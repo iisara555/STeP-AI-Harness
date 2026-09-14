@@ -109,37 +109,23 @@ Pilot นี้ใช้การควบคุมต่อไปนี้:
 
 อ่าน rules/data-classification.md, rules/human-approval.md และ docs/knowledge-policy.md ก่อนเพิ่มข้อมูลขององค์กร
 
-## การติดตั้ง
+## การเริ่มใช้งาน
 
 สิ่งที่ต้องมี:
 
-- Node.js 20 ขึ้นไป
 - Git
 - Python 3 สำหรับตรวจสอบ Repository
 - สิทธิ์เข้าถึง Repository ส่วนตัวที่ได้รับอนุมัติ
 
-ติดตั้ง TeamAI CLI และเริ่มต้นใช้งาน Harness:
+โคลน Repository และตรวจสอบชุดไฟล์:
 
 ~~~bash
-npm install -g teamai-cli@0.23.1
-teamai init https://github.com/iisara555/STeP-AI-Harness.git --scope user
-teamai doctor
-teamai roles list
+git clone https://github.com/iisara555/STeP-AI-Harness.git
+cd STeP-AI-Harness
+python3 scripts/validate_repo.py
 ~~~
 
-เลือก Role หลัก:
-
-~~~bash
-teamai roles set creative
-teamai pull
-~~~
-
-Role ที่มีคือ creative, pm, developer และ ai-admin ผู้ปฏิบัติงานข้ามทีมสามารถเพิ่ม Role ได้:
-
-~~~bash
-teamai roles set creative --add pm
-teamai pull
-~~~
+ทีมสามารถเลือกอ่านและใช้ Skill ตามขอบเขตงานได้โดยตรงจากโฟลเดอร์ skills/ โดยไม่ต้องติดตั้ง CLI เพิ่มเติม
 
 ## การตรวจสอบ
 
