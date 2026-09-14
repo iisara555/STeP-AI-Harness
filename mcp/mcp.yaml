@@ -1,0 +1,4 @@
+# Pilot default: no shared MCP is activated.
+# Add only reviewed servers. Use ${ENV_VAR}; never place a literal token here.
+servers: []
+

@@ -1,0 +1,23 @@
+version: 1
+roles:
+  - id: creative
+    description: Creative communication, design, event and exhibition work
+    resources:
+      knowledge: [common, creative]
+      skills: [common, creative]
+  - id: pm
+    description: Project management, TOR, meeting and delivery coordination
+    resources:
+      knowledge: [common, pm]
+      skills: [common, pm]
+  - id: developer
+    description: Software, automation, infrastructure and deployment work
+    resources:
+      knowledge: [common, dev]
+      skills: [common, dev]
+  - id: ai-admin
+    description: Governance and maintenance across all AI resources
+    resources:
+      knowledge: [common, creative, pm, dev]
+      skills: [common, creative, pm, dev]
+

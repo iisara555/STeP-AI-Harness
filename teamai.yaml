@@ -1,0 +1,33 @@
+team: step-cmu
+description: STeP and RSP North shared AI working standards
+repo: https://github.com/iisara555/step-ai-harness.git
+provider: github
+
+reviewers:
+  - iisara555
+
+sharing:
+  rules:
+    enforced:
+      - data-classification
+      - secret-safety
+      - human-approval
+  recall:
+    enabled: false
+  docs:
+    localDir: ~/.teamai/docs
+  env:
+    injectShellProfile: false
+  hooks:
+    autoApply: false
+    requireTeamScripts: true
+  mcp:
+    autoApply: false
+    allowedCommands: []
+    allowedHosts: []
+  coAuthor:
+    enabled: false
+  contributeHint:
+    enabled: true
+
+autoUpdate: false

@@ -1,0 +1,17 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+teamai.lock
+sessions/
+stats/
+members/
+votes/
+tmp/
+
+# Local or restricted source material
+artifacts/
+output/
+docs/staff-abbreviations.md
