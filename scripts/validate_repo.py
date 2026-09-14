@@ -82,16 +82,68 @@ def scan_secrets(errors: list[str]) -> None:
                 errors.append(f"{path.relative_to(ROOT)}: possible {label}")
 
 
+def validate_package_config(errors: list[str]) -> None:
+    pkg_path = ROOT / "package.json"
+    if not pkg_path.is_file():
+        errors.append("Missing required file: package.json")
+        return
+
+    import json
+    import subprocess
+
+    try:
+        data = json.loads(pkg_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"Invalid package.json: {exc}")
+        return
+
+    if data.get("name") != "@step-cmu/ai-harness":
+        errors.append(f"package.json name must be '@step-cmu/ai-harness', got {data.get('name')!r}")
+
+    files = data.get("files", [])
+    if not isinstance(files, list) or not files:
+        errors.append("package.json must specify non-empty 'files' whitelist")
+
+    # Ensure restricted files are never in package files whitelist
+    banned_prefixes = ("artifacts", "output", "tmp", "docs/staff-abbreviations.md")
+    for f in files:
+        if any(f.startswith(p) for p in banned_prefixes):
+            errors.append(f"package.json files contains restricted entry: {f}")
+
+    # Test npm pack dry-run if npm is available
+    try:
+        res = subprocess.run(
+            ["npm", "pack", "--dry-run", "--json"],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            shell=True,
+            check=False,
+        )
+        if res.returncode == 0:
+            pack_data = json.loads(res.stdout)
+            if isinstance(pack_data, list) and pack_data:
+                packed_files = [item["path"] for item in pack_data[0].get("files", [])]
+                for pf in packed_files:
+                    if pf == "docs/staff-abbreviations.md" or pf.startswith(("artifacts/", "output/", "tmp/")):
+                        errors.append(f"npm pack dry-run leaked restricted file: {pf}")
+    except Exception:
+        # npm may not be in all environments, whitelist check above is primary
+        pass
+
+
 def main() -> int:
     errors: list[str] = []
     count = validate_skills(errors)
     scan_secrets(errors)
+    validate_package_config(errors)
 
     required = [
         "teamai.yaml",
         "culture.md",
         "manifest/roles.yaml",
         "mcp/mcp.yaml",
+        "package.json",
     ]
     for relative in required:
         if not (ROOT / relative).is_file():
@@ -103,7 +155,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"Validation passed: {count} skills; no likely secrets detected.")
+    print(f"Validation passed: {count} skills; no likely secrets detected; package whitelist verified.")
     return 0
 
 

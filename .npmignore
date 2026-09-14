@@ -1,0 +1,24 @@
+# Sensitive and restricted documentation
+docs/staff-abbreviations.md
+docs/*private*
+docs/*restricted*
+
+# Scratch and internal work
+artifacts/
+output/
+tmp/
+scratch/
+test/
+
+# Development and repo tooling
+.github/
+scripts/
+*.py
+HANDOFF.md
+HANDOFF-CHECKSUMS.json
+START-PROMPT.txt
+OPEN-IN-CODEX.md
+STeP-Context-and-Skills-Review.md
+.git/
+.gitignore
+.agents/

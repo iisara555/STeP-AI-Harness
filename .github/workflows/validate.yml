@@ -13,6 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate skills and scan likely secrets
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate skills, scan secrets, and verify package whitelist
         run: python3 scripts/validate_repo.py
+      - name: Run CLI and module unit tests
+        run: npm test
+      - name: Verify package tarball contents
+        run: npm pack --dry-run
 

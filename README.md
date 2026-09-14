@@ -109,12 +109,61 @@ Pilot นี้ใช้การควบคุมต่อไปนี้:
 
 อ่าน rules/data-classification.md, rules/human-approval.md และ docs/knowledge-policy.md ก่อนเพิ่มข้อมูลขององค์กร
 
-## การเริ่มใช้งาน
+## การเริ่มใช้งานสำหรับพนักงาน (Private npm Distribution)
+
+พนักงานติดตั้ง Package `@step-cmu/ai-harness` จาก Private GitHub Packages และใช้ `step-ai` CLI เพื่อนำ Skill ที่ผ่านการอนุมัติเข้าสู่ Workspace ของ Codex:
+
+### 1. ตั้งค่าสิทธิ์เข้าถึง Private Registry (ครั้งแรกครั้งเดียว)
+
+~~~bash
+echo @step-cmu:registry=https://npm.pkg.github.com >> ~/.npmrc
+echo //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT >> ~/.npmrc
+~~~
+*(ใช้ Personal Access Token ที่มีสิทธิ์ `read:packages` ขององค์กร)*
+
+### 2. ติดตั้ง CLI
+
+~~~bash
+npm install --global @step-cmu/ai-harness
+~~~
+
+### 3. คำสั่งหลักในการทำงาน
+
+~~~bash
+# ตรวจสอบความพร้อมของสภาพแวดล้อมและสิทธิ์ Registry
+step-ai doctor
+
+# ติดตั้ง Skill สำหรับ Claude (Claude Code / Desktop -> สร้าง CLAUDE.md)
+step-ai init --role developer --tool claude
+
+# ติดตั้ง Skill สำหรับ Cursor IDE (-> สร้าง .cursorrules)
+step-ai init --role pm --tool cursor
+
+# ติดตั้ง Skill สำหรับ Codex Desktop (-> สร้าง CODEX_INSTRUCTIONS.md)
+step-ai init --role creative --tool codex
+
+# ติดตั้งรองรับทุก Agent พร้อมกันใน Workspace เดียว
+step-ai init --role pm --tool all
+
+# ตรวจสอบสถานะและไฟล์ที่มีการแก้ไขในเครื่อง
+step-ai status
+
+# ซิงก์อัปเดต Skill รุ่นล่าสุด (ไม่เขียนทับไฟล์ที่มีการแก้ไขในเครื่อง)
+step-ai sync
+
+# ย้อนกลับรุ่นก่อนหน้าจาก Backup Snapshot
+step-ai rollback
+~~~
+
+---
+
+## การเริ่มใช้งานสำหรับผู้พัฒนาชุด Harness (Repository Contributor)
 
 สิ่งที่ต้องมี:
 
 - Git
 - Python 3 สำหรับตรวจสอบ Repository
+- Node.js >= 20.0.0
 - สิทธิ์เข้าถึง Repository ส่วนตัวที่ได้รับอนุมัติ
 
 โคลน Repository และตรวจสอบชุดไฟล์:
@@ -123,9 +172,8 @@ Pilot นี้ใช้การควบคุมต่อไปนี้:
 git clone https://github.com/iisara555/STeP-AI-Harness.git
 cd STeP-AI-Harness
 python3 scripts/validate_repo.py
+npm test
 ~~~
-
-ทีมสามารถเลือกอ่านและใช้ Skill ตามขอบเขตงานได้โดยตรงจากโฟลเดอร์ skills/ โดยไม่ต้องติดตั้ง CLI เพิ่มเติม
 
 ## การตรวจสอบ
 
