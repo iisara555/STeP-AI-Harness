@@ -109,51 +109,176 @@ Pilot นี้ใช้การควบคุมต่อไปนี้:
 
 อ่าน rules/data-classification.md, rules/human-approval.md และ docs/knowledge-policy.md ก่อนเพิ่มข้อมูลขององค์กร
 
-## การเริ่มใช้งานสำหรับพนักงาน (Private npm Distribution)
+## คู่มือการใช้งานสำหรับพนักงาน (Private npm & step-ai CLI)
 
-พนักงานติดตั้ง Package `@step-cmu/ai-harness` จาก Private GitHub Packages และใช้ `step-ai` CLI เพื่อนำ Skill ที่ผ่านการอนุมัติเข้าสู่ Workspace ของ Codex:
+ระบบนี้ออกแบบมาเพื่อให้พนักงานในทีม **STeP / RSP North** นำความรู้ กติกากลาง และขั้นตอนการทำงาน (Skills & Rules) ที่ผ่านการอนุมัติแล้ว ไปติดตั้งเข้าโปรเจกต์งานของตนเองได้อย่างสะดวกรวดเร็ว โดยไม่ต้องจำขั้นตอนหรือคัดลอกไฟล์ด้วยมือ รองรับเครื่องมือทั้ง **Claude (Claude Code / Desktop)**, **Cursor IDE**, **Codex Desktop** และ AI Agents อื่นๆ
 
-### 1. ตั้งค่าสิทธิ์เข้าถึง Private Registry (ครั้งแรกครั้งเดียว)
+---
 
+### ขั้นตอนที่ 1: ตั้งค่าสิทธิ์เข้าถึง Private Registry (ทำครั้งแรกครั้งเดียว)
+
+เนื่องจากแพ็กเกจ `@step-cmu/ai-harness` เผยแพร่บน Private GitHub Packages ขององค์กร จึงต้องยืนยันตัวตนผ่าน Personal Access Token (PAT) ก่อน:
+
+1. เข้าไปที่ [GitHub Settings -> Personal Access Tokens (Classic)](https://github.com/settings/tokens)
+2. สร้าง Token ใหม่โดยเลือกสิทธิ์ (Scope): **`read:packages`**
+3. เพิ่มการตั้งค่าลงในไฟล์ `~/.npmrc` ในเครื่องของคุณ:
+
+**สำหรับ macOS / Linux (Terminal / Bash):**
 ~~~bash
-echo @step-cmu:registry=https://npm.pkg.github.com >> ~/.npmrc
-echo //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT >> ~/.npmrc
+echo "@step-cmu:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT" >> ~/.npmrc
 ~~~
-*(ใช้ Personal Access Token ที่มีสิทธิ์ `read:packages` ขององค์กร)*
 
-### 2. ติดตั้ง CLI
+**สำหรับ Windows (PowerShell):**
+~~~powershell
+Add-Content "$HOME\.npmrc" "@step-cmu:registry=https://npm.pkg.github.com"
+Add-Content "$HOME\.npmrc" "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT"
+~~~
+*(เปลี่ยน `YOUR_GITHUB_PAT` เป็น Token ที่สร้างจาก GitHub)*
+
+---
+
+### ขั้นตอนที่ 2: ติดตั้ง `step-ai` CLI
+
+ติดตั้ง Package เข้าเครื่องแบบ Global:
 
 ~~~bash
 npm install --global @step-cmu/ai-harness
 ~~~
 
-### 3. คำสั่งหลักในการทำงาน
+ตรวจสอบความพร้อมของระบบและสิทธิ์การเข้าถึงด้วยคำสั่ง:
 
 ~~~bash
-# ตรวจสอบความพร้อมของสภาพแวดล้อมและสิทธิ์ Registry
 step-ai doctor
+~~~
 
-# ติดตั้ง Skill สำหรับ Claude (Claude Code / Desktop -> สร้าง CLAUDE.md)
+> [!TIP]
+> หาก `step-ai doctor` แสดงเครื่องหมาย ✔ ครบทุกข้อ แปลว่าเครื่องของคุณพร้อมติดตั้ง Skill เข้าโปรเจกต์งานแล้ว!
+
+---
+
+### ขั้นตอนที่ 3: ติดตั้ง Skills เข้าโฟลเดอร์โปรเจกต์งาน (`step-ai init`)
+
+เมื่อคุณเปิดโปรเจกต์ใหม่ หรือมีโฟลเดอร์งานที่ต้องการให้ AI ช่วยทำงาน ให้เปิด Terminal ในโฟลเดอร์นั้น แล้วรันคำสั่ง `step-ai init`:
+
+~~~bash
+step-ai init --role <บทบาทของคุณ> --tool <เครื่องมือที่ใช้>
+~~~
+
+#### 1. บทบาทที่เลือกได้ (`--role`):
+
+| Role ID | เหมาะสำหรับงาน | สิ่งที่ได้รับ |
+|---|---|---|
+| `pm` | ผู้จัดการโครงการ, ประสานงาน, จัดซื้อจัดจ้าง | Skills กลาง + แผนโครงการ, ตรวจ TOR, ร่าง TOR ราชการ, สรุปประชุม |
+| `developer` | โปรแกรมเมอร์, วิศวกรระบบ, DevOps | Skills กลาง + Git Workflow, GitHub Guidelines, การ Deploy Vercel |
+| `creative` | งานออกแบบ, นิทรรศการ, งานสื่อสาร | Skills กลาง + Designer Brief, แนวคิดงาน Event, การออกแบบ Slide |
+| `ai-admin` | ผู้ดูแลระบบและธรรมาภิบาล AI ของทีม | ได้รับ Skills และความรู้ครบทุกหมวดหมู่ |
+
+#### 2. เครื่องมือที่เลือกได้ (`--tool`):
+
+| Tool Name | เหมาะสำหรับ | ไฟล์คอนฟิกที่ระบบสร้างให้ |
+|---|---|---|
+| `claude` | Claude Code, Claude Desktop, Anthropic Projects | `CLAUDE.md`, `AGENTS.md` |
+| `cursor` | Cursor IDE (Composer / Chat) | `.cursorrules`, `AGENTS.md` |
+| `codex` | OpenAI Codex Desktop | `CODEX_INSTRUCTIONS.md`, `AGENTS.md` |
+| `all` | พนักงานที่สลับใช้หลายเครื่องมือในโฟลเดอร์เดียวกัน | สร้างครบทุกไฟล์ข้างต้น |
+
+#### ตัวอย่างคำสั่งใช้งานจริง:
+
+~~~bash
+# กรณีที่ 1: สายพัฒนาซอฟต์แวร์ ใช้ Claude Code
 step-ai init --role developer --tool claude
 
-# ติดตั้ง Skill สำหรับ Cursor IDE (-> สร้าง .cursorrules)
+# กรณีที่ 2: สายบริหารโครงการ (PM) ใช้ Cursor
 step-ai init --role pm --tool cursor
 
-# ติดตั้ง Skill สำหรับ Codex Desktop (-> สร้าง CODEX_INSTRUCTIONS.md)
+# กรณีที่ 3: สายออกแบบสื่อสาร ใช้ Codex
 step-ai init --role creative --tool codex
 
-# ติดตั้งรองรับทุก Agent พร้อมกันใน Workspace เดียว
+# กรณีที่ 4: ต้องการรองรับทุก AI Tool ในโปรเจกต์เดียว
 step-ai init --role pm --tool all
 
-# ตรวจสอบสถานะและไฟล์ที่มีการแก้ไขในเครื่อง
-step-ai status
-
-# ซิงก์อัปเดต Skill รุ่นล่าสุด (ไม่เขียนทับไฟล์ที่มีการแก้ไขในเครื่อง)
-step-ai sync
-
-# ย้อนกลับรุ่นก่อนหน้าจาก Backup Snapshot
-step-ai rollback
+# กรณีที่ 5: ดูตัวอย่างไฟล์ก่อนติดตั้งจริง (Dry-run)
+step-ai init --role pm --tool claude --dry-run
 ~~~
+
+---
+
+### ขั้นตอนที่ 4: วิธีทำงานร่วมกับ AI แต่ละเครื่องมือ
+
+เมื่อรัน `step-ai init` สำเร็จ โฟลเดอร์งานของคุณจะมีโฟลเดอร์ `skills/`, `rules/` และไฟล์คำสั่งสำหรับ Agent โดยอัตโนมัติ:
+
+#### 1. การใช้งานใน Claude (Claude Code / Claude Desktop)
+- เปิดโฟลเดอร์งานใน Claude Code หรือ Claude Desktop
+- Claude จะอ่านไฟล์ `CLAUDE.md` โดยอัตโนมัติ เพื่อรับทราบ Role กติกากลาง และรายการ Skills ที่ใช้ได้
+- **ตัวอย่าง Prompt สั่งงาน:**
+  > *"ช่วยร่างข้อความประกาศเปิดตัวโครงการนี้ให้หน่อย โดยปฏิบัติตามขั้นตอนใน skill brand-tone-of-voice"*
+  > *"ช่วยตรวจทานแบบฟอร์มขอใช้บริการตามกติกาใน rules/step-writing.md"*
+
+#### 2. การใช้งานใน Cursor IDE
+- เปิดโฟลเดอร์ใน Cursor
+- Cursor Chat และ Composer จะรับรู้กฎระเบียบจากไฟล์ `.cursorrules` ทันที
+- **ตัวอย่าง Prompt สั่งงาน:**
+  > *"ช่วยร่างฟังก์ชัน deploy ขึ้น Vercel ตามแนวทางใน skill vercel-deploy"*
+  > *"ช่วยรีวิว pull request นี้ตาม coding-git-workflow"*
+
+#### 3. การใช้งานใน Codex Desktop
+- เปิดโฟลเดอร์เป็น Workspace ใน Codex Desktop
+- Codex จะอิงตามคำแนะนำใน `CODEX_INSTRUCTIONS.md` และ `AGENTS.md`
+- **ตัวอย่าง Prompt สั่งงาน:**
+  > *"ช่วยตรวจเอกสาร TOR ฉบับนี้ตามขั้นตอนและ Checklist ใน skill tor-review"*
+  > *"ช่วยจัดรูปแบบบันทึกการประชุมนี้ตาม skill meeting-summary"*
+
+---
+
+### ขั้นตอนที่ 5: การตรวจสถานะและอัปเดต Skills
+
+เมื่อเวลาผ่านไป หรือมีการปรับปรุงความรู้ขององค์กร คุณสามารถจัดการไฟล์ผ่านคำสั่งต่อไปนี้:
+
+#### 1. ตรวจสอบความสมบูรณ์ของไฟล์ (`step-ai status`)
+ตรวจสอบว่าไฟล์ในเครื่องของคุณตรงกับเวอร์ชันทางการหรือไม่ หรือมีการแก้ไขในเครื่องหรือไม่:
+~~~bash
+step-ai status
+~~~
+- **Clean (สีเขียว)**: ไฟล์สมบูรณ์ตรงตามมาตรฐานขององค์กร
+- **Modified (สีเหลือง)**: คุณมีการแก้ไขไฟล์เพิ่มเติมในเครื่อง (ระบบจะจำไว้และไม่เขียนทับ)
+- **Missing (สีแดง)**: ไฟล์สูญหายไปจากโฟลเดอร์
+
+#### 2. อัปเดต Skills เมื่อองค์กรออกรุ่นใหม่ (`step-ai sync`)
+เมื่อผู้ดูแลระบบประกาศอัปเดต Package `@step-cmu/ai-harness` รุ่นใหม่:
+1. อัปเดตแพ็กเกจ CLI ในเครื่อง:
+   ~~~bash
+   npm update --global @step-cmu/ai-harness
+   ~~~
+2. รันคำสั่ง sync ในโฟลเดอร์โปรเจกต์งานของคุณ:
+   ~~~bash
+   step-ai sync
+   ~~~
+   *(ระบบจะดึงเนื้อหาล่าสุดมาลงให้ โดยทำการสำรองข้อมูลเดิมอัตโนมัติ และ**คงไฟล์ที่คุณเคยแก้ไขไว้**อย่างปลอดภัย)*
+
+#### 3. การย้อนกลับรุ่นเมื่อพบปัญหา (`step-ai rollback`)
+หากต้องการคืนค่ากลับไปเป็นสภาพก่อนที่จะ sync หรือแก้ไข:
+~~~bash
+# ดูประวัติ Snapshot สำรองที่มีอยู่
+step-ai rollback --list
+
+# ย้อนกลับไปยัง Snapshot ล่าสุด
+step-ai rollback
+
+# หรือระบุ Snapshot ID ที่ต้องการ
+step-ai rollback --snapshot 20260914-162842
+~~~
+
+---
+
+### กติกากลางด้านความปลอดภัยที่พนักงานทุกคนต้องปฏิบัติ
+
+1. **Human Approval (การอนุมัติโดยมนุษย์)**: AI มีหน้าที่ช่วยคิด วิเคราะห์ ร่าง และตรวจทานเอกสารเท่านั้น การดำเนินการที่มีผลจริง (เช่น ส่งหนังสือราชการ อนุมัติจัดซื้อจัดจ้าง เซ็นสัญญา หรือ deploy ขึ้นระบบจริง) ต้องผ่านการตรวจสอบและอนุมัติจากมนุษย์ที่เป็นเจ้าของงานเสมอ
+2. **ห้าม Commit หรือป้อนข้อมูลที่เป็นความลับ**:
+   - ห้ามใส่ข้อมูลส่วนบุคคล (PII) เช่น รายชื่อพนักงาน เลขบัตรประชาชน ข้อมูลเงินเดือน
+   - ห้ามใส่ข้อกำหนด TOR ร่าง งบประมาณลับ หรือสัญญาที่ยังไม่ผ่านการลงนาม
+   - ห้ามใส่ API Key, Password หรือ Token ใดๆ ในโฟลเดอร์ที่แชร์หรือ commit ขึ้น Git
+3. **ยึดความจริง (No Hallucination)**: หากข้อมูลในต้นฉบับไม่เพียงพอ ให้ระบุว่า *"เป็นข้อมูลรอยืนยัน"* อย่าให้ AI สันนิษฐานหรือแต่งข้อมูลขึ้นเอง
 
 ---
 
