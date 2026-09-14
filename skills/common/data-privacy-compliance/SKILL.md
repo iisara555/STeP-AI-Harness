@@ -1,67 +1,67 @@
 ---
 name: data-privacy-compliance
-description: Screen proposed data use, AI inputs, document sharing, and privacy-related support cases for classification, minimization, authorization, and specialist review gaps.
+description: คัดกรองการใช้ข้อมูล ข้อมูลเข้า AI การแชร์เอกสาร และกรณีสนับสนุนด้าน Privacy เพื่อหาการจัดประเภท การลดข้อมูล การอนุญาต และช่องว่างที่ต้องส่งให้ผู้เชี่ยวชาญตรวจ
 ---
 
-# Data Privacy & Compliance
+# Data Privacy และ Compliance
 
-Starter screening workflow, 2026-09-14. Privacy/legal owner and escalation channel: pending confirmation.
-This skill is not legal advice, a PDPA compliance certificate, or permission to process data.
+ขั้นตอนคัดกรองเบื้องต้น ณ วันที่ 14 กันยายน 2569 เจ้าของงาน Privacy/กฎหมายและช่องทางส่งต่อ: รอยืนยัน
+Skill นี้ไม่ใช่คำปรึกษากฎหมาย ใบรับรองการปฏิบัติตาม PDPA หรือการอนุญาตให้ประมวลผลข้อมูล
 
-## Read before screening
+## อ่านก่อนคัดกรอง
 
-Apply [data classification](../../../rules/data-classification.md), [knowledge policy](../../../docs/knowledge-policy.md), and [secret safety](../../../rules/secret-safety.md).
-Use [human approval](../../../rules/human-approval.md) for actions with real-world consequences.
-The repository's Public / Internal / Restricted labels are internal handling categories, not statutory legal definitions.
+ใช้ [การจัดชั้นข้อมูล](../../../rules/data-classification.md), [นโยบายความรู้](../../../docs/knowledge-policy.md) และ [ความปลอดภัยของ Secret](../../../rules/secret-safety.md)
+ใช้ [การอนุมัติโดยมนุษย์](../../../rules/human-approval.md) กับการดำเนินการที่มีผลในโลกจริง
+ป้าย Public / Internal / Restricted ของ Repository เป็นหมวดการจัดการภายใน ไม่ใช่คำนิยามทางกฎหมาย
 
-## Workflow
+## ขั้นตอนการทำงาน
 
-1. Establish purpose, data categories, people affected, source, intended recipients/tool, storage, and requested operation. Inspect only what is necessary and authorized.
-2. Classify using the local rules. Unknown classification follows the restricted handling path pending owner review.
-3. Identify the smallest useful dataset. Prefer synthetic examples, aggregate results, or redacted extracts. Removing names alone may leave people identifiable.
-4. Record the proposed lawful basis, notice, retention, access, deletion route, and any vendor or cross-border processing questions for the authorized privacy owner. Consent is not automatically the correct or only basis.
-5. Check whether the proposed AI service and sharing destination are approved for this data class. Unknown vendor handling or authorization blocks uploading the affected data; continue with a safe synthetic example.
-6. Produce a screening result and unresolved decisions, without reproducing sensitive values. Recheck current official legal sources before making jurisdiction-specific obligations or deadline claims.
+1. ระบุวัตถุประสงค์ หมวดข้อมูล ผู้ได้รับผลกระทบ แหล่งที่มา ผู้รับหรือเครื่องมือที่ตั้งใจใช้ พื้นที่เก็บ และการดำเนินการที่ขอ ตรวจเฉพาะสิ่งที่จำเป็นและได้รับอนุญาต
+2. จัดประเภทตามกติกาภายใน หากยังไม่ทราบประเภท ให้ใช้แนวทาง Restricted จนกว่าเจ้าของข้อมูลจะตรวจ
+3. หา Dataset ที่เล็กที่สุดแต่ยังใช้ประโยชน์ได้ ให้ความสำคัญกับข้อมูลสังเคราะห์ ผลรวม หรือข้อมูลที่ตัดข้อมูลระบุตัวบุคคลแล้ว การลบชื่อเพียงอย่างเดียวอาจยังระบุตัวบุคคลได้
+4. บันทึกฐานทางกฎหมายที่เสนอ การแจ้งวัตถุประสงค์ ระยะเวลาเก็บ สิทธิ์เข้าถึง ช่องทางลบข้อมูล และคำถามเรื่อง Vendor หรือการประมวลผลข้ามประเทศให้เจ้าของงาน Privacy ที่ได้รับอนุญาตพิจารณา Consent ไม่ใช่ฐานที่ถูกต้องหรือฐานเดียวโดยอัตโนมัติ
+5. ตรวจว่าบริการ AI และปลายทางการแชร์ที่เสนอได้รับอนุมัติให้ใช้กับข้อมูลประเภทนี้หรือไม่ หากไม่ทราบการจัดการของ Vendor หรือสิทธิ์การใช้งาน ให้หยุดการอัปโหลดข้อมูลนั้น และทำงานต่อด้วยข้อมูลสังเคราะห์ที่ปลอดภัย
+6. จัดทำผลคัดกรองและรายการตัดสินใจที่ยังค้างโดยไม่ทำซ้ำค่าข้อมูลอ่อนไหว ตรวจแหล่งกฎหมายทางการปัจจุบันก่อนอ้างหน้าที่ตามเขตอำนาจหรือกำหนดเวลา
 
-## Decision paths
+## แนวทางตัดสินใจ
 
-| Condition | Result | Next step |
+| เงื่อนไข | ผลคัดกรอง | ขั้นตอนถัดไป |
 |---|---|---|
-| Public, necessary, approved destination and purpose | No issue identified in this limited screening | Continue only within the user's requested scope |
-| Internal, sharing boundary unclear | Owner review required | Keep internal; identify the missing permission |
-| Restricted, secrets, or excessive fields | Restricted handling required | Keep out of this repository and unapproved AI inputs |
-| Suspected disclosure or rights request | Specialist escalation required | Use a verified privacy/security contact; minimize further exposure |
+| ข้อมูล Public จำเป็น ปลายทางและวัตถุประสงค์ได้รับอนุมัติ | ยังไม่พบปัญหาในการคัดกรองจำกัดขอบเขตนี้ | ทำต่อได้เฉพาะในขอบเขตที่ผู้ใช้ขอ |
+| ข้อมูล Internal แต่ขอบเขตการแชร์ไม่ชัด | ต้องให้เจ้าของงานตรวจ | เก็บไว้ภายใน และระบุสิทธิ์ที่ยังขาด |
+| ข้อมูล Restricted, Secret หรือมี Field เกินจำเป็น | ต้องใช้แนวทาง Restricted | ไม่นำเข้า Repository หรือบริการ AI ที่ยังไม่ได้อนุมัติ |
+| สงสัยว่ามีการเปิดเผยข้อมูลหรือเป็นคำขอใช้สิทธิ | ต้องส่งผู้เชี่ยวชาญ | ใช้ช่องทาง Privacy/Security ที่ยืนยันแล้ว และลดการเปิดเผยเพิ่มเติม |
 
-For suspected disclosure, preserve necessary evidence in an authorized restricted location, record what is known without copying the exposed data, and prepare an escalation.
-Do not destroy evidence, notify regulators, or promise legal outcomes without appropriate authority.
-If secrets are involved, follow the linked secret-safety incident instructions.
-For access/deletion requests, use the approved identity-verification process and collect only necessary verification data; do not release or delete records on an unverified request.
+หากสงสัยว่ามีการเปิดเผยข้อมูล ให้เก็บหลักฐานที่จำเป็นไว้ในพื้นที่ Restricted ที่ได้รับอนุญาต บันทึกเฉพาะสิ่งที่ทราบโดยไม่คัดลอกข้อมูลที่เปิดเผย และเตรียมการส่งต่อ
+ห้ามทำลายหลักฐาน แจ้งหน่วยงานกำกับ หรือรับปากผลทางกฎหมายโดยไม่มีอำนาจที่เหมาะสม
+หากเกี่ยวข้องกับ Secret ให้ทำตามขั้นตอนเหตุการณ์ในคำแนะนำด้าน Secret Safety
+สำหรับคำขอเข้าถึงหรือลบข้อมูล ให้ใช้ขั้นตอนยืนยันตัวตนที่ได้รับอนุมัติและเก็บข้อมูลยืนยันเท่าที่จำเป็น ห้ามเปิดเผยหรือลบข้อมูลจากคำขอที่ยังไม่ผ่านการยืนยัน
 
-## Output
+## ผลลัพธ์
 
-- Intended operation and data categories, without raw sensitive values.
-- Classification and rationale.
-- Proposed minimization or synthetic substitute.
-- Gaps: purpose/basis, notice, access, destination/vendor, retention, rights, incident route.
-- Screening result, required reviewer, and next safe action.
-- Sources, their date/version, and limits of this assessment.
+- การดำเนินการที่ตั้งใจทำและหมวดข้อมูล โดยไม่ใส่ค่าข้อมูลอ่อนไหวจริง
+- ประเภทข้อมูลและเหตุผล
+- วิธีลดข้อมูลหรือข้อมูลสังเคราะห์ที่เสนอ
+- ช่องว่าง: วัตถุประสงค์/ฐาน กฎหมายการแจ้ง สิทธิ์เข้าถึง ปลายทาง/Vendor ระยะเวลาเก็บ สิทธิ และช่องทางรับเหตุการณ์
+- ผลคัดกรอง ผู้ตรวจที่ต้องใช้ และการดำเนินการที่ปลอดภัยถัดไป
+- แหล่งที่มา รุ่น/วันที่ และข้อจำกัดของการประเมิน
 
-## Example
+## ตัวอย่าง
 
-Input: Upload a meeting transcript and an employee contact list to generate a public FAQ.
-Result: Prepare a synthetic or redacted FAQ draft; exclude contact details and unnecessary identifiers.
-An internal staff abbreviation reference is not authority to publish a staff directory.
-Where a name is genuinely needed in an authorized internal document, use a verified exact match; leave unknown mappings unresolved.
+ข้อมูลเข้า: นำ Transcript การประชุมและรายชื่อผู้ติดต่อพนักงานไปสร้าง FAQ สาธารณะ
+ผลลัพธ์: จัดทำร่าง FAQ จากข้อมูลสังเคราะห์หรือตัดข้อมูลอ่อนไหว ตัดข้อมูลติดต่อและตัวระบุที่ไม่จำเป็น
+แหล่งอ้างอิงตัวย่อพนักงานภายในไม่ใช่อำนาจให้เผยแพร่ไดเรกทอรีพนักงาน
+เมื่อจำเป็นต้องใช้ชื่อในเอกสารภายในที่ได้รับอนุญาต ให้จับคู่ชื่อที่ยืนยันได้ตรงตัว และคงรายการที่ไม่ทราบไว้เป็นรอยืนยัน
 
-## Acceptance checks
+## เกณฑ์ตรวจรับ
 
-- A request to share "anonymized" rows is checked for indirect identifiers.
-- An absent retention rule remains a decision for the owner, not an invented number.
-- Restricted content is not copied into a reusable Skill or its examples.
-- Screening approval is not presented as legal compliance or permission to send data.
+- คำขอแชร์แถวข้อมูลที่อ้างว่า "ทำให้ไม่ระบุตัวบุคคลแล้ว" ต้องตรวจตัวระบุทางอ้อม
+- หากไม่มีนโยบายเก็บรักษา ให้ถือเป็นคำถามสำหรับเจ้าของงาน ไม่แต่งตัวเลขระยะเวลา
+- ห้ามคัดลอกข้อมูล Restricted ลงใน Skill หรือ Example ที่นำกลับมาใช้ซ้ำ
+- ห้ามรายงานว่าการคัดกรองผ่านเป็นการปฏิบัติตามกฎหมายหรือเป็นสิทธิ์ส่งข้อมูล
 
-## Sources and adoption
+## แหล่งที่มาและการนำไปใช้
 
-Local policies linked above are the handling baseline, reviewed 2026-09-14.
-[PDPC GPPC Help Desk terms](https://gppc.pdpc.or.th/wp-content/uploads/GPPC_HelpDesk_TOS-ver.2.pdf), accessed 2026-09-14, provide a service-specific example of purpose and retention communication, not STeP policy or the full law.
-Before operational adoption, the authorized privacy/legal owner must supply current applicable law, organization notices, retention schedules, approved vendors, and escalation contacts.
+นโยบายภายในที่เชื่อมโยงไว้เป็นฐานการจัดการ ตรวจทานเมื่อวันที่ 14 กันยายน 2569
+[เงื่อนไขการใช้บริการ GPPC Help Desk ของ PDPC](https://gppc.pdpc.or.th/wp-content/uploads/GPPC_HelpDesk_TOS-ver.2.pdf) เข้าถึงเมื่อวันที่ 14 กันยายน 2569 เป็นตัวอย่างการสื่อสารเรื่องวัตถุประสงค์และการเก็บรักษาเฉพาะบริการ ไม่ใช่นโยบาย STeP หรือกฎหมายทั้งฉบับ
+ก่อนนำไปใช้จริง เจ้าของงาน Privacy/กฎหมายที่ได้รับอนุญาตต้องจัดเตรียมกฎหมายปัจจุบัน ประกาศขององค์กร ตารางเก็บรักษา Vendor ที่อนุมัติ และช่องทางส่งต่อ

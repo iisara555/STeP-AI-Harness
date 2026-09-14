@@ -1,171 +1,171 @@
 # STeP AI Harness
 
-An internal pilot repository for applying shared organizational knowledge, working standards, and repeatable workflows across STeP / RSP North teams.
+คลังต้นแบบภายในสำหรับนำความรู้ขององค์กร มาตรฐานการทำงาน และขั้นตอนที่ใช้ซ้ำได้มาใช้ร่วมกันในทีม STeP / RSP North
 
-The harness is designed around three layers:
+ระบบนี้ออกแบบตาม 3 ชั้นของ Organization AI:
 
-```text
+~~~text
 Organization AI
 ├── Team Execution
 │   └── Skills / Rules / Roles / MCP
-│       "Work the way our organization works"
+│       "ทำงานตามวิธีขององค์กร"
 ├── Team Context
 │   └── Docs / Knowledge / Team Wiki
-│       "Know our organization"
+│       "รู้จักองค์กรของเรา"
 └── Team Improvement
     └── Learnings / Sessions / Digest
-        "Learn from how the team works"
-```
+        "เรียนรู้จากการทำงานของทีม"
+~~~
 
-## Pilot status
+## สถานะ Pilot
 
-This repository is a controlled pilot. It provides reusable guidance and draft-generation support. Human owners remain responsible for approvals, official publication, employee decisions, procurement, contracts, production changes, and other actions with real-world impact.
+Repository นี้เป็นชุดทดลองภายใต้การควบคุม ใช้สำหรับให้คำแนะนำที่นำกลับมาใช้ซ้ำได้และช่วยจัดทำร่างเอกสาร เจ้าของงานที่เป็นมนุษย์ยังคงรับผิดชอบการอนุมัติ การเผยแพร่เอกสารทางการ การตัดสินใจเกี่ยวกับพนักงาน การจัดซื้อจัดจ้าง สัญญา การแก้ไขระบบจริง และการดำเนินการอื่นที่มีผลในโลกจริง
 
-## Repository structure
+## โครงสร้าง Repository
 
-```text
-skills/       Reusable workflows grouped by domain
-rules/        Cross-work rules and safety guardrails
-manifest/     Team roles and ownership metadata
-docs/         Operating guidance, context, and knowledge policy
-mcp/          MCP configuration kept disabled by default
-scripts/      Repository validation and safety checks
-artifacts/    Working document artifacts
-output/       Generated drafts and reviewed outputs
-```
+~~~text
+skills/       ขั้นตอนการทำงานที่ใช้ซ้ำได้ แบ่งตามหมวดงาน
+rules/        กติกากลางและข้อควบคุมด้านความปลอดภัย
+manifest/     ข้อมูล Role และความรับผิดชอบของทีม
+docs/         คู่มือการทำงาน บริบท และนโยบายความรู้
+mcp/          การตั้งค่า MCP ซึ่งปิดไว้เป็นค่าเริ่มต้น
+scripts/      สคริปต์ตรวจสอบ Repository และความปลอดภัย
+artifacts/    ไฟล์งานระหว่างจัดทำ
+output/       ร่างและผลลัพธ์ที่สร้างขึ้น
+~~~
 
-`artifacts/`, `output/`, `tmp/`, and the staff directory are local or restricted working data and are ignored by default; they are not part of the GitHub source push.
+โฟลเดอร์ artifacts/, output/, tmp/ และไดเรกทอรีรายชื่อพนักงานเป็นข้อมูลทำงานภายในหรือข้อมูลจำกัดการเข้าถึง จึงถูกละเว้นจาก Git โดยค่าเริ่มต้น และไม่รวมอยู่ในการ push ไปยัง GitHub
 
-## Organization AI layers
+## ชั้นของ Organization AI
 
-### Team Execution
+### Team Execution — ชั้นการทำงาน
 
-The execution layer turns organizational working practices into reusable instructions:
+ชั้นนี้แปลงวิธีทำงานขององค์กรให้เป็นคำแนะนำที่ใช้ซ้ำได้:
 
-- `skills/common/` — shared capabilities such as brand voice, privacy, SOP authoring, customer support triage, official Thai documents, and weekly reviews.
-- `skills/creative/` — creative briefs, event concepts, and presentation design.
-- `skills/pm/` — project plans, meeting summaries, TOR writing, and TOR review.
-- `skills/dev/` — coding, Git, GitHub, and deployment workflows.
-- `rules/` — data classification, human approval, naming, secret safety, and writing standards.
-- `manifest/roles.yaml` — role definitions for Creative, PM, Developer, and AI Admin.
+- skills/common/ — ความสามารถร่วม เช่น Brand และ Tone of Voice, Data Privacy, การเขียน SOP, การคัดแยกคำถามลูกค้า, เอกสารราชการไทย และการทบทวนงานประจำสัปดาห์
+- skills/creative/ — Designer Brief, แนวคิดงาน Event และการออกแบบ Presentation
+- skills/pm/ — แผนโครงการ สรุปการประชุม การเขียน TOR และการตรวจ TOR
+- skills/dev/ — การเขียนโค้ด GitHub และการ Deploy
+- rules/ — การจัดชั้นข้อมูล การอนุมัติโดยมนุษย์ การตั้งชื่อ ความปลอดภัยของ Secret และมาตรฐานการเขียน
+- manifest/roles.yaml — Role ของ Creative, PM, Developer และ AI Admin
 
-Skills describe how to perform repeatable work. Rules describe constraints that apply across work. A policy document is not automatically an Agent instruction; it must be reviewed, scoped, and converted into an approved operational rule before automation uses it.
+Skill อธิบายวิธีทำงานที่ใช้ซ้ำได้ ส่วน Rule อธิบายข้อจำกัดที่ใช้ข้ามงาน เอกสารนโยบายไม่ใช่คำสั่งของ Agent โดยอัตโนมัติ ต้องผ่านการตรวจสอบ กำหนดขอบเขต และแปลงเป็น Rule ที่ได้รับอนุมัติก่อนนำไปใช้กับระบบอัตโนมัติ
 
-### Team Context
+### Team Context — ชั้นบริบท
 
-The context layer holds organizational knowledge and references, including:
+ชั้นนี้เก็บความรู้และเอกสารอ้างอิงขององค์กร เช่น:
 
-- `docs/step-context.md` — shared organizational context.
-- `docs/roles-and-ownership.md` — roles and ownership.
-- `docs/staff-abbreviations.md` — approved staff abbreviation references.
-- `docs/knowledge-policy.md` — what may be stored, shared, and retained.
-- `STeP-Context-and-Skills-Review.md` — the current context and skills review.
-- `HANDOFF.md` — project handoff and operating decisions.
+- docs/step-context.md — บริบทขององค์กร
+- docs/roles-and-ownership.md — Role และเจ้าของงาน
+- docs/staff-abbreviations.md — แหล่งอ้างอิงตัวย่อพนักงานที่ได้รับอนุมัติ
+- docs/knowledge-policy.md — ข้อมูลที่เก็บ แชร์ และเก็บรักษาได้
+- STeP-Context-and-Skills-Review.md — รายงานทบทวนบริบทและ Skills
+- HANDOFF.md — บริบทส่งต่อและข้อตกลงการทำงาน
 
-Controlled HR, customer, procurement, contract, personal-data, and other restricted source documents should remain in an approved knowledge location. The repository may contain a sanitized index or approved reference, but should not become an uncontrolled document store.
+เอกสารต้นฉบับด้านบุคลากร ลูกค้า การจัดซื้อจัดจ้าง สัญญา ข้อมูลส่วนบุคคล และข้อมูลจำกัดการเข้าถึงควรเก็บไว้ในพื้นที่ความรู้ที่ได้รับอนุญาต Repository อาจเก็บดัชนีที่ตัดข้อมูลอ่อนไหวแล้วหรือเอกสารอ้างอิงที่ได้รับอนุมัติ แต่ไม่ควรเป็นที่เก็บเอกสารต้นฉบับโดยไม่มีการควบคุม
 
-### Team Improvement
+### Team Improvement — ชั้นการปรับปรุง
 
-Improvement work is governed by the knowledge lifecycle in `docs/knowledge-policy.md`:
+การปรับปรุงงานให้เป็นไปตามวงจรความรู้ใน docs/knowledge-policy.md:
 
-1. Capture a problem, context, and proposed learning.
-2. Remove personal and sensitive information.
-3. Have the work owner and a second reviewer check it.
-4. Promote stable learning into a Skill, Rule, or approved document.
-5. Review active guidance every 90 days and archive stale material.
+1. บันทึกปัญหา บริบท และบทเรียนที่เสนอ
+2. ลบข้อมูลส่วนบุคคลและข้อมูลอ่อนไหว
+3. ให้เจ้าของงานและผู้ตรวจคนที่สองตรวจสอบ
+4. ยกระดับบทเรียนที่เสถียรแล้วเป็น Skill, Rule หรือเอกสารที่ได้รับอนุมัติ
+5. ทบทวนคำแนะนำที่ยังใช้งานทุก 90 วัน และเก็บถาวรสิ่งที่หมดอายุ
 
-## Skills currently included
+## Skills ที่มีอยู่
 
-The pilot currently contains 18 skills across `common`, `creative`, `pm`, and `dev`. Each skill is stored as a namespaced `SKILL.md` and should define its trigger, workflow, outputs, and completion checks.
+Pilot นี้มี 18 Skills ในหมวด common, creative, pm และ dev แต่ละ Skill อยู่ในไฟล์ SKILL.md ภายใต้ Namespace ของตนเอง และควรระบุเงื่อนไขการเรียกใช้ ขั้นตอน ผลลัพธ์ และเกณฑ์จบงาน
 
-Use a skill when the request matches its domain. State the selected skill when the route is not obvious. Combine skills only when each one contributes a distinct part of the work.
+ให้เลือกใช้ Skill เมื่อคำขอตรงกับขอบเขตของ Skill นั้น หากไม่ชัดเจนให้ระบุ Skill ที่เลือกใช้ รวม Skills เฉพาะเมื่อแต่ละ Skill มีส่วนช่วยคนละด้านอย่างชัดเจน
 
-Examples:
+ตัวอย่าง:
 
-- Use `skills/pm/tor-review/SKILL.md` to review a TOR.
-- Use `skills/common/thai-official-documents/SKILL.md` to check a Thai official document.
-- Use `skills/pm/meeting-summary/SKILL.md` to turn meeting notes into an accountable written record.
-- Use `skills/common/team-weekly-review/SKILL.md` to structure team progress and follow-up work.
+- ใช้ skills/pm/tor-review/SKILL.md เพื่อตรวจ TOR
+- ใช้ skills/common/thai-official-documents/SKILL.md เพื่อตรวจเอกสารราชการไทย
+- ใช้ skills/pm/meeting-summary/SKILL.md เพื่อเปลี่ยนบันทึกการประชุมเป็นเอกสารที่ตรวจสอบและติดตามได้
+- ใช้ skills/common/team-weekly-review/SKILL.md เพื่อจัดโครงสร้างการทบทวนงานประจำสัปดาห์
 
-## Organizational Rules source documents
+## เอกสาร Rules ขององค์กร
 
-An organizational handbook or HR announcement may be an authoritative policy source, but it is not a direct prompt. Before deriving Agent behavior from one:
+คู่มือพนักงานหรือประกาศด้านบุคลากรอาจเป็นแหล่งนโยบายที่มีอำนาจอ้างอิง แต่ไม่ใช่ Prompt โดยตรง ก่อนสกัดพฤติกรรมของ Agent จากเอกสารดังกล่าว ให้ดำเนินการดังนี้:
 
-- confirm the document owner, version, effective date, scope, and approval status;
-- preserve the original source outside the public repository when it is restricted;
-- create a rule index with stable IDs and source page references;
-- record exceptions, human decision points, and escalation paths;
-- require human approval for employee, disciplinary, legal, or other high-impact decisions.
+- ยืนยันเจ้าของเอกสาร รุ่น วันที่มีผล ขอบเขต และสถานะการอนุมัติ
+- เก็บเอกสารต้นฉบับไว้นอก Repository หากเป็นข้อมูลจำกัดการเข้าถึง
+- สร้างดัชนี Rule ที่มีรหัสถาวรและเลขหน้าอ้างอิง
+- บันทึกข้อยกเว้น จุดที่ต้องตัดสินใจโดยมนุษย์ และช่องทางส่งต่อ
+- การตัดสินใจเกี่ยวกับพนักงาน วินัย กฎหมาย หรือเรื่องที่มีผลกระทบสูงต้องผ่านการอนุมัติจากมนุษย์
 
-## Safety and approval boundaries
+## ขอบเขตด้านความปลอดภัยและการอนุมัติ
 
-The following controls are enforced by the pilot:
+Pilot นี้ใช้การควบคุมต่อไปนี้:
 
-- Recall is disabled by default.
-- MCP auto-apply is disabled by default.
-- Custom hooks are not auto-applied.
-- Secrets, credentials, personal data, and restricted source files must not be committed.
-- AI may draft, summarize, classify, and check work, but a human owner must approve real-world actions.
+- ปิด Recall ไว้เป็นค่าเริ่มต้น
+- ปิดการใช้ MCP อัตโนมัติไว้เป็นค่าเริ่มต้น
+- ไม่เปิดใช้ Custom Hook อัตโนมัติ
+- ห้าม commit Secret, Credential, ข้อมูลส่วนบุคคล และเอกสารต้นฉบับที่จำกัดการเข้าถึง
+- AI ช่วยร่าง สรุป จัดประเภท และตรวจสอบได้ แต่เจ้าของงานที่เป็นมนุษย์ต้องอนุมัติการดำเนินการที่มีผลจริง
 
-Read `rules/data-classification.md`, `rules/human-approval.md`, and `docs/knowledge-policy.md` before adding organizational material.
+อ่าน rules/data-classification.md, rules/human-approval.md และ docs/knowledge-policy.md ก่อนเพิ่มข้อมูลขององค์กร
 
-## Setup
+## การติดตั้ง
 
-Requirements:
+สิ่งที่ต้องมี:
 
-- Node.js 20 or newer
+- Node.js 20 ขึ้นไป
 - Git
-- Python 3 for repository validation
-- Access to the approved private repository
+- Python 3 สำหรับตรวจสอบ Repository
+- สิทธิ์เข้าถึง Repository ส่วนตัวที่ได้รับอนุมัติ
 
-Install the TeamAI CLI and initialize the harness:
+ติดตั้ง TeamAI CLI และเริ่มต้นใช้งาน Harness:
 
-```bash
+~~~bash
 npm install -g teamai-cli@0.23.1
 teamai init https://github.com/iisara555/STeP-AI-Harness.git --scope user
 teamai doctor
 teamai roles list
-```
+~~~
 
-Select a primary role:
+เลือก Role หลัก:
 
-```bash
+~~~bash
 teamai roles set creative
 teamai pull
-```
+~~~
 
-Available roles are `creative`, `pm`, `developer`, and `ai-admin`. A cross-functional contributor may add another role:
+Role ที่มีคือ creative, pm, developer และ ai-admin ผู้ปฏิบัติงานข้ามทีมสามารถเพิ่ม Role ได้:
 
-```bash
+~~~bash
 teamai roles set creative --add pm
 teamai pull
-```
+~~~
 
-## Validation
+## การตรวจสอบ
 
-Run the repository validator before committing:
+รันตัวตรวจสอบก่อน commit:
 
-```bash
+~~~bash
 python3 scripts/validate_repo.py
-```
+~~~
 
-The GitHub Actions workflow runs the same validation on pull requests and pushes to `main`.
+GitHub Actions จะรันตัวตรวจสอบเดียวกันเมื่อเปิด Pull Request และเมื่อมีการ push ไปยัง main
 
-## Contribution workflow
+## ขั้นตอนการมีส่วนร่วม
 
-1. Identify whether the change belongs in a Skill, Rule, Context document, or Improvement record.
-2. Keep one authoritative source for each meaning.
-3. Use a small, reviewable change.
-4. Run the validator and review generated artifacts.
-5. Open a pull request for a second reviewer.
-6. Merge only after the owner confirms scope, safety, and expected behavior.
+1. ระบุว่าการเปลี่ยนแปลงควรอยู่ใน Skill, Rule, เอกสาร Context หรือบันทึก Improvement
+2. ให้แต่ละความหมายมีแหล่งข้อมูลหลักเพียงแห่งเดียว
+3. แบ่งการเปลี่ยนแปลงให้เล็กและตรวจสอบได้
+4. รันตัวตรวจสอบและทบทวนไฟล์ผลลัพธ์
+5. เปิด Pull Request ให้ผู้ตรวจคนที่สองตรวจ
+6. Merge เมื่อเจ้าของงานยืนยันขอบเขต ความปลอดภัย และพฤติกรรมที่คาดหวังแล้ว
 
-## Pilot roadmap
+## แผน Pilot
 
-1. Review the current Skills, Rules, roles, and knowledge policy with two maintainers.
-2. Trial the harness with 5–10 users from Creative, PM, and Developer roles.
-3. Collect real examples, failure cases, and time saved.
-4. Improve Skills through reviewed pull requests.
-5. Decide whether to enable additional Recall, Dashboard, or MCP capabilities only after privacy and operational review.
+1. ให้ผู้ดูแลอย่างน้อย 2 คนตรวจ Skills, Rules, Role และนโยบายความรู้
+2. ทดลองใช้กับผู้ใช้ 5–10 คนจาก Role Creative, PM และ Developer
+3. เก็บตัวอย่างจริง กรณีที่ระบบทำผิด และเวลาที่ลดลง
+4. ปรับปรุง Skill ผ่าน Pull Request ที่ผ่านการตรวจ
+5. พิจารณาเปิด Recall, Dashboard หรือ MCP เพิ่มเติมหลังผ่านการตรวจด้าน Privacy และการปฏิบัติงาน
 
-See `docs/pilot-operations.md` for the operating plan.
+อ่านแผนการดำเนินงานได้ที่ docs/pilot-operations.md

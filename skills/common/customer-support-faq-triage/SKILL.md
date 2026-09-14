@@ -1,73 +1,73 @@
 ---
 name: customer-support-faq-triage
-description: Draft source-backed FAQ answers and triage incoming STeP service questions or complaints into actionable handoffs, without inventing service terms or sending replies.
+description: ร่างคำตอบ FAQ ที่มีแหล่งอ้างอิงและคัดแยกคำถามหรือข้อร้องเรียนเกี่ยวกับบริการ STeP เป็นงานส่งต่อที่ทำต่อได้ โดยไม่แต่งเงื่อนไขบริการหรือส่งคำตอบเอง
 ---
 
-# Customer Support FAQ & Triage
+# FAQ และการคัดแยกคำถามฝ่ายสนับสนุนลูกค้า
 
-Starter draft, 2026-09-14. Service owners, routing directory, and service-level targets: pending confirmation.
-No approved STeP FAQ database or response-time commitment is established by this skill.
+ร่างเริ่มต้น ณ วันที่ 14 กันยายน 2569 เจ้าของบริการ ไดเรกทอรีส่งต่อ และเป้าหมายระดับบริการ: รอยืนยัน
+Skill นี้ยังไม่ได้กำหนดฐานข้อมูล FAQ หรือคำมั่นเรื่องเวลาตอบของ STeP ที่ได้รับอนุมัติ
 
-## Inputs
+## ข้อมูลที่ต้องใช้
 
-Read [STeP context](../../../docs/step-context.md) and [writing rules](../../../rules/step-writing.md).
-Obtain the question, relevant service/project, audience, impact, and available approved service sources.
-Use only the personal details needed to handle the case; follow [data classification](../../../rules/data-classification.md).
+อ่าน [บริบท STeP](../../../docs/step-context.md) และ [กติกาการเขียน](../../../rules/step-writing.md)
+รวบรวมคำถาม บริการหรือโครงการที่เกี่ยวข้อง ผู้รับสาร ผลกระทบ และแหล่งบริการที่ได้รับอนุมัติซึ่งมีอยู่
+ใช้เฉพาะข้อมูลส่วนบุคคลที่จำเป็นต่อการจัดการกรณี และทำตาม [การจัดชั้นข้อมูล](../../../rules/data-classification.md)
 
-## Workflow
+## ขั้นตอนการทำงาน
 
-1. Identify the actual need: information, application/booking, status, technical problem, complaint, or privacy/security concern.
-2. Check the applicable official service page or owner-approved FAQ. Record source and verification date; check volatile details before quoting them.
-3. If the source answers the question, draft a concise Thai answer with a clear next step. For conflicts, identify the discrepancy and request owner confirmation.
-4. If not answerable, ask the minimum clarifying question and draft a handoff. Use a confirmed routing directory, not a guessed employee or team.
-5. Assign a provisional impact category using the table below. Distinguish reported facts from inferred impact.
-6. Return the reply draft and internal triage note separately. Sending, ticket creation, refunds, and other mutations need authorization appropriate to that action.
+1. ระบุความต้องการที่แท้จริง: ขอข้อมูล สมัครหรือจอง ตรวจสถานะ ปัญหาทางเทคนิค ข้อร้องเรียน หรือข้อกังวลด้าน Privacy/Security
+2. ตรวจหน้าเว็บบริการทางการหรือ FAQ ที่เจ้าของบริการอนุมัติ บันทึกแหล่งที่มาและวันที่ตรวจ และตรวจรายละเอียดที่เปลี่ยนแปลงได้ก่อนนำมาอ้าง
+3. หากแหล่งข้อมูลตอบคำถามได้ ให้ร่างคำตอบภาษาไทยที่กระชับพร้อมขั้นตอนถัดไปที่ชัดเจน หากข้อมูลขัดกันให้ชี้จุดต่างและขอเจ้าของงานยืนยัน
+4. หากยังตอบไม่ได้ ให้ถามคำถามเพื่อขอข้อมูลเพิ่มเท่าที่จำเป็นและร่างการส่งต่อ ใช้ไดเรกทอรีส่งต่อที่ยืนยันแล้ว ไม่เดาชื่อพนักงานหรือทีม
+5. กำหนดหมวดผลกระทบเบื้องต้นจากตารางด้านล่าง แยกข้อเท็จจริงที่ผู้แจ้งรายงานออกจากผลกระทบที่อนุมาน
+6. ส่งร่างคำตอบและบันทึกการคัดแยกภายในแยกจากกัน การส่งข้อความ สร้าง Ticket คืนเงิน หรือการเปลี่ยนแปลงอื่นต้องมีอำนาจตามประเภทการดำเนินการนั้น
 
-Read [brand-tone-of-voice](../brand-tone-of-voice/SKILL.md) for channel-sensitive wording.
-For rights requests or suspected disclosure, read [data-privacy-compliance](../data-privacy-compliance/SKILL.md).
+อ่าน [brand-tone-of-voice](../brand-tone-of-voice/SKILL.md) สำหรับถ้อยคำตามช่องทาง
+สำหรับคำขอใช้สิทธิหรือกรณีสงสัยว่ามีการเปิดเผยข้อมูล ให้อ่าน [data-privacy-compliance](../data-privacy-compliance/SKILL.md)
 
-## Proposed triage categories
+## หมวดคัดแยกเบื้องต้น
 
-| Category | Evidence | Handling |
+| หมวด | หลักฐาน | แนวทาง |
 |---|---|---|
-| Urgent review | Suspected active security/privacy incident or serious safety risk | Flag promptly to a verified responsible human; avoid exposing case data |
-| High impact | Reported service blocker or an evidenced imminent deadline | Summarize impact and seek responsible service owner |
-| Routine | General question, normal status request, or feature suggestion | Answer from approved sources or draft a standard handoff |
+| ต้องตรวจเร่งด่วน | สงสัยว่าเป็นเหตุด้าน Security/Privacy ที่กำลังเกิดขึ้น หรือมีความเสี่ยงต่อความปลอดภัยร้ายแรง | ส่งสัญญาณให้ผู้รับผิดชอบที่ยืนยันแล้วโดยเร็ว และหลีกเลี่ยงการเปิดเผยข้อมูลของกรณี |
+| ผลกระทบสูง | มีการรายงานว่าบริการใช้งานไม่ได้ หรือมีเส้นตายใกล้เข้ามาที่มีหลักฐาน | สรุปผลกระทบและขอเจ้าของบริการที่รับผิดชอบ |
+| งานทั่วไป | คำถามทั่วไป การขอทราบสถานะตามปกติ หรือข้อเสนอแนะ | ตอบจากแหล่งที่อนุมัติแล้ว หรือร่างการส่งต่อมาตรฐาน |
 
-These are draft triage categories, not an approved SLA. Urgency does not authorize bypassing access controls.
-Do not assign a response deadline or claim escalation has occurred unless confirmed.
+หมวดเหล่านี้เป็นร่างสำหรับคัดแยก ไม่ใช่ SLA ที่ได้รับอนุมัติ ความเร่งด่วนไม่ใช่เหตุให้ข้าม Access Control
+ห้ามกำหนดกำหนดเวลาตอบหรืออ้างว่าได้ Escalate แล้ว หากยังไม่มีการยืนยัน
 
-## Output templates
+## แบบฟอร์มผลลัพธ์
 
-### Reply draft
-[Acknowledge the request. Give the verified answer or state the missing detail. Offer the next step.]
-Sources: [relevant page or approved document]
+### ร่างคำตอบ
+[รับทราบคำขอ ให้คำตอบที่ตรวจแล้วหรือระบุรายละเอียดที่ขาด และเสนอขั้นตอนถัดไป]
+แหล่งอ้างอิง: [หน้าเว็บหรือเอกสารที่ได้รับอนุมัติ]
 
-### Internal triage
-- Category and reported impact:
-- Service / issue:
-- Known facts / unconfirmed points:
-- Proposed destination / whether confirmed:
-- Next action and owner confirmation needed:
-- Sensitive details excluded:
+### บันทึกการคัดแยกภายใน
+- หมวดและผลกระทบที่ผู้แจ้งรายงาน:
+- บริการ / ปัญหา:
+- ข้อเท็จจริงที่ทราบ / ประเด็นที่ยังไม่ยืนยัน:
+- ปลายทางที่เสนอ / สถานะการยืนยัน:
+- การดำเนินการถัดไปและเจ้าของงานที่ต้องยืนยัน:
+- รายละเอียดอ่อนไหวที่ตัดออก:
 
-### Reusable FAQ entry
-- Question:
-- Answer:
-- Source / version / checked date:
-- Applicable service and exclusions:
-- Content owner / review status:
-- Recheck trigger: changed fees, eligibility, schedule, or policy.
+### รายการ FAQ ที่นำกลับมาใช้ได้
+- คำถาม:
+- คำตอบ:
+- แหล่งที่มา / รุ่น / วันที่ตรวจ:
+- บริการที่ใช้ได้และข้อยกเว้น:
+- เจ้าของเนื้อหา / สถานะการทบทวน:
+- เงื่อนไขที่ต้องตรวจซ้ำ: ค่าธรรมเนียม คุณสมบัติ ตารางเวลา หรือนโยบายเปลี่ยนแปลง
 
-## Examples and acceptance checks
+## ตัวอย่างและเกณฑ์ตรวจรับ
 
-- "What is the room booking price?" with no current tariff: ask which facility/date is intended, state that the rate needs confirmation, and avoid inventing a price.
-- "Delete my personal data": acknowledge the request and route through a verified privacy procedure; do not delete records from the request alone.
-- A complaint about a delayed reply: acknowledge the reported delay without promising a refund or a resolution time.
-- An FAQ made from meeting notes excludes internal discussion and unapproved service commitments.
-- Drafting a handoff is reported as a draft, never as a sent escalation.
+- คำถาม "ราคาจองห้องเท่าไร" แต่ไม่มีอัตราปัจจุบัน: ถามว่าสถานที่และวันที่ใด ระบุว่าอัตราต้องยืนยัน และห้ามแต่งราคา
+- คำถาม "ลบข้อมูลส่วนบุคคลของฉัน": รับทราบคำขอและส่งต่อผ่านขั้นตอน Privacy ที่ยืนยันแล้ว ห้ามลบข้อมูลจากคำขอเพียงอย่างเดียว
+- ข้อร้องเรียนเรื่องตอบช้า: รับทราบความล่าช้าที่ผู้แจ้งรายงาน โดยไม่สัญญาคืนเงินหรือกำหนดเวลาจะแก้ไข
+- FAQ ที่ทำจากบันทึกประชุมต้องตัดการสนทนาภายในและคำมั่นบริการที่ยังไม่อนุมัติ
+- การร่างการส่งต่อให้รายงานเป็นร่างเสมอ ไม่รายงานว่าได้ส่งต่อแล้ว
 
-## Basis and adoption
+## แหล่งที่มาและการนำไปใช้
 
-Derived from the linked local context and handling/writing rules, reviewed 2026-09-14.
-Before live use, service owners must supply an approved FAQ, contact routing, escalation process, and any SLA.
+สกัดจากบริบทและกติกาด้านการจัดการและการเขียนที่เชื่อมโยงไว้ ตรวจทานเมื่อวันที่ 14 กันยายน 2569
+ก่อนใช้งานจริง เจ้าของบริการต้องจัดเตรียม FAQ ที่อนุมัติแล้ว ช่องทางส่งต่อ กระบวนการ Escalate และ SLA ที่เกี่ยวข้อง

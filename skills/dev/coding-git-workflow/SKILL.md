@@ -1,63 +1,63 @@
 ---
 name: coding-git-workflow
-description: Implement or review scoped code changes with repository discovery, targeted tests, diff review, and safe Git handoff. Use for coding tasks; GitHub-only operations use github-workflow.
+description: ดำเนินการหรือทบทวนการแก้ไขโค้ดที่มีขอบเขตชัดเจน โดยค้นหา Repository รันการตรวจที่ตรงจุด ทบทวน Diff และส่งต่องาน Git อย่างปลอดภัย ใช้กับงานเขียนโค้ด ส่วนงานที่ทำเฉพาะ GitHub ให้ใช้ github-workflow
 ---
 
-# Coding & Git Workflow
+# ขั้นตอนการเขียนโค้ดและ Git
 
-Starter draft, 2026-09-14. Technical owner and project-specific conventions: pending confirmation.
-This skill extends coding verification; [github-workflow](../github-workflow/SKILL.md) remains the source for GitHub collaboration steps.
-It applies to developers and maintainers, not as a Git requirement for employees submitting Skill ideas.
+ร่างเริ่มต้น ณ วันที่ 14 กันยายน 2569 เจ้าของด้านเทคนิคและข้อตกลงเฉพาะโครงการ: รอยืนยัน
+Skill นี้เพิ่มขั้นตอนตรวจสอบงานเขียนโค้ด ส่วน github-workflow เป็นแหล่งอ้างอิงหลักสำหรับการทำงานร่วมกันบน GitHub
+ใช้กับ Developer และ Maintainer ไม่ได้กำหนดให้พนักงานต้องใช้ Git เมื่อต้องการเสนอแนวคิด Skill
 
-## Establish the requested mode
+## กำหนดโหมดตามคำขอ
 
-- Plan/explain/review: inspect and report; do not implement or mutate external systems.
-- Implement/fix: make the scoped local changes and verify them.
-- Publish/merge/deploy: perform only the expressly authorized operation with the applicable approval and checks.
+- วางแผน/อธิบาย/ทบทวน: ตรวจสอบและรายงาน ห้าม Implement หรือเปลี่ยนระบบภายนอก
+- Implement/แก้ไข: แก้ไขเฉพาะขอบเขตในเครื่องและตรวจสอบผล
+- Publish/Merge/Deploy: ดำเนินการเฉพาะรายการที่ผู้ใช้สั่งอย่างชัดเจน และต้องผ่านการอนุมัติและการตรวจที่เกี่ยวข้อง
 
-Read repository instructions, [secret safety](../../../rules/secret-safety.md), and [human approval](../../../rules/human-approval.md).
-A request to code does not itself authorize production deployment or unrelated cleanup.
+อ่านคำแนะนำของ Repository, [ความปลอดภัยของ Secret](../../../rules/secret-safety.md) และ [การอนุมัติโดยมนุษย์](../../../rules/human-approval.md)
+คำขอให้เขียนโค้ดไม่ใช่การอนุญาตให้ Deploy Production หรือทำความสะอาดไฟล์ที่ไม่เกี่ยวข้อง
 
-## Workflow
+## ขั้นตอนการทำงาน
 
-1. Locate the repository root and inspect status/diffs if Git exists. If this is a plain directory, report that and continue local work without initializing Git unless requested.
-2. Inspect relevant source files, dependency manifests, existing tests, and configured commands. Use the project's conventions rather than prescribing a language, framework, or package manager.
-3. State the desired behavior and acceptance criteria. Reproduce the failure when feasible before fixing it.
-4. Make the smallest coherent change, preserving existing user edits. If edits conflict with the required change, stop and ask how to handle the overlap.
-5. Run relevant available tests, lint, type checks, or build according to impact. For this harness, run `python scripts/validate_repo.py` when changing Skills or configuration.
-6. Review the final diff for accidental changes, secrets, generated files, and behavioral regressions. Separate pre-existing failures from new failures using evidence.
-7. Return the changed files, observed test results, remaining risks, and next action. Use [github-workflow](../github-workflow/SKILL.md) if the requested handoff includes commits or a PR.
+1. ค้นหารากของ Repository และตรวจสถานะ/Diff หากมี Git หากเป็นไดเรกทอรีทั่วไป ให้รายงานและทำงานในเครื่องต่อโดยไม่เริ่มต้น Git เว้นแต่ผู้ใช้ร้องขอ
+2. ตรวจไฟล์ต้นฉบับที่เกี่ยวข้อง Manifest ของ Dependency Test ที่มีอยู่ และคำสั่งที่ตั้งค่าไว้ ใช้ข้อตกลงของโครงการแทนการกำหนดภาษา Framework หรือ Package Manager เอง
+3. ระบุพฤติกรรมที่ต้องการและเกณฑ์การยอมรับ จำลองปัญหาก่อนแก้เมื่อทำได้
+4. แก้ไขให้น้อยที่สุดแต่ครบเป็นเรื่องเดียว และรักษาการแก้ไขเดิมของผู้ใช้ หากการแก้ไขทับซ้อนกับสิ่งที่ต้องทำ ให้หยุดและถามวิธีจัดการ
+5. รัน Test, Lint, Type Check หรือ Build ที่มีและเกี่ยวข้องตามผลกระทบ สำหรับ Harness นี้ ให้รัน python scripts/validate_repo.py เมื่อแก้ Skill หรือ Configuration
+6. ทบทวน Diff สุดท้ายเพื่อหาไฟล์ที่เปลี่ยนโดยไม่ตั้งใจ Secret ไฟล์ที่สร้างขึ้น และการถดถอยของพฤติกรรม แยกปัญหาที่มีอยู่ก่อนออกจากปัญหาใหม่ด้วยหลักฐาน
+7. รายงานไฟล์ที่เปลี่ยน ผลการตรวจ ความเสี่ยงที่เหลือ และการดำเนินการถัดไป หากการส่งต่องานมี Commit หรือ Pull Request ให้ใช้ github-workflow
 
-For UI changes, inspect the rendered behavior when tooling is available.
-For data migrations or destructive changes, establish the target, recovery plan, and required approval before execution.
-Never claim a test passed if it was not run; explain unavailable checks.
+สำหรับการแก้ไข UI ให้ตรวจพฤติกรรมที่ Render แล้วเมื่อมีเครื่องมือ
+สำหรับ Data Migration หรือการเปลี่ยนแปลงที่ทำลายข้อมูล ให้ยืนยันเป้าหมาย แผนกู้คืน และการอนุมัติที่จำเป็นก่อนดำเนินการ
+ห้ามอ้างว่า Test ผ่าน หากยังไม่ได้รัน ให้ระบุการตรวจที่ทำไม่ได้
 
-## Git handoff
+## การส่งต่องาน Git
 
-Inspect current repository rules before choosing branch names, commit style, or merge strategy.
-Use English for branch names, commit messages, PR text, and code comments unless explicitly instructed otherwise.
-Stage only intended changes, and inspect the staged diff before an authorized commit.
-Do not reset user work, force-push, alter branch protections, or bypass failed checks without the relevant explicit authority.
-Branch protection is a configurable GitHub feature, not evidence that this repository currently has it enabled.
+ตรวจ Rules ของ Repository ก่อนเลือกชื่อ Branch รูปแบบ Commit หรือวิธี Merge
+ใช้ภาษาอังกฤษสำหรับชื่อ Branch ข้อความ Commit ข้อความ Pull Request และ Code Comment เว้นแต่ผู้ใช้สั่งเป็นอย่างอื่น
+Stage เฉพาะการเปลี่ยนแปลงที่ตั้งใจ และตรวจ Staged Diff ก่อน Commit ที่ได้รับอนุญาต
+ห้าม Reset งานของผู้ใช้ Force Push เปลี่ยน Branch Protection หรือข้าม Check ที่ล้มเหลว หากยังไม่มีอำนาจชัดเจน
+Branch Protection เป็นความสามารถที่ตั้งค่าได้ใน GitHub ไม่ใช่หลักฐานว่า Repository นี้เปิดใช้แล้ว
 
-## Output
+## ผลลัพธ์
 
-- Outcome and scope.
-- Files changed or review findings with locations.
-- Verification: command, observed result, and limitations.
-- Known risks and proposed recovery when relevant.
-- Git status/actions actually taken; deployment status separately.
+- ผลลัพธ์และขอบเขตงาน
+- ไฟล์ที่เปลี่ยนหรือผลตรวจพร้อมตำแหน่ง
+- การตรวจสอบ: คำสั่ง ผลที่พบ และข้อจำกัด
+- ความเสี่ยงที่ทราบและแนวทางกู้คืนเมื่อเกี่ยวข้อง
+- สถานะ Git และการดำเนินการที่ทำจริง แยกสถานะ Deploy ออกมาต่างหาก
 
-## Examples and acceptance checks
+## ตัวอย่างและเกณฑ์ตรวจรับ
 
-- User asks for a plan: return design and test strategy with no implementation.
-- User asks to fix one failing unit test: investigate behavior, patch the relevant code/test, run targeted verification, preserve unrelated edits.
-- Skill change in this harness: validate frontmatter and references; report structural validation separately from behavioral testing.
-- No Git metadata: local changes can be complete, but no commit or branch is claimed.
-- Failing required CI: report the blocker; do not disable the check to merge.
+- ผู้ใช้ขอแผน: ส่งแบบออกแบบและกลยุทธ์ Test โดยไม่ Implement
+- ผู้ใช้ขอแก้ Unit Test ที่ล้มเหลว: ตรวจพฤติกรรม แก้โค้ดหรือ Test ที่เกี่ยวข้อง รันการตรวจเฉพาะจุด และรักษาการแก้ไขที่ไม่เกี่ยวข้อง
+- เปลี่ยน Skill ใน Harness นี้: ตรวจ Frontmatter และ Reference แยกผลตรวจโครงสร้างออกจากการทดสอบพฤติกรรม
+- ไม่มีข้อมูล Git: การแก้ไขในเครื่องอาจเสร็จได้ แต่ห้ามอ้างว่ามี Commit หรือ Branch
+- CI ที่จำเป็นล้มเหลว: รายงานเป็นตัวขัดขวาง ห้ามปิด Check เพื่อให้ Merge ได้
 
-## Sources and adoption
+## แหล่งที่มาและการนำไปใช้
 
-Local linked rules and workflow, reviewed 2026-09-14.
-[GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches), accessed 2026-09-14: reference for configurable review and status-check requirements.
-Before adoption, the technical owner should confirm test commands, review requirements, branch conventions, and deployment authority for each repository.
+อ้างอิง Rules และขั้นตอนภายในที่เชื่อมโยงไว้ ตรวจทานเมื่อวันที่ 14 กันยายน 2569
+[GitHub Protected Branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) เข้าถึงเมื่อวันที่ 14 กันยายน 2569 เป็นแหล่งอ้างอิงเรื่องการตรวจทานและ Status Check ที่ตั้งค่าได้
+ก่อนนำไปใช้ เจ้าของด้านเทคนิคควรยืนยันคำสั่ง Test ข้อกำหนดการตรวจทาน ข้อตกลงเรื่อง Branch และอำนาจ Deploy ของแต่ละ Repository

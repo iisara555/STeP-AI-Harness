@@ -1,9 +1,9 @@
 ---
 name: tor-government-writing
-description: Draft and structure Thai government-style Terms of Reference (TOR) for STeP procurement work using current official guidance, measurable requirements, fair competition, traceability, and approval gates. Use when creating or substantially revising a TOR.
+description: ร่างและจัดโครงสร้าง Terms of Reference (TOR) รูปแบบงานราชการไทยสำหรับงานจัดซื้อจัดจ้างของ STeP โดยใช้แนวทางทางการปัจจุบัน ข้อกำหนดที่วัดได้ การแข่งขันที่เป็นธรรม Traceability และจุดอนุมัติ ใช้เมื่อสร้างหรือแก้ไข TOR อย่างมีสาระสำคัญ
 ---
 
-# Government TOR Writing
+# การเขียน TOR งานราชการ
 
 ฉบับตั้งต้นจากการสำรวจแหล่งราชการ ณ วันที่ 14 กันยายน 2569
 Skill นี้ช่วยจัดทำ “ร่าง” TOR ไม่ใช่การวินิจฉัยกฎหมาย การกำหนดวิธีจัดซื้อจัดจ้าง การอนุมัติงบประมาณ หรือการรับรองว่าเอกสารพร้อมประกาศ
@@ -20,7 +20,7 @@ TOR ที่ดีต้องทำให้ผู้เสนอราคา�
 6. ใช้ตัวเลข วันส่งมอบ งวดงาน ค่าปรับ การรับประกัน และน้ำหนักเกณฑ์เฉพาะเมื่อมีแหล่งที่มาและผู้รับผิดชอบยืนยัน
 7. อย่าอ้างว่าเป็น TOR ที่ถูกต้องตามกฎหมายหรือพร้อมประกาศจนกว่าฝ่ายพัสดุ ผู้เชี่ยวชาญงาน และผู้มีอำนาจจะตรวจรับรอง
 
-อ่าน [บริบท STeP](../../../docs/step-context.md), [มาตรฐานการเขียน](../../../rules/step-writing.md) และ [Human Approval](../../../rules/human-approval.md) ก่อนเริ่ม
+อ่าน [บริบท STeP](../../../docs/step-context.md), [มาตรฐานการเขียน](../../../rules/step-writing.md) และ [การอนุมัติโดยมนุษย์](../../../rules/human-approval.md) ก่อนเริ่ม
 
 ## ขอบเขตงานและประเภทโครงการ
 

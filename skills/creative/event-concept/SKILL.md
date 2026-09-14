@@ -1,16 +1,15 @@
 ---
 name: event-concept
-description: Develop evidence-based event, exhibition, booth, ceremony, and visitor-experience concepts for STeP projects, linking narrative, audience journey, spatial elements, production feasibility, and TOR constraints.
+description: พัฒนาแนวคิดงาน Event นิทรรศการ Booth พิธีการ และประสบการณ์ผู้เข้าชมสำหรับโครงการ STeP โดยเชื่อมเรื่องเล่า เส้นทางผู้ชม องค์ประกอบพื้นที่ ความเป็นไปได้ในการผลิต และข้อจำกัดของ TOR
 ---
 
-# Event Concept
+# แนวคิดงาน Event
 
-1. อ่าน TOR, site plan, stakeholder goals, audience, budget range และข้อจำกัดพื้นที่ก่อน
-2. สกัดแก่นเรื่องเป็น Concept statement หนึ่งประโยคโดยไม่อ้างสิ่งที่โครงการทำไม่ได้
-3. แปลง Concept เป็น Visitor journey: เห็น → เข้าใจ → มีส่วนร่วม → จดจำ → ดำเนินการต่อ
-4. เชื่อม Key visual, entrance, stage, booth, check-in, signage, lighting, media และ souvenir ให้เป็นระบบเดียว
+1. อ่าน TOR, Site Plan, เป้าหมายของผู้มีส่วนได้ส่วนเสีย กลุ่มผู้ชม ช่วงงบประมาณ และข้อจำกัดพื้นที่ก่อน
+2. สกัดแก่นเรื่องเป็น Concept Statement หนึ่งประโยคโดยไม่อ้างสิ่งที่โครงการทำไม่ได้
+3. แปลง Concept เป็นเส้นทางผู้เข้าชม: เห็น → เข้าใจ → มีส่วนร่วม → จดจำ → ดำเนินการต่อ
+4. เชื่อม Key Visual, Entrance, Stage, Booth, Check-in, Signage, Lighting, Media และ Souvenir ให้เป็นระบบเดียว
 5. ระบุวัสดุ ขนาดโดยประมาณ วิธีผลิต การติดตั้ง การเข้าถึง และความเสี่ยงหน้างาน
-6. ทำ Compliance matrix เทียบ TOR ทีละข้อและทำเครื่องหมายสิ่งที่ยังขาด
+6. ทำ Compliance Matrix เทียบ TOR ทีละข้อ และทำเครื่องหมายสิ่งที่ยังขาด
 
-อย่าเริ่มจากความสวยงามเพียงอย่างเดียว ต้องแสดงเหตุผลเชิงเนื้อหา ประสบการณ์ และความเป็นไปได้ในการผลิต
-
+อย่าเริ่มจากความสวยงามเพียงอย่างเดียว ต้องแสดงเหตุผลด้านเนื้อหา ประสบการณ์ และความเป็นไปได้ในการผลิต

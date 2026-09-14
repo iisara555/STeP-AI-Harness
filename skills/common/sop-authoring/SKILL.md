@@ -1,73 +1,73 @@
 ---
 name: sop-authoring
-description: Turn an established work process into a draft Standard Operating Procedure, or review an SOP for steps, handoffs, evidence, exceptions, and approval gaps.
+description: เปลี่ยนกระบวนการทำงานที่มีอยู่เป็นร่าง Standard Operating Procedure หรือทบทวน SOP ด้านขั้นตอน การส่งต่องาน หลักฐาน ข้อยกเว้น และช่องว่างการอนุมัติ
 ---
 
-# Standard Operating Procedure (SOP)
+# ขั้นตอนปฏิบัติงานมาตรฐาน (SOP)
 
-Starter draft, 2026-09-14. Process owner and approver: pending confirmation.
-This skill authors procedures; it does not make proposals into organizational policy.
+ร่างเริ่มต้น ณ วันที่ 14 กันยายน 2569 เจ้าของกระบวนการและผู้อนุมัติ: รอยืนยัน
+Skill นี้จัดทำขั้นตอนการทำงาน ไม่เปลี่ยนข้อเสนอให้เป็นนโยบายขององค์กรโดยอัตโนมัติ
 
-## Inputs and authority
+## ข้อมูลเข้าและอำนาจอ้างอิง
 
-Obtain the process purpose, start/end conditions, current practice, responsible roles, and approved source documents.
-Read [knowledge policy](../../../docs/knowledge-policy.md) and [human approval](../../../rules/human-approval.md).
-Meeting notes establish what was recorded, not necessarily an approved recurring process.
-Identify the source/version for every mandatory requirement. Label additions as proposed controls.
+รวบรวมวัตถุประสงค์กระบวนการ เงื่อนไขเริ่มต้นและสิ้นสุด วิธีปฏิบัติปัจจุบัน Role ที่รับผิดชอบ และเอกสารต้นทางที่ได้รับอนุมัติ
+อ่าน [นโยบายความรู้](../../../docs/knowledge-policy.md) และ [การอนุมัติโดยมนุษย์](../../../rules/human-approval.md)
+บันทึกการประชุมบอกสิ่งที่ถูกบันทึกไว้ ไม่ได้ยืนยันว่าเป็นกระบวนการประจำที่ได้รับอนุมัติแล้ว
+ระบุแหล่งที่มาและรุ่นสำหรับข้อกำหนดบังคับทุกข้อ หากเพิ่มสิ่งใดให้ติดป้ายว่าเป็นข้อควบคุมที่เสนอ
 
-## Workflow
+## ขั้นตอนการทำงาน
 
-1. Bound the process: trigger, prerequisites, output, and exclusions.
-2. Extract observed steps and explicit decisions. Separate current practice, approved requirements, and proposed improvements.
-3. For each step record an action, responsible role, input, output/evidence, and completion condition.
-4. Add handoff acceptance criteria and the action when a prerequisite or review fails.
-5. Record exceptions, escalation route, and recovery approach. Keep unknown owners, deadlines, and service targets unconfirmed.
-6. Walk one normal case and one missing-input case through the procedure. Fix gaps that prevent a person from completing the process.
-7. Return a reviewable draft with unresolved decisions. An approved status requires evidence of approval.
+1. กำหนดขอบเขตกระบวนการ: Trigger, เงื่อนไขก่อนเริ่ม, ผลลัพธ์ และสิ่งที่ไม่รวม
+2. สกัดขั้นตอนที่พบและมติที่ระบุชัด แยกวิธีปฏิบัติปัจจุบัน ข้อกำหนดที่อนุมัติแล้ว และการปรับปรุงที่เสนอ
+3. สำหรับแต่ละขั้นตอนบันทึก Action, Role ที่รับผิดชอบ, Input, Output/หลักฐาน และเงื่อนไขจบ
+4. เพิ่มเกณฑ์รับมอบงานระหว่างจุดส่งต่อ และการกระทำเมื่อเงื่อนไขก่อนเริ่มหรือการตรวจทานไม่ผ่าน
+5. บันทึกข้อยกเว้น ช่องทาง Escalate และแนวทางกู้คืน เก็บเจ้าของงาน กำหนดเวลา และเป้าหมายบริการที่ยังไม่ทราบไว้เป็นรอยืนยัน
+6. ทดลองเดินกระบวนการด้วยกรณีปกติ 1 กรณีและกรณีข้อมูลไม่ครบ 1 กรณี แก้ช่องว่างที่ทำให้ผู้ปฏิบัติงานทำงานต่อไม่ได้
+7. ส่งร่างที่ตรวจทานได้พร้อมรายการตัดสินใจที่ยังค้าง สถานะ Approved ต้องมีหลักฐานการอนุมัติ
 
-Use Thai for the business SOP unless requested otherwise.
-For a requested Thai official-style DOCX, use the available document-authoring skill and supplied agency template; verify the generated file and layout.
-If no approved form exists, label the layout provisional rather than claiming official conformity.
+ใช้ภาษาไทยสำหรับ SOP ของงาน เว้นแต่ผู้ใช้ขอเป็นภาษาอื่น
+หากต้องการ DOCX รูปแบบราชการไทย ให้ใช้ Skill จัดทำเอกสารที่มีอยู่และแบบฟอร์มของหน่วยงาน พร้อมตรวจไฟล์และรูปแบบการจัดหน้า
+หากยังไม่มีแบบฟอร์มที่ได้รับอนุมัติ ให้ติดป้ายรูปแบบว่าเป็นแบบชั่วคราว ไม่อ้างว่าเป็นแบบราชการที่ถูกต้อง
 
-## Output template
+## แบบฟอร์มผลลัพธ์
 
-# [Process title]
-- Document ID / version: [proposed or supplied]
-- Status: Draft / Approved only with evidence
-- Owner / reviewer / approver: [confirmed role or pending]
-- Effective date: [only if approved]
-- Purpose, scope, trigger, prerequisites
-- Source documents and versions
+# [ชื่อกระบวนการ]
+- รหัสเอกสาร / รุ่น: [เสนอหรือมีอยู่แล้ว]
+- สถานะ: ร่าง / Approved เมื่อมีหลักฐานเท่านั้น
+- เจ้าของ / ผู้ตรวจ / ผู้อนุมัติ: [Role ที่ยืนยันแล้วหรือรอยืนยัน]
+- วันที่มีผล: [ใส่เมื่ออนุมัติแล้วเท่านั้น]
+- วัตถุประสงค์ ขอบเขต Trigger และเงื่อนไขก่อนเริ่ม
+- เอกสารต้นทางและรุ่น
 
-| Step | Responsible role | Input | Action | Output / evidence | Acceptance / next step |
+| ขั้นตอน | Role ที่รับผิดชอบ | Input | Action | Output / หลักฐาน | เกณฑ์รับงาน / ขั้นตอนถัดไป |
 |---|---|---|---|---|---|
 
-## Exceptions and escalation
-[Condition, safe response, escalation role, and resumption criterion]
+## ข้อยกเว้นและการส่งต่อ
+[เงื่อนไข การตอบสนองที่ปลอดภัย Role ที่รับการส่งต่อ และเกณฑ์กลับมาทำงานต่อ]
 
-## Records
-[Record type, approved storage location, access, retention source or pending decision]
+## บันทึก
+[ประเภทบันทึก พื้นที่เก็บที่อนุมัติ สิทธิ์เข้าถึง แหล่งระยะเวลาเก็บ หรือคำถามที่ยังรอยืนยัน]
 
-## Review decisions
-[Missing information, proposed controls, approver questions]
+## มติที่ต้องตรวจ
+[ข้อมูลที่ขาด ข้อควบคุมที่เสนอ คำถามสำหรับผู้อนุมัติ]
 
-## Worked example: CC weekly meeting follow-up
+## ตัวอย่าง: การติดตามงานหลังประชุมประจำสัปดาห์ทีม CC
 
-Use [team-weekly-review](../team-weekly-review/SKILL.md) when the input is a weekly meeting record.
-Proposed sequence: obtain notes -> draft decisions/actions -> responsible person confirms -> prepare the approved-format report.
-An owner or due date absent from the notes stays unconfirmed.
-An item mentioning ClickUp does not authorize creating or changing a task.
-A January meeting example is illustrative, not a recurring schedule or permanent assignment.
+ใช้ [team-weekly-review](../team-weekly-review/SKILL.md) เมื่อข้อมูลเข้าเป็นบันทึกประชุมประจำสัปดาห์
+ลำดับที่เสนอ: รับบันทึก -> ร่างมติและงาน -> ผู้รับผิดชอบยืนยัน -> จัดทำรายงานตามแบบที่อนุมัติ
+หากบันทึกไม่มีเจ้าของงานหรือกำหนดส่ง ให้คงเป็นรอยืนยัน
+การกล่าวถึง ClickUp ไม่ใช่การอนุญาตให้สร้างหรือแก้ไขงาน
+ตัวอย่างการประชุมเดือนมกราคมเป็นเพียงตัวอย่าง ไม่ใช่ตารางประจำหรือการมอบหมายถาวร
 
-## Acceptance checks
+## เกณฑ์ตรวจรับ
 
-- Every step ends with an observable output or decision.
-- A reviewer can distinguish existing obligations from suggestions.
-- The missing-owner case stops at a confirmation request, not an invented assignment.
-- A report is not marked approved or effective without the appropriate evidence.
+- ทุกขั้นตอนจบด้วยผลลัพธ์หรือมติที่สังเกตได้
+- ผู้ตรวจแยกข้อผูกพันที่มีอยู่แล้วออกจากข้อเสนอได้
+- กรณีเจ้าของงานไม่ระบุให้หยุดที่คำขอยืนยัน ไม่แต่งการมอบหมาย
+- ห้ามระบุรายงานว่า Approved หรือมีผลแล้ว หากไม่มีหลักฐานที่เหมาะสม
 
-## Basis and adoption
+## แหล่งที่มาและการนำไปใช้
 
-Derived from the linked local knowledge and approval policies, reviewed 2026-09-14.
-No ISO certification or external compliance is asserted.
-Before adoption, the process owner must validate steps, records, exceptions, and authority.
+สกัดจากนโยบายความรู้และการอนุมัติภายในที่เชื่อมโยงไว้ ตรวจทานเมื่อวันที่ 14 กันยายน 2569
+ไม่ได้อ้างการรับรอง ISO หรือการปฏิบัติตามมาตรฐานภายนอก
+ก่อนนำไปใช้ เจ้าของกระบวนการต้องตรวจขั้นตอน บันทึก ข้อยกเว้น และอำนาจอนุมัติ

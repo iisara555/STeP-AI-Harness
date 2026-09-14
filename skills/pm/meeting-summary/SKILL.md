@@ -1,16 +1,15 @@
 ---
 name: meeting-summary
-description: Turn STeP meeting notes, transcripts, or chats into concise minutes with decisions, owners, due dates, open questions, dependencies, and follow-up actions without inventing missing commitments.
+description: เปลี่ยนบันทึกประชุม Transcript หรือ Chat ของ STeP เป็นรายงานสั้นที่มีมติ เจ้าของงาน กำหนดส่ง คำถามค้าง Dependency และงานติดตาม โดยไม่แต่งคำมั่นที่ไม่มีในต้นทาง
 ---
 
-# Meeting Summary
+# สรุปการประชุม
 
-1. แยกข้อมูลเป็น Decision, Action, Information, Risk และ Open question
+1. แยกข้อมูลเป็นมติ งานที่ต้องทำ ข้อมูลแจ้งให้ทราบ ความเสี่ยง และคำถามค้าง
 2. เก็บถ้อยคำสำคัญ ชื่อโครงการ ตัวเลข และวันตามต้นฉบับ
-3. สำหรับทุก Action ระบุ Owner, Due date และ Dependency ถ้ามี
-4. ถ้าต้นทางไม่ระบุ Owner หรือวัน ให้เขียน `ยังไม่ระบุ` ห้ามคาดเดา
+3. สำหรับทุกงานที่ต้องทำ ระบุเจ้าของงาน กำหนดส่ง และ Dependency เมื่อมีข้อมูล
+4. ถ้าต้นทางไม่ระบุเจ้าของงานหรือวัน ให้เขียน "ยังไม่ระบุ" ห้ามคาดเดา
 5. รวมประเด็นซ้ำและแยกข้อเสนอที่ยังไม่อนุมัติออกจากมติ
 6. ตรวจข้อมูลส่วนบุคคลก่อนเผยแพร่หรือเก็บเป็น Knowledge
 
-ส่งออกเป็น Summary สั้น, Decisions, Action table, Risks/Open questions และ Next meeting checkpoint
-
+ส่งออกเป็น Summary สั้น มติ ตารางงานที่ต้องทำ ความเสี่ยง/คำถามค้าง และจุดตรวจการประชุมครั้งถัดไป
