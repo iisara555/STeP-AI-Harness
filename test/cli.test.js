@@ -24,6 +24,13 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(roleIds.includes('developer'), 'Should include developer role');
     assert.ok(roleIds.includes('creative'), 'Should include creative role');
     assert.ok(roleIds.includes('ai-admin'), 'Should include ai-admin role');
+    assert.ok(roleIds.includes('all'), 'Should include all role');
+    assert.ok(roleIds.includes('staff'), 'Should include staff role');
+
+    const allFiles = await resolveRoleFiles('all');
+    assert.equal(allFiles.role.id, 'all');
+    const allSkillPaths = allFiles.files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
+    assert.equal(allSkillPaths.length, 19, 'Universal role should resolve all 19 skills');
 
     const pmFiles = await resolveRoleFiles('pm');
     assert.equal(pmFiles.role.id, 'pm');

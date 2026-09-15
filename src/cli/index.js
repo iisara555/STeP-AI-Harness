@@ -58,7 +58,7 @@ ${colors.bold('คำสั่งหลัก:')}
   ${colors.cyan('rollback')}   ย้อนกลับรุ่นก่อนหน้าจาก Backup Snapshot
 
 ${colors.bold('ตัวเลือกทั่วไป:')}
-  -r, --role <id>       ระบุ Role (creative, pm, developer, ai-admin)
+  -r, --role <id>       ระบุ Role (all, staff, creative, pm, developer, ai-admin) [default: all]
   -t, --tool <name>     ระบุเครื่องมือ (claude, cursor, codex, all) [default: codex]
   -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
       --dry-run         แสดงตัวอย่างไฟล์ที่จะดำเนินการโดยไม่เขียนลงเครื่อง
@@ -68,10 +68,10 @@ ${colors.bold('ตัวเลือกทั่วไป:')}
   -v, --version         แสดงเวอร์ชันของแพ็กเกจ
 
 ${colors.bold('ตัวอย่างการใช้งาน:')}
-  step-ai init --role developer --tool claude
-  step-ai init --role pm --tool cursor
-  step-ai init --role creative --tool codex
-  step-ai init --role ai-admin --tool all
+  step-ai init                      # ติดตั้งทุก Skill สำหรับ Codex (Universal Access)
+  step-ai init --tool claude        # ติดตั้งทุก Skill สำหรับ Claude Code
+  step-ai init --tool cursor        # ติดตั้งทุก Skill สำหรับ Cursor
+  step-ai init --tool all           # ติดตั้งทุก Skill สำหรับทุก Agent ในโปรเจกต์
   step-ai status
   step-ai sync
   step-ai doctor

@@ -1,5 +1,15 @@
 version: 1
 roles:
+  - id: all
+    description: Universal access - all approved skills and rules for STeP staff
+    resources:
+      knowledge: [common, creative, pm, dev]
+      skills: [common, creative, pm, dev]
+  - id: staff
+    description: All STeP staff (universal access to all skills)
+    resources:
+      knowledge: [common, creative, pm, dev]
+      skills: [common, creative, pm, dev]
   - id: creative
     description: Creative communication, design, event and exhibition work
     resources:

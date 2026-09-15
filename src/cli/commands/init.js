@@ -12,22 +12,16 @@ import { join } from 'node:path';
 export async function runInit(args) {
   header('Initialize Approved Skills for Workspace');
 
-  const roleId = args.role || args.r;
+  const rawRoleId = args.role || args.r;
+  const roleId = (rawRoleId || 'all').toLowerCase();
   const tool = (args.tool || args.t || 'codex').toLowerCase();
   const dest = resolve(process.cwd(), args.dest || args.d || '.');
   const isDryRun = Boolean(args['dry-run']);
 
   const roles = await getAvailableRoles();
 
-  if (!roleId) {
-    warn('กรุณาระบุ Role ที่ต้องการติดตั้ง');
-    console.log(`\nRole ที่รองรับในระบบ:`);
-    for (const r of roles) {
-      console.log(`  - ${colors.bold(r.id.padEnd(12))}: ${r.description}`);
-    }
-    console.log(`\nเครื่องมือที่รองรับ (--tool): ${colors.cyan(getSupportedTools().join(', '))}`);
-    console.log(`\nตัวอย่างคำสั่ง:\n  step-ai init --role pm --tool claude\n  step-ai init --role developer --tool cursor\n  step-ai init --role pm --tool all\n`);
-    process.exit(1);
+  if (!rawRoleId) {
+    info(`โหมดการใช้งาน: ${colors.bold('Universal Access')} (ติดตั้งทุก Skill ให้ทุกคนเข้าถึงได้ ค่าเริ่มต้น role: 'all')`);
   }
 
   if (!isToolSupported(tool)) {
