@@ -102,11 +102,15 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     const psInstall = join(PACKAGE_ROOT, 'install', 'install-windows.ps1');
     const batUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.bat');
     const psUpdate = join(PACKAGE_ROOT, 'install', 'update-windows.ps1');
+    const batFeedback = join(PACKAGE_ROOT, 'Feedback-STeP-AI.bat');
+    const psFeedback = join(PACKAGE_ROOT, 'install', 'feedback-windows.ps1');
 
     assert.ok(await pathExists(batInstall), 'Install-STeP-AI.bat must exist at repo root');
     assert.ok(await pathExists(psInstall), 'install/install-windows.ps1 must exist');
     assert.ok(await pathExists(batUpdate), 'Update-STeP-AI.bat must exist at repo root');
     assert.ok(await pathExists(psUpdate), 'install/update-windows.ps1 must exist');
+    assert.ok(await pathExists(batFeedback), 'Feedback-STeP-AI.bat must exist at repo root');
+    assert.ok(await pathExists(psFeedback), 'install/feedback-windows.ps1 must exist');
 
     const batInstallContent = await readFile(batInstall, 'utf-8');
     assert.ok(batInstallContent.includes('install-windows.ps1'));
@@ -127,6 +131,9 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
 
     const batUpdateContent = await readFile(batUpdate, 'utf-8');
     assert.ok(batUpdateContent.includes('update-windows.ps1'));
+
+    const batFeedbackContent = await readFile(batFeedback, 'utf-8');
+    assert.ok(batFeedbackContent.includes('feedback-windows.ps1'));
   });
 
   await t.test('Case 6: Workspace init and step-ai update preserves settings', async () => {
@@ -178,11 +185,15 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     const shInstall = join(PACKAGE_ROOT, 'install', 'install-macos.sh');
     const cmdUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.command');
     const shUpdate = join(PACKAGE_ROOT, 'install', 'update-macos.sh');
+    const cmdFeedback = join(PACKAGE_ROOT, 'Feedback-STeP-AI.command');
+    const shFeedback = join(PACKAGE_ROOT, 'install', 'feedback-macos.sh');
 
     assert.ok(await pathExists(cmdInstall), 'Install-STeP-AI.command must exist at repo root');
     assert.ok(await pathExists(shInstall), 'install/install-macos.sh must exist');
     assert.ok(await pathExists(cmdUpdate), 'Update-STeP-AI.command must exist at repo root');
     assert.ok(await pathExists(shUpdate), 'install/update-macos.sh must exist');
+    assert.ok(await pathExists(cmdFeedback), 'Feedback-STeP-AI.command must exist at repo root');
+    assert.ok(await pathExists(shFeedback), 'install/feedback-macos.sh must exist');
 
     const cmdInstallContent = await readFile(cmdInstall, 'utf-8');
     assert.ok(cmdInstallContent.includes('install-macos.sh'));
@@ -211,6 +222,9 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
 
     const shUpdateContent = await readFile(shUpdate, 'utf-8');
     assert.ok(shUpdateContent.includes('step-ai.js" update'));
+
+    const cmdFeedbackContent = await readFile(cmdFeedback, 'utf-8');
+    assert.ok(cmdFeedbackContent.includes('feedback-macos.sh'));
   });
 
   await t.test('Case 9: macOS Platform Tool Detector detects Mac applications and profiles', async () => {
@@ -268,9 +282,11 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
   await t.test('Case 11: Windows Installer and Updater PowerShell script encoding & syntax', async () => {
     const installPs1Path = join(PACKAGE_ROOT, 'install', 'install-windows.ps1');
     const updatePs1Path = join(PACKAGE_ROOT, 'install', 'update-windows.ps1');
+    const feedbackPs1Path = join(PACKAGE_ROOT, 'install', 'feedback-windows.ps1');
 
     const installBuf = await readFile(installPs1Path);
     const updateBuf = await readFile(updatePs1Path);
+    const feedbackBuf = await readFile(feedbackPs1Path);
 
     // Verify UTF-8 BOM
     assert.equal(installBuf[0], 0xef, 'install-windows.ps1 must start with UTF-8 BOM byte 0');
@@ -281,9 +297,13 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     assert.equal(updateBuf[1], 0xbb, 'update-windows.ps1 must start with UTF-8 BOM byte 1');
     assert.equal(updateBuf[2], 0xbf, 'update-windows.ps1 must start with UTF-8 BOM byte 2');
 
+    assert.equal(feedbackBuf[0], 0xef, 'feedback-windows.ps1 must start with UTF-8 BOM byte 0');
+    assert.equal(feedbackBuf[1], 0xbb, 'feedback-windows.ps1 must start with UTF-8 BOM byte 1');
+    assert.equal(feedbackBuf[2], 0xbf, 'feedback-windows.ps1 must start with UTF-8 BOM byte 2');
+
     // On Windows, verify parser validation via powershell.exe
     if (process.platform === 'win32') {
-      for (const psFile of [installPs1Path, updatePs1Path]) {
+      for (const psFile of [installPs1Path, updatePs1Path, feedbackPs1Path]) {
         const psScript = `
           $err = $null
           $tok = $null

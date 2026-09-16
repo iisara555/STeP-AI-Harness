@@ -41,8 +41,10 @@ def build_pilot_bundle():
     include_files = [
         "Install-STeP-AI.bat",
         "Update-STeP-AI.bat",
+        "Feedback-STeP-AI.bat",
         "Install-STeP-AI.command",
         "Update-STeP-AI.command",
+        "Feedback-STeP-AI.command",
         "package.json",
         "README.md",
         "culture.md",
