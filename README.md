@@ -2,6 +2,18 @@
 ### ระบบกำกับดูแลและกระจาย AI Skills & Rules ระดับองค์กร
 **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)**
 
+```text
+================================================================
+   ____ _____     ____       _    ___ 
+  / ___|_   _|___|  _ \     / \  |_ _|   STeP AI Harness (Pilot v0.2)
+  \___ \ | | / _ \ |_) |   / _ \  | |    Enterprise AI Architecture
+   ___) || ||  __/  __/   / ___ \ | |    22 Teams - 5 Clusters
+  |____/ |_| \___|_|     /_/   \_\___|
+================================================================
+  อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)
+================================================================
+```
+
 ---
 
 **STeP AI Harness** คือคลังต้นแบบภายในสำหรับนำความรู้ขององค์กร มาตรฐานการทำงาน และขั้นตอนที่ใช้ซ้ำได้มาใช้ร่วมกันในบุคลากรทั้ง **22 ทีม (5 กลุ่มงาน)** ของอุทยานฯ เพื่อให้สามารถใช้งาน AI Agents (ครอบคลุมทั้ง **สายฟรีมีโควตา**, **สายจ่ายตังค์**, และ **สาย Local AI** เช่น **Cursor**, **OpenCode**, **Claude Desktop**, **ChatGPT Desktop**, **Google Antigravity & Spark**, **Hermes Agent**, **Windsurf**, และ **VS Code**) ได้อย่างมีประสิทธิภาพ ปลอดภัย และถูกต้องตามระเบียบของมหาวิทยาลัยเชียงใหม่และหน่วยงานราชการ
@@ -10,7 +22,7 @@
 > **นโยบายระยะทดลอง (Universal Access Model & 22-Team Routing):**  
 > • **พนักงานทั่วไป:** ดาวน์โหลดแล้วดับเบิลคลิกติดตั้งได้ทันที ไม่ต้องรู้เรื่อง Git, Node หรือคำสั่ง Terminal  
 > • **ระบบ Guided Wizard:** หากเครื่องยังไม่มีโปรแกรม AI เลย ระบบจะถามนำทางและช่วยเปิดหน้าเว็บดาวน์โหลดโปรแกรมสายฟรี (เช่น OpenCode หรือ Cursor) ให้ทันทีผ่านเบราว์เซอร์  
-> • **การเข้าถึง:** พนักงานทุกคนสามารถเข้าถึงและใช้งาน Approved Skills ได้อย่างยืดหยุ่น โดยมี **Layer 1 Router** คอยคัดเลือกทักษะที่ถูกต้องให้อัตโนมัติตามบริบทงาน
+> • **แบ่ง 2 โหมดชัดเจน:** แยก **Employee Mode** (แชทภาษาไทยปกติ / One-Click Launchers) ออกจาก **Champion/Admin Mode** (จัดการ Skills / Review / Test) เพื่อให้พนักงานใช้งานได้อย่างสบายใจที่สุด
 
 ---
 
@@ -46,7 +58,20 @@
 > **คำแนะนำสำหรับ macOS (Gatekeeper Tip):**  
 > หากเปิดครั้งแรกแล้ว macOS แจ้งเตือนเรื่องนักพัฒนาที่ไม่รู้จัก ให้คลิกขวาที่ไฟล์ `Install-STeP-AI.command` แล้วเลือก **Open (เปิด)** หรือไปที่ System Settings $\rightarrow$ Privacy & Security แล้วกด **Open Anyway**
 
-### 🔄 การอัปเดตเมื่อมีทักษะใหม่
+### 💬 การส่งข้อเสนอแนะ หรือของานเพิ่ม (สำหรับพนักงานทั่วไป)
+พนักงานสามารถส่งข้อเสนอแนะได้ **2 ทางง่ายๆ**:
+1. **คุยกับ AI ตามปกติในแชท (วิธีหลักอันดับ 1 — สะดวกที่สุด):**
+   - **เมื่อ AI ตอบไม่ถูก:** พิมพ์บอกในแชท: *"เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย"* $\rightarrow$ AI สรุปประเด็นแล้วถามยืนยันสั้นๆ เพื่อส่งต่อให้ทีมงาน
+   - **เมื่ออยากให้ช่วยงานเพิ่ม:** พิมพ์บอกในแชท: *"อยากให้ STeP AI ช่วยงานนี้..."* $\rightarrow$ AI จะถามรายละเอียด 3 ข้อสั้นๆ แล้วบันทึกให้ทันที
+2. **ดับเบิลคลิกปุ่มลัด `Feedback-STeP-AI` (เมื่อไม่ได้เปิด AI อยู่):**
+   - **Windows:** ดับเบิลคลิก **`Feedback-STeP-AI.bat`**
+   - **macOS:** ดับเบิลคลิก **`Feedback-STeP-AI.command`**
+   - มีเพียง 2 ตัวเลือกที่เข้าใจง่าย:
+     - `[1] AI ตอบไม่ถูก / อยากแจ้งปัญหา` (เปิดแบบฟอร์ม `FEEDBACK.md` ใน Notepad ทันที)
+     - `[2] อยากให้ AI ช่วยงานเพิ่ม` (เปิดแบบฟอร์ม `REQUEST_NEW_TASK.md` ใน Notepad ทันที)
+     - `[0] ปิด`
+
+### 🔄 การอัปเดตเมื่อมีทักษะและมาตรฐานใหม่
 - **Windows:** ดับเบิลคลิก **`Update-STeP-AI.bat`**
 - **macOS:** ดับเบิลคลิก **`Update-STeP-AI.command`**
 *(อ่านคู่มือพนักงานฉบับเต็มได้ที่ [docs/employee-guide.md](docs/employee-guide.md))*
@@ -414,14 +439,20 @@ sequenceDiagram
 
 ```bash
 # 1. ตรวจสอบความถูกต้องและสแกน Secret ในคลัง
-py scripts/validate_repo.py
+python scripts/validate_repo.py
 
-# 2. รันชุดทดสอบความถูกต้องอัตโนมัติ (CLI, Router, Employee Queries, Installer)
+# 2. รันชุดทดสอบความถูกต้องอัตโนมัติ 70 เคส (CLI, Router, 25 Employee Queries, Installer)
 npm test
 
 # 3. อัปเดตไฟล์ตัวติดตั้ง Zero-Terminal (Windows .ps1 และ macOS .sh)
-py scripts/update_installers.py
+python scripts/update_installers.py
 
-# 4. บิลด์ไฟล์แจกจ่าย Pilot ZIP (STeP-AI-Pilot-v0.2.0.zip)
-py scripts/build_pilot_bundle.py
+# 4. อัปเดตสคริปต์ Feedback (Windows .ps1 และ macOS .sh)
+python scripts/generate_feedback_helpers.py
+
+# 5. บิลด์ไฟล์แจกจ่าย Pilot ZIP (STeP-AI-Pilot-v0.2.0.zip)
+python scripts/build_pilot_bundle.py
+
+# 6. เปิดโหมดผู้ดูแลระบบ (Champion / Admin Mode)
+step-ai feedback --admin
 ```
