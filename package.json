@@ -17,6 +17,8 @@
     "install",
     "Install-STeP-AI.bat",
     "Update-STeP-AI.bat",
+    "Install-STeP-AI.command",
+    "Update-STeP-AI.command",
     "skills",
     "rules",
     "manifest/roles.yaml",

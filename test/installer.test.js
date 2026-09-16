@@ -156,4 +156,62 @@ test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);
   });
+
+  await t.test('Case 8: Verification of macOS Finder command and shell scripts', async () => {
+    const cmdInstall = join(PACKAGE_ROOT, 'Install-STeP-AI.command');
+    const shInstall = join(PACKAGE_ROOT, 'install', 'install-mac.sh');
+    const cmdUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.command');
+    const shUpdate = join(PACKAGE_ROOT, 'install', 'update-mac.sh');
+
+    assert.ok(await pathExists(cmdInstall), 'Install-STeP-AI.command must exist at repo root');
+    assert.ok(await pathExists(shInstall), 'install/install-mac.sh must exist');
+    assert.ok(await pathExists(cmdUpdate), 'Update-STeP-AI.command must exist at repo root');
+    assert.ok(await pathExists(shUpdate), 'install/update-mac.sh must exist');
+
+    const cmdInstallContent = await readFile(cmdInstall, 'utf-8');
+    assert.ok(cmdInstallContent.includes('install-mac.sh'));
+    assert.ok(cmdInstallContent.includes('dirname "$0"'));
+
+    const shInstallContent = await readFile(shInstall, 'utf-8');
+    assert.ok(shInstallContent.includes('STeP AI Setup'));
+    assert.ok(shInstallContent.includes('command -v node'));
+    assert.ok(shInstallContent.includes('Applications/Visual Studio Code.app'));
+    assert.ok(shInstallContent.includes('Applications/Cursor.app'));
+    assert.ok(shInstallContent.includes('Applications/Claude.app'));
+    // Verify top 5 pilot teams
+    assert.ok(shInstallContent.includes('QS'));
+    assert.ok(shInstallContent.includes('AFP'));
+    assert.ok(shInstallContent.includes('CC'));
+    assert.ok(shInstallContent.includes('MI'));
+    assert.ok(shInstallContent.includes('PITI'));
+
+    const cmdUpdateContent = await readFile(cmdUpdate, 'utf-8');
+    assert.ok(cmdUpdateContent.includes('update-mac.sh'));
+
+    const shUpdateContent = await readFile(shUpdate, 'utf-8');
+    assert.ok(shUpdateContent.includes('step-ai.js" update'));
+  });
+
+  await t.test('Case 9: macOS Platform Tool Detector detects Mac applications and profiles', async () => {
+    const tmpHome = join(PACKAGE_ROOT, 'tmp', 'fake-mac-home');
+    await rm(tmpHome, { recursive: true, force: true });
+    await mkdir(join(tmpHome, 'Library', 'Application Support', 'Code'), { recursive: true });
+    await mkdir(join(tmpHome, '.cursor'), { recursive: true });
+
+    try {
+      const macTools = await detectInstalledTools({ platform: 'darwin', home: tmpHome });
+      assert.ok(Array.isArray(macTools));
+      assert.equal(macTools.length, 3);
+
+      const codex = macTools.find((t) => t.id === 'codex');
+      const cursor = macTools.find((t) => t.id === 'cursor');
+      const claude = macTools.find((t) => t.id === 'claude');
+
+      assert.ok(codex && codex.installed === true, 'Codex should be detected via Library/Application Support/Code');
+      assert.ok(cursor && cursor.installed === true, 'Cursor should be detected via .cursor');
+      assert.ok(claude && claude.installed === false, 'Claude should not be detected if path does not exist');
+    } finally {
+      await rm(tmpHome, { recursive: true, force: true });
+    }
+  });
 });

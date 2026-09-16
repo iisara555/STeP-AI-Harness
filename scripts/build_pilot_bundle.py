@@ -41,6 +41,8 @@ def build_pilot_bundle():
     include_files = [
         "Install-STeP-AI.bat",
         "Update-STeP-AI.bat",
+        "Install-STeP-AI.command",
+        "Update-STeP-AI.command",
         "package.json",
         "README.md",
         "culture.md",
@@ -56,14 +58,23 @@ def build_pilot_bundle():
         "docs",
     ]
 
+    def add_file_to_zip(zf, fpath, arcname):
+        str_arc = str(arcname).replace('\\', '/')
+        zinfo = zipfile.ZipInfo.from_file(fpath, arcname=str_arc)
+        if str_arc.endswith(('.sh', '.command')):
+            zinfo.external_attr = 0o755 << 16  # Unix executable permissions rwxr-xr-x
+        else:
+            zinfo.external_attr = 0o644 << 16  # Unix regular file permissions rw-r--r--
+        with open(fpath, 'rb') as src:
+            zf.writestr(zinfo, src.read(), compress_type=zipfile.ZIP_DEFLATED)
+
     file_count = 0
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         # Add root files
         for fname in include_files:
             fpath = ROOT / fname
             if fpath.exists():
-                arcname = fname
-                zf.write(fpath, arcname)
+                add_file_to_zip(zf, fpath, fname)
                 file_count += 1
             else:
                 print(f"  [WARN] Missing file: {fname}")
@@ -82,7 +93,7 @@ def build_pilot_bundle():
                     if f.endswith((".pyc", ".DS_Store", ".tmp")) or "__pycache__" in str(full_p):
                         continue
                     arcname = full_p.relative_to(ROOT)
-                    zf.write(full_p, arcname)
+                    add_file_to_zip(zf, full_p, arcname)
                     file_count += 1
 
     size_kb = zip_path.stat().st_size / 1024
