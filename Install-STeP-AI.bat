@@ -9,16 +9,16 @@ echo   \___ \ ^| ^| / _ \ ^|_) ^|   / _ \  ^| ^|    Enterprise AI Architecture
 echo    ___) ^|^| ^|^|  __/  __/   / ___ \ ^| ^|    22 Teams - 5 Clusters
 echo   ^|____/ ^|_^| \___^|_^|     /_/   \_\___^|
 echo ================================================================
-echo   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)
+echo   STeP - Science and Technology Park, Chiang Mai University
 echo ================================================================
 echo.
-echo กำลังเริ่มต้นระบบติดตั้งสำหรับพนักงาน...
+echo Starting STeP AI setup wizard...
 echo.
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\install-windows.ps1"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
-    echo [ERROR] ไม่สามารถดำเนินการติดตั้งได้
+    echo [ERROR] Installation failed.
     pause
 )

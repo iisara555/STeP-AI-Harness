@@ -134,6 +134,11 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
 
     const batFeedbackContent = await readFile(batFeedback, 'utf-8');
     assert.ok(batFeedbackContent.includes('feedback-windows.ps1'));
+
+    // Verify CRLF line endings to prevent Windows cmd.exe parser desync
+    assert.ok(batInstallContent.includes('\r\n'), 'Install-STeP-AI.bat must use CRLF line endings');
+    assert.ok(batUpdateContent.includes('\r\n'), 'Update-STeP-AI.bat must use CRLF line endings');
+    assert.ok(batFeedbackContent.includes('\r\n'), 'Feedback-STeP-AI.bat must use CRLF line endings');
   });
 
   await t.test('Case 6: Workspace init and step-ai update preserves settings', async () => {

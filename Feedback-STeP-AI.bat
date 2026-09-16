@@ -1,22 +1,24 @@
 @echo off
 chcp 65001 > nul
-title STeP AI Feedback & Skills (Pilot v0.2)
+title STeP AI Feedback (Pilot v0.2)
 
 echo ================================================================
 echo    ____ _____     ____       _    ___ 
-echo   / ___^|_   _^|___^|  _ \     / \  ^|_ _^|   STeP AI Feedback & Skills
-echo   \___ \ ^| ^| / _ \ ^|_) ^|   / _ \  ^| ^|    ศูนย์รับฟังความคิดเห็นและเสนอทักษะ
-echo    ___) ^|^| ^|^|  __/  __/   / ___ \ ^| ^|    สำหรับพนักงานอุทยานฯ 22 ทีม
+echo   / ___^|_   _^|___^|  _ \     / \  ^|_ _^|   STeP AI Feedback and Tasks
+echo   \___ \ ^| ^| / _ \ ^|_) ^|   / _ \  ^| ^|    Enterprise AI Architecture
+echo    ___) ^|^| ^|^|  __/  __/   / ___ \ ^| ^|    22 Teams - 5 Clusters
 echo   ^|____/ ^|_^| \___^|_^|     /_/   \_\___^|
 echo ================================================================
-echo   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)
+echo   STeP - Science and Technology Park, Chiang Mai University
 echo ================================================================
+echo.
+echo Starting STeP AI feedback helper...
 echo.
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\feedback-windows.ps1"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
-    echo [ERROR] เกิดข้อผิดพลาดในการเปิดระบบ
+    echo [ERROR] Failed to open feedback helper.
     pause
 )
