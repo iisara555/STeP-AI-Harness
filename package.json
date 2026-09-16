@@ -8,7 +8,7 @@
     "step-ai": "./bin/step-ai.js"
   },
   "scripts": {
-    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js",
+    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js",
     "validate": "python scripts/validate_repo.py"
   },
   "files": [

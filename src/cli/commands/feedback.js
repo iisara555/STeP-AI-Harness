@@ -1,21 +1,8 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { exec } from 'node:child_process';
 import { header, success, info } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
-import { loadUserConfig } from '../../utils/user-config.js';
 
-const GITHUB_ISSUES_URL = 'https://github.com/iisara555/STeP-AI-Harness/issues/new';
-
-function openUrlInBrowser(url) {
-  const startCmd = process.platform === 'win32'
-    ? `start "" "${url}"`
-    : process.platform === 'darwin'
-      ? `open "${url}"`
-      : `xdg-open "${url}"`;
-
-  exec(startCmd, () => {});
-}
 
 export const FEEDBACK_TEMPLATE = `# แจ้งปัญหา / AI ตอบไม่ถูก (STeP AI Feedback)
 
@@ -70,8 +57,9 @@ export async function runFeedback(args) {
   const destDir = args.dest || args.d || process.cwd();
 
   if (args.open) {
-    info(`กำลังเปิดหน้าเว็บส่งข้อเสนอแนะผ่านเบราว์เซอร์: ${GITHUB_ISSUES_URL}`);
-    openUrlInBrowser(GITHUB_ISSUES_URL);
+    info('พนักงานทั่วไปไม่ต้องใช้ GitHub');
+    console.log('  พิมพ์ในแชทว่า "เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย"');
+    console.log('  หรือดับเบิลคลิก Feedback-STeP-AI แล้วส่งไฟล์ให้ AI Champion / ห้องแชทองค์กร\n');
     return;
   }
 

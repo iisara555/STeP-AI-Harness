@@ -52,13 +52,8 @@ echo -e "${GRAY}สถาปัตยกรรมระบบ: ${WHITE}${ARCH_DI
 echo -e "${GRAY}กำลังตรวจสอบ Node.js runtime...${NC}"
 if ! command -v node >/dev/null 2>&1; then
     echo ""
-    echo -e "${YELLOW}⚠️  ไม่พบ Node.js ในเครื่อง Mac ของคุณ${NC}"
-    echo -e "${GRAY}ระบบ STeP AI จำเป็นต้องใช้ Node.js (v20 ขึ้นไป) เพื่อประมวลผล Skill Router${NC}"
-    echo ""
-    echo -e "กรุณาดาวน์โหลดและติดตั้งได้ฟรีที่: ${CYAN}https://nodejs.org${NC} (เลือกเวอร์ชัน LTS)"
-    echo -e "หรือติดตั้งผ่าน Homebrew: ${CYAN}brew install node${NC}"
-    echo ""
-    echo -e "${GRAY}หากติดตั้งแล้ว กรุณาดับเบิลคลิกไฟล์ Install-STeP-AI.command ใหม่อีกครั้ง${NC}"
+    echo -e "${YELLOW}⚠️  เครื่องนี้ยังไม่พร้อมติดตั้ง${NC}"
+    echo -e "${GRAY}กรุณาติดต่อ AI Champion ประจำทีมให้ช่วยติดตั้งให้ ไม่ต้องติดตั้งโปรแกรมระบบด้วยตัวเอง${NC}"
     echo ""
     read -p "กด Enter เพื่อออกจากโปรแกรม..." dummy
     exit 1
@@ -144,8 +139,8 @@ if [ "$FOUND_COUNT" -eq 0 ]; then
     echo -e "${GRAY}------------------------------------------------------------${NC}"
     echo -e "${CYAN}🧭 [คำแนะนำการเลือก AI ให้เหมาะกับรูปแบบการทำงานของคุณ]:${NC}"
     echo -e "  1. สายฟรี / มี Quota ฟรี (แนะนำมากที่สุดสำหรับเริ่มต้นใช้งาน — ไม่มีค่าใช้จ่าย):"
-    echo -e "     - ⭐ Cursor IDE: เปิดโฟลเดอร์นี้แล้วคุยภาษาไทยได้ทันที มีโควตาฟรี (${CYAN}https://cursor.com${NC})"
-    echo -e "     - ⭐ OpenCode: ผู้ช่วย AI ใช้งานง่ายพร้อมโควตาฟรี (${CYAN}https://opencode.ai${NC})"
+    echo -e "     - เลือกสายฟรีหนึ่งตัวที่โหลดง่ายในเครื่องคุณ: Cursor หรือ OpenCode"
+    echo -e "       Cursor: ${CYAN}https://cursor.com${NC}  |  OpenCode: ${CYAN}https://opencode.ai${NC}"
     echo -e "  2. สายจ่ายตังค์ / องค์กรจัดซื้อ (สำหรับท่านที่มีสิทธิ์ Pro/Plus หรือ License หน่วยงาน):"
     echo -e "     - ChatGPT Desktop / Claude Desktop / Google Antigravity & Spark"
     echo -e "  3. สาย Local AI (สำหรับผู้ต้องการความปลอดภัยข้อมูล 100% ประมวลผลในเครื่อง):"
@@ -159,8 +154,8 @@ if [ "$FOUND_COUNT" -eq 0 ]; then
     if [ "$GUIDE_CHOICE" = "1" ]; then
         echo ""
         echo -e "${CYAN}เลือกโปรแกรมสายฟรีที่ต้องการเปิดหน้าเว็บดาวน์โหลด:${NC}"
-        echo -e "  1. Cursor IDE (https://cursor.com) [แนะนำที่สุด]"
-        echo -e "  2. OpenCode AI (https://opencode.ai)"
+        echo -e "  1. Cursor (สายฟรี) https://cursor.com"
+        echo -e "  2. OpenCode (สายฟรี) https://opencode.ai"
         echo -e "  3. ข้ามไปขั้นตอนติดตั้งต่อ"
         read -p "พิมพ์หมายเลข (1-3) [default: 1]: " DL_CHOICE || true
         DL_CHOICE=${DL_CHOICE:-1}
@@ -244,10 +239,12 @@ echo -e "  21. LES       - ห้องปฏิบัติการและ�
 echo -e "  22. FOODFABR  - โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม"
 echo ""
 
-read -p "พิมพ์หมายเลขทีม (1-22) หรือ รหัสทีม (เช่น 4 หรือ qs) [default: 4 (QS)]: " TEAM_CHOICE || true
-TEAM_CHOICE=${TEAM_CHOICE:-4}
+read -p "พิมพ์หมายเลขทีม (1-22) หรือรหัสทีม (เช่น ga, cc) [default: ทุกคนเข้าถึงได้]: " TEAM_CHOICE || true
+TEAM_CHOICE=$(echo "$TEAM_CHOICE" | tr '[:upper:]' '[:lower:]')
 
-case "$(echo "$TEAM_CHOICE" | tr '[:upper:]' '[:lower:]')" in
+SELECTED_TEAM=""
+if [ -n "$TEAM_CHOICE" ]; then
+case "$TEAM_CHOICE" in
     1|ga) SELECTED_TEAM="ga" ;;
     2|afp) SELECTED_TEAM="afp" ;;
     3|iasa) SELECTED_TEAM="iasa" ;;
@@ -271,10 +268,11 @@ case "$(echo "$TEAM_CHOICE" | tr '[:upper:]' '[:lower:]')" in
     21|les) SELECTED_TEAM="les" ;;
     22|foodfabr) SELECTED_TEAM="foodfabr" ;;
     *)
-        echo -e "${YELLOW}ไม่พบทีม '$TEAM_CHOICE' ระบบจะใช้ค่าเริ่มต้น: QS (ระบบคุณภาพ)${NC}"
-        SELECTED_TEAM="qs"
+        echo -e "${YELLOW}ไม่พบทีม '$TEAM_CHOICE' ระบบจะติดตั้งแบบทุกคนเข้าถึงได้${NC}"
+        SELECTED_TEAM=""
         ;;
 esac
+fi
 
 # 6. Install / Configure Harness
 echo ""
@@ -283,34 +281,37 @@ echo -e "${YELLOW}ขั้นตอนที่ 3: กำลังติดต�
 echo ""
 
 cd "$ROOT_DIR"
-node "$ROOT_DIR/bin/step-ai.js" init --team "$SELECTED_TEAM" --tool "$SELECTED_TOOL"
-node "$ROOT_DIR/bin/step-ai.js" config --team "$SELECTED_TEAM"
+if [ -n "$SELECTED_TEAM" ]; then
+    node "$ROOT_DIR/bin/step-ai.js" init --team "$SELECTED_TEAM" --tool "$SELECTED_TOOL"
+    node "$ROOT_DIR/bin/step-ai.js" config --team "$SELECTED_TEAM"
+else
+    node "$ROOT_DIR/bin/step-ai.js" init --role all --tool "$SELECTED_TOOL"
+fi
 
 # 7. Run Doctor Check
 echo ""
 node "$ROOT_DIR/bin/step-ai.js" doctor --employee
 
+TEAM_LABEL="$SELECTED_TEAM"
+if [ -z "$SELECTED_TEAM" ]; then
+    TEAM_LABEL="ทุกคนเข้าถึงได้"
+else
+    TEAM_LABEL=$(echo "$SELECTED_TEAM" | tr '[:lower:]' '[:upper:]')
+fi
 echo ""
 echo -e "${GREEN}=================================================================${NC}"
 echo -e "${YELLOW}                 ✓ STeP AI พร้อมใช้งานบน macOS               ${NC}"
 echo -e "${GREEN}=================================================================${NC}"
 echo ""
-echo -e "  ทีมหลัก:       ${WHITE}$(echo "$SELECTED_TEAM" | tr '[:lower:]' '[:upper:]')${NC}"
-echo -e "  เครื่องมือ AI:  ${WHITE}$SELECTED_TOOL${NC}"
-echo -e "  สถาปัตยกรรม:   ${WHITE}$ARCH_DISPLAY${NC}"
-echo -e "  ระบบค้นหา:     ${WHITE}Layer 1 Dynamic Router พร้อมใช้งาน${NC}"
+echo -e "  ทีม: ${WHITE}${TEAM_LABEL}${NC}"
 echo ""
-echo -e "${CYAN}💡 วิธีเริ่มใช้งานบน macOS:${NC}"
-echo -e "  1. เปิดโปรแกรม AI ที่คุณเลือก (Cursor, OpenCode, VS Code, Claude Desktop หรือ ChatGPT Desktop)"
-echo -e "  2. ในโปรแกรม AI ให้เปิดโฟลเดอร์ระบบ STeP AI นี้ (เมนู File -> Open Folder):"
-echo -e "     📁 ${YELLOW}$ROOT_DIR${NC}"
-echo -e "  3. เริ่มพิมพ์คุยงานภาษาไทยในช่องแชท AI ได้ทันที เช่น:"
-echo -e "     - ${GRAY}'ช่วยตรวจเอกสารนี้ก่อนส่ง'${NC}"
-echo -e "     - ${GRAY}'ช่วยตรวจใบเสร็จนี้ว่าเบิกจ่ายตามระเบียบ มช. ได้มั้ย'${NC}"
-echo -e "     - ${GRAY}'ช่วยตรวจ TOR จัดซื้อระบบ หน่อยครับ'${NC}"
-echo -e "     ${GRAY}(สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)${NC}"
+echo -e "${CYAN}วิธีเริ่มใช้งาน:${NC}"
+echo -e "  1. เปิดโปรแกรม AI ที่คุณใช้อยู่ (สายฟรี เช่น Cursor หรือ OpenCode หรือโปรแกรมที่หน่วยงานมีสิทธิ์)"
+echo -e "  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:"
+echo -e "     ${YELLOW}$ROOT_DIR${NC}"
+echo -e "  3. พิมพ์ถามงานภาษาไทยในแชท เช่น 'ช่วยตรวจเอกสารนี้ก่อนส่ง'"
 echo ""
-echo -e "${GRAY}  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'${NC}"
-echo -e "${GRAY}  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
+echo -e "${GRAY}  อ่านไฟล์ START-HERE.md ในโฟลเดอร์นี้ถ้าไม่แน่ใจว่าจะเริ่มอย่างไร${NC}"
+echo -e "${GRAY}  อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
 echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy

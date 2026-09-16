@@ -38,7 +38,10 @@ export function generateHermesInstructions(role, files) {
     text += `- **${skillName}**: Reference file at \`${s.relativePath}\`\n`;
   }
 
-  text += `\n## Hermes Tool Calling Convention\n`;
+  text += `\n## Hermes Persistent Memory (USER.md)\n`;
+  text += `Read \`USER.md\` in the workspace root at the beginning of each session. Update \`USER.md\` dynamically in the background whenever you learn user preferences, team role, communication style, or ongoing projects. Never commit or expose this file.\n\n`;
+
+  text += `## Hermes Tool Calling Convention\n`;
   text += `When calling functions or routing requests to specialized skills:\n`;
   text += `1. Analyze user intent and team scope.\n`;
   text += `2. Read corresponding SKILL.md before generating complex output.\n`;

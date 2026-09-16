@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { queryStepRouter } from '../src/cli/commands/ask.js';
+import { initUserMemory } from '../src/modules/user-memory.js';
 
 test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite', async (t) => {
 
@@ -199,4 +203,80 @@ test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite',
       assert.ok(!result.selectedSkill.description.includes('terminal'));
     }
   });
+
+  await t.test('Scenario 26: Everyday Administration — Browser Form Assistant (Fill -> Review -> Submit)', async () => {
+    const result = await queryStepRouter('ช่วยกรอกแบบฟอร์มขอใช้ห้องประชุมจากข้อมูลโครงการนี้');
+    assert.ok(result.selectedSkill, 'Selected skill exists');
+    assert.equal(result.selectedSkill.name, 'browser-form-assistant');
+    assert.equal(result.selectedSkill.teams.primary[0], 'ga');
+    assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 27: Anti-Collision — browser-form-assistant does not steal domain skills', async () => {
+    const sopResult = await queryStepRouter('ตรวจแบบฟอร์ม SOP นี้ให้หน่อย');
+    assert.ok(sopResult.selectedSkill);
+    assert.equal(sopResult.selectedSkill.name, 'sop-authoring');
+
+    const weeklyResult = await queryStepRouter('submit the weekly review');
+    assert.ok(weeklyResult.selectedSkill);
+    assert.equal(weeklyResult.selectedSkill.name, 'team-weekly-review');
+
+    const torFormResult = await queryStepRouter('อยากได้แบบฟอร์มร่าง TOR ราชการสำหรับงานจ้างที่ปรึกษา');
+    assert.ok(torFormResult.selectedSkill);
+    assert.equal(torFormResult.selectedSkill.name, 'tor-government-writing');
+  });
+
+  await t.test('Scenario 28: Anti-False-Positive — No substring collisions on platform/format/information/website/mis', async () => {
+    // 28a: "form" in platform/information/format
+    const formatResult = await queryStepRouter('please format this information for the platform');
+    assert.notEqual(formatResult.selectedSkill?.name, 'browser-form-assistant');
+
+    // 28b: general website browsing
+    const webResult = await queryStepRouter('ช่วยเปิดเว็บไซต์ของอุทยานฯ ให้หน่อย');
+    assert.notEqual(webResult.selectedSkill?.name, 'browser-form-assistant');
+
+    // 28c: mis report
+    const misResult = await queryStepRouter('mis report สำหรับพนักงาน');
+    assert.notEqual(misResult.selectedSkill?.name, 'browser-form-assistant');
+  });
+
+  await t.test('Scenario 29: Confirmation Gate — Thai and English submission commands trigger ESCALATE', async () => {
+    const thaiSubmit = await queryStepRouter('ช่วยกดส่งแบบฟอร์มจองห้องประชุม');
+    assert.equal(thaiSubmit.selectedSkill?.name, 'browser-form-assistant');
+    assert.equal(thaiSubmit.scopeResult.status, 'ESCALATE');
+    assert.ok(thaiSubmit.scopeResult.reason.includes('Human Confirmation Gate'));
+
+    const enSubmit = await queryStepRouter('ช่วยกรอกฟอร์มแล้ว submit ให้เลย');
+    assert.equal(enSubmit.selectedSkill?.name, 'browser-form-assistant');
+    assert.equal(enSubmit.scopeResult.status, 'ESCALATE');
+  });
+
+  await t.test('Scenario 30: Active Clarification Protocol — Broad/ambiguous query flags isAmbiguous', async () => {
+    // Vague query without specific keywords
+    const broadResult = await queryStepRouter('ช่วยดูเอกสารนี้หน่อย');
+    assert.equal(broadResult.isAmbiguous, true, 'Broad query should be flagged as ambiguous');
+    assert.ok(broadResult.candidateSkills.length >= 2, 'Should offer multiple candidate skills for clarification');
+  });
+
+  await t.test('Scenario 31: Workspace User Memory (USER.md) — Disambiguates with user team context', async () => {
+    const tmpWorkspace = await mkdtemp(join(tmpdir(), 'step-user-mem-'));
+    try {
+      await initUserMemory(tmpWorkspace, {
+        name: 'พี่นก',
+        team: 'afp',
+        role: 'หัวหน้างานจัดซื้อ',
+      });
+
+      // When querying from workspace with AFP memory, AFP skills get team boost
+      const memResult = await queryStepRouter('ช่วยดูเอกสารนี้หน่อย', { workspaceDir: tmpWorkspace });
+      assert.ok(memResult.userMemory?.exists, 'Memory should be loaded from workspace');
+      assert.equal(memResult.userMemory.profile.team, 'afp');
+      assert.equal(memResult.selectedSkill?.name, 'tor-review', 'AFP team context should prioritize tor-review');
+    } finally {
+      await rm(tmpWorkspace, { recursive: true, force: true });
+    }
+  });
 });
+
+
+

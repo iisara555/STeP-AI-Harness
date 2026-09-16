@@ -122,6 +122,19 @@ processes:
       - governance.meeting.minutes-recording
       - governance.meeting.action-item-tracking
 
+  governance.facility-booking:
+    name: "การขอใช้สถานที่ ห้องประชุม และบริการยานพาหนะผ่านระบบอิเล็กทรอนิกส์"
+    category: governance
+    owner: ga
+    consumers: ["*"]
+    subprocesses:
+      - governance.facility-booking.request
+      - governance.facility-booking.verification
+      - governance.facility-booking.confirmation
+    associatedSops:
+      - human-approval-rule
+    description: "กระบวนการสำรวจ จอง และประสานงานขอใช้ห้องประชุมและสถานที่ของอุทยานฯ"
+
   client.inquiry-triage:
     name: "การรับเรื่อง คัดแยก และส่งต่อความต้องการของลูกค้าอุทยานฯ"
     category: client-services

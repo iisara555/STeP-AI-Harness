@@ -224,7 +224,7 @@ export async function detectMacTools(options = {}) {
       tier: 'free_quota',
       tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'AI Code & Document Editor ที่ฉลาดและใช้งานง่ายที่สุดสำหรับพนักงานทั่วไป',
-      recommendation: '⭐ แนะนำอันดับ 1 สำหรับสายฟรี (เปิดโฟลเดอร์แล้วเริ่มคุยภาษาไทยได้ทันที)',
+      recommendation: 'สายฟรี: เปิดโฟลเดอร์แล้วคุยภาษาไทยได้ เลือกคู่กับ OpenCode ตามที่โหลดง่ายในเครื่อง',
       instructionFile: '.cursorrules',
     },
     {

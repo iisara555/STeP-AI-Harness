@@ -97,6 +97,39 @@ skills:
           authority: official-signing
           description: การแต่งมติหรือสถานะที่ไม่มีในบันทึกจริง
 
+  - name: browser-form-assistant
+    cluster: governance-operations
+    domain: operations
+    processId: governance.facility-booking
+    teams:
+      primary: [ga]
+      consumers: ["*"]
+    description: ผู้ช่วยร่างและตรวจทานข้อมูลแบบฟอร์มออนไลน์แบบมีมนุษย์กำกับ ไม่ส่งแทนโดยพลการ
+    intent: [fill, create, plan, review]
+    triggers: [กรอกฟอร์ม, กรอกแบบฟอร์ม, จองห้องประชุม, ขอใช้ห้องประชุม, ขอใช้สถานที่]
+    paths: ["**/form*/**", "**/booking*/**", "**/request*/**"]
+    fileTypes: [pdf, docx, txt, html]
+    requires: [form_objective]
+    scope:
+      allow:
+        - เปิดเว็บไซต์ สำรวจและอ่านข้อกำหนดของแบบฟอร์ม
+        - กรอกข้อมูลฉบับร่างและเลือกตัวเลือกใน dropdown
+        - แนบไฟล์เอกสารประกอบฉบับร่างและถ่ายภาพหน้าจอตรวจสอบ
+        - สรุปข้อมูลที่กรอกทั้งหมดให้ผู้ใช้ตรวจทาน
+      escalate:
+        form_submission:
+          skill: browser-form-assistant
+          description: การกดยืนยันส่งฟอร์ม (Submit) หรือจองสิทธิ์ที่มีผลผูกพัน ต้องได้รับคำยืนยันจากผู้ใช้ก่อน
+      human_only:
+        budget_approval:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติงบประมาณหรือเปลี่ยนแปลงวงเงิน
+        official_signing:
+          role: authorized-signatory
+          authority: official-signing
+          description: การลงนามในหนังสือราชการ สัญญา หรือข้อตกลงผูกพันนิติบุคคล
+
   - name: project-plan
     cluster: incubation-strategy
     domain: project-management
@@ -409,7 +442,7 @@ skills:
       primary: [sit]
       consumers: ["*"]
     description: รวบรวมและวิเคราะห์ผลการทำงานประจำสัปดาห์ ปัญหาคอขวด และแผนงานสัปดาห์ถัดไป
-    intent: [summarize, report]
+    intent: [summarize, report, review]
     triggers: [weekly, ประจำสัปดาห์, ทบทวนงาน, รายงานประจำสัปดาห์, weekly review, ติดตามงาน]
     paths: ["**/weekly/**", "**/reports/**"]
     fileTypes: [md, docx, xlsx]

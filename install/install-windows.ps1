@@ -43,12 +43,8 @@ try {
 
 if (-not $nodeInstalled) {
     Write-Host ""
-    Write-Host "⚠️  ไม่พบ Node.js ในเครื่องคอมพิวเตอร์ของคุณ" -ForegroundColor Yellow
-    Write-Host "ระบบ STeP AI จำเป็นต้องใช้ Node.js (v20 ขึ้นไป) เพื่อประมวลผล Skill Router" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "กรุณาดาวน์โหลดและติดตั้งได้ฟรีที่: https://nodejs.org (เลือกเวอร์ชัน LTS)" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "หากติดตั้งแล้ว กรุณาเปิดไฟล์ Install-STeP-AI.bat ใหม่อีกครั้ง" -ForegroundColor Gray
+    Write-Host "⚠️  เครื่องนี้ยังไม่พร้อมติดตั้ง" -ForegroundColor Yellow
+    Write-Host "กรุณาติดต่อ AI Champion ประจำทีมให้ช่วยติดตั้งให้ ไม่ต้องติดตั้งโปรแกรมระบบด้วยตัวเอง" -ForegroundColor Gray
     Write-Host ""
     Read-Host "กด Enter เพื่อออกจากโปรแกรม"
     exit 1
@@ -112,8 +108,8 @@ if ($foundCount -eq 0) {
     Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
     Write-Host "🧭 [คำแนะนำการเลือก AI ให้เหมาะกับรูปแบบการทำงานของคุณ]:" -ForegroundColor Cyan
     Write-Host "  1. สายฟรี / มี Quota ฟรี  (แนะนำมากที่สุดสำหรับเริ่มต้นใช้งาน — ไม่มีค่าใช้จ่าย):" -ForegroundColor White
-    Write-Host "     - ⭐ Cursor IDE: เปิดโฟลเดอร์นี้แล้วคุยภาษาไทยได้ทันที มีโควตาฟรี (https://cursor.com)" -ForegroundColor Gray
-    Write-Host "     - ⭐ OpenCode: ผู้ช่วย AI ใช้งานง่ายพร้อมโควตาฟรี (https://opencode.ai)" -ForegroundColor Gray
+    Write-Host "     - เลือกสายฟรีหนึ่งตัวที่โหลดง่ายในเครื่องคุณ: Cursor หรือ OpenCode" -ForegroundColor Gray
+    Write-Host "       Cursor: https://cursor.com  |  OpenCode: https://opencode.ai" -ForegroundColor Gray
     Write-Host "  2. สายจ่ายตังค์ / องค์กรจัดซื้อ (สำหรับท่านที่มีสิทธิ์ Pro/Plus หรือ License หน่วยงาน):" -ForegroundColor White
     Write-Host "     - ChatGPT Desktop / Claude Desktop / Google Antigravity & Spark" -ForegroundColor Gray
     Write-Host "  3. สาย Local AI (สำหรับผู้ต้องการความปลอดภัยข้อมูล 100% ประมวลผลในเครื่อง):" -ForegroundColor White
@@ -127,8 +123,8 @@ if ($foundCount -eq 0) {
     if ($guideChoice -eq "1") {
         Write-Host ""
         Write-Host "เลือกโปรแกรมสายฟรีที่ต้องการเปิดหน้าเว็บดาวน์โหลด:" -ForegroundColor Cyan
-        Write-Host "  1. Cursor IDE (https://cursor.com) [แนะนำที่สุด]" -ForegroundColor White
-        Write-Host "  2. OpenCode AI (https://opencode.ai)" -ForegroundColor White
+        Write-Host "  1. Cursor (สายฟรี) https://cursor.com" -ForegroundColor White
+        Write-Host "  2. OpenCode (สายฟรี) https://opencode.ai" -ForegroundColor White
         Write-Host "  3. ข้ามไปขั้นตอนติดตั้งต่อ" -ForegroundColor Gray
         $downloadChoice = Read-Host "พิมพ์หมายเลข (1-3) [default: 1]"
         if ([string]::IsNullOrWhiteSpace($downloadChoice)) { $downloadChoice = "1" }
@@ -237,16 +233,16 @@ $teamMap = @{
     "22" = "foodfabr";  "foodfabr" = "foodfabr"
 }
 
-$teamChoice = Read-Host "พิมพ์หมายเลขทีม (1-22) หรือ รหัสทีม (เช่น 4 หรือ qs) [default: 4 (QS)]"
+$teamChoice = Read-Host "พิมพ์หมายเลขทีม (1-22) หรือรหัสทีม (เช่น ga, cc) [default: ทุกคนเข้าถึงได้]"
 if ([string]::IsNullOrWhiteSpace($teamChoice)) {
-    $selectedTeam = "qs"
+    $selectedTeam = ""
 } else {
     $normalizedTeam = $teamChoice.Trim().ToLower()
     if ($teamMap.ContainsKey($normalizedTeam)) {
         $selectedTeam = $teamMap[$normalizedTeam]
     } else {
-        Write-Host "ไม่พบทีม '$teamChoice' ระบบจะใช้ค่าเริ่มต้น: QS (ระบบคุณภาพ)" -ForegroundColor Yellow
-        $selectedTeam = "qs"
+        Write-Host "ไม่พบทีม '$teamChoice' ระบบจะติดตั้งแบบทุกคนเข้าถึงได้" -ForegroundColor Yellow
+        $selectedTeam = ""
     }
 }
 
@@ -259,42 +255,41 @@ Write-Host ""
 $rootDir = Resolve-Path "$PSScriptRoot\.."
 Set-Location $rootDir
 
-# Run init
-& node "$rootDir\bin\step-ai.js" init --team $selectedTeam --tool $selectedTool
+if ($selectedTeam) {
+    & node "$rootDir\bin\step-ai.js" init --team $selectedTeam --tool $selectedTool
+} else {
+    & node "$rootDir\bin\step-ai.js" init --role all --tool $selectedTool
+}
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "เกิดข้อผิดพลาดในการติดตั้ง กรุณาติดต่อผู้ดูแลระบบ" -ForegroundColor Red
+    Write-Host "เกิดข้อผิดพลาดในการติดตั้ง กรุณาติดต่อ AI Champion ประจำทีม" -ForegroundColor Red
     Read-Host "กด Enter เพื่อออก"
     exit 1
 }
 
-# Run config update
-& node "$rootDir\bin\step-ai.js" config --team $selectedTeam
+if ($selectedTeam) {
+    & node "$rootDir\bin\step-ai.js" config --team $selectedTeam
+}
 
 # 5. Run Doctor Check
 Write-Host ""
 & node "$rootDir\bin\step-ai.js" doctor --employee
 
 # 6. Success Screen
+$teamLabel = if ($selectedTeam) { $selectedTeam.ToUpper() } else { "ทุกคนเข้าถึงได้" }
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "                 ✓ STeP AI พร้อมใช้งาน                      " -ForegroundColor Yellow
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  ทีมหลัก:       $($selectedTeam.ToUpper())" -ForegroundColor White
-Write-Host "  เครื่องมือ AI:  $selectedTool" -ForegroundColor White
-Write-Host "  ระบบค้นหา:     Layer 1 Dynamic Router พร้อมใช้งาน" -ForegroundColor White
+Write-Host "  ทีม: $teamLabel" -ForegroundColor White
 Write-Host ""
-Write-Host "💡 วิธีเริ่มใช้งาน:" -ForegroundColor Cyan
-Write-Host "  1. เปิดโปรแกรม AI ที่คุณเลือก (Cursor, OpenCode, VS Code, Claude หรือ ChatGPT Desktop)" -ForegroundColor White
-Write-Host "  2. ในโปรแกรม AI ให้เปิดโฟลเดอร์ระบบ STeP AI นี้ (เมนู File -> Open Folder):" -ForegroundColor White
-Write-Host "     📁 $rootDir" -ForegroundColor Yellow
-Write-Host "  3. เริ่มพิมพ์คุยงานภาษาไทยในช่องแชท AI ได้ทันที เช่น:" -ForegroundColor White
-Write-Host "     - 'ช่วยตรวจเอกสารนี้ก่อนส่ง'" -ForegroundColor Gray
-Write-Host "     - 'ช่วยตรวจ Internal Audit ชุดนี้'" -ForegroundColor Gray
-Write-Host "     - 'ช่วยตรวจ TOR จัดซื้อระบบ หน่อยครับ'" -ForegroundColor Gray
-Write-Host "     (สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)" -ForegroundColor DarkGray
+Write-Host "วิธีเริ่มใช้งาน:" -ForegroundColor Cyan
+Write-Host "  1. เปิดโปรแกรม AI ที่คุณใช้อยู่ (สายฟรี เช่น Cursor หรือ OpenCode หรือโปรแกรมที่หน่วยงานมีสิทธิ์)" -ForegroundColor White
+Write-Host "  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:" -ForegroundColor White
+Write-Host "     $rootDir" -ForegroundColor Yellow
+Write-Host "  3. พิมพ์ถามงานภาษาไทยในแชท เช่น 'ช่วยตรวจเอกสารนี้ก่อนส่ง'" -ForegroundColor White
 Write-Host ""
-Write-Host "  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'" -ForegroundColor DarkGray
-Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
+Write-Host "  อ่านไฟล์ START-HERE.md ในโฟลเดอร์นี้ถ้าไม่แน่ใจว่าจะเริ่มอย่างไร" -ForegroundColor DarkGray
+Write-Host "  อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 

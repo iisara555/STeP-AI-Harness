@@ -99,7 +99,17 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
   // 2. Keyword / Trigger Match
   if (text && Array.isArray(skill.triggers)) {
     const lowerText = text.toLowerCase();
-    const matchedTrigger = skill.triggers.some((tr) => lowerText.includes(tr.toLowerCase()));
+    const matchedTrigger = skill.triggers.some((tr) => {
+      const lowerTr = tr.toLowerCase().trim();
+      if (!lowerTr) return false;
+      const isLatin = /^[a-z0-9_\s-]+$/i.test(lowerTr);
+      if (isLatin) {
+        const escaped = lowerTr.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+        return regex.test(lowerText);
+      }
+      return lowerText.includes(lowerTr);
+    });
     if (matchedTrigger) {
       breakdown.keyword = weights.KEYWORD;
     }
@@ -174,8 +184,18 @@ export function rankSkillCandidates(skills, context, options = {}) {
       let maxLen = 0;
       let count = 0;
       for (const tr of skill?.triggers || []) {
-        const lowerTr = tr.toLowerCase();
-        if (lowerTr.length >= 2 && lowerText.includes(lowerTr)) {
+        const lowerTr = tr.toLowerCase().trim();
+        if (lowerTr.length < 2) continue;
+        const isLatin = /^[a-z0-9_\s-]+$/i.test(lowerTr);
+        let matches = false;
+        if (isLatin) {
+          const escaped = lowerTr.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+          matches = regex.test(lowerText);
+        } else {
+          matches = lowerText.includes(lowerTr);
+        }
+        if (matches) {
           count++;
           if (lowerTr.length > maxLen) maxLen = lowerTr.length;
         }

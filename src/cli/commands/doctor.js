@@ -8,6 +8,7 @@ import { PACKAGE_ROOT, getAvailableTeams } from '../../modules/role-resolver.js'
 import { loadUserConfig, USER_CONFIG_PATH } from '../../utils/user-config.js';
 import { detectInstalledTools } from '../../utils/tool-detector.js';
 import { getPlatformDisplay } from '../../platform/index.js';
+import { loadUserMemory } from '../../modules/user-memory.js';
 
 export async function runDoctor(args) {
   const isEmployeeMode = Boolean(args.employee || args.simple || args.e);
@@ -45,17 +46,18 @@ export async function runDoctor(args) {
     }
     console.log(`  ${colors.green('✓')} Skill Index:     ${colors.bold(`Ready (${skillsCount > 0 ? `${skillsCount} Skills` : 'Organization Library'})`)}`);
     console.log(`  ${colors.green('✓')} Configuration:   ${colors.dim(USER_CONFIG_PATH)}`);
+    const userMem = await loadUserMemory(process.cwd());
+    if (userMem.exists) {
+      console.log(`  ${colors.green('✓')} User Memory:     ${colors.bold('USER.md (Active & Gitignored)')}`);
+    }
     console.log(colors.dim('────────────────────────────────────────────────────────────'));
 
     if (installedToolNames.length === 0) {
       console.log(colors.yellow(colors.bold('💡 ยังไม่พบโปรแกรม AI ในเครื่อง — แนะนำให้ดาวน์โหลด (ฟรี):')));
-      console.log(`  1. ${colors.cyan(colors.bold('Cursor IDE'))} (แนะนำที่สุด): ${colors.dim('https://cursor.com')}`);
-      console.log(`     - ใช้ง่ายที่สุด เพียงเปิดโฟลเดอร์นี้แล้วพิมพ์คุยภาษาไทยได้ทันที`);
-      console.log(`  2. ${colors.cyan(colors.bold('Claude Desktop'))}: ${colors.dim('https://claude.ai/download')}`);
-      console.log(`     - เหมาะสำหรับงานเอกสาร สรุปรายงาน และตรวจทานภาษาไทย`);
-      console.log(`  3. ${colors.cyan(colors.bold('Hermes Agent'))}: ${colors.dim('https://github.com/NousResearch/Hermes-Agent')}`);
-      console.log(`     - เหมาะสำหรับ Local AI ในเครื่องและความเป็นส่วนตัว (pip install hermes-agent)`);
-      console.log(`  4. ${colors.cyan(colors.bold('VS Code'))}: ${colors.dim('https://code.visualstudio.com')}`);
+      console.log(`  1. ${colors.cyan(colors.bold('Cursor'))} หรือ ${colors.cyan(colors.bold('OpenCode'))} (สายฟรี เลือกหนึ่งตัว):`);
+      console.log(`     ${colors.dim('https://cursor.com')}  |  ${colors.dim('https://opencode.ai')}`);
+      console.log(`  2. ${colors.cyan(colors.bold('ChatGPT / Claude'))}: ใช้ตัวที่มีสิทธิ์อยู่แล้ว ไม่ต้องย้ายค่าย`);
+      console.log(`  3. ${colors.cyan(colors.bold('VS Code'))}: ${colors.dim('https://code.visualstudio.com')} หากมีโปรแกรมนี้อยู่แล้ว`);
       console.log(colors.dim('────────────────────────────────────────────────────────────'));
     }
 
@@ -177,6 +179,14 @@ export async function runDoctor(args) {
     success(`AI Agent Project Workspace: พบไฟล์คู่มือและ Manifest สำหรับ: ${colors.bold(list)}`);
   } else {
     info(`AI Agent Project Workspace: ไดเรกทอรียังไม่ได้ Initialize (รัน 'step-ai init' หรือดับเบิลคลิก Install-STeP-AI.bat)`);
+  }
+
+  // 7. Workspace User Memory Check
+  const userMemFull = await loadUserMemory(targetDir);
+  if (userMemFull.exists) {
+    success(`Workspace User Memory: พบ USER.md บันทึกบริบทผู้ใช้ส่วนบุคคล (Gitignored)`);
+  } else {
+    info(`Workspace User Memory: ยังไม่มี USER.md ในโฟลเดอร์นี้ (จะถูกสร้างอัตโนมัติเมื่อรัน 'step-ai init')`);
   }
 
   console.log();

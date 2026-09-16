@@ -9,6 +9,7 @@ import { saveUserConfig, getUserTeam } from '../../utils/user-config.js';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import readline from 'node:readline';
+import { initUserMemory, ensureGitignored } from '../../modules/user-memory.js';
 
 export async function runInit(args) {
   header('Initialize Approved Skills for Workspace');
@@ -203,6 +204,15 @@ export async function runInit(args) {
   await writeManifest(dest, manifestData);
   if (targetType === 'team' || teamCode) {
     await saveUserConfig({ team: teamCode || role.id, tool });
+  }
+
+  // Initialize Workspace-Private User Memory (USER.md) & ensure gitignored
+  const memResult = await initUserMemory(dest, {
+    team: teamCode || (role.id !== 'all' ? role.id : ''),
+    role: targetType === 'team' ? `บุคลากรทีม ${role.id.toUpperCase()}` : (role.name || role.id),
+  });
+  if (memResult.created) {
+    info(`สร้างหน่วยความจำเฉพาะตัวใน ${colors.dim('USER.md')} (อยู่ใน .gitignore ไม่มีการเผยแพร่)`);
   }
 
   console.log();

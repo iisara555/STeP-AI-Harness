@@ -1,4 +1,6 @@
 from pathlib import Path
+# Employee-facing installer copy is maintained in install/install-windows.ps1
+# and install/install-macos.sh. Sync this template before regenerating.
 
 ROOT = Path(__file__).resolve().parent.parent
 

@@ -5,6 +5,7 @@ import { header, success, info, warn, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
 import { getUserTeam } from '../../utils/user-config.js';
+import { loadUserMemory } from '../../modules/user-memory.js';
 import {
   buildContext,
   rankSkillCandidates,
@@ -215,15 +216,29 @@ export async function queryStepRouter(query, options = {}) {
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
 
+  let resolvedTeam = options.team || '';
+  let userMemory = null;
+  if (!resolvedTeam) {
+    try {
+      userMemory = await loadUserMemory(options.workspaceDir || process.cwd());
+      if (userMemory?.profile?.team) {
+        resolvedTeam = userMemory.profile.team;
+      }
+    } catch {
+      // ignore memory read error
+    }
+  }
+
   const context = buildContext({
     promptText: query,
     path: options.path || '',
     filenames: options.filenames || [],
-    team: options.team || '',
+    team: resolvedTeam,
   });
 
   const ranked = rankSkillCandidates(skills, context);
   const bestMatch = ranked[0] || null;
+  const runnerUp = ranked[1] || null;
 
   let selectedSkill = null;
   if (bestMatch) {
@@ -235,6 +250,30 @@ export async function queryStepRouter(query, options = {}) {
   const primaryTeamCode = selectedSkill?.teams?.primary?.[0] || 'common';
   const teamInfo = teams[primaryTeamCode] || { id: primaryTeamCode, name: primaryTeamCode };
 
+  // Disambiguation & Clarification detection:
+  // Is ambiguous when in FALLBACK tier (score < 0.50) OR (runnerUp close to bestMatch && score < 0.80)
+  const isAmbiguous = Boolean(
+    bestMatch && (
+      bestMatch.tier === 'FALLBACK' ||
+      (bestMatch.tier === 'AMBIGUOUS' && runnerUp && (bestMatch.score - runnerUp.score < 0.15) && runnerUp.score >= 0.35)
+    )
+  );
+
+  const candidateSkills = ranked
+    .slice(0, 3)
+    .filter((r) => r.score >= 0.20)
+    .map((r) => {
+      const sObj = skills.find((s) => s.name === r.skill);
+      const pTeam = sObj?.teams?.primary?.[0] || 'common';
+      const tInfo = teams[pTeam] || { id: pTeam, name: pTeam };
+      return {
+        skill: sObj,
+        score: r.score,
+        tier: r.tier,
+        teamInfo: tInfo,
+      };
+    });
+
   return {
     query,
     selectedSkill,
@@ -242,6 +281,9 @@ export async function queryStepRouter(query, options = {}) {
     bestMatch,
     scopeResult,
     teamInfo,
+    isAmbiguous,
+    candidateSkills,
+    userMemory,
   };
 }
 
@@ -281,12 +323,32 @@ export async function runAsk(args) {
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const result = await queryStepRouter(query, { team: userTeam });
-  const { selectedSkill, bestMatch, scopeResult, teamInfo } = result;
+  const { selectedSkill, bestMatch, scopeResult, teamInfo, isAmbiguous, candidateSkills, userMemory } = result;
 
   const isMatched = selectedSkill && (bestMatch.score >= 0.20 || bestMatch.breakdown.keyword > 0);
   if (!isMatched) {
     warn('ไม่พบทักษะเฉพาะทางที่ตรงกับคำถามอย่างชัดเจน');
     console.log(colors.dim('คุณสามารถถามกับ AI ได้โดยตรงในฐานะผู้ช่วยทั่วไป หรือลองเพิ่มคำระบุงาน เช่น TOR, บรีฟ, สไลด์, หนังสือราชการ'));
+    return;
+  }
+
+  // Active Clarification Protocol: If query is broad / ambiguous, show clarification card
+  if (isAmbiguous && candidateSkills.length > 1) {
+    console.log(colors.bold(colors.yellow('┌─────────────────────────────────────────────────────────────────────────────┐')));
+    console.log(colors.bold(colors.yellow('│  🤔 คำถามค่อนข้างกว้างหรือมีหลายทักษะที่เข้าข่าย (Clarification Needed)     │')));
+    console.log(colors.bold(colors.yellow('└─────────────────────────────────────────────────────────────────────────────┘')));
+    console.log(`  คำถาม: "${colors.bold(query)}" อาจเข้าข่ายหลายกระบวนการ หรือต้องการข้อมูลเพิ่ม`);
+    if (userMemory?.exists && userMemory.profile?.team) {
+      console.log(colors.dim(`  (ตรวจพบบริบทจาก USER.md: ทีม ${userMemory.profile.team.toUpperCase()})`));
+    }
+    console.log(`\n  ${colors.bold('ทักษะของ STeP ที่เข้าข่าย (กรุณาระบุเพิ่มเติมหรือเลือกทักษะที่ตรงกับงาน):')}`);
+    candidateSkills.forEach((c, idx) => {
+      console.log(`  ${colors.cyan(`${idx + 1}.`)} [${colors.bold(c.skill.name)}] ${c.skill.description} (${colors.dim(`ทีม ${c.teamInfo.name}`)})`);
+    });
+    console.log();
+    console.log(colors.bold('💡 คำแนะนำเพื่อให้ AI ช่วยเหลือได้แม่นยำยิ่งขึ้น:'));
+    console.log(colors.dim('   - ระบุประเภทเอกสารหรือผลงานที่ต้องการ (เช่น "ตรวจ TOR", "ทำสไลด์ Pitching", "ตรวจแบบฟอร์ม SOP")'));
+    console.log(colors.dim('   - หรือระบุทีม/โครงการที่เกี่ยวข้อง (เช่น "ของโครงการ PITI", "งานของฝ่ายบัญชีและการเงิน AFP")\n'));
     return;
   }
 
@@ -313,9 +375,15 @@ export async function runAsk(args) {
     console.log(`  • คำแนะนำ:           ${colors.dim(scopeResult.reason)}`);
     console.log(colors.dim('  (AI สามารถช่วยร่างหรือเตรียมข้อมูลเปรียบเทียบได้ แต่ไม่สามารถตัดสินใจแทนได้ครับ)'));
   } else if (scopeResult.status === 'ESCALATE') {
-    console.log(colors.bold(colors.yellow('🔄  การส่งต่องาน (Cross-Skill Escalation):')));
-    console.log(`  • ทักษะที่ควรรับช่วงต่อ: ${colors.bold(colors.cyan(scopeResult.targetSkill))}`);
-    console.log(`  • คำแนะนำ:             ${colors.dim(scopeResult.reason)}`);
+    if (scopeResult.targetSkill === selectedSkill.name) {
+      console.log(colors.bold(colors.yellow('✋  ประตูยืนยันความถูกต้อง (Human Confirmation Gate):')));
+      console.log(`  • สถานะ:             ${colors.yellow('ต้องได้รับคำยืนยันจากผู้ใช้ก่อนกดส่งจริง')}`);
+      console.log(`  • คำแนะนำ:           ${colors.dim(scopeResult.reason)}`);
+    } else {
+      console.log(colors.bold(colors.yellow('🔄  การส่งต่องาน (Cross-Skill Escalation):')));
+      console.log(`  • ทักษะที่ควรรับช่วงต่อ: ${colors.bold(colors.cyan(scopeResult.targetSkill))}`);
+      console.log(`  • คำแนะนำ:             ${colors.dim(scopeResult.reason)}`);
+    }
   } else {
     success(`ขอบเขตงาน (Scope Guard): อนุญาตให้ AI ช่วยดำเนินการได้ตามระเบียบ STeP`);
     if (selectedSkill.scope?.allow && selectedSkill.scope.allow.length > 0) {

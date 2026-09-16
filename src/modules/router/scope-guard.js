@@ -40,6 +40,7 @@ export function checkScope(skill, requestText = '') {
     if (key.includes('budget') && (lower.includes('อนุมัติงบ') || lower.includes('เปลี่ยนวงเงิน') || lower.includes('ขอเงินเพิ่ม'))) heuristic = true;
     if (key.includes('vendor') && (lower.includes('เลือกบริษัท') || lower.includes('เจ้าไหนดี') || lower.includes('ให้คะแนนซอง') || lower.includes('ตัดสินผู้ชนะ'))) heuristic = true;
     if (key.includes('sign') && (lower.includes('ลงนาม') || lower.includes('เซ็นอนุมัติ') || lower.includes('ออกเลขหนังสือ'))) heuristic = true;
+    if ((key.includes('submit') || key.includes('submission')) && (lower.includes('กดส่ง') || lower.includes('ส่งฟอร์ม') || lower.includes('ยืนยันส่ง') || lower.includes('ส่งให้เลย') || lower.includes('กดยืนยัน') || lower.includes('submit'))) heuristic = true;
 
     return heuristic;
   };
@@ -69,6 +70,16 @@ export function checkScope(skill, requestText = '') {
       const desc = typeof conf === 'string' ? conf : conf.description || '';
       if (matchTrigger(ruleKey, desc)) {
         const targetSkill = typeof conf === 'object' ? conf.skill : conf;
+        const isSelf = targetSkill === skill.name || conf.confirmation;
+        if (isSelf) {
+          return {
+            status: 'ESCALATE',
+            inScope: false,
+            ruleKey,
+            targetSkill: skill.name,
+            reason: `การส่งฟอร์มต้องได้รับการยืนยันจากผู้ใช้ก่อนดำเนินการ (Human Confirmation Gate): ${desc}`,
+          };
+        }
         return {
           status: 'ESCALATE',
           inScope: false,

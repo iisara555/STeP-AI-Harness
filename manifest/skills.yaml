@@ -80,6 +80,25 @@ skills:
       mandatory: [human-approval-rule]
       optional: []
 
+  browser-form-assistant:
+    owner: ga
+    version: 1.0.0
+    domain: [operations, automation]
+    process: [governance.facility-booking]
+    path: skills/common/browser-form-assistant/SKILL.md
+    description: ผู้ช่วยร่างและตรวจทานข้อมูลแบบฟอร์มออนไลน์แบบมีมนุษย์กำกับ ไม่ส่งแทนโดยพลการ
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, secret-safety-rule, data-classification-rule]
+      optional: []
+
   project-plan:
     owner: pm
     version: 1.0.0

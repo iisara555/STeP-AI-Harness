@@ -10,6 +10,7 @@ import { scoreSkillCandidate } from './scorer.js';
 export const INTENT_KEYWORDS = {
   summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'summarize', 'summary', 'minutes'],
   review: ['ตรวจ', 'รีวิว', 'เช็ก', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ช่วยดู', 'review', 'check', 'audit', 'evaluate'],
+  fill: ['กรอก', 'จองห้อง', 'ขอใช้ห้อง', 'ลงทะเบียน', 'fill', 'book', 'register'],
   create: ['จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'create', 'draft', 'write', 'generate', 'design'],
   plan: ['วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
   deploy: ['deploy', 'เดพลอย', 'ขึ้นระบบ', 'production', 'staging'],

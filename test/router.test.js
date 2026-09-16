@@ -162,7 +162,7 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.ok(ranked[0].score > ranked[1].score);
   });
 
-  await t.test('Case 6: Scope Guard 3-Outcome: ALLOW, ESCALATE, and BLOCK (HUMAN_ONLY)', () => {
+  await t.test('Case 6: Scope Guard 3-Outcome: ALLOW, ESCALATE, and BLOCK (HUMAN_ONLY)', async () => {
     // 6a: ALLOW
     const allowed = checkScope(mockTorReview, 'ตรวจความครบถ้วนของงวดงานและเกณฑ์ตรวจรับ');
     assert.equal(allowed.status, 'ALLOW');
@@ -186,6 +186,64 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(blockedBudget.inScope, false);
     assert.equal(blockedBudget.targetRole, 'afp-finance-head');
     assert.equal(blockedBudget.authority, 'budget-allocation');
+
+    // 6d: browser-form-assistant Scope Guard: ALLOW draft form filling
+    const mockBrowserForm = {
+      name: 'browser-form-assistant',
+      scope: {
+        allow: ['เปิดเว็บไซต์', 'กรอกข้อมูลฉบับร่าง'],
+        escalate: {
+          form_submission: { skill: 'browser-form-assistant', description: 'ต้องได้รับการยืนยันก่อนส่ง' }
+        },
+        human_only: {
+          budget_approval: { role: 'afp-finance-head', authority: 'budget-allocation', description: 'การอนุมัติงบประมาณ' },
+          official_signing: { role: 'authorized-signatory', authority: 'official-signing', description: 'การลงนามหนังสือ' }
+        }
+      }
+    };
+    const formDraft = checkScope(mockBrowserForm, 'ช่วยเปิดเว็บและกรอกข้อมูลขอใช้ห้องประชุม');
+    assert.equal(formDraft.status, 'ALLOW');
+    assert.equal(formDraft.inScope, true);
+
+    // 6e: browser-form-assistant Scope Guard: BLOCK on budget alteration
+    const formBudget = checkScope(mockBrowserForm, 'ช่วยกรอกแบบฟอร์มขออนุมัติงบประมาณและเปลี่ยนวงเงินโครงการ');
+    assert.equal(formBudget.status, 'BLOCK');
+    assert.equal(formBudget.inScope, false);
+    assert.equal(formBudget.targetRole, 'afp-finance-head');
+
+    // 6f: browser-form-assistant Scope Guard: ESCALATE (Confirmation Gate) on Thai submission
+    const formSubmitThai = checkScope(mockBrowserForm, 'ช่วยกดส่งแบบฟอร์มจองห้องประชุม');
+    assert.equal(formSubmitThai.status, 'ESCALATE');
+    assert.equal(formSubmitThai.inScope, false);
+    assert.equal(formSubmitThai.targetSkill, 'browser-form-assistant');
+    assert.ok(formSubmitThai.reason.includes('Human Confirmation Gate'));
+
+    // 6g: browser-form-assistant Scope Guard: ESCALATE on submit keyword
+    const formSubmitEn = checkScope(mockBrowserForm, 'ช่วยกรอกฟอร์มแล้ว submit ให้เลย');
+    assert.equal(formSubmitEn.status, 'ESCALATE');
+    assert.equal(formSubmitEn.inScope, false);
+
+    // 6h: Real YAML check for browser-form-assistant loaded from disk
+    const routerPath = resolve('manifest/router-index.yaml');
+    const routerContent = await readFile(routerPath, 'utf-8');
+    const realSkills = [];
+    for (const block of routerContent.split(/\n {2}- name:\s*/).slice(1)) {
+      const name = block.split(/\r?\n/)[0].trim();
+      const hasEscalate = block.includes('form_submission:');
+      const hasBudget = block.includes('budget_approval:');
+      if (name === 'browser-form-assistant') {
+        const realSkillObj = {
+          name,
+          scope: {
+            allow: ['เปิดเว็บไซต์', 'กรอกข้อมูลฉบับร่าง'],
+            escalate: hasEscalate ? { form_submission: { skill: 'browser-form-assistant', description: 'ต้องยืนยันก่อนส่ง' } } : {},
+            human_only: hasBudget ? { budget_approval: { role: 'afp-finance-head', authority: 'budget-allocation', description: 'อนุมัติงบ' } } : {}
+          }
+        };
+        const realEsc = checkScope(realSkillObj, 'ช่วยกดส่งแบบฟอร์มจองห้องประชุม');
+        assert.equal(realEsc.status, 'ESCALATE');
+      }
+    }
   });
 
   await t.test('Case 7: Context Scanner extracts intents and file types cleanly', () => {
@@ -193,6 +251,8 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(inferIntentFromText('ช่วยยกร่างข้อเสนอ'), 'create');
     assert.equal(inferIntentFromText('ช่วยสรุปการประชุม'), 'summarize');
     assert.equal(inferIntentFromText('ช่วยวางแผนโครงการ'), 'plan');
+    assert.equal(inferIntentFromText('ช่วยกรอกแบบฟอร์มขอใช้ห้องประชุม'), 'fill');
+    assert.equal(inferIntentFromText('ช่วยจองห้องประชุม'), 'fill');
 
     const exts = extractFileTypes(['contract.DOCX', 'budget.XLSX', 'image.PNG']);
     assert.deepEqual(exts, ['docx', 'xlsx', 'png']);
