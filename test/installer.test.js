@@ -473,6 +473,32 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'antigravity'));
     assert.ok(tiered.localPrivacy.tools.some((t) => t.id === 'hermes'));
   });
+
+  await t.test('Case 21: Feedback and Skill Contribution commands create templates', async () => {
+    const testDir = join(PACKAGE_ROOT, 'tmp', 'test-feedback-workspace');
+    await rm(testDir, { recursive: true, force: true });
+    await mkdir(testDir, { recursive: true });
+
+    // Test feedback --template
+    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--template', '-d', testDir]);
+    const feedbackPath = join(testDir, 'FEEDBACK.md');
+    assert.ok(await pathExists(feedbackPath));
+    const feedbackContent = await readFile(feedbackPath, 'utf-8');
+    assert.ok(feedbackContent.includes('STeP AI Feedback'));
+    assert.ok(feedbackContent.includes('Prompt'));
+    assert.ok(feedbackContent.includes('Actual Response'));
+    assert.ok(feedbackContent.includes('Expected / Suggestion'));
+
+    // Test feedback --propose
+    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--propose', '-d', testDir]);
+    const proposalPath = join(testDir, 'SKILL_PROPOSAL_TEMPLATE.md');
+    assert.ok(await pathExists(proposalPath));
+    const proposalContent = await readFile(proposalPath, 'utf-8');
+    assert.ok(proposalContent.includes('Scope Guard'));
+    assert.ok(proposalContent.includes('PDPA'));
+
+    await rm(testDir, { recursive: true, force: true });
+  });
 });
 
 

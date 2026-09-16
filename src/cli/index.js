@@ -12,6 +12,7 @@ import { runTeams } from './commands/teams.js';
 import { runAsk } from './commands/ask.js';
 import { runConfig } from './commands/config.js';
 import { runUpdate } from './commands/update.js';
+import { runFeedback } from './commands/feedback.js';
 
 function parseArgs(rawArgs) {
   const args = { _: [] };
@@ -59,6 +60,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('ask')}        ถามคำถามงานภาษาไทยธรรมดา เพื่อให้ AI วิเคราะห์ Skill, SOP และระเบียบที่เกี่ยวข้อง
   ${colors.cyan('config')}     ดูหรือเปลี่ยนทีมหลักและเครื่องมือ AI ประจำตัว (${colors.dim('~/.step-ai/config.json')})
   ${colors.cyan('update')}     อัปเดต Skills และ Router ล่าสุดในคลิกเดียว (ไม่กระทบไฟล์งานเดิม)
+  ${colors.cyan('feedback')}   แนะนำวิธีส่งข้อเสนอแนะ รายงานผลลัพธ์ หรือเสนอ Skill ใหม่
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
   ${colors.cyan('teams')}      แสดงผังและรายชื่อ 22 ทีมของ STeP พร้อม 5 Domain Clusters
   ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
@@ -114,6 +116,9 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     case 'update':
       await runUpdate(args);
+      break;
+    case 'feedback':
+      await runFeedback(args);
       break;
     case 'teams':
       await runTeams(args);
