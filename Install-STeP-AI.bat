@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 > nul
-title STeP AI Setup (Pilot v0.1)
+title STeP AI Setup (Pilot v0.2)
 
 echo ============================================================
 echo         STeP AI — อุทยานวิทยาศาสตร์และเทคโนโลยี มช.

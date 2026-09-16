@@ -1,12 +1,17 @@
-# STeP AI — One-Click Updater (Pilot v0.1)
+﻿# STeP AI — One-Click Updater (Pilot v0.2)
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$Host.UI.RawUI.WindowTitle = "STeP AI Update & Sync"
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$Host.UI.RawUI.WindowTitle = "STeP AI Update & Sync (Pilot v0.2)"
+
+if (-not $PSScriptRoot) {
+    $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
 
 Clear-Host
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "           STeP AI Update & Skill Sync (Pilot v0.1)         " -ForegroundColor Yellow
+Write-Host "           STeP AI Update & Skill Sync (Pilot v0.2)         " -ForegroundColor Yellow
 Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) " -ForegroundColor White
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""

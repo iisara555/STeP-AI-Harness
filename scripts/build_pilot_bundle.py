@@ -66,7 +66,11 @@ def build_pilot_bundle():
         else:
             zinfo.external_attr = 0o644 << 16  # Unix regular file permissions rw-r--r--
         with open(fpath, 'rb') as src:
-            zf.writestr(zinfo, src.read(), compress_type=zipfile.ZIP_DEFLATED)
+            data = src.read()
+        # Windows PowerShell requires UTF-8 BOM to parse non-ASCII characters correctly
+        if str_arc.endswith('.ps1') and not data.startswith(b'\xef\xbb\xbf'):
+            data = b'\xef\xbb\xbf' + data
+        zf.writestr(zinfo, data, compress_type=zipfile.ZIP_DEFLATED)
 
     file_count = 0
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

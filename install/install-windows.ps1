@@ -1,13 +1,18 @@
-# STeP AI — Zero-Terminal Windows Installer (Pilot v0.1)
+﻿# STeP AI — Zero-Terminal Windows Installer (Pilot v0.2)
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$Host.UI.RawUI.WindowTitle = "STeP AI Setup (Pilot v0.1)"
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$Host.UI.RawUI.WindowTitle = "STeP AI Setup (Pilot v0.2)"
+
+if (-not $PSScriptRoot) {
+    $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
 
 function Show-Header {
     Clear-Host
     Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "               STeP AI Setup (Pilot v0.1)                   " -ForegroundColor Yellow -NoNewline
+    Write-Host "               STeP AI Setup (Pilot v0.2)                   " -ForegroundColor Yellow -NoNewline
     Write-Host ""
     Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) " -ForegroundColor White
     Write-Host "============================================================" -ForegroundColor Cyan

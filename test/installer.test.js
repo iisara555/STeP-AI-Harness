@@ -235,4 +235,39 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     const linuxDisplay = getPlatformDisplay({ platform: 'linux', arch: 'x64' });
     assert.equal(linuxDisplay, 'Linux (x64)');
   });
+
+  await t.test('Case 11: Windows Installer and Updater PowerShell script encoding & syntax', async () => {
+    const installPs1Path = join(PACKAGE_ROOT, 'install', 'install-windows.ps1');
+    const updatePs1Path = join(PACKAGE_ROOT, 'install', 'update-windows.ps1');
+
+    const installBuf = await readFile(installPs1Path);
+    const updateBuf = await readFile(updatePs1Path);
+
+    // Verify UTF-8 BOM
+    assert.equal(installBuf[0], 0xef, 'install-windows.ps1 must start with UTF-8 BOM byte 0');
+    assert.equal(installBuf[1], 0xbb, 'install-windows.ps1 must start with UTF-8 BOM byte 1');
+    assert.equal(installBuf[2], 0xbf, 'install-windows.ps1 must start with UTF-8 BOM byte 2');
+
+    assert.equal(updateBuf[0], 0xef, 'update-windows.ps1 must start with UTF-8 BOM byte 0');
+    assert.equal(updateBuf[1], 0xbb, 'update-windows.ps1 must start with UTF-8 BOM byte 1');
+    assert.equal(updateBuf[2], 0xbf, 'update-windows.ps1 must start with UTF-8 BOM byte 2');
+
+    // On Windows, verify parser validation via powershell.exe
+    if (process.platform === 'win32') {
+      for (const psFile of [installPs1Path, updatePs1Path]) {
+        const psScript = `
+          $err = $null
+          $tok = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile('${psFile.replace(/\\\\/g, '\\\\\\\\')}', [ref]$tok, [ref]$err)
+          if ($err -and $err.Count -gt 0) {
+            $err | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+        `;
+        const res = await execFileAsync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript]);
+        assert.equal(res.stderr, '');
+      }
+    }
+  });
 });
+
