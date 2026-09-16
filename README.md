@@ -4,12 +4,23 @@
 
 ---
 
-**STeP AI Harness** คือคลังต้นแบบภายในสำหรับนำความรู้ขององค์กร มาตรฐานการทำงาน และขั้นตอนที่ใช้ซ้ำได้มาใช้ร่วมกันในบุคลากรทั้ง **22 ทีม (5 กลุ่มงาน)** ของอุทยานฯ เพื่อให้สามารถใช้งาน AI Agents (เช่น **OpenAI Codex**, **Claude Code**, **Cursor IDE**) ได้อย่างมีประสิทธิภาพ ปลอดภัย และถูกต้องตามระเบียบของมหาวิทยาลัยเชียงใหม่และหน่วยงานราชการ
+**STeP AI Harness** คือคลังต้นแบบภายในสำหรับนำความรู้ขององค์กร มาตรฐานการทำงาน และขั้นตอนที่ใช้ซ้ำได้มาใช้ร่วมกันในบุคลากรทั้ง **22 ทีม (5 กลุ่มงาน)** ของอุทยานฯ เพื่อให้สามารถใช้งาน AI Agents (ครอบคลุมทั้ง **สายฟรีมีโควตา**, **สายจ่ายตังค์**, และ **สาย Local AI** เช่น **Cursor**, **OpenCode**, **Claude Desktop**, **ChatGPT Desktop**, **Google Antigravity & Spark**, **Hermes Agent**, **Windsurf**, และ **VS Code**) ได้อย่างมีประสิทธิภาพ ปลอดภัย และถูกต้องตามระเบียบของมหาวิทยาลัยเชียงใหม่และหน่วยงานราชการ
 
 > [!NOTE]
 > **นโยบายระยะทดลอง (Universal Access Model & 22-Team Routing):**  
 > • **พนักงานทั่วไป:** ดาวน์โหลดแล้วดับเบิลคลิกติดตั้งได้ทันที ไม่ต้องรู้เรื่อง Git, Node หรือคำสั่ง Terminal  
+> • **ระบบ Guided Wizard:** หากเครื่องยังไม่มีโปรแกรม AI เลย ระบบจะถามนำทางและช่วยเปิดหน้าเว็บดาวน์โหลดโปรแกรมสายฟรี (เช่น OpenCode หรือ Cursor) ให้ทันทีผ่านเบราว์เซอร์  
 > • **การเข้าถึง:** พนักงานทุกคนสามารถเข้าถึงและใช้งาน Approved Skills ได้อย่างยืดหยุ่น โดยมี **Layer 1 Router** คอยคัดเลือกทักษะที่ถูกต้องให้อัตโนมัติตามบริบทงาน
+
+---
+
+## 🧭 โครงสร้าง 3 สายการใช้งาน (3-Tier AI Ecosystem)
+
+| หมวดหมู่ (Tier) | เครื่องมือที่รองรับ | คำแนะนำสำหรับพนักงาน STeP | ไฟล์ที่สร้าง |
+| :--- | :--- | :--- | :--- |
+| **1. สายฟรี / มี Quota ฟรี** *(Free Quota)* | ⭐ **Cursor IDE**, ⭐ **OpenCode AI**, **Windsurf AI IDE**, **VS Code** | **แนะนำอันดับ 1 สำหรับพนักงานทั่วไป**: ไม่มีค่าใช้จ่าย มีโควตาฟรีประจำเดือน เริ่มต้นได้ทันที | `.cursorrules`, `OPENCODE.md`, `.windsurfrules`, `CODEX_INSTRUCTIONS.md` |
+| **2. สายจ่ายตังค์ / องค์กรจัดซื้อ** *(Paid / Commercial)* | **Claude Desktop**, **ChatGPT Desktop**, **Google Antigravity & Spark** | เหมาะสำหรับผู้มีสิทธิ์ใช้งานระดับ Pro / Plus / Team หรือสิทธิ์องค์กรของ มช./อว. | `CLAUDE.md`, `CHATGPT.md`, `GEMINI.md` |
+| **3. สาย Local AI / ความเป็นส่วนตัวข้อมูล 100%** *(Local / Privacy)* | **Hermes Agent (Nous Research)** | ประมวลผลภายในเครื่อง ปลอดภัยสูงสุดตามมาตรฐาน PDPA ไม่ส่งข้อมูลออกภายนอก | `HERMES.md` |
 
 ---
 
@@ -20,14 +31,16 @@
 ### 🪟 สำหรับ Windows
 1. แตกไฟล์ `STeP-AI-Pilot-v0.2.0.zip`
 2. ดับเบิลคลิกที่ไฟล์ **`Install-STeP-AI.bat`**
-3. เลือกหมายเลขทีมของคุณ (เช่น `1. QS`, `2. AFP`, `3. CC` หรือพิมพ์ `A` เพื่อดูครบ 22 ทีม)
-4. เปิดโปรแกรม AI (VS Code, Cursor, Claude) สั่งงานได้ทันที!
+3. ระบบจะสแกนโปรแกรม AI 8 ค่ายในเครื่องอัตโนมัติ (หากยังไม่มี ระบบจะถามนำทางและเปิดหน้าดาวน์โหลด Cursor หรือ OpenCode ให้ทันที)
+4. เลือกหมายเลขทีมของคุณ (แสดงครบทั้ง 22 ทีม เช่น `1. GA`, `2. AFP`, `4. QS`, `7. PITI`, `16. CC` ฯลฯ)
+5. เปิดโปรแกรม AI ที่คุณเลือก $\rightarrow$ เมนู **File $\rightarrow$ Open Folder...** $\rightarrow$ เลือกโฟลเดอร์นี้ แล้วเริ่มพิมพ์คุยงานภาษาไทยได้ทันที!
 
 ### 🍏 สำหรับ macOS
 1. แตกไฟล์ `STeP-AI-Pilot-v0.2.0.zip`
 2. ดับเบิลคลิกที่ไฟล์ **`Install-STeP-AI.command`**
-3. เลือกหมายเลขทีมของคุณ (เช่น `1. QS`, `2. AFP`, `3. CC` หรือพิมพ์ `A` เพื่อดูครบ 22 ทีม)
-4. เปิดโปรแกรม AI (VS Code, Cursor, Claude) สั่งงานได้ทันที!
+3. ระบบจะสแกนโปรแกรม AI 8 ค่ายบน Mac อัตโนมัติ พร้อมระบบ Guided Wizard กรณีเริ่มจากศูนย์
+4. เลือกหมายเลขทีมของคุณ (1–22)
+5. เปิดโปรแกรม AI $\rightarrow$ เมนู **File $\rightarrow$ Open Folder...** $\rightarrow$ เลือกโฟลเดอร์นี้ แล้วเริ่มพิมพ์คุยงานภาษาไทยได้ทันที!
 
 > [!TIP]
 > **คำแนะนำสำหรับ macOS (Gatekeeper Tip):**  
@@ -287,14 +300,19 @@ step-ai teams
 | `creative` | งานออกแบบ, นิทรรศการ, งานสื่อสาร | Skills กลาง + Designer Brief, แนวคิดงาน Event, การออกแบบ Slide |
 | `ai-admin` | ผู้ดูแลระบบและธรรมาภิบาล AI ของทีม | ได้รับ Skills และความรู้ครบทุกหมวดหมู่ |
 
-#### 3. เครื่องมือที่เลือกได้ (`--tool`):
+#### 3. เครื่องมือที่เลือกได้ (`--tool` — ครอบคลุม 8 ค่ายใน 3 สาย):
 
-| Tool Name | เหมาะสำหรับ | ไฟล์คอนฟิกที่ระบบสร้างให้ |
-|---|---|---|
-| `codex` | OpenAI Codex Desktop (ค่าเริ่มต้น) | `CODEX_INSTRUCTIONS.md`, `AGENTS.md` |
-| `claude` | Claude Code, Claude Desktop, Anthropic Projects | `CLAUDE.md`, `AGENTS.md` |
-| `cursor` | Cursor IDE (Composer / Chat) | `.cursorrules`, `AGENTS.md` |
-| `all` | พนักงานที่สลับใช้หลายเครื่องมือในโฟลเดอร์เดียวกัน | สร้างครบทุกไฟล์ข้างต้น |
+| Tool Name | หมวดหมู่ (Tier) | เหมาะสำหรับ | ไฟล์คำสั่งที่ระบบสร้างให้ |
+|---|---|---|---|
+| `cursor` | สายฟรีมีโควตา | Cursor IDE (Composer / Chat) [แนะนำอันดับ 1] | `.cursorrules`, `AGENTS.md` |
+| `opencode` | สายฟรีมีโควตา | OpenCode AI Assistant [แนะนำสำหรับเริ่มต้น] | `OPENCODE.md`, `AGENTS.md` |
+| `windsurf` | สายฟรีมีโควตา | Windsurf AI IDE (Codeium Cascade) | `.windsurfrules`, `AGENTS.md` |
+| `codex` | สายฟรีมีโควตา | OpenAI Codex Desktop / VS Code | `CODEX_INSTRUCTIONS.md`, `AGENTS.md` |
+| `claude` | สายจ่ายตังค์ | Claude Code, Claude Desktop, Anthropic Projects | `CLAUDE.md`, `AGENTS.md` |
+| `chatgpt` | สายจ่ายตังค์ | ChatGPT Desktop, OpenAI Plus/Team/Enterprise | `CHATGPT.md`, `AGENTS.md` |
+| `antigravity` / `gemini` | สายจ่ายตังค์ | Google Antigravity & Spark, Gemini Enterprise | `GEMINI.md`, `AGENTS.md` |
+| `hermes` | สาย Local AI | Hermes Agent (Nous Research / Local AI) | `HERMES.md`, `AGENTS.md` |
+| `all` | ครอบคลุมทุกสาย | พนักงานที่สลับใช้หลายเครื่องมือในโฟลเดอร์เดียวกัน | สร้างครบทั้ง 8 ค่ายพร้อมกัน (9 ไฟล์) |
 
 #### ตัวอย่างคำสั่งใช้งานจริง:
 
@@ -395,9 +413,15 @@ sequenceDiagram
 ## 👥 สำหรับผู้ร่วมพัฒนา Harness (Developer / Maintainer)
 
 ```bash
-# ตรวจสอบความถูกต้องและสแกน Secret ในคลัง
+# 1. ตรวจสอบความถูกต้องและสแกน Secret ในคลัง
 py scripts/validate_repo.py
 
-# รันชุดทดสอบความถูกต้องของ CLI & Adapters
+# 2. รันชุดทดสอบความถูกต้องอัตโนมัติ (CLI, Router, Employee Queries, Installer)
 npm test
+
+# 3. อัปเดตไฟล์ตัวติดตั้ง Zero-Terminal (Windows .ps1 และ macOS .sh)
+py scripts/update_installers.py
+
+# 4. บิลด์ไฟล์แจกจ่าย Pilot ZIP (STeP-AI-Pilot-v0.2.0.zip)
+py scripts/build_pilot_bundle.py
 ```
