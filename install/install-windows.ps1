@@ -196,10 +196,13 @@ Write-Host "  ระบบค้นหา:     Layer 1 Dynamic Router พร้�
 Write-Host ""
 Write-Host "💡 วิธีเริ่มใช้งาน:" -ForegroundColor Cyan
 Write-Host "  1. เปิดโปรแกรม AI ที่คุณเลือก (Cursor, VS Code หรือ Claude)" -ForegroundColor White
-Write-Host "  2. เปิดโฟลเดอร์นี้ หรือเริ่มพิมพ์คุยงานภาษาไทยได้ทันที เช่น:" -ForegroundColor White
+Write-Host "  2. ในโปรแกรม AI ให้เปิดโฟลเดอร์ระบบ STeP AI นี้ (เมนู File -> Open Folder):" -ForegroundColor White
+Write-Host "     📁 $rootDir" -ForegroundColor Yellow
+Write-Host "  3. เริ่มพิมพ์คุยงานภาษาไทยในช่องแชท AI ได้ทันที เช่น:" -ForegroundColor White
 Write-Host "     - 'ช่วยตรวจเอกสารนี้ก่อนส่ง'" -ForegroundColor Gray
 Write-Host "     - 'ช่วยตรวจ Internal Audit ชุดนี้'" -ForegroundColor Gray
 Write-Host "     - 'ช่วยตรวจ TOR จัดซื้อระบบ หน่อยครับ'" -ForegroundColor Gray
+Write-Host "     (สามารถลากไฟล์งาน Word, PDF หรือ Excel เข้ามาวางในโฟลเดอร์นี้เพื่อให้ AI ช่วยตรวจได้)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'" -ForegroundColor DarkGray
 Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
