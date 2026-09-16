@@ -15,11 +15,18 @@ if (-not $PSScriptRoot) {
 
 function Show-Header {
     Clear-Host
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "               STeP AI Setup (Pilot v0.2)                   " -ForegroundColor Yellow -NoNewline
-    Write-Host ""
-    Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) " -ForegroundColor White
-    Write-Host "============================================================" -ForegroundColor Cyan
+    Write-Host "=================================================================" -ForegroundColor Cyan
+    Write-Host "   ____ _____     ____       _    ___                            " -ForegroundColor Cyan
+    Write-Host "  / ___|_   _|___|  _ \\     / \\  |_ _|   " -ForegroundColor Cyan -NoNewline
+    Write-Host "STeP AI Setup (Pilot v0.2)      " -ForegroundColor Yellow
+    Write-Host "  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    " -ForegroundColor Cyan -NoNewline
+    Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
+    Write-Host "   ___) || ||  __/  __/   / ___ \\ | |    " -ForegroundColor Cyan -NoNewline
+    Write-Host "22 Teams • 5 Clusters           " -ForegroundColor Gray
+    Write-Host "  |____/ |_| \\___|_|     /_/   \\_\\___|                           " -ForegroundColor Cyan
+    Write-Host "=================================================================" -ForegroundColor Cyan
+    Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White
+    Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -272,9 +279,9 @@ Write-Host ""
 & node "$rootDir\\bin\\step-ai.js" doctor --employee
 
 # 6. Success Screen
-Write-Host "============================================================" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "                 ✓ STeP AI พร้อมใช้งาน                      " -ForegroundColor Yellow
-Write-Host "============================================================" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  ทีมหลัก:       $($selectedTeam.ToUpper())" -ForegroundColor White
 Write-Host "  เครื่องมือ AI:  $selectedTool" -ForegroundColor White
@@ -292,10 +299,52 @@ Write-Host "     (สามารถลากไฟล์งาน Word, PDF ห
 Write-Host ""
 Write-Host "  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'" -ForegroundColor DarkGray
 Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
-Write-Host "============================================================" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 
 Read-Host "กด Enter เพื่อเสร็จสิ้นการติดตั้ง"
+"""
+
+UPDATE_PS1_CONTENT = """# STeP AI — One-Click Updater (Pilot v0.2)
+# อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$Host.UI.RawUI.WindowTitle = "STeP AI Update & Sync (Pilot v0.2)"
+
+if (-not $PSScriptRoot) {
+    $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+
+Clear-Host
+Write-Host "=================================================================" -ForegroundColor Cyan
+Write-Host "   ____ _____     ____       _    ___                            " -ForegroundColor Cyan
+Write-Host "  / ___|_   _|___|  _ \\     / \\  |_ _|   " -ForegroundColor Cyan -NoNewline
+Write-Host "STeP AI Update & Sync (Pilot v0.2)" -ForegroundColor Yellow
+Write-Host "  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    " -ForegroundColor Cyan -NoNewline
+Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
+Write-Host "   ___) || ||  __/  __/   / ___ \\ | |    " -ForegroundColor Cyan -NoNewline
+Write-Host "22 Teams • 5 Clusters           " -ForegroundColor Gray
+Write-Host "  |____/ |_| \\___|_|     /_/   \\_\\___|                           " -ForegroundColor Cyan
+Write-Host "=================================================================" -ForegroundColor Cyan
+Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White
+Write-Host "=================================================================" -ForegroundColor Cyan
+Write-Host ""
+
+$rootDir = Resolve-Path "$PSScriptRoot\\.."
+Set-Location $rootDir
+
+Write-Host "กำลังตรวจสอบและอัปเดตทักษะองค์กรล่าสุด..." -ForegroundColor Gray
+Write-Host ""
+
+& node "$rootDir\\bin\\step-ai.js" update
+
+Write-Host ""
+Write-Host "=================================================================" -ForegroundColor Green
+Write-Host "                 ✓ การอัปเดตเสร็จสมบูรณ์                     " -ForegroundColor Yellow
+Write-Host "=================================================================" -ForegroundColor Green
+Write-Host ""
+Read-Host "กด Enter เพื่อเสร็จสิ้น"
 """
 
 SH_CONTENT = """#!/usr/bin/env bash
@@ -318,10 +367,15 @@ MAGENTA='\\033[0;35m'
 NC='\\033[0m'
 
 clear || true
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${YELLOW}               STeP AI Setup (Pilot v0.2)                   ${NC}"
-echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) ${NC}"
-echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN}=================================================================${NC}"
+echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
+echo -e "${CYAN}  / ___|_   _|___|  _ \\     / \\  |_ _|   ${YELLOW}STeP AI Setup (Pilot v0.2)      ${NC}"
+echo -e "${CYAN}  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    ${GRAY}Enterprise AI Architecture      ${NC}"
+echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\ | |    ${GRAY}22 Teams • 5 Clusters           ${NC}"
+echo -e "${CYAN}  |____/ |_| \\___|_|     /_/   \\_\\___|                           ${NC}"
+echo -e "${CYAN}=================================================================${NC}"
+echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) ${NC}"
+echo -e "${CYAN}=================================================================${NC}"
 echo ""
 
 # 1. Detect macOS
@@ -586,9 +640,9 @@ echo ""
 node "$ROOT_DIR/bin/step-ai.js" doctor --employee
 
 echo ""
-echo -e "${GREEN}============================================================${NC}"
+echo -e "${GREEN}=================================================================${NC}"
 echo -e "${YELLOW}                 ✓ STeP AI พร้อมใช้งานบน macOS               ${NC}"
-echo -e "${GREEN}============================================================${NC}"
+echo -e "${GREEN}=================================================================${NC}"
 echo ""
 echo -e "  ทีมหลัก:       ${WHITE}$(echo "$SELECTED_TEAM" | tr '[:lower:]' '[:upper:]')${NC}"
 echo -e "  เครื่องมือ AI:  ${WHITE}$SELECTED_TOOL${NC}"
@@ -611,21 +665,91 @@ echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy
 """
 
+UPDATE_SH_CONTENT = """#!/usr/bin/env bash
+# STeP AI — Zero-Terminal macOS Updater (Pilot v0.2)
+# อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Colors
+CYAN='\\033[0;36m'
+GREEN='\\033[0;32m'
+YELLOW='\\033[1;33m'
+WHITE='\\033[1;37m'
+GRAY='\\033[0;90m'
+NC='\\033[0m'
+
+clear || true
+echo -e "${CYAN}=================================================================${NC}"
+echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
+echo -e "${CYAN}  / ___|_   _|___|  _ \\     / \\  |_ _|   ${YELLOW}STeP AI Update & Sync (Pilot v0.2)${NC}"
+echo -e "${CYAN}  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    ${GRAY}Enterprise AI Architecture      ${NC}"
+echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\ | |    ${GRAY}22 Teams • 5 Clusters           ${NC}"
+echo -e "${CYAN}  |____/ |_| \\___|_|     /_/   \\_\\___|                           ${NC}"
+echo -e "${CYAN}=================================================================${NC}"
+echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) ${NC}"
+echo -e "${CYAN}=================================================================${NC}"
+echo ""
+
+# 1. Check Node.js Runtime
+if ! command -v node >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️  ไม่พบ Node.js ในเครื่องคอมพิวเตอร์ของคุณ${NC}"
+    echo -e "กรุณาดาวน์โหลดได้ที่: ${CYAN}https://nodejs.org${NC}"
+    read -p "กด Enter เพื่อออกจากโปรแกรม..." dummy
+    exit 1
+fi
+
+cd "$ROOT_DIR"
+
+# 2. Run Update
+echo -e "${YELLOW}กำลังดำเนินการอัปเดต Approved Skills และ Router ล่าสุด...${NC}"
+node "$ROOT_DIR/bin/step-ai.js" update
+
+# 3. Run Doctor
+echo ""
+node "$ROOT_DIR/bin/step-ai.js" doctor --employee
+
+echo ""
+echo -e "${GREEN}=================================================================${NC}"
+echo -e "${YELLOW}                 ✓ อัปเดต STeP AI สำเร็จแล้ว                ${NC}"
+echo -e "${GREEN}=================================================================${NC}"
+echo ""
+echo -e "  ระบบได้ทำการสำรองข้อมูล และอัปเดต Skills ให้ตรงกับส่วนกลางล่าสุดแล้ว"
+echo -e "  ไฟล์ที่คุณเคยปรับแก้เองได้รับการปกป้องไว้อย่างปลอดภัย"
+echo ""
+read -p "กด Enter เพื่อเสร็จสิ้น..." dummy
+"""
+
 def main():
-    ps1_file = ROOT / 'install' / 'install-windows.ps1'
-    sh_file = ROOT / 'install' / 'install-macos.sh'
+    install_ps1 = ROOT / 'install' / 'install-windows.ps1'
+    update_ps1 = ROOT / 'install' / 'update-windows.ps1'
+    install_sh = ROOT / 'install' / 'install-macos.sh'
+    update_sh = ROOT / 'install' / 'update-macos.sh'
 
     # Write Windows ps1 with UTF-8 BOM and CRLF
-    ps1_bytes = PS1_CONTENT.replace('\r\n', '\n').replace('\n', '\r\n').encode('utf-8-sig')
-    with open(ps1_file, 'wb') as f:
+    ps1_bytes = PS1_CONTENT.replace('\\r\\n', '\\n').replace('\\n', '\\r\\n').encode('utf-8-sig')
+    with open(install_ps1, 'wb') as f:
         f.write(ps1_bytes)
-    print(f"Updated {ps1_file} (UTF-8 BOM, CRLF, {len(ps1_bytes)} bytes)")
+    print(f"Updated {install_ps1} (UTF-8 BOM, CRLF, {len(ps1_bytes)} bytes)")
+
+    update_ps1_bytes = UPDATE_PS1_CONTENT.replace('\\r\\n', '\\n').replace('\\n', '\\r\\n').encode('utf-8-sig')
+    with open(update_ps1, 'wb') as f:
+        f.write(update_ps1_bytes)
+    print(f"Updated {update_ps1} (UTF-8 BOM, CRLF, {len(update_ps1_bytes)} bytes)")
 
     # Write macOS sh with UTF-8 and LF
-    sh_bytes = SH_CONTENT.replace('\r\n', '\n').encode('utf-8')
-    with open(sh_file, 'wb') as f:
+    sh_bytes = SH_CONTENT.replace('\\r\\n', '\\n').encode('utf-8')
+    with open(install_sh, 'wb') as f:
         f.write(sh_bytes)
-    print(f"Updated {sh_file} (UTF-8, LF, {len(sh_bytes)} bytes)")
+    print(f"Updated {install_sh} (UTF-8, LF, {len(sh_bytes)} bytes)")
+
+    update_sh_bytes = UPDATE_SH_CONTENT.replace('\\r\\n', '\\n').encode('utf-8')
+    with open(update_sh, 'wb') as f:
+        f.write(update_sh_bytes)
+    print(f"Updated {update_sh} (UTF-8, LF, {len(update_sh_bytes)} bytes)")
 
 if __name__ == '__main__':
     main()

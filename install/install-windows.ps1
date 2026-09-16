@@ -11,11 +11,18 @@ if (-not $PSScriptRoot) {
 
 function Show-Header {
     Clear-Host
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "               STeP AI Setup (Pilot v0.2)                   " -ForegroundColor Yellow -NoNewline
-    Write-Host ""
-    Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) " -ForegroundColor White
-    Write-Host "============================================================" -ForegroundColor Cyan
+    Write-Host "=================================================================" -ForegroundColor Cyan
+    Write-Host "   ____ _____     ____       _    ___                            " -ForegroundColor Cyan
+    Write-Host "  / ___|_   _|___|  _ \     / \  |_ _|   " -ForegroundColor Cyan -NoNewline
+    Write-Host "STeP AI Setup (Pilot v0.2)      " -ForegroundColor Yellow
+    Write-Host "  \___ \ | | / _ \ |_) |   / _ \  | |    " -ForegroundColor Cyan -NoNewline
+    Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
+    Write-Host "   ___) || ||  __/  __/   / ___ \ | |    " -ForegroundColor Cyan -NoNewline
+    Write-Host "22 Teams • 5 Clusters           " -ForegroundColor Gray
+    Write-Host "  |____/ |_| \___|_|     /_/   \_\___|                           " -ForegroundColor Cyan
+    Write-Host "=================================================================" -ForegroundColor Cyan
+    Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White
+    Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -268,9 +275,9 @@ Write-Host ""
 & node "$rootDir\bin\step-ai.js" doctor --employee
 
 # 6. Success Screen
-Write-Host "============================================================" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "                 ✓ STeP AI พร้อมใช้งาน                      " -ForegroundColor Yellow
-Write-Host "============================================================" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  ทีมหลัก:       $($selectedTeam.ToUpper())" -ForegroundColor White
 Write-Host "  เครื่องมือ AI:  $selectedTool" -ForegroundColor White
@@ -288,7 +295,7 @@ Write-Host "     (สามารถลากไฟล์งาน Word, PDF ห
 Write-Host ""
 Write-Host "  หากต้องการเปลี่ยนทีมในอนาคต: รัน 'step-ai config'" -ForegroundColor DarkGray
 Write-Host "  หากต้องการอัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
-Write-Host "============================================================" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 
 Read-Host "กด Enter เพื่อเสร็จสิ้นการติดตั้ง"

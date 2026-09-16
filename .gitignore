@@ -10,6 +10,7 @@ stats/
 members/
 votes/
 tmp/
+.step-ai/
 
 # Local or restricted source material
 artifacts/
