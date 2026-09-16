@@ -96,17 +96,26 @@ export async function runConfig(args) {
       }
     } else if (choice === '2') {
       console.log('\nเลือกเครื่องมือ AI:');
-      console.log('  1. Claude');
-      console.log('  2. Cursor');
-      console.log('  3. Codex');
-      console.log('  4. ทั้งหมด (All)');
+      console.log('  1. ทั้งหมด (All - Cursor, VS Code, Claude, Hermes, Windsurf) [แนะนำ]');
+      console.log('  2. Cursor IDE');
+      console.log('  3. OpenAI Codex / VS Code');
+      console.log('  4. Claude Desktop / Claude Code');
+      console.log('  5. Hermes Agent (Nous Research / Local AI)');
+      console.log('  6. Windsurf AI IDE');
       const toolAns = await new Promise((res) => {
-        rl.question(colors.bold(colors.green('เลือกเครื่องมือ (1-4): ')), (ans) => {
+        rl.question(colors.bold(colors.green('เลือกเครื่องมือ (1-6): ')), (ans) => {
           rl.close();
           res(ans.trim());
         });
       });
-      const map = { '1': 'claude', '2': 'cursor', '3': 'codex', '4': 'all' };
+      const map = {
+        '1': 'all',
+        '2': 'cursor',
+        '3': 'codex',
+        '4': 'claude',
+        '5': 'hermes',
+        '6': 'windsurf',
+      };
       if (map[toolAns]) {
         await saveUserConfig({ tool: map[toolAns] });
         success(`บันทึกเครื่องมือ AI: ${map[toolAns]} สำเร็จ!`);

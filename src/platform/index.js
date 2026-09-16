@@ -38,7 +38,15 @@ export function getPlatformDisplay(options = {}) {
  * @param {object} [options]
  * @param {string} [options.platform]
  * @param {string} [options.home]
- * @returns {Promise<Array<{ id: string, name: string, installed: boolean }>>}
+ * @returns {Promise<Array<{
+ *   id: string,
+ *   name: string,
+ *   installed: boolean,
+ *   url: string,
+ *   description: string,
+ *   recommendation: string,
+ *   instructionFile: string
+ * }>>}
  */
 export async function detectTools(options = {}) {
   const p = options.platform || platform();
@@ -53,4 +61,22 @@ export async function detectTools(options = {}) {
   return detectWindowsTools(options);
 }
 
+/**
+ * Get recommendations for AI tools, especially when none are installed
+ * @param {object} [options]
+ * @returns {Promise<Array<{ id: string, name: string, url: string, description: string, recommendation: string }>>}
+ */
+export async function getToolRecommendations(options = {}) {
+  const tools = await detectTools(options);
+  return tools.map((t) => ({
+    id: t.id,
+    name: t.name,
+    url: t.url,
+    description: t.description,
+    recommendation: t.recommendation,
+    installed: t.installed,
+  }));
+}
+
 export { detectWindowsTools, detectMacTools, getMacCpuArch };
+

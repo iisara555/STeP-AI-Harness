@@ -65,60 +65,111 @@ echo -e "${GREEN}✓ ตรวจพบ Node.js Runtime: ${NODE_VER}${NC}"
 echo ""
 echo -e "${GRAY}กำลังตรวจสอบโปรแกรม AI ในเครื่อง Mac...${NC}"
 
-CODEX_FOUND=false
 CURSOR_FOUND=false
+CODEX_FOUND=false
 CLAUDE_FOUND=false
-
-# Check applications and CLI commands
-if [ -d "/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Library/Application Support/Code" ] || [ -d "$HOME/.vscode" ] || command -v code >/dev/null 2>&1 || command -v codex >/dev/null 2>&1; then
-    CODEX_FOUND=true
-fi
+HERMES_FOUND=false
+WINDSURF_FOUND=false
 
 if [ -d "/Applications/Cursor.app" ] || [ -d "$HOME/Applications/Cursor.app" ] || [ -d "$HOME/Library/Application Support/Cursor" ] || [ -d "$HOME/.cursor" ] || command -v cursor >/dev/null 2>&1; then
     CURSOR_FOUND=true
+fi
+
+if [ -d "/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Library/Application Support/Code" ] || [ -d "$HOME/.vscode" ] || command -v code >/dev/null 2>&1 || command -v codex >/dev/null 2>&1; then
+    CODEX_FOUND=true
 fi
 
 if [ -d "/Applications/Claude.app" ] || [ -d "$HOME/Applications/Claude.app" ] || [ -d "$HOME/Library/Application Support/Claude" ] || [ -d "$HOME/.claude" ] || [ -d "$HOME/.claude-code" ] || command -v claude >/dev/null 2>&1; then
     CLAUDE_FOUND=true
 fi
 
-echo -e "${WHITE}ผลการตรวจจับเครื่องมือ AI บน macOS:${NC}"
-if [ "$CODEX_FOUND" = true ]; then
-    echo -e "  [${GREEN}✓${NC}] OpenAI Codex / VS Code"
-else
-    echo -e "  [ ] OpenAI Codex / VS Code"
+if command -v hermes >/dev/null 2>&1 || command -v hermes-agent >/dev/null 2>&1 || [ -d "$HOME/.hermes" ] || [ -d "$HOME/Library/Application Support/hermes" ]; then
+    HERMES_FOUND=true
 fi
 
+if [ -d "/Applications/Windsurf.app" ] || [ -d "$HOME/Applications/Windsurf.app" ] || [ -d "$HOME/Library/Application Support/Windsurf" ] || [ -d "$HOME/.windsurf" ] || command -v windsurf >/dev/null 2>&1; then
+    WINDSURF_FOUND=true
+fi
+
+FOUND_COUNT=0
+[ "$CURSOR_FOUND" = true ] && FOUND_COUNT=$((FOUND_COUNT + 1))
+[ "$CODEX_FOUND" = true ] && FOUND_COUNT=$((FOUND_COUNT + 1))
+[ "$CLAUDE_FOUND" = true ] && FOUND_COUNT=$((FOUND_COUNT + 1))
+[ "$HERMES_FOUND" = true ] && FOUND_COUNT=$((FOUND_COUNT + 1))
+[ "$WINDSURF_FOUND" = true ] && FOUND_COUNT=$((FOUND_COUNT + 1))
+
+echo -e "${WHITE}ผลการตรวจจับโปรแกรม AI บน macOS:${NC}"
 if [ "$CURSOR_FOUND" = true ]; then
-    echo -e "  [${GREEN}✓${NC}] Cursor IDE"
+    echo -e "  [${GREEN}✓${NC}] Cursor IDE                       (พบในเครื่อง - พร้อมใช้งาน)"
 else
-    echo -e "  [ ] Cursor IDE"
+    echo -e "  [ ] Cursor IDE                       (ยังไม่พบในเครื่อง)"
+fi
+
+if [ "$CODEX_FOUND" = true ]; then
+    echo -e "  [${GREEN}✓${NC}] OpenAI Codex / VS Code           (พบในเครื่อง - พร้อมใช้งาน)"
+else
+    echo -e "  [ ] OpenAI Codex / VS Code           (ยังไม่พบในเครื่อง)"
 fi
 
 if [ "$CLAUDE_FOUND" = true ]; then
-    echo -e "  [${GREEN}✓${NC}] Claude Desktop / Claude Code"
+    echo -e "  [${GREEN}✓${NC}] Claude Desktop / Claude Code     (พบในเครื่อง - พร้อมใช้งาน)"
 else
-    echo -e "  [ ] Claude Desktop / Claude Code"
+    echo -e "  [ ] Claude Desktop / Claude Code     (ยังไม่พบในเครื่อง)"
+fi
+
+if [ "$HERMES_FOUND" = true ]; then
+    echo -e "  [${GREEN}✓${NC}] Hermes Agent (Nous / Local AI)   (พบในเครื่อง - พร้อมใช้งาน)"
+else
+    echo -e "  [ ] Hermes Agent (Nous / Local AI)   (ยังไม่พบในเครื่อง)"
+fi
+
+if [ "$WINDSURF_FOUND" = true ]; then
+    echo -e "  [${GREEN}✓${NC}] Windsurf AI IDE (Codeium)        (พบในเครื่อง - พร้อมใช้งาน)"
+else
+    echo -e "  [ ] Windsurf AI IDE (Codeium)        (ยังไม่พบในเครื่อง)"
+fi
+
+if [ "$FOUND_COUNT" -eq 0 ]; then
+    echo ""
+    echo -e "${YELLOW}⚠️  ยังไม่พบโปรแกรม AI ใดๆ ในเครื่องคอมพิวเตอร์ของคุณ${NC}"
+    echo -e "${GRAY}------------------------------------------------------------${NC}"
+    echo -e "${CYAN}💡 แนะนำโปรแกรม AI ฟรีสำหรับพนักงาน STeP:${NC}"
+    echo -e "  1. ⭐ Cursor IDE (แนะนำที่สุดสำหรับพนักงานทั่วไป):"
+    echo -e "     ดาวน์โหลดได้ฟรีที่: ${CYAN}https://cursor.com${NC}"
+    echo -e "     - ใช้งานง่ายที่สุด เพียงเปิดโฟลเดอร์นี้แล้วเริ่มพิมพ์คุยได้ทันที"
+    echo -e "  2. 📄 Claude Desktop (เหมาะสำหรับงานเอกสาร/ตรวจภาษาไทย):"
+    echo -e "     ดาวน์โหลดได้ฟรีที่: ${CYAN}https://claude.ai/download${NC}"
+    echo -e "  3. 🛡️ Hermes Agent (สำหรับ Local AI และความเป็นส่วนตัวข้อมูลสูงสุด):"
+    echo -e "     ดูข้อมูลและติดตั้ง: ${CYAN}https://github.com/NousResearch/Hermes-Agent${NC}"
+    echo -e "     หรือรันคำสั่ง: pip install hermes-agent"
+    echo -e "  4. 💻 VS Code:"
+    echo -e "     ดาวน์โหลดได้ฟรีที่: ${CYAN}https://code.visualstudio.com${NC}"
+    echo -e "${GRAY}------------------------------------------------------------${NC}"
+    echo -e "${GRAY}(คุณสามารถเลือกติดตั้ง STeP AI ต่อได้ทันที เมื่อดาวน์โหลดโปรแกรม AI แล้วจะพร้อมใช้งานทันที)${NC}"
 fi
 
 echo ""
 echo -e "${GRAY}------------------------------------------------------------${NC}"
-echo -e "${YELLOW}ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่ต้องการติดตั้ง${NC}"
-echo -e "  1. ติดตั้งทั้งหมดที่ตรวจพบ (แนะนำ)"
-echo -e "  2. OpenAI Codex / VS Code"
-echo -e "  3. Cursor IDE"
+echo -e "${YELLOW}ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่ต้องการติดตั้งคำสั่ง${NC}"
+echo -e "  1. ติดตั้งให้ทุกค่าย (All: Cursor, VS Code, Claude, Hermes, Windsurf) [แนะนำ]"
+echo -e "  2. Cursor IDE"
+echo -e "  3. OpenAI Codex / VS Code"
 echo -e "  4. Claude Desktop / Claude Code"
+echo -e "  5. Hermes Agent (Nous Research / Local AI)"
+echo -e "  6. Windsurf AI IDE"
 echo ""
 
-read -p "พิมพ์หมายเลข (1-4) [default: 1]: " TOOL_CHOICE || true
+read -p "พิมพ์หมายเลข (1-6) [default: 1]: " TOOL_CHOICE || true
 TOOL_CHOICE=${TOOL_CHOICE:-1}
 
 SELECTED_TOOL="all"
 case "$TOOL_CHOICE" in
     1) SELECTED_TOOL="all" ;;
-    2) SELECTED_TOOL="codex" ;;
-    3) SELECTED_TOOL="cursor" ;;
+    2) SELECTED_TOOL="cursor" ;;
+    3) SELECTED_TOOL="codex" ;;
     4) SELECTED_TOOL="claude" ;;
+    5) SELECTED_TOOL="hermes" ;;
+    6) SELECTED_TOOL="windsurf" ;;
     *) SELECTED_TOOL="all" ;;
 esac
 

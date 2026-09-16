@@ -38,10 +38,27 @@ export async function runDoctor(args) {
     console.log(`  ${colors.green('✓')} Platform:        ${colors.bold(getPlatformDisplay())}`);
     console.log(`  ${colors.green('✓')} Router:          ${colors.bold('Ready (Layer 1 Dynamic Routing)')}`);
     console.log(`  ${colors.green('✓')} Team:            ${colors.bold(teamDisplay)}`);
-    console.log(`  ${colors.green('✓')} Detected AI:     ${installedToolNames.length > 0 ? colors.cyan(installedToolNames.join(', ')) : colors.yellow('ยังตรวจไม่พบ (เปิดใน Cursor / VS Code / Claude ได้)')}`);
+    if (installedToolNames.length > 0) {
+      console.log(`  ${colors.green('✓')} Detected AI:     ${colors.cyan(installedToolNames.join(', '))}`);
+    } else {
+      console.log(`  ${colors.yellow('⚠️')} Detected AI:     ${colors.yellow('ยังไม่พบโปรแกรม AI ในเครื่อง')}`);
+    }
     console.log(`  ${colors.green('✓')} Skill Index:     ${colors.bold(`Ready (${skillsCount > 0 ? `${skillsCount} Skills` : 'Organization Library'})`)}`);
     console.log(`  ${colors.green('✓')} Configuration:   ${colors.dim(USER_CONFIG_PATH)}`);
     console.log(colors.dim('────────────────────────────────────────────────────────────'));
+
+    if (installedToolNames.length === 0) {
+      console.log(colors.yellow(colors.bold('💡 ยังไม่พบโปรแกรม AI ในเครื่อง — แนะนำให้ดาวน์โหลด (ฟรี):')));
+      console.log(`  1. ${colors.cyan(colors.bold('Cursor IDE'))} (แนะนำที่สุด): ${colors.dim('https://cursor.com')}`);
+      console.log(`     - ใช้ง่ายที่สุด เพียงเปิดโฟลเดอร์นี้แล้วพิมพ์คุยภาษาไทยได้ทันที`);
+      console.log(`  2. ${colors.cyan(colors.bold('Claude Desktop'))}: ${colors.dim('https://claude.ai/download')}`);
+      console.log(`     - เหมาะสำหรับงานเอกสาร สรุปรายงาน และตรวจทานภาษาไทย`);
+      console.log(`  3. ${colors.cyan(colors.bold('Hermes Agent'))}: ${colors.dim('https://github.com/NousResearch/Hermes-Agent')}`);
+      console.log(`     - เหมาะสำหรับ Local AI ในเครื่องและความเป็นส่วนตัว (pip install hermes-agent)`);
+      console.log(`  4. ${colors.cyan(colors.bold('VS Code'))}: ${colors.dim('https://code.visualstudio.com')}`);
+      console.log(colors.dim('────────────────────────────────────────────────────────────'));
+    }
+
     console.log(`${colors.green(colors.bold('✓ สภาพแวดล้อมพร้อมใช้งาน พนักงานสามารถเริ่มถามงานได้ทันที!'))}\n`);
     return;
   }
@@ -136,14 +153,16 @@ export async function runDoctor(args) {
   if (installedSystemTools.length > 0) {
     success(`Detected System AI Tools: ${colors.bold(installedSystemTools.join(', '))}`);
   } else {
-    info(`Detected System AI Tools: ยังตรวจไม่พบ (รองรับ Cursor, VS Code/Codex, Claude)`);
+    info(`Detected System AI Tools: ยังตรวจไม่พบ (รองรับ Cursor, VS Code, Claude, Hermes Agent, Windsurf)`);
   }
 
   // 6. AI Agent Workspace Check
   const agentFiles = [
     { file: 'CLAUDE.md', tool: 'Claude' },
     { file: '.cursorrules', tool: 'Cursor' },
-    { file: 'CODEX_INSTRUCTIONS.md', tool: 'Codex' },
+    { file: '.windsurfrules', tool: 'Windsurf' },
+    { file: 'HERMES.md', tool: 'Hermes Agent' },
+    { file: 'CODEX_INSTRUCTIONS.md', tool: 'Codex / VS Code' },
     { file: 'AGENTS.md', tool: 'Generic Agent' },
   ];
   const detectedAgents = [];

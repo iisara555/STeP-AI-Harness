@@ -49,39 +49,73 @@ if (-not $nodeInstalled) {
 
 # 2. Detect Installed AI Tools
 Write-Host ""
-Write-Host "กำลังตรวจสอบโปรแกรม AI ในเครื่อง..." -ForegroundColor Gray
+Write-Host "กำลังตรวจสอบโปรแกรม AI ในเครื่องของคุณ..." -ForegroundColor Gray
 
 $appData = [System.Environment]::GetFolderPath('ApplicationData')
 $localAppData = [System.Environment]::GetFolderPath('LocalApplicationData')
 $userHome = [System.Environment]::GetFolderPath('UserProfile')
 
-$codexFound = (Test-Path "$appData\Code") -or (Test-Path "$userHome\.vscode") -or (Test-Path "$localAppData\Programs\Microsoft VS Code")
 $cursorFound = (Test-Path "$localAppData\Programs\cursor") -or (Test-Path "$appData\Cursor") -or (Test-Path "$userHome\.cursor")
+$codexFound = (Test-Path "$appData\Code") -or (Test-Path "$userHome\.vscode") -or (Test-Path "$localAppData\Programs\Microsoft VS Code")
 $claudeFound = (Test-Path "$appData\Claude") -or (Test-Path "$userHome\.claude") -or (Test-Path "$localAppData\Programs\Claude")
+$hermesFound = (Test-Path "$userHome\.hermes") -or (Test-Path "$userHome\hermes") -or (Test-Path "$appData\Hermes") -or (Get-Command hermes -ErrorAction SilentlyContinue)
+$windsurfFound = (Test-Path "$localAppData\Programs\Windsurf") -or (Test-Path "$appData\Windsurf") -or (Test-Path "$userHome\.windsurf")
 
-Write-Host "ผลการตรวจจับเครื่องมือ AI:" -ForegroundColor White
-if ($codexFound) { Write-Host "  [✓] OpenAI Codex / VS Code" -ForegroundColor Green } else { Write-Host "  [ ] OpenAI Codex / VS Code" -ForegroundColor DarkGray }
-if ($cursorFound) { Write-Host "  [✓] Cursor IDE" -ForegroundColor Green } else { Write-Host "  [ ] Cursor IDE" -ForegroundColor DarkGray }
-if ($claudeFound) { Write-Host "  [✓] Claude Desktop / Claude Code" -ForegroundColor Green } else { Write-Host "  [ ] Claude Desktop / Claude Code" -ForegroundColor DarkGray }
+$foundCount = 0
+if ($cursorFound) { $foundCount++ }
+if ($codexFound) { $foundCount++ }
+if ($claudeFound) { $foundCount++ }
+if ($hermesFound) { $foundCount++ }
+if ($windsurfFound) { $foundCount++ }
+
+Write-Host "ผลการตรวจจับโปรแกรม AI ในเครื่องของคุณ:" -ForegroundColor White
+if ($cursorFound) { Write-Host "  [✓] Cursor IDE                       (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Cursor IDE                       (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($codexFound) { Write-Host "  [✓] OpenAI Codex / VS Code           (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] OpenAI Codex / VS Code           (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($claudeFound) { Write-Host "  [✓] Claude Desktop / Claude Code     (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Claude Desktop / Claude Code     (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($hermesFound) { Write-Host "  [✓] Hermes Agent (Nous / Local AI)   (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Hermes Agent (Nous / Local AI)   (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($windsurfFound) { Write-Host "  [✓] Windsurf AI IDE (Codeium)        (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Windsurf AI IDE (Codeium)        (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+
+if ($foundCount -eq 0) {
+    Write-Host ""
+    Write-Host "⚠️  ยังไม่พบโปรแกรม AI ใดๆ ในเครื่องคอมพิวเตอร์ของคุณ" -ForegroundColor Yellow
+    Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "💡 แนะนำโปรแกรม AI ฟรีสำหรับพนักงาน STeP:" -ForegroundColor Cyan
+    Write-Host "  1. ⭐ Cursor IDE (แนะนำที่สุดสำหรับพนักงานทั่วไป):" -ForegroundColor White
+    Write-Host "     ดาวน์โหลดได้ฟรีที่: https://cursor.com" -ForegroundColor Cyan
+    Write-Host "     - ใช้งานง่ายที่สุด เพียงเปิดโฟลเดอร์นี้แล้วเริ่มพิมพ์คุยได้ทันที" -ForegroundColor Gray
+    Write-Host "  2. 📄 Claude Desktop (เหมาะสำหรับงานเอกสาร/สรุปรายงาน):" -ForegroundColor White
+    Write-Host "     ดาวน์โหลดได้ฟรีที่: https://claude.ai/download" -ForegroundColor Cyan
+    Write-Host "  3. 🛡️ Hermes Agent (สำหรับ Local AI และความเป็นส่วนตัวข้อมูลสูงสุด):" -ForegroundColor White
+    Write-Host "     ดูข้อมูลและติดตั้ง: https://github.com/NousResearch/Hermes-Agent" -ForegroundColor Cyan
+    Write-Host "     หรือรันคำสั่ง: pip install hermes-agent" -ForegroundColor Gray
+    Write-Host "  4. 💻 VS Code:" -ForegroundColor White
+    Write-Host "     ดาวน์โหลดได้ฟรีที่: https://code.visualstudio.com" -ForegroundColor Cyan
+    Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "(คุณสามารถเลือกติดตั้ง STeP AI ต่อได้ทันที เมื่อดาวน์โหลดโปรแกรม AI แล้วจะพร้อมใช้งานทันที)" -ForegroundColor DarkGray
+}
 
 Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่คุณต้องการติดตั้ง" -ForegroundColor Yellow
-Write-Host "  1. ติดตั้งทั้งหมดที่ตรวจพบ (แนะนำ)" -ForegroundColor White
-Write-Host "  2. OpenAI Codex / VS Code" -ForegroundColor White
-Write-Host "  3. Cursor IDE" -ForegroundColor White
+Write-Host "ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง" -ForegroundColor Yellow
+Write-Host "  1. ติดตั้งให้ทุกค่าย (All: Cursor, VS Code, Claude, Hermes, Windsurf) [แนะนำ]" -ForegroundColor White
+Write-Host "  2. Cursor IDE" -ForegroundColor White
+Write-Host "  3. OpenAI Codex / VS Code" -ForegroundColor White
 Write-Host "  4. Claude Desktop / Claude Code" -ForegroundColor White
+Write-Host "  5. Hermes Agent (Nous Research / Local AI)" -ForegroundColor White
+Write-Host "  6. Windsurf AI IDE" -ForegroundColor White
 Write-Host ""
 
-$toolChoice = Read-Host "พิมพ์หมายเลข (1-4) [default: 1]"
+$toolChoice = Read-Host "พิมพ์หมายเลข (1-6) [default: 1]"
 if ([string]::IsNullOrWhiteSpace($toolChoice)) { $toolChoice = "1" }
 
 $selectedTool = "all"
 switch ($toolChoice) {
     "1" { $selectedTool = "all" }
-    "2" { $selectedTool = "codex" }
-    "3" { $selectedTool = "cursor" }
+    "2" { $selectedTool = "cursor" }
+    "3" { $selectedTool = "codex" }
     "4" { $selectedTool = "claude" }
+    "5" { $selectedTool = "hermes" }
+    "6" { $selectedTool = "windsurf" }
     default { $selectedTool = "all" }
 }
 

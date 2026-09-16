@@ -14,7 +14,8 @@ import {
   USER_CONFIG_PATH,
 } from '../src/utils/user-config.js';
 import { detectInstalledTools } from '../src/utils/tool-detector.js';
-import { getPlatformDisplay, getMacCpuArch } from '../src/platform/index.js';
+import { getPlatformDisplay, getMacCpuArch, getToolRecommendations } from '../src/platform/index.js';
+import { getAdapter, getSupportedTools } from '../src/modules/adapters/index.js';
 
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
@@ -55,16 +56,20 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
   await t.test('Case 2: Tool Detector detects system tools structure', async () => {
     const detected = await detectInstalledTools();
     assert.ok(Array.isArray(detected));
-    assert.ok(detected.length >= 3);
+    assert.ok(detected.length >= 5);
 
     const ids = detected.map((t) => t.id);
     assert.ok(ids.includes('codex'));
     assert.ok(ids.includes('cursor'));
     assert.ok(ids.includes('claude'));
+    assert.ok(ids.includes('hermes'));
+    assert.ok(ids.includes('windsurf'));
 
     for (const tool of detected) {
       assert.equal(typeof tool.name, 'string');
       assert.equal(typeof tool.installed, 'boolean');
+      assert.ok(tool.url.startsWith('https://'));
+      assert.equal(typeof tool.description, 'string');
     }
   });
 
@@ -212,15 +217,19 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     try {
       const macTools = await detectInstalledTools({ platform: 'darwin', home: tmpHome });
       assert.ok(Array.isArray(macTools));
-      assert.equal(macTools.length, 3);
+      assert.equal(macTools.length, 5);
 
       const codex = macTools.find((t) => t.id === 'codex');
       const cursor = macTools.find((t) => t.id === 'cursor');
       const claude = macTools.find((t) => t.id === 'claude');
+      const hermes = macTools.find((t) => t.id === 'hermes');
+      const windsurf = macTools.find((t) => t.id === 'windsurf');
 
       assert.ok(codex && codex.installed === true, 'Codex should be detected via Library/Application Support/Code');
       assert.ok(cursor && cursor.installed === true, 'Cursor should be detected via .cursor');
       assert.ok(claude && claude.installed === false, 'Claude should not be detected if path does not exist');
+      assert.ok(hermes && typeof hermes.url === 'string', 'Hermes should have url');
+      assert.ok(windsurf && typeof windsurf.url === 'string', 'Windsurf should have url');
     } finally {
       await rm(tmpHome, { recursive: true, force: true });
     }
@@ -277,5 +286,105 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
       }
     }
   });
+
+  await t.test('Case 12: Hermes Agent Adapter generates HERMES.md instructions', async () => {
+    const hermesAdapter = getAdapter('hermes');
+    assert.ok(hermesAdapter);
+
+    const mockRole = { id: 'qs', name: 'Quality System', description: 'ISO 9001 and audit' };
+    const mockFiles = [
+      { relativePath: 'skills/common/receipt-audit/SKILL.md', type: 'skill' },
+      { relativePath: 'rules/human-approval.md', type: 'rule' },
+    ];
+
+    const instructions = hermesAdapter.getInstructionFiles(mockRole, mockFiles);
+    assert.equal(instructions.length, 2);
+
+    const hermesFile = instructions.find((f) => f.filename === 'HERMES.md');
+    assert.ok(hermesFile);
+    assert.ok(hermesFile.content.includes('Hermes Agent System Prompt'));
+    assert.ok(hermesFile.content.includes('Human-in-the-loop Mandate'));
+    assert.ok(hermesFile.content.includes('receipt-audit'));
+  });
+
+  await t.test('Case 13: Windsurf Adapter generates .windsurfrules', async () => {
+    const windsurfAdapter = getAdapter('windsurf');
+    assert.ok(windsurfAdapter);
+
+    const mockRole = { id: 'cc', name: 'Creative & Communication', description: 'Design brief and CI' };
+    const mockFiles = [
+      { relativePath: 'skills/common/brand-tone-of-voice/SKILL.md', type: 'skill' },
+      { relativePath: 'rules/naming.md', type: 'rule' },
+    ];
+
+    const instructions = windsurfAdapter.getInstructionFiles(mockRole, mockFiles);
+    const windsurfRules = instructions.find((f) => f.filename === '.windsurfrules');
+    assert.ok(windsurfRules);
+    assert.ok(windsurfRules.content.includes('Windsurf AI Rules'));
+    assert.ok(windsurfRules.content.includes('brand-tone-of-voice'));
+  });
+
+  await t.test('Case 14: Multi Adapter generates complete agent suite including HERMES.md and .windsurfrules', async () => {
+    const multiAdapter = getAdapter('all');
+    assert.ok(multiAdapter);
+
+    const mockRole = { id: 'afp', name: 'Accounting & Procurement', description: 'Finance & TOR' };
+    const mockFiles = [
+      { relativePath: 'skills/pm/tor-review/SKILL.md', type: 'skill' },
+    ];
+
+    const instructions = multiAdapter.getInstructionFiles(mockRole, mockFiles);
+    const filenames = instructions.map((i) => i.filename);
+
+    assert.ok(filenames.includes('CODEX_INSTRUCTIONS.md'));
+    assert.ok(filenames.includes('CLAUDE.md'));
+    assert.ok(filenames.includes('.cursorrules'));
+    assert.ok(filenames.includes('.windsurfrules'));
+    assert.ok(filenames.includes('HERMES.md'));
+    assert.ok(filenames.includes('AGENTS.md'));
+  });
+
+  await t.test('Case 15: Tool Recommendations return valid URLs and descriptions', async () => {
+    const recs = await getToolRecommendations();
+    assert.ok(Array.isArray(recs));
+    assert.equal(recs.length, 5);
+
+    const cursorRec = recs.find((r) => r.id === 'cursor');
+    const hermesRec = recs.find((r) => r.id === 'hermes');
+
+    assert.ok(cursorRec);
+    assert.equal(cursorRec.url, 'https://cursor.com');
+    assert.ok(cursorRec.recommendation.includes('แนะนำอันดับ 1'));
+
+    assert.ok(hermesRec);
+    assert.ok(hermesRec.url.includes('Hermes-Agent'));
+    assert.ok(hermesRec.description.includes('Local AI'));
+  });
+
+  await t.test('Case 16: Zero-tools installed scenario provides helpful recommendations', async () => {
+    const fakeHome = join(PACKAGE_ROOT, 'tmp', 'fake-empty-home');
+    await rm(fakeHome, { recursive: true, force: true });
+    await mkdir(fakeHome, { recursive: true });
+
+    try {
+      const winTools = await detectInstalledTools({ platform: 'win32', home: fakeHome });
+      assert.equal(winTools.length, 5);
+      const winInstalled = winTools.filter((t) => t.installed);
+      assert.equal(winInstalled.length, 0);
+
+      const macTools = await detectInstalledTools({ platform: 'darwin', home: fakeHome });
+      assert.equal(macTools.length, 5);
+      const macInstalled = macTools.filter((t) => t.installed);
+      assert.equal(macInstalled.length, 0);
+
+      for (const t of winTools) {
+        assert.ok(t.url.startsWith('https://'));
+        assert.ok(t.recommendation.length > 0);
+      }
+    } finally {
+      await rm(fakeHome, { recursive: true, force: true });
+    }
+  });
 });
+
 

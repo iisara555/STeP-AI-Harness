@@ -1,12 +1,16 @@
 import * as codexAdapter from './codex.js';
 import * as claudeAdapter from './claude.js';
 import * as cursorAdapter from './cursor.js';
+import * as hermesAdapter from './hermes.js';
+import * as windsurfAdapter from './windsurf.js';
 import * as multiAdapter from './multi.js';
 
 const ADAPTERS = {
   codex: codexAdapter,
   claude: claudeAdapter,
   cursor: cursorAdapter,
+  hermes: hermesAdapter,
+  windsurf: windsurfAdapter,
   all: multiAdapter,
   multi: multiAdapter,
   generic: multiAdapter,
@@ -41,12 +45,15 @@ export function isToolSupported(toolName) {
  * @returns {string[]}
  */
 export function getSupportedTools() {
-  return ['codex', 'claude', 'cursor', 'all'];
+  return ['codex', 'claude', 'cursor', 'hermes', 'windsurf', 'all'];
 }
 
 export {
   codexAdapter,
   claudeAdapter,
   cursorAdapter,
+  hermesAdapter,
+  windsurfAdapter,
   multiAdapter,
 };
+
