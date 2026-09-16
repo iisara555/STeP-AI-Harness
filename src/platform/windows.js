@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
 /**
- * Detect installed AI tools on Windows
+ * Detect installed AI tools on Windows across 8 categories
  * @param {object} [options]
  * @param {string} [options.home]
  * @returns {Promise<Array<{
@@ -15,6 +15,8 @@ const execFileAsync = promisify(execFile);
  *   name: string,
  *   installed: boolean,
  *   url: string,
+ *   tier: 'free_quota' | 'paid_commercial' | 'local_privacy',
+ *   tierDisplay: string,
  *   description: string,
  *   recommendation: string,
  *   instructionFile: string
@@ -25,20 +27,29 @@ export async function detectWindowsTools(options = {}) {
   const appData = options.appData || (options.home ? join(home, 'AppData', 'Roaming') : (process.env.APPDATA || join(home, 'AppData', 'Roaming')));
   const localAppData = options.localAppData || (options.home ? join(home, 'AppData', 'Local') : (process.env.LOCALAPPDATA || join(home, 'AppData', 'Local')));
 
-  const codePaths = [
-    join(appData, 'Code'),
-    join(home, '.vscode'),
-    join(localAppData, 'Programs', 'Microsoft VS Code'),
-  ];
   const cursorPaths = [
     join(localAppData, 'Programs', 'cursor'),
     join(appData, 'Cursor'),
     join(home, '.cursor'),
   ];
+  const opencodePaths = [
+    join(appData, 'OpenCode'),
+    join(localAppData, 'Programs', 'OpenCode'),
+    join(home, '.opencode'),
+  ];
   const claudePaths = [
     join(appData, 'Claude'),
     join(home, '.claude'),
     join(localAppData, 'Programs', 'Claude'),
+  ];
+  const chatgptPaths = [
+    join(localAppData, 'Programs', 'ChatGPT'),
+    join(appData, 'ChatGPT'),
+    join(localAppData, 'ChatGPT'),
+  ];
+  const antigravityPaths = [
+    join(home, '.gemini', 'antigravity-ide'),
+    join(home, '.gemini'),
   ];
   const hermesPaths = [
     join(home, '.hermes'),
@@ -51,20 +62,33 @@ export async function detectWindowsTools(options = {}) {
     join(appData, 'Windsurf'),
     join(home, '.windsurf'),
   ];
-
-  let codexFound = false;
-  for (const p of codePaths) {
-    if (await pathExists(p)) {
-      codexFound = true;
-      break;
-    }
-  }
+  const codePaths = [
+    join(appData, 'Code'),
+    join(home, '.vscode'),
+    join(localAppData, 'Programs', 'Microsoft VS Code'),
+  ];
 
   let cursorFound = false;
   for (const p of cursorPaths) {
     if (await pathExists(p)) {
       cursorFound = true;
       break;
+    }
+  }
+
+  let opencodeFound = false;
+  for (const p of opencodePaths) {
+    if (await pathExists(p)) {
+      opencodeFound = true;
+      break;
+    }
+  }
+  if (!opencodeFound && !options.home) {
+    try {
+      await execFileAsync('where', ['opencode']);
+      opencodeFound = true;
+    } catch {
+      opencodeFound = false;
     }
   }
 
@@ -75,6 +99,46 @@ export async function detectWindowsTools(options = {}) {
       break;
     }
   }
+  if (!claudeFound && !options.home) {
+    try {
+      await execFileAsync('where', ['claude']);
+      claudeFound = true;
+    } catch {
+      claudeFound = false;
+    }
+  }
+
+  let chatgptFound = false;
+  for (const p of chatgptPaths) {
+    if (await pathExists(p)) {
+      chatgptFound = true;
+      break;
+    }
+  }
+  if (!chatgptFound && !options.home) {
+    try {
+      await execFileAsync('where', ['chatgpt']);
+      chatgptFound = true;
+    } catch {
+      chatgptFound = false;
+    }
+  }
+
+  let antigravityFound = false;
+  for (const p of antigravityPaths) {
+    if (await pathExists(p)) {
+      antigravityFound = true;
+      break;
+    }
+  }
+  if (!antigravityFound && !options.home) {
+    try {
+      await execFileAsync('where', ['agy']);
+      antigravityFound = true;
+    } catch {
+      antigravityFound = false;
+    }
+  }
 
   let hermesFound = false;
   for (const p of hermesPaths) {
@@ -83,7 +147,6 @@ export async function detectWindowsTools(options = {}) {
       break;
     }
   }
-  // If not found in paths and running without custom home override, check PATH via where
   if (!hermesFound && !options.home) {
     try {
       await execFileAsync('where', ['hermes']);
@@ -105,6 +168,30 @@ export async function detectWindowsTools(options = {}) {
       break;
     }
   }
+  if (!windsurfFound && !options.home) {
+    try {
+      await execFileAsync('where', ['windsurf']);
+      windsurfFound = true;
+    } catch {
+      windsurfFound = false;
+    }
+  }
+
+  let codexFound = false;
+  for (const p of codePaths) {
+    if (await pathExists(p)) {
+      codexFound = true;
+      break;
+    }
+  }
+  if (!codexFound && !options.home) {
+    try {
+      await execFileAsync('where', ['code']);
+      codexFound = true;
+    } catch {
+      codexFound = false;
+    }
+  }
 
   return [
     {
@@ -112,34 +199,64 @@ export async function detectWindowsTools(options = {}) {
       name: 'Cursor IDE',
       installed: cursorFound,
       url: 'https://cursor.com',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'AI Code & Document Editor ที่ฉลาดและใช้งานง่ายที่สุดสำหรับพนักงานทั่วไป',
-      recommendation: '⭐ แนะนำอันดับ 1 (เปิดโฟลเดอร์แล้วเริ่มคุยภาษาไทยได้ทันที)',
+      recommendation: '⭐ แนะนำอันดับ 1 สำหรับสายฟรี (เปิดโฟลเดอร์แล้วเริ่มคุยภาษาไทยได้ทันที)',
       instructionFile: '.cursorrules',
     },
     {
-      id: 'codex',
-      name: 'OpenAI Codex / VS Code',
-      installed: codexFound,
-      url: 'https://code.visualstudio.com',
-      description: 'Editor ยอดนิยมระดับสากล รองรับ GitHub Copilot และส่วนขยาย AI หลากหลาย',
-      recommendation: 'เหมาะสำหรับผู้ที่มี VS Code อยู่แล้วและต้องการใช้ส่วนขยาย AI',
-      instructionFile: 'CODEX_INSTRUCTIONS.md',
+      id: 'opencode',
+      name: 'OpenCode AI Assistant',
+      installed: opencodeFound,
+      url: 'https://opencode.ai',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
+      description: 'ผู้ช่วย AI พร้อมโควตาฟรี ใช้งานง่าย เหมาะสำหรับพนักงานที่เริ่มต้นใช้งาน',
+      recommendation: '⭐ แนะนำสำหรับผู้เริ่มต้นที่ต้องการ AI ฟรีและมีโควตาพร้อมใช้ทันที',
+      instructionFile: 'OPENCODE.md',
     },
     {
       id: 'claude',
       name: 'Claude Desktop / Claude Code',
       installed: claudeFound,
       url: 'https://claude.ai/download',
-      description: 'ผู้ช่วย AI ด้านการเขียนภาษาไทย ร่างหนังสือราชการ และวิเคราะห์เอกสาร',
-      recommendation: 'เหมาะสำหรับงานเอกสาร สรุปรายงาน และตรวจทานภาษาไทย',
+      tier: 'paid_commercial',
+      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
+      description: 'ผู้ช่วย AI ชั้นนำด้านการเขียนภาษาไทย ร่างหนังสือราชการ และวิเคราะห์เอกสาร',
+      recommendation: 'เหมาะสำหรับงานเอกสาร สรุปรายงาน และตรวจทานภาษาไทยขั้นสูง (Claude Pro/Team)',
       instructionFile: 'CLAUDE.md',
+    },
+    {
+      id: 'chatgpt',
+      name: 'ChatGPT Desktop',
+      installed: chatgptFound,
+      url: 'https://chatgpt.com',
+      tier: 'paid_commercial',
+      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
+      description: 'ChatGPT Desktop App สำหรับแชท วิเคราะห์ข้อมูล และทำงานร่วมกับไฟล์งาน',
+      recommendation: 'เหมาะสำหรับผู้ใช้งาน ChatGPT Plus / Team หรือสิทธิ์องค์กร',
+      instructionFile: 'CHATGPT.md',
+    },
+    {
+      id: 'antigravity',
+      name: 'Google Antigravity & Spark',
+      installed: antigravityFound,
+      url: 'https://deepmind.google/technologies/gemini/',
+      tier: 'paid_commercial',
+      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
+      description: 'Google Antigravity & Spark — AI สถาปัตยกรรมตัวแทนอัจฉริยะตระกูล Google',
+      recommendation: 'เหมาะสำหรับสายงานวิจัย นวัตกรรม และผู้ใช้ Google Enterprise / Spark',
+      instructionFile: 'GEMINI.md',
     },
     {
       id: 'hermes',
       name: 'Hermes Agent (Nous Research / Local AI)',
       installed: hermesFound,
       url: 'https://github.com/NousResearch/Hermes-Agent',
-      description: 'สุดยอด Open-Source AI Agent (Local AI) สำหรับประมวลผลภายในเครื่อง ปลอดภัยสูงสุด',
+      tier: 'local_privacy',
+      tierDisplay: 'สาย Local AI / ข้อมูลปลอดภัย 100% (Local / Privacy)',
+      description: 'Open-Source AI Agent (Local AI) สำหรับประมวลผลภายในเครื่อง ปลอดภัยสูงสุดตามมาตรฐาน PDPA',
       recommendation: 'เหมาะสำหรับ Local AI, ความเป็นส่วนตัวข้อมูล และสายเทคนิค (pip install hermes-agent)',
       instructionFile: 'HERMES.md',
     },
@@ -148,9 +265,22 @@ export async function detectWindowsTools(options = {}) {
       name: 'Windsurf AI IDE (Codeium)',
       installed: windsurfFound,
       url: 'https://codeium.com/windsurf',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'AI IDE เจเนอเรชันใหม่พร้อมระบบ Cascade Agent ทำงานต่อเนื่องอัตโนมัติ',
-      recommendation: 'ทางเลือกใหม่อันทรงพลังเทียบเคียง Cursor',
+      recommendation: 'ทางเลือกใหม่อันทรงพลังเทียบเคียง Cursor พร้อมโควตาฟรี',
       instructionFile: '.windsurfrules',
+    },
+    {
+      id: 'codex',
+      name: 'OpenAI Codex / VS Code',
+      installed: codexFound,
+      url: 'https://code.visualstudio.com',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
+      description: 'Editor ยอดนิยมระดับสากล รองรับ GitHub Copilot และส่วนขยาย AI หลากหลาย',
+      recommendation: 'เหมาะสำหรับผู้ที่มี VS Code อยู่แล้วและต้องการใช้ส่วนขยาย AI',
+      instructionFile: 'CODEX_INSTRUCTIONS.md',
     },
   ];
 }

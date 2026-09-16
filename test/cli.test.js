@@ -189,6 +189,11 @@ test('CLI & Core Modules Test Suite', async (t) => {
 
     assert.ok(await pathExists(join(multiDir, 'CLAUDE.md')));
     assert.ok(await pathExists(join(multiDir, '.cursorrules')));
+    assert.ok(await pathExists(join(multiDir, '.windsurfrules')));
+    assert.ok(await pathExists(join(multiDir, 'HERMES.md')));
+    assert.ok(await pathExists(join(multiDir, 'OPENCODE.md')));
+    assert.ok(await pathExists(join(multiDir, 'GEMINI.md')));
+    assert.ok(await pathExists(join(multiDir, 'CHATGPT.md')));
     assert.ok(await pathExists(join(multiDir, 'CODEX_INSTRUCTIONS.md')));
     assert.ok(await pathExists(join(multiDir, 'AGENTS.md')));
 

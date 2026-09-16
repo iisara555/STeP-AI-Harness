@@ -47,75 +47,123 @@ if (-not $nodeInstalled) {
     exit 1
 }
 
-# 2. Detect Installed AI Tools
+# 2. Detect Installed AI Tools (8 Tools across 3 Tiers)
 Write-Host ""
-Write-Host "กำลังตรวจสอบโปรแกรม AI ในเครื่องของคุณ..." -ForegroundColor Gray
+Write-Host "กำลังตรวจสอบโปรแกรม AI ในเครื่องของคุณ (ครอบคลุมทั้ง 3 สาย: สายฟรี, สายจ่ายตังค์, สาย Local AI)..." -ForegroundColor Gray
 
 $appData = [System.Environment]::GetFolderPath('ApplicationData')
 $localAppData = [System.Environment]::GetFolderPath('LocalApplicationData')
 $userHome = [System.Environment]::GetFolderPath('UserProfile')
 
+# 1. Cursor (Free Quota)
 $cursorFound = (Test-Path "$localAppData\Programs\cursor") -or (Test-Path "$appData\Cursor") -or (Test-Path "$userHome\.cursor")
-$codexFound = (Test-Path "$appData\Code") -or (Test-Path "$userHome\.vscode") -or (Test-Path "$localAppData\Programs\Microsoft VS Code")
-$claudeFound = (Test-Path "$appData\Claude") -or (Test-Path "$userHome\.claude") -or (Test-Path "$localAppData\Programs\Claude")
-$hermesFound = (Test-Path "$userHome\.hermes") -or (Test-Path "$userHome\hermes") -or (Test-Path "$appData\Hermes") -or (Get-Command hermes -ErrorAction SilentlyContinue)
-$windsurfFound = (Test-Path "$localAppData\Programs\Windsurf") -or (Test-Path "$appData\Windsurf") -or (Test-Path "$userHome\.windsurf")
+# 2. OpenCode (Free Quota)
+$opencodeFound = (Test-Path "$appData\OpenCode") -or (Test-Path "$localAppData\Programs\OpenCode") -or (Test-Path "$userHome\.opencode") -or (Get-Command opencode -ErrorAction SilentlyContinue)
+# 3. Claude Desktop (Paid / Commercial)
+$claudeFound = (Test-Path "$appData\Claude") -or (Test-Path "$userHome\.claude") -or (Test-Path "$localAppData\Programs\Claude") -or (Get-Command claude -ErrorAction SilentlyContinue)
+# 4. ChatGPT Desktop (Paid / Commercial)
+$chatgptFound = (Test-Path "$localAppData\Programs\ChatGPT") -or (Test-Path "$appData\ChatGPT") -or (Test-Path "$localAppData\ChatGPT") -or (Get-Command chatgpt -ErrorAction SilentlyContinue)
+# 5. Google Antigravity & Spark (Paid / Commercial)
+$antigravityFound = (Test-Path "$userHome\.gemini\antigravity-ide") -or (Test-Path "$userHome\.gemini") -or (Get-Command agy -ErrorAction SilentlyContinue)
+# 6. Hermes Agent (Local / Privacy)
+$hermesFound = (Test-Path "$userHome\.hermes") -or (Test-Path "$userHome\hermes") -or (Test-Path "$appData\Hermes") -or (Get-Command hermes -ErrorAction SilentlyContinue) -or (Get-Command hermes-agent -ErrorAction SilentlyContinue)
+# 7. Windsurf AI IDE (Free Quota)
+$windsurfFound = (Test-Path "$localAppData\Programs\Windsurf") -or (Test-Path "$appData\Windsurf") -or (Test-Path "$userHome\.windsurf") -or (Get-Command windsurf -ErrorAction SilentlyContinue)
+# 8. OpenAI Codex / VS Code (Free Quota)
+$codexFound = (Test-Path "$appData\Code") -or (Test-Path "$userHome\.vscode") -or (Test-Path "$localAppData\Programs\Microsoft VS Code") -or (Get-Command code -ErrorAction SilentlyContinue)
 
 $foundCount = 0
 if ($cursorFound) { $foundCount++ }
-if ($codexFound) { $foundCount++ }
+if ($opencodeFound) { $foundCount++ }
 if ($claudeFound) { $foundCount++ }
+if ($chatgptFound) { $foundCount++ }
+if ($antigravityFound) { $foundCount++ }
 if ($hermesFound) { $foundCount++ }
 if ($windsurfFound) { $foundCount++ }
+if ($codexFound) { $foundCount++ }
 
 Write-Host "ผลการตรวจจับโปรแกรม AI ในเครื่องของคุณ:" -ForegroundColor White
-if ($cursorFound) { Write-Host "  [✓] Cursor IDE                       (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Cursor IDE                       (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
-if ($codexFound) { Write-Host "  [✓] OpenAI Codex / VS Code           (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] OpenAI Codex / VS Code           (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
-if ($claudeFound) { Write-Host "  [✓] Claude Desktop / Claude Code     (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Claude Desktop / Claude Code     (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
-if ($hermesFound) { Write-Host "  [✓] Hermes Agent (Nous / Local AI)   (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Hermes Agent (Nous / Local AI)   (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
-if ($windsurfFound) { Write-Host "  [✓] Windsurf AI IDE (Codeium)        (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "  [ ] Windsurf AI IDE (Codeium)        (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
 
+Write-Host " ● สายฟรี / มี Quota ฟรี (Free Quota Tier):" -ForegroundColor Cyan
+if ($cursorFound) { Write-Host "    [✓] Cursor IDE                       (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] Cursor IDE                       (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($opencodeFound) { Write-Host "    [✓] OpenCode AI Assistant            (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] OpenCode AI Assistant            (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($windsurfFound) { Write-Host "    [✓] Windsurf AI IDE (Codeium)        (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] Windsurf AI IDE (Codeium)        (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($codexFound) { Write-Host "    [✓] OpenAI Codex / VS Code           (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] OpenAI Codex / VS Code           (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+
+Write-Host " ● สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial Tier):" -ForegroundColor Yellow
+if ($claudeFound) { Write-Host "    [✓] Claude Desktop / Claude Code     (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] Claude Desktop / Claude Code     (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($chatgptFound) { Write-Host "    [✓] ChatGPT Desktop                  (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] ChatGPT Desktop                  (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+if ($antigravityFound) { Write-Host "    [✓] Google Antigravity & Spark       (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] Google Antigravity & Spark       (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+
+Write-Host " ● สาย Local AI / ความเป็นส่วนตัวข้อมูลสูงสุด (Local / Privacy Tier):" -ForegroundColor Magenta
+if ($hermesFound) { Write-Host "    [✓] Hermes Agent (Nous / Local AI)   (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] Hermes Agent (Nous / Local AI)   (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
+
+# Zero-Tool Guided Wizard
 if ($foundCount -eq 0) {
     Write-Host ""
     Write-Host "⚠️  ยังไม่พบโปรแกรม AI ใดๆ ในเครื่องคอมพิวเตอร์ของคุณ" -ForegroundColor Yellow
     Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "💡 แนะนำโปรแกรม AI ฟรีสำหรับพนักงาน STeP:" -ForegroundColor Cyan
-    Write-Host "  1. ⭐ Cursor IDE (แนะนำที่สุดสำหรับพนักงานทั่วไป):" -ForegroundColor White
-    Write-Host "     ดาวน์โหลดได้ฟรีที่: https://cursor.com" -ForegroundColor Cyan
-    Write-Host "     - ใช้งานง่ายที่สุด เพียงเปิดโฟลเดอร์นี้แล้วเริ่มพิมพ์คุยได้ทันที" -ForegroundColor Gray
-    Write-Host "  2. 📄 Claude Desktop (เหมาะสำหรับงานเอกสาร/สรุปรายงาน):" -ForegroundColor White
-    Write-Host "     ดาวน์โหลดได้ฟรีที่: https://claude.ai/download" -ForegroundColor Cyan
-    Write-Host "  3. 🛡️ Hermes Agent (สำหรับ Local AI และความเป็นส่วนตัวข้อมูลสูงสุด):" -ForegroundColor White
-    Write-Host "     ดูข้อมูลและติดตั้ง: https://github.com/NousResearch/Hermes-Agent" -ForegroundColor Cyan
-    Write-Host "     หรือรันคำสั่ง: pip install hermes-agent" -ForegroundColor Gray
-    Write-Host "  4. 💻 VS Code:" -ForegroundColor White
-    Write-Host "     ดาวน์โหลดได้ฟรีที่: https://code.visualstudio.com" -ForegroundColor Cyan
+    Write-Host "🧭 [คำแนะนำการเลือก AI ให้เหมาะกับรูปแบบการทำงานของคุณ]:" -ForegroundColor Cyan
+    Write-Host "  1. สายฟรี / มี Quota ฟรี  (แนะนำมากที่สุดสำหรับเริ่มต้นใช้งาน — ไม่มีค่าใช้จ่าย):" -ForegroundColor White
+    Write-Host "     - ⭐ Cursor IDE: เปิดโฟลเดอร์นี้แล้วคุยภาษาไทยได้ทันที มีโควตาฟรี (https://cursor.com)" -ForegroundColor Gray
+    Write-Host "     - ⭐ OpenCode: ผู้ช่วย AI ใช้งานง่ายพร้อมโควตาฟรี (https://opencode.ai)" -ForegroundColor Gray
+    Write-Host "  2. สายจ่ายตังค์ / องค์กรจัดซื้อ (สำหรับท่านที่มีสิทธิ์ Pro/Plus หรือ License หน่วยงาน):" -ForegroundColor White
+    Write-Host "     - ChatGPT Desktop / Claude Desktop / Google Antigravity & Spark" -ForegroundColor Gray
+    Write-Host "  3. สาย Local AI (สำหรับผู้ต้องการความปลอดภัยข้อมูล 100% ประมวลผลในเครื่อง):" -ForegroundColor White
+    Write-Host "     - Hermes Agent (pip install hermes-agent)" -ForegroundColor Gray
+    Write-Host "  4. ดำเนินการติดตั้ง STeP AI ต่อทันที (ไปดาวน์โหลด AI ภายหลัง)" -ForegroundColor White
     Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "(คุณสามารถเลือกติดตั้ง STeP AI ต่อได้ทันที เมื่อดาวน์โหลดโปรแกรม AI แล้วจะพร้อมใช้งานทันที)" -ForegroundColor DarkGray
+    
+    $guideChoice = Read-Host "ต้องการให้ระบบแนะนำและเปิดหน้าดาวน์โหลดสายฟรีหรือไม่? (พิมพ์ 1 เพื่อเปิดหน้าดาวน์โหลด / กด Enter เพื่อข้าม) [default: 1]"
+    if ([string]::IsNullOrWhiteSpace($guideChoice)) { $guideChoice = "1" }
+    
+    if ($guideChoice -eq "1") {
+        Write-Host ""
+        Write-Host "เลือกโปรแกรมสายฟรีที่ต้องการเปิดหน้าเว็บดาวน์โหลด:" -ForegroundColor Cyan
+        Write-Host "  1. Cursor IDE (https://cursor.com) [แนะนำที่สุด]" -ForegroundColor White
+        Write-Host "  2. OpenCode AI (https://opencode.ai)" -ForegroundColor White
+        Write-Host "  3. ข้ามไปขั้นตอนติดตั้งต่อ" -ForegroundColor Gray
+        $downloadChoice = Read-Host "พิมพ์หมายเลข (1-3) [default: 1]"
+        if ([string]::IsNullOrWhiteSpace($downloadChoice)) { $downloadChoice = "1" }
+        
+        if ($downloadChoice -eq "1") {
+            Write-Host "กำลังเปิดเบราว์เซอร์เพื่อดาวน์โหลด Cursor IDE..." -ForegroundColor Green
+            Start-Process "https://cursor.com"
+        } elseif ($downloadChoice -eq "2") {
+            Write-Host "กำลังเปิดเบราว์เซอร์เพื่อดาวน์โหลด OpenCode..." -ForegroundColor Green
+            Start-Process "https://opencode.ai"
+        }
+    }
 }
 
 Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host "ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง" -ForegroundColor Yellow
-Write-Host "  1. ติดตั้งให้ทุกค่าย (All: Cursor, VS Code, Claude, Hermes, Windsurf) [แนะนำ]" -ForegroundColor White
-Write-Host "  2. Cursor IDE" -ForegroundColor White
-Write-Host "  3. OpenAI Codex / VS Code" -ForegroundColor White
-Write-Host "  4. Claude Desktop / Claude Code" -ForegroundColor White
-Write-Host "  5. Hermes Agent (Nous Research / Local AI)" -ForegroundColor White
-Write-Host "  6. Windsurf AI IDE" -ForegroundColor White
+Write-Host "  1. ติดตั้งให้ทุกค่าย (All 8 Tools: Cursor, OpenCode, Claude, ChatGPT, Antigravity, Hermes, Windsurf, VS Code) [แนะนำ]" -ForegroundColor White
+Write-Host "  2. Cursor IDE (สายฟรีมีโควตา)" -ForegroundColor White
+Write-Host "  3. OpenCode AI Assistant (สายฟรีมีโควตา)" -ForegroundColor White
+Write-Host "  4. Claude Desktop / Claude Code (สายจ่ายตังค์)" -ForegroundColor White
+Write-Host "  5. ChatGPT Desktop (สายจ่ายตังค์)" -ForegroundColor White
+Write-Host "  6. Google Antigravity & Spark (สายจ่ายตังค์)" -ForegroundColor White
+Write-Host "  7. Hermes Agent (สาย Local AI)" -ForegroundColor White
+Write-Host "  8. Windsurf AI IDE (สายฟรีมีโควตา)" -ForegroundColor White
+Write-Host "  9. OpenAI Codex / VS Code (สายฟรีมีโควตา)" -ForegroundColor White
 Write-Host ""
 
-$toolChoice = Read-Host "พิมพ์หมายเลข (1-6) [default: 1]"
+$toolChoice = Read-Host "พิมพ์หมายเลข (1-9) [default: 1]"
 if ([string]::IsNullOrWhiteSpace($toolChoice)) { $toolChoice = "1" }
 
 $selectedTool = "all"
 switch ($toolChoice) {
     "1" { $selectedTool = "all" }
     "2" { $selectedTool = "cursor" }
-    "3" { $selectedTool = "codex" }
+    "3" { $selectedTool = "opencode" }
     "4" { $selectedTool = "claude" }
-    "5" { $selectedTool = "hermes" }
-    "6" { $selectedTool = "windsurf" }
+    "5" { $selectedTool = "chatgpt" }
+    "6" { $selectedTool = "antigravity" }
+    "7" { $selectedTool = "hermes" }
+    "8" { $selectedTool = "windsurf" }
+    "9" { $selectedTool = "codex" }
     default { $selectedTool = "all" }
 }
 
@@ -124,7 +172,7 @@ Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host "ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team — แสดงครบทั้ง 22 ทีม)" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "● กลุ่มงาน: ธรรมาภิบาลและการบริหารจัดการ (Governance & Operations)" -ForegroundColor Cyan
+Write-Host "● กลุ่มงาน: ธรรมาภิบาลและการบริหารจัดการ (Governance and Operations)" -ForegroundColor Cyan
 Write-Host "   1. GA        - งานบริหารทั่วไป (ธุรการกลาง/เอกสาร)" -ForegroundColor White
 Write-Host "   2. AFP       - บัญชี การเงิน และจัดซื้อ" -ForegroundColor White
 Write-Host "   3. IASA      - ความร่วมมือระหว่างประเทศและพันธมิตร" -ForegroundColor White
@@ -132,25 +180,25 @@ Write-Host "   4. QS        - ระบบคุณภาพ (ISO และม�
 Write-Host "   5. NMCO      - ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว." -ForegroundColor White
 Write-Host "   6. HD        - พัฒนาศักยภาพบุคลากร" -ForegroundColor White
 Write-Host ""
-Write-Host "● กลุ่มงาน: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation & Strategy)" -ForegroundColor Cyan
+Write-Host "● กลุ่มงาน: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation and Strategy)" -ForegroundColor Cyan
 Write-Host "   7. PITI      - บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี" -ForegroundColor White
 Write-Host "   8. ISI       - บ่มเพาะ Startup นวัตกรรม" -ForegroundColor White
 Write-Host "   9. EIC       - การเป็นผู้ประกอบการและนวัตกรรม" -ForegroundColor White
 Write-Host "  10. IMO       - บริหารจัดการนวัตกรรม" -ForegroundColor White
 Write-Host "  11. SIT       - ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง" -ForegroundColor White
 Write-Host ""
-Write-Host "● กลุ่มงาน: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer & Industry)" -ForegroundColor Cyan
+Write-Host "● กลุ่มงาน: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer and Industry)" -ForegroundColor Cyan
 Write-Host "  12. TECH-SPIN - ถ่ายทอดเทคโนโลยีและบริษัท Spin-off" -ForegroundColor White
 Write-Host "  13. TECH-UP   - เทคโนโลยีเชิงลึกและการขยายระดับการผลิต" -ForegroundColor White
 Write-Host "  14. LINC      - ความร่วมมือท้องถิ่นและอุตสาหกรรม" -ForegroundColor White
 Write-Host "  15. PUBSEC    - โครงการความร่วมมือภาครัฐ" -ForegroundColor White
 Write-Host ""
-Write-Host "● กลุ่มงาน: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative & Client)" -ForegroundColor Cyan
+Write-Host "● กลุ่มงาน: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative and Client)" -ForegroundColor Cyan
 Write-Host "  16. CC        - งานสร้างสรรค์และการสื่อสาร" -ForegroundColor White
 Write-Host "  17. MI        - นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม" -ForegroundColor White
 Write-Host "  18. CRM       - ลูกค้าสัมพันธ์" -ForegroundColor White
 Write-Host ""
-Write-Host "● กลุ่มงาน: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Labs & Infrastructure)" -ForegroundColor Cyan
+Write-Host "● กลุ่มงาน: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Labs and Infrastructure)" -ForegroundColor Cyan
 Write-Host "  19. IFU       - การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก" -ForegroundColor White
 Write-Host "  20. IQI       - พัฒนาคุณภาพโครงสร้างพื้นฐาน" -ForegroundColor White
 Write-Host "  21. LES       - ห้องปฏิบัติการและเครื่องมือ" -ForegroundColor White
@@ -229,7 +277,7 @@ Write-Host "  เครื่องมือ AI:  $selectedTool" -ForegroundColo
 Write-Host "  ระบบค้นหา:     Layer 1 Dynamic Router พร้อมใช้งาน" -ForegroundColor White
 Write-Host ""
 Write-Host "💡 วิธีเริ่มใช้งาน:" -ForegroundColor Cyan
-Write-Host "  1. เปิดโปรแกรม AI ที่คุณเลือก (Cursor, VS Code หรือ Claude)" -ForegroundColor White
+Write-Host "  1. เปิดโปรแกรม AI ที่คุณเลือก (Cursor, OpenCode, VS Code, Claude หรือ ChatGPT Desktop)" -ForegroundColor White
 Write-Host "  2. ในโปรแกรม AI ให้เปิดโฟลเดอร์ระบบ STeP AI นี้ (เมนู File -> Open Folder):" -ForegroundColor White
 Write-Host "     📁 $rootDir" -ForegroundColor Yellow
 Write-Host "  3. เริ่มพิมพ์คุยงานภาษาไทยในช่องแชท AI ได้ทันที เช่น:" -ForegroundColor White

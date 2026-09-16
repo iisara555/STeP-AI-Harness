@@ -3,14 +3,22 @@ import * as claudeAdapter from './claude.js';
 import * as cursorAdapter from './cursor.js';
 import * as hermesAdapter from './hermes.js';
 import * as windsurfAdapter from './windsurf.js';
+import * as opencodeAdapter from './opencode.js';
+import * as geminiAdapter from './gemini.js';
+import * as chatgptAdapter from './chatgpt.js';
 import * as multiAdapter from './multi.js';
 
 const ADAPTERS = {
-  codex: codexAdapter,
-  claude: claudeAdapter,
   cursor: cursorAdapter,
+  opencode: opencodeAdapter,
+  claude: claudeAdapter,
+  chatgpt: chatgptAdapter,
+  antigravity: geminiAdapter,
+  spark: geminiAdapter,
+  gemini: geminiAdapter,
   hermes: hermesAdapter,
   windsurf: windsurfAdapter,
+  codex: codexAdapter,
   all: multiAdapter,
   multi: multiAdapter,
   generic: multiAdapter,
@@ -45,7 +53,18 @@ export function isToolSupported(toolName) {
  * @returns {string[]}
  */
 export function getSupportedTools() {
-  return ['codex', 'claude', 'cursor', 'hermes', 'windsurf', 'all'];
+  return [
+    'cursor',
+    'opencode',
+    'claude',
+    'chatgpt',
+    'antigravity',
+    'gemini',
+    'hermes',
+    'windsurf',
+    'codex',
+    'all',
+  ];
 }
 
 export {
@@ -54,6 +73,9 @@ export {
   cursorAdapter,
   hermesAdapter,
   windsurfAdapter,
+  opencodeAdapter,
+  geminiAdapter,
+  chatgptAdapter,
   multiAdapter,
 };
 

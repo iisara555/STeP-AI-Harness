@@ -23,7 +23,7 @@ export function getMacCpuArch(overrideArch) {
 }
 
 /**
- * Detect installed AI tools on macOS
+ * Detect installed AI tools on macOS across 8 categories
  * @param {object} [options]
  * @param {string} [options.home]
  * @returns {Promise<Array<{
@@ -31,6 +31,8 @@ export function getMacCpuArch(overrideArch) {
  *   name: string,
  *   installed: boolean,
  *   url: string,
+ *   tier: 'free_quota' | 'paid_commercial' | 'local_privacy',
+ *   tierDisplay: string,
  *   description: string,
  *   recommendation: string,
  *   instructionFile: string
@@ -39,20 +41,18 @@ export function getMacCpuArch(overrideArch) {
 export async function detectMacTools(options = {}) {
   const home = options.home || homedir();
 
-  const codePaths = [
-    '/Applications/Visual Studio Code.app',
-    join(home, 'Applications', 'Visual Studio Code.app'),
-    join(home, 'Library', 'Application Support', 'Code'),
-    join(home, '.vscode'),
-  ];
-
   const cursorPaths = [
     '/Applications/Cursor.app',
     join(home, 'Applications', 'Cursor.app'),
     join(home, 'Library', 'Application Support', 'Cursor'),
     join(home, '.cursor'),
   ];
-
+  const opencodePaths = [
+    '/Applications/OpenCode.app',
+    join(home, 'Applications', 'OpenCode.app'),
+    join(home, 'Library', 'Application Support', 'OpenCode'),
+    join(home, '.opencode'),
+  ];
   const claudePaths = [
     '/Applications/Claude.app',
     join(home, 'Applications', 'Claude.app'),
@@ -60,7 +60,16 @@ export async function detectMacTools(options = {}) {
     join(home, '.claude'),
     join(home, '.claude-code'),
   ];
-
+  const chatgptPaths = [
+    '/Applications/ChatGPT.app',
+    join(home, 'Applications', 'ChatGPT.app'),
+    join(home, 'Library', 'Application Support', 'ChatGPT'),
+  ];
+  const antigravityPaths = [
+    join(home, '.gemini', 'antigravity-ide'),
+    join(home, '.gemini'),
+    '/Applications/Google Antigravity.app',
+  ];
   const hermesPaths = [
     '/Applications/Hermes.app',
     join(home, 'Applications', 'Hermes.app'),
@@ -68,21 +77,18 @@ export async function detectMacTools(options = {}) {
     join(home, 'hermes'),
     join(home, 'Library', 'Application Support', 'hermes'),
   ];
-
   const windsurfPaths = [
     '/Applications/Windsurf.app',
     join(home, 'Applications', 'Windsurf.app'),
     join(home, 'Library', 'Application Support', 'Windsurf'),
     join(home, '.windsurf'),
   ];
-
-  let codexFound = false;
-  for (const p of codePaths) {
-    if (await pathExists(p)) {
-      codexFound = true;
-      break;
-    }
-  }
+  const codePaths = [
+    '/Applications/Visual Studio Code.app',
+    join(home, 'Applications', 'Visual Studio Code.app'),
+    join(home, 'Library', 'Application Support', 'Code'),
+    join(home, '.vscode'),
+  ];
 
   let cursorFound = false;
   for (const p of cursorPaths) {
@@ -92,11 +98,67 @@ export async function detectMacTools(options = {}) {
     }
   }
 
+  let opencodeFound = false;
+  for (const p of opencodePaths) {
+    if (await pathExists(p)) {
+      opencodeFound = true;
+      break;
+    }
+  }
+  if (!opencodeFound && !options.home) {
+    try {
+      await execFileAsync('which', ['opencode']);
+      opencodeFound = true;
+    } catch {
+      opencodeFound = false;
+    }
+  }
+
   let claudeFound = false;
   for (const p of claudePaths) {
     if (await pathExists(p)) {
       claudeFound = true;
       break;
+    }
+  }
+  if (!claudeFound && !options.home) {
+    try {
+      await execFileAsync('which', ['claude']);
+      claudeFound = true;
+    } catch {
+      claudeFound = false;
+    }
+  }
+
+  let chatgptFound = false;
+  for (const p of chatgptPaths) {
+    if (await pathExists(p)) {
+      chatgptFound = true;
+      break;
+    }
+  }
+  if (!chatgptFound && !options.home) {
+    try {
+      await execFileAsync('which', ['chatgpt']);
+      chatgptFound = true;
+    } catch {
+      chatgptFound = false;
+    }
+  }
+
+  let antigravityFound = false;
+  for (const p of antigravityPaths) {
+    if (await pathExists(p)) {
+      antigravityFound = true;
+      break;
+    }
+  }
+  if (!antigravityFound && !options.home) {
+    try {
+      await execFileAsync('which', ['agy']);
+      antigravityFound = true;
+    } catch {
+      antigravityFound = false;
     }
   }
 
@@ -128,6 +190,30 @@ export async function detectMacTools(options = {}) {
       break;
     }
   }
+  if (!windsurfFound && !options.home) {
+    try {
+      await execFileAsync('which', ['windsurf']);
+      windsurfFound = true;
+    } catch {
+      windsurfFound = false;
+    }
+  }
+
+  let codexFound = false;
+  for (const p of codePaths) {
+    if (await pathExists(p)) {
+      codexFound = true;
+      break;
+    }
+  }
+  if (!codexFound && !options.home) {
+    try {
+      await execFileAsync('which', ['code']);
+      codexFound = true;
+    } catch {
+      codexFound = false;
+    }
+  }
 
   return [
     {
@@ -135,34 +221,64 @@ export async function detectMacTools(options = {}) {
       name: 'Cursor IDE',
       installed: cursorFound,
       url: 'https://cursor.com',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'AI Code & Document Editor ที่ฉลาดและใช้งานง่ายที่สุดสำหรับพนักงานทั่วไป',
-      recommendation: '⭐ แนะนำอันดับ 1 (เปิดโฟลเดอร์แล้วเริ่มคุยภาษาไทยได้ทันที)',
+      recommendation: '⭐ แนะนำอันดับ 1 สำหรับสายฟรี (เปิดโฟลเดอร์แล้วเริ่มคุยภาษาไทยได้ทันที)',
       instructionFile: '.cursorrules',
     },
     {
-      id: 'codex',
-      name: 'OpenAI Codex / VS Code',
-      installed: codexFound,
-      url: 'https://code.visualstudio.com',
-      description: 'Editor ยอดนิยมระดับสากล รองรับ GitHub Copilot และส่วนขยาย AI หลากหลาย',
-      recommendation: 'เหมาะสำหรับผู้ที่มี VS Code อยู่แล้วและต้องการใช้ส่วนขยาย AI',
-      instructionFile: 'CODEX_INSTRUCTIONS.md',
+      id: 'opencode',
+      name: 'OpenCode AI Assistant',
+      installed: opencodeFound,
+      url: 'https://opencode.ai',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
+      description: 'ผู้ช่วย AI พร้อมโควตาฟรี ใช้งานง่าย เหมาะสำหรับพนักงานที่เริ่มต้นใช้งาน',
+      recommendation: '⭐ แนะนำสำหรับผู้เริ่มต้นที่ต้องการ AI ฟรีและมีโควตาพร้อมใช้ทันที',
+      instructionFile: 'OPENCODE.md',
     },
     {
       id: 'claude',
       name: 'Claude Desktop / Claude Code',
       installed: claudeFound,
       url: 'https://claude.ai/download',
-      description: 'ผู้ช่วย AI ด้านการเขียนภาษาไทย ร่างหนังสือราชการ และวิเคราะห์เอกสาร',
-      recommendation: 'เหมาะสำหรับงานเอกสาร สรุปรายงาน และตรวจทานภาษาไทย',
+      tier: 'paid_commercial',
+      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
+      description: 'ผู้ช่วย AI ชั้นนำด้านการเขียนภาษาไทย ร่างหนังสือราชการ และวิเคราะห์เอกสาร',
+      recommendation: 'เหมาะสำหรับงานเอกสาร สรุปรายงาน และตรวจทานภาษาไทยขั้นสูง (Claude Pro/Team)',
       instructionFile: 'CLAUDE.md',
+    },
+    {
+      id: 'chatgpt',
+      name: 'ChatGPT Desktop',
+      installed: chatgptFound,
+      url: 'https://chatgpt.com',
+      tier: 'paid_commercial',
+      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
+      description: 'ChatGPT Desktop App สำหรับแชท วิเคราะห์ข้อมูล และทำงานร่วมกับไฟล์งาน',
+      recommendation: 'เหมาะสำหรับผู้ใช้งาน ChatGPT Plus / Team หรือสิทธิ์องค์กร',
+      instructionFile: 'CHATGPT.md',
+    },
+    {
+      id: 'antigravity',
+      name: 'Google Antigravity & Spark',
+      installed: antigravityFound,
+      url: 'https://deepmind.google/technologies/gemini/',
+      tier: 'paid_commercial',
+      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
+      description: 'Google Antigravity & Spark — AI สถาปัตยกรรมตัวแทนอัจฉริยะตระกูล Google',
+      recommendation: 'เหมาะสำหรับสายงานวิจัย นวัตกรรม และผู้ใช้ Google Enterprise / Spark',
+      instructionFile: 'GEMINI.md',
     },
     {
       id: 'hermes',
       name: 'Hermes Agent (Nous Research / Local AI)',
       installed: hermesFound,
       url: 'https://github.com/NousResearch/Hermes-Agent',
-      description: 'สุดยอด Open-Source AI Agent (Local AI) สำหรับประมวลผลภายในเครื่อง ปลอดภัยสูงสุด',
+      tier: 'local_privacy',
+      tierDisplay: 'สาย Local AI / ข้อมูลปลอดภัย 100% (Local / Privacy)',
+      description: 'Open-Source AI Agent (Local AI) สำหรับประมวลผลภายในเครื่อง ปลอดภัยสูงสุดตามมาตรฐาน PDPA',
       recommendation: 'เหมาะสำหรับ Local AI, ความเป็นส่วนตัวข้อมูล และสายเทคนิค (pip install hermes-agent)',
       instructionFile: 'HERMES.md',
     },
@@ -171,9 +287,22 @@ export async function detectMacTools(options = {}) {
       name: 'Windsurf AI IDE (Codeium)',
       installed: windsurfFound,
       url: 'https://codeium.com/windsurf',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'AI IDE เจเนอเรชันใหม่พร้อมระบบ Cascade Agent ทำงานต่อเนื่องอัตโนมัติ',
-      recommendation: 'ทางเลือกใหม่อันทรงพลังเทียบเคียง Cursor',
+      recommendation: 'ทางเลือกใหม่อันทรงพลังเทียบเคียง Cursor พร้อมโควตาฟรี',
       instructionFile: '.windsurfrules',
+    },
+    {
+      id: 'codex',
+      name: 'OpenAI Codex / VS Code',
+      installed: codexFound,
+      url: 'https://code.visualstudio.com',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
+      description: 'Editor ยอดนิยมระดับสากล รองรับ GitHub Copilot และส่วนขยาย AI หลากหลาย',
+      recommendation: 'เหมาะสำหรับผู้ที่มี VS Code อยู่แล้วและต้องการใช้ส่วนขยาย AI',
+      instructionFile: 'CODEX_INSTRUCTIONS.md',
     },
   ];
 }

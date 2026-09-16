@@ -14,7 +14,7 @@ import {
   USER_CONFIG_PATH,
 } from '../src/utils/user-config.js';
 import { detectInstalledTools } from '../src/utils/tool-detector.js';
-import { getPlatformDisplay, getMacCpuArch, getToolRecommendations } from '../src/platform/index.js';
+import { getPlatformDisplay, getMacCpuArch, getToolRecommendations, getTieredRecommendations } from '../src/platform/index.js';
 import { getAdapter, getSupportedTools } from '../src/modules/adapters/index.js';
 
 const execFileAsync = promisify(execFile);
@@ -56,20 +56,25 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
   await t.test('Case 2: Tool Detector detects system tools structure', async () => {
     const detected = await detectInstalledTools();
     assert.ok(Array.isArray(detected));
-    assert.ok(detected.length >= 5);
+    assert.equal(detected.length, 8);
 
     const ids = detected.map((t) => t.id);
-    assert.ok(ids.includes('codex'));
     assert.ok(ids.includes('cursor'));
+    assert.ok(ids.includes('opencode'));
     assert.ok(ids.includes('claude'));
+    assert.ok(ids.includes('chatgpt'));
+    assert.ok(ids.includes('antigravity'));
     assert.ok(ids.includes('hermes'));
     assert.ok(ids.includes('windsurf'));
+    assert.ok(ids.includes('codex'));
 
     for (const tool of detected) {
       assert.equal(typeof tool.name, 'string');
       assert.equal(typeof tool.installed, 'boolean');
       assert.ok(tool.url.startsWith('https://'));
       assert.equal(typeof tool.description, 'string');
+      assert.ok(['free_quota', 'paid_commercial', 'local_privacy'].includes(tool.tier));
+      assert.equal(typeof tool.tierDisplay, 'string');
     }
   });
 
@@ -213,23 +218,30 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     await rm(tmpHome, { recursive: true, force: true });
     await mkdir(join(tmpHome, 'Library', 'Application Support', 'Code'), { recursive: true });
     await mkdir(join(tmpHome, '.cursor'), { recursive: true });
+    await mkdir(join(tmpHome, '.opencode'), { recursive: true });
 
     try {
       const macTools = await detectInstalledTools({ platform: 'darwin', home: tmpHome });
       assert.ok(Array.isArray(macTools));
-      assert.equal(macTools.length, 5);
+      assert.equal(macTools.length, 8);
 
       const codex = macTools.find((t) => t.id === 'codex');
       const cursor = macTools.find((t) => t.id === 'cursor');
+      const opencode = macTools.find((t) => t.id === 'opencode');
       const claude = macTools.find((t) => t.id === 'claude');
       const hermes = macTools.find((t) => t.id === 'hermes');
       const windsurf = macTools.find((t) => t.id === 'windsurf');
+      const chatgpt = macTools.find((t) => t.id === 'chatgpt');
+      const antigravity = macTools.find((t) => t.id === 'antigravity');
 
       assert.ok(codex && codex.installed === true, 'Codex should be detected via Library/Application Support/Code');
       assert.ok(cursor && cursor.installed === true, 'Cursor should be detected via .cursor');
+      assert.ok(opencode && opencode.installed === true, 'OpenCode should be detected via .opencode');
       assert.ok(claude && claude.installed === false, 'Claude should not be detected if path does not exist');
       assert.ok(hermes && typeof hermes.url === 'string', 'Hermes should have url');
       assert.ok(windsurf && typeof windsurf.url === 'string', 'Windsurf should have url');
+      assert.ok(chatgpt && chatgpt.tier === 'paid_commercial', 'ChatGPT should have paid_commercial tier');
+      assert.ok(antigravity && antigravity.tier === 'paid_commercial', 'Antigravity should have paid_commercial tier');
     } finally {
       await rm(tmpHome, { recursive: true, force: true });
     }
@@ -324,7 +336,7 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     assert.ok(windsurfRules.content.includes('brand-tone-of-voice'));
   });
 
-  await t.test('Case 14: Multi Adapter generates complete agent suite including HERMES.md and .windsurfrules', async () => {
+  await t.test('Case 14: Multi Adapter generates complete agent suite across all 8 tools', async () => {
     const multiAdapter = getAdapter('all');
     assert.ok(multiAdapter);
 
@@ -341,49 +353,125 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     assert.ok(filenames.includes('.cursorrules'));
     assert.ok(filenames.includes('.windsurfrules'));
     assert.ok(filenames.includes('HERMES.md'));
+    assert.ok(filenames.includes('OPENCODE.md'));
+    assert.ok(filenames.includes('GEMINI.md'));
+    assert.ok(filenames.includes('CHATGPT.md'));
     assert.ok(filenames.includes('AGENTS.md'));
   });
 
-  await t.test('Case 15: Tool Recommendations return valid URLs and descriptions', async () => {
+  await t.test('Case 15: Tool Recommendations return valid URLs and descriptions across 8 tools', async () => {
     const recs = await getToolRecommendations();
     assert.ok(Array.isArray(recs));
-    assert.equal(recs.length, 5);
+    assert.equal(recs.length, 8);
 
     const cursorRec = recs.find((r) => r.id === 'cursor');
+    const opencodeRec = recs.find((r) => r.id === 'opencode');
     const hermesRec = recs.find((r) => r.id === 'hermes');
+    const chatgptRec = recs.find((r) => r.id === 'chatgpt');
+    const geminiRec = recs.find((r) => r.id === 'antigravity');
 
-    assert.ok(cursorRec);
-    assert.equal(cursorRec.url, 'https://cursor.com');
-    assert.ok(cursorRec.recommendation.includes('แนะนำอันดับ 1'));
-
-    assert.ok(hermesRec);
-    assert.ok(hermesRec.url.includes('Hermes-Agent'));
-    assert.ok(hermesRec.description.includes('Local AI'));
+    assert.ok(cursorRec && cursorRec.url === 'https://cursor.com');
+    assert.ok(opencodeRec && opencodeRec.url === 'https://opencode.ai');
+    assert.ok(hermesRec && hermesRec.url.includes('Hermes-Agent'));
+    assert.ok(chatgptRec && chatgptRec.tier === 'paid_commercial');
+    assert.ok(geminiRec && geminiRec.tier === 'paid_commercial');
   });
 
-  await t.test('Case 16: Zero-tools installed scenario provides helpful recommendations', async () => {
+  await t.test('Case 16: Zero-tools installed scenario provides helpful recommendations for 8 tools', async () => {
     const fakeHome = join(PACKAGE_ROOT, 'tmp', 'fake-empty-home');
     await rm(fakeHome, { recursive: true, force: true });
     await mkdir(fakeHome, { recursive: true });
 
     try {
       const winTools = await detectInstalledTools({ platform: 'win32', home: fakeHome });
-      assert.equal(winTools.length, 5);
+      assert.equal(winTools.length, 8);
       const winInstalled = winTools.filter((t) => t.installed);
       assert.equal(winInstalled.length, 0);
 
       const macTools = await detectInstalledTools({ platform: 'darwin', home: fakeHome });
-      assert.equal(macTools.length, 5);
+      assert.equal(macTools.length, 8);
       const macInstalled = macTools.filter((t) => t.installed);
       assert.equal(macInstalled.length, 0);
 
       for (const t of winTools) {
         assert.ok(t.url.startsWith('https://'));
         assert.ok(t.recommendation.length > 0);
+        assert.ok(['free_quota', 'paid_commercial', 'local_privacy'].includes(t.tier));
       }
     } finally {
       await rm(fakeHome, { recursive: true, force: true });
     }
+  });
+
+  await t.test('Case 17: OpenCode Adapter generates OPENCODE.md instructions', async () => {
+    const opencodeAdapter = getAdapter('opencode');
+    assert.ok(opencodeAdapter);
+
+    const mockRole = { id: 'piti', name: 'Platform & Incubation', description: 'Tech incubation' };
+    const mockFiles = [
+      { relativePath: 'skills/common/receipt-audit/SKILL.md', type: 'skill' },
+      { relativePath: 'rules/naming.md', type: 'rule' },
+    ];
+
+    const instructions = opencodeAdapter.getInstructionFiles(mockRole, mockFiles);
+    const opencodeFile = instructions.find((f) => f.filename === 'OPENCODE.md');
+    assert.ok(opencodeFile);
+    assert.ok(opencodeFile.content.includes('OpenCode AI Assistant'));
+    assert.ok(opencodeFile.content.includes('Free Quota AI Assistant'));
+    assert.ok(opencodeFile.content.includes('receipt-audit'));
+  });
+
+  await t.test('Case 18: Gemini and Google Antigravity Adapter generates GEMINI.md', async () => {
+    const geminiAdapter = getAdapter('gemini');
+    const antigravityAdapter = getAdapter('antigravity');
+    assert.equal(geminiAdapter, antigravityAdapter);
+
+    const mockRole = { id: 'tech-spin', name: 'Tech Transfer & Spin-off', description: 'Commercial spin-off' };
+    const mockFiles = [
+      { relativePath: 'skills/pm/tor-review/SKILL.md', type: 'skill' },
+      { relativePath: 'rules/human-approval.md', type: 'rule' },
+    ];
+
+    const instructions = geminiAdapter.getInstructionFiles(mockRole, mockFiles);
+    const geminiFile = instructions.find((f) => f.filename === 'GEMINI.md');
+    assert.ok(geminiFile);
+    assert.ok(geminiFile.content.includes('Google Antigravity & Spark'));
+    assert.ok(geminiFile.content.includes('tor-review'));
+  });
+
+  await t.test('Case 19: ChatGPT Desktop Adapter generates CHATGPT.md', async () => {
+    const chatgptAdapter = getAdapter('chatgpt');
+    assert.ok(chatgptAdapter);
+
+    const mockRole = { id: 'ga', name: 'General Administration', description: 'General affairs & memos' };
+    const mockFiles = [
+      { relativePath: 'skills/common/meeting-summary/SKILL.md', type: 'skill' },
+      { relativePath: 'rules/thai-official-style.md', type: 'rule' },
+    ];
+
+    const instructions = chatgptAdapter.getInstructionFiles(mockRole, mockFiles);
+    const chatgptFile = instructions.find((f) => f.filename === 'CHATGPT.md');
+    assert.ok(chatgptFile);
+    assert.ok(chatgptFile.content.includes('ChatGPT Desktop'));
+    assert.ok(chatgptFile.content.includes('meeting-summary'));
+  });
+
+  await t.test('Case 20: 3-Tier Categorized Recommendations structure', async () => {
+    const tiered = await getTieredRecommendations();
+    assert.ok(tiered.freeQuota);
+    assert.ok(tiered.paidCommercial);
+    assert.ok(tiered.localPrivacy);
+
+    assert.equal(tiered.freeQuota.id, 'free_quota');
+    assert.equal(tiered.paidCommercial.id, 'paid_commercial');
+    assert.equal(tiered.localPrivacy.id, 'local_privacy');
+
+    assert.ok(tiered.freeQuota.tools.some((t) => t.id === 'cursor'));
+    assert.ok(tiered.freeQuota.tools.some((t) => t.id === 'opencode'));
+    assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'claude'));
+    assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'chatgpt'));
+    assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'antigravity'));
+    assert.ok(tiered.localPrivacy.tools.some((t) => t.id === 'hermes'));
   });
 });
 
