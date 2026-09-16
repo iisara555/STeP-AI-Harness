@@ -1,38 +1,54 @@
-import { resolve, join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
+import { loadUserConfig } from '../../utils/user-config.js';
 import { inspectWorkspace, writeManifest } from '../../modules/manifest.js';
-import { resolveRoleFiles, resolveTeamFiles, PACKAGE_ROOT } from '../../modules/role-resolver.js';
+import { resolveRoleFiles, resolveTeamFiles } from '../../modules/role-resolver.js';
 import { createSnapshot } from '../../modules/recovery.js';
 import { safeCopyFile } from '../../utils/file-ops.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
+import { getAdapter } from '../../modules/adapters/index.js';
 import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
-import { generateCodexInstructions } from '../../modules/adapter-codex.js';
+import { runDoctor } from './doctor.js';
 
-export async function runSync(args) {
-  header('Sync & Update Skills to Latest Version');
+export async function runUpdate(args) {
+  header('STeP AI — One-Click Update & Skill Sync');
 
   const dest = resolve(process.cwd(), args.dest || args.d || '.');
-  const inspection = await inspectWorkspace(dest);
-
-  if (!inspection.manifest) {
-    warn(`ไม่พบไฟล์ติดตั้งใน: ${dest}`);
-    console.log(`\nกรุณาเริ่มด้วยคำสั่ง:\n  ${colors.cyan('step-ai init --team <team> --tool codex')}\n`);
-    return;
-  }
-
-  const { manifest, clean, modified, missing } = inspection;
+  const userCfg = await loadUserConfig();
   const pkgJson = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8'));
 
-  info(`บทบาทปัจจุบัน: ${colors.bold(manifest.team ? `ทีม ${manifest.team.toUpperCase()}` : `Role ${manifest.role}`)}`);
-  info(`เวอร์ชันติดตั้ง:  ${colors.yellow(manifest.version)} -> เวอร์ชันล่าสุด: ${colors.green(pkgJson.version)}`);
+  info(`ตรวจสอบความพร้อมแพ็กเกจล่าสุด: ${colors.bold(`v${pkgJson.version}`)}`);
 
-  // Auto snapshot before sync
-  const snapshotId = await createSnapshot(dest, `pre-sync-v${pkgJson.version}`);
+  const inspection = await inspectWorkspace(dest);
+  if (!inspection.manifest) {
+    info(`ยังไม่พบการติดตั้งในโฟลเดอร์นี้: ${colors.dim(dest)}`);
+    // Check if user has global config
+    const targetTeam = args.team || args.m || userCfg.team;
+    const targetTool = args.tool || args.t || userCfg.tool || 'codex';
+
+    if (targetTeam) {
+      info(`พบการตั้งค่าทีมหลักของคุณ: ${colors.bold(targetTeam.toUpperCase())} กำลังดำเนินการติดตั้งให้ทันที...`);
+      const { runInit } = await import('./init.js');
+      await runInit({ team: targetTeam, tool: targetTool, dest });
+      return;
+    } else {
+      warn('กรุณาเริ่มด้วยคำสั่งติดตั้ง: step-ai init หรือดับเบิลคลิก Install-STeP-AI.bat');
+      return;
+    }
+  }
+
+  const { manifest, modified } = inspection;
+  info(`ตรวจพบการติดตั้งปัจจุบัน: ${colors.bold(manifest.team ? `ทีม ${manifest.team.toUpperCase()}` : `Role ${manifest.role}`)} (v${manifest.version})`);
+
+  // Snapshot before update
+  const snapshotId = await createSnapshot(dest, `pre-update-v${pkgJson.version}`);
   if (snapshotId) {
     success(`สร้าง Backup Snapshot อัตโนมัติ: .step-ai/backups/${snapshotId}/`);
   }
 
+  // Resolve files (support both team and role)
   let resolved;
   let targetRole;
   if (manifest.team || manifest.targetType === 'team') {
@@ -53,8 +69,7 @@ export async function runSync(args) {
     targetRole = resolved.role;
   }
 
-  const { role, files } = resolved;
-
+  const { files } = resolved;
   let updatedCount = 0;
   let preservedCount = 0;
   const newManifestFiles = { ...manifest.files };
@@ -64,12 +79,9 @@ export async function runSync(args) {
     const isModified = modified.includes(f.relativePath);
 
     if (isModified) {
-      // Preserve user modifications safely
       warn(`คงไฟล์เดิมที่มีการแก้ไข: ${f.relativePath}`);
       preservedCount++;
-      // Keep existing hash in manifest
     } else {
-      // Safe to update
       await safeCopyFile(f.sourcePath, targetPath);
       const newHash = await calculateFileSha256(targetPath);
       const stat = await (await import('node:fs/promises')).stat(targetPath);
@@ -81,10 +93,9 @@ export async function runSync(args) {
     }
   }
 
-  // Update instruction files if not locally modified
-  const { getAdapter } = await import('../../modules/adapters/index.js');
-  const adapter = getAdapter(manifest.tool || 'codex');
-  const instructionFiles = adapter.getInstructionFiles(role, files);
+  // Update instructions
+  const adapter = getAdapter(manifest.tool || userCfg.tool || 'codex');
+  const instructionFiles = adapter.getInstructionFiles(targetRole, files);
 
   for (const inst of instructionFiles) {
     const instPath = join(dest, inst.filename);
@@ -96,20 +107,18 @@ export async function runSync(args) {
     }
   }
 
-  // Update manifest data
+  // Write updated manifest
   const updatedManifest = {
     ...manifest,
     version: pkgJson.version,
     updatedAt: new Date().toISOString(),
     files: newManifestFiles,
   };
-
   await writeManifest(dest, updatedManifest);
 
+  success(`อัปเดตไฟล์ทักษะและ Router สำเร็จ (${updatedCount} ไฟล์อัปเดต, ${preservedCount} ไฟล์คงเดิม)`);
+
+  // Run doctor summary check
   console.log();
-  success(`ซิงก์อัปเดตเสร็จสมบูรณ์!`);
-  console.log(`  - อัปเดตไฟล์เป็นรุ่นล่าสุด: ${colors.bold(updatedCount)} ไฟล์`);
-  if (preservedCount > 0) {
-    console.log(`  - คงไฟล์ที่มีการแก้ไขในเครื่องไว้: ${colors.bold(preservedCount)} ไฟล์ (ปลอดภัย ไม่ถูกเขียนทับ)`);
-  }
+  await runDoctor({ ...args, employee: true });
 }

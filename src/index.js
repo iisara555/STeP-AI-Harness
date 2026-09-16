@@ -1,4 +1,4 @@
-export { getAvailableRoles, resolveRoleFiles } from './modules/role-resolver.js';
+export { getAvailableRoles, resolveRoleFiles, getAvailableTeams, resolveTeamFiles, parseTeamsYaml } from './modules/role-resolver.js';
 export { inspectWorkspace, readManifest, writeManifest } from './modules/manifest.js';
 export { createSnapshot, listSnapshots, restoreSnapshot } from './modules/recovery.js';
 export { getAdapter, isToolSupported, getSupportedTools } from './modules/adapters/index.js';

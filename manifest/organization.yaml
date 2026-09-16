@@ -1,0 +1,44 @@
+version: 1
+organization:
+  id: step-cmu
+  name: "Science and Technology Park, Chiang Mai University"
+  nameTh: "อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)"
+  abbreviation: STeP
+  parentOrganization: "Chiang Mai University"
+  role: "Regional Science Park (RSP) North Host"
+
+governance:
+  qualityFramework: "ISO 9001:2015 / Good Laboratory Practice / CMU QF"
+  dataProtectionFramework: "PDPA (Personal Data Protection Act B.E. 2562)"
+  aiGovernancePolicy:
+    principles:
+      - "Human-in-the-loop for binding financial and legal decisions"
+      - "Zero context pollution via progressive disclosure"
+      - "Strict confidentiality and intellectual property preservation"
+      - "Traceability of recommendations to approved SOPs and guidelines"
+
+clusters:
+  governance-operations:
+    nameTh: "ฝ่ายบริหารกลาง ธรรมาภิบาล และการเงิน"
+    description: "นโยบาย บัญชี พัสดุ การเงิน สื่อสารองค์กร และระบบคุณภาพ"
+    teams: [ga, afp, iasa, qs, nmco, hd]
+
+  incubation-strategy:
+    nameTh: "ฝ่ายบ่มเพาะธุรกิจและยุทธศาสตร์นวัตกรรม"
+    description: "บ่มเพาะ Startup เชื่อมโยงเทคโนโลยี การตลาด และการวางแผนยุทธศาสตร์"
+    teams: [piti, isi, eic, imo, sit]
+
+  tech-industry:
+    nameTh: "ฝ่ายถ่ายทอดเทคโนโลยีและพัฒนาภาคอุตสาหกรรม"
+    description: "ทรัพย์สินทางปัญญา ถ่ายทอดเทคโนโลยี และยกระดับภาคอุตสาหกรรม/ภาครัฐ"
+    teams: [tech-spin, tech-up, linc, pubsec]
+
+  market-creative:
+    nameTh: "ฝ่ายการตลาด สื่อสาร และลูกค้าสัมพันธ์"
+    description: "ผลิตสื่อ ออกแบบ Creative จัดกิจกรรมนิทรรศการ และดูแลบริการลูกค้า"
+    teams: [cc, mi, crm]
+
+  infrastructure-labs:
+    nameTh: "ฝ่ายโครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ"
+    description: "โครงสร้างพื้นฐาน อาคารทดสอบ ห้องปฏิบัติการวิเคราะห์ และโรงงานต้นแบบนวัตกรรมอาหาร"
+    teams: [ifu, iqi, les, foodfabr]

@@ -8,6 +8,11 @@ import { runSync } from './commands/sync.js';
 import { runDoctor } from './commands/doctor.js';
 import { runRollback } from './commands/rollback.js';
 
+import { runTeams } from './commands/teams.js';
+import { runAsk } from './commands/ask.js';
+import { runConfig } from './commands/config.js';
+import { runUpdate } from './commands/update.js';
+
 function parseArgs(rawArgs) {
   const args = { _: [] };
   for (let i = 0; i < rawArgs.length; i++) {
@@ -45,22 +50,28 @@ function parseArgs(rawArgs) {
 function showHelp(version) {
   console.log(`
 ${colors.cyan(colors.bold('@step-cmu/ai-harness'))} ${colors.dim(`v${version}`)}
-ระบบแจกจ่าย Approved Skills และ Rules สำหรับ Codex และ AI Agents ในองค์กร
+ระบบแจกจ่าย Approved Skills และ Rules สำหรับ 22 ทีม STeP / RSP North
 
 ${colors.bold('การใช้งาน:')}
   step-ai <คำสั่ง> [ตัวเลือก]
 
-${colors.bold('คำสั่งหลัก:')}
-  ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Role และเครื่องมือ
+${colors.bold('คำสั่งหลักสำหรับพนักงาน:')}
+  ${colors.cyan('ask')}        ถามคำถามงานภาษาไทยธรรมดา เพื่อให้ AI วิเคราะห์ Skill, SOP และระเบียบที่เกี่ยวข้อง
+  ${colors.cyan('config')}     ดูหรือเปลี่ยนทีมหลักและเครื่องมือ AI ประจำตัว (${colors.dim('~/.step-ai/config.json')})
+  ${colors.cyan('update')}     อัปเดต Skills และ Router ล่าสุดในคลิกเดียว (ไม่กระทบไฟล์งานเดิม)
+  ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
+  ${colors.cyan('teams')}      แสดงผังและรายชื่อ 22 ทีมของ STeP พร้อม 5 Domain Clusters
+  ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
   ${colors.cyan('status')}     ตรวจรุ่นที่ติดตั้งและไฟล์ที่มีการแก้ไขในเครื่อง
-  ${colors.cyan('sync')}       อัปเดต Skills และ Rules เป็นเวอร์ชันล่าสุด (ไม่เขียนทับงานเดิม)
-  ${colors.cyan('doctor')}     ตรวจสิทธิ์การเข้าถึง Private Registry และสภาพแวดล้อม
+  ${colors.cyan('sync')}       ซิงก์ไฟล์ Skills และ Rules
   ${colors.cyan('rollback')}   ย้อนกลับรุ่นก่อนหน้าจาก Backup Snapshot
 
 ${colors.bold('ตัวเลือกทั่วไป:')}
-  -r, --role <id>       ระบุ Role (all, staff, creative, pm, developer, ai-admin) [default: all]
+  -m, --team <id>       ระบุรหัสทีมใน 22 ทีม (เช่น qs, afp, mi, piti, linc, cc)
+  -r, --role <id>       ระบุ Role (all, staff, pm, developer, creative, ai-admin) [default: all]
   -t, --tool <name>     ระบุเครื่องมือ (claude, cursor, codex, all) [default: codex]
   -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
+      --employee        แสดงผลลัพธ์ในโหมดพนักงานทั่วไป (เข้าใจง่าย ไม่แสดง technical warning)
       --dry-run         แสดงตัวอย่างไฟล์ที่จะดำเนินการโดยไม่เขียนลงเครื่อง
   -s, --snapshot <id>   ระบุ Snapshot ID สำหรับ rollback
   -l, --list            แสดงรายการ snapshot ที่มีอยู่
@@ -68,14 +79,14 @@ ${colors.bold('ตัวเลือกทั่วไป:')}
   -v, --version         แสดงเวอร์ชันของแพ็กเกจ
 
 ${colors.bold('ตัวอย่างการใช้งาน:')}
-  step-ai init                      # ติดตั้งทุก Skill สำหรับ Codex (Universal Access)
-  step-ai init --tool claude        # ติดตั้งทุก Skill สำหรับ Claude Code
-  step-ai init --tool cursor        # ติดตั้งทุก Skill สำหรับ Cursor
-  step-ai init --tool all           # ติดตั้งทุก Skill สำหรับทุก Agent ในโปรเจกต์
-  step-ai status
-  step-ai sync
-  step-ai doctor
-  step-ai rollback
+  step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย"
+  step-ai ask "ทำสไลด์ Pitching ให้ผู้ประกอบการ"
+  step-ai config
+  step-ai config --team qs
+  step-ai update
+  step-ai init --team qs --tool codex
+  step-ai init --role all --tool claude
+  step-ai doctor --employee
 `);
 }
 
@@ -95,6 +106,18 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   switch (command) {
+    case 'ask':
+      await runAsk(args);
+      break;
+    case 'config':
+      await runConfig(args);
+      break;
+    case 'update':
+      await runUpdate(args);
+      break;
+    case 'teams':
+      await runTeams(args);
+      break;
     case 'init':
       await runInit(args);
       break;

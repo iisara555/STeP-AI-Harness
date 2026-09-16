@@ -1,0 +1,82 @@
+version: 1
+description: Official STeP Controlled Document Registry — Policies, SOPs, Rules, and Templates
+
+documents:
+  procurement-policy:
+    title: "นโยบายและหลักเกณฑ์การจัดซื้อจัดจ้างและการบริหารพัสดุ STeP"
+    owner: afp
+    type: policy
+    process: procurement.tor
+    version: "2.1"
+    path: rules/human-approval.md
+    status: active
+
+  qs-doc-control-procedure:
+    title: "ระเบียบปฏิบัติงานการควบคุมเอกสารและข้อมูลในระบบคุณภาพ (SOP)"
+    owner: qs
+    type: sop
+    process: quality.document-control
+    version: "3.2"
+    path: rules/naming.md
+    status: active
+
+  data-classification-rule:
+    title: "ระเบียบการจำแนกชั้นความลับและการคุ้มครองข้อมูลส่วนบุคคล (PDPA)"
+    owner: qs
+    type: rule
+    process: quality.data-privacy
+    version: "1.0"
+    path: rules/data-classification.md
+    status: active
+
+  human-approval-rule:
+    title: "เกณฑ์การขอความเห็นชอบและการอนุมัติโดยบุคลากรผู้มีอำนาจ (Human-in-the-loop)"
+    owner: ga
+    type: rule
+    process: procurement.tor
+    version: "1.2"
+    path: rules/human-approval.md
+    status: active
+
+  secret-safety-rule:
+    title: "แนวปฏิบัติความปลอดภัยด้านความลับและ Credentials ในการพัฒนาซอฟต์แวร์"
+    owner: developer
+    type: rule
+    process: engineering.code-delivery
+    version: "1.1"
+    path: rules/secret-safety.md
+    status: active
+
+  step-writing-rule:
+    title: "คู่มือมาตรฐานการเขียนและการใช้ภาษาไทยสำหรับสื่อสารองค์กร STeP"
+    owner: cc
+    type: rule
+    process: creative.branding
+    version: "1.0"
+    path: rules/step-writing.md
+    status: active
+
+  naming-convention-rule:
+    title: "มาตรฐานการตั้งชื่อไฟล์ รหัสโครงการ และเวอร์ชันเอกสาร"
+    owner: qs
+    type: rule
+    process: quality.document-control
+    version: "1.0"
+    path: rules/naming.md
+    status: active
+
+  tor-template:
+    title: "แบบฟอร์มมาตรฐานร่างขอบเขตของงาน (TOR) พัสดุ"
+    owner: afp
+    type: template
+    process: procurement.tor
+    version: "2026.1"
+    status: active
+
+  creative-brief-template:
+    title: "แบบฟอร์ม Creative Brief สำหรับสั่งงานออกแบบและผลิตสื่อ"
+    owner: cc
+    type: template
+    process: creative.branding
+    version: "1.0"
+    status: active

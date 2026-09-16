@@ -1,0 +1,394 @@
+version: 1
+description: Official STeP AI Skill Registry — Governance, Ownership, Process Links & Lifecycle Status
+
+skills:
+  step-router:
+    owner: ai-admin
+    version: 2.0.0
+    domain: [routing]
+    process: [strategy.weekly-review]
+    path: skills/common/step-router/SKILL.md
+    description: Central Layer 1 Router Skill implementing Progressive Disclosure & 5-Factor Scoring
+    governance:
+      owner: ai-admin
+      reviewer: [qs]
+      approvedBy: [tech-director]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: []
+      optional: []
+
+  tor-review:
+    owner: afp
+    version: 1.0.0
+    domain: [procurement]
+    process: [procurement.tor]
+    service: [tech-commercialization, public-sector-innovation]
+    path: skills/pm/tor-review/SKILL.md
+    description: ตรวจ TOR และขอบเขตงานจัดซื้อจัดจ้างด้านความครบถ้วนและความสอดคล้อง
+    governance:
+      owner: afp
+      reviewer: [qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [procurement-policy, human-approval-rule]
+      optional: [tor-template]
+
+  tor-government-writing:
+    owner: afp
+    version: 1.0.0
+    domain: [procurement]
+    process: [procurement.tor]
+    service: [public-sector-innovation]
+    path: skills/pm/tor-government-writing/SKILL.md
+    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ
+    governance:
+      owner: afp
+      reviewer: [qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [procurement-policy, human-approval-rule]
+      optional: [tor-template]
+
+  meeting-summary:
+    owner: ga
+    version: 1.0.0
+    domain: [governance]
+    process: [governance.meeting]
+    path: skills/pm/meeting-summary/SKILL.md
+    description: สรุปบันทึกการประชุม แยกมติ Action item และผู้รับผิดชอบ
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  project-plan:
+    owner: pm
+    version: 1.0.0
+    domain: [project-management]
+    process: [project.planning]
+    service: [incubation-startup, public-sector-innovation]
+    path: skills/pm/project-plan/SKILL.md
+    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone และความเสี่ยง
+    governance:
+      owner: pm
+      reviewer: [sit, qs]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  designer-brief:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/designer-brief/SKILL.md
+    description: จัดทำและตรวจ Creative Brief สำหรับงานออกแบบ Artwork
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: [creative-brief-template]
+
+  event-concept:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.event]
+    service: [creative-marketing]
+    path: skills/creative/event-concept/SKILL.md
+    description: ออกแบบแนวคิดงาน Event ผังบูธ และประสบการณ์ผู้เข้าร่วมงาน
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  presentation-design:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/presentation-design/SKILL.md
+    description: โครงสร้างและลำดับการนำเสนอ Presentation สำหรับ Pitching หรือรายงาน
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  coding-git-workflow:
+    owner: developer
+    version: 1.0.0
+    domain: [engineering]
+    process: [engineering.code-delivery]
+    path: skills/dev/coding-git-workflow/SKILL.md
+    description: มาตรฐานการเขียนโค้ด การแตก branch การ commit และ pull request
+    governance:
+      owner: developer
+      reviewer: [qs]
+      approvedBy: [tech-lead]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [secret-safety-rule, human-approval-rule]
+      optional: []
+
+  github-workflow:
+    owner: developer
+    version: 1.0.0
+    domain: [engineering]
+    process: [engineering.code-delivery]
+    path: skills/dev/github-workflow/SKILL.md
+    description: แนวทางการตั้งค่า GitHub Issues, Projects, Labels และ Automation
+    governance:
+      owner: developer
+      reviewer: [qs]
+      approvedBy: [tech-lead]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [secret-safety-rule]
+      optional: []
+
+  vercel-deploy:
+    owner: developer
+    version: 1.0.0
+    domain: [engineering]
+    process: [engineering.code-delivery]
+    path: skills/dev/vercel-deploy/SKILL.md
+    description: การตรวจสอบความพร้อม สภาพแวดล้อม และขั้นตอน Deploy เว็บแอปขึ้น Vercel
+    governance:
+      owner: developer
+      reviewer: [qs]
+      approvedBy: [tech-lead]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [secret-safety-rule, human-approval-rule]
+      optional: []
+
+  step-writing:
+    owner: cc
+    version: 1.0.0
+    domain: [communication]
+    process: [creative.branding]
+    path: skills/common/step-writing/SKILL.md
+    description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้อง
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  thai-official-documents:
+    owner: ga
+    version: 1.0.0
+    domain: [governance]
+    process: [governance.correspondence]
+    path: skills/common/thai-official-documents/SKILL.md
+    description: ตรวจและจัดรูปแบบหนังสือราชการไทย หนังสือภายนอก หนังสือภายใน
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  brand-tone-of-voice:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/common/brand-tone-of-voice/SKILL.md
+    description: รักษาอัตลักษณ์และน้ำเสียงของ STeP และ RSP North ตาม Brand CI
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  step-brand:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/common/step-brand/SKILL.md
+    description: อ้างอิงและตรวจสอบการใช้ตราสัญลักษณ์และทรัพยากรแบรนด์ STeP
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  data-privacy-compliance:
+    owner: qs
+    version: 1.0.0
+    domain: [compliance]
+    process: [quality.data-privacy]
+    path: skills/common/data-privacy-compliance/SKILL.md
+    description: ตรวจจับและควบคุมข้อมูลส่วนบุคคล (PDPA/PII) และความลับทางการค้า
+    governance:
+      owner: qs
+      reviewer: [iasa]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [data-classification-rule, secret-safety-rule]
+      optional: []
+
+  customer-support-faq-triage:
+    owner: crm
+    version: 1.0.0
+    domain: [client-services]
+    process: [client.inquiry-triage]
+    service: [infrastructure-testing]
+    path: skills/common/customer-support-faq-triage/SKILL.md
+    description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
+    governance:
+      owner: crm
+      reviewer: [qs]
+      approvedBy: [crm-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  sop-authoring:
+    owner: qs
+    version: 1.0.0
+    domain: [quality]
+    process: [quality.document-control]
+    path: skills/common/sop-authoring/SKILL.md
+    description: ถอดวิธีปฏิบัติงานมาตรฐาน (SOP / WI) ให้อยู่ในรูปแบบที่คนอื่นทำซ้ำได้
+    governance:
+      owner: qs
+      reviewer: [qs]
+      approvedBy: [qmr]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [qs-doc-control-procedure, naming-convention-rule]
+      optional: []
+
+  team-weekly-review:
+    owner: sit
+    version: 1.0.0
+    domain: [strategy]
+    process: [strategy.weekly-review]
+    path: skills/common/team-weekly-review/SKILL.md
+    description: รวบรวมและวิเคราะห์ผลการทำงานประจำสัปดาห์ ปัญหาคอขวด และแผนงาน
+    governance:
+      owner: sit
+      reviewer: [qs]
+      approvedBy: [sit-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  receipt-audit:
+    owner: afp
+    version: 1.0.0
+    domain: [finance, procurement]
+    process: [procurement.request]
+    service: [public-sector-innovation]
+    path: skills/common/receipt-audit/SKILL.md
+    description: ตรวจสอบใบเสร็จรับเงิน ใบกำกับภาษี และเอกสารการเบิกจ่ายตามระเบียบ มช.
+    governance:
+      owner: afp
+      reviewer: [qs]
+      approvedBy: [afp-finance-head]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+

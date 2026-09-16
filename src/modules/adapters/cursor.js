@@ -1,4 +1,5 @@
 import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { buildRouterGuidelines } from '../router/index.js';
 
 /**
  * Generate .cursorrules content optimized for Cursor IDE
@@ -11,13 +12,17 @@ export function generateCursorRules(role, files) {
   const ruleFiles = files.filter((f) => f.type === 'rule');
 
   let text = `# Cursor AI Rules — STeP AI Harness\n\n`;
-  text += `You are an AI assistant configured for STeP / RSP North.\n`;
+  text += `You are an AI assistant configured for STeP / RSP North (22 Teams across 5 Domain Clusters).\n`;
   text += `Role: ${role.id} (${role.description})\n\n`;
 
   text += `## Guidelines & Boundaries\n`;
   text += `- Always prioritize human approval for actionable decisions (procurement, official letters, deployment).\n`;
   text += `- Never expose or commit secrets, personal staff info, client data, or confidential contracts.\n`;
   text += `- When writing Thai documentation or official texts, adhere to official formats and professional tone.\n\n`;
+
+  text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
+  text += buildRouterGuidelines();
+  text += `\n`;
 
   text += `## Rules\n`;
   for (const r of ruleFiles) {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rm, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { getAvailableRoles, resolveRoleFiles } from '../src/modules/role-resolver.js';
+import { getAvailableRoles, resolveRoleFiles, getAvailableTeams, resolveTeamFiles } from '../src/modules/role-resolver.js';
 import { inspectWorkspace, readManifest } from '../src/modules/manifest.js';
 import { createSnapshot, listSnapshots, restoreSnapshot } from '../src/modules/recovery.js';
 import { installForCodex } from '../src/modules/adapter-codex.js';
@@ -30,7 +30,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     const allFiles = await resolveRoleFiles('all');
     assert.equal(allFiles.role.id, 'all');
     const allSkillPaths = allFiles.files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-    assert.equal(allSkillPaths.length, 19, 'Universal role should resolve all 19 skills');
+    assert.equal(allSkillPaths.length, 20, 'Universal role should resolve all 20 skills');
 
     const pmFiles = await resolveRoleFiles('pm');
     assert.equal(pmFiles.role.id, 'pm');
@@ -195,6 +195,51 @@ test('CLI & Core Modules Test Suite', async (t) => {
     await rm(multiDir, { recursive: true, force: true });
   });
 
+  await t.test('Role Resolver loads all 22 STeP teams correctly', async () => {
+    const teams = await getAvailableTeams();
+    assert.equal(teams.length, 22, 'Should have exactly 22 teams defined in teams.yaml');
+
+    const teamIds = teams.map((t) => t.id);
+    const expectedTeams = [
+      'ga', 'afp', 'iasa', 'qs', 'nmco', 'hd',
+      'piti', 'isi', 'eic', 'imo', 'sit',
+      'tech-spin', 'tech-up', 'linc', 'pubsec',
+      'cc', 'mi', 'crm',
+      'ifu', 'iqi', 'les', 'foodfabr',
+    ];
+
+    for (const expected of expectedTeams) {
+      assert.ok(teamIds.includes(expected), `Missing team: ${expected}`);
+    }
+  });
+
+  await t.test('Team Resolver resolves specific team skills and router files', async () => {
+    const qsResolved = await resolveTeamFiles('qs');
+    assert.equal(qsResolved.team.id, 'qs');
+    assert.equal(qsResolved.team.clusterId, 'governance-operations');
+
+    const qsFilePaths = qsResolved.files.map((f) => f.relativePath);
+    assert.ok(qsFilePaths.includes('skills/common/step-router/SKILL.md'), 'Must include step-router');
+    assert.ok(qsFilePaths.includes('skills/pm/tor-review/SKILL.md'), 'QS includes tor-review');
+    assert.ok(qsFilePaths.includes('skills/common/sop-authoring/SKILL.md'), 'QS includes sop-authoring');
+    assert.ok(qsFilePaths.includes('docs/teams.md'), 'Must include teams.md');
+    assert.ok(qsFilePaths.includes('docs/step-router.md'), 'Must include step-router.md');
+
+    // Test Creative & Communication (CC) team
+    const ccResolved = await resolveTeamFiles('cc');
+    const ccFilePaths = ccResolved.files.map((f) => f.relativePath);
+    assert.ok(ccFilePaths.includes('skills/creative/designer-brief/SKILL.md'));
+    assert.ok(ccFilePaths.includes('skills/creative/event-concept/SKILL.md'));
+    assert.ok(ccFilePaths.includes('skills/common/step-brand/SKILL.md'));
+
+    // Test Market Innovation (MI) team
+    const miResolved = await resolveTeamFiles('mi');
+    assert.equal(miResolved.team.clusterId, 'market-creative');
+    assert.ok(miResolved.team.skills.includes('creative'));
+    assert.ok(miResolved.team.skills.includes('pm'));
+  });
+
   // Cleanup after test
   await rm(TEST_DIR, { recursive: true, force: true });
 });
+

@@ -8,18 +8,32 @@
     "step-ai": "./bin/step-ai.js"
   },
   "scripts": {
-    "test": "node test/cli.test.js",
+    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js",
     "validate": "python scripts/validate_repo.py"
   },
   "files": [
     "bin",
     "src",
+    "install",
+    "Install-STeP-AI.bat",
+    "Update-STeP-AI.bat",
     "skills",
     "rules",
     "manifest/roles.yaml",
+    "manifest/teams.yaml",
+    "manifest/skills.yaml",
+    "manifest/processes.yaml",
+    "manifest/documents.yaml",
+    "manifest/services.yaml",
+    "manifest/authority.yaml",
+    "manifest/organization.yaml",
+    "manifest/router-index.yaml",
     "docs/step-context.md",
     "docs/roles-and-ownership.md",
     "docs/knowledge-policy.md",
+    "docs/teams.md",
+    "docs/step-router.md",
+    "docs/employee-guide.md",
     "README.md",
     "culture.md"
   ],
