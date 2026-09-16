@@ -122,41 +122,75 @@ case "$TOOL_CHOICE" in
     *) SELECTED_TOOL="all" ;;
 esac
 
-# 5. เลือก STeP Team
+# 5. เลือก STeP Team (Display all 22 teams)
 echo ""
 echo -e "${GRAY}------------------------------------------------------------${NC}"
-echo -e "${YELLOW}ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team)${NC}"
-echo -e "  1. QS   - ระบบบริหารคุณภาพ ISO"
-echo -e "  2. AFP  - บัญชี การเงิน และจัดซื้อ"
-echo -e "  3. CC   - การสื่อสารองค์กรและการตลาด"
-echo -e "  4. MI   - วิเคราะห์ข้อมูลการตลาดและธุรกิจ"
-echo -e "  5. PITI - นวัตกรรมสตาร์ทอัพและบ่มเพาะธุรกิจ"
-echo -e "${GRAY}  --------------------------------------------------------${NC}"
-echo -e "${CYAN}  A. แสดงรายชื่อครบทั้ง 22 ทีมของ STeP${NC}"
+echo -e "${YELLOW}ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team — แสดงครบทั้ง 22 ทีม)${NC}"
+echo ""
+echo -e "${CYAN}● กลุ่มงาน: ธรรมาภิบาลและการบริหารจัดการ (Governance & Operations)${NC}"
+echo -e "   1. GA        - งานบริหารทั่วไป (ธุรการกลาง/เอกสาร)"
+echo -e "   2. AFP       - บัญชี การเงิน และจัดซื้อ"
+echo -e "   3. IASA      - ความร่วมมือระหว่างประเทศและพันธมิตร"
+echo -e "   4. QS        - ระบบคุณภาพ (ISO และมาตรฐานองค์กร)"
+echo -e "   5. NMCO      - ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว."
+echo -e "   6. HD        - พัฒนาศักยภาพบุคลากร"
+echo ""
+echo -e "${CYAN}● กลุ่มงาน: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation & Strategy)${NC}"
+echo -e "   7. PITI      - บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี"
+echo -e "   8. ISI       - บ่มเพาะ Startup นวัตกรรม"
+echo -e "   9. EIC       - การเป็นผู้ประกอบการและนวัตกรรม"
+echo -e "  10. IMO       - บริหารจัดการนวัตกรรม"
+echo -e "  11. SIT       - ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง"
+echo ""
+echo -e "${CYAN}● กลุ่มงาน: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer & Industry)${NC}"
+echo -e "  12. TECH-SPIN - ถ่ายทอดเทคโนโลยีและบริษัท Spin-off"
+echo -e "  13. TECH-UP   - เทคโนโลยีเชิงลึกและการขยายระดับการผลิต"
+echo -e "  14. LINC      - ความร่วมมือท้องถิ่นและอุตสาหกรรม"
+echo -e "  15. PUBSEC    - โครงการความร่วมมือภาครัฐ"
+echo ""
+echo -e "${CYAN}● กลุ่มงาน: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative & Client)${NC}"
+echo -e "  16. CC        - งานสร้างสรรค์และการสื่อสาร"
+echo -e "  17. MI        - นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม"
+echo -e "  18. CRM       - ลูกค้าสัมพันธ์"
+echo ""
+echo -e "${CYAN}● กลุ่มงาน: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Labs & Infrastructure)${NC}"
+echo -e "  19. IFU       - การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก"
+echo -e "  20. IQI       - พัฒนาคุณภาพโครงสร้างพื้นฐาน"
+echo -e "  21. LES       - ห้องปฏิบัติการและเครื่องมือ"
+echo -e "  22. FOODFABR  - โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม"
 echo ""
 
-read -p "พิมพ์หมายเลขทีม (1-5) หรือ 'A' เพื่อดูทั้งหมด [default: 1]: " TEAM_CHOICE || true
-TEAM_CHOICE=${TEAM_CHOICE:-1}
+read -p "พิมพ์หมายเลขทีม (1-22) หรือ รหัสทีม (เช่น 4 หรือ qs) [default: 4 (QS)]: " TEAM_CHOICE || true
+TEAM_CHOICE=${TEAM_CHOICE:-4}
 
-SELECTED_TEAM="qs"
-if [ "$TEAM_CHOICE" = "A" ] || [ "$TEAM_CHOICE" = "a" ]; then
-    echo ""
-    node "$ROOT_DIR/bin/step-ai.js" teams
-    echo ""
-    read -p "พิมพ์รหัสทีมของคุณ (เช่น qs, afp, cc, mi, piti, linc, etc.): " TEAM_CODE_INPUT || true
-    if [ -n "$TEAM_CODE_INPUT" ]; then
-        SELECTED_TEAM=$(echo "$TEAM_CODE_INPUT" | tr '[:upper:]' '[:lower:]' | xargs)
-    fi
-else
-    case "$TEAM_CHOICE" in
-        1) SELECTED_TEAM="qs" ;;
-        2) SELECTED_TEAM="afp" ;;
-        3) SELECTED_TEAM="cc" ;;
-        4) SELECTED_TEAM="mi" ;;
-        5) SELECTED_TEAM="piti" ;;
-        *) SELECTED_TEAM="qs" ;;
-    esac
-fi
+case "$(echo "$TEAM_CHOICE" | tr '[:upper:]' '[:lower:]')" in
+    1|ga) SELECTED_TEAM="ga" ;;
+    2|afp) SELECTED_TEAM="afp" ;;
+    3|iasa) SELECTED_TEAM="iasa" ;;
+    4|qs) SELECTED_TEAM="qs" ;;
+    5|nmco) SELECTED_TEAM="nmco" ;;
+    6|hd) SELECTED_TEAM="hd" ;;
+    7|piti) SELECTED_TEAM="piti" ;;
+    8|isi) SELECTED_TEAM="isi" ;;
+    9|eic) SELECTED_TEAM="eic" ;;
+    10|imo) SELECTED_TEAM="imo" ;;
+    11|sit) SELECTED_TEAM="sit" ;;
+    12|tech-spin|techspin) SELECTED_TEAM="tech-spin" ;;
+    13|tech-up|techup) SELECTED_TEAM="tech-up" ;;
+    14|linc) SELECTED_TEAM="linc" ;;
+    15|pubsec) SELECTED_TEAM="pubsec" ;;
+    16|cc) SELECTED_TEAM="cc" ;;
+    17|mi) SELECTED_TEAM="mi" ;;
+    18|crm) SELECTED_TEAM="crm" ;;
+    19|ifu) SELECTED_TEAM="ifu" ;;
+    20|iqi) SELECTED_TEAM="iqi" ;;
+    21|les) SELECTED_TEAM="les" ;;
+    22|foodfabr) SELECTED_TEAM="foodfabr" ;;
+    *)
+        echo -e "${YELLOW}ไม่พบทีม '$TEAM_CHOICE' ระบบจะใช้ค่าเริ่มต้น: QS (ระบบคุณภาพ)${NC}"
+        SELECTED_TEAM="qs"
+        ;;
+esac
 
 # 6. Install / Configure Harness
 echo ""

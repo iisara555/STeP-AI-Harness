@@ -85,39 +85,79 @@ switch ($toolChoice) {
     default { $selectedTool = "all" }
 }
 
-# 3. Select Team
+# 3. Select Team (Display all 22 teams)
 Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team)" -ForegroundColor Yellow
-Write-Host "  1. QS   - ระบบบริหารคุณภาพ ISO" -ForegroundColor White
-Write-Host "  2. AFP  - บัญชี การเงิน และจัดซื้อ" -ForegroundColor White
-Write-Host "  3. CC   - การสื่อสารองค์กรและการตลาด" -ForegroundColor White
-Write-Host "  4. MI   - วิเคราะห์ข้อมูลการตลาดและธุรกิจ" -ForegroundColor White
-Write-Host "  5. PITI - นวัตกรรมสตาร์ทอัพและบ่มเพาะธุรกิจ" -ForegroundColor White
-Write-Host "  --------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "  A. แสดงรายชื่อครบทั้ง 22 ทีมของ STeP" -ForegroundColor Cyan
+Write-Host "ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team — แสดงครบทั้ง 22 ทีม)" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "● กลุ่มงาน: ธรรมาภิบาลและการบริหารจัดการ (Governance & Operations)" -ForegroundColor Cyan
+Write-Host "   1. GA        - งานบริหารทั่วไป (ธุรการกลาง/เอกสาร)" -ForegroundColor White
+Write-Host "   2. AFP       - บัญชี การเงิน และจัดซื้อ" -ForegroundColor White
+Write-Host "   3. IASA      - ความร่วมมือระหว่างประเทศและพันธมิตร" -ForegroundColor White
+Write-Host "   4. QS        - ระบบคุณภาพ (ISO และมาตรฐานองค์กร)" -ForegroundColor White
+Write-Host "   5. NMCO      - ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว." -ForegroundColor White
+Write-Host "   6. HD        - พัฒนาศักยภาพบุคลากร" -ForegroundColor White
+Write-Host ""
+Write-Host "● กลุ่มงาน: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation & Strategy)" -ForegroundColor Cyan
+Write-Host "   7. PITI      - บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี" -ForegroundColor White
+Write-Host "   8. ISI       - บ่มเพาะ Startup นวัตกรรม" -ForegroundColor White
+Write-Host "   9. EIC       - การเป็นผู้ประกอบการและนวัตกรรม" -ForegroundColor White
+Write-Host "  10. IMO       - บริหารจัดการนวัตกรรม" -ForegroundColor White
+Write-Host "  11. SIT       - ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง" -ForegroundColor White
+Write-Host ""
+Write-Host "● กลุ่มงาน: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer & Industry)" -ForegroundColor Cyan
+Write-Host "  12. TECH-SPIN - ถ่ายทอดเทคโนโลยีและบริษัท Spin-off" -ForegroundColor White
+Write-Host "  13. TECH-UP   - เทคโนโลยีเชิงลึกและการขยายระดับการผลิต" -ForegroundColor White
+Write-Host "  14. LINC      - ความร่วมมือท้องถิ่นและอุตสาหกรรม" -ForegroundColor White
+Write-Host "  15. PUBSEC    - โครงการความร่วมมือภาครัฐ" -ForegroundColor White
+Write-Host ""
+Write-Host "● กลุ่มงาน: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative & Client)" -ForegroundColor Cyan
+Write-Host "  16. CC        - งานสร้างสรรค์และการสื่อสาร" -ForegroundColor White
+Write-Host "  17. MI        - นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม" -ForegroundColor White
+Write-Host "  18. CRM       - ลูกค้าสัมพันธ์" -ForegroundColor White
+Write-Host ""
+Write-Host "● กลุ่มงาน: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Labs & Infrastructure)" -ForegroundColor Cyan
+Write-Host "  19. IFU       - การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก" -ForegroundColor White
+Write-Host "  20. IQI       - พัฒนาคุณภาพโครงสร้างพื้นฐาน" -ForegroundColor White
+Write-Host "  21. LES       - ห้องปฏิบัติการและเครื่องมือ" -ForegroundColor White
+Write-Host "  22. FOODFABR  - โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม" -ForegroundColor White
 Write-Host ""
 
-$teamChoice = Read-Host "พิมพ์หมายเลขทีม (1-5) หรือ 'A' เพื่อดูทั้งหมด [default: 1]"
-if ([string]::IsNullOrWhiteSpace($teamChoice)) { $teamChoice = "1" }
+$teamMap = @{
+    "1" = "ga";         "ga" = "ga"
+    "2" = "afp";        "afp" = "afp"
+    "3" = "iasa";       "iasa" = "iasa"
+    "4" = "qs";         "qs" = "qs"
+    "5" = "nmco";       "nmco" = "nmco"
+    "6" = "hd";         "hd" = "hd"
+    "7" = "piti";       "piti" = "piti"
+    "8" = "isi";        "isi" = "isi"
+    "9" = "eic";        "eic" = "eic"
+    "10" = "imo";       "imo" = "imo"
+    "11" = "sit";       "sit" = "sit"
+    "12" = "tech-spin"; "tech-spin" = "tech-spin"; "techspin" = "tech-spin"
+    "13" = "tech-up";   "tech-up" = "tech-up";     "techup" = "tech-up"
+    "14" = "linc";      "linc" = "linc"
+    "15" = "pubsec";    "pubsec" = "pubsec"
+    "16" = "cc";        "cc" = "cc"
+    "17" = "mi";        "mi" = "mi"
+    "18" = "crm";       "crm" = "crm"
+    "19" = "ifu";       "ifu" = "ifu"
+    "20" = "iqi";       "iqi" = "iqi"
+    "21" = "les";       "les" = "les"
+    "22" = "foodfabr";  "foodfabr" = "foodfabr"
+}
 
-$selectedTeam = "qs"
-if ($teamChoice -eq "A" -or $teamChoice -eq "a") {
-    Write-Host ""
-    & node "$PSScriptRoot\..\bin\step-ai.js" teams
-    Write-Host ""
-    $teamCodeInput = Read-Host "พิมพ์รหัสทีมของคุณ (เช่น qs, afp, cc, mi, piti, linc, etc.)"
-    if (-not [string]::IsNullOrWhiteSpace($teamCodeInput)) {
-        $selectedTeam = $teamCodeInput.Trim().ToLower()
-    }
+$teamChoice = Read-Host "พิมพ์หมายเลขทีม (1-22) หรือ รหัสทีม (เช่น 4 หรือ qs) [default: 4 (QS)]"
+if ([string]::IsNullOrWhiteSpace($teamChoice)) {
+    $selectedTeam = "qs"
 } else {
-    switch ($teamChoice) {
-        "1" { $selectedTeam = "qs" }
-        "2" { $selectedTeam = "afp" }
-        "3" { $selectedTeam = "cc" }
-        "4" { $selectedTeam = "mi" }
-        "5" { $selectedTeam = "piti" }
-        default { $selectedTeam = "qs" }
+    $normalizedTeam = $teamChoice.Trim().ToLower()
+    if ($teamMap.ContainsKey($normalizedTeam)) {
+        $selectedTeam = $teamMap[$normalizedTeam]
+    } else {
+        Write-Host "ไม่พบทีม '$teamChoice' ระบบจะใช้ค่าเริ่มต้น: QS (ระบบคุณภาพ)" -ForegroundColor Yellow
+        $selectedTeam = "qs"
     }
 }
 

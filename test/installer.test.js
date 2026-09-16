@@ -104,12 +104,16 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
 
     const psInstallContent = await readFile(psInstall, 'utf-8');
     assert.ok(psInstallContent.includes('STeP AI Setup'));
-    // Verify top 5 pilot teams are highlighted in installer
+    // Verify all 22 teams are displayed in installer
     assert.ok(psInstallContent.includes('QS'));
     assert.ok(psInstallContent.includes('AFP'));
     assert.ok(psInstallContent.includes('CC'));
     assert.ok(psInstallContent.includes('MI'));
     assert.ok(psInstallContent.includes('PITI'));
+    assert.ok(psInstallContent.includes('GA'));
+    assert.ok(psInstallContent.includes('FOODFABR'));
+    assert.ok(psInstallContent.includes('TECH-SPIN'));
+    assert.ok(psInstallContent.includes('22 ทีม'));
 
     const batUpdateContent = await readFile(batUpdate, 'utf-8');
     assert.ok(batUpdateContent.includes('update-windows.ps1'));
@@ -181,12 +185,16 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     assert.ok(shInstallContent.includes('Applications/Visual Studio Code.app'));
     assert.ok(shInstallContent.includes('Applications/Cursor.app'));
     assert.ok(shInstallContent.includes('Applications/Claude.app'));
-    // Verify top 5 pilot teams
+    // Verify all 22 teams are displayed in macOS installer
     assert.ok(shInstallContent.includes('QS'));
     assert.ok(shInstallContent.includes('AFP'));
     assert.ok(shInstallContent.includes('CC'));
     assert.ok(shInstallContent.includes('MI'));
     assert.ok(shInstallContent.includes('PITI'));
+    assert.ok(shInstallContent.includes('GA'));
+    assert.ok(shInstallContent.includes('FOODFABR'));
+    assert.ok(shInstallContent.includes('TECH-SPIN'));
+    assert.ok(shInstallContent.includes('22 ทีม'));
 
     const cmdUpdateContent = await readFile(cmdUpdate, 'utf-8');
     assert.ok(cmdUpdateContent.includes('update-macos.sh'));
