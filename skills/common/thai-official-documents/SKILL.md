@@ -97,7 +97,7 @@ Skill นี้ใช้ตรวจเชิงโครงสร้าง ภ�
 
 ## กรณี TOR ของ STeP
 
-เมื่อ input เป็น TOR ให้ใช้ [tor-review](../../pm/tor-review/SKILL.md) และ [tor-government-writing](../../pm/tor-government-writing/SKILL.md) ร่วมกัน:
+เมื่อ input เป็น TOR ให้ใช้ [tor-review](../../pm/tor-review/SKILL.md) และ [tor-government-writing](../../pm/tor-government-writing/SKILL.md) ร่วมกัน โดยสามารถดึงโครงสร้าง ๑๖ ข้อและกฎการจัดหน้าจาก [แม่แบบ TOR ๑๖ หัวข้อมาตรฐาน](templates/tor-16-sections-template.md):
 
 1. ตรวจสาระสำคัญของ TOR และ Traceability ถึงการตรวจรับ
 2. ตรวจว่า TOR ถูกวางสถานะเป็นร่าง มีเจ้าของเรื่อง ผู้ตรวจ และผู้อนุมัติที่รอยืนยัน

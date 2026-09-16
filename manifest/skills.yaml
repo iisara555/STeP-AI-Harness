@@ -23,17 +23,17 @@ skills:
 
   tor-review:
     owner: afp
-    version: 1.0.0
+    version: 1.1.0
     domain: [procurement]
     process: [procurement.tor]
     service: [tech-commercialization, public-sector-innovation]
     path: skills/pm/tor-review/SKILL.md
-    description: ตรวจ TOR และขอบเขตงานจัดซื้อจัดจ้างด้านความครบถ้วนและความสอดคล้อง
+    description: ตรวจ TOR และขอบเขตงานจัดซื้อจัดจ้างด้านความครบถ้วนและความถูกต้องตามกฎหมายพัสดุ
     governance:
       owner: afp
       reviewer: [qs]
       approvedBy: [afp-head]
-      reviewedAt: "2026-09-01"
+      reviewedAt: "2026-09-16"
       reviewCycle: { months: 12 }
       lifecycle:
         stage: approved
@@ -43,17 +43,17 @@ skills:
 
   tor-government-writing:
     owner: afp
-    version: 1.0.0
+    version: 1.1.0
     domain: [procurement]
     process: [procurement.tor]
     service: [public-sector-innovation]
     path: skills/pm/tor-government-writing/SKILL.md
-    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ
+    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ (แม่แบบมาสเตอร์ ๑๖ หัวข้อ)
     governance:
       owner: afp
       reviewer: [qs]
       approvedBy: [afp-head]
-      reviewedAt: "2026-09-01"
+      reviewedAt: "2026-09-16"
       reviewCycle: { months: 12 }
       lifecycle:
         stage: approved

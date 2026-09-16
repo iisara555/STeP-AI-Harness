@@ -25,3 +25,12 @@ desktop.ini
 # Generated agent instruction files (workspace-specific)
 AGENTS.md
 CHATGPT.md
+CLAUDE.md
+CODEX_INSTRUCTIONS.md
+GEMINI.md
+HERMES.md
+OPENCODE.md
+.cursorrules
+.windsurfrules
+FEEDBACK.md
+REQUEST_NEW_TASK.md
