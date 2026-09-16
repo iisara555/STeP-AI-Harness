@@ -2,12 +2,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-PS1_CONTENT = """# STeP AI — Feedback & Skill Contribution (Pilot v0.2)
+PS1_CONTENT = """# STeP AI — Feedback & Task Request (Pilot v0.2)
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
-$Host.UI.RawUI.WindowTitle = "STeP AI Feedback & Skills (Pilot v0.2)"
+$Host.UI.RawUI.WindowTitle = "STeP AI Feedback & Tasks (Pilot v0.2)"
 
 if (-not $PSScriptRoot) {
     $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -20,9 +20,9 @@ Clear-Host
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "   ____ _____     ____       _    ___                            " -ForegroundColor Cyan
 Write-Host "  / ___|_   _|___|  _ \\     / \\  |_ _|   " -ForegroundColor Cyan -NoNewline
-Write-Host "STeP AI Feedback & Skills       " -ForegroundColor Yellow
+Write-Host "STeP AI Feedback & Tasks        " -ForegroundColor Yellow
 Write-Host "  \\___ \\ | | / _ \\ |_) |   / _ \\  | |    " -ForegroundColor Cyan -NoNewline
-Write-Host "ศูนย์รับฟังและร่วมพัฒนาทักษะ     " -ForegroundColor Gray
+Write-Host "ศูนย์รับฟังข้อเสนอแนะและงานใหม่  " -ForegroundColor Gray
 Write-Host "   ___) || ||  __/  __/   / ___ \\ | |    " -ForegroundColor Cyan -NoNewline
 Write-Host "สำหรับพนักงานอุทยานฯ 22 ทีม     " -ForegroundColor Gray
 Write-Host "  |____/ |_| \\___|_|     /_/   \\_\\___|                           " -ForegroundColor Cyan
@@ -30,70 +30,60 @@ Write-Host "=================================================================" -
 Write-Host "   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) " -ForegroundColor White
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "ยินดีต้อนรับสู่ศูนย์รับฟังความคิดเห็นและร่วมเสนอทักษะใหม่สำหรับพนักงาน STeP" -ForegroundColor Yellow
-Write-Host "ท่านสามารถเลือกสิ่งที่ต้องการดำเนินการได้ดังนี้:" -ForegroundColor White
+Write-Host "ยินดีต้อนรับสู่ศูนย์รับฟังข้อเสนอแนะ STeP AI" -ForegroundColor Yellow
+Write-Host "กรุณาเลือกสิ่งที่ท่านต้องการดำเนินการ:" -ForegroundColor White
 Write-Host ""
-Write-Host "  [1] แจ้งข้อเสนอแนะ / แจ้งเมื่อ AI ตอบผิด (เปิดไฟล์แบบฟอร์มใน Notepad ทันที)" -ForegroundColor Cyan
-Write-Host "  [2] เสนอคู่มือหรือทักษะใหม่ของทีม (เปิดไฟล์โครงร่าง Skill ใน Notepad ทันที)" -ForegroundColor Cyan
-Write-Host "  [3] เปิดโฟลเดอร์ทักษะงาน (เปิดโฟลเดอร์ skills ใน Windows Explorer)" -ForegroundColor Cyan
-Write-Host "  [4] เปิดหน้าเว็บส่งข้อเสนอแนะออนไลน์ผ่านเบราว์เซอร์" -ForegroundColor Cyan
-Write-Host "  [0] ออกจากโปรแกรม" -ForegroundColor Gray
+Write-Host "  [1] AI ตอบไม่ถูก / อยากแจ้งปัญหา" -ForegroundColor Cyan
+Write-Host "  [2] อยากให้ AI ช่วยงานเพิ่ม" -ForegroundColor Cyan
+Write-Host "  [0] ปิด" -ForegroundColor Gray
 Write-Host ""
 
-$choice = Read-Host "กรุณาพิมพ์หมายเลขที่ต้องการ (1, 2, 3, 4 หรือ 0)"
+$choice = Read-Host "พิมพ์หมายเลข (1, 2 หรือ 0)"
 
 switch ($choice) {
     "1" {
         Write-Host ""
-        Write-Host "กำลังสร้างแบบฟอร์มส่งข้อเสนอแนะ..." -ForegroundColor Gray
-        & node "$rootDir\\bin\\step-ai.js" feedback --template -d "$rootDir"
+        Write-Host "กำลังเปิดแบบฟอร์มแจ้งปัญหา..." -ForegroundColor Gray
+        & node "$rootDir\\bin\\step-ai.js" feedback --issue -d "$rootDir"
         $feedbackFile = "$rootDir\\FEEDBACK.md"
         if (Test-Path $feedbackFile) {
             Write-Host "✓ เปิดไฟล์ FEEDBACK.md ใน Notepad ให้ท่านแล้ว..." -ForegroundColor Green
             Start-Process "notepad.exe" $feedbackFile
         }
         Write-Host ""
-        Write-Host "คำแนะนำ: กรอกข้อมูลในไฟล์ FEEDBACK.md แล้วส่งให้ AI Champion ประจำทีม" -ForegroundColor Yellow
-        Write-Host "         หรือส่งในห้องแชทกลาง (Line OpenChat / Teams) ได้ทันทีครับ" -ForegroundColor Yellow
+        Write-Host "คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้กด Save (Ctrl+S) แล้วส่งไฟล์ FEEDBACK.md" -ForegroundColor Yellow
+        Write-Host "         ให้ AI Champion ประจำทีม หรือส่งในห้องแชทองค์กรได้เลยครับ" -ForegroundColor Yellow
     }
     "2" {
         Write-Host ""
-        Write-Host "กำลังสร้างเทมเพลตเสนอทักษะใหม่..." -ForegroundColor Gray
-        & node "$rootDir\\bin\\step-ai.js" feedback --propose -d "$rootDir"
-        $proposeFile = "$rootDir\\SKILL_PROPOSAL_TEMPLATE.md"
-        if (Test-Path $proposeFile) {
-            Write-Host "✓ เปิดไฟล์ SKILL_PROPOSAL_TEMPLATE.md ใน Notepad ให้ท่านแล้ว..." -ForegroundColor Green
-            Start-Process "notepad.exe" $proposeFile
+        Write-Host "กำลังเปิดแบบฟอร์มของานเพิ่ม..." -ForegroundColor Gray
+        & node "$rootDir\\bin\\step-ai.js" feedback --request -d "$rootDir"
+        $requestFile = "$rootDir\\REQUEST_NEW_TASK.md"
+        if (Test-Path $requestFile) {
+            Write-Host "✓ เปิดไฟล์ REQUEST_NEW_TASK.md ใน Notepad ให้ท่านแล้ว..." -ForegroundColor Green
+            Start-Process "notepad.exe" $requestFile
         }
         Write-Host ""
-        Write-Host "คำแนะนำ: กรอกรายละเอียดทักษะแล้วส่งให้ Domain Lead (หัวหน้าฝ่ายที่เกี่ยวข้อง)" -ForegroundColor Yellow
-        Write-Host "         เพื่อตรวจสอบความถูกต้องของระเบียบก่อนนำขึ้นสู่ระบบกลางครับ" -ForegroundColor Yellow
+        Write-Host "คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้กด Save (Ctrl+S) แล้วส่งไฟล์ REQUEST_NEW_TASK.md" -ForegroundColor Yellow
+        Write-Host "         ให้หัวหน้าฝ่ายหรือ AI Champion เพื่อรับรองเข้าสู่ระบบกลางครับ" -ForegroundColor Yellow
     }
-    "3" {
+    "admin" {
         Write-Host ""
-        Write-Host "กำลังเปิดโฟลเดอร์ skills ใน Windows Explorer..." -ForegroundColor Gray
-        Start-Process "explorer.exe" "$rootDir\\skills"
-        Write-Host "✓ เปิดโฟลเดอร์เรียบร้อยแล้ว ท่านสามารถดูหรือแก้ไขไฟล์ทักษะได้โดยตรง" -ForegroundColor Green
-    }
-    "4" {
-        Write-Host ""
-        Write-Host "กำลังเปิดหน้าเว็บส่งข้อเสนอแนะออนไลน์ในเบราว์เซอร์..." -ForegroundColor Gray
-        & node "$rootDir\\bin\\step-ai.js" feedback --open
-        Write-Host "✓ เปิดหน้าเว็บเรียบร้อยแล้ว" -ForegroundColor Green
+        & node "$rootDir\\bin\\step-ai.js" feedback --admin
     }
     default {
         Write-Host ""
-        Write-Host "ออกจากโปรแกรมเรียบร้อยแล้ว" -ForegroundColor Gray
+        Write-Host "ปิดโปรแกรมเรียบร้อยแล้ว" -ForegroundColor Gray
     }
 }
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Green
-Read-Host "กด Enter เพื่อปิดหน้าต่างนี้"
+Read-Host "กด Enter เพื่อเสร็จสิ้น"
 """
 
 SH_CONTENT = """#!/usr/bin/env bash
-# STeP AI — Feedback & Skill Contribution (macOS)
+# STeP AI — Feedback & Task Request (macOS)
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 set -e
@@ -111,64 +101,54 @@ NC='\\033[0m'
 clear || true
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
-echo -e "${CYAN}  / ___|_   _|___|  _ \\\\     / \\\\  |_ _|   ${YELLOW}STeP AI Feedback & Skills       ${NC}"
-echo -e "${CYAN}  \\\\___ \\\\ | | / _ \\\\ |_) |   / _ \\\\  | |    ${GRAY}ศูนย์รับฟังและร่วมพัฒนาทักษะ     ${NC}"
+echo -e "${CYAN}  / ___|_   _|___|  _ \\\\     / \\\\  |_ _|   ${YELLOW}STeP AI Feedback & Tasks        ${NC}"
+echo -e "${CYAN}  \\\\___ \\\\ | | / _ \\\\ |_) |   / _ \\\\  | |    ${GRAY}ศูนย์รับฟังข้อเสนอแนะและงานใหม่  ${NC}"
 echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \\\\ | |    ${GRAY}สำหรับพนักงานอุทยานฯ 22 ทีม     ${NC}"
 echo -e "${CYAN}  |____/ |_| \\\\___|_|     /_/   \\\\_\\\\___|                           ${NC}"
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) ${NC}"
 echo -e "${CYAN}=================================================================${NC}"
 echo ""
-echo -e "${YELLOW}ยินดีต้อนรับสู่ศูนย์รับฟังความคิดเห็นและร่วมเสนอทักษะใหม่สำหรับพนักงาน STeP${NC}"
-echo -e "ท่านสามารถเลือกสิ่งที่ต้องการดำเนินการได้ดังนี้:"
+echo -e "${YELLOW}ยินดีต้อนรับสู่ศูนย์รับฟังข้อเสนอแนะ STeP AI${NC}"
+echo -e "กรุณาเลือกสิ่งที่ท่านต้องการดำเนินการ:"
 echo ""
-echo -e "  ${CYAN}[1]${NC} แจ้งข้อเสนอแนะ / แจ้งเมื่อ AI ตอบผิด (เปิดไฟล์แบบฟอร์มใน TextEdit ทันที)"
-echo -e "  ${CYAN}[2]${NC} เสนอคู่มือหรือทักษะใหม่ของทีม (เปิดไฟล์โครงร่าง Skill ใน TextEdit ทันที)"
-echo -e "  ${CYAN}[3]${NC} เปิดโฟลเดอร์ทักษะงาน (เปิดโฟลเดอร์ skills ใน Finder)"
-echo -e "  ${CYAN}[4]${NC} เปิดหน้าเว็บส่งข้อเสนอแนะออนไลน์ผ่านเบราว์เซอร์"
-echo -e "  ${GRAY}[0] ออกจากโปรแกรม${NC}"
+echo -e "  ${CYAN}[1]${NC} AI ตอบไม่ถูก / อยากแจ้งปัญหา"
+echo -e "  ${CYAN}[2]${NC} อยากให้ AI ช่วยงานเพิ่ม"
+echo -e "  ${GRAY}[0] ปิด${NC}"
 echo ""
 
-read -p "กรุณาพิมพ์หมายเลขที่ต้องการ (1, 2, 3, 4 หรือ 0): " choice
+read -p "พิมพ์หมายเลข (1, 2 หรือ 0): " choice
 
 case "$choice" in
     1)
         echo ""
-        echo -e "${GRAY}กำลังสร้างแบบฟอร์มส่งข้อเสนอแนะ...${NC}"
-        node "$ROOT_DIR/bin/step-ai.js" feedback --template -d "$ROOT_DIR"
+        echo -e "${GRAY}กำลังเปิดแบบฟอร์มแจ้งปัญหา...${NC}"
+        node "$ROOT_DIR/bin/step-ai.js" feedback --issue -d "$ROOT_DIR"
         open -t "$ROOT_DIR/FEEDBACK.md" 2>/dev/null || open "$ROOT_DIR/FEEDBACK.md"
         echo -e "${GREEN}✓ เปิดไฟล์ FEEDBACK.md ให้ท่านเรียบร้อยแล้ว${NC}"
-        echo -e "${YELLOW}คำแนะนำ: กรอกข้อมูลในไฟล์ FEEDBACK.md แล้วส่งให้ AI Champion ประจำทีม หรือส่งในห้องแชทกลางได้เลยครับ${NC}"
+        echo -e "${YELLOW}คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้กด Save แล้วส่งไฟล์ให้ AI Champion ประจำทีมได้เลยครับ${NC}"
         ;;
     2)
         echo ""
-        echo -e "${GRAY}กำลังสร้างเทมเพลตเสนอทักษะใหม่...${NC}"
-        node "$ROOT_DIR/bin/step-ai.js" feedback --propose -d "$ROOT_DIR"
-        open -t "$ROOT_DIR/SKILL_PROPOSAL_TEMPLATE.md" 2>/dev/null || open "$ROOT_DIR/SKILL_PROPOSAL_TEMPLATE.md"
-        echo -e "${GREEN}✓ เปิดไฟล์ SKILL_PROPOSAL_TEMPLATE.md ให้ท่านเรียบร้อยแล้ว${NC}"
-        echo -e "${YELLOW}คำแนะนำ: กรอกรายละเอียดทักษะแล้วส่งให้ Domain Lead (หัวหน้าฝ่ายที่เกี่ยวข้อง) เพื่อตรวจความถูกต้องก่อนครับ${NC}"
+        echo -e "${GRAY}กำลังเปิดแบบฟอร์มของานเพิ่ม...${NC}"
+        node "$ROOT_DIR/bin/step-ai.js" feedback --request -d "$ROOT_DIR"
+        open -t "$ROOT_DIR/REQUEST_NEW_TASK.md" 2>/dev/null || open "$ROOT_DIR/REQUEST_NEW_TASK.md"
+        echo -e "${GREEN}✓ เปิดไฟล์ REQUEST_NEW_TASK.md ให้ท่านเรียบร้อยแล้ว${NC}"
+        echo -e "${YELLOW}คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้ส่งไฟล์ให้หัวหน้าฝ่ายหรือ AI Champion ได้เลยครับ${NC}"
         ;;
-    3)
+    admin)
         echo ""
-        echo -e "${GRAY}กำลังเปิดโฟลเดอร์ skills ใน Finder...${NC}"
-        open "$ROOT_DIR/skills"
-        echo -e "${GREEN}✓ เปิดโฟลเดอร์เรียบร้อยแล้ว${NC}"
-        ;;
-    4)
-        echo ""
-        echo -e "${GRAY}กำลังเปิดหน้าเว็บในเบราว์เซอร์...${NC}"
-        node "$ROOT_DIR/bin/step-ai.js" feedback --open
-        echo -e "${GREEN}✓ เปิดหน้าเว็บเรียบร้อยแล้ว${NC}"
+        node "$ROOT_DIR/bin/step-ai.js" feedback --admin
         ;;
     *)
         echo ""
-        echo -e "${GRAY}ออกจากโปรแกรมเรียบร้อยแล้ว${NC}"
+        echo -e "${GRAY}ปิดโปรแกรมเรียบร้อยแล้ว${NC}"
         ;;
 esac
 
 echo ""
 echo -e "${GREEN}=================================================================${NC}"
-read -p "กด Enter เพื่อปิดหน้าต่างนี้..." dummy
+read -p "กด Enter เพื่อเสร็จสิ้น..." dummy
 """
 
 def main():

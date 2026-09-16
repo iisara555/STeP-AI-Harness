@@ -499,23 +499,29 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     await rm(testDir, { recursive: true, force: true });
     await mkdir(testDir, { recursive: true });
 
-    // Test feedback --template
-    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--template', '-d', testDir]);
+    // Test feedback --issue
+    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--issue', '-d', testDir]);
     const feedbackPath = join(testDir, 'FEEDBACK.md');
     assert.ok(await pathExists(feedbackPath));
     const feedbackContent = await readFile(feedbackPath, 'utf-8');
     assert.ok(feedbackContent.includes('STeP AI Feedback'));
-    assert.ok(feedbackContent.includes('Prompt'));
-    assert.ok(feedbackContent.includes('Actual Response'));
-    assert.ok(feedbackContent.includes('Expected / Suggestion'));
+    assert.ok(feedbackContent.includes('คำถาม'));
+    assert.ok(feedbackContent.includes('สิ่งที่ AI ตอบผิด'));
+    assert.ok(feedbackContent.includes('สิ่งที่ถูกต้อง'));
 
-    // Test feedback --propose
-    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--propose', '-d', testDir]);
-    const proposalPath = join(testDir, 'SKILL_PROPOSAL_TEMPLATE.md');
-    assert.ok(await pathExists(proposalPath));
-    const proposalContent = await readFile(proposalPath, 'utf-8');
-    assert.ok(proposalContent.includes('Scope Guard'));
-    assert.ok(proposalContent.includes('PDPA'));
+    // Test feedback --request
+    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--request', '-d', testDir]);
+    const requestPath = join(testDir, 'REQUEST_NEW_TASK.md');
+    assert.ok(await pathExists(requestPath));
+    const requestContent = await readFile(requestPath, 'utf-8');
+    assert.ok(requestContent.includes('อยากให้ STeP AI ช่วยงานอะไรเพิ่ม'));
+    assert.ok(requestContent.includes('งานที่อยากให้ AI ช่วยคืออะไร'));
+    assert.ok(requestContent.includes('ปกติงานนี้มีขั้นตอนอย่างไร'));
+
+    // Test feedback --admin
+    const { stdout: adminOut } = await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--admin']);
+    assert.ok(adminOut.includes('CHAMPION & ADMIN MODE'));
+    assert.ok(adminOut.includes('skills/'));
 
     await rm(testDir, { recursive: true, force: true });
   });
