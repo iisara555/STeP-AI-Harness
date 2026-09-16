@@ -17,3 +17,11 @@ artifacts/
 output/
 dist/
 docs/staff-abbreviations.md
+
+# Windows shell integration (local only)
+*.lnk
+desktop.ini
+
+# Generated agent instruction files (workspace-specific)
+AGENTS.md
+CHATGPT.md
