@@ -1,0 +1,52 @@
+version: 1
+description: Official STeP Authority & Decision Matrix — Human-in-the-loop Governance
+
+authorities:
+  procurement-approval:
+    name: "การอนุมัติการจัดซื้อจัดจ้างและการตัดสินผลการยื่นข้อเสนอ"
+    authorizedRole: "procurement-committee"
+    alternateRole: "afp-head"
+    humanInTheLoop: mandatory
+    description: "การคัดเลือกผู้เสนอราคา ตัดสินผู้ชนะ หรืออนุมัติสั่งจ้าง ต้องผ่านความเห็นชอบของคณะกรรมการ"
+
+  budget-allocation:
+    name: "การอนุมัติวงเงินงบประมาณและการเปลี่ยนแปลงรายการงวดเงิน"
+    authorizedRole: "afp-finance-head"
+    alternateRole: "executive-director"
+    humanInTheLoop: mandatory
+    description: "การจัดสรรงบประมาณ การขอเพิ่มวงเงิน หรือการโอนงบ ต้องได้รับอนุมัติจากผู้บริหารฝ่ายการเงิน"
+
+  legal-advice:
+    name: "การวินิจฉัยข้อกฎหมาย การพิจารณาสัญญา และข้อพิพาท"
+    authorizedRole: "human-legal-officer"
+    alternateRole: "cmu-legal-division"
+    humanInTheLoop: mandatory
+    description: "การให้ความเห็นทางกฎหมายที่มีผลผูกพัน หรือการพิจารณาร่างสัญญา ต้องรับรองโดยนิติกร"
+
+  official-signing:
+    name: "การลงนามในหนังสือราชการและเอกสารคำสั่งภายนอก"
+    authorizedRole: "authorized-signatory"
+    alternateRole: "executive-director"
+    humanInTheLoop: mandatory
+    description: "การลงนามหนังสือราชการออกเลขสารบรรณ ต้องลงนามโดยผู้มีอำนาจตามระเบียบสารบรรณ"
+
+  iso-enactment:
+    name: "การประกาศบังคับใช้ แก้ไข หรือยกเลิก SOP ในระบบบริหารคุณภาพ"
+    authorizedRole: "qs-iso-manager"
+    alternateRole: "quality-management-representative"
+    humanInTheLoop: mandatory
+    description: "การรับรอง SOP/WI เข้าสู่ระบบควบคุมเอกสาร ISO ต้องผ่านการลงนามโดยผู้จัดการระบบคุณภาพ"
+
+  brand-alteration:
+    name: "การอนุมัติดัดแปลงตราสัญลักษณ์หรือ Brand Identity"
+    authorizedRole: "executive-director"
+    alternateRole: "cc-head"
+    humanInTheLoop: mandatory
+    description: "การดัดแปลงโลโก้ สีประจำองค์กร หรือข้อความอัตลักษณ์ ต้องได้รับอนุมัติจากผู้อำนวยการ"
+
+  hr-performance-evaluation:
+    name: "การประเมินผลการปฏิบัติงาน การกำหนด KPI และการพิจารณาทางวินัย"
+    authorizedRole: "hd-hr-lead"
+    alternateRole: "executive-director"
+    humanInTheLoop: mandatory
+    description: "การประเมินประสิทธิภาพการทำงานของบุคลากรรายบุคคลเป็นสิทธิ์ของฝ่ายพัฒนาทรัพยากรบุคคล"

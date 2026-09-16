@@ -1,0 +1,53 @@
+version: 1
+description: Official STeP Service Catalog — Service Journeys, Lead Teams, and Value Delivery
+
+services:
+  incubation-startup:
+    name: "บริการบ่มเพาะวิสาหกิจเริ่มต้นและสตาร์ทอัพ (Innovation Incubation & Acceleration)"
+    leadTeam: piti
+    supportTeams: [isi, eic, imo, cc, crm]
+    targetAudience: "ผู้ประกอบการรุ่นใหม่, นักศึกษา, อาจารย์, และ Startup"
+    processes:
+      - incubation.startup-intake
+      - project.planning
+    description: "บ่มเพาะโมเดลธุรกิจ เชื่อมโยงแหล่งทุน พัฒนาผลิตภัณฑ์ต้นแบบ และขยายตลาด"
+
+  tech-commercialization:
+    name: "บริการบริหารทรัพย์สินทางปัญญาและการถ่ายทอดเทคโนโลยีสู่เชิงพาณิชย์"
+    leadTeam: tech-spin
+    supportTeams: [tech-up, linc, pubsec, afp]
+    targetAudience: "นักวิจัย มช., ภาคอุตสาหกรรม และผู้ประกอบการนวัตกรรม"
+    processes:
+      - technology.commercialization
+      - procurement.tor
+    description: "จดสิทธิบัตร อนุญาตให้ใช้สิทธิ (Licensing) จัดตั้งบริษัท Spin-off และวิจัยร่วมภาคเอกชน"
+
+  infrastructure-testing:
+    name: "บริการวิเคราะห์ ทดสอบ สอบเทียบ และโรงงานต้นแบบนวัตกรรมอาหาร"
+    leadTeam: ifu
+    supportTeams: [iqi, les, foodfabr, crm]
+    targetAudience: "ผู้ประกอบการแปรรูปอาหาร, ภาคอุตสาหกรรม, นักวิจัย"
+    processes:
+      - client.inquiry-triage
+      - quality.document-control
+    description: "ให้บริการโครงสร้างพื้นฐาน ห้องปฏิบัติการมาตรฐาน และโรงงานต้นแบบ Food Innovation"
+
+  creative-marketing:
+    name: "บริการสื่อสารการตลาด ผลิตสื่อ Creative และจัดกิจกรรมส่งเสริมนวัตกรรม"
+    leadTeam: cc
+    supportTeams: [mi, crm, imo]
+    targetAudience: "หน่วยงานภายในอุทยานฯ, สตาร์ทอัพ และองค์กรพันธมิตร"
+    processes:
+      - creative.branding
+      - creative.event
+    description: "ผลิตสื่อสร้างสรรค์ วางกลยุทธ์ประชาสัมพันธ์ และบริหารการจัดงานนิทรรศการนวัตกรรม"
+
+  public-sector-innovation:
+    name: "บริการยกระดับนวัตกรรมสำหรับหน่วยงานภาครัฐและองค์กรปกครองส่วนท้องถิ่น"
+    leadTeam: pubsec
+    supportTeams: [sit, linc, ga]
+    targetAudience: "หน่วยงานภาครัฐ, อปท., สถาบันการศึกษา"
+    processes:
+      - project.planning
+      - procurement.tor
+    description: "ขับเคลื่อนนวัตกรรมเชิงพื้นที่และการประยุกต์ใช้งานเทคโนโลยีในภาครัฐ"

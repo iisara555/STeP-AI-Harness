@@ -1,0 +1,202 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { queryStepRouter } from '../src/cli/commands/ask.js';
+
+test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite', async (t) => {
+
+  await t.test('Scenario 1: Procurement (AFP) — Review TOR specification', async () => {
+    const result = await queryStepRouter('ช่วยดู TOR จ้างทำระบบหน่อยว่าเขียนครบมั้ย');
+    assert.ok(result.selectedSkill, 'Selected skill exists');
+    assert.equal(result.selectedSkill.name, 'tor-review');
+    assert.equal(result.teamInfo.id, 'afp');
+    assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 2: Procurement (AFP) — Draft government TOR format', async () => {
+    const result = await queryStepRouter('อยากได้แบบฟอร์มร่าง TOR ราชการสำหรับงานจ้างที่ปรึกษา');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'tor-government-writing');
+    assert.equal(result.teamInfo.id, 'afp');
+  });
+
+  await t.test('Scenario 3: Governance (GA) — Official government letter formatting', async () => {
+    const result = await queryStepRouter('อยากได้หนังสือราชการเชิญวิทยากรภายนอกมาบรรยายที่อุทยานฯ');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'thai-official-documents');
+    assert.equal(result.teamInfo.id, 'ga');
+  });
+
+  await t.test('Scenario 4: Governance (GA) — Meeting minutes and action items', async () => {
+    const result = await queryStepRouter('สรุปการประชุมเมื่อเช้าให้หน่อย ใครต้องทำอะไรบ้าง');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'meeting-summary');
+    assert.equal(result.teamInfo.id, 'ga');
+  });
+
+  await t.test('Scenario 5: Market & Creative (CC) — Creative poster design brief', async () => {
+    const result = await queryStepRouter('ช่วยทำบรีฟให้กราฟิกออกแบบโปสเตอร์งานสัมมนา');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'designer-brief');
+    assert.equal(result.teamInfo.id, 'cc');
+  });
+
+  await t.test('Scenario 6: Market & Creative (CC) — Exhibition booth concept & flow', async () => {
+    const result = await queryStepRouter('จัดธีมงานและผังบูธนิทรรศการสตาร์ทอัพ');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'event-concept');
+    assert.equal(result.teamInfo.id, 'cc');
+  });
+
+  await t.test('Scenario 7: Market & Creative (CC) — Startup pitching deck design', async () => {
+    const result = await queryStepRouter('ทำสไลด์ Pitching ให้ผู้ประกอบการไปนำเสนอทุน');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'presentation-design');
+    assert.equal(result.teamInfo.id, 'cc');
+  });
+
+  await t.test('Scenario 8: Project Management (PM) — Project plan and milestones', async () => {
+    const result = await queryStepRouter('วางแผนโครงการ แตกงวดงานและประเมินความเสี่ยง');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'project-plan');
+    assert.equal(result.teamInfo.id, 'pm');
+  });
+
+  await t.test('Scenario 9: Quality & Compliance (QS) — PDPA and PII detection', async () => {
+    const result = await queryStepRouter('ตรวจดูว่าเอกสารนี้มีข้อมูลส่วนบุคคล เลขบัตรประชาชน หรือเบอร์โทรหลุดมั้ย');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'data-privacy-compliance');
+    assert.equal(result.teamInfo.id, 'qs');
+  });
+
+  await t.test('Scenario 10: Client Services (CRM) — Customer inquiry triage', async () => {
+    const result = await queryStepRouter('ลูกค้าทักมาถามว่าค่าใช้บริการห้องแล็บวิเคราะห์คิดยังไง');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'customer-support-faq-triage');
+    assert.equal(result.teamInfo.id, 'crm');
+  });
+
+  await t.test('Scenario 11: Quality (QS) — SOP authoring', async () => {
+    const result = await queryStepRouter('อยากเขียนขั้นตอนการทำงาน SOP ให้คนในทีมทำตามได้');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'sop-authoring');
+    assert.equal(result.teamInfo.id, 'qs');
+  });
+
+  await t.test('Scenario 12: Communication (CC) — Thai official copywriting tone', async () => {
+    const result = await queryStepRouter('เขียนข้อความแคปชันโพสต์เฟซบุ๊กให้สุภาพตามสไตล์ STeP');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'step-writing');
+    assert.equal(result.teamInfo.id, 'cc');
+  });
+
+  await t.test('Scenario 13: Strategy (SIT) — Weekly team performance review', async () => {
+    const result = await queryStepRouter('สรุปงานประจำสัปดาห์ มีปัญหาติดขัดอะไรบ้าง');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'team-weekly-review');
+    assert.equal(result.teamInfo.id, 'sit');
+  });
+
+  await t.test('Scenario 14: Creative (CC) — Brand CI guidelines', async () => {
+    const result = await queryStepRouter('ตรวจสอบการใช้ตราสัญลักษณ์และคู่มือแบรนด์ CI');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'step-brand');
+    assert.equal(result.teamInfo.id, 'cc');
+  });
+
+  await t.test('Scenario 15: Creative (CC) — Brand tone of voice', async () => {
+    const result = await queryStepRouter('ตรวจบุคลิกแบรนด์และน้ำเสียงของ RSP North');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'brand-tone-of-voice');
+    assert.equal(result.teamInfo.id, 'cc');
+  });
+
+  await t.test('Scenario 16: Engineering (Dev) — Git branching standards', async () => {
+    const result = await queryStepRouter('ตรวจสอบมาตรฐานการแตก branch และ commit code');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'coding-git-workflow');
+  });
+
+  await t.test('Scenario 17: Engineering (Dev) — GitHub automation setup', async () => {
+    const result = await queryStepRouter('ตั้งค่า GitHub issue templates และ project board');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'github-workflow');
+  });
+
+  await t.test('Scenario 18: Engineering (Dev) — Vercel deployment readiness', async () => {
+    const result = await queryStepRouter('ตรวจสอบขั้นตอน deploy เว็บแอปขึ้น Vercel');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'vercel-deploy');
+  });
+
+  await t.test('Scenario 19: Human Authority Boundary — Vendor selection blocked', async () => {
+    const result = await queryStepRouter('ในงาน TOR นี้ช่วยเลือกบริษัทผู้ชนะการประมูลให้หน่อย');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'tor-review');
+    // Must escalate or block for human decision
+    assert.ok(result.scopeResult.status === 'BLOCK' || result.scopeResult.status === 'ESCALATE');
+    assert.equal(result.scopeResult.inScope, false);
+  });
+
+  await t.test('Scenario 20: Human Authority Boundary — Budget modification blocked', async () => {
+    const result = await queryStepRouter('ช่วยอนุมัติงบประมาณและเปลี่ยนแปลงวงเงินในงาน TOR ให้หน่อย');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'tor-review');
+    assert.equal(result.scopeResult.status, 'BLOCK');
+    assert.equal(result.scopeResult.inScope, false);
+    assert.equal(result.scopeResult.targetRole, 'afp-finance-head');
+    assert.equal(result.scopeResult.authority, 'budget-allocation');
+  });
+
+  await t.test('Scenario 21: Human Authority Boundary — Legal interpretation blocked', async () => {
+    const result = await queryStepRouter('ช่วยวินิจฉัยข้อกฎหมายและตีความสัญญาว่าผิดกฎหมายหรือไม่');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'tor-review');
+    assert.equal(result.scopeResult.status, 'BLOCK');
+    assert.equal(result.scopeResult.inScope, false);
+    assert.equal(result.scopeResult.targetRole, 'human-legal-officer');
+  });
+
+  await t.test('Scenario 22: Human Authority Boundary — Official signing blocked', async () => {
+    const result = await queryStepRouter('ช่วยลงนามและเซ็นอนุมัติในหนังสือราชการนี้');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'thai-official-documents');
+    assert.equal(result.scopeResult.status, 'BLOCK');
+    assert.equal(result.scopeResult.inScope, false);
+    assert.equal(result.scopeResult.targetRole, 'authorized-signatory');
+  });
+
+  await t.test('Scenario 23: Cross-functional Consumer Team (PITI user asking for TOR)', async () => {
+    const result = await queryStepRouter('ช่วยตรวจ TOR จัดซื้อระบบสำหรับสตาร์ทอัพ', { team: 'piti' });
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'tor-review');
+    // AFP is primary owner, PITI is consumer
+    assert.equal(result.selectedSkill.teams.primary[0], 'afp');
+    assert.ok(result.selectedSkill.teams.consumers.includes('piti'));
+  });
+
+  await t.test('Scenario 24: Cross-functional Consumer Team (MI user asking for Creative Brief)', async () => {
+    const result = await queryStepRouter('ทำบรีฟออกแบบสื่อการตลาดสำหรับผลิตภัณฑ์', { team: 'mi' });
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'designer-brief');
+    assert.equal(result.selectedSkill.teams.primary[0], 'cc');
+    assert.ok(result.selectedSkill.teams.consumers.includes('mi'));
+  });
+
+  await t.test('Scenario 25: Zero Technical Jargon Barrier', async () => {
+    const queries = [
+      'ช่วยตรวจ TOR ฉบับนี้ให้หน่อย',
+      'ทำสไลด์ Pitching ให้ผู้ประกอบการ',
+      'ร่างหนังสือขอความอนุเคราะห์สถานที่',
+      'สรุปการประชุมเมื่อเช้า',
+      'มีลูกค้าถามเรื่องค่าบริการแล็บ',
+    ];
+
+    for (const q of queries) {
+      const result = await queryStepRouter(q);
+      assert.ok(result.selectedSkill, `Query '${q}' should successfully resolve to a skill`);
+      // Ensure description and process are plain business terms
+      assert.ok(!result.selectedSkill.description.includes('git commit'));
+      assert.ok(!result.selectedSkill.description.includes('terminal'));
+    }
+  });
+});

@@ -1,4 +1,5 @@
 import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { buildRouterGuidelines } from '../router/index.js';
 
 /**
  * Generate CLAUDE.md content specifically tailored for Claude Code & Claude Desktop
@@ -11,7 +12,7 @@ export function generateClaudeInstructions(role, files) {
   const ruleFiles = files.filter((f) => f.type === 'rule');
 
   let text = `# CLAUDE.md — STeP AI Working Context\n\n`;
-  text += `This project contains approved organizational skills and operating standards for **STeP / RSP North**.\n`;
+  text += `This project contains approved organizational skills and operating standards for **STeP / RSP North** (22 Teams across 5 Domain Clusters).\n`;
   text += `Active Role: **${role.id.toUpperCase()}** (${role.description})\n\n`;
 
   text += `## Core Principles & Safety Boundaries\n\n`;
@@ -19,18 +20,23 @@ export function generateClaudeInstructions(role, files) {
   text += `- **Confidentiality & Data Privacy**: Do NOT commit or disclose personal data, draft contracts, budgets, or credentials.\n`;
   text += `- **Tone of Voice**: Professional, clear, polite, and objective Thai language for STeP communication unless requested otherwise.\n\n`;
 
+  text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
+  text += buildRouterGuidelines();
+  text += `\n`;
+
   text += `## Mandatory Rules to Enforce\n\n`;
   for (const r of ruleFiles) {
     text += `- \`${r.relativePath}\`\n`;
   }
 
-  text += `\n## Approved Skills for this Role\n\n`;
+  text += `\n## Approved Skills for this Context\n\n`;
   for (const s of skillFiles) {
     const skillName = s.relativePath.split('/')[2];
     text += `- **${skillName}**: Refer to \`${s.relativePath}\` for exact steps, checklist, and completion criteria.\n`;
   }
 
   text += `\n## CLI Integration Commands\n\n`;
+  text += `- View STeP 22 teams: \`step-ai teams\`\n`;
   text += `- Check file integrity: \`step-ai status\`\n`;
   text += `- Sync latest skill updates: \`step-ai sync\`\n`;
   text += `- Verify environment: \`step-ai doctor\`\n`;

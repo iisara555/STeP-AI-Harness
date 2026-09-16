@@ -1,0 +1,152 @@
+version: 1
+description: Official STeP Process Registry — Process Categories, Process IDs, Owners & Subprocesses
+
+processes:
+  procurement.tor:
+    name: "การจัดทำและตรวจสอบขอบเขตงาน (TOR) พัสดุ"
+    category: procurement
+    owner: afp
+    consumers: [piti, linc, mi, cc, pubsec, qs, ga]
+    subprocesses:
+      - procurement.tor.drafting
+      - procurement.tor.review
+      - procurement.tor.vendor-selection
+      - procurement.tor.inspection
+    associatedSops:
+      - procurement-policy
+      - tor-guidelines
+    description: "กระบวนการจัดทำ ตรวจสอบ และบริหารขอบเขตงานจัดซื้อจัดจ้างตามระเบียบพัสดุ มช."
+
+  procurement.request:
+    name: "การขออนุมัติจัดซื้อจัดจ้างและขอความเห็นชอบ"
+    category: procurement
+    owner: afp
+    consumers: ["*"]
+    subprocesses:
+      - procurement.request.initiation
+      - procurement.request.budget-verification
+      - procurement.request.approval
+    associatedSops:
+      - procurement-policy
+
+  quality.document-control:
+    name: "การควบคุมเอกสารในระบบบริหารคุณภาพ (ISO / SOP / WI)"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.document-control.sop-drafting
+      - quality.document-control.review
+      - quality.document-control.enactment
+    associatedSops:
+      - qs-doc-control-procedure
+
+  quality.data-privacy:
+    name: "การคุ้มครองข้อมูลส่วนบุคคลและข้อมูลลับ (PDPA / Confidentiality)"
+    category: compliance
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.data-privacy.pii-scan
+      - quality.data-privacy.consent-management
+    associatedSops:
+      - pdpa-compliance-rule
+
+  incubation.startup-intake:
+    name: "การรับสมัครและคัดกรองผู้ประกอบการเข้าสู่โครงการบ่มเพาะ"
+    category: incubation
+    owner: piti
+    consumers: [isi, eic, imo]
+    subprocesses:
+      - incubation.startup-intake.application
+      - incubation.startup-intake.evaluation
+      - incubation.startup-intake.onboarding
+
+  project.planning:
+    name: "การจัดทำแผนงานโครงการ งวดงาน และบริหารความเสี่ยง"
+    category: project-management
+    owner: pm
+    consumers: [sit, imo, piti, pubsec, linc]
+    subprocesses:
+      - project.planning.wbs
+      - project.planning.milestone
+      - project.planning.risk-assessment
+
+  technology.commercialization:
+    name: "การบริหารจัดการทรัพย์สินทางปัญญาและการถ่ายทอดเทคโนโลยี"
+    category: technology-transfer
+    owner: tech-spin
+    consumers: [tech-up, linc, pubsec]
+    subprocesses:
+      - technology.commercialization.ip-disclosure
+      - technology.commercialization.licensing
+      - technology.commercialization.spin-off
+
+  creative.branding:
+    name: "การบริหารอัตลักษณ์แบรนด์ ตราสัญลักษณ์ และสื่อประชาสัมพันธ์"
+    category: creative
+    owner: cc
+    consumers: ["*"]
+    subprocesses:
+      - creative.branding.tone-review
+      - creative.branding.ci-audit
+      - creative.branding.briefing
+
+  creative.event:
+    name: "การออกแบบและบริหารการจัดงานนิทรรศการและอีเวนต์"
+    category: creative
+    owner: cc
+    consumers: [crm, eic, imo]
+    subprocesses:
+      - creative.event.concept-design
+      - creative.event.booth-layout
+      - creative.event.execution
+
+  governance.correspondence:
+    name: "การจัดการงานสารบรรณและหนังสือราชการ"
+    category: governance
+    owner: ga
+    consumers: [afp, qs, pubsec, iasa]
+    subprocesses:
+      - governance.correspondence.drafting
+      - governance.correspondence.formatting-review
+      - governance.correspondence.signing
+
+  governance.meeting:
+    name: "การบริหารการประชุมและการถอดบันทึกมติ"
+    category: governance
+    owner: ga
+    consumers: ["*"]
+    subprocesses:
+      - governance.meeting.agenda-prep
+      - governance.meeting.minutes-recording
+      - governance.meeting.action-item-tracking
+
+  client.inquiry-triage:
+    name: "การรับเรื่อง คัดแยก และส่งต่อความต้องการของลูกค้าอุทยานฯ"
+    category: client-services
+    owner: crm
+    consumers: [ga, ifu, les, cc]
+    subprocesses:
+      - client.inquiry-triage.intake
+      - client.inquiry-triage.routing
+      - client.inquiry-triage.follow-up
+
+  engineering.code-delivery:
+    name: "มาตรฐานการเขียนโค้ด การรีวิว และส่งมอบซอฟต์แวร์"
+    category: engineering
+    owner: developer
+    consumers: [sit, tech-up]
+    subprocesses:
+      - engineering.code-delivery.branching
+      - engineering.code-delivery.pr-review
+      - engineering.code-delivery.deployment
+
+  strategy.weekly-review:
+    name: "การทบทวนผลงานประจำสัปดาห์และการประสานงานระหว่างฝ่าย"
+    category: strategy
+    owner: sit
+    consumers: ["*"]
+    subprocesses:
+      - strategy.weekly-review.status-collection
+      - strategy.weekly-review.bottleneck-escalation
