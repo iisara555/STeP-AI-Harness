@@ -7,6 +7,7 @@ import { pathExists } from '../../utils/file-ops.js';
 import { PACKAGE_ROOT, getAvailableTeams } from '../../modules/role-resolver.js';
 import { loadUserConfig, USER_CONFIG_PATH } from '../../utils/user-config.js';
 import { detectInstalledTools } from '../../utils/tool-detector.js';
+import { getPlatformDisplay } from '../../platform/index.js';
 
 export async function runDoctor(args) {
   const isEmployeeMode = Boolean(args.employee || args.simple || args.e);
@@ -34,6 +35,7 @@ export async function runDoctor(args) {
     }
 
     console.log(`  ${colors.green('✓')} Installation:    ${colors.bold(`พร้อมใช้งาน (v${pkgJson.version})`)}`);
+    console.log(`  ${colors.green('✓')} Platform:        ${colors.bold(getPlatformDisplay())}`);
     console.log(`  ${colors.green('✓')} Router:          ${colors.bold('Ready (Layer 1 Dynamic Routing)')}`);
     console.log(`  ${colors.green('✓')} Team:            ${colors.bold(teamDisplay)}`);
     console.log(`  ${colors.green('✓')} Detected AI:     ${installedToolNames.length > 0 ? colors.cyan(installedToolNames.join(', ')) : colors.yellow('ยังตรวจไม่พบ (เปิดใน Cursor / VS Code / Claude ได้)')}`);

@@ -14,11 +14,12 @@ import {
   USER_CONFIG_PATH,
 } from '../src/utils/user-config.js';
 import { detectInstalledTools } from '../src/utils/tool-detector.js';
+import { getPlatformDisplay, getMacCpuArch } from '../src/platform/index.js';
 
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
 
-test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
+test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
   const backupConfigPath = USER_CONFIG_PATH + '.bak';
 
   t.before(async () => {
@@ -75,10 +76,11 @@ test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
     assert.equal(team, 'afp');
   });
 
-  await t.test('Case 4: CLI step-ai doctor in employee mode displays clean checklist', async () => {
+  await t.test('Case 4: CLI step-ai doctor in employee mode displays clean checklist with Platform', async () => {
     const { stdout } = await execFileAsync(process.execPath, [STEP_AI_BIN, 'doctor', '--employee']);
     assert.ok(stdout.includes('STeP AI System Check'));
     assert.ok(stdout.includes('Installation:'));
+    assert.ok(stdout.includes('Platform:'));
     assert.ok(stdout.includes('Router:'));
     assert.ok(stdout.includes('พร้อมใช้งาน'));
     assert.ok(!stdout.includes('stack trace'));
@@ -149,9 +151,9 @@ test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
     }
   });
 
-  await t.test('Case 7: Distribution Packager (build_pilot_bundle.py) builds valid ZIP', async () => {
-    const zipPath = join(PACKAGE_ROOT, 'dist', 'STeP-AI-Pilot-v0.1.0.zip');
-    assert.ok(await pathExists(zipPath), 'Pilot bundle zip must exist');
+  await t.test('Case 7: Distribution Packager (build_pilot_bundle.py) builds valid v0.2.0 ZIP', async () => {
+    const zipPath = join(PACKAGE_ROOT, 'dist', 'STeP-AI-Pilot-v0.2.0.zip');
+    assert.ok(await pathExists(zipPath), 'Pilot bundle v0.2.0 zip must exist');
 
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);
@@ -159,21 +161,22 @@ test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
 
   await t.test('Case 8: Verification of macOS Finder command and shell scripts', async () => {
     const cmdInstall = join(PACKAGE_ROOT, 'Install-STeP-AI.command');
-    const shInstall = join(PACKAGE_ROOT, 'install', 'install-mac.sh');
+    const shInstall = join(PACKAGE_ROOT, 'install', 'install-macos.sh');
     const cmdUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.command');
-    const shUpdate = join(PACKAGE_ROOT, 'install', 'update-mac.sh');
+    const shUpdate = join(PACKAGE_ROOT, 'install', 'update-macos.sh');
 
     assert.ok(await pathExists(cmdInstall), 'Install-STeP-AI.command must exist at repo root');
-    assert.ok(await pathExists(shInstall), 'install/install-mac.sh must exist');
+    assert.ok(await pathExists(shInstall), 'install/install-macos.sh must exist');
     assert.ok(await pathExists(cmdUpdate), 'Update-STeP-AI.command must exist at repo root');
-    assert.ok(await pathExists(shUpdate), 'install/update-mac.sh must exist');
+    assert.ok(await pathExists(shUpdate), 'install/update-macos.sh must exist');
 
     const cmdInstallContent = await readFile(cmdInstall, 'utf-8');
-    assert.ok(cmdInstallContent.includes('install-mac.sh'));
-    assert.ok(cmdInstallContent.includes('dirname "$0"'));
+    assert.ok(cmdInstallContent.includes('install-macos.sh'));
 
     const shInstallContent = await readFile(shInstall, 'utf-8');
     assert.ok(shInstallContent.includes('STeP AI Setup'));
+    assert.ok(shInstallContent.includes('Darwin'));
+    assert.ok(shInstallContent.includes('uname -m'));
     assert.ok(shInstallContent.includes('command -v node'));
     assert.ok(shInstallContent.includes('Applications/Visual Studio Code.app'));
     assert.ok(shInstallContent.includes('Applications/Cursor.app'));
@@ -186,7 +189,7 @@ test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
     assert.ok(shInstallContent.includes('PITI'));
 
     const cmdUpdateContent = await readFile(cmdUpdate, 'utf-8');
-    assert.ok(cmdUpdateContent.includes('update-mac.sh'));
+    assert.ok(cmdUpdateContent.includes('update-macos.sh'));
 
     const shUpdateContent = await readFile(shUpdate, 'utf-8');
     assert.ok(shUpdateContent.includes('step-ai.js" update'));
@@ -213,5 +216,23 @@ test('STeP AI Pilot v0.1 Installer & User Configuration Suite', async (t) => {
     } finally {
       await rm(tmpHome, { recursive: true, force: true });
     }
+  });
+
+  await t.test('Case 10: Platform Layer CPU Architecture & Display Formatting', async () => {
+    assert.equal(getMacCpuArch('arm64'), 'Apple Silicon (arm64)');
+    assert.equal(getMacCpuArch('x64'), 'Intel Mac (x86_64)');
+    assert.equal(getMacCpuArch('x86_64'), 'Intel Mac (x86_64)');
+
+    const macArm = getPlatformDisplay({ platform: 'darwin', arch: 'arm64' });
+    assert.equal(macArm, 'macOS (Apple Silicon (arm64))');
+
+    const macIntel = getPlatformDisplay({ platform: 'darwin', arch: 'x64' });
+    assert.equal(macIntel, 'macOS (Intel Mac (x86_64))');
+
+    const winDisplay = getPlatformDisplay({ platform: 'win32', arch: 'x64' });
+    assert.equal(winDisplay, 'Windows (x64)');
+
+    const linuxDisplay = getPlatformDisplay({ platform: 'linux', arch: 'x64' });
+    assert.equal(linuxDisplay, 'Linux (x64)');
   });
 });

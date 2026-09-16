@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# STeP AI — Zero-Terminal macOS Updater (Pilot v0.1)
+# STeP AI — Zero-Terminal macOS Updater (Pilot v0.2)
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 set -e
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 clear || true
 echo -e "${CYAN}============================================================${NC}"
-echo -e "${YELLOW}               STeP AI Update (Pilot v0.1)                  ${NC}"
+echo -e "${YELLOW}               STeP AI Update (Pilot v0.2)                  ${NC}"
 echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) ${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo ""

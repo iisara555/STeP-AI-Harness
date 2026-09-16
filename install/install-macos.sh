@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# STeP AI — Zero-Terminal macOS Installer (Pilot v0.1)
+# STeP AI — Zero-Terminal macOS Installer (Pilot v0.2)
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 set -e
@@ -18,16 +18,35 @@ NC='\033[0m'
 
 clear || true
 echo -e "${CYAN}============================================================${NC}"
-echo -e "${YELLOW}               STeP AI Setup (Pilot v0.1)                   ${NC}"
+echo -e "${YELLOW}               STeP AI Setup (Pilot v0.2)                   ${NC}"
 echo -e "${WHITE}   อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP) ${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo ""
 
-# 1. Check Node.js Runtime
-echo -e "${GRAY}กำลังตรวจสอบสภาพแวดล้อมระบบ macOS...${NC}"
+# 1. Detect macOS
+OS_NAME="$(uname -s)"
+if [ "$OS_NAME" != "Darwin" ]; then
+    echo -e "${RED}⚠️  สคริปต์นี้สำหรับ macOS เท่านั้น (ระบบปัจจุบัน: $OS_NAME)${NC}"
+    echo -e "${GRAY}หากคุณใช้ Windows กรุณาดับเบิลคลิกไฟล์ Install-STeP-AI.bat แทน${NC}"
+    read -p "กด Enter เพื่อออก..." dummy
+    exit 1
+fi
+
+# 2. Detect CPU architecture
+ARCH="$(uname -m)"
+ARCH_DISPLAY="$ARCH"
+if [ "$ARCH" = "arm64" ]; then
+    ARCH_DISPLAY="Apple Silicon ($ARCH)"
+elif [ "$ARCH" = "x86_64" ]; then
+    ARCH_DISPLAY="Intel Mac ($ARCH)"
+fi
+echo -e "${GRAY}สถาปัตยกรรมระบบ: ${WHITE}${ARCH_DISPLAY}${NC}"
+
+# 3. Detect required runtime (Node.js >= 20)
+echo -e "${GRAY}กำลังตรวจสอบ Node.js runtime...${NC}"
 if ! command -v node >/dev/null 2>&1; then
     echo ""
-    echo -e "${YELLOW}⚠️  ไม่พบ Node.js ในเครื่องคอมพิวเตอร์ของคุณ${NC}"
+    echo -e "${YELLOW}⚠️  ไม่พบ Node.js ในเครื่อง Mac ของคุณ${NC}"
     echo -e "${GRAY}ระบบ STeP AI จำเป็นต้องใช้ Node.js (v20 ขึ้นไป) เพื่อประมวลผล Skill Router${NC}"
     echo ""
     echo -e "กรุณาดาวน์โหลดและติดตั้งได้ฟรีที่: ${CYAN}https://nodejs.org${NC} (เลือกเวอร์ชัน LTS)"
@@ -40,25 +59,26 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 NODE_VER=$(node -v 2>/dev/null || echo "unknown")
-echo -e "${GREEN}✓ พบ Node.js Runtime: ${NODE_VER}${NC}"
+echo -e "${GREEN}✓ ตรวจพบ Node.js Runtime: ${NODE_VER}${NC}"
 
-# 2. Detect Installed AI Tools on macOS
+# 4. Detect AI tools
 echo ""
-echo -e "${GRAY}กำลังตรวจสอบโปรแกรม AI ในเครื่อง macOS...${NC}"
+echo -e "${GRAY}กำลังตรวจสอบโปรแกรม AI ในเครื่อง Mac...${NC}"
 
 CODEX_FOUND=false
 CURSOR_FOUND=false
 CLAUDE_FOUND=false
 
-if [ -d "/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Library/Application Support/Code" ] || [ -d "$HOME/.vscode" ]; then
+# Check applications and CLI commands
+if [ -d "/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Applications/Visual Studio Code.app" ] || [ -d "$HOME/Library/Application Support/Code" ] || [ -d "$HOME/.vscode" ] || command -v code >/dev/null 2>&1 || command -v codex >/dev/null 2>&1; then
     CODEX_FOUND=true
 fi
 
-if [ -d "/Applications/Cursor.app" ] || [ -d "$HOME/Applications/Cursor.app" ] || [ -d "$HOME/Library/Application Support/Cursor" ] || [ -d "$HOME/.cursor" ]; then
+if [ -d "/Applications/Cursor.app" ] || [ -d "$HOME/Applications/Cursor.app" ] || [ -d "$HOME/Library/Application Support/Cursor" ] || [ -d "$HOME/.cursor" ] || command -v cursor >/dev/null 2>&1; then
     CURSOR_FOUND=true
 fi
 
-if [ -d "/Applications/Claude.app" ] || [ -d "$HOME/Applications/Claude.app" ] || [ -d "$HOME/Library/Application Support/Claude" ] || [ -d "$HOME/.claude" ] || [ -d "$HOME/.claude-code" ]; then
+if [ -d "/Applications/Claude.app" ] || [ -d "$HOME/Applications/Claude.app" ] || [ -d "$HOME/Library/Application Support/Claude" ] || [ -d "$HOME/.claude" ] || [ -d "$HOME/.claude-code" ] || command -v claude >/dev/null 2>&1; then
     CLAUDE_FOUND=true
 fi
 
@@ -81,10 +101,9 @@ else
     echo -e "  [ ] Claude Desktop / Claude Code"
 fi
 
-# 3. Choose AI Tool
 echo ""
 echo -e "${GRAY}------------------------------------------------------------${NC}"
-echo -e "${YELLOW}ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่คุณต้องการติดตั้ง${NC}"
+echo -e "${YELLOW}ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่ต้องการติดตั้ง${NC}"
 echo -e "  1. ติดตั้งทั้งหมดที่ตรวจพบ (แนะนำ)"
 echo -e "  2. OpenAI Codex / VS Code"
 echo -e "  3. Cursor IDE"
@@ -103,7 +122,7 @@ case "$TOOL_CHOICE" in
     *) SELECTED_TOOL="all" ;;
 esac
 
-# 4. Choose Team
+# 5. เลือก STeP Team
 echo ""
 echo -e "${GRAY}------------------------------------------------------------${NC}"
 echo -e "${YELLOW}ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team)${NC}"
@@ -139,25 +158,20 @@ else
     esac
 fi
 
-# 5. Perform Installation
+# 6. Install / Configure Harness
 echo ""
 echo -e "${GRAY}------------------------------------------------------------${NC}"
 echo -e "${YELLOW}ขั้นตอนที่ 3: กำลังติดตั้ง STeP AI ให้พร้อมใช้งาน...${NC}"
 echo ""
 
 cd "$ROOT_DIR"
-
-# Run init
 node "$ROOT_DIR/bin/step-ai.js" init --team "$SELECTED_TEAM" --tool "$SELECTED_TOOL"
-
-# Run config update
 node "$ROOT_DIR/bin/step-ai.js" config --team "$SELECTED_TEAM"
 
-# 6. Run Doctor Check
+# 7. Run Doctor Check
 echo ""
 node "$ROOT_DIR/bin/step-ai.js" doctor --employee
 
-# 7. Success Screen
 echo ""
 echo -e "${GREEN}============================================================${NC}"
 echo -e "${YELLOW}                 ✓ STeP AI พร้อมใช้งานบน macOS               ${NC}"
@@ -165,6 +179,7 @@ echo -e "${GREEN}============================================================${N
 echo ""
 echo -e "  ทีมหลัก:       ${WHITE}$(echo "$SELECTED_TEAM" | tr '[:lower:]' '[:upper:]')${NC}"
 echo -e "  เครื่องมือ AI:  ${WHITE}$SELECTED_TOOL${NC}"
+echo -e "  สถาปัตยกรรม:   ${WHITE}$ARCH_DISPLAY${NC}"
 echo -e "  ระบบค้นหา:     ${WHITE}Layer 1 Dynamic Router พร้อมใช้งาน${NC}"
 echo ""
 echo -e "${CYAN}💡 วิธีเริ่มใช้งานบน macOS:${NC}"
