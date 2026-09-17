@@ -10,21 +10,22 @@ import {
   parseUserMemory,
   ensureGitignored,
   generateUserMemoryTemplate,
+  needsFirstRunCompanion,
+  getPersonalityPreset,
 } from '../src/modules/user-memory.js';
 
-test('User Memory (USER.md) & Clarification Suite', async (t) => {
+test('User Memory (USER.md), First Run Companion & Clarification Suite', async (t) => {
   const tmpDir = await mkdtemp(join(tmpdir(), 'step-memory-test-'));
 
   t.after(async () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  await t.test('Case 1: initUserMemory creates template with options', async () => {
+  await t.test('Case 1: initUserMemory creates template with assistant defaults and options', async () => {
     const res = await initUserMemory(tmpDir, {
       name: 'สมชาย',
       team: 'afp',
       role: 'เจ้าหน้าที่การเงินและพัสดุ',
-      tone: 'สุภาพ ทางการ',
       activeProjects: ['โครงการพัฒนาผู้ประกอบการนวัตกรรม'],
       frequentSkills: ['tor-review', 'receipt-audit'],
     });
@@ -37,6 +38,10 @@ test('User Memory (USER.md) & Clarification Suite', async (t) => {
     assert.equal(loaded.profile.name, 'สมชาย');
     assert.equal(loaded.profile.team, 'afp');
     assert.equal(loaded.profile.role, 'เจ้าหน้าที่การเงินและพัสดุ');
+    assert.equal(loaded.assistant.name, 'STeP Mate');
+    assert.equal(loaded.assistant.personality, 'coworker');
+    assert.equal(loaded.assistant.firstRunCompleted, false);
+    assert.equal(needsFirstRunCompanion(loaded), true);
     assert.ok(loaded.activeProjects.includes('โครงการพัฒนาผู้ประกอบการนวัตกรรม'));
     assert.ok(loaded.frequentSkills.includes('tor-review'));
   });
@@ -45,11 +50,13 @@ test('User Memory (USER.md) & Clarification Suite', async (t) => {
     const res = await initUserMemory(tmpDir, {
       name: 'คนอื่น',
       team: 'qs',
+      assistantName: 'Friday',
     });
 
     assert.equal(res.created, false);
     const loaded = await loadUserMemory(tmpDir);
-    assert.equal(loaded.profile.name, 'สมชาย'); // preserved
+    assert.equal(loaded.profile.name, 'สมชาย');
+    assert.equal(loaded.assistant.name, 'STeP Mate');
   });
 
   await t.test('Case 3: ensureGitignored automatically adds USER.md and MEMORY.md', async () => {
@@ -63,17 +70,18 @@ test('User Memory (USER.md) & Clarification Suite', async (t) => {
     assert.ok(content.includes('USER.md'));
     assert.ok(content.includes('MEMORY.md'));
 
-    // Second call should not duplicate
     const updatedAgain = await ensureGitignored(tmpDir);
     assert.equal(updatedAgain, false);
   });
 
-  await t.test('Case 4: parseUserMemory handles empty or custom markdown safely', () => {
+  await t.test('Case 4: parseUserMemory handles legacy markdown without forcing onboarding', () => {
     const emptyParsed = parseUserMemory('');
     assert.deepEqual(emptyParsed.activeProjects, []);
     assert.equal(emptyParsed.profile.name, '');
+    assert.equal(emptyParsed.assistant.firstRunCompleted, null);
+    assert.equal(needsFirstRunCompanion(emptyParsed), false);
 
-    const customMd = `# Custom Header
+    const legacyMd = `# Custom Header
 ## 1. ข้อมูลผู้ใช้งาน (User Profile)
 - **ชื่อ / ชื่อเรียก (Name/Nickname)**: Art
 - **ทีมหลัก (Primary Team)**: DEV
@@ -90,11 +98,48 @@ test('User Memory (USER.md) & Clarification Suite', async (t) => {
 - deploy-checklist
 `;
 
-    const parsed = parseUserMemory(customMd);
+    const parsed = parseUserMemory(legacyMd);
     assert.equal(parsed.profile.name, 'Art');
     assert.equal(parsed.profile.team, 'dev');
     assert.equal(parsed.profile.role, 'Fullstack Lead');
+    assert.equal(parsed.assistant.firstRunCompleted, null);
+    assert.equal(needsFirstRunCompanion(parsed), false);
     assert.deepEqual(parsed.activeProjects, ['STeP AI Harness v0.2', 'RSP North Mobile']);
     assert.deepEqual(parsed.frequentSkills, ['git-branching', 'deploy-checklist']);
+  });
+
+  await t.test('Case 5: completed First Run persists assistant identity and personality', async () => {
+    const completed = generateUserMemoryTemplate({
+      name: 'กล้อง',
+      team: 'cc',
+      assistantName: 'Friday',
+      personality: 'concise',
+      firstRunCompleted: true,
+    });
+
+    await saveUserMemory(tmpDir, completed);
+    const loaded = await loadUserMemory(tmpDir);
+
+    assert.equal(loaded.profile.name, 'กล้อง');
+    assert.equal(loaded.profile.team, 'cc');
+    assert.equal(loaded.assistant.name, 'Friday');
+    assert.equal(loaded.assistant.personality, 'concise');
+    assert.equal(loaded.assistant.firstRunCompleted, true);
+    assert.equal(needsFirstRunCompanion(loaded), false);
+  });
+
+  await t.test('Case 6: personality presets are small, predictable and employee-friendly', () => {
+    assert.equal(getPersonalityPreset('coworker').label, 'เพื่อนร่วมงาน');
+    assert.equal(getPersonalityPreset('professional').label, 'มืออาชีพ');
+    assert.equal(getPersonalityPreset('concise').label, 'กระชับ');
+    assert.equal(getPersonalityPreset('unknown').label, 'เพื่อนร่วมงาน');
+  });
+
+  await t.test('Case 7: generated template contains private first-run state without secrets', () => {
+    const content = generateUserMemoryTemplate();
+    assert.ok(content.includes('## 2. ผู้ช่วยส่วนตัว (Personal Assistant)'));
+    assert.ok(content.includes('**ชื่อผู้ช่วย (Assistant Name)**: STeP Mate'));
+    assert.ok(content.includes('**First Run Completed**: false'));
+    assert.ok(content.includes('ห้ามบันทึกรหัสผ่าน Token'));
   });
 });
