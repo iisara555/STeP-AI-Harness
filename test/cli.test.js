@@ -30,8 +30,16 @@ test('CLI & Core Modules Test Suite', async (t) => {
     const allFiles = await resolveRoleFiles('all');
     assert.equal(allFiles.role.id, 'all');
     const allSkillPaths = allFiles.files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-    assert.equal(allSkillPaths.length, 27, 'Universal role should resolve all 27 skills');
+    assert.equal(allSkillPaths.length, 35, 'Universal role should resolve all 35 skills');
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/creative/creative-art-director/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/evidence-before-approval/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/learning-designer/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/pm/assumption-challenger/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/pm/decision-memo/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/pm/industry-problem-discovery/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/market-signal-radar/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/voice-of-customer/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/lab-result-review/SKILL.md'));
 
     const pmFiles = await resolveRoleFiles('pm');
     assert.equal(pmFiles.role.id, 'pm');
@@ -39,6 +47,9 @@ test('CLI & Core Modules Test Suite', async (t) => {
 
     const skillPaths = pmFiles.files.map((f) => f.relativePath);
     assert.ok(skillPaths.includes('skills/pm/tor-review/SKILL.md'));
+    assert.ok(skillPaths.includes('skills/pm/assumption-challenger/SKILL.md'));
+    assert.ok(skillPaths.includes('skills/pm/decision-memo/SKILL.md'));
+    assert.ok(skillPaths.includes('skills/pm/industry-problem-discovery/SKILL.md'));
     assert.ok(skillPaths.includes('rules/human-approval.md'));
     assert.ok(skillPaths.includes('docs/step-context.md'));
 
@@ -229,6 +240,8 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(qsFilePaths.includes('skills/common/step-router/SKILL.md'), 'Must include step-router');
     assert.ok(qsFilePaths.includes('skills/pm/tor-review/SKILL.md'), 'QS includes tor-review');
     assert.ok(qsFilePaths.includes('skills/common/sop-authoring/SKILL.md'), 'QS includes sop-authoring');
+    assert.ok(qsFilePaths.includes('skills/common/evidence-before-approval/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/lab-result-review/SKILL.md'));
     assert.ok(qsFilePaths.includes('docs/teams.md'), 'Must include teams.md');
     assert.ok(qsFilePaths.includes('docs/step-router.md'), 'Must include step-router.md');
 
@@ -240,12 +253,17 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(ccFilePaths.includes('skills/creative/step-image-prompt/SKILL.md'));
     assert.ok(ccFilePaths.includes('skills/creative/creative-art-director/SKILL.md'));
     assert.ok(ccFilePaths.includes('skills/common/step-brand/SKILL.md'));
+    assert.ok(ccFilePaths.includes('skills/common/market-signal-radar/SKILL.md'));
 
     // Test Market Innovation (MI) team
     const miResolved = await resolveTeamFiles('mi');
     assert.equal(miResolved.team.clusterId, 'market-creative');
     assert.ok(miResolved.team.skills.includes('creative'));
     assert.ok(miResolved.team.skills.includes('pm'));
+    const miPaths = miResolved.files.map((f) => f.relativePath);
+    assert.ok(miPaths.includes('skills/common/market-signal-radar/SKILL.md'));
+    assert.ok(miPaths.includes('skills/common/voice-of-customer/SKILL.md'));
+    assert.ok(miPaths.includes('skills/pm/assumption-challenger/SKILL.md'));
   });
 
   // Cleanup after test
