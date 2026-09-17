@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.1.0
+  version: 2.2.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
@@ -589,15 +589,19 @@ skills:
     teams:
       primary: [cc]
       consumers: ["*"]
-    description: สร้างและแนะนำ Prompt สร้างภาพ AI สไตล์ 2D Vector, Infographic และ Notion Line Art ตามอัตลักษณ์สีเหลือง STeP และค่านิยม Simple Service Sincere
+    description: กำกับ Art Direction และสร้าง Prompt ภาพ AI แบบยืดหยุ่นตามบริบท โดยรักษา STeP Brand DNA ผ่าน Brand Strength, Visual Modes และ Reference-Led workflow
     intent: [create, draft, design]
-    triggers: [prompt, ขอ prompt, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion]
-    paths: ["**/creative/**", "**/poster/**", "**/media/**"]
-    fileTypes: [png, jpg, md, prompt]
+    triggers: [prompt, ขอ prompt, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion, art direction, visual direction, reference image, ภาพอ้างอิง, ตาม ref, ตาม reference, photorealistic, ภาพสมจริง, product hero, technology hero, architectural visual, exhibition visual, visual campaign]
+    paths: ["**/creative/**", "**/poster/**", "**/media/**", "**/visual/**", "**/campaign/**"]
+    fileTypes: [png, jpg, jpeg, webp, md, prompt]
     requires: [image_theme_context]
     scope:
       allow:
-        - สร้างและแนะนำ Prompt ตาม CI สีเหลือง STeP (#F9AE3B) และ Core Values Simple Service Sincere
+        - กำหนด Brand Strength แบบ STRONG / BALANCED / LIGHT โดย BALANCED เป็นค่าเริ่มต้น
+        - เลือก Visual Mode ให้เหมาะกับวัตถุประสงค์ เช่น Editorial, Photorealistic, Architectural, Technology Hero หรือ Reference-Led
+        - สร้าง Prompt จากภาพอ้างอิงโดยถอดหลัก Art Direction แล้วตีความใหม่ให้สอดคล้องกับ STeP Brand DNA
+        - ใช้ STeP Innovation Yellow (#F9AE3B) เป็น Brand Anchor โดยไม่บังคับให้เป็นสีหลักทุกชิ้น
+        - สร้าง Photorealistic visual เมื่อเหมาะกับงาน โดยต้องไม่สร้างโลโก้ เหตุการณ์ บุคคล หรือข้อมูลที่ทำให้เข้าใจผิดว่าเป็นข้อเท็จจริง
       escalate: {}
       human_only:
         brand_alteration_approval:
@@ -637,4 +641,3 @@ skills:
           role: executive-director
           authority: policy-waiver
           description: การอนุมัติผ่อนผันกรณีใบเสร็จไม่ครบหรือเกินเพดานค่าใช้จ่าย
-
