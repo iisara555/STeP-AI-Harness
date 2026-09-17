@@ -1,510 +1,335 @@
-# STeP AI Harness 🚀
-### ระบบกำกับดูแลและกระจาย AI Skills & Rules ระดับองค์กร
-**อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)**
+# STeP AI Harness
+
+ชุด Skills, Rules และบริบทการทำงานสำหรับช่วยให้พนักงาน STeP ใช้ AI กับงานจริงได้ง่ายขึ้น โดยไม่ต้องจำ Prompt และไม่ต้องเริ่มอธิบายบริบทขององค์กรใหม่ทุกครั้ง
+
+โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
+
+**สถานะปัจจุบัน:** Pilot v0.2  
+**ครอบคลุม:** 22 ทีม / 5 กลุ่มงาน / 35 Skills
+
+[เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
+
+---
+
+## ทำไมต้องมี STeP AI Harness
+
+พนักงานแต่ละทีมใช้ AI ช่วยงานกันอยู่แล้ว แต่ปัญหาที่เจอบ่อยคือ AI ไม่รู้บริบทของ STeP ไม่รู้ว่าเอกสารแบบไหนต้องมีคนอนุมัติ ไม่รู้คำศัพท์หรือกระบวนการภายใน และผู้ใช้ต้องคอยอธิบายเรื่องเดิมซ้ำ ๆ
+
+STeP AI Harness จึงทำหน้าที่เป็นชั้นกลางระหว่าง **คนทำงาน** กับ **AI ที่แต่ละคนเลือกใช้**
+
+แทนที่จะรวมทุกอย่างไว้ใน Prompt ยาว ๆ ระบบแยกความรู้เป็นส่วนที่ดูแลและปรับปรุงได้ เช่น
+
+- Skills สำหรับงานแต่ละประเภท
+- Rules ที่ต้องใช้ร่วมกัน
+- ข้อมูลทีมและเจ้าของกระบวนการ
+- Process และ Authority ขององค์กร
+- Router สำหรับเลือก Skill ที่เหมาะกับงาน
+- บริบทส่วนตัวของผู้ใช้ภายใน Workspace
+
+เป้าหมายคือให้พนักงานพิมพ์งานตามปกติ เช่น
+
+> ช่วยตรวจ TOR นี้ก่อนส่ง
+
+> สรุปประชุมเมื่อเช้า แยกสิ่งที่ต้องทำต่อ
+
+> ช่วยคิด Art Direction งานนี้หน่อย มันยังดู AI เกินไป
+
+> ช่วยดู feedback ลูกค้าชุดนี้ว่ามี pain point อะไรซ้ำกันบ้าง
+
+แล้วให้ระบบเลือกวิธีช่วยที่เหมาะสมจากบริบทของงาน
+
+---
+
+## เริ่มใช้งาน
+
+สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
+
+1. ดาวน์โหลด `STeP-AI-Pilot-v0.2.0.zip`
+2. แตกไฟล์
+3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
+4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
+5. พิมพ์งานเป็นภาษาไทยได้เลย
+
+หากยังไม่เคยใช้งาน แนะนำให้อ่าน [START-HERE.md](START-HERE.md) ก่อน ใช้เวลาไม่นาน
+
+### ครั้งแรก
+
+ผู้ช่วยมีชื่อเริ่มต้นว่า **STeP Mate**
+
+สามารถตั้งชื่อใหม่ เลือกวิธีคุย และบอกชื่อที่ต้องการให้เรียกได้ เช่น
+
+> เรียกตัวเองว่า Friday
+
+> คุยกับผมแบบเพื่อนร่วมงาน
+
+> ตอบให้สั้นกว่านี้
+
+การตั้งค่าเหล่านี้มีผลกับวิธีสื่อสารเท่านั้น ไม่เปลี่ยนกฎการอนุมัติ ความปลอดภัย หรือขอบเขตอำนาจของ AI
+
+ถ้าไม่อยากตั้งค่าก็ข้ามได้และเริ่มทำงานทันที
+
+---
+
+## ใช้กับโปรแกรมอะไรได้บ้าง
+
+Harness ไม่ได้ออกแบบให้ผูกกับ AI รายเดียว
+
+ตัวติดตั้งมี Adapter สำหรับเครื่องมือหลายแบบ เช่น
+
+- ChatGPT
+- Claude
+- Codex
+- Cursor
+- OpenCode
+- Windsurf
+- Gemini
+- Hermes
+
+ถ้ามีโปรแกรมที่ใช้อยู่แล้ว ไม่จำเป็นต้องเปลี่ยนเครื่องมือเพื่อใช้ STeP AI
+
+หลักของโครงการคือให้ **ความรู้และกติกาของ STeP อยู่กับ Workspace** มากกว่าผูกกับผู้ให้บริการ AI รายใดรายหนึ่ง
+
+---
+
+## 35 Skills ทำอะไรบ้าง
+
+Skills ไม่ได้ถูกโหลดทั้งหมดพร้อมกัน ระบบจะเลือกเฉพาะส่วนที่เกี่ยวข้องกับงาน
+
+ตัวอย่างกลุ่มงานที่มีอยู่ปัจจุบัน:
+
+### เอกสารและงานบริหาร
+
+- `thai-official-documents` — หนังสือราชการและบันทึกข้อความ
+- `meeting-summary` — สรุปประชุม มติ และ Action Items
+- `tor-government-writing` — ช่วยร่าง TOR
+- `tor-review` — ตรวจความครบถ้วนและความเสี่ยงของ TOR
+- `receipt-audit` — ตรวจเอกสารใบเสร็จและหลักฐานเบิกจ่าย
+- `browser-form-assistant` — ช่วยเตรียมและตรวจข้อมูลก่อนกรอกแบบฟอร์ม
+
+### โครงการและยุทธศาสตร์
+
+- `project-plan` — WBS, Milestone, Critical Path และ Risk
+- `project-pre-mortem` — หาความเสี่ยงก่อนเริ่มโครงการ
+- `executive-status-update` — สรุปสถานะสำหรับผู้บริหาร
+- `innovation-okr-mapping` — เชื่อมเป้าหมายกับ OKR
+- `decision-memo` — เตรียมข้อมูลและตัวเลือกก่อนการตัดสินใจ
+- `evidence-before-approval` — ตรวจว่ามีหลักฐานพอก่อนบอกว่างานพร้อม
+
+### Startup และ Innovation
+
+- `startup-discovery` — Customer Discovery, VPC และ The Mom Test
+- `assumption-challenger` — หา Critical Assumption ที่ควรพิสูจน์ก่อน
+- `industry-problem-discovery` — ถอดโจทย์โรงงานหรือชุมชนก่อนเสนอ Solution
+- `market-signal-radar` — ดูสัญญาณตลาดและพฤติกรรมที่เปลี่ยนไป
+- `voice-of-customer` — สรุปเสียงลูกค้าและ Pain Point
+
+### Creative และ Communication
+
+- `designer-brief` — เตรียม Creative Brief
+- `creative-art-director` — ช่วยกำหนด Creative / Art Direction ก่อนผลิตงาน
+- `step-image-prompt` — แปลง Direction เป็น Prompt ภาพที่พร้อมใช้งาน
+- `event-concept` — แนวคิด Event, Exhibition และ Booth
+- `presentation-design` — โครงสร้างและออกแบบ Presentation
+- `step-brand` — บริบทและข้อกำหนดด้านแบรนด์
+- `step-writing` — ปรับภาษาให้เหมาะกับการสื่อสารของ STeP
+
+### การเรียนรู้ งานแล็บ และระบบ
+
+- `learning-designer` — ออกแบบ Training, Onboarding และ Workshop
+- `lab-result-review` — ตรวจความครบถ้วนและ Traceability ของผลทดสอบ
+- `data-privacy-compliance` — ตรวจประเด็นข้อมูลส่วนบุคคล
+- `sop-authoring` — ช่วยถอดกระบวนการเป็น SOP/WI
+- `coding-git-workflow` — แนวทางพัฒนาซอฟต์แวร์
+- `github-workflow` — Workflow บน GitHub
+- `vercel-deploy` — ตรวจความพร้อมก่อน Deploy
+
+รายการที่เป็น Source of Truth อยู่ที่ [`manifest/skills.yaml`](manifest/skills.yaml)
+
+---
+
+## 22 ทีมของ STeP
+
+ระบบจัดทีมไว้ 5 กลุ่มเพื่อช่วย Router เข้าใจบริบทงาน แต่ไม่ได้ใช้เพื่อปิดกั้นว่า Skill ใดเป็นของใคร
+
+1. Governance, Operations & Quality
+2. Incubation, Entrepreneurship & Strategy
+3. Tech Transfer & Industry Collaboration
+4. Market, Creative & Client
+5. Infrastructure, Labs & Pilot Plant
+
+รวมทั้งหมด 22 ทีม
+
+รายละเอียดทีม เจ้าของงาน และเส้นทางที่เกี่ยวข้องดูได้ที่ [`manifest/teams.yaml`](manifest/teams.yaml) และ [docs/teams.md](docs/teams.md)
+
+---
+
+## Router ทำงานอย่างไร
+
+แนวคิดหลักคือ
+
+> **Installed ≠ Loaded**
+
+แม้ Workspace จะมี Skills หลายตัว แต่ AI ไม่จำเป็นต้องอ่านข้อความทุกไฟล์ทุกครั้ง
+
+เมื่อมีคำขอ ระบบจะพิจารณาองค์ประกอบ เช่น
+
+- เจตนาของคำขอ
+- คำที่เกี่ยวข้อง
+- ทีม
+- Path ของไฟล์
+- ประเภทไฟล์
+
+จากนั้นเลือก Skill ที่เกี่ยวข้อง แล้วค่อยเปิด Rules, SOP หรือ Reference เพิ่มเมื่อจำเป็น
 
 ```text
-================================================================
-   ____ _____     ____       _    ___ 
-  / ___|_   _|___|  _ \     / \  |_ _|   STeP AI Harness (Pilot v0.2)
-  \___ \ | | / _ \ |_) |   / _ \  | |    Enterprise AI Architecture
-   ___) || ||  __/  __/   / ___ \ | |    22 Teams - 5 Clusters
-  |____/ |_| \___|_|     /_/   \_\___|
-================================================================
-  อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)
-================================================================
+คำขอของผู้ใช้
+      ↓
+STeP Router
+      ↓
+Skill ที่เกี่ยวข้อง
+      ↓
+Rules / SOP / Reference ที่จำเป็น
+      ↓
+คำตอบหรือร่างงาน
 ```
 
-<div align="center">
+Router ปัจจุบันใช้เวอร์ชัน **2.3.0**
 
-[![Latest Release](https://img.shields.io/github/v/release/iisara555/step-ai-harness?label=Release&color=0078D4)](https://github.com/iisara555/step-ai-harness/releases)
-[![Download Zip](https://img.shields.io/badge/⬇️_Download-STeP--AI--Pilot--v0.2.0.zip-2ea44f?style=flat&logo=archive&logoColor=white)](https://github.com/iisara555/step-ai-harness/releases/latest/download/STeP-AI-Pilot-v0.2.0.zip)
-[![Teams](https://img.shields.io/badge/Teams-22_Teams_/_5_Clusters-blue)](manifest/teams.yaml)
-[![License](https://img.shields.io/badge/License-Internal_STeP-orange.svg)](README.md)
-
-</div>
+Source of Truth อยู่ที่ [`manifest/router-index.yaml`](manifest/router-index.yaml)
 
 ---
 
-**STeP AI Harness** คือคลังต้นแบบภายในสำหรับนำความรู้ขององค์กร มาตรฐานการทำงาน และขั้นตอนที่ใช้ซ้ำได้มาใช้ร่วมกันในบุคลากรทั้ง **22 ทีม (5 กลุ่มงาน)** ของอุทยานฯ เพื่อให้สามารถใช้งาน AI Agents (ครอบคลุมทั้ง **สายฟรีมีโควตา**, **สายจ่ายตังค์**, และ **สาย Local AI** เช่น **Cursor**, **OpenCode**, **Claude Desktop**, **ChatGPT Desktop**, **Google Antigravity & Spark**, **Hermes Agent**, **Windsurf**, และ **VS Code**) ได้อย่างมีประสิทธิภาพ ปลอดภัย และถูกต้องตามระเบียบของมหาวิทยาลัยเชียงใหม่และหน่วยงานราชการ
+## AI ช่วยได้แค่ไหน
 
-> [!NOTE]
-> **นโยบายระยะทดลอง (Universal Access Model & 22-Team Routing):**  
-> • **พนักงานทั่วไป:** ดาวน์โหลดแล้วดับเบิลคลิกติดตั้งได้ทันที ไม่ต้องรู้เรื่อง Git, Node หรือคำสั่ง Terminal  
-> • **ระบบ Guided Wizard:** หากเครื่องยังไม่มีโปรแกรม AI เลย ระบบจะถามนำทางและช่วยเปิดหน้าเว็บดาวน์โหลดโปรแกรมสายฟรี (เช่น OpenCode หรือ Cursor) ให้ทันทีผ่านเบราว์เซอร์  
-> • **แบ่ง 2 โหมดชัดเจน:** แยก **Employee Mode** (แชทภาษาไทยปกติ / One-Click Launchers) ออกจาก **Champion/Admin Mode** (จัดการ Skills / Review / Test) เพื่อให้พนักงานใช้งานได้อย่างสบายใจที่สุด
+Harness ตั้งใจให้ AI เป็น **ผู้ช่วยเตรียมงาน ไม่ใช่ผู้มีอำนาจตัดสินใจ**
 
----
+AI สามารถช่วย
 
-## 🧭 โครงสร้าง 3 สายการใช้งาน (3-Tier AI Ecosystem)
+- ร่าง
+- ตรวจ
+- สรุป
+- เปรียบเทียบ
+- จัดโครงสร้างข้อมูล
+- หา Missing Information
+- เสนอทางเลือก
+- เตรียมข้อมูลก่อนตัดสินใจ
 
-| หมวดหมู่ (Tier) | เครื่องมือที่รองรับ | คำแนะนำสำหรับพนักงาน STeP | ไฟล์ที่สร้าง |
-| :--- | :--- | :--- | :--- |
-| **1. สายฟรี / มี Quota ฟรี** *(Free Quota)* | **Cursor**, **OpenCode**, **Windsurf**, **VS Code** | **แนะนำสำหรับพนักงานที่ยังไม่มีโปรแกรม:** เลือกสายฟรีหนึ่งตัวที่โหลดง่ายในเครื่อง | `.cursorrules`, `OPENCODE.md`, `.windsurfrules`, `CODEX_INSTRUCTIONS.md` |
-| **2. สายจ่ายตังค์ / องค์กรจัดซื้อ** *(Paid / Commercial)* | **Claude Desktop**, **ChatGPT Desktop**, **Google Antigravity & Spark** | มีสิทธิ์ Pro / Plus / Team อยู่แล้วให้ใช้ตัวนั้น ไม่ต้องย้ายค่าย | `CLAUDE.md`, `CHATGPT.md`, `GEMINI.md` |
-| **3. สาย Local AI / ความเป็นส่วนตัวข้อมูล 100%** *(Local / Privacy)* | **Hermes Agent (Nous Research)** | ประมวลผลภายในเครื่อง ปลอดภัยสูงสุดตามมาตรฐาน PDPA ไม่ส่งข้อมูลออกภายนอก | `HERMES.md` |
+แต่บางเรื่องยังต้องให้คนที่มีอำนาจรับผิดชอบตรวจและยืนยัน เช่น
 
----
+- การอนุมัติงบประมาณ
+- การเลือกผู้เสนอราคา
+- การลงนามหนังสือ
+- การประกาศใช้ SOP
+- การเปลี่ยน Brand Identity
+- การประเมินบุคลากร
+- การออกผลหรือรับรองผลห้องปฏิบัติการ
 
-## 🚀 เริ่มต้นใช้งานฉบับพนักงานทั่วไป (Zero-Terminal / No Code สำหรับ Windows & macOS)
-
-<div align="center">
-
-### 📦 ดาวน์โหลดชุดติดตั้ง STeP AI Pilot (v0.2.0)
-
-[![ดาวน์โหลด STeP-AI-Pilot-v0.2.0.zip](https://img.shields.io/badge/⬇️_คลิกดาวน์โหลด-STeP--AI--Pilot--v0.2.0.zip_(220_KB)-2ea44f?style=for-the-badge&logo=archive&logoColor=white)](https://github.com/iisara555/step-ai-harness/releases/latest/download/STeP-AI-Pilot-v0.2.0.zip)
-&nbsp;&nbsp;
-[![ดาวน์โหลดจาก GitHub Releases](https://img.shields.io/badge/GitHub_Releases-เวอร์ชันล่าสุด-24292e?style=for-the-badge&logo=github&logoColor=white)](https://github.com/iisara555/step-ai-harness/releases)
-
-</div>
-
-> [!TIP]
-> **ช่องทางดาวน์โหลดไฟล์ติดตั้ง `STeP-AI-Pilot-v0.2.0.zip`:**
-> - 🟢 **ดาวน์โหลดโดยตรงผ่าน GitHub Release (แนะนำ):** [👉 คลิกดาวน์โหลด STeP-AI-Pilot-v0.2.0.zip ทันที](https://github.com/iisara555/step-ai-harness/releases/latest/download/STeP-AI-Pilot-v0.2.0.zip)
-> - 📁 **ดาวน์โหลดจากในเครื่อง / โฟลเดอร์ต้นฉบับ:** [คลิกเปิดไฟล์ `dist/STeP-AI-Pilot-v0.2.0.zip`](dist/STeP-AI-Pilot-v0.2.0.zip)
-> - 🏢 **ดาวน์โหลดผ่าน Shared Drive ของอุทยานฯ:** ผ่านลิงก์ Google Drive องค์กรที่ทีม AI Champion แจ้งไว้
->
-> **เป้าหมาย 4 ขั้นตอน:** ดาวน์โหลด `STeP-AI-Pilot-v0.2.0.zip` → แตกไฟล์ (Extract All) → ดับเบิลคลิกติดตั้ง → เปิดโปรแกรม AI ที่คุณมี แล้วพิมพ์ถามงานได้ทันที!
-
-อ่านทางลัดสำหรับพนักงานฉบับสรุป 1 หน้าได้ที่ [START-HERE.md](START-HERE.md)
-
-### 🪟 สำหรับ Windows
-1. แตกไฟล์ `STeP-AI-Pilot-v0.2.0.zip`
-2. ดับเบิลคลิกที่ไฟล์ **`Install-STeP-AI.bat`**
-3. หากยังไม่มีโปรแกรม AI ให้เลือกสายฟรีหนึ่งตัว (Cursor หรือ OpenCode) หากมี ChatGPT หรือ Claude อยู่แล้ว ให้ใช้ตัวนั้น
-4. จะเลือกทีมหรือกด Enter เพื่อใช้แบบทุกคนเข้าถึงได้ก็ได้
-5. เปิดโปรแกรม AI ที่คุณใช้ แล้วเปิดโฟลเดอร์นี้ จากนั้นพิมพ์คุยงานภาษาไทยได้ทันที
-
-### 🍏 สำหรับ macOS
-1. แตกไฟล์ `STeP-AI-Pilot-v0.2.0.zip`
-2. ดับเบิลคลิกที่ไฟล์ **`Install-STeP-AI.command`**
-3. หากยังไม่มีโปรแกรม AI ให้เลือกสายฟรีหนึ่งตัว หากมีโปรแกรมที่มีสิทธิ์อยู่แล้ว ให้ใช้ตัวนั้น
-4. จะเลือกทีม (1–22) หรือกด Enter เพื่อใช้แบบทุกคนเข้าถึงได้ก็ได้
-5. เปิดโปรแกรม AI แล้วเปิดโฟลเดอร์นี้ จากนั้นพิมพ์คุยงานภาษาไทยได้ทันที
-
-> [!TIP]
-> **คำแนะนำสำหรับ macOS (Gatekeeper Tip):**  
-> หากเปิดครั้งแรกแล้ว macOS แจ้งเตือนเรื่องนักพัฒนาที่ไม่รู้จัก ให้คลิกขวาที่ไฟล์ `Install-STeP-AI.command` แล้วเลือก **Open (เปิด)** หรือไปที่ System Settings $\rightarrow$ Privacy & Security แล้วกด **Open Anyway**
-
-### 💬 การส่งข้อเสนอแนะ หรือของานเพิ่ม (สำหรับพนักงานทั่วไป)
-พนักงานสามารถส่งข้อเสนอแนะได้ **2 ทางง่ายๆ**:
-1. **คุยกับ AI ตามปกติในแชท (วิธีหลักอันดับ 1 — สะดวกที่สุด):**
-   - **เมื่อ AI ตอบไม่ถูก:** พิมพ์บอกในแชท: *"เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย"* $\rightarrow$ AI สรุปประเด็นแล้วถามยืนยันสั้นๆ เพื่อส่งต่อให้ทีมงาน
-   - **เมื่ออยากให้ช่วยงานเพิ่ม:** พิมพ์บอกในแชท: *"อยากให้ STeP AI ช่วยงานนี้..."* $\rightarrow$ AI จะถามรายละเอียด 3 ข้อสั้นๆ แล้วบันทึกให้ทันที
-2. **ดับเบิลคลิกปุ่มลัด `Feedback-STeP-AI` (เมื่อไม่ได้เปิด AI อยู่):**
-   - **Windows:** ดับเบิลคลิก **`Feedback-STeP-AI.bat`**
-   - **macOS:** ดับเบิลคลิก **`Feedback-STeP-AI.command`**
-   - มีเพียง 2 ตัวเลือกที่เข้าใจง่าย:
-     - `[1] AI ตอบไม่ถูก / อยากแจ้งปัญหา` (เปิดแบบฟอร์ม `FEEDBACK.md` ใน Notepad ทันที)
-     - `[2] อยากให้ AI ช่วยงานเพิ่ม` (เปิดแบบฟอร์ม `REQUEST_NEW_TASK.md` ใน Notepad ทันที)
-     - `[0] ปิด`
-
-### 🔄 การอัปเดตเมื่อมีทักษะและมาตรฐานใหม่
-- **Windows:** ดับเบิลคลิก **`Update-STeP-AI.bat`**
-- **macOS:** ดับเบิลคลิก **`Update-STeP-AI.command`**
-*(อ่านคู่มือพนักงานฉบับเต็มได้ที่ [docs/employee-guide.md](docs/employee-guide.md))*
+Authority เหล่านี้ระบุไว้ใน [`manifest/authority.yaml`](manifest/authority.yaml)
 
 ---
 
-## 💻 สำหรับ Developer และผู้ใช้งาน Command Line
+## เรื่องข้อมูลและความเป็นส่วนตัว
 
-```bash
-# 1. ถามงานภาษาไทยธรรมดา เพื่อให้ AI วิเคราะห์ Skill, SOP และระเบียบที่เกี่ยวข้อง
-step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย"
-step-ai ask "ช่วยตรวจใบเสร็จนี้ว่าเบิกจ่ายตามระเบียบ มช. ได้มั้ย"
+อย่าใส่ข้อมูลที่ไม่ควรส่งให้ AI เพียงเพราะมี Harness อยู่ใน Workspace
 
-# 2. ดูหรือเปลี่ยนทีมหลักประจำตัว (บันทึกไว้ใน ~/.step-ai/config.json)
-step-ai config
-step-ai config --team qs
+ก่อนใช้งานควรพิจารณาประเภทข้อมูลและนโยบายของเครื่องมือ AI ที่กำลังใช้เสมอ โดยเฉพาะ
 
-# 3. อัปเดตทักษะและ Router ล่าสุดในคลิกเดียว (รักษาคอนฟิกผู้ใช้เดิม)
-step-ai update
+- รหัสผ่านและ Token
+- เลขบัตรประชาชน
+- ข้อมูลเงินเดือน
+- ข้อมูลสุขภาพ
+- ข้อมูลส่วนบุคคลที่ไม่จำเป็น
+- ความลับทางการค้า
+- เอกสารที่มีข้อจำกัดในการเผยแพร่
 
-# 4. ติดตั้ง Skills เข้า Workspace ตามทีม หรือแบบ Universal Access (All)
-step-ai init --team qs --tool codex
-step-ai init --role all --tool claude
-
-# 5. ตรวจความพร้อมของระบบในโหมดพนักงาน
-step-ai doctor --employee
-
-# 6. ดูผัง 22 ทีม และ 5 Domain Clusters
-step-ai teams
-```
+`USER.md` ใช้เก็บบริบทการทำงานของผู้ใช้ภายใน Workspace และถูกตั้งให้ไม่ commit เข้า Git แต่ไม่ควรใช้เก็บ Password, Token หรือข้อมูลลับ
 
 ---
 
-## 🏛️ สถาปัตยกรรม 3 ชั้น (3-Layer Architecture with Progressive Disclosure)
+## โครงสร้างของ Repository
 
 ```text
-User Request / step-ai ask
-         ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: STeP Skill Router                                  │
-│ - สแกนบริบทราคาถูก (โฟลเดอร์, นามสกุลไฟล์, เจตนาภาษาไทย)   │
-│ - คัดกรองและนำทางตรงสู่ 22 ทีม และ 5 Domain Clusters        │
-│ - คำนวณความตรงกันด้วย 5-Factor Deterministic Scoring        │
-└─────────────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 2: Targeted Domain Skill                              │
-│ - โหลดเฉพาะ SKILL.md เดียวที่เกี่ยวข้อง (Installed ≠ Loaded) │
-│ - กำกับด้วย 3-Outcome Scope Guard (ALLOW / ESCALATE / BLOCK)│
-└─────────────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 3: Lazy References                                    │
-│ - เปิดอ่าน Rules, SOPs, Templates เฉพาะเมื่อจำเป็น          │
-└─────────────────────────────────────────────────────────────┘
+STeP-AI-Harness/
+├─ skills/          # วิธีทำงานสำหรับแต่ละประเภทงาน
+├─ rules/           # กติกากลางที่ต้องใช้ร่วมกัน
+├─ manifest/        # Teams, Skills, Processes, Authority และ Router
+├─ docs/            # คู่มือและบริบทองค์กร
+├─ src/             # CLI, Router และ Adapter
+├─ scripts/         # Validation และ Build
+├─ test/            # Automated tests
+├─ START-HERE.md    # คู่มือเริ่มต้นสำหรับพนักงาน
+└─ README.md
 ```
 
----
+โครงสร้าง Manifest ขององค์กรใช้ 6 มิติ:
 
-## 🏢 ผัง 22 ทีมของ STeP (5 Domain Clusters)
-
-ระบบรองรับการทำงานของ **22 ทีม** ภายใต้อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North) จัดหมวดหมู่เป็น 5 กลุ่มงานหลัก (อ่านฉบับเต็มได้ที่ [docs/teams.md](docs/teams.md)):
-
-1. **Governance, Operations & Quality (6 ทีม):** `GA` (บริหารทั่วไป), `AFP` (การเงิน/จัดซื้อ/TOR), `IASA` (ความร่วมมือสากล), `QS` (ระบบคุณภาพ ISO), `NMCO` (เครือข่าย อว.), `HD` (พัฒนาบุคลากร)
-2. **Incubation, Entrepreneurship & Strategy (5 ทีม):** `PITI` (บ่มเพาะเทคโนโลยี), `ISI` (บ่มเพาะ Startup), `EIC` (พัฒนาผู้ประกอบการ), `IMO` (บริหารนวัตกรรม), `SIT` (ยุทธศาสตร์และการเปลี่ยนแปลง)
-3. **Tech Transfer & Industry Collaboration (4 ทีม):** `Tech Spin` (Spin-off/สิทธิบัตร), `Tech Up` (ขยายขนาด Deep Tech), `LINC` (เชื่อมโยงชุมชนและโรงงาน), `PubSec` (โครงการภาครัฐ)
-4. **Market, Creative & Client (3 ทีม):** `CC` (งานสร้างสรรค์/Brief ออกแบบ), `MI` (นวัตกรรมตลาด/วิจัยสินค้า), `CRM` (ลูกค้าสัมพันธ์และคัดกรองบริการ)
-5. **Infrastructure, Labs & Pilot Plant (4 ทีม):** `IFU` (พื้นที่เช่า/อาคาร), `IQI` (วิศวกรรมโครงสร้างพื้นฐาน), `LES` (ห้องแล็บและเครื่องมือวิทยาศาสตร์), `FOODFABR` (โรงงานอาหารต้นแบบ)
-
----
-
-## 📌 STeP AI Harness คืออะไร?
-
-**STeP AI Harness** คือชุดโครงสร้างพื้นฐานและมาตรฐานกลางด้าน AI ประจำองค์กร ที่ถูกพัฒนาขึ้นเพื่อให้พนักงานทุกคนใน STeP สามารถใช้งาน AI Agents (เช่น **OpenAI Codex**, **Claude Code**, **Cursor IDE**) ได้อย่างมีประสิทธิภาพ ปลอดภัย และถูกต้องตามระเบียบของมหาวิทยาลัยเชียงใหม่และหน่วยงานราชการ
-
-> [!NOTE]
-> **นโยบายระยะทดลอง (Universal Access Model):**  
-> **"ยังไม่ต้องแบ่งทีม — ทุก Skill ทุกคนสามารถเข้าถึงได้ทันที"**  
-> พนักงานทุกคนสามารถดึงทักษะทั้ง 21 Skills และกฎระเบียบ 5 Rules ไปใช้งานในโฟลเดอร์งานของตนเองได้แบบ 100% ไม่มีข้อจำกัดด้านสังกัดทีม เพื่อสนับสนุนการทำงานร่วมกันแบบข้ามสายงาน (Cross-functional)
-
----
-
-## 💡 สำหรับ AI Admin: "STeP AI Harness" แตกต่างจาก "Skill ทั่วไป" อย่างไร?
-
-หลายคนอาจเข้าใจว่า Skill คือไฟล์ Prompt ธรรมดา แต่ในระดับองค์กร **Harness คือระบบปฏิบัติการที่คอยควบคุมและปกป้องคุณภาพงาน**:
-
-| ประเด็นเปรียบเทียบ | ❌ Skill ทั่วไปตามเน็ต / Prompt เดี่ยวๆ | ✅ STeP AI Harness (`@step-cmu/ai-harness`) |
-|---|---|---|
-| **ความน่าเชื่อถือ & คุณภาพ** | ใครเขียนก็ได้ มักเป็นคำสั่งกว้างๆ ขาดความเข้าใจบริบทองค์กร AI มักมั่วข้อมูล (Hallucination) | **Approved Skills**: ถอดบทเรียนจากงานจริงของ STeP ผ่านการตรวจสอบระเบียบสารบรรณ เกณฑ์จัดซื้อจัดจ้าง และระเบียบ มช. |
-| **ความปลอดภัย & ความลับ** | ไม่มีระบบควบคุม พนักงานอาจเผลอนำข้อมูลลับ, ร่าง TOR, ข้อมูลส่วนบุคคล (PDPA) หรืองบประมาณป้อนลง AI | **5 Enforced Rules**: ฝังเกณฑ์ควบคุม (Guardrails) ห้าม AI ดึงหรือเผยแพร่ความลับเด็ดขาด และบังคับจำแนกชั้นข้อมูล |
-| **การอนุมัติ (Governance)** | พนักงานอาจปล่อยให้ AI ส่งอีเมล หรือสรุปเอกสารแล้วนำไปใช้ทันทีโดยไม่มีใครตรวจ | **Human-in-the-Loop**: กำหนดชัดเจนว่า AI เป็นเพียง "ผู้ช่วยร่าง" (Drafter) อำนาจตัดสินใจและอนุมัติสุดท้ายเป็นของมนุษย์ 100% |
-| **การรองรับ AI หลายค่าย** | มักผูกติดกับแอปใดแอปหนึ่ง พอเปลี่ยนเครื่องมือต้องคัดลอก Prompt ใหม่ | **Multi-Agent Agnostic**: มี Adapter ในตัว สร้าง Config ให้พร้อมใช้ทั้ง **Codex**, **Claude**, และ **Cursor** จากมาตรฐานเดียวกัน |
-| **การแจกจ่าย & เวอร์ชัน** | ส่งต่อผ่านแชต/ไดรฟ์ ใครอัปเดตอะไรไม่รู้รุ่น พนักงานเสี่ยงเผลอเขียนทับงานเดิม | **CLI Distribution & Safe Sync**: ติดตั้งและอัปเดตผ่านคำสั่ง `step-ai` พร้อมระบบ **Snapshot & Rollback** ไม่เขียนทับไฟล์งานของพนักงาน |
-| **การเข้าถึงของบุคลากร** | ต้องมานั่งคัดเลือกว่าใครอยู่ฝ่ายไหน แผนกไหนใช้ได้บ้าง | **Universal Access**: เปิดให้ทุกคนเข้าถึงได้ทุกทักษะทันทีอย่างไร้รอยต่อ |
-
----
-
-## 🧩 โครงสร้าง 3 ส่วนหลักของ Harness
-
-```mermaid
-graph LR
-    subgraph "1. Approved Skills (21 ทักษะ)"
-        S0["Layer 1 Router"]
-        S1["งานเอกสาร & บริหารโครงการ"]
-        S2["งานสื่อสาร & ออกแบบ"]
-        S3["งานเทคนิค & ระบบ"]
-    end
-
-    subgraph "2. Mandatory Rules (5 กฎเหล็ก)"
-        R1["Data Classification"]
-        R2["Human Approval"]
-        R3["Secret Safety"]
-        R4["STEP Writing Standard"]
-        R5["Standard Naming"]
-    end
-
-    subgraph "3. CLI & Engine (step-ai)"
-        E1["Universal Distribution"]
-        E2["Adapters (Codex/Claude/Cursor)"]
-        E3["Snapshot & Rollback"]
-    end
-
-    Skills --> CLI
-    Rules --> CLI
-    CLI --> Workspaces["โฟลเดอร์โปรเจกต์งานของพนักงาน"]
-```
-
----
-
-## 📚 รายการ Approved Skills (26 ทักษะที่ทุกคนเข้าถึงได้)
-
-### 0. ทักษะนำทางอัจฉริยะ (Layer 1 Router)
-- **`step-router`**: วิเคราะห์บริบทงาน เจตนาภาษาไทย และเชื่อมโยงสู่ 22 ทีม เพื่อโหลดเฉพาะ Skill ที่ถูกต้องโดยอัตโนมัติ (Installed ≠ Loaded)
-
-### 1. หมวดงานเอกสาร ราชการ และบริหารโครงการ (Common & PM)
-- **`browser-form-assistant`**: ผู้ช่วยเปิดเว็บ สำรวจแบบฟอร์ม และกรอกข้อมูลฉบับร่างแบบมีมนุษย์กำกับ (Fill -> Review -> Submit)
-- **`receipt-audit`**: ตรวจสอบใบเสร็จรับเงิน ใบกำกับภาษีตามกฎหมาย พร้อมวินิจฉัยข้ามบริบทกับใบขออนุมัติและระเบียบ มช.
-- **`thai-official-documents`**: ร่างและตรวจสอบหนังสือราชการ บันทึกข้อความ ตามระเบียบสารบรรณ
-- **`tor-government-writing`**: การร่างขอบเขตของงาน (TOR) ตามมาตรฐานภาครัฐ
-- **`tor-review`**: Checklist ตรวจสอบความถูกต้องและจุดเสี่ยงของเอกสาร TOR
-- **`meeting-summary`**: แปลงบันทึกการประชุมให้เป็น Action Items พร้อมผู้รับผิดชอบและกำหนดส่งที่ชัดเจน
-- **`project-plan`**: จัดทำแผนการดำเนินงาน งวดงาน Milestone, เส้นทางวิกฤต Critical Path, RICE Scoring และ Risk Register
-- **`startup-discovery`**: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพ ด้วย Value Proposition Canvas (VPC) และ The Mom Test
-- **`executive-status-update`**: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหาร ด้วย SBNR Framework และสัญญาณไฟจราจร Traffic-Light
-- **`project-pre-mortem`**: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาโครงการ (Tiger, Paper Tiger, Elephant in the room)
-- **`innovation-okr-mapping`**: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม
-- **`team-weekly-review`**: โครงสร้างการทบทวนงานประจำสัปดาห์ของทีม
-- **`sop-authoring`**: การจัดทำคู่มือมาตรฐานการปฏิบัติงาน (Standard Operating Procedure)
-- **`customer-support-faq-triage`**: การคัดแยกข้อซักถามและแนวทางตอบคำถามผู้รับบริการ
-
-### 2. หมวดงานสื่อสาร อัตลักษณ์ และงานสร้างสรรค์ (Common & Creative)
-- **`step-brand`**: แนวทางและข้อกำหนดอัตลักษณ์ของแบรนด์ STeP
-- **`step-image-prompt`**: เครื่องมือช่วยสร้าง Prompt ภาพ AI สไตล์ 2D Vector & Infographic ล็อกสีเหลือง STeP และค่านิยม Simple Service Sincere
-- **`step-writing`**: สำนวนภาษา โทนเสียง (Tone of Voice) และการใช้คำที่เป็นทางการของ STeP
-- **`brand-tone-of-voice`**: การปรับระดับภาษาและน้ำเสียงให้เหมาะสมกับผู้รับสารแต่ละกลุ่ม
-- **`designer-brief`**: การเขียน Brief สั่งงานออกแบบ ป้าย กราฟิก และสื่อผลิตจริง
-- **`event-concept`**: การพัฒนาแนวคิดงานกิจกรรม นิทรรศการ และรูปแบบการจัดบูธ
-- **`presentation-design`**: โครงสร้างและออกแบบสไลด์ Interactive 16:9 HTML พร้อมโหมดแก้ไขข้อความในเบราว์เซอร์และส่งออก PDF
-
-### 3. หมวดความปลอดภัยและการพัฒนาดิจิทัล (Common & Dev)
-- **`data-privacy-compliance`**: แนวทางการปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)
-- **`coding-git-workflow`**: มาตรฐานการพัฒนาซอฟต์แวร์และการเขียนโค้ด
-- **`github-workflow`**: ขั้นตอนการใช้ GitHub และการรีวิว Pull Request อย่างปลอดภัย
-- **`vercel-deploy`**: แนวทางการ Deploy ระบบเว็บแอปพลิเคชันอย่างเป็นขั้นตอน
-
----
-
-## ⚡ คู่มือเริ่มใช้งานด่วน (Quick Start ใน 3 ขั้นตอน)
-
-### ขั้นตอนที่ 1: ตั้งค่าสิทธิ์เข้าถึง Private Package (ทำครั้งแรกครั้งเดียว)
-แพ็กเกจจัดเก็บอยู่บน GitHub Packages ของ STeP ให้สร้าง [GitHub Personal Access Token](https://github.com/settings/tokens) (เลือกสิทธิ์ `read:packages`) แล้วรันคำสั่งใน Terminal:
-
-**สำหรับ Windows (PowerShell):**
-```powershell
-Add-Content "$HOME\.npmrc" "@step-cmu:registry=https://npm.pkg.github.com"
-Add-Content "$HOME\.npmrc" "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT"
-```
-
-**สำหรับ macOS / Linux (Bash):**
-```bash
-echo "@step-cmu:registry=https://npm.pkg.github.com" >> ~/.npmrc
-echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT" >> ~/.npmrc
-```
-*(แทนที่ `YOUR_GITHUB_PAT` ด้วย Token ของคุณ)*
-
----
-
-### ขั้นตอนที่ 2: ติดตั้งเครื่องมือ `step-ai`
-```bash
-npm install --global @step-cmu/ai-harness
-```
-ตรวจความพร้อมของระบบ:
-```bash
-step-ai doctor
-```
-
----
-
-### ขั้นตอนที่ 3: ติดตั้ง Skills เข้าโฟลเดอร์งาน (`step-ai init`)
-เปิด Terminal ในโฟลเดอร์โปรเจกต์งานที่คุณต้องการใช้งาน AI แล้วรันคำสั่ง:
-
-```bash
-# ค่าเริ่มต้น: ติดตั้งทุก Skill สำหรับ OpenAI Codex Desktop (Universal Access)
-step-ai init
-
-# หรือระบุเครื่องมือที่ต้องการ:
-step-ai init --tool codex       # สำหรับ OpenAI Codex Desktop
-step-ai init --tool claude      # สำหรับ Claude Code หรือ Claude Desktop
-step-ai init --tool cursor      # สำหรับ Cursor IDE
-step-ai init --tool all         # ติดตั้ง Config ให้ครบทุกเครื่องมือพร้อมกัน
-```
-
-> [!TIP]
-> **ระบบจะสร้างไฟล์และโฟลเดอร์ให้คุณอัตโนมัติ:**
-> - โฟลเดอร์ `skills/` (ทักษะทั้งหมด 21 ทักษะ รวมถึง Layer 1 `step-router`)
-> - โฟลเดอร์ `rules/` (กฎควบคุมความปลอดภัย 5 ข้อ)
-> - ไฟล์คำสั่ง Agent: `CODEX_INSTRUCTIONS.md`, `CLAUDE.md`, หรือ `.cursorrules` ตามเครื่องมือที่เลือก
-> 
-> หลังจากนั้น เพียงเปิดโฟลเดอร์ในโปรแกรม AI ที่คุณเลือก ก็สั่งงานได้ทันที!
-
-เมื่อคุณเปิดโปรเจกต์ใหม่ หรือมีโฟลเดอร์งานที่ต้องการให้ AI ช่วยทำงาน คุณสามารถเลือกติดตั้งตาม **22 ทีมของ STeP**, เลือกตาม **Role กลาง**, หรือใช้ค่าเริ่มต้น **Universal Access**:
-
-```bash
-# แบบที่ 1: Universal Access (ค่าเริ่มต้น - ติดตั้งทุก Skill ให้ทุกคนเข้าถึงได้)
-step-ai init
-
-# แบบที่ 2: ติดตั้งเฉพาะกลุ่มทักษะตาม 22 ทีม (แนะนำ):
-step-ai init --team qs --tool codex
-step-ai init --team afp --tool cursor
-step-ai init --team cc --tool claude
-
-# แบบที่ 3: ติดตั้งตาม Role กลาง:
-step-ai init --role developer --tool claude
-step-ai init --role pm --tool codex
-
-# เรียกดูรายชื่อ 22 ทีมทั้งหมด:
-step-ai teams
-```
-
-#### 1. การเลือกตามทีม (`--team` — ครอบคลุม 22 ทีม):
-ดูรหัสทีมได้จาก `step-ai teams` หรือตัวอย่างยอดนิยม:
-- `--team qs` : ระบบคุณภาพ ISO, Audit, SOP
-- `--team afp` : บัญชี การเงิน ตรวจ TOR และจัดซื้อจัดจ้าง
-- `--team cc` : ออกแบบสื่อ, Brief ออกแบบ, อัตลักษณ์แบรนด์
-- `--team mi` : นวัตกรรมตลาด, วิเคราะห์จุดขาย, ทดสอบสินค้า
-- `--team piti` : บ่มเพาะผู้ประกอบการและเทคโนโลยี
-- `--team linc` : เชื่อมโยงอุตสาหกรรมและชุมชน
-- `--team sit` : ยุทธศาสตร์องค์กรและการเปลี่ยนแปลงระบบ
-
-#### 2. บทบาทที่เลือกได้ (`--role`):
-
-| Role ID | เหมาะสำหรับงาน | สิ่งที่ได้รับ |
-|---|---|---|
-| `all` | พนักงานทุกคน (ค่าเริ่มต้น - Universal Access) | Approved Skills ครบทุกทักษะ (21 ทักษะ) |
-| `pm` | ผู้จัดการโครงการ, ประสานงาน, จัดซื้อจัดจ้าง | Skills กลาง + แผนโครงการ, ตรวจ TOR, ร่าง TOR ราชการ, สรุปประชุม |
-| `developer` | โปรแกรมเมอร์, วิศวกรระบบ, DevOps | Skills กลาง + Git Workflow, GitHub Guidelines, การ Deploy Vercel |
-| `creative` | งานออกแบบ, นิทรรศการ, งานสื่อสาร | Skills กลาง + Designer Brief, แนวคิดงาน Event, การออกแบบ Slide |
-| `ai-admin` | ผู้ดูแลระบบและธรรมาภิบาล AI ของทีม | ได้รับ Skills และความรู้ครบทุกหมวดหมู่ |
-
-#### 3. เครื่องมือที่เลือกได้ (`--tool` — ครอบคลุม 8 ค่ายใน 3 สาย):
-
-| Tool Name | หมวดหมู่ (Tier) | เหมาะสำหรับ | ไฟล์คำสั่งที่ระบบสร้างให้ |
-|---|---|---|---|
-| `cursor` | สายฟรีมีโควตา | Cursor (เปิดโฟลเดอร์แล้วคุยในแชทได้) | `.cursorrules`, `AGENTS.md` |
-| `opencode` | สายฟรีมีโควตา | OpenCode AI Assistant [แนะนำสำหรับเริ่มต้น] | `OPENCODE.md`, `AGENTS.md` |
-| `windsurf` | สายฟรีมีโควตา | Windsurf AI IDE (Codeium Cascade) | `.windsurfrules`, `AGENTS.md` |
-| `codex` | สายฟรีมีโควตา | OpenAI Codex Desktop / VS Code | `CODEX_INSTRUCTIONS.md`, `AGENTS.md` |
-| `claude` | สายจ่ายตังค์ | Claude Code, Claude Desktop, Anthropic Projects | `CLAUDE.md`, `AGENTS.md` |
-| `chatgpt` | สายจ่ายตังค์ | ChatGPT Desktop, OpenAI Plus/Team/Enterprise | `CHATGPT.md`, `AGENTS.md` |
-| `antigravity` / `gemini` | สายจ่ายตังค์ | Google Antigravity & Spark, Gemini Enterprise | `GEMINI.md`, `AGENTS.md` |
-| `hermes` | สาย Local AI | Hermes Agent (Nous Research / Local AI) | `HERMES.md`, `AGENTS.md` |
-| `all` | ครอบคลุมทุกสาย | พนักงานที่สลับใช้หลายเครื่องมือในโฟลเดอร์เดียวกัน | สร้างครบทั้ง 8 ค่ายพร้อมกัน (9 ไฟล์) |
-
-#### ตัวอย่างคำสั่งใช้งานจริง:
-
-```bash
-# กรณีที่ 1: พนักงานทีมระบบคุณภาพ (QS) ใช้ Claude Code
-step-ai init --team qs --tool claude
-
-# กรณีที่ 2: พนักงานฝ่ายจัดซื้อ/การเงิน (AFP) ใช้ Cursor
-step-ai init --team afp --tool cursor
-
-# กรณีที่ 3: ทีมนวัตกรรมตลาด (MI) หรือ CC ใช้ Codex
-step-ai init --team mi --tool codex
-
-# กรณีที่ 4: สายพัฒนาซอฟต์แวร์ ใช้ Claude Code
-step-ai init --role developer --tool claude
-
-# กรณีที่ 5: ต้องการรองรับทุก AI Tool ในโปรเจกต์เดียว
-step-ai init --team qs --tool all
-
-# กรณีที่ 6: ดูตัวอย่างไฟล์ก่อนติดตั้งจริง (Dry-run)
-step-ai init --team qs --tool claude --dry-run
-```
-
----
-
-### ขั้นตอนที่ 4: วิธีทำงานร่วมกับ AI และคำสั่งลัด `/ask_step`
-
-เมื่อรัน `step-ai init` สำเร็จ โฟลเดอร์งานของคุณจะมีโฟลเดอร์ `skills/` (รวมถึง Layer 1 `step-router`), `rules/` และไฟล์คำสั่งสำหรับ Agent โดยอัตโนมัติ
-
-#### คำสั่งลัด `/ask_step` (Progressive Routing)
-คุณสามารถพิมพ์สั่งงานด้วยรูปแบบคำสั่งลัด `/ask_step` เพื่อให้ Agent สแกนบริบทและดึงเฉพาะ Skill ที่ถูกต้องมาทำงาน โดยไม่เปลือง Token:
-
-> **ตัวอย่าง Prompt:**
-> - `/ask_step ช่วยตรวจ TOR ไฟล์นี้ก่อนส่งจัดซื้อ`
-> - `/ask_step ช่วยตรวจใบเสร็จนี้ว่าเบิกจ่ายตามระเบียบ มช. ได้มั้ย`
-> - `/ask_step ช่วยสรุปบันทึกการประชุมเมื่อวานนี้แยก Action item`
-> - `/ask_step ช่วยทำ Brief สำหรับออกแบบโปสเตอร์งานสัมมนา`
-
-Agent จะตอบแท็กสั้นๆ เพื่อยืนยันการเลือกและเข้าสู่ขั้นตอนการทำงานทันที:
 ```text
-[STeP Router] Team: AFP / QS | Intent: Review
-✓ Active Skill: tor-review
-✓ Scope Guard: Active (ตรวจขอบเขต/เกณฑ์ตรวจรับ ไม่ตัดสินผลทางกฎหมาย)
+WHO        → Teams / Roles
+WHERE      → Organizational context
+WHAT       → Skills
+WHY        → Services
+HOW        → Processes
+AUTHORITY  → สิ่งที่ AI ทำได้ และเรื่องที่ต้องให้คนตัดสิน
 ```
 
----
-
-## 🧠 หน่วยความจำผู้ใช้เฉพาะตัว (Workspace User Memory: `USER.md`) และการถามกลับ (Active Clarification)
-
-เพื่อยกระดับความเข้าใจระหว่างพนักงานกับ AI ระบบรองรับกลไก 2 ส่วนสำคัญ:
-
-### 1. Workspace-Private User Memory (`USER.md`)
-เมื่อรัน `step-ai init` หรือใช้งานในโฟลเดอร์งาน ระบบจะสร้างไฟล์ **`USER.md`** ประจำ Workspace เพื่อเก็บข้อมูลบริบทส่วนบุคคล (ตามแนวคิด **Hermes Agent**):
-- **ข้อมูลที่จัดเก็บ:** ชื่อเรียก, ทีมหลัก (Primary Team), บทบาทหน้าที่, รูปแบบการสื่อสารที่ชอบ, โครงการที่กำลังรับผิดชอบ และทักษะที่เรียกใช้บ่อย
-- **ความเป็นส่วนตัว 100% (Strictly Gitignored):** ไฟล์ `USER.md` อยู่ใน `.gitignore` เสมอ **ไม่มีการเผยแพร่หรือ Commit ออกสู่ภายนอก**
-- **การอัปเดตอัตโนมัติ (Continuous Memory Updates):** เมื่อพนักงานคุยกับ AI ในแชทและบอกข้อมูลใหม่ (เช่น สังกัดทีมไหน ชอบผลลัพธ์แบบใด) AI จะปรับปรุง `USER.md` ในเบื้องหลังให้โดยอัตโนมัติ
-- **Zero Secret Footprint:** มีกฎความปลอดภัยห้ามบันทึกรหัสผ่าน Token หรือข้อมูลส่วนบุคคลจริง (PDPA) ลงในหน่วยความจำเด็ดขาด
-
-### 2. การถามกลับเมื่อคำขอกว้างหรือคลุมเครือ (Active Clarification Protocol)
-เมื่อพนักงานพิมพ์คำถามที่กว้าง ขาดตัวแปร หรือเข้าข่ายหลายทักษะ (เช่น *"ช่วยดูเอกสารนี้หน่อย"*, *"ขอไฟล์"*, *"ช่วยสรุปให้ที"*):
-- **ห้ามเดาสุ่ม (Never guess blindly):** AI และคำสั่ง `step-ai ask` จะไม่เลือกทักษะแบบเดาสุ่มเมื่อความมั่นใจต่ำ
-- **ถามกลับพร้อมเสนอ 2–3 ทางเลือก (Hypotheses):** AI จะถามกลับด้วยภาษาไทยสุภาพและกระชับ พร้อมเสนอทักษะที่เข้าข่ายเพื่อให้พนักงานเลือกได้ทันที
-- **นำ Memory มาใช้:** หากใน `USER.md` มีระบุทีม (เช่น ทีม AFP) ระบบจะดึงบริบทนี้มาช่วยคัดกรองทักษะ เช่น แนะนำ `tor-review` ได้อย่างแม่นยำยิ่งขึ้น
+ไม่ได้ตั้งใจสร้าง Workflow Engine ครอบทุกอย่าง งานใหม่ควรเริ่มจาก Skill หรือ Process ที่จำเป็นจริงก่อน
 
 ---
 
-## 🛠️ คำสั่งที่ใช้งานบ่อยสำหรับทุกคน
+## สำหรับ Maintainer
 
-| คำสั่ง | หน้าที่การทำงาน |
-|---|---|
-| `step-ai ask "<คำถาม>"` | ถามงานภาษาไทยธรรมดา เพื่อให้ AI วิเคราะห์ทักษะและระเบียบที่เกี่ยวข้องทันที |
-| `step-ai config` | ดูหรือเปลี่ยนทีมประจำตัวของคุณ (เช่น `step-ai config --team qs`) |
-| `step-ai update` | อัปเดตทักษะและ Router ล่าสุดจากส่วนกลางในคลิกเดียว |
-| `step-ai init` | ติดตั้ง Approved Skills และ Rules เข้าโฟลเดอร์งานปัจจุบัน |
-| `step-ai teams` | แสดงรายชื่อ 22 ทีมและ 5 กลุ่มงานทั้งหมดของ STeP |
-| `step-ai doctor` | ตรวจสอบความพร้อมของระบบและการเชื่อมต่อสิทธิ์ (เพิ่ม `--employee` เพื่อดูโหมดเข้าใจง่าย) |
-| `step-ai status` | ตรวจสอบว่าไฟล์ในโฟลเดอร์สมบูรณ์ หรือมีไฟล์ไหนที่คุณปรับแก้เอง |
-| `step-ai sync` | ดึง Skills เวอร์ชันล่าสุดขององค์กรมาอัปเดต (ปลอดภัย: มีระบบสำรองข้อมูล และ**ไม่เขียนทับงานเดิม**) |
-| `step-ai rollback` | ย้อนกลับโฟลเดอร์ไปยังเวอร์ชันก่อนหน้า หากอัปเดตแล้วเกิดข้อผิดพลาด |
-
----
-
-## 🔄 กระบวนการเสนอแนะปรับปรุง Skill (โดยไม่ต้องใช้ Git)
-
-พนักงานทุกคนสามารถช่วยให้ AI ขององค์กรเก่งขึ้นและฉลาดขึ้นได้ผ่านขั้นตอนง่ายๆ 4 ขั้น:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Staff as พนักงานผู้ใช้งาน
-    participant Form as ช่องทางรับเรื่อง (Form/Portal)
-    participant Lead as Knowledge Owner / ผู้เชี่ยวชาญ
-    participant Admin as AI Admin (ผู้ดูแลระบบกลาง)
-
-    Staff->>Form: แจ้งปัญหา หรือส่งตัวอย่างงานจริงที่ถูกต้อง
-    Form->>Lead: คัดกรองและยืนยันความถูกต้องของข้อมูล
-    Lead->>Admin: ส่งแนวทางที่ปรับปรุงแล้ว
-    Admin->>Admin: ทดสอบและปล่อยเวอร์ชันใหม่ (@step-cmu/ai-harness)
-    Admin-->>Staff: แจ้งพนักงานให้รัน `step-ai sync` เพื่อรับทักษะใหม่
-```
-
-**สิ่งที่พนักงานต้องระบุเมื่อส่งข้อเสนอ:**
-1. **งานที่กำลังทำ:** (เช่น กำลังร่างหนังสือขออนุมัติ หรือตรวจเอกสาร TOR)
-2. **สิ่งที่พบ:** (เช่น AI ตอบภาษาไม่เป็นทางการ หรือใช้ฟอนต์ผิดระเบียบ)
-3. **สิ่งที่ควรจะเป็น / ตัวอย่างงานที่ดี:** (แนบไฟล์ตัวอย่างงานที่เคยผ่านการอนุมัติจริง)
-
----
-
-## 🔒 กฎเหล็กด้านความปลอดภัย (Mandatory Safety Rules)
-
-1. **Human-in-the-loop**: ผลลัพธ์จาก AI เป็นเพียงร่างเริ่มต้น เจ้าของงานที่เป็นมนุษย์ต้องอ่าน ตรวจทาน และอนุมัติด้วยตนเองเสมอ
-2. **ห้ามป้อนข้อมูลความลับ**: ห้ามกรอกเลขบัตรประชาชน ข้อมูลเงินเดือน รหัสผ่าน หรือสัญญาที่ยังไม่ได้ลงนามลงใน Prompt
-3. **ยึดความจริง (No Hallucination)**: หากข้อมูลต้นฉบับไม่เพียงพอ AI จะต้องแจ้งว่า "ไม่มีข้อมูลยืนยัน" ห้ามคาดเดาหรือแต่งข้อมูลขึ้นมาเอง
-
----
-
-## 👥 สำหรับผู้ร่วมพัฒนา Harness (Developer / Maintainer)
+หลังแก้ Skill, Rule หรือ Manifest ควรรันอย่างน้อย:
 
 ```bash
-# 1. ตรวจสอบความถูกต้องและสแกน Secret ในคลัง
 python scripts/validate_repo.py
-
-# 2. รันชุดทดสอบความถูกต้องอัตโนมัติ 81 เคส (CLI, Router, 30+ Employee Queries, Installer, User Memory)
-npm test
-
-# 3. อัปเดตไฟล์ตัวติดตั้ง Zero-Terminal (Windows .ps1 และ macOS .sh)
-python scripts/update_installers.py
-
-# 4. อัปเดตสคริปต์ Feedback (Windows .ps1 และ macOS .sh)
-python scripts/generate_feedback_helpers.py
-
-# 5. บิลด์ไฟล์แจกจ่าย Pilot ZIP (STeP-AI-Pilot-v0.2.0.zip)
 python scripts/build_pilot_bundle.py
-
-# 6. เปิดโหมดผู้ดูแลระบบ (Champion / Admin Mode)
-step-ai feedback --admin
+npm test
+npm pack --dry-run
 ```
+
+GitHub Actions จะรัน validation และ test อีกครั้งเมื่อเปิด Pull Request หรือมีการเปลี่ยนแปลงบน `main`
+
+หลักที่ใช้ในการเพิ่ม Skill ใหม่:
+
+1. ต้องตอบปัญหางานจริง
+2. ต้องไม่ซ้ำกับ Skill ที่มีอยู่
+3. ระบุ Owner ให้ชัด
+4. ระบุ Human Review / Authority เมื่อเกี่ยวข้อง
+5. เขียนให้พนักงานเข้าใจได้ ไม่ใช่เขียนเพื่อ AI อย่างเดียว
+6. มีตัวอย่างหรือ Regression Test สำหรับ Router เมื่อมีโอกาสชนกับ Skill อื่น
+
+---
+
+## การปรับปรุงจากการใช้งานจริง
+
+ถ้า AI ตอบไม่ถูก ไม่จำเป็นต้องรู้ Git หรือเปิด Pull Request
+
+พนักงานสามารถบอกในแชทได้ตรง ๆ เช่น
+
+> เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย
+
+หรือ
+
+> อยากให้ STeP AI ช่วยงานแบบนี้เพิ่ม
+
+จุดสำคัญคือส่ง **ตัวอย่างงานจริงที่ถูกต้อง** มาด้วย เพราะตัวอย่างจากผู้ทำงานจริงมีประโยชน์ต่อการปรับ Skill มากกว่าการเพิ่ม Prompt ที่ยาวขึ้น
+
+รายละเอียดดูที่ [docs/employee-guide.md](docs/employee-guide.md)
+
+---
+
+## สถานะโครงการ
+
+STeP AI Harness ยังเป็น **Pilot**
+
+โครงสร้าง Skills, Router และ Workflow จะเปลี่ยนตามผลทดลองใช้งานของพนักงาน สิ่งที่อยู่ใน repository จึงไม่ควรถูกมองว่าเป็นระเบียบหรือนโยบายฉบับใหม่ขององค์กรโดยอัตโนมัติ
+
+เป้าหมายช่วงนี้คือทำให้ระบบ
+
+- ใช้งานง่ายกับคนที่ไม่ได้ทำงานด้าน AI
+- ช่วยงานจริงได้
+- ไม่เพิ่มขั้นตอนโดยไม่จำเป็น
+- รู้ว่าเมื่อไรควรหยุดและให้คนตัดสิน
+- ปรับปรุงได้จาก feedback ของทั้ง 22 ทีม
+
+ถ้าเริ่มใช้งานครั้งแรก ให้เริ่มจาก [START-HERE.md](START-HERE.md)
