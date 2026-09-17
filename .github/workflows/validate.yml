@@ -21,8 +21,9 @@ jobs:
           node-version: '20'
       - name: Validate skills, scan secrets, and verify package whitelist
         run: python3 scripts/validate_repo.py
+      - name: Build pilot distribution bundle
+        run: python3 scripts/build_pilot_bundle.py
       - name: Run CLI and module unit tests
         run: npm test
       - name: Verify package tarball contents
         run: npm pack --dry-run
-
