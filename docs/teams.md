@@ -35,11 +35,11 @@
 
 | ทีม | ชื่อเต็มภาษาไทย / อังกฤษ | หน้าที่หลักและขอบเขตบริการ | ทักษะ AI ที่เกี่ยวข้อง |
 |---|---|---|---|
-| **PITI** | **บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี**<br>Platform for Innovation & Technology Incubation | บ่มเพาะผู้ประกอบการฐานนวัตกรรมและประเมินโอกาสความเป็นไปได้เบื้องต้น | `project-plan`, `presentation-design` |
-| **ISI** | **บ่มเพาะ Startup นวัตกรรม**<br>Innovative Startup Incubation | ให้คำปรึกษา Mentoring แก่ Startup และติดตามแผนการทดลองธุรกิจ | `project-plan`, `meeting-summary` |
-| **EIC** | **การเป็นผู้ประกอบการและนวัตกรรม**<br>Entrepreneurship & Innovation Center | ออกแบบหลักสูตร เวิร์กช็อป และกิจกรรมบ่มเพาะทักษะผู้ประกอบการ | `event-concept`, `presentation-design` |
-| **IMO** | **บริหารจัดการนวัตกรรม**<br>Innovation Management Office | จัดกลุ่มพอร์ตโฟลิโอโครงการนวัตกรรมและวิเคราะห์ข้อมูลเพื่อการตัดสินใจ | `project-plan`, `presentation-design` |
-| **SIT** | **ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง**<br>Strategy, Initiatives & Transformation | ขับเคลื่อนยุทธศาสตร์องค์กร โครงการเปลี่ยนแปลงระบบ และติดตามตัวชี้วัด | `team-weekly-review`, `project-plan`, `meeting-summary` |
+| **PITI** | **บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี**<br>Platform for Innovation & Technology Incubation | บ่มเพาะผู้ประกอบการฐานนวัตกรรมและประเมินโอกาสความเป็นไปได้เบื้องต้น | `startup-discovery`, `project-plan`, `presentation-design` |
+| **ISI** | **บ่มเพาะ Startup นวัตกรรม**<br>Innovative Startup Incubation | ให้คำปรึกษา Mentoring แก่ Startup และติดตามแผนการทดลองธุรกิจ | `startup-discovery`, `project-plan`, `meeting-summary` |
+| **EIC** | **การเป็นผู้ประกอบการและนวัตกรรม**<br>Entrepreneurship & Innovation Center | ออกแบบหลักสูตร เวิร์กช็อป และกิจกรรมบ่มเพาะทักษะผู้ประกอบการ | `startup-discovery`, `event-concept`, `presentation-design` |
+| **IMO** | **บริหารจัดการนวัตกรรม**<br>Innovation Management Office | จัดกลุ่มพอร์ตโฟลิโอโครงการนวัตกรรมและวิเคราะห์ข้อมูลเพื่อการตัดสินใจ | `project-plan`, `executive-status-update`, `presentation-design` |
+| **SIT** | **ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง**<br>Strategy, Initiatives & Transformation | ขับเคลื่อนยุทธศาสตร์องค์กร โครงการเปลี่ยนแปลงระบบ และติดตามตัวชี้วัด | `team-weekly-review`, `executive-status-update`, `innovation-okr-mapping`, `project-plan`, `meeting-summary` |
 
 ---
 
@@ -48,9 +48,9 @@
 | ทีม | ชื่อเต็มภาษาไทย / อังกฤษ | หน้าที่หลักและขอบเขตบริการ | ทักษะ AI ที่เกี่ยวข้อง |
 |---|---|---|---|
 | **Tech Spin** | **ถ่ายทอดเทคโนโลยีและบริษัท Spin-off**<br>Technology Spin-off & Transfer | สัญญาอนุญาตใช้สิทธิ์ (Licensing) จัดตั้ง Spin-off และจับคู่เทคโนโลยีกับเอกชน | `project-plan`, `presentation-design`, `step-writing` |
-| **Tech Up** | **เทคโนโลยีเชิงลึกและการขยายระดับการผลิต**<br>Deep Tech Scale-Up | ประเมินความพร้อมของต้นแบบ (TRL) และเตรียมการทดสอบระดับกึ่งอุตสาหกรรม | `project-plan`, `tor-review` |
+| **Tech Up** | **เทคโนโลยีเชิงลึกและการขยายระดับการผลิต**<br>Deep Tech Scale-Up | ประเมินความพร้อมของต้นแบบ (TRL) และเตรียมการทดสอบระดับกึ่งอุตสาหกรรม | `project-plan`, `project-pre-mortem`, `tor-review` |
 | **LINC** | **ความร่วมมือท้องถิ่นและอุตสาหกรรม**<br>Local & Industrial Collaboration | สกัดโจทย์จริงจากการลงพื้นที่ชุมชนและโรงงาน เพื่อจับคู่ผู้เชี่ยวชาญ | `meeting-summary`, `project-plan` |
-| **PubSec** | **โครงการความร่วมมือภาครัฐ**<br>Public Sector Projects | ออกแบบและบริหารโครงการเชิงพื้นที่ร่วมกับหน่วยงานภาครัฐและแหล่งทุน | `tor-review`, `project-plan`, `tor-government-writing` |
+| **PubSec** | **โครงการความร่วมมือภาครัฐ**<br>Public Sector Projects | ออกแบบและบริหารโครงการเชิงพื้นที่ร่วมกับหน่วยงานภาครัฐและแหล่งทุน | `tor-review`, `project-plan`, `project-pre-mortem`, `tor-government-writing` |
 
 ---
 
@@ -58,7 +58,7 @@
 
 | ทีม | ชื่อเต็มภาษาไทย / อังกฤษ | หน้าที่หลักและขอบเขตบริการ | ทักษะ AI ที่เกี่ยวข้อง |
 |---|---|---|---|
-| **CC** | **งานสร้างสรรค์และการสื่อสาร**<br>Creative & Communication | ทำ Creative Brief ออกแบบสื่อ สิ่งพิมพ์ นิทรรศการ และกำกับแบรนด์ CI | `designer-brief`, `event-concept`, `presentation-design`, `brand-tone-of-voice`, `step-brand` |
+| **CC** | **งานสร้างสรรค์และการสื่อสาร**<br>Creative & Communication | ทำ Creative Brief ออกแบบสื่อ สิ่งพิมพ์ นิทรรศการ และกำกับแบรนด์ CI | `designer-brief`, `event-concept`, `presentation-design`, `brand-tone-of-voice`, `step-brand`, `step-image-prompt` |
 | **MI** | **นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม**<br>Market Innovation | ทดสอบสมมติฐานตลาด ตรวจสอบจุดขายและราคา และเตรียมข้อมูลเชิงพาณิชย์ | `designer-brief`, `presentation-design`, `brand-tone-of-voice` |
 | **CRM** | **ลูกค้าสัมพันธ์**<br>Customer Relationship Management | รับเรื่อง ให้ข้อมูลบริการอุทยานฯ คัดกรองความต้องการ และติดตามความพึงพอใจ | `customer-support-faq-triage`, `step-writing`, `meeting-summary` |
 

@@ -14,6 +14,15 @@
 ================================================================
 ```
 
+<div align="center">
+
+[![Latest Release](https://img.shields.io/github/v/release/iisara555/step-ai-harness?label=Release&color=0078D4)](https://github.com/iisara555/step-ai-harness/releases)
+[![Download Zip](https://img.shields.io/badge/⬇️_Download-STeP--AI--Pilot--v0.2.0.zip-2ea44f?style=flat&logo=archive&logoColor=white)](https://github.com/iisara555/step-ai-harness/releases/latest/download/STeP-AI-Pilot-v0.2.0.zip)
+[![Teams](https://img.shields.io/badge/Teams-22_Teams_/_5_Clusters-blue)](manifest/teams.yaml)
+[![License](https://img.shields.io/badge/License-Internal_STeP-orange.svg)](README.md)
+
+</div>
+
 ---
 
 **STeP AI Harness** คือคลังต้นแบบภายในสำหรับนำความรู้ขององค์กร มาตรฐานการทำงาน และขั้นตอนที่ใช้ซ้ำได้มาใช้ร่วมกันในบุคลากรทั้ง **22 ทีม (5 กลุ่มงาน)** ของอุทยานฯ เพื่อให้สามารถใช้งาน AI Agents (ครอบคลุมทั้ง **สายฟรีมีโควตา**, **สายจ่ายตังค์**, และ **สาย Local AI** เช่น **Cursor**, **OpenCode**, **Claude Desktop**, **ChatGPT Desktop**, **Google Antigravity & Spark**, **Hermes Agent**, **Windsurf**, และ **VS Code**) ได้อย่างมีประสิทธิภาพ ปลอดภัย และถูกต้องตามระเบียบของมหาวิทยาลัยเชียงใหม่และหน่วยงานราชการ
@@ -38,9 +47,25 @@
 
 ## 🚀 เริ่มต้นใช้งานฉบับพนักงานทั่วไป (Zero-Terminal / No Code สำหรับ Windows & macOS)
 
-> **เป้าหมาย:** ดาวน์โหลด `STeP-AI-Pilot-v0.2.0.zip` → ดับเบิลคลิกติดตั้ง → เปิดโปรแกรม AI ที่คุณมี → พิมพ์ถามงาน
+<div align="center">
 
-อ่านทางลัดสำหรับพนักงานที่ [START-HERE.md](START-HERE.md)
+### 📦 ดาวน์โหลดชุดติดตั้ง STeP AI Pilot (v0.2.0)
+
+[![ดาวน์โหลด STeP-AI-Pilot-v0.2.0.zip](https://img.shields.io/badge/⬇️_คลิกดาวน์โหลด-STeP--AI--Pilot--v0.2.0.zip_(220_KB)-2ea44f?style=for-the-badge&logo=archive&logoColor=white)](https://github.com/iisara555/step-ai-harness/releases/latest/download/STeP-AI-Pilot-v0.2.0.zip)
+&nbsp;&nbsp;
+[![ดาวน์โหลดจาก GitHub Releases](https://img.shields.io/badge/GitHub_Releases-เวอร์ชันล่าสุด-24292e?style=for-the-badge&logo=github&logoColor=white)](https://github.com/iisara555/step-ai-harness/releases)
+
+</div>
+
+> [!TIP]
+> **ช่องทางดาวน์โหลดไฟล์ติดตั้ง `STeP-AI-Pilot-v0.2.0.zip`:**
+> - 🟢 **ดาวน์โหลดโดยตรงผ่าน GitHub Release (แนะนำ):** [👉 คลิกดาวน์โหลด STeP-AI-Pilot-v0.2.0.zip ทันที](https://github.com/iisara555/step-ai-harness/releases/latest/download/STeP-AI-Pilot-v0.2.0.zip)
+> - 📁 **ดาวน์โหลดจากในเครื่อง / โฟลเดอร์ต้นฉบับ:** [คลิกเปิดไฟล์ `dist/STeP-AI-Pilot-v0.2.0.zip`](dist/STeP-AI-Pilot-v0.2.0.zip)
+> - 🏢 **ดาวน์โหลดผ่าน Shared Drive ของอุทยานฯ:** ผ่านลิงก์ Google Drive องค์กรที่ทีม AI Champion แจ้งไว้
+>
+> **เป้าหมาย 4 ขั้นตอน:** ดาวน์โหลด `STeP-AI-Pilot-v0.2.0.zip` → แตกไฟล์ (Extract All) → ดับเบิลคลิกติดตั้ง → เปิดโปรแกรม AI ที่คุณมี แล้วพิมพ์ถามงานได้ทันที!
+
+อ่านทางลัดสำหรับพนักงานฉบับสรุป 1 หน้าได้ที่ [START-HERE.md](START-HERE.md)
 
 ### 🪟 สำหรับ Windows
 1. แตกไฟล์ `STeP-AI-Pilot-v0.2.0.zip`
@@ -203,7 +228,7 @@ graph LR
 
 ---
 
-## 📚 รายการ Approved Skills (21 ทักษะที่ทุกคนเข้าถึงได้)
+## 📚 รายการ Approved Skills (26 ทักษะที่ทุกคนเข้าถึงได้)
 
 ### 0. ทักษะนำทางอัจฉริยะ (Layer 1 Router)
 - **`step-router`**: วิเคราะห์บริบทงาน เจตนาภาษาไทย และเชื่อมโยงสู่ 22 ทีม เพื่อโหลดเฉพาะ Skill ที่ถูกต้องโดยอัตโนมัติ (Installed ≠ Loaded)
@@ -215,18 +240,23 @@ graph LR
 - **`tor-government-writing`**: การร่างขอบเขตของงาน (TOR) ตามมาตรฐานภาครัฐ
 - **`tor-review`**: Checklist ตรวจสอบความถูกต้องและจุดเสี่ยงของเอกสาร TOR
 - **`meeting-summary`**: แปลงบันทึกการประชุมให้เป็น Action Items พร้อมผู้รับผิดชอบและกำหนดส่งที่ชัดเจน
-- **`project-plan`**: จัดทำแผนการดำเนินงาน โครงสร้างตารางเวลา และการติดตามผล
+- **`project-plan`**: จัดทำแผนการดำเนินงาน งวดงาน Milestone, เส้นทางวิกฤต Critical Path, RICE Scoring และ Risk Register
+- **`startup-discovery`**: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพ ด้วย Value Proposition Canvas (VPC) และ The Mom Test
+- **`executive-status-update`**: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหาร ด้วย SBNR Framework และสัญญาณไฟจราจร Traffic-Light
+- **`project-pre-mortem`**: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาโครงการ (Tiger, Paper Tiger, Elephant in the room)
+- **`innovation-okr-mapping`**: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม
 - **`team-weekly-review`**: โครงสร้างการทบทวนงานประจำสัปดาห์ของทีม
 - **`sop-authoring`**: การจัดทำคู่มือมาตรฐานการปฏิบัติงาน (Standard Operating Procedure)
 - **`customer-support-faq-triage`**: การคัดแยกข้อซักถามและแนวทางตอบคำถามผู้รับบริการ
 
 ### 2. หมวดงานสื่อสาร อัตลักษณ์ และงานสร้างสรรค์ (Common & Creative)
 - **`step-brand`**: แนวทางและข้อกำหนดอัตลักษณ์ของแบรนด์ STeP
+- **`step-image-prompt`**: เครื่องมือช่วยสร้าง Prompt ภาพ AI สไตล์ 2D Vector & Infographic ล็อกสีเหลือง STeP และค่านิยม Simple Service Sincere
 - **`step-writing`**: สำนวนภาษา โทนเสียง (Tone of Voice) และการใช้คำที่เป็นทางการของ STeP
 - **`brand-tone-of-voice`**: การปรับระดับภาษาและน้ำเสียงให้เหมาะสมกับผู้รับสารแต่ละกลุ่ม
 - **`designer-brief`**: การเขียน Brief สั่งงานออกแบบ ป้าย กราฟิก และสื่อผลิตจริง
 - **`event-concept`**: การพัฒนาแนวคิดงานกิจกรรม นิทรรศการ และรูปแบบการจัดบูธ
-- **`presentation-design`**: โครงสร้างและการจัดวางเนื้อหาสไลด์นำเสนอให้น่าสนใจและกระชับ
+- **`presentation-design`**: โครงสร้างและออกแบบสไลด์ Interactive 16:9 HTML พร้อมโหมดแก้ไขข้อความในเบราว์เซอร์และส่งออก PDF
 
 ### 3. หมวดความปลอดภัยและการพัฒนาดิจิทัล (Common & Dev)
 - **`data-privacy-compliance`**: แนวทางการปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)

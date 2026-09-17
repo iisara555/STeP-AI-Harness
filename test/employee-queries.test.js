@@ -276,6 +276,44 @@ test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite',
       await rm(tmpWorkspace, { recursive: true, force: true });
     }
   });
+
+  await t.test('Scenario 32: Creative & Marketing (CC) — AI Image Prompt Generation (STeP Brand-Fixed)', async () => {
+    const promptResult = await queryStepRouter('ขอ prompt ทำโปสเตอร์งานสัมมนาสตาร์ทอัพ คุม CI STeP');
+    assert.equal(promptResult.selectedSkill?.name, 'step-image-prompt');
+    assert.equal(promptResult.scopeResult.status, 'ALLOW');
+
+    const notionResult = await queryStepRouter('อยากได้ prompt สร้างภาพสไตล์ notion สำหรับบทความ');
+    assert.equal(notionResult.selectedSkill?.name, 'step-image-prompt');
+    assert.equal(notionResult.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 33: Incubation (PITI) — Startup discovery & Value Proposition Canvas', async () => {
+    const vpcResult = await queryStepRouter('จัดทำ Value Proposition Canvas และสคริปต์สัมภาษณ์กลุ่มเป้าหมายสำหรับสตาร์ทอัพ');
+    assert.ok(vpcResult.selectedSkill);
+    assert.equal(vpcResult.selectedSkill.name, 'startup-discovery');
+    assert.equal(vpcResult.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 34: Strategy (SIT) — Executive status update with SBNR traffic light', async () => {
+    const sbnrResult = await queryStepRouter('ทำรายงานสรุปสถานะโครงการพอร์ตโฟลิโอแบบ Traffic Light เสนอผู้บริหาร');
+    assert.ok(sbnrResult.selectedSkill);
+    assert.equal(sbnrResult.selectedSkill.name, 'executive-status-update');
+    assert.equal(sbnrResult.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 35: Project Management (PM) — Project Pre-mortem risk assessment', async () => {
+    const premortemResult = await queryStepRouter('ทำ Pre-mortem ดักจับความเสี่ยงล่วงหน้า Tiger และ Elephant ก่อนเริ่มโครงการ');
+    assert.ok(premortemResult.selectedSkill);
+    assert.equal(premortemResult.selectedSkill.name, 'project-pre-mortem');
+    assert.equal(premortemResult.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 36: Strategy (SIT) — Innovation OKR mapping with North Star metric', async () => {
+    const okrResult = await queryStepRouter('ช่วยตั้งเป้าหมาย OKRs รายไตรมาสเชื่อมโยงตัวชี้วัด อว. และ North Star');
+    assert.ok(okrResult.selectedSkill);
+    assert.equal(okrResult.selectedSkill.name, 'innovation-okr-mapping');
+    assert.equal(okrResult.scopeResult.status, 'ALLOW');
+  });
 });
 
 

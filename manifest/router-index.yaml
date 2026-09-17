@@ -137,9 +137,9 @@ skills:
     teams:
       primary: [pm]
       consumers: [imo, sit, linc, pubsec, piti]
-    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone และความเสี่ยง
+    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
     intent: [plan, review, create]
-    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์]
+    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring]
     paths: ["**/project*/**", "**/plan/**", "**/PM/**"]
     fileTypes: [xlsx, csv, md]
     requires: [project_scope, timeline]
@@ -147,6 +147,7 @@ skills:
       allow:
         - แตก Work Breakdown Structure (WBS)
         - กำหนด Milestone และ Dependency
+        - คำนวณ Critical Path และ RICE Scoring
         - วิเคราะห์ความเสี่ยงและมาตรการรับมือ
       escalate: {}
       human_only:
@@ -154,6 +155,106 @@ skills:
           role: project-director
           authority: budget-allocation
           description: การอนุมัติขยายเวลาโครงการจริง
+
+  - name: project-pre-mortem
+    cluster: governance-quality
+    domain: project-management
+    processId: project.planning
+    teams:
+      primary: [pm]
+      consumers: [pubsec, tech-up, tech-spin, foodfabr]
+    description: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาหรือโครงการ จำแนกความเสี่ยงแบบ Tiger, Paper Tiger และ Elephant in the room
+    intent: [analyze, review, plan]
+    triggers: [pre-mortem, ความเสี่ยงล่วงหน้า, premortem, tiger paper tiger, elephant in the room, ดักจับความเสี่ยง, จำลองความล้มเหลว]
+    paths: ["**/risk/**", "**/premortem/**", "**/pre-mortem/**", "**/PM/**"]
+    fileTypes: [md, docx, xlsx]
+    requires: [project_scope]
+    scope:
+      allow:
+        - จำลองสาเหตุความล้มเหลวของโครงการล่วงหน้า
+        - จัดกลุ่มความเสี่ยง Tiger, Paper Tiger และ Elephant
+        - เสนอมาตรการป้องกันและสัญญาณเตือนล่วงหน้า
+      escalate: {}
+      human_only:
+        policy_waiver_signing:
+          role: executive-director
+          authority: policy-waiver
+          description: การอนุมัติผ่อนผันข้อกำหนดหรือระเบียบความเสี่ยง
+
+  - name: startup-discovery
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.startup-intake
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, imo, mi]
+    description: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพและงานวิจัย ด้วย Value Proposition Canvas และ The Mom Test
+    intent: [create, review, interview, plan]
+    triggers: [vpc, value proposition, value proposition canvas, สมมติฐานตลาด, สัมภาษณ์ลูกค้า, customer interview, mom test, problem-solution fit, บ่มเพาะสตาร์ทอัพ, ค้นหาความต้องการลูกค้า]
+    paths: ["**/startup/**", "**/incubation/**", "**/discovery/**", "**/PITI/**"]
+    fileTypes: [md, docx, pdf]
+    requires: [target_customer, core_technology]
+    scope:
+      allow:
+        - จัดทำ Value Proposition Canvas (Customer Profile & Value Map)
+        - ออกแบบสคริปต์สัมภาษณ์ The Mom Test
+        - สรุปสมมติฐานความต้องการตลาด
+      escalate: {}
+      human_only:
+        grant_intake_approval:
+          role: project-director
+          authority: budget-allocation
+          description: การอนุมัติคัดเลือกสตาร์ทอัพรับทุนหรือเข้าโครงการบ่มเพาะ
+
+  - name: executive-status-update
+    cluster: incubation-strategy
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [sit]
+      consumers: [imo, pm, pubsec, nmco]
+    description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
+    intent: [summarize, report, review]
+    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด]
+    paths: ["**/status/**", "**/executive/**", "**/portfolio/**", "**/SIT/**"]
+    fileTypes: [md, xlsx, docx, pdf]
+    requires: [project_list, progress_data]
+    scope:
+      allow:
+        - จัดทำรายงานสรุป SBNR (Status, Blockers, Next Steps, Risks)
+        - ประเมินสัญญาณไฟจราจร Green/Yellow/Red
+        - สรุปประเด็นตัดสินใจของผู้บริหาร
+      escalate: {}
+      human_only:
+        budget_adjustment_approval:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติปรับแผนงบประมาณหรือเปลี่ยนแปลงงวดเงิน
+
+  - name: innovation-okr-mapping
+    cluster: incubation-strategy
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [sit]
+      consumers: [qs, imo, piti, crm]
+    description: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม (North Star & Input Metrics)
+    intent: [plan, align, review]
+    triggers: [okr, okrs, north star, เป้าหมายไตรมาส, ตัวชี้วัด อว, key results, ถ่ายทอดยุทธศาสตร์, input metrics]
+    paths: ["**/okr/**", "**/strategy/**", "**/SIT/**"]
+    fileTypes: [md, xlsx, docx]
+    requires: [strategic_goals]
+    scope:
+      allow:
+        - กำหนด Objective และ 3 Measurable Key Results
+        - วางผัง North Star Metric และ Input Metrics Tree
+        - หลีกเลี่ยง Output Trap
+      escalate: {}
+      human_only:
+        kpi_target_approval:
+          role: executive-director
+          authority: hr-performance-evaluation
+          description: การอนุมัติรับรองตัวชี้วัดประเมินผลการปฏิบัติงานองค์กร
 
   # --- Creative & Communication ---
   - name: designer-brief
@@ -208,16 +309,17 @@ skills:
     teams:
       primary: [cc]
       consumers: [imo, mi, piti, sit]
-    description: โครงสร้างและลำดับการนำเสนอ Presentation สำหรับ Pitching หรือรายงานผู้บริหาร
+    description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck ในรูปแบบ Interactive 16:9 HTML และ Pitching สำหรับผู้บริหาร
     intent: [create, review]
-    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, keynote]
+    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, keynote, frontend-slides, html slide, pitch deck, สไลด์นำเสนอ]
     paths: ["**/slides/**", "**/presentation/**", "**/deck/**"]
-    fileTypes: [pptx, pdf, key]
+    fileTypes: [pptx, pdf, key, html]
     requires: [narrative_goal, key_takeaways]
     scope:
       allow:
         - จัด Story flow 1-slide-1-message
         - วาง Visual Hierarchy และคัดเลือกเนื้อหาสำคัญ
+        - สร้างและปรับแต่ง 16:9 Interactive HTML Presentation พร้อมโหมดแก้ไขในเบราว์เซอร์
       escalate: {}
       human_only:
         fabricated_metrics:
@@ -479,6 +581,29 @@ skills:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติการดัดแปลงตราสัญลักษณ์องค์กร
+
+  - name: step-image-prompt
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: ["*"]
+    description: สร้างและแนะนำ Prompt สร้างภาพ AI สไตล์ 2D Vector, Infographic และ Notion Line Art ตามอัตลักษณ์สีเหลือง STeP และค่านิยม Simple Service Sincere
+    intent: [create, draft, design]
+    triggers: [prompt, ขอ prompt, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion]
+    paths: ["**/creative/**", "**/poster/**", "**/media/**"]
+    fileTypes: [png, jpg, md, prompt]
+    requires: [image_theme_context]
+    scope:
+      allow:
+        - สร้างและแนะนำ Prompt ตาม CI สีเหลือง STeP (#F9AE3B) และ Core Values Simple Service Sincere
+      escalate: {}
+      human_only:
+        brand_alteration_approval:
+          role: executive-director
+          authority: brand-alteration
+          description: การอนุมัติการดัดแปลงหรือเผยแพร่สื่ออัตลักษณ์องค์กรภายนอก
 
   - name: receipt-audit
     cluster: governance-operations

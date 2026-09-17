@@ -101,22 +101,102 @@ skills:
 
   project-plan:
     owner: pm
-    version: 1.0.0
+    version: 2.0.0
     domain: [project-management]
     process: [project.planning]
     service: [incubation-startup, public-sector-innovation]
     path: skills/pm/project-plan/SKILL.md
-    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone และความเสี่ยง
+    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
     governance:
       owner: pm
       reviewer: [sit, qs]
       approvedBy: [project-director]
-      reviewedAt: "2026-09-01"
+      reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
         stage: approved
     references:
-      mandatory: [human-approval-rule]
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  startup-discovery:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, project-management]
+    process: [incubation.startup-intake]
+    service: [incubation-startup, tech-commercialization]
+    path: skills/pm/startup-discovery/SKILL.md
+    description: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพและงานวิจัย ด้วย Value Proposition Canvas (VPC) และ The Mom Test
+    governance:
+      owner: piti
+      reviewer: [isi, qs]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  executive-status-update:
+    owner: sit
+    version: 1.0.0
+    domain: [strategy, project-management]
+    process: [strategy.weekly-review]
+    service: [public-sector-innovation]
+    path: skills/pm/executive-status-update/SKILL.md
+    description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
+    governance:
+      owner: sit
+      reviewer: [qs]
+      approvedBy: [sit-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  project-pre-mortem:
+    owner: pm
+    version: 1.0.0
+    domain: [project-management]
+    process: [project.planning]
+    service: [public-sector-innovation, tech-commercialization]
+    path: skills/pm/project-pre-mortem/SKILL.md
+    description: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาหรือโครงการ จำแนกความเสี่ยงแบบ Tiger, Paper Tiger และ Elephant in the room
+    governance:
+      owner: pm
+      reviewer: [qs]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  innovation-okr-mapping:
+    owner: sit
+    version: 1.0.0
+    domain: [strategy]
+    process: [strategy.weekly-review]
+    service: [public-sector-innovation]
+    path: skills/pm/innovation-okr-mapping/SKILL.md
+    description: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม (North Star & Input Metrics)
+    governance:
+      owner: sit
+      reviewer: [qs]
+      approvedBy: [sit-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
       optional: []
 
   designer-brief:
@@ -161,17 +241,17 @@ skills:
 
   presentation-design:
     owner: cc
-    version: 1.0.0
+    version: 2.0.0
     domain: [creative]
     process: [creative.branding]
     service: [creative-marketing]
     path: skills/creative/presentation-design/SKILL.md
-    description: โครงสร้างและลำดับการนำเสนอ Presentation สำหรับ Pitching หรือรายงาน
+    description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck และ Pitching ในรูปแบบ Interactive 16:9 HTML พร้อมโหมดแก้ไขข้อความในเบราว์เซอร์
     governance:
       owner: cc
       reviewer: [qs]
       approvedBy: [cc-head]
-      reviewedAt: "2026-09-01"
+      reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
         stage: approved
@@ -313,6 +393,26 @@ skills:
     references:
       mandatory: [step-writing-rule]
       optional: []
+
+  step-image-prompt:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/step-image-prompt/SKILL.md
+    description: สร้างและแนะนำ Prompt สร้างภาพ AI สไตล์ 2D Vector, Infographic และ Notion Line Art ตามอัตลักษณ์สีเหลือง STeP และค่านิยม Simple Service Sincere
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule]
+      optional: [creative-brief-template]
 
   data-privacy-compliance:
     owner: qs

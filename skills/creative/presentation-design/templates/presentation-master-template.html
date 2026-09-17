@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STeP Presentation Title</title>
+
+    <!-- Google Fonts: Prompt (Thai/Latin) + Space Grotesk (Modern Display/Tech) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           1. CSS CUSTOM PROPERTIES (STeP BRAND CI)
+           =========================================== */
+        :root {
+            /* สีอัตลักษณ์หลักอุทยานฯ (STeP Brand Colors) */
+            --step-yellow: #F9AE3B;
+            --step-yellow-dark: #F2A32D;
+            --step-yellow-light: #FFF6E5;
+            --step-charcoal: #2B333D;
+            --step-slate: #1E252E;
+            --step-surface: #F8F9FA;
+            --step-surface-dark: #161B22;
+            --step-white: #FFFFFF;
+            --step-border: rgba(43, 51, 61, 0.12);
+            --step-border-dark: rgba(255, 255, 255, 0.1);
+
+            /* Typography (Authored at 1920x1080) */
+            --font-display: 'Prompt', 'Space Grotesk', sans-serif;
+            --font-body: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+
+            --size-hero: 84px;
+            --size-title: 60px;
+            --size-subtitle: 34px;
+            --size-card-title: 28px;
+            --size-body: 24px;
+            --size-caption: 18px;
+
+            /* Spacing (Authored at 1920x1080) */
+            --slide-pad-x: 100px;
+            --slide-pad-y: 80px;
+            --content-gap: 40px;
+
+            /* Animations */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+            --duration-reveal: 0.65s;
+        }
+
+        /* Reset */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ===========================================
+           2. FIXED 16:9 STAGE BASE STYLES
+           =========================================== */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #141821;
+            font-family: var(--font-body);
+            color: var(--step-charcoal);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .deck-viewport {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            background: #141821;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .deck-stage {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            transform-origin: 0 0;
+            background: var(--step-white);
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: var(--slide-pad-y) var(--slide-pad-x);
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            background: var(--step-white);
+        }
+
+        .slide.active,
+        .slide.visible {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 1;
+        }
+
+        /* ===========================================
+           3. ANIMATION REVEAL SYSTEM
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity var(--duration-reveal) var(--ease-out-expo),
+                        transform var(--duration-reveal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal:nth-child(1) { transition-delay: 0.08s; }
+        .reveal:nth-child(2) { transition-delay: 0.16s; }
+        .reveal:nth-child(3) { transition-delay: 0.24s; }
+        .reveal:nth-child(4) { transition-delay: 0.32s; }
+        .reveal:nth-child(5) { transition-delay: 0.40s; }
+
+        /* ===========================================
+           4. STeP SLIDE LAYOUT PATTERNS
+           =========================================== */
+        /* Header / Brand Bar */
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            width: 100%;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--step-yellow-light);
+            color: var(--step-charcoal);
+            padding: 8px 18px;
+            border-radius: 9999px;
+            font-size: var(--size-caption);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(249, 174, 59, 0.4);
+        }
+
+        .brand-badge::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--step-yellow);
+        }
+
+        .slide-category {
+            font-size: var(--size-caption);
+            color: #718096;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .slide-title {
+            font-family: var(--font-display);
+            font-size: var(--size-title);
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--step-charcoal);
+            margin-bottom: 24px;
+        }
+
+        .slide-title span.highlight {
+            color: var(--step-yellow-dark);
+            position: relative;
+        }
+
+        .slide-subtitle {
+            font-size: var(--size-subtitle);
+            color: #4A5568;
+            font-weight: 400;
+            line-height: 1.4;
+            max-width: 1200px;
+            margin-bottom: 48px;
+        }
+
+        /* Slide Layout: 2 Columns */
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            flex: 1;
+            align-items: stretch;
+        }
+
+        /* Slide Layout: 3 Cards Grid */
+        .grid-3col {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 36px;
+            flex: 1;
+            align-items: stretch;
+        }
+
+        /* Feature Card */
+        .feature-card {
+            background: var(--step-surface);
+            border: 1px solid var(--step-border);
+            border-radius: 20px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--step-yellow);
+            box-shadow: 0 16px 36px rgba(249, 174, 59, 0.12);
+        }
+
+        .feature-card .card-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 38px;
+            font-weight: 700;
+            color: var(--step-yellow);
+            margin-bottom: 16px;
+        }
+
+        .feature-card .card-title {
+            font-size: var(--size-card-title);
+            font-weight: 600;
+            color: var(--step-charcoal);
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .feature-card .card-body {
+            font-size: var(--size-body);
+            color: #4A5568;
+            line-height: 1.55;
+        }
+
+        /* Stat Callout */
+        .stat-card {
+            background: var(--step-charcoal);
+            color: var(--step-white);
+            border-radius: 24px;
+            padding: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-card .stat-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 72px;
+            font-weight: 700;
+            color: var(--step-yellow);
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .stat-label {
+            font-size: var(--size-subtitle);
+            color: #CBD5E1;
+            font-weight: 400;
+        }
+
+        /* Title Slide Variant */
+        .slide.title-slide {
+            justify-content: center;
+            background: radial-gradient(circle at 80% 20%, rgba(249, 174, 59, 0.12) 0%, transparent 60%),
+                        radial-gradient(circle at 10% 90%, rgba(43, 51, 61, 0.05) 0%, transparent 50%),
+                        var(--step-white);
+        }
+
+        .title-slide .hero-tag {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--step-charcoal);
+            background: var(--step-yellow);
+            padding: 10px 24px;
+            border-radius: 9999px;
+            display: inline-block;
+            margin-bottom: 32px;
+            width: fit-content;
+        }
+
+        .title-slide h1 {
+            font-family: var(--font-display);
+            font-size: var(--size-hero);
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--step-charcoal);
+            margin-bottom: 28px;
+            max-width: 1500px;
+        }
+
+        .title-slide p.lead {
+            font-size: 32px;
+            color: #4A5568;
+            line-height: 1.5;
+            max-width: 1200px;
+            margin-bottom: 56px;
+        }
+
+        .title-slide .meta-row {
+            display: flex;
+            gap: 40px;
+            font-size: 20px;
+            color: #718096;
+            border-top: 1px solid var(--step-border);
+            padding-top: 28px;
+            max-width: 900px;
+        }
+
+        /* Dark Slide Variant (Keynote / Decision) */
+        .slide.dark-theme {
+            background: var(--step-charcoal);
+            color: var(--step-white);
+        }
+
+        .slide.dark-theme .slide-title {
+            color: var(--step-white);
+        }
+
+        .slide.dark-theme .slide-subtitle {
+            color: #94A3B8;
+        }
+
+        .slide.dark-theme .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--step-border-dark);
+        }
+
+        .slide.dark-theme .feature-card .card-title {
+            color: var(--step-white);
+        }
+
+        .slide.dark-theme .feature-card .card-body {
+            color: #CBD5E1;
+        }
+
+        /* ===========================================
+           5. PRESENTATION CHROME & INLINE EDITING
+           =========================================== */
+        .deck-controls {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 18px;
+            background: rgba(26, 30, 39, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 9999px;
+            color: #ffffff;
+            font-family: var(--font-body);
+            font-size: 14px;
+            user-select: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .deck-controls button {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .deck-controls button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--step-yellow);
+        }
+
+        /* Inline Editor Hotzone & Toggle */
+        .edit-hotzone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 80px;
+            z-index: 10000;
+            cursor: pointer;
+        }
+
+        .edit-toggle {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 10001;
+            background: var(--step-charcoal);
+            color: var(--step-yellow);
+            border: 1px solid rgba(249, 174, 59, 0.4);
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .edit-toggle.show,
+        .edit-toggle.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .edit-toggle.active {
+            background: var(--step-yellow);
+            color: var(--step-charcoal);
+        }
+
+        .edit-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #F9AE3B;
+            color: #1E252E;
+            padding: 8px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+
+        .edit-banner.active {
+            display: flex;
+        }
+
+        .edit-banner button {
+            background: #1E252E;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        [contenteditable="true"] {
+            outline: 2px dashed rgba(249, 174, 59, 0.75) !important;
+            outline-offset: 4px;
+            cursor: text;
+        }
+
+        /* Speaker Note Box (Toggle via 'N') */
+        .speaker-note-drawer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(22, 27, 34, 0.95);
+            color: #E2E8F0;
+            padding: 24px 36px;
+            font-size: 18px;
+            line-height: 1.6;
+            max-height: 240px;
+            overflow-y: auto;
+            border-top: 2px solid var(--step-yellow);
+            z-index: 9990;
+            display: none;
+        }
+
+        .speaker-note-drawer.open {
+            display: block;
+        }
+
+        @media print {
+            .deck-controls, .edit-hotzone, .edit-toggle, .edit-banner, .speaker-note-drawer {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Inline Editor Controls -->
+    <div class="edit-hotzone" title="โหมดแก้ไขข้อความ (กด E)"></div>
+    <button class="edit-toggle" id="editToggle" title="Edit Mode (Hotkey: E)">
+        <span>✏️ แก้ไขเนื้อหา</span>
+    </button>
+    <div class="edit-banner" id="editBanner">
+        <span>⚡ กำลังอยู่ในโหมดแก้ไขข้อความ (คลิกที่ข้อความใดก็ได้เพื่อพิมพ์แก้)</span>
+        <div style="display:flex; gap:8px;">
+            <button id="saveHtmlBtn">💾 บันทึกไฟล์ HTML</button>
+            <button id="exitEditBtn">ปิดโหมดแก้ไข</button>
+        </div>
+    </div>
+
+    <!-- Presentation Viewport -->
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+
+            <!-- ==========================================
+                 SLIDE 1: TITLE & EXECUTIVE HOOK
+                 ========================================== -->
+            <section class="slide title-slide active" data-notes="บทเปิด: ทักทายผู้บริหาร/กรรมการ แนะนำชื่องานและเป้าหมายการตัดสินใจ">
+                <div class="hero-tag reveal">อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่</div>
+                <h1 class="reveal">แพลตฟอร์มนวัตกรรม <span class="highlight">STeP DeepTech</span> ขับเคลื่อนธุรกิจแห่งอนาคต</h1>
+                <p class="lead reveal">ข้อเสนอเชิงยุทธศาสตร์เพื่อการบ่มเพาะและยกระดับสตาร์ทอัพเทคโนโลยีขั้นสูงในพื้นที่ภาคเหนือ</p>
+                <div class="meta-row reveal">
+                    <div><strong>ผู้นำเสนอ:</strong> ทีมพัฒนาธุรกิจนวัตกรรม</div>
+                    <div><strong>สำหรับ:</strong> คณะกรรมการพิจารณาโครงการ</div>
+                    <div><strong>ระยะเวลานำเสนอ:</strong> 10 นาที</div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 SLIDE 2: PROBLEM & CHALLENGE
+                 ========================================== -->
+            <section class="slide" data-notes="ประเด็นปัญหา: คอขวดหลักของงานวิจัยที่เปลี่ยนเป็นธุรกิจจริงไม่ได้">
+                <div class="slide-header">
+                    <div class="brand-badge">บริบทและปัญหา</div>
+                    <div class="slide-category">01 / SITUATION & CHALLENGE</div>
+                </div>
+                <h2 class="slide-title reveal">ช่องว่างระหว่าง <span class="highlight">งานวิจัยในห้องแล็บ</span> สู่เชิงพาณิชย์</h2>
+                <p class="slide-subtitle reveal">งานวิจัยที่มีศักยภาพสูงของมหาวิทยาลัยมักติดคอขวด 3 ประการในการออกสู่ตลาดจริง</p>
+
+                <div class="grid-3col">
+                    <div class="feature-card reveal">
+                        <div class="card-number">01</div>
+                        <div class="card-title">ขาดเงินทุนเริ่มต้น (TRL 4-7)</div>
+                        <div class="card-body">ขาดแคลนทุน Proof of Concept ในการสร้างต้นแบบระดับอุตสาหกรรม ทำให้ผลงานวิจัยหยุดชะงักที่ระดับแล็บ</div>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="card-number">02</div>
+                        <div class="card-title">ขาดมาตรฐานและการทดสอบ</div>
+                        <div class="card-body">ขั้นตอนการรับรองมาตรฐานสากลซับซ้อนและมีค่าใช้จ่ายสูงเกินกว่านักวิจัยเดี่ยวจะบริหารจัดการได้</div>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="card-number">03</div>
+                        <div class="card-title">การเข้าถึงตลาดและพันธมิตร</div>
+                        <div class="card-body">ไม่มีสะพานเชื่อมโยงตรงสู่ภาคเอกชน คู่ค้าทางธุรกิจ และเครือข่ายนักลงทุนในและต่างประเทศ</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 SLIDE 3: STEP SOLUTION & VALUE PROPOSITION
+                 ========================================== -->
+            <section class="slide" data-notes="แนวทางแก้ไข: 3 กลไกสำคัญของ STeP ที่ตอบโจทย์ครบวงจร">
+                <div class="slide-header">
+                    <div class="brand-badge">แนวทางแก้ไข</div>
+                    <div class="slide-category">02 / STeP MECHANISM</div>
+                </div>
+                <h2 class="slide-title reveal">กลไกสนับสนุนครบวงจร <span class="highlight">Simple • Service • Sincere</span></h2>
+                <p class="slide-subtitle reveal">ผสานโครงสร้างพื้นฐาน ห้องปฏิบัติการวิเคราะห์ และเครือข่ายผู้เชี่ยวชาญเข้าด้วยกัน</p>
+
+                <div class="grid-2col">
+                    <div class="feature-card reveal">
+                        <div class="card-number">INFRASTRUCTURE</div>
+                        <div class="card-title">โรงงานต้นแบบและ Pilot Plant มาตรฐาน</div>
+                        <div class="card-body">พื้นที่พัฒนาต้นแบบ โรงงานแปรรูปอาหารและชีวภาพที่ได้รับมาตรฐาน GMP/HACCP พร้อมให้ผู้ประกอบการทดลองผลิตจริงก่อนตั้งโรงงาน</div>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="card-number">COMMERCIALIZATION</div>
+                        <div class="card-title">Tech Scouting & IP Matching</div>
+                        <div class="card-body">ระบบจับคู่สิทธิบัตรและเทคโนโลยีกับโจทย์จริงของภาคเอกชน พร้อมโปรแกรมบ่มเพาะ Startup เชิงลึกและการสนับสนุนด้านทรัพย์สินทางปัญญา</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 SLIDE 4: EVIDENCE & KEY METRICS (NO FAKE METRICS)
+                 ========================================== -->
+            <section class="slide" data-notes="ผลงานเชิงประจักษ์: ตัวเลขผลดำเนินงานจริงที่มีการตรวจยืนยัน">
+                <div class="slide-header">
+                    <div class="brand-badge">ผลลัพธ์และหลักฐาน</div>
+                    <div class="slide-category">03 / EVIDENCE & TRACTION</div>
+                </div>
+                <h2 class="slide-title reveal">ผลสัมฤทธิ์จริง <span class="highlight">ที่ขับเคลื่อนเศรษฐกิจภาคเหนือ</span></h2>
+                <p class="slide-subtitle reveal">ข้อมูลผลการดำเนินงานที่ผ่านการตรวจสอบประจำปีงบประมาณ</p>
+
+                <div class="grid-3col">
+                    <div class="stat-card reveal">
+                        <div class="stat-number">150+</div>
+                        <div class="stat-label">สตาร์ทอัพที่ผ่านการบ่มเพาะ</div>
+                    </div>
+                    <div class="stat-card reveal">
+                        <div class="stat-number">450 ล้าน</div>
+                        <div class="stat-label">มูลค่าทางเศรษฐกิจที่สร้างขึ้น (บาท)</div>
+                    </div>
+                    <div class="stat-card reveal">
+                        <div class="stat-number">94%</div>
+                        <div class="stat-label">ความพึงพอใจของภาคอุตสาหกรรม</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 SLIDE 5: ACTION & DECISION REQUEST
+                 ========================================== -->
+            <section class="slide dark-theme" data-notes="การขออนุมัติ: สิ่งที่ต้องการให้คณะกรรมการตัดสินใจอย่างชัดเจน">
+                <div class="slide-header">
+                    <div class="brand-badge" style="background: rgba(249, 174, 59, 0.2); color: #F9AE3B; border-color: #F9AE3B;">สิ่งที่ขออนุมัติ</div>
+                    <div class="slide-category" style="color: #A0AEC0;">04 / DECISION REQUIRED</div>
+                </div>
+                <h2 class="slide-title reveal">ข้อเสนอการตัดสินใจ <span class="highlight">เพื่อขับเคลื่อนระยะถัดไป</span></h2>
+                <p class="slide-subtitle reveal">ขอรับความเห็นชอบใน 3 ประเด็นเพื่อเริ่มดำเนินงานภายในไตรมาสที่ 1</p>
+
+                <div class="grid-3col">
+                    <div class="feature-card reveal">
+                        <div class="card-number">01</div>
+                        <div class="card-title">อนุมัติกรอบดำเนินงาน</div>
+                        <div class="card-body">เห็นชอบแผนงานยุทธศาสตร์ DeepTech Accelerator Program ระยะเวลา 12 เดือน</div>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="card-number">02</div>
+                        <div class="card-title">จัดสรรงบประมาณสนับสนุน</div>
+                        <div class="card-body">อนุมัติงบสนับสนุนสำหรับงวดที่ 1 ตามรายละเอียดงบประมาณที่แนบในเอกสาร</div>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="card-number">03</div>
+                        <div class="card-title">แต่งตั้งคณะกรรมการกำกับ</div>
+                        <div class="card-body">แต่งตั้งตัวแทนร่วมระหว่างมหาวิทยาลัยและภาคเอกชนเพื่อติดตามผลรายไตรมาส</div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Presentation Chrome Controls -->
+    <div class="deck-controls">
+        <button id="prevBtn" title="สไลด์ก่อนหน้า (Left Arrow / PageUp)">◀</button>
+        <span class="slide-counter" id="slideCounter">1 / 5</span>
+        <button id="nextBtn" title="สไลด์ถัดไป (Right Arrow / Space / PageDown)">▶</button>
+        <span style="opacity:0.3">|</span>
+        <button id="notesBtn" title="แสดงบันทึกผู้บรรยาย (N)">📝 Notes</button>
+        <button id="fullscreenBtn" title="เต็มจอ (F)">⛶</button>
+    </div>
+
+    <!-- Speaker Notes Drawer -->
+    <div class="speaker-note-drawer" id="speakerNotesDrawer">
+        <strong>🎙️ Speaker Note:</strong>
+        <div id="speakerNotesContent" style="margin-top: 6px;"></div>
+    </div>
+
+    <!-- Presentation Controller & Inline Editor JavaScript -->
+    <script>
+        class SlidePresentation {
+            constructor() {
+                this.stage = document.getElementById('deckStage');
+                this.slides = Array.from(document.querySelectorAll('.slide'));
+                this.counter = document.getElementById('slideCounter');
+                this.notesDrawer = document.getElementById('speakerNotesDrawer');
+                this.notesContent = document.getElementById('speakerNotesContent');
+                this.currentSlide = 0;
+                this.isEditMode = false;
+
+                this.setupStageScale();
+                this.setupNavigation();
+                this.setupInlineEditor();
+                this.showSlide(0);
+            }
+
+            setupStageScale() {
+                const scale = () => {
+                    const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+                    const x = (window.innerWidth - 1920 * factor) / 2;
+                    const y = (window.innerHeight - 1080 * factor) / 2;
+                    this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+                };
+                scale();
+                window.addEventListener('resize', scale);
+            }
+
+            setupNavigation() {
+                document.getElementById('prevBtn').addEventListener('click', () => this.prev());
+                document.getElementById('nextBtn').addEventListener('click', () => this.next());
+                document.getElementById('notesBtn').addEventListener('click', () => this.toggleNotes());
+                document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+
+                // Keyboard
+                document.addEventListener('keydown', (e) => {
+                    // หากพิมพ์อยู่ใน contenteditable ห้ามเปลี่ยนสไลด์ด้วยแป้นพิมพ์
+                    if (e.target.getAttribute('contenteditable') === 'true') {
+                        if (e.key === 'Escape') this.toggleEditMode(false);
+                        return;
+                    }
+
+                    switch (e.key) {
+                        case 'ArrowRight':
+                        case 'PageDown':
+                        case ' ':
+                            e.preventDefault();
+                            this.next();
+                            break;
+                        case 'ArrowLeft':
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.prev();
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            this.showSlide(0);
+                            break;
+                        case 'End':
+                            e.preventDefault();
+                            this.showSlide(this.slides.length - 1);
+                            break;
+                        case 'f':
+                        case 'F':
+                            this.toggleFullscreen();
+                            break;
+                        case 'n':
+                        case 'N':
+                            this.toggleNotes();
+                            break;
+                        case 'e':
+                        case 'E':
+                            this.toggleEditMode();
+                            break;
+                    }
+                });
+
+                // Touch / Swipe
+                let touchStartX = 0;
+                window.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+
+                window.addEventListener('touchend', (e) => {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const diff = touchEndX - touchStartX;
+                    if (Math.abs(diff) > 50) {
+                        if (diff < 0) this.next();
+                        else this.prev();
+                    }
+                }, { passive: true });
+            }
+
+            showSlide(index) {
+                this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+                this.slides.forEach((slide, i) => {
+                    const isActive = i === this.currentSlide;
+                    slide.classList.toggle('active', isActive);
+                    slide.classList.toggle('visible', isActive);
+                });
+
+                if (this.counter) {
+                    this.counter.textContent = `${this.currentSlide + 1} / ${this.slides.length}`;
+                }
+
+                this.updateNotes();
+            }
+
+            next() {
+                if (this.currentSlide < this.slides.length - 1) {
+                    this.showSlide(this.currentSlide + 1);
+                }
+            }
+
+            prev() {
+                if (this.currentSlide > 0) {
+                    this.showSlide(this.currentSlide - 1);
+                }
+            }
+
+            toggleNotes() {
+                this.notesDrawer.classList.toggle('open');
+                this.updateNotes();
+            }
+
+            updateNotes() {
+                const activeSlide = this.slides[this.currentSlide];
+                const note = activeSlide.getAttribute('data-notes') || 'ไม่มีบันทึกสำหรับสไลด์นี้';
+                this.notesContent.textContent = note;
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else {
+                    document.exitFullscreen().catch(() => {});
+                }
+            }
+
+            setupInlineEditor() {
+                const hotzone = document.querySelector('.edit-hotzone');
+                const toggleBtn = document.getElementById('editToggle');
+                const banner = document.getElementById('editBanner');
+                const saveBtn = document.getElementById('saveHtmlBtn');
+                const exitBtn = document.getElementById('exitEditBtn');
+
+                let hideTimer = null;
+
+                hotzone.addEventListener('mouseenter', () => {
+                    clearTimeout(hideTimer);
+                    toggleBtn.classList.add('show');
+                });
+
+                hotzone.addEventListener('mouseleave', () => {
+                    hideTimer = setTimeout(() => {
+                        if (!this.isEditMode) toggleBtn.classList.remove('show');
+                    }, 400);
+                });
+
+                toggleBtn.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+                toggleBtn.addEventListener('mouseleave', () => {
+                    hideTimer = setTimeout(() => {
+                        if (!this.isEditMode) toggleBtn.classList.remove('show');
+                    }, 400);
+                });
+
+                hotzone.addEventListener('click', () => this.toggleEditMode());
+                toggleBtn.addEventListener('click', () => this.toggleEditMode());
+                exitBtn.addEventListener('click', () => this.toggleEditMode(false));
+
+                saveBtn.addEventListener('click', () => this.downloadUpdatedHtml());
+            }
+
+            toggleEditMode(forceState) {
+                this.isEditMode = forceState !== undefined ? forceState : !this.isEditMode;
+                const toggleBtn = document.getElementById('editToggle');
+                const banner = document.getElementById('editBanner');
+
+                toggleBtn.classList.toggle('active', this.isEditMode);
+                toggleBtn.classList.toggle('show', this.isEditMode);
+                banner.classList.toggle('active', this.isEditMode);
+
+                // Enable/Disable contenteditable on headings, paragraphs, and cards
+                const editableSelectors = 'h1, h2, h3, p, .card-title, .card-body, .stat-number, .stat-label, .brand-badge, .hero-tag';
+                const editables = document.querySelectorAll(editableSelectors);
+
+                editables.forEach(el => {
+                    el.setAttribute('contenteditable', this.isEditMode ? 'true' : 'false');
+                });
+            }
+
+            downloadUpdatedHtml() {
+                // Remove contenteditable attributes before saving
+                const editables = document.querySelectorAll('[contenteditable]');
+                editables.forEach(el => el.removeAttribute('contenteditable'));
+
+                const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = document.title.replace(/[^a-zA-Z0-9ก-๙_-]/g, '_') + '_edited.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('✅ บันทึกและดาวน์โหลดไฟล์ HTML ที่แก้ไขเรียบร้อยแล้ว!');
+                this.toggleEditMode(false);
+            }
+        }
+
+        // Initialize presentation
+        window.presentation = new SlidePresentation();
+    </script>
+</body>
+</html>

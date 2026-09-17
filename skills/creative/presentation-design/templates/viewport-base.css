@@ -1,0 +1,180 @@
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   รวมไฟล์นี้ไว้ใน Presentation เสมอ
+   สไลด์ทั้งหมดออกแบบที่ขนาดคงที่ 1920×1080 และถูกสเกลทั้ง Stage พร้อมกัน
+   =========================================== */
+
+/* 1. ล็อก Browser Viewport */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #1a1e24);
+}
+
+/* 2. Full-window Deck Viewport */
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #1a1e24);
+}
+
+/* 3. Fixed 16:9 Canvas (1920x1080)
+   JavaScript จะคำนวณ transform: translate(...) scale(...) ให้พอดีหน้าจอ */
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #ffffff);
+}
+
+/* 4. Slides Stack ภายใน Fixed Stage
+   เนื้อหาทั้งหมดจัดวางที่ 1920×1080 ไม่เกิดการ Layout Reflow บนจอมือถือ */
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #ffffff);
+    box-sizing: border-box;
+}
+
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+/* 5. ควบคุมขนาดรูปภาพและมีเดียให้อยู่ในสไลด์ */
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* 6. Presentation Navigation Controls */
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(20, 24, 33, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    user-select: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.deck-controls button {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.deck-controls button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--accent-primary, #F9AE3B);
+}
+
+.deck-controls .slide-counter {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding: 0 6px;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* 7. Print & PDF Export: 1 สไลด์ต่อ 1 หน้ากระดาษแนวนอน */
+@media print {
+    @page {
+        size: 1920px 1080px landscape;
+        margin: 0;
+    }
+
+    html,
+    body {
+        width: 1920px !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    .deck-viewport {
+        position: static !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    .deck-stage {
+        position: static !important;
+        width: 1920px !important;
+        height: auto !important;
+        transform: none !important;
+        background: none !important;
+    }
+
+    .slide {
+        position: relative !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px !important;
+        height: 1080px !important;
+        page-break-after: always !important;
+        break-after: page !important;
+    }
+
+    .slide:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+    }
+
+    .deck-controls,
+    .edit-hotzone,
+    .edit-toggle,
+    .edit-panel {
+        display: none !important;
+    }
+}
+
+/* 8. Reduced Motion เพื่อความปลอดภัยและการเข้าถึง (Accessibility) */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.1s !important;
+    }
+}
