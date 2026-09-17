@@ -314,7 +314,30 @@ test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite',
     assert.equal(okrResult.selectedSkill.name, 'innovation-okr-mapping');
     assert.equal(okrResult.scopeResult.status, 'ALLOW');
   });
-});
 
+  await t.test('Scenario 37: Creative (CC) — Reference-led Art Direction routes to step-image-prompt', async () => {
+    const result = await queryStepRouter('เอา art direction จากภาพ reference นี้มาทำ visual ของ STeP แต่ยังคง CI');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'step-image-prompt');
+    assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 38: Creative (CC) — Photorealistic technology hero routes to step-image-prompt', async () => {
+    const result = await queryStepRouter('ช่วยทำ prompt ภาพสมจริงแบบ photorealistic technology hero สำหรับนวัตกรรมของ STeP');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'step-image-prompt');
+    assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 39: Creative Anti-Collision — Exhibition concept stays event-concept while exhibition visual prompt uses image skill', async () => {
+    const conceptResult = await queryStepRouter('จัดธีมงานและผังบูธนิทรรศการสตาร์ทอัพ');
+    assert.ok(conceptResult.selectedSkill);
+    assert.equal(conceptResult.selectedSkill.name, 'event-concept');
+
+    const visualResult = await queryStepRouter('ขอ prompt ทำ exhibition visual แบบ architectural visual สำหรับงานสตาร์ทอัพ');
+    assert.ok(visualResult.selectedSkill);
+    assert.equal(visualResult.selectedSkill.name, 'step-image-prompt');
+  });
+});
 
 

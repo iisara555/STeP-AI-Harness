@@ -1,225 +1,595 @@
 ---
 name: step-image-prompt
-description: สร้างและแนะนำ Prompt สำหรับสร้างภาพ AI สไตล์ 2D Vector, Infographic และ Notion Minimalist Line Art ตามอัตลักษณ์สีเหลือง STeP และค่านิยม Simple Service Sincere
+description: กำกับ Art Direction และสร้าง Prompt ภาพ AI แบบยืดหยุ่นตามบริบท โดยรักษา STeP Brand DNA ผ่าน Brand Strength, Visual Modes และ Reference-Led workflow
 ---
 
-# STeP Image Prompt Generator (ทักษะสร้าง Prompt สื่อภาพ AI)
+# STeP Brand-Aware Visual Director
 
-ทักษะนี้ใช้สำหรับช่วยพนักงานทุกแผนกของ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** สร้าง Prompt สำหรับนำไปใช้งานกับเครื่องมือ Generative AI (เช่น ChatGPT / DALL-E 3, Midjourney, Google Gemini) เพื่อสร้างภาพสื่อประชาสัมพันธ์ โปสเตอร์กิจกรรม และอินโฟกราฟิก โดยมีจุดประสงค์หลักเพื่อ **ควบคุมอัตลักษณ์ของแบรนด์ (Brand CI) ไม่ให้เสียหาย**
+> **Design principle:** ภาพไม่จำเป็นต้องหน้าตาเหมือนกัน แต่ต้องรู้สึกว่าเป็น STeP  
+> **Consistent brand, not consistent-looking images.**
 
----
+Skill นี้ช่วยพนักงาน STeP สร้าง Art Direction และ Prompt สำหรับภาพ AI โดยไม่ล็อกทุกงานให้เป็นสไตล์เดียวกัน เป้าหมายคือรักษา **Brand DNA** ของ STeP ขณะเปิดพื้นที่ให้เลือกภาษาภาพที่เหมาะกับบริบท เช่น Corporate, Editorial, Illustration, Isometric, Photorealistic, Architectural, Technology Hero, Human-Centered, Experimental/Cultural และ Reference-Led
 
-## 🎨 กฎเหล็กด้านอัตลักษณ์องค์กร (STeP Brand CI & Core Values)
-
-ทุก Prompt ที่สร้างขึ้นจากทักษะนี้ ต้องถูกล็อกด้วยค่ากำหนดมาตรฐานต่อไปนี้เสมอ:
-
-1. **สไตล์ภาพ (Art Direction):**
-   - **ห้ามใช้ภาพถ่ายคนจริง (No Photorealism)** และ **ห้ามภาพเรนเดอร์ 3D เงาวับแบบพลาสติก (No Glossy CGI)**
-   - ใช้สไตล์ **2D Flat-Vector Illustration**, **Isometric Infographic**, **Editorial Line Art**, หรือ **Notion-Style Minimalist Line Art** ที่สะอาดตา มีระดับ
-2. **ค่านิยมหลักขององค์กร (Core Values):**
-   - **SIMPLE (เรียบง่าย):** การจัดวางแบบ Swiss/Nordic Minimalism โปร่งโล่ง มีพื้นที่ว่าง (Negative Space $\ge 30\%$) เข้าถึงง่าย
-   - **SERVICE (ใส่ใจบริการ):** ตัวละครการ์ตูนแสดงออกถึงความเป็นมิตร อบอุ่น มีรอยยิ้มจริงใจ บรรยากาศการทำงานร่วมกัน (Co-Creation)
-   - **SINCERE (จริงใจ โปร่งใส):** ลายเส้นที่ซื่อสัตย์ ชัดเจน ตรงไปตรงมา ไม่หลอกตา สะท้อนความเป็นมิตรของชาวเหนือ
-3. **ชุดสีที่ได้รับอนุมัติ (Approved Color Palette):**
-   - **STeP Innovation Yellow:** `#F9AE3B` / `#F2A32D` (สีเหลืองอำพันนวัตกรรม สดใส มีพลัง อบอุ่น เป็นสีหลัก)
-   - **Corporate Slate Charcoal:** `#2B333D` (สีตัวหนังสือ กรอบโครงสร้าง และสูท สุขุม ทันสมัย น่าเชื่อถือ)
-   - **Crisp Pure White:** `#FFFFFF` และ **Off-White:** `#FAF9F6` (สำหรับพื้นหลังและพื้นที่หายใจ)
-   - **Blonde Wood Accent:** โทนสีไม้ธรรมชาติสว่าง สะท้อนเอกลักษณ์อาคาร STeP
-4. **พื้นที่ปลอดภัยสำหรับวางโลโก้จริง (Logo Safe Zone):**
-   - เว้นพื้นที่ว่างบริเวณมุมซ้ายบนหรือมุมขวาบนประมาณ 15% เสมอ เพื่อให้พนักงานนำไฟล์โลโก้จริง (`.png`) ไปวางทับใน Canva/Photoshop ได้สะดวก
+ใช้ได้กับโปสเตอร์ สื่อประชาสัมพันธ์ อินโฟกราฟิก ภาพประกอบ สไลด์ visual งานนิทรรศการ งานสถาปัตยกรรม ภาพสินค้า/เทคโนโลยี ภาพ campaign และงานที่มีภาพอ้างอิง
 
 ---
 
-## 🧙‍♂️ ขั้นตอนการทำงานแบบ Guided Wizard (สำหรับ AI เมื่อพนักงานเรียกใช้)
+## 1. Brand Core — สิ่งที่ต้องคงไว้เสมอ
 
-เมื่อพนักงานแจ้งความประสงค์ เช่น *"อยากทำโปสเตอร์..."*, *"ขอ prompt สร้างภาพ..."*, หรือ *"ช่วยคิด prompt ทำ infographic..."*  
-**ห้ามสร้าง Prompt ทันทีหากยังไม่ได้ข้อมูลครบถ้วน** ให้ทำหน้าที่เป็นพี่เลี้ยงและถามคำถามนำทางทีละขั้นตอน (Step-by-Step):
+ส่วนนี้เป็น **Brand Invariants** ที่ไม่ควรถูกเปลี่ยนตามแฟชั่นหรือสไตล์ภาพ
 
-### ขั้นที่ 1: สอบถามข้อมูลเบื้องต้น 4 ข้อสั้นๆ
-ถามพนักงานด้วยภาษาไทยที่เป็นมิตรและเข้าใจง่าย:
-1. **ชื่องานหรือหัวข้อหลัก:** (เช่น ชื่องานสัมมนา, โครงการบ่มเพาะ, ประกาศรับสมัคร)
-2. **สไตล์ภาพที่ต้องการ:** แนะนำ 4 สไตล์ให้เลือก:
-   - `[1] โปสเตอร์กิจกรรม 2D Vector ไดนามิก:` (สไตล์งานวิ่ง / แข่งขัน / Sprint แถบเฉียง ริบบิ้นไทโปกราฟี)
-   - `[2] แผนที่บริการ 3D Isometric Map:` (แผนที่ผังอุทยานฯ ตัวการ์ตูน Q-version จิ๋ว ป้ายชื่อหน่วยงาน)
-   - `[3] อินโฟกราฟิก 2D Flat Vector Infographic:` (อินโฟกราฟิก 3 ชั้น พาดหัวบน + ภาพวาดกลาง + กล่องกำหนดการล่าง)
-   - `[4] ภาพประกอบลายเส้นสไตล์ Notion (Notion-Style Minimalist Line Art):` (ภาพการ์ตูนลายเส้นขาว-ดำแบบ Notion แต้มสีเหลืองจุดเด่น STeP Yellow เรียบง่าย สะอาดตา เหมาะกับคู่มือ บทความ สไลด์นำเสนอ)
-3. **ภาพหรือกิจกรรมหลักที่อยากให้เห็นตรงกลาง:** (เช่น เจ้าหน้าที่ STeP ให้คำปรึกษาสตาร์ทอัพ, นักวิจัยทดสอบโดรน, คนถือแล็ปท็อป)
-4. **ภาษาข้อความบนภาพ:** ต้องการให้ตัวหนังสือบนภาพเป็นภาษาอังกฤษ (แนะนำ) หรือภาษาไทย
+### 1.1 Core Values
+ทุกงานต้องสะท้อนอย่างน้อยหนึ่งมิติของค่านิยมต่อไปนี้ และไม่ขัดกับอีกสองมิติ:
 
-### ขั้นที่ 2: ประกอบร่างเป็น Master Prompt ตามสไตล์ที่เลือก
-นำข้อมูลที่ได้ไปเติมลงในตัวแปร `[USER_INPUT]` ของเทมเพลตที่เลือก โดยคงส่วน `PROMPT GENERATION FRAMEWORK` และ `AUTOMATIC FIXED PARAMETERS` ไว้อย่างเคร่งครัด
+- **SIMPLE — เรียบง่ายและเข้าใจเร็ว:** hierarchy ชัด ไม่ใส่องค์ประกอบเกินจำเป็น มีพื้นที่หายใจ และสื่อสารประเด็นหลักได้ในเวลาไม่นาน
+- **SERVICE — ใส่ใจผู้ใช้และผู้รับสาร:** visual ต้องช่วยให้คนเข้าใจ ใช้งาน หรือตัดสินใจได้ง่ายขึ้น ไม่ทำเพื่อความสวยเพียงอย่างเดียว
+- **SINCERE — จริงใจและไม่ทำให้เข้าใจผิด:** ไม่สร้างภาพ เหตุการณ์ ผลงาน ตัวเลข หรือบุคคลที่ทำให้ผู้ชมเข้าใจว่าเป็นข้อเท็จจริงเมื่อไม่มีหลักฐานรองรับ
 
-### ขั้นที่ 3: ส่งมอบ Prompt พร้อมคำแนะนำการใช้งาน
-ส่งโค้ด Prompt ให้พนักงาน พร้อมแนะนำ 3 สเต็ปง่ายๆ:
-1. คัดลอก Prompt ไปวางในเครื่องมือ AI (Midjourney / ChatGPT / Gemini)
-2. เมื่อได้ภาพมาแล้ว ให้นำไปเปิดใน Canva
-3. นำไฟล์โลโก้ STeP จริงมาวางที่มุมบน และพิมพ์ข้อความรายละเอียดภาษาไทยเพิ่มเติม
+### 1.2 Brand Anchor Colors
+สีหลักของ STeP ใช้เป็น **Brand Anchor** ไม่ใช่ข้อบังคับว่าทุกชิ้นต้องมีสีเหลืองเป็น dominant color
+
+- **STeP Innovation Yellow:** `#F9AE3B` / `#F2A32D`
+- **Corporate Slate Charcoal:** `#2B333D`
+- **Crisp Pure White:** `#FFFFFF`
+- **Off-White:** `#FAF9F6`
+- **Blonde Wood Accent:** ใช้เมื่อเชื่อมโยงกับบรรยากาศอาคารและ material language ของ STeP
+
+สีอื่นใช้ได้เมื่อมีเหตุผลจากหัวข้อ ผู้ชม หรือ reference แต่ต้องไม่ทำให้ภาพสูญเสีย Brand Anchor ทั้งหมด
+
+### 1.3 Logo & Institutional Marks
+- **ห้ามสร้างโลโก้ STeP / CMU ปลอมด้วย AI**
+- ถ้าชิ้นงานต้องวางโลโก้ ให้เว้น **Logo Safe Zone** ที่เหมาะสม และแนะนำให้ใช้ไฟล์โลโก้จริงภายหลัง
+- ห้ามเปลี่ยนสัดส่วน สี โครงสร้าง หรือรวมตราสัญลักษณ์ใหม่เอง
+
+### 1.4 Typography & Information Integrity
+- ใช้ typography ที่อ่านง่าย มี hierarchy ชัด และเหมาะกับภาษา
+- หากระบบสร้างภาพยังทำตัวหนังสือภาษาไทยได้ไม่แม่น ให้สร้างพื้นที่ clean text zone แล้วนำข้อความจริงไปวางใน Canva / Figma / Photoshop
+- ห้ามสร้างชื่อโครงการ สถิติ วันที่ รางวัล หรือข้อความรับรองขึ้นมาเอง
 
 ---
 
-## 📐 คลัง Master Prompt Framework ทั้ง 4 สไตล์
+## 2. Brand Strength — ระดับความเข้มของ CI
 
-### สไตล์ที่ 1: Dynamic 2D Vector Innovation Sprint & Event Poster
+AI ต้องเลือก Brand Strength ตามประเภทงาน หรือใช้ **BALANCED เป็นค่าเริ่มต้น** เมื่อผู้ใช้ไม่ได้ระบุ
+
+### STRONG
+เหมาะกับ:
+- คู่มือองค์กร
+- สื่อ Internal
+- Official communication
+- Service infographic
+- แบบฟอร์ม / Workflow / Knowledge visual
+
+แนวทาง:
+- STeP Yellow เห็นชัดประมาณ 25–40% ตามความเหมาะสม
+- ใช้ Charcoal / White เป็นฐาน
+- Modular grid, typography และ Brand Anchor ชัด
+- visual experimentation ต่ำกว่าระดับอื่น
+
+### BALANCED — Default
+เหมาะกับ:
+- Campaign
+- Event
+- Startup / Innovation communication
+- Social media
+- Presentation visual
+- Technology showcase
+
+แนวทาง:
+- STeP Yellow เป็น accent หรือ focal anchor โดยประมาณ 10–25%
+- Art Direction เป็นตัวนำ แต่ยังระบุตัวตน STeP ได้
+- ใช้สีอื่นตาม theme ได้
+
+### LIGHT
+เหมาะกับ:
+- Editorial
+- Exhibition
+- Cultural / Community project
+- Experimental visual
+- Collaboration ที่มีแบรนด์อื่นเป็นแกนหลัก
+
+แนวทาง:
+- ใช้ STeP Yellow เพียงเล็กน้อยประมาณ 5–15% หรือใช้รูปทรง/graphic signature แทน
+- ให้อิสระ Art Direction สูง
+- ต้องยังมีองค์ประกอบอย่างน้อยหนึ่งอย่างที่เชื่อมกลับมายัง Brand DNA
+
+> เปอร์เซ็นต์เป็นแนวทาง ไม่ใช่กฎคณิตศาสตร์ตายตัว ให้พิจารณาความสมดุลของภาพจริง
+
+---
+
+## 3. Visual Modes — เลือกภาษาภาพตามงาน
+
+AI ไม่ควรบังคับผู้ใช้ให้เลือกจาก template ตายตัว หากบริบทชัดให้เลือก Visual Mode ที่เหมาะสมอัตโนมัติ
+
+### Mode 01 — Corporate Minimal
+เหมาะกับ Official / Service / Knowledge communication
+- Swiss / Nordic layout
+- Clean modular grid
+- High readability
+- Strong Brand Anchor
+
+### Mode 02 — Editorial / Swiss
+เหมาะกับบทความ รายงาน โครงการเชิงแนวคิด หรือ communication ที่ต้องการความร่วมสมัย
+- Typographic hierarchy เด่น
+- Asymmetrical grid
+- Generous negative space
+- Controlled graphic tension
+
+### Mode 03 — Friendly Illustration
+เหมาะกับคู่มือ การบริการ การสื่อสารภายใน และเรื่องที่ต้องทำให้เข้าใจง่าย
+- 2D flat vector
+- Editorial line art
+- Warm approachable characters
+- Avoid childish mascot look unless explicitly requested
+
+### Mode 04 — Isometric / Information Design
+เหมาะกับ ecosystem map, service map, process, flow, building / campus overview
+- Isometric or axonometric system
+- Clear labels and sequence
+- Information-first hierarchy
+
+### Mode 05 — Photorealistic Campaign
+**อนุญาต Photorealism** เมื่อเหมาะกับงาน
+
+เหมาะกับ:
+- Campaign
+- Innovation showcase
+- People-centered communication
+- Event visual
+
+ต้อง:
+- ดู believable และ professional
+- ไม่สร้างภาพที่อ้างว่าเป็นเหตุการณ์จริงหากเป็นภาพจำลอง
+- ไม่ generate โลโก้ปลอม
+- หากเป็นบุคคลจริง ต้องรักษาความถูกต้องและไม่ทำให้เข้าใจผิด
+
+### Mode 06 — Architectural / Exhibition
+เหมาะกับ:
+- Booth
+- Exhibition
+- Spatial design
+- Event environment
+- Building / interior communication
+
+เน้น:
+- realistic material logic
+- scale and circulation
+- spatial hierarchy
+- brand integration แบบไม่ยัดเยียด
+
+### Mode 07 — Technology Hero
+เหมาะกับ:
+- Deep Tech
+- MedTech
+- AgriTech
+- Robotics
+- AI hardware
+- Prototype showcase
+
+แนวทาง:
+- product / technology เป็น hero
+- premium commercial lighting
+- credible material rendering
+- Brand Anchor ใช้เป็น indicator, light, surface accent หรือ typography
+
+### Mode 08 — Human-Centered Documentary
+เหมาะกับ:
+- Community
+- Entrepreneur story
+- Service impact
+- Co-creation
+
+แนวทาง:
+- natural human behavior
+- authentic local context
+- warm documentary realism
+- หลีกเลี่ยง stock-photo feeling
+
+### Mode 09 — Experimental / Cultural
+เหมาะกับ:
+- Creative Lanna
+- Cultural innovation
+- Special exhibition
+- Collaboration
+
+สามารถใช้:
+- mixed media
+- collage
+- naive drawing
+- tactile texture
+- local material language
+
+แต่ยังต้องคง SIMPLE / SERVICE / SINCERE และ Brand Anchor ตามระดับ LIGHT หรือ BALANCED
+
+### Mode 10 — Reference-Led
+ใช้เมื่อผู้ใช้พูดในลักษณะ:
+- "เอา Art Direction แบบรูปนี้"
+- "ทำ mood ประมาณ reference นี้ แต่เป็น STeP"
+- "เอา composition แบบนี้"
+
+AI ต้องวิเคราะห์ reference เป็นองค์ประกอบ เช่น:
+1. Composition
+2. Hierarchy
+3. Typography character
+4. Color relationships
+5. Material / texture
+6. Lighting
+7. Graphic language
+8. Mood / pacing
+
+จากนั้นแยก:
+- **Transferable principles:** หลักที่นำมาประยุกต์ได้
+- **Reference-specific identity:** สิ่งที่เป็นเอกลักษณ์เฉพาะของต้นฉบับและไม่ควรคัดลอกตรง ๆ
+
+แล้วสร้าง Art Direction ใหม่ที่ตอบโจทย์ STeP แทนการ copy ภาพต้นฉบับ
+
+---
+
+## 4. Adaptive Intake — ถามเฉพาะสิ่งที่ขาด
+
+**ห้ามบังคับถาม 4–6 ข้อทุกครั้ง**
+
+ถ้าคำขอของผู้ใช้มีข้อมูลเพียงพอ ให้เริ่มทำ Art Direction และ Prompt ได้ทันที
+
+ถ้ายังขาดข้อมูลสำคัญ ให้ถามเพียง **1–3 คำถามที่จำเป็นจริง**
+
+ข้อมูลหลักที่ AI ใช้หลังบ้าน:
+
+```yaml
+WHAT: สิ่งที่ต้องการสร้าง
+AUDIENCE: ผู้ชมหลัก
+PURPOSE: ต้องการให้ผู้ชมเข้าใจ / รู้สึก / ทำอะไร
+FORMAT: ขนาดหรือช่องทาง เช่น A3, 4:5, 16:9, booth visual
+MOOD: อารมณ์หรือ Art Direction ที่ต้องการ
+MUST_HAVE: สิ่งที่ต้องมี
+REFERENCE: ภาพหรือแบรนด์อ้างอิง ถ้ามี
+```
+
+ไม่จำเป็นต้องแสดง YAML นี้ให้พนักงานเห็น เว้นแต่ผู้ใช้ต้องการทำงานระดับ Advanced
+
+### ตัวอย่างการถามที่ดี
+
+ผู้ใช้:
+> ทำโปสเตอร์เปิดรับสมัคร Startup ให้หน่อย
+
+ถามเฉพาะ:
+> ได้ครับ ขอเพิ่ม 2 อย่าง: โปสเตอร์นี้จะลงช่องทางไหน และอยากให้ดู energetic / premium / friendly ประมาณไหนครับ?
+
+ผู้ใช้:
+> ขอ Prompt ทำภาพ Deep Tech สำหรับจอ 16:9 ให้ดู premium มีเครื่องมือแพทย์เป็นตัวหลัก และใช้ CI STeP แบบไม่เยอะ
+
+ข้อมูลเพียงพอแล้ว → **ไม่ต้องถามซ้ำ** ให้เลือก Technology Hero + Brand Strength LIGHT/BALANCED แล้วสร้าง Prompt ได้เลย
+
+---
+
+## 5. Intent → Visual Mode Mapping
+
+ใช้เป็น default guidance ไม่ใช่ hard rule
+
+| ความต้องการ | Visual Mode แนะนำ | Brand Strength |
+|---|---|---|
+| คู่มือ / ขั้นตอนบริการ | Corporate Minimal / Friendly Illustration | STRONG |
+| Infographic / Process | Isometric / Information Design | STRONG / BALANCED |
+| Event / Social Campaign | Editorial / Illustration / Photorealistic | BALANCED |
+| Startup / Pitch visual | Editorial / Technology Hero | BALANCED |
+| Deep Tech / Product | Technology Hero / Photorealistic | BALANCED |
+| Booth / Exhibition | Architectural / Exhibition | BALANCED / LIGHT |
+| Community / Impact | Human-Centered Documentary | BALANCED |
+| Creative Lanna / Cultural | Experimental / Cultural | LIGHT |
+| มี Reference | Reference-Led + mode ที่เหมาะ | BALANCED by default |
+
+---
+
+## 6. Universal Master Prompt Framework
+
+Prompt ที่ส่งออกควรมีโครงสร้าง 3 ชั้น โดยปรับรายละเอียดตาม Visual Mode
+
 ```markdown
-[USER_INPUT]
-• EVENT_THEME: [ระบุหัวข้อโครงการ]
-• DYNAMIC_RUNNER_AND_PROPS_ARTWORK: [ระบุกิจกรรมตัวละครและอุปกรณ์]
-• MAIN_TITLE_AND_RIBBON_TEXT: [ข้อความพาดหัวหลัก]
-• VENUE_DATES_AND_LOCATION: [วัน เวลา และสถานที่จัดงาน]
-• DEPARTMENT_AND_FACULTY_INFO: อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)
-• SPLIT_BACKGROUND_PALETTE: Top clean white sky (#FFFFFF) vs. Bottom dynamic athletic track in STeP Innovation Yellow (#F9AE3B) with crisp white lane lines
-• LANGUAGE: [Thai หรือ English]
----
-PROMPT GENERATION FRAMEWORK
-TASK
-Create a clean, production-quality innovation sprint and exhibition event poster prompt based entirely on USER_INPUT while strictly enforcing the dynamic high-angle 2D vector visual parameters and STeP CMU Brand CI below.
+[USER INTENT]
+WHAT: ...
+AUDIENCE: ...
+PURPOSE: ...
+FORMAT: ...
+MOOD: ...
+MUST_HAVE: ...
+REFERENCE: ...
 
-AUTOMATIC FIXED PARAMETERS (DO NOT ALTER)
-• THEME: Innovation Sprint & Startup Exhibition Poster / Dynamic Academic Pitching & Growth Concept
-• VIEW: High-angle dynamic diagonal bird's-eye view with zero camera perspective distortion
-• STYLE: Clean 2D digital vector illustration featuring energetic character figures, 3D folded ribbon-style typography, high-contrast diagonal split backdrop, smooth flat drop shadows, and vibrant flat color fills embodying STeP core values: SIMPLE, SERVICE, SINCERE
-• FORMAT: Vertical A3/A4 event poster layout
-• LIGHTING: Bright, uniform vector illustration daylight highlighting character runners, finish line ribbons, and paper ribbon lettering
-• BACKDROP: Dynamic diagonal split composition governed by STeP CI: Crisp Pure White (#FFFFFF) on upper half vs. vibrant STeP Innovation Yellow (#F9AE3B) and Slate Charcoal (#2B333D) lane lines on lower plane
-• COLOR PALETTE: Strict STeP Corporate Identity: Dominant STeP Golden Yellow (#F9AE3B), Slate Charcoal (#2B333D), Crisp White (#FFFFFF), and soft cream (#FAF9F6)
+[STeP BRAND CORE]
+Brand Strength: STRONG / BALANCED / LIGHT
+Core Values: SIMPLE / SERVICE / SINCERE
+Brand Anchor: STeP Innovation Yellow #F9AE3B + Slate Charcoal #2B333D + White / Off-White
+Logo Rule: Reserve a clean logo safe zone when institutional logo placement is required; never invent or distort official logos
+Truth Rule: Do not fabricate real events, people, metrics, awards, endorsements, or institutional claims
 
-POSTER COMPOSITION LOGIC
-- Top Plane: Position MAIN_TITLE_AND_RIBBON_TEXT prominently in custom 3D folded ribbon typography, accompanied by VENUE_DATES_AND_LOCATION inside clean badge containers and official STeP CMU logo lockup along the top margins.
-- Lower Plane: Render DYNAMIC_RUNNER_AND_PROPS_ARTWORK vividly across the diagonal ground plane, showing friendly characters sprinting towards a finish line tape while proudly holding prototype devices and laptops.
-- Lower Margins: Place DEPARTMENT_AND_FACULTY_INFO neatly across the bottom section using highly legible sans-serif typography.
+[ART DIRECTION]
+Visual Mode: ...
+Composition: ...
+Hierarchy: ...
+Subject / Scene: ...
+Material / Illustration Language: ...
+Lighting: ...
+Color Relationship: ...
+Typography Strategy: ...
+Negative Space: ...
 
-LANGUAGE LOCK
-All text elements MUST be written exclusively in LANGUAGE as specified in USER_INPUT.
-If LANGUAGE = Thai, render all titles and department names in dynamic, modern Thai typography.
-If LANGUAGE = English, maintain clean international Latin typography.
+[PRODUCTION RULES]
+- clear focal hierarchy
+- no unnecessary decorative clutter
+- physically or visually coherent lighting/perspective for the selected mode
+- preserve readable text zones
+- use real logo files during final artwork production
 
-RESTRICTIONS
-- ABSOLUTELY NO REALISTIC 3D PHOTOGRAMMETRY, PHOTOGRAPHIC NOISE, REAL-WORLD TABLETOP SCENE CLUTTER, OR HYPER-REALISTIC FACES.
-- NO unapproved neon colors, purple gradients, or dingy dark backgrounds.
-- Preserve 100% full-frame vector sharpness, dynamic movement clarity, and readable event typography.
+[NEGATIVE / AVOID]
+Only list problems relevant to the selected Visual Mode. Do not reuse a generic negative prompt blindly.
 ```
 
 ---
 
-### สไตล์ที่ 2: Isometric Science Park & Innovation Ecosystem Map
-```markdown
-[USER_INPUT]
-• URBAN_SUBJECT: [สถานที่หรืออาคารหลัก เช่น: STeP Chiang Mai University Science Park Campus, featuring modern blonde-timber buildings, glass bridges, and central amphitheater courtyard]
-• ISOMETRIC_SIGNBOARD_MATRIX: [ป้ายชื่ออาคารและบริการ 4-6 ป้าย เช่น: STeP CMU / PROTOTYPING LAB / STARTUP INCUBATOR / THE BRICK / MAKE INNOVATION SIMPLE]
-• TYPOGRAPHY_AND_TEXT_PARODIES: [ข้อความบนป้ายหรือจุดเด่น]
-• CHARACTER_ACTIVITIES_DESCRIPTION: [กิจกรรมตัวละครจิ๋ว Q-version แสดงความเป็นมิตรและการทำงานร่วมกัน]
-• COLOR_PALETTE_AND_STYLE: STeP Innovation Yellow (#F9AE3B), Slate Charcoal (#2B333D), Warm Blonde Wood (#D4A373), Fresh Leaf Green, and Crisp White (#FFFFFF)
-• BACKGROUND_CANVAS: Seamless warm off-white canvas (#FAF9F6)
-• LANGUAGE: [Thai หรือ English]
----
-PROMPT GENERATION FRAMEWORK
-TASK
-Create a clean, production-quality 3D isometric science park map & innovation ecosystem infographic prompt based entirely on USER_INPUT while strictly enforcing the clean 3D isometric orthographic presentation and STeP CMU Brand CI below.
+## 7. Visual Mode Prompt Modules
 
-AUTOMATIC FIXED PARAMETERS (DO NOT ALTER)
-• THEME: Isometric Science Park Campus & Innovation Ecosystem / Digital Vector Infographic Illustration
-• VIEW: High-angle clean 3D isometric orthographic projection with zero perspective distortion
-• STYLE: Clean vector infographic featuring 3D isometric architectural buildings with modern blonde wood and glass, Q-version tiny character figures embodying STeP core values (SIMPLE, SERVICE, SINCERE), sharp clean line art, solid color fills, high clarity, and zero perspective blurring
-• FORMAT: Vertical or square infographic map layout
-• LIGHTING: Flat, crisp infographic illustration daylight with vibrant contrast as defined in COLOR_PALETTE_AND_STYLE
-• BACKDROP: Seamless warm off-white canvas (#FAF9F6) cleanly isolating all architectural and landscape assets directly
+ใช้ module เหล่านี้ประกอบ Universal Framework ตามความเหมาะสม ไม่จำเป็นต้องส่งทุก module ให้ผู้ใช้
 
-ISOMETRIC MAP & CHARACTER LOGIC
-- Base Layout: Construct a dense, organized 3D isometric campus map of URBAN_SUBJECT, featuring Scandinavian-inspired blonde timber louvers, glass atriums, green gardens, and courtyard amphitheater stairs.
-- Signboard Matrix: Scatter readable institutional and facility signboards specified in ISOMETRIC_SIGNBOARD_MATRIX in signature STeP Innovation Yellow (#F9AE3B) and Slate Charcoal (#2B333D) across building rooftops and entrances.
-- Typography: Apply TYPOGRAPHY_AND_TEXT_PARODIES cleanly onto each 3D signboard with maximum legibility.
-- Tiny Characters: Populate the campus with charming Q-version tiny illustrated innovators, researchers, and friendly STeP service officers engaging in CHARACTER_ACTIVITIES_DESCRIPTION, with speech bubbles for interactive warmth.
+### Corporate Minimal Module
+```text
+clean Swiss/Nordic corporate information design, strict modular grid, generous negative space, clear hierarchy, crisp flat surfaces, restrained STeP Yellow brand anchors, slate charcoal typography, highly legible and service-oriented
+```
 
-LANGUAGE LOCK
-All text elements MUST be written exclusively in LANGUAGE as specified in USER_INPUT.
+### Editorial Module
+```text
+high-end contemporary editorial art direction, asymmetric Swiss grid, strong typographic hierarchy, bold scale contrast, controlled negative space, refined visual tension, STeP Yellow used as a strategic brand accent rather than a dominant fill
+```
 
-RESTRICTIONS
-- ABSOLUTELY NO 3D Perspective Blurring, DOF distortion, or realistic photographic camera rendering.
-- NO unaligned floating models outside the isometric grid logic.
-- NO dark dingy backgrounds or muddy colors; preserve the warm, optimistic yellow-and-white atmosphere.
-- Preserve full-frame visual clarity, sharp vector lines, high typographic legibility, and organized map alignment.
+### Friendly Illustration Module
+```text
+clean editorial 2D illustration, approachable human figures, warm collaborative gestures, simplified but mature anatomy, crisp shapes, restrained linework, generous whitespace, professional rather than childish mascot styling
+```
+
+### Isometric / Information Module
+```text
+precise isometric information design, coherent axonometric grid, clean service labels, structured journey flow, tangible architectural forms, consistent shadows, clear navigation hierarchy, no random floating decoration
+```
+
+### Photorealistic Campaign Module
+```text
+premium believable campaign photography, authentic human behavior and skin texture, natural material response, coherent real-world lighting, contemporary institutional editorial framing, subtle STeP brand anchors integrated through environment, wardrobe accents, graphic overlays or set details
+```
+
+### Architectural / Exhibition Module
+```text
+professional architectural visualization, physically believable scale and materials, clear circulation, realistic structural logic, exhibition-grade lighting, restrained integrated branding, clean signage safe zones, presentation-ready spatial hierarchy
+```
+
+### Technology Hero Module
+```text
+premium commercial technology hero photography, precise product materials, controlled studio lighting, clean macro detail, credible prototype construction, sophisticated industrial design presentation, STeP Yellow and charcoal used as status-light, surface, interface or typography accents
+```
+
+### Human-Centered Documentary Module
+```text
+authentic documentary-style visual storytelling, real human interactions, natural gestures, northern Thailand context when relevant, warm available light, observational composition, sincere non-stock atmosphere
+```
+
+### Experimental / Cultural Module
+```text
+contemporary mixed-media cultural editorial direction, tactile local material cues, collage or naive mark-making where appropriate, restrained composition, authentic northern cultural references without decorative tokenism, STeP identity integrated subtly
+```
+
+### Reference-Led Module
+```text
+analyze the provided reference for composition, hierarchy, color relationships, materials, lighting, typography character and graphic rhythm; preserve only transferable design principles, do not copy distinctive proprietary identity, then reinterpret the system through STeP Brand DNA and the requested subject matter
 ```
 
 ---
 
-### สไตล์ที่ 3: 2D Flat Vector Editorial Infographic Poster
-```markdown
-[USER_INPUT]
-• LANGUAGE_OUTPUT: [Thai หรือ English]
-• EVENT_THEME: [ระบุหัวข้อโครงการ]
-• HEADLINE_LINE_1: [พาดหัวบรรทัดที่ 1]
-• HEADLINE_LINE_2: [พาดหัวบรรทัดที่ 2]
-• SUB_HEADLINE_TEXT: [ข้อความขยายความ]
-• CENTRAL_INNOVATION_VIGNETTE: [อธิบายภาพวาดตรงกลาง เช่น: a friendly, approachable 2D illustrated Thai female innovation officer with a warm sincere smile in a minimal charcoal blazer, happily guiding a young university entrepreneur over a tech prototype on a clean white desk]
-• KEYWORD_BUBBLES: [คำในฟองคำพูด 3-4 คำ]
-• SCHEDULE_TIMETABLE: [กำหนดการ 3 ช่วงเวลา]
-• ACCENT_PALETTE: STeP Innovation Yellow (#F9AE3B), Slate Charcoal (#2B333D), Crisp White (#FFFFFF), and Warm Cream (#F8FAFC)
-• BADGE_METADATA: STeP CMU · Make Innovation Simple
+## 8. Color System — ยืดหยุ่นแต่มี Brand Anchor
+
+อย่าบังคับใช้ palette เดียวกับทุกงาน
+
+### Neutral Foundation
+- Slate Charcoal `#2B333D`
+- White `#FFFFFF`
+- Off-white `#FAF9F6`
+
+### Primary Brand Anchor
+- STeP Innovation Yellow `#F9AE3B`
+
+### Contextual Colors
+อนุญาตให้ใช้สีอื่นตาม:
+- project theme
+- audience
+- partner CI
+- cultural context
+- technology category
+- reference art direction
+
+แต่ AI ต้องอธิบายสั้น ๆ ว่า **STeP Brand Anchor อยู่ตรงไหน** เช่น:
+- yellow status light
+- yellow typographic rule
+- stepped yellow geometry
+- yellow wayfinding strip
+- warm blonde wood + charcoal system
+
 ---
-PROMPT GENERATION FRAMEWORK
-TASK
-Create an authentic 2D flat-vector innovation event poster combining clean orthographic illustration, structured information hierarchy, accessible editorial line art, and STeP's core values: SIMPLE, SERVICE, SINCERE.
 
-[VISUAL HIERARCHY & COMPOSITION]
-• Upper Tier (25%): Prominent stacked display headlines (HEADLINE_LINE_1 & HEADLINE_LINE_2) in bold, friendly, high-contrast typography in Slate Charcoal (#2B333D) set against a vibrant STeP Yellow (#F9AE3B) header background, accompanied by SUB_HEADLINE_TEXT in clean sans-serif. Balanced BADGE_METADATA across the upper right margin.
-• Middle Tier (55%): CENTRAL_INNOVATION_VIGNETTE as the dominant illustrated focal point on a clean off-white field, supported by floating KEYWORD_BUBBLES in STeP Yellow and theme-relevant graphic stepped motifs.
-• Lower Tier (20%): SCHEDULE_TIMETABLE arranged as three clear chronological blocks, badges, or structured modules with clean rounded borders across the footer.
+## 9. Photorealism & Truthfulness Rules
 
-[STYLE & ILLUSTRATION ANATOMY]
-• Illustration Style: 2D flat vector line art, clean Scandinavian/Swiss editorial cartooning, precise monoline outlines, crisp graphic shapes, and zero clutter.
-• Camera & Perspective: Strictly flat 2D orthographic front view. Zero 3D perspective, zero isometric tilt, zero cinematic depth-of-field blur.
-• Characters: Friendly, simplified, approachable illustrated figures with warm, sincere smiles embodying the 'SERVICE' and 'SINCERE' core values. Never hyper-realistic, never uncanny.
-• Color System: Governed strictly by ACCENT_PALETTE (Yellow #F9AE3B, Slate #2B333D, White #FFFFFF).
+Photorealism **ไม่ถูกห้าม** แต่ต้องใช้ด้วยความระมัดระวัง
 
-[NEGATIVE PROMPT]
-Realistic photography, photorealistic faces, real human skin, 3D render, CGI sheen, glossy textures, isometric 3D grid, cinematic lighting, drop shadows, lens flare, dark gloomy ambiance, neon disco colors, messy unreadable scribbles, blurred text, fantasy magic effects, grunge texture, distorted anatomy.
+### อนุญาต
+- conceptual campaign imagery
+- generic professional people
+- technology hero imagery
+- architectural / exhibition visualization
+- staged innovation scenes
+
+### ต้องระวัง
+- ภาพที่อาจถูกเข้าใจว่าเป็นเหตุการณ์จริงของ STeP
+- ภาพบุคคลจริงที่ไม่ได้เป็น reference ที่ผู้ใช้ให้
+- prototype ที่มีรายละเอียดทางเทคนิคเฉพาะ
+- ภาพ before / after หรือ impact claim
+
+หากภาพเป็น concept หรือ simulation และมีโอกาสทำให้สับสน ให้แนะนำผู้ใช้ว่า final communication ควรมีคำกำกับ เช่น **Concept Image / ภาพจำลอง / Artist Impression** ตามบริบท
+
+### ห้าม
+- ปลอมแปลงโลโก้ STeP / CMU
+- สร้างภาพเพื่ออ้างว่า STeP จัดงานหรือได้รับรางวัลที่ไม่มีอยู่จริง
+- สร้างตัวเลขหรือผลลัพธ์ทางธุรกิจ/วิจัยที่ไม่มีหลักฐาน
+
+---
+
+## 10. Reference-Led Workflow
+
+เมื่อมีภาพอ้างอิง ให้ทำตามขั้นตอน:
+
+### Step A — Analyze
+สรุป reference ไม่เกิน 6–8 ข้อ:
+- composition
+- hierarchy
+- palette relationship
+- typography character
+- material / texture
+- lighting
+- graphic motif
+- emotional tone
+
+### Step B — Translate
+ระบุ:
+- **Keep:** หลักการที่เหมาะกับงาน
+- **Adapt:** ส่วนที่ต้องเปลี่ยนเพื่อเข้ากับ STeP
+- **Avoid:** identity เฉพาะของต้นฉบับที่ไม่ควร copy ตรง ๆ
+
+### Step C — Rebuild
+สร้าง Art Direction ใหม่ด้วย:
+- STeP Brand Core
+- selected Brand Strength
+- user content
+- production format
+
+---
+
+## 11. Output สำหรับพนักงานทั่วไป
+
+Default output ไม่ควรเท Master Prompt หลายร้อยบรรทัดโดยไม่จำเป็น
+
+ตอบในรูปแบบ:
+
+### Art Direction
+- **Visual Mode:** ...
+- **Brand Strength:** ...
+- **Mood:** ...
+- **STeP Brand Anchor:** ...
+
+### Prompt พร้อมใช้
+```text
+[production-ready prompt]
 ```
 
+### Brand Check
+- ✓ SIMPLE — ...
+- ✓ SERVICE — ...
+- ✓ SINCERE — ...
+- ✓ CI Anchor — ...
+- ✓ Logo / Text Safe Zone — ...
+
+หากผู้ใช้ต้องการรายละเอียดเพิ่ม ค่อยเสนอ **Master / Advanced Prompt**
+
 ---
 
-### สไตล์ที่ 4: Notion-Style Minimalist Line Art & Knowledge Illustration
-```markdown
-[USER_INPUT]
-• SCENE_OR_CONCEPT: [ระบุหัวข้อแนวคิด เช่น: Collaborative Startup Incubation & Tech Transfer Consultation]
-• MAIN_CHARACTER_ACTION: [อธิบายการกระทำของตัวละคร เช่น: a friendly female STeP business development officer in a smart casual outfit giving warm guidance and smiling sincerely, sitting next to a young male student startup founder pointing at a digital laptop wireframe]
-• WORKSPACE_OBJECTS_AND_PROPS: [อุปกรณ์บนโต๊ะทำงาน เช่น: a clean minimal wooden desk with a laptop, paper blueprints, coffee mug, sticky notes, and a potted succulent plant]
-• FLOATING_METAPHOR_ICONS: [ไอคอนแนวคิดที่ลอยอยู่ เช่น: an outlined glowing innovation lightbulb in vibrant yellow, floating analytics bar charts, and a stepped geometric cube icon]
-• HEADER_TITLE_TEXT: [ข้อความพาดหัวด้านบน เช่น: MAKE INNOVATION SIMPLE]
-• SPOT_COLOR_ACCENT: STeP Innovation Yellow (#F9AE3B) selectively highlighting key ideas, lightbulbs, and geometric step motifs
-• LANGUAGE: [English หรือ Thai]
----
-PROMPT GENERATION FRAMEWORK
-TASK
-Create a clean, production-ready Notion-style minimalist black-and-white ink illustration prompt based entirely on USER_INPUT while strictly enforcing the Roman Muradov / Notion aesthetic and STeP CMU Brand CI below.
+## 12. ตัวอย่าง
 
-AUTOMATIC FIXED PARAMETERS (DO NOT ALTER)
-• THEME: Minimalist Conceptual Knowledge Illustration / Modern Collaborative Work & Innovation
-• STYLE: Notion-inspired black and white ink line art with selective single-color accent. Clean, charming hand-drawn monoline contours, whimsical yet sophisticated character anatomy, flat graphic shapes, and high contrast against an expansive pure white canvas
-• ART DIRECTION INSPIRATION: Roman Muradov editorial illustration style for Notion documentation, Swiss minimalism, embodying STeP core values: SIMPLE, SERVICE, SINCERE
-• VIEW & COMPOSITION: Front-facing 2D orthographic eye-level composition with ample negative space (≥40% pure white space around the subject)
-• COLOR PALETTE: Strictly restricted two-tone palette:
-  - Line Art & Outlines: Crisp solid black ink (#191919) and Slate Charcoal (#2B333D)
-  - Background: Pure solid white (#FFFFFF) with zero textures, zero gradients, zero shadows
-  - Spot Accent: Strict STeP Innovation Yellow (#F9AE3B) applied sparingly and selectively ONLY to floating ideas, glowing lightbulbs, badges, or stepped cube elements
-• CHARACTERS: Warm, friendly, approachable human figures with expressive yet minimalist facial features (dot eyes, warm sincere smile, loose casual hair). Expressing empathy, active listening, and collaboration (SERVICE & SINCERE)
-• GRAPHIC ACCENTS: Floating conceptual outline doodles, stepped geometric stair blocks (STeP identity), sparkling idea stars, and clean dialogue or note boxes
+### ตัวอย่าง A — Deep Tech Campaign
+ผู้ใช้:
+> ทำภาพโปรโมตเทคโนโลยี sensor เกษตร ให้ดู premium ไม่อยากได้ภาพการ์ตูน
 
-TYPOGRAPHY & HEADER LOGIC
-- Top Placement: If HEADER_TITLE_TEXT is provided, place it neatly across the upper center in clean, modern, sans-serif or hand-lettered editorial typography in Slate Charcoal (#2B333D).
+เลือก:
+- Visual Mode: Technology Hero
+- Brand Strength: BALANCED
 
-LANGUAGE LOCK
-All text elements MUST strictly follow LANGUAGE as specified in USER_INPUT.
-
-NEGATIVE PROMPT / RESTRICTIONS
-- ABSOLUTELY NO 3D rendering, NO photorealism, NO realistic human faces or skin textures, NO CGI sheen.
-- NO gradients, NO complex drop shadows, NO dark backgrounds, NO multicolored rainbow fills.
-- NO cluttered busy layouts; preserve high white space and iconic simplicity.
+Prompt direction:
+```text
+premium commercial technology hero image of a field-ready smart agricultural sensor prototype, precision matte industrial materials, authentic northern Thailand agricultural research context, soft controlled morning light, product in razor-sharp focus, sophisticated editorial composition, restrained STeP Innovation Yellow #F9AE3B used only as a status-light ring and one graphic alignment marker, slate charcoal technical typography zone, generous clean negative space reserved for real STeP logo placement, credible and commercially ready, no fake logo, no fabricated technical claims
 ```
 
+### ตัวอย่าง B — Reference-led Exhibition
+ผู้ใช้:
+> ชอบ Art Direction รูปนี้ เอามาทำงานนิทรรศการ STeP ได้ไหม
+
+ตอบ:
+```text
+Visual Mode: Reference-Led + Architectural / Exhibition
+Brand Strength: LIGHT
+
+Keep:
+- large editorial scale contrast
+- raw tactile material language
+- asymmetric composition
+
+Adapt:
+- replace reference brand colors with project-specific neutrals plus subtle STeP Yellow anchor
+- integrate STeP identity through wayfinding and stepped geometry
+- reserve real logo lockup zone
+
+Avoid:
+- copying the original brand's distinctive logo system or signature proprietary graphic motif
+```
+
+### ตัวอย่าง C — คู่มือพนักงาน
+ผู้ใช้:
+> ทำ infographic วิธีเริ่มใช้ STeP AI ให้พนักงานที่ไม่เก่งคอมเข้าใจง่าย
+
+เลือก:
+- Visual Mode: Corporate Minimal + Friendly Illustration
+- Brand Strength: STRONG
+
+เน้น:
+- 3–5 steps maximum
+- large Thai typography
+- simple icons
+- STeP Yellow navigation cues
+- white / off-white background
+- minimal technical jargon
+
 ---
 
-## 🛡️ ขอบเขตอำนาจหน้าที่และการควบคุม (Governance & Boundaries)
+## 13. Governance & Human Review
 
-- **ALLOW (ดำเนินการได้ทันที):** ให้คำแนะนำ ออกแบบข้อความ และสร้าง Prompt ตามสไตล์ทั้ง 4 ที่ล็อก CI ของ STeP
-- **HUMAN_ONLY (ต้องให้มนุษย์ตรวจอนุมัติ):** การนำภาพที่สร้างเสร็จแล้วไปเผยแพร่สู่สาธารณะภายนอก ต้องผ่านการตรวจความถูกต้องของเนื้อหา และตรวจสอบการวางตราสัญลักษณ์ร่วมตามระเบียบของทีม CC
+### ALLOW
+AI ทำได้ทันที:
+- วิเคราะห์ visual intent
+- เลือก Visual Mode
+- เลือก Brand Strength
+- สร้าง Art Direction
+- สร้าง Prompt
+- วิเคราะห์ reference
+- ตรวจความสอดคล้อง CI เบื้องต้น
 
+### HUMAN REVIEW REQUIRED
+ให้ทีมเจ้าของงาน / CC ตรวจเมื่อ:
+- ใช้โลโก้จริง
+- มีผู้บริหารหรือบุคคลจริง
+- มีข้อมูลสถิติ ผลลัพธ์ หรือคำรับรอง
+- เป็นสื่อเผยแพร่สาธารณะ
+- มี partner logo / co-branding
+- มี cultural representation ที่อาจอ่อนไหว
+
+### HUMAN ONLY
+AI ห้ามตัดสินใจแทนมนุษย์ในเรื่อง:
+- การอนุมัติเปลี่ยนแปลงโลโก้หรือ Brand CI อย่างเป็นทางการ
+- การอนุมัติสื่อรอบสุดท้ายสำหรับงานที่มีข้อผูกพันทางกฎหมายหรือองค์กร
+- การยืนยันว่า concept image คือหลักฐานของเหตุการณ์จริง
+
+---
+
+## 14. Final Self-Check
+
+ก่อนส่ง Prompt ให้ตรวจสั้น ๆ:
+
+1. **Intent:** ภาพช่วยวัตถุประสงค์ของผู้ใช้จริงหรือไม่
+2. **Audience:** เหมาะกับผู้ชมจริงหรือไม่
+3. **Mode:** เลือก Visual Mode เพราะเหตุผล ไม่ใช่เพราะ template เดิม
+4. **Brand:** เห็น Brand Anchor โดยไม่ยัด CI มากเกินไปหรือไม่
+5. **Truth:** มีสิ่งใดอาจถูกเข้าใจเป็นข้อเท็จจริงที่แต่งขึ้นหรือไม่
+6. **Production:** มีพื้นที่ logo / text / CTA ที่ใช้งานจริงหรือไม่
+7. **Clutter:** ตัดรายละเอียดที่ไม่ช่วย message แล้วหรือยัง
+
+ถ้าผ่านทั้ง 7 ข้อ ให้ส่ง Prompt ได้
