@@ -30,7 +30,8 @@ test('CLI & Core Modules Test Suite', async (t) => {
     const allFiles = await resolveRoleFiles('all');
     assert.equal(allFiles.role.id, 'all');
     const allSkillPaths = allFiles.files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-    assert.equal(allSkillPaths.length, 26, 'Universal role should resolve all 26 skills');
+    assert.equal(allSkillPaths.length, 27, 'Universal role should resolve all 27 skills');
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/creative/creative-art-director/SKILL.md'));
 
     const pmFiles = await resolveRoleFiles('pm');
     assert.equal(pmFiles.role.id, 'pm');
@@ -165,6 +166,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(result.installedFiles.length > 0);
     assert.ok(await pathExists(join(cursorDir, '.cursorrules')));
     assert.ok(await pathExists(join(cursorDir, 'skills/creative/designer-brief/SKILL.md')));
+    assert.ok(await pathExists(join(cursorDir, 'skills/creative/creative-art-director/SKILL.md')));
 
     const cursorContent = await readFile(join(cursorDir, '.cursorrules'), 'utf-8');
     assert.ok(cursorContent.includes('Role: creative'));
@@ -236,6 +238,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(ccFilePaths.includes('skills/creative/designer-brief/SKILL.md'));
     assert.ok(ccFilePaths.includes('skills/creative/event-concept/SKILL.md'));
     assert.ok(ccFilePaths.includes('skills/creative/step-image-prompt/SKILL.md'));
+    assert.ok(ccFilePaths.includes('skills/creative/creative-art-director/SKILL.md'));
     assert.ok(ccFilePaths.includes('skills/common/step-brand/SKILL.md'));
 
     // Test Market Innovation (MI) team
@@ -248,4 +251,3 @@ test('CLI & Core Modules Test Suite', async (t) => {
   // Cleanup after test
   await rm(TEST_DIR, { recursive: true, force: true });
 });
-
