@@ -4,6 +4,25 @@ import { pathExists } from '../utils/file-ops.js';
 
 export const USER_MEMORY_FILENAME = 'USER.md';
 
+export const PERSONALITY_PRESETS = {
+  coworker: {
+    label: 'เพื่อนร่วมงาน',
+    tone: 'เป็นกันเอง สุภาพ พูดธรรมชาติ ไม่ใช้ภาษาทางการเกินจำเป็น',
+  },
+  professional: {
+    label: 'มืออาชีพ',
+    tone: 'สุภาพ มีโครงสร้าง ชัดเจน เหมาะกับงานองค์กร',
+  },
+  concise: {
+    label: 'กระชับ',
+    tone: 'ตอบสั้น ตรงประเด็น เน้นสิ่งที่ต้องทำต่อ',
+  },
+  custom: {
+    label: 'กำหนดเอง',
+    tone: '',
+  },
+};
+
 /**
  * Get absolute path to USER.md in target workspace
  * @param {string} workspaceDir
@@ -13,6 +32,10 @@ export function getUserMemoryPath(workspaceDir = process.cwd()) {
   return join(workspaceDir, USER_MEMORY_FILENAME);
 }
 
+export function getPersonalityPreset(key = 'coworker') {
+  return PERSONALITY_PRESETS[key] || PERSONALITY_PRESETS.coworker;
+}
+
 /**
  * Generate starter markdown content for USER.md
  * @param {object} options
@@ -20,6 +43,10 @@ export function getUserMemoryPath(workspaceDir = process.cwd()) {
  * @param {string} [options.team] Team code (e.g. afp, qs, piti, ga)
  * @param {string} [options.role] Role or position title
  * @param {string} [options.tone] Communication style preference
+ * @param {string} [options.assistantName] Personal assistant display name
+ * @param {'coworker'|'professional'|'concise'|'custom'} [options.personality]
+ * @param {string} [options.assistantTone] Custom assistant conversation style
+ * @param {boolean} [options.firstRunCompleted]
  * @param {string[]} [options.activeProjects] Active projects
  * @param {string[]} [options.frequentSkills] Frequently used skills
  * @returns {string}
@@ -28,7 +55,12 @@ export function generateUserMemoryTemplate(options = {}) {
   const name = options.name || '';
   const team = options.team || '';
   const role = options.role || '';
-  const tone = options.tone || 'สุภาพ เป็นกันเอง และกระชับตรงประเด็น';
+  const personality = options.personality || 'coworker';
+  const preset = getPersonalityPreset(personality);
+  const assistantName = options.assistantName || 'STeP Mate';
+  const assistantTone = options.assistantTone || preset.tone;
+  const tone = options.tone || assistantTone;
+  const firstRunCompleted = options.firstRunCompleted === true;
   const projects = options.activeProjects || [];
   const skills = options.frequentSkills || [];
 
@@ -44,47 +76,42 @@ export function generateUserMemoryTemplate(options = {}) {
   text += `- **รูปแบบการสื่อสารที่ชอบ (Preferred Tone)**: ${tone}\n`;
   text += `- **ภาษาหลัก (Language)**: ภาษาไทย (Thai)\n\n`;
 
-  text += `## 2. สไตล์และแนวทางการทำงาน (Working Preferences)\n`;
+  text += `## 2. ผู้ช่วยส่วนตัว (Personal Assistant)\n`;
+  text += `- **ชื่อผู้ช่วย (Assistant Name)**: ${assistantName}\n`;
+  text += `- **บุคลิกผู้ช่วย (Personality)**: ${personality} (${preset.label})\n`;
+  text += `- **รูปแบบการคุย (Conversation Style)**: ${assistantTone}\n`;
+  text += `- **First Run Completed**: ${firstRunCompleted ? 'true' : 'false'}\n\n`;
+
+  text += `## 3. สไตล์และแนวทางการทำงาน (Working Preferences)\n`;
   text += `- **การจัดรูปแบบผลลัพธ์ (Output Format)**: ชอบแบบสรุปหัวข้อย่อยและตาราง Markdown\n`;
   text += `- **การตรวจทาน (Review Habits)**: ตรวจสอบความถูกต้องของร่างเอกสารก่อนส่งจริงเสมอ\n`;
   text += `- **ข้อจำกัดเฉพาะตัว (Custom Constraints)**: ปฏิบัติตามมาตรฐาน CMU / MHESI\n\n`;
 
-  text += `## 3. โครงการและบริบทที่ทำอยู่ (Active Projects & Contexts)\n`;
+  text += `## 4. โครงการและบริบทที่ทำอยู่ (Active Projects & Contexts)\n`;
   if (projects.length > 0) {
-    for (const p of projects) {
-      text += `- ${p}\n`;
-    }
+    for (const p of projects) text += `- ${p}\n`;
   } else {
     text += `- (ระบุโครงการที่กำลังรับผิดชอบ เพื่อให้ AI นำมาเป็นบริบทอัตโนมัติ)\n`;
   }
   text += `\n`;
 
-  text += `## 4. ทักษะที่ใช้งานบ่อย (Frequently Used Skills)\n`;
+  text += `## 5. ทักษะที่ใช้งานบ่อย (Frequently Used Skills)\n`;
   if (skills.length > 0) {
-    for (const s of skills) {
-      text += `- ${s}\n`;
-    }
+    for (const s of skills) text += `- ${s}\n`;
   } else {
     text += `- (AI จะบันทึกทักษะที่คุณเรียกใช้บ่อยให้อัตโนมัติ)\n`;
   }
   text += `\n`;
 
-  text += `## 5. บันทึกเพิ่มเติมและการเรียนรู้ (Working Notes & Clarifications)\n`;
+  text += `## 6. บันทึกเพิ่มเติมและการเรียนรู้ (Working Notes & Clarifications)\n`;
   text += `- AI จะอัปเดตส่วนนี้อย่างต่อเนื่องเมื่อคุณให้ข้อมูลหรือระบุสไตล์ใหม่ในแชท\n`;
 
   return text;
 }
 
 /**
- * Parse structured fields from USER.md markdown
- * @param {string} markdown 
- * @returns {{
- *   profile: { name: string, team: string, role: string, tone: string, language: string },
- *   preferences: Record<string, string>,
- *   activeProjects: string[],
- *   frequentSkills: string[],
- *   notes: string[]
- * }}
+ * Parse structured fields from USER.md markdown.
+ * Supports both legacy USER.md sections and the First Run Companion format.
  */
 export function parseUserMemory(markdown = '') {
   const result = {
@@ -94,6 +121,12 @@ export function parseUserMemory(markdown = '') {
       role: '',
       tone: '',
       language: '',
+    },
+    assistant: {
+      name: '',
+      personality: '',
+      tone: '',
+      firstRunCompleted: null,
     },
     preferences: {},
     activeProjects: [],
@@ -109,23 +142,14 @@ export function parseUserMemory(markdown = '') {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    if (trimmed.startsWith('## 1.')) {
-      currentSection = 'profile';
-      continue;
-    } else if (trimmed.startsWith('## 2.')) {
-      currentSection = 'preferences';
-      continue;
-    } else if (trimmed.startsWith('## 3.')) {
-      currentSection = 'projects';
-      continue;
-    } else if (trimmed.startsWith('## 4.')) {
-      currentSection = 'skills';
-      continue;
-    } else if (trimmed.startsWith('## 5.')) {
-      currentSection = 'notes';
-      continue;
-    } else if (trimmed.startsWith('## ')) {
-      currentSection = 'other';
+    if (trimmed.startsWith('## ')) {
+      if (/ข้อมูลผู้ใช้งาน|User Profile/i.test(trimmed)) currentSection = 'profile';
+      else if (/ผู้ช่วยส่วนตัว|Personal Assistant/i.test(trimmed)) currentSection = 'assistant';
+      else if (/สไตล์และแนวทางการทำงาน|Working Preferences/i.test(trimmed)) currentSection = 'preferences';
+      else if (/โครงการและบริบท|Active Projects/i.test(trimmed)) currentSection = 'projects';
+      else if (/ทักษะที่ใช้งานบ่อย|Frequently Used Skills/i.test(trimmed)) currentSection = 'skills';
+      else if (/บันทึกเพิ่มเติม|Working Notes/i.test(trimmed)) currentSection = 'notes';
+      else currentSection = 'other';
       continue;
     }
 
@@ -144,6 +168,26 @@ export function parseUserMemory(markdown = '') {
 
       const langMatch = trimmed.match(/- \*\*ภาษาหลัก.*?\*\*:\s*(.*)/i);
       if (langMatch && langMatch[1]) result.profile.language = langMatch[1].trim();
+    } else if (currentSection === 'assistant') {
+      const assistantNameMatch = trimmed.match(/- \*\*ชื่อผู้ช่วย.*?\*\*:\s*(.*)/i);
+      if (assistantNameMatch && assistantNameMatch[1]) result.assistant.name = assistantNameMatch[1].trim();
+
+      const personalityMatch = trimmed.match(/- \*\*บุคลิกผู้ช่วย.*?\*\*:\s*(.*)/i);
+      if (personalityMatch && personalityMatch[1]) {
+        const raw = personalityMatch[1].trim();
+        result.assistant.personality = raw.split(/\s|\(/)[0].trim();
+      }
+
+      const assistantToneMatch = trimmed.match(/- \*\*รูปแบบการคุย.*?\*\*:\s*(.*)/i);
+      if (assistantToneMatch && assistantToneMatch[1]) result.assistant.tone = assistantToneMatch[1].trim();
+
+      const firstRunMatch = trimmed.match(/- \*\*First Run Completed\*\*:\s*(.*)/i);
+      if (firstRunMatch && firstRunMatch[1]) {
+        result.assistant.firstRunCompleted = /^(true|yes|1|completed|เสร็จ)$/i.test(firstRunMatch[1].trim());
+      }
+    } else if (currentSection === 'preferences') {
+      const prefMatch = trimmed.match(/^- \*\*(.+?)\*\*:\s*(.*)$/);
+      if (prefMatch) result.preferences[prefMatch[1].trim()] = prefMatch[2].trim();
     } else if (currentSection === 'projects') {
       if (trimmed.startsWith('-') && !trimmed.includes('(ระบุโครงการ')) {
         const item = trimmed.replace(/^-\s*/, '').trim();
@@ -166,61 +210,35 @@ export function parseUserMemory(markdown = '') {
 }
 
 /**
+ * First Run is opt-in only when the new USER.md explicitly contains
+ * `First Run Completed: false`. Legacy USER.md files remain undisturbed.
+ */
+export function needsFirstRunCompanion(memory = {}) {
+  return memory?.assistant?.firstRunCompleted === false;
+}
+
+/**
  * Load User Memory from workspace if present
- * @param {string} workspaceDir 
- * @returns {Promise<{
- *   exists: boolean,
- *   rawText: string,
- *   filePath: string,
- *   profile: { name: string, team: string, role: string, tone: string, language: string },
- *   activeProjects: string[],
- *   frequentSkills: string[],
- *   notes: string[]
- * }>}
  */
 export async function loadUserMemory(workspaceDir = process.cwd()) {
   const filePath = getUserMemoryPath(workspaceDir);
   const exists = await pathExists(filePath);
+  const empty = parseUserMemory('');
 
   if (!exists) {
-    return {
-      exists: false,
-      rawText: '',
-      filePath,
-      profile: { name: '', team: '', role: '', tone: '', language: '' },
-      activeProjects: [],
-      frequentSkills: [],
-      notes: [],
-    };
+    return { exists: false, rawText: '', filePath, ...empty };
   }
 
   try {
     const rawText = await readFile(filePath, 'utf-8');
     const parsed = parseUserMemory(rawText);
-    return {
-      exists: true,
-      rawText,
-      filePath,
-      ...parsed,
-    };
+    return { exists: true, rawText, filePath, ...parsed };
   } catch {
-    return {
-      exists: false,
-      rawText: '',
-      filePath,
-      profile: { name: '', team: '', role: '', tone: '', language: '' },
-      activeProjects: [],
-      frequentSkills: [],
-      notes: [],
-    };
+    return { exists: false, rawText: '', filePath, ...empty };
   }
 }
 
-/**
- * Save raw markdown text to USER.md
- * @param {string} workspaceDir 
- * @param {string} content 
- */
+/** Save raw markdown text to USER.md */
 export async function saveUserMemory(workspaceDir = process.cwd(), content = '') {
   const filePath = getUserMemoryPath(workspaceDir);
   await writeFile(filePath, content, 'utf-8');
@@ -228,12 +246,7 @@ export async function saveUserMemory(workspaceDir = process.cwd(), content = '')
   return filePath;
 }
 
-/**
- * Initialize USER.md in workspace if it doesn't already exist
- * @param {string} workspaceDir 
- * @param {object} options 
- * @returns {Promise<{ created: boolean, filePath: string }>}
- */
+/** Initialize USER.md in workspace if it doesn't already exist */
 export async function initUserMemory(workspaceDir = process.cwd(), options = {}) {
   const filePath = getUserMemoryPath(workspaceDir);
   const exists = await pathExists(filePath);
@@ -249,28 +262,18 @@ export async function initUserMemory(workspaceDir = process.cwd(), options = {})
   return { created: true, filePath };
 }
 
-/**
- * Ensure USER.md and MEMORY.md are included in workspace .gitignore
- * @param {string} workspaceDir 
- * @returns {Promise<boolean>} Whether gitignore was updated
- */
+/** Ensure USER.md and MEMORY.md are included in workspace .gitignore */
 export async function ensureGitignored(workspaceDir = process.cwd()) {
   const gitignorePath = join(workspaceDir, '.gitignore');
-  if (!(await pathExists(gitignorePath))) {
-    return false;
-  }
+  if (!(await pathExists(gitignorePath))) return false;
 
   try {
     const content = await readFile(gitignorePath, 'utf-8');
     const lines = content.split(/\r?\n/).map((l) => l.trim());
-
     const missing = [];
-    if (!lines.includes('USER.md') && !lines.includes('/USER.md')) {
-      missing.push('USER.md');
-    }
-    if (!lines.includes('MEMORY.md') && !lines.includes('/MEMORY.md')) {
-      missing.push('MEMORY.md');
-    }
+
+    if (!lines.includes('USER.md') && !lines.includes('/USER.md')) missing.push('USER.md');
+    if (!lines.includes('MEMORY.md') && !lines.includes('/MEMORY.md')) missing.push('MEMORY.md');
 
     if (missing.length > 0) {
       const addition = `\n# Private workspace user memory\n${missing.join('\n')}\n`;
@@ -278,7 +281,7 @@ export async function ensureGitignored(workspaceDir = process.cwd()) {
       return true;
     }
   } catch {
-    // If reading fails, ignore
+    // If reading fails, leave the workspace untouched.
   }
 
   return false;
