@@ -1,7 +1,6 @@
 ---
 name: step-image-prompt
 description: กำกับ Art Direction และสร้าง Prompt ภาพ AI แบบยืดหยุ่นตามบริบท โดยรักษา STeP Brand DNA ผ่าน Brand Strength, Visual Modes และ Reference-Led workflow
-version: 2.0.0
 ---
 
 # STeP Brand-Aware Visual Director
