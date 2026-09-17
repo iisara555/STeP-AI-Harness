@@ -163,3 +163,43 @@ processes:
     subprocesses:
       - strategy.weekly-review.status-collection
       - strategy.weekly-review.bottleneck-escalation
+
+  people.learning-development:
+    name: "การออกแบบการเรียนรู้ การอบรม และพัฒนาศักยภาพบุคลากร"
+    category: people-development
+    owner: hd
+    consumers: ["*"]
+    subprocesses:
+      - people.learning-development.needs-analysis
+      - people.learning-development.learning-design
+      - people.learning-development.assessment
+
+  industry.problem-discovery:
+    name: "การค้นหาและถอดโจทย์จากภาคอุตสาหกรรมและชุมชน"
+    category: industry-collaboration
+    owner: linc
+    consumers: [tech-up, tech-spin, pubsec, mi]
+    subprocesses:
+      - industry.problem-discovery.intake
+      - industry.problem-discovery.evidence-gathering
+      - industry.problem-discovery.expert-matching
+
+  market.insight-research:
+    name: "การติดตามสัญญาณตลาดและสังเคราะห์ข้อมูลลูกค้าเพื่อการทดสอบตลาด"
+    category: market-intelligence
+    owner: mi
+    consumers: [piti, isi, eic, tech-spin, linc, crm]
+    subprocesses:
+      - market.insight-research.signal-scan
+      - market.insight-research.customer-synthesis
+      - market.insight-research.validation-plan
+
+  laboratory.result-review:
+    name: "การทบทวนหลักฐาน ผลทดสอบ และข้อมูลการทดลองก่อนออกผลหรือสรุปผล"
+    category: laboratory
+    owner: les
+    consumers: [foodfabr, tech-up, iqi]
+    subprocesses:
+      - laboratory.result-review.completeness
+      - laboratory.result-review.qc-review
+      - laboratory.result-review.qualified-signoff

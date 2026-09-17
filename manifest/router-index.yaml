@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.2.0
+  version: 2.3.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
@@ -641,3 +641,212 @@ skills:
           role: executive-director
           authority: policy-waiver
           description: การอนุมัติผ่อนผันกรณีใบเสร็จไม่ครบหรือเกินเพดานค่าใช้จ่าย
+
+  # --- Creative Direction ---
+  - name: creative-art-director
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: [mi, eic, piti, imo]
+    description: กำหนด Creative Direction จาก Intent, Audience, Feeling, Visual Hammer และ Anti-AI-Slop ก่อนส่งต่อไปยัง Skill ผลิตงาน
+    intent: [create, review, plan]
+    triggers: [creative direction, design direction, visual hammer, anti-ai-slop, ai slop, งานดู ai, หา visual hammer, ควรไปทางไหนดี, ทิศทางงานออกแบบ, critique direction, art direction ก่อนทำ]
+    paths: ["**/Creative/**", "**/branding/**", "**/campaign/**", "**/exhibition/**"]
+    fileTypes: [pdf, pptx, png, jpg, md]
+    requires: [creative_objective, audience]
+    scope:
+      allow:
+        - วิเคราะห์ Intent, Audience State, Target Feeling และ Core Scene
+        - กำหนด Visual Hammer, Design Language และ Brand Relationship
+        - วิจารณ์ AI Slop / visual cliché จากเหตุผลของงาน
+      escalate: {}
+      human_only:
+        brand_alteration_approval:
+          role: executive-director
+          authority: brand-alteration
+          description: การอนุมัติดัดแปลง CI หรือ Brand Identity อย่างเป็นทางการ
+
+  # --- High-Leverage Cross-Team Skills ---
+  - name: evidence-before-approval
+    cluster: governance-operations
+    domain: quality
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ
+    intent: [review, check]
+    triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง]
+    paths: ["**/review/**", "**/final/**", "**/handoff/**"]
+    fileTypes: [md, docx, pdf, xlsx, pptx]
+    requires: [claim_or_output]
+    scope:
+      allow:
+        - แยก Claim กับ Evidence และตรวจความตรงกัน
+        - ระบุ VERIFIED / PARTIAL / UNVERIFIED
+        - ระบุ evidence gap และสิ่งที่ต้องตรวจเพิ่มก่อนส่ง
+      escalate: {}
+      human_only: {}
+
+  - name: learning-designer
+    cluster: governance-operations
+    domain: people-development
+    processId: people.learning-development
+    teams:
+      primary: [hd]
+      consumers: [eic, piti, isi, qs, ga, nmco]
+    description: ออกแบบ Learning Outcome, Practice, Feedback, Assessment, Workshop และ Onboarding จากเป้าหมายงานจริง
+    intent: [create, plan]
+    triggers: [ออกแบบการเรียนรู้, learning design, learning outcome, หลักสูตรอบรม, training plan, lesson plan, microlearning, onboarding curriculum, กิจกรรมการเรียนรู้, แบบทดสอบหลังอบรม]
+    paths: ["**/Training/**", "**/Onboarding/**", "**/learning/**", "**/workshop/**"]
+    fileTypes: [pptx, docx, md, pdf]
+    requires: [learner_profile, learning_goal]
+    scope:
+      allow:
+        - กำหนด outcome, practice, feedback และ evidence of learning
+        - ออกแบบ microlearning, workshop, onboarding และ job aid
+      escalate: {}
+      human_only:
+        staff_performance_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การใช้ผลการเรียนเพื่อประเมิน KPI หรือผลการปฏิบัติงานรายบุคคล
+
+  - name: assumption-challenger
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.startup-intake
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, mi, tech-spin, tech-up]
+    description: ท้าทายสมมติฐาน แยก Fact / Assumption / Decision / Unknown และออกแบบการทดสอบที่ประหยัดที่สุด
+    intent: [review, evaluate, plan]
+    triggers: [ท้าทายสมมติฐาน, challenge assumption, stress test idea, grill idea, assumption map, สมมติฐานธุรกิจ, ถามให้ครบก่อนทำ, what are we assuming, critical assumption]
+    paths: ["**/startup/**", "**/discovery/**", "**/innovation/**"]
+    fileTypes: [md, docx, pdf]
+    requires: [idea_or_plan]
+    scope:
+      allow:
+        - จัดกลุ่ม Fact / Assumption / Decision / Unknown
+        - จัดลำดับ Critical / Important / Monitor
+        - เสนอ Cheapest Valid Test และ evidence threshold
+      escalate: {}
+      human_only: {}
+
+  - name: decision-memo
+    cluster: incubation-strategy
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [imo]
+      consumers: [sit, pm, pubsec, nmco, tech-spin]
+    description: สร้าง Decision Memo ที่แยกข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation
+    intent: [review, evaluate, plan]
+    triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร]
+    paths: ["**/decision/**", "**/portfolio/**", "**/executive/**"]
+    fileTypes: [md, docx, pdf, pptx, xlsx]
+    requires: [decision_question]
+    scope:
+      allow:
+        - แยก Fact / Assumption / Unknown
+        - เปรียบเทียบทางเลือกและ trade-off
+        - เสนอ working recommendation พร้อม uncertainty
+      escalate: {}
+      human_only:
+        budget_decision:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติงบหรือเปลี่ยนวงเงินจริงเป็นอำนาจมนุษย์
+
+  - name: industry-problem-discovery
+    cluster: tech-industry
+    domain: industry-collaboration
+    processId: industry.problem-discovery
+    teams:
+      primary: [linc]
+      consumers: [tech-up, tech-spin, pubsec, mi]
+    description: ถอดโจทย์โรงงาน/ชุมชนก่อนเสนอเทคโนโลยี แยกอาการ หลักฐาน กระบวนการ ข้อจำกัด และ Desired Outcome
+    intent: [create, review, plan]
+    triggers: [ถอดโจทย์โรงงาน, โจทย์อุตสาหกรรม, problem discovery, pain point โรงงาน, จับโจทย์อุตสาหกรรม, constraint discovery, industry problem brief, โจทย์ชุมชน, current workaround]
+    paths: ["**/LINC/**", "**/Industry/**", "**/Local/**", "**/discovery/**"]
+    fileTypes: [md, docx, pdf, xlsx]
+    requires: [reported_problem]
+    scope:
+      allow:
+        - แยก symptom, evidence, current process, workaround และ constraints
+        - สร้าง root-cause hypotheses โดยไม่สรุปเกินหลักฐาน
+        - กำหนด expert matching criteria
+      escalate: {}
+      human_only: {}
+
+  - name: market-signal-radar
+    cluster: market-creative
+    domain: market-intelligence
+    processId: market.insight-research
+    teams:
+      primary: [mi]
+      consumers: [piti, isi, eic, tech-spin, linc, crm, cc]
+    description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของ evidence
+    intent: [review, plan]
+    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, trend radar, ตลาดพูดถึงอะไร]
+    paths: ["**/MI/**", "**/Market/**", "**/research/**", "**/insight/**"]
+    fileTypes: [md, docx, xlsx, csv]
+    requires: [market_question]
+    scope:
+      allow:
+        - แยก demand, behavior, competitor, technology และ ecosystem signals
+        - ระบุ timeframe, source type, strength และ next validation
+        - เปิดเผยเมื่อไม่มี access ถึงข้อมูลปัจจุบัน
+      escalate: {}
+      human_only: {}
+
+  - name: voice-of-customer
+    cluster: market-creative
+    domain: client-services
+    processId: market.insight-research
+    teams:
+      primary: [crm]
+      consumers: [mi, ifu, les, foodfabr, cc, piti]
+    description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยระวัง sample bias/PII
+    intent: [summarize, review]
+    triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า]
+    paths: ["**/CRM/**", "**/Customer/**", "**/survey/**", "**/feedback/**"]
+    fileTypes: [xlsx, csv, md, docx, txt]
+    requires: [customer_feedback]
+    scope:
+      allow:
+        - จัดกลุ่ม pain, need, expectation, positive driver และ information gap
+        - แยก frequency จาก severity และระบุ sample bias
+        - สกัด underlying need โดยรักษาความหมายเดิมของลูกค้า
+      escalate:
+        pii_or_sensitive_feedback:
+          skill: data-privacy-compliance
+          description: ข้อมูลลูกค้าที่มี PII หรือข้อมูลอ่อนไหวต้องผ่าน privacy review
+      human_only: {}
+
+  - name: lab-result-review
+    cluster: facilities-labs
+    domain: laboratory
+    processId: laboratory.result-review
+    teams:
+      primary: [les]
+      consumers: [foodfabr, tech-up, iqi, qs]
+    description: ทบทวนผลทดสอบและข้อมูลทดลอง ตรวจ completeness, units, QC, replicates, outliers และ method/spec alignment ก่อน qualified review
+    intent: [review, check]
+    triggers: [ทบทวนผลทดสอบ, lab result, ผลวิเคราะห์, ผลแล็บ, method validation, qc result, replicate, outlier, analytical result, repeatability, reproducibility]
+    paths: ["**/LES/**", "**/Lab/**", "**/Testing/**", "**/PilotPlant/**"]
+    fileTypes: [xlsx, csv, pdf, docx, txt]
+    requires: [test_results]
+    scope:
+      allow:
+        - ตรวจ completeness, traceability, QC/control, replicates และ calculations
+        - flag outlier โดยไม่ลบข้อมูลอัตโนมัติ
+        - เทียบ method/spec เฉพาะเกณฑ์ที่มีหลักฐานจริง
+      escalate: {}
+      human_only:
+        official_result_release:
+          role: authorized-signatory
+          authority: official-signing
+          description: การออกหรือรับรองรายงานผลทดสอบอย่างเป็นทางการต้องมีผู้มีอำนาจ/ผู้เชี่ยวชาญลงนาม
