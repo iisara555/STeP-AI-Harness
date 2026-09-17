@@ -510,3 +510,180 @@ skills:
     references:
       mandatory: [human-approval-rule]
       optional: []
+
+  creative-art-director:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/creative-art-director/SKILL.md
+    description: กำหนด Creative Direction จาก Intent, Audience, Feeling, Visual Hammer และ Anti-AI-Slop ก่อนส่งต่อไปยัง Skill ผลิตงาน
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: [creative-brief-template]
+
+  evidence-before-approval:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, governance]
+    process: [quality.document-control]
+    path: skills/common/evidence-before-approval/SKILL.md
+    description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ โดยแยก VERIFIED / PARTIAL / UNVERIFIED
+    governance:
+      owner: qs
+      reviewer: [ga, sit]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  learning-designer:
+    owner: hd
+    version: 1.0.0
+    domain: [people-development, learning]
+    process: [people.learning-development]
+    path: skills/common/learning-designer/SKILL.md
+    description: ออกแบบ Learning Outcome, Practice, Feedback, Assessment, Workshop และ Onboarding จากเป้าหมายการทำงานจริง
+    governance:
+      owner: hd
+      reviewer: [eic, qs]
+      approvedBy: [hd-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  assumption-challenger:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, innovation]
+    process: [incubation.startup-intake]
+    service: [incubation-startup, tech-commercialization]
+    path: skills/pm/assumption-challenger/SKILL.md
+    description: แยก Fact / Assumption / Decision / Unknown จัดลำดับสมมติฐานสำคัญ และออกแบบการทดสอบที่ประหยัดที่สุด
+    governance:
+      owner: piti
+      reviewer: [isi, mi]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  decision-memo:
+    owner: imo
+    version: 1.0.0
+    domain: [strategy, decision-support]
+    process: [strategy.weekly-review]
+    service: [public-sector-innovation]
+    path: skills/pm/decision-memo/SKILL.md
+    description: สังเคราะห์ข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation เป็น Decision Memo สำหรับผู้มีอำนาจตัดสินใจ
+    governance:
+      owner: imo
+      reviewer: [sit, qs]
+      approvedBy: [imo-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  industry-problem-discovery:
+    owner: linc
+    version: 1.0.0
+    domain: [industry-collaboration, discovery]
+    process: [industry.problem-discovery]
+    service: [tech-commercialization, public-sector-innovation]
+    path: skills/pm/industry-problem-discovery/SKILL.md
+    description: ถอดโจทย์โรงงาน/ชุมชน แยกอาการ หลักฐาน กระบวนการ ข้อจำกัด และ Desired Outcome ก่อนเสนอเทคโนโลยีหรือจับคู่ผู้เชี่ยวชาญ
+    governance:
+      owner: linc
+      reviewer: [tech-up, qs]
+      approvedBy: [linc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  market-signal-radar:
+    owner: mi
+    version: 1.0.0
+    domain: [market-intelligence, research]
+    process: [market.insight-research]
+    service: [creative-marketing, incubation-startup, tech-commercialization]
+    path: skills/common/market-signal-radar/SKILL.md
+    description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของหลักฐาน
+    governance:
+      owner: mi
+      reviewer: [piti, crm]
+      approvedBy: [mi-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [data-classification-rule]
+      optional: []
+
+  voice-of-customer:
+    owner: crm
+    version: 1.0.0
+    domain: [client-services, market-intelligence]
+    process: [market.insight-research]
+    path: skills/common/voice-of-customer/SKILL.md
+    description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยรักษาความหมายลูกค้าและระวัง sample bias/PII
+    governance:
+      owner: crm
+      reviewer: [mi, qs]
+      approvedBy: [crm-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [data-classification-rule, secret-safety-rule]
+      optional: []
+
+  lab-result-review:
+    owner: les
+    version: 1.0.0
+    domain: [laboratory, quality]
+    process: [laboratory.result-review]
+    service: [infrastructure-testing]
+    path: skills/common/lab-result-review/SKILL.md
+    description: ทบทวนผลทดสอบและข้อมูลห้องปฏิบัติการ ตรวจ completeness, units, QC, replicates, outliers และ method/spec alignment ก่อน qualified review
+    governance:
+      owner: les
+      reviewer: [qs, foodfabr, tech-up]
+      approvedBy: [les-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: approved
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
