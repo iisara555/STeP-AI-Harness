@@ -396,12 +396,12 @@ skills:
 
   step-image-prompt:
     owner: cc
-    version: 1.0.0
+    version: 2.0.0
     domain: [creative]
     process: [creative.branding]
     service: [creative-marketing]
     path: skills/creative/step-image-prompt/SKILL.md
-    description: สร้างและแนะนำ Prompt สร้างภาพ AI สไตล์ 2D Vector, Infographic และ Notion Line Art ตามอัตลักษณ์สีเหลือง STeP และค่านิยม Simple Service Sincere
+    description: กำกับ Art Direction และสร้าง Prompt ภาพ AI แบบยืดหยุ่นตามบริบท โดยรักษา STeP Brand DNA ผ่าน Brand Strength, Visual Modes และ Reference-Led workflow
     governance:
       owner: cc
       reviewer: [qs]
@@ -510,4 +510,3 @@ skills:
     references:
       mandatory: [human-approval-rule]
       optional: []
-
