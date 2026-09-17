@@ -315,10 +315,10 @@ test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite',
     assert.equal(okrResult.scopeResult.status, 'ALLOW');
   });
 
-  await t.test('Scenario 37: Creative (CC) — Reference-led Art Direction routes to step-image-prompt', async () => {
+  await t.test('Scenario 37: Creative (CC) — Reference-led Art Direction routes to creative-art-director', async () => {
     const result = await queryStepRouter('เอา art direction จากภาพ reference นี้มาทำ visual ของ STeP แต่ยังคง CI');
     assert.ok(result.selectedSkill);
-    assert.equal(result.selectedSkill.name, 'step-image-prompt');
+    assert.equal(result.selectedSkill.name, 'creative-art-director');
     assert.equal(result.scopeResult.status, 'ALLOW');
   });
 
@@ -338,6 +338,32 @@ test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite',
     assert.ok(visualResult.selectedSkill);
     assert.equal(visualResult.selectedSkill.name, 'step-image-prompt');
   });
+
+  await t.test('Scenario 40: Creative Direction — Natural Thai request routes to creative-art-director', async () => {
+    const result = await queryStepRouter('ช่วยคิด art direction งานเปิดตัวเทคโนโลยีของ STeP ควรไปทางไหนดี');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'creative-art-director');
+    assert.equal(result.selectedSkill.teams.primary[0], 'cc');
+  });
+
+  await t.test('Scenario 41: Creative Critique — Visual Hammer and AI-slop review routes to creative-art-director', async () => {
+    const result = await queryStepRouter('ช่วยวิจารณ์ดีไซน์นี้หน่อย ภาพจำหรือ visual hammer ยังไม่ชัดและงานดูเป็น AI ไป');
+    assert.ok(result.selectedSkill);
+    assert.equal(result.selectedSkill.name, 'creative-art-director');
+    assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('Scenario 42: Creative Anti-Collision — Brief, direction, event and production prompt stay separated', async () => {
+    const briefResult = await queryStepRouter('ช่วยทำบรีฟให้กราฟิกออกแบบโปสเตอร์');
+    assert.equal(briefResult.selectedSkill?.name, 'designer-brief');
+
+    const directionResult = await queryStepRouter('ช่วยกำหนดทิศทางงานออกแบบและหา visual hammer สำหรับ campaign นี้');
+    assert.equal(directionResult.selectedSkill?.name, 'creative-art-director');
+
+    const eventResult = await queryStepRouter('วางผังบูธและ visitor journey สำหรับนิทรรศการ');
+    assert.equal(eventResult.selectedSkill?.name, 'event-concept');
+
+    const promptResult = await queryStepRouter('ขอ prompt สร้างภาพ key visual แบบ photorealistic สำหรับ campaign นี้');
+    assert.equal(promptResult.selectedSkill?.name, 'step-image-prompt');
+  });
 });
-
-
