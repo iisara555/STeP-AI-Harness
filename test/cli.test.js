@@ -30,7 +30,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     const allFiles = await resolveRoleFiles('all');
     assert.equal(allFiles.role.id, 'all');
     const allSkillPaths = allFiles.files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-    assert.equal(allSkillPaths.length, 35, 'Universal role should resolve all 35 skills');
+    assert.equal(allSkillPaths.length, 43, 'Universal role should resolve all 43 skills');
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/creative/creative-art-director/SKILL.md'));
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/evidence-before-approval/SKILL.md'));
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/learning-designer/SKILL.md'));
@@ -40,6 +40,14 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/market-signal-radar/SKILL.md'));
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/voice-of-customer/SKILL.md'));
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/lab-result-review/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/iso9001-audit-readiness/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/audit-evidence-matrix/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/document-record-control/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/audit-interview-coach/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/ncr-capa/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/qms-risk-opportunity-review/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/quality-objective-kpi-review/SKILL.md'));
+    assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/management-review-prep/SKILL.md'));
 
     const pmFiles = await resolveRoleFiles('pm');
     assert.equal(pmFiles.role.id, 'pm');
@@ -243,6 +251,14 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(qsFilePaths.includes('skills/common/sop-authoring/SKILL.md'), 'QS includes sop-authoring');
     assert.ok(qsFilePaths.includes('skills/common/evidence-before-approval/SKILL.md'));
     assert.ok(qsFilePaths.includes('skills/common/lab-result-review/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/iso9001-audit-readiness/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/audit-evidence-matrix/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/document-record-control/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/audit-interview-coach/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/ncr-capa/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/qms-risk-opportunity-review/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/quality-objective-kpi-review/SKILL.md'));
+    assert.ok(qsFilePaths.includes('skills/common/management-review-prep/SKILL.md'));
     assert.ok(qsFilePaths.includes('rules/output-management.md'), 'All teams must receive output-management rule');
     assert.ok(qsFilePaths.includes('docs/teams.md'), 'Must include teams.md');
     assert.ok(qsFilePaths.includes('docs/step-router.md'), 'Must include step-router.md');
