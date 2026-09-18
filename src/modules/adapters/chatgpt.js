@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -8,9 +8,6 @@ import { buildRouterGuidelines } from '../router/index.js';
  * @returns {string}
  */
 export function generateChatGPTInstructions(role, files) {
-  const skillFiles = files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-  const ruleFiles = files.filter((f) => f.type === 'rule');
-
   let text = `# ChatGPT Desktop — STeP AI Context & System Instructions\n\n`;
   text += `**Role:** ${role.id.toUpperCase()} (${role.name || role.id}) — ${role.description || ''}\n`;
   text += `**Organization:** อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)\n`;
@@ -26,18 +23,7 @@ export function generateChatGPTInstructions(role, files) {
   text += `Operates via Layer 1 Dynamic Router. Never load all organization skills into context at once.\n\n`;
   text += buildRouterGuidelines();
   text += `\n\n`;
-
-  text += `## Active Organization Rules\n`;
-  for (const r of ruleFiles) {
-    text += `- [Rule] ${r.relativePath}: Read and enforce strictly.\n`;
-  }
-
-  text += `\n## Approved Organization Skills for Team ${role.id.toUpperCase()}\n`;
-  for (const s of skillFiles) {
-    const parts = s.relativePath.split('/');
-    const skillName = parts.length >= 3 ? parts[2] : s.relativePath;
-    text += `- **${skillName}**: Reference file at \`${s.relativePath}\`\n`;
-  }
+  text += buildLazyLoadingInventory(files);
 
   text += `\n## ChatGPT Best Practices for STeP Workflows\n`;
   text += `1. When drafting memos, agreements, or reports, structure output with clear headings and bullet points.\n`;
