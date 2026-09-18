@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -8,9 +8,6 @@ import { buildRouterGuidelines } from '../router/index.js';
  * @returns {string}
  */
 export function generateCodexInstructions(role, files) {
-  const skillFiles = files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-  const ruleFiles = files.filter((f) => f.type === 'rule');
-
   let text = `# STeP AI — Codex Project Context & Instructions\n\n`;
   text += `**Role:** ${role.id.toUpperCase()} (${role.description})\n`;
   text += `**Organization:** อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North - 22 Teams)\n`;
@@ -20,22 +17,15 @@ export function generateCodexInstructions(role, files) {
   text += `คุณกำลังปฏิบัติงานในฐานะ AI Assistant ประจำองค์กร STeP / RSP North สำหรับ **${role.id}**\n`;
   text += `โปรดปฏิบัติตามกฎระเบียบและขั้นตอนการทำงานที่ได้รับอนุมัติต่อไปนี้อย่างเคร่งครัด:\n\n`;
 
-  text += `### 1. กติกากลางด้านความปลอดภัย (Mandatory Rules)\n\n`;
-  for (const r of ruleFiles) {
-    text += `- [${r.relativePath}](${r.relativePath})\n`;
-  }
-  text += `- ข้อมูลส่วนบุคคล สัญญา งบประมาณ และเอกสารต้นฉบับที่จำกัดการเข้าถึงต้องไม่ถูก commit หรือเปิดเผย\n`;
-  text += `- การกระทำที่มีผลในโลกจริง (เช่น ส่งหนังสือ ส่งงาน อนุมัติงบ) ต้องผ่านการอนุมัติโดยมนุษย์เสมอ\n\n`;
+  text += `### 1. กติกากลางด้านความปลอดภัย\n\n`;
+  text += `- ข้อมูลส่วนบุคคล สัญญา งบประมาณ Credential และเอกสารจำกัดการเข้าถึงต้องไม่ถูก commit หรือเปิดเผย\n`;
+  text += `- การกระทำที่มีผลในโลกจริง (เช่น ส่งหนังสือ ส่งงาน อนุมัติงบ) ต้องผ่านการอนุมัติโดยมนุษย์เสมอ\n`;
+  text += `- อย่าอ่าน Rules ทั้งโฟลเดอร์ตอนเริ่มต้น ให้โหลดเฉพาะ mandatory references ของ Skill ที่ Router เลือกเมื่อมีงานจริง\n\n`;
 
   text += `### 2. สถาปัตยกรรม 3 ชั้นและ Progressive Disclosure\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
-
-  text += `### 4. Approved Skills ประจำบริบท\n\n`;
-  for (const s of skillFiles) {
-    const skillName = s.relativePath.split('/')[2];
-    text += `- **${skillName}**: ดูวิธีทำงานและขั้นตอนใน [${s.relativePath}](${s.relativePath})\n`;
-  }
+  text += buildLazyLoadingInventory(files);
 
   text += `\n### 5. คำแนะนำในการเรียกใช้\n`;
   text += `- เมื่อได้รับมอบหมายงาน ให้ตรวจดูว่าตรงกับขอบเขตของ Skill ใด แล้วปฏิบัติตามเงื่อนไข ขั้นตอน และเกณฑ์จบงานใน Skill นั้น\n`;

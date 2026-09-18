@@ -82,7 +82,8 @@ test('CLI & Core Modules Test Suite', async (t) => {
 
     const instructionsContent = await readFile(join(TEST_DIR, 'CODEX_INSTRUCTIONS.md'), 'utf-8');
     assert.ok(instructionsContent.includes('**Role:** PM'));
-    assert.ok(instructionsContent.includes('Mandatory Rules'));
+    assert.ok(instructionsContent.includes('Compact Bootstrap'));
+    assert.ok(instructionsContent.includes('Installed ≠ Loaded'));
   });
 
   await t.test('Manifest tracks file integrity correctly', async () => {

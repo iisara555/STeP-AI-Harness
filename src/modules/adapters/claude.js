@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -8,9 +8,6 @@ import { buildRouterGuidelines } from '../router/index.js';
  * @returns {string}
  */
 export function generateClaudeInstructions(role, files) {
-  const skillFiles = files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-  const ruleFiles = files.filter((f) => f.type === 'rule');
-
   let text = `# CLAUDE.md — STeP AI Working Context\n\n`;
   text += `This project contains approved organizational skills and operating standards for **STeP / RSP North** (22 Teams across 5 Domain Clusters).\n`;
   text += `Active Role: **${role.id.toUpperCase()}** (${role.description})\n\n`;
@@ -21,19 +18,9 @@ export function generateClaudeInstructions(role, files) {
   text += `- **Tone of Voice**: Professional, clear, polite, and objective Thai language for STeP communication unless requested otherwise.\n\n`;
 
   text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
-
-  text += `## Mandatory Rules to Enforce\n\n`;
-  for (const r of ruleFiles) {
-    text += `- \`${r.relativePath}\`\n`;
-  }
-
-  text += `\n## Approved Skills for this Context\n\n`;
-  for (const s of skillFiles) {
-    const skillName = s.relativePath.split('/')[2];
-    text += `- **${skillName}**: Refer to \`${s.relativePath}\` for exact steps, checklist, and completion criteria.\n`;
-  }
+  text += buildLazyLoadingInventory(files);
 
   text += `\n## CLI Integration Commands\n\n`;
   text += `- View STeP 22 teams: \`step-ai teams\`\n`;

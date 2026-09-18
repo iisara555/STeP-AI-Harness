@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -8,9 +8,6 @@ import { buildRouterGuidelines } from '../router/index.js';
  * @returns {string}
  */
 export function generateGeminiInstructions(role, files) {
-  const skillFiles = files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-  const ruleFiles = files.filter((f) => f.type === 'rule');
-
   let text = `# Google Antigravity & Spark — STeP AI Context & Instructions\n\n`;
   text += `**Role:** ${role.id.toUpperCase()} (${role.name || role.id}) — ${role.description || ''}\n`;
   text += `**Organization:** อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)\n`;
@@ -24,20 +21,9 @@ export function generateGeminiInstructions(role, files) {
 
   text += `## 3-Layer Progressive Disclosure & Skill Router\n`;
   text += `Operates via Layer 1 Dynamic Router. Never load all organization skills into context at once.\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n\n`;
-
-  text += `## Active Organization Rules\n`;
-  for (const r of ruleFiles) {
-    text += `- [Rule] ${r.relativePath}: Read and enforce strictly.\n`;
-  }
-
-  text += `\n## Approved Organization Skills for Team ${role.id.toUpperCase()}\n`;
-  for (const s of skillFiles) {
-    const parts = s.relativePath.split('/');
-    const skillName = parts.length >= 3 ? parts[2] : s.relativePath;
-    text += `- **${skillName}**: Reference file at \`${s.relativePath}\`\n`;
-  }
+  text += buildLazyLoadingInventory(files);
 
   text += `\n## Google Antigravity & Spark Execution Directives\n`;
   text += `1. Follow task management and planning guidelines before modifying project artifacts.\n`;

@@ -16,6 +16,22 @@
  * @returns {string}
  */
 export function buildRouterGuidelines({ format = 'markdown' } = {}) {
+  if (format === 'compact') {
+    let text = '';
+    text += `### STeP AI Compact Bootstrap — L0 First\n\n`;
+    text += `- พนักงานพิมพ์ภาษาไทยธรรมดาได้ ไม่ต้องรู้ Git, Terminal, Skill ID, YAML หรือ Router\n`;
+    text += `- **First Run:** อ่านเฉพาะ \`START-PROMPT.txt\`, \`START-HERE.md\`, \`USER.md\` และ \`MEMORY.md\` ถ้ามี\n`;
+    text += `- **ห้าม First Run scan:** ห้าม recursive scan, glob/search \`*.md\`, หรือสำรวจ \`skills/\`, \`rules/\`, \`manifest/\` ทั้งโฟลเดอร์\n`;
+    text += `- ถ้ามีงานจริง ให้ข้าม onboarding และใช้ cheap context จากคำขอ/ไฟล์ปัจจุบันก่อน\n`;
+    text += `- เมื่อจำเป็นต้อง route งาน ให้เปิด \`manifest/router-index.yaml\` เท่าที่จำเป็น เลือก **1 primary Skill** แล้วอ่านเฉพาะ \`SKILL.md\` ของ Skill นั้น\n`;
+    text += `- โหลดเฉพาะ mandatory references ของ Skill จาก \`manifest/skills.yaml\`; templates/examples เป็น Level 3 โหลดเมื่อจำเป็นเท่านั้น\n`;
+    text += `- Installed ≠ Loaded: การมีไฟล์อยู่ใน Workspace ไม่ได้หมายความว่าต้องอ่านเข้า context\n`;
+    text += `- ถ้าคำขอมีผลจริง เช่น Submit/Approve/Sign/Pay/Procurement decision ให้ใช้ Human Approval / Authority Gate เสมอ\n`;
+    text += `- ถ้าคำขอคลุมเครือ ให้ใช้ cheap context ก่อน แล้วถามกลับสั้นๆ เมื่อยังจำเป็น\n`;
+    text += `- USER.md/MEMORY.md เป็น local context; ห้ามบันทึก password, token, credential หรือข้อมูลลับที่ไม่จำเป็น\n\n`;
+    return text;
+  }
+
   let text = '';
 
   text += `### การทำงานร่วมกับพนักงาน STeP (Zero-Friction Everyday Interaction)\n\n`;
@@ -23,8 +39,16 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `- **ตรวจจับและเลือกทักษะอัตโนมัติ**: AI จะจับคู่งานกับทักษะที่ผ่านการรับรองขององค์กรในเบื้องหลัง โดยไม่ต้องให้พนักงานจำชื่อทักษะ\n`;
   text += `- **การแสดงผลที่เป็นมิตรและเป็นมืออาชีพ**: ใช้ชื่อผู้ช่วยจาก \`USER.md\` หากมี และไม่แสดงศัพท์ระบบภายในที่พนักงานไม่จำเป็นต้องรู้\n\n`;
 
+  text += `### First Run Fast Path — L0 Only\n\n`;
+  text += `เมื่อผู้ใช้ทักทายหรือพิมพ์ "เริ่มใช้งาน STeP AI" ให้ใช้ Fast Path นี้ก่อนทุกอย่าง:\n`;
+  text += `- อ่านได้เฉพาะ \`START-PROMPT.txt\`, \`START-HERE.md\`, \`USER.md\` (ถ้ามี) และ \`MEMORY.md\` (ถ้ามี) เท่านั้น\n`;
+  text += `- **ห้าม** recursive scan / glob / search \`*.md\` หรือสำรวจ \`skills/\`, \`rules/\`, \`manifest/\` ทั้งโฟลเดอร์ใน First Run\n`;
+  text += `- **ห้าม** สร้าง inventory รายชื่อ Skill/Rule ทั้งหมด หรืออ่าน \`SKILL.md\` ใดๆ ก่อนมีงานจริง\n`;
+  text += `- ถ้าข้อความแรกเป็นงานจริง ให้ข้าม onboarding และเข้าสู่ Router หลังจากระบุ intent จากคำขอนั้น โดยไม่ scan ทั้ง Workspace\n`;
+  text += `- เป้าหมาย First Run คือพร้อมคุยภายใน 1–2 turn ไม่ใช่ทำ knowledge indexing\n\n`;
+
   text += `### First Run Companion — ประสบการณ์ครั้งแรกแบบเป็นเพื่อนร่วมงาน\n\n`;
-  text += `ก่อนตอบข้อความแรกของ Workspace ให้ตรวจ \`USER.md\` ส่วน **Personal Assistant** ก่อนเสมอ:\n`;
+  text += `จากไฟล์ startup ที่อนุญาต ให้ตรวจ \`USER.md\` ส่วน **Personal Assistant** ถ้ามี:\n`;
   text += `- ถ้า \`First Run Completed: false\` และผู้ใช้พิมพ์ทักทาย คำว่า "เริ่มใช้งาน" หรือยังไม่ได้มอบหมายงานจริง ให้เริ่ม First Run แบบสั้น ไม่เกิน 1–2 turn\n`;
   text += `- ถ้าข้อความแรกเป็นงานที่ทำต่อได้ทันที ให้ **ทำงานก่อน** ห้ามบังคับ onboarding หรือขวางงาน แล้วค่อยเสนอให้ตั้งค่าผู้ช่วยสั้นๆ หลังส่งมอบงาน\n`;
   text += `- ถ้า \`First Run Completed\` ไม่มีอยู่เลย ให้ถือว่าเป็น USER.md รุ่นเดิมและ **ห้ามบังคับ onboarding ย้อนหลัง**\n`;
@@ -46,7 +70,7 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `- **AUTHORITY (ใครมีอำนาจตัดสินใจ)**: ตารางอนุมัติ Human-in-the-loop (\`manifest/authority.yaml\`)\n\n`;
 
   text += `### สถาปัตยกรรม 3 ชั้นและ 4-Level Loading Budget\n\n`;
-  text += `1. **Level 0 (Router Metadata)**: สแกนบริบทต้นทุนต่ำ (โฟลเดอร์ นามสกุลไฟล์ และ User Intent) โดยยังไม่อ่านเนื้อหาทั้งหมด\n`;
+  text += `1. **Level 0 (Startup / Cheap Context)**: First Run ใช้เฉพาะ startup files; เมื่อมีงานจริงจึงดู User Intent, ชื่อไฟล์/นามสกุล และ \`manifest/router-index.yaml\` เท่าที่จำเป็น โดยห้าม recursive scan\n`;
   text += `2. **Level 1 (Domain Skill)**: โหลดเฉพาะ \`SKILL.md\` ของทักษะที่ได้รับคัดเลือกเพียง 1 ทักษะ (Installed ≠ Loaded)\n`;
   text += `3. **Level 2 (Mandatory Rules & SOPs)**: เปิดอ่านเฉพาะกติกาข้อบังคับที่จำเป็นตามคำขอ\n`;
   text += `4. **Level 3 (Templates & Examples)**: 0 ไฟล์เป็นค่าเริ่มต้น โหลดตัวอย่างเฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจน\n\n`;
