@@ -39,4 +39,7 @@ export {
   updatePlaybookRun,
   validatePlaybookRegistry,
   validatePlaybookSources,
+  resolvePlaybookAction,
+  completePlaybookStep,
+  markPlaybookActionState,
 } from './modules/playbooks/index.js';
