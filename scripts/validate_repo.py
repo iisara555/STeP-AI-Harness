@@ -183,6 +183,7 @@ def main() -> int:
         "manifest/authority.yaml",
         "manifest/organization.yaml",
         "manifest/router-index.yaml",
+        "manifest/playbooks.yaml",
         "mcp/mcp.yaml",
         "package.json",
     ]
