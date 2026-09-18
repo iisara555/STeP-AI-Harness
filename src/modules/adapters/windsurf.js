@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -8,9 +8,6 @@ import { buildRouterGuidelines } from '../router/index.js';
  * @returns {string}
  */
 export function generateWindsurfRules(role, files) {
-  const skillFiles = files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-  const ruleFiles = files.filter((f) => f.type === 'rule');
-
   let text = `# Windsurf AI Rules — STeP AI Harness\n\n`;
   text += `You are an AI assistant configured for STeP / RSP North (22 Teams across 5 Domain Clusters).\n`;
   text += `Role: ${role.id} (${role.name || role.id}) — ${role.description || ''}\n\n`;
@@ -23,18 +20,7 @@ export function generateWindsurfRules(role, files) {
   text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
   text += buildRouterGuidelines();
   text += `\n`;
-
-  text += `## Rules\n`;
-  for (const r of ruleFiles) {
-    text += `- Read and follow: ${r.relativePath}\n`;
-  }
-
-  text += `\n## Available Skills\n`;
-  for (const s of skillFiles) {
-    const parts = s.relativePath.split('/');
-    const skillName = parts.length >= 3 ? parts[2] : s.relativePath;
-    text += `- ${skillName}: ${s.relativePath}\n`;
-  }
+  text += buildLazyLoadingInventory(files);
 
   return text;
 }
