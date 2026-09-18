@@ -50,6 +50,7 @@ test('Version Upgrade Core', async (t) => {
       await writeFile(join(dest, 'skills', 'common', 'demo', 'SKILL.md'), 'old upstream skill', 'utf-8');
       await writeFile(join(dest, 'README.md'), 'old readme', 'utf-8');
       await writeFile(join(dest, 'USER.md'), 'private user memory', 'utf-8');
+      await writeFile(join(dest, 'MEMORY.md'), 'private working memory', 'utf-8');
       await writeFile(join(dest, 'output', 'work.txt'), 'employee output', 'utf-8');
 
       const skillPath = join(dest, 'skills', 'common', 'demo', 'SKILL.md');
@@ -81,6 +82,7 @@ test('Version Upgrade Core', async (t) => {
       assert.equal(await readFile(join(dest, 'src', 'runtime.js'), 'utf-8'), 'new runtime');
       assert.equal(await readFile(skillPath, 'utf-8'), 'employee local edit');
       assert.equal(await readFile(join(dest, 'USER.md'), 'utf-8'), 'private user memory');
+      assert.equal(await readFile(join(dest, 'MEMORY.md'), 'utf-8'), 'private working memory');
       assert.equal(await readFile(join(dest, 'output', 'work.txt'), 'utf-8'), 'employee output');
       assert.ok(await pathExists(join(dest, '.step-ai', 'version-backups', result.versionBackupId)));
     } finally {
