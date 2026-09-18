@@ -75,6 +75,12 @@ export function validateActionRegistry(actions = {}) {
     if (!Array.isArray(action.preferredTools) || action.preferredTools.length === 0) {
       errors.push(`Action '${id}' must declare at least one preferred tool`);
     }
+    if (action.risk === 'high' && action.confirmation === 'none') {
+      errors.push(`Action '${id}' with high risk must require user-confirm or human-only`);
+    }
+    if (action.risk === 'restricted' && action.confirmation !== 'human-only') {
+      errors.push(`Action '${id}' with restricted risk must require human-only`);
+    }
     if (action.outputReferenceRequired && !action.specPath) {
       errors.push(`Action '${id}' requires specPath when outputReferenceRequired=true`);
     }
