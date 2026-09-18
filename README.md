@@ -93,28 +93,82 @@ Harness ไม่ได้ออกแบบให้ผูกกับ AI ร�
 
 ## การจัดเก็บไฟล์ที่ AI สร้าง
 
-ตั้งแต่ Pilot v0.3 ไฟล์ output ที่ AI สร้างควรถูกเก็บใต้ `output/` ตามทีม ปี เดือน และประเภทงาน เพื่อให้ค้นหาและแยกเวอร์ชันได้ง่าย
+ตั้งแต่ **Pilot v0.3** ไฟล์ที่ AI สร้าง เช่น DOCX, PDF, PPTX, XLSX, CSV, HTML และรูปภาพ จะใช้มาตรฐานการจัดเก็บเดียวกัน เพื่อให้หาไฟล์ย้อนหลังง่ายและไม่เขียนทับงานเดิมโดยไม่ตั้งใจ
+
+โครงสร้างหลักคือ:
 
 ```text
-output/CC/2026/09/presentation/
-└─ 20260918_CC_presentation_STeP-Booth-CMU_v01.pptx
+output/
+└─ <TEAM>/
+   └─ <YYYY>/
+      └─ <MM>/
+         └─ <TYPE>/
 ```
 
-รูปแบบชื่อมาตรฐานคือ:
+ตัวอย่าง:
+
+```text
+output/
+├─ CC/
+│  └─ 2026/09/presentation/
+│     ├─ 20260918_CC_presentation_STeP-Booth-CMU_v01.pptx
+│     └─ 20260918_CC_presentation_STeP-Booth-CMU_v02.pptx
+├─ GA/
+│  └─ 2026/09/document/
+│     └─ 20260918_GA_document_หนังสือขอใช้สถานที่_v01.docx
+└─ SHARED/
+   └─ 2026/09/image/
+      └─ 20260918_SHARED_image_Event-Key-Visual_v01.png
+```
+
+ชื่อไฟล์ใช้รูปแบบ:
 
 ```text
 YYYYMMDD_TEAM_TYPE_TITLE_vNN.ext
 ```
 
-ถ้ามีไฟล์ชื่อเดียวกันอยู่แล้ว ระบบจะใช้ `v02`, `v03` ต่อไปแทนการเขียนทับไฟล์เดิม โฟลเดอร์ `output/` เป็นไฟล์งานเฉพาะเครื่องและถูกตั้งไว้ใน `.gitignore`
+ความหมายของแต่ละส่วน:
 
-สำหรับเครื่องมือที่เรียก CLI ได้ สามารถขอ path ก่อนสร้างไฟล์ด้วย:
+- `YYYYMMDD` — วันที่สร้างไฟล์
+- `TEAM` — รหัสทีม เช่น `CC`, `MI`, `PITI`, `AFP`; ถ้าไม่มีบริบททีมใช้ `SHARED`
+- `TYPE` — ประเภทงาน เช่น `document`, `presentation`, `spreadsheet`, `image`, `data`, `web`
+- `TITLE` — ชื่องานที่สั้นและค้นหาเจอได้ ควรเก็บ Project ID / Job ID ไว้ถ้ามี
+- `vNN` — เวอร์ชัน เช่น `v01`, `v02`, `v03`
+
+หากชื่อเดียวกันมีอยู่แล้ว ระบบจะเพิ่มเลขเวอร์ชันต่อให้โดยอัตโนมัติแทนการเขียนทับไฟล์เดิม และจะตัดอักขระที่ใช้ไม่ได้บน Windows/macOS ออกจากชื่อไฟล์ โดยยังเก็บข้อความภาษาไทยและคำสำคัญของงานไว้
+
+> ถ้าผู้ใช้ระบุชื่อไฟล์หรือปลายทางไว้เอง ให้ยึดตามที่ผู้ใช้กำหนดก่อน ตราบใดที่ปลอดภัย
+
+โฟลเดอร์ `output/` เป็นพื้นที่เก็บงานเฉพาะ Workspace และถูกตั้งไว้ใน `.gitignore` จึงไม่ถูก commit เข้า repository โดยปริยาย
+
+สำหรับเครื่องมือที่เรียก CLI ได้ สามารถขอชื่อไฟล์และ path ถัดไปก่อนสร้างงาน:
 
 ```bash
-step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
+step-ai output \
+  --team cc \
+  --type presentation \
+  --title "STeP Booth CMU" \
+  --ext pptx
 ```
 
-กติกากลางอยู่ที่ [`rules/output-management.md`](rules/output-management.md)
+ตัวอย่างผลลัพธ์:
+
+```text
+output/CC/2026/09/presentation/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx
+```
+
+สำหรับ automation ใช้ผลลัพธ์แบบ JSON ได้:
+
+```bash
+step-ai output \
+  --team cc \
+  --type presentation \
+  --title "STeP Booth CMU" \
+  --ext pptx \
+  --json
+```
+
+กติกากลางอยู่ที่ [`rules/output-management.md`](rules/output-management.md) และรายละเอียดสำหรับพนักงานอยู่ที่ [`docs/employee-guide.md`](docs/employee-guide.md)
 
 ---
 
