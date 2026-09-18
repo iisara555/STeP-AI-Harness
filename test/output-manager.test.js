@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
 import {
   sanitizeOutputSegment,
   normalizeTeamCode,
@@ -13,6 +16,9 @@ import {
   initOutputWorkspace,
 } from '../src/modules/output-manager.js';
 import { pathExists } from '../src/utils/file-ops.js';
+
+const execFileAsync = promisify(execFile);
+const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
 
 test('Output File Management', async (t) => {
   await t.test('sanitizes unsafe characters while preserving searchable Thai text', () => {
@@ -84,6 +90,29 @@ test('Output File Management', async (t) => {
 
       assert.equal(second.version, 2);
       assert.ok(second.filename.endsWith('_v02.pptx'));
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  await t.test('CLI returns a machine-readable path and creates the target directory', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'step-output-cli-'));
+    try {
+      const { stdout } = await execFileAsync(process.execPath, [
+        STEP_AI_BIN,
+        'output',
+        '--team', 'cc',
+        '--type', 'presentation',
+        '--title', 'STeP Booth CMU',
+        '--ext', 'pptx',
+        '--date', '2026-09-18',
+        '--dest', workspace,
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      assert.equal(result.relativePath, 'output/CC/2026/09/presentation/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx');
+      assert.ok(await pathExists(result.directory));
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }
