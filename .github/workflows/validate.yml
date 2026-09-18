@@ -23,6 +23,12 @@ jobs:
         run: python3 scripts/validate_repo.py
       - name: Build pilot distribution bundle
         run: python3 scripts/build_pilot_bundle.py
+      - name: Check updater script syntax
+        shell: bash
+        run: |
+          bash -n install/update-macos.sh
+          pwsh -NoProfile -Command "\$null = [scriptblock]::Create((Get-Content -Raw 'install/update-windows.ps1')); Write-Host 'PowerShell syntax OK'"
+
       - name: Run CLI and module unit tests
         run: npm test
       - name: Verify package tarball contents
