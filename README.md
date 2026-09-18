@@ -496,6 +496,20 @@ AUTHORITY  → สิ่งที่ AI ทำได้ และเรื่อ
 
 ---
 
+## Lightweight Harness Foundation
+
+เพื่อรองรับ Pilot โดยไม่เพิ่มความซับซ้อนระดับ platform ระบบมี foundation กลาง 3 ส่วน:
+
+- `manifest/actions.yaml` — Action/Capability Registry สำหรับงานที่ทำให้เกิดผลจริง เช่น Spreadsheet หรือ Browser Submit
+- `manifest/provenance.yaml` — มาตรฐานแยก Source Fact, Derived Fact, User Input, Planning Assumption, Organization Rule และ AI Recommendation
+- Playbook Run State v3 — เก็บ event log, provenance และ feedback แบบ lightweight ใต้ `.step-ai/runs/`
+
+ส่วนเหล่านี้เป็น **Harness Infrastructure** ที่ครอบ Organization Model 6 มิติเดิม ไม่ใช่มิติใหม่ และไม่เปลี่ยนระบบให้เป็น Workflow Engine
+
+รายละเอียด: [docs/harness-foundation.md](docs/harness-foundation.md)
+
+---
+
 ## สำหรับ Maintainer
 
 หลังแก้ Skill, Rule หรือ Manifest ควรรันอย่างน้อย:
