@@ -118,6 +118,14 @@ $$\text{Score} = (\text{Intent} \times 0.30) + (\text{Keyword} \times 0.25) + (\
 - ถ้า TOR มีเพียงวงเงินรวม ห้ามกระจายเป็นงบรายกิจกรรมเอง
 - ใช้มาตรฐาน output จาก `docs/tor-to-project-plan.md`
 
+### Action Completion Contract
+
+ถ้า Playbook step เป็น Tool Action:
+- ถ้ามี `actionSpecPath` ให้เปิดอ่านก่อน execute
+- ใช้ preferred tool ก่อน และ fallback เมื่อ preferred tool ไม่มี
+- ห้ามอ้างว่าสร้าง Google Sheet/XLSX สำเร็จจนกว่าจะมี output link/path/reference จริง
+- ถ้าไม่มีเครื่องมือ ให้คง state เป็น `waiting-tool` และรักษาผลจาก Skill steps ที่เสร็จแล้ว
+
 Playbook เป็นส่วนหนึ่งของ HOW และ **ไม่ใช่ Workflow Engine ใหม่**
 
 ---

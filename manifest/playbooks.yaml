@@ -41,7 +41,10 @@ playbooks:
         when: spreadsheet
         preferredTool: google-sheets
         fallback: xlsx
-        description: "สร้าง Project Master Plan + Gantt ด้วย schema มาตรฐาน WBS / Activity / TOR Ref / Workstream / Owner / Start / End / Duration / Dependency / Milestone / Deliverable / Approval Required / Budget Category / Status / % Progress / Remark"
+        capability: spreadsheet-write
+        actionSpecPath: docs/spreadsheet-project-plan.md
+        completionCriteria: output-reference-required
+        description: "สร้าง Project Parameters + Project Master Plan + Gantt ตาม Action Contract; ถ้าไม่มี Google Sheets ให้ fallback เป็น XLSX และห้าม claim ว่าสร้างไฟล์สำเร็จหากยังไม่มี output reference จริง"
         consumes: [wbs, activities, owners, milestones, dependencies, approval-gates, deliverables-plan, budget-categories, timeline, project-parameters]
         produces: [project-master-plan-sheet, gantt-view]
 

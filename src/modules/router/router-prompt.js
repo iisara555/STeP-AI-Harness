@@ -84,6 +84,8 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `- Playbook เป็นส่วนประกอบของ HOW ไม่ใช่ Workflow Engine และไม่เพิ่มมิติองค์กรใหม่\n`;
   text += `- ทำทีละ step: โหลด Skill ปัจจุบัน → สร้าง structured handoff → ปิด context ที่ไม่จำเป็น → ไป step ถัดไป\n`;
   text += `- Action เช่น Google Sheets/XLSX/Browser เป็น Tool Action ไม่ใช่ Skill; ถ้า preferred tool ไม่มีให้ใช้ fallback ที่ Playbook ระบุ\n`;
+  text += `- ถ้า Action step มี \`actionSpecPath\` ให้เปิด spec ก่อนลงมือ และถือว่างานเสร็จเมื่อมี output link/path/reference จริงตาม Completion Contract เท่านั้น\n`;
+  text += `- ถ้า Tool Action ทำไม่ได้และไม่มี fallback ให้คงสถานะ run เป็น \`waiting-tool\` โดยรักษา Skill outputs เดิมไว้ ไม่ย้อนทำงานใหม่โดยไม่จำเป็น\n`;
   text += `- สำหรับ \`tor-to-project-plan\`: ใช้ **หนึ่ง TOR ต่อหนึ่ง run**, แยก TOR Fact ออกจาก Planning Assumption และห้ามกระจายวงเงินรวมเป็นงบรายกิจกรรมเอง\n`;
   text += `- เมื่อแก้ไฟล์ได้ ให้บันทึก run state ที่ \`.step-ai/runs/<run-id>/state.json\` เพื่อ resume งานเดิมได้ โดยห้ามเก็บ password/token/credential/PII ที่ไม่จำเป็น\n`;
   text += `- Human Approval / Authority ใช้เหมือนเดิมทุก step และมีสิทธิ์หยุด Playbook ได้ทันที\n\n`;

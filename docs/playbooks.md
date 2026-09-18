@@ -97,3 +97,17 @@ Action ที่มีผลจริงยังต้องทำตาม Hum
 5. มี regression test
 
 อย่าเพิ่ม Playbook เพียงเพราะ “อาจมีประโยชน์ในอนาคต”
+
+
+## Action Completion Contract
+
+Tool Action ต่างจาก Skill เพราะต้องเกิดผลลัพธ์จริงในระบบภายนอกหรือไฟล์
+
+กติกา:
+1. Action step อาจกำหนด `preferredTool`, `fallback`, `actionSpecPath` และ `completionCriteria`
+2. ถ้ามี preferred tool ให้ใช้ก่อน
+3. ถ้าไม่มี preferred tool และมี fallback ให้ใช้ fallback โดยไม่ย้อนทำ Skill steps
+4. ถ้าไม่มีทั้งคู่ ให้สถานะ run เป็น `waiting-tool`
+5. ห้าม mark `completed` จนกว่าจะมี output reference/path/link ตาม action spec
+
+สำหรับ TOR → Project Plan ดู `docs/spreadsheet-project-plan.md`

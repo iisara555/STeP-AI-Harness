@@ -354,6 +354,9 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
         }
       } else if (step.type === 'action') {
         if (!step.action) errors.push(`Playbook '${playbook.id}' step '${step.id}' has no action`);
+        if (step.completionCriteria === 'output-reference-required' && !step.actionSpecPath) {
+          errors.push(`Playbook '${playbook.id}' action '${step.id}' requires actionSpecPath for output-reference completion`);
+        }
       } else {
         errors.push(`Playbook '${playbook.id}' step '${step.id}' has unsupported type '${step.type}'`);
       }
@@ -361,4 +364,80 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
   }
 
   return { valid: errors.length === 0, errors };
+}
+
+
+export function resolvePlaybookAction(step, availableTools = []) {
+  if (!step || step.type !== 'action') {
+    return { status: 'not-action', tool: '', fallback: '', reason: '' };
+  }
+
+  const tools = new Set((availableTools || []).map((tool) => String(tool).toLowerCase().trim()));
+  const preferred = String(step.preferredTool || '').toLowerCase().trim();
+  const fallback = String(step.fallback || '').toLowerCase().trim();
+
+  if (preferred && tools.has(preferred)) {
+    return {
+      status: 'ready',
+      tool: preferred,
+      fallback,
+      reason: 'preferred-tool-available',
+    };
+  }
+
+  if (fallback) {
+    return {
+      status: 'fallback',
+      tool: fallback,
+      fallback,
+      reason: preferred ? 'preferred-tool-unavailable' : 'fallback-only',
+    };
+  }
+
+  return {
+    status: 'blocked',
+    tool: '',
+    fallback: '',
+    reason: 'no-supported-tool',
+  };
+}
+
+export function completePlaybookStep(state, stepId, outputs = {}) {
+  const next = structuredClone(state);
+  const step = next.steps?.find((item) => item.id === stepId);
+  if (!step) throw new Error(`Unknown Playbook step '${stepId}'`);
+
+  step.status = 'completed';
+  step.completedAt = new Date().toISOString();
+
+  next.context ||= {};
+  next.context.outputs ||= {};
+  next.context.outputs[stepId] = outputs;
+
+  const currentIndex = next.steps.findIndex((item) => item.id === stepId);
+  const nextStep = next.steps.slice(currentIndex + 1).find((item) => item.status !== 'completed');
+  next.currentStep = nextStep?.id || null;
+  next.status = nextStep ? 'active' : 'completed';
+
+  return next;
+}
+
+export function markPlaybookActionState(state, stepId, actionResolution) {
+  const next = structuredClone(state);
+  const step = next.steps?.find((item) => item.id === stepId);
+  if (!step) throw new Error(`Unknown Playbook step '${stepId}'`);
+  if (step.type !== 'action') throw new Error(`Playbook step '${stepId}' is not an action`);
+
+  step.actionState = {
+    status: actionResolution?.status || 'blocked',
+    tool: actionResolution?.tool || '',
+    reason: actionResolution?.reason || '',
+  };
+
+  if (step.actionState.status === 'blocked') {
+    next.status = 'waiting-tool';
+    next.currentStep = stepId;
+  }
+
+  return next;
 }

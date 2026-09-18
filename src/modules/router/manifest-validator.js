@@ -351,13 +351,21 @@ export async function loadAndValidateManifests(manifestDir) {
   }
 
   for (const playbook of playbooks) {
-    if (!playbook.specPath) continue;
-    if (playbook.specPath.startsWith('/') || playbook.specPath.includes('..')) {
-      pathErrors.push(`Playbook '${playbook.id}' has unsafe specPath '${playbook.specPath}'`);
-      continue;
+    if (playbook.specPath) {
+      if (playbook.specPath.startsWith('/') || playbook.specPath.includes('..')) {
+        pathErrors.push(`Playbook '${playbook.id}' has unsafe specPath '${playbook.specPath}'`);
+      } else if (!(await pathExists(join(rootDir, playbook.specPath)))) {
+        pathErrors.push(`Playbook '${playbook.id}' specPath does not exist: ${playbook.specPath}`);
+      }
     }
-    if (!(await pathExists(join(rootDir, playbook.specPath)))) {
-      pathErrors.push(`Playbook '${playbook.id}' specPath does not exist: ${playbook.specPath}`);
+
+    for (const step of playbook.steps || []) {
+      if (step.type !== 'action' || !step.actionSpecPath) continue;
+      if (step.actionSpecPath.startsWith('/') || step.actionSpecPath.includes('..')) {
+        pathErrors.push(`Playbook '${playbook.id}' action '${step.id}' has unsafe actionSpecPath '${step.actionSpecPath}'`);
+      } else if (!(await pathExists(join(rootDir, step.actionSpecPath)))) {
+        pathErrors.push(`Playbook '${playbook.id}' action '${step.id}' actionSpecPath does not exist: ${step.actionSpecPath}`);
+      }
     }
   }
 
