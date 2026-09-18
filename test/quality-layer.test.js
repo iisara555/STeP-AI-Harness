@@ -29,6 +29,15 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
   });
 
   await t.test('provided QPs remain unverified until Master List arrives', () => {
+    const blockFor = (id) => {
+      const lines = documents.split(/\r?\n/);
+      const start = lines.findIndex((line) => line === `  ${id}:`);
+      assert.ok(start >= 0, `missing ${id}`);
+      let end = start + 1;
+      while (end < lines.length && !/^  [a-z0-9_-]+:$/.test(lines[end])) end += 1;
+      return lines.slice(start, end).join('\n');
+    };
+
     for (const id of [
       'qs-doc-control-procedure',
       'qms-quality-record-control',
@@ -39,10 +48,7 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
       'qms-management-review',
       'qms-complaint-management',
     ]) {
-      const start = documents.indexOf(`${id}:`);
-      assert.ok(start >= 0, `missing ${id}`);
-      const next = documents.indexOf('\n  ', start + id.length + 2);
-      const block = documents.slice(start, next > start ? next : undefined);
+      const block = blockFor(id);
       assert.ok(block.includes('verification: pending-master-list'), `${id} must await Master List`);
       assert.ok(block.includes('status: provided-unverified'), `${id} must not be treated as current automatically`);
     }
