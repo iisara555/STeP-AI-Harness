@@ -247,3 +247,53 @@ export async function updatePlaybookRun(workspaceDir, runId, updater) {
   await writeFile(statePath, JSON.stringify(next, null, 2), 'utf-8');
   return next;
 }
+
+
+export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams = new Set() } = {}) {
+  const errors = [];
+  const seen = new Set();
+
+  for (const playbook of playbooks || []) {
+    if (seen.has(playbook.id)) errors.push(`Duplicate playbook id '${playbook.id}'`);
+    seen.add(playbook.id);
+
+    if (!playbook.owner) errors.push(`Playbook '${playbook.id}' has no owner`);
+    if (playbook.owner && teams.size > 0 && !teams.has(playbook.owner)) {
+      errors.push(`Playbook '${playbook.id}' references unknown owner '${playbook.owner}'`);
+    }
+
+    if (!Array.isArray(playbook.steps) || playbook.steps.length < 2) {
+      errors.push(`Playbook '${playbook.id}' must contain at least 2 steps`);
+    }
+
+    for (const required of playbook.requiredSignals || []) {
+      if (!Object.hasOwn(playbook.signals || {}, required)) {
+        errors.push(`Playbook '${playbook.id}' requires unknown signal '${required}'`);
+      }
+    }
+
+    const stepIds = new Set();
+    for (const step of playbook.steps || []) {
+      if (stepIds.has(step.id)) errors.push(`Playbook '${playbook.id}' has duplicate step '${step.id}'`);
+      stepIds.add(step.id);
+
+      if (step.when && !Object.hasOwn(playbook.signals || {}, step.when)) {
+        errors.push(`Playbook '${playbook.id}' step '${step.id}' references unknown signal '${step.when}'`);
+      }
+
+      if (step.type === 'skill') {
+        if (!step.skill) {
+          errors.push(`Playbook '${playbook.id}' step '${step.id}' has no Skill`);
+        } else if (skills.size > 0 && !skills.has(step.skill)) {
+          errors.push(`Playbook '${playbook.id}' step '${step.id}' references unknown Skill '${step.skill}'`);
+        }
+      } else if (step.type === 'action') {
+        if (!step.action) errors.push(`Playbook '${playbook.id}' step '${step.id}' has no action`);
+      } else {
+        errors.push(`Playbook '${playbook.id}' step '${step.id}' has unsupported type '${step.type}'`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
