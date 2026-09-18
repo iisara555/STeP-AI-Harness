@@ -71,6 +71,14 @@ Action ที่มีผลจริงยังต้องทำตาม Hum
 
 ใช้เมื่อคำขอพูดถึง TOR และอย่างน้อยอีกสองมิติ เช่น กิจกรรม + งบ, timeline, Gantt, Google Sheet
 
+กติกาเฉพาะ:
+- หนึ่ง TOR ต่อหนึ่ง Run
+- แยก TOR Fact / Planning Assumption
+- สร้าง Project Parameters ก่อน Timeline
+- งบใช้ Source เท่านั้น ห้ามกระจายวงเงินรวมเอง
+- Google Sheet/XLSX ใช้ Project Master Plan + Gantt schema เดียวกัน
+- โหลดรายละเอียดมาตรฐานจาก `docs/tor-to-project-plan.md`
+
 ### Meeting → Action Plan
 `meeting-summary → project-plan → spreadsheet-action-plan`
 
