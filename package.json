@@ -51,7 +51,8 @@
     "docs/quality-pilot-smoke-test.md",
     "docs/afp-demo-source-register.md",
     "docs/afp-demo-concepts.md",
-    "docs/afp-demo-run-sheet.md"
+    "docs/afp-demo-run-sheet.md",
+    "docs/afp-demo-start.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
