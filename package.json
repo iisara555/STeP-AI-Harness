@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/ai-harness",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "STeP AI skills, rules, routing, governance, and employee workspace distribution",
   "main": "src/index.js",
   "type": "module",
@@ -8,7 +8,7 @@
     "step-ai": "./bin/step-ai.js"
   },
   "scripts": {
-    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js test/high-leverage-skills.test.js test/iso-audit-readiness.test.js test/pilot-readiness.test.js",
+    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js test/high-leverage-skills.test.js test/iso-audit-readiness.test.js test/pilot-readiness.test.js test/first-run-loading.test.js",
     "validate": "python scripts/validate_repo.py"
   },
   "files": [
