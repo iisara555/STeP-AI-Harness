@@ -13,6 +13,7 @@ import { runAsk } from './commands/ask.js';
 import { runConfig } from './commands/config.js';
 import { runUpdate } from './commands/update.js';
 import { runFeedback } from './commands/feedback.js';
+import { runOutput } from './commands/output.js';
 
 function parseArgs(rawArgs) {
   const args = { _: [] };
@@ -61,6 +62,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('config')}     ดูหรือเปลี่ยนทีมหลักและเครื่องมือ AI ประจำตัว (${colors.dim('~/.step-ai/config.json')})
   ${colors.cyan('update')}     อัปเดต Skills และ Router ล่าสุดในคลิกเดียว (ไม่กระทบไฟล์งานเดิม)
   ${colors.cyan('feedback')}   แนะนำวิธีส่งข้อเสนอแนะ รายงานผลลัพธ์ หรือเสนอ Skill ใหม่
+  ${colors.cyan('output')}     สร้าง path และชื่อไฟล์มาตรฐานสำหรับเก็บ output โดยไม่เขียนทับไฟล์เดิม
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
   ${colors.cyan('teams')}      แสดงผังและรายชื่อ 22 ทีมของ STeP พร้อม 5 Domain Clusters
   ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
@@ -86,6 +88,7 @@ ${colors.bold('ตัวอย่างการใช้งาน:')}
   step-ai config
   step-ai config --team qs
   step-ai update
+  step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
   step-ai init --team qs --tool codex
   step-ai init --role all --tool claude
   step-ai doctor --employee
@@ -119,6 +122,9 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     case 'feedback':
       await runFeedback(args);
+      break;
+    case 'output':
+      await runOutput(args);
       break;
     case 'teams':
       await runTeams(args);
