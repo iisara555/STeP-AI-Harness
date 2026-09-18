@@ -99,3 +99,32 @@ Quality Layer ใช้ `manifest/documents.yaml` เดิมเป็น Contr
 - link QMS Skills เดิมกับ source ที่เกี่ยวข้อง แทนการสร้าง Skill ซ้ำ
 
 Pilot ของ Quality Layer ใช้ checklist ที่ `docs/quality-pilot-smoke-test.md` และตัดสินการพัฒนาต่อจาก usage จริง
+
+
+## 6. Lightweight Privacy Gate
+
+Privacy Gate เป็น cross-cutting safeguard ของ Harness เดิม ไม่ใช่ Dimension ใหม่และไม่ใช่ Workflow Engine
+
+```text
+Input
+  ↓
+Quick Local Scan
+  ↓
+Public/Internal ─────────────→ ใช้งานต่อ
+Restricted ──────────────────→ Auto-mask → AI
+Sensitive / High Risk ───────→ Human Confirmation / Block external AI
+```
+
+หลัก Pilot:
+- local-first ด้วย regex/heuristic ก่อนเรียก model
+- ไม่ OCR PDF/รูปภาพทั้งชุดโดยอัตโนมัติ
+- cache ผล scan ตาม hash เพื่อลด latency
+- allowlist เลขประจำตัวองค์กรที่เป็นข้อมูลสาธารณะและจำเป็นต่อ Task ได้
+- Run State เก็บเฉพาะ privacy metadata เช่น hash/class/action/redaction status
+- query และ feedback ที่จะ persist ต้องผ่าน redaction ก่อน
+- Raw PII ไม่ควรถูกเก็บใน Run Log
+
+คำสั่งตรวจแบบ local:
+`step-ai privacy --file sample.txt --redact`
+
+สำหรับ PDF/รูปภาพ ให้ AI client หรือตัวอ่านเอกสาร local สกัดเฉพาะส่วนที่จำเป็นก่อน ไม่ทำ OCR อัตโนมัติทั้งไฟล์
