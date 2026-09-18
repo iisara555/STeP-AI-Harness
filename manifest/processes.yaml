@@ -203,3 +203,42 @@ processes:
       - laboratory.result-review.completeness
       - laboratory.result-review.qc-review
       - laboratory.result-review.qualified-signoff
+
+  quality.audit-readiness:
+    name: "การเตรียมความพร้อมและหลักฐานสำหรับ Internal / External Audit"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.audit-readiness.scope-confirmation
+      - quality.audit-readiness.evidence-preparation
+      - quality.audit-readiness.mock-interview
+      - quality.audit-readiness.readiness-review
+    description: "เตรียม Process Owner, audit criteria, evidence และ team readiness โดยไม่ตัดสิน conformity แทน auditor หรือ QMR"
+
+  quality.corrective-action:
+    name: "การจัดการ Nonconformity และ Corrective Action"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.corrective-action.nc-record
+      - quality.corrective-action.containment
+      - quality.corrective-action.root-cause
+      - quality.corrective-action.action
+      - quality.corrective-action.effectiveness
+      - quality.corrective-action.human-closure
+    description: "กระบวนการ NC/CAPA ตั้งแต่ข้อเท็จจริงถึง effectiveness verification และการปิดโดยผู้มีอำนาจ"
+
+  quality.management-review:
+    name: "การทบทวนผลการดำเนินงานระบบบริหารคุณภาพโดยฝ่ายบริหาร"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.management-review.input-collection
+      - quality.management-review.objective-kpi
+      - quality.management-review.risk-opportunity
+      - quality.management-review.decision-prep
+      - quality.management-review.action-follow-up
+    description: "รวบรวมและทบทวนผลการดำเนินงาน QMS เพื่อเตรียมข้อมูลและประเด็นตัดสินใจสำหรับฝ่ายบริหาร"

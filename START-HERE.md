@@ -2,13 +2,13 @@
 
 ใช้โปรแกรม AI ที่คุณมีอยู่แล้ว ไม่ต้องย้ายค่าย และไม่ต้องใช้ Terminal
 
-### ดาวน์โหลด STeP AI Pilot (v0.4.0)
+### ดาวน์โหลด STeP AI Pilot (v0.5.0)
 
-[ดาวน์โหลด `STeP-AI-Pilot-v0.4.0.zip` จาก GitHub Releases](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.4.0/STeP-AI-Pilot-v0.4.0.zip)
+[ดาวน์โหลด `STeP-AI-Pilot-v0.5.0.zip` จาก GitHub Releases](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.5.0/STeP-AI-Pilot-v0.5.0.zip)
 
 ถ้าใช้งานผ่านช่องทางภายในองค์กร สามารถรับไฟล์ชุดเดียวกันจาก **Shared Drive** หรือ AI Champion ได้
 
-> ลิงก์นี้ระบุเวอร์ชันตรง ๆ (`v0.4.0`) เพื่อให้เอกสารชี้ไปยังไฟล์ Pilot ที่ตรวจสอบแล้ว ไม่ผูกกับ `releases/latest`
+> ลิงก์นี้ระบุเวอร์ชันตรง ๆ (`v0.5.0`) เพื่อให้เอกสารชี้ไปยังไฟล์ Pilot ที่ตรวจสอบแล้ว ไม่ผูกกับ `releases/latest`
 
 เมื่อได้ไฟล์แล้ว ให้แตกไฟล์ก่อนใช้งาน (Windows: **Extract All...**, macOS: ดับเบิลคลิกไฟล์ ZIP)
 
@@ -49,14 +49,14 @@ AI จะถามสั้นๆ แค่สิ่งที่จำเป็�
 
 ## อัปเดตเวอร์ชันในครั้งถัดไป
 
-หลังติดตั้ง v0.4.0 แล้ว หากมีเวอร์ชันใหม่ ให้ดับเบิลคลิก:
+หลังติดตั้ง v0.5.0 แล้ว หากมีเวอร์ชันใหม่ ให้ดับเบิลคลิก:
 
 - Windows: `Update-STeP-AI.bat`
 - macOS: `Update-STeP-AI.command`
 
 ระบบจะตรวจ GitHub Release, สำรองรุ่นเดิม และอัปเดตโดยไม่ลบ `USER.md`, `MEMORY.md` หรือ `output/`
 
-> ถ้ายังใช้ v0.3.0 หรือต่ำกว่า ให้ดาวน์โหลด v0.4.0 ใหม่หนึ่งครั้งก่อน
+> ถ้ายังใช้ v0.3.0 หรือต่ำกว่า ให้ดาวน์โหลด v0.5.0 ใหม่หนึ่งครั้งก่อน
 
 ## ไฟล์ที่ AI สร้างจะอยู่ที่ไหน
 

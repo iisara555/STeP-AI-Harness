@@ -687,3 +687,156 @@ skills:
     references:
       mandatory: [human-approval-rule, data-classification-rule]
       optional: []
+
+  # --- ISO 9001 / QMS Audit Readiness Pack ---
+  iso9001-audit-readiness:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, audit, compliance]
+    process: [quality.audit-readiness]
+    path: skills/common/iso9001-audit-readiness/SKILL.md
+    description: เตรียม Internal/External Audit ISO 9001 แบบ process-based สำหรับ 22 ทีม โดยเชื่อม scope, criteria, evidence, KPI, risk, records และ prior findings
+    governance:
+      owner: qs
+      reviewer: [sit, ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  audit-evidence-matrix:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, audit, evidence]
+    process: [quality.audit-readiness]
+    path: skills/common/audit-evidence-matrix/SKILL.md
+    description: สร้าง Evidence Matrix เชื่อม process/criteria กับหลักฐาน ช่วงเวลา source owner status และ evidence gap
+    governance:
+      owner: qs
+      reviewer: [ga, sit]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  document-record-control:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, document-control]
+    process: [quality.document-control]
+    path: skills/common/document-record-control/SKILL.md
+    description: ตรวจ owner, version, approval, effective date, current/obsolete, retention และ traceability ของ Controlled Documents และ Records
+    governance:
+      owner: qs
+      reviewer: [ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [qs-doc-control-procedure, human-approval-rule, data-classification-rule]
+      optional: []
+
+  audit-interview-coach:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, audit, people-readiness]
+    process: [quality.audit-readiness]
+    path: skills/common/audit-interview-coach/SKILL.md
+    description: จำลอง Auditor Interview ให้ Process Owner และพนักงานอธิบายสิ่งที่ทำจริงและเปิดหลักฐานได้โดยไม่แต่งหรือท่องคำตอบ
+    governance:
+      owner: qs
+      reviewer: [hd, ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  ncr-capa:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, corrective-action]
+    process: [quality.corrective-action]
+    path: skills/common/ncr-capa/SKILL.md
+    description: จัดการ NC/CAPA ตั้งแต่ข้อเท็จจริง containment/correction, root cause, corrective action และ effectiveness check จนพร้อมให้มนุษย์ปิด
+    governance:
+      owner: qs
+      reviewer: [sit]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  qms-risk-opportunity-review:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, risk-management]
+    process: [quality.management-review]
+    path: skills/common/qms-risk-opportunity-review/SKILL.md
+    description: ทบทวน QMS Risks/Opportunities แบบ evidence-based เชื่อม event/cause/consequence, current controls, action, owner และ follow-up
+    governance:
+      owner: qs
+      reviewer: [sit, imo]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  quality-objective-kpi-review:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, performance]
+    process: [quality.management-review]
+    path: skills/common/quality-objective-kpi-review/SKILL.md
+    description: ทบทวน Quality Objective/KPI ให้ measurable และ traceable ด้วย formula, source, baseline, target, cadence, owner, actual และ action
+    governance:
+      owner: qs
+      reviewer: [sit, imo]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  management-review-prep:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, management-review]
+    process: [quality.management-review]
+    path: skills/common/management-review-prep/SKILL.md
+    description: เตรียม Management Review จาก evidence ของ 22 ทีม รวม KPI, customer feedback, audit, NC/CAPA, risks/opportunities, resources และ decisions required
+    governance:
+      owner: qs
+      reviewer: [sit, ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []

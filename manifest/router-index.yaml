@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.3.0
+  version: 2.4.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
@@ -850,3 +850,206 @@ skills:
           role: authorized-signatory
           authority: official-signing
           description: การออกหรือรับรองรายงานผลทดสอบอย่างเป็นทางการต้องมีผู้มีอำนาจ/ผู้เชี่ยวชาญลงนาม
+
+  # --- ISO 9001 / QMS Audit Readiness Pack ---
+  - name: iso9001-audit-readiness
+    cluster: governance-operations
+    domain: quality
+    processId: quality.audit-readiness
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: เตรียม External/Internal Audit ISO 9001 แบบ process-based สำหรับทีมและทั้งองค์กร
+    intent: [review, plan]
+    triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
+    paths: ["**/ISO/**", "**/Audit/**", "**/Quality/**"]
+    fileTypes: [md, docx, pdf, xlsx]
+    requires: [audit_scope_or_plan]
+    scope:
+      allow:
+        - สรุป process readiness, evidence gap, KPI, risk และ interview readiness
+        - เตรียม action list ก่อน fieldwork
+      escalate: {}
+      human_only:
+        iso_conformity_claim:
+          role: qs-iso-manager
+          authority: qms-conformity-decision
+          description: การรับรองว่าผ่าน ISO หรือยืนยัน conformity/certification อย่างเป็นทางการ
+
+  - name: audit-evidence-matrix
+    cluster: governance-operations
+    domain: quality
+    processId: quality.audit-readiness
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: ทำ Evidence Matrix/PBC list เชื่อม requirement กับหลักฐาน period source owner และ gap
+    intent: [create, review]
+    triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso]
+    paths: ["**/Audit/**", "**/Evidence/**", "**/ISO/**"]
+    fileTypes: [xlsx, csv, md, docx, pdf]
+    requires: [audit_scope_or_evidence_request]
+    scope:
+      allow:
+        - สร้าง evidence register และตรวจ relevance/completeness/period/traceability
+        - ระบุ READY / PARTIAL / MISSING / STALE
+      escalate:
+        pii_sensitive_material:
+          skill: data-privacy-compliance
+          description: หลักฐาน audit มีข้อมูลส่วนบุคคลหรือข้อมูลลับที่ต้องลด/ปกปิดก่อนส่ง
+      human_only: {}
+
+  - name: document-record-control
+    cluster: governance-operations
+    domain: quality
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: ตรวจ Controlled Document และ Record เรื่อง owner revision approval current/obsolete retention และ traceability
+    intent: [review, check]
+    triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย]
+    paths: ["**/ISO/**", "**/SOP/**", "**/records/**", "**/documents/**"]
+    fileTypes: [docx, pdf, xlsx, md]
+    requires: [document_or_record]
+    scope:
+      allow:
+        - ตรวจ current/review-due/obsolete/uncontrolled/record-gap
+        - ตรวจ owner version approval effective date และ traceability
+      escalate:
+        sop_rewrite:
+          skill: sop-authoring
+          description: ต้องยกร่างหรือแก้เนื้อหา SOP/WI หลังพบ document gap
+      human_only:
+        formal_enactment:
+          role: qs-iso-manager
+          authority: iso-enactment
+          description: การประกาศใช้ แก้ไข หรือยกเลิก controlled document อย่างเป็นทางการ
+
+  - name: audit-interview-coach
+    cluster: governance-operations
+    domain: quality
+    processId: quality.audit-readiness
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
+    intent: [review, interview]
+    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit]
+    paths: ["**/Audit/**", "**/ISO/**", "**/Training/**"]
+    fileTypes: [md, docx, pdf]
+    requires: [team_or_process_context]
+    scope:
+      allow:
+        - จำลองคำถาม process/evidence/KPI/risk/improvement
+        - debrief knowledge/process/evidence gaps
+      escalate: {}
+      human_only: {}
+
+  - name: ncr-capa
+    cluster: governance-operations
+    domain: quality
+    processId: quality.corrective-action
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: จัดการ NC/NCR/CAPA ตั้งแต่ fact, containment, RCA, corrective action และ effectiveness check
+    intent: [create, review]
+    triggers: [ncr capa, capa, nonconformity, non-conformity, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan]
+    paths: ["**/CAPA/**", "**/NCR/**", "**/Audit/**", "**/Quality/**"]
+    fileTypes: [xlsx, md, docx, pdf]
+    requires: [nonconformity_or_finding]
+    scope:
+      allow:
+        - เขียน NC statement จาก requirement เทียบกับ evidence
+        - ช่วยทำ containment, root cause, corrective action และ effectiveness plan
+      escalate:
+        controlled_document_change:
+          skill: sop-authoring
+          description: Corrective action ต้องแก้ SOP/WI หรือ controlled process document
+      human_only:
+        formal_closure:
+          role: qs-iso-manager
+          authority: qms-conformity-decision
+          description: การปิด NC/CAPA หรือยืนยัน corrective action ว่าปิดอย่างเป็นทางการ
+
+  - name: qms-risk-opportunity-review
+    cluster: governance-operations
+    domain: quality
+    processId: quality.management-review
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
+    intent: [review, evaluate]
+    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms]
+    paths: ["**/Risk/**", "**/ISO/**", "**/Quality/**"]
+    fileTypes: [xlsx, md, docx]
+    requires: [process_or_qms_context]
+    scope:
+      allow:
+        - แยก risk event/cause/consequence จาก control gap
+        - ตรวจ current controls, action, owner และ follow-up evidence
+      escalate:
+        project_context:
+          skill: project-pre-mortem
+          description: ความเสี่ยงเฉพาะโครงการหรือสัญญาควรใช้ Project Pre-Mortem
+      human_only:
+        formal_acceptance:
+          role: executive-director
+          authority: policy-waiver
+          description: การยอมรับความเสี่ยงหรือผ่อนผัน control อย่างเป็นทางการ
+
+  - name: quality-objective-kpi-review
+    cluster: governance-operations
+    domain: quality
+    processId: quality.management-review
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
+    intent: [review, evaluate]
+    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics]
+    paths: ["**/KPI/**", "**/Quality/**", "**/ISO/**"]
+    fileTypes: [xlsx, csv, md, docx, pptx]
+    requires: [objective_or_kpi]
+    scope:
+      allow:
+        - ตรวจ formula/source/baseline/target/cadence/owner/actual/action
+        - แยก activity/output กับ outcome
+      escalate:
+        strategic_okr_design:
+          skill: innovation-okr-mapping
+          description: การออกแบบ OKR เชิงยุทธศาสตร์ทั้งชุดควรใช้ innovation-okr-mapping
+      human_only:
+        hr_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การกำหนดหรือรับรอง KPI ประเมินผลรายบุคคล
+
+  - name: management-review-prep
+    cluster: governance-operations
+    domain: quality
+    processId: quality.management-review
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    description: เตรียม Management Review Pack จาก KPI, customer feedback, audit, CAPA, risk, resources และ prior actions
+    intent: [create, summarize, review]
+    triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review]
+    paths: ["**/ManagementReview/**", "**/ISO/**", "**/Quality/**", "**/QMR/**"]
+    fileTypes: [pptx, xlsx, md, docx, pdf]
+    requires: [management_review_period]
+    scope:
+      allow:
+        - รวม source completeness, trends, exceptions, prior actions และ decision queue
+        - เตรียม pre-read โดยไม่แก้ source records
+      escalate:
+        decision_analysis:
+          skill: decision-memo
+          description: ประเด็นที่ต้องเปรียบเทียบทางเลือกเชิงลึกควรใช้ Decision Memo
+      human_only:
+        formal_qms_approval:
+          role: executive-director
+          authority: qms-conformity-decision
+          description: การตัดสินใจ รับรองผล หรืออนุมัติการเปลี่ยนแปลง QMS ใน Management Review

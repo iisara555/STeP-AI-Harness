@@ -58,3 +58,10 @@ authorities:
     humanInTheLoop: mandatory
     description: "การอนุมัติผ่อนผันระเบียบการเบิกจ่ายหรือจัดซื้อจัดจ้างกรณีจำเป็น ต้องได้รับความเห็นชอบจากผู้อำนวยการ"
 
+
+  qms-conformity-decision:
+    name: "การรับรองสถานะความสอดคล้องของ QMS การตอบรับ finding และการปิด NC/CAPA อย่างเป็นทางการ"
+    authorizedRole: "qs-iso-manager"
+    alternateRole: "quality-management-representative"
+    humanInTheLoop: mandatory
+    description: "การยืนยันว่าองค์กรหรือกระบวนการผ่านเกณฑ์ ISO การตอบรับต่อผู้ตรวจประเมิน หรือการปิด NC/CAPA อย่างเป็นทางการ ต้องเป็นการตัดสินใจของผู้มีอำนาจในระบบคุณภาพ"

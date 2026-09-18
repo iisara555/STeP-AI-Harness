@@ -4,8 +4,8 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.4  
-**ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 35 Skills
+**สถานะปัจจุบัน:** Pilot v0.5  
+**ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
 
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.4.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.4.0/STeP-AI-Pilot-v0.4.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.5.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.5.0/STeP-AI-Pilot-v0.5.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -119,7 +119,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.4.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.5.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
@@ -206,7 +206,7 @@ step-ai output \
 
 ---
 
-## 35 Skills ทำอะไรบ้าง
+## 43 Skills ทำอะไรบ้าง
 
 Skills ไม่ได้ถูกโหลดทั้งหมดพร้อมกัน ระบบจะเลือกเฉพาะส่วนที่เกี่ยวข้องกับงาน
 
@@ -247,6 +247,19 @@ Skills ไม่ได้ถูกโหลดทั้งหมดพร้อ�
 - `presentation-design` — โครงสร้างและออกแบบ Presentation
 - `step-brand` — บริบทและข้อกำหนดด้านแบรนด์
 - `step-writing` — ปรับภาษาให้เหมาะกับการสื่อสารของ STeP
+
+### ISO 9001 / QMS Audit Readiness
+
+- `iso9001-audit-readiness` — เตรียม External/Internal Audit แบบ process-based
+- `audit-evidence-matrix` — จัด Evidence Matrix และตรวจ coverage/period/owner
+- `document-record-control` — ตรวจ revision, approval, current/obsolete และ records
+- `audit-interview-coach` — ซ้อม Auditor Interview จากสิ่งที่ทำจริง
+- `ncr-capa` — NC → Root Cause → Corrective Action → Effectiveness
+- `qms-risk-opportunity-review` — ทบทวน QMS Risks & Opportunities
+- `quality-objective-kpi-review` — ตรวจ Quality Objective/KPI ให้ measurable และ traceable
+- `management-review-prep` — เตรียม Management Review Pack จาก evidence ของทั้งองค์กร
+
+ชุดนี้ใช้ได้กับทั้ง 22 ทีม โดย QS เป็นเจ้าของ framework ส่วน evidence เป็นความรับผิดชอบของ Process Owner แต่ละทีม AI ช่วยเตรียมและตรวจ gap ได้ แต่ไม่สามารถรับรองว่า “ผ่าน ISO”, ปิด NC/CAPA หรือให้ conformity decision แทนผู้มีอำนาจได้
 
 ### การเรียนรู้ งานแล็บ และระบบ
 
