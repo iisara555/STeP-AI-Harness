@@ -26,7 +26,13 @@ jobs:
       - name: Check updater script syntax
         shell: bash
         run: |
+          bash -n Install-STeP-AI.command
+          bash -n Update-STeP-AI.command
+          bash -n Feedback-STeP-AI.command
+          bash -n install/install-macos.sh
           bash -n install/update-macos.sh
+          bash -n install/feedback-macos.sh
+          bash -n install/macos-runtime.sh
           pwsh -NoProfile -Command "\$null = [scriptblock]::Create((Get-Content -Raw 'install/update-windows.ps1')); Write-Host 'PowerShell syntax OK'"
 
       - name: Run CLI and module unit tests

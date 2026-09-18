@@ -6,6 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=macos-runtime.sh
+. "$SCRIPT_DIR/macos-runtime.sh"
 REPO="iisara555/STeP-AI-Harness"
 LATEST_API="https://api.github.com/repos/$REPO/releases/latest"
 
@@ -16,13 +18,14 @@ RED='\033[0;31m'
 GRAY='\033[0;90m'
 NC='\033[0m'
 
-if ! command -v node >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  ไม่พบ Node.js ในเครื่อง กรุณาติดต่อ AI Champion${NC}"
+if ! resolve_step_node "$ROOT_DIR"; then
+    echo -e "${YELLOW}⚠️  ไม่สามารถเตรียม Node.js Runtime สำหรับการอัปเดตได้${NC}"
     read -r -p "กด Enter เพื่อออก..." _
     exit 1
 fi
+NODE_BIN="$STEP_NODE_BIN"
 
-CURRENT_VERSION="$(node -e "const fs=require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1],'utf8')).version)" "$ROOT_DIR/package.json")"
+CURRENT_VERSION="$("$NODE_BIN" -e "const fs=require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1],'utf8')).version)" "$ROOT_DIR/package.json")"
 
 show_header() {
     clear || true
@@ -36,7 +39,7 @@ show_header() {
 
 local_sync() {
     echo -e "${YELLOW}กำลังซิงก์ Skills, Rules และ Router จากเวอร์ชันที่ติดตั้งอยู่...${NC}"
-    node "$ROOT_DIR/bin/step-ai.js" update --dest "$ROOT_DIR"
+    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" update --dest "$ROOT_DIR"
 }
 
 finish_update() {
@@ -60,7 +63,7 @@ if ! curl -fsSL --connect-timeout 10 --max-time 20     -H "Accept: application/v
     exit 0
 fi
 
-LATEST_VERSION="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(String(r.tag_name||'').replace(/^v/i,''))" "$TMP_API")"
+LATEST_VERSION="$("$NODE_BIN" -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(String(r.tag_name||'').replace(/^v/i,''))" "$TMP_API")"
 rm -f "$TMP_API"
 
 if [ -z "$LATEST_VERSION" ]; then
@@ -70,7 +73,7 @@ if [ -z "$LATEST_VERSION" ]; then
     exit 0
 fi
 
-COMPARE="$(node -e "
+COMPARE="$("$NODE_BIN" -e "
 const p=v=>v.replace(/^v/i,'').split('.').slice(0,3).map(Number);
 const a=p(process.argv[1]),b=p(process.argv[2]);
 let r=0; for(let i=0;i<3;i++){if(a[i]>b[i]){r=1;break} if(a[i]<b[i]){r=-1;break}}
@@ -132,14 +135,14 @@ if [ ! -f "$NEW_ROOT/package.json" ] || [ ! -f "$NEW_ROOT/bin/step-ai.js" ]; the
     exit 1
 fi
 
-NEW_VERSION="$(node -e "const fs=require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1],'utf8')).version)" "$NEW_ROOT/package.json")"
+NEW_VERSION="$("$NODE_BIN" -e "const fs=require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1],'utf8')).version)" "$NEW_ROOT/package.json")"
 if [ "$NEW_VERSION" != "$LATEST_VERSION" ]; then
     echo -e "${RED}Release version mismatch: expected $LATEST_VERSION, found $NEW_VERSION${NC}"
     exit 1
 fi
 
 echo -e "${YELLOW}กำลังสำรองข้อมูลและอัปเกรด Workspace...${NC}"
-node "$NEW_ROOT/bin/step-ai.js" upgrade-apply --dest "$ROOT_DIR" --version "$LATEST_VERSION"
+"$NODE_BIN" "$NEW_ROOT/bin/step-ai.js" upgrade-apply --dest "$ROOT_DIR" --version "$LATEST_VERSION"
 
 CURRENT_VERSION="$LATEST_VERSION"
 echo -e "${GREEN}✓ อัปเดตเป็น v$LATEST_VERSION เรียบร้อย${NC}"

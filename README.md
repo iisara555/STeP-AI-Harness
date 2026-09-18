@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.6.1  
+**สถานะปัจจุบัน:** Pilot v0.6.2  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,13 +44,23 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.6.1.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.6.1/STeP-AI-Pilot-v0.6.1.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.6.2.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.6.2/STeP-AI-Pilot-v0.6.2.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
 5. พิมพ์งานเป็นภาษาไทยได้เลย
 
 หากยังไม่เคยใช้งาน แนะนำให้อ่าน [START-HERE.md](START-HERE.md) ก่อน ใช้เวลาไม่นาน
+
+### macOS
+
+หลังแตก ZIP ให้ **คลิกขวา `Install-STeP-AI.command` → Open** ในครั้งแรก
+
+หาก macOS แจ้งว่าไม่สามารถตรวจสอบผู้พัฒนาได้ ให้ไปที่ **System Settings → Privacy & Security → Open Anyway → Open**
+
+ตั้งแต่ Pilot v0.6.2 ถ้าเครื่องยังไม่มี Node.js ตัวติดตั้งจะดาวน์โหลด Node 22 runtime สำหรับ Apple Silicon/Intel มาไว้ **เฉพาะในโฟลเดอร์ STeP AI** พร้อมตรวจ SHA-256 โดยอัตโนมัติ จึงไม่ต้องติดตั้ง Homebrew, Node.js หรือใช้ Terminal เอง
+
+ดูไฟล์ `MAC-START-HERE.txt` หากเปิดตัวติดตั้งไม่ได้
 
 ### ครั้งแรก
 
@@ -119,7 +129,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.6.1 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.6.2 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 

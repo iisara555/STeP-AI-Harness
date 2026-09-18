@@ -214,12 +214,28 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const cmdInstallContent = await readFile(cmdInstall, 'utf-8');
     assert.ok(cmdInstallContent.includes('install-macos.sh'));
 
-    const shInstallContent = await readFile(shInstall, 'utf-8');
+    const runtimeHelper = join(PACKAGE_ROOT, 'install', 'macos-runtime.sh');
+    const macHelp = join(PACKAGE_ROOT, 'MAC-START-HERE.txt');
+    assert.ok(await pathExists(runtimeHelper), 'install/macos-runtime.sh must exist');
+    assert.ok(await pathExists(macHelp), 'MAC-START-HERE.txt must exist');
+
+    const runtimeContent = await readFile(runtimeHelper, 'utf-8');
+    assert.ok(runtimeContent.includes('latest-v\${STEP_NODE_MAJOR}.x'));
+    assert.ok(runtimeContent.includes('SHASUMS256.txt'));
+    assert.ok(runtimeContent.includes('shasum -a 256'));
+    assert.ok(runtimeContent.includes('.step-ai/runtime/node'));
+    assert.ok(runtimeContent.includes('node_arch="arm64"'));
+    assert.ok(runtimeContent.includes('node_arch="x64"'));
+    assert.ok(!runtimeContent.includes('sudo '));
+    assert.ok(!runtimeContent.includes('brew install'));
+
+        const shInstallContent = await readFile(shInstall, 'utf-8');
     assert.ok(shInstallContent.includes('STeP AI Setup'));
     assert.ok(shInstallContent.includes('PILOT_VERSION'));
     assert.ok(shInstallContent.includes('Darwin'));
     assert.ok(shInstallContent.includes('uname -m'));
-    assert.ok(shInstallContent.includes('command -v node'));
+    assert.ok(shInstallContent.includes('resolve_step_node'));
+    assert.ok(shInstallContent.includes('NODE_BIN="$STEP_NODE_BIN"'));
     assert.ok(shInstallContent.includes('Applications/Visual Studio Code.app'));
     assert.ok(shInstallContent.includes('Applications/Cursor.app'));
     assert.ok(shInstallContent.includes('Applications/Claude.app'));
@@ -242,9 +258,30 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(shUpdateContent.includes('sha256'));
     assert.ok(shUpdateContent.includes('upgrade-apply'));
     assert.ok(shUpdateContent.includes('step-ai.js" update'));
+    assert.ok(shUpdateContent.includes('resolve_step_node'));
+    assert.ok(shUpdateContent.includes('NODE_BIN="$STEP_NODE_BIN"'));
 
     const cmdFeedbackContent = await readFile(cmdFeedback, 'utf-8');
     assert.ok(cmdFeedbackContent.includes('feedback-macos.sh'));
+    assert.ok(cmdInstallContent.includes('com.apple.quarantine'));
+    assert.ok(cmdUpdateContent.includes('com.apple.quarantine'));
+    assert.ok(cmdFeedbackContent.includes('com.apple.quarantine'));
+
+    const shFeedbackContent = await readFile(shFeedback, 'utf-8');
+    assert.ok(shFeedbackContent.includes('resolve_step_node'));
+    assert.ok(shFeedbackContent.includes('NODE_BIN="$STEP_NODE_BIN"'));
+
+    const zipPath = join(PACKAGE_ROOT, 'dist', `STeP-AI-Pilot-v${PACKAGE_VERSION}.zip`);
+    if (await pathExists(zipPath)) {
+      const py = [
+        'import sys, zipfile',
+        'z=zipfile.ZipFile(sys.argv[1])',
+        'names=["Install-STeP-AI.command","Update-STeP-AI.command","Feedback-STeP-AI.command","install/install-macos.sh","install/macos-runtime.sh"]',
+        'print(" ".join(oct((z.getinfo(n).external_attr >> 16) & 0o777) for n in names))'
+      ].join('; ');
+      const { stdout } = await execFileAsync('python3', ['-c', py, zipPath]);
+      assert.equal(stdout.trim(), '0o755 0o755 0o755 0o755 0o755', 'macOS executable permissions must survive Pilot ZIP packaging');
+    }
   });
 
   await t.test('Case 9: macOS Platform Tool Detector detects Mac applications and profiles', async () => {

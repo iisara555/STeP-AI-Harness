@@ -48,6 +48,7 @@ def build_pilot_bundle():
         "package.json",
         "README.md",
         "START-HERE.md",
+        "MAC-START-HERE.txt",
         "START-PROMPT.txt",
         "culture.md",
         ".env.example",

@@ -10,6 +10,7 @@ export const DISTRIBUTION_FILES = [
   'package.json',
   'README.md',
   'START-HERE.md',
+  'MAC-START-HERE.txt',
   'START-PROMPT.txt',
   'culture.md',
   '.env.example',
