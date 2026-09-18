@@ -21,7 +21,7 @@ export function generateOpenCodeInstructions(role, files) {
 
   text += `## 3-Layer Progressive Disclosure & Skill Router\n`;
   text += `OpenCode operates with Layer 1 Dynamic Router. Never load all organization skills into context at once.\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n\n`;
   text += buildLazyLoadingInventory(files);
 
