@@ -350,6 +350,17 @@ export async function loadAndValidateManifests(manifestDir) {
     }
   }
 
+  for (const playbook of playbooks) {
+    if (!playbook.specPath) continue;
+    if (playbook.specPath.startsWith('/') || playbook.specPath.includes('..')) {
+      pathErrors.push(`Playbook '${playbook.id}' has unsafe specPath '${playbook.specPath}'`);
+      continue;
+    }
+    if (!(await pathExists(join(rootDir, playbook.specPath)))) {
+      pathErrors.push(`Playbook '${playbook.id}' specPath does not exist: ${playbook.specPath}`);
+    }
+  }
+
   const errors = [...result.errors, ...playbookResult.errors, ...pathErrors];
 
   return {
