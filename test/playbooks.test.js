@@ -151,7 +151,7 @@ test('STeP Composite Playbooks', async (t) => {
       now: new Date('2026-09-18T05:00:00Z'),
     });
 
-    assert.equal(state.version, 2);
+    assert.equal(state.version, 3);
     assert.equal(state.sourceRefs.length, 1);
     assert.deepEqual(state.context.facts, {});
     assert.deepEqual(state.context.assumptions, {});
