@@ -356,7 +356,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(hermesFile);
     assert.ok(hermesFile.content.includes('Hermes Agent System Prompt'));
     assert.ok(hermesFile.content.includes('Human-in-the-loop Mandate'));
-    assert.ok(hermesFile.content.includes('receipt-audit'));
+    assert.ok(hermesFile.content.includes('Installed ≠ Loaded'));
+    assert.ok(!hermesFile.content.includes('receipt-audit'));
   });
 
   await t.test('Case 13: Windsurf Adapter generates .windsurfrules', async () => {
@@ -373,7 +374,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const windsurfRules = instructions.find((f) => f.filename === '.windsurfrules');
     assert.ok(windsurfRules);
     assert.ok(windsurfRules.content.includes('Windsurf AI Rules'));
-    assert.ok(windsurfRules.content.includes('brand-tone-of-voice'));
+    assert.ok(windsurfRules.content.includes('Installed ≠ Loaded'));
+    assert.ok(!windsurfRules.content.includes('brand-tone-of-voice'));
   });
 
   await t.test('Case 14: Multi Adapter generates complete agent suite across all 8 tools', async () => {
@@ -458,7 +460,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(opencodeFile);
     assert.ok(opencodeFile.content.includes('OpenCode AI Assistant'));
     assert.ok(opencodeFile.content.includes('Free Quota AI Assistant'));
-    assert.ok(opencodeFile.content.includes('receipt-audit'));
+    assert.ok(opencodeFile.content.includes('Installed ≠ Loaded'));
+    assert.ok(!opencodeFile.content.includes('receipt-audit'));
   });
 
   await t.test('Case 18: Gemini and Google Antigravity Adapter generates GEMINI.md', async () => {
@@ -476,7 +479,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const geminiFile = instructions.find((f) => f.filename === 'GEMINI.md');
     assert.ok(geminiFile);
     assert.ok(geminiFile.content.includes('Google Antigravity & Spark'));
-    assert.ok(geminiFile.content.includes('tor-review'));
+    assert.ok(geminiFile.content.includes('Installed ≠ Loaded'));
+    assert.ok(!geminiFile.content.includes('tor-review'));
   });
 
   await t.test('Case 19: ChatGPT Desktop Adapter generates CHATGPT.md', async () => {
@@ -493,7 +497,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const chatgptFile = instructions.find((f) => f.filename === 'CHATGPT.md');
     assert.ok(chatgptFile);
     assert.ok(chatgptFile.content.includes('ChatGPT Desktop'));
-    assert.ok(chatgptFile.content.includes('meeting-summary'));
+    assert.ok(chatgptFile.content.includes('Installed ≠ Loaded'));
+    assert.ok(!chatgptFile.content.includes('meeting-summary'));
   });
 
   await t.test('Case 20: 3-Tier Categorized Recommendations structure', async () => {
