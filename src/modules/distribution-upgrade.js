@@ -12,6 +12,7 @@ export const DISTRIBUTION_FILES = [
   'START-HERE.md',
   'START-PROMPT.txt',
   'culture.md',
+  '.env.example',
   'Install-STeP-AI.bat',
   'Update-STeP-AI.bat',
   'Feedback-STeP-AI.bat',
