@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.7.1  
+**สถานะปัจจุบัน:** Pilot v0.7.2  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.7.1.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.7.1/STeP-AI-Pilot-v0.7.1.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.7.2.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.7.2/STeP-AI-Pilot-v0.7.2.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -129,7 +129,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.7.1 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.7.2 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
@@ -274,7 +274,7 @@ Playbook อยู่ใน `manifest/playbooks.yaml` และ run state อย
 
 ### TOR → Project Plan ที่พร้อมใช้จริง
 
-ตั้งแต่ v0.7.1 Flow นี้เพิ่มกติกาเฉพาะงาน TOR:
+ตั้งแต่ v0.7.2 Flow นี้เพิ่มกติกาเฉพาะงาน TOR:
 - หนึ่ง TOR ต่อหนึ่ง Run
 - แยก TOR Fact / Planning Assumption
 - มี Contract/Event parameters ก่อนทำ Timeline
@@ -282,6 +282,17 @@ Playbook อยู่ใน `manifest/playbooks.yaml` และ run state อย
 - Google Sheet/XLSX ใช้มาตรฐาน Project Master Plan + Gantt เดียวกัน
 
 รายละเอียด: [docs/tor-to-project-plan.md](docs/tor-to-project-plan.md)
+
+### Google Sheet Action Contract
+
+การสร้าง Project Plan ลง Google Sheets/XLSX ใช้มาตรฐานเดียวกัน:
+- 3 tabs: Project Parameters / Project Master Plan / Gantt
+- ถ้ามี Google Sheets tool ให้ใช้ Google Sheets
+- ถ้าไม่มีให้ fallback เป็น XLSX
+- ถ้าสร้างไฟล์ไม่ได้ ให้คง Run ไว้ที่ `waiting-tool` และห้ามบอกว่าสร้างสำเร็จ
+- Completion ต้องมี link/path/reference ของ output จริง
+
+รายละเอียด: [docs/spreadsheet-project-plan.md](docs/spreadsheet-project-plan.md)
 
 รายละเอียด: [docs/playbooks.md](docs/playbooks.md)
 
