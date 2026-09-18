@@ -403,7 +403,7 @@ export function resolvePlaybookAction(step, availableTools = [], actionRegistry 
     };
   }
 
-  if (fallback) {
+  if (fallback && tools.has(fallback)) {
     return {
       status: 'fallback',
       tool: fallback,
