@@ -15,6 +15,9 @@ import {
   updatePlaybookRun,
   validatePlaybookRegistry,
   validatePlaybookSources,
+  resolvePlaybookAction,
+  completePlaybookStep,
+  markPlaybookActionState,
 } from '../src/modules/playbooks/index.js';
 import { loadAndValidateManifests } from '../src/modules/router/index.js';
 import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
@@ -257,6 +260,76 @@ playbooks:
     assert.equal(result.valid, false);
     assert.ok(result.errors.some((e) => e.includes("unknown Skill 'missing-skill'")));
     assert.ok(result.errors.some((e) => e.includes("unknown signal 'missing-signal'")));
+  });
+
+  await t.test('Google Sheets preferred tool resolves to ready', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    const action = buildPlaybookPlan(playbook, ['source', 'planning', 'schedule', 'spreadsheet'])
+      .find((step) => step.type === 'action');
+
+    const resolved = resolvePlaybookAction(action, ['google-sheets']);
+    assert.equal(resolved.status, 'ready');
+    assert.equal(resolved.tool, 'google-sheets');
+  });
+
+  await t.test('missing Google Sheets falls back to XLSX without losing the plan', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    const state = buildRunState({
+      playbook,
+      query: 'TOR action plan gantt google sheet',
+      team: 'pubsec',
+      matchedSignals: ['source', 'planning', 'schedule', 'spreadsheet'],
+      sourceRefs: [{ id: 'tor-a', name: 'TOR A.pdf' }],
+      now: new Date('2026-09-18T05:00:00Z'),
+    });
+
+    const action = state.steps.find((step) => step.type === 'action');
+    const resolved = resolvePlaybookAction(action, []);
+    assert.equal(resolved.status, 'fallback');
+    assert.equal(resolved.tool, 'xlsx');
+
+    const marked = markPlaybookActionState(state, action.id, resolved);
+    assert.equal(marked.steps.find((step) => step.id === action.id).actionState.tool, 'xlsx');
+    assert.equal(marked.status, 'active');
+  });
+
+  await t.test('action can wait for a tool without restarting completed Skill steps', () => {
+    const playbook = {
+      id: 'tool-test',
+      name: 'Tool Test',
+      parameters: [],
+      steps: [
+        { id: 'skill-step', type: 'skill', skill: 'tor-review' },
+        { id: 'action-step', type: 'action', action: 'sheet', preferredTool: 'google-sheets' },
+      ],
+    };
+    let state = buildRunState({
+      playbook,
+      query: 'test',
+      matchedSignals: [],
+      now: new Date('2026-09-18T05:00:00Z'),
+    });
+    state = completePlaybookStep(state, 'skill-step', { plan: ['A'] });
+    assert.equal(state.currentStep, 'action-step');
+    assert.equal(state.steps[0].status, 'completed');
+
+    const resolved = resolvePlaybookAction(state.steps[1], []);
+    assert.equal(resolved.status, 'blocked');
+    state = markPlaybookActionState(state, 'action-step', resolved);
+    assert.equal(state.status, 'waiting-tool');
+    assert.equal(state.currentStep, 'action-step');
+    assert.equal(state.steps[0].status, 'completed');
+    assert.deepEqual(state.context.outputs['skill-step'], { plan: ['A'] });
+  });
+
+  await t.test('spreadsheet action contract requires real output reference and 3 tabs', async () => {
+    const spec = await readFile('docs/spreadsheet-project-plan.md', 'utf-8');
+    assert.ok(spec.includes('Project Parameters'));
+    assert.ok(spec.includes('Project Master Plan'));
+    assert.ok(spec.includes('Gantt'));
+    assert.ok(spec.includes('waiting-tool'));
+    assert.ok(spec.includes('ห้ามบอกว่าสร้าง Google Sheet สำเร็จ'));
+    assert.ok(spec.includes('output reference'));
   });
 
   await t.test('full manifest integrity includes Playbooks', async () => {
