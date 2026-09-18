@@ -47,6 +47,8 @@ def build_pilot_bundle():
         "Feedback-STeP-AI.command",
         "package.json",
         "README.md",
+        "START-HERE.md",
+        "START-PROMPT.txt",
         "culture.md",
     ]
 
