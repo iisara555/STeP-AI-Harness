@@ -1,159 +1,160 @@
-# AFP Demo Source Register v0.1
+# ทะเบียนแหล่งอ้างอิงสำหรับสาธิต AFP v0.1
 
-> เป้าหมาย: ใช้เป็น Source Pack สำหรับ Demo STeP AI Harness กับทีม AFP ก่อนประชุมยืนยัน Source of Truth จริง
+> เป้าหมาย: ใช้เป็นชุดแหล่งอ้างอิงสำหรับสาธิต STeP AI Harness กับทีม AFP ก่อนประชุมยืนยันแหล่งข้อมูลที่ AFP ใช้จริง
 >
-> หลักสำคัญ: เอกสารที่พบจากแหล่งสาธารณะไม่ได้ถูกยกระดับเป็นกฎภายใน STeP ทุกกรณีโดยอัตโนมัติ หากยังไม่มีการยืนยันจาก AFP ให้ใช้สถานะ `PENDING_AFP_CONFIRMATION`
+> หลักสำคัญ: เอกสารที่พบจากแหล่งสาธารณะจะไม่ถูกถือเป็นกฎภายใน STeP ทุกกรณีโดยอัตโนมัติ หาก AFP ยังไม่ยืนยัน ให้แสดงสถานะ **รอ AFP ยืนยัน** (`PENDING_AFP_CONFIRMATION`)
 
-## Source hierarchy สำหรับ Demo
+## ลำดับแหล่งอ้างอิงสำหรับการสาธิต
 
 ```text
-A. STeP Direct Source
+ก. แหล่งอ้างอิงโดยตรงของ STeP
         ↓
-B. CMU Central Rule / Order / Form
+ข. กฎ / คำสั่ง / แบบฟอร์มส่วนกลางของ มช.
         ↓
-C. National Law / Ministry Regulation
+ค. กฎหมายและระเบียบระดับประเทศ/กระทรวง
         ↓
-D. AFP Internal Guidance / Checklist
+ง. แนวปฏิบัติ / Checklist ภายใน AFP
         ↓
-E. Prior Case / Example
+จ. กรณีตัวอย่างหรือเคสที่ผ่านมา
 ```
 
 หมายเหตุ:
-- ลำดับข้างต้นเป็น retrieval/traceability hierarchy สำหรับ Demo ไม่ใช่การวินิจฉัยลำดับศักดิ์กฎหมาย
-- ถ้า source ขัดกัน ให้ AI หยุดที่ `HUMAN_JUDGMENT_REQUIRED` และส่งให้ AFP
-- Prior case ไม่ใช่ rule และไม่ทำให้ case ใหม่ต้องได้ผลเหมือนเดิม
+- ลำดับข้างต้นใช้เพื่อการค้นหาและตรวจสอบย้อนกลับ ไม่ใช่การวินิจฉัยลำดับศักดิ์กฎหมาย
+- หากแหล่งอ้างอิงขัดกัน ให้ AI แสดงสถานะ **ต้องใช้ดุลพินิจของผู้มีอำนาจ** (`HUMAN_JUDGMENT_REQUIRED`) และส่งต่อ AFP
+- กรณีที่ผ่านมาเป็นเพียง **กรณีอ้างอิง** ไม่ใช่กฎที่บังคับให้กรณีใหม่ต้องได้ผลเหมือนเดิม
 
-## A. STeP Direct Sources
+## ก. แหล่งอ้างอิงโดยตรงของ STeP
 
 ### AFP-SRC-001 — STeP OIT 2026: คู่มือ/แนวทางการปฏิบัติงานของเจ้าหน้าที่
-- URL: https://www.step.cmu.ac.th/oit/oit-2026.php
-- Publisher: อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่
-- Scope found: งานดำเนินการจัดซื้อจัดจ้าง
-- Related laws named by STeP:
+- แหล่งที่มา: https://www.step.cmu.ac.th/oit/oit-2026.php
+- หน่วยงานเผยแพร่: อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่
+- ขอบเขตที่พบ: งานดำเนินการจัดซื้อจัดจ้าง
+- กฎหมายที่ STeP ระบุว่าเกี่ยวข้อง:
   1. พระราชบัญญัติการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
   2. ระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
-- Demo status: `DIRECT_STEP_REFERENCE`
-- Use: TOR / procurement compliance source routing
+- สถานะสำหรับสาธิต: **แหล่งอ้างอิงโดยตรงของ STeP** (`DIRECT_STEP_REFERENCE`)
+- ใช้สำหรับ: ตรวจ TOR / การจัดซื้อจัดจ้าง / การเลือกแหล่งอ้างอิงที่เกี่ยวข้อง
 
-### AFP-SRC-002 — STeP OIT 2026: ผลการจัดซื้อจัดจ้าง/สขร.1
-- URL: https://www.step.cmu.ac.th/oit/oit-2026.php
-- Publisher: STeP CMU
-- Demo status: `STEP_OPERATIONAL_RECORD`
-- Use: ตัวอย่าง transaction/วิธีจัดซื้อจัดจ้างจริงของ STeP
-- Restriction: ใช้เป็น historical evidence ไม่ใช่ normative rule
+### AFP-SRC-002 — STeP OIT 2026: ผลการจัดซื้อจัดจ้าง / สขร.1
+- แหล่งที่มา: https://www.step.cmu.ac.th/oit/oit-2026.php
+- หน่วยงานเผยแพร่: STeP CMU
+- สถานะสำหรับสาธิต: **บันทึกการดำเนินงานของ STeP** (`STEP_OPERATIONAL_RECORD`)
+- ใช้สำหรับ: ตัวอย่างรายการและวิธีดำเนินการจัดซื้อจัดจ้างที่เคยเกิดขึ้น
+- ข้อจำกัด: ใช้เป็นหลักฐานย้อนหลัง ไม่ใช่ข้อกำหนดหรือกฎ
 
-## B. CMU Central Sources
+## ข. แหล่งอ้างอิงส่วนกลางของมหาวิทยาลัยเชียงใหม่
 
-### AFP-SRC-010 — กองคลัง มช.: Registry ด้านพัสดุ
-- URL: https://finance.oou.cmu.ac.th/statute_procurement/
-- Publisher: กองคลัง สำนักงานมหาวิทยาลัย มหาวิทยาลัยเชียงใหม่
-- Contains:
-  - พ.ร.บ.จัดซื้อจัดจ้างฯ 2560
-  - ระเบียบกระทรวงการคลังฯ 2560
+### AFP-SRC-010 — กองคลัง มช.: กฎหมาย/ระเบียบด้านพัสดุ
+- แหล่งที่มา: https://finance.oou.cmu.ac.th/statute_procurement/
+- หน่วยงานเผยแพร่: กองคลัง สำนักงานมหาวิทยาลัย มหาวิทยาลัยเชียงใหม่
+- เนื้อหาที่พบ:
+  - พ.ร.บ. การจัดซื้อจัดจ้างฯ พ.ศ. 2560
+  - ระเบียบกระทรวงการคลังฯ พ.ศ. 2560
   - กฎกระทรวงที่เกี่ยวข้อง
-  - ระเบียบ มช. ด้านการจัดซื้อจัดจ้างบางประเภท
+  - ระเบียบมหาวิทยาลัยเชียงใหม่ด้านการจัดซื้อจัดจ้างบางประเภท
   - ข้อบังคับการใช้ลายมือชื่ออิเล็กทรอนิกส์
   - คำสั่งมอบอำนาจด้านการจัดซื้อจัดจ้างและการเบิกจ่าย
-- Demo status: `CMU_CENTRAL_REGISTRY`
-- Applicability: `PENDING_AFP_CONFIRMATION` ต่อ transaction
+- สถานะสำหรับสาธิต: **ทะเบียนกลางของ มช.** (`CMU_CENTRAL_REGISTRY`)
+- การนำไปใช้กับ STeP: **รอ AFP ยืนยัน** (`PENDING_AFP_CONFIRMATION`) รายกรณี
 
-### AFP-SRC-011 — คำสั่งสำนักงานมหาวิทยาลัย 1996/2567
-- Title: มอบอำนาจเกี่ยวกับการจัดซื้อจัดจ้างและการบริหารพัสดุ
-- URL: https://finance.oou.cmu.ac.th/statute_procurement/
-- Demo status: `CMU_AUTHORITY_SOURCE`
-- Use: Authority/escalation demo
-- Applicability: `PENDING_AFP_CONFIRMATION`
+### AFP-SRC-011 — คำสั่งสำนักงานมหาวิทยาลัยเชียงใหม่ ที่ 1996/2567
+- ชื่อเรื่อง: มอบอำนาจเกี่ยวกับการจัดซื้อจัดจ้างและการบริหารพัสดุ
+- แหล่งที่มา: https://finance.oou.cmu.ac.th/statute_procurement/
+- สถานะสำหรับสาธิต: **แหล่งอ้างอิงด้านอำนาจหน้าที่ของ มช.** (`CMU_AUTHORITY_SOURCE`)
+- ใช้สำหรับ: ตัวอย่างการตรวจอำนาจ/การส่งต่อผู้มีอำนาจ
+- การนำไปใช้กับ STeP: **รอ AFP ยืนยัน**
 
-### AFP-SRC-012 — คำสั่งสำนักงานมหาวิทยาลัย 1997/2567
-- Title: มอบอำนาจช่วงให้เบิกจ่ายเงินเกี่ยวกับการจัดซื้อจัดจ้าง
-- URL: https://finance.oou.cmu.ac.th/statute_procurement/
-- Demo status: `CMU_AUTHORITY_SOURCE`
-- Use: Decision authority / payment approval demo
-- Applicability: `PENDING_AFP_CONFIRMATION`
+### AFP-SRC-012 — คำสั่งสำนักงานมหาวิทยาลัยเชียงใหม่ ที่ 1997/2567
+- ชื่อเรื่อง: มอบอำนาจช่วงให้เบิกจ่ายเงินเกี่ยวกับการจัดซื้อจัดจ้าง
+- แหล่งที่มา: https://finance.oou.cmu.ac.th/statute_procurement/
+- สถานะสำหรับสาธิต: **แหล่งอ้างอิงด้านอำนาจหน้าที่ของ มช.** (`CMU_AUTHORITY_SOURCE`)
+- ใช้สำหรับ: ตัวอย่างอำนาจอนุมัติและการเบิกจ่าย
+- การนำไปใช้กับ STeP: **รอ AFP ยืนยัน**
 
-### AFP-SRC-013 — ข้อบังคับ มช. ว่าด้วยการใช้ลายมือชื่ออิเล็กทรอนิกส์ พ.ศ. 2565
-- URL: https://finance.oou.cmu.ac.th/statute_procurement/
-- Demo status: `CMU_CENTRAL_RULE`
-- Use: e-document / signature check
-- Applicability: `PENDING_AFP_CONFIRMATION`
+### AFP-SRC-013 — ข้อบังคับมหาวิทยาลัยเชียงใหม่ว่าด้วยการใช้ลายมือชื่ออิเล็กทรอนิกส์ พ.ศ. 2565
+- แหล่งที่มา: https://finance.oou.cmu.ac.th/statute_procurement/
+- สถานะสำหรับสาธิต: **กฎส่วนกลางของ มช.** (`CMU_CENTRAL_RULE`)
+- ใช้สำหรับ: ตรวจเอกสารอิเล็กทรอนิกส์/ลายมือชื่อ
+- การนำไปใช้กับ STeP: **รอ AFP ยืนยัน**
 
-### AFP-SRC-014 — กองคลัง มช.: บริการรับ/จ่ายเงิน
-- URL: https://finance.oou.cmu.ac.th/service_payment_receive/
-- Publisher: กองคลัง มช.
-- Key operational principle:
+### AFP-SRC-014 — กองคลัง มช.: การรับเงินและการเบิกจ่ายเงิน
+- แหล่งที่มา: https://finance.oou.cmu.ac.th/service_payment_receive/
+- หน่วยงานเผยแพร่: กองคลัง มช.
+- หลักการตรวจที่พบ:
   - ตรวจความถูกต้องในสาระสำคัญของเอกสาร
   - ตรวจปีงบประมาณ
   - ตรวจหลักฐานใบสำคัญ
   - ตรวจจำนวนเงิน
   - ตรวจตามกฎหมาย ประกาศ ข้อบังคับ และระเบียบที่เกี่ยวข้อง
-- Demo status: `CMU_CENTRAL_OPERATIONAL_GUIDANCE`
-- Use: Receipt/finance pre-check model
+- สถานะสำหรับสาธิต: **แนวทางการปฏิบัติงานส่วนกลางของ มช.** (`CMU_CENTRAL_OPERATIONAL_GUIDANCE`)
+- ใช้สำหรับ: แบบจำลองการตรวจเอกสารการเงินก่อนส่ง AFP
 
 ### AFP-SRC-015 — กองคลัง มช.: แบบฟอร์มงานการเงิน
-- URL: https://finance.oou.cmu.ac.th/doc_form/
-- Examples found:
+- แหล่งที่มา: https://finance.oou.cmu.ac.th/doc_form/
+- ตัวอย่างที่พบ:
   - แบบฟอร์มเดินทาง
   - สัญญายืมเงิน
   - หลักเกณฑ์ค่าใช้จ่ายในการเดินทาง
   - เอกสารการเบิกจ่ายอื่น
-- Demo status: `CMU_CENTRAL_FORM_REGISTRY`
-- Applicability: `PENDING_AFP_CONFIRMATION`
+- สถานะสำหรับสาธิต: **ทะเบียนแบบฟอร์มส่วนกลางของ มช.** (`CMU_CENTRAL_FORM_REGISTRY`)
+- การนำไปใช้กับ STeP: **รอ AFP ยืนยัน**
 
-### AFP-SRC-016 — แนวปฏิบัติ/นโยบายบัญชี มช. 2567
-- Public source: กองคลัง มช.
-- Includes guidance on เงินยืมทดรองจ่าย and related accounting practice
-- Demo status: `CMU_CENTRAL_GUIDANCE`
-- Applicability: `PENDING_AFP_CONFIRMATION`
+### AFP-SRC-016 — แนวปฏิบัติ/นโยบายบัญชีของมหาวิทยาลัยเชียงใหม่ พ.ศ. 2567
+- แหล่งเผยแพร่: กองคลัง มช.
+- เนื้อหาที่เกี่ยวข้อง: เงินยืมทดรองจ่ายและแนวปฏิบัติทางบัญชี
+- สถานะสำหรับสาธิต: **แนวปฏิบัติส่วนกลางของ มช.** (`CMU_CENTRAL_GUIDANCE`)
+- การนำไปใช้กับ STeP: **รอ AFP ยืนยัน**
 
-## C. National / Ministry Sources
+## ค. กฎหมายและระเบียบระดับประเทศ/กระทรวง
 
-### AFP-SRC-020 — พ.ร.บ. การจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
-- Referenced directly by STeP OIT
-- Also listed in CMU Finance procurement registry
-- Demo status: `NATIONAL_LAW`
+### AFP-SRC-020 — พระราชบัญญัติการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
+- STeP OIT ระบุเป็นกฎหมายที่เกี่ยวข้องกับงานจัดซื้อจัดจ้าง
+- กองคลัง มช. ระบุไว้ในทะเบียนกฎหมาย/ระเบียบด้านพัสดุ
+- สถานะสำหรับสาธิต: **กฎหมายระดับประเทศ** (`NATIONAL_LAW`)
 
-Key Demo principles:
-- มาตรา 8: คุ้มค่า / โปร่งใส / มีประสิทธิภาพและประสิทธิผล / ตรวจสอบได้
-- มาตรา 9: การกำหนดคุณลักษณะเฉพาะต้องคำนึงถึงคุณภาพ เทคนิค และวัตถุประสงค์ และต้องระวังการกำหนดที่เจาะจงยี่ห้อหรือผู้ขายโดยไม่มีเหตุรองรับตามกฎหมาย
+หลักที่ใช้ใน Demo:
+- มาตรา 8: หลักความคุ้มค่า ความโปร่งใส ประสิทธิภาพและประสิทธิผล และการตรวจสอบได้
+- มาตรา 9: ใช้เป็นจุดตรวจเกี่ยวกับการกำหนดคุณลักษณะเฉพาะ โดยต้องพิจารณาข้อความของมาตราและบริบทของรายการจริงก่อนสรุป
 
 ### AFP-SRC-021 — ระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
-- Referenced directly by STeP OIT
-- Listed in CMU Finance procurement registry
-- Demo status: `MINISTRY_REGULATION`
+- STeP OIT ระบุเป็นระเบียบที่เกี่ยวข้องกับงานจัดซื้อจัดจ้าง
+- กองคลัง มช. ระบุไว้ในทะเบียนกฎหมาย/ระเบียบด้านพัสดุ
+- สถานะสำหรับสาธิต: **ระเบียบกระทรวง** (`MINISTRY_REGULATION`)
 
-## D. Sources intentionally NOT treated as STeP Source of Truth
+## ง. แหล่งที่ยังไม่ถือเป็นแหล่งอ้างอิงหลักของ STeP
 
-คู่มือ/Checklist ของคณะอื่นใน มช. สามารถใช้ศึกษา UX, format หรือหา test idea ได้ แต่ Demo นี้จะไม่อ้างเป็นกฎของ STeP จน AFP ยืนยัน
+คู่มือหรือ Checklist ของคณะอื่นในมหาวิทยาลัยเชียงใหม่ สามารถใช้ศึกษารูปแบบการนำเสนอหรือสร้างกรณีทดสอบได้ แต่ **ห้ามอ้างเป็นกฎของ STeP** จนกว่า AFP จะยืนยัน
 
-Examples:
+ตัวอย่าง:
 - คู่มือคณะสังคมศาสตร์
 - คู่มือคณะเทคนิคการแพทย์
 - แนวปฏิบัติคณะเศรษฐศาสตร์
 
-## Current gaps to ask AFP
+## ข้อมูลที่ยังต้องขอจาก AFP
 
-1. AFP Internal Source of Truth / shared folder / master list
-2. TOR checklist ที่ AFP ใช้จริง
-3. Receipt/finance checklist ที่ AFP ใช้จริง
-4. รายการ transaction type และ required documents
-5. Top return reasons
-6. Rule vs judgment boundary
-7. Current delegation/authority mapping for STeP
-8. Exception/escalation rules
-9. Current forms/templates used by STeP
-10. Known superseded documents
+1. แหล่งข้อมูลหลัก/โฟลเดอร์กลาง/ทะเบียนเอกสารที่ AFP ใช้จริง
+2. Checklist ตรวจ TOR ที่ AFP ใช้จริง
+3. Checklist ตรวจใบเสร็จและเอกสารการเงินที่ AFP ใช้จริง
+4. ประเภทของรายการ/ธุรกรรมและรายการเอกสารที่ต้องใช้
+5. เหตุผลในการตีกลับที่พบบ่อย
+6. ขอบเขตระหว่างกฎตายตัวกับเรื่องที่ต้องใช้ดุลพินิจ
+7. แผนผังอำนาจอนุมัติของ STeP ที่ใช้อยู่ในปัจจุบัน
+8. หลักเกณฑ์กรณียกเว้นและการส่งต่อ
+9. แบบฟอร์ม/แม่แบบปัจจุบันของ STeP
+10. รายการเอกสารที่ยกเลิกหรือถูกแทนที่แล้ว
 
-## Demo rule
+## กติกาการแสดงผลใน Demo
 
 ทุกผลลัพธ์ต้องแสดง:
-- `SOURCE`
-- `SOURCE STATUS`
-- `RULE / EVIDENCE / JUDGMENT`
-- `WHAT IS MISSING`
-- `HUMAN AUTHORITY`
+- **แหล่งอ้างอิง**
+- **สถานะของแหล่งอ้างอิง**
+- **ประเภทการพิจารณา: กฎ / หลักฐาน / ดุลพินิจ**
+- **ข้อมูลที่ยังขาด**
+- **ผู้มีอำนาจตัดสิน**
 
-ถ้า source ยังไม่ได้ AFP confirm:
+หาก AFP ยังไม่ยืนยันแหล่งอ้างอิง ให้แสดง:
+
 ```text
-Source status: PENDING_AFP_CONFIRMATION
-AI may pre-check but must not issue a final compliance/approval decision.
+สถานะแหล่งอ้างอิง: รอ AFP ยืนยัน
+AI สามารถช่วยตรวจเบื้องต้นได้ แต่ยังไม่ออกข้อสรุปเรื่องการอนุมัติหรือความถูกต้องขั้นสุดท้าย
 ```
