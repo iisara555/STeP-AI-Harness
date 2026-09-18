@@ -106,10 +106,10 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.equal(result.scopeResult.authority, 'procurement-approval');
   });
 
-  await t.test('Pilot package is v0.6.0 and bundles the safe env template', async () => {
+  await t.test('Pilot package is v0.6.1 and bundles the safe env template', async () => {
     const pkg = JSON.parse(await readFile('package.json', 'utf-8'));
     const buildScript = await readFile('scripts/build_pilot_bundle.py', 'utf-8');
-    assert.equal(pkg.version, '0.6.0');
+    assert.equal(pkg.version, '0.6.1');
     assert.ok(pkg.files.includes('.env.example'));
     assert.ok(buildScript.includes('".env.example"'));
   });
