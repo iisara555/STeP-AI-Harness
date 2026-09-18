@@ -14,6 +14,7 @@ import { runConfig } from './commands/config.js';
 import { runUpdate } from './commands/update.js';
 import { runFeedback } from './commands/feedback.js';
 import { runOutput } from './commands/output.js';
+import { runUpgradeApply } from './commands/upgrade-apply.js';
 
 function parseArgs(rawArgs) {
   const args = { _: [] };
@@ -60,7 +61,7 @@ ${colors.bold('การใช้งาน:')}
 ${colors.bold('คำสั่งหลักสำหรับพนักงาน:')}
   ${colors.cyan('ask')}        ถามคำถามงานภาษาไทยธรรมดา เพื่อให้ AI วิเคราะห์ Skill, SOP และระเบียบที่เกี่ยวข้อง
   ${colors.cyan('config')}     ดูหรือเปลี่ยนทีมหลักและเครื่องมือ AI ประจำตัว (${colors.dim('~/.step-ai/config.json')})
-  ${colors.cyan('update')}     อัปเดต Skills และ Router ล่าสุดในคลิกเดียว (ไม่กระทบไฟล์งานเดิม)
+  ${colors.cyan('update')}     ซิงก์ Skills และ Router จากเวอร์ชัน STeP AI ที่ติดตั้งอยู่
   ${colors.cyan('feedback')}   แนะนำวิธีส่งข้อเสนอแนะ รายงานผลลัพธ์ หรือเสนอ Skill ใหม่
   ${colors.cyan('output')}     สร้าง path และชื่อไฟล์มาตรฐานสำหรับเก็บ output โดยไม่เขียนทับไฟล์เดิม
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
@@ -119,6 +120,9 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     case 'update':
       await runUpdate(args);
+      break;
+    case 'upgrade-apply':
+      await runUpgradeApply(args);
       break;
     case 'feedback':
       await runFeedback(args);
