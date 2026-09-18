@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createProvenanceRecord } from '../provenance/index.js';
+import { redactPrivacyText, evaluatePrivacyGate } from '../privacy/index.js';
 
 function parseList(raw = '') {
   return raw
@@ -251,12 +252,13 @@ export function buildRunState({
   if (!sourceCheck.valid) throw new Error(sourceCheck.error);
 
   const plan = buildPlaybookPlan(playbook, matchedSignals);
+  const privacy = evaluatePrivacyGate(query || '');
   return {
     version: 3,
     runId: makeRunId(playbook.id, now),
     playbookId: playbook.id,
     playbookName: playbook.name,
-    query,
+    query: privacy.redactedText,
     team,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -279,6 +281,7 @@ export function buildRunState({
       missingInformation: [],
       outputs: {},
       provenance: [],
+      privacy: privacy.logSafeMetadata,
     },
     events: [
       {
@@ -520,10 +523,11 @@ export function recordRunFeedback(state, {
 
   const next = structuredClone(state);
   next.feedback ||= [];
+  const safeNote = redactPrivacyText(String(note || '')).redactedText;
   next.feedback.push({
     rating,
     category: String(category || '').slice(0, 80),
-    note: String(note || '').slice(0, 500),
+    note: safeNote.slice(0, 500),
     createdAt,
   });
   next.events ||= [];
