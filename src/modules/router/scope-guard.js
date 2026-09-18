@@ -49,6 +49,16 @@ export function checkScope(skill, requestText = '') {
     if (key.includes('acceptance') && (lower.includes('ยอมรับความเสี่ยง') || lower.includes('accept risk') || lower.includes('risk acceptance'))) heuristic = true;
     if (key.includes('evaluation') && (lower.includes('รายบุคคล') || lower.includes('ประเมินผลบุคคล') || lower.includes('kpi บุคคล') || lower.includes('individual performance'))) heuristic = true;
     if (key.includes('approval') && (lower.includes('อนุมัติ') || lower.includes('รับรองผล') || lower.includes('approve'))) heuristic = true;
+    if (key.includes('ci_governance') && (
+      lower.includes('แก้ ci') ||
+      lower.includes('เปลี่ยน ci') ||
+      lower.includes('ดัดแปลงตรา') ||
+      lower.includes('เปลี่ยนโลโก้') ||
+      lower.includes('แก้โลโก้') ||
+      lower.includes('เปลี่ยนอัตลักษณ์') ||
+      lower.includes('brand identity change') ||
+      lower.includes('change logo')
+    )) heuristic = true;
 
     return heuristic;
   };
