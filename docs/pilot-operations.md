@@ -1,28 +1,97 @@
-# Pilot Operations
+# Pilot Operations — 1 Month
 
 ## ขอบเขต
 
-ทดลอง 8 สัปดาห์กับผู้ใช้ 5–10 คน แบ่งเป็น Creative, PM, Developer และผู้ดูแลระบบ AI อย่างน้อย 2 คน
+ระยะเวลา **4 สัปดาห์** ใช้ Pilot v0.6.0 เป็น baseline
+
+- เปิดใช้ได้กับ 22 ทีม
+- มี Core Pilot Users ประมาณ 10–15 คน ครอบคลุมทั้ง 5 routing clusters
+- QS/GA/CC และอย่างน้อยหนึ่งทีมจากแต่ละ cluster ต้องมีผู้ใช้จริง
+- พนักงานทั่วไปใช้ภาษาไทยตามงานจริง ไม่ต้องใช้ Git/Terminal/Skill ID
+
+## Week 0 — Preflight
+
+ก่อนเริ่มนับ Pilot:
+- ติดตั้ง/อัปเดต v0.6.0
+- รัน CI และ Pilot readiness suite ให้เขียว
+- ทดสอบ update + rollback อย่างน้อย 1 เครื่อง Windows และ 1 เครื่อง macOS ถ้ามี
+- ยืนยัน feedback channel และผู้รับผิดชอบ triage
+- ย้ำ Browser credential policy และ Human Confirmation Gate
+- freeze feature ใหม่ที่ไม่จำเป็น
+
+## Week 1 — Everyday Work
+
+โฟกัสงาน low/medium risk:
+- สรุปประชุม
+- เอกสาร/ร่างงาน
+- Creative/Image Prompt
+- Project/market/customer analysis
+- Output management
+
+เก็บ wrong-route, missing-context และ usability friction
+
+## Week 2 — Browser & Cross-Team
+
+เปิด Browser Form Assistant กับผู้ใช้ Pilot:
+- login ครั้งแรกโดย user
+- opt-in remembered login
+- draft/review
+- submit ต้องยืนยัน
+- ทดสอบ session expiry/manual fallback
+
+เริ่ม cross-team routing และ output handoff
+
+## Week 3 — ISO / Governance
+
+ใช้ ISO Audit Readiness Pack กับ Process Owners:
+- evidence matrix
+- document/record control
+- mock interview
+- QMS risk/KPI
+- NCR/CAPA
+- management review prep
+
+AI ช่วยเตรียม แต่ conformity/closure ยังเป็น Human Authority
+
+## Week 4 — Stability & Decision
+
+- ทดสอบ self-update/rollback
+- review incidents และ false blocks/false allows
+- survey ผู้ใช้
+- สรุป Keep / Improve / Remove
+- ตัดสิน Go / Extend Pilot / Stop
 
 ## ตัวชี้วัด
 
-- เวลาที่ใช้ตั้งแต่รับงานถึงร่างแรก
-- จำนวนรอบแก้เพราะข้อมูลหรือรูปแบบผิด
-- สัดส่วนงานที่ใช้ Skill แล้วนำผลลัพธ์ไปใช้ต่อได้
-- เหตุการณ์ข้อมูลอ่อนไหวหรือ Secret: เป้าหมายต้องเป็นศูนย์
-- จำนวน Learning ที่ผ่านการตรวจและนำกลับมาใช้จริง
+- Secret/Credential incident: **0**
+- Unauthorized consequential action: **0**
+- Data loss from install/update/output: **0**
+- Scenario routing regression suite: **100% pass**
+- งานจริงที่นำผลลัพธ์ไปใช้ต่อได้หลังแก้เล็กน้อย: **≥ 80%**
+- ผู้ใช้ Pilot ที่ทำงานหลักได้โดยไม่ใช้ Terminal: **≥ 90%**
+- install/update สำเร็จโดยไม่ต้องแก้ manual: **≥ 90%**
 
 ## รอบการดูแล
 
-- ทุกสัปดาห์: ดู feedback และตัวอย่างคำตอบที่ผิด
-- ทุก 2 สัปดาห์: รวมการแก้ Skill เป็น pull request เดียวต่อหัวข้อ
-- สิ้นเดือน: ตรวจ Skill ที่ซ้ำ ล้าสมัย หรือไม่ถูกเรียกใช้
-- สิ้น Pilot: สรุป Keep / Improve / Remove และตัดสินใจเปิดฟีเจอร์ Beta
+- ทุกวัน: security/data-loss incident triage
+- ทุกสัปดาห์: feedback + wrong-route + false-block review
+- สิ้น Week 2: midpoint review
+- สิ้น Week 4: Pilot decision
 
-## เกณฑ์ผ่าน Pilot
+## Change Policy ระหว่าง Pilot
 
-1. ไม่มีข้อมูล Restricted หรือ Secret เข้าสู่ repository
-2. งานตัวอย่างอย่างน้อย 70% ใช้ผลลัพธ์ต่อได้หลังแก้เล็กน้อย
-3. ผู้ใช้แต่ละ Role มี Skill ที่ช่วยลดเวลางานจริงอย่างน้อย 2 รายการ
-4. มีผู้รับผิดชอบ Skill และผู้ตรวจสำรองชัดเจน
+ทำทันที:
+- security fix
+- data-loss fix
+- authority/human-gate fix
+- critical routing collision
 
+รวมเป็น weekly batch:
+- trigger wording
+- prompt quality
+- docs/UX clarification
+
+เลื่อนไปหลัง Pilot:
+- feature ใหม่ที่ไม่จำเป็น
+- architecture refactor
+- workflow engine เพิ่มเติม
