@@ -129,3 +129,15 @@ Playbook ช่วยวางแผนและจัดโครงสร้�
 - งบไม่ถูกแต่งหรือกระจายเอง
 - พร้อมลง Project Master Plan + Gantt
 - missing information ถูกแสดงเป็น TBD/Gap แทนการเดา
+
+
+## 10. Spreadsheet Action Contract
+
+การสร้าง Google Sheet/XLSX ต้องทำตาม `docs/spreadsheet-project-plan.md`
+
+หลักสำคัญ:
+- Google Sheets เป็น preferred tool
+- XLSX เป็น fallback
+- ถ้าไม่มี tool เขียนไฟล์ ให้สถานะ Action เป็น `waiting-tool` แทนการอ้างว่าสร้างสำเร็จ
+- Completion ต้องมี output reference/link/path จริง
+- Sheet ต้องมีอย่างน้อย Project Parameters / Project Master Plan / Gantt
