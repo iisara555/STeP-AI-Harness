@@ -15,6 +15,7 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.equal(integrity.summary.teamsCount, 22);
     assert.equal(integrity.summary.skillsCount, 43);
     assert.equal(integrity.summary.routerSkillsCount, 42);
+    assert.equal(integrity.summary.playbooksCount, 3);
   });
 
   await t.test('manifest validator catches unknown router skill and escalation target', () => {

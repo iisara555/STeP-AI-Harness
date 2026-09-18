@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.6.2  
+**สถานะปัจจุบัน:** Pilot v0.7.0  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.6.2.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.6.2/STeP-AI-Pilot-v0.6.2.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.7.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.7.0/STeP-AI-Pilot-v0.7.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -58,7 +58,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 หาก macOS แจ้งว่าไม่สามารถตรวจสอบผู้พัฒนาได้ ให้ไปที่ **System Settings → Privacy & Security → Open Anyway → Open**
 
-ตั้งแต่ Pilot v0.6.2 ถ้าเครื่องยังไม่มี Node.js ตัวติดตั้งจะดาวน์โหลด Node 22 runtime สำหรับ Apple Silicon/Intel มาไว้ **เฉพาะในโฟลเดอร์ STeP AI** พร้อมตรวจ SHA-256 โดยอัตโนมัติ จึงไม่ต้องติดตั้ง Homebrew, Node.js หรือใช้ Terminal เอง
+ตั้งแต่ Pilot v0.7.0 ถ้าเครื่องยังไม่มี Node.js ตัวติดตั้งจะดาวน์โหลด Node 22 runtime สำหรับ Apple Silicon/Intel มาไว้ **เฉพาะในโฟลเดอร์ STeP AI** พร้อมตรวจ SHA-256 โดยอัตโนมัติ จึงไม่ต้องติดตั้ง Homebrew, Node.js หรือใช้ Terminal เอง
 
 ดูไฟล์ `MAC-START-HERE.txt` หากเปิดตัวติดตั้งไม่ได้
 
@@ -129,7 +129,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.6.2 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.7.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
@@ -225,7 +225,7 @@ First Run ใช้ **L0-only startup** เหมือนกันทุก AI 
 - อ่านเฉพาะ `START-PROMPT.txt`, `START-HERE.md`, `USER.md` / `MEMORY.md` ถ้ามี
 - ไม่ scan `skills/`, `rules/`, `manifest/` และไม่ search `*.md` ทั้ง Workspace
 - instruction แสดงเพียงจำนวน Skill/Rule ที่ติดตั้ง ไม่แจกแจง inventory รายไฟล์
-- เมื่อมีงานจริงจึงเปิด Router metadata แล้วโหลด 1 primary Skill + mandatory references ที่จำเป็น
+- เมื่อมีงานจริงจึงเปิด Router metadata; งานเดี่ยวโหลด 1 primary Skill ส่วนงานหลายขั้นใช้ Playbook และโหลดทีละ Skill ตาม current step
 
 ### Browser Login & Credential Safety
 
@@ -245,6 +245,34 @@ Browser Form Assistant รองรับการจำ login แบบ opt-in 
 ### Pilot 1 เดือน
 
 แผน Pilot ใช้ 4 สัปดาห์ พร้อม Security / Routing / Human Action / Distribution / UX gates และ stop conditions ดู `docs/pilot-operations.md` และ `docs/pilot-readiness-audit.md`
+
+---
+
+## งานหลายขั้น: Playbooks
+
+ตั้งแต่ Pilot v0.7 งานที่ต้องใช้หลายความสามารถต่อกันไม่ถูกบังคับให้เลือก Skill เดียวอีกต่อไป
+
+ตัวอย่าง:
+
+```text
+TOR
+→ ตรวจ Scope / Deliverables
+→ แตกกิจกรรม / WBS
+→ จับงบประมาณ
+→ ทำ Timeline / Dependency
+→ สร้าง Google Sheet หรือ XLSX + Gantt
+```
+
+ระบบเรียกแนวทางนี้ว่า **Playbook** โดยยังคงหลักสำคัญว่าโหลดทีละ Skill ไม่โหลดทุกอย่างพร้อมกัน
+
+Playbooks ชุดแรก:
+- `tor-to-project-plan`
+- `meeting-to-action-plan`
+- `iso-audit-readiness-flow`
+
+Playbook อยู่ใน `manifest/playbooks.yaml` และ run state อยู่ใต้ `.step-ai/runs/` เมื่อ client รองรับการเขียนไฟล์
+
+รายละเอียด: [docs/playbooks.md](docs/playbooks.md)
 
 ---
 
@@ -363,7 +391,7 @@ Rules / SOP / Reference ที่จำเป็น
 คำตอบหรือร่างงาน
 ```
 
-Router ปัจจุบันใช้เวอร์ชัน **2.3.0**
+Router ปัจจุบันใช้เวอร์ชัน **2.6.0**
 
 Source of Truth อยู่ที่ [`manifest/router-index.yaml`](manifest/router-index.yaml)
 

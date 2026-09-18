@@ -75,6 +75,16 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `3. **Level 2 (Mandatory Rules & SOPs)**: เปิดอ่านเฉพาะกติกาข้อบังคับที่จำเป็นตามคำขอ\n`;
   text += `4. **Level 3 (Templates & Examples)**: 0 ไฟล์เป็นค่าเริ่มต้น โหลดตัวอย่างเฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจน\n\n`;
 
+  text += `### Composite Work — Multi-Skill Playbook\n\n`;
+  text += `ก่อนบังคับเลือก Skill เดียว ให้ตรวจว่าคำขอมีหลายผลลัพธ์/หลายขั้นตอนที่เชื่อมกันหรือไม่ เช่น TOR → กิจกรรม → งบ → Timeline → Google Sheet\n`;
+  text += `- ถ้าเป็น **Atomic Task** ให้ใช้ Router 5-Factor เดิมและโหลด 1 Skill\n`;
+  text += `- ถ้าเป็น **Composite Task** ที่ตรง \`manifest/playbooks.yaml\` ให้ใช้ Playbook นั้นแทนการบังคับ Skill เดียว\n`;
+  text += `- Playbook เป็นส่วนประกอบของ HOW ไม่ใช่ Workflow Engine และไม่เพิ่มมิติองค์กรใหม่\n`;
+  text += `- ทำทีละ step: โหลด Skill ปัจจุบัน → สร้าง structured handoff → ปิด context ที่ไม่จำเป็น → ไป step ถัดไป\n`;
+  text += `- Action เช่น Google Sheets/XLSX/Browser เป็น Tool Action ไม่ใช่ Skill; ถ้า preferred tool ไม่มีให้ใช้ fallback ที่ Playbook ระบุ\n`;
+  text += `- เมื่อแก้ไฟล์ได้ ให้บันทึก run state ที่ \`.step-ai/runs/<run-id>/state.json\` เพื่อ resume งานเดิมได้ โดยห้ามเก็บ password/token/credential/PII ที่ไม่จำเป็น\n`;
+  text += `- Human Approval / Authority ใช้เหมือนเดิมทุก step และมีสิทธิ์หยุด Playbook ได้ทันที\n\n`;
+
   text += `### เกณฑ์การตัดสินใจด้วย Deterministic 5-Factor Scoring Model\n`;
   text += `- **สูตรคำนวณความมั่นใจ**: Intent Match (30%) + Keyword Match (25%) + Path Match (20%) + Team Context (15%) + File Type Match (10%)\n`;
   text += `- **คะแนน $\\ge 0.80$ (HIGH Tier)**: เปิดใช้งาน Domain Skill นั้นทันทีโดยไม่ต้องถามยืนยัน\n`;

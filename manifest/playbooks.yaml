@@ -1,0 +1,132 @@
+version: 1
+
+# Playbooks are lightweight multi-skill flows for composite work.
+# They do not replace Skills, Processes, Authority, or human approval.
+playbooks:
+  - id: tor-to-project-plan
+    name: "TOR → Project Plan"
+    owner: pm
+    consumers: ["*"]
+    description: "แปลง TOR เป็นกิจกรรม งบประมาณ ระยะเวลา dependencies และแผนงานที่พร้อมนำไปทำ Gantt/Spreadsheet"
+    requiredSignals: [source]
+    minSignals: 3
+    signals:
+      source: [tor, terms of reference, ขอบเขตของงาน]
+      planning: [แตกกิจกรรม, กิจกรรม, project plan, wbs, work breakdown, แตกงาน]
+      budget: [งบประมาณ, budget, cost, ค่าใช้จ่าย]
+      schedule: [ระยะเวลา, timeline, gantt, milestone, แผนงาน]
+      spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง]
+    steps:
+      - id: review-source
+        type: skill
+        skill: tor-review
+        description: "อ่าน TOR และสกัด scope, deliverables, constraints, dates, budget rules และ missing information"
+        produces: [requirements, deliverables, constraints, source-facts]
+      - id: build-plan
+        type: skill
+        skill: project-plan
+        description: "แตกงานเป็นกิจกรรม/WBS พร้อม owner, milestone, dependency, budget mapping และ timeline"
+        consumes: [requirements, deliverables, constraints, source-facts]
+        produces: [activities, milestones, dependencies, budget-map, timeline]
+      - id: create-spreadsheet
+        type: action
+        action: spreadsheet-project-plan
+        when: spreadsheet
+        preferredTool: google-sheets
+        fallback: xlsx
+        description: "สร้างตาราง Activity / Owner / Budget / Start / End / Duration / Dependency / Status และ Gantt view"
+        consumes: [activities, milestones, dependencies, budget-map, timeline]
+        produces: [project-plan-sheet]
+
+  - id: meeting-to-action-plan
+    name: "Meeting → Action Plan"
+    owner: pm
+    consumers: ["*"]
+    description: "เปลี่ยนบันทึกประชุมเป็น Action Items แล้วต่อเป็นแผนงาน/Timeline/Spreadsheet เมื่อผู้ใช้ต้องการหลายขั้น"
+    requiredSignals: [source]
+    minSignals: 3
+    signals:
+      source: [ประชุม, meeting, minutes, บันทึกประชุม]
+      action: [action plan, action item, สิ่งที่ต้องทำต่อ, งานที่ต้องทำ, ผู้รับผิดชอบ, owner]
+      planning: [project plan, แผนงาน, แตกงาน, milestone]
+      schedule: [timeline, deadline, due date, ระยะเวลา, gantt]
+      spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง]
+    steps:
+      - id: summarize-meeting
+        type: skill
+        skill: meeting-summary
+        description: "สรุป Decision / Action / Owner / Due date / Open issue จากการประชุม"
+        produces: [decisions, actions, owners, due-dates, open-issues]
+      - id: build-action-plan
+        type: skill
+        skill: project-plan
+        description: "จัด Action Items เป็นแผนงานที่มี dependency, milestone และ timeline"
+        consumes: [decisions, actions, owners, due-dates, open-issues]
+        produces: [activities, milestones, dependencies, timeline]
+      - id: create-action-sheet
+        type: action
+        action: spreadsheet-action-plan
+        when: spreadsheet
+        preferredTool: google-sheets
+        fallback: xlsx
+        description: "สร้าง Action Tracker / Timeline / Gantt จากแผนที่ได้"
+        consumes: [activities, milestones, dependencies, timeline]
+        produces: [action-plan-sheet]
+
+  - id: iso-audit-readiness-flow
+    name: "ISO Audit Readiness"
+    owner: qs
+    consumers: ["*"]
+    description: "ประสานหลายทักษะ ISO/QMS เมื่อผู้ใช้ต้องเตรียม audit หลายด้านในคำขอเดียว"
+    requiredSignals: [audit]
+    minSignals: 3
+    signals:
+      audit: [external audit, internal audit, iso 9001, surveillance audit, recertification, audit readiness]
+      evidence: [evidence matrix, หลักฐาน audit, รายการหลักฐาน, pbc]
+      documents: [document control, record control, revision, obsolete document, ควบคุมเอกสาร]
+      interview: [mock audit, audit interview, ซ้อมตอบ auditor, ซ้อม audit]
+      performance: [quality objective, kpi iso, ตัวชี้วัดคุณภาพ, risk opportunity, qms risk]
+      capa: [ncr, capa, corrective action, nonconformity, nc audit]
+      management: [management review, qmr, ทบทวนฝ่ายบริหาร]
+    steps:
+      - id: readiness-baseline
+        type: skill
+        skill: iso9001-audit-readiness
+        description: "ยืนยัน scope/criteria/process owner และสร้าง readiness baseline"
+        produces: [audit-scope, process-profile, readiness-gaps]
+      - id: evidence-matrix
+        type: skill
+        skill: audit-evidence-matrix
+        when: evidence
+        consumes: [audit-scope, process-profile]
+        produces: [evidence-matrix, evidence-gaps]
+      - id: document-control
+        type: skill
+        skill: document-record-control
+        when: documents
+        consumes: [audit-scope, process-profile]
+        produces: [document-record-gaps]
+      - id: interview-coaching
+        type: skill
+        skill: audit-interview-coach
+        when: interview
+        consumes: [process-profile, evidence-matrix]
+        produces: [interview-readiness]
+      - id: qms-performance
+        type: skill
+        skill: quality-objective-kpi-review
+        when: performance
+        consumes: [process-profile]
+        produces: [objective-kpi-gaps]
+      - id: capa-review
+        type: skill
+        skill: ncr-capa
+        when: capa
+        consumes: [readiness-gaps, evidence-gaps]
+        produces: [capa-actions]
+      - id: management-review
+        type: skill
+        skill: management-review-prep
+        when: management
+        consumes: [readiness-gaps, objective-kpi-gaps, capa-actions]
+        produces: [management-review-pack]

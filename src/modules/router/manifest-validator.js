@@ -12,6 +12,7 @@
 
 import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { parsePlaybooksYaml, validatePlaybookRegistry } from '../playbooks/index.js';
 
 export function extractManifestData(text) {
   const lines = text.split(/\r?\n/);
@@ -294,6 +295,7 @@ export async function loadAndValidateManifests(manifestDir) {
   const docsContent = await readFile(join(manifestDir, 'documents.yaml'), 'utf-8');
   const authContent = await readFile(join(manifestDir, 'authority.yaml'), 'utf-8');
   const routerContent = await readFile(join(manifestDir, 'router-index.yaml'), 'utf-8');
+  const playbooksContent = await readFile(join(manifestDir, 'playbooks.yaml'), 'utf-8');
 
   const teamCodes = new Set();
   for (const m of teamsContent.matchAll(/^ {6}- id:\s*([a-z0-9_-]+)/gm)) teamCodes.add(m[1]);
@@ -303,6 +305,7 @@ export async function loadAndValidateManifests(manifestDir) {
   const docsData = extractManifestData(docsContent);
   const authData = extractManifestData(authContent);
   const routerSkills = extractRouterSkills(routerContent);
+  const playbooks = parsePlaybooksYaml(playbooksContent);
 
   const result = validateManifestIntegrity({
     teamCodes,
@@ -311,6 +314,12 @@ export async function loadAndValidateManifests(manifestDir) {
     documents: docsData.documents,
     authorities: authData.authorities,
     routerSkills,
+  });
+
+  const playbookTeams = new Set([...teamCodes, 'developer', 'pm', 'ai-admin']);
+  const playbookResult = validatePlaybookRegistry(playbooks, {
+    skills: new Set(Object.keys(skillsData.skills)),
+    teams: playbookTeams,
   });
 
   const rootDir = join(manifestDir, '..');
@@ -341,7 +350,7 @@ export async function loadAndValidateManifests(manifestDir) {
     }
   }
 
-  const errors = [...result.errors, ...pathErrors];
+  const errors = [...result.errors, ...playbookResult.errors, ...pathErrors];
 
   return {
     valid: errors.length === 0,
@@ -353,6 +362,7 @@ export async function loadAndValidateManifests(manifestDir) {
       documentsCount: Object.keys(docsData.documents).length,
       authoritiesCount: Object.keys(authData.authorities).length,
       routerSkillsCount: routerSkills.length,
+      playbooksCount: playbooks.length,
     },
   };
 }

@@ -41,7 +41,7 @@ Agent จะเปิดอ่านเนื้อหาทีละ Skill เ�
 ```text
 Level 0: Registry / Metadata (router-index.yaml ~KB)
              ↓
-Level 1: Active Domain Skill (SKILL.md เพียง 1 ตัว)
+Level 1: Active Skill / Current Playbook Step (โหลดทีละ 1 SKILL.md)
              ↓
 Level 2: Mandatory Rules & SOPs (rules/*.md เมื่อคำขอเรียกหาเงื่อนไข)
              ↓
@@ -49,7 +49,7 @@ Level 3: Templates & Examples (เฉพาะเมื่อต้องเท�
 ```
 
 1. **Level 0 (Metadata)**: สแกนโครงสร้างโฟลเดอร์ นามสกุลไฟล์ และคำขอของผู้ใช้ โดยยังไม่อ่านตัวเอกสาร
-2. **Level 1 (Domain Skill)**: โหลดเฉพาะ `SKILL.md` ของทักษะที่ได้รับคัดเลือกเพียง 1 ตัว ตรวจสอบ Scope Guard ก่อนลงมือ
+2. **Level 1 (Skill / Playbook Step)**: งานเดี่ยวโหลด `SKILL.md` เพียง 1 ตัว; งานหลายขั้นใช้ `manifest/playbooks.yaml` แต่โหลดทีละ Skill ตาม current step และตรวจ Scope Guard ก่อนลงมือ
 3. **Level 2 (Mandatory Rules & SOPs)**: หากคำขอเกี่ยวข้องกับความลับ ข้อมูลส่วนบุคคล หรือระเบียบจัดซื้อ จึงเปิด `rules/data-classification.md` หรือ `rules/human-approval.md` ตามที่ระบุในเอกสารควบคุม
 4. **Level 3 (Templates & Examples)**: 0 ไฟล์เป็นค่าเริ่มต้น ห้ามเปิดตัวอย่างเอกสารหรือคู่มือฉบับเต็มโดยไม่จำเป็น เปิดเฉพาะเมื่อผู้ใช้ต้องการให้จัดรูปแบบเทียบเคียง
 
@@ -81,6 +81,39 @@ $$\text{Score} = (\text{Intent} \times 0.30) + (\text{Keyword} \times 0.25) + (\
 
 ---
 
+## Atomic vs Composite Routing
+
+ก่อนเลือก Skill เดียว ให้แยกประเภทงาน:
+
+### Atomic Task
+คำขอมีผลลัพธ์หลักเดียว เช่น:
+- “ช่วยตรวจ TOR นี้”
+- “ช่วยสรุปประชุม”
+- “ช่วยทำ KPI review”
+
+ใช้ Router เดิมและเลือก Skill เดียว
+
+### Composite Task
+คำขอมีหลายผลลัพธ์ที่ต้องส่งต่อกัน เช่น:
+- “เอา TOR นี้แตกกิจกรรม งบ ระยะเวลา แล้วทำ Gantt ลง Google Sheet”
+- “สรุปประชุม แล้วทำ Action Plan พร้อม Timeline ลง Sheet”
+- “เตรียม ISO Audit ทั้ง evidence, mock interview และ management review”
+
+ให้ตรวจ `manifest/playbooks.yaml` และเลือก Playbook ที่เข้าเงื่อนไขแทนการบังคับให้ Skill เดียวรับทั้งหมด
+
+กติกา Playbook:
+1. โหลดทีละ Skill ตามลำดับ
+2. ส่งต่อเฉพาะ structured handoff ที่จำเป็น
+3. Tool/Action เช่น Google Sheets ไม่ถือเป็น Skill
+4. ถ้า tool ที่ต้องการไม่มี ให้ใช้ fallback
+5. Human Approval / Authority ยังใช้ทุก step
+6. เมื่อ client แก้ไฟล์ได้ ให้เก็บ state ใต้ `.step-ai/runs/<run-id>/state.json`
+7. ห้ามเก็บ password/token/credential/PII ที่ไม่จำเป็นใน run state
+
+Playbook เป็นส่วนหนึ่งของ HOW และ **ไม่ใช่ Workflow Engine ใหม่**
+
+---
+
 ## ขอบเขตการทำงาน 3 สถานะ (3-Outcome Scope Guard)
 
 ทุก Skill มีการกำหนดขอบเขตใน `router-index.yaml`:
@@ -99,4 +132,9 @@ $$\text{Score} = (\text{Intent} \times 0.30) + (\text{Keyword} \times 0.25) + (\
    ```text
    [STeP Router] Team: <ทีม> | Intent: <เจตนา> | Active Skill: <ชื่อ-skill>
    ```
-4. ดำเนินงานตามขั้นตอนของ Skill นั้นโดยรักษา Loading Budget
+
+   สำหรับงาน Composite:
+   ```text
+   [STeP Router] Team: <ทีม> | Mode: Playbook | Flow: <playbook-id> | Step: <current-step>
+   ```
+4. งาน Atomic ดำเนินตาม Skill เดียว; งาน Composite ดำเนิน Playbook ทีละ step โดยรักษา Loading Budget
