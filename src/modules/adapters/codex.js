@@ -23,7 +23,7 @@ export function generateCodexInstructions(role, files) {
   text += `- อย่าอ่าน Rules ทั้งโฟลเดอร์ตอนเริ่มต้น ให้โหลดเฉพาะ mandatory references ของ Skill ที่ Router เลือกเมื่อมีงานจริง\n\n`;
 
   text += `### 2. สถาปัตยกรรม 3 ชั้นและ Progressive Disclosure\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
   text += buildLazyLoadingInventory(files);
 
