@@ -2,7 +2,7 @@
 
 ## ขอบเขต
 
-ระยะเวลา **4 สัปดาห์** ใช้ Pilot v0.6.0 เป็น baseline
+ระยะเวลา **4 สัปดาห์** ใช้ Pilot v0.6.1 เป็น baseline
 
 - เปิดใช้ได้กับ 22 ทีม
 - มี Core Pilot Users ประมาณ 10–15 คน ครอบคลุมทั้ง 5 routing clusters
@@ -12,7 +12,7 @@
 ## Week 0 — Preflight
 
 ก่อนเริ่มนับ Pilot:
-- ติดตั้ง/อัปเดต v0.6.0
+- ติดตั้ง/อัปเดต v0.6.1
 - รัน CI และ Pilot readiness suite ให้เขียว
 - ทดสอบ update + rollback อย่างน้อย 1 เครื่อง Windows และ 1 เครื่อง macOS ถ้ามี
 - ยืนยัน feedback channel และผู้รับผิดชอบ triage
