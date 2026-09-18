@@ -4,3 +4,16 @@ export { createSnapshot, listSnapshots, restoreSnapshot } from './modules/recove
 export { getAdapter, isToolSupported, getSupportedTools } from './modules/adapters/index.js';
 export { installForCodex, generateCodexInstructions } from './modules/adapter-codex.js';
 export { calculateFileSha256, calculateSha256 } from './utils/checksum.js';
+
+export {
+  OUTPUT_ROOT,
+  sanitizeOutputSegment,
+  normalizeExtension,
+  inferOutputType,
+  normalizeOutputType,
+  normalizeTeamCode,
+  buildOutputDirectory,
+  buildOutputBaseName,
+  getNextOutputPath,
+  initOutputWorkspace,
+} from './modules/output-manager.js';
