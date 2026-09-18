@@ -6,6 +6,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=macos-runtime.sh
+. "$SCRIPT_DIR/macos-runtime.sh"
 PILOT_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT_DIR/package.json" | head -n 1)"
 PILOT_VERSION="${PILOT_VERSION:-unknown}"
 
@@ -50,19 +52,20 @@ elif [ "$ARCH" = "x86_64" ]; then
 fi
 echo -e "${GRAY}สถาปัตยกรรมระบบ: ${WHITE}${ARCH_DISPLAY}${NC}"
 
-# 3. Detect required runtime (Node.js >= 20)
+# 3. Resolve required runtime (Node.js >= 20)
 echo -e "${GRAY}กำลังตรวจสอบ Node.js runtime...${NC}"
-if ! command -v node >/dev/null 2>&1; then
+if ! resolve_step_node "$ROOT_DIR"; then
     echo ""
-    echo -e "${YELLOW}⚠️  เครื่องนี้ยังไม่พร้อมติดตั้ง${NC}"
-    echo -e "${GRAY}กรุณาติดต่อ AI Champion ประจำทีมให้ช่วยติดตั้งให้ ไม่ต้องติดตั้งโปรแกรมระบบด้วยตัวเอง${NC}"
+    echo -e "${RED}⚠️  ไม่สามารถเตรียม Node.js Runtime ได้${NC}"
+    echo -e "${GRAY}กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่ หรือส่งภาพหน้าจอนี้ให้ AI Champion${NC}"
     echo ""
     read -p "กด Enter เพื่อออกจากโปรแกรม..." dummy
     exit 1
 fi
 
-NODE_VER=$(node -v 2>/dev/null || echo "unknown")
-echo -e "${GREEN}✓ ตรวจพบ Node.js Runtime: ${NODE_VER}${NC}"
+NODE_BIN="$STEP_NODE_BIN"
+NODE_VER="$("$NODE_BIN" -v 2>/dev/null || echo "unknown")"
+echo -e "${GREEN}✓ Node.js Runtime พร้อมใช้งาน: ${NODE_VER}${NC}"
 
 # 4. Detect AI tools (8 tools across 3 tiers)
 echo ""
@@ -284,15 +287,15 @@ echo ""
 
 cd "$ROOT_DIR"
 if [ -n "$SELECTED_TEAM" ]; then
-    node "$ROOT_DIR/bin/step-ai.js" init --team "$SELECTED_TEAM" --tool "$SELECTED_TOOL"
-    node "$ROOT_DIR/bin/step-ai.js" config --team "$SELECTED_TEAM"
+    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" init --team "$SELECTED_TEAM" --tool "$SELECTED_TOOL"
+    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" config --team "$SELECTED_TEAM"
 else
-    node "$ROOT_DIR/bin/step-ai.js" init --role all --tool "$SELECTED_TOOL"
+    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" init --role all --tool "$SELECTED_TOOL"
 fi
 
 # 7. Run Doctor Check
 echo ""
-node "$ROOT_DIR/bin/step-ai.js" doctor --employee
+"$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" doctor --employee
 
 TEAM_LABEL="$SELECTED_TEAM"
 if [ -z "$SELECTED_TEAM" ]; then
