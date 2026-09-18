@@ -22,6 +22,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Read package version
         id: version
         shell: bash
@@ -48,9 +52,33 @@ jobs:
         if: steps.existing.outputs.exists != 'true'
         run: python3 scripts/validate_repo.py
 
+      - name: Check updater script syntax
+        if: steps.existing.outputs.exists != 'true'
+        shell: bash
+        run: |
+          bash -n install/update-macos.sh
+          pwsh -NoProfile -Command "\$null = [scriptblock]::Create((Get-Content -Raw 'install/update-windows.ps1')); Write-Host 'PowerShell syntax OK'"
+
+      - name: Run CLI and module unit tests
+        if: steps.existing.outputs.exists != 'true'
+        run: npm test
+
+      - name: Verify package tarball contents
+        if: steps.existing.outputs.exists != 'true'
+        run: npm pack --dry-run
+
       - name: Build Pilot ZIP
         if: steps.existing.outputs.exists != 'true'
         run: python3 scripts/build_pilot_bundle.py
+
+      - name: Generate SHA-256 checksum
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        shell: bash
+        run: |
+          cd dist
+          sha256sum "$ASSET" > "$ASSET.sha256"
 
       - name: Publish GitHub Release
         if: steps.existing.outputs.exists != 'true'
@@ -62,7 +90,7 @@ jobs:
         shell: bash
         run: |
           test -f "dist/$ASSET"
-          gh release create "$TAG" "dist/$ASSET" \
+          gh release create "$TAG" "dist/$ASSET" "dist/$ASSET.sha256" \
             --target "$GITHUB_SHA" \
             --title "STeP AI Harness Pilot $TAG" \
             --notes "Pilot distribution for STeP AI Harness $TAG. Built from validated source on main. Includes the employee installer bundle for Windows and macOS."
