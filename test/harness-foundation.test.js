@@ -147,6 +147,36 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
     assert.ok(result.errors.some((e) => e.includes('requires specPath')));
   });
 
+
+  await t.test('High-risk and restricted actions cannot bypass human confirmation policy', () => {
+    const result = validateActionRegistry({
+      highWithoutConfirmation: {
+        id: 'highWithoutConfirmation',
+        capability: 'browser-submit',
+        risk: 'high',
+        sideEffect: 'external',
+        confirmation: 'none',
+        preferredTools: ['browser'],
+        outputReferenceRequired: false,
+        specPath: '',
+      },
+      restrictedWithUserConfirm: {
+        id: 'restrictedWithUserConfirm',
+        capability: 'official-approval',
+        risk: 'restricted',
+        sideEffect: 'irreversible',
+        confirmation: 'user-confirm',
+        preferredTools: ['internal-system'],
+        outputReferenceRequired: false,
+        specPath: '',
+      },
+    });
+
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes('high risk') && e.includes('user-confirm')));
+    assert.ok(result.errors.some((e) => e.includes('restricted risk') && e.includes('human-only')));
+  });
+
   await t.test('Playbook validator rejects an action missing from the central registry', () => {
     const result = validatePlaybookRegistry(
       [{
