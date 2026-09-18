@@ -19,8 +19,9 @@ import { getAdapter, getSupportedTools } from '../src/modules/adapters/index.js'
 
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
+const PACKAGE_VERSION = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8')).version;
 
-test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
+test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, async (t) => {
   const backupConfigPath = USER_CONFIG_PATH + '.bak';
 
   t.before(async () => {
@@ -161,6 +162,7 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
 
       assert.ok(await pathExists(join(tmpDir, '.step-ai', 'manifest.json')));
       assert.ok(await pathExists(join(tmpDir, 'CODEX_INSTRUCTIONS.md')));
+      assert.ok(await pathExists(join(tmpDir, 'output', 'QS')), 'Init should create team output workspace');
 
       // 2. Run step-ai update on this workspace
       const { stdout } = await execFileAsync(process.execPath, [
@@ -177,9 +179,9 @@ test('STeP AI Pilot v0.2 Installer & User Configuration Suite', async (t) => {
     }
   });
 
-  await t.test('Case 7: Distribution Packager (build_pilot_bundle.py) builds valid v0.2.0 ZIP', async () => {
-    const zipPath = join(PACKAGE_ROOT, 'dist', 'STeP-AI-Pilot-v0.2.0.zip');
-    assert.ok(await pathExists(zipPath), 'Pilot bundle v0.2.0 zip must exist');
+  await t.test(`Case 7: Distribution Packager builds valid v${PACKAGE_VERSION} ZIP`, async () => {
+    const zipPath = join(PACKAGE_ROOT, 'dist', `STeP-AI-Pilot-v${PACKAGE_VERSION}.zip`);
+    assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist`);
 
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);
