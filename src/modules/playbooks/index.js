@@ -354,6 +354,9 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
         }
       } else if (step.type === 'action') {
         if (!step.action) errors.push(`Playbook '${playbook.id}' step '${step.id}' has no action`);
+        if (step.completionCriteria === 'output-reference-required' && !step.actionSpecPath) {
+          errors.push(`Playbook '${playbook.id}' action '${step.id}' requires actionSpecPath for output-reference completion`);
+        }
       } else {
         errors.push(`Playbook '${playbook.id}' step '${step.id}' has unsupported type '${step.type}'`);
       }
