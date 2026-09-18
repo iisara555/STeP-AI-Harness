@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.4.0
+  version: 2.5.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
@@ -34,11 +34,12 @@ skills:
         - ตรวจความครบถ้วนของโครงสร้าง TOR และขอบเขตงาน
         - ทำ Traceability Matrix (วัตถุประสงค์ -> งาน -> ผลส่งมอบ -> เกณฑ์ตรวจรับ)
         - ตรวจสอบคำกำกวม ข้อกำหนดที่ขัดแย้งกันเอง หรือการล็อกสเปกโดยไม่จำเป็น
-      escalate:
-        vendor_selection:
-          skill: vendor-evaluation
-          description: การคัดเลือกหรือตัดสินให้คะแนนผู้ยื่นซอง
+      escalate: {}
       human_only:
+        vendor_selection:
+          role: procurement-committee
+          authority: procurement-approval
+          description: การคัดเลือก ให้คะแนนผู้ยื่นข้อเสนอ หรือตัดสินผู้ชนะเป็นอำนาจของคณะกรรมการจัดซื้อจัดจ้าง
         legal_advice:
           role: human-legal-officer
           authority: legal-advice
@@ -114,7 +115,8 @@ skills:
       allow:
         - เปิดเว็บไซต์ สำรวจและอ่านข้อกำหนดของแบบฟอร์ม
         - กรอกข้อมูลฉบับร่างและเลือกตัวเลือกใน dropdown
-        - แนบไฟล์เอกสารประกอบฉบับร่างและถ่ายภาพหน้าจอตรวจสอบ
+        - reuse authenticated session ที่ผู้ใช้ opt-in ไว้ โดยไม่เปิดเผยหรือบันทึก plaintext credential
+        - แนบไฟล์เอกสารประกอบฉบับร่างและถ่ายภาพหน้าจอตรวจสอบเมื่อไม่มี secret ที่ไม่จำเป็น
         - สรุปข้อมูลที่กรอกทั้งหมดให้ผู้ใช้ตรวจทาน
       escalate:
         form_submission:
@@ -577,7 +579,7 @@ skills:
         - ตรวจสอบระยะปลอดภัย ตราสัญลักษณ์ร่วม และคู่สีองค์กร
       escalate: {}
       human_only:
-        brand_alteration_approval:
+        ci_governance:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติการดัดแปลงตราสัญลักษณ์องค์กร
@@ -604,7 +606,7 @@ skills:
         - สร้าง Photorealistic visual เมื่อเหมาะกับงาน โดยต้องไม่สร้างโลโก้ เหตุการณ์ บุคคล หรือข้อมูลที่ทำให้เข้าใจผิดว่าเป็นข้อเท็จจริง
       escalate: {}
       human_only:
-        brand_alteration_approval:
+        ci_governance:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติการดัดแปลงหรือเผยแพร่สื่ออัตลักษณ์องค์กรภายนอก
@@ -663,7 +665,7 @@ skills:
         - วิจารณ์ AI Slop / visual cliché จากเหตุผลของงาน
       escalate: {}
       human_only:
-        brand_alteration_approval:
+        ci_governance:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติดัดแปลง CI หรือ Brand Identity อย่างเป็นทางการ

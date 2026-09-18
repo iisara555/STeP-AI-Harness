@@ -16,6 +16,40 @@ Skill นี้ช่วยพนักงาน STeP สร้าง Art Direct
 
 ---
 
+## 0. Target Image Model Capability Standard
+
+Skill นี้ถูกออกแบบสำหรับ image model ที่มี **contextual understanding และ multimodal image reasoning อย่างน้อยระดับ GPT-Image-2-class หรือเทียบเท่า** โดย **แนะนำ GPT-Image-2.5-class หรือรุ่นที่มีความสามารถสูงกว่า** เมื่อมีให้ใช้
+
+ให้ประเมินจากความสามารถ ไม่ใช่ชื่อโมเดลเพียงอย่างเดียว โมเดลเป้าหมายควรทำได้อย่างน้อย:
+
+- เข้าใจ prompt ที่มีบริบทหลายชั้น เช่น audience, purpose, brand, composition และ constraints พร้อมกัน
+- รับและวิเคราะห์ **reference image** ได้เมื่อ workflow ต้องอาศัยภาพอ้างอิง
+- รักษา subject identity / object structure / camera logic / layout constraints ได้ดีในการ edit หรือ iteration
+- ทำตาม aspect ratio, framing, hierarchy, material, lighting และ negative constraints ได้สม่ำเสมอ
+- รองรับ multi-turn refinement โดยไม่ทำรายละเอียดที่ผู้ใช้ไม่ได้สั่งเปลี่ยนหายไปมาก
+- แยก “ข้อเท็จจริงที่ต้องรักษา” ออกจาก “สไตล์ที่ปรับได้”
+- สร้างหรือแก้ภาพจาก input image โดยไม่ต้องแปลงทุกอย่างกลับเป็น text description ก่อน
+
+### Capability Gate
+
+ถ้า target model **ไม่มี image input / reference understanding**:
+- ห้ามใช้ Reference-Led mode เสมือนว่าโมเดลเห็นภาพ
+- ให้แปลงงานเป็น Text-Only Prompt และระบุข้อจำกัดแก่ผู้ใช้
+
+ถ้า target model มี image input แต่ editing fidelity ต่ำ:
+- ให้ลดความซับซ้อนของคำสั่ง edit
+- แบ่งเป็นรอบแก้ทีละเรื่อง
+- หลีกเลี่ยง claim ว่าจะ preserve 100% ถ้า tool/model ไม่มีความสามารถรองรับ
+
+ถ้ามีหลายโมเดลให้เลือก:
+1. เลือกโมเดลที่มี contextual + reference understanding ก่อน
+2. งาน edit/identity/architecture ใช้รุ่นที่ fidelity สูงกว่า
+3. งาน draft/idea generation อาจใช้รุ่นเร็วกว่าได้ ถ้ายังผ่าน capability floor
+
+หลักสำคัญ: **Prompt quality ไม่สามารถชดเชย model capability ที่ต่ำกว่างานได้ทั้งหมด**
+
+---
+
 ## 1. Brand Core — สิ่งที่ต้องคงไว้เสมอ
 
 ### 1.1 Core Values

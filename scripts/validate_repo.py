@@ -74,12 +74,44 @@ def scan_secrets(errors: list[str]) -> None:
     for path in sorted(ROOT.rglob("*")):
         if not path.is_file() or ".git" in path.parts:
             continue
-        if path.suffix.lower() not in {".md", ".yaml", ".yml", ".py", ".txt"}:
+        if path.suffix.lower() not in {".md", ".yaml", ".yml", ".py", ".txt", ".js", ".mjs", ".cjs", ".ts", ".sh", ".ps1", ".json", ".env", ".example", ".command", ".bat"}:
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
         for label, pattern in SECRET_PATTERNS.items():
             if pattern.search(text):
                 errors.append(f"{path.relative_to(ROOT)}: possible {label}")
+
+
+
+def validate_browser_env_safety(errors: list[str]) -> None:
+    gitignore_path = ROOT / ".gitignore"
+    if not gitignore_path.is_file():
+        errors.append("Missing required file: .gitignore")
+        return
+
+    gitignore = gitignore_path.read_text(encoding="utf-8", errors="replace")
+    for required_entry in (".env", ".env.*", ".step-ai/"):
+        if required_entry not in gitignore:
+            errors.append(f".gitignore must protect local browser/private state: {required_entry}")
+
+    env_example = ROOT / ".env.example"
+    if not env_example.is_file():
+        errors.append("Missing required file: .env.example")
+        return
+
+    env_text = env_example.read_text(encoding="utf-8", errors="replace")
+    if "STEP_BROWSER_CREDENTIAL_REF=" not in env_text:
+        errors.append(".env.example must define STEP_BROWSER_CREDENTIAL_REF")
+
+    forbidden_assignments = re.compile(
+        r"(?im)^\s*(?:PASSWORD|PASSWD|PWD|TOKEN|API_KEY|APIKEY|SECRET|COOKIE|MFA_CODE)\s*=\s*\S+"
+    )
+    if forbidden_assignments.search(env_text):
+        errors.append(".env.example must not contain or encourage plaintext password/token/cookie fields")
+
+    # Repository policy: .env may hold references/config only, never credentials.
+    if re.search(r"(?im)^\s*STEP_BROWSER_(?:PASSWORD|TOKEN|COOKIE|MFA)\s*=", env_text):
+        errors.append(".env.example contains prohibited browser secret variable")
 
 
 def validate_package_config(errors: list[str]) -> None:
@@ -136,6 +168,7 @@ def main() -> int:
     errors: list[str] = []
     count = validate_skills(errors)
     scan_secrets(errors)
+    validate_browser_env_safety(errors)
     validate_package_config(errors)
 
     required = [

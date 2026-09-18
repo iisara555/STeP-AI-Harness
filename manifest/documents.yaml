@@ -80,3 +80,12 @@ documents:
     process: creative.branding
     version: "1.0"
     status: active
+
+  browser-credential-safety-rule:
+    title: "แนวปฏิบัติการจดจำ Login และ Credential สำหรับ Browser Automation"
+    owner: ga
+    type: rule
+    process: governance.facility-booking
+    version: "1.0"
+    path: rules/browser-credential-safety.md
+    status: pilot

@@ -82,7 +82,7 @@ skills:
 
   browser-form-assistant:
     owner: ga
-    version: 1.0.0
+    version: 1.1.0
     domain: [operations, automation]
     process: [governance.facility-booking]
     path: skills/common/browser-form-assistant/SKILL.md
@@ -96,7 +96,7 @@ skills:
       lifecycle:
         stage: draft
     references:
-      mandatory: [human-approval-rule, secret-safety-rule, data-classification-rule]
+      mandatory: [human-approval-rule, secret-safety-rule, data-classification-rule, browser-credential-safety-rule]
       optional: []
 
   project-plan:
@@ -396,7 +396,7 @@ skills:
 
   step-image-prompt:
     owner: cc
-    version: 2.0.0
+    version: 2.1.0
     domain: [creative]
     process: [creative.branding]
     service: [creative-marketing]

@@ -234,4 +234,23 @@ Updater จะตรวจ GitHub Release ล่าสุด หากมีร�
 
 หากตรวจ GitHub ไม่ได้ ระบบจะไม่เปลี่ยนเวอร์ชัน และจะทำ local sync จากเวอร์ชันที่ติดตั้งอยู่แทน
 
-ผู้ใช้ v0.3.0 หรือต่ำกว่าต้องดาวน์โหลด v0.4.0 ใหม่หนึ่งครั้งเพื่อรับ updater รุ่นใหม่นี้
+ผู้ใช้ v0.3.0 หรือต่ำกว่าต้องดาวน์โหลด Pilot รุ่นปัจจุบันใหม่หนึ่งครั้งเพื่อรับ updater รุ่นใหม่; ตั้งแต่ v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตรุ่นถัดไปได้
+
+
+## การจำ Login สำหรับ Browser Assistant
+
+ครั้งแรกให้พนักงาน login เอง รวมถึง MFA/CAPTCHA/passkey จากนั้น Browser Assistant สามารถ reuse session ที่ผู้ใช้เลือกให้จดจำได้เมื่อ browser/runtime รองรับ
+
+- ห้ามใส่ password ลง chat
+- ห้ามเก็บ password/token/cookie/MFA code แบบ plaintext ใน `.env`
+- `.env` เก็บได้เฉพาะ `STEP_BROWSER_CREDENTIAL_REF` และ non-secret settings
+- ถ้า session หมดอายุ ให้พนักงาน login ใหม่
+- การจำ login ไม่ได้แปลว่าอนุญาตให้ Submit; ระบบยังต้องรอคำยืนยันก่อน action ที่มีผลจริง
+
+ดู `rules/browser-credential-safety.md`
+
+## มาตรฐาน Image Prompt
+
+งานที่ใช้ `step-image-prompt` โดยเฉพาะงานจาก reference หรือ image editing ควรใช้ image model ที่มี contextual understanding และ image input อย่างน้อยระดับ GPT-Image-2-class หรือเทียบเท่า โดยแนะนำ GPT-Image-2.5-class หรือสูงกว่าเมื่อมีให้ใช้
+
+หากเครื่องมือสร้างภาพไม่รองรับ image input ระบบต้องแจ้งข้อจำกัดและเปลี่ยนเป็น Text-Only Prompt แทน

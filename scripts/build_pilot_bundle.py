@@ -50,6 +50,7 @@ def build_pilot_bundle():
         "START-HERE.md",
         "START-PROMPT.txt",
         "culture.md",
+        ".env.example",
     ]
 
     include_dirs = [
