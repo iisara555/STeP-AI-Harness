@@ -23,7 +23,7 @@ skills:
 
   tor-review:
     owner: afp
-    version: 1.1.0
+    version: 1.1.1
     domain: [procurement]
     process: [procurement.tor]
     service: [tech-commercialization, public-sector-innovation]
@@ -38,7 +38,7 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [procurement-policy, human-approval-rule]
+      mandatory: [procurement-policy, human-approval-rule, data-classification-rule]
       optional: [tor-template]
 
   tor-government-writing:
@@ -493,7 +493,7 @@ skills:
 
   receipt-audit:
     owner: afp
-    version: 1.0.0
+    version: 1.0.1
     domain: [finance, procurement]
     process: [procurement.request]
     service: [public-sector-innovation]
@@ -508,7 +508,7 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [human-approval-rule]
+      mandatory: [human-approval-rule, data-classification-rule]
       optional: []
 
   creative-art-director:
