@@ -12,7 +12,7 @@
 
 > **เป้าหมาย:** ดาวน์โหลด → เลือกทีม → ติดตั้ง → เปิดใช้งานได้ทันที
 
-1. **ดาวน์โหลด:** นำไฟล์ `STeP-AI-Pilot-v0.7.1.zip` จาก Shared Drive ขององค์กรมาไว้ในเครื่อง แล้วแตกไฟล์ (Extract All บน Windows หรือดับเบิลคลิกบน Mac)
+1. **ดาวน์โหลด:** นำไฟล์ `STeP-AI-Pilot-v0.7.2.zip` จาก Shared Drive ขององค์กรมาไว้ในเครื่อง แล้วแตกไฟล์ (Extract All บน Windows หรือดับเบิลคลิกบน Mac)
 2. **ดับเบิลคลิกติดตั้ง:**
    - **สำหรับ Windows:** ดับเบิลคลิกที่ไฟล์ **`Install-STeP-AI.bat`**
    - **สำหรับ macOS:** ดับเบิลคลิกที่ไฟล์ **`Install-STeP-AI.command`**
@@ -267,3 +267,11 @@ Updater จะตรวจ GitHub Release ล่าสุด หากมีร�
 สำหรับ TOR → Project Plan ระบบใช้หลัก **หนึ่ง TOR ต่อหนึ่ง Run**, แยก TOR Fact กับ Planning Assumption และไม่กระจายวงเงินรวมเป็นงบรายกิจกรรมเอง
 
 ถ้าเป็นคำขอธรรมดา เช่น “ช่วยตรวจ TOR” ระบบยังใช้ Skill เดียวเหมือนเดิม
+
+
+### ถ้าขอ Google Sheet / Gantt
+
+สำหรับงานหลายขั้น เช่น TOR → Action Plan → Gantt:
+- ถ้ามี Google Sheets tool ระบบควรสร้าง Sheet จริงและส่ง link/reference กลับมา
+- ถ้าไม่มี Google Sheets tool ระบบจะสร้าง XLSX ตามโครงเดียวกัน
+- ถ้ายังสร้างไฟล์ไม่ได้ ระบบต้องแจ้งว่า `waiting-tool` และเก็บแผนไว้ทำต่อ ไม่ควรบอกว่าสร้าง Sheet แล้ว
