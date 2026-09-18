@@ -1,0 +1,15 @@
+STeP AI — เริ่มติดตั้งบน macOS
+
+1) แตกไฟล์ ZIP ก่อน
+2) คลิกขวาไฟล์ "Install-STeP-AI.command" แล้วเลือก Open
+3) ถ้า macOS แจ้งว่าไม่สามารถตรวจสอบผู้พัฒนาได้:
+   System Settings > Privacy & Security > เลื่อนลง > Open Anyway > Open
+4) หลังจากหน้าต่างติดตั้งเปิดขึ้น ทำตามขั้นตอนบนหน้าจอได้เลย
+
+ไม่ต้องติดตั้ง Homebrew / Node.js / ใช้ Terminal เอง
+ถ้าเครื่องยังไม่มี Node.js ระบบจะดาวน์โหลด Runtime ที่ตรวจ SHA-256 แล้วไว้เฉพาะในโฟลเดอร์ STeP AI
+
+Apple อธิบายการเปิดซอฟต์แวร์จากนักพัฒนาที่ยังไม่ได้รับการ notarize:
+https://support.apple.com/th-th/102445
+
+หากยังเปิดไม่ได้ ให้ถ่ายภาพหน้าจอข้อความ Error แล้วส่งให้ AI Champion
