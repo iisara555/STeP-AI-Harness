@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -8,9 +8,6 @@ import { buildRouterGuidelines } from '../router/index.js';
  * @returns {string}
  */
 export function generateHermesInstructions(role, files) {
-  const skillFiles = files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-  const ruleFiles = files.filter((f) => f.type === 'rule');
-
   let text = `# Hermes Agent System Prompt — STeP AI Harness\n\n`;
   text += `You are the STeP AI Assistant running on Nous Research Hermes / Local AI architecture.\n`;
   text += `Organization: Science and Technology Park, Chiang Mai University (STeP / RSP North).\n`;
@@ -25,18 +22,7 @@ export function generateHermesInstructions(role, files) {
   text += `Hermes Agent operates as Layer 1 Dynamic Router. Never load all organization skills into context at once.\n\n`;
   text += buildRouterGuidelines();
   text += `\n\n`;
-
-  text += `## Active Organization Rules\n`;
-  for (const r of ruleFiles) {
-    text += `- [Rule] ${r.relativePath}: Read and enforce strictly.\n`;
-  }
-
-  text += `\n## Approved Organization Skills for Team ${role.id.toUpperCase()}\n`;
-  for (const s of skillFiles) {
-    const parts = s.relativePath.split('/');
-    const skillName = parts.length >= 3 ? parts[2] : s.relativePath;
-    text += `- **${skillName}**: Reference file at \`${s.relativePath}\`\n`;
-  }
+  text += buildLazyLoadingInventory(files);
 
   text += `\n## Hermes Persistent Memory (USER.md)\n`;
   text += `Read \`USER.md\` in the workspace root at the beginning of each session. Update \`USER.md\` dynamically in the background whenever you learn user preferences, team role, communication style, or ongoing projects. Never commit or expose this file.\n\n`;
