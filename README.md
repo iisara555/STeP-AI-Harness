@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.5  
+**สถานะปัจจุบัน:** Pilot v0.6  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.5.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.5.0/STeP-AI-Pilot-v0.5.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.6.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.6.0/STeP-AI-Pilot-v0.6.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -119,7 +119,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.5.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.6.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
@@ -203,6 +203,29 @@ step-ai output \
 ```
 
 กติกากลางอยู่ที่ [`rules/output-management.md`](rules/output-management.md) และรายละเอียดสำหรับพนักงานอยู่ที่ [`docs/employee-guide.md`](docs/employee-guide.md)
+
+---
+
+## Pilot Hardening v0.6
+
+### Browser Login & Credential Safety
+
+Browser Form Assistant รองรับการจำ login แบบ opt-in โดยให้ผู้ใช้ login เองครั้งแรก และ reuse authenticated session หรือ OS/browser credential store เมื่อ runtime รองรับ
+
+- `.env` ใช้เก็บ configuration/credential reference เท่านั้น
+- ห้ามเก็บ password/token/cookie/MFA แบบ plaintext
+- session/profile ต้องเป็น local และอยู่ใต้พื้นที่ที่ gitignore
+- remembered login ไม่ข้าม Human Confirmation Gate ก่อน Submit
+
+### Image Prompt Capability Floor
+
+`step-image-prompt` กำหนด target image model ขั้นต่ำเป็น **GPT-Image-2-class หรือเทียบเท่า** และแนะนำ **GPT-Image-2.5-class หรือสูงกว่า** สำหรับงานที่ต้องเข้าใจ reference, preserve structure/identity และแก้ภาพหลายรอบ
+
+ถ้า model ไม่มี image input/reference understanding ระบบต้องลด workflow เป็น Text-Only Prompt อย่างชัดเจน ไม่ทำเสมือนว่าโมเดลเห็นภาพ
+
+### Pilot 1 เดือน
+
+แผน Pilot ใช้ 4 สัปดาห์ พร้อม Security / Routing / Human Action / Distribution / UX gates และ stop conditions ดู `docs/pilot-operations.md` และ `docs/pilot-readiness-audit.md`
 
 ---
 
