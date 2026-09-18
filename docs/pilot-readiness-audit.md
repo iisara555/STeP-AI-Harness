@@ -1,7 +1,7 @@
 # Pilot Readiness Audit — 1 Month
 
 สถานะ: **Pre-Pilot Hardening**  
-Baseline เป้าหมาย: **Pilot v0.6.0**  
+Baseline เป้าหมาย: **Pilot v0.6.1**  
 ขอบเขต: STeP AI Harness, 22 teams, 5 routing clusters
 
 ## Executive Summary
@@ -69,6 +69,12 @@ Residual risk: browser/session persistence แตกต่างกันตา�
 
 เอกสารเดิมระบุ Pilot 8 สัปดาห์ ปรับเป็น **4 สัปดาห์** พร้อม weekly gates และ stop conditions
 
+### F. First Run Context Loading — MEDIUM → HARDENED
+
+**พบ:** adapter เดิมแม้ระบุ Progressive Disclosure แต่ instruction ยังแจกแจงรายชื่อ Skill/Rule ทั้งหมด ทำให้ agent บางตัว recursive scan Workspace ตอน onboarding
+
+**ปรับ:** ใช้ L0-only First Run ทุก adapter, Compact Bootstrap และ Installed ≠ Loaded inventory summary; ห้าม scan skills/rules/manifest จนกว่าจะมีงานจริง
+
 ## Residual Risks Accepted for 1-Month Pilot
 
 - Harness ไม่ทำ password vault เอง; secure remembered login ขึ้นกับ browser/runtime/OS
@@ -95,7 +101,7 @@ Residual risk: browser/session persistence แตกต่างกันตา�
 
 ## Pre-Pilot Freeze
 
-เมื่อ v0.6.0 ผ่าน Gate:
+เมื่อ v0.6.1 ผ่าน Gate:
 - freeze architecture 1 เดือน
 - security/data-loss hotfix ทำได้ทันที
 - routing/skill wording fixes รวมเป็น weekly batch
