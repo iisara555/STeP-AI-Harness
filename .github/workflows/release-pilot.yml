@@ -1,0 +1,74 @@
+name: Publish Pilot Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - scripts/build_pilot_bundle.py
+      - .github/workflows/release-pilot.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Read package version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(python3 -c "import json; print(json.load(open('package.json'))['version'])")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "asset=STeP-AI-Pilot-v$VERSION.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether release already exists
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate repository
+        if: steps.existing.outputs.exists != 'true'
+        run: python3 scripts/validate_repo.py
+
+      - name: Build Pilot ZIP
+        if: steps.existing.outputs.exists != 'true'
+        run: python3 scripts/build_pilot_bundle.py
+
+      - name: Publish GitHub Release
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        shell: bash
+        run: |
+          test -f "dist/$ASSET"
+          gh release create "$TAG" "dist/$ASSET" \
+            --target "$GITHUB_SHA" \
+            --title "STeP AI Harness Pilot $TAG" \
+            --notes "Pilot distribution for STeP AI Harness $TAG. Built from validated source on main. Includes the employee installer bundle for Windows and macOS."
+
+      - name: Existing release
+        if: steps.existing.outputs.exists == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: echo "Release $TAG already exists; leaving the published artifact unchanged."
