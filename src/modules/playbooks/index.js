@@ -1,5 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createProvenanceRecord } from '../provenance/index.js';
+import { redactPrivacyText, evaluatePrivacyGate } from '../privacy/index.js';
 
 function parseList(raw = '') {
   return raw
@@ -250,12 +252,13 @@ export function buildRunState({
   if (!sourceCheck.valid) throw new Error(sourceCheck.error);
 
   const plan = buildPlaybookPlan(playbook, matchedSignals);
+  const privacy = evaluatePrivacyGate(query || '');
   return {
-    version: 2,
+    version: 3,
     runId: makeRunId(playbook.id, now),
     playbookId: playbook.id,
     playbookName: playbook.name,
-    query,
+    query: privacy.redactedText,
     team,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -277,7 +280,17 @@ export function buildRunState({
       assumptions: {},
       missingInformation: [],
       outputs: {},
+      provenance: [],
+      privacy: privacy.logSafeMetadata,
     },
+    events: [
+      {
+        at: now.toISOString(),
+        type: 'run-created',
+        stepId: plan[0]?.id || null,
+      },
+    ],
+    feedback: [],
     steps: plan,
   };
 }
@@ -306,7 +319,7 @@ export async function updatePlaybookRun(workspaceDir, runId, updater) {
 }
 
 
-export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams = new Set() } = {}) {
+export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams = new Set(), actions = new Set() } = {}) {
   const errors = [];
   const seen = new Set();
 
@@ -354,6 +367,9 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
         }
       } else if (step.type === 'action') {
         if (!step.action) errors.push(`Playbook '${playbook.id}' step '${step.id}' has no action`);
+        else if (actions.size > 0 && !actions.has(step.action)) {
+          errors.push(`Playbook '${playbook.id}' step '${step.id}' references unknown Action '${step.action}'`);
+        }
         if (step.completionCriteria === 'output-reference-required' && !step.actionSpecPath) {
           errors.push(`Playbook '${playbook.id}' action '${step.id}' requires actionSpecPath for output-reference completion`);
         }
@@ -367,14 +383,16 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
 }
 
 
-export function resolvePlaybookAction(step, availableTools = []) {
+export function resolvePlaybookAction(step, availableTools = [], actionRegistry = {}) {
   if (!step || step.type !== 'action') {
     return { status: 'not-action', tool: '', fallback: '', reason: '' };
   }
 
   const tools = new Set((availableTools || []).map((tool) => String(tool).toLowerCase().trim()));
-  const preferred = String(step.preferredTool || '').toLowerCase().trim();
-  const fallback = String(step.fallback || '').toLowerCase().trim();
+  const registered = actionRegistry?.[step.action] || {};
+  const registryTools = Array.isArray(registered.preferredTools) ? registered.preferredTools : [];
+  const preferred = String(step.preferredTool || registryTools[0] || '').toLowerCase().trim();
+  const fallback = String(step.fallback || registryTools[1] || '').toLowerCase().trim();
 
   if (preferred && tools.has(preferred)) {
     return {
@@ -382,15 +400,21 @@ export function resolvePlaybookAction(step, availableTools = []) {
       tool: preferred,
       fallback,
       reason: 'preferred-tool-available',
+      capability: step.capability || registered.capability || '',
+      risk: registered.risk || '',
+      confirmation: registered.confirmation || '',
     };
   }
 
-  if (fallback) {
+  if (fallback && tools.has(fallback)) {
     return {
       status: 'fallback',
       tool: fallback,
       fallback,
       reason: preferred ? 'preferred-tool-unavailable' : 'fallback-only',
+      capability: step.capability || registered.capability || '',
+      risk: registered.risk || '',
+      confirmation: registered.confirmation || '',
     };
   }
 
@@ -399,7 +423,15 @@ export function resolvePlaybookAction(step, availableTools = []) {
     tool: '',
     fallback: '',
     reason: 'no-supported-tool',
+    capability: step.capability || registered.capability || '',
+    risk: registered.risk || '',
+    confirmation: registered.confirmation || '',
   };
+}
+
+function hasOutputReference(outputs = {}) {
+  const keys = ['outputReference', 'reference', 'url', 'link', 'path', 'filePath', 'sheetUrl'];
+  return keys.some((key) => typeof outputs?.[key] === 'string' && outputs[key].trim());
 }
 
 export function completePlaybookStep(state, stepId, outputs = {}) {
@@ -407,12 +439,22 @@ export function completePlaybookStep(state, stepId, outputs = {}) {
   const step = next.steps?.find((item) => item.id === stepId);
   if (!step) throw new Error(`Unknown Playbook step '${stepId}'`);
 
+  if (
+    step.type === 'action' &&
+    step.completionCriteria === 'output-reference-required' &&
+    !hasOutputReference(outputs)
+  ) {
+    throw new Error(`Playbook action '${stepId}' requires a real output reference/path/link before completion`);
+  }
+
   step.status = 'completed';
   step.completedAt = new Date().toISOString();
 
   next.context ||= {};
   next.context.outputs ||= {};
   next.context.outputs[stepId] = outputs;
+  next.events ||= [];
+  next.events.push({ at: new Date().toISOString(), type: 'step-completed', stepId });
 
   const currentIndex = next.steps.findIndex((item) => item.id === stepId);
   const nextStep = next.steps.slice(currentIndex + 1).find((item) => item.status !== 'completed');
@@ -434,10 +476,61 @@ export function markPlaybookActionState(state, stepId, actionResolution) {
     reason: actionResolution?.reason || '',
   };
 
+  next.events ||= [];
+  next.events.push({
+    at: new Date().toISOString(),
+    type: 'action-resolved',
+    stepId,
+    status: step.actionState.status,
+    tool: step.actionState.tool,
+  });
+
   if (step.actionState.status === 'blocked') {
     next.status = 'waiting-tool';
     next.currentStep = stepId;
   }
 
+  return next;
+}
+
+
+export function addRunProvenance(state, record) {
+  const next = structuredClone(state);
+  next.context ||= {};
+  next.context.provenance ||= [];
+  const normalized = createProvenanceRecord(record);
+  next.context.provenance.push(normalized);
+  next.events ||= [];
+  next.events.push({
+    at: normalized.createdAt,
+    type: 'provenance-added',
+    provenanceType: normalized.type,
+    sourceRef: normalized.sourceRef || '',
+  });
+  return next;
+}
+
+export function recordRunFeedback(state, {
+  rating,
+  category = '',
+  note = '',
+  createdAt = new Date().toISOString(),
+} = {}) {
+  const allowedRatings = new Set(['useful', 'needs-fix', 'not-useful']);
+  if (!allowedRatings.has(rating)) {
+    throw new Error("Feedback rating must be one of: useful, needs-fix, not-useful");
+  }
+
+  const next = structuredClone(state);
+  next.feedback ||= [];
+  const safeNote = redactPrivacyText(String(note || '')).redactedText;
+  next.feedback.push({
+    rating,
+    category: String(category || '').slice(0, 80),
+    note: safeNote.slice(0, 500),
+    createdAt,
+  });
+  next.events ||= [];
+  next.events.push({ at: createdAt, type: 'feedback-recorded', rating, category: String(category || '').slice(0, 80) });
   return next;
 }

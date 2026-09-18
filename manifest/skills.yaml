@@ -23,7 +23,7 @@ skills:
 
   tor-review:
     owner: afp
-    version: 1.1.0
+    version: 1.1.1
     domain: [procurement]
     process: [procurement.tor]
     service: [tech-commercialization, public-sector-innovation]
@@ -38,7 +38,7 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [procurement-policy, human-approval-rule]
+      mandatory: [procurement-policy, human-approval-rule, data-classification-rule]
       optional: [tor-template]
 
   tor-government-writing:
@@ -77,8 +77,8 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
+      optional: [qms-quality-manual]
 
   browser-form-assistant:
     owner: ga
@@ -455,7 +455,7 @@ skills:
 
   sop-authoring:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality]
     process: [quality.document-control]
     path: skills/common/sop-authoring/SKILL.md
@@ -470,7 +470,7 @@ skills:
         stage: approved
     references:
       mandatory: [qs-doc-control-procedure, naming-convention-rule]
-      optional: []
+      optional: [qms-master-document-list]
 
   team-weekly-review:
     owner: sit
@@ -493,7 +493,7 @@ skills:
 
   receipt-audit:
     owner: afp
-    version: 1.0.0
+    version: 1.0.1
     domain: [finance, procurement]
     process: [procurement.request]
     service: [public-sector-innovation]
@@ -508,7 +508,7 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [human-approval-rule]
+      mandatory: [human-approval-rule, data-classification-rule]
       optional: []
 
   creative-art-director:
@@ -691,7 +691,7 @@ skills:
   # --- ISO 9001 / QMS Audit Readiness Pack ---
   iso9001-audit-readiness:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, audit, compliance]
     process: [quality.audit-readiness]
     path: skills/common/iso9001-audit-readiness/SKILL.md
@@ -705,12 +705,12 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [iso-9001-2015, step-quality-policy-v2, human-approval-rule]
+      optional: [qms-quality-manual, qms-master-document-list, qms-internal-audit]
 
   audit-evidence-matrix:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, audit, evidence]
     process: [quality.audit-readiness]
     path: skills/common/audit-evidence-matrix/SKILL.md
@@ -724,12 +724,12 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule, data-classification-rule]
-      optional: []
+      mandatory: [iso-9001-2015, human-approval-rule, data-classification-rule]
+      optional: [qms-quality-manual, qms-master-document-list, qms-internal-audit]
 
   document-record-control:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, document-control]
     process: [quality.document-control]
     path: skills/common/document-record-control/SKILL.md
@@ -743,8 +743,8 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [qs-doc-control-procedure, human-approval-rule, data-classification-rule]
-      optional: []
+      mandatory: [qs-doc-control-procedure, qms-quality-record-control, human-approval-rule, data-classification-rule]
+      optional: [qms-master-document-list]
 
   audit-interview-coach:
     owner: qs
@@ -767,7 +767,7 @@ skills:
 
   ncr-capa:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, corrective-action]
     process: [quality.corrective-action]
     path: skills/common/ncr-capa/SKILL.md
@@ -781,12 +781,12 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [qms-nonconformity, qms-corrective-preventive-action, human-approval-rule]
+      optional: [qms-complaint-management, qms-internal-audit]
 
   qms-risk-opportunity-review:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, risk-management]
     process: [quality.management-review]
     path: skills/common/qms-risk-opportunity-review/SKILL.md
@@ -800,12 +800,12 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [qms-risk-management, human-approval-rule]
+      optional: [qms-quality-manual]
 
   quality-objective-kpi-review:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, performance]
     process: [quality.management-review]
     path: skills/common/quality-objective-kpi-review/SKILL.md
@@ -819,12 +819,12 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [step-quality-policy-v2, human-approval-rule]
+      optional: [qms-quality-manual, qms-management-review]
 
   management-review-prep:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, management-review]
     process: [quality.management-review]
     path: skills/common/management-review-prep/SKILL.md
@@ -838,5 +838,5 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
+      optional: [qms-quality-manual]

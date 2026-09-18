@@ -12,13 +12,16 @@ documents:
     status: active
 
   qs-doc-control-procedure:
-    title: "ระเบียบปฏิบัติงานการควบคุมเอกสารและข้อมูลในระบบคุณภาพ (SOP)"
+    title: "QP-DC-001 การควบคุมเอกสารและข้อมูล"
     owner: qs
-    type: sop
+    type: quality-procedure
     process: quality.document-control
-    version: "3.2"
-    path: rules/naming.md
-    status: active
+    version: "06"
+    effectiveDate: "2026-04-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
 
   data-classification-rule:
     title: "ระเบียบการจำแนกชั้นความลับและการคุ้มครองข้อมูลส่วนบุคคล (PDPA)"
@@ -89,3 +92,132 @@ documents:
     version: "1.0"
     path: rules/browser-credential-safety.md
     status: pilot
+
+
+  # --- STeP Quality Layer v0.1 ---
+  iso-9001-2015:
+    title: "ISO 9001:2015 Quality management systems — Requirements"
+    owner: qs
+    type: external-standard
+    process: quality.audit-readiness
+    version: "2015"
+    sourceLevel: external-standard
+    authority: normative-external
+    verification: user-confirmed-current-standard
+    status: active-reference
+
+  step-quality-policy-v2:
+    title: "STeP Quality Policy and Quality Objectives"
+    owner: qs
+    type: organization-policy
+    process: quality.management-review
+    version: "2"
+    effectiveDate: "2026-09-08"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: user-confirmed-current
+    status: active
+
+  qms-quality-manual:
+    title: "STeP Quality Manual (current revision)"
+    owner: qs
+    type: quality-manual
+    process: quality.document-control
+    sourceLevel: quality-manual
+    authority: controlled-document
+    verification: missing-source
+    status: missing
+
+  qms-master-document-list:
+    title: "STeP Master Document List (current)"
+    owner: qs
+    type: master-list
+    process: quality.document-control
+    sourceLevel: document-control-index
+    authority: revision-source-of-truth
+    verification: missing-source
+    status: missing
+
+  qms-quality-record-control:
+    title: "QP-DC-002 การควบคุมบันทึกคุณภาพ"
+    owner: qs
+    type: quality-procedure
+    process: quality.document-control
+    version: "02"
+    effectiveDate: "2023-09-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
+
+  qms-risk-management:
+    title: "QP-QS-001 การวิเคราะห์และการจัดการความเสี่ยง"
+    owner: qs
+    type: quality-procedure
+    process: quality.management-review
+    version: "00"
+    effectiveDate: "2023-04-16"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
+
+  qms-nonconformity:
+    title: "QP-QS-002 การปฏิบัติงานที่เกิดข้อผิดพลาด"
+    owner: qs
+    type: quality-procedure
+    process: quality.corrective-action
+    version: "02"
+    effectiveDate: "2025-07-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
+
+  qms-corrective-preventive-action:
+    title: "QP-QM-001 การปฏิบัติการแก้ไข และป้องกัน"
+    owner: qs
+    type: quality-procedure
+    process: quality.corrective-action
+    version: "02"
+    effectiveDate: "2023-12-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
+
+  qms-internal-audit:
+    title: "QP-QM-002 การตรวจติดตามคุณภาพภายใน"
+    owner: qs
+    type: quality-procedure
+    process: quality.audit-readiness
+    version: "01"
+    effectiveDate: "2023-09-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
+
+  qms-management-review:
+    title: "QP-QM-003 การประชุมทบทวนฝ่ายบริหาร"
+    owner: qs
+    type: quality-procedure
+    process: quality.management-review
+    version: "03"
+    effectiveDate: "2023-12-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified
+
+  qms-complaint-management:
+    title: "QP-QM-004 การจัดการข้อร้องเรียนของผู้ใช้บริการ"
+    owner: qs
+    type: quality-procedure
+    process: quality.corrective-action
+    version: "01"
+    effectiveDate: "2023-09-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: pending-master-list
+    status: provided-unverified

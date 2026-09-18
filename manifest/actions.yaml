@@ -1,0 +1,32 @@
+version: 1
+
+# Central registry for executable actions. Actions are not Skills.
+# Keep this list small: only register actions that exist in the Pilot.
+actions:
+  spreadsheet-project-plan:
+    name: "Project Plan Spreadsheet"
+    capability: spreadsheet-write
+    risk: low
+    sideEffect: reversible
+    confirmation: none
+    preferredTools: [google-sheets, xlsx]
+    outputReferenceRequired: true
+    specPath: docs/spreadsheet-project-plan.md
+
+  spreadsheet-action-plan:
+    name: "Action Plan Spreadsheet"
+    capability: spreadsheet-write
+    risk: low
+    sideEffect: reversible
+    confirmation: none
+    preferredTools: [google-sheets, xlsx]
+    outputReferenceRequired: false
+
+  browser-form-submit:
+    name: "Browser Form Submit"
+    capability: browser-submit
+    risk: high
+    sideEffect: external
+    confirmation: user-confirm
+    preferredTools: [browser]
+    outputReferenceRequired: false

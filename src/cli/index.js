@@ -15,6 +15,7 @@ import { runUpdate } from './commands/update.js';
 import { runFeedback } from './commands/feedback.js';
 import { runOutput } from './commands/output.js';
 import { runUpgradeApply } from './commands/upgrade-apply.js';
+import { runPrivacy } from './commands/privacy.js';
 
 function parseArgs(rawArgs) {
   const args = { _: [] };
@@ -64,6 +65,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('update')}     ซิงก์ Skills และ Router จากเวอร์ชัน STeP AI ที่ติดตั้งอยู่
   ${colors.cyan('feedback')}   แนะนำวิธีส่งข้อเสนอแนะ รายงานผลลัพธ์ หรือเสนอ Skill ใหม่
   ${colors.cyan('output')}     สร้าง path และชื่อไฟล์มาตรฐานสำหรับเก็บ output โดยไม่เขียนทับไฟล์เดิม
+  ${colors.cyan('privacy')}    ตรวจข้อมูลส่วนบุคคลแบบ local และปิดบังก่อนส่ง AI
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
   ${colors.cyan('teams')}      แสดงผังและรายชื่อ 22 ทีมของ STeP พร้อม 5 Domain Clusters
   ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
@@ -90,6 +92,7 @@ ${colors.bold('ตัวอย่างการใช้งาน:')}
   step-ai config --team qs
   step-ai update
   step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
+  step-ai privacy --file sample.txt --redact
   step-ai init --team qs --tool codex
   step-ai init --role all --tool claude
   step-ai doctor --employee
@@ -129,6 +132,9 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     case 'output':
       await runOutput(args);
+      break;
+    case 'privacy':
+      await runPrivacy(args);
       break;
     case 'teams':
       await runTeams(args);

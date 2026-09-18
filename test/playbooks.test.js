@@ -151,7 +151,7 @@ test('STeP Composite Playbooks', async (t) => {
       now: new Date('2026-09-18T05:00:00Z'),
     });
 
-    assert.equal(state.version, 2);
+    assert.equal(state.version, 3);
     assert.equal(state.sourceRefs.length, 1);
     assert.deepEqual(state.context.facts, {});
     assert.deepEqual(state.context.assumptions, {});
@@ -284,13 +284,39 @@ playbooks:
     });
 
     const action = state.steps.find((step) => step.type === 'action');
-    const resolved = resolvePlaybookAction(action, []);
+    const resolved = resolvePlaybookAction(action, ['xlsx']);
     assert.equal(resolved.status, 'fallback');
     assert.equal(resolved.tool, 'xlsx');
 
     const marked = markPlaybookActionState(state, action.id, resolved);
     assert.equal(marked.steps.find((step) => step.id === action.id).actionState.tool, 'xlsx');
     assert.equal(marked.status, 'active');
+  });
+
+
+  await t.test('real TOR spreadsheet action waits when neither Google Sheets nor XLSX is available', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    let state = buildRunState({
+      playbook,
+      query: 'TOR action plan gantt google sheet',
+      team: 'pubsec',
+      matchedSignals: ['source', 'planning', 'schedule', 'spreadsheet'],
+      sourceRefs: [{ id: 'tor-a', name: 'TOR A.pdf' }],
+      now: new Date('2026-09-18T05:00:00Z'),
+    });
+
+    state = completePlaybookStep(state, 'review-source', { facts: ['A'] });
+    state = completePlaybookStep(state, 'build-plan', { activities: ['A'] });
+
+    const action = state.steps.find((step) => step.id === 'create-spreadsheet');
+    const resolved = resolvePlaybookAction(action, []);
+    assert.equal(resolved.status, 'blocked');
+
+    state = markPlaybookActionState(state, action.id, resolved);
+    assert.equal(state.status, 'waiting-tool');
+    assert.equal(state.currentStep, 'create-spreadsheet');
+    assert.equal(state.steps[0].status, 'completed');
+    assert.equal(state.steps[1].status, 'completed');
   });
 
   await t.test('action can wait for a tool without restarting completed Skill steps', () => {

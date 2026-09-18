@@ -13,6 +13,8 @@
 import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parsePlaybooksYaml, validatePlaybookRegistry } from '../playbooks/index.js';
+import { parseActionsYaml, validateActionRegistry } from '../actions/index.js';
+import { parseProvenanceYaml, validateProvenanceTypes } from '../provenance/index.js';
 
 export function extractManifestData(text) {
   const lines = text.split(/\r?\n/);
@@ -296,6 +298,8 @@ export async function loadAndValidateManifests(manifestDir) {
   const authContent = await readFile(join(manifestDir, 'authority.yaml'), 'utf-8');
   const routerContent = await readFile(join(manifestDir, 'router-index.yaml'), 'utf-8');
   const playbooksContent = await readFile(join(manifestDir, 'playbooks.yaml'), 'utf-8');
+  const actionsContent = await readFile(join(manifestDir, 'actions.yaml'), 'utf-8');
+  const provenanceContent = await readFile(join(manifestDir, 'provenance.yaml'), 'utf-8');
 
   const teamCodes = new Set();
   for (const m of teamsContent.matchAll(/^ {6}- id:\s*([a-z0-9_-]+)/gm)) teamCodes.add(m[1]);
@@ -306,6 +310,8 @@ export async function loadAndValidateManifests(manifestDir) {
   const authData = extractManifestData(authContent);
   const routerSkills = extractRouterSkills(routerContent);
   const playbooks = parsePlaybooksYaml(playbooksContent);
+  const actions = parseActionsYaml(actionsContent);
+  const provenanceTypes = parseProvenanceYaml(provenanceContent);
 
   const result = validateManifestIntegrity({
     teamCodes,
@@ -317,9 +323,12 @@ export async function loadAndValidateManifests(manifestDir) {
   });
 
   const playbookTeams = new Set([...teamCodes, 'developer', 'pm', 'ai-admin']);
+  const actionResult = validateActionRegistry(actions);
+  const provenanceResult = validateProvenanceTypes(provenanceTypes);
   const playbookResult = validatePlaybookRegistry(playbooks, {
     skills: new Set(Object.keys(skillsData.skills)),
     teams: playbookTeams,
+    actions: new Set(Object.keys(actions)),
   });
 
   const rootDir = join(manifestDir, '..');
@@ -350,6 +359,15 @@ export async function loadAndValidateManifests(manifestDir) {
     }
   }
 
+  for (const action of Object.values(actions)) {
+    if (!action.specPath) continue;
+    if (action.specPath.startsWith('/') || action.specPath.includes('..')) {
+      pathErrors.push(`Action '${action.id}' has unsafe specPath '${action.specPath}'`);
+    } else if (!(await pathExists(join(rootDir, action.specPath)))) {
+      pathErrors.push(`Action '${action.id}' specPath does not exist: ${action.specPath}`);
+    }
+  }
+
   for (const playbook of playbooks) {
     if (playbook.specPath) {
       if (playbook.specPath.startsWith('/') || playbook.specPath.includes('..')) {
@@ -369,7 +387,13 @@ export async function loadAndValidateManifests(manifestDir) {
     }
   }
 
-  const errors = [...result.errors, ...playbookResult.errors, ...pathErrors];
+  const errors = [
+    ...result.errors,
+    ...actionResult.errors,
+    ...provenanceResult.errors,
+    ...playbookResult.errors,
+    ...pathErrors,
+  ];
 
   return {
     valid: errors.length === 0,
@@ -382,6 +406,8 @@ export async function loadAndValidateManifests(manifestDir) {
       authoritiesCount: Object.keys(authData.authorities).length,
       routerSkillsCount: routerSkills.length,
       playbooksCount: playbooks.length,
+      actionsCount: Object.keys(actions).length,
+      provenanceTypesCount: provenanceTypes.length,
     },
   };
 }
