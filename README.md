@@ -5,7 +5,7 @@
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
 **สถานะปัจจุบัน:** Pilot v0.2  
-**ครอบคลุม:** 22 ทีม / 5 กลุ่มงาน / 35 Skills
+**ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 35 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
 
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด `STeP-AI-Pilot-v0.2.0.zip`
+1. รับไฟล์ `STeP-AI-Pilot-v0.2.0.zip` จาก Shared Drive หรือช่องทาง Pilot ที่ทีม STeP AI แจ้ง
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -224,7 +224,7 @@ AI สามารถช่วย
 - การประเมินบุคลากร
 - การออกผลหรือรับรองผลห้องปฏิบัติการ
 
-Authority เหล่านี้ระบุไว้ใน [`manifest/authority.yaml`](manifest/authority.yaml)
+Authority หลักระบุไว้ใน [`manifest/authority.yaml`](manifest/authority.yaml) และบาง Skill มี `human_only` เพิ่มเติมตามบริบทของงาน เช่น การออกหรือรับรองผลห้องปฏิบัติการ
 
 ---
 
