@@ -32,6 +32,13 @@ export function parsePlaybooksYaml(text) {
         description: '',
         requiredSignals: [],
         minSignals: 2,
+        sourcePolicy: '',
+        factPolicy: '',
+        budgetPolicy: '',
+        schedulePolicy: '',
+        parameters: [],
+        outputSchema: '',
+        specPath: '',
         signals: {},
         steps: [],
       };
@@ -76,6 +83,18 @@ export function parsePlaybooksYaml(text) {
     const minMatch = line.match(/^ {4}minSignals:\s*(\d+)/);
     if (minMatch) {
       current.minSignals = Number(minMatch[1]);
+      continue;
+    }
+
+    const policyMatch = line.match(/^ {4}(sourcePolicy|factPolicy|budgetPolicy|schedulePolicy|outputSchema|specPath):\s*(.+)/);
+    if (policyMatch) {
+      current[policyMatch[1]] = stripValue(policyMatch[2]);
+      continue;
+    }
+
+    const parametersMatch = line.match(/^ {4}parameters:\s*\[(.*?)\]/);
+    if (parametersMatch) {
+      current.parameters = parseList(parametersMatch[1]);
       continue;
     }
 
@@ -206,10 +225,33 @@ function makeRunId(playbookId, now = new Date()) {
   return `${stamp}-${playbookId}`;
 }
 
-export function buildRunState({ playbook, query, team = '', matchedSignals = [], now = new Date() }) {
+export function validatePlaybookSources(playbook, sourceRefs = []) {
+  const refs = Array.isArray(sourceRefs) ? sourceRefs.filter(Boolean) : [];
+
+  if (playbook?.sourcePolicy === 'one-tor-per-run' && refs.length > 1) {
+    return {
+      valid: false,
+      error: 'This Playbook requires one TOR source per run. Create separate runs for separate TOR documents.',
+    };
+  }
+
+  return { valid: true, error: '' };
+}
+
+export function buildRunState({
+  playbook,
+  query,
+  team = '',
+  matchedSignals = [],
+  sourceRefs = [],
+  now = new Date(),
+}) {
+  const sourceCheck = validatePlaybookSources(playbook, sourceRefs);
+  if (!sourceCheck.valid) throw new Error(sourceCheck.error);
+
   const plan = buildPlaybookPlan(playbook, matchedSignals);
   return {
-    version: 1,
+    version: 2,
     runId: makeRunId(playbook.id, now),
     playbookId: playbook.id,
     playbookName: playbook.name,
@@ -219,8 +261,23 @@ export function buildRunState({ playbook, query, team = '', matchedSignals = [],
     updatedAt: now.toISOString(),
     currentStep: plan[0]?.id || null,
     matchedSignals,
+    sourceRefs,
+    policies: {
+      sourcePolicy: playbook.sourcePolicy || '',
+      factPolicy: playbook.factPolicy || '',
+      budgetPolicy: playbook.budgetPolicy || '',
+      schedulePolicy: playbook.schedulePolicy || '',
+    },
+    parameters: Object.fromEntries((playbook.parameters || []).map((key) => [key, null])),
+    outputSchema: playbook.outputSchema || '',
+    specPath: playbook.specPath || '',
     status: 'active',
-    context: {},
+    context: {
+      facts: {},
+      assumptions: {},
+      missingInformation: [],
+      outputs: {},
+    },
     steps: plan,
   };
 }
@@ -264,6 +321,14 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
 
     if (!Array.isArray(playbook.steps) || playbook.steps.length < 2) {
       errors.push(`Playbook '${playbook.id}' must contain at least 2 steps`);
+    }
+
+    if (playbook.sourcePolicy === 'one-tor-per-run' && !playbook.specPath) {
+      errors.push(`Playbook '${playbook.id}' with one-tor-per-run policy must define specPath`);
+    }
+
+    if (playbook.budgetPolicy === 'source-only-no-auto-allocation' && !playbook.outputSchema) {
+      errors.push(`Playbook '${playbook.id}' with source-only budget policy must define outputSchema`);
     }
 
     for (const required of playbook.requiredSignals || []) {

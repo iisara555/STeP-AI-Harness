@@ -23,7 +23,8 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
     text += `- **First Run:** อ่านเฉพาะ \`START-PROMPT.txt\`, \`START-HERE.md\`, \`USER.md\` และ \`MEMORY.md\` ถ้ามี\n`;
     text += `- **ห้าม First Run scan:** ห้าม recursive scan, glob/search \`*.md\`, หรือสำรวจ \`skills/\`, \`rules/\`, \`manifest/\` ทั้งโฟลเดอร์\n`;
     text += `- ถ้ามีงานจริง ให้ข้าม onboarding และใช้ cheap context จากคำขอ/ไฟล์ปัจจุบันก่อน\n`;
-    text += `- เมื่อจำเป็นต้อง route งาน ให้เปิด \`manifest/router-index.yaml\` เท่าที่จำเป็น เลือก **1 primary Skill** แล้วอ่านเฉพาะ \`SKILL.md\` ของ Skill นั้น\n`;
+    text += `- เมื่อจำเป็นต้อง route งาน ให้เปิด \`manifest/router-index.yaml\` เท่าที่จำเป็น; งาน Atomic เลือก **1 primary Skill** ส่วนงาน Composite ให้ตรวจ \`manifest/playbooks.yaml\` และทำทีละ step\n`;
+    text += `- ถ้า Playbook มี \`specPath\` ให้เปิด spec นั้นเฉพาะ flow ที่ถูกเลือก\n`;
     text += `- โหลดเฉพาะ mandatory references ของ Skill จาก \`manifest/skills.yaml\`; templates/examples เป็น Level 3 โหลดเมื่อจำเป็นเท่านั้น\n`;
     text += `- Installed ≠ Loaded: การมีไฟล์อยู่ใน Workspace ไม่ได้หมายความว่าต้องอ่านเข้า context\n`;
     text += `- ถ้าคำขอมีผลจริง เช่น Submit/Approve/Sign/Pay/Procurement decision ให้ใช้ Human Approval / Authority Gate เสมอ\n`;
@@ -79,9 +80,11 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `ก่อนบังคับเลือก Skill เดียว ให้ตรวจว่าคำขอมีหลายผลลัพธ์/หลายขั้นตอนที่เชื่อมกันหรือไม่ เช่น TOR → กิจกรรม → งบ → Timeline → Google Sheet\n`;
   text += `- ถ้าเป็น **Atomic Task** ให้ใช้ Router 5-Factor เดิมและโหลด 1 Skill\n`;
   text += `- ถ้าเป็น **Composite Task** ที่ตรง \`manifest/playbooks.yaml\` ให้ใช้ Playbook นั้นแทนการบังคับ Skill เดียว\n`;
+  text += `- ถ้า Playbook มี \`specPath\` ให้เปิด spec นั้นก่อนเริ่ม step แรก และใช้เป็นมาตรฐาน output ของ flow\n`;
   text += `- Playbook เป็นส่วนประกอบของ HOW ไม่ใช่ Workflow Engine และไม่เพิ่มมิติองค์กรใหม่\n`;
   text += `- ทำทีละ step: โหลด Skill ปัจจุบัน → สร้าง structured handoff → ปิด context ที่ไม่จำเป็น → ไป step ถัดไป\n`;
   text += `- Action เช่น Google Sheets/XLSX/Browser เป็น Tool Action ไม่ใช่ Skill; ถ้า preferred tool ไม่มีให้ใช้ fallback ที่ Playbook ระบุ\n`;
+  text += `- สำหรับ \`tor-to-project-plan\`: ใช้ **หนึ่ง TOR ต่อหนึ่ง run**, แยก TOR Fact ออกจาก Planning Assumption และห้ามกระจายวงเงินรวมเป็นงบรายกิจกรรมเอง\n`;
   text += `- เมื่อแก้ไฟล์ได้ ให้บันทึก run state ที่ \`.step-ai/runs/<run-id>/state.json\` เพื่อ resume งานเดิมได้ โดยห้ามเก็บ password/token/credential/PII ที่ไม่จำเป็น\n`;
   text += `- Human Approval / Authority ใช้เหมือนเดิมทุก step และมีสิทธิ์หยุด Playbook ได้ทันที\n\n`;
 

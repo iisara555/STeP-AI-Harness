@@ -7,36 +7,43 @@ playbooks:
     name: "TOR → Project Plan"
     owner: pm
     consumers: ["*"]
-    description: "แปลง TOR เป็นกิจกรรม งบประมาณ ระยะเวลา dependencies และแผนงานที่พร้อมนำไปทำ Gantt/Spreadsheet"
+    description: "แปลง TOR หนึ่งฉบับต่อหนึ่ง run เป็น Action Plan/WBS, milestones, dependencies, budget categories และแผนงานพร้อม Google Sheet/XLSX + Gantt"
+    sourcePolicy: one-tor-per-run
+    factPolicy: facts-and-assumptions-separated
+    budgetPolicy: source-only-no-auto-allocation
+    schedulePolicy: source-dates-first
+    parameters: [contract-start, event-start, event-end, contract-end]
+    outputSchema: project-master-plan-v1
+    specPath: docs/tor-to-project-plan.md
     requiredSignals: [source]
     minSignals: 3
     signals:
       source: [tor, terms of reference, ขอบเขตของงาน]
-      planning: [แตกกิจกรรม, กิจกรรม, project plan, wbs, work breakdown, แตกงาน]
+      planning: [แตกกิจกรรม, กิจกรรม, action plan, project plan, wbs, work breakdown, แตกงาน]
       budget: [งบประมาณ, budget, cost, ค่าใช้จ่าย]
-      schedule: [ระยะเวลา, timeline, gantt, milestone, แผนงาน]
+      schedule: [ระยะเวลา, timeline, gantt, grantt, milestone, แผนงาน]
       spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง]
     steps:
       - id: review-source
         type: skill
         skill: tor-review
-        description: "อ่าน TOR และสกัด scope, deliverables, constraints, dates, budget rules และ missing information"
-        produces: [requirements, deliverables, constraints, source-facts]
+        description: "อ่าน TOR ทีละฉบับและสกัด TOR Facts แยกจาก Planning Assumptions พร้อม scope, deliverables, constraints, source dates, budget facts และ missing information"
+        produces: [source-facts, planning-assumptions, requirements, deliverables, constraints, project-parameters, missing-information]
       - id: build-plan
         type: skill
         skill: project-plan
-        description: "แตกงานเป็นกิจกรรม/WBS พร้อม owner, milestone, dependency, budget mapping และ timeline"
-        consumes: [requirements, deliverables, constraints, source-facts]
-        produces: [activities, milestones, dependencies, budget-map, timeline]
+        description: "แตก TOR Facts เป็น Action Plan/WBS พร้อม owner, milestone, dependency, approval gate, deliverable, budget category และ timeline โดยไม่แต่งงบหรือตั้งวันที่เป็นข้อเท็จจริง"
+        consumes: [source-facts, planning-assumptions, requirements, deliverables, constraints, project-parameters, missing-information]
+        produces: [wbs, activities, owners, milestones, dependencies, approval-gates, deliverables-plan, budget-categories, timeline]
       - id: create-spreadsheet
         type: action
         action: spreadsheet-project-plan
         when: spreadsheet
         preferredTool: google-sheets
         fallback: xlsx
-        description: "สร้างตาราง Activity / Owner / Budget / Start / End / Duration / Dependency / Status และ Gantt view"
-        consumes: [activities, milestones, dependencies, budget-map, timeline]
-        produces: [project-plan-sheet]
+        description: "สร้าง Project Master Plan + Gantt ด้วย schema มาตรฐาน WBS / Activity / TOR Ref / Workstream / Owner / Start / End / Duration / Dependency / Milestone / Deliverable / Approval Required / Budget Category / Status / % Progress / Remark"
+        consumes: [wbs, activities, owners, milestones, dependencies, approval-gates, deliverables-plan, budget-categories, timeline, project-parameters]
+        produces: [project-master-plan-sheet, gantt-view]
 
   - id: meeting-to-action-plan
     name: "Meeting → Action Plan"

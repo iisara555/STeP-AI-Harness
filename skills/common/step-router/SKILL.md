@@ -103,12 +103,20 @@ $$\text{Score} = (\text{Intent} \times 0.30) + (\text{Keyword} \times 0.25) + (\
 
 กติกา Playbook:
 1. โหลดทีละ Skill ตามลำดับ
-2. ส่งต่อเฉพาะ structured handoff ที่จำเป็น
-3. Tool/Action เช่น Google Sheets ไม่ถือเป็น Skill
-4. ถ้า tool ที่ต้องการไม่มี ให้ใช้ fallback
-5. Human Approval / Authority ยังใช้ทุก step
-6. เมื่อ client แก้ไฟล์ได้ ให้เก็บ state ใต้ `.step-ai/runs/<run-id>/state.json`
-7. ห้ามเก็บ password/token/credential/PII ที่ไม่จำเป็นใน run state
+2. ถ้า Playbook มี `specPath` ให้เปิด spec นั้นก่อนเริ่ม step แรก
+3. ส่งต่อเฉพาะ structured handoff ที่จำเป็น
+4. Tool/Action เช่น Google Sheets ไม่ถือเป็น Skill
+5. ถ้า tool ที่ต้องการไม่มี ให้ใช้ fallback
+6. Human Approval / Authority ยังใช้ทุก step
+7. เมื่อ client แก้ไฟล์ได้ ให้เก็บ state ใต้ `.step-ai/runs/<run-id>/state.json`
+8. ห้ามเก็บ password/token/credential/PII ที่ไม่จำเป็นใน run state
+
+สำหรับ `tor-to-project-plan`:
+- หนึ่ง TOR ต่อหนึ่ง run; ถ้ามีหลาย TOR ให้แยก run เว้นแต่ผู้ใช้สั่งรวมเป็น portfolio ชัดเจน
+- แยก **TOR Fact** ออกจาก **Planning Assumption**
+- วันที่ที่ AI เสนอเพื่อวางแผนต้องระบุ basis ไม่ทำเหมือนเป็นวันที่จาก TOR
+- ถ้า TOR มีเพียงวงเงินรวม ห้ามกระจายเป็นงบรายกิจกรรมเอง
+- ใช้มาตรฐาน output จาก `docs/tor-to-project-plan.md`
 
 Playbook เป็นส่วนหนึ่งของ HOW และ **ไม่ใช่ Workflow Engine ใหม่**
 

@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.7.0  
+**สถานะปัจจุบัน:** Pilot v0.7.1  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.7.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.7.0/STeP-AI-Pilot-v0.7.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.7.1.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.7.1/STeP-AI-Pilot-v0.7.1.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -129,7 +129,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.7.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.7.1 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
@@ -272,6 +272,17 @@ Playbooks ชุดแรก:
 
 Playbook อยู่ใน `manifest/playbooks.yaml` และ run state อยู่ใต้ `.step-ai/runs/` เมื่อ client รองรับการเขียนไฟล์
 
+### TOR → Project Plan ที่พร้อมใช้จริง
+
+ตั้งแต่ v0.7.1 Flow นี้เพิ่มกติกาเฉพาะงาน TOR:
+- หนึ่ง TOR ต่อหนึ่ง Run
+- แยก TOR Fact / Planning Assumption
+- มี Contract/Event parameters ก่อนทำ Timeline
+- งบใช้ตัวเลขจาก Source เท่านั้น ไม่กระจายวงเงินรวมเอง
+- Google Sheet/XLSX ใช้มาตรฐาน Project Master Plan + Gantt เดียวกัน
+
+รายละเอียด: [docs/tor-to-project-plan.md](docs/tor-to-project-plan.md)
+
 รายละเอียด: [docs/playbooks.md](docs/playbooks.md)
 
 ---
@@ -391,7 +402,7 @@ Rules / SOP / Reference ที่จำเป็น
 คำตอบหรือร่างงาน
 ```
 
-Router ปัจจุบันใช้เวอร์ชัน **2.6.0**
+Router ปัจจุบันใช้เวอร์ชัน **2.6.1**
 
 Source of Truth อยู่ที่ [`manifest/router-index.yaml`](manifest/router-index.yaml)
 

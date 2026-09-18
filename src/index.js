@@ -38,4 +38,5 @@ export {
   readPlaybookRun,
   updatePlaybookRun,
   validatePlaybookRegistry,
+  validatePlaybookSources,
 } from './modules/playbooks/index.js';
