@@ -184,6 +184,8 @@ def main() -> int:
         "manifest/organization.yaml",
         "manifest/router-index.yaml",
         "manifest/playbooks.yaml",
+        "manifest/actions.yaml",
+        "manifest/provenance.yaml",
         "mcp/mcp.yaml",
         "package.json",
     ]
