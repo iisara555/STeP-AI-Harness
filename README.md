@@ -567,3 +567,16 @@ STeP AI Harness ยังเป็น **Pilot**
 - ปรับปรุงได้จาก feedback ของทั้ง 22 ทีม
 
 ถ้าเริ่มใช้งานครั้งแรก ให้เริ่มจาก [START-HERE.md](START-HERE.md)
+
+
+### Quality Layer v0.1
+
+Pilot Foundation เพิ่มชั้น Source/Governance สำหรับระบบคุณภาพโดยใช้ Document Registry เดิม:
+
+- ISO 9001:2015 และ STeP Quality Policy V2 เป็น registered sources
+- QP ที่ได้รับจาก QS ถูกลง metadata แต่ยัง `provided-unverified` จนกว่า Master Document List จะยืนยัน
+- Quality Manual และ Master Document List ถูก mark เป็น `missing` อย่างชัดเจน
+- Existing QMS Skills เชื่อมกับ source ที่เกี่ยวข้องโดยไม่เพิ่ม Skill ซ้ำ
+- มี Staff Pilot Smoke Test 15 เคส และใช้ผล usage จริงตัดสินสิ่งที่จะพัฒนาต่อ
+
+ดู `docs/quality-layer.md` และ `docs/quality-pilot-smoke-test.md`
