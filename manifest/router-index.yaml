@@ -34,11 +34,12 @@ skills:
         - ตรวจความครบถ้วนของโครงสร้าง TOR และขอบเขตงาน
         - ทำ Traceability Matrix (วัตถุประสงค์ -> งาน -> ผลส่งมอบ -> เกณฑ์ตรวจรับ)
         - ตรวจสอบคำกำกวม ข้อกำหนดที่ขัดแย้งกันเอง หรือการล็อกสเปกโดยไม่จำเป็น
-      escalate:
-        vendor_selection:
-          skill: vendor-evaluation
-          description: การคัดเลือกหรือตัดสินให้คะแนนผู้ยื่นซอง
+      escalate: {}
       human_only:
+        vendor_selection:
+          role: procurement-committee
+          authority: procurement-approval
+          description: การคัดเลือก ให้คะแนนผู้ยื่นข้อเสนอ หรือตัดสินผู้ชนะเป็นอำนาจของคณะกรรมการจัดซื้อจัดจ้าง
         legal_advice:
           role: human-legal-officer
           authority: legal-advice
