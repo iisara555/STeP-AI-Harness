@@ -8,7 +8,7 @@
     "step-ai": "./bin/step-ai.js"
   },
   "scripts": {
-    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js test/high-leverage-skills.test.js test/iso-audit-readiness.test.js test/pilot-readiness.test.js test/first-run-loading.test.js test/playbooks.test.js",
+    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js test/high-leverage-skills.test.js test/iso-audit-readiness.test.js test/pilot-readiness.test.js test/first-run-loading.test.js test/playbooks.test.js test/harness-foundation.test.js",
     "validate": "python scripts/validate_repo.py"
   },
   "files": [
@@ -43,7 +43,10 @@
     "manifest/playbooks.yaml",
     "docs/playbooks.md",
     "docs/tor-to-project-plan.md",
-    "docs/spreadsheet-project-plan.md"
+    "docs/spreadsheet-project-plan.md",
+    "manifest/actions.yaml",
+    "manifest/provenance.yaml",
+    "docs/harness-foundation.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
