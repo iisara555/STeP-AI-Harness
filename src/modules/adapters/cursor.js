@@ -18,7 +18,7 @@ export function generateCursorRules(role, files) {
   text += `- When writing Thai documentation or official texts, adhere to official formats and professional tone.\n\n`;
 
   text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
   text += buildLazyLoadingInventory(files);
 
