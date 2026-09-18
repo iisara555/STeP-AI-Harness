@@ -59,6 +59,10 @@ jobs:
           bash -n install/update-macos.sh
           pwsh -NoProfile -Command "\$null = [scriptblock]::Create((Get-Content -Raw 'install/update-windows.ps1')); Write-Host 'PowerShell syntax OK'"
 
+      - name: Build Pilot ZIP
+        if: steps.existing.outputs.exists != 'true'
+        run: python3 scripts/build_pilot_bundle.py
+
       - name: Run CLI and module unit tests
         if: steps.existing.outputs.exists != 'true'
         run: npm test
@@ -66,10 +70,6 @@ jobs:
       - name: Verify package tarball contents
         if: steps.existing.outputs.exists != 'true'
         run: npm pack --dry-run
-
-      - name: Build Pilot ZIP
-        if: steps.existing.outputs.exists != 'true'
-        run: python3 scripts/build_pilot_bundle.py
 
       - name: Generate SHA-256 checksum
         if: steps.existing.outputs.exists != 'true'
