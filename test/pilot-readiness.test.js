@@ -87,6 +87,25 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.equal(result.scopeResult.status, 'ALLOW');
   });
 
+  await t.test('brand usage is allowed but explicit CI change is blocked', async () => {
+    const normal = await queryStepRouter('ขอ prompt สร้างภาพจาก reference นี้ ให้ใช้ STeP brand และรักษา composition', { team: 'cc' });
+    assert.equal(normal.selectedSkill?.name, 'step-image-prompt');
+    assert.equal(normal.scopeResult.status, 'ALLOW');
+
+    const change = await queryStepRouter('ช่วยทำ prompt แล้วเปลี่ยนโลโก้ STeP กับแก้ CI ใหม่ให้เลย', { team: 'cc' });
+    assert.equal(change.selectedSkill?.name, 'step-image-prompt');
+    assert.equal(change.scopeResult.status, 'BLOCK');
+    assert.equal(change.scopeResult.authority, 'brand-alteration');
+  });
+
+  await t.test('TOR vendor selection is a procurement human authority, not a dangling skill', async () => {
+    const result = await queryStepRouter('ตรวจ TOR นี้แล้วช่วยเลือกบริษัทผู้ชนะและให้คะแนนผู้ยื่นข้อเสนอให้เลย', { team: 'afp' });
+    assert.equal(result.selectedSkill?.name, 'tor-review');
+    assert.equal(result.scopeResult.status, 'BLOCK');
+    assert.equal(result.scopeResult.targetRole, 'procurement-committee');
+    assert.equal(result.scopeResult.authority, 'procurement-approval');
+  });
+
   await t.test('Pilot package is v0.6.0 and bundles the safe env template', async () => {
     const pkg = JSON.parse(await readFile('package.json', 'utf-8'));
     const buildScript = await readFile('scripts/build_pilot_bundle.py', 'utf-8');
