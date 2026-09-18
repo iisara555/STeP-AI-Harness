@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. รับไฟล์ `STeP-AI-Pilot-v0.2.0.zip` จาก Shared Drive หรือช่องทาง Pilot ที่ทีม STeP AI แจ้ง
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.2.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.2.0/STeP-AI-Pilot-v0.2.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
