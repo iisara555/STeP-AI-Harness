@@ -7,6 +7,11 @@ import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
 import { getUserTeam } from '../../utils/user-config.js';
 import { loadUserMemory } from '../../modules/user-memory.js';
 import {
+  loadPlaybooks,
+  detectCompositePlaybook,
+  buildPlaybookPlan,
+} from '../../modules/playbooks/index.js';
+import {
   buildContext,
   rankSkillCandidates,
   checkScope,
@@ -215,6 +220,7 @@ export async function loadTeamsDictionary() {
 export async function queryStepRouter(query, options = {}) {
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
+  const playbooks = await loadPlaybooks(PACKAGE_ROOT);
 
   let resolvedTeam = options.team || '';
   let userMemory = null;
@@ -237,23 +243,55 @@ export async function queryStepRouter(query, options = {}) {
   });
 
   const ranked = rankSkillCandidates(skills, context);
-  const bestMatch = ranked[0] || null;
-  const runnerUp = ranked[1] || null;
+  const playbookMatch = options.disablePlaybooks ? null : detectCompositePlaybook(playbooks, query);
+  const selectedPlaybook = playbookMatch?.playbook || null;
+  const playbookPlan = selectedPlaybook
+    ? buildPlaybookPlan(selectedPlaybook, playbookMatch.matchedSignals)
+    : [];
 
+  let bestMatch = ranked[0] || null;
+  let runnerUp = ranked[1] || null;
   let selectedSkill = null;
-  if (bestMatch) {
-    selectedSkill = skills.find((s) => s.name === bestMatch.skill);
+
+  if (selectedPlaybook) {
+    const firstSkillStep = playbookPlan.find((step) => step.type === 'skill' && step.skill);
+    const primarySkillName = firstSkillStep?.skill || '';
+    selectedSkill = skills.find((skill) => skill.name === primarySkillName) || null;
+    const primaryRank = ranked.find((item) => item.skill === primarySkillName);
+    if (primaryRank) bestMatch = primaryRank;
+  } else if (bestMatch) {
+    selectedSkill = skills.find((skill) => skill.name === bestMatch.skill);
   }
 
-  const scopeResult = selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true };
+  let scopeResult = selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true };
 
-  const primaryTeamCode = selectedSkill?.teams?.primary?.[0] || 'common';
+  if (selectedPlaybook) {
+    for (const step of playbookPlan) {
+      if (step.type !== 'skill' || !step.skill) continue;
+      const stepSkill = skills.find((skill) => skill.name === step.skill);
+      if (!stepSkill) continue;
+      const stepScope = checkScope(stepSkill, query);
+      if (stepScope.status === 'BLOCK') {
+        scopeResult = { ...stepScope, playbookStep: step.id, playbookId: selectedPlaybook.id };
+        break;
+      }
+      if (
+        stepScope.status === 'ESCALATE' &&
+        stepScope.targetSkill === step.skill &&
+        scopeResult.status === 'ALLOW'
+      ) {
+        scopeResult = { ...stepScope, playbookStep: step.id, playbookId: selectedPlaybook.id };
+      }
+    }
+  }
+
+  const primaryTeamCode = selectedPlaybook?.owner || selectedSkill?.teams?.primary?.[0] || 'common';
   const teamInfo = teams[primaryTeamCode] || { id: primaryTeamCode, name: primaryTeamCode };
 
   // Disambiguation & Clarification detection:
   // Is ambiguous when in FALLBACK tier (score < 0.50) OR (runnerUp close to bestMatch && score < 0.80)
   const isAmbiguous = Boolean(
-    bestMatch && (
+    !selectedPlaybook && bestMatch && (
       bestMatch.tier === 'FALLBACK' ||
       (bestMatch.tier === 'AMBIGUOUS' && runnerUp && (bestMatch.score - runnerUp.score < 0.15) && runnerUp.score >= 0.35)
     )
@@ -284,6 +322,10 @@ export async function queryStepRouter(query, options = {}) {
     isAmbiguous,
     candidateSkills,
     userMemory,
+    routingMode: selectedPlaybook ? 'PLAYBOOK' : 'SKILL',
+    selectedPlaybook,
+    playbookPlan,
+    playbookMatch,
   };
 }
 
@@ -323,7 +365,47 @@ export async function runAsk(args) {
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const result = await queryStepRouter(query, { team: userTeam });
-  const { selectedSkill, bestMatch, scopeResult, teamInfo, isAmbiguous, candidateSkills, userMemory } = result;
+  const {
+    selectedSkill,
+    bestMatch,
+    scopeResult,
+    teamInfo,
+    isAmbiguous,
+    candidateSkills,
+    userMemory,
+    routingMode,
+    selectedPlaybook,
+    playbookPlan,
+  } = result;
+
+  if (routingMode === 'PLAYBOOK' && selectedPlaybook) {
+    console.log(colors.bold(colors.green('┌─────────────────────────────────────────────────────────────────────────────┐')));
+    console.log(colors.bold(colors.green('│  🧭 พบงานหลายขั้น — จัดเป็นแผนงานต่อเนื่องให้แล้ว                          │')));
+    console.log(colors.bold(colors.green('└─────────────────────────────────────────────────────────────────────────────┘')));
+    console.log(`  • แผนงาน:           ${colors.bold(colors.cyan(selectedPlaybook.name))}`);
+    console.log(`  • ทีมเจ้าของ Flow:   ${colors.bold(teamInfo.name)} (${teamInfo.id.toUpperCase()})`);
+    console.log('  • ขั้นตอน:');
+    playbookPlan.forEach((step) => {
+      const kind = step.type === 'skill' ? 'วิเคราะห์/เตรียมงาน' : 'ลงมือสร้างผลลัพธ์';
+      console.log(`    ${step.order}. ${step.description || step.id} [${kind}]`);
+    });
+    console.log();
+    console.log(colors.dim('  ระบบควรทำทีละขั้น และส่งเฉพาะผลลัพธ์ที่จำเป็นไปขั้นถัดไป ไม่โหลดทุกทักษะพร้อมกัน'));
+
+    if (scopeResult.status === 'BLOCK') {
+      console.log();
+      console.log(colors.bold(colors.red('⚠️  มีขั้นตอนที่ต้องให้ผู้มีอำนาจตัดสินใจ:')));
+      console.log(`  • ขั้นตอน:            ${scopeResult.playbookStep || '-'}`);
+      console.log(`  • ผู้มีอำนาจ:         ${colors.bold(scopeResult.targetRole || 'Authorized Human')}`);
+      if (scopeResult.authority) console.log(`  • Authority:          ${colors.dim(scopeResult.authority)}`);
+      console.log(`  • คำแนะนำ:            ${colors.dim(scopeResult.reason)}`);
+    }
+
+    console.log();
+    console.log(colors.cyan(`   "${query}"`));
+    console.log(colors.dim('   AI จะใช้ manifest/playbooks.yaml เพื่อทำงานต่อเนื่อง และบันทึก run state ใต้ .step-ai/runs/ เมื่อเครื่องมือรองรับการเขียนไฟล์\n'));
+    return;
+  }
 
   const isMatched = selectedSkill && (bestMatch.score >= 0.20 || bestMatch.breakdown.keyword > 0);
   if (!isMatched) {
