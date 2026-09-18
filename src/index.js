@@ -26,3 +26,16 @@ export {
   applyDistributionUpgrade,
   rollbackDistributionUpgrade,
 } from './modules/distribution-upgrade.js';
+
+export {
+  parsePlaybooksYaml,
+  loadPlaybooks,
+  matchPlaybook,
+  detectCompositePlaybook,
+  buildPlaybookPlan,
+  buildRunState,
+  createPlaybookRun,
+  readPlaybookRun,
+  updatePlaybookRun,
+  validatePlaybookRegistry,
+} from './modules/playbooks/index.js';
