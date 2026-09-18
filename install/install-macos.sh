@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# STeP AI — Zero-Terminal macOS Installer (Pilot v0.2)
+# STeP AI — Zero-Terminal macOS Installer
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PILOT_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT_DIR/package.json" | head -n 1)"
+PILOT_VERSION="${PILOT_VERSION:-unknown}"
 
 # Colors
 CYAN='\033[0;36m'
@@ -20,7 +22,7 @@ NC='\033[0m'
 clear || true
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${CYAN}   ____ _____     ____       _    ___                            ${NC}"
-echo -e "${CYAN}  / ___|_   _|___|  _ \     / \  |_ _|   ${YELLOW}STeP AI Setup (Pilot v0.2)      ${NC}"
+echo -e "${CYAN}  / ___|_   _|___|  _ \     / \  |_ _|   ${YELLOW}STeP AI Setup (v${PILOT_VERSION})      ${NC}"
 echo -e "${CYAN}  \___ \ | | / _ \ |_) |   / _ \  | |    ${GRAY}Enterprise AI Architecture      ${NC}"
 echo -e "${CYAN}   ___) || ||  __/  __/   / ___ \ | |    ${GRAY}22 Teams • 5 Clusters           ${NC}"
 echo -e "${CYAN}  |____/ |_| \___|_|     /_/   \_\___|                           ${NC}"
