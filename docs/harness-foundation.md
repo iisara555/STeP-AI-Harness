@@ -83,3 +83,19 @@ Run-level feedback ไม่แทนระบบ `FEEDBACK.md` เดิม แ
 - Autonomous cross-system execution
 
 ให้เพิ่มสิ่งเหล่านี้เมื่อ Pilot usage แสดงความจำเป็นจริงเท่านั้น
+
+
+## 5. Quality Layer
+
+เอกสารหลัก: `docs/quality-layer.md`
+
+Quality Layer ใช้ `manifest/documents.yaml` เดิมเป็น Controlled Source Registry โดยไม่เพิ่ม Dimension ใหม่
+
+หน้าที่หลัก:
+- แยก External Standard / Organization Policy / QM / QP / WI / Form / Record
+- เก็บ revision/effective date/source status เท่าที่มีหลักฐาน
+- mark `Quality Manual` และ `Master Document List` เป็น known gaps จนกว่า QS จะส่ง source ปัจจุบัน
+- ไม่รับรอง Current Revision ของ QP/WI จากชื่อไฟล์เพียงอย่างเดียว
+- link QMS Skills เดิมกับ source ที่เกี่ยวข้อง แทนการสร้าง Skill ซ้ำ
+
+Pilot ของ Quality Layer ใช้ checklist ที่ `docs/quality-pilot-smoke-test.md` และตัดสินการพัฒนาต่อจาก usage จริง
