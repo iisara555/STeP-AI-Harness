@@ -17,3 +17,12 @@ export {
   getNextOutputPath,
   initOutputWorkspace,
 } from './modules/output-manager.js';
+
+export {
+  DISTRIBUTION_DIRS,
+  DISTRIBUTION_FILES,
+  parseVersion,
+  compareVersions,
+  applyDistributionUpgrade,
+  rollbackDistributionUpgrade,
+} from './modules/distribution-upgrade.js';
