@@ -11,6 +11,7 @@ import { getAdapter } from '../../modules/adapters/index.js';
 import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { runDoctor } from './doctor.js';
+import { initOutputWorkspace } from '../../modules/output-manager.js';
 
 export async function runUpdate(args) {
   header('STeP AI — One-Click Update & Skill Sync');
@@ -115,6 +116,7 @@ export async function runUpdate(args) {
     files: newManifestFiles,
   };
   await writeManifest(dest, updatedManifest);
+  await initOutputWorkspace(dest, manifest.team || (manifest.targetType === 'team' ? manifest.role : 'shared'));
 
   success(`อัปเดตไฟล์ทักษะและ Router สำเร็จ (${updatedCount} ไฟล์อัปเดต, ${preservedCount} ไฟล์คงเดิม)`);
 
