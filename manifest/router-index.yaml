@@ -579,7 +579,7 @@ skills:
         - ตรวจสอบระยะปลอดภัย ตราสัญลักษณ์ร่วม และคู่สีองค์กร
       escalate: {}
       human_only:
-        brand_alteration_approval:
+        ci_governance:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติการดัดแปลงตราสัญลักษณ์องค์กร
@@ -606,7 +606,7 @@ skills:
         - สร้าง Photorealistic visual เมื่อเหมาะกับงาน โดยต้องไม่สร้างโลโก้ เหตุการณ์ บุคคล หรือข้อมูลที่ทำให้เข้าใจผิดว่าเป็นข้อเท็จจริง
       escalate: {}
       human_only:
-        brand_alteration_approval:
+        ci_governance:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติการดัดแปลงหรือเผยแพร่สื่ออัตลักษณ์องค์กรภายนอก
@@ -665,7 +665,7 @@ skills:
         - วิจารณ์ AI Slop / visual cliché จากเหตุผลของงาน
       escalate: {}
       human_only:
-        brand_alteration_approval:
+        ci_governance:
           role: executive-director
           authority: brand-alteration
           description: การอนุมัติดัดแปลง CI หรือ Brand Identity อย่างเป็นทางการ
