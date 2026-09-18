@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.3  
+**สถานะปัจจุบัน:** Pilot v0.4  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 35 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.3.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.3.0/STeP-AI-Pilot-v0.3.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.4.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.4.0/STeP-AI-Pilot-v0.4.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -88,6 +88,40 @@ Harness ไม่ได้ออกแบบให้ผูกกับ AI ร�
 ถ้ามีโปรแกรมที่ใช้อยู่แล้ว ไม่จำเป็นต้องเปลี่ยนเครื่องมือเพื่อใช้ STeP AI
 
 หลักของโครงการคือให้ **ความรู้และกติกาของ STeP อยู่กับ Workspace** มากกว่าผูกกับผู้ให้บริการ AI รายใดรายหนึ่ง
+
+---
+
+## การอัปเดตเวอร์ชัน
+
+ตั้งแต่ **Pilot v0.4** ไฟล์ `Update-STeP-AI.bat` (Windows) และ `Update-STeP-AI.command` (macOS) จะตรวจสอบ GitHub Releases ก่อนทุกครั้ง
+
+```text
+Current version
+      ↓
+Check GitHub Releases
+      ↓
+มีรุ่นใหม่?
+ ├─ ไม่มี → Sync Skills / Rules / Router ในเครื่อง
+ └─ มี
+      ↓
+ Download versioned ZIP
+      ↓
+ Verify SHA-256 (ถ้ามี)
+      ↓
+ Backup รุ่นเดิม
+      ↓
+ Preserve USER.md / MEMORY.md / output/
+      ↓
+ Apply new version
+      ↓
+ Sync Workspace + Doctor
+```
+
+ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
+
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.4.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+
+ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
 ---
 
