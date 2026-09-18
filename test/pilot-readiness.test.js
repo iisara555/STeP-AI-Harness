@@ -109,7 +109,7 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
   await t.test('Pilot package has a valid version and bundles required local-safety templates', async () => {
     const pkg = JSON.parse(await readFile('package.json', 'utf-8'));
     const buildScript = await readFile('scripts/build_pilot_bundle.py', 'utf-8');
-    assert.match(pkg.version, /^\\d+\\.\\d+\\.\\d+$/);
+    assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
     assert.ok(pkg.files.includes('.env.example'));
     assert.ok(pkg.files.includes('MAC-START-HERE.txt'));
     assert.ok(buildScript.includes('".env.example"'));
