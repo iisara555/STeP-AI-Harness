@@ -52,7 +52,8 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(browserSkill.includes('ผู้ใช้กรอก username/password เอง'));
     assert.ok(browserSkill.includes('Human Confirmation Gate'));
     assert.ok(browserRule.includes('Never store a plaintext password'));
-    assert.ok(browserRule.includes('OS/browser credential store'));
+    assert.ok(browserRule.includes('credential store'));
+    assert.ok(browserRule.includes('operating system/browser'));
     assert.ok(envExample.includes('STEP_BROWSER_CREDENTIAL_REF='));
     assert.ok(!/^\s*STEP_BROWSER_PASSWORD\s*=/mi.test(envExample));
     assert.ok(!/^\s*PASSWORD\s*=/mi.test(envExample));
