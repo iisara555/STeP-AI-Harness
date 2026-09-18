@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.6  
+**สถานะปัจจุบัน:** Pilot v0.6.1  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 43 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.6.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.6.0/STeP-AI-Pilot-v0.6.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.6.1.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.6.1/STeP-AI-Pilot-v0.6.1.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -119,7 +119,7 @@ Check GitHub Releases
 
 ถ้าอินเทอร์เน็ตหรือ GitHub ใช้งานไม่ได้ ระบบจะไม่แก้ไขเวอร์ชัน แต่ยังสามารถ sync Workspace จากรุ่นที่ติดตั้งอยู่ได้
 
-> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.6.0 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
+> สำหรับผู้ใช้ **v0.3.0 หรือต่ำกว่า** ต้องดาวน์โหลด v0.6.1 ใหม่หนึ่งครั้ง เพราะ updater รุ่นเก่ายังไม่สามารถดึง Release ใหม่เองได้ หลังจาก v0.4.0 เป็นต้นไปสามารถใช้ไฟล์ Update เพื่ออัปเดตเวอร์ชันถัดไปได้
 
 ไฟล์ส่วนตัวและงานที่สร้างไว้ เช่น `USER.md`, `MEMORY.md`, `output/` และ local edits ที่ระบบติดตาม จะไม่ถูกเขียนทับโดย updater
 
@@ -207,6 +207,15 @@ step-ai output \
 ---
 
 ## Pilot Hardening v0.6
+
+### Lightweight First Run
+
+First Run ใช้ **L0-only startup** เหมือนกันทุก AI adapter: ChatGPT, Claude, Codex, Cursor, OpenCode, Windsurf, Gemini/Antigravity/Spark, Hermes และ Multi/Generic
+
+- อ่านเฉพาะ `START-PROMPT.txt`, `START-HERE.md`, `USER.md` / `MEMORY.md` ถ้ามี
+- ไม่ scan `skills/`, `rules/`, `manifest/` และไม่ search `*.md` ทั้ง Workspace
+- instruction แสดงเพียงจำนวน Skill/Rule ที่ติดตั้ง ไม่แจกแจง inventory รายไฟล์
+- เมื่อมีงานจริงจึงเปิด Router metadata แล้วโหลด 1 primary Skill + mandatory references ที่จำเป็น
 
 ### Browser Login & Credential Safety
 
