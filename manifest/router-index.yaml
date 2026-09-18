@@ -894,7 +894,7 @@ skills:
         - สร้าง evidence register และตรวจ relevance/completeness/period/traceability
         - ระบุ READY / PARTIAL / MISSING / STALE
       escalate:
-        privacy_sensitive_evidence:
+        pii_sensitive_material:
           skill: data-privacy-compliance
           description: หลักฐาน audit มีข้อมูลส่วนบุคคลหรือข้อมูลลับที่ต้องลด/ปกปิดก่อนส่ง
       human_only: {}
@@ -921,7 +921,7 @@ skills:
           skill: sop-authoring
           description: ต้องยกร่างหรือแก้เนื้อหา SOP/WI หลังพบ document gap
       human_only:
-        document_enactment:
+        formal_enactment:
           role: qs-iso-manager
           authority: iso-enactment
           description: การประกาศใช้ แก้ไข หรือยกเลิก controlled document อย่างเป็นทางการ
@@ -968,7 +968,7 @@ skills:
           skill: sop-authoring
           description: Corrective action ต้องแก้ SOP/WI หรือ controlled process document
       human_only:
-        official_capa_closure:
+        formal_closure:
           role: qs-iso-manager
           authority: qms-conformity-decision
           description: การปิด NC/CAPA หรือยืนยัน corrective action ว่าปิดอย่างเป็นทางการ
@@ -991,11 +991,11 @@ skills:
         - แยก risk event/cause/consequence จาก control gap
         - ตรวจ current controls, action, owner และ follow-up evidence
       escalate:
-        project_specific_risk:
+        project_context:
           skill: project-pre-mortem
           description: ความเสี่ยงเฉพาะโครงการหรือสัญญาควรใช้ Project Pre-Mortem
       human_only:
-        risk_acceptance:
+        formal_acceptance:
           role: executive-director
           authority: policy-waiver
           description: การยอมรับความเสี่ยงหรือผ่อนผัน control อย่างเป็นทางการ
@@ -1022,7 +1022,7 @@ skills:
           skill: innovation-okr-mapping
           description: การออกแบบ OKR เชิงยุทธศาสตร์ทั้งชุดควรใช้ innovation-okr-mapping
       human_only:
-        individual_performance_target:
+        hr_evaluation:
           role: hd-hr-lead
           authority: hr-performance-evaluation
           description: การกำหนดหรือรับรอง KPI ประเมินผลรายบุคคล
@@ -1049,7 +1049,7 @@ skills:
           skill: decision-memo
           description: ประเด็นที่ต้องเปรียบเทียบทางเลือกเชิงลึกควรใช้ Decision Memo
       human_only:
-        management_decision:
+        formal_qms_approval:
           role: executive-director
           authority: qms-conformity-decision
           description: การตัดสินใจ รับรองผล หรืออนุมัติการเปลี่ยนแปลง QMS ใน Management Review
