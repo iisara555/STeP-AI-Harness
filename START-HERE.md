@@ -2,11 +2,13 @@
 
 ใช้โปรแกรม AI ที่คุณมีอยู่แล้ว ไม่ต้องย้ายค่าย และไม่ต้องใช้ Terminal
 
-### รับชุดติดตั้ง STeP AI Pilot (v0.2.0)
+### ดาวน์โหลด STeP AI Pilot (v0.2.0)
 
-ในช่วง Pilot ให้รับไฟล์ `STeP-AI-Pilot-v0.2.0.zip` จาก **Shared Drive ขององค์กร** หรือช่องทางที่ทีม STeP AI / AI Champion แจ้งไว้
+[ดาวน์โหลด `STeP-AI-Pilot-v0.2.0.zip` จาก GitHub Releases](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.2.0/STeP-AI-Pilot-v0.2.0.zip)
 
-> ขณะนี้ยังไม่ได้เผยแพร่ชุดติดตั้งผ่าน GitHub Releases จึงไม่ควรใช้ลิงก์ `releases/latest` เป็นช่องทางหลัก
+ถ้าใช้งานผ่านช่องทางภายในองค์กร สามารถรับไฟล์ชุดเดียวกันจาก **Shared Drive** หรือ AI Champion ได้
+
+> ลิงก์นี้ระบุเวอร์ชันตรง ๆ (`v0.2.0`) เพื่อให้เอกสารชี้ไปยังไฟล์ Pilot ที่ตรวจสอบแล้ว ไม่ผูกกับ `releases/latest`
 
 เมื่อได้ไฟล์แล้ว ให้แตกไฟล์ก่อนใช้งาน (Windows: **Extract All...**, macOS: ดับเบิลคลิกไฟล์ ZIP)
 
