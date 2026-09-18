@@ -179,9 +179,12 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
     assert.equal(preferred.status, 'ready');
     assert.equal(preferred.tool, 'google-sheets');
 
-    const fallback = resolvePlaybookAction(step, [], actions);
+    const fallback = resolvePlaybookAction(step, ['xlsx'], actions);
     assert.equal(fallback.status, 'fallback');
     assert.equal(fallback.tool, 'xlsx');
+
+    const blocked = resolvePlaybookAction(step, [], actions);
+    assert.equal(blocked.status, 'blocked');
   });
 
   await t.test('Source-required provenance cannot be recorded without a source reference', () => {
