@@ -4,6 +4,7 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 if (-not $PSScriptRoot) {
     $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -75,7 +76,7 @@ try {
     exit 0
 }
 
-$latestVersionText = ([string]$release.tag_name).TrimStart("v", "V")
+$latestVersionText = ([string]$release.tag_name) -replace "^[vV]", ""
 try {
     $latestVersion = [version]$latestVersionText
 } catch {
