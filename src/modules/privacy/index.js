@@ -62,28 +62,37 @@ function hashText(text) {
   return createHash('sha256').update(String(text || ''), 'utf8').digest('hex');
 }
 
-function collectMatches(text, pattern) {
+function normalizeDigits(value = '') {
+  return String(value).replace(/\D/g, '');
+}
+
+function collectMatches(text, pattern, allowedIdentifiers = new Set()) {
   const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
   const matches = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
+    if (pattern.id === 'id-13-digit' && allowedIdentifiers.has(normalizeDigits(match[0]))) {
+      continue;
+    }
     matches.push({ index: match.index, length: match[0].length });
     if (match[0].length === 0) regex.lastIndex += 1;
   }
   return matches;
 }
 
-export function scanPrivacyText(text = '') {
+export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
   const input = String(text || '');
+  const allowed = new Set((allowedIdentifiers || []).map(normalizeDigits).filter(Boolean));
+  const cacheKey = hashText(input + '|allow:' + [...allowed].sort().join(','));
   const hash = hashText(input);
-  const cached = scanCache.get(hash);
+  const cached = scanCache.get(cacheKey);
   if (cached) return { ...structuredClone(cached), cacheHit: true };
 
   const findings = [];
   let hasDirectIdentifier = false;
 
   for (const pattern of PATTERNS) {
-    const matches = collectMatches(input, pattern);
+    const matches = collectMatches(input, pattern, allowed);
     if (!matches.length) continue;
     findings.push({
       type: pattern.id,
@@ -134,17 +143,24 @@ export function scanPrivacyText(text = '') {
     cacheHit: false,
   };
 
-  scanCache.set(hash, result);
+  scanCache.set(cacheKey, result);
   return structuredClone(result);
 }
 
-export function redactPrivacyText(text = '') {
+export function redactPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
   let output = String(text || '');
-  const scan = scanPrivacyText(output);
+  const allowed = new Set((allowedIdentifiers || []).map(normalizeDigits).filter(Boolean));
+  const scan = scanPrivacyText(output, { allowedIdentifiers });
 
   for (const pattern of PATTERNS) {
     const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-    output = output.replace(regex, pattern.replacement);
+    if (pattern.id === 'id-13-digit') {
+      output = output.replace(regex, (value) =>
+        allowed.has(normalizeDigits(value)) ? value : pattern.replacement
+      );
+    } else {
+      output = output.replace(regex, pattern.replacement);
+    }
   }
 
   return {
@@ -154,8 +170,8 @@ export function redactPrivacyText(text = '') {
   };
 }
 
-export function evaluatePrivacyGate(text = '') {
-  const result = redactPrivacyText(text);
+export function evaluatePrivacyGate(text = '', options = {}) {
+  const result = redactPrivacyText(text, options);
 
   return {
     ...result,
