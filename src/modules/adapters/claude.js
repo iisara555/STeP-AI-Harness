@@ -18,7 +18,7 @@ export function generateClaudeInstructions(role, files) {
   text += `- **Tone of Voice**: Professional, clear, polite, and objective Thai language for STeP communication unless requested otherwise.\n\n`;
 
   text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
-  text += buildRouterGuidelines();
+  text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
   text += buildLazyLoadingInventory(files);
 
