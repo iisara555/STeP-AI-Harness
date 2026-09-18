@@ -3,7 +3,7 @@
 build_pilot_bundle.py
 ---------------------
 Packages the STeP AI Harness into a standalone, ready-to-distribute ZIP archive
-for general STeP staff to download from Google Drive or organization shared folders.
+for general STeP staff to download from GitHub Releases, Shared Drive, or organization shared folders.
 
 Usage:
     python scripts/build_pilot_bundle.py
@@ -47,6 +47,8 @@ def build_pilot_bundle():
         "Feedback-STeP-AI.command",
         "package.json",
         "README.md",
+        "START-HERE.md",
+        "START-PROMPT.txt",
         "culture.md",
     ]
 

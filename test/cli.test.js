@@ -51,6 +51,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(skillPaths.includes('skills/pm/decision-memo/SKILL.md'));
     assert.ok(skillPaths.includes('skills/pm/industry-problem-discovery/SKILL.md'));
     assert.ok(skillPaths.includes('rules/human-approval.md'));
+    assert.ok(skillPaths.includes('rules/output-management.md'));
     assert.ok(skillPaths.includes('docs/step-context.md'));
 
     // Verify staff-abbreviations is NOT included
@@ -242,6 +243,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(qsFilePaths.includes('skills/common/sop-authoring/SKILL.md'), 'QS includes sop-authoring');
     assert.ok(qsFilePaths.includes('skills/common/evidence-before-approval/SKILL.md'));
     assert.ok(qsFilePaths.includes('skills/common/lab-result-review/SKILL.md'));
+    assert.ok(qsFilePaths.includes('rules/output-management.md'), 'All teams must receive output-management rule');
     assert.ok(qsFilePaths.includes('docs/teams.md'), 'Must include teams.md');
     assert.ok(qsFilePaths.includes('docs/step-router.md'), 'Must include step-router.md');
 

@@ -10,6 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { initUserMemory, ensureGitignored } from '../../modules/user-memory.js';
+import { initOutputWorkspace } from '../../modules/output-manager.js';
 
 export async function runInit(args) {
   header('Initialize Approved Skills for Workspace');
@@ -214,6 +215,9 @@ export async function runInit(args) {
   if (memResult.created) {
     info(`สร้างหน่วยความจำเฉพาะตัวใน ${colors.dim('USER.md')} (อยู่ใน .gitignore ไม่มีการเผยแพร่)`);
   }
+
+  const outputWorkspace = await initOutputWorkspace(dest, teamCode || (targetType === 'team' ? role.id : 'shared'));
+  info(`เตรียมโฟลเดอร์เก็บไฟล์งาน: ${colors.dim(outputWorkspace.relativePath + '/')}`);
 
   console.log();
   const entityLabel = targetType === 'team' ? 'ทีม' : 'Role';

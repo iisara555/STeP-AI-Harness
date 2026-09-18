@@ -4,7 +4,7 @@
 
 โครงการนี้พัฒนาสำหรับ **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP / RSP North)** และอยู่ในช่วงทดลองใช้งานภายในองค์กร
 
-**สถานะปัจจุบัน:** Pilot v0.2  
+**สถานะปัจจุบัน:** Pilot v0.3  
 **ครอบคลุม:** 22 ทีม / 5 AI routing clusters / 35 Skills
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือฉบับเต็ม](docs/employee-guide.md) · [ดูรายชื่อทีม](docs/teams.md)
@@ -44,7 +44,7 @@ STeP AI Harness จึงทำหน้าที่เป็นชั้นก�
 
 สำหรับพนักงานทั่วไป ไม่จำเป็นต้องใช้ Git หรือ Terminal
 
-1. ดาวน์โหลด [`STeP-AI-Pilot-v0.2.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.2.0/STeP-AI-Pilot-v0.2.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
+1. ดาวน์โหลด [`STeP-AI-Pilot-v0.3.0.zip`](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.3.0/STeP-AI-Pilot-v0.3.0.zip) จาก GitHub Releases หรือรับจาก Shared Drive ขององค์กร
 2. แตกไฟล์
 3. เปิดตัวติดตั้งสำหรับ Windows หรือ macOS
 4. เปิดโฟลเดอร์ STeP AI ด้วยโปรแกรม AI ที่ใช้อยู่
@@ -88,6 +88,33 @@ Harness ไม่ได้ออกแบบให้ผูกกับ AI ร�
 ถ้ามีโปรแกรมที่ใช้อยู่แล้ว ไม่จำเป็นต้องเปลี่ยนเครื่องมือเพื่อใช้ STeP AI
 
 หลักของโครงการคือให้ **ความรู้และกติกาของ STeP อยู่กับ Workspace** มากกว่าผูกกับผู้ให้บริการ AI รายใดรายหนึ่ง
+
+---
+
+## การจัดเก็บไฟล์ที่ AI สร้าง
+
+ตั้งแต่ Pilot v0.3 ไฟล์ output ที่ AI สร้างควรถูกเก็บใต้ `output/` ตามทีม ปี เดือน และประเภทงาน เพื่อให้ค้นหาและแยกเวอร์ชันได้ง่าย
+
+```text
+output/CC/2026/09/presentation/
+└─ 20260918_CC_presentation_STeP-Booth-CMU_v01.pptx
+```
+
+รูปแบบชื่อมาตรฐานคือ:
+
+```text
+YYYYMMDD_TEAM_TYPE_TITLE_vNN.ext
+```
+
+ถ้ามีไฟล์ชื่อเดียวกันอยู่แล้ว ระบบจะใช้ `v02`, `v03` ต่อไปแทนการเขียนทับไฟล์เดิม โฟลเดอร์ `output/` เป็นไฟล์งานเฉพาะเครื่องและถูกตั้งไว้ใน `.gitignore`
+
+สำหรับเครื่องมือที่เรียก CLI ได้ สามารถขอ path ก่อนสร้างไฟล์ด้วย:
+
+```bash
+step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
+```
+
+กติกากลางอยู่ที่ [`rules/output-management.md`](rules/output-management.md)
 
 ---
 
