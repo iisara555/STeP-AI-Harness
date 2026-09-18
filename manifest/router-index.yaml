@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.4.0
+  version: 2.5.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
@@ -114,7 +114,8 @@ skills:
       allow:
         - เปิดเว็บไซต์ สำรวจและอ่านข้อกำหนดของแบบฟอร์ม
         - กรอกข้อมูลฉบับร่างและเลือกตัวเลือกใน dropdown
-        - แนบไฟล์เอกสารประกอบฉบับร่างและถ่ายภาพหน้าจอตรวจสอบ
+        - reuse authenticated session ที่ผู้ใช้ opt-in ไว้ โดยไม่เปิดเผยหรือบันทึก plaintext credential
+        - แนบไฟล์เอกสารประกอบฉบับร่างและถ่ายภาพหน้าจอตรวจสอบเมื่อไม่มี secret ที่ไม่จำเป็น
         - สรุปข้อมูลที่กรอกทั้งหมดให้ผู้ใช้ตรวจทาน
       escalate:
         form_submission:
