@@ -1,181 +1,181 @@
-# AFP Demo Run Sheet — Meeting Ready
+# คู่มือเดิน Demo AFP — พร้อมใช้ในการประชุม
 
-> ใช้เล่น Demo 15–20 นาที กับหัวหน้า AFP
+> ใช้สาธิต 15–20 นาที กับหัวหน้า AFP
 >
-> Mock data เท่านั้น ห้ามตีความว่าเป็น transaction จริงหรือคำวินิจฉัยของ AFP
+> ใช้ข้อมูลจำลองเท่านั้น ห้ามตีความว่าเป็นรายการจริงหรือคำวินิจฉัยของ AFP
 
-## Before demo
+## ก่อนเริ่ม Demo
 
-เปิดเอกสารประกอบ:
+เปิดเอกสาร:
 1. `docs/afp-demo-source-register.md`
 2. `docs/afp-demo-concepts.md`
 
 อธิบายก่อนเริ่ม:
 
-> "Demo นี้ใช้ source สาธารณะที่ STeP/CMU อ้างอิงได้ก่อน ส่วนกฎภายใน AFP ที่ยังไม่ได้รับ จะถูก mark ว่า pending และ AI จะไม่เดา"
+> "Demo นี้ใช้แหล่งอ้างอิงสาธารณะของ STeP/มหาวิทยาลัยเชียงใหม่ก่อน ส่วนกฎภายใน AFP ที่เรายังไม่ได้รับ จะแสดงว่า 'รอ AFP ยืนยัน' และ AI จะไม่เดากฎขึ้นเอง"
 
 ---
 
-## Demo 1 — Receipt / Finance Pre-check
+## Demo 1 — ตรวจใบเสร็จและเอกสารการเงินก่อนส่ง AFP
 
-### Prompt
+### คำถามที่ใช้ Demo
 
 ```text
 ช่วยตรวจชุดเอกสารนี้ก่อนส่ง AFP ว่าพร้อมหรือยัง
-อย่าตัดสินว่าเบิกได้ ถ้ายังไม่มี source รองรับ
+อย่าตัดสินว่าเบิกได้ ถ้ายังไม่มีแหล่งอ้างอิงรองรับ
 ```
 
-### Mock facts
+### ข้อมูลจำลอง
 
 ```text
-Project: Innovation Event Demo
-Amount: 2,450 THB
-Payment evidence: attached
-Activity approval: attached
-Expense category: user did not specify
-Date on payment evidence: within project month
+โครงการ: Innovation Event Demo
+จำนวนเงิน: 2,450 บาท
+หลักฐานการชำระเงิน: มี
+หลักฐานอนุมัติกิจกรรม: มี
+ประเภทค่าใช้จ่าย: ผู้ใช้ยังไม่ได้ระบุ
+วันที่ในหลักฐานการจ่าย: อยู่ในเดือนของโครงการ
 ```
 
-### Expected screen/result
+### ผลลัพธ์ที่ควรเห็น
 
 ```text
-STATUS: NEEDS_INFORMATION
+สถานะ: ต้องการข้อมูลเพิ่ม
 
-✓ Amount consistent
-✓ Approval evidence present
-? Transaction type not confirmed
-? AFP-specific required-document checklist not yet loaded
+✓ จำนวนเงินสอดคล้องกัน
+✓ มีหลักฐานอนุมัติกิจกรรม
+? ยังไม่ยืนยันประเภทค่าใช้จ่าย
+? ยังไม่มี Checklist เฉพาะของ AFP สำหรับรายการนี้
 
-SOURCE
-AFP-SRC-014 — CMU Finance payment review principles
-AFP-SRC-015 — CMU Finance form registry
+แหล่งอ้างอิง
+AFP-SRC-014 — กองคลัง มช.: การรับเงินและการเบิกจ่ายเงิน
+AFP-SRC-015 — กองคลัง มช.: แบบฟอร์มงานการเงิน
 
-SOURCE STATUS
-PENDING_AFP_CONFIRMATION
+สถานะแหล่งอ้างอิง
+รอ AFP ยืนยันการใช้กับรายการของ STeP
 
-NEXT ACTION
-Confirm expense/transaction category before final document checklist.
+สิ่งที่ต้องทำต่อ
+ยืนยันประเภทค่าใช้จ่ายก่อนจัดรายการเอกสารที่ต้องใช้ขั้นสุดท้าย
 
-HUMAN AUTHORITY
+ผู้มีอำนาจตัดสิน
 AFP
 ```
 
-### Ask AFP live
+### ถาม AFP สดในที่ประชุม
 
-> "ถ้าเป็นเคสจริง AFP จะถามอะไรเพิ่มเป็นอันดับแรก?"
+> "ถ้าเป็นเคสจริง AFP จะถามข้อมูลอะไรเพิ่มเป็นอันดับแรก?"
 
-จดคำตอบเป็น candidate rule/checklist
+จดคำตอบเป็น Candidate สำหรับกฎ/Checklist ของ AFP
 
 ---
 
-## Demo 2 — TOR Pre-check
+## Demo 2 — ตรวจ TOR ก่อนส่ง AFP
 
-### Prompt
+### คำถามที่ใช้ Demo
 
 ```text
 ช่วยตรวจ TOR งานจ้างออกแบบและติดตั้งบูธนี้ก่อนส่ง AFP
-แยกสิ่งที่เป็น rule, สิ่งที่เป็น risk และสิ่งที่ต้องให้คนใช้ดุลพินิจ
+แยกให้หน่อยว่าอะไรเป็นกฎ อะไรเป็นความเสี่ยง และอะไรต้องให้คนใช้ดุลพินิจ
 ```
 
-### Mock TOR excerpt
+### TOR จำลอง
 
 ```text
-งาน: ออกแบบและติดตั้ง Event Booth
-Deliverable: Booth พร้อมใช้งาน
+งาน: ออกแบบและติดตั้งบูธงาน Event
+สิ่งส่งมอบ: บูธพร้อมใช้งาน
 คุณภาพงาน: "สวยงาม ทันสมัย Premium"
 วัสดุหลัก: ต้องใช้ระบบ/ผลิตภัณฑ์ Brand X
-ส่งมอบ: ก่อนวันงาน
-Acceptance: "เป็นที่พึงพอใจของผู้ว่าจ้าง"
+กำหนดส่ง: ก่อนวันงาน
+เกณฑ์ตรวจรับ: "เป็นที่พึงพอใจของผู้ว่าจ้าง"
 ```
 
-### Expected screen/result
+### ผลลัพธ์ที่ควรเห็น
 
 ```text
-STATUS: NEEDS_CORRECTION + HUMAN_JUDGMENT_REQUIRED
+สถานะ: ต้องแก้ไข + ต้องใช้ดุลพินิจของผู้มีอำนาจ
 
-ISSUE A — Acceptance not measurable
+ประเด็น A — เกณฑ์ตรวจรับยังวัดผลไม่ชัด
 "เป็นที่พึงพอใจของผู้ว่าจ้าง"
 
-ISSUE B — Deliverable lacks objective inspection criteria
+ประเด็น B — สิ่งส่งมอบยังไม่มีเกณฑ์ตรวจสอบเชิงวัตถุ
 
-ISSUE C — Brand-specific wording
+ประเด็น C — พบข้อความระบุยี่ห้อ/ผลิตภัณฑ์เฉพาะ
 ต้องตรวจเหตุจำเป็นและกฎหมาย/เงื่อนไขที่รองรับ
 
-SOURCE
-STeP OIT procurement references
-Procurement Act 2560 — section 8/9 principles
-Ministry procurement regulation 2560
+แหล่งอ้างอิง
+STeP OIT — งานดำเนินการจัดซื้อจัดจ้าง
+พระราชบัญญัติการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
+ระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
 
-AI ACTION
-Suggest clearer measurable wording.
+AI ช่วยได้
+เสนอถ้อยคำและเกณฑ์ที่ตรวจสอบได้ชัดขึ้น
 
-AI MUST NOT
-Approve TOR
-Decide that brand wording is legally acceptable
-Select a vendor
+AI ห้าม
+อนุมัติ TOR
+วินิจฉัยขั้นสุดท้ายว่าการระบุยี่ห้อชอบด้วยกฎหมาย
+เลือกผู้ขาย
 ```
 
-### Ask AFP live
+### ถาม AFP สดในที่ประชุม
 
 > "จุดไหน AFP จะให้แก้ทันที และจุดไหนต้องดูบริบทก่อน?"
 
-คำตอบจะแยก Rule vs Judgment
+จดคำตอบแยกเป็น **กฎ** กับ **ดุลพินิจ**
 
 ---
 
-## Demo 3 — Required Document Navigator
+## Demo 3 — รายการเอกสารที่ต้องเตรียม
 
-### Prompt
+### คำถามที่ใช้ Demo
 
 ```text
 ผมจะจ้างทำสื่อสำหรับงาน Event ต้องเตรียมเอกสารอะไรส่ง AFP บ้าง
-ถ้ายังไม่มี checklist ของ AFP ให้บอกตรง ๆ ว่าขาดอะไร
+ถ้ายังไม่มี Checklist ของ AFP ให้บอกตรง ๆ ว่าขาดข้อมูลอะไร
 ```
 
-### Expected screen/result
+### ผลลัพธ์ที่ควรเห็น
 
 ```text
-TRANSACTION: Event media service procurement
+ประเภทรายการ
+จ้างทำสื่อสำหรับงาน Event
 
-KNOWN SOURCE SET
-✓ STeP procurement references
-✓ CMU central procurement registry
-✓ CMU finance forms registry
+แหล่งอ้างอิงที่มี
+✓ แหล่งอ้างอิงงานจัดซื้อจัดจ้างของ STeP
+✓ ทะเบียนกฎหมาย/ระเบียบด้านพัสดุของ มช.
+✓ ทะเบียนแบบฟอร์มงานการเงินของ มช.
 
-PENDING
-AFP internal transaction checklist
+ข้อมูลที่ยังขาด
+Checklist ภายใน AFP สำหรับประเภทรายการนี้
 
-PROVISIONAL STRUCTURE
-[ ] Approval/request evidence
-[ ] TOR/scope if applicable
-[ ] Procurement evidence
-[ ] Delivery/acceptance evidence
-[ ] Payment evidence
-[ ] Transaction-specific forms
+โครงสร้างรายการเอกสารเบื้องต้น
+[ ] หลักฐานขออนุมัติ/อนุมัติ
+[ ] TOR/ขอบเขตงาน หากกรณีนี้ต้องใช้
+[ ] เอกสารดำเนินการจัดซื้อจัดจ้าง
+[ ] หลักฐานส่งมอบ/ตรวจรับ
+[ ] หลักฐานการชำระเงิน
+[ ] แบบฟอร์มเฉพาะของรายการ
 
-STATUS: NEEDS_AFP_CONFIRMATION
+สถานะ
+รอ AFP ยืนยัน
 ```
 
-### Ask AFP live
-
-ให้หัวหน้า AFP แก้ checklist บนจอ:
+### ให้ AFP แก้รายการสด
 
 ```text
-Required
-Conditional
-Not Required
-Depends on amount
-Depends on fund source
-Depends on transaction
+จำเป็น
+มีเงื่อนไข
+ไม่ต้องใช้
+ขึ้นกับวงเงิน
+ขึ้นกับแหล่งเงิน
+ขึ้นกับประเภทรายการ
 ```
 
-นี่คือข้อมูล Foundation ที่มีค่าที่สุดจาก Demo
+ข้อมูลนี้จะกลายเป็น Foundation ของ AFP โดยตรง
 
 ---
 
-## Demo 4 — Explain My Return
+## Demo 4 — อธิบายเหตุผลที่เอกสารถูกตีกลับ
 
-### Prompt
+### คำถามที่ใช้ Demo
 
 ```text
 ครั้งก่อนเคสคล้ายกันผ่าน แต่ครั้งนี้ AFP ตีกลับ
@@ -183,86 +183,84 @@ Depends on transaction
 บอกว่าต่างกันตรงไหน และอะไรยังต้องให้ AFP ตัดสิน
 ```
 
-### Mock Case A
+### กรณี A จำลอง
 
 ```text
-Amount: 8,000 THB
-Activity approval: before transaction
-Payment evidence: complete
-Return note: none
-Outcome: processed
+จำนวนเงิน: 8,000 บาท
+หลักฐานอนุมัติ: เห็นชัดว่าอนุมัติก่อนดำเนินการ
+หลักฐานการชำระเงิน: ครบ
+เหตุผลตีกลับ: ไม่มี
+ผล: ดำเนินการต่อ
 ```
 
-### Mock Case B
+### กรณี B จำลอง
 
 ```text
-Amount: 8,000 THB
-Activity approval: attached but approval date unclear
-Payment evidence: complete
-Return note: "ตรวจสอบเอกสารอนุมัติ"
-Outcome: returned
+จำนวนเงิน: 8,000 บาท
+หลักฐานอนุมัติ: มี แต่วันที่อนุมัติยังตรวจสอบไม่ชัด
+หลักฐานการชำระเงิน: ครบ
+เหตุผลตีกลับ: "ตรวจสอบเอกสารอนุมัติ"
+ผล: ตีกลับ
 ```
 
-### Expected screen/result
+### ผลลัพธ์ที่ควรเห็น
 
 ```text
-STATUS: HUMAN_JUDGMENT_REQUIRED
+สถานะ: ต้องใช้ดุลพินิจของผู้มีอำนาจ
 
-SIMILAR
-- same amount
-- similar expense context
+สิ่งที่เหมือนกัน
+- จำนวนเงินเท่ากัน
+- ลักษณะค่าใช้จ่ายใกล้เคียงกัน
 
-MATERIAL DIFFERENCE FOUND
-- Case A shows approval timing clearly
-- Case B approval timing is unclear from evidence supplied
+ความแตกต่างที่พบ
+- กรณี A เห็นลำดับเวลาการอนุมัติชัดเจน
+- กรณี B ยังตรวจสอบลำดับเวลาการอนุมัติไม่ได้จากหลักฐานที่มี
 
-PRECEDENT
-Case A is historical evidence, not a rule.
+สถานะของกรณีที่ผ่านมา
+กรณี A เป็นกรณีอ้างอิงย้อนหลัง ไม่ใช่กฎ
 
-SOURCE
-CMU Finance review principle: check material correctness and supporting evidence
+แหล่งอ้างอิง
+กองคลัง มช.: หลักการตรวจความถูกต้องของเอกสารและหลักฐานประกอบ
 
-CONCLUSION
-Current data is insufficient to conclude AFP treated the cases inconsistently.
+ข้อสรุป
+ข้อมูลที่มีอยู่ยังไม่เพียงพอที่จะสรุปว่า AFP พิจารณาไม่สม่ำเสมอ
 
-NEXT ACTION
-Confirm applicable approval rule and timing requirement with AFP.
+สิ่งที่ต้องทำต่อ
+ยืนยันกฎเรื่องการอนุมัติและช่วงเวลาที่ใช้กับรายการนี้กับ AFP
 ```
 
-### Ask AFP live
+### ถาม AFP สดในที่ประชุม
 
-> "ถ้า facts เหมือนกันจริง 100% แต่ผลต่างกัน AFP อยากให้ AI flag อย่างไร?"
+> "ถ้าข้อเท็จจริงสำคัญเหมือนกัน กฎเดียวกัน หลักฐานเหมือนกัน แต่ผลพิจารณาต่างกัน AFP อยากให้ AI แจ้งอย่างไร?"
 
-Proposed flag:
+ข้อเสนอ:
 
 ```text
-POTENTIAL_INCONSISTENCY_REVIEW
-→ Send to AFP lead
-→ Never auto-overrule prior/current decision
+แจ้ง: พบความเป็นไปได้ว่าการพิจารณาไม่สม่ำเสมอ
+การดำเนินการ: ส่งหัวหน้า AFP ทบทวน
+ข้อจำกัด: AI ไม่เปลี่ยนหรือยกเลิกคำตัดสินเดิมเอง
 ```
 
 ---
 
-# Capture during meeting
+# แบบจดข้อมูลระหว่างประชุม
 
-จดทุก correction ของ AFP ในตารางนี้:
-
-| Demo | AFP correction | Type | Source available? | Next step |
+| Demo | สิ่งที่ AFP แก้ | ประเภท | มีแหล่งอ้างอิงหรือไม่ | สิ่งที่ต้องทำต่อ |
 | --- | --- | --- | --- | --- |
-| Receipt | | RULE / EVIDENCE / JUDGMENT | yes/no | |
-| TOR | | RULE / EVIDENCE / JUDGMENT | yes/no | |
-| Checklist | | REQUIREMENT | yes/no | |
-| Conflict | | PRECEDENT / JUDGMENT | yes/no | |
+| ใบเสร็จ/การเงิน | | กฎ / หลักฐาน / ดุลพินิจ | มี/ไม่มี | |
+| TOR | | กฎ / หลักฐาน / ดุลพินิจ | มี/ไม่มี | |
+| รายการเอกสาร | | ข้อกำหนด | มี/ไม่มี | |
+| กรณีตีกลับ | | กรณีอ้างอิง / ดุลพินิจ | มี/ไม่มี | |
 
-## Definition of a successful demo
+## ถือว่า Demo สำเร็จเมื่อ
 
 หลังประชุมควรได้อย่างน้อย:
-- 3–5 source ที่ AFP ยืนยัน
-- 5 return reasons
-- 3 judgment boundaries
-- 1 TOR checklist direction
-- 1 finance/receipt checklist direction
-- 3 transaction categories ที่ควร pilot
-- 1 authority/escalation correction
+- แหล่งอ้างอิงที่ AFP ยืนยัน 3–5 รายการ
+- เหตุผลตีกลับ 5 เหตุผล
+- จุดที่ต้องใช้ดุลพินิจ 3 เรื่อง
+- แนวทาง Checklist ตรวจ TOR 1 ชุด
+- แนวทาง Checklist ตรวจใบเสร็จ/การเงิน 1 ชุด
+- ประเภทรายการที่จะ Pilot 3 ประเภท
+- การแก้ไข Authority/Escalation อย่างน้อย 1 จุด
 
-ไม่ต้องพยายามทำให้ Demo ตอบได้ทุกเคสในวันแรก
+ไม่จำเป็นต้องทำให้ Demo ตอบได้ทุกกรณีในการประชุมครั้งแรก
