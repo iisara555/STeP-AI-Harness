@@ -455,7 +455,7 @@ skills:
 
   sop-authoring:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality]
     process: [quality.document-control]
     path: skills/common/sop-authoring/SKILL.md
@@ -470,7 +470,7 @@ skills:
         stage: approved
     references:
       mandatory: [qs-doc-control-procedure, naming-convention-rule]
-      optional: []
+      optional: [qms-master-document-list]
 
   team-weekly-review:
     owner: sit
@@ -710,7 +710,7 @@ skills:
 
   audit-evidence-matrix:
     owner: qs
-    version: 1.0.0
+    version: 1.0.1
     domain: [quality, audit, evidence]
     process: [quality.audit-readiness]
     path: skills/common/audit-evidence-matrix/SKILL.md
@@ -724,8 +724,8 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule, data-classification-rule]
-      optional: []
+      mandatory: [iso-9001-2015, human-approval-rule, data-classification-rule]
+      optional: [qms-quality-manual, qms-master-document-list, qms-internal-audit]
 
   document-record-control:
     owner: qs
@@ -838,5 +838,5 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [human-approval-rule]
-      optional: []
+      mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
+      optional: [qms-quality-manual]
