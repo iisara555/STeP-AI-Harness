@@ -25,7 +25,7 @@ function Show-Header {
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host "   STeP AI Update & Sync" -ForegroundColor Cyan
     Write-Host "   Current version: v$currentVersionText" -ForegroundColor Yellow
-    Write-Host "   22 Teams • 35 Skills • Safe Workspace Upgrade" -ForegroundColor Gray
+    Write-Host "   22 Teams • 43 Skills • Safe Workspace Upgrade" -ForegroundColor Gray
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
