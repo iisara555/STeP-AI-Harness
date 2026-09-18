@@ -29,7 +29,7 @@ show_header() {
     echo -e "${CYAN}=================================================================${NC}"
     echo -e "${CYAN}   STeP AI Update & Sync${NC}"
     echo -e "${YELLOW}   Current version: v$CURRENT_VERSION${NC}"
-    echo -e "${GRAY}   22 Teams • 35 Skills • Safe Workspace Upgrade${NC}"
+    echo -e "${GRAY}   22 Teams • 43 Skills • Safe Workspace Upgrade${NC}"
     echo -e "${CYAN}=================================================================${NC}"
     echo ""
 }
