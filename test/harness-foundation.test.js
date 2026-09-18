@@ -11,6 +11,7 @@ import {
   STANDARD_PROVENANCE_TYPES,
   parseProvenanceYaml,
   validateProvenanceTypes,
+  createProvenanceRecord,
 } from '../src/modules/provenance/index.js';
 import {
   loadPlaybooks,
@@ -19,6 +20,7 @@ import {
   recordRunFeedback,
   resolvePlaybookAction,
   validatePlaybookRegistry,
+  completePlaybookStep,
 } from '../src/modules/playbooks/index.js';
 import { loadAndValidateManifests } from '../src/modules/router/index.js';
 import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
@@ -119,6 +121,137 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
     assert.equal(state.feedback[0].rating, 'needs-fix');
     assert.ok(state.events.some((e) => e.type === 'provenance-added'));
     assert.ok(state.events.some((e) => e.type === 'feedback-recorded'));
+  });
+
+
+  await t.test('Action Registry validator rejects malformed risk/confirmation/tool metadata', () => {
+    const result = validateActionRegistry({
+      bad: {
+        id: 'bad',
+        capability: '',
+        risk: 'critical',
+        sideEffect: 'magic',
+        confirmation: 'auto',
+        preferredTools: [],
+        outputReferenceRequired: true,
+        specPath: '',
+      },
+    });
+
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes('has no capability')));
+    assert.ok(result.errors.some((e) => e.includes('invalid risk')));
+    assert.ok(result.errors.some((e) => e.includes('invalid confirmation')));
+    assert.ok(result.errors.some((e) => e.includes('invalid sideEffect')));
+    assert.ok(result.errors.some((e) => e.includes('preferred tool')));
+    assert.ok(result.errors.some((e) => e.includes('requires specPath')));
+  });
+
+  await t.test('Playbook validator rejects an action missing from the central registry', () => {
+    const result = validatePlaybookRegistry(
+      [{
+        id: 'bad-action-flow',
+        name: 'Bad Action',
+        owner: 'pm',
+        requiredSignals: [],
+        minSignals: 1,
+        signals: { run: ['run'] },
+        steps: [
+          { id: 'one', type: 'skill', skill: 'project-plan' },
+          { id: 'two', type: 'action', action: 'not-registered' },
+        ],
+      }],
+      {
+        skills: new Set(['project-plan']),
+        teams: new Set(['pm']),
+        actions: new Set(Object.keys(actions)),
+      }
+    );
+
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes("unknown Action 'not-registered'")));
+  });
+
+  await t.test('Action Registry can supply preferred and fallback tools when Playbook step omits them', () => {
+    const step = { id: 'sheet', type: 'action', action: 'spreadsheet-project-plan' };
+
+    const preferred = resolvePlaybookAction(step, ['google-sheets'], actions);
+    assert.equal(preferred.status, 'ready');
+    assert.equal(preferred.tool, 'google-sheets');
+
+    const fallback = resolvePlaybookAction(step, [], actions);
+    assert.equal(fallback.status, 'fallback');
+    assert.equal(fallback.tool, 'xlsx');
+  });
+
+  await t.test('Source-required provenance cannot be recorded without a source reference', () => {
+    assert.throws(
+      () => createProvenanceRecord({ type: 'SOURCE_FACT', value: 'งบประมาณ 1,000 บาท' }),
+      /requires sourceRef/
+    );
+
+    assert.doesNotThrow(() =>
+      createProvenanceRecord({
+        type: 'PLANNING_ASSUMPTION',
+        value: 'เริ่มเตรียมงานก่อนวันงาน 30 วัน',
+      })
+    );
+  });
+
+  await t.test('Provenance registry validator detects wrong sourceRequired policy', () => {
+    const bad = [
+      { id: 'SOURCE_FACT', sourceRequired: false },
+      { id: 'DERIVED_FACT', sourceRequired: true },
+      { id: 'USER_INPUT', sourceRequired: false },
+      { id: 'PLANNING_ASSUMPTION', sourceRequired: false },
+      { id: 'ORGANIZATION_RULE', sourceRequired: true },
+      { id: 'AI_RECOMMENDATION', sourceRequired: false },
+    ];
+    const result = validateProvenanceTypes(bad);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes("SOURCE_FACT") && e.includes('must be true')));
+  });
+
+  await t.test('Output-reference-required Action cannot complete without a real link/path/reference', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    let state = buildRunState({
+      playbook,
+      query: 'TOR action plan gantt google sheet',
+      team: 'pubsec',
+      matchedSignals: ['source', 'planning', 'schedule', 'spreadsheet'],
+      sourceRefs: [{ id: 'tor-1', name: 'TOR.pdf' }],
+      now: new Date('2026-09-18T08:00:00Z'),
+    });
+
+    state = completePlaybookStep(state, 'review-source', { facts: ['A'] });
+    state = completePlaybookStep(state, 'build-plan', { activities: ['A'] });
+
+    assert.throws(
+      () => completePlaybookStep(state, 'create-spreadsheet', { message: 'done' }),
+      /requires a real output reference/
+    );
+
+    const completed = completePlaybookStep(state, 'create-spreadsheet', {
+      path: 'output/PM/2026/09/spreadsheet/project-plan.xlsx',
+    });
+    assert.equal(completed.status, 'completed');
+    assert.equal(completed.steps.find((s) => s.id === 'create-spreadsheet').status, 'completed');
+  });
+
+  await t.test('Run feedback rejects unknown rating values', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    const state = buildRunState({
+      playbook,
+      query: 'test',
+      matchedSignals: ['source', 'planning', 'schedule'],
+      sourceRefs: [{ id: 'tor-1' }],
+      now: new Date('2026-09-18T08:00:00Z'),
+    });
+
+    assert.throws(
+      () => recordRunFeedback(state, { rating: 'maybe' }),
+      /must be one of/
+    );
   });
 
   await t.test('Full manifest integrity includes actions and provenance', async () => {
