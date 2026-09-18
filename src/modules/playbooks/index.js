@@ -387,8 +387,9 @@ export function resolvePlaybookAction(step, availableTools = [], actionRegistry 
 
   const tools = new Set((availableTools || []).map((tool) => String(tool).toLowerCase().trim()));
   const registered = actionRegistry?.[step.action] || {};
-  const preferred = String(step.preferredTool || '').toLowerCase().trim();
-  const fallback = String(step.fallback || '').toLowerCase().trim();
+  const registryTools = Array.isArray(registered.preferredTools) ? registered.preferredTools : [];
+  const preferred = String(step.preferredTool || registryTools[0] || '').toLowerCase().trim();
+  const fallback = String(step.fallback || registryTools[1] || '').toLowerCase().trim();
 
   if (preferred && tools.has(preferred)) {
     return {
@@ -425,10 +426,23 @@ export function resolvePlaybookAction(step, availableTools = [], actionRegistry 
   };
 }
 
+function hasOutputReference(outputs = {}) {
+  const keys = ['outputReference', 'reference', 'url', 'link', 'path', 'filePath', 'sheetUrl'];
+  return keys.some((key) => typeof outputs?.[key] === 'string' && outputs[key].trim());
+}
+
 export function completePlaybookStep(state, stepId, outputs = {}) {
   const next = structuredClone(state);
   const step = next.steps?.find((item) => item.id === stepId);
   if (!step) throw new Error(`Unknown Playbook step '${stepId}'`);
+
+  if (
+    step.type === 'action' &&
+    step.completionCriteria === 'output-reference-required' &&
+    !hasOutputReference(outputs)
+  ) {
+    throw new Error(`Playbook action '${stepId}' requires a real output reference/path/link before completion`);
+  }
 
   step.status = 'completed';
   step.completedAt = new Date().toISOString();
