@@ -54,7 +54,9 @@ Playbook **ไม่ใช่ Workflow Engine** และไม่ใช่ม�
 
 ## Tool / Action
 
-Action ไม่ใช่ Skill เช่น:
+Action ไม่ใช่ Skill และต้องมีรายการกลางใน `manifest/actions.yaml` เพื่อให้ Playbook/validator รู้ capability, risk, confirmation และ tool ที่รองรับ
+
+Action ตัวอย่าง:
 - สร้าง/อัปเดต Google Sheet
 - สร้างไฟล์ XLSX
 - บันทึก output
@@ -111,3 +113,14 @@ Tool Action ต่างจาก Skill เพราะต้องเกิด�
 5. ห้าม mark `completed` จนกว่าจะมี output reference/path/link ตาม action spec
 
 สำหรับ TOR → Project Plan ดู `docs/spreadsheet-project-plan.md`
+
+
+## Source / Provenance และ Run Feedback
+
+ตั้งแต่ Lightweight Harness Foundation:
+- ข้อเท็จจริง/สมมติฐานที่สำคัญสามารถติด label ตาม `manifest/provenance.yaml`
+- Run State v3 เก็บ `context.provenance`, `events` และ `feedback`
+- Event log เก็บเฉพาะเหตุการณ์สำคัญ ไม่ใช่ transcript ทั้งหมด
+- ห้ามเก็บ password/token/cookie/MFA หรือ PII ที่ไม่จำเป็น
+
+รายละเอียดดู `docs/harness-foundation.md`
