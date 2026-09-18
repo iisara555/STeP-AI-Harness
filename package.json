@@ -1,14 +1,14 @@
 {
   "name": "@step-cmu/ai-harness",
-  "version": "0.3.0",
-  "description": "Private npm distribution of approved STeP AI skills and rules for Codex and AI agents",
+  "version": "0.4.0",
+  "description": "STeP AI skills, rules, routing, governance, and employee workspace distribution",
   "main": "src/index.js",
   "type": "module",
   "bin": {
     "step-ai": "./bin/step-ai.js"
   },
   "scripts": {
-    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js",
+    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js",
     "validate": "python scripts/validate_repo.py"
   },
   "files": [

@@ -119,6 +119,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
     const psInstallContent = await readFile(psInstall, 'utf-8');
     assert.ok(psInstallContent.includes('STeP AI Setup'));
+    assert.ok(psInstallContent.includes('package.json'));
+    assert.ok(psInstallContent.includes('$pilotVersion'));
     // Verify all 22 teams are displayed in installer
     assert.ok(psInstallContent.includes('QS'));
     assert.ok(psInstallContent.includes('AFP'));
@@ -132,6 +134,13 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
     const batUpdateContent = await readFile(batUpdate, 'utf-8');
     assert.ok(batUpdateContent.includes('update-windows.ps1'));
+
+    const psUpdateContent = await readFile(psUpdate, 'utf-8');
+    assert.ok(psUpdateContent.includes('releases/latest'));
+    assert.ok(psUpdateContent.includes('SHA-256'));
+    assert.ok(psUpdateContent.includes('upgrade-apply'));
+    assert.ok(psUpdateContent.includes('USER.md'));
+    assert.ok(psUpdateContent.includes('output/'));
 
     const batFeedbackContent = await readFile(batFeedback, 'utf-8');
     assert.ok(batFeedbackContent.includes('feedback-windows.ps1'));
@@ -207,6 +216,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
     const shInstallContent = await readFile(shInstall, 'utf-8');
     assert.ok(shInstallContent.includes('STeP AI Setup'));
+    assert.ok(shInstallContent.includes('PILOT_VERSION'));
     assert.ok(shInstallContent.includes('Darwin'));
     assert.ok(shInstallContent.includes('uname -m'));
     assert.ok(shInstallContent.includes('command -v node'));
@@ -228,6 +238,9 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(cmdUpdateContent.includes('update-macos.sh'));
 
     const shUpdateContent = await readFile(shUpdate, 'utf-8');
+    assert.ok(shUpdateContent.includes('releases/latest'));
+    assert.ok(shUpdateContent.includes('sha256'));
+    assert.ok(shUpdateContent.includes('upgrade-apply'));
     assert.ok(shUpdateContent.includes('step-ai.js" update'));
 
     const cmdFeedbackContent = await readFile(cmdFeedback, 'utf-8');

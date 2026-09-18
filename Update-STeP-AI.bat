@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 > nul
-title STeP AI Update (Pilot v0.2)
+title STeP AI Update
 
 echo ================================================================
 echo    ____ _____     ____       _    ___ 

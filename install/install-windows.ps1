@@ -1,20 +1,23 @@
-﻿# STeP AI — Zero-Terminal Windows Installer (Pilot v0.2)
+﻿# STeP AI — Zero-Terminal Windows Installer
 # อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ (STeP)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
-$Host.UI.RawUI.WindowTitle = "STeP AI Setup (Pilot v0.2)"
 
 if (-not $PSScriptRoot) {
     $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 }
+
+$rootDir = (Resolve-Path "$PSScriptRoot\..").Path
+$pilotVersion = [string](Get-Content -Raw (Join-Path $rootDir "package.json") | ConvertFrom-Json).version
+$Host.UI.RawUI.WindowTitle = "STeP AI Setup (v$pilotVersion)"
 
 function Show-Header {
     Clear-Host
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host "   ____ _____     ____       _    ___                            " -ForegroundColor Cyan
     Write-Host "  / ___|_   _|___|  _ \     / \  |_ _|   " -ForegroundColor Cyan -NoNewline
-    Write-Host "STeP AI Setup (Pilot v0.2)      " -ForegroundColor Yellow
+    Write-Host "STeP AI Setup (v$pilotVersion)       " -ForegroundColor Yellow
     Write-Host "  \___ \ | | / _ \ |_) |   / _ \  | |    " -ForegroundColor Cyan -NoNewline
     Write-Host "Enterprise AI Architecture      " -ForegroundColor Gray
     Write-Host "   ___) || ||  __/  __/   / ___ \ | |    " -ForegroundColor Cyan -NoNewline
@@ -252,7 +255,7 @@ Write-Host "------------------------------------------------------------" -Foreg
 Write-Host "ขั้นตอนที่ 3: กำลังติดตั้ง STeP AI ให้พร้อมใช้งาน..." -ForegroundColor Yellow
 Write-Host ""
 
-$rootDir = Resolve-Path "$PSScriptRoot\.."
+
 Set-Location $rootDir
 
 if ($selectedTeam) {

@@ -44,9 +44,11 @@ export async function runUpdate(args) {
   info(`ตรวจพบการติดตั้งปัจจุบัน: ${colors.bold(manifest.team ? `ทีม ${manifest.team.toUpperCase()}` : `Role ${manifest.role}`)} (v${manifest.version})`);
 
   // Snapshot before update
-  const snapshotId = await createSnapshot(dest, `pre-update-v${pkgJson.version}`);
-  if (snapshotId) {
-    success(`สร้าง Backup Snapshot อัตโนมัติ: .step-ai/backups/${snapshotId}/`);
+  if (!args['skip-snapshot']) {
+    const snapshotId = await createSnapshot(dest, `pre-update-v${pkgJson.version}`);
+    if (snapshotId) {
+      success(`สร้าง Backup Snapshot อัตโนมัติ: .step-ai/backups/${snapshotId}/`);
+    }
   }
 
   // Resolve files (support both team and role)
