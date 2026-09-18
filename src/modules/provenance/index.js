@@ -8,6 +8,12 @@ export const STANDARD_PROVENANCE_TYPES = Object.freeze([
 ]);
 
 const TYPE_SET = new Set(STANDARD_PROVENANCE_TYPES);
+export const SOURCE_REQUIRED_TYPES = Object.freeze([
+  'SOURCE_FACT',
+  'DERIVED_FACT',
+  'ORGANIZATION_RULE',
+]);
+const SOURCE_REQUIRED_SET = new Set(SOURCE_REQUIRED_TYPES);
 
 export function parseProvenanceYaml(text) {
   const types = [];
@@ -55,6 +61,13 @@ export function validateProvenanceTypes(types = []) {
     if (!TYPE_SET.has(id)) errors.push(`Unknown provenance type '${id}'`);
   }
 
+  for (const type of types) {
+    const expected = SOURCE_REQUIRED_SET.has(type.id);
+    if (Boolean(type.sourceRequired) !== expected) {
+      errors.push(`Provenance type '${type.id}' sourceRequired must be ${expected}`);
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -69,6 +82,9 @@ export function createProvenanceRecord({
   if (!TYPE_SET.has(type)) throw new Error(`Unsupported provenance type '${type}'`);
   if (value === undefined || value === null || value === '') {
     throw new Error('Provenance record requires a non-empty value');
+  }
+  if (SOURCE_REQUIRED_SET.has(type) && !String(sourceRef || '').trim()) {
+    throw new Error(`Provenance type '${type}' requires sourceRef`);
   }
 
   return {
