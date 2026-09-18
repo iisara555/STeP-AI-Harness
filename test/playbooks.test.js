@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { queryStepRouter } from '../src/cli/commands/ask.js';
@@ -14,6 +14,7 @@ import {
   readPlaybookRun,
   updatePlaybookRun,
   validatePlaybookRegistry,
+  validatePlaybookSources,
 } from '../src/modules/playbooks/index.js';
 import { loadAndValidateManifests } from '../src/modules/router/index.js';
 import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
@@ -27,6 +28,33 @@ test('STeP Composite Playbooks', async (t) => {
       playbooks.map((p) => p.id),
       ['tor-to-project-plan', 'meeting-to-action-plan', 'iso-audit-readiness-flow']
     );
+  });
+
+
+  await t.test('TOR Playbook carries source, fact, budget, parameter and output policies', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    assert.equal(playbook.sourcePolicy, 'one-tor-per-run');
+    assert.equal(playbook.factPolicy, 'facts-and-assumptions-separated');
+    assert.equal(playbook.budgetPolicy, 'source-only-no-auto-allocation');
+    assert.equal(playbook.schedulePolicy, 'source-dates-first');
+    assert.deepEqual(playbook.parameters, ['contract-start', 'event-start', 'event-end', 'contract-end']);
+    assert.equal(playbook.outputSchema, 'project-master-plan-v1');
+    assert.equal(playbook.specPath, 'docs/tor-to-project-plan.md');
+  });
+
+  await t.test('exact staff phrasing routes TOR Action Plan + Grantt + Google Sheet to Playbook', async () => {
+    const result = await queryStepRouter(
+      'นี่คือ TOR ของSTeP ที่ Bidding มาได้ ขอช่วยทำ Action Plan พร้อมแตกกิจกรรม เพื่อนำไปทำ Grantt Charts ใน Google Sheet',
+      { team: 'pubsec' }
+    );
+
+    assert.equal(result.routingMode, 'PLAYBOOK');
+    assert.equal(result.selectedPlaybook?.id, 'tor-to-project-plan');
+    assert.equal(result.selectedSkill?.name, 'tor-review');
+    assert.ok(result.playbookMatch.matchedSignals.includes('source'));
+    assert.ok(result.playbookMatch.matchedSignals.includes('planning'));
+    assert.ok(result.playbookMatch.matchedSignals.includes('schedule'));
+    assert.ok(result.playbookMatch.matchedSignals.includes('spreadsheet'));
   });
 
   await t.test('atomic TOR review remains a single Skill', async () => {
@@ -107,6 +135,63 @@ test('STeP Composite Playbooks', async (t) => {
       result.playbookPlan.map((s) => s.skill || s.action),
       ['iso9001-audit-readiness', 'audit-evidence-matrix', 'audit-interview-coach', 'management-review-prep']
     );
+  });
+
+  await t.test('TOR Run State separates facts and assumptions and creates parameter slots', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    const state = buildRunState({
+      playbook,
+      query: 'TOR action plan gantt google sheet',
+      team: 'pubsec',
+      matchedSignals: ['source', 'planning', 'schedule', 'spreadsheet'],
+      sourceRefs: [{ id: 'tor-ethnic-lampang', name: 'TOR มหกรรมชาติพันธุ์นครลำปาง.pdf' }],
+      now: new Date('2026-09-18T05:00:00Z'),
+    });
+
+    assert.equal(state.version, 2);
+    assert.equal(state.sourceRefs.length, 1);
+    assert.deepEqual(state.context.facts, {});
+    assert.deepEqual(state.context.assumptions, {});
+    assert.deepEqual(state.context.missingInformation, []);
+    assert.deepEqual(state.parameters, {
+      'contract-start': null,
+      'event-start': null,
+      'event-end': null,
+      'contract-end': null,
+    });
+    assert.equal(state.policies.budgetPolicy, 'source-only-no-auto-allocation');
+    assert.equal(state.outputSchema, 'project-master-plan-v1');
+  });
+
+  await t.test('multiple TOR sources are rejected from one run instead of being merged silently', () => {
+    const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
+    const sourceCheck = validatePlaybookSources(playbook, [
+      { id: 'tor-a', name: 'TOR A.pdf' },
+      { id: 'tor-b', name: 'TOR B.pdf' },
+    ]);
+    assert.equal(sourceCheck.valid, false);
+    assert.match(sourceCheck.error, /one TOR source per run/i);
+
+    assert.throws(
+      () =>
+        buildRunState({
+          playbook,
+          query: 'รวม TOR สองไฟล์ทำ gantt',
+          sourceRefs: [{ id: 'tor-a' }, { id: 'tor-b' }],
+        }),
+      /one TOR source per run/i
+    );
+  });
+
+  await t.test('TOR-to-Project-Plan specification locks budget and Gantt schema rules', async () => {
+    const spec = await readFile('docs/tor-to-project-plan.md', 'utf-8');
+    assert.ok(spec.includes('ห้าม AI กระจายวงเงินรวมเป็นงบรายกิจกรรมเอง'));
+    assert.ok(spec.includes('Budget Amount (Source Only)'));
+    assert.ok(spec.includes('Project Parameters'));
+    assert.ok(spec.includes('Project Master Plan'));
+    assert.ok(spec.includes('Gantt'));
+    assert.ok(spec.includes('TOR Fact'));
+    assert.ok(spec.includes('Planning Assumption'));
   });
 
   await t.test('run state can be persisted and resumed without becoming a workflow engine', async () => {
