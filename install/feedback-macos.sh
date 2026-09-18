@@ -6,6 +6,15 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=macos-runtime.sh
+. "$SCRIPT_DIR/macos-runtime.sh"
+
+if ! resolve_step_node "$ROOT_DIR"; then
+    echo "ไม่สามารถเตรียม Node.js Runtime ได้ กรุณาส่งภาพหน้าจอให้ AI Champion"
+    read -p "กด Enter เพื่อออก..." dummy
+    exit 1
+fi
+NODE_BIN="$STEP_NODE_BIN"
 
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -39,7 +48,7 @@ case "$choice" in
     1)
         echo ""
         echo -e "${GRAY}กำลังเปิดแบบฟอร์มแจ้งปัญหา...${NC}"
-        node "$ROOT_DIR/bin/step-ai.js" feedback --issue -d "$ROOT_DIR"
+        "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" feedback --issue -d "$ROOT_DIR"
         open -t "$ROOT_DIR/FEEDBACK.md" 2>/dev/null || open "$ROOT_DIR/FEEDBACK.md"
         echo -e "${GREEN}✓ เปิดไฟล์ FEEDBACK.md ให้ท่านเรียบร้อยแล้ว${NC}"
         echo -e "${YELLOW}คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้กด Save แล้วส่งไฟล์ให้ AI Champion ประจำทีมได้เลยครับ${NC}"
@@ -47,14 +56,14 @@ case "$choice" in
     2)
         echo ""
         echo -e "${GRAY}กำลังเปิดแบบฟอร์มของานเพิ่ม...${NC}"
-        node "$ROOT_DIR/bin/step-ai.js" feedback --request -d "$ROOT_DIR"
+        "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" feedback --request -d "$ROOT_DIR"
         open -t "$ROOT_DIR/REQUEST_NEW_TASK.md" 2>/dev/null || open "$ROOT_DIR/REQUEST_NEW_TASK.md"
         echo -e "${GREEN}✓ เปิดไฟล์ REQUEST_NEW_TASK.md ให้ท่านเรียบร้อยแล้ว${NC}"
         echo -e "${YELLOW}คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้ส่งไฟล์ให้หัวหน้าฝ่ายหรือ AI Champion ได้เลยครับ${NC}"
         ;;
     admin)
         echo ""
-        node "$ROOT_DIR/bin/step-ai.js" feedback --admin
+        "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" feedback --admin
         ;;
     *)
         echo ""
