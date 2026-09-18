@@ -1,22 +1,18 @@
 /**
  * Manifest Integrity & Dependency Graph Validator
- * 
- * Verifies that the cross-manifest relationships in STeP remain 100% intact:
- * - Skill -> Team exists in manifest/teams.yaml
- * - Skill -> Process exists in manifest/processes.yaml
- * - Skill -> Mandatory Document exists in manifest/documents.yaml
- * - Scope Escalation Target exists in manifest/skills.yaml or router-index.yaml
- * - Scope Authority exists in manifest/authority.yaml
+ *
+ * Cross-checks the STeP registries before a Pilot/Release:
+ * - registered Skill -> owner/process/document/path exists
+ * - Router Skill -> registered Skill/process/team exists
+ * - Router consumer teams -> valid team or wildcard
+ * - Scope escalation target -> registered Skill exists
+ * - Human-only authority -> authority registry exists
+ * - every registered user-facing Skill is reachable from the Router
  */
 
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-/**
- * Basic regex-based extractor for YAML keys and arrays without external dependencies
- * @param {string} text 
- * @returns {object}
- */
 export function extractManifestData(text) {
   const lines = text.split(/\r?\n/);
   const data = {
@@ -24,49 +20,52 @@ export function extractManifestData(text) {
     processes: {},
     documents: {},
     authorities: {},
-    routerSkills: [],
   };
 
   let section = '';
-  let currentKey = '';
-  let currentSub = '';
   let currentObj = null;
+  let currentSub = '';
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
 
-    if (line.match(/^skills:/)) {
+    if (/^skills:/.test(line)) {
       section = 'skills';
+      currentObj = null;
       continue;
     }
-    if (line.match(/^processes:/)) {
+    if (/^processes:/.test(line)) {
       section = 'processes';
+      currentObj = null;
       continue;
     }
-    if (line.match(/^documents:/)) {
+    if (/^documents:/.test(line)) {
       section = 'documents';
+      currentObj = null;
       continue;
     }
-    if (line.match(/^authorities:/)) {
+    if (/^authorities:/.test(line)) {
       section = 'authorities';
+      currentObj = null;
       continue;
     }
 
-    // Top-level map item (2 spaces indent)
     const mapMatch = line.match(/^ {2}([a-z0-9_.-]+):$/);
     if (mapMatch) {
-      currentKey = mapMatch[1];
+      const key = mapMatch[1];
       currentObj = {
-        name: currentKey,
+        name: key,
         owner: '',
         process: [],
+        path: '',
         references: { mandatory: [], optional: [] },
       };
-      if (section === 'skills') data.skills[currentKey] = currentObj;
-      if (section === 'processes') data.processes[currentKey] = currentObj;
-      if (section === 'documents') data.documents[currentKey] = currentObj;
-      if (section === 'authorities') data.authorities[currentKey] = currentObj;
+      currentSub = '';
+      if (section === 'skills') data.skills[key] = currentObj;
+      if (section === 'processes') data.processes[key] = currentObj;
+      if (section === 'documents') data.documents[key] = currentObj;
+      if (section === 'authorities') data.authorities[key] = currentObj;
       continue;
     }
 
@@ -78,13 +77,25 @@ export function extractManifestData(text) {
       continue;
     }
 
+    const pathMatch = line.match(/^ {4}path:\s*(.+)/);
+    if (pathMatch) {
+      currentObj.path = pathMatch[1].trim().replace(/^['"]|['"]$/g, '');
+      continue;
+    }
+
     const processInlineMatch = line.match(/^ {4}process:\s*\[(.*?)\]/);
     if (processInlineMatch) {
       currentObj.process = processInlineMatch[1].split(',').map((p) => p.trim()).filter(Boolean);
       continue;
     }
 
-    if (line.match(/^ {4}references:/)) {
+    const processScalarMatch = line.match(/^ {4}process:\s*([a-z0-9_.-]+)/);
+    if (processScalarMatch) {
+      currentObj.process = [processScalarMatch[1]];
+      continue;
+    }
+
+    if (/^ {4}references:/.test(line)) {
       currentSub = 'references';
       continue;
     }
@@ -94,22 +105,21 @@ export function extractManifestData(text) {
       currentObj.references.mandatory = mandatoryMatch[1].split(',').map((r) => r.trim()).filter(Boolean);
       continue;
     }
+
+    const optionalMatch = line.match(/^ {6}optional:\s*\[(.*?)\]/);
+    if (optionalMatch && currentSub === 'references') {
+      currentObj.references.optional = optionalMatch[1].split(',').map((r) => r.trim()).filter(Boolean);
+    }
   }
 
   return data;
 }
 
-/**
- * Extract router skills and their scope authorities from router-index.yaml
- * @param {string} text 
- * @returns {Array<{ name: string, processId: string, primaryTeams: string[], authorities: string[] }>}
- */
 export function extractRouterSkills(text) {
   const lines = text.split(/\r?\n/);
   const routerSkills = [];
   let currentSkill = null;
-  let inScope = false;
-  let inHumanOnly = false;
+  let scopeSection = '';
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -121,14 +131,14 @@ export function extractRouterSkills(text) {
         name: skillItemMatch[1],
         processId: '',
         primaryTeams: [],
+        consumerTeams: [],
         authorities: [],
+        escalationTargets: [],
       };
       routerSkills.push(currentSkill);
-      inScope = false;
-      inHumanOnly = false;
+      scopeSection = '';
       continue;
     }
-
     if (!currentSkill) continue;
 
     const procMatch = line.match(/^ {4}processId:\s*([a-z0-9_.-]+)/);
@@ -139,24 +149,41 @@ export function extractRouterSkills(text) {
 
     const primaryMatch = line.match(/^ {6}primary:\s*\[(.*?)\]/);
     if (primaryMatch) {
-      currentSkill.primaryTeams = primaryMatch[1].split(',').map((t) => t.trim()).filter(Boolean);
+      currentSkill.primaryTeams = primaryMatch[1].split(',').map((t) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
       continue;
     }
 
-    if (line.match(/^ {4}scope:/)) {
-      inScope = true;
+    const consumerMatch = line.match(/^ {6}consumers:\s*\[(.*?)\]/);
+    if (consumerMatch) {
+      currentSkill.consumerTeams = consumerMatch[1].split(',').map((t) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
       continue;
     }
-    if (inScope && line.match(/^ {6}human_only:/)) {
-      inHumanOnly = true;
+
+    if (/^ {4}scope:/.test(line)) {
+      scopeSection = '';
       continue;
     }
-    if (inHumanOnly && line.match(/^ {6}[a-z]/)) {
-      inHumanOnly = false;
+    if (/^ {6}allow:/.test(line)) {
+      scopeSection = 'allow';
+      continue;
+    }
+    if (/^ {6}escalate:/.test(line)) {
+      scopeSection = 'escalate';
+      continue;
+    }
+    if (/^ {6}human_only:/.test(line)) {
+      scopeSection = 'human_only';
+      continue;
+    }
+
+    const skillTargetMatch = line.match(/^ {10}skill:\s*([a-z0-9_-]+)/);
+    if (scopeSection === 'escalate' && skillTargetMatch) {
+      currentSkill.escalationTargets.push(skillTargetMatch[1]);
+      continue;
     }
 
     const authMatch = line.match(/^ {10}authority:\s*([a-z0-9_-]+)/);
-    if (inHumanOnly && authMatch) {
+    if (scopeSection === 'human_only' && authMatch) {
       currentSkill.authorities.push(authMatch[1]);
     }
   }
@@ -164,17 +191,6 @@ export function extractRouterSkills(text) {
   return routerSkills;
 }
 
-/**
- * Validate the cross-manifest dependency graph
- * @param {object} params
- * @param {Set<string>|string[]} params.teamCodes Valid team codes
- * @param {object} params.skills Parsed skills dictionary
- * @param {object} params.processes Parsed processes dictionary
- * @param {object} params.documents Parsed documents dictionary
- * @param {object} params.authorities Parsed authorities dictionary
- * @param {Array<object>} params.routerSkills Parsed router-index skills list
- * @returns {{ valid: boolean, errors: string[] }}
- */
 export function validateManifestIntegrity({
   teamCodes = new Set(),
   skills = {},
@@ -186,44 +202,59 @@ export function validateManifestIntegrity({
   const errors = [];
 
   const validTeams = new Set(Array.from(teamCodes).map((t) => t.toLowerCase()));
-  validTeams.add('developer');
-  validTeams.add('pm');
-  validTeams.add('ai-admin');
+  for (const special of ['developer', 'pm', 'ai-admin']) validTeams.add(special);
 
   const validProcessIds = new Set(Object.keys(processes));
   const validDocIds = new Set(Object.keys(documents));
   const validAuthorityIds = new Set(Object.keys(authorities));
+  const validSkillIds = new Set(Object.keys(skills));
+  const routerNames = routerSkills.map((s) => s.name);
+  const routerNameSet = new Set(routerNames);
 
-  // 1. Validate skills.yaml
+  if (routerNameSet.size !== routerNames.length) {
+    const seen = new Set();
+    for (const name of routerNames) {
+      if (seen.has(name)) errors.push(`router-index: duplicate Skill '${name}'`);
+      seen.add(name);
+    }
+  }
+
   for (const [skillName, skill] of Object.entries(skills)) {
     if (skill.owner && !validTeams.has(skill.owner.toLowerCase())) {
       errors.push(`Skill '${skillName}' references unknown owner team '${skill.owner}'`);
     }
 
-    if (Array.isArray(skill.process)) {
-      for (const procId of skill.process) {
-        if (!validProcessIds.has(procId)) {
-          errors.push(`Skill '${skillName}' references unknown process ID '${procId}'`);
-        }
+    for (const procId of skill.process || []) {
+      if (!validProcessIds.has(procId)) {
+        errors.push(`Skill '${skillName}' references unknown process ID '${procId}'`);
       }
     }
 
-    if (skill.references?.mandatory) {
-      for (const docId of skill.references.mandatory) {
-        if (!validDocIds.has(docId)) {
-          errors.push(`Skill '${skillName}' references unknown mandatory document '${docId}'`);
-        }
+    for (const docId of skill.references?.mandatory || []) {
+      if (!validDocIds.has(docId)) {
+        errors.push(`Skill '${skillName}' references unknown mandatory document '${docId}'`);
       }
+    }
+
+    if (skillName !== 'step-router' && !routerNameSet.has(skillName)) {
+      errors.push(`Skill '${skillName}' is registered but unreachable from router-index`);
     }
   }
 
-  // 2. Validate router-index.yaml
   for (const rSkill of routerSkills) {
-    if (rSkill.primaryTeams) {
-      for (const pt of rSkill.primaryTeams) {
-        if (!validTeams.has(pt.toLowerCase())) {
-          errors.push(`router-index: Skill '${rSkill.name}' references unknown primary team '${pt}'`);
-        }
+    if (!validSkillIds.has(rSkill.name)) {
+      errors.push(`router-index: Skill '${rSkill.name}' is not registered in skills.yaml`);
+    }
+
+    for (const pt of rSkill.primaryTeams || []) {
+      if (!validTeams.has(pt.toLowerCase())) {
+        errors.push(`router-index: Skill '${rSkill.name}' references unknown primary team '${pt}'`);
+      }
+    }
+
+    for (const ct of rSkill.consumerTeams || []) {
+      if (ct !== '*' && !validTeams.has(ct.toLowerCase())) {
+        errors.push(`router-index: Skill '${rSkill.name}' references unknown consumer team '${ct}'`);
       }
     }
 
@@ -231,26 +262,31 @@ export function validateManifestIntegrity({
       errors.push(`router-index: Skill '${rSkill.name}' references unknown processId '${rSkill.processId}'`);
     }
 
-    if (rSkill.authorities) {
-      for (const auth of rSkill.authorities) {
-        if (!validAuthorityIds.has(auth)) {
-          errors.push(`router-index: Skill '${rSkill.name}' references unknown authority '${auth}'`);
-        }
+    for (const auth of rSkill.authorities || []) {
+      if (!validAuthorityIds.has(auth)) {
+        errors.push(`router-index: Skill '${rSkill.name}' references unknown authority '${auth}'`);
+      }
+    }
+
+    for (const target of rSkill.escalationTargets || []) {
+      if (!validSkillIds.has(target)) {
+        errors.push(`router-index: Skill '${rSkill.name}' escalates to unknown Skill '${target}'`);
       }
     }
   }
 
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+  return { valid: errors.length === 0, errors };
 }
 
-/**
- * Load all manifest files from disk and validate their dependency graph
- * @param {string} manifestDir Path to manifest/ directory
- * @returns {Promise<{ valid: boolean, errors: string[], summary: object }>}
- */
+async function pathExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function loadAndValidateManifests(manifestDir) {
   const teamsContent = await readFile(join(manifestDir, 'teams.yaml'), 'utf-8');
   const skillsContent = await readFile(join(manifestDir, 'skills.yaml'), 'utf-8');
@@ -259,12 +295,8 @@ export async function loadAndValidateManifests(manifestDir) {
   const authContent = await readFile(join(manifestDir, 'authority.yaml'), 'utf-8');
   const routerContent = await readFile(join(manifestDir, 'router-index.yaml'), 'utf-8');
 
-  // Extract team codes from teams.yaml
   const teamCodes = new Set();
-  const teamMatches = teamsContent.matchAll(/^ {6}- id:\s*([a-z0-9_-]+)/gm);
-  for (const m of teamMatches) {
-    teamCodes.add(m[1]);
-  }
+  for (const m of teamsContent.matchAll(/^ {6}- id:\s*([a-z0-9_-]+)/gm)) teamCodes.add(m[1]);
 
   const skillsData = extractManifestData(skillsContent);
   const processesData = extractManifestData(processesContent);
@@ -281,8 +313,39 @@ export async function loadAndValidateManifests(manifestDir) {
     routerSkills,
   });
 
+  const rootDir = join(manifestDir, '..');
+  const pathErrors = [];
+
+  for (const [skillName, skill] of Object.entries(skillsData.skills)) {
+    if (!skill.path) {
+      pathErrors.push(`Skill '${skillName}' has no path in skills.yaml`);
+      continue;
+    }
+    if (skill.path.startsWith('/') || skill.path.includes('..')) {
+      pathErrors.push(`Skill '${skillName}' has unsafe path '${skill.path}'`);
+      continue;
+    }
+    if (!(await pathExists(join(rootDir, skill.path)))) {
+      pathErrors.push(`Skill '${skillName}' path does not exist: ${skill.path}`);
+    }
+  }
+
+  for (const [docId, doc] of Object.entries(docsData.documents)) {
+    if (!doc.path) continue; // some controlled templates are external/not yet stored in repo
+    if (doc.path.startsWith('/') || doc.path.includes('..')) {
+      pathErrors.push(`Document '${docId}' has unsafe path '${doc.path}'`);
+      continue;
+    }
+    if (!(await pathExists(join(rootDir, doc.path)))) {
+      pathErrors.push(`Document '${docId}' path does not exist: ${doc.path}`);
+    }
+  }
+
+  const errors = [...result.errors, ...pathErrors];
+
   return {
-    ...result,
+    valid: errors.length === 0,
+    errors,
     summary: {
       teamsCount: teamCodes.size,
       skillsCount: Object.keys(skillsData.skills).length,
