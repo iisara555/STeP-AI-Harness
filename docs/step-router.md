@@ -50,7 +50,7 @@
 ```text
 Level 0: Registry / Metadata (router-index.yaml ~KB)
              ↓
-Level 1: Active Domain Skill (SKILL.md เพียง 1 ตัว)
+Level 1: Active Skill / Current Playbook Step (ทีละ 1 SKILL.md)
              ↓
 Level 2: Mandatory Rules & SOPs (rules/*.md เมื่อคำขอเรียกหาเงื่อนไข)
              ↓
@@ -58,7 +58,7 @@ Level 3: Templates & Examples (เฉพาะเมื่อต้องเท�
 ```
 
 1. **Level 0 (Metadata)**: สแกนโฟลเดอร์ นามสกุลไฟล์ และ User Intent เพื่อคำนวณคะแนน
-2. **Level 1 (Domain Skill)**: โหลดเฉพาะ `SKILL.md` ตัวเดียวที่ได้รับคัดเลือก และตรวจสอบ Scope Guard
+2. **Level 1 (Skill / Playbook Step)**: งาน Atomic โหลด `SKILL.md` ตัวเดียว; งาน Composite ใช้ `manifest/playbooks.yaml` และโหลดทีละ Skill ตาม current step
 3. **Level 2 (Mandatory Rules & SOPs)**: เปิดอ่านกติกาใน `rules/` หรือ SOP เฉพาะเมื่อคำขอถามถึงระเบียบ ความลับ หรือความปลอดภัย
 4. **Level 3 (Templates & Examples)**: 0 ไฟล์เป็นค่าเริ่มต้น ห้ามเปิดตัวอย่างเอกสารหรือคู่มือฉบับเต็มโดยไม่จำเป็น เปิดเฉพาะเมื่อผู้ใช้สั่งให้จัดรูปแบบเทียบเคียง
 
@@ -154,3 +154,27 @@ scope:
 ✓ Active Skill: tor-review (Confidence: 0.95, HIGH Tier)
 ✓ Scope Guard: Active (ตรวจขอบเขต/เกณฑ์ตรวจรับ | Human-only: ไม่อนุมัติวงเงินหรือวินิจฉัยกฎหมาย)
 ```
+
+
+## Composite Routing / Playbooks
+
+Router แยกงานเป็น 2 แบบ:
+
+- **Atomic** — ผลลัพธ์หลักเดียว ใช้ 5-Factor Skill Scoring ตามเดิม
+- **Composite** — หลายผลลัพธ์ที่ต้อง handoff กัน และตรง signal ใน `manifest/playbooks.yaml`
+
+Composite routing ไม่แทนที่ Skill Router แต่ทำหน้าที่เลือก sequence ก่อน จากนั้นแต่ละ step ยังใช้ Skill, Scope Guard, Mandatory Rules และ Authority เดิม
+
+```text
+Composite Request
+      ↓
+Playbook Detection
+      ↓
+Current Skill
+      ↓ structured handoff
+Next Skill
+      ↓
+Tool / Action
+```
+
+Run state เก็บได้ที่ `.step-ai/runs/<run-id>/state.json` เพื่อให้กลับมาทำงานเดิมต่อได้ โดย state ต้องไม่มี secrets/credentials ที่ไม่จำเป็น
