@@ -27,7 +27,7 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 
 ช่องทางหลักคือ **Shared Drive หรือช่องทางภายในที่ AI Champion ประจำทีมแจ้ง** ให้ใช้ไฟล์ชุดที่องค์กรระบุเท่านั้น
 
-ถ้าเข้าแหล่งภายในไม่ได้ ให้ใช้ [GitHub Release v0.7.2 สำหรับ Pilot](https://github.com/iisara555/STeP-AI-Harness/releases/download/v0.7.2/STeP-AI-Pilot-v0.7.2.zip) เป็นช่องทางสำรอง แล้วแจ้ง AI Champion ให้ทราบ
+หากเข้าแหล่งภายในไม่ได้ ให้ติดต่อ AI Champion เพื่อขอช่องทางที่องค์กรอนุมัติ **อย่าใช้ Public GitHub Release เป็น fallback โดยอัตโนมัติ** เพราะ repository visibility กับสิทธิ์เผยแพร่ข้อมูลภายในเป็นคนละเรื่อง
 
 อย่าดาวน์โหลดไฟล์ติดตั้งจากแหล่งอื่นหรือจากไฟล์ที่ส่งต่อโดยไม่ทราบที่มา
 
@@ -201,6 +201,10 @@ Updater จะสำรองรุ่นเดิมและพยายาม
 - [Context Efficiency](docs/context-efficiency.md) — ทำไมระบบจึงโหลดเฉพาะบริบทที่จำเป็น
 - [Pilot Operations](docs/pilot-operations.md) — การดูแล Pilot สำหรับ AI Champion
 - [Quality Layer](docs/quality-layer.md) — ขอบเขตข้อมูลคุณภาพและ known gaps
+
+## Repository visibility
+
+ณ วันที่ 20 กันยายน 2569 repository นี้มีสถานะ **Public** ดังนั้นไฟล์ที่ commit ต้องถือว่าเผยแพร่สู่สาธารณะได้ ห้ามนำ controlled SOP/WI, PII, customer data, credentials หรือข้อมูลภายในที่ยังไม่ได้อนุมัติเผยแพร่เข้า repo ดู [Repository Visibility & Data Boundary](docs/repository-data-boundary.md)
 
 ## สำหรับ AI Champion และผู้ดูแลระบบ
 
