@@ -12,6 +12,17 @@ documents:
     verification: pending-afp-confirmation
     status: missing
 
+
+  finance-disbursement-policy:
+    title: "นโยบาย/แนวปฏิบัติการเบิกจ่ายและชุดเอกสารประกอบปัจจุบันของ STeP/CMU"
+    owner: afp
+    type: policy
+    process: procurement.request
+    sourceLevel: organization-policy
+    authority: unverified
+    verification: pending-afp-confirmation
+    status: missing
+
   qs-doc-control-procedure:
     title: "QP-DC-001 การควบคุมเอกสารและข้อมูล"
     owner: qs
