@@ -1,6 +1,6 @@
 const DEFAULT_BUDGETS = Object.freeze({
   startup: 800,
-  routing: 200,
+  routing: 300,
   skill: 2500,
   rules: 800,
   sources: 3000,
