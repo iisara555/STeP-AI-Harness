@@ -647,7 +647,7 @@ step-ai benchmark --limit 20
 Automated benchmark วัด Router, Context Budget, Authority และ latency โดย **ไม่เรียก LLM**  
 คุณภาพคำตอบจริงและ Time-to-Usable-Output ต้องเก็บจาก Human Pilot
 
-รายละเอียด: [docs/pilot-30-task-test.md](docs/pilot-30-task-test.md)
+รายละเอียด: [docs/pilot-30-task-test.md](docs/pilot-30-task-test.md)\n\nผล Model-side Round 1: [docs/pilot-30-model-side-results-2026-09-19.md](docs/pilot-30-model-side-results-2026-09-19.md)
 
 ---
 
