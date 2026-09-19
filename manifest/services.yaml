@@ -1,53 +1,277 @@
-version: 1
-description: Official STeP Service Catalog — Service Journeys, Lead Teams, and Value Delivery
+version: 2
+description: Official STeP Service Registry — service routing, public discovery sources, and owner-verification status
+
+policy:
+  purpose: "ช่วย Router/Skills จับคู่ความต้องการกับบริการและทรัพยากรที่เกี่ยวข้อง โดยไม่ใช้ข้อมูลสาธารณะเป็นสิทธิ์อนุมัติแทนเจ้าของบริการ"
+  publicDiscoveryIsNotAuthority: true
+  humanVerifyBeforeCommitment: true
+  doNotStorePersonalExpertProfiles: true
+  lastReviewed: "2026-09-19"
+
+sources:
+  step-nsp-services:
+    title: "Northern Science Park — Total Innovation Solutions / Services"
+    url: "https://www.step.cmu.ac.th/NSP/service.php"
+    type: public-official
+  step-service-journey:
+    title: "STeP — Our Journey / Solution Services"
+    url: "https://step.cmu.ac.th/our_journey.php"
+    type: public-official
+  step-oit-2026:
+    title: "STeP OIT 2026 — Public service and e-Service information"
+    url: "https://www1.step.cmu.ac.th/oit/oit-2026.php"
+    type: public-official
+  abplas-service:
+    title: "ABPlas Laboratory Management Platform"
+    url: "https://abplas.step.cmu.ac.th/"
+    type: public-official
+  nstis:
+    title: "National Science and Technology Information System (NSTIS)"
+    url: "https://nstis.mhesi.go.th/"
+    type: external-government-directory
 
 services:
+  service-intake-front-door:
+    name: "รับเรื่องและจับคู่บริการ STeP (Service Intake & Triage)"
+    leadTeam: crm
+    supportTeams: [ga, ifu, les, foodfabr, linc, piti, tech-spin]
+    targetAudience: "ผู้ประกอบการ บุคคลทั่วไป นักวิจัย หน่วยงานภายนอก และผู้ใช้บริการอาคาร"
+    capabilities:
+      - inquiry-triage
+      - service-matching
+      - visit-and-facility-inquiry
+      - handoff-to-service-owner
+    processes: [client.inquiry-triage]
+    sourceRefs: [step-service-journey, step-oit-2026]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "จุดเริ่มต้นสำหรับคัดแยกความต้องการ ตรวจข้อมูลขั้นต่ำ และส่งต่อไปยังบริการ/ทีมที่เหมาะสม"
+
   incubation-startup:
     name: "บริการบ่มเพาะวิสาหกิจเริ่มต้นและสตาร์ทอัพ (Innovation Incubation & Acceleration)"
     leadTeam: piti
+    leadDisplay: "PITi"
     supportTeams: [isi, eic, imo, cc, crm]
-    targetAudience: "ผู้ประกอบการรุ่นใหม่, นักศึกษา, อาจารย์, และ Startup"
-    processes:
-      - incubation.startup-intake
-      - project.planning
-    description: "บ่มเพาะโมเดลธุรกิจ เชื่อมโยงแหล่งทุน พัฒนาผลิตภัณฑ์ต้นแบบ และขยายตลาด"
+    targetAudience: "ผู้ประกอบการรุ่นใหม่ นักศึกษา อาจารย์ และ Startup"
+    capabilities:
+      - startup-intake
+      - business-model-development
+      - prototype-and-market-readiness
+      - funding-and-network-connection
+    processes: [incubation.startup-intake, project.planning]
+    sourceRefs: [step-nsp-services]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "บ่มเพาะโมเดลธุรกิจ พัฒนาความพร้อมผลิตภัณฑ์/ตลาด และเชื่อมโยงเครือข่ายสนับสนุน"
+
+  industry-problem-solving:
+    name: "บริการรับโจทย์อุตสาหกรรมและจับคู่ผู้เชี่ยวชาญ"
+    leadTeam: linc
+    publicUnit: "Inco"
+    supportTeams: [tech-up, tech-spin, les, foodfabr, piti]
+    targetAudience: "ภาคอุตสาหกรรม ผู้ประกอบการ ชุมชน และหน่วยงานที่มีโจทย์เทคโนโลยี"
+    capabilities:
+      - problem-intake
+      - problem-framing
+      - expert-matching
+      - lab-and-equipment-matching
+      - funding-pathway-discovery
+    processes: [industry.problem-discovery]
+    sourceRefs: [step-nsp-services, step-oit-2026]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "ถอดโจทย์ก่อนเลือกเทคโนโลยี แล้วค้นหา expertise, ห้องปฏิบัติการ, เครื่องมือ หรือทีมที่เหมาะสม"
+
+  ip-management:
+    name: "บริการทรัพย์สินทางปัญญา (IP Service)"
+    leadTeam: piti
+    leadDisplay: "PITi"
+    supportTeams: [tech-spin]
+    targetAudience: "อาจารย์ นักวิจัย บุคลากร มช. และผู้พัฒนานวัตกรรม"
+    capabilities:
+      - ip-intake
+      - ip-consulting
+      - protection-pathway
+      - commercialization-handoff
+    processes: [technology.commercialization]
+    sourceRefs: [step-oit-2026]
+    existenceStatus: public-verified
+    ownershipStatus: user-confirmed
+    description: "รับเรื่องและให้คำปรึกษาด้านทรัพย์สินทางปัญญา ก่อนส่งต่อสู่การคุ้มครองหรือการใช้ประโยชน์เชิงพาณิชย์"
 
   tech-commercialization:
-    name: "บริการบริหารทรัพย์สินทางปัญญาและการถ่ายทอดเทคโนโลยีสู่เชิงพาณิชย์"
+    name: "บริการถ่ายทอดเทคโนโลยีและผลักดันงานวิจัยสู่เชิงพาณิชย์"
     leadTeam: tech-spin
-    supportTeams: [tech-up, linc, pubsec, afp]
-    targetAudience: "นักวิจัย มช., ภาคอุตสาหกรรม และผู้ประกอบการนวัตกรรม"
-    processes:
-      - technology.commercialization
-      - procurement.tor
-    description: "จดสิทธิบัตร อนุญาตให้ใช้สิทธิ (Licensing) จัดตั้งบริษัท Spin-off และวิจัยร่วมภาคเอกชน"
+    supportTeams: [piti, tech-up, linc, afp]
+    targetAudience: "นักวิจัย มช. ภาคอุตสาหกรรม และผู้ประกอบการนวัตกรรม"
+    capabilities:
+      - research-commercialization
+      - licensing-support
+      - spin-off-support
+      - industry-research-matching
+    processes: [technology.commercialization]
+    sourceRefs: [step-nsp-services]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "เชื่อมงานวิจัยกับตลาด/ภาคเอกชน และเตรียมเส้นทาง licensing, spin-off หรือความร่วมมือเชิงพาณิชย์"
+
+  business-matching:
+    name: "Business Matching & Funding Support"
+    leadTeam: linc
+    supportTeams: [mi, crm, tech-spin, piti, imo]
+    targetAudience: "ผู้ประกอบการ Startup นักวิจัย และพันธมิตรธุรกิจ"
+    capabilities:
+      - partner-matching
+      - business-matching
+      - funding-source-discovery
+      - ecosystem-connection
+    processes: [industry.problem-discovery, market.insight-research]
+    sourceRefs: [step-nsp-services]
+    existenceStatus: public-verified
+    ownershipStatus: owner-confirmation-recommended
+    description: "ค้นหาเส้นทางจับคู่ธุรกิจ เครือข่าย และแหล่งทุน โดยผลการจับคู่ต้องให้เจ้าของบริการยืนยันก่อนติดต่อหรือรับปาก"
 
   infrastructure-testing:
-    name: "บริการวิเคราะห์ ทดสอบ สอบเทียบ และโรงงานต้นแบบนวัตกรรมอาหาร"
+    name: "บริการโครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ"
     leadTeam: ifu
-    supportTeams: [iqi, les, foodfabr, crm]
-    targetAudience: "ผู้ประกอบการแปรรูปอาหาร, ภาคอุตสาหกรรม, นักวิจัย"
-    processes:
-      - client.inquiry-triage
-      - quality.document-control
-    description: "ให้บริการโครงสร้างพื้นฐาน ห้องปฏิบัติการมาตรฐาน และโรงงานต้นแบบ Food Innovation"
+    supportTeams: [iqi, les, foodfabr, tech-up, crm]
+    targetAudience: "ผู้ประกอบการ ภาคอุตสาหกรรม นักวิจัย และผู้พัฒนาผลิตภัณฑ์"
+    capabilities:
+      - laboratory-discovery
+      - equipment-discovery
+      - pilot-plant-discovery
+      - facility-routing
+    processes: [client.inquiry-triage, laboratory.result-review]
+    sourceRefs: [step-nsp-services, step-service-journey]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "Umbrella service สำหรับค้นหา Lab, เครื่องมือ, FABLAB, ABPlas, CIMO, Central Lab, RF Pilot Plant และ FOODFABR"
+
+  laboratory-testing:
+    name: "บริการวิเคราะห์และทดสอบทางห้องปฏิบัติการ"
+    leadTeam: les
+    supportTeams: [foodfabr, tech-up]
+    targetAudience: "ผู้ประกอบการ นักวิจัย และผู้พัฒนาผลิตภัณฑ์"
+    capabilities:
+      - laboratory-testing
+      - product-testing
+      - method-and-capability-routing
+      - result-review-handoff
+    processes: [laboratory.result-review]
+    sourceRefs: [step-nsp-services, step-service-journey]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "จับคู่ความต้องการทดสอบกับห้องปฏิบัติการและความสามารถที่เกี่ยวข้อง โดยไม่รับรองผลแทนผู้มีอำนาจของ Lab"
+
+  food-pilot-production:
+    name: "บริการโรงงานต้นแบบนวัตกรรมอาหาร (FOODFABR)"
+    leadTeam: foodfabr
+    supportTeams: [les, mi, tech-up]
+    targetAudience: "ผู้ประกอบการอาหาร นักวิจัย และผู้พัฒนาผลิตภัณฑ์อาหาร"
+    capabilities:
+      - food-prototype-production
+      - food-processing-trial
+      - scale-up-trial
+      - market-test-preparation
+    processes: [project.planning]
+    sourceRefs: [step-nsp-services, step-service-journey]
+    existenceStatus: public-verified
+    ownershipStatus: public-and-organization-mapping
+    description: "ทดลองผลิตและแปรรูปผลิตภัณฑ์อาหารในระดับต้นแบบ/กึ่งอุตสาหกรรมและเชื่อมต่อการทดสอบที่เกี่ยวข้อง"
+
+  plasma-technology:
+    name: "บริการเทคโนโลยีพลาสมาสำหรับเกษตรและชีวภาพ (ABPlas)"
+    leadTeam: les
+    serviceUnit: "ABPlas"
+    supportTeams: [tech-up]
+    targetAudience: "นักวิจัย นักศึกษา ผู้ประกอบการ และภาคอุตสาหกรรม"
+    capabilities:
+      - plasma-rnd
+      - plasma-analysis
+      - sample-testing
+      - equipment-use-request
+    processes: [laboratory.result-review]
+    sourceRefs: [abplas-service, step-nsp-services]
+    existenceStatus: public-verified
+    ownershipStatus: owner-confirmation-recommended
+    description: "ค้นหาความเหมาะสมของบริการ ABPlas และเตรียมข้อมูลก่อนยื่นคำขอใช้บริการ/เครื่องมือ"
+
+  prototype-fabrication:
+    name: "บริการขึ้นรูปชิ้นงานสามมิติและพัฒนาต้นแบบ (FABLAB)"
+    leadTeam: tech-up
+    serviceUnit: "The Brick Fabrication Lab (FABLAB)"
+    supportTeams: [linc]
+    targetAudience: "นักวิจัย Startup ผู้ประกอบการ และทีมพัฒนาผลิตภัณฑ์"
+    capabilities:
+      - 3d-printing
+      - prototype-fabrication
+      - material-and-packaging-prototype
+    processes: [project.planning]
+    sourceRefs: [step-nsp-services, step-service-journey]
+    existenceStatus: public-verified
+    ownershipStatus: owner-confirmation-recommended
+    description: "ช่วยค้นหาเส้นทางพัฒนาต้นแบบและการใช้ทรัพยากร FABLAB ก่อนประสานเจ้าของบริการ"
+
+  facility-space:
+    name: "บริการพื้นที่ ห้องประชุม และสถานที่จัดกิจกรรม"
+    leadTeam: ifu
+    supportTeams: [crm, ga]
+    targetAudience: "หน่วยงานภายใน ผู้ประกอบการ พันธมิตร และผู้จัดกิจกรรม"
+    capabilities:
+      - meeting-room-inquiry
+      - event-space-inquiry
+      - exhibition-space-inquiry
+      - office-space-inquiry
+    processes: [client.inquiry-triage]
+    sourceRefs: [step-nsp-services, step-oit-2026]
+    existenceStatus: public-verified
+    ownershipStatus: organization-mapping
+    description: "จับคู่ความต้องการพื้นที่กับประเภทห้อง/พื้นที่และส่งต่อขั้นตอนจองที่ได้รับการยืนยัน"
 
   creative-marketing:
     name: "บริการสื่อสารการตลาด ผลิตสื่อ Creative และจัดกิจกรรมส่งเสริมนวัตกรรม"
     leadTeam: cc
     supportTeams: [mi, crm, imo]
-    targetAudience: "หน่วยงานภายในอุทยานฯ, สตาร์ทอัพ และองค์กรพันธมิตร"
-    processes:
-      - creative.branding
-      - creative.event
-    description: "ผลิตสื่อสร้างสรรค์ วางกลยุทธ์ประชาสัมพันธ์ และบริหารการจัดงานนิทรรศการนวัตกรรม"
+    targetAudience: "หน่วยงานภายใน STeP Startup และองค์กรพันธมิตร"
+    capabilities:
+      - creative-brief
+      - communication-design
+      - event-and-exhibition-concept
+      - market-communication
+    processes: [creative.branding, creative.event]
+    sourceRefs: []
+    existenceStatus: organization-registered
+    ownershipStatus: organization-mapping
+    description: "ผลิตสื่อสร้างสรรค์ วางโครงสื่อสาร และออกแบบกิจกรรม/นิทรรศการ"
 
   public-sector-innovation:
     name: "บริการยกระดับนวัตกรรมสำหรับหน่วยงานภาครัฐและองค์กรปกครองส่วนท้องถิ่น"
     leadTeam: pubsec
     supportTeams: [sit, linc, ga]
-    targetAudience: "หน่วยงานภาครัฐ, อปท., สถาบันการศึกษา"
-    processes:
-      - project.planning
-      - procurement.tor
-    description: "ขับเคลื่อนนวัตกรรมเชิงพื้นที่และการประยุกต์ใช้งานเทคโนโลยีในภาครัฐ"
+    targetAudience: "หน่วยงานภาครัฐ อปท. และสถาบันการศึกษา"
+    capabilities:
+      - public-sector-project-design
+      - area-based-innovation
+      - technology-adoption-planning
+    processes: [project.planning, procurement.tor]
+    sourceRefs: []
+    existenceStatus: organization-registered
+    ownershipStatus: organization-mapping
+    description: "ขับเคลื่อนนวัตกรรมเชิงพื้นที่และการประยุกต์ใช้เทคโนโลยีในภาครัฐ"
+
+resourceResolution:
+  expert-and-resource-matching:
+    ownerTeam: linc
+    purpose: "ค้นหา candidate expert, researcher, lab, equipment หรือ pilot plant จากโจทย์ที่ผ่านการ frame แล้ว"
+    preferredSequence:
+      - match-service-capability
+      - search-step-nsp-public-resources
+      - search-nstis-when-needed
+      - verify-with-service-owner
+    discoverySources: [step-nsp-services, nstis]
+    rules:
+      - "ค้นหาความสามารถและทรัพยากรก่อนชื่อบุคคล"
+      - "ข้อมูล NSTIS/เว็บสาธารณะเป็น discovery evidence ไม่ใช่การรับรอง availability หรือความเหมาะสมขั้นสุดท้าย"
+      - "ไม่สร้าง permanent profile รายบุคคลจาก social media หรือข่าวประชาสัมพันธ์"
+      - "ก่อนติดต่อ จอง ใช้งบ หรือรับปาก ให้เจ้าของบริการ/ผู้ใช้ยืนยัน candidate และข้อมูลล่าสุด"
+      - "หากโจทย์ยังไม่ชัด ให้ใช้ industry-problem-discovery ก่อน matching"
