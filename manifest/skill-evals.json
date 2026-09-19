@@ -19,7 +19,8 @@
     "pilotToApproved": [
       "owner review",
       "usage evidence",
-      "no unresolved critical safety issue"
+      "no unresolved critical safety issue",
+      "record explicit approval evidence; approval role alone is insufficient"
     ]
   },
   "directModelSideBenchmark": {
