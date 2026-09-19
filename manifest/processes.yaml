@@ -242,3 +242,17 @@ processes:
       - quality.management-review.decision-prep
       - quality.management-review.action-follow-up
     description: "รวบรวมและทบทวนผลการดำเนินงาน QMS เพื่อเตรียมข้อมูลและประเด็นตัดสินใจสำหรับฝ่ายบริหาร"
+
+  ai.skill-governance:
+    name: "การสร้าง ทบทวน และนำ Skill ของ STeP AI Harness เข้าสู่ Pilot"
+    category: ai-governance
+    owner: ai-admin
+    consumers: ["*"]
+    subprocesses:
+      - ai.skill-governance.need-gate
+      - ai.skill-governance.authoring
+      - ai.skill-governance.registry-routing
+      - ai.skill-governance.evaluation
+      - ai.skill-governance.pilot-promotion
+    description: "กำกับการสร้าง/ปรับ Skill ให้แยกจาก Playbook, Rule, Registry และ Action พร้อม routing, source, authority และ eval ก่อน Pilot"
+
