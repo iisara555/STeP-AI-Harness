@@ -18,6 +18,10 @@ import {
   inspectCheapContext,
   rescoreWithCheapContext,
 } from '../../modules/router/index.js';
+import {
+  buildCompactRoutingContract,
+  buildContextBudgetPlan,
+} from '../../modules/context-budget/index.js';
 
 /**
  * Load router index skills from manifest/router-index.yaml
@@ -205,6 +209,82 @@ export async function loadTeamsDictionary() {
   return dict;
 }
 
+function parseInlineList(raw = '') {
+  return String(raw)
+    .split(',')
+    .map((value) => value.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
+}
+
+export async function loadSkillContextMetadata(skillName) {
+  if (!skillName) return null;
+  const text = await readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8');
+  const lines = text.split(/\r?\n/);
+  let active = false;
+  let inReferences = false;
+  const result = { name: skillName, path: '', mandatory: [], optional: [] };
+
+  for (const line of lines) {
+    const key = line.match(/^  ([a-z0-9_-]+):\s*$/);
+    if (key) {
+      if (active && key[1] !== skillName) break;
+      active = key[1] === skillName;
+      inReferences = false;
+      continue;
+    }
+    if (!active) continue;
+
+    const pathMatch = line.match(/^    path:\s*(.+)/);
+    if (pathMatch) {
+      result.path = pathMatch[1].trim().replace(/^['"]|['"]$/g, '');
+      continue;
+    }
+    if (/^    references:/.test(line)) {
+      inReferences = true;
+      continue;
+    }
+    if (inReferences) {
+      const mandatory = line.match(/^      mandatory:\s*\[(.*?)\]/);
+      if (mandatory) result.mandatory = parseInlineList(mandatory[1]);
+      const optional = line.match(/^      optional:\s*\[(.*?)\]/);
+      if (optional) result.optional = parseInlineList(optional[1]);
+    }
+  }
+
+  return result;
+}
+
+export async function loadDocumentContextMetadata(ids = []) {
+  const wanted = new Set(ids || []);
+  if (wanted.size === 0) return [];
+
+  const text = await readFile(join(PACKAGE_ROOT, 'manifest', 'documents.yaml'), 'utf-8');
+  const lines = text.split(/\r?\n/);
+  const results = [];
+  let current = null;
+
+  for (const line of lines) {
+    const key = line.match(/^  ([a-z0-9_-]+):\s*$/);
+    if (key) {
+      current = wanted.has(key[1])
+        ? { id: key[1], title: '', path: '', status: '' }
+        : null;
+      if (current) results.push(current);
+      continue;
+    }
+    if (!current) continue;
+
+    const title = line.match(/^    title:\s*(.+)/);
+    if (title) current.title = title[1].trim().replace(/^['"]|['"]$/g, '');
+    const pathMatch = line.match(/^    path:\s*(.+)/);
+    if (pathMatch) current.path = pathMatch[1].trim().replace(/^['"]|['"]$/g, '');
+    const status = line.match(/^    status:\s*(.+)/);
+    if (status) current.status = status[1].trim().replace(/^['"]|['"]$/g, '');
+  }
+
+  return results;
+}
+
 /**
  * Programmatic query function for testing and external consumers
  * @param {string} query 
@@ -288,6 +368,46 @@ export async function queryStepRouter(query, options = {}) {
   const primaryTeamCode = selectedPlaybook?.owner || selectedSkill?.teams?.primary?.[0] || 'common';
   const teamInfo = teams[primaryTeamCode] || { id: primaryTeamCode, name: primaryTeamCode };
 
+  const skillMetadata = selectedSkill
+    ? await loadSkillContextMetadata(selectedSkill.name)
+    : null;
+  const referenceMetadata = await loadDocumentContextMetadata(skillMetadata?.mandatory || []);
+
+  let skillText = '';
+  if (skillMetadata?.path) {
+    try {
+      skillText = await readFile(join(PACKAGE_ROOT, skillMetadata.path), 'utf-8');
+    } catch {
+      skillText = '';
+    }
+  }
+
+  const ruleTexts = [];
+  for (const ref of referenceMetadata) {
+    if (!ref.path) continue;
+    try {
+      ruleTexts.push(await readFile(join(PACKAGE_ROOT, ref.path), 'utf-8'));
+    } catch {
+      // Missing reference content stays visible in metadata without guessing.
+    }
+  }
+
+  const routingContract = buildCompactRoutingContract({
+    selectedSkill,
+    selectedPlaybook,
+    playbookPlan,
+    teamInfo,
+    scopeResult,
+    bestMatch,
+    skillMetadata,
+    referenceMetadata,
+  });
+  const contextPlan = buildContextBudgetPlan({
+    routingContract,
+    skillText,
+    ruleTexts,
+  });
+
   // Disambiguation & Clarification detection:
   // Is ambiguous when in FALLBACK tier (score < 0.50) OR (runnerUp close to bestMatch && score < 0.80)
   const isAmbiguous = Boolean(
@@ -326,6 +446,10 @@ export async function queryStepRouter(query, options = {}) {
     selectedPlaybook,
     playbookPlan,
     playbookMatch,
+    skillMetadata,
+    referenceMetadata,
+    routingContract,
+    contextPlan,
   };
 }
 
@@ -333,7 +457,8 @@ export async function queryStepRouter(query, options = {}) {
  * CLI command runner: `step-ai ask`
  */
 export async function runAsk(args) {
-  header('STeP AI Assistant — ผู้ช่วยค้นหาทักษะและมาตรฐานงานองค์กร');
+  const machineMode = Boolean(args.json);
+  if (!machineMode) header('STeP AI Assistant — ผู้ช่วยค้นหาทักษะและมาตรฐานงานองค์กร');
 
   let query = args._ ? args._.slice(1).join(' ') : '';
   if (!query && args.q) query = args.q;
@@ -361,10 +486,17 @@ export async function runAsk(args) {
     }
   }
 
-  info(`วิเคราะห์คำถาม: "${colors.bold(query)}" ...\n`);
+  if (!machineMode) info(`วิเคราะห์คำถาม: "${colors.bold(query)}" ...\n`);
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const result = await queryStepRouter(query, { team: userTeam });
+  if (machineMode) {
+    console.log(JSON.stringify({
+      routing: result.routingContract,
+      contextPlan: result.contextPlan,
+    }, null, 2));
+    return;
+  }
   const {
     selectedSkill,
     bestMatch,
