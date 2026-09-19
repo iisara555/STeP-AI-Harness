@@ -56,7 +56,8 @@
     "docs/architecture.md",
     "docs/context-efficiency.md",
     "manifest/pilot-benchmark.json",
-    "docs/pilot-30-task-test.md"
+    "docs/pilot-30-task-test.md",
+    "docs/pilot-30-model-side-results-2026-09-19.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
@@ -78,4 +79,4 @@
   "engines": {
     "node": ">=20.0.0"
   }
-}
+}\n
