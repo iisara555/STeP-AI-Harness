@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.6.2
+  version: 2.7.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
