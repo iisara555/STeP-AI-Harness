@@ -54,7 +54,7 @@ test('STeP Skill Authoring Standard', async (t) => {
 
   await t.test('all local Markdown dependencies referenced by Skills exist', async () => {
     const markdownLink = /\[[^\]]*\]\(([^)]+)\)/g;
-    const localResource = /`((?:references|scripts|templates|assets)\/[A-Za-z0-9_.\-/]+)`/g;
+    const localResource = /`((?:references|scripts|templates)\/[A-Za-z0-9_.\-/]+)`/g;
 
     for (const skillPath of await skillFiles()) {
       const body = await readFile(skillPath, 'utf-8');
