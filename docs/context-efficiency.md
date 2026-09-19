@@ -64,7 +64,7 @@ Default budget เป็น guardrail ไม่ใช่การตัดเน
 | Component | Default budget |
 | --- | ---: |
 | Startup | 800 tokens |
-| Routing result | 200 |
+| Routing result | 300 |
 | Selected Skill | 2,500 |
 | Mandatory Rules | 800 |
 | Relevant Sources | 3,000 |
@@ -176,7 +176,7 @@ Authority: procurement-approval / human-only
 - Full router registry sent to model = **0**
 - Full Skill inventory sent to model = **0**
 - Unrelated Rules loaded = **0**
-- Atomic routing contract <= **200 estimated tokens**
+- Atomic routing contract <= **300 estimated tokens**
 - Playbook handoff <= **1,500 estimated tokens/step**
 - Atomic Harness overhead เป้าหมายระยะถัดไป <= **3,000 tokens**
 - Token reduction ต้องไม่ลด Source Traceability, Privacy Safety หรือ Human Authority
