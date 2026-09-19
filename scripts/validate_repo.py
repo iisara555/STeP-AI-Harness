@@ -72,7 +72,7 @@ def validate_skills(errors: list[str]) -> int:
 
 
 SKILL_LOCAL_RESOURCE_RE = re.compile(
-    r"`((?:references|scripts|templates|assets)/[A-Za-z0-9_.\-/]+)`"
+    r"`((?:references|scripts|templates)/[A-Za-z0-9_.\-/]+)`"
 )
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
