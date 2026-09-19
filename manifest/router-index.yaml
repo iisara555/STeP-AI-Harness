@@ -1,7 +1,7 @@
 version: 1
 router:
   name: step-router
-  version: 2.6.2
+  version: 2.7.0
   description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
   scoring:
     weights:
@@ -15,6 +15,28 @@ router:
       ambiguous: 0.50
 
 skills:
+  # --- AI Harness Governance ---
+  - name: step-skill-authoring
+    cluster: governance-operations
+    domain: ai-governance
+    processId: ai.skill-governance
+    teams:
+      primary: [ai-admin]
+      consumers: ["*"]
+    description: ใช้เมื่อจะสร้างหรือปรับ Skill ของ STeP AI Harness; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action และออกแบบ Trigger/Anti-trigger, Source, Authority, Handoff และ Eval ก่อน Pilot
+    intent: [create, improve]
+    triggers: [สร้าง skill, สร้างสกิล, create skill, add skill, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring, skill contract, skill eval, ทำ skill ให้พร้อม pilot]
+    paths: ["**/skills/**", "**/manifest/**", "**/router-index.yaml", "**/skill-*"]
+    fileTypes: [md, yaml, yml, json]
+    requires: [skill_need]
+    scope:
+      allow:
+        - ตรวจ Need Gate ว่าควรเป็น Skill, Playbook, Rule, Registry หรือ Action
+        - ออกแบบ Trigger/Anti-trigger, Input, Output, Source, Authority, Handoff และ Context Budget
+        - สร้าง eval plan และรายการ registry/router changes ที่จำเป็น
+      escalate: {}
+      human_only: {}
+
   # --- Procurement & TOR ---
   - name: tor-review
     cluster: governance-operations
@@ -25,7 +47,7 @@ skills:
       consumers: [piti, linc, mi, cc, pubsec, qs, ga]
     description: ตรวจ TOR ขอบเขตงาน และความพร้อมของเอกสารจัดซื้อจัดจ้างก่อนส่ง AFP ด้านความครบถ้วน ความสอดคล้อง เกณฑ์ตรวจรับ และความชัดเจน
     intent: [review, check, compare, evaluate]
-    triggers: [TOR, ทีโออาร์, ขอบเขตงาน, จัดซื้อ, จัดจ้าง, ข้อกำหนด, เกณฑ์ตรวจรับ, specification, scope of work, ครบถ้วน, เอกสารจัดซื้อ, เอกสารจัดจ้าง, เอกสารพัสดุ, ต้องเตรียมเอกสารอะไร, เอกสารอะไรบ้าง]
+    triggers: [TOR, ทีโออาร์, ขอบเขตงาน, จัดซื้อ, จัดจ้าง, ข้อกำหนด, เกณฑ์ตรวจรับ, specification, scope of work, ครบถ้วน, เอกสารจัดซื้อ, เอกสารจัดจ้าง, เอกสารพัสดุ, ต้องเตรียมเอกสารอะไร, เอกสารอะไรบ้าง, ข้อกฎหมาย, วินิจฉัยข้อกฎหมาย, ตีความสัญญา, legal interpretation]
     paths: ["**/TOR/**", "**/procurement/**", "**/AFP/**"]
     fileTypes: [docx, pdf, txt]
     requires: [tor_file]
@@ -57,7 +79,7 @@ skills:
     teams:
       primary: [afp]
       consumers: [pm, pubsec, sit]
-    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ
+    description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability และเกณฑ์ตรวจรับ โดยเปิดเผย source gaps
     intent: [create, plan]
     triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor]
     paths: ["**/TOR/**", "**/procurement/**"]
@@ -65,8 +87,9 @@ skills:
     requires: [project_objective, estimated_budget]
     scope:
       allow:
-        - ร่างโครงสร้างตามแบบมาตรฐานพัสดุ
-        - ระบุระยะเวลาและงวดงาน
+        - ร่างโครงสร้างจาก current template/source หรือ working template ที่ระบุสถานะชัด
+        - ทำ requirement/deliverable/acceptance traceability
+        - ใช้วัน งบ เกณฑ์ และข้อบังคับเฉพาะเมื่อมี source รองรับ; ถ้าไม่มีให้รอยืนยัน
       escalate: {}
       human_only:
         budget_allocation:
@@ -619,7 +642,7 @@ skills:
     teams:
       primary: [afp]
       consumers: ["*"]
-    description: ตรวจสอบใบเสร็จรับเงิน ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิกจ่ายตามระเบียบ มช.
+    description: Pre-check ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิก โดยแยก document facts, cross-document evidence และ current-source policy checks
     intent: [review, verify, audit, check]
     triggers: [ใบเสร็จ, ใบกำกับภาษี, เบิกจ่าย, ใบสำคัญรับเงิน, e-tax, vat, ค่าเดินทาง, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าที่พัก, ใบเสร็จรับเงิน, receipt]
     paths: ["**/finance/**", "**/receipts/**", "**/billing/**"]
@@ -627,10 +650,10 @@ skills:
     requires: [receipt_document_context]
     scope:
       allow:
-        - ตรวจสอบองค์ประกอบ 9 ข้อของใบกำกับภาษีและใบเสร็จรับเงินตามประมวลรัษฎากร
-        - ตรวจสอบความถูกต้องของ e-Tax Invoice และ Digital Signature
-        - ตรวจเทียบรายการค่าใช้จ่ายกับระเบียบการเงินและเพดานค่าใช้จ่าย มช.
-        - ตรวจชุดเอกสารประกอบการเบิกจ่ายครบชุด
+        - ตรวจ document facts, arithmetic และความครบถ้วนตามหลักฐานที่มี
+        - ตรวจ cross-document consistency กับ approval/PO/quotation/delivery evidence
+        - ตรวจ policy/เพดาน/required documents เฉพาะเมื่อ resolve current verified source ได้
+        - ระบุ NEED-SOURCE / NEED-INFO แทนการแต่งกฎเมื่อ Source ยังไม่ยืนยัน
       escalate:
         tax_exemption_conflict:
           skill: tor-review

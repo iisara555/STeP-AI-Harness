@@ -1,14 +1,37 @@
 ---
 name: github-workflow
-description: ใช้ขั้นตอน GitHub ที่ปลอดภัยสำหรับ Repository ของ STeP ครอบคลุมการเชื่อม Issue กับ Branch การ Commit แบบมีขอบเขต การทบทวน Pull Request การตรวจ CI การป้องกัน Secret และการกู้คืนที่ไม่ทำลายข้อมูล
+description: ใช้เมื่อทำงานกับ GitHub repository ของ STeP เช่น Issue/Branch/Commit/PR/CI/Merge และต้องรักษา scope/secret/review evidence; ไม่ใช้แทน coding implementation, deployment-specific verification หรืออนุญาตให้ merge เมื่อ required checks/authority ยังไม่ผ่าน
 ---
 
-# ขั้นตอนการทำงานกับ GitHub
+# STeP GitHub Workflow
 
-1. อ่านคำแนะนำของ Repository และตรวจ Working Tree ก่อนเปลี่ยนไฟล์
-2. เชื่อมงานกับ Issue หรือ Brief และตั้งชื่อ Branch ให้สื่อความหมาย
-3. แก้เฉพาะขอบเขตงาน รักษาการเปลี่ยนแปลงเดิมของผู้อื่น และห้ามใช้ Destructive Reset โดยไม่มีการอนุมัติ
-4. แยก Commit ตามเหตุผล พร้อมข้อความที่ตรวจย้อนกลับได้
-5. รัน Test, Lint, Build และ Security Check ที่เกี่ยวข้องก่อนเปิด Pull Request
-6. ใน Pull Request ระบุ Why, What, Verification, Risk, Rollback และภาพประกอบเมื่อ UI เปลี่ยน
-7. ห้าม Merge เมื่อ Required Check ล้มเหลวหรือยังไม่มีผู้อนุมัติที่กำหนด
+## Inputs
+- repository / branch / issue หรือ brief
+- requested change
+- repository instructions / CI requirements
+- current working tree / existing changes เมื่อเข้าถึงได้
+
+## Workflow
+1. อ่าน repository instructions และตรวจสถานะ branch/working tree
+2. ผูกงานกับ Issue/Brief และกำหนด scope ที่เล็กที่สุด
+3. สร้าง branch จาก base ที่ถูกต้อง; รักษางานเดิมของผู้อื่น
+4. แก้เฉพาะขอบเขตที่ขอและไม่ใช้ destructive reset โดยพลการ
+5. แยก commit ตามเหตุผลและหลีกเลี่ยง secret/credential
+6. รัน test/lint/build/security checks ที่ repo กำหนด
+7. เปิด PR พร้อม Why / What / Verification / Risk / Rollback
+8. ตรวจ CI/required review ก่อน merge
+9. หลัง merge ตรวจ target branch/commit และบันทึก known gap
+
+## Output Contract
+- Branch / PR reference เมื่อสร้างจริง
+- Files changed
+- Verification performed + result
+- Known risk / unverified item
+- Merge status: `NOT-READY` / `READY-FOR-REVIEW` / `MERGED` ตามหลักฐานจริง
+
+## Guardrails
+- ไม่ claim ว่า CI ผ่านถ้ายังไม่มี check result
+- ไม่ force-push/reset/delete branch ที่มีงานคนอื่นโดยไม่มีคำสั่งชัด
+- ไม่ commit secret, token, cookie, private runtime state
+- ไม่ merge เมื่อ required check ล้มเหลวหรือ authority/review ที่ repo กำหนดยังไม่ครบ
+- Production deployment ให้ใช้ `vercel-deploy` หรือ deployment Skill ที่ตรง platform

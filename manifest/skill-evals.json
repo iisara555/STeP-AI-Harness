@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "description": "STeP Skill evaluation coverage baseline. Registration/routability is not the same as model-side usefulness.",
+  "requiredDimensions": {
+    "positive": "should trigger and produce the intended deliverable",
+    "antiTrigger": "similar request that should not use this Skill",
+    "collision": "request overlapping a neighboring Skill; Router must choose correctly",
+    "missingSource": "when authoritative input is unavailable, expose the gap instead of inventing it"
+  },
+  "promotionPolicy": {
+    "draftToPilot": [
+      "manifest/router integrity",
+      "local dependency validation",
+      "positive eval",
+      "anti-trigger eval",
+      "collision eval",
+      "source/authority mapping when relevant"
+    ],
+    "pilotToApproved": [
+      "owner review",
+      "usage evidence",
+      "no unresolved critical safety issue"
+    ]
+  },
+  "directModelSideBenchmark": {
+    "suite": "pilot-30-v1",
+    "skills": [
+      "tor-review",
+      "tor-government-writing",
+      "browser-form-assistant",
+      "project-plan",
+      "startup-discovery",
+      "executive-status-update",
+      "project-pre-mortem",
+      "designer-brief",
+      "event-concept",
+      "presentation-design",
+      "step-writing",
+      "thai-official-documents",
+      "data-privacy-compliance",
+      "customer-support-faq-triage",
+      "sop-authoring",
+      "receipt-audit",
+      "evidence-before-approval",
+      "learning-designer",
+      "decision-memo",
+      "lab-result-review",
+      "iso9001-audit-readiness",
+      "audit-evidence-matrix",
+      "document-record-control",
+      "ncr-capa",
+      "quality-objective-kpi-review",
+      "management-review-prep"
+    ]
+  },
+  "needsDirectModelSideCoverage": [
+    "step-router",
+    "step-skill-authoring",
+    "meeting-summary",
+    "innovation-okr-mapping",
+    "coding-git-workflow",
+    "github-workflow",
+    "vercel-deploy",
+    "brand-tone-of-voice",
+    "step-brand",
+    "step-image-prompt",
+    "team-weekly-review",
+    "creative-art-director",
+    "assumption-challenger",
+    "industry-problem-discovery",
+    "expert-resource-matching",
+    "market-signal-radar",
+    "voice-of-customer",
+    "audit-interview-coach",
+    "qms-risk-opportunity-review"
+  ],
+  "note": "Many skills in needsDirectModelSideCoverage already have routing/authority regression tests. This list means they are not directly represented in pilot-30-v1 model-side benchmark."
+}

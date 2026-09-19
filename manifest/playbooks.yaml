@@ -142,3 +142,36 @@ playbooks:
         when: management
         consumes: [readiness-gaps, objective-kpi-gaps, capa-actions]
         produces: [management-review-pack]
+
+  - id: skill-to-pilot
+    name: "Skill → Pilot"
+    owner: ai-admin
+    consumers: ["*"]
+    description: "เปลี่ยนความต้องการ Skill ใหม่/การปรับ Skill เป็น Skill Contract, repo change set และ evidence review ก่อนเข้าสู่ Pilot โดยไม่เพิ่ม Layer หรือ auto-approve"
+    requiredSignals: [skill]
+    minSignals: 1
+    signals:
+      skill: [create skill, add skill, สร้าง skill, สร้างสกิล, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring]
+      implementation: [ลง repo, แก้ repo, implement, register, registry, router, manifest, commit, pull request]
+      pilot: [pilot, test, eval, validation, พร้อมใช้, production ready, production-ready, ทดลองใช้]
+    steps:
+      - id: author-skill
+        type: skill
+        skill: step-skill-authoring
+        description: "ทำ Need Gate และสร้าง Skill Contract พร้อม Trigger/Anti-trigger, Source, Authority, Handoff, Context Budget และ Eval plan"
+        produces: [need-classification, skill-contract, skill-draft, registry-plan, eval-plan, known-gaps]
+      - id: implement-skill
+        type: skill
+        skill: coding-git-workflow
+        when: implementation
+        description: "นำ approved design ไปแก้ไฟล์ที่จำเป็นแบบ minimal diff พร้อม registry/router/tests โดยรักษาการเปลี่ยนแปลงเดิมของผู้อื่น"
+        consumes: [skill-contract, skill-draft, registry-plan, eval-plan, known-gaps]
+        produces: [repo-change-set, validation-results]
+      - id: verify-pilot
+        type: skill
+        skill: evidence-before-approval
+        when: pilot
+        description: "ตรวจ claim ว่า Skill พร้อม Pilot จากไฟล์จริง dependency, routing/collision/source/authority eval และ known gaps; ถ้าหลักฐานไม่ครบให้คงสถานะ PARTIAL/UNVERIFIED"
+        consumes: [skill-contract, repo-change-set, validation-results, eval-plan, known-gaps]
+        produces: [pilot-readiness-evidence, remaining-gaps]
+

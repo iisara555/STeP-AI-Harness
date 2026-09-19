@@ -15,8 +15,8 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 | Released Pilot | **v0.7.2** |
 | ทีมที่รองรับ | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **44 Skills** |
-| Playbooks | **3 Playbooks** |
+| Skills | **45 Skills** |
+| Playbooks | **4 Playbooks** |
 | Actions | **3 Actions** |
 
 รายละเอียดเชิงระบบอยู่ใน [Architecture Reference](docs/architecture.md) ส่วนหน้านี้เขียนสำหรับพนักงานเป็นหลัก

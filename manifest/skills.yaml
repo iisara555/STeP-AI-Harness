@@ -21,6 +21,26 @@ skills:
       mandatory: []
       optional: []
 
+
+  step-skill-authoring:
+    owner: ai-admin
+    version: 1.0.0
+    domain: [ai-governance, skill-authoring]
+    process: [ai.skill-governance]
+    path: skills/common/step-skill-authoring/SKILL.md
+    description: ออกแบบหรือปรับ Skill ของ STeP AI Harness โดยตรวจ Need Gate, Trigger/Anti-trigger, Source, Authority, Handoff, Context Budget และ Eval ก่อนเข้าสู่ Pilot
+    governance:
+      owner: ai-admin
+      reviewer: [qs, developer]
+      approvedBy: [ai-admin]
+      reviewedAt: "2026-09-20"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
   tor-review:
     owner: afp
     version: 1.1.1
@@ -28,7 +48,7 @@ skills:
     process: [procurement.tor]
     service: [tech-commercialization, public-sector-innovation]
     path: skills/pm/tor-review/SKILL.md
-    description: ตรวจ TOR และขอบเขตงานจัดซื้อจัดจ้างด้านความครบถ้วนและความถูกต้องตามกฎหมายพัสดุ
+    description: ตรวจ TOR ก่อนส่ง AFP โดยแยก structural review ออกจาก source-backed compliance และไม่อ้าง current rule เมื่อ Source ยังไม่ยืนยัน
     governance:
       owner: afp
       reviewer: [qs]
@@ -48,7 +68,7 @@ skills:
     process: [procurement.tor]
     service: [public-sector-innovation]
     path: skills/pm/tor-government-writing/SKILL.md
-    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ (แม่แบบมาสเตอร์ ๑๖ หัวข้อ)
+    description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability/acceptance criteria โดยไม่แต่ง procurement rule
     governance:
       owner: afp
       reviewer: [qs]
@@ -498,7 +518,7 @@ skills:
     process: [procurement.request]
     service: [public-sector-innovation]
     path: skills/common/receipt-audit/SKILL.md
-    description: ตรวจสอบใบเสร็จรับเงิน ใบกำกับภาษี และเอกสารการเบิกจ่ายตามระเบียบ มช.
+    description: Pre-check ใบเสร็จ/ใบกำกับภาษี/ชุดเบิกโดยเทียบหลักฐานกับ current verified source และเปิดเผย source gap
     governance:
       owner: afp
       reviewer: [qs]
@@ -508,7 +528,7 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [human-approval-rule, data-classification-rule]
+      mandatory: [finance-disbursement-policy, human-approval-rule, data-classification-rule]
       optional: []
 
   creative-art-director:
