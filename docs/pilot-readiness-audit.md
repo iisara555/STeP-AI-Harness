@@ -15,6 +15,7 @@
 3. **Human Action Gate** — action ที่มีผลจริง เช่น Submit, Approve, Sign, Pay, Close CAPA ยังคงมี human confirmation/authority
 4. **Distribution Gate** — install/update/rollback/output preservation ผ่าน test และ release มี checksum
 5. **User Experience Gate** — พนักงานใช้ภาษาไทยธรรมดาได้ ไม่ต้องรู้ Git, Terminal, Skill ID หรือ YAML
+6. **Repository Visibility Gate** — ยืนยัน Public/Private model และ distribution channel; ถ้า repo เป็น Public ต้องมีเฉพาะ public-safe tracked content
 
 ## Audit Findings & Resolution
 
@@ -88,6 +89,7 @@ Residual risk: browser/session persistence แตกต่างกันตา�
 
 **GO** เมื่อ:
 - CI / validation / bundle / package checks ผ่าน
+- ยืนยัน repository visibility + release/distribution channel และผ่าน public/internal data-boundary review
 - current manifest/router/playbook/action integrity ผ่าน (counts derived from manifests; do not hard-code release inventory)
 - 0 known plaintext secret ใน distribution
 - Browser submit confirmation tests ผ่าน
