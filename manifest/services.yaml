@@ -50,7 +50,7 @@ services:
   incubation-startup:
     name: "บริการบ่มเพาะวิสาหกิจเริ่มต้นและสตาร์ทอัพ (Innovation Incubation & Acceleration)"
     leadTeam: piti
-    leadDisplay: "PITi"
+    leadDisplay: "PITI"
     supportTeams: [isi, eic, imo, cc, crm]
     targetAudience: "ผู้ประกอบการรุ่นใหม่ นักศึกษา อาจารย์ และ Startup"
     capabilities:
@@ -85,7 +85,7 @@ services:
   ip-management:
     name: "บริการทรัพย์สินทางปัญญา (IP Service)"
     leadTeam: piti
-    leadDisplay: "PITi"
+    leadDisplay: "PITI"
     supportTeams: [tech-spin]
     targetAudience: "อาจารย์ นักวิจัย บุคลากร มช. และผู้พัฒนานวัตกรรม"
     capabilities:
