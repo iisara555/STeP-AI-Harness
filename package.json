@@ -53,7 +53,8 @@
     "docs/afp-demo-concepts.md",
     "docs/afp-demo-run-sheet.md",
     "docs/afp-demo-start.md",
-    "docs/architecture.md"
+    "docs/architecture.md",
+    "docs/context-efficiency.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
