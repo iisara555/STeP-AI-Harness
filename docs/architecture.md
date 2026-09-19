@@ -48,7 +48,7 @@ flowchart TB
     end
 
     subgraph C5["Layer 5 — Skills & Playbooks"]
-      SK[43 Atomic Skills<br/>โหลดเฉพาะงานที่เกี่ยวข้อง]
+      SK[44 Atomic Skills<br/>โหลดเฉพาะงานที่เกี่ยวข้อง]
       PB[3 Lightweight Playbooks<br/>TOR→Project Plan<br/>Meeting→Action Plan<br/>ISO Audit Readiness]
     end
 
@@ -265,7 +265,7 @@ Master Document List        ← missing source
 ## 8. Skills, Playbooks และ Actions
 
 ณ snapshot ปัจจุบัน:
-- 43 Skills
+- 44 Skills
 - 3 Playbooks
 - 3 executable Actions
 - 6 provenance types

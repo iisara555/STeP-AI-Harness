@@ -784,6 +784,28 @@ skills:
       escalate: {}
       human_only: {}
 
+
+  - name: expert-resource-matching
+    cluster: tech-industry
+    domain: resource-discovery
+    processId: industry.problem-discovery
+    teams:
+      primary: [linc]
+      consumers: [tech-up, tech-spin, les, foodfabr, piti, crm, mi, pubsec]
+    description: จับคู่โจทย์ที่ชัดแล้วกับบริการ ผู้เชี่ยวชาญ Lab เครื่องมือ หรือ Pilot Plant จาก Service Registry/NSP/NSTIS โดยให้เจ้าของบริการยืนยันก่อนส่งต่อจริง
+    intent: [search, recommend, plan]
+    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, NSTIS]
+    paths: ["**/LINC/**", "**/Industry/**", "**/Expert/**", "**/Resource/**", "**/Lab/**"]
+    fileTypes: [md, docx, pdf, xlsx, csv]
+    requires: [problem_or_capability_need]
+    scope:
+      allow:
+        - จับคู่ service capability ก่อนค้นชื่อบุคคล
+        - สร้าง candidate list พร้อม source, วันที่ตรวจ, เหตุผลที่ match และสิ่งที่ยังไม่ยืนยัน
+        - ใช้ NSP/NSTIS เป็น discovery source เมื่อ registry ภายในไม่พอ
+      escalate: {}
+      human_only: {}
+
   - name: market-signal-radar
     cluster: market-creative
     domain: market-intelligence
