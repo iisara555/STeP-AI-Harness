@@ -27,11 +27,24 @@ test('STeP Composite Playbooks', async (t) => {
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
   const actions = await loadActionRegistry(PACKAGE_ROOT);
 
-  await t.test('registry contains the 3 intentionally small Pilot playbooks', () => {
-    assert.equal(playbooks.length, 3);
+  await t.test('registry contains the intentionally small Pilot playbooks', () => {
+    assert.equal(playbooks.length, 4);
     assert.deepEqual(
       playbooks.map((p) => p.id),
-      ['tor-to-project-plan', 'meeting-to-action-plan', 'iso-audit-readiness-flow']
+      ['tor-to-project-plan', 'meeting-to-action-plan', 'iso-audit-readiness-flow', 'skill-to-pilot']
+    );
+  });
+
+  await t.test('Skill-to-Pilot composes authoring, repo workflow and evidence review only when requested', async () => {
+    const result = await queryStepRouter(
+      'สร้าง skill ใหม่ ลง repo และ test ให้พร้อม pilot',
+      { team: 'ai-admin' }
+    );
+    assert.equal(result.routingMode, 'PLAYBOOK');
+    assert.equal(result.selectedPlaybook?.id, 'skill-to-pilot');
+    assert.deepEqual(
+      result.playbookPlan.map((step) => step.skill || step.action),
+      ['step-skill-authoring', 'coding-git-workflow', 'evidence-before-approval']
     );
   });
 
@@ -375,6 +388,6 @@ playbooks:
   await t.test('full manifest integrity includes Playbooks', async () => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
-    assert.equal(integrity.summary.playbooksCount, 3);
+    assert.equal(integrity.summary.playbooksCount, 4);
   });
 });
