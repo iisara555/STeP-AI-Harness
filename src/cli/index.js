@@ -79,6 +79,7 @@ ${colors.bold('ตัวเลือกทั่วไป:')}
   -t, --tool <name>     ระบุเครื่องมือ (claude, cursor, codex, all) [default: codex]
   -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
       --employee        แสดงผลลัพธ์ในโหมดพนักงานทั่วไป (เข้าใจง่าย ไม่แสดง technical warning)
+      --json            สำหรับ ask: คืน compact routing contract + context budget เป็น JSON
       --dry-run         แสดงตัวอย่างไฟล์ที่จะดำเนินการโดยไม่เขียนลงเครื่อง
   -s, --snapshot <id>   ระบุ Snapshot ID สำหรับ rollback
   -l, --list            แสดงรายการ snapshot ที่มีอยู่
@@ -87,6 +88,7 @@ ${colors.bold('ตัวเลือกทั่วไป:')}
 
 ${colors.bold('ตัวอย่างการใช้งาน:')}
   step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย"
+  step-ai ask "ช่วยตรวจ TOR ฉบับนี้หน่อย" --json
   step-ai ask "ทำสไลด์ Pitching ให้ผู้ประกอบการ"
   step-ai config
   step-ai config --team qs

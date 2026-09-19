@@ -23,7 +23,8 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
     text += `- **First Run:** อ่านเฉพาะ \`START-PROMPT.txt\`, \`START-HERE.md\`, \`USER.md\` และ \`MEMORY.md\` ถ้ามี\n`;
     text += `- **ห้าม First Run scan:** ห้าม recursive scan, glob/search \`*.md\`, หรือสำรวจ \`skills/\`, \`rules/\`, \`manifest/\` ทั้งโฟลเดอร์\n`;
     text += `- ถ้ามีงานจริง ให้ข้าม onboarding และใช้ cheap context จากคำขอ/ไฟล์ปัจจุบันก่อน\n`;
-    text += `- เมื่อจำเป็นต้อง route งาน ให้เปิด \`manifest/router-index.yaml\` เท่าที่จำเป็น; งาน Atomic เลือก **1 primary Skill** ส่วนงาน Composite ให้ตรวจ \`manifest/playbooks.yaml\` และทำทีละ step\n`;
+    text += `- เมื่อมี local runtime/CLI ให้ route ด้วย \`step-ai ask "<งาน>" --json\` แล้วใช้ **compact routing contract**; **ห้ามโหลด \`manifest/router-index.yaml\` ทั้งไฟล์เข้า model context**\n`;
+    text += `- ถ้า local router ใช้ไม่ได้ จึงค่อยอ่านเฉพาะ section ที่จำเป็นจาก Router metadata; งาน Atomic เลือก **1 primary Skill** ส่วนงาน Composite ตรวจเฉพาะ Playbook ที่ match และทำทีละ step\n`;
     text += `- ถ้า Playbook มี \`specPath\` ให้เปิด spec นั้นเฉพาะ flow ที่ถูกเลือก\n`;
     text += `- โหลดเฉพาะ mandatory references ของ Skill จาก \`manifest/skills.yaml\`; templates/examples เป็น Level 3 โหลดเมื่อจำเป็นเท่านั้น\n`;
     text += `- Installed ≠ Loaded: การมีไฟล์อยู่ใน Workspace ไม่ได้หมายความว่าต้องอ่านเข้า context\n`;
@@ -71,7 +72,7 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `- **AUTHORITY (ใครมีอำนาจตัดสินใจ)**: ตารางอนุมัติ Human-in-the-loop (\`manifest/authority.yaml\`)\n\n`;
 
   text += `### สถาปัตยกรรม 3 ชั้นและ 4-Level Loading Budget\n\n`;
-  text += `1. **Level 0 (Startup / Cheap Context)**: First Run ใช้เฉพาะ startup files; เมื่อมีงานจริงจึงดู User Intent, ชื่อไฟล์/นามสกุล และ \`manifest/router-index.yaml\` เท่าที่จำเป็น โดยห้าม recursive scan\n`;
+  text += `1. **Level 0 (Startup / Cheap Context)**: First Run ใช้เฉพาะ startup files; เมื่อมีงานจริงให้ใช้ local deterministic router/compact routing contract ก่อน และ **ห้ามส่ง router registry ทั้งไฟล์เข้า model context**\n`;
   text += `2. **Level 1 (Domain Skill)**: โหลดเฉพาะ \`SKILL.md\` ของทักษะที่ได้รับคัดเลือกเพียง 1 ทักษะ (Installed ≠ Loaded)\n`;
   text += `3. **Level 2 (Mandatory Rules & SOPs)**: เปิดอ่านเฉพาะกติกาข้อบังคับที่จำเป็นตามคำขอ\n`;
   text += `4. **Level 3 (Templates & Examples)**: 0 ไฟล์เป็นค่าเริ่มต้น โหลดตัวอย่างเฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจน\n\n`;
@@ -82,7 +83,7 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `- ถ้าเป็น **Composite Task** ที่ตรง \`manifest/playbooks.yaml\` ให้ใช้ Playbook นั้นแทนการบังคับ Skill เดียว\n`;
   text += `- ถ้า Playbook มี \`specPath\` ให้เปิด spec นั้นก่อนเริ่ม step แรก และใช้เป็นมาตรฐาน output ของ flow\n`;
   text += `- Playbook เป็นส่วนประกอบของ HOW ไม่ใช่ Workflow Engine และไม่เพิ่มมิติองค์กรใหม่\n`;
-  text += `- ทำทีละ step: โหลด Skill ปัจจุบัน → สร้าง structured handoff → ปิด context ที่ไม่จำเป็น → ไป step ถัดไป\n`;
+  text += `- ทำทีละ step: โหลด Skill ปัจจุบัน → สร้าง structured handoff ตาม \`consumes/produces\` → ปิด source/conversation ที่ไม่จำเป็น → ไป step ถัดไป โดยไม่ replay context เก่าทั้งชุด\n`;
   text += `- Action เช่น Google Sheets/XLSX/Browser เป็น Tool Action ไม่ใช่ Skill; ถ้า preferred tool ไม่มีให้ใช้ fallback ที่ Playbook ระบุ\n`;
   text += `- ถ้า Action step มี \`actionSpecPath\` ให้เปิด spec ก่อนลงมือ และถือว่างานเสร็จเมื่อมี output link/path/reference จริงตาม Completion Contract เท่านั้น\n`;
   text += `- ถ้า Tool Action ทำไม่ได้และไม่มี fallback ให้คงสถานะ run เป็น \`waiting-tool\` โดยรักษา Skill outputs เดิมไว้ ไม่ย้อนทำงานใหม่โดยไม่จำเป็น\n`;

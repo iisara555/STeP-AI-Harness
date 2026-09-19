@@ -11,7 +11,7 @@ STeP AI Harness เป็นชั้นกลางระหว่าง **พ�
 | รายการ | สถานะ |
 | --- | --- |
 | Released Pilot | **v0.7.2** |
-| Development branch | **feat/lightweight-harness-foundation** |
+| Development state | **post-v0.7.2 / unreleased** |
 | Teams | **22 ทีม** |
 | AI routing clusters | **5 clusters** |
 | Skills | **43 Skills** |
@@ -21,8 +21,9 @@ STeP AI Harness เป็นชั้นกลางระหว่าง **พ�
 | Quality Layer | **v0.1 — Pilot Foundation** |
 | AFP Finance & Procurement | **Demo Source Pack / Foundation Preparation** |
 | Privacy Gate | **Lightweight local-first Pilot** |
+| Context Efficiency | **Local routing + token telemetry + structured handoff** |
 
-> ความสามารถใน Quality Layer, AFP Demo และ Privacy Gate บางส่วนอยู่บน development branch นี้ และยังไม่ควรถูกตีความว่าเป็น Release v0.7.2 จนกว่าจะ merge/release อย่างเป็นทางการ
+> Released Pilot ยังคงเป็น v0.7.2 ส่วน repository ปัจจุบันมีงานพัฒนาหลัง v0.7.2 เพิ่มบน Foundation เดิม และยังไม่ควรถูกตีความว่าเป็น Release ใหม่จนกว่าจะออก Release อย่างเป็นทางการ
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือพนักงาน](docs/employee-guide.md) · [Architecture Reference](docs/architecture.md) · [ดูรายชื่อทีม](docs/teams.md)
 
@@ -370,6 +371,38 @@ step-ai privacy --file sample.txt --redact
 ~~~
 
 กติกาหลักอยู่ที่ [rules/data-classification.md](rules/data-classification.md)
+
+---
+
+# Context Efficiency & Token Budgeting
+
+Context Efficiency เป็น **implementation mechanism ภายใน Router / Context Assembly** ไม่ใช่ Layer หรือ Dimension ใหม่
+
+~~~text
+User
+ ↓
+Local Deterministic Router
+ ↓
+Compact Routing Contract
+ ↓
+Context Budget
+ ├─ Selected Skill only
+ ├─ Mandatory Rules only
+ ├─ Relevant Sources only
+ └─ Governance metadata only
+ ↓
+AI
+~~~
+
+หลักที่เพิ่ม:
+- ห้ามส่ง `router-index.yaml` ทั้งไฟล์เข้า model context เมื่อ local router ใช้งานได้
+- ใช้ `step-ai ask "<งาน>" --json` เพื่อรับ compact routing contract
+- มี token telemetry แยก **estimated** ออกจาก provider-reported actual usage
+- มี default context budget ต่อ component
+- Playbook สร้าง structured handoff และส่งเฉพาะ context ที่ step ถัดไปต้องใช้
+- Full output ยังอยู่ใน Run State เพื่อ traceability/resume แต่ไม่ต้อง replay เข้า model ทุก step
+
+อ่านเพิ่ม: [docs/context-efficiency.md](docs/context-efficiency.md)
 
 ---
 

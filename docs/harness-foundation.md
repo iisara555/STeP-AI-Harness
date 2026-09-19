@@ -128,3 +128,22 @@ Sensitive / High Risk ───────→ Human Confirmation / Block extern
 `step-ai privacy --file sample.txt --redact`
 
 สำหรับ PDF/รูปภาพ ให้ AI client หรือตัวอ่านเอกสาร local สกัดเฉพาะส่วนที่จำเป็นก่อน ไม่ทำ OCR อัตโนมัติทั้งไฟล์
+
+
+## 7. Context Efficiency
+
+Context Efficiency เป็น implementation mechanism ภายใน Router/Context Assembly ไม่เพิ่ม Dimension หรือ Layer ใหม่
+
+หลัก:
+- local deterministic routing ก่อน model
+- compact routing contract แทนการส่ง Router Registry ทั้งไฟล์
+- default context budgets สำหรับ routing/skill/rules/sources/handoff/governance
+- token telemetry แยก estimated กับ provider-reported actual
+- structured Playbook handoff ไม่ replay full conversation/source ทุก step
+- full outputs ยังเก็บใน Run State เพื่อ traceability/resume
+
+คำสั่ง compact route:
+
+`step-ai ask "ช่วยตรวจ TOR นี้ก่อนส่ง AFP" --json`
+
+รายละเอียด: `docs/context-efficiency.md`

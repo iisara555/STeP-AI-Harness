@@ -2,6 +2,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createProvenanceRecord } from '../provenance/index.js';
 import { redactPrivacyText, evaluatePrivacyGate } from '../privacy/index.js';
+import {
+  buildStructuredHandoff,
+  getStepHandoffContext,
+  createUsageTelemetry,
+  mergeActualUsage,
+} from '../context-budget/index.js';
 
 function parseList(raw = '') {
   return raw
@@ -246,6 +252,7 @@ export function buildRunState({
   team = '',
   matchedSignals = [],
   sourceRefs = [],
+  routingContract = null,
   now = new Date(),
 }) {
   const sourceCheck = validatePlaybookSources(playbook, sourceRefs);
@@ -253,6 +260,10 @@ export function buildRunState({
 
   const plan = buildPlaybookPlan(playbook, matchedSignals);
   const privacy = evaluatePrivacyGate(query || '');
+  const usage = createUsageTelemetry({
+    queryText: privacy.redactedText,
+    routingContract,
+  });
   return {
     version: 3,
     runId: makeRunId(playbook.id, now),
@@ -280,6 +291,7 @@ export function buildRunState({
       assumptions: {},
       missingInformation: [],
       outputs: {},
+      handoffs: {},
       provenance: [],
       privacy: privacy.logSafeMetadata,
     },
@@ -291,6 +303,7 @@ export function buildRunState({
       },
     ],
     feedback: [],
+    usage,
     steps: plan,
   };
 }
@@ -452,15 +465,55 @@ export function completePlaybookStep(state, stepId, outputs = {}) {
 
   next.context ||= {};
   next.context.outputs ||= {};
+  next.context.handoffs ||= {};
   next.context.outputs[stepId] = outputs;
+
+  const handoff = buildStructuredHandoff(step, outputs);
+  next.context.handoffs[stepId] = handoff;
+
   next.events ||= [];
   next.events.push({ at: new Date().toISOString(), type: 'step-completed', stepId });
+  next.events.push({
+    at: new Date().toISOString(),
+    type: 'handoff-created',
+    stepId,
+    estimatedTokens: handoff.telemetry?.estimatedTokens || 0,
+    truncated: Boolean(handoff.truncated),
+  });
 
   const currentIndex = next.steps.findIndex((item) => item.id === stepId);
   const nextStep = next.steps.slice(currentIndex + 1).find((item) => item.status !== 'completed');
   next.currentStep = nextStep?.id || null;
   next.status = nextStep ? 'active' : 'completed';
 
+  return next;
+}
+
+
+export function getPlaybookStepContext(state, stepId = '') {
+  const handoffContext = getStepHandoffContext(state, stepId);
+  return {
+    ...handoffContext,
+    parameters: state?.parameters || {},
+    policies: state?.policies || {},
+    sourceRefs: state?.sourceRefs || [],
+  };
+}
+
+export function recordRunUsage(state, {
+  inputTokens = null,
+  outputTokens = null,
+} = {}) {
+  const next = structuredClone(state);
+  next.usage = mergeActualUsage(next.usage || {}, { inputTokens, outputTokens });
+  next.events ||= [];
+  next.events.push({
+    at: new Date().toISOString(),
+    type: 'usage-recorded',
+    inputTokens,
+    outputTokens,
+    accounting: next.usage.accounting,
+  });
   return next;
 }
 
