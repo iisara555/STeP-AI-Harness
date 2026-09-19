@@ -57,8 +57,11 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
         'quality-objective-kpi-review',
         'ncr-capa',
         'management-review-prep',
+        'step-skill-authoring',
+        'coding-git-workflow',
+        'evidence-before-approval',
       ]),
-      teams: new Set(['pm', 'qs']),
+      teams: new Set(['pm', 'qs', 'ai-admin']),
       actions: new Set(Object.keys(actions)),
     });
     assert.equal(result.valid, true, result.errors.join('\n'));
