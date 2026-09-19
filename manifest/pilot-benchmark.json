@@ -5,7 +5,8 @@
   "notes": [
     "Automated benchmark validates routing/context/authority preflight only.",
     "Human Pilot must still judge output usefulness, correctness, source traceability, and time-to-usable-output.",
-    "All prompts are synthetic and should not contain real PII or confidential documents."
+    "All prompts are synthetic and should not contain real PII or confidential documents.",
+    "Pilot tasks include realistic configured team context; teamless routing robustness should be measured separately."
   ],
   "tasks": [
     {
@@ -16,7 +17,8 @@
         "mode": "SKILL",
         "skill": "step-writing",
         "team": "cc"
-      }
+      },
+      "inputTeam": "cc"
     },
     {
       "id": "P02",
@@ -26,7 +28,8 @@
         "mode": "SKILL",
         "skill": "thai-official-documents",
         "team": "ga"
-      }
+      },
+      "inputTeam": "ga"
     },
     {
       "id": "P03",
@@ -36,7 +39,8 @@
         "mode": "SKILL",
         "skill": "customer-support-faq-triage",
         "team": "crm"
-      }
+      },
+      "inputTeam": "crm"
     },
     {
       "id": "P04",
@@ -46,7 +50,8 @@
         "mode": "SKILL",
         "skill": "designer-brief",
         "team": "cc"
-      }
+      },
+      "inputTeam": "cc"
     },
     {
       "id": "P05",
@@ -56,7 +61,8 @@
         "mode": "SKILL",
         "skill": "event-concept",
         "team": "cc"
-      }
+      },
+      "inputTeam": "cc"
     },
     {
       "id": "P06",
@@ -66,7 +72,8 @@
         "mode": "SKILL",
         "skill": "presentation-design",
         "team": "cc"
-      }
+      },
+      "inputTeam": "cc"
     },
     {
       "id": "P07",
@@ -76,7 +83,8 @@
         "mode": "SKILL",
         "skill": "startup-discovery",
         "team": "piti"
-      }
+      },
+      "inputTeam": "piti"
     },
     {
       "id": "P08",
@@ -86,7 +94,8 @@
         "mode": "SKILL",
         "skill": "project-pre-mortem",
         "team": "pm"
-      }
+      },
+      "inputTeam": "pm"
     },
     {
       "id": "P09",
@@ -96,7 +105,8 @@
         "mode": "SKILL",
         "skill": "learning-designer",
         "team": "hd"
-      }
+      },
+      "inputTeam": "hd"
     },
     {
       "id": "P10",
@@ -106,7 +116,8 @@
         "mode": "SKILL",
         "skill": "lab-result-review",
         "team": "les"
-      }
+      },
+      "inputTeam": "les"
     },
     {
       "id": "P11",
@@ -116,7 +127,8 @@
         "mode": "SKILL",
         "skill": "receipt-audit",
         "team": "afp"
-      }
+      },
+      "inputTeam": "afp"
     },
     {
       "id": "P12",
@@ -126,7 +138,8 @@
         "mode": "SKILL",
         "skill": "tor-review",
         "team": "afp"
-      }
+      },
+      "inputTeam": "afp"
     },
     {
       "id": "P13",
@@ -136,7 +149,8 @@
         "mode": "SKILL",
         "skill": "tor-government-writing",
         "team": "afp"
-      }
+      },
+      "inputTeam": "afp"
     },
     {
       "id": "P14",
@@ -146,7 +160,8 @@
         "mode": "SKILL",
         "skill": "data-privacy-compliance",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P15",
@@ -156,7 +171,8 @@
         "mode": "SKILL",
         "skill": "sop-authoring",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P16",
@@ -166,7 +182,8 @@
         "mode": "SKILL",
         "skill": "evidence-before-approval",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P17",
@@ -176,7 +193,8 @@
         "mode": "SKILL",
         "skill": "iso9001-audit-readiness",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P18",
@@ -186,7 +204,8 @@
         "mode": "SKILL",
         "skill": "audit-evidence-matrix",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P19",
@@ -196,7 +215,8 @@
         "mode": "SKILL",
         "skill": "document-record-control",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P20",
@@ -206,7 +226,8 @@
         "mode": "SKILL",
         "skill": "ncr-capa",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P21",
@@ -216,7 +237,8 @@
         "mode": "SKILL",
         "skill": "quality-objective-kpi-review",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P22",
@@ -226,7 +248,8 @@
         "mode": "SKILL",
         "skill": "management-review-prep",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P23",
@@ -236,7 +259,8 @@
         "mode": "PLAYBOOK",
         "playbook": "meeting-to-action-plan",
         "team": "pm"
-      }
+      },
+      "inputTeam": "pm"
     },
     {
       "id": "P24",
@@ -246,7 +270,8 @@
         "mode": "PLAYBOOK",
         "playbook": "tor-to-project-plan",
         "team": "pm"
-      }
+      },
+      "inputTeam": "pm"
     },
     {
       "id": "P25",
@@ -256,7 +281,8 @@
         "mode": "PLAYBOOK",
         "playbook": "iso-audit-readiness-flow",
         "team": "qs"
-      }
+      },
+      "inputTeam": "qs"
     },
     {
       "id": "P26",
@@ -268,7 +294,8 @@
         "team": "afp",
         "scope": "BLOCK",
         "authority": "procurement-approval"
-      }
+      },
+      "inputTeam": "afp"
     },
     {
       "id": "P27",
@@ -280,7 +307,8 @@
         "team": "afp",
         "scope": "BLOCK",
         "authority": "budget-allocation"
-      }
+      },
+      "inputTeam": "afp"
     },
     {
       "id": "P28",
@@ -290,7 +318,8 @@
         "mode": "SKILL",
         "skill": "browser-form-assistant",
         "team": "ga"
-      }
+      },
+      "inputTeam": "ga"
     },
     {
       "id": "P29",
@@ -300,7 +329,8 @@
         "mode": "SKILL",
         "skill": "decision-memo",
         "team": "imo"
-      }
+      },
+      "inputTeam": "imo"
     },
     {
       "id": "P30",
@@ -310,7 +340,8 @@
         "mode": "SKILL",
         "skill": "executive-status-update",
         "team": "sit"
-      }
+      },
+      "inputTeam": "sit"
     }
   ]
 }
