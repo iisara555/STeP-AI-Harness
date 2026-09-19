@@ -48,7 +48,7 @@ test('README and architecture stay aligned with current manifests', async (t) =>
   });
 
   await t.test('README distinguishes release from development foundation', () => {
-    assert.ok(readme.includes('feat/context-efficiency'));
+    assert.ok(readme.includes('Development state | **post-v0.7.2 / unreleased**'));
     assert.ok(readme.includes('ยังไม่ควรถูกตีความว่าเป็น Release'));
     assert.ok(readme.includes('AFP ยังอยู่ในสถานะ **Demo Source Pack / Foundation Preparation**'));
   });
