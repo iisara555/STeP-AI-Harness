@@ -50,12 +50,12 @@ clusters:
     router: incubation-router
     teams:
       - id: piti
-        shortName: PITi
+        shortName: PITI
         name: บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี
         nameEn: Platform for Innovation & Technology Incubation
         description: บ่มเพาะและประเมินโอกาสความเป็นไปได้ทางเทคโนโลยีเบื้องต้น
         skills: [common, pm]
-        paths: ["**/PITi/**", "**/PITI/**", "**/Incubation/**"]
+        paths: ["**/PITI/**", "**/Incubation/**"]
       - id: isi
         name: บ่มเพาะ Startup นวัตกรรม
         nameEn: Innovative Startup Incubation

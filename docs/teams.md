@@ -35,7 +35,7 @@
 
 | ทีม | ชื่อเต็มภาษาไทย / อังกฤษ | หน้าที่หลักและขอบเขตบริการ | ทักษะ AI ที่เกี่ยวข้อง |
 |---|---|---|---|
-| **PITi** | **บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี**<br>Platform for Innovation & Technology Incubation | บ่มเพาะผู้ประกอบการฐานนวัตกรรมและประเมินโอกาสความเป็นไปได้เบื้องต้น | `startup-discovery`, `project-plan`, `presentation-design` |
+| **PITI** | **บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี**<br>Platform for Innovation & Technology Incubation | บ่มเพาะผู้ประกอบการฐานนวัตกรรมและประเมินโอกาสความเป็นไปได้เบื้องต้น | `startup-discovery`, `project-plan`, `presentation-design` |
 | **ISI** | **บ่มเพาะ Startup นวัตกรรม**<br>Innovative Startup Incubation | ให้คำปรึกษา Mentoring แก่ Startup และติดตามแผนการทดลองธุรกิจ | `startup-discovery`, `project-plan`, `meeting-summary` |
 | **EIC** | **การเป็นผู้ประกอบการและนวัตกรรม**<br>Entrepreneurship & Innovation Center | ออกแบบหลักสูตร เวิร์กช็อป และกิจกรรมบ่มเพาะทักษะผู้ประกอบการ | `startup-discovery`, `event-concept`, `presentation-design` |
 | **IMO** | **บริหารจัดการนวัตกรรม**<br>Innovation Management Office | จัดกลุ่มพอร์ตโฟลิโอโครงการนวัตกรรมและวิเคราะห์ข้อมูลเพื่อการตัดสินใจ | `project-plan`, `executive-status-update`, `presentation-design` |
