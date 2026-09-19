@@ -11,6 +11,7 @@
 5. Mutable rule/fact ต้อง resolve จาก Controlled Source ไม่ hard-code เป็น current truth ใน Skill
 6. ทุก Skill ต้องมี Source, Authority และ Handoff boundary ตามความเสี่ยง
 7. ก่อน Promote ต้องมี eval อย่างน้อย positive / anti-trigger / collision / missing-source ตามความเกี่ยวข้อง
+8. `approvedBy` ระบุ **บทบาทที่ต้องอนุมัติ** ไม่ใช่หลักฐานว่าอนุมัติแล้ว; `stage: approved` ต้องมี explicit owner-review evidence ที่ตรวจย้อนหลังได้
 
 ## Flow
 
