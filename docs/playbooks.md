@@ -1,5 +1,7 @@
 # STeP Playbooks — Multi-Skill Flow
 
+Development contract: [Action verification](action-verification.md). Action completion ต้องผ่าน `completePlaybookAction` และการอ่านผลกลับ; path/link อย่างเดียวไม่พอ
+
 Playbook ใช้กับคำขอที่มี **หลายผลลัพธ์และหลายขั้นตอน** ซึ่ง Skill เดียวไม่ควรรับผิดชอบทั้งหมด
 
 ## หลักการ

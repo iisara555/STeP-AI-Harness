@@ -14,7 +14,7 @@ function riskLabel(value) {
 }
 
 function actionLabel(value) {
-  if (value === 'pass') return 'ใช้ได้ตามปกติ';
+  if (value === 'pass') return 'ไม่พบรูปแบบที่เฝ้าระวัง — ใช้สิทธิ์ของเอกสารต้นทางประกอบ';
   if (value === 'auto-mask') return 'ปิดบังข้อมูลก่อนส่ง AI';
   if (value === 'human-confirm') return 'ให้ผู้ใช้ตรวจสอบก่อนส่ง';
   if (value === 'block-external') return 'หยุดการส่งไป AI ภายนอก';
@@ -56,7 +56,8 @@ export async function runPrivacy(args) {
   console.log(colors.bold('\nผลตรวจ Privacy Gate'));
   console.log(`  ระดับข้อมูล:      ${riskLabel(result.classification)}`);
   console.log(`  การดำเนินการ:     ${actionLabel(result.action)}`);
-  console.log(`  พบข้อมูลส่วนบุคคล: ${result.containsPersonalData ? 'พบ' : 'ไม่พบ'}`);
+  console.log(`  พบข้อมูลส่วนบุคคล: ${result.containsPersonalData ? 'พบ' : 'ไม่พบจากรูปแบบที่ตรวจ'}`);
+  console.log('  ขอบเขต: ตรวจรูปแบบข้อความ ไม่ใช่การรับรองว่าเอกสารเผยแพร่ได้');
   console.log(`  เวลาตรวจ:         ${elapsedMs.toFixed(2)} ms`);
 
   if (result.findings.length) {
@@ -68,12 +69,12 @@ export async function runPrivacy(args) {
 
   if (args.redact && file && result.redactionApplied && result.action !== 'block-external') {
     const outPath = redactedPath(file);
-    await writeFile(outPath, result.redactedText, 'utf-8');
+    await writeFile(outPath, result.redactedText, { encoding: 'utf-8', mode: 0o600, flag: 'wx' });
     console.log(`\n  สร้างสำเนาที่ปิดบังข้อมูลแล้ว: ${outPath}`);
   }
 
   if (result.action === 'block-external') {
-    console.log(colors.red('\n  หยุด: พบข้อมูลความเสี่ยงสูงร่วมกับตัวระบุบุคคล ห้ามส่งต้นฉบับไป AI ภายนอกโดยอัตโนมัติ'));
+    console.log(colors.red('\n  หยุด: พบข้อมูลความเสี่ยงสูงหรือข้อมูลรับรองตัวตน ห้ามส่งต้นฉบับไป AI ภายนอกโดยอัตโนมัติ'));
   }
 
   console.log();

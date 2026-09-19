@@ -1,5 +1,63 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+
+const approvals = new WeakSet();
+
+function canonical(value) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+  }
+  throw new Error('Action operation must contain JSON values');
+}
+
+export function getOperationHash(actionId, operation) {
+  if (!['runId', 'stepId', 'target'].every((key) => typeof operation?.[key] === 'string' && operation[key].trim())
+      || !Object.hasOwn(operation, 'payload')) {
+    throw new Error('Action operation requires runId, stepId, target and payload');
+  }
+  return createHash('sha256').update(JSON.stringify([actionId, canonical(operation)])).digest('hex');
+}
+
+/** Host integration only. The callback must use an authenticated human UI or
+ * existing scoped authorization, never a model-supplied boolean or JSON file.
+ * Approvals are in-memory, short-lived and bound to the exact operation.
+ */
+export async function requestActionApproval(actionId, operation, confirmWithUser) {
+  if (typeof confirmWithUser !== 'function') throw new Error('Human confirmation provider is required');
+  const snapshot = structuredClone(operation);
+  const operationHash = getOperationHash(actionId, snapshot);
+  const confirmed = await confirmWithUser({ actionId, operation: snapshot });
+  if (confirmed !== true) return null;
+  if (getOperationHash(actionId, snapshot) !== operationHash) throw new Error('Action operation changed during confirmation');
+  const approval = Object.freeze({ actionId, operationHash, confirmedAt: new Date().toISOString(), expiresAt: Date.now() + 300_000 });
+  approvals.add(approval);
+  return approval;
+}
+
+export function consumeActionApproval(approval) {
+  if (approval) approvals.delete(approval);
+}
+
+export function evaluateActionGate(action, { operation, approval } = {}) {
+  if (!action || !validateActionRegistry({ [action.id || 'action']: action }).valid) {
+    return { status: 'blocked', reason: 'unregistered-or-invalid-action' };
+  }
+  if (action.confirmation === 'human-only' || action.risk === 'restricted') {
+    return { status: 'blocked', reason: 'human-only-authority' };
+  }
+  if (action.confirmation === 'none') return { status: 'allowed', reason: 'no-confirmation-required' };
+  let operationHash;
+  try { operationHash = getOperationHash(action.id, operation); } catch { /* No complete operation: fail closed. */ }
+  if (!approval || !approvals.has(approval) || approval.actionId !== action.id
+      || approval.operationHash !== operationHash || approval.expiresAt <= Date.now()) {
+    return { status: 'waiting-confirmation', reason: 'scoped-human-confirmation-required' };
+  }
+  return { status: 'allowed', reason: 'scoped-human-confirmation', operationHash };
+}
 
 function strip(raw = '') {
   return raw.trim().replace(/^['"]|['"]$/g, '');

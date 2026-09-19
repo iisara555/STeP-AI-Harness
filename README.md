@@ -8,6 +8,8 @@ STeP AI Harness เป็นชั้นกลางระหว่าง **พ�
 
 ## สถานะปัจจุบัน
 
+เกณฑ์ตรวจงานพัฒนาต่อ: [7 แกนคุณภาพ](docs/harness-quality-axes.md) · [Action verification](docs/action-verification.md)
+
 | รายการ | สถานะ |
 | --- | --- |
 | Released Pilot | **v0.7.2** |

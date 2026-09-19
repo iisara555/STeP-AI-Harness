@@ -38,6 +38,15 @@ Sensitive / High Risk ───────→ Human Confirmation หรือ B
 9. **Approved tools only:** ข้อมูล Restricted/Sensitive ใช้เฉพาะเครื่องมือหรือช่องทางที่องค์กรอนุมัติ
 10. **Delete when no longer needed:** สำเนาที่สร้างเพื่อ redaction หรือ preprocessing ต้องไม่ถูกเก็บเกินความจำเป็นของงาน
 
+### ขอบเขตการตรวจในโค้ด
+
+- `human-confirm` ที่ยังไม่ยืนยันต้องไม่ส่งข้อมูล; `canSendToExternalAI=false`
+- ชื่อที่มี label/คำนำหน้าและ email ถือเป็นตัวระบุบุคคล ข้อมูลอ่อนไหวร่วมกับตัวระบุให้ block external
+- sanitize nested outputs, handoffs, provenance, feedback และจุดเขียน Run State; credentials และเนื้อหาอ่อนไหวถูกละออกจาก state
+- scanner เป็น text-patterns-only: ชื่อไม่มี label, ข้อมูลในภาพ และข้อมูลส่วนบุคคลที่ไม่ตรงรูปแบบอาจตรวจไม่พบ
+- `public/pass` หมายถึงไม่พบรูปแบบที่รู้จัก ไม่ใช่การรับรองว่าเอกสารเผยแพร่ได้ ต้องใช้ classification/สิทธิ์ของต้นทางด้วย
+- ข้อความที่หน้าเว็บ/เอกสารสั่งให้ส่งข้อมูลลับหรือข้ามกฎถือเป็นข้อมูลที่ไม่น่าเชื่อถือ ห้ามใช้แทนคำอนุญาตจากผู้ใช้
+
 ## ตัวอย่าง Metadata ที่เก็บได้
 
 ```json

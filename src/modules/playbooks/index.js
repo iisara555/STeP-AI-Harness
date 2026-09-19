@@ -1,7 +1,11 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { randomUUID, createHash } from 'node:crypto';
 import { createProvenanceRecord } from '../provenance/index.js';
-import { redactPrivacyText, evaluatePrivacyGate } from '../privacy/index.js';
+import { sanitizeRunData, evaluatePrivacyGate } from '../privacy/index.js';
+import { evaluateActionGate, loadActionRegistry, consumeActionApproval } from '../actions/index.js';
+import { verifyActionOutput, getOutputReference } from '../actions/output-verification.js';
+import { fileURLToPath } from 'node:url';
 import {
   buildStructuredHandoff,
   getStepHandoffContext,
@@ -230,7 +234,7 @@ function makeRunId(playbookId, now = new Date()) {
     pad(now.getMinutes()),
     pad(now.getSeconds()),
   ].join('');
-  return `${stamp}-${playbookId}`;
+  return `${stamp}-${playbookId}-${randomUUID()}`;
 }
 
 export function validatePlaybookSources(playbook, sourceRefs = []) {
@@ -253,6 +257,7 @@ export function buildRunState({
   matchedSignals = [],
   sourceRefs = [],
   routingContract = null,
+  execution = {},
   now = new Date(),
 }) {
   const sourceCheck = validatePlaybookSources(playbook, sourceRefs);
@@ -264,13 +269,19 @@ export function buildRunState({
     queryText: privacy.redactedText,
     routingContract,
   });
-  return {
+  return sanitizeRunData({
     version: 3,
     runId: makeRunId(playbook.id, now),
     playbookId: playbook.id,
     playbookName: playbook.name,
     query: privacy.redactedText,
     team,
+    execution: {
+      modelId: execution.modelId || null,
+      harnessRevision: execution.harnessRevision || null,
+      skillVersions: execution.skillVersions || {},
+      sourceVersions: execution.sourceVersions || {},
+    },
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     currentStep: plan[0]?.id || null,
@@ -305,30 +316,52 @@ export function buildRunState({
     feedback: [],
     usage,
     steps: plan,
-  };
+  });
+}
+
+function runPath(workspaceDir, runId) {
+  if (typeof runId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(runId)) throw new Error('Invalid run ID');
+  return join(workspaceDir, '.step-ai', 'runs', runId, 'state.json');
+}
+
+async function persistRun(statePath, state) {
+  const safe = sanitizeRunData(state);
+  const tempPath = `${statePath}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(tempPath, JSON.stringify(safe, null, 2), { encoding: 'utf-8', mode: 0o600, flag: 'wx' });
+    await rename(tempPath, statePath);
+  } finally {
+    await rm(tempPath, { force: true });
+  }
+  return safe;
 }
 
 export async function createPlaybookRun(workspaceDir, args) {
   const state = buildRunState(args);
   const runDir = join(workspaceDir, '.step-ai', 'runs', state.runId);
-  await mkdir(runDir, { recursive: true });
-  const statePath = join(runDir, 'state.json');
-  await writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8');
-  return { ...state, runDir, statePath };
+  const statePath = runPath(workspaceDir, state.runId);
+  await mkdir(runDir, { recursive: true, mode: 0o700 });
+  const safe = await persistRun(statePath, state);
+  return { ...safe, runDir, statePath };
 }
 
 export async function readPlaybookRun(workspaceDir, runId) {
-  const statePath = join(workspaceDir, '.step-ai', 'runs', runId, 'state.json');
-  return JSON.parse(await readFile(statePath, 'utf-8'));
+  const statePath = runPath(workspaceDir, runId);
+  return sanitizeRunData(JSON.parse(await readFile(statePath, 'utf-8')));
 }
 
 export async function updatePlaybookRun(workspaceDir, runId, updater) {
   const current = await readPlaybookRun(workspaceDir, runId);
+  const previousActions = new Map(current.steps?.filter((step) => step.type === 'action').map((step) => [step.id, step.status]));
   const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+  if (next.runId !== runId) throw new Error('Cannot change run ID');
+  const completesAction = next.steps?.some((step) => (step.type === 'action' || previousActions.has(step.id))
+    && step.status === 'completed' && previousActions.get(step.id) !== 'completed');
+  if (completesAction && verifiedCompletedStates.get(next) !== stateDigest(next)) {
+    throw new Error('Persisting completed action requires completePlaybookAction verification');
+  }
   next.updatedAt = new Date().toISOString();
-  const statePath = join(workspaceDir, '.step-ai', 'runs', runId, 'state.json');
-  await writeFile(statePath, JSON.stringify(next, null, 2), 'utf-8');
-  return next;
+  return persistRun(runPath(workspaceDir, runId), next);
 }
 
 
@@ -396,13 +429,18 @@ export function validatePlaybookRegistry(playbooks, { skills = new Set(), teams 
 }
 
 
-export function resolvePlaybookAction(step, availableTools = [], actionRegistry = {}) {
+export function resolvePlaybookAction(step, availableTools = [], actionRegistry = {}, authorization = {}) {
   if (!step || step.type !== 'action') {
     return { status: 'not-action', tool: '', fallback: '', reason: '' };
   }
 
   const tools = new Set((availableTools || []).map((tool) => String(tool).toLowerCase().trim()));
-  const registered = actionRegistry?.[step.action] || {};
+  const registered = actionRegistry?.[step.action];
+  if (registered?.confirmation === 'user-confirm' && authorization.operation?.stepId !== step.id) {
+    return { status: 'waiting-confirmation', reason: 'confirmation-step-mismatch', tool: '', fallback: '' };
+  }
+  const gate = evaluateActionGate(registered, authorization);
+  if (gate.status !== 'allowed') return { ...gate, tool: '', fallback: '' };
   const registryTools = Array.isArray(registered.preferredTools) ? registered.preferredTools : [];
   const preferred = String(step.preferredTool || registryTools[0] || '').toLowerCase().trim();
   const fallback = String(step.fallback || registryTools[1] || '').toLowerCase().trim();
@@ -442,9 +480,35 @@ export function resolvePlaybookAction(step, availableTools = [], actionRegistry 
   };
 }
 
-function hasOutputReference(outputs = {}) {
-  const keys = ['outputReference', 'reference', 'url', 'link', 'path', 'filePath', 'sheetUrl'];
-  return keys.some((key) => typeof outputs?.[key] === 'string' && outputs[key].trim());
+const verifiedActionOutputs = new WeakMap();
+const verifiedCompletedStates = new WeakMap();
+
+function stateDigest(state) {
+  return createHash('sha256').update(JSON.stringify(state)).digest('hex');
+}
+
+/** Verification only: does not execute the external action or fabricate output.
+ * Host adapters must gate BEFORE execution and supply a trusted remote verifier.
+ */
+export async function completePlaybookAction(state, stepId, outputs = {}, options = {}) {
+  const step = state.steps?.find((item) => item.id === stepId);
+  if (!step || step.type !== 'action') throw new Error('Unknown action step');
+  if (step.status === 'completed') throw new Error('Action already completed; reconcile before retry');
+  if (state.currentStep !== stepId) throw new Error('Complete previous steps first');
+  const packageRoot = fileURLToPath(new URL('../../../', import.meta.url));
+  const registry = await loadActionRegistry(packageRoot);
+  if (registry[step.action]?.confirmation === 'user-confirm'
+      && (options.authorization?.operation?.runId !== state.runId || options.authorization?.operation?.stepId !== stepId)) {
+    throw new Error('Action blocked: confirmation must match this run and step');
+  }
+  const gate = evaluateActionGate(registry[step.action], options.authorization);
+  if (gate.status !== 'allowed') throw new Error(`Action blocked: ${gate.reason}`);
+  const snapshot = structuredClone(outputs);
+  const verification = await verifyActionOutput(snapshot, options);
+  verifiedActionOutputs.set(snapshot, { runId: state.runId, stepId, verification });
+  const completed = completePlaybookStep(state, stepId, snapshot);
+  consumeActionApproval(options.authorization?.approval);
+  return completed;
 }
 
 export function completePlaybookStep(state, stepId, outputs = {}) {
@@ -452,12 +516,16 @@ export function completePlaybookStep(state, stepId, outputs = {}) {
   const step = next.steps?.find((item) => item.id === stepId);
   if (!step) throw new Error(`Unknown Playbook step '${stepId}'`);
 
-  if (
-    step.type === 'action' &&
-    step.completionCriteria === 'output-reference-required' &&
-    !hasOutputReference(outputs)
-  ) {
-    throw new Error(`Playbook action '${stepId}' requires a real output reference/path/link before completion`);
+  if (step.status === 'completed') throw new Error('Step already completed');
+  if (state.currentStep !== stepId) throw new Error('Complete previous steps first');
+  if (step.type === 'action') {
+    getOutputReference(outputs);
+    const receipt = verifiedActionOutputs.get(outputs);
+    if (!receipt || receipt.runId !== state.runId || receipt.stepId !== stepId) {
+      throw new Error('Action requires verified output; use completePlaybookAction');
+    }
+    step.outputVerification = receipt.verification;
+    verifiedActionOutputs.delete(outputs);
   }
 
   step.status = 'completed';
@@ -466,9 +534,10 @@ export function completePlaybookStep(state, stepId, outputs = {}) {
   next.context ||= {};
   next.context.outputs ||= {};
   next.context.handoffs ||= {};
-  next.context.outputs[stepId] = outputs;
+  const safeOutputs = sanitizeRunData(outputs);
+  next.context.outputs[stepId] = safeOutputs;
 
-  const handoff = buildStructuredHandoff(step, outputs);
+  const handoff = buildStructuredHandoff(step, safeOutputs);
   next.context.handoffs[stepId] = handoff;
 
   next.events ||= [];
@@ -486,7 +555,9 @@ export function completePlaybookStep(state, stepId, outputs = {}) {
   next.currentStep = nextStep?.id || null;
   next.status = nextStep ? 'active' : 'completed';
 
-  return next;
+  const safe = sanitizeRunData(next);
+  if (step.type === 'action') verifiedCompletedStates.set(safe, stateDigest(safe));
+  return safe;
 }
 
 
@@ -538,12 +609,15 @@ export function markPlaybookActionState(state, stepId, actionResolution) {
     tool: step.actionState.tool,
   });
 
-  if (step.actionState.status === 'blocked') {
+  if (step.actionState.status === 'waiting-confirmation') {
+    next.status = 'waiting-confirmation';
+    next.currentStep = stepId;
+  } else if (step.actionState.status === 'blocked') {
     next.status = 'waiting-tool';
     next.currentStep = stepId;
   }
 
-  return next;
+  return sanitizeRunData(next);
 }
 
 
@@ -551,7 +625,7 @@ export function addRunProvenance(state, record) {
   const next = structuredClone(state);
   next.context ||= {};
   next.context.provenance ||= [];
-  const normalized = createProvenanceRecord(record);
+  const normalized = sanitizeRunData(createProvenanceRecord(record));
   next.context.provenance.push(normalized);
   next.events ||= [];
   next.events.push({
@@ -560,7 +634,7 @@ export function addRunProvenance(state, record) {
     provenanceType: normalized.type,
     sourceRef: normalized.sourceRef || '',
   });
-  return next;
+  return sanitizeRunData(next);
 }
 
 export function recordRunFeedback(state, {
@@ -576,7 +650,7 @@ export function recordRunFeedback(state, {
 
   const next = structuredClone(state);
   next.feedback ||= [];
-  const safeNote = redactPrivacyText(String(note || '')).redactedText;
+  const safeNote = sanitizeRunData(String(note || ''));
   next.feedback.push({
     rating,
     category: String(category || '').slice(0, 80),
@@ -585,5 +659,5 @@ export function recordRunFeedback(state, {
   });
   next.events ||= [];
   next.events.push({ at: createdAt, type: 'feedback-recorded', rating, category: String(category || '').slice(0, 80) });
-  return next;
+  return sanitizeRunData(next);
 }

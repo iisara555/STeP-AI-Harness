@@ -4,9 +4,30 @@ const scanCache = new Map();
 
 const PATTERNS = [
   {
+    id: 'person-name',
+    label: 'ชื่อบุคคล',
+    class: 'restricted',
+    regex: /(?:ชื่อ(?:พนักงาน|ผู้รับบริการ|บุคคล|ผู้ติดต่อ|จริง|[ -]นามสกุล)?\s*[:：]\s*|\b(?:employee\s*name|full\s*name|contact\s*name)\s*[:：]\s*)[^\r\n,;|]{1,120}/gi,
+    replacement: '[ชื่อบุคคลถูกปิดบัง]',
+  },
+  {
+    id: 'thai-titled-name',
+    label: 'ชื่อบุคคลพร้อมคำนำหน้า',
+    class: 'restricted',
+    regex: /(?<![ก-๙])(?:นาย|นางสาว|นาง|น\.ส\.)[ \t]*[ก-๙]{2,}(?:[ \t]+[ก-๙]{2,})?/g,
+    replacement: '[ชื่อบุคคลถูกปิดบัง]',
+  },
+  {
+    id: 'credential',
+    label: 'ข้อมูลรับรองตัวตน',
+    class: 'sensitive',
+    regex: /\b(?:password|passwd|pwd|api[_-]?key|access[_-]?token|refresh[_-]?token|secret|cookie|authorization|mfa[_-]?code|recovery[_-]?code)\s*[:=]\s*[^\r\n,;]+|Bearer\s+[A-Za-z0-9._~+\/-]+=*|\b(?:gh[pousr]_|sk-)[A-Za-z0-9_-]{20,}|[?&](?:token|key|sig|signature|code|x-amz-signature)=[^\s&#]+/gi,
+    replacement: '[credential-redacted]',
+  },
+  {
     id: 'email',
     label: 'อีเมล',
-    class: 'internal',
+    class: 'restricted',
     regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
     replacement: '[อีเมลถูกปิดบัง]',
   },
@@ -132,6 +153,10 @@ export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
     classification = 'restricted';
     action = 'human-confirm';
   }
+  if (findings.some((f) => f.type === 'credential')) {
+    classification = 'sensitive';
+    action = 'block-external';
+  }
 
   const result = {
     hash,
@@ -141,6 +166,8 @@ export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
     findings,
     sensitiveKeywordsCount: sensitiveKeywords.length,
     cacheHit: false,
+    // A pattern scan is not an authoritative document classification.
+    detectionScope: 'text-patterns-only',
   };
 
   scanCache.set(cacheKey, result);
@@ -175,7 +202,9 @@ export function evaluatePrivacyGate(text = '', options = {}) {
 
   return {
     ...result,
-    canSendToExternalAI: result.action !== 'block-external',
+    // Pending confirmation is not permission to transmit. The host must resolve
+    // the review separately; a classifier flag must never implicitly authorize it.
+    canSendToExternalAI: result.action === 'pass' || result.action === 'auto-mask',
     requiresHumanConfirmation: result.action === 'human-confirm' || result.action === 'block-external',
     logSafeMetadata: {
       sourceHash: result.hash,
@@ -185,6 +214,37 @@ export function evaluatePrivacyGate(text = '', options = {}) {
       redactionApplied: result.redactionApplied,
     },
   };
+}
+
+const PRIVATE_KEYS = /^(?:password|passwd|pwd|secret|token|accessToken|refreshToken|apiKey|cookie|cookies|authorization|mfa|mfaCode|recoveryCode|employeeName|fullName|firstName|lastName|personalName|phone|phoneNumber|email|address|bankAccount|nationalId|employeeId|medicalHistory|healthRecord|ชื่อพนักงาน|ชื่อจริง|นามสกุล|เบอร์โทร|เลขบัญชี|เลขประจำตัว)$/i;
+
+/** Best-effort minimization for JSON state. Unknown/unlabelled PII still needs
+ * host review; never use this helper as a permission or a complete DLP verdict.
+ * Keys are inspected too because model output can place PII in object keys.
+ */
+export function sanitizeRunData(value, depth = 0, parentKey = '') {
+  if (depth > 30) throw new Error('Run data exceeds maximum depth');
+  if (value === null || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    if (parentKey === 'runId' && /^\d{8}-\d{6}-[a-z0-9-]+-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) return value;
+    if (/^(?:sha256|sourceHash|operationHash|harnessRevision)$/.test(parentKey)
+        && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(value)) return value;
+    const result = evaluatePrivacyGate(value);
+    if (result.requiresHumanConfirmation) return '[restricted-content-omitted]';
+    return result.redactedText;
+  }
+  if (Array.isArray(value)) return value.map((item) => sanitizeRunData(item, depth + 1, parentKey));
+  if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+      const safeKey = sanitizeRunData(key, depth + 1);
+      const privateKey = PRIVATE_KEYS.test(key.replace(/[_\s-]/g, ''))
+        || (key === 'name' && /^(?:employee|person|contact|user)$/i.test(parentKey));
+      return [safeKey, privateKey ? '[private-field-omitted]' : sanitizeRunData(item, depth + 1, key)];
+    }));
+  }
+  if (value === undefined) return null;
+  throw new Error('Run data must contain only JSON values');
 }
 
 export function clearPrivacyScanCache() {

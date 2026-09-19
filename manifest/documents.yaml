@@ -7,9 +7,10 @@ documents:
     owner: afp
     type: policy
     process: procurement.tor
-    version: "2.1"
-    path: rules/human-approval.md
-    status: active
+    sourceLevel: organization-policy
+    authority: unverified
+    verification: pending-afp-confirmation
+    status: missing
 
   qs-doc-control-procedure:
     title: "QP-DC-001 การควบคุมเอกสารและข้อมูล"

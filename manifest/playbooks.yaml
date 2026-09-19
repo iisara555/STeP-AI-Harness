@@ -79,6 +79,8 @@ playbooks:
         when: spreadsheet
         preferredTool: google-sheets
         fallback: xlsx
+        actionSpecPath: docs/action-verification.md
+        completionCriteria: output-reference-required
         description: "สร้าง Action Tracker / Timeline / Gantt จากแผนที่ได้"
         consumes: [activities, milestones, dependencies, timeline]
         produces: [action-plan-sheet]

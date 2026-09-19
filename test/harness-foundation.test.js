@@ -264,11 +264,10 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
       /requires a real output reference/
     );
 
-    const completed = completePlaybookStep(state, 'create-spreadsheet', {
+    assert.throws(() => completePlaybookStep(state, 'create-spreadsheet', {
       path: 'output/PM/2026/09/spreadsheet/project-plan.xlsx',
-    });
-    assert.equal(completed.status, 'completed');
-    assert.equal(completed.steps.find((s) => s.id === 'create-spreadsheet').status, 'completed');
+    }), /requires verified output/);
+    assert.equal(state.steps.find((s) => s.id === 'create-spreadsheet').status, 'pending');
   });
 
   await t.test('Run feedback rejects unknown rating values', () => {
