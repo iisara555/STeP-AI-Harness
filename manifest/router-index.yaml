@@ -15,6 +15,28 @@ router:
       ambiguous: 0.50
 
 skills:
+  # --- AI Harness Governance ---
+  - name: step-skill-authoring
+    cluster: governance-operations
+    domain: ai-governance
+    processId: ai.skill-governance
+    teams:
+      primary: [ai-admin]
+      consumers: ["*"]
+    description: ใช้เมื่อจะสร้างหรือปรับ Skill ของ STeP AI Harness; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action และออกแบบ Trigger/Anti-trigger, Source, Authority, Handoff และ Eval ก่อน Pilot
+    intent: [create, review, improve, plan]
+    triggers: [สร้าง skill, สร้างสกิล, create skill, add skill, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring, skill contract, skill eval, ทำ skill ให้พร้อม pilot]
+    paths: ["**/skills/**", "**/manifest/**", "**/router-index.yaml", "**/skill-*"]
+    fileTypes: [md, yaml, yml, json]
+    requires: [skill_need]
+    scope:
+      allow:
+        - ตรวจ Need Gate ว่าควรเป็น Skill, Playbook, Rule, Registry หรือ Action
+        - ออกแบบ Trigger/Anti-trigger, Input, Output, Source, Authority, Handoff และ Context Budget
+        - สร้าง eval plan และรายการ registry/router changes ที่จำเป็น
+      escalate: {}
+      human_only: {}
+
   # --- Procurement & TOR ---
   - name: tor-review
     cluster: governance-operations
