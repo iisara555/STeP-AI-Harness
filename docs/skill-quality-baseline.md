@@ -5,6 +5,8 @@
 ## Scope
 
 - Registered Skills: **45**
+- Lifecycle evidence: **approved 0 / pilot 44 / draft 1**
+- `approvedBy` is treated as the required approval role, not proof that owner approval occurred
 - Routable user-facing Skills: **44** + `step-router`
 - Directly represented in model-side 30-task benchmark: **26**
 - Not directly represented in that benchmark: **19**
