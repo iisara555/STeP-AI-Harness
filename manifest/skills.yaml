@@ -629,6 +629,27 @@ skills:
       mandatory: [human-approval-rule]
       optional: []
 
+
+  expert-resource-matching:
+    owner: linc
+    version: 1.0.0
+    domain: [industry-collaboration, resource-discovery]
+    process: [industry.problem-discovery]
+    service: [industry-problem-solving, infrastructure-testing, tech-commercialization]
+    path: skills/pm/expert-resource-matching/SKILL.md
+    description: จับคู่โจทย์ที่ชัดแล้วกับบริการ STeP, Expert, Lab, Equipment หรือ Pilot Plant จาก Service Registry และแหล่ง discovery ทางการ พร้อม Human Verification ก่อนส่งต่อจริง
+    governance:
+      owner: linc
+      reviewer: [tech-up, les, qs]
+      approvedBy: [linc-head]
+      reviewedAt: "2026-09-19"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
   market-signal-radar:
     owner: mi
     version: 1.0.0
