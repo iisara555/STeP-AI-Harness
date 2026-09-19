@@ -12,12 +12,13 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 
 | รายการ | สถานะ |
 | --- | --- |
-| Released Pilot | **v0.7.2** |
-| ทีมที่รองรับ | **22 ทีม** |
-| กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **45 Skills** |
-| Playbooks | **4 Playbooks** |
-| Actions | **3 Actions** |
+| Released Pilot baseline | **v0.7.2** |
+| Repository `main` | **post-v0.7.2 development** — ยังไม่ถือเป็น release จนกว่าจะ tag/release |
+| ทีมใน current main | **22 ทีม** |
+| กลุ่ม routing ใน current main | **5 กลุ่ม** |
+| Skills ใน current main | **45 Skills** |
+| Playbooks ใน current main | **4 Playbooks** |
+| Actions ใน current main | **3 Actions** |
 
 รายละเอียดเชิงระบบอยู่ใน [Architecture Reference](docs/architecture.md) ส่วนหน้านี้เขียนสำหรับพนักงานเป็นหลัก
 
