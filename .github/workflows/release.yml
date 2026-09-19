@@ -25,6 +25,8 @@ jobs:
           scope: '@step-cmu'
       - name: Validate repository integrity
         run: python3 scripts/validate_repo.py
+      - name: Build pilot distribution bundle
+        run: python3 scripts/build_pilot_bundle.py
       - name: Run test suite
         run: npm test
       - name: Publish to GitHub Packages
