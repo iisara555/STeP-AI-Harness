@@ -48,7 +48,7 @@ test('README and architecture stay aligned with current manifests', async (t) =>
   });
 
   await t.test('README distinguishes release from development foundation', () => {
-    assert.ok(readme.includes('feat/lightweight-harness-foundation'));
+    assert.ok(readme.includes('feat/context-efficiency'));
     assert.ok(readme.includes('ยังไม่ควรถูกตีความว่าเป็น Release'));
     assert.ok(readme.includes('AFP ยังอยู่ในสถานะ **Demo Source Pack / Foundation Preparation**'));
   });
@@ -76,5 +76,13 @@ test('README and architecture stay aligned with current manifests', async (t) =>
     assert.ok(readme.includes('step-ai privacy --file sample.txt --redact'));
     assert.ok(readme.includes('Run State v3'));
     assert.ok(readme.includes('raw PII'));
+  });
+
+  await t.test('README and architecture document context efficiency without adding a new layer', () => {
+    assert.ok(readme.includes('Context Efficiency & Token Budgeting'));
+    assert.ok(readme.includes('Compact Routing Contract'));
+    assert.ok(readme.includes('structured handoff'));
+    assert.ok(architecture.includes('Context Budgeter ไม่ใช่ Layer ใหม่'));
+    assert.ok(architecture.includes('src/modules/context-budget/'));
   });
 });
