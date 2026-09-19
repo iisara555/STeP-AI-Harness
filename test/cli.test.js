@@ -30,7 +30,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     const allFiles = await resolveRoleFiles('all');
     assert.equal(allFiles.role.id, 'all');
     const allSkillPaths = allFiles.files.filter((f) => f.type === 'skill' && f.relativePath.endsWith('SKILL.md'));
-    assert.equal(allSkillPaths.length, 43, 'Universal role should resolve all 43 skills');
+    assert.equal(allSkillPaths.length, 44, 'Universal role should resolve all 44 skills');
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/creative/creative-art-director/SKILL.md'));
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/evidence-before-approval/SKILL.md'));
     assert.ok(allSkillPaths.some((f) => f.relativePath === 'skills/common/learning-designer/SKILL.md'));
