@@ -21,6 +21,8 @@ jobs:
           node-version: '20'
       - name: Validate skills, scan secrets, and verify package whitelist
         run: python3 scripts/validate_repo.py
+      - name: Verify pinned Node runtime supply chain
+        run: bash scripts/verify_node_runtime_pins.sh
       - name: Build pilot distribution bundle
         run: python3 scripts/build_pilot_bundle.py
       - name: Check updater script syntax
@@ -33,7 +35,7 @@ jobs:
           bash -n install/update-macos.sh
           bash -n install/feedback-macos.sh
           bash -n install/macos-runtime.sh
-          pwsh -NoProfile -Command "\$null = [scriptblock]::Create((Get-Content -Raw 'install/update-windows.ps1')); Write-Host 'PowerShell syntax OK'"
+          pwsh -NoProfile -Command "@('install/windows-runtime.ps1','install/install-windows.ps1','install/update-windows.ps1','install/feedback-windows.ps1') | ForEach-Object { \$null = [scriptblock]::Create((Get-Content -Raw \$_)) }; Write-Host 'PowerShell syntax OK'"
 
       - name: Run CLI and module unit tests
         run: npm test

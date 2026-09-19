@@ -11,6 +11,9 @@ if (-not $PSScriptRoot) {
 }
 
 $rootDir = (Resolve-Path "$PSScriptRoot\..").Path
+. (Join-Path $PSScriptRoot "windows-runtime.ps1")
+$nodeBin = Resolve-StepNode -RootDir $rootDir
+
 $packagePath = Join-Path $rootDir "package.json"
 $currentPackage = Get-Content -Raw $packagePath | ConvertFrom-Json
 $currentVersionText = [string]$currentPackage.version
@@ -32,7 +35,7 @@ function Show-Header {
 
 function Invoke-LocalSync {
     Write-Host "กำลังซิงก์ Skills, Rules และ Router จากเวอร์ชันที่ติดตั้งอยู่..." -ForegroundColor Yellow
-    & node "$rootDir\bin\step-ai.js" update --dest "$rootDir"
+    & $nodeBin "$rootDir\bin\step-ai.js" update --dest "$rootDir"
     if ($LASTEXITCODE -ne 0) {
         throw "Local workspace sync failed."
     }
@@ -48,15 +51,7 @@ function Finish-Update {
 }
 
 Show-Header
-
-try {
-    $nodeVer = & node -v 2>$null
-    if (-not $nodeVer) { throw "ไม่พบ Node.js Runtime" }
-} catch {
-    Write-Host "⚠️  เครื่องนี้ยังไม่พร้อมอัปเดต กรุณาติดต่อ AI Champion" -ForegroundColor Yellow
-    Read-Host "กด Enter เพื่อออก"
-    exit 1
-}
+Write-Host "✓ Node.js Runtime: $(& $nodeBin -v)" -ForegroundColor Green
 
 Set-Location $rootDir
 Write-Host "กำลังตรวจสอบรุ่นล่าสุดจาก GitHub Releases..." -ForegroundColor Gray
@@ -153,7 +148,7 @@ try {
     }
 
     Write-Host "กำลังสำรองข้อมูลและอัปเกรด Workspace..." -ForegroundColor Yellow
-    & node $newCliPath upgrade-apply --dest "$rootDir" --version "$latestVersionText"
+    & $nodeBin $newCliPath upgrade-apply --dest "$rootDir" --version "$latestVersionText"
     if ($LASTEXITCODE -ne 0) {
         throw "Version upgrade failed."
     }

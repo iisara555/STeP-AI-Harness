@@ -1,8 +1,12 @@
 # Pilot Operations — 1 Month
 
+**As of:** 2026-09-20  
+**Released distribution baseline:** v0.7.2  
+**Repository scope:** `main` may contain post-v0.7.2 changes; do not treat `main` as a released employee package until tagged/released.
+
 ## ขอบเขต
 
-ระยะเวลา **4 สัปดาห์** ใช้ Pilot v0.6.1 เป็น baseline
+ระยะเวลา **4 สัปดาห์** ใช้ released Pilot v0.7.2 เป็น distribution baseline
 
 - เปิดใช้ได้กับ 22 ทีม
 - มี Core Pilot Users ประมาณ 10–15 คน ครอบคลุมทั้ง 5 routing clusters
@@ -12,10 +16,11 @@
 ## Week 0 — Preflight
 
 ก่อนเริ่มนับ Pilot:
-- ติดตั้ง/อัปเดต v0.6.1
+- ติดตั้ง/อัปเดต released Pilot v0.7.2 หรือรุ่นถัดไปที่ผ่าน Release Gate
 - รัน CI และ Pilot readiness suite ให้เขียว
 - ทดสอบ update + rollback อย่างน้อย 1 เครื่อง Windows และ 1 เครื่อง macOS ถ้ามี
 - ยืนยัน feedback channel และผู้รับผิดชอบ triage
+- ยืนยัน Public/Private model ของ repository และช่องทาง distribution ตาม `docs/repository-data-boundary.md`
 - ย้ำ Browser credential policy และ Human Confirmation Gate
 - freeze feature ใหม่ที่ไม่จำเป็น
 

@@ -10,6 +10,9 @@ if (-not $PSScriptRoot) {
 }
 
 $rootDir = Resolve-Path "$PSScriptRoot\.."
+. (Join-Path $PSScriptRoot "windows-runtime.ps1")
+$nodeBin = Resolve-StepNode -RootDir $rootDir
+
 Set-Location $rootDir
 
 Clear-Host
@@ -40,7 +43,7 @@ switch ($choice) {
     "1" {
         Write-Host ""
         Write-Host "กำลังเปิดแบบฟอร์มแจ้งปัญหา..." -ForegroundColor Gray
-        & node "$rootDir\bin\step-ai.js" feedback --issue -d "$rootDir"
+        & $nodeBin "$rootDir\bin\step-ai.js" feedback --issue -d "$rootDir"
         $feedbackFile = "$rootDir\FEEDBACK.md"
         if (Test-Path $feedbackFile) {
             Write-Host "✓ เปิดไฟล์ FEEDBACK.md ใน Notepad ให้ท่านแล้ว..." -ForegroundColor Green
@@ -53,7 +56,7 @@ switch ($choice) {
     "2" {
         Write-Host ""
         Write-Host "กำลังเปิดแบบฟอร์มของานเพิ่ม..." -ForegroundColor Gray
-        & node "$rootDir\bin\step-ai.js" feedback --request -d "$rootDir"
+        & $nodeBin "$rootDir\bin\step-ai.js" feedback --request -d "$rootDir"
         $requestFile = "$rootDir\REQUEST_NEW_TASK.md"
         if (Test-Path $requestFile) {
             Write-Host "✓ เปิดไฟล์ REQUEST_NEW_TASK.md ใน Notepad ให้ท่านแล้ว..." -ForegroundColor Green
@@ -65,7 +68,7 @@ switch ($choice) {
     }
     "admin" {
         Write-Host ""
-        & node "$rootDir\bin\step-ai.js" feedback --admin
+        & $nodeBin "$rootDir\bin\step-ai.js" feedback --admin
     }
     default {
         Write-Host ""

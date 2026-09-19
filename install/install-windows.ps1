@@ -9,6 +9,9 @@ if (-not $PSScriptRoot) {
 }
 
 $rootDir = (Resolve-Path "$PSScriptRoot\..").Path
+. (Join-Path $PSScriptRoot "windows-runtime.ps1")
+$nodeBin = Resolve-StepNode -RootDir $rootDir
+
 $pilotVersion = [string](Get-Content -Raw (Join-Path $rootDir "package.json") | ConvertFrom-Json).version
 $Host.UI.RawUI.WindowTitle = "STeP AI Setup (v$pilotVersion)"
 
@@ -31,27 +34,9 @@ function Show-Header {
 
 Show-Header
 
-# 1. Check Node.js Runtime
+# 1. Node.js Runtime is resolved by windows-runtime.ps1.
 Write-Host "กำลังตรวจสอบสภาพแวดล้อมระบบ..." -ForegroundColor Gray
-$nodeInstalled = $false
-try {
-    $nodeVer = & node -v 2>$null
-    if ($nodeVer) {
-        $nodeInstalled = $true
-        Write-Host "✓ พบ Node.js Runtime: $nodeVer" -ForegroundColor Green
-    }
-} catch {
-    $nodeInstalled = $false
-}
-
-if (-not $nodeInstalled) {
-    Write-Host ""
-    Write-Host "⚠️  เครื่องนี้ยังไม่พร้อมติดตั้ง" -ForegroundColor Yellow
-    Write-Host "กรุณาติดต่อ AI Champion ประจำทีมให้ช่วยติดตั้งให้ ไม่ต้องติดตั้งโปรแกรมระบบด้วยตัวเอง" -ForegroundColor Gray
-    Write-Host ""
-    Read-Host "กด Enter เพื่อออกจากโปรแกรม"
-    exit 1
-}
+Write-Host "✓ Node.js Runtime: $(& $nodeBin -v)" -ForegroundColor Green
 
 # 2. Detect Installed AI Tools (8 Tools across 3 Tiers)
 Write-Host ""
@@ -259,9 +244,9 @@ Write-Host ""
 Set-Location $rootDir
 
 if ($selectedTeam) {
-    & node "$rootDir\bin\step-ai.js" init --team $selectedTeam --tool $selectedTool
+    & $nodeBin "$rootDir\bin\step-ai.js" init --team $selectedTeam --tool $selectedTool
 } else {
-    & node "$rootDir\bin\step-ai.js" init --role all --tool $selectedTool
+    & $nodeBin "$rootDir\bin\step-ai.js" init --role all --tool $selectedTool
 }
 if ($LASTEXITCODE -ne 0) {
     Write-Host "เกิดข้อผิดพลาดในการติดตั้ง กรุณาติดต่อ AI Champion ประจำทีม" -ForegroundColor Red
@@ -270,12 +255,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($selectedTeam) {
-    & node "$rootDir\bin\step-ai.js" config --team $selectedTeam
+    & $nodeBin "$rootDir\bin\step-ai.js" config --team $selectedTeam
 }
 
 # 5. Run Doctor Check
 Write-Host ""
-& node "$rootDir\bin\step-ai.js" doctor --employee
+& $nodeBin "$rootDir\bin\step-ai.js" doctor --employee
 
 # 6. Success Screen
 $teamLabel = if ($selectedTeam) { $selectedTeam.ToUpper() } else { "ทุกคนเข้าถึงได้" }

@@ -104,6 +104,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
   await t.test('Case 5: Verification of Windows Explorer batch and powershell files', async () => {
     const batInstall = join(PACKAGE_ROOT, 'Install-STeP-AI.bat');
     const psInstall = join(PACKAGE_ROOT, 'install', 'install-windows.ps1');
+    const psRuntime = join(PACKAGE_ROOT, 'install', 'windows-runtime.ps1');
     const batUpdate = join(PACKAGE_ROOT, 'Update-STeP-AI.bat');
     const psUpdate = join(PACKAGE_ROOT, 'install', 'update-windows.ps1');
     const batFeedback = join(PACKAGE_ROOT, 'Feedback-STeP-AI.bat');
@@ -111,6 +112,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
     assert.ok(await pathExists(batInstall), 'Install-STeP-AI.bat must exist at repo root');
     assert.ok(await pathExists(psInstall), 'install/install-windows.ps1 must exist');
+    assert.ok(await pathExists(psRuntime), 'install/windows-runtime.ps1 must exist');
     assert.ok(await pathExists(batUpdate), 'Update-STeP-AI.bat must exist at repo root');
     assert.ok(await pathExists(psUpdate), 'install/update-windows.ps1 must exist');
     assert.ok(await pathExists(batFeedback), 'Feedback-STeP-AI.bat must exist at repo root');
@@ -121,9 +123,15 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(batInstallContent.includes('chcp 65001'));
 
     const psInstallContent = await readFile(psInstall, 'utf-8');
+    const psRuntimeContent = await readFile(psRuntime, 'utf-8');
     assert.ok(psInstallContent.includes('STeP AI Setup'));
     assert.ok(psInstallContent.includes('package.json'));
     assert.ok(psInstallContent.includes('$pilotVersion'));
+    assert.ok(psInstallContent.includes('Resolve-StepNode'));
+    assert.ok(psRuntimeContent.includes('$StepNodeVersion = "22.23.2"'));
+    assert.ok(psRuntimeContent.includes('1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97'));
+    assert.ok(psRuntimeContent.includes('fec025a6da31757e3b6af84c5a1628e9d38442ca99a2161091d78f2fcfa35ef3'));
+    assert.ok(!psRuntimeContent.includes('latest-v'));
     // Verify all 22 teams are displayed in installer
     assert.ok(psInstallContent.includes('QS'));
     assert.ok(psInstallContent.includes('AFP'));
@@ -193,7 +201,12 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
   await t.test(`Case 7: Distribution Packager builds valid v${PACKAGE_VERSION} ZIP`, async () => {
     const zipPath = join(PACKAGE_ROOT, 'dist', `STeP-AI-Pilot-v${PACKAGE_VERSION}.zip`);
-    assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist`);
+    if (!(await pathExists(zipPath))) {
+      await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, join(PACKAGE_ROOT, 'scripts', 'build_pilot_bundle.py')], {
+        cwd: PACKAGE_ROOT,
+      });
+    }
+    assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist after packager runs`);
 
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);
@@ -223,9 +236,11 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(await pathExists(macHelp), 'MAC-START-HERE.txt must exist');
 
     const runtimeContent = await readFile(runtimeHelper, 'utf-8');
-    assert.ok(runtimeContent.includes('latest-v\${STEP_NODE_MAJOR}.x'));
-    assert.ok(runtimeContent.includes('SHASUMS256.txt'));
+    assert.ok(runtimeContent.includes('STEP_NODE_VERSION="22.23.2"'));
+    assert.ok(runtimeContent.includes('61130f394c1630d211dd50aecc4353d379480f36d3ac913cd85dbba1aed585c6'));
+    assert.ok(runtimeContent.includes('58e99022c2ff89395576cc7fd4d98cea24bb68081475d5f88b801ee8729fb026'));
     assert.ok(runtimeContent.includes('shasum -a 256'));
+    assert.ok(!runtimeContent.includes('latest-v'));
     assert.ok(runtimeContent.includes('.step-ai/runtime/node'));
     assert.ok(runtimeContent.includes('node_arch="arm64"'));
     assert.ok(runtimeContent.includes('node_arch="x64"'));
@@ -343,10 +358,12 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const installPs1Path = join(PACKAGE_ROOT, 'install', 'install-windows.ps1');
     const updatePs1Path = join(PACKAGE_ROOT, 'install', 'update-windows.ps1');
     const feedbackPs1Path = join(PACKAGE_ROOT, 'install', 'feedback-windows.ps1');
+    const runtimePs1Path = join(PACKAGE_ROOT, 'install', 'windows-runtime.ps1');
 
     const installBuf = await readFile(installPs1Path);
     const updateBuf = await readFile(updatePs1Path);
     const feedbackBuf = await readFile(feedbackPs1Path);
+    const runtimeBuf = await readFile(runtimePs1Path);
 
     // Verify UTF-8 BOM
     assert.equal(installBuf[0], 0xef, 'install-windows.ps1 must start with UTF-8 BOM byte 0');
@@ -360,6 +377,10 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.equal(feedbackBuf[0], 0xef, 'feedback-windows.ps1 must start with UTF-8 BOM byte 0');
     assert.equal(feedbackBuf[1], 0xbb, 'feedback-windows.ps1 must start with UTF-8 BOM byte 1');
     assert.equal(feedbackBuf[2], 0xbf, 'feedback-windows.ps1 must start with UTF-8 BOM byte 2');
+
+    assert.equal(runtimeBuf[0], 0xef, 'windows-runtime.ps1 must start with UTF-8 BOM byte 0');
+    assert.equal(runtimeBuf[1], 0xbb, 'windows-runtime.ps1 must start with UTF-8 BOM byte 1');
+    assert.equal(runtimeBuf[2], 0xbf, 'windows-runtime.ps1 must start with UTF-8 BOM byte 2');
 
     // On Windows, verify parser validation via powershell.exe
     if (process.platform === 'win32') {

@@ -62,7 +62,11 @@
     "docs/harness-quality-axes.md",
     "manifest/skill-evals.json",
     "docs/skill-authoring-standard.md",
-    "docs/skill-quality-baseline.md"
+    "docs/skill-quality-baseline.md",
+    "docs/repository-data-boundary.md",
+    "docs/legacy-skill-mapping.md",
+    "docs/pilot-readiness-audit.md",
+    "docs/pilot-operations.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

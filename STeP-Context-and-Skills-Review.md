@@ -1,5 +1,12 @@
 **STeP: บริบทองค์กร ทีม และรูปแบบงานที่เหมาะกับ AI Skills**
 
+## สถานะเอกสารปัจจุบัน
+
+- **จัดทำเดิม:** 14 กันยายน 2569
+- **สถานะ:** Historical proposal / research input — ไม่ใช่ inventory ของ Harness ปัจจุบัน
+- **Current mapping as of 20 กันยายน 2569:** ดู [Legacy Proposal → Current Harness Mapping](docs/legacy-skill-mapping.md)
+- ชื่อ Skill ในรายงานนี้เป็นข้อเสนอ ณ เวลานั้น จึงห้ามใช้เป็นหลักฐานว่าไฟล์ Skill ปัจจุบันต้องมีชื่อเดียวกัน
+
 ทบทวนข้อมูลวันที่ 14 กันยายน 2569 • ข้อเสนอสำหรับปรับ STeP TeamAI Pilot Harness
 
 ชื่อทีมหลักที่ผู้ใช้ยืนยัน: **PITI, LINC และ MI** ใช้ชื่อชุดนี้ในแผนที่ทีม ข้อเสนอ Roles และการพัฒนา Skills ต่อจากรายงานนี้

@@ -1,5 +1,10 @@
 # STeP — Codex Desktop Handoff
 
+## สถานะปัจจุบันของเอกสารนี้
+
+**Historical handoff only — จัดทำ 14 กันยายน 2569**  
+ห้ามใช้ไฟล์นี้เป็น inventory ของ Harness ปัจจุบันหรือเป็นหลักฐานสถานะ release. สำหรับสถานะ Skill ปัจจุบันดู `manifest/skills.yaml`; สำหรับการเทียบข้อเสนอเดิมกับระบบปัจจุบันดู [docs/legacy-skill-mapping.md](docs/legacy-skill-mapping.md).
+
 จัดทำ 14 กันยายน 2569 จากบทสนทนากับผู้ใช้ สำหรับวางแผนต่อใน Codex Desktop
 
 ## เป้าหมายและขอบเขตที่ผู้ใช้ยืนยัน
