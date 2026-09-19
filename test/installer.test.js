@@ -193,7 +193,12 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
   await t.test(`Case 7: Distribution Packager builds valid v${PACKAGE_VERSION} ZIP`, async () => {
     const zipPath = join(PACKAGE_ROOT, 'dist', `STeP-AI-Pilot-v${PACKAGE_VERSION}.zip`);
-    assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist`);
+    if (!(await pathExists(zipPath))) {
+      await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, join(PACKAGE_ROOT, 'scripts', 'build_pilot_bundle.py')], {
+        cwd: PACKAGE_ROOT,
+      });
+    }
+    assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist after packager runs`);
 
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);
