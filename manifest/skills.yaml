@@ -68,7 +68,7 @@ skills:
     process: [procurement.tor]
     service: [public-sector-innovation]
     path: skills/pm/tor-government-writing/SKILL.md
-    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ (แม่แบบมาสเตอร์ ๑๖ หัวข้อ)
+    description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability/acceptance criteria โดยไม่แต่ง procurement rule
     governance:
       owner: afp
       reviewer: [qs]
