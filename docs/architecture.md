@@ -1,6 +1,6 @@
 # STeP AI Harness — Architecture Reference
 
-> เอกสารนี้อธิบายสถาปัตยกรรมล่าสุดของ STeP AI Harness บน branch **feat/lightweight-harness-foundation**
+> เอกสารนี้อธิบายสถาปัตยกรรมล่าสุดของ STeP AI Harness บน branch **feat/context-efficiency**
 >
 > หลักสำคัญ: Harness เป็นชั้นกลางระหว่างพนักงานกับ AI เพื่อให้ AI เข้าใจบริบทองค์กร ใช้แหล่งอ้างอิงที่ตรวจสอบได้ รู้ขอบเขตอำนาจ และเรียกความสามารถที่เหมาะสมโดยไม่ผูกกับ AI provider รายเดียว
 
@@ -19,6 +19,7 @@ flowchart TB
 
     subgraph C2["Layer 2 — Intent & Routing"]
       RT[Router<br/>Intent + Team + Path + File Type + Signals]
+      CB[Context Budgeter<br/>compact route / selected context only]
       ATOMIC[Atomic Task<br/>เลือก 1 Skill]
       COMP[Composite Task<br/>เลือก Playbook]
     end
@@ -84,8 +85,9 @@ flowchart TB
     DR --> AFP
     ORG --> RT
 
-    RT --> ATOMIC
-    RT --> COMP
+    RT --> CB
+    CB --> ATOMIC
+    CB --> COMP
     ATOMIC --> SK
     COMP --> PB
 
@@ -115,13 +117,19 @@ flowchart TB
 | Layer | หน้าที่ | Source หลักใน repo |
 | --- | --- | --- |
 | AI Client & Workspace | ทำให้ Harness ใช้งานได้กับ AI หลายค่าย และโหลดบริบทแบบ progressive disclosure | START-HERE.md, adapters, generated instruction files |
-| Intent & Routing | เลือกทีม/Skill/Playbook จากภาษาธรรมชาติ โดยไม่ให้พนักงานจำคำสั่งเฉพาะ | manifest/router-index.yaml, src/modules/router/ |
+| Intent & Routing | เลือกทีม/Skill/Playbook แบบ local deterministic และสร้าง compact context contract; Context Budgeter เป็น implementation mechanism ภายใน layer นี้ | manifest/router-index.yaml, src/modules/router/, src/modules/context-budget/ |
 | Organization Model 6D | โมเดลองค์กร 6 มิติ: WHO / WHERE / WHAT / WHY / HOW / AUTHORITY | manifest/teams.yaml, manifest/processes.yaml, manifest/services.yaml, manifest/authority.yaml, manifest/organization.yaml |
 | Controlled Knowledge & Domain Governance | เก็บ Source ที่ AI ใช้อ้างอิง พร้อม owner/status/version เท่าที่ตรวจสอบได้ | manifest/documents.yaml, docs/quality-layer.md, AFP demo docs |
 | Cross-cutting Safeguards | Privacy, provenance, human authority และ credential safety ที่ครอบหลาย layer | rules/data-classification.md, manifest/provenance.yaml, manifest/authority.yaml, rules/secret-safety.md |
 | Skills & Playbooks | Atomic task ใช้ Skill; composite task ใช้ Playbook ที่เรียง Skill แบบ lightweight | manifest/skills.yaml, manifest/playbooks.yaml |
 | Action & Tool Execution | แยก “ความรู้/วิธีทำงาน” ออกจาก “การลงมือทำจริง” และตรวจ risk/confirmation/tool availability | manifest/actions.yaml, action specs |
 | State, Output & Learning | เก็บ run state แบบปลอดภัย, output reference, provenance และ feedback เพื่อนำไปปรับระบบ | .step-ai/runs/, output/, feedback flow |
+
+### Context Budgeter ไม่ใช่ Layer ใหม่
+
+Context Budgeter อยู่ภายใน Intent & Routing เพื่อควบคุมว่าอะไรควรเข้า model context โดย **ไม่เปลี่ยน 6D, Skills, Playbooks, Source Governance หรือ Authority**
+
+หลักคือ local router อ่าน registry ได้ แต่ model เห็นเพียง compact routing contract, selected Skill, mandatory references และ relevant source excerpts ที่จำเป็น
 
 ## 3. Request Lifecycle
 
@@ -133,6 +141,8 @@ Lightweight First Run / Workspace Context
 Privacy Quick Check (เมื่อมีข้อมูล/เอกสาร)
       ↓
 Router
+      ↓
+Compact Routing Contract + Context Budget
       ↓
 ตรวจ Team + Intent + 6D context
       ↓
@@ -301,6 +311,8 @@ Run State ใช้เพื่อ resume งานหลายขั้น ไ�
 - source/provenance metadata
 - privacy-safe metadata
 - output references
+- structured handoffs สำหรับ step ถัดไป
+- token telemetry (estimate/actual แยกกัน)
 - events
 - feedback
 
@@ -310,7 +322,21 @@ Run State ใช้เพื่อ resume งานหลายขั้น ไ�
 - secrets
 - สำเนาเอกสารทั้งฉบับโดยไม่จำเป็น
 
-## 10. สิ่งที่ Architecture นี้ตั้งใจไม่ทำใน Pilot
+## 10. Context Efficiency
+
+การลด token ใช้ progressive disclosure โดยไม่ลด governance:
+
+- router registry ถูกประมวลผล local และไม่ส่งทั้งไฟล์เข้า model เมื่อ local runtime พร้อม
+- selected Skill เท่านั้นที่เข้าสู่ working context
+- mandatory rules เท่านั้นที่ถูก resolve โดย default
+- source ใช้ relevant excerpt budget
+- Privacy/Authority resolve local ก่อนเท่าที่ทำได้ แล้วส่งเฉพาะ compact result
+- Playbook ใช้ structured handoff ตาม consumes/produces แทน conversation replay
+- Run State เก็บ estimate token telemetry และรองรับ actual usage จาก provider เมื่อมีข้อมูลจริง
+
+รายละเอียด: `docs/context-efficiency.md`
+
+## 11. สิ่งที่ Architecture นี้ตั้งใจไม่ทำใน Pilot
 
 ยังไม่สร้าง:
 - organization-wide vector database
