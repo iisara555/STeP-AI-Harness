@@ -20,6 +20,7 @@
 - รัน CI และ Pilot readiness suite ให้เขียว
 - ทดสอบ update + rollback อย่างน้อย 1 เครื่อง Windows และ 1 เครื่อง macOS ถ้ามี
 - ยืนยัน feedback channel และผู้รับผิดชอบ triage
+- ยืนยัน Public/Private model ของ repository และช่องทาง distribution ตาม `docs/repository-data-boundary.md`
 - ย้ำ Browser credential policy และ Human Confirmation Gate
 - freeze feature ใหม่ที่ไม่จำเป็น
 
