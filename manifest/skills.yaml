@@ -1,4 +1,6 @@
 version: 1
+# Lifecycle evidence rule: approvedBy identifies the required approver role, not proof that approval occurred.
+# stage: pilot requires explicit owner-review evidence outside this manifest; until then use pilot/draft.
 description: Official STeP AI Skill Registry — Governance, Ownership, Process Links & Lifecycle Status
 
 skills:
@@ -16,7 +18,7 @@ skills:
       reviewedAt: "2026-09-16"
       reviewCycle: { months: 6 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: []
       optional: []
@@ -56,7 +58,7 @@ skills:
       reviewedAt: "2026-09-16"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [procurement-policy, human-approval-rule, data-classification-rule]
       optional: [tor-template]
@@ -76,7 +78,7 @@ skills:
       reviewedAt: "2026-09-16"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [procurement-policy, human-approval-rule]
       optional: [tor-template]
@@ -95,7 +97,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
       optional: [qms-quality-manual]
@@ -134,7 +136,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
@@ -154,7 +156,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
@@ -174,7 +176,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
@@ -194,7 +196,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
@@ -214,7 +216,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
@@ -234,7 +236,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: [creative-brief-template]
@@ -254,7 +256,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
@@ -274,7 +276,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule]
       optional: []
@@ -293,7 +295,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 6 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [secret-safety-rule, human-approval-rule]
       optional: []
@@ -312,7 +314,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [secret-safety-rule]
       optional: []
@@ -331,7 +333,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 6 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [secret-safety-rule, human-approval-rule]
       optional: []
@@ -350,7 +352,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule]
       optional: []
@@ -369,7 +371,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -389,7 +391,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule]
       optional: []
@@ -409,7 +411,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule]
       optional: []
@@ -429,7 +431,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule]
       optional: [creative-brief-template]
@@ -448,7 +450,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 6 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [data-classification-rule, secret-safety-rule]
       optional: []
@@ -468,7 +470,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -487,7 +489,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [qs-doc-control-procedure, naming-convention-rule]
       optional: [qms-master-document-list]
@@ -506,7 +508,7 @@ skills:
       reviewedAt: "2026-09-01"
       reviewCycle: { months: 6 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -526,7 +528,7 @@ skills:
       reviewedAt: "2026-09-16"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [finance-disbursement-policy, human-approval-rule, data-classification-rule]
       optional: []
@@ -546,7 +548,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: [creative-brief-template]
@@ -565,7 +567,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -584,7 +586,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -604,7 +606,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -624,7 +626,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -644,7 +646,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule]
       optional: []
@@ -685,7 +687,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 6 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [data-classification-rule]
       optional: []
@@ -704,7 +706,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [data-classification-rule, secret-safety-rule]
       optional: []
@@ -724,7 +726,7 @@ skills:
       reviewedAt: "2026-09-17"
       reviewCycle: { months: 12 }
       lifecycle:
-        stage: approved
+        stage: pilot
     references:
       mandatory: [human-approval-rule, data-classification-rule]
       optional: []
