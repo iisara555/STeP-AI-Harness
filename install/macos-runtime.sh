@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Shared macOS runtime bootstrap for STeP AI.
-# Keeps Node.js local to the STeP AI folder so staff do not need Homebrew, sudo, or Terminal setup.
+# Node is pinned so employee installs are reproducible and do not trust a moving latest-v*.x target.
+# CI verifies these pinned hashes against Node.js signed SHASUMS.
 
-STEP_NODE_MAJOR="22"
-STEP_NODE_DIST="https://nodejs.org/dist/latest-v${STEP_NODE_MAJOR}.x"
+STEP_NODE_VERSION="22.23.2"
+STEP_NODE_DIST="https://nodejs.org/dist/v${STEP_NODE_VERSION}"
+STEP_NODE_SHA256_ARM64="61130f394c1630d211dd50aecc4353d379480f36d3ac913cd85dbba1aed585c6"
+STEP_NODE_SHA256_X64="58e99022c2ff89395576cc7fd4d98cea24bb68081475d5f88b801ee8729fb026"
 
 step_node_major() {
     "$1" -p "Number(process.versions.node.split('.')[0])" 2>/dev/null || echo "0"
@@ -56,11 +59,17 @@ find_step_node() {
 
 bootstrap_step_node() {
     local root_dir="$1"
-    local node_arch runtime_parent runtime_dir temp_dir sums_file node_file expected_hash archive actual_hash extract_dir extracted_dir
+    local node_arch expected_hash runtime_parent runtime_dir temp_dir node_file archive actual_hash extract_dir extracted_dir
 
     case "$(uname -m)" in
-        arm64) node_arch="arm64" ;;
-        x86_64) node_arch="x64" ;;
+        arm64)
+            node_arch="arm64"
+            expected_hash="$STEP_NODE_SHA256_ARM64"
+            ;;
+        x86_64)
+            node_arch="x64"
+            expected_hash="$STEP_NODE_SHA256_X64"
+            ;;
         *)
             echo "ไม่รองรับสถาปัตยกรรม Mac นี้: $(uname -m)"
             return 1
@@ -77,39 +86,23 @@ bootstrap_step_node() {
     runtime_parent="$root_dir/.step-ai/runtime"
     runtime_dir="$runtime_parent/node"
     temp_dir="$(mktemp -d -t step-ai-node.XXXXXX)" || return 1
-    sums_file="$temp_dir/SHASUMS256.txt"
-
-    echo "กำลังเตรียม Node.js Runtime สำหรับ STeP AI (ติดตั้งเฉพาะในโฟลเดอร์นี้)..."
-
-    if ! curl -fsSL --connect-timeout 10 --max-time 60         -H "User-Agent: STeP-AI-Installer"         "$STEP_NODE_DIST/SHASUMS256.txt" -o "$sums_file"; then
-        rm -rf "$temp_dir"
-        echo "ดาวน์โหลดรายการตรวจสอบ Node.js ไม่สำเร็จ"
-        return 1
-    fi
-
-    node_file="$(awk -v arch="$node_arch" '
-        $2 ~ ("^node-v22\\.[0-9]+\\.[0-9]+-darwin-" arch "\\.tar\\.gz$") { print $2; exit }
-    ' "$sums_file")"
-
-    if [ -z "$node_file" ]; then
-        rm -rf "$temp_dir"
-        echo "ไม่พบ Node.js สำหรับ Mac สถาปัตยกรรม $node_arch"
-        return 1
-    fi
-
-    expected_hash="$(awk -v file="$node_file" '$2 == file { print $1; exit }' "$sums_file")"
+    node_file="node-v${STEP_NODE_VERSION}-darwin-${node_arch}.tar.gz"
     archive="$temp_dir/$node_file"
 
-    if ! curl -fL --connect-timeout 10 --max-time 180         -H "User-Agent: STeP-AI-Installer"         "$STEP_NODE_DIST/$node_file" -o "$archive"; then
+    echo "กำลังเตรียม Node.js v$STEP_NODE_VERSION สำหรับ STeP AI (ติดตั้งเฉพาะในโฟลเดอร์นี้)..."
+
+    if ! curl -fL --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 180 \
+        -H "User-Agent: STeP-AI-Installer" \
+        "$STEP_NODE_DIST/$node_file" -o "$archive"; then
         rm -rf "$temp_dir"
         echo "ดาวน์โหลด Node.js Runtime ไม่สำเร็จ"
         return 1
     fi
 
     actual_hash="$(shasum -a 256 "$archive" | awk '{ print $1 }')"
-    if [ -z "$expected_hash" ] || [ "$actual_hash" != "$expected_hash" ]; then
+    if [ "$actual_hash" != "$expected_hash" ]; then
         rm -rf "$temp_dir"
-        echo "SHA-256 ของ Node.js ไม่ตรงกัน ยกเลิกการติดตั้งเพื่อความปลอดภัย"
+        echo "SHA-256 ของ Node.js ไม่ตรงกับค่าที่ STeP AI pin ไว้ ยกเลิกการติดตั้ง"
         return 1
     fi
 
