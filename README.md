@@ -11,7 +11,7 @@ STeP AI Harness เป็นชั้นกลางระหว่าง **พ�
 | รายการ | สถานะ |
 | --- | --- |
 | Released Pilot | **v0.7.2** |
-| Development branch | **feat/context-efficiency** |
+| Development state | **post-v0.7.2 / unreleased** |
 | Teams | **22 ทีม** |
 | AI routing clusters | **5 clusters** |
 | Skills | **43 Skills** |
@@ -23,7 +23,7 @@ STeP AI Harness เป็นชั้นกลางระหว่าง **พ�
 | Privacy Gate | **Lightweight local-first Pilot** |
 | Context Efficiency | **Local routing + token telemetry + structured handoff** |
 
-> Released Pilot ยังคงเป็น v0.7.2 ส่วน development branch นี้เพิ่ม Context Efficiency บน Foundation เดิม และยังไม่ควรถูกตีความว่าเป็น Release ใหม่จนกว่าจะ merge/release อย่างเป็นทางการ
+> Released Pilot ยังคงเป็น v0.7.2 ส่วน repository ปัจจุบันมีงานพัฒนาหลัง v0.7.2 เพิ่มบน Foundation เดิม และยังไม่ควรถูกตีความว่าเป็น Release ใหม่จนกว่าจะออก Release อย่างเป็นทางการ
 
 [เริ่มใช้งานสำหรับพนักงาน](START-HERE.md) · [คู่มือพนักงาน](docs/employee-guide.md) · [Architecture Reference](docs/architecture.md) · [ดูรายชื่อทีม](docs/teams.md)
 
