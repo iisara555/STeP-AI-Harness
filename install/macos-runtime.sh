@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared macOS runtime bootstrap for STeP AI.
-# Node is pinned so employee installs are reproducible and do not trust a moving latest-v*.x target.
+# Node is pinned so employee installs are reproducible and do not trust a moving release target.
 # CI verifies these pinned hashes against Node.js signed SHASUMS.
 
 STEP_NODE_VERSION="22.23.2"
