@@ -70,6 +70,52 @@ def validate_skills(errors: list[str]) -> int:
     return len(paths)
 
 
+
+SKILL_LOCAL_RESOURCE_RE = re.compile(
+    r"`((?:references|scripts|templates|assets)/[A-Za-z0-9_.\-/]+)`"
+)
+MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+
+
+def validate_skill_dependencies(errors: list[str]) -> None:
+    """Ensure local files referenced by SKILL.md actually exist.
+
+    This intentionally validates only repository-local dependencies. External
+    URLs are runtime sources and are not fetched during repository validation.
+    """
+    for skill_path in sorted(SKILL_ROOT.glob("*/*/SKILL.md")):
+        text = skill_path.read_text(encoding="utf-8", errors="replace")
+        targets: set[str] = set()
+
+        for match in MARKDOWN_LINK_RE.finditer(text):
+            raw = match.group(1).strip().strip("<>")
+            if raw:
+                targets.add(raw)
+
+        for match in SKILL_LOCAL_RESOURCE_RE.finditer(text):
+            targets.add(match.group(1))
+
+        for raw_target in sorted(targets):
+            target = raw_target.split("#", 1)[0].split("?", 1)[0].strip()
+            if not target:
+                continue
+            if re.match(r"^(?:https?://|mailto:|data:)", target, flags=re.IGNORECASE):
+                continue
+
+            candidate = (skill_path.parent / target).resolve()
+            try:
+                candidate.relative_to(ROOT.resolve())
+            except ValueError:
+                errors.append(
+                    f"{skill_path.relative_to(ROOT)}: local dependency escapes repository: {raw_target}"
+                )
+                continue
+
+            if not candidate.exists():
+                errors.append(
+                    f"{skill_path.relative_to(ROOT)}: missing local dependency: {raw_target}"
+                )
+
 def scan_secrets(errors: list[str]) -> None:
     for path in sorted(ROOT.rglob("*")):
         if not path.is_file() or ".git" in path.parts:
@@ -167,6 +213,7 @@ def validate_package_config(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     count = validate_skills(errors)
+    validate_skill_dependencies(errors)
     scan_secrets(errors)
     validate_browser_env_safety(errors)
     validate_package_config(errors)
@@ -199,7 +246,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"Validation passed: {count} skills; no likely secrets detected; package whitelist verified.")
+    print(f"Validation passed: {count} skills; local Skill dependencies resolved; no likely secrets detected; package whitelist verified.")
     return 0
 
 
