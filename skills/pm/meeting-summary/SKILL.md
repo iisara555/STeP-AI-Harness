@@ -1,15 +1,46 @@
 ---
 name: meeting-summary
-description: เปลี่ยนบันทึกประชุม Transcript หรือ Chat ของ STeP เป็นรายงานสั้นที่มีมติ เจ้าของงาน กำหนดส่ง คำถามค้าง Dependency และงานติดตาม โดยไม่แต่งคำมั่นที่ไม่มีในต้นทาง
+description: ใช้เมื่อมีบันทึกประชุม Transcript หรือ Chat ที่ต้องสรุปเป็นมติ Action Owner Due date และประเด็นค้างโดยยึดต้นทาง; ไม่ใช้เพื่อแต่งมติ กำหนด owner/deadline ที่ไม่ได้ตกลง หรือสร้างแผนโครงการหลายขั้นแทน meeting-to-action-plan
 ---
 
-# สรุปการประชุม
+# STeP Meeting Summary
 
-1. แยกข้อมูลเป็นมติ งานที่ต้องทำ ข้อมูลแจ้งให้ทราบ ความเสี่ยง และคำถามค้าง
-2. เก็บถ้อยคำสำคัญ ชื่อโครงการ ตัวเลข และวันตามต้นฉบับ
-3. สำหรับทุกงานที่ต้องทำ ระบุเจ้าของงาน กำหนดส่ง และ Dependency เมื่อมีข้อมูล
-4. ถ้าต้นทางไม่ระบุเจ้าของงานหรือวัน ให้เขียน "ยังไม่ระบุ" ห้ามคาดเดา
-5. รวมประเด็นซ้ำและแยกข้อเสนอที่ยังไม่อนุมัติออกจากมติ
-6. ตรวจข้อมูลส่วนบุคคลก่อนเผยแพร่หรือเก็บเป็น Knowledge
+## Inputs
+- meeting notes / transcript / chat
+- วันที่/ชื่อประชุมเมื่อมี
+- source reference เพื่อ trace กลับ
 
-ส่งออกเป็น Summary สั้น มติ ตารางงานที่ต้องทำ ความเสี่ยง/คำถามค้าง และจุดตรวจการประชุมครั้งถัดไป
+## Workflow
+1. แยก **Decision / Action / Information / Proposal / Open Issue / Risk**
+2. รวมประเด็นซ้ำแต่รักษาความหมายและตัวเลขสำคัญจากต้นทาง
+3. ทุก Action ระบุ Owner / Due date / Dependency เฉพาะเมื่อมีหลักฐาน
+4. ถ้าไม่ระบุ ให้ใช้ `ยังไม่ระบุ` หรือ `รอยืนยัน` ห้ามคาดเดา
+5. แยก Proposal ที่ยังไม่ตกลงออกจาก Decision
+6. ระบุ conflict หรือข้อความที่ตีความได้หลายแบบเป็น Open Issue
+7. ตรวจ PII ก่อนเก็บ/แชร์ output
+
+## Output Contract
+### Summary
+- เป้าหมาย/บริบทประชุม
+- มติสำคัญ
+- ข้อมูลแจ้งให้ทราบ
+
+### Action Table
+| Action | Owner | Due date | Dependency | Source | Status |
+|---|---|---|---|---|---|
+
+### Open Issues / Risks
+- …
+
+### Next Meeting Check
+- ประเด็นที่ต้องกลับมาตรวจ
+
+## Handoff
+- ถ้าผู้ใช้ต้องการแตก Action เป็น Timeline/Spreadsheet/Gantt → `meeting-to-action-plan`
+- ถ้าต้องสร้างหนังสือราชการจากมติ → `thai-official-documents`
+
+## Guardrails
+- ไม่แต่งมติ คำสั่ง owner deadline budget หรือ approval
+- ไม่เปลี่ยน Proposal เป็น Decision
+- ไม่รายงานว่างานถูกส่ง/มอบหมายแล้วหากมีเพียง draft
+- การรับรองรายงานประชุมอย่างเป็นทางการเป็น Human Authority
