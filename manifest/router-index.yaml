@@ -641,7 +641,7 @@ skills:
     teams:
       primary: [afp]
       consumers: ["*"]
-    description: ตรวจสอบใบเสร็จรับเงิน ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิกจ่ายตามระเบียบ มช.
+    description: Pre-check ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิก โดยแยก document facts, cross-document evidence และ current-source policy checks
     intent: [review, verify, audit, check]
     triggers: [ใบเสร็จ, ใบกำกับภาษี, เบิกจ่าย, ใบสำคัญรับเงิน, e-tax, vat, ค่าเดินทาง, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าที่พัก, ใบเสร็จรับเงิน, receipt]
     paths: ["**/finance/**", "**/receipts/**", "**/billing/**"]
@@ -649,10 +649,10 @@ skills:
     requires: [receipt_document_context]
     scope:
       allow:
-        - ตรวจสอบองค์ประกอบ 9 ข้อของใบกำกับภาษีและใบเสร็จรับเงินตามประมวลรัษฎากร
-        - ตรวจสอบความถูกต้องของ e-Tax Invoice และ Digital Signature
-        - ตรวจเทียบรายการค่าใช้จ่ายกับระเบียบการเงินและเพดานค่าใช้จ่าย มช.
-        - ตรวจชุดเอกสารประกอบการเบิกจ่ายครบชุด
+        - ตรวจ document facts, arithmetic และความครบถ้วนตามหลักฐานที่มี
+        - ตรวจ cross-document consistency กับ approval/PO/quotation/delivery evidence
+        - ตรวจ policy/เพดาน/required documents เฉพาะเมื่อ resolve current verified source ได้
+        - ระบุ NEED-SOURCE / NEED-INFO แทนการแต่งกฎเมื่อ Source ยังไม่ยืนยัน
       escalate:
         tax_exemption_conflict:
           skill: tor-review
