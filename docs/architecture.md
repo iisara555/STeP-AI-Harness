@@ -1,6 +1,6 @@
 # STeP AI Harness — Architecture Reference
 
-> เอกสารนี้อธิบายสถาปัตยกรรมล่าสุดของ STeP AI Harness บน branch **feat/context-efficiency**
+> เอกสารนี้อธิบายสถาปัตยกรรมล่าสุดของ STeP AI Harness ใน repository ปัจจุบัน
 >
 > หลักสำคัญ: Harness เป็นชั้นกลางระหว่างพนักงานกับ AI เพื่อให้ AI เข้าใจบริบทองค์กร ใช้แหล่งอ้างอิงที่ตรวจสอบได้ รู้ขอบเขตอำนาจ และเรียกความสามารถที่เหมาะสมโดยไม่ผูกกับ AI provider รายเดียว
 
