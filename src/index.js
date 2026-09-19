@@ -41,5 +41,9 @@ export {
   validatePlaybookSources,
   resolvePlaybookAction,
   completePlaybookStep,
+  completePlaybookAction,
   markPlaybookActionState,
 } from './modules/playbooks/index.js';
+
+export { evaluateActionGate, requestActionApproval, getOperationHash } from './modules/actions/index.js';
+export { evaluatePrivacyGate, sanitizeRunData } from './modules/privacy/index.js';

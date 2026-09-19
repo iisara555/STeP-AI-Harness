@@ -21,9 +21,11 @@ import {
 } from '../src/modules/playbooks/index.js';
 import { loadAndValidateManifests } from '../src/modules/router/index.js';
 import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
+import { loadActionRegistry } from '../src/modules/actions/index.js';
 
 test('STeP Composite Playbooks', async (t) => {
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
+  const actions = await loadActionRegistry(PACKAGE_ROOT);
 
   await t.test('registry contains the 3 intentionally small Pilot playbooks', () => {
     assert.equal(playbooks.length, 3);
@@ -267,7 +269,7 @@ playbooks:
     const action = buildPlaybookPlan(playbook, ['source', 'planning', 'schedule', 'spreadsheet'])
       .find((step) => step.type === 'action');
 
-    const resolved = resolvePlaybookAction(action, ['google-sheets']);
+    const resolved = resolvePlaybookAction(action, ['google-sheets'], actions);
     assert.equal(resolved.status, 'ready');
     assert.equal(resolved.tool, 'google-sheets');
   });
@@ -284,7 +286,7 @@ playbooks:
     });
 
     const action = state.steps.find((step) => step.type === 'action');
-    const resolved = resolvePlaybookAction(action, ['xlsx']);
+    const resolved = resolvePlaybookAction(action, ['xlsx'], actions);
     assert.equal(resolved.status, 'fallback');
     assert.equal(resolved.tool, 'xlsx');
 
@@ -309,7 +311,7 @@ playbooks:
     state = completePlaybookStep(state, 'build-plan', { activities: ['A'] });
 
     const action = state.steps.find((step) => step.id === 'create-spreadsheet');
-    const resolved = resolvePlaybookAction(action, []);
+    const resolved = resolvePlaybookAction(action, [], actions);
     assert.equal(resolved.status, 'blocked');
 
     state = markPlaybookActionState(state, action.id, resolved);

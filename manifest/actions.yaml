@@ -20,7 +20,8 @@ actions:
     sideEffect: reversible
     confirmation: none
     preferredTools: [google-sheets, xlsx]
-    outputReferenceRequired: false
+    outputReferenceRequired: true
+    specPath: docs/action-verification.md
 
   browser-form-submit:
     name: "Browser Form Submit"
