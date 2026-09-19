@@ -39,6 +39,13 @@ test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) =
     assert.equal(result.teamInfo.id, 'linc');
   });
 
+  await t.test('LINC expert and resource search routes to expert-resource-matching', async () => {
+    const result = await queryStepRouter('ช่วยหา expert และห้องแล็บที่เหมาะกับโจทย์นี้ พร้อมดูเครื่องมือใน NSTIS', { team: 'linc' });
+    assert.equal(result.selectedSkill?.name, 'expert-resource-matching');
+    assert.equal(result.teamInfo.id, 'linc');
+    assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
   await t.test('MI recent market research routes to market-signal-radar', async () => {
     const result = await queryStepRouter('ช่วยดู trend ล่าสุดและสัญญาณตลาดว่าคู่แข่งล่าสุดกำลังพูดเรื่องอะไร', { team: 'mi' });
     assert.equal(result.selectedSkill?.name, 'market-signal-radar');
