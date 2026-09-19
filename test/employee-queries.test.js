@@ -3,10 +3,16 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { queryStepRouter } from '../src/cli/commands/ask.js';
+import { queryStepRouter as routeStepQuery } from '../src/cli/commands/ask.js';
 import { initUserMemory } from '../src/modules/user-memory.js';
 
 test('STeP Everyday Employee Experience — 25+ Natural Language Queries Suite', async (t) => {
+  const neutralWorkspace = await mkdtemp(join(tmpdir(), 'step-router-neutral-'));
+  t.after(() => rm(neutralWorkspace, { recursive: true, force: true }));
+  const queryStepRouter = (query, options = {}) => routeStepQuery(query, {
+    workspaceDir: neutralWorkspace,
+    ...options,
+  });
 
   await t.test('Scenario 1: Procurement (AFP) — Review TOR specification', async () => {
     const result = await queryStepRouter('ช่วยดู TOR จ้างทำระบบหน่อยว่าเขียนครบมั้ย');

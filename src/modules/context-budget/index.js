@@ -70,26 +70,31 @@ export function buildCompactRoutingContract({
 }
 
 export function buildContextBudgetPlan({
+  startupText = '',
   routingContract = {},
   skillText = '',
   ruleTexts = [],
   sourceTexts = [],
   handoff = null,
+  governanceText = '',
   budgets = {},
 } = {}) {
   const limit = { ...DEFAULT_BUDGETS, ...budgets };
+  const startup = String(startupText || '');
   const routingText = JSON.stringify(routingContract);
   const rulesText = (ruleTexts || []).join('\n');
   const sourcesText = (sourceTexts || []).join('\n');
   const handoffText = handoff ? JSON.stringify(handoff) : '';
+  const governance = String(governanceText || '');
 
   const components = {
+    startup: { ...estimateTextTokens(startup), budget: limit.startup },
     routing: { ...estimateTextTokens(routingText), budget: limit.routing },
     skill: { ...estimateTextTokens(skillText), budget: limit.skill },
     rules: { ...estimateTextTokens(rulesText), budget: limit.rules },
     sources: { ...estimateTextTokens(sourcesText), budget: limit.sources },
     handoff: { ...estimateTextTokens(handoffText), budget: limit.handoff },
-    governance: { estimatedTokens: 0, actualTokens: null, chars: 0, method: 'char-estimate-v1', budget: limit.governance },
+    governance: { ...estimateTextTokens(governance), budget: limit.governance },
   };
 
   for (const value of Object.values(components)) {
@@ -115,52 +120,130 @@ function clampString(value, maxChars) {
   return text.slice(0, Math.max(0, maxChars - 24)) + '…[handoff-truncated]';
 }
 
-function compactValue(value, depth = 0) {
-  if (depth > 5) return '[max-depth]';
-  if (value === null || value === undefined) return value;
-  if (typeof value === 'string') return clampString(value, 1200);
-  if (typeof value === 'number' || typeof value === 'boolean') return value;
-  if (Array.isArray(value)) return value.slice(0, 30).map((item) => compactValue(item, depth + 1));
-  if (typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value)
-        .slice(0, 40)
-        .map(([key, item]) => [key, compactValue(item, depth + 1)])
-    );
+function summarizeValue(value, maxChars) {
+  const serialized = JSON.stringify(value);
+  if (serialized.length <= maxChars) {
+    return { value: structuredClone(value), truncation: null };
   }
-  return String(value);
+
+  if (typeof value === 'string') {
+    return {
+      value: clampString(value, Math.max(40, maxChars)),
+      truncation: { kind: 'string', originalChars: value.length },
+    };
+  }
+
+  if (Array.isArray(value)) {
+    const preview = [];
+    const contentBudget = Math.max(40, maxChars - 120);
+    for (const item of value) {
+      const itemText = JSON.stringify(item);
+      const used = JSON.stringify(preview).length;
+      const remaining = contentBudget - used;
+      if (remaining < 40) break;
+      if (itemText.length <= remaining) {
+        preview.push(structuredClone(item));
+      } else if (preview.length === 0) {
+        preview.push({ compactSummary: clampString(itemText, remaining) });
+      } else {
+        break;
+      }
+    }
+    return {
+      value: preview,
+      truncation: {
+        kind: 'array',
+        originalItems: value.length,
+        includedItems: preview.length,
+      },
+    };
+  }
+
+  if (value && typeof value === 'object') {
+    const preview = {};
+    const entries = Object.entries(value);
+    const contentBudget = Math.max(40, maxChars - 140);
+    for (const [key, item] of entries) {
+      const candidate = { ...preview, [key]: item };
+      if (JSON.stringify(candidate).length <= contentBudget) {
+        preview[key] = structuredClone(item);
+      } else if (Object.keys(preview).length === 0) {
+        preview[key] = clampString(JSON.stringify(item), Math.max(40, contentBudget - key.length));
+      } else {
+        break;
+      }
+    }
+    return {
+      value: preview,
+      truncation: {
+        kind: 'object',
+        originalKeys: entries.length,
+        includedKeys: Object.keys(preview).length,
+      },
+    };
+  }
+
+  return {
+    value: String(value),
+    truncation: { kind: typeof value, originalChars: serialized.length },
+  };
 }
 
 export function buildStructuredHandoff(step, outputs = {}, {
   maxEstimatedTokens = DEFAULT_BUDGETS.handoff,
 } = {}) {
-  const compacted = compactValue(outputs);
   const produces = Array.isArray(step?.produces) ? step.produces : [];
-  const envelope = {
+  const fullEnvelope = {
     version: 1,
     fromStep: step?.id || '',
     producedKeys: produces,
-    data: compacted,
+    data: structuredClone(outputs),
   };
 
-  let telemetry = estimateTextTokens(JSON.stringify(envelope));
+  let telemetry = estimateTextTokens(JSON.stringify(fullEnvelope));
   if (telemetry.estimatedTokens <= maxEstimatedTokens) {
-    return { ...envelope, truncated: false, telemetry };
+    return { ...fullEnvelope, truncated: false, telemetry };
   }
 
   const maxChars = Math.floor(maxEstimatedTokens * ESTIMATE_CHARS_PER_TOKEN);
-  const serialized = JSON.stringify(compacted);
-  const fallback = {
+  const entries = Object.entries(outputs || {});
+  const perKeyBudget = Math.max(80, Math.floor((maxChars - 500) / Math.max(1, entries.length)));
+  const data = {};
+  const truncation = {};
+  for (const [key, value] of entries) {
+    const summary = summarizeValue(value, perKeyBudget);
+    data[key] = summary.value;
+    if (summary.truncation) truncation[key] = summary.truncation;
+  }
+
+  let compactEnvelope = {
     version: 1,
     fromStep: step?.id || '',
     producedKeys: produces,
-    data: {
-      compactSummary: clampString(serialized, Math.max(200, maxChars - 300)),
-    },
+    data,
     truncated: true,
+    truncation,
+    fullOutputRetainedInRunState: true,
   };
-  telemetry = estimateTextTokens(JSON.stringify(fallback));
-  return { ...fallback, telemetry };
+  telemetry = estimateTextTokens(JSON.stringify(compactEnvelope));
+
+  if (telemetry.estimatedTokens > maxEstimatedTokens + 50) {
+    compactEnvelope = {
+      version: 1,
+      fromStep: step?.id || '',
+      producedKeys: produces,
+      data: Object.fromEntries(entries.map(([key]) => [key, '[truncated; inspect full run output]'])),
+      truncated: true,
+      truncation: Object.fromEntries(entries.map(([key, value]) => [key, {
+        kind: Array.isArray(value) ? 'array' : typeof value,
+        originalChars: JSON.stringify(value).length,
+      }])),
+      fullOutputRetainedInRunState: true,
+    };
+    telemetry = estimateTextTokens(JSON.stringify(compactEnvelope));
+  }
+
+  return { ...compactEnvelope, telemetry };
 }
 
 export function getStepHandoffContext(state, stepId = '') {
@@ -181,6 +264,10 @@ export function getStepHandoffContext(state, stepId = '') {
     }
   }
 
+  if (consumes.includes('source-references') && !Object.hasOwn(inputs, 'source-references')) {
+    inputs['source-references'] = state?.sourceRefs || [];
+  }
+
   // Compatibility fallback: some current Skills return compact objects whose
   // keys do not exactly match Playbook produces/consumes yet.
   if (Object.keys(inputs).length === 0 && consumes.length > 0) {
@@ -199,21 +286,25 @@ export function getStepHandoffContext(state, stepId = '') {
 
 export function createUsageTelemetry({
   queryText = '',
+  startupText = '',
   routingContract = null,
   skillText = '',
   ruleTexts = [],
   sourceTexts = [],
   handoff = null,
+  governanceText = '',
   actualInputTokens = null,
   actualOutputTokens = null,
 } = {}) {
   const task = estimateTextTokens(queryText);
   const plan = buildContextBudgetPlan({
+    startupText,
     routingContract: routingContract || {},
     skillText,
     ruleTexts,
     sourceTexts,
     handoff,
+    governanceText,
   });
 
   return {

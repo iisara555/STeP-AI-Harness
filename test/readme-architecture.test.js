@@ -1,14 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 function countMatches(text, regex) {
   return (text.match(regex) || []).length;
 }
 
-test('README and architecture stay aligned with current manifests', async (t) => {
+function localMarkdownLinks(markdown) {
+  return [...markdown.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)]
+    .map((match) => match[1].trim())
+    .filter((target) => !target.startsWith('http://') && !target.startsWith('https://'))
+    .map((target) => target.split('#')[0])
+    .filter(Boolean);
+}
+
+test('employee documentation is aligned and links resolve', async (t) => {
   const [
     readme,
+    startHere,
+    employeeGuide,
     architecture,
     packageText,
     teams,
@@ -18,15 +32,17 @@ test('README and architecture stay aligned with current manifests', async (t) =>
     provenance,
     documents,
   ] = await Promise.all([
-    readFile('README.md', 'utf-8'),
-    readFile('docs/architecture.md', 'utf-8'),
-    readFile('package.json', 'utf-8'),
-    readFile('manifest/teams.yaml', 'utf-8'),
-    readFile('manifest/skills.yaml', 'utf-8'),
-    readFile('manifest/playbooks.yaml', 'utf-8'),
-    readFile('manifest/actions.yaml', 'utf-8'),
-    readFile('manifest/provenance.yaml', 'utf-8'),
-    readFile('manifest/documents.yaml', 'utf-8'),
+    readFile(resolve(repoRoot, 'README.md'), 'utf-8'),
+    readFile(resolve(repoRoot, 'START-HERE.md'), 'utf-8'),
+    readFile(resolve(repoRoot, 'docs/employee-guide.md'), 'utf-8'),
+    readFile(resolve(repoRoot, 'docs/architecture.md'), 'utf-8'),
+    readFile(resolve(repoRoot, 'package.json'), 'utf-8'),
+    readFile(resolve(repoRoot, 'manifest/teams.yaml'), 'utf-8'),
+    readFile(resolve(repoRoot, 'manifest/skills.yaml'), 'utf-8'),
+    readFile(resolve(repoRoot, 'manifest/playbooks.yaml'), 'utf-8'),
+    readFile(resolve(repoRoot, 'manifest/actions.yaml'), 'utf-8'),
+    readFile(resolve(repoRoot, 'manifest/provenance.yaml'), 'utf-8'),
+    readFile(resolve(repoRoot, 'manifest/documents.yaml'), 'utf-8'),
   ]);
 
   const pkg = JSON.parse(packageText);
@@ -37,52 +53,79 @@ test('README and architecture stay aligned with current manifests', async (t) =>
   const actionCount = countMatches(actions, /^  [a-z0-9_-]+:\s*$/gm);
   const provenanceCount = countMatches(provenance, /^  - id:/gm);
 
-  await t.test('README reports released package version and manifest counts', () => {
-    assert.ok(readme.includes(`Released Pilot | **v${pkg.version}**`));
-    assert.ok(readme.includes(`Teams | **${teamCount} ทีม**`));
-    assert.ok(readme.includes(`AI routing clusters | **${clusterCount} clusters**`));
-    assert.ok(readme.includes(`Skills | **${skillCount} Skills**`));
-    assert.ok(readme.includes(`Playbooks | **${playbookCount} Playbooks**`));
-    assert.ok(readme.includes(`Executable Actions | **${actionCount} Actions**`));
-    assert.ok(readme.includes(`Provenance labels | **${provenanceCount} types**`));
+  await t.test('README has the employee-first onboarding contract', () => {
+    assert.ok(readme.includes('# STeP AI'));
+    assert.ok(readme.includes('คู่มือเริ่มต้นสำหรับพนักงาน'));
+    assert.ok(readme.includes(`**v${pkg.version}**`));
+    assert.ok(readme.includes(`**${teamCount} ทีม**`));
+    assert.ok(readme.includes(`**${clusterCount} กลุ่ม**`));
+    assert.ok(readme.includes(`**${skillCount} Skills**`));
+    assert.ok(readme.includes(`**${playbookCount} Playbooks**`));
+    assert.ok(readme.includes(`**${actionCount} Actions**`));
+    assert.ok(readme.includes('Shared Drive หรือช่องทางภายใน'));
+    assert.ok(readme.includes('GitHub Release v0.7.2 สำหรับ Pilot'));
+    assert.ok(readme.includes('Install-STeP-AI.bat'));
+    assert.ok(readme.includes('Install-STeP-AI.command'));
+    assert.ok(readme.includes('เริ่มใช้งาน STeP AI'));
   });
 
-  await t.test('README distinguishes release from development foundation', () => {
-    assert.ok(readme.includes('Development state | **post-v0.7.2 / unreleased**'));
-    assert.ok(readme.includes('ยังไม่ควรถูกตีความว่าเป็น Release'));
-    assert.ok(readme.includes('AFP ยังอยู่ในสถานะ **Demo Source Pack / Foundation Preparation**'));
+  await t.test('README contains the six employee acceptance outcomes', () => {
+    for (const phrase of [
+      'รู้ว่าจะดาวน์โหลดไฟล์จากที่ไหน',
+      'ติดตั้งได้บน Windows หรือ macOS',
+      'เลือกทีมและเปิดโฟลเดอร์ด้วย AI ที่องค์กรอนุมัติ',
+      'พิมพ์งานแรกเป็นภาษาไทยได้',
+      'รู้ว่าเมื่อใดต้องหยุดให้มนุษย์ยืนยัน',
+      'รู้ว่าจะส่งปัญหาให้ AI Champion อย่างไร',
+    ]) {
+      assert.ok(readme.includes(phrase), phrase);
+    }
   });
 
-  await t.test('architecture keeps 6D separate from safeguards and domain layers', () => {
+  await t.test('README contains the six standard employee examples', () => {
+    for (const phrase of [
+      'ตรวจเอกสารก่อนส่ง',
+      'สรุปประชุมและแยกสิ่งที่ต้องทำต่อ',
+      'ร่างหนังสือหรือข้อความสื่อสาร',
+      'ตรวจหรือร่าง TOR และงานจัดซื้อ',
+      'วางแผนโครงการและทำ Timeline/Gantt',
+      'ตรวจข้อมูลส่วนบุคคลและปิดบังก่อนส่ง',
+    ]) {
+      assert.ok(readme.includes(phrase), phrase);
+    }
+  });
+
+  await t.test('README states the three privacy rules and support path', () => {
+    assert.ok(readme.includes('ใช้เฉพาะโปรแกรม AI และช่องทางที่องค์กรอนุมัติ'));
+    assert.ok(readme.includes('ห้ามใส่รหัสผ่าน, token, cookie, MFA หรือ secret'));
+    assert.ok(readme.includes('ถ้าระบบแจ้งข้อมูลความเสี่ยงสูง'));
+    assert.ok(readme.includes('ถ่ายภาพหน้าจอพร้อมข้อความผิดพลาด'));
+    assert.ok(readme.includes('Feedback-STeP-AI.bat'));
+    assert.ok(readme.includes('REQUEST_NEW_TASK.md'));
+  });
+
+  await t.test('documentation layers have distinct roles', () => {
+    assert.ok(startHere.includes('ใบเริ่มต้นสั้นสำหรับ First Run'));
+    assert.ok(startHere.includes('[README.md](README.md)'));
+    assert.ok(employeeGuide.includes('คู่มือฉบับเต็มสำหรับพนักงาน'));
+    assert.ok(employeeGuide.includes('สำหรับ AI Champion'));
+    assert.ok(!employeeGuide.includes('pip install hermes-agent'));
+  });
+
+  await t.test('all README local links resolve', async () => {
+    for (const link of localMarkdownLinks(readme)) {
+      await access(resolve(repoRoot, link));
+    }
+  });
+
+  await t.test('architecture and controlled-source gaps remain explicit', () => {
     assert.ok(architecture.includes('Organization Model 6D'));
     assert.ok(architecture.includes('WHO / WHERE / WHAT / WHY / HOW / AUTHORITY'));
     assert.ok(architecture.includes('Cross-cutting Safeguards'));
     assert.ok(architecture.includes('Privacy Gate'));
     assert.ok(architecture.includes('Source & Provenance'));
     assert.ok(architecture.includes('Human Authority'));
-  });
-
-  await t.test('quality known gaps remain explicit', () => {
     assert.ok(documents.includes('qms-quality-manual:'));
     assert.ok(documents.includes('qms-master-document-list:'));
-    assert.ok(architecture.includes('Quality Manual              ← missing source'));
-    assert.ok(architecture.includes('Master Document List        ← missing source'));
-    assert.ok(readme.includes('Quality Manual              ← MISSING'));
-    assert.ok(readme.includes('Master Document List        ← MISSING'));
-  });
-
-  await t.test('README documents Privacy Gate and safe Run State behavior', () => {
-    assert.ok(readme.includes('Quick Local Scan'));
-    assert.ok(readme.includes('step-ai privacy --file sample.txt --redact'));
-    assert.ok(readme.includes('Run State v3'));
-    assert.ok(readme.includes('raw PII'));
-  });
-
-  await t.test('README and architecture document context efficiency without adding a new layer', () => {
-    assert.ok(readme.includes('Context Efficiency & Token Budgeting'));
-    assert.ok(readme.includes('Compact Routing Contract'));
-    assert.ok(readme.includes('structured handoff'));
-    assert.ok(architecture.includes('Context Budgeter ไม่ใช่ Layer ใหม่'));
-    assert.ok(architecture.includes('src/modules/context-budget/'));
   });
 });

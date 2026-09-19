@@ -22,6 +22,12 @@ export const DISTRIBUTION_FILES = [
   'Feedback-STeP-AI.command',
 ];
 
+function isDistributionPath(relPath) {
+  const normalized = String(relPath || '').replace(/\\/g, '/');
+  return DISTRIBUTION_FILES.includes(normalized)
+    || DISTRIBUTION_DIRS.some((dirName) => normalized.startsWith(`${dirName}/`));
+}
+
 export function parseVersion(value) {
   const match = String(value || '').trim().replace(/^v/i, '').match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
   if (!match) throw new Error(`Invalid semantic version: ${value}`);
@@ -100,13 +106,23 @@ async function restoreDistribution(destDir, backup) {
   }
 }
 
-async function refreshManifestHashes(destDir, preservedPaths) {
+async function refreshManifestHashes(destDir, preservedPaths, relativeFiles, sourceVersion, removedPaths) {
   const manifest = await readManifest(destDir);
   if (!manifest?.files) return;
 
-  const nextFiles = { ...manifest.files };
-  for (const relPath of Object.keys(nextFiles)) {
-    if (preservedPaths.has(relPath)) continue;
+  const sourcePaths = new Set(relativeFiles);
+  const removed = new Set(removedPaths);
+  const nextFiles = {};
+
+  for (const [relPath, entry] of Object.entries(manifest.files)) {
+    if (removed.has(relPath)) continue;
+    if (!sourcePaths.has(relPath) || preservedPaths.has(relPath)) {
+      nextFiles[relPath] = entry;
+    }
+  }
+
+  for (const relPath of sourcePaths) {
+    if (preservedPaths.has(relPath) && nextFiles[relPath]) continue;
     const target = join(destDir, relPath);
     if (!(await pathExists(target))) continue;
 
@@ -119,6 +135,7 @@ async function refreshManifestHashes(destDir, preservedPaths) {
 
   await writeManifest(destDir, {
     ...manifest,
+    version: sourceVersion,
     files: nextFiles,
     upgradePreparedAt: new Date().toISOString(),
   });
@@ -150,11 +167,17 @@ export async function applyDistributionUpgrade({
   const preservedPaths = new Set(inspection.modified || []);
   const snapshotId = await createSnapshot(destDir, `pre-version-upgrade-v${sourceVersion}`);
   const relativeFiles = await distributionRelativeFiles(sourceDir);
+  const sourcePaths = new Set(relativeFiles);
+  const removedPaths = Object.keys(inspection.manifest.files || {})
+    .filter((relPath) => isDistributionPath(relPath)
+      && !sourcePaths.has(relPath)
+      && !preservedPaths.has(relPath));
 
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const backupId = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}-v${currentVersion}`;
-  const backup = await backupDistribution(destDir, relativeFiles, backupId);
+  const backupPaths = [...new Set([...relativeFiles, ...removedPaths])].sort();
+  const backup = await backupDistribution(destDir, backupPaths, backupId);
 
   let copied = 0;
   try {
@@ -164,7 +187,11 @@ export async function applyDistributionUpgrade({
       copied++;
     }
 
-    await refreshManifestHashes(destDir, preservedPaths);
+    for (const relPath of removedPaths) {
+      await rm(join(destDir, relPath), { force: true });
+    }
+
+    await refreshManifestHashes(destDir, preservedPaths, relativeFiles, sourceVersion, removedPaths);
 
     return {
       currentVersion,
@@ -172,6 +199,7 @@ export async function applyDistributionUpgrade({
       snapshotId,
       versionBackupId: backupId,
       copied,
+      removed: removedPaths.length,
       preserved: [...preservedPaths].sort(),
     };
   } catch (error) {

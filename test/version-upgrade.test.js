@@ -8,7 +8,7 @@ import {
   compareVersions,
   parseVersion,
 } from '../src/modules/distribution-upgrade.js';
-import { writeManifest } from '../src/modules/manifest.js';
+import { readManifest, writeManifest } from '../src/modules/manifest.js';
 import { calculateFileSha256 } from '../src/utils/checksum.js';
 import { pathExists } from '../src/utils/file-ops.js';
 
@@ -48,6 +48,7 @@ test('Version Upgrade Core', async (t) => {
 
       await writeFile(join(dest, 'package.json'), JSON.stringify({ version: '0.3.0' }), 'utf-8');
       await writeFile(join(dest, 'src', 'runtime.js'), 'old runtime', 'utf-8');
+      await writeFile(join(dest, 'src', 'obsolete.js'), 'retired runtime', 'utf-8');
       await writeFile(join(dest, 'skills', 'common', 'demo', 'SKILL.md'), 'old upstream skill', 'utf-8');
       await writeFile(join(dest, 'README.md'), 'old readme', 'utf-8');
       await writeFile(join(dest, 'USER.md'), 'private user memory', 'utf-8');
@@ -59,6 +60,7 @@ test('Version Upgrade Core', async (t) => {
       const skillPath = join(dest, 'skills', 'common', 'demo', 'SKILL.md');
       const manifestFiles = {
         'skills/common/demo/SKILL.md': await trackedEntry(skillPath),
+        'src/obsolete.js': await trackedEntry(join(dest, 'src', 'obsolete.js')),
       };
       await writeManifest(dest, {
         package: '@step-cmu/ai-harness',
@@ -89,6 +91,11 @@ test('Version Upgrade Core', async (t) => {
       assert.equal(await readFile(join(dest, 'output', 'work.txt'), 'utf-8'), 'employee output');
       assert.equal(await readFile(join(dest, '.env'), 'utf-8'), 'STEP_BROWSER_CREDENTIAL_REF=step:local-user');
       assert.equal(await readFile(join(dest, '.env.example'), 'utf-8'), 'STEP_BROWSER_CREDENTIAL_REF=step:new');
+      assert.equal(await pathExists(join(dest, 'src', 'obsolete.js')), false);
+      const upgradedManifest = await readManifest(dest);
+      assert.equal(upgradedManifest.version, '0.4.0');
+      assert.ok(upgradedManifest.files['src/runtime.js']);
+      assert.equal(Object.hasOwn(upgradedManifest.files, 'src/obsolete.js'), false);
       assert.ok(await pathExists(join(dest, '.step-ai', 'version-backups', result.versionBackupId)));
     } finally {
       await rm(root, { recursive: true, force: true });

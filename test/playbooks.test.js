@@ -35,6 +35,18 @@ test('STeP Composite Playbooks', async (t) => {
     );
   });
 
+  await t.test('Meeting Action Plan carries every required sheet field into the action step', () => {
+    const playbook = playbooks.find((item) => item.id === 'meeting-to-action-plan');
+    const buildStep = playbook.steps.find((step) => step.id === 'build-action-plan');
+    const sheetStep = playbook.steps.find((step) => step.id === 'create-action-sheet');
+    const required = ['actions', 'owners', 'due-dates', 'source-references', 'statuses'];
+
+    for (const field of required) {
+      assert.ok(buildStep.produces.includes(field), `build-action-plan must produce ${field}`);
+      assert.ok(sheetStep.consumes.includes(field), `create-action-sheet must consume ${field}`);
+    }
+  });
+
 
   await t.test('TOR Playbook carries source, fact, budget, parameter and output policies', () => {
     const playbook = playbooks.find((p) => p.id === 'tor-to-project-plan');
@@ -328,7 +340,7 @@ playbooks:
       parameters: [],
       steps: [
         { id: 'skill-step', type: 'skill', skill: 'tor-review' },
-        { id: 'action-step', type: 'action', action: 'sheet', preferredTool: 'google-sheets' },
+        { id: 'action-step', type: 'action', action: 'spreadsheet-project-plan', preferredTool: 'google-sheets' },
       ],
     };
     let state = buildRunState({
@@ -341,7 +353,7 @@ playbooks:
     assert.equal(state.currentStep, 'action-step');
     assert.equal(state.steps[0].status, 'completed');
 
-    const resolved = resolvePlaybookAction(state.steps[1], []);
+    const resolved = resolvePlaybookAction(state.steps[1], [], actions);
     assert.equal(resolved.status, 'blocked');
     state = markPlaybookActionState(state, 'action-step', resolved);
     assert.equal(state.status, 'waiting-tool');

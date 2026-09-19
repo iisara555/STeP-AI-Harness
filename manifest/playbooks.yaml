@@ -70,9 +70,9 @@ playbooks:
       - id: build-action-plan
         type: skill
         skill: project-plan
-        description: "จัด Action Items เป็นแผนงานที่มี dependency, milestone และ timeline"
+        description: "จัด Action Items เป็นแผนงานที่มี action, owner/รอยืนยัน, due date/รอยืนยัน, source reference, status, dependency, milestone และ timeline"
         consumes: [decisions, actions, owners, due-dates, open-issues]
-        produces: [activities, milestones, dependencies, timeline]
+        produces: [activities, actions, owners, due-dates, source-references, statuses, milestones, dependencies, timeline]
       - id: create-action-sheet
         type: action
         action: spreadsheet-action-plan
@@ -82,7 +82,7 @@ playbooks:
         actionSpecPath: docs/action-verification.md
         completionCriteria: output-reference-required
         description: "สร้าง Action Tracker / Timeline / Gantt จากแผนที่ได้"
-        consumes: [activities, milestones, dependencies, timeline]
+        consumes: [activities, actions, owners, due-dates, source-references, statuses, milestones, dependencies, timeline]
         produces: [action-plan-sheet]
 
   - id: iso-audit-readiness-flow

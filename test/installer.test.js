@@ -20,6 +20,9 @@ import { getAdapter, getSupportedTools } from '../src/modules/adapters/index.js'
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
 const PACKAGE_VERSION = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8')).version;
+const PYTHON = process.platform === 'win32'
+  ? { command: 'py', prefixArgs: ['-3'] }
+  : { command: 'python3', prefixArgs: [] };
 
 test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, async (t) => {
   const backupConfigPath = USER_CONFIG_PATH + '.bak';
@@ -279,7 +282,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
         'names=["Install-STeP-AI.command","Update-STeP-AI.command","Feedback-STeP-AI.command","install/install-macos.sh","install/macos-runtime.sh"]',
         'print(" ".join(oct((z.getinfo(n).external_attr >> 16) & 0o777) for n in names))'
       ].join('; ');
-      const { stdout } = await execFileAsync('python3', ['-c', py, zipPath]);
+      const { stdout } = await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, '-c', py, zipPath]);
       assert.equal(stdout.trim(), '0o755 0o755 0o755 0o755 0o755', 'macOS executable permissions must survive Pilot ZIP packaging');
     }
   });

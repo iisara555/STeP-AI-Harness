@@ -21,7 +21,7 @@ const PATTERNS = [
     id: 'credential',
     label: 'ข้อมูลรับรองตัวตน',
     class: 'sensitive',
-    regex: /\b(?:password|passwd|pwd|api[_-]?key|access[_-]?token|refresh[_-]?token|secret|cookie|authorization|mfa[_-]?code|recovery[_-]?code)\s*[:=]\s*[^\r\n,;]+|Bearer\s+[A-Za-z0-9._~+\/-]+=*|\b(?:gh[pousr]_|sk-)[A-Za-z0-9_-]{20,}|[?&](?:token|key|sig|signature|code|x-amz-signature)=[^\s&#]+/gi,
+    regex: /\b(?:password|passwd|pwd|api[_-]?key|access[_-]?token|refresh[_-]?token|secret|cookie|authorization|mfa[_-]?code|recovery[_-]?code)["']?\s*[:=]\s*["']?[^\r\n,;}]+|Bearer\s+[A-Za-z0-9._~+\/-]+=*|\b(?:gh[pousr]_|sk-)[A-Za-z0-9_-]{20,}|[?&](?:token|key|sig|signature|code|x-amz-signature)=[^\s&#]+/gi,
     replacement: '[credential-redacted]',
   },
   {

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { parseYamlBracketList, stripYamlScalar } from '../../utils/simple-yaml.js';
 
 const approvals = new WeakSet();
 
@@ -59,19 +60,6 @@ export function evaluateActionGate(action, { operation, approval } = {}) {
   return { status: 'allowed', reason: 'scoped-human-confirmation', operationHash };
 }
 
-function strip(raw = '') {
-  return raw.trim().replace(/^['"]|['"]$/g, '');
-}
-
-function list(raw = '') {
-  const match = raw.trim().match(/^\[(.*?)\]$/);
-  if (!match) return [];
-  return match[1]
-    .split(',')
-    .map((v) => strip(v))
-    .filter(Boolean);
-}
-
 export function parseActionsYaml(text) {
   const actions = {};
   let current = null;
@@ -102,9 +90,9 @@ export function parseActionsYaml(text) {
     if (!scalar) continue;
     const [, key, raw] = scalar;
 
-    if (key === 'preferredTools') current.preferredTools = list(raw);
-    else if (key === 'outputReferenceRequired') current.outputReferenceRequired = strip(raw) === 'true';
-    else current[key] = strip(raw);
+    if (key === 'preferredTools') current.preferredTools = parseYamlBracketList(raw);
+    else if (key === 'outputReferenceRequired') current.outputReferenceRequired = stripYamlScalar(raw) === 'true';
+    else current[key] = stripYamlScalar(raw);
   }
 
   return actions;

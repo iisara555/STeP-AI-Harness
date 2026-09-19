@@ -82,10 +82,28 @@ test('Context efficiency — progressive disclosure without architecture changes
     const plan = buildContextBudgetPlan({
       routingContract: { skill: 'receipt-audit' },
       skillText: 'ก'.repeat(10000),
+      startupText: 's'.repeat(2500),
+      governanceText: 'g'.repeat(1000),
     });
 
     assert.equal(plan.components.skill.overBudget, true);
     assert.ok(plan.components.skill.estimatedTokens > plan.components.skill.budget);
+    assert.equal(plan.components.startup.overBudget, true);
+    assert.ok(plan.components.startup.estimatedTokens > plan.components.startup.budget);
+    assert.equal(plan.components.governance.overBudget, true);
+    assert.ok(plan.components.governance.estimatedTokens > plan.components.governance.budget);
+  });
+
+  await t.test('small structured handoffs preserve every item without a false truncation result', () => {
+    const facts = Array.from({ length: 31 }, (_, index) => `fact-${index + 1}`);
+    const handoff = buildStructuredHandoff(
+      { id: 'review-source', produces: ['source-facts'] },
+      { 'source-facts': facts }
+    );
+
+    assert.equal(handoff.truncated, false);
+    assert.equal(handoff.data['source-facts'].length, 31);
+    assert.equal(handoff.data['source-facts'].at(-1), 'fact-31');
   });
 
   await t.test('structured handoff keeps full step output in state but bounds next-step context', async () => {
@@ -113,6 +131,9 @@ test('Context efficiency — progressive disclosure without architecture changes
 
     assert.equal(state.context.outputs['review-source']['source-facts'].length, 80);
     assert.ok(state.context.handoffs['review-source']);
+    assert.equal(state.context.handoffs['review-source'].truncated, true);
+    assert.ok(Object.hasOwn(state.context.handoffs['review-source'].data, 'source-facts'));
+    assert.equal(state.context.handoffs['review-source'].truncation['source-facts'].originalItems, 80);
     assert.ok(
       state.context.handoffs['review-source'].telemetry.estimatedTokens
         <= DEFAULT_BUDGETS.handoff + 50

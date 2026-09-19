@@ -1,15 +1,225 @@
 ---
+
 name: event-concept
-description: พัฒนาแนวคิดงาน Event นิทรรศการ Booth พิธีการ และประสบการณ์ผู้เข้าชมสำหรับโครงการ STeP โดยเชื่อมเรื่องเล่า เส้นทางผู้ชม องค์ประกอบพื้นที่ ความเป็นไปได้ในการผลิต และข้อจำกัดของ TOR
+description: พัฒนาแนวคิด Event นิทรรศการ Booth หรือประสบการณ์ผู้เข้าชมของ STeP จากเป้าหมายโครงการ กลุ่มผู้ชม เนื้อหา พื้นที่ และข้อจำกัดที่ได้รับ ให้เป็น Concept Statement, Visitor Journey และทิศทางองค์ประกอบพื้นที่ที่เชื่อมโยงกัน โดยไม่สร้างข้อกำหนด TOR งบประมาณ หรือข้อมูลพื้นที่ขึ้นเอง
 ---
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# แนวคิดงาน Event
+# Event Concept
 
-1. อ่าน TOR, Site Plan, เป้าหมายของผู้มีส่วนได้ส่วนเสีย กลุ่มผู้ชม ช่วงงบประมาณ และข้อจำกัดพื้นที่ก่อน
-2. สกัดแก่นเรื่องเป็น Concept Statement หนึ่งประโยคโดยไม่อ้างสิ่งที่โครงการทำไม่ได้
-3. แปลง Concept เป็นเส้นทางผู้เข้าชม: เห็น → เข้าใจ → มีส่วนร่วม → จดจำ → ดำเนินการต่อ
-4. เชื่อม Key Visual, Entrance, Stage, Booth, Check-in, Signage, Lighting, Media และ Souvenir ให้เป็นระบบเดียว
-5. ระบุวัสดุ ขนาดโดยประมาณ วิธีผลิต การติดตั้ง การเข้าถึง และความเสี่ยงหน้างาน
-6. ทำ Compliance Matrix เทียบ TOR ทีละข้อ และทำเครื่องหมายสิ่งที่ยังขาด
+## Purpose
 
-อย่าเริ่มจากความสวยงามเพียงอย่างเดียว ต้องแสดงเหตุผลด้านเนื้อหา ประสบการณ์ และความเป็นไปได้ในการผลิต
+เปลี่ยนบริบทของโครงการให้เป็นแนวคิด Event ที่สามารถนำไปพัฒนาต่อด้าน Design, Content และ Spatial Experience ได้
+
+Skill นี้ทำหน้าที่:
+
+**Project Context → Concept → Visitor Experience → Spatial Direction**
+
+เน้นความสัมพันธ์ระหว่าง:
+
+* เป้าหมายโครงการ
+* เนื้อหา
+* ผู้ชม
+* ประสบการณ์
+* พื้นที่
+* องค์ประกอบการสื่อสาร
+
+ไม่ใช่การตรวจ TOR อย่างเป็นทางการหรือการจัดทำแบบผลิตขั้นสุดท้าย
+
+## Inputs
+
+อาจได้รับ:
+
+* Project brief
+* TOR
+* Site plan
+* Venue information
+* Content
+* Stakeholder objectives
+* Target audience
+* Brand direction
+* Budget range
+* Schedule
+* Reference
+* Existing design
+
+ใช้เฉพาะข้อมูลที่มีอยู่จริง
+
+หากข้อมูลสำคัญไม่มี ให้ระบุว่า `ยังไม่ระบุ`
+
+## Core Workflow
+
+### 1. Understand Context
+
+สกัดข้อมูลเท่าที่มี:
+
+* เป้าหมายของโครงการ
+* ผู้ชมหลัก
+* Key message
+* สิ่งที่ต้องการให้ผู้ชมเข้าใจ
+* สิ่งที่ต้องการให้ผู้ชมทำต่อ
+* พื้นที่
+* ระยะเวลา
+* ข้อจำกัด
+* Requirement ที่ระบุไว้
+
+ไม่ตีความ Requirement ที่ไม่ชัดเป็นข้อบังคับใหม่
+
+### 2. Define Concept
+
+สร้าง `Concept Statement` ที่อธิบายแนวคิดหลักในหนึ่งประโยค
+
+Concept ต้อง:
+
+* เชื่อมกับเป้าหมายโครงการ
+* สื่อสารได้เข้าใจง่าย
+* นำไปใช้ต่อกับองค์ประกอบหลายประเภทได้
+* ไม่อ้างความสามารถหรือผลลัพธ์ที่โครงการไม่มีหลักฐานรองรับ
+
+จากนั้นอธิบาย `Concept Rationale` สั้น ๆ ว่าแนวคิดนี้มาจากอะไร
+
+### 3. Define Visitor Experience
+
+แปลง Concept ให้เป็นลำดับประสบการณ์ของผู้ชม
+
+ใช้โครงสร้างเป็นแนวทาง เช่น:
+
+`Attract → Understand → Engage → Remember → Next Action`
+
+ปรับตามประเภทของ Event ได้
+
+ไม่จำเป็นต้องใช้ Journey เดียวกันทุกโครงการ
+
+สำหรับแต่ละช่วง ให้ระบุ:
+
+* ผู้ชมพบอะไร
+* ต้องเข้าใจอะไร
+* Interaction ที่เกิดขึ้น
+* ผลลัพธ์ที่ต้องการ
+
+### 4. Translate Into Experience Zones
+
+แปลง Visitor Journey เป็นองค์ประกอบพื้นที่เท่าที่จำเป็น เช่น:
+
+* Entrance
+* Orientation
+* Exhibition
+* Booth
+* Stage
+* Activity
+* Check-in
+* Consultation
+* Product display
+* Media
+* Exit / Call-to-action
+
+ไม่จำเป็นต้องมีทุกองค์ประกอบ
+
+เลือกเฉพาะที่รองรับ Concept และ Requirement
+
+### 5. Connect Visual & Spatial Direction
+
+กำหนดความสัมพันธ์ระหว่างองค์ประกอบ เช่น:
+
+* Key Visual
+* Graphic language
+* Spatial language
+* Material direction
+* Lighting character
+* Media
+* Signage
+* Interaction
+* Souvenir
+
+อธิบายว่าแต่ละองค์ประกอบสนับสนุน Concept อย่างไร
+
+หลีกเลี่ยงการเลือกองค์ประกอบเพียงเพราะดูสวย
+
+### 6. Consider Practical Constraints
+
+พิจารณาข้อจำกัดที่ต้นทางระบุ เช่น:
+
+* พื้นที่
+* จำนวนผู้ชม
+* งบประมาณ
+* ระยะเวลาติดตั้ง
+* การขนส่ง
+* Indoor / Outdoor
+* Accessibility
+* Existing structure
+* Venue restriction
+
+หากไม่มีข้อมูล ห้ามสร้างข้อจำกัดขึ้นเอง
+
+สามารถเสนอ `ข้อควรพิจารณา` เพิ่มเติมได้ แต่ต้องแยกออกจาก Requirement ที่ยืนยันแล้ว
+
+## Output
+
+### Project Context
+
+* Project:
+* Objective:
+* Audience:
+* Key Message:
+* Venue / Site:
+* Known Constraints:
+* Information Missing:
+
+### Concept Statement
+
+ประโยคเดียวที่อธิบายแนวคิดหลัก
+
+### Concept Rationale
+
+อธิบายเหตุผลและความสัมพันธ์กับเป้าหมายของโครงการอย่างกระชับ
+
+### Visitor Journey
+
+| Stage | Visitor Experience | Message | Interaction | Intended Outcome |
+| ----- | ------------------ | ------- | ----------- | ---------------- |
+
+### Experience / Spatial Zones
+
+| Zone | Function | Visitor Experience | Connection to Concept |
+| ---- | -------- | ------------------ | --------------------- |
+
+### Visual & Spatial Direction
+
+ระบุเฉพาะองค์ประกอบที่เกี่ยวข้อง เช่น:
+
+* Visual language:
+* Spatial language:
+* Materials:
+* Lighting:
+* Media:
+* Signage:
+* Interaction:
+* Souvenir / Takeaway:
+
+พร้อมอธิบายเหตุผลสั้น ๆ
+
+### Practical Considerations
+
+| Issue | Known Constraint | Design Response |
+| ----- | ---------------- | --------------- |
+
+### Open Questions
+
+ระบุเฉพาะข้อมูลที่จำเป็นต่อการพัฒนา Concept ต่อ เช่น:
+
+* พื้นที่ยังไม่ยืนยัน
+* งบประมาณยังไม่ระบุ
+* Audience estimate ยังไม่มี
+* Requirement บางข้อยังตีความไม่ได้
+
+## Rules
+
+* ห้ามสร้าง Requirement ที่ไม่มีในต้นทาง
+* ห้ามสร้างงบประมาณหรือขนาดพื้นที่ขึ้นเอง
+* ห้ามเปลี่ยน Reference ให้เป็น Requirement โดยอัตโนมัติ
+* ห้ามอ้างว่า Concept สอดคล้อง TOR หากยังไม่ได้ตรวจ TOR
+* ห้ามอ้างว่าวัสดุหรือโครงสร้างผลิตได้จริงโดยไม่มีข้อมูลเพียงพอ
+* แยก `Requirement` ออกจาก `Design Proposal`
+* แยก `Known Constraint` ออกจาก `Design Assumption`
+* ทุกองค์ประกอบควรมีเหตุผลเชื่อมกับ Concept, Audience หรือ Function
+* หากข้อมูลไม่พอ ให้คงความไม่แน่นอนไว้แทนการเดา

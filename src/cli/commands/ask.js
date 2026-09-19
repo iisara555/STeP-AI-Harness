@@ -22,6 +22,7 @@ import {
   buildCompactRoutingContract,
   buildContextBudgetPlan,
 } from '../../modules/context-budget/index.js';
+import { parseYamlInlineList, stripYamlScalar } from '../../utils/simple-yaml.js';
 
 /**
  * Load router index skills from manifest/router-index.yaml
@@ -209,13 +210,6 @@ export async function loadTeamsDictionary() {
   return dict;
 }
 
-function parseInlineList(raw = '') {
-  return String(raw)
-    .split(',')
-    .map((value) => value.trim().replace(/^['"]|['"]$/g, ''))
-    .filter(Boolean);
-}
-
 export async function loadSkillContextMetadata(skillName) {
   if (!skillName) return null;
   const text = await readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8');
@@ -236,7 +230,7 @@ export async function loadSkillContextMetadata(skillName) {
 
     const pathMatch = line.match(/^    path:\s*(.+)/);
     if (pathMatch) {
-      result.path = pathMatch[1].trim().replace(/^['"]|['"]$/g, '');
+      result.path = stripYamlScalar(pathMatch[1]);
       continue;
     }
     if (/^    references:/.test(line)) {
@@ -245,9 +239,9 @@ export async function loadSkillContextMetadata(skillName) {
     }
     if (inReferences) {
       const mandatory = line.match(/^      mandatory:\s*\[(.*?)\]/);
-      if (mandatory) result.mandatory = parseInlineList(mandatory[1]);
+      if (mandatory) result.mandatory = parseYamlInlineList(mandatory[1]);
       const optional = line.match(/^      optional:\s*\[(.*?)\]/);
-      if (optional) result.optional = parseInlineList(optional[1]);
+      if (optional) result.optional = parseYamlInlineList(optional[1]);
     }
   }
 
@@ -275,11 +269,11 @@ export async function loadDocumentContextMetadata(ids = []) {
     if (!current) continue;
 
     const title = line.match(/^    title:\s*(.+)/);
-    if (title) current.title = title[1].trim().replace(/^['"]|['"]$/g, '');
+    if (title) current.title = stripYamlScalar(title[1]);
     const pathMatch = line.match(/^    path:\s*(.+)/);
-    if (pathMatch) current.path = pathMatch[1].trim().replace(/^['"]|['"]$/g, '');
+    if (pathMatch) current.path = stripYamlScalar(pathMatch[1]);
     const status = line.match(/^    status:\s*(.+)/);
-    if (status) current.status = status[1].trim().replace(/^['"]|['"]$/g, '');
+    if (status) current.status = stripYamlScalar(status[1]);
   }
 
   return results;
@@ -406,6 +400,7 @@ export async function queryStepRouter(query, options = {}) {
     routingContract,
     skillText,
     ruleTexts,
+    governanceText: JSON.stringify(routingContract.authority),
   });
 
   // Disambiguation & Clarification detection:

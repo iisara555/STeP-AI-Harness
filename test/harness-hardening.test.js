@@ -72,6 +72,20 @@ test('credentials, structured PII and object keys are minimized without changing
   assert.deepEqual(value.facts, { budget: 10000, dueDate: '2026-10-15', sourceRef: 'TOR-SYN-01' });
 });
 
+test('quoted JSON credential keys are blocked before external transmission', () => {
+  for (const input of [
+    JSON.stringify({ password: 'synthetic-password-123' }),
+    JSON.stringify({ access_token: 'synthetic-token-123' }),
+  ]) {
+    const result = evaluatePrivacyGate(input);
+    assert.equal(result.classification, 'sensitive');
+    assert.equal(result.action, 'block-external');
+    assert.equal(result.canSendToExternalAI, false);
+    assert.equal(result.redactionApplied, true);
+    assert.ok(!result.redactedText.includes('synthetic-'));
+  }
+});
+
 test('step outputs, handoffs, provenance and feedback are redacted before persistence', () => {
   let state = buildRunState({ playbook: tor, query: 'TOR', matchedSignals: ['source', 'planning', 'schedule'] });
   state = completePlaybookStep(state, 'review-source', { 'source-facts': [{ contact: 'test@example.invalid' }] });
@@ -107,7 +121,10 @@ test('same-second runs have distinct IDs and model/source revisions remain expli
 
 test('unregistered action and missing confirmation fail closed', () => {
   const step = { id: 'submit', type: 'action', action: 'browser-form-submit' };
-  assert.equal(resolvePlaybookAction(step, ['browser']).status, 'blocked');
+  const unregistered = resolvePlaybookAction(step, ['browser']);
+  assert.equal(unregistered.status, 'blocked');
+  const unregisteredState = buildRunState({ playbook: { id: 'unregistered-test', steps: [step] } });
+  assert.equal(markPlaybookActionState(unregisteredState, 'submit', unregistered).status, 'blocked');
   const result = resolvePlaybookAction(step, ['browser'], actions);
   assert.equal(result.status, 'waiting-confirmation');
   const state = buildRunState({ playbook: { id: 'browser-test', steps: [step] } });
@@ -203,6 +220,23 @@ test('direct state updates cannot label unverified actions completed; verified t
     state.steps.at(-1).status = 'completed';
     return state;
   }), /requires completePlaybookAction/);
+  await assert.rejects(updatePlaybookRun(root, run.runId, (state) => ({
+    ...state,
+    steps: state.steps.filter((step) => step.type !== 'action'),
+    currentStep: null,
+    status: 'completed',
+  })), /Cannot change Playbook step plan/);
+  await assert.rejects(updatePlaybookRun(root, run.runId, (state) => ({
+    ...state,
+    steps: state.steps.map((step) => step.type === 'action'
+      ? { ...step, id: 'renamed-action', action: 'different-action' }
+      : step),
+  })), /Cannot change Playbook step plan/);
+  await assert.rejects(updatePlaybookRun(root, run.runId, (state) => ({
+    ...state,
+    status: 'completed',
+    currentStep: null,
+  })), /completed run requires every step to be completed/);
   let state = await readPlaybookRun(root, run.runId);
   for (const step of state.steps.filter((s) => s.type === 'skill')) state = completePlaybookStep(state, step.id, {});
   await updatePlaybookRun(root, run.runId, () => state);

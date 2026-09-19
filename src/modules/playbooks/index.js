@@ -12,17 +12,7 @@ import {
   createUsageTelemetry,
   mergeActualUsage,
 } from '../context-budget/index.js';
-
-function parseList(raw = '') {
-  return raw
-    .split(',')
-    .map((v) => v.trim().replace(/^['"]|['"]$/g, ''))
-    .filter(Boolean);
-}
-
-function stripValue(raw = '') {
-  return raw.trim().replace(/^['"]|['"]$/g, '');
-}
+import { parseYamlInlineList, stripYamlScalar } from '../../utils/simple-yaml.js';
 
 export function parsePlaybooksYaml(text) {
   const playbooks = [];
@@ -64,7 +54,7 @@ export function parsePlaybooksYaml(text) {
 
     const nameMatch = line.match(/^ {4}name:\s*(.+)/);
     if (nameMatch) {
-      current.name = stripValue(nameMatch[1]);
+      current.name = stripYamlScalar(nameMatch[1]);
       continue;
     }
 
@@ -76,19 +66,19 @@ export function parsePlaybooksYaml(text) {
 
     const consumersMatch = line.match(/^ {4}consumers:\s*\[(.*?)\]/);
     if (consumersMatch) {
-      current.consumers = parseList(consumersMatch[1]);
+      current.consumers = parseYamlInlineList(consumersMatch[1]);
       continue;
     }
 
     const descriptionMatch = line.match(/^ {4}description:\s*(.+)/);
     if (descriptionMatch && !currentStep) {
-      current.description = stripValue(descriptionMatch[1]);
+      current.description = stripYamlScalar(descriptionMatch[1]);
       continue;
     }
 
     const requiredMatch = line.match(/^ {4}requiredSignals:\s*\[(.*?)\]/);
     if (requiredMatch) {
-      current.requiredSignals = parseList(requiredMatch[1]);
+      current.requiredSignals = parseYamlInlineList(requiredMatch[1]);
       continue;
     }
 
@@ -100,13 +90,13 @@ export function parsePlaybooksYaml(text) {
 
     const policyMatch = line.match(/^ {4}(sourcePolicy|factPolicy|budgetPolicy|schedulePolicy|outputSchema|specPath):\s*(.+)/);
     if (policyMatch) {
-      current[policyMatch[1]] = stripValue(policyMatch[2]);
+      current[policyMatch[1]] = stripYamlScalar(policyMatch[2]);
       continue;
     }
 
     const parametersMatch = line.match(/^ {4}parameters:\s*\[(.*?)\]/);
     if (parametersMatch) {
-      current.parameters = parseList(parametersMatch[1]);
+      current.parameters = parseYamlInlineList(parametersMatch[1]);
       continue;
     }
 
@@ -124,7 +114,7 @@ export function parsePlaybooksYaml(text) {
 
     const signalMatch = line.match(/^ {6}([a-z0-9_-]+):\s*\[(.*?)\]/);
     if (section === 'signals' && signalMatch) {
-      current.signals[signalMatch[1]] = parseList(signalMatch[2]);
+      current.signals[signalMatch[1]] = parseYamlInlineList(signalMatch[2]);
       continue;
     }
 
@@ -154,9 +144,9 @@ export function parsePlaybooksYaml(text) {
     const [, key, raw] = scalar;
     if (['consumes', 'produces'].includes(key)) {
       const listMatch = raw.match(/^\[(.*?)\]$/);
-      currentStep[key] = listMatch ? parseList(listMatch[1]) : [];
+      currentStep[key] = listMatch ? parseYamlInlineList(listMatch[1]) : [];
     } else {
-      currentStep[key] = stripValue(raw);
+      currentStep[key] = stripYamlScalar(raw);
     }
   }
 
@@ -268,6 +258,7 @@ export function buildRunState({
   const usage = createUsageTelemetry({
     queryText: privacy.redactedText,
     routingContract,
+    governanceText: JSON.stringify(routingContract?.authority || {}),
   });
   return sanitizeRunData({
     version: 3,
@@ -350,11 +341,33 @@ export async function readPlaybookRun(workspaceDir, runId) {
   return sanitizeRunData(JSON.parse(await readFile(statePath, 'utf-8')));
 }
 
+function assertStableStepPlan(currentSteps = [], nextSteps = []) {
+  if (!Array.isArray(nextSteps) || currentSteps.length !== nextSteps.length) {
+    throw new Error('Cannot change Playbook step plan during a run');
+  }
+
+  for (let index = 0; index < currentSteps.length; index++) {
+    const current = currentSteps[index];
+    const next = nextSteps[index];
+    if (!next
+        || next.id !== current.id
+        || next.type !== current.type
+        || (current.type === 'skill' && next.skill !== current.skill)
+        || (current.type === 'action' && next.action !== current.action)) {
+      throw new Error('Cannot change Playbook step plan during a run');
+    }
+  }
+}
+
 export async function updatePlaybookRun(workspaceDir, runId, updater) {
   const current = await readPlaybookRun(workspaceDir, runId);
   const previousActions = new Map(current.steps?.filter((step) => step.type === 'action').map((step) => [step.id, step.status]));
   const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
   if (next.runId !== runId) throw new Error('Cannot change run ID');
+  assertStableStepPlan(current.steps || [], next.steps);
+  if (next.status === 'completed' && next.steps.some((step) => step.status !== 'completed')) {
+    throw new Error('A completed run requires every step to be completed');
+  }
   const completesAction = next.steps?.some((step) => (step.type === 'action' || previousActions.has(step.id))
     && step.status === 'completed' && previousActions.get(step.id) !== 'completed');
   if (completesAction && verifiedCompletedStates.get(next) !== stateDigest(next)) {
@@ -613,7 +626,7 @@ export function markPlaybookActionState(state, stepId, actionResolution) {
     next.status = 'waiting-confirmation';
     next.currentStep = stepId;
   } else if (step.actionState.status === 'blocked') {
-    next.status = 'waiting-tool';
+    next.status = step.actionState.reason === 'no-supported-tool' ? 'waiting-tool' : 'blocked';
     next.currentStep = stepId;
   }
 
