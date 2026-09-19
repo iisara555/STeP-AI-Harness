@@ -63,7 +63,9 @@ test('employee documentation is aligned and links resolve', async (t) => {
     assert.ok(readme.includes(`**${playbookCount} Playbooks**`));
     assert.ok(readme.includes(`**${actionCount} Actions**`));
     assert.ok(readme.includes('Shared Drive หรือช่องทางภายใน'));
-    assert.ok(readme.includes('GitHub Release v0.7.2 สำหรับ Pilot'));
+    assert.ok(readme.includes('อย่าใช้ Public GitHub Release เป็น fallback โดยอัตโนมัติ'));
+    assert.ok(readme.includes('Repository visibility'));
+    assert.ok(readme.includes('repository นี้มีสถานะ **Public**'));
     assert.ok(readme.includes('Install-STeP-AI.bat'));
     assert.ok(readme.includes('Install-STeP-AI.command'));
     assert.ok(readme.includes('เริ่มใช้งาน STeP AI'));
