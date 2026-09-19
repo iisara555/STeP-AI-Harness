@@ -1,12 +1,12 @@
 version: 1
 roles:
   - id: all
-    description: Universal access - all approved skills and rules for STeP staff
+    description: Universal access - all packaged Pilot skills and rules for STeP staff; lifecycle metadata still applies
     resources:
       knowledge: [common, creative, pm, dev]
       skills: [common, creative, pm, dev]
   - id: staff
-    description: All STeP staff (universal access to all skills)
+    description: All STeP staff (universal access to packaged Pilot skills; not evidence of owner approval)
     resources:
       knowledge: [common, creative, pm, dev]
       skills: [common, creative, pm, dev]
