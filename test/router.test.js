@@ -253,6 +253,8 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(inferIntentFromText('ช่วยวางแผนโครงการ'), 'plan');
     assert.equal(inferIntentFromText('ช่วยกรอกแบบฟอร์มขอใช้ห้องประชุม'), 'fill');
     assert.equal(inferIntentFromText('ช่วยจองห้องประชุม'), 'fill');
+    assert.equal(inferIntentFromText('ช่วยวางคำถามสัมภาษณ์ลูกค้าตาม Mom Test'), 'interview');
+    assert.equal(inferIntentFromText('ช่วยซ้อม audit interview'), 'interview');
 
     const exts = extractFileTypes(['contract.DOCX', 'budget.XLSX', 'image.PNG']);
     assert.deepEqual(exts, ['docx', 'xlsx', 'png']);
@@ -308,6 +310,32 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.ok(disambiguation.reason.includes('Disambiguated via cheap context'));
   });
 
+  await t.test('Case 12: near-tie routing prefers domain keyword evidence over intent-only candidate', () => {
+    const domainSpecific = {
+      name: 'iso-readiness',
+      intent: ['review', 'plan'],
+      triggers: ['external audit iso 9001'],
+      paths: [],
+      fileTypes: [],
+      teams: { primary: ['qs'], consumers: [] },
+    };
+    const genericSummary = {
+      name: 'generic-summary',
+      intent: ['summarize', 'review'],
+      triggers: ['management review'],
+      paths: [],
+      fileTypes: [],
+      teams: { primary: ['qs'], consumers: [] },
+    };
+    const context = buildContext({
+      promptText: 'ช่วยสรุปความพร้อม external audit ISO 9001',
+      team: 'qs',
+    });
+    const ranked = rankSkillCandidates([genericSummary, domainSpecific], context);
+    assert.equal(ranked[0].skill, 'iso-readiness');
+    assert.ok(ranked[0].breakdown.keyword > 0);
+  });
+
   await t.test('Case 10: Manifest Integrity & Dependency Graph Validation (Real Files)', async () => {
     const manifestDir = resolve('manifest');
     const integrity = await loadAndValidateManifests(manifestDir);
@@ -340,8 +368,9 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(selectedSkill.tier, 'HIGH');
 
     // Progressive Disclosure Loading Budget Simulation:
-    // Level 0: Router Index Metadata (Always loaded)
-    const level0Loaded = ['manifest/router-index.yaml'];
+    // Level 0: Router resolves locally; registry is not sent into model context.
+    const level0Loaded = ['compact-routing-contract'];
+    assert.ok(!level0Loaded.includes('manifest/router-index.yaml'));
 
     // Level 1: Only 1 primary skill SKILL.md
     const level1Loaded = [`skills/pm/${selectedSkill.skill}/SKILL.md`];

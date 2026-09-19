@@ -632,6 +632,25 @@ STeP-AI-Harness/
 
 ---
 
+# Pilot Benchmark 30 งาน
+
+สำหรับ Pilot รอบแรกมีชุดทดสอบ 30 งาน แบ่งเป็นงานสั้น งานเอกสาร งาน Composite และ Authority cases
+
+รัน automated preflight:
+
+~~~bash
+step-ai benchmark
+step-ai benchmark --json
+step-ai benchmark --limit 20
+~~~
+
+Automated benchmark วัด Router, Context Budget, Authority และ latency โดย **ไม่เรียก LLM**  
+คุณภาพคำตอบจริงและ Time-to-Usable-Output ต้องเก็บจาก Human Pilot
+
+รายละเอียด: [docs/pilot-30-task-test.md](docs/pilot-30-task-test.md)
+
+---
+
 # Validation & Tests
 
 ก่อน merge/release ให้รัน:
