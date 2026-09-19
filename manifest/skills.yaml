@@ -48,7 +48,7 @@ skills:
     process: [procurement.tor]
     service: [tech-commercialization, public-sector-innovation]
     path: skills/pm/tor-review/SKILL.md
-    description: ตรวจ TOR และขอบเขตงานจัดซื้อจัดจ้างด้านความครบถ้วนและความถูกต้องตามกฎหมายพัสดุ
+    description: ตรวจ TOR ก่อนส่ง AFP โดยแยก structural review ออกจาก source-backed compliance และไม่อ้าง current rule เมื่อ Source ยังไม่ยืนยัน
     governance:
       owner: afp
       reviewer: [qs]
@@ -518,7 +518,7 @@ skills:
     process: [procurement.request]
     service: [public-sector-innovation]
     path: skills/common/receipt-audit/SKILL.md
-    description: ตรวจสอบใบเสร็จรับเงิน ใบกำกับภาษี และเอกสารการเบิกจ่ายตามระเบียบ มช.
+    description: Pre-check ใบเสร็จ/ใบกำกับภาษี/ชุดเบิกโดยเทียบหลักฐานกับ current verified source และเปิดเผย source gap
     governance:
       owner: afp
       reviewer: [qs]
@@ -528,7 +528,7 @@ skills:
       lifecycle:
         stage: approved
     references:
-      mandatory: [human-approval-rule, data-classification-rule]
+      mandatory: [finance-disbursement-policy, human-approval-rule, data-classification-rule]
       optional: []
 
   creative-art-director:
