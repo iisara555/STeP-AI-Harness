@@ -1,11 +1,11 @@
 ---
 name: market-signal-radar
-description: สแกนสัญญาณตลาดและบทสนทนาล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และ Evidence เพื่อช่วย MI/PITI/ISI ตัดสินใจว่าจะตรวจอะไรต่อ
+description: สแกนสัญญาณตลาดและบทสนทนาล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และ Evidence เพื่อช่วย MI/PITi/ISI ตัดสินใจว่าจะตรวจอะไรต่อ
 ---
 
 # STeP Market Signal Radar
 
-Skill นี้ช่วย MI, PITI, ISI, EIC, TECH-SPIN, LINC และทีมที่ต้องเข้าใจ “ตอนนี้ตลาดกำลังพูดอะไร” โดยเน้น **recent signals + source quality + uncertainty** ไม่ใช่สรุปเทรนด์จากความจำของโมเดล
+Skill นี้ช่วย MI, PITi, ISI, EIC, TECH-SPIN, LINC และทีมที่ต้องเข้าใจ “ตอนนี้ตลาดกำลังพูดอะไร” โดยเน้น **recent signals + source quality + uncertainty** ไม่ใช่สรุปเทรนด์จากความจำของโมเดล
 
 > **Recent does not mean representative. Popular does not mean proven.**
 
