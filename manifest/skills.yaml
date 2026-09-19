@@ -21,6 +21,26 @@ skills:
       mandatory: []
       optional: []
 
+
+  step-skill-authoring:
+    owner: ai-admin
+    version: 1.0.0
+    domain: [ai-governance, skill-authoring]
+    process: [ai.skill-governance]
+    path: skills/common/step-skill-authoring/SKILL.md
+    description: ออกแบบหรือปรับ Skill ของ STeP AI Harness โดยตรวจ Need Gate, Trigger/Anti-trigger, Source, Authority, Handoff, Context Budget และ Eval ก่อนเข้าสู่ Pilot
+    governance:
+      owner: ai-admin
+      reviewer: [qs, developer]
+      approvedBy: [ai-admin]
+      reviewedAt: "2026-09-20"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
   tor-review:
     owner: afp
     version: 1.1.1
