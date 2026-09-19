@@ -172,8 +172,17 @@ export function rankSkillCandidates(skills, context, options = {}) {
   const lowerText = (context.text || '').toLowerCase();
 
   return scored.sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score;
+    const scoreDiff = b.score - a.score;
+
+    // Near-tie specificity rule:
+    // a domain-specific keyword match should beat an intent-only candidate
+    // when the total scores differ by no more than 0.10.
+    if (Math.abs(scoreDiff) <= 0.10 && a.breakdown.keyword !== b.breakdown.keyword) {
+      return b.breakdown.keyword - a.breakdown.keyword;
+    }
+
+    if (scoreDiff !== 0) {
+      return scoreDiff;
     }
 
     // Tie-breaker: prefer candidate with more specific / longer keyword matches
