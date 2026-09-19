@@ -79,7 +79,7 @@ skills:
     teams:
       primary: [afp]
       consumers: [pm, pubsec, sit]
-    description: ยกร่าง TOR ราชการตามแบบแผนและระเบียบพัสดุ
+    description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability และเกณฑ์ตรวจรับ โดยเปิดเผย source gaps
     intent: [create, plan]
     triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor]
     paths: ["**/TOR/**", "**/procurement/**"]
@@ -87,8 +87,9 @@ skills:
     requires: [project_objective, estimated_budget]
     scope:
       allow:
-        - ร่างโครงสร้างตามแบบมาตรฐานพัสดุ
-        - ระบุระยะเวลาและงวดงาน
+        - ร่างโครงสร้างจาก current template/source หรือ working template ที่ระบุสถานะชัด
+        - ทำ requirement/deliverable/acceptance traceability
+        - ใช้วัน งบ เกณฑ์ และข้อบังคับเฉพาะเมื่อมี source รองรับ; ถ้าไม่มีให้รอยืนยัน
       escalate: {}
       human_only:
         budget_allocation:
