@@ -91,6 +91,18 @@ Action ที่มีผลจริงยังต้องทำตาม Hum
 ### ISO Audit Readiness
 เริ่มจาก `iso9001-audit-readiness` และเรียก evidence/document/interview/KPI/CAPA/management-review Skills เฉพาะ signal ที่ผู้ใช้ต้องการ
 
+### Skill → Pilot
+`step-skill-authoring → coding-git-workflow → evidence-before-approval`
+
+ใช้เมื่อผู้ใช้ต้องการสร้าง/ปรับ Skill และให้ลง repo หรือเตรียมเข้าสู่ Pilot
+
+หลัก:
+- เริ่มด้วย Need Gate ก่อนเสมอ: Skill vs Playbook vs Rule vs Registry vs Action
+- implementation step ทำเฉพาะเมื่อคำขอมี signal ให้แก้ repo
+- evidence review ทำเฉพาะเมื่อผู้ใช้ต้องการ test/eval/Pilot readiness
+- ไม่ auto-promote lifecycle และไม่ merge หากหลักฐานสำคัญไม่ผ่าน
+- มาตรฐานอยู่ที่ `docs/skill-authoring-standard.md`
+
 ## หลักการเพิ่ม Playbook ใหม่
 
 เพิ่มเมื่อ:
