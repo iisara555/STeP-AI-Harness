@@ -104,6 +104,16 @@ test('STeP Skill Authoring Standard', async (t) => {
     assert.equal(evals.needsDirectModelSideCoverage.length, 19);
   });
 
+  await t.test('approved lifecycle cannot be inferred from an approver role alone', async () => {
+    const registry = await readFile('manifest/skills.yaml', 'utf-8');
+    const blocks = registry.split(/^  (?=[a-z0-9-]+:\s*$)/m).slice(1);
+    for (const block of blocks) {
+      if (!/stage:\s*approved/.test(block)) continue;
+      assert.match(block, /approvalEvidence:\s*(?!pending|none|$)\S+/m, 'approved Skill must carry explicit approval evidence');
+    }
+    assert.equal((registry.match(/stage:\s*approved/g) || []).length, 0, 'current repo has no owner-review evidence sufficient for approved status');
+  });
+
   await t.test('manifest integrity includes the new Skill, process and Playbook', async () => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
