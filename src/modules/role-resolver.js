@@ -249,6 +249,110 @@ export async function getAvailableTeams() {
 }
 
 /**
+ * Parse Router team eligibility without loading Skill bodies.
+ * Router Registry is the source of truth for which teams should see each
+ * user-facing Skill. Directory namespaces are organization only, not scope.
+ */
+export function parseRouterTeamEligibility(yamlText) {
+  const lines = yamlText.split(/\r?\n/);
+  const entries = [];
+  let current = null;
+
+  for (const line of lines) {
+    const nameMatch = line.match(/^ {2}- name:\s*([a-z0-9-]+)/);
+    if (nameMatch) {
+      current = {
+        name: nameMatch[1],
+        primary: [],
+        consumers: [],
+      };
+      entries.push(current);
+      continue;
+    }
+    if (!current) continue;
+
+    const primaryMatch = line.match(/^ {6}primary:\s*\[(.*?)\]/);
+    if (primaryMatch) {
+      current.primary = primaryMatch[1]
+        .split(',')
+        .map((item) => item.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
+      continue;
+    }
+
+    const consumerMatch = line.match(/^ {6}consumers:\s*\[(.*?)\]/);
+    if (consumerMatch) {
+      current.consumers = consumerMatch[1]
+        .split(',')
+        .map((item) => item.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Parse Skill Registry paths: Skill ID -> canonical SKILL.md path.
+ */
+export function parseSkillRegistryPaths(yamlText) {
+  const lines = yamlText.split(/\r?\n/);
+  const paths = new Map();
+  let current = '';
+
+  for (const line of lines) {
+    const keyMatch = line.match(/^ {2}([a-z0-9-]+):\s*$/);
+    if (keyMatch) {
+      current = keyMatch[1];
+      continue;
+    }
+    if (!current) continue;
+
+    const pathMatch = line.match(/^ {4}path:\s*(skills\/[^\s]+\/SKILL\.md)\s*$/);
+    if (pathMatch) paths.set(current, pathMatch[1]);
+  }
+
+  return paths;
+}
+
+/**
+ * Resolve canonical Skill paths for a team using Router Registry eligibility.
+ * step-router is system infrastructure and is always included.
+ */
+export async function resolveTeamSkillPaths(teamCode) {
+  const normalizedTeam = String(teamCode || '').toLowerCase().trim();
+  const [routerText, registryText] = await Promise.all([
+    readFile(join(PACKAGE_ROOT, 'manifest', 'router-index.yaml'), 'utf-8'),
+    readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8'),
+  ]);
+
+  const eligibility = parseRouterTeamEligibility(routerText);
+  const registryPaths = parseSkillRegistryPaths(registryText);
+  const names = new Set(['step-router']);
+
+  for (const entry of eligibility) {
+    if (
+      entry.primary.includes(normalizedTeam) ||
+      entry.consumers.includes(normalizedTeam) ||
+      entry.consumers.includes('*')
+    ) {
+      names.add(entry.name);
+    }
+  }
+
+  const paths = [];
+  for (const name of names) {
+    const skillPath = registryPaths.get(name);
+    if (!skillPath) {
+      throw new Error(`Router/Skill Registry mismatch: '${name}' has no canonical SKILL.md path`);
+    }
+    paths.push(skillPath);
+  }
+
+  return paths.sort();
+}
+
+/**
  * Resolve all files for a specific team
  * @param {string} teamCode 
  * @returns {Promise<{
@@ -267,18 +371,27 @@ export async function resolveTeamFiles(teamCode) {
 
   const files = [];
 
-  // 1. Resolve skills for this team
-  for (const group of team.skills) {
-    const groupDir = join(PACKAGE_ROOT, 'skills', group);
-    if (await pathExists(groupDir)) {
-      const relFiles = await listFilesRecursive(groupDir);
-      for (const rel of relFiles) {
-        files.push({
-          relativePath: `skills/${group}/${rel}`,
-          sourcePath: join(groupDir, rel),
-          type: 'skill',
-        });
-      }
+  // 1. Resolve only team-eligible Skills from Router Registry.
+  // Namespace folders (common/pm/creative/dev) organize source files but must
+  // not expand a team's search space by themselves.
+  const teamSkillPaths = await resolveTeamSkillPaths(team.id);
+  const addedSkillFiles = new Set();
+
+  for (const skillPath of teamSkillPaths) {
+    const relativeDir = dirname(skillPath);
+    const skillDir = join(PACKAGE_ROOT, relativeDir);
+    if (!(await pathExists(skillDir))) continue;
+
+    const relFiles = await listFilesRecursive(skillDir);
+    for (const rel of relFiles) {
+      const relativePath = `${relativeDir}/${rel}`.replace(/\\/g, '/');
+      if (addedSkillFiles.has(relativePath)) continue;
+      addedSkillFiles.add(relativePath);
+      files.push({
+        relativePath,
+        sourcePath: join(skillDir, rel),
+        type: 'skill',
+      });
     }
   }
 
