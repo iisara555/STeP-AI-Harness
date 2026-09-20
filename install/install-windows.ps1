@@ -89,42 +89,12 @@ if ($antigravityFound) { Write-Host "    [✓] Google Antigravity & Spark       
 Write-Host " ● สาย Local AI / ความเป็นส่วนตัวข้อมูลสูงสุด (Local / Privacy Tier):" -ForegroundColor Magenta
 if ($hermesFound) { Write-Host "    [✓] Hermes Agent (Nous / Local AI)   (พบในเครื่อง - พร้อมใช้งาน)" -ForegroundColor Green } else { Write-Host "    [ ] Hermes Agent (Nous / Local AI)   (ยังไม่พบในเครื่อง)" -ForegroundColor DarkGray }
 
-# Zero-Tool Guided Wizard
+# No approved AI tool detected: continue Harness install but do not open external signup/download pages.
 if ($foundCount -eq 0) {
     Write-Host ""
-    Write-Host "⚠️  ยังไม่พบโปรแกรม AI ใดๆ ในเครื่องคอมพิวเตอร์ของคุณ" -ForegroundColor Yellow
-    Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "🧭 [คำแนะนำการเลือก AI ให้เหมาะกับรูปแบบการทำงานของคุณ]:" -ForegroundColor Cyan
-    Write-Host "  1. สายฟรี / มี Quota ฟรี  (แนะนำมากที่สุดสำหรับเริ่มต้นใช้งาน — ไม่มีค่าใช้จ่าย):" -ForegroundColor White
-    Write-Host "     - เลือกสายฟรีหนึ่งตัวที่โหลดง่ายในเครื่องคุณ: Cursor หรือ OpenCode" -ForegroundColor Gray
-    Write-Host "       Cursor: https://cursor.com  |  OpenCode: https://opencode.ai" -ForegroundColor Gray
-    Write-Host "  2. สายจ่ายตังค์ / องค์กรจัดซื้อ (สำหรับท่านที่มีสิทธิ์ Pro/Plus หรือ License หน่วยงาน):" -ForegroundColor White
-    Write-Host "     - ChatGPT Desktop / Claude Desktop / Google Antigravity & Spark" -ForegroundColor Gray
-    Write-Host "  3. สาย Local AI (สำหรับผู้ต้องการความปลอดภัยข้อมูล 100% ประมวลผลในเครื่อง):" -ForegroundColor White
-    Write-Host "     - Hermes Agent (pip install hermes-agent)" -ForegroundColor Gray
-    Write-Host "  4. ดำเนินการติดตั้ง STeP AI ต่อทันที (ไปดาวน์โหลด AI ภายหลัง)" -ForegroundColor White
-    Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-    
-    $guideChoice = Read-Host "ต้องการให้ระบบแนะนำและเปิดหน้าดาวน์โหลดสายฟรีหรือไม่? (พิมพ์ 1 เพื่อเปิดหน้าดาวน์โหลด / กด Enter เพื่อข้าม) [default: 1]"
-    if ([string]::IsNullOrWhiteSpace($guideChoice)) { $guideChoice = "1" }
-    
-    if ($guideChoice -eq "1") {
-        Write-Host ""
-        Write-Host "เลือกโปรแกรมสายฟรีที่ต้องการเปิดหน้าเว็บดาวน์โหลด:" -ForegroundColor Cyan
-        Write-Host "  1. Cursor (สายฟรี) https://cursor.com" -ForegroundColor White
-        Write-Host "  2. OpenCode (สายฟรี) https://opencode.ai" -ForegroundColor White
-        Write-Host "  3. ข้ามไปขั้นตอนติดตั้งต่อ" -ForegroundColor Gray
-        $downloadChoice = Read-Host "พิมพ์หมายเลข (1-3) [default: 1]"
-        if ([string]::IsNullOrWhiteSpace($downloadChoice)) { $downloadChoice = "1" }
-        
-        if ($downloadChoice -eq "1") {
-            Write-Host "กำลังเปิดเบราว์เซอร์เพื่อดาวน์โหลด Cursor IDE..." -ForegroundColor Green
-            Start-Process "https://cursor.com"
-        } elseif ($downloadChoice -eq "2") {
-            Write-Host "กำลังเปิดเบราว์เซอร์เพื่อดาวน์โหลด OpenCode..." -ForegroundColor Green
-            Start-Process "https://opencode.ai"
-        }
-    }
+    Write-Host "⚠️  ยังไม่พบโปรแกรม AI ที่องค์กรอนุมัติในเครื่องนี้" -ForegroundColor Yellow
+    Write-Host "ติดตั้ง STeP AI ต่อได้ แต่ก่อนใช้งานให้ติดต่อ AI Champion เพื่อยืนยันโปรแกรม AI ที่ใช้ได้" -ForegroundColor Gray
+    Write-Host "ระบบจะไม่เปิดเว็บสมัครหรือดาวน์โหลดโปรแกรม AI ให้โดยอัตโนมัติ" -ForegroundColor Gray
 }
 
 Write-Host ""
