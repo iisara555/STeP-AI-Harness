@@ -116,37 +116,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 & $nodeBin "$rootDir\bin\step-ai.js" doctor --employee
 
-# 6. Success Screen
-$configPath = Join-Path ([System.Environment]::GetFolderPath('UserProfile')) ".step-ai\config.json"
-$teamLabel = "ยังไม่ระบุ — เลือกภายหลังได้"
-$clusterLabel = ""
-if (Test-Path $configPath) {
-    try {
-        $userConfig = Get-Content -Raw $configPath | ConvertFrom-Json
-        if ($userConfig.team) { $teamLabel = ([string]$userConfig.team).ToUpperInvariant() }
-        if ($userConfig.cluster) { $clusterLabel = [string]$userConfig.cluster }
-    } catch {}
-}
-
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "                 ✓ STeP AI พร้อมใช้งาน                      " -ForegroundColor Yellow
-Write-Host "=================================================================" -ForegroundColor Green
+# 6. Finish
 Write-Host ""
-Write-Host "  ทีม: $teamLabel" -ForegroundColor White
-if ($clusterLabel) { Write-Host "  กลุ่ม Routing: $clusterLabel" -ForegroundColor DarkGray }
-Write-Host "  AI adapters: เตรียม instruction ให้ 8 โปรแกรมแล้ว" -ForegroundColor White
-Write-Host "  เปลี่ยนทีมภายหลัง: step-ai config" -ForegroundColor DarkGray
+Write-Host "✓ ตรวจระบบเสร็จแล้ว — ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน" -ForegroundColor Green
+Write-Host "อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "วิธีเริ่มใช้งาน:" -ForegroundColor Cyan
-Write-Host "  1. เปิดโปรแกรม AI ที่องค์กรอนุมัติ" -ForegroundColor White
-Write-Host "  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:" -ForegroundColor White
-Write-Host "     $rootDir" -ForegroundColor Yellow
-Write-Host "  3. พิมพ์: เริ่มใช้งาน STeP AI" -ForegroundColor White
-Write-Host "     ระบบจะแนะนำ 3 งานเริ่มต้นตามทีม หรือช่วยงานจริงก่อนถ้ายังไม่ได้เลือกทีม" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  อ่านไฟล์ START-HERE.md ในโฟลเดอร์นี้ถ้าไม่แน่ใจว่าจะเริ่มอย่างไร" -ForegroundColor DarkGray
-Write-Host "  อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host ""
-
 Read-Host "กด Enter เพื่อเสร็จสิ้นการติดตั้ง"
