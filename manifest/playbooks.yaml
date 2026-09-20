@@ -19,7 +19,7 @@ playbooks:
     minSignals: 3
     signals:
       source: [tor, terms of reference, ขอบเขตของงาน]
-      planning: [แตกกิจกรรม, กิจกรรม, action plan, project plan, wbs, work breakdown, แตกงาน]
+      planning: [แตกกิจกรรม, กิจกรรม, แตกเป็นแผนงาน, แผนงาน, action plan, project plan, wbs, work breakdown, แตกงาน]
       budget: [งบประมาณ, budget, cost, ค่าใช้จ่าย]
       schedule: [ระยะเวลา, timeline, gantt, grantt, milestone, แผนงาน]
       spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง]
