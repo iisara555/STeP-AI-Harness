@@ -17,6 +17,127 @@ governance:
       - "Strict confidentiality and intellectual property preservation"
       - "Traceability of recommendations to approved SOPs and guidelines"
 
+# ข้อมูลทั่วไปจากแหล่งสาธารณะทางการ ใช้เป็น SOURCE_FACT ได้เมื่ออ้าง sourceRef
+# ไม่ใช่การรับรองจากเจ้าของกระบวนการ และไม่ใช้แทนอำนาจอนุมัติ (ดู manifest/authority.yaml)
+publicProfile:
+  lastChecked: "2026-09-20"
+  verification: public-source-unverified-by-owner
+  tagline: "Make Innovation Simple"
+  establishment:
+    basis: "ส่วนงานวิชาการภายในของมหาวิทยาลัยเชียงใหม่ จัดตั้งจากข้อตกลงความร่วมมือระหว่าง 7 คณะ"
+    foundingFaculties:
+      - "คณะวิศวกรรมศาสตร์"
+      - "คณะวิทยาศาสตร์"
+      - "คณะเกษตรศาสตร์"
+      - "คณะอุตสาหกรรมเกษตร"
+      - "วิทยาลัยศิลปะ สื่อ และเทคโนโลยี"
+      - "คณะสถาปัตยกรรมศาสตร์"
+      - "คณะบริหารธุรกิจ"
+    positioning: "สะพานแห่งการสร้างนวัตกรรม (Bridge for Innovation) เชื่อมมหาวิทยาลัยกับภาคอุตสาหกรรม ภาคเอกชน ภาครัฐ และภาคประชาสังคม"
+    sourceRefs: [step-aboutus, cmu-org-step]
+  missionPillars:
+    - research-utilization
+    - solution-provider
+    - incubator
+    - open-innovation
+    - infrastructure
+  missionNote: "หัวข้อพันธกิจสรุปจากหน้า aboutus สาธารณะ ถ้อยคำทางการฉบับเต็มต้องยืนยันกับทีมยุทธศาสตร์ก่อนนำไปใช้ในเอกสารราชการ"
+  serviceLines:
+    - technology-commercialization
+    - business-development
+    - community-innovation
+    - organizational-transformation
+    - solution-services
+  serviceLinesSourceRefs: [step-service-journey]
+  contact:
+    addressTh: "อาคาร A ชั้น 2 อาคารอำนวยการอุทยานวิทยาศาสตร์ภูมิภาค ภาคเหนือ (จังหวัดเชียงใหม่) 155 หมู่ 2 ตำบลแม่เหียะ อำเภอเมือง จังหวัดเชียงใหม่ 50100"
+    addressEn: "Floor 2 (A Building), Regional Science Park (North) Building, 155 Mae Hia, Mueang, Chiang Mai 50100"
+    phone: "0 5394 8678"
+    email: "info@step.cmu.ac.th"
+    officialChannels: ["Facebook: cmustep", "Instagram: cmustep", "TikTok: cmustep", "LinkedIn: cmustep2012", "YouTube", "Line"]
+    sourceRefs: [step-contact]
+  publicDisclosure:
+    program: "OIT / ITA ประจำปี 2569"
+    sourceRefs: [step-oit-2026]
+    items:
+      - "O1 โครงสร้าง หน้าที่และอำนาจ"
+      - "O2 ข้อมูลผู้บริหาร"
+      - "O3 ข้อมูลการติดต่อและช่องทางการสอบถาม"
+      - "O4 ข่าวประชาสัมพันธ์"
+      - "O5 แผนยุทธศาสตร์หรือแผนพัฒนาส่วนงาน"
+      - "O6 แผนและความก้าวหน้าในการดำเนินงานและการใช้งบประมาณประจำปี พ.ศ. 2569"
+      - "O7 รายงานผลการดำเนินงานประจำปีงบประมาณ พ.ศ. 2568"
+      - "O8 คู่มือหรือแนวทางการปฏิบัติงานของเจ้าหน้าที่"
+      - "O9 คู่มือหรือแนวทางการขอรับบริการสำหรับผู้รับบริการหรือผู้มาติดต่อ"
+      - "O10 ระบบการให้บริการผ่านช่องทางออนไลน์ (e-Service)"
+      - "O11 สรุปผลการจัดซื้อจัดจ้างหรือการจัดหาพัสดุ รายเดือน ประจำปีงบประมาณ พ.ศ. 2569"
+      - "O12 รายงานสรุปผลการจัดซื้อจัดจ้างหรือการจัดหาพัสดุของส่วนงาน ประจำปีงบประมาณ พ.ศ. 2568"
+    usage: "รายการ OIT เป็นดัชนีว่าเอกสารทางการเผยแพร่ที่ใด ไม่ใช่สำเนาเนื้อหา ต้องเปิดจากแหล่งจริงทุกครั้งที่อ้าง"
+
+# ผังการกำกับดูแล: ผู้บริหารคนใดกำกับทีมใด ใช้หาผู้รับผิดชอบระดับบริหารเมื่อต้องส่งต่อหรือขออนุมัติ
+# เก็บเฉพาะ ชื่อ / ตำแหน่ง / ทีมที่กำกับ — ไม่เก็บเบอร์โทร Line หรืออีเมลส่วนบุคคล ตาม docs/knowledge-policy.md
+# ไม่ใช่ authority registry: อำนาจอนุมัติจริงอยู่ที่ manifest/authority.yaml
+executiveOversight:
+  source: "ผังคณะผู้บริหารที่ผู้ดูแลส่งเข้ามา 2026-09-20; ชื่อและตำแหน่งตรวจทานได้จาก https://www.step.cmu.ac.th/executive (OIT O2)"
+  confirmedBy: "ผู้ดูแล STeP AI ยืนยันตำแหน่งและการกำกับร่วม 2026-09-20"
+  lastChecked: "2026-09-20"
+  verification: owner-confirmed
+  executives:
+    - name: "รศ.ดร.ปิติวัฒน์ วัฒนชัย"
+      position: "ผู้อำนวยการ"
+      teams: []
+    - name: "ผศ.ดร.เกษมศักดิ์ อุทัยชนะ"
+      position: "รองผู้อำนวยการ"
+      teams: [imo]
+    - name: "ผศ.ดร.สุริยะ ทองมุณี"
+      position: "รองผู้อำนวยการ"
+      teams: [ga, pubsec, ifu, iqi, cc]
+    - name: "นางสาวเมลิน เชื้อมโนชาญ"
+      position: "รองผู้อำนวยการ"
+      teams: [ga, afp, nmco, hd]
+    - name: "รศ.ดร.จุฬาลักษณ์ เขมาชีวะกุล"
+      position: "ผู้ช่วยผู้อำนวยการ"
+      teams: [les, foodfabr]
+    - name: "ผศ.ดร.ทินกร ปงธิยา"
+      position: "ผู้ช่วยผู้อำนวยการ"
+      teams: [tech-spin, mi]
+    - name: "ผศ.ดร.ฐากร โอภาสสุวรรณ"
+      position: "ผู้จัดการทั่วไป"
+      teams: [qs, tech-up]
+    - name: "อาจารย์ ดร.ภวิกา มงคลกิจทวีผล"
+      position: "ผู้จัดการทั่วไป"
+      teams: [nmco, isi]
+    - name: "อาจารย์ ดร.รอม แพสุวรรณ"
+      position: "ผู้จัดการทั่วไป"
+      teams: [iasa, eic]
+    - name: "นายพิชาติ อินทราวุธ"
+      position: "ผู้จัดการทั่วไป"
+      teams: [linc, crm, sit]
+    - name: "อาจารย์ ดร.กรพินธุ์ จิระพงษ์"
+      position: "ผู้จัดการโครงการ"
+      teams: [linc, pubsec]
+    - name: "อาจารย์ ดร.ณัฐธิดา เตชะบุญ"
+      position: "ผู้จัดการโครงการ"
+      teams: [piti]
+    - name: "คุณมาร์ติน เฟ็นสกี้-สตาลลิ่ง"
+      position: "ที่ปรึกษาอาวุโส"
+      teams: []
+  # ทีมที่ผู้บริหารมากกว่าหนึ่งคนกำกับร่วมกันโดยเจตนา ไม่ใช่ข้อมูลซ้ำที่ต้องแก้
+  sharedOversight: [ga, nmco, linc, pubsec]
+  notes:
+    - "ga, nmco, linc, pubsec เป็นการกำกับร่วม (ช่วยกันดู) ผู้ดูแลยืนยันแล้ว 2026-09-20 — ติดต่อผู้กำกับคนใดก็ได้ตามเรื่องที่รับผิดชอบ ไม่ต้องบังคับเลือกคนเดียว"
+    - "ผังนี้ระบุการกำกับดูแล ไม่ได้ระบุว่าผู้กำกับมีอำนาจอนุมัติแทนคณะกรรมการหรือผู้มีอำนาจตาม authority.yaml"
+    - "ตำแหน่งผู้จัดการโครงการของ ดร.กรพินธุ์ จิระพงษ์ และ ดร.ณัฐธิดา เตชะบุญ ยืนยันแล้ว 2026-09-20; ไฟล์ทำเนียบปี 2565 ที่ระบุเป็นผู้จัดการทั่วไปถือว่าล้าสมัย"
+# ระบบภายในลงทะเบียนเป็น pointer เท่านั้น repository นี้เป็น public
+# ห้ามคัดเนื้อหา ข้อมูลผู้ใช้ หรือรายงานจากระบบภายในเข้ามา (docs/repository-data-boundary.md)
+internalSystems:
+  step-mis:
+    name: "STeP MIS"
+    access: login-required
+    contentInRepo: false
+    sourceRef: step-mis
+    note: "ยังไม่ได้รับการยืนยันขอบเขตการใช้งานจากเจ้าของระบบ"
+
 clusters:
   governance-operations:
     nameTh: "ฝ่ายบริหารกลาง ธรรมาภิบาล และการเงิน"
@@ -38,7 +159,7 @@ clusters:
     description: "ผลิตสื่อ ออกแบบ Creative จัดกิจกรรมนิทรรศการ และดูแลบริการลูกค้า"
     teams: [cc, mi, crm]
 
-  infrastructure-labs:
+  facilities-labs:
     nameTh: "ฝ่ายโครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ"
     description: "โครงสร้างพื้นฐาน อาคารทดสอบ ห้องปฏิบัติการวิเคราะห์ และโรงงานต้นแบบนวัตกรรมอาหาร"
     teams: [ifu, iqi, les, foodfabr]

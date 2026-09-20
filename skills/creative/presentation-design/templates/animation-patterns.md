@@ -70,8 +70,8 @@
 
 .feature-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(43, 51, 61, 0.08);
-    border-color: var(--step-yellow, #F9AE3B);
+    box-shadow: 0 20px 40px rgba(35, 31, 32, 0.08);
+    border-color: var(--step-yellow, #FFC709);
 }
 ```
 
@@ -99,8 +99,8 @@ function attachTilt(cardElement) {
 ```css
 .grid-backdrop {
     background-image:
-        linear-gradient(rgba(43, 51, 61, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(43, 51, 61, 0.04) 1px, transparent 1px);
+        linear-gradient(rgba(35, 31, 32, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(35, 31, 32, 0.04) 1px, transparent 1px);
     background-size: 60px 60px;
 }
 ```
@@ -108,8 +108,8 @@ function attachTilt(cardElement) {
 ### 3.2 Innovation Amber Glow (ประกายแสงสีเหลือง STeP นุ่มนวล)
 ```css
 .glow-backdrop {
-    background: radial-gradient(circle at 85% 15%, rgba(249, 174, 59, 0.15) 0%, transparent 55%),
-                radial-gradient(circle at 15% 85%, rgba(43, 51, 61, 0.05) 0%, transparent 50%),
+    background: radial-gradient(circle at 85% 15%, rgba(255, 199, 9, 0.15) 0%, transparent 55%),
+                radial-gradient(circle at 15% 85%, rgba(35, 31, 32, 0.05) 0%, transparent 50%),
                 #FFFFFF;
 }
 ```

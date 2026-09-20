@@ -12,7 +12,7 @@ description: ชั้นแรกของระบบ STeP AI สำหรั�
 
 ---
 
-## 🏛️ โครงสร้างองค์กร 6 มิติ (STeP Organization Knowledge Model)
+## โครงสร้างองค์กร 6 มิติ (STeP Organization Knowledge Model)
 
 Router ประเมินบริบทงานตาม 6 มิติขององค์กร:
 1. **WHO (ใครทำ)**: บทบาทของ AI Agent จาก `manifest/roles.yaml`

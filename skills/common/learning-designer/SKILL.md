@@ -1,104 +1,100 @@
 ---
 name: learning-designer
 description: ออกแบบการเรียนรู้ การอบรม Onboarding Workshop และ Microlearning จากเป้าหมายการทำงานจริง โดยกำหนด Learning Outcome, Practice, Feedback และ Assessment ที่วัดได้
+standardVersion: 2
 ---
 
 # STeP Learning Designer
 
-Skill นี้ช่วย HD, EIC และทีมที่ต้องถ่ายทอดความรู้ เปลี่ยนหัวข้อกว้าง ๆ ให้เป็น **ประสบการณ์การเรียนรู้ที่พนักงานหรือผู้เข้าอบรมทำได้จริง** ไม่ใช่เพียงชุดสไลด์หรือรายการเนื้อหา
+## Purpose
 
-## หลักคิด
+ช่วย HD, EIC และทีมที่ต้องถ่ายทอดความรู้ เปลี่ยนหัวข้อกว้าง ๆ ให้เป็น **ประสบการณ์การเรียนรู้ที่ผู้เรียนทำได้จริง** ไม่ใช่เพียงชุดสไลด์หรือรายการเนื้อหา
 
-> **Outcome before content. Practice before volume.**
+หลักสำคัญ: **Outcome before content. Practice before volume.** เริ่มจาก "หลังเรียนแล้วผู้เรียนต้องทำอะไรได้" ก่อนตัดสินว่าจะสอนอะไร
 
-เริ่มจาก “หลังเรียนแล้วผู้เรียนต้องทำอะไรได้” ก่อนตัดสินว่าจะสอนอะไร
+## เมื่อควรใช้
 
-## Brief Gate
-ใช้ข้อมูลที่มีอยู่ก่อนถามเพิ่ม และถามเฉพาะสิ่งที่เปลี่ยนการออกแบบจริง:
-1. ผู้เรียนคือใคร / มีพื้นฐานระดับไหน
+- ออกแบบการอบรม workshop onboarding หรือ microlearning
+- ต้องเปลี่ยนหัวข้อกว้างให้เป็นหลักสูตรที่วัดผลได้
+- ต้องออกแบบวิธีวัดว่าผู้เรียนทำได้จริง
+
+**Anti-trigger:**
+- งาน event experience → `event-concept`
+- เอกสารคู่มือหรือ SOP → `sop-authoring`
+- สไลด์สำหรับสอน → `presentation-design`
+- การประเมินผลบุคลากรจริง → HD Human Review
+
+## Inputs
+
+**Brief Gate** — ใช้ข้อมูลที่มีอยู่ก่อนถามเพิ่ม และถามเฉพาะสิ่งที่เปลี่ยนการออกแบบจริง:
+
+1. ผู้เรียนคือใคร และมีพื้นฐานระดับไหน
 2. ต้องเปลี่ยนพฤติกรรมหรือความสามารถอะไร
 3. เวลาและรูปแบบการเรียนรู้
 4. หลักฐานอะไรจะบอกว่าเรียนรู้แล้ว
 
 หากข้อมูลพอ ให้เดินหน้าทันที
 
-## Learning Design Loop
+## Source
 
-### 1. Mission
-สรุปเหตุผลของการเรียนรู้เป็น 1 ประโยคที่โยงกับงานจริง
+- เนื้อหาที่ต้องอ้างข้อบังคับหรือมาตรฐาน ต้องใช้ source ที่ตรวจสอบได้และระบุวันที่ ดู `manifest/documents.yaml`
+- เนื้อหาความปลอดภัย ห้องแล็บ เครื่องจักร หรือกฎหมาย ต้องมีเจ้าของเนื้อหาเฉพาะทาง review
+- ถ้าไม่มี source ภายนอกที่จำเป็น ให้ระบุว่าออกแบบจากวิธีทำงานที่ผู้ใช้อธิบาย
 
-### 2. Learning Outcomes
-เขียน Outcome ให้สังเกตได้ เช่น:
-- ทำได้
-- เลือกได้
-- ตรวจได้
-- อธิบายได้
-- ปฏิบัติตามขั้นตอนได้
+## Workflow
 
-หลีกเลี่ยง Outcome ที่วัดยาก เช่น “เข้าใจดีขึ้น” โดยไม่มีพฤติกรรมประกอบ
+1. **Mission** — สรุปเหตุผลของการเรียนรู้เป็น 1 ประโยคที่โยงกับงานจริง
+2. **Learning Outcomes** — เขียนให้สังเกตได้ เช่น ทำได้ เลือกได้ ตรวจได้ อธิบายได้ ปฏิบัติตามขั้นตอนได้ หลีกเลี่ยง outcome ที่วัดยากอย่าง "เข้าใจดีขึ้น" โดยไม่มีพฤติกรรมประกอบ
+3. **Prior Knowledge** — ระบุสิ่งที่ผู้เรียนรู้อยู่แล้ว สิ่งที่ไม่ต้องสอนซ้ำ และ misconception ที่อาจมี
+4. **Practice** — ทุก outcome ต้องมี practice ที่ตรงกัน: recall/retrieval, scenario decision, hands-on task, role play, checklist exercise หรือ real-work simulation
+5. **Feedback** — กำหนดว่าจะให้ feedback เมื่อไร จากใคร และใช้อะไรเป็นเกณฑ์
+6. **Assessment** — วัดเฉพาะสิ่งที่ outcome ระบุ ไม่สร้างข้อสอบที่วัดการจำศัพท์แทนทักษะจริง
 
-### 3. Prior Knowledge
-ระบุสิ่งที่ผู้เรียนรู้อยู่แล้ว สิ่งที่ไม่ต้องสอนซ้ำ และ misconception ที่อาจมี
+**Learning Architecture** เลือกให้เหมาะกับงาน: Microlearning (5-15 นาทีต่อ 1 outcome), Workshop (activity ร่วมกับ reflection), Onboarding (จากสิ่งจำเป็นวันแรก → งานจริง → reference ระยะยาว), Job Aid (checklist หรือ quick reference หน้างาน), Practice Series (ใช้ spacing และ retrieval practice เมื่อทักษะต้องจำระยะยาว)
 
-### 4. Practice
-ทุก Outcome ต้องมี practice ที่ตรงกัน:
-- Recall / Retrieval
-- Scenario decision
-- Hands-on task
-- Role play
-- Checklist exercise
-- Real-work simulation
-
-### 5. Feedback
-กำหนดว่าจะให้ feedback เมื่อไร จากใคร และใช้อะไรเป็นเกณฑ์
-
-### 6. Assessment
-วัดเฉพาะสิ่งที่ Outcome ระบุ ไม่สร้างข้อสอบที่วัดการจำศัพท์แทนทักษะจริง
-
-## Learning Architecture
-เลือกให้เหมาะกับงาน:
-- **Microlearning:** 5–15 นาที / 1 outcome
-- **Workshop:** เรียนรู้ผ่าน activity + reflection
-- **Onboarding:** ลำดับจากสิ่งจำเป็นวันแรก → งานจริง → reference ระยะยาว
-- **Job Aid:** checklist / cheat sheet / quick reference สำหรับใช้หน้างาน
-- **Practice Series:** ใช้ spacing และ retrieval practice เมื่อทักษะต้องจำระยะยาว
-
-## Output เริ่มต้น
+## Output
 
 ### Learning Blueprint
-- **Audience:** …
-- **Mission:** …
-- **Learning Outcomes:** 3–5 ข้อ
-- **Format / Duration:** …
-- **Practice:** …
-- **Feedback loop:** …
-- **Assessment evidence:** …
-- **Job aid / reference:** …
-- **Follow-up:** …
 
-หากผู้ใช้ต้องการรายละเอียด ให้แตกเป็น Lesson Cards:
+- **Audience**
+- **Mission**
+- **Learning Outcomes:** 3-5 ข้อ
+- **Format / Duration**
+- **Practice**
+- **Feedback loop**
+- **Assessment evidence**
+- **Job aid / reference**
+- **Follow-up**
 
-### Lesson Card
-- Outcome
-- Key concept
-- Activity
-- Feedback
-- Evidence of learning
-- Timebox
+หากต้องการรายละเอียด ให้แตกเป็น **Lesson Card**: Outcome, Key concept, Activity, Feedback, Evidence of learning และ Timebox
 
-## Guardrails
-- ไม่ออกแบบหลักสูตรยาวเพียงเพื่อให้ “ดูครบ”
-- ไม่ใช้สไลด์เป็นหลักฐานว่าผู้เรียนเรียนรู้แล้ว
-- หากความรู้ต้องอ้างอิงข้อบังคับ/มาตรฐาน ให้ใช้ source ที่ตรวจสอบได้และระบุวันที่
-- Assessment เพื่อการเรียนรู้ทำได้ แต่ **การประเมินผลการปฏิบัติงานรายบุคคล/KPI เป็น Human-only**
-- เนื้อหาความปลอดภัย ห้องแล็บ เครื่องจักร หรือกฎหมาย ต้องมีเจ้าของเนื้อหาเฉพาะทาง review
+## Authority
+
+AI ช่วยได้: ออกแบบหลักสูตร กำหนด outcome practice และวิธีวัดผลการเรียนรู้
+
+ต้องให้มนุษย์ตัดสิน:
+- **การประเมินผลการปฏิบัติงานรายบุคคลและ KPI — `hr-performance-evaluation` เป็น human-only**
+- การรับรองเนื้อหาด้านความปลอดภัย เครื่องจักร หรือกฎหมาย
+- การประกาศใช้หลักสูตรเป็นข้อกำหนดขององค์กร
 
 ## Handoff
-- งาน Event experience → `event-concept`
-- เอกสารคู่มือ/SOP → `sop-authoring`
-- Presentation สำหรับสอน → `presentation-design`
+
+- งาน event experience → `event-concept`
+- เอกสารคู่มือหรือ SOP → `sop-authoring`
+- สไลด์สำหรับสอน → `presentation-design`
 - การประเมินผลบุคลากรจริง → HD Human Review
+- training gap จาก CAPA → `ncr-capa`
 
----
+พร้อมส่งต่อเมื่อ: ทุก outcome มี practice และหลักฐานการเรียนรู้ที่ตรงกัน
 
-**Method note:** ได้แรงบันดาลใจจากหลัก mission-grounded learning, retrieval practice และ feedback loop ใน `teach` ของ mattpocock/skills (MIT) และปรับให้เป็นงานอบรมองค์กร STeP แบบไม่สร้าง learning workspace ซับซ้อน
+## Guardrails
+
+- ไม่ออกแบบหลักสูตรยาวเพียงเพื่อให้ดูครบ
+- **ไม่ใช้สไลด์เป็นหลักฐานว่าผู้เรียนเรียนรู้แล้ว**
+- ความรู้ที่อ้างข้อบังคับหรือมาตรฐาน ต้องมี source ที่ตรวจสอบได้พร้อมวันที่
+- Assessment เพื่อการเรียนรู้ทำได้ แต่การประเมินผลรายบุคคลเป็น human-only
+- เนื้อหาความปลอดภัยและกฎหมายต้องผ่านเจ้าของเนื้อหาเฉพาะทาง
+
+## Method note
+
+ได้แรงบันดาลใจจากหลัก mission-grounded learning, retrieval practice และ feedback loop ใน `teach` ของ mattpocock/skills (MIT) และปรับให้เป็นงานอบรมองค์กร STeP แบบไม่สร้าง learning workspace ซับซ้อน

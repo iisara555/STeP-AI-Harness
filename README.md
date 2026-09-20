@@ -8,7 +8,7 @@ STeP AI เป็นชุด workspace สำหรับนำ AI มาช่
 
 ## สถานะของ source และชุดติดตั้ง
 
-README ฉบับนี้อ้างอิง source ที่ commit `06e67a4` วันที่ 20 กันยายน 2569 พร้อมแยกงานใน working tree ที่ยังไม่ได้ commit ไว้ด้านล่าง
+README ฉบับนี้อ้างอิง source ที่ commit `bdfa0ec` วันที่ 20 กันยายน 2569 และ working tree ไม่มีงานค้างที่ยังไม่ commit
 
 | รายการใน source ปัจจุบัน | จำนวน |
 | --- | --- |
@@ -134,11 +134,13 @@ output/CC/2026/09/presentation/20260920_CC_presentation_STeP-Booth-CMU_v01.pptx
 
 ### สิ่งที่เปลี่ยนล่าสุด
 
-commit `06e67a4` แก้คำถาม clarification ที่วนซ้ำ เพิ่มเมนูเลือกงาน และตรวจคำตอบเมนูก่อนเปิด Skill โดยคง Authority preflight ไว้ก่อนการเลือกเส้นทาง
+commit `bdfa0ec` ปรับ README กับ routing coverage ให้ตรงกัน เพิ่มตัวเรียก validator ที่ค้น Python อัตโนมัติ และ trigger ภาษาพูดพร้อม regression 78 เคส ครอบคลุม router 45 รายการ
+
+ก่อนหน้านั้น commit `06e67a4` แก้คำถาม clarification ที่วนซ้ำ เพิ่มเมนูเลือกงาน และตรวจคำตอบเมนูก่อนเปิด Skill โดยคง Authority preflight ไว้ก่อนการเลือกเส้นทาง
 
 source ยังรวมการแยกคำขอกำกวมระหว่าง Skill/Playbook, การปรับ routing งาน ISO และ Image Prompt ที่ใช้ Prompt Spec แล้วแปลงรูปแบบให้เหมาะกับเครื่องมือปลายทาง
 
-**งานใน working tree ที่ยังไม่ได้ commit ณ การแก้ README รอบนี้:** ตัวเรียก validator ที่ค้น Python อัตโนมัติ และ trigger ภาษาพูดพร้อม regression 78 เคส ครอบคลุม router 45 รายการ ทั้งสองส่วนยังไม่ใช่ release ใหม่
+ทั้งสองส่วนอยู่ใน `main` แล้ว แต่ยังไม่ใช่ release ใหม่ ชุดติดตั้งของพนักงานยังเป็น v0.7.2
 
 78 เคสประกอบด้วย 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 54 คำถามจำลอง และ 4 เคสจำลองตรวจคำชนกัน ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
 
@@ -151,7 +153,7 @@ npm run validate
 npm test
 ```
 
-ตัวเรียก validator ใน working tree ค้น `python`, `python3` หรือ `py -3` บน Windows แล้วรัน `scripts/validate_repo.py` ส่วน CI ใช้ Python ตรวจไฟล์โดยตรง ข้อกำหนด Python นี้ใช้กับผู้ดูแลที่ตรวจ source ไม่ใช่พนักงานที่เปิด workspace
+ตัวเรียก validator ค้น `python`, `python3` หรือ `py -3` บน Windows แล้วรัน `scripts/validate_repo.py` ส่วน CI ใช้ Python ตรวจไฟล์โดยตรง ข้อกำหนด Python นี้ใช้กับผู้ดูแลที่ตรวจ source ไม่ใช่พนักงานที่เปิด workspace
 
 คำสั่งสำหรับตรวจ routing โดยไม่ต้องติดตั้ง CLI แบบ global:
 

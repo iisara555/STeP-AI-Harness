@@ -4,10 +4,12 @@
  * Cross-checks the STeP registries before a Pilot/Release:
  * - registered Skill -> owner/process/document/path exists
  * - Router Skill -> registered Skill/process/team exists
+ * - Router Skill -> cluster declared in teams.yaml
  * - Router consumer teams -> valid team or wildcard
  * - Scope escalation target -> registered Skill exists
  * - Human-only authority -> authority registry exists
  * - every registered user-facing Skill is reachable from the Router
+ * - organization.yaml clusters -> same ids and membership as teams.yaml
  */
 
 import { access, readFile } from 'node:fs/promises';
@@ -132,6 +134,7 @@ export function extractRouterSkills(text) {
     if (skillItemMatch) {
       currentSkill = {
         name: skillItemMatch[1],
+        cluster: '',
         processId: '',
         primaryTeams: [],
         consumerTeams: [],
@@ -144,6 +147,12 @@ export function extractRouterSkills(text) {
       continue;
     }
     if (!currentSkill) continue;
+
+    const clusterMatch = line.match(/^ {4}cluster:\s*([a-z0-9_.-]+)/);
+    if (clusterMatch) {
+      currentSkill.cluster = clusterMatch[1];
+      continue;
+    }
 
     const procMatch = line.match(/^ {4}processId:\s*([a-z0-9_.-]+)/);
     if (procMatch) {
@@ -201,8 +210,85 @@ export function extractRouterSkills(text) {
   return routerSkills;
 }
 
+/**
+ * Read the `clusters:` block of organization.yaml as a cluster -> teams map.
+ * Only keys inside that top-level block count: the file holds other top-level
+ * sections with the same two-space key shape.
+ */
+export function extractOrganizationClusters(text) {
+  const clusters = {};
+  let inClusters = false;
+  let current = '';
+
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+
+    // Any other top-level key ends the clusters block.
+    if (/^[a-zA-Z0-9_-]+:/.test(line)) {
+      inClusters = /^clusters:\s*$/.test(line);
+      current = '';
+      continue;
+    }
+    if (!inClusters) continue;
+
+    const clusterMatch = line.match(/^ {2}([a-z0-9_-]+):\s*$/);
+    if (clusterMatch) {
+      current = clusterMatch[1];
+      clusters[current] = [];
+      continue;
+    }
+    if (!current) continue;
+
+    const teamsMatch = line.match(/^ {4}teams:\s*\[(.*)\]/);
+    if (teamsMatch) {
+      clusters[current] = teamsMatch[1]
+        .split(',')
+        .map((t) => t.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
+    }
+  }
+
+  return clusters;
+}
+
+/**
+ * organization.yaml is the human-facing description of the same clusters that
+ * teams.yaml routes with. Nothing loads it at runtime, so a rename here drifts
+ * silently — compare both ids and membership.
+ */
+export function validateOrganizationClusters(orgClusters = {}, teamClusters = {}) {
+  const errors = [];
+  const orgIds = Object.keys(orgClusters);
+  const teamIds = Object.keys(teamClusters);
+  if (orgIds.length === 0 || teamIds.length === 0) return { valid: true, errors };
+
+  for (const id of orgIds) {
+    if (!teamClusters[id]) {
+      errors.push(`organization.yaml: cluster '${id}' is not declared in teams.yaml`);
+    }
+  }
+  for (const id of teamIds) {
+    if (!orgClusters[id]) {
+      errors.push(`organization.yaml: cluster '${id}' from teams.yaml is missing`);
+    }
+  }
+  for (const id of orgIds) {
+    if (!teamClusters[id]) continue;
+    const orgTeams = [...orgClusters[id]].sort().join(',');
+    const teamMembers = [...teamClusters[id]].sort().join(',');
+    if (orgTeams !== teamMembers) {
+      errors.push(
+        `organization.yaml: cluster '${id}' members [${orgTeams}] do not match teams.yaml [${teamMembers}]`
+      );
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateManifestIntegrity({
   teamCodes = new Set(),
+  clusterIds = new Set(),
   skills = {},
   processes = {},
   documents = {},
@@ -213,6 +299,7 @@ export function validateManifestIntegrity({
 
   const validTeams = new Set(Array.from(teamCodes).map((t) => t.toLowerCase()));
   for (const special of ['developer', 'pm', 'ai-admin']) validTeams.add(special);
+  const validClusters = new Set(Array.from(clusterIds).map((c) => c.toLowerCase()));
 
   const validProcessIds = new Set(Object.keys(processes));
   const validDocIds = new Set(Object.keys(documents));
@@ -254,6 +341,18 @@ export function validateManifestIntegrity({
   for (const rSkill of routerSkills) {
     if (!validSkillIds.has(rSkill.name)) {
       errors.push(`router-index: Skill '${rSkill.name}' is not registered in skills.yaml`);
+    }
+
+    // A cluster that teams.yaml does not declare can never match a confirmed
+    // cluster at scoring time, so the Skill silently loses that routing signal.
+    if (validClusters.size > 0) {
+      if (!rSkill.cluster) {
+        errors.push(`router-index: Skill '${rSkill.name}' has no cluster`);
+      } else if (!validClusters.has(rSkill.cluster.toLowerCase())) {
+        errors.push(
+          `router-index: Skill '${rSkill.name}' references unknown cluster '${rSkill.cluster}'`
+        );
+      }
     }
 
     for (const pt of rSkill.primaryTeams || []) {
@@ -310,12 +409,28 @@ export async function loadAndValidateManifests(manifestDir) {
   const docsContent = await readFile(join(manifestDir, 'documents.yaml'), 'utf-8');
   const authContent = await readFile(join(manifestDir, 'authority.yaml'), 'utf-8');
   const routerContent = await readFile(join(manifestDir, 'router-index.yaml'), 'utf-8');
+  const organizationContent = await readFile(join(manifestDir, 'organization.yaml'), 'utf-8');
   const playbooksContent = await readFile(join(manifestDir, 'playbooks.yaml'), 'utf-8');
   const actionsContent = await readFile(join(manifestDir, 'actions.yaml'), 'utf-8');
   const provenanceContent = await readFile(join(manifestDir, 'provenance.yaml'), 'utf-8');
 
   const teamCodes = new Set();
   for (const m of teamsContent.matchAll(/^ {6}- id:\s*([a-z0-9_-]+)/gm)) teamCodes.add(m[1]);
+
+  const clusterIds = new Set();
+  const teamClusters = {};
+  let currentCluster = '';
+  for (const line of teamsContent.split(/\r?\n/)) {
+    const clusterMatch = line.match(/^ {2}- id:\s*([a-z0-9_-]+)/);
+    if (clusterMatch) {
+      currentCluster = clusterMatch[1];
+      clusterIds.add(currentCluster);
+      teamClusters[currentCluster] = [];
+      continue;
+    }
+    const teamMatch = line.match(/^ {6}- id:\s*([a-z0-9_-]+)/);
+    if (teamMatch && currentCluster) teamClusters[currentCluster].push(teamMatch[1]);
+  }
 
   const skillsData = extractManifestData(skillsContent);
   const processesData = extractManifestData(processesContent);
@@ -328,12 +443,18 @@ export async function loadAndValidateManifests(manifestDir) {
 
   const result = validateManifestIntegrity({
     teamCodes,
+    clusterIds,
     skills: skillsData.skills,
     processes: processesData.processes,
     documents: docsData.documents,
     authorities: authData.authorities,
     routerSkills,
   });
+
+  const organizationResult = validateOrganizationClusters(
+    extractOrganizationClusters(organizationContent),
+    teamClusters
+  );
 
   const playbookTeams = new Set([...teamCodes, 'developer', 'pm', 'ai-admin']);
   const actionResult = validateActionRegistry(actions);
@@ -402,6 +523,7 @@ export async function loadAndValidateManifests(manifestDir) {
 
   const errors = [
     ...result.errors,
+    ...organizationResult.errors,
     ...actionResult.errors,
     ...provenanceResult.errors,
     ...playbookResult.errors,
@@ -413,6 +535,7 @@ export async function loadAndValidateManifests(manifestDir) {
     errors,
     summary: {
       teamsCount: teamCodes.size,
+      clustersCount: clusterIds.size,
       skillsCount: Object.keys(skillsData.skills).length,
       processesCount: Object.keys(processesData.processes).length,
       documentsCount: Object.keys(docsData.documents).length,

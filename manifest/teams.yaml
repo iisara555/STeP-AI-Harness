@@ -1,6 +1,7 @@
 version: 1
 # หมายเหตุสำคัญ: กลุ่มงานทั้ง 5 Clusters ด้านล่างเป็น "AI Routing Taxonomy"
 # ไม่ใช่การเปลี่ยนแปลงหรือทดแทนโครงสร้างสายบังคับบัญชาจริงของ STeP
+# projectCode = รหัสทีม 2 ตัวอักษรที่ใช้ประกอบรหัสโครงการ (ดู docs/project-code-scheme.md)
 # Per-team Skill eligibility ถูก resolve จาก manifest/router-index.yaml -> teams.primary/consumers
 # ส่วน skills: [common, pm, ...] ในไฟล์นี้เป็น legacy namespace/profile hint เพื่อ compatibility
 # และห้ามใช้เป็นเหตุผลในการโหลดทั้ง namespace เข้าสู่ team workspace
@@ -11,6 +12,7 @@ clusters:
     router: governance-router
     teams:
       - id: ga
+        projectCode: GA
         name: งานบริหารทั่วไป
         nameEn: General Administration
         description: รับเรื่อง ตรวจความครบถ้วน ส่งต่อเรื่อง และงานธุรการกลาง
@@ -18,6 +20,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/GA/**", "**/Admin/**"]
       - id: afp
+        projectCode: AF
         name: บัญชี การเงิน และจัดซื้อ
         nameEn: Accounting, Finance & Procurement
         description: ตรวจคำขอ ขอบเขตงาน งบประมาณ จัดซื้อจัดจ้าง และระเบียบการเงิน
@@ -25,6 +28,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/AFP/**", "**/Procurement/**", "**/Finance/**", "**/TOR/**"]
       - id: iasa
+        projectCode: IA
         name: ความร่วมมือระหว่างประเทศและพันธมิตร
         nameEn: International Affairs & Strategic Alliance
         description: เตรียมข้อมูลพันธมิตรสากล ประสานงานต่างประเทศ และบันทึกข้อตกลง
@@ -32,6 +36,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/IASA/**", "**/International/**", "**/Partnership/**"]
       - id: qs
+        projectCode: QS
         name: ระบบคุณภาพ
         nameEn: Quality System
         description: บริหารระบบคุณภาพ ISO ตรวจประเมินภายใน ติดตาม NCR และการควบคุมเอกสาร
@@ -39,6 +44,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/QS/**", "**/ISO/**", "**/Quality/**", "**/Audit/**"]
       - id: nmco
+        projectCode: NM
         name: ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว.
         nameEn: Network Management & Coordination Office
         description: ประสานงานเครือข่ายอุทยานฯ ทั่วประเทศ และรายงานหน่วยงานภาครัฐ (อว.)
@@ -46,6 +52,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/NMCO/**", "**/Network/**", "**/RSP/**"]
       - id: hd
+        projectCode: HD
         name: พัฒนาศักยภาพบุคลากร
         nameEn: Human Development
         description: พัฒนาศักยภาพบุคลากร ถอดองค์ความรู้ภายใน และจัดเตรียมแผนการฝึกอบรม
@@ -58,6 +65,7 @@ clusters:
     router: incubation-router
     teams:
       - id: piti
+        projectCode: IP
         shortName: PITI
         name: บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี
         nameEn: Platform for Innovation & Technology Incubation
@@ -66,6 +74,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/PITI/**", "**/Incubation/**"]
       - id: isi
+        projectCode: IS
         name: บ่มเพาะ Startup นวัตกรรม
         nameEn: Innovative Startup Incubation
         description: ให้คำปรึกษาและติดตามทีมธุรกิจ Startup หลังการ Mentoring
@@ -73,6 +82,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/ISI/**", "**/Startup/**", "**/Mentoring/**"]
       - id: eic
+        projectCode: EI
         name: การเป็นผู้ประกอบการและนวัตกรรม
         nameEn: Entrepreneurship & Innovation Center
         description: ออกแบบหลักสูตรและจัดกิจกรรมพัฒนาทักษะผู้ประกอบการ
@@ -80,6 +90,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/EIC/**", "**/Workshop/**", "**/Entrepreneur/**"]
       - id: imo
+        projectCode: IM
         name: บริหารจัดการนวัตกรรม
         nameEn: Innovation Management Office
         description: จัดพอร์ตโฟลิโอโครงการนวัตกรรมและสนับสนุนการตัดสินใจเชิงกลยุทธ์
@@ -87,6 +98,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/IMO/**", "**/Portfolio/**"]
       - id: sit
+        projectCode: SI
         name: ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง
         nameEn: Strategy, Initiatives & Transformation
         description: ขับเคลื่อนแผนยุทธศาสตร์ บริหารการเปลี่ยนแปลง และติดตามตัวชี้วัดองค์กร
@@ -99,6 +111,7 @@ clusters:
     router: tech-transfer-router
     teams:
       - id: tech-spin
+        projectCode: TS
         name: ถ่ายทอดเทคโนโลยีและบริษัท Spin-off
         nameEn: Technology Spin-off & Transfer
         description: แปลงงานวิจัยเป็นข้อเสนอทางธุรกิจและการเจรจาถ่ายทอดเทคโนโลยี
@@ -106,6 +119,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/TechSpin/**", "**/SpinOff/**", "**/Licensing/**", "**/IP/**"]
       - id: tech-up
+        projectCode: TU
         name: เทคโนโลยีเชิงลึกและการขยายระดับการผลิต
         nameEn: Deep Tech Scale-Up
         description: ทบทวนและทดสอบความพร้อมทางเทคโนโลยีต้นแบบก่อนขยายสู่เชิงพาณิชย์
@@ -113,6 +127,7 @@ clusters:
         skills: [common, pm, dev]
         paths: ["**/TechUp/**", "**/DeepTech/**", "**/ScaleUp/**"]
       - id: linc
+        projectCode: LC
         name: ความร่วมมือท้องถิ่นและอุตสาหกรรม
         nameEn: Local & Industrial Collaboration
         description: สกัดโจทย์จริงจากภาคอุตสาหกรรมและชุมชนเพื่อจับคู่ผู้เชี่ยวชาญ
@@ -120,6 +135,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/LINC/**", "**/Industry/**", "**/Local/**"]
       - id: pubsec
+        projectCode: PS
         name: โครงการความร่วมมือภาครัฐ
         nameEn: Public Sector Projects
         description: ออกแบบและบริหารโครงการเชิงพื้นที่ร่วมกับหน่วยงานภาครัฐ
@@ -132,6 +148,7 @@ clusters:
     router: market-creative-router
     teams:
       - id: cc
+        projectCode: CC
         name: งานสร้างสรรค์และการสื่อสาร
         nameEn: Creative & Communication
         description: งานออกแบบ Artwork, Brief ออกแบบ, อัตลักษณ์แบรนด์, นิทรรศการ และสื่อสารองค์กร
@@ -139,6 +156,7 @@ clusters:
         skills: [common, creative]
         paths: ["**/CC/**", "**/Creative/**", "**/Artwork/**", "**/Branding/**", "**/Design/**"]
       - id: mi
+        projectCode: MI
         name: นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม
         nameEn: Market Innovation
         description: วางแผนทดสอบสมมติฐานการตลาด ตรวจสอบจุดขายสินค้า และเตรียมข้อมูลเชิงพาณิชย์
@@ -146,6 +164,7 @@ clusters:
         skills: [common, creative, pm]
         paths: ["**/MI/**", "**/Market/**", "**/MarketTest/**"]
       - id: crm
+        projectCode: CR
         name: ลูกค้าสัมพันธ์
         nameEn: Customer Relationship Management
         description: รับเรื่อง บริการลูกค้า จับคู่ความต้องการกับบริการ และติดตามความพึงพอใจ
@@ -158,6 +177,7 @@ clusters:
     router: facilities-lab-router
     teams:
       - id: ifu
+        projectCode: IF
         name: การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก
         nameEn: Infrastructure & Facility Utilization
         description: บริหารจัดการพื้นที่ให้บริการ ห้องประชุม พื้นที่เช่า และสิ่งอำนวยความสะดวก
@@ -165,6 +185,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/IFU/**", "**/Facility/**", "**/Space/**"]
       - id: iqi
+        projectCode: IQ
         name: พัฒนาคุณภาพโครงสร้างพื้นฐาน
         nameEn: Infrastructure Quality Improvement
         description: ปรับปรุงคุณภาพโครงสร้างพื้นฐาน อาคารสถานที่ และระบบวิศวกรรมอาคาร
@@ -172,6 +193,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/IQI/**", "**/BuildingQuality/**", "**/Maintenance/**"]
       - id: les
+        projectCode: LE
         name: ห้องปฏิบัติการและเครื่องมือ
         nameEn: Laboratory & Equipment Services
         description: บริการตรวจวิเคราะห์ทางห้องปฏิบัติการ เครื่องมือวิทยาศาสตร์ และรายงานผลทดสอบ
@@ -179,6 +201,7 @@ clusters:
         skills: [common, pm]
         paths: ["**/LES/**", "**/Lab/**", "**/Testing/**"]
       - id: foodfabr
+        projectCode: FF
         name: โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม
         nameEn: Food Fabrication Pilot Plant
         description: บริการแปรรูปและทดลองผลิตผลิตภัณฑ์อาหารต้นแบบในระดับกึ่งอุตสาหกรรม

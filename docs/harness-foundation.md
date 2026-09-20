@@ -6,18 +6,22 @@
 
 ```text
 WHO / WHERE / WHAT / WHY / HOW / AUTHORITY
+(manifest/ — ข้อมูลที่ Router อ่าน ไม่ใช่ขั้นที่คำขอวิ่งผ่าน)
+                    │ read-only
+                    ▼
+Router → Scope Guard → Authority Preflight → Clarify (ถ้ายังไม่ชัด) → Context Budget
                     │
                     ▼
           Skills + Playbooks
                     │
                     ▼
-          Actions / Capabilities
+  Confirmation Gate → Actions / Capabilities
                     │
                     ▼
                  Tools
 ```
 
-สิ่งที่ครอบทุกชั้นคือ Source/Provenance, Human Authority, Security, Run Log และ Feedback
+สิ่งที่ครอบทุกชั้นคือ Source/Provenance, Human Authority, Security, Run Log และ Feedback — จุดเกาะของแต่ละ safeguard ดูตารางใน [Architecture 1.3](architecture.md#13-cross-cutting-safeguards-attachment-points)
 
 ## 1. Tool / Action Registry
 
@@ -64,7 +68,7 @@ Run State v3 เพิ่มเพียง:
 
 ไม่เก็บ password, token, cookie, MFA หรือ PII ที่ไม่จำเป็น
 
-## 4. Feedback Loop
+## 4. Feedback Loop (ทบทวนด้วยมือ)
 
 Feedback ช่วง Pilot ควรตอบคำถามง่าย ๆ:
 - ผลลัพธ์ใช้ได้หรือไม่
@@ -73,6 +77,8 @@ Feedback ช่วง Pilot ควรตอบคำถามง่าย ๆ:
 - มีตัวอย่างที่ถูกต้องให้ทีมปรับ Skill หรือไม่
 
 Run-level feedback ไม่แทนระบบ `FEEDBACK.md` เดิม แต่ช่วยเชื่อม usage จริงกับการปรับ Skill/Playbook
+
+Feedback เป็น **record ให้ maintainer อ่านและตัดสินใจแก้เอง** ระบบไม่ปรับ Router, Skill หรือ Source mapping ให้อัตโนมัติ และไม่มี training loop ใด ๆ ใน Pilot นี้
 
 ## สิ่งที่ยังไม่ทำใน Foundation นี้
 

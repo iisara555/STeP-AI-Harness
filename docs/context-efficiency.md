@@ -11,6 +11,11 @@ User Request
     ↓
 Local Deterministic Router
     ↓
+Scope Guard + Authority Preflight
+    ↓
+ชัดเจนพอหรือไม่
+    ├─ ไม่ชัด → CLARIFY contract (ยังไม่ส่ง skill path และไม่โหลดเนื้อหา Skill)
+    └─ ชัด ↓
 Compact Routing Contract
     ↓
 Context Budget
@@ -24,10 +29,16 @@ AI
 
 สิ่งที่ตั้งใจไม่ส่งเข้า model context:
 - router-index.yaml ทั้งไฟล์
-- inventory ของ 43 Skills
+- Skill inventory ทั้งชุดใน `manifest/skills.yaml` (จำนวนจริงดูที่ manifest ไม่ต้องจำตัวเลขจากเอกสาร)
 - Rules ที่ไม่เกี่ยวข้อง
 - optional templates/examples โดยอัตโนมัติ
 - conversation/source จาก Playbook step ก่อนหน้าทั้งชุด
+
+## 0. Clarification ไม่ใช่ต้นทุนเพิ่ม
+
+เมื่อ confidence ยังไม่ถึง HIGH ระบบคืน `mode: CLARIFY` พร้อมคำถามเดียวหรือ `clarification.options` โดย **ยังไม่โหลด SKILL.md ใด ๆ** ต้นทุนของการถามจึงต่ำกว่าการเดาเส้นทางผิดแล้วโหลด Skill ผิดตัว
+
+Adapter ส่งคำตอบสะสมกลับผ่าน `--answer` แล้ว route ใหม่ ไม่ต้อง replay บทสนทนาเดิมทั้งชุด
 
 ## 1. Zero-token Router Registry
 

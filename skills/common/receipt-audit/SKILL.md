@@ -1,87 +1,60 @@
 ---
 name: receipt-audit
 description: ใช้เมื่อต้อง pre-check ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ หรือชุดเอกสารเบิกก่อนส่ง AFP โดยเทียบข้อเท็จจริงข้ามเอกสารกับ current verified sources; ไม่ใช้เพื่ออนุมัติเบิก กำหนดสิทธิ หรือแต่งเพดาน/รายการเอกสารเมื่อ Source ยังไม่ยืนยัน
+standardVersion: 2
 ---
 
 # STeP Receipt & Disbursement Pre-check
 
-Skill นี้ช่วยตรวจความครบถ้วนและความสอดคล้องของหลักฐานก่อนเจ้าหน้าที่ AFP ตรวจจริง
+## Purpose
 
-> **Evidence first. Current finance rules must come from current finance sources.**
+ตรวจความครบถ้วนและความสอดคล้องของหลักฐานการเบิกจ่าย ก่อนเจ้าหน้าที่ AFP ตรวจจริง เพื่อลดการตีกลับ
 
-## Source Gate
+หลักสำคัญ: **Evidence first และกฎการเงินปัจจุบันต้องมาจากแหล่งการเงินปัจจุบัน**
 
-อ่านสถานะ Source ใน `manifest/documents.yaml` ก่อนใช้กฎการเงิน
+## เมื่อควรใช้
 
-- Current AFP/CMU source ยืนยันแล้ว → ใช้เป็น rule พร้อม source reference
-- Source `missing` / `pending-*` / `provided-unverified` → ห้ามสรุปว่า “เบิกได้/ไม่ได้แน่นอน”
-- `references/receipt-rules-cmu.md` เป็น working review guide ไม่ใช่ current controlled finance policy
+- pre-check ใบเสร็จ ใบกำกับภาษี หรือใบแจ้งหนี้ก่อนส่ง AFP
+- ตรวจชุดเอกสารเบิกว่าครบและสอดคล้องกันหรือไม่
+- ตอบคำถามว่าเอกสารชุดนี้ยังขาดอะไร
 
-ห้าม hard-code หรือเดาจากความจำ:
-- เพดานค่าใช้จ่าย
-- required document set
-- buyer/tax identity
-- VAT/tax treatment
-- travel entitlement
-- exception/waiver
+**Anti-trigger:**
+- ต้องการอนุมัติเบิกหรือสั่งจ่าย เป็นอำนาจของ AFP
+- ตรวจ TOR หรือเอกสารจัดซื้อ ให้ใช้ `tor-review`
+- เอกสารมีข้อมูลส่วนบุคคลจำนวนมาก ให้ใช้ `data-privacy-compliance` ควบคู่
 
 ## Inputs
 
 ใช้เท่าที่มีและจำเป็น:
-- receipt / invoice / e-document
-- approval memo / project approval
-- PO / quotation / delivery/inspection evidence
-- current policy/checklist/source reference
+- receipt, invoice หรือ e-document
+- approval memo หรือ project approval
+- PO, quotation, delivery หรือ inspection evidence
+- current policy, checklist หรือ source reference
 
 ถ้าขาดเอกสารบริบท ให้ตรวจเฉพาะสิ่งที่พิสูจน์ได้จากเอกสารที่มี
 
+## Source
+
+**Source Gate** — อ่านสถานะ Source ใน `manifest/documents.yaml` ก่อนใช้กฎการเงิน
+
+- Current AFP หรือ CMU source ที่ยืนยันแล้ว → ใช้เป็น rule พร้อม source reference
+- Source `missing`, `pending-*` หรือ `provided-unverified` → **ห้ามสรุปว่าเบิกได้หรือไม่ได้แน่นอน**
+- `references/receipt-rules-cmu.md` เป็น working review guide ไม่ใช่ current controlled finance policy
+
+**ห้าม hard-code หรือเดาจากความจำ:** เพดานค่าใช้จ่าย, required document set, buyer หรือ tax identity, VAT และ tax treatment, travel entitlement, exception หรือ waiver
+
 ## Workflow
 
-### 1. Document facts
-สกัด:
-- document type / number / date
-- issuer / buyer fields เท่าที่จำเป็น
-- items / quantity / amount / tax fields
-- referenced project/PO เมื่อมี
+1. **Document facts** — สกัด document type, number, date, issuer และ buyer fields เท่าที่จำเป็น, items, quantity, amount, tax fields และ referenced project หรือ PO เมื่อมี
+2. **Arithmetic & internal consistency** — ตรวจ subtotal, tax, total, quantity คูณ unit price, ค่าที่ซ้ำหรือขัดกัน และความครบของ field ที่ source ปัจจุบันกำหนด
+3. **Cross-document consistency** — เทียบ receipt ↔ approval, receipt ↔ PO/quotation, receipt ↔ delivery/acceptance ทั้ง date, item, amount และ vendor identity **การไม่ตรงกันให้ flag เป็น evidence mismatch ไม่ใช่ตัดสินว่าเป็นการทุจริต**
+4. **Policy checks** — ทำเฉพาะข้อที่มี current verified source เช่น expense ceiling, tax หรือ document requirement, required attachments, eligible period หรือ category และ special approval ถ้าไม่มี source ให้ `NEED-SOURCE`
+5. **Privacy** — mask หรือ minimize national ID, personal bank account, personal address, phone, email และข้อมูลสุขภาพ การตรวจว่าตรงกันหรือไม่ใช้ token เช่น `PERSON_001` แทนชื่อจริงได้
 
-### 2. Arithmetic & internal consistency
-ตรวจ:
-- subtotal/tax/total arithmetic
-- quantity × unit price
-- duplicated/conflicting values
-- visible completeness ของ field ที่ source ปัจจุบันกำหนด
-
-### 3. Cross-document consistency
-เทียบ:
-- receipt ↔ approval
-- receipt ↔ PO/quotation
-- receipt ↔ delivery/acceptance
-- date / item / amount / vendor identity
-
-การไม่ตรงกันให้ flag เป็น evidence mismatch ไม่ใช่ตัดสิน fraud
-
-### 4. Policy checks
-ทำเฉพาะข้อที่มี current verified source:
-- expense ceiling
-- tax/document requirement
-- required attachments
-- eligible period/category
-- special approval
-
-ถ้า source ไม่มี ให้ `NEED-SOURCE`
-
-### 5. Privacy
-Mask/minimize:
-- national ID
-- personal bank account
-- personal address/phone/email
-- health/other sensitive data
-
-การตรวจ “ตรงกันหรือไม่” สามารถใช้ token เช่น `PERSON_001` แทนชื่อจริง
-
-## Output Contract
+## Output
 
 ### Receipt Pre-check
+
 | Check | Status | Evidence | Source | Next action |
 |---|---|---|---|---|
 | Document facts | PASS / FLAG / NEED-INFO | … | document | … |
@@ -89,26 +62,34 @@ Mask/minimize:
 | Cross-document match | PASS / FLAG / NEED-INFO | … | source docs | … |
 | Policy requirement | VERIFIED / NEED-SOURCE | … | current source | … |
 
-### Overall
-- `READY-FOR-AFP-REVIEW`
-- `NEEDS-DOCUMENT-FIX`
-- `NEEDS-MORE-EVIDENCE`
-- `NEEDS-CURRENT-SOURCE`
+**Overall:** `READY-FOR-AFP-REVIEW` / `NEEDS-DOCUMENT-FIX` / `NEEDS-MORE-EVIDENCE` / `NEEDS-CURRENT-SOURCE`
 
-สถานะเหล่านี้ไม่ใช่การอนุมัติเบิกจ่าย
+**สถานะเหล่านี้ไม่ใช่การอนุมัติเบิกจ่าย**
 
-## Handoff & Authority
+## Authority
 
-AI ทำได้:
-- pre-check
-- mismatch detection
-- missing evidence list
-- source gap list
+AI ทำได้: pre-check, mismatch detection, รายการหลักฐานที่ขาด และรายการ source gap
 
 AI ห้าม:
-- อนุมัติสั่งจ่าย/เบิก
-- อนุมัติข้อยกเว้น
+- อนุมัติสั่งจ่ายหรือเบิก — `budget-allocation`
+- อนุมัติข้อยกเว้น — `policy-waiver`
 - สรุป policy ใหม่จาก case เก่า
-- เปลี่ยนวงเงิน/สิทธิของผู้เบิก
+- เปลี่ยนวงเงินหรือสิทธิของผู้เบิก
 
-Final decision อยู่กับ AFP/ผู้มีอำนาจตาม current organization source
+Final decision อยู่กับ AFP และผู้มีอำนาจตาม current organization source
+
+## Handoff
+
+- เอกสารต้องแก้หรือขาด → เจ้าของเรื่อง
+- ประเด็นกฎการเงินที่ยังไม่มี source → AFP
+- ข้อมูลส่วนบุคคลในเอกสาร → `data-privacy-compliance`
+- ตรวจความพร้อมก่อนบอกว่าครบ → `evidence-before-approval`
+
+พร้อมส่งต่อเมื่อ: ทุก check มีสถานะ และรายการที่ `NEED-SOURCE` ระบุว่าต้องถามใคร
+
+## Guardrails
+
+- ไม่สรุปว่าเบิกได้หรือไม่ได้เมื่อ source ยังไม่ยืนยัน
+- ไม่แต่งเพดานค่าใช้จ่ายหรือรายการเอกสารที่ต้องแนบ
+- ไม่ตัดสินเจตนาของผู้เบิกจากความไม่ตรงกันของเอกสาร
+- mask ข้อมูลส่วนบุคคลก่อนแสดงผลหรือเก็บ output

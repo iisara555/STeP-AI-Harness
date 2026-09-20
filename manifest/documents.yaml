@@ -62,6 +62,25 @@ documents:
     path: rules/secret-safety.md
     status: active
 
+  step-brand-ci-guideline:
+    title: "STeP Corporate Identity Manual Digest (โลโก้ สี และการใช้งาน)"
+    owner: cc
+    type: organization-guideline
+    process: creative.branding
+    sourceLevel: organization-policy
+    authority: unverified
+    verification: pending-cc-confirmation
+    status: provided-unverified
+    publicationDate: "2021-02-18"
+    receivedDate: "2026-09-20"
+    sourceFile: "STeP Corporate Idenity Manual Digest.pdf"
+    sourceSha256: "07773e1140b24f8d23fe14c073e08bb04630555a7cfba7e79bc36e9eeb8dac7a"
+    index: skills/common/step-brand/references/ci-manual-digest.md
+    digitalPaletteVerification: user-confirmed
+    digitalPaletteConfirmedDate: "2026-09-20"
+    digitalPaletteConfirmation: "ผู้ใช้ยืนยัน Yellow #FFC709 และ Dark #231F20 เพื่อแก้ conflict หน้า 3; ไม่ใช่การยืนยัน CMYK หรือสถานะคู่มือทั้งฉบับ"
+    note: "ได้รับ digest 5 หน้า มี logo construction/clear space, variants/backgrounds และ minimum height 8 mm สำหรับ full lockup และ symbol; ไม่ระบุ revision, effective date, typography หรือ co-branding; ยังรอ CC ยืนยันฉบับปัจจุบันและสีพิมพ์ เก็บ PDF ต้นฉบับนอก repo"
+
   step-writing-rule:
     title: "คู่มือมาตรฐานการเขียนและการใช้ภาษาไทยสำหรับสื่อสารองค์กร STeP"
     owner: cc
@@ -107,6 +126,26 @@ documents:
 
 
   # --- STeP Quality Layer v0.1 ---
+  hr-personnel-welfare-2566:
+    title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคลและสวัสดิการพนักงาน พ.ศ. 2566"
+    owner: hd
+    type: organization-announcement
+    process: people.personnel-welfare
+    version: "2566"
+    effectiveDate: "2023-01-26"
+    effectiveDateSource: "ชื่อไฟล์ต้นฉบับ (20230126); หน้าลงนามไม่ปรากฏในไฟล์ที่ได้รับ"
+    legalBasis: "ข้อ 18 แห่งข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 และมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 2/2565 เมื่อ 6 ธันวาคม 2565"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: owner-confirmed-current
+    status: active
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันเป็นฉบับปัจจุบัน 2026-09-20"
+    index: docs/hr-personnel-welfare-index.md
+    contentInRepo: false
+    sensitivity: restricted
+    sensitivityReason: "เอกสารแนบท้ายมีตารางเงินเดือนต่ำสุด/สูงสุด ค่าความเชี่ยวชาญ และสิทธิ์ค่ารักษาพยาบาลรายตำแหน่ง"
+    note: "เก็บเฉพาะดัชนีหัวข้อและคำนิยาม ห้ามคัดตัวเลขค่าตอบแทนหรือเนื้อความเต็มเข้า repository สาธารณะ ต้องเปิดจากไฟล์ต้นฉบับของ HD ทุกครั้งที่อ้างอิง"
+
   iso-9001-2015:
     title: "ISO 9001:2015 Quality management systems — Requirements"
     owner: qs
@@ -233,3 +272,25 @@ documents:
     authority: controlled-document
     verification: pending-master-list
     status: provided-unverified
+
+  step-facility-equipment-inventory-2020:
+    title: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่อาคารอำนวยการอุทยานวิทยาศาสตร์ภาคเหนือ (จ.เชียงใหม่)"
+    owner: les
+    coOwners: [foodfabr]
+    type: facility-equipment-inventory
+    process: client.inquiry-triage
+    version: "2020-06-19-source-metadata"
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: owner-confirmed-current
+    status: active-reference
+    receivedDate: "2026-09-20"
+    sourceFile: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่.pdf"
+    sourceSha256: "74288e1558f3a4d30c6e42af1189ef76d1f436f9be3ff4350f79c0f37e349e2d"
+    pageCount: 42
+    index: docs/facility-equipment-index.md
+    contentInRepo: false
+    sensitivity: internal-reference
+    confirmedDate: "2026-09-20"
+    confirmedBy: "เจ้าของบริการ; ผู้ใช้บันทึกคำยืนยันใน session 2026-09-20"
+    note: "เจ้าของบริการยืนยัน 2026-09-20 ว่า LES ดูแล CIMO, INFRI และ RF ส่วน FOODFABR ดูแล Innovative Food Fabrication Pilot Plant; NSP Central Laboratory ในเอกสารคือ INFRI และ FABLAB ไม่มีบริการแล้ว; PDF ไม่ระบุ revision/effective date จึงยังต้องตรวจข้อมูลที่เปลี่ยนตามเวลา"

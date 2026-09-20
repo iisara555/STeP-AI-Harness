@@ -13,6 +13,9 @@ Atomic Task
 
 Composite Task
 → Router
+→ Playbook ก้ำกึ่งกันหรือไม่
+   ├─ ก้ำกึ่ง → CLARIFY + clarification.options (ยังไม่เลือก Playbook และยังไม่โหลด step)
+   └─ ชัด ↓
 → Playbook
 → Skill A
 → handoff context
@@ -21,6 +24,8 @@ Composite Task
 ```
 
 Playbook **ไม่ใช่ Workflow Engine** และไม่ใช่มิติที่ 7 ของ Organization Model แต่เป็นวิธีประกอบ HOW จาก Skills ที่มีอยู่แล้ว
+
+Scope Guard และ Authority Preflight ทำงานก่อนการถามแยก Playbook เสมอ งานที่เป็น human-only ต้องหยุดตั้งแต่ก่อนเลือก flow ไม่ใช่ไปหยุดกลางขั้นตอน
 
 ## Loading Budget
 

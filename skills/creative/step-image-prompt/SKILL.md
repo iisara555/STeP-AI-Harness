@@ -52,13 +52,16 @@ description: เปลี่ยนวัตถุประสงค์ เนื
 
 ใช้ source ตามลำดับ:
 1. brief / reference / existing image ที่ผู้ใช้ให้ในงานปัจจุบัน
-2. `references/prompt-spec.md` สำหรับ schema และ renderer contract
-3. `references/brand-visual-context.md` สำหรับ brand visual context ที่มี source
-4. `references/visual-direction-vocabulary.md` เมื่อจำเป็นต้องเลือก/ขยาย Art Direction
+2. `references/prompt-patterns.md` สำหรับ pattern ตาม use case ที่ STeP ทำบ่อย
+3. `references/prompt-spec.md` สำหรับ schema และ renderer contract
+4. `references/brand-visual-context.md` สำหรับ STeP Brand CI ที่มีหลักฐานใน repo
+5. `references/model-families.md` เมื่อต้องจับคู่เครื่องมือปลายทางกับ syntax family
+6. `references/visual-direction-vocabulary.md` เมื่อจำเป็นต้องเลือกหรือขยาย Art Direction
 
-สถานะ Brand ปัจจุบันต้องตรวจจาก `references/brand-visual-context.md`.
+สถานะ Brand ปัจจุบันต้องตรวจจาก `references/brand-visual-context.md` ซึ่งเชื่อมไปยัง CI Manual Digest ที่ผู้ใช้ให้และคำยืนยันสีดิจิทัล
+สถานะฉบับควบคุมปัจจุบันและประเด็นที่ยังไม่ยืนยันลงทะเบียนไว้ที่ `manifest/documents.yaml` → `step-brand-ci-guideline`
 
-ถ้ายังไม่มี Controlled CI Guideline:
+สำหรับประเด็นที่ source ยังไม่ครอบคลุมหรือขัดกัน:
 - ใช้เฉพาะ brand context ที่ผู้ใช้ให้หรือ Official Asset ที่ resolve ได้
 - ห้ามสร้าง hex, logo geometry, co-branding rule หรือ safe-area rule จากความจำ
 
@@ -71,7 +74,8 @@ description: เปลี่ยนวัตถุประสงค์ เนื
 - **Family C — Parameter-flag**
 - **Family D — Edit / inpaint**
 
-รายละเอียด: `references/prompt-spec.md`
+รายละเอียด syntax ของแต่ละ family: `references/prompt-spec.md`
+ตารางจับคู่เครื่องมือปัจจุบันกับ family (ทบทวน 2026-09-20): `references/model-families.md`
 
 หากผู้ใช้ไม่ทราบ family:
 - ใช้ Family A ชั่วคราว
@@ -111,6 +115,14 @@ description: เปลี่ยนวัตถุประสงค์ เนื
 
 ถ้าไม่แน่ใจให้รักษาสิ่งเดิมก่อน
 
+### 2.5 Pick a Pattern
+
+เทียบ use case กับตารางใน `references/prompt-patterns.md` แล้วเลือก pattern ที่ตรงที่สุด
+
+- pattern บอกว่าอะไรต้องล็อก อะไรปล่อยได้ และอะไรต้องกัน จึงใช้เป็นโครงของ Spec ได้ทันที
+- pattern ไม่ใช่ prompt สำเร็จรูป ต้องเติม subject และข้อจำกัดของงานจริงเสมอ
+- ถ้าไม่ตรง pattern ใด ให้สร้าง Spec จากศูนย์และแจ้งผู้ใช้ว่าไม่ได้ใช้ pattern
+
 ### 3. Define Art Direction
 เลือก direction จาก purpose/audience/medium
 
@@ -127,9 +139,13 @@ Reference ไม่ใช่ Requirement ทั้งหมดโดยอัต
 ### 5. Apply Brand Context
 ใช้ `references/brand-visual-context.md`
 
-- Official logo ต้องมาจาก Official Asset
+- `PALETTE` ใช้ **คำบรรยายสี** เป็นค่าเริ่มต้น เช่น warm amber accent บน deep charcoal slate; ใส่ hex เฉพาะเมื่อปลายทางเป็นงาน design ไม่ใช่ prompt ภาพ
+- accent เป็นจุดเน้นเดียวต่อเฟรม ไม่ใช่สีพื้น การยัดเหลืองทั้งภาพไม่ใช่การทำตาม CI
+- ค่านิยม SIMPLE / SERVICE / SINCERE แปลงเป็นข้อกำหนดของภาพ: พื้นที่ว่างอย่างน้อย 30%, อ่านง่ายสำหรับผู้รับสารจริง, ไม่ทำให้เข้าใจผิดว่าเป็นเหตุการณ์จริง
+- ข้อความภาษาไทยในภาพเป็น `EXCLUDE` โดยค่าเริ่มต้น ให้เว้น `TEXT_SPACE` ไว้วางตัวอักษรจริงในขั้นออกแบบ
+- Official logo ต้องมาจาก Official Asset และอยู่ใน `EXCLUDE` ของ prompt เสมอ
 - AI ไม่สร้างหรือเลียนแบบ STeP / CMU logo
-- ไม่ hard-code mutable CI rule ใน Skill นี้
+- ไม่ hard-code mutable CI rule ใน Skill นี้ ให้แก้ที่ `references/brand-visual-context.md` เมื่อมี source ใหม่
 
 ### 6. Build Prompt Spec → Confirm Family → Render
 
@@ -201,7 +217,9 @@ AI ช่วยสร้าง visual direction, Prompt Spec และ rendered 
 - ห้ามสร้าง Fact, Metric, Award, Claim, Endorsement หรือ technical specification ที่ไม่มีหลักฐาน
 - ห้ามเปลี่ยน Reference เป็น Requirement ทั้งหมดโดยอัตโนมัติ
 - ห้ามเปลี่ยนสิ่งที่ผู้ใช้สั่งให้รักษาเพียงเพื่อความสวยงาม
-- ห้ามยัด CI ลงทุกภาพ
+- ห้ามยัด CI ลงทุกภาพ และห้ามใช้ accent เป็นสีพื้นเพื่ออ้างว่าตรง CI
+- ห้ามให้โมเดลเขียนข้อความภาษาไทยลงภาพเป็นค่าเริ่มต้น เพราะรูปสระและวรรณยุกต์ยังผิดบ่อย
+- ห้ามใช้ตัวเลข กราฟ เปอร์เซ็นต์ หรือหน่วยวัดที่โมเดลสร้างขึ้น
 - ห้าม hard-code ชื่อรุ่นโมเดลเป็น Capability Gate
 - ห้าม patch rendered prompt เป็น source of truth; ต้องสะท้อนกลับเข้า Prompt Spec
 - ห้ามอ้าง `preserve 100%` เมื่อเครื่องมือรับประกัน fidelity ไม่ได้

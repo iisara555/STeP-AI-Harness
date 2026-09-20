@@ -1,112 +1,109 @@
 ---
 name: management-review-prep
 description: เตรียม Management Review แบบ evidence-based โดยรวบรวม performance, objectives, customer feedback, audit results, NC/CAPA, risks/opportunities, resources, prior actions และ decisions ที่ผู้บริหารต้องพิจารณา
+standardVersion: 2
 ---
 
 # STeP Management Review Preparation
 
-> **Management Review is a decision meeting, not a slide-making exercise.**
+## Purpose
 
-## ใช้เมื่อ
-- management review / ทบทวนฝ่ายบริหาร
-- QMR meeting
-- เตรียมข้อมูล ISO ก่อนประชุมผู้บริหาร
-- รวม input จาก 22 ทีม
+รวบรวมข้อมูลจากทุกทีมให้เป็นชุดข้อมูลที่ผู้บริหารใช้ตัดสินใจได้ ตรวจความครบถ้วนของ input และจัดคิวเรื่องที่ต้องตัดสิน
+
+หลักสำคัญ: **Management Review คือการประชุมเพื่อตัดสินใจ ไม่ใช่การทำสไลด์**
+
+Skill นี้ทำหน้าที่ **aggregate, check completeness และ prepare decisions** ไม่ตัดสินใจแทนผู้บริหาร และไม่แก้ source record ของแต่ละทีม
+
+## เมื่อควรใช้
+
+- เตรียม management review หรือการทบทวนฝ่ายบริหาร
+- เตรียม QMR meeting
+- รวม input จาก 22 ทีมก่อนประชุม
 - ตรวจ action จาก management review รอบก่อน
 
-## Role
-Skill นี้ **aggregate + check completeness + prepare decisions**
-ไม่ตัดสินใจแทนผู้บริหาร และไม่แก้ source record ของแต่ละทีม
+**Anti-trigger:**
+- รายงานสถานะโครงการ ให้ใช้ `executive-status-update`
+- ต้องวิเคราะห์ทางเลือกเชิงลึก ให้ใช้ `decision-memo`
+- บันทึกผลการประชุม ให้ใช้ `meeting-summary`
 
-## Input Collection
+## Inputs
 
-รวบรวมจาก source จริงตาม scope/criteria ขององค์กร เช่น:
+รวบรวมจาก source จริงตาม scope และ criteria ขององค์กร:
+
 - Action จาก Management Review รอบก่อน
-- การเปลี่ยนแปลง context / interested parties ที่มีผลกับ QMS
-- Quality objectives / KPI และ trend
-- Process / service performance
-- Customer feedback / complaints / satisfaction
+- การเปลี่ยนแปลง context และ interested parties ที่มีผลกับ QMS
+- Quality objectives, KPI และ trend
+- Process และ service performance
+- Customer feedback, complaints และ satisfaction
 - Audit results และ open findings
-- NC / CAPA / effectiveness status
-- External provider / supplier issues ที่เกี่ยวข้อง
-- Resource / competence / infrastructure issues
-- Risks & opportunities
+- NC, CAPA และ effectiveness status
+- External provider หรือ supplier issues ที่เกี่ยวข้อง
+- Resource, competence และ infrastructure issues
+- Risks และ opportunities
 - Improvement opportunities
 - Change proposals ที่ต้องการ decision
 
-ถ้า criteria edition กำหนด input เพิ่ม ให้ใช้ audit/QMS source ที่ QS ยืนยันแล้ว ไม่ hardcode จากความจำ
+## Source
 
-## Preparation Flow
+- ทุก input ต้องมาจาก record จริงของทีมเจ้าของ ไม่ใช่การสรุปซ้ำจากรายงานเก่า
+- ถ้า criteria edition กำหนด input เพิ่ม ให้ใช้ audit หรือ QMS source ที่ QS ยืนยันแล้ว **ไม่ hardcode จากความจำ**
 
-### 1. Source Completeness
-ทำ input register:
-| Input | Source | Owner | Period | Status | Gap |
-|---|---|---|---|---|---|
+## Workflow
 
-### 2. Trend & Exception
-ไม่ dump ตัวเลขทั้งหมด ให้เน้น:
-- target vs actual
-- trend
-- recurring issue
-- overdue action
-- open high-impact gap
-- evidence confidence
+1. **Source Completeness** — ทำ input register
 
-### 3. Decision Queue
-ทุกเรื่องที่ต้องผู้บริหารตัดสิน ระบุ:
-- Decision needed
-- Context/evidence
-- Options
-- Risk/trade-off
-- Recommended owner
-- Decision deadline
+   | Input | Source | Owner | Period | Status | Gap |
+   |---|---|---|---|---|---|
 
-ใช้ `decision-memo` ถ้าต้องวิเคราะห์ทางเลือกเชิงลึก
+2. **Trend & Exception** — ไม่ dump ตัวเลขทั้งหมด ให้เน้น target vs actual, trend, recurring issue, overdue action, open high-impact gap และ evidence confidence
+3. **Decision Queue** — ทุกเรื่องที่ต้องให้ผู้บริหารตัดสิน ระบุ Decision needed, Context/evidence, Options, Risk/trade-off, Recommended owner และ Decision deadline ใช้ `decision-memo` ถ้าต้องวิเคราะห์ทางเลือกเชิงลึก
+4. **Pre-read** — สร้างเอกสารอ่านก่อนประชุมที่สั้น: Executive summary, What changed, KPI exceptions, Customer/audit/CAPA highlights, Risk/opportunity highlights, Decisions required, Actions overdue และ Evidence gaps
+5. **Meeting Record** — หลังประชุมใช้ `meeting-summary` เพื่อเก็บ decision, action, owner, due date และ follow-up evidence
 
-### 4. Pre-read
-สร้าง pre-read ที่สั้น:
-- Executive summary
-- What changed
-- KPI/quality objective exceptions
-- Customer/audit/CAPA highlights
-- Risk/opportunity highlights
-- Decisions required
-- Actions overdue
-- Evidence gaps
-
-### 5. Meeting Record
-หลังประชุมใช้ `meeting-summary` เพื่อเก็บ:
-- decision
-- action
-- owner
-- due date
-- follow-up evidence
-
-## Status
-- READY-FOR-REVIEW
-- PARTIAL-INPUTS
-- DECISION-GAP
-- EVIDENCE-GAP
+**สถานะ:** READY-FOR-REVIEW, PARTIAL-INPUTS, DECISION-GAP, EVIDENCE-GAP
 
 ## Output
 
 ### Management Review Pack
+
 1. Input completeness
-2. Quality objective/KPI trends
-3. Customer/service signals
-4. Audit + NC/CAPA status
-5. Risks/opportunities
-6. Resource/competence issues
+2. Quality objective และ KPI trends
+3. Customer และ service signals
+4. Audit พร้อม NC/CAPA status
+5. Risks และ opportunities
+6. Resource และ competence issues
 7. Prior action follow-up
 8. Decisions required
-9. Proposed actions / owners
-10. Missing evidence before meeting
+9. Proposed actions และ owners
+10. Missing evidence ก่อนประชุม
+
+## Authority
+
+AI ช่วยได้: รวบรวม input ตรวจความครบถ้วน และจัดคิวการตัดสินใจ
+
+AI ห้าม:
+- invent management decision
+- mark action `CLOSED` โดยไม่มี evidence
+- อนุมัติ QMS change, SOP หรือ official response — เป็น Human Authority ตาม `iso-qms-enactment`
+
+## Handoff
+
+- วิเคราะห์ทางเลือกเชิงลึก → `decision-memo`
+- บันทึกผลการประชุม → `meeting-summary`
+- KPI ที่ต้องทบทวน → `quality-objective-kpi-review`
+- ความเสี่ยง → `qms-risk-opportunity-review`
+- NC และ CAPA → `ncr-capa`
+- ความพร้อม audit ของแต่ละทีม → `iso9001-audit-readiness`
+
+พร้อมส่งต่อเมื่อ: input register ครบ ทุก decision มี evidence และระบุผู้ตัดสินกับกำหนดเวลาแล้ว
 
 ## Guardrails
-- ห้าม invent management decision
-- ห้าม mark action CLOSED โดยไม่มี evidence
-- ห้ามเปลี่ยน source KPI/NC/risk record เพื่อให้ report ดูดี
-- การอนุมัติ QMS change / SOP / official response ยังเป็น Human Authority
+
+- ห้ามเปลี่ยน source record ของ KPI, NC หรือ risk เพื่อให้รายงานดูดี
+- ห้ามสรุปว่า action ปิดแล้วโดยไม่มีหลักฐาน
+- แยกสิ่งที่เป็นข้อมูลออกจากสิ่งที่ต้องตัดสินใจ
+- ระบุ input ที่ยังขาดอย่างตรงไปตรงมาก่อนเข้าประชุม
 
 ## Method note
-เขียนใหม่โดยใช้ aggregation/decision-readiness patterns จาก STeP `executive-status-update`, `decision-memo`, `meeting-summary` และแนวคิด decision-linked metrics จาก smerphy/cyber-grc-agent-skills (MIT)
+
+เขียนใหม่โดยใช้ aggregation และ decision-readiness patterns จาก `executive-status-update`, `decision-memo` และ `meeting-summary` ของ STeP ร่วมกับแนวคิด decision-linked metrics จาก smerphy/cyber-grc-agent-skills (MIT)

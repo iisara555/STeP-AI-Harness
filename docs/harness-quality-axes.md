@@ -54,6 +54,18 @@ validator ต้องมี Python 3.10 ขึ้นไป โดยค้น `
 อัตโนมัติ แล้วเรียก `scripts/validate_repo.py` ตัวเดียวกับ CI หาก validator พบข้อผิดพลาดจะคืน exit code เดิม
 เครื่อง Windows ที่มี Python ผ่าน `py` อยู่แล้วไม่ต้องติดตั้งซ้ำหรือแก้ PATH
 
+### Router registry integrity
+
+`scripts/validate_repo.py` และ `validateManifestIntegrity()` ตรวจ `manifest/router-index.yaml` ว่า:
+
+- ทุก entry มี `cluster` และเป็น cluster ที่ `manifest/teams.yaml` ประกาศไว้
+- `teams.primary` / `teams.consumers` อ้างได้เฉพาะ team id ใน `teams.yaml`, role id ใน `roles.yaml` หรือ wildcard `"*"`
+- `manifest/organization.yaml` ต้องมี cluster id ชุดเดียวกับ `teams.yaml` และสมาชิกทีมในแต่ละ cluster ต้องตรงกัน
+
+จำเป็นเพราะ [scorer.js](../src/modules/router/scorer.js) ให้คะแนนเพิ่มเมื่อ cluster ที่ผู้ใช้ยืนยันตรงกับ `skill.cluster`
+ค่า cluster ที่ไม่มีใครประกาศจะไม่ match อะไรเลย Skill นั้นจึงเสียสัญญาณเงียบ ๆ แทนที่จะ error
+ส่วน `organization.yaml` ไม่มีโค้ดใดอ่านตอน runtime การเปลี่ยนชื่อ cluster ที่ไฟล์เดียวจึงไม่มีอะไรจับได้ถ้าไม่ตรวจตรงนี้
+
 ## หลักฐาน routing ภาษาพูด
 
 `test/pilot-20-routing-regression.test.js` เก็บตารางเดียวพร้อมแหล่งที่มาแยกกัน:

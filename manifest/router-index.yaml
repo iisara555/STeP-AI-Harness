@@ -229,7 +229,7 @@ skills:
           description: การอนุมัติขยายเวลาโครงการจริง
 
   - name: project-pre-mortem
-    cluster: governance-quality
+    cluster: incubation-strategy
     domain: project-management
     processId: project.planning
     teams:
@@ -870,7 +870,7 @@ skills:
       consumers: [tech-up, tech-spin, les, foodfabr, piti, crm, mi, pubsec]
     description: จับคู่โจทย์ที่ชัดแล้วกับบริการ ผู้เชี่ยวชาญ Lab เครื่องมือ หรือ Pilot Plant จาก Service Registry/NSP/NSTIS โดยให้เจ้าของบริการยืนยันก่อนส่งต่อจริง
     intent: [search, recommend, plan]
-    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, NSTIS, หาคนช่วยแก้ปัญหาโรงงาน, ต้องใช้อาจารย์ด้านไหน]
+    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, หาเครื่อง, มีเครื่อง, เครื่องมืออะไรบ้าง, รายการเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, freeze dryer, spray dryer, HPLC, GC-MS, AFM, เครื่องพลาสมา, 3D printer, laser cutter, NSTIS, หาคนช่วยแก้ปัญหาโรงงาน, ต้องใช้อาจารย์ด้านไหน]
     paths: ["**/LINC/**", "**/Industry/**", "**/Expert/**", "**/Resource/**", "**/Lab/**"]
     fileTypes: [md, docx, pdf, xlsx, csv]
     requires: [problem_or_capability_need]

@@ -8,19 +8,73 @@ policy:
   doNotStorePersonalExpertProfiles: true
   lastReviewed: "2026-09-19"
 
+# URL status ตรวจครั้งล่าสุด 2026-09-20 (HTTP reachability เท่านั้น ไม่ใช่การรับรองเนื้อหาโดยเจ้าของบริการ)
 sources:
   step-nsp-services:
     title: "Northern Science Park — Total Innovation Solutions / Services"
     url: "https://www.step.cmu.ac.th/NSP/service.php"
     type: public-official
+    status: dead-link
+    lastChecked: "2026-09-20"
+    note: "คืน HTTP 404 ใช้ step-service-journey หรือ step-aboutus แทนจนกว่าจะได้ URL ใหม่จากทีมสื่อสารองค์กร"
   step-service-journey:
     title: "STeP — Our Journey / Solution Services"
     url: "https://step.cmu.ac.th/our_journey.php"
     type: public-official
+    status: reachable
+    lastChecked: "2026-09-20"
+  step-aboutus:
+    title: "CMU STeP — เกี่ยวกับหน่วยงาน (การจัดตั้ง วิสัยทัศน์ พันธกิจ)"
+    url: "https://step.cmu.ac.th/aboutus.php"
+    type: public-official
+    status: reachable
+    lastChecked: "2026-09-20"
+  step-contact:
+    title: "CMU STeP — ข้อมูลการติดต่อและช่องทางออนไลน์"
+    url: "https://www.step.cmu.ac.th/contact"
+    type: public-official
+    status: reachable
+    lastChecked: "2026-09-20"
   step-oit-2026:
     title: "STeP OIT 2026 — Public service and e-Service information"
-    url: "https://www1.step.cmu.ac.th/oit/oit-2026.php"
+    url: "https://www.step.cmu.ac.th/oit/oit-2026.php"
     type: public-official
+    status: reachable
+    lastChecked: "2026-09-20"
+    note: "host เดิม www1.step.cmu.ac.th ใช้ไม่ได้ (DNS/TLS ไม่ตรง) เปลี่ยนมาใช้ host www"
+  cmu-org-step:
+    title: "มหาวิทยาลัยเชียงใหม่ — หน้าส่วนงานอุทยานวิทยาศาสตร์และเทคโนโลยี"
+    url: "https://www.cmu.ac.th/th/Organization/science_and_technology_park/aboutus"
+    type: public-official
+    status: reachable
+    lastChecked: "2026-09-20"
+    note: "แหล่งระดับมหาวิทยาลัย ใช้ยืนยันสถานะส่วนงานภายใน มช."
+  infli-service-infographic:
+    title: "INFLI — ชื่อเดิม/ชื่อในอินโฟกราฟิกของ INFRI ห้องปฏิบัติการนวัตกรรมอาหารเพื่ออุตสาหกรรม"
+    type: owner-provided-material
+    status: provided-unverified
+    lastChecked: "2026-09-20"
+    note: "อินโฟกราฟิกใช้ชื่อ INFLI; เจ้าของบริการยืนยัน 2026-09-20 ว่า NSP Central Laboratory คือ INFRI จึงเก็บ INFLI เป็นชื่อเดิม/ชื่อใน source เท่านั้น เก็บเฉพาะข้อเท็จจริงเชิงโครงสร้าง ไม่เก็บไฟล์ภาพ ราคา หรือช่องทางติดต่อรายบุคคล"
+  facility-equipment-inventory-2020:
+    title: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่อาคารอำนวยการอุทยานวิทยาศาสตร์ภาคเหนือ (จ.เชียงใหม่)"
+    type: owner-confirmed-equipment-inventory
+    status: owner-confirmed-current
+    sourceDate: "2020-06-19"
+    receivedDate: "2026-09-20"
+    documentRef: step-facility-equipment-inventory-2020
+    index: docs/facility-equipment-index.md
+    contentInRepo: false
+    confirmedDate: "2026-09-20"
+    confirmedBy: "เจ้าของบริการ; ผู้ใช้บันทึกคำยืนยันใน session 2026-09-20"
+    note: "ใช้ค้นหาความสามารถของ FOODFABR, RF Pilot Plant, INFRI (เดิมระบุ Central Lab), ABPlas และ CIMO; เจ้าของบริการยืนยันข้อมูลปัจจุบัน 2026-09-20 โดย LES ดูแล CIMO, INFRI และ RF ส่วน FOODFABR ดูแล Innovative Food Fabrication Pilot Plant และ FABLAB ไม่มีบริการแล้ว ข้อมูล FABLAB ใน source ใช้เป็นประวัติเท่านั้น"
+  step-mis:
+    title: "STeP MIS — ระบบสารสนเทศภายใน (ต้องเข้าสู่ระบบ)"
+    url: "https://mis.step.cmu.ac.th/"
+    type: internal-restricted
+    status: login-required
+    lastChecked: "2026-09-20"
+    contentInRepo: false
+    note: "ลงทะเบียนเป็น pointer เท่านั้น ห้ามคัดเนื้อหาหรือข้อมูลจากระบบนี้เข้า repository สาธารณะ ผู้ใช้ต้องเปิดเองและยืนยันข้อมูลกับเจ้าของระบบ"
   abplas-service:
     title: "ABPlas Laboratory Management Platform"
     url: "https://abplas.step.cmu.ac.th/"
@@ -142,10 +196,16 @@ services:
       - pilot-plant-discovery
       - facility-routing
     processes: [client.inquiry-triage, laboratory.result-review]
-    sourceRefs: [step-nsp-services, step-service-journey]
+    sourceRefs: [step-nsp-services, step-service-journey, facility-equipment-inventory-2020]
     existenceStatus: public-verified
-    ownershipStatus: organization-mapping
-    description: "Umbrella service สำหรับค้นหา Lab, เครื่องมือ, FABLAB, ABPlas, CIMO, Central Lab, RF Pilot Plant และ FOODFABR"
+    ownershipStatus: owner-confirmed-routing
+    serviceOwnerMap:
+      infri: les
+      cimo: les
+      rf-technology-pilot-plant: les
+      innovative-food-fabrication-pilot-plant: foodfabr
+    confirmedDate: "2026-09-20"
+    description: "Umbrella service สำหรับค้นหา Lab และเครื่องมือ โดยส่ง INFRI, CIMO และ RF Pilot Plant ให้ LES และส่ง Innovative Food Fabrication Pilot Plant ให้ FOODFABR; FABLAB ยุติบริการแล้ว"
 
   laboratory-testing:
     name: "บริการวิเคราะห์และทดสอบทางห้องปฏิบัติการ"
@@ -158,10 +218,85 @@ services:
       - method-and-capability-routing
       - result-review-handoff
     processes: [laboratory.result-review]
-    sourceRefs: [step-nsp-services, step-service-journey]
+    sourceRefs: [step-nsp-services, step-service-journey, facility-equipment-inventory-2020]
     existenceStatus: public-verified
     ownershipStatus: organization-mapping
     description: "จับคู่ความต้องการทดสอบกับห้องปฏิบัติการและความสามารถที่เกี่ยวข้อง โดยไม่รับรองผลแทนผู้มีอำนาจของ Lab"
+
+  food-lab-testing-infri:
+    name: "บริการวิเคราะห์ทดสอบอาหาร ห้องปฏิบัติการนวัตกรรมอาหารเพื่ออุตสาหกรรม (INFRI)"
+    nameEn: "Food Innovation Laboratory (INFRI)"
+    leadTeam: les
+    serviceUnit: "INFRI"
+    aliases: ["NSP Central Laboratory", "Central Lab", "INFLI (legacy/source name)"]
+    supportTeams: [foodfabr, crm, piti]
+    targetAudience: "ภาคเอกชน โดยเฉพาะ SMEs Startup และผู้สนใจพัฒนาผลิตภัณฑ์อาหาร"
+    funding: "ได้รับการสนับสนุนงบประมาณจากกระทรวงการอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม (อว.)"
+    capabilities:
+      - chemical-analysis
+      - microbiological-analysis
+      - physical-analysis
+      - shelf-life-testing
+      - sensory-evaluation
+      - advanced-testing-referral
+    highlightInstruments: ["GCMS", "HPLC", "AAS", "UV-Visible Spectrophotometer"]
+    intakeSteps:
+      - "ติดต่อสอบถามรายการทดสอบและราคากับเจ้าหน้าที่"
+      - "ดาวน์โหลดและกรอกใบคำขอรับบริการ"
+      - "นัดหมายส่งตัวอย่างด้วยตนเองหรือทางไปรษณีย์ตามที่อยู่อุทยานฯ"
+    samplePreparation:
+      - "ทดสอบทางเคมีและกายภาพ: บรรจุในภาชนะที่ปิดสนิท"
+      - "ทดสอบเชื้อจุลินทรีย์และอายุการเก็บรักษา: บรรจุในภาชนะที่ปิดสนิท ไม่มีรอยแตกรั่วหรือฉีกขาด"
+      - "อุณหภูมิจัดเก็บ: อุณหภูมิห้อง แช่เย็น หรือแช่แข็ง ขึ้นกับประเภทและสภาวะการเก็บรักษาของตัวอย่าง"
+      - "น้ำอุปโภคและน้ำเสีย: เก็บรักษาที่อุณหภูมิแช่เย็นและส่งตรวจวิเคราะห์ทันที"
+    reportingPolicy:
+      - "ห้องปฏิบัติการไม่ตัดสินผลการทดสอบ ไม่แสดงความคิดเห็น และไม่แปลผลการทดสอบ"
+      - "ไม่ระบุข้อความเกี่ยวกับความเป็นไปตามข้อกำหนดเฉพาะหรือมาตรฐานการทดสอบ เช่น ผ่าน/ไม่ผ่าน"
+      - "รายงานค่าความไม่แน่นอนของการวัดเฉพาะกรณีที่ลูกค้าร้องขอเท่านั้น"
+    processes: [laboratory.result-review]
+    sourceRefs: [infli-service-infographic]
+    existenceStatus: owner-confirmed-current
+    ownershipStatus: owner-confirmed
+    confirmedDate: "2026-09-20"
+    description: "วิเคราะห์ทดสอบด้านเคมี จุลินทรีย์ กายภาพ อายุการเก็บรักษา และประสาทสัมผัสสำหรับผลิตภัณฑ์อาหาร พร้อมให้คำปรึกษาและส่งต่อการทดสอบขั้นสูง"
+
+  rf-technology-pilot-plant:
+    name: "RF Technology Pilot Plant"
+    leadTeam: les
+    serviceUnit: "RF Technology Pilot Plant"
+    supportTeams: [foodfabr]
+    targetAudience: "ผู้ประกอบการอาหาร นักวิจัย และผู้พัฒนากระบวนการหลังการเก็บเกี่ยว"
+    capabilities:
+      - radio-frequency-insect-control
+      - rice-insect-and-egg-control
+      - clean-room-packaging
+      - vacuum-packaging
+    processes: [project.planning, laboratory.result-review]
+    sourceRefs: [facility-equipment-inventory-2020]
+    existenceStatus: owner-confirmed-current
+    ownershipStatus: owner-confirmed
+    confirmedDate: "2026-09-20"
+    description: "โรงงานต้นแบบสำหรับกระบวนการกำจัดแมลงและไข่แมลงในข้าวสารด้วยคลื่นความถี่วิทยุ รวมถึงพื้นที่บรรจุแบบสะอาดและระบบบรรจุสุญญากาศ โดยทีม LES เป็นผู้ดูแลบริการ"
+
+  cimo-ion-beam-and-analysis:
+    name: "CIMO — Ion Beam and Advanced Analysis"
+    leadTeam: les
+    serviceUnit: "CIMO"
+    supportTeams: []
+    targetAudience: "ภาคอุตสาหกรรม นักวิจัย และผู้พัฒนาวัสดุหรืออัญมณี"
+    capabilities:
+      - ion-implantation
+      - raman-analysis
+      - ftir-analysis
+      - uv-vis-nir-analysis
+      - xrf-analysis
+      - gem-analysis
+    processes: [laboratory.result-review]
+    sourceRefs: [facility-equipment-inventory-2020]
+    existenceStatus: owner-confirmed-current
+    ownershipStatus: owner-confirmed
+    confirmedDate: "2026-09-20"
+    description: "บริการ CIMO ด้าน ion implantation เครื่องมือวิเคราะห์ระดับสูง และเครื่องมือวิเคราะห์อัญมณี โดยทีม LES เป็นผู้ดูแลบริการ"
 
   food-pilot-production:
     name: "บริการโรงงานต้นแบบนวัตกรรมอาหาร (FOODFABR)"
@@ -174,10 +309,11 @@ services:
       - scale-up-trial
       - market-test-preparation
     processes: [project.planning]
-    sourceRefs: [step-nsp-services, step-service-journey]
-    existenceStatus: public-verified
-    ownershipStatus: public-and-organization-mapping
-    description: "ทดลองผลิตและแปรรูปผลิตภัณฑ์อาหารในระดับต้นแบบ/กึ่งอุตสาหกรรมและเชื่อมต่อการทดสอบที่เกี่ยวข้อง"
+    sourceRefs: [step-nsp-services, step-service-journey, facility-equipment-inventory-2020]
+    existenceStatus: owner-confirmed-current
+    ownershipStatus: owner-confirmed
+    confirmedDate: "2026-09-20"
+    description: "ทดลองผลิตและแปรรูปผลิตภัณฑ์อาหารในระดับต้นแบบ/กึ่งอุตสาหกรรมและเชื่อมต่อการทดสอบที่เกี่ยวข้อง โดยทีม FOODFABR เป็นผู้ดูแล Innovative Food Fabrication Pilot Plant"
 
   plasma-technology:
     name: "บริการเทคโนโลยีพลาสมาสำหรับเกษตรและชีวภาพ (ABPlas)"
@@ -191,13 +327,13 @@ services:
       - sample-testing
       - equipment-use-request
     processes: [laboratory.result-review]
-    sourceRefs: [abplas-service, step-nsp-services]
+    sourceRefs: [abplas-service, step-nsp-services, facility-equipment-inventory-2020]
     existenceStatus: public-verified
     ownershipStatus: owner-confirmation-recommended
     description: "ค้นหาความเหมาะสมของบริการ ABPlas และเตรียมข้อมูลก่อนยื่นคำขอใช้บริการ/เครื่องมือ"
 
   prototype-fabrication:
-    name: "บริการขึ้นรูปชิ้นงานสามมิติและพัฒนาต้นแบบ (FABLAB)"
+    name: "The Brick Fabrication Lab (FABLAB) — ยุติบริการแล้ว"
     leadTeam: tech-up
     serviceUnit: "The Brick Fabrication Lab (FABLAB)"
     supportTeams: [linc]
@@ -207,10 +343,12 @@ services:
       - prototype-fabrication
       - material-and-packaging-prototype
     processes: [project.planning]
-    sourceRefs: [step-nsp-services, step-service-journey]
-    existenceStatus: public-verified
-    ownershipStatus: owner-confirmation-recommended
-    description: "ช่วยค้นหาเส้นทางพัฒนาต้นแบบและการใช้ทรัพยากร FABLAB ก่อนประสานเจ้าของบริการ"
+    sourceRefs: [step-nsp-services, step-service-journey, facility-equipment-inventory-2020]
+    existenceStatus: discontinued
+    ownershipStatus: owner-confirmed
+    discontinuedConfirmedDate: "2026-09-20"
+    recommendationPolicy: do-not-recommend-as-current-service
+    description: "เก็บเป็นประวัติจากเอกสารปี 2020 เท่านั้น เจ้าของบริการยืนยันว่า FABLAB ไม่มีบริการแล้ว ห้ามเสนอเป็นบริการปัจจุบันหรือรับคำขอจอง"
 
   facility-space:
     name: "บริการพื้นที่ ห้องประชุม และสถานที่จัดกิจกรรม"
@@ -265,13 +403,16 @@ resourceResolution:
     purpose: "ค้นหา candidate expert, researcher, lab, equipment หรือ pilot plant จากโจทย์ที่ผ่านการ frame แล้ว"
     preferredSequence:
       - match-service-capability
+      - inspect-local-facility-index
       - search-step-nsp-public-resources
       - search-nstis-when-needed
       - verify-with-service-owner
-    discoverySources: [step-nsp-services, nstis]
+    discoverySources: [facility-equipment-inventory-2020, step-nsp-services, nstis]
     rules:
       - "ค้นหาความสามารถและทรัพยากรก่อนชื่อบุคคล"
       - "ข้อมูล NSTIS/เว็บสาธารณะเป็น discovery evidence ไม่ใช่การรับรอง availability หรือความเหมาะสมขั้นสุดท้าย"
+      - "รายการเครื่องมือได้รับการยืนยันจากเจ้าของบริการเมื่อ 2026-09-20; ตรวจ PDF ตามเลขหน้าเมื่อใช้สเปก และตรวจ availability ราคา คิวใช้งาน เงื่อนไข และความปลอดภัย ณ เวลารับบริการ"
+      - "ตัดบริการที่มีสถานะ discontinued ออกจาก candidate ปัจจุบัน; FABLAB ใช้เป็นข้อมูลประวัติเท่านั้น"
       - "ไม่สร้าง permanent profile รายบุคคลจาก social media หรือข่าวประชาสัมพันธ์"
       - "ก่อนติดต่อ จอง ใช้งบ หรือรับปาก ให้เจ้าของบริการ/ผู้ใช้ยืนยัน candidate และข้อมูลล่าสุด"
       - "หากโจทย์ยังไม่ชัด ให้ใช้ industry-problem-discovery ก่อน matching"

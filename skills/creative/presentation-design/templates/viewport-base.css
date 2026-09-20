@@ -104,7 +104,7 @@ svg {
 
 .deck-controls button:hover {
     background: rgba(255, 255, 255, 0.15);
-    color: var(--accent-primary, #F9AE3B);
+    color: var(--accent-primary, #FFC709);
 }
 
 .deck-controls .slide-counter {

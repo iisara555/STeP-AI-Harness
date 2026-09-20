@@ -148,6 +148,220 @@ def validate_skill_dependencies(errors: list[str]) -> None:
                     f"{skill_path.relative_to(ROOT)}: missing local dependency: {raw_target}"
                 )
 
+def validate_router_registry(errors: list[str]) -> None:
+    """Cross-check router-index.yaml against the team and role registries.
+
+    A cluster or team value that no registry declares cannot match anything at
+    scoring time, so the Skill quietly loses that routing signal instead of
+    failing loudly. Catch it here rather than in production routing.
+    """
+    teams_path = ROOT / "manifest" / "teams.yaml"
+    roles_path = ROOT / "manifest" / "roles.yaml"
+    router_path = ROOT / "manifest" / "router-index.yaml"
+    for path in (teams_path, roles_path, router_path):
+        if not path.is_file():
+            return
+
+    teams_text = teams_path.read_text(encoding="utf-8", errors="replace")
+    clusters = set(re.findall(r"^ {2}- id:\s*([a-z0-9_-]+)", teams_text, flags=re.MULTILINE))
+    teams = set(re.findall(r"^ {6}- id:\s*([a-z0-9_-]+)", teams_text, flags=re.MULTILINE))
+
+    roles_text = roles_path.read_text(encoding="utf-8", errors="replace")
+    roles = set(re.findall(r"^ {2}- id:\s*([a-z0-9_-]+)", roles_text, flags=re.MULTILINE))
+
+    # teams.primary / teams.consumers accept team ids, role ids and the "*" wildcard.
+    valid_refs = teams | roles
+
+    router_text = router_path.read_text(encoding="utf-8", errors="replace")
+    current = ""
+    for line in router_text.splitlines():
+        name_match = re.match(r"^ {2}- name:\s*([a-z0-9_-]+)", line)
+        if name_match:
+            current = name_match.group(1)
+            continue
+        if not current:
+            continue
+
+        cluster_match = re.match(r"^ {4}cluster:\s*([a-z0-9_-]+)", line)
+        if cluster_match and cluster_match.group(1) not in clusters:
+            errors.append(
+                f"manifest/router-index.yaml: Skill '{current}' references unknown "
+                f"cluster '{cluster_match.group(1)}'"
+            )
+            continue
+
+        refs_match = re.match(r"^ {6}(primary|consumers):\s*\[(.*)\]", line)
+        if refs_match:
+            field = refs_match.group(1)
+            for raw in refs_match.group(2).split(","):
+                ref = raw.strip().strip("'\"")
+                if not ref or ref == "*":
+                    continue
+                if ref not in valid_refs:
+                    errors.append(
+                        f"manifest/router-index.yaml: Skill '{current}' references unknown "
+                        f"team/role '{ref}' in {field}"
+                    )
+
+
+def validate_organization_clusters(errors: list[str]) -> None:
+    """Keep organization.yaml's cluster description in step with teams.yaml.
+
+    Nothing loads organization.yaml at runtime, so a cluster renamed in only one
+    of the two files drifts silently and the docs start describing a grouping
+    the router does not use.
+    """
+    teams_path = ROOT / "manifest" / "teams.yaml"
+    org_path = ROOT / "manifest" / "organization.yaml"
+    if not teams_path.is_file() or not org_path.is_file():
+        return
+
+    team_clusters: dict[str, list[str]] = {}
+    current = ""
+    for line in teams_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        cluster_match = re.match(r"^ {2}- id:\s*([a-z0-9_-]+)", line)
+        if cluster_match:
+            current = cluster_match.group(1)
+            team_clusters[current] = []
+            continue
+        team_match = re.match(r"^ {6}- id:\s*([a-z0-9_-]+)", line)
+        if team_match and current:
+            team_clusters[current].append(team_match.group(1))
+
+    org_clusters: dict[str, list[str]] = {}
+    in_clusters = False
+    current = ""
+    for line in org_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        # organization.yaml has other top-level sections with the same key shape,
+        # so only read the clusters block.
+        if re.match(r"^[A-Za-z0-9_-]+:", line):
+            in_clusters = re.match(r"^clusters:\s*$", line) is not None
+            current = ""
+            continue
+        if not in_clusters:
+            continue
+        cluster_match = re.match(r"^ {2}([a-z0-9_-]+):\s*$", line)
+        if cluster_match:
+            current = cluster_match.group(1)
+            org_clusters[current] = []
+            continue
+        if not current:
+            continue
+        members_match = re.match(r"^ {4}teams:\s*\[(.*)\]", line)
+        if members_match:
+            org_clusters[current] = [
+                member.strip().strip("'\"")
+                for member in members_match.group(1).split(",")
+                if member.strip()
+            ]
+
+    if not org_clusters or not team_clusters:
+        return
+
+    for cluster in sorted(set(org_clusters) - set(team_clusters)):
+        errors.append(
+            f"manifest/organization.yaml: cluster '{cluster}' is not declared in teams.yaml"
+        )
+    for cluster in sorted(set(team_clusters) - set(org_clusters)):
+        errors.append(
+            f"manifest/organization.yaml: cluster '{cluster}' from teams.yaml is missing"
+        )
+    for cluster in sorted(set(org_clusters) & set(team_clusters)):
+        if sorted(org_clusters[cluster]) != sorted(team_clusters[cluster]):
+            errors.append(
+                f"manifest/organization.yaml: cluster '{cluster}' members "
+                f"{sorted(org_clusters[cluster])} do not match teams.yaml "
+                f"{sorted(team_clusters[cluster])}"
+            )
+
+
+def validate_executive_oversight(errors: list[str]) -> None:
+    """Every team named in organization.yaml -> executiveOversight must exist.
+
+    The oversight map is how a request finds the executive above a team, so a
+    renamed or dropped team id turns into a dead routing hint.
+    """
+    teams_path = ROOT / "manifest" / "teams.yaml"
+    org_path = ROOT / "manifest" / "organization.yaml"
+    if not teams_path.is_file() or not org_path.is_file():
+        return
+
+    teams = set(
+        re.findall(
+            r"^ {6}- id:\s*([a-z0-9_-]+)",
+            teams_path.read_text(encoding="utf-8", errors="replace"),
+            flags=re.MULTILINE,
+        )
+    )
+    if not teams:
+        return
+
+    org_text = org_path.read_text(encoding="utf-8", errors="replace")
+    in_oversight = False
+    current = ""
+    supervised: dict[str, list[str]] = {}
+    declared_shared: set[str] = set()
+    for line in org_text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if re.match(r"^[A-Za-z0-9_-]+:", line):
+            in_oversight = re.match(r"^executiveOversight:\s*$", line) is not None
+            current = ""
+            continue
+        if not in_oversight:
+            continue
+
+        shared_match = re.match(r"^ {2}sharedOversight:\s*\[(.*)\]", line)
+        if shared_match:
+            declared_shared = {
+                team.strip().strip("'\"")
+                for team in shared_match.group(1).split(",")
+                if team.strip()
+            }
+            continue
+
+        name_match = re.match(r"^ {4}- name:\s*\"?(.+?)\"?\s*$", line)
+        if name_match:
+            current = name_match.group(1)
+            continue
+
+        teams_match = re.match(r"^ {6}teams:\s*\[(.*)\]", line)
+        if teams_match:
+            for raw in teams_match.group(1).split(","):
+                team = raw.strip().strip("'\"")
+                if not team:
+                    continue
+                if team not in teams:
+                    errors.append(
+                        f"manifest/organization.yaml: executiveOversight entry '{current}' "
+                        f"references unknown team '{team}'"
+                    )
+                    continue
+                supervised.setdefault(team, []).append(current)
+
+    # Co-oversight is a deliberate arrangement, so it must be declared. That way a
+    # newly duplicated team shows up as an error instead of passing as intentional.
+    actual_shared = {team for team, owners in supervised.items() if len(owners) > 1}
+    for team in sorted(actual_shared - declared_shared):
+        errors.append(
+            f"manifest/organization.yaml: team '{team}' is supervised by "
+            f"{len(supervised[team])} executives but is not listed in sharedOversight"
+        )
+    for team in sorted(declared_shared - actual_shared):
+        errors.append(
+            f"manifest/organization.yaml: sharedOversight lists '{team}' but only "
+            f"{len(supervised.get(team, []))} executive supervises it"
+        )
+
+    # A team with no executive above it has no escalation path.
+    for team in sorted(teams - set(supervised)):
+        errors.append(
+            f"manifest/organization.yaml: team '{team}' has no executive in executiveOversight"
+        )
+
+
 def scan_secrets(errors: list[str]) -> None:
     for path in sorted(ROOT.rglob("*")):
         if not path.is_file() or ".git" in path.parts:
@@ -246,6 +460,9 @@ def main() -> int:
     errors: list[str] = []
     count = validate_skills(errors)
     validate_skill_dependencies(errors)
+    validate_router_registry(errors)
+    validate_organization_clusters(errors)
+    validate_executive_oversight(errors)
     scan_secrets(errors)
     validate_browser_env_safety(errors)
     validate_package_config(errors)
@@ -280,7 +497,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"Validation passed: {count} skills; local Skill dependencies resolved; no likely secrets detected; package whitelist verified.")
+    print(f"Validation passed: {count} skills; local Skill dependencies resolved; router clusters, team/role references organization cluster map and executive oversight valid; no likely secrets detected; package whitelist verified.")
     return 0
 
 

@@ -1,6 +1,7 @@
 ---
 name: step-skill-authoring
 description: ใช้เมื่อผู้ใช้ต้องการสร้าง ปรับ หรือยกระดับ Skill ของ STeP AI Harness ให้เข้ากับบริบทองค์กร; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry/Source หรือ Action และไม่ใช้เพื่ออนุมัติ Skill เข้าสู่ Pilot โดยไม่มีการทดสอบและหลักฐาน
+standardVersion: 2
 ---
 
 # STeP Skill Authoring
@@ -9,7 +10,42 @@ Skill นี้เป็นมาตรฐานกลางสำหรับ�
 
 > **Create the smallest reusable capability that solves repeated work.**
 
-## 1. Need Gate — ต้องเป็น Skill จริงหรือไม่
+## Purpose
+
+เป็นมาตรฐานกลางสำหรับออกแบบหรือปรับ Skill ของ STeP AI Harness โดยยึด **ของที่มีอยู่จริงใน repo ก่อน** และไม่สร้าง Skill ใหม่เพียงเพราะมีคำขอใหม่หนึ่งครั้ง
+
+## เมื่อควรใช้
+
+- ต้องสร้าง Skill ใหม่หรือปรับ Skill เดิมอย่างมีนัยสำคัญ
+- ต้องตัดสินว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action
+- ต้องยกระดับ legacy Skill ให้เป็น Standard v2
+
+**Anti-trigger:**
+- ต้องการนำ Skill เข้าสู่ Pilot จริง → Playbook `skill-to-pilot`
+- ต้องการแก้โค้ดของ Harness → `coding-git-workflow`
+- ต้องการเขียน SOP ของงานจริง ไม่ใช่ Skill → `sop-authoring`
+
+## Inputs
+
+ขั้นต่ำ:
+- โจทย์หรือคำขอที่ทำให้คิดว่าต้องมี Skill
+- ตัวอย่างงานจริงที่จะใช้ Skill นี้
+
+ช่วยให้ออกแบบได้แม่นขึ้นถ้ามี:
+- ตัวอย่างที่ Skill เดิมทำผิดหรือทำไม่พอ
+- ทีมเจ้าของงานและกระบวนการที่เกี่ยวข้อง
+
+## Source
+
+- `manifest/skills.yaml`, `manifest/router-index.yaml` และ registry อื่นใน `manifest/` เป็น source of truth
+- มาตรฐานการเขียน: [docs/skill-authoring-standard.md](../../../docs/skill-authoring-standard.md) และ [skill-contract.md](references/skill-contract.md)
+- **ห้ามคาดเดาจำนวน Skill, team id, process id หรือ source status จากความจำ**
+
+## Workflow
+
+ทำตามหัวข้อ 1-7 ด้านล่างตามลำดับ
+
+### 1. Need Gate — ต้องเป็น Skill จริงหรือไม่
 
 ก่อนเขียนไฟล์ ให้จัดประเภทความต้องการ:
 
@@ -23,7 +59,7 @@ Skill นี้เป็นมาตรฐานกลางสำหรับ�
 
 หากของเดิมทำได้อยู่แล้ว ให้ปรับ Skill/Router/Source เดิมก่อนสร้างใหม่
 
-## 2. Inspect Current Harness
+### 2. Inspect Current Harness
 
 ก่อนแก้ ต้องอ่านอย่างน้อย:
 - Skill ที่ใกล้เคียง
@@ -35,7 +71,7 @@ Skill นี้เป็นมาตรฐานกลางสำหรับ�
 
 ห้ามคาดเดาจำนวน Skill, team id, process id หรือ source status จากความจำ
 
-## 3. Skill Contract
+### 3. Skill Contract
 
 Skill ใหม่หรือ Skill ที่ปรับอย่างมีนัยสำคัญต้องตอบได้:
 
@@ -54,7 +90,7 @@ Skill ใหม่หรือ Skill ที่ปรับอย่างมี�
 
 รายละเอียดมาตรฐาน: [skill-contract.md](references/skill-contract.md)
 
-## 4. Trigger Metadata & Standard v2
+### 4. Trigger Metadata & Standard v2
 
 Skill ใหม่ต้องใช้ frontmatter:
 - `name`
@@ -74,7 +110,7 @@ Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migra
 
 อย่าใช้ description ที่กว้าง เช่น “ช่วยงานโครงการ” หรือ “จัดการเอกสาร”
 
-## 5. Progressive Disclosure
+### 5. Progressive Disclosure
 
 `SKILL.md` เก็บเฉพาะ routing contract + core workflow + guardrails ที่ต้องใช้เกือบทุกครั้ง
 
@@ -85,7 +121,7 @@ Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migra
 
 ห้ามฝังกฎที่เปลี่ยนได้ เช่น ราคา เพดาน อัตรา แบบฟอร์ม revision หรือ current policy ไว้เป็น truth ถาวรใน SKILL.md; ให้ resolve จาก Controlled Source
 
-## 6. Baseline → Change → Eval
+### 6. Baseline → Change → Eval
 
 ก่อนปรับ Skill เดิม:
 1. บันทึกตัวอย่างที่ปัจจุบันทำผิด/ไม่พออย่างน้อย 1 เคส
@@ -100,7 +136,9 @@ Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migra
 - Collision case กับ Skill ใกล้เคียง
 - Missing-source / uncertainty case เมื่อ Skill พึ่ง Source
 
-## 7. Output Package
+## Output
+
+### 7. Output Package
 
 เมื่อผู้ใช้ขอ “ออกแบบ Skill” ให้ส่ง:
 - Need classification
@@ -112,6 +150,24 @@ Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migra
 - Risks / unknowns
 
 เมื่อผู้ใช้ขอ “ลง repo / ทำให้พร้อม Pilot” ให้ใช้ Playbook `skill-to-pilot` และทำงานผ่าน workflow ของ repo; ห้าม claim ว่าพร้อม Pilot จน validation/evidence ผ่าน
+
+## Authority
+
+AI ช่วยได้: จัดประเภทความต้องการ ออกแบบ Skill Contract ยกร่าง SKILL.md และเสนอ eval cases
+
+ต้องให้มนุษย์ตัดสิน:
+- การอนุมัติให้ Skill เข้าสู่ Pilot หรือ `approved` lifecycle ซึ่งต้องมีหลักฐานการตรวจจากเจ้าของ
+- การเปลี่ยน Rule, Authority หรือ Controlled Source
+- การ merge เข้า repository
+
+## Handoff
+
+- นำ Skill เข้าสู่ Pilot → Playbook `skill-to-pilot`
+- แก้โค้ดหรือ validator ของ Harness → `coding-git-workflow`
+- งานที่ควรเป็น SOP ขององค์กร → `sop-authoring`
+- การจัดเส้นทางและ collision → `step-router` และ `manifest/router-index.yaml`
+
+พร้อมส่งต่อเมื่อ: Skill Contract ครบ 12 ข้อ, มี eval cases และระบุการเปลี่ยนแปลงใน registry ที่ต้องทำ
 
 ## Guardrails
 

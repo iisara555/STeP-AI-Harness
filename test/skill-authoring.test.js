@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { access, readFile, readdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { queryStepRouter } from '../src/cli/commands/ask.js';
 import { loadAndValidateManifests } from '../src/modules/router/index.js';
 
@@ -130,6 +130,57 @@ test('STeP Skill Authoring Standard', async (t) => {
     const iso = await readFile('skills/common/iso9001-audit-readiness/SKILL.md', 'utf-8');
     assert.ok(ncr.includes('## Authority'));
     assert.ok(iso.includes('## Authority'));
+  });
+
+  await t.test('every Skill except the documented exemption follows Standard v2', async () => {
+    // docs/skill-authoring-standard.md records step-router as the only exemption:
+    // it specifies the routing algorithm itself, not a task Skill.
+    const exempt = new Set(['skills/common/step-router/SKILL.md'.replace(/\//g, sep)]);
+    const required = [
+      'Purpose',
+      'เมื่อควรใช้',
+      'Inputs',
+      'Source',
+      'Workflow',
+      'Output',
+      'Authority',
+      'Handoff',
+      'Guardrails',
+    ];
+
+    const standard = await readFile('docs/skill-authoring-standard.md', 'utf-8');
+    assert.ok(
+      standard.includes('skills/common/step-router'),
+      'the exemption must stay documented in the authoring standard'
+    );
+
+    const offenders = [];
+    for (const file of await skillFiles()) {
+      if (exempt.has(file)) continue;
+      const text = await readFile(file, 'utf-8');
+      const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      if (!frontmatter || !/standardVersion:\s*2/.test(frontmatter[1])) {
+        offenders.push(`${file}: missing standardVersion: 2`);
+        continue;
+      }
+      const headings = [...text.matchAll(/^##\s+(.+?)\s*$/gm)].map((match) => match[1].trim());
+      const missing = required.filter((heading) => !headings.includes(heading));
+      if (missing.length) offenders.push(`${file}: missing ${missing.join(', ')}`);
+    }
+
+    assert.deepEqual(offenders, [], offenders.join('\n'));
+  });
+
+  await t.test('no Skill uses emoji in its Markdown', async () => {
+    const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+    const offenders = [];
+    for (const file of await skillFiles()) {
+      const lines = (await readFile(file, 'utf-8')).split(/\r?\n/);
+      lines.forEach((line, index) => {
+        if (emoji.test(line)) offenders.push(`${file}:${index + 1}`);
+      });
+    }
+    assert.deepEqual(offenders, [], `emoji found in:\n${offenders.join('\n')}`);
   });
 
   await t.test('approved lifecycle cannot be inferred from an approver role alone', async () => {

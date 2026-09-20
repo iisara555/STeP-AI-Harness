@@ -67,7 +67,8 @@
     "docs/repository-data-boundary.md",
     "docs/legacy-skill-mapping.md",
     "docs/pilot-readiness-audit.md",
-    "docs/pilot-operations.md"
+    "docs/pilot-operations.md",
+    "docs/facility-equipment-index.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

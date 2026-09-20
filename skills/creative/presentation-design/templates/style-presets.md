@@ -1,10 +1,12 @@
 # คลังชุดสไตล์และธีมนำเสนอ (Style Presets Reference)
 
-ชุดสไตล์ที่ผ่านการออกแบบตามหลักสุนทรียศาสตร์ชั้นสูง (Design Aesthetics) ผสานกับอัตลักษณ์องค์กร **STeP CMU Brand CI** และรองรับฟอนต์ภาษาไทยจาก Google Fonts สวยงาม คมชัด ไม่ซ้ำซาก ไม่มี "AI Slop"
+ชุดสไตล์สำหรับงานนำเสนอ STeP; สีดิจิทัลอ้างอิง [CI manual digest reference](../../../common/step-brand/references/ci-manual-digest.md) และคำยืนยันผู้ใช้ 2026-09-20: Yellow `#FFC709`, Dark `#231F20`.
+
+**ขอบเขต:** ฟอนต์ สีพื้นรอง กราฟิก และธีมทางเลือกด้านล่างเป็น design suggestions ไม่ใช่ข้อกำหนดองค์กรจาก digest. ธีมสีอื่นต้องไม่เปลี่ยนสี official logo; ใช้ logo variant ตามพื้นหลังและตรวจ `step-brand` ก่อนเผยแพร่. สี CMYK และสถานะฉบับควบคุมปัจจุบันยังรอ CC ยืนยัน.
 
 ---
 
-## 1. 🌟 STeP Signature Innovation (ชุดสไตล์หลักองค์กร — แนะนำเป็นอันดับ 1)
+## 1. STeP Signature Innovation (ชุดสไตล์เริ่มต้นด้วยสี STeP)
 **Vibe:** ทันสมัย อบอุ่น มีพลัง สะท้อนค่านิยม Simple • Service • Sincere  
 **เหมาะสำหรับ:** Executive Deck, รายงานผลการดำเนินงาน, Pitching ทุนวิจัย, สไลด์แนะนำองค์กร STeP
 
@@ -16,19 +18,19 @@
     --bg-primary: #FFFFFF;
     --bg-secondary: #F8F9FA;
     --stage-bg: #141821;
-    --text-primary: #2B333D;    /* STeP Slate Charcoal */
+    --text-primary: #231F20;    /* STeP Dark */
     --text-secondary: #4A5568;
-    --accent-primary: #F9AE3B;  /* STeP Innovation Yellow */
-    --accent-secondary: #F2A32D;
+    --accent-primary: #FFC709;  /* STeP Yellow */
+    --accent-secondary: #FFC709; /* reuse confirmed yellow; not a second brand colour */
     --accent-light: #FFF6E5;
-    --border: rgba(43, 51, 61, 0.12);
+    --border: rgba(35, 31, 32, 0.12);
 }
 ```
 - **Signature Elements:** ป้ายหัวข้อสไตล์แคปซูล (Pill Badge), กรอบการ์ดโค้งมน (Border radius 20px) พร้อมเงาสีเหลืองจางๆ, ตัวเลขสถิติขนาดใหญ่แบบ Space Grotesk
 
 ---
 
-## 2. 🏛️ Executive Slate & Silver (สไตล์ผู้บริหาร / ทางการระดับสูง)
+## 2. Executive Slate & Silver (สไตล์ผู้บริหาร / ทางการระดับสูง)
 **Vibe:** สุขุม น่าเชื่อถือ หนักแน่น ทรงอำนาจและแม่นยำ  
 **เหมาะสำหรับ:** บอร์ดบริหารมหาวิทยาลัย, สำนักงบประมาณ, หน่วยงานภาครัฐ, แผนการเงิน
 
@@ -65,7 +67,7 @@
     --stage-bg: #E4E4E7;
     --text-primary: #09090B;
     --text-secondary: #71717A;
-    --accent-primary: #F9AE3B;  /* แซมจุดเด่นสีเหลือง STeP */
+    --accent-primary: #FFC709;  /* แซมจุดเด่นสีเหลือง STeP */
     --border: #E4E4E7;
 }
 ```
@@ -73,7 +75,7 @@
 
 ---
 
-## 4. ⚡ Creative Voltage & Startup Pitch (สไตล์สตาร์ทอัพ / พลังงานสูง)
+## 4. Creative Voltage & Startup Pitch (สไตล์สตาร์ทอัพ / พลังงานสูง)
 **Vibe:** ตื่นเต้น ท้าทาย เปี่ยมพลัง คอนทราสต์รุนแรงแบบสตาร์ทอัพรุ่นใหม่  
 **เหมาะสำหรับ:** Demo Day, การแข่งขัน Hackathon, Pitching ดึงดูด VC / Angel Investors
 
@@ -96,7 +98,7 @@
 
 ---
 
-## 5. 🔬 DeepTech & Ecosystem (สไตล์ห้องแล็บและวิทยาศาสตร์ขั้นสูง)
+## 5. DeepTech & Ecosystem (สไตล์ห้องแล็บและวิทยาศาสตร์ขั้นสูง)
 **Vibe:** ไฮเทค ล้ำสมัย สะท้อนความเป็นอุทยานวิทยาศาสตร์และแล็บทดสอบ  
 **เหมาะสำหรับ:** นำเสนองานวิจัย DeepTech, โครงการพัฒนาหุ่นยนต์/AI, การแถลงความร่วมมืออุตสาหกรรม
 
@@ -110,7 +112,7 @@
     --stage-bg: #000411;
     --text-primary: #E2E8F0;
     --text-secondary: #8892B0;
-    --accent-primary: #F9AE3B;  /* STeP Amber */
+    --accent-primary: #FFC709;  /* STeP Yellow */
     --accent-tech: #00F5D4;     /* Cyber Cyan */
     --border: rgba(0, 245, 212, 0.15);
 }
@@ -119,7 +121,7 @@
 
 ---
 
-## 6. 📰 Warm Editorial (สไตล์วารสารวิชาการ / สตอรี่เทลลิงอบอุ่น)
+## 6. Warm Editorial (สไตล์วารสารวิชาการ / สตอรี่เทลลิงอบอุ่น)
 **Vibe:** ประณีต ละเมียดละไม เหมือนเปิดอ่านนิตยสารธุรกิจชั้นนำระดับโลก  
 **เหมาะสำหรับ:** Case Study ความสำเร็จของผู้ประกอบการ, เรื่องเล่าแรงบันดาลใจ, รายงานประจำปี
 

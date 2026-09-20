@@ -57,6 +57,11 @@ Skill ใหม่ตั้งแต่ Standard v2 ต้องใส่ `stand
 - `Authority` ต้องแยกสิ่งที่ AI ช่วยได้ อะไรต้องยืนยัน และอะไรเป็นอำนาจมนุษย์
 - `Handoff` ต้องระบุปลายทางหรือเกณฑ์ว่าเมื่อไรงานพร้อมส่งต่อ
 - ขนาดไฟล์ไม่ใช่ quality gate โดยตัวมันเอง แต่ core contract ควรสั้นและ predictable; methodology/template ที่ยาวให้ย้ายไป references/scripts/templates ตาม Progressive Disclosure
+
+### ข้อยกเว้นที่บันทึกไว้
+
+- `skills/common/step-router` **ไม่ต้องใช้โครง v2** เพราะไม่ใช่ Skill ปลายทางที่ Router เลือก แต่เป็นสเปกอัลกอริทึมการจัดเส้นทางของตัว Router เอง การยัดหัวข้อ Inputs/Output/Handoff แบบ Skill ทั่วไปจะบิดความหมายของเอกสาร
+- ข้อยกเว้นต้องบันทึกที่นี่เท่านั้น Skill อื่นทุกตัวใน `skills/` ต้องเป็น v2
 ## Router consumer scope
 
 - `teams.consumers` ระบุทีมที่ควร preload Skill เข้า team workspace; ไม่ใช่รายชื่อทุกทีมที่อาจเป็น subject ของกระบวนการ

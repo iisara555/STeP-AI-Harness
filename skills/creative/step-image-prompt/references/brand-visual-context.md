@@ -1,21 +1,34 @@
-# Brand Visual Context
+# Brand Visual Context — STeP Brand CI
 
-**Status:** NO-CONTROLLED-SOURCE  
-**Authority:** ไม่มี Controlled CI Guideline ที่ลงทะเบียนและยืนยันแล้วใน `manifest/documents.yaml` สำหรับใช้เป็น current visual truth ใน Skill นี้
+**Status:** SOURCE-BACKED DIGEST; digital palette confirmed by the user on 2026-09-20.
+**Registry:** `manifest/documents.yaml` → `step-brand-ci-guideline` (`status: provided-unverified`; current controlled edition pending CC confirmation).
+**Source:** [CI manual digest reference](../../../common/step-brand/references/ci-manual-digest.md), based on the supplied 5-page manual published 18 February 2021.
 
-## Runtime rule
+Read the source reference for exact logo handling, clear space, minimum sizes, page citations and the colour-page conflict. This file contains image-prompt application guidance.
 
-จนกว่าจะมี controlled source:
-- ใช้เฉพาะ brand context ที่ผู้ใช้ให้ในงานนั้น หรือ Official Asset ที่ resolve ได้
-- ห้ามแต่งค่า hex, logo geometry, co-branding rule, safe area หรือ visual claim จากความจำ
-- ถ้าผู้ใช้ต้องการตรวจ compliance อย่างเป็นทางการ ให้ handoff ไป Brand Review / เจ้าของ CI ที่เกี่ยวข้อง
+## Palette
 
-## เมื่อมี Controlled CI Guideline
+Use **STeP Yellow `#FFC709`** and **STeP Dark `#231F20`**, confirmed by the user. RGB and the source transcription are in the shared reference. Do not reuse the previous amber/slate template colours as STeP CI.
 
-อัปเดตไฟล์นี้ด้วยข้อมูลที่ resolve จาก source นั้นเท่านั้น เช่น:
-- คำบรรยาย `PALETTE` ที่ใช้ใน Prompt Spec
-- official asset constraints
-- visual usage constraints ที่มีผลต่อ prompt
-- source ID / revision / effective date / owner
+- In image prompts describe "bright golden yellow with near-black"; retain exact HEX in the designer handoff or vector/design spec. Generated raster colours still require checking.
+- Choose colour coverage for the brief. The manual includes a yellow background example; using yellow only as a small accent is a design choice, not a CI restriction.
+- White and soft surface tints are supporting layout choices.
+- Print CMYK remains unresolved; use the shared source conflict note when print colour accuracy matters.
 
-อย่าคัดลอกคู่มือทั้งฉบับมาไว้ที่นี่ ให้เก็บเฉพาะ runtime visual context ที่จำเป็นและอ้างกลับไปยัง controlled source
+## Typography and composition
+
+The digest specifies no typography system. `Prompt`, `Kanit`, `Sarabun` and `IBM Plex Sans Thai` are presentation choices, not official CI fonts.
+
+For generated images, exclude text and reserve `TEXT_SPACE` for the designer to add real typography. Simple composition, readable hierarchy and purposeful whitespace support the brief; a 30% whitespace target is a design preference, not a rule from this manual.
+
+## Logo and placement
+
+- **AI ไม่สร้าง ไม่วาด และไม่เลียนแบบโลโก้ STeP หรือ CMU**; use Official Asset in the design/compositing step.
+- Include `logo, wordmark, brand emblem` in `EXCLUDE` for generated content and reserve space for the real asset.
+- Read the shared reference for original/mono variants, background visibility, the page 2 clear-space grid and page 5 print minimums. Do not treat a diagram or screenshot as a production logo.
+
+## Missing evidence
+
+ห้ามสร้างหรือเดาจากความจำ: co-branding hierarchy, separate CMU/RSP North rules, short-wordmark minimum size, digital pixel minimums, official fonts, Pantone values or image rights.
+
+Route compliance questions to `step-brand`/CC. Resolve current source status from the registry and update the shared reference when CC supplies a new edition or print specification.

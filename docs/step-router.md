@@ -1,6 +1,8 @@
 # STeP AI — Organization Knowledge Architecture & Router Specification
 
-เอกสารข้อกำหนดทางเทคนิคและการออกแบบสถาปัตยกรรม **STeP Organization Knowledge Architecture** และ **3-Layer Skill Router** สำหรับองค์กร **STeP / RSP North**
+เอกสารข้อกำหนดทางเทคนิคและการออกแบบสถาปัตยกรรม **STeP Organization Knowledge Architecture** และ **Skill Router** สำหรับองค์กร **STeP / RSP North**
+
+Router ใช้ 4-Level Progressive Disclosure ตามหัวข้อด้านล่าง ภาพรวมว่า Router วางอยู่ตรงไหนของระบบดูที่ [Architecture — Runtime Flow](architecture.md#11-runtime-flow)
 
 ---
 
@@ -32,7 +34,8 @@
 ```
 
 - **แยก Registry ออกจาก Router Index**: `router-index.yaml` ทำหน้าที่เป็น Routing Table ขนาดเบาเพื่อความรวดเร็วในการจับคู่ ส่วนข้อมูลรายละเอียดองค์กร (Process, SOP, Services, Authorities) ถูกกระจายอยู่ใน Registries เฉพาะทาง
-- **5 Clusters เป็น AI Search-Space Reduction Taxonomy**: การจัด 22 ทีมเป็น 5 กลุ่มงานมีไว้เพื่อลด Search Space ของ AI จาก 150+ ทักษะเหลือ ~20 ทักษะต่อกลุ่ม โดยไม่กระทบสายการบังคับบัญชาจริงขององค์กร
+- **5 Clusters เป็น AI Search-Space Reduction Taxonomy**: การจัด 22 ทีมเป็น 5 กลุ่มงานมีไว้เพื่อลด Search Space ของ AI โดยไม่กระทบสายการบังคับบัญชาจริงขององค์กร จำนวน entry ต่อกลุ่มไม่เท่ากันและนับจาก `manifest/router-index.yaml` เท่านั้น กลไกนี้ออกแบบให้รองรับจำนวน Skill ที่โตขึ้นได้โดยไม่ต้องเพิ่มขนาด context
+- **ฟิลด์ `teams.primary` / `teams.consumers` รับได้ทั้ง team id และ role id**: นอกจาก 22 team id ใน `manifest/teams.yaml` ฟิลด์นี้ยังรับ role id จาก `manifest/roles.yaml` (`pm`, `developer`, `ai-admin`) และ wildcard `"*"` สำหรับ Skill ที่ทุกทีมใช้ร่วมกัน เช่น `document-review`, `meeting-summary`, `step-writing` — ค่าเหล่านี้ไม่ใช่ทีมตามโครงสร้างองค์กร
 - **รองรับ Multi-Team Consumption**: สนับสนุนการทำงานร่วมกันข้ามฝ่าย (เช่น ทีม `piti` บ่มเพาะสตาร์ทอัพ เรียกใช้กระบวนการ `procurement.tor` ของ `afp` ได้อย่างไร้รอยต่อ)
 
 ---

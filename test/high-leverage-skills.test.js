@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { queryStepRouter } from '../src/cli/commands/ask.js';
 
 test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) => {
@@ -44,6 +45,46 @@ test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) =
     assert.equal(result.selectedSkill?.name, 'expert-resource-matching');
     assert.equal(result.teamInfo.id, 'linc');
     assert.equal(result.scopeResult.status, 'ALLOW');
+  });
+
+  await t.test('equipment matching resolves the owner-confirmed facility inventory with live availability guards', async () => {
+    const skill = await readFile('skills/pm/expert-resource-matching/SKILL.md', 'utf-8');
+    const services = await readFile('manifest/services.yaml', 'utf-8');
+    const documents = await readFile('manifest/documents.yaml', 'utf-8');
+    const index = await readFile('docs/facility-equipment-index.md', 'utf-8');
+
+    assert.ok(skill.includes('docs/facility-equipment-index.md'));
+    assert.ok(skill.includes('owner-confirmed-reference-2026-09-20'));
+    assert.ok(services.includes('facility-equipment-inventory-2020'));
+    assert.ok(documents.includes('step-facility-equipment-inventory-2020'));
+    assert.ok(documents.includes('owner-confirmed-current'));
+    assert.ok(documents.includes('active-reference'));
+    assert.ok(index.includes('124 รายการตามหมวดในเอกสาร'));
+    assert.ok(index.includes('ไม่ใช่คำสั่งให้ AI ดำเนินการ'));
+    assert.ok(index.includes('NSP Central Laboratory คือ INFRI'));
+    assert.ok(index.includes('ทีม LES ดูแล CIMO, INFRI และ RF'));
+    assert.ok(index.includes('ทีม FOODFABR ดูแล Innovative Food Fabrication Pilot Plant'));
+    assert.ok(index.includes('FABLAB ไม่มีบริการแล้ว'));
+    assert.ok(services.includes('food-lab-testing-infri'));
+    assert.match(services, /rf-technology-pilot-plant:[\s\S]*?leadTeam: les[\s\S]*?ownershipStatus: owner-confirmed/);
+    assert.match(services, /cimo-ion-beam-and-analysis:[\s\S]*?leadTeam: les[\s\S]*?ownershipStatus: owner-confirmed/);
+    assert.match(services, /food-pilot-production:[\s\S]*?leadTeam: foodfabr[\s\S]*?ownershipStatus: owner-confirmed/);
+    assert.ok(documents.includes('owner: les'));
+    assert.ok(documents.includes('coOwners: [foodfabr]'));
+    assert.ok(services.includes('recommendationPolicy: do-not-recommend-as-current-service'));
+  });
+
+  await t.test('natural equipment inventory questions route to expert-resource-matching', async () => {
+    for (const prompt of [
+      'มีเครื่อง Freeze Dryer หรือ Spray Dryer ไหม',
+      'ช่วยหาเครื่อง HPLC สำหรับวิเคราะห์อาหาร',
+      'ต้องการใช้เครื่องพลาสมาหรือ AFM',
+      'มีเครื่อง 3D printer และ laser cutter อะไรบ้าง',
+    ]) {
+      const result = await queryStepRouter(prompt);
+      assert.equal(result.selectedSkill?.name, 'expert-resource-matching', prompt);
+      assert.equal(result.scopeResult.status, 'ALLOW', prompt);
+    }
   });
 
   await t.test('MI recent market research routes to market-signal-radar', async () => {

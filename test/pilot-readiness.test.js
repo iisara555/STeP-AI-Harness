@@ -7,6 +7,11 @@ import {
   loadAndValidateManifests,
   validateManifestIntegrity,
 } from '../src/modules/router/index.js';
+import {
+  extractOrganizationClusters,
+  extractRouterSkills,
+  validateOrganizationClusters,
+} from '../src/modules/router/manifest-validator.js';
 
 test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
   await t.test('manifest graph is complete and all user-facing skills are routable', async () => {
@@ -15,7 +20,122 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.equal(integrity.summary.teamsCount, 22);
     assert.equal(integrity.summary.skillsCount, 46);
     assert.equal(integrity.summary.routerSkillsCount, 45);
+    assert.equal(integrity.summary.clustersCount, 5);
     assert.equal(integrity.summary.playbooksCount, 4);
+  });
+
+  await t.test('every router entry sits in a cluster teams.yaml declares', async () => {
+    const [teamsText, routerText] = await Promise.all([
+      readFile('manifest/teams.yaml', 'utf-8'),
+      readFile('manifest/router-index.yaml', 'utf-8'),
+    ]);
+    const clusters = new Set(
+      [...teamsText.matchAll(/^ {2}- id:\s*([a-z0-9_-]+)/gm)].map((m) => m[1])
+    );
+    const routerSkills = extractRouterSkills(routerText);
+
+    assert.equal(routerSkills.length, 45);
+    for (const skill of routerSkills) {
+      assert.ok(skill.cluster, `${skill.name} has no cluster`);
+      assert.ok(
+        clusters.has(skill.cluster),
+        `${skill.name} uses undeclared cluster '${skill.cluster}'`
+      );
+    }
+  });
+
+  await t.test('organization.yaml describes the same clusters teams.yaml routes with', async () => {
+    const [orgText, teamsText] = await Promise.all([
+      readFile('manifest/organization.yaml', 'utf-8'),
+      readFile('manifest/teams.yaml', 'utf-8'),
+    ]);
+
+    const teamClusters = {};
+    let current = '';
+    for (const line of teamsText.split(/\r?\n/)) {
+      const clusterMatch = line.match(/^ {2}- id:\s*([a-z0-9_-]+)/);
+      if (clusterMatch) {
+        current = clusterMatch[1];
+        teamClusters[current] = [];
+        continue;
+      }
+      const teamMatch = line.match(/^ {6}- id:\s*([a-z0-9_-]+)/);
+      if (teamMatch && current) teamClusters[current].push(teamMatch[1]);
+    }
+
+    const result = validateOrganizationClusters(extractOrganizationClusters(orgText), teamClusters);
+    assert.equal(result.valid, true, result.errors.join('\n'));
+  });
+
+  await t.test('organization cluster parser reads only the clusters block', () => {
+    const clusters = extractOrganizationClusters(
+      [
+        'organization:',
+        '  id: step-cmu',
+        'publicProfile:',
+        '  establishment:',
+        '    foundingFaculties:',
+        '      - "คณะวิศวกรรมศาสตร์"',
+        '  contact:',
+        '    phone: "0 5394 8678"',
+        'clusters:',
+        '  governance-operations:',
+        '    teams: [ga, qs]',
+        'internalSystems:',
+        '  step-mis:',
+        '    access: login-required',
+      ].join('\n')
+    );
+    assert.deepEqual(Object.keys(clusters), ['governance-operations']);
+    assert.deepEqual(clusters['governance-operations'], ['ga', 'qs']);
+  });
+
+  await t.test('organization validator catches a renamed or re-membered cluster', () => {
+    const teamClusters = {
+      'governance-operations': ['ga', 'qs'],
+      'facilities-labs': ['ifu', 'les'],
+    };
+
+    const renamed = validateOrganizationClusters(
+      { 'governance-operations': ['ga', 'qs'], 'infrastructure-labs': ['ifu', 'les'] },
+      teamClusters
+    );
+    assert.equal(renamed.valid, false);
+    assert.ok(renamed.errors.some((e) => e.includes("cluster 'infrastructure-labs' is not declared")));
+    assert.ok(renamed.errors.some((e) => e.includes("cluster 'facilities-labs' from teams.yaml is missing")));
+
+    const moved = validateOrganizationClusters(
+      { 'governance-operations': ['ga'], 'facilities-labs': ['ifu', 'les', 'qs'] },
+      teamClusters
+    );
+    assert.equal(moved.valid, false);
+    assert.ok(moved.errors.some((e) => e.includes('do not match teams.yaml')));
+  });
+
+  await t.test('manifest validator catches an undeclared router cluster', () => {
+    const result = validateManifestIntegrity({
+      teamCodes: new Set(['ga']),
+      clusterIds: new Set(['governance-operations']),
+      skills: {
+        'known-skill': { owner: 'ga', process: ['p1'], references: { mandatory: [] } },
+      },
+      processes: { p1: {} },
+      documents: {},
+      authorities: {},
+      routerSkills: [
+        {
+          name: 'known-skill',
+          cluster: 'governance-quality',
+          processId: 'p1',
+          primaryTeams: ['ga'],
+          consumerTeams: [],
+          authorities: [],
+          escalationTargets: [],
+        },
+      ],
+    });
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes("unknown cluster 'governance-quality'")));
   });
 
   await t.test('manifest validator catches unknown router skill and escalation target', () => {
@@ -128,10 +248,39 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(promptSpec.includes('เปลี่ยนเครื่องมือ'));
     assert.ok(!promptSpec.includes('GPT-Image-'));
 
-    assert.ok(brandVisualContext.includes('Status:** NO-CONTROLLED-SOURCE'));
-    assert.ok(brandVisualContext.includes('ไม่มี Controlled CI Guideline'));
-    assert.ok(brandVisualContext.includes('ห้ามแต่งค่า hex'));
+    // Supplied CI evidence replaces the missing-source placeholder, while
+    // scoped colour confirmation must not certify the entire controlled edition.
+    const ciReference = await readFile('skills/common/step-brand/references/ci-manual-digest.md', 'utf-8');
+    assert.ok(brandVisualContext.includes('SOURCE-BACKED DIGEST'));
+    assert.ok(brandVisualContext.includes('step-brand-ci-guideline'));
+    assert.ok(brandVisualContext.includes('ci-manual-digest.md'));
+    assert.ok(brandVisualContext.includes('ห้ามสร้างหรือเดาจากความจำ'));
+    assert.ok(brandVisualContext.includes('AI ไม่สร้าง ไม่วาด และไม่เลียนแบบโลโก้'));
     assert.ok(imageSkill.includes('references/brand-visual-context.md'));
+    assert.ok(ciReference.includes('height of 8 mm'));
+    assert.ok(ciReference.includes('y = X × 10'));
+    assert.ok(ciReference.includes('255, 199, 199'), 'retain the inconsistent printed RGB as source evidence');
+    assert.ok(ciReference.includes('CMYK as a source transcription only'));
+
+    const documents = await readFile('manifest/documents.yaml', 'utf-8');
+    const ciEntry = documents.split(/^  (?=[a-z0-9-]+:\s*$)/m).find((block) => block.startsWith('step-brand-ci-guideline:'));
+    assert.ok(ciEntry, 'the supplied digest must stay registered');
+    assert.match(ciEntry, /status:\s*provided-unverified/);
+    assert.match(ciEntry, /verification:\s*pending-cc-confirmation/);
+    assert.match(ciEntry, /digitalPaletteVerification:\s*user-confirmed/);
+
+    // Pattern library must stay a STeP-owned, offline reference.
+    const patterns = await readFile('skills/creative/step-image-prompt/references/prompt-patterns.md', 'utf-8');
+    assert.ok(patterns.includes('ไม่ใช่ prompt สำเร็จรูปให้คัดลอกทั้งก้อน'));
+    assert.ok(patterns.includes('ไม่ดึงข้อมูลหรือภาพตัวอย่างจากบริการภายนอกตอนใช้งาน'));
+    assert.ok(patterns.includes('ห้ามให้โมเดลสร้างตัวเลข กราฟ หรือเปอร์เซ็นต์'));
+    assert.ok(imageSkill.includes('references/prompt-patterns.md'));
+
+    // Model names are a hint table, never the capability gate.
+    const modelFamilies = await readFile('skills/creative/step-image-prompt/references/model-families.md', 'utf-8');
+    assert.ok(modelFamilies.includes('ไม่ใช่ Capability Gate'));
+    assert.ok(modelFamilies.includes('ห้าม hard-code ชื่อรุ่นเป็นเงื่อนไขในการทำงาน'));
+    assert.ok(imageSkill.includes('ห้าม hard-code ชื่อรุ่นโมเดลเป็น Capability Gate'));
   });
 
   await t.test('step-image-prompt follows Standard v2 structure and meeting summary stays QMS-independent', async () => {

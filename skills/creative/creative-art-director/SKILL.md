@@ -1,6 +1,7 @@
 ---
 name: creative-art-director
 description: ช่วยกำหนดทิศทางงานออกแบบก่อนลงมือผลิต วิเคราะห์ Intent ผู้ชม ความรู้สึก Visual Hammer และตรวจความเป็นงาน AI สำเร็จรูป สำหรับ Branding, Campaign, Event, Exhibition, Presentation และ Visual Communication ของ STeP
+standardVersion: 2
 ---
 
 # STeP Creative Art Director
@@ -8,9 +9,13 @@ description: ช่วยกำหนดทิศทางงานออกแ�
 > **Direction before decoration.**  
 > ทุกการเลือกทางภาพต้องตอบได้ว่า “ทำไมสิ่งนี้จึงเหมาะกับงานนี้”
 
+## Purpose
+
 Skill นี้ทำหน้าที่เป็น **คู่คิดด้าน Creative Direction** ก่อนส่งงานไปผลิตจริง ไม่ใช่ Skill สำหรับสร้างภาพหรือทำ Artwork โดยตรง
 
 เป้าหมายคือเปลี่ยนโจทย์กว้าง ๆ เช่น “ขอให้ดู modern / premium / innovation” ให้กลายเป็นทิศทางที่มีเหตุผล มีภาพจำ และนำไปทำต่อได้จริง โดยยังสอดคล้องกับบริบท STeP / RSP North
+
+## เมื่อควรใช้
 
 ใช้กับ:
 - Brand / Visual Identity direction
@@ -20,6 +25,27 @@ Skill นี้ทำหน้าที่เป็น **คู่คิดด�
 - Editorial / Infographic / Communication design
 - Reference-led direction
 - Design critique และการตัดสินใจระหว่างหลายแนวทาง
+
+**Anti-trigger:**
+- ต้องการบรีฟงานให้ Designer ผลิต → `designer-brief`
+- ต้องการสร้างหรือแก้ภาพ AI → `step-image-prompt`
+- ต้องการตรวจงานที่เสร็จแล้วเทียบ brand → `step-brand`
+
+## Inputs
+
+ข้อมูลขั้นต่ำและข้อมูลที่ช่วยให้ Direction แข็งแรงขึ้น อยู่ที่หัวข้อ **4. Brief Gate** ด้านล่าง
+
+ถ้าขาดเฉพาะรายละเอียดที่ไม่เปลี่ยนแนวคิด ให้เดินหน้าด้วยสมมติฐานที่ระบุว่า `รอยืนยัน` ถ้าขาดแกนสำคัญจนทำให้ Direction เปลี่ยน ให้ถามก่อน
+
+## Source
+
+- โจทย์ เอกสาร และ reference ที่ผู้ใช้ให้มาเป็นแหล่งหลัก
+- อัตลักษณ์องค์กรและ co-branding อ้างอิง `step-brand` และ asset ที่ได้รับอนุมัติ **ห้ามสรุป brand hierarchy เอง**
+- ข้อจำกัดด้านงบ วัสดุ และสถานที่ ต้องยืนยันกับเจ้าของงานก่อนใช้เป็นข้อกำหนด
+
+## Workflow
+
+ลำดับการทำงานคือหัวข้อ 1-8 ด้านล่าง: ตรวจขอบเขต (1) → หลักคิดกลาง (2) → Five Questions Before Direction (3) → Brief Gate (4) → Direction Engine 6 ชั้น (5) → Anti-AI-Slop Review (6) → ขั้นตอนที่เหลือจนถึงการสรุป Direction
 
 ---
 
@@ -255,7 +281,9 @@ Visual Hammer ที่ดี:
 
 ---
 
-## 9. Output สำหรับพนักงานทั่วไป
+## Output
+
+### 9. รูปแบบผลลัพธ์สำหรับพนักงานทั่วไป
 
 Default output ต้องกระชับและพร้อมทำต่อ:
 
@@ -294,7 +322,9 @@ NEXT PRODUCTION STEP:
 
 ---
 
-## 10. Handoff Rules
+## Handoff
+
+### 10. กติกาการส่งต่อ
 
 ### → `step-image-prompt`
 ใช้เมื่อผู้ใช้ต้องการ:
@@ -324,7 +354,9 @@ NEXT PRODUCTION STEP:
 
 ---
 
-## 11. Governance
+## Authority
+
+### 11. Governance
 
 ### ALLOW
 - สร้าง Creative Direction
@@ -348,7 +380,16 @@ NEXT PRODUCTION STEP:
 
 ---
 
-## 12. Final Check
+## Guardrails
+
+กติกาที่ต้องถืออยู่ในหัวข้อ **6. Anti-AI-Slop Review** และการตรวจก่อนส่งด้านล่าง สรุปข้อที่ละเมิดไม่ได้:
+
+- ทุกการเลือกทางภาพต้องตอบได้ว่าทำไมจึงเหมาะกับงานนี้ ไม่ใช่เพราะดูดี
+- ไม่สรุป brand hierarchy หรือดัดแปลงอัตลักษณ์องค์กรเอง
+- ไม่เปลี่ยนข้อเท็จจริงหรือคำมั่นในเนื้อหาเพื่อให้ภาพลงตัว
+- ไม่ส่ง Direction ที่เป็นเพียง adjective กว้าง ๆ โดยไม่มีเหตุผลรองรับ
+
+### 12. Final Check
 
 ก่อนส่ง Direction ตรวจ 6 ข้อ:
 1. ทุก design decision เชื่อมกับ Intent หรือไม่
