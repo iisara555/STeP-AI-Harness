@@ -8,6 +8,7 @@ import { extname, basename, dirname } from 'node:path';
 import { scoreSkillCandidate } from './scorer.js';
 
 export const INTENT_KEYWORDS = {
+  'brand-review': ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'],
   summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'summarize', 'summary', 'minutes'],
   interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach'],
   review: ['ตรวจ', 'รีวิว', 'เช็ก', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ช่วยดู', 'review', 'check', 'audit', 'evaluate'],
@@ -23,7 +24,7 @@ export const INTENT_KEYWORDS = {
 /**
  * Infer intent from prompt text
  * @param {string} promptText 
- * @returns {string} Inferred intent (review, create, summarize, plan, deploy, triage, or unknown)
+ * @returns {string} Inferred intent (brand-review, review, create, summarize, plan, deploy, triage, or unknown)
  */
 export function inferIntentFromText(promptText = '') {
   const lower = promptText.toLowerCase();
