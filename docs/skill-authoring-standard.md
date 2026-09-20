@@ -34,3 +34,27 @@ Pilot
 ```
 
 รายละเอียดเชิงปฏิบัติอยู่ที่ `skills/common/step-skill-authoring/`.
+
+## Skill Standard v2 — โครงบังคับสำหรับ Skill ใหม่
+
+Skill ใหม่ตั้งแต่ Standard v2 ต้องใส่ `standardVersion: 2` ใน frontmatter และมีหัวข้อระดับ `##` ครบ 9 หัวข้อ:
+
+1. `Purpose`
+2. `เมื่อควรใช้`
+3. `Inputs`
+4. `Source`
+5. `Workflow`
+6. `Output`
+7. `Authority`
+8. `Handoff`
+9. `Guardrails`
+
+หลักการ:
+
+- Legacy Skill ที่ยังไม่มี `standardVersion` **ยังไม่ทำให้ CI แดง** เพื่อให้ migrate แบบ incremental
+- Skill ใหม่ต้องใช้ v2 ทันที
+- `Source` ถ้าไม่ต้องใช้ external source ให้เขียนว่าไม่มี source ภายนอกที่จำเป็นอย่างชัดเจน
+- `Authority` ต้องแยกสิ่งที่ AI ช่วยได้ อะไรต้องยืนยัน และอะไรเป็นอำนาจมนุษย์
+- `Handoff` ต้องระบุปลายทางหรือเกณฑ์ว่าเมื่อไรงานพร้อมส่งต่อ
+- ขนาดไฟล์ไม่ใช่ quality gate โดยตัวมันเอง แต่ core contract ควรสั้นและ predictable; methodology/template ที่ยาวให้ย้ายไป references/scripts/templates ตาม Progressive Disclosure
+
