@@ -82,6 +82,7 @@ ${colors.bold('ตัวเลือกทั่วไป:')}
   -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
       --employee        แสดงผลลัพธ์ในโหมดพนักงานทั่วไป (เข้าใจง่าย ไม่แสดง technical warning)
       --json            สำหรับ ask: คืน compact routing contract + context budget เป็น JSON
+      --answer <text>   สำหรับ ask: เพิ่มคำตอบเพื่อระบุขอบเขตร่วมกับคำถามเดิม
       --dry-run         แสดงตัวอย่างไฟล์ที่จะดำเนินการโดยไม่เขียนลงเครื่อง
   -s, --snapshot <id>   ระบุ Snapshot ID สำหรับ rollback
   -l, --list            แสดงรายการ snapshot ที่มีอยู่

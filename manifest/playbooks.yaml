@@ -5,6 +5,7 @@ version: 1
 playbooks:
   - id: tor-to-project-plan
     name: "TOR → Project Plan"
+    clarificationLabel: "แปลง TOR เป็นแผนโครงการ"
     owner: pm
     consumers: ["*"]
     description: "แปลง TOR หนึ่งฉบับต่อหนึ่ง run เป็น Action Plan/WBS, milestones, dependencies, budget categories และแผนงานพร้อม Google Sheet/XLSX + Gantt"
@@ -50,6 +51,7 @@ playbooks:
 
   - id: meeting-to-action-plan
     name: "Meeting → Action Plan"
+    clarificationLabel: "ต่อยอดบันทึกประชุมเป็นแผนงาน"
     owner: pm
     consumers: ["*"]
     description: "เปลี่ยนบันทึกประชุมเป็น Action Items แล้วต่อเป็นแผนงาน/Timeline/Spreadsheet เมื่อผู้ใช้ต้องการหลายขั้น"
@@ -87,6 +89,7 @@ playbooks:
 
   - id: iso-audit-readiness-flow
     name: "ISO Audit Readiness"
+    clarificationLabel: "เตรียมความพร้อมตรวจ ISO หลายด้าน"
     owner: qs
     consumers: ["*"]
     description: "ประสานหลายทักษะ ISO/QMS เมื่อผู้ใช้ต้องเตรียม audit หลายด้านในคำขอเดียว"
@@ -145,6 +148,7 @@ playbooks:
 
   - id: skill-to-pilot
     name: "Skill → Pilot"
+    clarificationLabel: "พัฒนาทักษะผู้ช่วยใหม่แล้วทดลองใช้งาน"
     owner: ai-admin
     consumers: ["*"]
     description: "เปลี่ยนความต้องการ Skill ใหม่/การปรับ Skill เป็น Skill Contract, repo change set และ evidence review ก่อนเข้าสู่ Pilot โดยไม่เพิ่ม Layer หรือ auto-approve"

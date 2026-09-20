@@ -301,6 +301,10 @@ export async function loadDocumentContextMetadata(ids = []) {
  * }>}
  */
 export async function queryStepRouter(query, options = {}) {
+  const originalQuery = query;
+  if (typeof options.clarificationAnswer === 'string' && options.clarificationAnswer.trim()) {
+    query = `${query}\nข้อมูลเพิ่มเติม: ${options.clarificationAnswer.trim()}`;
+  }
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
@@ -333,7 +337,10 @@ export async function queryStepRouter(query, options = {}) {
   });
 
   const ranked = rankSkillCandidates(skills, context);
-  const playbookMatch = options.disablePlaybooks ? null : detectCompositePlaybook(playbooks, query);
+  const playbookMatch = options.disablePlaybooks ? null : detectCompositePlaybook(playbooks, originalQuery, {
+    clarificationAnswer: options.clarificationAnswer,
+  });
+  const competingPlaybooks = playbookMatch?.ambiguous ? playbookMatch.candidates : [];
   const selectedPlaybook = playbookMatch?.playbook || null;
   const playbookPlan = selectedPlaybook
     ? buildPlaybookPlan(selectedPlaybook, playbookMatch.matchedSignals)
@@ -349,7 +356,7 @@ export async function queryStepRouter(query, options = {}) {
     selectedSkill = skills.find((skill) => skill.name === primarySkillName) || null;
     const primaryRank = ranked.find((item) => item.skill === primarySkillName);
     if (primaryRank) bestMatch = primaryRank;
-  } else if (bestMatch) {
+  } else if (bestMatch && competingPlaybooks.length === 0) {
     selectedSkill = skills.find((skill) => skill.name === bestMatch.skill);
   }
 
@@ -367,7 +374,7 @@ export async function queryStepRouter(query, options = {}) {
       }
     : (selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true });
 
-  if (selectedPlaybook && !hasGlobalAuthorityBlock) {
+  if ((selectedPlaybook || competingPlaybooks.length) && !hasGlobalAuthorityBlock) {
     // The initially selected Skill is normally the first Playbook Skill.
     // Preserve its local BLOCK/ESCALATE provenance instead of dropping the step id.
     if (scopeResult.status !== 'ALLOW' && preflightPlaybookStep) {
@@ -378,29 +385,55 @@ export async function queryStepRouter(query, options = {}) {
       };
     }
 
-    for (const step of playbookPlan) {
-      if (step.type !== 'skill' || !step.skill) continue;
-      const stepSkill = skills.find((skill) => skill.name === step.skill);
-      if (!stepSkill) continue;
-      const stepScope = checkScope(stepSkill, query);
-      if (stepScope.status === 'BLOCK') {
-        scopeResult = { ...stepScope, playbookStep: step.id, playbookId: selectedPlaybook.id };
-        break;
+    const scopePlans = selectedPlaybook
+      ? [{ playbook: selectedPlaybook, plan: playbookPlan }]
+      : competingPlaybooks.map((match) => ({
+        playbook: match.playbook,
+        plan: buildPlaybookPlan(match.playbook, match.matchedSignals),
+      }));
+    for (const { playbook, plan } of scopePlans) {
+      for (const step of plan) {
+        if (step.type !== 'skill' || !step.skill) continue;
+        const stepSkill = skills.find((skill) => skill.name === step.skill);
+        if (!stepSkill) continue;
+        const stepScope = checkScope(stepSkill, query);
+        if (stepScope.status === 'BLOCK') {
+          scopeResult = { ...stepScope, playbookStep: step.id, playbookId: playbook.id };
+          break;
+        }
+        if (
+          stepScope.status === 'ESCALATE' &&
+          stepScope.targetSkill === step.skill &&
+          scopeResult.status === 'ALLOW'
+        ) {
+          scopeResult = { ...stepScope, playbookStep: step.id, playbookId: playbook.id };
+        }
       }
-      if (
-        stepScope.status === 'ESCALATE' &&
-        stepScope.targetSkill === step.skill &&
-        scopeResult.status === 'ALLOW'
-      ) {
-        scopeResult = { ...stepScope, playbookStep: step.id, playbookId: selectedPlaybook.id };
-      }
+      if (scopeResult.status === 'BLOCK') break;
     }
   }
 
   const primaryTeamCode = selectedPlaybook?.owner || selectedSkill?.teams?.primary?.[0] || 'common';
   const teamInfo = teams[primaryTeamCode] || { id: primaryTeamCode, name: primaryTeamCode };
 
-  const skillMetadata = selectedSkill
+  const routingConfidence = competingPlaybooks.length
+    ? { tier: 'AMBIGUOUS', margin: 0, reason: 'competing-playbooks' }
+    : deriveRoutingConfidence(bestMatch, runnerUp);
+  const isAmbiguous = !selectedPlaybook && routingConfidence.tier !== 'HIGH';
+  const clarification = isAmbiguous && scopeResult.status === 'ALLOW'
+    ? competingPlaybooks.length
+      ? {
+        field: 'playbook',
+        question: 'ต้องการเริ่มจากงานไหนก่อนครับ?',
+        options: competingPlaybooks.map(({ playbook }) => ({
+          value: playbook.id,
+          label: playbook.clarificationLabel || playbook.description || playbook.name,
+        })),
+      }
+      : buildRoutingClarification(query, context, options.clarificationAnswer)
+    : null;
+
+  const skillMetadata = selectedSkill && !clarification
     ? await loadSkillContextMetadata(selectedSkill.name)
     : null;
   const referenceMetadata = await loadDocumentContextMetadata(skillMetadata?.mandatory || []);
@@ -424,10 +457,8 @@ export async function queryStepRouter(query, options = {}) {
     }
   }
 
-  const routingConfidence = deriveRoutingConfidence(bestMatch, runnerUp);
-
   const routingContract = buildCompactRoutingContract({
-    selectedSkill,
+    selectedSkill: clarification ? null : selectedSkill,
     selectedPlaybook,
     playbookPlan,
     teamInfo,
@@ -436,6 +467,7 @@ export async function queryStepRouter(query, options = {}) {
     routingConfidence,
     skillMetadata,
     referenceMetadata,
+    clarification,
   });
   const contextPlan = buildContextBudgetPlan({
     routingContract,
@@ -443,15 +475,6 @@ export async function queryStepRouter(query, options = {}) {
     ruleTexts,
     governanceText: JSON.stringify(routingContract.authority),
   });
-
-  // Routing confidence is not the raw 5-factor match score.
-  // Direct trigger + intent evidence with a clear lead can be HIGH even when
-  // path/file metadata is unavailable in chat.
-  const isAmbiguous = Boolean(
-    !selectedPlaybook &&
-    bestMatch &&
-    routingConfidence.tier !== 'HIGH'
-  );
 
   const candidateSkills = ranked
     .slice(0, 3)
@@ -470,6 +493,8 @@ export async function queryStepRouter(query, options = {}) {
 
   return {
     query,
+    // Retained as a candidate for existing diagnostic consumers. Only the
+    // routing contract activates a Skill; CLARIFY has no Skill or Skill context.
     selectedSkill,
     ranked,
     bestMatch,
@@ -478,7 +503,8 @@ export async function queryStepRouter(query, options = {}) {
     isAmbiguous,
     candidateSkills,
     userMemory,
-    routingMode: selectedPlaybook ? 'PLAYBOOK' : 'SKILL',
+    routingMode: routingContract.mode,
+    clarification,
     selectedPlaybook,
     playbookPlan,
     playbookMatch,
@@ -488,6 +514,31 @@ export async function queryStepRouter(query, options = {}) {
     contextPlan,
     routingConfidence,
     authorityPreflight,
+  };
+}
+
+function buildRoutingClarification(query, context, answer) {
+  if (typeof answer === 'string' && answer.trim()) {
+    return {
+      field: 'outcome',
+      question: 'ในงานที่บอกมา ต้องการให้ช่วยตรวจอะไร สรุปอะไร หรือจัดทำอะไรให้ครับ?',
+    };
+  }
+  if (/ต้องแนบอะไร/.test(query)) {
+    return {
+      field: 'purpose',
+      question: 'เอกสารนี้ใช้ทำเรื่องอะไรครับ เช่น เบิกค่าใช้จ่าย ขอใช้สถานที่ หรือสมัครงาน?',
+    };
+  }
+  if (context.intent === 'unknown') {
+    return {
+      field: 'task',
+      question: 'ต้องการให้ช่วยทำอะไรกับเรื่องไหนครับ?',
+    };
+  }
+  return {
+    field: 'scope',
+    question: 'งานนี้เกี่ยวกับเรื่องอะไรหรือใช้เอกสารประเภทไหนครับ?',
   };
 }
 
@@ -528,7 +579,9 @@ export async function runAsk(args) {
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const userCluster = args.cluster || args.c || (await getUserCluster()) || '';
-  const result = await queryStepRouter(query, { team: userTeam, cluster: userCluster });
+  const result = await queryStepRouter(query, {
+    team: userTeam, cluster: userCluster, clarificationAnswer: args.answer,
+  });
   if (machineMode) {
     console.log(JSON.stringify({
       routing: result.routingContract,
@@ -541,26 +594,27 @@ export async function runAsk(args) {
     bestMatch,
     scopeResult,
     teamInfo,
-    isAmbiguous,
-    candidateSkills,
-    userMemory,
     routingMode,
     selectedPlaybook,
     playbookPlan,
     routingConfidence,
     authorityPreflight,
+    clarification,
   } = result;
 
-  if (authorityPreflight?.status === 'BLOCK') {
+  const authorityDecision = authorityPreflight?.status === 'BLOCK'
+    ? authorityPreflight
+    : !selectedSkill && scopeResult.status === 'BLOCK' ? scopeResult : null;
+  if (authorityDecision) {
     console.log(colors.bold(colors.red('┌─────────────────────────────────────────────────────────────────────────────┐')));
     console.log(colors.bold(colors.red('│  ⚠️  Human Authority Required — AI cannot make this decision                │')));
     console.log(colors.bold(colors.red('└─────────────────────────────────────────────────────────────────────────────┘')));
-    console.log(`  • Authority:          ${colors.bold(authorityPreflight.authority)}`);
-    console.log(`  • ผู้มีอำนาจ:         ${colors.bold(authorityPreflight.targetRole || 'Authorized Human')}`);
-    if (authorityPreflight.alternateRole) {
-      console.log(`  • ผู้รับช่วงสำรอง:     ${colors.dim(authorityPreflight.alternateRole)}`);
+    console.log(`  • Authority:          ${colors.bold(authorityDecision.authority)}`);
+    console.log(`  • ผู้มีอำนาจ:         ${colors.bold(authorityDecision.targetRole || 'Authorized Human')}`);
+    if (authorityDecision.alternateRole) {
+      console.log(`  • ผู้รับช่วงสำรอง:     ${colors.dim(authorityDecision.alternateRole)}`);
     }
-    console.log(`  • เหตุผล:             ${colors.dim(authorityPreflight.reason)}`);
+    console.log(`  • เหตุผล:             ${colors.dim(authorityDecision.reason)}`);
     console.log(colors.dim('  AI ช่วยเตรียมข้อมูล ร่างเอกสาร หรือ checklist ก่อนส่งให้ผู้มีอำนาจได้ แต่ไม่อนุมัติ ตัดสิน หรือกดดำเนินการแทน'));
     return;
   }
@@ -594,30 +648,25 @@ export async function runAsk(args) {
     return;
   }
 
+  if (clarification) {
+    console.log(colors.bold(clarification.question));
+    for (const [index, option] of (clarification.options || []).entries()) {
+      console.log(`  ${index + 1}. ${option.label}`);
+    }
+    console.log(colors.dim('ตอบเพิ่มได้ตามงานจริง แล้วผมจะช่วยต่อจากคำขอเดิมครับ'));
+    return;
+  }
+
+  if (!selectedSkill && scopeResult.status === 'ESCALATE') {
+    console.log(colors.bold('งานนี้มีขั้นตอนที่ต้องยืนยันหรือส่งต่อก่อนดำเนินการครับ'));
+    console.log(colors.dim(scopeResult.reason));
+    return;
+  }
+
   const isMatched = selectedSkill && (bestMatch.score >= 0.20 || bestMatch.breakdown.keyword > 0);
   if (!isMatched) {
     warn('ไม่พบทักษะเฉพาะทางที่ตรงกับคำถามอย่างชัดเจน');
     console.log(colors.dim('ลองเพิ่มกริยางานหรือสิ่งที่ต้องการให้ทำ เช่น ตรวจ, เขียน, กรอก, สรุป, วางแผน พร้อมเอกสาร/บริบทที่เกี่ยวข้อง ระบบจะยังคงตรวจ Authority และ Guardrails ก่อนดำเนินการ'));
-    return;
-  }
-
-  // Active Clarification Protocol: If query is broad / ambiguous, show clarification card
-  if (isAmbiguous && candidateSkills.length > 1) {
-    console.log(colors.bold(colors.yellow('┌─────────────────────────────────────────────────────────────────────────────┐')));
-    console.log(colors.bold(colors.yellow('│  🤔 คำถามค่อนข้างกว้างหรือมีหลายทักษะที่เข้าข่าย (Clarification Needed)     │')));
-    console.log(colors.bold(colors.yellow('└─────────────────────────────────────────────────────────────────────────────┘')));
-    console.log(`  คำถาม: "${colors.bold(query)}" อาจเข้าข่ายหลายกระบวนการ หรือต้องการข้อมูลเพิ่ม`);
-    if (userMemory?.exists && userMemory.profile?.team) {
-      console.log(colors.dim(`  (ตรวจพบบริบทจาก USER.md: ทีม ${userMemory.profile.team.toUpperCase()})`));
-    }
-    console.log(`\n  ${colors.bold('ทักษะของ STeP ที่เข้าข่าย (กรุณาระบุเพิ่มเติมหรือเลือกทักษะที่ตรงกับงาน):')}`);
-    candidateSkills.forEach((c, idx) => {
-      console.log(`  ${colors.cyan(`${idx + 1}.`)} [${colors.bold(c.skill.name)}] ${c.skill.description} (${colors.dim(`ทีม ${c.teamInfo.name}`)})`);
-    });
-    console.log();
-    console.log(colors.bold('💡 คำแนะนำเพื่อให้ AI ช่วยเหลือได้แม่นยำยิ่งขึ้น:'));
-    console.log(colors.dim('   - ระบุประเภทเอกสารหรือผลงานที่ต้องการ (เช่น "ตรวจ TOR", "ทำสไลด์ Pitching", "ตรวจแบบฟอร์ม SOP")'));
-    console.log(colors.dim('   - หรือระบุทีม/โครงการที่เกี่ยวข้อง (เช่น "ของโครงการ PITI", "งานของฝ่ายบัญชีและการเงิน AFP")\n'));
     return;
   }
 

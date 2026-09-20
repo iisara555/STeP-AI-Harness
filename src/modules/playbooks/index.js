@@ -88,7 +88,7 @@ export function parsePlaybooksYaml(text) {
       continue;
     }
 
-    const policyMatch = line.match(/^ {4}(sourcePolicy|factPolicy|budgetPolicy|schedulePolicy|outputSchema|specPath):\s*(.+)/);
+    const policyMatch = line.match(/^ {4}(sourcePolicy|factPolicy|budgetPolicy|schedulePolicy|outputSchema|specPath|clarificationLabel):\s*(.+)/);
     if (policyMatch) {
       current[policyMatch[1]] = stripYamlScalar(policyMatch[2]);
       continue;
@@ -190,16 +190,61 @@ export function matchPlaybook(playbook, query) {
   };
 }
 
-export function detectCompositePlaybook(playbooks, query) {
-  const matches = (playbooks || [])
+function rankPlaybookMatches(playbooks, query) {
+  return (playbooks || [])
     .map((playbook) => matchPlaybook(playbook, query))
     .filter((match) => match.eligible)
     .sort((a, b) => {
       if (b.matchedCount !== a.matchedCount) return b.matchedCount - a.matchedCount;
-      return b.score - a.score;
+      return b.score - a.score || a.playbook.id.localeCompare(b.playbook.id);
     });
+}
 
-  return matches[0] || null;
+function closePlaybookMatches(matches) {
+  const best = matches[0];
+  if (!best) return [];
+  // One signal (20% for a five-signal flow) is insufficient separation.
+  return matches.filter((match) => best.matchedCount - match.matchedCount <= 1
+    && Math.abs(best.score - match.score) <= 0.20 + Number.EPSILON);
+}
+
+function choosePlaybookFromAnswer(candidates, answer) {
+  // Adapters accumulate replies one per line. The latest reply decides which
+  // flow to start; earlier context still supplies its requested output steps.
+  const latest = normalize(String(answer || '').split(/\r?\n/).filter((line) => line.trim()).at(-1));
+  if (!latest || /ไม่|ยกเว้น|\b(?:not|neither|except)\b/.test(latest)) return null;
+  if (/^[1-9]\d*$/.test(latest)) return candidates[Number(latest) - 1] || null;
+
+  const explicit = candidates.filter(({ playbook }) =>
+    [playbook.id, playbook.clarificationLabel, playbook.name]
+      .filter(Boolean).some((label) => normalize(label) === latest));
+  if (explicit.length === 1) return explicit[0];
+
+  // Shared planning/output words must not resolve the tie. A unique source
+  // or other required-domain signal can: e.g. "เริ่มจากบันทึกประชุม".
+  const domainMatches = candidates.filter(({ playbook }) => {
+    const match = matchPlaybook(playbook, latest);
+    const required = playbook.requiredSignals || [];
+    return required.length > 0
+      && required.every((signal) => match.matchedSignals.includes(signal));
+  });
+  return domainMatches.length === 1 ? domainMatches[0] : null;
+}
+
+export function detectCompositePlaybook(playbooks, query, { clarificationAnswer = '' } = {}) {
+  const initialMatches = rankPlaybookMatches(playbooks, query);
+  const initialCandidates = closePlaybookMatches(initialMatches);
+  const combinedQuery = `${query}\n${typeof clarificationAnswer === 'string' ? clarificationAnswer : ''}`;
+  // Preserve the original displayed choices when the reply is an option number.
+  const matches = initialCandidates.length > 1 || !clarificationAnswer
+    ? initialMatches
+    : rankPlaybookMatches(playbooks, combinedQuery);
+  const candidates = closePlaybookMatches(matches);
+  if (candidates.length < 2) return matches[0] || null;
+
+  const chosen = choosePlaybookFromAnswer(candidates, clarificationAnswer);
+  if (chosen) return matchPlaybook(chosen.playbook, combinedQuery);
+  return { playbook: null, ambiguous: true, candidates };
 }
 
 export function buildPlaybookPlan(playbook, matchedSignals = []) {

@@ -50,12 +50,12 @@ function matchesQualifiedIntent(lower, rule) {
 }
 
 export const INTENT_KEYWORDS = {
-  summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'summarize', 'summary', 'minutes'],
+  summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'จดประชุม', 'โน้ตประชุม', 'ใครต้องทำอะไร', 'summarize', 'summary', 'minutes'],
   interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach'],
-  review: ['ตรวจ', 'รีวิว', 'เช็ก', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ช่วยดู', 'review', 'check', 'audit', 'evaluate'],
+  review: ['ปรับสำนวน', 'ตรวจ', 'รีวิว', 'เช็ก', 'เช็ค', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ครบยัง', 'ครบมั้ย', 'ครบไหม', 'ช่วยดู', 'เบิกได้', 'review', 'check', 'audit', 'evaluate'],
   fill: ['กรอก', 'จองห้อง', 'ขอใช้ห้อง', 'ลงทะเบียน', 'fill', 'book', 'register'],
-  create: ['จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'create', 'draft', 'write', 'generate', 'design'],
-  plan: ['วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
+  create: ['ทำ creative brief', 'คิด concept', 'จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt ทำภาพ', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'key visual', 'create', 'draft', 'write', 'generate', 'design'],
+  plan: ['ทำ pre-mortem', 'วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
   deploy: ['deploy', 'เดพลอย', 'ขึ้นระบบ', 'production', 'staging'],
   triage: ['คัดแยก', 'ส่งต่อ', 'รับเรื่อง', 'triage', 'inquiry', 'สอบถาม', 'ถาม', 'ติดต่อ', 'ราคา'],
   approve: ['อนุมัติ', 'ขออนุมัติ', 'เซ็น', 'ลงนาม', 'approve', 'sign', 'เคาะ'],
@@ -83,13 +83,36 @@ export function inferIntentFromText(promptText = '') {
     return 'brand-review';
   }
 
+  // Pick the intent by position first, not by the order categories happen to be
+  // declared in. Thai requests lead with the head verb ("ช่วยตรวจ TOR งานจ้าง
+  // ออกแบบ...") and trail with objects and subordinate clauses ("...และสรุป
+  // evidence gap"), so the earliest keyword usually carries the intent.
+  // A later keyword only overrides it when it is far more specific — at least
+  // twice as long — which protects phrases like "สัมภาษณ์ลูกค้า" from a short
+  // generic keyword ("ถาม") that merely sits inside an earlier word.
+  const matches = [];
   for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
-    if (keywords.some((kw) => lower.includes(kw.toLowerCase()))) {
-      return intent;
+    for (const kw of keywords) {
+      const lowerKw = kw.toLowerCase();
+      if (!lowerKw) continue;
+      const index = lower.indexOf(lowerKw);
+      if (index === -1) continue;
+      matches.push({ intent, index, length: lowerKw.length });
     }
   }
 
-  return 'unknown';
+  if (matches.length === 0) return 'unknown';
+
+  matches.sort((a, b) => a.index - b.index || b.length - a.length);
+  const earliest = matches[0];
+  let best = earliest;
+  for (const match of matches) {
+    if (match.length >= earliest.length * 2 && match.length > best.length) {
+      best = match;
+    }
+  }
+
+  return best.intent;
 }
 
 /**

@@ -41,12 +41,13 @@ export function buildCompactRoutingContract({
   routingConfidence = null,
   skillMetadata = null,
   referenceMetadata = [],
+  clarification = null,
 } = {}) {
   const contract = {
     version: 1,
     routingEngine: 'local-deterministic',
     routerRegistrySentToModel: false,
-    mode: selectedPlaybook ? 'PLAYBOOK' : 'SKILL',
+    mode: selectedPlaybook ? 'PLAYBOOK' : clarification ? 'CLARIFY' : 'SKILL',
     team: teamInfo?.id || '',
     skill: selectedSkill?.name || '',
     skillPath: skillMetadata?.path || '',
@@ -72,6 +73,7 @@ export function buildCompactRoutingContract({
     authority: compactScope(scopeResult),
   };
 
+  if (clarification) contract.clarification = clarification;
   return contract;
 }
 

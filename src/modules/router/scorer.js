@@ -167,7 +167,7 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
   }
 
   const rawScore = breakdown.intent + breakdown.keyword + breakdown.path + breakdown.team + breakdown.fileType;
-  const score = Math.round(rawScore * 100) / 100;
+  const score = Math.min(Math.round(rawScore * 100) / 100, 1);
 
   let tier = 'FALLBACK';
   if (score >= thresholds.HIGH) {
@@ -190,6 +190,42 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
  * Raw score remains a match score; confidence also considers direct trigger
  * evidence and separation from the runner-up.
  */
+/**
+ * Summarize trigger evidence, ignoring triggers that are merely substrings of
+ * a longer matched trigger (they are one piece of evidence, not several).
+ */
+function summarizeTriggerEvidence(match) {
+  const triggers = (match?.matchedTriggers || [])
+    .map((tr) => String(tr).trim())
+    .filter(Boolean);
+
+  const distinct = triggers.filter(
+    (tr) => !triggers.some((other) => other !== tr && other.toLowerCase().includes(tr.toLowerCase()))
+  );
+
+  return {
+    count: distinct.length,
+    maxLength: distinct.reduce((max, tr) => Math.max(max, tr.length), 0),
+  };
+}
+
+/**
+ * A candidate whose trigger evidence clearly dominates the runner-up is not
+ * genuinely ambiguous, even when the raw scores sit close together: the runner-up
+ * earned its score from intent and team weight without topical evidence.
+ */
+function dominatesTriggerEvidence(bestMatch, runnerUp) {
+  const best = summarizeTriggerEvidence(bestMatch);
+  if (best.count === 0) return false;
+
+  const runner = summarizeTriggerEvidence(runnerUp);
+  if (runner.count === 0) return true;
+
+  // Either a markedly more specific phrase, or markedly more distinct evidence.
+  if (best.maxLength >= runner.maxLength * 1.5) return true;
+  return best.count >= 2 && best.count >= runner.count * 2;
+}
+
 export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
   if (!bestMatch) {
     return {
@@ -217,6 +253,14 @@ export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
       tier: 'HIGH',
       margin,
       reason: 'direct-trigger-and-intent-with-clear-margin',
+    };
+  }
+
+  if (hasDirectTrigger && hasIntent && dominatesTriggerEvidence(bestMatch, runnerUp)) {
+    return {
+      tier: 'HIGH',
+      margin,
+      reason: 'direct-trigger-and-intent-with-dominant-trigger-evidence',
     };
   }
 

@@ -261,8 +261,8 @@ skills:
       primary: [piti]
       consumers: [isi, eic, imo, mi]
     description: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพและงานวิจัย ด้วย Value Proposition Canvas และ The Mom Test
-    intent: [create, review, interview, plan]
-    triggers: [vpc, value proposition, value proposition canvas, สมมติฐานตลาด, สัมภาษณ์ลูกค้า, customer interview, mom test, problem-solution fit, บ่มเพาะสตาร์ทอัพ, ค้นหาความต้องการลูกค้า]
+    intent: [create, review, interview, plan, evaluate]
+    triggers: [vpc, value proposition, value proposition canvas, สมมติฐานตลาด, สัมภาษณ์ลูกค้า, customer interview, mom test, problem-solution fit, บ่มเพาะสตาร์ทอัพ, ค้นหาความต้องการลูกค้า, เทคโนโลยีจากอาจารย์, เทคโนโลยีจากงานวิจัย, ผลงานวิจัยไปต่อ]
     paths: ["**/startup/**", "**/incubation/**", "**/discovery/**", "**/PITI/**"]
     fileTypes: [md, docx, pdf]
     requires: [target_customer, core_technology]
@@ -573,7 +573,7 @@ skills:
       consumers: [ga, ifu, les, cc]
     description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
     intent: [triage, check, review]
-    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
+    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, ลูกค้าถาม, ลูกค้าทักมา, ตอบลูกค้ายังไง, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
     paths: ["**/support/**", "**/inquiry/**", "**/CRM/**"]
     fileTypes: [txt, md, docx]
     requires: [customer_message]
@@ -696,7 +696,7 @@ skills:
     wildcardReason: "staff across teams may pre-check reimbursement evidence before AFP review"
     description: Pre-check ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิก โดยแยก document facts, cross-document evidence และ current-source policy checks
     intent: [review, verify, audit, check]
-    triggers: [ใบเสร็จ, ใบกำกับภาษี, เบิกจ่าย, ใบสำคัญรับเงิน, e-tax, vat, ค่าเดินทาง, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าที่พัก, ใบเสร็จรับเงิน, receipt]
+    triggers: [ใบเสร็จ, ใบกำกับภาษี, เบิกจ่าย, เบิกได้มั้ย, เบิกได้ไหม, ใบสำคัญรับเงิน, e-tax, vat, ค่าเดินทาง, ค่าอาหาร, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าที่พัก, ใบเสร็จรับเงิน, receipt]
     paths: ["**/finance/**", "**/receipts/**", "**/billing/**"]
     fileTypes: [pdf, png, jpg, xlsx, docx]
     requires: [receipt_document_context]
@@ -961,7 +961,7 @@ skills:
       primary: [qs]
       consumers: []
     description: เตรียม External/Internal Audit ISO 9001 แบบ process-based สำหรับทีมและทั้งองค์กร
-    intent: [review, plan]
+    intent: [review, plan, evaluate]
     triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, เตรียมเอกสาร audit iso, เตรียมเอกสารสำหรับ audit iso, เอกสาร audit iso, เอกสารสำหรับ audit iso, audit iso, iso audit, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
     paths: ["**/ISO/**", "**/Audit/**", "**/Quality/**"]
     fileTypes: [md, docx, pdf, xlsx]

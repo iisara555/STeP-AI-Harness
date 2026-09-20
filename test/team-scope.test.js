@@ -56,6 +56,8 @@ test('team Skill scoping follows Router eligibility rather than namespace folder
     const les = await resolveTeamSkillPaths('les');
     assert.ok(les.includes('skills/common/lab-result-review/SKILL.md'));
     assert.ok(!les.includes('skills/creative/creative-art-director/SKILL.md'));
+  });
+
   await t.test('organization-wide wildcard consumers require explicit justification', async () => {
     const router = await readFile('manifest/router-index.yaml', 'utf-8');
     const blocks = router.split(/\n(?=  - name: )/).filter((block) => block.startsWith('  - name: '));
@@ -67,7 +69,5 @@ test('team Skill scoping follows Router eligibility rather than namespace folder
       assert.match(block, /^    wildcardReason:\s*.+$/m, `${name} wildcard needs wildcardReason`);
     }
     assert.ok(wildcardBlocks.length <= 10, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
-  });
-
   });
 });
