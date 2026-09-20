@@ -105,7 +105,7 @@ skills:
       primary: [ga]
       consumers: ["*"]
     description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน placeholder owner/deadline และสิ่งที่เจ้าของงานต้องแก้เอง
-    intent: [review, check]
+    intent: [review, check, summarize]
     triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง]
     paths: ["**/draft/**", "**/documents/**", "**/review/**"]
     fileTypes: [docx, pdf, txt, md, xlsx]
