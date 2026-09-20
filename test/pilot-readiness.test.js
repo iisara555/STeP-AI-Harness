@@ -73,13 +73,65 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.equal(submit.scopeResult.inScope, false);
   });
 
-  await t.test('image prompt skill enforces a capability floor for context and references', async () => {
+  await t.test('image prompt skill uses syntax-family capability gate and Spec-first rendering', async () => {
     const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
-    assert.ok(imageSkill.includes('GPT-Image-2-class หรือเทียบเท่า'));
-    assert.ok(imageSkill.includes('GPT-Image-2.5-class'));
-    assert.ok(imageSkill.includes('reference image'));
+    const promptSpec = await readFile('skills/creative/step-image-prompt/references/prompt-spec.md', 'utf-8');
+    const brandVisualContext = await readFile('skills/creative/step-image-prompt/references/brand-visual-context.md', 'utf-8');
+
     assert.ok(imageSkill.includes('Capability Gate'));
-    assert.ok(imageSkill.includes('ห้ามใช้ Reference-Led mode เสมือนว่าโมเดลเห็นภาพ'));
+    assert.ok(imageSkill.includes('references/prompt-spec.md'));
+    assert.ok(imageSkill.includes('Build Prompt Spec → Confirm Family → Render'));
+    assert.ok(imageSkill.includes('Prompt Spec เป็น source of truth'));
+    assert.ok(imageSkill.includes('Family B'));
+    assert.ok(imageSkill.includes('ratio handoff'));
+    assert.ok(imageSkill.includes('Family D — Edit / inpaint'));
+    assert.ok(imageSkill.includes('Reference-Led / Edit'));
+    assert.ok(imageSkill.includes('เครื่องมือปลายทางรับ image input ได้จริง'));
+    assert.ok(imageSkill.includes('ห้ามทำเหมือนระบบเห็นภาพที่ไม่ได้รับมา'));
+    assert.ok(!imageSkill.includes('GPT-Image-2-class'));
+    assert.ok(!imageSkill.includes('GPT-Image-2.5-class'));
+
+    for (const family of [
+      'Family A — Natural-language',
+      'Family B — Tag + weight',
+      'Family C — Parameter-flag',
+      'Family D — Edit / inpaint',
+    ]) {
+      assert.ok(promptSpec.includes(family), `prompt-spec missing ${family}`);
+    }
+
+    for (const field of [
+      'SUBJECT:',
+      'ACTION:',
+      'SETTING:',
+      'SHOT:',
+      'PLACEMENT:',
+      'TEXT_SPACE:',
+      'RATIO:',
+      'LIGHT:',
+      'MEDIUM:',
+      'STYLE:',
+      'PALETTE:',
+      'MUST_KEEP:',
+      'CHANGE_ONLY:',
+      'EXCLUDE:',
+    ]) {
+      assert.ok(promptSpec.includes(field), `prompt-spec missing ${field}`);
+    }
+
+    assert.ok(promptSpec.includes('text, letters, typography, captions, signage lettering'));
+    assert.ok(promptSpec.includes('logos, watermarks, brand marks'));
+    assert.ok(promptSpec.includes('distorted hands, extra fingers, extra limbs'));
+    assert.ok(promptSpec.includes('Ratio handoff'));
+    assert.ok(promptSpec.includes('1344 × 768'));
+    assert.ok(promptSpec.includes('แก้ Prompt Spec'));
+    assert.ok(promptSpec.includes('เปลี่ยนเครื่องมือ'));
+    assert.ok(!promptSpec.includes('GPT-Image-'));
+
+    assert.ok(brandVisualContext.includes('Status:** NO-CONTROLLED-SOURCE'));
+    assert.ok(brandVisualContext.includes('ไม่มี Controlled CI Guideline'));
+    assert.ok(brandVisualContext.includes('ห้ามแต่งค่า hex'));
+    assert.ok(imageSkill.includes('references/brand-visual-context.md'));
   });
 
   await t.test('image generation routing remains stable after capability hardening', async () => {
