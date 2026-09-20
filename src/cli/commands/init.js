@@ -86,7 +86,7 @@ export async function runInit(args) {
       targetEntity = {
         id: t.id,
         name: t.name,
-        description: `${t.name} (${t.nameEn}) [${t.clusterName}]`,
+        description: `${t.name} (${t.nameEn})`,
         skills: t.skills,
         isTeam: true,
         clusterId: t.clusterId,
