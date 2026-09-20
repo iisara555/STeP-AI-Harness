@@ -66,8 +66,10 @@ test('Lightweight First Run — all AI adapters', async (t) => {
         assert.ok(instruction.content.includes('Compact Bootstrap'), `${tool}/${instruction.filename} missing compact bootstrap`);
         assert.ok(instruction.content.includes('Installed ≠ Loaded'), `${tool}/${instruction.filename} missing lazy-load contract`);
         assert.ok(instruction.content.includes('First Work — Employee Handoff Contract'), `${tool}/${instruction.filename} missing first-work contract`);
-        assert.ok(instruction.content.includes('ทีมหลักที่ตั้งไว้'), `${tool}/${instruction.filename} missing team-aware onboarding`);
-        assert.ok(instruction.content.includes('ช่วยทำ Designer Brief จากข้อมูลนี้ให้ครบก่อนส่งทีมออกแบบ'), `${tool}/${instruction.filename} missing team starter prompt`);
+        assert.ok(instruction.content.includes('USER.md'), `${tool}/${instruction.filename} missing USER.md routing identity`);
+        assert.ok(instruction.content.includes('current user choice'), `${tool}/${instruction.filename} missing USER.md override rule`);
+        assert.ok(instruction.content.includes('Installation-time team hint: **CC**'), `${tool}/${instruction.filename} missing installation team hint`);
+        assert.ok(!instruction.content.includes('ช่วยทำ Designer Brief จากข้อมูลนี้ให้ครบก่อนส่งทีมออกแบบ'), `${tool}/${instruction.filename} should not duplicate mutable team starter prompts`);
         assert.ok(!instruction.content.includes('__startup-sentinel-skill__'), `${tool}/${instruction.filename} leaked Skill inventory`);
         assert.ok(!instruction.content.includes('__startup-sentinel-rule__'), `${tool}/${instruction.filename} leaked Rule inventory`);
         assert.ok(!instruction.content.includes('## Available Skills'), `${tool}/${instruction.filename} enumerates Skills`);
@@ -90,8 +92,8 @@ test('Lightweight First Run — all AI adapters', async (t) => {
     );
 
     for (const instruction of instructions) {
-      assert.ok(instruction.content.includes('ช่วยงานนั้นก่อน'));
-      assert.ok(instruction.content.includes('ขอการยืนยันก่อนบันทึกทีม'));
+      assert.ok(instruction.content.includes('help with that task first'));
+      assert.ok(instruction.content.includes('Ask for confirmation before saving'));
       assert.ok(instruction.content.includes('step-ai config --team <team-id>'));
       assert.ok(instruction.content.includes('market-creative'));
     }
