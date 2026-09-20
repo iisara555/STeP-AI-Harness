@@ -272,6 +272,13 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
       });
     }
     assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist after packager runs`);
+    const zipCheck = [
+      'import sys, zipfile',
+      'z=zipfile.ZipFile(sys.argv[1])',
+      'print("SUPPORT.md" in z.namelist())'
+    ].join('; ');
+    const { stdout: supportIncluded } = await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, '-c', zipCheck, zipPath]);
+    assert.equal(supportIncluded.trim(), 'True', 'SUPPORT.md must be included in Pilot bundle');
 
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);
@@ -670,8 +677,9 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
     // Test feedback --admin
     const { stdout: adminOut } = await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--admin']);
-    assert.ok(adminOut.includes('CHAMPION & ADMIN MODE'));
+    assert.ok(adminOut.includes('ADMIN MODE'));
     assert.ok(adminOut.includes('skills/'));
+    assert.ok(!adminOut.includes('CHAMPION & ADMIN MODE'));
 
     await rm(testDir, { recursive: true, force: true });
   });
