@@ -137,6 +137,7 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
   await t.test('step-image-prompt follows Standard v2 structure and meeting summary stays QMS-independent', async () => {
     const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
     const skillsManifest = await readFile('manifest/skills.yaml', 'utf-8');
+    const routerIndex = await readFile('manifest/router-index.yaml', 'utf-8');
 
     assert.ok(imageSkill.includes('standardVersion: 2'));
     for (const heading of [
@@ -153,6 +154,14 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
       assert.ok(imageSkill.includes(heading), `step-image-prompt missing ${heading}`);
     }
     assert.ok(imageSkill.includes('references/visual-direction-vocabulary.md'));
+
+    const imageRouterBlock = routerIndex.slice(
+      routerIndex.indexOf('  - name: step-image-prompt'),
+      routerIndex.indexOf('\n  - name: receipt-audit')
+    );
+    assert.ok(imageRouterBlock.includes('สร้าง Prompt Spec'));
+    assert.ok(!imageRouterBlock.includes('#F9AE3B'));
+    assert.ok(!imageRouterBlock.includes('Brand Strength แบบ STRONG / BALANCED / LIGHT'));
 
     const meetingBlock = skillsManifest.slice(
       skillsManifest.indexOf('  meeting-summary:'),
