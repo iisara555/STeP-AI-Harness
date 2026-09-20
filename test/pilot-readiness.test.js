@@ -73,13 +73,55 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.equal(submit.scopeResult.inScope, false);
   });
 
-  await t.test('image prompt skill enforces a capability floor for context and references', async () => {
+  await t.test('image prompt skill uses syntax-family capability gate and Spec-first rendering', async () => {
     const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
-    assert.ok(imageSkill.includes('GPT-Image-2-class หรือเทียบเท่า'));
-    assert.ok(imageSkill.includes('GPT-Image-2.5-class'));
-    assert.ok(imageSkill.includes('reference image'));
+    const promptSpec = await readFile('skills/creative/step-image-prompt/references/prompt-spec.md', 'utf-8');
+
     assert.ok(imageSkill.includes('Capability Gate'));
+    assert.ok(imageSkill.includes('references/prompt-spec.md'));
+    assert.ok(imageSkill.includes('Build Prompt Spec → Confirm Family → Render'));
+    assert.ok(imageSkill.includes('Prompt Spec เป็น source of truth'));
+    assert.ok(imageSkill.includes('Family B ต้องส่งค่า ratio handoff'));
+    assert.ok(imageSkill.includes('Family D — Edit / inpaint'));
     assert.ok(imageSkill.includes('ห้ามใช้ Reference-Led mode เสมือนว่าโมเดลเห็นภาพ'));
+    assert.ok(!imageSkill.includes('GPT-Image-2-class'));
+    assert.ok(!imageSkill.includes('GPT-Image-2.5-class'));
+
+    for (const family of [
+      'Family A — Natural-language',
+      'Family B — Tag + weight',
+      'Family C — Parameter-flag',
+      'Family D — Edit / inpaint',
+    ]) {
+      assert.ok(promptSpec.includes(family), `prompt-spec missing ${family}`);
+    }
+
+    for (const field of [
+      'SUBJECT:',
+      'ACTION:',
+      'SETTING:',
+      'SHOT:',
+      'PLACEMENT:',
+      'TEXT_SPACE:',
+      'RATIO:',
+      'LIGHT:',
+      'MEDIUM:',
+      'STYLE:',
+      'PALETTE:',
+      'MUST_KEEP:',
+      'CHANGE_ONLY:',
+      'EXCLUDE:',
+    ]) {
+      assert.ok(promptSpec.includes(field), `prompt-spec missing ${field}`);
+    }
+
+    assert.ok(promptSpec.includes('text, letters, typography, captions, signage lettering'));
+    assert.ok(promptSpec.includes('logos, watermarks, brand marks'));
+    assert.ok(promptSpec.includes('distorted hands, extra fingers, extra limbs'));
+    assert.ok(promptSpec.includes('Ratio handoff'));
+    assert.ok(promptSpec.includes('1344 × 768'));
+    assert.ok(promptSpec.includes('แก้ Prompt Spec'));
+    assert.ok(promptSpec.includes('เปลี่ยนเครื่องมือ'));
   });
 
   await t.test('image generation routing remains stable after capability hardening', async () => {
