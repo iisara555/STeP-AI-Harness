@@ -160,8 +160,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(psInstallContent.includes('init --tool all'));
     assert.ok(psInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
     assert.ok(psInstallContent.includes('step-ai config'));
-    assert.ok(psInstallContent.includes('เริ่มใช้งาน STeP AI'));
-    assert.ok(psInstallContent.includes('เตรียม instruction ให้ 8 โปรแกรมแล้ว'));
+    assert.ok(psInstallContent.includes('init --tool all'));
+    assert.ok(psInstallContent.includes('ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน'));
     assert.ok(!psInstallContent.includes('เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง'));
     assert.ok(!psInstallContent.includes('พิมพ์หมายเลขทีม (1-22)'));
     assert.ok(!psInstallContent.includes('Start-Process "https://cursor.com"'));
@@ -199,6 +199,17 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(verifyPins.includes('RELEASE_KEYS_COMMIT="7b6eb2d6ab524bb30487f31612cdbeb35ae37533"'));
     assert.ok(verifyPins.includes('raw.githubusercontent.com/nodejs/release-keys/${RELEASE_KEYS_COMMIT}/gpg/pubring.kbx'));
     assert.ok(!verifyPins.includes('/HEAD/'), 'release keyring source must not float on HEAD');
+  });
+
+  await t.test('Case 5c: step-ai init owns the shared employee finish handoff', async () => {
+    const initSource = await readFile(join(PACKAGE_ROOT, 'src', 'cli', 'commands', 'init.js'), 'utf-8');
+
+    assert.ok(initSource.includes('✓ STeP AI พร้อมเริ่มงาน'));
+    assert.ok(initSource.includes('เตรียม instruction ให้ 8 โปรแกรมแล้ว'));
+    assert.ok(initSource.includes('เริ่มใช้งาน STeP AI'));
+    assert.ok(initSource.includes('ลองเริ่มจากงานของทีม'));
+    assert.ok(initSource.includes('ถ้ายังไม่ได้เลือกทีม ให้เริ่มจากงานจริงได้เลย'));
+    assert.ok(initSource.includes('step-ai config'));
   });
 
   await t.test('Case 6: Workspace init and step-ai update preserves settings', async () => {
@@ -300,8 +311,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(shInstallContent.includes('init --tool all'));
     assert.ok(shInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
     assert.ok(shInstallContent.includes('step-ai config'));
-    assert.ok(shInstallContent.includes('เริ่มใช้งาน STeP AI'));
-    assert.ok(shInstallContent.includes('เตรียม instruction ให้ 8 โปรแกรมแล้ว'));
+    assert.ok(shInstallContent.includes('init --tool all'));
+    assert.ok(shInstallContent.includes('ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน'));
     assert.ok(!shInstallContent.includes('เลือกเครื่องมือ AI ที่ต้องการติดตั้งคำสั่ง'));
     assert.ok(!shInstallContent.includes('พิมพ์หมายเลขทีม (1-22)'));
     assert.ok(!shInstallContent.includes('open "https://cursor.com"'));
