@@ -399,6 +399,8 @@ export async function queryStepRouter(query, options = {}) {
     }
   }
 
+  const routingConfidence = deriveRoutingConfidence(bestMatch, runnerUp);
+
   const routingContract = buildCompactRoutingContract({
     selectedSkill,
     selectedPlaybook,
@@ -406,6 +408,7 @@ export async function queryStepRouter(query, options = {}) {
     teamInfo,
     scopeResult,
     bestMatch,
+    routingConfidence,
     skillMetadata,
     referenceMetadata,
   });
@@ -419,7 +422,6 @@ export async function queryStepRouter(query, options = {}) {
   // Routing confidence is not the raw 5-factor match score.
   // Direct trigger + intent evidence with a clear lead can be HIGH even when
   // path/file metadata is unavailable in chat.
-  const routingConfidence = deriveRoutingConfidence(bestMatch, runnerUp);
   const isAmbiguous = Boolean(
     !selectedPlaybook &&
     bestMatch &&
