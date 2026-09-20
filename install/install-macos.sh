@@ -137,42 +137,12 @@ if [ "$ANTIGRAVITY_FOUND" = true ]; then echo -e "    [${GREEN}✓${NC}] Google 
 echo -e " ${MAGENTA}● สาย Local AI / ความเป็นส่วนตัวข้อมูลสูงสุด (Local / Privacy Tier):${NC}"
 if [ "$HERMES_FOUND" = true ]; then echo -e "    [${GREEN}✓${NC}] Hermes Agent (Nous / Local AI)   (พบในเครื่อง - พร้อมใช้งาน)"; else echo -e "    [ ] Hermes Agent (Nous / Local AI)   (ยังไม่พบในเครื่อง)"; fi
 
-# Zero-Tool Guided Wizard
+# No approved AI tool detected: continue Harness install but do not open external signup/download pages.
 if [ "$FOUND_COUNT" -eq 0 ]; then
     echo ""
-    echo -e "${YELLOW}⚠️  ยังไม่พบโปรแกรม AI ใดๆ ในเครื่อง Mac ของคุณ${NC}"
-    echo -e "${GRAY}------------------------------------------------------------${NC}"
-    echo -e "${CYAN}🧭 [คำแนะนำการเลือก AI ให้เหมาะกับรูปแบบการทำงานของคุณ]:${NC}"
-    echo -e "  1. สายฟรี / มี Quota ฟรี (แนะนำมากที่สุดสำหรับเริ่มต้นใช้งาน — ไม่มีค่าใช้จ่าย):"
-    echo -e "     - เลือกสายฟรีหนึ่งตัวที่โหลดง่ายในเครื่องคุณ: Cursor หรือ OpenCode"
-    echo -e "       Cursor: ${CYAN}https://cursor.com${NC}  |  OpenCode: ${CYAN}https://opencode.ai${NC}"
-    echo -e "  2. สายจ่ายตังค์ / องค์กรจัดซื้อ (สำหรับท่านที่มีสิทธิ์ Pro/Plus หรือ License หน่วยงาน):"
-    echo -e "     - ChatGPT Desktop / Claude Desktop / Google Antigravity & Spark"
-    echo -e "  3. สาย Local AI (สำหรับผู้ต้องการความปลอดภัยข้อมูล 100% ประมวลผลในเครื่อง):"
-    echo -e "     - Hermes Agent (pip install hermes-agent)"
-    echo -e "  4. ดำเนินการติดตั้ง STeP AI ต่อทันที (ไปดาวน์โหลด AI ภายหลัง)"
-    echo -e "${GRAY}------------------------------------------------------------${NC}"
-
-    read -p "ต้องการให้ระบบแนะนำและเปิดหน้าดาวน์โหลดสายฟรีหรือไม่? (พิมพ์ 1 หรือกด Enter) [default: 1]: " GUIDE_CHOICE || true
-    GUIDE_CHOICE=${GUIDE_CHOICE:-1}
-
-    if [ "$GUIDE_CHOICE" = "1" ]; then
-        echo ""
-        echo -e "${CYAN}เลือกโปรแกรมสายฟรีที่ต้องการเปิดหน้าเว็บดาวน์โหลด:${NC}"
-        echo -e "  1. Cursor (สายฟรี) https://cursor.com"
-        echo -e "  2. OpenCode (สายฟรี) https://opencode.ai"
-        echo -e "  3. ข้ามไปขั้นตอนติดตั้งต่อ"
-        read -p "พิมพ์หมายเลข (1-3) [default: 1]: " DL_CHOICE || true
-        DL_CHOICE=${DL_CHOICE:-1}
-
-        if [ "$DL_CHOICE" = "1" ]; then
-            echo -e "${GREEN}กำลังเปิดเบราว์เซอร์เพื่อดาวน์โหลด Cursor IDE...${NC}"
-            open "https://cursor.com" || true
-        elif [ "$DL_CHOICE" = "2" ]; then
-            echo -e "${GREEN}กำลังเปิดเบราว์เซอร์เพื่อดาวน์โหลด OpenCode...${NC}"
-            open "https://opencode.ai" || true
-        fi
-    fi
+    echo -e "${YELLOW}⚠️  ยังไม่พบโปรแกรม AI ที่องค์กรอนุมัติในเครื่องนี้${NC}"
+    echo -e "${GRAY}ติดตั้ง STeP AI ต่อได้ แต่ก่อนใช้งานให้ติดต่อ AI Champion เพื่อยืนยันโปรแกรม AI ที่ใช้ได้${NC}"
+    echo -e "${GRAY}ระบบจะไม่เปิดเว็บสมัครหรือดาวน์โหลดโปรแกรม AI ให้โดยอัตโนมัติ${NC}"
 fi
 
 echo ""
