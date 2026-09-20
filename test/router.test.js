@@ -304,6 +304,8 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
 
   await t.test('Case 7: Context Scanner extracts intents and file types cleanly', () => {
     assert.equal(inferIntentFromText('ช่วยตรวจ TOR'), 'review');
+    assert.equal(inferIntentFromText('ช่วยตรวจ tone of voice ของแบรนด์'), 'brand-review');
+    assert.equal(inferIntentFromText('ช่วยตรวจโลโก้ STeP ตามคู่มือแบรนด์'), 'brand-review');
     assert.equal(inferIntentFromText('ช่วยยกร่างข้อเสนอ'), 'create');
     assert.equal(inferIntentFromText('ช่วยสรุปการประชุม'), 'summarize');
     assert.equal(inferIntentFromText('ช่วยวางแผนโครงการ'), 'plan');
