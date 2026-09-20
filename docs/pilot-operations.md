@@ -2,7 +2,8 @@
 
 **As of:** 2026-09-20  
 **Released distribution baseline:** v0.7.2  
-**Repository scope:** `main` may contain post-v0.7.2 changes; do not treat `main` as a released employee package until tagged/released.
+**Repository scope:** `main` may contain post-v0.7.2 changes; do not treat `main` as a released employee package until tagged/released.  
+**Current `main` inventory:** 45 Skills / 4 Playbooks / 3 Actions / 22 teams / 5 routing clusters
 
 ## ขอบเขต
 
