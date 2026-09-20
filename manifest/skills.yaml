@@ -83,6 +83,25 @@ skills:
       mandatory: [procurement-policy, human-approval-rule]
       optional: [tor-template]
 
+  document-review:
+    owner: ga
+    version: 1.0.0
+    domain: [governance, document-review]
+    process: [governance.document-review]
+    path: skills/common/document-review/SKILL.md
+    description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน owner/deadline placeholder และความเหมาะสมต่อผู้รับ ก่อน handoff ไป Skill เฉพาะทาง
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-20"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
   meeting-summary:
     owner: ga
     version: 1.0.0
