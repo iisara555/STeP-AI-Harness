@@ -89,7 +89,7 @@ export async function runFeedback(args) {
   }
 
   // Admin Mode
-  if (args.admin || args.champion) {
+  if (args.admin) {
     console.log(`${colors.yellow(colors.bold('=== ADMIN MODE ==='))}\n`);
     console.log(`ศูนย์ควบคุมการจัดการ Approved Skills และ Governance สำหรับทีมผู้ดูแล:\n`);
     console.log(`  • โฟลเดอร์ทักษะ:         ${colors.cyan('skills/')} (จัดกลุ่มตาม 22 ทีมและส่วนกลาง)`);
