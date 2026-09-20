@@ -47,6 +47,7 @@ def build_pilot_bundle():
         "Feedback-STeP-AI.command",
         "package.json",
         "README.md",
+        "SUPPORT.md",
         "START-HERE.md",
         "MAC-START-HERE.txt",
         "START-PROMPT.txt",
