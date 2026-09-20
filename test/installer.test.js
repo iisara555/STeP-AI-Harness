@@ -162,6 +162,21 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(batFeedbackContent.includes('\r\n'), 'Feedback-STeP-AI.bat must use CRLF line endings');
   });
 
+  await t.test('Case 5b: Runtime support policy and Node release keyring source are explicit', async () => {
+    const pkg = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8'));
+    const validateWorkflow = await readFile(join(PACKAGE_ROOT, '.github', 'workflows', 'validate.yml'), 'utf-8');
+    const releaseWorkflow = await readFile(join(PACKAGE_ROOT, '.github', 'workflows', 'release.yml'), 'utf-8');
+    const verifyPins = await readFile(join(PACKAGE_ROOT, 'scripts', 'verify_node_runtime_pins.sh'), 'utf-8');
+
+    assert.equal(pkg.engines.node, '>=20.0.0');
+    assert.ok(validateWorkflow.includes("node-version: '20'"), 'validate CI must exercise the supported Node 20 floor');
+    assert.ok(releaseWorkflow.includes("node-version: '20'"), 'release CI must exercise the supported Node 20 floor');
+
+    assert.ok(verifyPins.includes('RELEASE_KEYS_COMMIT="7b6eb2d6ab524bb30487f31612cdbeb35ae37533"'));
+    assert.ok(verifyPins.includes('raw.githubusercontent.com/nodejs/release-keys/${RELEASE_KEYS_COMMIT}/gpg/pubring.kbx'));
+    assert.ok(!verifyPins.includes('/HEAD/'), 'release keyring source must not float on HEAD');
+  });
+
   await t.test('Case 6: Workspace init and step-ai update preserves settings', async () => {
     const tmpDir = join(PACKAGE_ROOT, 'tmp', 'test-installer-workspace');
     await rm(tmpDir, { recursive: true, force: true });
