@@ -266,11 +266,13 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
 
   await t.test(`Case 7: Distribution Packager builds valid v${PACKAGE_VERSION} ZIP`, async () => {
     const zipPath = join(PACKAGE_ROOT, 'dist', `STeP-AI-Pilot-v${PACKAGE_VERSION}.zip`);
-    if (!(await pathExists(zipPath))) {
-      await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, join(PACKAGE_ROOT, 'scripts', 'build_pilot_bundle.py')], {
-        cwd: PACKAGE_ROOT,
-      });
-    }
+
+    // Always rebuild from the current source tree. A stale ZIP in dist/ must never
+    // make this test validate an older package than the code under test.
+    await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, join(PACKAGE_ROOT, 'scripts', 'build_pilot_bundle.py')], {
+      cwd: PACKAGE_ROOT,
+    });
+
     assert.ok(await pathExists(zipPath), `Pilot bundle v${PACKAGE_VERSION} zip must exist after packager runs`);
     const zipCheck = [
       'import sys, zipfile',
