@@ -10,6 +10,7 @@ import {
   parseUserMemory,
   ensureGitignored,
   generateUserMemoryTemplate,
+  updateUserMemoryProfile,
   needsFirstRunCompanion,
   getPersonalityPreset,
 } from '../src/modules/user-memory.js';
@@ -25,6 +26,12 @@ test('User Memory (USER.md), First Run Companion & Clarification Suite', async (
     const res = await initUserMemory(tmpDir, {
       name: 'สมชาย',
       team: 'afp',
+      cluster: 'governance-operations',
+      starterPrompts: [
+        'ช่วยตรวจ TOR นี้ก่อนส่ง AFP',
+        'ช่วย pre-check ใบเสร็จชุดนี้',
+        'ช่วยสรุปคำขอจัดซื้อรายการนี้',
+      ],
       role: 'เจ้าหน้าที่การเงินและพัสดุ',
       activeProjects: ['โครงการพัฒนาผู้ประกอบการนวัตกรรม'],
       frequentSkills: ['tor-review', 'receipt-audit'],
@@ -37,6 +44,7 @@ test('User Memory (USER.md), First Run Companion & Clarification Suite', async (
     assert.equal(loaded.exists, true);
     assert.equal(loaded.profile.name, 'สมชาย');
     assert.equal(loaded.profile.team, 'afp');
+    assert.equal(loaded.profile.cluster, 'governance-operations');
     assert.equal(loaded.profile.role, 'เจ้าหน้าที่การเงินและพัสดุ');
     assert.equal(loaded.assistant.name, 'STeP Mate');
     assert.equal(loaded.assistant.personality, 'coworker');
@@ -57,6 +65,28 @@ test('User Memory (USER.md), First Run Companion & Clarification Suite', async (
     const loaded = await loadUserMemory(tmpDir);
     assert.equal(loaded.profile.name, 'สมชาย');
     assert.equal(loaded.assistant.name, 'STeP Mate');
+  });
+
+  await t.test('Case 2b: deferred team confirmation updates USER.md routing identity and starter tasks', async () => {
+    const updated = await updateUserMemoryProfile(tmpDir, {
+      team: 'cc',
+      cluster: 'market-creative',
+      starterPrompts: [
+        'ช่วยทำ Designer Brief จากข้อมูลนี้ให้ครบก่อนส่งทีมออกแบบ',
+        'ช่วยคิด Event Concept จาก TOR นี้',
+        'ช่วยจัดโครง Presentation นี้ให้ message ชัด',
+      ],
+    });
+
+    assert.equal(updated.updated, true);
+    const loaded = await loadUserMemory(tmpDir);
+    assert.equal(loaded.profile.team, 'cc');
+    assert.equal(loaded.profile.cluster, 'market-creative');
+
+    const raw = await readFile(join(tmpDir, 'USER.md'), 'utf-8');
+    assert.ok(raw.includes('ช่วยทำ Designer Brief จากข้อมูลนี้ให้ครบก่อนส่งทีมออกแบบ'));
+    assert.ok(raw.includes('ช่วยคิด Event Concept จาก TOR นี้'));
+    assert.ok(raw.includes('ช่วยจัดโครง Presentation นี้ให้ message ชัด'));
   });
 
   await t.test('Case 3: ensureGitignored automatically adds USER.md and MEMORY.md', async () => {
