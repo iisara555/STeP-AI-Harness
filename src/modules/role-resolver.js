@@ -140,7 +140,6 @@ export async function resolveRoleFiles(roleId) {
  *   description: string,
  *   clusterId: string,
  *   clusterName: string,
- *   clusterInstallerLabel: string,
  *   clusterRouter: string,
  *   skills: string[],
  *   starterPrompts: string[],
@@ -150,7 +149,7 @@ export async function resolveRoleFiles(roleId) {
 export function parseTeamsYaml(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   const teams = [];
-  let currentCluster = { id: '', name: '', installerLabel: '', router: '' };
+  let currentCluster = { id: '', name: '', router: '' };
   let currentTeam = null;
 
   for (const line of lines) {
@@ -162,17 +161,12 @@ export function parseTeamsYaml(yamlText) {
     if (clusterIdMatch && !line.startsWith('      - id:')) {
       if (currentTeam) teams.push(currentTeam);
       currentTeam = null;
-      currentCluster = { id: clusterIdMatch[1], name: '', installerLabel: '', router: '' };
+      currentCluster = { id: clusterIdMatch[1], name: '', router: '' };
       continue;
     }
     const clusterNameMatch = line.match(/^ {4}name:\s*(.+)/);
     if (clusterNameMatch && !currentTeam) {
       currentCluster.name = clusterNameMatch[1].trim();
-      continue;
-    }
-    const clusterInstallerLabelMatch = line.match(/^ {4}installerLabel:\s*(.+)/);
-    if (clusterInstallerLabelMatch && !currentTeam) {
-      currentCluster.installerLabel = clusterInstallerLabelMatch[1].trim();
       continue;
     }
     const clusterRouterMatch = line.match(/^ {4}router:\s*(.+)/);
@@ -192,7 +186,6 @@ export function parseTeamsYaml(yamlText) {
         description: '',
         clusterId: currentCluster.id,
         clusterName: currentCluster.name,
-        clusterInstallerLabel: currentCluster.installerLabel,
         clusterRouter: currentCluster.router,
         skills: [],
         paths: [],
@@ -259,7 +252,7 @@ export async function getAvailableTeams() {
  * Resolve all files for a specific team
  * @param {string} teamCode 
  * @returns {Promise<{
- *   team: { id: string, name: string, nameEn: string, description: string, clusterId: string, clusterName: string, clusterInstallerLabel: string, clusterRouter: string, skills: string[], paths: string[], starterPrompts: string[] },
+ *   team: { id: string, name: string, nameEn: string, description: string, clusterId: string, clusterName: string, clusterRouter: string, skills: string[], paths: string[], starterPrompts: string[] },
  *   files: Array<{ relativePath: string, sourcePath: string, type: 'skill'|'rule'|'doc' }>
  * }>}
  */
