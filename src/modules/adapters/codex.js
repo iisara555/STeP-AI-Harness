@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory, buildFirstWorkOnboardingContract } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -26,6 +26,7 @@ export function generateCodexInstructions(role, files) {
   text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
   text += buildLazyLoadingInventory(files);
+  text += buildFirstWorkOnboardingContract(role);
 
   text += `\n### 5. คำแนะนำในการเรียกใช้\n`;
   text += `- เมื่อได้รับมอบหมายงาน ให้ตรวจดูว่าตรงกับขอบเขตของ Skill ใด แล้วปฏิบัติตามเงื่อนไข ขั้นตอน และเกณฑ์จบงานใน Skill นั้น\n`;
