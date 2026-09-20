@@ -85,3 +85,42 @@ export function buildLazyLoadingInventory(files = []) {
   text += `- Load templates/examples only when the selected Skill or user request requires them.\n\n`;
   return text;
 }
+
+/**
+ * Shared employee onboarding contract used by every AI adapter.
+ * Keeps first-run behavior aligned across Cursor, Claude, Codex, ChatGPT, etc.
+ */
+export function buildFirstWorkOnboardingContract(role = {}) {
+  const teamKnown = Boolean(role.isTeam && role.id && role.id !== 'all');
+  const prompts = Array.isArray(role.starterPrompts) ? role.starterPrompts.slice(0, 3) : [];
+
+  let text = `## First Work — Employee Handoff Contract\n\n`;
+  text += `When the user says **"เริ่มใช้งาน STeP AI"** or opens this workspace for the first time, keep the introduction short. Do not scan Skills/Rules/Manifest recursively.\n`;
+
+  if (teamKnown) {
+    text += `- ทีมหลักที่ตั้งไว้: **${String(role.id).toUpperCase()} — ${role.name || role.description || role.id}**\n`;
+    text += `- บอกผู้ใช้สั้น ๆ ว่า STeP AI รู้บริบททีมนี้แล้ว และเสนอ 3 งานเริ่มต้นด้านล่างโดยไม่โหลด Skill ทั้งหมด:\n`;
+    prompts.forEach((prompt) => {
+      text += `  - "${prompt}"\n`;
+    });
+    if (prompts.length === 0) {
+      text += `  - ให้เสนอ 3 ตัวอย่างจากคำอธิบายงานของทีมโดยไม่แต่งกฎหรือ Source of Truth\n`;
+    }
+  } else {
+    const cluster = role.selectedCluster || '';
+    if (cluster) {
+      text += `- ผู้ใช้เลือกกลุ่ม routing ไว้แล้ว: **${cluster}** แต่ยังไม่ได้เลือกทีม\n`;
+    } else {
+      text += `- ผู้ใช้ยังไม่ได้เลือกทีม และนี่เป็นสถานะที่ยอมรับได้สำหรับ First Run\n`;
+    }
+    text += `- เมื่อได้รับ **งานจริงครั้งแรก ให้ช่วยงานนั้นก่อน** อย่าหยุดเพื่อบังคับตั้งค่าโปรไฟล์\n`;
+    text += `- หลังให้ผลลัพธ์แรกที่มีประโยชน์แล้ว ค่อยเสนอทีมที่น่าจะเกี่ยวข้องมากที่สุด 1 ทีม (ไม่เกิน 2 ถ้ายังคลุมเครือ) พร้อมเหตุผลสั้น ๆ\n`;
+    text += `- ขอการยืนยันก่อนบันทึกทีม ห้ามเดาหรือเปลี่ยนทีมเงียบ ๆ\n`;
+    text += `- เมื่อผู้ใช้ยืนยันและเครื่องมือเขียนไฟล์ได้ ให้ปรับ **Primary Team** ใน `USER.md`; สำหรับ CLI routing ให้แจ้งคำสั่ง `step-ai config --team <team-id>` หรือดำเนินการให้เมื่อมีสิทธิ์ใช้ terminal\n`;
+    text += `- ถ้าผู้ใช้ยังไม่แน่ใจ ให้ทำงานต่อในโหมดกว้างได้ ไม่ต้องถามซ้ำทุกข้อความ\n`;
+  }
+
+  text += `\n`;
+  return text;
+}
+
