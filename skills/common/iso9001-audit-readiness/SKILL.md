@@ -11,6 +11,7 @@ Skill นี้เป็น Orchestrator สำหรับการเตรี
 
 ## ใช้เมื่อ
 - “เตรียม External Audit ISO 9001”
+- “ช่วยเตรียมเอกสารสำหรับ audit ISO ปีนี้”
 - “ทีมเราพร้อม audit หรือยัง”
 - surveillance / recertification / internal audit readiness
 - ต้องการ mock readiness ของทีมก่อน auditor เข้ามา
