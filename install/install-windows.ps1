@@ -50,7 +50,7 @@ Write-Host ""
 Set-Location $rootDir
 & $nodeBin "$rootDir\bin\step-ai.js" init --tool all
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "เกิดข้อผิดพลาดในการติดตั้ง กรุณาติดต่อ AI Champion ประจำทีม" -ForegroundColor Red
+    Write-Host "เกิดข้อผิดพลาดในการติดตั้ง กรุณาเปิด SUPPORT.md และส่งภาพหน้าจอตามช่องทางช่วยเหลือที่ระบุ" -ForegroundColor Red
     Read-Host "กด Enter เพื่อออก"
     exit 1
 }
