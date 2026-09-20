@@ -107,7 +107,7 @@ skills:
     wildcardReason: "all teams create general documents that need a pre-send completeness check"
     description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน placeholder owner/deadline และสิ่งที่เจ้าของงานต้องแก้เอง
     intent: [review, check, summarize]
-    triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง]
+    triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง, เช็คเอกสาร, ร่างเอกสารทั่วไป, ช่องไหนยังเว้นว่าง]
     paths: ["**/draft/**", "**/documents/**", "**/review/**"]
     fileTypes: [docx, pdf, txt, md, xlsx]
     requires: [target_document]
@@ -211,7 +211,7 @@ skills:
       consumers: [imo, sit, linc, pubsec, piti]
     description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
     intent: [plan, review, create]
-    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring]
+    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ]
     paths: ["**/project*/**", "**/plan/**", "**/PM/**"]
     fileTypes: [xlsx, csv, md]
     requires: [project_scope, timeline]
@@ -237,7 +237,7 @@ skills:
       consumers: [pubsec, tech-up, tech-spin, foodfabr]
     description: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาหรือโครงการ จำแนกความเสี่ยงแบบ Tiger, Paper Tiger และ Elephant in the room
     intent: [analyze, review, plan]
-    triggers: [pre-mortem, ความเสี่ยงล่วงหน้า, premortem, tiger paper tiger, elephant in the room, ดักจับความเสี่ยง, จำลองความล้มเหลว]
+    triggers: [pre-mortem, ความเสี่ยงล่วงหน้า, premortem, tiger paper tiger, elephant in the room, ดักจับความเสี่ยง, จำลองความล้มเหลว, โครงการนี้อาจพัง, โครงการล้มเหลวล่วงหน้า]
     paths: ["**/risk/**", "**/premortem/**", "**/pre-mortem/**", "**/PM/**"]
     fileTypes: [md, docx, xlsx]
     requires: [project_scope]
@@ -312,7 +312,7 @@ skills:
       consumers: [qs, imo, piti, crm]
     description: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม (North Star & Input Metrics)
     intent: [plan, align, review]
-    triggers: [okr, okrs, north star, เป้าหมายไตรมาส, ตัวชี้วัด อว, key results, ถ่ายทอดยุทธศาสตร์, input metrics]
+    triggers: [okr, okrs, north star, เป้าหมายไตรมาส, ตัวชี้วัด อว, key results, ถ่ายทอดยุทธศาสตร์, input metrics, แปลงเป้าหมายองค์กร, เป้าทีมไตรมาส]
     paths: ["**/okr/**", "**/strategy/**", "**/SIT/**"]
     fileTypes: [md, xlsx, docx]
     requires: [strategic_goals]
@@ -361,7 +361,7 @@ skills:
       consumers: [crm, eic, imo]
     description: ออกแบบแนวคิดงาน Event ผังบูธ และประสบการณ์ผู้เข้าร่วมงาน
     intent: [create, plan]
-    triggers: [event, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, จัดสัมมนา, ออกแบบงานสัมมนา, concept งานสัมมนา]
+    triggers: [event, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, จัดสัมมนา, ออกแบบงานสัมมนา, concept งานสัมมนา, งานเปิดบ้าน, กิจกรรมในงาน]
     paths: ["**/event*/**", "**/exhibition/**", "**/booth/**"]
     fileTypes: [pdf, pptx, docx]
     requires: [event_goal, audience_type, venue_constraints]
@@ -383,7 +383,7 @@ skills:
       consumers: [imo, mi, piti, sit]
     description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck ในรูปแบบ Interactive 16:9 HTML และ Pitching สำหรับผู้บริหาร
     intent: [create, review]
-    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, keynote, frontend-slides, html slide, pitch deck, สไลด์นำเสนอ]
+    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, keynote, frontend-slides, html slide, pitch deck, สไลด์นำเสนอ, งานนำเสนอ]
     paths: ["**/slides/**", "**/presentation/**", "**/deck/**"]
     fileTypes: [pptx, pdf, key, html]
     requires: [narrative_goal, key_takeaways]
@@ -409,7 +409,7 @@ skills:
       consumers: [sit, tech-up]
     description: มาตรฐานการเขียนโค้ด การแตก branch การ commit และ pull request ในองค์กร
     intent: [create, review]
-    triggers: [git, commit, branch, pull request, pr, code review, workflow]
+    triggers: [git, commit, branch, pull request, pr, code review, workflow, รีวิวโค้ด, ตรวจโค้ด, รวมเข้ากิ่งหลัก]
     paths: ["**/src/**", "**/.git/**", "**/scripts/**"]
     fileTypes: [js, ts, py, sh]
     requires: [git_context]
@@ -432,7 +432,7 @@ skills:
       consumers: [sit]
     description: แนวทางการตั้งค่า GitHub Issues, Projects, Labels และ Automation
     intent: [plan, create, review]
-    triggers: [github, issue, board, milestone, label, project board]
+    triggers: [github, issue, board, milestone, label, project board, กิตฮับ, บอร์ดงาน]
     paths: ["**/.github/**"]
     fileTypes: [yaml, yml, md]
     requires: [workflow_objective]
@@ -455,7 +455,7 @@ skills:
       consumers: [sit]
     description: การตรวจสอบความพร้อม สภาพแวดล้อม และขั้นตอน Deploy เว็บแอปขึ้น Vercel
     intent: [deploy, check, review]
-    triggers: [vercel, deploy, production, preview, environment variable, dns]
+    triggers: [vercel, deploy, production, preview, environment variable, dns, เวอร์เซล]
     paths: ["**/vercel.json", "**/frontend/**", "**/web/**"]
     fileTypes: [json, env, js]
     requires: [build_output, env_vars]
@@ -596,7 +596,7 @@ skills:
       consumers: [hd, les, foodfabr, ga]
     description: ถอดวิธีปฏิบัติงานมาตรฐาน (SOP / WI) ของทีมให้อยู่ในรูปแบบที่คนอื่นทำซ้ำได้
     intent: [create, plan, review]
-    triggers: [sop, wi, คู่มือ, ขั้นตอนการทำงาน, วิธีทำงาน, มาตรฐานการทำงาน, playbook]
+    triggers: [sop, wi, คู่มือ, ขั้นตอนการทำงาน, วิธีทำงาน, มาตรฐานการทำงาน, playbook, ขั้นตอนงานประจำ]
     paths: ["**/SOP/**", "**/procedures/**", "**/playbook/**"]
     fileTypes: [docx, md]
     requires: [process_steps, roles_involved]
@@ -620,7 +620,7 @@ skills:
     wildcardReason: "every team may run a weekly work review"
     description: รวบรวมและวิเคราะห์ผลการทำงานประจำสัปดาห์ ปัญหาคอขวด และแผนงานสัปดาห์ถัดไป
     intent: [summarize, report, review]
-    triggers: [weekly, ประจำสัปดาห์, ทบทวนงาน, รายงานประจำสัปดาห์, weekly review, ติดตามงาน]
+    triggers: [weekly, ประจำสัปดาห์, ทบทวนงาน, รายงานประจำสัปดาห์, weekly review, ติดตามงาน, งานทีมอาทิตย์นี้, งานทีมรอบสัปดาห์]
     paths: ["**/weekly/**", "**/reports/**"]
     fileTypes: [md, docx, xlsx]
     requires: [weekly_tasks_status]
@@ -730,7 +730,7 @@ skills:
       consumers: [mi, eic, piti, imo]
     description: กำหนด Creative Direction จาก Intent, Audience, Feeling, Visual Hammer และ Anti-AI-Slop ก่อนส่งต่อไปยัง Skill ผลิตงาน
     intent: [create, review, plan]
-    triggers: [creative direction, design direction, visual hammer, anti-ai-slop, ai slop, งานดู ai, หา visual hammer, ควรไปทางไหนดี, ทิศทางงานออกแบบ, critique direction, art direction ก่อนทำ]
+    triggers: [creative direction, design direction, visual hammer, anti-ai-slop, ai slop, งานดู ai, หา visual hammer, ควรไปทางไหนดี, ทิศทางงานออกแบบ, critique direction, art direction ก่อนทำ, ทิศทางภาพรวมงานออกแบบ, concept ภาพ, ภาพให้มีเอกลักษณ์]
     paths: ["**/Creative/**", "**/branding/**", "**/campaign/**", "**/exhibition/**"]
     fileTypes: [pdf, pptx, png, jpg, md]
     requires: [creative_objective, audience]
@@ -757,7 +757,7 @@ skills:
     wildcardReason: "evidence-before-claim discipline applies across all teams"
     description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ
     intent: [review, check]
-    triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง]
+    triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง, หลักฐานรองรับครบ, ก่อนบอกว่างานเสร็จ]
     paths: ["**/review/**", "**/final/**", "**/handoff/**"]
     fileTypes: [md, docx, pdf, xlsx, pptx]
     requires: [claim_or_output]
@@ -802,7 +802,7 @@ skills:
       consumers: [isi, eic, mi, tech-spin, tech-up]
     description: ท้าทายสมมติฐาน แยก Fact / Assumption / Decision / Unknown และออกแบบการทดสอบที่ประหยัดที่สุด
     intent: [review, evaluate, plan]
-    triggers: [ท้าทายสมมติฐาน, challenge assumption, stress test idea, grill idea, assumption map, สมมติฐานธุรกิจ, ถามให้ครบก่อนทำ, what are we assuming, critical assumption]
+    triggers: [ท้าทายสมมติฐาน, challenge assumption, stress test idea, grill idea, assumption map, สมมติฐานธุรกิจ, ถามให้ครบก่อนทำ, what are we assuming, critical assumption, คิดไปเอง, เชื่อแต่ยังไม่มีหลักฐาน, ยังไม่ได้พิสูจน์]
     paths: ["**/startup/**", "**/discovery/**", "**/innovation/**"]
     fileTypes: [md, docx, pdf]
     requires: [idea_or_plan]
@@ -823,7 +823,7 @@ skills:
       consumers: [sit, pm, pubsec, nmco, tech-spin]
     description: สร้าง Decision Memo ที่แยกข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation
     intent: [review, evaluate, plan]
-    triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร]
+    triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร, เปรียบเทียบทางเลือก, ข้อมูลประกอบการตัดสินใจ]
     paths: ["**/decision/**", "**/portfolio/**", "**/executive/**"]
     fileTypes: [md, docx, pdf, pptx, xlsx]
     requires: [decision_question]
@@ -847,8 +847,8 @@ skills:
       primary: [linc]
       consumers: [tech-up, tech-spin, pubsec, mi]
     description: ถอดโจทย์โรงงาน/ชุมชนก่อนเสนอเทคโนโลยี แยกอาการ หลักฐาน กระบวนการ ข้อจำกัด และ Desired Outcome
-    intent: [create, review, plan]
-    triggers: [ถอดโจทย์โรงงาน, โจทย์อุตสาหกรรม, problem discovery, pain point โรงงาน, จับโจทย์อุตสาหกรรม, constraint discovery, industry problem brief, โจทย์ชุมชน, current workaround]
+    intent: [create, review, plan, summarize]
+    triggers: [ถอดโจทย์โรงงาน, โจทย์อุตสาหกรรม, problem discovery, pain point โรงงาน, จับโจทย์อุตสาหกรรม, constraint discovery, industry problem brief, โจทย์ชุมชน, current workaround, โจทย์จากที่คุยกับโรงงาน, ปัญหาหน้างานโรงงาน]
     paths: ["**/LINC/**", "**/Industry/**", "**/Local/**", "**/discovery/**"]
     fileTypes: [md, docx, pdf, xlsx]
     requires: [reported_problem]
@@ -870,7 +870,7 @@ skills:
       consumers: [tech-up, tech-spin, les, foodfabr, piti, crm, mi, pubsec]
     description: จับคู่โจทย์ที่ชัดแล้วกับบริการ ผู้เชี่ยวชาญ Lab เครื่องมือ หรือ Pilot Plant จาก Service Registry/NSP/NSTIS โดยให้เจ้าของบริการยืนยันก่อนส่งต่อจริง
     intent: [search, recommend, plan]
-    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, NSTIS]
+    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, NSTIS, หาคนช่วยแก้ปัญหาโรงงาน, ต้องใช้อาจารย์ด้านไหน]
     paths: ["**/LINC/**", "**/Industry/**", "**/Expert/**", "**/Resource/**", "**/Lab/**"]
     fileTypes: [md, docx, pdf, xlsx, csv]
     requires: [problem_or_capability_need]
@@ -912,7 +912,7 @@ skills:
       consumers: [mi, ifu, les, foodfabr, cc, piti]
     description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยระวัง sample bias/PII
     intent: [summarize, review]
-    triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า]
+    triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า, ลูกค้าบ่น, จัดกลุ่มความเห็นลูกค้า]
     paths: ["**/CRM/**", "**/Customer/**", "**/survey/**", "**/feedback/**"]
     fileTypes: [xlsx, csv, md, docx, txt]
     requires: [customer_feedback]
@@ -985,8 +985,8 @@ skills:
       primary: [qs]
       consumers: []
     description: ทำ Evidence Matrix/PBC list เชื่อม requirement กับหลักฐาน period source owner และ gap
-    intent: [create, review]
-    triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso]
+    intent: [create, review, summarize]
+    triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso, ผู้ตรวจจะขอหลักฐาน, รายการหลักฐานให้ผู้ตรวจ]
     paths: ["**/Audit/**", "**/Evidence/**", "**/ISO/**"]
     fileTypes: [xlsx, csv, md, docx, pdf]
     requires: [audit_scope_or_evidence_request]
@@ -1009,7 +1009,7 @@ skills:
       consumers: []
     description: ตรวจ Controlled Document และ Record เรื่อง owner revision approval current/obsolete retention และ traceability
     intent: [review, check]
-    triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย]
+    triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย, เอกสารในระบบคุณภาพ, ทะเบียนเอกสาร, ฉบับไหนเลิกใช้]
     paths: ["**/ISO/**", "**/SOP/**", "**/records/**", "**/documents/**"]
     fileTypes: [docx, pdf, xlsx, md]
     requires: [document_or_record]
@@ -1036,7 +1036,7 @@ skills:
       consumers: []
     description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
     intent: [review, interview]
-    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit]
+    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ]
     paths: ["**/Audit/**", "**/ISO/**", "**/Training/**"]
     fileTypes: [md, docx, pdf]
     requires: [team_or_process_context]
@@ -1083,7 +1083,7 @@ skills:
       consumers: []
     description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
     intent: [review, evaluate]
-    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms]
+    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ]
     paths: ["**/Risk/**", "**/ISO/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx]
     requires: [process_or_qms_context]
@@ -1110,7 +1110,7 @@ skills:
       consumers: []
     description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
     intent: [review, evaluate]
-    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics]
+    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ]
     paths: ["**/KPI/**", "**/Quality/**", "**/ISO/**"]
     fileTypes: [xlsx, csv, md, docx, pptx]
     requires: [objective_or_kpi]
@@ -1137,7 +1137,7 @@ skills:
       consumers: []
     description: เตรียม Management Review Pack จาก KPI, customer feedback, audit, CAPA, risk, resources และ prior actions
     intent: [create, summarize, review]
-    triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review]
+    triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review, ผู้บริหารทบทวนระบบคุณภาพ]
     paths: ["**/ManagementReview/**", "**/ISO/**", "**/Quality/**", "**/QMR/**"]
     fileTypes: [pptx, xlsx, md, docx, pdf]
     requires: [management_review_period]

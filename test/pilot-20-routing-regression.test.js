@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { queryStepRouter } from '../src/cli/commands/ask.js';
+import { loadRouterIndex, queryStepRouter } from '../src/cli/commands/ask.js';
 
 /**
- * Pilot 20-case routing regression scoreboard.
+ * Routing regression scoreboard: original pilot plus synthetic coverage.
  *
  * One file, one table, one number to compare before and after a routing change.
- * Prompts are verbatim from the 2026-09-20 manual pilot run — spoken Thai as
- * employees actually type it, no technical vocabulary.
+ * The original 20 prompts retain their documented 2026-09-20 manual-pilot
+ * provenance. Additional prompts are synthetic employee-style examples,
+ * not evidence of real employee testing. Keep these sources separate.
  *
  * Each case pins the whole outcome an employee sees: routing mode, playbook,
  * skill, confidence tier and scope decision. A tier that drifts in either
@@ -20,7 +21,7 @@ import { queryStepRouter } from '../src/cli/commands/ask.js';
 
 const WORKSPACE = 'tmp/__pilot-20-routing-regression__';
 
-const CASES = [
+const PILOT_CASES = [
   {
     id: 1,
     team: 'cc',
@@ -178,7 +179,118 @@ const CASES = [
   },
 ];
 
-test('Pilot 20-case routing regression', async (t) => {
+// Two independently worded requests per previously uncovered router entry.
+// Keep prompts free of skill IDs; test phrases employees could actually use.
+const SYNTHETIC_SKILLS = [
+  ['tor-review', 'afp',
+    'ช่วยเช็คขอบเขตงานจ้างฉบับนี้หน่อยว่าคนรับงานจะเข้าใจตรงกันไหม',
+    'ตรวจทีโออาร์ให้หน่อย กลัวเขียนเกณฑ์รับงานไม่ชัด'],
+  ['document-review', 'ga',
+    'ช่วยเช็คเอกสารฉบับนี้หน่อย มีช่องไหนยังเว้นว่างหรือวันที่ไม่ตรงกันไหม',
+    'ช่วยดูร่างเอกสารทั่วไปให้หน่อย ยังมีจุดไหนตกหล่นบ้าง'],
+  ['project-plan', 'pm',
+    'วางแผนแบ่งงานโครงการนี้ให้หน่อยว่าอะไรต้องทำก่อนหลัง',
+    'ช่วยกะเวลางานโครงการให้หน่อย แต่ละช่วงควรเสร็จเมื่อไหร่'],
+  ['project-pre-mortem', 'pm',
+    'ช่วยดูหน่อยว่าโครงการนี้อาจพังตรงไหนก่อนจะเริ่มทำ',
+    'วางแผนกันโครงการล้มเหลวล่วงหน้าให้หน่อย จะได้เตรียมทางรับมือ'],
+  ['innovation-okr-mapping', 'sit',
+    'วางแผนแปลงเป้าหมายองค์กรมาเป็นเป้าทีมไตรมาสหน้าให้หน่อย',
+    'ช่วยทบทวนเป้าทีมไตรมาสหน้าว่าสอดคล้องกับยุทธศาสตร์ไหม'],
+  ['event-concept', 'cc',
+    'ช่วยคิด concept งานเปิดบ้านให้หน่อย อยากให้คนเดินชมทั่วงาน',
+    'ช่วยออกแบบกิจกรรมในงานเปิดบ้านให้คนอยากเข้าร่วมหน่อย'],
+  ['presentation-design', 'cc',
+    'ช่วยทำสไลด์เล่าโครงการให้ผู้บริหารฟังในสิบนาทีหน่อย',
+    'ช่วยออกแบบหน้าแต่ละหน้าของงานนำเสนอให้เล่าเรื่องต่อกัน'],
+  ['coding-git-workflow', 'developer',
+    'ช่วยรีวิวโค้ดก่อนรวมเข้ากิ่งหลักให้หน่อย กลัวทำของเดิมพัง',
+    'ช่วยตรวจโค้ดที่แก้รอบนี้ก่อนส่งให้เพื่อนรวมงานหน่อย'],
+  ['github-workflow', 'developer',
+    'วางแผนจัดบอร์ดงานบนกิตฮับให้หน่อย จะได้รู้ว่าใครทำอะไรอยู่',
+    'ช่วยสร้างรายการงานบน GitHub แยกคนรับผิดชอบและป้ายกำกับให้หน่อย'],
+  ['vercel-deploy', 'developer',
+    'ช่วยขึ้นระบบเว็บบนเวอร์เซลให้ลองเปิดดูก่อนใช้จริงหน่อย',
+    'ช่วยตรวจค่าตั้งต้นเว็บบนเวอร์เซลก่อนเอาขึ้นใช้งานหน่อย'],
+  ['brand-tone-of-voice', 'cc',
+    'ช่วยเช็คน้ำเสียงแบรนด์ในข้อความนี้หน่อยว่าเป็นทางการเกินไปไหม',
+    'ช่วยดูภาษาที่สื่อสารในนามองค์กรหน่อยว่าเข้ากับบุคลิกแบรนด์ไหม'],
+  ['sop-authoring', 'qs',
+    'ช่วยเขียนวิธีทำงานทีละขั้นให้คนอื่นทำตามได้หน่อย',
+    'ช่วยร่างขั้นตอนงานประจำให้คนมารับงานต่ออ่านแล้วทำได้เลย'],
+  ['team-weekly-review', 'sit',
+    'ช่วยสรุปงานทีมอาทิตย์นี้หน่อย ว่าเสร็จอะไร ค้างอะไรบ้าง',
+    'ช่วยทบทวนงานทีมรอบสัปดาห์นี้แล้วแยกสิ่งที่ต้องทำต่อ'],
+  ['step-brand', 'cc',
+    'ช่วยเช็คตราอุทยานบนป้ายนี้ว่าเว้นระยะถูกตามคู่มือแบรนด์ไหม',
+    'ช่วยดูสีและตัวอักษรเทียบกับคู่มือแบรนด์ของอุทยานให้หน่อย'],
+  ['creative-art-director', 'cc',
+    'ช่วยดูทิศทางภาพรวมงานออกแบบหน่อย ตอนนี้หน้าตาเหมือนงานทั่วไปมาก',
+    'ช่วยคิด concept ภาพให้มีเอกลักษณ์หน่อย ยังไม่ต้องทำชิ้นงานจริง'],
+  ['evidence-before-approval', 'qs',
+    'ช่วยตรวจหลักฐานก่อนปิดงานหน่อย ว่ามีอะไรที่ยังยืนยันไม่ได้',
+    'ช่วยเช็คว่ามีหลักฐานรองรับครบก่อนบอกว่างานเสร็จหรือยัง'],
+  ['assumption-challenger', 'piti',
+    'ช่วยทบทวนไอเดียนี้หน่อย มีอะไรที่เราคิดไปเองโดยยังไม่ได้พิสูจน์บ้าง',
+    'ช่วยประเมินสิ่งที่เราเชื่อแต่ยังไม่มีหลักฐานในไอเดียนี้หน่อย'],
+  ['decision-memo', 'imo',
+    'ช่วยเปรียบเทียบทางเลือกให้หัวหน้าตัดสินใจหน่อย ขอข้อดีข้อเสียแต่ละทาง',
+    'ช่วยประเมินสองทางเลือกนี้แล้วทำข้อมูลประกอบการตัดสินใจให้หัวหน้า'],
+  ['industry-problem-discovery', 'linc',
+    'ช่วยสรุปโจทย์จากที่คุยกับโรงงานหน่อย ว่าปัญหาจริงอยู่ตรงไหน',
+    'ช่วยทบทวนปัญหาหน้างานโรงงานก่อนเสนอเทคโนโลยีให้เขาหน่อย'],
+  ['expert-resource-matching', 'linc',
+    'วางแผนหาคนช่วยแก้ปัญหาโรงงานหน่อย ต้องใช้อาจารย์ด้านไหน',
+    'วางแผนหาเครื่องมือทดสอบให้ตรงกับโจทย์นี้หน่อย มีที่ไหนเหมาะบ้าง'],
+  ['voice-of-customer', 'crm',
+    'ช่วยสรุปว่าลูกค้าบ่นเรื่องอะไรบ่อยจากข้อความชุดนี้หน่อย',
+    'ช่วยจัดกลุ่มความเห็นลูกค้าให้หน่อย อยากรู้ว่าควรแก้เรื่องไหนก่อน'],
+  ['audit-evidence-matrix', 'qs',
+    'ช่วยทำตารางว่าผู้ตรวจจะขอหลักฐานอะไร อยู่ที่ใคร อยู่ที่ไหน',
+    'ช่วยรวบรวมรายการหลักฐานให้ผู้ตรวจแล้วจับคู่กับข้อกำหนดหน่อย'],
+  ['document-record-control', 'qs',
+    'ช่วยเช็คเอกสารในระบบคุณภาพหน่อยว่าฉบับไหนล่าสุด ฉบับไหนเลิกใช้แล้ว',
+    'ช่วยตรวจทะเบียนเอกสารว่ามีฉบับเก่าหลงเหลือให้คนหยิบใช้ไหม'],
+  ['audit-interview-coach', 'qs',
+    'ช่วยซ้อมตอบผู้ตรวจให้หน่อย กลัวตอบไม่ตรงกับงานที่ทำจริง',
+    'ช่วยซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพให้ทีมหน่อย'],
+  ['qms-risk-opportunity-review', 'qs',
+    'ช่วยทบทวนความเสี่ยงของระบบคุณภาพกับโอกาสปรับปรุงรอบนี้หน่อย',
+    'ช่วยประเมินทะเบียนความเสี่ยงระบบคุณภาพว่ายังมีเรื่องไหนตกหล่น'],
+  ['quality-objective-kpi-review', 'qs',
+    'ช่วยดูตัวชี้วัดคุณภาพหน่อยว่าเป้าที่ตั้งไว้วัดผลได้จริงไหม',
+    'ช่วยทบทวนเป้าด้านคุณภาพที่ทำไม่ถึงหน่อย ต้องดูข้อมูลอะไรเพิ่ม'],
+  ['management-review-prep', 'qs',
+    'ช่วยรวบรวมข้อมูลเข้าประชุมทบทวนฝ่ายบริหารให้หน่อย',
+    'ช่วยจัดทำชุดข้อมูลให้ผู้บริหารทบทวนระบบคุณภาพรอบปีนี้หน่อย'],
+];
+
+const CASES = [
+  ...PILOT_CASES.map(item => ({ ...item, source: 'manual-pilot-2026-09-20' })),
+  ...SYNTHETIC_SKILLS.flatMap(([skill, team, ...prompts], index) => prompts.map((prompt, variant) => ({
+    id: `synthetic-${index + 1}-${variant + 1}`,
+    name: `${skill} colloquial variant ${variant + 1}`,
+    source: 'synthetic-2026-09-20',
+    team,
+    prompt,
+    expect: { mode: 'SKILL', skill, tier: 'HIGH', scope: 'ALLOW' },
+  }))),
+  ...[
+    ['afp', 'ร่าง TOR จ้างจัดกิจกรรมในงานเปิดบ้านให้หน่อย', 'tor-government-writing'],
+    ['cc', 'ช่วยเขียนแคปชั่นชวนคนมางานเปิดบ้านหน่อย', 'step-writing'],
+    ['ga', 'ช่วยร่างหนังสือเชิญเข้าประชุมทบทวนฝ่ายบริหารหน่อย', 'thai-official-documents'],
+    ['qs', 'ช่วยตรวจทะเบียนเอกสารที่มีเลขบัตรประชาชนก่อนส่งต่อหน่อย', 'data-privacy-compliance'],
+  ].map(([team, prompt, skill], index) => ({
+    id: `boundary-${index + 1}`,
+    name: `colloquial topic must preserve ${skill}`,
+    source: 'synthetic-boundary-2026-09-20',
+    team,
+    prompt,
+    expect: { mode: 'SKILL', skill, tier: 'HIGH', scope: 'ALLOW' },
+  })),
+];
+
+test('Pilot and synthetic routing regression', async (t) => {
   const failures = [];
 
   for (const item of CASES) {
@@ -243,6 +355,16 @@ test('Pilot 20-case routing regression', async (t) => {
       highTierCases.length >= 17,
       `expected at least 17 HIGH-confidence pilot cases, table now pins ${highTierCases.length}`
     );
+  });
+
+  await t.test('every router entry has an expected route and prompts have provenance', async () => {
+    const catalog = await loadRouterIndex();
+    const covered = new Set(CASES.map(item => item.expect.skill).filter(Boolean));
+    assert.deepEqual([...covered].sort(), catalog.map(skill => skill.name).sort());
+    assert.equal(new Set(CASES.map(item => item.prompt)).size, CASES.length);
+    assert.equal(new Set(CASES.map(item => item.id)).size, CASES.length);
+    assert.equal(CASES.filter(item => item.source === 'manual-pilot-2026-09-20').length, 20);
+    assert.ok(CASES.every(item => item.source));
   });
 
   await t.test('generic fallback never invites governance bypass', async () => {
