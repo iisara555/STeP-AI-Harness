@@ -69,7 +69,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('privacy')}    ตรวจข้อมูลส่วนบุคคลแบบ local และปิดบังก่อนส่ง AI
   ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
-  ${colors.cyan('teams')}      แสดงผังและรายชื่อ 22 ทีมของ STeP พร้อม 5 Domain Clusters
+  ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
   ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
   ${colors.cyan('status')}     ตรวจรุ่นที่ติดตั้งและไฟล์ที่มีการแก้ไขในเครื่อง
   ${colors.cyan('sync')}       ซิงก์ไฟล์ Skills และ Rules
