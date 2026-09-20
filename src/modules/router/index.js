@@ -22,3 +22,5 @@ export {
 export { checkScope } from './scope-guard.js';
 export { buildRouterGuidelines } from './router-prompt.js';
 export { validateManifestIntegrity, loadAndValidateManifests } from './manifest-validator.js';
+
+export { parseAuthorityRegistry, loadAuthorityRegistry, evaluateAuthorityPreflight } from './authority-preflight.js';
