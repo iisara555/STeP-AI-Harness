@@ -5,6 +5,7 @@ import { getSupportedTools, isToolSupported } from '../../modules/adapters/index
 import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import readline from 'node:readline';
+import { updateUserMemoryProfile } from '../../modules/user-memory.js';
 
 export async function runConfig(args) {
   header('STeP AI User Settings & Profile');
@@ -24,6 +25,7 @@ export async function runConfig(args) {
       process.exit(1);
     }
     await saveUserConfig({ team: found.id, cluster: found.clusterId, teamDeferred: false });
+    await updateUserMemoryProfile(process.cwd(), { team: found.id, cluster: found.clusterId, starterPrompts: found.starterPrompts || [] });
     success(`อัปเดตทีมหลักเป็น: ${colors.bold(found.name)} (${found.id.toUpperCase()})`);
     return;
   }
@@ -37,6 +39,7 @@ export async function runConfig(args) {
       process.exit(1);
     }
     await saveUserConfig({ team: '', cluster: foundCluster.id, teamDeferred: true });
+    await updateUserMemoryProfile(process.cwd(), { team: '', cluster: foundCluster.id, starterPrompts: [] });
     success(`บันทึกกลุ่มงาน: ${colors.bold(foundCluster.label)} — ยังเลือกทีมภายหลังได้`);
     return;
   }
@@ -104,6 +107,11 @@ export async function runConfig(args) {
           cluster: selection.team.clusterId,
           teamDeferred: false,
         });
+        await updateUserMemoryProfile(process.cwd(), {
+          team: selection.team.id,
+          cluster: selection.team.clusterId,
+          starterPrompts: selection.team.starterPrompts || [],
+        });
         success(`บันทึกทีมหลัก: ${selection.team.name} (${selection.team.id.toUpperCase()}) สำเร็จ!`);
       } else if (selection.cluster) {
         await saveUserConfig({
@@ -111,9 +119,15 @@ export async function runConfig(args) {
           cluster: selection.cluster.id,
           teamDeferred: true,
         });
+        await updateUserMemoryProfile(process.cwd(), {
+          team: '',
+          cluster: selection.cluster.id,
+          starterPrompts: [],
+        });
         success(`บันทึกกลุ่มงาน: ${selection.cluster.label} — ยังเลือกทีมภายหลังได้`);
       } else {
         await saveUserConfig({ team: '', cluster: '', teamDeferred: true });
+        await updateUserMemoryProfile(process.cwd(), { team: '', cluster: '', starterPrompts: [] });
         info('ยังไม่ระบุกลุ่มหรือทีม ระบบจะใช้ routing แบบกว้างก่อน');
       }
     } else if (choice === '2') {
