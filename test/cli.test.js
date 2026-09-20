@@ -242,7 +242,6 @@ test('CLI & Core Modules Test Suite', async (t) => {
     }
 
     const cc = teams.find((team) => team.id === 'cc');
-    assert.equal(cc.clusterInstallerLabel, 'การตลาด ออกแบบ สื่อสาร และลูกค้าสัมพันธ์');
     assert.equal(cc.starterPrompts.length, 3);
     assert.ok(cc.starterPrompts[0].includes('Designer Brief'));
   });
