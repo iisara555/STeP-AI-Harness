@@ -177,144 +177,39 @@ fi
 
 echo ""
 echo -e "${GRAY}------------------------------------------------------------${NC}"
-echo -e "${YELLOW}ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่ต้องการติดตั้งคำสั่ง${NC}"
-echo -e "  1. ติดตั้งให้ทุกค่าย (All 8 Tools: Cursor, OpenCode, Claude, ChatGPT, Antigravity, Hermes, Windsurf, VS Code) [แนะนำ]"
-echo -e "  2. Cursor IDE (สายฟรีมีโควตา)"
-echo -e "  3. OpenCode AI Assistant (สายฟรีมีโควตา)"
-echo -e "  4. Claude Desktop / Claude Code (สายจ่ายตังค์)"
-echo -e "  5. ChatGPT Desktop (สายจ่ายตังค์)"
-echo -e "  6. Google Antigravity & Spark (สายจ่ายตังค์)"
-echo -e "  7. Hermes Agent (สาย Local AI)"
-echo -e "  8. Windsurf AI IDE (สายฟรีมีโควตา)"
-echo -e "  9. OpenAI Codex / VS Code (สายฟรีมีโควตา)"
-echo ""
-
-read -p "พิมพ์หมายเลข (1-9) [default: 1]: " TOOL_CHOICE || true
-TOOL_CHOICE=${TOOL_CHOICE:-1}
-
-SELECTED_TOOL="all"
-case "$TOOL_CHOICE" in
-    1) SELECTED_TOOL="all" ;;
-    2) SELECTED_TOOL="cursor" ;;
-    3) SELECTED_TOOL="opencode" ;;
-    4) SELECTED_TOOL="claude" ;;
-    5) SELECTED_TOOL="chatgpt" ;;
-    6) SELECTED_TOOL="antigravity" ;;
-    7) SELECTED_TOOL="hermes" ;;
-    8) SELECTED_TOOL="windsurf" ;;
-    9) SELECTED_TOOL="codex" ;;
-    *) SELECTED_TOOL="all" ;;
-esac
-
-# 5. เลือก STeP Team (Display all 22 teams)
-echo ""
-echo -e "${GRAY}------------------------------------------------------------${NC}"
-echo -e "${YELLOW}ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team — แสดงครบทั้ง 22 ทีม)${NC}"
-echo ""
-echo -e "${CYAN}● กลุ่มงาน: ธรรมาภิบาลและการบริหารจัดการ (Governance & Operations)${NC}"
-echo -e "   1. GA        - งานบริหารทั่วไป (ธุรการกลาง/เอกสาร)"
-echo -e "   2. AFP       - บัญชี การเงิน และจัดซื้อ"
-echo -e "   3. IASA      - ความร่วมมือระหว่างประเทศและพันธมิตร"
-echo -e "   4. QS        - ระบบคุณภาพ (ISO และมาตรฐานองค์กร)"
-echo -e "   5. NMCO      - ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว."
-echo -e "   6. HD        - พัฒนาศักยภาพบุคลากร"
-echo ""
-echo -e "${CYAN}● กลุ่มงาน: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation & Strategy)${NC}"
-echo -e "   7. PITI      - บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี"
-echo -e "   8. ISI       - บ่มเพาะ Startup นวัตกรรม"
-echo -e "   9. EIC       - การเป็นผู้ประกอบการและนวัตกรรม"
-echo -e "  10. IMO       - บริหารจัดการนวัตกรรม"
-echo -e "  11. SIT       - ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง"
-echo ""
-echo -e "${CYAN}● กลุ่มงาน: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer & Industry)${NC}"
-echo -e "  12. TECH-SPIN - ถ่ายทอดเทคโนโลยีและบริษัท Spin-off"
-echo -e "  13. TECH-UP   - เทคโนโลยีเชิงลึกและการขยายระดับการผลิต"
-echo -e "  14. LINC      - ความร่วมมือท้องถิ่นและอุตสาหกรรม"
-echo -e "  15. PUBSEC    - โครงการความร่วมมือภาครัฐ"
-echo ""
-echo -e "${CYAN}● กลุ่มงาน: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative & Client)${NC}"
-echo -e "  16. CC        - งานสร้างสรรค์และการสื่อสาร"
-echo -e "  17. MI        - นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม"
-echo -e "  18. CRM       - ลูกค้าสัมพันธ์"
-echo ""
-echo -e "${CYAN}● กลุ่มงาน: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Labs & Infrastructure)${NC}"
-echo -e "  19. IFU       - การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก"
-echo -e "  20. IQI       - พัฒนาคุณภาพโครงสร้างพื้นฐาน"
-echo -e "  21. LES       - ห้องปฏิบัติการและเครื่องมือ"
-echo -e "  22. FOODFABR  - โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม"
-echo ""
-
-read -p "พิมพ์หมายเลขทีม (1-22) หรือรหัสทีม (เช่น ga, cc) [default: ทุกคนเข้าถึงได้]: " TEAM_CHOICE || true
-TEAM_CHOICE=$(echo "$TEAM_CHOICE" | tr '[:upper:]' '[:lower:]')
-
-SELECTED_TEAM=""
-if [ -n "$TEAM_CHOICE" ]; then
-case "$TEAM_CHOICE" in
-    1|ga) SELECTED_TEAM="ga" ;;
-    2|afp) SELECTED_TEAM="afp" ;;
-    3|iasa) SELECTED_TEAM="iasa" ;;
-    4|qs) SELECTED_TEAM="qs" ;;
-    5|nmco) SELECTED_TEAM="nmco" ;;
-    6|hd) SELECTED_TEAM="hd" ;;
-    7|piti) SELECTED_TEAM="piti" ;;
-    8|isi) SELECTED_TEAM="isi" ;;
-    9|eic) SELECTED_TEAM="eic" ;;
-    10|imo) SELECTED_TEAM="imo" ;;
-    11|sit) SELECTED_TEAM="sit" ;;
-    12|tech-spin|techspin) SELECTED_TEAM="tech-spin" ;;
-    13|tech-up|techup) SELECTED_TEAM="tech-up" ;;
-    14|linc) SELECTED_TEAM="linc" ;;
-    15|pubsec) SELECTED_TEAM="pubsec" ;;
-    16|cc) SELECTED_TEAM="cc" ;;
-    17|mi) SELECTED_TEAM="mi" ;;
-    18|crm) SELECTED_TEAM="crm" ;;
-    19|ifu) SELECTED_TEAM="ifu" ;;
-    20|iqi) SELECTED_TEAM="iqi" ;;
-    21|les) SELECTED_TEAM="les" ;;
-    22|foodfabr) SELECTED_TEAM="foodfabr" ;;
-    *)
-        echo -e "${YELLOW}ไม่พบทีม '$TEAM_CHOICE' ระบบจะติดตั้งแบบทุกคนเข้าถึงได้${NC}"
-        SELECTED_TEAM=""
-        ;;
-esac
-fi
-
-# 6. Install / Configure Harness
-echo ""
-echo -e "${GRAY}------------------------------------------------------------${NC}"
-echo -e "${YELLOW}ขั้นตอนที่ 3: กำลังติดตั้ง STeP AI ให้พร้อมใช้งาน...${NC}"
+echo -e "${YELLOW}ตั้งค่าการใช้งาน: เลือกกลุ่มงาน/ทีม (ข้ามได้)${NC}"
+echo -e "${GRAY}ระบบจะเตรียม instruction สำหรับ AI adapters ที่รองรับทั้งหมดโดยอัตโนมัติ${NC}"
+echo -e "${GRAY}ถ้ายังไม่แน่ใจ ให้เลือก 0 ได้ และเปลี่ยนภายหลังด้วย step-ai config${NC}"
 echo ""
 
 cd "$ROOT_DIR"
-if [ -n "$SELECTED_TEAM" ]; then
-    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" init --team "$SELECTED_TEAM" --tool "$SELECTED_TOOL"
-    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" config --team "$SELECTED_TEAM"
-else
-    "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" init --role all --tool "$SELECTED_TOOL"
-fi
+"$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" init --tool all
 
 # 7. Run Doctor Check
 echo ""
 "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" doctor --employee
 
-TEAM_LABEL="$SELECTED_TEAM"
-if [ -z "$SELECTED_TEAM" ]; then
-    TEAM_LABEL="ทุกคนเข้าถึงได้"
-else
-    TEAM_LABEL=$(echo "$SELECTED_TEAM" | tr '[:lower:]' '[:upper:]')
-fi
+TEAM_LABEL="$("$NODE_BIN" -e "const fs=require('fs'),os=require('os'),p=require('path').join(os.homedir(),'.step-ai','config.json');try{const c=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(c.team?String(c.team).toUpperCase():'ยังไม่ระบุ — เลือกภายหลังได้')}catch{process.stdout.write('ยังไม่ระบุ — เลือกภายหลังได้')}")"
+CLUSTER_LABEL="$("$NODE_BIN" -e "const fs=require('fs'),os=require('os'),p=require('path').join(os.homedir(),'.step-ai','config.json');try{const c=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(c.cluster||'')}catch{}")"
+
 echo ""
 echo -e "${GREEN}=================================================================${NC}"
 echo -e "${YELLOW}                 ✓ STeP AI พร้อมใช้งานบน macOS               ${NC}"
 echo -e "${GREEN}=================================================================${NC}"
 echo ""
 echo -e "  ทีม: ${WHITE}${TEAM_LABEL}${NC}"
+if [ -n "$CLUSTER_LABEL" ]; then
+    echo -e "  กลุ่ม Routing: ${GRAY}${CLUSTER_LABEL}${NC}"
+fi
+echo -e "  AI adapters: ${WHITE}เตรียม instruction ให้ 8 โปรแกรมแล้ว${NC}"
+echo -e "  เปลี่ยนทีมภายหลัง: ${GRAY}step-ai config${NC}"
 echo ""
 echo -e "${CYAN}วิธีเริ่มใช้งาน:${NC}"
-echo -e "  1. เปิดโปรแกรม AI ที่คุณใช้อยู่ (สายฟรี เช่น Cursor หรือ OpenCode หรือโปรแกรมที่หน่วยงานมีสิทธิ์)"
+echo -e "  1. เปิดโปรแกรม AI ที่องค์กรอนุมัติ"
 echo -e "  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:"
 echo -e "     ${YELLOW}$ROOT_DIR${NC}"
-echo -e "  3. พิมพ์ถามงานภาษาไทยในแชท เช่น 'ช่วยตรวจเอกสารนี้ก่อนส่ง'"
+echo -e "  3. พิมพ์: ${WHITE}เริ่มใช้งาน STeP AI${NC}"
+echo -e "${GRAY}     ระบบจะแนะนำ 3 งานเริ่มต้นตามทีม หรือช่วยงานจริงก่อนถ้ายังไม่ได้เลือกทีม${NC}"
 echo ""
 echo -e "${GRAY}  อ่านไฟล์ START-HERE.md ในโฟลเดอร์นี้ถ้าไม่แน่ใจว่าจะเริ่มอย่างไร${NC}"
 echo -e "${GRAY}  อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
