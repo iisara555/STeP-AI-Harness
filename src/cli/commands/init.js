@@ -9,7 +9,7 @@ import { saveUserConfig, getUserTeam, getUserCluster } from '../../utils/user-co
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import readline from 'node:readline';
-import { initUserMemory, ensureGitignored } from '../../modules/user-memory.js';
+import { initUserMemory, ensureGitignored, updateUserMemoryProfile } from '../../modules/user-memory.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
 import { selectTeamProfile } from '../team-selection.js';
 
@@ -218,6 +218,12 @@ export async function runInit(args) {
   });
   if (memResult.created) {
     info(`สร้างหน่วยความจำเฉพาะตัวใน ${colors.dim('USER.md')} (อยู่ใน .gitignore ไม่มีการเผยแพร่)`);
+  } else {
+    await updateUserMemoryProfile(dest, {
+      team: teamCode || '',
+      cluster: selectedClusterId || '',
+      starterPrompts: targetEntity?.starterPrompts || [],
+    });
   }
 
   const outputWorkspace = await initOutputWorkspace(dest, teamCode || (targetType === 'team' ? role.id : 'shared'));
