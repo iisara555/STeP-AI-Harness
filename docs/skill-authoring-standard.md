@@ -57,4 +57,10 @@ Skill ใหม่ตั้งแต่ Standard v2 ต้องใส่ `stand
 - `Authority` ต้องแยกสิ่งที่ AI ช่วยได้ อะไรต้องยืนยัน และอะไรเป็นอำนาจมนุษย์
 - `Handoff` ต้องระบุปลายทางหรือเกณฑ์ว่าเมื่อไรงานพร้อมส่งต่อ
 - ขนาดไฟล์ไม่ใช่ quality gate โดยตัวมันเอง แต่ core contract ควรสั้นและ predictable; methodology/template ที่ยาวให้ย้ายไป references/scripts/templates ตาม Progressive Disclosure
+## Router consumer scope
+
+- `teams.consumers` ระบุทีมที่ควร preload Skill เข้า team workspace; ไม่ใช่รายชื่อทุกทีมที่อาจเป็น subject ของกระบวนการ
+- ใช้ `consumers: ["*"]` เฉพาะ capability ที่เป็นงานประจำข้ามองค์กรจริง เช่น document review, privacy, meeting, writing
+- ทุก wildcard ต้องมี `wildcardReason` ใน Router Registry; validator จะ reject wildcard ที่ไม่มีเหตุผล
+- Specialist/QMS Skill ให้ primary owner ถือเป็น baseline และเพิ่ม consumer แบบ explicit เมื่อมี usage evidence; ทีมอื่นยัง route เข้า Skill ได้เมื่อคำขอมี trigger ชัด
 
