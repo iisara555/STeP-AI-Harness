@@ -668,7 +668,7 @@ skills:
     wildcardReason: "any team may need an AI visual prompt while preserving STeP brand context"
     description: สร้าง Prompt Spec กลางแล้ว render เป็น syntax family ที่เหมาะกับเครื่องมือสำหรับงานสร้างหรือแก้ภาพ โดยรักษา reference และ brand constraints
     intent: [create, draft, design]
-    triggers: [prompt, ขอ prompt, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion, art direction, visual direction, reference image, ภาพอ้างอิง, ตาม ref, ตาม reference, photorealistic, ภาพสมจริง, product hero, technology hero, architectural visual, exhibition visual, visual campaign]
+    triggers: [prompt, ขอ prompt, ขอ prompt ภาพ, ขอ prompt รูป, ขอ prompt โปสเตอร์, prompt ภาพโปสเตอร์, prompt งานสัมมนา, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion, art direction, visual direction, reference image, ภาพอ้างอิง, ตาม ref, ตาม reference, photorealistic, ภาพสมจริง, product hero, technology hero, architectural visual, exhibition visual, visual campaign]
     paths: ["**/creative/**", "**/poster/**", "**/media/**", "**/visual/**", "**/campaign/**"]
     fileTypes: [png, jpg, jpeg, webp, md, prompt]
     requires: [image_theme_context]
@@ -962,7 +962,7 @@ skills:
       consumers: []
     description: เตรียม External/Internal Audit ISO 9001 แบบ process-based สำหรับทีมและทั้งองค์กร
     intent: [review, plan]
-    triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
+    triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, เตรียมเอกสาร audit iso, เตรียมเอกสารสำหรับ audit iso, เอกสาร audit iso, เอกสารสำหรับ audit iso, audit iso, iso audit, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
     paths: ["**/ISO/**", "**/Audit/**", "**/Quality/**"]
     fileTypes: [md, docx, pdf, xlsx]
     requires: [audit_scope_or_plan]
