@@ -665,7 +665,7 @@ skills:
     teams:
       primary: [cc]
       consumers: ["*"]
-    wildcardReason: "any team may need an AI visual prompt while preserving STeP brand context"
+    wildcardReason: "any team may need an AI visual prompt for communication, concept, or image-edit work"
     description: สร้าง Prompt Spec กลางแล้ว render เป็น syntax family ที่เหมาะกับเครื่องมือสำหรับงานสร้างหรือแก้ภาพ โดยรักษา reference และ brand constraints
     intent: [create, draft, design]
     triggers: [prompt, ขอ prompt, ขอ prompt ภาพ, ขอ prompt รูป, ขอ prompt โปสเตอร์, prompt ภาพโปสเตอร์, prompt งานสัมมนา, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion, art direction, visual direction, reference image, ภาพอ้างอิง, ตาม ref, ตาม reference, photorealistic, ภาพสมจริง, product hero, technology hero, architectural visual, exhibition visual, visual campaign]
@@ -674,11 +674,11 @@ skills:
     requires: [image_theme_context]
     scope:
       allow:
-        - กำหนด Brand Strength แบบ STRONG / BALANCED / LIGHT โดย BALANCED เป็นค่าเริ่มต้น
-        - เลือก Visual Mode ให้เหมาะกับวัตถุประสงค์ เช่น Editorial, Photorealistic, Architectural, Technology Hero หรือ Reference-Led
-        - สร้าง Prompt จากภาพอ้างอิงโดยถอดหลัก Art Direction แล้วตีความใหม่ให้สอดคล้องกับ STeP Brand DNA
-        - ใช้ STeP Innovation Yellow (#F9AE3B) เป็น Brand Anchor โดยไม่บังคับให้เป็นสีหลักทุกชิ้น
-        - สร้าง Photorealistic visual เมื่อเหมาะกับงาน โดยต้องไม่สร้างโลโก้ เหตุการณ์ บุคคล หรือข้อมูลที่ทำให้เข้าใจผิดว่าเป็นข้อเท็จจริง
+        - สร้าง Prompt Spec จาก brief, reference หรือ existing image แล้ว render ตาม syntax family ของเครื่องมือปลายทาง
+        - เลือก Art Direction, composition, lighting, medium และ palette ตาม purpose/audience โดยไม่ผูกกับชื่อรุ่น
+        - แยก MUST_KEEP / CHANGE_ONLY สำหรับ edit หรือ inpaint และรักษา reference constraints
+        - ใช้ Brand context เฉพาะจาก source ที่ยืนยันได้หรือข้อมูลที่ผู้ใช้ให้ในงานปัจจุบัน
+        - สร้าง visual prompt ได้หลายแนว เช่น Editorial, Photorealistic, Architectural, Technology/Product หรือ Reference-Led โดยไม่สร้างโลโก้หรือ claim ที่ไม่มีหลักฐาน
       escalate: {}
       human_only:
         ci_governance:
