@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory, buildFirstWorkOnboardingContract } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -24,6 +24,7 @@ export function generateGeminiInstructions(role, files) {
   text += buildRouterGuidelines({ format: 'compact' });
   text += `\n\n`;
   text += buildLazyLoadingInventory(files);
+  text += buildFirstWorkOnboardingContract(role);
 
   text += `\n## Google Antigravity & Spark Execution Directives\n`;
   text += `1. Follow task management and planning guidelines before modifying project artifacts.\n`;
