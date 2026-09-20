@@ -238,13 +238,30 @@ export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
 export function rankSkillCandidates(skills, context, options = {}) {
   const scored = skills.map((s) => scoreSkillCandidate(s, context, options));
   const lowerText = (context.text || '').toLowerCase();
+  const actionFirstIntents = new Set([
+    'privacy-review',
+    'form-submit',
+    'social-writing',
+    'lab-review',
+    'market-test',
+    'onboarding-plan',
+    'nonconformity',
+  ]);
 
   return scored.sort((a, b) => {
     const scoreDiff = b.score - a.score;
 
-    // Near-tie specificity rule:
-    // a domain-specific keyword match should beat an intent-only candidate
-    // when the total scores differ by no more than 0.10.
+    // Qualified action intent beats a noun/domain keyword in a near tie.
+    // Example: "เขียนแคปชั่นงานสัมมนา" is writing, not event design.
+    if (
+      actionFirstIntents.has(context.intent) &&
+      Math.abs(scoreDiff) <= 0.10 &&
+      a.breakdown.intent !== b.breakdown.intent
+    ) {
+      return b.breakdown.intent - a.breakdown.intent;
+    }
+
+    // For ordinary intents, a domain-specific keyword can break a near tie.
     if (Math.abs(scoreDiff) <= 0.10 && a.breakdown.keyword !== b.breakdown.keyword) {
       return b.breakdown.keyword - a.breakdown.keyword;
     }
