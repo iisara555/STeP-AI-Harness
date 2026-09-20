@@ -255,6 +255,49 @@ export async function loadUserMemory(workspaceDir = process.cwd()) {
   }
 }
 
+/**
+ * Update only the routing identity section of an existing USER.md.
+ * Used when a deferred team selection is confirmed after installation.
+ */
+export async function updateUserMemoryProfile(workspaceDir = process.cwd(), updates = {}) {
+  const filePath = getUserMemoryPath(workspaceDir);
+  if (!(await pathExists(filePath))) return { updated: false, filePath };
+
+  let content = await readFile(filePath, 'utf-8');
+  const team = updates.team ? String(updates.team).toUpperCase() : '';
+  const cluster = updates.cluster ? String(updates.cluster) : '';
+
+  content = content.replace(
+    /(- \*\*ทีมหลัก \(Primary Team\)\*\*:\s*).*$/m,
+    `$1${team}`
+  );
+  content = content.replace(
+    /(- \*\*กลุ่มงานสำหรับ Routing \(Routing Cluster\)\*\*:\s*).*$/m,
+    `$1${cluster}`
+  );
+
+  if (Array.isArray(updates.starterPrompts)) {
+    const prompts = updates.starterPrompts.slice(0, 3);
+    const replacement = [
+      '## 5. งานเริ่มต้นที่แนะนำ (Suggested First Tasks)',
+      ...(prompts.length > 0
+        ? prompts.map((prompt) => `- ${prompt}`)
+        : ['- (เมื่อเริ่มงานจริง AI จะช่วยแนะนำตัวอย่างที่เหมาะกับงานของคุณ)']),
+      '',
+      '## 6. ทักษะที่ใช้งานบ่อย (Frequently Used Skills)',
+    ].join('\n');
+
+    content = content.replace(
+      /## 5\. งานเริ่มต้นที่แนะนำ \(Suggested First Tasks\)[\s\S]*?## 6\. ทักษะที่ใช้งานบ่อย \(Frequently Used Skills\)/,
+      replacement
+    );
+  }
+
+  await writeFile(filePath, content, 'utf-8');
+  await ensureGitignored(workspaceDir);
+  return { updated: true, filePath };
+}
+
 /** Save raw markdown text to USER.md */
 export async function saveUserMemory(workspaceDir = process.cwd(), content = '') {
   const filePath = getUserMemoryPath(workspaceDir);
