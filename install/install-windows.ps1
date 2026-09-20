@@ -129,133 +129,17 @@ if ($foundCount -eq 0) {
 
 Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "ขั้นตอนที่ 1: เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง" -ForegroundColor Yellow
-Write-Host "  1. ติดตั้งให้ทุกค่าย (All 8 Tools: Cursor, OpenCode, Claude, ChatGPT, Antigravity, Hermes, Windsurf, VS Code) [แนะนำ]" -ForegroundColor White
-Write-Host "  2. Cursor IDE (สายฟรีมีโควตา)" -ForegroundColor White
-Write-Host "  3. OpenCode AI Assistant (สายฟรีมีโควตา)" -ForegroundColor White
-Write-Host "  4. Claude Desktop / Claude Code (สายจ่ายตังค์)" -ForegroundColor White
-Write-Host "  5. ChatGPT Desktop (สายจ่ายตังค์)" -ForegroundColor White
-Write-Host "  6. Google Antigravity & Spark (สายจ่ายตังค์)" -ForegroundColor White
-Write-Host "  7. Hermes Agent (สาย Local AI)" -ForegroundColor White
-Write-Host "  8. Windsurf AI IDE (สายฟรีมีโควตา)" -ForegroundColor White
-Write-Host "  9. OpenAI Codex / VS Code (สายฟรีมีโควตา)" -ForegroundColor White
+Write-Host "ตั้งค่าการใช้งาน: เลือกกลุ่มงาน/ทีม (ข้ามได้)" -ForegroundColor Yellow
+Write-Host "ระบบจะเตรียม instruction สำหรับ AI adapters ที่รองรับทั้งหมดโดยอัตโนมัติ" -ForegroundColor Gray
+Write-Host "ถ้ายังไม่แน่ใจ ให้เลือก 0 ได้ และเปลี่ยนภายหลังด้วย step-ai config" -ForegroundColor Gray
 Write-Host ""
-
-$toolChoice = Read-Host "พิมพ์หมายเลข (1-9) [default: 1]"
-if ([string]::IsNullOrWhiteSpace($toolChoice)) { $toolChoice = "1" }
-
-$selectedTool = "all"
-switch ($toolChoice) {
-    "1" { $selectedTool = "all" }
-    "2" { $selectedTool = "cursor" }
-    "3" { $selectedTool = "opencode" }
-    "4" { $selectedTool = "claude" }
-    "5" { $selectedTool = "chatgpt" }
-    "6" { $selectedTool = "antigravity" }
-    "7" { $selectedTool = "hermes" }
-    "8" { $selectedTool = "windsurf" }
-    "9" { $selectedTool = "codex" }
-    default { $selectedTool = "all" }
-}
-
-# 3. Select Team (Display all 22 teams)
-Write-Host ""
-Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "ขั้นตอนที่ 2: เลือกทีมหลักของคุณ (Primary Team — แสดงครบทั้ง 22 ทีม)" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "● กลุ่มงาน: ธรรมาภิบาลและการบริหารจัดการ (Governance and Operations)" -ForegroundColor Cyan
-Write-Host "   1. GA        - งานบริหารทั่วไป (ธุรการกลาง/เอกสาร)" -ForegroundColor White
-Write-Host "   2. AFP       - บัญชี การเงิน และจัดซื้อ" -ForegroundColor White
-Write-Host "   3. IASA      - ความร่วมมือระหว่างประเทศและพันธมิตร" -ForegroundColor White
-Write-Host "   4. QS        - ระบบคุณภาพ (ISO และมาตรฐานองค์กร)" -ForegroundColor White
-Write-Host "   5. NMCO      - ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว." -ForegroundColor White
-Write-Host "   6. HD        - พัฒนาศักยภาพบุคลากร" -ForegroundColor White
-Write-Host ""
-Write-Host "● กลุ่มงาน: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation and Strategy)" -ForegroundColor Cyan
-Write-Host "   7. PITI      - บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี" -ForegroundColor White
-Write-Host "   8. ISI       - บ่มเพาะ Startup นวัตกรรม" -ForegroundColor White
-Write-Host "   9. EIC       - การเป็นผู้ประกอบการและนวัตกรรม" -ForegroundColor White
-Write-Host "  10. IMO       - บริหารจัดการนวัตกรรม" -ForegroundColor White
-Write-Host "  11. SIT       - ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง" -ForegroundColor White
-Write-Host ""
-Write-Host "● กลุ่มงาน: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer and Industry)" -ForegroundColor Cyan
-Write-Host "  12. TECH-SPIN - ถ่ายทอดเทคโนโลยีและบริษัท Spin-off" -ForegroundColor White
-Write-Host "  13. TECH-UP   - เทคโนโลยีเชิงลึกและการขยายระดับการผลิต" -ForegroundColor White
-Write-Host "  14. LINC      - ความร่วมมือท้องถิ่นและอุตสาหกรรม" -ForegroundColor White
-Write-Host "  15. PUBSEC    - โครงการความร่วมมือภาครัฐ" -ForegroundColor White
-Write-Host ""
-Write-Host "● กลุ่มงาน: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative and Client)" -ForegroundColor Cyan
-Write-Host "  16. CC        - งานสร้างสรรค์และการสื่อสาร" -ForegroundColor White
-Write-Host "  17. MI        - นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม" -ForegroundColor White
-Write-Host "  18. CRM       - ลูกค้าสัมพันธ์" -ForegroundColor White
-Write-Host ""
-Write-Host "● กลุ่มงาน: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Labs and Infrastructure)" -ForegroundColor Cyan
-Write-Host "  19. IFU       - การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก" -ForegroundColor White
-Write-Host "  20. IQI       - พัฒนาคุณภาพโครงสร้างพื้นฐาน" -ForegroundColor White
-Write-Host "  21. LES       - ห้องปฏิบัติการและเครื่องมือ" -ForegroundColor White
-Write-Host "  22. FOODFABR  - โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม" -ForegroundColor White
-Write-Host ""
-
-$teamMap = @{
-    "1" = "ga";         "ga" = "ga"
-    "2" = "afp";        "afp" = "afp"
-    "3" = "iasa";       "iasa" = "iasa"
-    "4" = "qs";         "qs" = "qs"
-    "5" = "nmco";       "nmco" = "nmco"
-    "6" = "hd";         "hd" = "hd"
-    "7" = "piti";       "piti" = "piti"
-    "8" = "isi";        "isi" = "isi"
-    "9" = "eic";        "eic" = "eic"
-    "10" = "imo";       "imo" = "imo"
-    "11" = "sit";       "sit" = "sit"
-    "12" = "tech-spin"; "tech-spin" = "tech-spin"; "techspin" = "tech-spin"
-    "13" = "tech-up";   "tech-up" = "tech-up";     "techup" = "tech-up"
-    "14" = "linc";      "linc" = "linc"
-    "15" = "pubsec";    "pubsec" = "pubsec"
-    "16" = "cc";        "cc" = "cc"
-    "17" = "mi";        "mi" = "mi"
-    "18" = "crm";       "crm" = "crm"
-    "19" = "ifu";       "ifu" = "ifu"
-    "20" = "iqi";       "iqi" = "iqi"
-    "21" = "les";       "les" = "les"
-    "22" = "foodfabr";  "foodfabr" = "foodfabr"
-}
-
-$teamChoice = Read-Host "พิมพ์หมายเลขทีม (1-22) หรือรหัสทีม (เช่น ga, cc) [default: ทุกคนเข้าถึงได้]"
-if ([string]::IsNullOrWhiteSpace($teamChoice)) {
-    $selectedTeam = ""
-} else {
-    $normalizedTeam = $teamChoice.Trim().ToLower()
-    if ($teamMap.ContainsKey($normalizedTeam)) {
-        $selectedTeam = $teamMap[$normalizedTeam]
-    } else {
-        Write-Host "ไม่พบทีม '$teamChoice' ระบบจะติดตั้งแบบทุกคนเข้าถึงได้" -ForegroundColor Yellow
-        $selectedTeam = ""
-    }
-}
-
-# 4. Perform Installation
-Write-Host ""
-Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "ขั้นตอนที่ 3: กำลังติดตั้ง STeP AI ให้พร้อมใช้งาน..." -ForegroundColor Yellow
-Write-Host ""
-
 
 Set-Location $rootDir
-
-if ($selectedTeam) {
-    & $nodeBin "$rootDir\bin\step-ai.js" init --team $selectedTeam --tool $selectedTool
-} else {
-    & $nodeBin "$rootDir\bin\step-ai.js" init --role all --tool $selectedTool
-}
+& $nodeBin "$rootDir\bin\step-ai.js" init --tool all
 if ($LASTEXITCODE -ne 0) {
     Write-Host "เกิดข้อผิดพลาดในการติดตั้ง กรุณาติดต่อ AI Champion ประจำทีม" -ForegroundColor Red
     Read-Host "กด Enter เพื่อออก"
     exit 1
-}
-
-if ($selectedTeam) {
-    & $nodeBin "$rootDir\bin\step-ai.js" config --team $selectedTeam
 }
 
 # 5. Run Doctor Check
@@ -263,18 +147,32 @@ Write-Host ""
 & $nodeBin "$rootDir\bin\step-ai.js" doctor --employee
 
 # 6. Success Screen
-$teamLabel = if ($selectedTeam) { $selectedTeam.ToUpper() } else { "ทุกคนเข้าถึงได้" }
+$configPath = Join-Path ([System.Environment]::GetFolderPath('UserProfile')) ".step-ai\config.json"
+$teamLabel = "ยังไม่ระบุ — เลือกภายหลังได้"
+$clusterLabel = ""
+if (Test-Path $configPath) {
+    try {
+        $userConfig = Get-Content -Raw $configPath | ConvertFrom-Json
+        if ($userConfig.team) { $teamLabel = ([string]$userConfig.team).ToUpperInvariant() }
+        if ($userConfig.cluster) { $clusterLabel = [string]$userConfig.cluster }
+    } catch {}
+}
+
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "                 ✓ STeP AI พร้อมใช้งาน                      " -ForegroundColor Yellow
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  ทีม: $teamLabel" -ForegroundColor White
+if ($clusterLabel) { Write-Host "  กลุ่ม Routing: $clusterLabel" -ForegroundColor DarkGray }
+Write-Host "  AI adapters: เตรียม instruction ให้ 8 โปรแกรมแล้ว" -ForegroundColor White
+Write-Host "  เปลี่ยนทีมภายหลัง: step-ai config" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "วิธีเริ่มใช้งาน:" -ForegroundColor Cyan
-Write-Host "  1. เปิดโปรแกรม AI ที่คุณใช้อยู่ (สายฟรี เช่น Cursor หรือ OpenCode หรือโปรแกรมที่หน่วยงานมีสิทธิ์)" -ForegroundColor White
+Write-Host "  1. เปิดโปรแกรม AI ที่องค์กรอนุมัติ" -ForegroundColor White
 Write-Host "  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:" -ForegroundColor White
 Write-Host "     $rootDir" -ForegroundColor Yellow
-Write-Host "  3. พิมพ์ถามงานภาษาไทยในแชท เช่น 'ช่วยตรวจเอกสารนี้ก่อนส่ง'" -ForegroundColor White
+Write-Host "  3. พิมพ์: เริ่มใช้งาน STeP AI" -ForegroundColor White
+Write-Host "     ระบบจะแนะนำ 3 งานเริ่มต้นตามทีม หรือช่วยงานจริงก่อนถ้ายังไม่ได้เลือกทีม" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  อ่านไฟล์ START-HERE.md ในโฟลเดอร์นี้ถ้าไม่แน่ใจว่าจะเริ่มอย่างไร" -ForegroundColor DarkGray
 Write-Host "  อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.bat" -ForegroundColor DarkGray
