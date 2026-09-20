@@ -66,10 +66,10 @@ description: เปลี่ยนวัตถุประสงค์ เนื
 
 ก่อน render ให้ระบุ syntax family ของเครื่องมือปลายทาง:
 
-- **A. Natural-language**
-- **B. Tag + weight**
-- **C. Parameter-flag**
-- **D. Edit / inpaint**
+- **Family A — Natural-language**
+- **Family B — Tag + weight**
+- **Family C — Parameter-flag**
+- **Family D — Edit / inpaint**
 
 รายละเอียด: `references/prompt-spec.md`
 
