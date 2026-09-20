@@ -140,15 +140,17 @@ export async function resolveRoleFiles(roleId) {
  *   description: string,
  *   clusterId: string,
  *   clusterName: string,
+ *   clusterInstallerLabel: string,
  *   clusterRouter: string,
  *   skills: string[],
+ *   starterPrompts: string[],
  *   paths: string[]
  * }>}
  */
 export function parseTeamsYaml(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   const teams = [];
-  let currentCluster = { id: '', name: '', router: '' };
+  let currentCluster = { id: '', name: '', installerLabel: '', router: '' };
   let currentTeam = null;
 
   for (const line of lines) {
@@ -160,12 +162,17 @@ export function parseTeamsYaml(yamlText) {
     if (clusterIdMatch && !line.startsWith('      - id:')) {
       if (currentTeam) teams.push(currentTeam);
       currentTeam = null;
-      currentCluster = { id: clusterIdMatch[1], name: '', router: '' };
+      currentCluster = { id: clusterIdMatch[1], name: '', installerLabel: '', router: '' };
       continue;
     }
     const clusterNameMatch = line.match(/^ {4}name:\s*(.+)/);
     if (clusterNameMatch && !currentTeam) {
       currentCluster.name = clusterNameMatch[1].trim();
+      continue;
+    }
+    const clusterInstallerLabelMatch = line.match(/^ {4}installerLabel:\s*(.+)/);
+    if (clusterInstallerLabelMatch && !currentTeam) {
+      currentCluster.installerLabel = clusterInstallerLabelMatch[1].trim();
       continue;
     }
     const clusterRouterMatch = line.match(/^ {4}router:\s*(.+)/);
@@ -185,9 +192,11 @@ export function parseTeamsYaml(yamlText) {
         description: '',
         clusterId: currentCluster.id,
         clusterName: currentCluster.name,
+        clusterInstallerLabel: currentCluster.installerLabel,
         clusterRouter: currentCluster.router,
         skills: [],
         paths: [],
+        starterPrompts: [],
       };
       continue;
     }
@@ -209,6 +218,14 @@ export function parseTeamsYaml(yamlText) {
     const descMatch = line.match(/^ {8}description:\s*(.+)/);
     if (descMatch) {
       currentTeam.description = descMatch[1].trim();
+      continue;
+    }
+    const starterPromptsMatch = line.match(/^ {8}starterPrompts:\s*\[(.*?)\]/);
+    if (starterPromptsMatch) {
+      currentTeam.starterPrompts = starterPromptsMatch[1]
+        .split(',')
+        .map((p) => p.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
       continue;
     }
 
@@ -242,7 +259,7 @@ export async function getAvailableTeams() {
  * Resolve all files for a specific team
  * @param {string} teamCode 
  * @returns {Promise<{
- *   team: { id: string, name: string, nameEn: string, description: string, clusterId: string, clusterName: string, clusterRouter: string, skills: string[], paths: string[] },
+ *   team: { id: string, name: string, nameEn: string, description: string, clusterId: string, clusterName: string, clusterInstallerLabel: string, clusterRouter: string, skills: string[], paths: string[], starterPrompts: string[] },
  *   files: Array<{ relativePath: string, sourcePath: string, type: 'skill'|'rule'|'doc' }>
  * }>}
  */
