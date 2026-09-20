@@ -5,12 +5,13 @@ import { createSnapshot } from '../../modules/recovery.js';
 import { header, success, info, warn, error, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
-import { saveUserConfig, getUserTeam } from '../../utils/user-config.js';
+import { saveUserConfig, getUserTeam, getUserCluster } from '../../utils/user-config.js';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { initUserMemory, ensureGitignored } from '../../modules/user-memory.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
+import { selectTeamProfile } from '../team-selection.js';
 
 export async function runInit(args) {
   header('Initialize Approved Skills for Workspace');
@@ -18,7 +19,10 @@ export async function runInit(args) {
   const rawRoleId = args.role || args.r;
   let roleId = rawRoleId ? rawRoleId.toLowerCase() : null;
   let teamCode = args.team || args.m;
-  let tool = (args.tool || args.t || 'codex').toLowerCase();
+  const explicitTool = args.tool || args.t;
+  let tool = (explicitTool || 'codex').toLowerCase();
+  let selectedClusterId = args.cluster || args.c || '';
+  let interactiveProfileSelection = false;
   const dest = resolve(process.cwd(), args.dest || args.d || '.');
   const isDryRun = Boolean(args['dry-run']);
 
@@ -26,67 +30,40 @@ export async function runInit(args) {
   const teams = await getAvailableTeams();
 
   const savedTeam = await getUserTeam();
+  const savedCluster = await getUserCluster();
   if (!roleId && !teamCode && savedTeam && (!process.stdin.isTTY || process.env.CI)) {
     teamCode = savedTeam;
   }
+  if (!selectedClusterId && savedCluster) selectedClusterId = savedCluster;
 
-  // Interactive selection if invoked without arguments in a TTY terminal
+  // Installer/interactive selection asks only questions employees can answer.
+  // AI tool instructions default to "all"; advanced users can still pass --tool explicitly.
   if (!roleId && !teamCode && process.stdin.isTTY && !process.env.CI) {
-    info('ยินดีต้อนรับสู่ระบบติดตั้ง STeP AI Approved Skills สำหรับพนักงาน');
-    console.log(colors.bold('\nกรุณาเลือกทีมของคุณจากรายชื่อ 22 ทีมด้านล่าง:\n'));
-
-    teams.forEach((t, idx) => {
-      const num = String(idx + 1).padStart(2, ' ');
-      console.log(`  ${colors.cyan(num + '.')} [${colors.bold(t.id.padEnd(9))}] ${t.name} (${colors.dim(t.clusterName)})`);
-    });
+    interactiveProfileSelection = true;
+    info('ตั้งค่า STeP AI แบบสั้น — ถ้ายังไม่แน่ใจสามารถข้ามและเปลี่ยนภายหลังได้');
 
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
     });
 
-    const teamAnswer = await new Promise((res) => {
-      const prompt = savedTeam
-        ? `\nพิมพ์หมายเลขทีมของคุณ (1-22) [default: ${savedTeam}]: `
-        : '\nพิมพ์หมายเลขทีมของคุณ (1-22) หรือกด Enter สำหรับ Universal Access (All Skills): ';
-      rl.question(colors.bold(colors.green(prompt)), (ans) => {
-        res(ans.trim());
-      });
-    });
+    const selection = await selectTeamProfile({ teams, rl });
+    rl.close();
 
-    let chosenTeamCode = null;
-    if (!teamAnswer && savedTeam) {
-      chosenTeamCode = savedTeam;
-    } else if (teamAnswer) {
-      const teamIdx = parseInt(teamAnswer, 10) - 1;
-      if (teamIdx >= 0 && teamIdx < teams.length) {
-        chosenTeamCode = teams[teamIdx].id;
-      }
-    }
-
-    if (chosenTeamCode) {
-      teamCode = chosenTeamCode;
-      const tObj = teams.find((t) => t.id.toLowerCase() === teamCode.toLowerCase());
-      success(`เลือกทีม: ${tObj ? tObj.name : teamCode} (${teamCode.toUpperCase()})`);
-
-      console.log('\nเลือกเครื่องมือ AI ที่ต้องการใช้งาน:');
-      console.log('  1. Claude (Claude Code / Claude Desktop)');
-      console.log('  2. Cursor IDE (.cursorrules)');
-      console.log('  3. OpenAI Codex (CODEX_INSTRUCTIONS.md)');
-      console.log('  4. ทั้งหมด (All: Claude + Cursor + Codex + Generic)');
-
-      const toolAnswer = await new Promise((res) => {
-        rl.question(colors.bold(colors.green('พิมพ์หมายเลขเครื่องมือ (1-4) [default: 1]: ')), (ans) => {
-          rl.close();
-          res(ans.trim() || '1');
-        });
-      });
-
-      const toolMap = { '1': 'claude', '2': 'cursor', '3': 'codex', '4': 'all' };
-      tool = toolMap[toolAnswer] || 'claude';
+    if (selection.cluster) selectedClusterId = selection.cluster.id;
+    if (selection.team) {
+      teamCode = selection.team.id;
+      selectedClusterId = selection.team.clusterId;
+      success(`เลือกทีม: ${selection.team.name} (${selection.team.id.toUpperCase()})`);
+    } else if (selection.cluster) {
+      info(`จำกลุ่มงานไว้แล้ว: ${selection.cluster.label}`);
+      info(`ยังไม่ต้องเลือกทีม — เปลี่ยนภายหลังได้ด้วย ${colors.cyan('step-ai config')}`);
     } else {
-      rl.close();
+      info(`ข้ามการเลือกทีมก่อน — เปลี่ยนภายหลังได้ด้วย ${colors.cyan('step-ai config')}`);
     }
+
+    if (!explicitTool) tool = 'all';
+    info('เตรียม instruction ให้ AI adapters ที่รองรับทั้งหมดโดยอัตโนมัติ — ไม่ต้องเลือกค่ายตอนติดตั้ง');
   }
 
   // Fallback to Universal Access ('all') if still unassigned
@@ -112,16 +89,25 @@ export async function runInit(args) {
       const t = teamResolved.team;
       targetEntity = {
         id: t.id,
+        name: t.name,
         description: `${t.name} (${t.nameEn}) [${t.clusterName}]`,
         skills: t.skills,
         isTeam: true,
+        clusterId: t.clusterId,
         clusterName: t.clusterName,
+        clusterInstallerLabel: t.clusterInstallerLabel,
         clusterRouter: t.clusterRouter,
+        starterPrompts: t.starterPrompts || [],
       };
+      selectedClusterId = t.clusterId;
       resolved = { role: targetEntity, files: teamResolved.files };
     } else {
       resolved = await resolveRoleFiles(roleId);
-      targetEntity = resolved.role;
+      targetEntity = {
+        ...resolved.role,
+        selectedCluster: selectedClusterId || '',
+      };
+      resolved = { ...resolved, role: targetEntity };
     }
   } catch (err) {
     error(err.message);
@@ -198,19 +184,37 @@ export async function runInit(args) {
     role: role.id,
     targetType,
     team: teamCode ? role.id : null,
+    cluster: selectedClusterId || null,
+    teamDeferred: !teamCode,
     tool,
     files: manifestFiles,
   };
 
   await writeManifest(dest, manifestData);
   if (targetType === 'team' || teamCode) {
-    await saveUserConfig({ team: teamCode || role.id, tool });
+    await saveUserConfig({
+      team: teamCode || role.id,
+      cluster: selectedClusterId || targetEntity.clusterId || '',
+      teamDeferred: false,
+      tool,
+    });
+  } else if (interactiveProfileSelection || selectedClusterId) {
+    await saveUserConfig({
+      team: '',
+      cluster: selectedClusterId || '',
+      teamDeferred: true,
+      tool,
+    });
   }
 
   // Initialize Workspace-Private User Memory (USER.md) & ensure gitignored
   const memResult = await initUserMemory(dest, {
     team: teamCode || (role.id !== 'all' ? role.id : ''),
-    role: targetType === 'team' ? `บุคลากรทีม ${role.id.toUpperCase()}` : (role.name || role.id),
+    cluster: selectedClusterId || '',
+    starterPrompts: targetEntity?.starterPrompts || [],
+    role: targetType === 'team'
+      ? `บุคลากรทีม ${role.id.toUpperCase()}`
+      : (selectedClusterId ? 'บุคลากร STeP — ยังไม่ระบุทีม' : (role.name || role.id)),
   });
   if (memResult.created) {
     info(`สร้างหน่วยความจำเฉพาะตัวใน ${colors.dim('USER.md')} (อยู่ใน .gitignore ไม่มีการเผยแพร่)`);
@@ -223,6 +227,6 @@ export async function runInit(args) {
   const entityLabel = targetType === 'team' ? 'ทีม' : 'Role';
   success(`ติดตั้ง Approved Skills สำหรับ ${entityLabel} ${colors.bold(role.id)} เข้า ${colors.bold(tool)} สำเร็จเรียบร้อย!`);
   info(`บันทึก Checksum ใน ${colors.dim('.step-ai/manifest.json')} สำหรับตรวจสอบและ Rollback`);
-  const toolNameDisplay = tool === 'all' ? 'Claude / Cursor / Codex' : tool;
+  const toolNameDisplay = tool === 'all' ? 'โปรแกรม AI ที่องค์กรอนุมัติ (เตรียม instruction สำหรับ 8 โปรแกรมแล้ว)' : tool;
   console.log(`\nขั้นตอนถัดไป:\n  1. เปิดไดเรกทอรีนี้ใน ${toolNameDisplay}\n  2. รัน ${colors.cyan('step-ai status')} เพื่อตรวจสอบสถานะไฟล์ได้ตลอดเวลา\n`);
 }
