@@ -8,17 +8,24 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 
 > เป้าหมายของหน้านี้: อ่านจบแล้วดาวน์โหลด ติดตั้ง เปิด workspace และลองงานแรกได้ภายในไม่กี่นาที
 
-## สถานะชุดติดตั้ง
+## ชุดที่คุณติดตั้ง
 
-| รายการ | สถานะ |
+ตัวเลขด้านล่างคือสิ่งที่อยู่ใน **ชุดติดตั้งที่องค์กรแจก** ไม่ใช่สิ่งที่อยู่ใน repository
+
+| รายการ | ค่า |
 | --- | --- |
-| Released Pilot baseline | **v0.7.2** |
-| Repository `main` | **post-v0.7.2 development** — ยังไม่ถือเป็น release จนกว่าจะ tag/release |
-| ทีมใน current main | **22 ทีม** |
-| กลุ่ม routing ใน current main | **5 กลุ่ม** |
-| Skills ใน current main | **45 Skills** |
-| Playbooks ใน current main | **4 Playbooks** |
-| Actions ใน current main | **3 Actions** |
+| รุ่นที่แจกให้พนักงาน | **v0.7.2** |
+| ทีม | **22 ทีม** |
+| กลุ่ม routing | **5 กลุ่ม** |
+| Skills | **44 Skills** |
+| Playbooks | **3 Playbooks** |
+| Actions | **3 Actions** |
+
+ถ้าตัวเลขในเครื่องคุณไม่ตรงกับตารางนี้ แปลว่าคุณอาจได้ชุดติดตั้งคนละรุ่น ให้แจ้ง AI Champion
+
+<!-- ผู้ดูแล: ตัวเลขแถวนี้ต้องตรงกับ release asset v0.7.2 ไม่ใช่กับ main
+     สถานะของ main ปัจจุบัน (45 Skills / 4 Playbooks / 3 Actions) อยู่ใน docs/pilot-operations.md
+     เมื่อ tag รุ่นใหม่ ให้ปรับตารางนี้พร้อมกับ release -->
 
 รายละเอียดเชิงระบบอยู่ใน [Architecture Reference](docs/architecture.md) ส่วนหน้านี้เขียนสำหรับพนักงานเป็นหลัก
 
@@ -26,9 +33,9 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 
 ### 1. ดาวน์โหลดจากช่องทางขององค์กร
 
-ช่องทางหลักคือ **Shared Drive หรือช่องทางภายในที่ AI Champion ประจำทีมแจ้ง** ให้ใช้ไฟล์ชุดที่องค์กรระบุเท่านั้น
+ช่องทางเดียวที่ใช้ได้คือ **Shared Drive หรือช่องทางภายในที่ AI Champion ประจำทีมแจ้ง**
 
-หากเข้าแหล่งภายในไม่ได้ ให้ติดต่อ AI Champion เพื่อขอช่องทางที่องค์กรอนุมัติ **อย่าใช้ Public GitHub Release เป็น fallback โดยอัตโนมัติ** เพราะ repository visibility กับสิทธิ์เผยแพร่ข้อมูลภายในเป็นคนละเรื่อง
+หากเข้าแหล่งภายในไม่ได้ ให้ติดต่อ AI Champion เพื่อขอช่องทางที่องค์กรอนุมัติ **อย่าใช้ไฟล์จาก Public GitHub Release** แม้จะเปิดดาวน์โหลดได้ก็ตาม — repository visibility กับสิทธิ์เผยแพร่ชุดติดตั้งภายในเป็นคนละเรื่อง
 
 อย่าดาวน์โหลดไฟล์ติดตั้งจากแหล่งอื่นหรือจากไฟล์ที่ส่งต่อโดยไม่ทราบที่มา
 
@@ -39,10 +46,13 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 - **Windows:** ดับเบิลคลิก `Install-STeP-AI.bat`
 - **macOS:** ดับเบิลคลิก `Install-STeP-AI.command` ถ้า macOS เตือนเรื่องผู้พัฒนา ให้คลิกขวาเลือก **Open** หรือกด **Open Anyway** ใน Privacy & Security
 
-ตัวติดตั้งจะตรวจความพร้อมของ runtime, ตรวจหาโปรแกรม AI ที่มีอยู่ และแสดงรายการทีมให้เลือก
+ตัวติดตั้งจะทำ 3 อย่างให้เอง:
 
-- เลือกทีมหลักของคุณตามที่หัวหน้าทีมหรือ AI Champion แจ้ง
-- ถ้าเครื่องมือหรือ runtime ไม่พร้อม **อย่าติดตั้งระบบเอง** ให้ส่งภาพหน้าจอให้ AI Champion
+1. เตรียม Node.js runtime — ถ้าเครื่องยังไม่มี ตัวติดตั้งจะดาวน์โหลดรุ่นที่ตรวจลายเซ็นแล้วมาวางไว้ **เฉพาะในโฟลเดอร์ STeP AI** ไม่ไปยุ่งกับระบบเครื่องคุณ
+2. ตรวจหาโปรแกรม AI ที่มีอยู่ในเครื่อง
+3. แสดงรายการทีมให้เลือก
+
+เลือกทีมหลักของคุณตามที่หัวหน้าทีมหรือ AI Champion แจ้ง
 
 ### 3. เปิด workspace ด้วยโปรแกรม AI ที่อนุมัติ
 
@@ -157,6 +167,8 @@ AI ช่วยเตรียมข้อมูลและร่างทา�
 output/CC/2026/09/presentation/20260918_CC_presentation_STeP-Booth-CMU_v01.pptx
 ```
 
+ปีในพาธใช้ **ค.ศ.** เสมอ เพื่อให้เรียงไฟล์และเทียบกับระบบอื่นได้ตรงกัน
+
 ถ้ามีชื่อเดิม ระบบควรสร้างเลขเวอร์ชันใหม่แทนการเขียนทับไฟล์เดิม
 
 เมื่อมีรุ่นใหม่จากองค์กร:
@@ -170,7 +182,9 @@ Updater จะสำรองรุ่นเดิมและพยายาม
 
 ### ติดตั้งไม่สำเร็จ
 
-ไม่ต้องติดตั้ง Node.js, Git หรือแก้ระบบด้วยตัวเอง ให้ถ่ายภาพหน้าจอพร้อมข้อความผิดพลาด แล้วส่ง AI Champion ประจำทีม
+ตัวติดตั้งเตรียม Node.js ให้เองอยู่แล้ว คุณไม่ต้องลง Node.js, Git หรือแก้ค่าระบบด้วยตัวเอง
+
+ถ้ายังไม่สำเร็จ ให้ถ่ายภาพหน้าจอพร้อมข้อความผิดพลาดส่ง AI Champion ประจำทีม สาเหตุที่พบบ่อยคือเครือข่ายองค์กรบล็อกการดาวน์โหลด หรือสิทธิ์เขียนไฟล์ในโฟลเดอร์นั้นไม่พอ
 
 ### AI ตอบไม่ถูก
 
@@ -200,24 +214,38 @@ Updater จะสำรองรุ่นเดิมและพยายาม
 - [รายชื่อทีม](docs/teams.md) — ทีมและขอบเขตงานที่ระบบรู้จัก
 - [Architecture Reference](docs/architecture.md) — ภาพรวมสำหรับผู้สนใจระบบ
 - [Context Efficiency](docs/context-efficiency.md) — ทำไมระบบจึงโหลดเฉพาะบริบทที่จำเป็น
-- [Pilot Operations](docs/pilot-operations.md) — การดูแล Pilot สำหรับ AI Champion
 - [Quality Layer](docs/quality-layer.md) — ขอบเขตข้อมูลคุณภาพและ known gaps
 
 ## Repository visibility
 
-ณ วันที่ 20 กันยายน 2569 repository นี้มีสถานะ **Public** ดังนั้นไฟล์ที่ commit ต้องถือว่าเผยแพร่สู่สาธารณะได้ ห้ามนำ controlled SOP/WI, PII, customer data, credentials หรือข้อมูลภายในที่ยังไม่ได้อนุมัติเผยแพร่เข้า repo ดู [Repository Visibility & Data Boundary](docs/repository-data-boundary.md)
+ณ วันที่ 20 กันยายน 2569 repository นี้มีสถานะ **Public** ดังนั้นไฟล์ที่ commit ต้องถือว่าเผยแพร่สู่สาธารณะได้ ห้ามนำ controlled SOP/WI, PII, customer data, credentials หรือข้อมูลภายในที่ยังไม่ได้อนุมัติเผยแพร่เข้า repo
+
+ดู [Repository Visibility & Data Boundary](docs/repository-data-boundary.md)
 
 ## สำหรับ AI Champion และผู้ดูแลระบบ
 
-พนักงานไม่จำเป็นต้องใช้ส่วนนี้ หากคุณเป็นผู้ดูแล ให้เริ่มจาก [Pilot Operations](docs/pilot-operations.md), [Harness Foundation](docs/harness-foundation.md) และ [Validation & Tests](docs/harness-quality-axes.md)
+พนักงานไม่จำเป็นต้องใช้ส่วนนี้
 
-คำสั่งตรวจระบบและชุดทดสอบอยู่ใน `package.json` และเอกสารสำหรับผู้ดูแล ไม่ควรให้พนักงานแก้ไฟล์ใน `skills/`, `rules/` หรือ `manifest/` เอง
+**เริ่มที่นี่**
 
-### Node.js Runtime Policy
+- [Pilot Operations](docs/pilot-operations.md) — การดูแล Pilot และสถานะของ `main` ปัจจุบัน
+- [Harness Foundation](docs/harness-foundation.md) — โครงสร้างพื้นฐานของระบบ
+- [Validation & Tests](docs/harness-quality-axes.md) — แกนคุณภาพและชุดทดสอบ
+- [Pilot Readiness Audit](docs/pilot-readiness-audit.md) — สถานะความพร้อมและ gate ที่ต้องผ่าน
 
-- **Supported floor:** Node.js **20+** — `package.json` ระบุ `engines.node >=20` และ CI ทั้ง validate/release รัน test suite บน Node 20
-- **Managed fallback:** หากเครื่องพนักงานไม่มี Node ที่รองรับ ตัวติดตั้งจะใช้ **Node.js 22.23.2** ที่ pin version + SHA-256 ไว้ เพื่อให้การติดตั้ง reproducible
-- Node 22.23.2 จึงเป็น **managed installer runtime** ไม่ใช่การประกาศว่าโค้ดรองรับเฉพาะ Node 22
+**มาตรฐานการเขียนและรับรอง Skill**
+
+- [Skill Authoring Standard](docs/skill-authoring-standard.md) — รูปแบบและข้อกำหนดของ SKILL.md
+- [Skill Quality Baseline](docs/skill-quality-baseline.md) — เกณฑ์คุณภาพขั้นต่ำก่อนขึ้นสถานะ
+- [Legacy Proposal → Current Harness Mapping](docs/legacy-skill-mapping.md) — ชื่อ Skill ที่เสนอในรายงานเดิม เทียบกับที่ติดตั้งจริง
+
+**กติกาการ release**
+
+- ชุดติดตั้งที่แจกพนักงานมาจาก **release tag เท่านั้น** ไม่ใช่จาก `main`
+- `main` อาจมีการเปลี่ยนแปลง post-release อยู่เสมอ ห้ามส่งไฟล์จาก `main` ให้พนักงานโดยตรง
+- คำสั่งตรวจระบบและชุดทดสอบอยู่ใน `package.json`
+- ไม่ควรให้พนักงานแก้ไฟล์ใน `skills/`, `rules/` หรือ `manifest/` เอง
+- Node.js runtime ที่ชุดติดตั้งใช้ถูก pin ไว้และตรวจลายเซ็นใน CI (`scripts/verify_node_runtime_pins.sh`)
 
 ## หลักการของ STeP AI
 
