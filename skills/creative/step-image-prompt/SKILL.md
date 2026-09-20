@@ -1,5 +1,6 @@
 ---
 name: step-image-prompt
+standardVersion: 2
 description: เปลี่ยนวัตถุประสงค์ เนื้อหา บริบท และภาพอ้างอิงให้เป็น Prompt Spec และ rendered prompt สำหรับสร้างหรือแก้ภาพ AI โดยรักษาข้อเท็จจริง reference และ brand constraints
 ---
 
