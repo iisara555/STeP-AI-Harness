@@ -64,3 +64,10 @@ Core SKILL.md ควรอ่านง่ายและมีเฉพาะส
 - assets/
 
 ทุก local dependency ที่อ้างจาก SKILL.md ต้องมีไฟล์จริงและถูกแจกไปกับ package
+## Router consumer-scope rule
+
+- `teams.primary` = owner/primary operator
+- `teams.consumers` = teams that should receive the Skill in their normal team scope
+- `consumers: ["*"]` is allowed only for genuinely organization-wide routine capabilities and requires `wildcardReason` in `manifest/router-index.yaml`
+- Being audited, reviewed, or supplying evidence to a specialist process does **not** by itself make every team a consumer of that specialist Skill
+
