@@ -4,18 +4,20 @@
 
 ## Scope
 
-- Registered Skills: **45**
-- Lifecycle evidence: **approved 0 / pilot 44 / draft 1**
+- Registered Skills: **46**
+- Lifecycle evidence: **approved 0 / pilot 45 / draft 1**
 - `approvedBy` is treated as the required approval role, not proof that owner approval occurred
-- Routable user-facing Skills: **44** + `step-router`
+- Routable user-facing Skills: **45** + `step-router`
 - Directly represented in model-side 30-task benchmark: **26**
-- Not directly represented in that benchmark: **19**
+- Not directly represented in that benchmark: **20**
 
-การอยู่ในกลุ่ม 19 ตัว **ไม่ได้แปลว่าไม่มี test**; หลายตัวมี routing/authority regression อยู่แล้ว แต่ยังไม่มี direct model-side benchmark case ใน `pilot-30-v1`.
+การอยู่ในกลุ่ม 20 ตัว **ไม่ได้แปลว่าไม่มี test**; หลายตัวมี routing/authority regression อยู่แล้ว แต่ยังไม่มี direct model-side benchmark case ใน `pilot-30-v1`.
 
 Machine-readable source: `manifest/skill-evals.json`
 
 ## Hardening completed in this change
+
+- เพิ่ม `document-review` เพื่อรองรับ pre-send document review จาก README/First Run
 
 - เพิ่ม STeP-native `step-skill-authoring`
 - เพิ่ม `skill-to-pilot` Playbook
@@ -34,4 +36,4 @@ Machine-readable source: `manifest/skill-evals.json`
 5. creative-art-director / step-image-prompt
 6. industry-problem-discovery / expert-resource-matching / market-signal-radar
 
-ไม่จำเป็นต้องเพิ่ม 19 เคสในครั้งเดียว; ให้เพิ่มจาก usage จริงและ regression ที่พบ
+ไม่จำเป็นต้องเพิ่ม 20 เคสในครั้งเดียว; ให้เพิ่มจาก usage จริงและ regression ที่พบ
