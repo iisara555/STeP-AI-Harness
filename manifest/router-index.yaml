@@ -97,6 +97,49 @@ skills:
           authority: budget-allocation
           description: การอนุมัติวงเงินจัดจ้างจริง
 
+  - name: document-review
+    cluster: governance-operations
+    domain: governance
+    processId: governance.document-review
+    teams:
+      primary: [ga]
+      consumers: ["*"]
+    description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน placeholder owner/deadline และสิ่งที่เจ้าของงานต้องแก้เอง
+    intent: [review, check]
+    triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง]
+    paths: ["**/draft/**", "**/documents/**", "**/review/**"]
+    fileTypes: [docx, pdf, txt, md, xlsx]
+    requires: [target_document]
+    scope:
+      allow:
+        - ตรวจความครบถ้วนและความสอดคล้องภายในของเอกสาร
+        - flag วันที่ ตัวเลข ชื่อ owner deadline placeholder หรือ claim ที่ยังรอยืนยัน
+        - สรุปสิ่งที่เจ้าของเอกสารต้องแก้เองก่อนส่ง
+      escalate:
+        tor_or_procurement:
+          skill: tor-review
+          description: เอกสารเป็น TOR หรือเกี่ยวกับการจัดซื้อจัดจ้าง
+        official_correspondence:
+          skill: thai-official-documents
+          description: เอกสารเป็นหนังสือราชการหรือบันทึกข้อความ
+        privacy_or_pii:
+          skill: data-privacy-compliance
+          description: เอกสารมีข้อมูลส่วนบุคคลหรือความลับที่ต้อง privacy review
+        receipt_or_disbursement:
+          skill: receipt-audit
+          description: เอกสารเป็นใบเสร็จหรือหลักฐานเบิกจ่าย
+        lab_result:
+          skill: lab-result-review
+          description: เอกสารเป็นผลทดสอบหรือข้อมูลห้องปฏิบัติการ
+        controlled_qms_document:
+          skill: document-record-control
+          description: เอกสารเป็น controlled QMS document หรือ record
+      human_only:
+        final_approval_or_release:
+          role: document-owner-or-authorized-signatory
+          authority: official-signing
+          description: การอนุมัติ ลงนาม ส่งจริง หรือรับรองเอกสารเป็นอำนาจของมนุษย์
+
   - name: meeting-summary
     cluster: governance-operations
     domain: governance
