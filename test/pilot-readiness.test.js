@@ -76,6 +76,7 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
   await t.test('image prompt skill uses syntax-family capability gate and Spec-first rendering', async () => {
     const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
     const promptSpec = await readFile('skills/creative/step-image-prompt/references/prompt-spec.md', 'utf-8');
+    const brandVisualContext = await readFile('skills/creative/step-image-prompt/references/brand-visual-context.md', 'utf-8');
 
     assert.ok(imageSkill.includes('Capability Gate'));
     assert.ok(imageSkill.includes('references/prompt-spec.md'));
@@ -122,6 +123,12 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(promptSpec.includes('1344 × 768'));
     assert.ok(promptSpec.includes('แก้ Prompt Spec'));
     assert.ok(promptSpec.includes('เปลี่ยนเครื่องมือ'));
+    assert.ok(!promptSpec.includes('GPT-Image-'));
+
+    assert.ok(brandVisualContext.includes('Status:** NO-CONTROLLED-SOURCE'));
+    assert.ok(brandVisualContext.includes('ไม่มี Controlled CI Guideline'));
+    assert.ok(brandVisualContext.includes('ห้ามแต่งค่า hex'));
+    assert.ok(imageSkill.includes('references/brand-visual-context.md'));
   });
 
   await t.test('image generation routing remains stable after capability hardening', async () => {
