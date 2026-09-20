@@ -9,6 +9,57 @@ import { scoreSkillCandidate } from './scorer.js';
 
 export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
 
+export const QUALIFIED_INTENT_RULES = [
+  {
+    intent: 'privacy-review',
+    any: ['เลขบัตรประชาชน', 'เลขบัตร', 'ข้อมูลส่วนบุคคล', 'pii', 'pdpa', 'credential', 'password', 'ข้อมูลสุขภาพ'],
+  },
+  {
+    intent: 'form-submit',
+    allAny: [
+      ['กดส่ง', 'ส่งแบบฟอร์ม', 'submit', 'กดยืนยัน', 'ส่งให้เลย'],
+      ['ฟอร์ม', 'แบบฟอร์ม', 'เว็บ', 'เว็บไซต์', 'ล็อกอิน'],
+    ],
+  },
+  {
+    intent: 'social-writing',
+    allAny: [
+      ['เขียน', 'ร่าง', 'แคปชั่น', 'caption', 'โพสต์'],
+      ['แคปชั่น', 'caption', 'โพสต์เฟซบุ๊ก', 'facebook', 'social post'],
+    ],
+  },
+  {
+    intent: 'lab-review',
+    allAny: [
+      ['ผลทดสอบ', 'ผลแล็บ', 'ผลวิเคราะห์', 'ใบคำขอ', 'หน่วยวัด'],
+      ['ไม่ตรง', 'ไม่ตรงกัน', 'หน่วย', 'ตรวจ', 'ทบทวน'],
+    ],
+  },
+  {
+    intent: 'market-test',
+    any: ['ขายได้ไหม', 'จะขายได้ไหม', 'ทดสอบตลาด', 'ทดลองตลาด', 'market test', 'test market'],
+  },
+  {
+    intent: 'onboarding-plan',
+    allAny: [
+      ['น้องใหม่', 'พนักงานใหม่', 'คนใหม่', 'new hire', 'onboarding'],
+      ['เตรียม', 'เข้ามา', 'เริ่มงาน', 'เดือนหน้า', 'onboarding'],
+    ],
+  },
+  {
+    intent: 'nonconformity',
+    any: ['ไม่ได้มาตรฐาน', 'ไม่เป็นไปตามข้อกำหนด', 'ข้อไม่เป็นไปตามข้อกำหนด', 'เปิด nc', 'เปิด ncr', 'nonconformity', 'non-conformity'],
+  },
+];
+
+function matchesQualifiedIntent(lower, rule) {
+  if (rule.any?.some((term) => lower.includes(term))) return true;
+  if (rule.allAny) {
+    return rule.allAny.every((group) => group.some((term) => lower.includes(term)));
+  }
+  return false;
+}
+
 export const INTENT_KEYWORDS = {
   summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'summarize', 'summary', 'minutes'],
   interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach'],
@@ -29,6 +80,10 @@ export const INTENT_KEYWORDS = {
  */
 export function inferIntentFromText(promptText = '') {
   const lower = promptText.toLowerCase();
+
+  for (const rule of QUALIFIED_INTENT_RULES) {
+    if (matchesQualifiedIntent(lower, rule)) return rule.intent;
+  }
 
   // Brand review is a qualified review intent: require both a brand-domain
   // signal and a review/check signal. A prompt that says "สร้างภาพ ... brand"
