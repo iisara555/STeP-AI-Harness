@@ -233,6 +233,38 @@ export async function runInit(args) {
   const entityLabel = targetType === 'team' ? 'ทีม' : 'Role';
   success(`ติดตั้ง Approved Skills สำหรับ ${entityLabel} ${colors.bold(role.id)} เข้า ${colors.bold(tool)} สำเร็จเรียบร้อย!`);
   info(`บันทึก Checksum ใน ${colors.dim('.step-ai/manifest.json')} สำหรับตรวจสอบและ Rollback`);
-  const toolNameDisplay = tool === 'all' ? 'โปรแกรม AI ที่องค์กรอนุมัติ (เตรียม instruction สำหรับ 8 โปรแกรมแล้ว)' : tool;
-  console.log(`\nขั้นตอนถัดไป:\n  1. เปิดไดเรกทอรีนี้ใน ${toolNameDisplay}\n  2. รัน ${colors.cyan('step-ai status')} เพื่อตรวจสอบสถานะไฟล์ได้ตลอดเวลา\n`);
+
+  const teamDisplay = teamCode ? String(teamCode).toUpperCase() : 'ยังไม่ระบุ — เลือกภายหลังได้';
+  console.log();
+  console.log(colors.bold(colors.green('=================================================================')));
+  console.log(colors.bold(colors.yellow('                 ✓ STeP AI พร้อมเริ่มงาน')));
+  console.log(colors.bold(colors.green('=================================================================')));
+  console.log(`  ทีม: ${colors.bold(teamDisplay)}`);
+  if (selectedClusterId) {
+    const selectedClusterTeam = teams.find((team) => team.clusterId === selectedClusterId);
+    const clusterLabel = selectedClusterTeam?.clusterInstallerLabel || selectedClusterId;
+    console.log(`  กลุ่มงาน: ${colors.dim(clusterLabel)}`);
+  }
+  console.log(`  AI adapters: ${tool === 'all' ? 'เตรียม instruction ให้ 8 โปรแกรมแล้ว' : tool}`);
+  console.log(`  เปลี่ยนทีมภายหลัง: ${colors.cyan('step-ai config')}`);
+  console.log();
+  console.log(colors.bold('วิธีเริ่มใช้งาน:'));
+  console.log('  1. เปิดโปรแกรม AI ที่องค์กรอนุมัติ');
+  console.log('  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:');
+  console.log(`     ${colors.yellow(dest)}`);
+  console.log(`  3. พิมพ์: ${colors.bold('เริ่มใช้งาน STeP AI')}`);
+
+  if (teamCode && Array.isArray(targetEntity?.starterPrompts) && targetEntity.starterPrompts.length > 0) {
+    console.log();
+    console.log(colors.bold(`ลองเริ่มจากงานของทีม ${String(teamCode).toUpperCase()}:`));
+    targetEntity.starterPrompts.slice(0, 3).forEach((prompt, idx) => {
+      console.log(`  ${idx + 1}. ${prompt}`);
+    });
+  } else {
+    console.log(colors.dim('     ถ้ายังไม่ได้เลือกทีม ให้เริ่มจากงานจริงได้เลย ระบบจะช่วยก่อนแล้วค่อยเสนอทีมที่น่าจะเกี่ยวข้อง'));
+  }
+
+  console.log();
+  console.log(colors.dim(`ตรวจสถานะภายหลัง: step-ai status`));
+  console.log(colors.bold(colors.green('=================================================================')));
 }
