@@ -81,7 +81,7 @@ test('employee documentation is aligned and links resolve', async (t) => {
       'เลือกทีมและเปิดโฟลเดอร์ด้วย AI ที่องค์กรอนุมัติ',
       'พิมพ์งานแรกเป็นภาษาไทยได้',
       'รู้ว่าเมื่อใดต้องหยุดให้มนุษย์ยืนยัน',
-      'รู้ว่าจะส่งปัญหาให้ AI Champion อย่างไร',
+      'รู้ว่าจะส่งปัญหาผ่าน [STeP AI Support](SUPPORT.md) อย่างไร',
     ]) {
       assert.ok(readme.includes(phrase), phrase);
     }
@@ -107,14 +107,36 @@ test('employee documentation is aligned and links resolve', async (t) => {
     assert.ok(readme.includes('ถ่ายภาพหน้าจอพร้อมข้อความผิดพลาด'));
     assert.ok(readme.includes('Feedback-STeP-AI.bat'));
     assert.ok(readme.includes('REQUEST_NEW_TASK.md'));
+    assert.ok(readme.includes('[STeP AI Support](SUPPORT.md)'));
   });
 
   await t.test('documentation layers have distinct roles', () => {
     assert.ok(startHere.includes('ใบเริ่มต้นสั้นสำหรับ First Run'));
     assert.ok(startHere.includes('[README.md](README.md)'));
     assert.ok(employeeGuide.includes('คู่มือฉบับเต็มสำหรับพนักงาน'));
-    assert.ok(employeeGuide.includes('สำหรับ AI Champion'));
+    assert.ok(employeeGuide.includes('สำหรับผู้ดูแลระบบ'));
+    assert.ok(employeeGuide.includes('[STeP AI Support](../SUPPORT.md)'));
     assert.ok(!employeeGuide.includes('pip install hermes-agent'));
+  });
+
+  await t.test('employee-facing docs do not depend on an unassigned AI Champion', async () => {
+    const surfaces = [
+      ['README.md', readme],
+      ['START-HERE.md', startHere],
+      ['docs/employee-guide.md', employeeGuide],
+      ['SUPPORT.md', await readFile(resolve(repoRoot, 'SUPPORT.md'), 'utf-8')],
+      ['MAC-START-HERE.txt', await readFile(resolve(repoRoot, 'MAC-START-HERE.txt'), 'utf-8')],
+      ['install/install-windows.ps1', await readFile(resolve(repoRoot, 'install/install-windows.ps1'), 'utf-8')],
+      ['install/install-macos.sh', await readFile(resolve(repoRoot, 'install/install-macos.sh'), 'utf-8')],
+      ['install/feedback-windows.ps1', await readFile(resolve(repoRoot, 'install/feedback-windows.ps1'), 'utf-8')],
+      ['install/feedback-macos.sh', await readFile(resolve(repoRoot, 'install/feedback-macos.sh'), 'utf-8')],
+      ['src/cli/commands/feedback.js', await readFile(resolve(repoRoot, 'src/cli/commands/feedback.js'), 'utf-8')],
+    ];
+
+    for (const [name, text] of surfaces) {
+      assert.ok(!text.includes('AI Champion'), `${name} still depends on AI Champion`);
+      assert.ok(!text.includes('CHAMPION & ADMIN MODE'), `${name} still exposes Champion admin wording`);
+    }
   });
 
   await t.test('all README local links resolve', async () => {
