@@ -753,7 +753,7 @@ skills:
   # --- ISO 9001 / QMS Audit Readiness Pack ---
   iso9001-audit-readiness:
     owner: qs
-    version: 1.0.1
+    version: 1.0.2
     domain: [quality, audit, compliance]
     process: [quality.audit-readiness]
     path: skills/common/iso9001-audit-readiness/SKILL.md
