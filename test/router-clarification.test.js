@@ -195,3 +195,74 @@ test('CLI and JSON expose a question instead of instructions to activate a guess
   assert.equal(answered.routing.mode, 'SKILL');
   assert.equal(answered.routing.skill, 'receipt-audit');
 });
+
+test('clarification never repeats a question and terminates in a choice menu', async () => {
+  const query = 'ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร';
+  const vague = ['เป็นงานของทีมเรา', 'ก็เรื่องทั่วไป', 'ไม่แน่ใจเหมือนกัน'];
+  const asked = [];
+
+  const first = await queryStepRouter(query, options);
+  asked.push(first.clarification.field);
+
+  const answers = [];
+  let result = first;
+  for (const reply of vague) {
+    answers.push(reply);
+    result = await queryStepRouter(query, { ...options, clarificationAnswer: answers.join('\n') });
+    assert.equal(result.routingMode, 'CLARIFY');
+    assert.ok(
+      !asked.includes(result.clarification.field),
+      `clarification repeated the "${result.clarification.field}" question`
+    );
+    asked.push(result.clarification.field);
+  }
+
+  assert.equal(result.clarification.field, 'skill');
+  assert.ok(result.clarification.options.length > 0);
+  assert.equal(result.routingContract.skill, '');
+  for (const option of result.clarification.options) {
+    assert.notEqual(option.label, option.value, 'menu must offer work language, not Skill names');
+  }
+});
+
+test('a menu choice resolves the route instead of asking again', async () => {
+  const query = 'ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร';
+  const answers = ['เป็นงานของทีมเรา', 'ก็เรื่องทั่วไป', 'ไม่แน่ใจเหมือนกัน'];
+  const menu = await queryStepRouter(query, { ...options, clarificationAnswer: answers.join('\n') });
+  const [, second] = menu.clarification.options;
+
+  for (const reply of ['2', second.label, second.value]) {
+    const chosen = await queryStepRouter(query, {
+      ...options, clarificationAnswer: [...answers, reply].join('\n'),
+    });
+    assert.equal(chosen.routingMode, 'SKILL', reply);
+    assert.equal(chosen.clarification, null, reply);
+    assert.equal(chosen.routingContract.skill, second.value, reply);
+  }
+});
+
+test('an out-of-range or free-text reply is context, not a menu choice', async () => {
+  const query = 'ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร';
+  const answers = ['เป็นงานของทีมเรา', 'ก็เรื่องทั่วไป', 'ไม่แน่ใจเหมือนกัน'];
+
+  for (const reply of ['99', '0', 'อันไหนก็ได้']) {
+    const result = await queryStepRouter(query, {
+      ...options, clarificationAnswer: [...answers, reply].join('\n'),
+    });
+    assert.equal(result.routingMode, 'CLARIFY', reply);
+    assert.equal(result.routingContract.skill, '', reply);
+  }
+});
+
+test('authority blocks still precede the clarification menu and its choice', async () => {
+  const query = 'ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร';
+  const answers = ['เป็นงานของทีมเรา', 'ก็เรื่องทั่วไป', 'ไม่แน่ใจเหมือนกัน'];
+  const result = await queryStepRouter(query, {
+    ...options,
+    clarificationAnswer: [...answers, 'อนุมัติจ่ายเงินให้ผู้รับจ้างรายนี้เลย'].join('\n'),
+  });
+
+  assert.equal(result.authorityPreflight.status, 'BLOCK');
+  assert.equal(result.routingContract.authority.status, 'BLOCK');
+  assert.equal(result.clarification, null);
+});

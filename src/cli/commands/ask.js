@@ -360,6 +360,20 @@ export async function queryStepRouter(query, options = {}) {
     selectedSkill = skills.find((skill) => skill.name === bestMatch.skill);
   }
 
+  // An employee who picked from the clarification menu has already told us the
+  // route; honouring it here stops the router asking the same question again.
+  const chosenSkillName = selectedPlaybook || competingPlaybooks.length
+    ? ''
+    : resolveSkillMenuChoice(options.clarificationAnswer, ranked, skills);
+  if (chosenSkillName) {
+    const chosenSkill = skills.find((skill) => skill.name === chosenSkillName);
+    const chosenRank = ranked.find((item) => item.skill === chosenSkillName);
+    if (chosenSkill) {
+      selectedSkill = chosenSkill;
+      if (chosenRank) bestMatch = chosenRank;
+    }
+  }
+
   const preflightPlaybookStep = selectedPlaybook
     ? playbookPlan.find((step) => step.type === 'skill' && step.skill)?.id || ''
     : '';
@@ -419,7 +433,7 @@ export async function queryStepRouter(query, options = {}) {
   const routingConfidence = competingPlaybooks.length
     ? { tier: 'AMBIGUOUS', margin: 0, reason: 'competing-playbooks' }
     : deriveRoutingConfidence(bestMatch, runnerUp);
-  const isAmbiguous = !selectedPlaybook && routingConfidence.tier !== 'HIGH';
+  const isAmbiguous = !selectedPlaybook && !chosenSkillName && routingConfidence.tier !== 'HIGH';
   const clarification = isAmbiguous && scopeResult.status === 'ALLOW'
     ? competingPlaybooks.length
       ? {
@@ -430,7 +444,7 @@ export async function queryStepRouter(query, options = {}) {
           label: playbook.clarificationLabel || playbook.description || playbook.name,
         })),
       }
-      : buildRoutingClarification(query, context, options.clarificationAnswer)
+      : buildRoutingClarification(query, context, options.clarificationAnswer, ranked, skills)
     : null;
 
   const skillMetadata = selectedSkill && !clarification
@@ -517,29 +531,90 @@ export async function queryStepRouter(query, options = {}) {
   };
 }
 
-function buildRoutingClarification(query, context, answer) {
-  if (typeof answer === 'string' && answer.trim()) {
-    return {
-      field: 'outcome',
-      question: 'ในงานที่บอกมา ต้องการให้ช่วยตรวจอะไร สรุปอะไร หรือจัดทำอะไรให้ครับ?',
-    };
+const CLARIFICATION_QUESTIONS = {
+  purpose: 'เอกสารนี้ใช้ทำเรื่องอะไรครับ เช่น เบิกค่าใช้จ่าย ขอใช้สถานที่ หรือสมัครงาน?',
+  task: 'ต้องการให้ช่วยทำอะไรกับเรื่องไหนครับ?',
+  outcome: 'ในงานที่บอกมา ต้องการให้ช่วยตรวจอะไร สรุปอะไร หรือจัดทำอะไรให้ครับ?',
+  scope: 'งานนี้เกี่ยวกับเรื่องอะไรหรือใช้เอกสารประเภทไหนครับ?',
+};
+
+const MAX_CLARIFICATION_CHOICES = 3;
+
+/**
+ * Count how many answers the employee has already given. Accumulated answers
+ * arrive newline-separated with the latest answer last, per the adapter contract
+ * in docs/step-router.md.
+ */
+function countClarificationRounds(answer) {
+  if (typeof answer !== 'string') return 0;
+  return answer.split(/\r?\n/).filter((line) => line.trim()).length;
+}
+
+/**
+ * Ask for one missing piece at a time and never repeat a question already asked.
+ * When every question has been asked and routing is still unresolved, stop
+ * asking open questions and offer the leading candidates as a numbered menu —
+ * the employee picks work language, never a Skill name they have to know.
+ */
+function buildRoutingClarification(query, context, answer, ranked = [], skills = []) {
+  const fields = [];
+  if (/ต้องแนบอะไร/.test(query)) fields.push('purpose');
+  if (context.intent === 'unknown') fields.push('task');
+  fields.push('outcome', 'scope');
+
+  const round = countClarificationRounds(answer);
+  const field = fields[round];
+
+  if (field) {
+    return { field, question: CLARIFICATION_QUESTIONS[field] };
   }
-  if (/ต้องแนบอะไร/.test(query)) {
-    return {
-      field: 'purpose',
-      question: 'เอกสารนี้ใช้ทำเรื่องอะไรครับ เช่น เบิกค่าใช้จ่าย ขอใช้สถานที่ หรือสมัครงาน?',
-    };
+
+  const options = buildSkillChoiceOptions(ranked, skills);
+
+  if (options.length === 0) {
+    return { field: 'scope', question: CLARIFICATION_QUESTIONS.scope };
   }
-  if (context.intent === 'unknown') {
-    return {
-      field: 'task',
-      question: 'ต้องการให้ช่วยทำอะไรกับเรื่องไหนครับ?',
-    };
-  }
+
   return {
-    field: 'scope',
-    question: 'งานนี้เกี่ยวกับเรื่องอะไรหรือใช้เอกสารประเภทไหนครับ?',
+    field: 'skill',
+    question: 'ยังระบุงานไม่ได้ชัด ตรงกับข้อไหนมากที่สุดครับ?',
+    options,
   };
+}
+
+/**
+ * Leading candidates described in work language, never by Skill name.
+ */
+function buildSkillChoiceOptions(ranked = [], skills = []) {
+  return ranked
+    .filter((item) => item.score > 0)
+    .slice(0, MAX_CLARIFICATION_CHOICES)
+    .map((item) => {
+      const skill = skills.find((candidate) => candidate.name === item.skill);
+      return { value: item.skill, label: skill?.description || item.skill };
+    });
+}
+
+/**
+ * Resolve a reply to the clarification menu: the displayed option number, the
+ * displayed label, or the Skill name itself. Anything else is treated as more
+ * context, not as a choice.
+ */
+function resolveSkillMenuChoice(answer, ranked = [], skills = []) {
+  if (typeof answer !== 'string') return '';
+  const lines = answer.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const last = lines[lines.length - 1];
+  if (!last) return '';
+
+  const options = buildSkillChoiceOptions(ranked, skills);
+  if (options.length === 0) return '';
+
+  const numeric = last.match(/^(\d+)$/);
+  if (numeric) {
+    return options[Number(numeric[1]) - 1]?.value || '';
+  }
+
+  return options.find((option) => option.label === last || option.value === last)?.value || '';
 }
 
 /**

@@ -186,11 +186,6 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
 }
 
 /**
- * Convert deterministic match evidence into a routing-confidence label.
- * Raw score remains a match score; confidence also considers direct trigger
- * evidence and separation from the runner-up.
- */
-/**
  * Summarize trigger evidence, ignoring triggers that are merely substrings of
  * a longer matched trigger (they are one piece of evidence, not several).
  */
@@ -226,6 +221,11 @@ function dominatesTriggerEvidence(bestMatch, runnerUp) {
   return best.count >= 2 && best.count >= runner.count * 2;
 }
 
+/**
+ * Convert deterministic match evidence into a routing-confidence label.
+ * Raw score remains a match score; confidence also considers direct trigger
+ * evidence and separation from the runner-up.
+ */
 export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
   if (!bestMatch) {
     return {
