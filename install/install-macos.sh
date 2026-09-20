@@ -159,29 +159,8 @@ cd "$ROOT_DIR"
 echo ""
 "$NODE_BIN" "$ROOT_DIR/bin/step-ai.js" doctor --employee
 
-TEAM_LABEL="$("$NODE_BIN" -e "const fs=require('fs'),os=require('os'),p=require('path').join(os.homedir(),'.step-ai','config.json');try{const c=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(c.team?String(c.team).toUpperCase():'ยังไม่ระบุ — เลือกภายหลังได้')}catch{process.stdout.write('ยังไม่ระบุ — เลือกภายหลังได้')}")"
-CLUSTER_LABEL="$("$NODE_BIN" -e "const fs=require('fs'),os=require('os'),p=require('path').join(os.homedir(),'.step-ai','config.json');try{const c=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(c.cluster||'')}catch{}")"
-
 echo ""
-echo -e "${GREEN}=================================================================${NC}"
-echo -e "${YELLOW}                 ✓ STeP AI พร้อมใช้งานบน macOS               ${NC}"
-echo -e "${GREEN}=================================================================${NC}"
-echo ""
-echo -e "  ทีม: ${WHITE}${TEAM_LABEL}${NC}"
-if [ -n "$CLUSTER_LABEL" ]; then
-    echo -e "  กลุ่ม Routing: ${GRAY}${CLUSTER_LABEL}${NC}"
-fi
-echo -e "  AI adapters: ${WHITE}เตรียม instruction ให้ 8 โปรแกรมแล้ว${NC}"
-echo -e "  เปลี่ยนทีมภายหลัง: ${GRAY}step-ai config${NC}"
-echo ""
-echo -e "${CYAN}วิธีเริ่มใช้งาน:${NC}"
-echo -e "  1. เปิดโปรแกรม AI ที่องค์กรอนุมัติ"
-echo -e "  2. เปิดโฟลเดอร์นี้ในโปรแกรมนั้น:"
-echo -e "     ${YELLOW}$ROOT_DIR${NC}"
-echo -e "  3. พิมพ์: ${WHITE}เริ่มใช้งาน STeP AI${NC}"
-echo -e "${GRAY}     ระบบจะแนะนำ 3 งานเริ่มต้นตามทีม หรือช่วยงานจริงก่อนถ้ายังไม่ได้เลือกทีม${NC}"
-echo ""
-echo -e "${GRAY}  อ่านไฟล์ START-HERE.md ในโฟลเดอร์นี้ถ้าไม่แน่ใจว่าจะเริ่มอย่างไร${NC}"
-echo -e "${GRAY}  อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
+echo -e "${GREEN}✓ ตรวจระบบเสร็จแล้ว — ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน${NC}"
+echo -e "${GRAY}อัปเดตเวอร์ชันใหม่: ดับเบิลคลิก Update-STeP-AI.command${NC}"
 echo ""
 read -p "กด Enter เพื่อเสร็จสิ้น..." dummy
