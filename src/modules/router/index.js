@@ -7,6 +7,7 @@ export {
   DEFAULT_THRESHOLDS,
   resolveWeights,
   resolveThresholds,
+  deriveRoutingConfidence,
 } from './scorer.js';
 
 export {
