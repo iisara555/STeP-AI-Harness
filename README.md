@@ -24,7 +24,7 @@ STeP AI คือ workspace ที่ช่วยให้พนักงาน�
 ถ้าตัวเลขในเครื่องคุณไม่ตรงกับตารางนี้ แปลว่าคุณอาจได้ชุดติดตั้งคนละรุ่น ให้ดู [STeP AI Support](SUPPORT.md) และแจ้งหัวหน้าทีมหรือผู้ประสานงานทีมผ่านช่องทางภายในที่ทีมใช้อยู่
 
 <!-- ผู้ดูแล: ตัวเลขแถวนี้ต้องตรงกับ release asset v0.7.2 ไม่ใช่กับ main
-     สถานะของ main ปัจจุบัน (45 Skills / 4 Playbooks / 3 Actions) อยู่ใน docs/pilot-operations.md
+     สถานะของ main ปัจจุบัน (46 Skills / 4 Playbooks / 3 Actions) อยู่ใน docs/pilot-operations.md
      เมื่อ tag รุ่นใหม่ ให้ปรับตารางนี้พร้อมกับ release -->
 
 รายละเอียดเชิงระบบอยู่ใน [Architecture Reference](docs/architecture.md) ส่วนหน้านี้เขียนสำหรับพนักงานเป็นหลัก

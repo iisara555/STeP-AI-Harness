@@ -102,6 +102,20 @@ processes:
       - creative.event.booth-layout
       - creative.event.execution
 
+  governance.document-review:
+    name: "การตรวจเอกสารทั่วไปก่อนส่ง"
+    category: governance
+    owner: ga
+    consumers: ["*"]
+    subprocesses:
+      - governance.document-review.completeness
+      - governance.document-review.internal-consistency
+      - governance.document-review.specialist-handoff
+    associatedSops:
+      - human-approval-rule
+      - data-classification-rule
+    description: "ตรวจความครบถ้วนและความสอดคล้องภายในของเอกสารทั่วไปก่อนส่ง โดยไม่แทน compliance review เฉพาะทาง"
+
   governance.correspondence:
     name: "การจัดการงานสารบรรณและหนังสือราชการ"
     category: governance

@@ -10,6 +10,7 @@ import {
   buildContext,
   inspectCheapContext,
   rescoreWithCheapContext,
+  deriveRoutingConfidence,
   checkScope,
   loadAndValidateManifests,
 } from '../src/modules/router/index.js';
@@ -131,6 +132,47 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.ok(creative.breakdown.team > 0, 'matching cluster should earn partial team-context weight');
     assert.equal(procurement.breakdown.team, 0, 'different cluster should not receive cluster weight');
     assert.ok(creative.score > procurement.score);
+  });
+
+  await t.test('Case 2c: semantic confidence can be HIGH at raw 0.55 with direct evidence and clear margin', () => {
+    const confidence = deriveRoutingConfidence(
+      {
+        score: 0.55,
+        tier: 'AMBIGUOUS',
+        breakdown: { intent: 0.30, keyword: 0.25, path: 0, team: 0, fileType: 0 },
+        matchedTriggers: ['ประชุม'],
+      },
+      {
+        score: 0.30,
+        tier: 'FALLBACK',
+        breakdown: { intent: 0.30, keyword: 0, path: 0, team: 0, fileType: 0 },
+        matchedTriggers: [],
+      }
+    );
+
+    assert.equal(confidence.tier, 'HIGH');
+    assert.equal(confidence.margin, 0.25);
+    assert.equal(confidence.reason, 'direct-trigger-and-intent-with-clear-margin');
+  });
+
+  await t.test('Case 2d: direct evidence remains AMBIGUOUS when runner-up is too close', () => {
+    const confidence = deriveRoutingConfidence(
+      {
+        score: 0.55,
+        tier: 'AMBIGUOUS',
+        breakdown: { intent: 0.30, keyword: 0.25, path: 0, team: 0, fileType: 0 },
+        matchedTriggers: ['ตรวจ'],
+      },
+      {
+        score: 0.45,
+        tier: 'FALLBACK',
+        breakdown: { intent: 0.30, keyword: 0.15, path: 0, team: 0, fileType: 0 },
+        matchedTriggers: ['ตรวจ'],
+      }
+    );
+
+    assert.equal(confidence.tier, 'AMBIGUOUS');
+    assert.ok(confidence.margin < 0.15);
   });
 
   await t.test('Case 3: Anti-Context Pollution — Irrelevant skills receive 0 score', () => {

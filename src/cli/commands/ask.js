@@ -17,6 +17,7 @@ import {
   checkScope,
   inspectCheapContext,
   rescoreWithCheapContext,
+  deriveRoutingConfidence,
 } from '../../modules/router/index.js';
 import {
   buildCompactRoutingContract,
@@ -398,6 +399,8 @@ export async function queryStepRouter(query, options = {}) {
     }
   }
 
+  const routingConfidence = deriveRoutingConfidence(bestMatch, runnerUp);
+
   const routingContract = buildCompactRoutingContract({
     selectedSkill,
     selectedPlaybook,
@@ -405,6 +408,7 @@ export async function queryStepRouter(query, options = {}) {
     teamInfo,
     scopeResult,
     bestMatch,
+    routingConfidence,
     skillMetadata,
     referenceMetadata,
   });
@@ -415,13 +419,13 @@ export async function queryStepRouter(query, options = {}) {
     governanceText: JSON.stringify(routingContract.authority),
   });
 
-  // Disambiguation & Clarification detection:
-  // Is ambiguous when in FALLBACK tier (score < 0.50) OR (runnerUp close to bestMatch && score < 0.80)
+  // Routing confidence is not the raw 5-factor match score.
+  // Direct trigger + intent evidence with a clear lead can be HIGH even when
+  // path/file metadata is unavailable in chat.
   const isAmbiguous = Boolean(
-    !selectedPlaybook && bestMatch && (
-      bestMatch.tier === 'FALLBACK' ||
-      (bestMatch.tier === 'AMBIGUOUS' && runnerUp && (bestMatch.score - runnerUp.score < 0.15) && runnerUp.score >= 0.35)
-    )
+    !selectedPlaybook &&
+    bestMatch &&
+    routingConfidence.tier !== 'HIGH'
   );
 
   const candidateSkills = ranked
@@ -457,6 +461,7 @@ export async function queryStepRouter(query, options = {}) {
     referenceMetadata,
     routingContract,
     contextPlan,
+    routingConfidence,
   };
 }
 
@@ -516,6 +521,7 @@ export async function runAsk(args) {
     routingMode,
     selectedPlaybook,
     playbookPlan,
+    routingConfidence,
   } = result;
 
   if (routingMode === 'PLAYBOOK' && selectedPlaybook) {
@@ -579,7 +585,7 @@ export async function runAsk(args) {
   console.log(colors.bold(colors.green('│  🎯 ทักษะที่แนะนำสำหรับงานนี้                                               │')));
   console.log(colors.bold(colors.green('└─────────────────────────────────────────────────────────────────────────────┘')));
   console.log(`  • ทักษะ (Skill):   ${colors.bold(colors.cyan(selectedSkill.name))} (${selectedSkill.description})`);
-  console.log(`  • ความมั่นใจ:      ${colors.bold(Math.round(bestMatch.score * 100) + '%')} [${bestMatch.tier} Tier]`);
+  console.log(`  • ความมั่นใจ:      ${colors.bold(routingConfidence.tier)} · Match score ${Math.round(bestMatch.score * 100)}% (${routingConfidence.reason})`);
   console.log(`  • ทีมที่รับผิดชอบ:  ${colors.bold(teamInfo.name)} (${teamInfo.id.toUpperCase()})`);
   if (selectedSkill.processId) {
     console.log(`  • กระบวนการ (HOW): ${colors.yellow(selectedSkill.processId)}`);

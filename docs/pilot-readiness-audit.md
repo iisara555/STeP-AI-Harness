@@ -4,7 +4,7 @@
 **Document status:** Current Pilot readiness reference  
 **Released distribution baseline:** v0.7.2  
 **Repository scope:** `main` is post-v0.7.2 development until the next release tag  
-**Current main inventory:** 45 Skills / 4 Playbooks / 3 Actions / 22 teams / 5 routing clusters
+**Current main inventory:** 46 Skills / 4 Playbooks / 3 Actions / 22 teams / 5 routing clusters
 
 ## Executive Summary
 

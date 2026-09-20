@@ -38,6 +38,7 @@ export function buildCompactRoutingContract({
   teamInfo = {},
   scopeResult = {},
   bestMatch = null,
+  routingConfidence = null,
   skillMetadata = null,
   referenceMetadata = [],
 } = {}) {
@@ -50,7 +51,12 @@ export function buildCompactRoutingContract({
     skill: selectedSkill?.name || '',
     skillPath: skillMetadata?.path || '',
     process: selectedSkill?.processId || '',
+    // Backward compatibility: confidence remains the deterministic match score.
     confidence: bestMatch ? Number(bestMatch.score.toFixed(3)) : null,
+    matchScore: bestMatch ? Number(bestMatch.score.toFixed(3)) : null,
+    confidenceTier: routingConfidence?.tier || bestMatch?.tier || '',
+    confidenceReason: routingConfidence?.reason || '',
+    confidenceMargin: routingConfidence?.margin ?? null,
     playbook: selectedPlaybook?.id || '',
     steps: (playbookPlan || []).map((step) => ({
       id: step.id,

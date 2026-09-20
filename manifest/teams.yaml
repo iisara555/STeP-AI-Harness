@@ -1,7 +1,9 @@
 version: 1
 # หมายเหตุสำคัญ: กลุ่มงานทั้ง 5 Clusters ด้านล่างเป็น "AI Routing Taxonomy"
-# มีไว้เพื่อลด Search Space ในการค้นหา Skill (จาก 150+ เหลือ ~20 ทักษะต่อกลุ่ม)
 # ไม่ใช่การเปลี่ยนแปลงหรือทดแทนโครงสร้างสายบังคับบัญชาจริงของ STeP
+# Per-team Skill eligibility ถูก resolve จาก manifest/router-index.yaml -> teams.primary/consumers
+# ส่วน skills: [common, pm, ...] ในไฟล์นี้เป็น legacy namespace/profile hint เพื่อ compatibility
+# และห้ามใช้เป็นเหตุผลในการโหลดทั้ง namespace เข้าสู่ team workspace
 
 clusters:
   - id: governance-operations

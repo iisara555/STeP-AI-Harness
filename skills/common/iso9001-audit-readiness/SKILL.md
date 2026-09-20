@@ -93,6 +93,14 @@ Skill นี้เป็น Orchestrator สำหรับการเตรี
 
 ห้ามใช้คำว่า `ISO PASSED`, `CERTIFIED`, `COMPLIANT` เป็นข้อสรุปของ AI
 
+## Authority
+
+AI ช่วยเตรียม readiness brief, evidence gap และ action list ได้ แต่:
+- ห้ามประกาศว่าองค์กร/ทีม `ISO PASSED`, `CERTIFIED` หรือ `COMPLIANT`
+- การตัดสิน conformity/finding เป็นอำนาจของ Auditor/QS/QMR ตามบทบาทจริง
+- การรับรองหรือปิด audit finding/CAPA ต้องใช้ human review และหลักฐานที่ตรวจย้อนกลับได้
+- สถานะ `READY` ใน Skill นี้หมายถึง “พร้อมสำหรับการตรวจตาม evidence ที่มี” ไม่ใช่ผลรับรอง ISO
+
 ## Output
 
 ### Team Audit Readiness Brief

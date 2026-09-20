@@ -83,6 +83,14 @@ Root cause ต้องมี evidence; “human error”, “ลืม”, “�
 
 AI ห้ามตั้งสถานะเป็น CLOSED อย่างเป็นทางการ
 
+## Authority
+
+AI ช่วยบันทึกข้อเท็จจริง วาง containment/RCA/corrective action และเตรียม effectiveness evidence ได้ แต่:
+- ห้ามประกาศ NC/CAPA ว่า `CLOSED` หรือปิดอย่างเป็นทางการ
+- การยืนยัน root cause, corrective action acceptance และ formal closure ต้องผ่าน Process Owner / QS / QMR ตามอำนาจจริง
+- การแก้ controlled SOP/WI ต้องผ่าน document-control/approval flow ที่เกี่ยวข้อง
+- ถ้าหลักฐาน effectiveness ยังไม่พอ ให้คงสถานะ `EFFECTIVENESS-PENDING` หรือ `READY-FOR-HUMAN-CLOSURE`
+
 ## Output
 
 ### NCR/CAPA Record

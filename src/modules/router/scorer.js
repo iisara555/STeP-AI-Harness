@@ -98,20 +98,24 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
   }
 
   // 2. Keyword / Trigger Match
+  const matchedTriggers = [];
   if (text && Array.isArray(skill.triggers)) {
     const lowerText = text.toLowerCase();
-    const matchedTrigger = skill.triggers.some((tr) => {
+    for (const tr of skill.triggers) {
       const lowerTr = tr.toLowerCase().trim();
-      if (!lowerTr) return false;
+      if (!lowerTr) continue;
       const isLatin = /^[a-z0-9_\s-]+$/i.test(lowerTr);
+      let matched = false;
       if (isLatin) {
         const escaped = lowerTr.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
         const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-        return regex.test(lowerText);
+        matched = regex.test(lowerText);
+      } else {
+        matched = lowerText.includes(lowerTr);
       }
-      return lowerText.includes(lowerTr);
-    });
-    if (matchedTrigger) {
+      if (matched) matchedTriggers.push(tr);
+    }
+    if (matchedTriggers.length > 0) {
       breakdown.keyword = weights.KEYWORD;
     }
   }
@@ -177,6 +181,57 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
     score,
     tier,
     breakdown,
+    matchedTriggers,
+  };
+}
+
+/**
+ * Convert deterministic match evidence into a routing-confidence label.
+ * Raw score remains a match score; confidence also considers direct trigger
+ * evidence and separation from the runner-up.
+ */
+export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
+  if (!bestMatch) {
+    return {
+      tier: 'FALLBACK',
+      margin: 0,
+      reason: 'no-candidate',
+    };
+  }
+
+  const runnerScore = runnerUp?.score ?? 0;
+  const margin = Math.round((bestMatch.score - runnerScore) * 100) / 100;
+  const hasDirectTrigger = (bestMatch.matchedTriggers || []).length > 0 || bestMatch.breakdown?.keyword > 0;
+  const hasIntent = bestMatch.breakdown?.intent > 0;
+
+  if (bestMatch.tier === 'HIGH') {
+    return {
+      tier: 'HIGH',
+      margin,
+      reason: 'raw-score-high',
+    };
+  }
+
+  if (hasDirectTrigger && hasIntent && margin >= 0.15) {
+    return {
+      tier: 'HIGH',
+      margin,
+      reason: 'direct-trigger-and-intent-with-clear-margin',
+    };
+  }
+
+  if (bestMatch.score >= 0.50 || hasDirectTrigger) {
+    return {
+      tier: 'AMBIGUOUS',
+      margin,
+      reason: margin < 0.15 ? 'runner-up-too-close' : 'partial-match-evidence',
+    };
+  }
+
+  return {
+    tier: 'FALLBACK',
+    margin,
+    reason: 'weak-match-evidence',
   };
 }
 

@@ -54,9 +54,18 @@ Skill ใหม่หรือ Skill ที่ปรับอย่างมี�
 
 รายละเอียดมาตรฐาน: [skill-contract.md](references/skill-contract.md)
 
-## 4. Trigger Metadata
+## 4. Trigger Metadata & Standard v2
 
-Frontmatter ต้องมีเพียง `name` และ `description` ตามรูปแบบ repo
+Skill ใหม่ต้องใช้ frontmatter:
+- `name`
+- `description`
+- `standardVersion: 2`
+
+และต้องมี section ระดับ `##` ครบ 9 หัวข้อ:
+
+`Purpose → เมื่อควรใช้ → Inputs → Source → Workflow → Output → Authority → Handoff → Guardrails`
+
+Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migrate แบบ incremental เมื่อมีการแก้เชิงสาระหรือเป็นกลุ่มความเสี่ยงสูง ไม่ต้องแก้ทั้ง repository พร้อมกัน
 
 `description` ต้องบอกให้ชัด:
 - **เมื่อไรควร Trigger**

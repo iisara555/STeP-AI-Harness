@@ -98,10 +98,38 @@ test('STeP Skill Authoring Standard', async (t) => {
       ...evals.needsDirectModelSideCoverage,
     ]);
 
-    assert.equal(registered.length, 45);
+    assert.equal(registered.length, 46);
     assert.deepEqual([...new Set(registered)].sort(), [...covered].sort());
     assert.equal(evals.directModelSideBenchmark.skills.length, 26);
-    assert.equal(evals.needsDirectModelSideCoverage.length, 19);
+    assert.equal(evals.needsDirectModelSideCoverage.length, 20);
+  });
+
+  await t.test('Standard v2 is enforced on new document-review without forcing legacy migration', async () => {
+    const skill = await readFile('skills/common/document-review/SKILL.md', 'utf-8');
+    assert.ok(skill.includes('standardVersion: 2'));
+
+    for (const heading of [
+      '## Purpose',
+      '## เมื่อควรใช้',
+      '## Inputs',
+      '## Source',
+      '## Workflow',
+      '## Output',
+      '## Authority',
+      '## Handoff',
+      '## Guardrails',
+    ]) {
+      assert.ok(skill.includes(heading), `document-review missing v2 heading: ${heading}`);
+    }
+
+    const authoring = await readFile('skills/common/step-skill-authoring/SKILL.md', 'utf-8');
+    assert.ok(authoring.includes('standardVersion: 2'));
+    assert.ok(authoring.includes('Purpose → เมื่อควรใช้ → Inputs → Source → Workflow → Output → Authority → Handoff → Guardrails'));
+
+    const ncr = await readFile('skills/common/ncr-capa/SKILL.md', 'utf-8');
+    const iso = await readFile('skills/common/iso9001-audit-readiness/SKILL.md', 'utf-8');
+    assert.ok(ncr.includes('## Authority'));
+    assert.ok(iso.includes('## Authority'));
   });
 
   await t.test('approved lifecycle cannot be inferred from an approver role alone', async () => {
@@ -117,8 +145,8 @@ test('STeP Skill Authoring Standard', async (t) => {
   await t.test('manifest integrity includes the new Skill, process and Playbook', async () => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
-    assert.equal(integrity.summary.skillsCount, 45);
-    assert.equal(integrity.summary.routerSkillsCount, 44);
+    assert.equal(integrity.summary.skillsCount, 46);
+    assert.equal(integrity.summary.routerSkillsCount, 45);
     assert.equal(integrity.summary.playbooksCount, 4);
   });
 });

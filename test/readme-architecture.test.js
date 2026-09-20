@@ -63,7 +63,7 @@ test('employee documentation is aligned and links resolve', async (t) => {
     assert.ok(readme.includes('| Playbooks | **3 Playbooks** |'));
     assert.ok(readme.includes('| Actions | **3 Actions** |'));
     assert.ok(readme.includes('ตัวเลขด้านล่างคือสิ่งที่อยู่ใน **ชุดติดตั้งที่องค์กรแจก** ไม่ใช่สิ่งที่อยู่ใน repository'));
-    assert.ok(readme.includes('สถานะของ main ปัจจุบัน (45 Skills / 4 Playbooks / 3 Actions) อยู่ใน docs/pilot-operations.md'));
+    assert.ok(readme.includes('สถานะของ main ปัจจุบัน (46 Skills / 4 Playbooks / 3 Actions) อยู่ใน docs/pilot-operations.md'));
     assert.ok(readme.includes('Shared Drive หรือช่องทางภายใน'));
     assert.ok(readme.includes('อย่าใช้ไฟล์จาก Public GitHub Release'));
     assert.ok(readme.includes('Repository visibility'));

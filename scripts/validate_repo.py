@@ -20,7 +20,7 @@ SECRET_PATTERNS = {
 }
 
 
-def parse_frontmatter(path: Path) -> tuple[str, str]:
+def parse_frontmatter(path: Path) -> tuple[str, str, int | None]:
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -39,12 +39,20 @@ def parse_frontmatter(path: Path) -> tuple[str, str]:
         key, value = line.split(":", 1)
         values[key.strip()] = value.strip().strip('"\'')
 
-    extra = set(values) - {"name", "description"}
+    extra = set(values) - {"name", "description", "standardVersion"}
     if extra:
         raise ValueError(f"unsupported frontmatter keys: {', '.join(sorted(extra))}")
     if not values.get("name") or not values.get("description"):
         raise ValueError("name and description are required")
-    return values["name"], values["description"]
+
+    standard_version = None
+    if values.get("standardVersion"):
+        try:
+            standard_version = int(values["standardVersion"])
+        except ValueError as exc:
+            raise ValueError("standardVersion must be an integer") from exc
+
+    return values["name"], values["description"], standard_version
 
 
 def validate_skills(errors: list[str]) -> int:
@@ -56,7 +64,7 @@ def validate_skills(errors: list[str]) -> int:
     seen: set[str] = set()
     for path in paths:
         try:
-            name, _ = parse_frontmatter(path)
+            name, _, standard_version = parse_frontmatter(path)
         except ValueError as exc:
             errors.append(f"{path.relative_to(ROOT)}: {exc}")
             continue
@@ -67,6 +75,30 @@ def validate_skills(errors: list[str]) -> int:
         if name in seen:
             errors.append(f"Duplicate skill name: {name}")
         seen.add(name)
+
+        if standard_version is not None and standard_version >= 2:
+            text = path.read_text(encoding="utf-8", errors="replace")
+            headings = [
+                match.group(1).strip()
+                for match in re.finditer(r"^##\s+(.+?)\s*$", text, flags=re.MULTILINE)
+            ]
+            required_headings = [
+                "Purpose",
+                "เมื่อควรใช้",
+                "Inputs",
+                "Source",
+                "Workflow",
+                "Output",
+                "Authority",
+                "Handoff",
+                "Guardrails",
+            ]
+            missing = [heading for heading in required_headings if heading not in headings]
+            if missing:
+                errors.append(
+                    f"{path.relative_to(ROOT)}: standardVersion {standard_version} "
+                    f"missing required sections: {', '.join(missing)}"
+                )
     return len(paths)
 
 
