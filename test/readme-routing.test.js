@@ -42,6 +42,8 @@ test('README six-query routing contract', async (t) => {
       assert.equal(result.routingMode, 'SKILL');
       assert.equal(result.selectedSkill?.name, item.skill);
       assert.equal(result.routingConfidence?.tier, 'HIGH');
+      assert.equal(result.routingContract?.confidenceTier, 'HIGH');
+      assert.equal(result.routingContract?.matchScore, result.bestMatch?.score);
       assert.equal(result.isAmbiguous, false);
       assert.ok(
         result.routingConfidence?.reason === 'raw-score-high' ||
