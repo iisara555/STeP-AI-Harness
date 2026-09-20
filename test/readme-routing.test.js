@@ -94,6 +94,36 @@ test('README six-query routing contract', async (t) => {
     assert.equal(result.routingConfidence?.tier, 'HIGH');
   });
 
+  await t.test('QS natural-language ISO audit preparation routes to ISO readiness', async () => {
+    const result = await queryStepRouter(
+      'ช่วยเตรียมเอกสารสำหรับ audit ISO ปีนี้',
+      { team: 'qs', workspaceDir: NO_MEMORY_WORKSPACE }
+    );
+
+    assert.equal(result.selectedSkill?.name, 'iso9001-audit-readiness');
+    assert.equal(result.routingConfidence?.tier, 'HIGH');
+  });
+
+  await t.test('ISO audit preparation remains discoverable without a selected team', async () => {
+    const result = await queryStepRouter(
+      'ช่วยเตรียมเอกสารสำหรับ audit ISO ปีนี้',
+      { workspaceDir: NO_MEMORY_WORKSPACE }
+    );
+
+    assert.equal(result.selectedSkill?.name, 'iso9001-audit-readiness');
+    assert.equal(result.routingConfidence?.tier, 'HIGH');
+  });
+
+  await t.test('seminar poster image-prompt request routes HIGH', async () => {
+    const result = await queryStepRouter(
+      'ขอ prompt ภาพโปสเตอร์งานสัมมนา',
+      { workspaceDir: NO_MEMORY_WORKSPACE }
+    );
+
+    assert.equal(result.selectedSkill?.name, 'step-image-prompt');
+    assert.equal(result.routingConfidence?.tier, 'HIGH');
+  });
+
   await t.test('document-review does not steal specialist document routes', async () => {
     const tor = await queryStepRouter('ช่วยตรวจ TOR นี้ว่าครบและพร้อมส่งไหม', {
       team: 'afp',
