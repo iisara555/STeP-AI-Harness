@@ -85,7 +85,9 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(imageSkill.includes('Family B'));
     assert.ok(imageSkill.includes('ratio handoff'));
     assert.ok(imageSkill.includes('Family D — Edit / inpaint'));
-    assert.ok(imageSkill.includes('ห้ามใช้ Reference-Led mode เสมือนว่าโมเดลเห็นภาพ'));
+    assert.ok(imageSkill.includes('Reference-Led / Edit'));
+    assert.ok(imageSkill.includes('เครื่องมือปลายทางรับ image input ได้จริง'));
+    assert.ok(imageSkill.includes('ห้ามทำเหมือนระบบเห็นภาพที่ไม่ได้รับมา'));
     assert.ok(!imageSkill.includes('GPT-Image-2-class'));
     assert.ok(!imageSkill.includes('GPT-Image-2.5-class'));
 
