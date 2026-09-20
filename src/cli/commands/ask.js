@@ -24,6 +24,7 @@ import {
   buildContextBudgetPlan,
 } from '../../modules/context-budget/index.js';
 import { parseYamlInlineList, stripYamlScalar } from '../../utils/simple-yaml.js';
+import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
 
 /**
  * Load router index skills from manifest/router-index.yaml
@@ -303,6 +304,8 @@ export async function queryStepRouter(query, options = {}) {
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
+  const authorities = await loadAuthorityRegistry(PACKAGE_ROOT);
+  const authorityPreflight = evaluateAuthorityPreflight(query, authorities);
 
   let resolvedTeam = options.team || '';
   let resolvedCluster = options.cluster || '';
@@ -350,9 +353,11 @@ export async function queryStepRouter(query, options = {}) {
     selectedSkill = skills.find((skill) => skill.name === bestMatch.skill);
   }
 
-  let scopeResult = selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true };
+  let scopeResult = authorityPreflight.status === 'BLOCK'
+    ? authorityPreflight
+    : (selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true });
 
-  if (selectedPlaybook) {
+  if (selectedPlaybook && scopeResult.status !== 'BLOCK') {
     for (const step of playbookPlan) {
       if (step.type !== 'skill' || !step.skill) continue;
       const stepSkill = skills.find((skill) => skill.name === step.skill);
@@ -462,6 +467,7 @@ export async function queryStepRouter(query, options = {}) {
     routingContract,
     contextPlan,
     routingConfidence,
+    authorityPreflight,
   };
 }
 
@@ -522,7 +528,22 @@ export async function runAsk(args) {
     selectedPlaybook,
     playbookPlan,
     routingConfidence,
+    authorityPreflight,
   } = result;
+
+  if (authorityPreflight?.status === 'BLOCK') {
+    console.log(colors.bold(colors.red('┌─────────────────────────────────────────────────────────────────────────────┐')));
+    console.log(colors.bold(colors.red('│  ⚠️  Human Authority Required — AI cannot make this decision                │')));
+    console.log(colors.bold(colors.red('└─────────────────────────────────────────────────────────────────────────────┘')));
+    console.log(`  • Authority:          ${colors.bold(authorityPreflight.authority)}`);
+    console.log(`  • ผู้มีอำนาจ:         ${colors.bold(authorityPreflight.targetRole || 'Authorized Human')}`);
+    if (authorityPreflight.alternateRole) {
+      console.log(`  • ผู้รับช่วงสำรอง:     ${colors.dim(authorityPreflight.alternateRole)}`);
+    }
+    console.log(`  • เหตุผล:             ${colors.dim(authorityPreflight.reason)}`);
+    console.log(colors.dim('  AI ช่วยเตรียมข้อมูล ร่างเอกสาร หรือ checklist ก่อนส่งให้ผู้มีอำนาจได้ แต่ไม่อนุมัติ ตัดสิน หรือกดดำเนินการแทน'));
+    return;
+  }
 
   if (routingMode === 'PLAYBOOK' && selectedPlaybook) {
     console.log(colors.bold(colors.green('┌─────────────────────────────────────────────────────────────────────────────┐')));
@@ -556,7 +577,7 @@ export async function runAsk(args) {
   const isMatched = selectedSkill && (bestMatch.score >= 0.20 || bestMatch.breakdown.keyword > 0);
   if (!isMatched) {
     warn('ไม่พบทักษะเฉพาะทางที่ตรงกับคำถามอย่างชัดเจน');
-    console.log(colors.dim('คุณสามารถถามกับ AI ได้โดยตรงในฐานะผู้ช่วยทั่วไป หรือลองเพิ่มคำระบุงาน เช่น TOR, บรีฟ, สไลด์, หนังสือราชการ'));
+    console.log(colors.dim('ลองเพิ่มกริยางานหรือสิ่งที่ต้องการให้ทำ เช่น ตรวจ, เขียน, กรอก, สรุป, วางแผน พร้อมเอกสาร/บริบทที่เกี่ยวข้อง ระบบจะยังคงตรวจ Authority และ Guardrails ก่อนดำเนินการ'));
     return;
   }
 
