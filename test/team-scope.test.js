@@ -47,6 +47,6 @@ test('team Skill scoping follows Router eligibility rather than namespace folder
 
     const les = await resolveTeamSkillPaths('les');
     assert.ok(les.includes('skills/common/lab-result-review/SKILL.md'));
-    assert.ok(!les.includes('skills/common/creative-art-director/SKILL.md'));
+    assert.ok(!les.includes('skills/creative/creative-art-director/SKILL.md'));
   });
 });
