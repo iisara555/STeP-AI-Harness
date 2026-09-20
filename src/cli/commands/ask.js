@@ -353,8 +353,17 @@ export async function queryStepRouter(query, options = {}) {
     selectedSkill = skills.find((skill) => skill.name === bestMatch.skill);
   }
 
+  const preflightPlaybookStep = selectedPlaybook
+    ? playbookPlan.find((step) => step.type === 'skill' && step.skill)?.id || ''
+    : '';
+
   let scopeResult = authorityPreflight.status === 'BLOCK'
-    ? authorityPreflight
+    ? {
+        ...authorityPreflight,
+        ...(selectedPlaybook
+          ? { playbookStep: preflightPlaybookStep, playbookId: selectedPlaybook.id }
+          : {}),
+      }
     : (selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true });
 
   if (selectedPlaybook && scopeResult.status !== 'BLOCK') {
