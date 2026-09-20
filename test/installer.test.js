@@ -17,7 +17,7 @@ import {
 import { detectInstalledTools } from '../src/utils/tool-detector.js';
 import { getPlatformDisplay, getMacCpuArch, getToolRecommendations, getTieredRecommendations } from '../src/platform/index.js';
 import { getAdapter, getSupportedTools } from '../src/modules/adapters/index.js';
-import { buildInstallerClusters, resolveClusterChoice, resolveTeamChoice } from '../src/cli/team-selection.js';
+import { resolveTeamChoice } from '../src/cli/team-selection.js';
 
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
@@ -92,26 +92,18 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.equal(team, 'afp');
   });
 
-  await t.test('Case 3b: Cluster-first onboarding has 5 simple groups and team drill-down', async () => {
+  await t.test('Case 3b: Direct 22-team selection has a visible skip default and derives cluster internally', async () => {
     const teams = await getAvailableTeams();
-    const clusters = buildInstallerClusters(teams);
+    assert.equal(teams.length, 22);
 
-    assert.equal(clusters.length, 5);
-    assert.ok(clusters[0].label.includes('ธุรการ'));
-    assert.deepEqual(
-      clusters.find((cluster) => cluster.id === 'market-creative').teams.map((team) => team.id),
-      ['cc', 'mi', 'crm']
-    );
+    assert.equal(resolveTeamChoice(teams, ''), null, 'Enter should use default skip');
+    assert.equal(resolveTeamChoice(teams, '0'), null, '0 should skip team selection');
+    assert.equal(resolveTeamChoice(teams, '16').id, 'cc');
+    assert.equal(resolveTeamChoice(teams, 'cc').id, 'cc');
 
-    const market = resolveClusterChoice(clusters, '4');
-    assert.equal(market.id, 'market-creative');
-    assert.equal(resolveTeamChoice(market, '1').id, 'cc');
-    assert.equal(resolveTeamChoice(market, 'cc').id, 'cc');
-    assert.equal(resolveTeamChoice(market, '0'), null);
-
-    await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--cluster', 'market-creative']);
-    assert.equal(await getUserTeam(), null);
-    assert.equal(await getUserCluster(), 'market-creative');
+    await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--team', 'cc']);
+    assert.equal(await getUserTeam(), 'cc');
+    assert.equal(await getUserCluster(), 'market-creative', 'routing cluster should derive from selected team');
   });
 
   await t.test('Case 4: CLI step-ai doctor in employee mode displays clean checklist with Platform', async () => {
@@ -124,10 +116,9 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(!stdout.includes('stack trace'));
     assert.ok(!stdout.includes('npmrc'));
     const doctorSource = await readFile(join(PACKAGE_ROOT, 'src', 'cli', 'commands', 'doctor.js'), 'utf-8');
-    assert.ok(doctorSource.includes('ติดต่อ AI Champion เพื่อยืนยันโปรแกรม AI ที่องค์กรอนุมัติ'));
-    assert.ok(doctorSource.includes('ระบบจะไม่เปิดเว็บสมัครหรือดาวน์โหลดโปรแกรม AI ให้อัตโนมัติ'));
-    assert.ok(!doctorSource.includes('https://cursor.com'));
-    assert.ok(!doctorSource.includes('https://opencode.ai'));
+    assert.ok(doctorSource.includes('ถ้ายังไม่มีโปรแกรม AI ให้เลือกเริ่มด้วย Cursor หรือ OpenCode ได้'));
+    assert.ok(doctorSource.includes('https://cursor.com'));
+    assert.ok(doctorSource.includes('https://opencode.ai'));
   });
 
   await t.test('Case 5: Verification of Windows Explorer batch and powershell files', async () => {
@@ -163,7 +154,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(!psRuntimeContent.includes('latest-v'));
     // Installer delegates employee choices to one shared CLI flow.
     assert.ok(psInstallContent.includes('init --tool all'));
-    assert.ok(psInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
+    assert.ok(psInstallContent.includes('เลือกทีมหลัก (ข้ามได้)'));
     assert.ok(psInstallContent.includes('step-ai config'));
     assert.ok(psInstallContent.includes('ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน'));
     assert.ok(!psInstallContent.includes('เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง'));
@@ -313,7 +304,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(!shInstallContent.includes('Applications/Claude.app'));
     // macOS uses the same shared CLI selection flow as Windows.
     assert.ok(shInstallContent.includes('init --tool all'));
-    assert.ok(shInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
+    assert.ok(shInstallContent.includes('เลือกทีมหลัก (ข้ามได้)'));
     assert.ok(shInstallContent.includes('step-ai config'));
     assert.ok(shInstallContent.includes('ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน'));
     assert.ok(!shInstallContent.includes('เลือกเครื่องมือ AI ที่ต้องการติดตั้งคำสั่ง'));
