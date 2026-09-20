@@ -50,9 +50,6 @@ export async function runConfig(args) {
   console.log(`│ ${colors.bold('⚙️  การตั้งค่าโปรไฟล์ผู้ใช้ (STeP AI User Profile)')}              │`);
   console.log(`└─────────────────────────────────────────────────────────────┘`);
   console.log(`  • ทีมหลักของคุณ:    ${currentTeamObj ? colors.green(colors.bold(`${currentTeamObj.name} (${currentTeamObj.id.toUpperCase()})`)) : colors.yellow('ยังไม่ได้ตั้งค่า')}`);
-  if (currentTeamObj) {
-    console.log(`    กลุ่ม Routing:    ${colors.dim(currentTeamObj.clusterName)}`);
-  }
   console.log(`  • เครื่องมือ AI:    ${colors.cyan(colors.bold(currentTool))}`);
   console.log(`  • ไฟล์คอนฟิก:       ${colors.dim(USER_CONFIG_PATH)}`);
   if (config.updatedAt) {
