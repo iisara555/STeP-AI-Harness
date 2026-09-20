@@ -2,6 +2,22 @@
 
 ใช้เป็น checklist ตอนสร้างหรือ review Skill ไม่จำเป็นต้องยัดทุกหัวข้อลง SKILL.md หากไม่มีประโยชน์ต่อ runtime
 
+## Standard v2 runtime skeleton
+
+Skill ใหม่ต้องประกาศ `standardVersion: 2` และมีหัวข้อ `##` ครบ:
+
+1. Purpose
+2. เมื่อควรใช้
+3. Inputs
+4. Source
+5. Workflow
+6. Output
+7. Authority
+8. Handoff
+9. Guardrails
+
+หัวข้อเหล่านี้เป็น runtime/review skeleton; รายละเอียด methodology, templates และตัวอย่างยาวให้ย้ายไป references/scripts/templates ตาม Progressive Disclosure
+
 ## Required design decisions
 
 | Contract | คำถาม |
