@@ -13,8 +13,8 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
     assert.equal(integrity.summary.teamsCount, 22);
-    assert.equal(integrity.summary.skillsCount, 45);
-    assert.equal(integrity.summary.routerSkillsCount, 44);
+    assert.equal(integrity.summary.skillsCount, 46);
+    assert.equal(integrity.summary.routerSkillsCount, 45);
     assert.equal(integrity.summary.playbooksCount, 4);
   });
 
