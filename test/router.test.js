@@ -306,6 +306,7 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(inferIntentFromText('ช่วยตรวจ TOR'), 'review');
     assert.equal(inferIntentFromText('ช่วยตรวจ tone of voice ของแบรนด์'), 'brand-review');
     assert.equal(inferIntentFromText('ช่วยตรวจโลโก้ STeP ตามคู่มือแบรนด์'), 'brand-review');
+    assert.equal(inferIntentFromText('ขอ prompt สร้างภาพให้เป็น STeP brand'), 'create');
     assert.equal(inferIntentFromText('ช่วยยกร่างข้อเสนอ'), 'create');
     assert.equal(inferIntentFromText('ช่วยสรุปการประชุม'), 'summarize');
     assert.equal(inferIntentFromText('ช่วยวางแผนโครงการ'), 'plan');
