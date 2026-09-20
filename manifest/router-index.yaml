@@ -176,8 +176,8 @@ skills:
       consumers: ["*"]
     wildcardReason: "all teams may use approved online forms with confirmation gates"
     description: ผู้ช่วยร่างและตรวจทานข้อมูลแบบฟอร์มออนไลน์แบบมีมนุษย์กำกับ ไม่ส่งแทนโดยพลการ
-    intent: [fill, create, plan, review]
-    triggers: [กรอกฟอร์ม, กรอกแบบฟอร์ม, จองห้องประชุม, ขอใช้ห้องประชุม, ขอใช้สถานที่]
+    intent: [form-submit, fill, create, plan, review]
+    triggers: [กรอกฟอร์ม, กรอกแบบฟอร์ม, กดส่งแบบฟอร์ม, ส่งแบบฟอร์ม, submit form, ล็อกอินเว็บ, จองห้องประชุม, ขอใช้ห้องประชุม, ขอใช้สถานที่]
     paths: ["**/form*/**", "**/booking*/**", "**/request*/**"]
     fileTypes: [pdf, docx, txt, html]
     requires: [form_objective]
@@ -361,7 +361,7 @@ skills:
       consumers: [crm, eic, imo]
     description: ออกแบบแนวคิดงาน Event ผังบูธ และประสบการณ์ผู้เข้าร่วมงาน
     intent: [create, plan]
-    triggers: [event, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, สัมมนา]
+    triggers: [event, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, จัดสัมมนา, ออกแบบงานสัมมนา, concept งานสัมมนา]
     paths: ["**/event*/**", "**/exhibition/**", "**/booth/**"]
     fileTypes: [pdf, pptx, docx]
     requires: [event_goal, audience_type, venue_constraints]
@@ -479,8 +479,8 @@ skills:
       consumers: ["*"]
     wildcardReason: "all teams produce internal or external organizational communication"
     description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
-    intent: [review, create]
-    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก]
+    intent: [social-writing, review, create]
+    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก]
     paths: ["**/*.md", "**/*.docx", "**/*.txt"]
     fileTypes: [md, docx, txt]
     requires: [draft_text]
@@ -549,8 +549,8 @@ skills:
       consumers: ["*"]
     wildcardReason: "privacy and secret checks apply to documents from every team"
     description: ตรวจจับและควบคุมข้อมูลส่วนบุคคล (PDPA/PII) และความลับทางการค้าก่อนเผยแพร่
-    intent: [check, audit, review]
-    triggers: [pdpa, privacy, ความเป็นส่วนตัว, ข้อมูลส่วนบุคคล, เลขบัตร, pii, ความลับ]
+    intent: [privacy-review, check, audit, review]
+    triggers: [pdpa, privacy, ความเป็นส่วนตัว, ข้อมูลส่วนบุคคล, เลขบัตรประชาชน, เลขบัตร, pii, credential, password, ข้อมูลสุขภาพ, ความลับ, ส่งต่อได้ไหม]
     paths: ["**/*"]
     fileTypes: [xlsx, docx, pdf, csv]
     requires: [target_document]
@@ -573,7 +573,7 @@ skills:
       consumers: [ga, ifu, les, cc]
     description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
     intent: [triage, check, review]
-    triggers: [faq, ลูกค้า, สอบถาม, บริการ, ติดต่อ, service intake, triage]
+    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
     paths: ["**/support/**", "**/inquiry/**", "**/CRM/**"]
     fileTypes: [txt, md, docx]
     requires: [customer_message]
@@ -777,8 +777,8 @@ skills:
       primary: [hd]
       consumers: [eic, piti, isi, qs, ga, nmco]
     description: ออกแบบ Learning Outcome, Practice, Feedback, Assessment, Workshop และ Onboarding จากเป้าหมายงานจริง
-    intent: [create, plan]
-    triggers: [ออกแบบการเรียนรู้, learning design, learning outcome, หลักสูตรอบรม, training plan, lesson plan, microlearning, onboarding curriculum, กิจกรรมการเรียนรู้, แบบทดสอบหลังอบรม]
+    intent: [onboarding-plan, create, plan]
+    triggers: [ออกแบบการเรียนรู้, learning design, learning outcome, หลักสูตรอบรม, training plan, lesson plan, microlearning, onboarding curriculum, onboarding พนักงาน, พนักงานใหม่, น้องใหม่, เตรียมคนใหม่, กิจกรรมการเรียนรู้, แบบทดสอบหลังอบรม]
     paths: ["**/Training/**", "**/Onboarding/**", "**/learning/**", "**/workshop/**"]
     fileTypes: [pptx, docx, md, pdf]
     requires: [learner_profile, learning_goal]
@@ -890,8 +890,8 @@ skills:
       primary: [mi]
       consumers: [piti, isi, eic, tech-spin, linc, crm, cc]
     description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของ evidence
-    intent: [review, plan]
-    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, trend radar, ตลาดพูดถึงอะไร]
+    intent: [market-test, review, plan]
+    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
     paths: ["**/MI/**", "**/Market/**", "**/research/**", "**/insight/**"]
     fileTypes: [md, docx, xlsx, csv]
     requires: [market_question]
@@ -935,8 +935,8 @@ skills:
       primary: [les]
       consumers: [foodfabr, tech-up, iqi, qs]
     description: ทบทวนผลทดสอบและข้อมูลทดลอง ตรวจ completeness, units, QC, replicates, outliers และ method/spec alignment ก่อน qualified review
-    intent: [review, check]
-    triggers: [ทบทวนผลทดสอบ, lab result, ผลวิเคราะห์, ผลแล็บ, method validation, qc result, replicate, outlier, analytical result, repeatability, reproducibility]
+    intent: [lab-review, review, check]
+    triggers: [ทบทวนผลทดสอบ, ตรวจผลทดสอบ, ผลทดสอบ, หน่วยวัดไม่ตรง, หน่วยผลทดสอบ, ใบคำขอ, lab result, ผลวิเคราะห์, ผลแล็บ, method validation, qc result, replicate, outlier, analytical result, repeatability, reproducibility]
     paths: ["**/LES/**", "**/Lab/**", "**/Testing/**", "**/PilotPlant/**"]
     fileTypes: [xlsx, csv, pdf, docx, txt]
     requires: [test_results]
@@ -1055,8 +1055,8 @@ skills:
       primary: [qs]
       consumers: []
     description: จัดการ NC/NCR/CAPA ตั้งแต่ fact, containment, RCA, corrective action และ effectiveness check
-    intent: [create, review]
-    triggers: [ncr capa, capa, nonconformity, non-conformity, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan]
+    intent: [nonconformity, create, review]
+    triggers: [ncr capa, ncr, capa, nonconformity, non-conformity, ไม่ได้มาตรฐาน, ของไม่ได้มาตรฐาน, ไม่เป็นไปตามข้อกำหนด, เปิด nc, เปิด ncr, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan]
     paths: ["**/CAPA/**", "**/NCR/**", "**/Audit/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx, pdf]
     requires: [nonconformity_or_finding]

@@ -4,6 +4,7 @@ description: Official STeP Authority & Decision Matrix — Human-in-the-loop Gov
 authorities:
   procurement-approval:
     name: "การอนุมัติการจัดซื้อจัดจ้างและการตัดสินผลการยื่นข้อเสนอ"
+    triggers: ["อนุมัติจัดซื้อ", "อนุมัติจัดจ้าง", "อนุมัติสั่งจ้าง", "ตัดสินผู้ชนะ", "เลือกผู้เสนอราคา", "เลือกผู้รับจ้าง", "ให้คะแนนซอง"]
     authorizedRole: "procurement-committee"
     alternateRole: "afp-head"
     humanInTheLoop: mandatory
@@ -11,6 +12,7 @@ authorities:
 
   budget-allocation:
     name: "การอนุมัติวงเงินงบประมาณและการเปลี่ยนแปลงรายการงวดเงิน"
+    triggers: ["อนุมัติจ่าย", "อนุมัติการจ่าย", "อนุมัติเบิกจ่าย", "จ่ายเงินให้ผู้รับจ้าง", "อนุมัติวงเงิน", "เพิ่มวงเงิน", "เปลี่ยนวงเงิน", "โอนงบ"]
     authorizedRole: "afp-finance-head"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory
@@ -18,6 +20,7 @@ authorities:
 
   legal-advice:
     name: "การวินิจฉัยข้อกฎหมาย การพิจารณาสัญญา และข้อพิพาท"
+    triggers: ["วินิจฉัยข้อกฎหมาย", "ตีความสัญญา", "ความเห็นทางกฎหมาย", "legal opinion"]
     authorizedRole: "human-legal-officer"
     alternateRole: "cmu-legal-division"
     humanInTheLoop: mandatory
@@ -25,6 +28,7 @@ authorities:
 
   official-signing:
     name: "การลงนามในหนังสือราชการและเอกสารคำสั่งภายนอก"
+    triggers: ["ลงนามหนังสือ", "ลงนามสัญญา", "เซ็นหนังสือ", "เซ็นสัญญา", "ออกเลขสารบรรณ"]
     authorizedRole: "authorized-signatory"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory
@@ -32,6 +36,7 @@ authorities:
 
   iso-enactment:
     name: "การประกาศบังคับใช้ แก้ไข หรือยกเลิก SOP ในระบบบริหารคุณภาพ"
+    triggers: ["ประกาศใช้ sop", "ประกาศใช้ wi", "ยกเลิก sop", "ยกเลิก wi", "อนุมัติแก้ sop", "อนุมัติแก้ wi"]
     authorizedRole: "qs-iso-manager"
     alternateRole: "quality-management-representative"
     humanInTheLoop: mandatory
@@ -39,6 +44,7 @@ authorities:
 
   brand-alteration:
     name: "การอนุมัติดัดแปลงตราสัญลักษณ์หรือ Brand Identity"
+    triggers: ["อนุมัติเปลี่ยนโลโก้", "อนุมัติแก้โลโก้", "อนุมัติเปลี่ยน ci", "ดัดแปลงตราสัญลักษณ์"]
     authorizedRole: "executive-director"
     alternateRole: "cc-head"
     humanInTheLoop: mandatory
@@ -46,6 +52,7 @@ authorities:
 
   hr-performance-evaluation:
     name: "การประเมินผลการปฏิบัติงาน การกำหนด KPI และการพิจารณาทางวินัย"
+    triggers: ["ประเมินผลงานรายบุคคล", "ประเมินผลพนักงาน", "กำหนด kpi รายบุคคล", "พิจารณาทางวินัย"]
     authorizedRole: "hd-hr-lead"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory
@@ -53,6 +60,7 @@ authorities:
 
   policy-waiver:
     name: "การอนุมัติผ่อนผันระเบียบหรืออนุมัติกรณีพิเศษ"
+    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ"]
     authorizedRole: "executive-director"
     alternateRole: "director-signatory"
     humanInTheLoop: mandatory
@@ -61,6 +69,7 @@ authorities:
 
   qms-conformity-decision:
     name: "การรับรองสถานะความสอดคล้องของ QMS การตอบรับ finding และการปิด NC/CAPA อย่างเป็นทางการ"
+    triggers: ["ปิด nc", "ปิด ncr", "ปิด capa", "รับรองว่า compliant", "รับรองว่าผ่าน iso", "ยืนยัน conformity"]
     authorizedRole: "qs-iso-manager"
     alternateRole: "quality-management-representative"
     humanInTheLoop: mandatory

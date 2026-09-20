@@ -13,6 +13,8 @@ import {
   deriveRoutingConfidence,
   checkScope,
   loadAndValidateManifests,
+  parseAuthorityRegistry,
+  evaluateAuthorityPreflight,
 } from '../src/modules/router/index.js';
 
 test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
@@ -315,9 +317,29 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(inferIntentFromText('ช่วยจองห้องประชุม'), 'fill');
     assert.equal(inferIntentFromText('ช่วยวางคำถามสัมภาษณ์ลูกค้าตาม Mom Test'), 'interview');
     assert.equal(inferIntentFromText('ช่วยซ้อม audit interview'), 'interview');
+    assert.equal(inferIntentFromText('เอกสารนี้มีเลขบัตรประชาชนลูกค้าอยู่ ส่งต่อได้ไหม'), 'privacy-review');
+    assert.equal(inferIntentFromText('ล็อกอินเว็บจัดซื้อแล้วกดส่งแบบฟอร์มให้เลย'), 'form-submit');
+    assert.equal(inferIntentFromText('เขียนแคปชั่นเฟซบุ๊กโปรโมทงานสัมมนา'), 'social-writing');
+    assert.equal(inferIntentFromText('หน่วยวัดในผลทดสอบกับใบคำขอไม่ตรงกัน'), 'lab-review');
+    assert.equal(inferIntentFromText('สินค้าจะขายได้ไหม ทดสอบตลาดยังไง'), 'market-test');
+    assert.equal(inferIntentFromText('น้องใหม่เข้ามาเดือนหน้า เตรียมอะไรบ้าง'), 'onboarding-plan');
+    assert.equal(inferIntentFromText('เจอของไม่ได้มาตรฐาน ต้องเปิดเอกสารอะไร'), 'nonconformity');
 
     const exts = extractFileTypes(['contract.DOCX', 'budget.XLSX', 'image.PNG']);
     assert.deepEqual(exts, ['docx', 'xlsx', 'png']);
+  });
+
+  await t.test('Case 7b: global authority preflight blocks mandatory human decisions', async () => {
+    const authorityText = await readFile('manifest/authority.yaml', 'utf-8');
+    const authorities = parseAuthorityRegistry(authorityText);
+    const result = evaluateAuthorityPreflight('อนุมัติจ่ายเงินให้ผู้รับจ้างรายนี้เลย', authorities);
+
+    assert.equal(result.status, 'BLOCK');
+    assert.equal(result.authority, 'budget-allocation');
+    assert.equal(result.targetRole, 'afp-finance-head');
+
+    const safe = evaluateAuthorityPreflight('ช่วยสรุปรายการค่าใช้จ่ายให้หน่อย', authorities);
+    assert.equal(safe.status, 'ALLOW');
   });
 
   await t.test('Case 8: Configurable Scoring Weights', () => {
