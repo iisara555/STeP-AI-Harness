@@ -4,18 +4,20 @@ import { join } from 'node:path';
 import { readFile, rm, mkdir, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
+import { PACKAGE_ROOT, getAvailableTeams } from '../src/modules/role-resolver.js';
 import { pathExists } from '../src/utils/file-ops.js';
 import {
   loadUserConfig,
   saveUserConfig,
   getUserTeam,
+  getUserCluster,
   getUserTools,
   USER_CONFIG_PATH,
 } from '../src/utils/user-config.js';
 import { detectInstalledTools } from '../src/utils/tool-detector.js';
 import { getPlatformDisplay, getMacCpuArch, getToolRecommendations, getTieredRecommendations } from '../src/platform/index.js';
 import { getAdapter, getSupportedTools } from '../src/modules/adapters/index.js';
+import { buildInstallerClusters, resolveClusterChoice, resolveTeamChoice } from '../src/cli/team-selection.js';
 
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
@@ -90,6 +92,28 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.equal(team, 'afp');
   });
 
+  await t.test('Case 3b: Cluster-first onboarding has 5 simple groups and team drill-down', async () => {
+    const teams = await getAvailableTeams();
+    const clusters = buildInstallerClusters(teams);
+
+    assert.equal(clusters.length, 5);
+    assert.ok(clusters[0].label.includes('ธุรการ'));
+    assert.deepEqual(
+      clusters.find((cluster) => cluster.id === 'market-creative').teams.map((team) => team.id),
+      ['cc', 'mi', 'crm']
+    );
+
+    const market = resolveClusterChoice(clusters, '4');
+    assert.equal(market.id, 'market-creative');
+    assert.equal(resolveTeamChoice(market, '1').id, 'cc');
+    assert.equal(resolveTeamChoice(market, 'cc').id, 'cc');
+    assert.equal(resolveTeamChoice(market, '0'), null);
+
+    await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--cluster', 'market-creative']);
+    assert.equal(await getUserTeam(), null);
+    assert.equal(await getUserCluster(), 'market-creative');
+  });
+
   await t.test('Case 4: CLI step-ai doctor in employee mode displays clean checklist with Platform', async () => {
     const { stdout } = await execFileAsync(process.execPath, [STEP_AI_BIN, 'doctor', '--employee']);
     assert.ok(stdout.includes('STeP AI System Check'));
@@ -132,16 +156,16 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(psRuntimeContent.includes('1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97'));
     assert.ok(psRuntimeContent.includes('fec025a6da31757e3b6af84c5a1628e9d38442ca99a2161091d78f2fcfa35ef3'));
     assert.ok(!psRuntimeContent.includes('latest-v'));
-    // Verify all 22 teams are displayed in installer
-    assert.ok(psInstallContent.includes('QS'));
-    assert.ok(psInstallContent.includes('AFP'));
-    assert.ok(psInstallContent.includes('CC'));
-    assert.ok(psInstallContent.includes('MI'));
-    assert.ok(psInstallContent.includes('PITI'));
-    assert.ok(psInstallContent.includes('GA'));
-    assert.ok(psInstallContent.includes('FOODFABR'));
-    assert.ok(psInstallContent.includes('TECH-SPIN'));
-    assert.ok(psInstallContent.includes('22 ทีม'));
+    // Installer delegates employee choices to one shared CLI flow.
+    assert.ok(psInstallContent.includes('init --tool all'));
+    assert.ok(psInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
+    assert.ok(psInstallContent.includes('step-ai config'));
+    assert.ok(psInstallContent.includes('เริ่มใช้งาน STeP AI'));
+    assert.ok(psInstallContent.includes('เตรียม instruction ให้ 8 โปรแกรมแล้ว'));
+    assert.ok(!psInstallContent.includes('เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง'));
+    assert.ok(!psInstallContent.includes('พิมพ์หมายเลขทีม (1-22)'));
+    assert.ok(!psInstallContent.includes('Start-Process "https://cursor.com"'));
+    assert.ok(!psInstallContent.includes('Start-Process "https://opencode.ai"'));
 
     const batUpdateContent = await readFile(batUpdate, 'utf-8');
     assert.ok(batUpdateContent.includes('update-windows.ps1'));
@@ -272,16 +296,16 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(shInstallContent.includes('Applications/Visual Studio Code.app'));
     assert.ok(shInstallContent.includes('Applications/Cursor.app'));
     assert.ok(shInstallContent.includes('Applications/Claude.app'));
-    // Verify all 22 teams are displayed in macOS installer
-    assert.ok(shInstallContent.includes('QS'));
-    assert.ok(shInstallContent.includes('AFP'));
-    assert.ok(shInstallContent.includes('CC'));
-    assert.ok(shInstallContent.includes('MI'));
-    assert.ok(shInstallContent.includes('PITI'));
-    assert.ok(shInstallContent.includes('GA'));
-    assert.ok(shInstallContent.includes('FOODFABR'));
-    assert.ok(shInstallContent.includes('TECH-SPIN'));
-    assert.ok(shInstallContent.includes('22 ทีม'));
+    // macOS uses the same shared CLI selection flow as Windows.
+    assert.ok(shInstallContent.includes('init --tool all'));
+    assert.ok(shInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
+    assert.ok(shInstallContent.includes('step-ai config'));
+    assert.ok(shInstallContent.includes('เริ่มใช้งาน STeP AI'));
+    assert.ok(shInstallContent.includes('เตรียม instruction ให้ 8 โปรแกรมแล้ว'));
+    assert.ok(!shInstallContent.includes('เลือกเครื่องมือ AI ที่ต้องการติดตั้งคำสั่ง'));
+    assert.ok(!shInstallContent.includes('พิมพ์หมายเลขทีม (1-22)'));
+    assert.ok(!shInstallContent.includes('open "https://cursor.com"'));
+    assert.ok(!shInstallContent.includes('open "https://opencode.ai"'));
 
     const cmdUpdateContent = await readFile(cmdUpdate, 'utf-8');
     assert.ok(cmdUpdateContent.includes('update-macos.sh'));
