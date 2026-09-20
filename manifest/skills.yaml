@@ -437,7 +437,7 @@ skills:
 
   step-image-prompt:
     owner: cc
-    version: 2.2.0
+    version: 2.3.0
     domain: [creative]
     process: [creative.branding]
     service: [creative-marketing]
