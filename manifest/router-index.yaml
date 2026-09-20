@@ -22,7 +22,7 @@ skills:
     processId: ai.skill-governance
     teams:
       primary: [ai-admin]
-      consumers: ["*"]
+      consumers: []
     description: ใช้เมื่อจะสร้างหรือปรับ Skill ของ STeP AI Harness; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action และออกแบบ Trigger/Anti-trigger, Source, Authority, Handoff และ Eval ก่อน Pilot
     intent: [create, improve]
     triggers: [สร้าง skill, สร้างสกิล, create skill, add skill, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring, skill contract, skill eval, ทำ skill ให้พร้อม pilot]
@@ -104,6 +104,7 @@ skills:
     teams:
       primary: [ga]
       consumers: ["*"]
+    wildcardReason: "all teams create general documents that need a pre-send completeness check"
     description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน placeholder owner/deadline และสิ่งที่เจ้าของงานต้องแก้เอง
     intent: [review, check, summarize]
     triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง]
@@ -147,6 +148,7 @@ skills:
     teams:
       primary: [ga]
       consumers: ["*"]
+    wildcardReason: "all teams participate in meetings and need action/milestone extraction"
     description: สรุปบันทึกการประชุม แยกมติ Action item ผู้รับผิดชอบ และประเด็นที่ยังค้าง
     intent: [summarize, review]
     triggers: [ประชุม, meeting, minutes, มติ, รายงานการประชุม, จดประชุม, action item]
@@ -172,6 +174,7 @@ skills:
     teams:
       primary: [ga]
       consumers: ["*"]
+    wildcardReason: "all teams may use approved online forms with confirmation gates"
     description: ผู้ช่วยร่างและตรวจทานข้อมูลแบบฟอร์มออนไลน์แบบมีมนุษย์กำกับ ไม่ส่งแทนโดยพลการ
     intent: [fill, create, plan, review]
     triggers: [กรอกฟอร์ม, กรอกแบบฟอร์ม, จองห้องประชุม, ขอใช้ห้องประชุม, ขอใช้สถานที่]
@@ -474,6 +477,7 @@ skills:
     teams:
       primary: [cc]
       consumers: ["*"]
+    wildcardReason: "all teams produce internal or external organizational communication"
     description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
     intent: [review, create]
     triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก]
@@ -521,8 +525,8 @@ skills:
       primary: [cc]
       consumers: [mi, crm, eic]
     description: รักษาอัตลักษณ์และน้ำเสียงของ STeP และ RSP North ให้เป็นไปตาม Brand CI
-    intent: [check, review]
-    triggers: [brand, tone, น้ำเสียง, CI, สี, โลโก้, logo, identity, บุคลิกแบรนด์]
+    intent: [brand-review]
+    triggers: [brand, tone of voice, น้ำเสียงแบรนด์, CI, โลโก้, logo, identity, บุคลิกแบรนด์]
     paths: ["**/branding/**", "**/marketing/**"]
     fileTypes: [ai, pdf, png]
     requires: [creative_asset_or_copy]
@@ -543,6 +547,7 @@ skills:
     teams:
       primary: [qs]
       consumers: ["*"]
+    wildcardReason: "privacy and secret checks apply to documents from every team"
     description: ตรวจจับและควบคุมข้อมูลส่วนบุคคล (PDPA/PII) และความลับทางการค้าก่อนเผยแพร่
     intent: [check, audit, review]
     triggers: [pdpa, privacy, ความเป็นส่วนตัว, ข้อมูลส่วนบุคคล, เลขบัตร, pii, ความลับ]
@@ -612,6 +617,7 @@ skills:
     teams:
       primary: [sit]
       consumers: ["*"]
+    wildcardReason: "every team may run a weekly work review"
     description: รวบรวมและวิเคราะห์ผลการทำงานประจำสัปดาห์ ปัญหาคอขวด และแผนงานสัปดาห์ถัดไป
     intent: [summarize, report, review]
     triggers: [weekly, ประจำสัปดาห์, ทบทวนงาน, รายงานประจำสัปดาห์, weekly review, ติดตามงาน]
@@ -635,8 +641,9 @@ skills:
     teams:
       primary: [cc]
       consumers: ["*"]
+    wildcardReason: "any team may create or review material using STeP brand assets"
     description: อ้างอิงและตรวจสอบการใช้ตราสัญลักษณ์และทรัพยากรแบรนด์ STeP / RSP North
-    intent: [check, review]
+    intent: [brand-review]
     triggers: [step brand, ตราอุทยาน, สัญลักษณ์, ci guideline, คู่มือแบรนด์]
     paths: ["**/brand/**", "**/CI/**"]
     fileTypes: [ai, eps, pdf, png]
@@ -658,6 +665,7 @@ skills:
     teams:
       primary: [cc]
       consumers: ["*"]
+    wildcardReason: "any team may need an AI visual prompt while preserving STeP brand context"
     description: กำกับ Art Direction และสร้าง Prompt ภาพ AI แบบยืดหยุ่นตามบริบท โดยรักษา STeP Brand DNA ผ่าน Brand Strength, Visual Modes และ Reference-Led workflow
     intent: [create, draft, design]
     triggers: [prompt, ขอ prompt, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion, art direction, visual direction, reference image, ภาพอ้างอิง, ตาม ref, ตาม reference, photorealistic, ภาพสมจริง, product hero, technology hero, architectural visual, exhibition visual, visual campaign]
@@ -685,6 +693,7 @@ skills:
     teams:
       primary: [afp]
       consumers: ["*"]
+    wildcardReason: "staff across teams may pre-check reimbursement evidence before AFP review"
     description: Pre-check ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิก โดยแยก document facts, cross-document evidence และ current-source policy checks
     intent: [review, verify, audit, check]
     triggers: [ใบเสร็จ, ใบกำกับภาษี, เบิกจ่าย, ใบสำคัญรับเงิน, e-tax, vat, ค่าเดินทาง, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าที่พัก, ใบเสร็จรับเงิน, receipt]
@@ -745,6 +754,7 @@ skills:
     teams:
       primary: [qs]
       consumers: ["*"]
+    wildcardReason: "evidence-before-claim discipline applies across all teams"
     description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ
     intent: [review, check]
     triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง]
@@ -949,7 +959,7 @@ skills:
     processId: quality.audit-readiness
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: เตรียม External/Internal Audit ISO 9001 แบบ process-based สำหรับทีมและทั้งองค์กร
     intent: [review, plan]
     triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
@@ -973,7 +983,7 @@ skills:
     processId: quality.audit-readiness
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: ทำ Evidence Matrix/PBC list เชื่อม requirement กับหลักฐาน period source owner และ gap
     intent: [create, review]
     triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso]
@@ -996,7 +1006,7 @@ skills:
     processId: quality.document-control
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: ตรวจ Controlled Document และ Record เรื่อง owner revision approval current/obsolete retention และ traceability
     intent: [review, check]
     triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย]
@@ -1023,7 +1033,7 @@ skills:
     processId: quality.audit-readiness
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
     intent: [review, interview]
     triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit]
@@ -1043,7 +1053,7 @@ skills:
     processId: quality.corrective-action
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: จัดการ NC/NCR/CAPA ตั้งแต่ fact, containment, RCA, corrective action และ effectiveness check
     intent: [create, review]
     triggers: [ncr capa, capa, nonconformity, non-conformity, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan]
@@ -1070,7 +1080,7 @@ skills:
     processId: quality.management-review
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
     intent: [review, evaluate]
     triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms]
@@ -1097,7 +1107,7 @@ skills:
     processId: quality.management-review
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
     intent: [review, evaluate]
     triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics]
@@ -1124,7 +1134,7 @@ skills:
     processId: quality.management-review
     teams:
       primary: [qs]
-      consumers: ["*"]
+      consumers: []
     description: เตรียม Management Review Pack จาก KPI, customer feedback, audit, CAPA, risk, resources และ prior actions
     intent: [create, summarize, review]
     triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review]
