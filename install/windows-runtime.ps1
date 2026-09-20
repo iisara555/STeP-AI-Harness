@@ -1,5 +1,5 @@
 ﻿# Shared Windows runtime bootstrap for STeP AI.
-# Node is pinned so employee installs are reproducible and do not trust a moving latest target.
+# Existing Node.js >=20 is supported and CI-tested; managed fallback is pinned to 22.23.2 for reproducible staff installs.
 # CI verifies these pinned hashes against Node.js signed SHASUMS.
 
 $StepNodeVersion = "22.23.2"
