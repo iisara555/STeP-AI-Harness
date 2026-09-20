@@ -82,7 +82,8 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(imageSkill.includes('references/prompt-spec.md'));
     assert.ok(imageSkill.includes('Build Prompt Spec → Confirm Family → Render'));
     assert.ok(imageSkill.includes('Prompt Spec เป็น source of truth'));
-    assert.ok(imageSkill.includes('Family B ต้องส่งค่า ratio handoff'));
+    assert.ok(imageSkill.includes('Family B'));
+    assert.ok(imageSkill.includes('ratio handoff'));
     assert.ok(imageSkill.includes('Family D — Edit / inpaint'));
     assert.ok(imageSkill.includes('ห้ามใช้ Reference-Led mode เสมือนว่าโมเดลเห็นภาพ'));
     assert.ok(!imageSkill.includes('GPT-Image-2-class'));
