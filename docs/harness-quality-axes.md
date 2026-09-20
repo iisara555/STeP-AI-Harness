@@ -11,7 +11,7 @@
 | Reliable Actions | อ่านผลกลับได้; มี output verification; ไม่ retry ผลที่ยังไม่ชัด | ผู้ดูแล Tool/Adapter |
 | Traceability | run ID ไม่ชน; แหล่งอ้างอิง/เวอร์ชัน/model/ผลการทำงานระบุได้ หรือแสดง unknown | ผู้ดูแล Harness |
 | Evaluation & Regression | 3 scenarios ผ่าน rubric เดิมเมื่อเปลี่ยน model/skill/source/tool | ผู้ดูแล Harness + ผู้ตรวจงาน |
-| Staff Experience | พนักงานพิมพ์ไทยจนได้ผลใช้จริง; แจ้งปัญหาได้โดยไม่ใช้ Git/Terminal | AI Champion + พนักงาน Pilot |
+| Staff Experience | พนักงานพิมพ์ไทยจนได้ผลใช้จริง; แจ้งปัญหาได้โดยไม่ใช้ Git/Terminal | ผู้ดูแลระบบ + พนักงาน Pilot |
 
 ## ทำได้ทันทีในโค้ด
 
