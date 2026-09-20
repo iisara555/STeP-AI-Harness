@@ -13,6 +13,8 @@ import {
   deriveRoutingConfidence,
   checkScope,
   loadAndValidateManifests,
+  parseAuthorityRegistry,
+  evaluateAuthorityPreflight,
 } from '../src/modules/router/index.js';
 
 test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
@@ -325,6 +327,19 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
 
     const exts = extractFileTypes(['contract.DOCX', 'budget.XLSX', 'image.PNG']);
     assert.deepEqual(exts, ['docx', 'xlsx', 'png']);
+  });
+
+  await t.test('Case 7b: global authority preflight blocks mandatory human decisions', async () => {
+    const authorityText = await readFile('manifest/authority.yaml', 'utf-8');
+    const authorities = parseAuthorityRegistry(authorityText);
+    const result = evaluateAuthorityPreflight('อนุมัติจ่ายเงินให้ผู้รับจ้างรายนี้เลย', authorities);
+
+    assert.equal(result.status, 'BLOCK');
+    assert.equal(result.authority, 'budget-allocation');
+    assert.equal(result.targetRole, 'afp-finance-head');
+
+    const safe = evaluateAuthorityPreflight('ช่วยสรุปรายการค่าใช้จ่ายให้หน่อย', authorities);
+    assert.equal(safe.status, 'ALLOW');
   });
 
   await t.test('Case 8: Configurable Scoring Weights', () => {
