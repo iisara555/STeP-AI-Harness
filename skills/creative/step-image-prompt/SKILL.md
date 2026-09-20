@@ -130,6 +130,9 @@ Emotional tone
 ---
 5. Apply Brand Context
 หากงานเกี่ยวข้องกับ STeP ให้ใช้ Brand source ที่ได้รับหรือ Brand reference ของระบบเป็นข้อมูลประกอบ
+
+สถานะปัจจุบันของ runtime visual context อยู่ที่ `references/brand-visual-context.md` ซึ่งต้องเปิดเผยชัดเจนหากยังไม่มี Controlled CI Guideline ที่ยืนยันแล้ว
+
 หลักทั่วไป:
 Brand ต้องสนับสนุนงาน ไม่ใช่ครอบภาพทั้งหมด
 ไม่จำเป็นต้องใช้สี STeP เป็นสีหลักในทุกภาพ
@@ -138,6 +141,8 @@ Logo จริงต้องมาจาก Official Asset
 AI ไม่ควรสร้างหรือเลียนแบบ Logo STeP / CMU ขึ้นใหม่
 Co-branding หรือ Partner Brand ต้องอ้างอิง Asset หรือ Guideline ที่ได้รับ
 หากไม่มี Brand source ที่ยืนยันได้ อย่าสร้าง Brand rule ใหม่จากความจำหรือความชอบ
+ห้าม hard-code hex, logo geometry, co-branding rule หรือ safe-area rule ลง SKILL.md โดยไม่มี controlled source
+เมื่อมี Controlled CI Guideline ให้สรุปเฉพาะ runtime visual context ที่จำเป็นลง `references/brand-visual-context.md` และอ้าง revision/source กลับไปยัง registry
 เมื่อต้องตรวจ Brand compliance อย่างเป็นทางการ ให้ใช้ Brand Review Skill หรือ Brand Reference ที่เกี่ยวข้องแทน
 ---
 6. Build Prompt Spec → Confirm Family → Render
