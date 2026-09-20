@@ -356,8 +356,9 @@ export async function queryStepRouter(query, options = {}) {
   const preflightPlaybookStep = selectedPlaybook
     ? playbookPlan.find((step) => step.type === 'skill' && step.skill)?.id || ''
     : '';
+  const hasGlobalAuthorityBlock = authorityPreflight.status === 'BLOCK';
 
-  let scopeResult = authorityPreflight.status === 'BLOCK'
+  let scopeResult = hasGlobalAuthorityBlock
     ? {
         ...authorityPreflight,
         ...(selectedPlaybook
@@ -366,7 +367,17 @@ export async function queryStepRouter(query, options = {}) {
       }
     : (selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true });
 
-  if (selectedPlaybook && scopeResult.status !== 'BLOCK') {
+  if (selectedPlaybook && !hasGlobalAuthorityBlock) {
+    // The initially selected Skill is normally the first Playbook Skill.
+    // Preserve its local BLOCK/ESCALATE provenance instead of dropping the step id.
+    if (scopeResult.status !== 'ALLOW' && preflightPlaybookStep) {
+      scopeResult = {
+        ...scopeResult,
+        playbookStep: preflightPlaybookStep,
+        playbookId: selectedPlaybook.id,
+      };
+    }
+
     for (const step of playbookPlan) {
       if (step.type !== 'skill' || !step.skill) continue;
       const stepSkill = skills.find((skill) => skill.name === step.skill);
