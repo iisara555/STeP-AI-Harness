@@ -119,6 +119,20 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.ok(result.breakdown.team > 0.10, 'Consumer team earns partial team weight');
   });
 
+  await t.test('Case 2b: Routing cluster helps before an exact team is known', () => {
+    const context = buildContext({
+      promptText: 'ช่วยดูงานนี้หน่อย',
+      cluster: 'market-creative',
+    });
+
+    const creative = scoreSkillCandidate(mockCreativeBrief, context);
+    const procurement = scoreSkillCandidate(mockTorReview, context);
+
+    assert.ok(creative.breakdown.team > 0, 'matching cluster should earn partial team-context weight');
+    assert.equal(procurement.breakdown.team, 0, 'different cluster should not receive cluster weight');
+    assert.ok(creative.score > procurement.score);
+  });
+
   await t.test('Case 3: Anti-Context Pollution — Irrelevant skills receive 0 score', () => {
     const context = buildContext({
       path: '/projects/IRTC/TOR',

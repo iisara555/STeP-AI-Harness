@@ -77,6 +77,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
 
 ${colors.bold('ตัวเลือกทั่วไป:')}
   -m, --team <id>       ระบุรหัสทีมใน 22 ทีม (เช่น qs, afp, mi, piti, linc, cc)
+  -c, --cluster <id>    ระบุกลุ่ม routing 1 ใน 5 กลุ่ม เมื่อยังไม่ต้องการเลือกทีม
   -r, --role <id>       ระบุ Role (all, staff, pm, developer, creative, ai-admin) [default: all]
   -t, --tool <name>     ระบุเครื่องมือ (claude, cursor, codex, all) [default: codex]
   -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
@@ -94,6 +95,7 @@ ${colors.bold('ตัวอย่างการใช้งาน:')}
   step-ai ask "ทำสไลด์ Pitching ให้ผู้ประกอบการ"
   step-ai config
   step-ai config --team qs
+  step-ai config --cluster market-creative
   step-ai update
   step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
   step-ai privacy --file sample.txt --redact

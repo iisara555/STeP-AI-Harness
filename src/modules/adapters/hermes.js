@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory, buildFirstWorkOnboardingContract } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -23,6 +23,7 @@ export function generateHermesInstructions(role, files) {
   text += buildRouterGuidelines({ format: 'compact' });
   text += `\n\n`;
   text += buildLazyLoadingInventory(files);
+  text += buildFirstWorkOnboardingContract(role);
 
   text += `\n## Hermes Persistent Memory (USER.md)\n`;
   text += `Read \`USER.md\` in the workspace root at the beginning of each session. Update \`USER.md\` dynamically in the background whenever you learn user preferences, team role, communication style, or ongoing projects. Never commit or expose this file.\n\n`;

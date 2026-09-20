@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory, buildFirstWorkOnboardingContract } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -21,6 +21,7 @@ export function generateClaudeInstructions(role, files) {
   text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
   text += buildLazyLoadingInventory(files);
+  text += buildFirstWorkOnboardingContract(role);
 
   text += `\n## CLI Integration Commands\n\n`;
   text += `- View STeP 22 teams: \`step-ai teams\`\n`;

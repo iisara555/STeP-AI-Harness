@@ -50,6 +50,16 @@ export async function getUserTeam() {
 }
 
 /**
+ * Get current routing cluster ID from user configuration.
+ * Cluster can be known even when the employee has not selected a team yet.
+ * @returns {Promise<string|null>}
+ */
+export async function getUserCluster() {
+  const cfg = await loadUserConfig();
+  return cfg.cluster || null;
+}
+
+/**
  * Get configured AI tools from user configuration
  * @returns {Promise<string[]>}
  */

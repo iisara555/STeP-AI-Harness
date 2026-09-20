@@ -77,6 +77,7 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
     text = '',
     path = '',
     team = '',
+    cluster = '',
     fileTypes = [],
   } = context;
 
@@ -137,6 +138,18 @@ export function scoreSkillCandidate(skill, context = {}, options = {}) {
       breakdown.team = weights.TEAM; // Full weight for primary owner team
     } else if (consumers.includes(normTeam) || consumers.includes('*')) {
       breakdown.team = Math.round(weights.TEAM * 0.70 * 1000) / 1000; // 70% weight for consuming team
+    }
+  }
+
+  // When a team is not known yet, a confirmed 5-cluster choice still narrows routing
+  // without forcing the employee to understand the 22-team organization map.
+  if (!team && cluster && skill.cluster) {
+    const normCluster = cluster.toLowerCase().trim();
+    if (String(skill.cluster).toLowerCase().trim() === normCluster) {
+      breakdown.team = Math.max(
+        breakdown.team,
+        Math.round(weights.TEAM * 0.70 * 1000) / 1000
+      );
     }
   }
 

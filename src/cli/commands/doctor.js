@@ -53,15 +53,14 @@ export async function runDoctor(args) {
     console.log(colors.dim('────────────────────────────────────────────────────────────'));
 
     if (installedToolNames.length === 0) {
-      console.log(colors.yellow(colors.bold('💡 ยังไม่พบโปรแกรม AI ในเครื่อง — แนะนำให้ดาวน์โหลด (ฟรี):')));
-      console.log(`  1. ${colors.cyan(colors.bold('Cursor'))} หรือ ${colors.cyan(colors.bold('OpenCode'))} (สายฟรี เลือกหนึ่งตัว):`);
-      console.log(`     ${colors.dim('https://cursor.com')}  |  ${colors.dim('https://opencode.ai')}`);
-      console.log(`  2. ${colors.cyan(colors.bold('ChatGPT / Claude'))}: ใช้ตัวที่มีสิทธิ์อยู่แล้ว ไม่ต้องย้ายค่าย`);
-      console.log(`  3. ${colors.cyan(colors.bold('VS Code'))}: ${colors.dim('https://code.visualstudio.com')} หากมีโปรแกรมนี้อยู่แล้ว`);
+      console.log(colors.yellow(colors.bold('⚠️  ยังไม่พบโปรแกรม AI ที่พร้อมใช้ในเครื่องนี้')));
+      console.log(colors.dim('   STeP AI ติดตั้งเรียบร้อยแล้ว แต่ก่อนเริ่มงานให้ติดต่อ AI Champion เพื่อยืนยันโปรแกรม AI ที่องค์กรอนุมัติ'));
+      console.log(colors.dim('   ระบบจะไม่เปิดเว็บสมัครหรือดาวน์โหลดโปรแกรม AI ให้อัตโนมัติ'));
       console.log(colors.dim('────────────────────────────────────────────────────────────'));
+      console.log(`${colors.yellow(colors.bold('ติดตั้ง Harness สำเร็จ แต่ยังไม่พร้อมเริ่มแชทจนกว่าจะมีโปรแกรม AI ที่องค์กรอนุมัติ'))}\n`);
+    } else {
+      console.log(`${colors.green(colors.bold('✓ สภาพแวดล้อมพร้อมใช้งาน พนักงานสามารถเริ่มถามงานได้ทันที!'))}\n`);
     }
-
-    console.log(`${colors.green(colors.bold('✓ สภาพแวดล้อมพร้อมใช้งาน พนักงานสามารถเริ่มถามงานได้ทันที!'))}\n`);
     return;
   }
 

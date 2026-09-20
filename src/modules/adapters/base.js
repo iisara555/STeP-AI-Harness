@@ -85,3 +85,33 @@ export function buildLazyLoadingInventory(files = []) {
   text += `- Load templates/examples only when the selected Skill or user request requires them.\n\n`;
   return text;
 }
+
+/**
+ * Shared employee onboarding contract used by every AI adapter.
+ * Keeps first-run behavior aligned across Cursor, Claude, Codex, ChatGPT, etc.
+ */
+export function buildFirstWorkOnboardingContract(role = {}) {
+  const installTeam = Boolean(role.isTeam && role.id && role.id !== 'all')
+    ? String(role.id).toUpperCase()
+    : '';
+  const installCluster = role.clusterId || role.selectedCluster || '';
+
+  let text = `## First Work — Employee Handoff Contract\n\n`;
+  text += `When the user says **"เริ่มใช้งาน STeP AI"** or opens this workspace for the first time, keep the introduction short. Do not scan Skills/Rules/Manifest recursively.\n`;
+  text += `- Read only the routing identity and **Suggested First Tasks** sections from \`USER.md\` if the file exists. Do not treat the rest of the workspace as startup context.\n`;
+  text += `- A non-empty **Primary Team** in \`USER.md\` is the current user choice and overrides any installation-time team hint below.\n`;
+
+  if (installTeam) {
+    text += `- Installation-time team hint: **${installTeam}**. If \`USER.md\` still has that team, say "ทีมคุณคือ ${installTeam}" and offer the 3 Suggested First Tasks from \`USER.md\`.\n`;
+  } else if (installCluster) {
+    text += `- Installation-time routing cluster hint: **${installCluster}**. Exact team selection was deferred.\n`;
+  } else {
+    text += `- No team was required during installation. This is a valid First Run state.\n`;
+  }
+
+  text += `- If \`USER.md\` has no Primary Team and the user already has a real task, **help with that task first**. Do not block work to configure a profile.\n`;
+  text += `- After the first useful result, suggest the single most likely team (maximum 2 if genuinely ambiguous) with a short reason. Ask for confirmation before saving.\n`;
+  text += `- After confirmation, update **Primary Team**, **Routing Cluster**, and **Suggested First Tasks** in \`USER.md\` when file writes are available. For CLI routing, use or tell the user \`step-ai config --team <team-id>\`.\n`;
+  text += `- If the user remains unsure, continue in broad/cluster routing mode and do not ask again on every message.\n\n`;
+  return text;
+}

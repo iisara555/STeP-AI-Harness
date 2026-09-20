@@ -240,6 +240,11 @@ test('CLI & Core Modules Test Suite', async (t) => {
     for (const expected of expectedTeams) {
       assert.ok(teamIds.includes(expected), `Missing team: ${expected}`);
     }
+
+    const cc = teams.find((team) => team.id === 'cc');
+    assert.equal(cc.clusterInstallerLabel, 'การตลาด ออกแบบ สื่อสาร และลูกค้าสัมพันธ์');
+    assert.equal(cc.starterPrompts.length, 3);
+    assert.ok(cc.starterPrompts[0].includes('Designer Brief'));
   });
 
   await t.test('Team Resolver resolves specific team skills and router files', async () => {

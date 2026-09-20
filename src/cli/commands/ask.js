@@ -4,7 +4,7 @@ import readline from 'node:readline';
 import { header, success, info, warn, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
-import { getUserTeam } from '../../utils/user-config.js';
+import { getUserTeam, getUserCluster } from '../../utils/user-config.js';
 import { loadUserMemory } from '../../modules/user-memory.js';
 import {
   loadPlaybooks,
@@ -46,6 +46,7 @@ export async function loadRouterIndex() {
     if (nameMatch) {
       current = {
         name: nameMatch[1],
+        cluster: '',
         domain: '',
         processId: '',
         teams: { primary: [], consumers: [] },
@@ -62,6 +63,12 @@ export async function loadRouterIndex() {
     }
 
     if (!current) continue;
+
+    const clusterMatch = line.match(/^ {4}cluster:\s*([a-z0-9_-]+)/);
+    if (clusterMatch) {
+      current.cluster = clusterMatch[1];
+      continue;
+    }
 
     const domainMatch = line.match(/^ {4}domain:\s*([a-z0-9_-]+)/);
     if (domainMatch) {
@@ -297,12 +304,16 @@ export async function queryStepRouter(query, options = {}) {
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
 
   let resolvedTeam = options.team || '';
+  let resolvedCluster = options.cluster || '';
   let userMemory = null;
-  if (!resolvedTeam) {
+  if (!resolvedTeam || !resolvedCluster) {
     try {
       userMemory = await loadUserMemory(options.workspaceDir || process.cwd());
-      if (userMemory?.profile?.team) {
+      if (!resolvedTeam && userMemory?.profile?.team) {
         resolvedTeam = userMemory.profile.team;
+      }
+      if (!resolvedCluster && userMemory?.profile?.cluster) {
+        resolvedCluster = userMemory.profile.cluster;
       }
     } catch {
       // ignore memory read error
@@ -314,6 +325,7 @@ export async function queryStepRouter(query, options = {}) {
     path: options.path || '',
     filenames: options.filenames || [],
     team: resolvedTeam,
+    cluster: resolvedCluster,
   });
 
   const ranked = rankSkillCandidates(skills, context);
@@ -484,7 +496,8 @@ export async function runAsk(args) {
   if (!machineMode) info(`วิเคราะห์คำถาม: "${colors.bold(query)}" ...\n`);
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
-  const result = await queryStepRouter(query, { team: userTeam });
+  const userCluster = args.cluster || args.c || (await getUserCluster()) || '';
+  const result = await queryStepRouter(query, { team: userTeam, cluster: userCluster });
   if (machineMode) {
     console.log(JSON.stringify({
       routing: result.routingContract,

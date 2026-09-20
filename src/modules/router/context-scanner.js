@@ -61,6 +61,7 @@ export function buildContext({
   filenames = [],
   promptText = '',
   team = '',
+  cluster = '',
 }) {
   const intent = inferIntentFromText(promptText);
   const fileTypes = extractFileTypes(filenames);
@@ -72,6 +73,7 @@ export function buildContext({
     text: promptText,
     intent,
     team,
+    cluster,
   };
 }
 

@@ -1,4 +1,4 @@
-import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory } from './base.js';
+import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory, buildFirstWorkOnboardingContract } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
 
 /**
@@ -24,6 +24,7 @@ export function generateOpenCodeInstructions(role, files) {
   text += buildRouterGuidelines({ format: 'compact' });
   text += `\n\n`;
   text += buildLazyLoadingInventory(files);
+  text += buildFirstWorkOnboardingContract(role);
 
   text += `\n## OpenCode Best Practices for STeP Workflows\n`;
   text += `1. Analyze user intent and identify appropriate skill before answering.\n`;

@@ -6,47 +6,55 @@ version: 1
 clusters:
   - id: governance-operations
     name: ธรรมาภิบาลและการบริหารจัดการ (Governance, Operations & Quality)
+    installerLabel: ธุรการ การเงิน จัดซื้อ คุณภาพ บุคลากร และงานสนับสนุน
     router: governance-router
     teams:
       - id: ga
         name: งานบริหารทั่วไป
         nameEn: General Administration
         description: รับเรื่อง ตรวจความครบถ้วน ส่งต่อเรื่อง และงานธุรการกลาง
+        starterPrompts: ["ช่วยตรวจหนังสือหรือบันทึกนี้ก่อนส่งและสรุปจุดที่ต้องแก้", "สรุปเรื่องที่รับเข้ามาและบอกว่าควรส่งต่อทีมไหน", "ร่างข้อความประสานงานภายในให้สุภาพและกระชับ"]
         skills: [common, pm]
         paths: ["**/GA/**", "**/Admin/**"]
       - id: afp
         name: บัญชี การเงิน และจัดซื้อ
         nameEn: Accounting, Finance & Procurement
         description: ตรวจคำขอ ขอบเขตงาน งบประมาณ จัดซื้อจัดจ้าง และระเบียบการเงิน
+        starterPrompts: ["ช่วยตรวจ TOR นี้ก่อนส่ง AFP และแยกจุดที่ต้องยืนยัน", "ช่วย pre-check ใบเสร็จชุดนี้และสรุปหลักฐานที่ยังขาด", "สรุปคำขอจัดซื้อรายการนี้เป็น checklist สำหรับเจ้าของเรื่อง"]
         skills: [common, pm]
         paths: ["**/AFP/**", "**/Procurement/**", "**/Finance/**", "**/TOR/**"]
       - id: iasa
         name: ความร่วมมือระหว่างประเทศและพันธมิตร
         nameEn: International Affairs & Strategic Alliance
         description: เตรียมข้อมูลพันธมิตรสากล ประสานงานต่างประเทศ และบันทึกข้อตกลง
+        starterPrompts: ["ช่วยสรุปข้อมูลพันธมิตรนี้เป็น brief สำหรับผู้บริหาร", "ร่างอีเมลประสานงานต่างประเทศให้สุภาพและชัดเจน", "สรุปประเด็นจาก MOU นี้และแยกเรื่องที่ต้องให้ผู้มีอำนาจยืนยัน"]
         skills: [common, pm]
         paths: ["**/IASA/**", "**/International/**", "**/Partnership/**"]
       - id: qs
         name: ระบบคุณภาพ
         nameEn: Quality System
         description: บริหารระบบคุณภาพ ISO ตรวจประเมินภายใน ติดตาม NCR และการควบคุมเอกสาร
+        starterPrompts: ["ช่วยตรวจความพร้อม ISO ของกระบวนการนี้และบอก evidence ที่ยังขาด", "ช่วยทำ audit evidence matrix จากเอกสารชุดนี้", "ช่วยสรุป NCR นี้และเตรียมประเด็นสำหรับ CAPA review"]
         skills: [common, pm]
         paths: ["**/QS/**", "**/ISO/**", "**/Quality/**", "**/Audit/**"]
       - id: nmco
         name: ประสานเครือข่ายอุทยานวิทยาศาสตร์และ อว.
         nameEn: Network Management & Coordination Office
         description: ประสานงานเครือข่ายอุทยานฯ ทั่วประเทศ และรายงานหน่วยงานภาครัฐ (อว.)
+        starterPrompts: ["ช่วยสรุปข้อมูลจากเครือข่ายหลายพื้นที่ให้อยู่ในรูปแบบเดียวกัน", "เตรียม executive update จากรายงานของเครือข่ายนี้", "ช่วยแยก action และ owner จากการประชุมเครือข่าย"]
         skills: [common, pm]
         paths: ["**/NMCO/**", "**/Network/**", "**/RSP/**"]
       - id: hd
         name: พัฒนาศักยภาพบุคลากร
         nameEn: Human Development
         description: พัฒนาศักยภาพบุคลากร ถอดองค์ความรู้ภายใน และจัดเตรียมแผนการฝึกอบรม
+        starterPrompts: ["ช่วยออกแบบแผนอบรมจากเป้าหมายการเรียนรู้นี้", "ช่วยสรุปบทเรียนจากกิจกรรมนี้ให้ใช้สอนคนอื่นต่อได้", "ช่วยทำ onboarding checklist สำหรับพนักงานใหม่"]
         skills: [common]
         paths: ["**/HD/**", "**/HRD/**", "**/Training/**", "**/Onboarding/**"]
 
   - id: incubation-strategy
     name: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation, Entrepreneurship & Strategy)
+    installerLabel: บ่มเพาะธุรกิจ Startup ผู้ประกอบการ และยุทธศาสตร์
     router: incubation-router
     teams:
       - id: piti
@@ -54,110 +62,129 @@ clusters:
         name: บ่มเพาะศักยภาพนวัตกรรมและเทคโนโลยี
         nameEn: Platform for Innovation & Technology Incubation
         description: บ่มเพาะและประเมินโอกาสความเป็นไปได้ทางเทคโนโลยีเบื้องต้น
+        starterPrompts: ["ช่วยวิเคราะห์ผู้ประกอบการรายนี้ก่อนเข้ากระบวนการบ่มเพาะ", "ช่วยสรุปโจทย์ Startup นี้และสิ่งที่ต้องพิสูจน์ต่อ", "ช่วยเตรียม action plan หลัง mentoring ให้ทีมผู้ประกอบการ"]
         skills: [common, pm]
         paths: ["**/PITI/**", "**/Incubation/**"]
       - id: isi
         name: บ่มเพาะ Startup นวัตกรรม
         nameEn: Innovative Startup Incubation
         description: ให้คำปรึกษาและติดตามทีมธุรกิจ Startup หลังการ Mentoring
+        starterPrompts: ["ช่วยสรุปสถานะ Startup นี้หลัง mentoring และงานที่ต้องทำต่อ", "ช่วยทำ discovery questions สำหรับคุยกับทีม Startup", "ช่วยเตรียม milestone สำหรับรอบติดตาม Startup ครั้งถัดไป"]
         skills: [common, pm]
         paths: ["**/ISI/**", "**/Startup/**", "**/Mentoring/**"]
       - id: eic
         name: การเป็นผู้ประกอบการและนวัตกรรม
         nameEn: Entrepreneurship & Innovation Center
         description: ออกแบบหลักสูตรและจัดกิจกรรมพัฒนาทักษะผู้ประกอบการ
+        starterPrompts: ["ช่วยออกแบบ workshop ผู้ประกอบการจาก learning outcome นี้", "ช่วยทำ agenda และกิจกรรมสำหรับคลาสนี้", "ช่วยสรุป feedback ผู้เข้าอบรมและข้อเสนอปรับรอบถัดไป"]
         skills: [common, pm]
         paths: ["**/EIC/**", "**/Workshop/**", "**/Entrepreneur/**"]
       - id: imo
         name: บริหารจัดการนวัตกรรม
         nameEn: Innovation Management Office
         description: จัดพอร์ตโฟลิโอโครงการนวัตกรรมและสนับสนุนการตัดสินใจเชิงกลยุทธ์
+        starterPrompts: ["ช่วยสรุป portfolio โครงการนวัตกรรมชุดนี้สำหรับผู้บริหาร", "ช่วยทำ decision memo จากตัวเลือกโครงการเหล่านี้", "ช่วยทบทวน OKR ของโครงการนี้ให้เชื่อมกับผลลัพธ์จริง"]
         skills: [common, pm]
         paths: ["**/IMO/**", "**/Portfolio/**"]
       - id: sit
         name: ยุทธศาสตร์ โครงการริเริ่ม และการเปลี่ยนแปลง
         nameEn: Strategy, Initiatives & Transformation
         description: ขับเคลื่อนแผนยุทธศาสตร์ บริหารการเปลี่ยนแปลง และติดตามตัวชี้วัดองค์กร
+        starterPrompts: ["ช่วยสรุปสถานะโครงการยุทธศาสตร์นี้และประเด็นที่ต้องตัดสินใจ", "ช่วยทำ pre-mortem ก่อนเริ่มโครงการนี้", "ช่วยแตก initiative นี้เป็น milestone และ owner"]
         skills: [common, pm, dev]
         paths: ["**/SIT/**", "**/Strategy/**", "**/Transformation/**"]
 
   - id: tech-industry
     name: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer & Industry Collaboration)
+    installerLabel: เทคโนโลยี งานวิจัย อุตสาหกรรม ชุมชน และภาครัฐ
     router: tech-transfer-router
     teams:
       - id: tech-spin
         name: ถ่ายทอดเทคโนโลยีและบริษัท Spin-off
         nameEn: Technology Spin-off & Transfer
         description: แปลงงานวิจัยเป็นข้อเสนอทางธุรกิจและการเจรจาถ่ายทอดเทคโนโลยี
+        starterPrompts: ["ช่วยสรุปงานวิจัยนี้เป็นโอกาสเชิงพาณิชย์", "ช่วยเตรียมประเด็นสำหรับหารือ licensing หรือ spin-off", "ช่วยทำ brief จับคู่งานวิจัยกับภาคเอกชน"]
         skills: [common, pm]
         paths: ["**/TechSpin/**", "**/SpinOff/**", "**/Licensing/**", "**/IP/**"]
       - id: tech-up
         name: เทคโนโลยีเชิงลึกและการขยายระดับการผลิต
         nameEn: Deep Tech Scale-Up
         description: ทบทวนและทดสอบความพร้อมทางเทคโนโลยีต้นแบบก่อนขยายสู่เชิงพาณิชย์
+        starterPrompts: ["ช่วยสรุปความพร้อมของเทคโนโลยีต้นแบบนี้ก่อน scale-up", "ช่วยหา resource หรือ Lab ที่เหมาะกับโจทย์เทคโนโลยีนี้", "ช่วยทำ validation plan สำหรับต้นแบบนี้"]
         skills: [common, pm, dev]
         paths: ["**/TechUp/**", "**/DeepTech/**", "**/ScaleUp/**"]
       - id: linc
         name: ความร่วมมือท้องถิ่นและอุตสาหกรรม
         nameEn: Local & Industrial Collaboration
         description: สกัดโจทย์จริงจากภาคอุตสาหกรรมและชุมชนเพื่อจับคู่ผู้เชี่ยวชาญ
+        starterPrompts: ["ช่วยถอดโจทย์ปัญหาจากบริษัทนี้ก่อนหาเทคโนโลยี", "ช่วยจับคู่โจทย์นี้กับ expert Lab หรือเครื่องมือที่เหมาะ", "ช่วยสรุปโจทย์อุตสาหกรรมนี้เป็น brief สำหรับส่งต่อผู้เชี่ยวชาญ"]
         skills: [common, pm]
         paths: ["**/LINC/**", "**/Industry/**", "**/Local/**"]
       - id: pubsec
         name: โครงการความร่วมมือภาครัฐ
         nameEn: Public Sector Projects
         description: ออกแบบและบริหารโครงการเชิงพื้นที่ร่วมกับหน่วยงานภาครัฐ
+        starterPrompts: ["ช่วยออกแบบโครงการความร่วมมือภาครัฐจากโจทย์พื้นที่นี้", "ช่วยแตกกิจกรรมและ milestone ของโครงการนี้", "ช่วยทำ decision memo จากทางเลือกดำเนินโครงการ"]
         skills: [common, pm]
         paths: ["**/PubSec/**", "**/PublicSector/**", "**/AreaProject/**"]
 
   - id: market-creative
     name: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative & Client)
+    installerLabel: การตลาด ออกแบบ สื่อสาร และลูกค้าสัมพันธ์
     router: market-creative-router
     teams:
       - id: cc
         name: งานสร้างสรรค์และการสื่อสาร
         nameEn: Creative & Communication
         description: งานออกแบบ Artwork, Brief ออกแบบ, อัตลักษณ์แบรนด์, นิทรรศการ และสื่อสารองค์กร
+        starterPrompts: ["ช่วยทำ Designer Brief จากข้อมูลนี้ให้ครบก่อนส่งทีมออกแบบ", "ช่วยคิด Event Concept จาก TOR และข้อจำกัดพื้นที่นี้", "ช่วยจัดโครง Presentation นี้ให้ message ชัดและใช้ต่อได้"]
         skills: [common, creative]
         paths: ["**/CC/**", "**/Creative/**", "**/Artwork/**", "**/Branding/**", "**/Design/**"]
       - id: mi
         name: นวัตกรรมตลาดสำหรับผลิตภัณฑ์นวัตกรรม
         nameEn: Market Innovation
         description: วางแผนทดสอบสมมติฐานการตลาด ตรวจสอบจุดขายสินค้า และเตรียมข้อมูลเชิงพาณิชย์
+        starterPrompts: ["ช่วยวางแผน market test สำหรับผลิตภัณฑ์นี้", "ช่วยสรุป Voice of Customer จาก feedback ชุดนี้", "ช่วยหา market signal ที่เกี่ยวข้องกับสินค้านี้และแยกข้อเท็จจริงจากสมมติฐาน"]
         skills: [common, creative, pm]
         paths: ["**/MI/**", "**/Market/**", "**/MarketTest/**"]
       - id: crm
         name: ลูกค้าสัมพันธ์
         nameEn: Customer Relationship Management
         description: รับเรื่อง บริการลูกค้า จับคู่ความต้องการกับบริการ และติดตามความพึงพอใจ
+        starterPrompts: ["ช่วยคัดแยกคำถามลูกค้านี้และจับคู่บริการ STeP ที่เหมาะ", "ช่วยร่างคำตอบลูกค้าจากข้อมูลบริการที่ยืนยันแล้ว", "ช่วยสรุป feedback ลูกค้าและประเด็นที่ควรส่งต่อทีมเจ้าของบริการ"]
         skills: [common, pm]
         paths: ["**/CRM/**", "**/Customer/**", "**/Inquiry/**"]
 
   - id: facilities-labs
     name: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Infrastructure, Labs & Pilot Plant)
+    installerLabel: อาคาร พื้นที่ ห้องแล็บ เครื่องมือ และโรงงานต้นแบบ
     router: facilities-lab-router
     teams:
       - id: ifu
         name: การใช้ประโยชน์พื้นที่และสิ่งอำนวยความสะดวก
         nameEn: Infrastructure & Facility Utilization
         description: บริหารจัดการพื้นที่ให้บริการ ห้องประชุม พื้นที่เช่า และสิ่งอำนวยความสะดวก
+        starterPrompts: ["ช่วยจับคู่ความต้องการใช้พื้นที่นี้กับบริการที่เกี่ยวข้อง", "ช่วยเตรียมข้อมูลก่อนจองห้องหรือพื้นที่ใช้งาน", "ช่วยสรุปปัญหาพื้นที่นี้เป็น brief สำหรับส่งต่อทีมดูแล"]
         skills: [common, pm]
         paths: ["**/IFU/**", "**/Facility/**", "**/Space/**"]
       - id: iqi
         name: พัฒนาคุณภาพโครงสร้างพื้นฐาน
         nameEn: Infrastructure Quality Improvement
         description: ปรับปรุงคุณภาพโครงสร้างพื้นฐาน อาคารสถานที่ และระบบวิศวกรรมอาคาร
+        starterPrompts: ["ช่วยสรุปปัญหาอาคารนี้และแยกอาการจากสาเหตุที่ยังต้องตรวจ", "ช่วยทำ action plan สำหรับงานปรับปรุงโครงสร้างพื้นฐานนี้", "ช่วยเตรียม checklist ตรวจรับงานปรับปรุงนี้"]
         skills: [common, pm]
         paths: ["**/IQI/**", "**/BuildingQuality/**", "**/Maintenance/**"]
       - id: les
         name: ห้องปฏิบัติการและเครื่องมือ
         nameEn: Laboratory & Equipment Services
         description: บริการตรวจวิเคราะห์ทางห้องปฏิบัติการ เครื่องมือวิทยาศาสตร์ และรายงานผลทดสอบ
+        starterPrompts: ["ช่วยหา Lab หรือเครื่องมือที่เหมาะกับตัวอย่างนี้", "ช่วยตรวจความสอดคล้องของผล Lab ชุดนี้ก่อนส่งต่อ", "ช่วยเตรียมคำถามที่ต้องยืนยันก่อนส่งตัวอย่างเข้าทดสอบ"]
         skills: [common, pm]
         paths: ["**/LES/**", "**/Lab/**", "**/Testing/**"]
       - id: foodfabr
         name: โรงงานต้นแบบผลิตภัณฑ์อาหารนวัตกรรม
         nameEn: Food Fabrication Pilot Plant
         description: บริการแปรรูปและทดลองผลิตผลิตภัณฑ์อาหารต้นแบบในระดับกึ่งอุตสาหกรรม
+        starterPrompts: ["ช่วยเตรียม brief สำหรับทดลองผลิตอาหารต้นแบบนี้", "ช่วยแตกขั้นตอน pilot production และ dependency ที่ต้องเตรียม", "ช่วยสรุปผลทดลองผลิตรอบนี้และสิ่งที่ต้องปรับรอบถัดไป"]
         skills: [common, pm]
         paths: ["**/FOODFABR/**", "**/PilotPlant/**", "**/FoodProduction/**"]
