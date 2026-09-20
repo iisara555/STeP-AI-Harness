@@ -135,6 +135,7 @@ export function extractRouterSkills(text) {
         processId: '',
         primaryTeams: [],
         consumerTeams: [],
+        wildcardReason: '',
         authorities: [],
         escalationTargets: [],
       };
@@ -159,6 +160,12 @@ export function extractRouterSkills(text) {
     const consumerMatch = line.match(/^ {6}consumers:\s*\[(.*?)\]/);
     if (consumerMatch) {
       currentSkill.consumerTeams = consumerMatch[1].split(',').map((t) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      continue;
+    }
+
+    const wildcardReasonMatch = line.match(/^ {4}wildcardReason:\s*(.+)/);
+    if (wildcardReasonMatch) {
+      currentSkill.wildcardReason = wildcardReasonMatch[1].trim().replace(/^['"]|['"]$/g, '');
       continue;
     }
 
@@ -259,6 +266,12 @@ export function validateManifestIntegrity({
       if (ct !== '*' && !validTeams.has(ct.toLowerCase())) {
         errors.push(`router-index: Skill '${rSkill.name}' references unknown consumer team '${ct}'`);
       }
+    }
+
+    if ((rSkill.consumerTeams || []).includes('*') && !rSkill.wildcardReason) {
+      errors.push(
+        `router-index: Skill '${rSkill.name}' uses consumers ["*"] without wildcardReason`
+      );
     }
 
     if (rSkill.processId && !validProcessIds.has(rSkill.processId)) {

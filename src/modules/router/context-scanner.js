@@ -7,6 +7,8 @@
 import { extname, basename, dirname } from 'node:path';
 import { scoreSkillCandidate } from './scorer.js';
 
+export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
+
 export const INTENT_KEYWORDS = {
   summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'summarize', 'summary', 'minutes'],
   interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach'],
@@ -23,10 +25,19 @@ export const INTENT_KEYWORDS = {
 /**
  * Infer intent from prompt text
  * @param {string} promptText 
- * @returns {string} Inferred intent (review, create, summarize, plan, deploy, triage, or unknown)
+ * @returns {string} Inferred intent (brand-review, review, create, summarize, plan, deploy, triage, or unknown)
  */
 export function inferIntentFromText(promptText = '') {
   const lower = promptText.toLowerCase();
+
+  // Brand review is a qualified review intent: require both a brand-domain
+  // signal and a review/check signal. A prompt that says "สร้างภาพ ... brand"
+  // must remain a create task and route to image/creative generation Skills.
+  const hasBrandSignal = BRAND_REVIEW_SIGNALS.some((kw) => lower.includes(kw.toLowerCase()));
+  const hasReviewSignal = INTENT_KEYWORDS.review.some((kw) => lower.includes(kw.toLowerCase()));
+  if (hasBrandSignal && hasReviewSignal) {
+    return 'brand-review';
+  }
 
   for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
     if (keywords.some((kw) => lower.includes(kw.toLowerCase()))) {

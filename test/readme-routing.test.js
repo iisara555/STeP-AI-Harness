@@ -62,6 +62,38 @@ test('README six-query routing contract', async (t) => {
     assert.equal(result.selectedPlaybook?.id, 'tor-to-project-plan');
   });
 
+  await t.test('CC TOR review does not surface brand Skills as near candidates', async () => {
+    const result = await queryStepRouter(
+      'ช่วยตรวจ TOR นี้ แยกข้อเท็จจริง ความเสี่ยง และข้อมูลที่ต้องให้เจ้าของงานยืนยันก่อนส่ง AFP',
+      { team: 'cc', workspaceDir: NO_MEMORY_WORKSPACE }
+    );
+
+    assert.equal(result.selectedSkill?.name, 'tor-review');
+    const topThree = result.ranked.slice(0, 3).map((item) => item.skill);
+    assert.ok(!topThree.includes('brand-tone-of-voice'), `brand-tone leaked into TOR top 3: ${topThree.join(', ')}`);
+    assert.ok(!topThree.includes('step-brand'), `step-brand leaked into TOR top 3: ${topThree.join(', ')}`);
+  });
+
+  await t.test('brand review still routes strongly when brand semantics are explicit', async () => {
+    const result = await queryStepRouter(
+      'ช่วยตรวจ tone of voice และน้ำเสียงแบรนด์ของข้อความนี้ให้ตรงกับ STeP',
+      { team: 'cc', workspaceDir: NO_MEMORY_WORKSPACE }
+    );
+
+    assert.equal(result.selectedSkill?.name, 'brand-tone-of-voice');
+    assert.equal(result.routingConfidence?.tier, 'HIGH');
+  });
+
+  await t.test('specialist QMS Skill remains routable on explicit demand outside QS', async () => {
+    const result = await queryStepRouter(
+      'ช่วยเตรียม external audit ISO 9001 ของทีมนี้และสรุป evidence gap',
+      { team: 'cc', workspaceDir: NO_MEMORY_WORKSPACE }
+    );
+
+    assert.equal(result.selectedSkill?.name, 'iso9001-audit-readiness');
+    assert.equal(result.routingConfidence?.tier, 'HIGH');
+  });
+
   await t.test('document-review does not steal specialist document routes', async () => {
     const tor = await queryStepRouter('ช่วยตรวจ TOR นี้ว่าครบและพร้อมส่งไหม', {
       team: 'afp',
