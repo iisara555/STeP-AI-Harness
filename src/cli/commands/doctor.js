@@ -4,7 +4,7 @@ import { readFile, access, constants } from 'node:fs/promises';
 import { header, success, warn, error, info } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { pathExists } from '../../utils/file-ops.js';
-import { PACKAGE_ROOT, getAvailableTeams } from '../../modules/role-resolver.js';
+import { PACKAGE_ROOT, getAvailableTeams, resolveTeamFiles } from '../../modules/role-resolver.js';
 import { loadUserConfig, USER_CONFIG_PATH } from '../../utils/user-config.js';
 import { detectInstalledTools } from '../../utils/tool-detector.js';
 import { getPlatformDisplay } from '../../platform/index.js';
@@ -23,13 +23,21 @@ export async function runDoctor(args) {
     const installedToolNames = detectedTools.filter((t) => t.installed).map((t) => t.name);
 
     let teamDisplay = 'ยังไม่ได้ระบุ';
-    let skillsCount = 0;
+    let teamSkillsCount = null;
+
+    const skillRegistry = await readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8');
+    const organizationSkillsCount = (skillRegistry.match(/^    path:\s*skills\/[^\n]+\/SKILL\.md\s*$/gm) || []).length;
     if (userCfg.team) {
       const teams = await getAvailableTeams();
       const t = teams.find((item) => item.id.toLowerCase() === userCfg.team.toLowerCase());
       if (t) {
         teamDisplay = `${t.name} (${t.id.toUpperCase()})`;
-        skillsCount = t.skills ? t.skills.length : 0;
+        const resolved = await resolveTeamFiles(t.id);
+        teamSkillsCount = new Set(
+          resolved.files
+            .filter((file) => file.type === 'skill' && file.relativePath.endsWith('/SKILL.md'))
+            .map((file) => file.relativePath)
+        ).size;
       } else {
         teamDisplay = userCfg.team.toUpperCase();
       }
@@ -44,7 +52,10 @@ export async function runDoctor(args) {
     } else {
       console.log(`  ${colors.yellow('⚠️')} Detected AI:     ${colors.yellow('ยังไม่พบโปรแกรม AI ในเครื่อง')}`);
     }
-    console.log(`  ${colors.green('✓')} Skill Index:     ${colors.bold(`Ready (${skillsCount > 0 ? `${skillsCount} Skills` : 'Organization Library'})`)}`);
+    const skillIndexDisplay = teamSkillsCount !== null
+      ? `Ready (${teamSkillsCount} team Skills / ${organizationSkillsCount} organization Skills)`
+      : `Ready (${organizationSkillsCount} organization Skills)`;
+    console.log(`  ${colors.green('✓')} Skill Index:     ${colors.bold(skillIndexDisplay)}`);
     console.log(`  ${colors.green('✓')} Configuration:   ${colors.dim(USER_CONFIG_PATH)}`);
     const userMem = await loadUserMemory(process.cwd());
     if (userMem.exists) {

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { readFile, rm, mkdir, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PACKAGE_ROOT, getAvailableTeams } from '../src/modules/role-resolver.js';
+import { PACKAGE_ROOT, getAvailableTeams, resolveTeamFiles } from '../src/modules/role-resolver.js';
 import { pathExists } from '../src/utils/file-ops.js';
 import {
   loadUserConfig,
@@ -106,7 +106,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.equal(await getUserCluster(), 'market-creative', 'routing cluster should derive from selected team');
   });
 
-  await t.test('Case 4: CLI step-ai doctor in employee mode displays clean checklist with Platform', async () => {
+  await t.test('Case 4: CLI step-ai doctor reports resolved team Skills and organization library correctly', async () => {
     const { stdout } = await execFileAsync(process.execPath, [STEP_AI_BIN, 'doctor', '--employee']);
     assert.ok(stdout.includes('STeP AI System Check'));
     assert.ok(stdout.includes('Installation:'));
@@ -115,7 +115,27 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(stdout.includes('พร้อมใช้งาน'));
     assert.ok(!stdout.includes('stack trace'));
     assert.ok(!stdout.includes('npmrc'));
+
+    const configuredTeam = await getUserTeam();
+    assert.equal(configuredTeam, 'cc');
+
+    const resolved = await resolveTeamFiles(configuredTeam);
+    const expectedTeamSkills = new Set(
+      resolved.files
+        .filter((file) => file.type === 'skill' && file.relativePath.endsWith('/SKILL.md'))
+        .map((file) => file.relativePath)
+    ).size;
+    const skillRegistry = await readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8');
+    const expectedOrganizationSkills = (skillRegistry.match(/^    path:\s*skills\/[^\n]+\/SKILL\.md\s*$/gm) || []).length;
+
+    assert.ok(
+      stdout.includes(`Ready (${expectedTeamSkills} team Skills / ${expectedOrganizationSkills} organization Skills)`),
+      `doctor should report resolved Skill counts, got:\n${stdout}`
+    );
+
     const doctorSource = await readFile(join(PACKAGE_ROOT, 'src', 'cli', 'commands', 'doctor.js'), 'utf-8');
+    assert.ok(doctorSource.includes('resolveTeamFiles'));
+    assert.ok(!doctorSource.includes('t.skills ? t.skills.length : 0'));
     assert.ok(doctorSource.includes('ถ้ายังไม่มีโปรแกรม AI ให้เลือกเริ่มด้วย Cursor หรือ OpenCode ได้'));
     assert.ok(doctorSource.includes('https://cursor.com'));
     assert.ok(doctorSource.includes('https://opencode.ai'));
