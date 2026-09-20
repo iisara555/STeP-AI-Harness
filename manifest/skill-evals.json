@@ -73,7 +73,8 @@
     "market-signal-radar",
     "voice-of-customer",
     "audit-interview-coach",
-    "qms-risk-opportunity-review"
+    "qms-risk-opportunity-review",
+    "document-review"
   ],
   "note": "Many skills in needsDirectModelSideCoverage already have routing/authority regression tests. This list means they are not directly represented in pilot-30-v1 model-side benchmark."
 }
