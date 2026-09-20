@@ -57,7 +57,7 @@ echo -e "${GRAY}กำลังตรวจสอบ Node.js runtime...${NC}"
 if ! resolve_step_node "$ROOT_DIR"; then
     echo ""
     echo -e "${RED}⚠️  ไม่สามารถเตรียม Node.js Runtime ได้${NC}"
-    echo -e "${GRAY}กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่ หรือส่งภาพหน้าจอนี้ให้ AI Champion${NC}"
+    echo -e "${GRAY}กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่ หรือเปิด SUPPORT.md แล้วส่งภาพหน้าจอตามช่องทางช่วยเหลือที่ระบุ${NC}"
     echo ""
     read -p "กด Enter เพื่อออกจากโปรแกรม..." dummy
     exit 1

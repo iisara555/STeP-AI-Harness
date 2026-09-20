@@ -234,6 +234,7 @@ def main() -> int:
         "manifest/actions.yaml",
         "manifest/provenance.yaml",
         "manifest/skill-evals.json",
+        "SUPPORT.md",
         "mcp/mcp.yaml",
         "package.json",
     ]

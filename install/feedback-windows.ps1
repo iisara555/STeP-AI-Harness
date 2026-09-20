@@ -51,7 +51,7 @@ switch ($choice) {
         }
         Write-Host ""
         Write-Host "คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้กด Save (Ctrl+S) แล้วส่งไฟล์ FEEDBACK.md" -ForegroundColor Yellow
-        Write-Host "         ให้ AI Champion ประจำทีม หรือส่งในห้องแชทองค์กรได้เลยครับ" -ForegroundColor Yellow
+        Write-Host "         ให้หัวหน้าทีมหรือผู้ประสานงานทีม ผ่านช่องทางภายในที่ทีมใช้อยู่ ตาม SUPPORT.md" -ForegroundColor Yellow
     }
     "2" {
         Write-Host ""
@@ -64,7 +64,7 @@ switch ($choice) {
         }
         Write-Host ""
         Write-Host "คำแนะนำ: เมื่อพิมพ์เสร็จแล้วให้กด Save (Ctrl+S) แล้วส่งไฟล์ REQUEST_NEW_TASK.md" -ForegroundColor Yellow
-        Write-Host "         ให้หัวหน้าฝ่ายหรือ AI Champion เพื่อรับรองเข้าสู่ระบบกลางครับ" -ForegroundColor Yellow
+        Write-Host "         ให้หัวหน้าทีมหรือผู้ประสานงานทีม ผ่านช่องทางภายในที่ทีมใช้อยู่ ตาม SUPPORT.md" -ForegroundColor Yellow
     }
     "admin" {
         Write-Host ""

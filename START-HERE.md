@@ -4,7 +4,7 @@
 
 ## ใช้งานแบบย่อ
 
-1. รับไฟล์ชุดติดตั้งจาก Shared Drive หรือช่องทางภายในที่ AI Champion แจ้ง
+1. รับไฟล์ชุดติดตั้งจาก Shared Drive หรือช่องทางภายในที่ทีมใช้อยู่และได้รับการแจ้งว่าเป็นชุดติดตั้งขององค์กร
 2. แตกไฟล์ ZIP
 3. เปิด `Install-STeP-AI.bat` (Windows) หรือ `Install-STeP-AI.command` (macOS)
 4. เลือกทีมหลักจาก **22 ทีม**; `0` หรือกด Enter = **ยังไม่แน่ใจ — ข้ามก่อนและเลือกภายหลังได้**
@@ -23,5 +23,5 @@
 
 - เปลี่ยนทีมภายหลัง: `step-ai config`
 - อัปเดต: `Update-STeP-AI.bat` หรือ `Update-STeP-AI.command`
-- แจ้งปัญหา: `Feedback-STeP-AI.bat` หรือ `Feedback-STeP-AI.command`
+- แจ้งปัญหา: `Feedback-STeP-AI.bat` หรือ `Feedback-STeP-AI.command` แล้วทำตาม [SUPPORT.md](SUPPORT.md)
 - คู่มือเต็ม: [docs/employee-guide.md](docs/employee-guide.md)

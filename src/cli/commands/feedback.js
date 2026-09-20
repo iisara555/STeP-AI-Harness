@@ -61,7 +61,7 @@ export async function runFeedback(args) {
   if (args.open) {
     info('พนักงานทั่วไปไม่ต้องใช้ GitHub');
     console.log('  พิมพ์ในแชทว่า "เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย"');
-    console.log('  หรือดับเบิลคลิก Feedback-STeP-AI แล้วส่งไฟล์ให้ AI Champion / ห้องแชทองค์กร\n');
+    console.log('  หรือดับเบิลคลิก Feedback-STeP-AI แล้วส่งไฟล์ตาม SUPPORT.md ผ่านช่องทางภายในของทีม\n');
     return;
   }
 
@@ -70,7 +70,7 @@ export async function runFeedback(args) {
     const filePath = join(destDir, 'FEEDBACK.md');
     await writeFile(filePath, FEEDBACK_TEMPLATE, 'utf-8');
     success(`สร้างแบบฟอร์มเรียบร้อยแล้ว: ${colors.bold('FEEDBACK.md')}`);
-    console.log(`  เปิดไฟล์ ${colors.cyan('FEEDBACK.md')} กรอกข้อมูล แล้วส่งให้ AI Champion หรือส่งในห้องแชทองค์กรได้ทันที\n`);
+    console.log(`  เปิดไฟล์ ${colors.cyan('FEEDBACK.md')} กรอกข้อมูล แล้วส่งตาม SUPPORT.md ผ่านหัวหน้าทีมหรือผู้ประสานงานทีม\n`);
     return;
   }
 
@@ -84,13 +84,13 @@ export async function runFeedback(args) {
       await writeFile(legacyPath, TASK_REQUEST_TEMPLATE, 'utf-8');
     }
     success(`สร้างแบบฟอร์มเรียบร้อยแล้ว: ${colors.bold('REQUEST_NEW_TASK.md')}`);
-    console.log(`  เปิดไฟล์ ${colors.cyan('REQUEST_NEW_TASK.md')} กรอกข้อมูล แล้วส่งให้หัวหน้าฝ่ายหรือ AI Champion ได้ทันที\n`);
+    console.log(`  เปิดไฟล์ ${colors.cyan('REQUEST_NEW_TASK.md')} กรอกข้อมูล แล้วส่งตาม SUPPORT.md ผ่านหัวหน้าทีมหรือผู้ประสานงานทีม\n`);
     return;
   }
 
-  // Admin / Champion Mode
-  if (args.admin || args.champion) {
-    console.log(`${colors.yellow(colors.bold('=== CHAMPION & ADMIN MODE ==='))}\n`);
+  // Admin Mode
+  if (args.admin) {
+    console.log(`${colors.yellow(colors.bold('=== ADMIN MODE ==='))}\n`);
     console.log(`ศูนย์ควบคุมการจัดการ Approved Skills และ Governance สำหรับทีมผู้ดูแล:\n`);
     console.log(`  • โฟลเดอร์ทักษะ:         ${colors.cyan('skills/')} (จัดกลุ่มตาม 22 ทีมและส่วนกลาง)`);
     console.log(`  • ผังองค์กรและทีม:       ${colors.cyan('manifest/teams.yaml')}`);
@@ -124,5 +124,5 @@ export async function runFeedback(args) {
   console.log(colors.bold('ตัวเลือกคำสั่ง:'));
   console.log(`  ${colors.green('step-ai feedback --issue')}     สร้างแบบฟอร์มแจ้งปัญหา (FEEDBACK.md)`);
   console.log(`  ${colors.green('step-ai feedback --request')}   สร้างแบบฟอร์มของานเพิ่ม (REQUEST_NEW_TASK.md)`);
-  console.log(`  ${colors.green('step-ai feedback --admin')}     เข้าสู่โหมดผู้ดูแลระบบ (Champion / Admin Mode)\n`);
+  console.log(`  ${colors.green('step-ai feedback --admin')}     เข้าสู่โหมดผู้ดูแลระบบ (Admin Mode)\n`);
 }
