@@ -437,12 +437,12 @@ skills:
 
   step-image-prompt:
     owner: cc
-    version: 2.1.0
+    version: 2.2.0
     domain: [creative]
     process: [creative.branding]
     service: [creative-marketing]
     path: skills/creative/step-image-prompt/SKILL.md
-    description: กำกับ Art Direction และสร้าง Prompt ภาพ AI แบบยืดหยุ่นตามบริบท โดยรักษา STeP Brand DNA ผ่าน Brand Strength, Visual Modes และ Reference-Led workflow
+    description: สร้าง Prompt Spec กลางครั้งเดียวแล้ว render เป็น syntax family ของเครื่องมือปลายทางสำหรับงานสร้างหรือแก้ภาพ โดยรักษา brand/reference constraints
     governance:
       owner: cc
       reviewer: [qs]
