@@ -14,7 +14,7 @@ export const INTENT_KEYWORDS = {
   interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach'],
   review: ['ตรวจ', 'รีวิว', 'เช็ก', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ช่วยดู', 'review', 'check', 'audit', 'evaluate'],
   fill: ['กรอก', 'จองห้อง', 'ขอใช้ห้อง', 'ลงทะเบียน', 'fill', 'book', 'register'],
-  create: ['จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'create', 'draft', 'write', 'generate', 'design'],
+  create: ['จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'create', 'draft', 'write', 'generate', 'design'],
   plan: ['วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
   deploy: ['deploy', 'เดพลอย', 'ขึ้นระบบ', 'production', 'staging'],
   triage: ['คัดแยก', 'ส่งต่อ', 'รับเรื่อง', 'triage', 'inquiry', 'สอบถาม', 'ถาม', 'ติดต่อ', 'ราคา'],

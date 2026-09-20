@@ -104,7 +104,7 @@ skills:
 
   meeting-summary:
     owner: ga
-    version: 1.0.0
+    version: 1.0.1
     domain: [governance]
     process: [governance.meeting]
     path: skills/pm/meeting-summary/SKILL.md
@@ -118,8 +118,8 @@ skills:
       lifecycle:
         stage: pilot
     references:
-      mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
-      optional: [qms-quality-manual]
+      mandatory: [human-approval-rule]
+      optional: []
 
   browser-form-assistant:
     owner: ga
@@ -437,7 +437,7 @@ skills:
 
   step-image-prompt:
     owner: cc
-    version: 2.2.0
+    version: 2.3.0
     domain: [creative]
     process: [creative.branding]
     service: [creative-marketing]

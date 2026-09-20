@@ -134,6 +134,37 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     assert.ok(imageSkill.includes('references/brand-visual-context.md'));
   });
 
+  await t.test('step-image-prompt follows Standard v2 structure and meeting summary stays QMS-independent', async () => {
+    const imageSkill = await readFile('skills/creative/step-image-prompt/SKILL.md', 'utf-8');
+    const skillsManifest = await readFile('manifest/skills.yaml', 'utf-8');
+
+    assert.ok(imageSkill.includes('standardVersion: 2'));
+    for (const heading of [
+      '## Purpose',
+      '## เมื่อควรใช้',
+      '## Inputs',
+      '## Source',
+      '## Workflow',
+      '## Output',
+      '## Authority',
+      '## Handoff',
+      '## Guardrails',
+    ]) {
+      assert.ok(imageSkill.includes(heading), `step-image-prompt missing ${heading}`);
+    }
+    assert.ok(imageSkill.includes('references/visual-direction-vocabulary.md'));
+
+    const meetingBlock = skillsManifest.slice(
+      skillsManifest.indexOf('  meeting-summary:'),
+      skillsManifest.indexOf('\n  browser-form-assistant:')
+    );
+    assert.ok(meetingBlock.includes('mandatory: [human-approval-rule]'));
+    assert.ok(meetingBlock.includes('optional: []'));
+    assert.ok(!meetingBlock.includes('qms-quality-manual'));
+    assert.ok(!meetingBlock.includes('qms-management-review'));
+    assert.ok(!meetingBlock.includes('step-quality-policy-v2'));
+  });
+
   await t.test('image generation routing remains stable after capability hardening', async () => {
     const result = await queryStepRouter('ขอ prompt สร้างภาพจาก reference นี้ ให้รักษา composition แล้วปรับเป็น STeP brand', { team: 'cc' });
     assert.equal(result.selectedSkill?.name, 'step-image-prompt');
