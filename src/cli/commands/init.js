@@ -91,7 +91,6 @@ export async function runInit(args) {
         isTeam: true,
         clusterId: t.clusterId,
         clusterName: t.clusterName,
-        clusterInstallerLabel: t.clusterInstallerLabel,
         clusterRouter: t.clusterRouter,
         starterPrompts: t.starterPrompts || [],
       };
