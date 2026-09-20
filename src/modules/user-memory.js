@@ -41,6 +41,8 @@ export function getPersonalityPreset(key = 'coworker') {
  * @param {object} options
  * @param {string} [options.name] User name or nickname
  * @param {string} [options.team] Team code (e.g. afp, qs, piti, ga)
+ * @param {string} [options.cluster] Routing cluster ID when team is not known yet
+ * @param {string[]} [options.starterPrompts] Team-specific first-task examples
  * @param {string} [options.role] Role or position title
  * @param {string} [options.tone] Communication style preference
  * @param {string} [options.assistantName] Personal assistant display name
@@ -54,6 +56,8 @@ export function getPersonalityPreset(key = 'coworker') {
 export function generateUserMemoryTemplate(options = {}) {
   const name = options.name || '';
   const team = options.team || '';
+  const cluster = options.cluster || '';
+  const starterPrompts = options.starterPrompts || [];
   const role = options.role || '';
   const personality = options.personality || 'coworker';
   const preset = getPersonalityPreset(personality);
@@ -72,6 +76,7 @@ export function generateUserMemoryTemplate(options = {}) {
   text += `## 1. ข้อมูลผู้ใช้งาน (User Profile)\n`;
   text += `- **ชื่อ / ชื่อเรียก (Name/Nickname)**: ${name}\n`;
   text += `- **ทีมหลัก (Primary Team)**: ${team ? team.toUpperCase() : ''}\n`;
+  text += `- **กลุ่มงานสำหรับ Routing (Routing Cluster)**: ${cluster}\n`;
   text += `- **บทบาทหน้าที่ (Role/Function)**: ${role}\n`;
   text += `- **รูปแบบการสื่อสารที่ชอบ (Preferred Tone)**: ${tone}\n`;
   text += `- **ภาษาหลัก (Language)**: ภาษาไทย (Thai)\n\n`;
@@ -95,7 +100,15 @@ export function generateUserMemoryTemplate(options = {}) {
   }
   text += `\n`;
 
-  text += `## 5. ทักษะที่ใช้งานบ่อย (Frequently Used Skills)\n`;
+  text += `## 5. งานเริ่มต้นที่แนะนำ (Suggested First Tasks)\n`;
+  if (starterPrompts.length > 0) {
+    for (const prompt of starterPrompts.slice(0, 3)) text += `- ${prompt}\n`;
+  } else {
+    text += `- (เมื่อเริ่มงานจริง AI จะช่วยแนะนำตัวอย่างที่เหมาะกับงานของคุณ)\n`;
+  }
+  text += `\n`;
+
+  text += `## 6. ทักษะที่ใช้งานบ่อย (Frequently Used Skills)\n`;
   if (skills.length > 0) {
     for (const s of skills) text += `- ${s}\n`;
   } else {
@@ -103,7 +116,7 @@ export function generateUserMemoryTemplate(options = {}) {
   }
   text += `\n`;
 
-  text += `## 6. บันทึกเพิ่มเติมและการเรียนรู้ (Working Notes & Clarifications)\n`;
+  text += `## 7. บันทึกเพิ่มเติมและการเรียนรู้ (Working Notes & Clarifications)\n`;
   text += `- AI จะอัปเดตส่วนนี้อย่างต่อเนื่องเมื่อคุณให้ข้อมูลหรือระบุสไตล์ใหม่ในแชท\n`;
 
   return text;
@@ -118,6 +131,7 @@ export function parseUserMemory(markdown = '') {
     profile: {
       name: '',
       team: '',
+      cluster: '',
       role: '',
       tone: '',
       language: '',
@@ -159,6 +173,9 @@ export function parseUserMemory(markdown = '') {
 
       const teamMatch = trimmed.match(/- \*\*ทีมหลัก.*?\*\*:\s*(.*)/i);
       if (teamMatch && teamMatch[1]) result.profile.team = teamMatch[1].trim().toLowerCase();
+
+      const clusterMatch = trimmed.match(/- \*\*กลุ่มงานสำหรับ Routing.*?\*\*:\s*(.*)/i);
+      if (clusterMatch && clusterMatch[1]) result.profile.cluster = clusterMatch[1].trim().toLowerCase();
 
       const roleMatch = trimmed.match(/- \*\*บทบาท.*?\*\*:\s*(.*)/i);
       if (roleMatch && roleMatch[1]) result.profile.role = roleMatch[1].trim();
