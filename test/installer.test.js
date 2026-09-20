@@ -123,6 +123,11 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(stdout.includes('พร้อมใช้งาน'));
     assert.ok(!stdout.includes('stack trace'));
     assert.ok(!stdout.includes('npmrc'));
+    const doctorSource = await readFile(join(PACKAGE_ROOT, 'src', 'cli', 'commands', 'doctor.js'), 'utf-8');
+    assert.ok(doctorSource.includes('ติดต่อ AI Champion เพื่อยืนยันโปรแกรม AI ที่องค์กรอนุมัติ'));
+    assert.ok(doctorSource.includes('ระบบจะไม่เปิดเว็บสมัครหรือดาวน์โหลดโปรแกรม AI ให้อัตโนมัติ'));
+    assert.ok(!doctorSource.includes('https://cursor.com'));
+    assert.ok(!doctorSource.includes('https://opencode.ai'));
   });
 
   await t.test('Case 5: Verification of Windows Explorer batch and powershell files', async () => {
@@ -160,7 +165,6 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(psInstallContent.includes('init --tool all'));
     assert.ok(psInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
     assert.ok(psInstallContent.includes('step-ai config'));
-    assert.ok(psInstallContent.includes('init --tool all'));
     assert.ok(psInstallContent.includes('ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน'));
     assert.ok(!psInstallContent.includes('เลือกเครื่องมือ AI ที่คุณต้องการติดตั้งคำสั่ง'));
     assert.ok(!psInstallContent.includes('พิมพ์หมายเลขทีม (1-22)'));
@@ -304,14 +308,13 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(shInstallContent.includes('uname -m'));
     assert.ok(shInstallContent.includes('resolve_step_node'));
     assert.ok(shInstallContent.includes('NODE_BIN="$STEP_NODE_BIN"'));
-    assert.ok(shInstallContent.includes('Applications/Visual Studio Code.app'));
-    assert.ok(shInstallContent.includes('Applications/Cursor.app'));
-    assert.ok(shInstallContent.includes('Applications/Claude.app'));
+    assert.ok(!shInstallContent.includes('Applications/Visual Studio Code.app'));
+    assert.ok(!shInstallContent.includes('Applications/Cursor.app'));
+    assert.ok(!shInstallContent.includes('Applications/Claude.app'));
     // macOS uses the same shared CLI selection flow as Windows.
     assert.ok(shInstallContent.includes('init --tool all'));
     assert.ok(shInstallContent.includes('เลือกกลุ่มงาน/ทีม (ข้ามได้)'));
     assert.ok(shInstallContent.includes('step-ai config'));
-    assert.ok(shInstallContent.includes('init --tool all'));
     assert.ok(shInstallContent.includes('ใช้คำแนะนำเริ่มงานที่แสดงจาก STeP AI ด้านบน'));
     assert.ok(!shInstallContent.includes('เลือกเครื่องมือ AI ที่ต้องการติดตั้งคำสั่ง'));
     assert.ok(!shInstallContent.includes('พิมพ์หมายเลขทีม (1-22)'));
