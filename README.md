@@ -213,6 +213,12 @@ Updater จะสำรองรุ่นเดิมและพยายาม
 
 คำสั่งตรวจระบบและชุดทดสอบอยู่ใน `package.json` และเอกสารสำหรับผู้ดูแล ไม่ควรให้พนักงานแก้ไฟล์ใน `skills/`, `rules/` หรือ `manifest/` เอง
 
+### Node.js Runtime Policy
+
+- **Supported floor:** Node.js **20+** — `package.json` ระบุ `engines.node >=20` และ CI ทั้ง validate/release รัน test suite บน Node 20
+- **Managed fallback:** หากเครื่องพนักงานไม่มี Node ที่รองรับ ตัวติดตั้งจะใช้ **Node.js 22.23.2** ที่ pin version + SHA-256 ไว้ เพื่อให้การติดตั้ง reproducible
+- Node 22.23.2 จึงเป็น **managed installer runtime** ไม่ใช่การประกาศว่าโค้ดรองรับเฉพาะ Node 22
+
 ## หลักการของ STeP AI
 
 > **Organization knowledge should outlive any single AI model.**

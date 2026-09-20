@@ -2,6 +2,7 @@
 set -euo pipefail
 
 VERSION="v22.23.2"
+RELEASE_KEYS_COMMIT="7b6eb2d6ab524bb30487f31612cdbeb35ae37533"
 BASE_URL="https://nodejs.org/dist/${VERSION}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -11,7 +12,7 @@ SUMS="$TMP_DIR/SHASUMS256.txt"
 KEYRING="$TMP_DIR/nodejs-keyring.kbx"
 
 curl -fsSL --proto '=https' --tlsv1.2 "$BASE_URL/SHASUMS256.txt.asc" -o "$ASC"
-curl -fsSL --proto '=https' --tlsv1.2 "https://github.com/nodejs/release-keys/raw/HEAD/gpg/pubring.kbx" -o "$KEYRING"
+curl -fsSL --proto '=https' --tlsv1.2 "https://raw.githubusercontent.com/nodejs/release-keys/${RELEASE_KEYS_COMMIT}/gpg/pubring.kbx" -o "$KEYRING"
 gpgv --keyring="$KEYRING" --output "$SUMS" "$ASC"
 
 expected_lines=(
@@ -33,4 +34,4 @@ grep -Fq '$StepNodeVersion = "22.23.2"' install/windows-runtime.ps1
 grep -Fq 'fec025a6da31757e3b6af84c5a1628e9d38442ca99a2161091d78f2fcfa35ef3' install/windows-runtime.ps1
 grep -Fq '1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97' install/windows-runtime.ps1
 
-echo "Node runtime pins verified against signed Node.js SHASUMS for $VERSION"
+echo "Node runtime pins verified against signed Node.js SHASUMS for $VERSION using release-keys commit $RELEASE_KEYS_COMMIT"
