@@ -531,6 +531,20 @@ export async function runAsk(args) {
     authorityPreflight,
   } = result;
 
+  if (authorityPreflight?.status === 'BLOCK') {
+    console.log(colors.bold(colors.red('┌─────────────────────────────────────────────────────────────────────────────┐')));
+    console.log(colors.bold(colors.red('│  ⚠️  Human Authority Required — AI cannot make this decision                │')));
+    console.log(colors.bold(colors.red('└─────────────────────────────────────────────────────────────────────────────┘')));
+    console.log(`  • Authority:          ${colors.bold(authorityPreflight.authority)}`);
+    console.log(`  • ผู้มีอำนาจ:         ${colors.bold(authorityPreflight.targetRole || 'Authorized Human')}`);
+    if (authorityPreflight.alternateRole) {
+      console.log(`  • ผู้รับช่วงสำรอง:     ${colors.dim(authorityPreflight.alternateRole)}`);
+    }
+    console.log(`  • เหตุผล:             ${colors.dim(authorityPreflight.reason)}`);
+    console.log(colors.dim('  AI ช่วยเตรียมข้อมูล ร่างเอกสาร หรือ checklist ก่อนส่งให้ผู้มีอำนาจได้ แต่ไม่อนุมัติ ตัดสิน หรือกดดำเนินการแทน'));
+    return;
+  }
+
   if (routingMode === 'PLAYBOOK' && selectedPlaybook) {
     console.log(colors.bold(colors.green('┌─────────────────────────────────────────────────────────────────────────────┐')));
     console.log(colors.bold(colors.green('│  🧭 พบงานหลายขั้น — จัดเป็นแผนงานต่อเนื่องให้แล้ว                          │')));
@@ -557,20 +571,6 @@ export async function runAsk(args) {
     console.log();
     console.log(colors.cyan(`   "${query}"`));
     console.log(colors.dim('   AI จะใช้ manifest/playbooks.yaml เพื่อทำงานต่อเนื่อง และบันทึก run state ใต้ .step-ai/runs/ เมื่อเครื่องมือรองรับการเขียนไฟล์\n'));
-    return;
-  }
-
-  if (authorityPreflight?.status === 'BLOCK') {
-    console.log(colors.bold(colors.red('┌─────────────────────────────────────────────────────────────────────────────┐')));
-    console.log(colors.bold(colors.red('│  ⚠️  Human Authority Required — AI cannot make this decision                │')));
-    console.log(colors.bold(colors.red('└─────────────────────────────────────────────────────────────────────────────┘')));
-    console.log(`  • Authority:          ${colors.bold(authorityPreflight.authority)}`);
-    console.log(`  • ผู้มีอำนาจ:         ${colors.bold(authorityPreflight.targetRole || 'Authorized Human')}`);
-    if (authorityPreflight.alternateRole) {
-      console.log(`  • ผู้รับช่วงสำรอง:     ${colors.dim(authorityPreflight.alternateRole)}`);
-    }
-    console.log(`  • เหตุผล:             ${colors.dim(authorityPreflight.reason)}`);
-    console.log(colors.dim('  AI ช่วยเตรียมข้อมูล ร่างเอกสาร หรือ checklist ก่อนส่งให้ผู้มีอำนาจได้ แต่ไม่อนุมัติ ตัดสิน หรือกดดำเนินการแทน'));
     return;
   }
 
