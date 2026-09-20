@@ -50,14 +50,10 @@ export async function runInit(args) {
     const selection = await selectTeamProfile({ teams, rl });
     rl.close();
 
-    if (selection.cluster) selectedClusterId = selection.cluster.id;
     if (selection.team) {
       teamCode = selection.team.id;
       selectedClusterId = selection.team.clusterId;
       success(`เลือกทีม: ${selection.team.name} (${selection.team.id.toUpperCase()})`);
-    } else if (selection.cluster) {
-      info(`จำกลุ่มงานไว้แล้ว: ${selection.cluster.label}`);
-      info(`ยังไม่ต้องเลือกทีม — เปลี่ยนภายหลังได้ด้วย ${colors.cyan('step-ai config')}`);
     } else {
       info(`ข้ามการเลือกทีมก่อน — เปลี่ยนภายหลังได้ด้วย ${colors.cyan('step-ai config')}`);
     }
@@ -90,12 +86,11 @@ export async function runInit(args) {
       targetEntity = {
         id: t.id,
         name: t.name,
-        description: `${t.name} (${t.nameEn}) [${t.clusterName}]`,
+        description: `${t.name} (${t.nameEn})`,
         skills: t.skills,
         isTeam: true,
         clusterId: t.clusterId,
         clusterName: t.clusterName,
-        clusterInstallerLabel: t.clusterInstallerLabel,
         clusterRouter: t.clusterRouter,
         starterPrompts: t.starterPrompts || [],
       };
@@ -240,11 +235,6 @@ export async function runInit(args) {
   console.log(colors.bold(colors.yellow('                 ✓ STeP AI พร้อมเริ่มงาน')));
   console.log(colors.bold(colors.green('=================================================================')));
   console.log(`  ทีม: ${colors.bold(teamDisplay)}`);
-  if (selectedClusterId) {
-    const selectedClusterTeam = teams.find((team) => team.clusterId === selectedClusterId);
-    const clusterLabel = selectedClusterTeam?.clusterInstallerLabel || selectedClusterId;
-    console.log(`  กลุ่มงาน: ${colors.dim(clusterLabel)}`);
-  }
   console.log(`  AI adapters: ${tool === 'all' ? 'เตรียม instruction ให้ 8 โปรแกรมแล้ว' : tool}`);
   console.log(`  เปลี่ยนทีมภายหลัง: ${colors.cyan('step-ai config')}`);
   console.log();

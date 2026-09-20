@@ -6,7 +6,6 @@ version: 1
 clusters:
   - id: governance-operations
     name: ธรรมาภิบาลและการบริหารจัดการ (Governance, Operations & Quality)
-    installerLabel: ธุรการ การเงิน จัดซื้อ คุณภาพ บุคลากร และงานสนับสนุน
     router: governance-router
     teams:
       - id: ga
@@ -54,7 +53,6 @@ clusters:
 
   - id: incubation-strategy
     name: บ่มเพาะธุรกิจและยุทธศาสตร์องค์กร (Incubation, Entrepreneurship & Strategy)
-    installerLabel: บ่มเพาะธุรกิจ Startup ผู้ประกอบการ และยุทธศาสตร์
     router: incubation-router
     teams:
       - id: piti
@@ -96,7 +94,6 @@ clusters:
 
   - id: tech-industry
     name: ถ่ายทอดเทคโนโลยีและเชื่อมโยงอุตสาหกรรม (Tech Transfer & Industry Collaboration)
-    installerLabel: เทคโนโลยี งานวิจัย อุตสาหกรรม ชุมชน และภาครัฐ
     router: tech-transfer-router
     teams:
       - id: tech-spin
@@ -130,7 +127,6 @@ clusters:
 
   - id: market-creative
     name: การตลาด การสื่อสาร และลูกค้าสัมพันธ์ (Market, Creative & Client)
-    installerLabel: การตลาด ออกแบบ สื่อสาร และลูกค้าสัมพันธ์
     router: market-creative-router
     teams:
       - id: cc
@@ -157,7 +153,6 @@ clusters:
 
   - id: facilities-labs
     name: โครงสร้างพื้นฐาน ห้องปฏิบัติการ และโรงงานต้นแบบ (Infrastructure, Labs & Pilot Plant)
-    installerLabel: อาคาร พื้นที่ ห้องแล็บ เครื่องมือ และโรงงานต้นแบบ
     router: facilities-lab-router
     teams:
       - id: ifu

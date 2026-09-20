@@ -69,7 +69,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('privacy')}    ตรวจข้อมูลส่วนบุคคลแบบ local และปิดบังก่อนส่ง AI
   ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
-  ${colors.cyan('teams')}      แสดงผังและรายชื่อ 22 ทีมของ STeP พร้อม 5 Domain Clusters
+  ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
   ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
   ${colors.cyan('status')}     ตรวจรุ่นที่ติดตั้งและไฟล์ที่มีการแก้ไขในเครื่อง
   ${colors.cyan('sync')}       ซิงก์ไฟล์ Skills และ Rules
@@ -77,7 +77,6 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
 
 ${colors.bold('ตัวเลือกทั่วไป:')}
   -m, --team <id>       ระบุรหัสทีมใน 22 ทีม (เช่น qs, afp, mi, piti, linc, cc)
-  -c, --cluster <id>    ระบุกลุ่ม routing 1 ใน 5 กลุ่ม เมื่อยังไม่ต้องการเลือกทีม
   -r, --role <id>       ระบุ Role (all, staff, pm, developer, creative, ai-admin) [default: all]
   -t, --tool <name>     ระบุเครื่องมือ (claude, cursor, codex, all) [default: codex]
   -d, --dest <path>     ระบุโฟลเดอร์ปลายทาง [default: .]
@@ -95,7 +94,6 @@ ${colors.bold('ตัวอย่างการใช้งาน:')}
   step-ai ask "ทำสไลด์ Pitching ให้ผู้ประกอบการ"
   step-ai config
   step-ai config --team qs
-  step-ai config --cluster market-creative
   step-ai update
   step-ai output --team cc --type presentation --title "STeP Booth CMU" --ext pptx
   step-ai privacy --file sample.txt --redact

@@ -42,9 +42,9 @@ Write-Host "✓ Node.js Runtime: $(& $nodeBin -v)" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "ตั้งค่าการใช้งาน: เลือกกลุ่มงาน/ทีม (ข้ามได้)" -ForegroundColor Yellow
+Write-Host "ตั้งค่าการใช้งาน: เลือกทีมหลัก (ข้ามได้)" -ForegroundColor Yellow
 Write-Host "ระบบจะเตรียม instruction สำหรับ AI adapters ที่รองรับทั้งหมดโดยอัตโนมัติ" -ForegroundColor Gray
-Write-Host "ถ้ายังไม่แน่ใจ ให้เลือก 0 ได้ และเปลี่ยนภายหลังด้วย step-ai config" -ForegroundColor Gray
+Write-Host "ถ้ายังไม่แน่ใจ ให้กด Enter หรือเลือก 0 แล้วเปลี่ยนภายหลังด้วย step-ai config" -ForegroundColor Gray
 Write-Host ""
 
 Set-Location $rootDir

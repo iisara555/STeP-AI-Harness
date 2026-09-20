@@ -54,10 +54,12 @@ export async function runDoctor(args) {
 
     if (installedToolNames.length === 0) {
       console.log(colors.yellow(colors.bold('⚠️  ยังไม่พบโปรแกรม AI ที่พร้อมใช้ในเครื่องนี้')));
-      console.log(colors.dim('   STeP AI ติดตั้งเรียบร้อยแล้ว แต่ก่อนเริ่มงานให้ติดต่อ AI Champion เพื่อยืนยันโปรแกรม AI ที่องค์กรอนุมัติ'));
-      console.log(colors.dim('   ระบบจะไม่เปิดเว็บสมัครหรือดาวน์โหลดโปรแกรม AI ให้อัตโนมัติ'));
+      console.log(colors.dim('   STeP AI ติดตั้งเรียบร้อยแล้ว ถ้ายังไม่มีโปรแกรม AI ให้เลือกเริ่มด้วย Cursor หรือ OpenCode ได้'));
+      console.log(`   ${colors.cyan('Cursor:')}   https://cursor.com`);
+      console.log(`   ${colors.cyan('OpenCode:')} https://opencode.ai`);
+      console.log(colors.dim('   ติดตั้งโปรแกรมใดโปรแกรมหนึ่ง แล้วเปิดโฟลเดอร์ STeP AI และพิมพ์ "เริ่มใช้งาน STeP AI"'));
       console.log(colors.dim('────────────────────────────────────────────────────────────'));
-      console.log(`${colors.yellow(colors.bold('ติดตั้ง Harness สำเร็จ แต่ยังไม่พร้อมเริ่มแชทจนกว่าจะมีโปรแกรม AI ที่องค์กรอนุมัติ'))}\n`);
+      console.log(`${colors.yellow(colors.bold('ติดตั้ง Harness สำเร็จ — เหลือเลือกโปรแกรม AI เพื่อเริ่มแชท'))}\n`);
     } else {
       console.log(`${colors.green(colors.bold('✓ สภาพแวดล้อมพร้อมใช้งาน พนักงานสามารถเริ่มถามงานได้ทันที!'))}\n`);
     }

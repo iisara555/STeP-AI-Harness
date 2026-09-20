@@ -1,5 +1,5 @@
 import { loadUserConfig, saveUserConfig, USER_CONFIG_PATH } from '../../utils/user-config.js';
-import { buildInstallerClusters, selectTeamProfile } from '../team-selection.js';
+import { selectTeamProfile } from '../team-selection.js';
 import { getAvailableTeams } from '../../modules/role-resolver.js';
 import { getSupportedTools, isToolSupported } from '../../modules/adapters/index.js';
 import { header, success, info, warn, error } from '../../utils/display.js';
@@ -14,7 +14,6 @@ export async function runConfig(args) {
   const teams = await getAvailableTeams();
 
   const newTeam = args.team || args.m;
-  const newCluster = args.cluster || args.c;
   const newTool = args.tool || args.t;
 
   // 1. Update team if provided via flags
@@ -30,21 +29,7 @@ export async function runConfig(args) {
     return;
   }
 
-  // 2. Update routing cluster without forcing a team.
-  if (newCluster) {
-    const clusters = buildInstallerClusters(teams);
-    const foundCluster = clusters.find((cluster) => cluster.id.toLowerCase() === String(newCluster).toLowerCase());
-    if (!foundCluster) {
-      error(`ไม่พบกลุ่มงาน '${newCluster}' (พิมพ์ 'step-ai teams' เพื่อดู 5 กลุ่มงาน)`);
-      process.exit(1);
-    }
-    await saveUserConfig({ team: '', cluster: foundCluster.id, teamDeferred: true });
-    await updateUserMemoryProfile(process.cwd(), { team: '', cluster: foundCluster.id, starterPrompts: [] });
-    success(`บันทึกกลุ่มงาน: ${colors.bold(foundCluster.label)} — ยังเลือกทีมภายหลังได้`);
-    return;
-  }
-
-  // 3. Update tool if provided via flags
+  // 2. Update tool if provided via flags
   if (newTool) {
     const toolLower = newTool.toLowerCase();
     if (!isToolSupported(toolLower) && toolLower !== 'all') {
@@ -56,22 +41,15 @@ export async function runConfig(args) {
     return;
   }
 
-  // 4. Display current settings
+  // 3. Display current settings
   const currentTeamId = config.team;
   const currentTeamObj = currentTeamId ? teams.find((t) => t.id.toLowerCase() === currentTeamId.toLowerCase()) : null;
-  const clusters = buildInstallerClusters(teams);
-  const currentClusterObj = config.cluster ? clusters.find((cluster) => cluster.id === config.cluster) : null;
   const currentTool = config.tool || (Array.isArray(config.tools) ? config.tools.join(', ') : 'ยังไม่ระบุ (default: codex)');
 
   console.log(`┌─────────────────────────────────────────────────────────────┐`);
   console.log(`│ ${colors.bold('⚙️  การตั้งค่าโปรไฟล์ผู้ใช้ (STeP AI User Profile)')}              │`);
   console.log(`└─────────────────────────────────────────────────────────────┘`);
   console.log(`  • ทีมหลักของคุณ:    ${currentTeamObj ? colors.green(colors.bold(`${currentTeamObj.name} (${currentTeamObj.id.toUpperCase()})`)) : colors.yellow('ยังไม่ได้ตั้งค่า')}`);
-  if (currentTeamObj) {
-    console.log(`    กลุ่มงาน:         ${colors.dim(currentTeamObj.clusterName)}`);
-  } else if (currentClusterObj) {
-    console.log(`    กลุ่มงาน:         ${colors.yellow(currentClusterObj.label)} (ยังไม่เลือกทีม)`);
-  }
   console.log(`  • เครื่องมือ AI:    ${colors.cyan(colors.bold(currentTool))}`);
   console.log(`  • ไฟล์คอนฟิก:       ${colors.dim(USER_CONFIG_PATH)}`);
   if (config.updatedAt) {
@@ -82,7 +60,7 @@ export async function runConfig(args) {
   // If running in interactive terminal without flags, offer low-friction profile change.
   if (process.stdin.isTTY && !process.env.CI && !args.json) {
     console.log(colors.bold('ตัวเลือกการเปลี่ยนการตั้งค่า:'));
-    console.log('  1. เปลี่ยนกลุ่มงาน / ทีมหลัก');
+    console.log('  1. เปลี่ยนทีมหลัก');
     console.log('  2. เปลี่ยนเครื่องมือ AI (สำหรับผู้ดูแล/ผู้ใช้ขั้นสูง)');
     console.log('  3. ออกจากการตั้งค่า\n');
 
@@ -113,22 +91,10 @@ export async function runConfig(args) {
           starterPrompts: selection.team.starterPrompts || [],
         });
         success(`บันทึกทีมหลัก: ${selection.team.name} (${selection.team.id.toUpperCase()}) สำเร็จ!`);
-      } else if (selection.cluster) {
-        await saveUserConfig({
-          team: '',
-          cluster: selection.cluster.id,
-          teamDeferred: true,
-        });
-        await updateUserMemoryProfile(process.cwd(), {
-          team: '',
-          cluster: selection.cluster.id,
-          starterPrompts: [],
-        });
-        success(`บันทึกกลุ่มงาน: ${selection.cluster.label} — ยังเลือกทีมภายหลังได้`);
       } else {
         await saveUserConfig({ team: '', cluster: '', teamDeferred: true });
         await updateUserMemoryProfile(process.cwd(), { team: '', cluster: '', starterPrompts: [] });
-        info('ยังไม่ระบุกลุ่มหรือทีม ระบบจะใช้ routing แบบกว้างก่อน');
+        info('ยังไม่ระบุทีม ระบบจะใช้ routing แบบกว้างก่อน และเลือกทีมภายหลังได้');
       }
     } else if (choice === '2') {
       console.log('\nเลือกเครื่องมือ AI:');
@@ -163,7 +129,6 @@ export async function runConfig(args) {
     }
   } else {
     console.log(colors.dim('คำแนะนำ: เปลี่ยนทีมโดยรัน: step-ai config --team <team-id>'));
-    console.log(colors.dim('        หรือเลือกแค่กลุ่มก่อน: step-ai config --cluster <cluster-id>'));
     console.log(colors.dim('        เปลี่ยนเครื่องมือโดยรัน: step-ai config --tool <tool-name>\n'));
   }
 }
