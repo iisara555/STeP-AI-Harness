@@ -414,6 +414,8 @@ def validate_package_config(errors: list[str]) -> None:
 
     import json
     import subprocess
+    import shutil
+    import os
 
     try:
         data = json.loads(pkg_path.read_text(encoding="utf-8"))
@@ -434,26 +436,51 @@ def validate_package_config(errors: list[str]) -> None:
         if any(f.startswith(p) for p in banned_prefixes):
             errors.append(f"package.json files contains restricted entry: {f}")
 
+    # A source-tree check alone misses broken references in npm installations.
+    required_package_files = {
+        "SUPPORT.md", "START-HERE.md", "START-PROMPT.txt",
+        "Feedback-STeP-AI.bat", "Feedback-STeP-AI.command",
+        "Check-Privacy-STeP-AI.bat", "Check-Privacy-STeP-AI.command",
+        "install/privacy-windows.ps1", "install/privacy-macos.sh", "docs/privacy-preflight.md",
+        "src/modules/privacy/document.js", "src/modules/privacy/document-worker.js",
+        "src/vendor/privacy/manifest.json", "src/vendor/privacy/pdf.mjs", "src/vendor/privacy/pdf.worker.mjs",
+        "src/vendor/privacy/fxp.cjs", "src/vendor/privacy/fflate.mjs",
+        "docs/step-public-profile.md", "docs/project-code-scheme.md",
+        "docs/pilot-runbook.md",
+    }
+    documents_text = (ROOT / "manifest/documents.yaml").read_text(encoding="utf-8")
+    required_package_files.update(re.findall(r"^\s+index:\s*(docs/[^\s]+)\s*$", documents_text, re.MULTILINE))
+    for required_file in sorted(required_package_files):
+        if not any(required_file == entry or required_file.startswith(entry.rstrip("/") + "/") for entry in files):
+            errors.append(f"package.json files omits required local reference: {required_file}")
+
     # Test npm pack dry-run if npm is available
+    npm_command = shutil.which("npm")
+    if not npm_command:
+        return
     try:
+        command = [npm_command, "pack", "--dry-run", "--json", "--cache", str(ROOT / "tmp/npm-validation-cache")]
         res = subprocess.run(
-            ["npm", "pack", "--dry-run", "--json"],
+            subprocess.list2cmdline(command) if os.name == "nt" else command,
             cwd=str(ROOT),
             capture_output=True,
             text=True,
-            shell=True,
+            shell=os.name == "nt",
             check=False,
         )
         if res.returncode == 0:
             pack_data = json.loads(res.stdout)
             if isinstance(pack_data, list) and pack_data:
                 packed_files = [item["path"] for item in pack_data[0].get("files", [])]
+                for required_file in sorted(required_package_files - set(packed_files)):
+                    errors.append(f"npm pack omits required local reference: {required_file}")
                 for pf in packed_files:
                     if pf == "docs/staff-abbreviations.md" or pf.startswith(("artifacts/", "output/", "tmp/")):
                         errors.append(f"npm pack dry-run leaked restricted file: {pf}")
-    except Exception:
-        # npm may not be in all environments, whitelist check above is primary
-        pass
+        else:
+            errors.append(f"npm pack dry-run failed with exit code {res.returncode}")
+    except Exception as exc:
+        errors.append(f"Could not verify npm package contents: {exc}")
 
 
 def main() -> int:

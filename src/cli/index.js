@@ -66,7 +66,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('update')}     ซิงก์ Skills และ Router จากเวอร์ชัน STeP AI ที่ติดตั้งอยู่
   ${colors.cyan('feedback')}   แนะนำวิธีส่งข้อเสนอแนะ รายงานผลลัพธ์ หรือเสนอ Skill ใหม่
   ${colors.cyan('output')}     สร้าง path และชื่อไฟล์มาตรฐานสำหรับเก็บ output โดยไม่เขียนทับไฟล์เดิม
-  ${colors.cyan('privacy')}    ตรวจข้อมูลส่วนบุคคลแบบ local และปิดบังก่อนส่ง AI
+  ${colors.cyan('privacy')}    ตรวจข้อความ/PDF/DOCX บนเครื่องก่อนแนบไฟล์ ให้คนตรวจผลก่อนส่ง
   ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
   ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
@@ -111,7 +111,8 @@ export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const command = args._[0];
 
-  if (args.version || args.v || command === 'version') {
+  // upgrade-apply owns --version; do not turn an upgrade into a version print.
+  if ((!command && (args.version || args.v)) || command === 'version') {
     console.log(pkgJson.version);
     return;
   }

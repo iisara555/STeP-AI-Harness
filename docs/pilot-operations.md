@@ -1,8 +1,13 @@
 # Pilot Operations — 1 Month
 
-**As of:** 2026-09-20  
-**Released distribution baseline:** v0.7.2  
-**Repository scope:** `main` may contain post-v0.7.2 changes; do not treat `main` as a released employee package until tagged/released.  
+**As of:** 2026-09-20
+
+**Released distribution baseline:** v0.7.2
+
+**Prepared Pilot candidate:** v0.7.3 — รอบแรก วันที่ 22 กันยายน 2569 ใช้ [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek
+
+**Repository scope:** `main` may contain post-v0.7.2 changes; do not treat `main` as a released employee package until tagged/released.
+
 **Current `main` inventory:** 46 Skills / 4 Playbooks / 3 Actions / 22 teams / 5 routing clusters
 
 ## ขอบเขต
@@ -10,7 +15,8 @@
 ระยะเวลา **4 สัปดาห์** ใช้ released Pilot v0.7.2 เป็น distribution baseline
 
 - เปิดใช้ได้กับ 22 ทีม
-- มี Core Pilot Users ประมาณ 10–15 คน ครอบคลุมทั้ง 5 routing clusters
+- มี Core Pilot Users จากทีมที่เข้าร่วม ครอบคลุมทั้ง 5 routing clusters
+- รอบแรกใช้ทั้ง Windows/macOS และหลายโปรแกรม AI; รายชื่อทีมจริงบันทึกก่อนเริ่ม ไม่สมมติว่าครบทุก cluster แล้ว
 - QS/GA/CC และอย่างน้อยหนึ่งทีมจากแต่ละ cluster ต้องมีผู้ใช้จริง
 - พนักงานทั่วไปใช้ภาษาไทยตามงานจริง ไม่ต้องใช้ Git/Terminal/Skill ID
 

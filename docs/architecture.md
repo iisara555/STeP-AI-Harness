@@ -28,7 +28,7 @@ flowchart TB
     end
 
     subgraph DET["Deterministic Local Runtime — ไม่ส่ง registry ทั้งชุดเข้า model"]
-      PG["Privacy Quick Scan<br/>local regex/heuristic → auto-mask"]
+      PG["Privacy Gate<br/>query / run-state minimization<br/>ไม่ได้ดักไฟล์แนบ"]
       RT["Router<br/>5-factor scoring<br/>src/modules/router/"]
       SG["Scope Guard<br/>ALLOW / ESCALATE / BLOCK"]
       AP["Authority Preflight<br/>manifest/authority.yaml"]
@@ -58,8 +58,7 @@ flowchart TB
     U --> AI
     AI --> AD
     AD --> FR
-    FR --> PG
-    PG --> RT
+    FR --> RT
     RT --> SG
     SG -->|ALLOW| AP
     SG -->|"ESCALATE: ส่งต่อ Skill อื่น"| RT
@@ -75,7 +74,8 @@ flowchart TB
     GATE --> AR
     AR --> TOOL
     SK --> RS
-    PB --> RS
+    PB --> PG
+    PG --> RS
     TOOL --> RS
     TOOL --> RC
     RS --> OUT
@@ -84,6 +84,8 @@ flowchart TB
 ~~~
 
 ลำดับ Authority ก่อน Clarification เป็นเจตนา: ถ้างานอยู่นอกอำนาจ AI ต้องหยุดก่อน ไม่ใช่ถามขอบเขตให้ผู้ใช้เสียเวลาแล้วค่อย block
+
+ก่อนเส้นทางนี้ ผู้ใช้สามารถเปิด `Check-Privacy-STeP-AI` เพื่ออ่าน PDF text layer/DOCX บนเครื่องและให้คนตรวจผลก่อนแนบได้ การแนบตรงเข้า AI client ข้ามตัวตรวจนี้ และ `canSendToExternalAI` จาก scanner ไม่ใช่สิทธิ์ส่งออก ดู [privacy-preflight.md](privacy-preflight.md)
 
 ### 1.2 Organization Model & Controlled Knowledge
 
@@ -206,14 +208,14 @@ Privacy Gate ไม่ใช่ Layer ที่บังคับให้ทุ
 
 ~~~text
 Quick Local Scan
-  ├─ Public/Internal → ผ่านหรือปิดบังเท่าที่จำเป็น
-  ├─ Restricted → Auto-mask ก่อนส่ง AI
+  ├─ Public/Internal → ตรวจเนื้อหาและสิทธิ์ต้นทาง
+  ├─ Restricted → Auto-mask เฉพาะ pattern → คนตรวจ
   └─ Sensitive/High Risk → Human Confirmation / Block external AI
 ~~~
 
 หลัก Pilot:
 - regex/heuristic local ก่อน model
-- ไม่ OCR PDF/รูปภาพทั้งชุดอัตโนมัติ
+- ไม่มี OCR; CLI ตรวจ PDF text layer/DOCX บนเครื่องก่อนแนบได้ ส่วนรูปภาพ/ไฟล์อ่านไม่ได้ให้คนตรวจ
 - cache ผล scan ตาม hash
 - Run State เก็บเฉพาะ privacy metadata ไม่เก็บ raw PII
 - query/feedback ที่ persist ต้อง redact ก่อน

@@ -1,6 +1,8 @@
 const DEFAULT_BUDGETS = Object.freeze({
   startup: 800,
-  routing: 300,
+  // The contract now also carries source readiness and permitted use, which the
+  // original 300-token budget predates. Raised deliberately, not to hide growth.
+  routing: 600,
   skill: 2500,
   rules: 800,
   sources: 3000,
@@ -17,6 +19,29 @@ export function estimateTextTokens(text = '') {
     estimatedTokens: value ? Math.ceil(value.length / ESTIMATE_CHARS_PER_TOKEN) : 0,
     actualTokens: null,
     method: 'char-estimate-v1',
+  };
+}
+
+/** Drop empty optional fields so healthy references stay cheap while problem
+ * references keep the provenance a reviewer needs. */
+function compactReference(ref = {}) {
+  const compact = {
+    id: ref.id,
+    path: ref.path || '',
+    status: ref.status || '',
+    availability: ref.availability || 'not-checked',
+  };
+  if (ref.authority) compact.authority = ref.authority;
+  if (ref.verification) compact.verification = ref.verification;
+  return compact;
+}
+
+/** mandatoryReferences is the single source of reference detail. Readiness
+ * issues only point at the offending id so the two do not duplicate fields. */
+function compactReadiness(readiness = { status: 'ready', issues: [] }) {
+  return {
+    status: readiness.status || 'ready',
+    issues: (readiness.issues || []).map((issue) => ({ type: issue.type, id: issue.id })),
   };
 }
 
@@ -42,34 +67,35 @@ export function buildCompactRoutingContract({
   skillMetadata = null,
   referenceMetadata = [],
   clarification = null,
+  readiness = { status: 'ready', issues: [] },
 } = {}) {
+  const halted = ['BLOCK', 'ESCALATE'].includes(scopeResult.status) || readiness.status === 'unavailable';
   const contract = {
     version: 1,
     routingEngine: 'local-deterministic',
     routerRegistrySentToModel: false,
-    mode: selectedPlaybook ? 'PLAYBOOK' : clarification ? 'CLARIFY' : 'SKILL',
+    mode: scopeResult.status === 'BLOCK' ? 'BLOCK' : scopeResult.status === 'ESCALATE' ? 'ESCALATE'
+      : readiness.status === 'unavailable' ? 'UNAVAILABLE' : selectedPlaybook ? 'PLAYBOOK' : clarification ? 'CLARIFY' : 'SKILL',
     team: teamInfo?.id || '',
-    skill: selectedSkill?.name || '',
-    skillPath: skillMetadata?.path || '',
-    process: selectedSkill?.processId || '',
+    skill: halted ? '' : selectedSkill?.name || '',
+    skillPath: halted ? '' : skillMetadata?.path || '',
+    process: halted ? '' : selectedSkill?.processId || '',
+    readiness: compactReadiness(readiness),
+    permittedUse: halted ? 'none' : readiness.status === 'partial' ? 'draft-with-source-gaps' : 'assist-with-human-authority',
     // Backward compatibility: confidence remains the deterministic match score.
     confidence: bestMatch ? Number(bestMatch.score.toFixed(3)) : null,
     matchScore: bestMatch ? Number(bestMatch.score.toFixed(3)) : null,
     confidenceTier: routingConfidence?.tier || bestMatch?.tier || '',
     confidenceReason: routingConfidence?.reason || '',
     confidenceMargin: routingConfidence?.margin ?? null,
-    playbook: selectedPlaybook?.id || '',
-    steps: (playbookPlan || []).map((step) => ({
+    playbook: halted ? '' : selectedPlaybook?.id || '',
+    steps: (halted ? [] : playbookPlan || []).map((step) => ({
       id: step.id,
       type: step.type,
       skill: step.skill || '',
       action: step.action || '',
     })),
-    mandatoryReferences: (referenceMetadata || []).map((ref) => ({
-      id: ref.id,
-      path: ref.path || '',
-      status: ref.status || '',
-    })),
+    mandatoryReferences: (referenceMetadata || []).map(compactReference),
     authority: compactScope(scopeResult),
   };
 

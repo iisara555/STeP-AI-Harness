@@ -116,13 +116,13 @@ Input
   ↓
 Quick Local Scan
   ↓
-Public/Internal ─────────────→ ใช้งานต่อ
-Restricted ──────────────────→ Auto-mask → AI
+Public/Internal ─────────────→ ตรวจเนื้อหาและสิทธิ์ต้นทาง
+Restricted ──────────────────→ Auto-mask เฉพาะ pattern → คนตรวจ
 Sensitive / High Risk ───────→ Human Confirmation / Block external AI
 ```
 
 หลัก Pilot:
-- local-first ด้วย regex/heuristic ก่อนเรียก model
+- local-first ด้วย regex/heuristic; ผู้ใช้เรียก CLI ตรวจไฟล์ก่อนแนบเอง ไม่มี upload interceptor
 - ไม่ OCR PDF/รูปภาพทั้งชุดโดยอัตโนมัติ
 - cache ผล scan ตาม hash เพื่อลด latency
 - allowlist เลขประจำตัวองค์กรที่เป็นข้อมูลสาธารณะและจำเป็นต่อ Task ได้
@@ -133,7 +133,9 @@ Sensitive / High Risk ───────→ Human Confirmation / Block extern
 คำสั่งตรวจแบบ local:
 `step-ai privacy --file sample.txt --redact`
 
-สำหรับ PDF/รูปภาพ ให้ AI client หรือตัวอ่านเอกสาร local สกัดเฉพาะส่วนที่จำเป็นก่อน ไม่ทำ OCR อัตโนมัติทั้งไฟล์
+สำหรับ PDF text layer/DOCX ให้ใช้ `step-ai privacy --file <ไฟล์>` บนเครื่อง **ก่อนแนบให้ AI client**; ไฟล์ภาพหรืออ่านไม่ได้ให้คนตรวจ ไม่มี OCR ผลทุกแบบไม่อนุญาตส่งออก และสำเนา `.redacted.txt` ไม่ได้แก้ต้นฉบับ ดู [คู่มือตรวจก่อนแนบ](privacy-preflight.md)
+
+ใน runtime อัตโนมัติ gate ตรวจเพียง query และช่วยลดข้อมูลใน run state/log การแนบไฟล์ให้ AI client โดยตรงข้าม gate นี้ได้
 
 
 ## 7. Context Efficiency

@@ -8,7 +8,7 @@ STeP AI เป็นชุด workspace สำหรับนำ AI มาช่
 
 ## สถานะของ source และชุดติดตั้ง
 
-README ฉบับนี้อ้างอิง source ที่ commit `bdfa0ec` วันที่ 20 กันยายน 2569 และ working tree ไม่มีงานค้างที่ยังไม่ commit
+README ฉบับนี้อ้างอิงชุดที่เตรียมสำหรับ Pilot วันที่ 22 กันยายน 2569 ตรวจ build ที่ได้รับจากเลขรุ่นและ SHA-256 ของ ZIP ตาม [คู่มือ Pilot](docs/pilot-runbook.md)
 
 | รายการใน source ปัจจุบัน | จำนวน |
 | --- | --- |
@@ -20,9 +20,11 @@ README ฉบับนี้อ้างอิง source ที่ commit `bdfa0
 
 Router มีเส้นทางเลือก Skill 45 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
 
-**Release baseline ที่บันทึกไว้คือ v0.7.2** และ `package.json` ยังระบุ **v0.7.2** การมีเลขรุ่นเดียวกันไม่ได้หมายความว่า source ปัจจุบันเหมือนชุดติดตั้งรุ่นนั้น ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ
+**Release baseline ที่บันทึกไว้คือ v0.7.2** ส่วนชุดที่เตรียมสำหรับ Pilot รอบนี้และ `package.json` ระบุ **v0.7.3** ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ ต้องตรวจ checksum ของชุดที่นำไปใช้ด้วย
 
 ชุดติดตั้งที่แจกพนักงานมาจาก **release tag เท่านั้น** ไม่ใช่จาก `main` ผู้ดูแลต้องผ่าน Release Gate และแจกผ่านช่องทางที่องค์กรอนุมัติ ดูสถานะ Pilot และการดูแลแต่ละสัปดาห์ใน [Pilot Operations](docs/pilot-operations.md)
+
+ข้อยกเว้นเฉพาะการทดสอบที่ผู้ใช้ขอครั้งนี้: Pilot ใช้ candidate v0.7.3 ที่ตรวจในเครื่องแล้วผ่านช่องทางภายใน โดย STeP AI Geek ยืนยันไฟล์และ checksum ก่อนเริ่ม ไม่ถือเป็นการเผยแพร่รุ่นทั่วไป
 
 ## เริ่มใช้งาน
 
@@ -109,10 +111,13 @@ AI ช่วยสรุป ตรวจ ร่าง เปรียบเท�
 ก่อนแนบเอกสาร:
 
 - ใช้เฉพาะโปรแกรม AI และช่องทางที่องค์กรอนุมัติ
+- เปิด `Check-Privacy-STeP-AI.bat` / `Check-Privacy-STeP-AI.command` ตรวจไฟล์บนเครื่องก่อนแนบ แล้วตรวจผลและสิทธิ์ตาม [คู่มือตรวจก่อนแนบ](docs/privacy-preflight.md)
 - ส่งเฉพาะข้อมูลจำเป็น ห้ามใส่รหัสผ่าน, token, cookie, MFA หรือ secret
 - ถ้าระบบแจ้งข้อมูลความเสี่ยงสูง ให้หยุดและติดต่อเจ้าของข้อมูลหรือผู้รับผิดชอบงาน
 
 การตรวจไม่พบข้อมูลอ่อนไหวไม่ได้รับรองว่าเอกสารเผยแพร่ได้ และการมี Skill ไม่ได้หมายความว่ามี SOP/ระเบียบฉบับอนุมัติครบทุกเรื่อง หากขาดแหล่งอ้างอิงต้องระบุว่ายังรอยืนยัน
+
+ตัวตรวจอ่าน PDF text layer/DOCX ได้บนเครื่อง แต่ไม่มี OCR และไม่ดักการแนบตรงเข้า AI client ผลปิดบังข้อความไม่ใช่การปิดบัง PDF/DOCX ต้นฉบับ
 
 อ่านเพิ่มเติม: [Privacy Gate](rules/data-classification.md) · [Browser & Credential Safety](rules/browser-credential-safety.md) · [Action Verification](docs/action-verification.md)
 
@@ -140,7 +145,7 @@ commit `bdfa0ec` ปรับ README กับ routing coverage ให้ตร�
 
 source ยังรวมการแยกคำขอกำกวมระหว่าง Skill/Playbook, การปรับ routing งาน ISO และ Image Prompt ที่ใช้ Prompt Spec แล้วแปลงรูปแบบให้เหมาะกับเครื่องมือปลายทาง
 
-ทั้งสองส่วนอยู่ใน `main` แล้ว แต่ยังไม่ใช่ release ใหม่ ชุดติดตั้งของพนักงานยังเป็น v0.7.2
+ทั้งสองส่วนรวมใน candidate v0.7.3 สำหรับ Pilot แล้ว ส่วน release baseline ที่บันทึกไว้ยังเป็น v0.7.2 จนกว่าจะเผยแพร่รุ่นใหม่
 
 78 เคสประกอบด้วย 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 54 คำถามจำลอง และ 4 เคสจำลองตรวจคำชนกัน ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
 

@@ -15,8 +15,6 @@ import {
   buildContext,
   rankSkillCandidates,
   checkScope,
-  inspectCheapContext,
-  rescoreWithCheapContext,
   deriveRoutingConfidence,
 } from '../../modules/router/index.js';
 import {
@@ -270,7 +268,7 @@ export async function loadDocumentContextMetadata(ids = []) {
     const key = line.match(/^  ([a-z0-9_-]+):\s*$/);
     if (key) {
       current = wanted.has(key[1])
-        ? { id: key[1], title: '', path: '', status: '' }
+        ? { id: key[1], title: '', path: '', status: '', authority: '', verification: '' }
         : null;
       if (current) results.push(current);
       continue;
@@ -283,9 +281,12 @@ export async function loadDocumentContextMetadata(ids = []) {
     if (pathMatch) current.path = stripYamlScalar(pathMatch[1]);
     const status = line.match(/^    status:\s*(.+)/);
     if (status) current.status = stripYamlScalar(status[1]);
+    const governance = line.match(/^    (authority|verification):\s*(.+)/);
+    if (governance) current[governance[1]] = stripYamlScalar(governance[2]);
   }
 
-  return results;
+  return [...wanted].map((id) => results.find((ref) => ref.id === id)
+    || { id, title: '', path: '', status: 'unregistered', authority: 'unverified', verification: '' });
 }
 
 /**
@@ -447,29 +448,58 @@ export async function queryStepRouter(query, options = {}) {
       : buildRoutingClarification(query, context, options.clarificationAnswer, ranked, skills)
     : null;
 
-  const skillMetadata = selectedSkill && !clarification
+  const halted = scopeResult.status !== 'ALLOW';
+  const readiness = { status: halted ? 'not-checked' : 'ready', issues: [] };
+  const skillMetadata = selectedSkill && !clarification && !halted
     ? await loadSkillContextMetadata(selectedSkill.name)
     : null;
-  const referenceMetadata = await loadDocumentContextMetadata(skillMetadata?.mandatory || []);
+  const skillMetadatas = skillMetadata ? [skillMetadata] : [];
+  if (!halted && !clarification && selectedPlaybook) {
+    for (const step of playbookPlan.filter((item) => item.type === 'skill' && item.skill !== selectedSkill?.name)) {
+      skillMetadatas.push(await loadSkillContextMetadata(step.skill));
+    }
+  }
+  const referenceMetadata = await loadDocumentContextMetadata([...new Set(skillMetadatas.flatMap((item) => item?.mandatory || []))]);
 
   let skillText = '';
   if (skillMetadata?.path) {
     try {
       skillText = await readFile(join(PACKAGE_ROOT, skillMetadata.path), 'utf-8');
+      if (!skillText.trim()) throw new Error('Empty Skill');
     } catch {
-      skillText = '';
+      readiness.status = 'unavailable';
+      readiness.issues.push({ type: 'skill-unreadable', id: selectedSkill.name });
+    }
+  } else if (selectedSkill && !clarification && !halted) {
+    readiness.status = 'unavailable';
+    readiness.issues.push({ type: 'skill-path-missing', id: selectedSkill.name });
+  }
+  for (const metadata of skillMetadatas.slice(1)) {
+    try {
+      if (!metadata?.path || !(await readFile(join(PACKAGE_ROOT, metadata.path), 'utf-8')).trim()) throw new Error('Missing Skill');
+    } catch {
+      readiness.status = 'unavailable';
+      readiness.issues.push({ type: 'skill-unreadable', id: metadata?.name || 'unknown' });
     }
   }
 
   const ruleTexts = [];
   for (const ref of referenceMetadata) {
-    if (!ref.path) continue;
-    try {
-      ruleTexts.push(await readFile(join(PACKAGE_ROOT, ref.path), 'utf-8'));
-    } catch {
-      // Missing reference content stays visible in metadata without guessing.
+    ref.availability = 'missing';
+    if (ref.path) {
+      try {
+        const content = await readFile(join(PACKAGE_ROOT, ref.path), 'utf-8');
+        if (content.trim()) { ruleTexts.push(content); ref.availability = 'readable'; }
+      } catch { /* Report missing content below without substituting another source. */ }
+    }
+    if (ref.availability !== 'readable' || !['active', 'active-reference'].includes(ref.status)
+      || ref.authority === 'unverified' || /pending|unverified/i.test(ref.verification)) {
+      if (readiness.status !== 'unavailable') readiness.status = 'partial';
+      readiness.issues.push({ type: 'mandatory-reference-unverified', id: ref.id,
+        status: ref.status, availability: ref.availability, verification: ref.verification });
     }
   }
+  if (readiness.status === 'unavailable') { skillText = ''; ruleTexts.length = 0; }
 
   const routingContract = buildCompactRoutingContract({
     selectedSkill: clarification ? null : selectedSkill,
@@ -482,6 +512,7 @@ export async function queryStepRouter(query, options = {}) {
     skillMetadata,
     referenceMetadata,
     clarification,
+    readiness,
   });
   const contextPlan = buildContextBudgetPlan({
     routingContract,
@@ -677,9 +708,7 @@ export async function runAsk(args) {
     clarification,
   } = result;
 
-  const authorityDecision = authorityPreflight?.status === 'BLOCK'
-    ? authorityPreflight
-    : !selectedSkill && scopeResult.status === 'BLOCK' ? scopeResult : null;
+  const authorityDecision = scopeResult.status === 'BLOCK' ? scopeResult : null;
   if (authorityDecision) {
     console.log(colors.bold(colors.red('┌─────────────────────────────────────────────────────────────────────────────┐')));
     console.log(colors.bold(colors.red('│  ⚠️  Human Authority Required — AI cannot make this decision                │')));
@@ -692,6 +721,21 @@ export async function runAsk(args) {
     console.log(`  • เหตุผล:             ${colors.dim(authorityDecision.reason)}`);
     console.log(colors.dim('  AI ช่วยเตรียมข้อมูล ร่างเอกสาร หรือ checklist ก่อนส่งให้ผู้มีอำนาจได้ แต่ไม่อนุมัติ ตัดสิน หรือกดดำเนินการแทน'));
     return;
+  }
+
+  if (routingMode === 'ESCALATE' || routingMode === 'UNAVAILABLE') {
+    console.log(routingMode === 'ESCALATE'
+      ? `ต้องส่งต่อ/ยืนยันก่อนดำเนินงาน: ${scopeResult.targetSkill || 'ผู้รับผิดชอบ'}`
+      : 'ยังเปิดใช้งานไม่ได้: อ่าน Skill ไม่ได้หรือไม่มี path');
+    if (scopeResult.reason) console.log(scopeResult.reason);
+    return;
+  }
+  if (result.routingContract.readiness.status === 'partial') {
+    console.log('⚠️ เอกสารอ้างอิงบังคับยังไม่พร้อม — ช่วยร่าง/ตรวจความครบถ้วนเบื้องต้นได้ แต่ยังรับรองตามระเบียบไม่ได้');
+    for (const issue of result.routingContract.readiness.issues) {
+      console.log(`  • ${issue.id}: ${issue.availability || issue.type} / ${issue.status || 'unverified'}`);
+    }
+    console.log('  ให้เจ้าของกระบวนการยืนยันเอกสารฉบับปัจจุบันก่อนตัดสินผลตามระเบียบ\n');
   }
 
   if (routingMode === 'PLAYBOOK' && selectedPlaybook) {
@@ -719,7 +763,7 @@ export async function runAsk(args) {
 
     console.log();
     console.log(colors.cyan(`   "${query}"`));
-    console.log(colors.dim('   AI จะใช้ manifest/playbooks.yaml เพื่อทำงานต่อเนื่อง และบันทึก run state ใต้ .step-ai/runs/ เมื่อเครื่องมือรองรับการเขียนไฟล์\n'));
+    console.log(colors.dim('   CLI นี้แสดงแผนเท่านั้น ยังไม่ได้เรียก tool หรือสร้าง run state; host integration ต้องเรียก API และผ่าน action gate แยกต่างหาก\n'));
     return;
   }
 
@@ -787,5 +831,5 @@ export async function runAsk(args) {
   console.log();
   console.log(colors.bold('💡 ตัวอย่างคำสั่งที่คุณสั่ง AI ใน Claude / Cursor / Codex ได้ทันที:'));
   console.log(colors.cyan(`   "${query}"`));
-  console.log(colors.dim('   (AI จะเปิดใช้ทักษะ ') + colors.bold(selectedSkill.name) + colors.dim(' และปฏิบัติตามมาตรฐานให้อัตโนมัติ)\n'));
+  console.log(colors.dim('   (ใช้ทักษะ ') + colors.bold(selectedSkill.name) + colors.dim(' เพื่อช่วยเตรียมงานตามแหล่งอ้างอิงที่ตรวจได้ ให้ผู้รับผิดชอบตรวจผลก่อนใช้จริง)\n'));
 }

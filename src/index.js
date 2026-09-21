@@ -47,3 +47,4 @@ export {
 
 export { evaluateActionGate, requestActionApproval, getOperationHash } from './modules/actions/index.js';
 export { evaluatePrivacyGate, sanitizeRunData } from './modules/privacy/index.js';
+export { evaluateDocumentPrivacy } from './modules/privacy/document.js';

@@ -1,14 +1,17 @@
 import { mkdir, readFile, stat, writeFile, rm } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { calculateFileSha256 } from '../utils/checksum.js';
 import { ensureDir, listFilesRecursive, pathExists, safeCopyFile } from '../utils/file-ops.js';
 import { inspectWorkspace, readManifest, writeManifest, getStepAiDir } from './manifest.js';
-import { createSnapshot, restoreSnapshot } from './recovery.js';
+import { createSnapshot, restoreSnapshot, prepareSnapshotRestore } from './recovery.js';
+import { safeWorkspacePath, validateRelativePath, validateBackupId } from '../utils/workspace-path.js';
 
 export const DISTRIBUTION_DIRS = ['bin', 'src', 'install', 'manifest', 'skills', 'rules', 'docs'];
 export const DISTRIBUTION_FILES = [
   'package.json',
   'README.md',
+  'SUPPORT.md',
   'START-HERE.md',
   'MAC-START-HERE.txt',
   'START-PROMPT.txt',
@@ -20,6 +23,8 @@ export const DISTRIBUTION_FILES = [
   'Install-STeP-AI.command',
   'Update-STeP-AI.command',
   'Feedback-STeP-AI.command',
+  'Check-Privacy-STeP-AI.bat',
+  'Check-Privacy-STeP-AI.command',
 ];
 
 function isDistributionPath(relPath) {
@@ -66,7 +71,7 @@ async function distributionRelativeFiles(rootDir) {
   return [...new Set(files)].sort();
 }
 
-async function backupDistribution(destDir, relativeFiles, backupId) {
+async function backupDistribution(destDir, relativeFiles, backupId, snapshotId, currentVersion, targetVersion) {
   const backupRoot = join(getStepAiDir(destDir), 'version-backups', backupId);
   const filesRoot = join(backupRoot, 'files');
   const createdPaths = [];
@@ -86,7 +91,7 @@ async function backupDistribution(destDir, relativeFiles, backupId) {
 
   await writeFile(
     join(backupRoot, 'version-backup.json'),
-    JSON.stringify({ backupId, createdAt: new Date().toISOString(), backedUp, createdPaths }, null, 2),
+    JSON.stringify({ backupId, snapshotId, currentVersion, targetVersion, createdAt: new Date().toISOString(), backedUp, createdPaths }, null, 2),
     'utf-8'
   );
 
@@ -95,8 +100,16 @@ async function backupDistribution(destDir, relativeFiles, backupId) {
 
 async function restoreDistribution(destDir, backup) {
   if (!backup) return;
+  await safeWorkspacePath(destDir, relative(destDir, backup.filesRoot).replace(/\\/g, '/'));
   const backupFiles = await listFilesRecursive(backup.filesRoot);
-
+  if (!Array.isArray(backup.createdPaths)) throw new Error('Invalid created paths');
+  // Validate the complete operation, including deletion targets, before copying.
+  for (const relPath of [...backupFiles, ...backup.createdPaths]) {
+    validateRelativePath(relPath);
+    if (!isDistributionPath(relPath)) throw new Error('Backup contains a non-distribution path');
+    await safeWorkspacePath(destDir, relPath);
+  }
+  for (const relPath of backupFiles) await safeWorkspacePath(backup.filesRoot, relPath);
   for (const relPath of backupFiles) {
     await safeCopyFile(join(backup.filesRoot, relPath), join(destDir, relPath));
   }
@@ -147,6 +160,15 @@ export async function applyDistributionUpgrade({
   targetVersion,
 } = {}) {
   if (!sourceDir || !destDir) throw new Error('sourceDir and destDir are required');
+  await safeWorkspacePath(destDir, '.step-ai/manifest.json');
+  const preflightFiles = await distributionRelativeFiles(sourceDir);
+  for (const relPath of preflightFiles) {
+    await safeWorkspacePath(sourceDir, relPath);
+    await safeWorkspacePath(destDir, relPath);
+  }
+  const preflightManifest = await readManifest(destDir);
+  for (const relPath of Object.keys(preflightManifest?.files || {})) await safeWorkspacePath(destDir, relPath);
+  await safeWorkspacePath(destDir, '.step-ai/version-backups');
 
   const sourceVersion = await readPackageVersion(sourceDir);
   const currentVersion = await readPackageVersion(destDir);
@@ -175,9 +197,14 @@ export async function applyDistributionUpgrade({
 
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  const backupId = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}-v${currentVersion}`;
+  const backupId = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}-v${currentVersion}-${randomUUID()}`;
   const backupPaths = [...new Set([...relativeFiles, ...removedPaths])].sort();
-  const backup = await backupDistribution(destDir, backupPaths, backupId);
+  const backup = await backupDistribution(destDir, backupPaths, backupId, snapshotId, currentVersion, sourceVersion);
+  // Link the employee-visible snapshot to its complete runtime backup before
+  // changing any distribution files. Legacy snapshots remain readable.
+  const snapshotMetaPath = join(getStepAiDir(destDir), 'backups', snapshotId, 'snapshot.json');
+  const snapshotMeta = JSON.parse(await readFile(snapshotMetaPath, 'utf-8'));
+  await writeFile(snapshotMetaPath, JSON.stringify({ ...snapshotMeta, versionBackupId: backupId, targetVersion: sourceVersion }, null, 2), 'utf-8');
 
   let copied = 0;
   try {
@@ -216,17 +243,19 @@ export async function applyDistributionUpgrade({
 }
 
 export async function rollbackDistributionUpgrade(destDir, versionBackupId, snapshotId) {
-  const backupRoot = join(getStepAiDir(destDir), 'version-backups', versionBackupId);
-  const metaPath = join(backupRoot, 'version-backup.json');
+  validateBackupId(versionBackupId);
+  const backupRoot = await safeWorkspacePath(destDir, `.step-ai/version-backups/${versionBackupId}`);
+  const metaPath = await safeWorkspacePath(destDir, `.step-ai/version-backups/${versionBackupId}/version-backup.json`);
   if (!(await pathExists(metaPath))) {
     throw new Error(`Version backup not found: ${versionBackupId}`);
   }
 
   const meta = JSON.parse(await readFile(metaPath, 'utf-8'));
+  if (snapshotId) await prepareSnapshotRestore(destDir, snapshotId);
   await restoreDistribution(destDir, {
     filesRoot: join(backupRoot, 'files'),
     createdPaths: meta.createdPaths || [],
   });
 
-  if (snapshotId) await restoreSnapshot(destDir, snapshotId);
+  if (snapshotId) return restoreSnapshot(destDir, snapshotId);
 }

@@ -13,15 +13,15 @@
 
 ## Lightweight Privacy Gate
 
-ใช้ก่อนส่งข้อมูลเข้า AI โดยไม่เพิ่ม Workflow ใหม่:
+ผู้ใช้ต้องเรียกตัวตรวจบนเครื่องก่อนแนบไฟล์เข้า AI; Harness ไม่ได้ดักการอัปโหลดของ AI client:
 
 ```text
-Input
+ไฟล์บนเครื่องก่อนแนบ / ข้อความที่ส่งให้ CLI ตรวจ
   ↓
 Quick Local Scan
   ↓
-Public/Internal ─────────────→ ใช้งานตามปกติหรือปิดบังเท่าที่จำเป็น
-Restricted ──────────────────→ Auto-mask ก่อนส่ง AI
+Public/Internal ─────────────→ ตรวจเนื้อหาและสิทธิ์ต้นทาง
+Restricted ──────────────────→ Auto-mask เฉพาะรูปแบบที่รู้จัก → คนตรวจ
 Sensitive / High Risk ───────→ Human Confirmation หรือ Block external AI
 ```
 
@@ -31,7 +31,7 @@ Sensitive / High Risk ───────→ Human Confirmation หรือ B
 2. **Minimize first:** ถ้าข้อมูลนั้นไม่จำเป็นต่อคำตอบ ให้ตัดออกแทนการส่งไปทั้งฉบับ
 3. **Mask before model:** ปิดบังข้อมูลส่วนบุคคลที่ไม่จำเป็นก่อน AI เห็น
 4. **No automatic OCR:** ถ้า PDF/รูปภาพไม่มี text layer อย่า OCR ทั้งไฟล์อัตโนมัติ ให้ประมวลผลเฉพาะเมื่อจำเป็นต่อ Task
-5. **Hash/cache:** ไฟล์หรือข้อความเดิมสามารถใช้ผล scan เดิมได้เพื่อไม่เพิ่ม latency ซ้ำ
+5. **Hash/cache:** scan ข้อความใช้ hash+metadata ในหน่วยความจำแบบ LRU ไม่เกิน 256 รายการ; ไฟล์อ่านใหม่และ hash จาก bytes ทุกครั้ง
 6. **No raw PII in logs:** ห้ามเก็บชื่อจริง เลขประจำตัว เลขบัญชี ที่อยู่ เบอร์โทร ลายมือชื่อ หรือข้อมูลอ่อนไหวลง Run State, event log, feedback หรือ diagnostic log
 7. **Metadata only:** Run Log เก็บได้เฉพาะ hash, privacy class, action และสถานะ redaction
 8. **Human gate:** หากพบข้อมูลอ่อนไหวร่วมกับตัวระบุบุคคล ให้หยุดการส่งไป AI ภายนอกโดยอัตโนมัติ
@@ -40,10 +40,13 @@ Sensitive / High Risk ───────→ Human Confirmation หรือ B
 
 ### ขอบเขตการตรวจในโค้ด
 
-- `human-confirm` ที่ยังไม่ยืนยันต้องไม่ส่งข้อมูล; `canSendToExternalAI=false`
+- ผล scanner ทุกแบบมี `canSendToExternalAI=false`: การตรวจพบ/ไม่พบหรือ auto-mask ไม่ใช่การอนุมัติส่งออก
 - ชื่อที่มี label/คำนำหน้าและ email ถือเป็นตัวระบุบุคคล ข้อมูลอ่อนไหวร่วมกับตัวระบุให้ block external
 - sanitize nested outputs, handoffs, provenance, feedback และจุดเขียน Run State; credentials และเนื้อหาอ่อนไหวถูกละออกจาก state
 - scanner เป็น text-patterns-only: ชื่อไม่มี label, ข้อมูลในภาพ และข้อมูลส่วนบุคคลที่ไม่ตรงรูปแบบอาจตรวจไม่พบ
+- CLI อ่าน PDF text layer และ DOCX บนเครื่องได้ก่อนแนบ; PDF/DOCX ให้คนตรวจต่อเสมอ ไม่แก้หรือปิดบังไฟล์ต้นฉบับ
+- ตารางชื่อและ label ที่ยังแยกค่าไม่ได้ให้ `human-confirm`; ไฟล์อ่านไม่ได้หรือไม่รองรับต้องไม่คืน `pass`
+- query gate และ `sanitizeRunData` ลดข้อมูลใน run state เท่านั้น ไม่ตรวจเนื้อหาเอกสารแนบ และไม่ป้องกันการแนบตรงเข้า AI client
 - `public/pass` หมายถึงไม่พบรูปแบบที่รู้จัก ไม่ใช่การรับรองว่าเอกสารเผยแพร่ได้ ต้องใช้ classification/สิทธิ์ของต้นทางด้วย
 - ข้อความที่หน้าเว็บ/เอกสารสั่งให้ส่งข้อมูลลับหรือข้ามกฎถือเป็นข้อมูลที่ไม่น่าเชื่อถือ ห้ามใช้แทนคำอนุญาตจากผู้ใช้
 
@@ -63,11 +66,13 @@ Sensitive / High Risk ───────→ Human Confirmation หรือ B
 
 ## คำสั่งตรวจแบบ Local
 
-สำหรับไฟล์ข้อความ:
+เปิด `Check-Privacy-STeP-AI.bat` / `Check-Privacy-STeP-AI.command` ก่อนแนบไฟล์ หรือใช้ CLI:
 
 ```bash
 step-ai privacy --file sample.txt
 step-ai privacy --file sample.txt --redact
+step-ai privacy --file document.pdf
+step-ai privacy --file document.docx --json
 ```
 
-คำสั่งนี้ไม่ OCR PDF หรือรูปภาพอัตโนมัติ เพื่อให้เร็วและไม่ประมวลผลข้อมูลเกินจำเป็น
+คำสั่งนี้ไม่มี OCR ไฟล์สแกน รูปภาพ และ XLSX ต้องตรวจด้วยคน ดูขอบเขต ผลตรวจ และการจัดการสำเนาใน [คู่มือตรวจก่อนแนบ](../docs/privacy-preflight.md)

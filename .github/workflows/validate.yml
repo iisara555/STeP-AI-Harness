@@ -34,8 +34,10 @@ jobs:
           bash -n install/install-macos.sh
           bash -n install/update-macos.sh
           bash -n install/feedback-macos.sh
+          bash -n Check-Privacy-STeP-AI.command
+          bash -n install/privacy-macos.sh
           bash -n install/macos-runtime.sh
-          pwsh -NoProfile -Command "@('install/windows-runtime.ps1','install/install-windows.ps1','install/update-windows.ps1','install/feedback-windows.ps1') | ForEach-Object { \$null = [scriptblock]::Create((Get-Content -Raw \$_)) }; Write-Host 'PowerShell syntax OK'"
+          pwsh -NoProfile -Command "@('install/windows-runtime.ps1','install/install-windows.ps1','install/update-windows.ps1','install/feedback-windows.ps1','install/privacy-windows.ps1') | ForEach-Object { \$null = [scriptblock]::Create((Get-Content -Raw \$_)) }; Write-Host 'PowerShell syntax OK'"
 
       - name: Run CLI and module unit tests
         run: npm test

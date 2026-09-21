@@ -2,6 +2,8 @@
 
 ไฟล์นี้เป็นใบเริ่มต้นสั้นสำหรับ First Run และตัวติดตั้ง หากต้องการคู่มือพนักงานฉบับเต็ม ให้เปิด [README.md](README.md)
 
+สำหรับ Pilot วันที่ 22 กันยายน 2569 ใช้ชุด **v0.7.3** ที่ STeP AI Geek แจกผ่านช่องทางภายใน ดู [กำหนดการและแบบบันทึกผล](docs/pilot-runbook.md) ติดตั้งในโฟลเดอร์ใหม่ แยกจากชุดเดิม และใช้สำเนางานที่อนุญาตให้ทดสอบ
+
 ## ใช้งานแบบย่อ
 
 1. รับไฟล์ชุดติดตั้งจาก Shared Drive หรือช่องทางภายในที่ทีมใช้อยู่และได้รับการแจ้งว่าเป็นชุดติดตั้งขององค์กร
@@ -25,3 +27,4 @@
 - อัปเดต: `Update-STeP-AI.bat` หรือ `Update-STeP-AI.command`
 - แจ้งปัญหา: `Feedback-STeP-AI.bat` หรือ `Feedback-STeP-AI.command` แล้วทำตาม [SUPPORT.md](SUPPORT.md)
 - คู่มือเต็ม: [docs/employee-guide.md](docs/employee-guide.md)
+- ก่อนแนบเอกสาร: เปิด `Check-Privacy-STeP-AI.bat` / `Check-Privacy-STeP-AI.command` แล้วตรวจผลตาม [คู่มือตรวจก่อนแนบ](docs/privacy-preflight.md); การแนบตรงให้ AI ข้ามตัวตรวจนี้

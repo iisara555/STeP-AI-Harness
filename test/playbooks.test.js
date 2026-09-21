@@ -121,7 +121,10 @@ test('STeP Composite Playbooks', async (t) => {
       { team: 'afp' }
     );
 
-    assert.equal(result.routingMode, 'PLAYBOOK');
+    assert.equal(result.routingMode, 'BLOCK');
+    assert.equal(result.routingContract.skill, '');
+    assert.deepEqual(result.routingContract.steps, []);
+    assert.equal(result.contextPlan.components.skill.chars, 0);
     assert.equal(result.selectedPlaybook?.id, 'tor-to-project-plan');
     assert.equal(result.scopeResult.status, 'BLOCK');
     assert.equal(result.scopeResult.targetRole, 'procurement-committee');

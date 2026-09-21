@@ -45,8 +45,23 @@ function normalize(value = '') {
   return String(value).toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+// Only remove the approval word inside an explicit request to draft a request
+// document. Independent approval/signing clauses remain visible to the gates.
+/**
+ * A clause that declines an action is not a request to perform it: "ยังไม่ต้องกด
+ * Submit" must not trip the submission gate. Drop the negated clause up to the
+ * next clause boundary so its verb never reaches a trigger match.
+ */
+const DECLINED_ACTION = /(?:แต่)?[ \t]*(?:ยังไม่ต้อง|ไม่ต้อง|ยังไม่|อย่าเพิ่ง|อย่า|ห้าม|ไม่ควร|do(?:es)? not|don['’]t|no need to|without)[^,;\n]*/gi;
+
+export function authorityIntentText(query = '') {
+  return String(query)
+    .replace(/((?:ร่าง|จัดทำ)(?:บันทึก|หนังสือ|เอกสาร)(?:เพื่อ)?(?:ขอ|เสนอขอ))อนุมัติ/g, '$1เสนอพิจารณา')
+    .replace(DECLINED_ACTION, ' ');
+}
+
 export function evaluateAuthorityPreflight(query = '', authorities = []) {
-  const lower = normalize(query);
+  const lower = normalize(authorityIntentText(query));
   const matches = [];
 
   for (const authority of authorities || []) {

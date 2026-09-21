@@ -10,6 +10,7 @@ stats/
 members/
 votes/
 tmp/
+node_modules/
 .step-ai/
 
 # Local or restricted source material

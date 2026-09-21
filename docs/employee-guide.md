@@ -139,7 +139,7 @@ First Run จะอ่านเฉพาะไฟล์เริ่มต้น�
 
 ข้อมูล Restricted หรือ Sensitive ต้องใช้ช่องทางที่องค์กรอนุมัติ หากไม่แน่ใจให้จัดเป็น Restricted ก่อน
 
-ระบบอาจทำ Quick Local Scan และ auto-mask ให้ แต่การสแกนแบบข้อความไม่ใช่การรับรองเอกสารทั้งฉบับ และไม่ได้ OCR รูปภาพ/PDF ทุกไฟล์โดยอัตโนมัติ
+ก่อนแนบเอกสาร เปิด `Check-Privacy-STeP-AI.bat` หรือ `Check-Privacy-STeP-AI.command` แล้วเลือกไฟล์บนเครื่อง อ่าน [คู่มือตรวจก่อนแนบ](privacy-preflight.md) สำหรับข้อจำกัด PDF/DOCX และการตรวจด้วยคน ตัวตรวจไม่ดักไฟล์ที่แนบตรงให้ AI ไม่มี OCR และไม่อนุญาตส่งออกจากผล auto-mask
 
 อ่านกติกาเต็มได้ที่ [Data Classification & Privacy Gate](../rules/data-classification.md)
 

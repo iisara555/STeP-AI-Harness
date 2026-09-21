@@ -1,7 +1,9 @@
 # Repository Visibility & Data Boundary
 
-**As of:** 2026-09-20  
-**Current GitHub visibility:** **PUBLIC**  
+**As of:** 2026-09-21
+
+**Last documented GitHub visibility:** **PUBLIC** on 2026-09-20; verification on 2026-09-21 was unavailable (authenticated CLI 401, anonymous API 404). Treat tracked material as public-readable until the owner confirms the current model.
+
 **Policy decision:** pending repository owner confirmation before wider organizational rollout.
 
 ## Why this matters

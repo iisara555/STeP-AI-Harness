@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { readFile, rm, mkdir, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createHash } from 'node:crypto';
 import { PACKAGE_ROOT, getAvailableTeams, resolveTeamFiles } from '../src/modules/role-resolver.js';
 import { pathExists } from '../src/utils/file-ops.js';
 import {
@@ -281,6 +282,10 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     ].join('; ');
     const { stdout: supportIncluded } = await execFileAsync(PYTHON.command, [...PYTHON.prefixArgs, '-c', zipCheck, zipPath]);
     assert.equal(supportIncluded.trim(), 'True', 'SUPPORT.md must be included in Pilot bundle');
+
+    const checksum = (await readFile(zipPath + '.sha256', 'utf-8')).trim().split(/\s+/);
+    assert.equal(checksum[0], createHash('sha256').update(await readFile(zipPath)).digest('hex'));
+    assert.equal(checksum[1], `STeP-AI-Pilot-v${PACKAGE_VERSION}.zip`);
 
     const s = await stat(zipPath);
     assert.ok(s.size > 50000, `Bundle size should be substantial (actual: ${s.size} bytes)`);

@@ -13,6 +13,7 @@ import os
 import json
 import zipfile
 import sys
+import hashlib
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -45,6 +46,8 @@ def build_pilot_bundle():
         "Install-STeP-AI.command",
         "Update-STeP-AI.command",
         "Feedback-STeP-AI.command",
+        "Check-Privacy-STeP-AI.bat",
+        "Check-Privacy-STeP-AI.command",
         "package.json",
         "README.md",
         "SUPPORT.md",
@@ -79,6 +82,10 @@ def build_pilot_bundle():
             data = b'\xef\xbb\xbf' + data
         zf.writestr(zinfo, data, compress_type=zipfile.ZIP_DEFLATED)
 
+    missing = [name for name in include_files + include_dirs if not (ROOT / name).exists()]
+    if missing:
+        raise FileNotFoundError(f"Required distribution paths missing: {', '.join(missing)}")
+
     file_count = 0
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         # Add root files
@@ -107,11 +114,15 @@ def build_pilot_bundle():
                     add_file_to_zip(zf, full_p, arcname)
                     file_count += 1
 
+    digest = hashlib.sha256(zip_path.read_bytes()).hexdigest()
+    checksum_path = dist_dir / f"{zip_name}.sha256"
+    checksum_path.write_text(f"{digest}  {zip_name}\n", encoding="utf-8")
     size_kb = zip_path.stat().st_size / 1024
     print("\n✓ Package build successful!")
     print(f"  • Total files bundled: {file_count}")
     print(f"  • Archive size:        {size_kb:.1f} KB")
     print(f"  • Output file:         {zip_path}")
+    print(f"  • SHA-256 file:        {checksum_path}")
     print("============================================================\n")
 
 if __name__ == "__main__":

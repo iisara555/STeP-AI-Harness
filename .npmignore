@@ -15,7 +15,6 @@ test/
 scripts/
 *.py
 HANDOFF.md
-START-PROMPT.txt
 OPEN-IN-CODEX.md
 STeP-Context-and-Skills-Review.md
 .git/

@@ -65,6 +65,7 @@ test('Lightweight First Run — all AI adapters', async (t) => {
       for (const instruction of instructions) {
         assert.ok(instruction.content.includes('Compact Bootstrap'), `${tool}/${instruction.filename} missing compact bootstrap`);
         assert.ok(instruction.content.includes('Installed ≠ Loaded'), `${tool}/${instruction.filename} missing lazy-load contract`);
+        assert.ok(instruction.content.includes('Attachments sent directly to an AI client bypass this scanner'), `${tool}/${instruction.filename} missing pre-attachment boundary`);
         assert.ok(instruction.content.includes('First Work — Employee Handoff Contract'), `${tool}/${instruction.filename} missing first-work contract`);
         assert.ok(instruction.content.includes('USER.md'), `${tool}/${instruction.filename} missing USER.md routing identity`);
         assert.ok(instruction.content.includes('current user choice'), `${tool}/${instruction.filename} missing USER.md override rule`);

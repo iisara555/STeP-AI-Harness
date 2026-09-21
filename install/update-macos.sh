@@ -32,7 +32,7 @@ show_header() {
     echo -e "${CYAN}=================================================================${NC}"
     echo -e "${CYAN}   STeP AI Update & Sync${NC}"
     echo -e "${YELLOW}   Current version: v$CURRENT_VERSION${NC}"
-    echo -e "${GRAY}   22 Teams • 43 Skills • Safe Workspace Upgrade${NC}"
+    echo -e "${GRAY}   STeP AI • Safe Workspace Upgrade${NC}"
     echo -e "${CYAN}=================================================================${NC}"
     echo ""
 }
@@ -45,7 +45,11 @@ local_sync() {
 finish_update() {
     echo ""
     echo -e "${GREEN}=================================================================${NC}"
-    echo -e "${YELLOW}                 ✓ การอัปเดตเสร็จสมบูรณ์${NC}"
+    if [ "${1:-}" = 'local-only' ]; then
+        echo -e "${YELLOW}✓ ซิงก์ข้อมูลในเครื่องแล้ว ยังไม่ได้ดาวน์โหลดรุ่นใหม่${NC}"
+    else
+        echo -e "${YELLOW}                 ✓ การอัปเดตเสร็จสมบูรณ์${NC}"
+    fi
     echo -e "${GREEN}=================================================================${NC}"
     echo ""
     read -r -p "กด Enter เพื่อเสร็จสิ้น..." _
@@ -59,7 +63,7 @@ if ! curl -fsSL --connect-timeout 10 --max-time 20     -H "Accept: application/v
     rm -f "$TMP_API"
     echo -e "${YELLOW}ไม่สามารถตรวจสอบ GitHub Releases ได้ ระบบจะซิงก์ Workspace จากเวอร์ชันที่ติดตั้งอยู่แทน${NC}"
     local_sync
-    finish_update
+    finish_update local-only
     exit 0
 fi
 
@@ -69,7 +73,7 @@ rm -f "$TMP_API"
 if [ -z "$LATEST_VERSION" ]; then
     echo -e "${RED}ไม่พบ version จาก GitHub Release${NC}"
     local_sync
-    finish_update
+    finish_update local-only
     exit 0
 fi
 
@@ -113,13 +117,14 @@ CHECKSUM_PATH="$TEMP_ROOT/$ASSET.sha256"
 if curl -fsSL --connect-timeout 10 --max-time 30     -H "User-Agent: STeP-AI-Updater"     "$CHECKSUM_URL" -o "$CHECKSUM_PATH"; then
     EXPECTED_HASH="$(awk '{print toupper($1)}' "$CHECKSUM_PATH" | head -n 1)"
     ACTUAL_HASH="$(shasum -a 256 "$ZIP_PATH" | awk '{print toupper($1)}')"
-    if [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
+    if [[ ! "$EXPECTED_HASH" =~ ^[A-F0-9]{64}$ ]] || [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
         echo -e "${RED}SHA-256 checksum mismatch. ยกเลิกการอัปเดตเพื่อความปลอดภัย${NC}"
         exit 1
     fi
     echo -e "${GREEN}✓ ตรวจสอบ SHA-256 ผ่าน${NC}"
 else
-    echo -e "${YELLOW}⚠️  Release นี้ไม่มี checksum file ระบบจะตรวจโครงสร้าง package ก่อนติดตั้ง${NC}"
+    echo -e "${RED}Release นี้ไม่มี SHA-256 checksum file ยกเลิกการอัปเดต กรุณาติดต่อผู้ประสานงานตาม SUPPORT.md${NC}"
+    exit 1
 fi
 
 ditto -x -k "$ZIP_PATH" "$EXTRACT_DIR"

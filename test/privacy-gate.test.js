@@ -22,7 +22,7 @@ test('Lightweight Privacy Gate', async (t) => {
 
   await t.test('phone, email, ID and bank account are masked locally', () => {
     const input = [
-      'ชื่อ นายตัวอย่าง',
+      'ชื่อ: นายตัวอย่าง',
       'โทร 081-234-5678',
       'email demo.person@example.com',
       'เลขประจำตัว 1-2345-67890-12-3',
@@ -33,7 +33,8 @@ test('Lightweight Privacy Gate', async (t) => {
 
     assert.equal(result.classification, 'restricted');
     assert.equal(result.action, 'auto-mask');
-    assert.equal(result.canSendToExternalAI, true);
+    assert.equal(result.canSendToExternalAI, false);
+    assert.equal(result.requiresHumanConfirmation, true);
     assert.ok(!result.redactedText.includes('081-234-5678'));
     assert.ok(!result.redactedText.includes('demo.person@example.com'));
     assert.ok(!result.redactedText.includes('1-2345-67890-12-3'));

@@ -83,6 +83,7 @@ export function buildLazyLoadingInventory(files = []) {
   text += `- When the user gives a real task, inspect \`manifest/router-index.yaml\` only as needed to select the primary Skill.\n`;
   text += `- Then read only that Skill's \`SKILL.md\` and its mandatory references from \`manifest/skills.yaml\`.\n`;
   text += `- Load templates/examples only when the selected Skill or user request requires them.\n\n`;
+  text += `Before asking users to attach documents, direct them to the local Check-Privacy-STeP-AI helper and read \`rules/data-classification.md\`. Attachments sent directly to an AI client bypass this scanner; an already attached file may already have left the device. Scan results never authorize external transmission.\n\n`;
   return text;
 }
 

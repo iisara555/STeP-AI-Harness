@@ -21,19 +21,26 @@
  *   reason?: string
  * }}
  */
+import { authorityIntentText } from './authority-preflight.js';
+
 export function checkScope(skill, requestText = '') {
   if (!skill || !skill.scope) {
     return { status: 'ALLOW', inScope: true };
   }
 
   const { scope } = skill;
-  const lower = requestText.toLowerCase();
+  const lower = authorityIntentText(requestText).toLowerCase();
 
   // Helper matcher for trigger words
   const matchTrigger = (key, desc) => {
     const keyParts = key.split('_');
     const descMatch = desc && lower.includes(desc.toLowerCase());
-    const keyMatch = keyParts.some((kw) => kw.length > 3 && lower.includes(kw));
+    // A compound key means the conjunction of its parts: 'budget_decision' is
+    // about budget decisions, not about every request containing "decision".
+    // Requiring every significant part keeps ordinary deliverables (a decision
+    // memo, a project plan) out of approval gates they do not belong in.
+    const significantParts = keyParts.filter((kw) => kw.length > 3);
+    const keyMatch = significantParts.length > 0 && significantParts.every((kw) => lower.includes(kw));
 
     let heuristic = descMatch || keyMatch;
     if (key.includes('legal') && (lower.includes('กฎหมาย') || lower.includes('ฟ้องร้อง') || lower.includes('ข้อพิพาท'))) heuristic = true;

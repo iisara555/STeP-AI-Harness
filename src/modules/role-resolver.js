@@ -113,6 +113,7 @@ export async function resolveRoleFiles(roleId) {
     'step-context.md',
     'roles-and-ownership.md',
     'knowledge-policy.md',
+    'privacy-preflight.md',
     'teams.md',
     'step-router.md',
   ];
@@ -413,6 +414,7 @@ export async function resolveTeamFiles(teamCode) {
     'step-context.md',
     'roles-and-ownership.md',
     'knowledge-policy.md',
+    'privacy-preflight.md',
     'teams.md',
     'step-router.md',
   ];

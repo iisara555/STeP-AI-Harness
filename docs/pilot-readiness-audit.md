@@ -1,14 +1,20 @@
 # Pilot Readiness Audit — 1 Month
 
-**As of:** 2026-09-20  
-**Document status:** Current Pilot readiness reference  
-**Released distribution baseline:** v0.7.2  
-**Repository scope:** `main` is post-v0.7.2 development until the next release tag  
+**As of:** 2026-09-21
+
+**Document status:** Current Pilot readiness reference
+
+**Released distribution baseline:** v0.7.2
+
+**Prepared Pilot candidate:** v0.7.3 สำหรับรอบทดสอบ; ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว
+
+**Repository scope:** source remains development until released; [Pilot runbook](pilot-runbook.md) governs the supervised session
+
 **Current main inventory:** 46 Skills / 4 Playbooks / 3 Actions / 22 teams / 5 routing clusters
 
 ## Executive Summary
 
-ก่อนเริ่ม Pilot 1 เดือน ระบบต้องผ่าน 5 gates:
+ก่อนเริ่ม Pilot 1 เดือน ระบบต้องผ่าน 6 gates:
 
 1. **Security Gate** — ไม่มี plaintext secret/password ใน repo, output, log หรือ local config ที่ AI อ่านได้
 2. **Routing & Governance Gate** — Skill, Router, Process, Authority และ escalation target เชื่อมกันครบ
@@ -38,7 +44,7 @@ Residual risk: browser/session persistence แตกต่างกันตา�
 
 **พบ:** Skill กำหนด prompt quality ดี แต่ไม่ได้กำหนด capability floor ของ target image model
 
-**ปรับ:** minimum เป็น GPT-Image-2-class หรือ equivalent; preferred GPT-Image-2.5-class หรือสูงกว่า โดยวัดจาก:
+**ปรับ:** ใช้ Prompt Spec เป็น source of truth แล้วเลือก syntax family ตามความสามารถจริงของเครื่องมือ ไม่ hard-code ชื่อรุ่นโมเดลเป็น Capability Gate โดยตรวจ:
 - contextual instruction following
 - reference-image understanding
 - edit/identity/structure fidelity
@@ -79,6 +85,14 @@ Residual risk: browser/session persistence แตกต่างกันตา�
 **ปรับ:** ใช้ L0-only First Run ทุก adapter, Compact Bootstrap และ Installed ≠ Loaded inventory summary; ห้าม scan skills/rules/manifest จนกว่าจะมีงานจริง
 
 ## Residual Risks Accepted for 1-Month Pilot
+
+### Privacy document boundary — assisted local preflight
+
+ตรวจพบว่า query gate/log sanitization ไม่เคยตรวจเอกสารแนบ และ `auto-mask` เคยคืนสิทธิ์ส่งออก แก้แล้ว: scanner ทุกผลคืน `canSendToExternalAI=false`, เพิ่ม pattern/English sensitive keywords, ตารางชื่อหรือ label ที่จับค่าไม่ได้ให้คนตรวจ และจำกัด LRU cache 256 รายการ
+
+เพิ่มตัวตรวจบนเครื่องก่อนแนบสำหรับ PDF text layer/DOCX พร้อม helper Windows/macOS และ regression tests ตามกรณีรายงาน ไฟล์อ่านไม่ได้/ไม่รองรับต้องตรวจด้วยคน ไม่มี OCR และไม่แก้เอกสารต้นฉบับ ดู [privacy-preflight.md](privacy-preflight.md)
+
+**ความเสี่ยงคงเหลือ:** AI client ที่รับไฟล์ตรงยังข้ามตัวตรวจนี้ได้ จึงยังไม่ใช่ DLP/upload gateway; Pilot ใช้ข้อมูลสังเคราะห์หรือข้อมูลที่เจ้าของอนุญาตและตรวจด้วยคนก่อนแนบ ยังไม่มีผลวัด recall บน corpus เอกสารจริงหรือหลักฐาน native macOS file picker ในรอบนี้
 
 - Harness ไม่ทำ password vault เอง; secure remembered login ขึ้นกับ browser/runtime/OS
 - external websites อาจเปลี่ยน DOM/field/login flow ทำให้ Browser Skill ต้อง fallback เป็น draft/manual

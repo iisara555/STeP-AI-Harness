@@ -200,7 +200,12 @@ function summarizeTriggerEvidence(match) {
 
   return {
     count: distinct.length,
+    // How many declared triggers matched before overlapping variants collapse.
+    // A registry that lists several phrasings of one domain term and matches all
+    // of them is evidence the author specified that term, not a longer string.
+    rawCount: triggers.length,
     maxLength: distinct.reduce((max, tr) => Math.max(max, tr.length), 0),
+    triggers: distinct.map((tr) => tr.toLowerCase()),
   };
 }
 
@@ -216,8 +221,23 @@ function dominatesTriggerEvidence(bestMatch, runnerUp) {
   const runner = summarizeTriggerEvidence(runnerUp);
   if (runner.count === 0) return true;
 
-  // Either a markedly more specific phrase, or markedly more distinct evidence.
-  if (best.maxLength >= runner.maxLength * 1.5) return true;
+  // Character length is not specificity: Thai phrases must not outrank TOR/ISO
+  // merely because an English acronym is shorter.
+
+  // The runner-up adds nothing when every phrase it matched sits inside a longer
+  // phrase the best candidate matched ("ออกแบบ" within "ทิศทางภาพรวมงานออกแบบ").
+  // Equality is not containment: identical evidence stays genuinely ambiguous.
+  const runnerIsContained = runner.triggers.every(
+    (tr) => best.triggers.some((candidate) => candidate !== tr && candidate.includes(tr))
+  );
+  if (runnerIsContained) return true;
+
+  // Several registered phrasings of one term all matching ("audit evidence
+  // matrix", "evidence matrix", "audit evidence") is authored specificity, not
+  // string length: one long generic phrase still matches once and stays
+  // ambiguous against a precise acronym.
+  if (best.rawCount >= 2 && best.rawCount >= runner.rawCount * 2) return true;
+
   return best.count >= 2 && best.count >= runner.count * 2;
 }
 
@@ -240,7 +260,7 @@ export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
   const hasDirectTrigger = (bestMatch.matchedTriggers || []).length > 0 || bestMatch.breakdown?.keyword > 0;
   const hasIntent = bestMatch.breakdown?.intent > 0;
 
-  if (bestMatch.tier === 'HIGH') {
+  if (bestMatch.tier === 'HIGH' && (margin >= 0.15 || !runnerUp?.matchedTriggers?.length)) {
     return {
       tier: 'HIGH',
       margin,

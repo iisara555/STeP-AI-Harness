@@ -28,7 +28,7 @@ function Show-Header {
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host "   STeP AI Update & Sync" -ForegroundColor Cyan
     Write-Host "   Current version: v$currentVersionText" -ForegroundColor Yellow
-    Write-Host "   22 Teams • 43 Skills • Safe Workspace Upgrade" -ForegroundColor Gray
+    Write-Host "   STeP AI • Safe Workspace Upgrade" -ForegroundColor Gray
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -42,9 +42,14 @@ function Invoke-LocalSync {
 }
 
 function Finish-Update {
+    param([switch]$LocalOnly)
     Write-Host ""
     Write-Host "=================================================================" -ForegroundColor Green
-    Write-Host "                 ✓ การอัปเดตเสร็จสมบูรณ์" -ForegroundColor Yellow
+    if ($LocalOnly) {
+        Write-Host "✓ ซิงก์ข้อมูลในเครื่องแล้ว ยังไม่ได้ดาวน์โหลดรุ่นใหม่" -ForegroundColor Yellow
+    } else {
+        Write-Host "                 ✓ การอัปเดตเสร็จสมบูรณ์" -ForegroundColor Yellow
+    }
     Write-Host "=================================================================" -ForegroundColor Green
     Write-Host ""
     Read-Host "กด Enter เพื่อเสร็จสิ้น"
@@ -67,7 +72,7 @@ try {
     Write-Host "ไม่สามารถตรวจสอบ GitHub Releases ได้ในขณะนี้" -ForegroundColor Yellow
     Write-Host "ระบบจะซิงก์ Workspace จากเวอร์ชันที่ติดตั้งอยู่แทน" -ForegroundColor Gray
     Invoke-LocalSync
-    Finish-Update
+    Finish-Update -LocalOnly
     exit 0
 }
 
@@ -77,7 +82,7 @@ try {
 } catch {
     Write-Host "รูปแบบ version จาก GitHub ไม่ถูกต้อง: $($release.tag_name)" -ForegroundColor Red
     Invoke-LocalSync
-    Finish-Update
+    Finish-Update -LocalOnly
     exit 0
 }
 
@@ -118,12 +123,12 @@ try {
         Invoke-WebRequest -Uri $checksumAsset.browser_download_url -Headers $headers -OutFile $checksumPath -TimeoutSec 30
         $expectedHash = ((Get-Content -Raw $checksumPath).Trim() -split "\s+")[0].ToUpperInvariant()
         $actualHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToUpperInvariant()
-        if ($expectedHash -ne $actualHash) {
+        if ($expectedHash -notmatch '^[A-F0-9]{64}$' -or $expectedHash -ne $actualHash) {
             throw "SHA-256 checksum mismatch. ยกเลิกการอัปเดตเพื่อความปลอดภัย"
         }
         Write-Host "✓ ตรวจสอบ SHA-256 ผ่าน" -ForegroundColor Green
     } else {
-        Write-Host "⚠️  Release นี้ไม่มี checksum file ระบบจะตรวจโครงสร้าง package ก่อนติดตั้ง" -ForegroundColor Yellow
+        throw "Release นี้ไม่มี SHA-256 checksum file ยกเลิกการอัปเดต กรุณาติดต่อผู้ประสานงานตาม SUPPORT.md"
     }
 
     Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
