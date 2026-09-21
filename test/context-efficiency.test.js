@@ -23,8 +23,14 @@ test('Context efficiency — progressive disclosure without architecture changes
   await t.test('token telemetry is explicitly estimated unless provider usage is supplied', () => {
     const estimate = estimateTextTokens('ช่วยตรวจ TOR ก่อนส่ง AFP');
     assert.equal(estimate.actualTokens, null);
-    assert.equal(estimate.method, 'char-estimate-v1');
+    assert.equal(estimate.method, 'script-aware-estimate-v2');
     assert.ok(estimate.estimatedTokens > 0);
+
+    // Thai costs far more tokens per character than Latin. A single ratio hid
+    // that, so equal-length samples must not estimate equally.
+    const thai = estimateTextTokens('ก'.repeat(400));
+    const latin = estimateTextTokens('a'.repeat(400));
+    assert.ok(thai.estimatedTokens > latin.estimatedTokens * 3);
   });
 
   await t.test('compact routing contract never carries router inventory or trigger lists', () => {
@@ -82,7 +88,9 @@ test('Context efficiency — progressive disclosure without architecture changes
     const plan = buildContextBudgetPlan({
       routingContract: { skill: 'receipt-audit' },
       skillText: 'ก'.repeat(10000),
-      startupText: 's'.repeat(2500),
+      // Latin budgets roughly four characters per token, so an over-budget Latin
+      // sample needs more than four times its token budget in characters.
+      startupText: 's'.repeat(4000),
       governanceText: 'g'.repeat(1000),
     });
 

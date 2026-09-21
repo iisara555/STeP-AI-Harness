@@ -322,27 +322,35 @@ export async function initUserMemory(workspaceDir = process.cwd(), options = {})
   return { created: true, filePath };
 }
 
-/** Ensure USER.md and MEMORY.md are included in workspace .gitignore */
+/**
+ * Ensure USER.md and MEMORY.md are included in workspace .gitignore.
+ *
+ * These files hold the employee's own profile, so "always gitignored" has to be
+ * true even in a workspace that has no .gitignore yet: a repository initialised
+ * later would otherwise pick them up. Create the file when it is missing rather
+ * than returning quietly.
+ */
 export async function ensureGitignored(workspaceDir = process.cwd()) {
   const gitignorePath = join(workspaceDir, '.gitignore');
-  if (!(await pathExists(gitignorePath))) return false;
+  const header = '# Private workspace user memory';
 
   try {
-    const content = await readFile(gitignorePath, 'utf-8');
+    const exists = await pathExists(gitignorePath);
+    const content = exists ? await readFile(gitignorePath, 'utf-8') : '';
     const lines = content.split(/\r?\n/).map((l) => l.trim());
     const missing = [];
 
     if (!lines.includes('USER.md') && !lines.includes('/USER.md')) missing.push('USER.md');
     if (!lines.includes('MEMORY.md') && !lines.includes('/MEMORY.md')) missing.push('MEMORY.md');
 
-    if (missing.length > 0) {
-      const addition = `\n# Private workspace user memory\n${missing.join('\n')}\n`;
-      await writeFile(gitignorePath, content.trimEnd() + '\n' + addition, 'utf-8');
-      return true;
-    }
-  } catch {
-    // If reading fails, leave the workspace untouched.
-  }
+    if (missing.length === 0) return false;
 
-  return false;
+    const addition = `${header}\n${missing.join('\n')}\n`;
+    const body = content.trim() ? `${content.trimEnd()}\n\n${addition}` : addition;
+    await writeFile(gitignorePath, body, 'utf-8');
+    return true;
+  } catch {
+    // A workspace we cannot write to is left untouched; the caller reports it.
+    return false;
+  }
 }

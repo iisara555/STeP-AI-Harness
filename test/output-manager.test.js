@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -128,4 +128,24 @@ test('Output File Management', async (t) => {
       await rm(workspace, { recursive: true, force: true });
     }
   });
+});
+
+test('concurrent output requests never hand out the same version', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-output-race-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+
+  const request = () => getNextOutputPath({
+    workspaceDir: dir, team: 'afp', type: 'document', title: 'tor-review', extension: 'md',
+  });
+
+  // Reading the directory and returning a name is not a reservation. Ten runs
+  // started together must receive ten distinct files, not ten copies of v01.
+  const results = await Promise.all(Array.from({ length: 10 }, request));
+  const versions = results.map((item) => item.version);
+  assert.equal(new Set(versions).size, versions.length, `duplicate versions: ${versions.join(',')}`);
+  assert.deepEqual([...versions].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+  for (const item of results) {
+    assert.equal(await readFile(item.path, 'utf-8'), '', 'reserved file should be empty');
+  }
 });

@@ -58,10 +58,11 @@ flowchart TB
     U --> AI
     AI --> AD
     AD --> FR
-    FR --> RT
+    FR --> PG
+    PG --> RT
     RT --> SG
     SG -->|ALLOW| AP
-    SG -->|"ESCALATE: ส่งต่อ Skill อื่น"| RT
+    SG -->|"ESCALATE: หยุด activation รอ host ส่งต่อ Skill ปลายทาง"| HUMAN
     AP -->|"BLOCK: human-only authority"| HUMAN
     AP -->|ผ่าน| CLR
     CLR -->|"CLARIFY: ถามทีละ 1 ข้อ / candidate menu"| U
@@ -162,7 +163,7 @@ Privacy Quick Check (เมื่อมีข้อมูล/เอกสาร)
       ↓
 Router (local deterministic, 5-factor scoring)
       ↓
-Scope Guard: ALLOW / ESCALATE (ส่งต่อ Skill อื่น) / BLOCK
+Scope Guard: ALLOW / ESCALATE (หยุด activation รอ host ส่งต่อ) / BLOCK
       ↓
 Authority Preflight → BLOCK = ส่งต่อผู้มีอำนาจ ไม่ทำต่อ
       ↓

@@ -173,3 +173,32 @@ test('User Memory (USER.md), First Run Companion & Clarification Suite', async (
     assert.ok(content.includes('ห้ามบันทึกรหัสผ่าน Token'));
   });
 });
+
+test('workspace with no .gitignore still gets USER.md and MEMORY.md excluded', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-gitignore-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+
+  // A workspace that becomes a repository later must not pick these up: the
+  // employee's own profile lives in them.
+  assert.equal(await ensureGitignored(dir), true);
+  const created = await readFile(join(dir, '.gitignore'), 'utf-8');
+  assert.ok(created.includes('USER.md'));
+  assert.ok(created.includes('MEMORY.md'));
+
+  // Running again is a no-op rather than a duplicate append.
+  assert.equal(await ensureGitignored(dir), false);
+  assert.equal(await readFile(join(dir, '.gitignore'), 'utf-8'), created);
+});
+
+test('existing .gitignore keeps its content when the entries are added', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-gitignore-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await writeFile(join(dir, '.gitignore'), 'node_modules/\ndist/\n', 'utf-8');
+
+  assert.equal(await ensureGitignored(dir), true);
+  const content = await readFile(join(dir, '.gitignore'), 'utf-8');
+  assert.ok(content.includes('node_modules/'));
+  assert.ok(content.includes('dist/'));
+  assert.ok(content.includes('USER.md'));
+  assert.ok(content.includes('MEMORY.md'));
+});

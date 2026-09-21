@@ -177,3 +177,35 @@ test('snapshot destination junction cannot escape workspace', async (t) => {
   assert.equal(await readFile(join(outside, 'sentinel.txt'), 'utf8'), 'unchanged');
   assert.equal(await readFile(join(workspace, 'README.md'), 'utf8'), 'current readme');
 });
+
+test('a pasted identifier is redacted before routing, reporting or logging', async () => {
+  const query = 'ผู้รับบริการ เลขประจำตัว 1234567890121 โทร 0812345678 อีเมล somchai@example.com ขอให้ช่วยร่างอีเมลตอบ';
+  const result = await queryStepRouter(query, options);
+
+  // The router works on the scanned text, so no Skill, contract or context plan
+  // ever receives the raw identifiers.
+  for (const raw of ['1234567890121', '0812345678', 'somchai@example.com']) {
+    assert.ok(!result.query.includes(raw), `router query still contains ${raw}`);
+    assert.ok(!JSON.stringify(result.routingContract).includes(raw), `contract still contains ${raw}`);
+  }
+  assert.equal(result.privacy.privacyClass, 'restricted');
+  assert.equal(result.privacy.redactionApplied, true);
+  assert.equal(result.privacy.containsPersonalData, true);
+  assert.ok(!Object.hasOwn(result.privacy, 'redactedText'), 'metadata must not carry text');
+
+  // Terminal output is a log too: neither the echo nor the JSON contract leaks.
+  const out = cli(query);
+  for (const raw of ['1234567890121', '0812345678', 'somchai@example.com']) {
+    assert.ok(!out.includes(raw), `CLI output still contains ${raw}`);
+  }
+  assert.ok(out.includes('ตรวจข้อมูลส่วนบุคคลในคำถาม'));
+
+  const machine = JSON.parse(cli(query, ['--json']));
+  assert.equal(machine.privacy.privacyClass, 'restricted');
+  assert.ok(!JSON.stringify(machine).includes('0812345678'));
+});
+
+test('a request with no personal data routes without a privacy notice', async () => {
+  const out = cli('ช่วยดูใบเสร็จค่าเดินทางว่าเบิกได้ไหม');
+  assert.ok(!out.includes('ตรวจข้อมูลส่วนบุคคลในคำถาม'));
+});

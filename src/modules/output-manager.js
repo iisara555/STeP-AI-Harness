@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { ensureDir, pathExists } from '../utils/file-ops.js';
 
@@ -124,6 +124,7 @@ export async function getNextOutputPath({
   extension = 'md',
   date = new Date(),
   createDir = true,
+  reserve = true,
 } = {}) {
   const ext = normalizeExtension(extension);
   const directory = buildOutputDirectory({ workspaceDir, team, type, extension: ext, date });
@@ -131,25 +132,46 @@ export async function getNextOutputPath({
 
   if (createDir) await ensureDir(directory);
 
+  const prefix = `${baseName}_v`;
+  const suffix = `.${ext}`;
+
+  const nextVersionFrom = (names) => {
+    let highest = 0;
+    for (const name of names) {
+      if (!name.startsWith(prefix) || !name.endsWith(suffix)) continue;
+      const versionText = name.slice(prefix.length, -suffix.length);
+      if (!/^\d+$/.test(versionText)) continue;
+      highest = Math.max(highest, Number(versionText));
+    }
+    return highest + 1;
+  };
+
   let entries = [];
   if (await pathExists(directory)) {
     entries = await readdir(directory);
   }
 
-  let highestVersion = 0;
-  const prefix = `${baseName}_v`;
-  const suffix = `.${ext}`;
+  let version = nextVersionFrom(entries);
+  let filename = `${baseName}_v${String(version).padStart(2, '0')}.${ext}`;
+  let path = join(directory, filename);
 
-  for (const name of entries) {
-    if (!name.startsWith(prefix) || !name.endsWith(suffix)) continue;
-    const versionText = name.slice(prefix.length, -suffix.length);
-    if (!/^\d+$/.test(versionText)) continue;
-    highestVersion = Math.max(highestVersion, Number(versionText));
+  // Reading the directory and returning a name is not a reservation: two runs in
+  // the same second would both be handed v01 and the second would overwrite the
+  // first. Claim the name with an exclusive create and retry on collision, so a
+  // version number the caller receives is a name only it holds.
+  if (reserve && createDir) {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      try {
+        await writeFile(path, '', { encoding: 'utf-8', flag: 'wx' });
+        break;
+      } catch (error) {
+        if (error?.code !== 'EEXIST') throw error;
+        version = nextVersionFrom(await readdir(directory));
+        filename = `${baseName}_v${String(version).padStart(2, '0')}.${ext}`;
+        path = join(directory, filename);
+      }
+    }
   }
-
-  const version = highestVersion + 1;
-  const filename = `${baseName}_v${String(version).padStart(2, '0')}.${ext}`;
-  const path = join(directory, filename);
 
   return {
     root: join(workspaceDir, OUTPUT_ROOT),

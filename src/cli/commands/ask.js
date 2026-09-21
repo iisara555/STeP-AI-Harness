@@ -23,6 +23,7 @@ import {
 } from '../../modules/context-budget/index.js';
 import { parseYamlInlineList, stripYamlScalar } from '../../utils/simple-yaml.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
+import { evaluatePrivacyGate } from '../../modules/privacy/index.js';
 
 /**
  * Load router index skills from manifest/router-index.yaml
@@ -306,6 +307,14 @@ export async function queryStepRouter(query, options = {}) {
   if (typeof options.clarificationAnswer === 'string' && options.clarificationAnswer.trim()) {
     query = `${query}\nข้อมูลเพิ่มเติม: ${options.clarificationAnswer.trim()}`;
   }
+
+  // The request itself is the one piece of text this command always handles, and
+  // employees paste identifiers straight into it. Scan before anything is routed,
+  // reported or persisted, and route on the redacted text so a pasted identifier
+  // never reaches a Skill, a log line or a diagnostic.
+  const privacy = evaluatePrivacyGate(query);
+  query = privacy.redactedText;
+
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
@@ -559,6 +568,8 @@ export async function queryStepRouter(query, options = {}) {
     contextPlan,
     routingConfidence,
     authorityPreflight,
+    // Metadata only: class, action and hash. The raw request never leaves here.
+    privacy: privacy.logSafeMetadata,
   };
 }
 
@@ -681,8 +692,6 @@ export async function runAsk(args) {
     }
   }
 
-  if (!machineMode) info(`วิเคราะห์คำถาม: "${colors.bold(query)}" ...\n`);
-
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const userCluster = args.cluster || args.c || (await getUserCluster()) || '';
   const result = await queryStepRouter(query, {
@@ -692,8 +701,24 @@ export async function runAsk(args) {
     console.log(JSON.stringify({
       routing: result.routingContract,
       contextPlan: result.contextPlan,
+      privacy: result.privacy,
     }, null, 2));
     return;
+  }
+
+  // Echo the scanned request, not the raw one: terminal scrollback is a log too.
+  info(`วิเคราะห์คำถาม: "${colors.bold(result.query)}" ...\n`);
+
+  if (result.privacy.redactionApplied || result.privacy.privacyAction !== 'pass') {
+    console.log(colors.bold(colors.yellow('🔒 ตรวจข้อมูลส่วนบุคคลในคำถาม:')));
+    console.log(`  • ระดับข้อมูล: ${colors.bold(result.privacy.privacyClass)}`);
+    if (result.privacy.redactionApplied) {
+      console.log(`  • ${colors.dim('ปิดบังข้อมูลที่ตรวจพบก่อนจัดเส้นทางแล้ว')}`);
+    }
+    if (result.privacy.privacyAction !== 'pass' && result.privacy.privacyAction !== 'auto-mask') {
+      console.log(colors.yellow(`  • ${'ให้ตรวจสอบก่อนส่งต่อ การสแกนรูปแบบข้อความไม่ใช่การรับรองว่าส่งได้'}`));
+    }
+    console.log();
   }
   const {
     selectedSkill,

@@ -1,8 +1,10 @@
 const DEFAULT_BUDGETS = Object.freeze({
   startup: 800,
   // The contract now also carries source readiness and permitted use, which the
-  // original 300-token budget predates. Raised deliberately, not to hide growth.
-  routing: 600,
+  // original 300-token budget predates. Raised deliberately, not to hide growth:
+  // the largest observed contract estimates 268, so this keeps real headroom
+  // while still failing if the contract starts carrying prose.
+  routing: 400,
   skill: 2500,
   rules: 800,
   sources: 3000,
@@ -10,15 +12,29 @@ const DEFAULT_BUDGETS = Object.freeze({
   governance: 200,
 });
 
-const ESTIMATE_CHARS_PER_TOKEN = 2.5;
+// A single ratio cannot serve both scripts. Thai sits outside the dense part of
+// a BPE vocabulary and costs roughly one token per character, while Latin text
+// averages about four characters per token. Estimating Thai at the Latin rate
+// under-reported Thai-heavy Skills by close to half, so budgets they exceeded
+// were reported as fitting. Kept as a stated estimate: an exact count still
+// requires the provider's own tokenizer, which arrives via actualTokens.
+const THAI_CHARS_PER_TOKEN = 1.1;
+const LATIN_CHARS_PER_TOKEN = 4;
+const THAI_CHARACTER = /[฀-๿]/g;
 
 export function estimateTextTokens(text = '') {
   const value = String(text || '');
+  if (!value) {
+    return { chars: 0, estimatedTokens: 0, actualTokens: null, method: 'script-aware-estimate-v2' };
+  }
+
+  const thaiChars = (value.match(THAI_CHARACTER) || []).length;
+  const otherChars = value.length - thaiChars;
   return {
     chars: value.length,
-    estimatedTokens: value ? Math.ceil(value.length / ESTIMATE_CHARS_PER_TOKEN) : 0,
+    estimatedTokens: Math.ceil(thaiChars / THAI_CHARS_PER_TOKEN + otherChars / LATIN_CHARS_PER_TOKEN),
     actualTokens: null,
-    method: 'char-estimate-v1',
+    method: 'script-aware-estimate-v2',
   };
 }
 
@@ -239,7 +255,9 @@ export function buildStructuredHandoff(step, outputs = {}, {
     return { ...fullEnvelope, truncated: false, telemetry };
   }
 
-  const maxChars = Math.floor(maxEstimatedTokens * ESTIMATE_CHARS_PER_TOKEN);
+  // Budget characters at the Thai rate: assuming the Latin rate here would hand
+  // a Thai handoff roughly twice the characters its token budget allows.
+  const maxChars = Math.floor(maxEstimatedTokens * THAI_CHARS_PER_TOKEN);
   const entries = Object.entries(outputs || {});
   const perKeyBudget = Math.max(80, Math.floor((maxChars - 500) / Math.max(1, entries.length)));
   const data = {};
