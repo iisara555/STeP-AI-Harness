@@ -84,6 +84,30 @@ test('Context efficiency — progressive disclosure without architecture changes
     assert.ok(compact.includes('ทั้งไฟล์'));
   });
 
+  await t.test('compact bootstrap makes local routing a gate, not an option the agent may skip', () => {
+    const compact = buildRouterGuidelines({ format: 'compact' });
+
+    // Context efficiency removed the inline Rule and Skill listings, so the CLI call is
+    // now the only path back into the harness. Phrasing it as a condition the agent
+    // evaluates ("when a runtime is available") let agents answer straight from model
+    // knowledge and never consult the Router at all.
+    assert.ok(compact.includes('Routing Gate'), 'bootstrap must name the gate');
+    assert.ok(compact.includes('ก่อนลงมือกับคำขอที่เป็นงานจริงทุกครั้ง'), 'gate must apply to every real task');
+    assert.ok(compact.includes('ห้ามตอบงานจากความรู้ของโมเดลเองโดยไม่ผ่าน gate'), 'bootstrap must forbid bypassing the gate');
+
+    // A gate with no defined failure path is a gate agents quietly drop.
+    assert.ok(compact.includes('ถ้า gate ใช้ไม่ได้'), 'bootstrap must define what to do when the CLI fails');
+    assert.ok(compact.includes('ห้ามเงียบแล้วตอบเอง'), 'CLI failure must not fall through to unrouted answers');
+
+    // Skipping onboarding is about not blocking the user, not about skipping governance.
+    assert.ok(compact.includes('ข้าม onboarding ไม่ได้แปลว่าข้าม Router'), 'skipping onboarding must not read as skipping the Router');
+    assert.ok(!compact.includes('เมื่อมี local runtime/CLI ให้ route'), 'routing must not be phrased as conditional again');
+
+    // Rules stay un-enumerated by design, so the floor has to be stated as behaviour.
+    assert.ok(compact.includes('มีผลกับทุกคำตอบเสมอ'), 'organization rules must apply with or without the Router');
+    assert.ok(!compact.includes('rules/human-approval.md'), 'the floor must not re-introduce Rule inventory');
+  });
+
   await t.test('context plan exposes over-budget components instead of silently pretending they fit', () => {
     const plan = buildContextBudgetPlan({
       routingContract: { skill: 'receipt-audit' },

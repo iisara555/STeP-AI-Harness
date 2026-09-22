@@ -22,9 +22,12 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
     text += `- พนักงานพิมพ์ภาษาไทยธรรมดาได้ ไม่ต้องรู้ Git, Terminal, Skill ID, YAML หรือ Router\n`;
     text += `- **First Run:** อ่านเฉพาะ \`START-PROMPT.txt\`, \`START-HERE.md\`, \`USER.md\` และ \`MEMORY.md\` ถ้ามี\n`;
     text += `- **ห้าม First Run scan:** ห้าม recursive scan, glob/search \`*.md\`, หรือสำรวจ \`skills/\`, \`rules/\`, \`manifest/\` ทั้งโฟลเดอร์\n`;
-    text += `- ถ้ามีงานจริง ให้ข้าม onboarding และใช้ cheap context จากคำขอ/ไฟล์ปัจจุบันก่อน\n`;
-    text += `- เมื่อมี local runtime/CLI ให้ route ด้วย \`step-ai ask "<งาน>" --json\` แล้วใช้ **compact routing contract**; **ห้ามโหลด \`manifest/router-index.yaml\` ทั้งไฟล์เข้า model context**\n`;
-    text += `- ถ้า local router ใช้ไม่ได้ จึงค่อยอ่านเฉพาะ section ที่จำเป็นจาก Router metadata; งาน Atomic เลือก **1 primary Skill** ส่วนงาน Composite ตรวจเฉพาะ Playbook ที่ match และทำทีละ step\n`;
+    text += `- **Routing Gate (บังคับ):** ก่อนลงมือกับคำขอที่เป็นงานจริงทุกครั้ง ให้รัน \`step-ai ask "<คำขอของผู้ใช้>" --json\` ก่อนเสมอ แล้วทำตาม **compact routing contract** ที่ได้กลับมา **ห้ามตอบงานจากความรู้ของโมเดลเองโดยไม่ผ่าน gate นี้** แม้คำขอจะดูง่ายหรือดูเหมือนตอบได้ทันที; **ห้ามโหลด \`manifest/router-index.yaml\` ทั้งไฟล์เข้า model context**\n`;
+    text += `- ข้าม Routing Gate ได้เฉพาะ: การทักทาย คำถามเกี่ยวกับตัว STeP AI เอง และการแก้ข้อความสั้นที่ผู้ใช้ระบุสิ่งที่ต้องการมาครบแล้ว\n`;
+    text += `- **ถ้า gate ใช้ไม่ได้:** ไม่มี runtime หรือคำสั่งล้ม ให้บอกผู้ใช้หนึ่งบรรทัดว่ากำลังทำงานนอก Router แล้วอ่านเฉพาะ section ที่จำเป็นจาก Router metadata เพื่อเลือก **1 primary Skill** ห้ามเงียบแล้วตอบเอง\n`;
+    text += `- ถ้าข้อความแรกเป็นงานจริง ให้ข้าม onboarding แล้วเข้า Routing Gate ทันที — ข้าม onboarding ไม่ได้แปลว่าข้าม Router\n`;
+    text += `- กฎองค์กรใน \`rules/\` มีผลกับทุกคำตอบเสมอ ไม่ว่าจะผ่าน Router หรือไม่ โดยเฉพาะ Human Approval, Data Classification และ Secret Safety; path ที่ต้องอ่านจริงอยู่ใน \`mandatoryReferences\` ของ contract\n`;
+    text += `- งาน Atomic เลือก **1 primary Skill** ส่วนงาน Composite ตรวจเฉพาะ Playbook ที่ match และทำทีละ step\n`;
     text += `- ถ้า Playbook มี \`specPath\` ให้เปิด spec นั้นเฉพาะ flow ที่ถูกเลือก\n`;
     text += `- โหลดเฉพาะ mandatory references ของ Skill จาก \`manifest/skills.yaml\`; templates/examples เป็น Level 3 โหลดเมื่อจำเป็นเท่านั้น\n`;
     text += `- Installed ≠ Loaded: การมีไฟล์อยู่ใน Workspace ไม่ได้หมายความว่าต้องอ่านเข้า context\n`;
