@@ -265,6 +265,10 @@ const SYNTHETIC_SKILLS = [
   ['management-review-prep', 'qs',
     'ช่วยรวบรวมข้อมูลเข้าประชุมทบทวนฝ่ายบริหารให้หน่อย',
     'ช่วยจัดทำชุดข้อมูลให้ผู้บริหารทบทวนระบบคุณภาพรอบปีนี้หน่อย'],
+  // Appended last on purpose: AMBIGUOUS_BY_DESIGN keys are positional.
+  ['event-run-of-show', 'cc',
+    'ช่วยจัดทำรันคิวเวทีจากกำหนดการนี้ แยกคิวจอ คิวเสียง และคนรับผิดชอบแต่ละคิว',
+    'ช่วยตรวจ sequence เวทีนี้ว่าเวลารวมไม่ตรงตรงไหน คิวไหนยังไม่มีคนรับผิดชอบ'],
 ];
 
 /**
@@ -300,6 +304,7 @@ const CASES = [
     ['cc', 'ช่วยเขียนแคปชั่นชวนคนมางานเปิดบ้านหน่อย', 'step-writing'],
     ['ga', 'ช่วยร่างหนังสือเชิญเข้าประชุมทบทวนฝ่ายบริหารหน่อย', 'thai-official-documents'],
     ['qs', 'ช่วยตรวจทะเบียนเอกสารที่มีเลขบัตรประชาชนก่อนส่งต่อหน่อย', 'data-privacy-compliance'],
+    ['cc', 'ช่วยออกแบบคอนเซ็ปต์งานนิทรรศการและผังบูธสำหรับงานเปิดบ้าน', 'event-concept'],
   ].map(([team, prompt, skill], index) => ({
     id: `boundary-${index + 1}`,
     name: `colloquial topic must preserve ${skill}`,

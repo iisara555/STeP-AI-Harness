@@ -280,6 +280,26 @@ skills:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
 
+  event-run-of-show:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.event]
+    service: [creative-marketing]
+    path: skills/creative/event-run-of-show/SKILL.md
+    description: สร้างและตรวจ Run of Show หรือ Sequence เวที ระดับคิว พร้อม lane เวลา จอ เสียง แสง เวที และผู้รับผิดชอบรายคิว
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-22"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
+      optional: [naming-convention-rule, step-brand-ci-guideline]
+
   presentation-design:
     owner: cc
     version: 2.0.0

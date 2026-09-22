@@ -98,10 +98,10 @@ test('STeP Skill Authoring Standard', async (t) => {
       ...evals.needsDirectModelSideCoverage,
     ]);
 
-    assert.equal(registered.length, 46);
+    assert.equal(registered.length, 47);
     assert.deepEqual([...new Set(registered)].sort(), [...covered].sort());
     assert.equal(evals.directModelSideBenchmark.skills.length, 26);
-    assert.equal(evals.needsDirectModelSideCoverage.length, 20);
+    assert.equal(evals.needsDirectModelSideCoverage.length, 21);
   });
 
   await t.test('Standard v2 is enforced on new document-review without forcing legacy migration', async () => {
@@ -196,8 +196,8 @@ test('STeP Skill Authoring Standard', async (t) => {
   await t.test('manifest integrity includes the new Skill, process and Playbook', async () => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
-    assert.equal(integrity.summary.skillsCount, 46);
-    assert.equal(integrity.summary.routerSkillsCount, 45);
-    assert.equal(integrity.summary.playbooksCount, 4);
+    assert.equal(integrity.summary.skillsCount, 47);
+    assert.equal(integrity.summary.routerSkillsCount, 46);
+    assert.equal(integrity.summary.playbooksCount, 5);
   });
 });

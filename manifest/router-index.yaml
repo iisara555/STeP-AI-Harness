@@ -374,6 +374,48 @@ skills:
           description: การจัดซื้อจัดจ้างสถานที่หรือจ้างออแกไนเซอร์
       human_only: {}
 
+  - name: event-run-of-show
+    cluster: market-creative
+    domain: creative
+    processId: creative.event
+    teams:
+      primary: [cc]
+      consumers: [eic, crm, imo, nmco, ga]
+    description: สร้างและตรวจ Run of Show หรือ Sequence เวที ระดับคิว พร้อม lane เวลา จอ เสียง แสง เวที และ Lead รายคิว
+    intent: [create, plan, review, check]
+    triggers: [run of show, run-of-show, rundown, cue sheet, cue-to-cue, show flow, stage sequence, showtime, run through, run-through, show calling, รันคิว, รันทรู, คิวงาน, คิวเวที, คิวจอ, คิวเสียง, คิวไฟ, ลำดับเวที, ลำดับคิว, ลำดับพิธีการ, ลำดับพิธีเปิด, sequence เวที, ซีเควนซ์, กำหนดการเวที, สคริปต์เวที, บทพิธีกร, คิวพิธีกร, ไทม์ไลน์เวที, ซ้อมใหญ่, จับเวลาบนเวที, นาทีต่อนาที, ตารางคิว, ผังคิว]
+    paths: ["**/run-of-show/**", "**/sequence/**", "**/rundown/**", "**/stage/**"]
+    fileTypes: [csv, xlsx, pdf, docx]
+    requires: [event_date, agenda_blocks, venue]
+    scope:
+      allow:
+        - แตก agenda เป็น cue รายแถว พร้อม block time และ cue time สองระดับ
+        - แยก lane เวลา จอ เสียง แสง เวที ของประกอบฉาก และผู้รับผิดชอบรายคิว
+        - ตรวจผลรวมเวลา คิวที่ไม่มี Lead lane ที่ประกาศแต่ไม่มีข้อมูล และ placeholder ที่ยังค้าง
+        - เสนอรหัส Scene หรือ Format เป็นข้อเสนอที่ต้องให้ทีม AV ยืนยันก่อนใช้
+      escalate:
+        event_concept_and_zoning:
+          skill: event-concept
+          description: ธีมงาน คอนเซ็ปต์ ผังโซน และเส้นทางผู้เข้าร่วมยังไม่ได้ตัดสิน
+        speaker_deck_and_vtr:
+          skill: presentation-design
+          description: การทำหรือแก้สไลด์ VTR หรือกราฟิกที่คิวอ้างถึง
+        pii_in_contact_lane:
+          skill: data-privacy-compliance
+          description: เอกสารมีเบอร์โทร ทะเบียนรถ หรือข้อมูลการเดินทางของบุคคลในคอลัมน์ติดต่อ
+        av_and_venue_procurement:
+          skill: tor-government-writing
+          description: การเขียนขอบเขตงานเพื่อจ้างทีมแสงเสียง จอ หรือออแกไนเซอร์
+      human_only:
+        vip_protocol_and_opening_speech:
+          role: authorized-signatory
+          authority: official-signing
+          description: ลำดับเกียรติ ลำดับการเชิญ VIP และถ้อยคำในคำกล่าวเปิดงานหรือหนังสือเชิญ
+        av_vendor_selection:
+          role: procurement-committee
+          authority: procurement-approval
+          description: การคัดเลือกผู้รับจ้างระบบแสงเสียง จอ LED หรือออแกไนเซอร์
+
   - name: presentation-design
     cluster: market-creative
     domain: creative
