@@ -3,3 +3,9 @@
 *.command text eol=lf
 *.bat text eol=crlf
 *.ps1 text eol=crlf
+
+# Vendored, hash-pinned privacy runtime. Every byte is verified against
+# src/vendor/privacy/manifest.json by test/privacy-documents.test.js, so these
+# files must never be EOL-converted: autocrlf rewrote 15 of them on Windows
+# checkouts and made the integrity check fail on files nobody had touched.
+src/vendor/privacy/** -text
