@@ -313,6 +313,24 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const macHelp = join(PACKAGE_ROOT, 'MAC-START-HERE.txt');
     assert.ok(await pathExists(runtimeHelper), 'install/macos-runtime.sh must exist');
     assert.ok(await pathExists(macHelp), 'MAC-START-HERE.txt must exist');
+    // Apple removed the Control-click > Open bypass in macOS 15, so guidance that leads
+    // with it sends Mac staff to a dead end on every current machine. The unsigned
+    // .command cannot de-quarantine itself: it has to be allowed before it can run.
+    const macHelpContent = await readFile(macHelp, 'utf-8');
+    assert.ok(macHelpContent.includes('System Settings'), 'mac guide must name the System Settings path');
+    assert.ok(macHelpContent.includes('Privacy & Security'), 'mac guide must name the Privacy pane');
+    assert.ok(macHelpContent.includes('Open Anyway'), 'mac guide must name the Open Anyway button');
+    assert.ok(macHelpContent.includes('xattr -dr com.apple.quarantine'), 'mac guide must offer the one-line fallback');
+    if (macHelpContent.includes('คลิกขวา')) {
+      assert.ok(
+        macHelpContent.includes('macOS 15') || macHelpContent.includes('Sequoia'),
+        'right-click guidance must state which macOS versions it still applies to',
+      );
+    }
+
+    const supportContent = await readFile(join(PACKAGE_ROOT, 'SUPPORT.md'), 'utf-8');
+    assert.ok(supportContent.includes('Open Anyway'), 'SUPPORT.md must cover the macOS Gatekeeper block');
+    assert.ok(supportContent.includes('xattr -dr com.apple.quarantine'), 'SUPPORT.md must carry the same fallback command');
 
     const runtimeContent = await readFile(runtimeHelper, 'utf-8');
     assert.ok(runtimeContent.includes('STEP_NODE_VERSION="22.23.2"'));
