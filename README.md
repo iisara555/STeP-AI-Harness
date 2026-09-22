@@ -14,11 +14,11 @@ README ฉบับนี้อ้างอิงชุดที่เตรี�
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **46 Skills** |
-| Playbooks | **4 Playbooks** |
-| Actions | **3 Actions** |
+| Skills | **47 Skills** |
+| Playbooks | **5 Playbooks** |
+| Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 45 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
+Router มีเส้นทางเลือก Skill 46 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
 
 **Release baseline ที่บันทึกไว้คือ v0.7.2** ส่วนชุดที่เตรียมสำหรับ Pilot รอบนี้และ `package.json` ระบุ **v0.7.3** ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ ต้องตรวจ checksum ของชุดที่นำไปใช้ด้วย
 
@@ -147,7 +147,7 @@ source ยังรวมการแยกคำขอกำกวมระห�
 
 ทั้งสองส่วนรวมใน candidate v0.7.3 สำหรับ Pilot แล้ว ส่วน release baseline ที่บันทึกไว้ยังเป็น v0.7.2 จนกว่าจะเผยแพร่รุ่นใหม่
 
-78 เคสประกอบด้วย 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 54 คำถามจำลอง และ 4 เคสจำลองตรวจคำชนกัน ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
+81 เคสประกอบด้วย 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 56 คำถามจำลอง และ 5 เคสจำลองตรวจคำชนกัน ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
 
 ### ตรวจ source ในเครื่อง
 

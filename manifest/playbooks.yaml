@@ -179,3 +179,49 @@ playbooks:
         consumes: [skill-contract, repo-change-set, validation-results, eval-plan, known-gaps]
         produces: [pilot-readiness-evidence, remaining-gaps]
 
+
+  - id: brief-to-run-of-show
+    name: "Agenda to Run of Show"
+    clarificationLabel: "แปลงกำหนดการเป็นรันคิวเวที"
+    owner: cc
+    consumers: [cc, eic, crm, imo, nmco, ga]
+    description: "แปลงกำหนดการหรือบรีฟงานหนึ่งงานต่อหนึ่ง run เป็น Run of Show ระดับคิว พร้อม lane จอ เสียง แสง เวที ผู้รับผิดชอบรายคิว และออกเป็น Google Sheet หรือ XLSX"
+    sourcePolicy: one-event-per-run
+    factPolicy: facts-and-assumptions-separated
+    timePolicy: source-times-first-no-silent-correction
+    enumPolicy: scene-codes-require-confirmation
+    piiPolicy: no-contact-details-in-sheet
+    outputSchema: run-of-show-v1
+    specPath: docs/event-run-of-show.md
+    requiredSignals: [source, spreadsheet]
+    minSignals: 3
+    signals:
+      source: [กำหนดการ, agenda, บรีฟงาน, rundown, sequence, ลำดับงาน, tor, คิวเดิม]
+      sequencing: [รันคิว, run of show, run-of-show, คิวงาน, คิวเวที, ลำดับเวที, cue sheet, สคริปต์เวที, ซ้อมใหญ่, run through, นาทีต่อนาที]
+      lanes: [แสงเสียง, คิวจอ, คิวเสียง, คิวไฟ, ขึ้นจอ, light, sound, av, สไลด์ขึ้นจอ, จอซ้าย, จอขวา]
+      ownership: [ผู้รับผิดชอบ, lead, ใครดูแล, staff, ทีมงาน, คนคุมคิว]
+      spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง, xlsx]
+    steps:
+      - id: read-source
+        type: skill
+        skill: document-review
+        description: "อ่านกำหนดการ บรีฟ หรือ sequence เดิม แยกข้อเท็จจริงที่ยืนยันแล้วออกจาก placeholder ระบุ block ที่ยังไม่มีเวลา ไม่มีเจ้าของ หรือยังรอคอนเฟิร์ม"
+        produces: [event-facts, agenda-blocks, placeholders, missing-information]
+      - id: build-sequence
+        type: skill
+        skill: event-run-of-show
+        description: "แตก block เป็น cue ตาม Lane Contract กำหนด lane จอ เสียง แสง เวที ผู้รับผิดชอบรายคิว ตรวจผลรวมเวลาและ Timer แล้วติดป้าย provenance ทุกค่า"
+        consumes: [event-facts, agenda-blocks, placeholders, missing-information]
+        produces: [show-parameters, cue-list, lane-assignments, cue-enums, open-items, provenance-labels]
+      - id: create-run-of-show-sheet
+        type: action
+        action: spreadsheet-run-of-show
+        when: spreadsheet
+        preferredTool: google-sheets
+        fallback: xlsx
+        capability: spreadsheet-write
+        actionSpecPath: docs/spreadsheet-run-of-show.md
+        completionCriteria: output-reference-required
+        description: "สร้าง Show Parameters, Run of Show, Cue Enums และ Open Items ตาม Action Contract ถ้าไม่มี Google Sheets ให้ fallback เป็น XLSX และห้าม claim ว่าสร้างไฟล์สำเร็จหากยังไม่มี output reference จริง"
+        consumes: [show-parameters, cue-list, lane-assignments, cue-enums, open-items, provenance-labels]
+        produces: [run-of-show-sheet, cue-enums-sheet, open-items-sheet]

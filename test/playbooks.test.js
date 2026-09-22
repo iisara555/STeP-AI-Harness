@@ -28,10 +28,10 @@ test('STeP Composite Playbooks', async (t) => {
   const actions = await loadActionRegistry(PACKAGE_ROOT);
 
   await t.test('registry contains the intentionally small Pilot playbooks', () => {
-    assert.equal(playbooks.length, 4);
+    assert.equal(playbooks.length, 5);
     assert.deepEqual(
       playbooks.map((p) => p.id),
-      ['tor-to-project-plan', 'meeting-to-action-plan', 'iso-audit-readiness-flow', 'skill-to-pilot']
+      ['tor-to-project-plan', 'meeting-to-action-plan', 'iso-audit-readiness-flow', 'skill-to-pilot', 'brief-to-run-of-show']
     );
   });
 
@@ -70,6 +70,36 @@ test('STeP Composite Playbooks', async (t) => {
     assert.deepEqual(playbook.parameters, ['contract-start', 'event-start', 'event-end', 'contract-end']);
     assert.equal(playbook.outputSchema, 'project-master-plan-v1');
     assert.equal(playbook.specPath, 'docs/tor-to-project-plan.md');
+  });
+
+  await t.test('Run of Show Playbook only fires when the staff member asks for the sheet', async () => {
+    const playbook = playbooks.find((p) => p.id === 'brief-to-run-of-show');
+    assert.equal(playbook.sourcePolicy, 'one-event-per-run');
+    assert.equal(playbook.factPolicy, 'facts-and-assumptions-separated');
+    assert.equal(playbook.outputSchema, 'run-of-show-v1');
+    assert.equal(playbook.specPath, 'docs/event-run-of-show.md');
+    assert.deepEqual(playbook.requiredSignals, ['source', 'spreadsheet']);
+
+    // Every cue-level request mentions an agenda and lanes, so source+sequencing+lanes
+    // alone would capture atomic work and waste the document-review step on it.
+    const atomic = await queryStepRouter(
+      'ช่วยจัดทำรันคิวเวทีจากกำหนดการนี้ แยกคิวจอ คิวเสียง และคนรับผิดชอบแต่ละคิว',
+      { team: 'cc' }
+    );
+    assert.equal(atomic.routingMode, 'SKILL');
+    assert.equal(atomic.selectedPlaybook, null);
+    assert.equal(atomic.selectedSkill?.name, 'event-run-of-show');
+
+    const composite = await queryStepRouter(
+      'ช่วยจัดทำรันคิวเวทีจากกำหนดการนี้ แล้วออกเป็น Google Sheet ให้ทีมด้วย',
+      { team: 'cc' }
+    );
+    assert.equal(composite.routingMode, 'PLAYBOOK');
+    assert.equal(composite.selectedPlaybook?.id, 'brief-to-run-of-show');
+    assert.deepEqual(
+      composite.playbookPlan.map((step) => step.skill || step.action),
+      ['document-review', 'event-run-of-show', 'spreadsheet-run-of-show']
+    );
   });
 
   await t.test('exact staff phrasing routes TOR Action Plan + Grantt + Google Sheet to Playbook', async () => {
@@ -391,6 +421,6 @@ playbooks:
   await t.test('full manifest integrity includes Playbooks', async () => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
-    assert.equal(integrity.summary.playbooksCount, 4);
+    assert.equal(integrity.summary.playbooksCount, 5);
   });
 });

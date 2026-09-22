@@ -10,7 +10,7 @@
 
 **Repository scope:** source remains development until released; [Pilot runbook](pilot-runbook.md) governs the supervised session
 
-**Current main inventory:** 46 Skills / 4 Playbooks / 3 Actions / 22 teams / 5 routing clusters
+**Current main inventory:** 47 Skills / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
 
 ## Executive Summary
 

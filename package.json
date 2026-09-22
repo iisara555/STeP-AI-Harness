@@ -49,6 +49,8 @@
     "docs/playbooks.md",
     "docs/tor-to-project-plan.md",
     "docs/spreadsheet-project-plan.md",
+    "docs/event-run-of-show.md",
+    "docs/spreadsheet-run-of-show.md",
     "manifest/actions.yaml",
     "manifest/provenance.yaml",
     "docs/harness-foundation.md",

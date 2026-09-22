@@ -292,9 +292,9 @@ Master Document List        ← missing source
 ## 8. Skills, Playbooks และ Actions
 
 ณ snapshot ปัจจุบัน (ตัวเลขนับจาก manifest ไม่ใช่จากรูป):
-- 46 Skills ใน `manifest/skills.yaml` โดยเป็นปลายทางที่ Router เลือกได้ 45 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง
-- 4 Playbooks
-- 3 executable Actions
+- 47 Skills ใน `manifest/skills.yaml` โดยเป็นปลายทางที่ Router เลือกได้ 46 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง
+- 5 Playbooks
+- 4 executable Actions
 - 6 provenance types
 - 22 teams ใน 5 AI routing clusters
 

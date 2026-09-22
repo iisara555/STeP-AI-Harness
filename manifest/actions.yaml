@@ -31,3 +31,13 @@ actions:
     confirmation: user-confirm
     preferredTools: [browser]
     outputReferenceRequired: false
+
+  spreadsheet-run-of-show:
+    name: "Run of Show Spreadsheet"
+    capability: spreadsheet-write
+    risk: low
+    sideEffect: reversible
+    confirmation: none
+    preferredTools: [google-sheets, xlsx]
+    outputReferenceRequired: true
+    specPath: docs/spreadsheet-run-of-show.md

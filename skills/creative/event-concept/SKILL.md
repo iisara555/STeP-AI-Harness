@@ -35,6 +35,7 @@ Skill นี้ทำหน้าที่:
 - บรีฟงานออกแบบชิ้นงานเดี่ยว → `designer-brief`
 - ตรวจงานเทียบ brand → `step-brand`
 - ออกแบบการเรียนรู้หรืออบรม → `learning-designer`
+- ทำลำดับคิวเวที รันคิว หรือ sequence นาทีต่อนาที → `event-run-of-show`
 
 ## Inputs
 
