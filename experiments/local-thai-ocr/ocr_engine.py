@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import statistics
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import fitz
 import numpy as np
+import pypdfium2 as pdfium
 from PIL import Image
 from paddleocr import PaddleOCR
 
@@ -50,6 +51,7 @@ class LocalThaiOCR:
         return self._handwriting
 
     def process(self, path: Path, config: OCRConfig) -> dict[str, Any]:
+        started = time.perf_counter()
         suffix = path.suffix.lower()
         warnings: list[str] = []
 
@@ -57,8 +59,7 @@ class LocalThaiOCR:
             pages = self._process_pdf(path, config, warnings)
         else:
             image = Image.open(path).convert("RGB")
-            page = self._ocr_image(image, 1, config, warnings)
-            pages = [page]
+            pages = [self._ocr_image(image, 1, config, warnings)]
 
         lines = [line for page in pages for line in page.get("lines", [])]
         scores = [line["confidence"] for line in lines if line.get("confidence") is not None]
@@ -70,9 +71,9 @@ class LocalThaiOCR:
                 text_pages.append(page.get("text", ""))
             else:
                 text_pages.append("\n".join(
-                    (line.get("handwriting_candidate") or line.get("text", "")).strip()
+                    line.get("text", "").strip()
                     for line in page.get("lines", [])
-                    if (line.get("handwriting_candidate") or line.get("text", "")).strip()
+                    if line.get("text", "").strip()
                 ))
 
         return {
@@ -85,6 +86,7 @@ class LocalThaiOCR:
                 "recognized_lines": len(lines),
                 "average_confidence": round(statistics.fmean(scores), 4) if scores else None,
                 "needs_review": len(low),
+                "elapsed_seconds": round(time.perf_counter() - started, 3),
             },
             "text": "\n\n".join(text_pages).strip(),
             "pages": pages,
@@ -92,26 +94,37 @@ class LocalThaiOCR:
         }
 
     def _process_pdf(self, path: Path, config: OCRConfig, warnings: list[str]) -> list[dict[str, Any]]:
-        doc = fitz.open(path)
+        pdf = pdfium.PdfDocument(str(path))
         pages: list[dict[str, Any]] = []
         try:
-            for index, page in enumerate(doc, start=1):
-                native_text = page.get_text("text").strip()
-                if len(native_text) >= config.native_pdf_min_chars:
-                    pages.append({
-                        "page": index,
-                        "source": "native_pdf_text",
-                        "text": native_text,
-                        "lines": [],
-                    })
-                    continue
+            for page_index in range(len(pdf)):
+                page = pdf[page_index]
+                try:
+                    textpage = page.get_textpage()
+                    try:
+                        native_text = textpage.get_text_bounded().replace("\r\n", "\n").strip()
+                    finally:
+                        textpage.close()
 
-                scale = config.render_dpi / 72.0
-                pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
-                image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                pages.append(self._ocr_image(image, index, config, warnings))
+                    if len(native_text) >= config.native_pdf_min_chars:
+                        pages.append({
+                            "page": page_index + 1,
+                            "source": "native_pdf_text",
+                            "text": native_text,
+                            "lines": [],
+                        })
+                        continue
+
+                    bitmap = page.render(scale=config.render_dpi / 72.0)
+                    try:
+                        image = bitmap.to_pil().convert("RGB")
+                    finally:
+                        bitmap.close()
+                    pages.append(self._ocr_image(image, page_index + 1, config, warnings))
+                finally:
+                    page.close()
         finally:
-            doc.close()
+            pdf.close()
         return pages
 
     def _ocr_image(
@@ -121,8 +134,7 @@ class LocalThaiOCR:
         config: OCRConfig,
         warnings: list[str],
     ) -> dict[str, Any]:
-        ocr = self._get_ocr()
-        outputs = ocr.predict(np.asarray(image))
+        outputs = self._get_ocr().predict(np.asarray(image))
         lines: list[dict[str, Any]] = []
 
         for output in outputs:
@@ -147,6 +159,11 @@ class LocalThaiOCR:
                         candidate = self._get_handwriting().read(crop)
                         if candidate:
                             item["handwriting_candidate"] = candidate
+                            item["handwriting_candidate_unverified"] = True
+                            self._add_warning(
+                                warnings,
+                                "Thai-TrOCR candidates are second opinions only and never replace OCR text automatically.",
+                            )
                     except ImportError:
                         self._add_warning(
                             warnings,
