@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STeP Local Thai OCR — ทดลองบนเครื่อง</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, -apple-system, "Noto Sans Thai", sans-serif; }
+    body { margin: 0; background: Canvas; color: CanvasText; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+    h1 { margin-bottom: 6px; font-size: 1.7rem; }
+    .muted { opacity: .72; }
+    .notice { border: 1px solid color-mix(in srgb, CanvasText 18%, transparent); border-radius: 12px; padding: 12px 14px; margin: 16px 0; }
+    .panel { border: 1px solid color-mix(in srgb, CanvasText 18%, transparent); border-radius: 14px; padding: 18px; margin-top: 16px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    label { display: inline-flex; gap: 8px; align-items: center; }
+    input[type="file"] { max-width: 100%; }
+    input[type="number"] { width: 76px; }
+    button { padding: 9px 14px; border-radius: 9px; border: 1px solid color-mix(in srgb, CanvasText 22%, transparent); cursor: pointer; }
+    button.primary { font-weight: 650; }
+    button:disabled { opacity: .55; cursor: default; }
+    textarea { width: 100%; min-height: 180px; box-sizing: border-box; padding: 12px; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, transparent); vertical-align: top; }
+    .bad { font-weight: 650; }
+    .pill { display: inline-block; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 999px; padding: 2px 8px; margin-right: 5px; font-size: .82rem; }
+    .hidden { display: none; }
+    #status { min-height: 1.4em; }
+    .summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    @media (max-width: 700px) { table { font-size: .82rem; } .hide-mobile { display: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>STeP Local Thai OCR</h1>
+  <div class="muted">Standalone experiment — อ่าน PDF/ภาพภาษาไทยบนเครื่องพนักงาน</div>
+
+  <div class="notice">
+    <strong>Privacy:</strong> ไฟล์เอกสารถูกประมวลผลที่ <code>127.0.0.1</code> บนเครื่องนี้เท่านั้น
+    และไฟล์ชั่วคราวถูกลบหลังประมวลผล. ครั้งแรก PaddleOCR อาจดาวน์โหลดโมเดลจากอินเทอร์เน็ต;
+    หากเปิด Thai-TrOCR ก็อาจดาวน์โหลดโมเดลจาก Hugging Face. ไม่มีการส่งเอกสารไปยัง OCR cloud API.
+  </div>
+
+  <section class="panel">
+    <div class="row">
+      <input id="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff">
+      <label>Review ต่ำกว่า
+        <input id="threshold" type="number" min="0.10" max="0.99" step="0.01" value="0.80">
+      </label>
+      <label title="ต้องติดตั้ง optional handwriting package ก่อน">
+        <input id="handwriting" type="checkbox">
+        Thai-TrOCR สำหรับบรรทัด confidence ต่ำ
+      </label>
+      <button id="run" class="primary">อ่านเอกสาร</button>
+    </div>
+    <p id="status" class="muted"></p>
+  </section>
+
+  <section id="resultPanel" class="panel hidden">
+    <div class="row">
+      <strong>ผลลัพธ์</strong>
+      <button id="copy">คัดลอกข้อความ</button>
+      <button id="download">บันทึก JSON</button>
+    </div>
+    <div id="summary" class="summary"></div>
+    <textarea id="text" spellcheck="false"></textarea>
+    <div id="warnings"></div>
+  </section>
+
+  <section id="detailPanel" class="panel hidden">
+    <strong>บรรทัดที่ OCR พบ</strong>
+    <div style="overflow:auto; margin-top:10px">
+      <table>
+        <thead>
+          <tr><th>หน้า</th><th>Confidence</th><th>ข้อความ</th><th>Thai-TrOCR candidate</th><th class="hide-mobile">สถานะ</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastPayload = null;
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+}
+
+$("run").addEventListener("click", async () => {
+  const file = $("file").files[0];
+  if (!file) { $("status").textContent = "กรุณาเลือก PDF หรือภาพก่อน"; return; }
+  $("run").disabled = true;
+  $("status").textContent = "กำลังประมวลผลในเครื่อง… ครั้งแรกอาจช้ากว่าเพราะต้องเตรียมโมเดล";
+  $("resultPanel").classList.add("hidden");
+  $("detailPanel").classList.add("hidden");
+
+  const qs = new URLSearchParams({
+    filename: file.name,
+    threshold: $("threshold").value,
+    handwriting: $("handwriting").checked ? "fallback" : "off",
+  });
+
+  try {
+    const res = await fetch("/api/ocr?" + qs.toString(), {
+      method: "POST",
+      headers: {"Content-Type": "application/octet-stream"},
+      body: await file.arrayBuffer(),
+    });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.message || payload.error || "OCR failed");
+
+    lastPayload = payload.result;
+    const s = payload.result.summary;
+    $("summary").innerHTML = [
+      `หน้า ${s.pages}`,
+      `บรรทัด ${s.recognized_lines}`,
+      `confidence เฉลี่ย ${s.average_confidence ?? "-"}`,
+      `ต้องตรวจ ${s.needs_review}`,
+    ].map(x => `<span class="pill">${escapeHtml(x)}</span>`).join("");
+
+    $("text").value = payload.result.text || "";
+    $("warnings").innerHTML = (payload.result.warnings || []).map(w => `<p class="bad">⚠ ${escapeHtml(w)}</p>`).join("");
+
+    const rows = [];
+    for (const page of payload.result.pages || []) {
+      if (page.source === "native_pdf_text") continue;
+      for (const line of page.lines || []) {
+        const conf = line.confidence == null ? "-" : line.confidence.toFixed(3);
+        rows.push(`<tr>
+          <td>${page.page}</td>
+          <td class="${line.needs_review ? "bad" : ""}">${conf}</td>
+          <td>${escapeHtml(line.text)}</td>
+          <td>${escapeHtml(line.handwriting_candidate || "")}</td>
+          <td class="hide-mobile">${line.needs_review ? "ตรวจซ้ำ" : "ผ่าน"}</td>
+        </tr>`);
+      }
+    }
+    $("rows").innerHTML = rows.join("") || `<tr><td colspan="5">หน้านี้ใช้ text layer ของ PDF โดยตรง จึงไม่ต้อง OCR</td></tr>`;
+    $("resultPanel").classList.remove("hidden");
+    $("detailPanel").classList.remove("hidden");
+    $("status").textContent = "เสร็จแล้ว — ตรวจบรรทัด confidence ต่ำก่อนนำข้อมูลสำคัญไปใช้";
+  } catch (err) {
+    $("status").textContent = "เกิดข้อผิดพลาด: " + err.message;
+  } finally {
+    $("run").disabled = false;
+  }
+});
+
+$("copy").addEventListener("click", async () => {
+  await navigator.clipboard.writeText($("text").value);
+  $("status").textContent = "คัดลอกข้อความแล้ว";
+});
+
+$("download").addEventListener("click", () => {
+  if (!lastPayload) return;
+  const blob = new Blob([JSON.stringify(lastPayload, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "step-local-thai-ocr-result.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
