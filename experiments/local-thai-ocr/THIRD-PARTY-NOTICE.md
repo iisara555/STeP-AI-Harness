@@ -4,7 +4,7 @@ This experiment intentionally does **not** vendor model weights or third-party s
 
 Core:
 - PaddleOCR / PaddlePaddle: follow upstream project licenses and redistribution terms.
-- PyMuPDF: review its license terms before packaging or redistributing a bundled application.
+- pypdfium2: Apache-2.0 / BSD-3-Clause per upstream; PDFium uses a BSD-style license and binary redistributions must include applicable bundled dependency licenses.
 - Pillow: follow upstream license.
 
 Optional handwriting fallback:
