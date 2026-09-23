@@ -22,6 +22,7 @@ ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
 
 _engine: LocalThaiOCR | None = None
 _engine_lock = threading.Lock()
+_process_lock = threading.Lock()
 
 
 def get_engine() -> LocalThaiOCR:
@@ -38,12 +39,17 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         print(f"[local-ocr] {self.address_string()} - {fmt % args}")
 
+    def _common_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+
     def _send_json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self._common_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -56,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", f"{ctype}; charset=utf-8" if ctype.startswith("text/") else ctype)
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        self._common_headers()
         self.end_headers()
         self.wfile.write(data)
 
@@ -117,13 +123,14 @@ class Handler(BaseHTTPRequestHandler):
             input_path = Path(tmp) / f"input{suffix}"
             input_path.write_bytes(raw)
             try:
-                result = get_engine().process(
-                    input_path,
-                    OCRConfig(
-                        low_confidence_threshold=threshold,
-                        handwriting_fallback=handwriting,
-                    ),
-                )
+                with _process_lock:
+                    result = get_engine().process(
+                        input_path,
+                        OCRConfig(
+                            low_confidence_threshold=threshold,
+                            handwriting_fallback=handwriting,
+                        ),
+                    )
                 result["filename"] = original_name
                 return self._send_json({"ok": True, "result": result})
             except Exception as exc:
