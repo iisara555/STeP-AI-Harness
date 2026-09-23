@@ -5,6 +5,8 @@ import argparse
 import json
 import mimetypes
 import os
+import subprocess
+import sys
 import tempfile
 import threading
 import urllib.parse
@@ -13,24 +15,48 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from ocr_engine import OCRConfig, LocalThaiOCR
-
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
+WORKER = ROOT / "ocr_worker.py"
+WORKER_TIMEOUT_SECONDS = 300
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
-_engine: LocalThaiOCR | None = None
-_engine_lock = threading.Lock()
 _process_lock = threading.Lock()
 
 
-def get_engine() -> LocalThaiOCR:
-    global _engine
-    with _engine_lock:
-        if _engine is None:
-            _engine = LocalThaiOCR()
-        return _engine
+def run_ocr_worker(input_path: Path, output_path: Path, threshold: float, handwriting: bool) -> dict:
+    command = [
+        sys.executable,
+        str(WORKER),
+        str(input_path),
+        str(output_path),
+        str(threshold),
+        "1" if handwriting else "0",
+    ]
+    worker = subprocess.Popen(
+        command,
+        cwd=ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        exit_code = worker.wait(timeout=WORKER_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired as exc:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(worker.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        else:
+            worker.kill()
+        worker.wait()
+        raise TimeoutError("OCR processing exceeded five minutes.") from exc
+    if exit_code != 0:
+        raise RuntimeError(f"OCR engine stopped unexpectedly (exit code {exit_code}).")
+    return json.loads(output_path.read_text(encoding="utf-8"))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -121,16 +147,11 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length)
         with tempfile.TemporaryDirectory(prefix="step-local-ocr-") as tmp:
             input_path = Path(tmp) / f"input{suffix}"
+            output_path = Path(tmp) / "result.json"
             input_path.write_bytes(raw)
             try:
                 with _process_lock:
-                    result = get_engine().process(
-                        input_path,
-                        OCRConfig(
-                            low_confidence_threshold=threshold,
-                            handwriting_fallback=handwriting,
-                        ),
-                    )
+                    result = run_ocr_worker(input_path, output_path, threshold, handwriting)
                 result["filename"] = original_name
                 return self._send_json({"ok": True, "result": result})
             except Exception as exc:

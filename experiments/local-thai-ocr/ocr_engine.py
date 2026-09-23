@@ -12,6 +12,8 @@ import pypdfium2 as pdfium
 from PIL import Image
 from paddleocr import PaddleOCR
 
+MAX_OCR_IMAGE_SIDE = 2400
+
 
 @dataclass(frozen=True)
 class OCRConfig:
@@ -35,12 +37,15 @@ class LocalThaiOCR:
     def _get_ocr(self) -> PaddleOCR:
         if self._ocr is None:
             self._ocr = PaddleOCR(
-                lang="th",
-                ocr_version="PP-OCRv5",
+                text_detection_model_name="PP-OCRv5_mobile_det",
+                text_recognition_model_name="th_PP-OCRv5_mobile_rec",
+                text_det_limit_type="max",
+                text_det_limit_side_len=960,
                 use_doc_orientation_classify=False,
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
                 device="cpu",
+                cpu_threads=4,
                 # PaddlePaddle 3.3.0 oneDNN fails during CPU text detection.
                 enable_mkldnn=False,
             )
@@ -60,8 +65,12 @@ class LocalThaiOCR:
         if suffix == ".pdf":
             pages = self._process_pdf(path, config, warnings)
         else:
-            image = Image.open(path).convert("RGB")
-            pages = [self._ocr_image(image, 1, config, warnings)]
+            with Image.open(path) as source:
+                original_size = source.size
+                if source.format == "JPEG":
+                    source.draft("RGB", (MAX_OCR_IMAGE_SIDE, MAX_OCR_IMAGE_SIDE))
+                image = source.convert("RGB")
+            pages = [self._ocr_image(image, 1, config, warnings, original_size=original_size)]
 
         lines = [line for page in pages for line in page.get("lines", [])]
         scores = [line["confidence"] for line in lines if line.get("confidence") is not None]
@@ -121,7 +130,11 @@ class LocalThaiOCR:
                         })
                         continue
 
-                    bitmap = page.render(scale=config.render_dpi / 72.0)
+                    width, height = page.get_size()
+                    scale = config.render_dpi / 72.0
+                    if max(width, height) > 0:
+                        scale = min(scale, MAX_OCR_IMAGE_SIDE / max(width, height))
+                    bitmap = page.render(scale=scale)
                     try:
                         image = bitmap.to_pil().convert("RGB")
                     finally:
@@ -154,7 +167,17 @@ class LocalThaiOCR:
         page_number: int,
         config: OCRConfig,
         warnings: list[str],
+        original_size: tuple[int, int] | None = None,
     ) -> dict[str, Any]:
+        original_width, original_height = original_size or image.size
+        if max(image.size) > MAX_OCR_IMAGE_SIDE:
+            image.thumbnail((MAX_OCR_IMAGE_SIDE, MAX_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
+        if image.size != (original_width, original_height):
+            self._add_warning(
+                warnings,
+                f"Image resized from {original_width}x{original_height} to "
+                f"{image.width}x{image.height} before OCR; verify small text carefully.",
+            )
         outputs = self._get_ocr().predict(np.asarray(image))
         lines: list[dict[str, Any]] = []
 
@@ -201,6 +224,8 @@ class LocalThaiOCR:
             "source": "ocr",
             "width": image.width,
             "height": image.height,
+            "original_width": original_width,
+            "original_height": original_height,
             "lines": lines,
         }
 
