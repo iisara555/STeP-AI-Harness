@@ -1,0 +1,109 @@
+# STeP Local Thai OCR — Standalone Experiment
+
+สถานะ: **ทดลองแยกจาก STeP AI Harness หลัก** (`v0.1`)
+
+เป้าหมายคือทดสอบ OCR ภาษาไทยบนเครื่องพนักงานโดยไม่ส่งเอกสารไปยัง OCR cloud API และไม่ผูกเข้ากับ Router/Skill ของ Harness จนกว่าจะมีผลทดสอบจากเอกสารจริงเพียงพอ
+
+## ขอบเขต v0.1
+
+- PDF ที่มี text layer: อ่านข้อความตรงด้วย PyMuPDF ก่อน ไม่ทำ OCR โดยไม่จำเป็น
+- PDF scan / PNG / JPG / TIFF / WebP: ใช้ **PaddleOCR PP-OCRv5 Thai** บน CPU
+- แสดงข้อความ, confidence ต่อบรรทัด, bounding box และรายการที่ควรตรวจซ้ำ
+- ตั้ง threshold สำหรับ `needs_review`
+- ทดลอง **Thai-TrOCR** เฉพาะบรรทัด confidence ต่ำได้แบบ optional/lazy-load
+- มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
+- ไฟล์ชั่วคราวถูกลบหลังประมวลผล
+
+ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก
+
+## Privacy boundary
+
+ตัว web server bind ที่ `127.0.0.1` เท่านั้นโดย default. เอกสารที่ทดลองจะถูกส่งจาก browser ไปยัง process บนเครื่องเดียวกันและเก็บไว้ใน temporary directory ระหว่างการประมวลผลเท่านั้น.
+
+สิ่งที่ยังต้องใช้อินเทอร์เน็ต:
+
+1. ตอนติดตั้ง Python packages
+2. ครั้งแรกที่ PaddleOCR ต้องดาวน์โหลด model weights หากยังไม่มีใน cache
+3. ครั้งแรกที่เปิด Thai-TrOCR หากยังไม่มี model weights ใน Hugging Face cache
+
+**Model download ไม่ใช่ document upload** แต่เครื่องที่ต้อง air-gap ควรเตรียม dependency/model cache ล่วงหน้าก่อนนำไปใช้.
+
+## เริ่มทดลอง — Windows
+
+1. ติดตั้ง Python 3.10–3.12 แบบ 64-bit ถ้ายังไม่มี
+2. เปิด `Install-OCR.bat`
+3. เปิด `Start-OCR.bat`
+4. Browser จะเปิดหน้า Local Thai OCR ให้อัตโนมัติ
+
+## เริ่มทดลอง — macOS
+
+1. ใช้ Python 3.10–3.12 จาก python.org/Homebrew
+2. ครั้งแรก: `chmod +x Install-OCR.command Start-OCR.command Install-Handwriting.command`
+3. เปิด `Install-OCR.command`
+4. เปิด `Start-OCR.command`
+
+> macOS ใช้ CPU inference. PaddlePaddle ไม่ต้องใช้ GPU สำหรับ prototype นี้.
+
+## เปิด handwriting fallback (optional)
+
+Thai-TrOCR ใช้ PyTorch/Transformers และหนักกว่า core OCR อย่างชัดเจน จึงไม่ติดตั้งโดย default.
+
+Windows: เปิด `Install-Handwriting.bat`
+
+macOS: เปิด `Install-Handwriting.command`
+
+จากนั้นติ๊ก `Thai-TrOCR สำหรับบรรทัด confidence ต่ำ` ในหน้าเว็บ.
+
+## Developer entry point
+
+```sh
+.venv/bin/python app.py --no-browser
+```
+
+Windows:
+
+```bat
+.venv\Scripts\python.exe app.py --no-browser
+```
+
+Health check:
+
+```text
+GET http://127.0.0.1:8765/api/health
+```
+
+OCR request ใช้ raw file bytes:
+
+```text
+POST /api/ocr?filename=sample.pdf&threshold=0.80&handwriting=off
+Content-Type: application/octet-stream
+```
+
+## Acceptance gate ก่อนเชื่อมเข้า Harness
+
+อย่า merge logic นี้เข้ากับ Router หลักจนกว่าจะตอบคำถามต่อไปนี้จาก pilot ได้:
+
+- เอกสารไทยพิมพ์ปกติอ่านผิดบ่อยแค่ไหน
+- ตัวเลข/จำนวนเงิน/เลขที่หนังสือผิดบ่อยแค่ไหน
+- ตารางแบบใดที่ OCR ได้แค่ข้อความแต่เสียโครงสร้าง
+- handwriting fallback ช่วยจริงกับเอกสาร STeP หรือทำให้ผิดมากขึ้น
+- RAM/เวลาเฉลี่ยบนเครื่องพนักงานจริงเป็นเท่าไร
+- threshold ใดทำให้ `needs_review` มีประโยชน์โดยไม่เตือนมากเกินไป
+
+ใช้ `TEST-PLAN.md` บันทึกผลก่อนตัดสินใจ integration.
+
+## หมายเหตุด้านความเบา
+
+`th_PP-OCRv5_mobile_rec` เป็น recognition model ขนาดเล็ก แต่ PaddleOCR runtime และ text detector ใช้ทรัพยากรมากกว่าขนาด model file. Prototype นี้จึง:
+
+- บังคับ CPU
+- ปิด orientation classifier
+- ปิด document unwarping
+- ปิด text-line orientation
+- โหลด model เมื่อมีคำขอ OCR ครั้งแรก
+- อ่าน PDF text layer โดยตรงเมื่อทำได้
+- ไม่โหลด Thai-TrOCR จนกว่าผู้ใช้จะเลือก
+
+## License / third-party
+
+Prototype ไม่ bundle model weights หรือ source ของ third party เข้ามาใน repository. Dependencies และ model weights ใช้ตาม license ของโครงการต้นทาง; ตรวจ license อีกครั้งก่อนนำไปแพ็กแจกจ่ายภายในองค์กร.
