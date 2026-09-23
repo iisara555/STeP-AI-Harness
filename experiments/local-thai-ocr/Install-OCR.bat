@@ -3,20 +3,15 @@ setlocal
 cd /d "%~dp0"
 
 set "PYTHON="
-where py >nul 2>nul && set "PYTHON=py -3"
+py -3.12 -c "import sys" >nul 2>nul && set "PYTHON=py -3.12"
+if not defined PYTHON py -3.11 -c "import sys" >nul 2>nul && set "PYTHON=py -3.11"
+if not defined PYTHON py -3.10 -c "import sys" >nul 2>nul && set "PYTHON=py -3.10"
 if not defined PYTHON (
-  where python >nul 2>nul && set "PYTHON=python"
+  where python >nul 2>nul && python -c "import sys; raise SystemExit(0 if (3,10) <= sys.version_info[:2] <= (3,12) else 1)" >nul 2>nul && set "PYTHON=python"
 )
 if not defined PYTHON (
   echo Python 3.10-3.12 64-bit is required for this standalone experiment.
   echo Install Python, then run this file again.
-  pause
-  exit /b 1
-)
-
-%PYTHON% -c "import sys; raise SystemExit(0 if (3,10) <= sys.version_info[:2] <= (3,12) else 1)"
-if errorlevel 1 (
-  echo Please use Python 3.10, 3.11, or 3.12 for the pilot.
   pause
   exit /b 1
 )
