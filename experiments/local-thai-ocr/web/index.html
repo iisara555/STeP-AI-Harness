@@ -103,11 +103,17 @@ $("run").addEventListener("click", async () => {
   });
 
   try {
-    const res = await fetch("/api/ocr?" + qs.toString(), {
-      method: "POST",
-      headers: {"Content-Type": "application/octet-stream"},
-      body: await file.arrayBuffer(),
-    });
+    const bytes = await file.arrayBuffer();
+    let res;
+    try {
+      res = await fetch("/api/ocr?" + qs.toString(), {
+        method: "POST",
+        headers: {"Content-Type": "application/octet-stream"},
+        body: bytes,
+      });
+    } catch {
+      throw new Error("Cannot connect to the local OCR server. Run Start-OCR.bat, keep its window open, then retry.");
+    }
     const payload = await res.json();
     if (!payload.ok) throw new Error(payload.message || payload.error || "OCR failed");
 

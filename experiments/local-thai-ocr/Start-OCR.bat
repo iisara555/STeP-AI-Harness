@@ -6,4 +6,12 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
+echo Keep this window open while using OCR. Closing it stops the local server.
+echo.
 ".venv\Scripts\python.exe" app.py
+if errorlevel 1 (
+  echo.
+  echo OCR server stopped unexpectedly. Check the error above.
+  pause
+  exit /b 1
+)
