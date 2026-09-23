@@ -6,15 +6,16 @@
 
 ## ขอบเขต v0.1
 
-- PDF ที่มี text layer: อ่านข้อความตรงด้วย PyMuPDF ก่อน ไม่ทำ OCR โดยไม่จำเป็น
+- PDF ที่มี text layer: อ่านข้อความตรงด้วย pypdfium2/PDFium ก่อน ไม่ทำ OCR โดยไม่จำเป็น
 - PDF scan / PNG / JPG / TIFF / WebP: ใช้ **PaddleOCR PP-OCRv5 Thai** บน CPU
 - แสดงข้อความ, confidence ต่อบรรทัด, bounding box และรายการที่ควรตรวจซ้ำ
 - ตั้ง threshold สำหรับ `needs_review`
 - ทดลอง **Thai-TrOCR** เฉพาะบรรทัด confidence ต่ำได้แบบ optional/lazy-load
+- Thai-TrOCR candidate เป็น second opinion เท่านั้น ระบบไม่แทนค่าข้อความเดิมอัตโนมัติ
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
-ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก
+ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก และยังไม่เพิ่ม table-structure model ในรอบนี้.
 
 ## Privacy boundary
 
@@ -52,7 +53,7 @@ Windows: เปิด `Install-Handwriting.bat`
 
 macOS: เปิด `Install-Handwriting.command`
 
-จากนั้นติ๊ก `Thai-TrOCR สำหรับบรรทัด confidence ต่ำ` ในหน้าเว็บ.
+จากนั้นติ๊ก `Thai-TrOCR สำหรับบรรทัด confidence ต่ำ` ในหน้าเว็บ. Candidate ที่ได้จะถูกแสดงแยกจาก PaddleOCR เพื่อให้คนตรวจเอง.
 
 ## Developer entry point
 
@@ -103,7 +104,8 @@ Content-Type: application/octet-stream
 - โหลด model เมื่อมีคำขอ OCR ครั้งแรก
 - อ่าน PDF text layer โดยตรงเมื่อทำได้
 - ไม่โหลด Thai-TrOCR จนกว่าผู้ใช้จะเลือก
+- ยังไม่โหลด table/layout pipeline เพิ่ม
 
 ## License / third-party
 
-Prototype ไม่ bundle model weights หรือ source ของ third party เข้ามาใน repository. Dependencies และ model weights ใช้ตาม license ของโครงการต้นทาง; ตรวจ license อีกครั้งก่อนนำไปแพ็กแจกจ่ายภายในองค์กร.
+Prototype ไม่ bundle model weights หรือ source ของ third party เข้ามาใน repository. PDF path ใช้ pypdfium2/PDFium ซึ่งมี license แบบ permissive ตาม upstream; binary redistribution ยังต้องแนบ license ของ PDFium dependencies ที่เกี่ยวข้อง. ตรวจ `THIRD-PARTY-NOTICE.md` ก่อนทำ installer สำหรับแจกจริง.
