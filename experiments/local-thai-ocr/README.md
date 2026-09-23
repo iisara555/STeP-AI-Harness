@@ -31,7 +31,7 @@
 
 ## เริ่มทดลอง — Windows
 
-1. ติดตั้ง Python 3.10–3.12 แบบ 64-bit ถ้ายังไม่มี
+1. ติดตั้ง Python 3.10–3.13 แบบ 64-bit ถ้ายังไม่มี
 2. เปิด `Install-OCR.bat`
 3. เปิด `Start-OCR.bat`
 4. Browser จะเปิดหน้า Local Thai OCR ให้อัตโนมัติ

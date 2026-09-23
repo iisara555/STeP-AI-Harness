@@ -41,6 +41,8 @@ class LocalThaiOCR:
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
                 device="cpu",
+                # PaddlePaddle 3.3.0 oneDNN fails during CPU text detection.
+                enable_mkldnn=False,
             )
         return self._ocr
 
@@ -106,7 +108,11 @@ class LocalThaiOCR:
                     finally:
                         textpage.close()
 
-                    if len(native_text) >= config.native_pdf_min_chars:
+                    # A short text layer can be just a page number on a scanned page.
+                    if native_text and (
+                        len(native_text) >= config.native_pdf_min_chars
+                        or not self._has_large_page_image(page)
+                    ):
                         pages.append({
                             "page": page_index + 1,
                             "source": "native_pdf_text",
@@ -126,6 +132,21 @@ class LocalThaiOCR:
         finally:
             pdf.close()
         return pages
+
+    @staticmethod
+    def _has_large_page_image(page: pdfium.PdfPage) -> bool:
+        width, height = page.get_size()
+        page_area = width * height
+        if page_area <= 0:
+            return False
+
+        for image in page.get_objects(filter=[pdfium.raw.FPDF_PAGEOBJ_IMAGE]):
+            left, bottom, right, top = image.get_bounds()
+            image_width = max(0.0, min(right, width) - max(left, 0.0))
+            image_height = max(0.0, min(top, height) - max(bottom, 0.0))
+            if image_width * image_height >= page_area * 0.5:
+                return True
+        return False
 
     def _ocr_image(
         self,

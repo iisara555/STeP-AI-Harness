@@ -117,7 +117,8 @@ $("run").addEventListener("click", async () => {
       `หน้า ${s.pages}`,
       `บรรทัด ${s.recognized_lines}`,
       `confidence เฉลี่ย ${s.average_confidence ?? "-"}`,
-      `ต้องตรวจ ${s.needs_review}`,\n      `เวลา ${s.elapsed_seconds ?? "-"} วินาที`,
+      `ต้องตรวจ ${s.needs_review}`,
+      `เวลา ${s.elapsed_seconds ?? "-"} วินาที`,
     ].map(x => `<span class="pill">${escapeHtml(x)}</span>`).join("");
 
     $("text").value = payload.result.text || "";

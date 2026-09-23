@@ -4,13 +4,14 @@ cd /d "%~dp0"
 
 set "PYTHON="
 py -3.12 -c "import sys" >nul 2>nul && set "PYTHON=py -3.12"
+if not defined PYTHON py -3.13 -c "import sys" >nul 2>nul && set "PYTHON=py -3.13"
 if not defined PYTHON py -3.11 -c "import sys" >nul 2>nul && set "PYTHON=py -3.11"
 if not defined PYTHON py -3.10 -c "import sys" >nul 2>nul && set "PYTHON=py -3.10"
 if not defined PYTHON (
-  where python >nul 2>nul && python -c "import sys; raise SystemExit(0 if (3,10) <= sys.version_info[:2] <= (3,12) else 1)" >nul 2>nul && set "PYTHON=python"
+  where python >nul 2>nul && python -c "import sys; raise SystemExit(0 if (3,10) <= sys.version_info[:2] <= (3,13) else 1)" >nul 2>nul && set "PYTHON=python"
 )
 if not defined PYTHON (
-  echo Python 3.10-3.12 64-bit is required for this standalone experiment.
+  echo Python 3.10-3.13 64-bit is required for this standalone experiment.
   echo Install Python, then run this file again.
   pause
   exit /b 1
