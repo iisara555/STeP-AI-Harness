@@ -40,8 +40,11 @@ standardVersion: 2
 - Current AFP หรือ CMU source ที่ยืนยันแล้ว → ใช้เป็น rule พร้อม source reference
 - Source `missing`, `pending-*` หรือ `provided-unverified` → **ห้ามสรุปว่าเบิกได้หรือไม่ได้แน่นอน**
 - `references/receipt-rules-cmu.md` เป็น working review guide ไม่ใช่ current controlled finance policy
+- [แนวปฏิบัติงาน AFP](../../../docs/afp-operational-circulars.md) — Lead Time งานการเงิน/พัสดุ, หมวด B/BV/B9.2, การจ้างเหมารถตู้, ข้อควรระวังการยืมเงิน และ E-Signature เป็นแนวปฏิบัติที่ AFP แจ้งเวียน ใช้อ้างอิงได้พร้อมระบุที่มา **ถ้าขัดกับระเบียบกระทรวงการคลังให้ยึดระเบียบ**
 
 **ห้าม hard-code หรือเดาจากความจำ:** เพดานค่าใช้จ่าย, required document set, buyer หรือ tax identity, VAT และ tax treatment, travel entitlement, exception หรือ waiver
+
+**เมื่อผู้ใช้ถามว่าเรื่องจะเสร็จเมื่อไหร่:** ตอบ Lead Time จากเอกสาร AFP พร้อมเงื่อนไขเสมอว่า **นับเมื่อเอกสารครบถ้วนถูกต้องแล้วเท่านั้น และเริ่มนับใหม่ถ้ามีการแก้ไขเอกสาร** และต้องเตือนเรื่อง[ปฏิทินปิดรับเอกสารรายเดือน](https://cmu.to/CalendarFinancial2026) ห้ามตอบเป็นจำนวนวันลอย ๆ
 
 ## Workflow
 

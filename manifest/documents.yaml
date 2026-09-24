@@ -125,6 +125,17 @@ documents:
     status: pilot
 
 
+  afp-operational-circulars:
+    title: 'แนวปฏิบัติงาน AFP: Lead Time, หมวดค่าใช้จ่าย และ E-Signature'
+    path: docs/afp-operational-circulars.md
+    owner: afp
+    documentType: team-circular
+    effectiveDate: '2026-09-01'
+    source: อีเมลแจ้งเวียนจาก finance@step.cmu.ac.th และ procurement@step.cmu.ac.th
+    summary: >-
+      Lead Time งานการเงินและงานพัสดุ หมวดค่าใช้จ่าย B/BV/B9.2
+      การจ้างเหมารถตู้ ค่าตอบแทนวิทยากร ข้อควรระวังการยืมเงิน
+      E-Signature ใน STeP MIS และเงินชดเชยคอมพิวเตอร์พกพา
   cc-iso-document-register:
     title: ทะเบียนเอกสารระบบคุณภาพ ทีม CC (ISO Document Register)
     path: docs/cc-iso-document-register.md
