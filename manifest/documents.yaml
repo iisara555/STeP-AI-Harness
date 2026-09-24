@@ -149,6 +149,24 @@ documents:
       เพื่อป้องกันการใช้เอกสารผิด Revision
 
   # --- STeP Quality Layer v0.1 ---
+  hr-service-channels:
+    title: "ระบบและช่องทางปฏิบัติงานด้านบุคคล (HR Service Channels)"
+    owner: hd
+    type: internal-practice
+    process: people.personnel-welfare
+    version: "2569"
+    sourceLevel: team-circular
+    authority: team-communicated-practice
+    verification: derived-from-hd-circulars
+    status: active
+    confirmedBy: "รวบรวมจากอีเมลแจ้งเวียนของ hr@step.cmu.ac.th ปี 2568-2569 ผู้ดูแล STeP AI อนุมัติให้บันทึก 2026-09-24"
+    index: docs/hr-service-channels.md
+    contentInRepo: true
+    sensitivity: internal-published
+    sensitivityReason: "ชื่อระบบและขั้นตอนที่ทีม HD แจ้งเวียนถึงพนักงานทุกคน ไม่มี credential และไม่มีข้อมูลรายบุคคล"
+    disclosureApprovedBy: "ผู้ดูแล STeP AI ยืนยัน 2026-09-24"
+    note: "แนวปฏิบัติระดับทีม ไม่ใช่ประกาศตราครุฑ เปลี่ยนได้โดยไม่ต้องออกประกาศใหม่ ถ้าขัดกับประกาศให้ยึดประกาศเป็นหลัก; ห้ามเก็บ URL ของ SharePoint รายทีม บัญชีผู้ใช้ หรือคำร้องรายบุคคล"
+
   hr-personnel-welfare-2569:
     title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคล และสวัสดิการพนักงาน พ.ศ. 2569"
     owner: hd
