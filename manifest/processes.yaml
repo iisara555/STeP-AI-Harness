@@ -189,6 +189,7 @@ processes:
       - people.personnel-welfare.compensation-benefits
       - people.personnel-welfare.leave
       - people.personnel-welfare.discipline
+      - people.personnel-welfare.separation
     associatedSops:
       - hr-personnel-welfare-2569
       - step-career-path-2569

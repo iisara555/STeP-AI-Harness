@@ -14,11 +14,11 @@ README ฉบับนี้อ้างอิงชุดที่เตรี�
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **47 Skills** |
+| Skills | **48 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 46 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
+Router มีเส้นทางเลือก Skill 47 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
 
 **Release baseline ที่บันทึกไว้คือ v0.7.2** ส่วนชุดที่เตรียมสำหรับ Pilot รอบนี้และ `package.json` ระบุ **v0.7.3** ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ ต้องตรวจ checksum ของชุดที่นำไปใช้ด้วย
 

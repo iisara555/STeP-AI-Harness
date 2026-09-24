@@ -611,6 +611,25 @@ skills:
       mandatory: [human-approval-rule]
       optional: []
 
+  hr-policy-lookup:
+    owner: hd
+    version: 1.0.0
+    domain: [people-development, hr-policy]
+    process: [people.personnel-welfare]
+    path: skills/common/hr-policy-lookup/SKILL.md
+    description: ตอบสิทธิและเงื่อนไขตามประกาศงานบุคคลและ Career Path ของอุทยานฯ พร้อมอ้างเลขข้อ โดยไม่คำนวณสิทธิคงเหลือรายบุคคล
+    governance:
+      owner: hd
+      reviewer: [ga, qs]
+      approvedBy: [hd-head]
+      reviewedAt: "2026-09-23"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
   learning-designer:
     owner: hd
     version: 1.0.0
