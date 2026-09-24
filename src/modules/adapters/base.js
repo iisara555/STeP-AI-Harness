@@ -99,7 +99,10 @@ export function buildFirstWorkOnboardingContract(role = {}) {
 
   let text = `## First Work — Employee Handoff Contract\n\n`;
   text += `When the user says **"เริ่มใช้งาน STeP AI"** or opens this workspace for the first time, keep the introduction short. Do not scan Skills/Rules/Manifest recursively.\n`;
-  text += `- Read only the routing identity and **Suggested First Tasks** sections from \`USER.md\` if the file exists. Do not treat the rest of the workspace as startup context.\n`;
+  text += `- Read only the routing identity, **Personal Assistant**, and **Suggested First Tasks** sections from \`USER.md\` if the file exists. Do not treat the rest of the workspace as startup context.\n`;
+  text += `- **New user personalization:** If \`USER.md\` has \`First Run Completed: false\`, first ask in one short message for (1) the user's nickname, (2) the assistant name (STeP Mate / น้องสเต็ป / custom), and (3) the conversation style (coworker / professional / concise / custom). Always offer "ข้าม ตั้งค่าทีหลัง" and keep the defaults if skipped.\n`;
+  text += `- After the user answers or skips, update the User Profile and Personal Assistant sections in \`USER.md\` and set \`First Run Completed: true\`. Do not ask for Role, Project, or Output Format during First Run.\n`;
+  text += `- If the first message is a real task, help with that task first and offer personalization briefly afterwards. If \`First Run Completed\` is missing, treat it as a legacy USER.md and do not force onboarding.\n`;
   text += `- A non-empty **Primary Team** in \`USER.md\` is the current user choice and overrides any installation-time team hint below.\n`;
 
   if (installTeam) {
