@@ -35,6 +35,7 @@
     "manifest/organization.yaml",
     "manifest/router-index.yaml",
     "docs/afp-operational-circulars.md",
+    "docs/cc-iso-document-register.md",
     "docs/step-context.md",
     "docs/roles-and-ownership.md",
     "docs/knowledge-policy.md",
