@@ -3,173 +3,171 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STeP Local Thai OCR — ทดลองบนเครื่อง</title>
-  <style>
-    :root { color-scheme: light dark; font-family: system-ui, -apple-system, "Noto Sans Thai", sans-serif; }
-    body { margin: 0; background: Canvas; color: CanvasText; }
-    main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
-    h1 { margin-bottom: 6px; font-size: 1.7rem; }
-    .muted { opacity: .72; }
-    .notice { border: 1px solid color-mix(in srgb, CanvasText 18%, transparent); border-radius: 12px; padding: 12px 14px; margin: 16px 0; }
-    .panel { border: 1px solid color-mix(in srgb, CanvasText 18%, transparent); border-radius: 14px; padding: 18px; margin-top: 16px; }
-    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    label { display: inline-flex; gap: 8px; align-items: center; }
-    input[type="file"] { max-width: 100%; }
-    input[type="number"] { width: 76px; }
-    button { padding: 9px 14px; border-radius: 9px; border: 1px solid color-mix(in srgb, CanvasText 22%, transparent); cursor: pointer; }
-    button.primary { font-weight: 650; }
-    button:disabled { opacity: .55; cursor: default; }
-    textarea { width: 100%; min-height: 180px; box-sizing: border-box; padding: 12px; border-radius: 10px; }
-    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-    th, td { text-align: left; padding: 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, transparent); vertical-align: top; }
-    .bad { font-weight: 650; }
-    .pill { display: inline-block; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 999px; padding: 2px 8px; margin-right: 5px; font-size: .82rem; }
-    .hidden { display: none; }
-    #status { min-height: 1.4em; }
-    .summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
-    @media (max-width: 700px) { table { font-size: .82rem; } .hide-mobile { display: none; } }
-  </style>
+  <meta name="color-scheme" content="light">
+  <title>STeP Receipt Review — ตรวจใบเสร็จในเครื่อง</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/receipt-review.js" defer></script>
+  <script src="/app.js" defer></script>
 </head>
 <body>
-<main>
-  <h1>STeP Local Thai OCR</h1>
-  <div class="muted">Standalone experiment — อ่าน PDF/ภาพภาษาไทยบนเครื่องพนักงาน</div>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="STeP Receipt Review">
+        <span class="brand-mark" aria-hidden="true"><span>ST</span><i></i></span>
+        <span class="brand-copy"><strong>STeP</strong><small>RECEIPT REVIEW</small></span>
+      </div>
+      <div class="topbar-actions">
+        <span class="local-label"><span class="local-dot"></span>ทำงานบนเครื่องนี้</span>
+        <button id="serviceButton" class="service-button" type="button" aria-label="ตรวจสถานะบริการ OCR">
+          <span id="serviceIndicator" class="service-indicator is-checking" aria-hidden="true"></span>
+          <span id="serviceLabel">กำลังตรวจบริการ</span>
+        </button>
+      </div>
+    </header>
 
-  <div class="notice">
-    <strong>Privacy:</strong> ไฟล์เอกสารถูกประมวลผลที่ <code>127.0.0.1</code> บนเครื่องนี้เท่านั้น
-    และไฟล์ชั่วคราวถูกลบหลังประมวลผล. ครั้งแรก PaddleOCR อาจดาวน์โหลดโมเดลจากอินเทอร์เน็ต;
-    หากเปิด Thai-TrOCR ก็อาจดาวน์โหลดโมเดลจาก Hugging Face. ไม่มีการส่งเอกสารไปยัง OCR cloud API.
+    <main>
+      <section class="page-intro" aria-labelledby="pageTitle">
+        <div class="intro-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> LOCAL DOCUMENT WORKSPACE <span class="eyebrow-index">01 / 03</span></div>
+          <h1 id="pageTitle">ตรวจใบเสร็จ<span class="title-dot">.</span></h1>
+          <p>เตรียมข้อมูลใบเสร็จสำหรับเบิกค่าใช้จ่ายของ STeP อ่านข้อมูลในเครื่อง แล้วให้ผู้ตรวจแก้และยืนยันแต่ละรายการก่อนบันทึกร่าง</p>
+        </div>
+        <div class="process-steps" aria-label="ขั้นตอนการตรวจใบเสร็จ">
+          <span id="stepFile" class="process-step is-current"><b>01</b><span>เลือกเอกสาร</span></span>
+          <span class="step-connector" aria-hidden="true"></span>
+          <span id="stepRead" class="process-step"><b>02</b><span>อ่านข้อมูล</span></span>
+          <span class="step-connector" aria-hidden="true"></span>
+          <span id="stepReview" class="process-step"><b>03</b><span>ตรวจทาน</span></span>
+        </div>
+      </section>
+
+      <div id="offlineBanner" class="connection-alert" role="alert" hidden>
+        <div class="alert-icon" aria-hidden="true">!</div>
+        <div>
+          <strong>บริการ OCR ในเครื่องยังไม่พร้อม</strong>
+          <p>เปิด <code>Start-OCR.bat</code> จากโฟลเดอร์ทดลองและเปิดหน้าต่างนั้นค้างไว้ แล้วกดตรวจสถานะอีกครั้ง</p>
+        </div>
+        <button id="retryService" type="button" class="button button-outline">ตรวจอีกครั้ง</button>
+      </div>
+
+      <div class="workspace-grid">
+        <section class="document-column" aria-labelledby="documentTitle">
+          <div class="section-kicker"><span>01</span><span class="kicker-rule"></span> SOURCE DOCUMENT</div>
+          <div class="section-title-row">
+            <div>
+              <h2 id="documentTitle">เอกสารต้นทาง</h2>
+              <p>ภาพถ่าย สแกน หรือ PDF ของใบเสร็จ</p>
+            </div>
+            <span class="section-icon" aria-hidden="true">↗</span>
+          </div>
+
+          <label class="visually-hidden" for="file">เลือกไฟล์ใบเสร็จ</label>
+          <input id="file" class="visually-hidden" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff">
+          <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="เลือกหรือลากไฟล์ใบเสร็จมาวาง">
+            <div class="upload-graphic" aria-hidden="true"><span class="upload-sheet"></span><span class="upload-arrow">↑</span></div>
+            <strong>วางใบเสร็จที่นี่</strong>
+            <span>หรือตรวจจากไฟล์ในเครื่อง</span>
+            <span class="upload-action">เลือกไฟล์ <span aria-hidden="true">↗</span></span>
+            <small>PDF, JPG, PNG, WebP, TIFF, BMP · ไม่เกิน 25 MB</small>
+          </div>
+
+          <div id="fileCard" class="file-card" hidden>
+            <div class="file-type" aria-hidden="true">DOC</div>
+            <div class="file-card-text"><strong id="fileName"></strong><small id="fileSize"></small></div>
+            <button id="removeFile" class="icon-button" type="button" aria-label="นำไฟล์ออก">×</button>
+          </div>
+
+          <div class="preview-heading"><span>ตัวอย่างเอกสาร</span><span id="previewHint">ยังไม่ได้เลือกไฟล์</span></div>
+          <div id="preview" class="preview-frame">
+            <div class="preview-empty" aria-hidden="true"><span class="empty-paper"><i></i><i></i><i></i><i></i></span></div>
+            <div id="previewContent" class="preview-content" hidden></div>
+          </div>
+          <div class="privacy-note"><span class="privacy-symbol" aria-hidden="true">◎</span><span>ไฟล์ถูกอ่านผ่านบริการที่ <code>127.0.0.1</code> บนเครื่องนี้ โมเดลอาจดาวน์โหลดครั้งแรก แต่ไม่มีการส่งใบเสร็จไปยัง OCR cloud API</span></div>
+        </section>
+
+        <section class="review-column" aria-labelledby="reviewTitle">
+          <div class="section-kicker"><span>02</span><span class="kicker-rule"></span> REVIEW & VERIFY</div>
+          <div class="section-title-row">
+            <div>
+              <h2 id="reviewTitle">ข้อมูลสำหรับตรวจทาน</h2>
+              <p>ค่าที่อ่านได้เป็นข้อเสนอแนะ ต้องตรวจจากใบเสร็จจริง</p>
+            </div>
+            <span class="review-stamp" aria-hidden="true">R</span>
+          </div>
+
+          <div class="read-card">
+            <div class="read-card-text"><strong>เริ่มอ่านข้อมูล</strong><span id="runHint">เลือกใบเสร็จเพื่อเริ่มตรวจ</span></div>
+            <button id="run" class="button button-primary" type="button" disabled>อ่านใบเสร็จ <span aria-hidden="true">→</span></button>
+            <details class="advanced-options">
+              <summary>ตัวเลือก OCR <span aria-hidden="true">⌄</span></summary>
+              <div class="advanced-grid">
+                <label for="threshold">แจ้งตรวจซ้ำเมื่อ confidence ต่ำกว่า <span>0.10–0.99</span></label>
+                <input id="threshold" type="number" min="0.10" max="0.99" step="0.01" value="0.80">
+                <label class="option-check" for="handwriting"><input id="handwriting" type="checkbox"><span>ลอง Thai-TrOCR กับบรรทัดที่ไม่ชัด <small>ต้องติดตั้ง package เพิ่มก่อน</small></span></label>
+              </div>
+            </details>
+          </div>
+          <p id="status" class="status-message" role="status" aria-live="polite"></p>
+
+          <div id="loadingPanel" class="loading-panel" hidden>
+            <span class="loading-orbit" aria-hidden="true"></span>
+            <div><strong>กำลังอ่านใบเสร็จในเครื่อง</strong><span>ครั้งแรกอาจใช้เวลานานขึ้นเพื่อเตรียมโมเดล</span></div>
+            <time id="elapsed">00:00</time>
+          </div>
+
+          <div id="emptyReview" class="empty-review">
+            <div class="empty-review-icon" aria-hidden="true"><span>✓</span></div>
+            <strong>พื้นที่ตรวจทานพร้อมแล้ว</strong>
+            <p>เมื่ออ่านใบเสร็จ ระบบจะแสดงข้อมูลสำคัญและรายการที่ต้องตรวจซ้ำตรงนี้</p>
+          </div>
+
+          <div id="reviewPanel" class="review-panel" hidden>
+            <div class="result-banner">
+              <div><span class="small-label">RESULT / ผลอ่านอัตโนมัติ</span><h3 id="summaryTitle">พบข้อมูลจากใบเสร็จ</h3><p id="summarySubtitle">โปรดเทียบกับเอกสารต้นทาง</p></div>
+              <span id="summaryBadge" class="summary-badge">รอตรวจทาน</span>
+            </div>
+            <div class="metric-row">
+              <div><strong id="metricPages">—</strong><span>หน้า</span></div>
+              <div><strong id="metricLines">—</strong><span>บรรทัดที่อ่านได้</span></div>
+              <div><strong id="metricLow">—</strong><span>จุดที่ต้องดูซ้ำ</span></div>
+            </div>
+
+            <div class="check-section">
+              <div class="subsection-head"><h3>รายการตรวจ</h3><span id="issueCount">—</span></div>
+              <ul id="checksList" class="checks-list"></ul>
+            </div>
+
+            <div class="form-section">
+              <div class="subsection-head"><h3>ข้อมูลบนใบเสร็จ</h3><span>แก้ไขและทำเครื่องหมายเมื่อตรวจแล้ว</span></div>
+              <div class="field-grid">
+                <div class="field field-wide" data-field-block="merchant"><label for="merchant">ร้านค้า / ผู้ออกใบเสร็จ <em>*</em></label><input id="merchant" data-field="merchant" autocomplete="off" placeholder="ชื่อที่ปรากฏบนใบเสร็จ"><small id="merchantMeta" class="field-meta"></small><label class="confirm-control" for="confirmMerchant"><input id="confirmMerchant" type="checkbox" data-confirm="merchant">ตรวจแล้ว</label></div>
+                <div class="field" data-field-block="receiptNumber"><label for="receiptNumber">เลขที่ใบเสร็จ</label><input id="receiptNumber" data-field="receiptNumber" autocomplete="off" placeholder="ถ้ามี"><small id="receiptNumberMeta" class="field-meta"></small><label class="confirm-control" for="confirmReceiptNumber"><input id="confirmReceiptNumber" type="checkbox" data-confirm="receiptNumber">ตรวจแล้ว</label></div>
+                <div class="field" data-field-block="date"><label for="date">วันที่บนใบเสร็จ <em>*</em></label><input id="date" data-field="date" autocomplete="off" placeholder="เช่น 23/09/2569"><small id="dateMeta" class="field-meta"></small><label class="confirm-control" for="confirmDate"><input id="confirmDate" type="checkbox" data-confirm="date">ตรวจแล้ว</label></div>
+                <div class="field field-wide" data-field-block="taxId"><label for="taxId">เลขประจำตัวผู้เสียภาษี</label><input id="taxId" data-field="taxId" inputmode="numeric" autocomplete="off" placeholder="13 หลัก ถ้ามี"><small id="taxIdMeta" class="field-meta"></small><label class="confirm-control" for="confirmTaxId"><input id="confirmTaxId" type="checkbox" data-confirm="taxId">ตรวจแล้ว</label></div>
+                <div class="field" data-field-block="subtotal"><label for="subtotal">ยอดก่อนภาษี</label><input id="subtotal" data-field="subtotal" inputmode="decimal" autocomplete="off" placeholder="0.00"><small id="subtotalMeta" class="field-meta"></small><label class="confirm-control" for="confirmSubtotal"><input id="confirmSubtotal" type="checkbox" data-confirm="subtotal">ตรวจแล้ว</label></div>
+                <div class="field" data-field-block="vat"><label for="vat">ภาษีมูลค่าเพิ่ม</label><input id="vat" data-field="vat" inputmode="decimal" autocomplete="off" placeholder="0.00"><small id="vatMeta" class="field-meta"></small><label class="confirm-control" for="confirmVat"><input id="confirmVat" type="checkbox" data-confirm="vat">ตรวจแล้ว</label></div>
+                <div class="field field-wide total-field" data-field-block="total"><label for="total">ยอดรวมที่ชำระ <em>*</em></label><div class="amount-input"><input id="total" data-field="total" inputmode="decimal" autocomplete="off" placeholder="0.00"><span>THB</span></div><small id="totalMeta" class="field-meta"></small><label class="confirm-control" for="confirmTotal"><input id="confirmTotal" type="checkbox" data-confirm="total">ตรวจแล้ว</label></div>
+              </div>
+            </div>
+
+            <div id="lowReviewWrap" class="low-review-wrap" hidden><label for="lowReview"><input id="lowReview" type="checkbox"><span>ฉันตรวจบรรทัดที่ confidence ต่ำเทียบกับใบเสร็จแล้ว</span></label><button id="viewLowLines" type="button" class="text-button">ดูบรรทัดเหล่านั้น ↗</button></div>
+
+            <div class="expense-note"><label for="expenseNote">หมายเหตุประกอบการเบิก <span>กรอกเอง · ไม่ได้อ่านจาก OCR</span></label><textarea id="expenseNote" rows="3" placeholder="ระบุวัตถุประสงค์หรือรายละเอียดค่าใช้จ่ายตามที่ใช้จริง"></textarea></div>
+
+            <div class="review-actions"><div class="review-progress"><strong id="reviewStatus">รอตรวจทาน</strong><span id="reviewCount">0 รายการตรวจแล้ว</span></div><div class="export-buttons"><button id="copyDraft" class="button button-subtle" type="button">คัดลอก JSON</button><button id="download" class="button button-dark" type="button">บันทึกร่าง JSON <span aria-hidden="true">↧</span></button></div></div>
+            <p class="authority-note">สถานะ “ตรวจข้อมูลแล้ว” เป็นการตรวจทานเอกสารในเครื่อง ไม่ใช่การอนุมัติรายการเบิกหรือยืนยันความถูกต้องทางภาษี</p>
+          </div>
+        </section>
+      </div>
+
+      <section id="evidencePanel" class="evidence-panel" aria-labelledby="evidenceTitle" hidden>
+        <div class="evidence-heading"><div class="section-kicker"><span>03</span><span class="kicker-rule"></span> OCR EVIDENCE</div><h2 id="evidenceTitle">ข้อความต้นฉบับที่อ่านได้</h2><p>ใช้เทียบข้อมูลแต่ละช่องกับผล OCR และใบเสร็จจริง</p></div>
+        <div id="warningList" class="warning-list" hidden></div>
+        <div class="evidence-grid"><div class="raw-panel"><div class="evidence-subhead"><strong>ข้อความทั้งหมด</strong><button id="copyText" type="button" class="text-button">คัดลอกข้อความ</button></div><textarea id="rawText" readonly spellcheck="false" aria-label="ข้อความทั้งหมดจาก OCR"></textarea></div><div class="lines-panel"><div class="evidence-subhead"><strong>บรรทัดที่พบ</strong><span id="lineCount">—</span></div><div class="lines-scroll"><table><thead><tr><th>หน้า</th><th>ความมั่นใจ</th><th>ข้อความ</th></tr></thead><tbody id="ocrRows"></tbody></table></div></div></div>
+      </section>
+
+      <footer class="footer"><span>STeP / LOCAL RECEIPT REVIEW</span><span>ร่างทดลอง · ข้อมูลอยู่ในเครื่องผู้ใช้</span></footer>
+    </main>
   </div>
-
-  <section class="panel">
-    <div class="row">
-      <input id="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff">
-      <label>Review ต่ำกว่า
-        <input id="threshold" type="number" min="0.10" max="0.99" step="0.01" value="0.80">
-      </label>
-      <label title="ต้องติดตั้ง optional handwriting package ก่อน">
-        <input id="handwriting" type="checkbox">
-        Thai-TrOCR สำหรับบรรทัด confidence ต่ำ
-      </label>
-      <button id="run" class="primary">อ่านเอกสาร</button>
-    </div>
-    <p id="status" class="muted"></p>
-  </section>
-
-  <section id="resultPanel" class="panel hidden">
-    <div class="row">
-      <strong>ผลลัพธ์</strong>
-      <button id="copy">คัดลอกข้อความ</button>
-      <button id="download">บันทึก JSON</button>
-    </div>
-    <div id="summary" class="summary"></div>
-    <textarea id="text" spellcheck="false"></textarea>
-    <div id="warnings"></div>
-  </section>
-
-  <section id="detailPanel" class="panel hidden">
-    <strong>บรรทัดที่ OCR พบ</strong>
-    <div style="overflow:auto; margin-top:10px">
-      <table>
-        <thead>
-          <tr><th>หน้า</th><th>Confidence</th><th>ข้อความ</th><th>Thai-TrOCR candidate</th><th class="hide-mobile">สถานะ</th></tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-  </section>
-</main>
-
-<script>
-const $ = (id) => document.getElementById(id);
-let lastPayload = null;
-
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
-}
-
-$("run").addEventListener("click", async () => {
-  const file = $("file").files[0];
-  if (!file) { $("status").textContent = "กรุณาเลือก PDF หรือภาพก่อน"; return; }
-  $("run").disabled = true;
-  $("status").textContent = "กำลังประมวลผลในเครื่อง… ครั้งแรกอาจช้ากว่าเพราะต้องเตรียมโมเดล";
-  $("resultPanel").classList.add("hidden");
-  $("detailPanel").classList.add("hidden");
-
-  const qs = new URLSearchParams({
-    filename: file.name,
-    threshold: $("threshold").value,
-    handwriting: $("handwriting").checked ? "fallback" : "off",
-  });
-
-  try {
-    const bytes = await file.arrayBuffer();
-    let res;
-    try {
-      res = await fetch("/api/ocr?" + qs.toString(), {
-        method: "POST",
-        headers: {"Content-Type": "application/octet-stream"},
-        body: bytes,
-      });
-    } catch {
-      throw new Error("Cannot connect to the local OCR server. Run Start-OCR.bat, keep its window open, then retry.");
-    }
-    const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.message || payload.error || "OCR failed");
-
-    lastPayload = payload.result;
-    const s = payload.result.summary;
-    $("summary").innerHTML = [
-      `หน้า ${s.pages}`,
-      `บรรทัด ${s.recognized_lines}`,
-      `confidence เฉลี่ย ${s.average_confidence ?? "-"}`,
-      `ต้องตรวจ ${s.needs_review}`,
-      `เวลา ${s.elapsed_seconds ?? "-"} วินาที`,
-    ].map(x => `<span class="pill">${escapeHtml(x)}</span>`).join("");
-
-    $("text").value = payload.result.text || "";
-    $("warnings").innerHTML = (payload.result.warnings || []).map(w => `<p class="bad">⚠ ${escapeHtml(w)}</p>`).join("");
-
-    const rows = [];
-    for (const page of payload.result.pages || []) {
-      if (page.source === "native_pdf_text") continue;
-      for (const line of page.lines || []) {
-        const conf = line.confidence == null ? "-" : line.confidence.toFixed(3);
-        rows.push(`<tr>
-          <td>${page.page}</td>
-          <td class="${line.needs_review ? "bad" : ""}">${conf}</td>
-          <td>${escapeHtml(line.text)}</td>
-          <td>${escapeHtml(line.handwriting_candidate || "")}</td>
-          <td class="hide-mobile">${line.needs_review ? "ตรวจซ้ำ" : "ผ่าน"}</td>
-        </tr>`);
-      }
-    }
-    $("rows").innerHTML = rows.join("") || `<tr><td colspan="5">หน้านี้ใช้ text layer ของ PDF โดยตรง จึงไม่ต้อง OCR</td></tr>`;
-    $("resultPanel").classList.remove("hidden");
-    $("detailPanel").classList.remove("hidden");
-    $("status").textContent = "เสร็จแล้ว — ตรวจบรรทัด confidence ต่ำก่อนนำข้อมูลสำคัญไปใช้";
-  } catch (err) {
-    $("status").textContent = "เกิดข้อผิดพลาด: " + err.message;
-  } finally {
-    $("run").disabled = false;
-  }
-});
-
-$("copy").addEventListener("click", async () => {
-  await navigator.clipboard.writeText($("text").value);
-  $("status").textContent = "คัดลอกข้อความแล้ว";
-});
-
-$("download").addEventListener("click", () => {
-  if (!lastPayload) return;
-  const blob = new Blob([JSON.stringify(lastPayload, null, 2)], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "step-local-thai-ocr-result.json";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-</script>
 </body>
 </html>

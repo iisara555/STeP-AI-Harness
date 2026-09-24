@@ -13,6 +13,9 @@
 | E. Low quality | ภาพมือถือเอียง/แสงไม่สม่ำเสมอ | detection + confidence |
 | F. Handwriting | ลายมือไทยอย่างน้อย 20 บรรทัด | Paddle vs Thai-TrOCR candidate |
 | G. Native PDF | PDF ที่เลือก copy text ได้ | ต้องใช้ text layer โดยไม่เรียก OCR |
+| H. Receipt fields | Printed Thai reimbursement receipts | Merchant, receipt number, date, tax ID, subtotal, VAT, paid total against source |
+| I. Receipt review | Missing or ambiguous values and low-confidence text | Manual correction, confirmation reset on edit, review checklist, draft JSON |
+| J. Thermal receipts | Faded, crumpled, or cropped thermal paper | Readability and number accuracy; record fields that still require manual entry |
 
 ## เก็บผลต่อเอกสาร
 

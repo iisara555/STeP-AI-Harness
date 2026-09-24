@@ -17,6 +17,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
+WEB_FILES = {
+    "/": WEB_ROOT / "index.html",
+    "/index.html": WEB_ROOT / "index.html",
+    "/styles.css": WEB_ROOT / "styles.css",
+    "/receipt-review.js": WEB_ROOT / "receipt-review.js",
+    "/app.js": WEB_ROOT / "app.js",
+}
 WORKER = ROOT / "ocr_worker.py"
 WORKER_TIMEOUT_SECONDS = 300
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -94,8 +101,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path in {"/", "/index.html"}:
-            return self._send_file(WEB_ROOT / "index.html")
+        if parsed.path in WEB_FILES:
+            return self._send_file(WEB_FILES[parsed.path])
         if parsed.path == "/api/health":
             return self._send_json({
                 "ok": True,

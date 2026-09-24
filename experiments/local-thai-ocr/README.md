@@ -15,6 +15,14 @@
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
+## Receipt review workflow
+
+The local page is designed for preparing STeP expense reimbursement evidence. Open `Start-OCR.bat` for each session, keep its server window running, then choose a receipt image or PDF in the page. The status badge and retry control show whether the local OCR service is reachable.
+
+After OCR, the page proposes the merchant, receipt number, date, tax ID, subtotal, VAT, and paid total. These are OCR suggestions. Compare each value against the receipt, correct it, and mark the populated field as checked. The review list also flags missing required values, a subtotal/VAT/total mismatch, incomplete tax ID length, and OCR lines below the confidence threshold. The expense note is entered manually.
+
+The draft can be downloaded as JSON or copied to the clipboard. It contains the OCR output and may contain personal or financial data, so store it according to the organization's data classification rules. The “fields checked” state records document review only; it does not approve reimbursement or validate tax compliance. Receipt extraction heuristics and accuracy still require pilot testing with authorized sample documents.
+
 ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก และยังไม่เพิ่ม table-structure model ในรอบนี้.
 
 ## Privacy boundary
