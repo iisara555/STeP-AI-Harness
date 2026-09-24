@@ -116,6 +116,11 @@ export async function resolveRoleFiles(roleId) {
     'privacy-preflight.md',
     'teams.md',
     'step-router.md',
+    'hr-personnel-welfare-index.md',
+    'career-path-index.md',
+    'hr-service-channels.md',
+    'cc-iso-document-register.md',
+    'afp-operational-circulars.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);
@@ -417,6 +422,11 @@ export async function resolveTeamFiles(teamCode) {
     'privacy-preflight.md',
     'teams.md',
     'step-router.md',
+    'hr-personnel-welfare-index.md',
+    'career-path-index.md',
+    'hr-service-channels.md',
+    'cc-iso-document-register.md',
+    'afp-operational-circulars.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);
