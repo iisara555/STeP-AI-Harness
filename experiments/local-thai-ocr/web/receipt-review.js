@@ -23,7 +23,17 @@
       } else {
         for (const line of page.lines || []) {
           if (String(line.text || "").trim()) {
-            records.push({ text: String(line.text).trim(), page: page.page, confidence: line.confidence ?? null, box: line.box || null });
+            records.push({
+              text: String(line.text).trim(),
+              page: page.page,
+              confidence: line.confidence ?? null,
+              box: line.box || null,
+              needsReview: Boolean(line.needs_review),
+              crosscheckCandidate: line.crosscheck_candidate || "",
+              crosscheckConfidence: line.crosscheck_confidence ?? null,
+              crosscheckStatus: line.crosscheck_status || null,
+              handwritingCandidate: line.handwriting_candidate || "",
+            });
           }
         }
       }
@@ -42,6 +52,9 @@
       page: record?.page ?? null,
       confidence: record?.confidence ?? null,
       evidence: record?.text ?? "",
+      crosscheckCandidate: record?.crosscheckCandidate ?? "",
+      crosscheckStatus: record?.crosscheckStatus ?? null,
+      handwritingCandidate: record?.handwritingCandidate ?? "",
     };
   }
 
@@ -186,8 +199,10 @@
 
     const pending = fieldKeys.filter((key) => String(values[key] || "").trim() && !confirmed[key]);
     if (pending.length) issues.push({ code: "unconfirmed_fields", severity: "blocking", count: pending.length });
-    if (options.lowConfidenceCount > 0 && !options.lowConfidenceReviewed) {
-      issues.push({ code: "low_confidence", severity: "blocking", count: options.lowConfidenceCount });
+    const reviewLineCount = options.reviewLineCount ?? options.lowConfidenceCount ?? 0;
+    const reviewLinesChecked = options.reviewLinesChecked ?? options.lowConfidenceReviewed ?? false;
+    if (reviewLineCount > 0 && !reviewLinesChecked) {
+      issues.push({ code: "review_lines", severity: "blocking", count: reviewLineCount });
     }
     if (options.resized) issues.push({ code: "resized_image", severity: "advisory" });
     if (options.buyerTaxIdExcluded) issues.push({ code: "buyer_tax_id_excluded", severity: "advisory" });

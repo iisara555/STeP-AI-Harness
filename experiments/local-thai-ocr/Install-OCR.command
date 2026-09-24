@@ -26,5 +26,5 @@ fi
 .venv/bin/python -m pip install -r requirements-core.txt
 
 echo
-echo "Core OCR installed. Thai-TrOCR is optional and is not installed by default."
+echo "Core OCR installed. EasyOCR cross-check and Thai-TrOCR handwriting are optional."
 echo "Run ./Start-OCR.command"

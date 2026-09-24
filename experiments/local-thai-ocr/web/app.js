@@ -14,6 +14,7 @@
     extracted: null,
     timer: null,
     startedAt: 0,
+    optionsInitialized: false,
   };
 
   const issueText = {
@@ -26,7 +27,7 @@
     amount_mismatch: "ยอดก่อนภาษีบวกภาษีมูลค่าเพิ่มไม่เท่ากับยอดรวม โปรดเทียบใบเสร็จ",
     tax_id_length: "เลขประจำตัวผู้เสียภาษีที่กรอกมีไม่ครบ 13 หลัก",
     unconfirmed_fields: (issue) => `มีข้อมูล ${issue.count} ช่องที่ยังไม่ได้ทำเครื่องหมายว่าตรวจแล้ว`,
-    low_confidence: (issue) => `มี ${issue.count} บรรทัดที่ OCR ไม่มั่นใจ โปรดตรวจข้อความต้นฉบับ`,
+    review_lines: (issue) => `มี ${issue.count} บรรทัดที่ต้องตรวจจากภาพต้นฉบับ รวมจุดที่ OCR สองตัวอ่านต่างกัน`,
     resized_image: "ภาพถูกย่อก่อน OCR เพื่อจำกัดการใช้หน่วยความจำ โปรดตรวจข้อความขนาดเล็กบนใบเสร็จ",
     buyer_tax_id_excluded: "พบเลขผู้เสียภาษีในส่วนของลูกค้าหรือผู้ซื้อ จึงไม่เติมเป็นเลขของผู้ออกใบเสร็จ",
   };
@@ -57,6 +58,10 @@
     try {
       const response = await fetch("/api/health", { cache: "no-store", signal: controller.signal });
       const payload = await response.json();
+      if (!state.optionsInitialized && payload.ok === true) {
+        $("crosscheck").checked = payload.crosscheck_installed === true;
+        state.optionsInitialized = true;
+      }
       setOnline(response.ok && payload.ok === true);
     } catch {
       setOnline(false);
@@ -208,6 +213,7 @@
       filename: file.name,
       threshold: String(threshold),
       handwriting: $("handwriting").checked ? "fallback" : "off",
+      crosscheck: $("crosscheck").checked ? "on" : "off",
     });
     try {
       const bytes = await file.arrayBuffer();
@@ -229,7 +235,12 @@
       state.result = payload.result;
       state.extracted = reviewCore.extractReceipt(payload.result);
       renderResult();
-      status("อ่านข้อมูลแล้ว โปรดเทียบแต่ละช่องกับใบเสร็จและทำเครื่องหมายเมื่อตรวจแล้ว", "success");
+      const crosscheckMissing = state.result.crosscheck_requested
+        && (state.result.summary?.recognized_lines || 0) > 0
+        && !(state.result.summary?.crosschecked_lines > 0);
+      status(crosscheckMissing
+        ? "อ่านข้อมูลแล้ว แต่ OCR ตัวที่สองยังไม่ทำงาน โปรดดูคำเตือนและตรวจใบเสร็จด้วยตนเอง"
+        : "อ่านข้อมูลแล้ว โปรดเทียบแต่ละช่องกับใบเสร็จและทำเครื่องหมายเมื่อตรวจแล้ว", crosscheckMissing ? "error" : "success");
     } catch (error) {
       $("emptyReview").hidden = false;
       status(`อ่านใบเสร็จไม่สำเร็จ: ${error.message}`, "error");
@@ -256,9 +267,11 @@
     for (const key of reviewCore.fieldKeys) {
       const item = state.extracted.fields[key];
       $(key).value = item.value;
-      $(`${key}Meta`).textContent = item.value
-        ? `เสนอจาก OCR · หน้า ${item.page ?? "—"}${item.confidence == null ? "" : ` · confidence ${item.confidence.toFixed(2)}`}`
+      const meta = item.value
+        ? `เสนอจาก OCR · หน้า ${item.page ?? "—"}${item.confidence == null ? "" : ` · confidence ${item.confidence.toFixed(2)}`}${item.crosscheckStatus === "disagree" ? ` · EasyOCR อ่านต่าง: ${item.crosscheckCandidate}` : ""}`
         : "OCR ยังไม่พบข้อมูล · กรอกเองได้";
+      $(`${key}Meta`).textContent = meta;
+      $(`${key}Meta`).title = meta;
       document.querySelector(`[data-confirm="${key}"]`).checked = false;
     }
     $("lowReviewWrap").hidden = !(summary.needs_review > 0);
@@ -270,13 +283,14 @@
   function renderEvidence() {
     $("rawText").value = state.result.text || "";
     const records = state.extracted.records;
-    $("lineCount").textContent = `${records.length} บรรทัด`;
+    const disagreementCount = state.result.summary?.disagreements || 0;
+    $("lineCount").textContent = `${records.length} บรรทัด${disagreementCount ? ` · ${disagreementCount} อ่านต่าง` : ""}`;
     const rows = $("ocrRows");
     rows.replaceChildren();
-    const threshold = Number($("threshold").value);
     for (const record of records) {
       const row = document.createElement("tr");
-      if (record.confidence != null && record.confidence < threshold) row.className = "is-low";
+      if (record.needsReview) row.classList.add("is-review");
+      if (record.crosscheckStatus === "disagree") row.classList.add("is-disagree");
       const page = document.createElement("td");
       page.textContent = record.page ?? "—";
       const score = document.createElement("td");
@@ -286,13 +300,49 @@
       score.append(chip);
       const text = document.createElement("td");
       text.textContent = record.text;
-      row.append(page, score, text);
+      const alternative = document.createElement("td");
+      if (record.crosscheckStatus === "disagree") {
+        const label = document.createElement("span");
+        label.className = "alternative-label is-disagree";
+        label.textContent = "อ่านต่าง · ตรวจภาพ";
+        const value = document.createElement("span");
+        value.className = "alternative-text";
+        value.textContent = record.crosscheckCandidate;
+        alternative.append(label, value);
+      } else if (record.crosscheckStatus === "agree") {
+        const label = document.createElement("span");
+        label.className = "alternative-label is-agree";
+        label.textContent = "อ่านตรงกัน";
+        alternative.append(label);
+      } else if (record.crosscheckStatus === "uncertain") {
+        const label = document.createElement("span");
+        label.className = "alternative-label is-uncertain";
+        label.textContent = "ผลสำรองไม่ชัด";
+        alternative.append(label);
+        if (record.crosscheckCandidate) {
+          const value = document.createElement("span");
+          value.className = "alternative-text";
+          value.textContent = record.crosscheckCandidate;
+          alternative.append(value);
+        }
+      }
+      if (record.handwritingCandidate) {
+        const label = document.createElement("span");
+        label.className = "alternative-label is-uncertain";
+        label.textContent = "Thai-TrOCR · ยังไม่ยืนยัน";
+        const value = document.createElement("span");
+        value.className = "alternative-text";
+        value.textContent = record.handwritingCandidate;
+        alternative.append(label, value);
+      }
+      if (!alternative.childNodes.length) alternative.textContent = "—";
+      row.append(page, score, text, alternative);
       rows.append(row);
     }
     if (!records.length) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 3;
+      cell.colSpan = 4;
       cell.textContent = "ไม่พบบรรทัดข้อความจากเอกสารนี้";
       row.append(cell);
       rows.append(row);
@@ -303,11 +353,17 @@
     for (const warning of warnings) {
       const paragraph = document.createElement("p");
       const resized = warning.match(/^Image resized from (\d+x\d+) to (\d+x\d+)/);
-      paragraph.textContent = resized
-        ? `ภาพขนาด ${resized[1]} ถูกย่อเป็น ${resized[2]} ก่อนอ่าน โปรดเทียบข้อความขนาดเล็กกับต้นฉบับ`
-        : warning.startsWith("High-detail tiled OCR")
-          ? "ระบบแบ่งภาพความละเอียดสูงเป็นส่วนย่อยเพื่อรักษารายละเอียด โปรดตรวจข้อมูลสำคัญกับใบเสร็จจริง"
-          : warning;
+      if (resized) paragraph.textContent = `ภาพขนาด ${resized[1]} ถูกย่อเป็น ${resized[2]} ก่อนอ่าน โปรดเทียบข้อความขนาดเล็กกับต้นฉบับ`;
+      else if (warning.startsWith("High-detail tiled OCR")) paragraph.textContent = "ระบบแบ่งภาพความละเอียดสูงเป็นส่วนย่อยเพื่อรักษารายละเอียด โปรดตรวจข้อมูลสำคัญกับใบเสร็จจริง";
+      else if (warning.startsWith("EasyOCR results")) paragraph.textContent = "ผล EasyOCR เป็นคำอ่านอีกแบบ หากอ่านต่างกันให้ตรวจจากภาพใบเสร็จจริง";
+      else if (warning.startsWith("EasyOCR cross-check is not installed")) paragraph.textContent = "ยังไม่ได้ติดตั้ง EasyOCR ตัวเสริม เปิด Install-Crosscheck.bat แล้วลองอีกครั้ง";
+      else if (warning.startsWith("EasyOCR cross-check could not run")) paragraph.textContent = "EasyOCR ตัวเสริมทำงานไม่สำเร็จ โปรดตรวจจากภาพใบเสร็จเอง";
+      else if (warning.startsWith("EasyOCR cross-check was limited")) paragraph.textContent = "เอกสารมีข้อความมาก ระบบเทียบผล OCR ตัวที่สองเฉพาะบางบรรทัด";
+      else if (warning.startsWith("EasyOCR cross-check reached")) paragraph.textContent = "ถึงขีดจำกัดการเทียบผล OCR ตัวที่สองในเอกสารนี้แล้ว โปรดตรวจบรรทัดที่เหลือจากต้นฉบับ";
+      else if (warning.startsWith("Thai-TrOCR candidates")) paragraph.textContent = "ผล Thai-TrOCR เป็นคำอ่านที่ยังไม่ยืนยัน และไม่แทนข้อความ OCR เดิม";
+      else if (warning.startsWith("Thai-TrOCR optional dependencies")) paragraph.textContent = "ยังไม่ได้ติดตั้ง Thai-TrOCR ตัวเสริม เปิด Install-Handwriting.bat แล้วลองอีกครั้ง";
+      else if (warning.startsWith("Thai-TrOCR fallback failed")) paragraph.textContent = "Thai-TrOCR อ่านบางบริเวณไม่สำเร็จ โปรดตรวจจากภาพใบเสร็จเอง";
+      else paragraph.textContent = warning;
       $("warningList").append(paragraph);
     }
   }
@@ -322,8 +378,8 @@
 
   function currentReview() {
     return reviewCore.reviewIssues(fieldValues(), fieldConfirmations(), {
-      lowConfidenceCount: state.result?.summary?.needs_review || 0,
-      lowConfidenceReviewed: $("lowReview").checked,
+      reviewLineCount: state.result?.summary?.needs_review || 0,
+      reviewLinesChecked: $("lowReview").checked,
       resized: (state.result?.warnings || []).some((warning) => /resized/i.test(warning)),
       buyerTaxIdExcluded: state.extracted?.buyerTaxIdExcluded || false,
     });
@@ -372,7 +428,7 @@
       source_filename: state.file?.name || state.result.filename || "",
       fields: fieldValues(),
       field_confirmed: fieldConfirmations(),
-      low_confidence_lines_checked: $("lowReview").checked,
+      ocr_review_lines_checked: $("lowReview").checked,
       expense_note: $("expenseNote").value.trim(),
       corrected_text: $("rawText").value,
       checks: review.issues,
@@ -428,7 +484,7 @@
   $("lowReview").addEventListener("change", updateReview);
   $("viewLowLines").addEventListener("click", () => {
     $("evidencePanel").scrollIntoView({ behavior: "smooth", block: "start" });
-    $("ocrRows").querySelector("tr.is-low")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    $("ocrRows").querySelector("tr.is-review")?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
   $("copyText").addEventListener("click", async () => {
     try {

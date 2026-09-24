@@ -11,4 +11,8 @@ Optional handwriting fallback:
 - `openthaigpt/thai-trocr`: model card states Apache-2.0.
 - PyTorch / Transformers: follow upstream licenses.
 
+Optional printed-text cross-check:
+- EasyOCR and its Thai recognition model: follow upstream licenses and model redistribution terms.
+- PyTorch, torchvision, OpenCV, and other EasyOCR dependencies: follow upstream licenses.
+
 Before STeP distributes a prebuilt installer containing dependencies or model files, perform a separate license and redistribution review. Keeping this prototype source-only avoids implying that third-party binaries/models are already approved for redistribution.

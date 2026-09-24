@@ -17,12 +17,15 @@ MAX_OCR_IMAGE_SIDE = 2400
 DETAIL_OCR_IMAGE_SIDE = 4800
 OCR_TILE_SIDE = 1800
 OCR_TILE_OVERLAP = 160
+MAX_CROSSCHECK_LINES_PER_TILE = 80
+MAX_CROSSCHECK_LINES_PER_REQUEST = 100
 
 
 @dataclass(frozen=True)
 class OCRConfig:
     low_confidence_threshold: float = 0.80
     handwriting_fallback: bool = False
+    crosscheck: bool = False
     native_pdf_min_chars: int = 40
     render_dpi: int = 150
 
@@ -37,6 +40,9 @@ class LocalThaiOCR:
     def __init__(self) -> None:
         self._ocr: PaddleOCR | None = None
         self._handwriting = None
+        self._crosscheck = None
+        self._crosscheck_failed = False
+        self._crosscheck_lines_used = 0
 
     def _get_ocr(self) -> PaddleOCR:
         if self._ocr is None:
@@ -61,8 +67,17 @@ class LocalThaiOCR:
             self._handwriting = ThaiHandwritingReader()
         return self._handwriting
 
+    def _get_crosscheck(self):
+        if self._crosscheck is None:
+            from crosscheck import EasyOCRCrosscheck
+
+            self._crosscheck = EasyOCRCrosscheck()
+        return self._crosscheck
+
     def process(self, path: Path, config: OCRConfig) -> dict[str, Any]:
         started = time.perf_counter()
+        self._crosscheck_lines_used = 0
+        self._crosscheck_failed = False
         suffix = path.suffix.lower()
         warnings: list[str] = []
 
@@ -80,6 +95,8 @@ class LocalThaiOCR:
         lines = [line for page in pages for line in page.get("lines", [])]
         scores = [line["confidence"] for line in lines if line.get("confidence") is not None]
         low = [line for line in lines if line.get("needs_review")]
+        disagreements = [line for line in lines if line.get("crosscheck_status") == "disagree"]
+        crosschecked = [line for line in lines if line.get("crosscheck_status")]
 
         text_pages: list[str] = []
         for page in pages:
@@ -96,12 +113,16 @@ class LocalThaiOCR:
             "engine": "PaddleOCR PP-OCRv5 Thai Mobile",
             "local_only": True,
             "handwriting_fallback_requested": config.handwriting_fallback,
+            "crosscheck_requested": config.crosscheck,
             "threshold": config.low_confidence_threshold,
             "summary": {
                 "pages": len(pages),
                 "recognized_lines": len(lines),
                 "average_confidence": round(statistics.fmean(scores), 4) if scores else None,
                 "needs_review": len(low),
+                "low_confidence_lines": sum(bool(line.get("low_confidence")) for line in lines),
+                "crosschecked_lines": len(crosschecked),
+                "disagreements": len(disagreements),
                 "elapsed_seconds": round(time.perf_counter() - started, 3),
             },
             "text": "\n\n".join(text_pages).strip(),
@@ -254,6 +275,7 @@ class LocalThaiOCR:
                     "text": str(text),
                     "confidence": score,
                     "box": box,
+                    "low_confidence": score is None or score < config.low_confidence_threshold,
                     "needs_review": score is None or score < config.low_confidence_threshold,
                 }
 
@@ -278,7 +300,72 @@ class LocalThaiOCR:
                         self._add_warning(warnings, f"Thai-TrOCR fallback failed for one region: {exc}")
 
                 lines.append(item)
+        if config.crosscheck and lines:
+            self._crosscheck_lines(image, lines, warnings)
         return lines
+
+    def _crosscheck_lines(
+        self, image: Image.Image, lines: list[dict[str, Any]], warnings: list[str]
+    ) -> None:
+        if self._crosscheck_failed:
+            return
+        remaining = MAX_CROSSCHECK_LINES_PER_REQUEST - self._crosscheck_lines_used
+        if remaining <= 0:
+            self._add_warning(warnings, "EasyOCR cross-check reached the per-document line limit.")
+            return
+        priority = (
+            [index for index, line in enumerate(lines) if line["low_confidence"]]
+            + list(range(max(0, len(lines) - 20), len(lines)))
+            + list(range(min(20, len(lines))))
+            + list(range(len(lines)))
+        )
+        selected: list[int] = []
+        for index in priority:
+            if index not in selected and lines[index].get("box"):
+                selected.append(index)
+            if len(selected) == min(MAX_CROSSCHECK_LINES_PER_TILE, remaining):
+                break
+        selected.sort()
+        if len(selected) < sum(bool(line.get("box")) for line in lines):
+            self._add_warning(warnings, "EasyOCR cross-check was limited to selected lines on a dense page.")
+        if not selected:
+            return
+
+        try:
+            boxes = [self._padded_box(image, lines[index]["box"]) for index in selected]
+            candidates = self._get_crosscheck().read_lines(image, boxes)
+            if len(candidates) != len(selected):
+                raise RuntimeError("EasyOCR returned a different number of text regions.")
+        except ImportError:
+            self._crosscheck_failed = True
+            self._add_warning(warnings, "EasyOCR cross-check is not installed. Run Install-Crosscheck first.")
+            return
+        except Exception as exc:
+            self._crosscheck_failed = True
+            self._add_warning(warnings, f"EasyOCR cross-check could not run: {type(exc).__name__}.")
+            return
+
+        from crosscheck import comparable_text
+
+        for index, candidate in zip(selected, candidates):
+            line = lines[index]
+            alternative = candidate["text"]
+            confidence = candidate["confidence"]
+            line["crosscheck_candidate"] = alternative
+            line["crosscheck_confidence"] = confidence
+            if not alternative or confidence < 0.20:
+                line["crosscheck_status"] = "uncertain"
+            elif comparable_text(line["text"]) == comparable_text(alternative):
+                line["crosscheck_status"] = "agree"
+            else:
+                line["crosscheck_status"] = "disagree"
+                line["needs_review"] = True
+
+        self._crosscheck_lines_used += len(selected)
+        self._add_warning(
+            warnings,
+            "EasyOCR results are independent second opinions. Differences require checking the receipt image.",
+        )
 
     @staticmethod
     def _result_json(output: Any) -> dict[str, Any]:
@@ -322,6 +409,18 @@ class LocalThaiOCR:
             min(image.width, right + pad_x),
             min(image.height, bottom + pad_y),
         ))
+
+    @staticmethod
+    def _padded_box(image: Image.Image, box: list[int]) -> list[int]:
+        left, top, right, bottom = box
+        pad_x = max(4, int((right - left) * 0.04))
+        pad_y = max(4, int((bottom - top) * 0.15))
+        return [
+            max(0, left - pad_x),
+            max(0, top - pad_y),
+            min(image.width, right + pad_x),
+            min(image.height, bottom + pad_y),
+        ]
 
     @staticmethod
     def _add_warning(warnings: list[str], message: str) -> None:

@@ -103,6 +103,7 @@
               <div class="advanced-grid">
                 <label for="threshold">แจ้งตรวจซ้ำเมื่อ confidence ต่ำกว่า <span>0.10–0.99</span></label>
                 <input id="threshold" type="number" min="0.10" max="0.99" step="0.01" value="0.80">
+                <label class="option-check" for="crosscheck"><input id="crosscheck" type="checkbox"><span>เทียบผลกับ EasyOCR ภาษาไทย/อังกฤษ <small>อ่านบรรทัดเดิมอีกครั้งบนเครื่อง · ต้องติดตั้งตัวเสริม</small></span></label>
                 <label class="option-check" for="handwriting"><input id="handwriting" type="checkbox"><span>ลอง Thai-TrOCR กับบรรทัดที่ไม่ชัด <small>ต้องติดตั้ง package เพิ่มก่อน</small></span></label>
               </div>
             </details>
@@ -150,7 +151,7 @@
               </div>
             </div>
 
-            <div id="lowReviewWrap" class="low-review-wrap" hidden><label for="lowReview"><input id="lowReview" type="checkbox"><span>ฉันตรวจบรรทัดที่ confidence ต่ำเทียบกับใบเสร็จแล้ว</span></label><button id="viewLowLines" type="button" class="text-button">ดูบรรทัดเหล่านั้น ↗</button></div>
+            <div id="lowReviewWrap" class="low-review-wrap" hidden><label for="lowReview"><input id="lowReview" type="checkbox"><span>ฉันตรวจบรรทัดที่ระบบแจ้ง รวมถึงจุดที่ OCR อ่านต่างกัน เทียบกับใบเสร็จแล้ว</span></label><button id="viewLowLines" type="button" class="text-button">ดูบรรทัดเหล่านั้น ↗</button></div>
 
             <div class="expense-note"><label for="expenseNote">หมายเหตุประกอบการเบิก <span>กรอกเอง · ไม่ได้อ่านจาก OCR</span></label><textarea id="expenseNote" rows="3" placeholder="ระบุวัตถุประสงค์หรือรายละเอียดค่าใช้จ่ายตามที่ใช้จริง"></textarea></div>
 
@@ -163,7 +164,7 @@
       <section id="evidencePanel" class="evidence-panel" aria-labelledby="evidenceTitle" hidden>
         <div class="evidence-heading"><div class="section-kicker"><span>03</span><span class="kicker-rule"></span> OCR EVIDENCE</div><h2 id="evidenceTitle">ข้อความจากใบเสร็จ</h2><p>แก้ข้อความร่างที่อ่านผิดได้ โดยเทียบกับใบเสร็จและบรรทัด OCR เดิมด้านขวา ช่องข้อมูลด้านบนต้องแก้แยกกัน</p></div>
         <div id="warningList" class="warning-list" hidden></div>
-        <div class="evidence-grid"><div class="raw-panel"><div class="evidence-subhead"><strong>ข้อความร่าง · แก้ไขได้</strong><button id="copyText" type="button" class="text-button">คัดลอกข้อความร่าง</button></div><textarea id="rawText" spellcheck="false" aria-label="ข้อความร่างที่แก้ไขได้"></textarea></div><div class="lines-panel"><div class="evidence-subhead"><strong>ผล OCR เดิม</strong><span id="lineCount">—</span></div><div class="lines-scroll"><table><thead><tr><th>หน้า</th><th>ความมั่นใจ</th><th>ข้อความ</th></tr></thead><tbody id="ocrRows"></tbody></table></div></div></div>
+        <div class="evidence-grid"><div class="raw-panel"><div class="evidence-subhead"><strong>ข้อความร่าง · แก้ไขได้</strong><button id="copyText" type="button" class="text-button">คัดลอกข้อความร่าง</button></div><textarea id="rawText" spellcheck="false" aria-label="ข้อความร่างที่แก้ไขได้"></textarea></div><div class="lines-panel"><div class="evidence-subhead"><strong>ผล OCR และคำอ่านอีกแบบ</strong><span id="lineCount">—</span></div><div class="lines-scroll"><table><thead><tr><th>หน้า</th><th>ความมั่นใจ</th><th>ผลอ่านหลัก</th><th>ผลอ่านอีกตัว</th></tr></thead><tbody id="ocrRows"></tbody></table></div></div></div>
       </section>
 
       <footer class="footer"><span>STeP / LOCAL RECEIPT REVIEW</span><span>ร่างทดลอง · ข้อมูลอยู่ในเครื่องผู้ใช้</span></footer>

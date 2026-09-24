@@ -13,6 +13,7 @@ def main() -> None:
     parser.add_argument("output", type=Path)
     parser.add_argument("threshold", type=float)
     parser.add_argument("handwriting", choices=["0", "1"])
+    parser.add_argument("crosscheck", choices=["0", "1"])
     args = parser.parse_args()
 
     result = LocalThaiOCR().process(
@@ -20,6 +21,7 @@ def main() -> None:
         OCRConfig(
             low_confidence_threshold=args.threshold,
             handwriting_fallback=args.handwriting == "1",
+            crosscheck=args.crosscheck == "1",
         ),
     )
     args.output.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")

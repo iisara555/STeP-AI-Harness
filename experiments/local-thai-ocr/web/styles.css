@@ -237,9 +237,15 @@ th { position: sticky; top: 0; z-index: 1; background: #f5f8f4; color: #6b7d74; 
 th, td { padding: 9px 11px; border-bottom: 1px solid #edf1ec; vertical-align: top; }
 th:first-child, td:first-child { width: 43px; }
 th:nth-child(2), td:nth-child(2) { width: 80px; }
-tr.is-low td { background: #fff9ef; }
+tr.is-review td { background: #fff9ef; }
+tr.is-disagree td { background: #fff3e7; }
 .confidence-chip { color: var(--teal-dark); font: 700 10px "Bahnschrift", sans-serif; }
-tr.is-low .confidence-chip { color: var(--amber); }
+tr.is-review .confidence-chip { color: var(--amber); }
+.alternative-label { display: block; width: max-content; max-width: 100%; margin-bottom: 3px; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 700; }
+.alternative-label.is-disagree { background: #f7ddc8; color: #82481d; }
+.alternative-label.is-agree { background: #e2f2e8; color: #1d6850; }
+.alternative-label.is-uncertain { background: #edf0ee; color: #60736b; }
+.alternative-text { display: block; overflow-wrap: anywhere; }
 .footer { display: flex; justify-content: space-between; gap: 15px; margin-top: 29px; padding-top: 18px; border-top: 1px solid var(--line); color: #94a59c; font-size: 9px; }
 
 @media (max-width: 1200px) {

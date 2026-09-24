@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import mimetypes
 import os
@@ -32,7 +33,7 @@ ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
 _process_lock = threading.Lock()
 
 
-def run_ocr_worker(input_path: Path, output_path: Path, threshold: float, handwriting: bool) -> dict:
+def run_ocr_worker(input_path: Path, output_path: Path, threshold: float, handwriting: bool, crosscheck: bool) -> dict:
     command = [
         sys.executable,
         str(WORKER),
@@ -40,12 +41,14 @@ def run_ocr_worker(input_path: Path, output_path: Path, threshold: float, handwr
         str(output_path),
         str(threshold),
         "1" if handwriting else "0",
+        "1" if crosscheck else "0",
     ]
     worker = subprocess.Popen(
         command,
         cwd=ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
     )
     try:
         exit_code = worker.wait(timeout=WORKER_TIMEOUT_SECONDS)
@@ -109,6 +112,7 @@ class Handler(BaseHTTPRequestHandler):
                 "service": "STeP Local Thai OCR",
                 "version": "0.1",
                 "local_only": True,
+                "crosscheck_installed": importlib.util.find_spec("easyocr") is not None,
             })
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -150,6 +154,7 @@ class Handler(BaseHTTPRequestHandler):
             threshold = 0.80
         threshold = min(0.99, max(0.10, threshold))
         handwriting = query.get("handwriting", ["off"])[0] in {"1", "true", "on", "fallback"}
+        crosscheck = query.get("crosscheck", ["off"])[0] in {"1", "true", "on"}
 
         raw = self.rfile.read(length)
         with tempfile.TemporaryDirectory(prefix="step-local-ocr-") as tmp:
@@ -158,7 +163,7 @@ class Handler(BaseHTTPRequestHandler):
             input_path.write_bytes(raw)
             try:
                 with _process_lock:
-                    result = run_ocr_worker(input_path, output_path, threshold, handwriting)
+                    result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck)
                 result["filename"] = original_name
                 return self._send_json({"ok": True, "result": result})
             except Exception as exc:

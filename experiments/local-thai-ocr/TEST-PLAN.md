@@ -19,6 +19,7 @@
 | K. High-resolution receipt | Image above 20 MP with small printed text | Tiled OCR stays available, critical values match the source, no duplicate lines at tile edges |
 | L. Buyer tax ID | Receipt names a buyer and its tax ID but not an issuer tax ID | Issuer field stays blank and the buyer-number advisory appears |
 | M. Split total row | Label and amount are separate OCR lines on the same row | Paid total is proposed from the aligned amount and still requires human confirmation |
+| N. Dual OCR review | Printed Thai receipts with known ground truth, including difficult diacritics and numbers | Count true errors caught, false disagreement alerts, missed errors, added processing time, and review completion |
 
 ## เก็บผลต่อเอกสาร
 

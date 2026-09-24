@@ -12,6 +12,7 @@
 - ตั้ง threshold สำหรับ `needs_review`
 - ทดลอง **Thai-TrOCR** เฉพาะบรรทัด confidence ต่ำได้แบบ optional/lazy-load
 - Thai-TrOCR candidate เป็น second opinion เท่านั้น ระบบไม่แทนค่าข้อความเดิมอัตโนมัติ
+- Optional EasyOCR Thai/English recognition cross-checks PaddleOCR's detected lines, including lines with high PaddleOCR confidence. Different readings are flagged for human review; neither reading replaces the other automatically.
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
@@ -36,6 +37,7 @@ The draft can be downloaded as JSON or copied to the clipboard. It contains the 
 1. ตอนติดตั้ง Python packages
 2. ครั้งแรกที่ PaddleOCR ต้องดาวน์โหลด model weights หากยังไม่มีใน cache
 3. ครั้งแรกที่เปิด Thai-TrOCR หากยังไม่มี model weights ใน Hugging Face cache
+4. The first EasyOCR cross-check may download its Thai recognition model if it is not cached. Model download does not upload receipt bytes.
 
 **Model download ไม่ใช่ document upload** แต่เครื่องที่ต้อง air-gap ควรเตรียม dependency/model cache ล่วงหน้าก่อนนำไปใช้.
 
@@ -49,7 +51,7 @@ The draft can be downloaded as JSON or copied to the clipboard. It contains the 
 ## เริ่มทดลอง — macOS
 
 1. ใช้ Python 3.10–3.12 จาก python.org/Homebrew
-2. ครั้งแรก: `chmod +x Install-OCR.command Start-OCR.command Install-Handwriting.command`
+2. First run: `chmod +x Install-OCR.command Start-OCR.command Install-Handwriting.command Install-Crosscheck.command`
 3. เปิด `Install-OCR.command`
 4. เปิด `Start-OCR.command`
 
@@ -64,6 +66,14 @@ Windows: เปิด `Install-Handwriting.bat`
 macOS: เปิด `Install-Handwriting.command`
 
 จากนั้นติ๊ก `Thai-TrOCR สำหรับบรรทัด confidence ต่ำ` ในหน้าเว็บ. Candidate ที่ได้จะถูกแสดงแยกจาก PaddleOCR เพื่อให้คนตรวจเอง.
+
+## Optional second OCR for printed receipts
+
+Run `Install-Crosscheck.bat` on Windows or `Install-Crosscheck.command` on macOS after the core installer. This installs EasyOCR and caches its Thai/English recognition model. The local page enables the cross-check by default when the package is installed; the checkbox can be cleared for a faster PaddleOCR-only run. Restart the local server after updating the experiment files.
+
+The second OCR reads the same detected text regions. The results table shows agreement, disagreement, or an uncertain alternative. A disagreement adds a review item even when PaddleOCR reports high confidence. The exported draft keeps the original OCR text, the alternative, and the review state. EasyOCR confidence is used only to suppress very weak alternatives; scores from different engines are not directly comparable. The optional Thai-TrOCR handwriting candidate remains separate.
+
+The second model is a review aid, not an accuracy guarantee. Validate both readings against the receipt image. At most 80 regions per tile and 100 regions per document are cross-checked, prioritizing low-confidence lines and the start/end of each tile. Native PDF text layers bypass both OCR engines.
 
 ## Developer entry point
 
@@ -86,7 +96,7 @@ GET http://127.0.0.1:8765/api/health
 OCR request ใช้ raw file bytes:
 
 ```text
-POST /api/ocr?filename=sample.pdf&threshold=0.80&handwriting=off
+POST /api/ocr?filename=sample.pdf&threshold=0.80&handwriting=off&crosscheck=on
 Content-Type: application/octet-stream
 ```
 

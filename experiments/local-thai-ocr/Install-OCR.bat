@@ -34,7 +34,7 @@ echo Installing local OCR dependencies...
 if errorlevel 1 goto :fail
 
 echo.
-echo Core OCR installed. Thai-TrOCR handwriting fallback is optional and is NOT installed by default.
+echo Core OCR installed. EasyOCR cross-check and Thai-TrOCR handwriting are optional.
 echo Run Start-OCR.bat to open the local trial page.
 pause
 exit /b 0

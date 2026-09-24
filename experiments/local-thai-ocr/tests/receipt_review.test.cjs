@@ -90,3 +90,21 @@ test("seller tax ID takes precedence over a later buyer tax ID", () => {
   const extracted = review.extractReceipt(result);
   assert.equal(extracted.fields.taxId.value, "0105559999999");
 });
+
+test("keeps independent OCR readings and requires review of disagreements", () => {
+  const result = sampleResult();
+  result.pages[0].lines[1].crosscheck_candidate = "ร้านตัวอยาง จำกัด";
+  result.pages[0].lines[1].crosscheck_status = "disagree";
+  result.pages[0].lines[1].needs_review = true;
+  const extracted = review.extractReceipt(result);
+  assert.equal(extracted.fields.merchant.value, "ร้านตัวอย่าง จำกัด");
+  assert.equal(extracted.fields.merchant.crosscheckCandidate, "ร้านตัวอยาง จำกัด");
+  assert.equal(extracted.records[1].crosscheckStatus, "disagree");
+
+  const values = Object.fromEntries(Object.entries(extracted.fields).map(([key, item]) => [key, item.value]));
+  const confirmed = Object.fromEntries(review.fieldKeys.map((key) => [key, true]));
+  const pending = review.reviewIssues(values, confirmed, { reviewLineCount: 1 });
+  assert.equal(pending.complete, false);
+  assert.ok(pending.issues.some((issue) => issue.code === "review_lines"));
+  assert.equal(review.reviewIssues(values, confirmed, { reviewLineCount: 1, reviewLinesChecked: true }).complete, true);
+});
