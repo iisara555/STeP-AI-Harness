@@ -149,6 +149,29 @@ documents:
       เพื่อป้องกันการใช้เอกสารผิด Revision
 
   # --- STeP Quality Layer v0.1 ---
+  hr-personnel-welfare-2569:
+    title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคล และสวัสดิการพนักงาน พ.ศ. 2569"
+    owner: hd
+    type: organization-announcement
+    process: people.personnel-welfare
+    version: "2569"
+    announcedDate: "2026-09-23"
+    effectiveDate: "2026-10-01"
+    effectiveDateSource: "ข้อ 2 ของประกาศ: ใช้บังคับตั้งแต่วันที่ 1 ตุลาคม 2569"
+    supersedes: hr-personnel-welfare-2566
+    legalBasis: "ข้อ 18 ข้อ 30 และข้อ 32 ของข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 ประกอบมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 1/2569 เมื่อ 21 พฤษภาคม 2569"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: owner-confirmed-current
+    status: active
+    confirmedBy: "ได้รับไฟล์ประกาศฉบับลงนามจากผู้ดูแล STeP AI 2026-09-23"
+    index: docs/hr-personnel-welfare-index.md
+    contentInRepo: false
+    sensitivity: internal-published
+    sensitivityReason: "ประกาศตราครุฑที่ลงนามและประกาศใช้กับบุคลากรทั้งองค์กร HD อนุมัติให้เก็บสาระสำคัญพร้อมอัตราและจำนวนวันไว้ใน repository ได้"
+    disclosureApprovedBy: "HD (เจ้าของเอกสาร) ยืนยัน 2026-09-23"
+    note: "ดัชนีเก็บหัวข้อ อัตรา และจำนวนวันตามประกาศ ตอบอ้างเลขข้อได้ แต่ไม่ใช่สำเนาฉบับเต็ม ถ้อยคำบังคับและการตีความเฉพาะกรณีต้องเปิดฉบับจริงจาก HD; ข้อมูลรายบุคคล (เงินเดือนจริง วันลาคงเหลือ ผลประเมิน) ยังห้ามเข้า repository ตามข้อ 5.1.14"
+
   hr-personnel-welfare-2566:
     title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคลและสวัสดิการพนักงาน พ.ศ. 2566"
     owner: hd
@@ -160,14 +183,35 @@ documents:
     legalBasis: "ข้อ 18 แห่งข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 และมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 2/2565 เมื่อ 6 ธันวาคม 2565"
     sourceLevel: organization-policy
     authority: approved-organization-policy
-    verification: owner-confirmed-current
-    status: active
-    confirmedBy: "ผู้ดูแล STeP AI ยืนยันเป็นฉบับปัจจุบัน 2026-09-20"
-    index: docs/hr-personnel-welfare-index.md
+    verification: superseded
+    status: superseded
+    supersededBy: hr-personnel-welfare-2569
+    supersededDate: "2026-10-01"
+    supersededNote: "ยกเลิกโดยข้อ 3 ของประกาศฯ ฉบับ พ.ศ. 2569 ใช้อ้างอิงได้เฉพาะเหตุการณ์ก่อน 1 ตุลาคม 2569"
     contentInRepo: false
     sensitivity: restricted
     sensitivityReason: "เอกสารแนบท้ายมีตารางเงินเดือนต่ำสุด/สูงสุด ค่าความเชี่ยวชาญ และสิทธิ์ค่ารักษาพยาบาลรายตำแหน่ง"
-    note: "เก็บเฉพาะดัชนีหัวข้อและคำนิยาม ห้ามคัดตัวเลขค่าตอบแทนหรือเนื้อความเต็มเข้า repository สาธารณะ ต้องเปิดจากไฟล์ต้นฉบับของ HD ทุกครั้งที่อ้างอิง"
+    note: "ฉบับถูกยกเลิกแล้ว เลขข้อไม่ตรงกับฉบับ 2569 (เช่น ข้อวินัยรักษาความลับ 5.1.16 -> 5.1.14) ห้ามใช้ตอบสิทธิปัจจุบัน"
+
+  step-career-path-2569:
+    title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย เส้นทางความก้าวหน้าในสายอาชีพ (Career path) ของอุทยานฯ"
+    owner: hd
+    type: organization-announcement
+    process: people.personnel-welfare
+    version: "2569"
+    announcedDate: "2026-09-23"
+    legalBasis: "ข้อ 18 แห่งข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 และมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 1/2569 เมื่อ 21 พฤษภาคม 2569"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: owner-confirmed-current
+    status: active
+    confirmedBy: "ได้รับไฟล์ประกาศฉบับลงนามจากผู้ดูแล STeP AI 2026-09-23"
+    index: docs/career-path-index.md
+    contentInRepo: false
+    sensitivity: internal-published
+    sensitivityReason: "ประกาศตราครุฑที่ลงนามและประกาศใช้กับบุคลากรทั้งองค์กร HD อนุมัติให้เก็บตารางขั้นพร้อมอัตราเงินเดือนและค่าตำแหน่งไว้ใน repository ได้"
+    disclosureApprovedBy: "HD (เจ้าของเอกสาร) ยืนยัน 2026-09-23"
+    note: "ฉบับ 2569 แยกออกจากเอกสารแนบท้ายของประกาศหลักเกณฑ์บริหารงานบุคคลฯ เป็นประกาศเอกเทศ ดัชนีเก็บตารางขั้น อัตราเงินเดือน ค่าความเชี่ยวชาญ/ค่าตำแหน่ง และผู้มีอำนาจอนุมัติ; ข้อมูลรายบุคคล (ใครอยู่ขั้นไหน ได้เท่าไหร่) ยังห้ามเข้า repository ตามข้อ 5.1.14"
 
   iso-9001-2015:
     title: "ISO 9001:2015 Quality management systems — Requirements"

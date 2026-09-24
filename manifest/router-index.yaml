@@ -811,6 +811,42 @@ skills:
       escalate: {}
       human_only: {}
 
+  - name: hr-policy-lookup
+    cluster: governance-operations
+    domain: people-development
+    processId: people.personnel-welfare
+    teams:
+      primary: [hd]
+      consumers: ["*"]
+    wildcardReason: "every employee in every team is bound by the HR and career-path announcements, so anyone must be able to look up their own entitlements"
+    description: ตอบสิทธิและเงื่อนไขตามประกาศงานบุคคลและ Career Path ของอุทยานฯ พร้อมอ้างเลขข้อ — วันลา เบี้ยขยัน เบี้ยเลี้ยง ค่าที่พัก ค่ายานพาหนะ เงินเดือน ค่าตำแหน่ง การลาออก การพ้นสภาพ และระเบียบวินัย
+    intent: [hr-entitlement]
+    triggers: [ลาพักผ่อน, ลาป่วย, ลากิจ, ลาคลอด, ลาบวช, ลาอุปสมบท, ลาปฏิบัติธรรม, ลากิจพิเศษ, ลารับปริญญา, ลาไปดูแลคู่สมรส, ลาเกณฑ์ทหาร, ลาตรวจเลือก, วันลา, ลาได้กี่วัน, สิทธิวันลา, ลาออก, ยื่นใบลาออก, พ้นสภาพพนักงาน, เบี้ยขยัน, เบี้ยเลี้ยง, ค่าที่พัก, ค่าเบี้ยเลี้ยงไปราชการ, ค่ายานพาหนะ, ค่าน้ำมัน, เบิกค่าเดินทาง, เงินเดือนออกวันไหน, รอบจ่ายเงินเดือน, ปรับเงินเดือน, ค่าตอบแทนตามผลงาน, pay for performance, กองทุนสำรองเลี้ยงชีพ, ประกันสังคม, ค่าพิธีศพ, ตรวจสุขภาพประจำปี, ประกันสุขภาพกลุ่ม, ระเบียบวินัย, โทษทางวินัย, ภาคทัณฑ์, เวลาทำงาน, บันทึกเวลา, สแกนนิ้ว, มาสาย, การแต่งกาย, ระเบียบการแต่งกาย, career path, เส้นทางความก้าวหน้า, เลื่อนขั้น, เลื่อนตำแหน่ง, ค่าตำแหน่ง, ค่าความเชี่ยวชาญ, ขั้นเงินเดือน, หัวหน้าทีม, พนักงานประจำ, พนักงานโครงการ, พนักงานทดลองงาน, สวัสดิการพนักงาน, ระเบียบบุคคล, ประกาศงานบุคคล]
+    paths: ["**/HD/**", "**/HR/**", "**/HRD/**", "**/Personnel/**"]
+    fileTypes: [md, pdf, docx]
+    requires: []
+    scope:
+      allow:
+        - อ้างอัตราและเงื่อนไขตามประกาศ พร้อมเลขข้อกำกับทุกครั้ง
+        - เทียบสิทธิระหว่างสถานะการจ้างและระหว่างสาย S กับสาย L
+        - ระบุผู้มีอำนาจอนุมัติหรือแต่งตั้งในแต่ละขั้น
+      escalate:
+        individual_entitlement:
+          to: hd
+          description: สิทธิคงเหลือ ยอดเบิกจริง หรือประวัติการลาของพนักงานรายบุคคล ต้องดูจากระบบของ HD
+        unregistered_rates:
+          to: hd
+          description: วงเงินค่ารักษาพยาบาล เงินชดเชยคอมพิวเตอร์ ค่าโทรศัพท์ และเบี้ยเลี้ยงต่างประเทศ อยู่ในประกาศแยกที่ยังไม่ลงทะเบียน
+      human_only:
+        staff_performance_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การประเมินผลงานรายบุคคล การพิจารณาทางวินัย และการเสนอเลื่อนขั้น
+        policy_exception:
+          role: executive-director
+          authority: policy-waiver
+          description: การผ่อนผันระเบียบหรือการพิจารณากรณีพิเศษที่ประกาศระบุว่าเป็นดุลยพินิจของผู้อำนวยการ
+
   - name: learning-designer
     cluster: governance-operations
     domain: people-development

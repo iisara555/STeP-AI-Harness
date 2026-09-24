@@ -68,6 +68,6 @@ test('team Skill scoping follows Router eligibility rather than namespace folder
       const name = block.match(/^  - name:\s*([a-z0-9-]+)/m)?.[1] || 'unknown';
       assert.match(block, /^    wildcardReason:\s*.+$/m, `${name} wildcard needs wildcardReason`);
     }
-    assert.ok(wildcardBlocks.length <= 10, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
+    assert.ok(wildcardBlocks.length <= 11, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
   });
 });

@@ -189,9 +189,11 @@ processes:
       - people.personnel-welfare.compensation-benefits
       - people.personnel-welfare.leave
       - people.personnel-welfare.discipline
+      - people.personnel-welfare.separation
     associatedSops:
-      - hr-personnel-welfare-2566
-    description: "หลักเกณฑ์การจ้างงาน เวลาทำงาน เงินเดือนและสวัสดิการ การลา และระเบียบวินัย ตามประกาศอุทยานฯ พ.ศ. 2566"
+      - hr-personnel-welfare-2569
+      - step-career-path-2569
+    description: "หลักเกณฑ์การจ้างงาน เวลาทำงาน เงินเดือนและสวัสดิการ การลา ระเบียบวินัย การลาออก และการพ้นสภาพ ตามประกาศอุทยานฯ พ.ศ. 2569 (บังคับใช้ 1 ตุลาคม 2569) ประกอบประกาศฯ เส้นทางความก้าวหน้าในสายอาชีพ"
 
   people.learning-development:
     name: "การออกแบบการเรียนรู้ การอบรม และพัฒนาศักยภาพบุคลากร"

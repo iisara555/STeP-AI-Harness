@@ -41,6 +41,16 @@ export const QUALIFIED_INTENT_RULES = [
     ],
   },
   { intent: 'nonconformity', any: ['ไม่ได้มาตรฐาน', 'ไม่เป็นไปตามข้อกำหนด', 'ข้อไม่เป็นไปตามข้อกำหนด', 'เปิด nc', 'เปิด ncr', 'nonconformity', 'non-conformity'] },
+  // Entitlement questions name an HR subject and ask for a quantity or a
+  // condition. Both halves are required: "ลาออก" alone can belong to an
+  // offboarding plan, and "เท่าไหร่" alone belongs to any costing question.
+  {
+    intent: 'hr-entitlement',
+    allAny: [
+      ['ลาพักผ่อน', 'ลาป่วย', 'ลากิจ', 'ลาคลอด', 'ลาบวช', 'ลาอุปสมบท', 'ลาปฏิบัติธรรม', 'วันลา', 'สิทธิลา', 'ลาออก', 'พ้นสภาพ', 'เบี้ยขยัน', 'เบี้ยเลี้ยง', 'ค่าที่พัก', 'ค่ายานพาหนะ', 'ค่าตำแหน่ง', 'ค่าความเชี่ยวชาญ', 'กองทุนสำรองเลี้ยงชีพ', 'ระเบียบวินัย', 'โทษทางวินัย', 'เลื่อนขั้น', 'ขั้นเงินเดือน', 'career path', 'เส้นทางความก้าวหน้า', 'สวัสดิการ', 'ระเบียบบุคคล'],
+      ['กี่วัน', 'กี่บาท', 'เท่าไหร่', 'เท่าไร', 'ได้ไหม', 'ได้มั้ย', 'ได้บ้าง', 'ยังไง', 'อย่างไร', 'เมื่อไหร่', 'ใครอนุมัติ', 'สิทธิ', 'เงื่อนไข', 'หลักเกณฑ์', 'ข้อไหน', 'ต้องทำ', 'ล่วงหน้า'],
+    ],
+  },
 ];
 
 function matchesQualifiedIntent(lower, rule) {
