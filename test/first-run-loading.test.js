@@ -70,6 +70,8 @@ test('Lightweight First Run — all AI adapters', async (t) => {
         assert.ok(instruction.content.includes('USER.md'), `${tool}/${instruction.filename} missing USER.md routing identity`);
         assert.ok(instruction.content.includes('current user choice'), `${tool}/${instruction.filename} missing USER.md override rule`);
         assert.ok(instruction.content.includes('Installation-time team hint: **CC**'), `${tool}/${instruction.filename} missing installation team hint`);
+        assert.ok(instruction.content.includes('New user personalization'), `${tool}/${instruction.filename} missing new-user personalization`);
+        assert.ok(instruction.content.includes('set `First Run Completed: true`'), `${tool}/${instruction.filename} missing First Run completion update`);
         assert.ok(!instruction.content.includes('ช่วยทำ Designer Brief จากข้อมูลนี้ให้ครบก่อนส่งทีมออกแบบ'), `${tool}/${instruction.filename} should not duplicate mutable team starter prompts`);
         assert.ok(!instruction.content.includes('__startup-sentinel-skill__'), `${tool}/${instruction.filename} leaked Skill inventory`);
         assert.ok(!instruction.content.includes('__startup-sentinel-rule__'), `${tool}/${instruction.filename} leaked Rule inventory`);
@@ -110,5 +112,16 @@ test('Lightweight First Run — all AI adapters', async (t) => {
     assert.ok(prompt.includes('manifest/'));
     assert.ok(prompt.includes('ถ้าผมมีงานจริงอยู่แล้ว ให้ช่วยงานนั้นก่อน'));
     assert.ok(prompt.includes('ขอคำยืนยันก่อนบันทึกทีม'));
+  });
+
+  await t.test('START-PROMPT asks new users for nickname, assistant name, and style', async () => {
+    const prompt = await readFile('START-PROMPT.txt', 'utf-8');
+
+    assert.ok(prompt.includes('First Run Completed: false'));
+    assert.ok(prompt.includes('ชื่อเรียกของผม'));
+    assert.ok(prompt.includes('ชื่อผู้ช่วย'));
+    assert.ok(prompt.includes('สไตล์การพูดคุย'));
+    assert.ok(prompt.includes('ข้าม ตั้งค่าทีหลัง'));
+    assert.ok(!prompt.includes('สามารถข้ามได้ทั้งหมด'));
   });
 });
