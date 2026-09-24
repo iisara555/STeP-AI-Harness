@@ -21,6 +21,8 @@ The local page is designed for preparing STeP expense reimbursement evidence. Op
 
 After OCR, the page proposes the merchant, receipt number, date, tax ID, subtotal, VAT, and paid total. These are OCR suggestions. Compare each value against the receipt, correct it, and mark the populated field as checked. The review list also flags missing required values, a subtotal/VAT/total mismatch, incomplete tax ID length, and OCR lines below the confidence threshold. The expense note is entered manually.
 
+High-resolution images are read in overlapping tiles after a bounded resize. This preserves more detail while keeping each OCR call small. A total label and amount on the same visual row can be paired even when OCR returns them as separate lines. A tax ID found only in the buyer/customer section is not proposed as the issuer's tax ID. The original OCR lines remain visible; reviewers can correct a separate text draft without overwriting that evidence. Corrected text and original OCR are both included in the JSON draft.
+
 The draft can be downloaded as JSON or copied to the clipboard. It contains the OCR output and may contain personal or financial data, so store it according to the organization's data classification rules. The “fields checked” state records document review only; it does not approve reimbursement or validate tax compliance. Receipt extraction heuristics and accuracy still require pilot testing with authorized sample documents.
 
 ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก และยังไม่เพิ่ม table-structure model ในรอบนี้.

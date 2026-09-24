@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import statistics
 import time
 from dataclasses import dataclass
@@ -13,6 +14,9 @@ from PIL import Image
 from paddleocr import PaddleOCR
 
 MAX_OCR_IMAGE_SIDE = 2400
+DETAIL_OCR_IMAGE_SIDE = 4800
+OCR_TILE_SIDE = 1800
+OCR_TILE_OVERLAP = 160
 
 
 @dataclass(frozen=True)
@@ -68,9 +72,10 @@ class LocalThaiOCR:
             with Image.open(path) as source:
                 original_size = source.size
                 if source.format == "JPEG":
-                    source.draft("RGB", (MAX_OCR_IMAGE_SIDE, MAX_OCR_IMAGE_SIDE))
+                    source.draft("RGB", (DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE))
+                source.thumbnail((DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
                 image = source.convert("RGB")
-            pages = [self._ocr_image(image, 1, config, warnings, original_size=original_size)]
+            pages = [self._ocr_image(image, 1, config, warnings, original_size=original_size, detail=True)]
 
         lines = [line for page in pages for line in page.get("lines", [])]
         scores = [line["confidence"] for line in lines if line.get("confidence") is not None]
@@ -168,16 +173,71 @@ class LocalThaiOCR:
         config: OCRConfig,
         warnings: list[str],
         original_size: tuple[int, int] | None = None,
+        detail: bool = False,
     ) -> dict[str, Any]:
         original_width, original_height = original_size or image.size
-        if max(image.size) > MAX_OCR_IMAGE_SIDE:
-            image.thumbnail((MAX_OCR_IMAGE_SIDE, MAX_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
+        limit = DETAIL_OCR_IMAGE_SIDE if detail else MAX_OCR_IMAGE_SIDE
+        if max(image.size) > limit:
+            image.thumbnail((limit, limit), Image.Resampling.LANCZOS)
         if image.size != (original_width, original_height):
             self._add_warning(
                 warnings,
                 f"Image resized from {original_width}x{original_height} to "
                 f"{image.width}x{image.height} before OCR; verify small text carefully.",
             )
+        if detail and max(image.size) > MAX_OCR_IMAGE_SIDE:
+            lines = self._ocr_tiled(image, config, warnings)
+            self._add_warning(warnings, "High-detail tiled OCR was used; verify critical fields against the original receipt.")
+        else:
+            lines = self._predict_lines(image, config, warnings)
+
+        return {
+            "page": page_number,
+            "source": "ocr",
+            "width": image.width,
+            "height": image.height,
+            "original_width": original_width,
+            "original_height": original_height,
+            "lines": lines,
+        }
+
+    def _ocr_tiled(self, image: Image.Image, config: OCRConfig, warnings: list[str]) -> list[dict[str, Any]]:
+        columns = math.ceil(image.width / OCR_TILE_SIDE)
+        rows = math.ceil(image.height / OCR_TILE_SIDE)
+        lines: list[dict[str, Any]] = []
+
+        for row in range(rows):
+            core_top = image.height * row // rows
+            core_bottom = image.height * (row + 1) // rows
+            for column in range(columns):
+                core_left = image.width * column // columns
+                core_right = image.width * (column + 1) // columns
+                crop_left = max(0, core_left - OCR_TILE_OVERLAP)
+                crop_top = max(0, core_top - OCR_TILE_OVERLAP)
+                crop_right = min(image.width, core_right + OCR_TILE_OVERLAP)
+                crop_bottom = min(image.height, core_bottom + OCR_TILE_OVERLAP)
+                tile = image.crop((crop_left, crop_top, crop_right, crop_bottom))
+
+                for line in self._predict_lines(tile, config, warnings):
+                    box = line.get("box")
+                    if box:
+                        box = [box[0] + crop_left, box[1] + crop_top, box[2] + crop_left, box[3] + crop_top]
+                        center_x = (box[0] + box[2]) / 2
+                        center_y = (box[1] + box[3]) / 2
+                        if not (core_left <= center_x < core_right and core_top <= center_y < core_bottom):
+                            continue
+                        line["box"] = box
+                    lines.append(line)
+
+        lines.sort(key=lambda line: (
+            (line["box"][1] + line["box"][3]) / 2 if line.get("box") else image.height,
+            line["box"][0] if line.get("box") else 0,
+        ))
+        return lines
+
+    def _predict_lines(
+        self, image: Image.Image, config: OCRConfig, warnings: list[str]
+    ) -> list[dict[str, Any]]:
         outputs = self._get_ocr().predict(np.asarray(image))
         lines: list[dict[str, Any]] = []
 
@@ -218,16 +278,7 @@ class LocalThaiOCR:
                         self._add_warning(warnings, f"Thai-TrOCR fallback failed for one region: {exc}")
 
                 lines.append(item)
-
-        return {
-            "page": page_number,
-            "source": "ocr",
-            "width": image.width,
-            "height": image.height,
-            "original_width": original_width,
-            "original_height": original_height,
-            "lines": lines,
-        }
+        return lines
 
     @staticmethod
     def _result_json(output: Any) -> dict[str, Any]:

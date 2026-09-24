@@ -28,6 +28,7 @@
     unconfirmed_fields: (issue) => `มีข้อมูล ${issue.count} ช่องที่ยังไม่ได้ทำเครื่องหมายว่าตรวจแล้ว`,
     low_confidence: (issue) => `มี ${issue.count} บรรทัดที่ OCR ไม่มั่นใจ โปรดตรวจข้อความต้นฉบับ`,
     resized_image: "ภาพถูกย่อก่อน OCR เพื่อจำกัดการใช้หน่วยความจำ โปรดตรวจข้อความขนาดเล็กบนใบเสร็จ",
+    buyer_tax_id_excluded: "พบเลขผู้เสียภาษีในส่วนของลูกค้าหรือผู้ซื้อ จึงไม่เติมเป็นเลขของผู้ออกใบเสร็จ",
   };
 
   function status(message, kind = "") {
@@ -301,7 +302,12 @@
     $("warningList").replaceChildren();
     for (const warning of warnings) {
       const paragraph = document.createElement("p");
-      paragraph.textContent = warning;
+      const resized = warning.match(/^Image resized from (\d+x\d+) to (\d+x\d+)/);
+      paragraph.textContent = resized
+        ? `ภาพขนาด ${resized[1]} ถูกย่อเป็น ${resized[2]} ก่อนอ่าน โปรดเทียบข้อความขนาดเล็กกับต้นฉบับ`
+        : warning.startsWith("High-detail tiled OCR")
+          ? "ระบบแบ่งภาพความละเอียดสูงเป็นส่วนย่อยเพื่อรักษารายละเอียด โปรดตรวจข้อมูลสำคัญกับใบเสร็จจริง"
+          : warning;
       $("warningList").append(paragraph);
     }
   }
@@ -319,6 +325,7 @@
       lowConfidenceCount: state.result?.summary?.needs_review || 0,
       lowConfidenceReviewed: $("lowReview").checked,
       resized: (state.result?.warnings || []).some((warning) => /resized/i.test(warning)),
+      buyerTaxIdExcluded: state.extracted?.buyerTaxIdExcluded || false,
     });
   }
 
@@ -367,6 +374,7 @@
       field_confirmed: fieldConfirmations(),
       low_confidence_lines_checked: $("lowReview").checked,
       expense_note: $("expenseNote").value.trim(),
+      corrected_text: $("rawText").value,
       checks: review.issues,
       ocr: state.result,
     };
@@ -424,8 +432,8 @@
   });
   $("copyText").addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(state.result?.text || "");
-      status("คัดลอกข้อความ OCR แล้ว", "success");
+      await navigator.clipboard.writeText($("rawText").value);
+      status("คัดลอกข้อความร่างแล้ว", "success");
     } catch {
       status("คัดลอกอัตโนมัติไม่ได้ กรุณาเลือกข้อความในช่องด้านล่างแล้วคัดลอก", "error");
     }

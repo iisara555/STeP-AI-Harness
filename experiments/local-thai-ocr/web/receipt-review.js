@@ -23,7 +23,7 @@
       } else {
         for (const line of page.lines || []) {
           if (String(line.text || "").trim()) {
-            records.push({ text: String(line.text).trim(), page: page.page, confidence: line.confidence ?? null });
+            records.push({ text: String(line.text).trim(), page: page.page, confidence: line.confidence ?? null, box: line.box || null });
           }
         }
       }
@@ -80,11 +80,43 @@
   }
 
   function findTaxId(records) {
-    const ranked = [...records].sort((a, b) => Number(/ผู้เสียภาษี|tax\s*(id|no)/i.test(b.text)) - Number(/ผู้เสียภาษี|tax\s*(id|no)/i.test(a.text)));
+    const buyerMarker = /ชื่อลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
+    const buyerStart = records.findIndex((record) => buyerMarker.test(record.text));
+    const sellerRecords = buyerStart < 0 ? records : records.slice(0, buyerStart);
+    const buyerRecords = buyerStart < 0 ? [] : records.slice(buyerStart);
+    const taxIdPattern = /(?:^|[^\d])((?:\d[\s-]?){12}\d)(?=$|[^\d])/;
+    const ranked = [...sellerRecords].sort((a, b) => Number(/ผู้เสียภาษี|tax\s*(id|no)/i.test(b.text)) - Number(/ผู้เสียภาษี|tax\s*(id|no)/i.test(a.text)));
+    const buyerIdExcluded = buyerRecords.some((record) => taxIdPattern.test(normalizeDigits(record.text)));
     for (const record of ranked) {
       const normalized = normalizeDigits(record.text);
-      const match = normalized.match(/(?:^|[^\d])((?:\d[\s-]?){12}\d)(?=$|[^\d])/);
-      if (match) return candidate(match[1].replace(/\D/g, ""), record);
+      const match = normalized.match(taxIdPattern);
+      if (match) return { field: candidate(match[1].replace(/\D/g, ""), record), buyerIdExcluded };
+    }
+    return { field: candidate("", null), buyerIdExcluded };
+  }
+
+  function findTotal(records) {
+    const marker = /ยอดสุทธิ|รวมทั้งสิ้น|ยอดรวม|รวมเงิน|จำนวนเงิน|grand\s*total|\btotal\b|net\s*amount|amount\s*due|^รวม$/i;
+    for (let index = records.length - 1; index >= 0; index--) {
+      const record = records[index];
+      const text = normalizeText(record.text);
+      if (!marker.test(text) || /subtotal|sub\s*total|vat|ภาษีมูลค่าเพิ่ม/i.test(text)) continue;
+      const tokens = amountTokens(text);
+      if (tokens.length) return candidate(tokens[tokens.length - 1], record);
+
+      const box = record.box;
+      if (!box) continue;
+      const centerY = (box[1] + box[3]) / 2;
+      const matches = records.filter((other) => {
+        if (other === record || other.page !== record.page || !other.box || parseMoney(other.text) === null) return false;
+        const otherCenterY = (other.box[1] + other.box[3]) / 2;
+        const tolerance = Math.max(30, (Math.max(box[3] - box[1], other.box[3] - other.box[1]) * 1.25));
+        return Math.abs(centerY - otherCenterY) <= tolerance && other.box[0] >= box[2] - 12;
+      });
+      if (matches.length) {
+        const amount = matches.sort((a, b) => b.box[0] - a.box[0])[0];
+        return candidate(amount.text, amount);
+      }
     }
     return candidate("", null);
   }
@@ -103,7 +135,7 @@
 
   function findMerchant(records) {
     const generic = /^(ใบเสร็จรับเงิน|ใบกำกับภาษี|ใบรับเงิน|receipt|tax invoice|invoice|ต้นฉบับ|สำเนา)$/i;
-    const label = /วันที่|date|เลขที่|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย/i;
+    const label = /วันที่|date|เลขที่|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer/i;
     const merchantHint = /ร้าน|บริษัท|ห้างหุ้นส่วน|หจก\.?|จำกัด|\b(?:co\.?|ltd\.?|company|store|shop)\b/i;
     const plausible = [];
     for (const record of records.slice(0, 8)) {
@@ -118,16 +150,17 @@
 
   function extractReceipt(result) {
     const records = lineRecords(result);
+    const taxId = findTaxId(records);
     const fields = {
       merchant: findMerchant(records),
       receiptNumber: findReceiptNumber(records),
       date: findDate(records),
-      taxId: findTaxId(records),
+      taxId: taxId.field,
       subtotal: findAmount(records, /ยอดก่อนภาษี|มูลค่าก่อนภาษี|ราคาไม่รวมภาษี|sub\s*total/i),
       vat: findAmount(records, /ภาษีมูลค่าเพิ่ม|\bvat\b/i),
-      total: findAmount(records, /ยอดสุทธิ|รวมทั้งสิ้น|ยอดรวม|รวมเงิน|จำนวนเงิน|grand\s*total|\btotal\b|net\s*amount|amount\s*due/i, /subtotal|sub\s*total|vat|ภาษีมูลค่าเพิ่ม/i),
+      total: findTotal(records),
     };
-    return { fields, records };
+    return { fields, records, buyerTaxIdExcluded: taxId.buyerIdExcluded };
   }
 
   function reviewIssues(values, confirmed, options = {}) {
@@ -157,6 +190,7 @@
       issues.push({ code: "low_confidence", severity: "blocking", count: options.lowConfidenceCount });
     }
     if (options.resized) issues.push({ code: "resized_image", severity: "advisory" });
+    if (options.buyerTaxIdExcluded) issues.push({ code: "buyer_tax_id_excluded", severity: "advisory" });
 
     return {
       issues,

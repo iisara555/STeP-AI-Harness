@@ -16,6 +16,9 @@
 | H. Receipt fields | Printed Thai reimbursement receipts | Merchant, receipt number, date, tax ID, subtotal, VAT, paid total against source |
 | I. Receipt review | Missing or ambiguous values and low-confidence text | Manual correction, confirmation reset on edit, review checklist, draft JSON |
 | J. Thermal receipts | Faded, crumpled, or cropped thermal paper | Readability and number accuracy; record fields that still require manual entry |
+| K. High-resolution receipt | Image above 20 MP with small printed text | Tiled OCR stays available, critical values match the source, no duplicate lines at tile edges |
+| L. Buyer tax ID | Receipt names a buyer and its tax ID but not an issuer tax ID | Issuer field stays blank and the buyer-number advisory appears |
+| M. Split total row | Label and amount are separate OCR lines on the same row | Paid total is proposed from the aligned amount and still requires human confirmation |
 
 ## เก็บผลต่อเอกสาร
 
