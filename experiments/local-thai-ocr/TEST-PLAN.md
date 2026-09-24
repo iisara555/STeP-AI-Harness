@@ -20,6 +20,7 @@
 | L. Buyer tax ID | Receipt names a buyer and its tax ID but not an issuer tax ID | Issuer field stays blank and the buyer-number advisory appears |
 | M. Split total row | Label and amount are separate OCR lines on the same row | Paid total is proposed from the aligned amount and still requires human confirmation |
 | N. Dual OCR review | Printed Thai receipts with known ground truth, including difficult diacritics and numbers | Count true errors caught, false disagreement alerts, missed errors, added processing time, and review completion |
+| O. Handwriting conflict | Handwritten text where PaddleOCR reports high confidence but EasyOCR disagrees | Thai-TrOCR candidate appears when enabled; all readings remain unverified until source comparison |
 
 ## เก็บผลต่อเอกสาร
 

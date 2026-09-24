@@ -363,6 +363,8 @@
       else if (warning.startsWith("Thai-TrOCR candidates")) paragraph.textContent = "ผล Thai-TrOCR เป็นคำอ่านที่ยังไม่ยืนยัน และไม่แทนข้อความ OCR เดิม";
       else if (warning.startsWith("Thai-TrOCR optional dependencies")) paragraph.textContent = "ยังไม่ได้ติดตั้ง Thai-TrOCR ตัวเสริม เปิด Install-Handwriting.bat แล้วลองอีกครั้ง";
       else if (warning.startsWith("Thai-TrOCR fallback failed")) paragraph.textContent = "Thai-TrOCR อ่านบางบริเวณไม่สำเร็จ โปรดตรวจจากภาพใบเสร็จเอง";
+      else if (warning.startsWith("Thai-TrOCR reached")) paragraph.textContent = "ถึงขีดจำกัดการอ่านด้วย Thai-TrOCR ในเอกสารนี้แล้ว โปรดตรวจบรรทัดที่เหลือจากต้นฉบับ";
+      else if (warning.startsWith("Thai-TrOCR was limited")) paragraph.textContent = "เอกสารมีข้อความต้องตรวจมาก ระบบใช้ Thai-TrOCR เฉพาะบางบรรทัด";
       else paragraph.textContent = warning;
       $("warningList").append(paragraph);
     }

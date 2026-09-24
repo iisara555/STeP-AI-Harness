@@ -10,7 +10,7 @@
 - PDF scan / PNG / JPG / TIFF / WebP: ใช้ **PaddleOCR PP-OCRv5 Thai** บน CPU
 - แสดงข้อความ, confidence ต่อบรรทัด, bounding box และรายการที่ควรตรวจซ้ำ
 - ตั้ง threshold สำหรับ `needs_review`
-- ทดลอง **Thai-TrOCR** เฉพาะบรรทัด confidence ต่ำได้แบบ optional/lazy-load
+- Optional/lazy-loaded Thai-TrOCR provides unverified candidates for low-confidence lines or lines where the OCR engines disagree.
 - Thai-TrOCR candidate เป็น second opinion เท่านั้น ระบบไม่แทนค่าข้อความเดิมอัตโนมัติ
 - Optional EasyOCR Thai/English recognition cross-checks PaddleOCR's detected lines, including lines with high PaddleOCR confidence. Different readings are flagged for human review; neither reading replaces the other automatically.
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
@@ -65,13 +65,13 @@ Windows: เปิด `Install-Handwriting.bat`
 
 macOS: เปิด `Install-Handwriting.command`
 
-จากนั้นติ๊ก `Thai-TrOCR สำหรับบรรทัด confidence ต่ำ` ในหน้าเว็บ. Candidate ที่ได้จะถูกแสดงแยกจาก PaddleOCR เพื่อให้คนตรวจเอง.
+Enable the Thai-TrOCR checkbox in the local page to show handwriting candidates separately from PaddleOCR and EasyOCR. Human review is required.
 
 ## Optional second OCR for printed receipts
 
 Run `Install-Crosscheck.bat` on Windows or `Install-Crosscheck.command` on macOS after the core installer. This installs EasyOCR and caches its Thai/English recognition model. The local page enables the cross-check by default when the package is installed; the checkbox can be cleared for a faster PaddleOCR-only run. Restart the local server after updating the experiment files.
 
-The second OCR reads the same detected text regions. The results table shows agreement, disagreement, or an uncertain alternative. A disagreement adds a review item even when PaddleOCR reports high confidence. The exported draft keeps the original OCR text, the alternative, and the review state. EasyOCR confidence is used only to suppress very weak alternatives; scores from different engines are not directly comparable. The optional Thai-TrOCR handwriting candidate remains separate.
+The second OCR reads the same detected text regions. The results table shows agreement, disagreement, or an uncertain alternative. A disagreement adds a review item even when PaddleOCR reports high confidence. The exported draft keeps the original OCR text, the alternative, and the review state. EasyOCR confidence is used only to suppress very weak alternatives; scores from different engines are not directly comparable. When enabled, Thai-TrOCR provides a separate handwriting candidate for low-confidence lines and disagreements, including disagreements on high-confidence PaddleOCR lines. Its work is limited to 20 lines per document.
 
 The second model is a review aid, not an accuracy guarantee. Validate both readings against the receipt image. At most 80 regions per tile and 100 regions per document are cross-checked, prioritizing low-confidence lines and the start/end of each tile. Native PDF text layers bypass both OCR engines.
 

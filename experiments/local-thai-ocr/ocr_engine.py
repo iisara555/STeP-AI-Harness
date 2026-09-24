@@ -19,6 +19,7 @@ OCR_TILE_SIDE = 1800
 OCR_TILE_OVERLAP = 160
 MAX_CROSSCHECK_LINES_PER_TILE = 80
 MAX_CROSSCHECK_LINES_PER_REQUEST = 100
+MAX_HANDWRITING_LINES_PER_REQUEST = 20
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,8 @@ class LocalThaiOCR:
     def __init__(self) -> None:
         self._ocr: PaddleOCR | None = None
         self._handwriting = None
+        self._handwriting_failed = False
+        self._handwriting_lines_used = 0
         self._crosscheck = None
         self._crosscheck_failed = False
         self._crosscheck_lines_used = 0
@@ -78,6 +81,8 @@ class LocalThaiOCR:
         started = time.perf_counter()
         self._crosscheck_lines_used = 0
         self._crosscheck_failed = False
+        self._handwriting_lines_used = 0
+        self._handwriting_failed = False
         suffix = path.suffix.lower()
         warnings: list[str] = []
 
@@ -279,30 +284,53 @@ class LocalThaiOCR:
                     "needs_review": score is None or score < config.low_confidence_threshold,
                 }
 
-                if config.handwriting_fallback and item["needs_review"] and box:
-                    try:
-                        crop = self._crop_box(image, box)
-                        candidate = self._get_handwriting().read(crop)
-                        if candidate:
-                            item["handwriting_candidate"] = candidate
-                            item["handwriting_candidate_unverified"] = True
-                            self._add_warning(
-                                warnings,
-                                "Thai-TrOCR candidates are second opinions only and never replace OCR text automatically.",
-                            )
-                    except ImportError:
-                        self._add_warning(
-                            warnings,
-                            "Thai-TrOCR optional dependencies are not installed. "
-                            "Run Install-Handwriting to enable the fallback.",
-                        )
-                    except Exception as exc:
-                        self._add_warning(warnings, f"Thai-TrOCR fallback failed for one region: {exc}")
-
                 lines.append(item)
         if config.crosscheck and lines:
             self._crosscheck_lines(image, lines, warnings)
+        if config.handwriting_fallback and lines:
+            self._handwriting_candidates(image, lines, warnings)
         return lines
+
+    def _handwriting_candidates(
+        self, image: Image.Image, lines: list[dict[str, Any]], warnings: list[str]
+    ) -> None:
+        if self._handwriting_failed:
+            return
+        selected = [line for line in lines if line.get("box") and line["low_confidence"]]
+        selected.extend(
+            line for line in lines
+            if line.get("box") and not line["low_confidence"] and line.get("crosscheck_status") == "disagree"
+        )
+        remaining = MAX_HANDWRITING_LINES_PER_REQUEST - self._handwriting_lines_used
+        if remaining <= 0:
+            if selected:
+                self._add_warning(warnings, "Thai-TrOCR reached the per-document line limit.")
+            return
+        if len(selected) > remaining:
+            self._add_warning(warnings, "Thai-TrOCR was limited to selected lines on this document.")
+
+        for line in selected[:remaining]:
+            self._handwriting_lines_used += 1
+            try:
+                crop = self._crop_box(image, line["box"])
+                candidate = self._get_handwriting().read(crop)
+                if candidate:
+                    line["handwriting_candidate"] = candidate
+                    line["handwriting_candidate_unverified"] = True
+                    self._add_warning(
+                        warnings,
+                        "Thai-TrOCR candidates are second opinions only and never replace OCR text automatically.",
+                    )
+            except ImportError:
+                self._handwriting_failed = True
+                self._add_warning(
+                    warnings,
+                    "Thai-TrOCR optional dependencies are not installed. "
+                    "Run Install-Handwriting to enable the fallback.",
+                )
+                return
+            except Exception as exc:
+                self._add_warning(warnings, f"Thai-TrOCR fallback failed for one region: {type(exc).__name__}.")
 
     def _crosscheck_lines(
         self, image: Image.Image, lines: list[dict[str, Any]], warnings: list[str]

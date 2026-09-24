@@ -4,7 +4,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from crosscheck import comparable_text
-from ocr_engine import LocalThaiOCR, OCRConfig
+from ocr_engine import LocalThaiOCR, OCRConfig, MAX_HANDWRITING_LINES_PER_REQUEST
 
 
 class FakePaddle:
@@ -24,6 +24,11 @@ class FakeCrosscheck:
     def read_lines(self, _image, boxes):
         assert boxes == [[2, 5, 228, 50]]
         return [{"text": self.text, "confidence": self.confidence}]
+
+
+class FakeHandwriting:
+    def read(self, _image):
+        return "handwriting candidate"
 
 
 class CrosscheckTests(unittest.TestCase):
@@ -58,6 +63,45 @@ class CrosscheckTests(unittest.TestCase):
 
         self.assertEqual(lines[0]["crosscheck_status"], "uncertain")
         self.assertFalse(lines[0]["needs_review"])
+
+    def test_handwriting_option_reads_a_high_confidence_disagreement(self):
+        with (
+            patch.object(self.reader, "_get_ocr", return_value=FakePaddle()),
+            patch.object(self.reader, "_get_crosscheck", return_value=FakeCrosscheck("วันที่ 25/09/2569", 0.9)),
+            patch.object(self.reader, "_get_handwriting", return_value=FakeHandwriting()),
+        ):
+            lines = self.reader._predict_lines(
+                self.image, OCRConfig(crosscheck=True, handwriting_fallback=True), []
+            )
+
+        self.assertEqual(lines[0]["handwriting_candidate"], "handwriting candidate")
+        self.assertTrue(lines[0]["handwriting_candidate_unverified"])
+        self.assertEqual(lines[0]["text"], "วันที่ 24/09/2569")
+
+    def test_handwriting_option_skips_agreed_high_confidence_lines(self):
+        with (
+            patch.object(self.reader, "_get_ocr", return_value=FakePaddle()),
+            patch.object(self.reader, "_get_crosscheck", return_value=FakeCrosscheck("วันที่ 24/09/2569", 0.9)),
+            patch.object(self.reader, "_get_handwriting") as get_handwriting,
+        ):
+            lines = self.reader._predict_lines(
+                self.image, OCRConfig(crosscheck=True, handwriting_fallback=True), []
+            )
+
+        get_handwriting.assert_not_called()
+        self.assertNotIn("handwriting_candidate", lines[0])
+
+    def test_handwriting_option_respects_document_limit(self):
+        self.reader._handwriting_lines_used = MAX_HANDWRITING_LINES_PER_REQUEST
+        warnings = []
+        with patch.object(self.reader, "_get_handwriting") as get_handwriting:
+            self.reader._handwriting_candidates(
+                self.image,
+                [{"text": "unclear", "box": [10, 10, 100, 40], "low_confidence": True}],
+                warnings,
+            )
+        get_handwriting.assert_not_called()
+        self.assertTrue(any("per-document line limit" in warning for warning in warnings))
 
     def test_missing_optional_model_keeps_primary_ocr_result(self):
         warnings = []
