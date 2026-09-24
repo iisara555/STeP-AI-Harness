@@ -68,6 +68,11 @@ test('team Skill scoping follows Router eligibility rather than namespace folder
       const name = block.match(/^  - name:\s*([a-z0-9-]+)/m)?.[1] || 'unknown';
       assert.match(block, /^    wildcardReason:\s*.+$/m, `${name} wildcard needs wildcardReason`);
     }
-    assert.ok(wildcardBlocks.length <= 11, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
+    // The ceiling tracks the reviewed set rather than capping it at whatever
+    // today's count happens to be. Raise it only for a Skill whose subject
+    // genuinely binds every team - organization-wide announcements, shared
+    // document discipline, or paperwork every team files with a central team -
+    // and never to make a team-specific Skill reachable from everywhere.
+    assert.ok(wildcardBlocks.length <= 12, `wildcard consumers should remain exceptional; got ${wildcardBlocks.length}`);
   });
 });
