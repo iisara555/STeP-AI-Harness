@@ -125,6 +125,18 @@ documents:
     status: pilot
 
 
+  cc-iso-document-register:
+    title: ทะเบียนเอกสารระบบคุณภาพ ทีม CC (ISO Document Register)
+    path: docs/cc-iso-document-register.md
+    owner: qs
+    documentType: team-circular
+    effectiveDate: '2026-09-01'
+    source: อีเมลแจ้งเวียนจาก iso@step.cmu.ac.th
+    summary: >-
+      แบบฟอร์มและขั้นตอนระบบคุณภาพของทีม CC ที่บังคับใช้ปัจจุบัน
+      รายการเอกสารที่ถูกยกเลิก และกฎว่าต้องดาวน์โหลดจาก STeP MIS เท่านั้น
+      เพื่อป้องกันการใช้เอกสารผิด Revision
+
   # --- STeP Quality Layer v0.1 ---
   hr-personnel-welfare-2566:
     title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคลและสวัสดิการพนักงาน พ.ศ. 2566"
