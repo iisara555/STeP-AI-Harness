@@ -40,6 +40,8 @@ def build_pilot_bundle():
 
     # Directories and files to include
     include_files = [
+        "step-ai",
+        "step-ai.cmd",
         "Install-STeP-AI.bat",
         "Update-STeP-AI.bat",
         "Feedback-STeP-AI.bat",
@@ -72,7 +74,7 @@ def build_pilot_bundle():
     def add_file_to_zip(zf, fpath, arcname):
         str_arc = str(arcname).replace('\\', '/')
         zinfo = zipfile.ZipInfo.from_file(fpath, arcname=str_arc)
-        if str_arc.endswith(('.sh', '.command')):
+        if str_arc.endswith(('.sh', '.command')) or str_arc == 'step-ai':
             zinfo.external_attr = 0o755 << 16  # Unix executable permissions rwxr-xr-x
         else:
             zinfo.external_attr = 0o644 << 16  # Unix regular file permissions rw-r--r--

@@ -45,7 +45,14 @@ export async function runDoctor(args) {
 
     console.log(`  ${colors.green('✓')} Installation:    ${colors.bold(`พร้อมใช้งาน (v${pkgJson.version})`)}`);
     console.log(`  ${colors.green('✓')} Platform:        ${colors.bold(getPlatformDisplay())}`);
-    console.log(`  ${colors.green('✓')} Router:          ${colors.bold('Ready (Layer 1 Dynamic Routing)')}`);
+    // AI apps call the Router through this launcher; without it every task
+    // silently runs outside the organization routing.
+    const launcher = process.platform === 'win32' ? 'step-ai.cmd' : 'step-ai';
+    if (await pathExists(join(PACKAGE_ROOT, launcher))) {
+      console.log(`  ${colors.green('✓')} Router:          ${colors.bold(`Ready (${launcher})`)}`);
+    } else {
+      console.log(`  ${colors.yellow('⚠️')} Router:          ${colors.yellow(`ไม่พบ ${launcher} ในโฟลเดอร์ ให้เปิด Update อีกครั้งหรือแจ้งตาม SUPPORT.md`)}`);
+    }
     console.log(`  ${colors.green('✓')} Team:            ${colors.bold(teamDisplay)}`);
     if (installedToolNames.length > 0) {
       console.log(`  ${colors.green('✓')} Detected AI:     ${colors.cyan(installedToolNames.join(', '))}`);

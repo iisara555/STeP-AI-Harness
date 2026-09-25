@@ -164,10 +164,14 @@ test('adapters ask one scope question and reroute with accumulated answers', () 
 });
 
 test('generic go/no-go and reply phrases do not count as domain evidence', async () => {
+  // With no Skill evidence the request is either asked about or answered as
+  // general help; what it must never do is activate a guessed Skill.
   for (const query of ['ช่วยประเมินว่าไปต่อได้ไหม', 'ควรตอบยังไงดี']) {
     const result = await queryStepRouter(query, options);
-    assert.equal(result.routingMode, 'CLARIFY', query);
+    assert.ok(['CLARIFY', 'GENERAL'].includes(result.routingMode), query);
     assert.notEqual(result.routingConfidence.tier, 'HIGH', query);
+    assert.equal(result.routingContract.skill, '', query);
+    assert.equal(result.routingContract.skillPath, '', query);
   }
 });
 
@@ -265,4 +269,90 @@ test('authority blocks still precede the clarification menu and its choice', asy
   assert.equal(result.authorityPreflight.status, 'BLOCK');
   assert.equal(result.routingContract.authority.status, 'BLOCK');
   assert.equal(result.clarification, null);
+});
+
+test('a concrete request with no matching Skill gets help instead of questions', async () => {
+  for (const query of ['ช่วยแปลเป็นภาษาอังกฤษ', 'ช่วยเขียนอีเมลถึงลูกค้าหน่อย', 'ช่วยทำ excel สรุปยอด', 'ขอไอเดียกิจกรรม team building']) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.equal(result.routingMode, 'GENERAL', query);
+    assert.equal(result.clarification, null, query);
+    assert.equal(result.routingContract.skill, '', query);
+    assert.equal(result.routingContract.skillPath, '', query);
+    assert.equal(result.routingContract.team, '', query);
+    assert.equal(result.routingContract.permittedUse, 'general-assist-without-org-source', query);
+    // No Skill is loaded, so the organization floor has to arrive another way.
+    const refs = result.routingContract.mandatoryReferences.map((item) => item.id);
+    assert.ok(refs.includes('human-approval-rule'), query);
+    assert.ok(refs.includes('data-classification-rule'), query);
+    assert.equal(result.contextPlan.components.skill.estimatedTokens, 0, query);
+  }
+});
+
+test('general help never replaces the questions that decide the route', async () => {
+  const cases = [
+    ['ช่วยหน่อย', 'says nothing about the task'],
+    ['ช่วยดูเอกสารนี้หน่อย', 'names a document but not what to do with it'],
+    ['ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร', 'attachment purpose decides the route'],
+    ['อนุมัติให้หน่อย', 'consequential request'],
+    ['ครั้งก่อนเคสคล้ายกันผ่าน แต่ครั้งนี้ AFP ตีกลับ ช่วยอธิบายว่าต่างกันตรงไหน', 'names an STeP team'],
+    ['ขอแบบฟอร์มขอใช้รถ', 'asks for an organization form'],
+  ];
+  for (const [query, why] of cases) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.notEqual(result.routingMode, 'GENERAL', `${query}: ${why}`);
+  }
+});
+
+test('authority blocks precede general help', async () => {
+  const result = await queryStepRouter('ช่วยแปลเป็นภาษาอังกฤษ แล้วอนุมัติจ่ายเงินให้ผู้รับจ้างรายนี้เลย', { workspaceDir: options.workspaceDir });
+  assert.equal(result.routingContract.authority.status, 'BLOCK');
+  assert.notEqual(result.routingMode, 'GENERAL');
+});
+
+test('a clarification answer that names a plain task ends the questions', async () => {
+  const result = await queryStepRouter('ช่วยหน่อย', {
+    workspaceDir: options.workspaceDir, clarificationAnswer: 'แปลอีเมลเป็นภาษาอังกฤษ',
+  });
+  assert.equal(result.routingMode, 'GENERAL');
+  assert.equal(result.clarification, null);
+});
+
+test('two real candidates are offered as a menu on the first question', async () => {
+  const result = await queryStepRouter('ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร', options);
+  // The attachment-purpose flow keeps its open question first.
+  assert.equal(result.clarification.field, 'purpose');
+  const menu = await queryStepRouter('ทำตารางสรุปโปสเตอร์ artwork', { workspaceDir: options.workspaceDir });
+  if (menu.routingMode === 'CLARIFY' && menu.routingConfidence.tier === 'AMBIGUOUS' && (menu.clarification.options || []).length) {
+    for (const option of menu.clarification.options) {
+      const ranked = menu.ranked.find((item) => item.skill === option.value);
+      assert.ok(ranked.score >= 0.2 || ranked.matchedTriggers.length > 0, `${option.value} offered without evidence`);
+    }
+  }
+});
+
+test('adapters help directly on GENERAL and know the workspace launchers', () => {
+  for (const format of ['compact', 'markdown']) {
+    const guidelines = buildRouterGuidelines({ format });
+    assert.match(guidelines, /GENERAL/, format);
+    assert.match(guidelines, /sh \.\/step-ai/, format);
+    assert.match(guidelines, /step-ai\.cmd/, format);
+  }
+  const compact = buildRouterGuidelines({ format: 'compact' });
+  // The failure message is shown to employees, so it must not be jargon.
+  assert.ok(!compact.includes('กำลังทำงานนอก Router'));
+  assert.match(compact, /ห้ามใช้คำว่า Router\/Skill\/contract กับผู้ใช้/);
+});
+
+test('a single weak candidate is confirmed in one question, not three', async () => {
+  const query = 'ช่วยหน่อย';
+  const answer = 'แปลอีเมลภาษาไทยเป็นภาษาอังกฤษ';
+  const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir, clarificationAnswer: answer });
+  assert.equal(result.routingMode, 'CLARIFY');
+  assert.equal(result.clarification.field, 'skill');
+  assert.equal(result.clarification.options.length, 1);
+  const confirmed = await queryStepRouter(query, {
+    workspaceDir: options.workspaceDir, clarificationAnswer: `${answer}\n1`,
+  });
+  assert.equal(confirmed.routingMode, 'SKILL');
+  assert.equal(confirmed.routingContract.skill, result.clarification.options[0].value);
 });

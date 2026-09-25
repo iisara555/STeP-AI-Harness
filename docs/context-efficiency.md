@@ -68,6 +68,15 @@ step-ai ask "ช่วยตรวจ TOR นี้ก่อนส่ง AFP" --
 
 แทนการให้ model เปิด Router Registry ทั้งไฟล์
 
+เครื่องพนักงานส่วนใหญ่ไม่มี `step-ai` หรือ Node.js บน PATH เพราะตัวติดตั้งวาง Node.js ไว้ใน `.step-ai/runtime/` ของโฟลเดอร์ ชุดติดตั้งจึงมีตัวเรียกคำสั่งที่ใช้ runtime นี้ก่อน แล้วค่อยลอง Node.js ในเครื่อง
+
+```bash
+sh ./step-ai ask "ช่วยตรวจ TOR นี้ก่อนส่ง AFP" --json      # macOS / Linux
+.\step-ai.cmd ask "ช่วยตรวจ TOR นี้ก่อนส่ง AFP" --json      # Windows
+```
+
+`sh ./step-ai` ทำงานได้แม้ไฟล์ไม่มี exec bit หรือยังติด quarantine หลังอัปเดต ส่วน `step-ai doctor --employee` แสดงว่าพบตัวเรียกคำสั่งของระบบปฏิบัติการนั้นหรือไม่
+
 ## 2. Context Budgets
 
 Default budget เป็น guardrail ไม่ใช่การตัดเนื้อหาแบบ blind:
