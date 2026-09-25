@@ -4,9 +4,9 @@
 
 **Document status:** Current Pilot readiness reference
 
-**Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21)
+**Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21) · v0.7.4 มี GitHub Release แต่ไม่แจก
 
-**Prepared Pilot candidate:** v0.7.4 รอ Release Gate; ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ดู [CHANGELOG](../CHANGELOG.md)
+**Prepared Pilot candidate:** v0.7.5 รอ Release Gate; ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ดู [CHANGELOG](../CHANGELOG.md)
 
 **Repository scope:** source remains development until released; [Pilot runbook](pilot-runbook.md) governs the supervised session
 

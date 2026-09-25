@@ -2,9 +2,9 @@
 
 **As of:** 2026-09-25
 
-**Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21; 46 Skills / 4 Playbooks / 3 Actions)
+**Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21; รุ่นที่ผู้ทดสอบรอบแรกใช้อยู่) · v0.7.4 มี GitHub Release 2026-09-25 แต่ไม่แจก ผู้ทดสอบข้ามไป v0.7.5
 
-**Prepared Pilot candidate:** v0.7.4 — รอ Release Gate; รอบแรกวันที่ 22 กันยายน 2569 ใช้ v0.7.3 ตาม [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek; สิ่งที่เปลี่ยนดู [CHANGELOG](../CHANGELOG.md)
+**Prepared Pilot candidate:** v0.7.5 — รอ Release Gate; รอบแรกวันที่ 22 กันยายน 2569 ใช้ v0.7.3 ตาม [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek; สิ่งที่เปลี่ยนดู [CHANGELOG](../CHANGELOG.md)
 
 **Repository scope:** `main` may contain post-v0.7.3 changes; do not treat `main` as a released employee package until tagged/released.
 
@@ -12,7 +12,7 @@
 
 ## ขอบเขต
 
-ระยะเวลา **4 สัปดาห์** เริ่ม 22 กันยายน 2569 ด้วย released Pilot v0.7.3 เป็น distribution baseline; การอัปเดตกลาง Pilot (เช่น v0.7.4) ต้องผ่าน Release Gate และแจกผ่าน Update ไม่ใช่ติดตั้งใหม่
+ระยะเวลา **4 สัปดาห์** เริ่ม 22 กันยายน 2569 ด้วย released Pilot v0.7.3 เป็น distribution baseline; การอัปเดตกลาง Pilot (เช่น v0.7.5) ต้องผ่าน Release Gate และแจกผ่าน Update ไม่ใช่ติดตั้งใหม่
 
 - เปิดใช้ได้กับ 22 ทีม
 - มี Core Pilot Users จากทีมที่เข้าร่วม ครอบคลุมทั้ง 5 routing clusters

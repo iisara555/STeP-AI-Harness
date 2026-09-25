@@ -65,6 +65,9 @@ jobs:
             echo "CHANGELOG.md has no '## v$VERSION' section; add release notes before publishing."
             exit 1
           fi
+          # CHANGELOG links are relative to the repository root; on the release
+          # page they must point at this tag's files or they 404.
+          sed -E -i "s#\]\(((docs|rules|manifest|skills)/[^)]+|[A-Za-z-]+\.md)\)#](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/\1)#g" dist/release-notes.md
 
       - name: Validate repository
         if: steps.existing.outputs.exists != 'true'
