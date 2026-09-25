@@ -522,7 +522,7 @@ skills:
     wildcardReason: "all teams produce internal or external organizational communication"
     description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
     intent: [social-writing, review, create]
-    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, คำผิด, ตรวจคำผิด, พิสูจน์อักษร, สะกดผิด]
+    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ปรับข้อความ, เขียนข้อความ, ข้อความประชาสัมพันธ์, ให้สุภาพ, สุภาพขึ้น, สุภาพพอไหม, สุภาพไหม, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, คำผิด, ตรวจคำผิด, พิสูจน์อักษร, สะกดผิด]
     paths: ["**/*.md", "**/*.docx", "**/*.txt"]
     fileTypes: [md, docx, txt]
     requires: [draft_text]
@@ -558,6 +558,10 @@ skills:
           role: authorized-signatory
           authority: official-signing
           description: การลงนามหรือออกเลขหนังสือจริง
+        approval_decision:
+          role: authorized-signatory
+          authority: official-signing
+          description: การอนุมัติหรือลงนามอนุมัติในบันทึกข้อความแทนผู้มีอำนาจ
 
   - name: stakeholder-questionnaire
     cluster: governance-operations

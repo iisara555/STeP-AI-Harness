@@ -25,6 +25,33 @@
       ]
     },
     {
+      "id": "positive-politeness-check",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "ข้อความนี้สุภาพพอไหม ช่วยดูหน่อย",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "ตอบว่าสุภาพพอหรือไม่ พร้อมจุดที่ควรปรับ",
+        "เสนอข้อความที่ปรับแล้วโดยคงข้อเท็จจริงเดิม"
+      ]
+    },
+    {
+      "id": "collision-memo-not-plain-text",
+      "dimension": "collision",
+      "team": "hd",
+      "prompt": "ร่างบันทึกข้อความขออนุมัติจัดอบรม เสนอรอง ผอ. ที่กำกับ HD ลงนาม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "notSkill": "step-writing"
+      },
+      "why": "trigger ข้อความ ของ step-writing เคยจับคำว่า บันทึกข้อความ จนแย่งงานร่างบันทึกข้อความไป"
+    },
+    {
       "id": "anti-official-letter",
       "dimension": "antiTrigger",
       "team": "ga",

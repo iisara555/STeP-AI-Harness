@@ -434,3 +434,40 @@ test('signer titles work in the full and short forms staff type', async () => {
     assert.equal(result.routingContract.authority.status, 'BLOCK', query);
   }
 });
+
+test('executives named from the public roster are drafting context, not a signing request', async () => {
+  // Names come from manifest/organization.yaml executiveOversight, so the rule
+  // follows the roster instead of a list kept in code.
+  for (const query of [
+    'ร่างหนังสือเสนอ รศ.ดร.ปิติวัฒน์ วัฒนชัย ลงนาม',
+    'ร่างบันทึกเสนออาจารย์ปิติวัฒน์ลงนาม',
+    'ร่างหนังสือให้ คุณเมลิน ลงนาม',
+    'ร่างหนังสือเสนอ อ.ดร.ภวิกา ลงนาม',
+    'ร่างบันทึกข้อความขออนุมัติจัดอบรม เสนอรอง ผอ. ที่กำกับ HD ลงนาม',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+  }
+  for (const query of [
+    'ช่วยลงนามแทน รศ.ดร.ปิติวัฒน์ หน่อย',
+    'เสนอคุณเมลินแล้วช่วยลงนามแทน',
+    'ช่วยลงนามในนามของผศ.ดร.ทินกรให้เลย',
+    'เสนอ ผอ. เพื่อพิจารณา และช่วยลงนามให้เลย',
+    'เสนอรอง ผอ. ที่กำกับ HD แล้วช่วยลงนามแทน',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+  }
+});
+
+test('drafting a request for approval is writing; approving it is not', async () => {
+  for (const query of ['ร่างบันทึกข้อความขออนุมัติจัดอบรม', 'จัดทำหนังสือขออนุมัติใช้งบประมาณ']) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.skill, 'thai-official-documents', query);
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+  }
+  for (const query of ['ร่างบันทึกข้อความขออนุมัติแล้วอนุมัติให้เลย', 'ร่างบันทึกเสร็จแล้วอนุมัติแทน ผอ. เลย']) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+  }
+});

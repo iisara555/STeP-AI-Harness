@@ -6,6 +6,7 @@
 
 import { extname, basename, dirname } from 'node:path';
 import { scoreSkillCandidate } from './scorer.js';
+import { neutralizeDraftingPhrases } from './authority-preflight.js';
 
 export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
 
@@ -73,7 +74,7 @@ function matchesQualifiedIntent(lower, rule) {
 export const INTENT_KEYWORDS = {
   summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'จัดกลุ่มความเห็น', 'จดประชุม', 'โน้ตประชุม', 'ใครต้องทำอะไร', 'summarize', 'summary', 'minutes'],
   interview: ['สัมภาษณ์ตรวจ', 'สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach', 'ซ้อมตอบผู้ตรวจ', 'ซ้อมสัมภาษณ์'],
-  review: ['ปรับสำนวน', 'ตรวจ', 'รีวิว', 'เช็ก', 'เช็ค', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ครบยัง', 'ครบมั้ย', 'ครบไหม', 'ช่วยดู', 'เบิกได้', 'review', 'check', 'audit', 'evaluate'],
+  review: ['ปรับสำนวน', 'ปรับข้อความ', 'ตรวจ', 'รีวิว', 'เช็ก', 'เช็ค', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ครบยัง', 'ครบมั้ย', 'ครบไหม', 'ช่วยดู', 'เบิกได้', 'review', 'check', 'audit', 'evaluate'],
   fill: ['กรอก', 'จองห้อง', 'ขอใช้ห้อง', 'ลงทะเบียน', 'fill', 'book', 'register'],
   create: ['ทำ creative brief', 'คิด concept', 'จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำตาราง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ทำ prompt', 'ทำ brief', 'ทำ tor', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt ทำภาพ', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'key visual', 'create', 'draft', 'write', 'generate', 'design'],
   plan: ['ทำ pre-mortem', 'วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'timeline', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
@@ -89,7 +90,11 @@ export const INTENT_KEYWORDS = {
  * @returns {string} Inferred intent (brand-review, review, create, summarize, plan, deploy, triage, or unknown)
  */
 export function inferIntentFromText(promptText = '') {
-  const lower = promptText.toLowerCase();
+  // Drafting a request for approval is writing, not approving: neutralise the
+  // drafting phrases the authority gates also neutralise, so
+  // "ร่างบันทึกข้อความขออนุมัติ" keeps its head verb instead of being outranked
+  // by the longer "ขออนุมัติ".
+  const lower = neutralizeDraftingPhrases(promptText).toLowerCase();
 
   for (const rule of QUALIFIED_INTENT_RULES) {
     if (matchesQualifiedIntent(lower, rule)) return rule.intent;

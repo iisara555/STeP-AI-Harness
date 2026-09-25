@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseYamlInlineList, stripYamlScalar } from '../../utils/simple-yaml.js';
 
@@ -71,11 +72,32 @@ const SIGNER_TITLES = [
   'ประธาน(?:กรรมการ)?', 'ผู้บริหาร', 'ผู้มีอำนาจ(?:ลงนาม)?', 'ท่าน',
   'deputy director', 'director', 'manager', 'head',
 ];
-// Words a title can carry before "ลงนาม" ("ผู้อำนวยการอุทยานวิทยาศาสตร์ฯ"),
+// Executives by name, from the public roster in manifest/organization.yaml,
+// so a draft may say "เสนอ รศ.ดร.ปิติวัฒน์ ลงนาม" or "ให้คุณเมลินลงนาม". The
+// roster is the single source: when it changes, this follows.
+const HONORIFICS = '(?:(?:รศ|ผศ|ศ|ดร|อ)\\.?\\s?|อาจารย์\\s?|คุณ\\s?|นางสาว|นาง|นาย|พี่\\s?|ท่าน\\s?)*';
+
+function loadExecutiveNamePatterns() {
+  try {
+    const text = readFileSync(new URL('../../../manifest/organization.yaml', import.meta.url), 'utf-8');
+    const section = text.split(/^executiveOversight:/m)[1] || '';
+    return [...section.matchAll(/^\s+- name:\s*"([^"]+)"/gm)].map(([, full]) => {
+      const bare = full.replace(/^(?:\s*(?:รศ\.|ผศ\.|ศ\.|ดร\.|อ\.|อาจารย์|นางสาว|นาง|นาย))+\s*/, '').trim();
+      const [first, last] = bare.split(/\s+/);
+      const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return first ? `${HONORIFICS}${escape(first)}(?:\\s?${escape(last || '')})?` : null;
+    }).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+// Words a title can carry before "ลงนาม" ("ผู้อำนวยการอุทยานวิทยาศาสตร์ฯ",
+// "รอง ผอ. ที่กำกับ HD"),
 // excluding anything that turns the sentence into a request to act:
 // "เสนอผู้อำนวยการแล้วช่วยลงนามแทน" must still reach the signing gate.
-const TITLE_SUFFIX = '(?:(?!แล้ว|ช่วย|และ|แทน|ให้|เลย)[^\\s,;\\n]){0,40}';
-const SIGNING_ROLE = `(?:${SIGNER_TITLES.join('|')})${TITLE_SUFFIX}`;
+const TITLE_SUFFIX = '(?:(?!แล้ว|ช่วย|และ|แทน|ให้|เลย|ลงนาม)[^,;\\n]){0,40}?';
+const SIGNING_ROLE = `(?:${[...loadExecutiveNamePatterns(), ...SIGNER_TITLES].join('|')})${TITLE_SUFFIX}`;
 const SIGNING_MENTION = new RegExp([
   '(?:ผู้|ช่อง|ส่วน|ตำแหน่ง|บรรทัด)(?:ลงนาม|เซ็น|ลายเซ็น|ลายมือชื่อ)',
   '(?:เสนอ|เพื่อเสนอ|เพื่อ|รอ(?:การ)?|ก่อน(?:เสนอ)?|หลัง(?:การ)?)\\s*(?:' + SIGNING_ROLE + ')?\\s*(?:พิจารณา)?\\s*ลงนาม',
@@ -83,11 +105,20 @@ const SIGNING_MENTION = new RegExp([
   'ลงนามโดย',
 ].join('|'), 'gi');
 
-export function authorityIntentText(query = '') {
+/**
+ * Phrases that describe a document being drafted rather than an act being
+ * requested: a memo that asks for approval, a letter that names its signer.
+ * Intent detection uses this alone; the authority gates also drop declined
+ * clauses, which would strip content ("ไม่ตรงกัน") from intent detection.
+ */
+export function neutralizeDraftingPhrases(query = '') {
   return String(query)
-    .replace(/((?:ร่าง|จัดทำ)(?:บันทึก|หนังสือ|เอกสาร)(?:เพื่อ)?(?:ขอ|เสนอขอ))อนุมัติ/g, '$1เสนอพิจารณา')
-    .replace(SIGNING_MENTION, 'ผู้มีอำนาจ')
-    .replace(DECLINED_ACTION, ' ');
+    .replace(/((?:ร่าง|จัดทำ|เขียน)\s*(?:บันทึก(?:ข้อความ)?|หนังสือ|เอกสาร)\s*(?:เพื่อ)?\s*(?:ขอ|เสนอขอ))\s*อนุมัติ/g, '$1เสนอพิจารณา')
+    .replace(SIGNING_MENTION, 'ผู้มีอำนาจ');
+}
+
+export function authorityIntentText(query = '') {
+  return neutralizeDraftingPhrases(query).replace(DECLINED_ACTION, ' ');
 }
 
 export function evaluateAuthorityPreflight(query = '', authorities = []) {
