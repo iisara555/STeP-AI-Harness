@@ -60,13 +60,28 @@ const DECLINED_ACTION = /(?:แต่)?[ \t]*(?:ยังไม่ต้อง|�
  * executive for signing. Only the act itself ("ช่วยลงนาม", "ลงนามแทน") belongs
  * to the signing gate, so these phrasings are neutralised before matching.
  */
-const SIGNING_ROLE = '(?:ผู้อำนวยการ|ผอ\\.?|รองผู้อำนวยการ|หัวหน้า(?:ทีม|งาน)?|ผู้บริหาร|ผู้มีอำนาจ|คณบดี|อธิการบดี|ท่าน)';
+// Signer titles in the forms staff actually type: full, abbreviated, with or
+// without the dot or space ("รอง ผอ.", "รองผอ", "ผช.ผอ."), and in English.
+// Longer forms come first so the alternation does not stop at a prefix.
+const SIGNER_TITLES = [
+  'ผู้ช่วยผู้อำนวยการ', 'รองผู้อำนวยการ', 'ผู้อำนวยการ',
+  'ผช\\.?\\s?ผอ\\.?', 'รอง\\s?ผอ\\.?', 'ผอ\\.?',
+  'รองอธิการบดี', 'อธิการบดี', 'รองคณบดี', 'คณบดี',
+  'ผู้จัดการ', 'ผจก\\.?', 'หัวหน้าทีม', 'หัวหน้างาน', 'หัวหน้า', 'หน\\.\\s?ทีม', 'หน\\.',
+  'ประธาน(?:กรรมการ)?', 'ผู้บริหาร', 'ผู้มีอำนาจ(?:ลงนาม)?', 'ท่าน',
+  'deputy director', 'director', 'manager', 'head',
+];
+// Words a title can carry before "ลงนาม" ("ผู้อำนวยการอุทยานวิทยาศาสตร์ฯ"),
+// excluding anything that turns the sentence into a request to act:
+// "เสนอผู้อำนวยการแล้วช่วยลงนามแทน" must still reach the signing gate.
+const TITLE_SUFFIX = '(?:(?!แล้ว|ช่วย|และ|แทน|ให้|เลย)[^\\s,;\\n]){0,40}';
+const SIGNING_ROLE = `(?:${SIGNER_TITLES.join('|')})${TITLE_SUFFIX}`;
 const SIGNING_MENTION = new RegExp([
   '(?:ผู้|ช่อง|ส่วน|ตำแหน่ง|บรรทัด)(?:ลงนาม|เซ็น|ลายเซ็น|ลายมือชื่อ)',
-  '(?:เสนอ|เพื่อเสนอ|เพื่อ|รอ(?:การ)?|ก่อน(?:เสนอ)?|หลัง(?:การ)?)\\s*' + SIGNING_ROLE + '?\\s*(?:พิจารณา)?\\s*ลงนาม',
+  '(?:เสนอ|เพื่อเสนอ|เพื่อ|รอ(?:การ)?|ก่อน(?:เสนอ)?|หลัง(?:การ)?)\\s*(?:' + SIGNING_ROLE + ')?\\s*(?:พิจารณา)?\\s*ลงนาม',
   'ให้\\s*' + SIGNING_ROLE + '\\s*(?:พิจารณา)?\\s*ลงนาม',
   'ลงนามโดย',
-].join('|'), 'g');
+].join('|'), 'gi');
 
 export function authorityIntentText(query = '') {
   return String(query)

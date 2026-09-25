@@ -405,3 +405,32 @@ test('mentioning a signer is drafting; asking to sign or issue a number is block
     assert.equal(result.routingContract.authority.authority, 'official-signing', query);
   }
 });
+
+test('signer titles work in the full and short forms staff type', async () => {
+  for (const query of [
+    'ร่างบันทึกข้อความเสนอ ผอ.ลงนาม',
+    'ร่างบันทึกข้อความเสนอรอง ผอ.ลงนาม',
+    'ร่างบันทึกข้อความเสนอรองผอ.ลงนาม',
+    'ร่างหนังสือเสนอผช.ผอ.ลงนาม',
+    'ร่างหนังสือเสนอผู้ช่วยผู้อำนวยการลงนาม',
+    'ร่างบันทึกข้อความเสนอผู้อำนวยการอุทยานวิทยาศาสตร์ฯ ลงนาม',
+    'ร่างหนังสือให้ผจก.ลงนาม',
+    'ร่างหนังสือให้ หน.ทีม ลงนาม',
+    'ร่างหนังสือเสนอประธานกรรมการลงนาม',
+    'ร่างบันทึกเสนอ director ลงนาม',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+  }
+  // A title followed by an action is still a request to act.
+  for (const query of [
+    'เสนอผู้อำนวยการแล้วช่วยลงนามแทน',
+    'เสนอ ผอ. แล้วช่วยลงนามแทนด้วย',
+    'ช่วยลงนามแทน ผอ. หน่อย',
+    'ช่วยเซ็นแทนรอง ผอ.',
+    'ร่างหนังสือเสนอ ผอ. เสร็จแล้วลงนามให้เลย',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+  }
+});
