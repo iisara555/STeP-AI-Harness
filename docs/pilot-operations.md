@@ -1,18 +1,18 @@
 # Pilot Operations — 1 Month
 
-**As of:** 2026-09-20
+**As of:** 2026-09-25
 
-**Released distribution baseline:** v0.7.2
+**Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21; 46 Skills / 4 Playbooks / 3 Actions)
 
-**Prepared Pilot candidate:** v0.7.3 — รอบแรก วันที่ 22 กันยายน 2569 ใช้ [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek
+**Prepared Pilot candidate:** v0.7.4 — รอ Release Gate; รอบแรกวันที่ 22 กันยายน 2569 ใช้ v0.7.3 ตาม [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek; สิ่งที่เปลี่ยนดู [CHANGELOG](../CHANGELOG.md)
 
-**Repository scope:** `main` may contain post-v0.7.2 changes; do not treat `main` as a released employee package until tagged/released.
+**Repository scope:** `main` may contain post-v0.7.3 changes; do not treat `main` as a released employee package until tagged/released.
 
-**Current `main` inventory:** 47 Skills / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
+**Current `main` inventory:** 49 Skills / 48 router entries / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
 
 ## ขอบเขต
 
-ระยะเวลา **4 สัปดาห์** ใช้ released Pilot v0.7.2 เป็น distribution baseline
+ระยะเวลา **4 สัปดาห์** เริ่ม 22 กันยายน 2569 ด้วย released Pilot v0.7.3 เป็น distribution baseline; การอัปเดตกลาง Pilot (เช่น v0.7.4) ต้องผ่าน Release Gate และแจกผ่าน Update ไม่ใช่ติดตั้งใหม่
 
 - เปิดใช้ได้กับ 22 ทีม
 - มี Core Pilot Users จากทีมที่เข้าร่วม ครอบคลุมทั้ง 5 routing clusters
@@ -23,7 +23,7 @@
 ## Week 0 — Preflight
 
 ก่อนเริ่มนับ Pilot:
-- ติดตั้ง/อัปเดต released Pilot v0.7.2 หรือรุ่นถัดไปที่ผ่าน Release Gate
+- ติดตั้ง/อัปเดต released Pilot v0.7.3 หรือรุ่นถัดไปที่ผ่าน Release Gate
 - รัน CI และ Pilot readiness suite ให้เขียว
 - ทดสอบ update + rollback อย่างน้อย 1 เครื่อง Windows และ 1 เครื่อง macOS ถ้ามี
 - ยืนยัน feedback channel และผู้รับผิดชอบ triage

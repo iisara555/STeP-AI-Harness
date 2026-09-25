@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/ai-harness",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "STeP AI skills, rules, routing, governance, and employee workspace distribution",
   "main": "src/index.js",
   "type": "module",
@@ -44,6 +44,7 @@
     "docs/step-router.md",
     "docs/employee-guide.md",
     "README.md",
+    "CHANGELOG.md",
     "SUPPORT.md",
     "culture.md",
     ".env.example",
