@@ -28,7 +28,7 @@ authorities:
 
   official-signing:
     name: "การลงนามในหนังสือราชการและเอกสารคำสั่งภายนอก"
-    triggers: ["ลงนามหนังสือ", "ลงนามสัญญา", "เซ็นหนังสือ", "เซ็นสัญญา", "ออกเลขสารบรรณ"]
+    triggers: ["ลงนามหนังสือ", "ลงนามสัญญา", "เซ็นหนังสือ", "เซ็นสัญญา", "ออกเลขสารบรรณ", "ออกเลขหนังสือ", "ออกเลขที่หนังสือ", "ลงนามแทน", "เซ็นแทน"]
     authorizedRole: "authorized-signatory"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory

@@ -54,9 +54,24 @@ function normalize(value = '') {
  */
 const DECLINED_ACTION = /(?:แต่)?[ \t]*(?:ยังไม่ต้อง|ไม่ต้อง|ยังไม่|อย่าเพิ่ง|อย่า|ห้าม|ไม่ควร|do(?:es)? not|don['’]t|no need to|without)[^,;\n]*/gi;
 
+/**
+ * "ลงนาม" as a noun or as the document's destination is not a request to sign:
+ * a letter names its signer, leaves a signature line, and is proposed to an
+ * executive for signing. Only the act itself ("ช่วยลงนาม", "ลงนามแทน") belongs
+ * to the signing gate, so these phrasings are neutralised before matching.
+ */
+const SIGNING_ROLE = '(?:ผู้อำนวยการ|ผอ\\.?|รองผู้อำนวยการ|หัวหน้า(?:ทีม|งาน)?|ผู้บริหาร|ผู้มีอำนาจ|คณบดี|อธิการบดี|ท่าน)';
+const SIGNING_MENTION = new RegExp([
+  '(?:ผู้|ช่อง|ส่วน|ตำแหน่ง|บรรทัด)(?:ลงนาม|เซ็น|ลายเซ็น|ลายมือชื่อ)',
+  '(?:เสนอ|เพื่อเสนอ|เพื่อ|รอ(?:การ)?|ก่อน(?:เสนอ)?|หลัง(?:การ)?)\\s*' + SIGNING_ROLE + '?\\s*(?:พิจารณา)?\\s*ลงนาม',
+  'ให้\\s*' + SIGNING_ROLE + '\\s*(?:พิจารณา)?\\s*ลงนาม',
+  'ลงนามโดย',
+].join('|'), 'g');
+
 export function authorityIntentText(query = '') {
   return String(query)
     .replace(/((?:ร่าง|จัดทำ)(?:บันทึก|หนังสือ|เอกสาร)(?:เพื่อ)?(?:ขอ|เสนอขอ))อนุมัติ/g, '$1เสนอพิจารณา')
+    .replace(SIGNING_MENTION, 'ผู้มีอำนาจ')
     .replace(DECLINED_ACTION, ' ');
 }
 

@@ -373,3 +373,35 @@ test('acts only a person may perform never become general help', async () => {
     assert.notEqual(result.routingMode, 'GENERAL', query);
   }
 });
+
+test('mentioning a signer is drafting; asking to sign or issue a number is blocked', async () => {
+  // A letter names its signer, leaves a signature line and is proposed to an
+  // executive for signing. Blocking those drafts told staff the assistant
+  // could not write the organization's most common document.
+  for (const query of [
+    'ร่างหนังสือเชิญประชุม ผู้ลงนามยังรอยืนยัน',
+    'ร่างหนังสือขอความอนุเคราะห์ เว้นช่องลงนามไว้',
+    'ร่างบันทึกข้อความเสนอผู้อำนวยการลงนาม',
+    'ตรวจรูปแบบหนังสือก่อนเสนอลงนาม',
+    'จัดทำหนังสือเพื่อให้หัวหน้าทีมลงนาม',
+    'ตรวจว่าตำแหน่งผู้ลงนามถูกต้องไหม',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+    assert.equal(result.routingContract.skill, 'thai-official-documents', query);
+  }
+  // The act itself stays with the authorized signatory.
+  for (const query of [
+    'ช่วยลงนามหนังสือฉบับนี้แทนผู้อำนวยการ',
+    'ช่วยเซ็นหนังสือนี้แทนหัวหน้า',
+    'ลงนามแทนผมได้เลย',
+    'ร่างหนังสือแล้วลงนามแทนผู้อำนวยการให้ด้วย',
+    'ร่างหนังสือเสร็จแล้วช่วยลงนามให้เลย',
+    'ออกเลขหนังสือให้เลย',
+    'ช่วยออกเลขที่หนังสือส่งออกให้หน่อย',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+    assert.equal(result.routingContract.authority.authority, 'official-signing', query);
+  }
+});
