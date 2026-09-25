@@ -607,9 +607,13 @@ const FILLER_TERMS = [
 const MIN_CONCRETE_CHARS = 3;
 
 // A request that names a STeP team or internal system ("AFP ตีกลับ", "ระเบียบ
-// ISO") is about how the organization works, so it must not be answered from
-// general knowledge. The product's own name is not such a signal.
-const ORGANIZATION_TERMS = ['ระเบียบ', 'หนังสือเวียน', 'แบบฟอร์ม', 'iso', 'qms', 'step mis', 'สเต็ป', 'อุทยาน', 'มช', 'cmu'];
+// ISO"), or asks what the organization pays or grants ("เบิกได้เท่าไหร่",
+// "สวัสดิการ"), is about how the organization works, so it must not be answered
+// from general knowledge. The product's own name is not such a signal.
+const ORGANIZATION_TERMS = [
+  'ระเบียบ', 'หนังสือเวียน', 'แบบฟอร์ม', 'iso', 'qms', 'step mis', 'สเต็ป', 'อุทยาน', 'มช', 'cmu',
+  'เบิก', 'สวัสดิการ', 'เงินเดือน', 'ค่าตอบแทน', 'วันลา', 'มีสิทธิ', 'ได้สิทธิ', 'สิทธิ์ลา', 'สิทธิลา',
+];
 
 function namesOrganizationContext(query, teamIds = []) {
   const text = String(query || '').toLowerCase().replace(/step\s*ai/g, '');

@@ -1,0 +1,66 @@
+{
+  "skill": "meeting-summary",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "สรุปเป็นย่อหน้าเดียว ปนมติกับข้อเสนอ และมักเติมผู้รับผิดชอบหรือกำหนดส่งที่บันทึกไม่ได้ระบุ",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-decisions-actions",
+      "dimension": "positive",
+      "team": "ga",
+      "prompt": "สรุปบันทึกประชุมทีมเมื่อวาน แยกมติ งานที่ต้องทำ และผู้รับผิดชอบ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "meeting-summary",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "แยกหัวข้อ มติ / งานที่ต้องทำ / ประเด็นค้าง ออกจากกัน",
+        "มีตาราง Action ที่มีคอลัมน์ Owner, Due date และ Source",
+        "ทุก Action อ้างกลับไปยังบรรทัดหรือช่วงในบันทึกต้นทางได้"
+      ]
+    },
+    {
+      "id": "anti-plan-to-sheet",
+      "dimension": "antiTrigger",
+      "team": "pm",
+      "prompt": "เอาบันทึกประชุมนี้ไปทำแผนงานลง Google Sheet พร้อม timeline",
+      "expect": {
+        "mode": "PLAYBOOK",
+        "playbook": "meeting-to-action-plan"
+      },
+      "why": "งานหลายขั้นจากบันทึกประชุมไปเป็นแผนและชีตต้องเป็น Playbook ไม่ใช่สรุปประชุมอย่างเดียว"
+    },
+    {
+      "id": "collision-official-letter",
+      "dimension": "collision",
+      "team": "ga",
+      "prompt": "ร่างหนังสือแจ้งมติที่ประชุมถึงหน่วยงานภายนอก",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "notSkill": "meeting-summary"
+      },
+      "why": "คำว่า มติ/ประชุม ต้องไม่ดึงงานร่างหนังสือราชการมาที่สรุปประชุม"
+    },
+    {
+      "id": "missing-owner",
+      "dimension": "missingSource",
+      "team": "ga",
+      "prompt": "สรุปประชุมนี้ให้หน่อย ในบันทึกไม่มีบอกว่าใครรับผิดชอบงานไหน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "meeting-summary"
+      },
+      "outputAssertions": [
+        "ช่อง Owner ของงานที่ไม่มีผู้รับผิดชอบในบันทึกเขียนว่า ยังไม่ระบุ หรือ รอยืนยัน",
+        "ไม่แต่งชื่อผู้รับผิดชอบหรือกำหนดส่งขึ้นเอง",
+        "ระบุในประเด็นค้างว่าต้องยืนยันผู้รับผิดชอบ"
+      ]
+    }
+  ]
+}

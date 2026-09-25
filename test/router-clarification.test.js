@@ -356,3 +356,13 @@ test('a single weak candidate is confirmed in one question, not three', async ()
   assert.equal(confirmed.routingMode, 'SKILL');
   assert.equal(confirmed.routingContract.skill, result.clarification.options[0].value);
 });
+
+test('organization entitlement questions never become general help', async () => {
+  for (const query of ['ค่ารักษาพยาบาลเบิกได้ปีละเท่าไหร่', 'พนักงานโครงการมีสิทธิได้โบนัสไหม', 'สวัสดิการพนักงานใหม่มีอะไรบ้าง']) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.notEqual(result.routingMode, 'GENERAL', query);
+  }
+  // Substrings must not trip the guard: ประสิทธิภาพ contains สิทธิ.
+  const general = await queryStepRouter('ช่วยเขียนวิธีเพิ่มประสิทธิภาพการทำงานของทีม', { workspaceDir: options.workspaceDir });
+  assert.equal(general.routingMode, 'GENERAL');
+});

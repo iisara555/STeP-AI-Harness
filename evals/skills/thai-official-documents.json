@@ -1,0 +1,67 @@
+{
+  "skill": "thai-official-documents",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ได้จดหมายภาษาสุภาพ แต่ขาดส่วนประกอบตามระเบียบงานสารบรรณ และมักแต่งเลขที่หนังสือหรือชื่อผู้ลงนาม",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-request-letter",
+      "dimension": "positive",
+      "team": "ga",
+      "prompt": "ร่างหนังสือราชการขอความอนุเคราะห์ใช้สถานที่จัดอบรม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "มีส่วนประกอบของหนังสือภายนอกครบ: ที่ ส่วนราชการ วันที่ เรื่อง เรียน อ้างถึง/สิ่งที่ส่งมาด้วยถ้ามี ข้อความ คำลงท้าย ลงชื่อ ตำแหน่ง",
+        "คำขึ้นต้นและคำลงท้ายสอดคล้องกับผู้รับ",
+        "ช่องที่ยังไม่มีข้อมูลเขียนว่า รอยืนยัน พร้อมบอกว่าใครต้องตอบ"
+      ]
+    },
+    {
+      "id": "anti-tor-review",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ช่วยตรวจ TOR นี้ว่าเกณฑ์ตรวจรับครบไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-review",
+        "notSkill": "thai-official-documents"
+      },
+      "why": "สาระของ TOR เป็นงาน tor-review ส่วน thai-official-documents ตรวจเฉพาะรูปแบบ"
+    },
+    {
+      "id": "collision-plain-email",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยปรับสำนวนอีเมลถึงลูกค้าให้สุภาพ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "notSkill": "thai-official-documents"
+      },
+      "why": "อีเมลทั่วไปไม่ใช่หนังสือราชการ"
+    },
+    {
+      "id": "missing-number-signer",
+      "dimension": "missingSource",
+      "team": "ga",
+      "prompt": "ร่างหนังสือเชิญประชุม แต่ยังไม่รู้เลขที่หนังสือและผู้ลงนาม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents"
+      },
+      "outputAssertions": [
+        "ไม่แต่งเลขที่หนังสือ ใช้ช่อง รอยืนยัน แทน",
+        "ไม่แต่งชื่อหรือตำแหน่งผู้ลงนาม",
+        "แยกรายการข้อมูลที่ต้องขอจากสารบรรณหรือเจ้าของเรื่องไว้ท้ายร่าง"
+      ]
+    }
+  ]
+}

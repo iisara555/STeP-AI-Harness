@@ -1,6 +1,8 @@
 version: 1
 # Lifecycle evidence rule: approvedBy identifies the required approver role, not proof that approval occurred.
-# stage: pilot requires explicit owner-review evidence outside this manifest; until then use pilot/draft.
+# draft -> pilot needs registry/router integrity, source/authority mapping and routing evals (docs/skill-authoring-standard.md).
+# pilot -> approved needs explicit owner-review evidence recorded outside this manifest; until then stay at pilot.
+# Skills listed in manifest/skill-evals.json legacyWithoutEvals reached pilot before per-Skill evals existed.
 description: Official STeP AI Skill Registry — Governance, Ownership, Process Links & Lifecycle Status
 
 skills:
@@ -100,6 +102,25 @@ skills:
         stage: pilot
     references:
       mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  stakeholder-questionnaire:
+    owner: qs
+    version: 1.0.0
+    domain: [governance, source-control]
+    process: [quality.document-control]
+    path: skills/common/stakeholder-questionnaire/SKILL.md
+    description: ร่างชุดคำถามส่งให้คนหรือทีมที่มีคำตอบ เมื่องานติดที่ข้อมูลซึ่งผู้ใช้ตอบเองไม่ได้ เช่น เอกสารหรือระเบียบที่ยังรอยืนยัน
+    governance:
+      owner: qs
+      reviewer: [ga, ai-admin]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-25"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [data-classification-rule]
       optional: []
 
   meeting-summary:

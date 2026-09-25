@@ -8,7 +8,7 @@
 
 **Repository scope:** `main` may contain post-v0.7.3 changes; do not treat `main` as a released employee package until tagged/released.
 
-**Current `main` inventory:** 49 Skills / 48 router entries / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
+**Current `main` inventory:** 50 Skills / 49 router entries / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
 
 ## ขอบเขต
 
