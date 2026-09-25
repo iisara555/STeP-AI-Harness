@@ -122,6 +122,9 @@ export async function resolveRoleFiles(roleId) {
     'cc-iso-document-register.md',
     'afp-operational-circulars.md',
     'third-party-methods.md',
+    'qms-working-master-list.md',
+    'qms-working-reference.md',
+    'afp-regulation-hierarchy.md',
     'skill-authoring-standard.md',
     'facility-equipment-index.md',
   ];
@@ -431,6 +434,9 @@ export async function resolveTeamFiles(teamCode) {
     'cc-iso-document-register.md',
     'afp-operational-circulars.md',
     'third-party-methods.md',
+    'qms-working-master-list.md',
+    'qms-working-reference.md',
+    'afp-regulation-hierarchy.md',
     'skill-authoring-standard.md',
     'facility-equipment-index.md',
   ];

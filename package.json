@@ -91,7 +91,10 @@
     "Check-Privacy-STeP-AI.bat",
     "Check-Privacy-STeP-AI.command",
     "docs/privacy-preflight.md",
-    "docs/third-party-methods.md"
+    "docs/third-party-methods.md",
+    "docs/qms-working-master-list.md",
+    "docs/qms-working-reference.md",
+    "docs/afp-regulation-hierarchy.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
