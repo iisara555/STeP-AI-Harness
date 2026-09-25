@@ -1,16 +1,16 @@
 # Pilot Readiness Audit — 1 Month
 
-**As of:** 2026-09-21
+**As of:** 2026-09-25
 
 **Document status:** Current Pilot readiness reference
 
-**Released distribution baseline:** v0.7.2
+**Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21)
 
-**Prepared Pilot candidate:** v0.7.3 สำหรับรอบทดสอบ; ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว
+**Prepared Pilot candidate:** v0.7.4 รอ Release Gate; ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ดู [CHANGELOG](../CHANGELOG.md)
 
 **Repository scope:** source remains development until released; [Pilot runbook](pilot-runbook.md) governs the supervised session
 
-**Current main inventory:** 47 Skills / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
+**Current main inventory:** 49 Skills / 48 router entries / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
 
 ## Executive Summary
 

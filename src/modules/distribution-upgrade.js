@@ -11,6 +11,7 @@ export const DISTRIBUTION_DIRS = ['bin', 'src', 'install', 'manifest', 'skills',
 export const DISTRIBUTION_FILES = [
   'package.json',
   'README.md',
+  'CHANGELOG.md',
   'SUPPORT.md',
   'START-HERE.md',
   'MAC-START-HERE.txt',

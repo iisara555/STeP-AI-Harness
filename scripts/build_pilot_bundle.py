@@ -50,6 +50,7 @@ def build_pilot_bundle():
         "Check-Privacy-STeP-AI.command",
         "package.json",
         "README.md",
+        "CHANGELOG.md",
         "SUPPORT.md",
         "START-HERE.md",
         "MAC-START-HERE.txt",

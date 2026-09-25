@@ -22,7 +22,7 @@ STeP AI — เริ่มติดตั้งบน macOS
 
 เปิด Terminal แล้ววางคำสั่งนี้ โดยเปลี่ยน path ให้ตรงกับที่แตกไฟล์ไว้:
 
-    xattr -dr com.apple.quarantine ~/Downloads/STeP-AI-Pilot-v0.7.3
+    xattr -dr com.apple.quarantine ~/Downloads/STeP-AI-Pilot-v0.7.4
 
 คำสั่งนี้ลบแฟล็ก "ดาวน์โหลดมาจากอินเทอร์เน็ต" ออกจากไฟล์ในโฟลเดอร์ชุดติดตั้ง
 ไม่ได้ติดตั้งอะไรเพิ่มและไม่แตะไฟล์นอกโฟลเดอร์นั้น
