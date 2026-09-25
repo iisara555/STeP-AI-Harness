@@ -455,6 +455,7 @@ export async function queryStepRouter(query, options = {}) {
     && scopeResult.status === 'ALLOW'
     && !ATTACHMENT_PURPOSE_PATTERN.test(query)
     && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
     && !namesOrganizationContext(query, Object.keys(teams))
     && hasConcreteRequest(originalQuery, options.clarificationAnswer);
   if (generalAssist) selectedSkill = null;
@@ -593,6 +594,10 @@ export async function queryStepRouter(query, options = {}) {
 
 const ATTACHMENT_PURPOSE_PATTERN = /ต้องแนบอะไร/;
 const CONSEQUENTIAL_INTENTS = new Set(['approve', 'form-submit']);
+// Acts only a person may perform. General help could invent their result (a
+// document number, a signature), so these always go through the Router's
+// questions and authority gates instead of GENERAL.
+const CONSEQUENTIAL_ACTION_PATTERN = /ออกเลข|ลงนาม|เซ็น|ลายเซ็น|โอนเงิน|จ่ายเงิน|สั่งจ่าย|อนุมัติ|ตัดสินผู้ชนะ|กดส่ง|ส่งฟอร์ม|\bsubmit\b|\bsign\b|\bapprove\b/i;
 // With no Skill loaded, the organization floor still has to reach the model.
 const GENERAL_ASSIST_REFERENCES = ['human-approval-rule', 'data-classification-rule'];
 

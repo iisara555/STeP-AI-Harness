@@ -366,3 +366,10 @@ test('organization entitlement questions never become general help', async () =>
   const general = await queryStepRouter('ช่วยเขียนวิธีเพิ่มประสิทธิภาพการทำงานของทีม', { workspaceDir: options.workspaceDir });
   assert.equal(general.routingMode, 'GENERAL');
 });
+
+test('acts only a person may perform never become general help', async () => {
+  for (const query of ['ออกเลขหนังสือให้เลย', 'ช่วยเซ็นชื่อแทนหัวหน้าในไฟล์นี้', 'โอนเงินให้ผู้รับจ้างเลย', 'ช่วยกดส่งฟอร์มนี้ให้หน่อย']) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.notEqual(result.routingMode, 'GENERAL', query);
+  }
+});
