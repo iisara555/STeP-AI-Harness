@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - package.json
+      - CHANGELOG.md
       - scripts/build_pilot_bundle.py
       - .github/workflows/release-pilot.yml
   workflow_dispatch:
@@ -48,9 +49,30 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Extract release notes from CHANGELOG
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          mkdir -p dist
+          awk -v heading="## v$VERSION" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > dist/release-notes.md
+          if ! grep -q '[^[:space:]]' dist/release-notes.md; then
+            echo "CHANGELOG.md has no '## v$VERSION' section; add release notes before publishing."
+            exit 1
+          fi
+
       - name: Validate repository
         if: steps.existing.outputs.exists != 'true'
         run: python3 scripts/validate_repo.py
+
+      - name: Verify pinned Node runtime supply chain
+        if: steps.existing.outputs.exists != 'true'
+        run: bash scripts/verify_node_runtime_pins.sh
 
       - name: Check updater script syntax
         if: steps.existing.outputs.exists != 'true'
@@ -62,8 +84,10 @@ jobs:
           bash -n install/install-macos.sh
           bash -n install/update-macos.sh
           bash -n install/feedback-macos.sh
+          bash -n Check-Privacy-STeP-AI.command
+          bash -n install/privacy-macos.sh
           bash -n install/macos-runtime.sh
-          pwsh -NoProfile -Command "\$null = [scriptblock]::Create((Get-Content -Raw 'install/update-windows.ps1')); Write-Host 'PowerShell syntax OK'"
+          pwsh -NoProfile -Command "@('install/windows-runtime.ps1','install/install-windows.ps1','install/update-windows.ps1','install/feedback-windows.ps1','install/privacy-windows.ps1') | ForEach-Object { \$null = [scriptblock]::Create((Get-Content -Raw \$_)) }; Write-Host 'PowerShell syntax OK'"
 
       - name: Build Pilot ZIP
         if: steps.existing.outputs.exists != 'true'
@@ -99,7 +123,7 @@ jobs:
           gh release create "$TAG" "dist/$ASSET" "dist/$ASSET.sha256" \
             --target "$GITHUB_SHA" \
             --title "STeP AI Harness Pilot $TAG" \
-            --notes "Pilot distribution for STeP AI Harness $TAG. Built from validated source on main. Includes the employee installer bundle for Windows and macOS."
+            --notes-file dist/release-notes.md
 
       - name: Existing release
         if: steps.existing.outputs.exists == 'true'
