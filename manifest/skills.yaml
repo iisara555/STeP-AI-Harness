@@ -611,6 +611,25 @@ skills:
       mandatory: [human-approval-rule]
       optional: []
 
+  afp-operations-lookup:
+    owner: afp
+    version: 1.0.0
+    domain: [finance, procurement]
+    process: [procurement.request]
+    path: skills/common/afp-operations-lookup/SKILL.md
+    description: ตอบ Lead Time งานการเงินและพัสดุ หมวดค่าใช้จ่าย และเงื่อนไขการเบิกจ่ายตามแนวปฏิบัติที่ AFP แจ้งเวียน โดยไม่สรุปว่าเบิกได้หรือไม่ได้
+    governance:
+      owner: afp
+      reviewer: [ga, qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-24"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
   hr-policy-lookup:
     owner: hd
     version: 1.0.0

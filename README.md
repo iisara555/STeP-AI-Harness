@@ -14,7 +14,7 @@ README ฉบับนี้อ้างอิงชุดที่เตรี�
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **48 Skills** |
+| Skills | **49 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 

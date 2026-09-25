@@ -811,6 +811,34 @@ skills:
       escalate: {}
       human_only: {}
 
+  - name: afp-operations-lookup
+    cluster: governance-operations
+    domain: finance
+    processId: procurement.request
+    teams:
+      primary: [afp]
+      consumers: ["*"]
+    wildcardReason: "every team sends finance and procurement paperwork to AFP, so anyone planning an activity must be able to look up the lead time and expense category before they commit to a date"
+    description: ตอบ Lead Time งานการเงินและงานพัสดุ หมวดค่าใช้จ่าย B/BV/B9.2 การจ้างเหมารถตู้ ค่าตอบแทนวิทยากร ข้อควรระวังการยืมเงิน และ E-Signature ตามแนวปฏิบัติที่ AFP แจ้งเวียน
+    intent: [afp-operations]
+    triggers: [lead time, leadtime, ระยะเวลาดำเนินงาน, ใช้เวลากี่วัน, กี่วันทำการ, เสร็จเมื่อไหร่, ทันไหม, ปิดรับเอกสาร, รอบปิดรับ, ปฏิทินการเงิน, ยืมเงิน, สัญญายืมเงิน, เคลียร์เงิน, สำรองจ่าย, เบิกเงินสำรองจ่าย, เงินอุดหนุนโครงการ, ใบแจ้งหนี้, ขอออกใบเสร็จ, ใบเสร็จรับเงิน, หมวดค่าใช้จ่าย, ลงหมวดอะไร, หมวด B, หมวด BV, จ้างเหมารถตู้, เช่ารถตู้, ค่าตอบแทนวิทยากร, วิทยากร, นับชั่วโมงวิทยากร, จัดซื้อจัดจ้าง, งานพัสดุ, ใบสั่งซื้อ, ใบสั่งจ้าง, PR, PO, e-signature, อีลายเซ็น, ลายเซ็นอิเล็กทรอนิกส์, STeP MIS, เงินชดเชยคอมพิวเตอร์, คอมพิวเตอร์พกพา, เอกสารภาษาต่างประเทศ, อัตราแลกเปลี่ยน]
+    paths: ["**/AFP/**", "**/Finance/**", "**/Procurement/**"]
+    fileTypes: [md, pdf, xlsx]
+    requires: []
+    scope:
+      allow:
+        - อ้าง Lead Time พร้อมเงื่อนไขว่านับเมื่อเอกสารครบถ้วนถูกต้อง และเริ่มนับใหม่เมื่อมีการแก้ไข
+        - ชี้หมวดค่าใช้จ่ายตามขอบเขตที่แนวปฏิบัติระบุ
+        - อธิบายวิธีนับชั่วโมงวิทยากรและข้อควรระวังการยืมเงิน
+      escalate:
+        disbursement_decision:
+          to: afp
+          description: การสรุปว่าเบิกได้หรือไม่ได้ในกรณีเฉพาะ เป็นดุลพินิจของเจ้าหน้าที่ AFP
+        unregistered_rate:
+          to: afp
+          description: อัตราค่าตอบแทนวิทยากรและเงินชดเชยคอมพิวเตอร์ยังไม่มีในเอกสารที่ลงทะเบียน
+      human_only: {}
+
   - name: hr-policy-lookup
     cluster: governance-operations
     domain: people-development
