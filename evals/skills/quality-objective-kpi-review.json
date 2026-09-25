@@ -1,0 +1,68 @@
+{
+  "skill": "quality-objective-kpi-review",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "รายงานทุกตัวเลขที่ขยับ เทียบแค่รอบก่อน ไม่บอกว่าส่วนไหนเป็นต้นเหตุ และไม่ตรวจคุณภาพข้อมูลหรือคำนวณทวน",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-monthly-report",
+      "dimension": "positive",
+      "team": "qs",
+      "prompt": "ทำรายงานผล KPI ประจำเดือนนี้เทียบเดือนก่อน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "quality-objective-kpi-review",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "เทียบกับค่าเฉลี่ยหลายรอบก่อนหน้า ไม่ใช่แค่เดือนก่อน และบอกจำนวนรอบที่ใช้",
+        "รายงานเฉพาะ KPI ที่เปลี่ยนเกินเกณฑ์ ไม่เกิน 5 ข้อ แต่ละข้อบอกส่วนที่เป็นต้นเหตุหลัก",
+        "แยกตัวเลขที่คำนวณออกจากความเห็น",
+        "ปิดท้ายด้วยหมายเหตุคุณภาพข้อมูล"
+      ]
+    },
+    {
+      "id": "anti-exec-update",
+      "dimension": "antiTrigger",
+      "team": "sit",
+      "prompt": "ทำรายงานผล KPI โครงการส่งผู้บริหาร",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "executive-status-update",
+        "notSkill": "quality-objective-kpi-review"
+      },
+      "why": "รายงานสถานะโครงการต่อผู้บริหารใช้ executive-status-update"
+    },
+    {
+      "id": "collision-pareto",
+      "dimension": "collision",
+      "team": "qs",
+      "prompt": "วิเคราะห์ Pareto ของ NC ปีนี้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "ncr-capa",
+        "notSkill": "quality-objective-kpi-review"
+      },
+      "why": "ตัวเลข NC ที่ต้องจัดลำดับสาเหตุเป็นงาน CAPA ไม่ใช่รายงาน KPI"
+    },
+    {
+      "id": "missing-baseline",
+      "dimension": "missingSource",
+      "team": "qs",
+      "prompt": "ทำรายงานผล KPI ไตรมาสนี้ แต่ยังไม่มี baseline",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "quality-objective-kpi-review"
+      },
+      "outputAssertions": [
+        "บอกว่าไม่มีค่าฐานให้เทียบ จึงสรุปแนวโน้มไม่ได้",
+        "ให้สถานะ PARTIAL กับ KPI ที่ไม่มี baseline",
+        "ไม่สร้างค่าฐานหรือเป้าหมายขึ้นเอง"
+      ]
+    }
+  ]
+}
