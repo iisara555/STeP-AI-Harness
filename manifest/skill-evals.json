@@ -112,12 +112,10 @@
     "learning-designer",
     "management-review-prep",
     "market-signal-radar",
-    "ncr-capa",
     "presentation-design",
     "project-plan",
     "project-pre-mortem",
     "qms-risk-opportunity-review",
-    "quality-objective-kpi-review",
     "receipt-audit",
     "sop-authoring",
     "startup-discovery",
@@ -126,10 +124,9 @@
     "step-skill-authoring",
     "team-weekly-review",
     "tor-government-writing",
-    "tor-review",
     "vercel-deploy",
     "voice-of-customer"
   ],
-  "legacyCeiling": 43,
+  "legacyCeiling": 40,
   "ratchetNote": "Skills registered before per-Skill evals existed. The list may only shrink: adding evals/skills/<skill>.json requires removing the Skill here, and a new Skill cannot be added here."
 }
