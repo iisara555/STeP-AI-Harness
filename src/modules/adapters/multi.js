@@ -7,6 +7,7 @@ import { generateWindsurfRules } from './windsurf.js';
 import { generateOpenCodeInstructions } from './opencode.js';
 import { generateGeminiInstructions } from './gemini.js';
 import { generateChatGPTInstructions } from './chatgpt.js';
+import { writeToolPermissions } from './tool-permissions.js';
 
 export function getInstructionFiles(role, files) {
   const codexContent = generateCodexInstructions(role, files);
@@ -28,6 +29,8 @@ export function getInstructionFiles(role, files) {
     { filename: 'GEMINI.md', content: geminiContent },
     { filename: 'CHATGPT.md', content: chatgptContent },
     { filename: 'AGENTS.md', content: codexContent },
+    // VS Code + Copilot (free tier included) reads this file on every chat request.
+    { filename: '.github/copilot-instructions.md', content: codexContent },
   ];
 }
 
@@ -40,5 +43,9 @@ export async function install({ workspaceDir, role, files, dryRun = false }) {
     installedFiles.push(result);
   }
 
-  return { installedFiles, instructionsFile: 'AGENTS.md (Multi-Agent)' };
+  // Settings files are merged, not owned: they stay out of the installed-file
+  // manifest so a user's own settings never show up as tampering.
+  const toolPermissions = await writeToolPermissions(workspaceDir, dryRun);
+
+  return { installedFiles, toolPermissions, instructionsFile: 'AGENTS.md (Multi-Agent)' };
 }

@@ -1,0 +1,68 @@
+{
+  "skill": "tor-review",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ตรวจเฉพาะสิ่งที่ TOR เขียนไว้และติภาษา แต่ไม่ถามถึงสิ่งที่ TOR เงียบ เช่น ส่งงานไม่ผ่านเกณฑ์แล้วทำอย่างไร และตั้งคำถามที่คำตอบอยู่ในส่วนอื่นของ TOR แล้ว",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-before-afp",
+      "dimension": "positive",
+      "team": "afp",
+      "prompt": "ช่วยตรวจ TOR จ้างทำวิดีโอนี้ก่อนส่ง AFP หน่อย",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-review",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "ทุก finding เรื่องช่องว่างเขียนเป็นสถานการณ์ 'ถ้าผู้รับจ้าง X ระหว่าง Y — TOR ไม่ได้กำหนดว่า Z'",
+        "ไม่ถามเรื่องที่ TOR ตอบไว้แล้วในส่วนอื่น และไม่นับส่วนที่ TOR ระบุว่าไม่รวมเป็นช่องว่าง",
+        "มีคำถามส่งต่อที่เป็นประโยคสุภาพ อ้างเลข finding และคัดลอกไปส่งได้ทันที",
+        "ผลรวมเป็น READY-FOR-AFP-REVIEW หรือ NEEDS-REVISION ไม่ใช่การอนุมัติ"
+      ]
+    },
+    {
+      "id": "anti-write-new",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ช่วยเขียน TOR ใหม่จ้างทำเว็บไซต์",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-government-writing",
+        "notSkill": "tor-review"
+      },
+      "why": "การร่าง TOR ใหม่เป็นงานของ tor-government-writing"
+    },
+    {
+      "id": "collision-receipt",
+      "dimension": "collision",
+      "team": "afp",
+      "prompt": "ช่วยตรวจใบเสร็จค่าจ้างทำวิดีโอก่อนส่งเบิก",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit",
+        "notSkill": "tor-review"
+      },
+      "why": "คำว่าจ้างทำวิดีโอใกล้กับ TOR แต่ใบเสร็จต้องไป receipt-audit"
+    },
+    {
+      "id": "missing-afp-checklist",
+      "dimension": "missingSource",
+      "team": "afp",
+      "prompt": "ช่วยตรวจ TOR นี้ก่อนส่ง AFP แต่ยังไม่มี checklist ของ AFP",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-review"
+      },
+      "outputAssertions": [
+        "บอกว่านโยบายจัดซื้อจัดจ้างของ STeP ยังไม่ได้รับ และข้อที่ต้องพึ่งระเบียบเป็น NEED-SOURCE",
+        "ยังตรวจโครงสร้าง เกณฑ์ตรวจรับ และช่องว่างที่ TOR ไม่ได้เขียนได้เต็มที่",
+        "ไม่อ้างเลขข้อ วงเงิน หรืออัตราจากความจำ"
+      ]
+    }
+  ]
+}

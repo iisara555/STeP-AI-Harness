@@ -287,7 +287,7 @@ skills:
       consumers: [imo, pm, pubsec, nmco]
     description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
     intent: [summarize, report, review]
-    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด]
+    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด, ส่งผู้บริหาร, รายงานสถานะโครงการ, รายงานผลการดำเนินงานโครงการ]
     paths: ["**/status/**", "**/executive/**", "**/portfolio/**", "**/SIT/**"]
     fileTypes: [md, xlsx, docx, pdf]
     requires: [project_list, progress_data]
@@ -1188,8 +1188,8 @@ skills:
       primary: [qs]
       consumers: []
     description: จัดการ NC/NCR/CAPA ตั้งแต่ fact, containment, RCA, corrective action และ effectiveness check
-    intent: [nonconformity, create, review]
-    triggers: [ncr capa, ncr, capa, nonconformity, non-conformity, ไม่ได้มาตรฐาน, ของไม่ได้มาตรฐาน, ไม่เป็นไปตามข้อกำหนด, เปิด nc, เปิด ncr, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan]
+    intent: [nonconformity, create, review, evaluate]
+    triggers: [ncr capa, ncr, capa, nonconformity, non-conformity, ไม่ได้มาตรฐาน, ของไม่ได้มาตรฐาน, ไม่เป็นไปตามข้อกำหนด, เปิด nc, เปิด ncr, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan, pareto, จัดลำดับสาเหตุ, สาเหตุหลักของ nc, root cause ของ nc, สาเหตุของ nc, ข้อร้องเรียนซ้ำ]
     paths: ["**/CAPA/**", "**/NCR/**", "**/Audit/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx, pdf]
     requires: [nonconformity_or_finding]
@@ -1216,7 +1216,7 @@ skills:
       consumers: []
     description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
     intent: [review, evaluate]
-    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ]
+    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ, ความเสี่ยงของกระบวนการ, ประเมินความเสี่ยงกระบวนการ]
     paths: ["**/Risk/**", "**/ISO/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx]
     requires: [process_or_qms_context]
@@ -1242,8 +1242,8 @@ skills:
       primary: [qs]
       consumers: []
     description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
-    intent: [review, evaluate]
-    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ]
+    intent: [review, evaluate, report]
+    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ, รายงานผล kpi, รายงาน kpi, ผล kpi, kpi ประจำเดือน, kpi ประจำไตรมาส, รีวิว kpi, ทบทวน kpi]
     paths: ["**/KPI/**", "**/Quality/**", "**/ISO/**"]
     fileTypes: [xlsx, csv, md, docx, pptx]
     requires: [objective_or_kpi]

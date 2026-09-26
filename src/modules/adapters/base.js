@@ -1,5 +1,5 @@
-import { writeFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, writeFile, stat } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { safeCopyFile } from '../../utils/file-ops.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
 
@@ -55,6 +55,8 @@ export async function writeInstructionFile(workspaceDir, filename, content, dryR
   }
 
   const filePath = join(workspaceDir, filename);
+  // Some tools read instructions from a subfolder, e.g. .github/copilot-instructions.md.
+  await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, content, 'utf-8');
   const hash = await calculateFileSha256(filePath);
   const fileStat = await stat(filePath);
