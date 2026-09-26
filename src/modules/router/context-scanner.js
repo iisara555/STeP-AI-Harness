@@ -81,7 +81,8 @@ export const INTENT_KEYWORDS = {
   deploy: ['deploy', 'เดพลอย', 'ขึ้นระบบ', 'production', 'staging'],
   triage: ['คัดแยก', 'ส่งต่อ', 'รับเรื่อง', 'triage', 'inquiry', 'สอบถาม', 'ถาม', 'ติดต่อ', 'ราคา'],
   approve: ['อนุมัติ', 'ขออนุมัติ', 'เซ็น', 'ลงนาม', 'approve', 'sign', 'เคาะ'],
-  evaluate: ['เลือก', 'ประเมิน', 'ตัดสิน', 'เปรียบเทียบ', 'compare', 'select', 'evaluate'],
+  report: ['รายงานผล', 'ทำรายงาน'],
+  evaluate: ['วิเคราะห์', 'จัดลำดับ', 'เลือก', 'ประเมิน', 'ตัดสิน', 'เปรียบเทียบ', 'compare', 'select', 'evaluate'],
 };
 
 /**

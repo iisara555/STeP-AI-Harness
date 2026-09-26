@@ -160,6 +160,14 @@ export async function detectMacTools(options = {}) {
     } catch {
       antigravityFound = false;
     }
+    if (!antigravityFound) {
+      try {
+        await execFileAsync('which', ['gemini']);
+        antigravityFound = true;
+      } catch {
+        antigravityFound = false;
+      }
+    }
   }
 
   let hermesFound = false;
@@ -224,7 +232,7 @@ export async function detectMacTools(options = {}) {
       tier: 'free_quota',
       tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'AI Code & Document Editor ที่ฉลาดและใช้งานง่ายที่สุดสำหรับพนักงานทั่วไป',
-      recommendation: 'สายฟรี: เปิดโฟลเดอร์แล้วคุยภาษาไทยได้ เลือกคู่กับ OpenCode ตามที่โหลดง่ายในเครื่อง',
+      recommendation: 'ใช้บัญชี Cursor รุ่นฟรีได้ เปิดโฟลเดอร์ STeP AI แล้วคุยภาษาไทยได้',
       instructionFile: '.cursorrules',
     },
     {
@@ -235,7 +243,7 @@ export async function detectMacTools(options = {}) {
       tier: 'free_quota',
       tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
       description: 'ผู้ช่วย AI พร้อมโควตาฟรี ใช้งานง่าย เหมาะสำหรับพนักงานที่เริ่มต้นใช้งาน',
-      recommendation: '⭐ แนะนำสำหรับผู้เริ่มต้นที่ต้องการ AI ฟรีและมีโควตาพร้อมใช้ทันที',
+      recommendation: 'ใช้โมเดลฟรีได้โดยไม่ต้องสมัคร เปิดในโฟลเดอร์ STeP AI',
       instructionFile: 'OPENCODE.md',
     },
     {
@@ -262,13 +270,13 @@ export async function detectMacTools(options = {}) {
     },
     {
       id: 'antigravity',
-      name: 'Google Antigravity & Spark',
+      name: 'Gemini CLI / Google Antigravity',
       installed: antigravityFound,
-      url: 'https://deepmind.google/technologies/gemini/',
-      tier: 'paid_commercial',
-      tierDisplay: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial)',
-      description: 'Google Antigravity & Spark — AI สถาปัตยกรรมตัวแทนอัจฉริยะตระกูล Google',
-      recommendation: 'เหมาะสำหรับสายงานวิจัย นวัตกรรม และผู้ใช้ Google Enterprise / Spark',
+      url: 'https://github.com/google-gemini/gemini-cli',
+      tier: 'free_quota',
+      tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
+      description: 'ผู้ช่วย AI ของ Google ที่เปิดโฟลเดอร์งานได้ ใช้บัญชี Google รวมบัญชีที่ได้สิทธิ์นักศึกษา',
+      recommendation: 'ล็อกอินด้วยบัญชี Google แล้วเลือกเชื่อถือโฟลเดอร์ STeP AI (Trust folder) เพื่อให้คำสั่ง step-ai รันได้โดยไม่ถามซ้ำ',
       instructionFile: 'GEMINI.md',
     },
     {
@@ -295,14 +303,14 @@ export async function detectMacTools(options = {}) {
     },
     {
       id: 'codex',
-      name: 'OpenAI Codex / VS Code',
+      name: 'VS Code + GitHub Copilot',
       installed: codexFound,
       url: 'https://code.visualstudio.com',
       tier: 'free_quota',
       tierDisplay: 'สายฟรีมีโควตา (Free Quota)',
-      description: 'Editor ยอดนิยมระดับสากล รองรับ GitHub Copilot และส่วนขยาย AI หลากหลาย',
-      recommendation: 'เหมาะสำหรับผู้ที่มี VS Code อยู่แล้วและต้องการใช้ส่วนขยาย AI',
-      instructionFile: 'CODEX_INSTRUCTIONS.md',
+      description: 'VS Code กับ GitHub Copilot ใช้บัญชี GitHub รุ่นฟรีได้ และอ่านคำสั่งจาก .github/copilot-instructions.md',
+      recommendation: 'เปิดโฟลเดอร์ STeP AI แล้วใช้โหมด Agent ใน Copilot Chat',
+      instructionFile: '.github/copilot-instructions.md',
     },
   ];
 }

@@ -11,9 +11,9 @@
 | Registered Skills | **50** |
 | Lifecycle | approved 0 / pilot 48 / draft 2 |
 | Routable user-facing Skills | **49** + `step-router` |
-| มีไฟล์ eval ครบ 4 มิติ (`evals/skills/`) | **6** |
-| มีตัวอย่างคำตอบที่ดีใน `examples/` | **7** (6 Skill ที่มี eval ครบ และ `tor-government-writing` ที่มีตัวอย่าง TOR อยู่ก่อนแล้ว) |
-| อยู่ในรายการหนี้ `legacyWithoutEvals` | **43** |
+| มีไฟล์ eval ครบ 4 มิติ (`evals/skills/`) | **9** |
+| มีตัวอย่างคำตอบที่ดีใน `examples/` | **10** (9 Skill ที่มี eval ครบ และ `tor-government-writing` ที่มีตัวอย่าง TOR อยู่ก่อนแล้ว) |
+| อยู่ในรายการหนี้ `legacyWithoutEvals` | **40** |
 | อยู่ใน model-side benchmark `pilot-30-v1` | **26** |
 
 - `approvedBy` คือบทบาทที่ต้องอนุมัติ ไม่ใช่หลักฐานว่าอนุมัติแล้ว

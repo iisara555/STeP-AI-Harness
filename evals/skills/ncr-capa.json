@@ -1,0 +1,68 @@
+{
+  "skill": "ncr-capa",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ทำ Pareto จากการนับดิบ ปล่อยหมวด 'อื่น ๆ' ใหญ่ ปนอาการกับสาเหตุ และเสนอ action โดยไม่กำหนดตัวเลขที่ต้องขยับหรือวันวัดซ้ำ",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-pareto",
+      "dimension": "positive",
+      "team": "qs",
+      "prompt": "วิเคราะห์ Pareto ของ NC ปีนี้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "ncr-capa",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "บอกหน่วยนับที่ใช้และเหตุผล และแสดงจำนวนครั้งคู่กับผลกระทบเมื่อไม่แน่ใจ",
+        "ตารางมี หมวด | ผลกระทบ | สัดส่วน | สัดส่วนสะสม และหมายเหตุข้อมูลบอกหมวดที่รวมและสัดส่วน 'อื่น ๆ'",
+        "เจาะหมวดอันดับ 1 ลงอีกชั้นก่อนเสนอ corrective action",
+        "กำหนดตัวเลขที่ต้องขยับและวันวัดซ้ำสำหรับ Effectiveness Check"
+      ]
+    },
+    {
+      "id": "anti-voice-of-customer",
+      "dimension": "antiTrigger",
+      "team": "qs",
+      "prompt": "ช่วยสรุปเสียงลูกค้าจากข้อร้องเรียนเดือนนี้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "voice-of-customer",
+        "notSkill": "ncr-capa"
+      },
+      "why": "สรุปเสียงลูกค้ายังไม่ใช่ NC ต้องไป voice-of-customer"
+    },
+    {
+      "id": "collision-process-risk",
+      "dimension": "collision",
+      "team": "qs",
+      "prompt": "ช่วยประเมินความเสี่ยงของกระบวนการใหม่",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "qms-risk-opportunity-review",
+        "notSkill": "ncr-capa"
+      },
+      "why": "ความเสี่ยงที่ยังไม่เกิดเป็นงานของ qms-risk-opportunity-review ไม่ใช่ CAPA"
+    },
+    {
+      "id": "missing-requirement",
+      "dimension": "missingSource",
+      "team": "qs",
+      "prompt": "ช่วยเขียน CAPA ของ NC นี้ แต่ยังไม่มีข้อกำหนดที่อ้างอิง",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "ncr-capa"
+      },
+      "outputAssertions": [
+        "บอกว่า NC statement ต้องมี requirement ที่เทียบได้ และขอข้อกำหนดหรือ QP ที่เกี่ยวข้อง",
+        "ไม่เขียน 'เพราะว่า…' ใน NC ก่อนทำ RCA",
+        "ไม่ปิด CAPA เอง และระบุว่าการปิดเป็นอำนาจของ QS"
+      ]
+    }
+  ]
+}
