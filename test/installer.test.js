@@ -137,7 +137,9 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const doctorSource = await readFile(join(PACKAGE_ROOT, 'src', 'cli', 'commands', 'doctor.js'), 'utf-8');
     assert.ok(doctorSource.includes('resolveTeamFiles'));
     assert.ok(!doctorSource.includes('t.skills ? t.skills.length : 0'));
-    assert.ok(doctorSource.includes('ถ้ายังไม่มีโปรแกรม AI ให้เลือกเริ่มด้วย Cursor หรือ OpenCode ได้'));
+    // With no AI app installed, doctor lists every free option equally and points to the setup guide.
+    for (const name of ['Cursor', 'OpenCode', 'Gemini CLI / Antigravity', 'VS Code + Copilot']) assert.ok(doctorSource.includes(name), name);
+    assert.ok(doctorSource.includes('docs/ai-app-setup.md'));
     assert.ok(doctorSource.includes('https://cursor.com'));
     assert.ok(doctorSource.includes('https://opencode.ai'));
   });
@@ -426,7 +428,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
       assert.ok(hermes && typeof hermes.url === 'string', 'Hermes should have url');
       assert.ok(windsurf && typeof windsurf.url === 'string', 'Windsurf should have url');
       assert.ok(chatgpt && chatgpt.tier === 'paid_commercial', 'ChatGPT should have paid_commercial tier');
-      assert.ok(antigravity && antigravity.tier === 'paid_commercial', 'Antigravity should have paid_commercial tier');
+      assert.ok(antigravity && antigravity.tier === 'free_quota', 'Gemini CLI / Antigravity works with free Google accounts, including student access');
     } finally {
       await rm(tmpHome, { recursive: true, force: true });
     }
@@ -573,7 +575,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(opencodeRec && opencodeRec.url === 'https://opencode.ai');
     assert.ok(hermesRec && hermesRec.url.includes('Hermes-Agent'));
     assert.ok(chatgptRec && chatgptRec.tier === 'paid_commercial');
-    assert.ok(geminiRec && geminiRec.tier === 'paid_commercial');
+    assert.ok(geminiRec && geminiRec.tier === 'free_quota');
   });
 
   await t.test('Case 16: Zero-tools installed scenario provides helpful recommendations for 8 tools', async () => {
@@ -616,7 +618,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const opencodeFile = instructions.find((f) => f.filename === 'OPENCODE.md');
     assert.ok(opencodeFile);
     assert.ok(opencodeFile.content.includes('OpenCode AI Assistant'));
-    assert.ok(opencodeFile.content.includes('Free Quota AI Assistant'));
+    assert.ok(opencodeFile.content.includes('ใช้ได้ทั้งโมเดลฟรีและบัญชีเสียเงิน'));
     assert.ok(opencodeFile.content.includes('Installed ≠ Loaded'));
     assert.ok(!opencodeFile.content.includes('receipt-audit'));
   });
@@ -635,7 +637,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     const instructions = geminiAdapter.getInstructionFiles(mockRole, mockFiles);
     const geminiFile = instructions.find((f) => f.filename === 'GEMINI.md');
     assert.ok(geminiFile);
-    assert.ok(geminiFile.content.includes('Google Antigravity & Spark'));
+    assert.ok(geminiFile.content.includes('Gemini CLI / Google Antigravity'));
     assert.ok(geminiFile.content.includes('Installed ≠ Loaded'));
     assert.ok(!geminiFile.content.includes('tor-review'));
   });
@@ -672,7 +674,8 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(tiered.freeQuota.tools.some((t) => t.id === 'opencode'));
     assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'claude'));
     assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'chatgpt'));
-    assert.ok(tiered.paidCommercial.tools.some((t) => t.id === 'antigravity'));
+    assert.ok(tiered.freeQuota.tools.some((t) => t.id === 'antigravity'), 'free Google accounts, including student access');
+    assert.ok(tiered.freeQuota.tools.some((t) => t.id === 'codex'), 'VS Code + Copilot free tier');
     assert.ok(tiered.localPrivacy.tools.some((t) => t.id === 'hermes'));
   });
 
