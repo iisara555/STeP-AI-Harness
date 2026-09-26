@@ -30,7 +30,7 @@
 ถ้าเปิด Terminal ได้ ใช้ทางลัดนี้แทนได้ โดยเปลี่ยน path ให้ตรงกับที่แตกไฟล์ไว้:
 
 ```text
-xattr -dr com.apple.quarantine ~/Downloads/STeP-AI-Pilot-v0.7.4
+xattr -dr com.apple.quarantine ~/Downloads/STeP-AI-Pilot-v0.7.5
 ```
 
 คำสั่งนี้ลบเฉพาะแฟล็ก quarantine ของไฟล์ในโฟลเดอร์ชุดติดตั้ง ไม่ได้ติดตั้งอะไรเพิ่ม
@@ -50,7 +50,7 @@ Apple ถอดวิธีนี้ออกตั้งแต่ macOS 15 (Seq
 
 1. ภาพหน้าจอข้อความผิดพลาด
 2. ระบบปฏิบัติการ: Windows หรือ macOS
-3. รุ่น STeP AI ที่กำลังติดตั้ง เช่น `v0.7.4`
+3. รุ่น STeP AI ที่กำลังติดตั้ง เช่น `v0.7.5`
 4. ขั้นตอนที่ทำก่อนเกิดปัญหา 1–2 บรรทัด
 5. ถ้าระบบเปิดได้ ให้แนบผลจาก `step-ai doctor --employee`
 

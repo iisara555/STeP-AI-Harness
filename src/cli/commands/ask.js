@@ -444,7 +444,22 @@ export async function queryStepRouter(query, options = {}) {
     ? { tier: 'AMBIGUOUS', margin: 0, reason: 'competing-playbooks' }
     : deriveRoutingConfidence(bestMatch, runnerUp);
   const isAmbiguous = !selectedPlaybook && !chosenSkillName && routingConfidence.tier !== 'HIGH';
-  const clarification = isAmbiguous && scopeResult.status === 'ALLOW'
+  // No Skill matched, but the employee asked for something concrete: translate,
+  // write an email, build a sheet. Clarifying cannot produce a Skill that does
+  // not exist, so it only delays help. Answer as a general assistant under the
+  // organization rules instead. Attachment-purpose questions and consequential
+  // requests keep asking, because there the missing context is what decides.
+  const generalAssist = isAmbiguous
+    && !competingPlaybooks.length
+    && routingConfidence.tier === 'FALLBACK'
+    && scopeResult.status === 'ALLOW'
+    && !ATTACHMENT_PURPOSE_PATTERN.test(query)
+    && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
+    && !namesOrganizationContext(query, Object.keys(teams))
+    && hasConcreteRequest(originalQuery, options.clarificationAnswer);
+  if (generalAssist) selectedSkill = null;
+  const clarification = isAmbiguous && !generalAssist && scopeResult.status === 'ALLOW'
     ? competingPlaybooks.length
       ? {
         field: 'playbook',
@@ -454,7 +469,7 @@ export async function queryStepRouter(query, options = {}) {
           label: playbook.clarificationLabel || playbook.description || playbook.name,
         })),
       }
-      : buildRoutingClarification(query, context, options.clarificationAnswer, ranked, skills)
+      : buildRoutingClarification(query, context, options.clarificationAnswer, ranked, skills, routingConfidence.tier)
     : null;
 
   const halted = scopeResult.status !== 'ALLOW';
@@ -468,7 +483,10 @@ export async function queryStepRouter(query, options = {}) {
       skillMetadatas.push(await loadSkillContextMetadata(step.skill));
     }
   }
-  const referenceMetadata = await loadDocumentContextMetadata([...new Set(skillMetadatas.flatMap((item) => item?.mandatory || []))]);
+  const referenceMetadata = await loadDocumentContextMetadata([...new Set([
+    ...skillMetadatas.flatMap((item) => item?.mandatory || []),
+    ...(generalAssist ? GENERAL_ASSIST_REFERENCES : []),
+  ])]);
 
   let skillText = '';
   if (skillMetadata?.path) {
@@ -511,6 +529,7 @@ export async function queryStepRouter(query, options = {}) {
   if (readiness.status === 'unavailable') { skillText = ''; ruleTexts.length = 0; }
 
   const routingContract = buildCompactRoutingContract({
+    generalAssist,
     selectedSkill: clarification ? null : selectedSkill,
     selectedPlaybook,
     playbookPlan,
@@ -573,6 +592,47 @@ export async function queryStepRouter(query, options = {}) {
   };
 }
 
+const ATTACHMENT_PURPOSE_PATTERN = /ต้องแนบอะไร/;
+const CONSEQUENTIAL_INTENTS = new Set(['approve', 'form-submit']);
+// Acts only a person may perform. General help could invent their result (a
+// document number, a signature), so these always go through the Router's
+// questions and authority gates instead of GENERAL.
+const CONSEQUENTIAL_ACTION_PATTERN = /ออกเลข|ลงนาม|เซ็น|ลายเซ็น|โอนเงิน|จ่ายเงิน|สั่งจ่าย|อนุมัติ|ตัดสินผู้ชนะ|กดส่ง|ส่งฟอร์ม|\bsubmit\b|\bsign\b|\bapprove\b/i;
+// With no Skill loaded, the organization floor still has to reach the model.
+const GENERAL_ASSIST_REFERENCES = ['human-approval-rule', 'data-classification-rule'];
+
+// Words that carry politeness or point at an object but name no task. A
+// request made only of these ("ช่วยหน่อย", "ช่วยดูเอกสารนี้หน่อย") still has to
+// be asked about: "look at this document" does not say what to look for.
+const FILLER_TERMS = [
+  'ช่วยด้วย', 'ช่วย', 'หน่อย', 'ครับ', 'คับ', 'ค่ะ', 'คะ', 'นะ', 'จ้า', 'ด้วย', 'ให้',
+  'งาน', 'อันนี้', 'นี้', 'นี่', 'นั้น', 'เรื่อง', 'เอกสาร', 'ไฟล์', 'ดู',
+  'please', 'help', 'pls',
+];
+const MIN_CONCRETE_CHARS = 3;
+
+// A request that names a STeP team or internal system ("AFP ตีกลับ", "ระเบียบ
+// ISO"), or asks what the organization pays or grants ("เบิกได้เท่าไหร่",
+// "สวัสดิการ"), is about how the organization works, so it must not be answered
+// from general knowledge. The product's own name is not such a signal.
+const ORGANIZATION_TERMS = [
+  'ระเบียบ', 'หนังสือเวียน', 'แบบฟอร์ม', 'iso', 'qms', 'step mis', 'สเต็ป', 'อุทยาน', 'มช', 'cmu',
+  'เบิก', 'สวัสดิการ', 'เงินเดือน', 'ค่าตอบแทน', 'วันลา', 'มีสิทธิ', 'ได้สิทธิ', 'สิทธิ์ลา', 'สิทธิลา',
+];
+
+function namesOrganizationContext(query, teamIds = []) {
+  const text = String(query || '').toLowerCase().replace(/step\s*ai/g, '');
+  if (ORGANIZATION_TERMS.some((term) => text.includes(term))) return true;
+  if (/\bstep\b/.test(text)) return true;
+  return teamIds.some((id) => new RegExp(`(^|[^a-z0-9-])${id.replace(/[-]/g, '\\-')}([^a-z0-9-]|$)`).test(text));
+}
+
+function hasConcreteRequest(query, answer) {
+  let text = `${query || ''} ${typeof answer === 'string' ? answer : ''}`.toLowerCase();
+  for (const term of FILLER_TERMS) text = text.split(term).join('');
+  return text.replace(/[\s\p{P}\p{S}]/gu, '').length >= MIN_CONCRETE_CHARS;
+}
+
 const CLARIFICATION_QUESTIONS = {
   purpose: 'เอกสารนี้ใช้ทำเรื่องอะไรครับ เช่น เบิกค่าใช้จ่าย ขอใช้สถานที่ หรือสมัครงาน?',
   task: 'ต้องการให้ช่วยทำอะไรกับเรื่องไหนครับ?',
@@ -581,6 +641,7 @@ const CLARIFICATION_QUESTIONS = {
 };
 
 const MAX_CLARIFICATION_CHOICES = 3;
+const MIN_MENU_SCORE = 0.20;
 
 /**
  * Count how many answers the employee has already given. Accumulated answers
@@ -598,20 +659,26 @@ function countClarificationRounds(answer) {
  * asking open questions and offer the leading candidates as a numbered menu —
  * the employee picks work language, never a Skill name they have to know.
  */
-function buildRoutingClarification(query, context, answer, ranked = [], skills = []) {
+function buildRoutingClarification(query, context, answer, ranked = [], skills = [], tier = '') {
+  const options = buildSkillChoiceOptions(ranked, skills);
+  const purpose = ATTACHMENT_PURPOSE_PATTERN.test(query);
+
   const fields = [];
-  if (/ต้องแนบอะไร/.test(query)) fields.push('purpose');
+  if (purpose) fields.push('purpose');
   if (context.intent === 'unknown') fields.push('task');
   fields.push('outcome', 'scope');
 
   const round = countClarificationRounds(answer);
-  const field = fields[round];
+  // Real candidates are best separated by naming them: one menu (or, with a
+  // single candidate, one yes/no) answers in a single reply what open questions
+  // would take up to three rounds to reach. Offer it in the first two rounds,
+  // since the first may have been spent learning what the task was at all.
+  const offerMenuNow = !purpose && tier === 'AMBIGUOUS' && options.length >= 1 && round <= 1;
+  const field = offerMenuNow ? 'skill' : fields[round];
 
-  if (field) {
+  if (field && field !== 'skill') {
     return { field, question: CLARIFICATION_QUESTIONS[field] };
   }
-
-  const options = buildSkillChoiceOptions(ranked, skills);
 
   if (options.length === 0) {
     return { field: 'scope', question: CLARIFICATION_QUESTIONS.scope };
@@ -619,7 +686,9 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
 
   return {
     field: 'skill',
-    question: 'ยังระบุงานไม่ได้ชัด ตรงกับข้อไหนมากที่สุดครับ?',
+    question: options.length === 1
+      ? 'งานนี้ตรงกับข้อนี้ไหมครับ? ถ้าตรงตอบ 1 ถ้าไม่ใช่ เล่าเพิ่มได้เลย'
+      : 'งานนี้ใกล้กับข้อไหนที่สุดครับ? ถ้าไม่ตรงสักข้อ เล่าเพิ่มได้เลย',
     options,
   };
 }
@@ -628,8 +697,10 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
  * Leading candidates described in work language, never by Skill name.
  */
 function buildSkillChoiceOptions(ranked = [], skills = []) {
+  // Offer only candidates with real evidence: a menu of unrelated work tells
+  // the employee the assistant did not understand them.
   return ranked
-    .filter((item) => item.score > 0)
+    .filter((item) => item.score >= MIN_MENU_SCORE || (item.matchedTriggers || []).length > 0)
     .slice(0, MAX_CLARIFICATION_CHOICES)
     .map((item) => {
       const skill = skills.find((candidate) => candidate.name === item.skill);
@@ -789,6 +860,12 @@ export async function runAsk(args) {
     console.log();
     console.log(colors.cyan(`   "${query}"`));
     console.log(colors.dim('   CLI นี้แสดงแผนเท่านั้น ยังไม่ได้เรียก tool หรือสร้าง run state; host integration ต้องเรียก API และผ่าน action gate แยกต่างหาก\n'));
+    return;
+  }
+
+  if (routingMode === 'GENERAL') {
+    console.log(colors.bold('งานนี้ AI ช่วยได้ทันทีในฐานะผู้ช่วยทั่วไป ไม่ต้องใช้ขั้นตอนเฉพาะของ STeP'));
+    console.log(colors.dim('กฎองค์กรเรื่องข้อมูลส่วนบุคคลและการอนุมัติยังใช้เหมือนเดิม และคำตอบจะไม่อ้างว่าเป็นระเบียบของ STeP ถ้าไม่มีเอกสารอ้างอิง'));
     return;
   }
 

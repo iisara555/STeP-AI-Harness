@@ -31,12 +31,12 @@ standardVersion: 2
 - process ที่เกี่ยวข้อง
 
 ช่วยให้ตรวจได้ครบขึ้นถ้ามี:
-- Master document list
+- Master List ฉบับทำงานหรือรายการเอกสารจาก STeP MIS
 - นโยบาย retention ขององค์กร
 
 ## Source
 
-- สถานะเอกสารควบคุมต้อง resolve จาก `manifest/documents.yaml` และ Master Document List ขององค์กร
+- สถานะเอกสารควบคุมต้อง resolve จาก `manifest/documents.yaml` และ [Master List ฉบับทำงาน](../../../docs/qms-working-master-list.md) (QS ไม่ให้ Master List ทางการ) — ฉบับทำงานไม่ใช่ทะเบียนควบคุม ให้บอกผู้ใช้ตรวจ Rev ล่าสุดใน STeP MIS ก่อนอ้างอิงทางการ
 - **ห้าม invent retention period หากไม่มี policy หรือ SOP ที่กำหนด**
 
 **แยกก่อน:**

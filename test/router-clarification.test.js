@@ -164,10 +164,14 @@ test('adapters ask one scope question and reroute with accumulated answers', () 
 });
 
 test('generic go/no-go and reply phrases do not count as domain evidence', async () => {
+  // With no Skill evidence the request is either asked about or answered as
+  // general help; what it must never do is activate a guessed Skill.
   for (const query of ['ช่วยประเมินว่าไปต่อได้ไหม', 'ควรตอบยังไงดี']) {
     const result = await queryStepRouter(query, options);
-    assert.equal(result.routingMode, 'CLARIFY', query);
+    assert.ok(['CLARIFY', 'GENERAL'].includes(result.routingMode), query);
     assert.notEqual(result.routingConfidence.tier, 'HIGH', query);
+    assert.equal(result.routingContract.skill, '', query);
+    assert.equal(result.routingContract.skillPath, '', query);
   }
 });
 
@@ -265,4 +269,205 @@ test('authority blocks still precede the clarification menu and its choice', asy
   assert.equal(result.authorityPreflight.status, 'BLOCK');
   assert.equal(result.routingContract.authority.status, 'BLOCK');
   assert.equal(result.clarification, null);
+});
+
+test('a concrete request with no matching Skill gets help instead of questions', async () => {
+  for (const query of ['ช่วยแปลเป็นภาษาอังกฤษ', 'ช่วยเขียนอีเมลถึงลูกค้าหน่อย', 'ช่วยทำ excel สรุปยอด', 'ขอไอเดียกิจกรรม team building']) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.equal(result.routingMode, 'GENERAL', query);
+    assert.equal(result.clarification, null, query);
+    assert.equal(result.routingContract.skill, '', query);
+    assert.equal(result.routingContract.skillPath, '', query);
+    assert.equal(result.routingContract.team, '', query);
+    assert.equal(result.routingContract.permittedUse, 'general-assist-without-org-source', query);
+    // No Skill is loaded, so the organization floor has to arrive another way.
+    const refs = result.routingContract.mandatoryReferences.map((item) => item.id);
+    assert.ok(refs.includes('human-approval-rule'), query);
+    assert.ok(refs.includes('data-classification-rule'), query);
+    assert.equal(result.contextPlan.components.skill.estimatedTokens, 0, query);
+  }
+});
+
+test('general help never replaces the questions that decide the route', async () => {
+  const cases = [
+    ['ช่วยหน่อย', 'says nothing about the task'],
+    ['ช่วยดูเอกสารนี้หน่อย', 'names a document but not what to do with it'],
+    ['ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร', 'attachment purpose decides the route'],
+    ['อนุมัติให้หน่อย', 'consequential request'],
+    ['ครั้งก่อนเคสคล้ายกันผ่าน แต่ครั้งนี้ AFP ตีกลับ ช่วยอธิบายว่าต่างกันตรงไหน', 'names an STeP team'],
+    ['ขอแบบฟอร์มขอใช้รถ', 'asks for an organization form'],
+  ];
+  for (const [query, why] of cases) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.notEqual(result.routingMode, 'GENERAL', `${query}: ${why}`);
+  }
+});
+
+test('authority blocks precede general help', async () => {
+  const result = await queryStepRouter('ช่วยแปลเป็นภาษาอังกฤษ แล้วอนุมัติจ่ายเงินให้ผู้รับจ้างรายนี้เลย', { workspaceDir: options.workspaceDir });
+  assert.equal(result.routingContract.authority.status, 'BLOCK');
+  assert.notEqual(result.routingMode, 'GENERAL');
+});
+
+test('a clarification answer that names a plain task ends the questions', async () => {
+  const result = await queryStepRouter('ช่วยหน่อย', {
+    workspaceDir: options.workspaceDir, clarificationAnswer: 'แปลอีเมลเป็นภาษาอังกฤษ',
+  });
+  assert.equal(result.routingMode, 'GENERAL');
+  assert.equal(result.clarification, null);
+});
+
+test('two real candidates are offered as a menu on the first question', async () => {
+  const result = await queryStepRouter('ช่วยดูเอกสารนี้หน่อย ต้องแนบอะไร', options);
+  // The attachment-purpose flow keeps its open question first.
+  assert.equal(result.clarification.field, 'purpose');
+  const menu = await queryStepRouter('ทำตารางสรุปโปสเตอร์ artwork', { workspaceDir: options.workspaceDir });
+  if (menu.routingMode === 'CLARIFY' && menu.routingConfidence.tier === 'AMBIGUOUS' && (menu.clarification.options || []).length) {
+    for (const option of menu.clarification.options) {
+      const ranked = menu.ranked.find((item) => item.skill === option.value);
+      assert.ok(ranked.score >= 0.2 || ranked.matchedTriggers.length > 0, `${option.value} offered without evidence`);
+    }
+  }
+});
+
+test('adapters help directly on GENERAL and know the workspace launchers', () => {
+  for (const format of ['compact', 'markdown']) {
+    const guidelines = buildRouterGuidelines({ format });
+    assert.match(guidelines, /GENERAL/, format);
+    assert.match(guidelines, /sh \.\/step-ai/, format);
+    assert.match(guidelines, /step-ai\.cmd/, format);
+  }
+  const compact = buildRouterGuidelines({ format: 'compact' });
+  // The failure message is shown to employees, so it must not be jargon.
+  assert.ok(!compact.includes('กำลังทำงานนอก Router'));
+  assert.match(compact, /ห้ามใช้คำว่า Router\/Skill\/contract กับผู้ใช้/);
+});
+
+test('a single weak candidate is confirmed in one question, not three', async () => {
+  const query = 'ช่วยหน่อย';
+  const answer = 'แปลอีเมลภาษาไทยเป็นภาษาอังกฤษ';
+  const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir, clarificationAnswer: answer });
+  assert.equal(result.routingMode, 'CLARIFY');
+  assert.equal(result.clarification.field, 'skill');
+  assert.equal(result.clarification.options.length, 1);
+  const confirmed = await queryStepRouter(query, {
+    workspaceDir: options.workspaceDir, clarificationAnswer: `${answer}\n1`,
+  });
+  assert.equal(confirmed.routingMode, 'SKILL');
+  assert.equal(confirmed.routingContract.skill, result.clarification.options[0].value);
+});
+
+test('organization entitlement questions never become general help', async () => {
+  for (const query of ['ค่ารักษาพยาบาลเบิกได้ปีละเท่าไหร่', 'พนักงานโครงการมีสิทธิได้โบนัสไหม', 'สวัสดิการพนักงานใหม่มีอะไรบ้าง']) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.notEqual(result.routingMode, 'GENERAL', query);
+  }
+  // Substrings must not trip the guard: ประสิทธิภาพ contains สิทธิ.
+  const general = await queryStepRouter('ช่วยเขียนวิธีเพิ่มประสิทธิภาพการทำงานของทีม', { workspaceDir: options.workspaceDir });
+  assert.equal(general.routingMode, 'GENERAL');
+});
+
+test('acts only a person may perform never become general help', async () => {
+  for (const query of ['ออกเลขหนังสือให้เลย', 'ช่วยเซ็นชื่อแทนหัวหน้าในไฟล์นี้', 'โอนเงินให้ผู้รับจ้างเลย', 'ช่วยกดส่งฟอร์มนี้ให้หน่อย']) {
+    const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
+    assert.notEqual(result.routingMode, 'GENERAL', query);
+  }
+});
+
+test('mentioning a signer is drafting; asking to sign or issue a number is blocked', async () => {
+  // A letter names its signer, leaves a signature line and is proposed to an
+  // executive for signing. Blocking those drafts told staff the assistant
+  // could not write the organization's most common document.
+  for (const query of [
+    'ร่างหนังสือเชิญประชุม ผู้ลงนามยังรอยืนยัน',
+    'ร่างหนังสือขอความอนุเคราะห์ เว้นช่องลงนามไว้',
+    'ร่างบันทึกข้อความเสนอผู้อำนวยการลงนาม',
+    'ตรวจรูปแบบหนังสือก่อนเสนอลงนาม',
+    'จัดทำหนังสือเพื่อให้หัวหน้าทีมลงนาม',
+    'ตรวจว่าตำแหน่งผู้ลงนามถูกต้องไหม',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+    assert.equal(result.routingContract.skill, 'thai-official-documents', query);
+  }
+  // The act itself stays with the authorized signatory.
+  for (const query of [
+    'ช่วยลงนามหนังสือฉบับนี้แทนผู้อำนวยการ',
+    'ช่วยเซ็นหนังสือนี้แทนหัวหน้า',
+    'ลงนามแทนผมได้เลย',
+    'ร่างหนังสือแล้วลงนามแทนผู้อำนวยการให้ด้วย',
+    'ร่างหนังสือเสร็จแล้วช่วยลงนามให้เลย',
+    'ออกเลขหนังสือให้เลย',
+    'ช่วยออกเลขที่หนังสือส่งออกให้หน่อย',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+    assert.equal(result.routingContract.authority.authority, 'official-signing', query);
+  }
+});
+
+test('signer titles work in the full and short forms staff type', async () => {
+  for (const query of [
+    'ร่างบันทึกข้อความเสนอ ผอ.ลงนาม',
+    'ร่างบันทึกข้อความเสนอรอง ผอ.ลงนาม',
+    'ร่างบันทึกข้อความเสนอรองผอ.ลงนาม',
+    'ร่างหนังสือเสนอผช.ผอ.ลงนาม',
+    'ร่างหนังสือเสนอผู้ช่วยผู้อำนวยการลงนาม',
+    'ร่างบันทึกข้อความเสนอผู้อำนวยการอุทยานวิทยาศาสตร์ฯ ลงนาม',
+    'ร่างหนังสือให้ผจก.ลงนาม',
+    'ร่างหนังสือให้ หน.ทีม ลงนาม',
+    'ร่างหนังสือเสนอประธานกรรมการลงนาม',
+    'ร่างบันทึกเสนอ director ลงนาม',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+  }
+  // A title followed by an action is still a request to act.
+  for (const query of [
+    'เสนอผู้อำนวยการแล้วช่วยลงนามแทน',
+    'เสนอ ผอ. แล้วช่วยลงนามแทนด้วย',
+    'ช่วยลงนามแทน ผอ. หน่อย',
+    'ช่วยเซ็นแทนรอง ผอ.',
+    'ร่างหนังสือเสนอ ผอ. เสร็จแล้วลงนามให้เลย',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+  }
+});
+
+test('executives named from the public roster are drafting context, not a signing request', async () => {
+  // Names come from manifest/organization.yaml executiveOversight, so the rule
+  // follows the roster instead of a list kept in code.
+  for (const query of [
+    'ร่างหนังสือเสนอ รศ.ดร.ปิติวัฒน์ วัฒนชัย ลงนาม',
+    'ร่างบันทึกเสนออาจารย์ปิติวัฒน์ลงนาม',
+    'ร่างหนังสือให้ คุณเมลิน ลงนาม',
+    'ร่างหนังสือเสนอ อ.ดร.ภวิกา ลงนาม',
+    'ร่างบันทึกข้อความขออนุมัติจัดอบรม เสนอรอง ผอ. ที่กำกับ HD ลงนาม',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+  }
+  for (const query of [
+    'ช่วยลงนามแทน รศ.ดร.ปิติวัฒน์ หน่อย',
+    'เสนอคุณเมลินแล้วช่วยลงนามแทน',
+    'ช่วยลงนามในนามของผศ.ดร.ทินกรให้เลย',
+    'เสนอ ผอ. เพื่อพิจารณา และช่วยลงนามให้เลย',
+    'เสนอรอง ผอ. ที่กำกับ HD แล้วช่วยลงนามแทน',
+  ]) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+  }
+});
+
+test('drafting a request for approval is writing; approving it is not', async () => {
+  for (const query of ['ร่างบันทึกข้อความขออนุมัติจัดอบรม', 'จัดทำหนังสือขออนุมัติใช้งบประมาณ']) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.skill, 'thai-official-documents', query);
+    assert.equal(result.routingContract.authority.status, 'ALLOW', query);
+  }
+  for (const query of ['ร่างบันทึกข้อความขออนุมัติแล้วอนุมัติให้เลย', 'ร่างบันทึกเสร็จแล้วอนุมัติแทน ผอ. เลย']) {
+    const result = await queryStepRouter(query, { team: 'ga', workspaceDir: options.workspaceDir });
+    assert.equal(result.routingContract.authority.status, 'BLOCK', query);
+  }
 });

@@ -6,6 +6,7 @@
 
 import { extname, basename, dirname } from 'node:path';
 import { scoreSkillCandidate } from './scorer.js';
+import { neutralizeDraftingPhrases } from './authority-preflight.js';
 
 export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
 
@@ -47,8 +48,8 @@ export const QUALIFIED_INTENT_RULES = [
   {
     intent: 'hr-entitlement',
     allAny: [
-      ['ลาพักผ่อน', 'ลาป่วย', 'ลากิจ', 'ลาคลอด', 'ลาบวช', 'ลาอุปสมบท', 'ลาปฏิบัติธรรม', 'วันลา', 'สิทธิลา', 'ลาออก', 'พ้นสภาพ', 'เบี้ยขยัน', 'เบี้ยเลี้ยง', 'ค่าที่พัก', 'ค่ายานพาหนะ', 'ค่าตำแหน่ง', 'ค่าความเชี่ยวชาญ', 'กองทุนสำรองเลี้ยงชีพ', 'ระเบียบวินัย', 'โทษทางวินัย', 'เลื่อนขั้น', 'ขั้นเงินเดือน', 'career path', 'เส้นทางความก้าวหน้า', 'สวัสดิการ', 'ระเบียบบุคคล', 'สลิปเงินเดือน', 'วันหยุดชดเชย', 'วันหยุดเพิ่มเติม', 'วันหยุดราชการ', 'บันทึกการพัฒนาบุคลากร', 'ใบลา', 'ยื่นใบลา', 'ปฏิบัติงานต่างประเทศ', 'ไปปฏิบัติงานต่างประเทศ', 'business travel', 'เบิกค่ารถ', 'เบิกค่าน้ำมัน', 'ค่ายานพาหนะ'],
-      ['กี่วัน', 'กี่บาท', 'เท่าไหร่', 'เท่าไร', 'ได้ไหม', 'ได้มั้ย', 'ได้บ้าง', 'ยังไง', 'อย่างไร', 'เมื่อไหร่', 'ใครอนุมัติ', 'สิทธิ', 'เงื่อนไข', 'หลักเกณฑ์', 'ข้อไหน', 'ต้องทำ', 'ล่วงหน้า', 'ที่ไหน', 'ระบบไหน', 'ยื่นที่', 'ขั้นตอน'],
+      ['ลาพักผ่อน', 'ลาป่วย', 'ลากิจ', 'ลาคลอด', 'ลาบวช', 'ลาอุปสมบท', 'ลาปฏิบัติธรรม', 'วันลา', 'สิทธิลา', 'ลาออก', 'พ้นสภาพ', 'เบี้ยขยัน', 'เบี้ยเลี้ยง', 'ค่าที่พัก', 'ค่ายานพาหนะ', 'ค่าตำแหน่ง', 'ค่าความเชี่ยวชาญ', 'กองทุนสำรองเลี้ยงชีพ', 'ระเบียบวินัย', 'โทษทางวินัย', 'เลื่อนขั้น', 'ขั้นเงินเดือน', 'career path', 'เส้นทางความก้าวหน้า', 'สวัสดิการ', 'ค่ารักษาพยาบาล', 'รักษาพยาบาล', 'ระเบียบบุคคล', 'สลิปเงินเดือน', 'วันหยุดชดเชย', 'วันหยุดเพิ่มเติม', 'วันหยุดราชการ', 'บันทึกการพัฒนาบุคลากร', 'ใบลา', 'ยื่นใบลา', 'ปฏิบัติงานต่างประเทศ', 'ไปปฏิบัติงานต่างประเทศ', 'business travel', 'เบิกค่ารถ', 'เบิกค่าน้ำมัน', 'ค่ายานพาหนะ'],
+      ['กี่วัน', 'กี่บาท', 'เท่าไหร่', 'เท่าไร', 'ได้ไหม', 'ได้มั้ย', 'ได้บ้าง', 'ยังไง', 'อย่างไร', 'เมื่อไหร่', 'ใครอนุมัติ', 'สิทธิ', 'เงื่อนไข', 'หลักเกณฑ์', 'ข้อไหน', 'ต้องทำ', 'ต้องมี', 'ต้องใช้', 'ล่วงหน้า', 'ที่ไหน', 'ระบบไหน', 'ยื่นที่', 'ขั้นตอน'],
     ],
   },
   // AFP operations questions name a finance or procurement subject and ask
@@ -72,11 +73,11 @@ function matchesQualifiedIntent(lower, rule) {
 
 export const INTENT_KEYWORDS = {
   summarize: ['สรุป', 'ย่อ', 'ถอดมติ', 'รวบรวม', 'จัดกลุ่มความเห็น', 'จดประชุม', 'โน้ตประชุม', 'ใครต้องทำอะไร', 'summarize', 'summary', 'minutes'],
-  interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach', 'ซ้อมตอบผู้ตรวจ', 'ซ้อมสัมภาษณ์'],
-  review: ['ปรับสำนวน', 'ตรวจ', 'รีวิว', 'เช็ก', 'เช็ค', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ครบยัง', 'ครบมั้ย', 'ครบไหม', 'ช่วยดู', 'เบิกได้', 'review', 'check', 'audit', 'evaluate'],
+  interview: ['สัมภาษณ์ตรวจ', 'สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach', 'ซ้อมตอบผู้ตรวจ', 'ซ้อมสัมภาษณ์'],
+  review: ['ปรับสำนวน', 'ปรับข้อความ', 'ตรวจ', 'รีวิว', 'เช็ก', 'เช็ค', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ครบยัง', 'ครบมั้ย', 'ครบไหม', 'ช่วยดู', 'เบิกได้', 'review', 'check', 'audit', 'evaluate'],
   fill: ['กรอก', 'จองห้อง', 'ขอใช้ห้อง', 'ลงทะเบียน', 'fill', 'book', 'register'],
-  create: ['ทำ creative brief', 'คิด concept', 'จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำตาราง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt ทำภาพ', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'key visual', 'create', 'draft', 'write', 'generate', 'design'],
-  plan: ['ทำ pre-mortem', 'วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
+  create: ['ทำ creative brief', 'คิด concept', 'จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำตาราง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ทำ prompt', 'ทำ brief', 'ทำ tor', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt ทำภาพ', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'key visual', 'create', 'draft', 'write', 'generate', 'design'],
+  plan: ['ทำ pre-mortem', 'วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'timeline', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
   deploy: ['deploy', 'เดพลอย', 'ขึ้นระบบ', 'production', 'staging'],
   triage: ['คัดแยก', 'ส่งต่อ', 'รับเรื่อง', 'triage', 'inquiry', 'สอบถาม', 'ถาม', 'ติดต่อ', 'ราคา'],
   approve: ['อนุมัติ', 'ขออนุมัติ', 'เซ็น', 'ลงนาม', 'approve', 'sign', 'เคาะ'],
@@ -89,7 +90,11 @@ export const INTENT_KEYWORDS = {
  * @returns {string} Inferred intent (brand-review, review, create, summarize, plan, deploy, triage, or unknown)
  */
 export function inferIntentFromText(promptText = '') {
-  const lower = promptText.toLowerCase();
+  // Drafting a request for approval is writing, not approving: neutralise the
+  // drafting phrases the authority gates also neutralise, so
+  // "ร่างบันทึกข้อความขออนุมัติ" keeps its head verb instead of being outranked
+  // by the longer "ขออนุมัติ".
+  const lower = neutralizeDraftingPhrases(promptText).toLowerCase();
 
   for (const rule of QUALIFIED_INTENT_RULES) {
     if (matchesQualifiedIntent(lower, rule)) return rule.intent;

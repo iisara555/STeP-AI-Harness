@@ -3,6 +3,10 @@
 *.command text eol=lf
 *.bat text eol=crlf
 *.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Workspace command launcher for AI tools; must stay LF to run under sh.
+/step-ai text eol=lf
 
 # Vendored, hash-pinned privacy runtime. Every byte is verified against
 # src/vendor/privacy/manifest.json by test/privacy-documents.test.js, so these

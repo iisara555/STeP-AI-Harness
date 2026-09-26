@@ -121,6 +121,12 @@ export async function resolveRoleFiles(roleId) {
     'hr-service-channels.md',
     'cc-iso-document-register.md',
     'afp-operational-circulars.md',
+    'third-party-methods.md',
+    'qms-working-master-list.md',
+    'qms-working-reference.md',
+    'afp-regulation-hierarchy.md',
+    'skill-authoring-standard.md',
+    'facility-equipment-index.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);
@@ -427,6 +433,12 @@ export async function resolveTeamFiles(teamCode) {
     'hr-service-channels.md',
     'cc-iso-document-register.md',
     'afp-operational-circulars.md',
+    'third-party-methods.md',
+    'qms-working-master-list.md',
+    'qms-working-reference.md',
+    'afp-regulation-hierarchy.md',
+    'skill-authoring-standard.md',
+    'facility-equipment-index.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);

@@ -1,0 +1,77 @@
+{
+  "skill": "stakeholder-questionnaire",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ให้คำถามทั่วไปยาวเป็นรายการเดียว ถามหลายเรื่องในข้อเดียว ไม่บอกผู้รับว่าคำตอบจะใช้ทำอะไร และถามผู้ใช้ในสิ่งที่ผู้ใช้ตอบไม่ได้",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-unblock-afp-source",
+      "dimension": "positive",
+      "team": "afp",
+      "prompt": "ระเบียบเบิกยังรอยืนยัน ช่วยร่างชุดคำถามส่งให้ AFP หน่อย",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "stakeholder-questionnaire",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "มีหัวข้อ ใช้เพื่อ / จาก / ถึง / คำตอบจะนำไปใช้",
+        "ทุกคำถามถามเรื่องเดียว",
+        "มีข้อปิดท้ายถามสิ่งที่ไม่ได้ถาม",
+        "ไม่ถามผู้ใช้เรื่องระเบียบซึ่งผู้ใช้ตอบไม่ได้ ถามเฉพาะผู้รับและสิ่งที่ต้องได้กลับ"
+      ]
+    },
+    {
+      "id": "anti-satisfaction-survey",
+      "dimension": "antiTrigger",
+      "team": "hd",
+      "prompt": "ทำแบบสอบถามความพึงพอใจผู้เข้าร่วมอบรม",
+      "expect": {
+        "notSkill": "stakeholder-questionnaire"
+      },
+      "why": "แบบสำรวจความพึงพอใจเก็บความเห็นจากคนจำนวนมาก ไม่ใช่การขอคำตอบจากเจ้าของข้อมูล"
+    },
+    {
+      "id": "anti-ask-customer-to-confirm",
+      "dimension": "antiTrigger",
+      "team": "crm",
+      "prompt": "ขอคำยืนยันจากลูกค้าว่าจะมางานไหม ช่วยเขียนข้อความหน่อย",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "notSkill": "stakeholder-questionnaire"
+      },
+      "why": "ข้อความถามลูกค้าคำถามเดียวเป็นงานเขียน ไม่ใช่ชุดคำถาม; trigger ขอคำยืนยัน เคยดึงคำขอนี้ออกจาก step-writing"
+    },
+    {
+      "id": "collision-customer-interview",
+      "dimension": "collision",
+      "team": "piti",
+      "prompt": "ช่วยวางคำถามสัมภาษณ์ลูกค้าเพื่อทดสอบไอเดียธุรกิจ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "startup-discovery",
+        "notSkill": "stakeholder-questionnaire"
+      },
+      "why": "การสัมภาษณ์ลูกค้าเพื่อทดสอบสมมติฐานมีวิธีการของ startup-discovery"
+    },
+    {
+      "id": "missing-needed-answers",
+      "dimension": "missingSource",
+      "team": "qs",
+      "prompt": "ช่วยร่างคำถามส่งให้ QS แต่ยังไม่แน่ใจว่าต้องการคำตอบเรื่องอะไรบ้าง",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "stakeholder-questionnaire"
+      },
+      "outputAssertions": [
+        "ถามผู้ใช้ก่อนในข้อความเดียวว่าต้องได้อะไรกลับมาเพื่อทำงานต่อ",
+        "ไม่แต่งหัวข้อคำถามขึ้นเองก่อนรู้ว่าต้องการคำตอบเรื่องใด"
+      ]
+    }
+  ]
+}

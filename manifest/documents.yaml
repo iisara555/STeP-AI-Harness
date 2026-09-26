@@ -9,8 +9,9 @@ documents:
     process: procurement.tor
     sourceLevel: organization-policy
     authority: unverified
-    verification: pending-afp-confirmation
-    status: missing
+    verification: afp-not-provided-2026-09-25
+    status: not-provided
+    workingSubstitute: afp-regulation-hierarchy
 
 
   finance-disbursement-policy:
@@ -20,8 +21,21 @@ documents:
     process: procurement.request
     sourceLevel: organization-policy
     authority: unverified
-    verification: pending-afp-confirmation
-    status: missing
+    verification: afp-not-provided-2026-09-25
+    status: not-provided
+    workingSubstitute: afp-regulation-hierarchy
+
+  # AFP ไม่ได้ส่งนโยบายฉบับ STeP (25 ก.ย. 2569) — ใช้ลำดับชั้นระเบียบของหน่วยงานเหนือขึ้นไป (มช.) เป็นกรอบ
+  afp-regulation-hierarchy:
+    title: "ลำดับชั้นระเบียบงานการเงินและพัสดุ (ฉบับทำงาน — มีแต่ชื่อฉบับ ไม่มีเนื้อความ)"
+    path: docs/afp-regulation-hierarchy.md
+    owner: afp
+    type: working-index
+    process: procurement.request
+    sourceLevel: derived-working-reference
+    authority: derived-from-public-titles
+    verification: titles-identified-2026-09-25-text-not-in-harness
+    status: active-reference
 
   qs-doc-control-procedure:
     title: "QP-DC-001 การควบคุมเอกสารและข้อมูล"
@@ -32,8 +46,8 @@ documents:
     effectiveDate: "2026-04-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   data-classification-rule:
     title: "ระเบียบการจำแนกชั้นความลับและการคุ้มครองข้อมูลส่วนบุคคล (PDPA)"
@@ -254,6 +268,8 @@ documents:
     verification: user-confirmed-current
     status: active
 
+  # QS แจ้งว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List ทางการ (25 ก.ย. 2569)
+  # Harness ใช้เอกสารอ้างอิงฉบับทำงานด้านล่างแทน โดยไม่แอบอ้างว่าเป็นเอกสารควบคุม
   qms-quality-manual:
     title: "STeP Quality Manual (current revision)"
     owner: qs
@@ -261,8 +277,9 @@ documents:
     process: quality.document-control
     sourceLevel: quality-manual
     authority: controlled-document
-    verification: missing-source
-    status: missing
+    verification: qs-declined-2026-09-25
+    status: not-provided
+    workingSubstitute: qms-working-reference
 
   qms-master-document-list:
     title: "STeP Master Document List (current)"
@@ -271,8 +288,31 @@ documents:
     process: quality.document-control
     sourceLevel: document-control-index
     authority: revision-source-of-truth
-    verification: missing-source
-    status: missing
+    verification: qs-declined-2026-09-25
+    status: not-provided
+    workingSubstitute: qms-working-master-list
+
+  qms-working-master-list:
+    title: "Master Document List ฉบับทำงาน (รวบรวมจาก QP ที่ QS ส่งมาและหนังสือเวียนของ QS)"
+    path: docs/qms-working-master-list.md
+    owner: qs
+    type: working-index
+    process: quality.document-control
+    sourceLevel: derived-working-reference
+    authority: derived-from-provided-documents
+    verification: compiled-2026-09-25-confirm-revision-on-step-mis
+    status: active-reference
+
+  qms-working-reference:
+    title: "แผนที่ ISO 9001:2015 กับเอกสารของ STeP (ใช้แทน Quality Manual)"
+    path: docs/qms-working-reference.md
+    owner: qs
+    type: working-index
+    process: quality.audit-readiness
+    sourceLevel: derived-working-reference
+    authority: derived-from-provided-documents
+    verification: compiled-2026-09-25
+    status: active-reference
 
   qms-quality-record-control:
     title: "QP-DC-002 การควบคุมบันทึกคุณภาพ"
@@ -283,8 +323,8 @@ documents:
     effectiveDate: "2023-09-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   qms-risk-management:
     title: "QP-QS-001 การวิเคราะห์และการจัดการความเสี่ยง"
@@ -295,8 +335,8 @@ documents:
     effectiveDate: "2023-04-16"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   qms-nonconformity:
     title: "QP-QS-002 การปฏิบัติงานที่เกิดข้อผิดพลาด"
@@ -307,8 +347,8 @@ documents:
     effectiveDate: "2025-07-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   qms-corrective-preventive-action:
     title: "QP-QM-001 การปฏิบัติการแก้ไข และป้องกัน"
@@ -319,8 +359,8 @@ documents:
     effectiveDate: "2023-12-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   qms-internal-audit:
     title: "QP-QM-002 การตรวจติดตามคุณภาพภายใน"
@@ -331,8 +371,8 @@ documents:
     effectiveDate: "2023-09-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   qms-management-review:
     title: "QP-QM-003 การประชุมทบทวนฝ่ายบริหาร"
@@ -343,8 +383,8 @@ documents:
     effectiveDate: "2023-12-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   qms-complaint-management:
     title: "QP-QM-004 การจัดการข้อร้องเรียนของผู้ใช้บริการ"
@@ -355,8 +395,8 @@ documents:
     effectiveDate: "2023-09-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: pending-master-list
-    status: provided-unverified
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
 
   step-facility-equipment-inventory-2020:
     title: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่อาคารอำนวยการอุทยานวิทยาศาสตร์ภาคเหนือ (จ.เชียงใหม่)"

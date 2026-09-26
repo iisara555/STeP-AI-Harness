@@ -1,0 +1,67 @@
+{
+  "skill": "document-review",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ชมหรือแก้ภาษาทั่วไป แต่ไม่แยกสิ่งที่ผู้ใช้ต้องแก้เองกับสิ่งที่ต้องถามเจ้าของเรื่อง และไม่ตรวจความขัดกันของวันที่/ตัวเลข",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-pre-send",
+      "dimension": "positive",
+      "team": "ga",
+      "prompt": "ช่วยตรวจเอกสารนี้ก่อนส่ง มีข้อมูลขัดกันหรือช่องว่างไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "document-review",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "ตรวจความสอดคล้องของวันที่ ตัวเลข ชื่อ และการอ้างอิงภายในเอกสาร",
+        "แยกผลเป็น สิ่งที่ต้องแก้ก่อนส่ง / ควรแก้ / ต้องถามเจ้าของเรื่อง",
+        "ระบุตำแหน่งในเอกสารของแต่ละจุดที่พบ"
+      ]
+    },
+    {
+      "id": "anti-receipt",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ช่วยตรวจใบเสร็จค่าอาหารจัดประชุมก่อนส่งเบิก",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit",
+        "notSkill": "document-review"
+      },
+      "why": "ใบเสร็จมี Skill เฉพาะทางที่มี Source Contract ของ AFP"
+    },
+    {
+      "id": "collision-pii",
+      "dimension": "collision",
+      "team": "qs",
+      "prompt": "ช่วยตรวจเอกสารนี้ว่ามีเลขบัตรประชาชนที่ต้องปิดบังไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "data-privacy-compliance",
+        "notSkill": "document-review"
+      },
+      "why": "การตรวจข้อมูลส่วนบุคคลต้องไป data-privacy-compliance"
+    },
+    {
+      "id": "missing-destination-form",
+      "dimension": "missingSource",
+      "team": "ga",
+      "prompt": "ช่วยตรวจเอกสารนี้ก่อนส่งว่าครบตามแบบฟอร์มที่หน่วยงานปลายทางกำหนดไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "document-review"
+      },
+      "outputAssertions": [
+        "บอกว่าไม่มีแบบฟอร์มหรือเกณฑ์ของหน่วยงานปลายทางให้เทียบ",
+        "ตรวจได้เฉพาะความครบและความสอดคล้องภายในเอกสาร",
+        "ขอแบบฟอร์มหรือเกณฑ์ของปลายทางแทนการเดาว่าครบแล้ว"
+      ]
+    }
+  ]
+}

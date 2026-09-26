@@ -1,0 +1,93 @@
+{
+  "skill": "step-writing",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ขัดเกลาภาษาได้ แต่เติมข้อเท็จจริง เช่น วัน เวลา สถานที่ ที่ต้นทางไม่มี และไม่ยึดกติกาการเขียนของ STeP",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-polish-email",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยปรับสำนวนอีเมลนี้ให้สุภาพและกระชับขึ้น",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "คงข้อเท็จจริง ตัวเลข และชื่อจากต้นฉบับครบ ไม่เพิ่มข้อเท็จจริงใหม่",
+        "ข้อความสั้นลงหรือเท่าเดิม และอ่านสุภาพกว่าเดิม",
+        "บอกสั้น ๆ ว่าเปลี่ยนอะไรไปบ้าง"
+      ]
+    },
+    {
+      "id": "positive-politeness-check",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "ข้อความนี้สุภาพพอไหม ช่วยดูหน่อย",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "ตอบว่าสุภาพพอหรือไม่ พร้อมจุดที่ควรปรับ",
+        "เสนอข้อความที่ปรับแล้วโดยคงข้อเท็จจริงเดิม"
+      ]
+    },
+    {
+      "id": "collision-memo-not-plain-text",
+      "dimension": "collision",
+      "team": "hd",
+      "prompt": "ร่างบันทึกข้อความขออนุมัติจัดอบรม เสนอรอง ผอ. ที่กำกับ HD ลงนาม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "notSkill": "step-writing"
+      },
+      "why": "trigger ข้อความ ของ step-writing เคยจับคำว่า บันทึกข้อความ จนแย่งงานร่างบันทึกข้อความไป"
+    },
+    {
+      "id": "anti-official-letter",
+      "dimension": "antiTrigger",
+      "team": "ga",
+      "prompt": "ร่างหนังสือราชการขอความอนุเคราะห์ใช้สถานที่",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "notSkill": "step-writing"
+      },
+      "why": "หนังสือราชการมีรูปแบบบังคับ ต้องไปที่ thai-official-documents"
+    },
+    {
+      "id": "collision-brand-tone",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยเช็คน้ำเสียงแบรนด์ในโพสต์นี้ว่าเข้ากับ STeP ไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "brand-tone-of-voice",
+        "notSkill": "step-writing"
+      },
+      "why": "การตรวจน้ำเสียงแบรนด์ตามช่องทางเป็นงานของ brand-tone-of-voice"
+    },
+    {
+      "id": "missing-event-facts",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยเขียนข้อความประชาสัมพันธ์งานสัมมนา แต่ยังไม่รู้วันและสถานที่",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing"
+      },
+      "outputAssertions": [
+        "ใช้ช่องว่างที่เห็นชัด เช่น [วันที่] [สถานที่] แทนการเดาข้อมูล",
+        "บอกผู้ใช้ว่าต้องเติมข้อมูลใดก่อนเผยแพร่"
+      ]
+    }
+  ]
+}

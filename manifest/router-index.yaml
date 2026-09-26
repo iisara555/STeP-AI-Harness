@@ -81,7 +81,7 @@ skills:
       consumers: [pm, pubsec, sit]
     description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability และเกณฑ์ตรวจรับ โดยเปิดเผย source gaps
     intent: [create, plan]
-    triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor]
+    triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor, ทำ TOR, TOR ซื้อ, TOR จ้าง]
     paths: ["**/TOR/**", "**/procurement/**"]
     fileTypes: [docx, txt]
     requires: [project_objective, estimated_budget]
@@ -211,7 +211,7 @@ skills:
       consumers: [imo, sit, linc, pubsec, piti]
     description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
     intent: [plan, review, create]
-    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ]
+    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ, timeline โครงการ, ไทม์ไลน์โครงการ, ทำ timeline]
     paths: ["**/project*/**", "**/plan/**", "**/PM/**"]
     fileTypes: [xlsx, csv, md]
     requires: [project_scope, timeline]
@@ -338,7 +338,7 @@ skills:
       consumers: [mi, crm, piti, eic]
     description: จัดทำและตรวจ Creative Brief สำหรับงานออกแบบ Artwork สื่อ และนิทรรศการ
     intent: [create, review, check]
-    triggers: [brief, บรีฟ, artwork, โปสเตอร์, ไวนิล, ออกแบบ, graphic, สื่อประชาสัมพันธ์]
+    triggers: [brief, บรีฟ, artwork, โปสเตอร์, ไวนิล, ออกแบบ, graphic, สื่อประชาสัมพันธ์, ดีไซเนอร์, บรีฟดีไซเนอร์, brief ดีไซเนอร์, ส่งงานให้ดีไซเนอร์]
     paths: ["**/CC/**", "**/Creative/**", "**/artwork/**", "**/brief/**"]
     fileTypes: [ai, psd, pdf, docx, png, jpg]
     requires: [project_objective, target_audience, dimension_or_format]
@@ -522,7 +522,7 @@ skills:
     wildcardReason: "all teams produce internal or external organizational communication"
     description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
     intent: [social-writing, review, create]
-    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก]
+    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ปรับข้อความ, เขียนข้อความ, ข้อความประชาสัมพันธ์, ให้สุภาพ, สุภาพขึ้น, สุภาพพอไหม, สุภาพไหม, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, คำผิด, ตรวจคำผิด, พิสูจน์อักษร, สะกดผิด]
     paths: ["**/*.md", "**/*.docx", "**/*.txt"]
     fileTypes: [md, docx, txt]
     requires: [draft_text]
@@ -545,7 +545,7 @@ skills:
       consumers: [afp, qs, pubsec, iasa]
     description: ตรวจและจัดรูปแบบหนังสือราชการไทย หนังสือภายนอก หนังสือภายใน และบันทึกข้อความ
     intent: [create, review, check]
-    triggers: [หนังสือราชการ, บันทึกข้อความ, หนังสือภายนอก, หนังสือภายใน, ตราครุฑ, คำขึ้นต้น, หนังสือส่ง, หนังสือเชิญ, ขอความอนุเคราะห์]
+    triggers: [หนังสือราชการ, บันทึกข้อความ, หนังสือภายนอก, หนังสือภายใน, ตราครุฑ, คำขึ้นต้น, หนังสือส่ง, หนังสือเชิญ, ขอความอนุเคราะห์, ร่างหนังสือ, หนังสือแจ้ง, หน่วยงานภายนอก, จัดทำหนังสือ, รูปแบบหนังสือ, ผู้ลงนาม, เสนอลงนาม]
     paths: ["**/official/**", "**/letters/**", "**/memo/**", "**/GA/**"]
     fileTypes: [docx, pdf]
     requires: [memo_topic, recipient, content_body]
@@ -558,6 +558,33 @@ skills:
           role: authorized-signatory
           authority: official-signing
           description: การลงนามหรือออกเลขหนังสือจริง
+        approval_decision:
+          role: authorized-signatory
+          authority: official-signing
+          description: การอนุมัติหรือลงนามอนุมัติในบันทึกข้อความแทนผู้มีอำนาจ
+
+  - name: stakeholder-questionnaire
+    cluster: governance-operations
+    domain: governance
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: [afp, ga, hd, sit, imo]
+    description: ร่างชุดคำถามส่งให้เจ้าของข้อมูลเมื่องานติดที่ข้อมูลหรือเอกสารที่ยังรอยืนยัน
+    intent: [create, triage]
+    triggers: [ชุดคำถาม, ลิสต์คำถาม, รายการคำถาม, คำถามส่งให้, ส่งคำถามให้, ร่างคำถาม, รอยืนยัน, questionnaire]
+    paths: []
+    fileTypes: [md, docx]
+    requires: [recipient, needed_answers]
+    scope:
+      allow:
+        - ร่างและจัดลำดับคำถามถึงเจ้าของข้อมูลจากช่องว่างที่ระบุได้
+      escalate: {}
+      human_only:
+        policy_interpretation:
+          role: policy-owner
+          authority: policy-waiver
+          description: การตีความคำตอบที่มีผลต่อระเบียบหรือข้อยกเว้น
 
   - name: brand-tone-of-voice
     cluster: market-creative
@@ -849,7 +876,7 @@ skills:
     wildcardReason: "every employee in every team is bound by the HR and career-path announcements, so anyone must be able to look up their own entitlements"
     description: ตอบสิทธิและเงื่อนไขตามประกาศงานบุคคลและ Career Path ของอุทยานฯ พร้อมอ้างเลขข้อ — วันลา เบี้ยขยัน เบี้ยเลี้ยง ค่าที่พัก ค่ายานพาหนะ เงินเดือน ค่าตำแหน่ง การลาออก การพ้นสภาพ และระเบียบวินัย
     intent: [hr-entitlement]
-    triggers: [ลาพักผ่อน, ลาป่วย, ลากิจ, ลาคลอด, ลาบวช, ลาอุปสมบท, ลาปฏิบัติธรรม, ลากิจพิเศษ, ลารับปริญญา, ลาไปดูแลคู่สมรส, ลาเกณฑ์ทหาร, ลาตรวจเลือก, วันลา, ลาได้กี่วัน, สิทธิวันลา, ลาออก, ยื่นใบลาออก, พ้นสภาพพนักงาน, เบี้ยขยัน, เบี้ยเลี้ยง, ค่าที่พัก, ค่าเบี้ยเลี้ยงไปราชการ, ค่ายานพาหนะ, ค่าน้ำมัน, เบิกค่าเดินทาง, เงินเดือนออกวันไหน, รอบจ่ายเงินเดือน, ปรับเงินเดือน, ค่าตอบแทนตามผลงาน, pay for performance, กองทุนสำรองเลี้ยงชีพ, ประกันสังคม, ค่าพิธีศพ, ตรวจสุขภาพประจำปี, ประกันสุขภาพกลุ่ม, ระเบียบวินัย, โทษทางวินัย, ภาคทัณฑ์, เวลาทำงาน, บันทึกเวลา, สแกนนิ้ว, มาสาย, การแต่งกาย, ระเบียบการแต่งกาย, career path, เส้นทางความก้าวหน้า, เลื่อนขั้น, เลื่อนตำแหน่ง, ค่าตำแหน่ง, ค่าความเชี่ยวชาญ, ขั้นเงินเดือน, หัวหน้าทีม, พนักงานประจำ, พนักงานโครงการ, พนักงานทดลองงาน, สวัสดิการพนักงาน, ระเบียบบุคคล, ประกาศงานบุคคล, สลิปเงินเดือน, ขอสลิปเงินเดือน, หนังสือรับรองเงินเดือน, Favpo, ยื่นใบลา, ยื่นคำร้อง, logbook, log book, วันหยุดชดเชย, วันหยุดเพิ่มเติม, วันหยุดราชการ, ไปต่างประเทศ, เดินทางไปปฏิบัติงานต่างประเทศ, business travel, บันทึกการพัฒนาบุคลากร, หลักฐานการอบรม, เบิกค่าน้ำมัน, เบิกค่ารถ, รถไฟฟ้า, ยื่นเรื่องที่ไหน, ทำที่ระบบไหน]
+    triggers: [ลาพักผ่อน, ลาป่วย, ลากิจ, ลาคลอด, ลาบวช, ลาอุปสมบท, ลาปฏิบัติธรรม, ลากิจพิเศษ, ลารับปริญญา, ลาไปดูแลคู่สมรส, ลาเกณฑ์ทหาร, ลาตรวจเลือก, วันลา, ลาได้กี่วัน, สิทธิวันลา, ลาออก, ยื่นใบลาออก, พ้นสภาพพนักงาน, เบี้ยขยัน, เบี้ยเลี้ยง, ค่าที่พัก, ค่าเบี้ยเลี้ยงไปราชการ, ค่ายานพาหนะ, ค่าน้ำมัน, เบิกค่าเดินทาง, เงินเดือนออกวันไหน, รอบจ่ายเงินเดือน, ปรับเงินเดือน, ค่าตอบแทนตามผลงาน, pay for performance, กองทุนสำรองเลี้ยงชีพ, ประกันสังคม, ค่าพิธีศพ, ตรวจสุขภาพประจำปี, ประกันสุขภาพกลุ่ม, ระเบียบวินัย, โทษทางวินัย, ภาคทัณฑ์, เวลาทำงาน, บันทึกเวลา, สแกนนิ้ว, มาสาย, การแต่งกาย, ระเบียบการแต่งกาย, career path, เส้นทางความก้าวหน้า, เลื่อนขั้น, เลื่อนตำแหน่ง, ค่าตำแหน่ง, ค่าความเชี่ยวชาญ, ขั้นเงินเดือน, หัวหน้าทีม, พนักงานประจำ, พนักงานโครงการ, พนักงานทดลองงาน, สวัสดิการพนักงาน, ระเบียบบุคคล, ประกาศงานบุคคล, สลิปเงินเดือน, ขอสลิปเงินเดือน, หนังสือรับรองเงินเดือน, Favpo, ยื่นใบลา, ยื่นคำร้อง, logbook, log book, วันหยุดชดเชย, วันหยุดเพิ่มเติม, วันหยุดราชการ, ไปต่างประเทศ, เดินทางไปปฏิบัติงานต่างประเทศ, business travel, บันทึกการพัฒนาบุคลากร, หลักฐานการอบรม, เบิกค่าน้ำมัน, เบิกค่ารถ, รถไฟฟ้า, ยื่นเรื่องที่ไหน, ทำที่ระบบไหน, ใบรับรองแพทย์, ค่ารักษาพยาบาล, รักษาพยาบาล]
     paths: ["**/HD/**", "**/HR/**", "**/HRD/**", "**/Personnel/**"]
     fileTypes: [md, pdf, docx]
     requires: []
@@ -1142,7 +1169,7 @@ skills:
       consumers: []
     description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
     intent: [review, interview]
-    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ]
+    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ, สัมภาษณ์ตรวจ, สัมภาษณ์ตรวจ iso, ตอบผู้ตรวจ]
     paths: ["**/Audit/**", "**/ISO/**", "**/Training/**"]
     fileTypes: [md, docx, pdf]
     requires: [team_or_process_context]

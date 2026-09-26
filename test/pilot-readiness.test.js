@@ -18,8 +18,8 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
     assert.equal(integrity.summary.teamsCount, 22);
-    assert.equal(integrity.summary.skillsCount, 49);
-    assert.equal(integrity.summary.routerSkillsCount, 48);
+    assert.equal(integrity.summary.skillsCount, 50);
+    assert.equal(integrity.summary.routerSkillsCount, 49);
     assert.equal(integrity.summary.clustersCount, 5);
     assert.equal(integrity.summary.playbooksCount, 5);
   });
@@ -34,7 +34,7 @@ test('Pilot 1-Month Readiness & Hardening Suite', async (t) => {
     );
     const routerSkills = extractRouterSkills(routerText);
 
-    assert.equal(routerSkills.length, 48);
+    assert.equal(routerSkills.length, 49);
     for (const skill of routerSkills) {
       assert.ok(skill.cluster, `${skill.name} has no cluster`);
       assert.ok(

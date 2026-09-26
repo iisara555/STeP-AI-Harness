@@ -12,6 +12,8 @@ export const DISTRIBUTION_FILES = [
   'package.json',
   'README.md',
   'CHANGELOG.md',
+  'step-ai',
+  'step-ai.cmd',
   'SUPPORT.md',
   'START-HERE.md',
   'MAC-START-HERE.txt',
