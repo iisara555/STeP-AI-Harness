@@ -24,6 +24,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 - `tor-review`, `ncr-capa` และ `quality-objective-kpi-review` มี eval ครบ 4 มิติและตัวอย่างคำตอบที่ดี รายการหนี้ `legacyWithoutEvals` ลดจาก 43 เหลือ 40
 
+### ใช้ได้ด้วยบัญชี AI ฟรี
+
+- **VS Code + GitHub Copilot** ได้ไฟล์คำสั่ง `.github/copilot-instructions.md` เนื้อหาเดียวกับ `AGENTS.md` ก่อนหน้านี้ต้องพึ่งการอ่าน `AGENTS.md` อย่างเดียว
+- **อนุญาตคำสั่ง step-ai ล่วงหน้า** เฉพาะ `step-ai ask` และ `step-ai output` ใน Gemini CLI (`.gemini/settings.json` → `tools.allowed`) และ VS Code (`.vscode/settings.json` → `chat.tools.terminal.autoApprove`) ตามเอกสารของแต่ละโปรแกรม คำสั่งอื่นยังถามเหมือนเดิม ถ้ามีไฟล์ตั้งค่าอยู่แล้ว ตัวติดตั้งเพิ่มเฉพาะรายการนี้ ไม่แก้ค่าที่ผู้ใช้ตั้งเอง และไม่แตะไฟล์ที่มี comment · OpenCode รันคำสั่งได้เองอยู่แล้ว · Cursor และ Antigravity เก็บการอนุญาตไว้นอกโฟลเดอร์ จึงให้กดอนุญาตครั้งแรก
+- Gemini CLI / Antigravity และ VS Code + Copilot ถูกจัดเป็นกลุ่มใช้ฟรีได้ ป้าย "Paid" หายจากไฟล์คำสั่ง · `doctor --employee` ตอนไม่พบโปรแกรม AI แสดง 4 ทางเลือกเท่ากัน และตรวจพบ Gemini CLI ได้
+- คู่มือใหม่ [ติดตั้งโปรแกรม AI](docs/ai-app-setup.md) ทีละขั้นสำหรับทั้ง 4 โปรแกรม · runbook เพิ่มชุดตรวจบนเครื่องจริงด้วยบัญชีฟรี
+
 ### คู่มือ
 
 - คู่มือพนักงานมีหัวข้อ **เลือกโปรแกรม AI (รุ่นฟรีก็ใช้ได้)** องค์กรไม่ได้จัดบัญชี AI ให้ พนักงานใช้บัญชีของตัวเองได้ โปรแกรมรุ่นฟรีที่เปิดโฟลเดอร์ได้ (Cursor, OpenCode, Gemini CLI/Antigravity, VS Code + Copilot) ใช้ขั้นตอนของ STeP AI ได้ครบเท่ารุ่นเสียเงิน แชทบนเว็บใช้ไม่ได้เพราะเปิดโฟลเดอร์ไม่ได้ และระบุข้อมูลที่ห้ามแนบเมื่อใช้บัญชีส่วนตัว
