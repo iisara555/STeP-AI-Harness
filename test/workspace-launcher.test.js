@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -61,7 +61,11 @@ test('sh launcher falls back to Node.js on PATH and runs without an exec bit', {
 test('sh launcher explains itself when no runtime exists', { skip: !POSIX || ['/opt/homebrew/bin/node', '/usr/local/bin/node'].some(existsSync) }, async () => {
   const root = await fakeWorkspace();
   try {
-    const run = spawnSync('sh', ['./step-ai', 'ask', 'x'], { cwd: root, encoding: 'utf8', env: { PATH: NO_NODE_PATH } });
+    // Isolate PATH: some Linux hosts have node in /usr/bin, so that path cannot simulate no runtime.
+    await symlink('/usr/bin/dirname', join(root, 'bin', 'dirname'));
+    const run = spawnSync('/bin/sh', ['./step-ai', 'ask', 'x'], {
+      cwd: root, encoding: 'utf8', env: { PATH: join(root, 'bin') },
+    });
     assert.equal(run.status, 127);
     assert.match(run.stderr, /Install-STeP-AI|Update-STeP-AI/);
   } finally {
