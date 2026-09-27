@@ -89,7 +89,7 @@ AI ช่วยได้: บันทึกข้อเท็จจริง �
 
 AI ห้าม:
 - ประกาศ NC หรือ CAPA ว่า `CLOSED` หรือปิดอย่างเป็นทางการ
-- ยืนยัน root cause, รับ corrective action หรือปิดงานแทน Process Owner, QS หรือ QMR — `iso-qms-enactment` ใน `manifest/authority.yaml`
+- ยืนยัน root cause, รับ corrective action หรือปิดงานแทน Process Owner, QS หรือ QMR — `iso-enactment` ใน `manifest/authority.yaml`
 - แก้ controlled SOP หรือ WI โดยไม่ผ่าน document control flow
 
 ถ้าหลักฐาน effectiveness ยังไม่พอ ให้คงสถานะ `EFFECTIVENESS-PENDING` หรือ `READY-FOR-HUMAN-CLOSURE`
