@@ -642,7 +642,7 @@ skills:
       consumers: [ga, ifu, les, cc]
     description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
     intent: [triage, check, review]
-    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, ลูกค้าถาม, ลูกค้าทักมา, ตอบลูกค้ายังไง, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
+    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, ลูกค้าถาม, ลูกค้าทักมา, ลูกค้าร้องเรียน, คัดแยกข้อร้องเรียน, ตอบลูกค้ายังไง, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
     paths: ["**/support/**", "**/inquiry/**", "**/CRM/**"]
     fileTypes: [txt, md, docx]
     requires: [customer_message]
@@ -1023,8 +1023,8 @@ skills:
       primary: [mi]
       consumers: [piti, isi, eic, tech-spin, linc, crm, cc]
     description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของ evidence
-    intent: [market-test, review, plan]
-    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
+    intent: [market-test, review, plan, competitor-comparison]
+    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, เทียบคู่แข่ง, เปรียบเทียบคู่แข่ง, competitor comparison, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
     paths: ["**/MI/**", "**/Market/**", "**/research/**", "**/insight/**"]
     fileTypes: [md, docx, xlsx, csv]
     requires: [market_question]
@@ -1044,7 +1044,7 @@ skills:
       primary: [crm]
       consumers: [mi, ifu, les, foodfabr, cc, piti]
     description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยระวัง sample bias/PII
-    intent: [summarize, review]
+    intent: [summarize, review, customer-feedback-synthesis]
     triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า, ลูกค้าบ่น, จัดกลุ่มความเห็นลูกค้า]
     paths: ["**/CRM/**", "**/Customer/**", "**/survey/**", "**/feedback/**"]
     fileTypes: [xlsx, csv, md, docx, txt]

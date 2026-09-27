@@ -12,6 +12,25 @@ export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเส�
 
 export const QUALIFIED_INTENT_RULES = [
   { intent: 'privacy-review', any: ['เลขบัตรประชาชน', 'เลขบัตร', 'ข้อมูลส่วนบุคคล', 'pii', 'pdpa', 'credential', 'password', 'ข้อมูลสุขภาพ'] },
+  // A complaint may be source material for survey synthesis, not an individual
+  // service case to triage. Require the explicit VoC deliverable and survey.
+  {
+    intent: 'customer-feedback-synthesis',
+    allAny: [
+      ['voice of customer', 'เสียงลูกค้า'],
+      ['แบบสำรวจ', 'survey'],
+    ],
+  },
+  // Comparing competitors needs the action, subject and comparison dimension;
+  // a passing mention of a competitor or a generic feature comparison is not enough.
+  {
+    intent: 'competitor-comparison',
+    allAny: [
+      ['เทียบ', 'เปรียบเทียบ', 'compare', 'comparison'],
+      ['คู่แข่ง', 'competitor'],
+      ['feature', 'capability', 'positioning', 'ฟีเจอร์', 'จุดยืน'],
+    ],
+  },
   {
     intent: 'form-submit',
     allAny: [

@@ -1,0 +1,50 @@
+{
+  "skill": "startup-discovery",
+  "version": 1,
+  "source": "synthetic-2026-09-27",
+  "note": "Routing runs in CI; outputAssertions are author-reviewed model-side, not CI-graded.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "Skill รุ่นก่อนสังเคราะห์ผลได้ดีแต่ไม่จัด grid หนึ่ง finding ต่อแถวพร้อมจำนวนผู้ให้ข้อมูล แหล่งบันทึก ข้อขัดแย้ง และ confidence ในที่เดียว; ยังกล่าวถึง 5–10 รายเป็นจำนวนสัมภาษณ์ตั้งต้น",
+    "modelSideRun": "2026-09-27: author self-check, hermes chat -Q --ignore-rules --max-turns 1 --run-budget 75 --source tool; same synthetic 8-interview fixture; old git show HEAD vs new SKILL.md. Old session 20260927_165423_dc02c4: already flagged conflict, narrow network, no purchase and refused validation but no finding-level evidence grid. New session 20260927_165446_7334b6: 4-row grid with participant denominators, source IDs, contradictions, confidence and follow-ups; still refused validation. Incremental gain is auditability, not novel caution. Raw results in local scratch adaptation_a_comparison; not independent grader."
+  },
+  "cases": [
+    {
+      "id": "positive-interview-synthesis",
+      "dimension": "positive",
+      "team": "piti",
+      "prompt": "สรุปผลสัมภาษณ์ลูกค้า 8 รายเพื่อประเมินสมมติฐานตลาดของสตาร์ทอัพ",
+      "expect": { "mode": "SKILL", "skill": "startup-discovery", "tier": "HIGH" },
+      "outputAssertions": [
+        "มี Interview Evidence Grid หนึ่งแถวต่อ finding พร้อมจำนวนผู้ให้ข้อมูลจากทั้งหมดและรหัสบันทึกที่ไม่ระบุตัวตน",
+        "แสดงหลักฐานที่ขัดกัน ระดับความเชื่อมั่น/เหตุผล และข้อจำกัดของ sample",
+        "ไม่สรุป Validated จากจำนวน 8 รายเพียงอย่างเดียว"
+      ]
+    },
+    {
+      "id": "anti-project-plan",
+      "dimension": "antiTrigger",
+      "team": "piti",
+      "prompt": "ช่วยวางแผนโครงการสตาร์ทอัพและ timeline",
+      "expect": { "mode": "SKILL", "skill": "project-plan", "notSkill": "startup-discovery" }
+    },
+    {
+      "id": "collision-market-radar",
+      "dimension": "collision",
+      "team": "mi",
+      "prompt": "ช่วยดู trend ล่าสุดและสัญญาณตลาดว่าคู่แข่งล่าสุดกำลังพูดเรื่องอะไร",
+      "expect": { "mode": "SKILL", "skill": "market-signal-radar", "notSkill": "startup-discovery" }
+    },
+    {
+      "id": "missing-interview-notes",
+      "dimension": "missingSource",
+      "team": "piti",
+      "prompt": "ช่วยสังเคราะห์ผลสัมภาษณ์ลูกค้าสตาร์ทอัพ 8 รายที่ยังขาดบันทึกบางส่วนเพื่อประเมินสมมติฐานตลาด",
+      "expect": { "mode": "SKILL", "skill": "startup-discovery", "tier": "HIGH" },
+      "outputAssertions": [
+        "ช่องหลักฐานต้นทางและจำนวนสนับสนุนใน grid ที่ไม่มีบันทึกจริงเขียนรอยืนยัน ไม่สร้างคำพูดลูกค้า",
+        "ระบุข้อจำกัดของ sample และไม่ถือว่าครบ 8 รายแปลว่า Validated",
+        "เสนอคำถามหรือบันทึกที่ต้องเก็บเพิ่มก่อนตัดสินใจ"
+      ]
+    }
+  ]
+}

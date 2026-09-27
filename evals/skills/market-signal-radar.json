@@ -1,0 +1,50 @@
+{
+  "skill": "market-signal-radar",
+  "version": 1,
+  "source": "synthetic-2026-09-27",
+  "note": "CI checks routing and eval schema only, not generated model output. outputAssertions are author-reviewed model-side expectations, not CI-graded. Standalone feature/positioning competitor comparison now routes to market-signal-radar for MI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "Skill รุ่นก่อนทำ signal radar และบอกว่า positioning ยังเทียบไม่ได้ แต่ไม่ทำตารางเปรียบเทียบแต่ละรายที่แยก positioning ที่กล่าวอ้าง/ยังไม่มีหลักฐาน ออกจาก feature, ประเภทหลักฐาน และสิ่งที่ต้องตรวจ",
+    "modelSideRun": "2026-09-27: author self-check, hermes chat -Q --ignore-rules --max-turns 1 --run-budget 75 --source tool; same synthetic A/B/C fixture; old git show HEAD vs new SKILL.md. Old session 20260927_165500_433fdb: signal table already correctly flagged marketing claims and lack of buyer data, but no competitor positioning comparison grid. New session 20260927_165529_69add9: comparison grid by A/B/C flags unavailable positioning, dated sources, claim vs test, unknown feature/price, next checks. Incremental gain is comparison artifact, not new sourcing caution. Raw results in local scratch adaptation_a_comparison; not independent grader."
+  },
+  "cases": [
+    {
+      "id": "positive-competitor-comparison",
+      "dimension": "positive",
+      "team": "mi",
+      "prompt": "ช่วยดู trend ล่าสุดและสัญญาณตลาดว่าคู่แข่งล่าสุดกำลังพูดเรื่องอะไร แล้วเทียบ feature กับ positioning จากหลักฐาน",
+      "expect": { "mode": "SKILL", "skill": "market-signal-radar", "tier": "HIGH" },
+      "outputAssertions": [
+        "มีตาราง Competitor Comparison รายคู่แข่ง แยก feature/capability กับ positioning ที่มีหลักฐานหรือระบุว่าไม่ทราบ",
+        "แต่ละ claim มีแหล่งและวันที่พร้อมแยกคำโฆษณาจากผลทดลองหรือพฤติกรรมซื้อ",
+        "ระบุสิ่งที่ยังต้องตรวจ ไม่แต่งราคาหรือส่วนแบ่งตลาด"
+      ]
+    },
+    {
+      "id": "anti-customer-interview",
+      "dimension": "antiTrigger",
+      "team": "mi",
+      "prompt": "ช่วยสัมภาษณ์ลูกค้าเพื่อทดสอบ problem-solution fit",
+      "expect": { "mode": "SKILL", "skill": "startup-discovery", "notSkill": "market-signal-radar" }
+    },
+    {
+      "id": "collision-voice-of-customer",
+      "dimension": "collision",
+      "team": "mi",
+      "prompt": "ช่วยสรุป voice of customer จาก survey feedback และ complaint themes",
+      "expect": { "mode": "SKILL", "skill": "voice-of-customer", "notSkill": "market-signal-radar" }
+    },
+    {
+      "id": "missing-competitor-price",
+      "dimension": "missingSource",
+      "team": "mi",
+      "prompt": "ช่วยดู trend ล่าสุดและสัญญาณตลาดว่าคู่แข่งล่าสุดกำลังพูดเรื่องอะไร แต่ไม่มีข้อมูลราคา",
+      "expect": { "mode": "SKILL", "skill": "market-signal-radar", "tier": "HIGH" },
+      "outputAssertions": [
+        "ช่องราคาที่ไม่มี source ให้เขียนรอยืนยัน ไม่แต่งตัวเลข",
+        "ถ้าไม่มีเว็บหรือหลักฐานปัจจุบัน ให้ระบุยังไม่ได้ตรวจข้อมูลปัจจุบันและเสนอ research plan",
+        "ไม่สรุปว่าคู่แข่งไม่มี feature เพียงเพราะหาแหล่งไม่พบ"
+      ]
+    }
+  ]
+}
