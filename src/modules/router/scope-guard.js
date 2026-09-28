@@ -7,6 +7,8 @@
  * 3. BLOCK (HUMAN_ONLY): Task requires human approval/authority (e.g. procurement signing, budget changes).
  */
 
+import { hasOwnBusinessProof } from './entrepreneur-intent.js';
+
 /**
  * Check request text against skill scope guard
  * @param {object} skill Skill metadata
@@ -65,7 +67,16 @@ export function checkScope(skill, requestText = '') {
       const intake = /(?:คัดเลือก|รับทุน|ได้ทุน|ให้ทุน|เข้าโครงการ|บ่มเพาะ|grant|incubat|accelerator|ลงทุน)/i.test(lower);
       const ownBusiness = /(?:บริษัท|กิจการ|ธุรกิจ)(?:ของ)?(?:ผม|ฉัน|เรา)|ในนาม(?:ผม|ฉัน)|แทน(?:ผม|ฉัน)/i.test(lower)
         && !/(?:สตาร์ทอัพ|startup|ผู้ประกอบการ|applicant|บ่มเพาะ|grant|incubat|accelerator|step)/i.test(lower);
-      heuristic = applicant && approve && intake && !ownBusiness;
+      // A bare order to approve something ("อนุมัติโบนัสให้เลย") is never the
+      // assistant's call either; without proof it is the user's own business,
+      // it stops here rather than falling through to a clarifying question.
+      // The approval verb must be the instruction itself, not a request to
+      // prepare one ("ขออนุมัติ", "ร่างคำขออนุมัติ", "ขั้นตอนขออนุมัติ").
+      const approvalOrder = /(?:^|ช่วย\s*|กรุณา\s*|โปรด\s*|แล้ว\s*)(?:อนุมัติ|approve\b|เคาะ)/i.test(lower.trim())
+        && !/ขออนุมัติ|คำขออนุมัติ/.test(lower)
+        && /(?:ให้เลย|เลย$|ทันที|\bnow\b|ให้หน่อย|ให้ด้วย)/i.test(lower.trim())
+        && !hasOwnBusinessProof(lower);
+      heuristic = !ownBusiness && ((applicant && approve && intake) || approvalOrder);
     }
     if (key.includes('ci_governance') && (
       lower.includes('แก้ ci') ||

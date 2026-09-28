@@ -117,10 +117,15 @@ test('host adapter instructions require explicit opt-in, privacy pass and a veri
 });
 
 test('annual revenue goal with ทำ and no space before แล้ว is not routed to startup intake', async () => {
-  const first = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนในนามผม');
+  const first = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนของบริษัทผม');
   assert.equal(first.selectedSkill?.name, 'entrepreneur-annual-goal');
   assert.equal(first.routingMode, 'ESCALATE');
   assert.equal(first.intentReview?.status, 'NEEDS_HOST');
+  // Without "ของบริษัทผม" nothing shows whose budget it is: the finance gate
+  // holds instead of asking a host (see entrepreneur-intent-review tests).
+  const unowned = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนในนามผม');
+  assert.equal(unowned.selectedSkill?.name, 'entrepreneur-annual-goal');
+  assert.equal(unowned.routingMode, 'BLOCK');
 });
 
 test('repeat-purchase rate is baseline data, not an order to buy', async () => {

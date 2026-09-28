@@ -30,7 +30,8 @@ import {
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
 import {
   classifyEntrepreneurIntent, needsEntrepreneurIntentReview,
-  isExplicitStepBudgetApproval, isPrivateBusinessContext, referencesOrganization,
+  isExplicitStepBudgetApproval, referencesOrganization,
+  hasOwnBudgetProof, isAnalysisOnly,
 } from '../../modules/router/entrepreneur-intent.js';
 import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
 
@@ -145,21 +146,22 @@ export async function queryStepRouter(query, options = {}) {
   // accepts only its schema-bound verdict on the privacy-passed text. The CLI
   // never calls a provider. Without a verdict, risky business acts stop for a
   // human instead of being guessed from Thai keywords.
-  // A budget gate may be reconsidered only when the request plainly concerns
-  // the entrepreneur's own business: any mention of STeP, its programmes or
-  // its approvers keeps the organization's gate no matter what a model says.
+  // A budget gate may be reconsidered only when the request shows the money
+  // belongs to the user's own business and names no organization: any
+  // mention of STeP, the university, its programmes or approvers - however
+  // spelled - or no owner at all keeps the finance gate whatever a model says.
   const organizationNamed = referencesOrganization(query);
   const budgetOverlap = authorityPreflight.authority === 'budget-allocation'
     && !isExplicitStepBudgetApproval(query)
     && !organizationNamed
-    && (selectedSkill?.name === 'entrepreneur-annual-goal'
-      || needsEntrepreneurIntentReview(query, selectedSkill?.name)
-      || isPrivateBusinessContext(query)
-      || /(?:เจ้าของ(?:กิจการ)?|ทีมขาย|เซลส์)/i.test(query));
+    && hasOwnBudgetProof(query);
   const privacyRisk = privacy.action !== 'pass'
     && (ownerPhraseMatched || needsEntrepreneurIntentReview(unscannedQuery, selectedSkill?.name));
+  // A pure question or analysis about the owner's act ("ควรจ้างกี่คน") carries
+  // no instruction to act, so it needs no verdict; any order still does.
+  const analysisOnly = authorityPreflight.status === 'ALLOW' && !privacyRisk && isAnalysisOnly(query);
   let intentReview = null;
-  if (authorityPreflight.status === 'ALLOW' || budgetOverlap) {
+  if (!analysisOnly && (authorityPreflight.status === 'ALLOW' || budgetOverlap)) {
     intentReview = await classifyEntrepreneurIntent(query, {
       selectedSkillName: selectedSkill?.name,
       privacyAction: privacy.action,
@@ -169,14 +171,12 @@ export async function queryStepRouter(query, options = {}) {
       intentTimeoutMs: options.intentTimeoutMs,
     });
     if (intentReview) {
-      const privateOwner = isPrivateBusinessContext(query);
-      const unresolvedOwner = budgetOverlap && !privateOwner;
       if (intentReview.status === 'NEEDS_HOST') {
         authorityPreflight = {
           status: 'ESCALATE', inScope: false, source: 'host-intent-review',
           ruleKey: 'entrepreneur-intent-review',
-          authority: unresolvedOwner ? 'ownership-review' : 'entrepreneur-commitment',
-          targetRole: unresolvedOwner ? 'business-owner-or-afp-finance-head' : 'business-owner',
+          authority: budgetOverlap ? 'ownership-review' : 'entrepreneur-commitment',
+          targetRole: budgetOverlap ? 'business-owner-or-afp-finance-head' : 'business-owner',
           reason: 'ยังไม่ชัดว่าเป็นการวิเคราะห์หรือคำสั่งผูกมัดกิจการ ต้องให้เจ้าของ/ผู้มีอำนาจตรวจ ไม่ให้ AI เดาหรือดำเนินการแทน',
         };
       } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'COMMIT') {

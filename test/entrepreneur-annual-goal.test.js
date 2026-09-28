@@ -80,7 +80,6 @@ test('a business owner must decide or commit hiring, investment and purchasing; 
     'ช่วยตั้งเป้ารายได้ปีหน้า แล้วรับพนักงานเข้าทำงานแทนผม',
     'ช่วยตั้งเป้ารายได้ปีหน้า แล้วกดสั่งวัตถุดิบแทนผม',
     'ช่วยตั้งเป้ารายได้ปีหน้า แล้วตัดสินเป้ารายได้แทนผม',
-    'ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนในนามผม',
     'ปีหน้าอยากได้รายได้ 3 ล้าน ควรจ้างพนักงานเลยไหม แล้วช่วยจ้างพนักงานให้เลย',
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยเปรียบเทียบทางเลือกจ้างทีมขายเลยกับใช้ฟรีแลนซ์ แล้วจ้างทีมขายให้เลย',
     'ช่วยตั้งเป้ารายได้ธุรกิจ 1 ปี แล้วช่วยจ้างพนักงานให้หน่อย',
@@ -110,6 +109,11 @@ test('a business owner must decide or commit hiring, investment and purchasing; 
     assert.equal(result.routingContract.authority.authority,
       namesStep ? 'ownership-review' : 'entrepreneur-commitment', query);
   }
+  // "ในนามผม" does not show whose budget it is, so the finance gate holds
+  // before any host is asked; the request still stops, just for AFP.
+  const unowned = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนในนามผม');
+  assert.equal(unowned.routingMode, 'BLOCK');
+  assert.equal(unowned.routingContract.authority.authority, 'budget-allocation');
   for (const query of [
     'ช่วยตั้งเป้ารายได้ธุรกิจ 1 ปี แต่ไม่ต้องจ้างใคร แค่ประมาณคนที่ต้องใช้',
     'ช่วยคำนวณต้องจ้าง Sales เพิ่มกี่คนเพื่อยอดขายปีหน้า',
