@@ -205,6 +205,21 @@ test('a pasted identifier is redacted before routing, reporting or logging', asy
   assert.ok(!JSON.stringify(machine).includes('0812345678'));
 });
 
+test('human CLI suggestions never repeat the original Thai-digit phone', () => {
+  for (const [query, expected] of [
+    ['ช่วยทำสไลด์ Pitching โทร ๐๘๑-๒๓๔-๕๖๗๘', 'ตัวอย่างคำสั่งที่คุณสั่ง AI'],
+    ['TOR งบประมาณ แตกกิจกรรม timeline ชีต ประชุม โทร ๐๘๑-๒๓๔-๕๖๗๘', 'พบงานหลายขั้น'],
+  ]) {
+    const out = cli(query);
+    assert.ok(out.includes(expected), `expected suggestion branch: ${expected}`);
+    assert.ok(!out.includes('๐๘๑-๒๓๔-๕๖๗๘'), 'human CLI echoed original phone');
+    assert.ok(!out.includes('081-234-5678'), 'human CLI echoed normalized phone');
+    assert.ok(out.includes('[หมายเลขโทรศัพท์ถูกปิดบัง]'), 'human CLI omitted masked request');
+    const json = cli(query, ['--json']);
+    assert.ok(!json.includes('๐๘๑-๒๓๔-๕๖๗๘'), 'JSON CLI echoed original phone');
+  }
+});
+
 test('a request with no personal data routes without a privacy notice', async () => {
   const out = cli('ช่วยดูใบเสร็จค่าเดินทางว่าเบิกได้ไหม');
   assert.ok(!out.includes('ตรวจข้อมูลส่วนบุคคลในคำถาม'));
