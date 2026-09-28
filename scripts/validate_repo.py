@@ -406,6 +406,312 @@ def validate_browser_env_safety(errors: list[str]) -> None:
         errors.append(".env.example contains prohibited browser secret variable")
 
 
+# The manifests are read by small line-based parsers (src/modules/role-resolver.js,
+# src/modules/router/*.js, src/modules/playbooks, actions, provenance and this
+# file), not by a YAML library. Valid YAML outside the subset they understand used
+# to be dropped without an error: a block-style `consumers:` list silently removed
+# a Skill from every workspace. This lint is an allowlist: every non-blank line has
+# to be one of the shapes below, or validation fails with a file:line.
+#
+#   # comment                  (own line only)
+#   key:                       (opens a block; children exactly two spaces deeper)
+#   key: value                 (plain or fully quoted scalar, or [a, b] on one line)
+#   - key: value               (list of mappings; only where MAPPING_LIST_FIRST_KEY allows)
+#   - item                     (list of scalars)
+#   body of a block scalar     (only for the (file, key) pairs in BLOCK_SCALAR_KEYS)
+#
+# Keys are unquoted. Values may not start with a YAML tag, anchor, alias or flow
+# map (`!`, `&`, `*`, `{`) except the flow maps in FLOW_MAP_VALUES.
+MANIFEST_KEY = r"[A-Za-z0-9_][A-Za-z0-9_.-]*"
+MANIFEST_LINE_RE = re.compile(rf"^(?P<dash>- )?(?P<key>{MANIFEST_KEY}):(?: (?P<value>.*))?$")
+
+# Keys the parsers only read as a one-line [a, b] list. A None parent means the
+# key is a list wherever it appears in that file; otherwise only under that parent
+# (`skills[]` = inside an entry of the `skills:` list).
+INLINE_LIST_KEYS: dict[str, dict[str, str | None]] = {
+    "actions.yaml": {"preferredTools": None},
+    "authority.yaml": {key: None for key in ("triggers", "actions", "objects", "qualifiers")},
+    "documents.yaml": {"coOwners": None},
+    "organization.yaml": {key: None for key in ("officialChannels", "serviceLinesSourceRefs", "sharedOversight", "sourceRefs", "teams")},
+    "playbooks.yaml": {key: None for key in ("consumers", "consumes", "parameters", "produces", "requiredSignals")},
+    "processes.yaml": {"consumers": None},
+    "roles.yaml": {"knowledge": None, "skills": None},
+    "router-index.yaml": {
+        **{key: None for key in ("consumers", "fileTypes", "paths", "primary", "requires", "triggers")},
+        "intent": "skills[]",
+    },
+    "services.yaml": {key: None for key in ("aliases", "discoverySources", "highlightInstruments", "processes", "sourceRefs", "supportTeams")},
+    "skills.yaml": {key: None for key in ("approvedBy", "domain", "mandatory", "optional", "reviewer", "service")},
+    "teams.yaml": {"paths": None, "skills": None, "starterPrompts": None},
+}
+# Every child of these keys is read as an inline list (playbook signals).
+INLINE_LIST_PARENTS = {("playbooks.yaml", "signals")}
+# The parsers find list-of-mapping entries by their first key (`  - name:`,
+# `  - id:`). An entry that starts with another key is dropped, so the first key
+# is fixed, and a list of mappings anywhere else is not supported.
+MAPPING_LIST_FIRST_KEY = {
+    ("router-index.yaml", "skills"): "name",
+    ("teams.yaml", "clusters"): "id",
+    ("teams.yaml", "teams"): "id",
+    ("roles.yaml", "roles"): "id",
+    ("playbooks.yaml", "playbooks"): "id",
+    ("playbooks.yaml", "steps"): "id",
+    ("provenance.yaml", "types"): "id",
+    ("organization.yaml", "executives"): "name",
+}
+# The JS parsers read a block scalar's body lines as if they were keys, so a
+# `consumers: [...]` inside one would change access. Only these are allowed.
+BLOCK_SCALAR_KEYS = {("documents.yaml", "summary")}
+FLOW_MAP_VALUES = {
+    ("router-index.yaml", "escalate"): re.compile(r"^\{\}$"),
+    ("router-index.yaml", "human_only"): re.compile(r"^\{\}$"),
+    ("skills.yaml", "reviewCycle"): re.compile(r"^\{ months: \d+ \}$"),
+}
+SKILL_PATH_RE = re.compile(r"^skills/[^\s\"']+/SKILL\.md$")
+PLAIN_FORBIDDEN_START = set("!&*{}[]|>%@`#?,\"'")
+
+
+def _quoted_scalar_error(text: str, *, in_list: bool) -> str | None:
+    # in_list: an item inside [a, b], which the parsers split on ',' and cut at ']'.
+    """text starts with a quote; it must be exactly one complete quoted scalar."""
+    quote = text[0]
+    body = text[1:]
+    if quote == "'":
+        body_check = body[:-1].replace("''", "") if body.endswith("'") else None
+    else:
+        body_check = body[:-1] if body.endswith('"') else None
+    if body_check is None or quote in body_check:
+        return "quoted value must be one complete quoted string; nothing may follow the closing quote"
+    if quote == '"' and "\\" in body_check:
+        return "escape sequences in double-quoted values are not read by the manifest parsers"
+    if in_list and any(char in body_check for char in ",[]{}"):
+        return "a quoted list item may not contain , [ ] { } (the parsers split on ',' and stop at ']')"
+    return None
+
+
+def _plain_scalar_error(text: str, *, in_list: bool) -> str | None:
+    if text[0] in PLAIN_FORBIDDEN_START or text == "-" or text.startswith("- "):
+        return f"value may not start with {text[0]!r} (YAML tag, anchor, alias, flow collection, block or quote)"
+    if " #" in text:
+        return "trailing comment after a value; put comments on their own line"
+    if ": " in text or text.endswith(":"):
+        return "': ' inside an unquoted value; quote the value"
+    if in_list and any(char in text for char in "[]{}"):
+        return "unquoted list item may not contain [ ] { }"
+    return None
+
+
+def _scalar_error(text: str, *, in_list: bool = False) -> str | None:
+    if not text:
+        return "empty list item" if in_list else "empty value"
+    if text[0] in "\"'":
+        return _quoted_scalar_error(text, in_list=in_list)
+    return _plain_scalar_error(text, in_list=in_list)
+
+
+def _split_flow_items(inner: str) -> list[str] | None:
+    """Split the inside of [a, b]; quotes open only at the start of an item."""
+    items, current, quote, at_start = [], [], "", True
+    for char in inner:
+        if quote:
+            current.append(char)
+            if char == quote:
+                quote = ""
+            continue
+        if char == ",":
+            items.append("".join(current).strip())
+            current, at_start = [], True
+            continue
+        if at_start and char in "\"'":
+            quote = char
+        if not char.isspace():
+            at_start = False
+        current.append(char)
+    if quote:
+        return None
+    items.append("".join(current).strip())
+    return items
+
+
+def _inline_list_error(value: str) -> str | None:
+    if not value.endswith("]"):
+        if " #" in value:
+            return "trailing comment after a value; put comments on their own line"
+        return "inline list must open and close on one line, with nothing after ']'"
+    inner = value[1:-1]
+    if not inner.strip():
+        return None
+    items = _split_flow_items(inner)
+    if items is None:
+        return "unterminated quote in inline list"
+    for item in items:
+        problem = _scalar_error(item, in_list=True)
+        if problem:
+            return f"{problem}: {item!r}"
+    return None
+
+
+def _value_error(name: str, key: str, value: str) -> str | None:
+    if value.startswith("["):
+        return _inline_list_error(value)
+    if value.startswith("{"):
+        allowed = FLOW_MAP_VALUES.get((name, key))
+        if allowed and allowed.match(value):
+            return None
+        return "flow mapping {...} is not read by the manifest parsers; use key: lines"
+    return _scalar_error(value)
+
+
+def lint_manifest_text(name: str, text: str) -> list[str]:
+    errors: list[str] = []
+    # Open containers: dicts with indent, kind ('map' | 'seq'), label and keys seen.
+    stack: list[dict] = [{"indent": 0, "kind": "map", "label": "", "keys": set()}]
+    pending: dict | None = None  # a `key:` with no value, waiting for its children
+    skip_deeper_than: int | None = None  # children of a rejected or block-scalar key
+
+    def container(indent: int, kind: str, label: str) -> dict:
+        frame = {"indent": indent, "kind": kind, "label": label, "keys": set()}
+        stack.append(frame)
+        return frame
+
+    lines = text.split("\n")
+    for index, raw in enumerate(lines):
+        number = index + 1
+        where = f"manifest/{name}:{number}"
+        if raw.endswith("\r") and index == len(lines) - 1:
+            errors.append(f"{where}: lone carriage return is not supported; use LF or CRLF line endings")
+            continue
+        line = raw[:-1] if raw.endswith("\r") else raw
+        if "\r" in line:
+            errors.append(f"{where}: lone carriage return is not supported; use LF or CRLF line endings")
+            continue
+        if not line.strip():
+            continue
+        body = line.lstrip(" ")
+        indent = len(line) - len(body)
+        if skip_deeper_than is not None:
+            if indent > skip_deeper_than:
+                continue
+            skip_deeper_than = None
+        if "\t" in line:
+            place = "indentation" if body.startswith("\t") else "line"
+            errors.append(f"{where}: tab in {place}; use spaces")
+            continue
+        if body.startswith("#"):
+            continue
+        if indent % 2:
+            errors.append(f"{where}: indentation of {indent} spaces; use multiples of 2")
+            continue
+
+        if pending is not None:
+            opener, pending = pending, None
+            if indent != opener["indent"] + 2:
+                if indent <= opener["indent"]:
+                    errors.append(f"manifest/{name}:{opener['number']}: '{opener['key']}' has no value; write it on the same line")
+                else:
+                    errors.append(f"{where}: indentation of {indent} spaces under '{opener['key']}'; children go exactly 2 deeper ({opener['indent'] + 2})")
+                    skip_deeper_than = opener["indent"]
+                    continue
+            else:
+                kind = "seq" if body == "-" or body.startswith("- ") else "map"
+                container(indent, kind, opener["key"])
+
+        while len(stack) > 1 and stack[-1]["indent"] > indent:
+            stack.pop()
+        frame = stack[-1]
+        if frame["indent"] != indent:
+            errors.append(f"{where}: indentation of {indent} spaces does not line up with the enclosing block ({frame['indent']})")
+            skip_deeper_than = frame["indent"]
+            continue
+
+        match = MANIFEST_LINE_RE.match(body)
+        is_dash = body == "-" or body.startswith("- ")
+        if is_dash != (frame["kind"] == "seq"):
+            expected = "a '- ' list item" if frame["kind"] == "seq" else "a 'key: value' line"
+            errors.append(f"{where}: expected {expected} here")
+            continue
+
+        if is_dash and not match:
+            item = body[2:] if body.startswith("- ") else ""
+            if (name, frame["label"]) in MAPPING_LIST_FIRST_KEY:
+                errors.append(f"{where}: entries of '{frame['label']}' must start with '- {MAPPING_LIST_FIRST_KEY[(name, frame['label'])]}:'")
+                continue
+            problem = _scalar_error(item) if item else "empty list item"
+            if problem:
+                errors.append(f"{where}: {problem}")
+            continue
+
+        if not match:
+            errors.append(f"{where}: not a supported manifest line (unquoted 'key: value', '- item' or '# comment' only)")
+            continue
+
+        key, value = match.group("key"), match.group("value")
+        value = "" if value is None else value
+        if value != value.strip() or (match.group("value") is not None and not value):
+            errors.append(f"{where}: '{key}' has stray whitespace around its value")
+            continue
+        key_indent = indent
+        if match.group("dash"):
+            first = MAPPING_LIST_FIRST_KEY.get((name, frame["label"]))
+            if first is None:
+                errors.append(f"{where}: a list of mappings under '{frame['label']}' is not read by the manifest parsers")
+                skip_deeper_than = indent
+                continue
+            if key != first:
+                errors.append(f"{where}: entries of '{frame['label']}' must start with '- {first}:'; the parsers drop this entry")
+                skip_deeper_than = indent
+                continue
+            key_indent = indent + 2
+            frame = container(key_indent, "map", f"{frame['label']}[]")
+
+        if name == "authority.yaml" and frame["label"] == "authorities" \
+                and not re.fullmatch(r"[a-z0-9-]+", key):
+            errors.append(f"{where}: authority identifier '{key}' is not read by the JS parser; use lowercase letters, digits and hyphens")
+        if key in frame["keys"]:
+            errors.append(f"{where}: duplicate key '{key}'")
+        frame["keys"].add(key)
+
+        list_keys = INLINE_LIST_KEYS.get(name, {})
+        must_be_list = (key in list_keys and list_keys[key] in (None, frame["label"])) \
+            or (name, frame["label"]) in INLINE_LIST_PARENTS
+        if must_be_list and not value.startswith("["):
+            errors.append(f"{where}: '{key}' must be an inline list [a, b] on the same line; block lists and other values are not read by the manifest parsers")
+            skip_deeper_than = key_indent
+            continue
+
+        if not value:
+            pending = {"indent": key_indent, "key": key, "number": number}
+            continue
+        if value[0] in ">|":
+            if (name, key) in BLOCK_SCALAR_KEYS and value in (">", ">-", "|", "|-"):
+                skip_deeper_than = key_indent
+                continue
+            errors.append(f"{where}: block scalar ('{value}') on '{key}' is not read by the manifest parsers; write the value on one line")
+            skip_deeper_than = key_indent
+            continue
+        if name == "skills.yaml" and key == "path":
+            if value[:1] in "\"'":
+                errors.append(f"{where}: 'path' must be unquoted")
+                continue
+            if not SKILL_PATH_RE.match(value):
+                errors.append(f"{where}: 'path' must be skills/<...>/SKILL.md on one line")
+                continue
+        problem = _value_error(name, key, value)
+        if problem:
+            label = f"'{key}' " if value.startswith("[") else ""
+            errors.append(f"{where}: {label}{problem}")
+    if pending is not None:
+        errors.append(f"manifest/{name}:{pending['number']}: '{pending['key']}' has no value; write it on the same line")
+    return errors
+
+
+def validate_manifest_subset(errors: list[str]) -> None:
+    for path in sorted((ROOT / "manifest").glob("*.yaml")):
+        # Path.read_text() uses universal newlines and conceals lone CR bytes.
+        # The JS loaders split only on LF/CRLF, so lint the exact decoded bytes.
+        errors.extend(lint_manifest_text(path.name, path.read_bytes().decode("utf-8")))
+
+
 def validate_package_config(errors: list[str]) -> None:
     pkg_path = ROOT / "package.json"
     if not pkg_path.is_file():
@@ -486,6 +792,7 @@ def validate_package_config(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     count = validate_skills(errors)
+    validate_manifest_subset(errors)
     validate_skill_dependencies(errors)
     validate_router_registry(errors)
     validate_organization_clusters(errors)

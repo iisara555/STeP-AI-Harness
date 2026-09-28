@@ -19,6 +19,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - CLI แสดงคำสั่งแนะนำโดยใช้คำขอที่ปิดบังแล้วทั้งเส้นทาง Skill และ Playbook ไม่แสดงเบอร์โทรต้นฉบับซ้ำ; ที่อยู่ซึ่งปิดบังแล้วไม่ถูกตรวจพบซ้ำจาก placeholder และเลขทศนิยมธรรมดาไม่ถูกตีความเป็นเลขบัตรแบบคั่นจุด
 - เพิ่มเทสต์สำหรับกรณีดังกล่าวและข้อความทั่วไปที่ต้องไม่ถูกบล็อกผิด
 
+กัน manifest ที่ระบบอ่านไม่ครบโดยไม่แจ้ง (ข้อ H5 จาก audit)
+
+- **Manifest ที่เขียนรูปแบบที่ระบบอ่านไม่ได้จะไม่ผ่าน validate (H5):** ตัวอ่าน manifest ของ Harness อ่าน YAML ได้เฉพาะบางรูปแบบ เดิมถ้าใครแก้ `consumers: ["*"]` เป็นรายการแบบหลายบรรทัด Skill นั้นจะหายจาก workspace ของทุกทีมโดยไม่มีข้อความเตือน แต่ validate และ test ยังผ่าน ตอนนี้ `npm run validate` ตรวจแบบ allowlist: ทุกบรรทัดใน `manifest/*.yaml` ต้องเป็นคอมเมนต์ทั้งบรรทัด, `key:`, `key: value`, `- key: value` หรือ `- item` เท่านั้น เยื้องเพิ่มทีละ 2 ช่อง ไม่มี tab และ key ไม่ใส่เครื่องหมายคำพูด ช่องที่ระบบอ่านเป็นรายการ (เช่น `consumers`, `primary`, `triggers`, `actions`, `objects`, `preferredTools`, `consumes`, `produces` และทุกช่องใต้ `signals:`) ต้องเขียน `[a, b]` ในบรรทัดเดียว; ห้ามใช้ tag/anchor/alias (`!`, `&`, `*`) และ `{...}` ยกเว้นรูปแบบที่มีอยู่แล้ว; ใช้ `>-` ได้เฉพาะ `summary` ใน `documents.yaml`; รายการใน `[...]` ห้ามมี `,` ในเครื่องหมายคำพูด; รายการแรกของแต่ละ entry ต้องเป็น `- name:` (router) หรือ `- id:` (teams, roles, playbooks, steps, provenance) ไม่เช่นนั้น entry นั้นถูกทิ้ง ทุกข้อผิดพลาดแจ้งเป็น file:line และมีเทสต์เทียบจำนวน entry ในไฟล์กับที่ตัวอ่าน JS โหลดได้จริง
+- ปิดช่องหลุดเพิ่มเติมของ H5: ตรวจ lone `CR` จาก bytes ของ manifest ก่อน Python แปลง newline เพื่อไม่ให้ authority trigger หายจากตัวอ่าน JS; ปฏิเสธ identifier ของ authority ที่ JS อ่านไม่ได้ (เช่นมี `_`) ก่อนนำค่าไปทับ authority ก่อนหน้า; และถอด apostrophe ที่ escape แบบ YAML (`''`) ในค่า single-quoted ให้ trigger และคำอธิบายตรงกับความหมาย YAML ทั้งใน authority และฟิลด์รายการของ router (`intent`, `triggers`, `paths`, `fileTypes`, `primary`)
+
 ## v0.7.6
 
 เสริมวิธีทำงานที่คัดจาก [claude-code-templates](https://github.com/davila7/claude-code-templates) ให้ Skill เดิม 4 ตัว ไม่เพิ่ม Skill ใหม่ และไม่ติดตั้งชุดนั้นทั้งหมด ที่มาและ license อยู่ใน [third-party-methods.md](docs/third-party-methods.md)
