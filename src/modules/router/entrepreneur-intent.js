@@ -9,87 +9,97 @@ const BUSINESS_RISK = /(?:จ้าง|พนักงาน|เซลส์|\bs
 // phrase; an owner-action verb with "for me" always needs an intent verdict.
 const ON_BEHALF = /(?:แทน|ในนาม)(?:ผม|ฉัน|หนู|เรา)|on my behalf|\bfor me\b/i;
 const OWNER_ACT = /(?:จ้าง|รับ[^\n]{0,8}เข้าทำงาน|สั่ง|ซื้อ|โอนเงิน|มัดจำ|จ่ายเงิน|เปิดสาขา|ลงทุน|กู้|เลือกเป้า|ตัดสินเป้า|เซ็นสัญญา|ทำสัญญา|hire|purchase|buy|order|invest|loan|sign)/i;
-// Names of STeP, the university, its programmes, other public funders and
-// approval roles. A model verdict about the entrepreneur's own business cannot
-// release a request that names these. Checked on a normalized copy so spacing,
-// dots, zero-width characters and full-width letters do not hide a name.
+// Names of STeP, the university, its programmes, public funders and approval
+// roles. A model verdict about the entrepreneur's own business cannot release
+// a request that names these. Names are matched on normalized copies of the
+// text; anything that looks like a disguised name (mixed scripts, invisible
+// characters, marks on Latin letters) counts as a name, so the gate fails
+// closed instead of relying on an ever-longer list of spellings.
 const ORGANIZATION_NAMES = [
-  /(?:^|[^a-z])step(?:[^a-z]|cmu|$)/i,
-  /ส[ะ]?เต[็]?[ปบ]/,
-  /อุทยาน/, /science[\s_-]*park/i, /(?:ไซ|ซาย)น?์?(?:ส์)?\s*(?:พาร์ค|ปาร์ค)/,
-  /(?:^|[^a-z])afp(?:[^a-z]|$)/i, /เอเอฟพี/,
-  /(?:^|[^a-z])cmu(?:[^a-z]|$)/i, /chiang\s*mai\s*univ/i,
-  /ม\.?\s*เชียงใหม่|มหาวิทยาลัยเชียงใหม่|มหาวิทยาลัย|มหาลัย/,
+  /(?:^|[^a-z]|cmu)steps?(?:[^a-z]|cmu|$)/i,
+  /(?:^|[^a-z])cmu/i, /chiang\s*mai\s*univ/i, /(?:^|[^a-z])univ(?:ersity)?(?:[^a-z]|$)/i,
+  /science[\s_-]*park/i, /(?:^|[^a-z])(?:afp|nia|nstda|depa)(?:[^a-z]|$)/i, /ted\s*fund/i,
+  /(?:ไซ|ซาย)(?:น|เอน|แอน)?[ซส]?์?(?:ส์)?\s*(?:พาร์ค|ปาร์ค)/, /เอเอฟพี/, /ดีป้า/, /บีโอไอ|(?:^|[^a-z])boi(?:[^a-z]|$)/i, /แม่โจ้/,
+  /ม\.?\s*เชียงใหม่|มหาวิทยาลัย|มหาลัย/,
   /(?:^|[^ก-๙])ม\.?\s?ช\.?(?![ก-๙])/,
-  /(?:^|[^a-z])(?:nia|nstda)(?:[^a-z]|$)/i, /สวทช|บพข|สนช|ทางราชการ/,
-  /หน่วยงาน|ต้นสังกัด|ส่วนงาน|ฝ่ายการเงิน|ทุนสนับสนุน|เบิกจ่าย|จัดซื้อจัดจ้าง/,
+  /สวทช|บพข|สนช|สสว|ทางราชการ|ภาครัฐ|รัฐบาล|กองทุนรัฐ|ทุนรัฐ|สำนักงานนวัตกรรม|นวัตกรรมแห่งชาติ/,
+  /หน่วยงาน|ต้นสังกัด|ส่วนงาน|ฝ่ายการเงิน|ทุนสนับสนุน|เบิกจ่าย|จัดซื้อจัดจ้าง|งบกลาง|งบประมาณแผ่นดิน/,
   /บ่มเพาะ|incubat|accelerator/i,
   /สตาร์ทอัพ(?!\s*(?:ของ)?\s*(?:ผม|ฉัน|เรา))|(?:^|[^a-z])startups?(?![a-z])(?!\s*(?:of\s+)?(?:mine|my|our))/i,
   /องค์กร(?!\s*(?:ของ)?\s*(?:ผม|ฉัน|เรา))/,
-  /(?<!เป็น)ผู้อำนวยการ(?!\s*(?:ของ)?\s*(?:บริษัท|ร้าน|กิจการ))|(?:^|[^ก-๙])ผอ\.?(?![ก-๙])/,
+  /(?<!เป็น)ผู้อำนวยการ(?!\s*(?:ของ)?\s*(?:บริษัท|ร้าน|กิจการ))|(?:^|[^ก-๙]|ท่าน)ผอ\.?(?![ก-๙])|ท่าน\s?ผอ/,
+  /คณบดี|อธิการ|หัวหน้าศูนย์|รองผู้อำนวยการ/,
   // Grant money is an organization's decision only when someone is approving it.
   /(?:อนุมัติ|approve|เคาะ|ตัดสิน|ให้ผ่าน)[^\n]{0,30}(?:รับทุน|ได้ทุน|ให้ทุน|\bgrant\b)/i,
 ];
-// Everyday phrases that contain an organization name by accident.
-const ORGANIZATION_FALSE_FRIENDS = /step[\s-]*by[\s-]*step|next\s+steps?|first\s+step|\bsteps?\s+\d|ขั้นตอน/gi;
+// Thai names checked with spaces, dots and tone marks removed, so "ส เต็ ป",
+// "ส.เต็ป", "สเต๊ป" and "อุ ท ยาน" are caught.
+const COMPACT_THAI_NAMES = /สะ?เต[็๊่้]?[ปบ]|อุทยาน|เอสทีอีพี|ซีเอ็มยู|มหาวิทยาลัย|ผู้อำนวยการ/;
+// Everyday lowercase phrases that contain "step" by accident. Case-sensitive
+// on purpose: "STeP", "Step" and "STEP" are never removed.
+const ORGANIZATION_FALSE_FRIENDS = /step[\s-]*by[\s-]*step|next\s+steps?|first\s+step|\bsteps?\s+\d|(?:\d+|few|the|these|those|two|three|four|five)\s+steps\b/g;
+// Letters from scripts a Thai/English request has no reason to mix in, marks
+// on Latin letters, and invisible format characters.
+const DISGUISE = /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Armenian}\p{Script=Cherokee}]|[A-Za-z][\p{M}]|\p{Cf}/u;
+const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b' };
 
 export function normalizeForScreening(query = '') {
   let text = String(query || '').normalize('NFKC')
-    .replace(/[\u200b-\u200d\u2060\ufeff\u00ad]/g, '');
-  // Collapse runs of single letters written apart ("S T e P", "S.T.e.P.",
-  // "A F P") into one word so the name checks below see them.
-  return text.replace(/(?<![A-Za-z])[A-Za-z](?:[\s._-]+[A-Za-z](?![A-Za-z]))+\.?/g,
-    (run) => run.replace(/[\s._-]+/g, ''));
+    // NFKC splits Thai sara am (ำ) into nikhahit + sara aa; put it back.
+    .replace(/\u0e4d\u0e32/g, 'ำ')
+    .replace(/\p{Cf}/gu, '');
+  // Collapse runs of single Latin letters written apart by any non-letter
+  // ("S T e P", "S.T.e.P.", "S*T*e*P", "S🙂T🙂e🙂P") into one word.
+  return text.replace(/(?<![A-Za-z])[A-Za-z](?:[^\p{L}\p{N}\n]+[A-Za-z](?![A-Za-z]))+[.]?/gu,
+    (run) => run.replace(/[^A-Za-z]+/g, ''));
 }
 
 export function referencesOrganization(query = '') {
-  const text = normalizeForScreening(query).replace(ORGANIZATION_FALSE_FRIENDS, ' ');
-  return ORGANIZATION_NAMES.some((pattern) => pattern.test(text));
+  const raw = String(query || '');
+  if (DISGUISE.test(raw.normalize('NFD').replace(/[\u0e00-\u0e7f]/g, ''))) return true;
+  const text = normalizeForScreening(raw).replace(ORGANIZATION_FALSE_FRIENDS, ' ');
+  const leet = text.replace(/[A-Za-z0-9]+/g, (token) => (/[A-Za-z]/.test(token) && /\d/.test(token)
+    ? token.replace(/\d/g, (digit) => LEET[digit] || digit) : token));
+  const compact = text.replace(/[\s.\-_*·]+/g, '').replace(/[่้๊๋]/g, '');
+  return ORGANIZATION_NAMES.some((pattern) => pattern.test(text) || pattern.test(leet))
+    || COMPACT_THAI_NAMES.test(compact) || COMPACT_THAI_NAMES.test(compact.replace(/[็]/g, ''));
 }
 
-// Evidence that the money or decision belongs to the user's own business: a
-// possessive on the business, or a named business owner as the decider. A bare
-// "ทีมขาย" or "ในฐานะเจ้าของ" says nothing about whose budget it is.
+// Evidence that the decision belongs to the user's own business: a possessive
+// on the business, or a named business owner as the decider. A bare "ทีมขาย"
+// or "ในฐานะเจ้าของ" says nothing about whose budget it is.
 export function hasOwnBusinessProof(query = '') {
   const text = normalizeForScreening(query);
   return isPrivateBusinessContext(text)
     || /(?:ร้าน|แบรนด์|ฟาร์ม|โรงงาน)[^\s,;?!]{0,12}(?:ของ)?(?:ผม|ฉัน|เรา)/.test(text)
     || /เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)/.test(text)
-    // A draft handed to the owner to decide names who holds the money.
-    || /(?:ให้|เสนอ|ส่ง)\s*เจ้าของ\s*(?:พิจารณา|ตัดสิน|อนุมัติ|เลือก|ตรวจ)/.test(text);
+    || OWNER_DECIDES.test(text);
 }
 
-// Stricter proof for lifting a budget gate: the possessive must sit on the
-// money itself ("วงเงินโฆษณาของบริษัทผม", "งบลงทุนของร้านเรา"), or the
-// request must hand the decision to the owner. "วงเงิน ศูนย์ ให้เซลส์ของ
-// บริษัทผม" names the sales team as the business's, not the budget.
+// Stricter proof for lifting a budget gate. Either the money itself carries a
+// business possessive ("วงเงินโฆษณาของบริษัทผม", "งบลงทุนของร้านเรา") or the
+// decision is handed to the owner, or the request is a question about the
+// user's own business with no order in it. "ของเรา" alone is not proof: staff
+// say it about their unit's money too. Money that came from somewhere else
+// ("ที่ได้จาก…", "งบกลาง", "…ให้มา") is never the owner's to release.
 const MONEY = '(?:งบ(?!ริษัท)(?:ประมาณ)?|วงเงิน|เงินลงทุน|เงินทุน|ทุนหมุนเวียน|เงินสด|budget)';
+const BUSINESS_OWNER = '(?:บริษัท|ร้าน|กิจการ|ธุรกิจ|แบรนด์|ฟาร์ม)(?:ของ)?\\s?(?:ผม|ฉัน|เรา|หนู)';
 // The money word may carry a short qualifier ("วงเงินโฆษณา") but not a
-// recipient ("วงเงินศูนย์ให้เซลส์") or an agency phrase ("งบลงทุนในนามผม"
-// says who acts, not whose money it is).
-const OWN_MONEY = new RegExp(`${MONEY}(?:(?!ให้|แก่|สำหรับ|ในนาม|แทน)[ก-๙a-z]){0,10}\\s?(?:ของ\\s?)?(?:(?:บริษัท|ร้าน|กิจการ|ธุรกิจ|แบรนด์|ฟาร์ม)(?:ของ)?\\s?)?(?:ผม|ฉัน|เรา|หนู)`, 'i');
+// recipient ("วงเงินศูนย์ให้เซลส์") or an agency phrase ("ในนามผม").
+const OWN_MONEY = new RegExp(`${MONEY}(?:(?!ให้|แก่|สำหรับ|ในนาม|แทน)[ก-๙a-z]){0,10}\\s?(?:ของ\\s?)?${BUSINESS_OWNER}`, 'i');
 const OWNER_DECIDES = /(?:ให้|เสนอ|ส่ง)\s*เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)?\s*(?:พิจารณา|ตัดสิน|อนุมัติ|เลือก|ตรวจ)/;
+const OTHER_MONEY = /(?:เงิน|งบ(?!ริษัท)|budget)[^\n]{0,24}จาก|ที่ได้(?:รับ)?จาก|ได้รับจาก|ให้มา|งบกลาง|งบประมาณแผ่นดิน|กองทุน|ทุนสนับสนุน|คณะ|ศูนย์|สำนักงาน|ผู้บริหาร|โครงการ(?!ของ(?:บริษัท|ร้าน))/;
+const MONEY_QUESTION = /(?:ควร|เท่าไร|เท่าไหร่|ดีไหม|ไหม|มั้ย|หรือไม่|ดี|\?)\s*$/;
+const MONEY_ORDER = /(?:ให้เลย|ทันที|เลย(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้ะ|จ้า))*\s*$|\bnow\b|โอน|อนุมัติ)/i;
 
 export function hasOwnBudgetProof(query = '') {
-  const text = normalizeForScreening(query);
-  return OWN_MONEY.test(text) || OWNER_DECIDES.test(text);
+  const text = normalizeForScreening(query).trim();
+  if (OTHER_MONEY.test(text)) return false;
+  if (OWN_MONEY.test(text) || OWNER_DECIDES.test(text)) return true;
+  const ownerAsking = isPrivateBusinessContext(text) || /เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)/.test(text);
+  return ownerAsking && MONEY_QUESTION.test(text) && !MONEY_ORDER.test(text);
 }
 
-// A request that only asks a question or asks for analysis about an owner's
-// act, with no instruction to carry it out, does not need an intent verdict.
-// Every clause that names an act must itself be framed as a question,
-// hypothesis, negation or analysis; any command marker disqualifies it.
-const ACT_VERB = /(?:จ้าง|สั่ง|ซื้อ|อนุมัติ|โอน|กู้|ลงทุน|รับ[^\s]{0,8}เข้าทำงาน|เปิดสาขา|เลือกเป้า|ตัดสินเป้า|ฟันธง|hire|purchase|buy|order|invest|loan|approve)/i;
-const CLAUSE_FRAME = /(?:ไหม|มั้ย|หรือเปล่า|หรือไม่|เท่าไร|เท่าไหร่|กี่|แบบไหน|อย่างไร|ยังไง|คุ้ม|ถ้า|หาก|ควร|วิเคราะห์|คำนวณ|ประเมิน|ประมาณ|เปรียบเทียบ|ไม่ต้อง|ไม่ได้|\?|should|how many|how much|whether|\bif\b)/i;
-const COMMAND_MARKER = /(?:กรุณา|โปรด|ขอให้|ให้คุณ|จากนั้น|ในนาม|แทน(?:ผม|ฉัน|หนู|เรา)|on my behalf|\bfor me\b|\bnow\b|\bplease\b|(?:ให้เลย|ทันที|ให้หน่อย|ให้ด้วย)(?!\s*(?:ไหม|มั้ย|หรือ|จะ|ดี|คุ้ม))|(?:จ้าง|สั่ง|ซื้อ|อนุมัติ|โอน|กู้|ลงทุน)[^\s]{0,15}?เลย(?!\s*(?:ไหม|มั้ย|หรือ|ดี|คุ้ม|จะ))|ช่วย\s*(?:กด)?(?:จ้าง|สั่ง|ซื้อ|อนุมัติ|โอน|กู้|ลงทุน|รับ|เลือกเป้า|ฟันธง)|แล้ว\s*(?:ก็)?\s*(?:จ้าง|สั่ง|ซื้อ|อนุมัติ|โอน|กู้|ลงทุน|รับ))/i;
-
-export function isAnalysisOnly(query = '') {
-  const text = normalizeForScreening(query);
-  if (COMMAND_MARKER.test(text)) return false;
-  if (!ACT_VERB.test(text)) return true;
-  const clauses = text.split(/[\s,;.!?\n]+|และ|จากนั้น/).filter(Boolean);
-  return clauses.every((clause) => !ACT_VERB.test(clause) || CLAUSE_FRAME.test(clause));
-}
 const DECISIONS = new Set(['ADVISORY', 'COMMIT', 'UNCERTAIN']);
 const OWNERS = new Set(['business-owner', 'step', 'unknown']);
 const ACTS = new Set(['goal', 'hire', 'invest', 'purchase', 'loan', 'other']);

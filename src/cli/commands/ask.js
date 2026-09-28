@@ -31,7 +31,7 @@ import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules
 import {
   classifyEntrepreneurIntent, needsEntrepreneurIntentReview,
   isExplicitStepBudgetApproval, referencesOrganization,
-  hasOwnBudgetProof, isAnalysisOnly,
+  hasOwnBudgetProof,
 } from '../../modules/router/entrepreneur-intent.js';
 import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
 
@@ -157,11 +157,10 @@ export async function queryStepRouter(query, options = {}) {
     && hasOwnBudgetProof(query);
   const privacyRisk = privacy.action !== 'pass'
     && (ownerPhraseMatched || needsEntrepreneurIntentReview(unscannedQuery, selectedSkill?.name));
-  // A pure question or analysis about the owner's act ("ควรจ้างกี่คน") carries
-  // no instruction to act, so it needs no verdict; any order still does.
-  const analysisOnly = authorityPreflight.status === 'ALLOW' && !privacyRisk && isAnalysisOnly(query);
+  // No keyword shortcut decides that a request is "only analysis": without the
+  // host's verdict every owner's act waits for a human (review round 3).
   let intentReview = null;
-  if (!analysisOnly && (authorityPreflight.status === 'ALLOW' || budgetOverlap)) {
+  if (authorityPreflight.status === 'ALLOW' || budgetOverlap) {
     intentReview = await classifyEntrepreneurIntent(query, {
       selectedSkillName: selectedSkill?.name,
       privacyAction: privacy.action,

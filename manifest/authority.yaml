@@ -88,7 +88,7 @@ authorities:
 
   policy-waiver:
     name: "การอนุมัติผ่อนผันระเบียบหรืออนุมัติกรณีพิเศษ"
-    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ"]
+    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", "อนุมัติยกเว้น", "อนุมัติการยกเว้น"]
     authorizedRole: "executive-director"
     alternateRole: "director-signatory"
     humanInTheLoop: mandatory

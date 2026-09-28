@@ -72,10 +72,16 @@ export function checkScope(skill, requestText = '') {
       // it stops here rather than falling through to a clarifying question.
       // The approval verb must be the instruction itself, not a request to
       // prepare one ("ขออนุมัติ", "ร่างคำขออนุมัติ", "ขั้นตอนขออนุมัติ").
-      const approvalOrder = /(?:^|ช่วย\s*|กรุณา\s*|โปรด\s*|แล้ว\s*)(?:อนุมัติ|approve\b|เคาะ)/i.test(lower.trim())
-        && !/ขออนุมัติ|คำขออนุมัติ/.test(lower)
-        && /(?:ให้เลย|เลย$|ทันที|\bnow\b|ให้หน่อย|ให้ด้วย)/i.test(lower.trim())
-        && !hasOwnBusinessProof(lower);
+      // Polite endings and lead-ins ("ครับ", "นะคะ", "ok", "โอเค") are removed
+      // first so they cannot hide the order.
+      const order = lower.trim()
+        .replace(/(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้ะ|จ้า|จ้ะ|ด้วย|please))+[\s.!]*$/giu, '')
+        .replace(/^(?:ok(?:ay)?|โอเค|ครับ|ค่ะ|งั้น|ถ้างั้น)[\s,]*/iu, '')
+        .trim();
+      const approvalOrder = /(?:^|ช่วย\s*|กรุณา\s*|โปรด\s*|แล้ว\s*)(?:อนุมัติ|approve\b|เคาะ)/i.test(order)
+        && !/ขออนุมัติ|คำขออนุมัติ/.test(order)
+        && /(?:ให้เลย|เลย$|ทันที|\bnow\b|ให้หน่อย|ให้ด้วย)/i.test(order)
+        && !hasOwnBusinessProof(order);
       heuristic = !ownBusiness && ((applicant && approve && intake) || approvalOrder);
     }
     if (key.includes('ci_governance') && (

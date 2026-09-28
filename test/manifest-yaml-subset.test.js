@@ -236,8 +236,8 @@ test('an authority identifier unsupported by the JS loader cannot overwrite a pr
 
 test('doubled apostrophes in single-quoted authority triggers decode before matching', () => {
   const text = mutate('authority.yaml',
-    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ"]\n',
-    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", \'director\'\'s waiver\']\n');
+    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", "อนุมัติยกเว้น", "อนุมัติการยกเว้น"]\n',
+    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", "อนุมัติยกเว้น", "อนุมัติการยกเว้น", \'director\'\'s waiver\']\n');
   assert.deepEqual(lint('authority.yaml', text), []);
   const authority = parseAuthorityRegistry(text).find((item) => item.id === 'policy-waiver');
   assert.ok(authority.triggers.includes("director's waiver"));
