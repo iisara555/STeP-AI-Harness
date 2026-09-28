@@ -69,31 +69,31 @@ export async function loadRouterIndex() {
 
     const intentMatch = line.match(/^ {4}intent:\s*\[(.*?)\]/);
     if (intentMatch) {
-      current.intent = intentMatch[1].split(',').map((i) => i.trim()).filter(Boolean);
+      current.intent = parseYamlInlineList(intentMatch[1]);
       continue;
     }
 
     const triggersMatch = line.match(/^ {4}triggers:\s*\[(.*?)\]/);
     if (triggersMatch) {
-      current.triggers = triggersMatch[1].split(',').map((t) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      current.triggers = parseYamlInlineList(triggersMatch[1]);
       continue;
     }
 
     const pathsMatch = line.match(/^ {4}paths:\s*\[(.*?)\]/);
     if (pathsMatch) {
-      current.paths = pathsMatch[1].split(',').map((p) => p.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      current.paths = parseYamlInlineList(pathsMatch[1]);
       continue;
     }
 
     const fileTypesMatch = line.match(/^ {4}fileTypes:\s*\[(.*?)\]/);
     if (fileTypesMatch) {
-      current.fileTypes = fileTypesMatch[1].split(',').map((f) => f.trim()).filter(Boolean);
+      current.fileTypes = parseYamlInlineList(fileTypesMatch[1]);
       continue;
     }
 
     const primaryMatch = line.match(/^ {6}primary:\s*\[(.*?)\]/);
     if (primaryMatch) {
-      current.teams.primary = primaryMatch[1].split(',').map((t) => t.trim()).filter(Boolean);
+      current.teams.primary = parseYamlInlineList(primaryMatch[1]);
       continue;
     }
 
