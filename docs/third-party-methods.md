@@ -4,7 +4,7 @@
 
 หลักที่ใช้ตาม `step-skill-authoring`: **ดัดแปลงวิธีการแล้วเขียนใหม่ให้เข้ากับ STeP ไม่คัดลอกทั้งไฟล์** เพราะ Skill ของเราต้องมีโครง Standard v2 มี Source, Authority และ Handoff ซึ่ง Skill ภายนอกไม่มี และ repository นี้เป็น Public
 
-ตรวจ license ณ วันที่ 25 กันยายน 2569 จาก commit ล่าสุดของแต่ละ repository
+ตรวจ license ของรายการเดิม ณ วันที่ 25 กันยายน 2569; รายการ `knowledge-work-plugins` ที่เพิ่มตรวจจาก commit `da38ec1` วันที่ 27 กันยายน 2569
 
 | ต้นทาง | License | สิ่งที่นำมาใช้ | อยู่ที่ |
 | --- | --- | --- | --- |
@@ -18,6 +18,9 @@
 | claude-code-templates รวบรวม `root-cause-pareto` จาก [gulmezeren2-byte/industrial-engineering-ai-skills](https://github.com/gulmezeren2-byte/industrial-engineering-ai-skills) | MIT © Eren Gulmez | เลือกหน่วยนับตามผลกระทบ · จัดหมวดก่อนนับ ("อื่น ๆ" ไม่เกินราว 15%) · เทียบกับปริมาณงาน · ตรวจอันดับข้ามสองช่วง · เจาะหมวดอันดับ 1 · ตัวเลขที่ต้องขยับ | `ncr-capa` ส่วน Pareto |
 | claude-code-templates รวบรวม `weekly-ops-report` จากแหล่งเดียวกัน | MIT © Eren Gulmez | ตอบ 3 คำถาม · เทียบค่าเฉลี่ยหลายรอบ · รายงานเฉพาะที่เกินเกณฑ์ ไม่เกิน 5 ข้อ · ทุกข้อค้นพบมีตัวขับ · แยกตัวเลขจากความเห็น · คำนวณทวน · หมายเหตุคุณภาพข้อมูล | `quality-objective-kpi-review` ส่วนรายงานประจำรอบ |
 | claude-code-templates รวบรวม `avoid-ai-writing` จาก [conorbronsdon/avoid-ai-writing](https://github.com/conorbronsdon/avoid-ai-writing) | MIT © 2026 Conor Bronsdon | หมวดของสำนวน AI (บริบทกว้างเกินเรื่อง ขยายความสำคัญ ปิดท้ายแบบแชตบอต คำฮิตที่มาเป็นกลุ่ม โครงสร้างซ้ำ) เขียนตัวอย่างภาษาไทยใหม่ทั้งหมด | `step-writing/references/thai-ai-writing-patterns.md` |
+| [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) `customer-support/skills/customer-escalation/SKILL.md` @ `da38ec1` | Apache-2.0 (plugin LICENSE) | เพิ่มร่าง Escalation Brief ที่แยกผลกระทบที่ยืนยัน สิ่งที่ลองแล้ว และคำขอให้ทีมปลายทางตรวจ โดยไม่แต่ง SLA หรืออ้างว่าส่งต่อแล้ว | `customer-support-faq-triage` |
+| [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) `product-management/skills/synthesize-research/SKILL.md` @ `da38ec1` | Apache-2.0 (plugin LICENSE) | ทำ Interview Evidence Grid ผูก finding กับจำนวนผู้ให้ข้อมูล บันทึกต้นทาง ข้อขัดกัน และข้อจำกัดของ sample โดยไม่ถือจำนวนสัมภาษณ์เป็นเกณฑ์อนุมัติ | `startup-discovery` |
+| [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) `product-management/skills/competitive-brief/SKILL.md` @ `da38ec1` | Apache-2.0 (plugin LICENSE) | เทียบข้ออ้าง/positioning คู่แข่งพร้อมแหล่งลงวันที่ แยกคำโฆษณาจากพฤติกรรมซื้อและระบุสิ่งที่ยังต้องตรวจ | `market-signal-radar` |
 
 ## ที่ตัดสินใจไม่นำมาใช้
 

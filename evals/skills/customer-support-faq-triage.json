@@ -1,0 +1,50 @@
+{
+  "skill": "customer-support-faq-triage",
+  "version": 1,
+  "source": "synthetic-2026-09-27",
+  "note": "Routing runs in CI; outputAssertions are author-reviewed model-side, not CI-graded. Standalone escalation-only phrasing currently routes GENERAL; qualified FAQ + triage wording routes here.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "Skill รุ่นก่อนให้บันทึกคัดแยกและช่องว่างข้อมูล แต่ไม่ได้จัด Escalation Brief แยกเพื่อให้ปลายทางตรวจปัญหา พร้อม expected/actual และคำขอที่ชัดเจน",
+    "modelSideRun": "2026-09-27: author self-check, hermes chat -Q --ignore-rules --max-turns 1 --run-budget 75 --source tool; same synthetic HTTP 500 form fixture; old git show HEAD vs new SKILL.md. Old session 20260927_165356_101f85: triage only, no dedicated brief. New session 20260927_165356_1ad951: separate draft Escalation Brief, reported vs verified impact, refresh attempt, expected/actual, unknown repro/owner, receiving-team investigation request. Both avoided invented SLA/sent claim. Raw results in local scratch adaptation_a_comparison; not independent grader."
+  },
+  "cases": [
+    {
+      "id": "positive-faq-escalation",
+      "dimension": "positive",
+      "team": "crm",
+      "prompt": "คัดแยกคำถาม FAQ บริการ STeP และข้อร้องเรียนลูกค้าเพื่อส่งต่อเจ้าของบริการ",
+      "expect": { "mode": "SKILL", "skill": "customer-support-faq-triage", "tier": "HIGH" },
+      "outputAssertions": [
+        "มี Escalation Brief แยกจากร่างคำตอบและบันทึกการคัดแยก",
+        "ระบุสิ่งที่ลองแล้ว ผลกระทบที่ยืนยัน/ที่ผู้แจ้งรายงาน และข้อมูลที่ยังไม่ทราบแยกกัน",
+        "ระบุคำขอให้ทีมปลายทางตรวจและวิธีทำซ้ำ/expected/actual เท่าที่มี ไม่อ้างว่าส่งแล้ว"
+      ]
+    },
+    {
+      "id": "anti-customer-themes",
+      "dimension": "antiTrigger",
+      "team": "crm",
+      "prompt": "ช่วยสรุป voice of customer จาก survey feedback และ complaint themes",
+      "expect": { "mode": "SKILL", "skill": "voice-of-customer", "notSkill": "customer-support-faq-triage" }
+    },
+    {
+      "id": "collision-privacy-delete",
+      "dimension": "collision",
+      "team": "crm",
+      "prompt": "ช่วยตรวจคำขอลบข้อมูลส่วนบุคคลของลูกค้า",
+      "expect": { "mode": "SKILL", "skill": "data-privacy-compliance", "notSkill": "customer-support-faq-triage" }
+    },
+    {
+      "id": "missing-service-owner",
+      "dimension": "missingSource",
+      "team": "crm",
+      "prompt": "ช่วยตอบ FAQ ผู้รับบริการและคัดแยกกรณีส่งต่อ แต่ยังไม่ได้ตรวจ Service Registry ว่าใครเป็นเจ้าของ",
+      "expect": { "mode": "SKILL", "skill": "customer-support-faq-triage", "tier": "HIGH" },
+      "outputAssertions": [
+        "ไม่แต่งชื่อทีม/บุคคลปลายทางหรือ ownershipStatus ก่อนเปิด manifest/services.yaml",
+        "แสดงปลายทางที่เสนอว่ารอยืนยันและขอเจ้าของบริการตรวจ ก่อนส่งจริง",
+        "ไม่รายงานว่าได้สร้าง Ticket หรือส่งต่อแล้ว"
+      ]
+    }
+  ]
+}
