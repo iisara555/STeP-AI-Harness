@@ -133,15 +133,22 @@ export async function queryStepRouter(query, options = {}) {
     ? playbookPlan.find((step) => step.type === 'skill' && step.skill)?.id || ''
     : '';
   const hasGlobalAuthorityBlock = authorityPreflight.status === 'BLOCK';
+  const localScope = hasGlobalAuthorityBlock || !selectedSkill
+    ? { status: 'ALLOW', inScope: true }
+    : checkScope(selectedSkill, query);
+  // A global confirmation gate (sending on the employee's behalf) applies even
+  // when no Skill matched. A Skill's own gate is more specific, so it wins.
+  const globalGate = hasGlobalAuthorityBlock
+    || (authorityPreflight.status === 'ESCALATE' && localScope.status === 'ALLOW');
 
-  let scopeResult = hasGlobalAuthorityBlock
+  let scopeResult = globalGate
     ? {
         ...authorityPreflight,
         ...(selectedPlaybook
           ? { playbookStep: preflightPlaybookStep, playbookId: selectedPlaybook.id }
           : {}),
       }
-    : (selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true });
+    : localScope;
 
   if ((selectedPlaybook || competingPlaybooks.length) && !hasGlobalAuthorityBlock) {
     // The initially selected Skill is normally the first Playbook Skill.

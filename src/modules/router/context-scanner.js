@@ -161,6 +161,18 @@ export function extractFileTypes(filenames = []) {
  * @param {object} params
  * @returns {object}
  */
+/**
+ * Remove a deliverable the employee explicitly declined ("ไม่ต้องทำ TOR นะ แค่
+ * ช่วยสรุปประชุม") so it cannot win routing. Only a negation followed by a
+ * deliverable is removed; descriptive negatives ("ไม่ตรงสเปก") stay, because
+ * they are the content of the request.
+ */
+const DECLINED_DELIVERABLE = /(?:ยังไม่ต้อง|ไม่ต้อง(?!รอ)|ไม่ได้ต้องการ|ไม่เอา|ไม่ใช่)\s*(?:ทำ|เขียน|ร่าง|สร้าง|ใช้|ขอ)?\s*[^\s,;]+(?:\s*(?:นะ|ครับ|ค่ะ|คะ))?/g;
+
+export function stripDeclinedDeliverables(promptText = '') {
+  return String(promptText).replace(DECLINED_DELIVERABLE, ' ');
+}
+
 export function buildContext({
   path = '',
   filenames = [],
@@ -168,14 +180,15 @@ export function buildContext({
   team = '',
   cluster = '',
 }) {
-  const intent = inferIntentFromText(promptText);
+  const routedText = stripDeclinedDeliverables(promptText);
+  const intent = inferIntentFromText(routedText);
   const fileTypes = extractFileTypes(filenames);
 
   return {
     path,
     filenames,
     fileTypes,
-    text: promptText,
+    text: routedText,
     intent,
     team,
     cluster,

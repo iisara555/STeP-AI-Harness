@@ -1,10 +1,21 @@
 version: 1
 description: Official STeP Authority & Decision Matrix — Human-in-the-loop Governance
 
+# How a request is matched (src/modules/router/authority-preflight.js):
+# - triggers: a phrase that alone names the act.
+# - actions + objects (+ qualifiers when present): the act said in other words.
+#   Every listed group must appear, close together, in the same request, so
+#   "เคาะงบ" and "Approve the extra budget" are caught while "สรุปงบ" is not.
+# Latin-script terms match whole words only ("sign" is not inside "design").
+# humanInTheLoop: mandatory blocks the act; confirmation asks the employee to
+# confirm before anything is sent on their behalf.
+
 authorities:
   procurement-approval:
     name: "การอนุมัติการจัดซื้อจัดจ้างและการตัดสินผลการยื่นข้อเสนอ"
     triggers: ["อนุมัติจัดซื้อ", "อนุมัติจัดจ้าง", "อนุมัติสั่งจ้าง", "ตัดสินผู้ชนะ", "เลือกผู้เสนอราคา", "เลือกผู้รับจ้าง", "ให้คะแนนซอง"]
+    actions: ["เลือก", "ตัดสิน", "ชี้ขาด", "เห็นชอบ", "ได้งาน", "pick", "choose", "select", "award", "decide"]
+    objects: ["ผู้ขาย", "ผู้เสนอราคา", "ผู้รับจ้าง", "บริษัทไหน", "เจ้าไหน", "ผู้ชนะ", "คำขอจัดซื้อ", "คำขอจัดจ้าง", "vendor", "supplier", "bidder", "winner"]
     authorizedRole: "procurement-committee"
     alternateRole: "afp-head"
     humanInTheLoop: mandatory
@@ -12,7 +23,9 @@ authorities:
 
   budget-allocation:
     name: "การอนุมัติวงเงินงบประมาณและการเปลี่ยนแปลงรายการงวดเงิน"
-    triggers: ["อนุมัติจ่าย", "อนุมัติการจ่าย", "อนุมัติเบิกจ่าย", "จ่ายเงินให้ผู้รับจ้าง", "อนุมัติวงเงิน", "เพิ่มวงเงิน", "เปลี่ยนวงเงิน", "โอนงบ"]
+    triggers: ["อนุมัติจ่าย", "อนุมัติการจ่าย", "อนุมัติเบิกจ่าย", "จ่ายเงินให้ผู้รับจ้าง", "อนุมัติวงเงิน", "เพิ่มวงเงิน", "เปลี่ยนวงเงิน", "ขยายวงเงิน", "โอนงบ"]
+    actions: ["อนุมัติ", "เคาะ", "ถือว่าผ่าน", "ตกลงตามนี้", "approve", "sign off"]
+    objects: ["งบ", "วงเงิน", "คำขอเบิก", "เบิกเงิน", "budget", "reimbursement"]
     authorizedRole: "afp-finance-head"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory
@@ -28,7 +41,7 @@ authorities:
 
   official-signing:
     name: "การลงนามในหนังสือราชการและเอกสารคำสั่งภายนอก"
-    triggers: ["ลงนามหนังสือ", "ลงนามสัญญา", "เซ็นหนังสือ", "เซ็นสัญญา", "ออกเลขสารบรรณ", "ออกเลขหนังสือ", "ออกเลขที่หนังสือ", "ลงนามแทน", "เซ็นแทน", "ลงนามในนาม", "เซ็นในนาม", "ลงชื่อแทน", "ช่วยลงนาม", "ลงนามให้", "ช่วยเซ็น", "เซ็นให้"]
+    triggers: ["ลงนามหนังสือ", "ลงนามสัญญา", "เซ็นหนังสือ", "เซ็นสัญญา", "ออกเลขสารบรรณ", "ออกเลขหนังสือ", "ออกเลขที่หนังสือ", "ใส่เลขหนังสือ", "ใส่เลขที่หนังสือ", "ลงนามแทน", "เซ็นแทน", "ลงนามในนาม", "เซ็นในนาม", "ลงชื่อแทน", "ช่วยลงนาม", "ลงนามให้", "ช่วยเซ็น", "เซ็นให้", "ใส่ลายเซ็น", "เซ็นชื่อ", "sign this", "sign the", "sign it", "sign on behalf", "on behalf of the director"]
     authorizedRole: "authorized-signatory"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory
@@ -37,6 +50,8 @@ authorities:
   iso-enactment:
     name: "การประกาศบังคับใช้ แก้ไข หรือยกเลิก SOP ในระบบบริหารคุณภาพ"
     triggers: ["ประกาศใช้ sop", "ประกาศใช้ wi", "ยกเลิก sop", "ยกเลิก wi", "อนุมัติแก้ sop", "อนุมัติแก้ wi"]
+    actions: ["ประกาศใช้", "ประกาศให้ใช้", "บังคับใช้", "ยกเลิก", "enact", "retire", "put into effect"]
+    objects: ["sop", "wi", "ขั้นตอนการปฏิบัติงาน", "เอกสารควบคุม", "controlled document"]
     authorizedRole: "qs-iso-manager"
     alternateRole: "quality-management-representative"
     humanInTheLoop: mandatory
@@ -53,6 +68,8 @@ authorities:
   hr-performance-evaluation:
     name: "การประเมินผลการปฏิบัติงาน การกำหนด KPI และการพิจารณาทางวินัย"
     triggers: ["ประเมินผลงานรายบุคคล", "ประเมินผลพนักงาน", "กำหนด kpi รายบุคคล", "พิจารณาทางวินัย"]
+    actions: ["ประเมิน", "ให้คะแนน", "ให้เกรด", "ตัดเกรด", "จัดอันดับ", "ใครควรได้", "rate", "grade", "rank"]
+    objects: ["น้องในทีม", "คนในทีม", "ลูกน้อง", "เพื่อนร่วมงาน", "รายบุคคล", "ขึ้นเงินเดือน", "team member", "colleague"]
     authorizedRole: "hd-hr-lead"
     alternateRole: "executive-director"
     humanInTheLoop: mandatory
@@ -70,7 +87,30 @@ authorities:
   qms-conformity-decision:
     name: "การรับรองสถานะความสอดคล้องของ QMS การตอบรับ finding และการปิด NC/CAPA อย่างเป็นทางการ"
     triggers: ["ปิด nc", "ปิด ncr", "ปิด capa", "รับรองว่า compliant", "รับรองว่าผ่าน iso", "ยืนยัน conformity"]
+    actions: ["ปิด", "close", "sign off"]
+    objects: ["nonconformity", "nc", "ncr", "capa", "corrective action"]
     authorizedRole: "qs-iso-manager"
     alternateRole: "quality-management-representative"
     humanInTheLoop: mandatory
     description: "การยืนยันว่าองค์กรหรือกระบวนการผ่านเกณฑ์ ISO การตอบรับต่อผู้ตรวจประเมิน หรือการปิด NC/CAPA อย่างเป็นทางการ ต้องเป็นการตัดสินใจของผู้มีอำนาจในระบบคุณภาพ"
+
+  lab-result-release:
+    name: "การออก รับรอง หรือส่งรายงานผลทดสอบ/ผลวิเคราะห์อย่างเป็นทางการ"
+    triggers: ["ออกผลรับรอง", "รับรองผลวิเคราะห์", "รับรองผลทดสอบ", "release result", "official result"]
+    actions: ["ออกผล", "ออกรายงาน", "ออกใบ", "ส่ง", "ปล่อย", "รับรอง", "release", "issue", "send"]
+    objects: ["ผลรับรอง", "ผลแล็บ", "ผลทดสอบ", "ผลวิเคราะห์", "รายงานผล", "lab report", "test report", "lab result", "certificate of analysis"]
+    qualifiers: ["ลูกค้า", "บริษัท", "ภายนอก", "ฉบับสมบูรณ์", "ทางการ", "customer", "client", "final", "official"]
+    authorizedRole: "authorized-lab-signatory"
+    alternateRole: "les-head"
+    humanInTheLoop: mandatory
+    description: "รายงานผลทดสอบที่ส่งถึงลูกค้าหรือใช้อ้างอิงทางการ ต้องผ่านการทบทวนและลงนามโดยผู้มีอำนาจลงนามของห้องปฏิบัติการ AI ตรวจความครบถ้วนได้ แต่ห้ามออกหรือส่งผลแทน"
+
+  external-submission:
+    name: "การกดส่งฟอร์ม ส่งอีเมล หรือส่งเอกสารออกไปในนามผู้ใช้"
+    triggers: ["ส่งเข้าระบบ", "กดส่ง", "กดยืนยันส่ง", "draft and send"]
+    actions: ["ส่งอีเมล", "ส่งไปที่", "ส่งไปยัง", "send it", "send them", "send the", "submit it", "submit the"]
+    qualifiers: ["เลย", "ให้หน่อย", "for me", "on my behalf", "now"]
+    authorizedRole: "requesting-employee"
+    alternateRole: ""
+    humanInTheLoop: confirmation
+    description: "AI เตรียมร่างและกรอกข้อมูลได้ แต่ผู้ใช้ต้องตรวจและกดส่งเอง หรือยืนยันชัดเจนก่อนส่งทุกครั้ง (Human Confirmation Gate)"
