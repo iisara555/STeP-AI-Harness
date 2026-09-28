@@ -239,6 +239,17 @@ AI ช่วยเตรียม ตรวจ เปรียบเทียบ
 - policy waiver
 - HR performance evaluation
 - brand alteration
+- entrepreneur commitment (การเลือกเป้า จ้าง ลงทุน สั่งซื้อ หรือกู้เงินในนามเจ้าของกิจการภายนอก)
+
+#### Entrepreneur intent review (opt-in)
+
+คำขอของกิจการภายนอกที่อาจเป็นทั้งงานวิเคราะห์และคำสั่งผูกมัด (เช่น "คำนวณว่าต้องจ้างเซลส์กี่คน" กับ "จ้างเซลส์ให้เลย") แยกด้วยคำอย่างเดียวไม่ปลอดภัย Router จึงทำดังนี้
+
+- ค่าเริ่มต้น: `ESCALATE` พร้อม `intentReview.status: NEEDS_HOST` ให้คนตรวจ ไม่โหลด Skill; CLI ไม่เรียกโมเดลหรือ API ใด
+- AI host ที่ผู้ดูแลเปิดใช้ (opt-in) จำแนก `intentReview.sanitizedQuery` ด้วยโมเดลที่ใช้อยู่แล้ว แล้วเรียกซ้ำด้วย `step-ai ask "<คำขอเดิม>" --json --intent-assessment '{"queryHash":"…","decision":"ADVISORY|COMMIT|UNCERTAIN","owner":"business-owner|step|unknown","act":"goal|hire|invest|purchase|loan|other"}'`
+- ต้องมี Privacy Gate เป็น `pass` และ `queryHash` ตรงกับผลรอบแรก; schema ผิด, UNCERTAIN, owner=unknown หรือ timeout → คนตรวจ
+- `ADVISORY` เปิดได้แค่การช่วยวิเคราะห์ ไม่ใช่อนุมัติ และปลดได้เฉพาะด่านงบที่ทับกับการตัดสินของเจ้าของกิจการ; authority อื่นในคำขอเดียวกันยังถูกประเมินและชนะ คำขอที่อ้าง STeP อุทยานฯ โครงการบ่มเพาะ หรือผู้มีอำนาจขององค์กรไม่ถูกปลดด้วยผลจำแนก
+- ข้อจำกัด: CLI บังคับการ opt-in ไม่ได้ ผู้ที่รัน CLI เองส่งผลจำแนกได้ `queryHash` ผูกผลกับข้อความเท่านั้น ไม่ได้ยืนยันตัวตนผู้จำแนก ด่านนี้ลดความผิดพลาดของ AI host ไม่ใช่กันผู้ใช้ที่ตั้งใจหลบ และการคัดกรองขั้นแรกยังเป็นคำ (lexical) ที่อาจพลาดสำนวนใหม่
 
 ## 6. Quality Layer v0.1
 
@@ -292,7 +303,7 @@ Master Document List        ← missing source
 ## 8. Skills, Playbooks และ Actions
 
 ณ snapshot ปัจจุบัน (ตัวเลขนับจาก manifest ไม่ใช่จากรูป):
-- 50 Skills ใน `manifest/skills.yaml` โดยเป็นปลายทางที่ Router เลือกได้ 49 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง
+- 51 Skills ใน `manifest/skills.yaml` โดยเป็นปลายทางที่ Router เลือกได้ 50 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง
 - 5 Playbooks
 - 4 executable Actions
 - 6 provenance types

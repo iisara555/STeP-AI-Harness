@@ -201,6 +201,25 @@ skills:
       mandatory: [step-writing-rule, human-approval-rule]
       optional: []
 
+  entrepreneur-annual-goal:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, business-planning]
+    process: [incubation.business-growth-planning]
+    service: [incubation-startup]
+    path: skills/pm/entrepreneur-annual-goal/SKILL.md
+    description: โค้ชผู้ประกอบการตั้งเป้ารายได้หนึ่งปีด้วยฐานจริง ย้อนเป็นยอดขาย ลูกค้า กำลังผลิต เงินทุนและงานรายเดือน
+    governance:
+      owner: piti
+      reviewer: [isi, eic, mi, qs]
+      approvedBy: [project-director]
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
   executive-status-update:
     owner: sit
     version: 1.0.0

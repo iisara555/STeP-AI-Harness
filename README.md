@@ -14,11 +14,11 @@ README ฉบับนี้อ้างอิง source ของรุ่น *
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **50 Skills** |
+| Skills | **51 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 49 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
+Router มีเส้นทางเลือก Skill 50 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
 
 เมื่อรุ่นใหม่ถูก merge เข้า `main` ระบบจะสร้าง GitHub Release ของเลขรุ่นใน `package.json` ให้อัตโนมัติ แต่**การมี GitHub Release ไม่ได้แปลว่าอนุมัติให้พนักงานอัปเดตแล้ว** ผู้ดูแลต้องผ่าน Release Gate ก่อน ดูว่ารุ่นไหนเผยแพร่แล้วได้ที่ GitHub Releases และดูรุ่นที่ผู้ทดสอบใช้อยู่ใน [Pilot Operations](docs/pilot-operations.md) ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ ต้องตรวจ checksum ของชุดที่นำไปใช้ด้วย สิ่งที่เปลี่ยนแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
@@ -145,7 +145,7 @@ v0.7.6 เสริมวิธีทำงานจากชุมชนให�
 
 v0.7.5 แก้เรื่องที่กระทบการใช้งานครั้งแรก: AI เรียกตัวเลือกวิธีทำงานในเครื่องได้แม้ไม่มี Node.js บน PATH (ผ่าน `sh ./step-ai` / `.\step-ai.cmd`), งานทั่วไปที่ไม่มีขั้นตอนเฉพาะของ STeP เช่น แปล เขียนอีเมล ทำ Excel ได้รับความช่วยเหลือทันทีแทนการถามกลับ (โหมด `GENERAL`) และคำพูดวันแรกอย่าง "ตรวจคำผิด", "ทำ timeline โครงการ", "ทำ brief ให้ดีไซเนอร์" ไปถึงงานที่ตรงได้เลย รายการทั้งหมดอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-Routing regression มี 95 เคส ได้แก่ 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 58 คำถามจำลอง (สองสำนวนต่อ 29 Skill), 5 เคสจำลองตรวจคำชนกัน และ 12 คำพูดวันแรกของพนักงานใหม่ (จำลอง) ครอบคลุมเส้นทาง Router ครบ 49 รายการ นอกจากนี้ Skill ที่มีไฟล์ eval ใน `evals/skills/` ถูกตรวจ routing ครบ 4 มิติ (positive, anti-trigger, collision, missing-source) ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
+Routing regression มี 97 เคส ได้แก่ 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 60 คำถามจำลอง (สองสำนวนต่อ 30 Skill), 5 เคสจำลองตรวจคำชนกัน และ 12 คำพูดวันแรกของพนักงานใหม่ (จำลอง) ครอบคลุมเส้นทาง Router ครบ 50 รายการ นอกจากนี้ Skill ที่มีไฟล์ eval ใน `evals/skills/` ถูกตรวจ routing ครบ 4 มิติ (positive, anti-trigger, collision, missing-source) ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
 
 ### ตรวจ source ในเครื่อง
 

@@ -56,6 +56,17 @@ export function checkScope(skill, requestText = '') {
     if (key.includes('acceptance') && (lower.includes('ยอมรับความเสี่ยง') || lower.includes('accept risk') || lower.includes('risk acceptance'))) heuristic = true;
     if (key.includes('evaluation') && (lower.includes('รายบุคคล') || lower.includes('ประเมินผลบุคคล') || lower.includes('kpi บุคคล') || lower.includes('individual performance'))) heuristic = true;
     if (key.includes('approval') && (lower.includes('อนุมัติ') || lower.includes('รับรองผล') || lower.includes('approve'))) heuristic = true;
+    // A generic approval word is not evidence of a startup intake decision,
+    // and an entrepreneur's own investment is not one either. Any approval of
+    // a startup, applicant or programme entry still belongs to the director.
+    if (key === 'grant_intake_approval') {
+      const applicant = /(?:สตาร์ทอัพ|startup|โครงการบ่มเพาะ|ผู้ประกอบการ|applicant|บริษัท\s*[a-z0-9ก-๙]|ทีม\s*[a-z0-9])/i.test(lower);
+      const approve = /(?:อนุมัติ|approve|ตัดสิน|ให้ผ่าน|เคาะ|รับรองผล)/i.test(lower);
+      const intake = /(?:คัดเลือก|รับทุน|ได้ทุน|ให้ทุน|เข้าโครงการ|บ่มเพาะ|grant|incubat|accelerator|ลงทุน)/i.test(lower);
+      const ownBusiness = /(?:บริษัท|กิจการ|ธุรกิจ)(?:ของ)?(?:ผม|ฉัน|เรา)|ในนาม(?:ผม|ฉัน)|แทน(?:ผม|ฉัน)/i.test(lower)
+        && !/(?:สตาร์ทอัพ|startup|ผู้ประกอบการ|applicant|บ่มเพาะ|grant|incubat|accelerator|step)/i.test(lower);
+      heuristic = applicant && approve && intake && !ownBusiness;
+    }
     if (key.includes('ci_governance') && (
       lower.includes('แก้ ci') ||
       lower.includes('เปลี่ยน ci') ||
