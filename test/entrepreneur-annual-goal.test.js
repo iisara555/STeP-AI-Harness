@@ -92,7 +92,6 @@ test('a business owner must decide or commit hiring, investment and purchasing; 
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยจ้างพนักงานทันที',
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วให้คุณจ้างทีมขาย',
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยสั่งซื้อวัตถุดิบ',
-    'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยอนุมัติเงินลงทุนของบริษัทผมทันที',
   ]) {
     const first = await route(query);
     // A lexical gate previously BLOCKed these even without a model, but it
@@ -109,6 +108,11 @@ test('a business owner must decide or commit hiring, investment and purchasing; 
     assert.equal(result.routingContract.authority.authority,
       namesStep ? 'ownership-review' : 'entrepreneur-commitment', query);
   }
+  // A budget approval stays with AFP finance whatever the owner says: a model
+  // verdict never lifts budget-allocation (review round 4).
+  const ownBudget = await route('ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยอนุมัติเงินลงทุนของบริษัทผมทันที');
+  assert.equal(ownBudget.routingMode, 'BLOCK');
+  assert.equal(ownBudget.routingContract.authority.authority, 'budget-allocation');
   // "ในนามผม" does not show whose budget it is, so the finance gate holds
   // before any host is asked; the request still stops, just for AFP.
   const unowned = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนในนามผม');
@@ -134,7 +138,6 @@ test('a business owner must decide or commit hiring, investment and purchasing; 
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า และขอแผนจ้างทีมขายให้หน่อย',
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยร่างประกาศรับพนักงานเข้าทำงานให้หน่อย',
     'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยเสนอทางเลือกว่าจะสั่งซื้อวัตถุดิบจากใครให้หน่อย',
-    'ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยร่างคำขออนุมัติงบลงทุนให้เจ้าของพิจารณา',
   ]) {
     const first = await route(query);
     const result = first.intentReview?.status === 'NEEDS_HOST'
@@ -142,6 +145,14 @@ test('a business owner must decide or commit hiring, investment and purchasing; 
     if (result !== first) assert.equal(first.routingMode, 'ESCALATE', query);
     assert.equal(result.routingContract.authority.status, 'ALLOW', query);
   }
+});
+
+test('a draft that names a budget approval still stops at AFP finance', async () => {
+  // Even a draft for the owner stays with AFP: a verdict never lifts
+  // budget-allocation (review round 4). Same result as before this feature.
+  const result = await route('ช่วยตั้งเป้ารายได้ธุรกิจปีหน้า แล้วช่วยร่างคำขออนุมัติงบลงทุนให้เจ้าของพิจารณา');
+  assert.equal(result.routingMode, 'BLOCK');
+  assert.equal(result.routingContract.authority.authority, 'budget-allocation');
 });
 
 test('formula guide never distributes a negative remaining target or material purchase', async () => {

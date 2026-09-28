@@ -30,8 +30,7 @@ import {
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
 import {
   classifyEntrepreneurIntent, needsEntrepreneurIntentReview,
-  isExplicitStepBudgetApproval, referencesOrganization,
-  hasOwnBudgetProof,
+  referencesOrganization,
 } from '../../modules/router/entrepreneur-intent.js';
 import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
 
@@ -146,25 +145,22 @@ export async function queryStepRouter(query, options = {}) {
   // accepts only its schema-bound verdict on the privacy-passed text. The CLI
   // never calls a provider. Without a verdict, risky business acts stop for a
   // human instead of being guessed from Thai keywords.
-  // A budget gate may be reconsidered only when the request shows the money
-  // belongs to the user's own business and names no organization: any
-  // mention of STeP, the university, its programmes or approvers - however
-  // spelled - or no owner at all keeps the finance gate whatever a model says.
+  // A model verdict never touches the organization's budget gate: ADVISORY is
+  // permission to analyse, not to spend, and four review rounds showed that
+  // no word list can tell the owner's money from STeP's or a funder's. Any
+  // request that reaches budget-allocation keeps the finance gate (review
+  // round 4). A verdict also cannot release a request naming an organization.
   const organizationNamed = referencesOrganization(query);
-  const budgetOverlap = authorityPreflight.authority === 'budget-allocation'
-    && !isExplicitStepBudgetApproval(query)
-    && !organizationNamed
-    && hasOwnBudgetProof(query);
   const privacyRisk = privacy.action !== 'pass'
     && (ownerPhraseMatched || needsEntrepreneurIntentReview(unscannedQuery, selectedSkill?.name));
   // No keyword shortcut decides that a request is "only analysis": without the
   // host's verdict every owner's act waits for a human (review round 3).
   let intentReview = null;
-  if (authorityPreflight.status === 'ALLOW' || budgetOverlap) {
+  if (authorityPreflight.status === 'ALLOW') {
     intentReview = await classifyEntrepreneurIntent(query, {
       selectedSkillName: selectedSkill?.name,
       privacyAction: privacy.action,
-      forceReview: privacyRisk || budgetOverlap || ownerPhraseMatched,
+      forceReview: privacyRisk || ownerPhraseMatched,
       intentAssessment: options.intentAssessment,
       intentClassifier: options.intentClassifier,
       intentTimeoutMs: options.intentTimeoutMs,
@@ -174,8 +170,8 @@ export async function queryStepRouter(query, options = {}) {
         authorityPreflight = {
           status: 'ESCALATE', inScope: false, source: 'host-intent-review',
           ruleKey: 'entrepreneur-intent-review',
-          authority: budgetOverlap ? 'ownership-review' : 'entrepreneur-commitment',
-          targetRole: budgetOverlap ? 'business-owner-or-afp-finance-head' : 'business-owner',
+          authority: 'entrepreneur-commitment',
+          targetRole: 'business-owner',
           reason: 'ยังไม่ชัดว่าเป็นการวิเคราะห์หรือคำสั่งผูกมัดกิจการ ต้องให้เจ้าของ/ผู้มีอำนาจตรวจ ไม่ให้ AI เดาหรือดำเนินการแทน',
         };
       } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'COMMIT') {
@@ -193,26 +189,13 @@ export async function queryStepRouter(query, options = {}) {
       } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'ADVISORY') {
         // This is permission to analyse, not permission to spend. A verdict
         // about the owner's business cannot release a request that names
-        // STeP, and it only lifts the budget clause: every other authority in
-        // the same request is evaluated again and still wins.
-        if (organizationNamed) {
-          authorityPreflight = {
-            status: 'ESCALATE', inScope: false, source: 'host-intent-review',
-            ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
-            targetRole: 'business-owner-or-afp-finance-head',
-            reason: 'คำขอนี้อ้างถึง STeP หรือโครงการขององค์กร ผลจำแนกของ AI ไม่อาจยืนยันว่าไม่ใช้อำนาจหรืองบขององค์กร ต้องให้คนตรวจ',
-          };
-        } else {
-          const remaining = budgetOverlap
-            ? evaluateAuthorityPreflight(query, organizationAuthorities
-              .filter((authority) => authority.id !== 'budget-allocation'))
-            : { status: 'ALLOW' };
-          authorityPreflight = remaining.status === 'ALLOW'
-            ? { status: 'ALLOW', inScope: true, source: 'host-intent-review' }
-            : remaining;
-        }
-      } else if (budgetOverlap && intentReview.owner === 'step') {
-        // Model classification cannot downgrade an organizational budget gate.
+        // STeP, a programme, an approver or outside funding.
+        authorityPreflight = organizationNamed ? {
+          status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+          targetRole: 'business-owner-or-afp-finance-head',
+          reason: 'คำขอนี้อ้างถึง STeP โครงการ ผู้มีอำนาจ หรือแหล่งทุนภายนอก ผลจำแนกของ AI ไม่อาจยืนยันว่าไม่ใช้อำนาจหรืองบขององค์กร ต้องให้คนตรวจ',
+        } : { status: 'ALLOW', inScope: true, source: 'host-intent-review' };
       } else {
         authorityPreflight = {
           status: 'ESCALATE', inScope: false, source: 'host-intent-review',

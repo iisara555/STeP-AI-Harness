@@ -117,12 +117,13 @@ test('host adapter instructions require explicit opt-in, privacy pass and a veri
 });
 
 test('annual revenue goal with ทำ and no space before แล้ว is not routed to startup intake', async () => {
+  // The annual-goal Skill is selected; the budget approval itself stays with
+  // AFP finance and is never sent to a host for a verdict.
   const first = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนของบริษัทผม');
   assert.equal(first.selectedSkill?.name, 'entrepreneur-annual-goal');
-  assert.equal(first.routingMode, 'ESCALATE');
-  assert.equal(first.intentReview?.status, 'NEEDS_HOST');
-  // Without "ของบริษัทผม" nothing shows whose budget it is: the finance gate
-  // holds instead of asking a host (see entrepreneur-intent-review tests).
+  assert.equal(first.routingMode, 'BLOCK');
+  assert.equal(first.routingContract.authority.authority, 'budget-allocation');
+  assert.equal(first.intentReview, null);
   const unowned = await route('ช่วยทำเป้ารายได้ธุรกิจปีหน้าแล้วอนุมัติงบลงทุนในนามผม');
   assert.equal(unowned.selectedSkill?.name, 'entrepreneur-annual-goal');
   assert.equal(unowned.routingMode, 'BLOCK');

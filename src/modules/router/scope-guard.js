@@ -67,21 +67,18 @@ export function checkScope(skill, requestText = '') {
       const intake = /(?:คัดเลือก|รับทุน|ได้ทุน|ให้ทุน|เข้าโครงการ|บ่มเพาะ|grant|incubat|accelerator|ลงทุน)/i.test(lower);
       const ownBusiness = /(?:บริษัท|กิจการ|ธุรกิจ)(?:ของ)?(?:ผม|ฉัน|เรา)|ในนาม(?:ผม|ฉัน)|แทน(?:ผม|ฉัน)/i.test(lower)
         && !/(?:สตาร์ทอัพ|startup|ผู้ประกอบการ|applicant|บ่มเพาะ|grant|incubat|accelerator|step)/i.test(lower);
-      // A bare order to approve something ("อนุมัติโบนัสให้เลย") is never the
-      // assistant's call either; without proof it is the user's own business,
-      // it stops here rather than falling through to a clarifying question.
-      // The approval verb must be the instruction itself, not a request to
-      // prepare one ("ขออนุมัติ", "ร่างคำขออนุมัติ", "ขั้นตอนขออนุมัติ").
-      // Polite endings and lead-ins ("ครับ", "นะคะ", "ok", "โอเค") are removed
-      // first so they cannot hide the order.
-      const order = lower.trim()
-        .replace(/(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้ะ|จ้า|จ้ะ|ด้วย|please))+[\s.!]*$/giu, '')
-        .replace(/^(?:ok(?:ay)?|โอเค|ครับ|ค่ะ|งั้น|ถ้างั้น)[\s,]*/iu, '')
-        .trim();
-      const approvalOrder = /(?:^|ช่วย\s*|กรุณา\s*|โปรด\s*|แล้ว\s*)(?:อนุมัติ|approve\b|เคาะ)/i.test(order)
-        && !/ขออนุมัติ|คำขออนุมัติ/.test(order)
-        && /(?:ให้เลย|เลย$|ทันที|\bnow\b|ให้หน่อย|ให้ด้วย)/i.test(order)
-        && !hasOwnBusinessProof(order);
+      // A bare order to approve something ("อนุมัติโบนัสให้เลย", "รบกวน
+      // อนุมัติทีม A ด่วน") is never the assistant's call either. Mentions that
+      // are not an order are removed first: asking for approval, approval that
+      // already happened, or a question about it. What remains is an order
+      // when it names an urgency or a candidate - endings and lead-ins such as
+      // "ครับ", "น้า", "รบกวน", "ok" no longer matter (review round 4).
+      const remaining = lower
+        .replace(/(?:ขอ|คำขอ|รอ|ได้รับ|ผ่านการ|หลัง(?:จาก)?|ถ้า|หาก|เพื่อ|ก่อน)\s*(?:การ)?อนุมัติ/g, ' ')
+        .replace(/อนุมัติ\s*(?:ไป)?\s*แล้ว|อนุมัติ(?:หรือ)?ยัง|อนุมัติ[^\n]{0,20}?(?:ไหม|มั้ย|ยังไง|อย่างไร|หรือเปล่า|หรือไม่|\?)|approved|approval process/g, ' ');
+      const approvalOrder = /(?:อนุมัติ|approve\b|เคาะ)/i.test(remaining)
+        && /(?:เลย|ทันที|\bnow\b|asap|ด่วน|ตอนนี้|ให้หน่อย|ให้ด้วย|เอาเลย|ทีม|สตาร์ทอัพ|startup|ผู้สมัคร|applicant|รายนี้|โบนัส|สัญญา|การลา)/i.test(remaining)
+        && !hasOwnBusinessProof(lower);
       heuristic = !ownBusiness && ((applicant && approve && intake) || approvalOrder);
     }
     if (key.includes('ci_governance') && (
