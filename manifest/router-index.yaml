@@ -1081,8 +1081,8 @@ skills:
       escalate: {}
       human_only:
         official_result_release:
-          role: authorized-signatory
-          authority: official-signing
+          role: authorized-lab-signatory
+          authority: lab-result-release
           description: การออกหรือรับรองรายงานผลทดสอบอย่างเป็นทางการต้องมีผู้มีอำนาจ/ผู้เชี่ยวชาญลงนาม
 
   # --- ISO 9001 / QMS Audit Readiness Pack ---

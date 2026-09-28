@@ -76,7 +76,7 @@ standardVersion: 2
 AI ช่วยได้: ตรวจสถานะ ชี้ความเสี่ยง และสรุป gap
 
 AI ห้าม:
-- ประกาศใช้ ยกเลิก หรือแก้ไข controlled document แทนผู้มีอำนาจ — `iso-qms-enactment`
+- ประกาศใช้ ยกเลิก หรือแก้ไข controlled document แทนผู้มีอำนาจ — `iso-enactment`
 - backdate approval หรือ effective date
 - สร้าง signature หรือ approval ที่ไม่มีจริง
 

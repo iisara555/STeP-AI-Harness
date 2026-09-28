@@ -84,7 +84,7 @@ AI ช่วยได้: เตรียม readiness brief ระบุ eviden
 
 AI ห้าม:
 - ประกาศว่าองค์กรหรือทีม `ISO PASSED`, `CERTIFIED` หรือ `COMPLIANT`
-- ตัดสิน conformity หรือ finding ซึ่งเป็นอำนาจของ Auditor, QS และ QMR — `iso-qms-enactment`
+- ตัดสิน conformity หรือ finding ซึ่งเป็นอำนาจของ Auditor, QS และ QMR — `iso-enactment`
 - รับรองหรือปิด audit finding และ CAPA
 
 **สถานะ `READY` หมายถึงพร้อมสำหรับการตรวจตาม evidence ที่มี ไม่ใช่ผลรับรอง ISO**

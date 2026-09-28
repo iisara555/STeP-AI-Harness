@@ -138,6 +138,7 @@ test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) =
     assert.equal(result.selectedSkill?.name, 'lab-result-review');
     assert.equal(result.scopeResult.inScope, false);
     assert.ok(result.scopeResult.status === 'BLOCK' || result.scopeResult.status === 'ESCALATE');
-    assert.equal(result.scopeResult.authority, 'official-signing');
+    // Releasing results belongs to the lab's signatory, not the letter signatory.
+    assert.equal(result.scopeResult.authority, 'lab-result-release');
   });
 });
