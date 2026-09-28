@@ -112,7 +112,7 @@ services:
       - business-model-development
       - prototype-and-market-readiness
       - funding-and-network-connection
-    processes: [incubation.startup-intake, project.planning]
+    processes: [incubation.startup-intake, incubation.business-growth-planning, project.planning]
     sourceRefs: [step-nsp-services]
     existenceStatus: public-verified
     ownershipStatus: organization-mapping

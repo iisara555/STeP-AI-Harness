@@ -28,6 +28,11 @@ import {
   loadDocumentContextMetadata,
 } from '../../modules/router/metadata.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
+import {
+  classifyEntrepreneurIntent, needsEntrepreneurIntentReview,
+  isExplicitStepBudgetApproval, referencesOrganization,
+  hasOwnBudgetProof,
+} from '../../modules/router/entrepreneur-intent.js';
 import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
 
 /**
@@ -52,6 +57,7 @@ export async function queryStepRouter(query, options = {}) {
   if (typeof options.clarificationAnswer === 'string' && options.clarificationAnswer.trim()) {
     query = `${query}\nข้อมูลเพิ่มเติม: ${options.clarificationAnswer.trim()}`;
   }
+  const unscannedQuery = query;
 
   // The request itself is the one piece of text this command always handles, and
   // employees paste identifiers straight into it. Scan before anything is routed,
@@ -64,7 +70,14 @@ export async function queryStepRouter(query, options = {}) {
   const teams = await loadTeamsDictionary();
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
   const authorities = await loadAuthorityRegistry(PACKAGE_ROOT);
-  const authorityPreflight = evaluateAuthorityPreflight(query, authorities);
+  // The outside-owner authority needs a host-assisted intent classification;
+  // its phrase list alone is not a safe global BLOCK rule for Thai advice, but
+  // a phrase it lists still forces a review instead of passing silently.
+  const organizationAuthorities = authorities.filter((authority) => authority.id !== 'entrepreneur-commitment');
+  const ownerPhraseMatched = evaluateAuthorityPreflight(
+    query, authorities.filter((authority) => authority.id === 'entrepreneur-commitment'),
+  ).status === 'BLOCK';
+  let authorityPreflight = evaluateAuthorityPreflight(query, organizationAuthorities);
 
   let resolvedTeam = options.team || '';
   let resolvedCluster = options.cluster || '';
@@ -92,7 +105,7 @@ export async function queryStepRouter(query, options = {}) {
   });
 
   const ranked = rankSkillCandidates(skills, context);
-  const playbookMatch = options.disablePlaybooks ? null : detectCompositePlaybook(playbooks, originalQuery, {
+  const playbookMatch = options.disablePlaybooks ? null : detectCompositePlaybook(playbooks, query, {
     clarificationAnswer: options.clarificationAnswer,
   });
   const competingPlaybooks = playbookMatch?.ambiguous ? playbookMatch.candidates : [];
@@ -126,6 +139,88 @@ export async function queryStepRouter(query, options = {}) {
     if (chosenSkill) {
       selectedSkill = chosenSkill;
       if (chosenRank) bestMatch = chosenRank;
+    }
+  }
+
+  // The AI host has already received the user's request; this opt-in path
+  // accepts only its schema-bound verdict on the privacy-passed text. The CLI
+  // never calls a provider. Without a verdict, risky business acts stop for a
+  // human instead of being guessed from Thai keywords.
+  // A budget gate may be reconsidered only when the request shows the money
+  // belongs to the user's own business and names no organization: any
+  // mention of STeP, the university, its programmes or approvers - however
+  // spelled - or no owner at all keeps the finance gate whatever a model says.
+  const organizationNamed = referencesOrganization(query);
+  const budgetOverlap = authorityPreflight.authority === 'budget-allocation'
+    && !isExplicitStepBudgetApproval(query)
+    && !organizationNamed
+    && hasOwnBudgetProof(query);
+  const privacyRisk = privacy.action !== 'pass'
+    && (ownerPhraseMatched || needsEntrepreneurIntentReview(unscannedQuery, selectedSkill?.name));
+  // No keyword shortcut decides that a request is "only analysis": without the
+  // host's verdict every owner's act waits for a human (review round 3).
+  let intentReview = null;
+  if (authorityPreflight.status === 'ALLOW' || budgetOverlap) {
+    intentReview = await classifyEntrepreneurIntent(query, {
+      selectedSkillName: selectedSkill?.name,
+      privacyAction: privacy.action,
+      forceReview: privacyRisk || budgetOverlap || ownerPhraseMatched,
+      intentAssessment: options.intentAssessment,
+      intentClassifier: options.intentClassifier,
+      intentTimeoutMs: options.intentTimeoutMs,
+    });
+    if (intentReview) {
+      if (intentReview.status === 'NEEDS_HOST') {
+        authorityPreflight = {
+          status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review',
+          authority: budgetOverlap ? 'ownership-review' : 'entrepreneur-commitment',
+          targetRole: budgetOverlap ? 'business-owner-or-afp-finance-head' : 'business-owner',
+          reason: 'ยังไม่ชัดว่าเป็นการวิเคราะห์หรือคำสั่งผูกมัดกิจการ ต้องให้เจ้าของ/ผู้มีอำนาจตรวจ ไม่ให้ AI เดาหรือดำเนินการแทน',
+        };
+      } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'COMMIT') {
+        authorityPreflight = organizationNamed ? {
+          status: 'BLOCK', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+          targetRole: 'business-owner-or-afp-finance-head',
+          reason: 'เป็นคำสั่งให้ดำเนินการจริงและอ้างถึง STeP หรือโครงการขององค์กร ต้องให้เจ้าของกิจการและผู้มีอำนาจขององค์กรตัดสินเอง',
+        } : {
+          status: 'BLOCK', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-commitment', authority: 'entrepreneur-commitment',
+          targetRole: 'business-owner',
+          reason: 'การเลือกเป้า อนุมัติเงิน จ้างคน หรือสั่งซื้อจริงเป็นอำนาจของเจ้าของกิจการ AI ช่วยร่างและวิเคราะห์ได้เท่านั้น',
+        };
+      } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'ADVISORY') {
+        // This is permission to analyse, not permission to spend. A verdict
+        // about the owner's business cannot release a request that names
+        // STeP, and it only lifts the budget clause: every other authority in
+        // the same request is evaluated again and still wins.
+        if (organizationNamed) {
+          authorityPreflight = {
+            status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+            ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+            targetRole: 'business-owner-or-afp-finance-head',
+            reason: 'คำขอนี้อ้างถึง STeP หรือโครงการขององค์กร ผลจำแนกของ AI ไม่อาจยืนยันว่าไม่ใช้อำนาจหรืองบขององค์กร ต้องให้คนตรวจ',
+          };
+        } else {
+          const remaining = budgetOverlap
+            ? evaluateAuthorityPreflight(query, organizationAuthorities
+              .filter((authority) => authority.id !== 'budget-allocation'))
+            : { status: 'ALLOW' };
+          authorityPreflight = remaining.status === 'ALLOW'
+            ? { status: 'ALLOW', inScope: true, source: 'host-intent-review' }
+            : remaining;
+        }
+      } else if (budgetOverlap && intentReview.owner === 'step') {
+        // Model classification cannot downgrade an organizational budget gate.
+      } else {
+        authorityPreflight = {
+          status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+          targetRole: 'business-owner-or-afp-finance-head',
+          reason: 'ยังไม่ยืนยันว่าเป็นการตัดสินใจของกิจการหรือใช้งบองค์กร ต้องให้คนตรวจเจ้าของอำนาจก่อน',
+        };
+      }
     }
   }
 
@@ -339,6 +434,7 @@ export async function queryStepRouter(query, options = {}) {
     contextPlan,
     routingConfidence,
     authorityPreflight,
+    intentReview,
     // Metadata only: class, action and hash. The raw request never leaves here.
     privacy: privacy.logSafeMetadata,
   };
@@ -517,14 +613,21 @@ export async function runAsk(args) {
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const userCluster = args.cluster || args.c || (await getUserCluster()) || '';
+  let intentAssessment;
+  if (args['intent-assessment'] !== undefined) {
+    try { intentAssessment = JSON.parse(String(args['intent-assessment'])); }
+    catch { intentAssessment = {}; } // Invalid host output must fail closed.
+  }
   const result = await queryStepRouter(query, {
     team: userTeam, cluster: userCluster, clarificationAnswer: args.answer,
+    intentAssessment,
   });
   if (machineMode) {
     console.log(JSON.stringify({
       routing: result.routingContract,
       contextPlan: result.contextPlan,
       privacy: result.privacy,
+      ...(result.intentReview ? { intentReview: result.intentReview } : {}),
     }, null, 2));
     return;
   }
@@ -573,7 +676,7 @@ export async function runAsk(args) {
 
   if (routingMode === 'ESCALATE' || routingMode === 'UNAVAILABLE') {
     console.log(routingMode === 'ESCALATE'
-      ? `ต้องส่งต่อ/ยืนยันก่อนดำเนินงาน: ${scopeResult.targetSkill || 'ผู้รับผิดชอบ'}`
+      ? `ต้องส่งต่อ/ยืนยันก่อนดำเนินงาน: ${scopeResult.targetRole || scopeResult.targetSkill || 'ผู้รับผิดชอบ'}`
       : 'ยังเปิดใช้งานไม่ได้: อ่าน Skill ไม่ได้หรือไม่มี path');
     if (scopeResult.reason) console.log(scopeResult.reason);
     return;

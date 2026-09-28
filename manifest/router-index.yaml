@@ -278,6 +278,38 @@ skills:
           authority: budget-allocation
           description: การอนุมัติคัดเลือกสตาร์ทอัพรับทุนหรือเข้าโครงการบ่มเพาะ
 
+  - name: entrepreneur-annual-goal
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.business-growth-planning
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, mi]
+    description: โค้ชเป้ารายได้ธุรกิจ 1 ปีโดยเริ่มจากฐานจริง ย้อนยอดขาย ลูกค้า funnel กำลังผลิต คนและเงินสด ก่อนลงแผนรายเดือน
+    intent: [plan, calculate, review]
+    triggers: [ตั้งเป้ารายได้ธุรกิจ 1 ปี, ตั้งเป้ารายได้ธุรกิจปีหน้า, ทำเป้ารายได้ธุรกิจปีหน้า, เป้ารายได้ธุรกิจ 1 ปี, เป้ารายได้ปีหน้า, ตั้งเป้าหมายธุรกิจ 1 ปี, เป้าหมายธุรกิจรายปี, แผนรายได้ธุรกิจ 12 เดือน, ต้องขายกี่ชิ้น, ลูกค้าใหม่กี่ราย, ลูกค้ากี่ราย, ต้องขายเพิ่มกี่ชุด, รายได้เพิ่มจาก subscription, แผนรายได้ปีหน้า, ยอดขายปีหน้า, แผนยอดขายทั้งปี, 1-year business goal, annual business revenue goal, re-forecast ยอดขายปี, re-forecast ที่เหลือทั้งปี, ยอดขายไม่ถึงเป้ารายเดือน, ยังไม่รู้เป้ารายได้, ทำแผน 12 เดือนพร้อมคนขาย]
+    paths: ["**/business-goal/**", "**/sales-forecast/**", "**/growth-plan/**"]
+    fileTypes: [md, xlsx, csv, txt]
+    requires: [target_or_baseline]
+    scope:
+      allow:
+        - ถามทีละข้อและยืนยันฐานรายได้ก่อนตั้งเป้าหมาย
+        - จำลอง Conservative Target Stretch โดยแยก Actual Benchmark Assumption
+        - ย้อนรายได้เป็นสินค้า ลูกค้า funnel กำลังผลิต วัตถุดิบ กำลังคน และเงินสด
+        - ลงแผนรายเดือนเฉพาะเมื่อยืนยันข้อมูลสำคัญและข้อจำกัดแล้ว
+      escalate:
+        market_only:
+          skill: market-signal-radar
+          description: ค้นหาตลาดและราคาคู่แข่งโดยยังไม่วางเป้าหมายกิจการ
+        discovery_only:
+          skill: startup-discovery
+          description: พิสูจน์โจทย์ลูกค้าและสมมติฐานตลาดก่อนวางยอดขาย
+      human_only:
+        entrepreneur_commitment:
+          role: business-owner
+          authority: entrepreneur-commitment
+          description: การเลือกเป้า อนุมัติลงทุน จ้างคน หรือสั่งซื้อจริงเป็นอำนาจเจ้าของกิจการ ไม่ใช่งบ STeP
+
   - name: executive-status-update
     cluster: incubation-strategy
     domain: strategy

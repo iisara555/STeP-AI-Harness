@@ -7,6 +7,8 @@
  * 3. BLOCK (HUMAN_ONLY): Task requires human approval/authority (e.g. procurement signing, budget changes).
  */
 
+import { hasOwnBusinessProof } from './entrepreneur-intent.js';
+
 /**
  * Check request text against skill scope guard
  * @param {object} skill Skill metadata
@@ -56,6 +58,32 @@ export function checkScope(skill, requestText = '') {
     if (key.includes('acceptance') && (lower.includes('ยอมรับความเสี่ยง') || lower.includes('accept risk') || lower.includes('risk acceptance'))) heuristic = true;
     if (key.includes('evaluation') && (lower.includes('รายบุคคล') || lower.includes('ประเมินผลบุคคล') || lower.includes('kpi บุคคล') || lower.includes('individual performance'))) heuristic = true;
     if (key.includes('approval') && (lower.includes('อนุมัติ') || lower.includes('รับรองผล') || lower.includes('approve'))) heuristic = true;
+    // A generic approval word is not evidence of a startup intake decision,
+    // and an entrepreneur's own investment is not one either. Any approval of
+    // a startup, applicant or programme entry still belongs to the director.
+    if (key === 'grant_intake_approval') {
+      const applicant = /(?:สตาร์ทอัพ|startup|โครงการบ่มเพาะ|ผู้ประกอบการ|applicant|บริษัท\s*[a-z0-9ก-๙]|ทีม\s*[a-z0-9])/i.test(lower);
+      const approve = /(?:อนุมัติ|approve|ตัดสิน|ให้ผ่าน|เคาะ|รับรองผล)/i.test(lower);
+      const intake = /(?:คัดเลือก|รับทุน|ได้ทุน|ให้ทุน|เข้าโครงการ|บ่มเพาะ|grant|incubat|accelerator|ลงทุน)/i.test(lower);
+      const ownBusiness = /(?:บริษัท|กิจการ|ธุรกิจ)(?:ของ)?(?:ผม|ฉัน|เรา)|ในนาม(?:ผม|ฉัน)|แทน(?:ผม|ฉัน)/i.test(lower)
+        && !/(?:สตาร์ทอัพ|startup|ผู้ประกอบการ|applicant|บ่มเพาะ|grant|incubat|accelerator|step)/i.test(lower);
+      // A bare order to approve something ("อนุมัติโบนัสให้เลย") is never the
+      // assistant's call either; without proof it is the user's own business,
+      // it stops here rather than falling through to a clarifying question.
+      // The approval verb must be the instruction itself, not a request to
+      // prepare one ("ขออนุมัติ", "ร่างคำขออนุมัติ", "ขั้นตอนขออนุมัติ").
+      // Polite endings and lead-ins ("ครับ", "นะคะ", "ok", "โอเค") are removed
+      // first so they cannot hide the order.
+      const order = lower.trim()
+        .replace(/(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้ะ|จ้า|จ้ะ|ด้วย|please))+[\s.!]*$/giu, '')
+        .replace(/^(?:ok(?:ay)?|โอเค|ครับ|ค่ะ|งั้น|ถ้างั้น)[\s,]*/iu, '')
+        .trim();
+      const approvalOrder = /(?:^|ช่วย\s*|กรุณา\s*|โปรด\s*|แล้ว\s*)(?:อนุมัติ|approve\b|เคาะ)/i.test(order)
+        && !/ขออนุมัติ|คำขออนุมัติ/.test(order)
+        && /(?:ให้เลย|เลย$|ทันที|\bnow\b|ให้หน่อย|ให้ด้วย)/i.test(order)
+        && !hasOwnBusinessProof(order);
+      heuristic = !ownBusiness && ((applicant && approve && intake) || approvalOrder);
+    }
     if (key.includes('ci_governance') && (
       lower.includes('แก้ ci') ||
       lower.includes('เปลี่ยน ci') ||

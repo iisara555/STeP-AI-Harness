@@ -1,0 +1,50 @@
+{
+  "skill": "entrepreneur-annual-goal",
+  "version": 1,
+  "source": "user-provided-entrepreneur-goal-brief-2026-09-28-and-synthetic-fixtures",
+  "note": "CI ตรวจ routing เท่านั้น; outputAssertions เป็นเกณฑ์ตรวจ model-side ด้วยข้อมูลสังเคราะห์ ไม่ใช่ตัวเลข benchmark ตลาด",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "บนคำขอสังเคราะห์ที่เป้าปีเท่ากับฐานและยังไม่รู้ฤดูกาล ลูกค้า/ฟันเนล/กำลังผลิต/เงินสด คำตอบแบบไม่มี Skill challenge ฐานได้แต่กลับออกตาราง 12 เดือนเท่า ๆ กัน (เดือนละ 200 ขวด) ทั้งที่ข้อมูล Seasonality ยังไม่ทราบ; Skill ต้องหยุดที่ baseline และถามยืนยันก่อนลงเดือน",
+    "modelSideRun": "2026-09-28 author self-check with the same synthetic 500-baht/200-unit fixture (hermes chat -Q --ignore-rules --max-turns 1 --run-budget 75 --source tool). Without Skill session 20260928_103354_6508a8: challenged target correctly but issued a 12-row equal monthly plan despite missing seasonality. With Skill+reference session 20260928_105000_d156ef: showed 500 × 200 = 100,000/month and derived 100,000 × 12 = 1,200,000/year; labelled seasonality unknown, declined the premature 12-month plan and asked one baseline-confirmation question. Author self-check only, not independent grading or CI model-output validation."
+  },
+  "cases": [
+    {
+      "id": "positive-annual-target-from-baseline",
+      "dimension": "positive",
+      "team": "piti",
+      "prompt": "ช่วยตั้งเป้ารายได้ธุรกิจ 1 ปีจากยอดขายปัจจุบัน",
+      "expect": { "mode": "SKILL", "skill": "entrepreneur-annual-goal", "tier": "HIGH" },
+      "outputAssertions": [
+        "เริ่มจากเป้ารายได้ปีหน้าหรือถามว่าตอบว่ายังไม่รู้ได้; ไม่ยื่นแบบสอบถามทุก Phase ในครั้งเดียว",
+        "คำนวณ baseline หลังได้ราคา/ยอดขาย แล้วถามผู้ประกอบการว่าฐานตรงกับความจริงหรือไม่",
+        "ไม่สร้างตาราง 12 เดือนก่อนตรวจการซื้อซ้ำ funnel กำลังผลิตและเงินสด"
+      ]
+    },
+    {
+      "id": "anti-project-plan",
+      "dimension": "antiTrigger",
+      "team": "piti",
+      "prompt": "ช่วยวางแผนโครงการสตาร์ทอัพและ timeline",
+      "expect": { "mode": "SKILL", "skill": "project-plan", "notSkill": "entrepreneur-annual-goal" }
+    },
+    {
+      "id": "collision-market-only",
+      "dimension": "collision",
+      "team": "mi",
+      "prompt": "ช่วยดู trend ล่าสุดและสัญญาณตลาดว่าคู่แข่งล่าสุดกำลังพูดเรื่องอะไร",
+      "expect": { "mode": "SKILL", "skill": "market-signal-radar", "notSkill": "entrepreneur-annual-goal" }
+    },
+    {
+      "id": "missing-conversion-and-capacity",
+      "dimension": "missingSource",
+      "team": "eic",
+      "prompt": "ยังไม่รู้เป้ารายได้ปีหน้า ช่วยตั้งเป้าหมายธุรกิจ 1 ปีแบบค่อยถาม แต่ไม่มีข้อมูลราคา อัตราซื้อซ้ำ conversion กำลังผลิต และเงินทุนหมุนเวียน",
+      "expect": { "mode": "SKILL", "skill": "entrepreneur-annual-goal", "tier": "HIGH" },
+      "outputAssertions": [
+        "แยก Actual / Benchmark / Assumption / รอยืนยัน และไม่แต่ง conversion หรือ repeat เป็นข้อมูลบริษัท",
+        "ยังไม่ฟันธงจำนวนลูกค้าใหม่ คนขาย หรือ Monthly Goal จากข้อมูลไม่ครบ",
+        "ถามข้อมูลขั้นต่ำเพียงหนึ่งข้อต่อรอบและบอกว่าตัวเลขตลาดหากใช้ต้องมีแหล่ง/วันที่/ธุรกิจที่เทียบเคียงได้"
+      ]
+    }
+  ]
+}

@@ -188,7 +188,10 @@ test('a lone CR inside a YAML comment cannot hide authority triggers from the JS
   const text = mutate('authority.yaml',
     '    name: "การอนุมัติผ่อนผันระเบียบหรืออนุมัติกรณีพิเศษ"\n',
     '    name: "การอนุมัติผ่อนผันระเบียบหรืออนุมัติกรณีพิเศษ"\n    # reviewed\r');
-  assertRejected('authority.yaml', text, /:80: .*carriage return/i);
+  // Derive the comment's line from the text so new authorities added above
+  // it do not break the assertion; the point is that the CR is reported.
+  const crLine = text.slice(0, text.indexOf('    # reviewed\r')).split('\n').length;
+  assertRejected('authority.yaml', text, new RegExp(`:${crLine}: .*carriage return`, 'i'));
 });
 
 test('a lone CR at EOF is not silently accepted as CRLF', () => {
@@ -233,8 +236,8 @@ test('an authority identifier unsupported by the JS loader cannot overwrite a pr
 
 test('doubled apostrophes in single-quoted authority triggers decode before matching', () => {
   const text = mutate('authority.yaml',
-    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ"]\n',
-    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", \'director\'\'s waiver\']\n');
+    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", "อนุมัติยกเว้น", "อนุมัติการยกเว้น"]\n',
+    '    triggers: ["อนุมัติผ่อนผัน", "ขอยกเว้นระเบียบ", "อนุมัติกรณีพิเศษ", "อนุมัติยกเว้น", "อนุมัติการยกเว้น", \'director\'\'s waiver\']\n');
   assert.deepEqual(lint('authority.yaml', text), []);
   const authority = parseAuthorityRegistry(text).find((item) => item.id === 'policy-waiver');
   assert.ok(authority.triggers.includes("director's waiver"));

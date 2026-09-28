@@ -53,6 +53,18 @@ export const QUALIFIED_INTENT_RULES = [
     ],
   },
   { intent: 'market-test', any: ['ขายได้ไหม', 'จะขายได้ไหม', 'ทดสอบตลาด', 'ทดลองตลาด', 'market test', 'test market'] },
+  // A one-year revenue target is a business-planning request even when the
+  // owner says "ตั้งเป้า" or "ต้องขายกี่ชิ้น" instead of "วางแผน". Require the
+  // financial subject, time horizon and business context together so salary
+  // forecasts or standalone market-price questions keep their own routing.
+  {
+    intent: 'plan',
+    allAny: [
+      ['รายได้', 'ยอดขาย', 'เป้าหมายธุรกิจ', 'ล้านบาท', 'business revenue', 'sales target'],
+      ['ปีหน้า', '1 ปี', 'หนึ่งปี', '12 เดือน', 'ทั้งปี', 'รายปี', 'annual', 'one year', '1-year'],
+      ['ธุรกิจ', 'ยอดขาย', 'ต้องขาย', 'ลูกค้า', 'สินค้า', 'สมาชิก', 'subscription', 'business', 'sales'],
+    ],
+  },
   {
     intent: 'onboarding-plan',
     allAny: [
