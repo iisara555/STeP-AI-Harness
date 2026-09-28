@@ -28,7 +28,7 @@ import {
   loadDocumentContextMetadata,
 } from '../../modules/router/metadata.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
-import { evaluatePrivacyGate } from '../../modules/privacy/index.js';
+import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
 
 /**
  * Router metadata loaders live in the router module. Keep CLI exports stable.
@@ -58,7 +58,7 @@ export async function queryStepRouter(query, options = {}) {
   // reported or persisted, and route on the redacted text so a pasted identifier
   // never reaches a Skill, a log line or a diagnostic.
   const privacy = evaluatePrivacyGate(query);
-  query = privacy.redactedText;
+  query = privacySafeText(privacy);
 
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
@@ -603,7 +603,7 @@ export async function runAsk(args) {
     }
 
     console.log();
-    console.log(colors.cyan(`   "${query}"`));
+    console.log(colors.cyan(`   "${result.query}"`));
     console.log(colors.dim('   CLI นี้แสดงแผนเท่านั้น ยังไม่ได้เรียก tool หรือสร้าง run state; host integration ต้องเรียก API และผ่าน action gate แยกต่างหาก\n'));
     return;
   }
@@ -677,6 +677,6 @@ export async function runAsk(args) {
 
   console.log();
   console.log(colors.bold('💡 ตัวอย่างคำสั่งที่คุณสั่ง AI ใน Claude / Cursor / Codex ได้ทันที:'));
-  console.log(colors.cyan(`   "${query}"`));
+  console.log(colors.cyan(`   "${result.query}"`));
   console.log(colors.dim('   (ใช้ทักษะ ') + colors.bold(selectedSkill.name) + colors.dim(' เพื่อช่วยเตรียมงานตามแหล่งอ้างอิงที่ตรวจได้ ให้ผู้รับผิดชอบตรวจผลก่อนใช้จริง)\n'));
 }

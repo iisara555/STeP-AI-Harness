@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { createProvenanceRecord } from '../provenance/index.js';
-import { sanitizeRunData, evaluatePrivacyGate } from '../privacy/index.js';
+import { sanitizeRunData, evaluatePrivacyGate, privacySafeText } from '../privacy/index.js';
 import { evaluateActionGate, loadActionRegistry, consumeActionApproval } from '../actions/index.js';
 import { verifyActionOutput, getOutputReference } from '../actions/output-verification.js';
 import { fileURLToPath } from 'node:url';
@@ -301,7 +301,7 @@ export function buildRunState({
   const plan = buildPlaybookPlan(playbook, matchedSignals);
   const privacy = evaluatePrivacyGate(query || '');
   const usage = createUsageTelemetry({
-    queryText: privacy.redactedText,
+    queryText: privacySafeText(privacy),
     routingContract,
     governanceText: JSON.stringify(routingContract?.authority || {}),
   });
@@ -310,7 +310,7 @@ export function buildRunState({
     runId: makeRunId(playbook.id, now),
     playbookId: playbook.id,
     playbookName: playbook.name,
-    query: privacy.redactedText,
+    query: privacySafeText(privacy),
     team,
     execution: {
       modelId: execution.modelId || null,
