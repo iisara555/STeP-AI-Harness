@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Download, FolderOpen, LoaderCircle, Plug, Sparkles } from 'lucide-react';
 import type { Connection, Settings, Snapshot } from './types';
-import { ClaudeCodeNote } from './ui';
+import { ProviderFields, initialChoice, type ProviderChoice } from './ui';
+import { providerLabel } from './messages';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import draftingArt from './assets/illustrations/drafting.png';
@@ -24,7 +25,7 @@ export function SetupWizard({ snapshot, call, refresh, onDone, onError }: { snap
   const [step, setStep] = useState(0), [busy, setBusy] = useState('');
   const [userName, setUserName] = useState(s.userName || ''), [team, setTeam] = useState(s.team || '');
   const [assistant, setAssistant] = useState(s.assistant || 'STeP Mate'), [personality, setPersonality] = useState<Personality>(s.personality || 'coworker'), [tone, setTone] = useState(s.assistantTone || '');
-  const [provider, setProvider] = useState('openai'), [mode, setMode] = useState('subscription'), [key, setKey] = useState(''), [tested, setTested] = useState<Connection | null>(null);
+  const [choice, setChoice] = useState<ProviderChoice>(initialChoice), [tested, setTested] = useState<Connection | null>(null);
   const [ocr, setOcr] = useState<any>(null), [log, setLog] = useState<string[]>([]), [connecting, setConnecting] = useState<{ id: string; text: string } | null>(null);
   const run = async (id: string, fn: () => Promise<unknown>) => { setBusy(id); try { await fn(); } catch (e) { onError(e); } finally { setBusy(''); } };
   useEffect(() => window.step?.onEvent(event => {
@@ -72,11 +73,10 @@ export function SetupWizard({ snapshot, call, refresh, onDone, onError }: { snap
       {step === 3 && <section className="wizard-body">
         <h1>เชื่อมต่อ AI</h1>
         <p className="muted">เลือกบริการที่คุณมีบัญชีอยู่แล้ว ระบบจะส่งคำขอสั้น ๆ หนึ่งครั้งเพื่อทดสอบ</p>
-        {snapshot.connections.map(c => <p key={c.id} className={c.ready ? 'connected small' : 'small muted'}><Plug size={13}/> {c.provider === 'openai' ? 'OpenAI' : c.provider === 'claude' ? 'Claude' : 'Gemini'} · {c.note}</p>)}
-        <div className="form-grid"><label>ผู้ให้บริการ<select value={provider} onChange={e => { setProvider(e.target.value); setMode(e.target.value === 'claude' ? 'claude-code' : 'subscription'); }}><option value="openai">OpenAI (ChatGPT)</option><option value="gemini">Gemini (Google)</option><option value="claude">Claude (Anthropic)</option></select></label>
-          <label>วิธีเชื่อมต่อ<select value={mode} onChange={e => setMode(e.target.value)}>{provider !== 'claude' ? <option value="subscription">บัญชีส่วนตัว (ลงชื่อเข้าใช้)</option> : <option value="claude-code">บัญชี Pro/Max (ผ่าน Claude Code)</option>}<option value="api">API key</option></select></label></div>
-        {mode === 'claude-code' ? <ClaudeCodeNote call={call}/> : <>{mode === 'api' && <label>API key<input type="password" autoComplete="off" value={key} onChange={e => setKey(e.target.value)} placeholder="เก็บเข้ารหัสในเครื่องนี้"/></label>}
-        <button disabled={Boolean(busy) || (mode === 'api' && !key.trim())} onClick={() => void run('connect', async () => { const c = await call('connection', { provider, mode, apiKey: key }); setKey(''); setConnecting({ id: c.id, text: 'กำลังเริ่มเชื่อมต่อ' }); try { setTested(await call('connect', { id: c.id })); } finally { setConnecting(null); } await refresh(); })}>{busy === 'connect' ? <LoaderCircle size={15} className="spin"/> : <Plug size={15}/>}{busy === 'connect' ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์' : 'เชื่อมต่อและทดสอบ'}</button>
+        {snapshot.connections.map(c => <p key={c.id} className={c.ready ? 'connected small' : 'small muted'}><Plug size={13}/> {providerLabel(c.provider)} · {c.note}</p>)}
+        <ProviderFields value={choice} onChange={setChoice} call={call}/>
+        {choice.mode !== 'claude-code' && <>
+        <button disabled={Boolean(busy) || (choice.mode === 'api' && !choice.key.trim())} onClick={() => void run('connect', async () => { const c = await call('connection', { provider: choice.provider, mode: choice.mode, apiKey: choice.key }); setChoice({ ...choice, key: '' }); setConnecting({ id: c.id, text: 'กำลังเริ่มเชื่อมต่อ' }); try { setTested(await call('connect', { id: c.id })); } finally { setConnecting(null); } await refresh(); })}>{busy === 'connect' ? <LoaderCircle size={15} className="spin"/> : <Plug size={15}/>}{busy === 'connect' ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์' : 'เชื่อมต่อและทดสอบ'}</button>
         {busy === 'connect' && connecting && <p className="connect-progress"><LoaderCircle size={13} className="spin"/>{connecting.text}<button className="text-link" onClick={() => void call('cancelConnect', { id: connecting.id })}>ยกเลิก</button></p>}
         {tested && <p className={tested.ready ? 'connected small' : 'small danger-text'}>{tested.note}</p>}</>}
       </section>}

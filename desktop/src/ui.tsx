@@ -126,3 +126,17 @@ export function ClaudeCodeNote({ call }: { call: (method: string, input?: any) =
     <p className="small muted">ถ้าต้องการให้คำตอบกลับมาในแอปนี้ ใช้ Claude API key จาก Claude Console (คิดค่าใช้จ่ายตามการใช้งาน)</p>
   </div>;
 }
+
+// Provider, sign-in method and API key: the same fields in the setup wizard and in Settings.
+export type ProviderChoice = { provider: string; mode: string; key: string };
+export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '' };
+export function ProviderFields({ value, onChange, call }: { value: ProviderChoice; onChange: (next: ProviderChoice) => void; call: (method: string, input?: any) => Promise<any> }) {
+  const { provider, mode, key } = value;
+  return <>
+    <div className="form-grid">
+      <label>ผู้ให้บริการ<select value={provider} onChange={e => onChange({ provider: e.target.value, mode: e.target.value === 'claude' ? 'claude-code' : 'subscription', key: '' })}><option value="openai">OpenAI (ChatGPT)</option><option value="gemini">Gemini (Google)</option><option value="claude">Claude (Anthropic)</option></select></label>
+      <label>วิธีเชื่อมต่อ<select value={mode} onChange={e => onChange({ ...value, mode: e.target.value })}>{provider !== 'claude' ? <option value="subscription">บัญชีส่วนตัว (ลงชื่อเข้าใช้)</option> : <option value="claude-code">บัญชี Pro/Max (ผ่าน Claude Code)</option>}<option value="api">API key</option></select></label>
+    </div>
+    {mode === 'claude-code' ? <ClaudeCodeNote call={call}/> : mode === 'api' && <label>API key<input type="password" autoComplete="off" value={key} onChange={e => onChange({ ...value, key: e.target.value })} placeholder="เก็บเข้ารหัสในเครื่องนี้"/></label>}
+  </>;
+}
