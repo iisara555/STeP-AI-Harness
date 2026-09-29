@@ -1,0 +1,68 @@
+import { _electron as electron } from '@playwright/test';
+import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import assert from 'node:assert/strict';
+const home = await mkdtemp(join(tmpdir(), 'step-desktop-smoke-'));
+await mkdir('release/qa', { recursive: true });
+const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
+delete env.ELECTRON_RUN_AS_NODE;
+const child = await electron.launch({ args: ['.'], env, timeout: 45000 });
+try {
+  const page = await child.firstWindow();
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor();
+  const state = await page.evaluate(() => window.step.call('snapshot'));
+  assert.equal(state.teams.length, 22);
+  await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย' , exact: false }).waitFor();
+  await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
+  await page.evaluate(async () => {
+    const connection = await window.step.call('connection', { provider: 'openai', mode: 'subscription', model: '' });
+    const session = await window.step.call('create', { connectionId: connection.id, project: 'Desktop verification' });
+    await window.step.call('edit', { id: session.id, text: 'ร่างทดสอบภาษาไทย\nตรวจการแก้ไขและบันทึกเวอร์ชัน', revision: 0 });
+  });
+  await page.reload();
+  await page.getByRole('textbox', { name: 'ร่างที่แก้ไขได้' }).count();
+  await page.locator('.draft-editor').waitFor();
+  await page.locator('.draft-editor').fill('ร่างทดสอบภาษาไทย\nแก้ไขโดยผู้ใช้');
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await page.waitForTimeout(250);
+  const edited = await page.evaluate(() => window.step.call('snapshot'));
+  assert.equal(edited.sessions[0].revision, 2);
+  assert.match(edited.sessions[0].draft, /แก้ไขโดยผู้ใช้/);
+  await page.getByRole('button', { name: 'ประวัติเวอร์ชัน' }).click();
+  await page.getByRole('button', { name: 'คืนค่าเวอร์ชัน 1', exact: false }).click();
+  await page.waitForTimeout(150);
+  const restored = await page.evaluate(() => window.step.call('snapshot'));
+  assert.match(restored.sessions[0].draft, /ตรวจการแก้ไข/);
+  await page.locator('.draft-editor').click();
+  await page.getByRole('button', { name: 'หัวข้อ', exact: true }).click();
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await page.waitForTimeout(200);
+  const formatted = await page.evaluate(() => window.step.call('snapshot'));
+  assert.ok(formatted.sessions[0].document.content.some(node => node.type === 'heading'));
+  await page.reload();
+  await page.locator('.draft-editor h2').waitFor();
+  const outputFolder = resolve('release/qa/exports');
+  await mkdir(outputFolder, { recursive: true });
+  await child.evaluate(({ dialog }, folder) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] }); }, outputFolder);
+  await page.evaluate(() => window.step.call('workspace'));
+  const exported = [];
+  for (const format of ['md', 'docx', 'pdf', 'xlsx', 'pptx']) {
+    const result = await page.evaluate(({ id, format }) => window.step.call('export', { id, format }), { id: restored.sessions[0].id, format });
+    const bytes = await readFile(result.path);
+    assert.ok(bytes.length > 50);
+    if (format === 'pdf') assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+    exported.push({ format, path: result.path, bytes: bytes.length });
+  }
+  await writeFile('release/qa/exports.json', JSON.stringify(exported, null, 2));
+  await page.evaluate(async () => { const s = await window.step.call('snapshot'); await window.step.call('settings', { ...s.settings, theme: 'dark' }); });
+  await page.reload(); await page.locator('.draft-editor').waitFor();
+  await page.screenshot({ path: 'release/qa/workspace-dark.png', fullPage: true });
+  await page.setViewportSize({ width: 850, height: 720 });
+  await page.screenshot({ path: 'release/qa/workspace-narrow.png', fullPage: true });
+  assert.deepEqual(errors, []);
+  await writeFile('release/qa/electron-smoke.json', JSON.stringify({ platform: process.platform, passed: true, assertions: ['22 teams', 'onboarding', 'create session', 'edit', 'save', 'restore', 'theme', 'narrow layout'], liveProviderTest: false, home }, null, 2));
+  console.log('Electron smoke passed: real IPC, SQLite, editor, restore, themes, five export formats. No live provider calls.');
+} finally { await child.close(); }

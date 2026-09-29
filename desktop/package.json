@@ -1,0 +1,158 @@
+{
+  "name": "@step-cmu/desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Local STeP employee workspace",
+  "author": "STeP AI Working Group",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "tsc --noEmit && node build.mjs",
+    "start": "electron .",
+    "test": "tsx --test test/*.test.ts",
+    "preview": "vite --host 127.0.0.1",
+    "package": "npm run build && electron-builder --dir",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:mac": "npm run build && electron-builder --mac dmg",
+    "icon": "electron scripts/make-icon.cjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.284",
+    "@fontsource/ibm-plex-sans-thai": "^5.3.0",
+    "@google/gemini-cli": "0.61.0",
+    "@openai/codex": "0.158.0",
+    "@tiptap/react": "^3.0.0",
+    "@tiptap/starter-kit": "^3.0.0",
+    "docx": "^9.0.0",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.468.0",
+    "pptxgenjs": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "electron": "44.4.5",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.0.0"
+  },
+  "build": {
+    "asar": false,
+    "appId": "th.ac.cmu.step.desktop",
+    "productName": "STeP Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "harness",
+        "filter": [
+          "package.json",
+          "src/**/*",
+          "skills/**/*",
+          "rules/**/*",
+          "manifest/**/*",
+          "docs/**/*",
+          "!docs/staff-abbreviations.md"
+        ]
+      },
+      {
+        "from": "licenses",
+        "to": "licenses"
+      },
+      {
+        "from": "../experiments/local-thai-ocr",
+        "to": "ocr",
+        "filter": [
+          "**/*",
+          "!.venv{,/**}",
+          "!tests{,/**}",
+          "!**/__pycache__{,/**}",
+          "!output{,/**}",
+          "!*.bat",
+          "!*.command",
+          "!.gitignore",
+          "!.DS_Store"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "STeP-Desktop-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "STeP Desktop",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "STeP-Desktop-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "STeP Desktop ${version}",
+      "contents": [
+        {
+          "x": 140,
+          "y": 190
+        },
+        {
+          "x": 400,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
+  "overrides": {
+    "pptxgenjs": {
+      "image-size": "2.0.4"
+    },
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
+  }
+}
