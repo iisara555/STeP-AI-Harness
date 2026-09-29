@@ -1,7 +1,8 @@
 name: Build STeP Desktop installers
 
-# Windows (NSIS .exe) and macOS (.dmg, Apple silicon and Intel) must each be built on their own OS.
-# Signing is used only when the organisation's certificates are configured as repository secrets.
+# Each installer is built on its own OS: Windows (NSIS .exe) and macOS (.dmg for Apple silicon and
+# for Intel). Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
+# run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
 on:
   workflow_dispatch:
   push:
@@ -16,15 +17,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
+          - name: windows-x64
+            os: windows-latest
             script: dist:win
             artifact: release/*.exe
-          - os: macos-latest
+          - name: macos-arm64
+            os: macos-latest
             script: dist:mac
+            artifact: release/*.dmg
+          - name: macos-x64
+            os: macos-latest
+            script: dist:mac:x64
             artifact: release/*.dmg
     runs-on: ${{ matrix.os }}
     defaults:
       run:
+        shell: bash
         working-directory: desktop
     steps:
       - uses: actions/checkout@v4
@@ -36,16 +44,21 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Build installer
-        run: npm run ${{ matrix.script }}
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          EXTRA=""
+          if [ -z "$CSC_LINK" ]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
+          fi
+          npm run ${{ matrix.script }} -- $EXTRA
       - uses: actions/upload-artifact@v4
         with:
-          name: step-desktop-${{ runner.os }}
+          name: step-desktop-${{ matrix.name }}
           path: desktop/${{ matrix.artifact }}
           if-no-files-found: error
