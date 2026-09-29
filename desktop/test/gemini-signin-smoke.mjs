@@ -7,8 +7,10 @@ import { join } from 'node:path';
 import assert from 'node:assert/strict';
 
 const home = await mkdtemp(join(tmpdir(), 'step-gemini-signin-'));
-const runtime = join(home, 'fake-gemini.cjs');
+// Named like the real CLI and answering --version, as the runtime picker requires.
+const runtime = join(home, 'gemini.js');
 await writeFile(runtime, `
+if (process.argv.includes('--version')) { console.log('0.61.0'); process.exit(0); }
 const send = m => process.stdout.write(JSON.stringify(m) + '\\n');
 // Like the real CLI, a successful sign-in is remembered in the runtime home, so later runs do not prompt.
 const fs = require('node:fs'), creds = require('node:path').join(process.env.GEMINI_CLI_HOME || '.', 'fake-oauth-creds');

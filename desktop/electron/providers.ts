@@ -71,8 +71,11 @@ export class CodexAdapter implements ProviderAdapter {
           if (method === 'item/reasoning/summaryTextDelta' && typeof params.delta === 'string') context.onReasoning?.(params.delta);
           // Each run uses an ephemeral thread, so the thread total is this run's usage.
           if (method === 'thread/tokenUsage/updated' && params.tokenUsage?.total) { const t = params.tokenUsage.total; context.onUsage?.({ input: t.inputTokens || 0, output: t.outputTokens || 0, total: t.totalTokens || 0 }); }
+          // Codex reports why a turn failed (usage limit, unsupported model, expired sign-in) here.
+          if (method === 'error' && params?.error?.message) rpc.note('error: ' + params.error.message + (params.error.codexErrorInfo ? ' ' + JSON.stringify(params.error.codexErrorInfo) : ''));
           if (method === 'turn/completed') {
             cleanup();
+            if (params.turn?.error?.message) rpc.note('turn failed: ' + params.turn.error.message + (params.turn.error.codexErrorInfo ? ' ' + JSON.stringify(params.turn.error.codexErrorInfo) : ''));
             if (params.turn?.status === 'completed') resolve(text); else reject(new Error('PROVIDER_REQUEST_FAILED'));
           }
         };

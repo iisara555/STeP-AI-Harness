@@ -29,13 +29,16 @@ export class Rpc {
       else {
         const entry = this.pending.get(message.id); if (!entry) return;
         clearTimeout(entry.timer); this.pending.delete(message.id);
-        if (message.error) entry.reject(new Error('PROVIDER_REQUEST_FAILED')); else entry.resolve(message.result);
+        // The provider's own reason is kept (scrubbed) so the failure can be explained.
+        if (message.error) { this.note(`error: ${message.error.message || ''} ${message.error.data ? JSON.stringify(message.error.data).slice(0, 400) : ''}`); entry.reject(new Error('PROVIDER_REQUEST_FAILED')); } else entry.resolve(message.result);
       }
     });
     this.child.on('error', () => this.stop('RUNTIME_UNAVAILABLE'));
     this.child.on('exit', () => this.stop('RUNTIME_EXITED'));
     this.child.stdin.on('error', () => this.stop('RUNTIME_EXITED'));
   }
+  /** Adds a provider-reported message (scrubbed) to the tail used to explain failures. */
+  note(line: string) { this.remember(line); }
   private remember(line: string) { const clean = scrub(line); if (!clean) return; this.tail.push(clean); if (this.tail.length > 30) this.tail.shift(); }
   /** Last scrubbed runtime messages, for explaining a failure. */
   stderrTail() { return this.tail.slice(); }

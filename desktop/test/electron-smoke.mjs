@@ -1,5 +1,6 @@
 import { _electron as electron } from '@playwright/test';
 import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -70,7 +71,26 @@ try {
   await page.screenshot({ path: 'release/qa/workspace-dark.png', fullPage: true });
   await page.setViewportSize({ width: 850, height: 720 });
   await page.screenshot({ path: 'release/qa/workspace-narrow.png', fullPage: true });
+  // Connections: an unrelated program is refused as a runtime; removing a connection deletes its
+  // sign-in folder and leaves its work ready to move to another AI.
+  const picked = await page.evaluate(async () => {
+    const a = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });
+    const b = await window.step.call('connection', { provider: 'gemini', mode: 'subscription' });
+    const task = await window.step.call('create', { connectionId: b.id });
+    return { a: a.id, b: b.id, task: task.id };
+  });
+  await child.evaluate(({ dialog }, exe) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [exe] }); }, process.execPath);
+  await assert.rejects(page.evaluate(id => window.step.call('runtime', { id }), picked.b), /RUNTIME_INVALID/);
+  const signInFolder = join(home, 'runtimes', picked.b);
+  await mkdir(join(signInFolder, '.gemini'), { recursive: true }); await writeFile(join(signInFolder, '.gemini', 'oauth_creds.json'), '{}');
+  await page.evaluate(id => window.step.call('removeConnection', { id }), picked.b);
+  const afterRemove = await page.evaluate(() => window.step.call('snapshot'));
+  assert.ok(!afterRemove.connections.some(c => c.id === picked.b), 'removed connection is gone');
+  assert.equal(afterRemove.sessions.find(x => x.id === picked.task).connectionId, '');
+  assert.equal(existsSync(signInFolder), false, 'sign-in folder is deleted');
+  const moved = await page.evaluate(p => window.step.call('sessionConnection', { id: p.task, connectionId: p.a }), picked);
+  assert.equal(moved.connectionId, picked.a);
   assert.deepEqual(errors, []);
-  await writeFile('release/qa/electron-smoke.json', JSON.stringify({ platform: process.platform, passed: true, assertions: ['22 teams', 'onboarding', 'create session', 'edit', 'save', 'restore', 'theme', 'narrow layout'], liveProviderTest: false, home }, null, 2));
+  await writeFile('release/qa/electron-smoke.json', JSON.stringify({ platform: process.platform, passed: true, assertions: ['22 teams', 'onboarding', 'create session', 'edit', 'save', 'restore', 'theme', 'narrow layout', 'runtime check', 'remove connection', 'switch task AI'], liveProviderTest: false, home }, null, 2));
   console.log('Electron smoke passed: real IPC, SQLite, editor, restore, themes, five export formats. No live provider calls.');
 } finally { await child.close(); }

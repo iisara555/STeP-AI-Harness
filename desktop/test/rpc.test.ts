@@ -148,3 +148,29 @@ test('a Gemini run that dies on quota reports PROVIDER_QUOTA with a scrubbed tai
   assert.equal(error.message, 'PROVIDER_QUOTA');
   assert.ok(error.detail.some((l: string) => l.includes('RESOURCE_EXHAUSTED')) && !error.detail.join(' ').includes('a@b.co'));
 });
+
+test('a provider error reply keeps its scrubbed reason and becomes PROVIDER_QUOTA', { timeout: 5000 }, async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-codex-quota-'));
+  const executable = join(home, 'runtime.cjs');
+  await writeFile(executable, `require('node:readline').createInterface({input:process.stdin}).on('line',l=>{
+    const m=JSON.parse(l); if(m.id===undefined)return;
+    if(m.method==='turn/start'){console.log(JSON.stringify({id:m.id,error:{code:-32000,message:'You have hit your usage limit (user a@b.co)'}}));return;}
+    console.log(JSON.stringify({id:m.id,result:m.method==='thread/start'?{thread:{id:'t'}}:{}}));
+  });`);
+  const connection: Connection = { id: 'test', provider: 'openai', mode: 'subscription', executable, model: '', ready: true, note: '' };
+  const error: any = await new CodexAdapter().run('Test', connection, { cwd: home, env: {}, signal: new AbortController().signal, emit: () => {} }).catch(e => e);
+  assert.equal(error.message, 'PROVIDER_QUOTA');
+  assert.ok(error.detail.join(' ').includes('usage limit') && !error.detail.join(' ').includes('a@b.co'));
+});
+
+test('a failed Codex turn reports the reason it gives', { timeout: 5000 }, async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-codex-turn-'));
+  const executable = join(home, 'runtime.cjs');
+  await writeFile(executable, `require('node:readline').createInterface({input:process.stdin}).on('line',l=>{
+    const m=JSON.parse(l); if(m.id===undefined)return;
+    console.log(JSON.stringify({id:m.id,result:m.method==='thread/start'?{thread:{id:'t'}}:{}}));
+    if(m.method==='turn/start'){console.log(JSON.stringify({method:'error',params:{error:{message:'The model gpt-x is not supported when using Codex with a ChatGPT account.'},willRetry:false}}));console.log(JSON.stringify({method:'turn/completed',params:{turn:{status:'failed',error:{message:'The model gpt-x is not supported when using Codex with a ChatGPT account.'}}}}));}
+  });`);
+  const connection: Connection = { id: 'test', provider: 'openai', mode: 'subscription', executable, model: 'gpt-x', ready: true, note: '' };
+  await assert.rejects(new CodexAdapter().run('Test', connection, { cwd: home, env: {}, signal: new AbortController().signal, emit: () => {} }), /MODEL_NOT_AVAILABLE/);
+});

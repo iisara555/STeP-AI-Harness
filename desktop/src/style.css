@@ -78,3 +78,8 @@ nav .count{margin-left:auto;font-size:10.5px;color:var(--muted)}
 /* Claude Pro/Max route: explanation and Claude Code status in connection forms. */
 .claude-code-note { display: grid; gap: 8px; }
 .claude-code-note button { justify-self: start; }
+
+/* Shown above the composer when the task's AI connection cannot answer. */
+.connection-warning { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 18%, transparent); font-size: 13px; }
+.connection-warning span { flex: 1; }
+.connection-warning button { padding: 3px 10px; }

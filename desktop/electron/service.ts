@@ -143,6 +143,8 @@ export class WorkService {
       session = this.store.session(id); session.status = controller.signal.aborted && !timedOut ? 'cancelled' : 'error';
       const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED';
       session.messages.push({ role: 'status', text: timedOut ? 'RUN_TIMEOUT' : controller.signal.aborted ? 'CANCELLED' : code, at: new Date().toISOString() }); this.store.save(session);
+      // The scrubbed runtime messages go to the host's diagnostics only, never into the conversation.
+      if (session.status === 'error') this.emit({ sessionId: id, type: 'failed', text: code, detail: ((error as any)?.detail || []).slice(-8) });
     } finally {
       clearTimeout(timeout); this.active.delete(id); this.emit({ sessionId: id, type: 'changed' });
     }

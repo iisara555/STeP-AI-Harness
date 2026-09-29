@@ -1,10 +1,11 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, clipboard, session as electronSession } from 'electron';
-import { mkdir, readFile, writeFile, stat, appendFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, stat, appendFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve, basename } from 'node:path';
+import { join, resolve, basename, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { execFile } from 'node:child_process';
 import { Store } from './store';
 import { WorkService, type Harness } from './service';
 import { adapter, createRpc, initialize, listModels, googleLoginUrl, runtimeError } from './providers';
@@ -15,7 +16,7 @@ import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { findPython, installOcr } from './components';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { existsSync } from 'node:fs';
-import type { Attachment, Connection, Provider, Settings } from '../src/types';
+import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
 let window: BrowserWindow, store: Store, service: WorkService;
 const attachments = new Map<string, { view: Attachment; text: string; sessionId: string }>();
@@ -31,13 +32,36 @@ const connectNotes: Record<string, string> = {
   PROVIDER_PERMISSION_DENIED: 'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี',
   PROVIDER_NETWORK: 'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall',
   CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
-  LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อในเบราว์เซอร์ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
+  LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อ (หรือวาง code ของ Google) ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
   LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
   CANCELLED: 'ยกเลิกการเชื่อมต่อแล้ว',
   API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
+  MODEL_NOT_AVAILABLE: 'บัญชีนี้ใช้โมเดลที่ตั้งไว้ไม่ได้ เลือกโมเดลอื่นหรือใช้ค่าเริ่มต้นของบริการ',
+  LOGIN_REQUIRED: 'การลงชื่อเข้าใช้หมดอายุหรือยังไม่สมบูรณ์ กดออกจากระบบแล้วเชื่อมต่อใหม่',
+  RUNTIME_EXITED: 'ตัวเชื่อม AI ปิดตัวกลางคัน กดเชื่อมต่อใหม่ ถ้ายังเกิดซ้ำให้ส่ง log วินิจฉัยให้ผู้ดูแล',
+  RUNTIME_UNAVAILABLE: 'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่',
 };
 let busy = false;
 const requireModule = createRequire(__filename);
+// The Codex or Gemini CLI that ships with the app, or the one the user picked while it still exists.
+function resolveRuntime(connection: Connection) {
+  if (connection.provider === 'claude') return '';
+  if (connection.customRuntime && connection.executable && existsSync(connection.executable)) return connection.executable;
+  try { return requireModule.resolve(connection.provider === 'openai' ? '@openai/codex/bin/codex.js' : '@google/gemini-cli/bundle/gemini.js'); }
+  catch { throw new Error('RUNTIME_UNAVAILABLE'); }
+}
+// A picked runtime must look like the provider's CLI by name and report a version, so an unrelated
+// program (for example an installer in Downloads) is never started as the AI runtime.
+async function checkRuntime(provider: string, file: string) {
+  const name = basename(file).toLowerCase();
+  const expected = provider === 'openai' ? /^codex(\.exe|\.js|\.mjs)?$/ : /^gemini(\.exe|\.js|\.mjs)?$/;
+  if (!expected.test(name) && !(provider === 'gemini' && /[\\/]@google[\\/]gemini-cli[\\/]/i.test(file))) throw new Error('RUNTIME_INVALID');
+  const script = /\.[cm]?js$/i.test(file);
+  const output = await new Promise<string>(resolveOutput => {
+    execFile(script ? process.execPath : file, script ? [file, '--version'] : ['--version'], { timeout: 10_000, windowsHide: true, env: { ...process.env, ...(script ? { ELECTRON_RUN_AS_NODE: '1' } : {}) } }, (error, stdout) => resolveOutput(error ? '' : String(stdout)));
+  });
+  if (!(provider === 'openai' ? /codex/i.test(output) : /^\s*\d+\.\d+\.\d+/.test(output))) throw new Error('RUNTIME_INVALID');
+}
 const validProviders = new Set(['openai', 'claude', 'gemini']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
 let logFile = '';
@@ -97,16 +121,26 @@ async function main() {
     if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
     return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
   }
+  // Each connection keeps its runtime's sign-in and state in its own folder under app data.
+  async function removeRuntimeHome(id: string) {
+    const base = join(data, 'runtimes'), home = resolve(base, id);
+    if (!/^[\w-]{1,60}$/.test(id) || dirname(home) !== resolve(base)) throw new Error('INVALID_INPUT');
+    await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
   async function runtime(connection: Connection) {
+    connection.executable = resolveRuntime(connection);
     const home = join(data, 'runtimes', connection.id), cwd = join(home, 'workspace');
     await mkdir(cwd, { recursive: true }); await mkdir(join(home, '.gemini'), { recursive: true });
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     await writeFile(join(home, '.gemini', 'settings.json'), JSON.stringify({ tools: { core: [] }, mcpServers: {}, telemetry: { enabled: false }, context: { fileName: '__STEP_NO_CONTEXT__' } }));
-    await writeFile(join(home, 'config.toml'), 'web_search = "disabled"\n[features]\nshell_tool = false\n');
+    await writeFile(join(home, 'config.toml'), 'web_search = "disabled"\n[features]\nshell_tool = false\nplugins = false\nremote_plugin = false\nplugin_sharing = false\napps = false\ngoals = false\n');
     const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, WINDIR: process.env.WINDIR, TEMP: process.env.TEMP, TMP: process.env.TMP, HOME: home, USERPROFILE: home, APPDATA: home, LOCALAPPDATA: home, CODEX_HOME: home, GEMINI_CLI_HOME: home, CLAUDE_CONFIG_DIR: join(home, '.claude') };
     return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) } };
   }
-  service = new WorkService(store, harness, runtime, event => { if (event.type === 'changed') { const s = store.get<any>('session', event.sessionId); if (s?.status === 'error') diagnose('run-failed', { code: String(s.messages.at(-1)?.text || '').slice(0, 40) }); } emit(event); });
+  service = new WorkService(store, harness, runtime, event => {
+    if (event.type === 'failed') { const s = store.get<Session>('session', event.sessionId), c = s && store.get<Connection>('connection', s.connectionId); diagnose('run-failed', { code: String(event.text || '').slice(0, 40), provider: c?.provider || '', mode: c?.mode || '', detail: (event.detail || []).join(' | ').slice(0, 1200) }); return; }
+    emit(event);
+  });
   // The OCR trial ships beside the harness in development; installed apps point at the folder the user chose.
   // OCR code ships with the app (resources/ocr); its Python packages live per user in app data.
   const ocrFolder = () => store.settings().ocrDir || (app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr'));
@@ -166,11 +200,9 @@ async function main() {
         if (!validProviders.has(input.provider) || !['api', 'subscription'].includes(input.mode) || (input.provider === 'claude' && input.mode !== 'api')) throw new Error('INVALID_CONNECTION');
         const id = input.id ? inputText(input.id, 60) : randomUUID();
         if (input.id && !store.get('connection', id)) throw new Error('CONNECTION_NOT_FOUND');
-        let executable = store.get<Connection>('connection', id)?.executable || '';
-        if (!executable && input.provider !== 'claude') {
-          try { executable = requireModule.resolve(input.provider === 'openai' ? '@openai/codex/bin/codex.js' : '@google/gemini-cli/bundle/gemini.js'); } catch { /* User can select a runtime in Settings. */ }
-        }
-        const connection: Connection = { id, provider: input.provider as Provider, mode: input.mode, model: inputText(input.model || '', 100), executable, ready: false, note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ' };
+        // Only a runtime the user picked is stored; the bundled one is resolved each time it is used.
+        const previous = store.get<Connection>('connection', id);
+        const connection: Connection = { id, provider: input.provider as Provider, mode: input.mode, model: inputText(input.model || '', 100), executable: previous?.customRuntime ? previous.executable : '', ...(previous?.customRuntime ? { customRuntime: true } : {}), ready: false, note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ' };
         if (input.apiKey) {
           if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
           store.put('secret', id, safeStorage.encryptString(inputText(input.apiKey, 1000)).toString('base64'));
@@ -180,8 +212,13 @@ async function main() {
       }
       case 'runtime': {
         const connection = store.get<Connection>('connection', input.id); if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        if (input.reset) { connection.executable = ''; delete connection.customRuntime; connection.ready = false; connection.note = 'ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ'; store.put('connection', connection.id, connection); return connection; }
         const result = await dialog.showOpenDialog(window, { properties: ['openFile'], filters: [{ name: 'Runtime', extensions: process.platform === 'win32' ? ['exe', 'js', 'mjs'] : ['*'] }] });
-        if (!result.canceled) { connection.executable = result.filePaths[0]; connection.ready = false; store.put('connection', connection.id, connection); } return connection;
+        if (!result.canceled) {
+          await checkRuntime(connection.provider, result.filePaths[0]);
+          connection.executable = result.filePaths[0]; connection.customRuntime = true; connection.ready = false; connection.note = 'ใช้ตัวเชื่อมที่เลือกเอง · ยังไม่ได้ทดสอบการเชื่อมต่อ'; store.put('connection', connection.id, connection);
+        }
+        return connection;
       }
       case 'connect': {
         const connection = store.get<Connection>('connection', input.id); if (!connection) throw new Error('CONNECTION_NOT_FOUND');
@@ -201,7 +238,10 @@ async function main() {
             rpc = createRpc(connection, current.context); await initialize(rpc, connection.provider);
             if (connection.provider === 'openai') {
               if (connection.mode === 'api') await rpc.request('account/login/start', { type: 'apiKey', apiKey: current.context.key });
-              else {
+              else if ((await rpc.request('account/read', { refreshToken: false }).catch(() => null))?.account?.type === 'chatgpt') {
+                // Already signed in on this connection: test it without asking for the browser again.
+                progress('ลงชื่อ ChatGPT ไว้แล้ว');
+              } else {
                 const login = await rpc.request('account/login/start', { type: 'chatgpt' });
                 const url = new URL(login.authUrl);
                 if (url.protocol !== 'https:' || !['auth.openai.com', 'chatgpt.com', 'auth0.openai.com'].includes(url.hostname)) throw new Error('INVALID_LOGIN_URL');
@@ -228,7 +268,7 @@ async function main() {
                 };
               }
               try { await rpc.request('authenticate', { methodId: connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal' }, 300_000); }
-              catch (error) { throw runtimeError(error, rpc); }
+              catch (error) { throw errorCode(error) === 'PROVIDER_TIMEOUT' && connection.mode === 'subscription' ? new Error('LOGIN_TIMEOUT') : runtimeError(error, rpc); }
               finally { authCodes.get(connection.id)?.(null); authCodes.delete(connection.id); }
             }
             rpc.close(); rpc = undefined;
@@ -319,7 +359,28 @@ async function main() {
         const c = store.get<Connection>('connection', input.id); if (!c) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(c.id)) throw new Error('RUN_ALREADY_ACTIVE');
         for (const session of store.list<any>('session')) if (session.connectionId === c.id) service.cancel(session.id);
-        c.ready = false; c.note = 'ยกเลิกการเชื่อมต่อในแอปแล้ว'; store.put('connection', c.id, c); store.put('secret', c.id, null); return c;
+        // Signing out removes this connection's sign-in data (Google or ChatGPT tokens in its runtime home).
+        await removeRuntimeHome(c.id);
+        c.ready = false; c.note = 'ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่'; delete c.models; delete c.modelsAt; store.put('connection', c.id, c); store.put('secret', c.id, null); return c;
+      }
+      case 'removeConnection': {
+        const c = store.get<Connection>('connection', inputText(input.id, 60)); if (!c) throw new Error('CONNECTION_NOT_FOUND');
+        if (connecting.has(c.id)) throw new Error('CONNECTION_BUSY');
+        const sessions = store.list<Session>('session').filter(session => session.connectionId === c.id);
+        if (sessions.some(session => service.isActive(session.id))) throw new Error('RUN_ALREADY_ACTIVE');
+        await removeRuntimeHome(c.id);
+        store.remove('connection', c.id); store.remove('secret', c.id);
+        // Work stays; it asks for another AI the next time it is used.
+        for (const session of sessions) { session.connectionId = ''; store.put('session', session.id, session); }
+        diagnose('connection-removed', { provider: c.provider, mode: c.mode });
+        return true;
+      }
+      case 'sessionConnection': {
+        const session = store.session(inputText(input.id, 60));
+        if (service.isActive(session.id)) throw new Error('RUN_ALREADY_ACTIVE');
+        const c = store.get<Connection>('connection', inputText(input.connectionId, 60)); if (!c) throw new Error('CONNECTION_NOT_FOUND');
+        if (session.connectionId !== c.id) { session.connectionId = c.id; delete session.model; delete session.effort; store.put('session', session.id, session); }
+        return session;
       }
       case 'create': {
         const connection = store.get<Connection>('connection', input.connectionId); if (!connection) throw new Error('CONNECTION_NOT_FOUND');
