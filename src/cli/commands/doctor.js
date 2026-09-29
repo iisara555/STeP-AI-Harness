@@ -45,7 +45,14 @@ export async function runDoctor(args) {
 
     console.log(`  ${colors.green('✓')} Installation:    ${colors.bold(`พร้อมใช้งาน (v${pkgJson.version})`)}`);
     console.log(`  ${colors.green('✓')} Platform:        ${colors.bold(getPlatformDisplay())}`);
-    console.log(`  ${colors.green('✓')} Router:          ${colors.bold('Ready (Layer 1 Dynamic Routing)')}`);
+    // AI apps call the Router through this launcher; without it every task
+    // silently runs outside the organization routing.
+    const launcher = process.platform === 'win32' ? 'step-ai.cmd' : 'step-ai';
+    if (await pathExists(join(PACKAGE_ROOT, launcher))) {
+      console.log(`  ${colors.green('✓')} Router:          ${colors.bold(`Ready (${launcher})`)}`);
+    } else {
+      console.log(`  ${colors.yellow('⚠️')} Router:          ${colors.yellow(`ไม่พบ ${launcher} ในโฟลเดอร์ ให้เปิด Update อีกครั้งหรือแจ้งตาม SUPPORT.md`)}`);
+    }
     console.log(`  ${colors.green('✓')} Team:            ${colors.bold(teamDisplay)}`);
     if (installedToolNames.length > 0) {
       console.log(`  ${colors.green('✓')} Detected AI:     ${colors.cyan(installedToolNames.join(', '))}`);
@@ -65,10 +72,13 @@ export async function runDoctor(args) {
 
     if (installedToolNames.length === 0) {
       console.log(colors.yellow(colors.bold('⚠️  ยังไม่พบโปรแกรม AI ที่พร้อมใช้ในเครื่องนี้')));
-      console.log(colors.dim('   STeP AI ติดตั้งเรียบร้อยแล้ว ถ้ายังไม่มีโปรแกรม AI ให้เลือกเริ่มด้วย Cursor หรือ OpenCode ได้'));
-      console.log(`   ${colors.cyan('Cursor:')}   https://cursor.com`);
-      console.log(`   ${colors.cyan('OpenCode:')} https://opencode.ai`);
+      console.log(colors.dim('   STeP AI ติดตั้งเรียบร้อยแล้ว เลือกโปรแกรม AI ตัวใดก็ได้ ใช้บัญชีฟรีได้ทุกตัว'));
+      console.log(`   ${colors.cyan('Cursor:')}                   https://cursor.com`);
+      console.log(`   ${colors.cyan('OpenCode:')}                 https://opencode.ai`);
+      console.log(`   ${colors.cyan('Gemini CLI / Antigravity:')} https://github.com/google-gemini/gemini-cli`);
+      console.log(`   ${colors.cyan('VS Code + Copilot:')}        https://code.visualstudio.com`);
       console.log(colors.dim('   ติดตั้งโปรแกรมใดโปรแกรมหนึ่ง แล้วเปิดโฟลเดอร์ STeP AI และพิมพ์ "เริ่มใช้งาน STeP AI"'));
+      console.log(colors.dim('   ขั้นตอนทีละขั้นอยู่ใน docs/ai-app-setup.md'));
       console.log(colors.dim('────────────────────────────────────────────────────────────'));
       console.log(`${colors.yellow(colors.bold('ติดตั้ง Harness สำเร็จ — เหลือเลือกโปรแกรม AI เพื่อเริ่มแชท'))}\n`);
     } else {
@@ -167,7 +177,7 @@ export async function runDoctor(args) {
   if (installedSystemTools.length > 0) {
     success(`Detected System AI Tools: ${colors.bold(installedSystemTools.join(', '))}`);
   } else {
-    info(`Detected System AI Tools: ยังตรวจไม่พบ (รองรับ Cursor, VS Code, Claude, Hermes Agent, Windsurf)`);
+    info(`Detected System AI Tools: ยังตรวจไม่พบ (รองรับ Cursor, OpenCode, Gemini CLI/Antigravity, VS Code + Copilot, Claude, Windsurf, Hermes Agent)`);
   }
 
   // 6. AI Agent Workspace Check
@@ -176,7 +186,9 @@ export async function runDoctor(args) {
     { file: '.cursorrules', tool: 'Cursor' },
     { file: '.windsurfrules', tool: 'Windsurf' },
     { file: 'HERMES.md', tool: 'Hermes Agent' },
-    { file: 'CODEX_INSTRUCTIONS.md', tool: 'Codex / VS Code' },
+    { file: 'CODEX_INSTRUCTIONS.md', tool: 'Codex' },
+    { file: '.github/copilot-instructions.md', tool: 'VS Code + Copilot' },
+    { file: 'GEMINI.md', tool: 'Gemini CLI / Antigravity' },
     { file: 'AGENTS.md', tool: 'Generic Agent' },
   ];
   const detectedAgents = [];

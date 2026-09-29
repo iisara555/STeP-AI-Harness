@@ -83,21 +83,25 @@ export function buildCompactRoutingContract({
   skillMetadata = null,
   referenceMetadata = [],
   clarification = null,
+  generalAssist = false,
   readiness = { status: 'ready', issues: [] },
 } = {}) {
   const halted = ['BLOCK', 'ESCALATE'].includes(scopeResult.status) || readiness.status === 'unavailable';
+  const general = generalAssist && !halted && !selectedPlaybook && !clarification;
   const contract = {
     version: 1,
     routingEngine: 'local-deterministic',
     routerRegistrySentToModel: false,
     mode: scopeResult.status === 'BLOCK' ? 'BLOCK' : scopeResult.status === 'ESCALATE' ? 'ESCALATE'
-      : readiness.status === 'unavailable' ? 'UNAVAILABLE' : selectedPlaybook ? 'PLAYBOOK' : clarification ? 'CLARIFY' : 'SKILL',
-    team: teamInfo?.id || '',
-    skill: halted ? '' : selectedSkill?.name || '',
+      : readiness.status === 'unavailable' ? 'UNAVAILABLE' : selectedPlaybook ? 'PLAYBOOK' : clarification ? 'CLARIFY'
+        : general ? 'GENERAL' : 'SKILL',
+    team: general ? '' : teamInfo?.id || '',
+    skill: halted || general ? '' : selectedSkill?.name || '',
     skillPath: halted ? '' : skillMetadata?.path || '',
     process: halted ? '' : selectedSkill?.processId || '',
     readiness: compactReadiness(readiness),
-    permittedUse: halted ? 'none' : readiness.status === 'partial' ? 'draft-with-source-gaps' : 'assist-with-human-authority',
+    permittedUse: halted ? 'none' : general ? 'general-assist-without-org-source'
+      : readiness.status === 'partial' ? 'draft-with-source-gaps' : 'assist-with-human-authority',
     // Backward compatibility: confidence remains the deterministic match score.
     confidence: bestMatch ? Number(bestMatch.score.toFixed(3)) : null,
     matchScore: bestMatch ? Number(bestMatch.score.toFixed(3)) : null,

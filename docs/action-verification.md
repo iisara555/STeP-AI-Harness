@@ -1,6 +1,6 @@
 # Action verification — development contract
 
-สถานะ: post-v0.7.2 / unreleased. ไม่เปลี่ยนแพ็กเกจ Pilot ที่แจกแล้ว
+สถานะ: รวมในแพ็กเกจตั้งแต่ v0.7.3 (GitHub Release 21 กันยายน 2569)
 
 ## ก่อนทำ
 

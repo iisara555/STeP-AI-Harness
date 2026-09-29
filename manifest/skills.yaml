@@ -1,6 +1,8 @@
 version: 1
 # Lifecycle evidence rule: approvedBy identifies the required approver role, not proof that approval occurred.
-# stage: pilot requires explicit owner-review evidence outside this manifest; until then use pilot/draft.
+# draft -> pilot needs registry/router integrity, source/authority mapping and routing evals (docs/skill-authoring-standard.md).
+# pilot -> approved needs explicit owner-review evidence recorded outside this manifest; until then stay at pilot.
+# Skills listed in manifest/skill-evals.json legacyWithoutEvals reached pilot before per-Skill evals existed.
 description: Official STeP AI Skill Registry — Governance, Ownership, Process Links & Lifecycle Status
 
 skills:
@@ -61,7 +63,7 @@ skills:
         stage: pilot
     references:
       mandatory: [procurement-policy, human-approval-rule, data-classification-rule]
-      optional: [tor-template]
+      optional: [tor-template, afp-regulation-hierarchy]
 
   tor-government-writing:
     owner: afp
@@ -81,7 +83,7 @@ skills:
         stage: pilot
     references:
       mandatory: [procurement-policy, human-approval-rule]
-      optional: [tor-template]
+      optional: [tor-template, afp-regulation-hierarchy]
 
   document-review:
     owner: ga
@@ -100,6 +102,25 @@ skills:
         stage: pilot
     references:
       mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  stakeholder-questionnaire:
+    owner: qs
+    version: 1.0.0
+    domain: [governance, source-control]
+    process: [quality.document-control]
+    path: skills/common/stakeholder-questionnaire/SKILL.md
+    description: ร่างชุดคำถามส่งให้คนหรือทีมที่มีคำตอบ เมื่องานติดที่ข้อมูลซึ่งผู้ใช้ตอบเองไม่ได้ เช่น เอกสารหรือระเบียบที่ยังรอยืนยัน
+    governance:
+      owner: qs
+      reviewer: [ga, ai-admin]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-25"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [data-classification-rule]
       optional: []
 
   meeting-summary:
@@ -178,6 +199,25 @@ skills:
         stage: pilot
     references:
       mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  entrepreneur-annual-goal:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, business-planning]
+    process: [incubation.business-growth-planning]
+    service: [incubation-startup]
+    path: skills/pm/entrepreneur-annual-goal/SKILL.md
+    description: โค้ชผู้ประกอบการตั้งเป้ารายได้หนึ่งปีด้วยฐานจริง ย้อนเป็นยอดขาย ลูกค้า กำลังผลิต เงินทุนและงานรายเดือน
+    governance:
+      owner: piti
+      reviewer: [isi, eic, mi, qs]
+      approvedBy: [project-director]
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
       optional: []
 
   executive-status-update:
@@ -531,7 +571,7 @@ skills:
         stage: pilot
     references:
       mandatory: [qs-doc-control-procedure, naming-convention-rule]
-      optional: [qms-master-document-list]
+      optional: [qms-working-master-list]
 
   team-weekly-review:
     owner: sit
@@ -570,7 +610,7 @@ skills:
         stage: pilot
     references:
       mandatory: [finance-disbursement-policy, human-approval-rule, data-classification-rule]
-      optional: []
+      optional: [afp-regulation-hierarchy]
 
   creative-art-director:
     owner: cc
@@ -610,6 +650,25 @@ skills:
     references:
       mandatory: [human-approval-rule]
       optional: []
+
+  afp-operations-lookup:
+    owner: afp
+    version: 1.0.0
+    domain: [finance, procurement]
+    process: [procurement.request]
+    path: skills/common/afp-operations-lookup/SKILL.md
+    description: ตอบ Lead Time งานการเงินและพัสดุ หมวดค่าใช้จ่าย และเงื่อนไขการเบิกจ่ายตามแนวปฏิบัติที่ AFP แจ้งเวียน โดยไม่สรุปว่าเบิกได้หรือไม่ได้
+    governance:
+      owner: afp
+      reviewer: [ga, qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-24"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: [afp-regulation-hierarchy]
 
   hr-policy-lookup:
     owner: hd
@@ -807,7 +866,7 @@ skills:
         stage: pilot
     references:
       mandatory: [iso-9001-2015, step-quality-policy-v2, human-approval-rule]
-      optional: [qms-quality-manual, qms-master-document-list, qms-internal-audit]
+      optional: [qms-working-reference, qms-working-master-list, qms-internal-audit]
 
   audit-evidence-matrix:
     owner: qs
@@ -826,7 +885,7 @@ skills:
         stage: pilot
     references:
       mandatory: [iso-9001-2015, human-approval-rule, data-classification-rule]
-      optional: [qms-quality-manual, qms-master-document-list, qms-internal-audit]
+      optional: [qms-working-reference, qms-working-master-list, qms-internal-audit]
 
   document-record-control:
     owner: qs
@@ -845,7 +904,7 @@ skills:
         stage: pilot
     references:
       mandatory: [qs-doc-control-procedure, qms-quality-record-control, human-approval-rule, data-classification-rule]
-      optional: [qms-master-document-list]
+      optional: [qms-working-master-list]
 
   audit-interview-coach:
     owner: qs
@@ -902,7 +961,7 @@ skills:
         stage: pilot
     references:
       mandatory: [qms-risk-management, human-approval-rule]
-      optional: [qms-quality-manual]
+      optional: [qms-working-reference]
 
   quality-objective-kpi-review:
     owner: qs
@@ -921,7 +980,7 @@ skills:
         stage: pilot
     references:
       mandatory: [step-quality-policy-v2, human-approval-rule]
-      optional: [qms-quality-manual, qms-management-review]
+      optional: [qms-working-reference, qms-management-review]
 
   management-review-prep:
     owner: qs
@@ -940,4 +999,4 @@ skills:
         stage: pilot
     references:
       mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
-      optional: [qms-quality-manual]
+      optional: [qms-working-reference]

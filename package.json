@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/ai-harness",
-  "version": "0.7.3",
+  "version": "0.7.6",
   "description": "STeP AI skills, rules, routing, governance, and employee workspace distribution",
   "main": "src/index.js",
   "type": "module",
@@ -8,7 +8,7 @@
     "step-ai": "./bin/step-ai.js"
   },
   "scripts": {
-    "test": "node --test test/cli.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js test/high-leverage-skills.test.js test/iso-audit-readiness.test.js test/pilot-readiness.test.js test/first-run-loading.test.js test/playbooks.test.js test/harness-foundation.test.js test/quality-layer.test.js test/afp-demo.test.js test/privacy-gate.test.js test/readme-architecture.test.js test/context-efficiency.test.js test/pilot-30-benchmark.test.js test/harness-hardening.test.js test/skill-authoring.test.js test/team-scope.test.js test/readme-routing.test.js test/pilot-20-routing-regression.test.js test/router-clarification.test.js test/validate-launcher.test.js test/updater-checksum.test.js test/privacy-documents.test.js test/governance-entrypoints.test.js test/validator-secret-scope.test.js test/skill-catalog.test.js test/user-personalization.test.js test/cc-staff-routing.test.js",
+    "test": "node --test test/cli.test.js test/tool-permissions.test.js test/router.test.js test/employee-queries.test.js test/installer.test.js test/user-memory.test.js test/output-manager.test.js test/version-upgrade.test.js test/high-leverage-skills.test.js test/iso-audit-readiness.test.js test/pilot-readiness.test.js test/first-run-loading.test.js test/playbooks.test.js test/harness-foundation.test.js test/quality-layer.test.js test/afp-demo.test.js test/privacy-gate.test.js test/readme-architecture.test.js test/context-efficiency.test.js test/pilot-30-benchmark.test.js test/harness-hardening.test.js test/skill-authoring.test.js test/team-scope.test.js test/readme-routing.test.js test/pilot-20-routing-regression.test.js test/router-clarification.test.js test/validate-launcher.test.js test/updater-checksum.test.js test/privacy-documents.test.js test/governance-entrypoints.test.js test/workspace-launcher.test.js test/skill-evals.test.js test/router-metadata.test.js test/authority-gate-hardening.test.js test/privacy-thai-forms.test.js test/knowledge-work-adaptations-a.test.js test/knowledge-work-routing.test.js test/entrepreneur-annual-goal.test.js test/entrepreneur-intent-optin.test.js test/entrepreneur-intent-review.test.js test/manifest-yaml-subset.test.js test/validator-secret-scope.test.js test/skill-catalog.test.js test/user-personalization.test.js test/cc-staff-routing.test.js",
     "validate": "node scripts/validate-repo.js",
     "graph:build": "node scripts/graphify-local.js build",
     "desktop:build": "npm --prefix desktop run build",
@@ -19,6 +19,8 @@
     "bin",
     "src",
     "install",
+    "step-ai",
+    "step-ai.cmd",
     "Install-STeP-AI.bat",
     "Update-STeP-AI.bat",
     "Install-STeP-AI.command",
@@ -39,6 +41,7 @@
     "manifest/organization.yaml",
     "manifest/router-index.yaml",
     "docs/afp-operational-circulars.md",
+    "skills/common/afp-operations-lookup/SKILL.md",
     "docs/cc-iso-document-register.md",
     "docs/step-context.md",
     "docs/roles-and-ownership.md",
@@ -46,7 +49,9 @@
     "docs/teams.md",
     "docs/step-router.md",
     "docs/employee-guide.md",
+    "docs/ai-app-setup.md",
     "README.md",
+    "CHANGELOG.md",
     "SUPPORT.md",
     "culture.md",
     ".env.example",
@@ -90,7 +95,11 @@
     "docs/pilot-runbook.md",
     "Check-Privacy-STeP-AI.bat",
     "Check-Privacy-STeP-AI.command",
-    "docs/privacy-preflight.md"
+    "docs/privacy-preflight.md",
+    "docs/third-party-methods.md",
+    "docs/qms-working-master-list.md",
+    "docs/qms-working-reference.md",
+    "docs/afp-regulation-hierarchy.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

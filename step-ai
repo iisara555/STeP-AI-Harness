@@ -1,0 +1,15 @@
+#!/bin/sh
+# STeP AI command launcher for AI tools working inside this folder.
+# Usage: sh ./step-ai ask "<request>" --json
+# Uses the Node.js runtime installed with this bundle first, so the command
+# works even when Node.js is not on PATH (typical for GUI AI apps on macOS).
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+CLI="$ROOT/bin/step-ai.js"
+
+for candidate in "$ROOT/.step-ai/runtime/node/bin/node" "$(command -v node 2>/dev/null)" /opt/homebrew/bin/node /usr/local/bin/node; do
+    [ -n "$candidate" ] && [ -x "$candidate" ] || continue
+    exec "$candidate" "$CLI" "$@"
+done
+
+echo "STeP AI: Node.js runtime not found. Open Install-STeP-AI.command or Update-STeP-AI.command once, then retry." >&2
+exit 127

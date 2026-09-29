@@ -1,5 +1,9 @@
 export function stripYamlScalar(raw = '') {
-  return String(raw).trim().replace(/^['"]|['"]$/g, '');
+  const text = String(raw).trim();
+  if (text.length >= 2 && text.startsWith("'") && text.endsWith("'")) {
+    return text.slice(1, -1).replace(/''/g, "'");
+  }
+  return text.replace(/^['"]|['"]$/g, '');
 }
 
 export function parseYamlInlineList(raw = '') {

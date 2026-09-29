@@ -75,14 +75,17 @@ const PATTERNS = [
     id: 'thai-phone',
     label: 'หมายเลขโทรศัพท์',
     class: 'restricted',
-    regex: /(?<!\d)(?:\+66[-\s]?|0)\d{1,2}[-\s]?\d{3}[-\s]?\d{4}(?!\d)/g,
+    // Thai numbers are grouped 0XX-XXX-XXXX, 0X-XXXX-XXXX or with dots.
+    regex: /(?<!\d)(?:\+66[-\s.]?|0)\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}(?!\d)/g,
     replacement: '[หมายเลขโทรศัพท์ถูกปิดบัง]',
   },
   {
     id: 'id-13-digit',
     label: 'เลขประจำตัว 13 หลัก',
     class: 'restricted',
-    regex: /(?<!\d)\d[-\s]?\d{4}[-\s]?\d{5}[-\s]?\d{2}[-\s]?\d(?!\d)/g,
+    // Dots are allowed only in the complete 1.2345.67890.12.1 grouping,
+    // not as one optional separator in a plain decimal like 0.123456789012.
+    regex: /(?<![\d.])(?:\d[-\s]?\d{4}[-\s]?\d{5}[-\s]?\d{2}[-\s]?\d|\d\.\d{4}\.\d{5}\.\d{2}\.\d)(?!\d)/g,
     replacement: '[เลขประจำตัวถูกปิดบัง]',
   },
   {
@@ -96,10 +99,12 @@ const PATTERNS = [
     id: 'address-line',
     label: 'ที่อยู่',
     class: 'restricted',
-    regex: /(?:ที่อยู่|address)\s*[:：]\s*[^\r\n]{6,160}/gi,
+    regex: /(?:ที่อยู่|address)[ \t]*[:：](?![ \t]*\[ถูกปิดบัง\][ \t]*\r?$)[ \t]*[^\r\n]{6,160}/gim,
     replacement: 'ที่อยู่: [ถูกปิดบัง]',
   },
 ];
+
+const PATTERN_IDS = new Set(PATTERNS.map((pattern) => pattern.id));
 
 const SENSITIVE_KEYWORDS = [
   'ข้อมูลสุขภาพ',
@@ -148,7 +153,60 @@ function hashText(text) {
 }
 
 function normalizeDigits(value = '') {
-  return String(value).replace(/\D/g, '');
+  return normalizeForScan(String(value)).text.replace(/\D/g, '');
+}
+
+// Characters that render as nothing but split a number or address in two.
+const INVISIBLE = /^[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]$/;
+
+/**
+ * Build the text the patterns run on, plus a map back to the original.
+ * - Thai digits become ASCII digits (๐๘๑ → 081).
+ * - Other characters are NFKC-normalized (full-width １２３ and ＠ → 123 and @).
+ *   Thai letters are left alone: NFKC splits ำ into two code points.
+ * - Invisible characters (zero-width space, word joiner, BOM) are dropped.
+ * starts[i]/ends[i] give the original span of normalized character i, so a
+ * match can be redacted in the original text without rewriting anything else.
+ */
+function normalizeForScan(input) {
+  let text = '';
+  const starts = [];
+  const ends = [];
+  for (let i = 0; i < input.length;) {
+    const cp = input.codePointAt(i);
+    const ch = String.fromCodePoint(cp);
+    const next = i + ch.length;
+    let piece;
+    if (INVISIBLE.test(ch)) piece = '';
+    else if (cp >= 0x0e50 && cp <= 0x0e59) piece = String(cp - 0x0e50);
+    else if (cp >= 0x0e00 && cp <= 0x0e7f) piece = ch;
+    else piece = ch.normalize('NFKC');
+    for (let k = 0; k < piece.length; k++) {
+      starts.push(i);
+      ends.push(next);
+    }
+    text += piece;
+    i = next;
+  }
+  return { text, starts, ends };
+}
+
+function replaceInOriginal(original, pattern, allowed) {
+  const view = normalizeForScan(original);
+  const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+  const spans = [];
+  let match;
+  while ((match = regex.exec(view.text)) !== null) {
+    if (match[0].length === 0) { regex.lastIndex += 1; continue; }
+    if (isAllowedMatch(pattern, match[0], allowed)) continue;
+    spans.push([view.starts[match.index], view.ends[match.index + match[0].length - 1]]);
+  }
+  let output = original;
+  for (let s = spans.length - 1; s >= 0; s--) {
+    const [start, end] = spans[s];
+    output = output.slice(0, start) + pattern.replacement + output.slice(end);
+  }
+  return output;
 }
 
 function organizationAllowlist(values) {
@@ -183,9 +241,10 @@ export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
 
   const findings = [];
   let hasDirectIdentifier = false;
+  const scanText = normalizeForScan(input).text;
 
   for (const pattern of PATTERNS) {
-    const matches = collectMatches(input, pattern, allowed);
+    const matches = collectMatches(scanText, pattern, allowed);
     if (!matches.length) continue;
     findings.push({
       type: pattern.id,
@@ -196,14 +255,14 @@ export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
     if (pattern.class === 'restricted') hasDirectIdentifier = true;
   }
 
-  const lower = input.toLowerCase();
+  const lower = scanText.toLowerCase();
   // Check labels left after known matches are removed. This is a review signal,
   // not a claim that an unlabelled name has been reliably recognized.
-  let unmatched = input;
+  let unmatched = scanText;
   for (const pattern of PATTERNS) {
     unmatched = unmatched.replace(pattern.regex, (value) => isAllowedMatch(pattern, value, allowed) ? value : '');
   }
-  const nameTable = NAME_TABLE_HEADER.test(input);
+  const nameTable = NAME_TABLE_HEADER.test(scanText);
   const unresolvedIdentifier = UNRESOLVED_ID_LABEL.test(unmatched);
   if (nameTable || unresolvedIdentifier) {
     findings.push({ type: nameTable ? 'name-table-review' : 'unresolved-identifier',
@@ -265,19 +324,34 @@ export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
 }
 
 export function redactPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
-  let output = String(text || '');
+  const original = String(text || '');
+  let output = original;
   const allowed = organizationAllowlist(allowedIdentifiers);
   const scan = scanPrivacyText(output, { allowedIdentifiers });
 
+  // Match on the normalized view, replace the matching span of the original.
   for (const pattern of PATTERNS) {
-    const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-    output = output.replace(regex, (value) => isAllowedMatch(pattern, value, allowed) ? value : pattern.replacement);
+    output = replaceInOriginal(output, pattern, allowed);
+  }
+
+  // Never hand back a "redacted" copy that still holds a known pattern. If the
+  // copy fails a rescan, it is withheld and a person reviews the original.
+  const residual = scanPrivacyText(output, { allowedIdentifiers }).findings
+    .filter((finding) => PATTERN_IDS.has(finding.type));
+  if (residual.length) {
+    return {
+      ...scan,
+      action: scan.action === 'block-external' ? 'block-external' : 'human-confirm',
+      redactedText: null,
+      redactionApplied: false,
+      redactionIncomplete: residual.map((finding) => finding.type),
+    };
   }
 
   return {
     ...scan,
     redactedText: output,
-    redactionApplied: output !== String(text || ''),
+    redactionApplied: output !== original,
   };
 }
 
@@ -301,6 +375,16 @@ export function evaluatePrivacyGate(text = '', options = {}) {
   };
 }
 
+export const WITHHELD_TEXT = '[ข้อความถูกระงับ: ปิดบังข้อมูลส่วนบุคคลได้ไม่ครบ ต้องให้คนตรวจต้นฉบับ]';
+
+/**
+ * Text that is safe to route, log or persist after a gate result. When the
+ * redacted copy was withheld, nothing of the original is passed on.
+ */
+export function privacySafeText(result) {
+  return typeof result?.redactedText === 'string' ? result.redactedText : WITHHELD_TEXT;
+}
+
 const PRIVATE_KEYS = /^(?:password|passwd|pwd|secret|token|accessToken|refreshToken|apiKey|cookie|cookies|authorization|mfa|mfaCode|recoveryCode|employeeName|fullName|firstName|lastName|personalName|phone|phoneNumber|email|address|bankAccount|nationalId|employeeId|medicalHistory|healthRecord|ชื่อพนักงาน|ชื่อจริง|นามสกุล|เบอร์โทร|เลขบัญชี|เลขประจำตัว)$/i;
 
 /** Best-effort minimization for JSON state. Unknown/unlabelled PII still needs
@@ -317,7 +401,7 @@ export function sanitizeRunData(value, depth = 0, parentKey = '') {
         && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(value)) return value;
     const result = evaluatePrivacyGate(value);
     if (result.action === 'human-confirm' || result.action === 'block-external') return '[restricted-content-omitted]';
-    return result.redactedText;
+    return privacySafeText(result);
   }
   if (Array.isArray(value)) return value.map((item) => sanitizeRunData(item, depth + 1, parentKey));
   if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {

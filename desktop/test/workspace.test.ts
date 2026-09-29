@@ -403,3 +403,21 @@ test('a step that runs past its budget is reported as a timeout, not a user canc
   assert.equal(after.proposals.length, 0);
   store.close();
 });
+
+test('general help without a Skill drafts with the mandatory rules only', async () => {
+  const { store, session } = fixture();
+  const prompts: string[] = [];
+  const routed = await routing.queryStepRouter('ช่วยเขียนอีเมลถึงลูกค้าหน่อย', { workspaceDir: tmpdir() });
+  assert.equal(routed.routingContract.mode, 'GENERAL');
+  const service = new WorkService(
+    store,
+    { ...harness, route: async () => routed },
+    async () => ({ adapter: { run: async (prompt: string) => (prompts.push(prompt), 'ร่างอีเมล') }, context: { cwd: tmpdir(), env: {} } }),
+    () => {},
+  );
+  await service.run(session.id, 'ช่วยเขียนอีเมลถึงลูกค้าหน่อย', '');
+  const done = store.session(session.id);
+  assert.equal(done.status, 'review', done.messages.at(-1)?.text);
+  assert.equal(done.proposals.at(-1)?.text, 'ร่างอีเมล');
+  store.close();
+});

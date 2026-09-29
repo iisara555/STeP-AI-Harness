@@ -8,23 +8,23 @@ STeP AI เป็นชุด workspace สำหรับนำ AI มาช่
 
 ## สถานะของ source และชุดติดตั้ง
 
-README ฉบับนี้อ้างอิงชุดที่เตรียมสำหรับ Pilot วันที่ 22 กันยายน 2569 ตรวจ build ที่ได้รับจากเลขรุ่นและ SHA-256 ของ ZIP ตาม [คู่มือ Pilot](docs/pilot-runbook.md)
+README ฉบับนี้อ้างอิง source ของรุ่น **v0.7.6** ตรวจ build ที่ได้รับจากเลขรุ่นและ SHA-256 ของ ZIP ตาม [คู่มือ Pilot](docs/pilot-runbook.md)
 
 | รายการใน source ปัจจุบัน | จำนวน |
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **48 Skills** |
+| Skills | **51 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 47 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
+Router มีเส้นทางเลือก Skill 50 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง ดูรายการต้นทางได้ที่ [Skills](manifest/skills.yaml), [Router index](manifest/router-index.yaml), [Playbooks](manifest/playbooks.yaml) และ [Actions](manifest/actions.yaml)
 
-**Release baseline ที่บันทึกไว้คือ v0.7.2** ส่วนชุดที่เตรียมสำหรับ Pilot รอบนี้และ `package.json` ระบุ **v0.7.3** ยังไม่ใช่คำยืนยันว่าเผยแพร่ GitHub Release แล้ว ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ ต้องตรวจ checksum ของชุดที่นำไปใช้ด้วย
+เมื่อรุ่นใหม่ถูก merge เข้า `main` ระบบจะสร้าง GitHub Release ของเลขรุ่นใน `package.json` ให้อัตโนมัติ แต่**การมี GitHub Release ไม่ได้แปลว่าอนุมัติให้พนักงานอัปเดตแล้ว** ผู้ดูแลต้องผ่าน Release Gate ก่อน ดูว่ารุ่นไหนเผยแพร่แล้วได้ที่ GitHub Releases และดูรุ่นที่ผู้ทดสอบใช้อยู่ใน [Pilot Operations](docs/pilot-operations.md) ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ ต้องตรวจ checksum ของชุดที่นำไปใช้ด้วย สิ่งที่เปลี่ยนแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
 ชุดติดตั้งที่แจกพนักงานมาจาก **release tag เท่านั้น** ไม่ใช่จาก `main` ผู้ดูแลต้องผ่าน Release Gate และแจกผ่านช่องทางที่องค์กรอนุมัติ ดูสถานะ Pilot และการดูแลแต่ละสัปดาห์ใน [Pilot Operations](docs/pilot-operations.md)
 
-ข้อยกเว้นเฉพาะการทดสอบที่ผู้ใช้ขอครั้งนี้: Pilot ใช้ candidate v0.7.3 ที่ตรวจในเครื่องแล้วผ่านช่องทางภายใน โดย STeP AI Geek ยืนยันไฟล์และ checksum ก่อนเริ่ม ไม่ถือเป็นการเผยแพร่รุ่นทั่วไป
+ผู้ทดสอบ Pilot ที่ติดตั้ง v0.7.3 ไว้แล้วให้อัปเดตตรงไปที่ v0.7.6 ด้วยตัวอัปเดต ไม่ต้องติดตั้งใหม่ และไม่ต้องผ่าน v0.7.4 STeP AI Geek ยืนยันไฟล์และ checksum ก่อนแจ้งให้อัปเดต ดูขั้นตอนใน [คู่มือ Pilot](docs/pilot-runbook.md)
 
 ## เริ่มใช้งาน
 
@@ -56,6 +56,8 @@ Router มีเส้นทางเลือก Skill 47 รายการ �
 > ช่วยตรวจเอกสารนี้ก่อนส่ง
 
 แนบเฉพาะไฟล์หรือส่วนที่จำเป็น ถ้ายังไม่เลือกทีม ระบบยังรับคำถามได้ และจะถามข้อมูลที่มีผลต่อการทำงานเมื่อจำเป็น
+
+ใช้บัญชี AI ของตัวเองได้ทั้งรุ่นฟรีและรุ่นเสียเงิน ขอให้เป็นโปรแกรมที่ติดตั้งในเครื่องและเปิดโฟลเดอร์ได้ เช่น Cursor, OpenCode, Gemini CLI หรือ VS Code + Copilot ขั้นตอนติดตั้งทีละขั้นอยู่ใน [ติดตั้งโปรแกรม AI](docs/ai-app-setup.md)
 
 เมื่อเริ่มใช้งานแล้ว คุณควร:
 
@@ -139,15 +141,11 @@ output/CC/2026/09/presentation/20260920_CC_presentation_STeP-Booth-CMU_v01.pptx
 
 ### สิ่งที่เปลี่ยนล่าสุด
 
-commit `bdfa0ec` ปรับ README กับ routing coverage ให้ตรงกัน เพิ่มตัวเรียก validator ที่ค้น Python อัตโนมัติ และ trigger ภาษาพูดพร้อม regression 78 เคส ครอบคลุม router 45 รายการ
+v0.7.6 เสริมวิธีทำงานจากชุมชนให้ 4 Skill เดิม: `tor-review` ตรวจสิ่งที่ TOR ไม่ได้เขียนและออกคำถามส่งต่อได้ทันที, `ncr-capa` จัดลำดับสาเหตุด้วย Pareto, `quality-objective-kpi-review` ทำรายงาน KPI ประจำรอบเทียบค่าฐาน และ `step-writing` ตัดสำนวนที่ฟังออกว่า AI เขียน
 
-ก่อนหน้านั้น commit `06e67a4` แก้คำถาม clarification ที่วนซ้ำ เพิ่มเมนูเลือกงาน และตรวจคำตอบเมนูก่อนเปิด Skill โดยคง Authority preflight ไว้ก่อนการเลือกเส้นทาง
+v0.7.5 แก้เรื่องที่กระทบการใช้งานครั้งแรก: AI เรียกตัวเลือกวิธีทำงานในเครื่องได้แม้ไม่มี Node.js บน PATH (ผ่าน `sh ./step-ai` / `.\step-ai.cmd`), งานทั่วไปที่ไม่มีขั้นตอนเฉพาะของ STeP เช่น แปล เขียนอีเมล ทำ Excel ได้รับความช่วยเหลือทันทีแทนการถามกลับ (โหมด `GENERAL`) และคำพูดวันแรกอย่าง "ตรวจคำผิด", "ทำ timeline โครงการ", "ทำ brief ให้ดีไซเนอร์" ไปถึงงานที่ตรงได้เลย รายการทั้งหมดอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-source ยังรวมการแยกคำขอกำกวมระหว่าง Skill/Playbook, การปรับ routing งาน ISO และ Image Prompt ที่ใช้ Prompt Spec แล้วแปลงรูปแบบให้เหมาะกับเครื่องมือปลายทาง
-
-ทั้งสองส่วนรวมใน candidate v0.7.3 สำหรับ Pilot แล้ว ส่วน release baseline ที่บันทึกไว้ยังเป็น v0.7.2 จนกว่าจะเผยแพร่รุ่นใหม่
-
-81 เคสประกอบด้วย 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 56 คำถามจำลอง และ 5 เคสจำลองตรวจคำชนกัน ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
+Routing regression มี 97 เคส ได้แก่ 20 เคสเดิมที่ระบุว่าเป็น manual pilot, 60 คำถามจำลอง (สองสำนวนต่อ 30 Skill), 5 เคสจำลองตรวจคำชนกัน และ 12 คำพูดวันแรกของพนักงานใหม่ (จำลอง) ครอบคลุมเส้นทาง Router ครบ 50 รายการ นอกจากนี้ Skill ที่มีไฟล์ eval ใน `evals/skills/` ถูกตรวจ routing ครบ 4 มิติ (positive, anti-trigger, collision, missing-source) ผลทดสอบโค้ดไม่ใช่การรับรองคุณภาพจากพนักงานจริง รายละเอียดอยู่ใน [Validation & Tests](docs/harness-quality-axes.md)
 
 ### ตรวจ source ในเครื่อง
 

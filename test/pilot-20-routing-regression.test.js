@@ -272,6 +272,15 @@ const SYNTHETIC_SKILLS = [
   ['hr-policy-lookup', 'hd',
     'ลาพักผ่อนได้ปีละกี่วัน แล้วสะสมข้ามปีได้ไหม',
     'ไปราชการต่างจังหวัดเบิกค่าที่พักได้คืนละเท่าไหร่'],
+  ['afp-operations-lookup', 'afp',
+    'ขอออกใบเสร็จรับเงินใช้เวลากี่วันทำการ',
+    'จ้างเหมารถตู้ไปจัดกิจกรรมลงหมวดค่าใช้จ่ายอะไร'],
+  ['stakeholder-questionnaire', 'qs',
+    'ทำลิสต์คำถามไปถามเจ้าของเอกสาร SOP ที่ยังรอยืนยัน',
+    'ช่วยร่างคำถามส่งให้หัวหน้า เพื่อขอคำยืนยันขอบเขตงานก่อนเริ่มโครงการ'],
+  ['entrepreneur-annual-goal', 'piti',
+    'ช่วยตั้งเป้ารายได้ธุรกิจ 1 ปีจากยอดขายปัจจุบัน',
+    'อยากได้รายได้ 3 ล้านบาทปีหน้า ต้องขายกี่ชิ้นและหาลูกค้าใหม่กี่ราย'],
 ];
 
 /**
@@ -315,6 +324,32 @@ const CASES = [
     team,
     prompt,
     expect: { mode: 'SKILL', skill, tier: 'HIGH', scope: 'ALLOW' },
+  })),
+  // First-day prompts from an employee with no team set yet: the words people
+  // type before they know the system. Before 2026-09-25, 32 of 40 such prompts
+  // asked a question first; these pin the ones that now route or help directly.
+  ...[
+    ['ตรวจคำผิดให้หน่อย', 'step-writing'],
+    ['ทำ timeline โครงการ', 'project-plan'],
+    ['เตรียมตัวสัมภาษณ์ตรวจ ISO', 'audit-interview-coach'],
+    ['ทำ brief ให้ดีไซเนอร์', 'designer-brief'],
+    ['ทำ TOR ซื้อคอมพิวเตอร์', 'tor-government-writing'],
+    ['ทำ prompt รูปโปสเตอร์', 'step-image-prompt'],
+    ['ลาป่วยต้องมีใบรับรองแพทย์ไหม', 'hr-policy-lookup'],
+    ['ช่วยแปลเป็นภาษาอังกฤษ', null],
+    ['ช่วยเขียนอีเมลถึงลูกค้าหน่อย', null],
+    ['ช่วยทำ excel สรุปยอด', null],
+    ['สรุป PDF นี้เป็นข้อ ๆ', null],
+    ['ขอไอเดียกิจกรรม team building', null],
+  ].map(([prompt, skill], index) => ({
+    id: `first-day-${index + 1}`,
+    name: skill ? `first-day wording routes to ${skill}` : 'first-day general task gets help without questions',
+    source: 'synthetic-first-day-2026-09-25',
+    team: '',
+    prompt,
+    expect: skill
+      ? { mode: 'SKILL', skill, tier: 'HIGH', scope: 'ALLOW' }
+      : { mode: 'GENERAL', tier: 'FALLBACK', scope: 'ALLOW' },
   })),
 ];
 

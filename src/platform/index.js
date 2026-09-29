@@ -101,7 +101,7 @@ export async function getTieredRecommendations(options = {}) {
     paidCommercial: {
       id: 'paid_commercial',
       title: 'สายจ่ายตังค์ / องค์กรจัดซื้อ (Paid / Commercial Tier)',
-      description: 'สำหรับผู้มีสิทธิ์ใช้งาน Claude Pro, ChatGPT Plus/Team หรือ Google Antigravity & Spark',
+      description: 'สำหรับผู้ที่มีบัญชี Claude Pro หรือ ChatGPT Plus/Team ของตัวเอง',
       tools: tools.filter((t) => t.tier === 'paid_commercial'),
     },
     localPrivacy: {

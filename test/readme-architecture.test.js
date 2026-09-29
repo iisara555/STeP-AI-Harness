@@ -156,3 +156,58 @@ test('employee documentation is aligned and links resolve', async (t) => {
     assert.ok(documents.includes('qms-master-document-list:'));
   });
 });
+
+test('release status documents quote one inventory and the current version', async (t) => {
+  const { loadRouterIndex } = await import('../src/cli/commands/ask.js');
+  const read = (path) => readFile(resolve(repoRoot, path), 'utf-8');
+  const [pkgText, teams, skills, playbooks, actions, readme, changelog, operations, audit, architecture, axes, runbook, catalog] =
+    await Promise.all([
+      read('package.json'),
+      read('manifest/teams.yaml'),
+      read('manifest/skills.yaml'),
+      read('manifest/playbooks.yaml'),
+      read('manifest/actions.yaml'),
+      read('README.md'),
+      read('CHANGELOG.md'),
+      read('docs/pilot-operations.md'),
+      read('docs/pilot-readiness-audit.md'),
+      read('docs/architecture.md'),
+      read('docs/harness-quality-axes.md'),
+      read('docs/pilot-runbook.md'),
+      loadRouterIndex(),
+    ]);
+
+  const version = JSON.parse(pkgText).version;
+  const skillCount = countMatches(skills, /^  [a-z0-9_-]+:\s*$/gm);
+  const routerCount = catalog.length;
+  const inventory = [
+    `${skillCount} Skills`,
+    `${routerCount} router entries`,
+    `${countMatches(playbooks, /^  - id:/gm)} Playbooks`,
+    `${countMatches(actions, /^  [a-z0-9_-]+:\s*$/gm)} Actions`,
+    `${countMatches(teams, /^      - id:/gm)} teams`,
+    `${countMatches(teams, /^  - id:/gm)} routing clusters`,
+  ].join(' / ');
+
+  await t.test('Pilot status headers carry the manifest inventory', () => {
+    for (const [name, text] of [['pilot-operations', operations], ['pilot-readiness-audit', audit]]) {
+      assert.ok(text.includes(inventory), `${name} inventory drifted from manifests; expected "${inventory}"`);
+      assert.ok(text.includes(`**Prepared Pilot candidate:** v${version}`), `${name} must name v${version} as the candidate`);
+    }
+  });
+
+  await t.test('prose counts match the router catalog', () => {
+    assert.ok(readme.includes(`Router มีเส้นทางเลือก Skill ${routerCount} รายการ`));
+    assert.ok(readme.includes(`ครอบคลุมเส้นทาง Router ครบ ${routerCount} รายการ`));
+    assert.ok(architecture.includes(`${skillCount} Skills ใน \`manifest/skills.yaml\` โดยเป็นปลายทางที่ Router เลือกได้ ${routerCount} รายการ`));
+    assert.ok(axes.includes(`ทั้ง ${routerCount} รายการจาก ${skillCount} Skill`));
+  });
+
+  await t.test('CHANGELOG has notes for the package version and its links resolve', async () => {
+    assert.ok(changelog.split('\n').includes(`## v${version}`), `CHANGELOG.md needs a "## v${version}" section for the release workflow`);
+    assert.ok(runbook.includes(`v${version}`), 'Pilot runbook must describe how testers reach the current version');
+    for (const link of localMarkdownLinks(changelog)) {
+      await access(resolve(repoRoot, link));
+    }
+  });
+});

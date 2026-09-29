@@ -1,0 +1,68 @@
+{
+  "skill": "hr-policy-lookup",
+  "version": 1,
+  "source": "synthetic-2026-09-25",
+  "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ตอบจำนวนวันลาหรืออัตราจากความรู้ทั่วไปหรือกฎหมายแรงงาน ไม่ใช่ประกาศของ STeP และไม่อ้างเลขข้อ",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-annual-leave",
+      "dimension": "positive",
+      "team": "hd",
+      "prompt": "ลาพักผ่อนได้ปีละกี่วัน สะสมได้ไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "hr-policy-lookup",
+        "tier": "HIGH"
+      },
+      "outputAssertions": [
+        "ตอบ 10 วันต่อปีงบประมาณ สะสมได้ไม่เกิน 20 วัน และอ้างข้อ 4.4 จาก docs/hr-personnel-welfare-index.md",
+        "บอกว่าสิทธิ์นี้เป็นของพนักงานประจำและผู้บริหารสาย S และถามหรือบอกให้ตรวจสถานะการจ้างของผู้ถาม",
+        "แนะนำให้เช็กยอดวันลาคงเหลือของตัวเองกับ HD แทนการคำนวณให้"
+      ]
+    },
+    {
+      "id": "anti-receipt-check",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ช่วยตรวจใบเสร็จค่าที่พักก่อนส่งเบิก",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit",
+        "notSkill": "hr-policy-lookup"
+      },
+      "why": "การตรวจเอกสารเบิกที่มีอยู่แล้วเป็นงาน receipt-audit ไม่ใช่การถามสิทธิ์"
+    },
+    {
+      "id": "collision-training-design",
+      "dimension": "collision",
+      "team": "hd",
+      "prompt": "ออกแบบหลักสูตรอบรมพนักงานใหม่",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "learning-designer",
+        "notSkill": "hr-policy-lookup"
+      },
+      "why": "ทีม HD เป็นเจ้าของทั้งสอง Skill แต่งานออกแบบหลักสูตรต้องไป learning-designer"
+    },
+    {
+      "id": "missing-medical-limit",
+      "dimension": "missingSource",
+      "team": "hd",
+      "prompt": "ค่ารักษาพยาบาลเบิกได้ปีละเท่าไหร่",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "hr-policy-lookup"
+      },
+      "outputAssertions": [
+        "บอกว่าวงเงินค่ารักษาพยาบาล (ข้อ 3.11.3) อยู่ในเอกสารที่ยังไม่ลงทะเบียน",
+        "ไม่ระบุตัวเลขวงเงินจากความจำหรือกฎหมายทั่วไป",
+        "ชี้ให้ติดต่อ HD เพื่อขอตัวเลขปัจจุบัน"
+      ],
+      "why": "ก่อนเพิ่ม trigger ค่ารักษาพยาบาล คำถามนี้หลุดไปโหมด GENERAL และจะถูกตอบจากความรู้ทั่วไป"
+    }
+  ]
+}

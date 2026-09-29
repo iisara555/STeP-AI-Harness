@@ -44,6 +44,8 @@ Skill ใหม่ต้องประกาศ `standardVersion: 2` และ�
 
 เพิ่ม authority/privacy/action cases เมื่อเกี่ยวข้อง
 
+Skill ใหม่เก็บเคสเหล่านี้ใน `evals/skills/<skill>.json` และต้องมีตัวอย่างคำตอบที่ดีใน `examples/` ของ Skill ซึ่ง `test/skill-evals.test.js` บังคับใน CI รายละเอียด: [eval-and-baseline.md](eval-and-baseline.md)
+
 ## Promotion rule
 
 `draft → pilot` ต้องมี:

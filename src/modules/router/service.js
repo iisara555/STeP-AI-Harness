@@ -1,3 +1,7 @@
+/**
+ * STeP Skill router: turns an employee request into a routing contract. Shared by the
+ * `step-ai ask` command and the desktop app.
+ */
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
@@ -17,274 +21,24 @@ import {
   buildCompactRoutingContract,
   buildContextBudgetPlan,
 } from '../../modules/context-budget/index.js';
-import { parseYamlInlineList, stripYamlScalar } from '../../utils/simple-yaml.js';
+import {
+  loadRouterIndex,
+  loadTeamsDictionary,
+  loadSkillContextMetadata,
+  loadDocumentContextMetadata,
+} from '../../modules/router/metadata.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
-import { evaluatePrivacyGate } from '../../modules/privacy/index.js';
+import { hasStartupIntakeDecision } from '../../modules/router/scope-guard.js';
+import {
+  classifyEntrepreneurIntent, needsEntrepreneurIntentReview,
+  referencesOrganization,
+} from '../../modules/router/entrepreneur-intent.js';
+import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
 
 /**
- * Load router index skills from manifest/router-index.yaml
+ * Router metadata loaders live in the router module. Keep CLI exports stable.
  */
-export async function loadRouterIndex() {
-  const routerPath = join(PACKAGE_ROOT, 'manifest', 'router-index.yaml');
-  const text = await readFile(routerPath, 'utf-8');
-
-  // Parse skills from router-index.yaml
-  const lines = text.split(/\r?\n/);
-  const skills = [];
-  let current = null;
-  let inScope = false;
-  let currentScopeKey = '';
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const nameMatch = line.match(/^ {2}- name:\s*([a-z0-9_-]+)/);
-    if (nameMatch) {
-      current = {
-        name: nameMatch[1],
-        cluster: '',
-        domain: '',
-        processId: '',
-        teams: { primary: [], consumers: [] },
-        description: '',
-        intent: [],
-        triggers: [],
-        paths: [],
-        fileTypes: [],
-        scope: { allow: [], escalate: {}, human_only: {} },
-      };
-      skills.push(current);
-      inScope = false;
-      continue;
-    }
-
-    if (!current) continue;
-
-    const clusterMatch = line.match(/^ {4}cluster:\s*([a-z0-9_-]+)/);
-    if (clusterMatch) {
-      current.cluster = clusterMatch[1];
-      continue;
-    }
-
-    const domainMatch = line.match(/^ {4}domain:\s*([a-z0-9_-]+)/);
-    if (domainMatch) {
-      current.domain = domainMatch[1];
-      continue;
-    }
-
-    const procMatch = line.match(/^ {4}processId:\s*([a-z0-9_.-]+)/);
-    if (procMatch) {
-      current.processId = procMatch[1];
-      continue;
-    }
-
-    const descMatch = line.match(/^ {4}description:\s*(.+)/);
-    if (descMatch) {
-      current.description = descMatch[1].trim();
-      continue;
-    }
-
-    const intentMatch = line.match(/^ {4}intent:\s*\[(.*?)\]/);
-    if (intentMatch) {
-      current.intent = intentMatch[1].split(',').map((i) => i.trim()).filter(Boolean);
-      continue;
-    }
-
-    const triggersMatch = line.match(/^ {4}triggers:\s*\[(.*?)\]/);
-    if (triggersMatch) {
-      current.triggers = triggersMatch[1].split(',').map((t) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
-      continue;
-    }
-
-    const pathsMatch = line.match(/^ {4}paths:\s*\[(.*?)\]/);
-    if (pathsMatch) {
-      current.paths = pathsMatch[1].split(',').map((p) => p.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
-      continue;
-    }
-
-    const fileTypesMatch = line.match(/^ {4}fileTypes:\s*\[(.*?)\]/);
-    if (fileTypesMatch) {
-      current.fileTypes = fileTypesMatch[1].split(',').map((f) => f.trim()).filter(Boolean);
-      continue;
-    }
-
-    const primaryMatch = line.match(/^ {6}primary:\s*\[(.*?)\]/);
-    if (primaryMatch) {
-      current.teams.primary = primaryMatch[1].split(',').map((t) => t.trim()).filter(Boolean);
-      continue;
-    }
-
-    const consumerMatch = line.match(/^ {6}consumers:\s*\[(.*?)\]/);
-    if (consumerMatch) {
-      current.teams.consumers = consumerMatch[1].split(',').map((t) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
-      continue;
-    }
-
-    if (line.match(/^ {4}scope:/)) {
-      inScope = true;
-      continue;
-    }
-
-    if (inScope) {
-      if (line.match(/^ {6}allow:/)) {
-        currentScopeKey = 'allow';
-        continue;
-      }
-      if (line.match(/^ {6}escalate:/)) {
-        currentScopeKey = 'escalate';
-        continue;
-      }
-      if (line.match(/^ {6}human_only:/)) {
-        currentScopeKey = 'human_only';
-        continue;
-      }
-
-      const allowItemMatch = line.match(/^ {8}-\s*(.+)/);
-      if (currentScopeKey === 'allow' && allowItemMatch) {
-        current.scope.allow.push(allowItemMatch[1].trim());
-        continue;
-      }
-
-      const mapKeyMatch = line.match(/^ {8}([a-z0-9_-]+):$/);
-      if (mapKeyMatch) {
-        current.scope[currentScopeKey][mapKeyMatch[1]] = {};
-        continue;
-      }
-      const descLineMatch = line.match(/^ {10}description:\s*(.+)/);
-      if (descLineMatch) {
-        const lastKey = Object.keys(current.scope[currentScopeKey]).pop();
-        if (lastKey) current.scope[currentScopeKey][lastKey].description = descLineMatch[1].trim();
-        continue;
-      }
-      const roleLineMatch = line.match(/^ {10}role:\s*([a-z0-9_-]+)/);
-      if (roleLineMatch) {
-        const lastKey = Object.keys(current.scope[currentScopeKey]).pop();
-        if (lastKey) current.scope[currentScopeKey][lastKey].role = roleLineMatch[1].trim();
-        continue;
-      }
-      const authLineMatch = line.match(/^ {10}authority:\s*([a-z0-9_-]+)/);
-      if (authLineMatch) {
-        const lastKey = Object.keys(current.scope[currentScopeKey]).pop();
-        if (lastKey) current.scope[currentScopeKey][lastKey].authority = authLineMatch[1].trim();
-        continue;
-      }
-      const skillLineMatch = line.match(/^ {10}skill:\s*([a-z0-9_-]+)/);
-      if (skillLineMatch) {
-        const lastKey = Object.keys(current.scope[currentScopeKey]).pop();
-        if (lastKey) current.scope[currentScopeKey][lastKey].skill = skillLineMatch[1].trim();
-        continue;
-      }
-    }
-  }
-
-  return skills;
-}
-
-/**
- * Load human-readable names for teams from manifest/teams.yaml
- */
-export async function loadTeamsDictionary() {
-  const teamsPath = join(PACKAGE_ROOT, 'manifest', 'teams.yaml');
-  const text = await readFile(teamsPath, 'utf-8');
-  const dict = {};
-
-  const lines = text.split(/\r?\n/);
-  let curId = '';
-  for (const line of lines) {
-    const m = line.match(/^ {6}- id:\s*([a-z0-9_-]+)/);
-    if (m) {
-      curId = m[1];
-      dict[curId] = { id: curId, name: curId, nameEn: '', clusterName: '' };
-      continue;
-    }
-    if (!curId) continue;
-    const nameM = line.match(/^ {8}name:\s*(.+)/);
-    if (nameM) {
-      dict[curId].name = nameM[1].trim();
-      continue;
-    }
-    const nameEnM = line.match(/^ {8}nameEn:\s*(.+)/);
-    if (nameEnM) {
-      dict[curId].nameEn = nameEnM[1].trim();
-      continue;
-    }
-  }
-
-  return dict;
-}
-
-export async function loadSkillContextMetadata(skillName) {
-  if (!skillName) return null;
-  const text = await readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8');
-  const lines = text.split(/\r?\n/);
-  let active = false;
-  let inReferences = false;
-  const result = { name: skillName, path: '', mandatory: [], optional: [] };
-
-  for (const line of lines) {
-    const key = line.match(/^  ([a-z0-9_-]+):\s*$/);
-    if (key) {
-      if (active && key[1] !== skillName) break;
-      active = key[1] === skillName;
-      inReferences = false;
-      continue;
-    }
-    if (!active) continue;
-
-    const pathMatch = line.match(/^    path:\s*(.+)/);
-    if (pathMatch) {
-      result.path = stripYamlScalar(pathMatch[1]);
-      continue;
-    }
-    if (/^    references:/.test(line)) {
-      inReferences = true;
-      continue;
-    }
-    if (inReferences) {
-      const mandatory = line.match(/^      mandatory:\s*\[(.*?)\]/);
-      if (mandatory) result.mandatory = parseYamlInlineList(mandatory[1]);
-      const optional = line.match(/^      optional:\s*\[(.*?)\]/);
-      if (optional) result.optional = parseYamlInlineList(optional[1]);
-    }
-  }
-
-  return result;
-}
-
-export async function loadDocumentContextMetadata(ids = []) {
-  const wanted = new Set(ids || []);
-  if (wanted.size === 0) return [];
-
-  const text = await readFile(join(PACKAGE_ROOT, 'manifest', 'documents.yaml'), 'utf-8');
-  const lines = text.split(/\r?\n/);
-  const results = [];
-  let current = null;
-
-  for (const line of lines) {
-    const key = line.match(/^  ([a-z0-9_-]+):\s*$/);
-    if (key) {
-      current = wanted.has(key[1])
-        ? { id: key[1], title: '', path: '', status: '', authority: '', verification: '' }
-        : null;
-      if (current) results.push(current);
-      continue;
-    }
-    if (!current) continue;
-
-    const title = line.match(/^    title:\s*(.+)/);
-    if (title) current.title = stripYamlScalar(title[1]);
-    const pathMatch = line.match(/^    path:\s*(.+)/);
-    if (pathMatch) current.path = stripYamlScalar(pathMatch[1]);
-    const status = line.match(/^    status:\s*(.+)/);
-    if (status) current.status = stripYamlScalar(status[1]);
-    const governance = line.match(/^    (authority|verification):\s*(.+)/);
-    if (governance) current[governance[1]] = stripYamlScalar(governance[2]);
-  }
-
-  return [...wanted].map((id) => results.find((ref) => ref.id === id)
-    || { id, title: '', path: '', status: 'unregistered', authority: 'unverified', verification: '' });
-}
+export { loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDocumentContextMetadata };
 
 /**
  * Programmatic query function for testing and external consumers
@@ -303,19 +57,27 @@ export async function queryStepRouter(query, options = {}) {
   if (typeof options.clarificationAnswer === 'string' && options.clarificationAnswer.trim()) {
     query = `${query}\nข้อมูลเพิ่มเติม: ${options.clarificationAnswer.trim()}`;
   }
+  const unscannedQuery = query;
 
   // The request itself is the one piece of text this command always handles, and
   // employees paste identifiers straight into it. Scan before anything is routed,
   // reported or persisted, and route on the redacted text so a pasted identifier
   // never reaches a Skill, a log line or a diagnostic.
   const privacy = evaluatePrivacyGate(query);
-  query = privacy.redactedText;
+  query = privacySafeText(privacy);
 
   const skills = await loadRouterIndex();
   const teams = await loadTeamsDictionary();
   const playbooks = await loadPlaybooks(PACKAGE_ROOT);
   const authorities = await loadAuthorityRegistry(PACKAGE_ROOT);
-  const authorityPreflight = evaluateAuthorityPreflight(query, authorities);
+  // The outside-owner authority needs a host-assisted intent classification;
+  // its phrase list alone is not a safe global BLOCK rule for Thai advice, but
+  // a phrase it lists still forces a review instead of passing silently.
+  const organizationAuthorities = authorities.filter((authority) => authority.id !== 'entrepreneur-commitment');
+  const ownerPhraseMatched = evaluateAuthorityPreflight(
+    query, authorities.filter((authority) => authority.id === 'entrepreneur-commitment'),
+  ).status === 'BLOCK';
+  let authorityPreflight = evaluateAuthorityPreflight(query, organizationAuthorities);
 
   let resolvedTeam = options.team || '';
   let resolvedCluster = options.cluster || '';
@@ -346,7 +108,7 @@ export async function queryStepRouter(query, options = {}) {
   // An employee who invokes a routed Skill by name skips scoring and playbooks, never
   // the authority preflight or the Skill's own scope check below.
   const explicitSkillName = typeof options.skill === 'string' && skills.some((skill) => skill.name === options.skill) ? options.skill : '';
-  const playbookMatch = options.disablePlaybooks || explicitSkillName ? null : detectCompositePlaybook(playbooks, originalQuery, {
+  const playbookMatch = options.disablePlaybooks || explicitSkillName ? null : detectCompositePlaybook(playbooks, query, {
     clarificationAnswer: options.clarificationAnswer,
   });
   const competingPlaybooks = playbookMatch?.ambiguous ? playbookMatch.candidates : [];
@@ -383,19 +145,103 @@ export async function queryStepRouter(query, options = {}) {
     }
   }
 
+  // An intake approval remains the project director's decision even when a
+  // preceding annual-goal phrase makes another Skill rank first. Evaluate the
+  // owning Skill's mandatory scope before offering any host intent verdict.
+  if (authorityPreflight.status === 'ALLOW' && hasStartupIntakeDecision(query)) {
+    const startupSkill = skills.find((skill) => skill.name === 'startup-discovery');
+    const intakeScope = checkScope(startupSkill, query);
+    if (intakeScope.status === 'BLOCK') {
+      authorityPreflight = { ...intakeScope, source: 'cross-skill-intake' };
+    }
+  }
+
+  // The AI host has already received the user's request; this opt-in path
+  // accepts only its schema-bound verdict on the privacy-passed text. The CLI
+  // never calls a provider. Without a verdict, risky business acts stop for a
+  // human instead of being guessed from Thai keywords.
+  // A model verdict never touches the organization's budget gate: ADVISORY is
+  // permission to analyse, not to spend, and four review rounds showed that
+  // no word list can tell the owner's money from STeP's or a funder's. Any
+  // request that reaches budget-allocation keeps the finance gate (review
+  // round 4). A verdict also cannot release a request naming an organization.
+  const organizationNamed = referencesOrganization(query);
+  const privacyRisk = privacy.action !== 'pass'
+    && (ownerPhraseMatched || needsEntrepreneurIntentReview(unscannedQuery, selectedSkill?.name));
+  // No keyword shortcut decides that a request is "only analysis": without the
+  // host's verdict every owner's act waits for a human (review round 3).
+  let intentReview = null;
+  if (authorityPreflight.status === 'ALLOW') {
+    intentReview = await classifyEntrepreneurIntent(query, {
+      selectedSkillName: selectedSkill?.name,
+      privacyAction: privacy.action,
+      forceReview: privacyRisk || ownerPhraseMatched,
+      intentAssessment: options.intentAssessment,
+      intentClassifier: options.intentClassifier,
+      intentTimeoutMs: options.intentTimeoutMs,
+    });
+    if (intentReview) {
+      if (intentReview.status === 'NEEDS_HOST') {
+        authorityPreflight = {
+          status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review',
+          authority: 'entrepreneur-commitment',
+          targetRole: 'business-owner',
+          reason: 'ยังไม่ชัดว่าเป็นการวิเคราะห์หรือคำสั่งผูกมัดกิจการ ต้องให้เจ้าของ/ผู้มีอำนาจตรวจ ไม่ให้ AI เดาหรือดำเนินการแทน',
+        };
+      } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'COMMIT') {
+        authorityPreflight = organizationNamed ? {
+          status: 'BLOCK', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+          targetRole: 'business-owner-or-afp-finance-head',
+          reason: 'เป็นคำสั่งให้ดำเนินการจริงและอ้างถึง STeP หรือโครงการขององค์กร ต้องให้เจ้าของกิจการและผู้มีอำนาจขององค์กรตัดสินเอง',
+        } : {
+          status: 'BLOCK', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-commitment', authority: 'entrepreneur-commitment',
+          targetRole: 'business-owner',
+          reason: 'การเลือกเป้า อนุมัติเงิน จ้างคน หรือสั่งซื้อจริงเป็นอำนาจของเจ้าของกิจการ AI ช่วยร่างและวิเคราะห์ได้เท่านั้น',
+        };
+      } else if (intentReview.owner === 'business-owner' && intentReview.decision === 'ADVISORY') {
+        // This is permission to analyse, not permission to spend. A verdict
+        // about the owner's business cannot release a request that names
+        // STeP, a programme, an approver or outside funding.
+        authorityPreflight = organizationNamed ? {
+          status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+          targetRole: 'business-owner-or-afp-finance-head',
+          reason: 'คำขอนี้อ้างถึง STeP โครงการ ผู้มีอำนาจ หรือแหล่งทุนภายนอก ผลจำแนกของ AI ไม่อาจยืนยันว่าไม่ใช้อำนาจหรืองบขององค์กร ต้องให้คนตรวจ',
+        } : { status: 'ALLOW', inScope: true, source: 'host-intent-review' };
+      } else {
+        authorityPreflight = {
+          status: 'ESCALATE', inScope: false, source: 'host-intent-review',
+          ruleKey: 'entrepreneur-intent-review', authority: 'ownership-review',
+          targetRole: 'business-owner-or-afp-finance-head',
+          reason: 'ยังไม่ยืนยันว่าเป็นการตัดสินใจของกิจการหรือใช้งบองค์กร ต้องให้คนตรวจเจ้าของอำนาจก่อน',
+        };
+      }
+    }
+  }
+
   const preflightPlaybookStep = selectedPlaybook
     ? playbookPlan.find((step) => step.type === 'skill' && step.skill)?.id || ''
     : '';
   const hasGlobalAuthorityBlock = authorityPreflight.status === 'BLOCK';
+  const localScope = hasGlobalAuthorityBlock || !selectedSkill
+    ? { status: 'ALLOW', inScope: true }
+    : checkScope(selectedSkill, query);
+  // A global confirmation gate (sending on the employee's behalf) applies even
+  // when no Skill matched. A Skill's own gate is more specific, so it wins.
+  const globalGate = hasGlobalAuthorityBlock
+    || (authorityPreflight.status === 'ESCALATE' && localScope.status === 'ALLOW');
 
-  let scopeResult = hasGlobalAuthorityBlock
+  let scopeResult = globalGate
     ? {
         ...authorityPreflight,
         ...(selectedPlaybook
           ? { playbookStep: preflightPlaybookStep, playbookId: selectedPlaybook.id }
           : {}),
       }
-    : (selectedSkill ? checkScope(selectedSkill, query) : { status: 'ALLOW', inScope: true });
+    : localScope;
 
   if ((selectedPlaybook || competingPlaybooks.length) && !hasGlobalAuthorityBlock) {
     // The initially selected Skill is normally the first Playbook Skill.
@@ -443,7 +289,22 @@ export async function queryStepRouter(query, options = {}) {
     ? { tier: 'AMBIGUOUS', margin: 0, reason: 'competing-playbooks' }
     : deriveRoutingConfidence(bestMatch, runnerUp);
   const isAmbiguous = !selectedPlaybook && !chosenSkillName && routingConfidence.tier !== 'HIGH';
-  const clarification = isAmbiguous && scopeResult.status === 'ALLOW'
+  // No Skill matched, but the employee asked for something concrete: translate,
+  // write an email, build a sheet. Clarifying cannot produce a Skill that does
+  // not exist, so it only delays help. Answer as a general assistant under the
+  // organization rules instead. Attachment-purpose questions and consequential
+  // requests keep asking, because there the missing context is what decides.
+  const generalAssist = isAmbiguous
+    && !competingPlaybooks.length
+    && routingConfidence.tier === 'FALLBACK'
+    && scopeResult.status === 'ALLOW'
+    && !ATTACHMENT_PURPOSE_PATTERN.test(query)
+    && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
+    && !namesOrganizationContext(query, Object.keys(teams))
+    && hasConcreteRequest(originalQuery, options.clarificationAnswer);
+  if (generalAssist) selectedSkill = null;
+  const clarification = isAmbiguous && !generalAssist && scopeResult.status === 'ALLOW'
     ? competingPlaybooks.length
       ? {
         field: 'playbook',
@@ -453,7 +314,7 @@ export async function queryStepRouter(query, options = {}) {
           label: playbook.clarificationLabel || playbook.description || playbook.name,
         })),
       }
-      : buildRoutingClarification(query, context, options.clarificationAnswer, ranked, skills)
+      : buildRoutingClarification(query, context, options.clarificationAnswer, ranked, skills, routingConfidence.tier)
     : null;
 
   const halted = scopeResult.status !== 'ALLOW';
@@ -467,7 +328,10 @@ export async function queryStepRouter(query, options = {}) {
       skillMetadatas.push(await loadSkillContextMetadata(step.skill));
     }
   }
-  const referenceMetadata = await loadDocumentContextMetadata([...new Set(skillMetadatas.flatMap((item) => item?.mandatory || []))]);
+  const referenceMetadata = await loadDocumentContextMetadata([...new Set([
+    ...skillMetadatas.flatMap((item) => item?.mandatory || []),
+    ...(generalAssist ? GENERAL_ASSIST_REFERENCES : []),
+  ])]);
 
   let skillText = '';
   if (skillMetadata?.path) {
@@ -510,6 +374,7 @@ export async function queryStepRouter(query, options = {}) {
   if (readiness.status === 'unavailable') { skillText = ''; ruleTexts.length = 0; }
 
   const routingContract = buildCompactRoutingContract({
+    generalAssist,
     selectedSkill: clarification ? null : selectedSkill,
     selectedPlaybook,
     playbookPlan,
@@ -567,9 +432,51 @@ export async function queryStepRouter(query, options = {}) {
     contextPlan,
     routingConfidence,
     authorityPreflight,
+    intentReview,
     // Metadata only: class, action and hash. The raw request never leaves here.
     privacy: privacy.logSafeMetadata,
   };
+}
+
+const ATTACHMENT_PURPOSE_PATTERN = /ต้องแนบอะไร/;
+const CONSEQUENTIAL_INTENTS = new Set(['approve', 'form-submit']);
+// Acts only a person may perform. General help could invent their result (a
+// document number, a signature), so these always go through the Router's
+// questions and authority gates instead of GENERAL.
+const CONSEQUENTIAL_ACTION_PATTERN = /ออกเลข|ลงนาม|เซ็น|ลายเซ็น|โอนเงิน|จ่ายเงิน|สั่งจ่าย|อนุมัติ|ตัดสินผู้ชนะ|กดส่ง|ส่งฟอร์ม|\bsubmit\b|\bsign\b|\bapprove\b/i;
+// With no Skill loaded, the organization floor still has to reach the model.
+const GENERAL_ASSIST_REFERENCES = ['human-approval-rule', 'data-classification-rule'];
+
+// Words that carry politeness or point at an object but name no task. A
+// request made only of these ("ช่วยหน่อย", "ช่วยดูเอกสารนี้หน่อย") still has to
+// be asked about: "look at this document" does not say what to look for.
+const FILLER_TERMS = [
+  'ช่วยด้วย', 'ช่วย', 'หน่อย', 'ครับ', 'คับ', 'ค่ะ', 'คะ', 'นะ', 'จ้า', 'ด้วย', 'ให้',
+  'งาน', 'อันนี้', 'นี้', 'นี่', 'นั้น', 'เรื่อง', 'เอกสาร', 'ไฟล์', 'ดู',
+  'please', 'help', 'pls',
+];
+const MIN_CONCRETE_CHARS = 3;
+
+// A request that names a STeP team or internal system ("AFP ตีกลับ", "ระเบียบ
+// ISO"), or asks what the organization pays or grants ("เบิกได้เท่าไหร่",
+// "สวัสดิการ"), is about how the organization works, so it must not be answered
+// from general knowledge. The product's own name is not such a signal.
+const ORGANIZATION_TERMS = [
+  'ระเบียบ', 'หนังสือเวียน', 'แบบฟอร์ม', 'iso', 'qms', 'step mis', 'สเต็ป', 'อุทยาน', 'มช', 'cmu',
+  'เบิก', 'สวัสดิการ', 'เงินเดือน', 'ค่าตอบแทน', 'วันลา', 'มีสิทธิ', 'ได้สิทธิ', 'สิทธิ์ลา', 'สิทธิลา',
+];
+
+function namesOrganizationContext(query, teamIds = []) {
+  const text = String(query || '').toLowerCase().replace(/step\s*ai/g, '');
+  if (ORGANIZATION_TERMS.some((term) => text.includes(term))) return true;
+  if (/\bstep\b/.test(text)) return true;
+  return teamIds.some((id) => new RegExp(`(^|[^a-z0-9-])${id.replace(/[-]/g, '\\-')}([^a-z0-9-]|$)`).test(text));
+}
+
+function hasConcreteRequest(query, answer) {
+  let text = `${query || ''} ${typeof answer === 'string' ? answer : ''}`.toLowerCase();
+  for (const term of FILLER_TERMS) text = text.split(term).join('');
+  return text.replace(/[\s\p{P}\p{S}]/gu, '').length >= MIN_CONCRETE_CHARS;
 }
 
 const CLARIFICATION_QUESTIONS = {
@@ -580,6 +487,7 @@ const CLARIFICATION_QUESTIONS = {
 };
 
 const MAX_CLARIFICATION_CHOICES = 3;
+const MIN_MENU_SCORE = 0.20;
 
 /**
  * Count how many answers the employee has already given. Accumulated answers
@@ -597,28 +505,26 @@ function countClarificationRounds(answer) {
  * asking open questions and offer the leading candidates as a numbered menu —
  * the employee picks work language, never a Skill name they have to know.
  */
-function buildRoutingClarification(query, context, answer, ranked = [], skills = []) {
+function buildRoutingClarification(query, context, answer, ranked = [], skills = [], tier = '') {
+  const options = buildSkillChoiceOptions(ranked, skills);
+  const purpose = ATTACHMENT_PURPOSE_PATTERN.test(query);
+
   const fields = [];
-  if (/ต้องแนบอะไร/.test(query)) fields.push('purpose');
+  if (purpose) fields.push('purpose');
   if (context.intent === 'unknown') fields.push('task');
   fields.push('outcome', 'scope');
 
   const round = countClarificationRounds(answer);
-  const field = fields[round];
+  // Real candidates are best separated by naming them: one menu (or, with a
+  // single candidate, one yes/no) answers in a single reply what open questions
+  // would take up to three rounds to reach. Offer it in the first two rounds,
+  // since the first may have been spent learning what the task was at all.
+  const offerMenuNow = !purpose && tier === 'AMBIGUOUS' && options.length >= 1 && round <= 1;
+  const field = offerMenuNow ? 'skill' : fields[round];
 
-  // When the request already names a topic a Skill covers, an open question only makes the
-  // employee repeat themselves; offer the leading candidates (topic first) as a numbered menu.
-  const topical = ranked.filter((item) => item.breakdown?.keyword > 0);
-  if (round === 0 && topical.length >= 1) {
-    const options = buildSkillChoiceOptions(ranked, skills);
-    return { field: 'skill', question: 'งานนี้ตรงกับข้อไหนมากที่สุดครับ? ตอบเป็นหมายเลขหรือพิมพ์อธิบายเพิ่มได้', options };
-  }
-
-  if (field) {
+  if (field && field !== 'skill') {
     return { field, question: CLARIFICATION_QUESTIONS[field] };
   }
-
-  const options = buildSkillChoiceOptions(ranked, skills);
 
   if (options.length === 0) {
     return { field: 'scope', question: CLARIFICATION_QUESTIONS.scope };
@@ -626,7 +532,9 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
 
   return {
     field: 'skill',
-    question: 'ยังระบุงานไม่ได้ชัด ตรงกับข้อไหนมากที่สุดครับ?',
+    question: options.length === 1
+      ? 'งานนี้ตรงกับข้อนี้ไหมครับ? ถ้าตรงตอบ 1 ถ้าไม่ใช่ เล่าเพิ่มได้เลย'
+      : 'งานนี้ใกล้กับข้อไหนที่สุดครับ? ถ้าไม่ตรงสักข้อ เล่าเพิ่มได้เลย',
     options,
   };
 }
@@ -635,8 +543,10 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
  * Leading candidates described in work language, never by Skill name.
  */
 function buildSkillChoiceOptions(ranked = [], skills = []) {
+  // Offer only candidates with real evidence: a menu of unrelated work tells
+  // the employee the assistant did not understand them.
   return ranked
-    .filter((item) => item.score > 0)
+    .filter((item) => item.score >= MIN_MENU_SCORE || (item.matchedTriggers || []).length > 0)
     .slice(0, MAX_CLARIFICATION_CHOICES)
     .map((item) => {
       const skill = skills.find((candidate) => candidate.name === item.skill);
@@ -665,4 +575,3 @@ function resolveSkillMenuChoice(answer, ranked = [], skills = []) {
 
   return options.find((option) => option.label === last || option.value === last)?.value || '';
 }
-

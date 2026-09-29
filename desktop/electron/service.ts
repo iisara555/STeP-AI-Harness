@@ -202,13 +202,18 @@ export class WorkService {
         this.emit({ sessionId: id, type: 'step', index, state: 'running' });
         arm();
         const skillId = step.skill || step.skillId || contract.skill;
-        const metadata = await this.harness.skillMetadata(skillId);
+        // GENERAL: plain help with no organization Skill; only the router's mandatory rules apply.
+        const general = contract.mode === 'GENERAL' && !skillId;
+        const metadata = skillId ? await this.harness.skillMetadata(skillId) : null;
         const skillPath = step.skillPath || (skillId === contract.skill ? contract.skillPath : '') || metadata?.path;
-        if (!skillPath) throw new Error('CONTEXT_UNAVAILABLE');
+        if (!skillPath && !general) throw new Error('CONTEXT_UNAVAILABLE');
         const refs = metadata?.mandatoryReferences || contract.mandatoryReferences;
-        const paths: string[] = [skillPath, ...(refs || []).map((r: any) => (typeof r === 'string' ? r : r.path)).filter(Boolean)];
+        const paths: string[] = [
+          ...(skillPath ? [skillPath] : []),
+          ...(refs || []).map((r: any) => (typeof r === 'string' ? r : r.path)).filter(Boolean),
+        ];
         const instructions = await Promise.all(paths.map(path => this.contextFile(path)));
-        skillTitle = /^#\s+(.+)$/m.exec(instructions[0] || '')?.[1]?.trim() || String(skillId || '');
+        skillTitle = general ? '' : /^#\s+(.+)$/m.exec(instructions[0] || '')?.[1]?.trim() || String(skillId || '');
         if (routed.selectedPlaybook?.specPath) {
           instructions.push(await this.contextFile(routed.selectedPlaybook.specPath));
           paths.push(routed.selectedPlaybook.specPath);

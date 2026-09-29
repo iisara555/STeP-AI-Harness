@@ -84,7 +84,7 @@ AI ช่วยได้: รวบรวม input ตรวจความค�
 AI ห้าม:
 - invent management decision
 - mark action `CLOSED` โดยไม่มี evidence
-- อนุมัติ QMS change, SOP หรือ official response — เป็น Human Authority ตาม `iso-qms-enactment`
+- อนุมัติ QMS change, SOP หรือ official response — เป็น Human Authority ตาม `iso-enactment`
 
 ## Handoff
 

@@ -104,11 +104,13 @@ Skill ใหม่ต้องใช้ frontmatter:
 Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migrate แบบ incremental เมื่อมีการแก้เชิงสาระหรือเป็นกลุ่มความเสี่ยงสูง ไม่ต้องแก้ทั้ง repository พร้อมกัน
 
 `description` ต้องบอกให้ชัด:
-- **เมื่อไรควร Trigger**
+- **เมื่อไรควร Trigger** ด้วยคำที่ผู้ใช้พูดจริง
 - **ขอบเขตหลัก**
 - **เมื่อไรไม่ควร Trigger** หากมี collision สำคัญ
 
-อย่าใช้ description ที่กว้าง เช่น “ช่วยงานโครงการ” หรือ “จัดการเอกสาร”
+description บอกเงื่อนไข ไม่สรุปขั้นตอนการทำงาน เพราะ AI อาจทำตามบทสรุปแทนการเปิด Skill และอย่าใช้ description ที่กว้าง เช่น “ช่วยงานโครงการ” หรือ “จัดการเอกสาร”
+
+ตอนเขียนหรือตัดแต่งเนื้อหา อ่าน [writing-for-the-agent.md](references/writing-for-the-agent.md): เกณฑ์ว่าเสร็จของแต่ละขั้น ตัวชี้ที่บอกว่าเปิดเมื่อไร และการตัดประโยคที่ไม่เปลี่ยนพฤติกรรม
 
 ### 5. Progressive Disclosure
 
@@ -123,18 +125,18 @@ Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migra
 
 ### 6. Baseline → Change → Eval
 
-ก่อนปรับ Skill เดิม:
+เริ่มจาก**เคสที่ AI พลาดเมื่อไม่มีการเปลี่ยนแปลงนี้**เสมอ ทั้ง Skill ใหม่และการปรับ Skill เดิม:
 1. บันทึกตัวอย่างที่ปัจจุบันทำผิด/ไม่พออย่างน้อย 1 เคส
 2. ระบุ expected behavior
 3. แก้ให้น้อยที่สุด
 4. ทดสอบ routing + anti-collision + authority/source behavior
 5. ตรวจ regression ของ Skill ใกล้เคียง
 
-สำหรับ Skill ใหม่ ต้องมีอย่างน้อย:
-- Positive case
-- Anti-trigger / negative case
-- Collision case กับ Skill ใกล้เคียง
-- Missing-source / uncertainty case เมื่อ Skill พึ่ง Source
+Skill ใหม่ต้องมีครบก่อน merge (test ใน CI ตรวจให้):
+- `evals/skills/<skill>.json` ที่มีเคส positive, antiTrigger, collision และ missingSource พร้อม `outputAssertions` และสิ่งที่คำตอบแบบไม่มี Skill พลาด
+- โฟลเดอร์ `examples/` ที่มีตัวอย่างคำตอบที่ดีพร้อมเหตุผล และเชื่อมจากหัวข้อ Output
+
+รูปแบบไฟล์ eval วิธีเขียน assertion ที่แยกได้ การเทียบกับ baseline และกติกาของรายการหนี้ `legacyWithoutEvals`: [eval-and-baseline.md](references/eval-and-baseline.md)
 
 ## Output
 
@@ -146,7 +148,8 @@ Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migra
 - SKILL.md draft
 - Registry/Router changes ที่ต้องมี
 - Source/Authority/Handoff mapping
-- Eval cases
+- เคสที่พลาดเมื่อไม่มี Skill และไฟล์ `evals/skills/<skill>.json`
+- ตัวอย่างคำตอบที่ดีใน `examples/`
 - Risks / unknowns
 
 เมื่อผู้ใช้ขอ “ลง repo / ทำให้พร้อม Pilot” ให้ใช้ Playbook `skill-to-pilot` และทำงานผ่าน workflow ของ repo; ห้าม claim ว่าพร้อม Pilot จน validation/evidence ผ่าน
@@ -167,12 +170,12 @@ AI ช่วยได้: จัดประเภทความต้องก
 - งานที่ควรเป็น SOP ขององค์กร → `sop-authoring`
 - การจัดเส้นทางและ collision → `step-router` และ `manifest/router-index.yaml`
 
-พร้อมส่งต่อเมื่อ: Skill Contract ครบ 12 ข้อ, มี eval cases และระบุการเปลี่ยนแปลงใน registry ที่ต้องทำ
+พร้อมส่งต่อเมื่อ: Skill Contract ครบ 12 ข้อ, มีไฟล์ eval ครบ 4 มิติและตัวอย่างคำตอบ และระบุการเปลี่ยนแปลงใน registry ที่ต้องทำ
 
 ## Guardrails
 
 - ไม่สร้าง Process/Layer/Dimension ใหม่หาก registry เดิมรองรับได้
-- ไม่ copy third-party Skill แบบ verbatim; ใช้ methodology แล้วเขียนใหม่ให้เข้ากับ STeP
+- ไม่ copy third-party Skill แบบ verbatim; ใช้ methodology แล้วเขียนใหม่ให้เข้ากับ STeP และบันทึกที่มากับ license ใน [docs/third-party-methods.md](../../../docs/third-party-methods.md)
 - ไม่แต่ง Source of Truth หรือ Authority
 - ไม่เปลี่ยน `approved` lifecycle เองเพียงเพราะไฟล์สร้างเสร็จ
 - ไม่ Merge เมื่อ dependency/test ที่เกี่ยวข้องล้มเหลว

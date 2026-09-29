@@ -62,6 +62,16 @@ processes:
       - incubation.startup-intake.evaluation
       - incubation.startup-intake.onboarding
 
+  incubation.business-growth-planning:
+    name: "การวางเป้าหมายรายได้ธุรกิจและติดตามแผนเติบโต 1 ปี"
+    category: incubation
+    owner: piti
+    consumers: [isi, eic, mi]
+    subprocesses:
+      - incubation.business-growth-planning.baseline
+      - incubation.business-growth-planning.reverse-planning
+      - incubation.business-growth-planning.monthly-reforecast
+
   project.planning:
     name: "การจัดทำแผนงานโครงการ งวดงาน และบริหารความเสี่ยง"
     category: project-management

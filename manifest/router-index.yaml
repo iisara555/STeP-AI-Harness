@@ -81,7 +81,7 @@ skills:
       consumers: [pm, pubsec, sit]
     description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability และเกณฑ์ตรวจรับ โดยเปิดเผย source gaps
     intent: [create, plan]
-    triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor]
+    triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor, ทำ TOR, TOR ซื้อ, TOR จ้าง]
     paths: ["**/TOR/**", "**/procurement/**"]
     fileTypes: [docx, txt]
     requires: [project_objective, estimated_budget]
@@ -211,7 +211,7 @@ skills:
       consumers: [imo, sit, linc, pubsec, piti]
     description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
     intent: [plan, review, create]
-    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ]
+    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ, timeline โครงการ, ไทม์ไลน์โครงการ, ทำ timeline]
     paths: ["**/project*/**", "**/plan/**", "**/PM/**"]
     fileTypes: [xlsx, csv, md]
     requires: [project_scope, timeline]
@@ -278,6 +278,38 @@ skills:
           authority: budget-allocation
           description: การอนุมัติคัดเลือกสตาร์ทอัพรับทุนหรือเข้าโครงการบ่มเพาะ
 
+  - name: entrepreneur-annual-goal
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.business-growth-planning
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, mi]
+    description: โค้ชเป้ารายได้ธุรกิจ 1 ปีโดยเริ่มจากฐานจริง ย้อนยอดขาย ลูกค้า funnel กำลังผลิต คนและเงินสด ก่อนลงแผนรายเดือน
+    intent: [plan, calculate, review]
+    triggers: [ตั้งเป้ารายได้ธุรกิจ 1 ปี, ตั้งเป้ารายได้ธุรกิจปีหน้า, ทำเป้ารายได้ธุรกิจปีหน้า, เป้ารายได้ธุรกิจ 1 ปี, เป้ารายได้ปีหน้า, ตั้งเป้าหมายธุรกิจ 1 ปี, เป้าหมายธุรกิจรายปี, แผนรายได้ธุรกิจ 12 เดือน, ต้องขายกี่ชิ้น, ลูกค้าใหม่กี่ราย, ลูกค้ากี่ราย, ต้องขายเพิ่มกี่ชุด, รายได้เพิ่มจาก subscription, แผนรายได้ปีหน้า, ยอดขายปีหน้า, แผนยอดขายทั้งปี, 1-year business goal, annual business revenue goal, re-forecast ยอดขายปี, re-forecast ที่เหลือทั้งปี, ยอดขายไม่ถึงเป้ารายเดือน, ยังไม่รู้เป้ารายได้, ทำแผน 12 เดือนพร้อมคนขาย]
+    paths: ["**/business-goal/**", "**/sales-forecast/**", "**/growth-plan/**"]
+    fileTypes: [md, xlsx, csv, txt]
+    requires: [target_or_baseline]
+    scope:
+      allow:
+        - ถามทีละข้อและยืนยันฐานรายได้ก่อนตั้งเป้าหมาย
+        - จำลอง Conservative Target Stretch โดยแยก Actual Benchmark Assumption
+        - ย้อนรายได้เป็นสินค้า ลูกค้า funnel กำลังผลิต วัตถุดิบ กำลังคน และเงินสด
+        - ลงแผนรายเดือนเฉพาะเมื่อยืนยันข้อมูลสำคัญและข้อจำกัดแล้ว
+      escalate:
+        market_only:
+          skill: market-signal-radar
+          description: ค้นหาตลาดและราคาคู่แข่งโดยยังไม่วางเป้าหมายกิจการ
+        discovery_only:
+          skill: startup-discovery
+          description: พิสูจน์โจทย์ลูกค้าและสมมติฐานตลาดก่อนวางยอดขาย
+      human_only:
+        entrepreneur_commitment:
+          role: business-owner
+          authority: entrepreneur-commitment
+          description: การเลือกเป้า อนุมัติลงทุน จ้างคน หรือสั่งซื้อจริงเป็นอำนาจเจ้าของกิจการ ไม่ใช่งบ STeP
+
   - name: executive-status-update
     cluster: incubation-strategy
     domain: strategy
@@ -287,7 +319,7 @@ skills:
       consumers: [imo, pm, pubsec, nmco]
     description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
     intent: [summarize, report, review]
-    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด]
+    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด, ส่งผู้บริหาร, รายงานสถานะโครงการ, รายงานผลการดำเนินงานโครงการ]
     paths: ["**/status/**", "**/executive/**", "**/portfolio/**", "**/SIT/**"]
     fileTypes: [md, xlsx, docx, pdf]
     requires: [project_list, progress_data]
@@ -338,7 +370,7 @@ skills:
       consumers: [mi, crm, piti, eic]
     description: จัดทำและตรวจ Creative Brief สำหรับงานออกแบบ Artwork สื่อ และนิทรรศการ
     intent: [create, review, check]
-    triggers: [brief, บรีฟ, artwork, โปสเตอร์, ไวนิล, ออกแบบ, graphic, สื่อประชาสัมพันธ์]
+    triggers: [brief, บรีฟ, artwork, โปสเตอร์, ไวนิล, ออกแบบ, graphic, สื่อประชาสัมพันธ์, ดีไซเนอร์, บรีฟดีไซเนอร์, brief ดีไซเนอร์, ส่งงานให้ดีไซเนอร์]
     paths: ["**/CC/**", "**/Creative/**", "**/artwork/**", "**/brief/**"]
     fileTypes: [ai, psd, pdf, docx, png, jpg]
     requires: [project_objective, target_audience, dimension_or_format]
@@ -522,7 +554,7 @@ skills:
     wildcardReason: "all teams produce internal or external organizational communication"
     description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
     intent: [social-writing, review, create]
-    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, โพสต์, ข่าวประชาสัมพันธ์, อีเมล, email]
+    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ปรับข้อความ, เขียนข้อความ, ข้อความประชาสัมพันธ์, ให้สุภาพ, สุภาพขึ้น, สุภาพพอไหม, สุภาพไหม, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, คำผิด, ตรวจคำผิด, พิสูจน์อักษร, สะกดผิด, โพสต์, ข่าวประชาสัมพันธ์]
     paths: ["**/*.md", "**/*.docx", "**/*.txt"]
     fileTypes: [md, docx, txt]
     requires: [draft_text]
@@ -545,7 +577,7 @@ skills:
       consumers: [afp, qs, pubsec, iasa]
     description: ตรวจและจัดรูปแบบหนังสือราชการไทย หนังสือภายนอก หนังสือภายใน และบันทึกข้อความ
     intent: [create, review, check]
-    triggers: [หนังสือราชการ, บันทึกข้อความ, หนังสือภายนอก, หนังสือภายใน, ตราครุฑ, คำขึ้นต้น, หนังสือส่ง, หนังสือเชิญ, ขอความอนุเคราะห์]
+    triggers: [หนังสือราชการ, บันทึกข้อความ, หนังสือภายนอก, หนังสือภายใน, ตราครุฑ, คำขึ้นต้น, หนังสือส่ง, หนังสือเชิญ, ขอความอนุเคราะห์, ร่างหนังสือ, หนังสือแจ้ง, หน่วยงานภายนอก, จัดทำหนังสือ, รูปแบบหนังสือ, ผู้ลงนาม, เสนอลงนาม]
     paths: ["**/official/**", "**/letters/**", "**/memo/**", "**/GA/**"]
     fileTypes: [docx, pdf]
     requires: [memo_topic, recipient, content_body]
@@ -558,6 +590,33 @@ skills:
           role: authorized-signatory
           authority: official-signing
           description: การลงนามหรือออกเลขหนังสือจริง
+        approval_decision:
+          role: authorized-signatory
+          authority: official-signing
+          description: การอนุมัติหรือลงนามอนุมัติในบันทึกข้อความแทนผู้มีอำนาจ
+
+  - name: stakeholder-questionnaire
+    cluster: governance-operations
+    domain: governance
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: [afp, ga, hd, sit, imo]
+    description: ร่างชุดคำถามส่งให้เจ้าของข้อมูลเมื่องานติดที่ข้อมูลหรือเอกสารที่ยังรอยืนยัน
+    intent: [create, triage]
+    triggers: [ชุดคำถาม, ลิสต์คำถาม, รายการคำถาม, คำถามส่งให้, ส่งคำถามให้, ร่างคำถาม, รอยืนยัน, questionnaire]
+    paths: []
+    fileTypes: [md, docx]
+    requires: [recipient, needed_answers]
+    scope:
+      allow:
+        - ร่างและจัดลำดับคำถามถึงเจ้าของข้อมูลจากช่องว่างที่ระบุได้
+      escalate: {}
+      human_only:
+        policy_interpretation:
+          role: policy-owner
+          authority: policy-waiver
+          description: การตีความคำตอบที่มีผลต่อระเบียบหรือข้อยกเว้น
 
   - name: brand-tone-of-voice
     cluster: market-creative
@@ -615,7 +674,7 @@ skills:
       consumers: [ga, ifu, les, cc]
     description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
     intent: [triage, check, review]
-    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, ลูกค้าถาม, ลูกค้าทักมา, ตอบลูกค้ายังไง, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
+    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, ลูกค้าถาม, ลูกค้าทักมา, ลูกค้าร้องเรียน, คัดแยกข้อร้องเรียน, ตอบลูกค้ายังไง, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
     paths: ["**/support/**", "**/inquiry/**", "**/CRM/**"]
     fileTypes: [txt, md, docx]
     requires: [customer_message]
@@ -811,6 +870,34 @@ skills:
       escalate: {}
       human_only: {}
 
+  - name: afp-operations-lookup
+    cluster: governance-operations
+    domain: finance
+    processId: procurement.request
+    teams:
+      primary: [afp]
+      consumers: ["*"]
+    wildcardReason: "every team sends finance and procurement paperwork to AFP, so anyone planning an activity must be able to look up the lead time and expense category before they commit to a date"
+    description: ตอบ Lead Time งานการเงินและงานพัสดุ หมวดค่าใช้จ่าย B/BV/B9.2 การจ้างเหมารถตู้ ค่าตอบแทนวิทยากร ข้อควรระวังการยืมเงิน และ E-Signature ตามแนวปฏิบัติที่ AFP แจ้งเวียน
+    intent: [afp-operations]
+    triggers: [lead time, leadtime, ระยะเวลาดำเนินงาน, ใช้เวลากี่วัน, กี่วันทำการ, เสร็จเมื่อไหร่, ทันไหม, ปิดรับเอกสาร, รอบปิดรับ, ปฏิทินการเงิน, ยืมเงิน, สัญญายืมเงิน, เคลียร์เงิน, สำรองจ่าย, เบิกเงินสำรองจ่าย, เงินอุดหนุนโครงการ, ใบแจ้งหนี้, ขอออกใบเสร็จ, ใบเสร็จรับเงิน, หมวดค่าใช้จ่าย, ลงหมวดอะไร, หมวด B, หมวด BV, จ้างเหมารถตู้, เช่ารถตู้, ค่าตอบแทนวิทยากร, วิทยากร, นับชั่วโมงวิทยากร, จัดซื้อจัดจ้าง, งานพัสดุ, ใบสั่งซื้อ, ใบสั่งจ้าง, PR, PO, e-signature, อีลายเซ็น, ลายเซ็นอิเล็กทรอนิกส์, STeP MIS, เงินชดเชยคอมพิวเตอร์, คอมพิวเตอร์พกพา, เอกสารภาษาต่างประเทศ, อัตราแลกเปลี่ยน]
+    paths: ["**/AFP/**", "**/Finance/**", "**/Procurement/**"]
+    fileTypes: [md, pdf, xlsx]
+    requires: []
+    scope:
+      allow:
+        - อ้าง Lead Time พร้อมเงื่อนไขว่านับเมื่อเอกสารครบถ้วนถูกต้อง และเริ่มนับใหม่เมื่อมีการแก้ไข
+        - ชี้หมวดค่าใช้จ่ายตามขอบเขตที่แนวปฏิบัติระบุ
+        - อธิบายวิธีนับชั่วโมงวิทยากรและข้อควรระวังการยืมเงิน
+      escalate:
+        disbursement_decision:
+          to: afp
+          description: การสรุปว่าเบิกได้หรือไม่ได้ในกรณีเฉพาะ เป็นดุลพินิจของเจ้าหน้าที่ AFP
+        unregistered_rate:
+          to: afp
+          description: อัตราค่าตอบแทนวิทยากรและเงินชดเชยคอมพิวเตอร์ยังไม่มีในเอกสารที่ลงทะเบียน
+      human_only: {}
+
   - name: hr-policy-lookup
     cluster: governance-operations
     domain: people-development
@@ -821,7 +908,7 @@ skills:
     wildcardReason: "every employee in every team is bound by the HR and career-path announcements, so anyone must be able to look up their own entitlements"
     description: ตอบสิทธิและเงื่อนไขตามประกาศงานบุคคลและ Career Path ของอุทยานฯ พร้อมอ้างเลขข้อ — วันลา เบี้ยขยัน เบี้ยเลี้ยง ค่าที่พัก ค่ายานพาหนะ เงินเดือน ค่าตำแหน่ง การลาออก การพ้นสภาพ และระเบียบวินัย
     intent: [hr-entitlement]
-    triggers: [ลาพักผ่อน, ลาป่วย, ลากิจ, ลาคลอด, ลาบวช, ลาอุปสมบท, ลาปฏิบัติธรรม, ลากิจพิเศษ, ลารับปริญญา, ลาไปดูแลคู่สมรส, ลาเกณฑ์ทหาร, ลาตรวจเลือก, วันลา, ลาได้กี่วัน, สิทธิวันลา, ลาออก, ยื่นใบลาออก, พ้นสภาพพนักงาน, เบี้ยขยัน, เบี้ยเลี้ยง, ค่าที่พัก, ค่าเบี้ยเลี้ยงไปราชการ, ค่ายานพาหนะ, ค่าน้ำมัน, เบิกค่าเดินทาง, เงินเดือนออกวันไหน, รอบจ่ายเงินเดือน, ปรับเงินเดือน, ค่าตอบแทนตามผลงาน, pay for performance, กองทุนสำรองเลี้ยงชีพ, ประกันสังคม, ค่าพิธีศพ, ตรวจสุขภาพประจำปี, ประกันสุขภาพกลุ่ม, ระเบียบวินัย, โทษทางวินัย, ภาคทัณฑ์, เวลาทำงาน, บันทึกเวลา, สแกนนิ้ว, มาสาย, การแต่งกาย, ระเบียบการแต่งกาย, career path, เส้นทางความก้าวหน้า, เลื่อนขั้น, เลื่อนตำแหน่ง, ค่าตำแหน่ง, ค่าความเชี่ยวชาญ, ขั้นเงินเดือน, หัวหน้าทีม, พนักงานประจำ, พนักงานโครงการ, พนักงานทดลองงาน, สวัสดิการพนักงาน, ระเบียบบุคคล, ประกาศงานบุคคล, สลิปเงินเดือน, ขอสลิปเงินเดือน, หนังสือรับรองเงินเดือน, Favpo, ยื่นใบลา, ยื่นคำร้อง, logbook, log book, วันหยุดชดเชย, วันหยุดเพิ่มเติม, วันหยุดราชการ, ไปต่างประเทศ, เดินทางไปปฏิบัติงานต่างประเทศ, business travel, บันทึกการพัฒนาบุคลากร, หลักฐานการอบรม, เบิกค่าน้ำมัน, เบิกค่ารถ, รถไฟฟ้า, ยื่นเรื่องที่ไหน, ทำที่ระบบไหน]
+    triggers: [ลาพักผ่อน, ลาป่วย, ลากิจ, ลาคลอด, ลาบวช, ลาอุปสมบท, ลาปฏิบัติธรรม, ลากิจพิเศษ, ลารับปริญญา, ลาไปดูแลคู่สมรส, ลาเกณฑ์ทหาร, ลาตรวจเลือก, วันลา, ลาได้กี่วัน, สิทธิวันลา, ลาออก, ยื่นใบลาออก, พ้นสภาพพนักงาน, เบี้ยขยัน, เบี้ยเลี้ยง, ค่าที่พัก, ค่าเบี้ยเลี้ยงไปราชการ, ค่ายานพาหนะ, ค่าน้ำมัน, เบิกค่าเดินทาง, เงินเดือนออกวันไหน, รอบจ่ายเงินเดือน, ปรับเงินเดือน, ค่าตอบแทนตามผลงาน, pay for performance, กองทุนสำรองเลี้ยงชีพ, ประกันสังคม, ค่าพิธีศพ, ตรวจสุขภาพประจำปี, ประกันสุขภาพกลุ่ม, ระเบียบวินัย, โทษทางวินัย, ภาคทัณฑ์, เวลาทำงาน, บันทึกเวลา, สแกนนิ้ว, มาสาย, การแต่งกาย, ระเบียบการแต่งกาย, career path, เส้นทางความก้าวหน้า, เลื่อนขั้น, เลื่อนตำแหน่ง, ค่าตำแหน่ง, ค่าความเชี่ยวชาญ, ขั้นเงินเดือน, หัวหน้าทีม, พนักงานประจำ, พนักงานโครงการ, พนักงานทดลองงาน, สวัสดิการพนักงาน, ระเบียบบุคคล, ประกาศงานบุคคล, สลิปเงินเดือน, ขอสลิปเงินเดือน, หนังสือรับรองเงินเดือน, Favpo, ยื่นใบลา, ยื่นคำร้อง, logbook, log book, วันหยุดชดเชย, วันหยุดเพิ่มเติม, วันหยุดราชการ, ไปต่างประเทศ, เดินทางไปปฏิบัติงานต่างประเทศ, business travel, บันทึกการพัฒนาบุคลากร, หลักฐานการอบรม, เบิกค่าน้ำมัน, เบิกค่ารถ, รถไฟฟ้า, ยื่นเรื่องที่ไหน, ทำที่ระบบไหน, ใบรับรองแพทย์, ค่ารักษาพยาบาล, รักษาพยาบาล]
     paths: ["**/HD/**", "**/HR/**", "**/HRD/**", "**/Personnel/**"]
     fileTypes: [md, pdf, docx]
     requires: []
@@ -968,8 +1055,8 @@ skills:
       primary: [mi]
       consumers: [piti, isi, eic, tech-spin, linc, crm, cc]
     description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของ evidence
-    intent: [market-test, review, plan]
-    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
+    intent: [market-test, review, plan, competitor-comparison]
+    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, เทียบคู่แข่ง, เปรียบเทียบคู่แข่ง, competitor comparison, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
     paths: ["**/MI/**", "**/Market/**", "**/research/**", "**/insight/**"]
     fileTypes: [md, docx, xlsx, csv]
     requires: [market_question]
@@ -989,7 +1076,7 @@ skills:
       primary: [crm]
       consumers: [mi, ifu, les, foodfabr, cc, piti]
     description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยระวัง sample bias/PII
-    intent: [summarize, review]
+    intent: [summarize, review, customer-feedback-synthesis]
     triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า, ลูกค้าบ่น, จัดกลุ่มความเห็นลูกค้า]
     paths: ["**/CRM/**", "**/Customer/**", "**/survey/**", "**/feedback/**"]
     fileTypes: [xlsx, csv, md, docx, txt]
@@ -1026,8 +1113,8 @@ skills:
       escalate: {}
       human_only:
         official_result_release:
-          role: authorized-signatory
-          authority: official-signing
+          role: authorized-lab-signatory
+          authority: lab-result-release
           description: การออกหรือรับรองรายงานผลทดสอบอย่างเป็นทางการต้องมีผู้มีอำนาจ/ผู้เชี่ยวชาญลงนาม
 
   # --- ISO 9001 / QMS Audit Readiness Pack ---
@@ -1114,7 +1201,7 @@ skills:
       consumers: []
     description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
     intent: [review, interview]
-    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ]
+    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ, สัมภาษณ์ตรวจ, สัมภาษณ์ตรวจ iso, ตอบผู้ตรวจ]
     paths: ["**/Audit/**", "**/ISO/**", "**/Training/**"]
     fileTypes: [md, docx, pdf]
     requires: [team_or_process_context]
@@ -1133,8 +1220,8 @@ skills:
       primary: [qs]
       consumers: []
     description: จัดการ NC/NCR/CAPA ตั้งแต่ fact, containment, RCA, corrective action และ effectiveness check
-    intent: [nonconformity, create, review]
-    triggers: [ncr capa, ncr, capa, nonconformity, non-conformity, ไม่ได้มาตรฐาน, ของไม่ได้มาตรฐาน, ไม่เป็นไปตามข้อกำหนด, เปิด nc, เปิด ncr, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan]
+    intent: [nonconformity, create, review, evaluate]
+    triggers: [ncr capa, ncr, capa, nonconformity, non-conformity, ไม่ได้มาตรฐาน, ของไม่ได้มาตรฐาน, ไม่เป็นไปตามข้อกำหนด, เปิด nc, เปิด ncr, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan, pareto, จัดลำดับสาเหตุ, สาเหตุหลักของ nc, root cause ของ nc, สาเหตุของ nc, ข้อร้องเรียนซ้ำ]
     paths: ["**/CAPA/**", "**/NCR/**", "**/Audit/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx, pdf]
     requires: [nonconformity_or_finding]
@@ -1161,7 +1248,7 @@ skills:
       consumers: []
     description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
     intent: [review, evaluate]
-    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ]
+    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ, ความเสี่ยงของกระบวนการ, ประเมินความเสี่ยงกระบวนการ]
     paths: ["**/Risk/**", "**/ISO/**", "**/Quality/**"]
     fileTypes: [xlsx, md, docx]
     requires: [process_or_qms_context]
@@ -1187,8 +1274,8 @@ skills:
       primary: [qs]
       consumers: []
     description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
-    intent: [review, evaluate]
-    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ]
+    intent: [review, evaluate, report]
+    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ, รายงานผล kpi, รายงาน kpi, ผล kpi, kpi ประจำเดือน, kpi ประจำไตรมาส, รีวิว kpi, ทบทวน kpi]
     paths: ["**/KPI/**", "**/Quality/**", "**/ISO/**"]
     fileTypes: [xlsx, csv, md, docx, pptx]
     requires: [objective_or_kpi]

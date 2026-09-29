@@ -40,15 +40,22 @@ export async function runAsk(args) {
 
   const userTeam = args.team || args.m || (await getUserTeam()) || '';
   const userCluster = args.cluster || args.c || (await getUserCluster()) || '';
+  let intentAssessment;
+  if (args['intent-assessment'] !== undefined) {
+    try { intentAssessment = JSON.parse(String(args['intent-assessment'])); }
+    catch { intentAssessment = {}; } // Invalid host output must fail closed.
+  }
   const result = await queryStepRouter(query, {
     team: userTeam, cluster: userCluster, clarificationAnswer: args.answer,
     skill: typeof args.skill === 'string' ? args.skill : undefined,
+    intentAssessment,
   });
   if (machineMode) {
     console.log(JSON.stringify({
       routing: result.routingContract,
       contextPlan: result.contextPlan,
       privacy: result.privacy,
+      ...(result.intentReview ? { intentReview: result.intentReview } : {}),
     }, null, 2));
     return;
   }
@@ -97,7 +104,7 @@ export async function runAsk(args) {
 
   if (routingMode === 'ESCALATE' || routingMode === 'UNAVAILABLE') {
     console.log(routingMode === 'ESCALATE'
-      ? `ต้องส่งต่อ/ยืนยันก่อนดำเนินงาน: ${scopeResult.targetSkill || 'ผู้รับผิดชอบ'}`
+      ? `ต้องส่งต่อ/ยืนยันก่อนดำเนินงาน: ${scopeResult.targetRole || scopeResult.targetSkill || 'ผู้รับผิดชอบ'}`
       : 'ยังเปิดใช้งานไม่ได้: อ่าน Skill ไม่ได้หรือไม่มี path');
     if (scopeResult.reason) console.log(scopeResult.reason);
     return;
@@ -134,9 +141,14 @@ export async function runAsk(args) {
     }
 
     console.log();
-    // Terminal output is a log too, so suggested prompts carry the scanned text, not the raw request.
-  console.log(colors.cyan(`   "${result.query}"`));
+    console.log(colors.cyan(`   "${result.query}"`));
     console.log(colors.dim('   CLI นี้แสดงแผนเท่านั้น ยังไม่ได้เรียก tool หรือสร้าง run state; host integration ต้องเรียก API และผ่าน action gate แยกต่างหาก\n'));
+    return;
+  }
+
+  if (routingMode === 'GENERAL') {
+    console.log(colors.bold('งานนี้ AI ช่วยได้ทันทีในฐานะผู้ช่วยทั่วไป ไม่ต้องใช้ขั้นตอนเฉพาะของ STeP'));
+    console.log(colors.dim('กฎองค์กรเรื่องข้อมูลส่วนบุคคลและการอนุมัติยังใช้เหมือนเดิม และคำตอบจะไม่อ้างว่าเป็นระเบียบของ STeP ถ้าไม่มีเอกสารอ้างอิง'));
     return;
   }
 
@@ -203,7 +215,6 @@ export async function runAsk(args) {
 
   console.log();
   console.log(colors.bold('💡 ตัวอย่างคำสั่งที่คุณสั่ง AI ใน Claude / Cursor / Codex ได้ทันที:'));
-  // Terminal output is a log too, so suggested prompts carry the scanned text, not the raw request.
   console.log(colors.cyan(`   "${result.query}"`));
   console.log(colors.dim('   (ใช้ทักษะ ') + colors.bold(selectedSkill.name) + colors.dim(' เพื่อช่วยเตรียมงานตามแหล่งอ้างอิงที่ตรวจได้ ให้ผู้รับผิดชอบตรวจผลก่อนใช้จริง)\n'));
 }
