@@ -1,0 +1,24 @@
+# Developer-only, code-only allowlist. Never index employee content.
+*
+!src/
+!src/**
+!bin/
+!bin/**
+!scripts/
+!scripts/**
+!test/
+!test/**
+!desktop/
+!desktop/src/
+!desktop/src/**
+!desktop/electron/
+!desktop/electron/**
+!desktop/test/
+!desktop/test/**
+**/node_modules/**
+**/dist/**
+**/.env*
+**/*.key
+**/*.pem
+src/vendor/
+src/vendor/**

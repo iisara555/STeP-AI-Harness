@@ -37,3 +37,9 @@ FEEDBACK.md
 REQUEST_NEW_TASK.md
 USER.md
 MEMORY.md
+
+# Local architecture analysis and desktop build artifacts
+graphify-out/
+desktop/dist/
+desktop/release/
+.codex/hooks.json
