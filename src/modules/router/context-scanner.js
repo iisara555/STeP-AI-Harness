@@ -64,7 +64,8 @@ export const INTENT_KEYWORDS = {
   interview: ['สัมภาษณ์ลูกค้า', 'customer interview', 'mom test', 'สัมภาษณ์ audit', 'audit interview', 'interview coach', 'ซ้อมตอบผู้ตรวจ', 'ซ้อมสัมภาษณ์'],
   review: ['ปรับสำนวน', 'ตรวจ', 'รีวิว', 'เช็ก', 'เช็ค', 'ตรวจสอบ', 'ทบทวน', 'ความครบถ้วน', 'ครบถ้วน', 'ครบยัง', 'ครบมั้ย', 'ครบไหม', 'ช่วยดู', 'เบิกได้', 'review', 'check', 'audit', 'evaluate'],
   fill: ['กรอก', 'จองห้อง', 'ขอใช้ห้อง', 'ลงทะเบียน', 'fill', 'book', 'register'],
-  create: ['ทำ creative brief', 'คิด concept', 'จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำตาราง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt ทำภาพ', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'key visual', 'create', 'draft', 'write', 'generate', 'design'],
+  // Everyday Thai drafting verbs ("ช่วยคิด…", "จัดโครง…", "ร่างอีเมล…") seen in staff usability testing.
+  create: ['ทำ creative brief', 'คิด concept', 'ช่วยคิด', 'คิดคอนเซ็ปต์', 'จัดโครง', 'วางโครง', 'ร่างหนังสือ', 'ร่างอีเมล', 'ร่างโพสต์', 'จัดทำ', 'ยกร่าง', 'ร่าง', 'สร้าง', 'เขียน', 'ออกแบบ', 'ดีไซน์', 'แต่ง', 'ทำตาราง', 'ทำสไลด์', 'ทำบรีฟ', 'ทำแบบ', 'ขอ prompt ภาพ', 'ขอ prompt รูป', 'ขอ prompt ทำภาพ', 'ขอ prompt โปสเตอร์', 'prompt ภาพโปสเตอร์', 'prompt งานสัมมนา', 'key visual', 'create', 'draft', 'write', 'generate', 'design'],
   plan: ['ทำ pre-mortem', 'วางแผน', 'แผนงาน', 'กะเวลา', 'ไทม์ไลน์', 'milestone', 'plan', 'schedule', 'gantt', 'ไทมไลน์'],
   deploy: ['deploy', 'เดพลอย', 'ขึ้นระบบ', 'production', 'staging'],
   triage: ['คัดแยก', 'ส่งต่อ', 'รับเรื่อง', 'triage', 'inquiry', 'สอบถาม', 'ถาม', 'ติดต่อ', 'ราคา'],

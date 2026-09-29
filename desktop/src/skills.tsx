@@ -11,17 +11,21 @@ export const statusTag: Record<string, { label: string; tone: string; hint: stri
   tool: { label: 'Mini App · ยังไม่ Routing', tone: 'tool', hint: 'เครื่องมือเฉพาะงาน เปิดจากเมนูเครื่องมือ ยังไม่ผ่าน Router' },
 };
 const tools = [{ id: 'receipt', title: 'ตรวจใบเสร็จก่อนส่ง AFP', description: 'อ่านใบเสร็จด้วย OCR ในเครื่อง ให้คนตรวจทีละช่อง แล้วส่งข้อมูลที่ตรวจแล้วให้ receipt-audit pre-check ต่อ', owner: 'afp', stage: 'ทดลอง' }];
+export const toolCount = tools.length;
 const filters = [['all', 'ทั้งหมด'], ['routed', 'Routing แล้ว'], ['registered', 'Manifest เท่านั้น'], ['unregistered', 'ยังไม่ลงทะเบียน'], ['tool', 'Mini App']] as const;
 const fold = (value: string) => value.toLowerCase().replace(/[-_\s]+/g, ' ');
 
-export function SkillsHub({ skills, onUse, onOpenTool }: { skills: SkillEntry[] | null; onUse: (name: string) => void; onOpenTool: (id: string) => void }) {
+export function SkillsHub({ skills, team = '', onUse, onOpenTool }: { skills: SkillEntry[] | null; team?: string; onUse: (name: string) => void; onOpenTool: (id: string) => void }) {
+  // Staff see their own team's Skills first; the rest follow in name order.
+  const mine = (s: SkillEntry) => Boolean(team) && (s.owner === team || s.teams.includes(team));
   const [query, setQuery] = useState(''), [filter, setFilter] = useState<(typeof filters)[number][0]>('all');
   const count = (id: string) => id === 'all' ? (skills?.length || 0) + tools.length : id === 'tool' ? tools.length : (skills || []).filter(s => id === 'unregistered' ? s.status === 'unregistered' || s.status === 'missing-file' : s.status === id).length;
   const visible = useMemo(() => {
     const q = fold(query.trim());
     return (skills || []).filter(s => (filter === 'all' || (filter === 'unregistered' ? ['unregistered', 'missing-file'].includes(s.status) : s.status === filter))
-      && (!q || fold([s.name, s.title, s.description, s.owner, s.cluster, ...s.triggers].join(' ')).includes(q)));
-  }, [skills, query, filter]);
+      && (!q || fold([s.name, s.title, s.description, s.owner, s.cluster, ...s.triggers].join(' ')).includes(q)))
+      .sort((a, b) => Number(!mine(a)) - Number(!mine(b)));
+  }, [skills, query, filter, team]);
   const visibleTools = tools.filter(t => (filter === 'all' || filter === 'tool') && (!query.trim() || fold(t.title + ' ' + t.description).includes(fold(query.trim()))));
 
   return <div className="skills-hub">
@@ -42,7 +46,8 @@ export function SkillsHub({ skills, onUse, onOpenTool }: { skills: SkillEntry[] 
         <header><Blocks size={16}/><strong>{s.title}</strong></header>
         <code className="skill-command">/{s.name}</code>
         <p>{s.description}</p>
-        <div className="skill-tags"><span className={`tag ${tag.tone}`} title={tag.hint}>{tag.label}</span>{s.stage && <span className="tag">{s.stage}</span>}{s.owner && <span className="tag">{s.owner.toUpperCase()}</span>}{s.category && <span className="tag">{s.category}</span>}</div>
+        {/* Release stage and category are internal bookkeeping; they stay in the tooltip for maintainers. */}
+        <div className="skill-tags" title={[s.stage, s.category].filter(Boolean).join(' · ')}>{mine(s) && <span className="tag team">ทีมคุณ</span>}<span className={`tag ${tag.tone}`} title={tag.hint}>{tag.label}</span>{s.owner && <span className="tag">ทีม {s.owner.toUpperCase()}</span>}</div>
         {s.status === 'routed' ? <button className="quiet" onClick={() => onUse(s.name)}>ใช้ Skill นี้<ArrowRight size={14}/></button> : <small className="muted">{tag.hint}</small>}
       </article>; })}
     </div>

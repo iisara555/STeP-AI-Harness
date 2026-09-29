@@ -134,7 +134,8 @@ export async function runAsk(args) {
     }
 
     console.log();
-    console.log(colors.cyan(`   "${query}"`));
+    // Terminal output is a log too, so suggested prompts carry the scanned text, not the raw request.
+  console.log(colors.cyan(`   "${result.query}"`));
     console.log(colors.dim('   CLI นี้แสดงแผนเท่านั้น ยังไม่ได้เรียก tool หรือสร้าง run state; host integration ต้องเรียก API และผ่าน action gate แยกต่างหาก\n'));
     return;
   }
@@ -202,6 +203,7 @@ export async function runAsk(args) {
 
   console.log();
   console.log(colors.bold('💡 ตัวอย่างคำสั่งที่คุณสั่ง AI ใน Claude / Cursor / Codex ได้ทันที:'));
-  console.log(colors.cyan(`   "${query}"`));
+  // Terminal output is a log too, so suggested prompts carry the scanned text, not the raw request.
+  console.log(colors.cyan(`   "${result.query}"`));
   console.log(colors.dim('   (ใช้ทักษะ ') + colors.bold(selectedSkill.name) + colors.dim(' เพื่อช่วยเตรียมงานตามแหล่งอ้างอิงที่ตรวจได้ ให้ผู้รับผิดชอบตรวจผลก่อนใช้จริง)\n'));
 }

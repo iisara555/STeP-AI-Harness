@@ -45,6 +45,8 @@ try {
     const c = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });
     for (const [title, pinned] of [['บรีฟงานสัมมนา AI สำหรับ SME', true], ['สรุปประชุมทีม CC', false], ['ร่างข่าวประชาสัมพันธ์', false]]) {
       const s = await window.step.call('create', { connectionId: c.id, project: 'สื่อสารองค์กร' });
+      // Tasks that were never used stay out of the list, so each seeded task gets a draft.
+      await window.step.call('edit', { id: s.id, text: title, revision: 0 });
       await window.step.call('rename', { id: s.id, title }); if (pinned) await window.step.call('pin', { id: s.id, pinned: true });
     }
   });

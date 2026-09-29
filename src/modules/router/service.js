@@ -606,6 +606,14 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
   const round = countClarificationRounds(answer);
   const field = fields[round];
 
+  // When the request already names a topic a Skill covers, an open question only makes the
+  // employee repeat themselves; offer the leading candidates (topic first) as a numbered menu.
+  const topical = ranked.filter((item) => item.breakdown?.keyword > 0);
+  if (round === 0 && topical.length >= 1) {
+    const options = buildSkillChoiceOptions(ranked, skills);
+    return { field: 'skill', question: 'งานนี้ตรงกับข้อไหนมากที่สุดครับ? ตอบเป็นหมายเลขหรือพิมพ์อธิบายเพิ่มได้', options };
+  }
+
   if (field) {
     return { field, question: CLARIFICATION_QUESTIONS[field] };
   }

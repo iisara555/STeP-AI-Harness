@@ -361,7 +361,7 @@ skills:
       consumers: [crm, eic, imo]
     description: ออกแบบแนวคิดงาน Event ผังบูธ และประสบการณ์ผู้เข้าร่วมงาน
     intent: [create, plan]
-    triggers: [event, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, จัดสัมมนา, ออกแบบงานสัมมนา, concept งานสัมมนา, งานเปิดบ้าน, กิจกรรมในงาน]
+    triggers: [event, event concept, คอนเซ็ปต์งาน, แนวคิดงาน, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, จัดสัมมนา, ออกแบบงานสัมมนา, concept งานสัมมนา, งานเปิดบ้าน, กิจกรรมในงาน]
     paths: ["**/event*/**", "**/exhibition/**", "**/booth/**"]
     fileTypes: [pdf, pptx, docx]
     requires: [event_goal, audience_type, venue_constraints]
@@ -522,7 +522,7 @@ skills:
     wildcardReason: "all teams produce internal or external organizational communication"
     description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
     intent: [social-writing, review, create]
-    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก]
+    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ข้อความ, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, โพสต์, ข่าวประชาสัมพันธ์, อีเมล, email]
     paths: ["**/*.md", "**/*.docx", "**/*.txt"]
     fileTypes: [md, docx, txt]
     requires: [draft_text]

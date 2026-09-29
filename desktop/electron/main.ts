@@ -411,11 +411,14 @@ async function main() {
           const a = attachments.get(aid); if (!a || !a.view.usable || a.sessionId !== id) throw new Error('ATTACHMENT_NOT_APPROVED'); return a;
         });
         const attachmentText = selected.map((a: any) => a.text).join('\n\n');
-        const review = service.review(text, attachmentText);
+        // Only juristic-person numbers (13 digits starting with 0) that the person checked may stay unmasked.
+        const allowIds = (Array.isArray(input.allowIdentifiers) ? input.allowIdentifiers : []).map((v: unknown) => String(v).replace(/\D/g, '')).filter((v: string) => /^0\d{12}$/.test(v)).slice(0, 3);
+        if (allowIds.length) { const s = store.session(id); s.allowedIdentifiers = [...new Set([...(s.allowedIdentifiers || []), ...allowIds])].slice(-5); store.put('session', s.id, s); }
+        const review = service.review(text, attachmentText, store.session(id).allowedIdentifiers || []);
         if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-        // Ask only when it adds information: first send in a session, a new attachment, or a privacy review signal.
+        // Ask only when it adds information: the first send on this computer, a new attachment, or a privacy review signal.
         const flagged = review.action === 'human-confirm';
-        const first = !store.session(id).consentedAt;
+        const first = !store.settings().consentedAt;
         if (first || selected.length || flagged) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
           const fingerprint = createHash('sha256').update([id, text, skill, ...selected.map((a: any) => a.view.id)].join('\0')).digest('hex');
@@ -427,11 +430,14 @@ async function main() {
           }
           consents.delete(token);
           const s = store.session(id); if (!s.consentedAt) { s.consentedAt = new Date().toISOString(); store.save(s); }
+          if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
         }
         if (busy) throw new Error('RUN_ALREADY_ACTIVE');
         busy = true;
         void service.run(id, text, attachmentText, true, skill || undefined).catch(error => { diagnose('run-rejected', { code: errorCode(error) }); emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' }); emit({ sessionId: id, type: 'changed' }); }).finally(() => { busy = false; });
-        for (const a of selected) attachments.delete(a.view.id); return { started: true };
+        for (const a of selected) attachments.delete(a.view.id);
+        // Without a dialog, the person still learns what was masked before sending.
+        return { started: true, masked: review.labels };
       }
       case 'cancel': service.cancel(input.id); return true;
       // Pin and rename are view metadata: keep updatedAt so the list order does not jump.

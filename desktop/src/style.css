@@ -83,3 +83,21 @@ nav .count{margin-left:auto;font-size:10.5px;color:var(--muted)}
 .connection-warning { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 18%, transparent); font-size: 13px; }
 .connection-warning span { flex: 1; }
 .connection-warning button { padding: 3px 10px; }
+
+/* After a failed run: try again with the same request, or put it back in the box to edit. */
+.retry-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -12px 0 24px; }
+.retry-row button { font-size: 12px; padding: 6px 12px; }
+/* A stop the person asked for is information, not an error. */
+.message.status.neutral .message-body { color: var(--muted); }
+
+/* Slash menu and Skill hub: Thai title and description first, the command last; the person's team is marked. */
+.slash-menu button { flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; }
+.slash-menu .slash-title { font-size: 13px; color: var(--text); display: flex; gap: 6px; align-items: center; }
+.slash-menu .slash-desc { font-size: 11px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slash-menu code { font-size: 10px; color: var(--muted); }
+.team-mark, .tag.team { background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 0 7px; font-size: 10px; }
+
+/* Task list filter: one compact row so the list itself gets the height. */
+.session-filter { display: flex; gap: 4px; padding: 3px; border-radius: 8px; background: var(--hover, var(--selected)); }
+.session-filter button { flex: 1; padding: 5px 8px; font-size: 12px; background: transparent; color: var(--muted); }
+.session-filter button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px #0001; }

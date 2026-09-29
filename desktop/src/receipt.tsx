@@ -8,7 +8,7 @@ type Field = { value: string; page: number | null; confidence: number | null; ev
 type LineRecord = { text: string; page: number; confidence: number | null; needsReview?: boolean; crosscheckCandidate?: string; crosscheckStatus?: string | null };
 type Issue = { code: string; severity: 'blocking' | 'advisory'; count?: number };
 type ReceiptReviewApi = {
-  fieldKeys: string[]; requiredKeys: string[];
+  fieldKeys: string[]; requiredKeys: string[]; normalizeDigits(value: string): string;
   extractReceipt(result: unknown): { fields: Record<string, Field>; records: LineRecord[]; buyerTaxIdExcluded: boolean };
   reviewIssues(values: Record<string, string>, confirmed: Record<string, boolean>, options: object): { issues: Issue[]; complete: boolean; confirmedCount: number; filledCount: number };
 };
@@ -27,14 +27,15 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
 };
 const describe = (issue: Issue) => { const text = issueText[issue.code]; return typeof text === 'function' ? text(issue) : text || issue.code; };
 
-export function ReceiptApp({ call, notify, onError, handoff }: { call: (method: string, input?: unknown) => Promise<any>; onError: (error: unknown) => void; notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void; handoff: (text: string) => Promise<void> }) {
+export function ReceiptApp({ call, notify, onError, handoff }: { call: (method: string, input?: unknown) => Promise<any>; onError: (error: unknown) => void; notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void; handoff: (text: string, allowIds?: string[]) => Promise<void> }) {
   const [status, setStatus] = useState<OcrStatus | null>(null), [busy, setBusy] = useState('');
   const [doc, setDoc] = useState<Doc | null>(null), [fields, setFields] = useState<Record<string, Field>>({}), [records, setRecords] = useState<LineRecord[]>([]);
   const [values, setValues] = useState<Record<string, string>>({}), [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
   const [linesChecked, setLinesChecked] = useState(false), [note, setNote] = useState(''), [buyerExcluded, setBuyerExcluded] = useState(false);
   const run = async (id: string, fn: () => Promise<unknown>) => { setBusy(id); try { await fn(); } catch (e) { onError(e); } finally { setBusy(''); } };
   const refresh = () => run('status', async () => setStatus(await call('ocrStatus')));
-  useEffect(() => { void refresh(); }, []);
+  // OCR ships with the app, so opening this page starts it; the button stays for a stopped service.
+  useEffect(() => { void run('status', async () => { const s = await call('ocrStatus'); setStatus(s); if (s?.installed && !s.running) setStatus(await call('ocrStart')); }); }, []);
 
   const reviewLines = doc?.result?.summary?.needs_review || 0;
   const resized = (doc?.result?.warnings || []).some((w: string) => /resized/i.test(w));
@@ -59,13 +60,14 @@ export function ReceiptApp({ call, notify, onError, handoff }: { call: (method: 
   ].join('\n');
 
   const ready = status?.running;
+  const requiredChecked = review.requiredKeys.every((k: string) => confirmed[k]);
   return <div className="receipt-app">
     <div className="receipt-service">
       <span className={`status-dot ${ready ? 'ok' : ''}`} aria-hidden="true"/>
       <span>{!status ? 'กำลังตรวจบริการ OCR…' : ready ? `OCR ในเครื่องพร้อมใช้${status.crosscheck ? ' · มี OCR ตัวที่สองช่วยตรวจ' : ''}` : status.installed ? 'บริการ OCR ในเครื่องยังไม่เปิด' : 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้'}</span>
       <span className="spacer"/>
       {status && !ready && status.installed && <button disabled={Boolean(busy)} onClick={() => void run('start', async () => setStatus(await call('ocrStart')))}>{busy === 'start' ? <LoaderCircle size={15} className="spin"/> : <Play size={15}/>}เปิดบริการ OCR</button>}
-      {status && !ready && <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('folder', async () => setStatus(await call('ocrFolder')))}><FolderOpen size={15}/>เลือกโฟลเดอร์ OCR</button>}
+      {status && !ready && !status.installed && <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('folder', async () => setStatus(await call('ocrFolder')))}><FolderOpen size={15}/>เลือกโฟลเดอร์ OCR</button>}
       <button className="icon" aria-label="ตรวจสถานะบริการอีกครั้ง" disabled={Boolean(busy)} onClick={() => void refresh()}><RefreshCw size={15}/></button>
     </div>
     {status && !ready && !status.installed && <p className="small muted receipt-hint">ติดตั้งครั้งแรกด้วย <code>Install-OCR.bat</code> ในโฟลเดอร์ <code>experiments/local-thai-ocr</code> แล้วกด “เลือกโฟลเดอร์ OCR” ใบเสร็จจะถูกอ่านบนเครื่องนี้เท่านั้น ไม่ส่งขึ้นบริการ OCR บนอินเทอร์เน็ต</p>}
@@ -105,7 +107,9 @@ export function ReceiptApp({ call, notify, onError, handoff }: { call: (method: 
           <button className="quiet" onClick={() => void run('save', async () => { const saved = await call('ocrSave', { draft: draft() }); if (saved) notify('บันทึกร่างการตรวจแล้ว', 'success', { label: 'เปิดโฟลเดอร์', run: () => call('reveal', { path: saved.path }) }); })}><Save size={15}/>บันทึกร่าง (JSON)</button>
           <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('read', read)}><FileSearch size={15}/>ตรวจใบใหม่</button>
           <span className="spacer"/>
-          <button onClick={() => void run('handoff', () => handoff(summary()))}><Send size={15}/>ให้ AI pre-check ต่อ</button>
+          {/* AI pre-check follows the person's check: the required fields must be ticked first. A checked vendor tax ID stays readable. */}
+          {!requiredChecked && <small className="muted">ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI</small>}
+          <button disabled={!requiredChecked || Boolean(busy)} onClick={() => void run('handoff', () => handoff(summary(), confirmed.taxId && /^0\d{12}$/.test(review.normalizeDigits(values.taxId || '')) ? [review.normalizeDigits(values.taxId)] : []))}><Send size={15}/>ให้ AI pre-check ต่อ</button>
         </div>
       </section>
     </div>}

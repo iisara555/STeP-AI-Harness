@@ -6,7 +6,7 @@ import { Store } from './store';
 import type { ProviderAdapter, ProviderContext } from './providers';
 
 export const STEP_TIMEOUT_MS = 600_000;
-export type Harness = { memoryDir?: () => string; root: string; route: (text: string, options: any) => Promise<any>; catalog?: () => Promise<any[]>; privacy: (text: string) => any; skillMetadata: (id: string) => Promise<any>; documentPrivacy: (path: string, options: any) => Promise<any>; nextOutput: (options: any) => Promise<any> };
+export type Harness = { memoryDir?: () => string; root: string; route: (text: string, options: any) => Promise<any>; catalog?: () => Promise<any[]>; privacy: (text: string, options?: { allowedIdentifiers?: string[] }) => any; skillMetadata: (id: string) => Promise<any>; documentPrivacy: (path: string, options: any) => Promise<any>; nextOutput: (options: any) => Promise<any> };
 // The employee's own settings from First Run: how to address them and how to talk. Drafts keep their document standard.
 const TONES: Record<string, string> = { coworker: 'friendly, polite and natural, like a helpful colleague', professional: 'polite, structured and clear for organizational work', concise: 'short and to the point, focused on next actions' };
 function personal(settings: { userName?: string; assistant?: string; personality?: string; assistantTone?: string }) {
@@ -22,21 +22,23 @@ export class WorkService {
   isActive(id: string) { return this.active.has(id); }
   cancelAll() { for (const controller of this.active.values()) controller.abort(); }
   // Summarize what the privacy gate found in new outgoing data so the host can ask once.
-  review(input: string, attachmentText: string) {
-    const scans = [input, attachmentText].filter(Boolean).map(text => this.harness.privacy(text));
+  // Organization numbers a person confirmed for this task (a vendor's tax ID on a receipt) stay readable.
+  private allowed: string[] = [];
+  review(input: string, attachmentText: string, allowed = this.allowed) {
+    const scans = [input, attachmentText].filter(Boolean).map(text => this.harness.privacy(text, { allowedIdentifiers: allowed }));
     const action = scans.some(s => s.action === 'block-external') ? 'block-external' : scans.some(s => s.action === 'human-confirm') ? 'human-confirm' : 'pass';
     const labels: string[] = [...new Set<string>(scans.flatMap(s => (s.findings || []).map((f: any) => String(f.label))))];
     return { action, labels };
   }
   // New user-supplied data: credentials and sensitive identifiers never leave; review signals need explicit confirmation.
   private outgoing(text: string, reviewed: boolean) {
-    const scan = this.harness.privacy(text);
+    const scan = this.harness.privacy(text, { allowedIdentifiers: this.allowed });
     if (scan.action === 'block-external' || (scan.action === 'human-confirm' && !reviewed)) throw new Error('PRIVACY_REVIEW_REQUIRED');
     return scan.redactedText;
   }
   // Data already reviewed or produced by the model: keep masking, but do not reopen review on every run.
   private masked(text: string) {
-    return this.harness.privacy(text).redactedText;
+    return this.harness.privacy(text, { allowedIdentifiers: this.allowed }).redactedText;
   }
   private async contextFile(path: string) {
     const full = resolve(this.harness.root, path), rel = relative(this.harness.root, full);
@@ -47,6 +49,7 @@ export class WorkService {
   async run(id: string, input: string, attachmentText: string, reviewed = false, skill?: string) {
     if (this.active.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
     if (!input.trim() || input.length > 30_000 || attachmentText.length > 100_000) throw new Error('INPUT_LIMIT');
+    this.allowed = this.store.session(id).allowedIdentifiers || [];
     const text = this.outgoing(input, reviewed);
     let session = this.store.session(id);
     const attachments = attachmentText ? this.outgoing(attachmentText, reviewed) : this.masked(session.sourceText || '');
@@ -66,7 +69,7 @@ export class WorkService {
     else if (revising) session.followUps = [...(session.followUps || []), text].slice(-10);
     else { session.originalQuery = text; session.answers = []; session.followUps = []; session.skill = skill || undefined; }
     session.messages.push({ role: 'user', text, at: new Date().toISOString() });
-    session.title = session.title === 'งานใหม่' ? text.slice(0, 64) : session.title;
+    session.title = session.title === 'งานใหม่' ? taskTitle(text) : session.title;
     session.status = 'running'; this.store.save(session);
     const controller = new AbortController(); this.active.set(id, controller);
     // Each model step gets its own budget; high reasoning levels can take several minutes per step.
@@ -92,7 +95,7 @@ export class WorkService {
       // A revision only needs the final drafting step, not a full replay of the playbook.
       const steps = revising ? [planned.filter((s: any) => !(s.kind === 'action' || s.action || s.actionId)).at(-1) || planned[0]] : planned;
       const runtime = await this.runtime(connection); checkAbort();
-      let result = '', handoff = '', sources: string[] = [];
+      let result = '', handoff = '', sources: string[] = [], skillTitle = '';
       // Providers report cumulative usage per step; keep the latest report of each step.
       let usage = { input: 0, output: 0, total: 0 }, stepUsage = { input: 0, output: 0, total: 0 };
       const isAction = (step: any) => step.kind === 'action' || step.type === 'action' || Boolean(step.action || step.actionId);
@@ -109,6 +112,7 @@ export class WorkService {
         const refs = metadata?.mandatoryReferences || contract.mandatoryReferences;
         const paths: string[] = [skillPath, ...(refs || []).map((r: any) => typeof r === 'string' ? r : r.path).filter(Boolean)];
         const instructions = await Promise.all(paths.map(path => this.contextFile(path)));
+        skillTitle = /^#\s+(.+)$/m.exec(instructions[0] || '')?.[1]?.trim() || String(skillId || '');
         if (routed.selectedPlaybook?.specPath) {
           instructions.push(await this.contextFile(routed.selectedPlaybook.specPath));
           paths.push(routed.selectedPlaybook.specPath);
@@ -137,7 +141,7 @@ export class WorkService {
       session = this.store.session(id); session.clarification = false; session.status = 'review';
       if (usage.total) { const u = session.usage || { input: 0, output: 0, total: 0, runs: 0 }; session.usage = { input: u.input + usage.input, output: u.output + usage.output, total: u.total + usage.total, runs: u.runs + 1 }; }
       session.proposals.push({ id: randomUUID(), text: handoff, baseRevision, sources, at: new Date().toISOString() });
-      session.messages.push({ role: 'assistant', text: 'จัดทำข้อเสนอร่างแล้ว ตรวจในแผงผลงานก่อนนำมาใช้', at: new Date().toISOString() });
+      session.messages.push({ role: 'assistant', text: draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''), at: new Date().toISOString() });
       this.store.save(session);
     } catch (error) {
       session = this.store.session(id); session.status = controller.signal.aborted && !timedOut ? 'cancelled' : 'error';
@@ -149,4 +153,36 @@ export class WorkService {
       clearTimeout(timeout); this.active.delete(id); this.emit({ sessionId: id, type: 'changed' });
     }
   }
+}
+
+// What the chat says when a draft arrives: which Skill, what it contains, what changed, and what the
+// person still has to fill in, so the draft panel is not the only place that explains the result.
+export function draftSummary(text: string, previous: string, skillTitle: string, revision: string) {
+  const headings = (draft: string) => [...draft.matchAll(/^#{1,3}\s+(.+)$/gm)].map(m => m[1].trim());
+  const now = headings(text), before = headings(previous);
+  const masked = (text.match(/\[[^\]\n]*ถูกปิดบัง\]/g) || []).length;
+  const blanks = (text.match(/\[[^\]\n]{2,80}\]/g) || []).length - masked;
+  const lines: string[] = [];
+  if (revision) {
+    const added = now.filter(h => !before.includes(h)), removed = before.filter(h => !now.includes(h));
+    lines.push(`แก้ร่างตามคำขอ “${revision.slice(0, 120)}” แล้ว`);
+    if (added.length) lines.push(`- เพิ่มหัวข้อ: ${added.slice(0, 6).join(', ')}`);
+    if (removed.length) lines.push(`- ตัดหัวข้อ: ${removed.slice(0, 6).join(', ')}`);
+    if (previous.trim()) lines.push(`- ความยาว ${previous.length.toLocaleString('th-TH')} → ${text.length.toLocaleString('th-TH')} ตัวอักษร`);
+  } else {
+    lines.push(`จัดทำร่าง${skillTitle ? `ด้วย Skill “${skillTitle}” ` : ''}แล้ว${now.length ? ` มี ${now.length} หัวข้อ` : ''}`);
+    if (now.length) lines.push(`- ${now.slice(0, 8).join(', ')}${now.length > 8 ? ' …' : ''}`);
+  }
+  if (blanks > 0) lines.push(`- มี ${blanks} จุดในวงเล็บ [ ] ที่ต้องเติมหรือยืนยันก่อนใช้`);
+  if (masked > 0) lines.push(`- มี ${masked} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง`);
+  lines.push('', 'ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”');
+  return lines.join('\n');
+}
+
+// A task's name: the first line of the request, cut at a word boundary rather than mid-word.
+export function taskTitle(text: string) {
+  const line = text.split(/\r?\n/).map(l => l.trim()).find(Boolean) || 'งานใหม่';
+  if (line.length <= 60) return line;
+  const cut = line.slice(0, 60), space = cut.lastIndexOf(' ');
+  return (space > 30 ? cut.slice(0, space) : cut).trim() + '…';
 }
