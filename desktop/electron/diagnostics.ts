@@ -24,3 +24,6 @@ export function explainRuntimeFailure(lines: string[]) {
   for (const [pattern, code] of KNOWN) if (lines.some(line => pattern.test(line))) return code;
   return undefined;
 }
+
+// A thrown error's code (UPPER_SNAKE message) or UNEXPECTED; only codes reach logs and the interface.
+export const errorCode = (error: unknown) => error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'UNEXPECTED';

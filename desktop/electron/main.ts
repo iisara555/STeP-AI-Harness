@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join, resolve, basename, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
-import { createRequire } from 'node:module';
-import { execFile } from 'node:child_process';
 import { Store } from './store';
 import { WorkService, type Harness } from './service';
-import { adapter, createRpc, initialize, listModels, googleLoginUrl, runtimeError } from './providers';
-import { explainRuntimeFailure } from './diagnostics';
+import { adapter, listModels } from './providers';
+import { errorCode } from './diagnostics';
+import { connectFailureNote, signInAndTest } from './connect';
+import { checkRuntime, resolveRuntime } from './runtimes';
 import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
@@ -25,47 +25,10 @@ const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
 const consents = new Map<string, string>();
 const connectControllers = new Map<string, AbortController>();
-// Plain-language notes for connection failures; anything else shows its code.
-const connectNotes: Record<string, string> = {
-  PROVIDER_QUOTA: 'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า',
-  GOOGLE_CLOUD_PROJECT_REQUIRED: 'บัญชี Google ขององค์กรหรือสถานศึกษาต้องตั้ง Google Cloud Project ก่อนใช้ Gemini ใช้ Gemini API key หรือบัญชี Google ส่วนตัวแทน',
-  PROVIDER_PERMISSION_DENIED: 'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี',
-  PROVIDER_NETWORK: 'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall',
-  CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
-  LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อ (หรือวาง code ของ Google) ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
-  LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
-  CANCELLED: 'ยกเลิกการเชื่อมต่อแล้ว',
-  API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
-  MODEL_NOT_AVAILABLE: 'บัญชีนี้ใช้โมเดลที่ตั้งไว้ไม่ได้ เลือกโมเดลอื่นหรือใช้ค่าเริ่มต้นของบริการ',
-  LOGIN_REQUIRED: 'การลงชื่อเข้าใช้หมดอายุหรือยังไม่สมบูรณ์ กดออกจากระบบแล้วเชื่อมต่อใหม่',
-  RUNTIME_EXITED: 'ตัวเชื่อม AI ปิดตัวกลางคัน กดเชื่อมต่อใหม่ ถ้ายังเกิดซ้ำให้ส่ง log วินิจฉัยให้ผู้ดูแล',
-  RUNTIME_UNAVAILABLE: 'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่',
-};
 let busy = false;
-const requireModule = createRequire(__filename);
-// The Codex or Gemini CLI that ships with the app, or the one the user picked while it still exists.
-function resolveRuntime(connection: Connection) {
-  if (connection.provider === 'claude') return '';
-  if (connection.customRuntime && connection.executable && existsSync(connection.executable)) return connection.executable;
-  try { return requireModule.resolve(connection.provider === 'openai' ? '@openai/codex/bin/codex.js' : '@google/gemini-cli/bundle/gemini.js'); }
-  catch { throw new Error('RUNTIME_UNAVAILABLE'); }
-}
-// A picked runtime must look like the provider's CLI by name and report a version, so an unrelated
-// program (for example an installer in Downloads) is never started as the AI runtime.
-async function checkRuntime(provider: string, file: string) {
-  const name = basename(file).toLowerCase();
-  const expected = provider === 'openai' ? /^codex(\.exe|\.js|\.mjs)?$/ : /^gemini(\.exe|\.js|\.mjs)?$/;
-  if (!expected.test(name) && !(provider === 'gemini' && /[\\/]@google[\\/]gemini-cli[\\/]/i.test(file))) throw new Error('RUNTIME_INVALID');
-  const script = /\.[cm]?js$/i.test(file);
-  const output = await new Promise<string>(resolveOutput => {
-    execFile(script ? process.execPath : file, script ? [file, '--version'] : ['--version'], { timeout: 10_000, windowsHide: true, env: { ...process.env, ...(script ? { ELECTRON_RUN_AS_NODE: '1' } : {}) } }, (error, stdout) => resolveOutput(error ? '' : String(stdout)));
-  });
-  if (!(provider === 'openai' ? /codex/i.test(output) : /^\s*\d+\.\d+\.\d+/.test(output))) throw new Error('RUNTIME_INVALID');
-}
 const validProviders = new Set(['openai', 'claude', 'gemini']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
 let logFile = '';
-const errorCode = (error: unknown) => error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'UNEXPECTED';
 function diagnose(event: string, detail: Record<string, string> = {}) {
   if (!logFile) return;
   void appendFile(logFile, JSON.stringify({ at: new Date().toISOString(), event, ...detail }) + '\n').catch(() => {});
@@ -224,75 +187,26 @@ async function main() {
         const connection = store.get<Connection>('connection', input.id); if (!connection) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         connecting.add(connection.id);
-        let rpc: ReturnType<typeof createRpc> | undefined;
         const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 480_000);
         connectControllers.set(connection.id, controller);
-        const progress = (text: string) => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text });
-        controller.signal.addEventListener('abort', () => rpc?.close('CANCELLED'), { once: true });
-        let testTimedOut = false;
+        const dropCode = () => { authCodes.get(connection.id)?.(null); authCodes.delete(connection.id); };
         try {
-          const current = await runtime(connection);
-          if (connection.mode === 'api' && !current.context.key) throw new Error('API_KEY_REQUIRED');
-          if (connection.provider !== 'claude') {
-            progress('กำลังเปิดตัวเชื่อม ' + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
-            rpc = createRpc(connection, current.context); await initialize(rpc, connection.provider);
-            if (connection.provider === 'openai') {
-              if (connection.mode === 'api') await rpc.request('account/login/start', { type: 'apiKey', apiKey: current.context.key });
-              else if ((await rpc.request('account/read', { refreshToken: false }).catch(() => null))?.account?.type === 'chatgpt') {
-                // Already signed in on this connection: test it without asking for the browser again.
-                progress('ลงชื่อ ChatGPT ไว้แล้ว');
-              } else {
-                const login = await rpc.request('account/login/start', { type: 'chatgpt' });
-                const url = new URL(login.authUrl);
-                if (url.protocol !== 'https:' || !['auth.openai.com', 'chatgpt.com', 'auth0.openai.com'].includes(url.hostname)) throw new Error('INVALID_LOGIN_URL');
-                progress('รอให้ลงชื่อเข้าใช้ในเบราว์เซอร์…');
-                await new Promise<void>((resolveLogin, reject) => {
-                  const t = setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), 300_000);
-                  controller.signal.addEventListener('abort', () => { clearTimeout(t); reject(new Error('CANCELLED')); }, { once: true });
-                  rpc!.onNotification = (method, params) => { if (method === 'account/login/completed') { clearTimeout(t); params.success ? resolveLogin() : reject(new Error('LOGIN_FAILED')); } };
-                  void shell.openExternal(url.href).catch(() => { clearTimeout(t); reject(new Error('LOGIN_FAILED')); });
-                });
-              }
-            } else {
-              if (connection.mode === 'subscription') {
-                // Gemini prints a Google sign-in URL, then waits for the code Google shows after sign-in.
-                const session = rpc; let attempts = 0;
-                session.onText = line => {
-                  const url = googleLoginUrl(line); if (!url) return;
-                  if (++attempts > 3) { session.close('LOGIN_FAILED'); return; }
-                  void shell.openExternal(url.href).catch(() => {});
-                  progress('ลงชื่อในหน้าของ Google แล้ววาง code ที่ได้ในแอป');
-                  authCodes.get(connection.id)?.(null);
-                  new Promise<string | null>(resolveCode => { authCodes.set(connection.id, resolveCode); emit({ sessionId: '', type: 'auth-code', connectionId: connection.id }); })
-                    .then(code => { if (code) session.writeText(code); else session.close('LOGIN_FAILED'); });
-                };
-              }
-              try { await rpc.request('authenticate', { methodId: connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal' }, 300_000); }
-              catch (error) { throw errorCode(error) === 'PROVIDER_TIMEOUT' && connection.mode === 'subscription' ? new Error('LOGIN_TIMEOUT') : runtimeError(error, rpc); }
-              finally { authCodes.get(connection.id)?.(null); authCodes.delete(connection.id); }
-            }
-            rpc.close(); rpc = undefined;
-          }
-          // The test gets its own short budget so a stalled provider is reported instead of spinning for minutes.
-          progress('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ');
-          const test = new AbortController(), testTimer = setTimeout(() => { testTimedOut = true; test.abort(); }, 120_000);
-          controller.signal.addEventListener('abort', () => test.abort(), { once: true });
-          try { await current.adapter.run('Reply with exactly OK. Do not use tools.', connection, { ...current.context, signal: test.signal, emit: () => {} }); }
-          catch (error) {
-            const detail = (error as any)?.detail || [];
-            if (testTimedOut && errorCode(error) === 'CANCELLED') throw Object.assign(new Error(explainRuntimeFailure(detail) || 'CONNECT_TEST_TIMEOUT'), { detail });
-            throw error;
-          }
-          finally { clearTimeout(testTimer); }
-          progress('กำลังโหลดรายชื่อโมเดล');
+          await signInAndTest(connection, {
+            runtime: await runtime(connection),
+            progress: text => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text }),
+            openExternal: url => shell.openExternal(url),
+            askForCode: () => new Promise(resolveCode => { authCodes.set(connection.id, resolveCode); emit({ sessionId: '', type: 'auth-code', connectionId: connection.id }); }),
+            dropCode,
+          }, controller.signal);
+          emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: 'กำลังโหลดรายชื่อโมเดล' });
           connection.ready = true; connection.note = 'ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว';
           try { await refreshModels(connection); } catch { /* The connection works; the model list can be reloaded later. */ }
         } catch (error) {
           const code = errorCode(error), detail = ((error as any)?.detail || []) as string[];
           diagnose('connect-failed', { provider: connection.provider, mode: connection.mode, code, detail: detail.join(' | ').slice(0, 1200) });
-          connection.ready = false; connection.note = `${connectNotes[code] || 'เชื่อมต่อไม่สำเร็จ ตรวจบัญชี โควตา และ runtime แล้วลองใหม่'} (${code})`;
+          connection.ready = false; connection.note = connectFailureNote(code);
         }
-        finally { clearTimeout(timer); rpc?.close(); connecting.delete(connection.id); connectControllers.delete(connection.id); }
+        finally { clearTimeout(timer); dropCode(); connecting.delete(connection.id); connectControllers.delete(connection.id); }
         store.put('connection', connection.id, connection); return connection;
       }
       case 'cancelConnect': { connectControllers.get(inputText(input.id, 60))?.abort(); return true; }
