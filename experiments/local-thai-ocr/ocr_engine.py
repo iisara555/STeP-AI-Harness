@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import statistics
 import time
 from dataclasses import dataclass
@@ -49,9 +50,18 @@ class LocalThaiOCR:
 
     def _get_ocr(self) -> PaddleOCR:
         if self._ocr is None:
+            # Installers ship the two models; STEP_OCR_MODEL_DIR points at them so no download is needed.
+            bundled = Path(os.environ.get("STEP_OCR_MODEL_DIR", ""))
+            model_dirs: dict[str, str] = {}
+            if os.environ.get("STEP_OCR_MODEL_DIR") and (bundled / "PP-OCRv5_mobile_det").is_dir() and (bundled / "th_PP-OCRv5_mobile_rec").is_dir():
+                model_dirs = {
+                    "text_detection_model_dir": str(bundled / "PP-OCRv5_mobile_det"),
+                    "text_recognition_model_dir": str(bundled / "th_PP-OCRv5_mobile_rec"),
+                }
             self._ocr = PaddleOCR(
                 text_detection_model_name="PP-OCRv5_mobile_det",
                 text_recognition_model_name="th_PP-OCRv5_mobile_rec",
+                **model_dirs,
                 text_det_limit_type="max",
                 text_det_limit_side_len=960,
                 use_doc_orientation_classify=False,

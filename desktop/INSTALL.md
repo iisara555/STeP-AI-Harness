@@ -21,10 +21,17 @@
 | แอป STeP Desktop และ STeP AI Harness (Skill, Rule, Manifest) | ✅ | ใช้งานได้ทันที |
 | ตัวเชื่อม OpenAI Codex, Gemini CLI, Claude Agent SDK | ✅ | ใช้บัญชี AI ของผู้ใช้เอง |
 | ฟอนต์ IBM Plex Sans Thai (SIL OFL 1.1) | ✅ | ใบอนุญาตอยู่ใน `resources/licenses` |
-| โค้ด OCR ภาษาไทยสำหรับตรวจใบเสร็จ | ✅ | ส่วนเสริม *ทดลอง* |
-| แพ็กเกจ Python ของ OCR (PaddleOCR ประมาณ 1–2 GB) | ติดตั้งจากตัวช่วยตั้งค่า | ต้องมี Python 3.10–3.12 แบบ 64-bit และอินเทอร์เน็ตตอนติดตั้ง |
+| OCR ภาษาไทยสำหรับตรวจใบเสร็จ: Python 3.12, PaddleOCR และโมเดลไทย 2 ตัว | ✅ | ใช้ได้ทันทีโดยไม่ต้องลง Python หรือต่ออินเทอร์เน็ต (Mac Intel: ถ้า build ไม่สำเร็จ แอปจะเสนอติดตั้งเองแทน) |
+| OCR ตัวที่สอง (EasyOCR) สำหรับตรวจไขว้ | ติดตั้งเพิ่มจากหน้าตรวจใบเสร็จ | ต้องต่ออินเทอร์เน็ต ติดตั้งลงข้อมูลแอปของผู้ใช้ |
 
-แพ็กเกจของ OCR ติดตั้งลงข้อมูลแอปของผู้ใช้ (`%APPDATA%` หรือ `~/Library/Application Support`) จึงไม่ต้องใช้สิทธิ์ผู้ดูแลระบบ และไม่แก้ไฟล์ในโฟลเดอร์ที่ติดตั้งแอป
+OCR ทำงานในเครื่องเท่านั้น (`127.0.0.1:8765`) ส่วนที่ติดตั้งเพิ่มลงข้อมูลแอปของผู้ใช้ (`%APPDATA%` หรือ `~/Library/Application Support`) จึงไม่ต้องใช้สิทธิ์ผู้ดูแลระบบ
+
+## Claude แบบ Pro/Max
+
+เงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Claude Pro/Max เฉพาะในแอปของ Anthropic แอปนี้จึงไม่ลงชื่อเข้าใช้ Claude แทนผู้ใช้ ทางเลือกมี 2 แบบ
+
+- **Claude Code ของผู้ใช้เอง:** ติดตั้ง Claude Code แล้วลงชื่อเข้าใช้ในนั้นหนึ่งครั้ง จากนั้นเลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะผ่านตัวตรวจความเป็นส่วนตัว คัดลอกคำขอ แล้วเปิด Claude Code ในโฟลเดอร์งาน คำตอบอยู่ใน Claude Code
+- **Claude API key:** จาก Claude Console คิดค่าใช้จ่ายตามการใช้งาน คำตอบกลับมาในแอป
 
 ## ครั้งแรกที่เปิด
 
@@ -49,6 +56,8 @@ npm ci
 npm run dist:win   # Windows: release/STeP-Desktop-Setup-<version>.exe
 npm run dist:mac   # macOS เท่านั้น: release/STeP-Desktop-<version>-arm64.dmg และ -x64.dmg
 ```
+
+ขั้น `dist:*` จะรัน `scripts/bundle-ocr.mjs` ก่อน: ดาวน์โหลด Python (python-build-standalone ตรวจ checksum) ติดตั้ง PaddleOCR และโหลดโมเดลลง `desktop/ocr-runtime` ครั้งแรกใช้เวลาหลายนาที ครั้งต่อไปข้ามถ้าไม่มีอะไรเปลี่ยน
 
 ตัวติดตั้ง macOS ต้องสร้างบนเครื่อง Mac ส่วน workflow `.github/workflows/desktop-release.yml` สร้างให้ทั้งสองระบบเมื่อสั่งด้วยมือหรือ push tag `desktop-v*` ถ้าตั้ง secret `CSC_LINK`, `CSC_KEY_PASSWORD` (และ `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` สำหรับ notarize) ตัวติดตั้งจะลงลายมือชื่อให้อัตโนมัติ
 

@@ -114,3 +114,15 @@ export function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
     <button className="icon" aria-label="ปิดข้อความ" onClick={() => dismiss(t.id)}><X size={14}/></button>
   </div>)}</div>;
 }
+
+// Claude Pro/Max cannot be connected to this app; explain the Claude Code route and whether it is ready here.
+export function ClaudeCodeNote({ call }: { call: (method: string, input?: any) => Promise<any> }) {
+  const [installed, setInstalled] = useState<boolean | null>(null);
+  useEffect(() => { void call('claudeCode').then((r: any) => setInstalled(r.installed)).catch(() => setInstalled(false)); }, []);
+  return <div className="claude-code-note">
+    <p className="small">เงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Claude Pro/Max ในแอปของ Anthropic เท่านั้น แอปนี้จึงลงชื่อเข้าใช้แทนไม่ได้ แต่ส่งงานต่อให้ Claude Code ที่คุณติดตั้งและลงชื่อเองได้: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้</p>
+    <p className={installed ? 'connected small' : 'small muted'}>{installed === null ? 'กำลังตรวจหา Claude Code…' : installed ? 'พบ Claude Code ในเครื่องนี้ พร้อมใช้' : 'ยังไม่พบ Claude Code ในเครื่องนี้'}</p>
+    {installed === false && <button className="quiet" onClick={() => void call('openHelp', { topic: 'claudeCode' })}>เปิดวิธีติดตั้ง Claude Code</button>}
+    <p className="small muted">ถ้าต้องการให้คำตอบกลับมาในแอปนี้ ใช้ Claude API key จาก Claude Console (คิดค่าใช้จ่ายตามการใช้งาน)</p>
+  </div>;
+}

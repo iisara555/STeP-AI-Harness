@@ -74,3 +74,7 @@ nav .count{margin-left:auto;font-size:10.5px;color:var(--muted)}
 .connect-progress{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--accent-ink);margin:3px 0}.connect-progress .text-link{padding:0 6px}
 
 .tools-group{margin-top:10px}.sidebar nav + .settings-button{margin-top:3px}
+
+/* Claude Pro/Max route: explanation and Claude Code status in connection forms. */
+.claude-code-note { display: grid; gap: 8px; }
+.claude-code-note button { justify-self: start; }

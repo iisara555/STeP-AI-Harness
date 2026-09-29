@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, session as electronSession } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, clipboard, session as electronSession } from 'electron';
 import { mkdir, readFile, writeFile, stat, appendFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, basename } from 'node:path';
@@ -13,6 +13,7 @@ import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { findPython, installOcr } from './components';
+import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { existsSync } from 'node:fs';
 import type { Attachment, Connection, Provider, Settings } from '../src/types';
 
@@ -110,7 +111,12 @@ async function main() {
   // OCR code ships with the app (resources/ocr); its Python packages live per user in app data.
   const ocrFolder = () => store.settings().ocrDir || (app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr'));
   const ocrHome = join(data, 'components', 'ocr');
-  const ocr = new OcrService(ocrFolder, undefined, () => existsSync(ocrPython(ocrHome)) ? ocrPython(ocrHome) : ocrPython(ocrFolder()));
+  // Installers carry a ready OCR runtime (scripts/bundle-ocr.mjs): Python with PaddleOCR plus its two models.
+  const ocrRuntime = app.isPackaged ? join(process.resourcesPath, 'ocr-runtime') : join(__dirname, '..', 'ocr-runtime');
+  const bundledPython = join(ocrRuntime, 'python', process.platform === 'win32' ? 'python.exe' : join('bin', 'python3'));
+  // A venv the user installed (for example with the second OCR engine) wins; otherwise the bundled runtime.
+  const ocr = new OcrService(ocrFolder, undefined, () => existsSync(ocrPython(ocrHome)) ? ocrPython(ocrHome) : existsSync(bundledPython) ? bundledPython : ocrPython(ocrFolder()),
+    () => ({ ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONDONTWRITEBYTECODE: '1', PADDLE_PDX_CACHE_HOME: join(ocrHome, 'paddlex'), PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: 'True', ...(existsSync(join(ocrRuntime, 'models')) ? { STEP_OCR_MODEL_DIR: join(ocrRuntime, 'models') } : {}) }));
   let installing = false;
   app.on('before-quit', () => ocr.stop());
   const previewTypes: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', bmp: 'image/bmp' };
@@ -259,12 +265,27 @@ async function main() {
       case 'skills': return skillCatalog.loadSkillCatalog(root);
       case 'tour': { const s = { ...store.settings(), tourDone: input.done === true }; store.put('settings', 'main', s); return s; }
       // Only fixed help pages open in the browser; nothing from the renderer becomes a URL.
-      case 'openHelp': { const pages: Record<string, string> = { python: 'https://www.python.org/downloads/' }; const url = pages[input.topic]; if (!url) throw new Error('INVALID_INPUT'); await shell.openExternal(url); return true; }
+      case 'claudeCode': return { installed: Boolean(await findClaudeCode()) };
+      case 'handoff': {
+        // Hands a request to the employee's own Claude Code (see handoff.ts). The privacy gate still applies.
+        const text = inputText(input.text), claude = await findClaudeCode();
+        if (!text.trim()) throw new Error('INVALID_INPUT');
+        if (!claude) throw new Error('CLAUDE_CODE_NOT_FOUND');
+        if (service.review(text, '').action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        const name = input.skill ? inputText(input.skill, 80) : '';
+        const skill = name ? (await skillCatalog.loadSkillCatalog(root)).find((s: any) => s.name === name && s.path) : undefined;
+        if (name && !skill) throw new Error('SKILL_NOT_FOUND');
+        clipboard.writeText(handoffText(harness.privacy(text).redactedText, skill && { name: skill.name, file: join(root, skill.path) }));
+        const workspace = store.settings().workspace, cwd = workspace && existsSync(workspace) ? workspace : root;
+        await openClaudeCode(claude, cwd); diagnose('handoff', { skill: skill ? 'yes' : 'no' });
+        return { cwd };
+      }
+      case 'openHelp': { const pages: Record<string, string> = { python: 'https://www.python.org/downloads/', claudeCode: 'https://code.claude.com/docs/en/setup' }; const url = pages[input.topic]; if (!url) throw new Error('INVALID_INPUT'); await shell.openExternal(url); return true; }
       case 'ocrInstall': {
         if (installing) throw new Error('INSTALL_BUSY');
         installing = true;
         try {
-          await installOcr(ocrFolder(), join(ocrHome, '.venv'), line => emit({ sessionId: '', type: 'install', text: line }), input.crosscheck === true);
+          await installOcr(ocrFolder(), join(ocrHome, '.venv'), line => emit({ sessionId: '', type: 'install', text: line }), input.crosscheck === true, bundledPython);
         } catch (error) { diagnose('ocr-install-failed', { code: errorCode(error) }); throw error; } finally { installing = false; }
         return ocr.status();
       }

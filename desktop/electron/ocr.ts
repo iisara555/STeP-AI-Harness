@@ -19,7 +19,7 @@ export const isOcrFolder = (folder: string) => Boolean(folder) && existsSync(joi
 export class OcrService {
   private child?: ChildProcess;
   // `python` points at the interpreter to run; by default the experiment folder's own .venv.
-  constructor(private folder: () => string, private base = OCR_URL, private python: () => string = () => ocrPython(this.folder())) {}
+  constructor(private folder: () => string, private base = OCR_URL, private python: () => string = () => ocrPython(this.folder()), private env: () => NodeJS.ProcessEnv = () => process.env) {}
 
   async health() {
     try {
@@ -40,7 +40,7 @@ export class OcrService {
     const folder = this.folder();
     if (!isOcrFolder(folder) || !existsSync(this.python())) throw new Error('OCR_NOT_INSTALLED');
     // No shell, no console window; the service binds to 127.0.0.1 by default.
-    this.child = spawn(this.python(), ['app.py', '--no-browser'], { cwd: folder, windowsHide: true, shell: false, stdio: 'ignore' });
+    this.child = spawn(this.python(), ['app.py', '--no-browser'], { cwd: folder, windowsHide: true, shell: false, stdio: 'ignore', env: this.env() });
     this.child.on('exit', () => { this.child = undefined; });
     for (let waited = 0; waited < 90_000; waited += 1000) {
       if ((await this.health()).running) return this.status();

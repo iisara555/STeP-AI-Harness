@@ -17,6 +17,14 @@ try {
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย' , exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
+  // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
+  await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');
+  await page.locator('.composer textarea').fill('ทดสอบส่งต่อ');
+  await page.keyboard.press('Enter');
+  const handoff = page.getByRole('alertdialog', { name: /ส่งต่อไปทำใน Claude Code|ยังไม่พบ Claude Code/ });
+  await handoff.waitFor();
+  await handoff.getByRole('button', { name: /^(ยกเลิก|ปิด)$/ }).click();
+  await page.locator('.composer textarea').fill('');
   await page.evaluate(async () => {
     const connection = await window.step.call('connection', { provider: 'openai', mode: 'subscription', model: '' });
     const session = await window.step.call('create', { connectionId: connection.id, project: 'Desktop verification' });

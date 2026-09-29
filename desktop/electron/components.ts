@@ -31,9 +31,10 @@ export async function findPython(): Promise<{ command: string; args: string[] } 
 }
 
 /** venvDir is private to this user (app data), so an installed app needs no write access to its own folder. */
-export async function installOcr(appFolder: string, venvDir: string, log: Log, crosscheck = false) {
+export async function installOcr(appFolder: string, venvDir: string, log: Log, crosscheck = false, bundledPython?: string) {
   if (!existsSync(join(appFolder, 'requirements-core.txt'))) throw new Error('OCR_FOLDER_INVALID');
-  const python = await findPython();
+  // The Python bundled with the installer can seed the venv, so no separate Python install is needed.
+  const python = bundledPython && existsSync(bundledPython) ? { command: bundledPython, args: [] } : await findPython();
   if (!python) throw new Error('PYTHON_REQUIRED');
   const venvPython = ocrPython(venvDir.replace(/[\\/]\.venv$/, ''));
   const steps: [string, string, string[]][] = [

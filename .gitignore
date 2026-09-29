@@ -42,4 +42,5 @@ MEMORY.md
 graphify-out/
 desktop/dist/
 desktop/release/
+desktop/ocr-runtime/
 .codex/hooks.json
