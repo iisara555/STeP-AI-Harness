@@ -9,6 +9,7 @@ import { runDoctor } from './commands/doctor.js';
 import { runRollback } from './commands/rollback.js';
 
 import { runTeams } from './commands/teams.js';
+import { runSkills } from './commands/skills.js';
 import { runAsk } from './commands/ask.js';
 import { runConfig } from './commands/config.js';
 import { runUpdate } from './commands/update.js';
@@ -70,6 +71,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
   ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
+  ${colors.cyan('skills')}     ศูนย์รวม Skill พร้อมสถานะ Manifest/Routing (--status routed|registered|unregistered, --json)
   ${colors.cyan('doctor')}     ตรวจความพร้อมของระบบและเครื่องมือ AI ที่ติดตั้งในเครื่อง
   ${colors.cyan('status')}     ตรวจรุ่นที่ติดตั้งและไฟล์ที่มีการแก้ไขในเครื่อง
   ${colors.cyan('sync')}       ซิงก์ไฟล์ Skills และ Rules
@@ -149,6 +151,9 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     case 'teams':
       await runTeams(args);
+      break;
+    case 'skills':
+      await runSkills(args);
       break;
     case 'init':
       await runInit(args);
