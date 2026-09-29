@@ -16,6 +16,10 @@ export type Connection = {
   model: string;
   executable: string;
   customRuntime?: boolean;
+  /** A login may have written runtime-owned credentials, including OS keychain entries. */
+  claudeAuthStarted?: boolean;
+  /** The account signed in at the last connect, kept apart from the test result in `ready`. */
+  signedIn?: boolean;
   ready: boolean;
   note: string;
   models?: ModelOption[];
@@ -84,6 +88,7 @@ export type Settings = {
 };
 export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean };
 export type Snapshot = {
+  features?: { claudeSubscription?: boolean };
   settings: Settings;
   connections: Connection[];
   sessions: Session[];
@@ -93,7 +98,18 @@ export type Snapshot = {
 export type PlanStep = { label: string; action?: boolean };
 export type RunEvent = {
   sessionId: string;
-  type: 'delta' | 'reasoning' | 'status' | 'changed' | 'auth-code' | 'plan' | 'step' | 'install' | 'connect-progress' | 'failed';
+  type:
+    | 'delta'
+    | 'reasoning'
+    | 'status'
+    | 'changed'
+    | 'auth-code'
+    | 'auth-code-close'
+    | 'plan'
+    | 'step'
+    | 'install'
+    | 'connect-progress'
+    | 'failed';
   text?: string;
   detail?: string[];
   connectionId?: string;

@@ -14,12 +14,15 @@ export function scrub(line: string) {
 // Known provider failures, mapped to codes the interface explains in Thai.
 const KNOWN: [RegExp, string][] = [
   [/GOOGLE_CLOUD_PROJECT/i, 'GOOGLE_CLOUD_PROJECT_REQUIRED'],
-  [/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|usage.?limit|usageLimitExceeded/i, 'PROVIDER_QUOTA'],
+  [/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|usage.?limit|usageLimitExceeded|out of extra usage/i, 'PROVIDER_QUOTA'],
   [
     /model.{0,40}(?:not supported|not available|does not exist|not found)|not available on your plan|unsupported model/i,
     'MODEL_NOT_AVAILABLE',
   ],
-  [/token (?:has )?expired|refresh token|not logged in|login required|re-?authenticate|invalid_grant|unauthorized/i, 'LOGIN_REQUIRED'],
+  [
+    /token (?:has )?expired|refresh token|not logged in|login required|re-?authenticate|invalid_grant|unauthorized|\b401\b|authentication_failed/i,
+    'LOGIN_REQUIRED',
+  ],
   [/PERMISSION_DENIED|\b403\b|not (?:eligible|authorized)/i, 'PROVIDER_PERMISSION_DENIED'],
   [/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|getaddrinfo|network error|proxy/i, 'PROVIDER_NETWORK'],
 ];

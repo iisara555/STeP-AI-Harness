@@ -222,6 +222,11 @@ export function SettingsPanel({
                 ) : (
                   <p className={c.ready ? 'connected' : 'muted'}>{c.note}</p>
                 )}
+                {c.provider === 'claude' && c.mode === 'subscription' && busy !== c.id && (
+                  <p className={c.signedIn ? 'small connected' : 'small muted'}>
+                    {c.signedIn ? 'ลงชื่อบัญชี Claude แล้ว' : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
+                  </p>
+                )}
                 {c.modelsAt && (
                   <p className="small muted">
                     โมเดล {c.models?.length || 0} รายการ · อัปเดต {new Date(c.modelsAt).toLocaleString('th-TH')}
@@ -230,7 +235,8 @@ export function SettingsPanel({
               </div>
               <div className="connection-actions">
                 <button disabled={Boolean(busy)} onClick={() => void run(c.id, () => call('connect', { id: c.id }))}>
-                  {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}เชื่อมต่อและทดสอบ
+                  {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+                  {c.provider === 'claude' && c.mode === 'subscription' ? 'เชื่อมต่อ Claude' : 'เชื่อมต่อและทดสอบ'}
                 </button>
                 {busy === c.id && (
                   <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
@@ -306,7 +312,12 @@ export function SettingsPanel({
             </ConfirmDialog>
           )}
           <div className="connection-form">
-            <ProviderFields value={choice} onChange={setChoice} call={call} />
+            <ProviderFields
+              value={choice}
+              onChange={setChoice}
+              call={call}
+              claudeSubscription={Boolean(snapshot.features?.claudeSubscription)}
+            />
             {choice.mode !== 'claude-code' && (
               <>
                 <p className="small muted">รายชื่อโมเดลจะโหลดจากบริการอัตโนมัติหลังเชื่อมต่อสำเร็จ แล้วเลือกได้จากกล่องพิมพ์</p>

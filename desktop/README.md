@@ -12,7 +12,11 @@ npm run desktop:build
 npm run desktop:start
 ```
 
-Open Settings, select a workspace and team (optional), add a provider connection, then run its explicit connection test. That test sends one short request and may consume provider quota. No credentials are imported from personal CLI installations. Claude subscription login is intentionally unavailable.
+Open Settings, select a workspace and team (optional), add a provider connection, then run its explicit connection test. That test sends one short request and may consume provider quota. No credentials are imported from personal CLI installations.
+
+In-app Claude subscription chat is off by default and needs `STEP_CLAUDE_SUBSCRIPTION=1` in the environment. Keep it off in releases until Anthropic approves offering claude.ai login in STeP (the Agent SDK terms require prior approval). With the flag off, existing subscription connections can still sign out and be removed, but cannot connect, list models or chat.
+
+For Claude subscription chat, install Claude Code 2.1.268 or newer yourself, choose Claude → บัญชี Claude, then connect. Claude Code opens the browser and manages authentication; paste a code into STeP only if prompted. Login, status, SDK inference and logout share a per-connection `CLAUDE_CONFIG_DIR` under STeP app data. The installed executable is used for both authentication and SDK requests. STeP does not copy personal Claude credentials, implement OAuth itself, or automatically install Claude Code. API-key chat and the optional external Claude Code handoff remain available. If the runtime is removed, reinstall it before signing out so it can clear its credential store. Live Pro access and macOS credential isolation require separate live validation; automated tests do not prove subscription entitlement.
 
 ## Verification
 

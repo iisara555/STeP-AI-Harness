@@ -27,6 +27,24 @@ try {
   await handoff.waitFor();
   await handoff.getByRole('button', { name: /^(ยกเลิก|ปิด)$/ }).click();
   await page.locator('.composer textarea').fill('');
+  // In-app Claude subscription is behind STEP_CLAUDE_SUBSCRIPTION=1. Off: the host refuses it.
+  // On: a connection can be created and removed before installing or logging in to Claude.
+  // Either way this exercises the real host validation without launching a browser.
+  const claudeFlag = (await page.evaluate(() => window.step.call('snapshot'))).features?.claudeSubscription === true;
+  assert.equal(claudeFlag, process.env.STEP_CLAUDE_SUBSCRIPTION === '1');
+  const claudeId = await page.evaluate(async () => {
+    try {
+      return (await window.step.call('connection', { provider: 'claude', mode: 'subscription' })).id;
+    } catch {
+      return null;
+    }
+  });
+  if (!claudeFlag) assert.equal(claudeId, null);
+  else {
+    const withClaude = await page.evaluate(() => window.step.call('snapshot'));
+    assert.ok(withClaude.connections.some(c => c.id === claudeId && c.mode === 'subscription' && !c.ready));
+    await page.evaluate(id => window.step.call('removeConnection', { id }), claudeId);
+  }
   await page.evaluate(async () => {
     const connection = await window.step.call('connection', { provider: 'openai', mode: 'subscription', model: '' });
     const session = await window.step.call('create', { connectionId: connection.id, project: 'Desktop verification' });

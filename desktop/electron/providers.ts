@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Rpc } from './rpc';
 import { explainRuntimeFailure } from './diagnostics';
+import { claudeEnv } from './claude-auth';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -195,10 +196,12 @@ export class GeminiAdapter implements ProviderAdapter {
 }
 
 export class ClaudeAdapter implements ProviderAdapter {
+  constructor(private loadSdk = () => import('@anthropic-ai/claude-agent-sdk')) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
-    if (connection.mode !== 'api' || !context.key) throw new Error('API_KEY_REQUIRED');
-    const { query } = await import('@anthropic-ai/claude-agent-sdk');
+    const authOptions = claudeSdkOptions(connection, context);
+    const { query } = await this.loadSdk();
+    if (context.signal.aborted) throw new Error('CANCELLED');
     const controller = new AbortController(),
       abort = () => controller.abort();
     context.signal.addEventListener('abort', abort, { once: true });
@@ -208,12 +211,13 @@ export class ClaudeAdapter implements ProviderAdapter {
         prompt,
         options: {
           cwd: context.cwd,
-          env: { ...context.env, ANTHROPIC_API_KEY: context.key },
+          ...authOptions,
           model: connection.model || undefined,
           ...(context.effort ? { effort: context.effort as any } : {}),
           tools: [],
           allowedTools: [],
           mcpServers: {},
+          strictMcpConfig: true,
           settingSources: [],
           persistSession: false,
           includePartialMessages: true,
@@ -238,17 +242,56 @@ export class ClaudeAdapter implements ProviderAdapter {
             input = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
           context.onUsage?.({ input, output: u.output_tokens || 0, total: input + (u.output_tokens || 0) });
         }
-        if (message.type === 'result' && message.is_error) throw new Error('PROVIDER_REQUEST_FAILED');
+        if (message.type === 'result' && message.is_error)
+          throw new Error(explainRuntimeFailure('errors' in message ? message.errors : []) || 'PROVIDER_REQUEST_FAILED');
         if (message.type === 'result' && message.subtype === 'success' && !text) {
           text = message.result;
           context.emit(text);
         }
       }
       return text;
+    } catch (error) {
+      if (context.signal.aborted) throw new Error('CANCELLED');
+      throw new Error(
+        explainRuntimeFailure([String(error)]) ||
+          (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED'),
+      );
     } finally {
       context.signal.removeEventListener('abort', abort);
     }
   }
+}
+
+export function claudeSdkOptions(
+  connection: Connection,
+  context: Pick<ProviderContext, 'env' | 'key'>,
+): {
+  env: NodeJS.ProcessEnv;
+  pathToClaudeCodeExecutable?: string;
+  executable?: 'node';
+} {
+  if (connection.mode === 'api') {
+    if (!context.key) throw new Error('API_KEY_REQUIRED');
+    return { env: { ...context.env, ANTHROPIC_API_KEY: context.key } };
+  }
+  if (!connection.executable) throw new Error('CLAUDE_CODE_NOT_FOUND');
+  const script = /\.[cm]?js$/i.test(connection.executable);
+  return {
+    pathToClaudeCodeExecutable: connection.executable,
+    ...(script ? { executable: process.execPath as 'node' } : {}),
+    // Explicitly unset ambient auth even in SDK versions that merge process.env.
+    env: {
+      ...claudeEnv(context.env),
+      ANTHROPIC_API_KEY: undefined,
+      ANTHROPIC_AUTH_TOKEN: undefined,
+      CLAUDE_CODE_OAUTH_TOKEN: undefined,
+      ANTHROPIC_BASE_URL: undefined,
+      CLAUDE_CODE_USE_BEDROCK: undefined,
+      CLAUDE_CODE_USE_VERTEX: undefined,
+      CLAUDE_CODE_USE_FOUNDRY: undefined,
+      ...(script ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+    },
+  };
 }
 
 // A Google sign-in URL on stdout means cached credentials are missing or expired.
@@ -291,7 +334,7 @@ export function normalizeModels(items: unknown[]): ModelOption[] {
 // Ask the provider which models this account can use, through the same isolated runtime used for drafting.
 export async function listModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env' | 'key'>): Promise<ModelOption[]> {
   if (connection.provider === 'claude') {
-    if (!context.key) throw new Error('API_KEY_REQUIRED');
+    const authOptions = claudeSdkOptions(connection, context);
     // The Agent SDK catalog is what Claude's own apps offer, including supported effort levels.
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
     const controller = new AbortController();
@@ -302,10 +345,11 @@ export async function listModels(connection: Connection, context: Pick<ProviderC
       prompt: idle(),
       options: {
         cwd: context.cwd,
-        env: { ...context.env, ANTHROPIC_API_KEY: context.key },
+        ...authOptions,
         tools: [],
         allowedTools: [],
         mcpServers: {},
+        strictMcpConfig: true,
         settingSources: [],
         persistSession: false,
         abortController: controller,

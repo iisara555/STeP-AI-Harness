@@ -221,7 +221,12 @@ export function SetupWizard({
                 <Plug size={13} /> {providerLabel(c.provider)} · {c.note}
               </p>
             ))}
-            <ProviderFields value={choice} onChange={setChoice} call={call} />
+            <ProviderFields
+              value={choice}
+              onChange={setChoice}
+              call={call}
+              claudeSubscription={Boolean(snapshot.features?.claudeSubscription)}
+            />
             {choice.mode !== 'claude-code' && (
               <>
                 <button
@@ -241,7 +246,11 @@ export function SetupWizard({
                   }
                 >
                   {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
-                  {busy === 'connect' ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์' : 'เชื่อมต่อและทดสอบ'}
+                  {busy === 'connect'
+                    ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์'
+                    : choice.provider === 'claude' && choice.mode === 'subscription'
+                      ? 'เชื่อมต่อ Claude'
+                      : 'เชื่อมต่อและทดสอบ'}
                 </button>
                 {busy === 'connect' && connecting && (
                   <p className="connect-progress">

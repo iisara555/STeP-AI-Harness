@@ -4,11 +4,8 @@ import { chmod, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Anthropic does not allow third-party apps to use Claude.ai (Pro/Max) sign-in, so STeP Desktop never
-// signs in to Claude or runs Claude on a subscription itself. Instead it can hand a request to the
-// employee's own Claude Code, which they installed and signed in to themselves: the app copies the
-// request and opens Claude Code in a terminal in the workspace, where the employee pastes and works.
-// The app never reads Claude Code's sign-in, input or output.
+// Optional handoff to the employee's personal Claude Code. In-app subscription
+// chat uses a separate profile (claude-auth.ts); handoff never reads credentials.
 
 function run(command: string, args: string[]) {
   return new Promise<string>(resolve => {

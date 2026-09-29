@@ -234,6 +234,7 @@ export default function App() {
           });
         }
         if (event.type === 'auth-code' && event.connectionId) setAuthCode({ id: event.connectionId, code: '' });
+        if (event.type === 'auth-code-close') setAuthCode(current => (current?.id === event.connectionId ? null : current));
       }),
     [api, refresh],
   );
@@ -1464,11 +1465,11 @@ export default function App() {
         <div className="dialog-backdrop">
           <section role="dialog" aria-modal="true" aria-label="ลงชื่อเข้าใช้ Google" className="attachment-dialog">
             <header>
-              <h2>ลงชื่อเข้าใช้ Gemini ด้วยบัญชี Google</h2>
+              <h2>ลงชื่อเข้าใช้บริการ AI</h2>
             </header>
             <p>
-              แอปเปิดหน้าลงชื่อเข้าใช้ของ Google ในเบราว์เซอร์แล้ว เมื่อลงชื่อและกดอนุญาต Google จะแสดง authorization code
-              ให้คัดลอกมาวางที่นี่
+              ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ
+              หน้าต่างนี้จะปิดเอง
             </p>
             <label className="auth-code">
               Authorization code

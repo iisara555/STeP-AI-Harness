@@ -1,16 +1,25 @@
 import { createRpc, initialize, googleLoginUrl, runtimeError, type ProviderAdapter, type ProviderContext } from './providers';
 import { errorCode, explainRuntimeFailure } from './diagnostics';
 import type { Connection } from '../src/types';
+import { claudeLogin } from './claude-auth';
 
 // Plain-language notes for connection failures; anything else shows its code.
 export const connectNotes: Record<string, string> = {
+  CLAUDE_CODE_NOT_FOUND: 'ยังไม่พบ Claude Code เปิดวิธีติดตั้งแล้วกดตรวจอีกครั้ง',
+  CLAUDE_CODE_UPDATE_REQUIRED: 'กรุณาอัปเดต Claude Code เป็นรุ่น 2.1.268 ขึ้นไป แล้วเชื่อมต่อใหม่',
+  CLAUDE_PROFILE_MISMATCH: 'Claude Code ใช้โฟลเดอร์บัญชีไม่ตรงกับ STeP จึงหยุดการเชื่อมต่อ',
+  CLAUDE_AUTH_STATUS_INVALID: 'ตรวจสถานะ Claude ไม่สำเร็จ กรุณาอัปเดต Claude Code แล้วลองใหม่',
+  CLAUDE_SUBSCRIPTION_REQUIRED: 'กรุณาใช้บัญชี Claude Pro/Max แทนบัญชี Console ในการเชื่อมต่อนี้',
+  CLAUDE_LOGOUT_FAILED: 'ออกจากบัญชี Claude ไม่สำเร็จ ข้อมูลบัญชียังเก็บไว้เพื่อให้ลองใหม่',
+  FEATURE_DISABLED: 'การเชื่อมต่อบัญชี Claude ในแอปยังปิดอยู่ ใช้ Claude API key หรือเปิดใน Claude Code ภายนอกแทน',
+  CLAUDE_AUTH_TIMEOUT: 'Claude Code ไม่ตอบสนอง กรุณาลองใหม่',
   PROVIDER_QUOTA: 'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า',
   GOOGLE_CLOUD_PROJECT_REQUIRED:
     'บัญชี Google ขององค์กรหรือสถานศึกษาต้องตั้ง Google Cloud Project ก่อนใช้ Gemini ใช้ Gemini API key หรือบัญชี Google ส่วนตัวแทน',
   PROVIDER_PERMISSION_DENIED: 'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี',
   PROVIDER_NETWORK: 'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall',
   CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
-  LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อ (หรือวาง code ของ Google) ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
+  LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
   LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
   CANCELLED: 'ยกเลิกการเชื่อมต่อแล้ว',
   API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
@@ -34,6 +43,8 @@ export type ConnectDeps = {
   askForCode: () => Promise<string | null>;
   /** Closes a code box that is still open. */
   dropCode: () => void;
+  /** Called once the account is signed in, before the test request. */
+  signedIn?: () => void;
 };
 
 /**
@@ -43,6 +54,10 @@ export type ConnectDeps = {
 export async function signInAndTest(connection: Connection, deps: ConnectDeps, signal: AbortSignal) {
   const { runtime, progress } = deps;
   if (connection.mode === 'api' && !runtime.context.key) throw new Error('API_KEY_REQUIRED');
+  if (connection.provider === 'claude' && connection.mode === 'subscription') {
+    await claudeLogin(connection.executable, runtime.context, deps, signal);
+    deps.signedIn?.();
+  }
   if (connection.provider !== 'claude') {
     progress('กำลังเปิดตัวเชื่อม ' + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
     const rpc = createRpc(connection, runtime.context);
@@ -59,6 +74,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
   }
   // The test gets its own short budget so a stalled provider is reported instead of spinning for minutes.
   progress('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ');
+  if (signal.aborted) throw new Error('CANCELLED');
   let timedOut = false;
   const test = new AbortController(),
     timer = setTimeout(() => {

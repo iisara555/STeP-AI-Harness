@@ -43,4 +43,5 @@ graphify-out/
 desktop/dist/
 desktop/release/
 desktop/ocr-runtime/
+.npm-cache/
 .codex/hooks.json

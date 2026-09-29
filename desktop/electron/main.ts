@@ -15,6 +15,7 @@ import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { findPython, installOcr } from './components';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
+import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
 import { existsSync } from 'node:fs';
 import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
@@ -135,7 +136,12 @@ async function main() {
     if (!/^[\w-]{1,60}$/.test(id) || dirname(home) !== resolve(base)) throw new Error('INVALID_INPUT');
     await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
-  async function runtime(connection: Connection) {
+  // In-app Claude subscription login stays off until Anthropic approves offering claude.ai login.
+  // Sign-out and removal keep working with the flag off so an earlier login can always be cleared.
+  const claudeSubscription = process.env.STEP_CLAUDE_SUBSCRIPTION === '1';
+  async function runtime(connection: Connection, signOut = false) {
+    if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription && !signOut)
+      throw new Error('FEATURE_DISABLED');
     connection.executable = resolveRuntime(connection);
     const home = join(data, 'runtimes', connection.id),
       cwd = join(home, 'workspace');
@@ -164,6 +170,10 @@ async function main() {
       GEMINI_CLI_HOME: home,
       CLAUDE_CONFIG_DIR: join(home, '.claude'),
     };
+    if (connection.provider === 'claude' && connection.mode === 'subscription') {
+      await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
+      connection.executable = await resolveClaudeRuntime({ cwd, env });
+    }
     return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) } };
   }
   service = new WorkService(store, harness, runtime, event => {
@@ -239,6 +249,7 @@ async function main() {
     return file;
   };
   const snapshot = async () => ({
+    features: { claudeSubscription },
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections(),
@@ -289,13 +300,16 @@ async function main() {
         if (
           !validProviders.has(input.provider) ||
           !['api', 'subscription'].includes(input.mode) ||
-          (input.provider === 'claude' && input.mode !== 'api')
+          (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscription)
         )
           throw new Error('INVALID_CONNECTION');
         const id = input.id ? inputText(input.id, 60) : randomUUID();
         if (input.id && !store.get('connection', id)) throw new Error('CONNECTION_NOT_FOUND');
         // Only a runtime the user picked is stored; the bundled one is resolved each time it is used.
         const previous = store.get<Connection>('connection', id);
+        if (connecting.has(id)) throw new Error('CONNECTION_BUSY');
+        if (previous?.claudeAuthStarted && (previous.provider !== input.provider || previous.mode !== input.mode))
+          throw new Error('DISCONNECT_REQUIRED');
         const connection: Connection = {
           id,
           provider: input.provider as Provider,
@@ -303,6 +317,7 @@ async function main() {
           model: inputText(input.model || '', 100),
           executable: previous?.customRuntime ? previous.executable : '',
           ...(previous?.customRuntime ? { customRuntime: true } : {}),
+          ...(previous?.claudeAuthStarted ? { claudeAuthStarted: true } : {}),
           ready: false,
           note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ',
         };
@@ -342,6 +357,8 @@ async function main() {
       case 'connect': {
         const connection = store.get<Connection>('connection', input.id);
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription)
+          throw new Error('FEATURE_DISABLED');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         connecting.add(connection.id);
         const controller = new AbortController(),
@@ -350,12 +367,19 @@ async function main() {
         const dropCode = () => {
           authCodes.get(connection.id)?.(null);
           authCodes.delete(connection.id);
+          emit({ sessionId: '', type: 'auth-code-close', connectionId: connection.id });
         };
+        delete connection.signedIn;
         try {
+          const connectionRuntime = await runtime(connection);
+          if (connection.provider === 'claude' && connection.mode === 'subscription') {
+            connection.claudeAuthStarted = true;
+            store.put('connection', connection.id, connection);
+          }
           await signInAndTest(
             connection,
             {
-              runtime: await runtime(connection),
+              runtime: connectionRuntime,
               progress: text => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text }),
               openExternal: url => shell.openExternal(url),
               askForCode: () =>
@@ -364,6 +388,9 @@ async function main() {
                   emit({ sessionId: '', type: 'auth-code', connectionId: connection.id });
                 }),
               dropCode,
+              signedIn: () => {
+                connection.signedIn = true;
+              },
             },
             controller.signal,
           );
@@ -404,7 +431,7 @@ async function main() {
           resolveCode = authCodes.get(id);
         if (!resolveCode) throw new Error('LOGIN_FAILED');
         const code = typeof input.code === 'string' ? input.code.trim() : '';
-        if (code && (code.length > 500 || !/^[\w\-/.~%]+$/.test(code))) throw new Error('INVALID_INPUT');
+        if (code && (code.length > 4096 || !/^[\w\-/.~%#]+$/.test(code))) throw new Error('INVALID_INPUT');
         authCodes.delete(id);
         resolveCode(code || null);
         return true;
@@ -513,6 +540,12 @@ async function main() {
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(c.id)) throw new Error('RUN_ALREADY_ACTIVE');
         for (const session of store.list<any>('session')) if (session.connectionId === c.id) service.cancel(session.id);
+        if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
+          const r = await runtime(c, true);
+          await claudeLogout(c.executable, r.context);
+          delete c.claudeAuthStarted;
+        }
+        delete c.signedIn;
         // Signing out removes this connection's sign-in data (Google or ChatGPT tokens in its runtime home).
         await removeRuntimeHome(c.id);
         c.ready = false;
@@ -529,6 +562,10 @@ async function main() {
         if (connecting.has(c.id)) throw new Error('CONNECTION_BUSY');
         const sessions = store.list<Session>('session').filter(session => session.connectionId === c.id);
         if (sessions.some(session => service.isActive(session.id))) throw new Error('RUN_ALREADY_ACTIVE');
+        if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
+          const r = await runtime(c, true);
+          await claudeLogout(c.executable, r.context);
+        }
         await removeRuntimeHome(c.id);
         store.remove('connection', c.id);
         store.remove('secret', c.id);

@@ -255,26 +255,34 @@ export function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
   );
 }
 
-// Claude Pro/Max cannot be connected to this app; explain the Claude Code route and whether it is ready here.
-export function ClaudeCodeNote({ call }: { call: (method: string, input?: any) => Promise<any> }) {
+// Shared installation guidance for in-app subscription chat and external handoff.
+export function ClaudeCodeNote({
+  call,
+  subscription = false,
+}: {
+  call: (method: string, input?: any) => Promise<any>;
+  subscription?: boolean;
+}) {
   const [installed, setInstalled] = useState<boolean | null>(null);
-  useEffect(() => {
+  const check = () => {
+    setInstalled(null);
     void call('claudeCode')
       .then((r: any) => setInstalled(r.installed))
       .catch(() => setInstalled(false));
-  }, []);
+  };
+  useEffect(check, []);
   return (
     <div className="claude-code-note">
       <p className="small">
-        เงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Claude Pro/Max ในแอปของ Anthropic เท่านั้น แอปนี้จึงลงชื่อเข้าใช้แทนไม่ได้ แต่ส่งงานต่อให้
-        Claude Code ที่คุณติดตั้งและลงชื่อเองได้: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude
-        Code ในโฟลเดอร์งานให้
+        {subscription
+          ? 'ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วรับคำตอบใน STeP ใช้ Claude Code รุ่น 2.1.268 ขึ้นไปที่ติดตั้งในเครื่อง บัญชีใน STeP แยกจาก Claude Code ส่วนตัว'
+          : 'ส่งงานต่อให้ Claude Code ส่วนตัว: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้'}
       </p>
       <p className={installed ? 'connected small' : 'small muted'}>
         {installed === null
           ? 'กำลังตรวจหา Claude Code…'
           : installed
-            ? 'พบ Claude Code ในเครื่องนี้ พร้อมใช้'
+            ? 'พบ Claude Code · จะตรวจรุ่นเมื่อเชื่อมต่อ'
             : 'ยังไม่พบ Claude Code ในเครื่องนี้'}
       </p>
       {installed === false && (
@@ -282,7 +290,9 @@ export function ClaudeCodeNote({ call }: { call: (method: string, input?: any) =
           เปิดวิธีติดตั้ง Claude Code
         </button>
       )}
-      <p className="small muted">ถ้าต้องการให้คำตอบกลับมาในแอปนี้ ใช้ Claude API key จาก Claude Console (คิดค่าใช้จ่ายตามการใช้งาน)</p>
+      <button className="quiet" onClick={check}>
+        ตรวจอีกครั้ง
+      </button>
     </div>
   );
 }
@@ -294,12 +304,15 @@ export function ProviderFields({
   value,
   onChange,
   call,
+  claudeSubscription = false,
 }: {
   value: ProviderChoice;
   onChange: (next: ProviderChoice) => void;
   call: (method: string, input?: any) => Promise<any>;
+  claudeSubscription?: boolean;
 }) {
   const { provider, mode, key } = value;
+  const subscription = provider !== 'claude' || claudeSubscription;
   return (
     <>
       <div className="form-grid">
@@ -308,7 +321,11 @@ export function ProviderFields({
           <select
             value={provider}
             onChange={e =>
-              onChange({ provider: e.target.value, mode: e.target.value === 'claude' ? 'claude-code' : 'subscription', key: '' })
+              onChange({
+                provider: e.target.value,
+                mode: e.target.value === 'claude' && !claudeSubscription ? 'claude-code' : 'subscription',
+                key: '',
+              })
             }
           >
             <option value="openai">OpenAI (ChatGPT)</option>
@@ -319,15 +336,17 @@ export function ProviderFields({
         <label>
           วิธีเชื่อมต่อ
           <select value={mode} onChange={e => onChange({ ...value, mode: e.target.value })}>
-            {provider !== 'claude' ? (
-              <option value="subscription">บัญชีส่วนตัว (ลงชื่อเข้าใช้)</option>
-            ) : (
-              <option value="claude-code">บัญชี Pro/Max (ผ่าน Claude Code)</option>
+            {subscription && (
+              <option value="subscription">
+                {provider === 'claude' ? 'บัญชี Claude (ลงชื่อเข้าใช้)' : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
+              </option>
             )}
+            {provider === 'claude' && <option value="claude-code">เปิดใน Claude Code ภายนอก</option>}
             <option value="api">API key</option>
           </select>
         </label>
       </div>
+      {provider === 'claude' && mode === 'subscription' && claudeSubscription && <ClaudeCodeNote call={call} subscription />}
       {mode === 'claude-code' ? (
         <ClaudeCodeNote call={call} />
       ) : (
