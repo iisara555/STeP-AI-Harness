@@ -15,7 +15,10 @@ export function scrub(line: string) {
 const KNOWN: [RegExp, string][] = [
   [/GOOGLE_CLOUD_PROJECT/i, 'GOOGLE_CLOUD_PROJECT_REQUIRED'],
   [/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|usage.?limit|usageLimitExceeded/i, 'PROVIDER_QUOTA'],
-  [/model.{0,40}(?:not supported|not available|does not exist|not found)|not available on your plan|unsupported model/i, 'MODEL_NOT_AVAILABLE'],
+  [
+    /model.{0,40}(?:not supported|not available|does not exist|not found)|not available on your plan|unsupported model/i,
+    'MODEL_NOT_AVAILABLE',
+  ],
   [/token (?:has )?expired|refresh token|not logged in|login required|re-?authenticate|invalid_grant|unauthorized/i, 'LOGIN_REQUIRED'],
   [/PERMISSION_DENIED|\b403\b|not (?:eligible|authorized)/i, 'PROVIDER_PERMISSION_DENIED'],
   [/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|getaddrinfo|network error|proxy/i, 'PROVIDER_NETWORK'],
@@ -26,4 +29,4 @@ export function explainRuntimeFailure(lines: string[]) {
 }
 
 // A thrown error's code (UPPER_SNAKE message) or UNEXPECTED; only codes reach logs and the interface.
-export const errorCode = (error: unknown) => error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'UNEXPECTED';
+export const errorCode = (error: unknown) => (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'UNEXPECTED');

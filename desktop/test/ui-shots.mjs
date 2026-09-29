@@ -33,9 +33,16 @@ try {
   await page.getByRole('button', { name: 'ดูทัวร์แนะนำ' }).click();
   await page.locator('.tour-card').waitFor();
   const saved = await page.evaluate(() => window.step.call('snapshot'));
-  if (saved.settings.userName !== 'ต้น' || saved.settings.assistant !== 'น้องสเต็ป' || saved.settings.personality !== 'concise' || !saved.userFile) throw new Error('Wizard did not save USER.md settings');
+  if (
+    saved.settings.userName !== 'ต้น' ||
+    saved.settings.assistant !== 'น้องสเต็ป' ||
+    saved.settings.personality !== 'concise' ||
+    !saved.userFile
+  )
+    throw new Error('Wizard did not save USER.md settings');
   await page.screenshot({ path: join(out, 'tour-1.png') });
-  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(300);
   await page.screenshot({ path: join(out, 'tour-3.png') });
   await page.getByRole('button', { name: 'ข้ามทัวร์' }).click();
@@ -43,11 +50,16 @@ try {
   await page.screenshot({ path: join(out, 'welcome.png') });
   await page.evaluate(async () => {
     const c = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });
-    for (const [title, pinned] of [['บรีฟงานสัมมนา AI สำหรับ SME', true], ['สรุปประชุมทีม CC', false], ['ร่างข่าวประชาสัมพันธ์', false]]) {
+    for (const [title, pinned] of [
+      ['บรีฟงานสัมมนา AI สำหรับ SME', true],
+      ['สรุปประชุมทีม CC', false],
+      ['ร่างข่าวประชาสัมพันธ์', false],
+    ]) {
       const s = await window.step.call('create', { connectionId: c.id, project: 'สื่อสารองค์กร' });
       // Tasks that were never used stay out of the list, so each seeded task gets a draft.
       await window.step.call('edit', { id: s.id, text: title, revision: 0 });
-      await window.step.call('rename', { id: s.id, title }); if (pinned) await window.step.call('pin', { id: s.id, pinned: true });
+      await window.step.call('rename', { id: s.id, title });
+      if (pinned) await window.step.call('pin', { id: s.id, pinned: true });
     }
   });
   await page.reload();
@@ -62,7 +74,8 @@ try {
   await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
   await page.getByRole('textbox', { name: 'พิมพ์คำขอ' }).fill('/rec');
   await page.locator('.slash-menu').waitFor();
-  if (!(await page.locator('.slash-menu button').first().textContent()).includes('/receipt-audit')) throw new Error('Prefix matches should rank first');
+  if (!(await page.locator('.slash-menu button').first().textContent()).includes('/receipt-audit'))
+    throw new Error('Prefix matches should rank first');
   await page.screenshot({ path: join(out, 'slash-menu.png') });
   await page.keyboard.press('Enter');
   await page.locator('.skill-chip').waitFor();
@@ -101,4 +114,6 @@ try {
   await page.waitForTimeout(200);
   await page.screenshot({ path: join(out, 'settings-dark.png') });
   console.log('UI screenshots written to ' + out);
-} finally { await app.close(); }
+} finally {
+  await app.close();
+}

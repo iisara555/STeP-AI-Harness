@@ -11,12 +11,13 @@ delete env.ELECTRON_RUN_AS_NODE;
 const child = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
   const page = await child.firstWindow();
-  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor();
   const state = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(state.teams.length, 22);
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย' , exact: false }).waitFor();
+  await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
   await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');
@@ -55,19 +56,28 @@ try {
   await page.locator('.draft-editor h2').waitFor();
   const outputFolder = resolve('release/qa/exports');
   await mkdir(outputFolder, { recursive: true });
-  await child.evaluate(({ dialog }, folder) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] }); }, outputFolder);
+  await child.evaluate(({ dialog }, folder) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
+  }, outputFolder);
   await page.evaluate(() => window.step.call('workspace'));
   const exported = [];
   for (const format of ['md', 'docx', 'pdf', 'xlsx', 'pptx']) {
-    const result = await page.evaluate(({ id, format }) => window.step.call('export', { id, format }), { id: restored.sessions[0].id, format });
+    const result = await page.evaluate(({ id, format }) => window.step.call('export', { id, format }), {
+      id: restored.sessions[0].id,
+      format,
+    });
     const bytes = await readFile(result.path);
     assert.ok(bytes.length > 50);
     if (format === 'pdf') assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
     exported.push({ format, path: result.path, bytes: bytes.length });
   }
   await writeFile('release/qa/exports.json', JSON.stringify(exported, null, 2));
-  await page.evaluate(async () => { const s = await window.step.call('snapshot'); await window.step.call('settings', { ...s.settings, theme: 'dark' }); });
-  await page.reload(); await page.locator('.draft-editor').waitFor();
+  await page.evaluate(async () => {
+    const s = await window.step.call('snapshot');
+    await window.step.call('settings', { ...s.settings, theme: 'dark' });
+  });
+  await page.reload();
+  await page.locator('.draft-editor').waitFor();
   await page.screenshot({ path: 'release/qa/workspace-dark.png', fullPage: true });
   await page.setViewportSize({ width: 850, height: 720 });
   await page.screenshot({ path: 'release/qa/workspace-narrow.png', fullPage: true });
@@ -79,10 +89,16 @@ try {
     const task = await window.step.call('create', { connectionId: b.id });
     return { a: a.id, b: b.id, task: task.id };
   });
-  await child.evaluate(({ dialog }, exe) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [exe] }); }, process.execPath);
-  await assert.rejects(page.evaluate(id => window.step.call('runtime', { id }), picked.b), /RUNTIME_INVALID/);
+  await child.evaluate(({ dialog }, exe) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [exe] });
+  }, process.execPath);
+  await assert.rejects(
+    page.evaluate(id => window.step.call('runtime', { id }), picked.b),
+    /RUNTIME_INVALID/,
+  );
   const signInFolder = join(home, 'runtimes', picked.b);
-  await mkdir(join(signInFolder, '.gemini'), { recursive: true }); await writeFile(join(signInFolder, '.gemini', 'oauth_creds.json'), '{}');
+  await mkdir(join(signInFolder, '.gemini'), { recursive: true });
+  await writeFile(join(signInFolder, '.gemini', 'oauth_creds.json'), '{}');
   await page.evaluate(id => window.step.call('removeConnection', { id }), picked.b);
   const afterRemove = await page.evaluate(() => window.step.call('snapshot'));
   assert.ok(!afterRemove.connections.some(c => c.id === picked.b), 'removed connection is gone');
@@ -91,6 +107,33 @@ try {
   const moved = await page.evaluate(p => window.step.call('sessionConnection', { id: p.task, connectionId: p.a }), picked);
   assert.equal(moved.connectionId, picked.a);
   assert.deepEqual(errors, []);
-  await writeFile('release/qa/electron-smoke.json', JSON.stringify({ platform: process.platform, passed: true, assertions: ['22 teams', 'onboarding', 'create session', 'edit', 'save', 'restore', 'theme', 'narrow layout', 'runtime check', 'remove connection', 'switch task AI'], liveProviderTest: false, home }, null, 2));
+  await writeFile(
+    'release/qa/electron-smoke.json',
+    JSON.stringify(
+      {
+        platform: process.platform,
+        passed: true,
+        assertions: [
+          '22 teams',
+          'onboarding',
+          'create session',
+          'edit',
+          'save',
+          'restore',
+          'theme',
+          'narrow layout',
+          'runtime check',
+          'remove connection',
+          'switch task AI',
+        ],
+        liveProviderTest: false,
+        home,
+      },
+      null,
+      2,
+    ),
+  );
   console.log('Electron smoke passed: real IPC, SQLite, editor, restore, themes, five export formats. No live provider calls.');
-} finally { await child.close(); }
+} finally {
+  await child.close();
+}

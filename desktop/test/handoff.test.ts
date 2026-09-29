@@ -4,7 +4,10 @@ import { findClaudeCode, handoffText } from '../electron/handoff';
 
 test('handoff text keeps the request and points at a chosen Skill file', () => {
   assert.equal(handoffText('ร่างหนังสือ'), 'ร่างหนังสือ');
-  assert.match(handoffText('ร่างหนังสือ', { name: 'thai-doc', file: '/h/skills/thai-doc/SKILL.md' }), /^ร่างหนังสือ\n\n\[STeP\] .*"thai-doc".*\/h\/skills\/thai-doc\/SKILL\.md$/);
+  assert.match(
+    handoffText('ร่างหนังสือ', { name: 'thai-doc', file: '/h/skills/thai-doc/SKILL.md' }),
+    /^ร่างหนังสือ\n\n\[STeP\] .*"thai-doc".*\/h\/skills\/thai-doc\/SKILL\.md$/,
+  );
 });
 
 test('Claude Code lookup answers with an existing path or null', async () => {

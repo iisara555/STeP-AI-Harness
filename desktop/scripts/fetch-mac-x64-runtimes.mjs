@@ -18,9 +18,11 @@ for (const path of wanted) {
   const bytes = Buffer.from(await response.arrayBuffer());
   const digest = 'sha512-' + createHash('sha512').update(bytes).digest('base64');
   if (digest !== entry.integrity) throw new Error(`Integrity mismatch for ${path}`);
-  const archive = join(tmpdir(), path.replace(/\W+/g, '_') + '.tgz'), target = new URL('../' + path + '/', import.meta.url);
+  const archive = join(tmpdir(), path.replace(/\W+/g, '_') + '.tgz'),
+    target = new URL('../' + path + '/', import.meta.url);
   await writeFile(archive, bytes);
-  await rm(target, { recursive: true, force: true }); await mkdir(target, { recursive: true });
+  await rm(target, { recursive: true, force: true });
+  await mkdir(target, { recursive: true });
   execFileSync('tar', ['-xzf', archive, '-C', target.pathname, '--strip-components=1']);
   console.log(`${path} ${entry.version} verified and unpacked`);
 }

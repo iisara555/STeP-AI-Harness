@@ -14,8 +14,11 @@ function run(command: string, args: string[]) {
   return new Promise<string>(resolve => {
     let out = '';
     const child = spawn(command, args, { windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'ignore'] });
-    child.stdout.on('data', chunk => { out += chunk; });
-    child.on('error', () => resolve('')); child.on('close', code => resolve(code === 0 ? out : ''));
+    child.stdout.on('data', chunk => {
+      out += chunk;
+    });
+    child.on('error', () => resolve(''));
+    child.on('close', code => resolve(code === 0 ? out : ''));
   });
 }
 
@@ -23,14 +26,27 @@ function run(command: string, args: string[]) {
 export async function findClaudeCode(): Promise<string | null> {
   const home = homedir();
   if (process.platform === 'win32') {
-    const found = (await run('where.exe', ['claude'])).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    const known = [join(home, '.local', 'bin', 'claude.exe'), join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'npm', 'claude.cmd')];
+    const found = (await run('where.exe', ['claude']))
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+    const known = [
+      join(home, '.local', 'bin', 'claude.exe'),
+      join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'npm', 'claude.cmd'),
+    ];
     return [...found.filter(path => /\.(exe|cmd)$/i.test(path)), ...known].find(path => existsSync(path)) || null;
   }
   // Apps opened from Finder get a minimal PATH, so ask a login shell and check the usual install locations.
   const found = (await run('/bin/zsh', ['-lc', 'command -v claude'])).trim();
-  return [found, join(home, '.local', 'bin', 'claude'), join(home, '.claude', 'local', 'claude'), '/opt/homebrew/bin/claude', '/usr/local/bin/claude']
-    .find(path => path.startsWith('/') && existsSync(path)) || null;
+  return (
+    [
+      found,
+      join(home, '.local', 'bin', 'claude'),
+      join(home, '.claude', 'local', 'claude'),
+      '/opt/homebrew/bin/claude',
+      '/usr/local/bin/claude',
+    ].find(path => path.startsWith('/') && existsSync(path)) || null
+  );
 }
 
 /** The text the employee pastes into Claude Code; a chosen Skill is referenced by its file. */
@@ -44,7 +60,12 @@ const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
 export async function openClaudeCode(claude: string, cwd: string) {
   if (process.platform === 'win32') {
     // Windows paths cannot contain double quotes, so quoting the program path is safe.
-    const child = spawn('cmd.exe', ['/d', '/s', '/c', `start "Claude Code" cmd.exe /k "${claude}"`], { cwd, detached: true, stdio: 'ignore', windowsVerbatimArguments: true });
+    const child = spawn('cmd.exe', ['/d', '/s', '/c', `start "Claude Code" cmd.exe /k "${claude}"`], {
+      cwd,
+      detached: true,
+      stdio: 'ignore',
+      windowsVerbatimArguments: true,
+    });
     child.unref();
     return;
   }

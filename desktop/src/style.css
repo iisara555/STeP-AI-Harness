@@ -1,15 +1,10 @@
-@import "./theme.css";
+@import './theme.css';
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  font-family:
-    "IBM Plex Sans Thai",
-    "Leelawadee UI",
-    "Thonburi",
-    system-ui,
-    sans-serif;
+  font-family: 'IBM Plex Sans Thai', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif;
   color: var(--text);
   background: var(--surface);
   font-size: 14px;
@@ -33,13 +28,13 @@ button {
   background: var(--accent);
   color: var(--on-accent);
   cursor: pointer;
-  transition: background .15s;
+  transition: background 0.15s;
 }
 button:hover {
-  filter: brightness(.95);
+  filter: brightness(0.95);
 }
 button:disabled {
-  opacity: .45;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 input,
@@ -60,7 +55,7 @@ select:focus {
 }
 button:focus-visible,
 summary:focus-visible,
-[role=separator]:focus-visible {
+[role='separator']:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
@@ -97,7 +92,7 @@ a,
 }
 .brand strong {
   font-size: 18px;
-  letter-spacing: .03em;
+  letter-spacing: 0.03em;
 }
 .brand span {
   display: block;
@@ -245,7 +240,7 @@ nav button,
 .conversation {
   flex: 1;
   overflow: auto;
-  padding: 28px max(24px, calc((100% - 720px)/2));
+  padding: 28px max(24px, calc((100% - 720px) / 2));
 }
 .welcome {
   padding: 45px 8px 25px;
@@ -256,7 +251,7 @@ nav button,
   font-size: 34px;
   line-height: 1.45;
   font-weight: 500;
-  letter-spacing: -.02em;
+  letter-spacing: -0.02em;
   margin: 0 0 15px;
   text-wrap: balance;
 }
@@ -422,7 +417,7 @@ nav button,
   padding: 35px;
 }
 .artifact-empty > svg {
-  opacity: .5;
+  opacity: 0.5;
 }
 .artifact-empty h2 {
   color: var(--text);
@@ -772,7 +767,7 @@ nav button,
 .draft-editor h2,
 .draft-editor h3 {
   line-height: 1.4;
-  margin: 1em 0 .5em;
+  margin: 1em 0 0.5em;
 }
 .draft-editor ul,
 .draft-editor ol {
@@ -794,7 +789,7 @@ nav button,
   height: 7px;
   border-radius: 50%;
   background: var(--muted);
-  opacity: .6;
+  opacity: 0.6;
 }
 .status-dot.ok {
   background: var(--accent);
@@ -858,7 +853,7 @@ nav button,
   font-size: 10px;
   color: var(--muted);
   margin: 14px 10px 5px;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
 }
 .session-rename {
   width: 100%;
@@ -1093,7 +1088,7 @@ button.danger {
   border-radius: 10px;
   box-shadow: 0 10px 30px #0002;
   font-size: 12.5px;
-  animation: toast-in .16s ease-out;
+  animation: toast-in 0.16s ease-out;
 }
 .toast > svg {
   flex-shrink: 0;
@@ -1165,24 +1160,24 @@ button.danger {
 .brand-symbol .on-dark {
   display: none;
 }
-:root[data-theme=dark] .brand-symbol .on-light {
+:root[data-theme='dark'] .brand-symbol .on-light {
   display: none;
 }
-:root[data-theme=dark] .brand-symbol .on-dark {
+:root[data-theme='dark'] .brand-symbol .on-dark {
   display: block;
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme=system] .brand-symbol .on-light {
+  :root[data-theme='system'] .brand-symbol .on-light {
     display: none;
   }
-  :root[data-theme=system] .brand-symbol .on-dark {
+  :root[data-theme='system'] .brand-symbol .on-dark {
     display: block;
   }
 }
 .brand-tagline {
   display: block;
   font-size: 9px !important;
-  letter-spacing: .14em;
+  letter-spacing: 0.14em;
   color: var(--muted);
 }
 .nav-active,
@@ -1216,14 +1211,14 @@ button.danger {
   user-select: none;
   pointer-events: none;
 }
-:root[data-theme=dark] .illustration {
+:root[data-theme='dark'] .illustration {
   filter: invert(1);
-  opacity: .88;
+  opacity: 0.88;
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme=system] .illustration {
+  :root[data-theme='system'] .illustration {
     filter: invert(1);
-    opacity: .88;
+    opacity: 0.88;
   }
 }
 .welcome-art {
@@ -1236,7 +1231,7 @@ button.danger {
 }
 .welcome h1 {
   font-weight: 600;
-  letter-spacing: -.015em;
+  letter-spacing: -0.015em;
 }
 .empty-art {
   width: 170px;
@@ -1287,7 +1282,9 @@ nav button:hover,
 }
 .composer {
   border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(35, 31, 32, .04), 0 4px 14px rgba(35, 31, 32, .04);
+  box-shadow:
+    0 1px 2px rgba(35, 31, 32, 0.04),
+    0 4px 14px rgba(35, 31, 32, 0.04);
 }
 @media (max-width: 1150px) {
   .settings-art {
@@ -1307,12 +1304,12 @@ nav button:hover,
   border-radius: 4px;
   background: var(--accent-soft);
   color: var(--accent-ink);
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
 }
 .receipt-app {
   flex: 1;
   overflow: auto;
-  padding: 22px max(24px, calc((100% - 1100px)/2)) 30px;
+  padding: 22px max(24px, calc((100% - 1100px) / 2)) 30px;
 }
 .receipt-service {
   display: flex;
@@ -1570,7 +1567,7 @@ nav .count {
 .skills-hub {
   flex: 1;
   overflow: auto;
-  padding: 24px max(24px, calc((100% - 1100px)/2)) 30px;
+  padding: 24px max(24px, calc((100% - 1100px) / 2)) 30px;
 }
 .skills-head {
   margin-bottom: 18px;
@@ -1946,15 +1943,15 @@ nav .count {
 .tour-spot {
   position: fixed;
   border-radius: 10px;
-  box-shadow: 0 0 0 9999px rgba(20, 17, 18, .55);
+  box-shadow: 0 0 0 9999px rgba(20, 17, 18, 0.55);
   outline: 2px solid var(--accent);
-  transition: all .2s ease;
+  transition: all 0.2s ease;
   pointer-events: none;
 }
 .tour-dim {
   position: fixed;
   inset: 0;
-  background: rgba(20, 17, 18, .55);
+  background: rgba(20, 17, 18, 0.55);
 }
 .tour-card {
   position: fixed;

@@ -14,8 +14,15 @@ async function serve(handler: Parameters<typeof createServer>[1]) {
 }
 
 test('only the STeP OCR service counts as running', async () => {
-  const other = await serve((_, res) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ ok: true, service: 'something else' })); });
-  try { assert.deepEqual(await new OcrService(() => '', other.base).health(), { running: false, crosscheck: false }); } finally { await other.close(); }
+  const other = await serve((_, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ ok: true, service: 'something else' }));
+  });
+  try {
+    assert.deepEqual(await new OcrService(() => '', other.base).health(), { running: false, crosscheck: false });
+  } finally {
+    await other.close();
+  }
   assert.equal((await new OcrService(() => '', 'http://127.0.0.1:9').health()).running, false);
 });
 
@@ -23,14 +30,18 @@ test('receipts are posted as raw bytes to the local service and its result is re
   let received: { url?: string; bytes?: Buffer } = {};
   const fake = await serve((req, res) => {
     res.setHeader('Content-Type', 'application/json');
-    if (req.url === '/api/health') return void res.end(JSON.stringify({ ok: true, service: 'STeP Local Thai OCR', crosscheck_installed: true }));
-    const chunks: Buffer[] = []; req.on('data', c => chunks.push(c)); req.on('end', () => {
+    if (req.url === '/api/health')
+      return void res.end(JSON.stringify({ ok: true, service: 'STeP Local Thai OCR', crosscheck_installed: true }));
+    const chunks: Buffer[] = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
       received = { url: req.url, bytes: Buffer.concat(chunks) };
       res.end(JSON.stringify({ ok: true, result: { text: 'ยอดสุทธิ 107.00', pages: [] } }));
     });
   });
   try {
-    const dir = await mkdtemp(join(tmpdir(), 'step-ocr-')), file = join(dir, 'ใบเสร็จ.jpg');
+    const dir = await mkdtemp(join(tmpdir(), 'step-ocr-')),
+      file = join(dir, 'ใบเสร็จ.jpg');
     await writeFile(file, Buffer.from([1, 2, 3]));
     const service = new OcrService(() => '', fake.base);
     assert.deepEqual(await service.health(), { running: true, crosscheck: true });
@@ -40,7 +51,9 @@ test('receipts are posted as raw bytes to the local service and its result is re
     assert.match(received.url!, /filename=%E0%B9%83.*\.jpg&threshold=0\.80&handwriting=off&crosscheck=on/);
     await writeFile(join(dir, 'note.exe'), 'x');
     await assert.rejects(service.recognize(join(dir, 'note.exe'), false), /OCR_UNSUPPORTED_FILE/);
-  } finally { await fake.close(); }
+  } finally {
+    await fake.close();
+  }
 });
 
 test('starting requires an installed OCR folder', async () => {
@@ -49,5 +62,8 @@ test('starting requires an installed OCR folder', async () => {
 
 test('the component installer refuses folders that are not the OCR trial', async () => {
   const { installOcr } = await import('../electron/components');
-  await assert.rejects(installOcr(tmpdir(), join(tmpdir(), 'venv-never-created'), () => {}), /OCR_FOLDER_INVALID/);
+  await assert.rejects(
+    installOcr(tmpdir(), join(tmpdir(), 'venv-never-created'), () => {}),
+    /OCR_FOLDER_INVALID/,
+  );
 });

@@ -14,24 +14,35 @@ export type OcrStatus = { running: boolean; crosscheck: boolean; installed: bool
 export function ocrPython(folder: string) {
   return process.platform === 'win32' ? join(folder, '.venv', 'Scripts', 'python.exe') : join(folder, '.venv', 'bin', 'python');
 }
-export const isOcrFolder = (folder: string) => Boolean(folder) && existsSync(join(folder, 'app.py')) && existsSync(join(folder, 'web', 'receipt-review.js'));
+export const isOcrFolder = (folder: string) =>
+  Boolean(folder) && existsSync(join(folder, 'app.py')) && existsSync(join(folder, 'web', 'receipt-review.js'));
 
 export class OcrService {
   private child?: ChildProcess;
   // `python` points at the interpreter to run; by default the experiment folder's own .venv.
-  constructor(private folder: () => string, private base = OCR_URL, private python: () => string = () => ocrPython(this.folder()), private env: () => NodeJS.ProcessEnv = () => process.env) {}
+  constructor(
+    private folder: () => string,
+    private base = OCR_URL,
+    private python: () => string = () => ocrPython(this.folder()),
+    private env: () => NodeJS.ProcessEnv = () => process.env,
+  ) {}
 
   async health() {
     try {
       const response = await fetch(this.base + '/api/health', { signal: AbortSignal.timeout(1500), cache: 'no-store' });
       const body: any = await response.json();
       // Only accept the STeP service, not whatever else happens to listen on the port.
-      return response.ok && body?.ok === true && body.service === 'STeP Local Thai OCR' ? { running: true, crosscheck: body.crosscheck_installed === true } : { running: false, crosscheck: false };
-    } catch { return { running: false, crosscheck: false }; }
+      return response.ok && body?.ok === true && body.service === 'STeP Local Thai OCR'
+        ? { running: true, crosscheck: body.crosscheck_installed === true }
+        : { running: false, crosscheck: false };
+    } catch {
+      return { running: false, crosscheck: false };
+    }
   }
 
   async status(): Promise<OcrStatus> {
-    const folder = this.folder(), health = await this.health();
+    const folder = this.folder(),
+      health = await this.health();
     return { ...health, installed: isOcrFolder(folder) && existsSync(this.python()), folder };
   }
 
@@ -40,8 +51,16 @@ export class OcrService {
     const folder = this.folder();
     if (!isOcrFolder(folder) || !existsSync(this.python())) throw new Error('OCR_NOT_INSTALLED');
     // No shell, no console window; the service binds to 127.0.0.1 by default.
-    this.child = spawn(this.python(), ['app.py', '--no-browser'], { cwd: folder, windowsHide: true, shell: false, stdio: 'ignore', env: this.env() });
-    this.child.on('exit', () => { this.child = undefined; });
+    this.child = spawn(this.python(), ['app.py', '--no-browser'], {
+      cwd: folder,
+      windowsHide: true,
+      shell: false,
+      stdio: 'ignore',
+      env: this.env(),
+    });
+    this.child.on('exit', () => {
+      this.child = undefined;
+    });
     for (let waited = 0; waited < 90_000; waited += 1000) {
       if ((await this.health()).running) return this.status();
       if (!this.child) break;
@@ -59,8 +78,16 @@ export class OcrService {
     const bytes = await readFile(path);
     const url = `${this.base}/api/ocr?filename=${encodeURIComponent(basename(path))}&threshold=0.80&handwriting=off&crosscheck=${crosscheck ? 'on' : 'off'}`;
     let response: Response;
-    try { response = await fetch(url, { method: 'POST', body: bytes, headers: { 'Content-Type': 'application/octet-stream' }, signal: AbortSignal.timeout(600_000) }); }
-    catch { throw new Error('OCR_UNAVAILABLE'); }
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        body: bytes,
+        headers: { 'Content-Type': 'application/octet-stream' },
+        signal: AbortSignal.timeout(600_000),
+      });
+    } catch {
+      throw new Error('OCR_UNAVAILABLE');
+    }
     const body: any = await response.json().catch(() => null);
     if (!response.ok || !body?.ok || !body.result) throw new Error('OCR_FAILED');
     return { bytes, extension, result: body.result };
@@ -68,9 +95,11 @@ export class OcrService {
 
   // Only a service this app started is stopped; a server the user runs themselves is left alone.
   stop() {
-    const child = this.child; this.child = undefined;
+    const child = this.child;
+    this.child = undefined;
     if (!child?.pid || child.exitCode !== null) return;
-    if (process.platform === 'win32') spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' });
+    if (process.platform === 'win32')
+      spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' });
     else child.kill();
   }
 }

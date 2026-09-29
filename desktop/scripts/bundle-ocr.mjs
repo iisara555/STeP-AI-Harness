@@ -11,7 +11,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const RELEASE = '20260924', VERSION = '3.12.14';
+const RELEASE = '20260924',
+  VERSION = '3.12.14';
 // [python-build-standalone triple, archive sha256, PaddlePaddle CPU wheel from PyPI]
 // PaddlePaddle stopped publishing Intel Mac wheels after 3.0.0.
 const BUILDS = {
@@ -24,48 +25,75 @@ const MODELS = ['PP-OCRv5_mobile_det', 'th_PP-OCRv5_mobile_rec'];
 const desktop = fileURLToPath(new URL('..', import.meta.url));
 const ocrApp = join(desktop, '..', 'experiments', 'local-thai-ocr');
 const out = join(desktop, 'ocr-runtime');
-const args = process.argv.slice(2), optional = args.includes('--optional');
-const arch = args.find(a => !a.startsWith('--')) || process.arch, key = `${process.platform}-${arch}`;
+const args = process.argv.slice(2),
+  optional = args.includes('--optional');
+const arch = args.find(a => !a.startsWith('--')) || process.arch,
+  key = `${process.platform}-${arch}`;
 if (!BUILDS[key]) throw new Error(`No bundled Python for ${key}`);
 const [triple, sha256, PADDLE] = BUILDS[key];
 
-try { await bundle(); } catch (error) {
+try {
+  await bundle();
+} catch (error) {
   if (!optional) throw error;
   await rm(out, { recursive: true, force: true });
   console.warn(`OCR runtime for ${key} not bundled (${error.message}); the app will offer its own OCR install`);
 }
 
 async function bundle() {
+  // Skip the slow rebuild when the same Python, architecture and requirements are already bundled.
+  const stamp = createHash('sha256')
+    .update(JSON.stringify([RELEASE, VERSION, key, PADDLE, MODELS, await readFile(join(ocrApp, 'requirements-core.txt'), 'utf8')]))
+    .digest('hex');
+  if (existsSync(join(out, 'stamp')) && (await readFile(join(out, 'stamp'), 'utf8')) === stamp) {
+    console.log(`OCR runtime for ${key} is up to date`);
+    return;
+  }
+  await rm(out, { recursive: true, force: true });
+  await mkdir(out, { recursive: true });
 
-// Skip the slow rebuild when the same Python, architecture and requirements are already bundled.
-const stamp = createHash('sha256').update(JSON.stringify([RELEASE, VERSION, key, PADDLE, MODELS, await readFile(join(ocrApp, 'requirements-core.txt'), 'utf8')])).digest('hex');
-if (existsSync(join(out, 'stamp')) && (await readFile(join(out, 'stamp'), 'utf8')) === stamp) { console.log(`OCR runtime for ${key} is up to date`); return; }
-await rm(out, { recursive: true, force: true }); await mkdir(out, { recursive: true });
+  const name = `cpython-${VERSION}+${RELEASE}-${triple}-install_only.tar.gz`;
+  const response = await fetch(
+    `https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE}/${encodeURIComponent(name)}`,
+  );
+  if (!response.ok) throw new Error(`Python download failed: ${response.status}`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (createHash('sha256').update(bytes).digest('hex') !== sha256) throw new Error('Python checksum mismatch');
+  const work = await mkdtemp(join(tmpdir(), 'step-ocr-')),
+    archive = join(work, 'python.tar.gz');
+  await writeFile(archive, bytes);
+  // Windows: use the system bsdtar, which understands drive-letter paths.
+  execFileSync(
+    process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\Windows', 'System32', 'tar.exe') : 'tar',
+    ['-xzf', archive, '-C', out],
+    { stdio: 'inherit' },
+  ); // unpacks to out/python
+  console.log(`Python ${VERSION} (${triple}) verified`);
 
-const name = `cpython-${VERSION}+${RELEASE}-${triple}-install_only.tar.gz`;
-const response = await fetch(`https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE}/${encodeURIComponent(name)}`);
-if (!response.ok) throw new Error(`Python download failed: ${response.status}`);
-const bytes = Buffer.from(await response.arrayBuffer());
-if (createHash('sha256').update(bytes).digest('hex') !== sha256) throw new Error('Python checksum mismatch');
-const work = await mkdtemp(join(tmpdir(), 'step-ocr-')), archive = join(work, 'python.tar.gz');
-await writeFile(archive, bytes);
-// Windows: use the system bsdtar, which understands drive-letter paths.
-execFileSync(process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\Windows', 'System32', 'tar.exe') : 'tar', ['-xzf', archive, '-C', out], { stdio: 'inherit' }); // unpacks to out/python
-console.log(`Python ${VERSION} (${triple}) verified`);
+  const python = process.platform === 'win32' ? join(out, 'python', 'python.exe') : join(out, 'python', 'bin', 'python3');
+  const env = {
+    ...process.env,
+    PYTHONIOENCODING: 'utf-8',
+    PIP_DISABLE_PIP_VERSION_CHECK: '1',
+    PIP_NO_CACHE_DIR: '1',
+    PADDLE_PDX_CACHE_HOME: join(work, 'paddlex'),
+    PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: 'True',
+  };
+  const py = (...args) => execFileSync(python, args, { stdio: 'inherit', env, cwd: ocrApp });
+  py('-m', 'pip', 'install', '--upgrade', 'pip');
+  py('-m', 'pip', 'install', PADDLE);
+  py('-m', 'pip', 'install', '-r', join(ocrApp, 'requirements-core.txt'));
 
-const python = process.platform === 'win32' ? join(out, 'python', 'python.exe') : join(out, 'python', 'bin', 'python3');
-const env = { ...process.env, PYTHONIOENCODING: 'utf-8', PIP_DISABLE_PIP_VERSION_CHECK: '1', PIP_NO_CACHE_DIR: '1', PADDLE_PDX_CACHE_HOME: join(work, 'paddlex'), PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: 'True' };
-const py = (...args) => execFileSync(python, args, { stdio: 'inherit', env, cwd: ocrApp });
-py('-m', 'pip', 'install', '--upgrade', 'pip');
-py('-m', 'pip', 'install', PADDLE);
-py('-m', 'pip', 'install', '-r', join(ocrApp, 'requirements-core.txt'));
-
-// Loading the engine once downloads exactly the models it uses; keep only those.
-py('-c', 'from ocr_engine import LocalThaiOCR; LocalThaiOCR()._get_ocr(); print("models ready")');
-for (const model of MODELS) await cp(join(work, 'paddlex', 'official_models', model), join(out, 'models', model), { recursive: true });
-// Precompile so the read-only app bundle never needs to write bytecode; a few stdlib test files do not compile.
-try { py('-m', 'compileall', '-q', '-j', '0', join(out, 'python')); } catch { console.log('compileall reported files it could not compile; continuing'); }
-await writeFile(join(out, 'stamp'), stamp);
-await rm(work, { recursive: true, force: true });
-console.log(`OCR runtime for ${key} bundled in ${out}`);
+  // Loading the engine once downloads exactly the models it uses; keep only those.
+  py('-c', 'from ocr_engine import LocalThaiOCR; LocalThaiOCR()._get_ocr(); print("models ready")');
+  for (const model of MODELS) await cp(join(work, 'paddlex', 'official_models', model), join(out, 'models', model), { recursive: true });
+  // Precompile so the read-only app bundle never needs to write bytecode; a few stdlib test files do not compile.
+  try {
+    py('-m', 'compileall', '-q', '-j', '0', join(out, 'python'));
+  } catch {
+    console.log('compileall reported files it could not compile; continuing');
+  }
+  await writeFile(join(out, 'stamp'), stamp);
+  await rm(work, { recursive: true, force: true });
+  console.log(`OCR runtime for ${key} bundled in ${out}`);
 }
