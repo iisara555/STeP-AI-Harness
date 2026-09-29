@@ -59,6 +59,8 @@ test('Context efficiency — progressive disclosure without architecture changes
     assert.equal(result.selectedSkill?.name, 'tor-review');
     assert.equal(result.routingContract.routerRegistrySentToModel, false);
     assert.equal(result.routingContract.skillPath, 'skills/pm/tor-review/SKILL.md');
+    assert.equal(result.routingContract.contextPolicy.currentTurn, 'authoritative');
+    assert.equal(result.routingContract.contextPolicy.history, 'ignore');
     assert.equal(result.contextPlan.routerRegistryIncluded, false);
     assert.equal(result.contextPlan.fullSkillInventoryIncluded, false);
     assert.equal(result.contextPlan.unrelatedRulesIncluded, false);
@@ -82,6 +84,9 @@ test('Context efficiency — progressive disclosure without architecture changes
     assert.ok(compact.includes('ห้ามโหลด'));
     assert.ok(compact.includes('router-index.yaml'));
     assert.ok(compact.includes('ทั้งไฟล์'));
+    assert.ok(compact.includes('Current Turn Authority'));
+    assert.ok(compact.includes('contextPolicy.history'));
+    assert.ok(compact.includes('ห้ามต่อข้อความจาก turn ก่อนหน้าเข้า query เอง'));
   });
 
   await t.test('compact bootstrap makes local routing a gate, not an option the agent may skip', () => {

@@ -84,6 +84,7 @@ export function buildCompactRoutingContract({
   referenceMetadata = [],
   clarification = null,
   generalAssist = false,
+  contextPolicy = null,
   readiness = { status: 'ready', issues: [] },
 } = {}) {
   const halted = ['BLOCK', 'ESCALATE'].includes(scopeResult.status) || readiness.status === 'unavailable';
@@ -92,6 +93,11 @@ export function buildCompactRoutingContract({
     version: 1,
     routingEngine: 'local-deterministic',
     routerRegistrySentToModel: false,
+    contextPolicy: {
+      currentTurn: contextPolicy?.currentTurn || 'authoritative',
+      history: contextPolicy?.history || 'ignore',
+      carryover: contextPolicy?.carryover === true,
+    },
     mode: scopeResult.status === 'BLOCK' ? 'BLOCK' : scopeResult.status === 'ESCALATE' ? 'ESCALATE'
       : readiness.status === 'unavailable' ? 'UNAVAILABLE' : selectedPlaybook ? 'PLAYBOOK' : clarification ? 'CLARIFY'
         : general ? 'GENERAL' : 'SKILL',

@@ -23,6 +23,10 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
     text += `- **First Run:** อ่านเฉพาะ \`START-PROMPT.txt\`, \`START-HERE.md\`, \`USER.md\` และ \`MEMORY.md\` ถ้ามี\n`;
     text += `- **ห้าม First Run scan:** ห้าม recursive scan, glob/search \`*.md\`, หรือสำรวจ \`skills/\`, \`rules/\`, \`manifest/\` ทั้งโฟลเดอร์\n`;
     text += `- **Routing Gate (บังคับ):** ก่อนลงมือกับคำขอที่เป็นงานจริงทุกครั้ง ให้รัน \`step-ai ask "<คำขอของผู้ใช้>" --json\` ก่อนเสมอ แล้วทำตาม **compact routing contract** ที่ได้กลับมา **ห้ามตอบงานจากความรู้ของโมเดลเองโดยไม่ผ่าน gate นี้** แม้คำขอจะดูง่ายหรือดูเหมือนตอบได้ทันที; **ห้ามโหลด \`manifest/router-index.yaml\` ทั้งไฟล์เข้า model context**\n`;
+    text += `- **Current Turn Authority (บังคับ):** ให้คำขอล่าสุดเป็น intent หลักเสมอ และส่งเข้า \`step-ai ask\` เฉพาะข้อความของ turn ล่าสุด **ห้ามต่อข้อความจาก turn ก่อนหน้าเข้า query เอง**\n`;
+    text += `- ถ้า \`contextPolicy.history\` เป็น \`ignore\`: ห้ามใช้หัวข้อ, Skill, Source, ตัวเลข, สมมติฐาน หรือคำตอบจาก turn ก่อนมาปนในงานนี้; ให้ถือว่าเป็น task ใหม่และปิด active context เดิม แม้อยู่ใน chat/session เดียวกัน\n`;
+    text += `- ถ้า \`contextPolicy.history\` เป็น \`relevant-only\`: ใช้ได้เฉพาะส่วนก่อนหน้าที่ผู้ใช้อ้างถึงโดยตรง เช่น "เมื่อกี้", "เรื่องเดิม", "ต่อจาก..." หรือ follow-up ที่ชัดเจน **ห้าม replay history ทั้งชุด**\n`;
+    text += `- การตอบ \`CLARIFY\` เป็น structured continuation: ให้คงคำขอเดิมแล้วส่งคำตอบผ่าน \`--answer\`; อย่าเปลี่ยนคำตอบ clarification ให้กลายเป็น task ใหม่\n`;
     text += `- **เรียกคำสั่งจากโฟลเดอร์ workspace นี้:** ถ้าไม่พบ \`step-ai\` ให้ใช้ \`sh ./step-ai\` (macOS/Linux) หรือ \`.\\step-ai.cmd\` (Windows) ซึ่งใช้ Node.js ที่ติดตั้งมากับชุดนี้ ไม่ต้องให้ผู้ใช้ติดตั้งอะไรเพิ่ม\n`;
     text += `- ข้าม Routing Gate ได้เฉพาะ: การทักทาย คำถามเกี่ยวกับตัว STeP AI เอง และการแก้ข้อความสั้นที่ผู้ใช้ระบุสิ่งที่ต้องการมาครบแล้ว\n`;
     text += `- **ถ้า gate ใช้ไม่ได้:** ลองครบทั้งสามวิธีแล้วยังล้ม ให้บอกผู้ใช้หนึ่งประโยคด้วยภาษาคนว่า "ตอนนี้ตัวเลือกวิธีทำงานของ STeP ในเครื่องยังไม่พร้อม คำตอบนี้อาจยังไม่ได้อ้างอิงขั้นตอนของ STeP ครบ" แนะนำให้เปิด Update หรือแจ้งตาม SUPPORT.md แล้วอ่านเฉพาะ section ที่จำเป็นจาก Router metadata เพื่อเลือก **1 primary Skill** ห้ามเงียบแล้วตอบเอง และห้ามใช้คำว่า Router/Skill/contract กับผู้ใช้\n`;
@@ -79,6 +83,13 @@ export function buildRouterGuidelines({ format = 'markdown' } = {}) {
   text += `- **WHY (บริการอะไร)**: แผนงานและบริการอุทยานฯ (\`manifest/services.yaml\`)\n`;
   text += `- **HOW (กระบวนการใด)**: ขั้นตอนการทำงานและ SOP (\`manifest/processes.yaml\`)\n`;
   text += `- **AUTHORITY (ใครมีอำนาจตัดสินใจ)**: ตารางอนุมัติ Human-in-the-loop (\`manifest/authority.yaml\`)\n\n`;
+
+  text += `### Current Turn Authority & Task Boundary\n\n`;
+  text += `- **คำขอล่าสุดเป็น intent หลักเสมอ**: route จากข้อความของ turn ปัจจุบัน ไม่ใช่จากหัวข้อเดิมของ session และห้ามรวมข้อความเก่ากับ query ใหม่เอง\n`;
+  text += `- อ่าน \`contextPolicy.history\` จาก compact routing contract: \`ignore\` = task ใหม่ ห้าม carry over Skill/Source/ตัวเลข/สมมติฐานเดิม; \`relevant-only\` = ใช้เฉพาะ fragment ที่ผู้ใช้อ้างถึงโดยตรง\n`;
+  text += `- **No Skill stickiness**: Skill ที่ใช้ใน turn ก่อนหมดอายุเมื่อมีคำขอใหม่ เว้นแต่ผู้ใช้ส่งสัญญาณ continuation ชัดเจน เช่น "เมื่อกี้", "เรื่องเดิม", "ต่อจาก..." หรือ follow-up ที่ต้องพึ่งข้อความก่อน\n`;
+  text += `- คำตอบของ \`CLARIFY\` ไม่ใช่ task ใหม่: ใช้คำขอเดิม + \`--answer\` ตาม protocol และใช้เฉพาะ clarification ที่สะสมสำหรับ task นั้น\n`;
+  text += `- \`USER.md\` ใช้ได้กับ identity/team/style ที่คงที่ แต่ห้ามใช้ active project หรือ memory เป็นเหตุให้เปลี่ยน intent ของคำขอล่าสุด\n\n`;
 
   text += `### สถาปัตยกรรม 3 ชั้นและ 4-Level Loading Budget\n\n`;
   text += `1. **Level 0 (Startup / Cheap Context)**: First Run ใช้เฉพาะ startup files; เมื่อมีงานจริงให้ใช้ local deterministic router/compact routing contract ก่อน และ **ห้ามส่ง router registry ทั้งไฟล์เข้า model context**\n`;

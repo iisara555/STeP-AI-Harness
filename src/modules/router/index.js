@@ -19,6 +19,8 @@ export {
   INTENT_KEYWORDS,
 } from './context-scanner.js';
 
+export { classifyContextPolicy } from './task-boundary.js';
+
 export { checkScope } from './scope-guard.js';
 export { buildRouterGuidelines } from './router-prompt.js';
 export { validateManifestIntegrity, loadAndValidateManifests } from './manifest-validator.js';

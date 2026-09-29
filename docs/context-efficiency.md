@@ -27,6 +27,14 @@ Context Budget
 AI
 ```
 
+## Current Turn Authority
+
+- คำขอล่าสุดเป็นแหล่ง intent หลักของทุก turn และ Router รับข้อความปัจจุบันเป็น query โดยไม่รวม history อัตโนมัติ
+- Compact routing contract ส่ง `contextPolicy.history` เป็น `ignore` โดยปริยาย; ใช้ `relevant-only` เฉพาะเมื่อข้อความปัจจุบันมีสัญญาณ continuation ชัดเจน เช่น "เมื่อกี้", "เรื่องเดิม", "ต่อจาก..." หรือ follow-up ที่พึ่งข้อความก่อน
+- เมื่อเป็น `ignore` host ต้อง reset active Skill/Source/assumption ของงานก่อนหน้า แม้อยู่ใน session เดียวกัน
+- เมื่อเป็น `relevant-only` ให้ดึงเฉพาะ fragment ที่ผู้ใช้อ้างถึง ห้าม replay conversation ทั้งชุด
+- Clarification ใช้ช่องทาง `--answer` ของ task เดิม จึงไม่ถือเป็นการ carry chat history ทั่วไป
+
 สิ่งที่ตั้งใจไม่ส่งเข้า model context:
 - router-index.yaml ทั้งไฟล์
 - Skill inventory ทั้งชุดใน `manifest/skills.yaml` (จำนวนจริงดูที่ manifest ไม่ต้องจำตัวเลขจากเอกสาร)

@@ -15,6 +15,7 @@ import {
   loadAndValidateManifests,
   parseAuthorityRegistry,
   evaluateAuthorityPreflight,
+  classifyContextPolicy,
 } from '../src/modules/router/index.js';
 
 test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
@@ -191,6 +192,25 @@ test('STeP Skill Router & 5-Factor Scoring Suite', async (t) => {
     assert.equal(result.breakdown.team, 0);
     assert.ok(result.score < 0.40);
     assert.equal(result.tier, 'FALLBACK');
+  });
+
+  await t.test('Case 3b: Current-turn authority blocks unrelated session carryover by default', () => {
+    const fresh = classifyContextPolicy('ระเบียบใหม่เรื่องวันลามีอะไรเปลี่ยนบ้าง');
+    assert.equal(fresh.currentTurn, 'authoritative');
+    assert.equal(fresh.history, 'ignore');
+    assert.equal(fresh.carryover, false);
+
+    const receipt = classifyContextPolicy('ช่วยตรวจใบเสร็จชุดนี้');
+    assert.equal(receipt.history, 'ignore');
+  });
+
+  await t.test('Case 3c: Explicit follow-up may recover only relevant earlier context', () => {
+    const explicit = classifyContextPolicy('แล้วใบเสร็จเมื่อกี้จะได้รับผลกระทบไหม');
+    assert.equal(explicit.history, 'relevant-only');
+    assert.equal(explicit.carryover, true);
+
+    const returnToTor = classifyContextPolicy('กลับมาที่ TOR เมื่อกี้ ข้อ 4 มีปัญหาไหม');
+    assert.equal(returnToTor.history, 'relevant-only');
   });
 
   await t.test('Case 4: Ambiguous request without keywords falls into lower tier', () => {

@@ -16,6 +16,7 @@ import {
   rankSkillCandidates,
   checkScope,
   deriveRoutingConfidence,
+  classifyContextPolicy,
 } from '../../modules/router/index.js';
 import {
   buildCompactRoutingContract,
@@ -54,6 +55,7 @@ export { loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDoc
  */
 export async function queryStepRouter(query, options = {}) {
   const originalQuery = query;
+  const contextPolicy = classifyContextPolicy(originalQuery);
   if (typeof options.clarificationAnswer === 'string' && options.clarificationAnswer.trim()) {
     query = `${query}\nข้อมูลเพิ่มเติม: ${options.clarificationAnswer.trim()}`;
   }
@@ -385,6 +387,7 @@ export async function queryStepRouter(query, options = {}) {
     skillMetadata,
     referenceMetadata,
     clarification,
+    contextPolicy,
     readiness,
   });
   const contextPlan = buildContextBudgetPlan({
@@ -431,6 +434,7 @@ export async function queryStepRouter(query, options = {}) {
     routingContract,
     contextPlan,
     routingConfidence,
+    contextPolicy,
     authorityPreflight,
     intentReview,
     // Metadata only: class, action and hash. The raw request never leaves here.
