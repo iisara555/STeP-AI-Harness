@@ -45,3 +45,10 @@ Unit tests use fake generation, real routing, SQLite and export libraries. Elect
 - DOCX/PDF/Markdown preserve headings, lists, bold and italic. Office exports use simple layouts. XLSX splits tab-separated or Markdown table rows. PPTX paginates text; this is not an Office layout editor.
 - Graph edges are navigation aids, never authoritative evidence. Use `node scripts/graphify-local.js build` from the root and verify inferred edges against source.
 - Live account login, provider failure behavior, packaging, signing, and macOS require independent validation before release.
+
+
+### Claude Console OAuth
+
+STeP Desktop รองรับ OAuth แบบ official ผ่าน Anthropic `ant` CLI โดยใช้ `ant auth login` และเก็บ profile แยกต่อ connection ใน app data ผ่าน `ANTHROPIC_CONFIG_DIR`. Claude Agent SDK อ่าน profile เดียวกันโดยตรง จึงไม่ต้องคัดลอก OAuth client ID, อ่าน token file หรือบันทึก access/refresh token ในฐานข้อมูลของ STeP
+
+โหมดนี้ใช้ Claude API workspace/usage ของ Claude Console ไม่ใช่โควตา Claude Pro/Max. การใช้ Pro/Max ภายในแอปยังคงปิดไว้หลัง `STEP_CLAUDE_SUBSCRIPTION` จนกว่าจะได้รับอนุมัติที่เหมาะสม; ผู้ใช้ Pro/Max ยังส่งต่องานไป Claude Code ภายนอกได้ตามเดิม
