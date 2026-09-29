@@ -2,6 +2,7 @@ import { createRpc, initialize, googleLoginUrl, runtimeError, type ProviderAdapt
 import { errorCode, explainRuntimeFailure } from './diagnostics';
 import type { Connection } from '../src/types';
 import { claudeLogin } from './claude-auth';
+import { anthropicLogin } from './anthropic-auth';
 
 // Plain-language notes for connection failures; anything else shows its code.
 export const connectNotes: Record<string, string> = {
@@ -11,6 +12,11 @@ export const connectNotes: Record<string, string> = {
   CLAUDE_AUTH_STATUS_INVALID: 'ตรวจสถานะ Claude ไม่สำเร็จ กรุณาอัปเดต Claude Code แล้วลองใหม่',
   CLAUDE_SUBSCRIPTION_REQUIRED: 'กรุณาใช้บัญชี Claude Pro/Max แทนบัญชี Console ในการเชื่อมต่อนี้',
   CLAUDE_LOGOUT_FAILED: 'ออกจากบัญชี Claude ไม่สำเร็จ ข้อมูลบัญชียังเก็บไว้เพื่อให้ลองใหม่',
+  ANTHROPIC_CLI_NOT_FOUND: 'ยังไม่พบ ant CLI ของ Anthropic ติดตั้งจากคู่มือ Claude Platform แล้วลองใหม่',
+  ANTHROPIC_CLI_UPDATE_REQUIRED: 'กรุณาอัปเดต ant CLI ของ Anthropic เป็นรุ่น 1.5.0 ขึ้นไป',
+  ANTHROPIC_PROFILE_REQUIRED: 'ยังไม่พบพื้นที่เก็บ OAuth profile ของ Claude ใน STeP',
+  ANTHROPIC_LOGOUT_FAILED: 'ออกจาก Claude Console OAuth ไม่สำเร็จ กรุณาลองใหม่',
+  ANTHROPIC_AUTH_TIMEOUT: 'Claude Console OAuth ไม่ตอบสนอง กรุณาลองใหม่',
   FEATURE_DISABLED: 'การเชื่อมต่อบัญชี Claude ในแอปยังปิดอยู่ ใช้ Claude API key หรือเปิดใน Claude Code ภายนอกแทน',
   CLAUDE_AUTH_TIMEOUT: 'Claude Code ไม่ตอบสนอง กรุณาลองใหม่',
   PROVIDER_QUOTA: 'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า',
@@ -37,7 +43,7 @@ const LOGIN_MS = 300_000,
 const OPENAI_LOGIN_HOSTS = ['auth.openai.com', 'chatgpt.com', 'auth0.openai.com'];
 
 export type ConnectDeps = {
-  runtime: { adapter: ProviderAdapter; context: Omit<ProviderContext, 'signal' | 'emit'> };
+  runtime: { adapter: ProviderAdapter; context: Omit<ProviderContext, 'signal' | 'emit'>; authExecutable?: string };
   progress: (text: string) => void;
   openExternal: (url: string) => Promise<void>;
   /** Shows the in-app code box and resolves with what the person pasted, or null when they close it. */
@@ -55,6 +61,11 @@ export type ConnectDeps = {
 export async function signInAndTest(connection: Connection, deps: ConnectDeps, signal: AbortSignal) {
   const { runtime, progress } = deps;
   if (connection.mode === 'api' && !runtime.context.key) throw new Error('API_KEY_REQUIRED');
+  if (connection.provider === 'claude' && connection.mode === 'oauth') {
+    if (!runtime.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
+    await anthropicLogin(runtime.authExecutable, runtime.context, deps, signal);
+    deps.signedIn?.();
+  }
   if (connection.provider === 'claude' && connection.mode === 'subscription') {
     await claudeLogin(connection.executable, runtime.context, deps, signal);
     deps.signedIn?.();
@@ -74,7 +85,11 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     }
   }
   // The test gets its own short budget so a stalled provider is reported instead of spinning for minutes.
-  progress('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ');
+  progress(
+    connection.provider === 'claude' && connection.mode === 'oauth'
+      ? 'ยืนยัน Claude Console OAuth แล้ว · กำลังทดสอบส่งข้อความสั้น ๆ'
+      : 'ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ',
+  );
   if (signal.aborted) throw new Error('CANCELLED');
   let timedOut = false;
   const test = new AbortController(),

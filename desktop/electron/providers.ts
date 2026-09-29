@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { Rpc } from './rpc';
 import { explainRuntimeFailure } from './diagnostics';
 import { claudeEnv } from './claude-auth';
+import { anthropicEnv } from './anthropic-auth';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -273,6 +274,17 @@ export function claudeSdkOptions(
   if (connection.mode === 'api') {
     if (!context.key) throw new Error('API_KEY_REQUIRED');
     return { env: { ...context.env, ANTHROPIC_API_KEY: context.key } };
+  }
+  if (connection.mode === 'oauth') {
+    return {
+      env: {
+        ...anthropicEnv(context.env),
+        ANTHROPIC_API_KEY: undefined,
+        ANTHROPIC_AUTH_TOKEN: undefined,
+        CLAUDE_CODE_OAUTH_TOKEN: undefined,
+        ANTHROPIC_BASE_URL: undefined,
+      },
+    };
   }
   if (!connection.executable) throw new Error('CLAUDE_CODE_NOT_FOUND');
   const script = /\.[cm]?js$/i.test(connection.executable);

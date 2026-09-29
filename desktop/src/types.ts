@@ -12,7 +12,7 @@ export type ModelOption = {
 export type Connection = {
   id: string;
   provider: Provider;
-  mode: 'api' | 'subscription';
+  mode: 'api' | 'subscription' | 'oauth';
   model: string;
   executable: string;
   customRuntime?: boolean;

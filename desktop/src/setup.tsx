@@ -248,9 +248,11 @@ export function SetupWizard({
                   {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
                   {busy === 'connect'
                     ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์'
-                    : choice.provider === 'claude' && choice.mode === 'subscription'
-                      ? 'เชื่อมต่อ Claude'
-                      : 'เชื่อมต่อและทดสอบ'}
+                    : choice.provider === 'claude' && choice.mode === 'oauth'
+                      ? 'เชื่อมต่อ Claude OAuth'
+                      : choice.provider === 'claude' && choice.mode === 'subscription'
+                        ? 'เชื่อมต่อ Claude'
+                        : 'เชื่อมต่อและทดสอบ'}
                 </button>
                 {busy === 'connect' && connecting && (
                   <p className="connect-progress">

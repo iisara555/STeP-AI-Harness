@@ -16,6 +16,7 @@ import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { findPython, installOcr } from './components';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
+import { findAnthropicCli, resolveAnthropicCli, anthropicLogout } from './anthropic-auth';
 import { existsSync } from 'node:fs';
 import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
@@ -169,12 +170,18 @@ async function main() {
       CODEX_HOME: home,
       GEMINI_CLI_HOME: home,
       CLAUDE_CONFIG_DIR: join(home, '.claude'),
+      ANTHROPIC_CONFIG_DIR: connection.provider === 'claude' && connection.mode === 'oauth' ? join(home, '.anthropic') : undefined,
     };
+    let authExecutable: string | undefined;
     if (connection.provider === 'claude' && connection.mode === 'subscription') {
       await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
       connection.executable = await resolveClaudeRuntime({ cwd, env });
     }
-    return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) } };
+    if (connection.provider === 'claude' && connection.mode === 'oauth') {
+      await mkdir(env.ANTHROPIC_CONFIG_DIR!, { recursive: true });
+      authExecutable = await resolveAnthropicCli({ cwd, env });
+    }
+    return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) }, authExecutable };
   }
   service = new WorkService(store, harness, runtime, event => {
     if (event.type === 'failed') {
@@ -299,7 +306,8 @@ async function main() {
       case 'connection': {
         if (
           !validProviders.has(input.provider) ||
-          !['api', 'subscription'].includes(input.mode) ||
+          !['api', 'subscription', 'oauth'].includes(input.mode) ||
+          (input.mode === 'oauth' && input.provider !== 'claude') ||
           (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscription)
         )
           throw new Error('INVALID_CONNECTION');
@@ -325,7 +333,7 @@ async function main() {
           if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
           store.put('secret', id, safeStorage.encryptString(inputText(input.apiKey, 1000)).toString('base64'));
         }
-        if (input.mode === 'subscription') store.put('secret', id, null);
+        if (input.mode === 'subscription' || input.mode === 'oauth') store.put('secret', id, null);
         store.put('connection', id, connection);
         return connection;
       }
@@ -446,6 +454,8 @@ async function main() {
       // Only fixed help pages open in the browser; nothing from the renderer becomes a URL.
       case 'claudeCode':
         return { installed: Boolean(await findClaudeCode()) };
+      case 'anthropicCli':
+        return { installed: Boolean(await findAnthropicCli()) };
       case 'handoff': {
         // Hands a request to the employee's own Claude Code (see handoff.ts). The privacy gate still applies.
         const text = inputText(input.text),
@@ -467,6 +477,7 @@ async function main() {
         const pages: Record<string, string> = {
           python: 'https://www.python.org/downloads/',
           claudeCode: 'https://code.claude.com/docs/en/setup',
+          anthropicCli: 'https://platform.claude.com/docs/en/cli-sdks-libraries/cli/quickstart',
         };
         const url = pages[input.topic];
         if (!url) throw new Error('INVALID_INPUT');
@@ -545,6 +556,11 @@ async function main() {
           await claudeLogout(c.executable, r.context);
           delete c.claudeAuthStarted;
         }
+        if (c.provider === 'claude' && c.mode === 'oauth') {
+          const r = await runtime(c, true);
+          if (!r.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
+          await anthropicLogout(r.authExecutable, r.context);
+        }
         delete c.signedIn;
         // Signing out removes this connection's sign-in data (Google or ChatGPT tokens in its runtime home).
         await removeRuntimeHome(c.id);
@@ -565,6 +581,11 @@ async function main() {
         if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
           const r = await runtime(c, true);
           await claudeLogout(c.executable, r.context);
+        }
+        if (c.provider === 'claude' && c.mode === 'oauth') {
+          const r = await runtime(c, true);
+          if (!r.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
+          await anthropicLogout(r.authExecutable, r.context);
         }
         await removeRuntimeHome(c.id);
         store.remove('connection', c.id);
