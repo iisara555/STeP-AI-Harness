@@ -212,7 +212,8 @@ export function SettingsPanel({
             <div className="connection-row" key={c.id}>
               <div>
                 <strong>
-                  {providerLabel(c.provider)} <small>{c.mode === 'api' ? 'API key' : c.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชีส่วนตัว'}</small>
+                  {providerLabel(c.provider)}{' '}
+                  <small>{c.mode === 'api' ? 'API key' : c.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชีส่วนตัว'}</small>
                 </strong>
                 {busy === c.id && progress[c.id] ? (
                   <p className="connect-progress">
@@ -316,8 +317,7 @@ export function SettingsPanel({
             >
               <p>
                 {providerLabel(removingConnection.provider)} (
-                  {removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชี'}
-                )
+                {removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชี'})
                 จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ
               </p>
               <p className="small muted">งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น</p>
