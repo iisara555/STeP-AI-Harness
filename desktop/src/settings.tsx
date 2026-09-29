@@ -212,7 +212,7 @@ export function SettingsPanel({
             <div className="connection-row" key={c.id}>
               <div>
                 <strong>
-                  {providerLabel(c.provider)} <small>{c.mode === 'api' ? 'API key' : 'บัญชีส่วนตัว'}</small>
+                  {providerLabel(c.provider)} <small>{c.mode === 'api' ? 'API key' : c.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชีส่วนตัว'}</small>
                 </strong>
                 {busy === c.id && progress[c.id] ? (
                   <p className="connect-progress">
@@ -222,9 +222,15 @@ export function SettingsPanel({
                 ) : (
                   <p className={c.ready ? 'connected' : 'muted'}>{c.note}</p>
                 )}
-                {c.provider === 'claude' && c.mode === 'subscription' && busy !== c.id && (
+                {c.provider === 'claude' && (c.mode === 'subscription' || c.mode === 'oauth') && busy !== c.id && (
                   <p className={c.signedIn ? 'small connected' : 'small muted'}>
-                    {c.signedIn ? 'ลงชื่อบัญชี Claude แล้ว' : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
+                    {c.signedIn
+                      ? c.mode === 'oauth'
+                        ? 'เชื่อม Claude Console OAuth แล้ว'
+                        : 'ลงชื่อบัญชี Claude แล้ว'
+                      : c.mode === 'oauth'
+                        ? 'ยังไม่ได้เชื่อม Claude Console OAuth'
+                        : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
                   </p>
                 )}
                 {c.modelsAt && (
@@ -236,7 +242,11 @@ export function SettingsPanel({
               <div className="connection-actions">
                 <button disabled={Boolean(busy)} onClick={() => void run(c.id, () => call('connect', { id: c.id }))}>
                   {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
-                  {c.provider === 'claude' && c.mode === 'subscription' ? 'เชื่อมต่อ Claude' : 'เชื่อมต่อและทดสอบ'}
+                  {c.provider === 'claude' && c.mode === 'oauth'
+                    ? 'เชื่อมต่อ OAuth'
+                    : c.provider === 'claude' && c.mode === 'subscription'
+                      ? 'เชื่อมต่อ Claude'
+                      : 'เชื่อมต่อและทดสอบ'}
                 </button>
                 {busy === c.id && (
                   <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
@@ -305,7 +315,9 @@ export function SettingsPanel({
               }}
             >
               <p>
-                {providerLabel(removingConnection.provider)} ({removingConnection.mode === 'api' ? 'API key' : 'บัญชี'})
+                {providerLabel(removingConnection.provider)} (
+                  {removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชี'}
+                )
                 จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ
               </p>
               <p className="small muted">งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น</p>
