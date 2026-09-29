@@ -3,101 +3,112 @@ import { createHash } from 'node:crypto';
 // This module does not call a model or an external service. The already-active
 // AI host may opt in by supplying a verdict for the privacy-passed request.
 // Without a verdict, consequential business language stops for human review.
-const BUSINESS_CONTEXT = /(?:ธุรกิจ|กิจการ|บริษัท(?:ของ|ผม|ฉัน)|ผู้ประกอบการ|เป้ารายได้|ยอดขายปีหน้า|ทีมขาย|เซลส์|ปีหน้า.{0,35}รายได้|รายได้.{0,35}ปีหน้า|(?:ร้าน|แบรนด์|ฟาร์ม)[^\s,;?!]{0,12}(?:ของ)?(?:ผม|ฉัน|เรา)|business goal)/i;
-const BUSINESS_RISK = /(?:จ้าง|พนักงาน|เซลส์|\bsales\b|สั่ง|ซื้อ(?:ให้|เลย|ทันที|จริง|วัตถุดิบ|สินค้า|เครื่อง|ของ|จาก|โดย)|จัดหา|อนุมัติ|กู้|ลงทุน|เลือกเป้า|ตัดสินเป้า|ฟันธง|รับ[^\n]{0,8}เข้าทำงาน|โอนเงิน|มัดจำ|เปิดสาขา|commit|hire|purchase|invest)/i;
+const BUSINESS_CONTEXT = /(?:ธุรกิจ|กิจการ|บริษัท(?:ของ|ผม|ฉัน)|ผู้ประกอบการ|โรงงาน|\bsme\b|เป้ารายได้|ยอดขายปีหน้า|ทีมขาย|เซลส์|ปีหน้า.{0,35}รายได้|รายได้.{0,35}ปีหน้า|(?:ร้าน|แบรนด์|ฟาร์ม)[^\s,;?!]{0,12}(?:ของ)?(?:ผม|ฉัน|เรา)|business goal|(?:เพจ|ร้าน|แบรนด์|โรงงาน)[^\s,;?!]{0,16}ของ(?:ผม|ฉัน|เรา)|\b(?:my|our)\s+(?:company|business|shop|store|startup|firm|factory)\b)/i;
+const BUSINESS_RISK = /(?:จ้าง|พนักงาน|เซลส์|\bsales\b|สั่ง|ซื้อ(?:ให้|เลย|ทันที|จริง|วัตถุดิบ|สินค้า|เครื่อง|ของ|จาก|โดย)|จัดหา|อนุมัติ|กู้|สินเชื่อ|เบิกเงินเกินบัญชี|ลงทุน|เล่นหุ้น|ชำระ|ขึ้นเงินเดือน|เพิ่มคน|ปิดดีล|จ่าย(?:เงิน|ค่า)|เช่า(?:โกดัง|ที่|อาคาร|พื้นที่|ตึก|ร้าน|เครื่อง|รถ)|เลือกเป้า|ตัดสินเป้า|กำหนดเป้า|เป้าจริง|ฟันธง|รับ[^\n]{0,8}เข้าทำงาน|โอนเงิน|มัดจำ|เปิดสาขา|commit|hire|purchase|\bbuy\b|\bpay\b|invest|\bloan\b)/i;
 // Acting in the owner's name is consequential even without an annual-goal
 // phrase; an owner-action verb with "for me" always needs an intent verdict.
-const ON_BEHALF = /(?:แทน|ในนาม)(?:ผม|ฉัน|หนู|เรา)|on my behalf|\bfor me\b/i;
-const OWNER_ACT = /(?:จ้าง|รับ[^\n]{0,8}เข้าทำงาน|สั่ง|ซื้อ|โอนเงิน|มัดจำ|จ่ายเงิน|เปิดสาขา|ลงทุน|กู้|เลือกเป้า|ตัดสินเป้า|เซ็นสัญญา|ทำสัญญา|hire|purchase|buy|order|invest|loan|sign)/i;
-// Names of STeP, the university, its programmes, public funders and approval
-// roles. A model verdict about the entrepreneur's own business cannot release
-// a request that names these. Names are matched on normalized copies of the
-// text; anything that looks like a disguised name (mixed scripts, invisible
-// characters, marks on Latin letters) counts as a name, so the gate fails
-// closed instead of relying on an ever-longer list of spellings.
+const ON_BEHALF = /(?:แทน|ในนาม)(?:ผม|ฉัน|หนู|เรา|เค้า|เขา|เจ้าของ|บริษัท)|on my behalf|\bfor me\b/i;
+const OWNER_ACT = /(?:จ้าง|เพิ่มคน|ขึ้นเงินเดือน|ปิดดีล|รับ[^\n]{0,8}เข้าทำงาน|สั่ง|ซื้อ|โอนเงิน|มัดจำ|จ่าย|ชำระ|สินเชื่อ|เช่า|เปิดสาขา|ลงทุน|กู้|เลือกเป้า|ตัดสินเป้า|เซ็นสัญญา|ทำสัญญา|hire|purchase|buy|order|invest|loan|sign|\bpay\b)/i;
+// Names of STeP, the university, its programmes and approvers, and any
+// outside source of money. After an ADVISORY verdict a request that names one
+// of these still goes to a human (review round 4): the list errs towards
+// over-blocking, and position in the sentence does not matter.
 const ORGANIZATION_NAMES = [
-  /(?:^|[^a-z]|cmu)steps?(?:[^a-z]|cmu|$)/i,
-  /(?:^|[^a-z])cmu/i, /chiang\s*mai\s*univ/i, /(?:^|[^a-z])univ(?:ersity)?(?:[^a-z]|$)/i,
-  /science[\s_-]*park/i, /(?:^|[^a-z])(?:afp|nia|nstda|depa)(?:[^a-z]|$)/i, /ted\s*fund/i,
-  /(?:ไซ|ซาย)(?:น|เอน|แอน)?[ซส]?์?(?:ส์)?\s*(?:พาร์ค|ปาร์ค)/, /เอเอฟพี/, /ดีป้า/, /บีโอไอ|(?:^|[^a-z])boi(?:[^a-z]|$)/i, /แม่โจ้/,
+  /(?:^|[^a-z])(?:steps?|stp|stepark|cmu|afp|nia|nstda|depa|boi|ted|nrct|univ(?:ersity)?)(?:[^a-z]|$)/i,
+  /step(?:cmu|park)|cmustep/i, /chiang\s*mai\s*univ/i, /sci(?:ence)?[\s_-]*park|(?:^|[^a-z])park(?:[^a-z]|$)/i,
+  /ted\s*fund|\bgrants?\b|\bfunding\b|\bsubsid/i,
+  /พาร์ค|ปาร์ค|เอเอฟพี|ดีป้า|บีโอไอ|แม่โจ้|มอชอ|(?<![ก-๙])มอ(?![ก-๙])|ทุนมอ(?!บ|เตอร์)/,
   /ม\.?\s*เชียงใหม่|มหาวิทยาลัย|มหาลัย/,
-  /(?:^|[^ก-๙])ม\.?\s?ช\.?(?![ก-๙])/,
-  /สวทช|บพข|สนช|สสว|ทางราชการ|ภาครัฐ|รัฐบาล|กองทุนรัฐ|ทุนรัฐ|สำนักงานนวัตกรรม|นวัตกรรมแห่งชาติ/,
-  /หน่วยงาน|ต้นสังกัด|ส่วนงาน|ฝ่ายการเงิน|ทุนสนับสนุน|เบิกจ่าย|จัดซื้อจัดจ้าง|งบกลาง|งบประมาณแผ่นดิน/,
+  // Keep punctuated/spaced university abbreviations as well as contiguous มช;
+  // the latter alone cannot see "ม.ช." or "ม ช" after normalization.
+  /ม\s*[.\-]\s*ช(?:\.(?![ก-๙])|(?![.ก-๙]))|(?<![ก-๙])ม\s+ช(?![\u0e30-\u0e3a\u0e47-\u0e4eอวยรลนา])|มช(?![\u0e30-\u0e3a\u0e47-\u0e4eอวยรลนา])/,
+  /สวทช|บพข|บพท|สนช|สสว|สกสว|วช\.|อว\.|(?<![ก-๙])(?:อว|วช)(?![ก-๙])|กระทรวง|กรม(?!ธรรม์)|ราชการ|(?<!สห)รัฐ|สำนักงานนวัตกรรม|นวัตกรรมแห่งชาติ/,
+  /หน่วยงาน|ต้นสังกัด|ส่วนงาน|ฝ่ายการเงิน|เบิกจ่าย|จัดซื้อจัดจ้าง|งบกลาง|งบประมาณแผ่นดิน/,
+  // Outside money: prizes, grants, subsidies, money someone else gave.
+  /รางวัล|ให้เปล่า|อุดหนุน|สนับสนุน|แกรนต์|ที่ได้(?:รับ)?มา|ได้รับจาก|ที่ได้จาก|ให้มา|(?<!ต้น|ลง|เงิน|คืน|คุ้ม|ร่วม|ระดม|ทำ)ทุน(?!หมุนเวียน|จดทะเบียน|นิยม|ส่วนตัว|ของ(?:ผม|ฉัน|เรา|บริษัท|ร้าน))/,
   /บ่มเพาะ|incubat|accelerator/i,
-  /สตาร์ทอัพ(?!\s*(?:ของ)?\s*(?:ผม|ฉัน|เรา))|(?:^|[^a-z])startups?(?![a-z])(?!\s*(?:of\s+)?(?:mine|my|our))/i,
+  /โครงการ(?!ของ(?:ผม|ฉัน|เรา|บริษัท|ร้าน)|คอนโด|บ้าน|หมู่บ้าน)/,
+  /สตาร์ทอัพ(?!\s*(?:ของ)?\s*(?:ผม|ฉัน|เรา))|(?:^|[^a-z])startups?(?![a-z])(?!\s*(?:of\s+)?(?:mine|my|our))(?!\s*(?:ของ)?\s*(?:ผม|ฉัน|เรา))/i,
   /องค์กร(?!\s*(?:ของ)?\s*(?:ผม|ฉัน|เรา))/,
-  /(?<!เป็น)ผู้อำนวยการ(?!\s*(?:ของ)?\s*(?:บริษัท|ร้าน|กิจการ))|(?:^|[^ก-๙]|ท่าน)ผอ\.?(?![ก-๙])|ท่าน\s?ผอ/,
-  /คณบดี|อธิการ|หัวหน้าศูนย์|รองผู้อำนวยการ/,
-  // Grant money is an organization's decision only when someone is approving it.
-  /(?:อนุมัติ|approve|เคาะ|ตัดสิน|ให้ผ่าน)[^\n]{0,30}(?:รับทุน|ได้ทุน|ให้ทุน|\bgrant\b)/i,
+  /(?<!เป็น)ผู้อำนวยการ(?!\s*(?:ของ)?\s*(?:บริษัท|ร้าน|กิจการ))|ผอ(?!ม)|คณบดี|อธิการ|หัวหน้าศูนย์/,
 ];
 // Thai names checked with spaces, dots and tone marks removed, so "ส เต็ ป",
-// "ส.เต็ป", "สเต๊ป" and "อุ ท ยาน" are caught.
-const COMPACT_THAI_NAMES = /สะ?เต[็๊่้]?[ปบ]|อุทยาน|เอสทีอีพี|ซีเอ็มยู|มหาวิทยาลัย|ผู้อำนวยการ/;
-// Everyday lowercase phrases that contain "step" by accident. Case-sensitive
-// on purpose: "STeP", "Step" and "STEP" are never removed.
-const ORGANIZATION_FALSE_FRIENDS = /step[\s-]*by[\s-]*step|next\s+steps?|first\s+step|\bsteps?\s+\d|(?:\d+|few|the|these|those|two|three|four|five)\s+steps\b/g;
-// Letters from scripts a Thai/English request has no reason to mix in, marks
-// on Latin letters, and invisible format characters.
-const DISGUISE = /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Armenian}\p{Script=Cherokee}]|[A-Za-z][\p{M}]|\p{Cf}/u;
+// "ส.เต็ป", "สเต๊ป", "สแตป", "เอสเทป", "อทุยาน" are caught.
+const COMPACT_THAI_NAMES = /[สซ]ะ?[เแ]ต็?[ปบพ]|เอส(?:ที|เท)(?:อี)?(?:พี|ป)?|อุ?ทุ?ยา[นณ]|อทุยา[นณ]|ซีเอ็มยู|มหาวิทยาลัย|ผู้อำนวยการ/;
+// Everyday phrases that contain "step" by accident. Only "step"/"Step" is
+// removed; "STeP", "STEP" and other mixed case always count as the name.
+const ORGANIZATION_FALSE_FRIENDS = /[Ss]tep[\s-]*by[\s-]*[Ss]tep|next\s+[Ss]teps?|first\s+[Ss]tep|\b[Ss]teps?\s+\d|(?:\d+|few|the|these|those|two|three|four|five)\s+steps\b/g;
+// Look-alike letters folded to Latin before names are checked.
+const CONFUSABLES = {
+  А: 'A', В: 'B', Е: 'E', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', Х: 'X', Ѕ: 'S', І: 'I', Ј: 'J',
+  а: 'a', е: 'e', о: 'o', р: 'p', с: 'c', у: 'y', х: 'x', ѕ: 's', і: 'i', ј: 'j', т: 't', п: 'n',
+  Α: 'A', Β: 'B', Ε: 'E', Ζ: 'Z', Η: 'H', Ι: 'I', Κ: 'K', Μ: 'M', Ν: 'N', Ο: 'O', Ρ: 'P', Τ: 'T', Υ: 'Y', Χ: 'X',
+  ο: 'o', ρ: 'p', τ: 't', ε: 'e', ι: 'i', κ: 'k', ν: 'v', υ: 'u', χ: 'x', α: 'a', μ: 'u',
+  ꜱ: 's', ᴛ: 't', ᴇ: 'e', ᴘ: 'p', ᴄ: 'c', ᴍ: 'm', ᴜ: 'u', ᴀ: 'a', ꜰ: 'f', ɴ: 'n', ɪ: 'i', ʙ: 'b', ᴏ: 'o', ᴅ: 'd',
+  $: 's', '@': 'a',
+};
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b' };
+const FOREIGN_LETTER = /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Armenian}\p{Script=Cherokee}\u1d00-\u1dbf\ua720-\ua7ff]/u;
 
 export function normalizeForScreening(query = '') {
-  let text = String(query || '').normalize('NFKC')
+  const text = String(query || '')
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    // Percent-encoded letters ("%53TeP") are decoded like HTML entities.
+    .replace(/%([46][1-9a-f]|[57][0-9a])/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .normalize('NFKC')
     // NFKC splits Thai sara am (ำ) into nikhahit + sara aa; put it back.
     .replace(/\u0e4d\u0e32/g, 'ำ')
+    // Invisible format characters (ZWSP, ZWJ in emoji, soft hyphen, BOM) are
+    // removed, not treated as a disguise: they arrive from copy-paste.
     .replace(/\p{Cf}/gu, '');
-  // Collapse runs of single Latin letters written apart by any non-letter
-  // ("S T e P", "S.T.e.P.", "S*T*e*P", "S🙂T🙂e🙂P") into one word.
-  return text.replace(/(?<![A-Za-z])[A-Za-z](?:[^\p{L}\p{N}\n]+[A-Za-z](?![A-Za-z]))+[.]?/gu,
-    (run) => run.replace(/[^A-Za-z]+/g, ''));
+  // Join short Latin pieces split by spaces or symbols ("S TeP", "S.Te.P",
+  // "S*T*e*P", "ST eP") so the name checks see one word. Longer words are
+  // left alone so ordinary English ("best episode") is not glued together.
+  return text.replace(/(?<![A-Za-z])[A-Za-z$]{1,3}(?:[^\p{L}\p{N}\n]{1,3}[A-Za-z$]{1,3}(?![A-Za-z]))+/gu,
+    (run) => run.replace(/[^A-Za-z$]+/g, ''));
+}
+
+// Fold one Latin-looking word to a plain-ASCII skeleton: marks removed,
+// look-alikes and leet digits mapped, doubled letters squeezed.
+function skeleton(word) {
+  return word.normalize('NFD').replace(/\p{M}/gu, '')
+    .replace(/./gu, (char) => CONFUSABLES[char] || char)
+    .replace(/\d/g, (digit) => LEET[digit])
+    .toLowerCase()
+    .replace(/([a-z])\1+/g, '$1');
+}
+const NAME_SKELETONS = /^(?:steps?|stp|stepark|stepcmu|cmustep|cmu|afp|nia|nstda|depa|boi|ted|nrct|park|scipark|sciencepark|grants?|univ(?:ersity)?)$/;
+
+function disguisedName(text) {
+  // Non-Thai runs only, so "ด้วย$TEP" still yields "$TEP".
+  const words = text.match(/[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\u1d00-\u1dbf\ua720-\ua7ff\d$@][\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\u1d00-\u1dbf\ua720-\ua7ff\p{Mn}\d$@]*/gu) || [];
+  return words.some((word) => {
+    if (!/[\p{L}$@]/u.test(word)) return false;
+    const folded = skeleton(word);
+    if (NAME_SKELETONS.test(folded) || NAME_SKELETONS.test([...folded].reverse().join(''))) return true;
+    // Latin mixed with look-alike letters inside one word is a disguise; a
+    // Greek symbol on its own ("Δ", "μ") or an accented word ("café") is not.
+    return FOREIGN_LETTER.test(word) && /[A-Za-z]/.test(word);
+  });
 }
 
 export function referencesOrganization(query = '') {
-  const raw = String(query || '');
-  if (DISGUISE.test(raw.normalize('NFD').replace(/[\u0e00-\u0e7f]/g, ''))) return true;
-  const text = normalizeForScreening(raw).replace(ORGANIZATION_FALSE_FRIENDS, ' ');
-  const leet = text.replace(/[A-Za-z0-9]+/g, (token) => (/[A-Za-z]/.test(token) && /\d/.test(token)
-    ? token.replace(/\d/g, (digit) => LEET[digit] || digit) : token));
+  const text = normalizeForScreening(query).replace(ORGANIZATION_FALSE_FRIENDS, ' ');
+  if (disguisedName(text)) return true;
   const compact = text.replace(/[\s.\-_*·]+/g, '').replace(/[่้๊๋]/g, '');
-  return ORGANIZATION_NAMES.some((pattern) => pattern.test(text) || pattern.test(leet))
-    || COMPACT_THAI_NAMES.test(compact) || COMPACT_THAI_NAMES.test(compact.replace(/[็]/g, ''));
+  return ORGANIZATION_NAMES.some((pattern) => pattern.test(text))
+    || COMPACT_THAI_NAMES.test(compact) || COMPACT_THAI_NAMES.test(compact.replace(/็/g, ''));
 }
 
-// Evidence that the decision belongs to the user's own business: a possessive
-// on the business, or a named business owner as the decider. A bare "ทีมขาย"
-// or "ในฐานะเจ้าของ" says nothing about whose budget it is.
+// Evidence that the request concerns the user's own business: a possessive on
+// the business, or a named business owner. It never releases a budget gate;
+// scope-guard uses it only to keep an owner's own plan out of startup intake.
 export function hasOwnBusinessProof(query = '') {
   const text = normalizeForScreening(query);
   return isPrivateBusinessContext(text)
     || /(?:ร้าน|แบรนด์|ฟาร์ม|โรงงาน)[^\s,;?!]{0,12}(?:ของ)?(?:ผม|ฉัน|เรา)/.test(text)
-    || /เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)/.test(text)
-    || OWNER_DECIDES.test(text);
-}
-
-// Stricter proof for lifting a budget gate. Either the money itself carries a
-// business possessive ("วงเงินโฆษณาของบริษัทผม", "งบลงทุนของร้านเรา") or the
-// decision is handed to the owner, or the request is a question about the
-// user's own business with no order in it. "ของเรา" alone is not proof: staff
-// say it about their unit's money too. Money that came from somewhere else
-// ("ที่ได้จาก…", "งบกลาง", "…ให้มา") is never the owner's to release.
-const MONEY = '(?:งบ(?!ริษัท)(?:ประมาณ)?|วงเงิน|เงินลงทุน|เงินทุน|ทุนหมุนเวียน|เงินสด|budget)';
-const BUSINESS_OWNER = '(?:บริษัท|ร้าน|กิจการ|ธุรกิจ|แบรนด์|ฟาร์ม)(?:ของ)?\\s?(?:ผม|ฉัน|เรา|หนู)';
-// The money word may carry a short qualifier ("วงเงินโฆษณา") but not a
-// recipient ("วงเงินศูนย์ให้เซลส์") or an agency phrase ("ในนามผม").
-const OWN_MONEY = new RegExp(`${MONEY}(?:(?!ให้|แก่|สำหรับ|ในนาม|แทน)[ก-๙a-z]){0,10}\\s?(?:ของ\\s?)?${BUSINESS_OWNER}`, 'i');
-const OWNER_DECIDES = /(?:ให้|เสนอ|ส่ง)\s*เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)?\s*(?:พิจารณา|ตัดสิน|อนุมัติ|เลือก|ตรวจ)/;
-const OTHER_MONEY = /(?:เงิน|งบ(?!ริษัท)|budget)[^\n]{0,24}จาก|ที่ได้(?:รับ)?จาก|ได้รับจาก|ให้มา|งบกลาง|งบประมาณแผ่นดิน|กองทุน|ทุนสนับสนุน|คณะ|ศูนย์|สำนักงาน|ผู้บริหาร|โครงการ(?!ของ(?:บริษัท|ร้าน))/;
-const MONEY_QUESTION = /(?:ควร|เท่าไร|เท่าไหร่|ดีไหม|ไหม|มั้ย|หรือไม่|ดี|\?)\s*$/;
-const MONEY_ORDER = /(?:ให้เลย|ทันที|เลย(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้ะ|จ้า))*\s*$|\bnow\b|โอน|อนุมัติ)/i;
-
-export function hasOwnBudgetProof(query = '') {
-  const text = normalizeForScreening(query).trim();
-  if (OTHER_MONEY.test(text)) return false;
-  if (OWN_MONEY.test(text) || OWNER_DECIDES.test(text)) return true;
-  const ownerAsking = isPrivateBusinessContext(text) || /เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)/.test(text);
-  return ownerAsking && MONEY_QUESTION.test(text) && !MONEY_ORDER.test(text);
+    || /เจ้าของ(?:กิจการ|ธุรกิจ|ร้าน|บริษัท)/.test(text);
 }
 
 const DECISIONS = new Set(['ADVISORY', 'COMMIT', 'UNCERTAIN']);
@@ -112,15 +123,6 @@ export function needsEntrepreneurIntentReview(query = '', selectedSkillName = ''
   if (ON_BEHALF.test(text) && OWNER_ACT.test(text)) return true;
   return BUSINESS_RISK.test(text)
     && (selectedSkillName === 'entrepreneur-annual-goal' || BUSINESS_CONTEXT.test(text));
-}
-
-// A reference to STeP funding does not make the entrepreneur's hiring or
-// investment a STeP budget approval. Require an explicit approval of a budget
-// whose owner is STeP to retain the organization's finance authority.
-export function isExplicitStepBudgetApproval(query = '') {
-  const text = String(query);
-  return /(?:อนุมัติ(?:งบ|วงเงิน)|เคาะงบ|โอนงบ)[^,;?!\n]{0,35}(?:ของ|สำหรับ|โครงการ)\s*(?:step\b|อุทยานวิทยาศาสตร์|มช\.)/i.test(text)
-    || /(?:อนุมัติงบ(?:ประมาณ)?|อนุมัติวงเงิน|เคาะงบ|โอนงบ)\s*(?:step\b|อุทยานวิทยาศาสตร์|มช\.)/i.test(text);
 }
 
 export function isPrivateBusinessContext(query = '') {

@@ -25,6 +25,59 @@ import { hasOwnBusinessProof } from './entrepreneur-intent.js';
  */
 import { authorityIntentText } from './authority-preflight.js';
 
+// The selected Skill cannot decide the authority for a second act in the same
+// request. Detect explicit intake decisions before ranking can hide them behind
+// an annual-goal plan; ordinary analysis and drafts remain outside this gate.
+export function hasStartupIntakeDecision(requestText = '') {
+  const text = authorityIntentText(requestText)
+    // A completed decision is evidence for a summary, not a new order.
+    .replace(/(?:รับรองผล|อนุมัติ|ยืนยันผลคัดเลือก)[^\n]{0,80}?โดย(?:ผู้อำนวยการ|ผอ\.?)แล้ว/g, ' ')
+    .replace(/โดย(?:ผู้อำนวยการ|ผอ\.?)\s*(?:รับรองผล|อนุมัติ)[^\n]{0,80}?แล้ว/g, ' ');
+  const candidate = /(?:สตาร์ทอัพ|startup|ผู้ประกอบการ|ผู้สมัคร|applicant|บริษัท\s*[\p{L}\p{N}]|ทีม\s*[\p{L}\p{N}])/iu;
+  const intake = /(?:คัดเลือก|รับทุน|ได้ทุน|ให้ทุน|เข้าโครงการ|บ่มเพาะ|grant|incubat|accelerator)/i;
+  if (!candidate.test(text)) return false;
+
+  // A candidate may be named in the previous clause ("ทีม A เข้าโครงการ แล้ว
+  // รับรองผลให้เลย"). Screen each decision verb separately: a question or a
+  // draft about one act cannot hide a later imperative in the same request.
+  const clauses = text.split(/(?:แล้ว(?=\s*\S)(?:ช่วย)?|และ(?:ช่วย)?|จากนั้น|ต่อไป|ถัดมา|พร้อมกับ|แต่|ก่อน(?=รับรองผล|อนุมัติ|เคาะ)|ไหม\s*(?=รับรองผล|อนุมัติ|เคาะ)|[,;，；/!?\n]|(?<!ผอ)\.)/i);
+  return clauses.some((clause) => {
+    const actions = [...clause.matchAll(/รับรองผล|ยืนยันผลคัดเลือก|ประกาศผลคัดเลือก|อนุมัติ|เคาะ|ให้ผ่าน|ตัดสิน|รับ(?=\s*(?:ทีม|ผู้สมัคร|สตาร์ทอัพ))|\badmit\b|approve/gi)];
+    return actions.some((match) => {
+      const before = clause.slice(0, match.index);
+      const after = clause.slice(match.index);
+      // A drafted document or a proposal naming the decision still goes to
+      // its signer; it is not an order for this assistant to certify it.
+      if (/(?:ร่าง|จัดทำ|เขียน)(?:หนังสือ|บันทึก|เอกสาร|ข้อความ|คำขอ|รายงาน)?(?:การ)?\s*$/i.test(before)
+          || /(?:ทำ|จัดทำ)\s*(?:รายงาน|หนังสือ|บันทึก|เอกสาร|ข้อความ)(?:การ)?\s*$/i.test(before)
+          || /(?:เพื่อ|เสนอ)\s*$/i.test(before)
+          || /(?:เสนอ(?:ให้)?|ให้)\s*(?:ผู้อำนวยการ|ผอ\.?)\s*$/i.test(before)
+          || (/(?:สรุป|ทบทวน|รายงาน|ค้นหา|ร่างข้อความแจ้ง).*?(?:(?:มติ|เหตุผล)(?:ที่)?|ว่า)\s*คณะกรรมการ(?:ที่)?\s*$/i.test(before)
+              && /^(?:รับรองผล|อนุมัติ)[^\n]{0,80}?แล้ว(?:\s*(?:ครับ|ค่ะ))?$/i.test(after))
+          || /(?:ค้นเอกสาร|ค้นหา|สืบค้น|ตรวจสอบ)\s*ว่าใคร\s*$/i.test(before)
+          || /(?:อธิบาย|สรุป|วิเคราะห์)\s*(?:วิธี|ขั้นตอน|หลักเกณฑ์)[^\n]{0,24}$/i.test(before)) return false;
+      const questionAt = after.search(/(?:ไหม|มั้ย|หรือไม่|หรือเปล่า|ยังไง|อย่างไร)/i);
+      const actionBeforeQuestion = questionAt < 0 ? after : after.slice(0, questionAt);
+      const direct = /(?:ให้เลย|ทันที|ด่วน|ตอนนี้|\bnow\b|เอาเลย|เลย(?:\s*(?:ครับ|ค่ะ|นะ|คะ))?\s*$)/i.test(actionBeforeQuestion);
+      // "ควรอนุมัติทันทีไหม" asks for analysis; "อนุมัติให้เลยไหม"
+      // asks the assistant to act. An imperative elsewhere after the question
+      // ("ทำตารางให้เลย") must not turn the question into an approval order.
+      if (/(?:ควร|หรือไม่|หรือเปล่า)/i.test(before)
+          && questionAt >= 0 && !/ให้เลย/i.test(actionBeforeQuestion)) return false;
+      if (questionAt >= 0 && !direct) return false;
+      const inClause = candidate.test(clause)
+        && (intake.test(clause) || /รับรองผล|ยืนยันผลคัดเลือก/i.test(after));
+      // Once the candidate and programme are established, an independent
+      // decision verb is mandatory regardless of its polite lead-in ("ช่วย",
+      // "ขอให้คุณ", etc.). The question/draft checks above still exempt
+      // analysis and preparation for the authorized signer.
+      const referringBack = intake.test(text)
+        && !/(?:งบ|เงินเดือน|ส่วนลด)/i.test(after);
+      return inClause || referringBack;
+    });
+  });
+}
+
 export function checkScope(skill, requestText = '') {
   if (!skill || !skill.scope) {
     return { status: 'ALLOW', inScope: true };
@@ -67,22 +120,20 @@ export function checkScope(skill, requestText = '') {
       const intake = /(?:คัดเลือก|รับทุน|ได้ทุน|ให้ทุน|เข้าโครงการ|บ่มเพาะ|grant|incubat|accelerator|ลงทุน)/i.test(lower);
       const ownBusiness = /(?:บริษัท|กิจการ|ธุรกิจ)(?:ของ)?(?:ผม|ฉัน|เรา)|ในนาม(?:ผม|ฉัน)|แทน(?:ผม|ฉัน)/i.test(lower)
         && !/(?:สตาร์ทอัพ|startup|ผู้ประกอบการ|applicant|บ่มเพาะ|grant|incubat|accelerator|step)/i.test(lower);
-      // A bare order to approve something ("อนุมัติโบนัสให้เลย") is never the
-      // assistant's call either; without proof it is the user's own business,
-      // it stops here rather than falling through to a clarifying question.
-      // The approval verb must be the instruction itself, not a request to
-      // prepare one ("ขออนุมัติ", "ร่างคำขออนุมัติ", "ขั้นตอนขออนุมัติ").
-      // Polite endings and lead-ins ("ครับ", "นะคะ", "ok", "โอเค") are removed
-      // first so they cannot hide the order.
-      const order = lower.trim()
-        .replace(/(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้ะ|จ้า|จ้ะ|ด้วย|please))+[\s.!]*$/giu, '')
-        .replace(/^(?:ok(?:ay)?|โอเค|ครับ|ค่ะ|งั้น|ถ้างั้น)[\s,]*/iu, '')
-        .trim();
-      const approvalOrder = /(?:^|ช่วย\s*|กรุณา\s*|โปรด\s*|แล้ว\s*)(?:อนุมัติ|approve\b|เคาะ)/i.test(order)
-        && !/ขออนุมัติ|คำขออนุมัติ/.test(order)
-        && /(?:ให้เลย|เลย$|ทันที|\bnow\b|ให้หน่อย|ให้ด้วย)/i.test(order)
-        && !hasOwnBusinessProof(order);
-      heuristic = !ownBusiness && ((applicant && approve && intake) || approvalOrder);
+      // A bare order to approve something ("อนุมัติโบนัสให้เลย", "รบกวน
+      // อนุมัติทีม A ด่วน") is never the assistant's call either. Mentions that
+      // are not an order are removed first: asking for approval, approval that
+      // already happened, or a question about it. What remains is an order
+      // when it names an urgency or a candidate - endings and lead-ins such as
+      // "ครับ", "น้า", "รบกวน", "ok" no longer matter (review round 4).
+      const remaining = lower
+        .replace(/(?:ขอ|คำขอ|รอ|ได้รับ|ผ่านการ|หลัง(?:จาก)?|ถ้า|หาก|เพื่อ|ก่อน)\s*(?:การ)?อนุมัติ/g, ' ')
+        .replace(/อนุมัติ\s*(?:ไป)?\s*แล้ว|อนุมัติ(?:หรือ)?ยัง|อนุมัติ[^\n]{0,20}?(?:ไหม|มั้ย|ยังไง|อย่างไร|หรือเปล่า|หรือไม่|\?)|approved|approval process/g, ' ');
+      const approvalOrder = /(?:อนุมัติ|approve\b|เคาะ)/i.test(remaining)
+        && /(?:เลย|ทันที|\bnow\b|asap|ด่วน|ตอนนี้|ให้หน่อย|ให้ด้วย|เอาเลย|ทีม|สตาร์ทอัพ|startup|ผู้สมัคร|applicant|รายนี้|โบนัส|สัญญา|การลา)/i.test(remaining)
+        && !hasOwnBusinessProof(lower);
+      heuristic = hasStartupIntakeDecision(requestText)
+        || (!ownBusiness && ((applicant && approve && intake) || approvalOrder));
     }
     if (key.includes('ci_governance') && (
       lower.includes('แก้ ci') ||
