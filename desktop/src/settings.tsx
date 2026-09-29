@@ -282,7 +282,7 @@ export function SettingsPanel({
                       เลือก runtime
                     </button>
                   ))}
-                {(c.ready || c.mode === 'subscription') && (
+                {(c.ready || c.mode === 'subscription' || c.mode === 'oauth') && (
                   <button
                     className="quiet"
                     disabled={Boolean(busy)}
