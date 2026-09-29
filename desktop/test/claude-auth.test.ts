@@ -33,7 +33,7 @@ async function fixture(mode = 'code', version = '2.1.268') {
       "if(args[1] === 'logout') { fs.rmSync(saved, {force:true}); process.exit(0); }",
       "if(args[1] === 'login') {",
       " if(mode === 'hang') { setInterval(()=>{},1000); }",
-      " else if(mode === 'failure') { console.error('403 not authorized sk-secret-do-not-expose'); process.exit(1); }",
+      " else if(mode === 'failure') { console.error('403 not authorized sk-secret-test'); process.exit(1); }",
       " else if(mode === 'browser') { fs.writeFileSync(saved, 'synthetic'); process.exit(0); }",
       ' else {',
       "  process.stdout.write('Paste code here if prompted: ');",
