@@ -7,7 +7,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { Store } from './store';
 import { WorkService, type Harness } from './service';
-import { adapter, createRpc, initialize, listModels, googleLoginUrl } from './providers';
+import { adapter, createRpc, initialize, listModels, googleLoginUrl, runtimeError } from './providers';
+import { explainRuntimeFailure } from './diagnostics';
 import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
@@ -21,6 +22,19 @@ const exportPaths = new Set<string>();
 const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
 const consents = new Map<string, string>();
+const connectControllers = new Map<string, AbortController>();
+// Plain-language notes for connection failures; anything else shows its code.
+const connectNotes: Record<string, string> = {
+  PROVIDER_QUOTA: 'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า',
+  GOOGLE_CLOUD_PROJECT_REQUIRED: 'บัญชี Google ขององค์กรหรือสถานศึกษาต้องตั้ง Google Cloud Project ก่อนใช้ Gemini ใช้ Gemini API key หรือบัญชี Google ส่วนตัวแทน',
+  PROVIDER_PERMISSION_DENIED: 'บัญชีนี้ยังไม่มีสิทธิ์ใช้บริการ ตรวจแพ็กเกจหรือสิทธิ์ของบัญชี',
+  PROVIDER_NETWORK: 'เชื่อมต่อบริการไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall',
+  CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
+  LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อในเบราว์เซอร์ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
+  LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
+  CANCELLED: 'ยกเลิกการเชื่อมต่อแล้ว',
+  API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
+};
 let busy = false;
 const requireModule = createRequire(__filename);
 const validProviders = new Set(['openai', 'claude', 'gemini']);
@@ -168,11 +182,16 @@ async function main() {
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         connecting.add(connection.id);
         let rpc: ReturnType<typeof createRpc> | undefined;
-        const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 300_000);
+        const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 480_000);
+        connectControllers.set(connection.id, controller);
+        const progress = (text: string) => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text });
+        controller.signal.addEventListener('abort', () => rpc?.close('CANCELLED'), { once: true });
+        let testTimedOut = false;
         try {
           const current = await runtime(connection);
           if (connection.mode === 'api' && !current.context.key) throw new Error('API_KEY_REQUIRED');
           if (connection.provider !== 'claude') {
+            progress('กำลังเปิดตัวเชื่อม ' + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
             rpc = createRpc(connection, current.context); await initialize(rpc, connection.provider);
             if (connection.provider === 'openai') {
               if (connection.mode === 'api') await rpc.request('account/login/start', { type: 'apiKey', apiKey: current.context.key });
@@ -180,8 +199,10 @@ async function main() {
                 const login = await rpc.request('account/login/start', { type: 'chatgpt' });
                 const url = new URL(login.authUrl);
                 if (url.protocol !== 'https:' || !['auth.openai.com', 'chatgpt.com', 'auth0.openai.com'].includes(url.hostname)) throw new Error('INVALID_LOGIN_URL');
+                progress('รอให้ลงชื่อเข้าใช้ในเบราว์เซอร์…');
                 await new Promise<void>((resolveLogin, reject) => {
-                  const t = setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), 180_000);
+                  const t = setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), 300_000);
+                  controller.signal.addEventListener('abort', () => { clearTimeout(t); reject(new Error('CANCELLED')); }, { once: true });
                   rpc!.onNotification = (method, params) => { if (method === 'account/login/completed') { clearTimeout(t); params.success ? resolveLogin() : reject(new Error('LOGIN_FAILED')); } };
                   void shell.openExternal(url.href).catch(() => { clearTimeout(t); reject(new Error('LOGIN_FAILED')); });
                 });
@@ -194,26 +215,41 @@ async function main() {
                   const url = googleLoginUrl(line); if (!url) return;
                   if (++attempts > 3) { session.close('LOGIN_FAILED'); return; }
                   void shell.openExternal(url.href).catch(() => {});
+                  progress('ลงชื่อในหน้าของ Google แล้ววาง code ที่ได้ในแอป');
                   authCodes.get(connection.id)?.(null);
                   new Promise<string | null>(resolveCode => { authCodes.set(connection.id, resolveCode); emit({ sessionId: '', type: 'auth-code', connectionId: connection.id }); })
                     .then(code => { if (code) session.writeText(code); else session.close('LOGIN_FAILED'); });
                 };
               }
               try { await rpc.request('authenticate', { methodId: connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal' }, 300_000); }
+              catch (error) { throw runtimeError(error, rpc); }
               finally { authCodes.get(connection.id)?.(null); authCodes.delete(connection.id); }
             }
             rpc.close(); rpc = undefined;
           }
-          await current.adapter.run('Reply with exactly OK. Do not use tools.', connection, { ...current.context, signal: controller.signal, emit: () => {} });
+          // The test gets its own short budget so a stalled provider is reported instead of spinning for minutes.
+          progress('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ');
+          const test = new AbortController(), testTimer = setTimeout(() => { testTimedOut = true; test.abort(); }, 120_000);
+          controller.signal.addEventListener('abort', () => test.abort(), { once: true });
+          try { await current.adapter.run('Reply with exactly OK. Do not use tools.', connection, { ...current.context, signal: test.signal, emit: () => {} }); }
+          catch (error) {
+            const detail = (error as any)?.detail || [];
+            if (testTimedOut && errorCode(error) === 'CANCELLED') throw Object.assign(new Error(explainRuntimeFailure(detail) || 'CONNECT_TEST_TIMEOUT'), { detail });
+            throw error;
+          }
+          finally { clearTimeout(testTimer); }
+          progress('กำลังโหลดรายชื่อโมเดล');
           connection.ready = true; connection.note = 'ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว';
           try { await refreshModels(connection); } catch { /* The connection works; the model list can be reloaded later. */ }
         } catch (error) {
-          const code = errorCode(error); diagnose('connect-failed', { provider: connection.provider, mode: connection.mode, code });
-          connection.ready = false; connection.note = `เชื่อมต่อไม่สำเร็จ (${code}) ตรวจบัญชี โควตา และ runtime แล้วลองใหม่`;
+          const code = errorCode(error), detail = ((error as any)?.detail || []) as string[];
+          diagnose('connect-failed', { provider: connection.provider, mode: connection.mode, code, detail: detail.join(' | ').slice(0, 1200) });
+          connection.ready = false; connection.note = `${connectNotes[code] || 'เชื่อมต่อไม่สำเร็จ ตรวจบัญชี โควตา และ runtime แล้วลองใหม่'} (${code})`;
         }
-        finally { clearTimeout(timer); rpc?.close(); connecting.delete(connection.id); }
+        finally { clearTimeout(timer); rpc?.close(); connecting.delete(connection.id); connectControllers.delete(connection.id); }
         store.put('connection', connection.id, connection); return connection;
       }
+      case 'cancelConnect': { connectControllers.get(inputText(input.id, 60))?.abort(); return true; }
       case 'authCode': {
         const id = inputText(input.id, 60), resolveCode = authCodes.get(id); if (!resolveCode) throw new Error('LOGIN_FAILED');
         const code = typeof input.code === 'string' ? input.code.trim() : '';

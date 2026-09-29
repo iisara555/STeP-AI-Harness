@@ -126,3 +126,25 @@ test('Gemini runs stop with LOGIN_REQUIRED instead of hanging on an expired sign
   const connection: Connection = { id: 'test', provider: 'gemini', mode: 'subscription', executable, model: '', ready: true, note: '' };
   await assert.rejects(new GeminiAdapter().run('Test', connection, { cwd: home, env: {}, signal: new AbortController().signal, emit: () => {} }), /LOGIN_REQUIRED/);
 });
+
+test('runtime stderr is scrubbed and known provider failures become codes', async () => {
+  const { scrub, explainRuntimeFailure } = await import('../electron/diagnostics');
+  const line = scrub('user me@cmu.ac.th token ya29.a0AfH6SMBxyz https://oauth2.googleapis.com/token?code=abc&state=1 ' + 'x'.repeat(40));
+  assert.ok(!line.includes('me@cmu.ac.th') && !line.includes('ya29.') && !line.includes('code=abc') && !line.includes('x'.repeat(40)));
+  assert.equal(explainRuntimeFailure(['[API Error: 429 RESOURCE_EXHAUSTED] quota']), 'PROVIDER_QUOTA');
+  assert.equal(explainRuntimeFailure(['Please set GOOGLE_CLOUD_PROJECT']), 'GOOGLE_CLOUD_PROJECT_REQUIRED');
+  assert.equal(explainRuntimeFailure(['all good']), undefined);
+});
+
+test('a Gemini run that dies on quota reports PROVIDER_QUOTA with a scrubbed tail', { timeout: 5000 }, async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-quota-test-'));
+  const executable = join(home, 'runtime.cjs');
+  await writeFile(executable, `require('node:readline').createInterface({input:process.stdin}).on('line',l=>{
+    const m=JSON.parse(l); if(m.method==='session/prompt'){ console.error('Error 429 RESOURCE_EXHAUSTED for user a@b.co'); setTimeout(()=>process.exit(1),20); return; }
+    console.log(JSON.stringify({id:m.id,result:m.method==='session/new'?{sessionId:'s'}:{}}));
+  });`);
+  const connection: Connection = { id: 'test', provider: 'gemini', mode: 'api', executable, model: '', ready: true, note: '' };
+  const error: any = await new GeminiAdapter().run('Test', connection, { cwd: home, env: {}, key: 'k', signal: new AbortController().signal, emit: () => {} }).catch(e => e);
+  assert.equal(error.message, 'PROVIDER_QUOTA');
+  assert.ok(error.detail.some((l: string) => l.includes('RESOURCE_EXHAUSTED')) && !error.detail.join(' ').includes('a@b.co'));
+});

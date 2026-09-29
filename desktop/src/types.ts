@@ -13,7 +13,7 @@ export type Settings = { team: string; assistant: string; workspace: string; the
 export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean };
 export type Snapshot = { settings: Settings; connections: Connection[]; sessions: Session[]; teams: { id: string; name: string }[]; userFile: string };
 export type PlanStep = { label: string; action?: boolean };
-export type RunEvent = { sessionId: string; type: 'delta' | 'reasoning' | 'status' | 'changed' | 'auth-code' | 'plan' | 'step' | 'install'; text?: string; connectionId?: string; plan?: PlanStep[]; index?: number; state?: 'running' | 'done' | 'skipped' };
+export type RunEvent = { sessionId: string; type: 'delta' | 'reasoning' | 'status' | 'changed' | 'auth-code' | 'plan' | 'step' | 'install' | 'connect-progress'; text?: string; connectionId?: string; plan?: PlanStep[]; index?: number; state?: 'running' | 'done' | 'skipped' };
 export interface DesktopAPI {
   call(method: string, input?: unknown): Promise<any>;
   onEvent(callback: (event: RunEvent) => void): () => void;

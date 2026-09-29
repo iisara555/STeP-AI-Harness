@@ -1,6 +1,14 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Rpc } from './rpc';
+import { explainRuntimeFailure } from './diagnostics';
+
+// A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
+export function runtimeError(error: unknown, rpc: Rpc) {
+  const tail = rpc.stderrTail(), code = explainRuntimeFailure(tail);
+  const base = error instanceof Error ? error : new Error(String(error));
+  return Object.assign(code && base.message !== 'CANCELLED' ? new Error(code) : base, { detail: tail.slice(-8) });
+}
 import type { Connection, ModelOption } from '../src/types';
 
 export type TokenCount = { input: number; output: number; total: number };
@@ -70,7 +78,7 @@ export class CodexAdapter implements ProviderAdapter {
         };
         rpc.request('turn/start', { threadId: result.thread.id, input: [{ type: 'text', text: prompt }], ...(context.effort ? { effort: context.effort } : {}) }).catch(fail);
       });
-    } finally { context.signal.removeEventListener('abort', abort); rpc.close(); }
+    } catch (error) { throw runtimeError(error, rpc); } finally { context.signal.removeEventListener('abort', abort); rpc.close(); }
   }
 }
 
@@ -97,7 +105,7 @@ export class GeminiAdapter implements ProviderAdapter {
       };
       await rpc.request('session/prompt', { sessionId: session.sessionId, prompt: [{ type: 'text', text: prompt }] }, 600_000);
       return text;
-    } finally { context.signal.removeEventListener('abort', abort); rpc.close(); }
+    } catch (error) { throw runtimeError(error, rpc); } finally { context.signal.removeEventListener('abort', abort); rpc.close(); }
   }
 }
 

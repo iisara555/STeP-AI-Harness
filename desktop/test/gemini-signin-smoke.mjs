@@ -19,6 +19,7 @@ require('node:readline').createInterface({ input: process.stdin }).on('line', li
   else if (m.method === 'authenticate' && fs.existsSync(creds)) send({ id: m.id, result: {} });
   else if (m.method === 'authenticate') { process.stdout.write('Please visit the following URL to authorize the application:\\n\\nhttps://accounts.google.com/o/oauth2/v2/auth?fake=1\\n'); waitingCode = m.id; }
   else if (m.method === 'session/new') send({ id: m.id, result: { sessionId: 's', models: { availableModels: [{ modelId: 'gemini-test', name: 'Gemini Test' }], currentModelId: 'gemini-test' } } });
+  else if (m.method === 'session/prompt' && fs.existsSync(require('node:path').join(__dirname, 'stall'))) { /* never answer */ }
   else if (m.method === 'session/prompt') { send({ method: 'session/update', params: { update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'OK' } } } }); send({ id: m.id, result: {} }); }
   else if (m.id !== undefined) send({ id: m.id, result: {} });
 });`);
@@ -52,5 +53,16 @@ try {
   const connection = await page.evaluate(() => window.__connect);
   assert.equal(connection.ready, true, connection.note);
   assert.equal(connection.models?.[0]?.id, 'gemini-test');
-  console.log('Gemini sign-in smoke passed: code dialog above the wizard, code accepted, connection ready.');
+  // A provider that stalls in the test step shows progress and can be cancelled from the settings page.
+  await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  await page.evaluate(async file => { const c = await window.step.call('connection', { provider: 'gemini', mode: 'subscription' }); await window.step.call('runtime', { id: c.id }); window.__stall = c.id; }, runtime);
+  await writeFile(join(home, 'stall'), '1');
+  await page.evaluate(() => window.step.call('snapshot'));
+  await page.keyboard.press('Control+K'); await page.keyboard.type('ตั้งค่าพื้นที่ทำงาน'); await page.keyboard.press('Enter');
+  await page.getByRole('tab', { name: /การเชื่อมต่อ AI/ }).click();
+  await page.getByRole('button', { name: 'เชื่อมต่อและทดสอบ' }).last().click();
+  await page.getByText('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ').waitFor({ timeout: 20000 });
+  await page.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await page.getByText(/ยกเลิกการเชื่อมต่อแล้ว \(CANCELLED\)/).waitFor({ timeout: 20000 });
+  console.log('Gemini sign-in smoke passed: code dialog above the wizard, code accepted, connection ready; a stalled test shows progress and cancels.');
 } finally { await app.close(); }

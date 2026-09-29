@@ -1,10 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
+import { scrub } from './diagnostics';
 
 export class Rpc {
   private child: ChildProcessWithoutNullStreams;
   private sequence = 0;
   private stopped?: Error;
+  private tail: string[] = [];
   private closeListeners = new Set<(error: Error) => void>();
   private pending = new Map<number, { resolve: (value: any) => void; reject: (err: Error) => void; timer: NodeJS.Timeout }>();
   onNotification: (method: string, params: any) => void = () => {};
@@ -13,11 +15,11 @@ export class Rpc {
   onText: (line: string) => void = () => {};
   constructor(command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv }) {
     this.child = spawn(command, args, { ...options, detached: process.platform !== 'win32', windowsHide: true, shell: false, stdio: 'pipe' });
-    this.child.stderr.resume();
+    createInterface({ input: this.child.stderr }).on('line', line => this.remember(line));
     const lines = createInterface({ input: this.child.stdout });
     lines.on('line', line => {
       if (line.length > 4_000_000) return this.close();
-      let message: any; try { message = JSON.parse(line); } catch { this.onText(line.replace(/\x1b\[[0-9;?<>]*[A-Za-z]/g, '')); return; }
+      let message: any; try { message = JSON.parse(line); } catch { const text = line.replace(/\x1b\[[0-9;?<>]*[A-Za-z]/g, ''); this.remember(text); this.onText(text); return; }
       if (message.method && message.id !== undefined) {
         void this.onRequest(message.method, message.params).then(
           result => this.write({ jsonrpc: '2.0', id: message.id, result }),
@@ -34,6 +36,9 @@ export class Rpc {
     this.child.on('exit', () => this.stop('RUNTIME_EXITED'));
     this.child.stdin.on('error', () => this.stop('RUNTIME_EXITED'));
   }
+  private remember(line: string) { const clean = scrub(line); if (!clean) return; this.tail.push(clean); if (this.tail.length > 30) this.tail.shift(); }
+  /** Last scrubbed runtime messages, for explaining a failure. */
+  stderrTail() { return this.tail.slice(); }
   onClose(listener: (error: Error) => void) {
     if (this.stopped) listener(this.stopped); else this.closeListeners.add(listener);
     return () => { this.closeListeners.delete(listener); };
