@@ -57,6 +57,13 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
-      - run: npm run format:check
+      - name: Check Desktop formatting
+        shell: bash
+        run: |
+          if ! npm run format:check; then
+            npm run format
+            git diff -- electron src test
+            exit 1
+          fi
       - run: npm test
       - run: npm run build
