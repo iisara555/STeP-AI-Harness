@@ -73,7 +73,6 @@ test('theme tokens use the confirmed STeP CI colours and never the superseded te
   for (const old of ['#f9ae3b', '#f2a32d', '#2b333d', '#285d50']) assert.ok(!css.includes(old), old);
 });
 
-
 test('Claude provider offers supported Console OAuth and clearly separates it from Pro/Max', async () => {
   const source = await (await import('node:fs/promises')).readFile(new URL('../src/ui.tsx', import.meta.url), 'utf8');
   assert.match(source, /value="oauth">Claude Console OAuth/);
