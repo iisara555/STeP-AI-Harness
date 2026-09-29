@@ -21,6 +21,7 @@ export const connectNotes: Record<string, string> = {
   CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
   LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
   LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
+  LOGIN_CODE_REJECTED: 'Google ไม่รับ code ที่วาง 3 ครั้ง กดปุ่ม Copy ในหน้า Google แล้ววางใหม่ภายในไม่กี่นาที',
   CANCELLED: 'ยกเลิกการเชื่อมต่อแล้ว',
   API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
   MODEL_NOT_AVAILABLE: 'บัญชีนี้ใช้โมเดลที่ตั้งไว้ไม่ได้ เลือกโมเดลอื่นหรือใช้ค่าเริ่มต้นของบริการ',
@@ -144,16 +145,20 @@ async function geminiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
     rpc.onText = line => {
       const url = googleLoginUrl(line);
       if (!url) return;
+      // Gemini prints a new URL after it rejects a code; after three tries the code is the problem.
       if (++attempts > 3) {
-        rpc.close('LOGIN_FAILED');
+        rpc.close('LOGIN_CODE_REJECTED');
         return;
       }
+      const round = attempts;
       void deps.openExternal(url.href).catch(() => {});
       deps.progress('ลงชื่อในหน้าของ Google แล้ววาง code ที่ได้ในแอป');
       deps.dropCode();
       void deps.askForCode().then(code => {
+        // A box replaced by a newer prompt resolves empty; only the current one may end sign-in.
+        if (round !== attempts) return;
         if (code) rpc.writeText(code);
-        else rpc.close('LOGIN_FAILED');
+        else rpc.close('CANCELLED');
       });
     };
   }
