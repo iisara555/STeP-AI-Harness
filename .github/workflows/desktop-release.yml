@@ -1,0 +1,67 @@
+name: Build STeP Desktop installers
+
+# Each installer is built on its own OS: Windows (NSIS .exe) and macOS (.dmg for Apple silicon and
+# for Intel). Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
+# run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['desktop-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            script: dist:win
+            artifact: release/*.exe
+          - name: macos-arm64
+            os: macos-latest
+            script: dist:mac
+            artifact: release/*.dmg
+          - name: macos-x64
+            os: macos-latest
+            script: dist:mac:x64
+            artifact: release/*.dmg
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm test
+      - name: Build installer
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          EXTRA=""
+          if [ -z "$CSC_LINK" ]; then
+            # Unset secrets arrive as empty strings, which electron-builder would treat as a certificate path.
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
+          fi
+          npm run ${{ matrix.script }} -- $EXTRA
+      - uses: actions/upload-artifact@v4
+        with:
+          name: step-desktop-${{ matrix.name }}
+          path: desktop/${{ matrix.artifact }}
+          if-no-files-found: error

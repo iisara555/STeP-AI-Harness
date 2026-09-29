@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import os
 import sys
 from pathlib import Path
 
@@ -363,15 +364,21 @@ def validate_executive_oversight(errors: list[str]) -> None:
 
 
 def scan_secrets(errors: list[str]) -> None:
-    for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or ".git" in path.parts:
-            continue
-        if path.suffix.lower() not in {".md", ".yaml", ".yml", ".py", ".txt", ".js", ".mjs", ".cjs", ".ts", ".sh", ".ps1", ".json", ".env", ".example", ".command", ".bat"}:
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
-        for label, pattern in SECRET_PATTERNS.items():
-            if pattern.search(text):
-                errors.append(f"{path.relative_to(ROOT)}: possible {label}")
+    # Prune installed dependencies before traversal, including nested workspaces.
+    # Generated desktop bundles contain copies of dependency fixtures as well, and the
+    # bundled OCR Python (desktop/ocr-runtime, git-ignored) ships library test keys.
+    for directory, children, filenames in os.walk(ROOT):
+        relative_dir = Path(directory).relative_to(ROOT)
+        children[:] = [name for name in children if name not in {".git", "node_modules", "graphify-out"}
+                       and not (relative_dir == Path("desktop") and name in {"dist", "release", "ocr-runtime"})]
+        for filename in sorted(filenames):
+            path = Path(directory) / filename
+            if path.suffix.lower() not in {".md", ".yaml", ".yml", ".py", ".txt", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".sh", ".ps1", ".json", ".env", ".example", ".command", ".bat"}:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for label, pattern in SECRET_PATTERNS.items():
+                if pattern.search(text):
+                    errors.append(f"{path.relative_to(ROOT)}: possible {label}")
 
 
 

@@ -232,3 +232,12 @@ test('offline vendor files match their pinned integrity manifest', async () => {
     assert.equal(createHash('sha256').update(await readFile(new URL(name, root))).digest('hex'), expected, name);
   }
 });
+
+test('naming things is ordinary drafting work, naming people still needs review', () => {
+  for (const input of ['ช่วยคิดชื่อแคมเปญเปิดตัวบริการใหม่', 'ตั้งชื่อโพสต์ Facebook', 'ร่างอีเมลเชิญผู้เข้าอบรม', 'ชื่อโครงการ AI', 'ชื่อ โครงการ', 'race-day event colors']) {
+    assert.equal(evaluatePrivacyGate(input).action, 'pass', input);
+  }
+  for (const input of ['ชื่อ สมชาย ใจดี', 'รายชื่อผู้เข้าอบรม', 'ชื่อผู้ติดต่อ สมศรี', 'ชื่อเล่นของพนักงาน', 'racial origin']) {
+    assert.equal(evaluatePrivacyGate(input).action, 'human-confirm', input);
+  }
+});

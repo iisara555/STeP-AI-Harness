@@ -28,6 +28,8 @@ The draft can be downloaded as JSON or copied to the clipboard. It contains the 
 
 ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก และยังไม่เพิ่ม table-structure model ในรอบนี้.
 
+**STeP Desktop mini app:** แอป Desktop มีเครื่องมือ “ตรวจใบเสร็จ AFP” (ป้าย *ทดลอง*) ที่เรียก service นี้ที่ `127.0.0.1:8765` โดยตรง ใช้ `web/receipt-review.js` ชุดเดียวกัน และเปิด service จาก `.venv` ของโฟลเดอร์นี้ได้เมื่อติดตั้งแล้ว เครื่องมือนี้ยังไม่ผ่าน Router; ปุ่ม “ให้ AI pre-check ต่อ” ส่งเฉพาะข้อมูลที่คนตรวจแล้วเป็นข้อความเข้า chat ปกติ (ผ่าน privacy gate และการยืนยันก่อนส่ง) แล้ว Router เลือก `receipt-audit` เอง Acceptance gate ด้านล่างยังใช้กับการผูก OCR เข้ากับ Router
+
 ## Privacy boundary
 
 ตัว web server bind ที่ `127.0.0.1` เท่านั้นโดย default. เอกสารที่ทดลองจะถูกส่งจาก browser ไปยัง process บนเครื่องเดียวกันและเก็บไว้ใน temporary directory ระหว่างการประมวลผลเท่านั้น.

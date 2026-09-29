@@ -47,7 +47,9 @@ function dateParts(value = new Date()) {
 }
 
 export function sanitizeOutputSegment(value, { fallback = 'untitled', maxLength = 72 } = {}) {
-  let text = String(value ?? '').normalize('NFKC').trim();
+  // NFKC folds look-alike characters but splits Thai SARA AM (ำ) into NIKHAHIT + SARA AA,
+  // which makes "ทำ" unsearchable in file names; put it back together.
+  let text = String(value ?? '').normalize('NFKC').replace(/ํา/g, 'ำ').trim();
   text = text
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
     .replace(/\s+/g, '-')

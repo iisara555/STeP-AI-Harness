@@ -1,0 +1,4 @@
+dist/
+release/
+ocr-runtime/
+node_modules/

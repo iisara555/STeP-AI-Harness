@@ -298,6 +298,50 @@ export async function updateUserMemoryProfile(workspaceDir = process.cwd(), upda
   return { updated: true, filePath };
 }
 
+/**
+ * Apply the First Run personalization (name, team, assistant name and conversation style)
+ * to USER.md text, keeping every other section the employee has written.
+ * A file without the Personal Assistant section is rebuilt from the template with its
+ * existing profile, projects and skills.
+ */
+export function applyPersonalization(markdown = '', options = {}) {
+  const personality = PERSONALITY_PRESETS[options.personality] ? options.personality : 'coworker';
+  const preset = getPersonalityPreset(personality);
+  const tone = (personality === 'custom' ? options.assistantTone : '') || preset.tone || options.assistantTone || '';
+  const clean = (value) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
+  const name = clean(options.name), assistantName = clean(options.assistantName) || 'STeP Mate', team = clean(options.team);
+
+  const current = parseUserMemory(markdown);
+  if (!markdown || !/ผู้ช่วยส่วนตัว|Personal Assistant/i.test(markdown)) {
+    return generateUserMemoryTemplate({
+      name: name || current.profile.name, team: team || current.profile.team, cluster: current.profile.cluster, role: current.profile.role,
+      assistantName, personality, assistantTone: clean(tone), tone: clean(tone), firstRunCompleted: true,
+      activeProjects: current.activeProjects, frequentSkills: current.frequentSkills,
+    });
+  }
+  const set = (text, label, value) => text.replace(new RegExp(`(- \\*\\*${label}[^*]*\\*\\*:)[^\\n]*`), `$1 ${value}`);
+  let text = markdown;
+  text = set(text, 'ชื่อ / ชื่อเรียก', name || current.profile.name);
+  if (options.team !== undefined) text = set(text, 'ทีมหลัก', team.toUpperCase());
+  text = set(text, 'รูปแบบการสื่อสารที่ชอบ', clean(tone));
+  text = set(text, 'ชื่อผู้ช่วย', assistantName);
+  text = set(text, 'บุคลิกผู้ช่วย', `${personality} (${preset.label})`);
+  text = set(text, 'รูปแบบการคุย', clean(tone));
+  text = /- \*\*First Run Completed\*\*:/.test(text)
+    ? set(text, 'First Run Completed', 'true')
+    : text.replace(/(- \*\*รูปแบบการคุย[^\n]*)/, '$1\n- **First Run Completed**: true');
+  return text;
+}
+
+/** Write the personalization to USER.md, creating the file when it does not exist yet. */
+export async function savePersonalization(workspaceDir = process.cwd(), options = {}) {
+  const filePath = getUserMemoryPath(workspaceDir);
+  const existing = (await pathExists(filePath)) ? await readFile(filePath, 'utf-8') : '';
+  await writeFile(filePath, applyPersonalization(existing, options), 'utf-8');
+  await ensureGitignored(workspaceDir);
+  return { filePath, created: !existing };
+}
+
 /** Save raw markdown text to USER.md */
 export async function saveUserMemory(workspaceDir = process.cwd(), content = '') {
   const filePath = getUserMemoryPath(workspaceDir);

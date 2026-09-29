@@ -60,7 +60,21 @@ Use matching official files for these variants. A screenshot from the digest is 
 - **Layout:** whitespace percentages, rounded cards, shadows and accent frequency are design choices, not CI rules in this source.
 - **Co-branding:** partner hierarchy, sponsor placement and separate CMU/RSP North identity rules are not specified.
 - **Photography:** page 4 covers logo visibility over images; it does not establish licensing, consent or retouching policy.
-- **Assets:** the digest does not supply original vector logo files or licensed fonts.
+- **Assets:** the digest does not supply original vector logo files or licensed fonts. See the supplied symbol files below.
+
+## Supplied symbol artwork (2026-09-29)
+
+The user supplied three SVG files of the **standalone symbol** (three slanted bars), matching the page 4 treatments. Copies used by STeP Desktop live in `desktop/src/assets/`; the app icon is generated from the original-colour file by `desktop/scripts/make-icon.cjs` without altering the artwork.
+
+| File supplied | Treatment (page 4) | Fill | SHA-256 |
+| --- | --- | --- | --- |
+| `Asset 3.svg` → `step-symbol-colour.svg` | Original Colour | top bar `#FFC609`, lower bars `#231F20` | `218ab49e7a09123356fac8218cb98b6aa4bf30b2708d138e0622b6ffe980e4a4` |
+| `Asset 1.svg` → `step-symbol-mono-dark.svg` | Mono / light background | `#231F20` | `ce33e1733b12f89c49f3b4177a9e2807d79cb62c5ea12417d1ab603e9bca5305` |
+| `Asset 2.svg` → `step-symbol-mono-white.svg` | Mono / dark background | `#FFFFFF` | `d8821aedcdb0a33598d57b4bacc4851bac869a4c21e597a41fedbb9fb2a1aad4` |
+
+- **รอยืนยัน:** the original-colour file uses `#FFC609`, one step from the confirmed digital yellow `#FFC709`. The artwork was not recoloured; CC should confirm which value is authoritative.
+- The files contain the symbol only. The full lockup and short STeP/CMU wordmark are still not supplied, so do not compose the symbol with typed text into a new lockup.
+- The earlier orange app icon (`assets/step-ai.ico`) does not match the confirmed palette; STeP Desktop now uses the icon generated from the supplied artwork.
 
 ## Review use
 

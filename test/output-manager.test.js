@@ -149,3 +149,7 @@ test('concurrent output requests never hand out the same version', async (t) => 
     assert.equal(await readFile(item.path, 'utf-8'), '', 'reserved file should be empty');
   }
 });
+
+test('output file names keep Thai SARA AM whole so they stay searchable', () => {
+  assert.equal(sanitizeOutputSegment('ช่วยทำ น้ำ'), 'ช่วยทำ-น้ำ');
+});

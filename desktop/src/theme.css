@@ -1,0 +1,73 @@
+/*
+  STeP CI digital palette (skills/common/step-brand/references/ci-manual-digest.md, confirmed 2026-09-20):
+  STeP Yellow #FFC709 and STeP Dark #231F20. Every other value here is a layout choice derived for legibility,
+  not an additional brand colour.
+  --accent       STeP Yellow as a fill; always paired with --on-accent (STeP Dark), about 11:1 contrast.
+  --accent-ink   accent for text and icons; yellow text on white fails contrast, so light mode uses a deep gold.
+  --accent-soft  quiet yellow tint for highlights and selection.
+*/
+:root {
+  --surface: #fafaf8;
+  --paper: #fff;
+  --sidebar: #f7f6f3;
+  --hover: rgba(35, 31, 32, 0.05);
+  --text: #231f20;
+  --muted: #6b6566;
+  --accent: #ffc709;
+  --on-accent: #231f20;
+  --accent-ink: #7a5b00;
+  --accent-soft: #fff4cc;
+  --focus: #231f20;
+  --line: #e7e4de;
+  --line-strong: #cfcac2;
+  --selected: #efece5;
+  --selection: #ffe38a;
+  --scroll: #cfcac2;
+  --danger: #b3261e;
+  --on-danger: #fff;
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  --surface: #1b1819;
+  --paper: #231f20;
+  --sidebar: #161314;
+  --hover: rgba(244, 241, 234, 0.06);
+  --text: #f4f1ea;
+  --muted: #ada6a0;
+  --accent: #ffc709;
+  --on-accent: #231f20;
+  --accent-ink: #ffc709;
+  --accent-soft: #3a3219;
+  --focus: #ffc709;
+  --line: #37312f;
+  --line-strong: #4e4745;
+  --selected: #2e2927;
+  --selection: #6b5610;
+  --scroll: #4e4745;
+  --danger: #f2a197;
+  --on-danger: #231f20;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] {
+    --surface: #1b1819;
+    --paper: #231f20;
+    --sidebar: #161314;
+    --hover: rgba(244, 241, 234, 0.06);
+    --text: #f4f1ea;
+    --muted: #ada6a0;
+    --accent: #ffc709;
+    --on-accent: #231f20;
+    --accent-ink: #ffc709;
+    --accent-soft: #3a3219;
+    --focus: #ffc709;
+    --line: #37312f;
+    --line-strong: #4e4745;
+    --selected: #2e2927;
+    --selection: #6b5610;
+    --scroll: #4e4745;
+    --danger: #f2a197;
+    --on-danger: #231f20;
+    color-scheme: dark;
+  }
+}
