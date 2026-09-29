@@ -297,6 +297,40 @@ export function ClaudeCodeNote({
   );
 }
 
+export function AnthropicOAuthNote({ call }: { call: (method: string, input?: any) => Promise<any> }) {
+  const [installed, setInstalled] = useState<boolean | null>(null);
+  const check = () => {
+    setInstalled(null);
+    void call('anthropicCli')
+      .then((result: any) => setInstalled(result.installed))
+      .catch(() => setInstalled(false));
+  };
+  useEffect(check, []);
+  return (
+    <div className="claude-code-note">
+      <p className="small">
+        OAuth นี้เป็นของ Claude Console และใช้ค่าใช้จ่าย/โควตา API ของ workspace ที่เลือก ไม่ใช่โควตา Claude Pro/Max
+        STeP เก็บ profile แยกในเครื่องและให้ ant CLI จัดการ token กับการ refresh
+      </p>
+      <p className={installed ? 'connected small' : 'small muted'}>
+        {installed === null
+          ? 'กำลังตรวจหา ant CLI…'
+          : installed
+            ? 'พบ Anthropic ant CLI · พร้อมเปิด OAuth'
+            : 'ยังไม่พบ Anthropic ant CLI ในเครื่องนี้'}
+      </p>
+      {installed === false && (
+        <button className="quiet" onClick={() => void call('openHelp', { topic: 'anthropicCli' })}>
+          เปิดวิธีติดตั้ง ant CLI
+        </button>
+      )}
+      <button className="quiet" onClick={check}>
+        ตรวจอีกครั้ง
+      </button>
+    </div>
+  );
+}
+
 // Provider, sign-in method and API key: the same fields in the setup wizard and in Settings.
 export type ProviderChoice = { provider: string; mode: string; key: string };
 export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '' };
@@ -323,7 +357,7 @@ export function ProviderFields({
             onChange={e =>
               onChange({
                 provider: e.target.value,
-                mode: e.target.value === 'claude' && !claudeSubscription ? 'claude-code' : 'subscription',
+                mode: e.target.value === 'claude' ? 'oauth' : 'subscription',
                 key: '',
               })
             }
@@ -336,16 +370,18 @@ export function ProviderFields({
         <label>
           วิธีเชื่อมต่อ
           <select value={mode} onChange={e => onChange({ ...value, mode: e.target.value })}>
+            {provider === 'claude' && <option value="oauth">Claude Console OAuth (ไม่ต้องใช้ API key)</option>}
             {subscription && (
               <option value="subscription">
-                {provider === 'claude' ? 'บัญชี Claude (ลงชื่อเข้าใช้)' : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
+                {provider === 'claude' ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)' : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
               </option>
             )}
-            {provider === 'claude' && <option value="claude-code">เปิดใน Claude Code ภายนอก</option>}
+            {provider === 'claude' && <option value="claude-code">Claude Pro/Max (เปิดใน Claude Code ภายนอก)</option>}
             <option value="api">API key</option>
           </select>
         </label>
       </div>
+      {provider === 'claude' && mode === 'oauth' && <AnthropicOAuthNote call={call} />}
       {provider === 'claude' && mode === 'subscription' && claudeSubscription && <ClaudeCodeNote call={call} subscription />}
       {mode === 'claude-code' ? (
         <ClaudeCodeNote call={call} />
