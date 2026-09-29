@@ -309,8 +309,8 @@ export function AnthropicOAuthNote({ call }: { call: (method: string, input?: an
   return (
     <div className="claude-code-note">
       <p className="small">
-        OAuth นี้เป็นของ Claude Console และใช้ค่าใช้จ่าย/โควตา API ของ workspace ที่เลือก ไม่ใช่โควตา Claude Pro/Max
-        STeP เก็บ profile แยกในเครื่องและให้ ant CLI จัดการ token กับการ refresh
+        OAuth นี้เป็นของ Claude Console และใช้ค่าใช้จ่าย/โควตา API ของ workspace ที่เลือก ไม่ใช่โควตา Claude Pro/Max STeP เก็บ profile
+        แยกในเครื่องและให้ ant CLI จัดการ token กับการ refresh
       </p>
       <p className={installed ? 'connected small' : 'small muted'}>
         {installed === null
