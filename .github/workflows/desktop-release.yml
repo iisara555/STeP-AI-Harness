@@ -35,8 +35,8 @@ jobs:
         shell: bash
         working-directory: desktop
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
@@ -53,6 +53,8 @@ jobs:
         run: |
           EXTRA=""
           if [ -z "$CSC_LINK" ]; then
+            # Unset secrets arrive as empty strings, which electron-builder would treat as a certificate path.
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
             export CSC_IDENTITY_AUTO_DISCOVERY=false
             if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
           fi
