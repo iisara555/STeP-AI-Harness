@@ -3,13 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  anthropicEnv,
-  anthropicLogin,
-  anthropicLogout,
-  anthropicStatus,
-  resolveAnthropicCli,
-} from '../electron/anthropic-auth';
+import { anthropicEnv, anthropicLogin, anthropicLogout, anthropicStatus, resolveAnthropicCli } from '../electron/anthropic-auth';
 import { claudeSdkOptions } from '../electron/providers';
 import { signInAndTest } from '../electron/connect';
 import type { Connection } from '../src/types';
@@ -23,19 +17,19 @@ async function fixture(version = '1.35.0') {
     executable,
     [
       "const fs = require('node:fs'), path = require('node:path');",
-      "const args = process.argv.slice(2);",
-      "const dir = process.env.ANTHROPIC_CONFIG_DIR;",
+      'const args = process.argv.slice(2);',
+      'const dir = process.env.ANTHROPIC_CONFIG_DIR;',
       "const saved = path.join(dir, 'synthetic-oauth');",
       "fs.appendFileSync(path.join(dir, 'calls'), args.join(' ') + '\\n');",
       "if(args[0] === '--version') { console.log('ant " + version + "'); process.exit(0); }",
       "if(args[0] === 'auth' && args[1] === '--help') { console.log('login\\nprint-credentials\\nlogout'); process.exit(0); }",
       "if(args[0] === 'auth' && args[1] === 'print-credentials') {",
       " if(fs.existsSync(saved)) { console.log('sk-' + 'ant-oat01-synthetic-token-value'); process.exit(0); }",
-      " process.exit(1);",
-      "}",
+      ' process.exit(1);',
+      '}',
       "if(args[0] === 'auth' && args[1] === 'login') { fs.writeFileSync(saved, 'oauth'); process.exit(0); }",
       "if(args[0] === 'auth' && args[1] === 'logout') { fs.rmSync(saved, {force:true}); process.exit(0); }",
-      "process.exit(2);",
+      'process.exit(2);',
     ].join('\n'),
   );
   const env = {
@@ -60,7 +54,10 @@ test('ant OAuth runtime is version-gated and isolated from ambient credentials',
 
   const old = await fixture('1.4.9');
   t.after(() => rm(old.cwd, { recursive: true, force: true }));
-  await assert.rejects(resolveAnthropicCli(old.context, async () => old.executable), /ANTHROPIC_CLI_UPDATE_REQUIRED/);
+  await assert.rejects(
+    resolveAnthropicCli(old.context, async () => old.executable),
+    /ANTHROPIC_CLI_UPDATE_REQUIRED/,
+  );
 });
 
 test('official Console OAuth login, reuse and logout stay inside the STeP profile', async t => {
