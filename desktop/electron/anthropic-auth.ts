@@ -143,8 +143,18 @@ export async function resolveAnthropicCli(
   if (!executable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
   const result = await runAnt(executable, ['--version'], context);
   const version = /\b(\d+)\.(\d+)\.(\d+)\b/.exec(result.output);
-  // Interactive OAuth profiles landed in ant 1.5.0.
-  if (result.code !== 0 || !version || Number(version[1]) < 1 || (Number(version[1]) === 1 && Number(version[2]) < 5))
+  // "ant" is also the name of Apache Ant. Verify the OAuth command surface,
+  // not just a version-looking string, before trusting the executable.
+  const authHelp = await runAnt(executable, ['auth', '--help'], context);
+  const official = authHelp.code === 0 && /\blogin\b/.test(authHelp.output) && /print-credentials/.test(authHelp.output);
+  // Interactive OAuth profiles landed in Anthropic ant 1.5.0.
+  if (
+    result.code !== 0 ||
+    !version ||
+    !official ||
+    Number(version[1]) < 1 ||
+    (Number(version[1]) === 1 && Number(version[2]) < 5)
+  )
     throw new Error('ANTHROPIC_CLI_UPDATE_REQUIRED');
   return executable;
 }
