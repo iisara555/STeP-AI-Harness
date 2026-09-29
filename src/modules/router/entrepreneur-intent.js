@@ -19,8 +19,9 @@ const ORGANIZATION_NAMES = [
   /ted\s*fund|\bgrants?\b|\bfunding\b|\bsubsid/i,
   /พาร์ค|ปาร์ค|เอเอฟพี|ดีป้า|บีโอไอ|แม่โจ้|มอชอ|(?<![ก-๙])มอ(?![ก-๙])|ทุนมอ(?!บ|เตอร์)/,
   /ม\.?\s*เชียงใหม่|มหาวิทยาลัย|มหาลัย/,
-  // มช inside a word ("ทีมช่วย", "สมชาย", "ความชอบ") is followed by a vowel or tone mark.
-  /มช(?![\u0e30-\u0e3a\u0e47-\u0e4eอวยรลนา])/,
+  // Keep punctuated/spaced university abbreviations as well as contiguous มช;
+  // the latter alone cannot see "ม.ช." or "ม ช" after normalization.
+  /ม\s*[.\-]\s*ช(?:\.(?![ก-๙])|(?![.ก-๙]))|(?<![ก-๙])ม\s+ช(?![\u0e30-\u0e3a\u0e47-\u0e4eอวยรลนา])|มช(?![\u0e30-\u0e3a\u0e47-\u0e4eอวยรลนา])/,
   /สวทช|บพข|บพท|สนช|สสว|สกสว|วช\.|อว\.|(?<![ก-๙])(?:อว|วช)(?![ก-๙])|กระทรวง|กรม(?!ธรรม์)|ราชการ|(?<!สห)รัฐ|สำนักงานนวัตกรรม|นวัตกรรมแห่งชาติ/,
   /หน่วยงาน|ต้นสังกัด|ส่วนงาน|ฝ่ายการเงิน|เบิกจ่าย|จัดซื้อจัดจ้าง|งบกลาง|งบประมาณแผ่นดิน/,
   // Outside money: prizes, grants, subsidies, money someone else gave.

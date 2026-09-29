@@ -28,6 +28,7 @@ import {
   loadDocumentContextMetadata,
 } from '../../modules/router/metadata.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
+import { hasStartupIntakeDecision } from '../../modules/router/scope-guard.js';
 import {
   classifyEntrepreneurIntent, needsEntrepreneurIntentReview,
   referencesOrganization,
@@ -138,6 +139,17 @@ export async function queryStepRouter(query, options = {}) {
     if (chosenSkill) {
       selectedSkill = chosenSkill;
       if (chosenRank) bestMatch = chosenRank;
+    }
+  }
+
+  // An intake approval remains the project director's decision even when a
+  // preceding annual-goal phrase makes another Skill rank first. Evaluate the
+  // owning Skill's mandatory scope before offering any host intent verdict.
+  if (authorityPreflight.status === 'ALLOW' && hasStartupIntakeDecision(query)) {
+    const startupSkill = skills.find((skill) => skill.name === 'startup-discovery');
+    const intakeScope = checkScope(startupSkill, query);
+    if (intakeScope.status === 'BLOCK') {
+      authorityPreflight = { ...intakeScope, source: 'cross-skill-intake' };
     }
   }
 

@@ -174,7 +174,12 @@ function matchConcepts(text, authority) {
     } else {
       let index = text.indexOf(needle);
       while (index >= 0) {
-        positions.push(index);
+        // "ร่างบันทึก" contains the letters งบ but is not a budget noun.
+        // An unrelated approval later in the request must not become an AFP
+        // allocation merely because its draft was called a บันทึก.
+        if (!(needle === 'งบ' && text.startsWith('ร่างบันทึก', index - 3))) {
+          positions.push(index);
+        }
         index = text.indexOf(needle, index + 1);
       }
     }
