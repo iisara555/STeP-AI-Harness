@@ -29,7 +29,7 @@ export default function App() {
   const api = window.step;
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null), [selected, setSelected] = useState('');
   const [settings, setSettings] = useState(false), [settingsPage, setSettingsPage] = useState<'general' | 'ai'>('general'), [query, setQuery] = useState(''), [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'projects' | 'artifacts'>('all'), [project, setProject] = useState('');
+  const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
   const [stream, setStream] = useState(''), [progress, setProgress] = useState(''), [running, setRunning] = useState(false);
   const [error, setError] = useState(''), [files, setFiles] = useState<Attachment[]>([]), [inspecting, setInspecting] = useState<Attachment | null>(null);
   // Three columns need room: on narrower windows the draft panel, then the task list, start hidden.
@@ -129,7 +129,7 @@ export default function App() {
   }
   async function createTask() {
     if (!connectionId || connectionId === CLAUDE_CODE) { needAi(); return null; }
-    const s = await api!.call('create', { connectionId, project, model: pendingModel, effort: pendingEffort }); setPendingModel(undefined); setPendingEffort(''); setSelected(s.id); await refresh(); return s;
+    const s = await api!.call('create', { connectionId, model: pendingModel, effort: pendingEffort }); setPendingModel(undefined); setPendingEffort(''); setSelected(s.id); await refresh(); return s;
   }
   async function send() {
     if (!query.trim() || running) return;
@@ -192,7 +192,7 @@ export default function App() {
   const useSkill = (name: string) => { setForcedSkill(name); setQuery(''); setSlashIndex(0); setSettings(false); setView('chat'); setTimeout(() => composerRef.current?.focus(), 0); };
   const forced = routedSkills.find(s => s.name === forcedSkill);
   // Tasks that were opened but never used (older versions created them eagerly) stay out of the list.
-  const filtered = snapshot?.sessions.filter(s => (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) && matchesSession(s, search) && (filter !== 'projects' || s.project) && (filter !== 'artifacts' || s.draft)) || [];
+  const filtered = snapshot?.sessions.filter(s => (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) && matchesSession(s, search) && (filter !== 'artifacts' || s.draft)) || [];
   const providerName = (c?: Connection) => c ? (c.provider === 'openai' ? 'OpenAI' : c.provider === 'claude' ? 'Claude' : 'Gemini') : '';
   const setTheme = (theme: string) => action(async () => { await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme }); await refresh(); });
   const paletteItems: PaletteItem[] = snapshot ? [
@@ -218,7 +218,7 @@ export default function App() {
       <button className="new-work" data-tour="new-work" onClick={() => void action(create)}><Plus size={18}/> เริ่มงานใหม่</button>
       <label className="search"><Search size={16}/><input placeholder="ค้นหางานหรือเนื้อหา" value={search} onChange={e => setSearch(e.target.value)}/><button className="icon palette-hint" aria-label="เปิดคำสั่ง" onClick={() => setPalette(true)}>{shortcut}</button></label>
       <div className="session-filter" role="tablist" aria-label="กรองงาน">{([['all', 'งานทั้งหมด', MessageSquare], ['artifacts', 'มีผลงาน', FileText]] as const).map(([value, label, Icon]) => <button key={value} role="tab" aria-selected={filter === value} className={filter === value ? 'active' : ''} onClick={() => { setFilter(value); setSettings(false); setView('chat'); }}><Icon size={14}/>{label}</button>)}</div>
-      {filter !== 'all' && <div className="recent-label">{filter === 'projects' ? 'งานที่จัดในโครงการ' : 'ร่างที่บันทึกแล้ว'}</div>}
+      {filter !== 'all' && <div className="recent-label">ร่างที่บันทึกแล้ว</div>}
       <div className="sessions">{groupSessions(filtered).map(group => <section key={group.label} aria-label={group.label}><div className="session-group">{group.label}</div>{group.sessions.map(s => renaming?.id === s.id
         ? <input key={s.id} className="session-rename" aria-label="ชื่องาน" autoFocus value={renaming.title} onChange={e => setRenaming({ ...renaming, title: e.target.value })} onBlur={() => setRenaming(null)} onKeyDown={e => { if (e.key === 'Escape') setRenaming(null); if (e.key === 'Enter' && renaming.title.trim()) void action(async () => { await api.call('rename', renaming); setRenaming(null); await refresh(); }); }}/>
         : <div key={s.id} className={`session ${selected === s.id ? 'selected' : ''}`}><button className="session-open" onClick={() => void action(() => selectSession(s.id))}><span>{s.title}</span><small>{s.project || s.team.toUpperCase() || 'ทุกทีม'} · {statusText[s.status] || s.status}</small></button>

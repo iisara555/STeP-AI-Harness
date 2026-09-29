@@ -3,6 +3,7 @@
     "target": "ES2023", "lib": ["ES2023", "DOM"], "module": "ESNext",
     "moduleResolution": "Bundler", "jsx": "react-jsx", "strict": true,
     "esModuleInterop": true, "skipLibCheck": true, "noEmit": true,
+    "noUnusedLocals": true, "noUnusedParameters": true,
     "types": ["node"]
   },
   "include": ["src", "electron", "test", "vite.config.ts"]

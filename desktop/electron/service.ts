@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve, relative, isAbsolute } from 'node:path';
-import type { Connection, RunEvent, Session } from '../src/types';
+import type { Connection, RunEvent } from '../src/types';
 import { Store } from './store';
 import type { ProviderAdapter, ProviderContext } from './providers';
 

@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, clipboard, session as electronSession } from 'electron';
-import { mkdir, readFile, writeFile, stat, appendFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, stat, appendFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, basename, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -76,7 +76,7 @@ async function makeWindow() {
   window = new BrowserWindow({ width: 1440, height: 940, minWidth: 800, minHeight: 600, title: 'STeP Desktop', backgroundColor: '#fafaf8', show: false, ...(app.isPackaged ? {} : { icon: resolve(__dirname, '../build/icon.ico') }), webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
-  window.webContents.on('will-prevent-unload', async event => {
+  window.webContents.on('will-prevent-unload', async () => {
     // Keep the window open by default when the editor has unsaved content.
     const result = await dialog.showMessageBox(window, { type: 'warning', message: 'มีร่างที่ยังไม่บันทึก', detail: 'กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก', buttons: ['กลับไปบันทึก', 'ปิดโดยไม่บันทึก'], defaultId: 0, cancelId: 0 });
     if (result.response === 1) window.destroy();
