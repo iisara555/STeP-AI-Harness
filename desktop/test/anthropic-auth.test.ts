@@ -28,6 +28,7 @@ async function fixture(version = '1.35.0') {
       "const saved = path.join(dir, 'synthetic-oauth');",
       "fs.appendFileSync(path.join(dir, 'calls'), args.join(' ') + '\\n');",
       "if(args[0] === '--version') { console.log('ant " + version + "'); process.exit(0); }",
+      "if(args[0] === 'auth' && args[1] === '--help') { console.log('login\\nprint-credentials\\nlogout'); process.exit(0); }",
       "if(args[0] === 'auth' && args[1] === 'print-credentials') {",
       " if(fs.existsSync(saved)) { console.log('sk-ant-oat01-synthetic-token-value'); process.exit(0); }",
       " process.exit(1);",
