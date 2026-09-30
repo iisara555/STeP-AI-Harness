@@ -8,7 +8,7 @@ The approved goal is a complete, chat-centered STeP employee workspace with edit
 
 Phases 0–3 are implemented and locally validated. The user explicitly authorized pushing this integrated baseline to `main`. This is a development preview, not a published release. Read [delivery status](openharness-parity.md) and check `git log origin/main` for the final integration commit. Phase 3's initial implementation is `3cb7dde`; the final follow-up also contains export validation, hard-link refusal, the memory editor smoke repair and this handoff.
 
-Phase 4 is implemented on `codex/openharness-phase4` for review against the integrated `main` baseline `61846ce`. **Next implementation phase: Phase 5, after reviewing Phase 4.** Do not reimplement Phases 0–4. Live acceptance gaps below remain open and must not be represented as passing because local fixtures passed.
+Phase 4 is implemented on `codex/openharness-phase4` in [draft PR #82](https://github.com/iisara555/STeP-AI-Harness/pull/82), with implementation commits `d7086e6` and `f6185ca`, for review against the integrated `main` baseline `61846ce`. **Next implementation phase: Phase 5, after reviewing Phase 4.** Do not reimplement Phases 0–4. Live acceptance gaps below remain open and must not be represented as passing because local fixtures passed.
 
 | Phase | Implemented baseline | Reference |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Phase 4 is implemented on `codex/openharness-phase4` for review against the inte
 
 Memory is a preference or reference, never authority to act. Workspace instructions and summaries cannot override organization governance. Native provider file/shell tools remain disabled.
 
-## Validation already completed
+## Phase 3 validation already completed
 
 | Check | Result | Boundary |
 | --- | --- | --- |
@@ -60,7 +60,7 @@ Phase 4 is a review branch; it has not been released or merged as part of the ea
 
 `mcp.ts` uses the pinned SDK for managed stdio/HTTP, destination consent, bounded discovery, no uncertain-call retry and process cleanup. `sandbox.ts` uses a reviewed, preinstalled digest-pinned image and only explicitly selected privacy-clean, read-only text snapshots. `src/modules/autopilot/index.js` and the CLI/operator entrypoints score approved public issues, isolate worktrees/test profiles, ask the CLI coder for JSON proposals with native tools disabled, validate paths/privacy/hashes before host writes, run unchanged validation scripts, and preserve review commits/dashboards. Publish and exact-head-reviewed merge are separately gated. A detached autopilot with a prompt hook fails closed rather than skipping the hook.
 
-Completed locally: 200 Desktop unit tests; all six Electron smoke scripts; six new autopilot tests on disposable repositories; Desktop formatting, TypeScript/build and the 51-Skill validator. The isolated Harness regression passed with 814 tests and 6 platform skips (820 total); remote CI is recorded in `desktop/VALIDATION.md` once completed. Fixtures establish local behavior, not live account/transport/container isolation or production acceptance.
+Completed locally: 200 Desktop unit tests; all six Electron smoke scripts; six new autopilot tests on disposable repositories; Desktop formatting, TypeScript/build and the 51-Skill validator. The isolated Harness regression passed with 814 tests and 6 platform skips (820 total); all three remote CI jobs passed for `f6185ca` in [run 36753076528](https://github.com/iisara555/STeP-AI-Harness/actions/runs/36753076528), with the platform counts recorded in `desktop/VALIDATION.md`. Fixtures establish local behavior, not live account/transport/container isolation or production acceptance.
 
 The accepted requirements are retained here for traceability:
 

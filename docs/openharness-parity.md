@@ -8,7 +8,7 @@ The approved roadmap adapts [HKUDS/OpenHarness](https://github.com/HKUDS/OpenHar
 | 1 | Managed policy, Workbench permission gate, hooks, unified approvals and mode UI | Implemented and covered by local unit/Electron checks; see [managed policy](desktop-policy.md) |
 | 2 | Bounded tool loop, parallel reads, document/spreadsheet/reference tools, plans, snapshots, output previews, retry/backoff and usage/cost | Implemented with synthetic local unit/Electron validation; see [tool loop](desktop-tool-loop.md) |
 | 3 | Workspace instructions, compaction, confirmed memory, personalization, session resume/fork/search/export and local OCR input | Implemented with synthetic local unit/Electron validation; see [context and memory](desktop-context-memory.md) |
-| 4 | Coordinator, background/cron tasks, gated autopilot, Docker sandbox and administrator-approved MCP | Implemented on `codex/openharness-phase4` with local synthetic checks; see [automation and tools](desktop-automation.md). Live/release acceptance remains open |
+| 4 | Coordinator, background/cron tasks, gated autopilot, Docker sandbox and administrator-approved MCP | Implemented in [draft PR #82](https://github.com/iisara555/STeP-AI-Harness/pull/82) on `codex/openharness-phase4` with local synthetic checks and passing Linux/Windows CI; see [automation and tools](desktop-automation.md). Live/release acceptance remains open |
 | 5 | Compatible providers, Copilot, headless CLI, dry run, commands, voice, governed Skill Packs and LINE gateway/session runner | Pending |
 | 6 | Live feature-matrix evaluation and remaining operator/employee documentation | Pending; live API runs require an explicit user instruction |
 
