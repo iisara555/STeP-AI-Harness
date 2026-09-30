@@ -421,3 +421,56 @@ test('general help without a Skill drafts with the mandatory rules only', async 
   assert.equal(done.proposals.at(-1)?.text, 'ร่างอีเมล');
   store.close();
 });
+
+
+test('structured receipt source persists in the workspace and is reused on follow-ups', async () => {
+  const { store, session } = fixture();
+  const prompts: string[] = [];
+  const fake: Harness = {
+    ...harness,
+    route: async () => ({
+      routingContract: {
+        mode: 'GENERAL',
+        authority: { status: 'ALLOW' },
+        readiness: { status: 'ready' },
+      },
+    }),
+  };
+  const service = new WorkService(
+    store,
+    fake,
+    async () => ({
+      adapter: {
+        run: async (prompt: string) => {
+          prompts.push(prompt);
+          return prompts.length === 1 ? 'ตรวจใบเสร็จเบื้องต้นแล้ว' : 'ยอดรวม 107.00 บาท';
+        },
+      },
+      context: { cwd: tmpdir(), env: {} },
+    }),
+    () => {},
+  );
+  const source = [
+    '[STeP receipt review JSON — persistent workspace source]',
+    JSON.stringify({
+      schema: 'step-receipt-review/v1',
+      filename: 'receipt.jpg',
+      fields: {
+        merchant: { value: 'ร้านตัวอย่าง จำกัด', checked: true },
+        receiptNumber: { value: 'RC-1024', checked: true },
+        total: { value: '107.00', checked: true },
+      },
+      expense_note: 'ใช้ในโครงการทดสอบ',
+    }),
+  ].join('\n');
+
+  await service.run(session.id, 'ช่วย pre-check ใบเสร็จก่อนส่ง AFP', source, true);
+  const afterFirst = store.session(session.id);
+  assert.match(afterFirst.sourceText || '', /RC-1024/);
+  assert.match(prompts[0], /Approved source excerpts[^]*RC-1024/);
+
+  await service.run(session.id, 'ยอดรวมในใบเสร็จนี้เท่าไร', '', true);
+  assert.match(prompts[1], /Approved source excerpts[^]*RC-1024/);
+  assert.match(prompts[1], /107\.00/);
+  store.close();
+});
