@@ -391,7 +391,9 @@ export function ProviderFields({
             placeholder="เช่น my-project-123456 · บัญชีส่วนตัวเว้นว่างได้"
             autoComplete="off"
           />
-          <span className="small muted">Google Workspace/องค์กรบางบัญชีต้องมี Project ID; Google ส่วนตัวและ AI Pro/Ultra ปกติไม่ต้องกรอก</span>
+          <span className="small muted">
+            Google Workspace/องค์กรบางบัญชีต้องมี Project ID; Google ส่วนตัวและ AI Pro/Ultra ปกติไม่ต้องกรอก
+          </span>
         </label>
       )}
       {provider === 'claude' && mode === 'oauth' && <AnthropicOAuthNote call={call} />}
