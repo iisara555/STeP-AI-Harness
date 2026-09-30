@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { initUserMemory, ensureGitignored, updateUserMemoryProfile } from '../../modules/user-memory.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
+import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
 import { selectTeamProfile } from '../team-selection.js';
 
 export async function runInit(args) {
@@ -151,6 +152,18 @@ export async function runInit(args) {
       if (snapId) {
         success(`สำรองข้อมูลไว้ที่ .step-ai/backups/${snapId}/`);
       }
+    }
+  }
+
+  // Reconcile the previous managed profile before copying the new one. Old
+  // clean files disappear; locally edited stale files are preserved outside
+  // active Skill/Rule paths so they cannot keep influencing routing.
+  if (existingManifest) {
+    const reconciled = await reconcileManagedFiles(dest, existingManifest, desiredManagedPaths(files, instructions));
+    if (reconciled.removed.length) info(`นำไฟล์ที่หมด scope ออกจาก workspace: ${reconciled.removed.length} ไฟล์`);
+    if (reconciled.quarantined.length) {
+      warn(`ย้ายไฟล์ที่เคยแก้แต่หมด scope ออกจากทางใช้งาน: ${reconciled.quarantined.length} ไฟล์`);
+      info(`เก็บสำเนาไว้ที่ ${colors.dim(reconciled.orphanRoot + '/')}`);
     }
   }
 
