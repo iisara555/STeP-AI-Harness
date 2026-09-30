@@ -171,7 +171,7 @@ export async function runInit(args) {
   // clean files disappear; locally edited stale files are preserved outside
   // active Skill/Rule paths so they cannot keep influencing routing.
   if (existingManifest) {
-    const reconciled = await reconcileManagedFiles(dest, existingManifest, desiredManagedPaths(files, instructions));
+    const reconciled = await reconcileManagedFiles(dest, existingManifest, desiredManagedPaths(files, instructions), { packageRoot: PACKAGE_ROOT });
     if (reconciled.removed.length) info(`นำไฟล์ที่หมด scope ออกจาก workspace: ${reconciled.removed.length} ไฟล์`);
     if (reconciled.quarantined.length) {
       warn(`ย้ายไฟล์ที่เคยแก้แต่หมด scope ออกจากทางใช้งาน: ${reconciled.quarantined.length} ไฟล์`);
