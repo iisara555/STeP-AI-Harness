@@ -107,8 +107,7 @@ async function installPortablePython(runtimeDir: string, log: Log) {
     await rm(runtimeDir, { recursive: true, force: true });
     await mkdir(runtimeDir, { recursive: true });
     log('STEP ตรวจสอบและแตกไฟล์ Python');
-    const tar =
-      process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
+    const tar = process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
     if ((await run(tar, ['-xzf', archive, '-C', runtimeDir], log)) !== 0 || !existsSync(portableOcrPython(runtimeDir)))
       throw new Error('OCR_COMPONENT_INSTALL_FAILED');
     return portableOcrPython(runtimeDir);
@@ -147,7 +146,11 @@ export async function installOcr(appFolder: string, componentDir: string, log: L
       ? []
       : [['สร้างพื้นที่ OCR แยกจากระบบ', bootstrapPython, ['-m', 'venv', venvDir]] as [string, string, string[]]]),
     ['อัปเดตตัวติดตั้ง Python', venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']],
-    ['ติดตั้ง PaddlePaddle (CPU)', venvPython, ['-m', 'pip', 'install', spec.paddle, '-i', 'https://www.paddlepaddle.org.cn/packages/stable/cpu/']],
+    [
+      'ติดตั้ง PaddlePaddle (CPU)',
+      venvPython,
+      ['-m', 'pip', 'install', spec.paddle, '-i', 'https://www.paddlepaddle.org.cn/packages/stable/cpu/'],
+    ],
     ['ติดตั้ง OCR ภาษาไทย', venvPython, ['-m', 'pip', 'install', '-r', join(appFolder, 'requirements-core.txt')]],
     ...(crosscheck
       ? [
