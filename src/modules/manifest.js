@@ -1,5 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { calculateFileSha256 } from '../utils/checksum.js';
 import { ensureDir, pathExists } from '../utils/file-ops.js';
 import { safeWorkspacePath } from '../utils/workspace-path.js';
@@ -38,7 +38,7 @@ export async function readManifest(workspaceDir) {
  */
 export async function writeManifest(workspaceDir, data) {
   const path = await safeWorkspacePath(workspaceDir, `${STEP_AI_DIR}/${MANIFEST_FILENAME}`);
-  await ensureDir(join(path, '..'));
+  await ensureDir(dirname(path));
   await writeFile(path, JSON.stringify(data, null, 2), 'utf-8');
 }
 
