@@ -36,7 +36,7 @@ export class OcrService {
 
   async health() {
     try {
-      const response = await fetch(this.base + '/api/health', { signal: AbortSignal.timeout(1500), cache: 'no-store' });
+      const response = await fetch(this.base + '/api/health', { signal: AbortSignal.timeout(4000), cache: 'no-store' });
       const body: any = await response.json();
       // Only accept the STeP service, not whatever else happens to listen on the port.
       return response.ok && body?.ok === true && body.service === 'STeP Local Thai OCR'
