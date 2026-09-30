@@ -244,7 +244,9 @@ export function SettingsPanel({
                               : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
                     </p>
                   )}
-                {c.provider === 'gemini' && c.googleCloudProject && <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>}
+                {c.provider === 'gemini' && c.googleCloudProject && (
+                  <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>
+                )}
                 {c.modelsAt && (
                   <p className="small muted">
                     โมเดล {c.models?.length || 0} รายการ · อัปเดต {new Date(c.modelsAt).toLocaleString('th-TH')}
