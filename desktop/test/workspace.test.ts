@@ -422,7 +422,6 @@ test('general help without a Skill drafts with the mandatory rules only', async 
   store.close();
 });
 
-
 test('structured receipt source persists in the workspace and is reused on follow-ups', async () => {
   const { store, session } = fixture();
   const prompts: string[] = [];
