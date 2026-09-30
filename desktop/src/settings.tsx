@@ -223,17 +223,28 @@ export function SettingsPanel({
                 ) : (
                   <p className={c.ready ? 'connected' : 'muted'}>{c.note}</p>
                 )}
-                {c.provider === 'claude' && (c.mode === 'subscription' || c.mode === 'oauth') && busy !== c.id && (
-                  <p className={c.signedIn ? 'small connected' : 'small muted'}>
-                    {c.signedIn
-                      ? c.mode === 'oauth'
-                        ? 'เชื่อม Claude Console OAuth แล้ว'
-                        : 'ลงชื่อบัญชี Claude แล้ว'
-                      : c.mode === 'oauth'
-                        ? 'ยังไม่ได้เชื่อม Claude Console OAuth'
-                        : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
-                  </p>
-                )}
+                {((c.provider === 'claude' && (c.mode === 'subscription' || c.mode === 'oauth')) ||
+                  ((c.provider === 'openai' || c.provider === 'gemini') && c.mode === 'subscription')) &&
+                  busy !== c.id && (
+                    <p className={c.signedIn ? 'small connected' : 'small muted'}>
+                      {c.provider === 'openai'
+                        ? c.signedIn
+                          ? 'ลงชื่อ ChatGPT แล้ว'
+                          : 'ยังไม่ได้ลงชื่อ ChatGPT'
+                        : c.provider === 'gemini'
+                          ? c.signedIn
+                            ? 'ลงชื่อ Google แล้ว'
+                            : 'ยังไม่ได้ลงชื่อ Google'
+                          : c.signedIn
+                            ? c.mode === 'oauth'
+                              ? 'เชื่อม Claude Console OAuth แล้ว'
+                              : 'ลงชื่อบัญชี Claude แล้ว'
+                            : c.mode === 'oauth'
+                              ? 'ยังไม่ได้เชื่อม Claude Console OAuth'
+                              : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
+                    </p>
+                  )}
+                {c.provider === 'gemini' && c.googleCloudProject && <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>}
                 {c.modelsAt && (
                   <p className="small muted">
                     โมเดล {c.models?.length || 0} รายการ · อัปเดต {new Date(c.modelsAt).toLocaleString('th-TH')}
@@ -243,11 +254,15 @@ export function SettingsPanel({
               <div className="connection-actions">
                 <button disabled={Boolean(busy)} onClick={() => void run(c.id, () => call('connect', { id: c.id }))}>
                   {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
-                  {c.provider === 'claude' && c.mode === 'oauth'
-                    ? 'เชื่อมต่อ OAuth'
-                    : c.provider === 'claude' && c.mode === 'subscription'
-                      ? 'เชื่อมต่อ Claude'
-                      : 'เชื่อมต่อและทดสอบ'}
+                  {c.provider === 'openai' && c.mode === 'subscription'
+                    ? 'เชื่อมต่อ ChatGPT'
+                    : c.provider === 'gemini' && c.mode === 'subscription'
+                      ? 'เชื่อมต่อ Google'
+                      : c.provider === 'claude' && c.mode === 'oauth'
+                        ? 'เชื่อมต่อ OAuth'
+                        : c.provider === 'claude' && c.mode === 'subscription'
+                          ? 'เชื่อมต่อ Claude'
+                          : 'เชื่อมต่อและทดสอบ'}
                 </button>
                 {busy === c.id && (
                   <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
@@ -337,7 +352,12 @@ export function SettingsPanel({
                   disabled={Boolean(busy) || (choice.mode === 'api' && !choice.key.trim())}
                   onClick={() =>
                     void run('new', async () => {
-                      await call('connection', { provider: choice.provider, mode: choice.mode, apiKey: choice.key });
+                      await call('connection', {
+                        provider: choice.provider,
+                        mode: choice.mode,
+                        apiKey: choice.key,
+                        googleCloudProject: choice.googleCloudProject,
+                      });
                       setChoice({ ...choice, key: '' });
                     })
                   }
