@@ -1,6 +1,15 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = {
+  SENSITIVE_PATH: 'ไฟล์นี้เป็นพื้นที่เก็บข้อมูลรับรองตัวตน จึงเปิดผ่านเครื่องมือไม่ได้',
+  PATH_RULE_DENIED: 'นโยบายองค์กรไม่อนุญาตให้เครื่องมือเข้าถึงไฟล์นี้',
+  COMMAND_DENIED: 'นโยบายองค์กรไม่อนุญาตคำสั่งนี้',
+  PLAN_MODE_BLOCKED: 'โหมดวางแผนอ่านได้อย่างเดียว เปลี่ยนเป็นถามก่อนทำเมื่อต้องการบันทึกหรือรันคำสั่ง',
+  MODE_NOT_ALLOWED: 'ผู้ดูแลยังไม่อนุญาตโหมดนี้',
+  POLICY_CHANGED: 'นโยบายองค์กรเปลี่ยนระหว่างรออนุมัติ กรุณาตรวจแล้วลองใหม่',
+  HOOK_BLOCKED: 'ขั้นตอนตรวจขององค์กรหยุดการทำงานนี้ กรุณาแจ้งผู้ดูแล',
+  HOOK_BLOCKED_AFTER_TOOL: 'เครื่องมือทำงานแล้ว แต่ขั้นตอนตรวจผลขององค์กรหยุดการใช้ผลลัพธ์ กรุณาตรวจไฟล์หรือ Tasks',
+  APPROVAL_EXPIRED: 'คำขออนุมัตินี้หมดอายุ กรุณาสั่งงานใหม่',
   // Why an attached file cannot be sent (electron/attachments.ts). Shown on the chip and when sending is refused.
   ATTACH_SENSITIVE: 'พบข้อมูลความเสี่ยงสูง เช่น รหัสผ่าน token หรือข้อมูลที่ห้ามส่งออก ลบหรือปิดบังส่วนนั้นในไฟล์แล้วแนบใหม่',
   ATTACH_UNSUPPORTED: 'ยังไม่รองรับไฟล์ชนิดนี้ ใช้ PDF, Word (DOCX), TXT, MD, CSV หรือ TSV',

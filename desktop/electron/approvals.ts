@@ -1,0 +1,59 @@
+import { randomUUID, createHash } from 'node:crypto';
+import type { ApprovalRequest, ApprovalRule } from '../src/types';
+import { Store } from './store';
+
+export const approvalHash = (value: string) => createHash('sha256').update(value).digest('hex');
+export class Approvals {
+  private pending = new Map<
+    string,
+    { resolve: (approved: boolean) => void; request: ApprovalRequest; rule: ApprovalRule; timer: ReturnType<typeof setTimeout> }
+  >();
+  constructor(
+    private store: Store,
+    private emit: (request?: ApprovalRequest, closedId?: string) => void,
+  ) {}
+  rule(workspace: string, tool: string, target: string): ApprovalRule {
+    const workspaceHash = approvalHash(workspace);
+    const targetHash = approvalHash(target);
+    return {
+      id: approvalHash([workspaceHash, tool, targetHash].join('\0')),
+      workspaceHash,
+      tool,
+      targetHash,
+      at: new Date().toISOString(),
+    };
+  }
+  remembered(rule: ApprovalRule) {
+    return Boolean(this.store.get('approval', rule.id));
+  }
+  list() {
+    return this.store.list<ApprovalRule>('approval');
+  }
+  remove(id: string) {
+    this.store.remove('approval', id);
+  }
+  request(rule: ApprovalRule, detail: Omit<ApprovalRequest, 'id' | 'tool'>) {
+    if (this.pending.size >= 20) throw new Error('APPROVAL_LIMIT');
+    return new Promise<boolean>(resolve => {
+      const request = { ...detail, tool: rule.tool, id: randomUUID() };
+      const timer = setTimeout(() => this.respond(request.id, 'cancel'), 300_000);
+      timer.unref();
+      this.pending.set(request.id, { resolve, request, rule, timer });
+      this.emit(request);
+    });
+  }
+  respond(id: string, answer: 'cancel' | 'once' | 'workspace') {
+    const pending = this.pending.get(id);
+    if (!pending) throw new Error('APPROVAL_EXPIRED');
+    if (!['cancel', 'once', 'workspace'].includes(answer) || (answer === 'workspace' && !pending.request.allowRemember))
+      throw new Error('INVALID_INPUT');
+    clearTimeout(pending.timer);
+    this.pending.delete(id);
+    if (answer === 'workspace') this.store.put('approval', pending.rule.id, pending.rule);
+    pending.resolve(answer !== 'cancel');
+    this.emit(undefined, id);
+  }
+  close() {
+    for (const id of [...this.pending.keys()]) this.respond(id, 'cancel');
+  }
+}

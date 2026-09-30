@@ -155,3 +155,6 @@ Context Efficiency เป็น implementation mechanism ภายใน Router/
 `step-ai ask "ช่วยตรวจ TOR นี้ก่อนส่ง AFP" --json`
 
 รายละเอียด: `docs/context-efficiency.md`
+## Desktop governance extension
+
+The desktop host uses an administrator-managed policy, a shared Workbench permission gate and metadata-only hooks. See [desktop-policy.md](desktop-policy.md) for the schema and operational limits, and [openharness-parity.md](openharness-parity.md) for delivery status. These controls supplement the existing Router authority and Privacy gates.

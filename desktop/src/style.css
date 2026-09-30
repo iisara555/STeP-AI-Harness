@@ -2172,3 +2172,31 @@ nav .count {
   color: var(--text);
   box-shadow: 0 1px 2px #0001;
 }
+.approval-detail {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.approval-remember {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+.approval-remember input {
+  width: auto;
+  flex: none;
+  margin-top: 4px;
+}
+.policy-features p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.composer-mode select {
+  margin-left: auto;
+  width: auto;
+  max-width: 240px;
+  font-size: 12px;
+}

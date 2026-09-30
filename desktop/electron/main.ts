@@ -29,7 +29,11 @@ import {
   antComponentPath,
   antComponentSpec,
 } from './anthropic-auth';
-import { existsSync } from 'node:fs';
+import { existsSync, watchFile, unwatchFile } from 'node:fs';
+import { loadPolicy, type PermissionMode } from './policy';
+import { Approvals } from './approvals';
+import { ToolGate } from './tool-gate';
+import { HookEngine, type HookPayload } from './hooks';
 import { attachmentReason } from './attachments';
 import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
@@ -111,6 +115,7 @@ async function main() {
     import(pathToFileURL(join(root, 'src/modules/skills/catalog.js')).href),
   ]);
   const harness: Harness = {
+    permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
     route: routing.queryStepRouter,
@@ -192,7 +197,73 @@ async function main() {
     return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) }, authExecutable };
   }
   const images = new Images(join(data, 'images'), key);
-  const workbench = new Workbench(store, text => privacy.evaluatePrivacyGate(text).redactedText);
+  // The organization's policy (admin-only file). Re-read when it changes; a bad file keeps safe defaults.
+  const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
+  const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
+  let policyState = readPolicy();
+  const workbench = new Workbench(
+    store,
+    text => privacy.evaluatePrivacyGate(text).redactedText,
+    () => policyState.policy,
+  );
+  if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  watchFile(policyState.path, { interval: 5000 }, () => {
+    policyState = readPolicy();
+    approvals.close();
+    diagnose('policy-reloaded', { source: policyState.policy.source, problems: String(policyState.problems.length) });
+    emit({ sessionId: '', type: 'changed' });
+  });
+  const hooks = new HookEngine(
+    () => policyState.policy,
+    async (prompt, payload, signal) => {
+      if (privacy.evaluatePrivacyGate(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+      const session = payload.sessionId ? store.session(String(payload.sessionId)) : undefined;
+      const connection = session ? store.get<Connection>('connection', session.connectionId) : store.connections().find(c => c.ready);
+      if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+      const r = await runtime(connection);
+      if (signal.aborted) throw new Error('CANCELLED');
+      const result = await r.adapter.run(prompt + '\nEvent metadata: ' + JSON.stringify(payload), connection, {
+        ...r.context,
+        signal,
+        emit: () => {},
+        system:
+          'Evaluate the organization hook using only the event metadata. Return only JSON {"decision":"allow"|"block"}. Do not execute tools or external actions.',
+      });
+      return result;
+    },
+  );
+  const permissionMode = (): PermissionMode => {
+    const chosen = store.settings().permissionMode;
+    return chosen && policyState.policy.permission.modes.includes(chosen) ? chosen : policyState.policy.permission.defaultMode;
+  };
+  // Hook results go to diagnostics; payloads carry masked text and metadata only.
+  const fireHook = async (payload: HookPayload) => {
+    const outcome = await hooks.run(payload);
+    if (outcome.results.length)
+      diagnose('hook', {
+        event: payload.event,
+        blocked: String(outcome.blocked),
+        results: outcome.results
+          .map(r => `${r.hook} ${r.ok ? 'ok' : 'failed'} ${r.ms}ms`)
+          .join(' | ')
+          .slice(0, 800),
+      });
+    return outcome;
+  };
+  const approvals = new Approvals(store, (approval, approvalId) =>
+    emit({ sessionId: '', type: approval ? 'approval' : 'approval-close', approval, approvalId }),
+  );
+  const gate = new ToolGate(
+    () => policyState.policy,
+    permissionMode,
+    () =>
+      workbench.root().catch(error => {
+        if (error.message === 'WORKSPACE_REQUIRED') return '';
+        throw error;
+      }),
+    approvals,
+    fireHook,
+  );
   const browsers = new Map<string, BrowserWindow>();
   service = new WorkService(
     store,
@@ -213,6 +284,7 @@ async function main() {
       // Run traces hold sizes, references and timing only; they go to diagnostics, not the window.
       if (event.type === 'trace' && event.trace) {
         const t = event.trace;
+        void fireHook({ event: 'stop', sessionId: event.sessionId, outcome: t.outcome, route: t.route });
         diagnose('run-trace', {
           outcome: t.outcome,
           code: t.code || '',
@@ -289,6 +361,17 @@ async function main() {
   };
   const snapshot = async () => ({
     features: { claudeSubscription },
+    policy: {
+      source: policyState.policy.source,
+      path: policyState.path,
+      problems: policyState.problems,
+      features: policyState.policy.features,
+      modes: policyState.policy.permission.modes,
+      defaultMode: policyState.policy.permission.defaultMode,
+      mode: permissionMode(),
+      hooks: policyState.policy.hooks.length,
+    },
+    approvals: approvals.list(),
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections(),
@@ -320,105 +403,138 @@ async function main() {
         exportPaths.add(result.filePath);
         return { path: result.filePath };
       }
-      case 'toolFiles':
-        return workbench.files(input.path || '');
-      case 'toolRead':
-        return workbench.read(inputText(input.path, 2000));
-      case 'toolStage':
-        return workbench.stage(inputText(input.path, 2000), inputText(input.content, 200000));
+      case 'toolFiles': {
+        const target = inputText(input.path || '', 2000);
+        return gate.run({ tool: 'files', readOnly: true, path: target || '.' }, { title: '', body: '', key: target }, () =>
+          workbench.files(target),
+        );
+      }
+      case 'toolRead': {
+        const target = inputText(input.path, 2000);
+        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, () => workbench.read(target));
+      }
+      case 'toolStage': {
+        const target = inputText(input.path, 2000);
+        // Previewing a diff does not write the workspace; apply has its own approval and mode check.
+        return gate.run({ tool: 'stage', readOnly: true, path: target }, { title: '', body: '', key: target }, () =>
+          workbench.stage(target, inputText(input.content, 200000)),
+        );
+      }
       case 'toolChanges':
-        return workbench.changes();
+        return gate.run({ tool: 'changes', readOnly: true }, { title: '', body: '', key: 'changes' }, () => workbench.changes());
       case 'toolReject':
-        workbench.reject(inputText(input.id, 60));
-        return true;
+        return gate.run({ tool: 'reject', readOnly: true }, { title: '', body: '', key: inputText(input.id, 60) }, () => {
+          workbench.reject(input.id);
+          return true;
+        });
       case 'toolApply': {
         const change = workbench.change(inputText(input.id, 60));
-        const answer = await dialog.showMessageBox(window, {
-          type: 'question',
-          message: 'เขียนไฟล์ที่ตรวจแล้ว?',
-          detail: change.path + '\nตรวจ Before / After ใน Changes ก่อนบันทึก',
-          buttons: ['ยกเลิก', 'บันทึกการแก้ไข'],
-          defaultId: 0,
-          cancelId: 0,
-        });
-        return answer.response === 1 ? workbench.apply(change.id) : null;
+        const review = privacy.evaluatePrivacyGate(change.before + '\n' + change.after);
+        return gate.run(
+          { tool: 'write', readOnly: false, path: change.path },
+          {
+            title: 'เขียนไฟล์ที่ตรวจแล้ว?',
+            body: change.path + '\nตรวจ Before / After ใน Changes ก่อนบันทึก',
+            key: change.path,
+            privacyClass: review.classification === 'public' ? 'internal' : review.classification,
+          },
+          () => workbench.apply(change.id),
+        );
       }
       case 'toolDiff':
-        return workbench.diff();
+        return gate.run({ tool: 'diff', readOnly: true }, { title: '', body: '', key: 'diff' }, () => workbench.diff());
       case 'toolTasks':
-        return workbench.tasks();
+        return gate.run({ tool: 'tasks', readOnly: true }, { title: '', body: '', key: 'tasks' }, () => workbench.tasks());
       case 'toolCancel':
-        await workbench.cancel(inputText(input.id, 60));
-        return true;
+        return gate.run({ tool: 'cancel', readOnly: true }, { title: '', body: '', key: inputText(input.id, 60) }, async () => {
+          await workbench.cancel(input.id);
+          return true;
+        });
       case 'toolRun': {
         const command = inputText(input.command, 2000),
           cwd = await workbench.root();
-        if (privacy.evaluatePrivacyGate(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-        const answer = await dialog.showMessageBox(window, {
-          type: 'warning',
-          message: 'รันคำสั่งนี้บนเครื่อง?',
-          detail: command + '\n\nWorking directory: ' + cwd + '\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย',
-          buttons: ['ยกเลิก', 'รันคำสั่ง'],
-          defaultId: 0,
-          cancelId: 0,
-        });
-        if (answer.response !== 1) return null;
-        if (cwd !== (await workbench.root())) throw new Error('WORKSPACE_CHANGED');
-        return workbench.start(command);
+        const review = privacy.evaluatePrivacyGate(command);
+        if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        return gate.run(
+          { tool: 'terminal', readOnly: false, execute: true, command },
+          {
+            title: 'รันคำสั่งนี้บนเครื่อง?',
+            body: command + '\n\nWorking directory: ' + cwd + '\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย',
+            key: command,
+            privacyClass: review.classification === 'public' ? 'internal' : review.classification,
+          },
+          () => workbench.start(command),
+        );
       }
       case 'toolBrowser': {
         const url = browserUrl(inputText(input.url, 2000));
-        if (browsers.size >= 4) throw new Error('TASK_LIMIT');
-        const id = randomUUID();
-        const browser = new BrowserWindow({
-          width: 1100,
-          height: 800,
-          title: 'STeP Browser',
-          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-browser-' + id },
-        });
-        browsers.set(id, browser);
-        browser.on('closed', () => browsers.delete(id));
-        const network = browser.webContents.session;
-        network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
-        network.setPermissionCheckHandler(() => false);
-        network.on('will-download', e => e.preventDefault());
-        browser.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-        browser.webContents.on('will-navigate', (e, target) => {
+        return gate.run({ tool: 'browser', readOnly: true }, { title: '', body: '', key: url }, async () => {
+          if (browsers.size >= 4) throw new Error('TASK_LIMIT');
+          const id = randomUUID();
+          const browser = new BrowserWindow({
+            width: 1100,
+            height: 800,
+            title: 'STeP Browser',
+            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-browser-' + id },
+          });
+          browsers.set(id, browser);
+          browser.on('closed', () => browsers.delete(id));
+          const network = browser.webContents.session;
+          network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
+          network.setPermissionCheckHandler(() => false);
+          network.on('will-download', e => e.preventDefault());
+          browser.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+          browser.webContents.on('will-navigate', (e, target) => {
+            try {
+              browserUrl(target);
+            } catch {
+              e.preventDefault();
+            }
+          });
+          browser.webContents.on('will-redirect', (e, target) => {
+            try {
+              browserUrl(target);
+            } catch {
+              e.preventDefault();
+            }
+          });
           try {
-            browserUrl(target);
+            await browser.loadURL(url);
           } catch {
-            e.preventDefault();
+            browser.destroy();
+            throw new Error('BROWSER_LOAD_FAILED');
           }
+          return { id, url, title: browser.webContents.getTitle() };
         });
-        browser.webContents.on('will-redirect', (e, target) => {
-          try {
-            browserUrl(target);
-          } catch {
-            e.preventDefault();
-          }
-        });
-        try {
-          await browser.loadURL(url);
-        } catch {
-          browser.destroy();
-          throw new Error('BROWSER_LOAD_FAILED');
-        }
-        return { id, url, title: browser.webContents.getTitle() };
       }
       case 'toolBrowserRead': {
         const browser = browsers.get(inputText(input.id, 60));
         if (!browser || browser.isDestroyed()) throw new Error('BROWSER_CLOSED');
-        return {
+        return gate.run({ tool: 'browser_read', readOnly: true }, { title: '', body: '', key: browser.webContents.getURL() }, async () => ({
           url: browser.webContents.getURL(),
           title: browser.webContents.getTitle(),
           text: await browser.webContents.executeJavaScript('document.body.innerText.slice(0,50000)'),
-        };
+        }));
       }
       case 'snapshot':
         return snapshot();
+      case 'permissionMode': {
+        const mode = input.mode as PermissionMode;
+        if (!policyState.policy.permission.modes.includes(mode)) throw new Error('MODE_NOT_ALLOWED');
+        approvals.close();
+        store.put('settings', 'main', { ...store.settings(), permissionMode: mode });
+        return snapshot();
+      }
+      case 'approvalRemove':
+        approvals.remove(inputText(input.id, 80));
+        return snapshot();
+      case 'approvalRespond':
+        approvals.respond(inputText(input.id, 60), input.answer);
+        return true;
       case 'workspace': {
         const result = await dialog.showOpenDialog(window, { properties: ['openDirectory', 'createDirectory'] });
         if (!result.canceled) {
+          approvals.close();
           const s = store.settings();
           s.workspace = result.filePaths[0];
           store.put('settings', 'main', s);
@@ -860,6 +976,11 @@ async function main() {
         const connection = store.get<Connection>('connection', input.connectionId);
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');
         const session = store.create(connection.id, store.settings().team, inputText(input.project || '', 80));
+        const started = await fireHook({ event: 'session_start', sessionId: session.id });
+        if (started.blocked) {
+          store.remove('session', session.id);
+          throw new Error('HOOK_BLOCKED');
+        }
         if (input.model !== undefined || input.effort) {
           session.model = modelChoice(connection, input.model);
           session.effort = effortChoice(connection, session.model ?? connection.model, input.effort);
@@ -965,6 +1086,18 @@ async function main() {
         }
         if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
+        // Organization hooks see the masked request only, never attachments or credentials.
+        const submitted = await fireHook({
+          event: 'user_prompt_submit',
+          sessionId: id,
+          promptChars: text.length,
+          mode: workMode,
+          files: selected.length,
+        });
+        if (submitted.blocked) {
+          diagnose('prompt-blocked', { code: 'HOOK_BLOCKED' });
+          throw new Error('HOOK_BLOCKED');
+        }
         const queued = store.session(id);
         queued.status = 'queued';
         store.save(queued);
@@ -1019,6 +1152,8 @@ async function main() {
         const id = inputText(input.id, 60);
         store.session(id);
         if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        const ended = await fireHook({ event: 'session_end', sessionId: id });
+        if (ended.blocked) throw new Error('HOOK_BLOCKED');
         store.remove('session', id);
         for (const [aid, a] of attachments) if (a.sessionId === id) attachments.delete(aid);
         return true;
@@ -1109,12 +1244,18 @@ async function main() {
   // Set the theme before the first paint so a dark-theme user never sees a light flash.
   nativeTheme.themeSource = store.settings().theme;
   await makeWindow();
+  window.webContents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
+    if (mainFrame) approvals.close();
+  });
+  window.webContents.on('render-process-gone', () => approvals.close());
   app.on('second-instance', () => {
     window.show();
     window.focus();
   });
   let closing = false;
   app.on('before-quit', event => {
+    approvals.close();
+    unwatchFile(policyState.path);
     service.cancelAll();
     if (closing) return;
     event.preventDefault();

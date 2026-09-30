@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop OpenHarness adaptation — Phase 1
+
+- Add administrator-owned managed policy with safe defaults, strict validation and hot reload.
+- Apply credential/path/command/mode checks and metadata-only command, HTTP and prompt hooks to Workbench tools.
+- Add a shared approval dialog, exact-workspace remembered grants, revocation and ask/plan/admin-enabled auto mode controls.
+- Cover governance with synthetic unit tests and an Electron smoke test through the real preload bridge.
+- Track the remaining OpenHarness adaptation phases in `docs/openharness-parity.md`.
+
 STeP Desktop และ Workspace ทำงานใกล้เคียงโปรแกรม AI ชั้นนำมากขึ้น โดยยังคงด่านอำนาจและ Privacy เดิม
 
 - **คำสั่งต่อเนื่องแบบที่คนพิมพ์จริงไม่หลุดเป็นงานใหม่** เช่น "ขอแบบสั้นกว่านี้", "ทำเป็นภาษาอังกฤษด้วย", "ช่วยทำต่อให้หน่อย", "โอเค แก้หัวข้อ 2 เป็นตาราง" แก้ร่างเดิมต่อ ส่วนคำขอที่พาไปงานอื่นหรือแนบเอกสารใหม่ยังเริ่มงานใหม่ คำถามที่ชี้ส่วนของร่าง ("หัวข้อ 2 หมายถึงอะไร") เห็นร่างประกอบ

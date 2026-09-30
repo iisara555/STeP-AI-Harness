@@ -13,6 +13,7 @@ export function ConfirmDialog({
   tone = 'default',
   onConfirm,
   onCancel,
+  focusCancel = false,
 }: {
   title: string;
   children: ReactNode;
@@ -21,6 +22,7 @@ export function ConfirmDialog({
   tone?: 'default' | 'danger';
   onConfirm: () => Promise<unknown> | unknown;
   onCancel: () => void;
+  focusCancel?: boolean;
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState('');
@@ -51,10 +53,10 @@ export function ConfirmDialog({
           </p>
         )}
         <div className="confirm-actions">
-          <button className="quiet" onClick={onCancel}>
+          <button autoFocus={focusCancel} className="quiet" onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button autoFocus className={tone === 'danger' ? 'danger' : ''} disabled={pending} onClick={() => void confirm()}>
+          <button autoFocus={!focusCancel} className={tone === 'danger' ? 'danger' : ''} disabled={pending} onClick={() => void confirm()}>
             {pending && <LoaderCircle size={15} className="spin" />}
             {confirmLabel}
           </button>

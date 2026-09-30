@@ -159,6 +159,10 @@ try {
     .getByRole('textbox', { name: 'Terminal command' })
     .fill(process.platform === 'win32' ? 'Write-Output "terminal-ui-ok"' : 'echo terminal-ui-ok');
   await page.getByRole('button', { name: 'ตรวจและรัน' }).click();
+  const toolApproval = page.getByRole('alertdialog', { name: 'รันคำสั่งนี้บนเครื่อง?' });
+  await toolApproval.waitFor();
+  assert.equal((await page.evaluate(() => window.step.call('toolTasks'))).length, 0, 'commands wait for human approval');
+  await toolApproval.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await page.locator('.task-card pre').filter({ hasText: 'terminal-ui-ok' }).waitFor();
   await page.getByRole('button', { name: 'ใช้ผลใน Chat', exact: true }).click();
   await page.locator('.send').click();
@@ -175,6 +179,10 @@ try {
   await page.getByRole('textbox', { name: 'File content' }).fill('Reviewed file content');
   await page.getByRole('button', { name: 'ตรวจใน Changes' }).click();
   await page.getByRole('button', { name: 'บันทึกที่ตรวจแล้ว' }).click();
+  await page
+    .getByRole('alertdialog', { name: 'เขียนไฟล์ที่ตรวจแล้ว?' })
+    .getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true })
+    .click();
   await page.waitForTimeout(100);
   assert.equal(await readFile(join(workspace, 'new.txt'), 'utf8'), 'Reviewed file content');
   await page.getByRole('button', { name: 'Browser', exact: true }).click();

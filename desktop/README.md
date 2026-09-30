@@ -77,3 +77,6 @@ STeP Desktop รองรับ OAuth แบบ official ผ่าน Anthropic 
 Anthropic ไม่มีตัวติดตั้ง `ant` สำหรับ Windows ถ้าเครื่องยังไม่มี `ant` STeP Desktop จะดาวน์โหลด release ทางการ v1.36.0 จาก `github.com/anthropics/anthropic-cli` (MIT) เมื่อผู้ใช้กดเชื่อมต่อหรือกด “ติดตั้ง ant CLI” ตรวจ SHA-256 ที่ปักไว้ในโค้ด และตรวจใน profile ชั่วคราวว่าเป็น `ant` 1.5 ขึ้นไปที่รองรับ OAuth ก่อนติดตั้งไว้ที่ `components/ant` ใน app data ถ้า `ant` ของผู้ใช้เองอยู่บน PATH จะใช้ตัวนั้นก่อน
 
 โหมดนี้ใช้ Claude API workspace/usage ของ Claude Console ไม่ใช่โควตา Claude Pro/Max. การใช้ Pro/Max ภายในแอปยังคงปิดไว้หลัง `STEP_CLAUDE_SUBSCRIPTION` จนกว่าจะได้รับอนุมัติที่เหมาะสม; ผู้ใช้ Pro/Max ยังส่งต่องานไป Claude Code ภายนอกได้ตามเดิม
+## Managed organization policy
+
+Desktop permissions and hooks are documented in [desktop-policy.md](../docs/desktop-policy.md). The OpenHarness adaptation roadmap and remaining phases are tracked in [openharness-parity.md](../docs/openharness-parity.md).
