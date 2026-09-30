@@ -233,7 +233,12 @@ export function SetupWizard({
                   disabled={Boolean(busy) || (choice.mode === 'api' && !choice.key.trim())}
                   onClick={() =>
                     void run('connect', async () => {
-                      const c = await call('connection', { provider: choice.provider, mode: choice.mode, apiKey: choice.key });
+                      const c = await call('connection', {
+                        provider: choice.provider,
+                        mode: choice.mode,
+                        apiKey: choice.key,
+                        googleCloudProject: choice.googleCloudProject,
+                      });
                       setChoice({ ...choice, key: '' });
                       setConnecting({ id: c.id, text: 'กำลังเริ่มเชื่อมต่อ' });
                       try {
@@ -248,11 +253,15 @@ export function SetupWizard({
                   {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
                   {busy === 'connect'
                     ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์'
-                    : choice.provider === 'claude' && choice.mode === 'oauth'
-                      ? 'เชื่อมต่อ Claude OAuth'
-                      : choice.provider === 'claude' && choice.mode === 'subscription'
-                        ? 'เชื่อมต่อ Claude'
-                        : 'เชื่อมต่อและทดสอบ'}
+                    : choice.provider === 'openai' && choice.mode === 'subscription'
+                      ? 'เชื่อมต่อ ChatGPT'
+                      : choice.provider === 'gemini' && choice.mode === 'subscription'
+                        ? 'เชื่อมต่อ Google'
+                        : choice.provider === 'claude' && choice.mode === 'oauth'
+                          ? 'เชื่อมต่อ Claude OAuth'
+                          : choice.provider === 'claude' && choice.mode === 'subscription'
+                            ? 'เชื่อมต่อ Claude'
+                            : 'เชื่อมต่อและทดสอบ'}
                 </button>
                 {busy === 'connect' && connecting && (
                   <p className="connect-progress">

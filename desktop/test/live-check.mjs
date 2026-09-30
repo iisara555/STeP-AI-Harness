@@ -1,6 +1,6 @@
 // Manual only (not part of npm test).
 // Live check with the user's own accounts, in a separate test profile (not the real app data).
-// The user signs in in the browser (and pastes the Google code into the app window) themselves.
+// The user signs in in the browser. Gemini uses its local loopback callback; no pasted authorization code is required.
 // Usage (from desktop/): node <this file> <profile-dir> <log-file> openai|gemini ...
 import { _electron as electron } from '@playwright/test';
 import { appendFileSync, mkdirSync } from 'node:fs';
@@ -39,9 +39,7 @@ const pollUntil = async (fn, ms) => {
 };
 
 for (const provider of providers) {
-  log(
-    `== ${provider}: connecting (sign in in the browser${provider === 'gemini' ? ', then paste the Google code in the STeP window' : ''})`,
-  );
+  log(`== ${provider}: connecting (sign in in the browser; STeP waits for the provider callback)`);
   const snap = await page.evaluate(() => window.step.call('snapshot'));
   let c = snap.connections.find(x => x.provider === provider && x.mode === 'subscription');
   if (!c) c = await page.evaluate(p => window.step.call('connection', { provider: p, mode: 'subscription' }), provider);

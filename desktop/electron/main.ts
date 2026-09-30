@@ -8,7 +8,7 @@ import { Store } from './store';
 import { WorkService, type Harness } from './service';
 import { adapter, listModels } from './providers';
 import { errorCode } from './diagnostics';
-import { connectFailureNote, signInAndTest } from './connect';
+import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
 import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
@@ -149,13 +149,20 @@ async function main() {
     await mkdir(cwd, { recursive: true });
     await mkdir(join(home, '.gemini'), { recursive: true });
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
+    const geminiAuthType = connection.provider === 'gemini' ? (connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal') : undefined;
     await writeFile(
       join(home, '.gemini', 'settings.json'),
-      JSON.stringify({ tools: { core: [] }, mcpServers: {}, telemetry: { enabled: false }, context: { fileName: '__STEP_NO_CONTEXT__' } }),
+      JSON.stringify({
+        tools: { core: [] },
+        mcpServers: {},
+        telemetry: { enabled: false },
+        context: { fileName: '__STEP_NO_CONTEXT__' },
+        ...(geminiAuthType ? { security: { auth: { selectedType: geminiAuthType, enforcedType: geminiAuthType } } } : {}),
+      }),
     );
     await writeFile(
       join(home, 'config.toml'),
-      'web_search = "disabled"\n[features]\nshell_tool = false\nplugins = false\nremote_plugin = false\nplugin_sharing = false\napps = false\ngoals = false\n',
+      'web_search = "disabled"\ncli_auth_credentials_store = "file"\n[features]\nshell_tool = false\nplugins = false\nremote_plugin = false\nplugin_sharing = false\napps = false\ngoals = false\n',
     );
     const env: NodeJS.ProcessEnv = {
       PATH: process.env.PATH,
@@ -169,6 +176,8 @@ async function main() {
       LOCALAPPDATA: home,
       CODEX_HOME: home,
       GEMINI_CLI_HOME: home,
+      GOOGLE_CLOUD_PROJECT: connection.provider === 'gemini' ? connection.googleCloudProject : undefined,
+      GOOGLE_CLOUD_PROJECT_ID: connection.provider === 'gemini' ? connection.googleCloudProject : undefined,
       CLAUDE_CONFIG_DIR: join(home, '.claude'),
       ANTHROPIC_CONFIG_DIR: connection.provider === 'claude' && connection.mode === 'oauth' ? join(home, '.anthropic') : undefined,
     };
@@ -316,6 +325,10 @@ async function main() {
         // Only a runtime the user picked is stored; the bundled one is resolved each time it is used.
         const previous = store.get<Connection>('connection', id);
         if (connecting.has(id)) throw new Error('CONNECTION_BUSY');
+        const googleCloudProject =
+          input.googleCloudProject === undefined ? previous?.googleCloudProject || '' : inputText(input.googleCloudProject, 60).trim();
+        if (googleCloudProject && !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(googleCloudProject))
+          throw new Error('GOOGLE_CLOUD_PROJECT_INVALID');
         if (previous?.claudeAuthStarted && (previous.provider !== input.provider || previous.mode !== input.mode))
           throw new Error('DISCONNECT_REQUIRED');
         const connection: Connection = {
@@ -326,6 +339,7 @@ async function main() {
           executable: previous?.customRuntime ? previous.executable : '',
           ...(previous?.customRuntime ? { customRuntime: true } : {}),
           ...(previous?.claudeAuthStarted ? { claudeAuthStarted: true } : {}),
+          ...(input.provider === 'gemini' && input.mode === 'subscription' && googleCloudProject ? { googleCloudProject } : {}),
           ready: false,
           note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ',
         };
@@ -561,6 +575,12 @@ async function main() {
           if (!r.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
           await anthropicLogout(r.authExecutable, r.context);
         }
+        if (c.provider === 'openai') {
+          const r = await runtime(c, true);
+          await signOutManagedProvider(c, r).catch(error =>
+            diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }),
+          );
+        }
         delete c.signedIn;
         // Signing out removes this connection's sign-in data (Google or ChatGPT tokens in its runtime home).
         await removeRuntimeHome(c.id);
@@ -586,6 +606,12 @@ async function main() {
           const r = await runtime(c, true);
           if (!r.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
           await anthropicLogout(r.authExecutable, r.context);
+        }
+        if (c.provider === 'openai') {
+          const r = await runtime(c, true);
+          await signOutManagedProvider(c, r).catch(error =>
+            diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }),
+          );
         }
         await removeRuntimeHome(c.id);
         store.remove('connection', c.id);

@@ -332,8 +332,8 @@ export function AnthropicOAuthNote({ call }: { call: (method: string, input?: an
 }
 
 // Provider, sign-in method and API key: the same fields in the setup wizard and in Settings.
-export type ProviderChoice = { provider: string; mode: string; key: string };
-export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '' };
+export type ProviderChoice = { provider: string; mode: string; key: string; googleCloudProject: string };
+export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '', googleCloudProject: '' };
 export function ProviderFields({
   value,
   onChange,
@@ -345,7 +345,7 @@ export function ProviderFields({
   call: (method: string, input?: any) => Promise<any>;
   claudeSubscription?: boolean;
 }) {
-  const { provider, mode, key } = value;
+  const { provider, mode, key, googleCloudProject } = value;
   const subscription = provider !== 'claude' || claudeSubscription;
   return (
     <>
@@ -359,6 +359,7 @@ export function ProviderFields({
                 provider: e.target.value,
                 mode: e.target.value === 'claude' ? 'oauth' : 'subscription',
                 key: '',
+                googleCloudProject: '',
               })
             }
           >
@@ -381,6 +382,20 @@ export function ProviderFields({
           </select>
         </label>
       </div>
+      {provider === 'gemini' && mode === 'subscription' && (
+        <label>
+          Google Cloud Project ID <span className="muted small">(ถ้าเป็นบัญชี CMU/องค์กร)</span>
+          <input
+            value={googleCloudProject}
+            onChange={e => onChange({ ...value, googleCloudProject: e.target.value.trim() })}
+            placeholder="เช่น my-project-123456 · บัญชีส่วนตัวเว้นว่างได้"
+            autoComplete="off"
+          />
+          <span className="small muted">
+            Google Workspace/องค์กรบางบัญชีต้องมี Project ID; Google ส่วนตัวและ AI Pro/Ultra ปกติไม่ต้องกรอก
+          </span>
+        </label>
+      )}
       {provider === 'claude' && mode === 'oauth' && <AnthropicOAuthNote call={call} />}
       {provider === 'claude' && mode === 'subscription' && claudeSubscription && <ClaudeCodeNote call={call} subscription />}
       {mode === 'claude-code' ? (

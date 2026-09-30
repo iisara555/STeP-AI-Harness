@@ -16,6 +16,8 @@ export type Connection = {
   model: string;
   executable: string;
   customRuntime?: boolean;
+  /** Optional Google Cloud project for Workspace / organization Google OAuth accounts. */
+  googleCloudProject?: string;
   /** A login may have written runtime-owned credentials, including OS keychain entries. */
   claudeAuthStarted?: boolean;
   /** The account signed in at the last connect, kept apart from the test result in `ready`. */
