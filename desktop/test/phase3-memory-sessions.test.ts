@@ -15,6 +15,19 @@ import { DatabaseSync } from 'node:sqlite';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const scan = privacy.evaluatePrivacyGate;
 const entry = { name: 'Style', text: 'Prefer concise responses.', type: 'user', scope: 'private', importance: 0.7, ttl_days: 0 };
+function shortPath(path: string) {
+  if (process.platform !== 'win32') return path;
+  const result = spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'for %I in ("%STEP_MEMORY_TEST_PATH%") do @echo "%~sI"'], {
+    env: { ...process.env, STEP_MEMORY_TEST_PATH: path },
+    encoding: 'utf8',
+    windowsHide: true,
+    windowsVerbatimArguments: true,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const alias = result.stdout.trim().replace(/^"|"$/g, '');
+  assert.ok(alias);
+  return alias;
+}
 test('version-one stores migrate to FTS without replaying interrupted sessions', async () => {
   const home = await mkdtemp(join(tmpdir(), 'step-fts-migrate-')),
     path = join(home, 'workspace.sqlite');
@@ -70,9 +83,9 @@ test('memory schema, explicit confirmation, evidence, privacy, edit and deletion
   store.close();
 });
 test('workspace memory and proposals cannot cross roots; team memory needs policy and correct team', async () => {
-  const home = await mkdtemp(join(tmpdir(), 'step-memory-scope-')),
+  const home = shortPath(await mkdtemp(join(tmpdir(), 'step-memory-scope-'))),
     a = join(home, 'a'),
-    b = join(home, 'b'),
+    b = join(home, 'secondary-workspace'),
     team = join(home, 'team');
   await Promise.all([mkdir(a), mkdir(b), mkdir(team)]);
   const store = new Store(':memory:');
@@ -91,18 +104,7 @@ test('workspace memory and proposals cannot cross roots; team memory needs polic
   assert.ok(parsePolicy({ memory: { teamDirectories: { cc: 'relative/path' } }, features: { memoryTeam: true } }).problems.length);
   policy.permission.pathRules = [{ pattern: '.step/**', allow: false }];
   await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
-  let alias = b;
-  if (process.platform === 'win32') {
-    const short = spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'for %I in ("%STEP_MEMORY_TEST_PATH%") do @echo "%~sI"'], {
-      env: { ...process.env, STEP_MEMORY_TEST_PATH: b },
-      encoding: 'utf8',
-      windowsHide: true,
-      windowsVerbatimArguments: true,
-    });
-    assert.equal(short.status, 0, short.stderr);
-    alias = short.stdout.trim().replace(/^"|"$/g, '');
-    assert.ok(alias);
-  }
+  const alias = shortPath(b);
   store.put('settings', 'main', { workspace: alias, team: 'afp' });
   await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
   policy.permission.pathRules = [{ pattern: join(b, '.step', '**'), allow: false }];

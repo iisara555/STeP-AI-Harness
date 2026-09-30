@@ -1,8 +1,8 @@
 import { mkdir, readdir, lstat, realpath, open, writeFile, unlink, rename } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname, basename, relative, isAbsolute } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
-import type { Policy } from './policy';
+import type { PathRule, Policy } from './policy';
 import type { MemoryEntry, MemoryProposal, Session } from '../src/types';
 import { deniedPath, sensitivePath } from './permissions';
 import { ensureGitignored } from '../../src/modules/user-memory.js';
@@ -10,6 +10,29 @@ import { ensureGitignored } from '../../src/modules/user-memory.js';
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 const TYPES = ['user', 'feedback', 'project', 'reference'];
 const SCOPES = ['private', 'project', 'team'];
+async function canonicalPathRules(rules: PathRule[]) {
+  const aliases = await Promise.all(
+    rules
+      .filter(rule => !rule.allow && isAbsolute(rule.pattern))
+      .map(async rule => {
+        const wildcard = rule.pattern.search(/[*?]/);
+        let parent = dirname(wildcard < 0 ? rule.pattern : rule.pattern.slice(0, wildcard) + '_'),
+          suffix = relative(parent, rule.pattern);
+        for (;;) {
+          try {
+            return { ...rule, pattern: join(await realpath(parent), suffix) };
+          } catch (e: any) {
+            if (!['ENOENT', 'ENOTDIR'].includes(e.code)) throw new Error('PATH_RULE_DENIED');
+            const next = dirname(parent);
+            if (next === parent) return rule;
+            suffix = join(basename(parent), suffix);
+            parent = next;
+          }
+        }
+      }),
+  );
+  return [...rules, ...aliases];
+}
 export function safeMemory(text: string, privacy: (text: string) => any) {
   const scan = privacy(text);
   if (
@@ -149,7 +172,7 @@ export class Memories {
       // Windows 8.3 aliases must not make a workspace-relative denial miss its canonical target.
       const configuredRoot = s.workspace || absolute,
         canonicalRoot = scope === 'project' ? path : await realpath(resolve(configuredRoot)),
-        rules = this.policy().permission.pathRules;
+        rules = await canonicalPathRules(this.policy().permission.pathRules);
       if (deniedPath(join(absolute, ...segments), rules, configuredRoot) || deniedPath(join(path, ...segments), rules, canonicalRoot))
         throw new Error('PATH_RULE_DENIED');
     }
@@ -213,7 +236,7 @@ export class Memories {
     if (m.scope === 'project') {
       const workspace = this.store.settings().workspace,
         canonicalWorkspace = await realpath(resolve(workspace)),
-        rules = this.policy().permission.pathRules;
+        rules = await canonicalPathRules(this.policy().permission.pathRules);
       if (
         deniedPath(join(workspace, '.gitignore'), rules, workspace) ||
         deniedPath(join(canonicalWorkspace, '.gitignore'), rules, canonicalWorkspace)
