@@ -81,19 +81,32 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
       });
     }
 
+    const localCandidates: Array<{ token: string; value: string; item: Candidate }> = [];
     for (const item of source.slice(0, 6)) {
       const value = String(item?.value || '').trim();
       if (!value || seen.has(value)) continue;
       seen.add(value);
-      const token = 'C_' + field + '_' + String(candidates.length + 1);
+      const token = 'C_' + field + '_' + String(localCandidates.length + 1);
       tokens.set(token, { field, value });
+      localCandidates.push({ token, value, item });
+    }
+
+    const tokenizedEvidence = (value: string) => {
+      let output = String(value || '');
+      for (const candidate of [...localCandidates].sort((a, b) => b.value.length - a.value.length)) {
+        if (candidate.value) output = output.split(candidate.value).join(candidate.token);
+      }
+      return sanitize(output).slice(0, 400);
+    };
+
+    for (const candidate of localCandidates) {
       candidates.push({
-        token,
-        shape: valueShape(value),
-        method: String(item?.method || ''),
-        engine: String(item?.engine || ''),
-        score: Number.isFinite(Number(item?.score)) ? Number(item.score) : null,
-        evidence: sanitize(String(item?.evidence || '')).slice(0, 400),
+        token: candidate.token,
+        shape: valueShape(candidate.value),
+        method: String(candidate.item?.method || ''),
+        engine: String(candidate.item?.engine || ''),
+        score: Number.isFinite(Number(candidate.item?.score)) ? Number(candidate.item.score) : null,
+        evidence: tokenizedEvidence(String(candidate.item?.evidence || '')),
       });
     }
 
@@ -103,7 +116,7 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
       current_status: String(spec.status || ''),
       has_current_value: Boolean(spec.selected_value),
       current_shape: valueShape(String(spec.selected_value || '')),
-      evidence: sanitize(String(spec.evidence || '')).slice(0, 400),
+      evidence: tokenizedEvidence(String(spec.evidence || '')),
       candidates,
     });
   }
