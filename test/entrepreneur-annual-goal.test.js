@@ -6,11 +6,12 @@ import { queryStepRouter } from '../src/cli/commands/ask.js';
 import { inferIntentFromText } from '../src/modules/router/context-scanner.js';
 import { PACKAGE_ROOT, resolveTeamSkillPaths } from '../src/modules/role-resolver.js';
 import { loadAndValidateManifests } from '../src/modules/router/index.js';
+import { normalizeFixtureText } from './helpers/text-fixtures.js';
 
 const NAME = 'entrepreneur-annual-goal';
 const PATH = `skills/pm/${NAME}/SKILL.md`;
 const WORKSPACE = 'tmp/__entrepreneur-annual-goal__';
-const read = (path) => readFile(join(PACKAGE_ROOT, path), 'utf8');
+const read = (path) => readFile(join(PACKAGE_ROOT, path), 'utf8').then(normalizeFixtureText);
 const route = (query, team = 'piti', extra = {}) => queryStepRouter(query, { team, workspaceDir: WORKSPACE, ...extra });
 const assessment = (first, decision, act = 'other') => ({
   queryHash: first.intentReview.queryHash, decision, owner: 'business-owner', act,

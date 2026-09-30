@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { queryStepRouter } from '../src/cli/commands/ask.js';
 
 test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) => {
@@ -74,16 +76,27 @@ test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) =
     assert.ok(services.includes('recommendationPolicy: do-not-recommend-as-current-service'));
   });
 
-  await t.test('natural equipment inventory questions route to expert-resource-matching', async () => {
+  await t.test('natural equipment inventory questions route to expert-resource-matching', async (t) => {
+    const workspace = await mkdtemp(join(tmpdir(), 'step-equipment-routing-'));
+    t.after(() => rm(workspace, { recursive: true, force: true }));
+    await writeFile(join(workspace, 'USER.md'), '# Synthetic profile\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n- **ทีมหลัก (Primary Team)**: CC\n- **กลุ่มงานสำหรับ Routing (Routing Cluster)**: market-creative\n');
     for (const prompt of [
       'มีเครื่อง Freeze Dryer หรือ Spray Dryer ไหม',
       'ช่วยหาเครื่อง HPLC สำหรับวิเคราะห์อาหาร',
       'ต้องการใช้เครื่องพลาสมาหรือ AFM',
       'มีเครื่อง 3D printer และ laser cutter อะไรบ้าง',
     ]) {
-      const result = await queryStepRouter(prompt);
+      const result = await queryStepRouter(prompt, { workspaceDir: workspace, team: '', cluster: '' });
       assert.equal(result.selectedSkill?.name, 'expert-resource-matching', prompt);
       assert.equal(result.scopeResult.status, 'ALLOW', prompt);
+      assert.equal(result.userMemory, null);
+      if (result.routingMode === 'CLARIFY') {
+        assert.equal(result.routingContract.skill, '');
+        assert.ok(result.clarification.options.some(option => option.value === 'expert-resource-matching'));
+      } else {
+        assert.equal(result.routingMode, 'SKILL');
+        assert.equal(result.routingContract.skill, 'expert-resource-matching');
+      }
     }
   });
 

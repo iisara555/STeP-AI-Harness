@@ -8,10 +8,11 @@ import { queryStepRouter } from '../src/cli/commands/ask.js';
 import { listSnapshots, restoreSnapshot } from '../src/modules/recovery.js';
 import { rollbackDistributionUpgrade } from '../src/modules/distribution-upgrade.js';
 import { deriveRoutingConfidence } from '../src/modules/router/scorer.js';
+import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
 
 const options = { team: 'shared', cluster: 'shared' };
-const cli = (query, extra = [], cwd = process.cwd()) => {
-  const result = spawnSync(process.execPath, [join(cwd, 'bin/step-ai.js'), 'ask', query,
+const cli = (query, extra = [], cwd = process.cwd(), packageRoot = cwd) => {
+  const result = spawnSync(process.execPath, [join(packageRoot, 'bin/step-ai.js'), 'ask', query,
     '--team', 'shared', '--cluster', 'shared', ...extra], { cwd, encoding: 'utf8', windowsHide: true });
   assert.equal(result.status, 0, result.stderr);
   return result.stdout;
@@ -56,13 +57,15 @@ test('draft approval request is allowed but an independent approval clause remai
   }
 });
 
-test('long Thai trigger cannot silently beat TOR with a narrow score margin', async () => {
+test('long Thai trigger cannot silently beat TOR with a narrow score margin', async (t) => {
+  const workspace = await temp(t);
+  await writeFile(join(workspace, 'USER.md'), '# Synthetic profile\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n- **ทีมหลัก (Primary Team)**: CC\n- **กลุ่มงานสำหรับ Routing (Routing Cluster)**: market-creative\n');
   const query = 'ช่วยตรวจ TOR งานจ้างออกแบบบูธก่อนส่ง AFP';
-  const result = await queryStepRouter(query, options);
+  const result = await queryStepRouter(query, { team: '', cluster: 'shared', workspaceDir: workspace });
   assert.equal(result.routingMode, 'CLARIFY');
   assert.notEqual(result.routingConfidence.tier, 'HIGH');
   assert.equal(result.contextPlan.components.skill.chars, 0);
-  assert.equal(JSON.parse(cli(query, ['--json'])).routing.mode, 'CLARIFY');
+  assert.equal(JSON.parse(cli(query, ['--json'], workspace, PACKAGE_ROOT)).routing.mode, 'CLARIFY');
   for (const acronym of ['TOR', 'NC', 'CAPA', 'ISO', 'KPI', 'QMS', 'WI']) {
     const confidence = deriveRoutingConfidence({ score: .70, tier: 'AMBIGUOUS', matchedTriggers: ['คำอธิบายงานยาวมาก'], breakdown: { intent: 1, keyword: 1 } },
       { score: .66, matchedTriggers: [acronym], breakdown: { intent: 1, keyword: 1 } });

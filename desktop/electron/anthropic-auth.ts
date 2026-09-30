@@ -7,7 +7,8 @@ export type AnthropicContext = { cwd: string; env: NodeJS.ProcessEnv };
 
 // Keep the OAuth profile isolated from personal API keys and unrelated provider
 // configuration. The official ant CLI and Claude Agent SDK both honor
-// ANTHROPIC_CONFIG_DIR, so STeP never needs to read or persist the token itself.
+// ANTHROPIC_CONFIG_DIR. Status checks briefly read the access token in this main
+// process only; it is never persisted, sent over IPC, or added to diagnostics.
 export function anthropicEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   if (!env.ANTHROPIC_CONFIG_DIR) throw new Error('ANTHROPIC_PROFILE_REQUIRED');
   const keys = [

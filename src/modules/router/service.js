@@ -83,14 +83,18 @@ export async function queryStepRouter(query, options = {}) {
 
   let resolvedTeam = options.team || '';
   let resolvedCluster = options.cluster || '';
+  // An explicitly empty field is broad routing, not permission to restore a
+  // workspace default. CLI identity resolution already applied its precedence.
+  const inheritTeam = options.team === undefined;
+  const inheritCluster = options.cluster === undefined;
   let userMemory = null;
-  if (!resolvedTeam || !resolvedCluster) {
+  if (inheritTeam || inheritCluster) {
     try {
       userMemory = await loadUserMemory(options.workspaceDir || process.cwd());
-      if (!resolvedTeam && userMemory?.profile?.team) {
+      if (inheritTeam && userMemory?.profile?.team) {
         resolvedTeam = userMemory.profile.team;
       }
-      if (!resolvedCluster && userMemory?.profile?.cluster) {
+      if (inheritCluster && userMemory?.profile?.cluster) {
         resolvedCluster = userMemory.profile.cluster;
       }
     } catch {

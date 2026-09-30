@@ -4,6 +4,9 @@ import { scrub } from './diagnostics';
 
 export class Rpc {
   private child: ChildProcessWithoutNullStreams;
+  private childClosed: Promise<void>;
+  private termination?: Promise<void>;
+  private closing = false;
   private sequence = 0;
   private stopped?: Error;
   private tail: string[] = [];
@@ -23,6 +26,8 @@ export class Rpc {
       shell: false,
       stdio: 'pipe',
     });
+    // 'exit' rejects requests immediately; 'close' also waits for stdio handles.
+    this.childClosed = new Promise(resolve => this.child.once('close', () => resolve()));
     createInterface({ input: this.child.stderr }).on('line', line => this.remember(line));
     const lines = createInterface({ input: this.child.stdout });
     lines.on('line', line => {
@@ -117,17 +122,43 @@ export class Rpc {
   }
   close(reason = 'CANCELLED') {
     this.stop(reason);
+    if (this.closing) return;
+    this.closing = true;
     const pid = this.child.pid;
     if (!pid || this.child.exitCode !== null || this.child.signalCode !== null) return;
     if (process.platform === 'win32') {
-      const killer = spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' });
-      killer.on('error', () => this.child.kill());
+      this.termination = new Promise(resolve => {
+        const killer = spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' });
+        killer.on('error', () => {
+          this.child.kill();
+          resolve();
+        });
+        killer.on('close', code => {
+          if (code !== 0 && this.child.exitCode === null && this.child.signalCode === null) this.child.kill();
+          resolve();
+        });
+      });
     } else {
       try {
         process.kill(-pid, 'SIGKILL');
       } catch {
         this.child.kill();
       }
+    }
+  }
+  /** Terminate once and wait for the process tree and stdio to release their handles. */
+  async closeAndWait(reason = 'CANCELLED', timeoutMs = 5000): Promise<void> {
+    this.close(reason);
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        Promise.all([this.childClosed, this.termination]),
+        new Promise<void>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('RUNTIME_SHUTDOWN_TIMEOUT')), timeoutMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

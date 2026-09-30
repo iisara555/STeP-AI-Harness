@@ -11,6 +11,7 @@ import { loadAuthorityRegistry, parseAuthorityRegistry, evaluateAuthorityPreflig
 import { loadActionRegistry } from '../src/modules/actions/index.js';
 import { loadPlaybooks } from '../src/modules/playbooks/index.js';
 import { parseProvenanceYaml } from '../src/modules/provenance/index.js';
+import { normalizeFixtureText } from './helpers/text-fixtures.js';
 
 // H5 from the 2026-09-27 harness audit: the manifests are read by line-based
 // parsers, not a YAML library. Valid YAML they do not understand was dropped
@@ -57,6 +58,17 @@ test('inline lists pass', () => {
   assert.deepEqual(lint('router-index.yaml', ENTRY(['      primary: [hd]', '      consumers: ["*"]'])), []);
 });
 
+test('fixture normalization preserves lone CR while LF and CRLF YAML retain validation', () => {
+  assert.equal(normalizeFixtureText('one\r\ntwo\rthree\n'), 'one\ntwo\rthree\n');
+  for (const newline of ['\n', '\r\n']) {
+    const valid = ENTRY(['      primary: [hd]', '      consumers: ["*"]']).replace(/\n/g, newline);
+    const invalid = ENTRY(['      primary: [hd]', '      consumers:', '        - "*"']).replace(/\n/g, newline);
+    assert.deepEqual(lint('router-index.yaml', valid), []);
+    assert.ok(lint('router-index.yaml', invalid).some(error => /consumers/.test(error)));
+    assert.equal(normalizeFixtureText(valid), ENTRY(['      primary: [hd]', '      consumers: ["*"]']));
+  }
+});
+
 test('a block list where the parsers expect an inline list is rejected', () => {
   const errors = lint('router-index.yaml', ENTRY(['      primary: [hd]', '      consumers:', '        - "*"']));
   assert.equal(errors.length, 1, JSON.stringify(errors));
@@ -93,7 +105,7 @@ test('folded block scalars stay allowed', () => {
 // every one passed the first version of the lint. They are applied to the real
 // manifests so the surrounding text is exactly what ships.
 function manifest(name) {
-  return readFileSync(join(PACKAGE_ROOT, 'manifest', name), 'utf-8');
+  return normalizeFixtureText(readFileSync(join(PACKAGE_ROOT, 'manifest', name), 'utf-8'));
 }
 
 function mutate(name, from, to) {

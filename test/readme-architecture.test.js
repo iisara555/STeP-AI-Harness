@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { normalizeFixtureText } from './helpers/text-fixtures.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -159,7 +160,7 @@ test('employee documentation is aligned and links resolve', async (t) => {
 
 test('release status documents quote one inventory and the current version', async (t) => {
   const { loadRouterIndex } = await import('../src/cli/commands/ask.js');
-  const read = (path) => readFile(resolve(repoRoot, path), 'utf-8');
+  const read = (path) => readFile(resolve(repoRoot, path), 'utf-8').then(normalizeFixtureText);
   const [pkgText, teams, skills, playbooks, actions, readme, changelog, operations, audit, architecture, axes, runbook, catalog] =
     await Promise.all([
       read('package.json'),

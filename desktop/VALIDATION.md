@@ -2,7 +2,17 @@
 
 This is a development preview, not an accepted production release.
 
-## Verified on Windows
+## Current automated verification
+
+The Windows validation/OAuth repair was checked locally with Node 25.8.0:
+
+- Harness: 799 passed, 6 skipped, zero failures (805 tests including nested cases).
+- Desktop: 91 passed, zero failures, including synthetic OAuth cancellation and awaited runtime shutdown.
+- TypeScript/production build, Desktop formatting and repository validation passed. Repository validation reports 51 Skills and no likely secrets.
+- Windows CI is configured to run Harness checks with Node 20 and Desktop checks with Node 24. Those hosted CI runs have not been executed by this local task.
+- Live OAuth, provider entitlement and packaged-app acceptance remain pending; the checklist below is not a completed validation record.
+
+## Previously verified on Windows
 
 - Existing Harness regression suite: 464 passing tests, including nested dependency exclusion and first-party TSX secret scanning.
 - Desktop service suite: 17 passing tests. Includes real deterministic routing for 22 teams, fake provider generation, cancellation, draft conflicts, SQLite restart recovery, and basic DOCX/XLSX/PPTX content checks, structured draft persistence/validation, RPC exit handling, default tool-request denial, and CLI descendant cancellation.
@@ -16,6 +26,15 @@ This is a development preview, not an accepted production release.
 - Dependency audit reports zero known vulnerabilities after scoped image-size 2.0.4 and uuid 11.1.1 overrides. Export regression checks passed; this does not establish absence of unknown vulnerabilities.
 
 ## Remaining acceptance work
+
+### Live OAuth checklist (pending; automated fixtures do not prove account access)
+
+- Use an authorized test account and disposable synthetic inputs. Sign in to ChatGPT, Gemini, or Claude Console through the Desktop connection flow; confirm the connection uses its isolated STeP runtime profile.
+- Run the explicit connection probe (one short model request, which may consume quota), then reopen the app and confirm account reuse. Check a short streamed response and cancellation without exporting credentials or raw auth output.
+- Sign out and remove the test connection; confirm its runtime profile can be removed and personal CLI profiles still work. Check expiry, denied permissions and quota errors using controlled account conditions when available; record any untested cases.
+- Keep Claude Pro/Max in-app login disabled until its separate approval and live validation requirements are met. Record provider, runtime version, platform and outcome only; never record tokens, authorization codes or raw credential responses.
+
+### Other acceptance work
 
 - Authenticated provider end-to-end tests on disposable authorized inputs: login, streaming, account expiry, quota exhaustion, cancellation and runtime tool-denial behavior. UI readiness requires a successful local generation probe, but that is not a full safety certification.
 - Claude SDK runtime integration has not been exercised against a live account. Claude subscription login (via the user's installed Claude Code, isolated `CLAUDE_CONFIG_DIR`) is covered only by synthetic-runtime tests plus a logged-out `auth status` probe against a real Claude Code 2.1.284 on Windows; live Pro login, chat, expiry and logout are unverified, macOS is untested, and Anthropic's Agent SDK terms require prior approval before offering claude.ai login in a third-party product.

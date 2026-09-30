@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { normalizeFixtureText } from './helpers/text-fixtures.js';
 
 test('STeP Quality Layer v0.1 foundation', async (t) => {
-  const documents = await readFile('manifest/documents.yaml', 'utf-8');
-  const skills = await readFile('manifest/skills.yaml', 'utf-8');
+  const documents = normalizeFixtureText(await readFile('manifest/documents.yaml', 'utf-8'));
+  const skills = normalizeFixtureText(await readFile('manifest/skills.yaml', 'utf-8'));
   const qualityLayer = await readFile('docs/quality-layer.md', 'utf-8');
   const smoke = await readFile('docs/quality-pilot-smoke-test.md', 'utf-8');
 

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import type { Connection } from '../src/types';
+import { Rpc } from '../electron/rpc';
 
 async function fakeRuntime(kind: 'openai' | 'gemini') {
   const home = await mkdtemp(join(tmpdir(), `step-${kind}-oauth-`));
@@ -115,9 +116,52 @@ const deps = (home: string, extraEnv: NodeJS.ProcessEnv = {}) => {
   };
 };
 
+test('OAuth cancellation closes the runtime and preserves cancellation over shutdown failure', { timeout: 5000 }, async t => {
+  const f = await fakeRuntime('openai');
+  t.after(() => rm(f.home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
+  const original = Rpc.prototype.closeAndWait;
+  t.mock.method(Rpc.prototype, 'closeAndWait', async function (this: Rpc) {
+    await original.call(this);
+    throw new Error('RUNTIME_SHUTDOWN_TIMEOUT');
+  });
+  const controller = new AbortController();
+  const d = deps(f.home);
+  const connection = { provider: 'openai', mode: 'subscription', executable: f.executable } as Connection;
+  await assert.rejects(
+    signInAndTest(
+      connection,
+      {
+        ...d.value,
+        openExternal: async () => {
+          controller.abort();
+        },
+      },
+      controller.signal,
+    ),
+    /CANCELLED/,
+  );
+  assert.equal(d.state.tested, false);
+  await rm(f.home, { recursive: true, force: true });
+});
+
+test('successful OAuth reports a shutdown failure before sending a test request', { timeout: 5000 }, async t => {
+  const f = await fakeRuntime('openai');
+  t.after(() => rm(f.home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
+  const original = Rpc.prototype.closeAndWait;
+  t.mock.method(Rpc.prototype, 'closeAndWait', async function (this: Rpc) {
+    await original.call(this);
+    throw new Error('RUNTIME_SHUTDOWN_TIMEOUT');
+  });
+  const d = deps(f.home);
+  const connection = { provider: 'openai', mode: 'subscription', executable: f.executable } as Connection;
+  await assert.rejects(signInAndTest(connection, d.value, new AbortController().signal), /RUNTIME_SHUTDOWN_TIMEOUT/);
+  assert.equal(d.state.signedIn, true);
+  assert.equal(d.state.tested, false);
+});
+
 test('ChatGPT OAuth binds the completion to loginId, refreshes the saved account, and reuses it', { timeout: 5000 }, async t => {
   const f = await fakeRuntime('openai');
-  t.after(() => rm(f.home, { recursive: true, force: true }));
+  t.after(() => rm(f.home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
   const connection: Connection = {
     id: 'openai-oauth',
     provider: 'openai',
@@ -160,7 +204,7 @@ test('ChatGPT OAuth binds the completion to loginId, refreshes the saved account
 
 test('Gemini OAuth keeps browser callback mode enabled and never asks ACP stdin for an auth code', { timeout: 5000 }, async t => {
   const f = await fakeRuntime('gemini');
-  t.after(() => rm(f.home, { recursive: true, force: true }));
+  t.after(() => rm(f.home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
   const connection: Connection = {
     id: 'gemini-oauth',
     provider: 'gemini',
@@ -192,7 +236,7 @@ test('Gemini OAuth keeps browser callback mode enabled and never asks ACP stdin 
 
 test('Gemini refuses an incompatible runtime that does not advertise Google OAuth', { timeout: 5000 }, async t => {
   const home = await mkdtemp(join(tmpdir(), 'step-gemini-old-'));
-  t.after(() => rm(home, { recursive: true, force: true }));
+  t.after(() => rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
   const executable = join(home, 'runtime.cjs');
   await writeFile(
     executable,

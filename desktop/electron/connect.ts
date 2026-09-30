@@ -77,13 +77,21 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     const rpc = createRpc(connection, runtime.context);
     const close = () => rpc.close('CANCELLED');
     signal.addEventListener('abort', close, { once: true });
+    let failed = false;
     try {
       const initialized = await initialize(rpc, connection.provider);
       if (connection.provider === 'openai') await openAiSignIn(rpc, connection, deps, signal);
       else await geminiSignIn(rpc, connection, deps, initialized);
+    } catch (error) {
+      failed = true;
+      throw error;
     } finally {
       signal.removeEventListener('abort', close);
-      rpc.close();
+      try {
+        await rpc.closeAndWait();
+      } catch (error) {
+        if (!failed) throw error;
+      }
     }
   }
   // The test gets its own short budget so a stalled provider is reported instead of spinning for minutes.
@@ -121,15 +129,21 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
 export async function signOutManagedProvider(connection: Connection, runtime: { context: Omit<ProviderContext, 'signal' | 'emit'> }) {
   if (connection.provider !== 'openai') return;
   const rpc = createRpc(connection, runtime.context);
+  let failed = false;
   try {
     await initialize(rpc, 'openai');
     await rpc.request('account/logout', null, 20_000);
   } catch (error) {
+    failed = true;
     // Local profile removal still happens in the host. Surface only a typed
     // provider error here; never include OAuth material from the runtime.
     throw runtimeError(error, rpc);
   } finally {
-    rpc.close();
+    try {
+      await rpc.closeAndWait();
+    } catch (error) {
+      if (!failed) throw error;
+    }
   }
 }
 

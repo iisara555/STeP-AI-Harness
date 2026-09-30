@@ -1,12 +1,40 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Rpc } from '../electron/rpc';
 import { createRequire } from 'node:module';
 import { CodexAdapter, GeminiAdapter, ClaudeAdapter, nativeCodex, listModels, googleLoginUrl } from '../electron/providers';
 import type { Connection } from '../src/types';
+
+test('closeAndWait is repeatable and releases process and file handles before cleanup', { timeout: 6000 }, async t => {
+  const home = await mkdtemp(join(tmpdir(), 'step-rpc-shutdown-'));
+  t.after(() => rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
+  const executable = join(home, 'runtime.cjs');
+  await writeFile(
+    executable,
+    `require('node:readline').createInterface({input:process.stdin}).on('line', line => {
+    const message=JSON.parse(line); console.log(JSON.stringify({id:message.id,result:{pid:process.pid}}));
+  });`,
+  );
+  const rpc = new Rpc(process.execPath, [executable], { cwd: home });
+  try {
+    const { pid } = await rpc.request('ready', {});
+    await Promise.all([rpc.closeAndWait(), rpc.closeAndWait()]);
+    assert.throws(() => process.kill(pid, 0));
+    await assert.rejects(rpc.request('ready', {}), /CANCELLED/);
+    await rm(home, { recursive: true, force: true });
+  } finally {
+    await rpc.closeAndWait();
+  }
+});
+
+test('closeAndWait completes after a runtime startup failure', async () => {
+  const rpc = new Rpc(join(tmpdir(), 'step-nonexistent-runtime', 'not-found'), [], { cwd: tmpdir() });
+  await assert.rejects(rpc.request('initialize', {}), /RUNTIME_UNAVAILABLE/);
+  await rpc.closeAndWait();
+});
 
 test('runtime exit rejects pending and future RPC requests immediately', async () => {
   const rpc = new Rpc(process.execPath, ['-e', 'process.exit(1)'], { cwd: tmpdir() });

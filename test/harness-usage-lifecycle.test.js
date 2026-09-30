@@ -11,10 +11,46 @@ import { createSnapshot, restoreSnapshot } from '../src/modules/recovery.js';
 import { copyRoleFiles } from '../src/modules/adapters/base.js';
 import { loadUserMemory, saveUserMemory } from '../src/modules/user-memory.js';
 import { resolveRoutingIdentity } from '../src/modules/routing-identity.js';
+import { spawnSync } from 'node:child_process';
+import { queryStepRouter } from '../src/modules/router/service.js';
+import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
 
 async function tracked(path) {
   return { sha256: await calculateFileSha256(path), size: (await readFile(path)).length };
 }
+
+test('explicit routing fields survive a CC workspace profile in API and CLI', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'step-explicit-routing-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await saveUserMemory(root, '# Synthetic profile\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n- **ทีมหลัก (Primary Team)**: CC\n- **กลุ่มงานสำหรับ Routing (Routing Cluster)**: market-creative\n');
+  const query = 'ช่วยตรวจ TOR งานจ้างออกแบบบูธก่อนส่ง AFP';
+  const route = (overrides = {}) => queryStepRouter(query, { workspaceDir: root, ...overrides });
+  const inherited = await route();
+  assert.equal(inherited.userMemory.profile.team, 'cc');
+  assert.equal(inherited.userMemory.profile.cluster, 'market-creative');
+  assert.deepEqual((await route({ team: undefined, cluster: undefined })).ranked, inherited.ranked);
+  assert.deepEqual(inherited.ranked, (await route({ team: 'cc', cluster: 'market-creative' })).ranked);
+
+  const broad = await route({ team: '', cluster: '' });
+  assert.equal(broad.userMemory, null);
+  assert.equal(broad.routingMode, 'CLARIFY');
+  assert.deepEqual((await route({ team: '' })).ranked, (await route({ team: '', cluster: 'market-creative' })).ranked);
+  assert.deepEqual((await route({ cluster: '' })).ranked, (await route({ team: 'cc', cluster: '' })).ranked);
+  assert.deepEqual((await route({ team: 'afp', cluster: '' })).ranked,
+    (await queryStepRouter(query, { team: 'afp', cluster: '', workspaceDir: join(root, 'empty') })).ranked);
+
+  for (const [flags, expected] of [
+    [[], inherited],
+    [['--team', 'shared'], broad],
+    [['--team', 'shared', '--cluster', 'shared'], await route({ team: '', cluster: 'shared' })],
+  ]) {
+    const result = spawnSync(process.execPath, [join(PACKAGE_ROOT, 'bin', 'step-ai.js'), 'ask', query, '--json', ...flags], {
+      cwd: root, encoding: 'utf8', windowsHide: true,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).routing, expected.routingContract);
+  }
+});
 
 test('managed-file reconciliation removes clean stale files and quarantines edited stale files', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'step-managed-'));
