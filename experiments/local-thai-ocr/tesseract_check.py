@@ -4,6 +4,7 @@ import io
 import os
 import shutil
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ COMMON_TESSERACT_PATHS = (
 )
 
 
+@lru_cache(maxsize=1)
 def find_tesseract() -> str:
     explicit = os.environ.get("TESSERACT_CMD", "").strip()
     if explicit and Path(os.path.expandvars(explicit)).is_file():
@@ -34,6 +36,7 @@ def find_tesseract() -> str:
     return ""
 
 
+@lru_cache(maxsize=4)
 def available_languages(command: str | None = None) -> set[str]:
     executable = command or find_tesseract()
     if not executable:
