@@ -814,6 +814,7 @@ export default function App() {
         ) : view === 'receipt' ? (
           <ReceiptApp
             call={api.call}
+            onEvent={api.onEvent}
             notify={notify}
             onError={e => notify(explainError(e), 'error')}
             handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
