@@ -118,7 +118,6 @@ test('a missing value is not stolen from the next AFP field label and remains tr
   assert.ok(extracted.afpMapping.unmapped_ocr_lines.some((line: any) => line.text === 'ภาษีมูลค่าเพิ่ม'));
 });
 
-
 test('Paddle and Tesseract disagreement becomes ambiguous instead of auto-filling', async () => {
   const review = await loadReview();
   const extracted = review.extractReceipt({
@@ -175,9 +174,5 @@ test('handwriting-only candidate stays ambiguous until a person or AI filter cho
 
   assert.equal(extracted.fields.total.value, '');
   assert.equal(extracted.fields.total.mappingStatus, 'ambiguous');
-  assert.ok(
-    extracted.fields.total.candidates.some(
-      (candidate: any) => candidate.value === '109.00' && candidate.engine === 'thai-trocr',
-    ),
-  );
+  assert.ok(extracted.fields.total.candidates.some((candidate: any) => candidate.value === '109.00' && candidate.engine === 'thai-trocr'));
 });
