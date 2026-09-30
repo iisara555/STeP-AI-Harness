@@ -814,9 +814,10 @@ export default function App() {
         ) : view === 'receipt' ? (
           <ReceiptApp
             call={api.call}
+            onEvent={api.onEvent}
             notify={notify}
             onError={e => notify(explainError(e), 'error')}
-            handoff={(text, allowIds) => action(() => receiptHandoff(text, allowIds))}
+            handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
           />
         ) : view === 'skills' ? (
           <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />

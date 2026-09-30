@@ -5,6 +5,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OcrService } from '../electron/ocr';
+import { ocrComponentSpec } from '../electron/components';
 
 async function serve(handler: Parameters<typeof createServer>[1]) {
   const server: Server = createServer(handler);
@@ -66,4 +67,31 @@ test('the component installer refuses folders that are not the OCR trial', async
     installOcr(tmpdir(), join(tmpdir(), 'venv-never-created'), () => {}),
     /OCR_FOLDER_INVALID/,
   );
+});
+
+test('base installers exclude the heavy OCR runtime and the Receipt page installs it on demand', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.doesNotMatch(pkg.scripts['dist:win'], /bundle-ocr/);
+  assert.doesNotMatch(pkg.scripts['dist:mac'], /bundle-ocr/);
+  assert.doesNotMatch(pkg.scripts['dist:mac:x64'], /bundle-ocr/);
+  assert.ok(
+    pkg.build.extraResources.some((resource: any) => resource.to === 'ocr'),
+    'small OCR application code still ships',
+  );
+  assert.ok(!pkg.build.extraResources.some((resource: any) => resource.to === 'ocr-runtime'), 'heavy OCR runtime must not ship');
+
+  const receipt = await readFile(new URL('../src/receipt.tsx', import.meta.url), 'utf8');
+  assert.match(receipt, /call\('ocrInstall'/);
+  assert.match(receipt, /OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก/);
+
+  const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(main, /resourcesPath, 'ocr-runtime'/);
+});
+
+test('optional OCR component pins the Paddle build supported by each desktop architecture', () => {
+  assert.equal(ocrComponentSpec('win32', 'x64')?.paddle, 'paddlepaddle==3.3.0');
+  assert.equal(ocrComponentSpec('darwin', 'arm64')?.paddle, 'paddlepaddle==3.3.0');
+  assert.equal(ocrComponentSpec('darwin', 'x64')?.paddle, 'paddlepaddle==3.0.0');
+  assert.equal(ocrComponentSpec('linux', 'x64'), null);
 });

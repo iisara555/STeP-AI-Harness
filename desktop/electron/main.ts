@@ -13,7 +13,7 @@ import { checkRuntime, resolveRuntime } from './runtimes';
 import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
-import { findPython, installOcr } from './components';
+import { installOcr, ocrComponentCurrent } from './components';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
 import { findAnthropicCli, resolveAnthropicCli, anthropicLogout } from './anthropic-auth';
@@ -206,26 +206,21 @@ async function main() {
     }
     emit(event);
   });
-  // The OCR trial ships beside the harness in development; installed apps point at the folder the user chose.
-  // OCR code ships with the app (resources/ocr); its Python packages live per user in app data.
-  const ocrFolder = () =>
-    store.settings().ocrDir || (app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr'));
+  // The main app ships only the small OCR application code. Python, Paddle and models are an
+  // optional per-user component installed from the Receipt page after STeP Desktop is installed.
+  const defaultOcrFolder = app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr');
+  const ocrFolder = () => store.settings().ocrDir || defaultOcrFolder;
   const ocrHome = join(data, 'components', 'ocr');
-  // Installers carry a ready OCR runtime (scripts/bundle-ocr.mjs): Python with PaddleOCR plus its two models.
-  const ocrRuntime = app.isPackaged ? join(process.resourcesPath, 'ocr-runtime') : join(__dirname, '..', 'ocr-runtime');
-  const bundledPython = join(ocrRuntime, 'python', process.platform === 'win32' ? 'python.exe' : join('bin', 'python3'));
-  // A venv the user installed (for example with the second OCR engine) wins; otherwise the bundled runtime.
   const ocr = new OcrService(
     ocrFolder,
     undefined,
-    () => (existsSync(ocrPython(ocrHome)) ? ocrPython(ocrHome) : existsSync(bundledPython) ? bundledPython : ocrPython(ocrFolder())),
+    () => (existsSync(ocrPython(ocrHome)) ? ocrPython(ocrHome) : ocrPython(ocrFolder())),
     () => ({
       ...process.env,
       PYTHONIOENCODING: 'utf-8',
       PYTHONDONTWRITEBYTECODE: '1',
       PADDLE_PDX_CACHE_HOME: join(ocrHome, 'paddlex'),
       PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: 'True',
-      ...(existsSync(join(ocrRuntime, 'models')) ? { STEP_OCR_MODEL_DIR: join(ocrRuntime, 'models') } : {}),
     }),
   );
   let installing = false;
@@ -503,11 +498,10 @@ async function main() {
         installing = true;
         try {
           await installOcr(
-            ocrFolder(),
-            join(ocrHome, '.venv'),
+            defaultOcrFolder,
+            ocrHome,
             line => emit({ sessionId: '', type: 'install', text: line }),
             input.crosscheck === true,
-            bundledPython,
           );
         } catch (error) {
           diagnose('ocr-install-failed', { code: errorCode(error) });
@@ -519,7 +513,15 @@ async function main() {
       }
       case 'ocrStatus': {
         const status = await ocr.status();
-        return status.installed ? status : { ...status, python: Boolean(await findPython()) };
+        const managed = existsSync(ocrPython(ocrHome));
+        const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
+        return {
+          ...status,
+          running: status.running && current,
+          installed: status.installed && current,
+          updateAvailable: managed && status.installed && !current,
+          installing,
+        };
       }
       case 'ocrFolder': {
         const picked = await dialog.showOpenDialog(window, { title: 'เลือกโฟลเดอร์ local-thai-ocr', properties: ['openDirectory'] });
