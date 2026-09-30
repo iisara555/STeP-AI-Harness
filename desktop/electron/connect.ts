@@ -118,6 +118,24 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
   }
 }
 
+export async function signOutManagedProvider(
+  connection: Connection,
+  runtime: { context: Omit<ProviderContext, 'signal' | 'emit'> },
+) {
+  if (connection.provider !== 'openai') return;
+  const rpc = createRpc(connection, runtime.context);
+  try {
+    await initialize(rpc, 'openai');
+    await rpc.request('account/logout', null, 20_000);
+  } catch (error) {
+    // Local profile removal still happens in the host. Surface only a typed
+    // provider error here; never include OAuth material from the runtime.
+    throw runtimeError(error, rpc);
+  } finally {
+    rpc.close();
+  }
+}
+
 async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Connection, deps: ConnectDeps, signal: AbortSignal) {
   if (connection.mode === 'api') {
     await rpc.request('account/login/start', { type: 'apiKey', apiKey: deps.runtime.context.key });
