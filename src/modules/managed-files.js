@@ -5,6 +5,30 @@ import { calculateFileSha256 } from '../utils/checksum.js';
 import { pathExists } from '../utils/file-ops.js';
 import { safeWorkspacePath, validateRelativePath } from '../utils/workspace-path.js';
 
+const PROFILE_INSTRUCTION_PATHS = new Set([
+  'CODEX_INSTRUCTIONS.md',
+  'AGENTS.md',
+  'CLAUDE.md',
+  '.cursorrules',
+  '.windsurfrules',
+  'HERMES.md',
+  'OPENCODE.md',
+  'GEMINI.md',
+  'CHATGPT.md',
+  '.github/copilot-instructions.md',
+]);
+
+export function isProfileManagedPath(value = '') {
+  const path = String(value).replace(/\\/g, '/');
+  return /^(?:skills|rules|docs)\//i.test(path) || PROFILE_INSTRUCTION_PATHS.has(path);
+}
+
+export function retainNonProfileManifestFiles(manifest) {
+  return Object.fromEntries(
+    Object.entries(manifest?.files || {}).filter(([path]) => !isProfileManagedPath(path)),
+  );
+}
+
 function normalizedPaths(paths = []) {
   return new Set(
     [...paths]
@@ -34,6 +58,7 @@ export async function reconcileManagedFiles(
   const desired = normalizedPaths(desiredPaths);
   const stale = Object.keys(manifest.files)
     .map(path => String(path).replace(/\\/g, '/'))
+    .filter(isProfileManagedPath)
     .filter(path => !desired.has(path))
     .map(validateRelativePath)
     .sort();
