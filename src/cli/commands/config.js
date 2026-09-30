@@ -100,7 +100,7 @@ export async function runConfig(args) {
     }
     await saveUserConfig({ tool: toolLower });
     success(`อัปเดตเครื่องมือ AI เป็น: ${colors.bold(toolLower)}`);
-    await reprofileCurrentWorkspace({ tool: toolLower, team: config.team });
+    await reprofileCurrentWorkspace({ tool: toolLower });
     return;
   }
 
@@ -192,7 +192,7 @@ export async function runConfig(args) {
       if (map[toolAns]) {
         await saveUserConfig({ tool: map[toolAns] });
         success(`บันทึกเครื่องมือ AI: ${map[toolAns]} สำเร็จ!`);
-        await reprofileCurrentWorkspace({ tool: map[toolAns], team: config.team });
+        await reprofileCurrentWorkspace({ tool: map[toolAns] });
       } else {
         warn('หมายเลขไม่ถูกต้อง ไม่มีการเปลี่ยนแปลง');
       }
