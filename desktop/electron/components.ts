@@ -124,13 +124,7 @@ async function installPortablePython(runtimeDir: string, log: Log) {
  * The main installer carries only the small OCR application code; Python, Paddle and models
  * are downloaded into this user's app-data folder only when the employee chooses to use OCR.
  */
-export async function installOcr(
-  appFolder: string,
-  componentDir: string,
-  log: Log,
-  crosscheck = false,
-  handwriting = false,
-) {
+export async function installOcr(appFolder: string, componentDir: string, log: Log, crosscheck = false, handwriting = false) {
   if (!existsSync(join(appFolder, 'requirements-core.txt'))) throw new Error('OCR_FOLDER_INVALID');
   const spec = ocrComponentSpec();
   if (!spec) throw new Error('OCR_COMPONENT_UNSUPPORTED');
