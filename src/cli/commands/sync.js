@@ -7,7 +7,11 @@ import { safeCopyFile } from '../../utils/file-ops.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
 import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
-import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
+import {
+  desiredManagedPaths,
+  reconcileManagedFiles,
+  retainNonProfileManifestFiles,
+} from '../../modules/managed-files.js';
 import { safeWorkspacePath } from '../../utils/workspace-path.js';
 
 export async function runSync(args) {
@@ -67,7 +71,7 @@ export async function runSync(args) {
 
   let updatedCount = 0;
   let preservedCount = 0;
-  const newManifestFiles = {};
+  const newManifestFiles = retainNonProfileManifestFiles(manifest);
 
   for (const f of files) {
     const targetPath = await safeWorkspacePath(dest, f.relativePath);
