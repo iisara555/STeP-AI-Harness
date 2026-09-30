@@ -67,10 +67,7 @@ test('receipts are posted as raw bytes to the local service and its result is re
     const read = await service.recognize(file, true, true, true);
     assert.equal(read.result.text, 'ยอดสุทธิ 107.00');
     assert.deepEqual([...received.bytes!], [1, 2, 3]);
-    assert.match(
-      received.url!,
-      /filename=%E0%B9%83.*\.jpg&threshold=0\.80&handwriting=on&crosscheck=on&tesseract=on/,
-    );
+    assert.match(received.url!, /filename=%E0%B9%83.*\.jpg&threshold=0\.80&handwriting=on&crosscheck=on&tesseract=on/);
     await writeFile(join(dir, 'note.exe'), 'x');
     await assert.rejects(service.recognize(join(dir, 'note.exe'), false), /OCR_UNSUPPORTED_FILE/);
   } finally {
