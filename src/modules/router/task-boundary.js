@@ -25,7 +25,7 @@ const LEADING_FOLLOWUP_PATTERN =
 // Only explicit edit language makes an existing draft a revision. Without this,
 // a completely different task typed in the same Workspace must start fresh.
 const REVISION_PATTERN =
-  /^\s*(?:ช่วย\s*)?(?:ปรับ|แก้(?:ไข)?|เพิ่ม|ลด|ตัด|เปลี่ยน|ย่อ|ขยาย|เรียบเรียง|จัดรูปแบบ|เขียนใหม่|เติม|ลบ|rewrite|revise|edit)(?:\s|$)/i;
+  /^\s*(?:ช่วย\s*)?(?:(?:ปรับ|แก้(?:ไข)?|เพิ่ม|ลด|ตัด|เปลี่ยน|ย่อ|ขยาย|เรียบเรียง|จัดรูปแบบ|เขียนใหม่|เติม|ลบ)|(?:rewrite|revise|edit)\b)/i;
 
 const RESUME_PATTERN = /^\s*(?:ต่อ(?:เลย|ครับ|ค่ะ|คะ)?|เหมือนเดิม|เอาแบบเดิม)\s*$/i;
 
