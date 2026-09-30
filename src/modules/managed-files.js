@@ -21,9 +21,14 @@ function normalizedPaths(paths = []) {
  * Skill/Rule/instruction paths into .step-ai/orphans so user work is preserved
  * without leaving obsolete context visible to AI clients.
  */
-export async function reconcileManagedFiles(workspaceDir, manifest, desiredPaths = []) {
+export async function reconcileManagedFiles(
+  workspaceDir,
+  manifest,
+  desiredPaths = [],
+  { packageRoot = '' } = {},
+) {
   if (!manifest?.files || typeof manifest.files !== 'object') {
-    return { removed: [], quarantined: [], orphanRoot: '' };
+    return { removed: [], quarantined: [], retainedPackageSources: [], orphanRoot: '' };
   }
 
   const desired = normalizedPaths(desiredPaths);
@@ -33,12 +38,16 @@ export async function reconcileManagedFiles(workspaceDir, manifest, desiredPaths
     .map(validateRelativePath)
     .sort();
 
-  if (stale.length === 0) return { removed: [], quarantined: [], orphanRoot: '' };
+  if (stale.length === 0) {
+    return { removed: [], quarantined: [], retainedPackageSources: [], orphanRoot: '' };
+  }
 
   const batchId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}`;
   const orphanRoot = `.step-ai/orphans/${batchId}`;
   const removed = [];
   const quarantined = [];
+  const retainedPackageSources = [];
+  const isDistributionRoot = packageRoot && resolve(workspaceDir) === resolve(packageRoot);
 
   for (const relPath of stale) {
     if (relPath.split('/')[0].toLowerCase() === '.step-ai') {
@@ -46,6 +55,13 @@ export async function reconcileManagedFiles(workspaceDir, manifest, desiredPaths
     }
 
     const source = await safeWorkspacePath(workspaceDir, relPath);
+    // The standard Pilot bundle is both package source and employee workspace.
+    // Skills/rules/docs outside the active profile stay on disk so another team
+    // can be selected later; dropping them from the manifest is sufficient.
+    if (isDistributionRoot && /^(?:skills|rules|docs)\//i.test(relPath)) {
+      retainedPackageSources.push(relPath);
+      continue;
+    }
     if (!(await pathExists(source))) {
       removed.push(relPath);
       continue;
@@ -68,7 +84,12 @@ export async function reconcileManagedFiles(workspaceDir, manifest, desiredPaths
     quarantined.push({ path: relPath, preservedAt: orphanRel });
   }
 
-  return { removed, quarantined, orphanRoot: quarantined.length ? orphanRoot : '' };
+  return {
+    removed,
+    quarantined,
+    retainedPackageSources,
+    orphanRoot: quarantined.length ? orphanRoot : '',
+  };
 }
 
 /** Build the exact managed-file set for one profile before install/update. */
