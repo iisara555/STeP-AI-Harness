@@ -688,6 +688,9 @@ async function main() {
           return a;
         });
         const attachmentText = selected.map((a: any) => a.text).join('\n\n');
+        const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
+        const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
+        if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');
         // Only juristic-person numbers (13 digits starting with 0) that the person checked may stay unmasked.
         const allowIds = (Array.isArray(input.allowIdentifiers) ? input.allowIdentifiers : [])
           .map((v: unknown) => String(v).replace(/\D/g, ''))
@@ -698,22 +701,32 @@ async function main() {
           s.allowedIdentifiers = [...new Set([...(s.allowedIdentifiers || []), ...allowIds])].slice(-5);
           store.put('session', s.id, s);
         }
-        const review = service.review(text, attachmentText, store.session(id).allowedIdentifiers || []);
+        const review = service.review(text, combinedSource, store.session(id).allowedIdentifiers || []);
         if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
         // Ask only when it adds information: the first send on this computer, a new attachment, or a privacy review signal.
         const flagged = review.action === 'human-confirm';
         const first = !store.settings().consentedAt;
-        if (first || selected.length || flagged) {
+        if (first || selected.length || sourceText || flagged) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
+          const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
           const fingerprint = createHash('sha256')
-            .update([id, text, skill, ...selected.map((a: any) => a.view.id)].join('\0'))
+            .update([id, text, skill, sourceDigest, ...selected.map((a: any) => a.view.id)].join('\0'))
             .digest('hex');
           const token = typeof input.consent === 'string' ? input.consent : '';
           if (!token || consents.get(token) !== fingerprint) {
             const issued = randomUUID();
             consents.set(issued, fingerprint);
             if (consents.size > 20) consents.delete(consents.keys().next().value!);
-            return { consent: { token: issued, first, flagged, labels: review.labels, attachment: selected.length > 0 } };
+            return {
+              consent: {
+                token: issued,
+                first,
+                flagged,
+                labels: review.labels,
+                attachment: selected.length > 0,
+                source: Boolean(sourceText),
+              },
+            };
           }
           consents.delete(token);
           const s = store.session(id);
@@ -726,7 +739,7 @@ async function main() {
         if (busy) throw new Error('RUN_ALREADY_ACTIVE');
         busy = true;
         void service
-          .run(id, text, attachmentText, true, skill || undefined)
+          .run(id, text, combinedSource, true, skill || undefined)
           .catch(error => {
             diagnose('run-rejected', { code: errorCode(error) });
             emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
