@@ -100,6 +100,20 @@ test('routing identity prefers current workspace USER.md, then manifest, and exp
     cluster: '',
     source: 'explicit',
   });
+  await assert.rejects(
+    resolveRoutingIdentity(root, { team: 'not-a-team' }),
+    /Unknown team 'not-a-team'/,
+  );
+
+  await saveUserMemory(
+    root,
+    '# Legacy\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n- **ทีมหลัก (Primary Team)**: NOT-A-TEAM\n- **กลุ่มงานสำหรับ Routing (Routing Cluster)**: market-creative\n',
+  );
+  assert.deepEqual(await resolveRoutingIdentity(root), {
+    team: 'qs',
+    cluster: 'market-creative',
+    source: 'manifest',
+  });
 });
 
 test('managed workspace writes reject symlink and junction-style escape paths', { skip: process.platform === 'win32' }, async (t) => {
