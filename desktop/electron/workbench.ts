@@ -6,10 +6,10 @@ import { promisify } from 'node:util';
 import { StringDecoder } from 'node:string_decoder';
 import type { BackgroundTask, FileChange } from '../src/tools';
 import { Store } from './store';
+import { sensitivePath, evaluatePermission } from './permissions';
+import type { Policy } from './policy';
 const execute = promisify(execFile);
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
-const privateFile = (path: string) =>
-  path.split(/[/\\]/).some(part => /^(?:\.env(?:\..*)?|\.ssh|\.aws|\.git|\.codex|credentials.*|.*\.(?:pem|p12|key))$/i.test(part));
 export function browserUrl(input: string) {
   let url: URL;
   try {
@@ -28,6 +28,7 @@ export class Workbench {
   constructor(
     private store: Store,
     private scrub: (text: string) => string = text => text,
+    private policy?: () => Policy,
   ) {
     for (const task of this.store.list<BackgroundTask>('background'))
       if (task.status === 'running') {
@@ -41,9 +42,15 @@ export class Workbench {
     return realpath(folder);
   }
   async path(input: string, missing = false) {
-    if (typeof input !== 'string' || input.length > 2000 || input.includes('\0') || privateFile(input)) throw new Error('INVALID_PATH');
+    if (typeof input !== 'string' || input.length > 2000 || input.includes('\0')) throw new Error('INVALID_PATH');
     const root = await this.root(),
       full = resolve(root, input || '.');
+    const permitted = (path: string) => {
+      if (sensitivePath(path, root)) throw new Error('INVALID_PATH');
+      if (this.policy && !evaluatePermission({ tool: 'read', readOnly: true, path }, 'ask', this.policy(), { root }).allowed)
+        throw new Error('PATH_RULE_DENIED');
+    };
+    permitted(full);
     const within = (path: string) => {
       const r = relative(root, path);
       if (r.startsWith('..') || isAbsolute(r)) throw new Error('INVALID_PATH');
@@ -52,10 +59,15 @@ export class Workbench {
     try {
       const info = await lstat(full);
       if (info.isSymbolicLink()) throw new Error('INVALID_PATH');
-      within(await realpath(full));
+      const actual = await realpath(full);
+      within(actual);
+      permitted(actual);
     } catch (e: any) {
-      if (missing && e.code === 'ENOENT') within(await realpath(dirname(full)));
-      else throw e;
+      if (missing && e.code === 'ENOENT') {
+        const parent = await realpath(dirname(full));
+        within(parent);
+        permitted(parent);
+      } else throw e;
     }
     return full;
   }
@@ -66,7 +78,15 @@ export class Workbench {
     return {
       path: relative(root, directory),
       entries: entries
-        .filter(e => !e.isSymbolicLink() && !privateFile(e.name) && !['node_modules', 'release'].includes(e.name))
+        .filter(
+          e =>
+            !e.isSymbolicLink() &&
+            !sensitivePath(resolve(directory, e.name)) &&
+            !['node_modules', 'release'].includes(e.name) &&
+            (!this.policy ||
+              evaluatePermission({ tool: 'files', readOnly: true, path: resolve(directory, e.name) }, 'ask', this.policy(), { root })
+                .allowed),
+        )
         .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name))
         .slice(0, 500)
         .map(e => ({ name: e.name, path: relative(root, resolve(directory, e.name)), directory: e.isDirectory() })),
@@ -140,16 +160,31 @@ export class Workbench {
         timeout: 15000,
         maxBuffer: 500000,
       });
+      const names = await execute('git', ['-C', root, '-c', 'core.fsmonitor=false', 'diff', '--name-only', '-z', 'HEAD', '--'], {
+        windowsHide: true,
+        timeout: 15000,
+        maxBuffer: 500000,
+      });
+      const paths: string[] = [];
+      for (const path of names.stdout.split('\0').filter(Boolean)) {
+        try {
+          await this.path(path, true);
+          paths.push(path);
+        } catch {
+          /* Hidden and inaccessible files never enter the diff. */
+        }
+      }
+      if (!paths.length) return { status: this.scrub(status.stdout), diff: '' };
       const diff = await execute(
         'git',
-        ['-C', root, '-c', 'core.fsmonitor=false', '--no-pager', 'diff', '--no-ext-diff', '--no-textconv', 'HEAD', '--'],
+        ['-C', root, '-c', 'core.fsmonitor=false', '--no-pager', 'diff', '--no-ext-diff', '--no-textconv', 'HEAD', '--', ...paths],
         {
           windowsHide: true,
           timeout: 15000,
           maxBuffer: 500000,
         },
       );
-      return { status: status.stdout, diff: diff.stdout };
+      return { status: this.scrub(status.stdout), diff: this.scrub(diff.stdout) };
     } catch {
       throw new Error('GIT_DIFF_UNAVAILABLE');
     }
@@ -160,7 +195,7 @@ export class Workbench {
     if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     const cwd = await this.root(),
       id = randomUUID();
-    const task: BackgroundTask = { id, command, cwd, status: 'running', output: '', at: new Date().toISOString() };
+    const task: BackgroundTask = { id, command: this.scrub(command), cwd, status: 'running', output: '', at: new Date().toISOString() };
     this.store.put('background', id, task);
     // Credentials are not passed to a shell. The user may still run commands with their own OS permissions.
     const env = Object.fromEntries(

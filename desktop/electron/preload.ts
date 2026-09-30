@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
   'snapshot',
+  'permissionMode',
+  'approvalRespond',
+  'approvalRemove',
   'settings',
   'workspace',
   'connection',

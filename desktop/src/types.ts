@@ -122,6 +122,7 @@ export type Session = {
   runs?: RunTrace[];
 };
 export type Settings = {
+  permissionMode?: PermissionMode;
   team: string;
   assistant: string;
   workspace: string;
@@ -138,6 +139,8 @@ export type Settings = {
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
 export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean; reason?: string };
 export type Snapshot = {
+  policy?: PolicySnapshot;
+  approvals?: ApprovalRule[];
   features?: { claudeSubscription?: boolean };
   settings: Settings;
   connections: Connection[];
@@ -145,6 +148,19 @@ export type Snapshot = {
   teams: { id: string; name: string }[];
   userFile: string;
 };
+export type PermissionMode = 'ask' | 'plan' | 'auto';
+export type PolicySnapshot = {
+  source: 'managed' | 'default';
+  path: string;
+  problems: string[];
+  features: Record<string, boolean>;
+  modes: PermissionMode[];
+  defaultMode: PermissionMode;
+  mode: PermissionMode;
+  hooks: number;
+};
+export type ApprovalRule = { id: string; workspaceHash: string; tool: string; targetHash: string; at: string };
+export type ApprovalRequest = { id: string; tool: string; title: string; body: string; privacyClass: string; allowRemember: boolean };
 export type PlanStep = { label: string; action?: boolean };
 export type RunEvent = {
   sessionId: string;
@@ -162,7 +178,11 @@ export type RunEvent = {
     | 'install'
     | 'connect-progress'
     | 'failed'
+    | 'approval'
+    | 'approval-close'
     | 'trace';
+  approval?: ApprovalRequest;
+  approvalId?: string;
   text?: string;
   trace?: RunTrace;
   detail?: string[];

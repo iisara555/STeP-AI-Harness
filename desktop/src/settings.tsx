@@ -42,7 +42,7 @@ export function SettingsPanel({
     [],
   );
   // New users land on AI connections when none exist; otherwise on general settings.
-  const [page, setPage] = useState<'general' | 'ai' | 'appearance' | 'privacy'>(
+  const [page, setPage] = useState<'general' | 'ai' | 'appearance' | 'privacy' | 'policy'>(
     initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length) ? 'ai' : 'general',
   );
   const run = async (id: string, fn: () => Promise<unknown>) => {
@@ -61,6 +61,7 @@ export function SettingsPanel({
     ['ai', 'การเชื่อมต่อ AI', Sparkles],
     ['appearance', 'รูปลักษณ์', Sun],
     ['privacy', 'ความเป็นส่วนตัว', ShieldCheck],
+    ['policy', 'นโยบายองค์กร', ShieldCheck],
   ] as const;
   return (
     <div className="settings-content">
@@ -175,6 +176,39 @@ export function SettingsPanel({
             ))}
           </div>
           <p className="small muted">ทางลัด: กด {shortcut} แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า</p>
+        </section>
+      )}
+      {page === 'policy' && snapshot.policy && (
+        <section>
+          <h2>นโยบายที่ผู้ดูแลกำหนด</h2>
+          <p>
+            {snapshot.policy.source === 'managed' ? 'ใช้นโยบายองค์กร' : 'ใช้ค่าเริ่มต้นที่ปิดความสามารถเสี่ยงไว้'} · Hooks:{' '}
+            {snapshot.policy.hooks}
+          </p>
+          <p className="small muted">{snapshot.policy.path}</p>
+          {snapshot.policy.problems.length > 0 && <p role="alert">อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล</p>}
+          <div className="policy-features">
+            {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
+              <p key={name}>
+                <code>{name}</code>
+                <span>{enabled ? 'เปิดในนโยบาย' : 'ปิดโดยผู้ดูแล'}</span>
+              </p>
+            ))}
+          </div>
+          <p className="small muted">สถานะนี้แสดงสิทธิ์ตามนโยบาย ความสามารถที่อยู่ระหว่างพัฒนาจะพร้อมใช้เมื่อส่งมอบแล้ว</p>
+          <h3>สิทธิ์ที่คุณอนุญาตไว้</h3>
+          {!snapshot.approvals?.length && <p className="muted">ยังไม่มีสิทธิ์ที่บันทึกไว้</p>}
+          {snapshot.approvals?.map(rule => (
+            <div className="folder-row" key={rule.id}>
+              <span>
+                {rule.tool} · {rule.targetHash.slice(0, 12)}
+              </span>
+              <button className="quiet" onClick={() => void run(rule.id, () => call('approvalRemove', { id: rule.id }))}>
+                ถอนสิทธิ์
+              </button>
+            </div>
+          ))}
+          <p className="small muted">สิทธิ์ผูกกับเครื่องมือ เป้าหมาย และโฟลเดอร์ที่ยืนยันเท่านั้น นโยบายองค์กรยังตรวจทุกครั้ง</p>
         </section>
       )}
       {page === 'privacy' && (

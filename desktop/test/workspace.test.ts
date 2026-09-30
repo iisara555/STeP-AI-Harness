@@ -620,6 +620,22 @@ function recorder(reply: (call: number) => string | Promise<string> = n => 'ร�
 const MINUTES =
   'บันทึกการประชุมทีมประชาสัมพันธ์ ครั้งที่ 3/2569\nมติ: ให้ทีม A ส่งร่างสื่อภายในวันที่ 1 ต.ค. 2569\nเสนอจัดเวิร์กช็อป ยังไม่ตกลงวันจัด';
 
+test('plan mode reaches the model while routing and privacy remain host-enforced', async () => {
+  const { store, session } = fixture();
+  const { calls, runtime } = recorder();
+  const service = new WorkService(store, { ...harness, permissionMode: () => 'plan' }, runtime, () => {});
+  try {
+    await service.run(session.id, 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', '', false, undefined, 'chat');
+    assert.match(calls[0].system || '', /Current permission mode is plan/);
+    assert.match(calls[0].prompt, /<routing_contract>/);
+    const before = calls.length;
+    await service.run(session.id, 'เลือกผู้ชนะจัดซื้อ', '', false, undefined, 'chat');
+    assert.equal(calls.length, before);
+  } finally {
+    store.close();
+  }
+});
+
 // Replays the conversation from the employee's screenshot: request, "did you read my file?", then "this one" with the file.
 test('chat keeps the request across "อ่านยัง" and "อันนี้" and reads the file sent with the pointer', async () => {
   const { store, session } = fixture();

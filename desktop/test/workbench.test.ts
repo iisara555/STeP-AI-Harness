@@ -6,6 +6,9 @@ import { join } from 'node:path';
 import { Store } from '../electron/store';
 import { Workbench, browserUrl } from '../electron/workbench';
 import { toolRequests } from '../src/tools';
+import { defaultPolicy } from '../electron/policy';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'step-tools-'));
@@ -61,6 +64,46 @@ test('staging is inert and applying refuses stale content or a changed workspace
     assert.equal(await readFile(join(f.root, 'new.txt'), 'utf8'), 'new');
     assert.equal(f.tools.changes().length, 0);
   } finally {
+    await f.close();
+  }
+});
+
+test('canonical credential paths and managed rules remain hidden in file listings and Git diff', async () => {
+  const f = await fixture();
+  const policy = defaultPolicy();
+  const tools = new Workbench(
+    f.store,
+    text => text,
+    () => policy,
+  );
+  const execute = promisify(execFile);
+  const git = (...args: string[]) =>
+    execute('git', ['-C', f.root, '-c', 'user.name=Synthetic', '-c', 'user.email=test@example.invalid', ...args], { windowsHide: true });
+  try {
+    await mkdir(join(f.root, '.aws'));
+    await writeFile(join(f.root, '.aws', 'credentials'), 'synthetic excluded value');
+    await symlink(join(f.root, '.aws'), join(f.root, 'alias'), process.platform === 'win32' ? 'junction' : 'dir');
+    await assert.rejects(tools.read('alias/credentials'), /INVALID_PATH/);
+    await writeFile(join(f.root, '.env'), 'SYNTHETIC=before');
+    await writeFile(join(f.root, 'allowed.md'), 'before');
+    await writeFile(join(f.root, 'blocked.md'), 'before');
+    await git('init', '--quiet');
+    await git('add', '.env', 'allowed.md', 'blocked.md');
+    await git('commit', '--quiet', '-m', 'Synthetic fixture');
+    await writeFile(join(f.root, '.env'), 'SYNTHETIC=excluded-credential-content');
+    await writeFile(join(f.root, 'allowed.md'), 'allowed public content');
+    await writeFile(join(f.root, 'blocked.md'), 'excluded managed content');
+    policy.permission.pathRules = [{ pattern: 'blocked.md', allow: false }];
+    assert.deepEqual(
+      (await tools.files()).entries.map(e => e.name),
+      ['allowed.md'],
+    );
+    await assert.rejects(tools.read('blocked.md'), /PATH_RULE_DENIED/);
+    const diff = await tools.diff();
+    assert.match(diff.diff, /allowed public content/);
+    assert.doesNotMatch(diff.diff, /excluded-credential-content|excluded managed content|\.env/);
+  } finally {
+    await tools.close();
     await f.close();
   }
 });

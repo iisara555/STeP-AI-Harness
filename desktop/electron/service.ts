@@ -20,6 +20,7 @@ const CHAT_FILE_LIMIT = 10;
 // A short message sent with a file ("อันนี้", "ตามนี้") belongs to the request before it.
 const SHORT_WITH_FILE = 40;
 export type Harness = {
+  permissionMode?: () => 'ask' | 'plan' | 'auto';
   memoryDir?: () => string;
   root: string;
   route: (text: string, options: any) => Promise<any>;
@@ -491,6 +492,7 @@ export class WorkService {
         activity('ค้นเว็บแล้ว · กำลังเตรียมคำตอบจากแหล่งข้อมูล');
       }
       if (mode === 'image') {
+        if (this.harness.permissionMode?.() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         if (!this.generateImage) throw new Error('IMAGE_API_REQUIRED');
         if (attachments) throw new Error('IMAGE_REFERENCE_UNSUPPORTED');
         const metadata = contract.skill ? await this.harness.skillMetadata(contract.skill) : null;
@@ -601,9 +603,13 @@ export class WorkService {
         // Stable parts first (rules, preferences, Skill), so providers can reuse the cached prefix across turns.
         const system = [
           chat ? CHAT_RULES : DRAFTING_RULES,
+          this.harness.permissionMode?.() === 'plan' &&
+            'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           ...personal(this.store.settings()),
           section('skill_instructions', instructions.join('\n\n')),
-        ].join('\n\n');
+        ]
+          .filter(Boolean)
+          .join('\n\n');
         const requestSections = chat
           ? [
               ...(continuing || revising || session.originalQuery !== latest ? [section('earlier_request', requestText)] : []),

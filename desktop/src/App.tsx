@@ -57,6 +57,8 @@ import ideaArt from './assets/illustrations/idea.png';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
+import { ApprovalDialog } from './approval';
+import type { ApprovalRequest } from './types';
 import { WorkbenchPanel } from './workbench';
 import { toolRequests, type ToolTab, type ToolRequest } from './tools';
 import { isImageRequest, imageModels } from './image-routing';
@@ -66,6 +68,7 @@ import { publicSourceUrl } from './web';
 
 export default function App() {
   const api = window.step;
+  const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [selected, setSelected] = useState('');
   const [settings, setSettings] = useState(false),
@@ -218,6 +221,9 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'approval' && event.approval)
+          setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
+        if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
         if (event.sessionId === currentId.current) {
           if (['heartbeat', 'status', 'activity', 'delta', 'reasoning'].includes(event.type)) setHeartbeatAt(Date.now());
           if (event.type === 'activity') {
@@ -239,6 +245,10 @@ export default function App() {
           }
         }
         if (event.type === 'changed') {
+          if (!event.sessionId) {
+            void refresh();
+            return;
+          }
           setRunning(false);
           setStream('');
           setReasoning('');
@@ -1175,6 +1185,29 @@ export default function App() {
                       {mode === 'chat' ? 'Chat' : mode === 'draft' ? 'Draft / Output' : 'Image'}
                     </button>
                   ))}
+                  {snapshot.policy && (
+                    <select
+                      aria-label="สิทธิ์เครื่องมือ"
+                      value={snapshot.policy.mode}
+                      disabled={running || submitting}
+                      onChange={e =>
+                        void action(async () => {
+                          await api.call('permissionMode', { mode: e.target.value });
+                          await refresh();
+                        })
+                      }
+                    >
+                      <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
+                        ถามก่อนทำ
+                      </option>
+                      <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
+                        วางแผน · อ่านอย่างเดียว
+                      </option>
+                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                        อัตโนมัติ{!snapshot.policy.modes.includes('auto') ? ' · ปิดโดยผู้ดูแล' : ''}
+                      </option>
+                    </select>
+                  )}
                   {pendingSource && (
                     <button className="source-chip quiet" onClick={() => setPendingSource('')}>
                       ผลจากเครื่องมือแนบแล้ว ×
@@ -1642,9 +1675,31 @@ export default function App() {
           </aside>
         </>
       )}
+      {toolApprovals[0] && (
+        <ApprovalDialog
+          key={toolApprovals[0].id}
+          request={toolApprovals[0]}
+          onCancel={() =>
+            void action(async () => {
+              await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'cancel' });
+            })
+          }
+          onConfirm={async remember => {
+            await api.call('approvalRespond', { id: toolApprovals[0].id, answer: remember ? 'workspace' : 'once' });
+            await refresh();
+          }}
+        />
+      )}
       {consentAsk && (
-        <ConfirmDialog
-          title={consentAsk.flagged ? 'ตรวจข้อความก่อนส่งให้ AI' : 'ยืนยันการส่งข้อมูลให้ AI'}
+        <ApprovalDialog
+          request={{
+            id: consentAsk.token,
+            tool: 'external_ai',
+            title: consentAsk.flagged ? 'ตรวจข้อความก่อนส่งให้ AI' : 'ยืนยันการส่งข้อมูลให้ AI',
+            body: '',
+            privacyClass: consentAsk.flagged ? 'restricted' : 'internal',
+            allowRemember: false,
+          }}
           confirmLabel="มีสิทธิ์ส่งข้อมูลนี้"
           onCancel={() => setConsentAsk(null)}
           onConfirm={async () => {
@@ -1697,7 +1752,7 @@ export default function App() {
               ? ' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ'
               : ''}
           </p>
-        </ConfirmDialog>
+        </ApprovalDialog>
       )}
       {handoffAsk &&
         (claudeCode === false ? (
