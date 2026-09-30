@@ -1,6 +1,7 @@
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { ensureDir, pathExists } from '../utils/file-ops.js';
+import { safeWorkspacePath } from '../utils/workspace-path.js';
 
 export const OUTPUT_ROOT = 'output';
 
@@ -131,8 +132,12 @@ export async function getNextOutputPath({
   const ext = normalizeExtension(extension);
   const directory = buildOutputDirectory({ workspaceDir, team, type, extension: ext, date });
   const baseName = buildOutputBaseName({ team, type, title, extension: ext, date });
+  const safeDirectory = await safeWorkspacePath(
+    workspaceDir,
+    relative(workspaceDir, directory).replace(/\\/g, '/'),
+  );
 
-  if (createDir) await ensureDir(directory);
+  if (createDir) await ensureDir(safeDirectory);
 
   const prefix = `${baseName}_v`;
   const suffix = `.${ext}`;
@@ -149,8 +154,8 @@ export async function getNextOutputPath({
   };
 
   let entries = [];
-  if (await pathExists(directory)) {
-    entries = await readdir(directory);
+  if (await pathExists(safeDirectory)) {
+    entries = await readdir(safeDirectory);
   }
 
   let version = nextVersionFrom(entries);
@@ -162,17 +167,24 @@ export async function getNextOutputPath({
   // first. Claim the name with an exclusive create and retry on collision, so a
   // version number the caller receives is a name only it holds.
   if (reserve && createDir) {
+    let reserved = false;
     for (let attempt = 0; attempt < 50; attempt += 1) {
       try {
+        path = await safeWorkspacePath(
+          workspaceDir,
+          relative(workspaceDir, path).replace(/\\/g, '/'),
+        );
         await writeFile(path, '', { encoding: 'utf-8', flag: 'wx' });
+        reserved = true;
         break;
       } catch (error) {
         if (error?.code !== 'EEXIST') throw error;
-        version = nextVersionFrom(await readdir(directory));
+        version = nextVersionFrom(await readdir(safeDirectory));
         filename = `${baseName}_v${String(version).padStart(2, '0')}.${ext}`;
-        path = join(directory, filename);
+        path = join(safeDirectory, filename);
       }
     }
+    if (!reserved) throw new Error('OUTPUT_RESERVATION_FAILED');
   }
 
   return {
@@ -190,7 +202,11 @@ export async function getNextOutputPath({
 
 export async function initOutputWorkspace(workspaceDir = process.cwd(), team = 'shared') {
   const teamRoot = join(workspaceDir, OUTPUT_ROOT, normalizeTeamCode(team));
-  await ensureDir(teamRoot);
+  const safeTeamRoot = await safeWorkspacePath(
+    workspaceDir,
+    relative(workspaceDir, teamRoot).replace(/\\/g, '/'),
+  );
+  await ensureDir(safeTeamRoot);
   return {
     root: join(workspaceDir, OUTPUT_ROOT),
     teamRoot,
