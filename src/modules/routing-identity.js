@@ -34,28 +34,32 @@ export async function resolveRoutingIdentity(
   }
 
   const memory = await loadUserMemory(workspaceDir);
-  const memoryTeam = validTeam(memory.profile?.team);
-  if (memoryTeam || memory.profile?.cluster) {
-    return {
-      team: memoryTeam,
-      cluster: String(memory.profile.cluster || '').trim().toLowerCase(),
-      source: memoryTeam ? 'USER.md' : 'USER.md-cluster',
-    };
-  }
-
   const manifest = await readManifest(workspaceDir);
+  const config = await loadUserConfig();
+
+  const memoryTeam = validTeam(memory.profile?.team);
   const manifestTeam = validTeam(
     manifest?.team || (manifest?.targetType === 'team' ? manifest?.role : ''),
   );
-  const manifestCluster = String(manifest?.cluster || '').trim().toLowerCase();
-  if (manifestTeam || manifestCluster) {
-    return { team: manifestTeam, cluster: manifestCluster, source: 'manifest' };
-  }
+  const globalTeam = validTeam(config.team);
+  const teamValue = memoryTeam || manifestTeam || globalTeam;
 
-  const config = await loadUserConfig();
-  return {
-    team: validTeam(config.team),
-    cluster: String(config.cluster || '').trim().toLowerCase(),
-    source: 'global-config',
-  };
+  const memoryCluster = String(memory.profile?.cluster || '').trim().toLowerCase();
+  const manifestCluster = String(manifest?.cluster || '').trim().toLowerCase();
+  const globalCluster = String(config.cluster || '').trim().toLowerCase();
+  const clusterValue = memoryCluster || manifestCluster || globalCluster;
+
+  const source = memoryTeam
+    ? 'USER.md'
+    : manifestTeam
+      ? 'manifest'
+      : globalTeam
+        ? 'global-config'
+        : memoryCluster
+          ? 'USER.md-cluster'
+          : manifestCluster
+            ? 'manifest-cluster'
+            : 'global-config';
+
+  return { team: teamValue, cluster: clusterValue, source };
 }
