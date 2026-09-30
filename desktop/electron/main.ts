@@ -579,8 +579,14 @@ async function main() {
           store.put('settings', 'main', { ...settings, ocrAiConsentedAt: new Date().toISOString() });
         }
 
-        const sanitize = (value: string) => harness.privacy(value).redactedText;
+        let blockedByPrivacy = false;
+        const sanitize = (value: string) => {
+          const scan = harness.privacy(value);
+          if (scan.action === 'block-external') blockedByPrivacy = true;
+          return scan.redactedText;
+        };
         const resolver = buildReceiptAiResolver(rawMapping, sanitize);
+        if (blockedByPrivacy) throw new Error('PRIVACY_REVIEW_REQUIRED');
         if (!resolver.fields.length) throw new Error('INVALID_INPUT');
 
         ocrResolving = true;
