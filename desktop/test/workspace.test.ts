@@ -476,7 +476,6 @@ test('structured receipt source persists in the workspace and is reused on follo
   store.close();
 });
 
-
 test('an unrelated turn starts a new task without old receipt source, draft or history', async () => {
   const { store, session } = fixture();
   const prompts: string[] = [];
