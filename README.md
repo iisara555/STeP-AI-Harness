@@ -30,6 +30,12 @@
 
 STeP AI จะเลือก Skill หรือ Playbook ที่เหมาะสมให้เองในงานส่วนใหญ่ ไม่จำเป็นต้องเลือกจากรายการก่อนทุกครั้ง
 
+## หน้าตา STeP Desktop
+
+![STeP Desktop Workspace พร้อมบทสนทนาและแถบผลงาน](docs/images/gui/02-workspace.png)
+
+> ภาพจาก Electron build จริงของ STeP Desktop โดยใช้ข้อมูลตัวอย่างสำหรับเอกสารนี้
+
 ---
 
 # 1. ติดตั้ง STeP Desktop
@@ -81,6 +87,10 @@ STeP-Desktop-<version>-x64.dmg
 ทีมหลักช่วย Router เลือก Skill ที่ตรงบริบทของคุณมากขึ้น แต่ถ้ายังไม่แน่ใจสามารถเลือกภายหลังได้
 
 ชื่อผู้ช่วยและสไตล์การพูดสามารถเปลี่ยนได้ใน **ตั้งค่าพื้นที่ทำงาน**
+
+![Setup Wizard ของ STeP Desktop](docs/images/gui/01-setup-wizard.png)
+
+*Setup Wizard จริงของ STeP Desktop — เริ่มจากข้อมูลผู้ใช้ ผู้ช่วย AI การเชื่อมต่อ และส่วนเสริม*
 
 ---
 
@@ -134,6 +144,10 @@ Gemini CLI เป็นผู้จัดการ browser OAuth และ local
 - **Claude Pro/Max ผ่าน Claude Code ภายนอก** — STeP Desktop คัดลอกงานและเปิด Claude Code ในโฟลเดอร์งาน
 
 การเชื่อมต่อแต่ละรายการมีปุ่ม **เชื่อมต่อ**, **โหลดรายชื่อโมเดล**, **ออกจากระบบ** และ **ลบ**
+
+![หน้าการเชื่อมต่อ AI ใน STeP Desktop](docs/images/gui/05-ai-connections.png)
+
+*หน้าการเชื่อมต่อ AI จริง แสดงสถานะบัญชี โมเดล และการเพิ่ม connection ใหม่*
 
 ---
 
@@ -274,6 +288,10 @@ Router จะเลือก Skill ให้
 
 เหมาะเมื่อคุณรู้ว่าต้องการ workflow ใดแน่นอน
 
+![ศูนย์รวม Skill ของ STeP Desktop](docs/images/gui/03-skill-hub.png)
+
+*Skill Hub จริง แสดง Skill ที่ Router ใช้ได้ สถานะ Manifest/Routing และ Skill ของทีมผู้ใช้*
+
 ---
 
 # 7. ตรวจใบเสร็จก่อนส่ง AFP
@@ -283,6 +301,10 @@ Router จะเลือก Skill ให้
 **เครื่องมือ → ตรวจใบเสร็จ AFP**
 
 OCR เป็นส่วนเสริมหลังติดตั้ง STeP Desktop คนที่ไม่ใช้ไม่ต้องดาวน์โหลด runtime OCR
+
+![หน้าตรวจใบเสร็จก่อนส่ง AFP](docs/images/gui/04-receipt-afp.png)
+
+*หน้า Receipt AFP จริงก่อนติดตั้ง OCR — ผู้ใช้ติดตั้งส่วนเสริมเฉพาะเครื่องที่ต้องใช้*
 
 ## ครั้งแรก
 
