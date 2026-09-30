@@ -50,6 +50,11 @@ type LineRecord = {
   needsReview?: boolean;
   crosscheckCandidate?: string;
   crosscheckStatus?: string | null;
+  tesseractCandidate?: string;
+  tesseractConfidence?: number | null;
+  tesseractStatus?: string | null;
+  handwritingCandidate?: string;
+  textKind?: 'printed-likely' | 'handwriting-likely' | 'printed-conflict' | 'uncertain';
 };
 type Issue = { code: string; severity: 'blocking' | 'advisory'; count?: number };
 type ReceiptReviewApi = {
@@ -72,10 +77,19 @@ const review = (window as unknown as { ReceiptReview: ReceiptReviewApi }).Receip
 type OcrStatus = {
   running: boolean;
   crosscheck: boolean;
+  handwriting: boolean;
+  tesseract: boolean;
   installed: boolean;
   folder: string;
   installing?: boolean;
   updateAvailable?: boolean;
+};
+type AiDecision = {
+  field: string;
+  status: 'keep' | 'suggested' | 'ambiguous' | 'unmapped';
+  value?: string;
+  token?: string;
+  reason: string;
 };
 type Doc = { name: string; preview: string; result: any };
 
@@ -113,12 +127,14 @@ export function ReceiptApp({
   onError,
   handoff,
   onEvent,
+  connectionId,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
   handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
   onEvent: (callback: (event: { type: string; text?: string }) => void) => () => void;
+  connectionId?: string;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState(''),
@@ -131,7 +147,8 @@ export function ReceiptApp({
     [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
   const [linesChecked, setLinesChecked] = useState(false),
     [note, setNote] = useState(''),
-    [buyerExcluded, setBuyerExcluded] = useState(false);
+    [buyerExcluded, setBuyerExcluded] = useState(false),
+    [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -185,6 +202,7 @@ export function ReceiptApp({
     setConfirmed({});
     setLinesChecked(false);
     setNote('');
+    setAiDecisions([]);
   }
   const draft = () => ({
     schema: 'step-receipt-review/v1',
