@@ -97,9 +97,7 @@ test('AI OCR resolver preserves uncertainty instead of forcing a field value', (
   };
   const built = buildReceiptAiResolver(mapping, text => text);
   const decisions = resolveReceiptAiResponse(
-    ```json
-{"decisions":{"total":{"choice":"AMBIGUOUS","reason":"conflict"},"vat":{"choice":"UNMAPPED","reason":"no candidate"}}}
-```,
+    '```json\n{"decisions":{"total":{"choice":"AMBIGUOUS","reason":"conflict"},"vat":{"choice":"UNMAPPED","reason":"no candidate"}}}\n```',
     built.tokens,
     built.fields,
   );
