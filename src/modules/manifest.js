@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { calculateFileSha256 } from '../utils/checksum.js';
 import { ensureDir, pathExists } from '../utils/file-ops.js';
+import { safeWorkspacePath } from '../utils/workspace-path.js';
 
 export const MANIFEST_FILENAME = 'manifest.json';
 export const STEP_AI_DIR = '.step-ai';
@@ -20,7 +21,7 @@ export function getManifestPath(workspaceDir) {
  * @returns {Promise<any|null>}
  */
 export async function readManifest(workspaceDir) {
-  const path = getManifestPath(workspaceDir);
+  const path = await safeWorkspacePath(workspaceDir, `${STEP_AI_DIR}/${MANIFEST_FILENAME}`);
   if (!(await pathExists(path))) return null;
   try {
     const raw = await readFile(path, 'utf-8');
@@ -36,9 +37,8 @@ export async function readManifest(workspaceDir) {
  * @param {object} data 
  */
 export async function writeManifest(workspaceDir, data) {
-  const stepAiDir = getStepAiDir(workspaceDir);
-  await ensureDir(stepAiDir);
-  const path = getManifestPath(workspaceDir);
+  const path = await safeWorkspacePath(workspaceDir, `${STEP_AI_DIR}/${MANIFEST_FILENAME}`);
+  await ensureDir(join(path, '..'));
   await writeFile(path, JSON.stringify(data, null, 2), 'utf-8');
 }
 
@@ -63,13 +63,12 @@ export async function inspectWorkspace(workspaceDir) {
   const missing = [];
 
   for (const [relPath, info] of Object.entries(manifest.files || {})) {
-    const fullPath = join(workspaceDir, relPath);
-    if (!(await pathExists(fullPath))) {
-      missing.push(relPath);
-      continue;
-    }
-
     try {
+      const fullPath = await safeWorkspacePath(workspaceDir, relPath);
+      if (!(await pathExists(fullPath))) {
+        missing.push(relPath);
+        continue;
+      }
       const currentHash = await calculateFileSha256(fullPath);
       if (currentHash === info.sha256) {
         clean.push(relPath);
