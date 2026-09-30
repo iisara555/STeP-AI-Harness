@@ -157,7 +157,7 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
   }
 
   const unresolved = (mapping?.unresolved_field_lines || []).slice(0, 20).map((item, index) => {
-    let text = String(item?.text || '');
+    let text = sanitize(String(item?.text || '')).slice(0, 400);
     const valueTokens = unresolvedValues(text).map((candidate, candidateIndex) => {
       const token = 'U_' + String(index + 1) + '_' + String(candidateIndex + 1);
       tokens.set(token, { fields: candidate.fields, value: candidate.value });
@@ -169,7 +169,7 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
       };
     });
     return {
-      text: sanitize(text).slice(0, 400),
+      text,
       page: Number(item?.page || 0) || null,
       confidence: typeof item?.confidence === 'number' ? item.confidence : null,
       value_tokens: valueTokens,
