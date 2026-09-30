@@ -13,6 +13,7 @@ import { colors } from '../../utils/colors.js';
 import { runDoctor } from './doctor.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
 import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
+import { safeWorkspacePath } from '../../utils/workspace-path.js';
 
 export async function runUpdate(args) {
   header('STeP AI — One-Click Update & Skill Sync');
@@ -88,7 +89,7 @@ export async function runUpdate(args) {
   const newManifestFiles = {};
 
   for (const f of files) {
-    const targetPath = join(dest, f.relativePath);
+    const targetPath = await safeWorkspacePath(dest, f.relativePath);
     const isModified = modified.includes(f.relativePath);
 
     if (isModified) {
@@ -109,7 +110,7 @@ export async function runUpdate(args) {
 
   // Update instructions.
   for (const inst of instructionFiles) {
-    const instPath = join(dest, inst.filename);
+    const instPath = await safeWorkspacePath(dest, inst.filename);
     if (modified.includes(inst.filename)) {
       preservedCount++;
       if (manifest.files?.[inst.filename]) newManifestFiles[inst.filename] = manifest.files[inst.filename];
