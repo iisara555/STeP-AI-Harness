@@ -86,8 +86,9 @@ async function main() {
   electronSession.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => callback(permission === 'notifications'));
   electronSession.defaultSession.setPermissionCheckHandler((_contents, permission) => permission === 'notifications');
   store = new Store(join(data, 'workspace.sqlite'));
-  const [routing, privacy, documents, outputs, skillCatalog] = await Promise.all([
+  const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
+    import(pathToFileURL(join(root, 'src/modules/router/index.js')).href),
     import(pathToFileURL(join(root, 'src/modules/privacy/index.js')).href),
     import(pathToFileURL(join(root, 'src/modules/privacy/document.js')).href),
     import(pathToFileURL(join(root, 'src/modules/output-manager.js')).href),
@@ -97,6 +98,7 @@ async function main() {
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
     route: routing.queryStepRouter,
+    contextPolicy: routerPolicy.classifyContextPolicy,
     privacy: privacy.evaluatePrivacyGate,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
