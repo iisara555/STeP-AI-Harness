@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { calculateFileSha256 } from '../src/utils/checksum.js';
 import { pathExists } from '../src/utils/file-ops.js';
-import { reconcileManagedFiles } from '../src/modules/managed-files.js';
+import { findUntrackedManagedConflicts, reconcileManagedFiles } from '../src/modules/managed-files.js';
 import { writeManifest, readManifest } from '../src/modules/manifest.js';
 import { createSnapshot, restoreSnapshot } from '../src/modules/recovery.js';
 import { copyRoleFiles } from '../src/modules/adapters/base.js';
@@ -125,4 +125,33 @@ test('managed workspace writes reject symlink and junction-style escape paths', 
   await rm(join(root, 'USER.md'));
   await symlink(outside, join(root, '.step-ai'));
   await assert.rejects(writeManifest(root, { files: {} }), /Linked workspace path/);
+});
+
+
+test('initial managed install detects conflicting untracked user files but allows identical packaged copies', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'step-install-conflict-'));
+  const sourceRoot = await mkdtemp(join(tmpdir(), 'step-install-source-'));
+  t.after(async () => {
+    await rm(root, { recursive: true, force: true });
+    await rm(sourceRoot, { recursive: true, force: true });
+  });
+
+  await mkdir(join(root, 'skills', 'demo'), { recursive: true });
+  await mkdir(join(sourceRoot, 'skills', 'demo'), { recursive: true });
+  const source = join(sourceRoot, 'skills', 'demo', 'SKILL.md');
+  const target = join(root, 'skills', 'demo', 'SKILL.md');
+  await writeFile(source, 'approved');
+  await writeFile(target, 'employee custom content');
+  await writeFile(join(root, 'AGENTS.md'), 'existing project instructions');
+
+  const files = [{ relativePath: 'skills/demo/SKILL.md', sourcePath: source, type: 'skill' }];
+  const instructions = [{ filename: 'AGENTS.md', content: 'STeP instructions' }];
+  assert.deepEqual(await findUntrackedManagedConflicts(root, null, files, instructions), [
+    'AGENTS.md',
+    'skills/demo/SKILL.md',
+  ]);
+
+  await writeFile(target, 'approved');
+  await writeFile(join(root, 'AGENTS.md'), 'STeP instructions');
+  assert.deepEqual(await findUntrackedManagedConflicts(root, null, files, instructions), []);
 });
