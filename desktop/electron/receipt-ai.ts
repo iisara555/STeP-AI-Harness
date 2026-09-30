@@ -199,11 +199,7 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
   return { prompt, tokens, fields: fields.map(item => item.field) };
 }
 
-export function resolveReceiptAiResponse(
-  response: string,
-  tokenMap: Map<string, TokenEntry>,
-  fields: string[],
-): ReceiptAiDecision[] {
+export function resolveReceiptAiResponse(response: string, tokenMap: Map<string, TokenEntry>, fields: string[]): ReceiptAiDecision[] {
   const parsed: any = jsonObject(response);
   const decisions = parsed?.decisions;
   if (!decisions || typeof decisions !== 'object' || Array.isArray(decisions)) throw new Error('OCR_AI_INVALID_RESPONSE');
@@ -214,7 +210,10 @@ export function resolveReceiptAiResponse(
     if (!allowedFields.has(field) || !raw || typeof raw !== 'object') continue;
     const item: any = raw;
     const choice = String(item.choice || '').trim();
-    const reason = String(item.reason || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 300);
+    const reason = String(item.reason || '')
+      .replace(/[\r\n]+/g, ' ')
+      .trim()
+      .slice(0, 300);
     if (choice === 'KEEP') {
       output.push({ field, status: 'keep', reason });
       continue;
