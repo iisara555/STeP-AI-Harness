@@ -1,5 +1,7 @@
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { rename, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { pathExists } from '../../utils/file-ops.js';
+import { safeWorkspacePath } from '../../utils/workspace-path.js';
 import { header, success, info } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 
@@ -53,22 +55,38 @@ export const TASK_REQUEST_TEMPLATE = `# อยากให้ STeP AI ช่ว�
   > วางข้อความตัวอย่างที่นี่ หรือระบุชื่อไฟล์แบบฟอร์มที่แนบมา (ไม่มีข้อมูลลับตาม PDPA)
 `;
 
+async function writeFreshTemplate(destDir, filename, content) {
+  const target = await safeWorkspacePath(destDir, filename);
+  if (await pathExists(target)) {
+    const stem = filename.replace(/\.md$/i, '');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    let index = 0;
+    let backup;
+    do {
+      const suffix = index ? `-${index}` : '';
+      backup = await safeWorkspacePath(destDir, `${stem}.previous-${stamp}${suffix}.md`);
+      index += 1;
+    } while (await pathExists(backup));
+    await rename(target, backup);
+  }
+  await writeFile(target, content, { encoding: 'utf8', flag: 'wx' });
+  return target;
+}
 export async function runFeedback(args) {
   header('STeP AI Feedback & Task Requests');
 
-  const destDir = args.dest || args.d || process.cwd();
+  const destDir = resolve(process.cwd(), args.dest || args.d || '.');
 
   if (args.open) {
     info('พนักงานทั่วไปไม่ต้องใช้ GitHub');
-    console.log('  พิมพ์ในแชทว่า "เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย"');
+    console.log('  พิมพ์ในแชทว่า "เมื่อกี้ตอบไม่ถูก ช่วยสรุปเป็น feedback ให้หน่อย"');
     console.log('  หรือดับเบิลคลิก Feedback-STeP-AI แล้วส่งไฟล์ตาม SUPPORT.md ผ่านช่องทางภายในของทีม\n');
     return;
   }
 
   // 1. Employee: AI ตอบไม่ถูก / แจ้งปัญหา
   if (args.issue || args.template || args.t) {
-    const filePath = join(destDir, 'FEEDBACK.md');
-    await writeFile(filePath, FEEDBACK_TEMPLATE, 'utf-8');
+    await writeFreshTemplate(destDir, 'FEEDBACK.md', FEEDBACK_TEMPLATE);
     success(`สร้างแบบฟอร์มเรียบร้อยแล้ว: ${colors.bold('FEEDBACK.md')}`);
     console.log(`  เปิดไฟล์ ${colors.cyan('FEEDBACK.md')} กรอกข้อมูล แล้วส่งตาม SUPPORT.md ผ่านหัวหน้าทีมหรือผู้ประสานงานทีม\n`);
     return;
@@ -76,12 +94,10 @@ export async function runFeedback(args) {
 
   // 2. Employee: อยากให้ AI ช่วยงานเพิ่ม
   if (args.request || args.propose || args.p) {
-    const filePath = join(destDir, 'REQUEST_NEW_TASK.md');
-    await writeFile(filePath, TASK_REQUEST_TEMPLATE, 'utf-8');
+    await writeFreshTemplate(destDir, 'REQUEST_NEW_TASK.md', TASK_REQUEST_TEMPLATE);
     // Also write alias SKILL_PROPOSAL_TEMPLATE.md if specifically requested by test or legacy callers
     if (args.propose || args.p) {
-      const legacyPath = join(destDir, 'SKILL_PROPOSAL_TEMPLATE.md');
-      await writeFile(legacyPath, TASK_REQUEST_TEMPLATE, 'utf-8');
+      await writeFreshTemplate(destDir, 'SKILL_PROPOSAL_TEMPLATE.md', TASK_REQUEST_TEMPLATE);
     }
     success(`สร้างแบบฟอร์มเรียบร้อยแล้ว: ${colors.bold('REQUEST_NEW_TASK.md')}`);
     console.log(`  เปิดไฟล์ ${colors.cyan('REQUEST_NEW_TASK.md')} กรอกข้อมูล แล้วส่งตาม SUPPORT.md ผ่านหัวหน้าทีมหรือผู้ประสานงานทีม\n`);
@@ -109,10 +125,10 @@ export async function runFeedback(args) {
   console.log(`ระบบรับฟังข้อเสนอแนะและรับคำของานใหม่ ${colors.bold('STeP AI (Employee Mode)')}\n`);
 
   console.log(colors.bold('💬 วิธีที่ 1: คุยกับ AI ตามปกติในแชท (ง่ายและสะดวกที่สุด)'));
-  console.log(`   • ${colors.cyan('เมื่อ AI ตอบไม่ถูก:')} พิมพ์บอกว่า ${colors.yellow('"เมื่อกี้ตอบไม่ถูก ช่วยแจ้งทีม STeP AI ให้หน่อย"')}`);
-  console.log(`     AI จะสรุปข้อผิดพลาด และถามยืนยันเพื่อเตรียมส่งให้ทันที`);
+  console.log(`   • ${colors.cyan('เมื่อ AI ตอบไม่ถูก:')} พิมพ์บอกว่า ${colors.yellow('"เมื่อกี้ตอบไม่ถูก ช่วยสรุปเป็น feedback ให้หน่อย"')}`);
+  console.log(`     AI จะช่วยสรุปประเด็นให้คุณตรวจ แล้วคุณส่งตามช่องทางใน SUPPORT.md`);
   console.log(`   • ${colors.cyan('อยากให้ช่วยงานเพิ่ม:')} พิมพ์บอกว่า ${colors.yellow('"อยากให้ STeP AI ช่วยงานนี้..."')}`);
-  console.log(`     AI จะสอบถามขั้นตอนและบันทึกความต้องการให้อัตโนมัติ\n`);
+  console.log(`     AI จะช่วยจัดรายละเอียดเป็นร่างคำขอ แล้วคุณตรวจและส่งตาม SUPPORT.md\n`);
 
   console.log(colors.bold('🖱️  วิธีที่ 2: ดับเบิลคลิกไฟล์ Feedback-STeP-AI'));
   console.log(`   เปิดไฟล์ ${colors.green('Feedback-STeP-AI.bat')} (Windows) หรือ ${colors.green('Feedback-STeP-AI.command')} (Mac)`);
