@@ -5,6 +5,14 @@ import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import ideaArt from './assets/illustrations/idea.png';
 import { receiptSourceText } from './receipt-source';
 
+type MappingCandidate = {
+  value: string;
+  evidence: string;
+  page: number | null;
+  confidence: number | null;
+  method: string;
+  score: number;
+};
 type Field = {
   value: string;
   page: number | null;
@@ -12,6 +20,28 @@ type Field = {
   evidence: string;
   crosscheckCandidate: string;
   crosscheckStatus: string | null;
+  mappingStatus?: 'mapped' | 'ambiguous' | 'unmapped';
+  mappingMethod?: string;
+  sourceTexts?: string[];
+  candidates?: MappingCandidate[];
+};
+type AfpMapping = {
+  schema: string;
+  notice: string;
+  fields: Record<
+    string,
+    {
+      label: string;
+      required_for_desktop_precheck: boolean;
+      status: string;
+      method: string;
+      selected_value: string;
+      evidence: string;
+      candidates: MappingCandidate[];
+    }
+  >;
+  unresolved_field_lines: Array<{ text: string; page: number; confidence: number | null }>;
+  unmapped_ocr_lines: Array<{ text: string; page: number; confidence: number | null }>;
 };
 type LineRecord = {
   text: string;
@@ -26,7 +56,12 @@ type ReceiptReviewApi = {
   fieldKeys: string[];
   requiredKeys: string[];
   normalizeDigits(value: string): string;
-  extractReceipt(result: unknown): { fields: Record<string, Field>; records: LineRecord[]; buyerTaxIdExcluded: boolean };
+  extractReceipt(result: unknown): {
+    fields: Record<string, Field>;
+    records: LineRecord[];
+    buyerTaxIdExcluded: boolean;
+    afpMapping: AfpMapping;
+  };
   reviewIssues(
     values: Record<string, string>,
     confirmed: Record<string, boolean>,
@@ -90,7 +125,8 @@ export function ReceiptApp({
     [installProgress, setInstallProgress] = useState('');
   const [doc, setDoc] = useState<Doc | null>(null),
     [fields, setFields] = useState<Record<string, Field>>({}),
-    [records, setRecords] = useState<LineRecord[]>([]);
+    [records, setRecords] = useState<LineRecord[]>([]),
+    [mapping, setMapping] = useState<AfpMapping | null>(null);
   const [values, setValues] = useState<Record<string, string>>({}),
     [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
   const [linesChecked, setLinesChecked] = useState(false),
@@ -143,6 +179,7 @@ export function ReceiptApp({
     setDoc(read);
     setFields(extracted.fields);
     setRecords(extracted.records);
+    setMapping(extracted.afpMapping);
     setBuyerExcluded(extracted.buyerTaxIdExcluded);
     setValues(Object.fromEntries(review.fieldKeys.map(k => [k, extracted.fields[k]?.value || ''])));
     setConfirmed({});
@@ -158,6 +195,34 @@ export function ReceiptApp({
     fields: Object.fromEntries(
       review.fieldKeys.map(k => [k, { value: values[k] || '', checked: Boolean(confirmed[k]), ocr_evidence: fields[k]?.evidence || '' }]),
     ),
+    afp_mapping: mapping
+      ? {
+          ...mapping,
+          fields: Object.fromEntries(
+            review.fieldKeys.map(k => {
+              const original = fields[k]?.value || '';
+              const selected = values[k] || '';
+              const base = mapping.fields[k] || {
+                label: labels[k],
+                required_for_desktop_precheck: review.requiredKeys.includes(k),
+                status: 'unmapped',
+                method: '',
+                selected_value: '',
+                evidence: '',
+                candidates: [],
+              };
+              return [
+                k,
+                {
+                  ...base,
+                  selected_value: selected,
+                  status: selected && selected !== original ? 'user-selected-or-edited' : base.status,
+                },
+              ];
+            }),
+          ),
+        }
+      : null,
     expense_note: note,
     issues: result.issues.map(i => ({ ...i, message: describe(i) })),
     ocr: { text: doc?.result?.text || '', lines: records },
@@ -171,6 +236,12 @@ export function ReceiptApp({
         k => `- ${labels[k]}: ${values[k] || '(ไม่มี)'}${values[k] ? (confirmed[k] ? ' · ตรวจแล้ว' : ' · ยังไม่ตรวจ') : ''}`,
       ),
       ...(note.trim() ? ['', 'หมายเหตุผู้เบิก: ' + note.trim()] : []),
+      ...(mapping?.unresolved_field_lines?.length
+        ? [
+            '',
+            `OCR พบข้อความที่ดูเหมือนข้อมูลสำหรับ AFP แต่ยัง map เข้าช่องไม่ได้ ${mapping.unresolved_field_lines.length} บรรทัด — โปรดดู afp_mapping ใน JSON`,
+          ]
+        : []),
       ...(result.issues.length ? ['', 'ประเด็นที่ระบบตรวจพบ:', ...result.issues.map(i => '- ' + describe(i))] : []),
     ].join('\n');
 
@@ -315,7 +386,28 @@ export function ReceiptApp({
                   <small className="muted">
                     จากบรรทัด “{fields[k].evidence}”
                     {fields[k].confidence !== null ? ` · ${Math.round((fields[k].confidence || 0) * 100)}%` : ''}
+                    {fields[k].mappingMethod ? ` · map: ${fields[k].mappingMethod}` : ''}
                   </small>
+                )}
+                {!String(values[k] || '').trim() && (fields[k]?.candidates?.length || 0) > 0 && (
+                  <div className="receipt-candidates">
+                    <small>OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:</small>
+                    <div>
+                      {(fields[k]?.candidates || []).slice(0, 3).map((candidate, index) => (
+                        <button
+                          className="quiet"
+                          type="button"
+                          key={candidate.value + index}
+                          onClick={() => {
+                            setValues({ ...values, [k]: candidate.value });
+                            setConfirmed({ ...confirmed, [k]: false });
+                          }}
+                        >
+                          ใช้ “{candidate.value}”
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
@@ -325,6 +417,17 @@ export function ReceiptApp({
                 ตรวจ {reviewLines} บรรทัดที่ต้องตรวจเทียบกับต้นฉบับแล้ว
               </label>
             )}
+            {mapping?.unresolved_field_lines?.length ? (
+              <details className="receipt-mapping-warning">
+                <summary>พบข้อมูลลักษณะช่อง AFP ที่ยัง map ไม่สำเร็จ {mapping.unresolved_field_lines.length} บรรทัด</summary>
+                <ul>
+                  {mapping.unresolved_field_lines.slice(0, 8).map((line, index) => (
+                    <li key={line.text + index}>{line.text}</li>
+                  ))}
+                </ul>
+                <small className="muted">ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง เพียงแต่ระบบไม่เดาใส่ช่องให้อัตโนมัติ</small>
+              </details>
+            ) : null}
             <label className="receipt-note">
               หมายเหตุการเบิก
               <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="เช่น ใช้ในโครงการ… (กรอกเอง)" />

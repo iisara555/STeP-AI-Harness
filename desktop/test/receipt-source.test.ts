@@ -8,11 +8,14 @@ test('receipt handoff serializes the reviewed JSON as persistent workspace sourc
     schema: 'step-receipt-review/v1',
     filename: 'receipt.jpg',
     fields: { total: { value: '107.00', checked: true } },
+    afp_mapping: { fields: { total: { status: 'mapped', selected_value: '107.00' } }, unmapped_ocr_lines: [] },
   });
   assert.match(source, /persistent workspace source/);
   assert.match(source, /step-receipt-review\/v1/);
   assert.match(source, /"total"/);
   assert.match(source, /107\.00/);
+  assert.match(source, /afp_mapping/);
+  assert.match(source, /blank field may still have OCR candidates or unmapped lines/);
 });
 
 test('receipt UI passes structured source through workspace send and consent replay', async () => {

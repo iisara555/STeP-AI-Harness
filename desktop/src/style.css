@@ -1423,6 +1423,37 @@ nav button:hover,
 .receipt-field small {
   font-size: 11px;
 }
+.receipt-candidates {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+.receipt-candidates > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.receipt-candidates button {
+  font-size: 11px;
+  padding: 5px 8px;
+}
+.receipt-mapping-warning {
+  margin: 8px 0 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.receipt-mapping-warning summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+.receipt-mapping-warning ul {
+  margin: 8px 0;
+  padding-left: 20px;
+  font-size: 11px;
+}
 .check {
   display: inline-flex;
   align-items: center;
