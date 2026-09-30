@@ -556,9 +556,10 @@ async function main() {
         return { name: basename(path), preview, result: read.result };
       }
       case 'ocrResolve': {
-        if (ocrResolving) throw new Error('RUN_ALREADY_ACTIVE');
+        if (busy || ocrResolving) throw new Error('RUN_ALREADY_ACTIVE');
         const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
         if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         const rawMapping = input.mapping;
         if (!rawMapping || typeof rawMapping !== 'object' || Array.isArray(rawMapping)) throw new Error('INVALID_INPUT');
         const serialized = JSON.stringify(rawMapping);
@@ -570,7 +571,8 @@ async function main() {
             type: 'question',
             title: 'ให้ AI ช่วยกรองผล OCR',
             message: 'ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ',
-            detail: 'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
+            detail:
+              'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
             buttons: ['ยกเลิก', 'ใช้ AI กรอง'],
             defaultId: 1,
             cancelId: 0,
