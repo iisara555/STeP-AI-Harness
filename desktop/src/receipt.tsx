@@ -3,6 +3,7 @@ import { Check, FileSearch, FolderOpen, LoaderCircle, Play, RefreshCw, Save, Sca
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import ideaArt from './assets/illustrations/idea.png';
+import { receiptSourceText } from './receipt-source';
 
 type Field = {
   value: string;
@@ -73,7 +74,7 @@ export function ReceiptApp({
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
-  handoff: (text: string, allowIds?: string[]) => Promise<void>;
+  handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState('');
@@ -338,6 +339,7 @@ export function ReceiptApp({
                   void run('handoff', () =>
                     handoff(
                       summary(),
+                      receiptSourceText(draft()),
                       confirmed.taxId && /^0\d{12}$/.test(review.normalizeDigits(values.taxId || ''))
                         ? [review.normalizeDigits(values.taxId)]
                         : [],
