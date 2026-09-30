@@ -172,10 +172,10 @@ export function parseUserMemory(markdown = '') {
       const nameMatch = trimmed.match(/- \*\*ชื่อ.*?\*\*:\s*(.*)/i);
       if (nameMatch && nameMatch[1]) result.profile.name = nameMatch[1].trim();
 
-      const teamMatch = trimmed.match(/- \*\*ทีมหลัก.*?\*\*:\s*(.*)/i);
+      const teamMatch = trimmed.match(/- \*\*(?:ทีมหลัก|Primary Team).*?\*\*:\s*(.*)/i);
       if (teamMatch && teamMatch[1]) result.profile.team = teamMatch[1].trim().toLowerCase();
 
-      const clusterMatch = trimmed.match(/- \*\*กลุ่มงานสำหรับ Routing.*?\*\*:\s*(.*)/i);
+      const clusterMatch = trimmed.match(/- \*\*(?:กลุ่มงานสำหรับ Routing|Routing Cluster).*?\*\*:\s*(.*)/i);
       if (clusterMatch && clusterMatch[1]) result.profile.cluster = clusterMatch[1].trim().toLowerCase();
 
       const roleMatch = trimmed.match(/- \*\*บทบาท.*?\*\*:\s*(.*)/i);
