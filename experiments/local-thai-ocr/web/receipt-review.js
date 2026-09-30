@@ -132,6 +132,7 @@
           text: alternative.text,
           confidence: alternative.confidence,
           engine: alternative.engine,
+          sourceTexts: [record.text, alternative.text],
           virtualCandidate: true,
         });
       }
@@ -244,7 +245,7 @@
           method: "same-line",
           engine: labelRecord.engine || "paddle",
           evidence: labelRecord.text,
-          sourceTexts: [labelRecord.text],
+          sourceTexts: labelRecord.sourceTexts || [labelRecord.text],
         });
       }
 
@@ -256,7 +257,10 @@
           method: "same-row",
           engine: item.record.engine || "paddle",
           evidence: `${labelRecord.text} ↔ ${item.record.text}`,
-          sourceTexts: [labelRecord.text, item.record.text],
+          sourceTexts: [
+            ...(labelRecord.sourceTexts || [labelRecord.text]),
+            ...(item.record.sourceTexts || [item.record.text]),
+          ],
         });
       }
 
@@ -268,7 +272,10 @@
           method: "next-line",
           engine: item.record.engine || "paddle",
           evidence: `${labelRecord.text} → ${item.record.text}`,
-          sourceTexts: [labelRecord.text, item.record.text],
+          sourceTexts: [
+            ...(labelRecord.sourceTexts || [labelRecord.text]),
+            ...(item.record.sourceTexts || [item.record.text]),
+          ],
         });
       }
     }
@@ -289,7 +296,24 @@
     if (!options.length) return candidate("", null, { candidates: [] });
     const top = options[0];
     const second = options.find((item) => normalizeText(item.value) !== normalizeText(top.value));
-    const ambiguous = Boolean(second && Math.abs((top.score || 0) - (second.score || 0)) < 0.08);
+    const independentConflict = Boolean(
+      second &&
+      (top.engine || top.record?.engine) !== (second.engine || second.record?.engine) &&
+      (second.score || 0) >= (top.score || 0) * 0.85,
+    );
+    const handwritingOnly = Boolean(
+      (top.engine || top.record?.engine) === "thai-trocr" &&
+      !options.some(
+        (item) =>
+          (item.engine || item.record?.engine) !== "thai-trocr" &&
+          normalizeText(item.value) === normalizeText(top.value),
+      ),
+    );
+    const ambiguous = Boolean(
+      handwritingOnly ||
+      independentConflict ||
+      (second && Math.abs((top.score || 0) - (second.score || 0)) < 0.08),
+    );
     const mappedOptions = options.slice(0, 5).map((item) => ({
       value: normalizeText(item.value),
       evidence: item.evidence || item.record?.text || "",
