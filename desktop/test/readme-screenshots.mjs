@@ -73,16 +73,15 @@ try {
       return row ? JSON.parse(String(row.value)) : null;
     };
     const put = (kind, id, value) =>
-      db.prepare('INSERT INTO records VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value')
+      db
+        .prepare('INSERT INTO records VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value')
         .run(kind, id, JSON.stringify(value));
 
     const connection = get('connection', seeded.connectionId);
     connection.ready = true;
     connection.signedIn = true;
     connection.note = 'พร้อมทำงาน';
-    connection.models = [
-      { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', description: 'งานความรู้และงานซับซ้อน', isDefault: true },
-    ];
+    connection.models = [{ id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', description: 'งานความรู้และงานซับซ้อน', isDefault: true }];
     connection.modelsAt = new Date().toISOString();
     put('connection', connection.id, connection);
 
