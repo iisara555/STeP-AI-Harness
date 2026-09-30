@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { readFile, rm, mkdir, stat } from 'node:fs/promises';
+import { readFile, readdir, rm, mkdir, stat, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
@@ -693,6 +693,16 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.ok(feedbackContent.includes('คำถาม'));
     assert.ok(feedbackContent.includes('สิ่งที่ AI ตอบผิด'));
     assert.ok(feedbackContent.includes('สิ่งที่ถูกต้อง'));
+
+    // Creating a fresh feedback form must not destroy a draft the employee
+    // already filled in.
+    await writeFile(feedbackPath, 'employee draft that must survive', 'utf8');
+    await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--issue', '-d', testDir]);
+    const feedbackFiles = await readdir(testDir);
+    const previousFeedback = feedbackFiles.find((name) => /^FEEDBACK\.previous-.*\.md$/.test(name));
+    assert.ok(previousFeedback, 'existing feedback draft should be rotated, not overwritten');
+    assert.equal(await readFile(join(testDir, previousFeedback), 'utf8'), 'employee draft that must survive');
+    assert.ok((await readFile(feedbackPath, 'utf8')).includes('STeP AI Feedback'));
 
     // Test feedback --request
     await execFileAsync('node', [STEP_AI_BIN, 'feedback', '--request', '-d', testDir]);
