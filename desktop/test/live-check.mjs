@@ -39,9 +39,7 @@ const pollUntil = async (fn, ms) => {
 };
 
 for (const provider of providers) {
-  log(
-    `== ${provider}: connecting (sign in in the browser; STeP waits for the provider callback)`,
-  );
+  log(`== ${provider}: connecting (sign in in the browser; STeP waits for the provider callback)`);
   const snap = await page.evaluate(() => window.step.call('snapshot'));
   let c = snap.connections.find(x => x.provider === provider && x.mode === 'subscription');
   if (!c) c = await page.evaluate(p => window.step.call('connection', { provider: p, mode: 'subscription' }), provider);
