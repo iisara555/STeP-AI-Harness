@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { readFile, access, constants } from 'node:fs/promises';
 import { header, success, warn, error, info } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
@@ -13,12 +13,13 @@ import { loadUserMemory } from '../../modules/user-memory.js';
 
 export async function runDoctor(args) {
   const isEmployeeMode = Boolean(args.employee || args.simple || args.e);
+  const targetDir = resolve(process.cwd(), args.dest || args.d || '.');
 
   if (isEmployeeMode) {
     console.log(`\n${colors.bold(colors.cyan('STeP AI System Check'))}`);
     console.log(colors.dim('────────────────────────────────────────────────────────────'));
 
-    const routingIdentity = await resolveRoutingIdentity(process.cwd());
+    const routingIdentity = await resolveRoutingIdentity(targetDir);
     const pkgJson = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8'));
     const detectedTools = await detectInstalledTools();
     const installedToolNames = detectedTools.filter((t) => t.installed).map((t) => t.name);
@@ -66,7 +67,7 @@ export async function runDoctor(args) {
       : `Ready (${organizationSkillsCount} organization Skills)`;
     console.log(`  ${colors.green('✓')} Skill Index:     ${colors.bold(skillIndexDisplay)}`);
     console.log(`  ${colors.green('✓')} Configuration:   ${colors.dim(USER_CONFIG_PATH)}`);
-    const userMem = await loadUserMemory(process.cwd());
+    const userMem = await loadUserMemory(targetDir);
     if (userMem.exists) {
       console.log(`  ${colors.green('✓')} User Memory:     ${colors.bold('USER.md (Active & Gitignored)')}`);
     }
@@ -164,7 +165,6 @@ export async function runDoctor(args) {
   }
 
   // 4. Workspace Write Permission
-  const targetDir = process.cwd();
   try {
     await access(targetDir, constants.W_OK);
     success(`Workspace Write Permission: เขียนไฟล์ในไดเรกทอรีปัจจุบันได้ (${targetDir})`);
