@@ -77,14 +77,17 @@ export function ReceiptApp({
   notify,
   onError,
   handoff,
+  onEvent,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
   handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
+  onEvent: (callback: (event: { type: string; text?: string }) => void) => () => void;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
-    [busy, setBusy] = useState('');
+    [busy, setBusy] = useState(''),
+    [installProgress, setInstallProgress] = useState('');
   const [doc, setDoc] = useState<Doc | null>(null),
     [fields, setFields] = useState<Record<string, Field>>({}),
     [records, setRecords] = useState<LineRecord[]>([]);
@@ -104,6 +107,13 @@ export function ReceiptApp({
     }
   };
   const refresh = () => run('status', async () => setStatus(await call('ocrStatus')));
+  useEffect(
+    () =>
+      onEvent(event => {
+        if (event.type === 'install' && /^(STEP|DONE)/.test(event.text || '')) setInstallProgress(event.text || '');
+      }),
+    [onEvent],
+  );
   // OCR is optional. If the employee installed it before, opening this page starts the local service; otherwise nothing is downloaded.
   useEffect(() => {
     void run('status', async () => {
@@ -193,10 +203,15 @@ export function ReceiptApp({
               disabled={Boolean(busy)}
               onClick={() =>
                 void run('install', async () => {
-                  const installed = await call('ocrInstall', { crosscheck: false });
-                  setStatus(installed);
-                  setStatus(await call('ocrStart'));
-                  notify('ติดตั้ง OCR ในเครื่องนี้แล้ว', 'success');
+                  setInstallProgress('กำลังเตรียมส่วนเสริม OCR');
+                  try {
+                    const installed = await call('ocrInstall', { crosscheck: false });
+                    setStatus(installed);
+                    setStatus(await call('ocrStart'));
+                    notify('ติดตั้ง OCR ในเครื่องนี้แล้ว', 'success');
+                  } finally {
+                    setInstallProgress('');
+                  }
                 })
               }
             >
@@ -217,6 +232,7 @@ export function ReceiptApp({
           <RefreshCw size={15} />
         </button>
       </div>
+      {busy === 'install' && installProgress && <p className="small muted receipt-hint">{installProgress.replace(/^STEP\s*/, '')}</p>}
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
           OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}” เมื่อต้องการใช้
