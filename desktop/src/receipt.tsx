@@ -236,7 +236,7 @@ export function ReceiptApp({
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
           OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}” เมื่อต้องการใช้
-          ระบบจะดาวน์โหลด Python, Paddle และโมเดลที่ตรวจสอบ checksum แล้วมาเก็บใน App Data ของผู้ใช้นี้
+          ระบบจะดาวน์โหลด Python ที่ตรวจสอบ checksum แล้ว จากนั้นติดตั้ง Paddle และโมเดล OCR ไว้ใน App Data ของผู้ใช้นี้
           การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต
         </p>
       )}
