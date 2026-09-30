@@ -118,10 +118,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
   }
 }
 
-export async function signOutManagedProvider(
-  connection: Connection,
-  runtime: { context: Omit<ProviderContext, 'signal' | 'emit'> },
-) {
+export async function signOutManagedProvider(connection: Connection, runtime: { context: Omit<ProviderContext, 'signal' | 'emit'> }) {
   if (connection.provider !== 'openai') return;
   const rpc = createRpc(connection, runtime.context);
   try {
@@ -206,12 +203,7 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
   deps.signedIn?.();
 }
 
-async function geminiSignIn(
-  rpc: ReturnType<typeof createRpc>,
-  connection: Connection,
-  deps: ConnectDeps,
-  initialized: any,
-) {
+async function geminiSignIn(rpc: ReturnType<typeof createRpc>, connection: Connection, deps: ConnectDeps, initialized: any) {
   const methodId = connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal';
   const methods = Array.isArray(initialized?.authMethods) ? initialized.authMethods.map((method: any) => method?.id) : [];
   if (methods.length && !methods.includes(methodId)) throw new Error('AUTH_METHOD_UNAVAILABLE');
