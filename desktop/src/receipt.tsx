@@ -328,7 +328,42 @@ export function ReceiptApp({
           <RefreshCw size={15} />
         </button>
       </div>
-      {busy === 'install' && installProgress && <p className="small muted receipt-hint">{installProgress.replace(/^STEP\s*/, '')}</p>}
+      {status?.running && (
+        <div className="receipt-ocr-layers small muted">
+          <span>Tesseract: {status.tesseract ? 'พร้อมตรวจตัวพิมพ์/ตัวเลข' : 'ยังไม่พบ tha+eng'}</span>
+          {!status.tesseract && (
+            <button className="text-link" type="button" onClick={() => void call('openHelp', { topic: 'tesseract' })}>
+              วิธีติดตั้ง
+            </button>
+          )}
+          <span>Thai-TrOCR: {status.handwriting ? 'พร้อมอ่านลายมือ' : 'ยังไม่ติดตั้ง'}</span>
+          {!status.handwriting && (
+            <button
+              className="text-link"
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() =>
+                void run('handwriting', async () => {
+                  setInstallProgress('กำลังเตรียมโมเดลอ่านลายมือภาษาไทย');
+                  try {
+                    const installed = await call('ocrInstall', { handwriting: true });
+                    setStatus(installed);
+                    setStatus(await call('ocrStart'));
+                    notify('ติดตั้งโมเดลอ่านลายมือภาษาไทยแล้ว', 'success');
+                  } finally {
+                    setInstallProgress('');
+                  }
+                })
+              }
+            >
+              เพิ่มอ่านลายมือ
+            </button>
+          )}
+        </div>
+      )}
+      {(busy === 'install' || busy === 'handwriting') && installProgress && (
+        <p className="small muted receipt-hint">{installProgress.replace(/^STEP\s*/, '')}</p>
+      )}
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
           OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}” เมื่อต้องการใช้
@@ -372,9 +407,21 @@ export function ReceiptApp({
                 {records.map((r, i) => (
                   <li key={i} className={r.needsReview ? 'flag' : ''}>
                     <span>{r.text}</span>
-                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
-                      <small>OCR ตัวที่สองอ่านว่า “{r.crosscheckCandidate}”</small>
+                    {r.tesseractCandidate && r.tesseractCandidate !== r.text && (
+                      <small>
+                        Tesseract อ่านว่า “{r.tesseractCandidate}”
+                        {r.tesseractConfidence !== null && r.tesseractConfidence !== undefined
+                          ? ` · ${Math.round(r.tesseractConfidence * 100)}%`
+                          : ''}
+                      </small>
                     )}
+                    {r.handwritingCandidate && r.handwritingCandidate !== r.text && (
+                      <small>โมเดลลายมืออ่านว่า “{r.handwritingCandidate}” · ยังไม่ยืนยัน</small>
+                    )}
+                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
+                      <small>EasyOCR อ่านว่า “{r.crosscheckCandidate}”</small>
+                    )}
+                    {r.textKind && <small>ประเภท: {r.textKind}</small>}
                     {r.confidence !== null && <small className="conf">{Math.round(r.confidence * 100)}%</small>}
                   </li>
                 ))}
