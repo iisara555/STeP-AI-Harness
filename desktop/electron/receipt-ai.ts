@@ -54,7 +54,9 @@ function unresolvedValues(text: string) {
   const tax = source.match(/(?:^|[^\d])((?:\d[\s-]?){12}\d)(?=$|[^\d])/);
   if (tax) push(tax[1].replace(/\D/g, ''), ['taxId'], '13-digit-id');
 
-  const date = source.match(/(?:^|[^\d])((?:19|20|25)\d{2}[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}[/.\-]\d{1,2}[/.\-](?:\d{4}|\d{2}))(?=$|[^\d])/);
+  const date = source.match(
+    /(?:^|[^\d])((?:19|20|25)\d{2}[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}[/.\-]\d{1,2}[/.\-](?:\d{4}|\d{2}))(?=$|[^\d])/,
+  );
   if (date) push(date[1], ['date'], 'date-like');
 
   for (const match of source.matchAll(/(^|[^\d])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?=$|[^\d])/g)) {
