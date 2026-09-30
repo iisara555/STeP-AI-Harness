@@ -173,7 +173,28 @@ export class DesktopTools {
       async () => {
         switch (r.tool) {
           case 'files':
-            return a.action === 'list' || !target ? this.workbench.files(target) : this.workbench.readChunk(target, Number(a.offset || 0));
+            if (a.action === 'list' || !target) return this.workbench.files(target);
+            {
+              const bytes = await this.workbench.bytes(target),
+                text = bytes.toString('utf8');
+              if (bytes.includes(0) || !Buffer.from(text).equals(bytes)) throw new Error('FILE_BINARY');
+              // Scan the complete bounded file first, so a chunk boundary cannot split a credential pattern.
+              const review = this.harness.privacy(text);
+              if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+              const offset = Number(a.offset || 0),
+                safe = review.redactedText;
+              if (!Number.isSafeInteger(offset) || offset < 0 || offset > safe.length) throw new Error('INVALID_INPUT');
+              const end = Math.min(safe.length, offset + 40_000);
+              return {
+                path: target,
+                text: safe.slice(offset, end),
+                offset,
+                total: safe.length,
+                redactionApplied: review.redactionApplied,
+                sourcePrivacyClass: review.classification,
+                ...(end < safe.length ? { nextOffset: end } : {}),
+              };
+            }
           case 'changes':
             if (a.action === 'diff') return this.workbench.diff();
             if (a.action === 'list') return this.workbench.changes();

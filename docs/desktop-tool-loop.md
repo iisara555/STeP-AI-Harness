@@ -6,6 +6,8 @@ Chat and Draft share a host tool loop in `WorkService`. Existing provider adapte
 
 Model-generated search queries and fetch URLs require their own one-time destination consent before network access. Only pattern-checked public requests qualify; confirming a provider result does not authorize a new web/search destination. Policy/workspace checks repeat after this consent.
 
+Model text-file reads scan the complete bounded source before paging. Known credentials block the entire source; paging offsets refer to masked text so detection cannot be bypassed at a chunk boundary. Manual previews remain local and use the existing attachment consent when sent into Chat.
+
 The initial request and later human requests retain routing and authority checks. `skill` accepts only a catalog entry with `status: routed`, reroutes the original task with that Skill, and rejects blocked, unavailable or ambiguous authority. `reference` resolves a controlled document ID and returns its status/authority/verification. Context reads enforce canonical boundaries, credential exclusions and managed path rules.
 
 `features.toolLoop: false` keeps proposals inert for manual review. Plan mode allows research/questions/plans but rejects model staging and command execution. Local tools retain Phase 1 path, command, mode, pre/post hook and policy-change checks. Shell execution requires confirmation unless policy enables both auto mode and `shellByAi`; it uses the employee's OS permissions and is not an OS sandbox. Models cannot apply Changes.

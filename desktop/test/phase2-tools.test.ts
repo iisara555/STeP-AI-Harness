@@ -183,6 +183,20 @@ test('text previews paginate; apply backs up bytes; restoration is staged and pr
     f.store.close();
   }
 });
+test('model file reads scan the complete source before paging across credential boundaries', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'boundary.txt'), 'x'.repeat(39_997) + '\npassword: synthetic-test-credential');
+    await assert.rejects(f.tools.execute({ tool: 'files', input: 'boundary.txt' }, f.scope), /PRIVACY_REVIEW_REQUIRED/);
+    await writeFile(join(f.root, 'personal.txt'), 'Contact: sample@example.com\n' + 'a'.repeat(50_000));
+    const chunk: any = await f.tools.execute({ tool: 'files', input: 'personal.txt' }, f.scope);
+    assert.equal(chunk.nextOffset, 40_000);
+    assert.ok(!chunk.text.includes('sample@example.com'));
+    assert.equal(chunk.redactionApplied, true);
+  } finally {
+    f.store.close();
+  }
+});
 test('spreadsheet edits preserve scalar types, stage a readable preview and reject changed source bytes', async () => {
   const f = await fixture();
   try {
