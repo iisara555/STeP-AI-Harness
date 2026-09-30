@@ -18,6 +18,8 @@ export const connectNotes: Record<string, string> = {
   ANTHROPIC_LOGOUT_FAILED: 'ออกจาก Claude Console OAuth ไม่สำเร็จ กรุณาลองใหม่',
   ANTHROPIC_AUTH_TIMEOUT: 'Claude Console OAuth ไม่ตอบสนอง กรุณาลองใหม่',
   FEATURE_DISABLED: 'การเชื่อมต่อบัญชี Claude ในแอปยังปิดอยู่ ใช้ Claude API key หรือเปิดใน Claude Code ภายนอกแทน',
+  AUTH_METHOD_UNAVAILABLE: 'runtime รุ่นนี้ไม่รองรับวิธีลงชื่อเข้าใช้ที่เลือก กรุณาอัปเดตตัวเชื่อม AI',
+  INVALID_LOGIN_RESPONSE: 'ตัวเชื่อม AI ส่งข้อมูลเริ่ม OAuth ไม่ครบ กรุณาอัปเดต runtime แล้วลองใหม่',
   CLAUDE_AUTH_TIMEOUT: 'Claude Code ไม่ตอบสนอง กรุณาลองใหม่',
   PROVIDER_QUOTA: 'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า',
   GOOGLE_CLOUD_PROJECT_REQUIRED:
@@ -76,9 +78,9 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     const close = () => rpc.close('CANCELLED');
     signal.addEventListener('abort', close, { once: true });
     try {
-      await initialize(rpc, connection.provider);
+      const initialized = await initialize(rpc, connection.provider);
       if (connection.provider === 'openai') await openAiSignIn(rpc, connection, deps, signal);
-      else await geminiSignIn(rpc, connection, deps);
+      else await geminiSignIn(rpc, connection, deps, initialized);
     } finally {
       signal.removeEventListener('abort', close);
       rpc.close();
@@ -121,64 +123,96 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
     await rpc.request('account/login/start', { type: 'apiKey', apiKey: deps.runtime.context.key });
     return;
   }
-  // Already signed in on this connection: test it without asking for the browser again.
-  if ((await rpc.request('account/read', { refreshToken: false }).catch(() => null))?.account?.type === 'chatgpt') {
-    deps.progress('ลงชื่อ ChatGPT ไว้แล้ว');
+
+  // Force a refresh before reusing a saved account. A stale auth.json may still
+  // say "chatgpt" even when its access token can no longer be refreshed.
+  const saved = await rpc.request('account/read', { refreshToken: true }).catch(() => null);
+  if (saved?.account?.type === 'chatgpt') {
+    deps.progress('ใช้บัญชี ChatGPT ที่ลงชื่อไว้แล้ว');
+    deps.signedIn?.();
     return;
   }
-  const login = await rpc.request('account/login/start', { type: 'chatgpt' });
+
+  const login = await rpc.request('account/login/start', {
+    type: 'chatgpt',
+    appBrand: 'chatgpt',
+    codexStreamlinedLogin: true,
+    useHostedLoginSuccessPage: true,
+  });
+  if (login?.type !== 'chatgpt' || typeof login.authUrl !== 'string' || typeof login.loginId !== 'string')
+    throw new Error('INVALID_LOGIN_RESPONSE');
+
   const url = new URL(login.authUrl);
   if (url.protocol !== 'https:' || !OPENAI_LOGIN_HOSTS.includes(url.hostname)) throw new Error('INVALID_LOGIN_URL');
-  deps.progress('รอให้ลงชื่อเข้าใช้ในเบราว์เซอร์…');
+  const loginId = login.loginId;
+  deps.progress('รอให้ลงชื่อ ChatGPT ในเบราว์เซอร์…');
+
+  const cancel = async () => {
+    await rpc.request('account/login/cancel', { loginId }, 10_000).catch(() => {});
+  };
   await new Promise<void>((resolveLogin, reject) => {
-    const timer = setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), LOGIN_MS);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(new Error('CANCELLED'));
-      },
-      { once: true },
-    );
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort', abort);
+      error ? reject(error) : resolveLogin();
+    };
+    const abort = () => {
+      void cancel();
+      finish(new Error('CANCELLED'));
+    };
+    const timer = setTimeout(() => {
+      void cancel();
+      finish(new Error('LOGIN_TIMEOUT'));
+    }, LOGIN_MS);
+
+    signal.addEventListener('abort', abort, { once: true });
     rpc.onNotification = (method, params) => {
-      if (method === 'account/login/completed') {
-        clearTimeout(timer);
-        params.success ? resolveLogin() : reject(new Error('LOGIN_FAILED'));
-      }
+      if (method !== 'account/login/completed') return;
+      // New Codex versions identify the login attempt. Older versions may omit loginId.
+      if (params?.loginId && params.loginId !== loginId) return;
+      params?.success ? finish() : finish(new Error('LOGIN_FAILED'));
     };
     deps.openExternal(url.href).catch(() => {
-      clearTimeout(timer);
-      reject(new Error('LOGIN_FAILED'));
+      void cancel();
+      finish(new Error('LOGIN_FAILED'));
     });
   });
+
+  // Do not trust the callback alone; verify that Codex can refresh the account it
+  // just persisted in this isolated CODEX_HOME.
+  const account = await rpc.request('account/read', { refreshToken: true }).catch(() => null);
+  if (account?.account?.type !== 'chatgpt') throw new Error('LOGIN_REQUIRED');
+  deps.signedIn?.();
 }
 
-async function geminiSignIn(rpc: ReturnType<typeof createRpc>, connection: Connection, deps: ConnectDeps) {
+async function geminiSignIn(
+  rpc: ReturnType<typeof createRpc>,
+  connection: Connection,
+  deps: ConnectDeps,
+  initialized: any,
+) {
+  const methodId = connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal';
+  const methods = Array.isArray(initialized?.authMethods) ? initialized.authMethods.map((method: any) => method?.id) : [];
+  if (methods.length && !methods.includes(methodId)) throw new Error('AUTH_METHOD_UNAVAILABLE');
+
   if (connection.mode === 'subscription') {
-    // Gemini prints a Google sign-in URL, then waits for the code Google shows after sign-in.
-    let attempts = 0;
+    // ACP mode is non-interactive. Let Gemini CLI own the supported browser +
+    // loopback callback flow; forcing NO_BROWSER makes current Gemini CLI reject
+    // OAuth because manual code entry requires an interactive terminal.
+    let sawLoginUrl = false;
     rpc.onText = line => {
-      const url = googleLoginUrl(line);
-      if (!url) return;
-      // Gemini prints a new URL after it rejects a code; after three tries the code is the problem.
-      if (++attempts > 3) {
-        rpc.close('LOGIN_CODE_REJECTED');
-        return;
-      }
-      const round = attempts;
-      void deps.openExternal(url.href).catch(() => {});
-      deps.progress('ลงชื่อในหน้าของ Google แล้ววาง code ที่ได้ในแอป');
-      deps.dropCode();
-      void deps.askForCode().then(code => {
-        // A box replaced by a newer prompt resolves empty; only the current one may end sign-in.
-        if (round !== attempts) return;
-        if (code) rpc.writeText(code);
-        else rpc.close('CANCELLED');
-      });
+      if (!googleLoginUrl(line)) return;
+      if (!sawLoginUrl) deps.progress('เปิดหน้าลงชื่อ Google แล้ว · รอการยืนยันจากเบราว์เซอร์');
+      sawLoginUrl = true;
     };
   }
+
   try {
-    await rpc.request('authenticate', { methodId: connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal' }, LOGIN_MS);
+    await rpc.request('authenticate', { methodId }, LOGIN_MS);
+    if (connection.mode === 'subscription') deps.signedIn?.();
   } catch (error) {
     throw errorCode(error) === 'PROVIDER_TIMEOUT' && connection.mode === 'subscription'
       ? new Error('LOGIN_TIMEOUT')
