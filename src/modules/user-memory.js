@@ -268,13 +268,26 @@ export async function updateUserMemoryProfile(workspaceDir = process.cwd(), upda
   const team = updates.team ? String(updates.team).toUpperCase() : '';
   const cluster = updates.cluster ? String(updates.cluster) : '';
 
-  content = content.replace(
-    /(- \*\*ทีมหลัก \(Primary Team\)\*\*:\s*).*$/m,
-    `$1${team}`
+  const setProfileField = (text, pattern, canonicalLabel, value) => {
+    if (pattern.test(text)) return text.replace(pattern, `$1${value}`);
+    const line = `- **${canonicalLabel}**: ${value}`;
+    if (/^## 1\..*$/m.test(text)) {
+      return text.replace(/^## 1\..*$/m, (heading) => `${heading}\n${line}`);
+    }
+    return `${text.trimEnd()}\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n${line}\n`;
+  };
+
+  content = setProfileField(
+    content,
+    /(- \*\*(?:ทีมหลัก(?: \(Primary Team\))?|Primary Team)\*\*:\s*).*$/m,
+    'ทีมหลัก (Primary Team)',
+    team,
   );
-  content = content.replace(
-    /(- \*\*กลุ่มงานสำหรับ Routing \(Routing Cluster\)\*\*:\s*).*$/m,
-    `$1${cluster}`
+  content = setProfileField(
+    content,
+    /(- \*\*(?:กลุ่มงานสำหรับ Routing(?: \(Routing Cluster\))?|Routing Cluster)\*\*:\s*).*$/m,
+    'กลุ่มงานสำหรับ Routing (Routing Cluster)',
+    cluster,
   );
 
   if (Array.isArray(updates.starterPrompts)) {
