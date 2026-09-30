@@ -9,7 +9,14 @@ export const OCR_URL = 'http://127.0.0.1:8765';
 export const OCR_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff'];
 export const OCR_MAX_BYTES = 25 * 1024 * 1024;
 
-export type OcrStatus = { running: boolean; crosscheck: boolean; installed: boolean; folder: string };
+export type OcrStatus = {
+  running: boolean;
+  crosscheck: boolean;
+  handwriting: boolean;
+  tesseract: boolean;
+  installed: boolean;
+  folder: string;
+};
 
 export function ocrPython(folder: string) {
   return process.platform === 'win32' ? join(folder, '.venv', 'Scripts', 'python.exe') : join(folder, '.venv', 'bin', 'python');
@@ -33,10 +40,15 @@ export class OcrService {
       const body: any = await response.json();
       // Only accept the STeP service, not whatever else happens to listen on the port.
       return response.ok && body?.ok === true && body.service === 'STeP Local Thai OCR'
-        ? { running: true, crosscheck: body.crosscheck_installed === true }
-        : { running: false, crosscheck: false };
+        ? {
+            running: true,
+            crosscheck: body.crosscheck_installed === true,
+            handwriting: body.handwriting_installed === true,
+            tesseract: body.tesseract_installed === true,
+          }
+        : { running: false, crosscheck: false, handwriting: false, tesseract: false };
     } catch {
-      return { running: false, crosscheck: false };
+      return { running: false, crosscheck: false, handwriting: false, tesseract: false };
     }
   }
 
@@ -70,13 +82,13 @@ export class OcrService {
     throw new Error('OCR_START_FAILED');
   }
 
-  async recognize(path: string, crosscheck: boolean) {
+  async recognize(path: string, crosscheck: boolean, tesseract = false, handwriting = false) {
     const extension = extname(path).slice(1).toLowerCase();
     if (!OCR_EXTENSIONS.includes(extension)) throw new Error('OCR_UNSUPPORTED_FILE');
     const size = (await stat(path)).size;
     if (!size || size > OCR_MAX_BYTES) throw new Error('OCR_FILE_TOO_LARGE');
     const bytes = await readFile(path);
-    const url = `${this.base}/api/ocr?filename=${encodeURIComponent(basename(path))}&threshold=0.80&handwriting=off&crosscheck=${crosscheck ? 'on' : 'off'}`;
+    const url = `${this.base}/api/ocr?filename=${encodeURIComponent(basename(path))}&threshold=0.80&handwriting=${handwriting ? 'on' : 'off'}&crosscheck=${crosscheck ? 'on' : 'off'}&tesseract=${tesseract ? 'on' : 'off'}`;
     let response: Response;
     try {
       response = await fetch(url, {
