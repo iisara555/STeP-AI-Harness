@@ -8,7 +8,7 @@ import readline from 'node:readline';
 import { updateUserMemoryProfile } from '../../modules/user-memory.js';
 import { readManifest } from '../../modules/manifest.js';
 
-async function reprofileCurrentWorkspace({ team = '', tool = '' } = {}) {
+async function reprofileCurrentWorkspace({ team = '', tool = '', clearTeam = false } = {}) {
   const workspaceDir = process.cwd();
   const manifest = await readManifest(workspaceDir);
   if (!manifest) return false;
@@ -19,6 +19,17 @@ async function reprofileCurrentWorkspace({ team = '', tool = '' } = {}) {
     manifest.targetType === 'team' ||
     manifest.teamDeferred === true ||
     ['all', 'staff'].includes(String(manifest.role || '').toLowerCase());
+
+  if (clearTeam) {
+    if (!installedAsTeam) return false;
+    info('พบ workspace ที่จัดการโดย STeP AI — กำลังเปลี่ยนเป็น broad routing แบบยังไม่ระบุทีม');
+    await runInit({
+      role: 'all',
+      tool: manifest.tool || tool || 'codex',
+      dest: workspaceDir,
+    });
+    return true;
+  }
 
   if (team) {
     if (!installedAsTeam) {
@@ -148,6 +159,7 @@ export async function runConfig(args) {
         await saveUserConfig({ team: '', cluster: '', teamDeferred: true });
         await updateUserMemoryProfile(process.cwd(), { team: '', cluster: '', starterPrompts: [] });
         info('ยังไม่ระบุทีม ระบบจะใช้ routing แบบกว้างก่อน และเลือกทีมภายหลังได้');
+        await reprofileCurrentWorkspace({ clearTeam: true, tool: config.tool });
       }
     } else if (choice === '2') {
       console.log('\nเลือกเครื่องมือ AI:');
