@@ -818,6 +818,7 @@ export default function App() {
             notify={notify}
             onError={e => notify(explainError(e), 'error')}
             handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
+            connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
           />
         ) : view === 'skills' ? (
           <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />
