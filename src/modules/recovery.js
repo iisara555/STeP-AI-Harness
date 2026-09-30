@@ -5,6 +5,7 @@ import { getStepAiDir, readManifest, writeManifest } from './manifest.js';
 import { ensureDir, pathExists, safeCopyFile } from '../utils/file-ops.js';
 import { safeWorkspacePath, validateRelativePath, validateBackupId } from '../utils/workspace-path.js';
 import { reconcileManagedFiles } from './managed-files.js';
+import { PACKAGE_ROOT } from './role-resolver.js';
 
 export const BACKUPS_DIRNAME = 'backups';
 
@@ -137,7 +138,12 @@ export async function prepareSnapshotRestore(workspaceDir, targetSnapshotId) {
 export async function restoreSnapshot(workspaceDir, targetSnapshotId) {
   const currentManifest = await readManifest(workspaceDir);
   const { snapshot, manifestData, copies } = await prepareSnapshotRestore(workspaceDir, targetSnapshotId);
-  const reconciliation = await reconcileManagedFiles(workspaceDir, currentManifest, Object.keys(manifestData.files || {}));
+  const reconciliation = await reconcileManagedFiles(
+    workspaceDir,
+    currentManifest,
+    Object.keys(manifestData.files || {}),
+    { packageRoot: PACKAGE_ROOT },
+  );
   const restoredFiles = [];
   for (const { srcPath, destPath, relPath } of copies) {
     await safeCopyFile(srcPath, destPath);
