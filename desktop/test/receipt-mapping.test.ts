@@ -117,3 +117,67 @@ test('a missing value is not stolen from the next AFP field label and remains tr
   assert.ok(extracted.afpMapping.unresolved_field_lines.some((line: any) => line.text === 'ภาษีมูลค่าเพิ่ม'));
   assert.ok(extracted.afpMapping.unmapped_ocr_lines.some((line: any) => line.text === 'ภาษีมูลค่าเพิ่ม'));
 });
+
+
+test('Paddle and Tesseract disagreement becomes ambiguous instead of auto-filling', async () => {
+  const review = await loadReview();
+  const extracted = review.extractReceipt({
+    pages: [
+      {
+        page: 1,
+        source: 'ocr',
+        lines: [
+          { text: 'ร้านตัวอย่าง จำกัด', confidence: 0.95 },
+          { text: 'วันที่ 30/09/2569', confidence: 0.95 },
+          {
+            text: 'ยอดรวม 107.00',
+            confidence: 0.95,
+            tesseract_candidate: 'ยอดรวม 108.00',
+            tesseract_confidence: 0.91,
+            tesseract_status: 'disagree',
+            text_kind: 'printed-conflict',
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(extracted.fields.total.value, '');
+  assert.equal(extracted.fields.total.mappingStatus, 'ambiguous');
+  const candidates = Array.from(extracted.fields.total.candidates, (candidate: any) => [candidate.value, candidate.engine]);
+  assert.deepEqual(candidates, [
+    ['107.00', 'paddle'],
+    ['108.00', 'tesseract'],
+  ]);
+});
+
+test('handwriting-only candidate stays ambiguous until a person or AI filter chooses it', async () => {
+  const review = await loadReview();
+  const extracted = review.extractReceipt({
+    pages: [
+      {
+        page: 1,
+        source: 'ocr',
+        lines: [
+          { text: 'ร้านตัวอย่าง จำกัด', confidence: 0.95 },
+          { text: 'วันที่ 30/09/2569', confidence: 0.95 },
+          {
+            text: 'ยอดรวม',
+            confidence: 0.35,
+            handwriting_candidate: 'ยอดรวม 109.00',
+            text_kind: 'handwriting-likely',
+            needs_review: true,
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(extracted.fields.total.value, '');
+  assert.equal(extracted.fields.total.mappingStatus, 'ambiguous');
+  assert.ok(
+    extracted.fields.total.candidates.some(
+      (candidate: any) => candidate.value === '109.00' && candidate.engine === 'thai-trocr',
+    ),
+  );
+});
