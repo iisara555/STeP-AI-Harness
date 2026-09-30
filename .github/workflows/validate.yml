@@ -25,6 +25,8 @@ jobs:
         run: bash scripts/verify_node_runtime_pins.sh
       - name: Build pilot distribution bundle
         run: python3 scripts/build_pilot_bundle.py
+      - name: Check local OCR Python syntax
+        run: python3 -m py_compile experiments/local-thai-ocr/*.py
       - name: Check updater script syntax
         shell: bash
         run: |
