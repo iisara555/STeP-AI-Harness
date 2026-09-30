@@ -5,7 +5,8 @@ import { header, success, warn, error, info } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { pathExists } from '../../utils/file-ops.js';
 import { PACKAGE_ROOT, getAvailableTeams, resolveTeamFiles } from '../../modules/role-resolver.js';
-import { loadUserConfig, USER_CONFIG_PATH } from '../../utils/user-config.js';
+import { USER_CONFIG_PATH } from '../../utils/user-config.js';
+import { resolveRoutingIdentity } from '../../modules/routing-identity.js';
 import { detectInstalledTools } from '../../utils/tool-detector.js';
 import { getPlatformDisplay } from '../../platform/index.js';
 import { loadUserMemory } from '../../modules/user-memory.js';
@@ -17,7 +18,7 @@ export async function runDoctor(args) {
     console.log(`\n${colors.bold(colors.cyan('STeP AI System Check'))}`);
     console.log(colors.dim('────────────────────────────────────────────────────────────'));
 
-    const userCfg = await loadUserConfig();
+    const routingIdentity = await resolveRoutingIdentity(process.cwd());
     const pkgJson = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8'));
     const detectedTools = await detectInstalledTools();
     const installedToolNames = detectedTools.filter((t) => t.installed).map((t) => t.name);
@@ -27,9 +28,9 @@ export async function runDoctor(args) {
 
     const skillRegistry = await readFile(join(PACKAGE_ROOT, 'manifest', 'skills.yaml'), 'utf-8');
     const organizationSkillsCount = (skillRegistry.match(/^    path:\s*skills\/[^\n]+\/SKILL\.md\s*$/gm) || []).length;
-    if (userCfg.team) {
+    if (routingIdentity.team) {
       const teams = await getAvailableTeams();
-      const t = teams.find((item) => item.id.toLowerCase() === userCfg.team.toLowerCase());
+      const t = teams.find((item) => item.id.toLowerCase() === routingIdentity.team.toLowerCase());
       if (t) {
         teamDisplay = `${t.name} (${t.id.toUpperCase()})`;
         const resolved = await resolveTeamFiles(t.id);
@@ -39,7 +40,7 @@ export async function runDoctor(args) {
             .map((file) => file.relativePath)
         ).size;
       } else {
-        teamDisplay = userCfg.team.toUpperCase();
+        teamDisplay = routingIdentity.team.toUpperCase();
       }
     }
 
@@ -54,6 +55,7 @@ export async function runDoctor(args) {
       console.log(`  ${colors.yellow('⚠️')} Router:          ${colors.yellow(`ไม่พบ ${launcher} ในโฟลเดอร์ ให้เปิด Update อีกครั้งหรือแจ้งตาม SUPPORT.md`)}`);
     }
     console.log(`  ${colors.green('✓')} Team:            ${colors.bold(teamDisplay)}`);
+    console.log(`  ${colors.green('✓')} Team Source:     ${colors.dim(routingIdentity.source)}`);
     if (installedToolNames.length > 0) {
       console.log(`  ${colors.green('✓')} Detected AI:     ${colors.cyan(installedToolNames.join(', '))}`);
     } else {
