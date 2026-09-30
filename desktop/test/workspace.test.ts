@@ -11,12 +11,14 @@ import { createRequire } from 'node:module';
 
 const root = resolve('..');
 const routing: any = await import('../../src/modules/router/service.js');
+const routerPolicy: any = await import('../../src/modules/router/index.js');
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
 const outputs: any = await import('../../src/modules/output-manager.js');
 const harness: Harness = {
   root,
   route: routing.queryStepRouter,
+  contextPolicy: routerPolicy.classifyContextPolicy,
   privacy: privacy.evaluatePrivacyGate,
   skillMetadata: async id => {
     const m = await routing.loadSkillContextMetadata(id);
@@ -471,5 +473,56 @@ test('structured receipt source persists in the workspace and is reused on follo
   await service.run(session.id, 'ยอดรวมในใบเสร็จนี้เท่าไร', '', true);
   assert.match(prompts[1], /Approved source excerpts[^]*RC-1024/);
   assert.match(prompts[1], /107\.00/);
+  store.close();
+});
+
+test('an unrelated turn starts a new task without old receipt source, draft or history', async () => {
+  const { store, session } = fixture();
+  const prompts: string[] = [];
+  const routes: string[] = [];
+  const fake: Harness = {
+    ...harness,
+    route: async (text: string) => {
+      routes.push(text);
+      return {
+        routingContract: {
+          mode: 'GENERAL',
+          authority: { status: 'ALLOW' },
+          readiness: { status: 'ready' },
+        },
+      };
+    },
+  };
+  const service = new WorkService(
+    store,
+    fake,
+    async () => ({
+      adapter: {
+        run: async (prompt: string) => {
+          prompts.push(prompt);
+          return prompts.length === 1 ? 'ร่างตรวจใบเสร็จ 107.00 บาท' : 'สรุประเบียบการลาฉบับใหม่';
+        },
+      },
+      context: { cwd: tmpdir(), env: {} },
+    }),
+    () => {},
+  );
+
+  await service.run(
+    session.id,
+    'ช่วย pre-check ใบเสร็จก่อนส่ง AFP',
+    '[STeP receipt review JSON]\n{"merchant":"ร้านตัวอย่าง","total":"107.00"}',
+    true,
+  );
+  assert.match(store.session(session.id).sourceText || '', /107\.00/);
+
+  await service.run(session.id, 'ช่วยสรุประเบียบการลาฉบับใหม่', '', true);
+  const second = prompts[1];
+  assert.deepEqual(routes, ['ช่วย pre-check ใบเสร็จก่อนส่ง AFP', 'ช่วยสรุประเบียบการลาฉบับใหม่']);
+  assert.match(second, /Conversation: \[\]/);
+  assert.match(second, /Current draft:\n\n/);
+  assert.doesNotMatch(second, /107\.00|ร้านตัวอย่าง|ร่างตรวจใบเสร็จ/);
+  assert.equal(store.session(session.id).sourceText, undefined);
+  assert.equal(store.session(session.id).originalQuery, 'ช่วยสรุประเบียบการลาฉบับใหม่');
   store.close();
 });
