@@ -1,0 +1,32 @@
+name: Capture README GUI screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [docs/gui-screenshots]
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Capture actual Electron GUI
+        run: xvfb-run -a node test/readme-screenshots.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: readme-gui-screenshots
+          path: desktop/release/readme/*.png
+          if-no-files-found: error
