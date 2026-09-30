@@ -118,6 +118,7 @@ export default function App() {
     attachments: string[];
     skill?: string;
     allowIds?: string[];
+    sourceText?: string;
     token: string;
     first: boolean;
     flagged: boolean;
@@ -328,10 +329,10 @@ export default function App() {
       label: 'ไปที่การเชื่อมต่อ AI',
       run: openAiSettings,
     });
-  async function receiptHandoff(text: string, allowIds: string[] = []) {
+  async function receiptHandoff(text: string, sourceText: string, allowIds: string[] = []) {
     if (connectionId === CLAUDE_CODE) {
       setView('chat');
-      setHandoffAsk({ text });
+      setHandoffAsk({ text: [text, sourceText].filter(Boolean).join('\n\n') });
       return;
     }
     if (!connectionId) {
@@ -343,7 +344,7 @@ export default function App() {
     setView('chat');
     setSelected(s.id);
     await refresh();
-    await start(s.id, text, [], undefined, undefined, allowIds);
+    await start(s.id, text, [], undefined, undefined, allowIds, sourceText);
   }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
@@ -396,10 +397,18 @@ export default function App() {
     );
   }
   // The host answers with a consent request when this send needs one; the dialog replays the same payload with its token.
-  async function start(id: string, text: string, attachments: string[], consent?: string, skill?: string, allowIds?: string[]) {
-    const result = await api!.call('send', { id, text, attachments, consent, skill, allowIdentifiers: allowIds });
+  async function start(
+    id: string,
+    text: string,
+    attachments: string[],
+    consent?: string,
+    skill?: string,
+    allowIds?: string[],
+    sourceText?: string,
+  ) {
+    const result = await api!.call('send', { id, text, attachments, consent, skill, allowIdentifiers: allowIds, sourceText });
     if (result.consent) {
-      setConsentAsk({ sessionId: id, text, attachments, skill, allowIds, ...result.consent });
+      setConsentAsk({ sessionId: id, text, attachments, skill, allowIds, sourceText, ...result.consent });
       return;
     }
     if (result.started && result.masked?.length) notify(`ระบบปิดบังก่อนส่งให้ AI: ${result.masked.join(', ')}`);
@@ -1334,7 +1343,7 @@ export default function App() {
           onConfirm={async () => {
             const ask = consentAsk;
             setConsentAsk(null);
-            await action(() => start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds));
+            await action(() => start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds, ask.sourceText));
           }}
         >
           {consentAsk.flagged ? (
@@ -1351,7 +1360,7 @@ export default function App() {
             )
           )}
           <p>
-            คำขอ{consentAsk.attachment ? ' ข้อความที่ตรวจแล้วจากไฟล์แนบ' : ''} ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้{' '}
+            คำขอ{consentAsk.attachment || consentAsk.sourceText ? ' พร้อมข้อมูลต้นทางที่ตรวจแล้ว' : ''} ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้{' '}
             {providerName(
               snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
                 connection,
@@ -1360,7 +1369,7 @@ export default function App() {
           <p className="small muted">
             ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ
             และไม่ส่งไฟล์ต้นฉบับ
-            {consentAsk.first && !consentAsk.flagged && !consentAsk.attachment
+            {consentAsk.first && !consentAsk.flagged && !consentAsk.attachment && !consentAsk.sourceText
               ? ' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ'
               : ''}
           </p>
