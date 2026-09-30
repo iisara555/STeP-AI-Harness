@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -152,4 +152,61 @@ test('concurrent output requests never hand out the same version', async (t) => 
 
 test('output file names keep Thai SARA AM whole so they stay searchable', () => {
   assert.equal(sanitizeOutputSegment('ช่วยทำ น้ำ'), 'ช่วยทำ-น้ำ');
+});
+
+
+test('output manager rejects an output symlink that would escape the workspace', { skip: process.platform === 'win32' }, async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'step-output-linked-'));
+  const outside = await mkdtemp(join(tmpdir(), 'step-output-outside-'));
+  t.after(async () => {
+    await rm(workspace, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  });
+
+  await symlink(outside, join(workspace, 'output'));
+  await assert.rejects(
+    getNextOutputPath({
+      workspaceDir: workspace,
+      team: 'qs',
+      type: 'document',
+      title: 'audit',
+      extension: 'md',
+    }),
+    /Linked workspace path/,
+  );
+});
+
+test('output CLI uses workspace-local team instead of a conflicting global default', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'step-output-local-team-'));
+  const fakeHome = await mkdtemp(join(tmpdir(), 'step-output-home-'));
+  t.after(async () => {
+    await rm(workspace, { recursive: true, force: true });
+    await rm(fakeHome, { recursive: true, force: true });
+  });
+
+  await writeFile(
+    join(workspace, 'USER.md'),
+    '# User\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n- **ทีมหลัก (Primary Team)**: QS\n',
+    'utf8',
+  );
+  await mkdir(join(fakeHome, '.step-ai'), { recursive: true });
+  await writeFile(join(fakeHome, '.step-ai', 'config.json'), JSON.stringify({ team: 'cc' }), 'utf8');
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [
+      STEP_AI_BIN,
+      'output',
+      '--type', 'document',
+      '--title', 'Audit Evidence',
+      '--ext', 'md',
+      '--date', '2026-09-30',
+      '--dest', workspace,
+      '--json',
+    ],
+    { env: { ...process.env, HOME: fakeHome, USERPROFILE: fakeHome } },
+  );
+  const result = JSON.parse(stdout);
+  assert.equal(result.team, 'QS');
+  assert.match(result.relativePath, /^output\/QS\//);
 });
