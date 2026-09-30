@@ -8,6 +8,7 @@ import { calculateFileSha256 } from '../../utils/checksum.js';
 import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
+import { safeWorkspacePath } from '../../utils/workspace-path.js';
 
 export async function runSync(args) {
   header('Sync & Update Skills to Latest Version');
@@ -69,7 +70,7 @@ export async function runSync(args) {
   const newManifestFiles = {};
 
   for (const f of files) {
-    const targetPath = join(dest, f.relativePath);
+    const targetPath = await safeWorkspacePath(dest, f.relativePath);
     const isModified = modified.includes(f.relativePath);
 
     if (isModified) {
@@ -93,7 +94,7 @@ export async function runSync(args) {
 
   // Update instruction files if not locally modified.
   for (const inst of instructionFiles) {
-    const instPath = join(dest, inst.filename);
+    const instPath = await safeWorkspacePath(dest, inst.filename);
     if (modified.includes(inst.filename)) {
       preservedCount++;
       if (manifest.files?.[inst.filename]) newManifestFiles[inst.filename] = manifest.files[inst.filename];
