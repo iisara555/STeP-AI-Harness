@@ -517,6 +517,7 @@ async function main() {
         const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
         return {
           ...status,
+          running: status.running && current,
           installed: status.installed && current,
           updateAvailable: managed && status.installed && !current,
           installing,
