@@ -231,14 +231,18 @@ export async function queryStepRouter(query, options = {}) {
   const localScope = hasGlobalAuthorityBlock || !selectedSkill
     ? { status: 'ALLOW', inScope: true }
     : checkScope(selectedSkill, query);
-  // A global confirmation gate (sending on the employee's behalf) applies even
-  // when no Skill matched. A Skill's own gate is more specific, so it wins.
-  const globalGate = hasGlobalAuthorityBlock
-    || (authorityPreflight.status === 'ESCALATE' && localScope.status === 'ALLOW');
+  // Mandatory local/global blocks outrank confirmation. When both the global
+  // authority registry and the Skill raise a confirmation/escalation, preserve
+  // the global authority provenance instead of silently dropping it.
+  const useGlobalAuthority = hasGlobalAuthorityBlock
+    || (authorityPreflight.status === 'ESCALATE' && localScope.status !== 'BLOCK');
 
-  let scopeResult = globalGate
+  let scopeResult = useGlobalAuthority
     ? {
         ...authorityPreflight,
+        ...(localScope.status === 'ESCALATE' && localScope.targetSkill
+          ? { targetSkill: localScope.targetSkill, localScopeReason: localScope.reason || '' }
+          : {}),
         ...(selectedPlaybook
           ? { playbookStep: preflightPlaybookStep, playbookId: selectedPlaybook.id }
           : {}),

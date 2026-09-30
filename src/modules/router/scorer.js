@@ -328,6 +328,16 @@ export function rankSkillCandidates(skills, context, options = {}) {
       return b.breakdown.keyword - a.breakdown.keyword;
     }
 
+    // A small primary-team advantage must not override much stronger topical
+    // evidence. Example: a CC employee reviewing a TOR may mention "ออกแบบ",
+    // but TOR + scope + acceptance-criteria evidence belongs to tor-review.
+    if (Math.abs(scoreDiff) <= 0.10 && a.breakdown.keyword > 0 && b.breakdown.keyword > 0) {
+      const aEvidence = summarizeTriggerEvidence(a);
+      const bEvidence = summarizeTriggerEvidence(b);
+      if (aEvidence.count >= 2 && dominatesTriggerEvidence(a, b)) return -1;
+      if (bEvidence.count >= 2 && dominatesTriggerEvidence(b, a)) return 1;
+    }
+
     if (scoreDiff !== 0) {
       return scoreDiff;
     }
