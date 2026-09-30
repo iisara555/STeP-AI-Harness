@@ -111,7 +111,7 @@ test('retrieval sees only the public turn; answering sees evidence and reviewed 
   assert.equal(calls[1].web, false);
   assert.doesNotMatch(calls[0].prompt, /PRIVATE_SOURCE_MARKER|Conversation:|Routing contract:/);
   assert.match(calls[0].prompt, /October 1|September 30/);
-  assert.match(calls[1].prompt, /Fresh web search evidence[^]*Government fixture/);
+  assert.match(calls[1].prompt, /<web_evidence>[^]*Government fixture/);
   assert.match(calls[1].prompt, /PRIVATE_SOURCE_MARKER/);
   assert.equal(store.session(session.id).usage?.total, 14);
   assert.deepEqual(store.session(session.id).messages.at(-1)?.webSources, webSources(evidence));

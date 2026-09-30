@@ -8,6 +8,8 @@ import { dirname, join } from 'node:path';
 //   `run_shell_command(<command>)`; loaded only after the user trusts the folder.
 // - VS Code + Copilot: `.vscode/settings.json` → `chat.tools.terminal.autoApprove`,
 //   `/regex/` keys matched per subcommand.
+// - Claude Code: `.claude/settings.json` → `permissions.allow` (`Bash(<prefix>:*)`),
+//   plus a UserPromptSubmit hook that runs the routing gate itself (see below).
 // OpenCode already allows shell commands by default, and Cursor and Antigravity
 // keep their allowlists outside the project, so none of them get a file here.
 
@@ -25,7 +27,25 @@ const VSCODE_AUTO_APPROVE = {
   '/^\\.\\\\step-ai\\.cmd (ask|output)\\b/': true,
 };
 
-export const TOOL_PERMISSION_FILES = ['.gemini/settings.json', '.vscode/settings.json'];
+// Claude Code's Bash tool runs Git Bash on Windows, where the launcher is ./step-ai.cmd.
+const CLAUDE_ALLOWED = [
+  'Bash(sh ./step-ai ask:*)',
+  'Bash(sh ./step-ai output:*)',
+  'Bash(./step-ai.cmd ask:*)',
+  'Bash(./step-ai.cmd output:*)',
+];
+
+// Claude Code runs this before every prompt and adds the routing contract to the model's
+// context, so the routing gate no longer depends on the model choosing to call it. Windows
+// runs hooks in PowerShell (always installed); macOS uses sh. Both read the hook JSON on stdin.
+export function claudeRoutingHook(platform = process.platform) {
+  return platform === 'win32'
+    ? { type: 'command', shell: 'powershell', command: '& "$env:CLAUDE_PROJECT_DIR\\step-ai.cmd" hook user-prompt-submit', timeout: 30 }
+    : { type: 'command', command: 'sh "$CLAUDE_PROJECT_DIR/step-ai" hook user-prompt-submit', timeout: 30 };
+}
+const isStepHook = (hook) => typeof hook?.command === 'string' && /step-ai(?:\.cmd)?["']? hook user-prompt-submit/.test(hook.command);
+
+export const TOOL_PERMISSION_FILES = ['.gemini/settings.json', '.vscode/settings.json', '.claude/settings.json'];
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -56,18 +76,41 @@ export function mergeVSCodeSettings(existing) {
   return settings;
 }
 
+export function mergeClaudeSettings(existing, platform = process.platform) {
+  const settings = isPlainObject(existing) ? structuredClone(existing) : {};
+  if (settings.permissions !== undefined && !isPlainObject(settings.permissions)) return null;
+  if (settings.permissions?.allow !== undefined && !Array.isArray(settings.permissions.allow)) return null;
+  if (settings.hooks !== undefined && !isPlainObject(settings.hooks)) return null;
+  if (settings.hooks?.UserPromptSubmit !== undefined && !Array.isArray(settings.hooks.UserPromptSubmit)) return null;
+  settings.permissions = settings.permissions || {};
+  const allow = settings.permissions.allow || [];
+  for (const entry of CLAUDE_ALLOWED) if (!allow.includes(entry)) allow.push(entry);
+  settings.permissions.allow = allow;
+  settings.hooks = settings.hooks || {};
+  const groups = settings.hooks.UserPromptSubmit || [];
+  // One STeP hook per workspace; a user's own hooks are kept, and a user who removed ours is asked again only on reinstall.
+  if (!groups.some((group) => Array.isArray(group?.hooks) && group.hooks.some(isStepHook))) {
+    groups.push({ hooks: [claudeRoutingHook(platform)] });
+  }
+  settings.hooks.UserPromptSubmit = groups;
+  return settings;
+}
+
 const MERGERS = {
   '.gemini/settings.json': mergeGeminiSettings,
   '.vscode/settings.json': mergeVSCodeSettings,
+  '.claude/settings.json': (existing) => mergeClaudeSettings(existing),
 };
 
 /**
  * Write or merge the permission files. Never overwrites a file it cannot parse;
- * reports it as skipped so the installer can tell the user.
+ * reports it as skipped so the installer can tell the user. `only` limits the
+ * files to one tool's (the Claude-only installer writes only `.claude/settings.json`).
  */
-export async function writeToolPermissions(workspaceDir, dryRun = false) {
+export async function writeToolPermissions(workspaceDir, dryRun = false, only = TOOL_PERMISSION_FILES) {
   const results = [];
   for (const [relativePath, merge] of Object.entries(MERGERS)) {
+    if (!only.includes(relativePath)) continue;
     const filePath = join(workspaceDir, relativePath);
     let existing = null;
     let raw = null;

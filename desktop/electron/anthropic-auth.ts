@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { chmod, copyFile, mkdir, mkdtemp, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 export type AnthropicContext = { cwd: string; env: NodeJS.ProcessEnv };
@@ -39,8 +41,11 @@ function findOnPath(command: string, args: string[]) {
   });
 }
 
-/** Full path of Anthropic's official `ant` CLI, or null when it is not installed. */
-export async function findAnthropicCli(): Promise<string | null> {
+/**
+ * Full path of Anthropic's official `ant` CLI, or null when it is not installed.
+ * `managed` lists copies STeP installed itself; they are checked after the employee's own install.
+ */
+export async function findAnthropicCli(managed: string[] = []): Promise<string | null> {
   const home = homedir();
   if (process.platform === 'win32') {
     const found = (await findOnPath('where.exe', ['ant']))
@@ -52,7 +57,7 @@ export async function findAnthropicCli(): Promise<string | null> {
       join(home, 'go', 'bin', 'ant.exe'),
       join(process.env.LOCALAPPDATA || join(home, 'AppData', 'Local'), 'Microsoft', 'WinGet', 'Links', 'ant.exe'),
     ];
-    return [...found.filter(path => /\.exe$/i.test(path)), ...known].find(path => existsSync(path)) || null;
+    return [...found.filter(path => /\.exe$/i.test(path)), ...managed, ...known].find(path => existsSync(path)) || null;
   }
 
   const shell = process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
@@ -60,6 +65,7 @@ export async function findAnthropicCli(): Promise<string | null> {
   return (
     [
       found,
+      ...managed,
       join(home, '.local', 'bin', 'ant'),
       join(home, 'go', 'bin', 'ant'),
       '/opt/homebrew/bin/ant',
@@ -181,4 +187,137 @@ export async function anthropicLogin(
 export async function anthropicLogout(executable: string, context: AnthropicContext) {
   const result = await runAnt(executable, ['auth', 'logout'], context, { timeout: 30_000 });
   if (result.code !== 0) throw new Error('ANTHROPIC_LOGOUT_FAILED');
+}
+
+// Anthropic publishes `ant` for Windows only as a GitHub release archive (no installer), so STeP
+// installs that exact release for the employee: one pinned version and its published SHA-256.
+// https://github.com/anthropics/anthropic-cli/releases/tag/v1.36.0 (MIT licence)
+export const ANT_VERSION = '1.36.0';
+const ANT_BUILDS: Record<string, { asset: string; sha256: string }> = {
+  'win32-x64': {
+    asset: `ant_${ANT_VERSION}_windows_amd64.zip`,
+    sha256: '8d23af7f718ca6deba10aa81da8214660478b94c6c2006e7659e570ee6011bab',
+  },
+  'win32-arm64': {
+    asset: `ant_${ANT_VERSION}_windows_arm64.zip`,
+    sha256: '076ba23210582c3e677c0bd3aabbea418afcc8872cbefa27b622097845b7d2fd',
+  },
+  'darwin-arm64': {
+    asset: `ant_${ANT_VERSION}_macos_arm64.zip`,
+    sha256: '57389381f52821fe86b3de69f5842706a391ee5531b3a9afeac3ceb375d3ec76',
+  },
+  'darwin-x64': {
+    asset: `ant_${ANT_VERSION}_macos_amd64.zip`,
+    sha256: 'b96eef66169f6be29c67cb2f47cfa46760c3176e24e77f9e5bf92671f0f711f6',
+  },
+};
+export function antComponentSpec(platform = process.platform, arch = process.arch) {
+  return ANT_BUILDS[`${platform}-${arch}`] || null;
+}
+/** Where STeP keeps the `ant` it installed, inside the employee's app data. */
+export function antComponentPath(componentDir: string, platform = process.platform) {
+  return join(componentDir, platform === 'win32' ? 'ant.exe' : 'ant');
+}
+
+async function downloadRelease(url: string, signal?: AbortSignal) {
+  const timeout = AbortSignal.timeout(5 * 60_000);
+  const response = await fetch(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout }).catch(() => {
+    throw new Error(signal?.aborted ? 'CANCELLED' : 'ANTHROPIC_CLI_DOWNLOAD_FAILED');
+  });
+  if (!response.ok) throw new Error('ANTHROPIC_CLI_DOWNLOAD_FAILED');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > 64 * 1024 * 1024) throw new Error('ANTHROPIC_CLI_DOWNLOAD_FAILED');
+  return bytes;
+}
+// The system bsdtar reads zip archives on Windows 10+ and macOS; no shell is involved.
+function extractArchive(archive: string, target: string) {
+  const tar = process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : '/usr/bin/tar';
+  return new Promise<boolean>(resolveExtract => {
+    const child = spawn(tar, ['-xf', archive, '-C', target], { windowsHide: true, shell: false, stdio: 'ignore' });
+    child.on('error', () => resolveExtract(false));
+    child.on('close', code => resolveExtract(code === 0));
+  });
+}
+async function findBinary(dir: string, name: string, depth = 3): Promise<string | null> {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isFile() && entry.name.toLowerCase() === name) return path;
+    if (entry.isDirectory() && depth > 0) {
+      const found = await findBinary(path, name, depth - 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export type AntInstallDeps = {
+  /** Release asset and checksum; tests substitute their own archive. */
+  spec?: { asset: string; sha256: string } | null;
+  download?: (url: string, signal?: AbortSignal) => Promise<Buffer>;
+  extract?: (archive: string, target: string) => Promise<boolean>;
+  /** Proves the extracted file is Anthropic's ant with OAuth support before it replaces anything. */
+  verify?: (executable: string, context: AnthropicContext) => Promise<unknown>;
+};
+
+/**
+ * Installs the pinned official `ant` release into `componentDir` and returns its path. Nothing is
+ * replaced unless the download matches the published checksum and the binary answers as ant 1.5+.
+ */
+export async function installAnthropicCli(
+  componentDir: string,
+  log: (line: string) => void,
+  deps: AntInstallDeps = {},
+  signal?: AbortSignal,
+) {
+  const spec = deps.spec === undefined ? antComponentSpec() : deps.spec;
+  if (!spec) throw new Error('ANTHROPIC_CLI_UNSUPPORTED');
+  const url = `https://github.com/anthropics/anthropic-cli/releases/download/v${ANT_VERSION}/${spec.asset}`;
+  const work = await mkdtemp(join(tmpdir(), 'step-ant-'));
+  try {
+    log(`กำลังดาวน์โหลด ant CLI ${ANT_VERSION} ของ Anthropic (ประมาณ 10 MB)`);
+    const bytes = await (deps.download || downloadRelease)(url, signal);
+    if (createHash('sha256').update(bytes).digest('hex') !== spec.sha256) throw new Error('ANTHROPIC_CLI_CHECKSUM_FAILED');
+    const archive = join(work, spec.asset),
+      unpacked = join(work, 'unpacked');
+    await writeFile(archive, bytes);
+    await mkdir(unpacked);
+    log('ตรวจ checksum ผ่านแล้ว กำลังแตกไฟล์');
+    if (!(await (deps.extract || extractArchive)(archive, unpacked))) throw new Error('ANTHROPIC_CLI_INSTALL_FAILED');
+    const found = await findBinary(unpacked, process.platform === 'win32' ? 'ant.exe' : 'ant');
+    if (!found) throw new Error('ANTHROPIC_CLI_INSTALL_FAILED');
+    await mkdir(componentDir, { recursive: true });
+    const target = antComponentPath(componentDir),
+      staged = join(componentDir, process.platform === 'win32' ? 'ant-staged.exe' : 'ant-staged');
+    await copyFile(found, staged);
+    if (process.platform !== 'win32') await chmod(staged, 0o755);
+    const profile = join(work, 'profile');
+    await mkdir(profile);
+    // Checked in a throwaway profile, so the check never touches a real sign-in.
+    const context: AnthropicContext = {
+      cwd: work,
+      env: {
+        PATH: process.env.PATH,
+        SystemRoot: process.env.SystemRoot,
+        TEMP: process.env.TEMP,
+        TMP: process.env.TMP,
+        HOME: work,
+        USERPROFILE: work,
+        APPDATA: work,
+        LOCALAPPDATA: work,
+        ANTHROPIC_CONFIG_DIR: profile,
+      },
+    };
+    try {
+      await (deps.verify || ((executable, ctx) => resolveAnthropicCli(ctx, async () => executable)))(staged, context);
+    } catch (error) {
+      await rm(staged, { force: true });
+      throw new Error(error instanceof Error && error.message === 'CANCELLED' ? 'CANCELLED' : 'ANTHROPIC_CLI_INSTALL_FAILED');
+    }
+    await rm(target, { force: true });
+    await rename(staged, target);
+    log('ติดตั้ง ant CLI เรียบร้อย');
+    return target;
+  } finally {
+    await rm(work, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
 }

@@ -135,6 +135,7 @@ export default function App() {
     attachment: boolean;
     mode: WorkMode;
     imageModel: string;
+    retry?: boolean;
   } | null>(null);
   // Claude Pro/Max works only inside Anthropic's own apps, so that choice hands the request to the employee's Claude Code.
   const [handoffAsk, setHandoffAsk] = useState<{ text: string; skill?: string } | null>(null),
@@ -467,6 +468,7 @@ export default function App() {
     sourceText?: string,
     mode: WorkMode = workMode,
     selectedImageModel: string = imageModel,
+    retry?: boolean,
   ) {
     runningId.current = id;
     currentId.current = id;
@@ -490,6 +492,7 @@ export default function App() {
         sourceText,
         mode,
         imageModel: selectedImageModel,
+        retry,
       });
     } catch (e) {
       setRunning(false);
@@ -512,6 +515,7 @@ export default function App() {
         sourceText,
         mode,
         imageModel: selectedImageModel,
+        retry,
         ...result.consent,
       });
       return;
@@ -1115,9 +1119,27 @@ export default function App() {
                   {stream && <RichText className="message-body streaming" text={stream} />}
                 </article>
               )}
-              {!running && session?.status === 'error' && lastRequest && (
+              {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
                 <div className="retry-row">
-                  <button onClick={() => void action(() => start(session.id, lastRequest, [], undefined, session.skill))}>
+                  {/* Continues the stopped task, after any Playbook steps it already finished. */}
+                  <button
+                    onClick={() =>
+                      void action(() =>
+                        start(
+                          session.id,
+                          lastRequest,
+                          [],
+                          undefined,
+                          session.skill,
+                          undefined,
+                          undefined,
+                          session.mode || workMode,
+                          imageModel,
+                          true,
+                        ),
+                      )
+                    }
+                  >
                     ลองอีกครั้ง
                   </button>
                   <button
@@ -1629,7 +1651,18 @@ export default function App() {
             const ask = consentAsk;
             setConsentAsk(null);
             await action(() =>
-              start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds, ask.sourceText, ask.mode, ask.imageModel),
+              start(
+                ask.sessionId,
+                ask.text,
+                ask.attachments,
+                ask.token,
+                ask.skill,
+                ask.allowIds,
+                ask.sourceText,
+                ask.mode,
+                ask.imageModel,
+                ask.retry,
+              ),
             );
           }}
         >

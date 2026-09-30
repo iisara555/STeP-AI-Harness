@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Rpc } from './rpc';
 import { explainRuntimeFailure } from './diagnostics';
@@ -20,6 +22,8 @@ export type ProviderContext = {
   env: NodeJS.ProcessEnv;
   key?: string;
   effort?: string;
+  /** Standing instructions for the runtime's system prompt; the prompt argument carries only the request sections. */
+  system?: string;
   signal: AbortSignal;
   emit: (text: string) => void;
   onReasoning?: (text: string) => void;
@@ -93,6 +97,9 @@ export class CodexAdapter implements ProviderAdapter {
         approvalPolicy: 'untrusted',
         sandbox: 'read-only',
         config: { web_search: context.webSearch ? 'live' : 'disabled', features: { shell_tool: false }, mcp_servers: {} },
+        // Developer instructions rank above the user message. The Codex base prompt stays in place:
+        // ChatGPT-plan sign-ins have rejected requests whose base instructions were replaced.
+        ...(context.system ? { developerInstructions: context.system } : {}),
         ephemeral: true,
       });
       return await new Promise<string>((resolve, reject) => {
@@ -174,7 +181,11 @@ export class CodexAdapter implements ProviderAdapter {
 export class GeminiAdapter implements ProviderAdapter {
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
-    const rpc = createRpc(connection, context);
+    // Gemini CLI replaces its own coding-agent system prompt with the file named in GEMINI_SYSTEM_MD.
+    // One file per run, so parallel tasks on the same connection never read each other's instructions.
+    const systemFile = context.system ? join(dirname(context.cwd), `system-${randomUUID()}.md`) : '';
+    if (systemFile) await writeFile(systemFile, context.system!, 'utf8');
+    const rpc = createRpc(connection, systemFile ? { ...context, env: { ...context.env, GEMINI_SYSTEM_MD: systemFile } } : context);
     let text = '';
     const searches = new Set<string>();
     const abort = () => rpc.close();
@@ -224,6 +235,7 @@ export class GeminiAdapter implements ProviderAdapter {
     } finally {
       context.signal.removeEventListener('abort', abort);
       await rpc.closeAndWait().catch(() => {});
+      if (systemFile) await rm(systemFile, { force: true }).catch(() => {});
     }
   }
 }
@@ -246,6 +258,7 @@ export class ClaudeAdapter implements ProviderAdapter {
           cwd: context.cwd,
           ...authOptions,
           model: connection.model || undefined,
+          ...(context.system ? { systemPrompt: context.system } : {}),
           ...(context.effort ? { effort: context.effort as any } : {}),
           tools: context.webSearch ? ['WebSearch'] : [],
           allowedTools: [],

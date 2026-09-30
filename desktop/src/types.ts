@@ -46,6 +46,28 @@ export type SkillEntry = {
 export type Usage = { input: number; output: number; total: number; runs: number };
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
+/** One model step of a run: sizes, references and timing only, never request, source or draft text. */
+export type StepTrace = {
+  label: string;
+  systemChars: number;
+  promptChars: number;
+  references: string[];
+  attempts: number;
+  ms: number;
+  usage?: { input: number; output: number; total: number };
+};
+export type RunTrace = {
+  id: string;
+  at: string;
+  mode: string;
+  route: string;
+  outcome: string;
+  code?: string;
+  ms: number;
+  steps: StepTrace[];
+};
+/** Finished Playbook steps of a run that stopped, so the same task can continue after them. */
+export type Checkpoint = { key: string; done: number; total: number; handoff: string; sources: string[]; skillTitle: string; at: string };
 export type Message = {
   role: 'user' | 'assistant' | 'status';
   text: string;
@@ -94,6 +116,10 @@ export type Session = {
   files?: ConversationFile[];
   /** Route of the last finished run, to tell a follow-up for the same work from a new task. */
   routeKey?: string;
+  checkpoint?: Checkpoint;
+  /** How the run in progress (or the one that stopped) treated earlier context, so a retry repeats it exactly. */
+  lastRun?: { revising: boolean; carries: boolean; continuing?: boolean; latest?: string };
+  runs?: RunTrace[];
 };
 export type Settings = {
   team: string;
@@ -135,8 +161,10 @@ export type RunEvent = {
     | 'step'
     | 'install'
     | 'connect-progress'
-    | 'failed';
+    | 'failed'
+    | 'trace';
   text?: string;
+  trace?: RunTrace;
   detail?: string[];
   connectionId?: string;
   plan?: PlanStep[];

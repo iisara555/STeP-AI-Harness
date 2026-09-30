@@ -48,7 +48,7 @@ try {
   }, runtime);
   // Connect while the wizard stays open, as an employee would from its "เชื่อมต่อ AI" step.
   await page.evaluate(async () => {
-    const c = await window.step.call('connection', { provider: 'gemini', mode: 'subscription' });
+    const c = await window.step.call('connection', { provider: 'gemini', mode: 'subscription', googleCloudProject: 'step-smoke-test' });
     await window.step.call('runtime', { id: c.id });
     window.__connect = window.step.call('connect', { id: c.id });
   });
@@ -62,7 +62,7 @@ try {
   // A provider that stalls in the test step shows progress and can be cancelled from the settings page.
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   await page.evaluate(async file => {
-    const c = await window.step.call('connection', { provider: 'gemini', mode: 'subscription' });
+    const c = await window.step.call('connection', { provider: 'gemini', mode: 'subscription', googleCloudProject: 'step-smoke-test' });
     await window.step.call('runtime', { id: c.id });
     window.__stall = c.id;
   }, runtime);

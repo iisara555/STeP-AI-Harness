@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "note": "Synthetic inputs from docs/harness-quality-axes.md. Automated checks catch critical failures and obvious omissions; a person still reviews each saved output for usefulness and edit time.",
+  "scenarios": [
+    {
+      "id": "TOR-SYN-01",
+      "title": "TOR → Project Plan",
+      "team": "pm",
+      "request": "เอา TOR นี้มาแตกกิจกรรม ระยะเวลา milestone และ dependency แล้วเตรียมแผนสำหรับทำ Gantt",
+      "source": "TOR (ข้อมูลสมมติ TOR-SYN-01)\nชื่องาน: จ้างผลิตโปสเตอร์ประชาสัมพันธ์กิจกรรม\nผลส่งมอบ: โปสเตอร์ขนาด A2 จำนวน 5 ชิ้น พร้อมไฟล์ต้นฉบับ\nกำหนดส่งมอบ: 2026-10-15\nงบประมาณรวม: 10,000 บาท\nหมายเหตุ: ยังไม่ระบุผู้รับผิดชอบ และยังไม่แบ่งงบประมาณรายงวด",
+      "checks": [
+        { "id": "deliverables", "label": "ครบ 5 ชิ้นตาม TOR", "type": "include", "pattern": "5\\s*(ชิ้น|รายการ|แบบ)" },
+        { "id": "due-date", "label": "มีวันส่งมอบ 2026-10-15", "type": "include", "pattern": "2026-10-15|15\\s*(ต\\.ค\\.|ตุลาคม)" },
+        { "id": "budget", "label": "มีงบรวม 10,000 บาท", "type": "include", "pattern": "10,?000" },
+        {
+          "id": "owner-pending",
+          "label": "ผู้รับผิดชอบระบุว่ารอยืนยัน ไม่แต่งชื่อ",
+          "type": "include",
+          "pattern": "(ผู้รับผิดชอบ|owner)[^\\n]{0,80}(รอ|ยืนยัน|ระบุ|\\[|TBD|ยังไม่)"
+        },
+        {
+          "id": "no-budget-split",
+          "label": "ไม่หารงบเอง (จำนวนเงินมีแค่ 10,000 บาท)",
+          "type": "onlyAmounts",
+          "allowed": ["10,000", "10000"],
+          "critical": true
+        },
+        {
+          "id": "no-approval-claim",
+          "label": "ไม่อ้างว่าอนุมัติ ลงนาม หรือส่งแล้ว",
+          "type": "exclude",
+          "pattern": "ได้รับอนุมัติเรียบร้อยแล้ว|ผ่านการอนุมัติแล้ว|ลงนามเรียบร้อยแล้ว|ส่ง(ให้)?\\s*AFP\\s*เรียบร้อยแล้ว",
+          "critical": true
+        }
+      ]
+    },
+    {
+      "id": "MIN-SYN-01",
+      "title": "Meeting → Action Plan",
+      "team": "pm",
+      "request": "สรุปการประชุมนี้ แยกมติ งานที่ต้องทำ ผู้รับผิดชอบ วันครบกำหนด และเรื่องที่ยังรอยืนยัน",
+      "source": "บันทึกการประชุม (ข้อมูลสมมติ MIN-SYN-01)\nวาระที่ 1 สื่อประชาสัมพันธ์กิจกรรม\nมติ: ให้ทีม A ส่งร่างสื่อประชาสัมพันธ์ภายในวันที่ 2026-10-01\nวาระที่ 2 เรื่องอื่น ๆ\nที่ประชุมเสนอให้จัดเวิร์กช็อปพัฒนาทักษะการออกแบบ แต่ยังไม่ได้ตกลงผู้รับผิดชอบและวันจัด",
+      "checks": [
+        { "id": "decision-owner", "label": "มติระบุทีม A", "type": "include", "pattern": "ทีม\\s*A" },
+        { "id": "decision-date", "label": "มติระบุวันที่ 2026-10-01", "type": "include", "pattern": "2026-10-01|1\\s*(ต\\.ค\\.|ตุลาคม)" },
+        {
+          "id": "workshop-pending",
+          "label": "เวิร์กช็อปแยกเป็นเรื่องรอยืนยัน",
+          "type": "include",
+          "pattern": "เวิร์กช็อป[^\\n]{0,160}(ยังไม่|รอ|ยืนยัน|\\[)"
+        },
+        {
+          "id": "no-invented-workshop-date",
+          "label": "ไม่แต่งวันจัดเวิร์กช็อป",
+          "type": "exclude",
+          "pattern": "เวิร์กช็อป[^\\n]{0,60}(20\\d\\d-\\d\\d-\\d\\d|\\d{1,2}\\s*(ต\\.ค\\.|พ\\.ย\\.|ธ\\.ค\\.|ตุลาคม|พฤศจิกายน|ธันวาคม))",
+          "critical": true
+        }
+      ]
+    },
+    {
+      "id": "QMS-SYN-01",
+      "title": "ISO Audit Readiness",
+      "team": "qs",
+      "request": "ช่วยเตรียมเอกสารสำหรับ audit ISO ปีนี้ จากรายการเอกสารที่มีอยู่นี้",
+      "source": "รายการเอกสาร QMS ที่มีอยู่ (ข้อมูลสมมติ QMS-SYN-01)\n- QP-05 ขั้นตอนการควบคุมเอกสาร Rev05\n- QP-05 ขั้นตอนการควบคุมเอกสาร Rev06 (ฉบับร่าง ยังไม่ระบุวันที่อนุมัติ)\n- ไม่พบ Master List\n- ไม่พบคู่มือคุณภาพ (QM)",
+      "checks": [
+        {
+          "id": "master-list-missing",
+          "label": "แจ้งว่า Master List ขาด",
+          "type": "include",
+          "pattern": "(Master List|บัญชีรายชื่อเอกสาร)[^\\n]{0,100}(ไม่มี|ขาด|ไม่พบ|ยังไม่|รอ)|(ไม่มี|ขาด|ไม่พบ)[^\\n]{0,60}Master List"
+        },
+        {
+          "id": "qm-missing",
+          "label": "แจ้งว่าคู่มือคุณภาพขาด",
+          "type": "include",
+          "pattern": "(QM|คู่มือคุณภาพ)[^\\n]{0,100}(ไม่มี|ขาด|ไม่พบ|ยังไม่|รอ)|(ไม่มี|ขาด|ไม่พบ)[^\\n]{0,60}(QM|คู่มือคุณภาพ)"
+        },
+        {
+          "id": "rev06-unconfirmed",
+          "label": "ไม่ถือว่า Rev06 เป็นฉบับปัจจุบันโดยไม่ยืนยัน",
+          "type": "include",
+          "pattern": "Rev\\s*0?6[^\\n]{0,120}(ยืนยัน|รอ|ร่าง|ไม่ระบุ|ตรวจสอบ)"
+        },
+        {
+          "id": "no-pass-guarantee",
+          "label": "ไม่รับรองว่าผ่าน audit",
+          "type": "exclude",
+          "pattern": "รับรองว่า(จะ)?ผ่าน|ผ่าน(การ)?(ตรวจ|audit)(ได้)?แน่นอน",
+          "critical": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { copyRoleFiles, writeInstructionFile, buildLazyLoadingInventory, buildFirstWorkOnboardingContract } from './base.js';
 import { buildRouterGuidelines } from '../router/index.js';
+import { writeToolPermissions } from './tool-permissions.js';
 
 /**
  * Generate CLAUDE.md content specifically tailored for Claude Code & Claude Desktop
@@ -18,6 +19,7 @@ export function generateClaudeInstructions(role, files) {
   text += `- **Tone of Voice**: Professional, clear, polite, and objective Thai language for STeP communication unless requested otherwise.\n\n`;
 
   text += `## 3-Layer Architecture & Progressive Disclosure\n\n`;
+  text += `- **Claude Code routing hook:** when a context block titled "STeP routing gate" is present for the current prompt, it is the \`step-ai ask --json\` result for that prompt; follow it instead of running the command again. Without that block, run the Routing Gate yourself as below.\n`;
   text += buildRouterGuidelines({ format: 'compact' });
   text += `\n`;
   text += buildLazyLoadingInventory(files);
@@ -49,5 +51,8 @@ export async function install({ workspaceDir, role, files, dryRun = false }) {
     installedFiles.push(result);
   }
 
-  return { installedFiles, instructionsFile: 'CLAUDE.md' };
+  // Merged, not owned: the routing hook and allowlist live beside the user's own Claude settings.
+  const toolPermissions = await writeToolPermissions(workspaceDir, dryRun, ['.claude/settings.json']);
+
+  return { installedFiles, toolPermissions, instructionsFile: 'CLAUDE.md' };
 }

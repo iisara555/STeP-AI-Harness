@@ -13,8 +13,15 @@ export function scrub(line: string) {
 
 // Known provider failures, mapped to codes the interface explains in Thai.
 const KNOWN: [RegExp, string][] = [
+  // Since 18 June 2026 Google serves Gemini CLI only to API keys and Code Assist Standard/Enterprise licenses.
+  [/no longer supported for Gemini Code Assist for individuals|IneligibleTier|migrate to the Antigravity/i, 'GEMINI_PERSONAL_DISCONTINUED'],
   [/GOOGLE_CLOUD_PROJECT/i, 'GOOGLE_CLOUD_PROJECT_REQUIRED'],
-  [/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|usage.?limit|usageLimitExceeded|out of extra usage/i, 'PROVIDER_QUOTA'],
+  // Exhausted quota or plan limits do not pass by waiting a few seconds; a busy or rate-limited service usually does.
+  [/RESOURCE_EXHAUSTED|quota|usage.?limit|usageLimitExceeded|out of extra usage/i, 'PROVIDER_QUOTA'],
+  [
+    /overloaded|\b50[234]\b|\b529\b|service unavailable|temporarily unavailable|rate_limit_error|rate.?limit|too many requests|\b429\b/i,
+    'PROVIDER_BUSY',
+  ],
   [
     /model.{0,40}(?:not supported|not available|does not exist|not found)|not available on your plan|unsupported model/i,
     'MODEL_NOT_AVAILABLE',

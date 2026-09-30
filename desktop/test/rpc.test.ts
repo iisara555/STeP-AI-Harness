@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Rpc } from '../electron/rpc';
@@ -289,5 +290,107 @@ test('a failed Codex turn reports the reason it gives', { timeout: 5000 }, async
   await assert.rejects(
     new CodexAdapter().run('Test', connection, { cwd: home, env: {}, signal: new AbortController().signal, emit: () => {} }),
     /MODEL_NOT_AVAILABLE/,
+  );
+});
+
+// Each runtime receives the drafting rules as system-level instructions, not inside the user message.
+test('Codex receives the drafting rules as developer instructions and keeps its base prompt', { timeout: 5000 }, async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-codex-system-'));
+  const executable = join(home, 'runtime.cjs');
+  const log = join(home, 'thread-start.json');
+  await writeFile(
+    executable,
+    `const fs=require('node:fs');require('node:readline').createInterface({input:process.stdin}).on('line',l=>{
+    const m=JSON.parse(l); if(m.id===undefined)return;
+    if(m.method==='thread/start'){fs.writeFileSync(${JSON.stringify(log)},JSON.stringify(m.params));console.log(JSON.stringify({id:m.id,result:{thread:{id:'t'}}}));return;}
+    console.log(JSON.stringify({id:m.id,result:{}}));
+    if(m.method==='turn/start'){console.log(JSON.stringify({method:'item/agentMessage/delta',params:{delta:'ร่าง'}}));console.log(JSON.stringify({method:'turn/completed',params:{turn:{status:'completed'}}}));}
+  });`,
+  );
+  const connection: Connection = { id: 'test', provider: 'openai', mode: 'subscription', executable, model: '', ready: true, note: '' };
+  const text = await new CodexAdapter().run('<request>\nทดสอบ\n</request>', connection, {
+    cwd: home,
+    env: {},
+    system: 'STEP RULES',
+    signal: new AbortController().signal,
+    emit: () => {},
+  });
+  assert.equal(text, 'ร่าง');
+  const params = JSON.parse(await readFile(log, 'utf8'));
+  assert.equal(params.developerInstructions, 'STEP RULES');
+  assert.equal(params.baseInstructions, undefined);
+  assert.equal(params.sandbox, 'read-only');
+});
+
+test('Gemini replaces its coding system prompt through a per-run file that is removed afterwards', { timeout: 5000 }, async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-gemini-system-'));
+  const cwd = join(home, 'workspace');
+  await mkdir(cwd);
+  const executable = join(home, 'runtime.cjs');
+  const seen = join(home, 'seen.json');
+  await writeFile(
+    executable,
+    `const fs=require('node:fs');require('node:readline').createInterface({input:process.stdin}).on('line',l=>{
+    const m=JSON.parse(l); if(m.id===undefined)return;
+    const file=process.env.GEMINI_SYSTEM_MD;
+    if(m.method==='session/new'){fs.writeFileSync(${JSON.stringify(seen)},JSON.stringify({file,text:fs.readFileSync(file,'utf8')}));console.log(JSON.stringify({id:m.id,result:{sessionId:'s'}}));return;}
+    if(m.method==='session/prompt'){console.log(JSON.stringify({method:'session/update',params:{update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'ร่าง'}}}}));}
+    console.log(JSON.stringify({id:m.id,result:{}}));
+  });`,
+  );
+  const connection: Connection = { id: 'test', provider: 'gemini', mode: 'api', executable, model: '', ready: true, note: '' };
+  const text = await new GeminiAdapter().run('<request>\nทดสอบ\n</request>', connection, {
+    cwd,
+    env: {},
+    key: 'test-key',
+    system: 'STEP RULES',
+    signal: new AbortController().signal,
+    emit: () => {},
+  });
+  assert.equal(text, 'ร่าง');
+  const { file, text: system } = JSON.parse(await readFile(seen, 'utf8'));
+  assert.equal(system, 'STEP RULES');
+  assert.ok(!file.startsWith(cwd), 'the file sits outside the runtime working folder');
+  assert.equal(existsSync(file), false, 'the per-run file is removed');
+});
+
+test('Claude receives the drafting rules as its system prompt', async () => {
+  let captured: any;
+  const provider = new ClaudeAdapter(
+    async () =>
+      ({
+        query: (input: any) => {
+          captured = input;
+          return (async function* () {
+            yield { type: 'result', subtype: 'success', is_error: false, result: 'ร่าง' };
+          })();
+        },
+      }) as any,
+  );
+  const answer = await provider.run('<request>\nทดสอบ\n</request>', { mode: 'api' } as Connection, {
+    cwd: tmpdir(),
+    env: {},
+    key: 'test-key',
+    system: 'STEP RULES',
+    signal: new AbortController().signal,
+    emit: () => {},
+  });
+  assert.equal(answer, 'ร่าง');
+  assert.equal(captured.options.systemPrompt, 'STEP RULES');
+  assert.deepEqual(captured.options.tools, []);
+});
+
+test('busy services, exhausted quotas and the Gemini personal-account shutdown are told apart', async () => {
+  const { explainRuntimeFailure } = await import('../electron/diagnostics');
+  assert.equal(explainRuntimeFailure(['{"type":"error","error":{"type":"overloaded_error"}}']), 'PROVIDER_BUSY');
+  assert.equal(explainRuntimeFailure(['529 Overloaded']), 'PROVIDER_BUSY');
+  assert.equal(explainRuntimeFailure(['rate_limit_error: 429 too many requests']), 'PROVIDER_BUSY');
+  assert.equal(explainRuntimeFailure(['You have hit your usage limit']), 'PROVIDER_QUOTA');
+  assert.equal(explainRuntimeFailure(['[API Error: 429 RESOURCE_EXHAUSTED] quota']), 'PROVIDER_QUOTA');
+  assert.equal(
+    explainRuntimeFailure([
+      'error: This client is no longer supported for Gemini Code Assist for individuals. To continue using Gemini, please migrate to the Antigravity suite of products',
+    ]),
+    'GEMINI_PERSONAL_DISCONTINUED',
   );
 });

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { readFile, readdir, rm, mkdir, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { readFile, readdir, rm, mkdir, mkdtemp, stat, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
@@ -22,6 +23,9 @@ import { resolveTeamChoice } from '../src/cli/team-selection.js';
 
 const execFileAsync = promisify(execFile);
 const STEP_AI_BIN = join(PACKAGE_ROOT, 'bin', 'step-ai.js');
+// `step-ai config` reinstalls the managed workspace in its working folder. Run it outside the
+// repository so tests never rewrite the checkout's own instruction and tool settings files.
+const CONFIG_CWD = await mkdtemp(join(tmpdir(), 'step-config-cwd-'));
 const PACKAGE_VERSION = JSON.parse(await readFile(join(PACKAGE_ROOT, 'package.json'), 'utf-8')).version;
 const PYTHON = process.platform === 'win32'
   ? { command: 'py', prefixArgs: ['-3'] }
@@ -86,7 +90,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
   });
 
   await t.test('Case 3: CLI step-ai config modifies and persists settings', async () => {
-    const { stdout } = await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--team', 'afp']);
+    const { stdout } = await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--team', 'afp'], { cwd: CONFIG_CWD });
     assert.ok(stdout.includes('AFP'));
 
     const team = await getUserTeam();
@@ -102,7 +106,7 @@ test(`STeP AI Pilot v${PACKAGE_VERSION} Installer & User Configuration Suite`, a
     assert.equal(resolveTeamChoice(teams, '16').id, 'cc');
     assert.equal(resolveTeamChoice(teams, 'cc').id, 'cc');
 
-    await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--team', 'cc']);
+    await execFileAsync(process.execPath, [STEP_AI_BIN, 'config', '--team', 'cc'], { cwd: CONFIG_CWD });
     assert.equal(await getUserTeam(), 'cc');
     assert.equal(await getUserCluster(), 'market-creative', 'routing cluster should derive from selected team');
   });

@@ -23,13 +23,14 @@ try {
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   const providerField = page.getByRole('combobox', { name: /ผู้ให้บริการ/ });
   const methodField = page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ });
+  // Google serves Gemini sign-in only to organization Code Assist licenses, so an API key is the default.
   await providerField.selectOption('gemini');
-  assert.equal(await methodField.inputValue(), 'subscription');
-  assert.ok((await methodField.locator('option').allTextContents()).includes('Google OAuth'));
-  assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
-  await methodField.selectOption('api');
+  assert.equal(await methodField.inputValue(), 'api');
   await page.getByLabel('API key', { exact: true }).waitFor();
+  assert.ok((await methodField.locator('option').allTextContents()).some(t => /Gemini Code Assist Standard\/Enterprise/.test(t)));
   await methodField.selectOption('subscription');
+  assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
+  await page.getByLabel(/Google Cloud Project ID/).fill('step-smoke-test');
   await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
   const withGoogle = await page.evaluate(() => window.step.call('snapshot'));
   assert.ok(withGoogle.connections.some(c => c.provider === 'gemini' && c.mode === 'subscription' && !c.ready));
@@ -40,7 +41,7 @@ try {
   await page.getByRole('button', { name: 'ตรวจอีกครั้ง', exact: true }).click();
   await page
     .locator('.claude-code-note')
-    .getByText(/พร้อมเปิด OAuth|ยังไม่พบ Anthropic/)
+    .getByText(/พร้อมเปิด OAuth|ยังไม่พบ Anthropic|ยังไม่มี ant CLI/)
     .waitFor();
   assert.deepEqual(errors, [], 'selecting Claude must not crash the renderer');
   await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
@@ -130,7 +131,7 @@ try {
   // sign-in folder and leaves its work ready to move to another AI.
   const picked = await page.evaluate(async () => {
     const a = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });
-    const b = await window.step.call('connection', { provider: 'gemini', mode: 'subscription' });
+    const b = await window.step.call('connection', { provider: 'gemini', mode: 'subscription', googleCloudProject: 'step-smoke-test' });
     const task = await window.step.call('create', { connectionId: b.id });
     return { a: a.id, b: b.id, task: task.id };
   });
