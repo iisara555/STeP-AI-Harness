@@ -1,6 +1,7 @@
 import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { safeCopyFile } from '../../utils/file-ops.js';
+import { safeWorkspacePath } from '../../utils/workspace-path.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
 
 /**
@@ -23,7 +24,7 @@ export async function copyRoleFiles(workspaceDir, files, dryRun = false) {
       continue;
     }
 
-    const destPath = join(workspaceDir, f.relativePath);
+    const destPath = await safeWorkspacePath(workspaceDir, f.relativePath);
     await safeCopyFile(f.sourcePath, destPath);
     const hash = await calculateFileSha256(destPath);
     const fileStat = await stat(destPath);
@@ -54,7 +55,7 @@ export async function writeInstructionFile(workspaceDir, filename, content, dryR
     };
   }
 
-  const filePath = join(workspaceDir, filename);
+  const filePath = await safeWorkspacePath(workspaceDir, filename);
   // Some tools read instructions from a subfolder, e.g. .github/copilot-instructions.md.
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, content, 'utf-8');
