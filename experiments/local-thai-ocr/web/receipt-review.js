@@ -147,6 +147,7 @@
     return records
       .filter((record) => {
         if (record === labelRecord || record.page !== labelRecord.page || !record.box || record.box[0] < labelRecord.box[2] - 12) return false;
+        if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) return false;
         const otherY = centerY(record.box);
         const tolerance = Math.max(30, Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]) * 1.25);
         return Math.abs(labelY - otherY) <= tolerance;
@@ -162,10 +163,10 @@
     for (let offset = 1; offset <= 2; offset++) {
       const record = records[labelIndex + offset];
       if (!record || record.page !== labelRecord.page) break;
+      // Stop at another recognized field label before parsing it as a value.
+      if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) break;
       const value = parseValue(record.text);
       if (value) results.push({ value, record, offset });
-      // Stop at another recognized field label: do not steal its value.
-      if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) break;
     }
     return results;
   }
