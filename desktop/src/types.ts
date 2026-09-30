@@ -46,7 +46,16 @@ export type SkillEntry = {
 export type Usage = { input: number; output: number; total: number; runs: number };
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
-export type Message = { role: 'user' | 'assistant' | 'status'; text: string; at: string; webSources?: { title: string; url: string }[] };
+export type Message = {
+  role: 'user' | 'assistant' | 'status';
+  text: string;
+  at: string;
+  webSources?: { title: string; url: string }[];
+  /** Files sent with this message, shown on it in the transcript. */
+  files?: { name: string }[];
+};
+/** A file sent in a chat: its checked, masked text stays with the conversation. */
+export type ConversationFile = { name: string; text: string; at: string };
 export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
 export type Proposal = { id: string; text: string; baseRevision: number; sources: string[]; at: string };
 export type Session = {
@@ -81,6 +90,10 @@ export type Session = {
   mode?: WorkMode;
   imageModel?: string;
   images?: ImageArtifact[];
+  /** Chat only: every file sent in the conversation. */
+  files?: ConversationFile[];
+  /** Route of the last finished run, to tell a follow-up for the same work from a new task. */
+  routeKey?: string;
 };
 export type Settings = {
   team: string;
@@ -96,7 +109,8 @@ export type Settings = {
   consentedAt?: string;
   ocrAiConsentedAt?: string;
 };
-export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean };
+/** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
+export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean; reason?: string };
 export type Snapshot = {
   features?: { claudeSubscription?: boolean };
   settings: Settings;

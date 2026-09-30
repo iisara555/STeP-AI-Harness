@@ -481,3 +481,22 @@ test('drafting a request for approval is writing; approving it is not', async ()
     assert.equal(result.routingContract.authority.status, 'BLOCK', query);
   }
 });
+
+test('a conversational host lets the model answer messages that match no Skill; menus and authority stay', async () => {
+  const pointer = await queryStepRouter('อันนี้', options);
+  assert.equal(pointer.routingContract.mode, 'CLARIFY');
+  const chat = await queryStepRouter('อันนี้', { ...options, conversational: true });
+  assert.equal(chat.routingContract.mode, 'GENERAL');
+  assert.equal(chat.routingContract.authority.status, 'ALLOW');
+  assert.ok(chat.routingContract.mandatoryReferences.length > 0, 'general help still carries the organization rules');
+
+  // Competing Playbooks still get a numbered menu, and approvals still stop at a person.
+  const menu = await queryStepRouter(mixedPlan, { ...options, conversational: true });
+  assert.equal(menu.routingContract.mode, 'CLARIFY');
+  assert.ok(menu.clarification.options.length >= 2);
+  const approval = await queryStepRouter('อนุมัติงบให้ทีมเลย', { ...options, conversational: true });
+  assert.equal(approval.routingContract.mode, 'BLOCK');
+  // A concrete Skill request routes the same either way.
+  const summary = await queryStepRouter('ช่วยสรุปบันทึกประชุมเป็นรายการงาน', { ...options, conversational: true });
+  assert.equal(summary.routingContract.skill, 'meeting-summary');
+});

@@ -309,7 +309,18 @@ export async function queryStepRouter(query, options = {}) {
     && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
     && !CONSEQUENTIAL_ACTION_PATTERN.test(query) && !CONSEQUENTIAL_INTENTS.has(context.intent)
     && !namesOrganizationContext(query, Object.keys(teams)) && needsPublicWebSearch(originalQuery);
-  const generalAssist = publicInformation || (isAmbiguous
+  // A conversational host sends the model the chat history and files, so a message
+  // that matches no Skill ("อันนี้", "อ่านยัง") is answered, or asked about, by the
+  // model in context instead of a fixed question here. Competing Playbooks, close
+  // Skill candidates and consequential requests still ask.
+  const conversationalAssist = options.conversational === true
+    && isAmbiguous
+    && !competingPlaybooks.length
+    && routingConfidence.tier === 'FALLBACK'
+    && scopeResult.status === 'ALLOW'
+    && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query);
+  const generalAssist = publicInformation || conversationalAssist || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'

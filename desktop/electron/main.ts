@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, clipboard, session as electronSession } from 'electron';
 import { mkdir, writeFile, stat, appendFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve, basename, dirname } from 'node:path';
+import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
@@ -23,6 +23,7 @@ import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
 import { findAnthropicCli, resolveAnthropicCli, anthropicLogout } from './anthropic-auth';
 import { existsSync } from 'node:fs';
+import { attachmentReason } from './attachments';
 import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
 let window: BrowserWindow, store: Store, service: WorkService;
@@ -944,7 +945,11 @@ async function main() {
         queued.status = 'queued';
         store.save(queued);
         void service
-          .run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel)
+          .run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel, [
+            ...selected.map((a: any) => a.view.name),
+            // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
+            ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
+          ])
           .catch(error => {
             diagnose('run-rejected', { code: errorCode(error) });
             const failed = store.session(id);
@@ -1013,16 +1018,19 @@ async function main() {
         if (result.canceled) return null;
         const path = result.filePaths[0],
           report = await harness.documentPrivacy(path, { includeRedacted: true });
-        const usable =
-          typeof report.redactedText === 'string' && report.action !== 'block-external' && report.redactedText.length <= 100000;
+        // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
+        const reason = attachmentReason(report);
+        const usable = !reason;
         const view: Attachment = {
           id: randomUUID(),
           name: basename(path),
-          status: usable ? 'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง' : 'ตรวจไม่ครบหรือมีข้อมูลที่ต้องจัดการก่อน ยังส่งไม่ได้',
+          status: usable ? 'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง' : 'ส่งไฟล์นี้ให้ AI ไม่ได้',
           preview: usable ? report.redactedText : '',
           usable,
+          ...(reason ? { reason } : {}),
         };
-        attachments.set(view.id, { view, text: report.redactedText || '', sessionId });
+        if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
+        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId });
         return view;
       }
       case 'export': {

@@ -415,6 +415,15 @@ export default function App() {
   }
   async function send() {
     if (!query.trim() || running || sendInFlight.current) return;
+    // A file that cannot go to the AI is never dropped quietly: the message waits until the person removes or replaces it.
+    const refused = files.find(f => !f.usable);
+    if (refused) {
+      notify(
+        `ส่งไฟล์ “${refused.name}” ให้ AI ไม่ได้: ${errorText[refused.reason || ''] || refused.status} · นำไฟล์ออกหรือแนบไฟล์อื่นก่อนส่ง`,
+        'error',
+      );
+      return;
+    }
     sendInFlight.current = true;
     setSubmitting(true);
     try {
@@ -436,7 +445,7 @@ export default function App() {
       await start(
         id,
         typedSkill ? typed![2] : query,
-        files.filter(f => f.usable).map(f => f.id),
+        files.map(f => f.id),
         undefined,
         forcedSkill || typedSkill || undefined,
         undefined,
@@ -984,6 +993,16 @@ export default function App() {
                   ) : (
                     <div className="message-body">{message.role === 'status' ? errorText[message.text] || message.text : message.text}</div>
                   )}
+                  {!!message.files?.length && (
+                    <div className="message-files" aria-label="ไฟล์ที่ส่งกับข้อความนี้">
+                      {message.files.map((file, i) => (
+                        <span key={i}>
+                          <Paperclip size={12} />
+                          {file.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {!!message.webSources?.length && (
                     <div className="web-sources" aria-label="แหล่งข้อมูลจากการค้นเว็บ">
                       <span>แหล่งข้อมูลจาก Web Search</span>
@@ -1169,10 +1188,11 @@ export default function App() {
                 {files.length > 0 && (
                   <div className="attachments">
                     {files.map(f => (
-                      <span key={f.id}>
-                        <button onClick={() => setInspecting(f)}>
+                      <span key={f.id} className={f.usable ? undefined : 'refused'}>
+                        <button onClick={() => setInspecting(f)} title={f.usable ? f.status : errorText[f.reason || ''] || f.status}>
                           <Paperclip size={13} />
                           {f.name}
+                          {!f.usable && <small> · ส่งไม่ได้</small>}
                         </button>
                         <button title="นำไฟล์ออก" onClick={() => setFiles(files.filter(x => x.id !== f.id))}>
                           <X size={13} />
@@ -1813,7 +1833,9 @@ export default function App() {
                 <X />
               </button>
             </header>
-            <p>{inspecting.status}</p>
+            <p className={inspecting.usable ? undefined : 'danger-text'}>
+              {inspecting.usable ? inspecting.status : `${inspecting.status}: ${errorText[inspecting.reason || ''] || ''}`}
+            </p>
             <p className="small muted">ตรวจเฉพาะข้อความที่อ่านได้ ไม่ตรวจรูปภาพหรือรับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง</p>
             <pre>{inspecting.preview || 'ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน'}</pre>
             <button onClick={() => setInspecting(null)}>กลับไปที่งาน</button>

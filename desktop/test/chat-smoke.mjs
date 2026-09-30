@@ -5,6 +5,31 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
+// A minimal PDF; an empty string makes a page without a text layer, like a scanned page.
+function minimalPdf(pages) {
+  const objects = [];
+  objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objects[2] = `<< /Type /Pages /Kids [${pages.map((_, i) => `${4 + i * 2} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+  objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+  pages.forEach((text, i) => {
+    const stream = text ? `BT /F1 12 Tf 72 720 Td (${text}) Tj ET` : '';
+    objects[4 + i * 2] =
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`;
+    objects[5 + i * 2] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  for (let n = 1; n < objects.length; n++) {
+    offsets[n] = out.length;
+    out += `${n} 0 obj\n${objects[n]}\nendobj\n`;
+  }
+  const xref = out.length;
+  out += `xref\n0 ${objects.length}\n0000000000 65535 f \n${offsets
+    .slice(1)
+    .map(o => `${String(o).padStart(10, '0')} 00000 n \n`)
+    .join('')}trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
 const home = await mkdtemp(join(tmpdir(), 'step-chat-smoke-')),
   workspace = join(home, 'files');
 await mkdir(workspace);
@@ -16,7 +41,7 @@ await writeFile(
 const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;
  const result=r.method==='thread/start'?{thread:{id:'thread'}}:r.method==='model/list'?{data:[{id:'synthetic-chat',displayName:'Synthetic Chat',isDefault:true}]}:{};
- send({id:r.id,result});if(r.method==='turn/start'){const prompt=r.params.input[0].text;const text=prompt.includes('Second message')?'Second answer received':prompt.includes('Draft request')?'# Synthetic draft\\nEditable output':prompt.includes('Tool proposal')?'Review this request\\n\\n\u0060\u0060\u0060step-tool\\n{"tool":"terminal","input":"echo proposed"}\\n\u0060\u0060\u0060':'First answer received';
+ send({id:r.id,result});if(r.method==='turn/start'){const prompt=r.params.input[0].text;const current=prompt.slice(prompt.lastIndexOf('\\n\\n')+2);const text=current.includes('Second message')?'Second answer received':current.includes('Draft request')?'# Synthetic draft\\nEditable output':current.includes('Tool proposal')?'Review this request\\n\\n\u0060\u0060\u0060step-tool\\n{"tool":"terminal","input":"echo proposed"}\\n\u0060\u0060\u0060':'First answer received';
  if(prompt.startsWith('Use the live web search tool now')){send({method:'item/started',params:{item:{id:'search',type:'webSearch',action:{type:'search'}}}});setTimeout(()=>{send({method:'item/completed',params:{item:{id:'search',type:'webSearch'}}});send({method:'item/agentMessage/delta',params:{delta:'Synthetic evidence only. [Government fixture](https://www.thaigov.go.th/example)'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},1600);return;}
  if(prompt.includes('Fresh web search evidence')){send({method:'item/agentMessage/delta',params:{delta:'Synthetic holiday answer '}});setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'from retrieved evidence'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},3400);return;}
  setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},120);}
@@ -141,7 +166,9 @@ try {
   await consent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้' }).click();
   await waitComplete(id);
   const withSource = await page.evaluate(() => window.step.call('snapshot'));
-  assert.match(withSource.sessions[0].sourceText, /terminal-ui-ok/);
+  // In chat, tool results stay with the conversation's files and are shown on the message they came with.
+  assert.match(withSource.sessions[0].files.at(-1).text, /terminal-ui-ok/);
+  assert.deepEqual(withSource.sessions[0].messages.filter(m => m.role === 'user').at(-1).files, [{ name: 'ผลจากเครื่องมือในแอป' }]);
   await page.getByRole('button', { name: 'Files', exact: true }).click();
   await page.getByRole('button', { name: 'สร้างไฟล์ใหม่' }).click();
   await page.getByRole('textbox', { name: 'File path' }).fill('new.txt');
@@ -167,6 +194,25 @@ try {
   if (await openOutput.count()) await openOutput.click();
   await page.locator('.draft-editor').waitFor();
   await page.screenshot({ path: 'release/qa/chat-workspace-dark.png', fullPage: true });
+  // A file the scan withholds (here a PDF whose second page has no text layer, like a scanned signature page)
+  // is marked on its chip, and sending is refused with the reason instead of dropping the file quietly.
+  const signed = join(home, 'signed-minutes.pdf');
+  await writeFile(signed, minimalPdf(['Meeting minutes: team A sends the draft', '']));
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+  }, signed);
+  const before = (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.length;
+  await page.getByRole('button', { name: 'ตรวจและแนบเอกสาร' }).click();
+  await page.getByRole('dialog', { name: 'ตรวจข้อความแนบ' }).getByText('บางหน้าใน PDF เป็นภาพสแกน', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'กลับไปที่งาน' }).click();
+  await page.locator('.attachments .refused').filter({ hasText: 'signed-minutes.pdf' }).waitFor();
+  await page.locator('.composer textarea').fill('สรุปไฟล์นี้');
+  await page.keyboard.press('Enter');
+  await page.getByText('ส่งไฟล์ “signed-minutes.pdf” ให้ AI ไม่ได้', { exact: false }).waitFor();
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.length, before, 'nothing was sent');
+  assert.equal(await page.locator('.composer textarea').inputValue(), 'สรุปไฟล์นี้');
+  await page.getByRole('button', { name: 'นำไฟล์ออก' }).click();
+  await page.locator('.composer textarea').fill('');
   // An unready connection reports the blocker and preserves the typed request.
   await app.evaluate(async ({ app }) => {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
@@ -205,6 +251,7 @@ try {
           'reviewed file changes',
           'sandbox browser reader',
           'unready connection keeps input',
+          'withheld attachment refuses to send with its reason',
         ],
         sessionId: id,
       },

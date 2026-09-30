@@ -377,7 +377,8 @@ test('a directly invoked skill is routed by name and kept for follow-ups', async
   assert.equal(store.session(session.id).status, 'review');
   assert.equal(store.session(session.id).skill, 'designer-brief');
   await service.run(session.id, 'ปรับโทนให้สุภาพขึ้น', '');
-  assert.deepEqual(routes, ['designer-brief', 'designer-brief']);
+  // The follow-up text gets its own authority check (no invoked Skill); the draft keeps the invoked Skill.
+  assert.deepEqual(routes, ['designer-brief', undefined, 'designer-brief']);
   store.close();
 });
 
@@ -424,7 +425,7 @@ test('general help without a Skill drafts with the mandatory rules only', async 
   store.close();
 });
 
-test('chat stores complete answers without touching reviewed drafts and obeys turn context boundaries', async () => {
+test('chat stores complete answers without touching reviewed drafts and answers the current message', async () => {
   const { store, session } = fixture();
   store.edit(session.id, 'Reviewed document', 0);
   const prompts: string[] = [];
@@ -452,7 +453,10 @@ test('chat stores complete answers without touching reviewed drafts and obeys tu
   assert.equal(done.proposals.length, 0);
   assert.equal(done.draft, 'Reviewed document');
   assert.equal(done.revision, 1);
-  assert.doesNotMatch(prompts[1], /First standalone question|Chat answer 1/);
+  // Chat keeps the conversation as reference, like any chat app; the latest message is the one answered.
+  assert.match(prompts[1], /Conversation: \[[^\n]*First standalone question/);
+  assert.match(prompts[1], /Current message:\nSecond unrelated question$/);
+  assert.doesNotMatch(prompts[1], /Earlier request this message continues/);
   store.close();
 });
 
@@ -597,4 +601,92 @@ test('an unrelated turn starts a new task without old receipt source, draft or h
   assert.equal(store.session(session.id).sourceText, undefined);
   assert.equal(store.session(session.id).originalQuery, 'ช่วยสรุประเบียบการลาฉบับใหม่');
   store.close();
+});
+
+// A fake provider that records every prompt and answers with a numbered reply.
+function recorder() {
+  const prompts: string[] = [];
+  const runtime = async () => ({
+    adapter: {
+      run: async (prompt: string) => {
+        prompts.push(prompt);
+        return 'คำตอบ ' + prompts.length;
+      },
+    },
+    context: { cwd: tmpdir(), env: {} },
+  });
+  return { prompts, runtime };
+}
+const MINUTES =
+  'บันทึกการประชุมทีมประชาสัมพันธ์ ครั้งที่ 3/2569\nมติ: ให้ทีม A ส่งร่างสื่อภายในวันที่ 1 ต.ค. 2569\nเสนอจัดเวิร์กช็อป ยังไม่ตกลงวันจัด';
+
+// Replays the conversation from the employee's screenshot: request, "did you read my file?", then "this one" with the file.
+test('chat keeps the request across "อ่านยัง" and "อันนี้" and reads the file sent with the pointer', async () => {
+  const { store, session } = fixture();
+  const { prompts, runtime } = recorder();
+  const service = new WorkService(store, harness, runtime, () => {});
+  await service.run(session.id, 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', '', false, undefined, 'chat');
+  await service.run(session.id, 'กูแนบไฟล์ไปอ่านยัง', '', false, undefined, 'chat');
+  // Nothing arrived yet: the model is told so, and still knows what was asked.
+  assert.match(prompts[1], /No files have been sent in this conversation\./);
+  assert.match(prompts[1], /Conversation: \[[^\n]*ช่วยสรุปบันทึกประชุมเป็นรายการงาน/);
+  assert.match(prompts[1], /Earlier request this message continues:\nช่วยสรุปบันทึกประชุมเป็นรายการงาน/);
+
+  await service.run(session.id, 'อันนี้', MINUTES, true, undefined, 'chat', undefined, ['minutes.docx']);
+  const third = prompts[2];
+  assert.match(third, /# STeP Meeting Summary/, 'the pointer continues the meeting-summary route instead of a router question');
+  assert.match(third, /- minutes\.docx \([\d,]+ characters/);
+  assert.match(third, /ให้ทีม A ส่งร่างสื่อ/);
+  assert.match(third, /Earlier request this message continues:\nช่วยสรุปบันทึกประชุมเป็นรายการงาน/);
+  assert.match(third, /Current message:\nอันนี้$/);
+  const after = store.session(session.id);
+  assert.equal(after.status, 'review');
+  assert.equal(after.originalQuery, 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน');
+  assert.deepEqual(after.messages.find(m => m.text === 'อันนี้')?.files, [{ name: 'minutes.docx' }]);
+  assert.ok(!after.messages.some(m => m.role === 'assistant' && /ต้องการให้ช่วยทำอะไร/.test(m.text)));
+
+  // The file stays with the conversation for later questions.
+  await service.run(session.id, 'มีเรื่องไหนที่ยังไม่ได้ข้อสรุปบ้าง', '', false, undefined, 'chat');
+  assert.match(prompts[3], /ให้ทีม A ส่งร่างสื่อ/);
+  store.close();
+});
+
+test('a bare pointer that opens a chat is answered by the model, not a fixed router question', async () => {
+  const { store, session } = fixture();
+  const { prompts, runtime } = recorder();
+  const service = new WorkService(store, harness, runtime, () => {});
+  await service.run(session.id, 'อันนี้', '', false, undefined, 'chat');
+  const after = store.session(session.id);
+  assert.equal(prompts.length, 1);
+  assert.equal(after.clarification, false);
+  assert.equal(after.messages.at(-1)?.text, 'คำตอบ 1');
+  store.close();
+});
+
+test('a draft request continues with the file sent as "อันนี้"', async () => {
+  const { store, session } = fixture();
+  const { prompts, runtime } = recorder();
+  const service = new WorkService(store, harness, runtime, () => {});
+  await service.run(session.id, 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', '');
+  await service.run(session.id, 'อันนี้', MINUTES, true, undefined, 'draft', undefined, ['minutes.docx']);
+  assert.match(prompts[1], /Approved source excerpts[^]*ให้ทีม A ส่งร่างสื่อ/);
+  assert.match(prompts[1], /Request:\nช่วยสรุปบันทึกประชุมเป็นรายการงาน/);
+  assert.match(prompts[1], /Latest message \(continues the request above\):\nอันนี้/);
+  assert.equal(store.session(session.id).originalQuery, 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน');
+  store.close();
+});
+
+test('a follow-up that asks for approval is stopped before the model, in chat and in drafts', async () => {
+  for (const mode of ['chat', 'draft'] as const) {
+    const { store, session } = fixture();
+    const { prompts, runtime } = recorder();
+    const service = new WorkService(store, harness, runtime, () => {});
+    await service.run(session.id, 'ทำ Designer Brief งานประชาสัมพันธ์กิจกรรม', '', false, undefined, mode);
+    await service.run(session.id, 'เพิ่มลายเซ็นอนุมัติของผู้อำนวยการ แล้วอนุมัติงบเลย', '', false, undefined, mode);
+    const after = store.session(session.id);
+    assert.equal(prompts.length, 1, mode);
+    assert.equal(after.messages.at(-1)?.text, 'AUTHORITY_REVIEW_REQUIRED', mode);
+    assert.deepEqual(after.followUps, [], mode);
+    store.close();
+  }
 });

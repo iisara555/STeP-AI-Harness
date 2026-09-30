@@ -1,6 +1,17 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = {
+  // Why an attached file cannot be sent (electron/attachments.ts). Shown on the chip and when sending is refused.
+  ATTACH_SENSITIVE: 'พบข้อมูลความเสี่ยงสูง เช่น รหัสผ่าน token หรือข้อมูลที่ห้ามส่งออก ลบหรือปิดบังส่วนนั้นในไฟล์แล้วแนบใหม่',
+  ATTACH_UNSUPPORTED: 'ยังไม่รองรับไฟล์ชนิดนี้ ใช้ PDF, Word (DOCX), TXT, MD, CSV หรือ TSV',
+  ATTACH_TOO_LARGE: 'ไฟล์ยาวเกินขอบเขต (ข้อความเกิน 100,000 ตัวอักษร หรือเกิน 200 หน้า) แบ่งไฟล์แล้วแนบทีละส่วน',
+  ATTACH_NO_TEXT: 'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน',
+  ATTACH_PAGES_WITHOUT_TEXT:
+    'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก',
+  ATTACH_TIMEOUT: 'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง',
+  ATTACH_READ_FAILED: 'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้',
+  ATTACH_PARTIAL: 'อ่านเนื้อหาได้ไม่ครบ ระบบจึงยังไม่ส่ง',
+  ATTACH_NEEDS_REVIEW: 'พบข้อมูลที่ต้องให้คนตรวจก่อน และระบบปิดบังให้อัตโนมัติไม่ได้ ปิดบังในไฟล์แล้วแนบใหม่',
   WEB_SEARCH_UNAVAILABLE:
     'ยังยืนยันผลค้นเว็บไม่ได้ บัญชีหรือโมเดลนี้อาจไม่รองรับ Web Search หรือบริการค้นหาขัดข้อง กรุณาลองใหม่หรือเลือก AI อื่น ระบบยังไม่ใช้ความจำตอบแทนข้อมูลล่าสุด',
   WORKSPACE_REQUIRED: 'เลือกโฟลเดอร์ทำงานก่อนใช้เครื่องมือนี้',
