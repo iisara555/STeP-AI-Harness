@@ -18,12 +18,17 @@ export async function resolveRoutingIdentity(
   const explicitCluster = String(cluster || '').trim().toLowerCase();
   const teams = await getAvailableTeams();
   const knownTeams = new Set(teams.map(item => item.id.toLowerCase()));
+  const broadAliases = new Set(['all', 'staff', 'shared', 'universal']);
   const validTeam = value => {
     const normalized = String(value || '').trim().toLowerCase();
+    if (broadAliases.has(normalized)) return '';
     return knownTeams.has(normalized) ? normalized : '';
   };
 
   if (explicitTeam) {
+    if (broadAliases.has(explicitTeam)) {
+      return { team: '', cluster: explicitCluster, source: 'explicit' };
+    }
     if (!knownTeams.has(explicitTeam)) {
       throw new Error(`Unknown team '${explicitTeam}'. Run 'step-ai teams' to see valid team IDs.`);
     }
