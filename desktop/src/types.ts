@@ -68,6 +68,8 @@ export type Session = {
   sourceText?: string;
   consentedAt?: string;
   followUps?: string[];
+  /** Index of the first message in the current task boundary inside this Workspace session. */
+  contextStart?: number;
   model?: string;
   effort?: string;
   pinned?: boolean;
