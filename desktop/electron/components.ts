@@ -124,7 +124,13 @@ async function installPortablePython(runtimeDir: string, log: Log) {
  * The main installer carries only the small OCR application code; Python, Paddle and models
  * are downloaded into this user's app-data folder only when the employee chooses to use OCR.
  */
-export async function installOcr(appFolder: string, componentDir: string, log: Log, crosscheck = false) {
+export async function installOcr(
+  appFolder: string,
+  componentDir: string,
+  log: Log,
+  crosscheck = false,
+  handwriting = false,
+) {
   if (!existsSync(join(appFolder, 'requirements-core.txt'))) throw new Error('OCR_FOLDER_INVALID');
   const spec = ocrComponentSpec();
   if (!spec) throw new Error('OCR_COMPONENT_UNSUPPORTED');
@@ -161,11 +167,29 @@ export async function installOcr(appFolder: string, componentDir: string, log: L
           ] as [string, string, string[]],
         ]
       : []),
+    ...(handwriting
+      ? [
+          [
+            'ติดตั้งโมเดลอ่านลายมือภาษาไทย',
+            venvPython,
+            ['-m', 'pip', 'install', '-r', join(appFolder, 'requirements-handwriting.txt')],
+          ] as [string, string, string[]],
+        ]
+      : []),
     [
       'ดาวน์โหลดและเตรียมโมเดล OCR ภาษาไทย',
       venvPython,
       ['-c', 'from ocr_engine import LocalThaiOCR; LocalThaiOCR()._get_ocr(); print("models ready")'],
     ],
+    ...(handwriting
+      ? [
+          [
+            'ดาวน์โหลดและเตรียมโมเดลลายมือภาษาไทย',
+            venvPython,
+            ['-c', 'from handwriting import ThaiHandwritingReader; ThaiHandwritingReader(); print("handwriting ready")'],
+          ] as [string, string, string[]],
+        ]
+      : []),
   ];
 
   try {
@@ -181,7 +205,12 @@ export async function installOcr(appFolder: string, componentDir: string, log: L
   }
   await writeFile(
     join(componentDir, 'stamp.json'),
-    JSON.stringify({ core: await coreFingerprint(appFolder), crosscheck, installedAt: new Date().toISOString() }),
+    JSON.stringify({
+      core: await coreFingerprint(appFolder),
+      crosscheck,
+      handwriting,
+      installedAt: new Date().toISOString(),
+    }),
     'utf8',
   );
   log('DONE');
