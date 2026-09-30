@@ -1,5 +1,5 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { calculateFileSha256 } from '../utils/checksum.js';
 import { pathExists } from '../utils/file-ops.js';
@@ -77,4 +77,52 @@ export function desiredManagedPaths(files = [], instructionFiles = []) {
     ...files.map(file => file.relativePath),
     ...instructionFiles.map(file => file.filename),
   ];
+}
+
+
+async function sameFileContent(path, expected) {
+  if (Buffer.isBuffer(expected)) {
+    const current = await import('node:fs/promises').then(fs => fs.readFile(path));
+    return current.equals(expected);
+  }
+  const current = await import('node:fs/promises').then(fs => fs.readFile(path, 'utf8'));
+  return current === String(expected);
+}
+
+/**
+ * Detect pre-existing files at paths the Harness wants to own but does not
+ * currently own according to the workspace manifest. Identical packaged files
+ * may be adopted; different user files must not be overwritten silently.
+ */
+export async function findUntrackedManagedConflicts(
+  workspaceDir,
+  manifest,
+  files = [],
+  instructionFiles = [],
+) {
+  const tracked = normalizedPaths(Object.keys(manifest?.files || {}));
+  const conflicts = [];
+
+  for (const file of files) {
+    const relPath = validateRelativePath(String(file.relativePath).replace(/\\/g, '/'));
+    if (tracked.has(relPath)) continue;
+    const target = await safeWorkspacePath(workspaceDir, relPath);
+    if (!(await pathExists(target))) continue;
+
+    // The distribution installer initializes its own root, where source and
+    // destination are intentionally the same packaged file.
+    if (resolve(file.sourcePath) === resolve(target)) continue;
+    const source = await import('node:fs/promises').then(fs => fs.readFile(file.sourcePath));
+    if (!(await sameFileContent(target, source))) conflicts.push(relPath);
+  }
+
+  for (const file of instructionFiles) {
+    const relPath = validateRelativePath(String(file.filename).replace(/\\/g, '/'));
+    if (tracked.has(relPath)) continue;
+    const target = await safeWorkspacePath(workspaceDir, relPath);
+    if (!(await pathExists(target))) continue;
+    if (!(await sameFileContent(target, file.content))) conflicts.push(relPath);
+  }
+
+  return [...new Set(conflicts)].sort();
 }
