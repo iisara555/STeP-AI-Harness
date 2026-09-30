@@ -15,6 +15,7 @@ import {
   desiredManagedPaths,
   findUntrackedManagedConflicts,
   reconcileManagedFiles,
+  retainNonProfileManifestFiles,
 } from '../../modules/managed-files.js';
 import { selectTeamProfile } from '../team-selection.js';
 
@@ -188,7 +189,7 @@ export async function runInit(args) {
   });
 
   // Build manifest files map
-  const manifestFiles = {};
+  const manifestFiles = retainNonProfileManifestFiles(existingManifest);
   for (const item of result.installedFiles) {
     manifestFiles[item.relativePath] = {
       sha256: item.sha256,
