@@ -12,6 +12,7 @@ type MappingCandidate = {
   confidence: number | null;
   method: string;
   score: number;
+  engine?: string;
 };
 type Field = {
   value: string;
