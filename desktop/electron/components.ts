@@ -60,6 +60,32 @@ export function portableOcrPython(runtimeDir: string) {
   return process.platform === 'win32' ? join(runtimeDir, 'python', 'python.exe') : join(runtimeDir, 'python', 'bin', 'python3');
 }
 
+async function coreFingerprint(appFolder: string) {
+  const spec = ocrComponentSpec();
+  if (!spec) return '';
+  const files = await Promise.all(
+    ['requirements-core.txt', 'ocr_engine.py'].map(async name => {
+      try {
+        return await readFile(join(appFolder, name), 'utf8');
+      } catch {
+        return '';
+      }
+    }),
+  );
+  return createHash('sha256')
+    .update(JSON.stringify([PYTHON_RELEASE, PYTHON_VERSION, process.platform, process.arch, spec.paddle, ...files]))
+    .digest('hex');
+}
+
+export async function ocrComponentCurrent(appFolder: string, componentDir: string) {
+  try {
+    const saved = JSON.parse(await readFile(join(componentDir, 'stamp.json'), 'utf8'));
+    return Boolean(saved?.core) && saved.core === (await coreFingerprint(appFolder));
+  } catch {
+    return false;
+  }
+}
+
 async function installPortablePython(runtimeDir: string, log: Log) {
   const spec = ocrComponentSpec();
   if (!spec) throw new Error('OCR_COMPONENT_UNSUPPORTED');
@@ -86,6 +112,9 @@ async function installPortablePython(runtimeDir: string, log: Log) {
     if ((await run(tar, ['-xzf', archive, '-C', runtimeDir], log)) !== 0 || !existsSync(portableOcrPython(runtimeDir)))
       throw new Error('OCR_COMPONENT_INSTALL_FAILED');
     return portableOcrPython(runtimeDir);
+  } catch (error) {
+    await rm(runtimeDir, { recursive: true, force: true });
+    throw error;
   } finally {
     await rm(work, { recursive: true, force: true });
   }
@@ -147,5 +176,10 @@ export async function installOcr(appFolder: string, componentDir: string, log: L
     await rm(venvDir, { recursive: true, force: true });
     throw error;
   }
+  await writeFile(
+    join(componentDir, 'stamp.json'),
+    JSON.stringify({ core: await coreFingerprint(appFolder), crosscheck, installedAt: new Date().toISOString() }),
+    'utf8',
+  );
   log('DONE');
 }
