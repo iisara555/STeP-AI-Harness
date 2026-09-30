@@ -82,7 +82,7 @@ try {
     connection.signedIn = true;
     connection.note = 'พร้อมทำงาน';
     connection.models = [{ id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', description: 'งานความรู้และงานซับซ้อน', isDefault: true }];
-    connection.modelsAt = new Date().toISOString();
+    connection.modelsAt = '2026-09-30T03:30:00.000Z';
     put('connection', connection.id, connection);
 
     const session = get('session', seeded.sessionId);
@@ -92,12 +92,12 @@ try {
       {
         role: 'user',
         text: 'สรุปการประชุมนี้ แยกมติ งานที่ต้องทำ ผู้รับผิดชอบ และวันครบกำหนด',
-        at: new Date(Date.now() - 120000).toISOString(),
+        at: '2026-09-30T03:28:00.000Z',
       },
       {
         role: 'assistant',
         text: 'สรุปให้แล้วครับ โดยแยกมติสำคัญและ Action Items ไว้ในร่างด้านขวาเพื่อให้ตรวจแก้ก่อนนำไปใช้',
-        at: new Date(Date.now() - 60000).toISOString(),
+        at: '2026-09-30T03:29:00.000Z',
       },
     ];
     session.sources = ['Meeting Notes · Food Hall · 30 Sep 2026'];
