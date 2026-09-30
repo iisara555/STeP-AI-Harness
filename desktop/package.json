@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && node build.mjs",
     "start": "electron .",
     "test": "tsx --test test/*.test.ts",
-    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs",
+    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
@@ -18,8 +18,8 @@
     "icon": "electron scripts/make-icon.cjs",
     "dist:mac:x64": "npm run build && node scripts/fetch-mac-x64-runtimes.mjs && electron-builder --publish never --mac dmg --x64",
     "bundle:ocr": "node scripts/bundle-ocr.mjs",
-    "format": "prettier --write \"electron/**/*.ts\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
-    "format:check": "prettier --check \"electron/**/*.ts\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
+    "format": "prettier --write \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
+    "format:check": "prettier --check \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
     "eval:golden": "tsx eval/golden.ts"
   },
   "dependencies": {

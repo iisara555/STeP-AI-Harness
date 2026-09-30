@@ -35,6 +35,9 @@ import { Approvals } from './approvals';
 import { ToolGate } from './tool-gate';
 import { HookEngine, type HookPayload } from './hooks';
 import { attachmentReason } from './attachments';
+import { DesktopTools } from './tools';
+import { Questions } from './questions';
+import { CostLedger } from './cost';
 import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
 let window: BrowserWindow, store: Store, service: WorkService;
@@ -121,6 +124,9 @@ async function main() {
     route: routing.queryStepRouter,
     contextPolicy: routerPolicy.classifyContextPolicy,
     privacy: privacy.evaluatePrivacyGate,
+    catalog: () => skillCatalog.loadSkillCatalog(root),
+    documentMetadata: routing.loadDocumentContextMetadata,
+    toolLoop: () => policyState.policy.features.toolLoop,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
@@ -210,6 +216,7 @@ async function main() {
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
     approvals.close();
+    questions.close();
     diagnose('policy-reloaded', { source: policyState.policy.source, problems: String(policyState.problems.length) });
     emit({ sessionId: '', type: 'changed' });
   });
@@ -265,6 +272,20 @@ async function main() {
     fireHook,
   );
   const browsers = new Map<string, BrowserWindow>();
+  const questions = new Questions(emit);
+  const ledger = new CostLedger(store, () => policyState.policy);
+  const tools = new DesktopTools(
+    workbench,
+    harness,
+    gate,
+    approvals,
+    questions,
+    () => policyState.policy,
+    permissionMode,
+    join(__dirname, 'sheet-worker.cjs'),
+  );
+  harness.tools = scope => tools.host(scope);
+  harness.recordUsage = (connection, count) => ledger.record(connection, count);
   service = new WorkService(
     store,
     harness,
@@ -360,6 +381,7 @@ async function main() {
     return file;
   };
   const snapshot = async () => ({
+    usage: ledger.report(),
     features: { claudeSubscription },
     policy: {
       source: policyState.policy.source,
@@ -403,6 +425,21 @@ async function main() {
         exportPaths.add(result.filePath);
         return { path: result.filePath };
       }
+      case 'usage':
+        return ledger.report();
+      case 'questionRespond':
+        questions.respond(inputText(input.id, 60), input.answer);
+        return true;
+      case 'toolSnapshots':
+        return gate.run({ tool: 'snapshot', readOnly: true }, { title: '', body: '', key: 'list' }, () => workbench.snapshots());
+      case 'toolSnapshotRestore':
+        return gate.run({ tool: 'snapshot', readOnly: true }, { title: '', body: '', key: inputText(input.id, 60) }, () =>
+          workbench.restoreSnapshot(input.id),
+        );
+      case 'toolSnapshotForget':
+        return gate.run({ tool: 'snapshot-forget', readOnly: true }, { title: '', body: '', key: inputText(input.id, 60) }, () =>
+          workbench.forgetSnapshot(input.id),
+        );
       case 'toolFiles': {
         const target = inputText(input.path || '', 2000);
         return gate.run({ tool: 'files', readOnly: true, path: target || '.' }, { title: '', body: '', key: target }, () =>
@@ -411,7 +448,9 @@ async function main() {
       }
       case 'toolRead': {
         const target = inputText(input.path, 2000);
-        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, () => workbench.read(target));
+        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, () =>
+          workbench.readChunk(target, Number(input.offset || 0), 200_000),
+        );
       }
       case 'toolStage': {
         const target = inputText(input.path, 2000);
@@ -522,6 +561,7 @@ async function main() {
         const mode = input.mode as PermissionMode;
         if (!policyState.policy.permission.modes.includes(mode)) throw new Error('MODE_NOT_ALLOWED');
         approvals.close();
+        questions.close();
         store.put('settings', 'main', { ...store.settings(), permissionMode: mode });
         return snapshot();
       }
@@ -535,6 +575,7 @@ async function main() {
         const result = await dialog.showOpenDialog(window, { properties: ['openDirectory', 'createDirectory'] });
         if (!result.canceled) {
           approvals.close();
+          questions.close();
           const s = store.settings();
           s.workspace = result.filePaths[0];
           store.put('settings', 'main', s);
@@ -1245,9 +1286,15 @@ async function main() {
   nativeTheme.themeSource = store.settings().theme;
   await makeWindow();
   window.webContents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
-    if (mainFrame) approvals.close();
+    if (mainFrame) {
+      approvals.close();
+      questions.close();
+    }
   });
-  window.webContents.on('render-process-gone', () => approvals.close());
+  window.webContents.on('render-process-gone', () => {
+    approvals.close();
+    questions.close();
+  });
   app.on('second-instance', () => {
     window.show();
     window.focus();
@@ -1255,6 +1302,7 @@ async function main() {
   let closing = false;
   app.on('before-quit', event => {
     approvals.close();
+    questions.close();
     unwatchFile(policyState.path);
     service.cancelAll();
     if (closing) return;

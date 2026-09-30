@@ -44,6 +44,16 @@ export type SkillEntry = {
   triggers: string[];
 };
 export type Usage = { input: number; output: number; total: number; runs: number };
+export type UsageReport = {
+  day: string;
+  month: string;
+  dailyTokens: number;
+  monthlyUsd: number;
+  unpricedTokens: number;
+  budgets: { dailyTokens?: number; monthlyCostUsd?: number };
+  warnings: string[];
+  entries: { day: string; provider: string; model: string; total: number; usd: number; unpricedTokens: number }[];
+};
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
 /** One model step of a run: sizes, references and timing only, never request, source or draft text. */
@@ -139,6 +149,7 @@ export type Settings = {
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
 export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean; reason?: string };
 export type Snapshot = {
+  usage?: UsageReport;
   policy?: PolicySnapshot;
   approvals?: ApprovalRule[];
   features?: { claudeSubscription?: boolean };
@@ -161,6 +172,7 @@ export type PolicySnapshot = {
 };
 export type ApprovalRule = { id: string; workspaceHash: string; tool: string; targetHash: string; at: string };
 export type ApprovalRequest = { id: string; tool: string; title: string; body: string; privacyClass: string; allowRemember: boolean };
+export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };
 export type RunEvent = {
   sessionId: string;
@@ -180,7 +192,11 @@ export type RunEvent = {
     | 'failed'
     | 'approval'
     | 'approval-close'
+    | 'question'
+    | 'question-close'
     | 'trace';
+  question?: ToolQuestion;
+  questionId?: string;
   approval?: ApprovalRequest;
   approvalId?: string;
   text?: string;

@@ -82,6 +82,7 @@ export type Policy = {
   /** US dollars per million tokens, keyed by model id or `provider:*`. */
   prices: Record<string, { input: number; output: number }>;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
+  network?: { proxyUrl?: string };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -156,6 +157,28 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.network !== undefined) {
+    if (!isObject(raw.network) || Object.keys(raw.network).some(k => k !== 'proxyUrl')) problems.push('invalid network configuration');
+    else if (raw.network.proxyUrl !== undefined) {
+      try {
+        const url = new URL(raw.network.proxyUrl);
+        if (
+          typeof raw.network.proxyUrl !== 'string' ||
+          raw.network.proxyUrl.length > 2000 ||
+          !['http:', 'https:'].includes(url.protocol) ||
+          url.username ||
+          url.password ||
+          url.pathname !== '/' ||
+          url.search ||
+          url.hash
+        )
+          throw new Error();
+        policy.network = { proxyUrl: url.href };
+      } catch {
+        problems.push('invalid network proxyUrl');
+      }
+    }
+  }
   if (raw.features !== undefined) {
     if (!isObject(raw.features)) problems.push('features must be an object');
     else

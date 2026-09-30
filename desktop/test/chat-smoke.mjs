@@ -34,6 +34,8 @@ const home = await mkdtemp(join(tmpdir(), 'step-chat-smoke-')),
   workspace = join(home, 'files');
 await mkdir(workspace);
 await mkdir('release/qa', { recursive: true });
+// Exercise the manual proposal fallback; the enabled loop has its own complete smoke test.
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false } }));
 const executable = join(home, 'codex.mjs');
 await writeFile(
   executable,

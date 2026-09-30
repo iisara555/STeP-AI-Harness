@@ -16,7 +16,7 @@ An unpackaged development app using `STEP_DESKTOP_TEST_HOME` reads `desktop-poli
 
 ## Defaults and example
 
-Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `sandbox`, `mcp`, `lineGateway`, `vision`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator` and `memoryTeam` default to false. `toolLoop` defaults to true as a permission for the future read-only loop; Phase 1 does not execute model tool proposals automatically. A feature flag grants permission and does not establish that its implementation is available.
+Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `sandbox`, `mcp`, `lineGateway`, `vision`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator` and `memoryTeam` default to false. `toolLoop` defaults to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. Other feature flags grant permission and do not establish that future implementations are available.
 
 ```json
 {

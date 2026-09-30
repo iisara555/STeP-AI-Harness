@@ -1,6 +1,15 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = {
+  TOOL_TURN_LIMIT: 'เครื่องมือทำงานครบจำนวนรอบที่กำหนดแล้ว ตรวจ Changes และ Tasks ก่อนสั่งทำต่อ',
+  TOOL_LOOP_DISABLED: 'ผู้ดูแลปิดวงจรเครื่องมืออัตโนมัติแล้ว',
+  TOOL_DATA_DECLINED: 'ยังไม่ส่งผลเครื่องมือให้ AI เพราะไม่ได้รับความยินยอม',
+  TOOL_OUTPUT_LIMIT: 'ผลเครื่องมือเกินขอบเขตการอ่าน ลองระบุช่วงที่เล็กลง',
+  WEB_ADDRESS_BLOCKED: 'เครื่องมือเว็บเข้าถึงได้เฉพาะปลายทางสาธารณะ',
+  WEB_PROXY_FAILED: 'เชื่อมต่อผ่าน proxy ขององค์กรไม่ได้ กรุณาแจ้งผู้ดูแล',
+  WEB_TIMEOUT: 'อ่านหน้าเว็บไม่เสร็จในเวลาที่กำหนด',
+  SNAPSHOT_LIMIT: 'พื้นที่ไฟล์สำรองถึงขอบเขตแล้ว ตรวจและลบไฟล์สำรองที่ไม่ต้องใช้ใน Changes',
+  SHEET_TIMEOUT: 'อ่านตารางไม่เสร็จในเวลาที่กำหนด ลองใช้ไฟล์ที่เล็กลง',
   SENSITIVE_PATH: 'ไฟล์นี้เป็นพื้นที่เก็บข้อมูลรับรองตัวตน จึงเปิดผ่านเครื่องมือไม่ได้',
   PATH_RULE_DENIED: 'นโยบายองค์กรไม่อนุญาตให้เครื่องมือเข้าถึงไฟล์นี้',
   COMMAND_DENIED: 'นโยบายองค์กรไม่อนุญาตคำสั่งนี้',

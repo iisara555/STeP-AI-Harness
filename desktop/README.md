@@ -2,6 +2,8 @@
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
+The Phase 2 [governed tool loop](../docs/desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
+
 ## Run
 
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:

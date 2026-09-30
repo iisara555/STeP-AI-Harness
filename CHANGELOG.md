@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop OpenHarness adaptation — Phase 2
+
+- Add a bounded Chat/Draft host tool loop with parallel reads, hooks, separate result consent and paged output.
+- Add routed Skills, registered references, document sections, reviewed XLSX edits, Chat questions, plan approval and exact-byte local backups.
+- Guard public retrieval with DNS/IP pinning, redirects and an optional trusted organization proxy.
+- Add three-retry exponential backoff with jitter/retry-after, reported token/cost estimates, budget warnings and `/usage`.
+- Cover the complete loop through synthetic Electron/preload/IPC; live providers and later phases remain unverified.
+
 ### Desktop OpenHarness adaptation — Phase 1
 
 - Add administrator-owned managed policy with safe defaults, strict validation and hot reload.

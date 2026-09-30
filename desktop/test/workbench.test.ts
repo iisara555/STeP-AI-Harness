@@ -62,7 +62,7 @@ test('staging is inert and applying refuses stale content or a changed workspace
     const newFile = await f.tools.stage('new.txt', 'new');
     await f.tools.apply(newFile.id);
     assert.equal(await readFile(join(f.root, 'new.txt'), 'utf8'), 'new');
-    assert.equal(f.tools.changes().length, 0);
+    assert.equal((await f.tools.changes()).length, 0);
   } finally {
     await f.close();
   }

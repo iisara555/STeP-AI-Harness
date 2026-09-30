@@ -2,6 +2,13 @@
 
 This is a development preview, not an accepted production release.
 
+## OpenHarness Phase 2 local verification (2026-09-30)
+
+- Desktop: 168 tests passed, zero failures. Covers routing/authority boundaries, bounded tool turns/parallelism, approved-result paging, separate data and generated-web destination consent, cancellation, real DOCX privacy extraction, XLSX scalar edits, conflict-safe backup/restoration, SSRF/proxy checks, retry-after and usage estimates.
+- Harness: 806 passed, 6 platform skips, zero failures, using a managed worktree and isolated child profile. Repository validation passed (51 Skills and no likely secrets); TypeScript/build and formatting passed.
+- All four Electron smoke scripts passed using synthetic profiles and a local fake Codex RPC runtime. The enabled-loop smoke exercises five model turns, result consent, option answers, plan approval, staged-only file changes, `/usage` token totals and pending-question cancellation through the real preload/IPC/UI. The earlier manual-proposal smoke explicitly disables `toolLoop` to verify fallback behavior.
+- [Tool loop operator notes](../docs/desktop-tool-loop.md) describe exact limits and the optional trusted proxy. Complex Excel features, live provider accounts/entitlement, corporate proxy and HTTPS proxy E2E, packaged installs and production acceptance remain unverified. No live API generation, merge or release was performed for this phase.
+
 ## Desktop 0.4.0 chat and workspace tools
 
 Local verification passed: Harness 799 passed / 6 skipped; Desktop 103 passed; TypeScript/renderer build, formatter, both repository validators and both Electron smoke scripts passed. The CLI fixture cleanup now retries transient Windows locks. Live accounts remain outside these results.

@@ -1,4 +1,4 @@
-import { readdir, readFile, realpath, lstat, writeFile } from 'node:fs/promises';
+import { readdir, readFile, realpath, lstat, writeFile, open } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, dirname } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
@@ -9,7 +9,8 @@ import { Store } from './store';
 import { sensitivePath, evaluatePermission } from './permissions';
 import type { Policy } from './policy';
 const execute = promisify(execFile);
-const digest = (text: string) => createHash('sha256').update(text).digest('hex');
+const digest = (text: string | Buffer) => createHash('sha256').update(text).digest('hex');
+export type FileSnapshot = { id: string; root: string; path: string; bytes: string; hash: string; at: string };
 export function browserUrl(input: string) {
   let url: URL;
   try {
@@ -100,9 +101,120 @@ export class Workbench {
     if (buffer.includes(0)) throw new Error('FILE_BINARY');
     return { path: relative(await this.root(), path), text: buffer.toString('utf8') };
   }
+  async bytes(input: string, limit = 8_000_000) {
+    const path = await this.path(input);
+    const handle = await open(path, 'r');
+    try {
+      const stat = await handle.stat();
+      if (!stat.isFile() || stat.size > limit) throw new Error('FILE_LIMIT');
+      const buffer = Buffer.alloc(stat.size + 1);
+      let offset = 0;
+      while (offset < buffer.length) {
+        const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, null);
+        if (!bytesRead) break;
+        offset += bytesRead;
+      }
+      if (offset !== stat.size) throw new Error('FILE_CONFLICT');
+      return buffer.subarray(0, offset);
+    } finally {
+      await handle.close();
+    }
+  }
+  async readChunk(input: string, offset = 0, length = 40_000) {
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(length) || length < 1 || length > 200_000)
+      throw new Error('INVALID_INPUT');
+    const buffer = await this.bytes(input, 8_000_000);
+    if (buffer.includes(0)) throw new Error('FILE_BINARY');
+    const text = buffer.toString('utf8');
+    if (offset > text.length) throw new Error('INVALID_INPUT');
+    const end = Math.min(text.length, offset + length);
+    return {
+      path: relative(await this.root(), await this.path(input)),
+      text: text.slice(offset, end),
+      offset,
+      total: text.length,
+      ...(end < text.length ? { nextOffset: end } : {}),
+    };
+  }
+  async snapshot(input: string) {
+    const root = await this.root(),
+      bytes = await this.bytes(input);
+    const snapshots = this.store.list<FileSnapshot>('file-snapshot');
+    if (snapshots.length >= 30 || snapshots.reduce((sum, s) => sum + s.bytes.length, 0) + (bytes.length * 4) / 3 > 40_000_000)
+      throw new Error('SNAPSHOT_LIMIT');
+    const snap: FileSnapshot = {
+      id: randomUUID(),
+      root,
+      path: relative(root, await this.path(input)),
+      bytes: bytes.toString('base64'),
+      hash: digest(bytes),
+      at: new Date().toISOString(),
+    };
+    if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+    this.store.put('file-snapshot', snap.id, snap);
+    return { id: snap.id, path: snap.path, at: snap.at };
+  }
+  async snapshots() {
+    const root = await this.root();
+    const visible = [];
+    for (const s of this.store.list<FileSnapshot>('file-snapshot').filter(s => s.root === root)) {
+      try {
+        await this.path(s.path, true);
+        visible.push({ id: s.id, path: s.path, at: s.at });
+      } catch {
+        /* Current policy also applies to old backups. */
+      }
+    }
+    return visible;
+  }
+  async stageBytes(input: string, bytes: Buffer, before: string, after: string, expectedHash?: string) {
+    if (bytes.length > 8_000_000) throw new Error('FILE_LIMIT');
+    const root = await this.root(),
+      path = await this.path(input),
+      existing = await this.bytes(input);
+    if (expectedHash && digest(existing) !== expectedHash) throw new Error('FILE_CONFLICT');
+    if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+    const change: FileChange = {
+      id: randomUUID(),
+      root,
+      path: relative(root, path),
+      before,
+      after,
+      hash: digest(existing),
+      binary: bytes.toString('base64'),
+      at: new Date().toISOString(),
+    };
+    this.store.put('change', change.id, change);
+    return { id: change.id, path: change.path, before, after };
+  }
+  async restoreSnapshot(id: string) {
+    const snap = this.store.get<FileSnapshot>('file-snapshot', id);
+    if (!snap || snap.root !== (await this.root())) throw new Error('SNAPSHOT_NOT_FOUND');
+    await this.path(snap.path);
+    const bytes = Buffer.from(snap.bytes, 'base64');
+    if (digest(bytes) !== snap.hash) throw new Error('FILE_CONFLICT');
+    const text = bytes.toString('utf8');
+    if (!bytes.includes(0) && text.length <= 200_000 && Buffer.from(text).equals(bytes)) return this.stage(snap.path, text);
+    const current = await this.bytes(snap.path);
+    return this.stageBytes(
+      snap.path,
+      bytes,
+      `Current file: ${current.length} bytes; SHA256 ${digest(current)}`,
+      `Restore ${bytes.length} bytes from ${snap.at}; SHA256 ${snap.hash}`,
+      digest(current),
+    );
+  }
+  async forgetSnapshot(id: string) {
+    const snap = this.store.get<FileSnapshot>('file-snapshot', id);
+    if (!snap || snap.root !== (await this.root())) throw new Error('SNAPSHOT_NOT_FOUND');
+    await this.path(snap.path, true);
+    this.store.remove('file-snapshot', id);
+    return true;
+  }
   async stage(input: string, content: string) {
     if (typeof content !== 'string' || content.length > 200000) throw new Error('FILE_LIMIT');
-    const path = await this.path(input, true);
+    const root = await this.root(),
+      path = await this.path(input, true);
     let before = '',
       exists = true;
     try {
@@ -113,13 +225,14 @@ export class Workbench {
     }
     const change: FileChange = {
       id: randomUUID(),
-      root: await this.root(),
-      path: relative(await this.root(), path),
+      root,
+      path: relative(root, path),
       before,
       after: content,
       hash: exists ? digest(before) : 'missing',
       at: new Date().toISOString(),
     };
+    if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
     this.store.put('change', change.id, change);
     return change;
   }
@@ -134,19 +247,37 @@ export class Workbench {
     const path = await this.path(change.path, true);
     let hash = 'missing';
     try {
-      hash = digest((await this.read(change.path)).text);
+      hash = change.binary ? digest(await this.bytes(change.path)) : digest((await this.read(change.path)).text);
     } catch (e: any) {
       if (e.code !== 'ENOENT') throw e;
     }
     if (hash !== change.hash) throw new Error('FILE_CONFLICT');
     // Recheck real paths after the approval dialog; never follow a replaced junction.
     await this.path(change.path, true);
-    await writeFile(path, change.after, { flag: hash === 'missing' ? 'wx' : 'w' });
+    if (hash !== 'missing') {
+      change.snapshotId = (await this.snapshot(change.path)).id;
+      const backup = this.store.get<FileSnapshot>('file-snapshot', change.snapshotId)!;
+      if (backup.hash !== hash) throw new Error('FILE_CONFLICT');
+    }
+    await this.path(change.path, true);
+    if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+    await writeFile(path, change.binary ? Buffer.from(change.binary, 'base64') : change.after, { flag: hash === 'missing' ? 'wx' : 'w' });
     this.store.remove('change', id);
-    return { path: change.path };
+    return { path: change.path, snapshotId: change.snapshotId };
   }
-  changes() {
-    return this.store.list<FileChange>('change');
+  async changes() {
+    const root = await this.root();
+    const changes: Omit<FileChange, 'binary'>[] = [];
+    for (const c of this.store.list<FileChange>('change').filter(c => c.root === root)) {
+      try {
+        await this.path(c.path, true);
+        const { binary, ...preview } = c;
+        changes.push(preview);
+      } catch {
+        /* Current policy hides old staged changes too. */
+      }
+    }
+    return changes;
   }
   reject(id: string) {
     this.change(id);

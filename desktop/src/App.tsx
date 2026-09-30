@@ -65,10 +65,15 @@ import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode } from './types';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
+import { QuestionCard } from './tool-question';
+import { UsageDialog } from './usage';
+import type { ToolQuestion } from './types';
 
 export default function App() {
   const api = window.step;
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
+  const [questions, setQuestions] = useState<ToolQuestion[]>([]),
+    [usageOpen, setUsageOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [selected, setSelected] = useState('');
   const [settings, setSettings] = useState(false),
@@ -224,6 +229,9 @@ export default function App() {
         if (event.type === 'approval' && event.approval)
           setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
         if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
+        if (event.type === 'question' && event.question)
+          setQuestions(list => [...list.filter(q => q.id !== event.question!.id), event.question!]);
+        if (event.type === 'question-close') setQuestions(list => list.filter(q => q.id !== event.questionId));
         if (event.sessionId === currentId.current) {
           if (['heartbeat', 'status', 'activity', 'delta', 'reasoning'].includes(event.type)) setHeartbeatAt(Date.now());
           if (event.type === 'activity') {
@@ -425,6 +433,11 @@ export default function App() {
     return s;
   }
   async function send() {
+    if (query.trim() === '/usage') {
+      setQuery('');
+      setUsageOpen(true);
+      return;
+    }
     if (!query.trim() || running || sendInFlight.current) return;
     // A file that cannot go to the AI is never dropped quietly: the message waits until the person removes or replaces it.
     const refused = files.find(f => !f.usable);
@@ -658,6 +671,7 @@ export default function App() {
   const paletteItems: PaletteItem[] = snapshot
     ? [
         { id: 'new', group: 'คำสั่ง', label: 'เริ่มงานใหม่', run: () => action(create) },
+        { id: 'usage', group: 'คำสั่ง', label: 'ดูการใช้งาน AI', hint: '/usage', run: () => setUsageOpen(true) },
         {
           id: 'settings',
           group: 'คำสั่ง',
@@ -1073,6 +1087,25 @@ export default function App() {
                   )}
                 </article>
               ))}
+              {questions
+                .filter(q => q.sessionId === selected)
+                .map(q => (
+                  <QuestionCard
+                    key={q.id}
+                    question={q}
+                    onAnswer={async answer => {
+                      await api!.call('questionRespond', { id: q.id, answer });
+                    }}
+                  />
+                ))}
+              {snapshot?.usage?.warnings.length ? (
+                <p className="small muted" role="status">
+                  การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้{' '}
+                  <button className="quiet" onClick={() => setUsageOpen(true)}>
+                    ดูการใช้งาน
+                  </button>
+                </p>
+              ) : null}
               {running && (
                 <article className="message assistant">
                   <div className="activity" role="status" aria-live="polite">
@@ -1675,6 +1708,7 @@ export default function App() {
           </aside>
         </>
       )}
+      {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
       {toolApprovals[0] && (
         <ApprovalDialog
           key={toolApprovals[0].id}

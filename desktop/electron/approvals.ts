@@ -32,13 +32,26 @@ export class Approvals {
   remove(id: string) {
     this.store.remove('approval', id);
   }
-  request(rule: ApprovalRule, detail: Omit<ApprovalRequest, 'id' | 'tool'>) {
+  request(rule: ApprovalRule, detail: Omit<ApprovalRequest, 'id' | 'tool'>, signal?: AbortSignal) {
+    if (signal?.aborted) return Promise.resolve(false);
     if (this.pending.size >= 20) throw new Error('APPROVAL_LIMIT');
     return new Promise<boolean>(resolve => {
       const request = { ...detail, tool: rule.tool, id: randomUUID() };
       const timer = setTimeout(() => this.respond(request.id, 'cancel'), 300_000);
       timer.unref();
-      this.pending.set(request.id, { resolve, request, rule, timer });
+      const stop = () => {
+        if (this.pending.has(request.id)) this.respond(request.id, 'cancel');
+      };
+      signal?.addEventListener('abort', stop, { once: true });
+      this.pending.set(request.id, {
+        resolve: approved => {
+          signal?.removeEventListener('abort', stop);
+          resolve(approved);
+        },
+        request,
+        rule,
+        timer,
+      });
       this.emit(request);
     });
   }

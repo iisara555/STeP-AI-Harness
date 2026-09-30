@@ -13,9 +13,11 @@ export class ToolGate {
   ) {}
   async run<T>(
     request: ToolRequest,
-    detail: { title: string; body: string; key: string; privacyClass?: string },
+    detail: { title: string; body: string; key: string; privacyClass?: string; sessionId?: string },
     action: () => Promise<T> | T,
+    signal?: AbortSignal,
   ): Promise<T | null> {
+    if (signal?.aborted) throw new Error('CANCELLED');
     const workspace = await this.root();
     const policy = this.policy();
     const mode = this.mode();
@@ -35,23 +37,28 @@ export class ToolGate {
     };
     const decision = check();
     const targetHash = approvalHash(detail.key);
-    const metadata = { tool: request.tool, readOnly: request.readOnly, targetHash };
+    const metadata = { tool: request.tool, readOnly: request.readOnly, targetHash, sessionId: detail.sessionId };
     const pre = await this.hook({ event: 'pre_tool_use', ...metadata });
     if (pre.blocked) throw new Error('HOOK_BLOCKED');
     const rule = this.approvals.rule(workspace, request.tool, detail.key);
     if (decision.requiresConfirmation && !this.approvals.remembered(rule)) {
-      const accepted = await this.approvals.request(rule, {
-        title: detail.title,
-        body: detail.body,
-        privacyClass: detail.privacyClass || 'internal',
-        allowRemember: true,
-      });
+      const accepted = await this.approvals.request(
+        rule,
+        {
+          title: detail.title,
+          body: detail.body,
+          privacyClass: detail.privacyClass || 'internal',
+          allowRemember: true,
+        },
+        signal,
+      );
       if (!accepted) return null;
     }
     // Re-evaluate after a dialog or hook: neither remembered consent nor auto mode overrides a new denial.
     if (workspace !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
     check();
     if (policy !== this.policy() || mode !== this.mode()) throw new Error('POLICY_CHANGED');
+    if (signal?.aborted) throw new Error('CANCELLED');
     try {
       const result = await action();
       const post = await this.hook({ event: 'post_tool_use', ...metadata, ok: true });
