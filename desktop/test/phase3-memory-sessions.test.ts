@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, symlink, writeFile, link, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { Store } from '../electron/store';
 import { Memories, memoryMarkdown, parseMemory, extractPreferences } from '../electron/memory';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
@@ -89,6 +90,24 @@ test('workspace memory and proposals cannot cross roots; team memory needs polic
   assert.equal((await memories.list()).length, 0);
   assert.ok(parsePolicy({ memory: { teamDirectories: { cc: 'relative/path' } }, features: { memoryTeam: true } }).problems.length);
   policy.permission.pathRules = [{ pattern: '.step/**', allow: false }];
+  await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
+  let alias = b;
+  if (process.platform === 'win32') {
+    const short = spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'for %I in ("%STEP_MEMORY_TEST_PATH%") do @echo "%~sI"'], {
+      env: { ...process.env, STEP_MEMORY_TEST_PATH: b },
+      encoding: 'utf8',
+      windowsHide: true,
+      windowsVerbatimArguments: true,
+    });
+    assert.equal(short.status, 0, short.stderr);
+    alias = short.stdout.trim().replace(/^"|"$/g, '');
+    assert.ok(alias);
+  }
+  store.put('settings', 'main', { workspace: alias, team: 'afp' });
+  await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
+  policy.permission.pathRules = [{ pattern: join(b, '.step', '**'), allow: false }];
+  await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
+  policy.permission.pathRules = [{ pattern: join(b, '.gitignore'), allow: false }];
   await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
   store.close();
 });

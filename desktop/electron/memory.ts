@@ -145,8 +145,14 @@ export class Memories {
       check = parent;
     }
     let path = await realpath(absolute);
-    if (scope !== 'private' && deniedPath(join(path, ...segments), this.policy().permission.pathRules, s.workspace || absolute))
-      throw new Error('PATH_RULE_DENIED');
+    if (scope !== 'private') {
+      // Windows 8.3 aliases must not make a workspace-relative denial miss its canonical target.
+      const configuredRoot = s.workspace || absolute,
+        canonicalRoot = scope === 'project' ? path : await realpath(resolve(configuredRoot)),
+        rules = this.policy().permission.pathRules;
+      if (deniedPath(join(absolute, ...segments), rules, configuredRoot) || deniedPath(join(path, ...segments), rules, canonicalRoot))
+        throw new Error('PATH_RULE_DENIED');
+    }
     for (const segment of segments) {
       path = join(path, segment);
       if (create)
@@ -205,8 +211,14 @@ export class Memories {
     }
     const directory = await this.directory(m.scope, true);
     if (m.scope === 'project') {
-      const workspace = this.store.settings().workspace;
-      if (deniedPath(join(workspace, '.gitignore'), this.policy().permission.pathRules, workspace)) throw new Error('PATH_RULE_DENIED');
+      const workspace = this.store.settings().workspace,
+        canonicalWorkspace = await realpath(resolve(workspace)),
+        rules = this.policy().permission.pathRules;
+      if (
+        deniedPath(join(workspace, '.gitignore'), rules, workspace) ||
+        deniedPath(join(canonicalWorkspace, '.gitignore'), rules, canonicalWorkspace)
+      )
+        throw new Error('PATH_RULE_DENIED');
       await ensureGitignored(workspace, { strict: true });
     }
     if (!existing && (await readdir(directory)).filter(f => /^[a-f0-9-]{36}\.md$/.test(f)).length >= 200) throw new Error('MEMORY_LIMIT');
