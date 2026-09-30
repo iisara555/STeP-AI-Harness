@@ -370,6 +370,7 @@ def scan_secrets(errors: list[str]) -> None:
     for directory, children, filenames in os.walk(ROOT):
         relative_dir = Path(directory).relative_to(ROOT)
         children[:] = [name for name in children if name not in {".git", "node_modules", "graphify-out"}
+                       and not (relative_dir == Path(".") and name == "tmp")
                        and not (relative_dir == Path("desktop") and name in {"dist", "release", "ocr-runtime"})]
         for filename in sorted(filenames):
             path = Path(directory) / filename

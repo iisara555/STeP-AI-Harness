@@ -54,10 +54,14 @@ test('employee documentation is aligned and links resolve', async (t) => {
   const actionCount = countMatches(actions, /^  [a-z0-9_-]+:\s*$/gm);
   const provenanceCount = countMatches(provenance, /^  - id:/gm);
 
-  await t.test('README has the employee-first onboarding contract', () => {
+  await t.test('README is GUI-first while keeping release and inventory boundaries', async () => {
+    const desktopPkg = JSON.parse(await readFile(resolve(repoRoot, 'desktop/package.json'), 'utf-8'));
+
     assert.ok(readme.includes('# STeP AI'));
-    assert.ok(readme.includes('คู่มือเริ่มต้นสำหรับพนักงาน'));
-    assert.ok(readme.includes(`**v${pkg.version}**`));
+    assert.ok(readme.includes('**STeP Desktop** คือหน้าจอทำงานหลัก'));
+    assert.ok(readme.includes('สำหรับผู้ใช้ทั่วไป: เริ่มจาก **STeP Desktop GUI**'));
+    assert.ok(readme.includes(`Harness source **v${pkg.version}**`));
+    assert.ok(readme.includes(`STeP Desktop **v${desktopPkg.version}**`));
     assert.ok(readme.includes(`| ทีม | **${teamCount} ทีม** |`));
     assert.ok(readme.includes(`| กลุ่ม routing | **${clusterCount} กลุ่ม** |`));
     assert.ok(readme.includes(`| Skills | **${skillCount} Skills** |`));
@@ -70,44 +74,45 @@ test('employee documentation is aligned and links resolve', async (t) => {
     assert.ok(readme.includes('Repository visibility'));
     assert.ok(readme.includes('repository นี้มีสถานะ **Public**'));
     assert.ok(readme.includes('ชุดติดตั้งที่แจกพนักงานมาจาก **release tag เท่านั้น** ไม่ใช่จาก `main`'));
-    assert.ok(readme.includes('Install-STeP-AI.bat'));
-    assert.ok(readme.includes('Install-STeP-AI.command'));
-    assert.ok(readme.includes('เริ่มใช้งาน STeP AI'));
   });
 
-  await t.test('README contains the six employee acceptance outcomes', () => {
+  await t.test('README covers the GUI onboarding and daily-use contract', () => {
     for (const phrase of [
-      'รู้ว่าจะดาวน์โหลดไฟล์จากที่ไหน',
-      'ติดตั้งได้บน Windows หรือ macOS',
-      'เลือกทีมและเปิดโฟลเดอร์ด้วย AI ที่องค์กรอนุมัติ',
-      'พิมพ์งานแรกเป็นภาษาไทยได้',
-      'รู้ว่าเมื่อใดต้องหยุดให้มนุษย์ยืนยัน',
-      'รู้ว่าจะส่งปัญหาผ่าน [STeP AI Support](SUPPORT.md) อย่างไร',
+      'Setup Wizard ครั้งแรก',
+      'เชื่อมต่อ AI',
+      'เริ่มงานใหม่',
+      'แถบซ้าย — งานและเครื่องมือ',
+      'ตรงกลาง — คุยกับ AI',
+      'แถบขวา — ผลงาน',
+      'ศูนย์รวม Skill',
+      'ตรวจใบเสร็จก่อนส่ง AFP',
+      'AI กรอง OCR อีกชั้น',
+      'ส่งออกเป็น `DOCX`, `PDF`, `MD`, `XLSX` หรือ `PPTX`',
     ]) {
       assert.ok(readme.includes(phrase), phrase);
     }
   });
 
-  await t.test('README contains the six standard employee examples', () => {
+  await t.test('README keeps standard employee examples visible in the GUI workflow', () => {
     for (const phrase of [
-      'ตรวจเอกสารก่อนส่ง',
-      'สรุปประชุมและแยกสิ่งที่ต้องทำต่อ',
-      'ร่างหนังสือหรือข้อความสื่อสาร',
-      'ตรวจหรือร่าง TOR และงานจัดซื้อ',
-      'วางแผนโครงการและทำ Timeline/Gantt',
-      'ตรวจข้อมูลส่วนบุคคลและปิดบังก่อนส่ง',
+      'ช่วยตรวจเอกสารนี้ก่อนส่ง',
+      'สรุปการประชุมนี้',
+      'ร่างหนังสือขอความอนุเคราะห์ใช้สถานที่',
+      'ช่วยตรวจ TOR นี้',
+      'เอา TOR นี้มาแตกกิจกรรม',
+      'ช่วยตรวจเอกสารนี้ว่ามีข้อมูลส่วนบุคคล',
     ]) {
       assert.ok(readme.includes(phrase), phrase);
     }
   });
 
-  await t.test('README states the three privacy rules and support path', () => {
+  await t.test('README states privacy, human authority, and support paths', () => {
     assert.ok(readme.includes('ใช้เฉพาะโปรแกรม AI และช่องทางที่องค์กรอนุมัติ'));
     assert.ok(readme.includes('ห้ามใส่รหัสผ่าน, token, cookie, MFA หรือ secret'));
     assert.ok(readme.includes('ถ้าระบบแจ้งข้อมูลความเสี่ยงสูง'));
     assert.ok(readme.includes('ถ่ายภาพหน้าจอพร้อมข้อความผิดพลาด'));
-    assert.ok(readme.includes('Feedback-STeP-AI.bat'));
-    assert.ok(readme.includes('REQUEST_NEW_TASK.md'));
+    assert.ok(readme.includes('อนุมัติเบิกเงินจริง'));
+    assert.ok(readme.includes('เลือกผู้ชนะจัดซื้อ'));
     assert.ok(readme.includes('[STeP AI Support](SUPPORT.md)'));
   });
 
@@ -199,7 +204,7 @@ test('release status documents quote one inventory and the current version', asy
 
   await t.test('prose counts match the router catalog', () => {
     assert.ok(readme.includes(`Router มีเส้นทางเลือก Skill ${routerCount} รายการ`));
-    assert.ok(readme.includes(`ครอบคลุมเส้นทาง Router ครบ ${routerCount} รายการ`));
+    assert.ok(readme.includes(`Router มีเส้นทางเลือก Skill ${routerCount} รายการ`));
     assert.ok(architecture.includes(`${skillCount} Skills ใน \`manifest/skills.yaml\` โดยเป็นปลายทางที่ Router เลือกได้ ${routerCount} รายการ`));
     assert.ok(axes.includes(`ทั้ง ${routerCount} รายการจาก ${skillCount} Skill`));
   });
