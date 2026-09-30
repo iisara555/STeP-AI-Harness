@@ -69,14 +69,16 @@ test('the component installer refuses folders that are not the OCR trial', async
   );
 });
 
-
 test('base installers exclude the heavy OCR runtime and the Receipt page installs it on demand', async () => {
   const { readFile } = await import('node:fs/promises');
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   assert.doesNotMatch(pkg.scripts['dist:win'], /bundle-ocr/);
   assert.doesNotMatch(pkg.scripts['dist:mac'], /bundle-ocr/);
   assert.doesNotMatch(pkg.scripts['dist:mac:x64'], /bundle-ocr/);
-  assert.ok(pkg.build.extraResources.some((resource: any) => resource.to === 'ocr'), 'small OCR application code still ships');
+  assert.ok(
+    pkg.build.extraResources.some((resource: any) => resource.to === 'ocr'),
+    'small OCR application code still ships',
+  );
   assert.ok(!pkg.build.extraResources.some((resource: any) => resource.to === 'ocr-runtime'), 'heavy OCR runtime must not ship');
 
   const receipt = await readFile(new URL('../src/receipt.tsx', import.meta.url), 'utf8');
