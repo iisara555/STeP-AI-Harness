@@ -11,6 +11,12 @@ import { join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { initUserMemory, ensureGitignored, updateUserMemoryProfile } from '../../modules/user-memory.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
+import {
+  desiredManagedPaths,
+  findUntrackedManagedConflicts,
+  reconcileManagedFiles,
+  retainNonProfileManifestFiles,
+} from '../../modules/managed-files.js';
 import { selectTeamProfile } from '../team-selection.js';
 
 export async function runInit(args) {
@@ -154,6 +160,26 @@ export async function runInit(args) {
     }
   }
 
+  const conflicts = await findUntrackedManagedConflicts(dest, existingManifest, files, instructions);
+  if (conflicts.length) {
+    error('พบไฟล์เดิมใน workspace ที่ STeP AI ไม่ได้เป็นเจ้าของ จึงหยุดก่อนเพื่อไม่เขียนทับงานของผู้ใช้');
+    for (const path of conflicts.slice(0, 12)) console.log(`  - ${path}`);
+    if (conflicts.length > 12) console.log(`  - ... และอีก ${conflicts.length - 12} ไฟล์`);
+    throw new Error('WORKSPACE_FILE_CONFLICT');
+  }
+
+  // Reconcile the previous managed profile before copying the new one. Old
+  // clean files disappear; locally edited stale files are preserved outside
+  // active Skill/Rule paths so they cannot keep influencing routing.
+  if (existingManifest) {
+    const reconciled = await reconcileManagedFiles(dest, existingManifest, desiredManagedPaths(files, instructions), { packageRoot: PACKAGE_ROOT });
+    if (reconciled.removed.length) info(`นำไฟล์ที่หมด scope ออกจาก workspace: ${reconciled.removed.length} ไฟล์`);
+    if (reconciled.quarantined.length) {
+      warn(`ย้ายไฟล์ที่เคยแก้แต่หมด scope ออกจากทางใช้งาน: ${reconciled.quarantined.length} ไฟล์`);
+      info(`เก็บสำเนาไว้ที่ ${colors.dim(reconciled.orphanRoot + '/')}`);
+    }
+  }
+
   // Execute installation
   const result = await adapter.install({
     workspaceDir: dest,
@@ -163,7 +189,7 @@ export async function runInit(args) {
   });
 
   // Build manifest files map
-  const manifestFiles = {};
+  const manifestFiles = retainNonProfileManifestFiles(existingManifest);
   for (const item of result.installedFiles) {
     manifestFiles[item.relativePath] = {
       sha256: item.sha256,

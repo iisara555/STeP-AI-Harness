@@ -1,6 +1,7 @@
 import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { safeCopyFile } from '../../utils/file-ops.js';
+import { safeWorkspacePath } from '../../utils/workspace-path.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
 
 /**
@@ -23,7 +24,7 @@ export async function copyRoleFiles(workspaceDir, files, dryRun = false) {
       continue;
     }
 
-    const destPath = join(workspaceDir, f.relativePath);
+    const destPath = await safeWorkspacePath(workspaceDir, f.relativePath);
     await safeCopyFile(f.sourcePath, destPath);
     const hash = await calculateFileSha256(destPath);
     const fileStat = await stat(destPath);
@@ -54,7 +55,7 @@ export async function writeInstructionFile(workspaceDir, filename, content, dryR
     };
   }
 
-  const filePath = join(workspaceDir, filename);
+  const filePath = await safeWorkspacePath(workspaceDir, filename);
   // Some tools read instructions from a subfolder, e.g. .github/copilot-instructions.md.
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, content, 'utf-8');
@@ -117,7 +118,7 @@ export function buildFirstWorkOnboardingContract(role = {}) {
 
   text += `- If \`USER.md\` has no Primary Team and the user already has a real task, **help with that task first**. Do not block work to configure a profile.\n`;
   text += `- After the first useful result, suggest the single most likely team (maximum 2 if genuinely ambiguous) with a short reason. Ask for confirmation before saving.\n`;
-  text += `- After confirmation, update **Primary Team**, **Routing Cluster**, and **Suggested First Tasks** in \`USER.md\` when file writes are available. For CLI routing, use or tell the user \`step-ai config --team <team-id>\`.\n`;
+  text += `- After confirmation, if the Routing Gate command is available, run \`step-ai config --team <team-id>\` from this workspace so **USER.md, the managed Skill scope, and CLI routing stay aligned**. Only edit **Primary Team**, **Routing Cluster**, and **Suggested First Tasks** in \`USER.md\` directly when the CLI is unavailable.\n`;
   text += `- If the user remains unsure, continue in broad/cluster routing mode and do not ask again on every message.\n\n`;
   return text;
 }

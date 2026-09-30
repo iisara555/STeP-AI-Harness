@@ -6,6 +6,67 @@ import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import readline from 'node:readline';
 import { updateUserMemoryProfile } from '../../modules/user-memory.js';
+import { readManifest } from '../../modules/manifest.js';
+
+async function reprofileCurrentWorkspace({ team = '', tool = '', clearTeam = false } = {}) {
+  const workspaceDir = process.cwd();
+  const manifest = await readManifest(workspaceDir);
+  if (!manifest) return false;
+
+  const { runInit } = await import('./init.js');
+  const installedAsTeam =
+    Boolean(manifest.team) ||
+    manifest.targetType === 'team' ||
+    manifest.teamDeferred === true ||
+    ['all', 'staff'].includes(String(manifest.role || '').toLowerCase());
+
+  if (clearTeam) {
+    if (!installedAsTeam) return false;
+    info('พบ workspace ที่จัดการโดย STeP AI — กำลังเปลี่ยนเป็น broad routing แบบยังไม่ระบุทีม');
+    await runInit({
+      role: 'all',
+      tool: manifest.tool || tool || 'codex',
+      dest: workspaceDir,
+    });
+    return true;
+  }
+
+  if (team) {
+    if (!installedAsTeam) {
+      warn(
+        `workspace นี้ติดตั้งแบบ Role ${manifest.role || '-'} จึงบันทึกทีมใหม่เป็นค่าเริ่มต้น แต่ไม่เปลี่ยน Skill scope ของ workspace นี้อัตโนมัติ`,
+      );
+      return false;
+    }
+    info('พบ workspace ที่จัดการโดย STeP AI — กำลังปรับชุด Skill ให้ตรงกับทีมใหม่');
+    await runInit({
+      team,
+      tool: manifest.tool || tool || 'codex',
+      dest: workspaceDir,
+    });
+    return true;
+  }
+
+  if (tool) {
+    info('พบ workspace ที่จัดการโดย STeP AI — กำลังปรับ instruction ให้ตรงกับเครื่องมือใหม่');
+    if (manifest.team || manifest.targetType === 'team') {
+      await runInit({
+        team: manifest.team || manifest.role,
+        tool,
+        dest: workspaceDir,
+      });
+    } else {
+      await runInit({
+        role: manifest.role || 'all',
+        tool,
+        dest: workspaceDir,
+      });
+    }
+    return true;
+  }
+
+  return false;
+}
 
 export async function runConfig(args) {
   header('STeP AI User Settings & Profile');
@@ -26,6 +87,7 @@ export async function runConfig(args) {
     await saveUserConfig({ team: found.id, cluster: found.clusterId, teamDeferred: false });
     await updateUserMemoryProfile(process.cwd(), { team: found.id, cluster: found.clusterId, starterPrompts: found.starterPrompts || [] });
     success(`อัปเดตทีมหลักเป็น: ${colors.bold(found.name)} (${found.id.toUpperCase()})`);
+    await reprofileCurrentWorkspace({ team: found.id, tool: config.tool });
     return;
   }
 
@@ -38,6 +100,7 @@ export async function runConfig(args) {
     }
     await saveUserConfig({ tool: toolLower });
     success(`อัปเดตเครื่องมือ AI เป็น: ${colors.bold(toolLower)}`);
+    await reprofileCurrentWorkspace({ tool: toolLower });
     return;
   }
 
@@ -91,10 +154,12 @@ export async function runConfig(args) {
           starterPrompts: selection.team.starterPrompts || [],
         });
         success(`บันทึกทีมหลัก: ${selection.team.name} (${selection.team.id.toUpperCase()}) สำเร็จ!`);
+        await reprofileCurrentWorkspace({ team: selection.team.id, tool: config.tool });
       } else {
         await saveUserConfig({ team: '', cluster: '', teamDeferred: true });
         await updateUserMemoryProfile(process.cwd(), { team: '', cluster: '', starterPrompts: [] });
         info('ยังไม่ระบุทีม ระบบจะใช้ routing แบบกว้างก่อน และเลือกทีมภายหลังได้');
+        await reprofileCurrentWorkspace({ clearTeam: true, tool: config.tool });
       }
     } else if (choice === '2') {
       console.log('\nเลือกเครื่องมือ AI:');
@@ -102,10 +167,13 @@ export async function runConfig(args) {
       console.log('  2. Cursor IDE');
       console.log('  3. OpenAI Codex / VS Code');
       console.log('  4. Claude Desktop / Claude Code');
-      console.log('  5. Hermes Agent');
-      console.log('  6. Windsurf AI IDE');
+      console.log('  5. ChatGPT Desktop');
+      console.log('  6. Gemini CLI / Google Antigravity');
+      console.log('  7. OpenCode');
+      console.log('  8. Hermes Agent');
+      console.log('  9. Windsurf AI IDE');
       const toolAns = await new Promise((res) => {
-        rl.question(colors.bold(colors.green('เลือกเครื่องมือ (1-6): ')), (ans) => {
+        rl.question(colors.bold(colors.green('เลือกเครื่องมือ (1-9): ')), (ans) => {
           rl.close();
           res(ans.trim());
         });
@@ -115,12 +183,16 @@ export async function runConfig(args) {
         '2': 'cursor',
         '3': 'codex',
         '4': 'claude',
-        '5': 'hermes',
-        '6': 'windsurf',
+        '5': 'chatgpt',
+        '6': 'gemini',
+        '7': 'opencode',
+        '8': 'hermes',
+        '9': 'windsurf',
       };
       if (map[toolAns]) {
         await saveUserConfig({ tool: map[toolAns] });
         success(`บันทึกเครื่องมือ AI: ${map[toolAns]} สำเร็จ!`);
+        await reprofileCurrentWorkspace({ tool: map[toolAns] });
       } else {
         warn('หมายเลขไม่ถูกต้อง ไม่มีการเปลี่ยนแปลง');
       }

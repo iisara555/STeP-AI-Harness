@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathExists } from '../utils/file-ops.js';
+import { safeWorkspacePath } from '../utils/workspace-path.js';
 
 export const USER_MEMORY_FILENAME = 'USER.md';
 
@@ -171,10 +172,10 @@ export function parseUserMemory(markdown = '') {
       const nameMatch = trimmed.match(/- \*\*ชื่อ.*?\*\*:\s*(.*)/i);
       if (nameMatch && nameMatch[1]) result.profile.name = nameMatch[1].trim();
 
-      const teamMatch = trimmed.match(/- \*\*ทีมหลัก.*?\*\*:\s*(.*)/i);
+      const teamMatch = trimmed.match(/- \*\*(?:ทีมหลัก|Primary Team).*?\*\*:\s*(.*)/i);
       if (teamMatch && teamMatch[1]) result.profile.team = teamMatch[1].trim().toLowerCase();
 
-      const clusterMatch = trimmed.match(/- \*\*กลุ่มงานสำหรับ Routing.*?\*\*:\s*(.*)/i);
+      const clusterMatch = trimmed.match(/- \*\*(?:กลุ่มงานสำหรับ Routing|Routing Cluster).*?\*\*:\s*(.*)/i);
       if (clusterMatch && clusterMatch[1]) result.profile.cluster = clusterMatch[1].trim().toLowerCase();
 
       const roleMatch = trimmed.match(/- \*\*บทบาท.*?\*\*:\s*(.*)/i);
@@ -238,7 +239,7 @@ export function needsFirstRunCompanion(memory = {}) {
  * Load User Memory from workspace if present
  */
 export async function loadUserMemory(workspaceDir = process.cwd()) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   const exists = await pathExists(filePath);
   const empty = parseUserMemory('');
 
@@ -260,20 +261,33 @@ export async function loadUserMemory(workspaceDir = process.cwd()) {
  * Used when a deferred team selection is confirmed after installation.
  */
 export async function updateUserMemoryProfile(workspaceDir = process.cwd(), updates = {}) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   if (!(await pathExists(filePath))) return { updated: false, filePath };
 
   let content = await readFile(filePath, 'utf-8');
   const team = updates.team ? String(updates.team).toUpperCase() : '';
   const cluster = updates.cluster ? String(updates.cluster) : '';
 
-  content = content.replace(
-    /(- \*\*ทีมหลัก \(Primary Team\)\*\*:\s*).*$/m,
-    `$1${team}`
+  const setProfileField = (text, pattern, canonicalLabel, value) => {
+    if (pattern.test(text)) return text.replace(pattern, `$1${value}`);
+    const line = `- **${canonicalLabel}**: ${value}`;
+    if (/^## 1\..*$/m.test(text)) {
+      return text.replace(/^## 1\..*$/m, (heading) => `${heading}\n${line}`);
+    }
+    return `${text.trimEnd()}\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n${line}\n`;
+  };
+
+  content = setProfileField(
+    content,
+    /(- \*\*(?:ทีมหลัก(?: \(Primary Team\))?|Primary Team)\*\*:\s*).*$/m,
+    'ทีมหลัก (Primary Team)',
+    team,
   );
-  content = content.replace(
-    /(- \*\*กลุ่มงานสำหรับ Routing \(Routing Cluster\)\*\*:\s*).*$/m,
-    `$1${cluster}`
+  content = setProfileField(
+    content,
+    /(- \*\*(?:กลุ่มงานสำหรับ Routing(?: \(Routing Cluster\))?|Routing Cluster)\*\*:\s*).*$/m,
+    'กลุ่มงานสำหรับ Routing (Routing Cluster)',
+    cluster,
   );
 
   if (Array.isArray(updates.starterPrompts)) {
@@ -335,7 +349,7 @@ export function applyPersonalization(markdown = '', options = {}) {
 
 /** Write the personalization to USER.md, creating the file when it does not exist yet. */
 export async function savePersonalization(workspaceDir = process.cwd(), options = {}) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   const existing = (await pathExists(filePath)) ? await readFile(filePath, 'utf-8') : '';
   await writeFile(filePath, applyPersonalization(existing, options), 'utf-8');
   await ensureGitignored(workspaceDir);
@@ -344,7 +358,7 @@ export async function savePersonalization(workspaceDir = process.cwd(), options 
 
 /** Save raw markdown text to USER.md */
 export async function saveUserMemory(workspaceDir = process.cwd(), content = '') {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   await writeFile(filePath, content, 'utf-8');
   await ensureGitignored(workspaceDir);
   return filePath;
@@ -352,7 +366,7 @@ export async function saveUserMemory(workspaceDir = process.cwd(), content = '')
 
 /** Initialize USER.md in workspace if it doesn't already exist */
 export async function initUserMemory(workspaceDir = process.cwd(), options = {}) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   const exists = await pathExists(filePath);
 
   if (exists) {
@@ -375,7 +389,7 @@ export async function initUserMemory(workspaceDir = process.cwd(), options = {})
  * than returning quietly.
  */
 export async function ensureGitignored(workspaceDir = process.cwd()) {
-  const gitignorePath = join(workspaceDir, '.gitignore');
+  const gitignorePath = await safeWorkspacePath(workspaceDir, '.gitignore');
   const header = '# Private workspace user memory';
 
   try {

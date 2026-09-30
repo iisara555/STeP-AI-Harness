@@ -174,6 +174,29 @@ test('User Memory (USER.md), First Run Companion & Clarification Suite', async (
   });
 });
 
+test('legacy USER.md routing labels are updated instead of silently keeping an old team', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-memory-legacy-profile-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await writeFile(
+    join(dir, 'USER.md'),
+    '# Legacy\n\n## 1. ข้อมูลผู้ใช้งาน (User Profile)\n- **ทีมหลัก**: QS\n- **Routing Cluster**: governance-operations\n',
+    'utf8',
+  );
+
+  const result = await updateUserMemoryProfile(dir, {
+    team: 'cc',
+    cluster: 'market-creative',
+    starterPrompts: [],
+  });
+  assert.equal(result.updated, true);
+  const loaded = await loadUserMemory(dir);
+  assert.equal(loaded.profile.team, 'cc');
+  assert.equal(loaded.profile.cluster, 'market-creative');
+  const raw = await readFile(join(dir, 'USER.md'), 'utf8');
+  assert.doesNotMatch(raw, /\*\*ทีมหลัก\*\*:\s*QS/);
+  assert.doesNotMatch(raw, /\*\*Routing Cluster\*\*:\s*governance-operations/);
+});
+
 test('workspace with no .gitignore still gets USER.md and MEMORY.md excluded', async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'step-gitignore-'));
   t.after(() => rm(dir, { recursive: true, force: true }));

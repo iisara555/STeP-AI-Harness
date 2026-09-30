@@ -12,6 +12,12 @@ import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { runDoctor } from './doctor.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
+import {
+  desiredManagedPaths,
+  reconcileManagedFiles,
+  retainNonProfileManifestFiles,
+} from '../../modules/managed-files.js';
+import { safeWorkspacePath } from '../../utils/workspace-path.js';
 
 export async function runUpdate(args) {
   header('STeP AI — One-Click Update & Skill Sync');
@@ -73,17 +79,27 @@ export async function runUpdate(args) {
   }
 
   const { files } = resolved;
+  const adapter = getAdapter(manifest.tool || userCfg.tool || 'codex');
+  const instructionFiles = adapter.getInstructionFiles(targetRole, files);
+  const reconciled = await reconcileManagedFiles(dest, manifest, desiredManagedPaths(files, instructionFiles), { packageRoot: PACKAGE_ROOT });
+  if (reconciled.removed.length) info(`นำไฟล์ที่หมด scope ออกจาก workspace: ${reconciled.removed.length} ไฟล์`);
+  if (reconciled.quarantined.length) {
+    warn(`ย้ายไฟล์ที่เคยแก้แต่หมด scope ออกจากทางใช้งาน: ${reconciled.quarantined.length} ไฟล์`);
+    info(`เก็บสำเนาไว้ที่ ${colors.dim(reconciled.orphanRoot + '/')}`);
+  }
+
   let updatedCount = 0;
   let preservedCount = 0;
-  const newManifestFiles = { ...manifest.files };
+  const newManifestFiles = retainNonProfileManifestFiles(manifest);
 
   for (const f of files) {
-    const targetPath = join(dest, f.relativePath);
+    const targetPath = await safeWorkspacePath(dest, f.relativePath);
     const isModified = modified.includes(f.relativePath);
 
     if (isModified) {
       warn(`คงไฟล์เดิมที่มีการแก้ไข: ${f.relativePath}`);
       preservedCount++;
+      if (manifest.files?.[f.relativePath]) newManifestFiles[f.relativePath] = manifest.files[f.relativePath];
     } else {
       await safeCopyFile(f.sourcePath, targetPath);
       const newHash = await calculateFileSha256(targetPath);
@@ -96,18 +112,18 @@ export async function runUpdate(args) {
     }
   }
 
-  // Update instructions
-  const adapter = getAdapter(manifest.tool || userCfg.tool || 'codex');
-  const instructionFiles = adapter.getInstructionFiles(targetRole, files);
-
+  // Update instructions.
   for (const inst of instructionFiles) {
-    const instPath = join(dest, inst.filename);
-    if (!modified.includes(inst.filename)) {
-      await (await import('node:fs/promises')).writeFile(instPath, inst.content, 'utf-8');
-      const hash = await calculateFileSha256(instPath);
-      const stat = await (await import('node:fs/promises')).stat(instPath);
-      newManifestFiles[inst.filename] = { sha256: hash, size: stat.size };
+    const instPath = await safeWorkspacePath(dest, inst.filename);
+    if (modified.includes(inst.filename)) {
+      preservedCount++;
+      if (manifest.files?.[inst.filename]) newManifestFiles[inst.filename] = manifest.files[inst.filename];
+      continue;
     }
+    await (await import('node:fs/promises')).writeFile(instPath, inst.content, 'utf-8');
+    const hash = await calculateFileSha256(instPath);
+    const stat = await (await import('node:fs/promises')).stat(instPath);
+    newManifestFiles[inst.filename] = { sha256: hash, size: stat.size };
   }
 
   // Write updated manifest
