@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import { header, success, info, warn, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
-import { getUserTeam, getUserCluster } from '../../utils/user-config.js';
+import { resolveRoutingIdentity } from '../../modules/routing-identity.js';
 import { queryStepRouter } from '../../modules/router/service.js';
 export { queryStepRouter, loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDocumentContextMetadata } from '../../modules/router/service.js';
 
@@ -38,8 +38,12 @@ export async function runAsk(args) {
     }
   }
 
-  const userTeam = args.team || args.m || (await getUserTeam()) || '';
-  const userCluster = args.cluster || args.c || (await getUserCluster()) || '';
+  const routingIdentity = await resolveRoutingIdentity(process.cwd(), {
+    team: args.team || args.m || '',
+    cluster: args.cluster || args.c || '',
+  });
+  const userTeam = routingIdentity.team;
+  const userCluster = routingIdentity.cluster;
   let intentAssessment;
   if (args['intent-assessment'] !== undefined) {
     try { intentAssessment = JSON.parse(String(args['intent-assessment'])); }
