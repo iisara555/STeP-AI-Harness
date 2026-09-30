@@ -124,8 +124,8 @@ try {
   await page.screenshot({ path: join(out, '04-receipt-afp.png'), fullPage: true });
 
   await page.getByRole('button', { name: /ตั้งค่าพื้นที่ทำงาน/ }).click();
-  await page.getByText('การเชื่อมต่อ AI', { exact: true }).click();
-  await page.getByText('OpenAI (ChatGPT)', { exact: false }).first().waitFor();
+  await page.getByRole('tab', { name: /การเชื่อมต่อ AI/ }).click();
+  await page.getByRole('heading', { name: 'การเชื่อมต่อ AI' }).waitFor();
   await page.screenshot({ path: join(out, '05-ai-connections.png'), fullPage: true });
 
   console.log('README GUI screenshots created in', out);
