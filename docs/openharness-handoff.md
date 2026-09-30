@@ -60,7 +60,7 @@ Phase 4 is a review branch; it has not been released or merged as part of the ea
 
 `mcp.ts` uses the pinned SDK for managed stdio/HTTP, destination consent, bounded discovery, no uncertain-call retry and process cleanup. `sandbox.ts` uses a reviewed, preinstalled digest-pinned image and only explicitly selected privacy-clean, read-only text snapshots. `src/modules/autopilot/index.js` and the CLI/operator entrypoints score approved public issues, isolate worktrees/test profiles, ask the CLI coder for JSON proposals with native tools disabled, validate paths/privacy/hashes before host writes, run unchanged validation scripts, and preserve review commits/dashboards. Publish and exact-head-reviewed merge are separately gated. A detached autopilot with a prompt hook fails closed rather than skipping the hook.
 
-Completed locally: 200 Desktop unit tests; all six Electron smoke scripts; six new autopilot tests on disposable repositories; Desktop formatting, TypeScript/build and the 51-Skill validator. Full Harness regression and remote CI are recorded in `desktop/VALIDATION.md` once completed. Fixtures establish local behavior, not live account/transport/container isolation or production acceptance.
+Completed locally: 200 Desktop unit tests; all six Electron smoke scripts; six new autopilot tests on disposable repositories; Desktop formatting, TypeScript/build and the 51-Skill validator. The isolated Harness regression passed with 814 tests and 6 platform skips (820 total); remote CI is recorded in `desktop/VALIDATION.md` once completed. Fixtures establish local behavior, not live account/transport/container isolation or production acceptance.
 
 The accepted requirements are retained here for traceability:
 

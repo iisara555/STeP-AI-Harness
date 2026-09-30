@@ -141,6 +141,17 @@ export async function autopilot(options = {}, dependencies = {}) {
   const policy = dependencies.policy || readManagedPolicy(),
     route = dependencies.route || queryStepRouter;
   const invoke = async (command, args, extra = {}) => {
+    const line = [command, ...args].join(" ").trim().replace(/\s+/g, " ");
+    for (const pattern of policy.permission?.deniedCommands || []) {
+      if (typeof pattern !== "string") throw new Error("POLICY_INVALID");
+      const body = pattern
+        .toLowerCase()
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*")
+        .replace(/\?/g, ".");
+      if (new RegExp("^" + body + "$", "i").test(line.toLowerCase()))
+        throw new Error("DENIED_COMMAND");
+    }
     const result = await run(command, args, {
       cwd,
       signal: options.signal,

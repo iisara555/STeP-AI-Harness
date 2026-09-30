@@ -105,6 +105,18 @@ test("dry-run on a disposable repository performs only GitHub reads, no model, w
   assert.ok(calls.every((c) => ["view", "list"].includes(c[2])));
 });
 test("execution is denied without administrator policy and explicit provider consent", async () => {
+  await assert.rejects(
+    autopilot(
+      { repo: "example/synthetic", "dry-run": true },
+      {
+        policy: { permission: { deniedCommands: ["gh *"] } },
+        run: async () => {
+          throw new Error("denied command must not run");
+        },
+      },
+    ),
+    /DENIED_COMMAND/,
+  );
   const run = async (_command, args) => ({
     code: 0,
     output: JSON.stringify(github(args)),
