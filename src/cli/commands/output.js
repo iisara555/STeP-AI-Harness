@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { getUserTeam } from '../../utils/user-config.js';
+import { resolveRoutingIdentity } from '../../modules/routing-identity.js';
 import { getNextOutputPath, inferOutputType } from '../../modules/output-manager.js';
 import { header, info, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
@@ -12,9 +12,10 @@ export async function runOutput(args) {
   }
 
   const extension = args.ext || args.extension || 'md';
-  const team = args.team || args.m || await getUserTeam() || 'shared';
-  const type = args.type || args.kind || inferOutputType(extension);
   const workspaceDir = resolve(process.cwd(), args.dest || args.d || '.');
+  const identity = await resolveRoutingIdentity(workspaceDir, { team: args.team || args.m || '' });
+  const team = identity.team || 'shared';
+  const type = args.type || args.kind || inferOutputType(extension);
   const date = args.date || new Date();
   const dryRun = Boolean(args['dry-run']);
 
