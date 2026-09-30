@@ -241,6 +241,13 @@ export function ReceiptApp({
           ),
         }
       : null,
+    ai_filter: aiDecisions.length
+      ? {
+          mode: 'candidate-only',
+          notice: 'AI may select only OCR candidate tokens. Human confirmation is still required.',
+          decisions: aiDecisions,
+        }
+      : null,
     expense_note: note,
     issues: result.issues.map(i => ({ ...i, message: describe(i) })),
     ocr: { text: doc?.result?.text || '', lines: records },
@@ -273,7 +280,7 @@ export function ReceiptApp({
           {!status
             ? 'กำลังตรวจบริการ OCR…'
             : ready
-              ? `OCR ในเครื่องพร้อมใช้${status.crosscheck ? ' · มี OCR ตัวที่สองช่วยตรวจ' : ''}`
+              ? `OCR ในเครื่องพร้อมใช้${status.tesseract ? ' · Tesseract' : ''}${status.handwriting ? ' · ลายมือ' : ''}${status.crosscheck ? ' · EasyOCR' : ''}`
               : status.installed
                 ? 'บริการ OCR ในเครื่องยังไม่เปิด'
                 : status.updateAvailable
