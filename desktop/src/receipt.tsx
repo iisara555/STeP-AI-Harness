@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, FileSearch, FolderOpen, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, TriangleAlert } from 'lucide-react';
+import { Check, Download, FileSearch, FolderOpen, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, TriangleAlert } from 'lucide-react';
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import ideaArt from './assets/illustrations/idea.png';
@@ -34,7 +34,7 @@ type ReceiptReviewApi = {
   ): { issues: Issue[]; complete: boolean; confirmedCount: number; filledCount: number };
 };
 const review = (window as unknown as { ReceiptReview: ReceiptReviewApi }).ReceiptReview;
-type OcrStatus = { running: boolean; crosscheck: boolean; installed: boolean; folder: string };
+type OcrStatus = { running: boolean; crosscheck: boolean; installed: boolean; folder: string; installing?: boolean };
 type Doc = { name: string; preview: string; result: any };
 
 const labels: Record<string, string> = {
@@ -97,7 +97,7 @@ export function ReceiptApp({
     }
   };
   const refresh = () => run('status', async () => setStatus(await call('ocrStatus')));
-  // OCR ships with the app, so opening this page starts it; the button stays for a stopped service.
+  // OCR is optional. If the employee installed it before, opening this page starts the local service; otherwise nothing is downloaded.
   useEffect(() => {
     void run('status', async () => {
       const s = await call('ocrStatus');
@@ -179,14 +179,30 @@ export function ReceiptApp({
           </button>
         )}
         {status && !ready && !status.installed && (
-          <button
-            className="quiet"
-            disabled={Boolean(busy)}
-            onClick={() => void run('folder', async () => setStatus(await call('ocrFolder')))}
-          >
-            <FolderOpen size={15} />
-            เลือกโฟลเดอร์ OCR
-          </button>
+          <>
+            <button
+              disabled={Boolean(busy)}
+              onClick={() =>
+                void run('install', async () => {
+                  const installed = await call('ocrInstall', { crosscheck: false });
+                  setStatus(installed);
+                  setStatus(await call('ocrStart'));
+                  notify('ติดตั้ง OCR ในเครื่องนี้แล้ว', 'success');
+                })
+              }
+            >
+              {busy === 'install' ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
+              {busy === 'install' ? 'กำลังติดตั้ง OCR…' : 'ติดตั้ง OCR'}
+            </button>
+            <button
+              className="quiet"
+              disabled={Boolean(busy)}
+              onClick={() => void run('folder', async () => setStatus(await call('ocrFolder')))}
+            >
+              <FolderOpen size={15} />
+              ใช้ OCR ที่มีอยู่
+            </button>
+          </>
         )}
         <button className="icon" aria-label="ตรวจสถานะบริการอีกครั้ง" disabled={Boolean(busy)} onClick={() => void refresh()}>
           <RefreshCw size={15} />
@@ -194,8 +210,8 @@ export function ReceiptApp({
       </div>
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
-          ติดตั้งครั้งแรกด้วย <code>Install-OCR.bat</code> ในโฟลเดอร์ <code>experiments/local-thai-ocr</code> แล้วกด “เลือกโฟลเดอร์ OCR”
-          ใบเสร็จจะถูกอ่านบนเครื่องนี้เท่านั้น ไม่ส่งขึ้นบริการ OCR บนอินเทอร์เน็ต
+          OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “ติดตั้ง OCR” เมื่อต้องการใช้ ระบบจะดาวน์โหลด Python, Paddle และโมเดลที่ตรวจสอบ
+          checksum แล้วมาเก็บใน App Data ของผู้ใช้นี้ การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต
         </p>
       )}
 
