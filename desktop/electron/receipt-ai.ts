@@ -3,6 +3,7 @@ type Candidate = {
   evidence?: string;
   method?: string;
   score?: number;
+  engine?: string;
 };
 
 type MappingField = {
@@ -90,6 +91,7 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
         token,
         shape: valueShape(value),
         method: String(item?.method || ''),
+        engine: String(item?.engine || ''),
         score: Number.isFinite(Number(item?.score)) ? Number(item.score) : null,
         evidence: sanitize(String(item?.evidence || '')).slice(0, 400),
       });
