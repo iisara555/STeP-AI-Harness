@@ -167,7 +167,7 @@ export class Memories {
           try {
             const path = join(directory, file),
               info = await lstat(path);
-            if (!info.isFile() || info.isSymbolicLink() || info.size > 12_000) continue;
+            if (!info.isFile() || info.isSymbolicLink() || info.nlink > 1 || info.size > 12_000) continue;
             const handle = await open(path, 'r');
             let source: string;
             try {

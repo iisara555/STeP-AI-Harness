@@ -127,7 +127,8 @@ try {
   await memory.getByLabel('ข้อความความจำ', { exact: true }).fill('Prefer concise responses and identify missing evidence.');
   await memory.getByRole('button', { name: 'ยืนยันบันทึกความจำ', exact: true }).click();
   await expect(memory).toContainText('identify missing evidence');
-  await memory.getByRole('combobox').selectOption('brief.md');
+  await expect(memory.getByLabel('ข้อความความจำ', { exact: true })).toHaveCount(0);
+  await memory.getByLabel('รูปแบบคำตอบ', { exact: true }).selectOption('brief.md');
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).settings.outputStyle).toBe('brief.md');
   await expect(memory.getByRole('button', { name: 'แก้ไข', exact: true })).toBeEnabled();
   await page.screenshot({ path: 'release/qa/phase3-memory.png' });

@@ -528,6 +528,13 @@ async function main() {
         const text = store.exportSession(id, format);
         const reviewed = harness.privacy(text);
         if (reviewed.action === 'block-external' || typeof reviewed.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        if (format === 'json') {
+          try {
+            JSON.parse(reviewed.redactedText);
+          } catch {
+            throw new Error('PRIVACY_REVIEW_REQUIRED');
+          }
+        }
         const result = await dialog.showSaveDialog(window, {
           title: 'บันทึกบทสนทนา',
           defaultPath: `conversation.${format}`,

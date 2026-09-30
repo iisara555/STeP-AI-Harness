@@ -69,6 +69,7 @@
     "docs/desktop-tool-loop.md",
     "docs/desktop-context-memory.md",
     "docs/openharness-parity.md",
+    "docs/openharness-handoff.md",
     "docs/quality-layer.md",
     "docs/quality-pilot-smoke-test.md",
     "docs/afp-demo-source-register.md",

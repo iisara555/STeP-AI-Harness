@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, symlink, writeFile, link, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from '../electron/store';
@@ -92,7 +92,7 @@ test('workspace memory and proposals cannot cross roots; team memory needs polic
   await assert.rejects(memories.save({ ...entry, scope: 'project' }), /PATH_RULE_DENIED/);
   store.close();
 });
-test('expired memory and symlink directories never enter prompts', async () => {
+test('expired memory, hard-linked files and symlink directories never enter prompts', async () => {
   const home = await mkdtemp(join(tmpdir(), 'step-memory-expiry-')),
     workspace = join(home, 'work');
   await mkdir(workspace);
@@ -104,6 +104,16 @@ test('expired memory and symlink directories never enter prompts', async () => {
   await writeFile(join(home, 'memory', m.id + '.md'), memoryMarkdown({ ...m, updated_at: '2020-01-01T00:00:00.000Z' }));
   assert.equal((await memories.relevant('Hi')).length, 0);
   assert.equal((await memories.list())[0].expired, true);
+  const memoryPath = join(home, 'memory', m.id + '.md'),
+    linkedPath = join(home, 'external-memory.md'),
+    original = await readFile(memoryPath, 'utf8');
+  await link(memoryPath, linkedPath);
+  assert.equal((await memories.list()).length, 0);
+  await assert.rejects(memories.save({ ...m, text: 'Prefer clear responses.' }), /MEMORY_NOT_FOUND/);
+  await assert.rejects(memories.remove(m.id), /MEMORY_NOT_FOUND/);
+  assert.equal(await readFile(linkedPath, 'utf8'), original);
+  await unlink(linkedPath);
+  assert.equal((await memories.list()).length, 1);
   await mkdir(join(workspace, '.step'));
   await symlink(home, join(workspace, '.step', 'memory'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(memories.save({ ...entry, scope: 'project' }), /INVALID_PATH/);

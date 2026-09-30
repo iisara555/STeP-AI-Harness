@@ -53,6 +53,7 @@ export function MemoryDialog({
       <label>
         รูปแบบคำตอบ{' '}
         <select
+          aria-label="รูปแบบคำตอบ"
           value={style}
           disabled={busy}
           onChange={e => {

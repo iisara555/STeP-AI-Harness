@@ -12,6 +12,6 @@ The approved roadmap adapts [HKUDS/OpenHarness](https://github.com/HKUDS/OpenHar
 | 5 | Compatible providers, Copilot, headless CLI, dry run, commands, voice, governed Skill Packs and LINE gateway/session runner | Pending |
 | 6 | Live feature-matrix evaluation and remaining operator/employee documentation | Pending; live API runs require an explicit user instruction |
 
-Keep each phase reviewable separately. The base branch carries the approved Phase 0 merge; Phase 1 changes are reviewed against that base. Subsequent phases depend on the permission/approval boundary. Do not label an administrator feature flag as proof of an implemented or released feature.
+Phases 0–3 form the integrated development baseline authorized for `main`. The earlier stacked draft PRs are historical review artifacts; check whether their commits are already on `main` before attempting another merge. Continue with the [cross-account handoff](openharness-handoff.md), starting at Phase 4. Subsequent phases depend on the permission/approval boundary. Do not label an administrator feature flag as proof of an implemented or released feature.
 
 Phase 2 should extend the existing `step-tool` protocol and `WorkService` rather than create an alternate path around routing/privacy. Only approved read operations may execute automatically. Writes and shell execution must keep `ToolGate`, policy reload checks, hooks and the approval UI; automatically sending results to a provider needs a separate content privacy/consent check. The current shell filter is not a Docker or OS sandbox.
