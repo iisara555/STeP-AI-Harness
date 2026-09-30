@@ -120,3 +120,83 @@ test('connect flow completes Console OAuth before the test request without askin
   assert.equal(tested, true);
   assert.equal(await anthropicStatus(f.executable, f.context), true);
 });
+
+// The in-app installer for Claude Console OAuth: nothing is installed unless the archive matches its
+// pinned checksum and the binary proves to be Anthropic's ant; a failed check leaves any earlier copy alone.
+test('ant installer verifies checksum and binary before replacing anything', async () => {
+  const { createHash } = await import('node:crypto');
+  const { existsSync } = await import('node:fs');
+  const { installAnthropicCli, antComponentPath } = await import('../electron/anthropic-auth');
+  const dir = await mkdtemp(join(tmpdir(), 'step-ant-install-'));
+  const archive = Buffer.from('synthetic ant release archive');
+  const spec = { asset: 'ant_test.zip', sha256: createHash('sha256').update(archive).digest('hex') };
+  const name = process.platform === 'win32' ? 'ant.exe' : 'ant';
+  const extract = async (_archive: string, target: string) => {
+    await mkdir(join(target, 'ant_1.36.0'), { recursive: true });
+    await writeFile(join(target, 'ant_1.36.0', name), 'synthetic ant binary');
+    return true;
+  };
+  const target = antComponentPath(dir);
+  const urls: string[] = [];
+  const download = async (url: string) => {
+    urls.push(url);
+    return archive;
+  };
+
+  await assert.rejects(
+    installAnthropicCli(dir, () => {}, { spec: { ...spec, sha256: '0'.repeat(64) }, download, extract, verify: async () => {} }),
+    /ANTHROPIC_CLI_CHECKSUM_FAILED/,
+  );
+  assert.equal(existsSync(target), false);
+  assert.match(urls[0], /^https:\/\/github\.com\/anthropics\/anthropic-cli\/releases\/download\/v\d+\.\d+\.\d+\/ant_test\.zip$/);
+
+  let checked = '';
+  const installed = await installAnthropicCli(dir, () => {}, {
+    spec,
+    download,
+    extract,
+    verify: async (executable, context) => {
+      checked = executable;
+      assert.ok(context.env.ANTHROPIC_CONFIG_DIR && !context.env.ANTHROPIC_CONFIG_DIR.startsWith(dir), 'checked in a throwaway profile');
+    },
+  });
+  assert.equal(installed, target);
+  assert.equal(await readFile(target, 'utf8'), 'synthetic ant binary');
+  assert.notEqual(checked, target, 'the staged copy is checked before it replaces the installed one');
+
+  await writeFile(target, 'working earlier copy');
+  await assert.rejects(
+    installAnthropicCli(dir, () => {}, {
+      spec,
+      download,
+      extract,
+      verify: async () => {
+        throw new Error('ANTHROPIC_CLI_UPDATE_REQUIRED');
+      },
+    }),
+    /ANTHROPIC_CLI_INSTALL_FAILED/,
+  );
+  assert.equal(await readFile(target, 'utf8'), 'working earlier copy');
+
+  await assert.rejects(
+    installAnthropicCli(dir, () => {}, { spec: null }),
+    /ANTHROPIC_CLI_UNSUPPORTED/,
+  );
+  await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+});
+
+test('the pinned ant release covers the desktop platforms with SHA-256 checksums', async () => {
+  const { antComponentSpec } = await import('../electron/anthropic-auth');
+  for (const [platform, arch] of [
+    ['win32', 'x64'],
+    ['win32', 'arm64'],
+    ['darwin', 'arm64'],
+    ['darwin', 'x64'],
+  ] as const) {
+    const spec = antComponentSpec(platform, arch);
+    assert.ok(spec, `${platform}-${arch}`);
+    assert.match(spec!.asset, /^ant_\d+\.\d+\.\d+_(windows|macos)_(amd64|arm64)\.zip$/);
+    assert.match(spec!.sha256, /^[0-9a-f]{64}$/);
+  }
+  assert.equal(antComponentSpec('linux', 'x64'), null);
+});

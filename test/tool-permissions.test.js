@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  STEP_AI_COMMANDS, mergeGeminiSettings, mergeVSCodeSettings, writeToolPermissions,
+  STEP_AI_COMMANDS, mergeGeminiSettings, mergeVSCodeSettings, mergeClaudeSettings, claudeRoutingHook, writeToolPermissions,
 } from '../src/modules/adapters/tool-permissions.js';
 import { getInstructionFiles } from '../src/modules/adapters/multi.js';
 
@@ -48,9 +48,9 @@ test('writeToolPermissions creates, re-runs cleanly and never overwrites unreada
   const dir = await mkdtemp(join(tmpdir(), 'step-perm-'));
   try {
     const first = await writeToolPermissions(dir);
-    assert.deepEqual(first.map((item) => item.status), ['created', 'created']);
+    assert.deepEqual(first.map((item) => item.status), ['created', 'created', 'created']);
     const second = await writeToolPermissions(dir);
-    assert.deepEqual(second.map((item) => item.status), ['unchanged', 'unchanged']);
+    assert.deepEqual(second.map((item) => item.status), ['unchanged', 'unchanged', 'unchanged']);
 
     const jsonc = '{\n  // my comment\n  "editor.tabSize": 2\n}\n';
     await writeFile(join(dir, '.vscode', 'settings.json'), jsonc);
@@ -75,4 +75,51 @@ test('VS Code + Copilot gets the same instructions as AGENTS.md', () => {
   assert.ok(copilot, 'multi adapter must write .github/copilot-instructions.md');
   assert.equal(copilot.content, agents.content);
   for (const file of files) assert.ok(!/Commercial \/ Paid|Free Quota AI Assistant/.test(file.content), `${file.filename} must not label a price tier`);
+});
+
+// Claude Code: the routing gate runs as a UserPromptSubmit hook, so it does not rely on the model
+// choosing to call `step-ai ask`. The user's own permissions and hooks survive every merge.
+test('Claude Code gets the routing hook and a read-only allowlist without losing user settings', () => {
+  const fresh = mergeClaudeSettings(null, 'darwin');
+  assert.deepEqual(fresh.hooks.UserPromptSubmit, [{ hooks: [claudeRoutingHook('darwin')] }]);
+  assert.match(claudeRoutingHook('darwin').command, /^sh "\$CLAUDE_PROJECT_DIR\/step-ai" hook user-prompt-submit$/);
+  const windows = claudeRoutingHook('win32');
+  assert.equal(windows.shell, 'powershell');
+  assert.match(windows.command, /step-ai\.cmd" hook user-prompt-submit$/);
+  for (const rule of fresh.permissions.allow) assert.match(rule, /^Bash\((sh \.\/step-ai|\.\/step-ai\.cmd) (ask|output):\*\)$/);
+
+  const own = {
+    model: 'opus',
+    permissions: { allow: ['Bash(git status:*)'], deny: ['Bash(rm:*)'] },
+    hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'my-notes.sh' }] }], Stop: [] },
+  };
+  const merged = mergeClaudeSettings(own, 'win32');
+  assert.equal(merged.model, 'opus');
+  assert.deepEqual(merged.permissions.deny, ['Bash(rm:*)']);
+  assert.equal(merged.permissions.allow[0], 'Bash(git status:*)');
+  assert.equal(merged.hooks.UserPromptSubmit[0].hooks[0].command, 'my-notes.sh');
+  assert.equal(merged.hooks.UserPromptSubmit.length, 2);
+  assert.deepEqual(mergeClaudeSettings(merged, 'win32'), merged, 'second merge is a no-op');
+  assert.equal(mergeClaudeSettings({ hooks: [] }), null);
+  assert.equal(mergeClaudeSettings({ permissions: { allow: 'all' } }), null);
+});
+
+test('the routing hook routes the prompt locally and never blocks it', async () => {
+  const { Readable, Writable } = await import('node:stream');
+  const { runHook } = await import('../src/cli/commands/hook.js');
+  const run = async (input) => {
+    let out = '';
+    const stdout = new Writable({ write(chunk, _e, done) { out += chunk; done(); } });
+    await runHook({ _: ['hook', 'user-prompt-submit'] }, { stdin: Readable.from([input]), stdout, env: {} });
+    return out;
+  };
+  const out = JSON.parse(await run(JSON.stringify({ prompt: 'ช่วยตรวจ TOR ฉบับนี้หน่อย', cwd: tmpdir() })));
+  assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
+  const context = out.hookSpecificOutput.additionalContext;
+  assert.match(context, /^STeP routing gate/);
+  const contract = JSON.parse(context.split('```json\n')[1].split('\n```')[0]);
+  assert.equal(contract.routing.skill, 'tor-review');
+  assert.ok(!JSON.stringify(contract).includes('router-index.yaml'), 'the router registry never enters the model context');
+  assert.equal(await run('not json'), '', 'unreadable input adds nothing and does not fail the prompt');
+  assert.equal(await run(JSON.stringify({ prompt: '   ' })), '');
 });

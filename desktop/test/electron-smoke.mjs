@@ -103,7 +103,7 @@ try {
   // sign-in folder and leaves its work ready to move to another AI.
   const picked = await page.evaluate(async () => {
     const a = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });
-    const b = await window.step.call('connection', { provider: 'gemini', mode: 'subscription' });
+    const b = await window.step.call('connection', { provider: 'gemini', mode: 'subscription', googleCloudProject: 'step-smoke-test' });
     const task = await window.step.call('create', { connectionId: b.id });
     return { a: a.id, b: b.id, task: task.id };
   });

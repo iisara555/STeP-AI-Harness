@@ -18,6 +18,7 @@ import { runOutput } from './commands/output.js';
 import { runUpgradeApply } from './commands/upgrade-apply.js';
 import { runPrivacy } from './commands/privacy.js';
 import { runBenchmark } from './commands/benchmark.js';
+import { runHook } from './commands/hook.js';
 
 function parseArgs(rawArgs) {
   const args = { _: [] };
@@ -169,6 +170,9 @@ export async function main(argv = process.argv.slice(2)) {
       break;
     case 'rollback':
       await runRollback(args);
+      break;
+    case 'hook':
+      await runHook(args);
       break;
     default:
       console.error(`${colors.red('✖')} คำสั่งไม่ถูกต้อง: '${command}'`);

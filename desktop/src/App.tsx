@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { plainDocument as toDoc, documentText } from './draft';
@@ -69,7 +69,7 @@ export default function App() {
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
   const [stream, setStream] = useState(''),
     [progress, setProgress] = useState(''),
-    [running, setRunning] = useState(false);
+    [pendingRuns, setPendingRuns] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null);
@@ -104,13 +104,14 @@ export default function App() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [toasts, setToasts] = useState<Toast[]>([]),
     toastId = useRef(0),
-    runningId = useRef('');
+    // Tasks started from this window, so their completion can be announced once.
+    startedRuns = useRef(new Set<string>());
   const dismiss = useCallback((id: number) => setToasts(list => list.filter(t => t.id !== id)), []);
   const notify = useCallback((text: string, tone: Toast['tone'] = 'info', action?: Toast['action']) => {
     if (text) setToasts(list => [...list.filter(t => t.text !== text), { id: ++toastId.current, text, tone, action }].slice(-4));
   }, []);
   const [reasoning, setReasoning] = useState(''),
-    [startedAt, setStartedAt] = useState(0),
+    startedAt = useRef(new Map<string, number>()),
     [now, setNow] = useState(Date.now());
   const [consentAsk, setConsentAsk] = useState<{
     sessionId: string;
@@ -119,6 +120,7 @@ export default function App() {
     skill?: string;
     allowIds?: string[];
     sourceText?: string;
+    retry?: boolean;
     token: string;
     first: boolean;
     flagged: boolean;
@@ -201,14 +203,22 @@ export default function App() {
           }
         }
         if (event.type === 'changed') {
-          setRunning(false);
-          setStream('');
-          setReasoning('');
-          setPlan([]);
-          setStartedAt(0);
-          setProgress(p => (p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' ? p : ''));
-          const finished = event.sessionId === runningId.current ? event.sessionId : '';
-          runningId.current = '';
+          setPendingRuns(ids => {
+            if (!ids.has(event.sessionId)) return ids;
+            const next = new Set(ids);
+            next.delete(event.sessionId);
+            return next;
+          });
+          startedAt.current.delete(event.sessionId);
+          // Other tasks may still be running; only the one on screen resets its live view.
+          if (event.sessionId === currentId.current) {
+            setStream('');
+            setReasoning('');
+            setPlan([]);
+            setProgress(p => (p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' ? p : ''));
+          }
+          const finished = startedRuns.current.has(event.sessionId) ? event.sessionId : '';
+          startedRuns.current.delete(event.sessionId);
           void refresh().then(data => {
             const done = finished && data?.sessions.find(s => s.id === finished);
             if (!done) return;
@@ -239,6 +249,12 @@ export default function App() {
       }),
     [api, refresh],
   );
+  const runningIds = useMemo(
+    () => new Set([...(snapshot?.sessions || []).filter(s => s.status === 'running').map(s => s.id), ...pendingRuns]),
+    [snapshot, pendingRuns],
+  );
+  // "running" always means the task on screen; tasks in other Workspaces may run at the same time.
+  const running = Boolean(selected) && runningIds.has(selected);
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -313,6 +329,8 @@ export default function App() {
     setSelected(id);
     setFiles([]);
     setStream('');
+    setReasoning('');
+    setPlan([]);
     setProgress('');
     setDirty(false);
     dirtyRef.current = false;
@@ -354,6 +372,8 @@ export default function App() {
     setSettings(false);
     setFiles([]);
     setStream('');
+    setReasoning('');
+    setPlan([]);
     setProgress('');
     setDirty(false);
     dirtyRef.current = false;
@@ -405,22 +425,23 @@ export default function App() {
     skill?: string,
     allowIds?: string[],
     sourceText?: string,
+    retry?: boolean,
   ) {
-    const result = await api!.call('send', { id, text, attachments, consent, skill, allowIdentifiers: allowIds, sourceText });
+    const result = await api!.call('send', { id, text, attachments, consent, skill, allowIdentifiers: allowIds, sourceText, retry });
     if (result.consent) {
-      setConsentAsk({ sessionId: id, text, attachments, skill, allowIds, sourceText, ...result.consent });
+      setConsentAsk({ sessionId: id, text, attachments, skill, allowIds, sourceText, retry, ...result.consent });
       return;
     }
     if (result.started && result.masked?.length) notify(`ระบบปิดบังก่อนส่งให้ AI: ${result.masked.join(', ')}`);
     if (result.started) {
-      runningId.current = id;
+      startedRuns.current.add(id);
+      setPendingRuns(ids => new Set(ids).add(id));
       setForcedSkill('');
-      setRunning(true);
       setQuery('');
       setFiles([]);
       setStream('');
       setReasoning('');
-      setStartedAt(Date.now());
+      startedAt.current.set(id, Date.now());
       setNow(Date.now());
       setProgress('กำลังเริ่มงาน');
       await refresh();
@@ -587,7 +608,8 @@ export default function App() {
           })),
       ]
     : [];
-  const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
+  const since = startedAt.current.get(selected);
+  const elapsed = running && since ? formatElapsed(now - since) : '';
   if (!api)
     return (
       <main className="browser-message">
@@ -703,7 +725,7 @@ export default function App() {
                         <button className="icon" aria-label="เปลี่ยนชื่อ" onClick={() => setRenaming({ id: s.id, title: s.title })}>
                           <Pencil size={14} />
                         </button>
-                        <button className="icon" aria-label="ลบงาน" disabled={running && selected === s.id} onClick={() => setRemoving(s)}>
+                        <button className="icon" aria-label="ลบงาน" disabled={runningIds.has(s.id)} onClick={() => setRemoving(s)}>
                           <Trash2 size={14} />
                         </button>
                       </span>
@@ -904,9 +926,14 @@ export default function App() {
                   {stream && <RichText className="message-body streaming" text={stream} />}
                 </article>
               )}
-              {!running && session?.status === 'error' && lastRequest && (
+              {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
                 <div className="retry-row">
-                  <button onClick={() => void action(() => start(session.id, lastRequest, [], undefined, session.skill))}>
+                  {/* Continues the stopped task, after any Playbook steps it already finished. */}
+                  <button
+                    onClick={() =>
+                      void action(() => start(session.id, lastRequest, [], undefined, session.skill, undefined, undefined, true))
+                    }
+                  >
                     ลองอีกครั้ง
                   </button>
                   <button
@@ -1345,7 +1372,9 @@ export default function App() {
           onConfirm={async () => {
             const ask = consentAsk;
             setConsentAsk(null);
-            await action(() => start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds, ask.sourceText));
+            await action(() =>
+              start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds, ask.sourceText, ask.retry),
+            );
           }}
         >
           {consentAsk.flagged ? (

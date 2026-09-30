@@ -10,6 +10,7 @@ import { adapter, listModels } from './providers';
 import { errorCode } from './diagnostics';
 import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
+import { isolatedRuntimeHome } from './runtime-home';
 import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
@@ -17,7 +18,14 @@ import { installOcr, ocrComponentCurrent } from './components';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
-import { findAnthropicCli, resolveAnthropicCli, anthropicLogout } from './anthropic-auth';
+import {
+  findAnthropicCli,
+  resolveAnthropicCli,
+  anthropicLogout,
+  installAnthropicCli,
+  antComponentPath,
+  antComponentSpec,
+} from './anthropic-auth';
 import { existsSync } from 'node:fs';
 import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
 
@@ -28,7 +36,9 @@ const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
 const consents = new Map<string, string>();
 const connectControllers = new Map<string, AbortController>();
-let busy = false;
+// Tasks in different Workspaces may run side by side; each session still runs one task at a time.
+const MAX_PARALLEL_RUNS = 3;
+let installingAnt = false;
 let ocrResolving = false;
 const validProviders = new Set(['openai', 'claude', 'gemini']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
@@ -144,47 +154,28 @@ async function main() {
   // In-app Claude subscription login stays off until Anthropic approves offering claude.ai login.
   // Sign-out and removal keep working with the flag off so an earlier login can always be cleared.
   const claudeSubscription = process.env.STEP_CLAUDE_SUBSCRIPTION === '1';
+  // The official ant CLI that STeP installs for Claude Console OAuth when the employee has none.
+  const antHome = join(data, 'components', 'ant');
+  const findAnt = () => findAnthropicCli([antComponentPath(antHome)]);
+  async function installAnt(log: (line: string) => void, signal?: AbortSignal) {
+    if (installingAnt) throw new Error('INSTALL_BUSY');
+    installingAnt = true;
+    try {
+      await installAnthropicCli(antHome, log, {}, signal);
+      diagnose('ant-installed');
+    } catch (error) {
+      diagnose('ant-install-failed', { code: errorCode(error) });
+      throw error;
+    } finally {
+      installingAnt = false;
+    }
+  }
   async function runtime(connection: Connection, signOut = false) {
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription && !signOut)
       throw new Error('FEATURE_DISABLED');
     connection.executable = resolveRuntime(connection);
-    const home = join(data, 'runtimes', connection.id),
-      cwd = join(home, 'workspace');
-    await mkdir(cwd, { recursive: true });
-    await mkdir(join(home, '.gemini'), { recursive: true });
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
-    const geminiAuthType = connection.provider === 'gemini' ? (connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal') : undefined;
-    await writeFile(
-      join(home, '.gemini', 'settings.json'),
-      JSON.stringify({
-        tools: { core: [] },
-        mcpServers: {},
-        telemetry: { enabled: false },
-        context: { fileName: '__STEP_NO_CONTEXT__' },
-        ...(geminiAuthType ? { security: { auth: { selectedType: geminiAuthType, enforcedType: geminiAuthType } } } : {}),
-      }),
-    );
-    await writeFile(
-      join(home, 'config.toml'),
-      'web_search = "disabled"\ncli_auth_credentials_store = "file"\n[features]\nshell_tool = false\nplugins = false\nremote_plugin = false\nplugin_sharing = false\napps = false\ngoals = false\n',
-    );
-    const env: NodeJS.ProcessEnv = {
-      PATH: process.env.PATH,
-      SystemRoot: process.env.SystemRoot,
-      WINDIR: process.env.WINDIR,
-      TEMP: process.env.TEMP,
-      TMP: process.env.TMP,
-      HOME: home,
-      USERPROFILE: home,
-      APPDATA: home,
-      LOCALAPPDATA: home,
-      CODEX_HOME: home,
-      GEMINI_CLI_HOME: home,
-      GOOGLE_CLOUD_PROJECT: connection.provider === 'gemini' ? connection.googleCloudProject : undefined,
-      GOOGLE_CLOUD_PROJECT_ID: connection.provider === 'gemini' ? connection.googleCloudProject : undefined,
-      CLAUDE_CONFIG_DIR: join(home, '.claude'),
-      ANTHROPIC_CONFIG_DIR: connection.provider === 'claude' && connection.mode === 'oauth' ? join(home, '.anthropic') : undefined,
-    };
+    const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection);
     let authExecutable: string | undefined;
     if (connection.provider === 'claude' && connection.mode === 'subscription') {
       await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
@@ -192,7 +183,7 @@ async function main() {
     }
     if (connection.provider === 'claude' && connection.mode === 'oauth') {
       await mkdir(env.ANTHROPIC_CONFIG_DIR!, { recursive: true });
-      authExecutable = await resolveAnthropicCli({ cwd, env });
+      authExecutable = await resolveAnthropicCli({ cwd, env }, findAnt);
     }
     return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) }, authExecutable };
   }
@@ -205,6 +196,25 @@ async function main() {
         provider: c?.provider || '',
         mode: c?.mode || '',
         detail: (event.detail || []).join(' | ').slice(0, 1200),
+      });
+      return;
+    }
+    // Run traces hold sizes, references and timing only; they go to diagnostics, not the window.
+    if (event.type === 'trace' && event.trace) {
+      const t = event.trace;
+      diagnose('run-trace', {
+        outcome: t.outcome,
+        code: t.code || '',
+        mode: t.mode,
+        route: t.route.slice(0, 80),
+        ms: String(t.ms),
+        steps: t.steps
+          .map(
+            s =>
+              `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'}`,
+          )
+          .join(' | ')
+          .slice(0, 1200),
       });
       return;
     }
@@ -328,6 +338,9 @@ async function main() {
           input.googleCloudProject === undefined ? previous?.googleCloudProject || '' : inputText(input.googleCloudProject, 60).trim();
         if (googleCloudProject && !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(googleCloudProject))
           throw new Error('GOOGLE_CLOUD_PROJECT_INVALID');
+        // Since 18 June 2026 Google serves Gemini sign-in only to Code Assist Standard/Enterprise, which needs a project.
+        if (input.provider === 'gemini' && input.mode === 'subscription' && !googleCloudProject)
+          throw new Error('GEMINI_PERSONAL_DISCONTINUED');
         if (previous?.claudeAuthStarted && (previous.provider !== input.provider || previous.mode !== input.mode))
           throw new Error('DISCONNECT_REQUIRED');
         const connection: Connection = {
@@ -392,6 +405,14 @@ async function main() {
         };
         delete connection.signedIn;
         try {
+          if (connection.provider === 'gemini' && connection.mode === 'subscription' && !connection.googleCloudProject)
+            throw new Error('GEMINI_PERSONAL_DISCONTINUED');
+          // Claude Console OAuth needs Anthropic's ant CLI; install the pinned official release when it is missing.
+          if (connection.provider === 'claude' && connection.mode === 'oauth' && !(await findAnt()))
+            await installAnt(
+              text => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text }),
+              controller.signal,
+            );
           const connectionRuntime = await runtime(connection);
           if (connection.provider === 'claude' && connection.mode === 'subscription') {
             connection.claudeAuthStarted = true;
@@ -468,7 +489,10 @@ async function main() {
       case 'claudeCode':
         return { installed: Boolean(await findClaudeCode()) };
       case 'anthropicCli':
-        return { installed: Boolean(await findAnthropicCli()) };
+        return { installed: Boolean(await findAnt()), installable: Boolean(antComponentSpec()), installing: installingAnt };
+      case 'anthropicCliInstall':
+        await installAnt(text => emit({ sessionId: '', type: 'install', text }));
+        return { installed: Boolean(await findAnt()) };
       case 'handoff': {
         // Hands a request to the employee's own Claude Code (see handoff.ts). The privacy gate still applies.
         const text = inputText(input.text),
@@ -556,7 +580,7 @@ async function main() {
         return { name: basename(path), preview, result: read.result };
       }
       case 'ocrResolve': {
-        if (busy || ocrResolving) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
         const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
         if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
@@ -740,10 +764,11 @@ async function main() {
         return session;
       }
       case 'send': {
-        if (busy) throw new Error('RUN_ALREADY_ACTIVE');
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         store.session(id);
+        if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         // A directly invoked Skill must be one the router can reach.
         const skill = input.skill ? inputText(input.skill, 80) : '';
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
@@ -803,18 +828,13 @@ async function main() {
           }
           if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
         }
-        if (busy) throw new Error('RUN_ALREADY_ACTIVE');
-        busy = true;
-        void service
-          .run(id, text, combinedSource, true, skill || undefined)
-          .catch(error => {
-            diagnose('run-rejected', { code: errorCode(error) });
-            emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
-            emit({ sessionId: id, type: 'changed' });
-          })
-          .finally(() => {
-            busy = false;
-          });
+        if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
+        void service.run(id, text, combinedSource, true, skill || undefined, { retry: input.retry === true }).catch(error => {
+          diagnose('run-rejected', { code: errorCode(error) });
+          emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
+          emit({ sessionId: id, type: 'changed' });
+        });
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
         return { started: true, masked: review.labels };

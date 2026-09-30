@@ -6,5 +6,5 @@
     "noUnusedLocals": true, "noUnusedParameters": true,
     "types": ["node"]
   },
-  "include": ["src", "electron", "test", "vite.config.ts"]
+  "include": ["src", "electron", "test", "eval", "vite.config.ts"]
 }

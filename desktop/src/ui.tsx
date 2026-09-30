@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CircleAlert, CircleCheck, LoaderCircle, Search, X } from 'lucide-react';
 import type { Session } from './types';
 import { markdownDocument, type DraftNode } from './draft';
+import { explainError } from './messages';
 
 // The one way the app asks "are you sure": focused, Enter confirms, Esc cancels, errors stay inline.
 export function ConfirmDialog({
@@ -299,13 +300,28 @@ export function ClaudeCodeNote({
 
 export function AnthropicOAuthNote({ call }: { call: (method: string, input?: any) => Promise<any> }) {
   const [installed, setInstalled] = useState<boolean | null>(null);
+  const [installable, setInstallable] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [failure, setFailure] = useState('');
   const check = () => {
     setInstalled(null);
     void call('anthropicCli')
-      .then((result: any) => setInstalled(result.installed))
+      .then((result: any) => {
+        setInstalled(result.installed);
+        setInstallable(result.installable === true);
+        setInstalling(result.installing === true);
+      })
       .catch(() => setInstalled(false));
   };
   useEffect(check, []);
+  const install = () => {
+    setInstalling(true);
+    setFailure('');
+    void call('anthropicCliInstall')
+      .then((result: any) => setInstalled(result.installed))
+      .catch(error => setFailure(explainError(error)))
+      .finally(() => setInstalling(false));
+  };
   return (
     <div className="claude-code-note">
       <p className="small">
@@ -317,11 +333,21 @@ export function AnthropicOAuthNote({ call }: { call: (method: string, input?: an
           ? 'กำลังตรวจหา ant CLI…'
           : installed
             ? 'พบ Anthropic ant CLI · พร้อมเปิด OAuth'
-            : 'ยังไม่พบ Anthropic ant CLI ในเครื่องนี้'}
+            : installing
+              ? 'กำลังติดตั้ง ant CLI ทางการของ Anthropic…'
+              : installable
+                ? 'ยังไม่มี ant CLI · STeP ติดตั้งรุ่นทางการ (ตรวจ checksum แล้ว ~10 MB) ให้ได้ หรือจะติดตั้งให้อัตโนมัติเมื่อกดเชื่อมต่อ'
+                : 'ยังไม่พบ Anthropic ant CLI ในเครื่องนี้'}
       </p>
+      {failure && <p className="small danger-text">{failure}</p>}
+      {installed === false && installable && (
+        <button disabled={installing} onClick={install}>
+          {installing ? 'กำลังติดตั้ง…' : 'ติดตั้ง ant CLI'}
+        </button>
+      )}
       {installed === false && (
         <button className="quiet" onClick={() => void call('openHelp', { topic: 'anthropicCli' })}>
-          เปิดวิธีติดตั้ง ant CLI
+          เปิดวิธีติดตั้งเอง
         </button>
       )}
       <button className="quiet" onClick={check}>
@@ -357,7 +383,8 @@ export function ProviderFields({
             onChange={e =>
               onChange({
                 provider: e.target.value,
-                mode: e.target.value === 'claude' ? 'oauth' : 'subscription',
+                // Gemini sign-in now serves only organization licenses, so an API key is the usual choice.
+                mode: e.target.value === 'claude' ? 'oauth' : e.target.value === 'gemini' ? 'api' : 'subscription',
                 key: '',
                 googleCloudProject: '',
               })
@@ -374,7 +401,11 @@ export function ProviderFields({
             {provider === 'claude' && <option value="oauth">Claude Console OAuth (ไม่ต้องใช้ API key)</option>}
             {subscription && (
               <option value="subscription">
-                {provider === 'claude' ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)' : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
+                {provider === 'claude'
+                  ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)'
+                  : provider === 'gemini'
+                    ? 'บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)'
+                    : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
               </option>
             )}
             {provider === 'claude' && <option value="claude-code">Claude Pro/Max (เปิดใน Claude Code ภายนอก)</option>}
@@ -384,15 +415,17 @@ export function ProviderFields({
       </div>
       {provider === 'gemini' && mode === 'subscription' && (
         <label>
-          Google Cloud Project ID <span className="muted small">(ถ้าเป็นบัญชี CMU/องค์กร)</span>
+          Google Cloud Project ID <span className="muted small">(จำเป็น)</span>
           <input
             value={googleCloudProject}
             onChange={e => onChange({ ...value, googleCloudProject: e.target.value.trim() })}
-            placeholder="เช่น my-project-123456 · บัญชีส่วนตัวเว้นว่างได้"
+            placeholder="เช่น my-project-123456"
             autoComplete="off"
           />
           <span className="small muted">
-            Google Workspace/องค์กรบางบัญชีต้องมี Project ID; Google ส่วนตัวและ AI Pro/Ultra ปกติไม่ต้องกรอก
+            Google หยุดให้บริการ Gemini CLI กับบัญชี Google ส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569
+            วิธีนี้ใช้ได้เฉพาะบัญชีองค์กรที่มี Gemini Code Assist Standard/Enterprise ผูกกับ Project นี้ บัญชีส่วนตัวให้เลือก “API key”
+            แล้วใช้ Gemini API key แทน
           </span>
         </label>
       )}
