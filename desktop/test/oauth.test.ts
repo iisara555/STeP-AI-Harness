@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { signInAndTest } from '../electron/connect';
+import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import type { Connection } from '../src/types';
 
 async function fakeRuntime(kind: 'openai' | 'gemini') {
@@ -149,6 +149,13 @@ test('ChatGPT OAuth binds the completion to loginId, refreshes the saved account
   assert.equal(calls2.filter(call => call.method === 'account/login/start').length, 1, 'saved ChatGPT login should be reused');
   assert.equal(second.state.opened, '');
   assert.equal(second.state.signedIn, true);
+
+  await signOutManagedProvider(connection, second.value.runtime);
+  const calls3 = (await readFile(f.calls, 'utf8'))
+    .trim()
+    .split('\n')
+    .map(line => JSON.parse(line));
+  assert.ok(calls3.some(call => call.method === 'account/logout'));
 });
 
 test('Gemini OAuth keeps browser callback mode enabled and never asks ACP stdin for an auth code', { timeout: 5000 }, async t => {
