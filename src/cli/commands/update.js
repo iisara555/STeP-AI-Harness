@@ -77,7 +77,7 @@ export async function runUpdate(args) {
   const { files } = resolved;
   const adapter = getAdapter(manifest.tool || userCfg.tool || 'codex');
   const instructionFiles = adapter.getInstructionFiles(targetRole, files);
-  const reconciled = await reconcileManagedFiles(dest, manifest, desiredManagedPaths(files, instructionFiles));
+  const reconciled = await reconcileManagedFiles(dest, manifest, desiredManagedPaths(files, instructionFiles), { packageRoot: PACKAGE_ROOT });
   if (reconciled.removed.length) info(`นำไฟล์ที่หมด scope ออกจาก workspace: ${reconciled.removed.length} ไฟล์`);
   if (reconciled.quarantined.length) {
     warn(`ย้ายไฟล์ที่เคยแก้แต่หมด scope ออกจากทางใช้งาน: ${reconciled.quarantined.length} ไฟล์`);
