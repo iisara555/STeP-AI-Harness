@@ -4,12 +4,13 @@ This is a development preview, not an accepted production release.
 
 ## Current automated verification
 
-The Windows validation/OAuth repair was checked locally with Node 25.8.0:
+The Windows validation/OAuth repair and Desktop 0.3.4 provider-selection fix were checked locally with Node 25.8.0:
 
 - Harness: 799 passed, 6 skipped, zero failures (805 tests including nested cases).
-- Desktop: 91 passed, zero failures, including synthetic OAuth cancellation and awaited runtime shutdown.
+- Desktop: 92 passed, zero failures, including synthetic OAuth cancellation, awaited runtime shutdown and the Anthropic CLI preload permission regression.
+- The Electron smoke test exercises Google OAuth/API selection and Claude Console availability through the real preload bridge. Selecting Claude previously threw `UNKNOWN_OPERATION` during an effect and unmounted the renderer; the bridge now permits that existing host operation and availability checks also catch synchronous failures. No live provider calls were made.
 - TypeScript/production build, Desktop formatting and repository validation passed. Repository validation reports 51 Skills and no likely secrets.
-- Windows CI is configured to run Harness checks with Node 20 and Desktop checks with Node 24. Those hosted CI runs have not been executed by this local task.
+- Windows validation CI is configured to run Harness checks with Node 20 and Desktop checks with Node 24. That separate validation job has not been executed by this local task. The Desktop 0.3.3 installer workflow passed on Windows and both macOS build jobs with Node 24; its artifacts remain development previews.
 - Live OAuth, provider entitlement and packaged-app acceptance remain pending; the checklist below is not a completed validation record.
 
 ## Previously verified on Windows

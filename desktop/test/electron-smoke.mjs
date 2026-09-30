@@ -17,6 +17,32 @@ try {
   const state = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(state.teams.length, 22);
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  // Exercise provider selection through the real preload bridge before any login.
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  const providerField = page.getByRole('combobox', { name: /ผู้ให้บริการ/ });
+  const methodField = page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ });
+  await providerField.selectOption('gemini');
+  assert.equal(await methodField.inputValue(), 'subscription');
+  assert.ok((await methodField.locator('option').allTextContents()).includes('Google OAuth'));
+  assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
+  await methodField.selectOption('api');
+  await page.getByLabel('API key', { exact: true }).waitFor();
+  await methodField.selectOption('subscription');
+  await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
+  const withGoogle = await page.evaluate(() => window.step.call('snapshot'));
+  assert.ok(withGoogle.connections.some(c => c.provider === 'gemini' && c.mode === 'subscription' && !c.ready));
+  await providerField.selectOption('claude');
+  assert.equal(await methodField.inputValue(), 'oauth');
+  const availability = await page.evaluate(() => window.step.call('anthropicCli'));
+  assert.equal(typeof availability.installed, 'boolean');
+  await page.getByRole('button', { name: 'ตรวจอีกครั้ง', exact: true }).click();
+  await page
+    .locator('.claude-code-note')
+    .getByText(/พร้อมเปิด OAuth|ยังไม่พบ Anthropic/)
+    .waitFor();
+  assert.deepEqual(errors, [], 'selecting Claude must not crash the renderer');
+  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
   await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
@@ -134,6 +160,8 @@ try {
         assertions: [
           '22 teams',
           'onboarding',
+          'Google OAuth and API selection',
+          'Claude OAuth availability through preload',
           'create session',
           'edit',
           'save',

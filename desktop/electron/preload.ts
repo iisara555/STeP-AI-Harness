@@ -15,6 +15,7 @@ const allowed = new Set([
   'ocrInstall',
   'cancelConnect',
   'claudeCode',
+  'anthropicCli',
   'handoff',
   'removeConnection',
   'sessionConnection',

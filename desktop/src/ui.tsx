@@ -266,7 +266,8 @@ export function ClaudeCodeNote({
   const [installed, setInstalled] = useState<boolean | null>(null);
   const check = () => {
     setInstalled(null);
-    void call('claudeCode')
+    void Promise.resolve()
+      .then(() => call('claudeCode'))
       .then((r: any) => setInstalled(r.installed))
       .catch(() => setInstalled(false));
   };
@@ -301,7 +302,8 @@ export function AnthropicOAuthNote({ call }: { call: (method: string, input?: an
   const [installed, setInstalled] = useState<boolean | null>(null);
   const check = () => {
     setInstalled(null);
-    void call('anthropicCli')
+    void Promise.resolve()
+      .then(() => call('anthropicCli'))
       .then((result: any) => setInstalled(result.installed))
       .catch(() => setInstalled(false));
   };
@@ -374,7 +376,11 @@ export function ProviderFields({
             {provider === 'claude' && <option value="oauth">Claude Console OAuth (ไม่ต้องใช้ API key)</option>}
             {subscription && (
               <option value="subscription">
-                {provider === 'claude' ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)' : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
+                {provider === 'claude'
+                  ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)'
+                  : provider === 'gemini'
+                    ? 'Google OAuth'
+                    : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
               </option>
             )}
             {provider === 'claude' && <option value="claude-code">Claude Pro/Max (เปิดใน Claude Code ภายนอก)</option>}
