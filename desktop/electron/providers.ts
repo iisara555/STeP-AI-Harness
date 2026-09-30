@@ -50,22 +50,28 @@ export function createRpc(connection: Connection, context: Pick<ProviderContext,
   const script = /\.[cm]?js$/i.test(executable);
   const env: NodeJS.ProcessEnv = { ...context.env, ...(script ? { ELECTRON_RUN_AS_NODE: '1' } : {}) };
   if (executable !== connection.executable) env.CODEX_MANAGED_PACKAGE_ROOT = dirname(dirname(connection.executable));
-  if (connection.provider === 'gemini' && context.key) env.GEMINI_API_KEY = context.key;
-  // Without a TTY, Gemini's browser-consent prompt waits on the JSON-RPC stdin forever; the manual-code flow can be answered.
-  if (connection.provider === 'gemini') env.NO_BROWSER = 'true';
+  if (connection.provider === 'gemini') {
+    if (context.key) env.GEMINI_API_KEY = context.key;
+    env.GEMINI_DEFAULT_AUTH_TYPE = connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal';
+    // ACP is already host-controlled; bypass workspace trust UI that cannot be
+    // answered through the JSON-RPC stream. Browser OAuth itself remains enabled.
+    env.GEMINI_CLI_TRUST_WORKSPACE = 'true';
+    delete env.NO_BROWSER;
+  }
   return new Rpc(script ? process.execPath : executable, script ? [executable, ...args] : args, { cwd: context.cwd, env });
 }
 
 export async function initialize(rpc: Rpc, provider: string) {
   if (provider === 'openai') {
-    await rpc.request('initialize', { clientInfo: { name: 'step-desktop', version: '0.1.0' }, capabilities: {} });
+    const result = await rpc.request('initialize', { clientInfo: { name: 'step-desktop', version: '0.1.0' }, capabilities: {} });
     rpc.notify('initialized');
-  } else
-    await rpc.request('initialize', {
-      protocolVersion: 1,
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
-      clientInfo: { name: 'step-desktop', version: '0.1.0' },
-    });
+    return result;
+  }
+  return rpc.request('initialize', {
+    protocolVersion: 1,
+    clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+    clientInfo: { name: 'step-desktop', version: '0.1.0' },
+  });
 }
 
 export class CodexAdapter implements ProviderAdapter {
