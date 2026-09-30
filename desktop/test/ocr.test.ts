@@ -20,7 +20,12 @@ test('only the STeP OCR service counts as running', async () => {
     res.end(JSON.stringify({ ok: true, service: 'something else' }));
   });
   try {
-    assert.deepEqual(await new OcrService(() => '', other.base).health(), { running: false, crosscheck: false });
+    assert.deepEqual(await new OcrService(() => '', other.base).health(), {
+      running: false,
+      crosscheck: false,
+      handwriting: false,
+      tesseract: false,
+    });
   } finally {
     await other.close();
   }
@@ -32,7 +37,15 @@ test('receipts are posted as raw bytes to the local service and its result is re
   const fake = await serve((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     if (req.url === '/api/health')
-      return void res.end(JSON.stringify({ ok: true, service: 'STeP Local Thai OCR', crosscheck_installed: true }));
+      return void res.end(
+        JSON.stringify({
+          ok: true,
+          service: 'STeP Local Thai OCR',
+          crosscheck_installed: true,
+          handwriting_installed: true,
+          tesseract_installed: true,
+        }),
+      );
     const chunks: Buffer[] = [];
     req.on('data', c => chunks.push(c));
     req.on('end', () => {
@@ -45,11 +58,16 @@ test('receipts are posted as raw bytes to the local service and its result is re
       file = join(dir, 'ใบเสร็จ.jpg');
     await writeFile(file, Buffer.from([1, 2, 3]));
     const service = new OcrService(() => '', fake.base);
-    assert.deepEqual(await service.health(), { running: true, crosscheck: true });
-    const read = await service.recognize(file, true);
+    assert.deepEqual(await service.health(), {
+      running: true,
+      crosscheck: true,
+      handwriting: true,
+      tesseract: true,
+    });
+    const read = await service.recognize(file, true, true, true);
     assert.equal(read.result.text, 'ยอดสุทธิ 107.00');
     assert.deepEqual([...received.bytes!], [1, 2, 3]);
-    assert.match(received.url!, /filename=%E0%B9%83.*\.jpg&threshold=0\.80&handwriting=off&crosscheck=on/);
+    assert.match(received.url!, /filename=%E0%B9%83.*\.jpg&threshold=0\.80&handwriting=on&crosscheck=on&tesseract=on/);
     await writeFile(join(dir, 'note.exe'), 'x');
     await assert.rejects(service.recognize(join(dir, 'note.exe'), false), /OCR_UNSUPPORTED_FILE/);
   } finally {
@@ -87,6 +105,21 @@ test('base installers exclude the heavy OCR runtime and the Receipt page install
 
   const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(main, /resourcesPath, 'ocr-runtime'/);
+});
+
+test('Tesseract is an optional printed-text verifier and handwriting remains a separate model', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const tesseract = await readFile(new URL('../../experiments/local-thai-ocr/tesseract_check.py', import.meta.url), 'utf8');
+  const engine = await readFile(new URL('../../experiments/local-thai-ocr/ocr_engine.py', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../../experiments/local-thai-ocr/app.py', import.meta.url), 'utf8');
+
+  assert.match(tesseract, /"tha\+eng"/);
+  assert.match(tesseract, /printed-likely/);
+  assert.match(tesseract, /handwriting-likely/);
+  assert.match(engine, /Tesseract is used only as an independent printed-text\/number check/);
+  assert.match(engine, /ThaiHandwritingReader/);
+  assert.match(app, /tesseract_installed/);
+  assert.match(app, /handwriting_installed/);
 });
 
 test('optional OCR component pins the Paddle build supported by each desktop architecture', () => {

@@ -71,7 +71,13 @@
               crosscheckCandidate: line.crosscheck_candidate || "",
               crosscheckConfidence: line.crosscheck_confidence ?? null,
               crosscheckStatus: line.crosscheck_status || null,
+              tesseractCandidate: line.tesseract_candidate || "",
+              tesseractConfidence: line.tesseract_confidence ?? null,
+              tesseractStatus: line.tesseract_status || null,
               handwritingCandidate: line.handwriting_candidate || "",
+              textKind: line.text_kind || "uncertain",
+              fusionCandidates: Array.isArray(line.fusion_candidates) ? line.fusion_candidates : [],
+              engine: "paddle",
             });
           }
         }
@@ -83,6 +89,55 @@
       }
     }
     return records.map((record, index) => ({ ...record, index }));
+  }
+
+  function engineWeight(record) {
+    if (record?.engine === "native") return 1;
+    if (record?.engine === "tesseract") return record?.textKind === "printed-likely" ? 1 : 0.92;
+    if (record?.engine === "thai-trocr") return record?.textKind === "handwriting-likely" ? 0.96 : 0.72;
+    if (record?.engine === "easyocr") return 0.85;
+    if (record?.engine === "paddle" && record?.textKind === "handwriting-likely") return 0.78;
+    return 1;
+  }
+
+  function mappingRecords(records) {
+    const expanded = [];
+    for (const record of records) {
+      expanded.push(record);
+      const alternatives = [
+        {
+          engine: "tesseract",
+          text: record.tesseractCandidate || "",
+          confidence: record.tesseractConfidence ?? null,
+          usable: record.tesseractStatus && record.tesseractStatus !== "error",
+        },
+        {
+          engine: "easyocr",
+          text: record.crosscheckCandidate || "",
+          confidence: record.crosscheckConfidence ?? null,
+          usable: Boolean(record.crosscheckCandidate),
+        },
+        {
+          engine: "thai-trocr",
+          text: record.handwritingCandidate || "",
+          confidence: null,
+          usable: Boolean(record.handwritingCandidate),
+        },
+      ];
+      for (const alternative of alternatives) {
+        if (!alternative.usable || !normalizeText(alternative.text)) continue;
+        if (normalizeText(alternative.text) === normalizeText(record.text)) continue;
+        expanded.push({
+          ...record,
+          text: alternative.text,
+          confidence: alternative.confidence,
+          engine: alternative.engine,
+          sourceTexts: [record.text, alternative.text],
+          virtualCandidate: true,
+        });
+      }
+    }
+    return expanded;
   }
 
   function candidate(value, record, extras = {}) {
@@ -99,6 +154,7 @@
       mappingMethod: extras.mappingMethod || "",
       sourceTexts: extras.sourceTexts || (record?.text ? [record.text] : []),
       candidates: extras.candidates || [],
+      engine: extras.engine || record?.engine || "paddle",
     };
   }
 
@@ -185,10 +241,11 @@
         found.push({
           value: sameLine,
           record: labelRecord,
-          score: 1,
+          score: 1 * engineWeight(labelRecord),
           method: "same-line",
+          engine: labelRecord.engine || "paddle",
           evidence: labelRecord.text,
-          sourceTexts: [labelRecord.text],
+          sourceTexts: labelRecord.sourceTexts || [labelRecord.text],
         });
       }
 
@@ -196,10 +253,14 @@
         found.push({
           value: item.value,
           record: item.record,
-          score: 0.95,
+          score: 0.95 * engineWeight(item.record),
           method: "same-row",
+          engine: item.record.engine || "paddle",
           evidence: `${labelRecord.text} ↔ ${item.record.text}`,
-          sourceTexts: [labelRecord.text, item.record.text],
+          sourceTexts: [
+            ...(labelRecord.sourceTexts || [labelRecord.text]),
+            ...(item.record.sourceTexts || [item.record.text]),
+          ],
         });
       }
 
@@ -207,10 +268,14 @@
         found.push({
           value: item.value,
           record: item.record,
-          score: item.offset === 1 ? 0.86 : 0.78,
+          score: (item.offset === 1 ? 0.86 : 0.78) * engineWeight(item.record),
           method: "next-line",
+          engine: item.record.engine || "paddle",
           evidence: `${labelRecord.text} → ${item.record.text}`,
-          sourceTexts: [labelRecord.text, item.record.text],
+          sourceTexts: [
+            ...(labelRecord.sourceTexts || [labelRecord.text]),
+            ...(item.record.sourceTexts || [item.record.text]),
+          ],
         });
       }
     }
@@ -231,13 +296,31 @@
     if (!options.length) return candidate("", null, { candidates: [] });
     const top = options[0];
     const second = options.find((item) => normalizeText(item.value) !== normalizeText(top.value));
-    const ambiguous = Boolean(second && Math.abs((top.score || 0) - (second.score || 0)) < 0.08);
+    const independentConflict = Boolean(
+      second &&
+      (top.engine || top.record?.engine) !== (second.engine || second.record?.engine) &&
+      (second.score || 0) >= (top.score || 0) * 0.85,
+    );
+    const handwritingOnly = Boolean(
+      (top.engine || top.record?.engine) === "thai-trocr" &&
+      !options.some(
+        (item) =>
+          (item.engine || item.record?.engine) !== "thai-trocr" &&
+          normalizeText(item.value) === normalizeText(top.value),
+      ),
+    );
+    const ambiguous = Boolean(
+      handwritingOnly ||
+      independentConflict ||
+      (second && Math.abs((top.score || 0) - (second.score || 0)) < 0.08),
+    );
     const mappedOptions = options.slice(0, 5).map((item) => ({
       value: normalizeText(item.value),
       evidence: item.evidence || item.record?.text || "",
       page: item.record?.page ?? null,
       confidence: item.record?.confidence ?? null,
       method: item.method || "pattern",
+      engine: item.engine || item.record?.engine || "paddle",
       score: item.score ?? 0,
     }));
 
@@ -248,6 +331,7 @@
         candidates: mappedOptions,
         evidence: top.evidence || "",
         sourceTexts: [...new Set(options.flatMap((item) => item.sourceTexts || []))],
+        engine: top.engine || top.record?.engine || "paddle",
       });
     }
 
@@ -257,6 +341,7 @@
       candidates: mappedOptions,
       evidence: top.evidence || top.record?.text || "",
       sourceTexts: top.sourceTexts || (top.record?.text ? [top.record.text] : []),
+      engine: top.engine || top.record?.engine || "paddle",
     });
   }
 
@@ -367,15 +452,16 @@
 
   function extractReceipt(result) {
     const records = lineRecords(result);
-    const taxId = findTaxId(records);
+    const mappedRecords = mappingRecords(records);
+    const taxId = findTaxId(mappedRecords);
     const fields = {
-      merchant: findMerchant(records),
-      receiptNumber: findReceiptNumber(records),
-      date: findDate(records),
+      merchant: findMerchant(mappedRecords),
+      receiptNumber: findReceiptNumber(mappedRecords),
+      date: findDate(mappedRecords),
       taxId: taxId.field,
-      subtotal: findAmount(records, "subtotal"),
-      vat: findAmount(records, "vat"),
-      total: findTotal(records),
+      subtotal: findAmount(mappedRecords, "subtotal"),
+      vat: findAmount(mappedRecords, "vat"),
+      total: findTotal(mappedRecords),
     };
     return {
       fields,

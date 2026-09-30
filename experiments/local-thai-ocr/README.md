@@ -1,6 +1,6 @@
 # STeP Local Thai OCR — Standalone Experiment
 
-สถานะ: **ทดลองแยกจาก STeP AI Harness หลัก** (`v0.1`)
+สถานะ: **Local OCR component สำหรับ STeP Desktop / standalone trial** (`v0.2`)
 
 เป้าหมายคือทดสอบ OCR ภาษาไทยบนเครื่องพนักงานโดยไม่ส่งเอกสารไปยัง OCR cloud API และไม่ผูกเข้ากับ Router/Skill ของ Harness จนกว่าจะมีผลทดสอบจากเอกสารจริงเพียงพอ
 
@@ -13,6 +13,9 @@
 - Optional/lazy-loaded Thai-TrOCR provides unverified candidates for low-confidence lines or lines where the OCR engines disagree.
 - Thai-TrOCR candidate เป็น second opinion เท่านั้น ระบบไม่แทนค่าข้อความเดิมอัตโนมัติ
 - Optional EasyOCR Thai/English recognition cross-checks PaddleOCR's detected lines, including lines with high PaddleOCR confidence. Different readings are flagged for human review; neither reading replaces the other automatically.
+- ถ้าเครื่องมี **Tesseract 5 + `tha` + `eng` traineddata** ระบบจะใช้เป็น independent verifier สำหรับตัวพิมพ์และตัวเลขโดยอัตโนมัติ ไม่ใช้ Tesseract เป็นผู้ตัดสินลายมือ
+- ระบบจัดประเภทบรรทัดเป็น `printed-likely`, `handwriting-likely`, `printed-conflict` หรือ `uncertain` จากการเห็นพ้อง/ขัดกันของ PaddleOCR, Tesseract และ Thai-TrOCR
+- STeP Desktop มี AI candidate filter แบบ opt-in: ส่งเฉพาะข้อความ OCR ที่ผ่าน privacy masking และ candidate token ไปยัง AI ที่ผู้ใช้เชื่อมต่ออยู่ **ไม่ส่งภาพใบเสร็จ** และไม่ยอมรับค่าที่ AI สร้างใหม่
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
@@ -40,6 +43,8 @@ The draft can be downloaded as JSON or copied to the clipboard. It contains the 
 2. ครั้งแรกที่ PaddleOCR ต้องดาวน์โหลด model weights หากยังไม่มีใน cache
 3. ครั้งแรกที่เปิด Thai-TrOCR หากยังไม่มี model weights ใน Hugging Face cache
 4. The first EasyOCR cross-check may download its Thai recognition model if it is not cached. Model download does not upload receipt bytes.
+5. Tesseract ไม่ได้ bundle มากับ installer หลัก; ถ้าต้องการชั้นนี้ให้ติดตั้ง Tesseract 5 และภาษา `tha` + `eng` ตามเอกสาร upstream แล้ว Desktop จะตรวจพบเอง
+6. AI candidate filter จะติดต่อ provider ที่ผู้ใช้เลือกเฉพาะเมื่อผู้ใช้กดใช้งานและยืนยันครั้งแรก โดยส่งเฉพาะ token + evidence ที่ผ่าน privacy gate
 
 **Model download ไม่ใช่ document upload** แต่เครื่องที่ต้อง air-gap ควรเตรียม dependency/model cache ล่วงหน้าก่อนนำไปใช้.
 
@@ -68,6 +73,14 @@ Windows: เปิด `Install-Handwriting.bat`
 macOS: เปิด `Install-Handwriting.command`
 
 Enable the Thai-TrOCR checkbox in the local page to show handwriting candidates separately from PaddleOCR and EasyOCR. Human review is required.
+
+## Optional Tesseract verifier
+
+Tesseract เป็นชั้นตรวจซ้ำสำหรับ **ตัวพิมพ์และตัวเลข** เท่านั้น โดยใช้ `tha+eng`, OEM 1 และ line-level recognition บนบริเวณที่ PaddleOCR ตรวจพบอยู่แล้ว. ถ้า Tesseract กับ PaddleOCR อ่านต่างกัน ระบบจะตั้ง `needs_review` และเก็บทั้งสอง candidate.
+
+STeP Desktop ตรวจ Tesseract จาก `TESSERACT_CMD`, PATH และตำแหน่งติดตั้งทั่วไปของ Windows/macOS. ต้องมีทั้งภาษา `tha` และ `eng`. การติดตั้งเป็น system-level dependency จึงไม่ถูกรวมในตัวติดตั้ง STeP Desktop; หน้า Receipt มีลิงก์ไปเอกสารติดตั้ง upstream.
+
+**อย่าใช้ผล Tesseract เพื่อสรุปว่าเป็นลายมือโดยลำพัง.** สัญญาณ `handwriting-likely` ต้องมี candidate จาก Thai-TrOCR และ Tesseract ต้องอ่อน/ไม่เห็นพ้องตามกฎใน engine.
 
 ## Optional second OCR for printed receipts
 
@@ -98,7 +111,7 @@ GET http://127.0.0.1:8765/api/health
 OCR request ใช้ raw file bytes:
 
 ```text
-POST /api/ocr?filename=sample.pdf&threshold=0.80&handwriting=off&crosscheck=on
+POST /api/ocr?filename=sample.pdf&threshold=0.80&handwriting=off&crosscheck=on&tesseract=on
 Content-Type: application/octet-stream
 ```
 

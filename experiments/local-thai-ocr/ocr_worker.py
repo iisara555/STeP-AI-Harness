@@ -14,6 +14,7 @@ def main() -> None:
     parser.add_argument("threshold", type=float)
     parser.add_argument("handwriting", choices=["0", "1"])
     parser.add_argument("crosscheck", choices=["0", "1"])
+    parser.add_argument("tesseract", choices=["0", "1"])
     args = parser.parse_args()
 
     result = LocalThaiOCR().process(
@@ -22,6 +23,7 @@ def main() -> None:
             low_confidence_threshold=args.threshold,
             handwriting_fallback=args.handwriting == "1",
             crosscheck=args.crosscheck == "1",
+            tesseract_crosscheck=args.tesseract == "1",
         ),
     )
     args.output.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")

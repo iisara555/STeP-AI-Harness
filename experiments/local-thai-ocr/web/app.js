@@ -15,6 +15,7 @@
     timer: null,
     startedAt: 0,
     optionsInitialized: false,
+    tesseractInstalled: false,
   };
 
   const issueText = {
@@ -60,8 +61,10 @@
       const payload = await response.json();
       if (!state.optionsInitialized && payload.ok === true) {
         $("crosscheck").checked = payload.crosscheck_installed === true;
+        $("handwriting").checked = payload.handwriting_installed === true;
         state.optionsInitialized = true;
       }
+      state.tesseractInstalled = payload.tesseract_installed === true;
       setOnline(response.ok && payload.ok === true);
     } catch {
       setOnline(false);
@@ -214,6 +217,7 @@
       threshold: String(threshold),
       handwriting: $("handwriting").checked ? "fallback" : "off",
       crosscheck: $("crosscheck").checked ? "on" : "off",
+      tesseract: state.tesseractInstalled ? "on" : "off",
     });
     try {
       const bytes = await file.arrayBuffer();
@@ -323,6 +327,26 @@
           const value = document.createElement("span");
           value.className = "alternative-text";
           value.textContent = record.crosscheckCandidate;
+          alternative.append(value);
+        }
+      }
+      if (record.tesseractCandidate) {
+        const label = document.createElement("span");
+        label.className = record.tesseractStatus === "agree"
+          ? "alternative-label is-agree"
+          : record.tesseractStatus === "disagree"
+            ? "alternative-label is-disagree"
+            : "alternative-label is-uncertain";
+        label.textContent = record.tesseractStatus === "agree"
+          ? "Tesseract · อ่านตรงกัน"
+          : record.tesseractStatus === "disagree"
+            ? "Tesseract · อ่านต่าง"
+            : "Tesseract · ไม่ชัด";
+        alternative.append(label);
+        if (record.tesseractCandidate !== record.text) {
+          const value = document.createElement("span");
+          value.className = "alternative-text";
+          value.textContent = record.tesseractCandidate;
           alternative.append(value);
         }
       }

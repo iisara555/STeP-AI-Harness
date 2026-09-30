@@ -24,6 +24,7 @@ const allowed = new Set([
   'ocrFolder',
   'ocrStart',
   'ocrRead',
+  'ocrResolve',
   'ocrSave',
   'send',
   'cancel',

@@ -89,6 +89,7 @@ export type Settings = {
   assistantTone?: string;
   tourDone?: boolean;
   consentedAt?: string;
+  ocrAiConsentedAt?: string;
 };
 export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean };
 export type Snapshot = {

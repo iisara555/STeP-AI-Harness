@@ -12,6 +12,7 @@ type MappingCandidate = {
   confidence: number | null;
   method: string;
   score: number;
+  engine?: string;
 };
 type Field = {
   value: string;
@@ -50,6 +51,11 @@ type LineRecord = {
   needsReview?: boolean;
   crosscheckCandidate?: string;
   crosscheckStatus?: string | null;
+  tesseractCandidate?: string;
+  tesseractConfidence?: number | null;
+  tesseractStatus?: string | null;
+  handwritingCandidate?: string;
+  textKind?: 'printed-likely' | 'handwriting-likely' | 'printed-conflict' | 'uncertain';
 };
 type Issue = { code: string; severity: 'blocking' | 'advisory'; count?: number };
 type ReceiptReviewApi = {
@@ -72,10 +78,19 @@ const review = (window as unknown as { ReceiptReview: ReceiptReviewApi }).Receip
 type OcrStatus = {
   running: boolean;
   crosscheck: boolean;
+  handwriting: boolean;
+  tesseract: boolean;
   installed: boolean;
   folder: string;
   installing?: boolean;
   updateAvailable?: boolean;
+};
+type AiDecision = {
+  field: string;
+  status: 'keep' | 'suggested' | 'ambiguous' | 'unmapped';
+  value?: string;
+  token?: string;
+  reason: string;
 };
 type Doc = { name: string; preview: string; result: any };
 
@@ -113,12 +128,14 @@ export function ReceiptApp({
   onError,
   handoff,
   onEvent,
+  connectionId,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
   notify: (text: string, tone?: 'info' | 'success' | 'error', action?: { label: string; run: () => unknown }) => void;
   handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
   onEvent: (callback: (event: { type: string; text?: string }) => void) => () => void;
+  connectionId?: string;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState(''),
@@ -131,7 +148,8 @@ export function ReceiptApp({
     [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
   const [linesChecked, setLinesChecked] = useState(false),
     [note, setNote] = useState(''),
-    [buyerExcluded, setBuyerExcluded] = useState(false);
+    [buyerExcluded, setBuyerExcluded] = useState(false),
+    [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -185,6 +203,7 @@ export function ReceiptApp({
     setConfirmed({});
     setLinesChecked(false);
     setNote('');
+    setAiDecisions([]);
   }
   const draft = () => ({
     schema: 'step-receipt-review/v1',
@@ -202,6 +221,9 @@ export function ReceiptApp({
             review.fieldKeys.map(k => {
               const original = fields[k]?.value || '';
               const selected = values[k] || '';
+              const aiSuggested = aiDecisions.some(
+                decision => decision.field === k && decision.status === 'suggested' && decision.value === selected,
+              );
               const base = mapping.fields[k] || {
                 label: labels[k],
                 required_for_desktop_precheck: review.requiredKeys.includes(k),
@@ -216,11 +238,22 @@ export function ReceiptApp({
                 {
                   ...base,
                   selected_value: selected,
-                  status: selected && selected !== original ? 'user-selected-or-edited' : base.status,
+                  status: aiSuggested
+                    ? 'ai-suggested-unconfirmed'
+                    : selected && selected !== original
+                      ? 'user-selected-or-edited'
+                      : base.status,
                 },
               ];
             }),
           ),
+        }
+      : null,
+    ai_filter: aiDecisions.length
+      ? {
+          mode: 'candidate-only',
+          notice: 'AI may select only OCR candidate tokens. Human confirmation is still required.',
+          decisions: aiDecisions,
         }
       : null,
     expense_note: note,
@@ -255,7 +288,7 @@ export function ReceiptApp({
           {!status
             ? 'กำลังตรวจบริการ OCR…'
             : ready
-              ? `OCR ในเครื่องพร้อมใช้${status.crosscheck ? ' · มี OCR ตัวที่สองช่วยตรวจ' : ''}`
+              ? `OCR ในเครื่องพร้อมใช้${status.tesseract ? ' · Tesseract' : ''}${status.handwriting ? ' · ลายมือ' : ''}${status.crosscheck ? ' · EasyOCR' : ''}`
               : status.installed
                 ? 'บริการ OCR ในเครื่องยังไม่เปิด'
                 : status.updateAvailable
@@ -303,7 +336,42 @@ export function ReceiptApp({
           <RefreshCw size={15} />
         </button>
       </div>
-      {busy === 'install' && installProgress && <p className="small muted receipt-hint">{installProgress.replace(/^STEP\s*/, '')}</p>}
+      {status?.running && (
+        <div className="receipt-ocr-layers small muted">
+          <span>Tesseract: {status.tesseract ? 'พร้อมตรวจตัวพิมพ์/ตัวเลข' : 'ยังไม่พบ tha+eng'}</span>
+          {!status.tesseract && (
+            <button className="text-link" type="button" onClick={() => void call('openHelp', { topic: 'tesseract' })}>
+              วิธีติดตั้ง
+            </button>
+          )}
+          <span>Thai-TrOCR: {status.handwriting ? 'พร้อมอ่านลายมือ' : 'ยังไม่ติดตั้ง'}</span>
+          {!status.handwriting && (
+            <button
+              className="text-link"
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() =>
+                void run('handwriting', async () => {
+                  setInstallProgress('กำลังเตรียมโมเดลอ่านลายมือภาษาไทย');
+                  try {
+                    const installed = await call('ocrInstall', { handwriting: true });
+                    setStatus(installed);
+                    setStatus(await call('ocrStart'));
+                    notify('ติดตั้งโมเดลอ่านลายมือภาษาไทยแล้ว', 'success');
+                  } finally {
+                    setInstallProgress('');
+                  }
+                })
+              }
+            >
+              เพิ่มอ่านลายมือ
+            </button>
+          )}
+        </div>
+      )}
+      {(busy === 'install' || busy === 'handwriting') && installProgress && (
+        <p className="small muted receipt-hint">{installProgress.replace(/^STEP\s*/, '')}</p>
+      )}
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
           OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}” เมื่อต้องการใช้
@@ -347,9 +415,19 @@ export function ReceiptApp({
                 {records.map((r, i) => (
                   <li key={i} className={r.needsReview ? 'flag' : ''}>
                     <span>{r.text}</span>
-                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
-                      <small>OCR ตัวที่สองอ่านว่า “{r.crosscheckCandidate}”</small>
+                    {r.tesseractCandidate && r.tesseractCandidate !== r.text && (
+                      <small>
+                        Tesseract อ่านว่า “{r.tesseractCandidate}”
+                        {r.tesseractConfidence !== null && r.tesseractConfidence !== undefined
+                          ? ` · ${Math.round(r.tesseractConfidence * 100)}%`
+                          : ''}
+                      </small>
                     )}
+                    {r.handwritingCandidate && r.handwritingCandidate !== r.text && (
+                      <small>โมเดลลายมืออ่านว่า “{r.handwritingCandidate}” · ยังไม่ยืนยัน</small>
+                    )}
+                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && <small>EasyOCR อ่านว่า “{r.crosscheckCandidate}”</small>}
+                    {r.textKind && <small>ประเภท: {r.textKind}</small>}
                     {r.confidence !== null && <small className="conf">{Math.round(r.confidence * 100)}%</small>}
                   </li>
                 ))}
@@ -409,6 +487,21 @@ export function ReceiptApp({
                     </div>
                   </div>
                 )}
+                {aiDecisions
+                  .filter(decision => decision.field === k)
+                  .map((decision, index) => (
+                    <small className="receipt-ai-decision" key={decision.field + index}>
+                      AI filter:{' '}
+                      {decision.status === 'suggested'
+                        ? `แนะนำ candidate “${decision.value}”`
+                        : decision.status === 'keep'
+                          ? 'เห็นด้วยกับค่าปัจจุบัน'
+                          : decision.status === 'ambiguous'
+                            ? 'ยังไม่แน่ใจ ให้คนเลือก'
+                            : 'หลักฐานยังไม่พอ map'}
+                      {decision.reason ? ` · ${decision.reason}` : ''}
+                    </small>
+                  ))}
               </div>
             ))}
             {reviewLines > 0 && (
@@ -474,6 +567,33 @@ export function ReceiptApp({
               <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('read', read)}>
                 <FileSearch size={15} />
                 ตรวจใบใหม่
+              </button>
+              <button
+                className="quiet"
+                disabled={!connectionId || !mapping || Boolean(busy)}
+                onClick={() =>
+                  void run('ai-filter', async () => {
+                    const currentMapping = draft().afp_mapping;
+                    const filtered = await call('ocrResolve', { connectionId, mapping: currentMapping });
+                    if (filtered?.cancelled) return;
+                    const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
+                    setAiDecisions(decisions);
+                    const nextValues = { ...values };
+                    const nextConfirmed = { ...confirmed };
+                    for (const decision of decisions) {
+                      if (decision.status === 'suggested' && decision.value && !String(nextValues[decision.field] || '').trim()) {
+                        nextValues[decision.field] = decision.value;
+                        nextConfirmed[decision.field] = false;
+                      }
+                    }
+                    setValues(nextValues);
+                    setConfirmed(nextConfirmed);
+                    notify('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”', 'success');
+                  })
+                }
+              >
+                {busy === 'ai-filter' ? <LoaderCircle size={15} className="spin" /> : <ScanText size={15} />}
+                AI กรอง OCR อีกชั้น
               </button>
               <span className="spacer" />
               {/* AI pre-check follows the person's check: the required fields must be ticked first. A checked vendor tax ID stays readable. */}
