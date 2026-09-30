@@ -28,7 +28,7 @@ export type ReceiptAiDecision = {
   reason: string;
 };
 
-type TokenEntry = { field: string; value: string };
+type TokenEntry = { fields: string[]; value: string };
 
 const SAFE_FIELD = /^[A-Za-z][A-Za-z0-9_-]{0,60}$/;
 
@@ -40,6 +40,39 @@ function valueShape(value: string) {
   if (/\d{1,4}[/.\-]\d{1,2}[/.\-]\d{1,4}/.test(compact)) return 'date-like';
   if (/^[A-Za-z0-9ก-๙][A-Za-z0-9ก-๙./#_-]{1,47}$/.test(compact)) return 'identifier-or-text';
   return 'text';
+}
+
+function unresolvedValues(text: string) {
+  const source = String(text || '').trim();
+  const values: Array<{ value: string; fields: string[]; shape: string }> = [];
+  const push = (value: string, fields: string[], shape: string) => {
+    const clean = String(value || '').trim();
+    if (!clean || values.some(item => item.value === clean && item.fields.join('|') === fields.join('|'))) return;
+    values.push({ value: clean, fields, shape });
+  };
+
+  const tax = source.match(/(?:^|[^\d])((?:\d[\s-]?){12}\d)(?=$|[^\d])/);
+  if (tax) push(tax[1].replace(/\D/g, ''), ['taxId'], '13-digit-id');
+
+  const date = source.match(/(?:^|[^\d])((?:19|20|25)\d{2}[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}[/.\-]\d{1,2}[/.\-](?:\d{4}|\d{2}))(?=$|[^\d])/);
+  if (date) push(date[1], ['date'], 'date-like');
+
+  for (const match of source.matchAll(/(^|[^\d])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?=$|[^\d])/g)) {
+    const value = match[2];
+    const digits = value.replace(/\D/g, '');
+    if (digits.length > 10 || (date && date[1].includes(value))) continue;
+    push(value, ['subtotal', 'vat', 'total'], 'number');
+  }
+
+  const trailing = source.match(/[:：]\s*(.{2,80})$/)?.[1]?.trim();
+  if (trailing && !/^\d+(?:[.,]\d+)?$/.test(trailing)) {
+    push(trailing, ['merchant', 'receiptNumber'], 'text-after-label');
+  }
+
+  const code = source.match(/\b([A-Za-z]{1,8}[-/#]?[A-Za-z0-9-]{2,30})\b/)?.[1];
+  if (code && /\d/.test(code)) push(code, ['receiptNumber'], 'identifier-or-text');
+
+  return values.slice(0, 8);
 }
 
 function jsonObject(text: string) {
@@ -87,7 +120,7 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
       if (!value || seen.has(value)) continue;
       seen.add(value);
       const token = 'C_' + field + '_' + String(localCandidates.length + 1);
-      tokens.set(token, { field, value });
+      tokens.set(token, { fields: [field], value });
       localCandidates.push({ token, value, item });
     }
 
@@ -121,13 +154,25 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
     });
   }
 
-  const unresolved = (mapping?.unresolved_field_lines || [])
-    .slice(0, 20)
-    .map(item => ({
-      text: sanitize(String(item?.text || '')).slice(0, 400),
+  const unresolved = (mapping?.unresolved_field_lines || []).slice(0, 20).map((item, index) => {
+    let text = String(item?.text || '');
+    const valueTokens = unresolvedValues(text).map((candidate, candidateIndex) => {
+      const token = 'U_' + String(index + 1) + '_' + String(candidateIndex + 1);
+      tokens.set(token, { fields: candidate.fields, value: candidate.value });
+      text = text.split(candidate.value).join(token);
+      return {
+        token,
+        shape: candidate.shape,
+        allowed_fields: candidate.fields,
+      };
+    });
+    return {
+      text: sanitize(text).slice(0, 400),
       page: Number(item?.page || 0) || null,
       confidence: typeof item?.confidence === 'number' ? item.confidence : null,
-    }));
+      value_tokens: valueTokens,
+    };
+  });
 
   const payload = {
     schema: mapping?.schema || 'step-afp-receipt-precheck-mapping/v1',
@@ -183,7 +228,7 @@ export function resolveReceiptAiResponse(
       continue;
     }
     const token = tokenMap.get(choice);
-    if (!token || token.field !== field) throw new Error('OCR_AI_INVALID_RESPONSE');
+    if (!token || !token.fields.includes(field)) throw new Error('OCR_AI_INVALID_RESPONSE');
     output.push({ field, status: 'suggested', value: token.value, token: choice, reason });
   }
   return output;
