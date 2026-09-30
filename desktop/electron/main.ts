@@ -13,7 +13,7 @@ import { checkRuntime, resolveRuntime } from './runtimes';
 import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
-import { installOcr } from './components';
+import { installOcr, ocrComponentCurrent } from './components';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
 import { findAnthropicCli, resolveAnthropicCli, anthropicLogout } from './anthropic-auth';
@@ -208,13 +208,13 @@ async function main() {
   });
   // The main app ships only the small OCR application code. Python, Paddle and models are an
   // optional per-user component installed from the Receipt page after STeP Desktop is installed.
-  const ocrFolder = () =>
-    store.settings().ocrDir || (app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr'));
+  const defaultOcrFolder = app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr');
+  const ocrFolder = () => store.settings().ocrDir || defaultOcrFolder;
   const ocrHome = join(data, 'components', 'ocr');
   const ocr = new OcrService(
     ocrFolder,
     undefined,
-    () => ocrPython(ocrHome),
+    () => (existsSync(ocrPython(ocrHome)) ? ocrPython(ocrHome) : ocrPython(ocrFolder())),
     () => ({
       ...process.env,
       PYTHONIOENCODING: 'utf-8',
@@ -498,7 +498,7 @@ async function main() {
         installing = true;
         try {
           await installOcr(
-            ocrFolder(),
+            defaultOcrFolder,
             ocrHome,
             line => emit({ sessionId: '', type: 'install', text: line }),
             input.crosscheck === true,
@@ -511,8 +511,17 @@ async function main() {
         }
         return ocr.status();
       }
-      case 'ocrStatus':
-        return { ...(await ocr.status()), installing };
+      case 'ocrStatus': {
+        const status = await ocr.status();
+        const managed = existsSync(ocrPython(ocrHome));
+        const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
+        return {
+          ...status,
+          installed: status.installed && current,
+          updateAvailable: managed && status.installed && !current,
+          installing,
+        };
+      }
       case 'ocrFolder': {
         const picked = await dialog.showOpenDialog(window, { title: 'เลือกโฟลเดอร์ local-thai-ocr', properties: ['openDirectory'] });
         if (picked.canceled) return ocr.status();
