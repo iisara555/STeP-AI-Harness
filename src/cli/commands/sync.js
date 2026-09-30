@@ -7,7 +7,7 @@ import { safeCopyFile } from '../../utils/file-ops.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
 import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
-import { generateCodexInstructions } from '../../modules/adapter-codex.js';
+import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
 
 export async function runSync(args) {
   header('Sync & Update Skills to Latest Version');
@@ -54,20 +54,30 @@ export async function runSync(args) {
   }
 
   const { role, files } = resolved;
+  const { getAdapter } = await import('../../modules/adapters/index.js');
+  const adapter = getAdapter(manifest.tool || 'codex');
+  const instructionFiles = adapter.getInstructionFiles(role, files);
+  const reconciled = await reconcileManagedFiles(dest, manifest, desiredManagedPaths(files, instructionFiles));
+  if (reconciled.removed.length) info(`นำไฟล์ที่หมด scope ออกจาก workspace: ${reconciled.removed.length} ไฟล์`);
+  if (reconciled.quarantined.length) {
+    warn(`ย้ายไฟล์ที่เคยแก้แต่หมด scope ออกจากทางใช้งาน: ${reconciled.quarantined.length} ไฟล์`);
+    info(`เก็บสำเนาไว้ที่ ${colors.dim(reconciled.orphanRoot + '/')}`);
+  }
 
   let updatedCount = 0;
   let preservedCount = 0;
-  const newManifestFiles = { ...manifest.files };
+  const newManifestFiles = {};
 
   for (const f of files) {
     const targetPath = join(dest, f.relativePath);
     const isModified = modified.includes(f.relativePath);
 
     if (isModified) {
-      // Preserve user modifications safely
+      // Preserve user modifications safely and keep the previous baseline hash
+      // so status continues to report this active file as modified.
       warn(`คงไฟล์เดิมที่มีการแก้ไข: ${f.relativePath}`);
       preservedCount++;
-      // Keep existing hash in manifest
+      if (manifest.files?.[f.relativePath]) newManifestFiles[f.relativePath] = manifest.files[f.relativePath];
     } else {
       // Safe to update
       await safeCopyFile(f.sourcePath, targetPath);
@@ -81,19 +91,18 @@ export async function runSync(args) {
     }
   }
 
-  // Update instruction files if not locally modified
-  const { getAdapter } = await import('../../modules/adapters/index.js');
-  const adapter = getAdapter(manifest.tool || 'codex');
-  const instructionFiles = adapter.getInstructionFiles(role, files);
-
+  // Update instruction files if not locally modified.
   for (const inst of instructionFiles) {
     const instPath = join(dest, inst.filename);
-    if (!modified.includes(inst.filename)) {
-      await (await import('node:fs/promises')).writeFile(instPath, inst.content, 'utf-8');
-      const hash = await calculateFileSha256(instPath);
-      const stat = await (await import('node:fs/promises')).stat(instPath);
-      newManifestFiles[inst.filename] = { sha256: hash, size: stat.size };
+    if (modified.includes(inst.filename)) {
+      preservedCount++;
+      if (manifest.files?.[inst.filename]) newManifestFiles[inst.filename] = manifest.files[inst.filename];
+      continue;
     }
+    await (await import('node:fs/promises')).writeFile(instPath, inst.content, 'utf-8');
+    const hash = await calculateFileSha256(instPath);
+    const stat = await (await import('node:fs/promises')).stat(instPath);
+    newManifestFiles[inst.filename] = { sha256: hash, size: stat.size };
   }
 
   // Update manifest data
