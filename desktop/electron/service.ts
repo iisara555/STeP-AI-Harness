@@ -98,11 +98,7 @@ export class WorkService {
     const incomingSource = attachmentText ? this.outgoing(attachmentText, reviewed) : '';
     // A new source replaces the old task source. Without an explicit reference to
     // earlier context, the old source is cleared instead of leaking into a new task.
-    const attachments = incomingSource
-      ? incomingSource
-      : clarification || carriesPrevious
-        ? this.masked(session.sourceText || '')
-        : '';
+    const attachments = incomingSource ? incomingSource : clarification || carriesPrevious ? this.masked(session.sourceText || '') : '';
     if (incomingSource) session.sourceText = incomingSource;
     else if (!clarification && !carriesPrevious) delete session.sourceText;
 
@@ -115,8 +111,7 @@ export class WorkService {
       draft = this.outgoing(session.draft, true);
     const pending = session.proposals.at(-1),
       working = pending && pending.baseRevision === baseRevision ? this.masked(pending.text) : draft;
-    const revising =
-      !clarification && hadTask && Boolean(working.trim()) && Boolean(policy.revision || policy.resume);
+    const revising = !clarification && hadTask && Boolean(working.trim()) && Boolean(policy.revision || policy.resume);
     const history =
       clarification || carriesPrevious
         ? session.messages
