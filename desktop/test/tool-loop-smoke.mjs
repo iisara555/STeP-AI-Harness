@@ -101,18 +101,16 @@ try {
   await expect(usage).toContainText('75 tokens');
   await page.screenshot({ path: 'release/qa/tool-loop-usage.png' });
   await usage.getByRole('button', { name: 'ปิด', exact: true }).click();
-  // Cancelling transmission must not produce a question or send the note to another provider turn.
+  // Declined note content is withheld; a provider may continue with a question without that note.
   await page.locator('.composer textarea').fill('Read local note again');
   await page.keyboard.press('Enter');
   await consent().waitFor();
   await consent().getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   await page.getByText('Choose output style', { exact: true }).waitFor();
   // The fake runtime deliberately ignores the refusal. Host cancellation still closes the question.
-  await page.evaluate(async () => {
-    const s = (await window.step.call('snapshot')).sessions[0];
-    await window.step.call('cancel', { id: s.id });
-  });
+  await page.getByRole('button', { name: 'ยกเลิกงานนี้', exact: true }).click();
   await expect(page.getByText('Choose output style', { exact: true })).toHaveCount(0);
+  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].status).toBe('cancelled');
   assert.deepEqual(errors, []);
   await writeFile(
     'release/qa/tool-loop-smoke.json',

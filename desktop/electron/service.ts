@@ -752,6 +752,7 @@ export class WorkService {
         };
         if (toolsEnabled) {
           const host = await this.harness.tools!({
+            cancel: () => controller.abort(),
             sessionId: id,
             query: session.originalQuery,
             team: session.team,

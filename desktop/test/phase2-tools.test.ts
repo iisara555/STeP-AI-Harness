@@ -62,6 +62,7 @@ async function fixture() {
     resolve('electron/sheet-worker.cjs'),
   );
   const scope: ToolScope = {
+    cancel: () => {},
     sessionId: 's',
     query: 'read',
     team: 'cc',

@@ -15,6 +15,7 @@ import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission } from './permissions';
 
 export type ToolScope = {
+  cancel: () => void;
   sessionId: string;
   query: string;
   team: string;
@@ -118,6 +119,7 @@ export class DesktopTools {
       if (!this.policy().features.toolLoop) throw new Error('TOOL_LOOP_DISABLED');
     };
     return {
+      cancel: scope.cancel,
       enabled: () => this.policy().features.toolLoop,
       check,
       readOnly: r => !['terminal', 'changes', 'sheet_edit', 'ask_user', 'plan', 'snapshot', 'web_search'].includes(r.tool),
