@@ -12,7 +12,10 @@ export function runtimeError(error: unknown, rpc: Rpc) {
   const tail = rpc.stderrTail(),
     code = explainRuntimeFailure(tail);
   const base = error instanceof Error ? error : new Error(String(error));
-  return Object.assign(code && base.message !== 'CANCELLED' ? new Error(code) : base, { detail: tail.slice(-8) });
+  return Object.assign(code && base.message !== 'CANCELLED' ? new Error(code) : base, {
+    detail: tail.slice(-8),
+    ...((base as any).retryAfterMs !== undefined ? { retryAfterMs: (base as any).retryAfterMs } : {}),
+  });
 }
 import type { Connection, ModelOption } from '../src/types';
 

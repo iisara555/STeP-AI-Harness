@@ -15,7 +15,7 @@ type Props = {
 export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, onSource }: Props) {
   const [path, setPath] = useState(''),
     [entries, setEntries] = useState<{ name: string; path: string; directory: boolean }[]>([]);
-  const [file, setFile] = useState<{ path: string; text: string } | null>(null),
+  const [file, setFile] = useState<{ path: string; text: string; offset?: number; total?: number; nextOffset?: number } | null>(null),
     [content, setContent] = useState('');
   const [command, setCommand] = useState(''),
     [tasks, setTasks] = useState<BackgroundTask[]>([]),
@@ -26,6 +26,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
     [busy, setBusy] = useState(false),
     [git, setGit] = useState<{ status: string; diff: string } | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [snapshots, setSnapshots] = useState<{ id: string; path: string; at: string }[]>([]);
   useEffect(() => setPreviews({}), [session?.id]);
   async function action(fn: () => Promise<void>) {
     setError('');
@@ -294,10 +295,35 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
               {file && (
                 <section className="file-editor">
                   <input aria-label="File path" value={file.path} onChange={e => setFile({ ...file, path: e.target.value })} />
-                  <textarea aria-label="File content" value={content} onChange={e => setContent(e.target.value)} />
+                  {file.total !== undefined && file.total > file.text.length && (
+                    <p className="muted small">
+                      แสดงช่วง {(file.offset || 0) + 1}–{(file.offset || 0) + file.text.length} จาก {file.total} ตัวอักษร
+                      ไฟล์ยาวเปิดอ่านเป็นช่วงได้
+                    </p>
+                  )}
+                  <textarea
+                    aria-label="File content"
+                    readOnly={file.total !== undefined && file.total > file.text.length}
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                  />
+                  {file.nextOffset !== undefined && (
+                    <button
+                      className="quiet"
+                      onClick={() =>
+                        void action(async () => {
+                          const data = await api.call('toolRead', { path: file.path, offset: file.nextOffset });
+                          setFile(data);
+                          setContent(data.text);
+                        })
+                      }
+                    >
+                      อ่านช่วงถัดไป
+                    </button>
+                  )}
                   <div className="tool-actions">
                     <button
-                      disabled={!file.path || busy}
+                      disabled={!file.path || busy || (file.total !== undefined && file.total > file.text.length)}
                       onClick={() =>
                         void action(async () => {
                           await api.call('toolStage', { path: file.path, content });
@@ -307,7 +333,14 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                     >
                       ตรวจใน Changes
                     </button>
-                    <button className="quiet" onClick={() => onSource(`File: ${file.path}\n\n${content}`)}>
+                    <button
+                      className="quiet"
+                      onClick={() =>
+                        onSource(
+                          `File: ${file.path}${file.total !== undefined && file.total > file.text.length ? ` (partial: offset ${file.offset || 0}, total ${file.total})` : ''}\n\n${content}`,
+                        )
+                      }
+                    >
                       ใช้ใน Chat
                     </button>
                   </div>
@@ -318,6 +351,38 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
           {tab === 'changes' && (
             <div className="tool-section">
               <h2>Changes</h2>
+              <button className="quiet" onClick={() => void action(async () => setSnapshots(await api.call('toolSnapshots')))}>
+                ดูไฟล์สำรอง
+              </button>
+              {snapshots.map(s => (
+                <section className="change-card" key={s.id}>
+                  <strong>{s.path}</strong>
+                  <small>{s.at}</small>
+                  <div className="tool-actions">
+                    <button
+                      onClick={() =>
+                        void action(async () => {
+                          await api.call('toolSnapshotRestore', { id: s.id });
+                          await loadChanges();
+                        })
+                      }
+                    >
+                      เตรียมคืนไฟล์ใน Changes
+                    </button>
+                    <button
+                      className="quiet"
+                      onClick={() =>
+                        void action(async () => {
+                          await api.call('toolSnapshotForget', { id: s.id });
+                          setSnapshots(await api.call('toolSnapshots'));
+                        })
+                      }
+                    >
+                      ลบไฟล์สำรองนี้
+                    </button>
+                  </div>
+                </section>
+              ))}
               <div className="tool-actions">
                 <button
                   className="quiet"
@@ -361,6 +426,9 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
               {changes.map(change => (
                 <section className="change-card" key={change.id}>
                   <h3>{change.path}</h3>
+                  {change.path.toLowerCase().endsWith('.xlsx') && (
+                    <p className="small muted">ตรวจสูตร รูปแบบ และองค์ประกอบของตารางหลังบันทึก ไฟล์เดิมจะสำรองไว้ใน Changes</p>
+                  )}
                   <small>{change.root}</small>
                   <div className="change-diff">
                     <div>

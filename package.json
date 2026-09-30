@@ -66,6 +66,7 @@
     "manifest/provenance.yaml",
     "docs/harness-foundation.md",
     "docs/desktop-policy.md",
+    "docs/desktop-tool-loop.md",
     "docs/openharness-parity.md",
     "docs/quality-layer.md",
     "docs/quality-pilot-smoke-test.md",

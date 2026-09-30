@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { scrub } from './diagnostics';
+import { retryAfterMs } from './retry';
 
 export class Rpc {
   private child: ChildProcessWithoutNullStreams;
@@ -55,7 +56,11 @@ export class Rpc {
         // The provider's own reason is kept (scrubbed) so the failure can be explained.
         if (message.error) {
           this.note(`error: ${message.error.message || ''} ${message.error.data ? JSON.stringify(message.error.data).slice(0, 400) : ''}`);
-          entry.reject(new Error('PROVIDER_REQUEST_FAILED'));
+          const data = message.error.data;
+          const ms = Number(data?.retryAfterMs);
+          const after =
+            Number.isFinite(ms) && ms >= 0 ? Math.min(ms, 120_000) : retryAfterMs(data?.headers?.['retry-after'] ?? data?.retryAfter);
+          entry.reject(Object.assign(new Error('PROVIDER_REQUEST_FAILED'), after === undefined ? {} : { retryAfterMs: after }));
         } else entry.resolve(message.result);
       }
     });

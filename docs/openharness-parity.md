@@ -6,7 +6,7 @@ The approved roadmap adapts [HKUDS/OpenHarness](https://github.com/HKUDS/OpenHar
 | --- | --- | --- |
 | 0 | Merge both existing development lines and validate the common base | Complete in `359e34a` on `feat/openharness-parity` |
 | 1 | Managed policy, Workbench permission gate, hooks, unified approvals and mode UI | Implemented and covered by local unit/Electron checks; see [managed policy](desktop-policy.md) |
-| 2 | Bounded tool loop, parallel reads, document/spreadsheet/reference tools, plans, snapshots, output previews, retry/backoff and usage/cost | Pending |
+| 2 | Bounded tool loop, parallel reads, document/spreadsheet/reference tools, plans, snapshots, output previews, retry/backoff and usage/cost | Implemented with synthetic local unit/Electron validation; see [tool loop](desktop-tool-loop.md) |
 | 3 | Workspace instructions, compaction, confirmed memory, personalization, session resume/fork/search/export and local OCR input | Pending |
 | 4 | Coordinator, background/cron tasks, gated autopilot, Docker sandbox and administrator-approved MCP | Pending |
 | 5 | Compatible providers, Copilot, headless CLI, dry run, commands, voice, governed Skill Packs and LINE gateway/session runner | Pending |
