@@ -11,7 +11,11 @@ import { join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { initUserMemory, ensureGitignored, updateUserMemoryProfile } from '../../modules/user-memory.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
-import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
+import {
+  desiredManagedPaths,
+  findUntrackedManagedConflicts,
+  reconcileManagedFiles,
+} from '../../modules/managed-files.js';
 import { selectTeamProfile } from '../team-selection.js';
 
 export async function runInit(args) {
@@ -153,6 +157,14 @@ export async function runInit(args) {
         success(`สำรองข้อมูลไว้ที่ .step-ai/backups/${snapId}/`);
       }
     }
+  }
+
+  const conflicts = await findUntrackedManagedConflicts(dest, existingManifest, files, instructions);
+  if (conflicts.length) {
+    error('พบไฟล์เดิมใน workspace ที่ STeP AI ไม่ได้เป็นเจ้าของ จึงหยุดก่อนเพื่อไม่เขียนทับงานของผู้ใช้');
+    for (const path of conflicts.slice(0, 12)) console.log(`  - ${path}`);
+    if (conflicts.length > 12) console.log(`  - ... และอีก ${conflicts.length - 12} ไฟล์`);
+    throw new Error('WORKSPACE_FILE_CONFLICT');
   }
 
   // Reconcile the previous managed profile before copying the new one. Old
