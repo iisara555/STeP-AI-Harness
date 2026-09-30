@@ -46,7 +46,6 @@ import {
   formatElapsed,
   formatTokens,
   groupSessions,
-  matchesSession,
   type PaletteItem,
 } from './ui';
 import symbolColour from './assets/step-symbol-colour.svg';
@@ -67,13 +66,16 @@ import { needsPublicWebSearch } from '../../src/modules/router/public-informatio
 import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
+import { MemoryDialog } from './memory';
 import type { ToolQuestion } from './types';
 
 export default function App() {
   const api = window.step;
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
-    [usageOpen, setUsageOpen] = useState(false);
+    [usageOpen, setUsageOpen] = useState(false),
+    [memoryOpen, setMemoryOpen] = useState(false);
+  const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [selected, setSelected] = useState('');
   const [settings, setSettings] = useState(false),
@@ -141,6 +143,7 @@ export default function App() {
     flagged: boolean;
     labels: string[];
     attachment: boolean;
+    vision?: boolean;
     mode: WorkMode;
     imageModel: string;
     retry?: boolean;
@@ -165,6 +168,21 @@ export default function App() {
   const sendInFlight = useRef(false),
     conversationEnd = useRef<HTMLDivElement>(null);
   const session = snapshot?.sessions.find(s => s.id === selected);
+  useEffect(() => {
+    let disposed = false;
+    if (api && search.trim())
+      void api
+        .call('sessionSearch', { query: search })
+        .then(ids => {
+          if (!disposed) setSearchMatches({ query: search, ids });
+        })
+        .catch(() => {
+          if (!disposed) setSearchMatches({ query: search, ids: [] });
+        });
+    return () => {
+      disposed = true;
+    };
+  }, [api, search, snapshot?.sessions]);
   const sessionRef = useRef<Session | undefined>(session);
   sessionRef.current = session;
   const dirtyRef = useRef(false);
@@ -365,6 +383,7 @@ export default function App() {
   const selectSessionRef = useRef<(id: string) => Promise<void>>(async () => {});
   async function selectSession(id: string) {
     await save();
+    if (!['running', 'queued'].includes(snapshot?.sessions.find(s => s.id === id)?.status || '')) await api!.call('sessionResume', { id });
     setView('chat');
     setSelected(id);
     const chosen = snapshot?.sessions.find(s => s.id === id);
@@ -433,6 +452,11 @@ export default function App() {
     return s;
   }
   async function send() {
+    if (query.trim() === '/memory') {
+      setQuery('');
+      setMemoryOpen(true);
+      return;
+    }
     if (query.trim() === '/usage') {
       setQuery('');
       setUsageOpen(true);
@@ -659,7 +683,7 @@ export default function App() {
     snapshot?.sessions.filter(
       s =>
         (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
-        matchesSession(s, search) &&
+        (!search.trim() || (searchMatches?.query === search && searchMatches.ids.includes(s.id))) &&
         (filter !== 'artifacts' || s.draft),
     ) || [];
   const providerName = (c?: Connection) => (c ? providerLabel(c.provider) : '');
@@ -672,6 +696,7 @@ export default function App() {
     ? [
         { id: 'new', group: 'คำสั่ง', label: 'เริ่มงานใหม่', run: () => action(create) },
         { id: 'usage', group: 'คำสั่ง', label: 'ดูการใช้งาน AI', hint: '/usage', run: () => setUsageOpen(true) },
+        { id: 'memory', group: 'คำสั่ง', label: 'ดูและแก้ไขความจำ', hint: '/memory', run: () => setMemoryOpen(true) },
         {
           id: 'settings',
           group: 'คำสั่ง',
@@ -983,6 +1008,67 @@ export default function App() {
         ) : (
           <>
             <div className="conversation" aria-live="polite">
+              {session && (
+                <div className="context-bar">
+                  <button
+                    className="quiet"
+                    disabled={running}
+                    onClick={() =>
+                      void action(async () => {
+                        await save();
+                        const forked = await api.call('sessionFork', { id: session.id });
+                        await refresh();
+                        await selectSession(forked.id);
+                      })
+                    }
+                  >
+                    Fork บทสนทนา
+                  </button>
+                  <button
+                    className="quiet"
+                    onClick={() =>
+                      void action(async () => {
+                        await save();
+                        const result = await api.call('sessionExport', { id: session.id, format: 'md' });
+                        if (result) notify('บันทึกบทสนทนาแล้ว');
+                      })
+                    }
+                  >
+                    ส่งออก Markdown
+                  </button>
+                  <button
+                    className="quiet"
+                    onClick={() =>
+                      void action(async () => {
+                        await save();
+                        const result = await api.call('sessionExport', { id: session.id, format: 'json' });
+                        if (result) notify('บันทึกบทสนทนาแล้ว');
+                      })
+                    }
+                  >
+                    ส่งออก JSON
+                  </button>
+                  <button className="quiet" onClick={() => setMemoryOpen(true)}>
+                    ความจำ
+                  </button>
+                  {!!session.loadedContext?.length && (
+                    <details>
+                      <summary>บริบทที่ใช้ ({session.loadedContext.length})</summary>
+                      <ul>
+                        {session.loadedContext.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                  {session.compaction && (
+                    <span className="muted small">
+                      ย่อบริบทแล้ว {session.compaction.before.toLocaleString('th-TH')} → {session.compaction.after.toLocaleString('th-TH')}{' '}
+                      tokens (ประมาณการ)
+                    </span>
+                  )}
+                </div>
+              )}
               {!session?.messages.length && (
                 <div className="welcome">
                   <img className="illustration welcome-art" src={launchArt} alt="" />
@@ -1366,6 +1452,26 @@ export default function App() {
                   }}
                 />
                 <div className="composer-tools">
+                  {snapshot.policy?.features.vision && (
+                    <button
+                      className="quiet"
+                      title="ตรวจและแนบภาพต้นฉบับให้ AI"
+                      disabled={running}
+                      onClick={() =>
+                        void action(async () => {
+                          const id = session?.id || (await createTask())?.id;
+                          if (!id) return;
+                          const f = await api.call('attach', { id, vision: true });
+                          if (f) {
+                            setFiles([f]);
+                            setInspecting(f);
+                          }
+                        })
+                      }
+                    >
+                      แนบภาพให้ AI
+                    </button>
+                  )}
                   <button
                     className="icon"
                     title="ตรวจและแนบเอกสาร"
@@ -1709,6 +1815,9 @@ export default function App() {
         </>
       )}
       {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
+      {memoryOpen && api && snapshot && (
+        <MemoryDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setMemoryOpen(false)} />
+      )}
       {toolApprovals[0] && (
         <ApprovalDialog
           key={toolApprovals[0].id}
@@ -1781,7 +1890,9 @@ export default function App() {
           </p>
           <p className="small muted">
             ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ
-            และไม่ส่งไฟล์ต้นฉบับ
+            {consentAsk.vision
+              ? ' ภาพต้นฉบับจะถูกส่งด้วย ตรวจภาพว่าไม่มีข้อมูลส่วนบุคคลหรือความลับที่ OCR อาจอ่านไม่พบก่อนยืนยัน'
+              : ' และไม่ส่งไฟล์ต้นฉบับ'}
             {consentAsk.first && !consentAsk.flagged && !consentAsk.attachment && !consentAsk.sourceText
               ? ' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ'
               : ''}
@@ -1958,7 +2069,12 @@ export default function App() {
             <p className={inspecting.usable ? undefined : 'danger-text'}>
               {inspecting.usable ? inspecting.status : `${inspecting.status}: ${errorText[inspecting.reason || ''] || ''}`}
             </p>
-            <p className="small muted">ตรวจเฉพาะข้อความที่อ่านได้ ไม่ตรวจรูปภาพหรือรับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง</p>
+            <p className="small muted">
+              {inspecting.vision
+                ? 'ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้'
+                : 'ตรวจเฉพาะข้อความที่อ่านได้ ไม่รับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง'}
+            </p>
+            {inspecting.imagePreview && <img className="attachment-image" src={inspecting.imagePreview} alt="ภาพต้นฉบับที่จะส่งให้ AI" />}
             <pre>{inspecting.preview || 'ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน'}</pre>
             <button onClick={() => setInspecting(null)}>กลับไปที่งาน</button>
           </section>

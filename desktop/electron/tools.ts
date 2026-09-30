@@ -293,6 +293,7 @@ export class DesktopTools {
               scope.signal,
             );
             if (!approved) throw new Error('CANCELLED');
+            this.workbench.rememberPlan(scope.sessionId, target);
             return { approved: true, scope: 'draft-only; business actions require separate authority' };
           }
           case 'snapshot':

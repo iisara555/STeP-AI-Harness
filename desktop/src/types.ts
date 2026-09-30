@@ -91,6 +91,10 @@ export type ConversationFile = { name: string; text: string; at: string };
 export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
 export type Proposal = { id: string; text: string; baseRevision: number; sources: string[]; at: string };
 export type Session = {
+  parentId?: string;
+  loadedContext?: string[];
+  compaction?: { before: number; after: number; method: string; at: string };
+  approvedPlan?: string;
   id: string;
   title: string;
   project: string;
@@ -132,6 +136,7 @@ export type Session = {
   runs?: RunTrace[];
 };
 export type Settings = {
+  outputStyle?: string;
   permissionMode?: PermissionMode;
   team: string;
   assistant: string;
@@ -147,7 +152,37 @@ export type Settings = {
   ocrAiConsentedAt?: string;
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
-export type Attachment = { id: string; name: string; status: string; preview: string; usable: boolean; reason?: string };
+export type Attachment = {
+  id: string;
+  name: string;
+  status: string;
+  preview: string;
+  usable: boolean;
+  reason?: string;
+  vision?: boolean;
+  imagePreview?: string;
+};
+export type VisionInput = { mime: 'image/png' | 'image/jpeg' | 'image/webp'; data: string };
+export type MemoryEntry = {
+  schema_version: 1;
+  id: string;
+  name: string;
+  text: string;
+  type: 'user' | 'feedback' | 'project' | 'reference';
+  scope: 'private' | 'project' | 'team';
+  importance: number;
+  ttl_days: number;
+  created_at: string;
+  updated_at: string;
+  source: 'user-confirmed';
+  expired?: boolean;
+};
+export type MemoryProposal = Pick<MemoryEntry, 'id' | 'name' | 'text' | 'type' | 'scope' | 'importance' | 'ttl_days'> & {
+  evidence: string;
+  sessionId: string;
+  context: string;
+  at: string;
+};
 export type Snapshot = {
   usage?: UsageReport;
   policy?: PolicySnapshot;

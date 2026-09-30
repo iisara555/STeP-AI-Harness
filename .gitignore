@@ -12,6 +12,8 @@ votes/
 tmp/
 node_modules/
 .step-ai/
+.step/memory/
+ASSISTANT.md
 
 # Local or restricted source material
 artifacts/

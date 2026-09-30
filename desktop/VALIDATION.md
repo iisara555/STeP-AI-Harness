@@ -2,6 +2,12 @@
 
 This is a development preview, not an accepted production release.
 
+## OpenHarness Phase 3 local verification (2026-09-30)
+
+- Desktop: 186 unit tests passed, zero failures. New checks cover canonical Thai-aware context estimation, micro/summary compaction, task-state retention, hook blocks, prompt-length retry and summary usage; confirmed memory/privacy/scope/TTL/path boundaries; SQLite migration/search/fork/resume/export; complete OCR text and gated provider image blocks.
+- Five Electron smoke scripts exercise real renderer/preload/IPC/SQLite with isolated synthetic profiles. The Phase 3 smoke verifies memory creation/editing and privacy rejection, explicit context consent, bounded history summary and usage, source search, independent fork, both conversation export formats, restart without replay, synthetic OCR attachment extraction and flagged-image refusal.
+- [Context and memory operator notes](../docs/desktop-context-memory.md) document limits, shared-folder policy and transmission boundaries. Providers and OCR responses are synthetic; actual OCR accuracy, live visual generation/input quality, provider entitlement, shared-folder ACLs/network behavior, packaged installs, macOS and production acceptance remain unverified. No live API evaluation, merge or release is part of this phase.
+
 ## OpenHarness Phase 2 local verification (2026-09-30)
 
 - Desktop: 170 tests passed, zero failures. Covers routing/authority boundaries, bounded tool turns/parallelism, approved-result paging, separate data and generated-web destination consent, cancellation, real DOCX privacy extraction, XLSX scalar edits, conflict-safe backup/restoration, SSRF/proxy checks, retry-after and usage estimates.

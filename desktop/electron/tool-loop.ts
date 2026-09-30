@@ -68,7 +68,6 @@ export class ToolLoop {
         if (signal.aborted) throw new Error('CANCELLED');
         await this.host.check();
         const next = prompt + history;
-        if (next.length > 160_000) throw new Error('CONTEXT_LIMIT');
         const result = await provider(next);
         const requests = loopRequests(result);
         if (!requests.length || !this.host.enabled()) return result;

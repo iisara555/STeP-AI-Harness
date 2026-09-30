@@ -2200,3 +2200,27 @@ nav .count {
   max-width: 240px;
   font-size: 12px;
 }
+/* Context and local memory controls. */
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.memory-editor {
+  display: grid;
+  gap: 12px;
+}
+.memory-item {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.attachment-image {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}

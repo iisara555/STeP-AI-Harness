@@ -1,5 +1,5 @@
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
-import { dirname, win32 } from 'node:path';
+import { dirname, win32, isAbsolute } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 /**
@@ -83,6 +83,7 @@ export type Policy = {
   prices: Record<string, { input: number; output: number }>;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
   network?: { proxyUrl?: string };
+  memory?: { teamDirectories: Record<string, string> };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -157,6 +158,19 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.memory !== undefined) {
+    if (!isObject(raw.memory) || Object.keys(raw.memory).some(k => k !== 'teamDirectories') || !isObject(raw.memory.teamDirectories))
+      problems.push('invalid memory configuration');
+    else {
+      const directories: Record<string, string> = {};
+      for (const [team, path] of Object.entries(raw.memory.teamDirectories)) {
+        if (!/^[a-z][a-z0-9-]{0,40}$/.test(team) || typeof path !== 'string' || path.length > 2000 || !isAbsolute(path))
+          problems.push('invalid team memory directory');
+        else directories[team] = path;
+      }
+      policy.memory = { teamDirectories: directories };
+    }
+  }
   if (raw.network !== undefined) {
     if (!isObject(raw.network) || Object.keys(raw.network).some(k => k !== 'proxyUrl')) problems.push('invalid network configuration');
     else if (raw.network.proxyUrl !== undefined) {

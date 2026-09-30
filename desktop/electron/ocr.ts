@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 
 // Client for the standalone local Thai OCR trial (experiments/local-thai-ocr).
@@ -85,9 +85,23 @@ export class OcrService {
   async recognize(path: string, crosscheck: boolean, tesseract = false, handwriting = false) {
     const extension = extname(path).slice(1).toLowerCase();
     if (!OCR_EXTENSIONS.includes(extension)) throw new Error('OCR_UNSUPPORTED_FILE');
-    const size = (await stat(path)).size;
-    if (!size || size > OCR_MAX_BYTES) throw new Error('OCR_FILE_TOO_LARGE');
-    const bytes = await readFile(path);
+    const handle = await open(path, 'r');
+    let bytes: Buffer<ArrayBuffer>;
+    try {
+      const info = await handle.stat();
+      if (!info.isFile() || !info.size || info.size > OCR_MAX_BYTES) throw new Error('OCR_FILE_TOO_LARGE');
+      const buffer = Buffer.alloc(info.size + 1);
+      let offset = 0;
+      while (offset < buffer.length) {
+        const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, null);
+        if (!bytesRead) break;
+        offset += bytesRead;
+      }
+      if (offset !== info.size) throw new Error('OCR_FILE_CHANGED');
+      bytes = buffer.subarray(0, offset);
+    } finally {
+      await handle.close();
+    }
     const url = `${this.base}/api/ocr?filename=${encodeURIComponent(basename(path))}&threshold=0.80&handwriting=${handwriting ? 'on' : 'off'}&crosscheck=${crosscheck ? 'on' : 'off'}&tesseract=${tesseract ? 'on' : 'off'}`;
     let response: Response;
     try {

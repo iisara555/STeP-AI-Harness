@@ -1,4 +1,8 @@
 const SECTIONS = [
+  'task_state',
+  'context_summary',
+  'memory_context',
+  'workspace_preferences',
   'skill_instructions',
   'routing_contract',
   'conversation',

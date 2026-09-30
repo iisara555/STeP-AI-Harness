@@ -4,6 +4,8 @@ Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, co
 
 The Phase 2 [governed tool loop](../docs/desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
 
+Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
+
 ## Run
 
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:

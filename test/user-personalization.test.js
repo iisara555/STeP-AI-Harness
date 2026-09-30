@@ -3,7 +3,20 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { applyPersonalization, generateUserMemoryTemplate, parseUserMemory, savePersonalization } from '../src/modules/user-memory.js';
+import { applyPersonalization, generateUserMemoryTemplate, parseUserMemory, savePersonalization, generateAssistantPreferences, ensureGitignored } from '../src/modules/user-memory.js';
+
+test('assistant preferences derive conversation style without copying employee profile data', () => {
+  const text = generateAssistantPreferences({ assistantName: 'STeP Mate', personality: 'concise', name: 'Employee Example', team: 'cc' });
+  assert.match(text, /Short and focused on next actions/); assert.match(text, /governance/);
+  assert.doesNotMatch(text, /Employee Example/); assert.match(generateAssistantPreferences({ personality: 'custom', assistantTone: 'Use tables' }), /Use tables/);
+});
+
+test('assistant and project memory are excluded before workspace personalization is saved', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-private-ignore-'));
+  await ensureGitignored(dir, { strict: true });
+  const text = await readFile(join(dir, '.gitignore'), 'utf8');
+  assert.match(text, /ASSISTANT\.md/); assert.match(text, /\.step\/memory\//); assert.equal(await ensureGitignored(dir, { strict: true }), false);
+});
 
 test('personalization updates name, assistant and style and completes First Run', () => {
   const before = generateUserMemoryTemplate({ team: 'cc', activeProjects: ['งานสัมมนา AI'] });

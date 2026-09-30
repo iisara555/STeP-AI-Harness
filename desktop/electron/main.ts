@@ -38,10 +38,14 @@ import { attachmentReason } from './attachments';
 import { DesktopTools } from './tools';
 import { Questions } from './questions';
 import { CostLedger } from './cost';
-import type { Attachment, Connection, Provider, Session, Settings } from '../src/types';
+import { Memories, safeMemory } from './memory';
+import { WorkspaceContext } from './workspace-context';
+import { section } from './prompt';
+import { ocrAttachmentReport } from './ocr-attachment';
+import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 
 let window: BrowserWindow, store: Store, service: WorkService;
-const attachments = new Map<string, { view: Attachment; text: string; sessionId: string }>();
+const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; image?: VisionInput }>();
 const exportPaths = new Set<string>();
 const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
@@ -127,6 +131,7 @@ async function main() {
     catalog: () => skillCatalog.loadSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
     toolLoop: () => policyState.policy.features.toolLoop,
+    visionEnabled: () => policyState.policy.features.vision,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
@@ -149,6 +154,18 @@ async function main() {
       team: s.team,
     });
     exportPaths.add(userFile());
+    const assistantPath = join(memoryDir(), 'ASSISTANT.md');
+    const assistantText = userMemory.generateAssistantPreferences({
+      assistantName: s.assistant,
+      personality: s.personality,
+      assistantTone: s.assistantTone,
+    });
+    safeMemory(assistantText, harness.privacy);
+    // Preserve an employee-authored persona; create the derived default only once.
+    const assistantTarget = s.workspace ? await workbench.path('ASSISTANT.md', true) : assistantPath;
+    await writeFile(assistantTarget, assistantText, { flag: 'wx', mode: 0o600 }).catch(e => {
+      if (e.code !== 'EEXIST') throw e;
+    });
   }
   const emit = (event: any) => {
     if (window && !window.isDestroyed()) window.webContents.send('step:event', event);
@@ -286,6 +303,63 @@ async function main() {
   );
   harness.tools = scope => tools.host(scope);
   harness.recordUsage = (connection, count) => ledger.record(connection, count);
+  const memories = new Memories(store, data, () => policyState.policy, harness.privacy);
+  const workspaceContext = new WorkspaceContext(workbench, data, () => store.settings(), harness.privacy);
+  harness.compactHook = async (event, id, before, after) => {
+    const result = await fireHook({ event, sessionId: id, beforeTokens: before, afterTokens: after });
+    if (result.blocked) throw new Error('HOOK_BLOCKED');
+  };
+  harness.completed = async session => {
+    await memories.dream(session);
+    emit({ sessionId: session.id, type: 'changed' });
+  };
+  harness.extraContext = async (id, query, connection, signal) => {
+    const settings = store.settings(),
+      policy = policyState.policy,
+      mode = permissionMode();
+    const identity = JSON.stringify([settings.workspace, settings.team, settings.outputStyle]);
+    const preferences = await workspaceContext.load(),
+      selected = await memories.relevant(query);
+    const text = [
+      preferences.length ? section('workspace_preferences', JSON.stringify(preferences)) : '',
+      selected.length
+        ? section(
+            'memory_context',
+            JSON.stringify(selected.map(m => ({ id: m.id, scope: m.scope, type: m.type, name: m.name, text: m.text }))),
+          )
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    if (text) {
+      const approved = await approvals.request(
+        approvals.rule(
+          settings.workspace || data,
+          'context-data',
+          createHash('sha256')
+            .update(id + '\0' + text)
+            .digest('hex'),
+        ),
+        {
+          title: 'ใช้บริบทที่บันทึกไว้กับงานนี้?',
+          body: `จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ ${connection.provider}\n${text.slice(0, 2000)}`,
+          privacyClass: 'internal',
+          allowRemember: false,
+        },
+        signal,
+      );
+      if (!approved) throw new Error('CANCELLED');
+    }
+    const current = store.settings();
+    if (signal.aborted) throw new Error('CANCELLED');
+    if (
+      identity !== JSON.stringify([current.workspace, current.team, current.outputStyle]) ||
+      policy !== policyState.policy ||
+      mode !== permissionMode()
+    )
+      throw new Error('WORKSPACE_CHANGED');
+    return { text, loaded: [...preferences.map(p => p.path), ...selected.map(m => `memory:${m.scope}:${m.name}`)] };
+  };
   service = new WorkService(
     store,
     harness,
@@ -405,6 +479,65 @@ async function main() {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('UNTRUSTED_SENDER');
     const input = raw ?? {};
     switch (method) {
+      case 'memoryList':
+        return {
+          entries: await memories.list(),
+          proposals: memories.proposals(),
+          teamEnabled: Boolean(policyState.policy.features.memoryTeam && policyState.policy.memory?.teamDirectories[store.settings().team]),
+        };
+      case 'memorySave':
+      case 'memoryConfirm': {
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        return method === 'memorySave' ? memories.save(input) : memories.confirm(inputText(input.id, 60), input);
+      }
+      case 'memoryDelete':
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        await memories.remove(inputText(input.id, 60));
+        return true;
+      case 'memoryDismiss':
+        memories.dismiss(inputText(input.id, 60));
+        return true;
+      case 'contextStyles':
+        return workspaceContext.styles();
+      case 'contextStyle': {
+        const style = inputText(input.style || '', 64);
+        if (style && !(await workspaceContext.styles()).includes(style)) throw new Error('INVALID_OUTPUT_STYLE');
+        approvals.close();
+        questions.close();
+        store.put('settings', 'main', { ...store.settings(), outputStyle: style });
+        return true;
+      }
+      case 'sessionSearch':
+        return store.search(inputText(input.query || '', 200));
+      case 'sessionResume':
+        return store.resume(inputText(input.id, 60));
+      case 'sessionFork': {
+        const source = inputText(input.id, 60);
+        if (service.isActive(source)) throw new Error('RUN_ALREADY_ACTIVE');
+        const forked = store.fork(source);
+        const started = await fireHook({ event: 'session_start', sessionId: forked.id });
+        if (started.blocked) {
+          store.remove('session', forked.id);
+          throw new Error('HOOK_BLOCKED');
+        }
+        return forked;
+      }
+      case 'sessionExport': {
+        const id = inputText(input.id, 60),
+          format = input.format;
+        const text = store.exportSession(id, format);
+        const reviewed = harness.privacy(text);
+        if (reviewed.action === 'block-external' || typeof reviewed.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        const result = await dialog.showSaveDialog(window, {
+          title: 'บันทึกบทสนทนา',
+          defaultPath: `conversation.${format}`,
+          filters: [{ name: format === 'json' ? 'JSON' : 'Markdown', extensions: [format] }],
+        });
+        if (result.canceled || !result.filePath) return null;
+        await writeFile(result.filePath, reviewed.redactedText, { mode: 0o600 });
+        exportPaths.add(result.filePath);
+        return { path: result.filePath };
+      }
       case 'imageModels': {
         const connection = store.get<Connection>('connection', inputText(input.id, 60));
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');
@@ -1071,11 +1204,15 @@ async function main() {
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
           throw new Error('SKILL_NOT_ROUTED');
         if (Array.isArray(input.attachments) && input.attachments.length > 1) throw new Error('ONE_SOURCE_PER_RUN');
-        const selected = (Array.isArray(input.attachments) ? input.attachments : []).map((aid: string) => {
+        const selected: { view: Attachment; text: string; sessionId: string; image?: VisionInput }[] = (
+          Array.isArray(input.attachments) ? input.attachments : []
+        ).map((aid: string) => {
           const a = attachments.get(aid);
           if (!a || !a.view.usable || a.sessionId !== id) throw new Error('ATTACHMENT_NOT_APPROVED');
           return a;
         });
+        if (selected.some(a => a.image) && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
+        if (selected.some(a => a.image) && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
         const attachmentText = selected.map((a: any) => a.text).join('\n\n');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
@@ -1113,6 +1250,7 @@ async function main() {
                 flagged,
                 labels: review.labels,
                 attachment: selected.length > 0,
+                vision: selected.some(a => Boolean(a.image)),
                 source: Boolean(sourceText),
               },
             };
@@ -1156,7 +1294,7 @@ async function main() {
               // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
               ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
             ],
-            { retry: input.retry === true },
+            { retry: input.retry === true, images: selected.flatMap(a => (a.image ? [a.image] : [])) },
           )
           .catch(error => {
             diagnose('run-rejected', { code: errorCode(error) });
@@ -1218,26 +1356,67 @@ async function main() {
       case 'attach': {
         const sessionId = inputText(input.id, 60);
         store.session(sessionId);
+        const vision = input.vision === true;
+        if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         const result = await dialog.showOpenDialog(window, {
           properties: ['openFile'],
-          filters: [{ name: 'Documents', extensions: ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx'] }],
+          filters: [
+            {
+              name: 'Documents and images',
+              extensions: vision ? ['png', 'jpg', 'jpeg', 'webp'] : ['txt', 'md', 'csv', 'tsv', 'pdf', 'docx', ...OCR_EXTENSIONS],
+            },
+          ],
         });
         if (result.canceled) return null;
         const path = result.filePaths[0],
-          report = await harness.documentPrivacy(path, { includeRedacted: true });
+          extension = extname(path).slice(1).toLowerCase();
+        let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
+          image: VisionInput | undefined;
+        const scanNeeded =
+          OCR_EXTENSIONS.includes(extension) &&
+          (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
+        if (scanNeeded && report.action !== 'block-external') {
+          const health = await ocr.health();
+          if (!health.running && (vision || extension !== 'pdf')) throw new Error('OCR_UNAVAILABLE');
+          if (health.running) {
+            const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+            report = ocrAttachmentReport(read.result, harness.privacy);
+            // Text redaction cannot mask pixels. Flagged OCR forbids sending the original image.
+            if (vision && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
+            if (vision && !attachmentReason(report)) {
+              if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+              const mime = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+              const valid =
+                mime === 'image/png'
+                  ? read.bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+                  : mime === 'image/jpeg'
+                    ? read.bytes[0] === 255 && read.bytes[1] === 216
+                    : read.bytes.subarray(0, 4).toString() === 'RIFF' && read.bytes.subarray(8, 12).toString() === 'WEBP';
+              if (!valid) throw new Error('ATTACH_UNSUPPORTED');
+              image = { mime, data: read.bytes.toString('base64') };
+            }
+          }
+        }
         // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
         const reason = attachmentReason(report);
         const usable = !reason;
         const view: Attachment = {
           id: randomUUID(),
           name: basename(path),
-          status: usable ? 'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง' : 'ส่งไฟล์นี้ให้ AI ไม่ได้',
+          status: usable
+            ? image
+              ? 'ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน'
+              : report.ocr
+                ? 'อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง'
+                : 'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง'
+            : 'ส่งไฟล์นี้ให้ AI ไม่ได้',
           preview: usable ? report.redactedText : '',
           usable,
+          ...(image ? { vision: true, imagePreview: `data:${image.mime};base64,${image.data}` } : {}),
           ...(reason ? { reason } : {}),
         };
         if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId });
+        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId, image });
         return view;
       }
       case 'export': {

@@ -1,6 +1,17 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = {
+  PRIVATE_FILES_NOT_IGNORED: 'ตั้งค่าให้ไฟล์ความจำไม่เข้า Git ไม่สำเร็จ จึงยังไม่บันทึกความจำ กรุณาตรวจสิทธิ์พื้นที่งาน',
+  MEMORY_LIMIT: 'ความจำในขอบเขตนี้ครบ 200 รายการแล้ว กรุณาตรวจและลบรายการที่ไม่ใช้',
+  OCR_FILE_CHANGED: 'ไฟล์เปลี่ยนระหว่างอ่าน กรุณาแนบไฟล์อีกครั้ง',
+  MEMORY_PRIVACY_BLOCKED: 'ข้อมูลนี้มีข้อมูลส่วนบุคคล ความลับ หรือเนื้อหาที่ต้องตรวจเพิ่มเติม จึงบันทึกเป็นความจำไม่ได้',
+  MEMORY_INVALID: 'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ',
+  MEMORY_NOT_FOUND: 'ไม่พบความจำในขอบเขตที่เลือก',
+  MEMORY_TEAM_DISABLED: 'ผู้ดูแลยังไม่เปิดความจำร่วมสำหรับทีมนี้',
+  VISION_DISABLED: 'ผู้ดูแลยังไม่อนุญาตการส่งภาพต้นฉบับให้ AI',
+  VISION_UNAVAILABLE: 'การเชื่อมต่อ AI นี้ยังไม่รองรับภาพ ใช้ข้อความ OCR แทน',
+  INVALID_OUTPUT_STYLE: 'ไม่พบรูปแบบคำตอบที่เลือกในพื้นที่งานนี้',
+  PROMPT_TOO_LONG: 'บริการ AI รับบริบทนี้ไม่ได้ ระบบย่อบริบทแล้วแต่ยังไม่พอ กรุณาแบ่งไฟล์หรือเริ่มงานใหม่',
   TOOL_TURN_LIMIT: 'เครื่องมือทำงานครบจำนวนรอบที่กำหนดแล้ว ตรวจ Changes และ Tasks ก่อนสั่งทำต่อ',
   TOOL_LOOP_DISABLED: 'ผู้ดูแลปิดวงจรเครื่องมืออัตโนมัติแล้ว',
   TOOL_DATA_DECLINED: 'ยังไม่ส่งผลเครื่องมือให้ AI เพราะไม่ได้รับความยินยอม',

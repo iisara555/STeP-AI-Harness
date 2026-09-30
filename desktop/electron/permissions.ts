@@ -22,6 +22,8 @@ export type PermissionDecision = { allowed: boolean; requiresConfirmation: boole
 // Credential and key material, denied in every mode and by any policy. OpenHarness keeps the same
 // list outside user control so prompt injection cannot reach it.
 export const SENSITIVE_PATH_PATTERNS = [
+  '*/.step/memory',
+  '*/.step/memory/*',
   '*/desktop-policy.json',
   '*/.ssh',
   '*/.aws',
@@ -91,7 +93,8 @@ export function sensitivePath(path: string, root?: string) {
   return SENSITIVE_PATH_PATTERNS.find(pattern => matches(full, pattern));
 }
 
-function pathRule(full: string, rules: PathRule[], root?: string) {
+export function deniedPath(path: string, rules: PathRule[], root?: string) {
+  const full = normalize(path, root);
   return rules.find(
     rule => !rule.allow && matches(full, /^(?:[a-z]:|\/|\*)/i.test(rule.pattern) ? rule.pattern : normalize(rule.pattern, root)),
   );
@@ -114,7 +117,7 @@ export function evaluatePermission(
     const full = normalize(request.path, options.root);
     const sensitive = SENSITIVE_PATH_PATTERNS.find(pattern => matches(full, pattern));
     if (sensitive) return { allowed: false, requiresConfirmation: false, reason: `SENSITIVE_PATH:${sensitive}` };
-    const rule = pathRule(full, policy.permission.pathRules, options.root);
+    const rule = deniedPath(full, policy.permission.pathRules, options.root);
     if (rule) return { allowed: false, requiresConfirmation: false, reason: `PATH_RULE:${rule.pattern}` };
   }
   if (request.command) {

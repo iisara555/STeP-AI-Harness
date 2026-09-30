@@ -26,6 +26,11 @@ export class Workbench {
   private stopped = new Set<string>();
   private cancelling = new Set<string>();
   private disposed = false;
+  rememberPlan(sessionId: string, text: string) {
+    const session = this.store.session(sessionId);
+    session.approvedPlan = text;
+    this.store.save(session);
+  }
   constructor(
     private store: Store,
     private scrub: (text: string) => string = text => text,

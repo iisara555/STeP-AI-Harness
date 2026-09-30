@@ -126,7 +126,7 @@ export function hookMetadata(payload: HookPayload): HookPayload {
   const clean: HookPayload = { event: payload.event };
   for (const key of ['sessionId', 'tool', 'targetHash', 'mode', 'outcome', 'route', 'code'])
     if (typeof payload[key] === 'string' && /^[a-zA-Z0-9_:-]{0,100}$/.test(payload[key] as string)) clean[key] = payload[key];
-  for (const key of ['files', 'promptChars'])
+  for (const key of ['files', 'promptChars', 'beforeTokens', 'afterTokens'])
     if (typeof payload[key] === 'number' && Number.isFinite(payload[key])) clean[key] = payload[key];
   for (const key of ['readOnly', 'ok']) if (typeof payload[key] === 'boolean') clean[key] = payload[key];
   return clean;

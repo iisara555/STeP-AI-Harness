@@ -13,6 +13,7 @@ export function scrub(line: string) {
 
 // Known provider failures, mapped to codes the interface explains in Thai.
 const KNOWN: [RegExp, string][] = [
+  [/context.{0,25}(?:length|window|exceed)|prompt.{0,15}too long|maximum.{0,15}tokens/i, 'PROMPT_TOO_LONG'],
   // Since 18 June 2026 Google serves Gemini CLI only to API keys and Code Assist Standard/Enterprise licenses.
   [/no longer supported for Gemini Code Assist for individuals|IneligibleTier|migrate to the Antigravity/i, 'GEMINI_PERSONAL_DISCONTINUED'],
   [/GOOGLE_CLOUD_PROJECT/i, 'GOOGLE_CLOUD_PROJECT_REQUIRED'],

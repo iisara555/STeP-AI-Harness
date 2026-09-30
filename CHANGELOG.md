@@ -6,6 +6,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop OpenHarness adaptation — Phase 3
+
+- Add script-aware context estimates, older-source previews, bounded summaries, prompt-overflow retry and compact hooks while retaining host task state.
+- Add privacy-checked, user-confirmed scoped memory, evidence-bound local Autodream suggestions and `/memory` editing with output styles.
+- Load bounded workspace instructions and assistant preferences under existing routing/governance with explicit context transmission consent.
+- Add local SQLite full-text search, independent session forks, resume without replay and scanned Markdown/JSON conversation exports.
+- Connect OCR to image/scanned-PDF attachments and gate transient original-image input by managed policy, complete OCR, privacy and explicit review.
+- Cover Phase 3 with synthetic unit/real Electron IPC/UI checks; live accounts, OCR accuracy, visual quality, packaged installs and production acceptance remain pending.
+
 ### Desktop OpenHarness adaptation — Phase 2
 
 - Add a bounded Chat/Draft host tool loop with parallel reads, hooks, separate result consent and paged output.

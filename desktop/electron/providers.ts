@@ -17,10 +17,11 @@ export function runtimeError(error: unknown, rpc: Rpc) {
     ...((base as any).retryAfterMs !== undefined ? { retryAfterMs: (base as any).retryAfterMs } : {}),
   });
 }
-import type { Connection, ModelOption } from '../src/types';
+import type { Connection, ModelOption, VisionInput } from '../src/types';
 
 export type TokenCount = { input: number; output: number; total: number };
 export type ProviderContext = {
+  images?: VisionInput[];
   cwd: string;
   env: NodeJS.ProcessEnv;
   key?: string;
@@ -167,7 +168,10 @@ export class CodexAdapter implements ProviderAdapter {
         rpc
           .request('turn/start', {
             threadId: result.thread.id,
-            input: [{ type: 'text', text: prompt }],
+            input: [
+              { type: 'text', text: prompt },
+              ...(context.images || []).map(i => ({ type: 'image', url: `data:${i.mime};base64,${i.data}` })),
+            ],
             ...(context.effort ? { effort: context.effort } : {}),
           })
           .catch(fail);
@@ -197,7 +201,8 @@ export class GeminiAdapter implements ProviderAdapter {
       rpc.onText = line => {
         if (isGoogleLogin(line)) rpc.close('LOGIN_REQUIRED');
       };
-      await initialize(rpc, 'gemini');
+      const capabilities = await initialize(rpc, 'gemini');
+      if (context.images?.length && !capabilities.agentCapabilities?.promptCapabilities?.image) throw new Error('VISION_UNAVAILABLE');
       rpc.onRequest = async method => {
         if (method === 'session/request_permission') return { outcome: { outcome: 'cancelled' } };
         throw new Error('TOOL_DENIED');
@@ -231,7 +236,14 @@ export class GeminiAdapter implements ProviderAdapter {
         if (method === 'session/update' && params.update?.sessionUpdate === 'agent_thought_chunk' && params.update.content?.type === 'text')
           context.onReasoning?.(params.update.content.text);
       };
-      await rpc.request('session/prompt', { sessionId: session.sessionId, prompt: [{ type: 'text', text: prompt }] }, 600_000);
+      await rpc.request(
+        'session/prompt',
+        {
+          sessionId: session.sessionId,
+          prompt: [{ type: 'text', text: prompt }, ...(context.images || []).map(i => ({ type: 'image', data: i.data, mimeType: i.mime }))],
+        },
+        600_000,
+      );
       return text;
     } catch (error) {
       throw runtimeError(error, rpc);
@@ -256,7 +268,25 @@ export class ClaudeAdapter implements ProviderAdapter {
     let text = '';
     try {
       const stream = query({
-        prompt,
+        prompt: context.images?.length
+          ? (async function* () {
+              yield {
+                type: 'user' as const,
+                session_id: '',
+                parent_tool_use_id: null,
+                message: {
+                  role: 'user' as const,
+                  content: [
+                    { type: 'text' as const, text: prompt },
+                    ...(context.images || []).map(i => ({
+                      type: 'image' as const,
+                      source: { type: 'base64' as const, media_type: i.mime, data: i.data },
+                    })),
+                  ],
+                },
+              };
+            })()
+          : prompt,
         options: {
           cwd: context.cwd,
           ...authOptions,

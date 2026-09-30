@@ -1,5 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'memoryList',
+  'memorySave',
+  'memoryConfirm',
+  'memoryDelete',
+  'memoryDismiss',
+  'contextStyles',
+  'contextStyle',
+  'sessionSearch',
+  'sessionResume',
+  'sessionFork',
+  'sessionExport',
   'snapshot',
   'usage',
   'questionRespond',

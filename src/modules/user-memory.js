@@ -37,6 +37,14 @@ export function getPersonalityPreset(key = 'coworker') {
   return PERSONALITY_PRESETS[key] || PERSONALITY_PRESETS.coworker;
 }
 
+/** Build assistant-only preferences. Employee profile data stays in USER.md. */
+export function generateAssistantPreferences({ assistantName = 'STeP Mate', personality = 'coworker', assistantTone = '' } = {}) {
+  const tones = { coworker: 'Friendly, polite and natural.', professional: 'Polite, structured and clear.', concise: 'Short and focused on next actions.' };
+  const tone = personality === 'custom' ? String(assistantTone).slice(0, 300) : tones[personality] || tones.coworker;
+  return '# Assistant Preferences\n\nThese are conversation preferences. Organization governance, current routing and permission mode take precedence.\n\n' +
+    '- Assistant name: ' + String(assistantName).replace(/[\r\n]/g, ' ').slice(0, 60) + '\n- Conversation tone: ' + tone + '\n- Document style: follow the selected Skill and output style.\n';
+}
+
 /**
  * Generate starter markdown content for USER.md
  * @param {object} options
@@ -381,14 +389,14 @@ export async function initUserMemory(workspaceDir = process.cwd(), options = {})
 }
 
 /**
- * Ensure USER.md and MEMORY.md are included in workspace .gitignore.
+ * Ensure profile, assistant and project-memory files are included in workspace .gitignore.
  *
  * These files hold the employee's own profile, so "always gitignored" has to be
  * true even in a workspace that has no .gitignore yet: a repository initialised
  * later would otherwise pick them up. Create the file when it is missing rather
  * than returning quietly.
  */
-export async function ensureGitignored(workspaceDir = process.cwd()) {
+export async function ensureGitignored(workspaceDir = process.cwd(), { strict = false } = {}) {
   const gitignorePath = await safeWorkspacePath(workspaceDir, '.gitignore');
   const header = '# Private workspace user memory';
 
@@ -400,6 +408,8 @@ export async function ensureGitignored(workspaceDir = process.cwd()) {
 
     if (!lines.includes('USER.md') && !lines.includes('/USER.md')) missing.push('USER.md');
     if (!lines.includes('MEMORY.md') && !lines.includes('/MEMORY.md')) missing.push('MEMORY.md');
+    if (!lines.includes('ASSISTANT.md') && !lines.includes('/ASSISTANT.md')) missing.push('ASSISTANT.md');
+    if (!lines.includes('.step/memory/') && !lines.includes('/.step/memory/')) missing.push('.step/memory/');
 
     if (missing.length === 0) return false;
 
@@ -408,6 +418,7 @@ export async function ensureGitignored(workspaceDir = process.cwd()) {
     await writeFile(gitignorePath, body, 'utf-8');
     return true;
   } catch {
+    if (strict) throw new Error('PRIVATE_FILES_NOT_IGNORED');
     // A workspace we cannot write to is left untouched; the caller reports it.
     return false;
   }
