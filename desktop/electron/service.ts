@@ -120,6 +120,7 @@ export class WorkService {
     const history =
       clarification || carriesPrevious
         ? session.messages
+            .slice(session.contextStart ?? Math.max(0, session.messages.length - 12))
             .filter(m => m.role !== 'status')
             .slice(-12)
             .map(m => ({ role: m.role, text: this.masked(m.text) }))
@@ -135,6 +136,7 @@ export class WorkService {
       session.answers = [];
       session.followUps = [];
       session.skill = skill || undefined;
+      session.contextStart = session.messages.length;
     }
     session.messages.push({ role: 'user', text, at: new Date().toISOString() });
     session.title = session.title === 'งานใหม่' ? taskTitle(text) : session.title;
