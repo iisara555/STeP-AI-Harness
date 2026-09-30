@@ -35,6 +35,7 @@ import {
   referencesOrganization,
 } from '../../modules/router/entrepreneur-intent.js';
 import { evaluatePrivacyGate, privacySafeText } from '../../modules/privacy/index.js';
+import { needsPublicWebSearch } from './public-information.js';
 
 /**
  * Router metadata loaders live in the router module. Keep CLI exports stable.
@@ -304,7 +305,11 @@ export async function queryStepRouter(query, options = {}) {
   // not exist, so it only delays help. Answer as a general assistant under the
   // organization rules instead. Attachment-purpose questions and consequential
   // requests keep asking, because there the missing context is what decides.
-  const generalAssist = isAmbiguous
+  const publicInformation = !chosenSkillName && !selectedPlaybook && !competingPlaybooks.length
+    && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query) && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !namesOrganizationContext(query, Object.keys(teams)) && needsPublicWebSearch(originalQuery);
+  const generalAssist = publicInformation || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'
@@ -312,7 +317,7 @@ export async function queryStepRouter(query, options = {}) {
     && !CONSEQUENTIAL_INTENTS.has(context.intent)
     && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
     && !namesOrganizationContext(query, Object.keys(teams))
-    && hasConcreteRequest(originalQuery, options.clarificationAnswer);
+    && hasConcreteRequest(originalQuery, options.clarificationAnswer));
   if (generalAssist) selectedSkill = null;
   const clarification = isAmbiguous && !generalAssist && scopeResult.status === 'ALLOW'
     ? competingPlaybooks.length

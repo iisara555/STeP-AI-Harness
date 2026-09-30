@@ -61,6 +61,8 @@ import { WorkbenchPanel } from './workbench';
 import { toolRequests, type ToolTab, type ToolRequest } from './tools';
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode } from './types';
+import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
+import { publicSourceUrl } from './web';
 
 export default function App() {
   const api = window.step;
@@ -74,6 +76,9 @@ export default function App() {
   const [stream, setStream] = useState(''),
     [progress, setProgress] = useState(''),
     [running, setRunning] = useState(false);
+  const [heartbeatAt, setHeartbeatAt] = useState(0),
+    [activityAt, setActivityAt] = useState(0),
+    [activities, setActivities] = useState<string[]>([]);
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null);
@@ -213,6 +218,13 @@ export default function App() {
     () =>
       api?.onEvent(event => {
         if (event.sessionId === currentId.current) {
+          if (['heartbeat', 'status', 'activity', 'delta', 'reasoning'].includes(event.type)) setHeartbeatAt(Date.now());
+          if (event.type === 'activity') {
+            const label = event.text || '';
+            setProgress(label);
+            setActivityAt(Date.now());
+            setActivities(list => (list.at(-1) === label ? list : [...list, label].slice(-5)));
+          }
           if (event.type === 'delta') setStream(s => (s + (event.text || '')).slice(-60000));
           if (event.type === 'reasoning') setReasoning(s => (s + (event.text || '')).slice(-20000));
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
@@ -454,6 +466,9 @@ export default function App() {
     setReasoning('');
     setProgress('กำลังส่งข้อความ');
     setStartedAt(Date.now());
+    setHeartbeatAt(Date.now());
+    setActivityAt(Date.now());
+    setActivities([]);
     let result;
     try {
       result = await api!.call('send', {
@@ -969,6 +984,23 @@ export default function App() {
                   ) : (
                     <div className="message-body">{message.role === 'status' ? errorText[message.text] || message.text : message.text}</div>
                   )}
+                  {!!message.webSources?.length && (
+                    <div className="web-sources" aria-label="แหล่งข้อมูลจากการค้นเว็บ">
+                      <span>แหล่งข้อมูลจาก Web Search</span>
+                      {message.webSources
+                        .filter(source => publicSourceUrl(source.url))
+                        .map(source => (
+                          <button
+                            className="quiet"
+                            key={source.url}
+                            title={source.url}
+                            onClick={() => void action(() => api.call('toolBrowser', { url: source.url }))}
+                          >
+                            {source.title} · {new URL(source.url).hostname}
+                          </button>
+                        ))}
+                    </div>
+                  )}
                   {message.role === 'assistant' && (
                     <div className="message-actions">
                       <button
@@ -1010,10 +1042,27 @@ export default function App() {
               ))}
               {running && (
                 <article className="message assistant">
-                  <div className="activity">
+                  <div className="activity" role="status" aria-live="polite">
                     <LoaderCircle className="spin" size={15} />
                     {progress || 'กำลังทำงาน'}
                   </div>
+                  <div className="activity-detail">
+                    <span className="activity-pulse" aria-hidden="true" />
+                    <span>
+                      ใช้เวลา {elapsed || '0 วินาที'} · {now - heartbeatAt > 15000 ? 'ยังไม่ได้รับสถานะจากแอป' : 'แอปยังทำงานอยู่'}
+                    </span>
+                  </div>
+                  {now - activityAt > 45000 && !stream && <p className="small muted">ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้</p>}
+                  {activities.length > 1 && (
+                    <details className="activity-history">
+                      <summary>ดูขั้นตอนที่ทำแล้ว</summary>
+                      <ol>
+                        {activities.slice(0, -1).map((label, index) => (
+                          <li key={index}>{label}</li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
                   {plan.length > 1 && (
                     <ol className="plan-card" aria-label="ขั้นตอนของงาน">
                       {plan.map((step, i) => (
@@ -1065,6 +1114,11 @@ export default function App() {
                 </div>
               )}
               {!running && progress && <p className="muted small">{progress}</p>}
+              {!running && workMode !== 'image' && needsPublicWebSearch(query) && (
+                <p className="web-route small" role="status">
+                  Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ
+                </p>
+              )}
               <div ref={conversationEnd} />
             </div>
             <div className="composer-area">
@@ -1578,6 +1632,10 @@ export default function App() {
               snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
                 connection,
             )}
+          </p>
+          <p className="small muted">
+            คำถามข้อมูลสาธารณะที่เปลี่ยนตามเวลาอาจใช้ Web Search ของบัญชี AI นี้ โดยส่งเฉพาะคำถามสาธารณะไปค้น
+            ไม่ส่งไฟล์แนบหรือบทสนทนาไปเป็นคำค้น
           </p>
           <p className="small muted">
             ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ

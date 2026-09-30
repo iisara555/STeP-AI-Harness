@@ -46,7 +46,7 @@ export type SkillEntry = {
 export type Usage = { input: number; output: number; total: number; runs: number };
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
-export type Message = { role: 'user' | 'assistant' | 'status'; text: string; at: string };
+export type Message = { role: 'user' | 'assistant' | 'status'; text: string; at: string; webSources?: { title: string; url: string }[] };
 export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
 export type Proposal = { id: string; text: string; baseRevision: number; sources: string[]; at: string };
 export type Session = {
@@ -112,6 +112,8 @@ export type RunEvent = {
     | 'delta'
     | 'reasoning'
     | 'status'
+    | 'activity'
+    | 'heartbeat'
     | 'changed'
     | 'auth-code'
     | 'auth-code-close'

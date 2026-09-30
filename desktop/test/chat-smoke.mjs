@@ -17,6 +17,8 @@ const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;
  const result=r.method==='thread/start'?{thread:{id:'thread'}}:r.method==='model/list'?{data:[{id:'synthetic-chat',displayName:'Synthetic Chat',isDefault:true}]}:{};
  send({id:r.id,result});if(r.method==='turn/start'){const prompt=r.params.input[0].text;const text=prompt.includes('Second message')?'Second answer received':prompt.includes('Draft request')?'# Synthetic draft\\nEditable output':prompt.includes('Tool proposal')?'Review this request\\n\\n\u0060\u0060\u0060step-tool\\n{"tool":"terminal","input":"echo proposed"}\\n\u0060\u0060\u0060':'First answer received';
+ if(prompt.startsWith('Use the live web search tool now')){send({method:'item/started',params:{item:{id:'search',type:'webSearch',action:{type:'search'}}}});setTimeout(()=>{send({method:'item/completed',params:{item:{id:'search',type:'webSearch'}}});send({method:'item/agentMessage/delta',params:{delta:'Synthetic evidence only. [Government fixture](https://www.thaigov.go.th/example)'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},1600);return;}
+ if(prompt.includes('Fresh web search evidence')){send({method:'item/agentMessage/delta',params:{delta:'Synthetic holiday answer '}});setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'from retrieved evidence'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},3400);return;}
  setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},120);}
 });`,
 );
@@ -92,6 +94,21 @@ try {
   );
   assert.equal(snapshot.sessions[0].proposals.length, 0);
   assert.equal(await page.locator('.composer textarea').inputValue(), '');
+  await page.locator('.composer textarea').fill('ประกาศวันหยุดราชการปีงบ 2570');
+  await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
+  await page.keyboard.press('Enter');
+  await page.getByText('กำลังค้นเว็บ', { exact: true }).waitFor();
+  await expect(page.locator('.activity-detail')).toContainText('แอปยังทำงานอยู่');
+  await page.screenshot({ path: 'release/qa/web-search-running.png', fullPage: true });
+  await page.getByText('Synthetic holiday answer', { exact: false }).waitFor();
+  // A heartbeat must keep the already streamed answer visible until completion.
+  await page.waitForTimeout(3100);
+  await expect(page.locator('.message-body').last()).toContainText('Synthetic holiday answer');
+  await waitComplete(id);
+  await page.getByRole('button', { name: 'Government fixture · www.thaigov.go.th' }).waitFor();
+  const searched = await page.evaluate(() => window.step.call('snapshot'));
+  assert.equal(searched.sessions[0].messages.at(-1).text, 'Synthetic holiday answer from retrieved evidence');
+  assert.equal(searched.sessions[0].messages.at(-1).webSources[0].url, 'https://www.thaigov.go.th/example');
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();
@@ -177,6 +194,10 @@ try {
           'first-send consent replay',
           'button send',
           'direct chat answer',
+          'public holiday search routing',
+          'native web-search progress',
+          'heartbeat preserves streaming',
+          'web source cards',
           'draft output',
           'inert AI tool proposals',
           'terminal output',

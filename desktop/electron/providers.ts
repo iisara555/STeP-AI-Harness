@@ -24,6 +24,8 @@ export type ProviderContext = {
   emit: (text: string) => void;
   onReasoning?: (text: string) => void;
   onUsage?: (usage: TokenCount) => void;
+  webSearch?: boolean;
+  onWebActivity?: (stage: 'search' | 'read' | 'complete' | 'failed') => void;
 };
 export interface ProviderAdapter {
   run(prompt: string, connection: Connection, context: ProviderContext): Promise<string>;
@@ -90,7 +92,7 @@ export class CodexAdapter implements ProviderAdapter {
         model: connection.model || undefined,
         approvalPolicy: 'untrusted',
         sandbox: 'read-only',
-        config: { features: { shell_tool: false }, mcp_servers: {} },
+        config: { web_search: context.webSearch ? 'live' : 'disabled', features: { shell_tool: false }, mcp_servers: {} },
         ephemeral: true,
       });
       return await new Promise<string>((resolve, reject) => {
@@ -116,6 +118,15 @@ export class CodexAdapter implements ProviderAdapter {
           return;
         }
         rpc.onNotification = (method, params) => {
+          if (context.webSearch && ['item/started', 'item/completed'].includes(method) && params.item?.type === 'webSearch') {
+            context.onWebActivity?.(
+              method === 'item/completed'
+                ? 'complete'
+                : params.item.action?.type === 'openPage' || params.item.action?.type === 'findInPage'
+                  ? 'read'
+                  : 'search',
+            );
+          }
           if (method === 'item/agentMessage/delta') {
             text += params.delta;
             context.emit(params.delta);
@@ -165,6 +176,7 @@ export class GeminiAdapter implements ProviderAdapter {
     if (context.signal.aborted) throw new Error('CANCELLED');
     const rpc = createRpc(connection, context);
     let text = '';
+    const searches = new Set<string>();
     const abort = () => rpc.close();
     context.signal.addEventListener('abort', abort, { once: true });
     try {
@@ -180,6 +192,20 @@ export class GeminiAdapter implements ProviderAdapter {
       const session = await rpc.request('session/new', { cwd: context.cwd, mcpServers: [] });
       if (connection.model) await rpc.request('session/set_model', { sessionId: session.sessionId, modelId: connection.model });
       rpc.onNotification = (method, params) => {
+        const update = params.update;
+        if (update?.kind === 'search' && typeof update.toolCallId === 'string') searches.add(update.toolCallId);
+        if (
+          context.webSearch &&
+          method === 'session/update' &&
+          ['tool_call', 'tool_call_update'].includes(update?.sessionUpdate) &&
+          (update.kind === 'search' || searches.has(update.toolCallId))
+        ) {
+          // Some CLI versions report a tool-result error as ACP "completed".
+          const toolError = update.content?.some((part: any) => /Error performing web search/i.test(part.content?.text || ''));
+          context.onWebActivity?.(
+            update.status === 'failed' || toolError ? 'failed' : update.status === 'completed' ? 'complete' : 'search',
+          );
+        }
         if (
           method === 'session/update' &&
           params.update?.sessionUpdate === 'agent_message_chunk' &&
@@ -221,7 +247,7 @@ export class ClaudeAdapter implements ProviderAdapter {
           ...authOptions,
           model: connection.model || undefined,
           ...(context.effort ? { effort: context.effort as any } : {}),
-          tools: [],
+          tools: context.webSearch ? ['WebSearch'] : [],
           allowedTools: [],
           mcpServers: {},
           strictMcpConfig: true,
@@ -229,8 +255,57 @@ export class ClaudeAdapter implements ProviderAdapter {
           persistSession: false,
           includePartialMessages: true,
           abortController: controller,
-          maxTurns: 1,
-          canUseTool: async () => ({ behavior: 'deny', message: 'Only host-managed drafting is available.' }),
+          maxTurns: context.webSearch ? 6 : 1,
+          ...(context.webSearch
+            ? {
+                hooks: {
+                  PreToolUse: [
+                    {
+                      hooks: [
+                        async (input: any) => {
+                          if (input.tool_name !== 'WebSearch')
+                            return {
+                              hookSpecificOutput: {
+                                hookEventName: 'PreToolUse' as const,
+                                permissionDecision: 'deny' as const,
+                                permissionDecisionReason: 'Only public web search is available.',
+                              },
+                            };
+                          context.onWebActivity?.('search');
+                          return {};
+                        },
+                      ],
+                    },
+                  ],
+                  PostToolUse: [
+                    {
+                      matcher: 'WebSearch',
+                      hooks: [
+                        async () => {
+                          context.onWebActivity?.('complete');
+                          return {};
+                        },
+                      ],
+                    },
+                  ],
+                  PostToolUseFailure: [
+                    {
+                      matcher: 'WebSearch',
+                      hooks: [
+                        async () => {
+                          context.onWebActivity?.('failed');
+                          return {};
+                        },
+                      ],
+                    },
+                  ],
+                },
+              }
+            : {}),
+          canUseTool: async (name, input) =>
+            context.webSearch && name === 'WebSearch'
+              ? { behavior: 'allow', updatedInput: input }
+              : { behavior: 'deny', message: 'Only host-managed drafting is available.' },
         },
       });
       for await (const message of stream) {

@@ -1,6 +1,8 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = {
+  WEB_SEARCH_UNAVAILABLE:
+    'ยังยืนยันผลค้นเว็บไม่ได้ บัญชีหรือโมเดลนี้อาจไม่รองรับ Web Search หรือบริการค้นหาขัดข้อง กรุณาลองใหม่หรือเลือก AI อื่น ระบบยังไม่ใช้ความจำตอบแทนข้อมูลล่าสุด',
   WORKSPACE_REQUIRED: 'เลือกโฟลเดอร์ทำงานก่อนใช้เครื่องมือนี้',
   WORKSPACE_CHANGED: 'โฟลเดอร์ทำงานเปลี่ยนไป กรุณาตรวจคำขออีกครั้ง',
   FILE_LIMIT: 'ไฟล์นี้ใหญ่เกิน 200 KB หรือไม่ใช่ไฟล์ข้อความ',

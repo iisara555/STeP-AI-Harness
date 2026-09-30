@@ -49,7 +49,7 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 
 - Conversation history and drafts are local application data, not diagnostic logs. API secrets use Electron secure storage. Provider-managed authentication is stored in an isolated runtime profile.
 - Only extracted, reviewed text is sent for attachments; original documents are not uploaded. Unsupported/incomplete extraction is blocked. One source attachment per request preserves one-source Playbook constraints.
-- The host rejects provider tool requests and exposes no external submission or publishing IPC. Runtime built-in tool restrictions still require adversarial live verification. Export happens through host code.
+- The host rejects file, shell and action requests from provider runtimes and exposes no external submission or publishing IPC. A separate public retrieval run enables only native web search after privacy and authority checks. Runtime restrictions still require adversarial live verification. Export happens through host code.
 - DOCX/PDF/Markdown preserve headings, lists, bold and italic. Office exports use simple layouts. XLSX splits tab-separated or Markdown table rows. PPTX paginates text; this is not an Office layout editor.
 - Graph edges are navigation aids, never authoritative evidence. Use `node scripts/graphify-local.js build` from the root and verify inferred edges against source.
 - Live account login, provider failure behavior, packaging, signing, and macOS require independent validation before release.

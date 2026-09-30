@@ -7,6 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
 import { Images } from './images';
+import { geminiTools } from './runtime-policy';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, type Harness } from './service';
 import { adapter, listModels } from './providers';
@@ -147,7 +148,7 @@ async function main() {
   // In-app Claude subscription login stays off until Anthropic approves offering claude.ai login.
   // Sign-out and removal keep working with the flag off so an earlier login can always be cleared.
   const claudeSubscription = process.env.STEP_CLAUDE_SUBSCRIPTION === '1';
-  async function runtime(connection: Connection, signOut = false) {
+  async function runtime(connection: Connection, signOut = false, webSearch = false) {
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription && !signOut)
       throw new Error('FEATURE_DISABLED');
     connection.executable = resolveRuntime(connection);
@@ -160,7 +161,7 @@ async function main() {
     await writeFile(
       join(home, '.gemini', 'settings.json'),
       JSON.stringify({
-        tools: { core: [] },
+        tools: geminiTools(webSearch),
         mcpServers: {},
         telemetry: { enabled: false },
         context: { fileName: '__STEP_NO_CONTEXT__' },
@@ -205,7 +206,7 @@ async function main() {
   service = new WorkService(
     store,
     harness,
-    runtime,
+    (connection, webSearch) => runtime(connection, false, webSearch),
     event => {
       if (event.type === 'failed') {
         const s = store.get<Session>('session', event.sessionId),

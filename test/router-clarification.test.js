@@ -9,6 +9,16 @@ import { PACKAGE_ROOT } from '../src/modules/role-resolver.js';
 const options = { team: 'qs', workspaceDir: 'tmp/__routing-clarification__' };
 const mixedPlan = 'มี TOR และบันทึกประชุม ช่วยทำแผนงาน milestone timeline ลง Google Sheet';
 
+test('public fiscal-year holidays do not trigger the internal HR clarification menu', async () => {
+  for (const team of ['cc', 'hd', '']) {
+    const result = await queryStepRouter('ประกาศวันหยุดราชการปีงบ 2570', { team, cluster: '', workspaceDir: 'tmp/__synthetic-public-search__' });
+    assert.equal(result.routingContract.mode, 'GENERAL');
+    assert.equal(result.routingContract.skill, '');
+    assert.equal(result.routingContract.authority.status, 'ALLOW');
+    assert.ok(result.routingContract.mandatoryReferences.some(ref => ref.id === 'data-classification-rule'));
+  }
+});
+
 test('tied and near-tied Playbooks ask before selecting or loading either flow', async () => {
   for (const query of [mixedPlan, `${mixedPlan} พร้อม action item`]) {
     const result = await queryStepRouter(query, options);
