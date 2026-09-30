@@ -149,8 +149,7 @@ async function main() {
     await mkdir(cwd, { recursive: true });
     await mkdir(join(home, '.gemini'), { recursive: true });
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
-    const geminiAuthType =
-      connection.provider === 'gemini' ? (connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal') : undefined;
+    const geminiAuthType = connection.provider === 'gemini' ? (connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal') : undefined;
     await writeFile(
       join(home, '.gemini', 'settings.json'),
       JSON.stringify({
@@ -158,9 +157,7 @@ async function main() {
         mcpServers: {},
         telemetry: { enabled: false },
         context: { fileName: '__STEP_NO_CONTEXT__' },
-        ...(geminiAuthType
-          ? { security: { auth: { selectedType: geminiAuthType, enforcedType: geminiAuthType } } }
-          : {}),
+        ...(geminiAuthType ? { security: { auth: { selectedType: geminiAuthType, enforcedType: geminiAuthType } } } : {}),
       }),
     );
     await writeFile(
@@ -329,9 +326,7 @@ async function main() {
         const previous = store.get<Connection>('connection', id);
         if (connecting.has(id)) throw new Error('CONNECTION_BUSY');
         const googleCloudProject =
-          input.googleCloudProject === undefined
-            ? previous?.googleCloudProject || ''
-            : inputText(input.googleCloudProject, 60).trim();
+          input.googleCloudProject === undefined ? previous?.googleCloudProject || '' : inputText(input.googleCloudProject, 60).trim();
         if (googleCloudProject && !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(googleCloudProject))
           throw new Error('GOOGLE_CLOUD_PROJECT_INVALID');
         if (previous?.claudeAuthStarted && (previous.provider !== input.provider || previous.mode !== input.mode))
@@ -582,7 +577,9 @@ async function main() {
         }
         if (c.provider === 'openai') {
           const r = await runtime(c, true);
-          await signOutManagedProvider(c, r).catch(error => diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }));
+          await signOutManagedProvider(c, r).catch(error =>
+            diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }),
+          );
         }
         delete c.signedIn;
         // Signing out removes this connection's sign-in data (Google or ChatGPT tokens in its runtime home).
@@ -612,7 +609,9 @@ async function main() {
         }
         if (c.provider === 'openai') {
           const r = await runtime(c, true);
-          await signOutManagedProvider(c, r).catch(error => diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }));
+          await signOutManagedProvider(c, r).catch(error =>
+            diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }),
+          );
         }
         await removeRuntimeHome(c.id);
         store.remove('connection', c.id);
