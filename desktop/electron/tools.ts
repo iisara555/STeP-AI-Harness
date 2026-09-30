@@ -47,6 +47,7 @@ export function documentSections(text: string) {
   return sections;
 }
 export class DesktopTools {
+  external?: (request: LoopRequest, scope: ToolScope) => Promise<unknown>;
   constructor(
     private workbench: Workbench,
     private harness: Harness,
@@ -122,7 +123,10 @@ export class DesktopTools {
       cancel: scope.cancel,
       enabled: () => this.policy().features.toolLoop,
       check,
-      readOnly: r => !['terminal', 'changes', 'sheet_edit', 'ask_user', 'plan', 'snapshot', 'web_search'].includes(r.tool),
+      readOnly: r =>
+        !['terminal', 'changes', 'sheet_edit', 'ask_user', 'plan', 'snapshot', 'web_search', 'mcp_call', 'mcp_search', 'sandbox'].includes(
+          r.tool,
+        ),
       activity: t => scope.activity('กำลังใช้เครื่องมือ ' + t),
       outgoing: async text => {
         await check();
@@ -153,12 +157,12 @@ export class DesktopTools {
     const a = r.args || {},
       target = r.input;
     const fileTool = ['files', 'changes', 'doc_outline', 'doc_section', 'sheet_read', 'sheet_edit'].includes(r.tool);
-    const command = r.tool === 'terminal' ? target : undefined;
+    const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
     if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
     if (this.mode() === 'plan' && ['changes', 'sheet_edit'].includes(r.tool)) throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
-      readOnly: r.tool !== 'terminal',
+      readOnly: !['terminal', 'sandbox', 'mcp_call', 'mcp_search'].includes(r.tool),
       ...(fileTool ? { path: target || '.' } : {}),
       ...(command ? { command, execute: true } : {}),
     };
@@ -172,6 +176,11 @@ export class DesktopTools {
       },
       async () => {
         switch (r.tool) {
+          case 'mcp_search':
+          case 'mcp_call':
+          case 'sandbox':
+            if (!this.external) throw new Error('TOOL_UNAVAILABLE');
+            return this.external(r, scope);
           case 'files':
             if (a.action === 'list' || !target) return this.workbench.files(target);
             {

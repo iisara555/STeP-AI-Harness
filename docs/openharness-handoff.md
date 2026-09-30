@@ -1,6 +1,6 @@
 # OpenHarness adaptation handoff
 
-Updated: 2026-09-30. This document is sufficient to continue from another account without access to the earlier chat or its attachments.
+Updated: 2026-10-01. This document is sufficient to continue from another account without access to the earlier chat or its attachments.
 
 ## Current state
 
@@ -8,7 +8,7 @@ The approved goal is a complete, chat-centered STeP employee workspace with edit
 
 Phases 0–3 are implemented and locally validated. The user explicitly authorized pushing this integrated baseline to `main`. This is a development preview, not a published release. Read [delivery status](openharness-parity.md) and check `git log origin/main` for the final integration commit. Phase 3's initial implementation is `3cb7dde`; the final follow-up also contains export validation, hard-link refusal, the memory editor smoke repair and this handoff.
 
-**Next implementation phase: Phase 4.** Do not reimplement Phases 0–3. Live acceptance gaps below remain open and must not be represented as passing because local fixtures passed.
+Phase 4 is implemented on `codex/openharness-phase4` for review against the integrated `main` baseline `61846ce`. **Next implementation phase: Phase 5, after reviewing Phase 4.** Do not reimplement Phases 0–4. Live acceptance gaps below remain open and must not be represented as passing because local fixtures passed.
 
 | Phase | Implemented baseline | Reference |
 | --- | --- | --- |
@@ -16,6 +16,7 @@ Phases 0–3 are implemented and locally validated. The user explicitly authoriz
 | 1 | Managed policy, Workbench permission gate, hooks, unified approvals and modes | [Policy](desktop-policy.md) |
 | 2 | Bounded tool loop, parallel approved reads, document/spreadsheet/reference tools, approved draft plans, snapshots/previews, retry/backoff and usage | [Tool loop](desktop-tool-loop.md) |
 | 3 | Context compaction, confirmed memory, workspace instructions/persona/styles, session resume/fork/search/export, local OCR and gated image input | [Context and memory](desktop-context-memory.md) |
+| 4 | Bounded coordinator, app-open scheduled drafts, attended MCP/Docker tools and host-validated GitHub autopilot proposals | [Automation and tools](desktop-automation.md) |
 
 ## Phase 3 implementation map
 
@@ -53,7 +54,15 @@ No paid API evaluation, live provider login/generation, release publication or p
 
 There is no known failing local Phase 3 check at handoff. These are acceptance gaps, not completed production gates.
 
-## Phase 4: Coordinator, automation, sandbox and MCP
+## Phase 4 implementation: Coordinator, automation, sandbox and MCP
+
+Phase 4 is a review branch; it has not been released or merged as part of the earlier Phase 0–3 main authorization. `desktop/electron/coordinator.ts` uses the shared `MAX_PARALLEL_RUNS` exported from `service.ts`; independent sessions and final-only merge retain routing/privacy/authority. `cron.ts` provides bounded CRUD/history, app-open ticks, context binding and interrupted-job recovery. `desktop/src/automations.tsx` exposes scheduled jobs and attended MCP/sandbox tools, with approvals rendered above the job dialog. Native notifications contain status only.
+
+`mcp.ts` uses the pinned SDK for managed stdio/HTTP, destination consent, bounded discovery, no uncertain-call retry and process cleanup. `sandbox.ts` uses a reviewed, preinstalled digest-pinned image and only explicitly selected privacy-clean, read-only text snapshots. `src/modules/autopilot/index.js` and the CLI/operator entrypoints score approved public issues, isolate worktrees/test profiles, ask the CLI coder for JSON proposals with native tools disabled, validate paths/privacy/hashes before host writes, run unchanged validation scripts, and preserve review commits/dashboards. Publish and exact-head-reviewed merge are separately gated. A detached autopilot with a prompt hook fails closed rather than skipping the hook.
+
+Completed locally: 200 Desktop unit tests; all six Electron smoke scripts; six new autopilot tests on disposable repositories; Desktop formatting, TypeScript/build and the 51-Skill validator. Full Harness regression and remote CI are recorded in `desktop/VALIDATION.md` once completed. Fixtures establish local behavior, not live account/transport/container isolation or production acceptance.
+
+The accepted requirements are retained here for traceability:
 
 1. Add `coordinator.ts`: split a request into bounded subtasks and run the existing `WorkService`, up to three concurrent runs using the main host's `MAX_PARALLEL_RUNS`. Merge results through the governed provider path. Parallelize Playbook steps only when their declared `consumes`/`produces` dependencies permit it.
 2. Add background AI task queues and notifications. Implement `cron.ts` CRUD, execution history and scheduling while the app is open. Scheduled work produces drafts for review; it cannot independently publish or export.
@@ -88,7 +97,7 @@ git status --short
 git log -1 origin/main
 ```
 
-When the checkout has no conflicting local work, switch to `main` and update with `git pull --ff-only`. Create a `codex/` development branch for Phase 4. Read this document, `docs/openharness-parity.md`, `docs/desktop-policy.md`, `docs/desktop-tool-loop.md`, `docs/desktop-context-memory.md` and `desktop/VALIDATION.md`. Run the workspace's `step-ai ask "<latest user request>" --json` gate and load only its mandatory references. Use `node scripts/graphify-local.js query "<symbols>"` for narrow code navigation; verify inferred edges in current source and rebuild the code-only graph if stale.
+When the checkout has no conflicting local work, switch to `main` and update with `git pull --ff-only`. Review `codex/openharness-phase4` and its PR before starting a separate `codex/` Phase 5 branch. Read this document, `docs/openharness-parity.md`, `docs/desktop-policy.md`, `docs/desktop-tool-loop.md`, `docs/desktop-context-memory.md` and `desktop/VALIDATION.md`. Run the workspace's `step-ai ask "<latest user request>" --json` gate and load only its mandatory references. Use `node scripts/graphify-local.js query "<symbols>"` for narrow code navigation; verify inferred edges in current source and rebuild the code-only graph if stale.
 
 The original checkout contains user-owned, untracked `.codex/`, `SVG/` and `TOR_Draft_AI_API_Gateway.docx`. Do not commit, overwrite or delete them. Keep `USER.md`, `MEMORY.md`, `ASSISTANT.md`, `.step/memory/`, account profiles and credentials local. Root tests mutate installation fixtures: use a managed test worktree and an isolated child profile, not the employee's real home or primary checkout.
 
@@ -107,4 +116,4 @@ Earlier stacked draft PRs: [#79](https://github.com/iisara555/STeP-AI-Harness/pu
 
 Suggested continuation prompt:
 
-> Read docs/openharness-handoff.md and desktop/VALIDATION.md. Confirm that Phases 0–3 are present on main, then implement Phase 4 on a codex/ branch through the existing governance boundary. Preserve local user files, use isolated synthetic validation, and report live/release acceptance separately. Do not start paid API evaluation or publish a release without explicit authorization.
+> Read docs/openharness-handoff.md and desktop/VALIDATION.md. Confirm that Phases 0–3 are present on main, review the Phase 4 implementation and checks on codex/openharness-phase4, then implement Phase 5 on a separate codex/ branch through the existing governance boundary. Preserve local user files, use isolated synthetic validation, and report live/release acceptance separately. Do not start paid API evaluation or publish a release without explicit authorization.

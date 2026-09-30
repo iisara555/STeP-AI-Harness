@@ -21,6 +21,9 @@ export type FileChange = {
   snapshotId?: string;
 };
 export const LOOP_TOOLS = [
+  'mcp_search',
+  'mcp_call',
+  'sandbox',
   'browser',
   'terminal',
   'files',

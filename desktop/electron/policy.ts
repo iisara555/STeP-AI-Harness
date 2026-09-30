@@ -1,6 +1,6 @@
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
-import { dirname, win32, isAbsolute } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { isAbsolute } from 'node:path';
+import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/managed-policy.js';
 
 /**
  * Organization policy for STeP Desktop. It lives where only an administrator can write:
@@ -14,6 +14,7 @@ export const FEATURES = [
   'autoMode',
   'shellByAi',
   'autoMerge',
+  'autopilot',
   'sandbox',
   'mcp',
   'lineGateway',
@@ -84,6 +85,7 @@ export type Policy = {
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
   network?: { proxyUrl?: string };
   memory?: { teamDirectories: Record<string, string> };
+  sandbox?: { image: string };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -92,6 +94,7 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   autoMode: false,
   shellByAi: false,
   autoMerge: false,
+  autopilot: false,
   sandbox: false,
   mcp: false,
   lineGateway: false,
@@ -130,11 +133,7 @@ export function defaultPolicy(): Policy {
   };
 }
 
-export function policyPath(platform = process.platform, env: NodeJS.ProcessEnv = process.env) {
-  if (platform === 'win32') return win32.join(env.ProgramData || 'C:\\ProgramData', 'STeP', 'desktop-policy.json');
-  if (platform === 'darwin') return '/Library/Application Support/STeP/desktop-policy.json';
-  return '/etc/step/desktop-policy.json';
-}
+export const policyPath = managedPolicyPath;
 
 const isObject = (value: unknown): value is Record<string, any> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, limit: number) => (typeof value === 'string' && value.trim() && value.length <= limit ? value.trim() : '');
@@ -158,6 +157,16 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.sandbox !== undefined) {
+    if (
+      !isObject(raw.sandbox) ||
+      Object.keys(raw.sandbox).some(k => k !== 'image') ||
+      typeof raw.sandbox.image !== 'string' ||
+      !/^[a-z0-9][a-z0-9._/:\-]*@sha256:[a-f0-9]{64}$/.test(raw.sandbox.image)
+    )
+      problems.push('sandbox requires a digest-pinned image');
+    else policy.sandbox = { image: raw.sandbox.image };
+  }
   if (raw.memory !== undefined) {
     if (!isObject(raw.memory) || Object.keys(raw.memory).some(k => k !== 'teamDirectories') || !isObject(raw.memory.teamDirectories))
       problems.push('invalid memory configuration');
@@ -283,6 +292,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       for (const server of raw.mcpServers.slice(0, 20)) {
         const name = text(server?.name, 60);
         if (!name || !/^[\w-]+$/.test(name)) problems.push('each MCP server needs a simple name');
+        else if (policy.mcpServers.some(s => s.name === name)) problems.push('duplicate MCP server name');
         else if (server.transport === 'stdio' && text(server.command, 1000))
           policy.mcpServers.push({
             name,
@@ -329,40 +339,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
 }
 
 /** Check the file and its directory; a writable directory can replace an otherwise protected file. */
-export function trustedPolicyPath(path: string): boolean {
-  try {
-    if (lstatSync(path).isSymbolicLink() || lstatSync(dirname(path)).isSymbolicLink()) return false;
-    if (process.platform !== 'win32')
-      return [path, dirname(path)].every(p => {
-        const s = lstatSync(p);
-        return s.uid === 0 && (s.mode & 0o022) === 0;
-      });
-    const script = `
-$ErrorActionPreference = 'Stop'
-$trusted = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')
-foreach ($p in @($env:STEP_POLICY_CHECK_PATH, [System.IO.Path]::GetDirectoryName($env:STEP_POLICY_CHECK_PATH))) {
-  $acl = Get-Acl -LiteralPath $p
-  $owner = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
-  if ($owner -notin $trusted) { exit 1 }
-  foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) {
-    if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin $trusted -and
-        (([int]$rule.FileSystemRights -band 852310) -ne 0)) { exit 1 }
-  }
-}
-Write-Output 'trusted'
-exit 0`;
-    const checked = execFileSync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '-'], {
-      input: script,
-      env: { ...process.env, STEP_POLICY_CHECK_PATH: path },
-      windowsHide: true,
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    return checked.toString('utf8').trim() === 'trusted';
-  } catch {
-    return false;
-  }
-}
+export const trustedPolicyPath = trustedManagedPolicyPath;
 
 /** Reads the managed policy file. A missing file is the normal default; an unreadable one keeps safe defaults. */
 export function loadPolicy(path = policyPath(), trusted = trustedPolicyPath): { policy: Policy; problems: string[]; path: string } {

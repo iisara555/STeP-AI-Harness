@@ -67,6 +67,7 @@ import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
+import { AutomationDialog } from './automations';
 import type { ToolQuestion } from './types';
 
 export default function App() {
@@ -75,6 +76,8 @@ export default function App() {
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
     [memoryOpen, setMemoryOpen] = useState(false);
+  const [automationOpen, setAutomationOpen] = useState(false),
+    [coordinated, setCoordinated] = useState(false);
   const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [selected, setSelected] = useState('');
@@ -147,6 +150,7 @@ export default function App() {
     mode: WorkMode;
     imageModel: string;
     retry?: boolean;
+    coordinator?: boolean;
   } | null>(null);
   // Claude Pro/Max works only inside Anthropic's own apps, so that choice hands the request to the employee's Claude Code.
   const [handoffAsk, setHandoffAsk] = useState<{ text: string; skill?: string } | null>(null),
@@ -516,6 +520,7 @@ export default function App() {
     mode: WorkMode = workMode,
     selectedImageModel: string = imageModel,
     retry?: boolean,
+    coordinator: boolean = coordinated && mode === 'draft' && !skill && !retry,
   ) {
     runningId.current = id;
     currentId.current = id;
@@ -540,6 +545,7 @@ export default function App() {
         mode,
         imageModel: selectedImageModel,
         retry,
+        coordinator,
       });
     } catch (e) {
       setRunning(false);
@@ -563,6 +569,7 @@ export default function App() {
         mode,
         imageModel: selectedImageModel,
         retry,
+        coordinator,
         ...result.consent,
       });
       return;
@@ -697,6 +704,7 @@ export default function App() {
         { id: 'new', group: 'คำสั่ง', label: 'เริ่มงานใหม่', run: () => action(create) },
         { id: 'usage', group: 'คำสั่ง', label: 'ดูการใช้งาน AI', hint: '/usage', run: () => setUsageOpen(true) },
         { id: 'memory', group: 'คำสั่ง', label: 'ดูและแก้ไขความจำ', hint: '/memory', run: () => setMemoryOpen(true) },
+        { id: 'automations', group: 'คำสั่ง', label: 'งานเบื้องหลังและเครื่องมือเพิ่มเติม', run: () => setAutomationOpen(true) },
         {
           id: 'settings',
           group: 'คำสั่ง',
@@ -1051,6 +1059,21 @@ export default function App() {
                   <button className="quiet" onClick={() => setMemoryOpen(true)}>
                     ความจำ
                   </button>
+                  <button className="quiet" onClick={() => setAutomationOpen(true)}>
+                    งานเบื้องหลัง
+                  </button>
+                  {snapshot.policy?.features.coordinator && (
+                    <label>
+                      <input
+                        aria-label="แบ่งงานย่อย"
+                        type="checkbox"
+                        checked={coordinated}
+                        disabled={running || workMode !== 'draft'}
+                        onChange={e => setCoordinated(e.target.checked)}
+                      />
+                      แบ่งงานย่อย
+                    </label>
+                  )}
                   {!!session.loadedContext?.length && (
                     <details>
                       <summary>บริบทที่ใช้ ({session.loadedContext.length})</summary>
@@ -1818,6 +1841,21 @@ export default function App() {
       {memoryOpen && api && snapshot && (
         <MemoryDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setMemoryOpen(false)} />
       )}
+      {automationOpen && (
+        <AutomationDialog
+          api={api}
+          connections={snapshot.connections}
+          features={snapshot.policy?.features || {}}
+          onClose={() => setAutomationOpen(false)}
+          onOpen={id => {
+            setAutomationOpen(false);
+            void action(async () => {
+              await refresh();
+              await selectSession(id);
+            });
+          }}
+        />
+      )}
       {toolApprovals[0] && (
         <ApprovalDialog
           key={toolApprovals[0].id}
@@ -1860,6 +1898,7 @@ export default function App() {
                 ask.mode,
                 ask.imageModel,
                 ask.retry,
+                ask.coordinator,
               ),
             );
           }}

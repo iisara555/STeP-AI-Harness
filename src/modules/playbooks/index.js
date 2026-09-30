@@ -133,6 +133,7 @@ export function parsePlaybooksYaml(text) {
         produces: [],
       };
       current.steps.push(currentStep);
+      Object.defineProperty(currentStep, 'dependenciesDeclared', { value: { consumes: false, produces: false }, enumerable: false });
       continue;
     }
 
@@ -143,6 +144,7 @@ export function parsePlaybooksYaml(text) {
 
     const [, key, raw] = scalar;
     if (['consumes', 'produces'].includes(key)) {
+      currentStep.dependenciesDeclared[key] = true;
       const listMatch = raw.match(/^\[(.*?)\]$/);
       currentStep[key] = listMatch ? parseYamlInlineList(listMatch[1]) : [];
     } else {

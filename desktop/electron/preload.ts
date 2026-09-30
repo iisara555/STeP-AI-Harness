@@ -1,5 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'automationList',
+  'automationSave',
+  'automationRemove',
+  'automationRun',
+  'automationCancel',
+  'mcpServers',
+  'mcpSearch',
+  'mcpCall',
+  'sandboxRun',
   'memoryList',
   'memorySave',
   'memoryConfirm',

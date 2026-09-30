@@ -1,4 +1,15 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, clipboard, session as electronSession } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  safeStorage,
+  nativeTheme,
+  clipboard,
+  Notification,
+  session as electronSession,
+} from 'electron';
 import { mkdir, writeFile, stat, appendFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, basename, dirname, extname } from 'node:path';
@@ -8,7 +19,11 @@ import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
-import { WorkService, type Harness } from './service';
+import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
+import { Coordinator } from './coordinator';
+import { Automations, connectionBinding } from './cron';
+import { Mcp } from './mcp';
+import { Sandbox } from './sandbox';
 import { adapter, listModels } from './providers';
 import { errorCode } from './diagnostics';
 import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
@@ -52,7 +67,6 @@ const authCodes = new Map<string, (code: string | null) => void>();
 const consents = new Map<string, string>();
 const connectControllers = new Map<string, AbortController>();
 // Tasks in different Workspaces may run side by side; each session still runs one task at a time.
-const MAX_PARALLEL_RUNS = 3;
 let installingAnt = false;
 let ocrResolving = false;
 const validProviders = new Set(['openai', 'claude', 'gemini']);
@@ -302,6 +316,29 @@ async function main() {
     join(__dirname, 'sheet-worker.cjs'),
   );
   harness.tools = scope => tools.host(scope);
+  const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);
+  const phase4Consent = (title: string, body: string, signal?: AbortSignal) =>
+    approvals.request(
+      approvals.rule(store.settings().workspace || data, 'phase4', body),
+      { title, body, privacyClass: 'internal', allowRemember: false },
+      signal,
+    );
+  const mcp = new Mcp(() => policyState.policy, phase4Identity, join(data, 'mcp'), harness.privacy, phase4Consent);
+  const sandbox = new Sandbox(
+    workbench,
+    () => policyState.policy,
+    harness.privacy,
+    (body, signal) => phase4Consent('รันคำสั่งใน Docker sandbox?', body, signal),
+  );
+  tools.external = (request, scope) => {
+    if (request.tool === 'mcp_search')
+      return request.input
+        ? mcp.search(request.input, String(request.args?.query || ''), scope.signal)
+        : Promise.resolve({ servers: mcp.servers() });
+    if (request.tool === 'mcp_call')
+      return mcp.call(request.input, String(request.args?.name || ''), request.args?.arguments as Record<string, unknown>, scope.signal);
+    return sandbox.run(request.input, (request.args?.files || []) as string[], scope.signal);
+  };
   harness.recordUsage = (connection, count) => ledger.record(connection, count);
   const memories = new Memories(store, data, () => policyState.policy, harness.privacy);
   const workspaceContext = new WorkspaceContext(workbench, data, () => store.settings(), harness.privacy);
@@ -401,6 +438,104 @@ async function main() {
     undefined,
     (connection, prompt, model, signal) => images.generate(connection, prompt, model, signal),
   );
+  const coordinator = new Coordinator(
+    store,
+    service,
+    () => policyState.policy,
+    id => {
+      const parent = store.session(id),
+        connection = store.get<Connection>('connection', parent.connectionId);
+      return JSON.stringify([
+        phase4Identity(),
+        parent.connectionId,
+        parent.model,
+        parent.effort,
+        parent.team,
+        parent.project,
+        connection?.ready,
+        connection?.model,
+        connection ? connectionBinding(connection) : null,
+      ]);
+    },
+    (id, tasks, signal) =>
+      phase4Consent(
+        'ตรวจแผนงานย่อยก่อนเริ่ม?',
+        `งาน ${id}\n${JSON.stringify(tasks, null, 2)}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ`,
+        signal,
+      ),
+    (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
+    (id, text) => emit({ sessionId: id, type: 'activity', text }),
+  );
+  const automations = new Automations(
+    store,
+    () => policyState.policy,
+    harness.privacy,
+    async (job, signal, created) => {
+      const identity = phase4Identity(),
+        policy = policyState.policy;
+      if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+      const session = store.create(job.connectionId, job.team, 'Scheduled drafts');
+      session.model = job.model;
+      session.title = job.name;
+      store.save(session);
+      created(session.id);
+      const cancel = () => service.cancel(session.id);
+      const check = () => {
+        if (signal.aborted) throw new Error('CANCELLED');
+        const connection = store.get<Connection>('connection', job.connectionId);
+        if (!connection?.ready || connection.model !== job.model || connectionBinding(connection) !== job.connectionBinding)
+          throw new Error('AUTOMATION_CONTEXT_CHANGED');
+        if (identity !== phase4Identity() || policy !== policyState.policy || !policy.features.cron)
+          throw new Error('AUTOMATION_CONTEXT_CHANGED');
+      };
+      signal.addEventListener('abort', cancel, { once: true });
+      const watcher = setInterval(() => {
+        try {
+          check();
+        } catch {
+          cancel();
+        }
+      }, 250);
+      try {
+        while (service.activeCount() >= MAX_PARALLEL_RUNS) {
+          check();
+          await new Promise(r => setTimeout(r, 50));
+        }
+        check();
+        const submitted = await fireHook({
+          event: 'user_prompt_submit',
+          sessionId: session.id,
+          promptChars: job.query.length,
+          mode: 'draft',
+          files: 0,
+        });
+        if (submitted.blocked) throw new Error('HOOK_BLOCKED');
+        check();
+        await service.run(session.id, job.query, '', true, undefined, 'draft', undefined, [], { draftOnly: true });
+        check();
+        if (store.session(session.id).status !== 'review') throw new Error('AUTOMATION_NEEDS_REVIEW');
+        return session.id;
+      } finally {
+        clearInterval(watcher);
+        signal.removeEventListener('abort', cancel);
+      }
+    },
+    run => {
+      emit({ sessionId: run.sessionId || '', type: 'changed' });
+      if (Notification.isSupported()) {
+        const notification = new Notification({
+          title: 'STeP Desktop',
+          body: run.status === 'review' ? 'งานตามรอบมีร่างรอตรวจแล้ว' : 'งานตามรอบต้องการให้ตรวจสถานะ',
+        });
+        notification.on('click', () => {
+          window.show();
+          window.focus();
+        });
+        notification.show();
+      }
+    },
+  );
+  automations.start();
   // The main app ships only the small OCR application code. Python, Paddle and models are an
   // optional per-user component installed from the Receipt page after STeP Desktop is installed.
   const defaultOcrFolder = app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr');
@@ -697,6 +832,62 @@ async function main() {
       }
       case 'snapshot':
         return snapshot();
+      case 'automationList':
+        return { jobs: automations.list(), history: automations.history(), enabled: policyState.policy.features.cron };
+      case 'automationSave': {
+        const query = inputText(input.query, 4000),
+          identity = phase4Identity(),
+          policy = policyState.policy;
+        const preview = automations.preview(input);
+        const routed = await harness.route(query, { team: store.settings().team, workspace: store.settings().workspace });
+        const contract = routed.routingContract;
+        if (contract?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'CLARIFY', 'UNAVAILABLE'].includes(contract?.mode))
+          throw new Error('AUTHORITY_REVIEW_REQUIRED');
+        if (
+          input.enabled &&
+          !(await phase4Consent(
+            'อนุมัติงานตามรอบ?',
+            `${query}\nตาราง UTC: ${input.schedule}\nใช้บัญชี ${input.connectionId} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ`,
+          ))
+        )
+          throw new Error('CANCELLED');
+        if (identity !== phase4Identity() || policy !== policyState.policy) throw new Error('POLICY_CHANGED');
+        const current = automations.preview(input);
+        if (preview.model !== current.model || preview.connectionBinding !== current.connectionBinding)
+          throw new Error('AUTOMATION_CONTEXT_CHANGED');
+        return automations.save(input);
+      }
+      case 'automationRemove':
+        automations.remove(inputText(input.id, 60));
+        return true;
+      case 'automationCancel':
+        automations.cancel(inputText(input.id, 60));
+        return true;
+      case 'automationRun': {
+        const id = inputText(input.id, 60),
+          job = automations.list().find(j => j.id === id);
+        if (!job) throw new Error('AUTOMATION_NOT_FOUND');
+        if (!(await phase4Consent('เริ่มงานเบื้องหลัง?', job.query))) throw new Error('CANCELLED');
+        if (JSON.stringify(job) !== JSON.stringify(automations.list().find(j => j.id === id)))
+          throw new Error('AUTOMATION_CONTEXT_CHANGED');
+        return automations.enqueue(id);
+      }
+      case 'mcpServers':
+        return mcp.servers();
+      case 'mcpSearch':
+        return gate.run({ tool: 'mcp_search', readOnly: false }, { title: 'ค้นหา MCP?', body: input.server, key: input.server }, () =>
+          mcp.search(inputText(input.server, 60), input.query || ''),
+        );
+      case 'mcpCall':
+        return gate.run({ tool: 'mcp_call', readOnly: false }, { title: 'เรียก MCP?', body: input.name, key: JSON.stringify(input) }, () =>
+          mcp.call(inputText(input.server, 60), inputText(input.name, 120), input.arguments),
+        );
+      case 'sandboxRun':
+        return gate.run(
+          { tool: 'sandbox', readOnly: false, command: inputText(input.command, 2000), execute: true },
+          { title: 'รันใน Docker?', body: input.command, key: JSON.stringify(input) },
+          () => sandbox.run(input.command, input.files || []),
+        );
       case 'permissionMode': {
         const mode = input.mode as PermissionMode;
         if (!policyState.policy.permission.modes.includes(mode)) throw new Error('MODE_NOT_ALLOWED');
@@ -1197,12 +1388,15 @@ async function main() {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
-        if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         const sendingConnection = store.get<Connection>('connection', sending.connectionId);
         if (!sendingConnection?.ready) throw new Error('CONNECTION_NOT_READY');
         const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
         const workMode = mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : mode;
+        const coordinated = input.coordinator === true;
+        if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
+          throw new Error('COORDINATOR_DISABLED');
         if (workMode === 'image' && (sendingConnection.mode !== 'api' || sendingConnection.provider === 'claude'))
           throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
@@ -1220,6 +1414,7 @@ async function main() {
         });
         if (selected.some(a => a.image) && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         if (selected.some(a => a.image) && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
+        if (coordinated && selected.some(a => a.image)) throw new Error('VISION_UNAVAILABLE');
         const attachmentText = selected.map((a: any) => a.text).join('\n\n');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
@@ -1239,11 +1434,22 @@ async function main() {
         // Ask only when it adds information: the first send on this computer, a new attachment, or a privacy review signal.
         const flagged = review.action === 'human-confirm';
         const first = !store.settings().consentedAt;
-        if (first || selected.length || sourceText || flagged) {
+        if (first || selected.length || sourceText || flagged || coordinated) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
           const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
           const fingerprint = createHash('sha256')
-            .update([id, text, skill, workMode, input.imageModel || '', sourceDigest, ...selected.map((a: any) => a.view.id)].join('\0'))
+            .update(
+              [
+                id,
+                text,
+                skill,
+                workMode,
+                input.imageModel || '',
+                String(coordinated),
+                sourceDigest,
+                ...selected.map((a: any) => a.view.id),
+              ].join('\0'),
+            )
             .digest('hex');
           const token = typeof input.consent === 'string' ? input.consent : '';
           if (!token || consents.get(token) !== fingerprint) {
@@ -1270,7 +1476,7 @@ async function main() {
           }
           if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
         }
-        if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         // Organization hooks see the masked request only, never attachments or credentials.
         const submitted = await fireHook({
@@ -1287,36 +1493,40 @@ async function main() {
         const queued = store.session(id);
         queued.status = 'queued';
         store.save(queued);
-        void service
-          .run(
-            id,
-            text,
-            combinedSource,
-            true,
-            skill || undefined,
-            workMode,
-            selectedImageModel,
-            [
-              ...selected.map((a: any) => a.view.name),
-              // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
-              ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
-            ],
-            { retry: input.retry === true, images: selected.flatMap(a => (a.image ? [a.image] : [])) },
-          )
-          .catch(error => {
-            diagnose('run-rejected', { code: errorCode(error) });
-            const failed = store.session(id);
-            failed.status = 'error';
+        void (
+          coordinated
+            ? coordinator.run(id, text, combinedSource)
+            : service.run(
+                id,
+                text,
+                combinedSource,
+                true,
+                skill || undefined,
+                workMode,
+                selectedImageModel,
+                [
+                  ...selected.map((a: any) => a.view.name),
+                  // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
+                  ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
+                ],
+                { retry: input.retry === true, images: selected.flatMap(a => (a.image ? [a.image] : [])) },
+              )
+        ).catch(error => {
+          diagnose('run-rejected', { code: errorCode(error) });
+          const failed = store.session(id);
+          failed.status = error.message === 'CANCELLED' ? 'interrupted' : 'error';
+          if (failed.messages.at(-1)?.text !== errorCode(error))
             failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
-            store.save(failed);
-            emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
-            emit({ sessionId: id, type: 'changed' });
-          });
+          store.save(failed);
+          emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
+          emit({ sessionId: id, type: 'changed' });
+        });
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
         return { started: true, mode: workMode, masked: review.labels };
       }
       case 'cancel':
+        coordinator.cancel(input.id);
         service.cancel(input.id);
         return true;
       // Pin and rename are view metadata: keep updatedAt so the list order does not jump.
@@ -1337,7 +1547,7 @@ async function main() {
       case 'remove': {
         const id = inputText(input.id, 60);
         store.session(id);
-        if (service.isActive(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         const ended = await fireHook({ event: 'session_end', sessionId: id });
         if (ended.blocked) throw new Error('HOOK_BLOCKED');
         store.remove('session', id);
@@ -1491,11 +1701,20 @@ async function main() {
     questions.close();
     unwatchFile(policyState.path);
     service.cancelAll();
+    coordinator.cancelAll();
+    automations.stop();
     if (closing) return;
     event.preventDefault();
     closing = true;
     for (const browser of browsers.values()) browser.destroy();
-    void Promise.allSettled([workbench.close(), service.closeAndWait()]).finally(() => app.quit());
+    void Promise.allSettled([
+      workbench.close(),
+      service.closeAndWait(),
+      coordinator.closeAndWait(),
+      automations.closeAndWait(),
+      mcp.close(),
+      sandbox.close(),
+    ]).finally(() => app.quit());
   });
   app.on('will-quit', () => store.close());
 }
