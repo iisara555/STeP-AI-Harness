@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PACKAGE_ROOT, resolveTeamFiles } from '../src/modules/role-resolver.js';
@@ -48,6 +48,23 @@ test('config team/tool changes reconcile the active managed workspace end to end
   assert.equal(await pathExists(join(workspace, qsOnly.relativePath)), true);
   assert.equal(await pathExists(join(workspace, ccOnly.relativePath)), false);
   assert.equal(await pathExists(join(workspace, 'CODEX_INSTRUCTIONS.md')), true);
+
+  // Simulate another workspace changing the global default to CC. This QS
+  // workspace must still route from its own USER.md/manifest identity.
+  await mkdir(join(fakeHome, '.step-ai'), { recursive: true });
+  await writeFile(
+    join(fakeHome, '.step-ai', 'config.json'),
+    JSON.stringify({ team: 'cc', cluster: 'market-creative', tool: 'codex' }),
+    'utf8',
+  );
+  const routed = await execFileAsync(
+    process.execPath,
+    [cli, 'ask', 'ช่วยเตรียมเอกสารสำหรับ audit ISO ปีนี้', '--json'],
+    { cwd: workspace, env },
+  );
+  const route = JSON.parse(routed.stdout).routing;
+  assert.equal(route.team, 'qs');
+  assert.equal(route.skill, 'iso9001-audit-readiness');
 
   await execFileAsync(process.execPath, [cli, 'config', '--team', 'cc'], { cwd: workspace, env });
   const afterTeam = await readManifest(workspace);
