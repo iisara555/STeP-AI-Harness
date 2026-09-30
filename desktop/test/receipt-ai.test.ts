@@ -26,8 +26,7 @@ test('AI OCR resolver hides candidate values behind local tokens', () => {
     },
     unresolved_field_lines: [{ text: 'โทร 081-234-5678', page: 1, confidence: 0.9 }],
   };
-  const sanitize = (text: string) =>
-    text.replace(/0105559999999/g, '[ID]').replace(/081-234-5678/g, '[PHONE]');
+  const sanitize = (text: string) => text.replace(/0105559999999/g, '[ID]').replace(/081-234-5678/g, '[PHONE]');
   const built = buildReceiptAiResolver(mapping, sanitize);
 
   assert.match(built.prompt, /C_total_1/);
@@ -71,12 +70,7 @@ test('AI OCR resolver can return only OCR-created candidate tokens', () => {
   ]);
 
   assert.throws(
-    () =>
-      resolveReceiptAiResponse(
-        '{"decisions":{"total":{"choice":"109.00","reason":"invented"}}}',
-        built.tokens,
-        built.fields,
-      ),
+    () => resolveReceiptAiResponse('{"decisions":{"total":{"choice":"109.00","reason":"invented"}}}', built.tokens, built.fields),
     /OCR_AI_INVALID_RESPONSE/,
   );
 });
@@ -115,7 +109,6 @@ test('AI OCR resolver preserves uncertainty instead of forcing a field value', (
   ]);
 });
 
-
 test('AI OCR resolver can semantically map an unresolved line only through a typed local token', () => {
   const mapping = {
     fields: {
@@ -148,12 +141,7 @@ test('AI OCR resolver can semantically map an unresolved line only through a typ
   ]);
 
   assert.throws(
-    () =>
-      resolveReceiptAiResponse(
-        '{"decisions":{"merchant":{"choice":"U_1_1","reason":"wrong field"}}}',
-        built.tokens,
-        ['merchant'],
-      ),
+    () => resolveReceiptAiResponse('{"decisions":{"merchant":{"choice":"U_1_1","reason":"wrong field"}}}', built.tokens, ['merchant']),
     /OCR_AI_INVALID_RESPONSE/,
   );
 });
