@@ -29,7 +29,17 @@ for (const provider of ['openai', 'gemini'] as const)
               : { models: [{ name: 'models/' + model }] }
             : provider === 'openai'
               ? { data: [{ b64_json: png.toString('base64') }] }
-              : { steps: [{ type: 'model_output', content: [{ type: 'image', mime_type: 'image/png', data: png.toString('base64') }] }] },
+              : {
+                  steps: [
+                    {
+                      type: 'model_output',
+                      content: [
+                        { type: 'image', mime_type: 'image/png', data: Buffer.from('intermediate').toString('base64') },
+                        { type: 'image', mime_type: 'image/png', data: png.toString('base64') },
+                      ],
+                    },
+                  ],
+                },
         ),
         { status: 200 },
       );
@@ -42,6 +52,10 @@ for (const provider of ['openai', 'gemini'] as const)
       assert.match((await images.read(artifact)).url, /^data:image\/png;base64,/);
       assert.equal(calls.length, 2);
       assert.equal(calls[1].body.model, model);
+      if (provider === 'gemini') {
+        assert.equal(calls[1].body.store, false);
+        assert.deepEqual(calls[1].body.response_format, { type: 'image', delivery: 'inline' });
+      }
       assert.doesNotMatch(JSON.stringify(artifact), /synthetic-key/);
       await assert.rejects(
         images.generate(connection(provider), 'tree', 'unknown-model', new AbortController().signal),

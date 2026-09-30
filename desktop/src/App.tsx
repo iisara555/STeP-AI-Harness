@@ -507,7 +507,7 @@ export default function App() {
         setStartedAt(0);
         setStream('');
       }
-      if (result.mode === 'image') {
+      if (result.mode === 'image' || result.mode === 'draft') {
         setToolTab('output');
         setRight(true);
       }

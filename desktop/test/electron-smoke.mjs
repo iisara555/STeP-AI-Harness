@@ -11,6 +11,7 @@ delete env.ELECTRON_RUN_AS_NODE;
 const child = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
   const page = await child.firstWindow();
+  await page.setViewportSize({ width: 1440, height: 900 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor();

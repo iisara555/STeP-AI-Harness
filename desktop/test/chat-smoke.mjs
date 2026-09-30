@@ -44,6 +44,7 @@ try {
   }
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  await page.setViewportSize({ width: 1000, height: 760 });
   // Populate only this synthetic SQLite store, leaving the installed profile untouched.
   await app.evaluate(
     async ({ app }, data) => {
@@ -97,6 +98,7 @@ try {
   await page.getByRole('button', { name: 'Draft / Output', exact: true }).click();
   await page.locator('.composer textarea').fill('Draft request');
   await page.keyboard.press('Enter');
+  await waitComplete(id);
   await page.getByText('ใช้ร่างนี้', { exact: true }).waitFor();
   snapshot = await page.evaluate(() => window.step.call('snapshot'));
   assert.match(snapshot.sessions[0].proposals.at(-1).text, /Synthetic draft/);
@@ -137,12 +139,15 @@ try {
   await page.getByRole('button', { name: 'อ่านหน้าเว็บปัจจุบัน' }).click();
   await page.locator('.browser-preview pre').filter({ hasText: 'Browser fixture' }).waitFor();
   await page.getByRole('button', { name: 'Output', exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: 'release/qa/chat-workspace-light.png', fullPage: true });
   await page.evaluate(async () => {
     const s = await window.step.call('snapshot');
     await window.step.call('settings', { ...s.settings, theme: 'dark' });
   });
   await page.reload();
+  const openOutput = page.getByRole('button', { name: 'เปิดร่าง', exact: true });
+  if (await openOutput.count()) await openOutput.click();
   await page.locator('.draft-editor').waitFor();
   await page.screenshot({ path: 'release/qa/chat-workspace-dark.png', fullPage: true });
   // An unready connection reports the blocker and preserves the typed request.
