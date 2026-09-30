@@ -155,3 +155,27 @@ test('initial managed install detects conflicting untracked user files but allow
   await writeFile(join(root, 'AGENTS.md'), 'STeP instructions');
   assert.deepEqual(await findUntrackedManagedConflicts(root, null, files, instructions), []);
 });
+
+
+test('distribution-root reconciliation untracks out-of-scope package sources without deleting them', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'step-package-root-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  await mkdir(join(root, 'skills', 'qs-only'), { recursive: true });
+  const skill = join(root, 'skills', 'qs-only', 'SKILL.md');
+  const instruction = join(root, 'CLAUDE.md');
+  await writeFile(skill, 'packaged qs source');
+  await writeFile(instruction, 'generated claude instructions');
+  const manifest = {
+    files: {
+      'skills/qs-only/SKILL.md': await tracked(skill),
+      'CLAUDE.md': await tracked(instruction),
+    },
+  };
+
+  const result = await reconcileManagedFiles(root, manifest, [], { packageRoot: root });
+  assert.equal(await pathExists(skill), true, 'package source must remain available for a later team switch');
+  assert.equal(await pathExists(instruction), false, 'generated stale instruction may be removed');
+  assert.ok(result.retainedPackageSources.includes('skills/qs-only/SKILL.md'));
+  assert.ok(result.removed.includes('CLAUDE.md'));
+});
