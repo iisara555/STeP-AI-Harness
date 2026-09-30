@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "Local STeP employee workspace",
   "author": "STeP AI Working Group",
@@ -12,10 +12,10 @@
     "test": "tsx --test test/*.test.ts",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
-    "dist:win": "npm run build && node scripts/bundle-ocr.mjs x64 && electron-builder --publish never --win nsis --x64",
-    "dist:mac": "npm run build && node scripts/bundle-ocr.mjs arm64 && electron-builder --publish never --mac dmg --arm64",
+    "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
+    "dist:mac": "npm run build && electron-builder --publish never --mac dmg --arm64",
     "icon": "electron scripts/make-icon.cjs",
-    "dist:mac:x64": "npm run build && node scripts/fetch-mac-x64-runtimes.mjs && node scripts/bundle-ocr.mjs x64 --optional && electron-builder --publish never --mac dmg --x64",
+    "dist:mac:x64": "npm run build && node scripts/fetch-mac-x64-runtimes.mjs && electron-builder --publish never --mac dmg --x64",
     "bundle:ocr": "node scripts/bundle-ocr.mjs",
     "format": "prettier --write \"electron/**/*.ts\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
     "format:check": "prettier --check \"electron/**/*.ts\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts"
@@ -90,26 +90,6 @@
           "!*.command",
           "!.gitignore",
           "!.DS_Store"
-        ]
-      },
-      {
-        "from": "ocr-runtime",
-        "to": "ocr-runtime",
-        "filter": [
-          "**/*",
-          "!stamp",
-          "!python/**/*.pdb",
-          "!python/tcl{,/**}",
-          "!python/Lib/test{,/**}",
-          "!python/Lib/idlelib{,/**}",
-          "!python/Lib/tkinter{,/**}",
-          "!python/lib/python3.12/test{,/**}",
-          "!python/lib/python3.12/idlelib{,/**}",
-          "!python/lib/python3.12/tkinter{,/**}",
-          "!python/lib/tcl*{,/**}",
-          "!python/lib/tk*{,/**}",
-          "!python/lib/itcl*{,/**}",
-          "!python/lib/thread*{,/**}"
         ]
       }
     ],
