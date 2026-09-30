@@ -34,7 +34,14 @@ type ReceiptReviewApi = {
   ): { issues: Issue[]; complete: boolean; confirmedCount: number; filledCount: number };
 };
 const review = (window as unknown as { ReceiptReview: ReceiptReviewApi }).ReceiptReview;
-type OcrStatus = { running: boolean; crosscheck: boolean; installed: boolean; folder: string; installing?: boolean };
+type OcrStatus = {
+  running: boolean;
+  crosscheck: boolean;
+  installed: boolean;
+  folder: string;
+  installing?: boolean;
+  updateAvailable?: boolean;
+};
 type Doc = { name: string; preview: string; result: any };
 
 const labels: Record<string, string> = {
@@ -170,7 +177,9 @@ export function ReceiptApp({
               ? `OCR ในเครื่องพร้อมใช้${status.crosscheck ? ' · มี OCR ตัวที่สองช่วยตรวจ' : ''}`
               : status.installed
                 ? 'บริการ OCR ในเครื่องยังไม่เปิด'
-                : 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้'}
+                : status.updateAvailable
+                  ? 'OCR ที่ติดตั้งไว้ต้องอัปเดตให้ตรงกับแอปเวอร์ชันนี้'
+                  : 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้'}
         </span>
         <span className="spacer" />
         {status && !ready && status.installed && (
@@ -192,7 +201,7 @@ export function ReceiptApp({
               }
             >
               {busy === 'install' ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
-              {busy === 'install' ? 'กำลังติดตั้ง OCR…' : 'ติดตั้ง OCR'}
+              {busy === 'install' ? 'กำลังติดตั้ง OCR…' : status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}
             </button>
             <button
               className="quiet"
@@ -210,8 +219,9 @@ export function ReceiptApp({
       </div>
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
-          OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “ติดตั้ง OCR” เมื่อต้องการใช้ ระบบจะดาวน์โหลด Python, Paddle และโมเดลที่ตรวจสอบ
-          checksum แล้วมาเก็บใน App Data ของผู้ใช้นี้ การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต
+          OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}” เมื่อต้องการใช้
+          ระบบจะดาวน์โหลด Python, Paddle และโมเดลที่ตรวจสอบ checksum แล้วมาเก็บใน App Data ของผู้ใช้นี้
+          การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต
         </p>
       )}
 
