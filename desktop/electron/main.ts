@@ -491,6 +491,7 @@ async function main() {
           python: 'https://www.python.org/downloads/',
           claudeCode: 'https://code.claude.com/docs/en/setup',
           anthropicCli: 'https://platform.claude.com/docs/en/cli-sdks-libraries/cli/quickstart',
+          tesseract: 'https://tesseract-ocr.github.io/tessdoc/Installation.html',
         };
         const url = pages[input.topic];
         if (!url) throw new Error('INVALID_INPUT');
@@ -501,6 +502,7 @@ async function main() {
         if (installing) throw new Error('INSTALL_BUSY');
         installing = true;
         try {
+          ocr.stop();
           await installOcr(
             defaultOcrFolder,
             ocrHome,
