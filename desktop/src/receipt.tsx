@@ -237,7 +237,10 @@ export function ReceiptApp({
       ),
       ...(note.trim() ? ['', 'หมายเหตุผู้เบิก: ' + note.trim()] : []),
       ...(mapping?.unresolved_field_lines?.length
-        ? ['', `OCR พบข้อความที่ดูเหมือนข้อมูลสำหรับ AFP แต่ยัง map เข้าช่องไม่ได้ ${mapping.unresolved_field_lines.length} บรรทัด — โปรดดู afp_mapping ใน JSON`]
+        ? [
+            '',
+            `OCR พบข้อความที่ดูเหมือนข้อมูลสำหรับ AFP แต่ยัง map เข้าช่องไม่ได้ ${mapping.unresolved_field_lines.length} บรรทัด — โปรดดู afp_mapping ใน JSON`,
+          ]
         : []),
       ...(result.issues.length ? ['', 'ประเด็นที่ระบบตรวจพบ:', ...result.issues.map(i => '- ' + describe(i))] : []),
     ].join('\n');
