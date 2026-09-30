@@ -82,7 +82,7 @@
         "skill": "iso9001-audit-readiness",
         "team": "qs",
         "scope": "ALLOW",
-        "readiness": "ready",
+        "readiness": "partial",
         "sourceIncludes": [
           "iso-9001-2015",
           "step-quality-policy-v2"
