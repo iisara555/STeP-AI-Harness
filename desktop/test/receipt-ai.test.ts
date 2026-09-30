@@ -114,3 +114,46 @@ test('AI OCR resolver preserves uncertainty instead of forcing a field value', (
     { field: 'vat', status: 'unmapped', reason: 'no candidate' },
   ]);
 });
+
+
+test('AI OCR resolver can semantically map an unresolved line only through a typed local token', () => {
+  const mapping = {
+    fields: {
+      total: {
+        label: 'ยอดรวมที่ชำระ',
+        status: 'unmapped',
+        selected_value: '',
+        candidates: [],
+      },
+    },
+    unresolved_field_lines: [{ text: 'ยอดชำระทั้งหมด: 999.00', page: 1, confidence: 0.88 }],
+  };
+  const built = buildReceiptAiResolver(mapping, text => text);
+  assert.match(built.prompt, /U_1_1/);
+  assert.doesNotMatch(built.prompt, /999\.00/);
+
+  const decisions = resolveReceiptAiResponse(
+    '{"decisions":{"total":{"choice":"U_1_1","reason":"semantic label matches total"}}}',
+    built.tokens,
+    built.fields,
+  );
+  assert.deepEqual(decisions, [
+    {
+      field: 'total',
+      status: 'suggested',
+      value: '999.00',
+      token: 'U_1_1',
+      reason: 'semantic label matches total',
+    },
+  ]);
+
+  assert.throws(
+    () =>
+      resolveReceiptAiResponse(
+        '{"decisions":{"merchant":{"choice":"U_1_1","reason":"wrong field"}}}',
+        built.tokens,
+        ['merchant'],
+      ),
+    /OCR_AI_INVALID_RESPONSE/,
+  );
+});
