@@ -68,7 +68,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
   return { home, executable, calls, marker };
 }
 
-const deps = (connection: Connection, home: string, extraEnv: NodeJS.ProcessEnv = {}) => {
+const deps = (home: string, extraEnv: NodeJS.ProcessEnv = {}) => {
   let signedIn = false;
   let tested = false;
   let opened = '';
@@ -127,7 +127,7 @@ test('ChatGPT OAuth binds the completion to loginId, refreshes the saved account
     ready: false,
     note: '',
   };
-  const first = deps(connection, f.home);
+  const first = deps(f.home);
   await signInAndTest(connection, first.value, new AbortController().signal);
   assert.equal(first.state.signedIn, true);
   assert.equal(first.state.tested, true);
@@ -140,7 +140,7 @@ test('ChatGPT OAuth binds the completion to loginId, refreshes the saved account
   assert.ok(calls1.some(call => call.method === 'account/login/start' && call.params.type === 'chatgpt'));
   assert.ok(calls1.some(call => call.method === 'account/read' && call.params.refreshToken === true));
 
-  const second = deps(connection, f.home);
+  const second = deps(f.home);
   await signInAndTest(connection, second.value, new AbortController().signal);
   const calls2 = (await readFile(f.calls, 'utf8'))
     .trim()
@@ -171,7 +171,7 @@ test('Gemini OAuth keeps browser callback mode enabled and never asks ACP stdin 
     ready: false,
     note: '',
   };
-  const d = deps(connection, f.home, { GOOGLE_CLOUD_PROJECT: connection.googleCloudProject });
+  const d = deps(f.home, { GOOGLE_CLOUD_PROJECT: connection.googleCloudProject });
   await signInAndTest(connection, d.value, new AbortController().signal);
   assert.equal(d.state.signedIn, true);
   assert.equal(d.state.tested, true);
