@@ -33,7 +33,14 @@ ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
 _process_lock = threading.Lock()
 
 
-def run_ocr_worker(input_path: Path, output_path: Path, threshold: float, handwriting: bool, crosscheck: bool) -> dict:
+def run_ocr_worker(
+    input_path: Path,
+    output_path: Path,
+    threshold: float,
+    handwriting: bool,
+    crosscheck: bool,
+    tesseract: bool,
+) -> dict:
     command = [
         sys.executable,
         str(WORKER),
@@ -42,6 +49,7 @@ def run_ocr_worker(input_path: Path, output_path: Path, threshold: float, handwr
         str(threshold),
         "1" if handwriting else "0",
         "1" if crosscheck else "0",
+        "1" if tesseract else "0",
     ]
     worker = subprocess.Popen(
         command,
@@ -107,12 +115,20 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path in WEB_FILES:
             return self._send_file(WEB_FILES[parsed.path])
         if parsed.path == "/api/health":
+            from tesseract_check import is_ready as tesseract_ready
+
+            handwriting_installed = (
+                importlib.util.find_spec("torch") is not None
+                and importlib.util.find_spec("transformers") is not None
+            )
             return self._send_json({
                 "ok": True,
                 "service": "STeP Local Thai OCR",
-                "version": "0.1",
+                "version": "0.2",
                 "local_only": True,
                 "crosscheck_installed": importlib.util.find_spec("easyocr") is not None,
+                "handwriting_installed": handwriting_installed,
+                "tesseract_installed": tesseract_ready(),
             })
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -155,6 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         threshold = min(0.99, max(0.10, threshold))
         handwriting = query.get("handwriting", ["off"])[0] in {"1", "true", "on", "fallback"}
         crosscheck = query.get("crosscheck", ["off"])[0] in {"1", "true", "on"}
+        tesseract = query.get("tesseract", ["off"])[0] in {"1", "true", "on"}
 
         raw = self.rfile.read(length)
         with tempfile.TemporaryDirectory(prefix="step-local-ocr-") as tmp:
@@ -163,7 +180,7 @@ class Handler(BaseHTTPRequestHandler):
             input_path.write_bytes(raw)
             try:
                 with _process_lock:
-                    result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck)
+                    result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck, tesseract)
                 result["filename"] = original_name
                 return self._send_json({"ok": True, "result": result})
             except Exception as exc:
