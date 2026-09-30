@@ -100,6 +100,11 @@ test('routing identity prefers current workspace USER.md, then manifest, and exp
     cluster: '',
     source: 'explicit',
   });
+  assert.deepEqual(await resolveRoutingIdentity(root, { team: 'shared' }), {
+    team: '',
+    cluster: '',
+    source: 'explicit',
+  });
   await assert.rejects(
     resolveRoutingIdentity(root, { team: 'not-a-team' }),
     /Unknown team 'not-a-team'/,
