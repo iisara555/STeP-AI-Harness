@@ -12,7 +12,11 @@ import { header, success, info, warn, error } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { runDoctor } from './doctor.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
-import { desiredManagedPaths, reconcileManagedFiles } from '../../modules/managed-files.js';
+import {
+  desiredManagedPaths,
+  reconcileManagedFiles,
+  retainNonProfileManifestFiles,
+} from '../../modules/managed-files.js';
 import { safeWorkspacePath } from '../../utils/workspace-path.js';
 
 export async function runUpdate(args) {
@@ -86,7 +90,7 @@ export async function runUpdate(args) {
 
   let updatedCount = 0;
   let preservedCount = 0;
-  const newManifestFiles = {};
+  const newManifestFiles = retainNonProfileManifestFiles(manifest);
 
   for (const f of files) {
     const targetPath = await safeWorkspacePath(dest, f.relativePath);
