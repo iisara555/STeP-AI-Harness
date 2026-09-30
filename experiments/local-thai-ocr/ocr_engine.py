@@ -21,6 +21,7 @@ OCR_TILE_OVERLAP = 160
 MAX_CROSSCHECK_LINES_PER_TILE = 80
 MAX_CROSSCHECK_LINES_PER_REQUEST = 100
 MAX_HANDWRITING_LINES_PER_REQUEST = 20
+MAX_TESSERACT_LINES_PER_REQUEST = 80
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class OCRConfig:
     low_confidence_threshold: float = 0.80
     handwriting_fallback: bool = False
     crosscheck: bool = False
+    tesseract_crosscheck: bool = False
     native_pdf_min_chars: int = 40
     render_dpi: int = 150
 
@@ -47,6 +49,9 @@ class LocalThaiOCR:
         self._crosscheck = None
         self._crosscheck_failed = False
         self._crosscheck_lines_used = 0
+        self._tesseract = None
+        self._tesseract_failed = False
+        self._tesseract_lines_used = 0
 
     def _get_ocr(self) -> PaddleOCR:
         if self._ocr is None:
@@ -87,12 +92,21 @@ class LocalThaiOCR:
             self._crosscheck = EasyOCRCrosscheck()
         return self._crosscheck
 
+    def _get_tesseract(self):
+        if self._tesseract is None:
+            from tesseract_check import TesseractCrosscheck
+
+            self._tesseract = TesseractCrosscheck()
+        return self._tesseract
+
     def process(self, path: Path, config: OCRConfig) -> dict[str, Any]:
         started = time.perf_counter()
         self._crosscheck_lines_used = 0
         self._crosscheck_failed = False
         self._handwriting_lines_used = 0
         self._handwriting_failed = False
+        self._tesseract_lines_used = 0
+        self._tesseract_failed = False
         suffix = path.suffix.lower()
         warnings: list[str] = []
 
@@ -129,6 +143,7 @@ class LocalThaiOCR:
             "local_only": True,
             "handwriting_fallback_requested": config.handwriting_fallback,
             "crosscheck_requested": config.crosscheck,
+            "tesseract_crosscheck_requested": config.tesseract_crosscheck,
             "threshold": config.low_confidence_threshold,
             "summary": {
                 "pages": len(pages),
@@ -137,6 +152,10 @@ class LocalThaiOCR:
                 "needs_review": len(low),
                 "low_confidence_lines": sum(bool(line.get("low_confidence")) for line in lines),
                 "crosschecked_lines": len(crosschecked),
+                "tesseract_checked_lines": sum(bool(line.get("tesseract_status")) for line in lines),
+                "handwriting_candidates": sum(bool(line.get("handwriting_candidate")) for line in lines),
+                "printed_likely_lines": sum(line.get("text_kind") == "printed-likely" for line in lines),
+                "handwriting_likely_lines": sum(line.get("text_kind") == "handwriting-likely" for line in lines),
                 "disagreements": len(disagreements),
                 "elapsed_seconds": round(time.perf_counter() - started, 3),
             },
@@ -297,9 +316,134 @@ class LocalThaiOCR:
                 lines.append(item)
         if config.crosscheck and lines:
             self._crosscheck_lines(image, lines, warnings)
+        if config.tesseract_crosscheck and lines:
+            self._tesseract_candidates(image, lines, warnings)
         if config.handwriting_fallback and lines:
             self._handwriting_candidates(image, lines, warnings)
+        if lines:
+            self._classify_text_kinds(lines)
         return lines
+
+    def _tesseract_candidates(
+        self, image: Image.Image, lines: list[dict[str, Any]], warnings: list[str]
+    ) -> None:
+        if self._tesseract_failed:
+            return
+
+        remaining = MAX_TESSERACT_LINES_PER_REQUEST - self._tesseract_lines_used
+        if remaining <= 0:
+            self._add_warning(warnings, "Tesseract reached the per-document line limit.")
+            return
+
+        priority = (
+            [index for index, line in enumerate(lines) if line.get("low_confidence")]
+            + [
+                index for index, line in enumerate(lines)
+                if any(character.isdigit() for character in str(line.get("text", "")))
+            ]
+            + list(range(min(20, len(lines))))
+            + list(range(max(0, len(lines) - 20), len(lines)))
+        )
+        selected: list[int] = []
+        for index in priority:
+            if index not in selected and lines[index].get("box"):
+                selected.append(index)
+            if len(selected) >= remaining:
+                break
+
+        if not selected:
+            return
+        if len(selected) < sum(bool(line.get("box")) for line in lines):
+            self._add_warning(
+                warnings,
+                "Tesseract cross-check was limited to selected low-confidence, numeric and edge lines.",
+            )
+
+        try:
+            reader = self._get_tesseract()
+        except (FileNotFoundError, RuntimeError):
+            self._tesseract_failed = True
+            self._add_warning(
+                warnings,
+                "Tesseract Thai/English cross-check is not available on this computer.",
+            )
+            return
+
+        from crosscheck import comparable_text
+
+        for index in selected:
+            line = lines[index]
+            self._tesseract_lines_used += 1
+            try:
+                crop = self._crop_box(image, line["box"])
+                result = reader.read(crop)
+                alternative = str(result.get("text", "")).strip()
+                confidence = result.get("confidence")
+                line["tesseract_candidate"] = alternative
+                line["tesseract_confidence"] = confidence
+                if not alternative or confidence is None or confidence < 0.20:
+                    line["tesseract_status"] = "uncertain"
+                elif comparable_text(line["text"]) == comparable_text(alternative):
+                    line["tesseract_status"] = "agree"
+                else:
+                    line["tesseract_status"] = "disagree"
+                    line["needs_review"] = True
+            except Exception as exc:
+                line["tesseract_status"] = "error"
+                self._add_warning(
+                    warnings,
+                    f"Tesseract cross-check failed for one region: {type(exc).__name__}.",
+                )
+
+        self._add_warning(
+            warnings,
+            "Tesseract is used only as an independent printed-text/number check; it is not the handwriting authority.",
+        )
+
+    @staticmethod
+    def _classify_text_kinds(lines: list[dict[str, Any]]) -> None:
+        from tesseract_check import classify_text_kind
+
+        for line in lines:
+            line["text_kind"] = classify_text_kind(
+                str(line.get("text", "")),
+                str(line.get("tesseract_candidate", "")),
+                line.get("tesseract_confidence"),
+                str(line.get("handwriting_candidate", "")),
+            )
+            candidates = [
+                {
+                    "engine": "paddle",
+                    "text": str(line.get("text", "")),
+                    "confidence": line.get("confidence"),
+                }
+            ]
+            if line.get("tesseract_candidate"):
+                candidates.append(
+                    {
+                        "engine": "tesseract",
+                        "text": line["tesseract_candidate"],
+                        "confidence": line.get("tesseract_confidence"),
+                    }
+                )
+            if line.get("crosscheck_candidate"):
+                candidates.append(
+                    {
+                        "engine": "easyocr",
+                        "text": line["crosscheck_candidate"],
+                        "confidence": line.get("crosscheck_confidence"),
+                    }
+                )
+            if line.get("handwriting_candidate"):
+                candidates.append(
+                    {
+                        "engine": "thai-trocr",
+                        "text": line["handwriting_candidate"],
+                        "confidence": None,
+                        "unverified": True,
+                    }
+                )
+            line["fusion_candidates"] = candidates
 
     def _handwriting_candidates(
         self, image: Image.Image, lines: list[dict[str, Any]], warnings: list[str]
