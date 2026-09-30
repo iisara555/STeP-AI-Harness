@@ -221,6 +221,9 @@ export function ReceiptApp({
             review.fieldKeys.map(k => {
               const original = fields[k]?.value || '';
               const selected = values[k] || '';
+              const aiSuggested = aiDecisions.some(
+                decision => decision.field === k && decision.status === 'suggested' && decision.value === selected,
+              );
               const base = mapping.fields[k] || {
                 label: labels[k],
                 required_for_desktop_precheck: review.requiredKeys.includes(k),
@@ -235,7 +238,11 @@ export function ReceiptApp({
                 {
                   ...base,
                   selected_value: selected,
-                  status: selected && selected !== original ? 'user-selected-or-edited' : base.status,
+                  status: aiSuggested
+                    ? 'ai-suggested-unconfirmed'
+                    : selected && selected !== original
+                      ? 'user-selected-or-edited'
+                      : base.status,
                 },
               ];
             }),
@@ -419,9 +426,7 @@ export function ReceiptApp({
                     {r.handwritingCandidate && r.handwritingCandidate !== r.text && (
                       <small>โมเดลลายมืออ่านว่า “{r.handwritingCandidate}” · ยังไม่ยืนยัน</small>
                     )}
-                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
-                      <small>EasyOCR อ่านว่า “{r.crosscheckCandidate}”</small>
-                    )}
+                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && <small>EasyOCR อ่านว่า “{r.crosscheckCandidate}”</small>}
                     {r.textKind && <small>ประเภท: {r.textKind}</small>}
                     {r.confidence !== null && <small className="conf">{Math.round(r.confidence * 100)}%</small>}
                   </li>
@@ -576,11 +581,7 @@ export function ReceiptApp({
                     const nextValues = { ...values };
                     const nextConfirmed = { ...confirmed };
                     for (const decision of decisions) {
-                      if (
-                        decision.status === 'suggested' &&
-                        decision.value &&
-                        !String(nextValues[decision.field] || '').trim()
-                      ) {
+                      if (decision.status === 'suggested' && decision.value && !String(nextValues[decision.field] || '').trim()) {
                         nextValues[decision.field] = decision.value;
                         nextConfirmed[decision.field] = false;
                       }
