@@ -155,7 +155,7 @@ export class CodexAdapter implements ProviderAdapter {
       throw runtimeError(error, rpc);
     } finally {
       context.signal.removeEventListener('abort', abort);
-      rpc.close();
+      await rpc.closeAndWait().catch(() => {});
     }
   }
 }
@@ -197,7 +197,7 @@ export class GeminiAdapter implements ProviderAdapter {
       throw runtimeError(error, rpc);
     } finally {
       context.signal.removeEventListener('abort', abort);
-      rpc.close();
+      await rpc.closeAndWait().catch(() => {});
     }
   }
 }

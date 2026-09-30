@@ -424,6 +424,78 @@ test('general help without a Skill drafts with the mandatory rules only', async 
   store.close();
 });
 
+test('chat stores complete answers without touching reviewed drafts and obeys turn context boundaries', async () => {
+  const { store, session } = fixture();
+  store.edit(session.id, 'Reviewed document', 0);
+  const prompts: string[] = [];
+  const service = new WorkService(
+    store,
+    {
+      ...harness,
+      route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, readiness: { status: 'ready' } } }),
+    },
+    async () => ({
+      adapter: {
+        run: async prompt => {
+          prompts.push(prompt);
+          return `Chat answer ${prompts.length}`;
+        },
+      },
+      context: { cwd: tmpdir(), env: {} },
+    }),
+    () => {},
+  );
+  await service.run(session.id, 'First standalone question', '', false, undefined, 'chat');
+  await service.run(session.id, 'Second unrelated question', '', false, undefined, 'chat');
+  const done = store.session(session.id);
+  assert.equal(done.messages.at(-1)?.text, 'Chat answer 2');
+  assert.equal(done.proposals.length, 0);
+  assert.equal(done.draft, 'Reviewed document');
+  assert.equal(done.revision, 1);
+  assert.doesNotMatch(prompts[1], /First standalone question|Chat answer 1/);
+  store.close();
+});
+
+test('image runs pass routing authority and privacy before invoking the image provider', async () => {
+  const { store, session } = fixture();
+  let calls = 0;
+  let allow = false;
+  const service = new WorkService(
+    store,
+    {
+      ...harness,
+      route: async () => ({
+        routingContract: { mode: 'GENERAL', authority: { status: allow ? 'ALLOW' : 'BLOCK' }, readiness: { status: 'ready' } },
+      }),
+    },
+    async () => {
+      throw new Error('Text runtime must not run');
+    },
+    () => {},
+    undefined,
+    async () => {
+      calls++;
+      return {
+        id: 'synthetic',
+        name: 'synthetic.png',
+        provider: 'openai',
+        model: 'synthetic-image',
+        mime: 'image/png',
+        at: new Date().toISOString(),
+      };
+    },
+  );
+  await service.run(session.id, 'สร้างรูปภูเขา', '', false, undefined, 'image');
+  assert.equal(calls, 0);
+  assert.equal(store.session(session.id).status, 'error');
+  allow = true;
+  await service.run(session.id, 'สร้างรูปภูเขา', '', false, undefined, 'image');
+  assert.equal(calls, 1);
+  assert.equal(store.session(session.id).images?.length, 1);
+  assert.equal(store.session(session.id).proposals.length, 0);
+  store.close();
+});
+
 test('structured receipt source persists in the workspace and is reused on follow-ups', async () => {
   const { store, session } = fixture();
   const prompts: string[] = [];

@@ -44,6 +44,8 @@ export type SkillEntry = {
   triggers: string[];
 };
 export type Usage = { input: number; output: number; total: number; runs: number };
+export type WorkMode = 'chat' | 'draft' | 'image';
+export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
 export type Message = { role: 'user' | 'assistant' | 'status'; text: string; at: string };
 export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
 export type Proposal = { id: string; text: string; baseRevision: number; sources: string[]; at: string };
@@ -76,6 +78,9 @@ export type Session = {
   usage?: Usage;
   skill?: string;
   allowedIdentifiers?: string[];
+  mode?: WorkMode;
+  imageModel?: string;
+  images?: ImageArtifact[];
 };
 export type Settings = {
   team: string;

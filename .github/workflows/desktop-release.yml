@@ -44,6 +44,9 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm test
+      - run: npm run build
+      - name: Verify chat and tools with a synthetic provider
+        run: npm run test:electron
       - name: Build installer
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}

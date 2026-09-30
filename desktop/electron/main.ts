@@ -5,6 +5,9 @@ import { join, resolve, basename, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
+import { Workbench, browserUrl } from './workbench';
+import { Images } from './images';
+import { isImageRequest } from '../src/image-routing';
 import { WorkService, type Harness } from './service';
 import { adapter, listModels } from './providers';
 import { errorCode } from './diagnostics';
@@ -196,20 +199,30 @@ async function main() {
     }
     return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) }, authExecutable };
   }
-  service = new WorkService(store, harness, runtime, event => {
-    if (event.type === 'failed') {
-      const s = store.get<Session>('session', event.sessionId),
-        c = s && store.get<Connection>('connection', s.connectionId);
-      diagnose('run-failed', {
-        code: String(event.text || '').slice(0, 40),
-        provider: c?.provider || '',
-        mode: c?.mode || '',
-        detail: (event.detail || []).join(' | ').slice(0, 1200),
-      });
-      return;
-    }
-    emit(event);
-  });
+  const images = new Images(join(data, 'images'), key);
+  const workbench = new Workbench(store, text => privacy.evaluatePrivacyGate(text).redactedText);
+  const browsers = new Map<string, BrowserWindow>();
+  service = new WorkService(
+    store,
+    harness,
+    runtime,
+    event => {
+      if (event.type === 'failed') {
+        const s = store.get<Session>('session', event.sessionId),
+          c = s && store.get<Connection>('connection', s.connectionId);
+        diagnose('run-failed', {
+          code: String(event.text || '').slice(0, 40),
+          provider: c?.provider || '',
+          mode: c?.mode || '',
+          detail: (event.detail || []).join(' | ').slice(0, 1200),
+        });
+        return;
+      }
+      emit(event);
+    },
+    undefined,
+    (connection, prompt, model, signal) => images.generate(connection, prompt, model, signal),
+  );
   // The main app ships only the small OCR application code. Python, Paddle and models are an
   // optional per-user component installed from the Receipt page after STeP Desktop is installed.
   const defaultOcrFolder = app.isPackaged ? join(process.resourcesPath, 'ocr') : join(root, 'experiments', 'local-thai-ocr');
@@ -276,6 +289,120 @@ async function main() {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('UNTRUSTED_SENDER');
     const input = raw ?? {};
     switch (method) {
+      case 'imageModels': {
+        const connection = store.get<Connection>('connection', inputText(input.id, 60));
+        if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        return images.models(connection);
+      }
+      case 'imageRead':
+      case 'imageExport': {
+        const artifact = store.session(inputText(input.id, 60)).images?.find(i => i.id === input.imageId);
+        if (!artifact) throw new Error('INVALID_PATH');
+        if (method === 'imageRead') return images.read(artifact);
+        const result = await dialog.showSaveDialog(window, {
+          defaultPath: artifact.name,
+          filters: [{ name: 'Image', extensions: [artifact.name.split('.').at(-1)!] }],
+        });
+        if (result.canceled || !result.filePath) return null;
+        const { copyFile } = await import('node:fs/promises');
+        await copyFile(images.path(artifact), result.filePath);
+        exportPaths.add(result.filePath);
+        return { path: result.filePath };
+      }
+      case 'toolFiles':
+        return workbench.files(input.path || '');
+      case 'toolRead':
+        return workbench.read(inputText(input.path, 2000));
+      case 'toolStage':
+        return workbench.stage(inputText(input.path, 2000), inputText(input.content, 200000));
+      case 'toolChanges':
+        return workbench.changes();
+      case 'toolReject':
+        workbench.reject(inputText(input.id, 60));
+        return true;
+      case 'toolApply': {
+        const change = workbench.change(inputText(input.id, 60));
+        const answer = await dialog.showMessageBox(window, {
+          type: 'question',
+          message: 'เขียนไฟล์ที่ตรวจแล้ว?',
+          detail: change.path + '\nตรวจ Before / After ใน Changes ก่อนบันทึก',
+          buttons: ['ยกเลิก', 'บันทึกการแก้ไข'],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        return answer.response === 1 ? workbench.apply(change.id) : null;
+      }
+      case 'toolDiff':
+        return workbench.diff();
+      case 'toolTasks':
+        return workbench.tasks();
+      case 'toolCancel':
+        await workbench.cancel(inputText(input.id, 60));
+        return true;
+      case 'toolRun': {
+        const command = inputText(input.command, 2000),
+          cwd = await workbench.root();
+        if (privacy.evaluatePrivacyGate(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        const answer = await dialog.showMessageBox(window, {
+          type: 'warning',
+          message: 'รันคำสั่งนี้บนเครื่อง?',
+          detail: command + '\n\nWorking directory: ' + cwd + '\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย',
+          buttons: ['ยกเลิก', 'รันคำสั่ง'],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        if (answer.response !== 1) return null;
+        if (cwd !== (await workbench.root())) throw new Error('WORKSPACE_CHANGED');
+        return workbench.start(command);
+      }
+      case 'toolBrowser': {
+        const url = browserUrl(inputText(input.url, 2000));
+        if (browsers.size >= 4) throw new Error('TASK_LIMIT');
+        const id = randomUUID();
+        const browser = new BrowserWindow({
+          width: 1100,
+          height: 800,
+          title: 'STeP Browser',
+          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-browser-' + id },
+        });
+        browsers.set(id, browser);
+        browser.on('closed', () => browsers.delete(id));
+        const network = browser.webContents.session;
+        network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
+        network.setPermissionCheckHandler(() => false);
+        network.on('will-download', e => e.preventDefault());
+        browser.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+        browser.webContents.on('will-navigate', (e, target) => {
+          try {
+            browserUrl(target);
+          } catch {
+            e.preventDefault();
+          }
+        });
+        browser.webContents.on('will-redirect', (e, target) => {
+          try {
+            browserUrl(target);
+          } catch {
+            e.preventDefault();
+          }
+        });
+        try {
+          await browser.loadURL(url);
+        } catch {
+          browser.destroy();
+          throw new Error('BROWSER_LOAD_FAILED');
+        }
+        return { id, url, title: browser.webContents.getTitle() };
+      }
+      case 'toolBrowserRead': {
+        const browser = browsers.get(inputText(input.id, 60));
+        if (!browser || browser.isDestroyed()) throw new Error('BROWSER_CLOSED');
+        return {
+          url: browser.webContents.getURL(),
+          title: browser.webContents.getTitle(),
+          text: await browser.webContents.executeJavaScript('document.body.innerText.slice(0,50000)'),
+        };
+      }
       case 'snapshot':
         return snapshot();
       case 'workspace': {
@@ -743,7 +870,14 @@ async function main() {
         if (busy) throw new Error('RUN_ALREADY_ACTIVE');
         const id = inputText(input.id, 60),
           text = inputText(input.text);
-        store.session(id);
+        const sending = store.session(id);
+        const sendingConnection = store.get<Connection>('connection', sending.connectionId);
+        if (!sendingConnection?.ready) throw new Error('CONNECTION_NOT_READY');
+        const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
+        const workMode = mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : mode;
+        if (workMode === 'image' && (sendingConnection.mode !== 'api' || sendingConnection.provider === 'claude'))
+          throw new Error('IMAGE_API_REQUIRED');
+        const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
         // A directly invoked Skill must be one the router can reach.
         const skill = input.skill ? inputText(input.skill, 80) : '';
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
@@ -777,7 +911,7 @@ async function main() {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
           const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
           const fingerprint = createHash('sha256')
-            .update([id, text, skill, sourceDigest, ...selected.map((a: any) => a.view.id)].join('\0'))
+            .update([id, text, skill, workMode, input.imageModel || '', sourceDigest, ...selected.map((a: any) => a.view.id)].join('\0'))
             .digest('hex');
           const token = typeof input.consent === 'string' ? input.consent : '';
           if (!token || consents.get(token) !== fingerprint) {
@@ -805,10 +939,17 @@ async function main() {
         }
         if (busy) throw new Error('RUN_ALREADY_ACTIVE');
         busy = true;
+        const queued = store.session(id);
+        queued.status = 'queued';
+        store.save(queued);
         void service
-          .run(id, text, combinedSource, true, skill || undefined)
+          .run(id, text, combinedSource, true, skill || undefined, workMode, selectedImageModel)
           .catch(error => {
             diagnose('run-rejected', { code: errorCode(error) });
+            const failed = store.session(id);
+            failed.status = 'error';
+            failed.messages.push({ role: 'status', text: errorCode(error), at: new Date().toISOString() });
+            store.save(failed);
             emit({ sessionId: id, type: 'status', text: /^[A-Z_]+$/.test(error.message) ? error.message : 'RUN_FAILED' });
             emit({ sessionId: id, type: 'changed' });
           })
@@ -817,7 +958,7 @@ async function main() {
           });
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
-        return { started: true, masked: review.labels };
+        return { started: true, mode: workMode, masked: review.labels };
       }
       case 'cancel':
         service.cancel(input.id);
@@ -932,7 +1073,15 @@ async function main() {
     window.show();
     window.focus();
   });
-  app.on('before-quit', () => service.cancelAll());
+  let closing = false;
+  app.on('before-quit', event => {
+    service.cancelAll();
+    if (closing) return;
+    event.preventDefault();
+    closing = true;
+    for (const browser of browsers.values()) browser.destroy();
+    void Promise.allSettled([workbench.close(), service.closeAndWait()]).finally(() => app.quit());
+  });
   app.on('will-quit', () => store.close());
 }
 app.on('window-all-closed', () => app.quit());

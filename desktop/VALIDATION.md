@@ -2,6 +2,20 @@
 
 This is a development preview, not an accepted production release.
 
+## Desktop 0.4.0 chat and workspace tools
+
+Local verification passed: Harness 799 passed / 6 skipped; Desktop 103 passed; TypeScript/renderer build, formatter, both repository validators and both Electron smoke scripts passed. The CLI fixture cleanup now retries transient Windows locks. Live accounts remain outside these results.
+
+- Chat returns the complete assistant answer in the conversation. Draft mode keeps versioned proposals and human edits. Markdown code blocks and tables render as escaped content; no provider HTML is executed.
+- Enter and button sends, repeated turns, draft acceptance, inert model tool proposals, terminal output, reviewed file changes, browser reading, and preservation of unsent text on an unready connection passed the real Electron/preload/IPC smoke using an isolated synthetic Codex RPC runtime. No personal profile or live provider was used.
+- Browser uses separate sandboxed windows without the application preload, credentials, IPC, file navigation, downloads, or browser permissions. Website text can be explicitly reviewed and attached to Chat. It is not an autonomous browser agent.
+- Terminal runs approved commands in the selected workspace and tracks them as cancellable background tasks. Commands use the person's OS permissions; the selected folder is a working directory, not an OS sandbox. The native approval dialog displays the exact command. Provider credential environment variables are removed and output is scrubbed before local persistence.
+- Files supports bounded text previews and edits. Changes stages before/after previews without writing, refuses stale content and workspace changes, and writes only after human approval. Traversal, escaping junctions and sensitive credential paths are rejected. Git diff disables external diff, text conversion and fsmonitor helpers.
+- Models can propose host tool requests as structured data. Opening a proposal does not execute it. The person reviews the request, runs it, then explicitly attaches any result to Chat through the normal privacy/consent path. Native runtime tools remain disabled.
+- Explicit image-creation requests route to the selected OpenAI or Google API connection. The host checks the account model catalog before generation. Documented candidates include `gpt-image-2.5-sunburst`, `gpt-image-2.5-flare` and Gemini 3 image models. OAuth/subscription connections without Image API support report an actionable error instead of switching accounts or producing a text-only substitute.
+- Mocked OpenAI Images and Google Interactions responses passed model discovery, verified local image storage, unsupported models/auth modes and error handling. These tests do not establish live image entitlement, billing, OAuth image support, or actual generated-image quality. This preview supports text-to-image; reference-image editing remains unsupported.
+- The installer workflow runs the synthetic Electron checks on Windows and both Mac build jobs. The prior 0.3.4 installers succeeded in CI at commit `89d7275`; Mac builds are ad-hoc signed and have not been notarized. Clean install and live account validation remain pending.
+
 ## Current automated verification
 
 The Windows validation/OAuth repair and Desktop 0.3.4 provider-selection fix were checked locally with Node 25.8.0:
@@ -47,4 +61,4 @@ The Windows validation/OAuth repair and Desktop 0.3.4 provider-selection fix wer
 - macOS build, signing/notarization, clean-machine install, runtime packaging and end-to-end verification are not run on this Windows host.
 - Windows installer clean-machine verification, release signing, branding/icon, dependency security review and update/rollback remain release gates.
 
-No release, deployment, commit, or push was performed by the implementation task.
+The repair branch was committed and pushed with user authorization. No merge, GitHub Release, notarization, or production deployment was performed.

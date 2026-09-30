@@ -217,9 +217,107 @@ function node(n: DraftNode, key: number): ReactNode {
       return <p key={key}>{children}</p>;
   }
 }
+export type ChatBlock = { kind: 'text' | 'code' | 'table'; text: string; language?: string; rows?: string[][] };
+export function chatBlocks(text: string): ChatBlock[] {
+  const blocks: ChatBlock[] = [];
+  const lines = text.replace(/\r\n/g, '\n').slice(0, 150000).split('\n');
+  let pending: string[] = [];
+  const flush = () => {
+    if (pending.length) blocks.push({ kind: 'text', text: pending.join('\n') });
+    pending = [];
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const fence = /^\s{0,3}(`{3,}|~{3,})([\w+-]*)\s*$/.exec(lines[i]);
+    if (fence) {
+      flush();
+      const content: string[] = [];
+      i++;
+      for (; i < lines.length && !lines[i].trim().startsWith(fence[1]); i++) content.push(lines[i]);
+      if (fence[2] !== 'step-tool') blocks.push({ kind: 'code', text: content.join('\n'), language: fence[2] });
+      continue;
+    }
+    if (lines[i].includes('|') && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1] || '')) {
+      flush();
+      const row = (line: string) =>
+        line
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .slice(0, 20)
+          .map(c => c.trim());
+      const rows = [row(lines[i])];
+      i += 2;
+      for (; i < lines.length && lines[i].trim() && lines[i].includes('|') && rows.length < 100; i++) rows.push(row(lines[i]));
+      i--;
+      blocks.push({ kind: 'table', text: '', rows });
+      continue;
+    }
+    pending.push(lines[i]);
+  }
+  flush();
+  return blocks;
+}
+function CodeBlock({ block }: { block: ChatBlock }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <figure className="chat-code">
+      <header>
+        <span>{block.language || 'text'}</span>
+        <button
+          className="quiet"
+          onClick={() =>
+            void navigator.clipboard
+              .writeText(block.text)
+              .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              })
+              .catch(() => setCopied(false))
+          }
+        >
+          {copied ? 'คัดลอกแล้ว' : 'คัดลอกโค้ด'}
+        </button>
+      </header>
+      <pre>
+        <code>{block.text}</code>
+      </pre>
+    </figure>
+  );
+}
 export function RichText({ text, className = '' }: { text: string; className?: string }) {
-  const doc = useMemo(() => markdownDocument(text), [text]);
-  return <div className={'rich-text ' + className}>{(doc.content || []).map(node)}</div>;
+  const blocks = useMemo(() => chatBlocks(text), [text]);
+  return (
+    <div className={'rich-text ' + className}>
+      {blocks.map((block, i) =>
+        block.kind === 'code' ? (
+          <CodeBlock key={i} block={block} />
+        ) : block.kind === 'table' ? (
+          <div className="chat-table" key={i}>
+            <table>
+              <thead>
+                <tr>
+                  {block.rows?.[0].map((cell, j) => (
+                    <th key={j}>{cell}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {block.rows?.slice(1).map((row, j) => (
+                  <tr key={j}>
+                    {row.map((cell, k) => (
+                      <td key={k}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div key={i}>{(markdownDocument(block.text).content || []).map(node)}</div>
+        ),
+      )}
+    </div>
+  );
 }
 
 export type Toast = { id: number; text: string; tone: 'info' | 'success' | 'error'; action?: { label: string; run: () => unknown } };

@@ -39,6 +39,21 @@ const allowed = new Set([
   'attach',
   'export',
   'reveal',
+  'imageModels',
+  'imageRead',
+  'imageExport',
+  'toolFiles',
+  'toolRead',
+  'toolStage',
+  'toolChanges',
+  'toolApply',
+  'toolReject',
+  'toolDiff',
+  'toolRun',
+  'toolTasks',
+  'toolCancel',
+  'toolBrowser',
+  'toolBrowserRead',
 ]);
 contextBridge.exposeInMainWorld('step', {
   call: (method: string, input: unknown) => {

@@ -12,7 +12,7 @@ export class Store {
     );
     // Interrupted jobs are never replayed automatically.
     for (const session of this.list<Session>('session')) {
-      if (session.status === 'running') {
+      if (session.status === 'running' || session.status === 'queued') {
         session.status = 'interrupted';
         this.put('session', session.id, session);
       }

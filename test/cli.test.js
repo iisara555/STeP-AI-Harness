@@ -13,7 +13,7 @@ const TEST_DIR = resolve('./tmp/unit-test-workspace');
 
 test('CLI & Core Modules Test Suite', async (t) => {
   // Clean test workspace before running
-  await rm(TEST_DIR, { recursive: true, force: true });
+  await rm(TEST_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 
   await t.test('Role Resolver loads roles and files correctly', async () => {
     const roles = await getAvailableRoles();
@@ -145,7 +145,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
 
   await t.test('Claude Adapter installs files and generates CLAUDE.md', async () => {
     const claudeDir = resolve('./tmp/unit-test-claude');
-    await rm(claudeDir, { recursive: true, force: true });
+    await rm(claudeDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 
     const { getAdapter } = await import('../src/modules/adapters/index.js');
     const claudeAdapter = getAdapter('claude');
@@ -167,12 +167,12 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(claudeContent.includes('Active Role: **DEVELOPER**'));
     assert.ok(claudeContent.includes('Core Principles & Safety Boundaries'));
 
-    await rm(claudeDir, { recursive: true, force: true });
+    await rm(claudeDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   });
 
   await t.test('Cursor Adapter installs files and generates .cursorrules', async () => {
     const cursorDir = resolve('./tmp/unit-test-cursor');
-    await rm(cursorDir, { recursive: true, force: true });
+    await rm(cursorDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 
     const { getAdapter } = await import('../src/modules/adapters/index.js');
     const cursorAdapter = getAdapter('cursor');
@@ -193,12 +193,12 @@ test('CLI & Core Modules Test Suite', async (t) => {
     const cursorContent = await readFile(join(cursorDir, '.cursorrules'), 'utf-8');
     assert.ok(cursorContent.includes('Role: creative'));
 
-    await rm(cursorDir, { recursive: true, force: true });
+    await rm(cursorDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   });
 
   await t.test('Multi-Agent Adapter installs all agent instruction files', async () => {
     const multiDir = resolve('./tmp/unit-test-multi');
-    await rm(multiDir, { recursive: true, force: true });
+    await rm(multiDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 
     const { getAdapter } = await import('../src/modules/adapters/index.js');
     const multiAdapter = getAdapter('all');
@@ -221,7 +221,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(await pathExists(join(multiDir, 'CODEX_INSTRUCTIONS.md')));
     assert.ok(await pathExists(join(multiDir, 'AGENTS.md')));
 
-    await rm(multiDir, { recursive: true, force: true });
+    await rm(multiDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   });
 
   await t.test('Role Resolver loads all 22 STeP teams correctly', async () => {
@@ -291,5 +291,5 @@ test('CLI & Core Modules Test Suite', async (t) => {
   });
 
   // Cleanup after test
-  await rm(TEST_DIR, { recursive: true, force: true });
+  await rm(TEST_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });

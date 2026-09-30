@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "private": true,
   "description": "Local STeP employee workspace",
   "author": "STeP AI Working Group",
@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && node build.mjs",
     "start": "electron .",
     "test": "tsx --test test/*.test.ts",
+    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",

@@ -57,6 +57,10 @@ import ideaArt from './assets/illustrations/idea.png';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
+import { WorkbenchPanel } from './workbench';
+import { toolRequests, type ToolTab, type ToolRequest } from './tools';
+import { isImageRequest, imageModels } from './image-routing';
+import type { WorkMode } from './types';
 
 export default function App() {
   const api = window.step;
@@ -124,6 +128,8 @@ export default function App() {
     flagged: boolean;
     labels: string[];
     attachment: boolean;
+    mode: WorkMode;
+    imageModel: string;
   } | null>(null);
   // Claude Pro/Max works only inside Anthropic's own apps, so that choice hands the request to the employee's Claude Code.
   const [handoffAsk, setHandoffAsk] = useState<{ text: string; skill?: string } | null>(null),
@@ -134,6 +140,16 @@ export default function App() {
   const [pendingModel, setPendingModel] = useState<string | undefined>(undefined),
     [pendingEffort, setPendingEffort] = useState(''),
     modelsRequested = useRef(new Set<string>());
+  const [workMode, setWorkMode] = useState<WorkMode>('chat'),
+    [imageModel, setImageModel] = useState('');
+  const [availableImages, setAvailableImages] = useState<string[]>([]),
+    [imageCatalogError, setImageCatalogError] = useState('');
+  const [toolTab, setToolTab] = useState<ToolTab>('output'),
+    [toolRequest, setToolRequest] = useState<ToolRequest>();
+  const [pendingSource, setPendingSource] = useState(''),
+    [submitting, setSubmitting] = useState(false);
+  const sendInFlight = useRef(false),
+    conversationEnd = useRef<HTMLDivElement>(null);
   const session = snapshot?.sessions.find(s => s.id === selected);
   const sessionRef = useRef<Session | undefined>(session);
   sessionRef.current = session;
@@ -167,11 +183,20 @@ export default function App() {
     }
   }, [api]);
   useEffect(() => {
+    const update = () => void refresh();
+    window.addEventListener('step-workspace', update);
+    return () => window.removeEventListener('step-workspace', update);
+  }, [refresh]);
+  useEffect(() => {
+    conversationEnd.current?.scrollIntoView({ block: 'end' });
+  }, [session?.messages.length, stream, running]);
+  useEffect(() => {
     void refresh()
       .then(s => {
         if (s) {
           setWizard(!s.settings.onboarding);
           setSelected(s.sessions[0]?.id || '');
+          setWorkMode(s.sessions[0]?.mode || (s.sessions[0]?.draft ? 'draft' : 'chat'));
           setConnectionId(s.connections[0]?.id || '');
         }
       })
@@ -311,6 +336,9 @@ export default function App() {
     await save();
     setView('chat');
     setSelected(id);
+    const chosen = snapshot?.sessions.find(s => s.id === id);
+    setWorkMode(chosen?.mode || (chosen?.draft ? 'draft' : 'chat'));
+    setPendingSource('');
     setFiles([]);
     setStream('');
     setProgress('');
@@ -344,12 +372,14 @@ export default function App() {
     setView('chat');
     setSelected(s.id);
     await refresh();
-    await start(s.id, text, [], undefined, undefined, allowIds, sourceText);
+    await start(s.id, text, [], undefined, undefined, allowIds, sourceText, 'draft');
   }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
     await save();
     setSelected('');
+    setWorkMode('chat');
+    setPendingSource('');
     setView('chat');
     setSettings(false);
     setFiles([]);
@@ -372,29 +402,38 @@ export default function App() {
     return s;
   }
   async function send() {
-    if (!query.trim() || running) return;
-    if (!selected && connectionId === CLAUDE_CODE) {
-      const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(query.trim()),
-        typedSkill = typed && (skills || []).some(s => s.name === typed[1]) ? typed[1] : '';
-      setHandoffAsk({ text: typedSkill ? typed![2] : query, skill: forcedSkill || typedSkill || undefined });
-      return;
+    if (!query.trim() || running || sendInFlight.current) return;
+    sendInFlight.current = true;
+    setSubmitting(true);
+    try {
+      if (!selected && connectionId === CLAUDE_CODE) {
+        const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(query.trim()),
+          typedSkill = typed && (skills || []).some(s => s.name === typed[1]) ? typed[1] : '';
+        setHandoffAsk({ text: typedSkill ? typed![2] : query, skill: forcedSkill || typedSkill || undefined });
+        return;
+      }
+      await save();
+      let id = selected;
+      if (!id) {
+        const s = await createTask();
+        if (!s) return;
+        id = s.id;
+      }
+      const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(query.trim());
+      const typedSkill = typed && routedSkills.some(s => s.name === typed[1]) ? typed[1] : '';
+      await start(
+        id,
+        typedSkill ? typed![2] : query,
+        files.filter(f => f.usable).map(f => f.id),
+        undefined,
+        forcedSkill || typedSkill || undefined,
+        undefined,
+        pendingSource || undefined,
+      );
+    } finally {
+      sendInFlight.current = false;
+      setSubmitting(false);
     }
-    await save();
-    let id = selected;
-    if (!id) {
-      const s = await createTask();
-      if (!s) return;
-      id = s.id;
-    }
-    const typed = /^\/([a-z0-9-]+)\s+([\s\S]+)$/.exec(query.trim());
-    const typedSkill = typed && routedSkills.some(s => s.name === typed[1]) ? typed[1] : '';
-    await start(
-      id,
-      typedSkill ? typed![2] : query,
-      files.filter(f => f.usable).map(f => f.id),
-      undefined,
-      forcedSkill || typedSkill || undefined,
-    );
   }
   // The host answers with a consent request when this send needs one; the dialog replays the same payload with its token.
   async function start(
@@ -405,28 +444,95 @@ export default function App() {
     skill?: string,
     allowIds?: string[],
     sourceText?: string,
+    mode: WorkMode = workMode,
+    selectedImageModel: string = imageModel,
   ) {
-    const result = await api!.call('send', { id, text, attachments, consent, skill, allowIdentifiers: allowIds, sourceText });
+    runningId.current = id;
+    currentId.current = id;
+    setRunning(true);
+    setStream('');
+    setReasoning('');
+    setProgress('กำลังส่งข้อความ');
+    setStartedAt(Date.now());
+    let result;
+    try {
+      result = await api!.call('send', {
+        id,
+        text,
+        attachments,
+        consent,
+        skill,
+        allowIdentifiers: allowIds,
+        sourceText,
+        mode,
+        imageModel: selectedImageModel,
+      });
+    } catch (e) {
+      setRunning(false);
+      runningId.current = '';
+      setProgress('');
+      setStartedAt(0);
+      throw e;
+    }
     if (result.consent) {
-      setConsentAsk({ sessionId: id, text, attachments, skill, allowIds, sourceText, ...result.consent });
+      setRunning(false);
+      runningId.current = '';
+      setProgress('');
+      setStartedAt(0);
+      setConsentAsk({
+        sessionId: id,
+        text,
+        attachments,
+        skill,
+        allowIds,
+        sourceText,
+        mode,
+        imageModel: selectedImageModel,
+        ...result.consent,
+      });
       return;
     }
     if (result.started && result.masked?.length) notify(`ระบบปิดบังก่อนส่งให้ AI: ${result.masked.join(', ')}`);
     if (result.started) {
-      runningId.current = id;
       setForcedSkill('');
-      setRunning(true);
       setQuery('');
+      setPendingSource('');
       setFiles([]);
-      setStream('');
-      setReasoning('');
-      setStartedAt(Date.now());
       setNow(Date.now());
-      setProgress('กำลังเริ่มงาน');
-      await refresh();
+      const updated = await refresh();
+      const state = updated?.sessions.find(s => s.id === id)?.status;
+      if (state && !['queued', 'running'].includes(state)) {
+        setRunning(false);
+        setProgress('');
+        setStartedAt(0);
+        setStream('');
+      }
+      if (result.mode === 'image') {
+        setToolTab('output');
+        setRight(true);
+      }
     }
   }
   const connection = snapshot?.connections.find(c => c.id === (session?.connectionId || connectionId));
+  const wantsImage = workMode === 'image' || (workMode === 'chat' && isImageRequest(query));
+  useEffect(() => {
+    let live = true;
+    setImageCatalogError('');
+    setAvailableImages([]);
+    setImageModel('');
+    if (api && wantsImage && connection?.ready && imageModels(connection).length)
+      void api
+        .call('imageModels', { id: connection.id })
+        .then(ids => {
+          if (live) setAvailableImages(ids);
+        })
+        .catch(e => {
+          if (live) setImageCatalogError(explainError(e));
+        });
+    return () => {
+      live = false;
+    };
+  }, [api, wantsImage, connection?.id, connection?.ready]);
   const currentModel = session ? (session.model ?? connection?.model ?? '') : (pendingModel ?? connection?.model ?? '');
   const defaultModel = connection?.models?.find(m => m.isDefault);
   const modelInfo = (id: string) => connection?.models?.find(m => m.id === id) || (!id ? defaultModel : undefined);
@@ -830,14 +936,14 @@ export default function App() {
                   <img className="illustration welcome-art" src={launchArt} alt="" />
                   {snapshot.settings.userName && <p className="greet">สวัสดีครับ คุณ{snapshot.settings.userName}</p>}
                   <h1>
-                    วันนี้อยากให้ช่วย
+                    คุย วางแผน
                     <br />
-                    เรื่องอะไรครับ
+                    และสร้างงานไปด้วยกัน
                   </h1>
                   <p>
-                    เริ่มจากสิ่งที่ต้องทำ ผมจะช่วยจัดข้อมูล
+                    ถามได้ตามปกติ หรือเลือกสร้างเอกสารและรูป
                     <br />
-                    และเตรียมร่างให้คุณตรวจแก้ไปด้วยกัน
+                    พร้อมเครื่องมือสำหรับทำงานในโฟลเดอร์ของคุณ
                   </p>
                   <div className="suggestions">
                     {['ช่วยจัดทำบรีฟงานประชาสัมพันธ์', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยวางโครงสไลด์นำเสนอโครงการ'].map(text => (
@@ -862,6 +968,43 @@ export default function App() {
                     <RichText className="message-body" text={message.text} />
                   ) : (
                     <div className="message-body">{message.role === 'status' ? errorText[message.text] || message.text : message.text}</div>
+                  )}
+                  {message.role === 'assistant' && (
+                    <div className="message-actions">
+                      <button
+                        className="quiet"
+                        onClick={() => void navigator.clipboard.writeText(message.text).catch(e => notify(explainError(e), 'error'))}
+                      >
+                        คัดลอก
+                      </button>
+                      <button
+                        className="quiet"
+                        onClick={() =>
+                          void action(async () => {
+                            await save();
+                            await api.call('edit', { id: session.id, text: message.text, revision: session.revision });
+                            await refresh();
+                            setToolTab('output');
+                            setRight(true);
+                          })
+                        }
+                      >
+                        เปิดใน Output
+                      </button>
+                      {toolRequests(message.text).map((request, i) => (
+                        <button
+                          className="tool-request quiet"
+                          key={i}
+                          onClick={() => {
+                            setToolRequest({ ...request });
+                            setToolTab(request.tool);
+                            setRight(true);
+                          }}
+                        >
+                          ตรวจ {request.tool}: {request.input.slice(0, 50)}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </article>
               ))}
@@ -922,9 +1065,53 @@ export default function App() {
                 </div>
               )}
               {!running && progress && <p className="muted small">{progress}</p>}
+              <div ref={conversationEnd} />
             </div>
             <div className="composer-area">
               <div className="composer" data-tour="composer">
+                <div className="composer-mode" role="group" aria-label="โหมดทำงาน">
+                  {(['chat', 'draft', 'image'] as WorkMode[]).map(mode => (
+                    <button
+                      key={mode}
+                      className={workMode === mode ? 'active' : 'quiet'}
+                      disabled={running || submitting}
+                      onClick={() => setWorkMode(mode)}
+                    >
+                      {mode === 'chat' ? 'Chat' : mode === 'draft' ? 'Draft / Output' : 'Image'}
+                    </button>
+                  ))}
+                  {pendingSource && (
+                    <button className="source-chip quiet" onClick={() => setPendingSource('')}>
+                      ผลจากเครื่องมือแนบแล้ว ×
+                    </button>
+                  )}
+                </div>
+                {wantsImage && (
+                  <div className="image-route" role="status">
+                    <Sparkles size={14} />
+                    {imageModels(connection).length ? (
+                      <>
+                        <span>Image API</span>
+                        <select
+                          aria-label="Image model"
+                          value={imageModel}
+                          onChange={e => setImageModel(e.target.value)}
+                          disabled={running}
+                        >
+                          <option value="">{availableImages[0] || 'กำลังตรวจโมเดลของบัญชี…'}</option>
+                          {availableImages.map(id => (
+                            <option key={id} value={id}>
+                              {id}
+                            </option>
+                          ))}
+                        </select>
+                        {imageCatalogError && <small>{imageCatalogError}</small>}
+                      </>
+                    ) : (
+                      <span>เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key เพื่อสร้างรูป · OAuth นี้ยังไม่มี Image API</span>
+                    )}
+                  </div>
+                )}
                 {files.length > 0 && (
                   <div className="attachments">
                     {files.map(f => (
@@ -1104,10 +1291,10 @@ export default function App() {
                     <button
                       className="send"
                       title="ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)"
-                      disabled={!query.trim() || !(connection?.ready || (!session && connectionId === CLAUDE_CODE))}
+                      disabled={!query.trim() || submitting}
                       onClick={() => void action(send)}
                     >
-                      <ArrowUp size={20} />
+                      {submitting ? <LoaderCircle size={20} className="spin" /> : <ArrowUp size={20} />}
                     </button>
                   )}
                 </div>
@@ -1172,168 +1359,190 @@ export default function App() {
             }}
           />
           <aside className="artifact-pane" data-tour="artifact">
-            <header className="artifact-header">
-              <FileText size={18} />
-              <strong>ผลงาน</strong>
-              <span className="spacer" />
-              <button className="icon" title="ประวัติเวอร์ชัน" onClick={() => setHistory(!history)}>
-                <History size={17} />
-              </button>
-              <button className="icon" title="ซ่อนร่าง" onClick={() => setRight(false)}>
-                <PanelRightClose size={17} />
-              </button>
-            </header>
-            {!session ? (
-              <div className="artifact-empty">
-                <img className="illustration empty-art" src={draftingArt} alt="" />
-                <h2>พื้นที่สำหรับร่างของคุณ</h2>
-                <p>
-                  เมื่อ AI จัดทำร่างแล้ว
-                  <br />
-                  คุณจะตรวจและแก้ไขได้ตรงนี้
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="draft-title">
-                  <span>{session.title}</span>
-                  <small>
-                    เวอร์ชัน {session.revision}
-                    {dirty ? ' · มีการแก้ไขที่ยังไม่บันทึก' : ' · บันทึกแล้ว'}
-                  </small>
+            <nav className="workbench-tabs" aria-label="Workspace tools">
+              {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[]).map(tab => (
+                <button key={tab} className={toolTab === tab ? 'active' : 'quiet'} onClick={() => setToolTab(tab)}>
+                  {tab === 'tasks' ? 'Tasks' : tab[0].toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </nav>
+            <WorkbenchPanel
+              api={api}
+              tab={toolTab}
+              session={session}
+              workspace={snapshot.settings.workspace}
+              request={toolRequest}
+              onTab={setToolTab}
+              onSource={text => {
+                setPendingSource(text.slice(0, 100000));
+                setQuery('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา');
+                composerRef.current?.focus();
+              }}
+            />
+            <div className="output-document" hidden={toolTab !== 'output'}>
+              <header className="artifact-header">
+                <FileText size={18} />
+                <strong>Output</strong>
+                <span className="spacer" />
+                <button className="icon" title="ประวัติเวอร์ชัน" onClick={() => setHistory(!history)}>
+                  <History size={17} />
+                </button>
+                <button className="icon" title="ซ่อนร่าง" onClick={() => setRight(false)}>
+                  <PanelRightClose size={17} />
+                </button>
+              </header>
+              {!session ? (
+                <div className="artifact-empty">
+                  <img className="illustration empty-art" src={draftingArt} alt="" />
+                  <h2>พื้นที่สำหรับร่างของคุณ</h2>
+                  <p>
+                    เมื่อ AI จัดทำร่างแล้ว
+                    <br />
+                    คุณจะตรวจและแก้ไขได้ตรงนี้
+                  </p>
                 </div>
-                {history && (
-                  <div className="version-list">
-                    {session.versions.some(v => v.text.trim()) ? (
-                      session.versions
-                        .filter(v => v.text.trim())
-                        .slice()
-                        .reverse()
-                        .map(v => (
-                          <button
-                            key={v.revision}
-                            disabled={dirty}
-                            onClick={() =>
-                              void action(async () => {
-                                await api.call('restore', { id: selected, revision: v.revision });
-                                await refresh();
-                              })
-                            }
-                          >
-                            คืนค่าเวอร์ชัน {v.revision} <small>{new Date(v.at).toLocaleString('th-TH')}</small>
-                          </button>
-                        ))
-                    ) : (
-                      <p>ยังไม่มีเวอร์ชันก่อนหน้า</p>
-                    )}
+              ) : (
+                <>
+                  <div className="draft-title">
+                    <span>{session.title}</span>
+                    <small>
+                      เวอร์ชัน {session.revision}
+                      {dirty ? ' · มีการแก้ไขที่ยังไม่บันทึก' : ' · บันทึกแล้ว'}
+                    </small>
                   </div>
-                )}
-                {session.proposals.map(p => (
-                  <section className="proposal" key={p.id}>
-                    <div>
-                      <Sparkles size={16} />
-                      <strong>ข้อเสนอจาก AI</strong>
+                  {history && (
+                    <div className="version-list">
+                      {session.versions.some(v => v.text.trim()) ? (
+                        session.versions
+                          .filter(v => v.text.trim())
+                          .slice()
+                          .reverse()
+                          .map(v => (
+                            <button
+                              key={v.revision}
+                              disabled={dirty}
+                              onClick={() =>
+                                void action(async () => {
+                                  await api.call('restore', { id: selected, revision: v.revision });
+                                  await refresh();
+                                })
+                              }
+                            >
+                              คืนค่าเวอร์ชัน {v.revision} <small>{new Date(v.at).toLocaleString('th-TH')}</small>
+                            </button>
+                          ))
+                      ) : (
+                        <p>ยังไม่มีเวอร์ชันก่อนหน้า</p>
+                      )}
                     </div>
-                    <p className="small muted">
-                      {p.baseRevision === session.revision
-                        ? 'ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน'
-                        : 'ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้'}
-                    </p>
-                    <details open={!session.draft.trim()}>
-                      <summary>{session.draft.trim() ? 'อ่านข้อเสนอและเทียบกับร่างด้านล่าง' : 'อ่านร่างจาก AI'}</summary>
-                      <RichText className="proposal-text" text={p.text} />
-                    </details>
-                    <div className="proposal-actions">
-                      <button
-                        disabled={dirty || p.baseRevision !== session.revision}
-                        onClick={() =>
-                          void action(async () => {
-                            await api.call('accept', { id: selected, proposalId: p.id });
-                            await refresh();
-                          })
-                        }
-                      >
-                        <Check size={15} />
-                        ใช้ร่างนี้
-                      </button>
-                      <button
-                        className="quiet"
-                        onClick={() =>
-                          void action(async () => {
-                            await api.call('reject', { id: selected, proposalId: p.id });
-                            await refresh();
-                          })
-                        }
-                      >
-                        ไม่ใช้
-                      </button>
-                    </div>
-                  </section>
-                ))}
-                <div className="format-toolbar" role="toolbar" aria-label="จัดรูปแบบร่าง">
-                  <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
-                    ข้อความ
-                  </button>
-                  <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
-                    หัวข้อ
-                  </button>
-                  <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
-                    ตัวหนา
-                  </button>
-                  <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
-                    ตัวเอียง
-                  </button>
-                  <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
-                    รายการ
-                  </button>
-                  <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
-                    ลำดับ
-                  </button>
-                </div>
-                <div className="editor-scroll">
-                  <EditorContent editor={editor} />
-                </div>
-                <details className="sources">
-                  <summary>แหล่งอ้างอิงที่ใช้ ({session.sources.length})</summary>
-                  {session.sources.map(path => (
-                    <p key={path}>{path}</p>
+                  )}
+                  {session.proposals.map(p => (
+                    <section className="proposal" key={p.id}>
+                      <div>
+                        <Sparkles size={16} />
+                        <strong>ข้อเสนอจาก AI</strong>
+                      </div>
+                      <p className="small muted">
+                        {p.baseRevision === session.revision
+                          ? 'ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน'
+                          : 'ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้'}
+                      </p>
+                      <details open={!session.draft.trim()}>
+                        <summary>{session.draft.trim() ? 'อ่านข้อเสนอและเทียบกับร่างด้านล่าง' : 'อ่านร่างจาก AI'}</summary>
+                        <RichText className="proposal-text" text={p.text} />
+                      </details>
+                      <div className="proposal-actions">
+                        <button
+                          disabled={dirty || p.baseRevision !== session.revision}
+                          onClick={() =>
+                            void action(async () => {
+                              await api.call('accept', { id: selected, proposalId: p.id });
+                              await refresh();
+                            })
+                          }
+                        >
+                          <Check size={15} />
+                          ใช้ร่างนี้
+                        </button>
+                        <button
+                          className="quiet"
+                          onClick={() =>
+                            void action(async () => {
+                              await api.call('reject', { id: selected, proposalId: p.id });
+                              await refresh();
+                            })
+                          }
+                        >
+                          ไม่ใช้
+                        </button>
+                      </div>
+                    </section>
                   ))}
-                </details>
-                <footer className="artifact-footer">
-                  <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
-                    <Save size={16} />
-                    บันทึก
-                  </button>
-                  <select aria-label="รูปแบบส่งออก" value={format} onChange={e => setFormat(e.target.value)}>
-                    {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
-                      <option key={f}>{f}</option>
+                  <div className="format-toolbar" role="toolbar" aria-label="จัดรูปแบบร่าง">
+                    <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
+                      ข้อความ
+                    </button>
+                    <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
+                      หัวข้อ
+                    </button>
+                    <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
+                      ตัวหนา
+                    </button>
+                    <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
+                      ตัวเอียง
+                    </button>
+                    <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
+                      รายการ
+                    </button>
+                    <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
+                      ลำดับ
+                    </button>
+                  </div>
+                  <div className="editor-scroll">
+                    <EditorContent editor={editor} />
+                  </div>
+                  <details className="sources">
+                    <summary>แหล่งอ้างอิงที่ใช้ ({session.sources.length})</summary>
+                    {session.sources.map(path => (
+                      <p key={path}>{path}</p>
                     ))}
-                  </select>
-                  <button
-                    disabled={!session.draft && !dirty}
-                    onClick={() =>
-                      void action(async () => {
-                        await save();
-                        const output = await api.call('export', { id: selected, format });
-                        setExportPath(output.path);
-                        notify(`บันทึก ${output.filename} แล้ว`, 'success', {
-                          label: 'เปิดโฟลเดอร์',
-                          run: () => api.call('reveal', { path: output.path }),
-                        });
-                      })
-                    }
-                  >
-                    <Download size={16} />
-                    ส่งออก
-                  </button>
-                </footer>
-                {exportPath && (
-                  <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
-                    เปิดโฟลเดอร์ไฟล์ล่าสุด
-                  </button>
-                )}
-              </>
-            )}
+                  </details>
+                  <footer className="artifact-footer">
+                    <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
+                      <Save size={16} />
+                      บันทึก
+                    </button>
+                    <select aria-label="รูปแบบส่งออก" value={format} onChange={e => setFormat(e.target.value)}>
+                      {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
+                        <option key={f}>{f}</option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={!session.draft && !dirty}
+                      onClick={() =>
+                        void action(async () => {
+                          await save();
+                          const output = await api.call('export', { id: selected, format });
+                          setExportPath(output.path);
+                          notify(`บันทึก ${output.filename} แล้ว`, 'success', {
+                            label: 'เปิดโฟลเดอร์',
+                            run: () => api.call('reveal', { path: output.path }),
+                          });
+                        })
+                      }
+                    >
+                      <Download size={16} />
+                      ส่งออก
+                    </button>
+                  </footer>
+                  {exportPath && (
+                    <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
+                      เปิดโฟลเดอร์ไฟล์ล่าสุด
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </aside>
         </>
       )}
@@ -1345,7 +1554,9 @@ export default function App() {
           onConfirm={async () => {
             const ask = consentAsk;
             setConsentAsk(null);
-            await action(() => start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds, ask.sourceText));
+            await action(() =>
+              start(ask.sessionId, ask.text, ask.attachments, ask.token, ask.skill, ask.allowIds, ask.sourceText, ask.mode, ask.imageModel),
+            );
           }}
         >
           {consentAsk.flagged ? (

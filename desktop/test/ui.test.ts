@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatElapsed, formatTokens, groupSessions, matchesSession } from '../src/ui';
+import { formatElapsed, formatTokens, groupSessions, matchesSession, chatBlocks, RichText } from '../src/ui';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import type { Session } from '../src/types';
 
 const session = (id: string, updatedAt: string, extra: Partial<Session> = {}) =>
@@ -23,6 +25,20 @@ const session = (id: string, updatedAt: string, extra: Partial<Session> = {}) =>
     sources: [],
     ...extra,
   }) as Session;
+test('chat Markdown renders fenced code and tables as escaped content without executing tool proposals', () => {
+  const text =
+    'Hello\n\n```js\n<script>alert(1)</script>\n```\n\n| Name | Value |\n| --- | --- |\n| x | 1 |\n\n```step-tool\n{"tool":"terminal","input":"echo hidden"}\n```';
+  assert.deepEqual(
+    chatBlocks(text)
+      .filter(b => b.kind !== 'text')
+      .map(b => b.kind),
+    ['code', 'table'],
+  );
+  const html = renderToStaticMarkup(createElement(RichText, { text }));
+  assert.match(html, /&lt;script&gt;/);
+  assert.match(html, /<table>/);
+  assert.doesNotMatch(html, /<script>|echo hidden/);
+});
 
 test('sessions group pinned first, then by recency', () => {
   const now = new Date('2026-09-29T12:00:00');
