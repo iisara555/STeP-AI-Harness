@@ -481,6 +481,21 @@ export function ReceiptApp({
                     </div>
                   </div>
                 )}
+                {aiDecisions
+                  .filter(decision => decision.field === k)
+                  .map((decision, index) => (
+                    <small className="receipt-ai-decision" key={decision.field + index}>
+                      AI filter:{' '}
+                      {decision.status === 'suggested'
+                        ? `แนะนำ candidate “${decision.value}”`
+                        : decision.status === 'keep'
+                          ? 'เห็นด้วยกับค่าปัจจุบัน'
+                          : decision.status === 'ambiguous'
+                            ? 'ยังไม่แน่ใจ ให้คนเลือก'
+                            : 'หลักฐานยังไม่พอ map'}
+                      {decision.reason ? ` · ${decision.reason}` : ''}
+                    </small>
+                  ))}
               </div>
             ))}
             {reviewLines > 0 && (
@@ -546,6 +561,37 @@ export function ReceiptApp({
               <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('read', read)}>
                 <FileSearch size={15} />
                 ตรวจใบใหม่
+              </button>
+              <button
+                className="quiet"
+                disabled={!connectionId || !mapping || Boolean(busy)}
+                onClick={() =>
+                  void run('ai-filter', async () => {
+                    const currentMapping = draft().afp_mapping;
+                    const filtered = await call('ocrResolve', { connectionId, mapping: currentMapping });
+                    if (filtered?.cancelled) return;
+                    const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
+                    setAiDecisions(decisions);
+                    const nextValues = { ...values };
+                    const nextConfirmed = { ...confirmed };
+                    for (const decision of decisions) {
+                      if (
+                        decision.status === 'suggested' &&
+                        decision.value &&
+                        !String(nextValues[decision.field] || '').trim()
+                      ) {
+                        nextValues[decision.field] = decision.value;
+                        nextConfirmed[decision.field] = false;
+                      }
+                    }
+                    setValues(nextValues);
+                    setConfirmed(nextConfirmed);
+                    notify('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”', 'success');
+                  })
+                }
+              >
+                {busy === 'ai-filter' ? <LoaderCircle size={15} className="spin" /> : <ScanText size={15} />}
+                AI กรอง OCR อีกชั้น
               </button>
               <span className="spacer" />
               {/* AI pre-check follows the person's check: the required fields must be ticked first. A checked vendor tax ID stays readable. */}
