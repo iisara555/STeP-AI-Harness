@@ -14,6 +14,7 @@ import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { installOcr, ocrComponentCurrent } from './components';
+import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
 import { findAnthropicCli, resolveAnthropicCli, anthropicLogout } from './anthropic-auth';
@@ -28,6 +29,7 @@ const authCodes = new Map<string, (code: string | null) => void>();
 const consents = new Map<string, string>();
 const connectControllers = new Map<string, AbortController>();
 let busy = false;
+let ocrResolving = false;
 const validProviders = new Set(['openai', 'claude', 'gemini']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
 let logFile = '';
@@ -504,6 +506,7 @@ async function main() {
             ocrHome,
             line => emit({ sessionId: '', type: 'install', text: line }),
             input.crosscheck === true,
+            input.handwriting === true,
           );
         } catch (error) {
           diagnose('ocr-install-failed', { code: errorCode(error) });
@@ -544,11 +547,61 @@ async function main() {
         });
         if (picked.canceled) return null;
         const path = picked.filePaths[0],
-          read = await ocr.recognize(path, health.crosscheck);
+          read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
         // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
         const type = previewTypes[read.extension];
         const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
         return { name: basename(path), preview, result: read.result };
+      }
+      case 'ocrResolve': {
+        if (ocrResolving) throw new Error('RUN_ALREADY_ACTIVE');
+        const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
+        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        const rawMapping = input.mapping;
+        if (!rawMapping || typeof rawMapping !== 'object' || Array.isArray(rawMapping)) throw new Error('INVALID_INPUT');
+        const serialized = JSON.stringify(rawMapping);
+        if (serialized.length > 120_000) throw new Error('INPUT_LIMIT');
+
+        const settings = store.settings();
+        if (!settings.ocrAiConsentedAt) {
+          const answer = await dialog.showMessageBox(window, {
+            type: 'question',
+            title: 'ให้ AI ช่วยกรองผล OCR',
+            message: 'ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ',
+            detail: 'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
+            buttons: ['ยกเลิก', 'ใช้ AI กรอง'],
+            defaultId: 1,
+            cancelId: 0,
+          });
+          if (answer.response !== 1) return { cancelled: true };
+          store.put('settings', 'main', { ...settings, ocrAiConsentedAt: new Date().toISOString() });
+        }
+
+        const sanitize = (value: string) => harness.privacy(value).redactedText;
+        const resolver = buildReceiptAiResolver(rawMapping, sanitize);
+        if (!resolver.fields.length) throw new Error('INVALID_INPUT');
+
+        ocrResolving = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120_000);
+        try {
+          const current = await runtime(connection);
+          const response = await current.adapter.run(resolver.prompt, connection, {
+            ...current.context,
+            signal: controller.signal,
+            emit: () => {},
+          });
+          const decisions = resolveReceiptAiResponse(response, resolver.tokens, resolver.fields);
+          diagnose('ocr-ai-filter', { provider: connection.provider, decisions: String(decisions.length) });
+          return { decisions };
+        } catch (error) {
+          diagnose('ocr-ai-filter-failed', { provider: connection.provider, code: errorCode(error) });
+          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+          throw error;
+        } finally {
+          clearTimeout(timeout);
+          ocrResolving = false;
+        }
       }
       case 'ocrSave': {
         const text = JSON.stringify(input.draft ?? null, null, 2);
