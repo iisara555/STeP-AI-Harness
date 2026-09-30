@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathExists } from '../utils/file-ops.js';
+import { safeWorkspacePath } from '../utils/workspace-path.js';
 
 export const USER_MEMORY_FILENAME = 'USER.md';
 
@@ -238,7 +239,7 @@ export function needsFirstRunCompanion(memory = {}) {
  * Load User Memory from workspace if present
  */
 export async function loadUserMemory(workspaceDir = process.cwd()) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   const exists = await pathExists(filePath);
   const empty = parseUserMemory('');
 
@@ -260,7 +261,7 @@ export async function loadUserMemory(workspaceDir = process.cwd()) {
  * Used when a deferred team selection is confirmed after installation.
  */
 export async function updateUserMemoryProfile(workspaceDir = process.cwd(), updates = {}) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   if (!(await pathExists(filePath))) return { updated: false, filePath };
 
   let content = await readFile(filePath, 'utf-8');
@@ -335,7 +336,7 @@ export function applyPersonalization(markdown = '', options = {}) {
 
 /** Write the personalization to USER.md, creating the file when it does not exist yet. */
 export async function savePersonalization(workspaceDir = process.cwd(), options = {}) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   const existing = (await pathExists(filePath)) ? await readFile(filePath, 'utf-8') : '';
   await writeFile(filePath, applyPersonalization(existing, options), 'utf-8');
   await ensureGitignored(workspaceDir);
@@ -344,7 +345,7 @@ export async function savePersonalization(workspaceDir = process.cwd(), options 
 
 /** Save raw markdown text to USER.md */
 export async function saveUserMemory(workspaceDir = process.cwd(), content = '') {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   await writeFile(filePath, content, 'utf-8');
   await ensureGitignored(workspaceDir);
   return filePath;
@@ -352,7 +353,7 @@ export async function saveUserMemory(workspaceDir = process.cwd(), content = '')
 
 /** Initialize USER.md in workspace if it doesn't already exist */
 export async function initUserMemory(workspaceDir = process.cwd(), options = {}) {
-  const filePath = getUserMemoryPath(workspaceDir);
+  const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   const exists = await pathExists(filePath);
 
   if (exists) {
@@ -375,7 +376,7 @@ export async function initUserMemory(workspaceDir = process.cwd(), options = {})
  * than returning quietly.
  */
 export async function ensureGitignored(workspaceDir = process.cwd()) {
-  const gitignorePath = join(workspaceDir, '.gitignore');
+  const gitignorePath = await safeWorkspacePath(workspaceDir, '.gitignore');
   const header = '# Private workspace user memory';
 
   try {
