@@ -209,6 +209,6 @@ r.on('line',line=>{const m=JSON.parse(line);if(m.method==='initialize')send({id:
     ready: false,
     note: '',
   };
-  const d = deps(connection, home);
+  const d = deps(home);
   await assert.rejects(signInAndTest(connection, d.value, new AbortController().signal), /AUTH_METHOD_UNAVAILABLE/);
 });
