@@ -128,6 +128,29 @@ export async function claudeStatus(executable: string, context: ClaudeContext, s
   return true;
 }
 
+/** Read only a complete authorization URL emitted by the official CLI, never a model-supplied link. */
+export function claudeLoginUrl(output: string) {
+  for (const match of output.matchAll(/https:\/\/[^\s<>"\x1b]+(?=\s)/g)) {
+    try {
+      const url = new URL(match[0]);
+      if (
+        url.protocol === 'https:' &&
+        ['claude.com', 'claude.ai'].includes(url.hostname) &&
+        !url.port &&
+        !url.username &&
+        !url.password &&
+        !url.hash &&
+        url.pathname === '/oauth/authorize' &&
+        url.searchParams.get('response_type') === 'code' &&
+        ['client_id', 'state', 'code_challenge', 'redirect_uri'].every(key => !!url.searchParams.get(key))
+      )
+        return url.href;
+    } catch {
+      // A malformed or incomplete link must not open a browser.
+    }
+  }
+}
+
 export async function claudeLogin(
   executable: string,
   context: ClaudeContext,
@@ -135,6 +158,7 @@ export async function claudeLogin(
     progress: (text: string) => void;
     askForCode: () => Promise<string | null>;
     dropCode: () => void;
+    openExternal?: (url: string) => Promise<void>;
   },
   signal: AbortSignal,
 ) {
@@ -144,15 +168,31 @@ export async function claudeLogin(
   const abort = () => controller.abort();
   signal.addEventListener('abort', abort, { once: true });
   let asked = false,
-    finished = false;
+    finished = false,
+    opened = false,
+    browserFailed = false;
   try {
     if (signal.aborted) controller.abort();
     const result = await runClaude(executable, ['auth', 'login', '--claudeai'], context, {
       signal: controller.signal,
       timeout: 300_000,
       onOutput: (text, write) => {
-        // Claude Code owns browser launch and callback. Only bridge its optional
-        // manual-code prompt; never copy an OAuth client or inspect credentials.
+        // Piped Claude Code may print a link without opening the browser. Keep
+        // that link process-only and let the official CLI own OAuth and storage.
+        const url = !opened && deps.openExternal ? claudeLoginUrl(text) : undefined;
+        if (url) {
+          opened = true;
+          void Promise.resolve()
+            .then(() => {
+              if (!finished && !controller.signal.aborted) return deps.openExternal!(url);
+            })
+            .catch(() => {
+              if (finished) return;
+              browserFailed = true;
+              controller.abort();
+            });
+        }
+        // Only bridge the CLI's optional manual-code prompt.
         if (!asked && /paste.{0,60}code|authorization code:/i.test(text)) {
           asked = true;
           void deps
@@ -169,6 +209,7 @@ export async function claudeLogin(
     if (result.code !== 0) throw new Error(explainRuntimeFailure([result.output]) || 'LOGIN_FAILED');
     if (!(await claudeStatus(executable, context, signal))) throw new Error('LOGIN_REQUIRED');
   } catch (error) {
+    if (browserFailed && !signal.aborted) throw new Error('LOGIN_BROWSER_FAILED');
     if (error instanceof Error && error.message === 'CLAUDE_AUTH_TIMEOUT') throw new Error('LOGIN_TIMEOUT');
     throw error;
   } finally {

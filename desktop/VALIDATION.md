@@ -2,6 +2,16 @@
 
 This is a development preview, not an accepted production release.
 
+## Claude Code OAuth follow-up (2026-10-01)
+
+- Review branch `codex/claude-oauth-followup`, based on Phase 6. See [OAuth follow-up](../docs/claude-oauth-followup.md).
+- Both installed and bundled CLI status checks initially reported logged out with personal and isolated homes. The user completed a fresh official Claude Code sign-in directly in a private local terminal. Bundled runtime **2.1.284** verified the approved profile; the personal **2.1.221** installation was not upgraded.
+- One live probe returned exactly `EVAL_READY`: **466 input + 9 output = 475 reported tokens**. Feature matrix **5/5 passed**, **8 real calls**, **100,329 reported tokens**, with local/live/hybrid labels retained. Report: ignored `eval-results/2026-10-01T05-04-52-619Z-matrix/report.md`.
+- Golden produced all three live drafts (**91,985 reported tokens**), but formal acceptance is **0/3**: the unchanged shared output gate requires `PRIVACY_REVIEW_REQUIRED` for name-table/unresolved-identifier signals. Offline replay reproduced these codes without another provider call, and separate local rubric checks passed **14/14**. Original report remains at ignored `eval-results/2026-10-01T05-13-00-768Z-claude/report.md`, with `offline-review.json` beside it. The evaluator now preserves post-generation codes and labels blocked drafts not graded. This is not an OAuth failure or a formal Golden pass.
+- Repaired missing browser launch for a piped official CLI: exact HTTPS Claude authorization URL validation, one browser open per attempt, private URL/code handling, typed browser failure and cleanup. The application repair is covered by synthetic fixtures; the live account check used the official CLI terminal and evaluation runner.
+- **220 Desktop tests passed**, zero failures/skips, including four new browser/evaluation regressions. Formatting, TypeScript/build, both repository validators (51 Skills) and chat/tools Electron smoke passed. The existing bundle warning remains. Full Harness tests and all eight Electron smokes were not rerun locally for this scoped repair.
+- In-app subscription login remains disabled by default. No credential migration, main merge, policy change, installer or release. Live STeP connection lifecycle, macOS and provider-native tool-denial acceptance remain open.
+
 ## OpenHarness adaptation — Phase 6 (2026-10-01)
 
 - [Draft PR #84](https://github.com/iisara555/STeP-AI-Harness/pull/84), implementation `5026d38`, branch `codex/openharness-phase6`, stacked on Phase 5: bounded source/account/model/policy consent scopes, risk provenance and revocation; synthetic/live feature matrix; explicit account/auth live boundary; native npm Claude launcher support; documentation.
@@ -92,7 +102,7 @@ The Windows validation/OAuth repair and Desktop 0.3.4 provider-selection fix wer
 ### Other acceptance work
 
 - Authenticated provider end-to-end tests on disposable authorized inputs: login, streaming, account expiry, quota exhaustion, cancellation and runtime tool-denial behavior. UI readiness requires a successful local generation probe, but that is not a full safety certification.
-- Claude SDK runtime integration has not been exercised against a live account. Claude subscription login (via the user's installed Claude Code, isolated `CLAUDE_CONFIG_DIR`) is covered only by synthetic-runtime tests plus a logged-out `auth status` probe against a real Claude Code 2.1.284 on Windows; live Pro login, chat, expiry and logout are unverified, macOS is untested, and Anthropic's Agent SDK terms require prior approval before offering claude.ai login in a third-party product.
+- Claude SDK generation and the feature matrix passed against the user's explicitly authorized existing Claude Code profile on Windows with runtime 2.1.284. This does not establish the STeP employee connection lifecycle: isolated in-app login, restart, expiry and logout remain unverified, as do macOS and packaged installs. The browser-launch repair is covered by synthetic fixtures. Anthropic's Agent SDK terms require prior approval before offering claude.ai login in a third-party product; the feature remains disabled by default.
 - Confirm no runtime built-in tool can bypass host boundaries. Do not distribute broadly before adversarial attachment and tool tests pass.
 - Structured headings, lists, bold and italic persist and export through DOCX/PDF/Markdown. Whole-proposal acceptance remains the default; granular change acceptance and direct table editing are future enhancements. XLSX/PPTX use plain content.
 - Local draft export uses the existing action gate with a host-owned low-risk descriptor. External actions are unavailable; no scoped authorization is granted to provider tools.

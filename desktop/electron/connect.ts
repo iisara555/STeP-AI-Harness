@@ -10,6 +10,7 @@ export const connectNotes: Record<string, string> = {
   CLAUDE_CODE_UPDATE_REQUIRED: 'กรุณาอัปเดต Claude Code เป็นรุ่น 2.1.268 ขึ้นไป แล้วเชื่อมต่อใหม่',
   CLAUDE_PROFILE_MISMATCH: 'Claude Code ใช้โฟลเดอร์บัญชีไม่ตรงกับ STeP จึงหยุดการเชื่อมต่อ',
   CLAUDE_AUTH_STATUS_INVALID: 'ตรวจสถานะ Claude ไม่สำเร็จ กรุณาอัปเดต Claude Code แล้วลองใหม่',
+  LOGIN_BROWSER_FAILED: 'เปิดหน้าลงชื่อในเบราว์เซอร์ไม่สำเร็จ ตรวจเบราว์เซอร์เริ่มต้นแล้วเชื่อมต่อใหม่',
   CLAUDE_SUBSCRIPTION_REQUIRED: 'กรุณาใช้บัญชี Claude Pro/Max แทนบัญชี Console ในการเชื่อมต่อนี้',
   CLAUDE_LOGOUT_FAILED: 'ออกจากบัญชี Claude ไม่สำเร็จ ข้อมูลบัญชียังเก็บไว้เพื่อให้ลองใหม่',
   ANTHROPIC_CLI_NOT_FOUND: 'ยังไม่พบ ant CLI ของ Anthropic กด “ติดตั้ง ant CLI” แล้วเชื่อมต่อใหม่',
