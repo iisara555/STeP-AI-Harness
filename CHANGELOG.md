@@ -6,6 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop ChatGPT and Gemini connection follow-up
+
+- Cancel pending ChatGPT OAuth attempts on synchronous or asynchronous browser failure and preserve a typed browser error. Reject malformed login links, user information, non-default ports and fragments before browser launch.
+- Record successful local ChatGPT account refresh and one bounded live generation. Retain Gemini's consumer-account restriction after verifying Google's explicit deprecation notice; protocol initialization is recorded separately from live account acceptance. See [connection evidence](docs/chatgpt-gemini-oauth-followup.md).
+
 ### Desktop Claude Code OAuth follow-up
 
 - Open a complete, validated official Claude authorization URL when piped CLI login does not launch the browser; cancel on browser failure and keep URLs/codes out of progress and diagnostics.

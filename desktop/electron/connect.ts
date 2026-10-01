@@ -180,8 +180,14 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
   if (login?.type !== 'chatgpt' || typeof login.authUrl !== 'string' || typeof login.loginId !== 'string')
     throw new Error('INVALID_LOGIN_RESPONSE');
 
-  const url = new URL(login.authUrl);
-  if (url.protocol !== 'https:' || !OPENAI_LOGIN_HOSTS.includes(url.hostname)) throw new Error('INVALID_LOGIN_URL');
+  let url: URL;
+  try {
+    url = new URL(login.authUrl);
+  } catch {
+    throw new Error('INVALID_LOGIN_URL');
+  }
+  if (url.protocol !== 'https:' || !OPENAI_LOGIN_HOSTS.includes(url.hostname) || url.port || url.username || url.password || url.hash)
+    throw new Error('INVALID_LOGIN_URL');
   const loginId = login.loginId;
   deps.progress('รอให้ลงชื่อ ChatGPT ในเบราว์เซอร์…');
 
@@ -213,10 +219,13 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
       if (params?.loginId && params.loginId !== loginId) return;
       params?.success ? finish() : finish(new Error('LOGIN_FAILED'));
     };
-    deps.openExternal(url.href).catch(() => {
-      void cancel();
-      finish(new Error('LOGIN_FAILED'));
-    });
+    if (signal.aborted) return abort();
+    void Promise.resolve()
+      .then(() => deps.openExternal(url.href))
+      .catch(() => {
+        void cancel();
+        finish(new Error('LOGIN_BROWSER_FAILED'));
+      });
   });
 
   // Do not trust the callback alone; verify that Codex can refresh the account it
