@@ -1023,7 +1023,7 @@ export default function App() {
                       })
                     }
                   >
-                    Fork บทสนทนา
+                    ทำสำเนาเป็นงานใหม่
                   </button>
                   <button
                     className="quiet"
@@ -1052,8 +1052,12 @@ export default function App() {
                   <button className="quiet" onClick={() => setMemoryOpen(true)}>
                     ความจำ
                   </button>
-                  <button className="quiet" onClick={() => setAutomationOpen(true)}>
-                    งานเบื้องหลัง
+                  <button
+                    className="quiet"
+                    title="ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน"
+                    onClick={() => setAutomationOpen(true)}
+                  >
+                    งานตามรอบ
                   </button>
                   {snapshot.policy?.features.coordinator && (
                     <label>
@@ -1100,7 +1104,14 @@ export default function App() {
                     พร้อมเครื่องมือสำหรับทำงานในโฟลเดอร์ของคุณ
                   </p>
                   <div className="suggestions">
-                    {(snapshot.settings.team === 'qs' ? ['ช่วยเตรียม checklist ตรวจติดตามคุณภาพภายใน ISO 9001', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยร่างอีเมลเชิญประชุมทีม'] : ['ช่วยร่างอีเมลเชิญประชุมทีม', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยวางโครงสไลด์นำเสนอโครงการ']).map(text => (
+                    {(snapshot.settings.team === 'qs'
+                      ? [
+                          'ช่วยเตรียม checklist ตรวจติดตามคุณภาพภายใน ISO 9001',
+                          'ช่วยสรุปบันทึกประชุมเป็นรายการงาน',
+                          'ช่วยร่างอีเมลเชิญประชุมทีม',
+                        ]
+                      : ['ช่วยร่างอีเมลเชิญประชุมทีม', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยวางโครงสไลด์นำเสนอโครงการ']
+                    ).map(text => (
                       <button key={text} onClick={() => setQuery(text)}>
                         <FileText size={16} />
                         <span>{text}</span>
@@ -1686,13 +1697,42 @@ export default function App() {
           />
           <aside className="artifact-pane" data-tour="artifact">
             <nav className="workbench-tabs" aria-label="Workspace tools">
-              {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[]).filter(tab => advancedTools || tab !== 'terminal').map(tab => (
-                <button key={tab} className={toolTab === tab ? 'active' : 'quiet'} onClick={() => setToolTab(tab)}>
-                  {{ output: 'ผลงาน', browser: 'เว็บ', terminal: 'คำสั่งขั้นสูง', tasks: 'งานเบื้องหลัง', files: 'ไฟล์งาน', changes: 'รายการแก้ไข' }[tab]}
-                </button>
-              ))}
+              {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
+                .filter(tab => advancedTools || tab !== 'terminal')
+                .map(tab => (
+                  <button
+                    key={tab}
+                    className={toolTab === tab ? 'active' : ''}
+                    aria-current={toolTab === tab ? 'page' : undefined}
+                    onClick={() => setToolTab(tab)}
+                  >
+                    {
+                      {
+                        output: 'ผลงาน',
+                        browser: 'เว็บ',
+                        terminal: 'คำสั่งขั้นสูง',
+                        tasks: 'งานเบื้องหลัง',
+                        files: 'ไฟล์งาน',
+                        changes: 'รายการแก้ไข',
+                      }[tab]
+                    }
+                  </button>
+                ))}
+              <button
+                className="workbench-advanced"
+                aria-expanded={advancedTools}
+                aria-label="เครื่องมือขั้นสูง"
+                title={
+                  advancedTools ? 'ซ่อนแท็บคำสั่งขั้นสูง' : 'เครื่องมือขั้นสูง: แสดงแท็บคำสั่งขั้นสูงสำหรับผู้ใช้ที่คุ้นเคยกับ Terminal'
+                }
+                onClick={() => {
+                  setAdvancedTools(!advancedTools);
+                  if (toolTab === 'terminal') setToolTab('output');
+                }}
+              >
+                <Settings2 size={15} />
+              </button>
             </nav>
-            <button className="text-link" aria-expanded={advancedTools} onClick={() => { setAdvancedTools(!advancedTools); if (toolTab === 'terminal') setToolTab('output'); }}>เครื่องมือขั้นสูง</button>
             <WorkbenchPanel
               api={api}
               tab={toolTab}
@@ -1700,7 +1740,11 @@ export default function App() {
               workspace={snapshot.settings.workspace}
               request={toolRequest}
               onTab={setToolTab}
-              onBrowserTask={url => { setWorkMode('chat'); setQuery(`ให้ผู้ช่วยทำงานบนเว็บ ${url === 'https://' ? '[ใส่ URL]' : url} โดย [ระบุสิ่งที่ต้องการทำ]`); composerRef.current?.focus(); }}
+              onBrowserTask={url => {
+                setWorkMode('chat');
+                setQuery(`ให้ผู้ช่วยทำงานบนเว็บ ${url === 'https://' ? '[ใส่ URL]' : url} โดย [ระบุสิ่งที่ต้องการทำ]`);
+                composerRef.current?.focus();
+              }}
               onSource={text => {
                 setPendingSource(text.slice(0, 100000));
                 setQuery('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา');

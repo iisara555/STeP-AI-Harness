@@ -91,7 +91,7 @@ try {
   await mkdir('release/qa', { recursive: true });
   await page.screenshot({ path: 'release/qa/phase6-scoped-consent.png' });
   await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-  await expect(page.getByText('Scoped tool flow completed', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scoped tool flow completed', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.transmission-scope')).toHaveCount(0);
   await assert.rejects(readFile(join(workspace, 'draft.txt')));
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).approvals.length, 0);

@@ -2249,3 +2249,39 @@ nav .count {
   border-radius: 8px;
   padding: 8px 12px;
 }
+/* Workbench tabs: one readable row, with the advanced toggle kept at the far end instead of floating under the tabs. */
+.workbench-tabs {
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.workbench-tabs button {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 7px 7px 0 0;
+  padding: 8px 8px 7px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.workbench-tabs button.active {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.workbench-tabs .workbench-advanced {
+  margin-left: auto;
+  padding: 6px;
+  border-radius: 7px;
+  border-bottom: 0;
+}
+.workbench-tabs .workbench-advanced[aria-expanded='true'] {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}

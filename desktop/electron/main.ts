@@ -966,7 +966,7 @@ async function main() {
         const id = inputText(input.id, 60),
           job = automations.list().find(j => j.id === id);
         if (!job) throw new Error('AUTOMATION_NOT_FOUND');
-        if (!(await phase4Consent('เริ่มงานเบื้องหลัง?', job.query))) throw new Error('CANCELLED');
+        if (!(await phase4Consent('เริ่มงานตามรอบ?', job.query))) throw new Error('CANCELLED');
         if (JSON.stringify(job) !== JSON.stringify(automations.list().find(j => j.id === id)))
           throw new Error('AUTOMATION_CONTEXT_CHANGED');
         return automations.enqueue(id);

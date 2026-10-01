@@ -169,7 +169,7 @@ try {
   await page.getByPlaceholder('ค้นหางานหรือเนื้อหา').fill('Distinct source');
   await expect(page.locator('.session-open')).toHaveCount(1);
   await page.getByPlaceholder('ค้นหางานหรือเนื้อหา').fill('');
-  await page.getByRole('button', { name: 'Fork บทสนทนา', exact: true }).click();
+  await page.getByRole('button', { name: 'ทำสำเนาเป็นงานใหม่', exact: true }).click();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.length).toBe(2);
   state = await page.evaluate(() => window.step.call('snapshot'));
   const fork = state.sessions.find(s => s.parentId === 'source');

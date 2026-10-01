@@ -152,8 +152,12 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                 เว็บ
               </h2>
               <button onClick={() => onBrowserTask(url)}>ให้ผู้ช่วยทำงานบนเว็บ</button>
-              <p className="small muted">ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น</p>
-              <p className="small muted">ลงชื่อเข้าใช้ด้วยตนเองในหน้าต่าง STeP ที่แยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์</p>
+              <p className="small muted">
+                ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น
+              </p>
+              <p className="small muted">
+                ลงชื่อเข้าใช้ด้วยตนเองในหน้าต่าง STeP ที่แยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์
+              </p>
               <h3>เปิดอ่านด้วยตนเอง</h3>
               <form
                 onSubmit={e => {
@@ -166,7 +170,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                 <input aria-label="Browser URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.com" />
                 <button disabled={busy}>เปิดเว็บ</button>
               </form>
-              <p className="muted small">เปิดในหน้าต่าง Browser แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจและส่งเข้า Chat ได้</p>
+              <p className="muted small">เปิดในหน้าต่างเว็บที่แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจ แล้วส่งเข้าช่องคุยได้</p>
               {browser && (
                 <section className="browser-preview">
                   <h3>{browser.title || browser.url}</h3>
@@ -183,7 +187,9 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                     >
                       อ่านหน้าเว็บปัจจุบัน
                     </button>
-                    {browser.text && <button onClick={() => onSource(`Web source: ${browser.url}\n\n${browser.text}`)}>ใช้ใน Chat</button>}
+                    {browser.text && (
+                      <button onClick={() => onSource(`Web source: ${browser.url}\n\n${browser.text}`)}>ส่งเข้าช่องคุย</button>
+                    )}
                   </div>
                   {browser.text && <pre>{browser.text}</pre>}
                 </section>
@@ -192,7 +198,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
           )}
           {(tab === 'terminal' || tab === 'tasks') && (
             <div className="tool-section">
-              <h2>{tab === 'terminal' ? 'Terminal' : 'Background Tasks'}</h2>
+              <h2>{tab === 'terminal' ? 'คำสั่งขั้นสูง' : 'งานเบื้องหลัง'}</h2>
               {tab === 'terminal' && (
                 <form
                   onSubmit={e => {
@@ -218,7 +224,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   </button>
                 </form>
               )}
-              <p className="muted small">งานทำต่อได้ระหว่างคุยใน Chat · ไม่รันซ้ำหลังเปิดแอปใหม่</p>
+              <p className="muted small">งานทำต่อได้ระหว่างคุยกับผู้ช่วย · ไม่รันซ้ำหลังเปิดแอปใหม่</p>
               {tasks.length === 0 && <div className="tool-empty">ยังไม่มีงานที่รัน</div>}
               {tasks.map(task => (
                 <section className="task-card" key={task.id}>
@@ -263,7 +269,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   <ArrowLeft size={14} />
                 </button>
                 <code>{path || '/'}</code>
-                <button className="icon" aria-label="Refresh files" onClick={() => void action(() => list(path))}>
+                <button className="icon" aria-label="รีเฟรชรายการไฟล์" onClick={() => void action(() => list(path))}>
                   <RefreshCw size={14} />
                 </button>
               </div>
@@ -346,7 +352,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         )
                       }
                     >
-                      ใช้ใน Chat
+                      ส่งเข้าช่องคุย
                     </button>
                   </div>
                 </section>
@@ -355,7 +361,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
           )}
           {tab === 'changes' && (
             <div className="tool-section">
-              <h2>Changes</h2>
+              <h2>รายการแก้ไข</h2>
               <button className="quiet" onClick={() => void action(async () => setSnapshots(await api.call('toolSnapshots')))}>
                 ดูไฟล์สำรอง
               </button>
@@ -432,16 +438,16 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                 <section className="change-card" key={change.id}>
                   <h3>{change.path}</h3>
                   {change.path.toLowerCase().endsWith('.xlsx') && (
-                    <p className="small muted">ตรวจสูตร รูปแบบ และองค์ประกอบของตารางหลังบันทึก ไฟล์เดิมจะสำรองไว้ใน Changes</p>
+                    <p className="small muted">ตรวจสูตร รูปแบบ และองค์ประกอบของตารางหลังบันทึก ไฟล์เดิมจะสำรองไว้ในแท็บรายการแก้ไข</p>
                   )}
                   <small>{change.root}</small>
                   <div className="change-diff">
                     <div>
-                      <h4>Before</h4>
+                      <h4>ก่อนแก้</h4>
                       <pre className="removed">{change.before || '(new file)'}</pre>
                     </div>
                     <div>
-                      <h4>After</h4>
+                      <h4>หลังแก้</h4>
                       <pre className="added">{change.after}</pre>
                     </div>
                   </div>
@@ -473,8 +479,8 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
               ))}
               {git && (
                 <section className="change-card">
-                  <h3>Git working tree</h3>
-                  <pre>{git.status || 'No changes'}</pre>
+                  <h3>สถานะไฟล์ใน Git</h3>
+                  <pre>{git.status || 'ไม่มีการเปลี่ยนแปลง'}</pre>
                   <pre>{git.diff}</pre>
                 </section>
               )}

@@ -5,7 +5,7 @@ export const COMMANDS = [
   ['new', 'เริ่มงานใหม่', 'Mod+Alt+n'],
   ['usage', 'ดูการใช้งาน AI', 'Mod+Shift+u'],
   ['memory', 'ดูและแก้ไขความจำ', 'Mod+Shift+m'],
-  ['automations', 'งานเบื้องหลังและเครื่องมือเพิ่มเติม', 'Mod+Shift+b'],
+  ['automations', 'งานตามรอบและเครื่องมือเพิ่มเติม', 'Mod+Shift+b'],
   ['settings', 'ตั้งค่าพื้นที่ทำงาน', 'Mod+,'],
   ['keyboard', 'คีย์ลัดและ Vim', ''],
   ['packs', 'Skill Packs', ''],
