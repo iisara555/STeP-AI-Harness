@@ -309,8 +309,12 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   <input aria-label="File path" value={file.path} onChange={e => setFile({ ...file, path: e.target.value })} />
                   {file.total !== undefined && file.total > file.text.length && (
                     <p className="muted small">
-                      {t('แสดงช่วง')} {(file.offset || 0) + 1}–{(file.offset || 0) + file.text.length} {t('จาก')} {file.total}{' '}
-                      {t('ตัวอักษร ไฟล์ยาวเปิดอ่านเป็นช่วงได้')}
+                      {t(
+                        'แสดงช่วง {0}–{1} จาก {2} ตัวอักษร ไฟล์ยาวเปิดอ่านเป็นช่วงได้',
+                        (file.offset || 0) + 1,
+                        (file.offset || 0) + file.text.length,
+                        file.total,
+                      )}
                     </p>
                   )}
                   <textarea

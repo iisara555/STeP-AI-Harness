@@ -204,9 +204,7 @@ export function SettingsPanel({
               </button>
             ))}
           </div>
-          <p className="small muted">
-            {t('ทางลัด: กด')} {shortcut} {t('แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า')}
-          </p>
+          <p className="small muted">{t('ทางลัด: กด {0} แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า', shortcut)}</p>
         </section>
       )}
       {page === 'policy' && snapshot.policy && (
@@ -416,13 +414,15 @@ export function SettingsPanel({
             >
               {removingConnection.provider !== 'antigravity' && (
                 <p>
-                  {providerLabel(removingConnection.provider)} (
-                  {removingConnection.mode === 'api'
-                    ? 'API key'
-                    : removingConnection.mode === 'oauth'
-                      ? 'Claude Console OAuth'
-                      : t('บัญชี')}
-                  {t(') จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ')}
+                  {t(
+                    '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ',
+                    providerLabel(removingConnection.provider),
+                    removingConnection.mode === 'api'
+                      ? 'API key'
+                      : removingConnection.mode === 'oauth'
+                        ? 'Claude Console OAuth'
+                        : t('บัญชี'),
+                  )}
                 </p>
               )}
               {removingConnection.provider === 'antigravity' && (

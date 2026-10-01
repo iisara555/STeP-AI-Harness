@@ -384,10 +384,9 @@ export function ReceiptApp({
       )}
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
-          {t('OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “')}
-          {status.updateAvailable ? t('อัปเดต OCR') : t('ติดตั้ง OCR')}
           {t(
-            '” เมื่อต้องการใช้ ระบบจะดาวน์โหลด Python ที่ตรวจสอบ checksum แล้ว จากนั้นติดตั้ง Paddle และโมเดล OCR ไว้ใน App Data ของผู้ใช้นี้ การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต',
+            'OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{0}” เมื่อต้องการใช้ ระบบจะดาวน์โหลด Python ที่ตรวจสอบ checksum แล้ว จากนั้นติดตั้ง Paddle และโมเดล OCR ไว้ใน App Data ของผู้ใช้นี้ การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต',
+            status.updateAvailable ? t('อัปเดต OCR') : t('ติดตั้ง OCR'),
           )}
         </p>
       )}
@@ -421,9 +420,9 @@ export function ReceiptApp({
             )}
             <details open={reviewLines > 0}>
               <summary>
-                {t('ข้อความที่อ่านได้ (')}
-                {records.length} {t('บรรทัด')}
-                {reviewLines ? t(' · ต้องตรวจ {0}', reviewLines) : ''})
+                {reviewLines
+                  ? t('ข้อความที่อ่านได้ ({0} บรรทัด · ต้องตรวจ {1})', records.length, reviewLines)
+                  : t('ข้อความที่อ่านได้ ({0} บรรทัด)', records.length)}
               </summary>
               <ol className="ocr-lines">
                 {records.map((r, i) => (
@@ -431,25 +430,17 @@ export function ReceiptApp({
                     <span>{r.text}</span>
                     {r.tesseractCandidate && r.tesseractCandidate !== r.text && (
                       <small>
-                        {t('Tesseract อ่านว่า “')}
-                        {r.tesseractCandidate}”
+                        {t('Tesseract อ่านว่า “{0}”', r.tesseractCandidate)}
                         {r.tesseractConfidence !== null && r.tesseractConfidence !== undefined
                           ? ` · ${Math.round(r.tesseractConfidence * 100)}%`
                           : ''}
                       </small>
                     )}
                     {r.handwritingCandidate && r.handwritingCandidate !== r.text && (
-                      <small>
-                        {t('โมเดลลายมืออ่านว่า “')}
-                        {r.handwritingCandidate}
-                        {t('” · ยังไม่ยืนยัน')}
-                      </small>
+                      <small>{t('โมเดลลายมืออ่านว่า “{0}” · ยังไม่ยืนยัน', r.handwritingCandidate)}</small>
                     )}
                     {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
-                      <small>
-                        {t('EasyOCR อ่านว่า “')}
-                        {r.crosscheckCandidate}”
-                      </small>
+                      <small>{t('EasyOCR อ่านว่า “{0}”', r.crosscheckCandidate)}</small>
                     )}
                     {r.textKind && (
                       <small>
@@ -490,8 +481,8 @@ export function ReceiptApp({
                 </div>
                 {fields[k]?.evidence && (
                   <small className="muted">
-                    {t('จากบรรทัด “')}
-                    {fields[k].evidence}”{fields[k].confidence !== null ? ` · ${Math.round((fields[k].confidence || 0) * 100)}%` : ''}
+                    {t('จากบรรทัด “{0}”', fields[k].evidence)}
+                    {fields[k].confidence !== null ? ` · ${Math.round((fields[k].confidence || 0) * 100)}%` : ''}
                     {fields[k].mappingMethod ? ` · map: ${fields[k].mappingMethod}` : ''}
                   </small>
                 )}
@@ -509,8 +500,7 @@ export function ReceiptApp({
                             setConfirmed({ ...confirmed, [k]: false });
                           }}
                         >
-                          {t('ใช้ “')}
-                          {candidate.value}”
+                          {t('ใช้ “{0}”', candidate.value)}
                         </button>
                       ))}
                     </div>
@@ -561,8 +551,8 @@ export function ReceiptApp({
               <div>
                 <strong>{result.complete ? t('พร้อมให้ AFP ตรวจ') : t('ยังต้องตรวจหรือแก้เพิ่ม')}</strong>{' '}
                 <small>
-                  {result.complete ? 'READY-FOR-AFP-REVIEW' : 'NEEDS-DOCUMENT-FIX'} {t('· ตรวจแล้ว')} {result.confirmedCount}/
-                  {result.filledCount} {t('ช่อง')}
+                  {result.complete ? 'READY-FOR-AFP-REVIEW' : 'NEEDS-DOCUMENT-FIX'}{' '}
+                  {t('· ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}
                 </small>
                 {result.issues.length > 0 && (
                   <ul>

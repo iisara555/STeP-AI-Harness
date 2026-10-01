@@ -743,11 +743,19 @@ export default function App() {
     'theme-light': () => void setTheme('light'),
     'theme-dark': () => void setTheme('dark'),
   };
+  // A refresh can land after main saved the answer but before it reports the run finished; the saved message
+  // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
+  const lastMessage = session?.messages.at(-1);
+  const streamSaved = Boolean(stream) && lastMessage?.role === 'assistant' && lastMessage.text.trim() === stream.trim();
   const commandRef = useRef(commands);
   commandRef.current = commands;
+  // Read the bindings during the key press rather than re-registering the listener: a shortcut pressed right
+  // after saving new bindings would otherwise land between the render and the effect and be dropped.
+  const keybindingsRef = useRef(snapshot?.settings.keybindings);
+  keybindingsRef.current = snapshot?.settings.keybindings;
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      const id = commandForKey(e, snapshot?.settings.keybindings, /Mac/.test(navigator.platform));
+      const id = commandForKey(e, keybindingsRef.current, /Mac/.test(navigator.platform));
       if (id && id in commandRef.current) {
         e.preventDefault();
         commandRef.current[id as keyof typeof commands]();
@@ -755,7 +763,7 @@ export default function App() {
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, [snapshot?.settings.keybindings]);
+  }, []);
   const paletteItems: PaletteItem[] = snapshot
     ? commandPalette(commands, snapshot.settings.keybindings || {}, [
         ...routedSkills.map(s => ({
@@ -1108,8 +1116,11 @@ export default function App() {
                   )}
                   {session.compaction && (
                     <span className="muted small">
-                      {t('ย่อบริบทแล้ว')} {session.compaction.before.toLocaleString(locale())} →{' '}
-                      {session.compaction.after.toLocaleString(locale())} {t('tokens (ประมาณการ)')}
+                      {t(
+                        'ย่อบริบทแล้ว {0} → {1} tokens (ประมาณการ)',
+                        session.compaction.before.toLocaleString(locale()),
+                        session.compaction.after.toLocaleString(locale()),
+                      )}
                     </span>
                   )}
                 </div>
@@ -1321,7 +1332,7 @@ export default function App() {
                       <div>{reasoning}</div>
                     </details>
                   )}
-                  {stream && <RichText className="message-body streaming" text={stream} />}
+                  {stream && !streamSaved && <RichText className="message-body streaming" text={stream} />}
                 </article>
               )}
               {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
@@ -1375,8 +1386,14 @@ export default function App() {
                 .map(g => (
                   <div className="transmission-scope" key={g.id} role="status">
                     <span>
-                      {t('อนุญาตส่งผลการอ่าน:')} {g.source} → {g.destination} {t('· เหลือ')} {g.remainingResults} {t('ผล /')}{' '}
-                      {g.remainingChars.toLocaleString(locale())} {t('ตัวอักษร · ถึง')} {new Date(g.expiresAt).toLocaleTimeString(locale())}
+                      {t(
+                        'อนุญาตส่งผลการอ่าน: {0} → {1} · เหลือ {2} ผล / {3} ตัวอักษร · ถึง {4}',
+                        g.source,
+                        g.destination,
+                        g.remainingResults,
+                        g.remainingChars.toLocaleString(locale()),
+                        new Date(g.expiresAt).toLocaleTimeString(locale()),
+                      )}
                     </span>
                     <button
                       className="quiet"
@@ -2064,18 +2081,19 @@ export default function App() {
             consentAsk.labels.length > 0 && (
               <p className="confirm-warning">
                 <ShieldCheck size={16} />
-                {t('ระบบจะปิดบังก่อนส่ง:')} {consentAsk.labels.join(', ')}{' '}
-                {t('ร่างที่ได้จะมีข้อความในวงเล็บแทน ให้ใส่ข้อมูลจริงเองหลังตรวจ')}
+                {t('ระบบจะปิดบังก่อนส่ง: {0} ร่างที่ได้จะมีข้อความในวงเล็บแทน ให้ใส่ข้อมูลจริงเองหลังตรวจ', consentAsk.labels.join(', '))}
               </p>
             )
           )}
           <p>
-            {t('คำขอ')}
-            {consentAsk.attachment || consentAsk.sourceText ? t(' พร้อมข้อมูลต้นทางที่ตรวจแล้ว') : ''}{' '}
-            {t('ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้')}{' '}
-            {providerName(
-              snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
-                connection,
+            {t(
+              consentAsk.attachment || consentAsk.sourceText
+                ? 'คำขอ พร้อมข้อมูลต้นทางที่ตรวจแล้ว ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้ {0}'
+                : 'คำขอ ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้ {0}',
+              providerName(
+                snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
+                  connection,
+              ),
             )}
           </p>
           <p className="small muted">
@@ -2137,9 +2155,11 @@ export default function App() {
             }}
           >
             <p>
-              {t('แอปจะคัดลอกคำขอ')}
-              {handoffAsk.skill ? t(' พร้อมตำแหน่งไฟล์ Skill') : ''}{' '}
-              {t('แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง')}
+              {handoffAsk.skill
+                ? t(
+                    'แอปจะคัดลอกคำขอ พร้อมตำแหน่งไฟล์ Skill แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง',
+                  )
+                : t('แอปจะคัดลอกคำขอ แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง')}
             </p>
             <p className="small muted">
               {t(
@@ -2166,8 +2186,10 @@ export default function App() {
           }}
         >
           <p>
-            “{removing.title}
-            {t('” พร้อมบทสนทนา ร่าง และประวัติเวอร์ชันจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้ ไฟล์ที่ส่งออกไว้แล้วในโฟลเดอร์ผลงานยังอยู่')}
+            {t(
+              '“{0}” พร้อมบทสนทนา ร่าง และประวัติเวอร์ชันจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้ ไฟล์ที่ส่งออกไว้แล้วในโฟลเดอร์ผลงานยังอยู่',
+              removing.title,
+            )}
           </p>
         </ConfirmDialog>
       )}

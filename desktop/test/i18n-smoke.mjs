@@ -30,7 +30,7 @@ try {
 
   // Welcome copy, trust points and starters follow the language; Thai text from the code must not leak.
   await expect(page.getByRole('heading', { name: /Let AI do the heavy drafting/ })).toBeVisible();
-  await expect(page.locator('.welcome-trust')).toContainText('AI drafts, people review and approve');
+  await expect(page.locator('.welcome-trust')).toContainText('AI drafts; people review and approve');
   await expect(page.locator('.suggestions button')).toHaveCount(3);
   const starter = (await page.locator('.suggestions button').first().innerText()).trim();
   assert.doesNotMatch(starter, /[฀-๿]/, starter);
@@ -49,7 +49,7 @@ try {
     await window.step.call('settings', { assistant: s.assistant, team: 'qs', theme: s.theme });
   });
   await page.reload();
-  await expect(page.locator('.suggestions-label')).toContainText('Try a first task for Quality System');
+  await expect(page.locator('.suggestions-label')).toContainText('First tasks for Quality System');
   await expect(page.locator('.suggestions')).toContainText('ISO 9001 internal audit checklist');
   await shot(page, 'en-welcome-qs.png');
 

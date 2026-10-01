@@ -27,7 +27,7 @@ const styles: { id: Personality; label: string; tone: string; sample: (user: str
     id: 'concise',
     label: 'กระชับ',
     tone: 'ตอบสั้น ตรงประเด็น',
-    sample: (u, a) => t('{0}พร้อมครับ บอกงานมาได้เลย — {1}', u ? u + ' ' : '', a),
+    sample: (u, a) => (u ? t('{0} พร้อมครับ บอกงานมาได้เลย — {1}', u, a) : t('พร้อมครับ บอกงานมาได้เลย — {0}', a)),
   },
   {
     id: 'custom',

@@ -929,8 +929,15 @@ export function draftSummary(text: string, previous: string, skillTitle: string,
         tm('- ความยาว {0} → {1} ตัวอักษร', previous.length.toLocaleString(mainLocale()), text.length.toLocaleString(mainLocale())),
       );
   } else {
+    // Whole sentences per case, so each language keeps its own word order.
     lines.push(
-      tm('จัดทำร่าง{0}แล้ว{1}', skillTitle ? tm('ด้วย Skill “{0}” ', skillTitle) : '', now.length ? tm(' มี {0} หัวข้อ', now.length) : ''),
+      skillTitle
+        ? now.length
+          ? tm('จัดทำร่างด้วย Skill “{0}” แล้ว มี {1} หัวข้อ', skillTitle, now.length)
+          : tm('จัดทำร่างด้วย Skill “{0}” แล้ว', skillTitle)
+        : now.length
+          ? tm('จัดทำร่างแล้ว มี {0} หัวข้อ', now.length)
+          : tm('จัดทำร่างแล้ว'),
     );
     if (now.length) lines.push(`- ${now.slice(0, 8).join(', ')}${now.length > 8 ? ' …' : ''}`);
   }

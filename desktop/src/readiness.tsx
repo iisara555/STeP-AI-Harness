@@ -31,9 +31,18 @@ export function Readiness({ api, query, connectionId, model }: { api: DesktopAPI
     <div className="small muted" aria-label={t('ตรวจความพร้อมก่อนส่ง')} aria-live="polite">
       {result.estimate && (
         <>
-          {t('ประมาณ')} {formatTokens(result.estimate.inputTokens)} {t('tokens เข้า /')} {formatTokens(result.estimate.outputTokens)}{' '}
-          {t('ออก ·')}
-          {result.estimate.usd === null ? t(' ยังไม่มีราคาในนโยบาย') : ` $${result.estimate.usd.toFixed(4)}`} {t('· เฉพาะคำขอปัจจุบัน')}
+          {result.estimate.usd === null
+            ? t(
+                'ประมาณ {0} tokens เข้า / {1} ออก · ยังไม่มีราคาในนโยบาย · เฉพาะคำขอปัจจุบัน',
+                formatTokens(result.estimate.inputTokens),
+                formatTokens(result.estimate.outputTokens),
+              )
+            : t(
+                'ประมาณ {0} tokens เข้า / {1} ออก · ${2} · เฉพาะคำขอปัจจุบัน',
+                formatTokens(result.estimate.inputTokens),
+                formatTokens(result.estimate.outputTokens),
+                result.estimate.usd.toFixed(4),
+              )}
         </>
       )}
       {result.status === 'needs-input' && t('ต้องตอบคำถามแยกประเภทงานก่อน')}
