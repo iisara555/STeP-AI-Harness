@@ -12,8 +12,8 @@ export type LoopHost = {
   check: () => Promise<void>;
   readOnly: (request: LoopRequest) => boolean;
   execute: (request: LoopRequest, signal: AbortSignal) => Promise<unknown>;
-  /** Scan and obtain separate consent before any new tool data crosses the provider boundary. */
-  outgoing: (text: string, signal: AbortSignal) => Promise<string>;
+  /** Scan every result and check its source-bound transmission consent. */
+  outgoing: (text: string, signal: AbortSignal, request?: LoopRequest) => Promise<string>;
   readPage?: (request: LoopRequest, page: () => Partial<ToolResult>, signal: AbortSignal) => Promise<Partial<ToolResult> | null>;
   dispose?: () => Promise<void>;
   cancel?: () => void;
@@ -51,7 +51,7 @@ export class ToolLoop {
       const raw = typeof value === 'string' ? value : JSON.stringify(value ?? { cancelled: true });
       if (raw.length > 1_000_000 || this.cachedChars + raw.length > 4_000_000) throw new Error('TOOL_OUTPUT_LIMIT');
       // Only approved/masked content goes into the paging cache and subsequent model turns.
-      const approved = await this.host.outgoing(raw, signal);
+      const approved = await this.host.outgoing(raw, signal, r);
       const id = randomUUID();
       this.outputs.set(id, approved);
       this.cachedChars += approved.length;

@@ -26,6 +26,8 @@ For Claude subscription chat, install Claude Code 2.1.268 or newer yourself, cho
 
 ## Verification
 
+Phase 6 adds [bounded clean-read transmission consent and a feature matrix](../docs/desktop-phase6.md). Employees can explicitly approve a source scope for one round and revoke it from the composer. Privacy checks run on every result; new scopes, masking, document/MCP/command/write results and business actions retain their own gates. Administrators can disable the scoped choice with `transmissionConsent.allowRunScope=false`.
+
 ```sh
 npm test
 npm run validate
@@ -45,10 +47,12 @@ Run whenever a model, Skill, source or prompt changes. It sends the three synthe
 
 ```sh
 cd desktop
-STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EVAL_RUNS=3 npm run eval:golden
+STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EVAL_RUNS=1 npm run eval:golden
 ```
 
 `STEP_EVAL_MODEL` picks a model and `STEP_EVAL_ONLY=TOR-SYN-01` limits scenarios. The rubric catches critical failures (invented budget split, approval claims, invented dates, audit guarantees) and obvious omissions; it is not a quality certificate.
+
+`npm run eval:features` runs the offline feature matrix without credentials or quota. Live mode requires `STEP_EVAL_MODE=live` plus explicit approval and named auth. Claude Code OAuth uses `STEP_EVAL_AUTH=subscription` and an explicitly authorized `STEP_EVAL_CLAUDE_PROFILE`; no credential is copied. See the [Phase 6 operator instructions](../docs/desktop-phase6.md) for executable/version checks, call limits, evidence labels and outstanding live acceptance.
 
 ## Distribution
 

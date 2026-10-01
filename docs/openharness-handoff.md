@@ -8,7 +8,7 @@ The approved goal is a complete, chat-centered STeP employee workspace with edit
 
 Phases 0–3 are implemented and locally validated. The user explicitly authorized pushing this integrated baseline to `main`. This is a development preview, not a published release. Read [delivery status](openharness-parity.md) and check `git log origin/main` for the final integration commit. Phase 3's initial implementation is `3cb7dde`; the final follow-up also contains export validation, hard-link refusal, the memory editor smoke repair and this handoff.
 
-Phase 4 is implemented on `codex/openharness-phase4` in [draft PR #82](https://github.com/iisara555/STeP-AI-Harness/pull/82), with implementation commits `d7086e6` and `f6185ca`, for review against the integrated `main` baseline `61846ce`. Phase 5 is implemented in `e83329f` on `codex/openharness-phase5`, stacked on Phase 4, in [draft PR #83](https://github.com/iisara555/STeP-AI-Harness/pull/83). See [providers and surfaces](desktop-phase5.md). **Next phase: Phase 6 live evaluation and final documentation, after branch review and explicit live-account authorization.** Do not reimplement Phases 0–5. Live acceptance gaps below remain open and must not be represented as passing because local fixtures passed.
+Phase 4 is implemented on `codex/openharness-phase4` in [draft PR #82](https://github.com/iisara555/STeP-AI-Harness/pull/82), with implementation commits `d7086e6` and `f6185ca`, for review against the integrated `main` baseline `61846ce`. Phase 5 is implemented in `e83329f` on `codex/openharness-phase5`, stacked on Phase 4, in [draft PR #83](https://github.com/iisara555/STeP-AI-Harness/pull/83). See [providers and surfaces](desktop-phase5.md). **Phase 6 is implemented on `codex/openharness-phase6`; next work is branch review and remaining live/release acceptance after renewed authorization.** Do not reimplement Phases 0–6. Live acceptance gaps below remain open and must not be represented as passing because local fixtures passed.
 
 | Phase | Implemented baseline | Reference |
 | --- | --- | --- |
@@ -18,6 +18,7 @@ Phase 4 is implemented on `codex/openharness-phase4` in [draft PR #82](https://g
 | 3 | Context compaction, confirmed memory, workspace instructions/persona/styles, session resume/fork/search/export, local OCR and gated image input | [Context and memory](desktop-context-memory.md) |
 | 4 | Bounded coordinator, app-open scheduled drafts, attended MCP/Docker tools and host-validated GitHub autopilot proposals | [Automation and tools](desktop-automation.md) |
 | 5 | Compatible/Copilot provider adapters, shared headless runner/readiness, commands/Vim, local voice, governed packs and approved LINE drafts | [Providers and surfaces](desktop-phase5.md) |
+| 6 | Bounded clean-read transmission consent, feature matrix and account-explicit evaluation | [Consent and evaluation](desktop-phase6.md) |
 
 ## Phase 3 implementation map
 
@@ -94,9 +95,11 @@ Use mock HTTP streaming endpoints and synthetic LINE signatures/webhooks, plus `
 - Local Windows Desktop: 205 unit tests and all seven Electron smoke scripts passed. Ten targeted Harness Phase 5 tests passed, including actual shared-runner/Router LINE generation without live delivery. Both repository validators passed (51 Skills, no likely secrets, package whitelist). The full isolated Harness suite passed: 824 tests/6 platform skips (830 total). Check PR #83 CI for the final revision and `desktop/VALIDATION.md` for detailed evidence.
 - Remaining live acceptance: actual compatible/Copilot accounts and billing/denials; compatible REST proxy transport (currently refused when managed proxy is configured); administrator-built multilingual voice artifacts/microphone/hardware accuracy; real LINE enrollment/channel/permissions/retention operations; packaged Windows/macOS dependencies and clean installs. Text-only Skill interchange is bounded; arbitrary third-party binary/native-tool packs are not supported.
 
-## Phase 6: Live evaluation and documentation
+## Phase 6: Scoped consent, evaluation and documentation (implemented)
 
-Extend `desktop/eval/golden.ts` into a live feature matrix covering multi-turn memory/follow-ups, attachments, compaction, approved reads and gated writes, hook blocks, retry/resume and coordinator runs. Real API evaluation consumes quota and requires an explicit user instruction identifying an authorized administrator account/key. Update `desktop/README.md`, `docs/harness-foundation.md`, `CHANGELOG.md` and operator/employee documentation for the final managed policy schema and actual release evidence.
+Implemented in [draft PR #84](https://github.com/iisara555/STeP-AI-Harness/pull/84) on `codex/openharness-phase6`, stacked on Phase 5, with implementation commit `5026d38`. `desktop/eval/feature-matrix.ts` covers memory/follow-ups/attachments, compaction, clean reads and staged writes, hook blocks, checkpoint retry/resume and coordinator. The synthetic matrix passes all five groups. Scoped consent lasts one loop, binds source/account/model/policy, coalesces parallel confirmations and limits each scope to 10 minutes, 24 results and 200,000 characters. The composer shows the scope and revoke-and-stop. Whole-file risk survives masking; higher-risk data, destinations and execution/business actions retain separate gates. See [Phase 6](desktop-phase6.md) and `desktop/VALIDATION.md` for final evidence and managed policy settings.
+
+The user authorized local Claude Code OAuth evaluation. Bundled runtime 2.1.284 verified authentication, but generation failed: five provider attempts reported no usage, only the local matrix group passed, and subsequent auth status returned `LOGIN_REQUIRED`. The user requested keeping failed results and finishing local work. **Do not retry live calls under this earlier authorization.** Renewed login and explicit retry authorization are required. Local reports remain in ignored `desktop/eval-results/`; no tokens/profile copies are committed. Successful live acceptance and production/release operations remain open. The personal Claude CLI was not upgraded.
 
 ## Continue from another account
 
@@ -108,9 +111,9 @@ git status --short
 git log -1 origin/main
 ```
 
-When the checkout has no conflicting local work, switch to `main` and update with `git pull --ff-only`. Review `codex/openharness-phase4` and `codex/openharness-phase5` and their PRs. If they are unmerged, use the Phase 5 head as the next review/evaluation starting point; do not reimplement them from `main`. Read this document, `docs/openharness-parity.md`, `docs/desktop-policy.md`, `docs/desktop-tool-loop.md`, `docs/desktop-context-memory.md` and `desktop/VALIDATION.md`. Run the workspace's `step-ai ask "<latest user request>" --json` gate and load only its mandatory references. Use `node scripts/graphify-local.js query "<symbols>"` for narrow code navigation; verify inferred edges in current source and rebuild the code-only graph if stale.
+When the checkout has no conflicting local work, switch to `main` and update with `git pull --ff-only`. Review `codex/openharness-phase4`, `codex/openharness-phase5` and `codex/openharness-phase6` and their PRs. If they are unmerged, use the Phase 6 head as the next review/evaluation starting point; do not reimplement them from `main`. Read this document, `docs/openharness-parity.md`, `docs/desktop-policy.md`, `docs/desktop-tool-loop.md`, `docs/desktop-context-memory.md` and `desktop/VALIDATION.md`. Run the workspace's `step-ai ask "<latest user request>" --json` gate and load only its mandatory references. Use `node scripts/graphify-local.js query "<symbols>"` for narrow code navigation; verify inferred edges in current source and rebuild the code-only graph if stale.
 
-The original checkout contains user-owned, untracked `.codex/`, `SVG/` and `TOR_Draft_AI_API_Gateway.docx`. Do not commit, overwrite or delete them. Keep `USER.md`, `MEMORY.md`, `ASSISTANT.md`, `.step/memory/`, account profiles and credentials local. Root tests mutate installation fixtures: use a managed test worktree and an isolated child profile, not the employee's real home or primary checkout.
+The original checkout contains user-owned, untracked `.claude/`, `.codex/`, `SVG/` and `TOR_Draft_AI_API_Gateway.docx`. Do not commit, overwrite or delete them. Keep `USER.md`, `MEMORY.md`, `ASSISTANT.md`, `.step/memory/`, account profiles and credentials local. Root tests mutate installation fixtures: use a managed test worktree and an isolated child profile, not the employee's real home or primary checkout.
 
 Desktop checks, from `desktop/`:
 
@@ -127,4 +130,4 @@ Earlier stacked draft PRs: [#79](https://github.com/iisara555/STeP-AI-Harness/pu
 
 Suggested continuation prompt:
 
-> Read docs/openharness-handoff.md and desktop/VALIDATION.md. Confirm that Phases 0–3 are present on main, review the Phase 4 implementation and checks on codex/openharness-phase4, then prepare the Phase 6 live feature matrix after explicit account/key authorization through the existing governance boundary. Preserve local user files, use isolated synthetic validation, and report live/release acceptance separately. Do not start paid API evaluation or publish a release without explicit authorization.
+> Read docs/openharness-handoff.md, docs/desktop-phase6.md and desktop/VALIDATION.md. Inspect the Phase 4–6 branches before review or integration; preserve employee files and keep main unchanged until authorized. Phase 6 local validation passes; Claude OAuth generation did not pass and further live calls were stopped at the user request. Continue live/release acceptance only after renewed login and explicit authorization. Use isolated synthetic profiles and report local, live and release evidence separately.

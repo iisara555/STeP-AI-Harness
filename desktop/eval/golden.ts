@@ -4,26 +4,25 @@ import { runGovernedDraft } from '../../src/modules/runner/index.js';
  * WorkService with a real provider, then grades each draft against its rubric. Use it whenever a
  * model, Skill, source or prompt changes, and compare the reports across runs.
  *
- *   STEP_EVAL_PROVIDER=claude|openai|gemini STEP_EVAL_API_KEY=... [STEP_EVAL_MODEL=...] [STEP_EVAL_RUNS=3] \
+ *   STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude|openai|gemini STEP_EVAL_API_KEY=... [STEP_EVAL_MODEL=...] [STEP_EVAL_RUNS=1] \
  *   [STEP_EVAL_ONLY=TOR-SYN-01,MIN-SYN-01] npm run eval:golden
  *
  * The key is read from the environment only and is never written to the report. Each call uses a
- * throwaway runtime home, so personal CLI settings, MCP servers and sign-ins are never read.
+ * throwaway runtime home. An explicitly named Claude subscription profile is used only for auth;
+ * native tools, settings discovery, MCP and plugins remain disabled by the provider adapter.
  * Automated checks are not a quality certificate: a person still reads the saved outputs.
  */
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
-import { adapter } from '../electron/providers';
-import { isolatedRuntimeHome } from '../electron/runtime-home';
-import type { Connection, Provider } from '../src/types';
+import type { Connection } from '../src/types';
+import { evaluationRuntime } from './runtime';
 
 export type Check = {
   id: string;
@@ -186,29 +185,14 @@ export function report(meta: Record<string, string>, results: RunResult[], scena
   return lines.join('\n') + '\n';
 }
 
-async function main() {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const root = resolve(here, '../..');
-  const provider = process.env.STEP_EVAL_PROVIDER as Provider;
-  const key = process.env.STEP_EVAL_API_KEY || '';
-  if (!['claude', 'openai', 'gemini'].includes(provider) || !key) {
-    console.error(
-      'Set STEP_EVAL_PROVIDER (claude|openai|gemini) and STEP_EVAL_API_KEY. Optional: STEP_EVAL_MODEL, STEP_EVAL_RUNS, STEP_EVAL_ONLY.',
-    );
-    process.exit(2);
-  }
-  const runs = Math.max(1, Math.min(10, Number(process.env.STEP_EVAL_RUNS || 3)));
-  const only = (process.env.STEP_EVAL_ONLY || '').split(',').filter(Boolean);
-  const golden = JSON.parse(await readFile(join(here, 'golden.json'), 'utf8'));
-  const scenarios: Scenario[] = golden.scenarios.filter((s: Scenario) => !only.length || only.includes(s.id));
-
+export async function evaluationHarness(root: string): Promise<Harness> {
   const importRoot = (path: string) => import(new URL(`../../${path}`, import.meta.url).href);
   const routing: any = await importRoot('src/modules/router/service.js');
   const routerPolicy: any = await importRoot('src/modules/router/index.js');
   const privacy: any = await importRoot('src/modules/privacy/index.js');
   const documents: any = await importRoot('src/modules/privacy/document.js');
   const outputs: any = await importRoot('src/modules/output-manager.js');
-  const harness: Harness = {
+  return {
     root,
     route: routing.queryStepRouter,
     contextPolicy: routerPolicy.classifyContextPolicy,
@@ -220,29 +204,27 @@ async function main() {
     documentPrivacy: documents.evaluateDocumentPrivacy,
     nextOutput: outputs.getNextOutputPath,
   };
+}
 
-  const requireModule = createRequire(import.meta.url);
-  const executable =
-    provider === 'openai'
-      ? requireModule.resolve('@openai/codex/bin/codex.js')
-      : provider === 'gemini'
-        ? requireModule.resolve('@google/gemini-cli/bundle/gemini.js')
-        : '';
-  const connection: Connection = {
-    id: 'eval',
-    provider,
-    mode: 'api',
-    model: process.env.STEP_EVAL_MODEL || '',
-    executable,
-    ready: true,
-    note: '',
-  };
-  const home = await mkdtemp(join(tmpdir(), 'step-eval-'));
-  const { cwd, env } = await isolatedRuntimeHome(home, connection);
-  const runtime = async () => ({ adapter: adapter(provider), context: { cwd, env, key } });
-
-  const results = await runGolden({ harness, runtime, connection, scenarios, runs, onProgress: line => console.log(line) });
-  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+async function main() {
+  const here = dirname(fileURLToPath(import.meta.url)),
+    root = resolve(here, '../..');
+  const runs = Number(process.env.STEP_EVAL_RUNS || 1);
+  if (!Number.isSafeInteger(runs) || runs < 1 || runs > 10) throw new Error('EVAL_RUNS_INVALID');
+  const only = (process.env.STEP_EVAL_ONLY || '').split(',').filter(Boolean);
+  const golden = JSON.parse(await readFile(join(here, 'golden.json'), 'utf8'));
+  const scenarios: Scenario[] = golden.scenarios.filter((s: Scenario) => !only.length || only.includes(s.id));
+  if (!scenarios.length || only.some(id => !golden.scenarios.some((s: Scenario) => s.id === id))) throw new Error('EVAL_SCENARIO_INVALID');
+  const harness = await evaluationHarness(root),
+    live = await evaluationRuntime();
+  const { connection, runtime } = live,
+    provider = connection.provider;
+  let results: RunResult[];
+  try {
+    results = await runGolden({ harness, runtime, connection, scenarios, runs, onProgress: line => console.log(line) });
+  } finally {
+    await live.close();
+  }
 
   const git = (args: string[]) => {
     try {
@@ -254,6 +236,7 @@ async function main() {
   const revision = git(['rev-parse', '--short', 'HEAD']) + (git(['status', '--porcelain']) ? '-dirty' : '');
   const meta = {
     provider,
+    auth: connection.mode,
     model: connection.model || '(provider default)',
     date: new Date().toISOString(),
     harness: revision,

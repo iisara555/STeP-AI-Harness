@@ -1307,6 +1307,27 @@ export default function App() {
               <div ref={conversationEnd} />
             </div>
             <div className="composer-area">
+              {(snapshot.transmissionGrants || [])
+                .filter(g => g.sessionId === selected)
+                .map(g => (
+                  <div className="transmission-scope" key={g.id} role="status">
+                    <span>
+                      อนุญาตส่งผลการอ่าน: {g.source} → {g.destination} · เหลือ {g.remainingResults} ผล /{' '}
+                      {g.remainingChars.toLocaleString('th-TH')} ตัวอักษร · ถึง {new Date(g.expiresAt).toLocaleTimeString('th-TH')}
+                    </span>
+                    <button
+                      className="quiet"
+                      onClick={() =>
+                        void action(async () => {
+                          await api.call('transmissionRevoke', { id: g.id });
+                          await refresh();
+                        })
+                      }
+                    >
+                      ถอนสิทธิ์และหยุดงาน
+                    </button>
+                  </div>
+                ))}
               <div className="composer" data-tour="composer">
                 <div className="composer-mode" role="group" aria-label="โหมดทำงาน">
                   {(['chat', 'draft', 'image'] as WorkMode[]).map(mode => (
@@ -1873,6 +1894,10 @@ export default function App() {
         <ApprovalDialog
           key={toolApprovals[0].id}
           request={toolApprovals[0]}
+          onRun={async () => {
+            await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'run' });
+            await refresh();
+          }}
           onCancel={() =>
             void action(async () => {
               await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'cancel' });

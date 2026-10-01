@@ -192,6 +192,7 @@ export type Snapshot = {
   usage?: UsageReport;
   policy?: PolicySnapshot;
   approvals?: ApprovalRule[];
+  transmissionGrants?: TransmissionGrant[];
   features?: { claudeSubscription?: boolean };
   settings: Settings;
   connections: Connection[];
@@ -211,7 +212,25 @@ export type PolicySnapshot = {
   hooks: number;
 };
 export type ApprovalRule = { id: string; workspaceHash: string; tool: string; targetHash: string; at: string };
-export type ApprovalRequest = { id: string; tool: string; title: string; body: string; privacyClass: string; allowRemember: boolean };
+export type ApprovalAnswer = 'cancel' | 'once' | 'workspace' | 'run';
+export type TransmissionGrant = {
+  id: string;
+  sessionId: string;
+  destination: string;
+  source: string;
+  expiresAt: string;
+  remainingChars: number;
+  remainingResults: number;
+};
+export type ApprovalRequest = {
+  id: string;
+  tool: string;
+  title: string;
+  body: string;
+  privacyClass: string;
+  allowRemember: boolean;
+  runScope?: string;
+};
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };
 export type RunEvent = {

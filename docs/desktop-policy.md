@@ -43,6 +43,8 @@ Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`
 
 ## Workbench permissions and approvals
 
+Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an unchecked employee choice for bounded clean-read transmission within one loop; it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
+
 Every Workbench IPC operation passes through `ToolGate`: Files, Read, Stage, Changes, Reject, Apply, Diff, Tasks, Cancel, Browser, Browser Read and Terminal. Checks run before the pre-tool hook and again immediately before the operation. A workspace, mode or policy change during an approval aborts or cancels it.
 
 - Read-only operations do not ask for consent. Staging a diff is a preview stored in the local review queue and does not write the workspace. Rejecting a preview and cancelling a running task remain available in plan mode.
@@ -58,7 +60,7 @@ Denied command patterns are checked against the command and shell segments. Lite
 
 ## Hooks
 
-Supported events are `session_start`, `session_end`, `user_prompt_submit`, `pre_tool_use`, `post_tool_use`, `pre_compact`, `post_compact` and `stop`. Phase 1 emits session start on creation, session end before removal, prompt submit before queueing, pre/post events for Workbench tools and an observational stop event with the run trace. Compaction events are defined for the Phase 3 integration and do not fire yet.
+Supported events are `session_start`, `session_end`, `user_prompt_submit`, `pre_tool_use`, `post_tool_use`, `pre_compact`, `post_compact` and `stop`. The host emits session start on creation, session end before removal, prompt submit before queueing, pre/post events for tools and an observational stop event with the run trace. Phase 3 compaction emits its pre/post events around actual compaction.
 
 All hook types receive metadata only: event, session id, tool, target hash, mode, counts, read-only/success flags and outcome codes. They never receive request text, document text, commands, file paths, credentials or attachments. Diagnostics identify the event/type/index, duration, success and blocking status; they do not record endpoints, commands or response reasons.
 

@@ -92,6 +92,7 @@ export type Policy = {
   providers?: { compatible: { name: string; baseUrl: string; protocol: 'openai' | 'anthropic' }[]; copilot?: { clientId: string } };
   voice?: { components: Record<string, { runtime: { url: string; sha256: string }; model: { url: string; sha256: string } }> };
   skillPacks?: { approvedDigests: string[] };
+  transmissionConsent?: { allowRunScope: boolean };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -165,6 +166,15 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.transmissionConsent !== undefined) {
+    if (
+      !isObject(raw.transmissionConsent) ||
+      Object.keys(raw.transmissionConsent).some(k => k !== 'allowRunScope') ||
+      typeof raw.transmissionConsent.allowRunScope !== 'boolean'
+    )
+      problems.push('invalid transmission consent policy');
+    else policy.transmissionConsent = { allowRunScope: raw.transmissionConsent.allowRunScope };
+  }
   if (raw.skillPacks !== undefined) {
     if (
       !isObject(raw.skillPacks) ||
