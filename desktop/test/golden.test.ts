@@ -64,3 +64,30 @@ test('every golden scenario routes to real work and the runner grades each draft
   const text = report({ provider: 'claude', model: 'test' }, results, scenarios);
   assert.match(text, /\| TOR-SYN-01 \| 1 \| review \| pass \|/);
 });
+
+test('post-generation privacy rejection keeps its typed code and leaves the rubric ungraded', async () => {
+  const { evaluationHarness } = await import('../eval/golden');
+  const harness = await evaluationHarness(resolve('..'));
+  const connection: Connection = { id: 'eval', provider: 'claude', mode: 'api', model: '', executable: '', ready: true, note: '' };
+  const output = '# Synthetic draft\n| Full Name |\n| --- |\n| [Unconfirmed] |';
+  assert.equal(harness.privacy(output).action, 'human-confirm');
+  const results = await runGolden({
+    harness,
+    connection,
+    scenarios: [tor],
+    runs: 1,
+    runtime: async () => ({
+      adapter: { run: async () => output },
+      context: { cwd: tmpdir(), env: {} },
+    }),
+  });
+  assert.equal(results[0].status, 'error');
+  assert.equal(results[0].code, 'PRIVACY_REVIEW_REQUIRED');
+  assert.equal(results[0].output, output);
+  assert.deepEqual(results[0].checks, []);
+  assert.equal(results[0].criticalPassed, false);
+  const text = report({ provider: 'claude', model: 'synthetic' }, results, [tor]);
+  assert.match(text, /error \(PRIVACY_REVIEW_REQUIRED\) \| FAIL \| not graded/);
+  assert.match(text, /Runs blocked before grading/);
+  assert.doesNotMatch(text, /\| 0\/0 \|/);
+});

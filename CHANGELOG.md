@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop Claude Code OAuth follow-up
+
+- Open a complete, validated official Claude authorization URL when piped CLI login does not launch the browser; cancel on browser failure and keep URLs/codes out of progress and diagnostics.
+- Preserve Golden post-generation error codes and label blocked runs as not graded. Keep the shared output Privacy Gate unchanged.
+- Record successful authorized account generation and 5/5 live/local feature groups. Formal Golden acceptance remains 0/3 pending output privacy review; separate offline content checks passed 14/14. See [OAuth follow-up](docs/claude-oauth-followup.md). No in-app subscription enablement, main merge or release is included.
+
 ### Desktop OpenHarness adaptation — Phase 6
 
 - Add opt-in, in-memory transmission scopes for clean reads with source/account/model/policy binding, parallel confirmation coalescing, time/volume limits, visible allowance and revoke-and-stop. Preserve full-source privacy scans, separate destination/effect approvals and fresh review for masking or higher risk.

@@ -3,10 +3,21 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { claudeEnv, claudeLogin, claudeLogout, claudeStatus, resolveClaudeRuntime, runClaude } from '../electron/claude-auth';
+import {
+  claudeEnv,
+  claudeLogin,
+  claudeLoginUrl,
+  claudeLogout,
+  claudeStatus,
+  resolveClaudeRuntime,
+  runClaude,
+} from '../electron/claude-auth';
 import { ClaudeAdapter, claudeSdkOptions } from '../electron/providers';
 import { signInAndTest } from '../electron/connect';
 import type { Connection } from '../src/types';
+
+const oauthTestUrl =
+  'https://claude.com/oauth/authorize?response_type=code&client_id=synthetic&state=synthetic&code_challenge=synthetic&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback';
 
 async function fixture(mode = 'code', version = '2.1.268') {
   const cwd = await mkdtemp(join(tmpdir(), 'step-claude-test-'));
@@ -36,6 +47,7 @@ async function fixture(mode = 'code', version = '2.1.268') {
       " else if(mode === 'failure') { console.error('403 not authorized sk-secret-test'); process.exit(1); }",
       " else if(mode === 'browser') { fs.writeFileSync(saved, 'synthetic'); process.exit(0); }",
       ' else {',
+      `  if(mode === 'url') console.log(${JSON.stringify(oauthTestUrl)});`,
       "  process.stdout.write('Paste code here if prompted: ');",
       "  require('node:readline').createInterface({input:process.stdin}).once('line',code=>{",
       "   if(code !== 'example#state') process.exit(2);",
@@ -66,6 +78,79 @@ test('discovery checks version; missing and old runtimes are actionable', async 
     resolveClaudeRuntime(old.context, async () => old.executable),
     /CLAUDE_CODE_UPDATE_REQUIRED/,
   );
+});
+
+test('Claude browser links require a complete URL on an exact official HTTPS authorization endpoint', () => {
+  assert.equal(claudeLoginUrl(oauthTestUrl + '\n'), oauthTestUrl);
+  assert.equal(claudeLoginUrl(oauthTestUrl.replace('claude.com', 'claude.ai') + '\n'), oauthTestUrl.replace('claude.com', 'claude.ai'));
+  assert.equal(claudeLoginUrl(oauthTestUrl), undefined);
+  for (const invalid of [
+    oauthTestUrl.replace('https:', 'http:'),
+    oauthTestUrl.replace('claude.com', 'claude.com.evil.invalid'),
+    oauthTestUrl.replace('claude.com', 'evil.invalid@claude.com'),
+    oauthTestUrl.replace('claude.com', 'claude.com:8443'),
+    oauthTestUrl.replace('/oauth/authorize', '/other'),
+    oauthTestUrl.replace('state=synthetic', 'state='),
+    oauthTestUrl.replace('response_type=code', 'response_type=token'),
+    oauthTestUrl + '#unexpected',
+  ])
+    assert.equal(claudeLoginUrl(invalid + '\n'), undefined, invalid);
+  const cut = oauthTestUrl.indexOf('code_challenge');
+  assert.equal(claudeLoginUrl(oauthTestUrl.slice(0, cut)), undefined);
+  assert.equal(claudeLoginUrl(oauthTestUrl.slice(0, cut) + oauthTestUrl.slice(cut) + '\n'), oauthTestUrl);
+});
+
+test('piped CLI login opens its official link once and keeps auth details out of progress', async () => {
+  const f = await fixture('url');
+  const opened: string[] = [],
+    progress: string[] = [];
+  const deps = {
+    progress: (text: string) => progress.push(text),
+    openExternal: async (url: string) => {
+      opened.push(url);
+    },
+    askForCode: async () => {
+      await new Promise(r => setTimeout(r, 20));
+      return 'example#state';
+    },
+    dropCode: () => {},
+  };
+  await claudeLogin(f.executable, f.context, deps, new AbortController().signal);
+  await claudeLogin(f.executable, f.context, deps, new AbortController().signal);
+  assert.deepEqual(opened, [oauthTestUrl]);
+  assert.equal(await claudeStatus(f.executable, f.context), true);
+  assert.doesNotMatch(progress.join('\n'), /https:|state=|example#state/);
+});
+
+test('browser launch failure cancels the native login and closes the code dialog with a typed error', async () => {
+  for (const synchronous of [false, true]) {
+    const f = await fixture('url');
+    let dropped = 0;
+    await assert.rejects(
+      claudeLogin(
+        f.executable,
+        f.context,
+        {
+          progress: () => {},
+          openExternal: synchronous
+            ? () => {
+                throw new Error('private browser error');
+              }
+            : async () => {
+                throw new Error('private browser error');
+              },
+          askForCode: () => new Promise<string | null>(() => {}),
+          dropCode: () => {
+            dropped++;
+          },
+        },
+        new AbortController().signal,
+      ),
+      /^Error: LOGIN_BROWSER_FAILED$/,
+    );
+    assert.equal(dropped, 1);
+    assert.equal(await claudeStatus(f.executable, f.context), false);
+  }
 });
 
 test('manual login, reuse across runs, and logout affect only the isolated profile', async () => {

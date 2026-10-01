@@ -98,6 +98,7 @@ export async function runGolden(options: {
       const session = store.create(options.connection.id, scenario.team);
       const service = new WorkService(store, options.harness, options.runtime, () => {});
       const started = Date.now();
+      let failureCode = '';
       options.onProgress?.(`${scenario.id} รอบ ${run}/${options.runs}`);
       await runGovernedDraft(
         {
@@ -117,11 +118,12 @@ export async function runGolden(options: {
           },
         },
       ).catch(error => {
+        failureCode = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'EVAL_FAILED';
         const stopped = store.session(session.id);
         stopped.status = 'error';
         stopped.messages.push({
           role: 'status',
-          text: /^[A-Z_]+$/.test(error.message) ? error.message : 'EVAL_FAILED',
+          text: failureCode,
           at: new Date().toISOString(),
         });
         store.save(stopped);
@@ -134,7 +136,7 @@ export async function runGolden(options: {
         scenario: scenario.id,
         run,
         status: done.status,
-        ...(trace?.code ? { code: trace.code } : {}),
+        ...(failureCode || trace?.code ? { code: failureCode || trace!.code } : {}),
         ms: Date.now() - started,
         ...(done.usage ? { tokens: { input: done.usage.input, output: done.usage.output, total: done.usage.total } } : {}),
         route: trace?.route || '',
@@ -165,8 +167,18 @@ export function report(meta: Record<string, string>, results: RunResult[], scena
     '| --- | --- | --- | --- | --- | --- | --- |',
     ...results.map(r => {
       const passed = r.checks.filter(c => c.passed).length;
-      return `| ${r.scenario} | ${r.run} | ${r.status}${r.code ? ` (${r.code})` : ''} | ${r.criticalPassed ? 'pass' : 'FAIL'} | ${passed}/${r.checks.length} | ${r.tokens?.total ?? '-'} | ${(r.ms / 1000).toFixed(0)} |`;
+      const checks = r.status === 'review' ? `${passed}/${r.checks.length}` : 'not graded';
+      return `| ${r.scenario} | ${r.run} | ${r.status}${r.code ? ` (${r.code})` : ''} | ${r.criticalPassed ? 'pass' : 'FAIL'} | ${checks} | ${r.tokens?.total ?? '-'} | ${(r.ms / 1000).toFixed(0)} |`;
     }),
+    '',
+    '## Runs blocked before grading',
+    '',
+    ...results
+      .filter(r => r.status !== 'review')
+      .map(
+        r =>
+          `- ${r.scenario} run ${r.run}: ${r.code || 'EVAL_FAILED'} (${r.status}). Any saved draft still requires review; no rubric pass is claimed.`,
+      ),
     '',
     '## Checks that did not pass',
     '',
