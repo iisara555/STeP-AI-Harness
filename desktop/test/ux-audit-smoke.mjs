@@ -21,7 +21,12 @@ try {
   const assertVisibleButton = async locator => {
     const bounds = await locator.boundingBox();
     assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 650, JSON.stringify(bounds));
-    assert.ok(await locator.evaluate(el => { const r = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x + r.width/2, r.y + r.height/2)); }));
+    assert.ok(
+      await locator.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      }),
+    );
   };
   await assertVisibleButton(wizard.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   for (let i = 0; i < 14; i++) {
@@ -54,7 +59,9 @@ try {
   await expect(page.locator('.composer textarea')).toHaveValue(/ให้ผู้ช่วยทำงานบนเว็บ/);
   await expect(page.locator('.composer textarea')).toBeFocused();
   assert.deepEqual(errors, []);
-  console.log('UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels and browser task entry.');
+  console.log(
+    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels and browser task entry.',
+  );
 } finally {
   await app.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

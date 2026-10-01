@@ -32,26 +32,41 @@ try {
   assert.ok(reg(['query', uninstallKey, '/v', 'DisplayVersion']).includes('0.4.1'));
   // The failing legacy uninstaller is never allowed to remove user files.
   const brokenSource = join(root, 'broken.nsi');
-  await writeFile(brokenSource, `Unicode true\nRequestExecutionLevel user\nSilentInstall silent\nOutFile "${join(destination, 'Uninstall STeP Desktop.exe')}"\nSection\nSetErrorLevel 7\nSectionEnd`);
+  await writeFile(
+    brokenSource,
+    `Unicode true\nRequestExecutionLevel user\nSilentInstall silent\nOutFile "${join(destination, 'Uninstall STeP Desktop.exe')}"\nSection\nSetErrorLevel 7\nSectionEnd`,
+  );
   execFileSync(nsis.path, ['/V2', brokenSource], { env: { ...process.env, ...nsis.env }, windowsHide: true });
   set(uninstallKey, 'DisplayVersion', '0.3.2');
   set(key, 'ShortcutName', 'STeP Installer Test');
   install();
   assert.ok(reg(['query', uninstallKey, '/v', 'DisplayVersion']).includes('0.4.1'));
   assert.equal(await readFile(data, 'utf8'), 'Synthetic conversation retained');
-  const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
-  app = await electron.launch({ executablePath: join(destination, 'STeP Desktop.exe'), args: ['--user-data-dir=' + profile], env, timeout: 45000 });
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  app = await electron.launch({
+    executablePath: join(destination, 'STeP Desktop.exe'),
+    args: ['--user-data-dir=' + profile],
+    env,
+    timeout: 45000,
+  });
   const page = await app.firstWindow();
   await expect(page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true }).click();
   await expect(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true })).toBeVisible();
-  await app.close(); app = null;
+  await app.close();
+  app = null;
   // Keep the test uninstaller from resolving any product shortcut with the same display name.
   set(key, 'ShortcutName', 'STeP Installer Test');
-  const removed = spawnSync(join(destination, 'Uninstall STeP Desktop.exe'), ['/S', '/currentuser', '_?=' + destination], { timeout: 60000, windowsHide: true });
+  const removed = spawnSync(join(destination, 'Uninstall STeP Desktop.exe'), ['/S', '/currentuser', '_?=' + destination], {
+    timeout: 60000,
+    windowsHide: true,
+  });
   assert.equal(removed.status, 0, `New uninstaller failed: ${removed.error || removed.status}`);
   assert.equal(await readFile(data, 'utf8'), 'Synthetic conversation retained');
-  console.log('Full NSIS payload passed: fresh install, upgrade past failing 0.3.2 uninstaller, launch current onboarding, uninstall and preserve user data. Test identity only.');
+  console.log(
+    'Full NSIS payload passed: fresh install, upgrade past failing 0.3.2 uninstaller, launch current onboarding, uninstall and preserve user data. Test identity only.',
+  );
 } finally {
   await app?.close();
   spawnSync('reg.exe', ['delete', key, '/f'], { stdio: 'ignore', windowsHide: true });

@@ -28,7 +28,7 @@ try {
   await page.getByRole('button', { name: 'ทำภายหลัง' }).click();
   await page.screenshot({ path: join(out, 'wizard-ready-without-ai.png') });
   await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน' }).click();
-  await wizard.waitFor({state:'detached'});
+  await wizard.waitFor({ state: 'detached' });
   const saved = await page.evaluate(() => window.step.call('snapshot'));
   if (
     saved.settings.userName !== 'ต้น' ||

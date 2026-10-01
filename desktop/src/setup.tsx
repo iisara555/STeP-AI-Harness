@@ -77,7 +77,6 @@ export function SetupWizard({
     [],
   );
 
-
   const save = (extra: object = {}) =>
     call('settings', { userName, team, assistant, personality, assistantTone: tone, theme: s.theme, ...extra });
   const finish = (tour: boolean) =>
@@ -101,25 +100,39 @@ export function SetupWizard({
   }, [step]);
 
   return (
-    <div ref={dialogRef} className="wizard" role="dialog" aria-modal="true" aria-label="ตั้งค่าเริ่มต้น STeP Desktop"
+    <div
+      ref={dialogRef}
+      className="wizard"
+      role="dialog"
+      aria-modal="true"
+      aria-label="ตั้งค่าเริ่มต้น STeP Desktop"
       onKeyDown={e => {
         e.stopPropagation();
         if (e.key !== 'Tab') return;
-        const items = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]') || []).filter(el => el.getClientRects().length > 0);
+        const items = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]',
+          ) || [],
+        ).filter(el => el.getClientRects().length > 0);
         const index = items.indexOf(document.activeElement as HTMLElement);
         if (index < 0 || (e.shiftKey ? index === 0 : index === items.length - 1)) {
           e.preventDefault();
           (e.shiftKey ? items.at(-1) : items[0])?.focus();
         }
-      }}>
+      }}
+    >
       <div className="wizard-card">
         <ol className="wizard-steps" aria-label="ขั้นตอน">
-          {steps.map((label, i) => ({ label, i })).filter(({ i }) => (customize ? [0, 1, 2, 3, 5] : [0, 3, 5]).includes(i)).map(({ label, i }, index) => (
-            <li key={label} className={i === step ? 'current' : i < step && !(i === 3 && !ready) ? 'done' : ''}>
-              <span>{i < step && !(i === 3 && !ready) ? <Check size={11} /> : index + 1}</span>
-              {label}{i === 3 && i < step && !ready ? ' · ทำภายหลัง' : ''}
-            </li>
-          ))}
+          {steps
+            .map((label, i) => ({ label, i }))
+            .filter(({ i }) => (customize ? [0, 1, 2, 3, 5] : [0, 3, 5]).includes(i))
+            .map(({ label, i }, index) => (
+              <li key={label} className={i === step ? 'current' : i < step && !(i === 3 && !ready) ? 'done' : ''}>
+                <span>{i < step && !(i === 3 && !ready) ? <Check size={11} /> : index + 1}</span>
+                {label}
+                {i === 3 && i < step && !ready ? ' · ทำภายหลัง' : ''}
+              </li>
+            ))}
         </ol>
 
         {step === 0 && (
@@ -132,7 +145,15 @@ export function SetupWizard({
               <li>ระบบปิดบังข้อมูลส่วนบุคคลที่ตรวจพบและถามก่อนส่งข้อมูลให้ AI</li>
               <li>AI จัดทำร่างเท่านั้น การส่ง อนุมัติ และเบิกจ่ายเป็นหน้าที่ของคน</li>
             </ul>
-            <button className="text-link" onClick={() => { setCustomize(true); setStep(1); }}>ตั้งชื่อและรูปแบบผู้ช่วยก่อน (ไม่บังคับ)</button>
+            <button
+              className="text-link"
+              onClick={() => {
+                setCustomize(true);
+                setStep(1);
+              }}
+            >
+              ตั้งชื่อและรูปแบบผู้ช่วยก่อน (ไม่บังคับ)
+            </button>
           </section>
         )}
 
@@ -214,9 +235,7 @@ export function SetupWizard({
                 <p>{style.sample(userName, assistant)}</p>
               </div>
             </div>
-            <p className="small muted">
-              บันทึกความชอบไว้ในเครื่อง เปลี่ยนภายหลังได้ในการตั้งค่า
-            </p>
+            <p className="small muted">บันทึกความชอบไว้ในเครื่อง เปลี่ยนภายหลังได้ในการตั้งค่า</p>
           </section>
         )}
 
@@ -315,7 +334,11 @@ export function SetupWizard({
           )}
           <span className="spacer" />
           {step < 5 ? (
-            <button className={step === 3 && !ready ? 'quiet' : ''} disabled={Boolean(busy)} onClick={() => setStep(step === 0 ? 3 : step === 3 ? 5 : step + 1)}>
+            <button
+              className={step === 3 && !ready ? 'quiet' : ''}
+              disabled={Boolean(busy)}
+              onClick={() => setStep(step === 0 ? 3 : step === 3 ? 5 : step + 1)}
+            >
               {step === 0 ? 'เริ่มตั้งค่า' : step === 3 && !ready ? 'ทำภายหลัง' : 'ถัดไป'}
               <ArrowRight size={15} />
             </button>
@@ -324,7 +347,7 @@ export function SetupWizard({
               <button className="quiet" disabled={Boolean(busy)} onClick={() => finish(false)}>
                 {ready ? 'เริ่มใช้งานเลย' : 'เข้าชมพื้นที่ทำงาน'}
               </button>
-              <button disabled={Boolean(busy)} onClick={() => ready ? finish(true) : setStep(3)}>
+              <button disabled={Boolean(busy)} onClick={() => (ready ? finish(true) : setStep(3))}>
                 {ready ? 'ดูทัวร์แนะนำ' : 'เชื่อมต่อ AI'}
                 <ArrowRight size={15} />
               </button>

@@ -148,7 +148,9 @@ export class AgentBrowser {
       }
     }
     const entry = this.get(request.input, context.sessionId);
-    context.activity?.(`${action === 'read' ? 'กำลังอ่านผลจากเว็บ' : action === 'close' ? 'กำลังปิดเว็บ' : action === 'fill' ? 'ตรวจเป้าหมายก่อนขอกรอกข้อมูล' : 'ตรวจเป้าหมายก่อนขอคลิก'} ${new URL(entry.origin).host}`);
+    context.activity?.(
+      `${action === 'read' ? 'กำลังอ่านผลจากเว็บ' : action === 'close' ? 'กำลังปิดเว็บ' : action === 'fill' ? 'ตรวจเป้าหมายก่อนขอกรอกข้อมูล' : 'ตรวจเป้าหมายก่อนขอคลิก'} ${new URL(entry.origin).host}`,
+    );
     if (entry.busy) throw new Error('BROWSER_BUSY');
     entry.busy = true;
     try {

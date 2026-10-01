@@ -499,19 +499,27 @@ export function ProviderFields(props: {
             >
               ChatGPT
             </button>
-            {props.claudeSubscription && <button
-              type="button"
-              className={props.value.provider === 'claude' ? 'choice active' : 'choice'}
-              aria-pressed={props.value.provider === 'claude'}
-              onClick={() => props.onChange({ ...initialChoice, provider: 'claude', mode: 'subscription' })}
-            >
-              Claude Pro / Max
-            </button>}
+            {props.claudeSubscription && (
+              <button
+                type="button"
+                className={props.value.provider === 'claude' ? 'choice active' : 'choice'}
+                aria-pressed={props.value.provider === 'claude'}
+                onClick={() => props.onChange({ ...initialChoice, provider: 'claude', mode: 'subscription' })}
+              >
+                Claude Pro / Max
+              </button>
+            )}
           </div>
           <details>
             <summary>มีบัญชี Claude หรือ Gemini อยู่แล้ว?</summary>
-            {!props.claudeSubscription && <p className="small muted">Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้</p>}
-            <p className="small muted">Gemini ส่วนตัว: ยังไม่รองรับการลงชื่อใน STeP ให้ผู้ดูแลเตรียมการเชื่อมต่อที่องค์กรรองรับในส่วนขั้นสูง</p>
+            {!props.claudeSubscription && (
+              <p className="small muted">
+                Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้
+              </p>
+            )}
+            <p className="small muted">
+              Gemini ส่วนตัว: ยังไม่รองรับการลงชื่อใน STeP ให้ผู้ดูแลเตรียมการเชื่อมต่อที่องค์กรรองรับในส่วนขั้นสูง
+            </p>
           </details>
           <p className="small muted">ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ</p>
           {props.value.provider === 'claude' && props.claudeSubscription && <ClaudeCodeNote call={props.call} subscription />}

@@ -36,8 +36,13 @@ while (args.length) {
   else if (flag === '--fixture-id') {
     if (!/^th\.ac\.cmu\.step\.installer-test\.[a-z0-9-]+$/.test(value)) throw new Error('Invalid installer fixture identity');
     options.config.appId = value;
-    options.config.nsis = { shortcutName: 'STeP Installer Test', createDesktopShortcut: false, createStartMenuShortcut: false, runAfterFinish: false, allowElevation: false };
-  }
-  else throw new Error(`Unknown packaging option: ${flag}`);
+    options.config.nsis = {
+      shortcutName: 'STeP Installer Test',
+      createDesktopShortcut: false,
+      createStartMenuShortcut: false,
+      runAfterFinish: false,
+      allowElevation: false,
+    };
+  } else throw new Error(`Unknown packaging option: ${flag}`);
 }
 await build(options);

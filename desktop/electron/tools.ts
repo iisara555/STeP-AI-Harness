@@ -169,7 +169,10 @@ export class DesktopTools {
     const sourceFor = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
       if (!r || this.policy().transmissionConsent?.allowRunScope === false) return;
       if (r.tool === 'ask_user' || r.tool === 'plan' || (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string'))
-        return { key: 'draft-progress', label: 'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)' };
+        return {
+          key: 'draft-progress',
+          label: 'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)',
+        };
       if (r.tool === 'files') {
         if (this.sourceClean.get(r) === false) return;
         const folder =
