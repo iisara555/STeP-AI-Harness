@@ -204,6 +204,9 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
   };
   await new Promise<void>((resolveLogin, reject) => {
     let settled = false;
+    let browserFailed = false;
+    let browserOpened = false;
+    let loginOutcome: boolean | undefined;
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
@@ -221,17 +224,28 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
     }, LOGIN_MS);
 
     signal.addEventListener('abort', abort, { once: true });
+    const completeAfterBrowser = () => {
+      if (browserOpened && !browserFailed && loginOutcome !== undefined) loginOutcome ? finish() : finish(new Error('LOGIN_FAILED'));
+    };
     rpc.onNotification = (method, params) => {
-      if (method !== 'account/login/completed') return;
+      if (method !== 'account/login/completed' || browserFailed) return;
       // New Codex versions identify the login attempt. Older versions may omit loginId.
       if (params?.loginId && params.loginId !== loginId) return;
-      params?.success ? finish() : finish(new Error('LOGIN_FAILED'));
+      loginOutcome = params?.success === true;
+      completeAfterBrowser();
     };
     if (signal.aborted) return abort();
     void Promise.resolve()
       .then(() => deps.openExternal(url.href))
-      .catch(() => {
-        void cancel();
+      .then(() => {
+        browserOpened = true;
+        completeAfterBrowser();
+      })
+      .catch(async () => {
+        browserFailed = true;
+        // Keep the runtime alive for the cancellation acknowledgement; late login
+        // callbacks cannot turn a failed browser launch into successful sign-in.
+        await cancel();
         finish(new Error('LOGIN_BROWSER_FAILED'));
       });
   });

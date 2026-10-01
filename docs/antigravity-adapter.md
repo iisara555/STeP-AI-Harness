@@ -34,7 +34,7 @@ The official Windows amd64 manifest selected **1.2.14**:
 
 ## Validation
 
-- **230 Desktop unit tests passed**, zero failures/skips. Eight new groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation.
+- **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.
 - The new Electron smoke passed through the actual renderer, preload, IPC and adapter with a synthetic runtime. It verifies selection/model persistence, successful connection, unsafe reconnect without a second prompt, invalid mode/model rejection, the old Gemini eligibility gate and local disconnect semantics.
 - Formatting, TypeScript/build and both repository validators passed. The existing renderer bundle-size warning remains. Native Windows checks establish the incompatibility above, not live provider acceptance or macOS/Linux native acceptance.
 

@@ -10,6 +10,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 - Add a separate personal Google connection, native NDJSON adapter, Gemini-only catalog and per-invocation configuration isolation. Preserve existing Gemini API and organization CLI routes.
 - Withhold user prompts until native policy/tool preflight passes; validate completion, usage, cancellation and shutdown. Official Windows CLI 1.2.14 still declares broad tools, so generation is blocked before prompt transmission. OAuth acceptance remains open; see [adapter status](docs/antigravity-adapter.md).
+- Wait for ChatGPT OAuth cancellation acknowledgement on browser-launch failure and reject late login callbacks; repair the race exposed by Linux CI.
 
 ### Desktop ChatGPT and Gemini connection follow-up
 
