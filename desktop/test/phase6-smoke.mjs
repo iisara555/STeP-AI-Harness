@@ -78,13 +78,16 @@ try {
   await composer.fill('Read the notes and prepare a preview EVAL_SCOPED');
   await composer.press('Enter');
   await expect(consent).toContainText('Synthetic public');
-  const scopeChoice = consent.getByRole('checkbox', { name: /อนุญาตผลการอ่านใหม่ในขอบเขตนี้/ });
+  const scopeChoice = consent.getByRole('checkbox', { name: /อนุญาตส่งข้อมูลในขอบเขตนี้/ });
   await expect(scopeChoice).not.toBeChecked();
   await scopeChoice.check();
   await consent.getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
   await expect(page.locator('.transmission-scope')).toContainText('fixture');
   await expect(consent).toContainText('draft.txt');
-  await expect(consent.getByRole('checkbox')).toHaveCount(0);
+  // Draft progress now offers its own opt-in run scope (UX audit F04); it must start unchecked.
+  await expect(consent.getByRole('checkbox')).toHaveCount(1);
+  await expect(consent).toContainText('สถานะการเตรียมร่าง');
+  await expect(consent.getByRole('checkbox')).not.toBeChecked();
   await mkdir('release/qa', { recursive: true });
   await page.screenshot({ path: 'release/qa/phase6-scoped-consent.png' });
   await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
