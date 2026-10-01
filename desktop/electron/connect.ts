@@ -70,7 +70,7 @@ export type ConnectDeps = {
  */
 export async function signInAndTest(connection: Connection, deps: ConnectDeps, signal: AbortSignal) {
   const { runtime, progress } = deps;
-  if (connection.mode === 'api' && !runtime.context.key) throw new Error('API_KEY_REQUIRED');
+  if (connection.mode === 'api' && connection.provider !== 'compatible' && !runtime.context.key) throw new Error('API_KEY_REQUIRED');
   if (connection.provider === 'claude' && connection.mode === 'oauth') {
     if (!runtime.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
     await anthropicLogin(runtime.authExecutable, runtime.context, deps, signal);
@@ -80,7 +80,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     await claudeLogin(connection.executable, runtime.context, deps, signal);
     deps.signedIn?.();
   }
-  if (connection.provider !== 'claude') {
+  if (['openai', 'gemini'].includes(connection.provider)) {
     progress('กำลังเปิดตัวเชื่อม ' + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
     const rpc = createRpc(connection, runtime.context);
     const close = () => rpc.close('CANCELLED');
@@ -156,7 +156,7 @@ export async function signOutManagedProvider(connection: Connection, runtime: { 
 }
 
 async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Connection, deps: ConnectDeps, signal: AbortSignal) {
-  if (connection.mode === 'api') {
+  if (connection.mode === 'api' || connection.provider === 'copilot') {
     await rpc.request('account/login/start', { type: 'apiKey', apiKey: deps.runtime.context.key });
     return;
   }

@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop OpenHarness adaptation — Phase 5
+
+- Add administrator-approved compatible/Ollama and Anthropic streaming profiles, safeStorage keys and managed Copilot device authorization through the pinned official SDK with native tools/config discovery disabled.
+- Share governed draft preflight/runner across CLI, Golden evaluation and LINE; add text/json/stream-json output, explicitly named environment keys, conservative usage reservations and dry-run/composer readiness estimates.
+- Consolidate the command palette/keyboard registry, configurable bindings and opt-in composer Vim; add on-demand checksum-verified local voice with temporary microphone approval and transcript privacy review.
+- Add inert, validated Skill Pack import/list/enable/export, digest approvals, separately enabled host hooks/agent templates and ordinary source/destination consent.
+- Add the organization-server LINE draft gateway with exact signed webhooks, allowlisted employee mapping, private sessions, attachment review, clarification state, outbound routing/privacy and explicit operator delivery approval.
+- Validate with synthetic provider/OAuth/voice/LINE fixtures and real local Electron IPC. No paid/live account evaluation, LINE delivery, main merge, installer or release is included.
+
+
 ### Desktop OpenHarness adaptation — Phase 4
 
 - Add bounded coordinator sessions, declared Playbook dependencies, a shared three-run provider limit and reviewed final merge proposals.

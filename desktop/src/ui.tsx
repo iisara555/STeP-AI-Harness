@@ -460,8 +460,23 @@ export function AnthropicOAuthNote({ call }: { call: (method: string, input?: an
 }
 
 // Provider, sign-in method and API key: the same fields in the setup wizard and in Settings.
-export type ProviderChoice = { provider: string; mode: string; key: string; googleCloudProject: string };
+export type ProviderChoice = {
+  provider: string;
+  mode: string;
+  key: string;
+  googleCloudProject: string;
+  baseUrl?: string;
+  protocol?: 'openai' | 'anthropic';
+  model?: string;
+};
 export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '', googleCloudProject: '' };
+export function providerChoiceReady(c: ProviderChoice) {
+  if (c.provider === 'compatible') return Boolean(c.baseUrl?.trim() && c.model?.trim() && (c.protocol !== 'anthropic' || c.key.trim()));
+  return c.mode !== 'api' || Boolean(c.key.trim());
+}
+export function providerDefaultMode(provider: string): ProviderChoice['mode'] {
+  return ['claude', 'copilot'].includes(provider) ? 'oauth' : ['gemini', 'compatible'].includes(provider) ? 'api' : 'subscription';
+}
 export function ProviderFields({
   value,
   onChange,
@@ -474,7 +489,7 @@ export function ProviderFields({
   claudeSubscription?: boolean;
 }) {
   const { provider, mode, key, googleCloudProject } = value;
-  const subscription = provider !== 'claude' || claudeSubscription;
+  const subscription = ['openai', 'gemini'].includes(provider) || (provider === 'claude' && claudeSubscription);
   return (
     <>
       <div className="form-grid">
@@ -486,7 +501,10 @@ export function ProviderFields({
               onChange({
                 provider: e.target.value,
                 // Gemini sign-in now serves only organization licenses, so an API key is the usual choice.
-                mode: e.target.value === 'claude' ? 'oauth' : e.target.value === 'gemini' ? 'api' : 'subscription',
+                mode: providerDefaultMode(e.target.value),
+                baseUrl: 'https://api.openai.com/v1',
+                protocol: 'openai',
+                model: '',
                 key: '',
                 googleCloudProject: '',
               })
@@ -495,11 +513,14 @@ export function ProviderFields({
             <option value="openai">OpenAI (ChatGPT)</option>
             <option value="gemini">Gemini (Google)</option>
             <option value="claude">Claude (Anthropic)</option>
+            <option value="compatible">Compatible endpoint / Ollama</option>
+            <option value="copilot">GitHub Copilot</option>
           </select>
         </label>
         <label>
           วิธีเชื่อมต่อ
           <select value={mode} onChange={e => onChange({ ...value, mode: e.target.value })}>
+            {provider === 'copilot' && <option value="oauth">GitHub OAuth (บัญชี Copilot)</option>}
             {provider === 'claude' && <option value="oauth">Claude Console OAuth (ไม่ต้องใช้ API key)</option>}
             {subscription && (
               <option value="subscription">
@@ -511,10 +532,42 @@ export function ProviderFields({
               </option>
             )}
             {provider === 'claude' && <option value="claude-code">Claude Pro/Max (เปิดใน Claude Code ภายนอก)</option>}
-            <option value="api">API key</option>
+            {provider !== 'copilot' && <option value="api">API key</option>}
           </select>
         </label>
       </div>
+      {provider === 'compatible' && (
+        <div className="form-grid">
+          <label>
+            API protocol
+            <select
+              value={value.protocol || 'openai'}
+              onChange={e => onChange({ ...value, protocol: e.target.value as 'openai' | 'anthropic' })}
+            >
+              <option value="openai">OpenAI-compatible</option>
+              <option value="anthropic">Anthropic Messages</option>
+            </select>
+          </label>
+          <label>
+            ชื่อ model
+            <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value })} autoComplete="off" />
+          </label>
+          <label>
+            Base URL
+            <input value={value.baseUrl || ''} onChange={e => onChange({ ...value, baseUrl: e.target.value })} autoComplete="off" />
+          </label>
+          <button
+            className="quiet"
+            onClick={() => onChange({ ...value, baseUrl: 'http://127.0.0.1:11434/v1', protocol: 'openai', key: '' })}
+          >
+            ใช้ Ollama ในเครื่อง
+          </button>
+          <p className="small muted">ใช้ได้เฉพาะปลายทางที่ผู้ดูแลอนุญาต ต้องตรวจข้อมูลและอนุมัติส่งเช่นเดียวกับบัญชีอื่น</p>
+        </div>
+      )}
+      {provider === 'copilot' && (
+        <p className="small muted">ลงชื่อผ่าน GitHub OAuth App ที่องค์กรกำหนด ใช้สิทธิ์และโควตาของบัญชี Copilot ที่ลงชื่อ</p>
+      )}
       {provider === 'gemini' && mode === 'subscription' && (
         <label>
           Google Cloud Project ID <span className="muted small">(จำเป็น)</span>

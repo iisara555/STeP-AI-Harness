@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Download, FolderOpen, LoaderCircle, Plug, Sparkles } from 'lucide-react';
 import type { Connection, Settings, Snapshot } from './types';
-import { ProviderFields, initialChoice, type ProviderChoice } from './ui';
+import { ProviderFields, providerChoiceReady, initialChoice, type ProviderChoice } from './ui';
 import { providerLabel } from './messages';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
@@ -230,7 +230,7 @@ export function SetupWizard({
             {choice.mode !== 'claude-code' && (
               <>
                 <button
-                  disabled={Boolean(busy) || (choice.mode === 'api' && !choice.key.trim())}
+                  disabled={Boolean(busy) || !providerChoiceReady(choice)}
                   onClick={() =>
                     void run('connect', async () => {
                       const c = await call('connection', {
@@ -238,6 +238,8 @@ export function SetupWizard({
                         mode: choice.mode,
                         apiKey: choice.key,
                         googleCloudProject: choice.googleCloudProject,
+                        baseUrl: choice.baseUrl,
+                        protocol: choice.protocol,
                       });
                       setChoice({ ...choice, key: '' });
                       setConnecting({ id: c.id, text: 'กำลังเริ่มเชื่อมต่อ' });

@@ -1,3 +1,6 @@
+import { prepareDraft } from '../../modules/runner/index.js';
+import { readManagedPolicy } from '../../utils/managed-policy.js';
+import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
 import readline from 'node:readline';
 import { header, success, info, warn, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
@@ -54,15 +57,27 @@ export async function runAsk(args) {
     skill: typeof args.skill === 'string' ? args.skill : undefined,
     intentAssessment,
   });
+  let dryRun;
+  if (args['dry-run'] === true) {
+    try {
+      dryRun = (await prepareDraft({query,team:userTeam,policy:readManagedPolicy(),profile:{model:args.model},provider:args.provider},
+        {harness:{root:PACKAGE_ROOT,route:async()=>result}})).readiness;
+    } catch(error) {
+      dryRun={status:'blocked',blockers:[/^[A-Z_]+$/.test(error.message)?error.message:'CONTEXT_UNAVAILABLE'],warnings:[],nextActions:['REVIEW_REQUEST']};
+    }
+  }
   if (machineMode) {
     console.log(JSON.stringify({
       routing: result.routingContract,
       contextPlan: result.contextPlan,
       privacy: result.privacy,
+      ...(dryRun ? {dryRun} : {}),
       ...(result.intentReview ? { intentReview: result.intentReview } : {}),
     }, null, 2));
     return;
   }
+
+  if (dryRun) { console.log(JSON.stringify(dryRun,null,2)); return; }
 
   // Echo the scanned request, not the raw one: terminal scrollback is a log too.
   info(`วิเคราะห์คำถาม: "${colors.bold(result.query)}" ...\n`);

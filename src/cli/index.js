@@ -19,6 +19,8 @@ import { runUpgradeApply } from './commands/upgrade-apply.js';
 import { runPrivacy } from './commands/privacy.js';
 import { runBenchmark } from './commands/benchmark.js';
 import { runHook } from './commands/hook.js';
+import { runRun } from './commands/run.js';
+import { runPlugin } from './commands/plugin.js';
 import { runAutopilot } from './commands/autopilot.js';
 
 function parseArgs(rawArgs) {
@@ -71,6 +73,7 @@ ${colors.bold('คำสั่งหลักสำหรับพนักง�
   ${colors.cyan('output')}     สร้าง path และชื่อไฟล์มาตรฐานสำหรับเก็บ output โดยไม่เขียนทับไฟล์เดิม
   ${colors.cyan('privacy')}    ตรวจข้อความ/PDF/DOCX บนเครื่องก่อนแนบไฟล์ ให้คนตรวจผลก่อนส่ง
   ${colors.cyan('benchmark')}  รัน Pilot benchmark 30 งานสำหรับ Router / Context / Authority
+  ${colors.cyan('run')}        Generate a governed draft (--base-url URL --model ID --api-key-env NAME --approve-provider --approve-destination --output-format text|json|stream-json)
   ${colors.cyan('autopilot')}  Inspect approved GitHub issues/PRs (--repo owner/repo --dry-run); guarded code proposals and human review
   ${colors.cyan('init')}       ติดตั้ง Approved Skills เข้า Workspace ตาม Team หรือ Role
   ${colors.cyan('teams')}      แสดงรายชื่อ 22 ทีมของ STeP
@@ -128,6 +131,11 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   switch (command) {
+    case 'plugin':
+      return runPlugin(args);
+    case 'run':
+      await runRun(args);
+      break;
     case 'autopilot':
       await runAutopilot(args);
       break;

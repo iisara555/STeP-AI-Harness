@@ -8,7 +8,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8')).packages;
-const wanted = ['node_modules/@openai/codex-darwin-x64', 'node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64'];
+const wanted = [
+  'node_modules/@openai/codex-darwin-x64',
+  'node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64',
+  'node_modules/@github/copilot-sdk-darwin-x64',
+];
 
 for (const path of wanted) {
   const entry = lock[path];

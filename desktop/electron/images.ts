@@ -11,7 +11,7 @@ export class Images {
     private request = fetch,
   ) {}
   private async json(connection: Connection, path: string, signal: AbortSignal, body?: unknown) {
-    if (connection.mode !== 'api' || connection.provider === 'claude') throw new Error('IMAGE_API_REQUIRED');
+    if (connection.mode !== 'api' || !['openai', 'gemini'].includes(connection.provider)) throw new Error('IMAGE_API_REQUIRED');
     const secret = await this.key(connection);
     if (!secret) throw new Error('IMAGE_API_REQUIRED');
     const openai = connection.provider === 'openai';

@@ -13,6 +13,9 @@ tmp/
 node_modules/
 .step-ai/
 .step/memory/
+.step/packs/
+.step/line-private/
+.step/usage/
 ASSISTANT.md
 
 # Local or restricted source material

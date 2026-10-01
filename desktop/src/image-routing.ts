@@ -10,6 +10,8 @@ export const IMAGE_MODELS = {
   openai: ['gpt-image-2.5-sunburst', 'gpt-image-2.5-flare', 'gpt-image-2', 'gpt-image-1.5'],
   gemini: ['gemini-3.1-flash-image', 'gemini-3-pro-image', 'gemini-3.1-flash-lite-image'],
   claude: [],
+  compatible: [],
+  copilot: [],
 } satisfies Record<string, string[]>;
 export function imageModels(connection?: Connection) {
   return connection?.mode === 'api' ? IMAGE_MODELS[connection.provider] : [];

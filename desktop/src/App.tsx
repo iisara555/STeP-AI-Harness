@@ -68,6 +68,11 @@ import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { AutomationDialog } from './automations';
+import { commandPalette, commandForKey, vimEdit } from './commands';
+import { KeyboardDialog } from './keyboard';
+import { Readiness } from './readiness';
+import { VoiceButton } from './voice';
+import { PacksDialog } from './packs';
 import type { ToolQuestion } from './types';
 
 export default function App() {
@@ -76,6 +81,9 @@ export default function App() {
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
     [memoryOpen, setMemoryOpen] = useState(false);
+  const [packsOpen, setPacksOpen] = useState(false),
+    [keyboardOpen, setKeyboardOpen] = useState(false),
+    [vimNormal, setVimNormal] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false),
     [coordinated, setCoordinated] = useState(false);
   const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
@@ -322,16 +330,6 @@ export default function App() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [running]);
-  useEffect(() => {
-    const open = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPalette(p => !p);
-      }
-    };
-    window.addEventListener('keydown', open);
-    return () => window.removeEventListener('keydown', open);
-  }, []);
   useEffect(() => {
     void api
       ?.call('skills')
@@ -699,59 +697,53 @@ export default function App() {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
       await refresh();
     });
+  const commands = {
+    packs: () => setPacksOpen(true),
+    palette: () => setPalette(p => !p),
+    new: () => void action(create),
+    usage: () => setUsageOpen(true),
+    memory: () => setMemoryOpen(true),
+    automations: () => setAutomationOpen(true),
+    settings: () => {
+      setSettingsPage('general');
+      setSettings(true);
+    },
+    keyboard: () => setKeyboardOpen(true),
+    tour: () => {
+      setSettings(false);
+      setView('chat');
+      setTour(true);
+    },
+    wizard: () => setWizard(true),
+    left: () => setLeft(p => !p),
+    right: () => setRight(p => !p),
+    skills: () => {
+      setSettings(false);
+      setView('skills');
+    },
+    receipt: () => {
+      setSettings(false);
+      setView('receipt');
+    },
+    'theme-system': () => void setTheme('system'),
+    'theme-light': () => void setTheme('light'),
+    'theme-dark': () => void setTheme('dark'),
+  };
+  const commandRef = useRef(commands);
+  commandRef.current = commands;
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => {
+      const id = commandForKey(e, snapshot?.settings.keybindings, /Mac/.test(navigator.platform));
+      if (id && id in commandRef.current) {
+        e.preventDefault();
+        commandRef.current[id as keyof typeof commands]();
+      }
+    };
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, [snapshot?.settings.keybindings]);
   const paletteItems: PaletteItem[] = snapshot
-    ? [
-        { id: 'new', group: 'คำสั่ง', label: 'เริ่มงานใหม่', run: () => action(create) },
-        { id: 'usage', group: 'คำสั่ง', label: 'ดูการใช้งาน AI', hint: '/usage', run: () => setUsageOpen(true) },
-        { id: 'memory', group: 'คำสั่ง', label: 'ดูและแก้ไขความจำ', hint: '/memory', run: () => setMemoryOpen(true) },
-        { id: 'automations', group: 'คำสั่ง', label: 'งานเบื้องหลังและเครื่องมือเพิ่มเติม', run: () => setAutomationOpen(true) },
-        {
-          id: 'settings',
-          group: 'คำสั่ง',
-          label: 'ตั้งค่าพื้นที่ทำงาน',
-          run: () => {
-            setSettingsPage('general');
-            setSettings(true);
-          },
-        },
-        {
-          id: 'tour',
-          group: 'คำสั่ง',
-          label: 'ดูทัวร์แนะนำอีกครั้ง',
-          run: () => {
-            setSettings(false);
-            setView('chat');
-            setTour(true);
-          },
-        },
-        { id: 'wizard', group: 'คำสั่ง', label: 'เปิดตัวช่วยตั้งค่าเริ่มต้น', run: () => setWizard(true) },
-        { id: 'left', group: 'คำสั่ง', label: left ? 'ซ่อนแถบงาน' : 'แสดงแถบงาน', run: () => setLeft(!left) },
-        { id: 'right', group: 'คำสั่ง', label: right ? 'ซ่อนร่าง' : 'เปิดร่าง', run: () => setRight(!right) },
-        ...(['system', 'light', 'dark'] as const).map(theme => ({
-          id: 'theme-' + theme,
-          group: 'ธีม',
-          label: theme === 'system' ? 'ธีมตามระบบ' : theme === 'light' ? 'ธีมสว่าง' : 'ธีมมืด',
-          run: () => setTheme(theme),
-        })),
-        {
-          id: 'skills',
-          group: 'เครื่องมือ',
-          label: 'ศูนย์รวม Skill',
-          run: () => {
-            setSettings(false);
-            setView('skills');
-          },
-        },
-        {
-          id: 'receipt',
-          group: 'เครื่องมือ',
-          label: 'ตรวจใบเสร็จก่อนส่ง AFP',
-          hint: 'ทดลอง',
-          run: () => {
-            setSettings(false);
-            setView('receipt');
-          },
-        },
+    ? commandPalette(commands, snapshot.settings.keybindings || {}, [
         ...routedSkills.map(s => ({
           id: 'skill-' + s.name,
           group: 'Skill',
@@ -776,7 +768,7 @@ export default function App() {
             hint: s.project || statusText[s.status],
             run: () => action(() => selectSession(s.id)),
           })),
-      ]
+      ])
     : [];
   const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
   if (!api)
@@ -1352,7 +1344,7 @@ export default function App() {
                   )}
                   {pendingSource && (
                     <button className="source-chip quiet" onClick={() => setPendingSource('')}>
-                      ผลจากเครื่องมือแนบแล้ว ×
+                      ข้อมูลต้นทางแนบแล้ว ×
                     </button>
                   )}
                 </div>
@@ -1456,6 +1448,17 @@ export default function App() {
                     setSlashIndex(0);
                   }}
                   onKeyDown={e => {
+                    if (e.nativeEvent.isComposing) return;
+                    if (snapshot.settings.vimMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                      const next = vimEdit(e.key, query, e.currentTarget.selectionStart, vimNormal);
+                      if (next) {
+                        e.preventDefault();
+                        setQuery(next.text);
+                        setVimNormal(next.normal);
+                        requestAnimationFrame(() => composerRef.current?.setSelectionRange(next.cursor, next.cursor));
+                        return;
+                      }
+                    }
                     if (slashMatches.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
                       e.preventDefault();
                       if (e.key === 'ArrowDown') setSlashIndex(i => Math.min(i + 1, slashMatches.length - 1));
@@ -1474,7 +1477,17 @@ export default function App() {
                     }
                   }}
                 />
+                {snapshot.settings.vimMode && <span className="small muted">Vim: {vimNormal ? 'Normal' : 'Insert'}</span>}
+                <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
                 <div className="composer-tools">
+                  {snapshot.policy?.features.voice && (
+                    <VoiceButton
+                      key={session?.id || 'composer'}
+                      api={api}
+                      disabled={running}
+                      onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
+                    />
+                  )}
                   {snapshot.policy?.features.vision && (
                     <button
                       className="quiet"
@@ -2009,6 +2022,17 @@ export default function App() {
           </p>
         </ConfirmDialog>
       )}
+      {packsOpen && (
+        <PacksDialog
+          api={api}
+          onClose={() => setPacksOpen(false)}
+          onSelect={text => {
+            setPendingSource(text);
+            notify('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง');
+          }}
+        />
+      )}
+      {keyboardOpen && <KeyboardDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setKeyboardOpen(false)} />}
       {palette && <CommandPalette items={paletteItems} onClose={() => setPalette(false)} />}
       {wizard && (
         <SetupWizard

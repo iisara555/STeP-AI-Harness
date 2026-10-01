@@ -1,5 +1,5 @@
 import type { DraftNode } from './draft';
-export type Provider = 'openai' | 'claude' | 'gemini';
+export type Provider = 'openai' | 'claude' | 'gemini' | 'compatible' | 'copilot';
 export type EffortOption = { id: string; description?: string };
 export type ModelOption = {
   id: string;
@@ -11,6 +11,9 @@ export type ModelOption = {
 };
 export type Connection = {
   id: string;
+  baseUrl?: string;
+  protocol?: 'openai' | 'anthropic';
+  label?: string;
   provider: Provider;
   mode: 'api' | 'subscription' | 'oauth';
   model: string;
@@ -136,6 +139,8 @@ export type Session = {
   runs?: RunTrace[];
 };
 export type Settings = {
+  keybindings?: import('./commands').Keybindings;
+  vimMode?: boolean;
   outputStyle?: string;
   permissionMode?: PermissionMode;
   team: string;

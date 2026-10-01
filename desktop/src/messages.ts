@@ -1,6 +1,33 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = {
+  PROVIDER_PROXY_UNAVAILABLE: 'ปลายทางนี้ยังไม่รองรับ proxy ที่นโยบายกำหนด กรุณาแจ้งผู้ดูแล',
+  PROVIDER_DESTINATION_DENIED: 'ผู้ดูแลยังไม่รับรองปลายทาง AI นี้ กรุณาตรวจ Base URL ในนโยบาย',
+  PROVIDER_URL_INVALID: 'Base URL ต้องเป็น HTTPS หรือ HTTP ของ localhost และไม่มีข้อมูลรับรองใน URL',
+  PROVIDER_STREAM_INCOMPLETE: 'AI ส่งข้อมูลมาไม่ครบ กรุณาลองใหม่',
+  PROVIDER_STREAM_INVALID: 'รูปแบบข้อมูลที่ AI ส่งกลับไม่ถูกต้อง',
+  PROVIDER_CAPABILITY_UNSUPPORTED: 'การเชื่อมต่อนี้รองรับร่างข้อความเท่านั้น',
+  COPILOT_CLIENT_ID_REQUIRED: 'ผู้ดูแลต้องกำหนด GitHub OAuth App ก่อนเชื่อม Copilot',
+  COPILOT_LOGIN_REQUIRED: 'กรุณาลงชื่อเข้าใช้ GitHub Copilot อีกครั้ง',
+  COPILOT_LOGIN_FAILED: 'ลงชื่อเข้าใช้ Copilot ไม่สำเร็จ กรุณาตรวจการตั้งค่า OAuth App',
+  COPILOT_LOGIN_EXPIRED: 'รหัสลงชื่อเข้าใช้หมดอายุ กรุณาเริ่มใหม่',
+  COPILOT_REQUEST_FAILED: 'Copilot ทำงานไม่สำเร็จ กรุณาตรวจสิทธิ์บัญชีและโควตา',
+  VOICE_DISABLED: 'ผู้ดูแลยังไม่เปิดส่วนเสริมเสียงสำหรับเครื่องนี้',
+  VOICE_APPROVAL_REQUIRED: 'กรุณาอนุญาตการบันทึกเสียงครั้งนี้ก่อน',
+  VOICE_AUDIO_INVALID: 'เสียงไม่อยู่ในรูปแบบที่รองรับหรือยาวเกิน 60 วินาที',
+  VOICE_TRANSCRIPTION_FAILED: 'ถอดเสียงไม่สำเร็จ กรุณาลองบันทึกใหม่',
+  COMPONENT_CHECKSUM_FAILED: 'ส่วนเสริมไม่ตรงกับไฟล์ที่ผู้ดูแลรับรอง กรุณาแจ้งผู้ดูแล',
+  COMPONENT_DOWNLOAD_FAILED: 'ดาวน์โหลดส่วนเสริมไม่สำเร็จ กรุณาตรวจเครือข่าย',
+  COMPONENT_BUSY: 'ส่วนเสริมกำลังทำงาน กรุณารอให้เสร็จก่อน',
+  PACK_APPROVAL_REQUIRED: 'ผู้ดูแลต้องรับรอง digest ของชุดนี้ก่อนเปิดใช้',
+  PACK_DISABLED: 'ชุดนี้ปิดใช้หรือไฟล์เปลี่ยนจากที่ผู้ดูแลรับรอง',
+  PACK_MANIFEST_INVALID: 'รูปแบบ Skill Pack ไม่ถูกต้อง',
+  PACK_AUTHORITY_REJECTED: 'ชุดนี้มีข้อความกำหนดสิทธิ์เครื่องมือที่ไม่รองรับ',
+  PACK_NAME_REQUIRED: 'กรุณากำหนดชื่อชุดด้วยอักษรอังกฤษตัวเล็กและขีดกลาง',
+  PACK_ALREADY_INSTALLED: 'มีชุดชื่อนี้แล้ว ใช้ชื่อหรือเวอร์ชันชุดใหม่',
+  PACK_PRIVACY_REVIEW_REQUIRED: 'พบข้อมูลที่ต้องตรวจเพิ่มเติมในชุดนี้ จึงยังนำเข้าไม่ได้',
+  INVALID_KEYBINDINGS: 'รูปแบบคีย์ลัดไม่ถูกต้อง ใช้ Mod+Alt+Shift+k ตามลำดับ',
+  DUPLICATE_KEYBINDING: 'คีย์ลัดซ้ำกับคำสั่งอื่น กรุณาเลือกคีย์ลัดใหม่',
   COORDINATOR_DISABLED: 'ผู้ดูแลยังไม่เปิดการแบ่งงานย่อย หรือรูปแบบงานนี้ไม่รองรับ ใช้โหมดร่างโดยไม่เลือก Skill เฉพาะ',
   COORDINATOR_PLAN_INVALID: 'แผนงานย่อยไม่ครบถ้วน กรุณาลองใหม่หรือแบ่งคำขอเอง',
   COORDINATOR_DEPENDENCY_CYCLE: 'แผนงานย่อยมีลำดับงานวนกลับ จึงเริ่มทำไม่ได้',
@@ -167,4 +194,14 @@ export const statusText: Record<string, string> = {
 };
 
 export const providerLabel = (provider?: string) =>
-  provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : provider === 'gemini' ? 'Gemini' : '';
+  provider === 'openai'
+    ? 'OpenAI'
+    : provider === 'claude'
+      ? 'Claude'
+      : provider === 'gemini'
+        ? 'Gemini'
+        : provider === 'compatible'
+          ? 'Compatible'
+          : provider === 'copilot'
+            ? 'GitHub Copilot'
+            : '';

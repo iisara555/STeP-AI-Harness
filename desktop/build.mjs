@@ -9,7 +9,7 @@ await build({
   platform: 'node',
   format: 'cjs',
   target: 'node22',
-  external: ['electron', '@anthropic-ai/claude-agent-sdk'],
+  external: ['electron', '@anthropic-ai/claude-agent-sdk', '@github/copilot-sdk'],
 });
 await copyFile('electron/sheet-worker.cjs', 'dist/sheet-worker.cjs');
 await build({

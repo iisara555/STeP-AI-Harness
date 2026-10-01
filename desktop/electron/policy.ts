@@ -1,3 +1,4 @@
+import { providerEndpoint } from '../../src/modules/providers/compatible.js';
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/managed-policy.js';
@@ -22,6 +23,8 @@ export const FEATURES = [
   'voice',
   'copilot',
   'compatibleProviders',
+  'headless',
+  'skillPacks',
   'cron',
   'coordinator',
   'memoryTeam',
@@ -86,6 +89,9 @@ export type Policy = {
   network?: { proxyUrl?: string };
   memory?: { teamDirectories: Record<string, string> };
   sandbox?: { image: string };
+  providers?: { compatible: { name: string; baseUrl: string; protocol: 'openai' | 'anthropic' }[]; copilot?: { clientId: string } };
+  voice?: { components: Record<string, { runtime: { url: string; sha256: string }; model: { url: string; sha256: string } }> };
+  skillPacks?: { approvedDigests: string[] };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -102,6 +108,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   voice: false,
   copilot: false,
   compatibleProviders: false,
+  headless: false,
+  skillPacks: false,
   cron: false,
   coordinator: false,
   memoryTeam: false,
@@ -157,6 +165,79 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.skillPacks !== undefined) {
+    if (
+      !isObject(raw.skillPacks) ||
+      Object.keys(raw.skillPacks).some(k => k !== 'approvedDigests') ||
+      !Array.isArray(raw.skillPacks.approvedDigests) ||
+      raw.skillPacks.approvedDigests.length > 100 ||
+      raw.skillPacks.approvedDigests.some((d: unknown) => typeof d !== 'string' || !/^[a-f0-9]{64}$/.test(d))
+    )
+      problems.push('invalid Skill Pack approvals');
+    else policy.skillPacks = { approvedDigests: [...new Set<string>(raw.skillPacks.approvedDigests)] };
+  }
+  if (raw.providers !== undefined) {
+    if (!isObject(raw.providers) || Object.keys(raw.providers).some(k => !['compatible', 'copilot'].includes(k)))
+      problems.push('invalid providers');
+    else {
+      const compatible: NonNullable<Policy['providers']>['compatible'] = [];
+      if (raw.providers.compatible !== undefined && (!Array.isArray(raw.providers.compatible) || raw.providers.compatible.length > 30))
+        problems.push('invalid compatible profiles');
+      else
+        for (const p of raw.providers.compatible || []) {
+          try {
+            if (
+              !isObject(p) ||
+              Object.keys(p).some(k => !['name', 'baseUrl', 'protocol'].includes(k)) ||
+              !text(p.name, 120) ||
+              !text(p.baseUrl, 2000) ||
+              !['openai', 'anthropic'].includes(p.protocol)
+            )
+              throw new Error('invalid');
+            providerEndpoint(p.baseUrl, p.protocol);
+            compatible.push({ name: p.name, baseUrl: p.baseUrl, protocol: p.protocol });
+          } catch {
+            problems.push('invalid compatible profile');
+          }
+        }
+      let copilot: { clientId: string } | undefined;
+      if (raw.providers.copilot !== undefined) {
+        const p = raw.providers.copilot;
+        if (!isObject(p) || Object.keys(p).some(k => k !== 'clientId') || !/^[a-zA-Z0-9_-]{8,80}$/.test(p.clientId))
+          problems.push('invalid Copilot client id');
+        else copilot = { clientId: p.clientId };
+      }
+      policy.providers = { compatible, ...(copilot ? { copilot } : {}) };
+    }
+  }
+  if (raw.voice !== undefined) {
+    if (!isObject(raw.voice) || Object.keys(raw.voice).some(k => k !== 'components') || !isObject(raw.voice.components))
+      problems.push('invalid voice components');
+    else {
+      const components: NonNullable<Policy['voice']>['components'] = {};
+      for (const [platform, spec] of Object.entries(raw.voice.components)) {
+        try {
+          if (
+            !/^(win32|darwin|linux)-(x64|arm64)$/.test(platform) ||
+            !isObject(spec) ||
+            Object.keys(spec).some(k => !['runtime', 'model'].includes(k))
+          )
+            throw new Error('invalid');
+          for (const a of [spec.runtime, spec.model]) {
+            if (!isObject(a) || Object.keys(a).some(k => !['url', 'sha256'].includes(k)) || !/^[a-f0-9]{64}$/.test(a.sha256))
+              throw new Error('invalid');
+            const url = new URL(a.url);
+            if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.search) throw new Error('invalid');
+          }
+          components[platform] = spec as any;
+        } catch {
+          problems.push('invalid voice artifact');
+        }
+      }
+      policy.voice = { components };
+    }
+  }
+
   if (raw.sandbox !== undefined) {
     if (
       !isObject(raw.sandbox) ||

@@ -20,7 +20,7 @@ export type Automation = {
 };
 export const connectionBinding = (c: Connection) =>
   createHash('sha256')
-    .update(JSON.stringify([c.provider, c.mode, c.executable, c.customRuntime, c.googleCloudProject]))
+    .update(JSON.stringify([c.provider, c.mode, c.executable, c.customRuntime, c.googleCloudProject, c.baseUrl, c.protocol]))
     .digest('hex');
 export type AutomationRun = {
   id: string;
