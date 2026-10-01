@@ -1,0 +1,57 @@
+# Experimental Gemini via Antigravity adapter
+
+STeP has an `AntigravityAdapter` and a separate `antigravity` subscription connection in Setup and Settings. It uses official `agy` NDJSON. Existing Gemini API and organization Gemini CLI connections retain their behavior.
+
+**Status: implemented and validated with synthetic generation; blocked before user-prompt transmission on official Windows CLI 1.2.14. Native OAuth and live generation are not accepted. Signing in again does not resolve this compatibility blocker.**
+
+## Implemented behavior
+
+- Discover an installed native `agy` or accept an explicitly selected runtime. Require version 1.2.14 or newer, subscription mode and a pinned `gemini-*` model. No global installer, update command or native logout is run by STeP.
+- Create a fresh configuration home and empty workspace for each invocation. A global custom `step-draft` agent carries host standing instructions separately from the user message. Personal MCP, plugins, skills, environment credentials and workspace files are not copied into the configuration home.
+- Deny every documented native action namespace: file read/write, URL read/actuation, command, unsandboxed command and MCP. No shell, ACP, permission bypass or conversation continuation is used.
+- Withhold the user message until `init` confirms the expected cwd, agent, `strict` mode and no tools except harmless `finish`. A broad catalog is insufficient proof of effective tool filtering. Failure returns `ANTIGRAVITY_TOOLS_UNAVAILABLE`; additional user confirmation cannot override this compatibility check.
+- Send one NDJSON user message on stdin, then close stdin. Stream text deltas once and require the final text to agree with them. Completion requires one successful result and process exit 0. Usage is reported once per invocation. Malformed messages, tool steps, duplicate results, extra turns, mismatched sessions and nonzero exits cannot produce readiness.
+- Bound output and lifetime; terminate the owned process tree on cancellation and wait before deleting its temporary home. Scrub diagnostic tails. Retain the home if shutdown cannot be confirmed.
+- Reject vision and native web search explicitly. Existing routing, Privacy Gate, transmission consent and host tool permissions stay in force. This adds no recurring consent prompt.
+
+## Account boundary
+
+Consumer OAuth credentials belong to Antigravity's native OS keyring. STeP does not read, copy, serialize or log them, and does not call `/logout`. Disconnect/removal clears the STeP binding and local runtime files; the native Google account remains signed in. Separate STeP connections do **not** establish separate Google identities or keyring namespaces.
+
+The native model catalog is bounded, deduplicated and filtered to Gemini. A catalog is not proof of account entitlement, OAuth refresh or generation readiness. Readiness requires successful generation. Account identity binding and native OAuth lifecycle acceptance remain open.
+
+## Native evidence (2026-10-01)
+
+The official Windows amd64 manifest selected **1.2.14**:
+
+- [Binary](https://storage.googleapis.com/antigravity-public/antigravity-cli/1.2.14-4571742832820224/windows-x64/cli_windows_x64.exe)
+- SHA-512: `908fcd591144c6df86506d7c135a486a2e4f4f606e09a9bcc5eb9bf943e385c06c94e0a218f29d8c5ba26db1406ee3a7aa2d08aa8685dadc37fe0fceda2fcf6f`
+- Download and checksum verification passed in ignored QA storage; no global installer was run. Native help confirms stream JSON and slash-command disabling.
+- Isolated settings were observed: setting `toolPermission: strict` changed `init.permission_mode`. The global agent was discovered by `agy agents`.
+- Neither `tools: []` nor `tools: [finish]` narrowed the init tool catalog. This does not prove that tools executed or that they are disabled. The adapter therefore returned **`ANTIGRAVITY_TOOLS_UNAVAILABLE` before writing the user message**.
+- **0 reported tokens**, **11 Gemini catalog entries**. OAuth refresh, account identity and generation were not tested. Zero reported tokens is not a billing measurement.
+- The binary, private probes and metadata-only evidence are ignored under `desktop/release/qa/antigravity/`; they are not dependencies or release assets.
+
+## Validation
+
+- **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.
+- The new Electron smoke passed through the actual renderer, preload, IPC and adapter with a synthetic runtime. It verifies selection/model persistence, successful connection, unsafe reconnect without a second prompt, invalid mode/model rejection, the old Gemini eligibility gate and local disconnect semantics.
+- Formatting, TypeScript/build and both repository validators passed. The existing renderer bundle-size warning remains. Native Windows checks establish the incompatibility above, not live provider acceptance or macOS/Linux native acceptance.
+
+## Remaining acceptance
+
+1. Obtain a provider-supported way to confirm that native tools are disabled before releasing a user message. Verify real file, command, MCP, browser and delegation denial. Do not remove the init check or rely on Markdown instructions as enforcement.
+2. Verify OAuth refresh and account identity boundaries using the authorized personal Google account after isolation is accepted. Keep native credentials private; distinguish STeP disconnect from provider logout.
+3. Run bounded live generation and shared feature evaluation, then verify native lifecycle and packaging on Windows and macOS before changing experimental status.
+
+No main merge, production policy change, installer or release is included. Gemini API remains the currently available Google route.
+
+## Official references
+
+- [Consumer Gemini CLI deprecation](https://developers.google.com/gemini-code-assist/docs/deprecations/code-assist-individuals): personal Google and Google AI Pro/Ultra CLI service ended June 18, 2026; organization Standard/Enterprise remains separate.
+- [Headless protocol](https://antigravity.google/docs/cli/headless/): NDJSON events, results, exit handling and default workspace tool permissions.
+- [CLI permissions](https://antigravity.google/docs/permissions?tab=cli): supported action namespaces and deny precedence.
+- [Custom agents](https://antigravity.google/docs/subagents?tab=cli): global discovery, system instructions and declared tool limits.
+- [Installation and authentication](https://antigravity.google/docs/cli/install/): native OS keyring sign-in and shared native logout.
+
+The Python SDK documents API-key/Vertex routes; it does not establish a personal-keyring OAuth substitute for this CLI integration.

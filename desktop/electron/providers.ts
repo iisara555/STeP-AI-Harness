@@ -8,6 +8,7 @@ import { Rpc } from './rpc';
 import { explainRuntimeFailure } from './diagnostics';
 import { claudeEnv } from './claude-auth';
 import { anthropicEnv } from './anthropic-auth';
+import { AntigravityAdapter, antigravityModels } from './antigravity';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -472,8 +473,9 @@ export function normalizeModels(items: unknown[]): ModelOption[] {
   return models;
 }
 
-// Ask the provider which models this account can use, through the same isolated runtime used for drafting.
+// Read provider catalogs through isolated runtime configuration. Antigravity's catalog does not prove account entitlement.
 export async function listModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env' | 'key'>): Promise<ModelOption[]> {
+  if (connection.provider === 'antigravity') return antigravityModels(connection, context);
   if (connection.provider === 'compatible') return [{ id: connection.model, label: connection.model }];
   if (connection.provider === 'copilot') return copilotModels(context);
   if (connection.provider === 'claude') {
@@ -576,6 +578,7 @@ export class CompatibleAdapter implements ProviderAdapter {
   }
 }
 export function adapter(provider: string): ProviderAdapter {
+  if (provider === 'antigravity') return new AntigravityAdapter();
   if (provider === 'compatible') return new CompatibleAdapter();
   if (provider === 'copilot') return new CopilotAdapter();
   if (provider === 'openai') return new CodexAdapter();

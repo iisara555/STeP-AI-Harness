@@ -7,7 +7,7 @@ import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import type { Connection } from '../src/types';
 import { Rpc } from '../electron/rpc';
 
-async function fakeRuntime(kind: 'openai' | 'gemini', authUrl = 'https://auth.openai.com/oauth/authorize?step=1') {
+async function fakeRuntime(kind: 'openai' | 'gemini', authUrl = 'https://auth.openai.com/oauth/authorize?step=1', cancelDelay = 0) {
   const home = await mkdtemp(join(tmpdir(), `step-${kind}-oauth-`));
   const executable = join(home, 'runtime.cjs');
   const calls = join(home, 'calls.jsonl');
@@ -31,7 +31,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
     setTimeout(()=>{fs.writeFileSync(marker,'1');send({method:'account/login/completed',params:{loginId:'login-good',success:true}})},15);
     return;
   }
-  if(m.method==='account/login/cancel') return send({id:m.id,result:{}});
+  if(m.method==='account/login/cancel') return setTimeout(()=>{fs.appendFileSync(calls,JSON.stringify({cancelAcknowledged:true})+'\\n');send({id:m.id,result:{}});},${cancelDelay});
   if(m.method==='account/logout'){fs.rmSync(marker,{force:true});return send({id:m.id,result:{}});}
   send({id:m.id,result:{}});
 });`
@@ -279,6 +279,38 @@ test('ChatGPT browser launch failures cancel the pending login and never test ge
       .map(line => JSON.parse(line));
     assert.ok(calls.some(call => call.method === 'account/login/cancel' && call.params.loginId === 'login-good'));
   }
+});
+
+test('ChatGPT waits for cancellation acknowledgement and rejects late successful login callbacks', { timeout: 10000 }, async t => {
+  const f = await fakeRuntime('openai', 'https://auth.openai.com/oauth/authorize?step=1', 80);
+  t.after(async () => {
+    const taskRoot = join(tmpdir(), 'step-openai-oauth-');
+    assert.ok(f.home.startsWith(taskRoot));
+    await rm(f.home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  });
+  const d = deps(f.home);
+  const connection = { provider: 'openai', mode: 'subscription', executable: f.executable } as Connection;
+  await assert.rejects(
+    signInAndTest(
+      connection,
+      {
+        ...d.value,
+        openExternal: async () => {
+          await new Promise(resolve => setTimeout(resolve, 60));
+          throw new Error('Browser unavailable');
+        },
+      },
+      new AbortController().signal,
+    ),
+    /LOGIN_BROWSER_FAILED/,
+  );
+  assert.equal(d.state.signedIn, false);
+  assert.equal(d.state.tested, false);
+  const calls = (await readFile(f.calls, 'utf8'))
+    .trim()
+    .split('\n')
+    .map(line => JSON.parse(line));
+  assert.ok(calls.some(call => call.cancelAcknowledged));
 });
 
 test('ChatGPT rejects malformed and misleading login URLs before opening a browser', { timeout: 10000 }, async t => {

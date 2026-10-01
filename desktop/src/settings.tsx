@@ -330,7 +330,7 @@ export function SettingsPanel({
                       title="เลิกใช้ runtime ที่เลือกเอง"
                       onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
                     >
-                      ใช้ตัวเชื่อมที่มากับแอป
+                      {c.provider === 'antigravity' ? 'Use installed Antigravity' : 'ใช้ตัวเชื่อมที่มากับแอป'}
                     </button>
                   ) : (
                     <button
@@ -346,10 +346,14 @@ export function SettingsPanel({
                   <button
                     className="quiet"
                     disabled={Boolean(busy)}
-                    title="ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง"
+                    title={
+                      c.provider === 'antigravity'
+                        ? 'Disconnect STeP; keep the native Antigravity account signed in'
+                        : 'ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง'
+                    }
                     onClick={() => void run(c.id, () => call('disconnect', { id: c.id }))}
                   >
-                    ออกจากระบบ
+                    {c.provider === 'antigravity' ? 'Disconnect STeP' : 'ออกจากระบบ'}
                   </button>
                 )}
                 <button className="quiet danger-text" disabled={Boolean(busy)} onClick={() => setRemovingConnection(c)}>
@@ -374,11 +378,18 @@ export function SettingsPanel({
                 await refresh();
               }}
             >
-              <p>
-                {providerLabel(removingConnection.provider)} (
-                {removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชี'})
-                จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ
-              </p>
+              {removingConnection.provider !== 'antigravity' && (
+                <p>
+                  {providerLabel(removingConnection.provider)} (
+                  {removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชี'})
+                  จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ
+                </p>
+              )}
+              {removingConnection.provider === 'antigravity' && (
+                <p className="small muted">
+                  The native Antigravity Google account remains signed in. STeP does not remove credentials from its shared OS keyring.
+                </p>
+              )}
               <p className="small muted">งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น</p>
             </ConfirmDialog>
           )}
@@ -403,6 +414,7 @@ export function SettingsPanel({
                         googleCloudProject: choice.googleCloudProject,
                         baseUrl: choice.baseUrl,
                         protocol: choice.protocol,
+                        model: choice.model,
                       });
                       setChoice({ ...choice, key: '' });
                     })

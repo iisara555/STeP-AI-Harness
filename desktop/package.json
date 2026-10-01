@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && node build.mjs",
     "start": "electron .",
     "test": "tsx --test test/*.test.ts",
-    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs",
+    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs && node test/antigravity-smoke.mjs",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
