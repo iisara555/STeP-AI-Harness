@@ -139,7 +139,7 @@ try {
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Draft / Output', exact: true }).click();
+  await page.getByRole('button', { name: 'สร้างเอกสาร', exact: true }).click();
   await page.locator('.composer textarea').fill('Draft request');
   await page.keyboard.press('Enter');
   await waitComplete(id);
@@ -148,7 +148,7 @@ try {
   assert.match(snapshot.sessions[0].proposals.at(-1).text, /Synthetic draft/);
   await page.getByText('ใช้ร่างนี้', { exact: true }).click();
   await page.locator('.draft-editor').filter({ hasText: 'Synthetic draft' }).waitFor();
-  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await page.getByRole('button', { name: 'คุยกับผู้ช่วย', exact: true }).click();
   await page.locator('.composer textarea').fill('Tool proposal');
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: /ตรวจ terminal: echo proposed/ }).click();
@@ -175,7 +175,7 @@ try {
   // In chat, tool results stay with the conversation's files and are shown on the message they came with.
   assert.match(withSource.sessions[0].files.at(-1).text, /terminal-ui-ok/);
   assert.deepEqual(withSource.sessions[0].messages.filter(m => m.role === 'user').at(-1).files, [{ name: 'ผลจากเครื่องมือในแอป' }]);
-  await page.getByRole('button', { name: 'Files', exact: true }).click();
+  await page.getByRole('button', { name: 'ไฟล์งาน', exact: true }).click();
   await page.getByRole('button', { name: 'สร้างไฟล์ใหม่' }).click();
   await page.getByRole('textbox', { name: 'File path' }).fill('new.txt');
   await page.getByRole('textbox', { name: 'File content' }).fill('Reviewed file content');
@@ -187,12 +187,12 @@ try {
     .click();
   await page.waitForTimeout(100);
   assert.equal(await readFile(join(workspace, 'new.txt'), 'utf8'), 'Reviewed file content');
-  await page.getByRole('button', { name: 'Browser', exact: true }).click();
+  await page.getByRole('button', { name: 'เว็บ', exact: true }).click();
   await page.getByRole('textbox', { name: 'Browser URL' }).fill('http://127.0.0.1:' + server.address().port);
   await page.getByRole('button', { name: 'เปิดเว็บ', exact: true }).click();
   await page.getByRole('button', { name: 'อ่านหน้าเว็บปัจจุบัน' }).click();
   await page.locator('.browser-preview pre').filter({ hasText: 'Browser fixture' }).waitFor();
-  await page.getByRole('button', { name: 'Output', exact: true }).click();
+  await page.getByRole('button', { name: 'ผลงาน', exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: 'release/qa/chat-workspace-light.png', fullPage: true });
   await page.evaluate(async () => {

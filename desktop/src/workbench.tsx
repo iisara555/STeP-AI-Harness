@@ -11,8 +11,9 @@ type Props = {
   request?: ToolRequest;
   onTab: (tab: ToolTab) => void;
   onSource: (text: string) => void;
+  onBrowserTask: (url: string) => void;
 };
-export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, onSource }: Props) {
+export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, onSource, onBrowserTask }: Props) {
   const [path, setPath] = useState(''),
     [entries, setEntries] = useState<{ name: string; path: string; directory: boolean }[]>([]);
   const [file, setFile] = useState<{ path: string; text: string; offset?: number; total?: number; nextOffset?: number } | null>(null),
@@ -148,8 +149,12 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
             <div className="tool-section">
               <h2>
                 <Globe size={20} />
-                Browser
+                เว็บ
               </h2>
+              <button onClick={() => onBrowserTask(url)}>ให้ผู้ช่วยทำงานบนเว็บ</button>
+              <p className="small muted">ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น</p>
+              <p className="small muted">ลงชื่อเข้าใช้ด้วยตนเองในหน้าต่าง STeP ที่แยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์</p>
+              <h3>เปิดอ่านด้วยตนเอง</h3>
               <form
                 onSubmit={e => {
                   e.preventDefault();

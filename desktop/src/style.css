@@ -624,6 +624,18 @@ nav button,
 .connection-form {
   margin-top: 23px;
 }
+.connection-cost {
+  padding: 10px;
+  border-left: 3px solid var(--accent-ink);
+  background: var(--paper);
+  font-size: 12px;
+}
+.connect-primary {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 0 0 8px var(--paper);
+}
 .connected {
   color: var(--accent-ink);
 }
@@ -1791,7 +1803,7 @@ nav .count {
 .wizard-card {
   width: min(760px, 100%);
   max-height: calc(100vh - 48px);
-  overflow: auto;
+  overflow: hidden;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1840,6 +1852,9 @@ nav .count {
   color: var(--paper);
 }
 .wizard-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;

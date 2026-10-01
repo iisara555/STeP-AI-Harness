@@ -37,7 +37,7 @@ export function ApprovalDialog({
         <label className="approval-remember">
           <input type="checkbox" checked={run} onChange={e => setRun(e.target.checked)} />
           <span>
-            อนุญาตผลการอ่านใหม่ในขอบเขตนี้โดยไม่ถามซ้ำ
+            อนุญาตส่งข้อมูลในขอบเขตนี้โดยไม่ถามซ้ำ
             <br />
             <span className="approval-detail">{request.runScope}</span>
           </span>

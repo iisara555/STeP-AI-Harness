@@ -31,6 +31,7 @@ export function SettingsPanel({
     [personality, setPersonality] = useState(snapshot.settings.personality || 'coworker'),
     [assistantTone, setAssistantTone] = useState(snapshot.settings.assistantTone || '');
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
+  const accountSignIn = choice.mode === 'subscription' && ['openai', 'claude'].includes(choice.provider);
   const [busy, setBusy] = useState(''),
     [progress, setProgress] = useState<Record<string, string>>({}),
     [removingConnection, setRemovingConnection] = useState<Connection | null>(null);
@@ -239,7 +240,7 @@ export function SettingsPanel({
         <section>
           <h2>การเชื่อมต่อ AI</h2>
           <p className="muted small">
-            เชื่อมด้วยบัญชีส่วนตัว (ลงชื่อเข้าใช้ ใช้โควตาของแพ็กเกจที่คุณสมัคร) หรือ API key (คิดค่าใช้จ่ายตามการใช้งาน)
+            เลือกการเชื่อมต่อที่รองรับด้านล่าง ตรวจสิทธิ์และผู้รับผิดชอบค่าใช้จ่ายของบัญชีก่อนเริ่ม
             การทดสอบจะส่งคำขอสั้น ๆ หนึ่งครั้ง
           </p>
           {snapshot.connections.map(c => (
@@ -404,10 +405,11 @@ export function SettingsPanel({
               <>
                 <p className="small muted">รายชื่อโมเดลจะโหลดจากบริการอัตโนมัติหลังเชื่อมต่อสำเร็จ แล้วเลือกได้จากกล่องพิมพ์</p>
                 <button
+                  className="connect-primary"
                   disabled={Boolean(busy) || !providerChoiceReady(choice)}
                   onClick={() =>
                     void run('new', async () => {
-                      await call('connection', {
+                      const connection = await call('connection', {
                         provider: choice.provider,
                         mode: choice.mode,
                         apiKey: choice.key,
@@ -417,11 +419,21 @@ export function SettingsPanel({
                         model: choice.model,
                       });
                       setChoice({ ...choice, key: '' });
+                      if (accountSignIn) {
+                        setBusy(connection.id);
+                        // Show the pending account immediately so progress and cancellation remain available.
+                        await refresh();
+                        await call('connect', { id: connection.id });
+                      }
                     })
                   }
                 >
                   <Plus size={16} />
-                  เพิ่มการเชื่อมต่อ
+                  {busy
+                    ? 'กำลังเชื่อมต่อ…'
+                    : accountSignIn
+                      ? `เชื่อมต่อ ${choice.provider === 'openai' ? 'ChatGPT' : 'Claude'}`
+                      : 'เพิ่มการเชื่อมต่อ'}
                 </button>
               </>
             )}

@@ -17,7 +17,7 @@ try {
   const wizard = page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' });
   await wizard.waitFor();
   await page.screenshot({ path: join(out, 'wizard-1-welcome.png') });
-  await page.getByRole('button', { name: 'เริ่มตั้งค่า' }).click();
+  await page.getByRole('button', { name: 'ตั้งชื่อและรูปแบบผู้ช่วยก่อน (ไม่บังคับ)' }).click();
   await page.getByLabel('ชื่อเรียก').fill('ต้น');
   await page.getByRole('button', { name: 'ถัดไป' }).click();
   await page.getByRole('button', { name: 'น้องสเต็ป' }).click();
@@ -26,12 +26,9 @@ try {
   await page.getByRole('button', { name: 'ถัดไป' }).click();
   await page.screenshot({ path: join(out, 'wizard-4-connect.png') });
   await page.getByRole('button', { name: 'ทำภายหลัง' }).click();
-  await page.getByText(/OCR ภาษาไทยสำหรับตรวจใบเสร็จ/).waitFor();
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: join(out, 'wizard-5-addons.png') });
-  await page.getByRole('button', { name: 'ถัดไป' }).click();
-  await page.getByRole('button', { name: 'ดูทัวร์แนะนำ' }).click();
-  await page.locator('.tour-card').waitFor();
+  await page.screenshot({ path: join(out, 'wizard-ready-without-ai.png') });
+  await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน' }).click();
+  await wizard.waitFor({state:'detached'});
   const saved = await page.evaluate(() => window.step.call('snapshot'));
   if (
     saved.settings.userName !== 'ต้น' ||
@@ -40,13 +37,6 @@ try {
     !saved.userFile
   )
     throw new Error('Wizard did not save USER.md settings');
-  await page.screenshot({ path: join(out, 'tour-1.png') });
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: join(out, 'tour-3.png') });
-  await page.getByRole('button', { name: 'ข้ามทัวร์' }).click();
-  await page.waitForTimeout(300);
   await page.screenshot({ path: join(out, 'welcome.png') });
   await page.evaluate(async () => {
     const c = await window.step.call('connection', { provider: 'openai', mode: 'subscription' });

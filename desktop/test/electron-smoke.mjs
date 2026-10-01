@@ -21,6 +21,7 @@ try {
   // Exercise provider selection through the real preload bridge before any login.
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   const providerField = page.getByRole('combobox', { name: /ผู้ให้บริการ/ });
   const methodField = page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ });
   // Google serves Gemini sign-in only to organization Code Assist licenses, so an API key is the default.

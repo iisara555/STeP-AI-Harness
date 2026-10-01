@@ -377,15 +377,15 @@ export function ClaudeCodeNote({
     <div className="claude-code-note">
       <p className="small">
         {subscription
-          ? 'ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วรับคำตอบใน STeP ใช้ Claude Code รุ่น 2.1.268 ขึ้นไปที่ติดตั้งในเครื่อง บัญชีใน STeP แยกจาก Claude Code ส่วนตัว'
+          ? 'ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วกลับมารับคำตอบใน STeP'
           : 'ส่งงานต่อให้ Claude Code ส่วนตัว: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้'}
       </p>
       <p className={installed ? 'connected small' : 'small muted'}>
         {installed === null
-          ? 'กำลังตรวจหา Claude Code…'
+          ? 'กำลังตรวจความพร้อม…'
           : installed
-            ? 'พบ Claude Code · จะตรวจรุ่นเมื่อเชื่อมต่อ'
-            : 'ยังไม่พบ Claude Code ในเครื่องนี้'}
+            ? 'พบตัวเชื่อมต่อ · จะตรวจความพร้อมอีกครั้งเมื่อเชื่อมต่อ'
+            : 'เครื่องนี้ยังขาดส่วนเสริมสำหรับ Claude ให้ผู้ดูแลช่วยติดตั้งครั้งแรก'}
       </p>
       {installed === false && (
         <button className="quiet" onClick={() => void call('openHelp', { topic: 'claudeCode' })}>
@@ -478,7 +478,73 @@ export function providerChoiceReady(c: ProviderChoice) {
 export function providerDefaultMode(provider: string): ProviderChoice['mode'] {
   return ['claude', 'copilot'].includes(provider) ? 'oauth' : ['gemini', 'compatible'].includes(provider) ? 'api' : 'subscription';
 }
-export function ProviderFields({
+export function ProviderFields(props: {
+  value: ProviderChoice;
+  onChange: (next: ProviderChoice) => void;
+  call: (method: string, input?: any) => Promise<any>;
+  claudeSubscription?: boolean;
+}) {
+  const [advanced, setAdvanced] = useState(false);
+  return (
+    <>
+      {!advanced ? (
+        <div>
+          <p>บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ลงชื่อในเบราว์เซอร์และกลับมาที่นี่</p>
+          <div className="choice-row" role="group" aria-label="เลือกบัญชี AI">
+            <button
+              type="button"
+              className={props.value.provider === 'openai' ? 'choice active' : 'choice'}
+              aria-pressed={props.value.provider === 'openai'}
+              onClick={() => props.onChange({ ...initialChoice })}
+            >
+              ChatGPT
+            </button>
+            {props.claudeSubscription && <button
+              type="button"
+              className={props.value.provider === 'claude' ? 'choice active' : 'choice'}
+              aria-pressed={props.value.provider === 'claude'}
+              onClick={() => props.onChange({ ...initialChoice, provider: 'claude', mode: 'subscription' })}
+            >
+              Claude Pro / Max
+            </button>}
+          </div>
+          <details>
+            <summary>มีบัญชี Claude หรือ Gemini อยู่แล้ว?</summary>
+            {!props.claudeSubscription && <p className="small muted">Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้</p>}
+            <p className="small muted">Gemini ส่วนตัว: ยังไม่รองรับการลงชื่อใน STeP ให้ผู้ดูแลเตรียมการเชื่อมต่อที่องค์กรรองรับในส่วนขั้นสูง</p>
+          </details>
+          <p className="small muted">ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ</p>
+          {props.value.provider === 'claude' && props.claudeSubscription && <ClaudeCodeNote call={props.call} subscription />}
+        </div>
+      ) : (
+        <AdvancedProviderFields {...props} />
+      )}
+      <p className="connection-cost" role="status">
+        {props.value.mode === 'claude-code'
+          ? 'เปิดแอปอื่น · ใช้บัญชี Claude Code ของคุณ ผลงานจะไม่กลับเข้า STeP อัตโนมัติ'
+          : props.value.mode === 'api' || (props.value.provider === 'claude' && props.value.mode === 'oauth')
+            ? 'ใช้งบ API · คิดตามการใช้กับบัญชีหรือโครงการของเจ้าของคีย์/สิทธิ์ที่เลือก โปรดยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ ไม่ใช้แพ็กเกจแชตส่วนตัว'
+            : props.value.provider === 'gemini' || props.value.provider === 'copilot'
+              ? 'ใช้สิทธิ์บัญชีองค์กรที่ลงชื่อ · ให้ผู้ดูแลยืนยันสิทธิ์และโควตาก่อนใช้งาน'
+              : 'ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ'}
+      </p>
+      <button
+        type="button"
+        className="text-link"
+        aria-expanded={advanced}
+        onClick={() => {
+          setAdvanced(!advanced);
+          // Returning to account sign-in must never retain an API key or a Console billing route.
+          if (advanced) props.onChange({ ...initialChoice });
+        }}
+      >
+        {advanced ? 'กลับไปเชื่อมต่อบัญชีส่วนตัว' : 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล'}
+      </button>
+    </>
+  );
+}
+
+function AdvancedProviderFields({
   value,
   onChange,
   call,

@@ -173,6 +173,7 @@ export default function App() {
     [imageModel, setImageModel] = useState('');
   const [availableImages, setAvailableImages] = useState<string[]>([]),
     [imageCatalogError, setImageCatalogError] = useState('');
+  const [advancedTools, setAdvancedTools] = useState(false);
   const [toolTab, setToolTab] = useState<ToolTab>('output'),
     [toolRequest, setToolRequest] = useState<ToolRequest>();
   const [pendingSource, setPendingSource] = useState(''),
@@ -1099,7 +1100,7 @@ export default function App() {
                     พร้อมเครื่องมือสำหรับทำงานในโฟลเดอร์ของคุณ
                   </p>
                   <div className="suggestions">
-                    {['ช่วยจัดทำบรีฟงานประชาสัมพันธ์', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยวางโครงสไลด์นำเสนอโครงการ'].map(text => (
+                    {(snapshot.settings.team === 'qs' ? ['ช่วยเตรียม checklist ตรวจติดตามคุณภาพภายใน ISO 9001', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยร่างอีเมลเชิญประชุมทีม'] : ['ช่วยร่างอีเมลเชิญประชุมทีม', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยวางโครงสไลด์นำเสนอโครงการ']).map(text => (
                       <button key={text} onClick={() => setQuery(text)}>
                         <FileText size={16} />
                         <span>{text}</span>
@@ -1337,7 +1338,7 @@ export default function App() {
                       disabled={running || submitting}
                       onClick={() => setWorkMode(mode)}
                     >
-                      {mode === 'chat' ? 'Chat' : mode === 'draft' ? 'Draft / Output' : 'Image'}
+                      {mode === 'chat' ? 'คุยกับผู้ช่วย' : mode === 'draft' ? 'สร้างเอกสาร' : 'สร้างรูป'}
                     </button>
                   ))}
                   {snapshot.policy && (
@@ -1685,12 +1686,13 @@ export default function App() {
           />
           <aside className="artifact-pane" data-tour="artifact">
             <nav className="workbench-tabs" aria-label="Workspace tools">
-              {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[]).map(tab => (
+              {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[]).filter(tab => advancedTools || tab !== 'terminal').map(tab => (
                 <button key={tab} className={toolTab === tab ? 'active' : 'quiet'} onClick={() => setToolTab(tab)}>
-                  {tab === 'tasks' ? 'Tasks' : tab[0].toUpperCase() + tab.slice(1)}
+                  {{ output: 'ผลงาน', browser: 'เว็บ', terminal: 'คำสั่งขั้นสูง', tasks: 'งานเบื้องหลัง', files: 'ไฟล์งาน', changes: 'รายการแก้ไข' }[tab]}
                 </button>
               ))}
             </nav>
+            <button className="text-link" aria-expanded={advancedTools} onClick={() => { setAdvancedTools(!advancedTools); if (toolTab === 'terminal') setToolTab('output'); }}>เครื่องมือขั้นสูง</button>
             <WorkbenchPanel
               api={api}
               tab={toolTab}
@@ -1698,6 +1700,7 @@ export default function App() {
               workspace={snapshot.settings.workspace}
               request={toolRequest}
               onTab={setToolTab}
+              onBrowserTask={url => { setWorkMode('chat'); setQuery(`ให้ผู้ช่วยทำงานบนเว็บ ${url === 'https://' ? '[ใส่ URL]' : url} โดย [ระบุสิ่งที่ต้องการทำ]`); composerRef.current?.focus(); }}
               onSource={text => {
                 setPendingSource(text.slice(0, 100000));
                 setQuery('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา');
@@ -1707,7 +1710,7 @@ export default function App() {
             <div className="output-document" hidden={toolTab !== 'output'}>
               <header className="artifact-header">
                 <FileText size={18} />
-                <strong>Output</strong>
+                <strong>ผลงาน</strong>
                 <span className="spacer" />
                 <button className="icon" title="ประวัติเวอร์ชัน" onClick={() => setHistory(!history)}>
                   <History size={17} />

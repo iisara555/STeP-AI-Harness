@@ -48,7 +48,8 @@ export function documentSections(text: string) {
   return sections;
 }
 export class DesktopTools {
-  external?: (request: LoopRequest, scope: ToolScope) => Promise<unknown>;
+  external?: (request: LoopRequest, scope: ToolScope, check: () => Promise<void>) => Promise<unknown>;
+  closeBrowser?: (sessionId: string) => void;
   private sourceClean = new WeakMap<LoopRequest, boolean>();
   private transmissions = new Map<RunTransmission, () => void>();
   transmissionGrants() {
@@ -135,6 +136,7 @@ export class DesktopTools {
     const jobs = new Set<string>();
     const stopJobs = () => {
       for (const id of jobs) void this.workbench.cancel(id);
+      this.closeBrowser?.(scope.sessionId);
     };
     scope.signal.addEventListener('abort', stopJobs, { once: true });
     const workspace = await this.workbench.root().catch(() => ''),
@@ -166,6 +168,8 @@ export class DesktopTools {
     });
     const sourceFor = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
       if (!r || this.policy().transmissionConsent?.allowRunScope === false) return;
+      if (r.tool === 'ask_user' || r.tool === 'plan' || (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string'))
+        return { key: 'draft-progress', label: 'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)' };
       if (r.tool === 'files') {
         if (this.sourceClean.get(r) === false) return;
         const folder =
@@ -183,9 +187,19 @@ export class DesktopTools {
       enabled: () => this.policy().features.toolLoop,
       check,
       readOnly: r =>
-        !['terminal', 'changes', 'sheet_edit', 'ask_user', 'plan', 'snapshot', 'web_search', 'mcp_call', 'mcp_search', 'sandbox'].includes(
-          r.tool,
-        ),
+        ![
+          'terminal',
+          'changes',
+          'sheet_edit',
+          'ask_user',
+          'plan',
+          'snapshot',
+          'web_search',
+          'mcp_call',
+          'mcp_search',
+          'sandbox',
+          'browser_control',
+        ].includes(r.tool),
       activity: t => scope.activity('กำลังใช้เครื่องมือ ' + t),
       outgoing: async (text, _signal, r) => {
         await check();
@@ -218,6 +232,7 @@ export class DesktopTools {
   async execute(r: LoopRequest, scope: ToolScope, check: () => Promise<void> = async () => {}) {
     const a = r.args || {},
       target = r.input;
+    if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
     const fileTool = ['files', 'changes', 'doc_outline', 'doc_section', 'sheet_read', 'sheet_edit'].includes(r.tool);
     const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
     if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
@@ -241,8 +256,9 @@ export class DesktopTools {
           case 'mcp_search':
           case 'mcp_call':
           case 'sandbox':
+          case 'browser_control':
             if (!this.external) throw new Error('TOOL_UNAVAILABLE');
-            return this.external(r, scope);
+            return this.external(r, scope, check);
           case 'files':
             if (a.action === 'list' || !target) return this.workbench.files(target);
             {

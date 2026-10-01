@@ -25,6 +25,7 @@ export const LOOP_TOOLS = [
   'mcp_call',
   'sandbox',
   'browser',
+  'browser_control',
   'terminal',
   'files',
   'changes',

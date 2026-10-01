@@ -104,7 +104,8 @@ export async function queryStepRouter(query, options = {}) {
   }
 
   const context = buildContext({
-    promptText: query,
+    // Reference URLs are evidence locations, not the employee's requested action.
+    promptText: query.replace(/https?:\/\/\S+/gi, ' '),
     path: options.path || '',
     filenames: options.filenames || [],
     team: resolvedTeam,
@@ -140,9 +141,14 @@ export async function queryStepRouter(query, options = {}) {
 
   // An employee who picked from the clarification menu has already told us the
   // route; honouring it here stops the router asking the same question again.
+  const taskText = query.replace(/https?:\/\/\S+/gi, ' ');
+  const concreteSkill = /(?:พัฒนา|แก้ไข|สร้าง|implement|build).*(?:ตัวเชื่อม|connector|โค้ด|code)/i.test(taskText)
+    ? 'coding-git-workflow'
+    : /(?:checklist|เช็กลิสต์|รายการตรวจ).*(?:ตรวจติดตาม|audit|คุณภาพ).*ISO\s*9001|ISO\s*9001.*(?:checklist|เช็กลิสต์|รายการตรวจ)/i.test(taskText)
+      ? 'iso9001-audit-readiness' : '';
   const chosenSkillName = explicitSkillName || (selectedPlaybook || competingPlaybooks.length
     ? ''
-    : resolveSkillMenuChoice(options.clarificationAnswer, ranked, skills));
+    : resolveSkillMenuChoice(options.clarificationAnswer, ranked, skills) || concreteSkill);
   if (chosenSkillName) {
     const chosenSkill = skills.find((skill) => skill.name === chosenSkillName);
     const chosenRank = ranked.find((item) => item.skill === chosenSkillName);
@@ -320,7 +326,11 @@ export async function queryStepRouter(query, options = {}) {
     && scopeResult.status === 'ALLOW'
     && !CONSEQUENTIAL_INTENTS.has(context.intent)
     && !CONSEQUENTIAL_ACTION_PATTERN.test(query);
-  const generalAssist = publicInformation || conversationalAssist || (isAmbiguous
+  const invitationDraft = !chosenSkillName && !selectedPlaybook && !competingPlaybooks.length
+    && /(?:ร่าง|เขียน).*(?:อีเมล|email|ข้อความ|จดหมาย).*เชิญประชุม/i.test(taskText)
+    && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query) && !CONSEQUENTIAL_INTENTS.has(context.intent);
+  const generalAssist = invitationDraft || publicInformation || conversationalAssist || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'

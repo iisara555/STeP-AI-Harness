@@ -19,6 +19,7 @@ import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
+import { AgentBrowser } from './browser-agent';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -337,6 +338,7 @@ async function main() {
     fireHook,
   );
   const browsers = new Map<string, BrowserWindow>();
+  const agentBrowser = new AgentBrowser();
   const questions = new Questions(emit);
   const ledger = new CostLedger(store, () => policyState.policy);
   const tools = new DesktopTools(
@@ -382,7 +384,24 @@ async function main() {
     harness.privacy,
     (body, signal) => phase4Consent('รันคำสั่งใน Docker sandbox?', body, signal),
   );
-  tools.external = (request, scope) => {
+  tools.closeBrowser = id => agentBrowser.closeOwner(id);
+  tools.external = (request, scope, check) => {
+    if (request.tool === 'browser_control')
+      return agentBrowser.run(request, {
+        sessionId: scope.sessionId,
+        activity: scope.activity,
+        signal: scope.signal,
+        check,
+        review: text => {
+          if (harness.privacy(text).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        },
+        approve: (title, body) =>
+          approvals.request(
+            approvals.rule(store.settings().workspace || data, 'browser_control', randomUUID()),
+            { title, body, privacyClass: 'internal', allowRemember: false },
+            scope.signal,
+          ),
+      });
     if (request.tool === 'mcp_search')
       return request.input
         ? mcp.search(request.input, String(request.args?.query || ''), scope.signal)
@@ -1918,6 +1937,7 @@ async function main() {
     event.preventDefault();
     closing = true;
     for (const browser of browsers.values()) browser.destroy();
+    agentBrowser.close();
     void Promise.allSettled([
       voice.close(),
       workbench.close(),

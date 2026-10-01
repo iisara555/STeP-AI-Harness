@@ -77,14 +77,11 @@ try {
   await page.getByRole('button', { name: 'Brief', exact: true }).click();
   await page.getByRole('button', { name: 'ส่งคำตอบ', exact: true }).click();
   await consent().waitFor();
-  await consent().getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+  await consent().getByRole('checkbox').check();
+  await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
   const plan = page.getByRole('alertdialog', { name: 'อนุมัติแผนก่อนจัดทำร่าง?' });
   await plan.waitFor();
   await plan.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-  await consent().waitFor();
-  await consent().getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-  await consent().waitFor();
-  await consent().getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await page.getByText('Completed with reviewed tools', { exact: true }).waitFor();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].status).toBe('review');
   const data = await page.evaluate(() => window.step.call('snapshot'));

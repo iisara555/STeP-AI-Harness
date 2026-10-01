@@ -34,6 +34,7 @@ try {
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('antigravity');
   assert.equal(await page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ }).inputValue(), 'subscription');
   assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);

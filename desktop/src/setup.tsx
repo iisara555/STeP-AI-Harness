@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Download, FolderOpen, LoaderCircle, Plug, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, LoaderCircle, Plug, Sparkles } from 'lucide-react';
 import type { Connection, Settings, Snapshot } from './types';
 import { ProviderFields, providerChoiceReady, initialChoice, type ProviderChoice } from './ui';
 import { providerLabel } from './messages';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
-import draftingArt from './assets/illustrations/drafting.png';
-import ideaArt from './assets/illustrations/idea.png';
 
 type Call = (method: string, input?: unknown) => Promise<any>;
 type Personality = NonNullable<Settings['personality']>;
@@ -49,6 +47,8 @@ export function SetupWizard({
   onError: (error: unknown) => void;
 }) {
   const s = snapshot.settings;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [customize, setCustomize] = useState(false);
   const [step, setStep] = useState(0),
     [busy, setBusy] = useState('');
   const [userName, setUserName] = useState(s.userName || ''),
@@ -58,9 +58,7 @@ export function SetupWizard({
     [tone, setTone] = useState(s.assistantTone || '');
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice),
     [tested, setTested] = useState<Connection | null>(null);
-  const [ocr, setOcr] = useState<any>(null),
-    [log, setLog] = useState<string[]>([]),
-    [connecting, setConnecting] = useState<{ id: string; text: string } | null>(null);
+  const [connecting, setConnecting] = useState<{ id: string; text: string } | null>(null);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -74,17 +72,11 @@ export function SetupWizard({
   useEffect(
     () =>
       window.step?.onEvent(event => {
-        if (event.type === 'install' && event.text) setLog(lines => [...lines, event.text!].slice(-6));
         if (event.type === 'connect-progress' && event.connectionId) setConnecting({ id: event.connectionId, text: event.text || '' });
       }),
     [],
   );
-  useEffect(() => {
-    if (step === 4 && !ocr)
-      void call('ocrStatus')
-        .then(setOcr)
-        .catch(() => setOcr({}));
-  }, [step]);
+
 
   const save = (extra: object = {}) =>
     call('settings', { userName, team, assistant, personality, assistantTone: tone, theme: s.theme, ...extra });
@@ -102,15 +94,30 @@ export function SetupWizard({
     });
   const style = styles.find(x => x.id === personality)!;
   const ready = snapshot.connections.some(c => c.ready);
+  useEffect(() => {
+    const heading = dialogRef.current?.querySelector('h1');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus();
+  }, [step]);
 
   return (
-    <div className="wizard" role="dialog" aria-modal="true" aria-label="ตั้งค่าเริ่มต้น STeP Desktop">
+    <div ref={dialogRef} className="wizard" role="dialog" aria-modal="true" aria-label="ตั้งค่าเริ่มต้น STeP Desktop"
+      onKeyDown={e => {
+        e.stopPropagation();
+        if (e.key !== 'Tab') return;
+        const items = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]') || []).filter(el => el.getClientRects().length > 0);
+        const index = items.indexOf(document.activeElement as HTMLElement);
+        if (index < 0 || (e.shiftKey ? index === 0 : index === items.length - 1)) {
+          e.preventDefault();
+          (e.shiftKey ? items.at(-1) : items[0])?.focus();
+        }
+      }}>
       <div className="wizard-card">
         <ol className="wizard-steps" aria-label="ขั้นตอน">
-          {steps.map((label, i) => (
-            <li key={label} className={i === step ? 'current' : i < step ? 'done' : ''}>
-              <span>{i < step ? <Check size={11} /> : i + 1}</span>
-              {label}
+          {steps.map((label, i) => ({ label, i })).filter(({ i }) => (customize ? [0, 1, 2, 3, 5] : [0, 3, 5]).includes(i)).map(({ label, i }, index) => (
+            <li key={label} className={i === step ? 'current' : i < step && !(i === 3 && !ready) ? 'done' : ''}>
+              <span>{i < step && !(i === 3 && !ready) ? <Check size={11} /> : index + 1}</span>
+              {label}{i === 3 && i < step && !ready ? ' · ทำภายหลัง' : ''}
             </li>
           ))}
         </ol>
@@ -119,12 +126,13 @@ export function SetupWizard({
           <section className="wizard-body center">
             <img className="illustration wizard-art" src={launchArt} alt="" />
             <h1>ยินดีต้อนรับสู่ STeP Desktop</h1>
-            <p className="muted">ผู้ช่วยจัดทำร่างเอกสารภาษาไทยสำหรับงานของ STeP ใช้เวลาตั้งค่าประมาณ 2 นาที</p>
+            <p className="muted">เชื่อมบัญชี AI แล้วเริ่มงานแรกได้เลย ชื่อผู้ช่วยและส่วนเสริมตั้งภายหลังได้</p>
             <ul className="wizard-points">
               <li>ใช้บัญชี AI ของคุณเอง ร่างและบทสนทนาเก็บในเครื่องนี้</li>
               <li>ระบบปิดบังข้อมูลส่วนบุคคลที่ตรวจพบและถามก่อนส่งข้อมูลให้ AI</li>
               <li>AI จัดทำร่างเท่านั้น การส่ง อนุมัติ และเบิกจ่ายเป็นหน้าที่ของคน</li>
             </ul>
+            <button className="text-link" onClick={() => { setCustomize(true); setStep(1); }}>ตั้งชื่อและรูปแบบผู้ช่วยก่อน (ไม่บังคับ)</button>
           </section>
         )}
 
@@ -153,7 +161,7 @@ export function SetupWizard({
                 ))}
               </select>
             </label>
-            <p className="small muted">ทีมช่วยให้ระบบเลือก Skill ที่ตรงกับงานของคุณได้แม่นขึ้น</p>
+            <p className="small muted">ทีมช่วยให้ระบบเลือกวิธีทำงานที่ตรงกับคุณได้แม่นขึ้น</p>
           </section>
         )}
 
@@ -207,7 +215,7 @@ export function SetupWizard({
               </div>
             </div>
             <p className="small muted">
-              บันทึกลง <code>USER.md</code> ในโฟลเดอร์ทำงานของคุณ ใช้ร่วมกับ STeP AI บน CLI ได้ เปลี่ยนภายหลังได้ในการตั้งค่า
+              บันทึกความชอบไว้ในเครื่อง เปลี่ยนภายหลังได้ในการตั้งค่า
             </p>
           </section>
         )}
@@ -230,6 +238,7 @@ export function SetupWizard({
             {choice.mode !== 'claude-code' && (
               <>
                 <button
+                  className="connect-primary"
                   disabled={Boolean(busy) || !providerChoiceReady(choice)}
                   onClick={() =>
                     void run('connect', async () => {
@@ -281,90 +290,20 @@ export function SetupWizard({
           </section>
         )}
 
-        {step === 4 && (
-          <section className="wizard-body">
-            <img className="illustration wizard-art small" src={draftingArt} alt="" />
-            <h1>โฟลเดอร์ทำงานและส่วนเสริม</h1>
-            <label>โฟลเดอร์เก็บผลงาน</label>
-            <div className="folder-row">
-              <span>{snapshot.settings.workspace || 'ยังไม่เลือก · USER.md จะเก็บในข้อมูลแอปก่อน'}</span>
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                onClick={() =>
-                  void run('folder', async () => {
-                    await save();
-                    await call('workspace');
-                    await refresh();
-                  })
-                }
-              >
-                <FolderOpen size={15} />
-                เลือกโฟลเดอร์
-              </button>
-            </div>
-            <div className="addon">
-              <img className="illustration" src={ideaArt} alt="" />
-              <div>
-                <strong>
-                  OCR ภาษาไทยสำหรับตรวจใบเสร็จ AFP <span className="beta">ทดลอง</span>
-                </strong>
-                <p className="small muted">
-                  อ่านใบเสร็จบนเครื่องนี้ ไม่ส่งเอกสารขึ้นอินเทอร์เน็ต
-                  {ocr?.installed ? ' มาพร้อมแอปแล้ว ใช้ได้ทันที' : ' ติดตั้งครั้งเดียวประมาณ 1–2 GB (ต้องใช้อินเทอร์เน็ตตอนติดตั้ง)'}
-                </p>
-                {!ocr ? (
-                  <p className="small muted">กำลังตรวจ…</p>
-                ) : ocr.installed ? (
-                  <p className="connected small">
-                    <Check size={13} /> ติดตั้งแล้ว
-                  </p>
-                ) : ocr.python === false ? (
-                  <>
-                    <p className="small">ต้องมี Python 3.10–3.12 (64-bit) ก่อน</p>
-                    <div className="choice-row">
-                      <button className="quiet" onClick={() => void run('py', () => call('openHelp', { topic: 'python' }))}>
-                        ดาวน์โหลด Python
-                      </button>
-                      <button className="quiet" onClick={() => void run('check', async () => setOcr(await call('ocrStatus')))}>
-                        ตรวจอีกครั้ง
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <button
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('ocr', async () => {
-                        setLog([]);
-                        setOcr(await call('ocrInstall'));
-                      })
-                    }
-                  >
-                    {busy === 'ocr' ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
-                    {busy === 'ocr' ? 'กำลังติดตั้ง… ใช้เวลาหลายนาที' : 'ติดตั้งส่วนเสริม OCR'}
-                  </button>
-                )}
-                {log.length > 0 && <pre className="install-log">{log.join('\n')}</pre>}
-              </div>
-            </div>
-          </section>
-        )}
-
         {step === 5 && (
           <section className="wizard-body center">
             <img className="illustration wizard-art" src={teamworkArt} alt="" />
-            <h1>{userName ? `พร้อมแล้ว คุณ${userName}` : 'พร้อมเริ่มงานแล้ว'}</h1>
+            <h1>{ready ? (userName ? `พร้อมแล้ว คุณ${userName}` : 'พร้อมเริ่มงานแล้ว') : 'บันทึกการตั้งค่าแล้ว'}</h1>
             <p className="muted">
-              {assistant} จะคุยแบบ “{style.label}”{ready ? '' : ' · ยังไม่ได้เชื่อมต่อ AI เพิ่มได้ในการตั้งค่า'}
+              {ready ? `${assistant} พร้อมช่วยงานแรกของคุณ` : 'ยังไม่ได้เชื่อมต่อ AI เชื่อมบัญชีก่อนเริ่มคุยกับผู้ช่วย'}
             </p>
-            <p className="small muted">ดูทัวร์สั้น ๆ 7 จุด เพื่อรู้จักส่วนสำคัญของหน้าจอ</p>
+            <p className="small muted">เริ่มจากงานตัวอย่าง หรือปรับผู้ช่วยและส่วนเสริมภายหลังในการตั้งค่า</p>
           </section>
         )}
 
         <footer className="wizard-actions">
           {step > 0 && step < 5 && (
-            <button className="quiet" onClick={() => setStep(step - 1)}>
+            <button className="quiet" disabled={Boolean(busy)} onClick={() => setStep(step === 3 ? (customize ? 2 : 0) : step - 1)}>
               <ArrowLeft size={15} />
               ย้อนกลับ
             </button>
@@ -376,17 +315,17 @@ export function SetupWizard({
           )}
           <span className="spacer" />
           {step < 5 ? (
-            <button className={step === 3 && !ready ? 'quiet' : ''} disabled={Boolean(busy)} onClick={() => setStep(step + 1)}>
+            <button className={step === 3 && !ready ? 'quiet' : ''} disabled={Boolean(busy)} onClick={() => setStep(step === 0 ? 3 : step === 3 ? 5 : step + 1)}>
               {step === 0 ? 'เริ่มตั้งค่า' : step === 3 && !ready ? 'ทำภายหลัง' : 'ถัดไป'}
               <ArrowRight size={15} />
             </button>
           ) : (
             <>
               <button className="quiet" disabled={Boolean(busy)} onClick={() => finish(false)}>
-                เริ่มใช้งานเลย
+                {ready ? 'เริ่มใช้งานเลย' : 'เข้าชมพื้นที่ทำงาน'}
               </button>
-              <button disabled={Boolean(busy)} onClick={() => finish(true)}>
-                ดูทัวร์แนะนำ
+              <button disabled={Boolean(busy)} onClick={() => ready ? finish(true) : setStep(3)}>
+                {ready ? 'ดูทัวร์แนะนำ' : 'เชื่อมต่อ AI'}
                 <ArrowRight size={15} />
               </button>
             </>

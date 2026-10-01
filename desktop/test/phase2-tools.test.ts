@@ -16,7 +16,7 @@ import { sheetWorker } from '../electron/sheets';
 import type { Harness } from '../electron/service';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
-async function fixture() {
+async function fixture(mode: 'ask' | 'plan' = 'ask') {
   const root = await mkdtemp(join(tmpdir(), 'step-phase2-')),
     store = new Store(':memory:'),
     policy = defaultPolicy();
@@ -43,7 +43,7 @@ async function fixture() {
   });
   const gate = new ToolGate(
     () => policy,
-    () => 'ask',
+    () => mode,
     () => workbench.root(),
     approvals,
     async p => {
@@ -68,7 +68,7 @@ async function fixture() {
     approvals,
     new Questions(() => {}),
     () => policy,
-    () => 'ask',
+    () => mode,
     resolve('electron/sheet-worker.cjs'),
   );
   const scope: ToolScope = {
@@ -105,6 +105,74 @@ async function fixture() {
     approvalOpened,
   };
 }
+test('draft progress consent covers only clean answers and receipts, never file contents or browser actions', async () => {
+  const f = await fixture();
+  f.allowRun();
+  const host = await f.tools.host(f.scope);
+  await host.outgoing('{"answer":"Brief"}', f.scope.signal, { tool: 'ask_user', input: 'Style?' });
+  const count = f.requests();
+  await host.outgoing('{"approved":true}', f.scope.signal, { tool: 'plan', input: 'Draft' });
+  await host.outgoing('{"status":"staged-for-human-review"}', f.scope.signal, { tool: 'changes', input: 'draft.md', content: 'Draft' });
+  assert.equal(f.requests(), count);
+  await host.outgoing('File content', f.scope.signal, { tool: 'changes', input: 'draft.md', args: { action: 'diff' } });
+  assert.equal(f.requests(), count + 1);
+  await host.outgoing('Web content', f.scope.signal, { tool: 'browser_control', input: 'tab', args: { action: 'read' } });
+  assert.equal(f.requests(), count + 2);
+  f.scope.connection.id = 'different-account';
+  await assert.rejects(host.outgoing('{"approved":true}', f.scope.signal, { tool: 'plan', input: 'Draft' }), /DESTINATION_CHANGED/);
+  await host.dispose?.();
+  f.store.close();
+});
+
+test('browser control uses the task scope, serial execution, transmission consent and cancellation', async () => {
+  const f = await fixture();
+  const stop = new AbortController();
+  f.scope.signal = stop.signal;
+  let owner = '';
+  let closed = '';
+  f.tools.external = async (request, scope, check) => {
+    await check();
+    owner = scope.sessionId;
+    return { text: 'Synthetic browser result', action: request.args?.action };
+  };
+  f.tools.closeBrowser = id => {
+    closed = id;
+  };
+  const host = await f.tools.host(f.scope);
+  const request = { tool: 'browser_control' as const, input: 'https://example.com', args: { action: 'open' } };
+  try {
+    assert.equal(host.readOnly(request), false, 'browser operations must retain their order');
+    const result = await host.execute(request, stop.signal);
+    assert.equal(owner, f.scope.sessionId);
+    assert.equal(f.requests(), 0, 'connector owns the one-time action confirmation');
+    await host.outgoing(JSON.stringify(result), stop.signal, request);
+    assert.equal(f.requests(), 1, 'page evidence still requires provider transmission consent');
+    stop.abort();
+    assert.equal(closed, f.scope.sessionId);
+    await assert.rejects(host.execute(request, stop.signal), /CANCELLED/);
+  } finally {
+    await host.dispose?.();
+    f.store.close();
+  }
+});
+
+test('plan mode refuses browser interactions before invoking the connector', async () => {
+  const f = await fixture('plan');
+  let called = false;
+  f.tools.external = async () => {
+    called = true;
+    return {};
+  };
+  try {
+    for (const action of ['open', 'click', 'fill', 'close']) {
+      await assert.rejects(f.tools.execute({ tool: 'browser_control', input: 'tab', args: { action } }, f.scope), /PLAN_MODE_BLOCKED/);
+    }
+    assert.equal(called, false);
+  } finally {
+    f.store.close();
+  }
+});
+
 test('scoped file consent batches clean reads but re-prompts masked sources and different folders', async () => {
   const f = await fixture();
   f.allowRun();
