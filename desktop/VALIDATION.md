@@ -2,6 +2,15 @@
 
 This is a development preview, not an accepted production release.
 
+## ChatGPT and Gemini connection follow-up (2026-10-01)
+
+- Review branch `codex/chatgpt-gemini-oauth`, based on the Claude follow-up. See [connection evidence](../docs/chatgpt-gemini-oauth-followup.md).
+- Existing local ChatGPT sign-in was confirmed by Codex 0.159.2. Bundled 0.158.0 refreshed both the personal account profile and the saved STeP runtime profile. Two bounded `gpt-6-astra` requests returned exactly `EVAL_READY` and `OK`: **26,084 reported tokens total**. Both verified zero enabled MCP servers, disabled shell/plugins/apps, and used ephemeral temporary workspaces. No credentials were copied or printed.
+- Gemini CLI 0.61.0 passed unauthenticated ACP initialization. The user selected a consumer Google account; the provider's June 18, 2026 deprecation prevents acceptance of that CLI OAuth route. No live Gemini login/generation was attempted and the existing eligibility gate remains unchanged.
+- The corrected read-only database query found one saved OpenAI subscription connection (`ready: true`) and no Gemini connection. The STeP runtime account refreshed and generated successfully; no record was changed. Native backend probes do not establish a completed UI connection lifecycle.
+- Fixed synchronous/asynchronous ChatGPT browser failures and invalid URL handling. **222 Desktop tests**, formatting, TypeScript/build and both validators passed; existing bundle warning remains. Full Harness/Electron suites were not rerun locally for this scope. No main merge, installer or release.
+- Claude follow-up [PR #85](https://github.com/iisara555/STeP-AI-Harness/pull/85) passed all three CI jobs for `0a3cb8c`; this is separate from the new branch's CI.
+
 ## Claude Code OAuth follow-up (2026-10-01)
 
 - Review branch `codex/claude-oauth-followup`, based on Phase 6. See [OAuth follow-up](../docs/claude-oauth-followup.md).

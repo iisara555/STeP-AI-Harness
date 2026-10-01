@@ -20,6 +20,8 @@ Phase 4 is implemented on `codex/openharness-phase4` in [draft PR #82](https://g
 | 5 | Compatible/Copilot provider adapters, shared headless runner/readiness, commands/Vim, local voice, governed packs and approved LINE drafts | [Providers and surfaces](desktop-phase5.md) |
 | 6 | Bounded clean-read transmission consent, feature matrix and account-explicit evaluation | [Consent and evaluation](desktop-phase6.md) |
 
+The connection follow-up is in [draft PR #86](https://github.com/iisara555/STeP-AI-Harness/pull/86) on `codex/chatgpt-gemini-oauth`, based on Claude follow-up `0a3cb8c` in [draft PR #85](https://github.com/iisara555/STeP-AI-Harness/pull/85). PR #85 passed all three CI jobs. Both the existing personal ChatGPT profile and saved STeP runtime profile refreshed and generated verified responses; no connection record was added or changed. Gemini's consumer CLI route remains blocked by Google's deprecation, and its transport-only check is not live acceptance. See [ChatGPT/Gemini evidence](chatgpt-gemini-oauth-followup.md) for exact scope and remaining work. Continue from this follow-up branch after reviewing the stack; do not repeat the paid Claude matrix or treat the Golden output gate as passing.
+
 ## Phase 3 implementation map
 
 - `desktop/electron/compact.ts`: the canonical `script-aware-estimate-v2` estimator, conservative input budget, older source/result previews, bounded same-provider summaries, fenced task state, pre/post hooks and a single reactive prompt-length retry. Required current sources and governance are never silently truncated; the original transcript remains intact.
