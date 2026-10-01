@@ -1,3 +1,5 @@
+import { compatibleRun } from '../../src/modules/providers/compatible.js';
+import { CopilotAdapter, copilotModels } from './copilot';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
@@ -472,6 +474,8 @@ export function normalizeModels(items: unknown[]): ModelOption[] {
 
 // Ask the provider which models this account can use, through the same isolated runtime used for drafting.
 export async function listModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env' | 'key'>): Promise<ModelOption[]> {
+  if (connection.provider === 'compatible') return [{ id: connection.model, label: connection.model }];
+  if (connection.provider === 'copilot') return copilotModels(context);
   if (connection.provider === 'claude') {
     const authOptions = claudeSdkOptions(connection, context);
     // The Agent SDK catalog is what Claude's own apps offer, including supported effort levels.
@@ -566,7 +570,14 @@ export async function listModels(connection: Connection, context: Pick<ProviderC
   }
 }
 
+export class CompatibleAdapter implements ProviderAdapter {
+  run(prompt: string, connection: Connection, context: ProviderContext) {
+    return compatibleRun(prompt, { baseUrl: connection.baseUrl || '', protocol: connection.protocol, model: connection.model }, context);
+  }
+}
 export function adapter(provider: string): ProviderAdapter {
+  if (provider === 'compatible') return new CompatibleAdapter();
+  if (provider === 'copilot') return new CopilotAdapter();
   if (provider === 'openai') return new CodexAdapter();
   if (provider === 'gemini') return new GeminiAdapter();
   if (provider === 'claude') return new ClaudeAdapter();

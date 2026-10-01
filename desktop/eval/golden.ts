@@ -1,3 +1,4 @@
+import { runGovernedDraft } from '../../src/modules/runner/index.js';
 /**
  * Golden-set evaluation: runs fixed synthetic tasks through the real router, Skill loading and
  * WorkService with a real provider, then grades each draft against its rubric. Use it whenever a
@@ -99,7 +100,33 @@ export async function runGolden(options: {
       const service = new WorkService(store, options.harness, options.runtime, () => {});
       const started = Date.now();
       options.onProgress?.(`${scenario.id} รอบ ${run}/${options.runs}`);
-      await service.run(session.id, scenario.request, scenario.source, true).catch(() => {});
+      await runGovernedDraft(
+        {
+          query: scenario.request,
+          source: scenario.source,
+          team: scenario.team,
+          approveProvider: true,
+          policy: { features: { headless: true } },
+        },
+        {
+          attended: true,
+          harness: options.harness,
+          execute: async () => {
+            await service.run(session.id, scenario.request, scenario.source, true);
+            const draft = store.session(session.id);
+            return { status: draft.status, text: draft.proposals.at(-1)?.text || '' };
+          },
+        },
+      ).catch(error => {
+        const stopped = store.session(session.id);
+        stopped.status = 'error';
+        stopped.messages.push({
+          role: 'status',
+          text: /^[A-Z_]+$/.test(error.message) ? error.message : 'EVAL_FAILED',
+          at: new Date().toISOString(),
+        });
+        store.save(stopped);
+      });
       const done = store.session(session.id);
       const output = done.proposals.at(-1)?.text || '';
       const trace = done.runs?.at(-1);

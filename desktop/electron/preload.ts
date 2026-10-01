@@ -1,5 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'packList',
+  'packInstall',
+  'packEnable',
+  'packAsset',
+  'packExport',
+  'voiceStatus',
+  'voiceInstall',
+  'voicePermission',
+  'voiceTranscribe',
+  'voiceCancel',
+  'keyboardSettings',
+  'dryRun',
   'automationList',
   'automationSave',
   'automationRemove',

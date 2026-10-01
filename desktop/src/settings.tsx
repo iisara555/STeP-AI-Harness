@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, FolderOpen, LoaderCircle, Monitor, Moon, Plus, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
-import { ConfirmDialog, ProviderFields, initialChoice, type ProviderChoice } from './ui';
+import { ConfirmDialog, ProviderFields, providerChoiceReady, initialChoice, type ProviderChoice } from './ui';
 import { explainError, providerLabel, shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import type { Connection, Snapshot } from './types';
@@ -247,7 +247,15 @@ export function SettingsPanel({
               <div>
                 <strong>
                   {providerLabel(c.provider)}{' '}
-                  <small>{c.mode === 'api' ? 'API key' : c.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชีส่วนตัว'}</small>
+                  <small>
+                    {c.mode === 'api'
+                      ? 'API key'
+                      : c.mode === 'oauth'
+                        ? c.provider === 'copilot'
+                          ? 'GitHub OAuth'
+                          : 'Claude Console OAuth'
+                        : 'บัญชีส่วนตัว'}
+                  </small>
                 </strong>
                 {busy === c.id && progress[c.id] ? (
                   <p className="connect-progress">
@@ -385,7 +393,7 @@ export function SettingsPanel({
               <>
                 <p className="small muted">รายชื่อโมเดลจะโหลดจากบริการอัตโนมัติหลังเชื่อมต่อสำเร็จ แล้วเลือกได้จากกล่องพิมพ์</p>
                 <button
-                  disabled={Boolean(busy) || (choice.mode === 'api' && !choice.key.trim())}
+                  disabled={Boolean(busy) || !providerChoiceReady(choice)}
                   onClick={() =>
                     void run('new', async () => {
                       await call('connection', {
@@ -393,6 +401,8 @@ export function SettingsPanel({
                         mode: choice.mode,
                         apiKey: choice.key,
                         googleCloudProject: choice.googleCloudProject,
+                        baseUrl: choice.baseUrl,
+                        protocol: choice.protocol,
                       });
                       setChoice({ ...choice, key: '' });
                     })

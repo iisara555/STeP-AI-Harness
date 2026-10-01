@@ -1,3 +1,5 @@
+import { approvedProfile } from '../../src/modules/providers/compatible.js';
+import { copilotDeviceLogin } from './copilot-auth';
 import {
   app,
   BrowserWindow,
@@ -33,6 +35,9 @@ import { exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { installOcr, ocrComponentCurrent } from './components';
+import { validateKeybindings } from '../src/commands';
+import { Voice } from './voice';
+import { installPack, listPacks, enablePack, exportPack, packAsset, enabledPackHooks } from '../../src/modules/packs/index.js';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
@@ -69,7 +74,7 @@ const connectControllers = new Map<string, AbortController>();
 // Tasks in different Workspaces may run side by side; each session still runs one task at a time.
 let installingAnt = false;
 let ocrResolving = false;
-const validProviders = new Set(['openai', 'claude', 'gemini']);
+const validProviders = new Set(['openai', 'claude', 'gemini', 'compatible', 'copilot']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
 let logFile = '';
 function diagnose(event: string, detail: Record<string, string> = {}) {
@@ -120,12 +125,31 @@ async function main() {
   }
   const root = app.isPackaged ? join(process.resourcesPath, 'harness') : resolve(__dirname, '../..');
   const data = app.getPath('userData');
+  const { prepareDraft } = await import(pathToFileURL(join(root, 'src/modules/runner/index.js')).href);
   await mkdir(data, { recursive: true });
   await mkdir(join(data, 'logs'), { recursive: true });
   logFile = join(data, 'logs', 'diagnostics.jsonl');
-  // The renderer only needs notifications; camera, microphone, location and the rest stay denied.
-  electronSession.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => callback(permission === 'notifications'));
-  electronSession.defaultSession.setPermissionCheckHandler((_contents, permission) => permission === 'notifications');
+  let voicePermissionUntil = 0,
+    voiceTicketUntil = 0;
+  electronSession.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) =>
+    callback(
+      permission === 'notifications' ||
+        (permission === 'media' &&
+          contents.id === window?.webContents.id &&
+          Date.now() < voicePermissionUntil &&
+          'mediaTypes' in details &&
+          details.mediaTypes?.length === 1 &&
+          details.mediaTypes[0] === 'audio'),
+    ),
+  );
+  electronSession.defaultSession.setPermissionCheckHandler(
+    (contents, permission, _origin, details) =>
+      permission === 'notifications' ||
+      (permission === 'media' &&
+        contents?.id === window?.webContents.id &&
+        Date.now() < voicePermissionUntil &&
+        details.mediaType === 'audio'),
+  );
   store = new Store(join(data, 'workspace.sqlite'));
   const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
@@ -219,7 +243,10 @@ async function main() {
   async function runtime(connection: Connection, signOut = false, webSearch = false) {
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription && !signOut)
       throw new Error('FEATURE_DISABLED');
-    connection.executable = resolveRuntime(connection);
+    if (connection.provider === 'compatible')
+      approvedProfile({ baseUrl: connection.baseUrl || '', protocol: connection.protocol, model: connection.model }, policyState.policy);
+    if (connection.provider === 'copilot' && !signOut && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
+    if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection);
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection, webSearch);
     let authExecutable: string | undefined;
@@ -238,6 +265,7 @@ async function main() {
   const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
   const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
   let policyState = readPolicy();
+  const voice = new Voice(join(data, 'components', 'voice'), () => policyState.policy);
   const workbench = new Workbench(
     store,
     text => privacy.evaluatePrivacyGate(text).redactedText,
@@ -246,13 +274,19 @@ async function main() {
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
+    voice.cancel();
+    voicePermissionUntil = 0;
+    voiceTicketUntil = 0;
     approvals.close();
     questions.close();
     diagnose('policy-reloaded', { source: policyState.policy.source, problems: String(policyState.problems.length) });
     emit({ sessionId: '', type: 'changed' });
   });
   const hooks = new HookEngine(
-    () => policyState.policy,
+    () => ({
+      ...policyState.policy,
+      hooks: [...policyState.policy.hooks, ...enabledPackHooks(store.settings().workspace || data, policyState.policy)],
+    }),
     async (prompt, payload, signal) => {
       if (privacy.evaluatePrivacyGate(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
       const session = payload.sessionId ? store.session(String(payload.sessionId)) : undefined;
@@ -830,6 +864,33 @@ async function main() {
           text: await browser.webContents.executeJavaScript('document.body.innerText.slice(0,50000)'),
         }));
       }
+      case 'dryRun': {
+        const query = inputText(input.query, 30_000),
+          connection = store.get<Connection>('connection', inputText(input.connectionId, 60));
+        try {
+          const plan = await prepareDraft(
+            {
+              query,
+              team: store.settings().team,
+              workspace: store.settings().workspace,
+              policy: policyState.policy,
+              provider: connection?.provider,
+              profile: { model: inputText(input.model || connection?.model || '', 160) },
+            },
+            { harness },
+          );
+          if (connection?.provider === 'compatible')
+            approvedProfile(
+              { baseUrl: connection.baseUrl || '', protocol: connection.protocol || 'openai', model: connection.model },
+              policyState.policy,
+            );
+          if (connection?.provider === 'copilot' && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
+          if (!connection?.ready) return { ...plan.readiness, status: 'blocked', blockers: ['CONNECTION_NOT_READY'] };
+          return plan.readiness;
+        } catch (error) {
+          return { status: 'blocked', blockers: [errorCode(error)], warnings: [], nextActions: ['REVIEW_REQUEST'] };
+        }
+      }
       case 'snapshot':
         return snapshot();
       case 'automationList':
@@ -937,14 +998,112 @@ async function main() {
         await writeUserMemory().catch(error => diagnose('user-memory-failed', { code: errorCode(error) }));
         return s;
       }
+      case 'voiceStatus':
+        return voice.status();
+      case 'packList':
+        return listPacks(store.settings().workspace || data, policyState.policy);
+      case 'packInstall': {
+        const selected = await dialog.showOpenDialog(window!, { title: 'นำเข้า Skill Pack จากโฟลเดอร์', properties: ['openDirectory'] });
+        if (selected.canceled || !selected.filePaths[0]) return null;
+        return installPack(store.settings().workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64) });
+      }
+      case 'packEnable': {
+        const identity = phase4Identity(),
+          workspace = store.settings().workspace || data,
+          id = inputText(input.id, 64);
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'question',
+          buttons: ['ยกเลิก', 'ยืนยัน'],
+          defaultId: 0,
+          cancelId: 0,
+          message: input.disable ? 'ปิด Skill Pack นี้' : 'เปิด Skill Pack ที่ผู้ดูแลรับรอง',
+          detail: `${id}\nHooks: ${input.hooks === true ? 'เปิด command/HTTP hooks ที่รับรอง' : 'ปิด'}\nAgent templates: ${input.agents === true ? 'เปิด' : 'ปิด'}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้`,
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
+        return enablePack(workspace, id, policyState.policy, {
+          approve: true,
+          hooks: input.hooks === true,
+          agents: input.agents === true,
+          disable: input.disable === true,
+        });
+      }
+      case 'packAsset':
+        return packAsset(
+          store.settings().workspace || data,
+          inputText(input.id, 64),
+          inputText(input.assetId, 64),
+          input.kind,
+          policyState.policy,
+        );
+      case 'packExport': {
+        const selected = await dialog.showSaveDialog(window!, { title: 'ส่งออก Skill ไปยังโฟลเดอร์ใหม่', defaultPath: 'exported-skills' });
+        if (selected.canceled || !selected.filePath) return null;
+        return exportPack(store.settings().workspace || data, inputText(input.id, 64), selected.filePath, { approve: true });
+      }
+      case 'voiceCancel':
+        voice.cancel();
+        voicePermissionUntil = 0;
+        voiceTicketUntil = 0;
+        return true;
+      case 'voiceInstall': {
+        if (!policyState.policy.features.voice) throw new Error('VOICE_DISABLED');
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'question',
+          buttons: ['ยกเลิก', 'ดาวน์โหลดส่วนเสริมเสียง'],
+          defaultId: 0,
+          cancelId: 0,
+          message: 'ดาวน์โหลดโมเดลและตัวถอดเสียงที่ผู้ดูแลรับรอง',
+          detail: 'ระบบตรวจ SHA-256 ก่อนติดตั้ง เสียงถอดข้อความในเครื่อง และคุณตรวจข้อความก่อนส่งให้ AI',
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        return voice.install();
+      }
+      case 'voicePermission': {
+        const status = await voice.status();
+        if (!status.installed) throw new Error('VOICE_DISABLED');
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'question',
+          buttons: ['ยกเลิก', 'บันทึกเสียงครั้งนี้'],
+          defaultId: 0,
+          cancelId: 0,
+          message: 'อนุญาตไมโครโฟนสำหรับคำขอนี้',
+          detail: 'บันทึกได้ไม่เกิน 60 วินาที คุณตรวจและแก้ข้อความก่อนส่ง',
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        voicePermissionUntil = Date.now() + 65_000;
+        voiceTicketUntil = Date.now() + 240_000;
+        return true;
+      }
+      case 'voiceTranscribe': {
+        if (Date.now() >= voiceTicketUntil || !(input.wav instanceof Uint8Array)) throw new Error('VOICE_APPROVAL_REQUIRED');
+        voiceTicketUntil = 0;
+        voicePermissionUntil = 0;
+        return voice.transcribe(input.wav);
+      }
+      case 'keyboardSettings': {
+        if (typeof input.vimMode !== 'boolean') throw new Error('INVALID_SETTINGS');
+        const s = { ...store.settings(), keybindings: validateKeybindings(input.keybindings), vimMode: input.vimMode };
+        store.put('settings', 'main', s);
+        return s;
+      }
       case 'connection': {
         if (
           !validProviders.has(input.provider) ||
           !['api', 'subscription', 'oauth'].includes(input.mode) ||
-          (input.mode === 'oauth' && input.provider !== 'claude') ||
+          (input.mode === 'oauth' && !['claude', 'copilot'].includes(input.provider)) ||
           (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscription)
         )
           throw new Error('INVALID_CONNECTION');
+        if (input.provider === 'compatible') {
+          if (input.mode !== 'api') throw new Error('INVALID_CONNECTION');
+          approvedProfile({ baseUrl: input.baseUrl, protocol: input.protocol, model: input.model }, policyState.policy);
+        }
+        if (
+          input.provider === 'copilot' &&
+          (input.mode !== 'oauth' || !policyState.policy.features.copilot || !policyState.policy.providers?.copilot)
+        )
+          throw new Error('FEATURE_DISABLED');
         const id = input.id ? inputText(input.id, 60) : randomUUID();
         if (input.id && !store.get('connection', id)) throw new Error('CONNECTION_NOT_FOUND');
         // Only a runtime the user picked is stored; the bundled one is resolved each time it is used.
@@ -968,6 +1127,9 @@ async function main() {
           ...(previous?.customRuntime ? { customRuntime: true } : {}),
           ...(previous?.claudeAuthStarted ? { claudeAuthStarted: true } : {}),
           ...(input.provider === 'gemini' && input.mode === 'subscription' && googleCloudProject ? { googleCloudProject } : {}),
+          ...(input.provider === 'compatible'
+            ? { baseUrl: inputText(input.baseUrl, 2000), protocol: input.protocol, label: inputText(input.label || 'Compatible', 120) }
+            : {}),
           ready: false,
           note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ',
         };
@@ -1029,6 +1191,18 @@ async function main() {
               text => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text }),
               controller.signal,
             );
+          if (connection.provider === 'copilot') {
+            if (!policyState.policy.features.copilot || !policyState.policy.providers?.copilot) throw new Error('FEATURE_DISABLED');
+            if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+            const currentPolicy = policyState.policy;
+            const token = await copilotDeviceLogin(currentPolicy.providers!.copilot!.clientId, controller.signal, async (code, url) => {
+              emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: `GitHub: ใส่รหัส ${code} ในหน้าที่เปิด` });
+              await shell.openExternal(url);
+            });
+            if (controller.signal.aborted || currentPolicy !== policyState.policy) throw new Error('CANCELLED');
+            store.put('secret', connection.id, safeStorage.encryptString(token).toString('base64'));
+            connection.signedIn = true;
+          }
           const connectionRuntime = await runtime(connection);
           if (connection.provider === 'claude' && connection.mode === 'subscription') {
             connection.claudeAuthStarted = true;
@@ -1699,6 +1873,9 @@ async function main() {
   app.on('before-quit', event => {
     approvals.close();
     questions.close();
+    voice.cancel();
+    voicePermissionUntil = 0;
+    voiceTicketUntil = 0;
     unwatchFile(policyState.path);
     service.cancelAll();
     coordinator.cancelAll();
@@ -1708,6 +1885,7 @@ async function main() {
     closing = true;
     for (const browser of browsers.values()) browser.destroy();
     void Promise.allSettled([
+      voice.close(),
       workbench.close(),
       service.closeAndWait(),
       coordinator.closeAndWait(),

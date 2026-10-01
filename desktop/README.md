@@ -6,6 +6,8 @@ The Phase 2 [governed tool loop](../docs/desktop-tool-loop.md) connects Chat/Dra
 
 Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
 
+Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
+
 ## Run
 
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:
