@@ -1,5 +1,5 @@
 import { readFile, realpath, lstat } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, extname } from 'node:path';
+import { resolve, relative, isAbsolute, extname, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { Connection } from '../src/types';
 import type { LoopRequest } from '../src/tools';
@@ -13,6 +13,7 @@ import type { LoopHost } from './tool-loop';
 import { fetchPublic, publicUrl } from './web-fetch';
 import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission } from './permissions';
+import { RunTransmission, type TransmissionSource } from './transmission';
 
 export type ToolScope = {
   cancel: () => void;
@@ -48,6 +49,20 @@ export function documentSections(text: string) {
 }
 export class DesktopTools {
   external?: (request: LoopRequest, scope: ToolScope) => Promise<unknown>;
+  private sourceClean = new WeakMap<LoopRequest, boolean>();
+  private transmissions = new Map<RunTransmission, () => void>();
+  transmissionGrants() {
+    return [...this.transmissions.keys()].flatMap(t => t.list());
+  }
+  revokeTransmission(id: string) {
+    for (const [run, cancel] of this.transmissions)
+      if (run.has(id)) {
+        run.close();
+        cancel();
+        return;
+      }
+    throw new Error('APPROVAL_EXPIRED');
+  }
   constructor(
     private workbench: Workbench,
     private harness: Harness,
@@ -57,6 +72,8 @@ export class DesktopTools {
     private policy: () => Policy,
     private mode: () => PermissionMode,
     private sheetPath: string,
+    private notify: () => void = () => {},
+    private identity: (sessionId: string) => string = () => '',
   ) {}
   private async context(path: string) {
     const root = await realpath(this.harness.root),
@@ -76,7 +93,13 @@ export class DesktopTools {
     if ((await lstat(actual)).size > 1_000_000) throw new Error('CONTEXT_LIMIT');
     return readFile(actual, 'utf8');
   }
-  async outgoing(text: string, scope: ToolScope, destination?: 'web-query' | 'web-url') {
+  async outgoing(
+    text: string,
+    scope: ToolScope,
+    destination?: 'web-query' | 'web-url',
+    transmission?: RunTransmission,
+    source?: TransmissionSource,
+  ) {
     const review = this.harness.privacy(text);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const rule = this.approvals.rule(
@@ -84,21 +107,26 @@ export class DesktopTools {
       destination || 'tool-data',
       createHash('sha256').update(text).digest('hex'),
     );
-    const approved = await this.approvals.request(
-      rule,
-      {
-        title:
-          destination === 'web-query'
-            ? 'ส่งคำค้นให้บริการค้นเว็บ?'
-            : destination === 'web-url'
-              ? 'เข้าถึงเว็บปลายทางนี้?'
-              : 'ส่งผลเครื่องมือให้ AI?',
-        body: `ข้อมูลใหม่ ${text.length.toLocaleString('th-TH')} ตัวอักษร จะส่งให้ ${destination === 'web-query' ? scope.connection.provider + ' และบริการค้นเว็บของบัญชีนี้' : destination === 'web-url' ? 'เว็บปลายทางที่ระบุ' : scope.connection.provider}\n${(review.findings || []).map((f: any) => f.label).join(', ')}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n${review.redactedText.slice(0, 1500)}`,
-        privacyClass: review.classification === 'public' ? 'internal' : review.classification,
-        allowRemember: false,
-      },
-      scope.signal,
-    );
+    const detail = {
+      title:
+        destination === 'web-query'
+          ? 'ส่งคำค้นให้บริการค้นเว็บ?'
+          : destination === 'web-url'
+            ? 'เข้าถึงเว็บปลายทางนี้?'
+            : 'ส่งผลเครื่องมือให้ AI?',
+      body: `ข้อมูลใหม่ ${text.length.toLocaleString('th-TH')} ตัวอักษร จะส่งให้ ${destination === 'web-query' ? scope.connection.provider + ' และบริการค้นเว็บของบัญชีนี้' : destination === 'web-url' ? 'เว็บปลายทางที่ระบุ' : scope.connection.provider}\n${(review.findings || []).map((f: any) => f.label).join(', ')}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n${review.redactedText.slice(0, 1500)}`,
+      privacyClass: review.classification === 'public' ? 'internal' : review.classification,
+      allowRemember: false,
+    };
+    if (transmission && !destination) {
+      const clean =
+        review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text;
+      await transmission.authorize(text.length, clean ? source : undefined, runScope =>
+        this.approvals.choose(rule, { ...detail, runScope }, scope.signal),
+      );
+      return review.redactedText;
+    }
+    const approved = await this.approvals.request(rule, detail, scope.signal);
     if (scope.signal.aborted) throw new Error('CANCELLED');
     if (!approved) throw new Error('TOOL_DATA_DECLINED');
     return review.redactedText;
@@ -112,12 +140,43 @@ export class DesktopTools {
     const workspace = await this.workbench.root().catch(() => ''),
       policy = this.policy(),
       mode = this.mode();
+    const connectionIdentity = JSON.stringify(scope.connection),
+      team = scope.team,
+      hostIdentity = this.identity(scope.sessionId);
     const check = async () => {
       if (scope.signal.aborted) throw new Error('CANCELLED');
       if (blocked(scope.contract)) throw new Error('AUTHORITY_REVIEW_REQUIRED');
       if (workspace !== (await this.workbench.root().catch(() => ''))) throw new Error('WORKSPACE_CHANGED');
       if (policy !== this.policy() || mode !== this.mode()) throw new Error('POLICY_CHANGED');
+      if (connectionIdentity !== JSON.stringify(scope.connection) || team !== scope.team) throw new Error('DESTINATION_CHANGED');
+      if (hostIdentity !== this.identity(scope.sessionId)) throw new Error('DESTINATION_CHANGED');
       if (!this.policy().features.toolLoop) throw new Error('TOOL_LOOP_DISABLED');
+    };
+    const transmission = new RunTransmission(
+      scope.sessionId,
+      `${scope.connection.provider} (${scope.connection.id.slice(0, 8)}) / ${scope.connection.model || 'default'}${scope.connection.baseUrl ? ' / ' + scope.connection.baseUrl : ''}`,
+      check,
+      this.notify,
+    );
+    const consentStop = new AbortController();
+    const transmissionScope = { ...scope, signal: AbortSignal.any([scope.signal, consentStop.signal]) };
+    this.transmissions.set(transmission, () => {
+      consentStop.abort();
+      scope.cancel();
+    });
+    const sourceFor = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
+      if (!r || this.policy().transmissionConsent?.allowRunScope === false) return;
+      if (r.tool === 'files') {
+        if (this.sourceClean.get(r) === false) return;
+        const folder =
+          r.args?.action === 'list' || !r.input ? await this.workbench.path(r.input || '.') : dirname(await this.workbench.path(r.input));
+        return { key: `files:${folder}`, label: `ไฟล์ข้อความในโฟลเดอร์ ${relative(workspace, folder) || '.'} (ไม่รวมโฟลเดอร์ย่อย)` };
+      }
+      if (['browser', 'web_fetch'].includes(r.tool)) {
+        const origin = publicUrl(r.input).origin;
+        return { key: `web:${origin}`, label: `ผลการอ่านเว็บ ${origin}` };
+      }
+      if (['skill', 'reference'].includes(r.tool)) return { key: `${r.tool}:${r.input}`, label: `${r.tool}: ${r.input}` };
     };
     return {
       cancel: scope.cancel,
@@ -128,9 +187,9 @@ export class DesktopTools {
           r.tool,
         ),
       activity: t => scope.activity('กำลังใช้เครื่องมือ ' + t),
-      outgoing: async text => {
+      outgoing: async (text, _signal, r) => {
         await check();
-        const approved = await this.outgoing(text, scope);
+        const approved = await this.outgoing(text, transmissionScope, undefined, transmission, await sourceFor(r));
         await check();
         return approved;
       },
@@ -148,6 +207,9 @@ export class DesktopTools {
         return value;
       },
       dispose: async () => {
+        consentStop.abort();
+        transmission.close();
+        this.transmissions.delete(transmission);
         scope.signal.removeEventListener('abort', stopJobs);
         if (scope.signal.aborted) await Promise.all([...jobs].map(id => this.workbench.cancel(id)));
       },
@@ -189,6 +251,10 @@ export class DesktopTools {
               if (bytes.includes(0) || !Buffer.from(text).equals(bytes)) throw new Error('FILE_BINARY');
               // Scan the complete bounded file first, so a chunk boundary cannot split a credential pattern.
               const review = this.harness.privacy(text);
+              this.sourceClean.set(
+                r,
+                review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text,
+              );
               if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
               const offset = Number(a.offset || 0),
                 safe = review.redactedText;

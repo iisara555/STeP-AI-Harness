@@ -89,12 +89,15 @@ export function runClaude(
   });
 }
 
-export async function resolveClaudeRuntime(context: ClaudeContext, discover = findClaudeCode): Promise<string> {
-  let executable = await discover();
+export function claudeLauncherExecutable(executable: string | null) {
   if (executable && /\.cmd$/i.test(executable)) {
-    const entry = join(dirname(executable), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js');
-    executable = existsSync(entry) ? entry : null;
+    const packageRoot = join(dirname(executable), 'node_modules', '@anthropic-ai', 'claude-code');
+    executable = [join(packageRoot, 'bin', 'claude.exe'), join(packageRoot, 'cli.js')].find(path => existsSync(path)) || null;
   }
+  return executable;
+}
+export async function resolveClaudeRuntime(context: ClaudeContext, discover = findClaudeCode): Promise<string> {
+  const executable = claudeLauncherExecutable(await discover());
   if (!executable) throw new Error('CLAUDE_CODE_NOT_FOUND');
   const result = await runClaude(executable, ['--version'], context);
   const version = /\b(\d+)\.(\d+)\.(\d+)\s+\(Claude Code\)/.exec(result.output);

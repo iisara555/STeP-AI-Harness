@@ -2,6 +2,15 @@
 
 This is a development preview, not an accepted production release.
 
+## OpenHarness adaptation — Phase 6 (2026-10-01)
+
+- Branch `codex/openharness-phase6`, stacked on Phase 5: bounded source/account/model/policy consent scopes, risk provenance and revocation; synthetic/live feature matrix; explicit account/auth live boundary; native npm Claude launcher support; documentation.
+- Desktop: **216 unit tests passed**, zero failures/skips, including pending-dialog disposal and administrator one-time/web-destination checks. Synthetic matrix: **5/5 groups passed** through actual routing, WorkService, memory, compaction, Workbench/ToolGate, checkpoints and coordinator. Three clean reads changed from 3 transmission prompts to 1; including a staged-change result, 4 changed to 2. This is a fixture measurement, not an employee usability study.
+- All **eight Electron smoke scripts passed** with isolated synthetic profiles. Phase 6 exercises real UI/preload/IPC/local SSE: unchecked scope choice, three reads with one dialog, visible bounded scope, separate write-result consent, no applied file, no persisted approval, and revoke-and-stop during generation.
+- TypeScript/production build, formatting and both repository validators passed (51 Skills, no likely secrets, package whitelist). Existing Vite renderer size warning remains (~859 KB). Full Harness tests were not repeated for Desktop/documentation changes; Phase 5 full isolated/CI results remain historical evidence.
+- User-authorized Claude Code OAuth: bundled runtime 2.1.284 verified the existing profile; personal runtime 2.1.221 was not upgraded. Live matrix failed accepted generation: five provider attempts, zero reported tokens, **1/5 groups passed** (local tool group), subsequent auth check `LOGIN_REQUIRED`. This does not prove zero charges, entitlement or live quality. The user requested no further live calls. Failed report retained at ignored `eval-results/2026-10-01T03-31-58-253Z-matrix/report.md`; final synthetic report at `eval-results/2026-10-01T03-50-58-657Z-matrix/report.md`.
+- Logs/screenshots are ignored under `release/qa/phase6-*`. No credentials, employee data, production policy, delivery, main merge, installer or release was created. Renewed login and explicit retry authorization are needed for live acceptance.
+
 ## OpenHarness Phase 5 local verification (2026-10-01)
 
 - Desktop: 205 unit tests passed. New cases cover fail-closed policy fields, fixed GitHub device OAuth/polling/cancellation, official Copilot SDK no-native-tool/config-discovery options, keybinding collisions/platform modifiers, composer Vim, pinned voice installation/tamper detection/PCM validation/transcript privacy and temporary recording cleanup. Existing Golden scenarios continue to use the real Router and `WorkService` through shared preflight.

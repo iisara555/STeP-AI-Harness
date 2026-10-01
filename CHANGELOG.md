@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop OpenHarness adaptation — Phase 6
+
+- Add opt-in, in-memory transmission scopes for clean reads with source/account/model/policy binding, parallel confirmation coalescing, time/volume limits, visible allowance and revoke-and-stop. Preserve full-source privacy scans, separate destination/effect approvals and fresh review for masking or higher risk.
+- Add synthetic/live feature-matrix evaluation for memory/follow-ups/attachments, compaction, gated tools/hooks, checkpoint resume and coordinator; label local/hybrid evidence separately. Share explicit live approval and named API/Claude subscription auth with Golden evaluation.
+- Resolve native npm Claude Code launchers as well as legacy script entries. Keep the existing runtime/profile version gate and avoid upgrading personal runtimes.
+- Document local validation and the user-authorized Claude OAuth attempt that failed generation and subsequently required login. No live acceptance, main merge or release is claimed.
+
 ### Desktop OpenHarness adaptation — Phase 5
 
 - Add administrator-approved compatible/Ollama and Anthropic streaming profiles, safeStorage keys and managed Copilot device authorization through the pinned official SDK with native tools/config discovery disabled.

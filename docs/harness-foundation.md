@@ -1,5 +1,7 @@
 # STeP Organization AI Harness — Lightweight Foundation
 
+Desktop Phase 6 preserves Router/Authority/Privacy/ToolGate boundaries while replacing repeated clean-read transmission dialogs with explicitly selected, source-bound consent for one loop. This scope never approves a business action, execution or production change. The synthetic/live feature matrix separates generation quality from local governance evidence; see [Phase 6](desktop-phase6.md), [managed policy](desktop-policy.md) and [validation](../desktop/VALIDATION.md).
+
 เอกสารนี้กำหนดส่วนเสริมของ Harness ที่ใช้ร่วมกับ Organization Model 6 มิติเดิม โดย **ไม่เพิ่ม Dimension ใหม่** และไม่สร้าง Workflow Engine ใหม่
 
 ## โครงสร้าง

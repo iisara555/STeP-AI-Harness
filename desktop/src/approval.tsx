@@ -8,20 +8,23 @@ export function ApprovalDialog({
   children,
   confirmLabel = 'อนุญาตครั้งนี้',
   onConfirm,
+  onRun,
   onCancel,
 }: {
   request: ApprovalRequest;
   children?: ReactNode;
   confirmLabel?: string;
   onConfirm: (remember: boolean) => Promise<unknown> | unknown;
+  onRun?: () => Promise<unknown> | unknown;
   onCancel: () => void;
 }) {
   const [remember, setRemember] = useState(false);
+  const [run, setRun] = useState(false);
   return (
     <ConfirmDialog
       title={request.title}
-      confirmLabel={remember ? 'อนุญาตใน workspace นี้' : confirmLabel}
-      onConfirm={() => onConfirm(remember)}
+      confirmLabel={run ? 'อนุญาตในขอบเขตนี้จนจบรอบ' : remember ? 'อนุญาตใน workspace นี้' : confirmLabel}
+      onConfirm={() => (run && onRun ? onRun() : onConfirm(remember))}
       onCancel={onCancel}
       focusCancel
     >
@@ -30,6 +33,16 @@ export function ApprovalDialog({
       </p>
       {request.body && <p className="approval-detail">{request.body}</p>}
       {children}
+      {request.runScope && onRun && (
+        <label className="approval-remember">
+          <input type="checkbox" checked={run} onChange={e => setRun(e.target.checked)} />
+          <span>
+            อนุญาตผลการอ่านใหม่ในขอบเขตนี้โดยไม่ถามซ้ำ
+            <br />
+            <span className="approval-detail">{request.runScope}</span>
+          </span>
+        </label>
+      )}
       {request.allowRemember && (
         <label className="approval-remember">
           <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />

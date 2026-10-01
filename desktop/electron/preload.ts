@@ -40,6 +40,7 @@ const allowed = new Set([
   'toolSnapshotForget',
   'permissionMode',
   'approvalRespond',
+  'transmissionRevoke',
   'approvalRemove',
   'settings',
   'workspace',

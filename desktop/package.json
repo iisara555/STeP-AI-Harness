@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && node build.mjs",
     "start": "electron .",
     "test": "tsx --test test/*.test.ts",
-    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs",
+    "test:electron": "node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
@@ -20,7 +20,8 @@
     "bundle:ocr": "node scripts/bundle-ocr.mjs",
     "format": "prettier --write \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
     "format:check": "prettier --check \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
-    "eval:golden": "tsx eval/golden.ts"
+    "eval:golden": "tsx eval/golden.ts",
+    "eval:features": "tsx eval/feature-matrix.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.284",

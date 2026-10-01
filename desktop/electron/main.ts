@@ -348,6 +348,24 @@ async function main() {
     () => policyState.policy,
     permissionMode,
     join(__dirname, 'sheet-worker.cjs'),
+    () => emit({ sessionId: '', type: 'changed' }),
+    id => {
+      const s = store.session(id);
+      const c = store.get<Connection>('connection', s.connectionId);
+      return JSON.stringify([
+        store.settings().team,
+        s.team,
+        s.connectionId,
+        s.model,
+        c?.provider,
+        c?.mode,
+        c?.baseUrl,
+        c?.protocol,
+        c?.executable,
+        c?.ready,
+        c?.signedIn,
+      ]);
+    },
   );
   harness.tools = scope => tools.host(scope);
   const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);
@@ -637,6 +655,7 @@ async function main() {
       hooks: policyState.policy.hooks.length,
     },
     approvals: approvals.list(),
+    transmissionGrants: tools.transmissionGrants(),
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections(),
@@ -963,6 +982,9 @@ async function main() {
       case 'approvalRespond':
         approvals.respond(inputText(input.id, 60), input.answer);
         return true;
+      case 'transmissionRevoke':
+        tools.revokeTransmission(inputText(input.id, 60));
+        return snapshot();
       case 'workspace': {
         const result = await dialog.showOpenDialog(window, { properties: ['openDirectory', 'createDirectory'] });
         if (!result.canceled) {

@@ -23,12 +23,22 @@ async function fixture() {
   store.put('settings', 'main', { workspace: root });
   const workbench = new Workbench(store, undefined, () => policy);
   let approve = true;
+  let allowRun = false;
+  let holdApproval = false,
+    lastApproval = '';
   let requests = 0;
+  let opened: () => void = () => {};
+  const approvalOpened = new Promise<void>(resolve => {
+    opened = resolve;
+  });
   const events: string[] = [];
   const approvals = new Approvals(store, r => {
     if (r) {
       requests++;
-      queueMicrotask(() => approvals.respond(r.id, approve ? 'once' : 'cancel'));
+      lastApproval = r.id;
+      opened();
+      if (holdApproval) return;
+      queueMicrotask(() => approvals.respond(r.id, !approve ? 'cancel' : allowRun && r.runScope ? 'run' : 'once'));
     }
   });
   const gate = new ToolGate(
@@ -84,8 +94,105 @@ async function fixture() {
       approve = false;
     },
     requests: () => requests,
+    allowRun: () => {
+      allowRun = true;
+    },
+    holdApproval: () => {
+      holdApproval = true;
+    },
+    lastApproval: () => lastApproval,
+    approvals,
+    approvalOpened,
   };
 }
+test('scoped file consent batches clean reads but re-prompts masked sources and different folders', async () => {
+  const f = await fixture();
+  f.allowRun();
+  await mkdir(join(f.root, 'other'));
+  await writeFile(join(f.root, 'a.txt'), 'Public A');
+  await writeFile(join(f.root, 'b.txt'), 'Public B');
+  await writeFile(join(f.root, 'private.txt'), 'Contact: sample@example.com');
+  await writeFile(join(f.root, 'other/c.txt'), 'Public C');
+  const host = await f.tools.host(f.scope);
+  const send = async (input: string) => {
+    const request = { tool: 'files' as const, input };
+    const value = await host.execute(request, f.scope.signal);
+    return host.outgoing(JSON.stringify(value), f.scope.signal, request);
+  };
+  try {
+    await Promise.all(['a.txt', 'b.txt'].map(send));
+    assert.equal(f.requests(), 1);
+    assert.equal(f.tools.transmissionGrants().length, 1);
+    assert.ok(!(await send('private.txt')).includes('sample@example.com'));
+    assert.equal(f.requests(), 2, 'pre-masking risk cannot disappear into a reusable grant');
+    await send('other/c.txt');
+    assert.equal(f.requests(), 3);
+    f.tools.revokeTransmission(f.tools.transmissionGrants()[0].id);
+    await assert.rejects(send('b.txt'), /CANCELLED/);
+    assert.deepEqual(f.store.list('approval'), []);
+  } finally {
+    await host.dispose?.();
+    assert.deepEqual(f.tools.transmissionGrants(), []);
+    f.store.close();
+  }
+});
+test('disposing a loop cancels its pending transmission dialog without waiting for expiry', async () => {
+  const f = await fixture();
+  f.holdApproval();
+  const host = await f.tools.host(f.scope);
+  const pending = assert.rejects(host.outgoing('Public fixture', f.scope.signal), /CANCELLED/);
+  await f.approvalOpened;
+  assert.equal(f.requests(), 1);
+  await host.dispose?.();
+  await pending;
+  assert.throws(() => f.approvals.respond(f.lastApproval(), 'once'), /APPROVAL_EXPIRED/);
+  f.store.close();
+});
+test('administrator one-time setting disables scopes; web-result scopes do not authorize destinations', async () => {
+  const f = await fixture();
+  f.allowRun();
+  let host = await f.tools.host(f.scope);
+  const request = { tool: 'web_fetch' as const, input: 'https://example.org/one' };
+  try {
+    await host.outgoing('Public result one', f.scope.signal, request);
+    await host.outgoing('Public result two', f.scope.signal, { ...request, input: 'https://example.org/two' });
+    assert.equal(f.requests(), 1);
+    await f.tools.outgoing('https://example.org/three', f.scope, 'web-url');
+    assert.equal(f.requests(), 2, 'destination request remains independently confirmed');
+    await host.outgoing('New origin result', f.scope.signal, { ...request, input: 'https://example.com/one' });
+    assert.equal(f.requests(), 3);
+    await host.dispose?.();
+    f.policy.transmissionConsent = { allowRunScope: false };
+    host = await f.tools.host(f.scope);
+    await host.outgoing('Public result one', f.scope.signal, request);
+    await host.outgoing('Public result two', f.scope.signal, request);
+    assert.equal(f.requests(), 5);
+    assert.deepEqual(f.tools.transmissionGrants(), []);
+  } finally {
+    await host.dispose?.();
+    f.store.close();
+  }
+});
+test('consent ends with the loop and never overrides policy or destination changes', async () => {
+  const f = await fixture();
+  f.allowRun();
+  await writeFile(join(f.root, 'a.txt'), 'Public A');
+  const request = { tool: 'files' as const, input: 'a.txt' };
+  let host = await f.tools.host(f.scope);
+  try {
+    const value = JSON.stringify(await host.execute(request, f.scope.signal));
+    await host.outgoing(value, f.scope.signal, request);
+    await host.dispose?.();
+    host = await f.tools.host(f.scope);
+    await host.outgoing(value, f.scope.signal, request);
+    assert.equal(f.requests(), 2);
+    f.scope.connection.model = 'different';
+    await assert.rejects(host.outgoing(value, f.scope.signal, request), /DESTINATION_CHANGED/);
+  } finally {
+    await host.dispose?.();
+    f.store.close();
+  }
+});
 test('new file data requires separate consent, denied data and credentials never transmit', async () => {
   const f = await fixture();
   try {
