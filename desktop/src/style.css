@@ -341,7 +341,7 @@ nav button,
   gap: 7px;
 }
 .composer-tools select {
-  font-size: 11px;
+  font-size: 12.5px;
   max-width: 230px;
   border: 0;
   background: transparent;
@@ -869,6 +869,10 @@ nav button,
   white-space: nowrap;
 }
 .session-open small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 11px;
 }
@@ -2177,8 +2181,10 @@ nav .count {
 }
 .session-filter button {
   flex: 1;
-  padding: 5px 8px;
+  min-width: 0;
+  padding: 5px 6px;
   font-size: 12px;
+  white-space: nowrap;
   background: transparent;
   color: var(--muted);
 }
@@ -2219,10 +2225,22 @@ nav .count {
 .context-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
-  padding: 10px 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--border);
+}
+/* Secondary task actions stay light so the conversation, not the toolbar, leads the page. */
+.context-bar > button {
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-color: transparent;
+  color: var(--muted);
+}
+.context-bar > button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+  filter: none;
 }
 .memory-editor {
   display: grid;
@@ -2248,40 +2266,4 @@ nav .count {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
-}
-/* Workbench tabs: one readable row, with the advanced toggle kept at the far end instead of floating under the tabs. */
-.workbench-tabs {
-  flex-direction: row;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 12px 0;
-  border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-  flex-shrink: 0;
-}
-.workbench-tabs button {
-  flex-shrink: 0;
-  background: transparent;
-  color: var(--muted);
-  border: 0;
-  border-bottom: 3px solid transparent;
-  border-radius: 7px 7px 0 0;
-  padding: 8px 8px 7px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-.workbench-tabs button.active {
-  color: var(--text);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-}
-.workbench-tabs .workbench-advanced {
-  margin-left: auto;
-  padding: 6px;
-  border-radius: 7px;
-  border-bottom: 0;
-}
-.workbench-tabs .workbench-advanced[aria-expanded='true'] {
-  color: var(--accent-ink);
-  background: var(--accent-soft);
 }

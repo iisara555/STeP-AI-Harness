@@ -52,6 +52,17 @@ try {
       if (pinned) await window.step.call('pin', { id: s.id, pinned: true });
     }
   });
+  // The consent screenshot needs a ready account; mark the seeded connection ready in this isolated
+  // profile only. Consent is shown before any provider call, so nothing is sent.
+  await app.evaluate(async ({ app }) => {
+    const { DatabaseSync } = process.mainModule.require('node:sqlite');
+    const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
+    for (const row of db.prepare("SELECT id, value FROM records WHERE kind='connection'").all()) {
+      const value = { ...JSON.parse(row.value), ready: true, note: 'Screenshot fixture' };
+      db.prepare("UPDATE records SET value=? WHERE kind='connection' AND id=?").run(JSON.stringify(value), row.id);
+    }
+    db.close();
+  });
   await page.reload();
   await page.locator('.session-group').first().waitFor();
   await page.locator('.session-open').nth(1).click();

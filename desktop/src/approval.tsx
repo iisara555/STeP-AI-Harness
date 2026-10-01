@@ -3,6 +3,25 @@ import { ConfirmDialog } from './ui';
 import type { ApprovalRequest } from './types';
 
 const privacyLabels: Record<string, string> = { public: 'ทั่วไป', internal: 'ภายใน', restricted: 'จำกัดการเข้าถึง', sensitive: 'อ่อนไหว' };
+// Employees see what the step does; unknown tool ids still show as-is so nothing is hidden.
+const toolLabels: Record<string, string> = {
+  external_ai: 'ส่งคำขอให้ AI',
+  browser_control: 'ผู้ช่วยทำงานบนเว็บ',
+  browser: 'เปิดเว็บ',
+  browser_read: 'อ่านหน้าเว็บ',
+  files: 'รายการไฟล์',
+  read: 'อ่านไฟล์',
+  write: 'บันทึกไฟล์',
+  changes: 'รายการแก้ไข',
+  sheet_edit: 'แก้ตาราง',
+  terminal: 'คำสั่งขั้นสูง',
+  web_search: 'ค้นเว็บ',
+  mcp_call: 'เครื่องมือ MCP',
+  mcp_search: 'ค้นเครื่องมือ MCP',
+  sandbox: 'Docker sandbox',
+  ask_user: 'คำถามถึงคุณ',
+  plan: 'แผนงาน',
+};
 export function ApprovalDialog({
   request,
   children,
@@ -29,7 +48,8 @@ export function ApprovalDialog({
       focusCancel
     >
       <p className="small muted">
-        เครื่องมือ: {request.tool} · ระดับข้อมูลจากการตรวจรูปแบบ: {privacyLabels[request.privacyClass] || request.privacyClass}
+        เครื่องมือ: {toolLabels[request.tool] || request.tool} · ระดับข้อมูลจากการตรวจรูปแบบ:{' '}
+        {privacyLabels[request.privacyClass] || request.privacyClass}
       </p>
       {request.body && <p className="approval-detail">{request.body}</p>}
       {children}

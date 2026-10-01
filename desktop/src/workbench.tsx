@@ -132,7 +132,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
         <>
           <div className="tool-context">
             <Folder size={14} />
-            <span title={workspace}>{workspace || 'เลือกโฟลเดอร์ทำงานเพื่อใช้ Files และ Terminal'}</span>
+            <span title={workspace}>{workspace || 'เลือกโฟลเดอร์ทำงานเพื่อใช้แท็บไฟล์งานและคำสั่งขั้นสูง'}</span>
             <button
               className="quiet"
               onClick={() =>

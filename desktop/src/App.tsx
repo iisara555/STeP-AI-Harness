@@ -1609,12 +1609,12 @@ export default function App() {
                     >
                       <option value="">
                         {activeModel.defaultEffort
-                          ? `Reasoning: ค่าเริ่มต้น (${effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort})`
-                          : 'Reasoning: ค่าเริ่มต้น'}
+                          ? `ระดับการคิด: ค่าเริ่มต้น (${effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort})`
+                          : 'ระดับการคิด: ค่าเริ่มต้น'}
                       </option>
                       {activeModel.efforts.map(e => (
                         <option key={e.id} value={e.id} title={e.description}>
-                          Reasoning: {effortLabel[e.id] || e.id}
+                          ระดับการคิด: {effortLabel[e.id] || e.id}
                         </option>
                       ))}
                     </select>
@@ -1637,7 +1637,8 @@ export default function App() {
                 </div>
               </div>
               <div className="composer-note">ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง</div>
-              {!connection?.ready && (
+              {/* With a task open, the connection warning above the box already offers this action. */}
+              {!connection?.ready && !session && (
                 <button className="text-link" onClick={openAiSettings}>
                   เชื่อมต่อ AI เพื่อเริ่มทำงาน
                 </button>
