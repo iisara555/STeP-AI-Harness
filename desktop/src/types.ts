@@ -1,5 +1,5 @@
 import type { DraftNode } from './draft';
-export type Provider = 'openai' | 'claude' | 'gemini' | 'compatible' | 'copilot';
+export type Provider = 'openai' | 'claude' | 'gemini' | 'antigravity' | 'compatible' | 'copilot';
 export type EffortOption = { id: string; description?: string };
 export type ModelOption = {
   id: string;

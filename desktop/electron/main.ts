@@ -74,7 +74,7 @@ const connectControllers = new Map<string, AbortController>();
 // Tasks in different Workspaces may run side by side; each session still runs one task at a time.
 let installingAnt = false;
 let ocrResolving = false;
-const validProviders = new Set(['openai', 'claude', 'gemini', 'compatible', 'copilot']);
+const validProviders = new Set(['openai', 'claude', 'gemini', 'antigravity', 'compatible', 'copilot']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
 let logFile = '';
 function diagnose(event: string, detail: Record<string, string> = {}) {
@@ -1113,6 +1113,11 @@ async function main() {
         if (
           !validProviders.has(input.provider) ||
           !['api', 'subscription', 'oauth'].includes(input.mode) ||
+          (input.provider === 'antigravity' &&
+            (input.mode !== 'subscription' ||
+              input.apiKey ||
+              typeof input.model !== 'string' ||
+              !/^gemini-[\w.-]{1,93}$/.test(input.model))) ||
           (input.mode === 'oauth' && !['claude', 'copilot'].includes(input.provider)) ||
           (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscription)
         )
@@ -1145,8 +1150,8 @@ async function main() {
           provider: input.provider as Provider,
           mode: input.mode,
           model: inputText(input.model || '', 100),
-          executable: previous?.customRuntime ? previous.executable : '',
-          ...(previous?.customRuntime ? { customRuntime: true } : {}),
+          executable: previous?.customRuntime && previous.provider === input.provider ? previous.executable : '',
+          ...(previous?.customRuntime && previous.provider === input.provider ? { customRuntime: true } : {}),
           ...(previous?.claudeAuthStarted ? { claudeAuthStarted: true } : {}),
           ...(input.provider === 'gemini' && input.mode === 'subscription' && googleCloudProject ? { googleCloudProject } : {}),
           ...(input.provider === 'compatible'
@@ -1170,7 +1175,10 @@ async function main() {
           connection.executable = '';
           delete connection.customRuntime;
           connection.ready = false;
-          connection.note = 'ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ';
+          connection.note =
+            connection.provider === 'antigravity'
+              ? 'Use installed Antigravity; connection needs a new test.'
+              : 'ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ';
           store.put('connection', connection.id, connection);
           return connection;
         }
@@ -1325,6 +1333,7 @@ async function main() {
       case 'openHelp': {
         const pages: Record<string, string> = {
           python: 'https://www.python.org/downloads/',
+          antigravity: 'https://antigravity.google/docs/cli/install/',
           claudeCode: 'https://code.claude.com/docs/en/setup',
           anthropicCli: 'https://platform.claude.com/docs/en/cli-sdks-libraries/cli/quickstart',
           tesseract: 'https://tesseract-ocr.github.io/tessdoc/Installation.html',
@@ -1488,7 +1497,10 @@ async function main() {
         // Signing out removes this connection's sign-in data (Google or ChatGPT tokens in its runtime home).
         await removeRuntimeHome(c.id);
         c.ready = false;
-        c.note = 'ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่';
+        c.note =
+          c.provider === 'antigravity'
+            ? 'Disconnected from STeP. The native Google account remains signed in to Antigravity.'
+            : 'ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่';
         delete c.models;
         delete c.modelsAt;
         store.put('connection', c.id, c);

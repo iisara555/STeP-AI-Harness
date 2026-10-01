@@ -471,6 +471,7 @@ export type ProviderChoice = {
 };
 export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '', googleCloudProject: '' };
 export function providerChoiceReady(c: ProviderChoice) {
+  if (c.provider === 'antigravity') return c.mode === 'subscription' && /^gemini-[\w.-]+$/.test(c.model || '') && !c.key;
   if (c.provider === 'compatible') return Boolean(c.baseUrl?.trim() && c.model?.trim() && (c.protocol !== 'anthropic' || c.key.trim()));
   return c.mode !== 'api' || Boolean(c.key.trim());
 }
@@ -489,7 +490,7 @@ export function ProviderFields({
   claudeSubscription?: boolean;
 }) {
   const { provider, mode, key, googleCloudProject } = value;
-  const subscription = ['openai', 'gemini'].includes(provider) || (provider === 'claude' && claudeSubscription);
+  const subscription = ['openai', 'gemini', 'antigravity'].includes(provider) || (provider === 'claude' && claudeSubscription);
   return (
     <>
       <div className="form-grid">
@@ -504,7 +505,7 @@ export function ProviderFields({
                 mode: providerDefaultMode(e.target.value),
                 baseUrl: 'https://api.openai.com/v1',
                 protocol: 'openai',
-                model: '',
+                model: e.target.value === 'antigravity' ? 'gemini-3.8-flash-medium' : '',
                 key: '',
                 googleCloudProject: '',
               })
@@ -512,6 +513,7 @@ export function ProviderFields({
           >
             <option value="openai">OpenAI (ChatGPT)</option>
             <option value="gemini">Gemini (Google)</option>
+            <option value="antigravity">Gemini via Antigravity (experimental)</option>
             <option value="claude">Claude (Anthropic)</option>
             <option value="compatible">Compatible endpoint / Ollama</option>
             <option value="copilot">GitHub Copilot</option>
@@ -524,15 +526,17 @@ export function ProviderFields({
             {provider === 'claude' && <option value="oauth">Claude Console OAuth (ไม่ต้องใช้ API key)</option>}
             {subscription && (
               <option value="subscription">
-                {provider === 'claude'
-                  ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)'
-                  : provider === 'gemini'
-                    ? 'บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)'
-                    : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
+                {provider === 'antigravity'
+                  ? 'Personal Google account (native Antigravity sign-in)'
+                  : provider === 'claude'
+                    ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)'
+                    : provider === 'gemini'
+                      ? 'บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)'
+                      : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
               </option>
             )}
             {provider === 'claude' && <option value="claude-code">Claude Pro/Max (เปิดใน Claude Code ภายนอก)</option>}
-            {provider !== 'copilot' && <option value="api">API key</option>}
+            {!['copilot', 'antigravity'].includes(provider) && <option value="api">API key</option>}
           </select>
         </label>
       </div>
@@ -567,6 +571,21 @@ export function ProviderFields({
       )}
       {provider === 'copilot' && (
         <p className="small muted">ลงชื่อผ่าน GitHub OAuth App ที่องค์กรกำหนด ใช้สิทธิ์และโควตาของบัญชี Copilot ที่ลงชื่อ</p>
+      )}
+      {provider === 'antigravity' && (
+        <div>
+          <label>
+            Gemini model
+            <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
+          </label>
+          <p className="small muted">
+            Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account
+            signed in. Current CLI 1.2.14 cannot confirm that all native tools are disabled, so STeP stops before sending a request.
+          </p>
+          <button className="quiet" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
+            Antigravity installation and sign-in guide
+          </button>
+        </div>
       )}
       {provider === 'gemini' && mode === 'subscription' && (
         <label>

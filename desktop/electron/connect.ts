@@ -6,6 +6,11 @@ import { anthropicLogin } from './anthropic-auth';
 
 // Plain-language notes for connection failures; anything else shows its code.
 export const connectNotes: Record<string, string> = {
+  ANTIGRAVITY_RUNTIME_REQUIRED: 'Install the official Antigravity CLI, or select its agy runtime, then test again.',
+  ANTIGRAVITY_UPDATE_REQUIRED: 'Antigravity CLI 1.2.14 or newer is required.',
+  ANTIGRAVITY_POLICY_UNCONFIRMED: 'Antigravity did not confirm the isolated STeP policy. No request was sent.',
+  ANTIGRAVITY_TOOLS_UNAVAILABLE:
+    'This Antigravity runtime declares native tools without confirming that they are disabled. No request was sent. Gemini API remains available.',
   CLAUDE_CODE_NOT_FOUND: 'ยังไม่พบ Claude Code เปิดวิธีติดตั้งแล้วกดตรวจอีกครั้ง',
   CLAUDE_CODE_UPDATE_REQUIRED: 'กรุณาอัปเดต Claude Code เป็นรุ่น 2.1.268 ขึ้นไป แล้วเชื่อมต่อใหม่',
   CLAUDE_PROFILE_MISMATCH: 'Claude Code ใช้โฟลเดอร์บัญชีไม่ตรงกับ STeP จึงหยุดการเชื่อมต่อ',
@@ -107,7 +112,9 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
   progress(
     connection.provider === 'claude' && connection.mode === 'oauth'
       ? 'ยืนยัน Claude Console OAuth แล้ว · กำลังทดสอบส่งข้อความสั้น ๆ'
-      : 'ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ',
+      : connection.provider === 'antigravity'
+        ? 'Checking the native Google session and testing one short request'
+        : 'ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ',
   );
   if (signal.aborted) throw new Error('CANCELLED');
   let timedOut = false;
@@ -124,6 +131,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
       signal: test.signal,
       emit: () => {},
     });
+    if (connection.provider === 'antigravity') deps.signedIn?.();
   } catch (error) {
     const detail = (error as any)?.detail || [];
     if (timedOut && errorCode(error) === 'CANCELLED')

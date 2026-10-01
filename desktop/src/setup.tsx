@@ -240,6 +240,7 @@ export function SetupWizard({
                         googleCloudProject: choice.googleCloudProject,
                         baseUrl: choice.baseUrl,
                         protocol: choice.protocol,
+                        model: choice.model,
                       });
                       setChoice({ ...choice, key: '' });
                       setConnecting({ id: c.id, text: 'กำลังเริ่มเชื่อมต่อ' });

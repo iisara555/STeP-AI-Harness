@@ -68,7 +68,7 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 
 ## Boundaries
 
-- Conversation history and drafts are local application data, not diagnostic logs. API secrets use Electron secure storage. Provider-managed authentication is stored in an isolated runtime profile.
+- Conversation history and drafts are local application data, not diagnostic logs. API secrets use Electron secure storage. Most provider-managed authentication uses an isolated runtime profile. Experimental Antigravity uses a shared native OS keyring: configuration isolation does not isolate Google identities, and STeP disconnect does not log out that native account. See [current compatibility blocker](../docs/antigravity-adapter.md).
 - Only extracted, reviewed text is sent for attachments; original documents are not uploaded. Unsupported/incomplete extraction is blocked. One source attachment per request preserves one-source Playbook constraints.
 - The host rejects file, shell and action requests from provider runtimes and exposes no external submission or publishing IPC. A separate public retrieval run enables only native web search after privacy and authority checks. Runtime restrictions still require adversarial live verification. Export happens through host code.
 - DOCX/PDF/Markdown preserve headings, lists, bold and italic. Office exports use simple layouts. XLSX splits tab-separated or Markdown table rows. PPTX paginates text; this is not an Office layout editor.

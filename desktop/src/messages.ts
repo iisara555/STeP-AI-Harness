@@ -194,14 +194,16 @@ export const statusText: Record<string, string> = {
 };
 
 export const providerLabel = (provider?: string) =>
-  provider === 'openai'
-    ? 'OpenAI'
-    : provider === 'claude'
-      ? 'Claude'
-      : provider === 'gemini'
-        ? 'Gemini'
-        : provider === 'compatible'
-          ? 'Compatible'
-          : provider === 'copilot'
-            ? 'GitHub Copilot'
-            : '';
+  provider === 'antigravity'
+    ? 'Gemini / Antigravity'
+    : provider === 'openai'
+      ? 'OpenAI'
+      : provider === 'claude'
+        ? 'Claude'
+        : provider === 'gemini'
+          ? 'Gemini'
+          : provider === 'compatible'
+            ? 'Compatible'
+            : provider === 'copilot'
+              ? 'GitHub Copilot'
+              : '';

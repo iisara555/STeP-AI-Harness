@@ -2,6 +2,14 @@
 
 This is a development preview, not an accepted production release.
 
+## Experimental Antigravity adapter (2026-10-01)
+
+- Branch `codex/antigravity-adapter`, stacked on `codex/chatgpt-gemini-oauth`. Added provider selection, native NDJSON, per-invocation configuration, model persistence/catalog filtering and shared-keyring-aware disconnect. See [implementation and evidence](../docs/antigravity-adapter.md).
+- **230 Desktop tests passed**, zero failures/skips. The new real renderer/preload/IPC Electron smoke passed with synthetic generation: safe init completed a connection; broad tools stopped reconnect before another prompt. The existing Gemini consumer eligibility restriction stayed intact. Formatting, TypeScript/build and both validators passed; the renderer-size warning remains.
+- Official Windows CLI **1.2.14** was verified against the manifest SHA-512. The actual adapter returned **`ANTIGRAVITY_TOOLS_UNAVAILABLE` before writing the user message**, with **0 reported tokens**. The catalog returned **11 Gemini models**, not proof of account entitlement.
+- Settings isolation and global-agent discovery were observed, but `tools: []` and `tools: [finish]` did not narrow the init catalog. No native tool execution or accepted native tool-denial behavior is claimed. OAuth refresh, live generation, identity binding and macOS/Linux native acceptance remain open; login alone does not resolve this blocker.
+- No global installer/update/logout, copied credentials, production policy change, main merge or release. Existing privacy/transmission consent behavior stays intact.
+
 ## ChatGPT and Gemini connection follow-up (2026-10-01)
 
 - Review branch `codex/chatgpt-gemini-oauth`, based on the Claude follow-up. See [connection evidence](../docs/chatgpt-gemini-oauth-followup.md).
