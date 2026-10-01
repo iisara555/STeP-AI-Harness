@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
 import type { DesktopAPI } from './types';
+import { t } from './i18n';
 export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClose: () => void; onSelect: (text: string) => void }) {
   const [packs, setPacks] = useState<any[]>([]),
     [name, setName] = useState(''),
@@ -37,41 +38,43 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
     }
   };
   return (
-    <ConfirmDialog title="Skill Packs" confirmLabel="ปิด" onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog title="Skill Packs" confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p>
-        นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills ผู้ดูแลต้องรับรอง digest ก่อนเปิดใช้ เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง
+        {t(
+          'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills ผู้ดูแลต้องรับรอง digest ก่อนเปิดใช้ เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง',
+        )}
       </p>
       <label>
-        ชื่อชุดที่นำเข้าจาก SKILL.md
+        {t('ชื่อชุดที่นำเข้าจาก SKILL.md')}
         <input value={name} onChange={e => setName(e.target.value)} placeholder="public-writing" />
       </label>
       <button disabled={busy} onClick={() => void act('packInstall', { name })}>
-        เลือกโฟลเดอร์และนำเข้า
+        {t('เลือกโฟลเดอร์และนำเข้า')}
       </button>
       <label>
         <input type="checkbox" checked={hooks} onChange={e => setHooks(e.target.checked)} />
-        เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน
+        {t('เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน')}
       </label>
       <label>
         <input type="checkbox" checked={agents} onChange={e => setAgents(e.target.checked)} />
-        เปิด Agent templates เมื่อยืนยัน
+        {t('เปิด Agent templates เมื่อยืนยัน')}
       </label>
       {error && <p role="alert">{error}</p>}
-      {!packs.length && <p>ยังไม่มี Skill Pack</p>}
+      {!packs.length && <p>{t('ยังไม่มี Skill Pack')}</p>}
       {packs.map(p => (
         <section key={p.id}>
           <strong>
-            {p.id} · {p.enabled ? 'เปิดใช้' : 'ปิดใช้'}
-            {p.invalid ? ' · ตรวจไฟล์ไม่ผ่าน' : ''}
+            {p.id} · {p.enabled ? t('เปิดใช้') : t('ปิดใช้')}
+            {p.invalid ? t(' · ตรวจไฟล์ไม่ผ่าน') : ''}
           </strong>
           <p className="small muted">
             {p.digest} · Hooks {p.hooks}
           </p>
           <button disabled={busy || p.invalid} onClick={() => void act('packEnable', { id: p.id, disable: p.enabled, hooks, agents })}>
-            {p.enabled ? 'ปิดใช้' : 'ยืนยันเปิดใช้'}
+            {p.enabled ? t('ปิดใช้') : t('ยืนยันเปิดใช้')}
           </button>
           <button disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
-            ส่งออก .claude/skills
+            {t('ส่งออก .claude/skills')}
           </button>
           {[
             ...p.skills.map((a: any) => ({ ...a, kind: 'skill' })),
@@ -95,7 +98,7 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
                 })()
               }
             >
-              ใช้ {a.kind}: {a.id}
+              {t('ใช้')} {a.kind}: {a.id}
             </button>
           ))}
         </section>

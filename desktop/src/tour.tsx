@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
+import { t } from './i18n';
 
 // A short spotlight tour over the real interface. Targets are marked with data-tour; a missing
 // target (a hidden pane) shows its card in the middle instead of pointing at nothing.
@@ -29,7 +30,11 @@ export const tourSteps = [
     body: 'AI เสนอร่างให้ตรวจก่อนเสมอ กด “ใช้ร่างนี้” แล้วแก้ต่อได้ มีประวัติเวอร์ชันและส่งออกเป็น docx, pdf, xlsx, pptx',
   },
   { target: 'tools', title: 'เครื่องมือเฉพาะงาน', body: 'เช่น ตรวจใบเสร็จก่อนส่ง AFP ด้วย OCR ในเครื่อง' },
-  { target: 'palette', title: 'ทางลัดทุกอย่าง', body: 'กด Ctrl+K (Mac: ⌘K) เพื่อค้นหางาน สลับโมเดล เปลี่ยนธีม หรือเปิดทัวร์นี้อีกครั้ง' },
+  {
+    target: 'palette',
+    title: 'ทางลัดทุกอย่าง',
+    body: 'กด Ctrl+K (Mac: ⌘K) เพื่อค้นหางาน สลับโมเดล เปลี่ยนธีม หรือเปิดทัวร์นี้อีกครั้ง',
+  },
 ];
 
 export function Tour({ onClose }: { onClose: () => void }) {
@@ -70,7 +75,12 @@ export function Tour({ onClose }: { onClose: () => void }) {
     : window.innerWidth / 2 - card / 2;
   const top = rect ? Math.min(Math.max(12, rect.top), window.innerHeight - 220) : window.innerHeight / 2 - 100;
   return (
-    <div className="tour" role="dialog" aria-modal="true" aria-label={`ทัวร์แนะนำ ${index + 1} จาก ${tourSteps.length}: ${step.title}`}>
+    <div
+      className="tour"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('ทัวร์แนะนำ {0} จาก {1}: {2}', index + 1, tourSteps.length, t(step.title))}
+    >
       {rect ? (
         <div
           className="tour-spot"
@@ -83,20 +93,20 @@ export function Tour({ onClose }: { onClose: () => void }) {
         <small className="muted">
           {index + 1} / {tourSteps.length}
         </small>
-        <h2>{step.title}</h2>
-        <p>{step.body}</p>
+        <h2>{t(step.title)}</h2>
+        <p>{t(step.body)}</p>
         <div className="tour-actions">
           <button className="text-link" onClick={onClose}>
-            ข้ามทัวร์
+            {t('ข้ามทัวร์')}
           </button>
           <span className="spacer" />
           {index > 0 && (
             <button className="quiet" onClick={() => setIndex(index - 1)}>
-              ย้อนกลับ
+              {t('ย้อนกลับ')}
             </button>
           )}
           <button autoFocus onClick={() => (last ? onClose() : setIndex(index + 1))}>
-            {last ? 'เริ่มใช้งาน' : 'ถัดไป'}
+            {last ? t('เริ่มใช้งาน') : t('ถัดไป')}
           </button>
         </div>
       </section>

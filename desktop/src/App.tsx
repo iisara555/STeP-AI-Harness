@@ -74,6 +74,8 @@ import { Readiness } from './readiness';
 import { VoiceButton } from './voice';
 import { PacksDialog } from './packs';
 import type { ToolQuestion } from './types';
+import { locale, setLanguage, t, teamName } from './i18n';
+import { startersFor, starterTag, starterText } from './starters';
 
 export default function App() {
   const api = window.step;
@@ -217,7 +219,7 @@ export default function App() {
       }),
     ],
     content: toDoc(''),
-    editorProps: { attributes: { 'aria-label': 'ร่างที่แก้ไขได้', class: 'draft-editor', spellcheck: 'false' } },
+    editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false' } },
     onUpdate: () => setDirty(true),
   });
   const refresh = useCallback(async () => {
@@ -293,7 +295,10 @@ export default function App() {
           setReasoning('');
           setPlan([]);
           setStartedAt(0);
-          setProgress(p => (p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' ? p : ''));
+          // The authority notice stays visible after the run; main sends it in the chosen language.
+          setProgress(p =>
+            p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' || p === t('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ') ? p : '',
+          );
           const finished = event.sessionId === runningId.current ? event.sessionId : '';
           runningId.current = '';
           void refresh().then(data => {
@@ -301,16 +306,16 @@ export default function App() {
             if (!done) return;
             const text =
               done.status === 'review'
-                ? `“${done.title}” มีร่างให้ตรวจแล้ว`
+                ? t('“{0}” มีร่างให้ตรวจแล้ว', done.title)
                 : done.status === 'waiting'
-                  ? `“${done.title}” รอข้อมูลเพิ่มจากคุณ`
+                  ? t('“{0}” รอข้อมูลเพิ่มจากคุณ', done.title)
                   : done.status === 'error'
-                    ? `“${done.title}” ต้องตรวจสอบ`
+                    ? t('“{0}” ต้องตรวจสอบ', done.title)
                     : '';
             if (!text) return;
             if (finished !== currentId.current)
               notify(text, done.status === 'error' ? 'error' : 'success', {
-                label: 'เปิดงาน',
+                label: t('เปิดงาน'),
                 run: () => selectSessionRef.current(finished),
               });
             if (!document.hasFocus() && typeof Notification !== 'undefined' && Notification.permission !== 'denied')
@@ -337,6 +342,8 @@ export default function App() {
       .then(setSkills)
       .catch(() => setSkills([]));
   }, [api]);
+  // Set during render so every child of this pass reads the chosen language.
+  setLanguage(snapshot?.settings.language);
   useEffect(() => {
     document.documentElement.dataset.theme = snapshot?.settings.theme || 'system';
   }, [snapshot?.settings.theme]);
@@ -406,8 +413,8 @@ export default function App() {
   };
   // Without a usable AI the request stays in the box and the person is told why, instead of being moved elsewhere.
   const needAi = () =>
-    notify('ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มการเชื่อมต่อ AI ก่อน', 'info', {
-      label: 'ไปที่การเชื่อมต่อ AI',
+    notify(t('ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มการเชื่อมต่อ AI ก่อน'), 'info', {
+      label: t('ไปที่การเชื่อมต่อ AI'),
       run: openAiSettings,
     });
   async function receiptHandoff(text: string, sourceText: string, allowIds: string[] = []) {
@@ -421,7 +428,7 @@ export default function App() {
       return;
     }
     await save();
-    const s = await api!.call('create', { connectionId, project: 'ตรวจใบเสร็จ AFP' });
+    const s = await api!.call('create', { connectionId, project: t('ตรวจใบเสร็จ AFP') });
     setView('chat');
     setSelected(s.id);
     await refresh();
@@ -470,7 +477,11 @@ export default function App() {
     const refused = files.find(f => !f.usable);
     if (refused) {
       notify(
-        `ส่งไฟล์ “${refused.name}” ให้ AI ไม่ได้: ${errorText[refused.reason || ''] || refused.status} · นำไฟล์ออกหรือแนบไฟล์อื่นก่อนส่ง`,
+        t(
+          'ส่งไฟล์ “{0}” ให้ AI ไม่ได้: {1} · นำไฟล์ออกหรือแนบไฟล์อื่นก่อนส่ง',
+          refused.name,
+          errorText[refused.reason || ''] || refused.status,
+        ),
         'error',
       );
       return;
@@ -526,7 +537,7 @@ export default function App() {
     setRunning(true);
     setStream('');
     setReasoning('');
-    setProgress('กำลังส่งข้อความ');
+    setProgress(t('กำลังส่งข้อความ'));
     setStartedAt(Date.now());
     setHeartbeatAt(Date.now());
     setActivityAt(Date.now());
@@ -573,7 +584,7 @@ export default function App() {
       });
       return;
     }
-    if (result.started && result.masked?.length) notify(`ระบบปิดบังก่อนส่งให้ AI: ${result.masked.join(', ')}`);
+    if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
       setForcedSkill('');
       setQuery('');
@@ -662,6 +673,8 @@ export default function App() {
   // "/" lists the person's team first and also matches Thai descriptions and trigger words.
   const slash = /^\/(\S*)$/.exec(query);
   const myTeam = snapshot?.settings.team || '';
+  const myTeamInfo = snapshot?.teams.find(team => team.id === myTeam);
+  const myTeamName = myTeamInfo ? teamName(myTeamInfo) : '';
   const forTeam = (s: SkillEntry) => Boolean(myTeam) && (s.owner === myTeam || s.teams.includes(myTeam));
   const slashMatches = slash
     ? routedSkills
@@ -748,15 +761,15 @@ export default function App() {
         ...routedSkills.map(s => ({
           id: 'skill-' + s.name,
           group: 'Skill',
-          label: 'ใช้ Skill: ' + s.title,
+          label: t('ใช้ Skill: ') + s.title,
           hint: '/' + s.name,
           run: () => useSkill(s.name),
         })),
         ...(connection?.models || []).map(m => ({
           id: 'model-' + m.id,
-          group: 'โมเดล',
-          label: 'ใช้ ' + m.label,
-          hint: m.id === currentModel ? 'ใช้อยู่' : providerName(connection),
+          group: t('โมเดล'),
+          label: t('ใช้ ') + m.label,
+          hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
           run: () => action(() => chooseModel(m.id)),
         })),
         ...[...snapshot.sessions]
@@ -764,7 +777,7 @@ export default function App() {
           .slice(0, 50)
           .map(s => ({
             id: 'session-' + s.id,
-            group: 'งาน',
+            group: t('งาน'),
             label: s.title,
             hint: s.project || statusText[s.status],
             run: () => action(() => selectSession(s.id)),
@@ -777,8 +790,8 @@ export default function App() {
       <main className="browser-message">
         <Sparkles size={36} />
         <h1>STeP Desktop</h1>
-        <p>พื้นที่ทำงานนี้ใช้ผ่านแอป Desktop เพื่อเชื่อมต่อ AI และจัดเก็บไฟล์ในเครื่อง</p>
-        <p>หน้านี้เป็นการเปิด UI ในเบราว์เซอร์ จึงยังใช้บัญชีหรือไฟล์จริงไม่ได้</p>
+        <p>{t('พื้นที่ทำงานนี้ใช้ผ่านแอป Desktop เพื่อเชื่อมต่อ AI และจัดเก็บไฟล์ในเครื่อง')}</p>
+        <p>{t('หน้านี้เป็นการเปิด UI ในเบราว์เซอร์ จึงยังใช้บัญชีหรือไฟล์จริงไม่ได้')}</p>
       </main>
     );
   if (!snapshot)
@@ -786,7 +799,7 @@ export default function App() {
       <main className="browser-message">
         <img className="illustration empty-art" src={ideaArt} alt="" />
         <LoaderCircle className="spin" />
-        <p>{error || 'กำลังเปิดพื้นที่ทำงาน…'}</p>
+        <p>{error || t('กำลังเปิดพื้นที่ทำงาน…')}</p>
       </main>
     );
   return (
@@ -801,25 +814,25 @@ export default function App() {
               </span>
               <span className="brand-tagline">MAKE INNOVATION SIMPLE</span>
             </div>
-            <button className="icon" title="ซ่อนแถบงาน" onClick={() => setLeft(false)}>
+            <button className="icon" title={t('ซ่อนแถบงาน')} onClick={() => setLeft(false)}>
               <PanelLeftClose size={17} />
             </button>
           </div>
           <button className="new-work" data-tour="new-work" onClick={() => void action(create)}>
-            <Plus size={18} /> เริ่มงานใหม่
+            <Plus size={18} /> {t('เริ่มงานใหม่')}
           </button>
           <label className="search">
             <Search size={16} />
-            <input placeholder="ค้นหางานหรือเนื้อหา" value={search} onChange={e => setSearch(e.target.value)} />
-            <button className="icon palette-hint" aria-label="เปิดคำสั่ง" onClick={() => setPalette(true)}>
+            <input placeholder={t('ค้นหางานหรือเนื้อหา')} value={search} onChange={e => setSearch(e.target.value)} />
+            <button className="icon palette-hint" aria-label={t('เปิดคำสั่ง')} onClick={() => setPalette(true)}>
               {shortcut}
             </button>
           </label>
-          <div className="session-filter" role="tablist" aria-label="กรองงาน">
+          <div className="session-filter" role="tablist" aria-label={t('กรองงาน')}>
             {(
               [
-                ['all', 'งานทั้งหมด', MessageSquare],
-                ['artifacts', 'มีผลงาน', FileText],
+                ['all', t('งานทั้งหมด'), MessageSquare],
+                ['artifacts', t('มีผลงาน'), FileText],
               ] as const
             ).map(([value, label, Icon]) => (
               <button
@@ -838,7 +851,7 @@ export default function App() {
               </button>
             ))}
           </div>
-          {filter !== 'all' && <div className="recent-label">ร่างที่บันทึกแล้ว</div>}
+          {filter !== 'all' && <div className="recent-label">{t('ร่างที่บันทึกแล้ว')}</div>}
           <div className="sessions">
             {groupSessions(filtered).map(group => (
               <section key={group.label} aria-label={group.label}>
@@ -848,7 +861,7 @@ export default function App() {
                     <input
                       key={s.id}
                       className="session-rename"
-                      aria-label="ชื่องาน"
+                      aria-label={t('ชื่องาน')}
                       autoFocus
                       value={renaming.title}
                       onChange={e => setRenaming({ ...renaming, title: e.target.value })}
@@ -866,15 +879,15 @@ export default function App() {
                   ) : (
                     <div key={s.id} className={`session ${selected === s.id ? 'selected' : ''}`}>
                       <button className="session-open" onClick={() => void action(() => selectSession(s.id))}>
-                        <span>{s.title}</span>
+                        <span>{t(s.title)}</span>
                         <small>
-                          {s.project || s.team.toUpperCase() || 'ทุกทีม'} · {statusText[s.status] || s.status}
+                          {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {statusText[s.status] || s.status}
                         </small>
                       </button>
                       <span className="session-actions">
                         <button
                           className="icon"
-                          aria-label={s.pinned ? 'เลิกปักหมุด' : 'ปักหมุด'}
+                          aria-label={s.pinned ? t('เลิกปักหมุด') : t('ปักหมุด')}
                           onClick={() =>
                             void action(async () => {
                               await api.call('pin', { id: s.id, pinned: !s.pinned });
@@ -884,10 +897,15 @@ export default function App() {
                         >
                           {s.pinned ? <PinOff size={14} /> : <Pin size={14} />}
                         </button>
-                        <button className="icon" aria-label="เปลี่ยนชื่อ" onClick={() => setRenaming({ id: s.id, title: s.title })}>
+                        <button className="icon" aria-label={t('เปลี่ยนชื่อ')} onClick={() => setRenaming({ id: s.id, title: s.title })}>
                           <Pencil size={14} />
                         </button>
-                        <button className="icon" aria-label="ลบงาน" disabled={running && selected === s.id} onClick={() => setRemoving(s)}>
+                        <button
+                          className="icon"
+                          aria-label={t('ลบงาน')}
+                          disabled={running && selected === s.id}
+                          onClick={() => setRemoving(s)}
+                        >
                           <Trash2 size={14} />
                         </button>
                       </span>
@@ -896,9 +914,11 @@ export default function App() {
                 )}
               </section>
             ))}
-            {!filtered.length && <p className="muted small">{search ? 'ไม่พบงานที่ตรงกับคำค้น' : 'เมื่อเริ่มงาน บทสนทนาจะอยู่ที่นี่'}</p>}
+            {!filtered.length && (
+              <p className="muted small">{search ? t('ไม่พบงานที่ตรงกับคำค้น') : t('เมื่อเริ่มงาน บทสนทนาจะอยู่ที่นี่')}</p>
+            )}
           </div>
-          <div className="session-group tools-group">เครื่องมือ</div>
+          <div className="session-group tools-group">{t('เครื่องมือ')}</div>
           <nav>
             <button
               data-tour="skills"
@@ -909,7 +929,8 @@ export default function App() {
               }}
             >
               <Blocks size={17} />
-              ศูนย์รวม Skill<span className="count">{skills ? skills.length + toolCount : ''}</span>
+              {t('ศูนย์รวม Skill')}
+              <span className="count">{skills ? skills.length + toolCount : ''}</span>
             </button>
             <button
               data-tour="tools"
@@ -920,7 +941,8 @@ export default function App() {
               }}
             >
               <ReceiptText size={17} />
-              ตรวจใบเสร็จ AFP<span className="beta">ทดลอง</span>
+              {t('ตรวจใบเสร็จ AFP')}
+              <span className="beta">{t('ทดลอง')}</span>
             </button>
           </nav>
           <button
@@ -931,15 +953,15 @@ export default function App() {
             }}
           >
             <Settings2 size={18} />
-            <span>ตั้งค่าพื้นที่ทำงาน</span>
+            <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
           </button>
           <div className="profile">
             <span>{initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}</span>
             <div>
               {snapshot.settings.userName || snapshot.settings.assistant}
               <small>
-                {snapshot.settings.userName ? `ผู้ช่วย ${snapshot.settings.assistant} · ` : ''}
-                {snapshot.settings.team ? `ทีม ${snapshot.settings.team.toUpperCase()}` : 'ยังไม่เลือกทีม'}
+                {snapshot.settings.userName ? t('ผู้ช่วย {0} · ', snapshot.settings.assistant) : ''}
+                {snapshot.settings.team ? t('ทีม {0}', snapshot.settings.team.toUpperCase()) : t('ยังไม่เลือกทีม')}
               </small>
             </div>
           </div>
@@ -948,34 +970,34 @@ export default function App() {
       <main className="main-pane">
         <header className="topbar">
           {!left && (
-            <button className="icon" title="แสดงแถบงาน" onClick={() => setLeft(true)}>
+            <button className="icon" title={t('แสดงแถบงาน')} onClick={() => setLeft(true)}>
               <PanelLeftClose size={18} />
             </button>
           )}
           <div>
             <strong>
               {settings
-                ? 'ตั้งค่าพื้นที่ทำงาน'
+                ? t('ตั้งค่าพื้นที่ทำงาน')
                 : view === 'receipt'
-                  ? 'ตรวจใบเสร็จก่อนส่ง AFP'
+                  ? t('ตรวจใบเสร็จก่อนส่ง AFP')
                   : view === 'skills'
-                    ? 'ศูนย์รวม Skill'
-                    : session?.title || 'เริ่มต้นงานที่อยากทำ'}
+                    ? t('ศูนย์รวม Skill')
+                    : session?.title || t('เริ่มต้นงานที่อยากทำ')}
             </strong>
             <small>
               {settings
-                ? 'บัญชี AI และข้อมูลอยู่ในเครื่องนี้'
+                ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
                 : view === 'receipt'
-                  ? 'ทดลอง · อ่านด้วย OCR ในเครื่อง ไม่ส่งเอกสารขึ้น cloud'
+                  ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง ไม่ส่งเอกสารขึ้น cloud')
                   : view === 'skills'
-                    ? 'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing'
-                    : session?.project || 'จากคำขอ สู่ผลงานที่ใช้ต่อได้'}
+                    ? t('Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing')
+                    : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
             </small>
           </div>
           {!settings && view === 'chat' && (
             <button className="quiet" onClick={() => setRight(!right)}>
               <FileText size={16} />
-              {right ? 'ซ่อนร่าง' : 'เปิดร่าง'}
+              {right ? t('ซ่อนร่าง') : t('เปิดร่าง')}
             </button>
           )}
         </header>
@@ -1023,7 +1045,7 @@ export default function App() {
                       })
                     }
                   >
-                    ทำสำเนาเป็นงานใหม่
+                    {t('ทำสำเนาเป็นงานใหม่')}
                   </button>
                   <button
                     className="quiet"
@@ -1031,11 +1053,11 @@ export default function App() {
                       void action(async () => {
                         await save();
                         const result = await api.call('sessionExport', { id: session.id, format: 'md' });
-                        if (result) notify('บันทึกบทสนทนาแล้ว');
+                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
                       })
                     }
                   >
-                    ส่งออก Markdown
+                    {t('ส่งออก Markdown')}
                   </button>
                   <button
                     className="quiet"
@@ -1043,37 +1065,40 @@ export default function App() {
                       void action(async () => {
                         await save();
                         const result = await api.call('sessionExport', { id: session.id, format: 'json' });
-                        if (result) notify('บันทึกบทสนทนาแล้ว');
+                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
                       })
                     }
                   >
-                    ส่งออก JSON
+                    {t('ส่งออก JSON')}
                   </button>
                   <button className="quiet" onClick={() => setMemoryOpen(true)}>
-                    ความจำ
+                    {t('ความจำ')}
                   </button>
                   <button
                     className="quiet"
-                    title="ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน"
+                    title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
                     onClick={() => setAutomationOpen(true)}
                   >
-                    งานตามรอบ
+                    {t('งานตามรอบ')}
                   </button>
                   {snapshot.policy?.features.coordinator && (
                     <label>
                       <input
-                        aria-label="แบ่งงานย่อย"
+                        aria-label={t('แบ่งงานย่อย')}
                         type="checkbox"
                         checked={coordinated}
                         disabled={running || workMode !== 'draft'}
                         onChange={e => setCoordinated(e.target.checked)}
                       />
-                      แบ่งงานย่อย
+                      {t('แบ่งงานย่อย')}
                     </label>
                   )}
                   {!!session.loadedContext?.length && (
                     <details>
-                      <summary>บริบทที่ใช้ ({session.loadedContext.length})</summary>
+                      <summary>
+                        {t('บริบทที่ใช้ (')}
+                        {session.loadedContext.length})
+                      </summary>
                       <ul>
                         {session.loadedContext.map((s, i) => (
                           <li key={i}>{s}</li>
@@ -1083,8 +1108,8 @@ export default function App() {
                   )}
                   {session.compaction && (
                     <span className="muted small">
-                      ย่อบริบทแล้ว {session.compaction.before.toLocaleString('th-TH')} → {session.compaction.after.toLocaleString('th-TH')}{' '}
-                      tokens (ประมาณการ)
+                      {t('ย่อบริบทแล้ว')} {session.compaction.before.toLocaleString(locale())} →{' '}
+                      {session.compaction.after.toLocaleString(locale())} {t('tokens (ประมาณการ)')}
                     </span>
                   )}
                 </div>
@@ -1092,33 +1117,52 @@ export default function App() {
               {!session?.messages.length && (
                 <div className="welcome">
                   <img className="illustration welcome-art" src={launchArt} alt="" />
-                  {snapshot.settings.userName && <p className="greet">สวัสดีครับ คุณ{snapshot.settings.userName}</p>}
+                  <p className="greet">
+                    {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
+                    {myTeamName ? ` · ${myTeamName}` : ''}
+                  </p>
                   <h1>
-                    คุย วางแผน
+                    {t('ให้ AI ร่างงานหนัก')}
                     <br />
-                    และสร้างงานไปด้วยกัน
+                    <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
                   </h1>
-                  <p>
-                    ถามได้ตามปกติ หรือเลือกสร้างเอกสารและรูป
-                    <br />
-                    พร้อมเครื่องมือสำหรับทำงานในโฟลเดอร์ของคุณ
+                  <p className="suggestions-label">
+                    {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
                   </p>
                   <div className="suggestions">
-                    {(snapshot.settings.team === 'qs'
-                      ? [
-                          'ช่วยเตรียม checklist ตรวจติดตามคุณภาพภายใน ISO 9001',
-                          'ช่วยสรุปบันทึกประชุมเป็นรายการงาน',
-                          'ช่วยร่างอีเมลเชิญประชุมทีม',
-                        ]
-                      : ['ช่วยร่างอีเมลเชิญประชุมทีม', 'ช่วยสรุปบันทึกประชุมเป็นรายการงาน', 'ช่วยวางโครงสไลด์นำเสนอโครงการ']
-                    ).map(text => (
-                      <button key={text} onClick={() => setQuery(text)}>
-                        <FileText size={16} />
-                        <span>{text}</span>
-                        <ChevronLeft className="point-right" size={15} />
-                      </button>
-                    ))}
+                    {startersFor(snapshot.settings.team).map(starter => {
+                      const text = starterText(starter);
+                      return (
+                        <button key={text} onClick={() => setQuery(text)}>
+                          <Sparkles size={16} />
+                          <span>
+                            <small className="starter-tag">{starterTag(starter)}</small>
+                            {text}
+                          </span>
+                          <ChevronLeft className="point-right" size={15} />
+                        </button>
+                      );
+                    })}
                   </div>
+                  <p className="welcome-lede">
+                    {t(
+                      'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง',
+                    )}
+                  </p>
+                  <ul className="welcome-trust">
+                    <li>
+                      <ShieldCheck size={14} />
+                      {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
+                    </li>
+                    <li>
+                      <Check size={14} />
+                      {t('AI ร่าง คนตรวจและอนุมัติ')}
+                    </li>
+                    <li>
+                      <Blocks size={14} />
+                      {t('รู้จักทีมและ Skill ของ STeP')}
+                    </li>
+                  </ul>
                 </div>
               )}
               {session?.messages.map((message, index) => (
@@ -1127,15 +1171,17 @@ export default function App() {
                   className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}`}
                 >
                   <div className="message-author">
-                    {message.role === 'user' ? 'คุณ' : message.role === 'status' ? 'สถานะงาน' : snapshot.settings.assistant}
+                    {message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant}
                   </div>
                   {message.role === 'assistant' ? (
                     <RichText className="message-body" text={message.text} />
                   ) : (
-                    <div className="message-body">{message.role === 'status' ? errorText[message.text] || message.text : message.text}</div>
+                    <div className="message-body">
+                      {message.role === 'status' ? errorText[message.text] || t(message.text) : message.text}
+                    </div>
                   )}
                   {!!message.files?.length && (
-                    <div className="message-files" aria-label="ไฟล์ที่ส่งกับข้อความนี้">
+                    <div className="message-files" aria-label={t('ไฟล์ที่ส่งกับข้อความนี้')}>
                       {message.files.map((file, i) => (
                         <span key={i}>
                           <Paperclip size={12} />
@@ -1145,8 +1191,8 @@ export default function App() {
                     </div>
                   )}
                   {!!message.webSources?.length && (
-                    <div className="web-sources" aria-label="แหล่งข้อมูลจากการค้นเว็บ">
-                      <span>แหล่งข้อมูลจาก Web Search</span>
+                    <div className="web-sources" aria-label={t('แหล่งข้อมูลจากการค้นเว็บ')}>
+                      <span>{t('แหล่งข้อมูลจาก Web Search')}</span>
                       {message.webSources
                         .filter(source => publicSourceUrl(source.url))
                         .map(source => (
@@ -1167,7 +1213,7 @@ export default function App() {
                         className="quiet"
                         onClick={() => void navigator.clipboard.writeText(message.text).catch(e => notify(explainError(e), 'error'))}
                       >
-                        คัดลอก
+                        {t('คัดลอก')}
                       </button>
                       <button
                         className="quiet"
@@ -1181,7 +1227,7 @@ export default function App() {
                           })
                         }
                       >
-                        เปิดใน Output
+                        {t('เปิดใน Output')}
                       </button>
                       {toolRequests(message.text).map((request, i) => (
                         <button
@@ -1193,7 +1239,7 @@ export default function App() {
                             setRight(true);
                           }}
                         >
-                          ตรวจ {request.tool}: {request.input.slice(0, 50)}
+                          {t('ตรวจ')} {request.tool}: {request.input.slice(0, 50)}
                         </button>
                       ))}
                     </div>
@@ -1213,9 +1259,9 @@ export default function App() {
                 ))}
               {snapshot?.usage?.warnings.length ? (
                 <p className="small muted" role="status">
-                  การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้{' '}
+                  {t('การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้')}{' '}
                   <button className="quiet" onClick={() => setUsageOpen(true)}>
-                    ดูการใช้งาน
+                    {t('ดูการใช้งาน')}
                   </button>
                 </p>
               ) : null}
@@ -1223,18 +1269,21 @@ export default function App() {
                 <article className="message assistant">
                   <div className="activity" role="status" aria-live="polite">
                     <LoaderCircle className="spin" size={15} />
-                    {progress || 'กำลังทำงาน'}
+                    {progress ? t(progress) : t('กำลังทำงาน')}
                   </div>
                   <div className="activity-detail">
                     <span className="activity-pulse" aria-hidden="true" />
                     <span>
-                      ใช้เวลา {elapsed || '0 วินาที'} · {now - heartbeatAt > 15000 ? 'ยังไม่ได้รับสถานะจากแอป' : 'แอปยังทำงานอยู่'}
+                      {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
+                      {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
                     </span>
                   </div>
-                  {now - activityAt > 45000 && !stream && <p className="small muted">ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้</p>}
+                  {now - activityAt > 45000 && !stream && (
+                    <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
+                  )}
                   {activities.length > 1 && (
                     <details className="activity-history">
-                      <summary>ดูขั้นตอนที่ทำแล้ว</summary>
+                      <summary>{t('ดูขั้นตอนที่ทำแล้ว')}</summary>
                       <ol>
                         {activities.slice(0, -1).map((label, index) => (
                           <li key={index}>{label}</li>
@@ -1243,7 +1292,7 @@ export default function App() {
                     </details>
                   )}
                   {plan.length > 1 && (
-                    <ol className="plan-card" aria-label="ขั้นตอนของงาน">
+                    <ol className="plan-card" aria-label={t('ขั้นตอนของงาน')}>
                       {plan.map((step, i) => (
                         <li key={i} className={step.state}>
                           {step.state === 'running' ? (
@@ -1257,7 +1306,7 @@ export default function App() {
                           )}
                           <span>
                             {step.label}
-                            {step.action && <small> · ต้องทำโดยผู้มีอำนาจ</small>}
+                            {step.action && <small> {t('· ต้องทำโดยผู้มีอำนาจ')}</small>}
                           </span>
                         </li>
                       ))}
@@ -1267,7 +1316,7 @@ export default function App() {
                     <details className="thinking">
                       <summary>
                         <Brain size={14} />
-                        ความคิดของ AI
+                        {t('ความคิดของ AI')}
                       </summary>
                       <div>{reasoning}</div>
                     </details>
@@ -1296,7 +1345,7 @@ export default function App() {
                       )
                     }
                   >
-                    ลองอีกครั้ง
+                    {t('ลองอีกครั้ง')}
                   </button>
                   <button
                     className="quiet"
@@ -1305,15 +1354,17 @@ export default function App() {
                       setTimeout(() => composerRef.current?.focus(), 0);
                     }}
                   >
-                    แก้คำขอ
+                    {t('แก้คำขอ')}
                   </button>
-                  {(connection?.models?.length || 0) > 1 && <span className="small muted">หรือเลือกโมเดลอื่นในกล่องพิมพ์ก่อนลองใหม่</span>}
+                  {(connection?.models?.length || 0) > 1 && (
+                    <span className="small muted">{t('หรือเลือกโมเดลอื่นในกล่องพิมพ์ก่อนลองใหม่')}</span>
+                  )}
                 </div>
               )}
-              {!running && progress && <p className="muted small">{progress}</p>}
+              {!running && progress && <p className="muted small">{t(progress)}</p>}
               {!running && workMode !== 'image' && needsPublicWebSearch(query) && (
                 <p className="web-route small" role="status">
-                  Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ
+                  {t('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ')}
                 </p>
               )}
               <div ref={conversationEnd} />
@@ -1324,8 +1375,8 @@ export default function App() {
                 .map(g => (
                   <div className="transmission-scope" key={g.id} role="status">
                     <span>
-                      อนุญาตส่งผลการอ่าน: {g.source} → {g.destination} · เหลือ {g.remainingResults} ผล /{' '}
-                      {g.remainingChars.toLocaleString('th-TH')} ตัวอักษร · ถึง {new Date(g.expiresAt).toLocaleTimeString('th-TH')}
+                      {t('อนุญาตส่งผลการอ่าน:')} {g.source} → {g.destination} {t('· เหลือ')} {g.remainingResults} {t('ผล /')}{' '}
+                      {g.remainingChars.toLocaleString(locale())} {t('ตัวอักษร · ถึง')} {new Date(g.expiresAt).toLocaleTimeString(locale())}
                     </span>
                     <button
                       className="quiet"
@@ -1336,12 +1387,12 @@ export default function App() {
                         })
                       }
                     >
-                      ถอนสิทธิ์และหยุดงาน
+                      {t('ถอนสิทธิ์และหยุดงาน')}
                     </button>
                   </div>
                 ))}
               <div className="composer" data-tour="composer">
-                <div className="composer-mode" role="group" aria-label="โหมดทำงาน">
+                <div className="composer-mode" role="group" aria-label={t('โหมดทำงาน')}>
                   {(['chat', 'draft', 'image'] as WorkMode[]).map(mode => (
                     <button
                       key={mode}
@@ -1349,12 +1400,12 @@ export default function App() {
                       disabled={running || submitting}
                       onClick={() => setWorkMode(mode)}
                     >
-                      {mode === 'chat' ? 'คุยกับผู้ช่วย' : mode === 'draft' ? 'สร้างเอกสาร' : 'สร้างรูป'}
+                      {mode === 'chat' ? t('คุยกับผู้ช่วย') : mode === 'draft' ? t('สร้างเอกสาร') : t('สร้างรูป')}
                     </button>
                   ))}
                   {snapshot.policy && (
                     <select
-                      aria-label="สิทธิ์เครื่องมือ"
+                      aria-label={t('สิทธิ์เครื่องมือ')}
                       value={snapshot.policy.mode}
                       disabled={running || submitting}
                       onChange={e =>
@@ -1365,19 +1416,20 @@ export default function App() {
                       }
                     >
                       <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                        ถามก่อนทำ
+                        {t('ถามก่อนทำ')}
                       </option>
                       <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
-                        วางแผน · อ่านอย่างเดียว
+                        {t('วางแผน · อ่านอย่างเดียว')}
                       </option>
                       <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                        อัตโนมัติ{!snapshot.policy.modes.includes('auto') ? ' · ปิดโดยผู้ดูแล' : ''}
+                        {t('อัตโนมัติ')}
+                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
                       </option>
                     </select>
                   )}
                   {pendingSource && (
                     <button className="source-chip quiet" onClick={() => setPendingSource('')}>
-                      ข้อมูลต้นทางแนบแล้ว ×
+                      {t('ข้อมูลต้นทางแนบแล้ว ×')}
                     </button>
                   )}
                 </div>
@@ -1393,7 +1445,7 @@ export default function App() {
                           onChange={e => setImageModel(e.target.value)}
                           disabled={running}
                         >
-                          <option value="">{availableImages[0] || 'กำลังตรวจโมเดลของบัญชี…'}</option>
+                          <option value="">{availableImages[0] || t('กำลังตรวจโมเดลของบัญชี…')}</option>
                           {availableImages.map(id => (
                             <option key={id} value={id}>
                               {id}
@@ -1403,7 +1455,7 @@ export default function App() {
                         {imageCatalogError && <small>{imageCatalogError}</small>}
                       </>
                     ) : (
-                      <span>เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key เพื่อสร้างรูป · OAuth นี้ยังไม่มี Image API</span>
+                      <span>{t('เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key เพื่อสร้างรูป · OAuth นี้ยังไม่มี Image API')}</span>
                     )}
                   </div>
                 )}
@@ -1414,9 +1466,9 @@ export default function App() {
                         <button onClick={() => setInspecting(f)} title={f.usable ? f.status : errorText[f.reason || ''] || f.status}>
                           <Paperclip size={13} />
                           {f.name}
-                          {!f.usable && <small> · ส่งไม่ได้</small>}
+                          {!f.usable && <small> {t('· ส่งไม่ได้')}</small>}
                         </button>
-                        <button title="นำไฟล์ออก" onClick={() => setFiles(files.filter(x => x.id !== f.id))}>
+                        <button title={t('นำไฟล์ออก')} onClick={() => setFiles(files.filter(x => x.id !== f.id))}>
                           <X size={13} />
                         </button>
                       </span>
@@ -1426,14 +1478,14 @@ export default function App() {
                 {session && !running && !connection?.ready && (
                   <div className="connection-warning" role="status">
                     <Sparkles size={14} />
-                    <span>{connection ? `${providerName(connection)} ของงานนี้ยังไม่พร้อม` : 'งานนี้ยังไม่ได้เลือก AI'}</span>
+                    <span>{connection ? t('{0} ของงานนี้ยังไม่พร้อม', providerName(connection)) : t('งานนี้ยังไม่ได้เลือก AI')}</span>
                     {readyConnection && readyConnection.id !== session.connectionId ? (
                       <button className="quiet" onClick={() => void action(() => chooseConnection(readyConnection.id))}>
-                        เปลี่ยนเป็น {providerName(readyConnection)}
+                        {t('เปลี่ยนเป็น')} {providerName(readyConnection)}
                       </button>
                     ) : (
                       <button className="quiet" onClick={openAiSettings}>
-                        ไปที่การเชื่อมต่อ AI
+                        {t('ไปที่การเชื่อมต่อ AI')}
                       </button>
                     )}
                   </div>
@@ -1441,15 +1493,15 @@ export default function App() {
                 {forced && (
                   <div className="skill-chip">
                     <Blocks size={13} />
-                    ใช้ Skill: <strong>{forced.title}</strong>
+                    {t('ใช้ Skill:')} <strong>{forced.title}</strong>
                     <code>/{forced.name}</code>
-                    <button className="icon" aria-label="เลิกใช้ Skill นี้" onClick={() => setForcedSkill('')}>
+                    <button className="icon" aria-label={t('เลิกใช้ Skill นี้')} onClick={() => setForcedSkill('')}>
                       <X size={13} />
                     </button>
                   </div>
                 )}
                 {slashMatches.length > 0 && (
-                  <div className="slash-menu" role="listbox" aria-label="เลือก Skill">
+                  <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
                     {slashMatches.map((s, i) => (
                       <button
                         key={s.name}
@@ -1463,7 +1515,7 @@ export default function App() {
                       >
                         <span className="slash-title">
                           {s.title}
-                          {forTeam(s) && <small className="team-mark">ทีมคุณ</small>}
+                          {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
                         </span>
                         <small className="slash-desc">{s.description}</small>
                         <code>/{s.name}</code>
@@ -1473,8 +1525,8 @@ export default function App() {
                 )}
                 <textarea
                   ref={composerRef}
-                  aria-label="พิมพ์คำขอ"
-                  placeholder={forced ? `บอกงานสำหรับ ${forced.title}…` : 'พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill'}
+                  aria-label={t('พิมพ์คำขอ')}
+                  placeholder={forced ? t('บอกงานสำหรับ {0}…', forced.title) : t('พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill')}
                   value={query}
                   onChange={e => {
                     setQuery(e.target.value);
@@ -1524,7 +1576,7 @@ export default function App() {
                   {snapshot.policy?.features.vision && (
                     <button
                       className="quiet"
-                      title="ตรวจและแนบภาพต้นฉบับให้ AI"
+                      title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
                       disabled={running}
                       onClick={() =>
                         void action(async () => {
@@ -1538,12 +1590,12 @@ export default function App() {
                         })
                       }
                     >
-                      แนบภาพให้ AI
+                      {t('แนบภาพให้ AI')}
                     </button>
                   )}
                   <button
                     className="icon"
-                    title="ตรวจและแนบเอกสาร"
+                    title={t('ตรวจและแนบเอกสาร')}
                     disabled={running || (!session && connectionId === CLAUDE_CODE)}
                     onClick={() =>
                       void action(async () => {
@@ -1560,31 +1612,33 @@ export default function App() {
                     <Paperclip size={18} />
                   </button>
                   <select
-                    aria-label="เลือกการเชื่อมต่อ AI"
+                    aria-label={t('เลือกการเชื่อมต่อ AI')}
                     value={session ? session.connectionId : connectionId}
                     disabled={running}
                     onChange={e => void action(() => chooseConnection(e.target.value))}
                   >
-                    <option value="">เลือก AI</option>
+                    <option value="">{t('เลือก AI')}</option>
                     {snapshot.connections.map(c => (
                       <option key={c.id} value={c.id}>
-                        {providerLabel(c.provider)} · {c.mode === 'api' ? 'API' : 'บัญชีส่วนตัว'}
-                        {c.ready ? '' : ' · ยังไม่พร้อม'}
+                        {providerLabel(c.provider)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
+                        {c.ready ? '' : t(' · ยังไม่พร้อม')}
                       </option>
                     ))}
-                    {!session && <option value={CLAUDE_CODE}>Claude · Pro/Max (เปิดใน Claude Code)</option>}
+                    {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
                   </select>
                   {connection && (
                     <select
-                      aria-label="เลือกโมเดล"
+                      aria-label={t('เลือกโมเดล')}
                       data-tour="model"
                       className="model-select"
-                      title={connection.models?.find(m => m.id === currentModel)?.description || 'โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ'}
+                      title={
+                        connection.models?.find(m => m.id === currentModel)?.description || t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
+                      }
                       value={currentModel}
                       disabled={running}
                       onChange={e => void action(() => chooseModel(e.target.value))}
                     >
-                      <option value="">{defaultModel ? `ค่าเริ่มต้น (${defaultModel.label})` : 'ค่าเริ่มต้นของบริการ'}</option>
+                      <option value="">{defaultModel ? t('ค่าเริ่มต้น ({0})', defaultModel.label) : t('ค่าเริ่มต้นของบริการ')}</option>
                       {(connection.models || []).map(m => (
                         <option key={m.id} value={m.id} title={m.description}>
                           {m.label}
@@ -1597,11 +1651,11 @@ export default function App() {
                   )}
                   {activeModel?.efforts?.length ? (
                     <select
-                      aria-label="เลือกระดับการคิด"
+                      aria-label={t('เลือกระดับการคิด')}
                       className="model-select"
                       title={
                         activeModel.efforts.find(e => e.id === currentEffort)?.description ||
-                        'ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น'
+                        t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น')
                       }
                       value={currentEffort}
                       disabled={running}
@@ -1609,25 +1663,25 @@ export default function App() {
                     >
                       <option value="">
                         {activeModel.defaultEffort
-                          ? `ระดับการคิด: ค่าเริ่มต้น (${effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort})`
-                          : 'ระดับการคิด: ค่าเริ่มต้น'}
+                          ? t('ระดับการคิด: ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
+                          : t('ระดับการคิด: ค่าเริ่มต้น')}
                       </option>
                       {activeModel.efforts.map(e => (
                         <option key={e.id} value={e.id} title={e.description}>
-                          ระดับการคิด: {effortLabel[e.id] || e.id}
+                          {t('ระดับการคิด:')} {effortLabel[e.id] || e.id}
                         </option>
                       ))}
                     </select>
                   ) : null}
                   <span className="spacer" />
                   {running ? (
-                    <button className="send stop" title="หยุดงาน" onClick={() => void api.call('cancel', { id: selected })}>
+                    <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
                       <Square size={17} />
                     </button>
                   ) : (
                     <button
                       className="send"
-                      title="ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)"
+                      title={t('ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)')}
                       disabled={!query.trim() || submitting}
                       onClick={() => void action(send)}
                     >
@@ -1636,20 +1690,22 @@ export default function App() {
                   )}
                 </div>
               </div>
-              <div className="composer-note">ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง</div>
+              <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
               {/* With a task open, the connection warning above the box already offers this action. */}
               {!connection?.ready && !session && (
                 <button className="text-link" onClick={openAiSettings}>
-                  เชื่อมต่อ AI เพื่อเริ่มทำงาน
+                  {t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}
                 </button>
               )}
             </div>
           </>
         )}
-        <footer className="statusbar" aria-label="สถานะ">
+        <footer className="statusbar" aria-label={t('สถานะ')}>
           <span className={`status-dot ${connection?.ready ? 'ok' : ''}`} aria-hidden="true" />
           <span>
-            {connection ? `${providerName(connection)} · ${connection.ready ? 'พร้อมทำงาน' : 'ยังไม่พร้อม'}` : 'ยังไม่เชื่อมต่อ AI'}
+            {connection
+              ? `${providerName(connection)} · ${connection.ready ? t('พร้อมทำงาน') : t('ยังไม่พร้อม')}`
+              : t('ยังไม่เชื่อมต่อ AI')}
           </span>
           {elapsed && (
             <span className="status-item">
@@ -1661,20 +1717,25 @@ export default function App() {
           {session?.usage && (
             <span
               className="status-item"
-              title={`ส่งเข้า ${session.usage.input.toLocaleString('th-TH')} · ตอบกลับ ${session.usage.output.toLocaleString('th-TH')} token จาก ${session.usage.runs} รอบ`}
+              title={t(
+                'ส่งเข้า {0} · ตอบกลับ {1} token จาก {2} รอบ',
+                session.usage.input.toLocaleString(locale()),
+                session.usage.output.toLocaleString(locale()),
+                session.usage.runs,
+              )}
             >
               {formatTokens(session.usage.total)} token
             </span>
           )}
           {connection && (
             <span className="status-item">
-              {activeModel?.label || currentModel || 'โมเดลค่าเริ่มต้น'}
+              {activeModel?.label || currentModel || t('โมเดลค่าเริ่มต้น')}
               {currentEffort ? ` · ${effortLabel[currentEffort] || currentEffort}` : ''}
             </span>
           )}
           <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
             <Command size={12} />
-            คำสั่ง {shortcut}
+            {t('คำสั่ง')} {shortcut}
           </button>
         </footer>
       </main>
@@ -1683,7 +1744,7 @@ export default function App() {
           <div
             className="resize-handle"
             role="separator"
-            aria-label="ปรับความกว้างร่าง"
+            aria-label={t('ปรับความกว้างร่าง')}
             tabIndex={0}
             onKeyDown={e => {
               if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
@@ -1709,12 +1770,12 @@ export default function App() {
                   >
                     {
                       {
-                        output: 'ผลงาน',
-                        browser: 'เว็บ',
-                        terminal: 'คำสั่งขั้นสูง',
-                        tasks: 'งานเบื้องหลัง',
-                        files: 'ไฟล์งาน',
-                        changes: 'รายการแก้ไข',
+                        output: t('ผลงาน'),
+                        browser: t('เว็บ'),
+                        terminal: t('คำสั่งขั้นสูง'),
+                        tasks: t('งานเบื้องหลัง'),
+                        files: t('ไฟล์งาน'),
+                        changes: t('รายการแก้ไข'),
                       }[tab]
                     }
                   </button>
@@ -1722,9 +1783,11 @@ export default function App() {
               <button
                 className="workbench-advanced"
                 aria-expanded={advancedTools}
-                aria-label="เครื่องมือขั้นสูง"
+                aria-label={t('เครื่องมือขั้นสูง')}
                 title={
-                  advancedTools ? 'ซ่อนแท็บคำสั่งขั้นสูง' : 'เครื่องมือขั้นสูง: แสดงแท็บคำสั่งขั้นสูงสำหรับผู้ใช้ที่คุ้นเคยกับ Terminal'
+                  advancedTools
+                    ? t('ซ่อนแท็บคำสั่งขั้นสูง')
+                    : t('เครื่องมือขั้นสูง: แสดงแท็บคำสั่งขั้นสูงสำหรับผู้ใช้ที่คุ้นเคยกับ Terminal')
                 }
                 onClick={() => {
                   setAdvancedTools(!advancedTools);
@@ -1743,44 +1806,44 @@ export default function App() {
               onTab={setToolTab}
               onBrowserTask={url => {
                 setWorkMode('chat');
-                setQuery(`ให้ผู้ช่วยทำงานบนเว็บ ${url === 'https://' ? '[ใส่ URL]' : url} โดย [ระบุสิ่งที่ต้องการทำ]`);
+                setQuery(t('ให้ผู้ช่วยทำงานบนเว็บ {0} โดย [ระบุสิ่งที่ต้องการทำ]', url === 'https://' ? t('[ใส่ URL]') : url));
                 composerRef.current?.focus();
               }}
               onSource={text => {
                 setPendingSource(text.slice(0, 100000));
-                setQuery('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา');
+                setQuery(t('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา'));
                 composerRef.current?.focus();
               }}
             />
             <div className="output-document" hidden={toolTab !== 'output'}>
               <header className="artifact-header">
                 <FileText size={18} />
-                <strong>ผลงาน</strong>
+                <strong>{t('ผลงาน')}</strong>
                 <span className="spacer" />
-                <button className="icon" title="ประวัติเวอร์ชัน" onClick={() => setHistory(!history)}>
+                <button className="icon" title={t('ประวัติเวอร์ชัน')} onClick={() => setHistory(!history)}>
                   <History size={17} />
                 </button>
-                <button className="icon" title="ซ่อนร่าง" onClick={() => setRight(false)}>
+                <button className="icon" title={t('ซ่อนร่าง')} onClick={() => setRight(false)}>
                   <PanelRightClose size={17} />
                 </button>
               </header>
               {!session ? (
                 <div className="artifact-empty">
                   <img className="illustration empty-art" src={draftingArt} alt="" />
-                  <h2>พื้นที่สำหรับร่างของคุณ</h2>
+                  <h2>{t('พื้นที่สำหรับร่างของคุณ')}</h2>
                   <p>
-                    เมื่อ AI จัดทำร่างแล้ว
+                    {t('เมื่อ AI จัดทำร่างแล้ว')}
                     <br />
-                    คุณจะตรวจและแก้ไขได้ตรงนี้
+                    {t('คุณจะตรวจและแก้ไขได้ตรงนี้')}
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="draft-title">
-                    <span>{session.title}</span>
+                    <span>{t(session.title)}</span>
                     <small>
-                      เวอร์ชัน {session.revision}
-                      {dirty ? ' · มีการแก้ไขที่ยังไม่บันทึก' : ' · บันทึกแล้ว'}
+                      {t('เวอร์ชัน')} {session.revision}
+                      {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
                     </small>
                   </div>
                   {history && (
@@ -1801,11 +1864,11 @@ export default function App() {
                                 })
                               }
                             >
-                              คืนค่าเวอร์ชัน {v.revision} <small>{new Date(v.at).toLocaleString('th-TH')}</small>
+                              {t('คืนค่าเวอร์ชัน')} {v.revision} <small>{new Date(v.at).toLocaleString(locale())}</small>
                             </button>
                           ))
                       ) : (
-                        <p>ยังไม่มีเวอร์ชันก่อนหน้า</p>
+                        <p>{t('ยังไม่มีเวอร์ชันก่อนหน้า')}</p>
                       )}
                     </div>
                   )}
@@ -1813,15 +1876,15 @@ export default function App() {
                     <section className="proposal" key={p.id}>
                       <div>
                         <Sparkles size={16} />
-                        <strong>ข้อเสนอจาก AI</strong>
+                        <strong>{t('ข้อเสนอจาก AI')}</strong>
                       </div>
                       <p className="small muted">
                         {p.baseRevision === session.revision
-                          ? 'ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน'
-                          : 'ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้'}
+                          ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
+                          : t('ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้')}
                       </p>
                       <details open={!session.draft.trim()}>
-                        <summary>{session.draft.trim() ? 'อ่านข้อเสนอและเทียบกับร่างด้านล่าง' : 'อ่านร่างจาก AI'}</summary>
+                        <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
                         <RichText className="proposal-text" text={p.text} />
                       </details>
                       <div className="proposal-actions">
@@ -1835,7 +1898,7 @@ export default function App() {
                           }
                         >
                           <Check size={15} />
-                          ใช้ร่างนี้
+                          {t('ใช้ร่างนี้')}
                         </button>
                         <button
                           className="quiet"
@@ -1846,36 +1909,39 @@ export default function App() {
                             })
                           }
                         >
-                          ไม่ใช้
+                          {t('ไม่ใช้')}
                         </button>
                       </div>
                     </section>
                   ))}
-                  <div className="format-toolbar" role="toolbar" aria-label="จัดรูปแบบร่าง">
+                  <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
                     <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
-                      ข้อความ
+                      {t('ข้อความ')}
                     </button>
                     <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
-                      หัวข้อ
+                      {t('หัวข้อ')}
                     </button>
                     <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
-                      ตัวหนา
+                      {t('ตัวหนา')}
                     </button>
                     <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
-                      ตัวเอียง
+                      {t('ตัวเอียง')}
                     </button>
                     <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
-                      รายการ
+                      {t('รายการ')}
                     </button>
                     <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
-                      ลำดับ
+                      {t('ลำดับ')}
                     </button>
                   </div>
                   <div className="editor-scroll">
                     <EditorContent editor={editor} />
                   </div>
                   <details className="sources">
-                    <summary>แหล่งอ้างอิงที่ใช้ ({session.sources.length})</summary>
+                    <summary>
+                      {t('แหล่งอ้างอิงที่ใช้ (')}
+                      {session.sources.length})
+                    </summary>
                     {session.sources.map(path => (
                       <p key={path}>{path}</p>
                     ))}
@@ -1883,9 +1949,9 @@ export default function App() {
                   <footer className="artifact-footer">
                     <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
                       <Save size={16} />
-                      บันทึก
+                      {t('บันทึก')}
                     </button>
-                    <select aria-label="รูปแบบส่งออก" value={format} onChange={e => setFormat(e.target.value)}>
+                    <select aria-label={t('รูปแบบส่งออก')} value={format} onChange={e => setFormat(e.target.value)}>
                       {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
                         <option key={f}>{f}</option>
                       ))}
@@ -1897,20 +1963,20 @@ export default function App() {
                           await save();
                           const output = await api.call('export', { id: selected, format });
                           setExportPath(output.path);
-                          notify(`บันทึก ${output.filename} แล้ว`, 'success', {
-                            label: 'เปิดโฟลเดอร์',
+                          notify(t('บันทึก {0} แล้ว', output.filename), 'success', {
+                            label: t('เปิดโฟลเดอร์'),
                             run: () => api.call('reveal', { path: output.path }),
                           });
                         })
                       }
                     >
                       <Download size={16} />
-                      ส่งออก
+                      {t('ส่งออก')}
                     </button>
                   </footer>
                   {exportPath && (
                     <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
-                      เปิดโฟลเดอร์ไฟล์ล่าสุด
+                      {t('เปิดโฟลเดอร์ไฟล์ล่าสุด')}
                     </button>
                   )}
                 </>
@@ -1962,12 +2028,12 @@ export default function App() {
           request={{
             id: consentAsk.token,
             tool: 'external_ai',
-            title: consentAsk.flagged ? 'ตรวจข้อความก่อนส่งให้ AI' : 'ยืนยันการส่งข้อมูลให้ AI',
+            title: consentAsk.flagged ? t('ตรวจข้อความก่อนส่งให้ AI') : t('ยืนยันการส่งข้อมูลให้ AI'),
             body: '',
             privacyClass: consentAsk.flagged ? 'restricted' : 'internal',
             allowRemember: false,
           }}
-          confirmLabel="มีสิทธิ์ส่งข้อมูลนี้"
+          confirmLabel={t('มีสิทธิ์ส่งข้อมูลนี้')}
           onCancel={() => setConsentAsk(null)}
           onConfirm={async () => {
             const ask = consentAsk;
@@ -1992,34 +2058,40 @@ export default function App() {
           {consentAsk.flagged ? (
             <p className="confirm-warning">
               <ShieldCheck size={16} />
-              ระบบพบสิ่งที่ควรตรวจ: {consentAsk.labels.join(', ')}
+              {t('ระบบพบสิ่งที่ควรตรวจ:')} {consentAsk.labels.join(', ')}
             </p>
           ) : (
             consentAsk.labels.length > 0 && (
               <p className="confirm-warning">
                 <ShieldCheck size={16} />
-                ระบบจะปิดบังก่อนส่ง: {consentAsk.labels.join(', ')} ร่างที่ได้จะมีข้อความในวงเล็บแทน ให้ใส่ข้อมูลจริงเองหลังตรวจ
+                {t('ระบบจะปิดบังก่อนส่ง:')} {consentAsk.labels.join(', ')}{' '}
+                {t('ร่างที่ได้จะมีข้อความในวงเล็บแทน ให้ใส่ข้อมูลจริงเองหลังตรวจ')}
               </p>
             )
           )}
           <p>
-            คำขอ{consentAsk.attachment || consentAsk.sourceText ? ' พร้อมข้อมูลต้นทางที่ตรวจแล้ว' : ''} ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้{' '}
+            {t('คำขอ')}
+            {consentAsk.attachment || consentAsk.sourceText ? t(' พร้อมข้อมูลต้นทางที่ตรวจแล้ว') : ''}{' '}
+            {t('ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้')}{' '}
             {providerName(
               snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
                 connection,
             )}
           </p>
           <p className="small muted">
-            คำถามข้อมูลสาธารณะที่เปลี่ยนตามเวลาอาจใช้ Web Search ของบัญชี AI นี้ โดยส่งเฉพาะคำถามสาธารณะไปค้น
-            ไม่ส่งไฟล์แนบหรือบทสนทนาไปเป็นคำค้น
+            {t(
+              'คำถามข้อมูลสาธารณะที่เปลี่ยนตามเวลาอาจใช้ Web Search ของบัญชี AI นี้ โดยส่งเฉพาะคำถามสาธารณะไปค้น ไม่ส่งไฟล์แนบหรือบทสนทนาไปเป็นคำค้น',
+            )}
           </p>
           <p className="small muted">
-            ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ
+            {t(
+              'ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ',
+            )}
             {consentAsk.vision
-              ? ' ภาพต้นฉบับจะถูกส่งด้วย ตรวจภาพว่าไม่มีข้อมูลส่วนบุคคลหรือความลับที่ OCR อาจอ่านไม่พบก่อนยืนยัน'
-              : ' และไม่ส่งไฟล์ต้นฉบับ'}
+              ? t(' ภาพต้นฉบับจะถูกส่งด้วย ตรวจภาพว่าไม่มีข้อมูลส่วนบุคคลหรือความลับที่ OCR อาจอ่านไม่พบก่อนยืนยัน')
+              : t(' และไม่ส่งไฟล์ต้นฉบับ')}
             {consentAsk.first && !consentAsk.flagged && !consentAsk.attachment && !consentAsk.sourceText
-              ? ' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ'
+              ? t(' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ')
               : ''}
           </p>
         </ApprovalDialog>
@@ -2027,9 +2099,9 @@ export default function App() {
       {handoffAsk &&
         (claudeCode === false ? (
           <ConfirmDialog
-            title="ยังไม่พบ Claude Code"
-            confirmLabel="เปิดวิธีติดตั้ง"
-            cancelLabel="ปิด"
+            title={t('ยังไม่พบ Claude Code')}
+            confirmLabel={t('เปิดวิธีติดตั้ง')}
+            cancelLabel={t('ปิด')}
             onCancel={() => setHandoffAsk(null)}
             onConfirm={async () => {
               await api.call('openHelp', { topic: 'claudeCode' });
@@ -2037,18 +2109,20 @@ export default function App() {
             }}
           >
             <p>
-              ใช้ Claude แบบ Pro/Max ได้ผ่าน Claude Code ของ Anthropic ที่ติดตั้งในเครื่องนี้ ติดตั้งแล้วเปิด Claude Code
-              หนึ่งครั้งเพื่อลงชื่อเข้าใช้บัญชี Claude ของคุณ แล้วกลับมาส่งใหม่
+              {t(
+                'ใช้ Claude แบบ Pro/Max ได้ผ่าน Claude Code ของ Anthropic ที่ติดตั้งในเครื่องนี้ ติดตั้งแล้วเปิด Claude Code หนึ่งครั้งเพื่อลงชื่อเข้าใช้บัญชี Claude ของคุณ แล้วกลับมาส่งใหม่',
+              )}
             </p>
             <p className="small muted">
-              STeP Desktop ลงชื่อเข้าใช้ Claude แทนคุณไม่ได้ เพราะเงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Pro/Max ในแอปของ Anthropic
-              เท่านั้น
+              {t(
+                'STeP Desktop ลงชื่อเข้าใช้ Claude แทนคุณไม่ได้ เพราะเงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Pro/Max ในแอปของ Anthropic เท่านั้น',
+              )}
             </p>
           </ConfirmDialog>
         ) : (
           <ConfirmDialog
-            title="ส่งต่อไปทำใน Claude Code"
-            confirmLabel="คัดลอกและเปิด Claude Code"
+            title={t('ส่งต่อไปทำใน Claude Code')}
+            confirmLabel={t('คัดลอกและเปิด Claude Code')}
             onCancel={() => setHandoffAsk(null)}
             onConfirm={async () => {
               try {
@@ -2059,24 +2133,26 @@ export default function App() {
               setHandoffAsk(null);
               setQuery('');
               setForcedSkill('');
-              notify('คัดลอกคำขอแล้ว วางในหน้าต่าง Claude Code (Ctrl+V หรือ ⌘V) แล้วกด Enter', 'success');
+              notify(t('คัดลอกคำขอแล้ว วางในหน้าต่าง Claude Code (Ctrl+V หรือ ⌘V) แล้วกด Enter'), 'success');
             }}
           >
             <p>
-              แอปจะคัดลอกคำขอ{handoffAsk.skill ? ' พร้อมตำแหน่งไฟล์ Skill' : ''} แล้วเปิด Claude Code ในโฟลเดอร์งาน
-              คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง
+              {t('แอปจะคัดลอกคำขอ')}
+              {handoffAsk.skill ? t(' พร้อมตำแหน่งไฟล์ Skill') : ''}{' '}
+              {t('แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง')}
             </p>
             <p className="small muted">
-              คำตอบจะอยู่ใน Claude Code ไม่กลับมาที่แอปนี้ ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบก่อนคัดลอก
-              ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้กับ Claude
+              {t(
+                'คำตอบจะอยู่ใน Claude Code ไม่กลับมาที่แอปนี้ ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบก่อนคัดลอก ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้กับ Claude',
+              )}
             </p>
           </ConfirmDialog>
         ))}
       {removing && (
         <ConfirmDialog
-          title="ลบงานนี้?"
+          title={t('ลบงานนี้?')}
           tone="danger"
-          confirmLabel="ลบงาน"
+          confirmLabel={t('ลบงาน')}
           onCancel={() => setRemoving(null)}
           onConfirm={async () => {
             await api.call('remove', { id: removing.id });
@@ -2090,8 +2166,8 @@ export default function App() {
           }}
         >
           <p>
-            “{removing.title}” พร้อมบทสนทนา ร่าง และประวัติเวอร์ชันจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้
-            ไฟล์ที่ส่งออกไว้แล้วในโฟลเดอร์ผลงานยังอยู่
+            “{removing.title}
+            {t('” พร้อมบทสนทนา ร่าง และประวัติเวอร์ชันจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้ ไฟล์ที่ส่งออกไว้แล้วในโฟลเดอร์ผลงานยังอยู่')}
           </p>
         </ConfirmDialog>
       )}
@@ -2101,7 +2177,7 @@ export default function App() {
           onClose={() => setPacksOpen(false)}
           onSelect={text => {
             setPendingSource(text);
-            notify('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง');
+            notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
           }}
         />
       )}
@@ -2132,13 +2208,14 @@ export default function App() {
       <Toasts toasts={toasts} dismiss={dismiss} />
       {authCode && (
         <div className="dialog-backdrop">
-          <section role="dialog" aria-modal="true" aria-label="ลงชื่อเข้าใช้ Google" className="attachment-dialog">
+          <section role="dialog" aria-modal="true" aria-label={t('ลงชื่อเข้าใช้ Google')} className="attachment-dialog">
             <header>
-              <h2>ลงชื่อเข้าใช้บริการ AI</h2>
+              <h2>{t('ลงชื่อเข้าใช้บริการ AI')}</h2>
             </header>
             <p>
-              ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ
-              หน้าต่างนี้จะปิดเอง
+              {t(
+                'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
+              )}
             </p>
             <label className="auth-code">
               Authorization code
@@ -2170,7 +2247,7 @@ export default function App() {
                 }
               >
                 <Check size={15} />
-                ยืนยัน
+                {t('ยืนยัน')}
               </button>
               <button
                 className="quiet"
@@ -2182,7 +2259,7 @@ export default function App() {
                   })
                 }
               >
-                ยกเลิก
+                {t('ยกเลิก')}
               </button>
             </div>
           </section>
@@ -2195,10 +2272,10 @@ export default function App() {
             if (e.key === 'Escape') setInspecting(null);
           }}
         >
-          <section role="dialog" aria-modal="true" aria-label="ตรวจข้อความแนบ" className="attachment-dialog">
+          <section role="dialog" aria-modal="true" aria-label={t('ตรวจข้อความแนบ')} className="attachment-dialog">
             <header>
               <h2>{inspecting.name}</h2>
-              <button className="icon" autoFocus onClick={() => setInspecting(null)} title="ปิด">
+              <button className="icon" autoFocus onClick={() => setInspecting(null)} title={t('ปิด')}>
                 <X />
               </button>
             </header>
@@ -2207,12 +2284,14 @@ export default function App() {
             </p>
             <p className="small muted">
               {inspecting.vision
-                ? 'ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้'
-                : 'ตรวจเฉพาะข้อความที่อ่านได้ ไม่รับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง'}
+                ? t('ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้')
+                : t('ตรวจเฉพาะข้อความที่อ่านได้ ไม่รับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง')}
             </p>
-            {inspecting.imagePreview && <img className="attachment-image" src={inspecting.imagePreview} alt="ภาพต้นฉบับที่จะส่งให้ AI" />}
-            <pre>{inspecting.preview || 'ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน'}</pre>
-            <button onClick={() => setInspecting(null)}>กลับไปที่งาน</button>
+            {inspecting.imagePreview && (
+              <img className="attachment-image" src={inspecting.imagePreview} alt={t('ภาพต้นฉบับที่จะส่งให้ AI')} />
+            )}
+            <pre>{inspecting.preview || t('ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน')}</pre>
+            <button onClick={() => setInspecting(null)}>{t('กลับไปที่งาน')}</button>
           </section>
         </div>
       )}

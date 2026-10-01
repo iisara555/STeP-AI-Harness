@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Mic, Square } from 'lucide-react';
 import type { DesktopAPI } from './types';
 import { explainError } from './messages';
+import { t } from './i18n';
 
 export async function audioWav(blob: Blob) {
   const context = new OfflineAudioContext(1, 16000, 16000),
@@ -109,12 +110,12 @@ export function VoiceButton({ api, onText, disabled }: { api: DesktopAPI; onText
     <>
       <button
         className="quiet"
-        aria-label={recording ? 'หยุดบันทึกเสียง' : 'พิมพ์ด้วยเสียง'}
+        aria-label={recording ? t('หยุดบันทึกเสียง') : t('พิมพ์ด้วยเสียง')}
         disabled={disabled || busy}
-        title="ถอดเสียงในเครื่อง ตรวจข้อความก่อนส่งให้ AI"
+        title={t('ถอดเสียงในเครื่อง ตรวจข้อความก่อนส่งให้ AI')}
         onClick={() => (recording ? recorder.current?.stop() : void start())}
       >
-        {recording ? <Square size={16} /> : <Mic size={16} />} {busy ? 'กำลังเตรียมเสียง…' : recording ? 'หยุด' : 'เสียง'}
+        {recording ? <Square size={16} /> : <Mic size={16} />} {busy ? t('กำลังเตรียมเสียง…') : recording ? t('หยุด') : t('เสียง')}
       </button>
       {error && (
         <span className="small" role="alert">

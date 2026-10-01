@@ -46,7 +46,7 @@ try {
     .waitFor();
   assert.deepEqual(errors, [], 'selecting Claude must not crash the renderer');
   await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
-  await page.getByRole('heading', { name: 'คุย วางแผน', exact: false }).waitFor();
+  await page.getByRole('heading', { name: 'ให้ AI ร่างงานหนัก', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
   await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');

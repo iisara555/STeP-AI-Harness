@@ -1,10 +1,16 @@
 import { useState, type ReactNode } from 'react';
 import { ConfirmDialog } from './ui';
 import type { ApprovalRequest } from './types';
+import { localized, t } from './i18n';
 
-const privacyLabels: Record<string, string> = { public: 'ทั่วไป', internal: 'ภายใน', restricted: 'จำกัดการเข้าถึง', sensitive: 'อ่อนไหว' };
+const privacyLabels: Record<string, string> = localized({
+  public: 'ทั่วไป',
+  internal: 'ภายใน',
+  restricted: 'จำกัดการเข้าถึง',
+  sensitive: 'อ่อนไหว',
+});
 // Employees see what the step does; unknown tool ids still show as-is so nothing is hidden.
-const toolLabels: Record<string, string> = {
+const toolLabels: Record<string, string> = localized({
   external_ai: 'ส่งคำขอให้ AI',
   browser_control: 'ผู้ช่วยทำงานบนเว็บ',
   browser: 'เปิดเว็บ',
@@ -21,11 +27,11 @@ const toolLabels: Record<string, string> = {
   sandbox: 'Docker sandbox',
   ask_user: 'คำถามถึงคุณ',
   plan: 'แผนงาน',
-};
+});
 export function ApprovalDialog({
   request,
   children,
-  confirmLabel = 'อนุญาตครั้งนี้',
+  confirmLabel = t('อนุญาตครั้งนี้'),
   onConfirm,
   onRun,
   onCancel,
@@ -41,23 +47,23 @@ export function ApprovalDialog({
   const [run, setRun] = useState(false);
   return (
     <ConfirmDialog
-      title={request.title}
-      confirmLabel={run ? 'อนุญาตในขอบเขตนี้จนจบรอบ' : remember ? 'อนุญาตใน workspace นี้' : confirmLabel}
+      title={t(request.title)}
+      confirmLabel={run ? t('อนุญาตในขอบเขตนี้จนจบรอบ') : remember ? t('อนุญาตใน workspace นี้') : confirmLabel}
       onConfirm={() => (run && onRun ? onRun() : onConfirm(remember))}
       onCancel={onCancel}
       focusCancel
     >
       <p className="small muted">
-        เครื่องมือ: {toolLabels[request.tool] || request.tool} · ระดับข้อมูลจากการตรวจรูปแบบ:{' '}
+        {t('เครื่องมือ:')} {toolLabels[request.tool] || request.tool} {t('· ระดับข้อมูลจากการตรวจรูปแบบ:')}{' '}
         {privacyLabels[request.privacyClass] || request.privacyClass}
       </p>
-      {request.body && <p className="approval-detail">{request.body}</p>}
+      {request.body && <p className="approval-detail">{t(request.body)}</p>}
       {children}
       {request.runScope && onRun && (
         <label className="approval-remember">
           <input type="checkbox" checked={run} onChange={e => setRun(e.target.checked)} />
           <span>
-            อนุญาตส่งข้อมูลในขอบเขตนี้โดยไม่ถามซ้ำ
+            {t('อนุญาตส่งข้อมูลในขอบเขตนี้โดยไม่ถามซ้ำ')}
             <br />
             <span className="approval-detail">{request.runScope}</span>
           </span>
@@ -66,7 +72,7 @@ export function ApprovalDialog({
       {request.allowRemember && (
         <label className="approval-remember">
           <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
-          อนุญาตทุกครั้งสำหรับเครื่องมือและเป้าหมายนี้ใน workspace นี้
+          {t('อนุญาตทุกครั้งสำหรับเครื่องมือและเป้าหมายนี้ใน workspace นี้')}
         </label>
       )}
     </ConfirmDialog>

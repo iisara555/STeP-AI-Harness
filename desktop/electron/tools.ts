@@ -14,6 +14,7 @@ import { fetchPublic, publicUrl } from './web-fetch';
 import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
+import { mainLocale, tm } from './i18n';
 
 export type ToolScope = {
   cancel: () => void;
@@ -111,11 +112,21 @@ export class DesktopTools {
     const detail = {
       title:
         destination === 'web-query'
-          ? 'ส่งคำค้นให้บริการค้นเว็บ?'
+          ? tm('ส่งคำค้นให้บริการค้นเว็บ?')
           : destination === 'web-url'
-            ? 'เข้าถึงเว็บปลายทางนี้?'
-            : 'ส่งผลเครื่องมือให้ AI?',
-      body: `ข้อมูลใหม่ ${text.length.toLocaleString('th-TH')} ตัวอักษร จะส่งให้ ${destination === 'web-query' ? scope.connection.provider + ' และบริการค้นเว็บของบัญชีนี้' : destination === 'web-url' ? 'เว็บปลายทางที่ระบุ' : scope.connection.provider}\n${(review.findings || []).map((f: any) => f.label).join(', ')}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n${review.redactedText.slice(0, 1500)}`,
+            ? tm('เข้าถึงเว็บปลายทางนี้?')
+            : tm('ส่งผลเครื่องมือให้ AI?'),
+      body: tm(
+        'ข้อมูลใหม่ {0} ตัวอักษร จะส่งให้ {1}\n{2}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n{3}',
+        text.length.toLocaleString(mainLocale()),
+        destination === 'web-query'
+          ? scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
+          : destination === 'web-url'
+            ? tm('เว็บปลายทางที่ระบุ')
+            : scope.connection.provider,
+        (review.findings || []).map((f: any) => f.label).join(', '),
+        review.redactedText.slice(0, 1500),
+      ),
       privacyClass: review.classification === 'public' ? 'internal' : review.classification,
       allowRemember: false,
     };
@@ -171,17 +182,17 @@ export class DesktopTools {
       if (r.tool === 'ask_user' || r.tool === 'plan' || (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string'))
         return {
           key: 'draft-progress',
-          label: 'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)',
+          label: tm('คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)'),
         };
       if (r.tool === 'files') {
         if (this.sourceClean.get(r) === false) return;
         const folder =
           r.args?.action === 'list' || !r.input ? await this.workbench.path(r.input || '.') : dirname(await this.workbench.path(r.input));
-        return { key: `files:${folder}`, label: `ไฟล์ข้อความในโฟลเดอร์ ${relative(workspace, folder) || '.'} (ไม่รวมโฟลเดอร์ย่อย)` };
+        return { key: `files:${folder}`, label: tm('ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)', relative(workspace, folder) || '.') };
       }
       if (['browser', 'web_fetch'].includes(r.tool)) {
         const origin = publicUrl(r.input).origin;
-        return { key: `web:${origin}`, label: `ผลการอ่านเว็บ ${origin}` };
+        return { key: `web:${origin}`, label: tm('ผลการอ่านเว็บ {0}', origin) };
       }
       if (['skill', 'reference'].includes(r.tool)) return { key: `${r.tool}:${r.input}`, label: `${r.tool}: ${r.input}` };
     };
@@ -203,7 +214,7 @@ export class DesktopTools {
           'sandbox',
           'browser_control',
         ].includes(r.tool),
-      activity: t => scope.activity('กำลังใช้เครื่องมือ ' + t),
+      activity: t => scope.activity(tm('กำลังใช้เครื่องมือ ') + t),
       outgoing: async (text, _signal, r) => {
         await check();
         const approved = await this.outgoing(text, transmissionScope, undefined, transmission, await sourceFor(r));
@@ -249,8 +260,8 @@ export class DesktopTools {
     return this.gate.run(
       request,
       {
-        title: 'รันคำสั่งจาก AI?',
-        body: target + '\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ',
+        title: tm('รันคำสั่งจาก AI?'),
+        body: target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
         key: target,
         sessionId: scope.sessionId,
       },
@@ -383,7 +394,7 @@ export class DesktopTools {
             const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'plan', target);
             const approved = await this.approvals.request(
               rule,
-              { title: 'อนุมัติแผนก่อนจัดทำร่าง?', body: target, privacyClass: 'internal', allowRemember: false },
+              { title: tm('อนุมัติแผนก่อนจัดทำร่าง?'), body: target, privacyClass: 'internal', allowRemember: false },
               scope.signal,
             );
             if (!approved) throw new Error('CANCELLED');

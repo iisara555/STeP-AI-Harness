@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ocrPython } from './ocr';
+import { tm } from './i18n';
 
 const PYTHON_RELEASE = '20260924';
 const PYTHON_VERSION = '3.12.14';
@@ -97,7 +98,7 @@ async function installPortablePython(runtimeDir: string, log: Log) {
   const work = await mkdtemp(join(tmpdir(), 'step-ocr-component-'));
   const archive = join(work, 'python.tar.gz');
   try {
-    log('STEP ดาวน์โหลด Python สำหรับ OCR');
+    log(tm('STEP ดาวน์โหลด Python สำหรับ OCR'));
     const response = await fetch(url, { signal: AbortSignal.timeout(10 * 60_000) });
     if (!response.ok) throw new Error('OCR_COMPONENT_DOWNLOAD_FAILED');
     const bytes = Buffer.from(await response.arrayBuffer());
@@ -106,7 +107,7 @@ async function installPortablePython(runtimeDir: string, log: Log) {
 
     await rm(runtimeDir, { recursive: true, force: true });
     await mkdir(runtimeDir, { recursive: true });
-    log('STEP ตรวจสอบและแตกไฟล์ Python');
+    log(tm('STEP ตรวจสอบและแตกไฟล์ Python'));
     const tar = process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
     if ((await run(tar, ['-xzf', archive, '-C', runtimeDir], log)) !== 0 || !existsSync(portableOcrPython(runtimeDir)))
       throw new Error('OCR_COMPONENT_INSTALL_FAILED');
@@ -144,18 +145,18 @@ export async function installOcr(appFolder: string, componentDir: string, log: L
   const steps: [string, string, string[]][] = [
     ...(existsSync(venvPython)
       ? []
-      : [['สร้างพื้นที่ OCR แยกจากระบบ', bootstrapPython, ['-m', 'venv', venvDir]] as [string, string, string[]]]),
-    ['อัปเดตตัวติดตั้ง Python', venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']],
+      : [[tm('สร้างพื้นที่ OCR แยกจากระบบ'), bootstrapPython, ['-m', 'venv', venvDir]] as [string, string, string[]]]),
+    [tm('อัปเดตตัวติดตั้ง Python'), venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']],
     [
-      'ติดตั้ง PaddlePaddle (CPU)',
+      tm('ติดตั้ง PaddlePaddle (CPU)'),
       venvPython,
       ['-m', 'pip', 'install', spec.paddle, '-i', 'https://www.paddlepaddle.org.cn/packages/stable/cpu/'],
     ],
-    ['ติดตั้ง OCR ภาษาไทย', venvPython, ['-m', 'pip', 'install', '-r', join(appFolder, 'requirements-core.txt')]],
+    [tm('ติดตั้ง OCR ภาษาไทย'), venvPython, ['-m', 'pip', 'install', '-r', join(appFolder, 'requirements-core.txt')]],
     ...(crosscheck
       ? [
           [
-            'ติดตั้ง OCR ตัวที่สอง (EasyOCR)',
+            tm('ติดตั้ง OCR ตัวที่สอง (EasyOCR)'),
             venvPython,
             ['-m', 'pip', 'install', '-r', join(appFolder, 'requirements-crosscheck.txt')],
           ] as [string, string, string[]],
@@ -164,21 +165,21 @@ export async function installOcr(appFolder: string, componentDir: string, log: L
     ...(handwriting
       ? [
           [
-            'ติดตั้งโมเดลอ่านลายมือภาษาไทย',
+            tm('ติดตั้งโมเดลอ่านลายมือภาษาไทย'),
             venvPython,
             ['-m', 'pip', 'install', '-r', join(appFolder, 'requirements-handwriting.txt')],
           ] as [string, string, string[]],
         ]
       : []),
     [
-      'ดาวน์โหลดและเตรียมโมเดล OCR ภาษาไทย',
+      tm('ดาวน์โหลดและเตรียมโมเดล OCR ภาษาไทย'),
       venvPython,
       ['-c', 'from ocr_engine import LocalThaiOCR; LocalThaiOCR()._get_ocr(); print("models ready")'],
     ],
     ...(handwriting
       ? [
           [
-            'ดาวน์โหลดและเตรียมโมเดลลายมือภาษาไทย',
+            tm('ดาวน์โหลดและเตรียมโมเดลลายมือภาษาไทย'),
             venvPython,
             ['-c', 'from handwriting import ThaiHandwritingReader; ThaiHandwritingReader(); print("handwriting ready")'],
           ] as [string, string, string[]],

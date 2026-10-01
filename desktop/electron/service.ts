@@ -21,6 +21,7 @@ import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
 import { compact, promptTooLong, tokens } from './compact';
+import { mainLocale, tm } from './i18n';
 export { fence, section } from './prompt';
 export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
 
@@ -414,7 +415,7 @@ export class WorkService {
       this.emit({ sessionId: id, type: 'trace', trace });
     };
     try {
-      status('กำลังเลือกแนวทางทำงาน');
+      status(tm('กำลังเลือกแนวทางทำงาน'));
       const routed = await this.harness.route(session.originalQuery, {
         team: session.team,
         workspaceDir,
@@ -457,7 +458,7 @@ export class WorkService {
         needsPublicWebSearch(session.originalQuery) &&
         this.harness.privacy(session.originalQuery).action === 'pass';
       if (searchPublic) {
-        activity('กำลังเตรียม Web Search');
+        activity(tm('กำลังเตรียม Web Search'));
         // Retrieval receives only the current public request. No files, history,
         // organization instructions or draft can become a search-engine query.
         const searchRuntime = await this.runtime(connection, true);
@@ -488,12 +489,12 @@ export class WorkService {
                   if (stage === 'failed') failed = true;
                   activity(
                     stage === 'search'
-                      ? 'กำลังค้นเว็บ'
+                      ? tm('กำลังค้นเว็บ')
                       : stage === 'read'
-                        ? 'กำลังอ่านแหล่งข้อมูล'
+                        ? tm('กำลังอ่านแหล่งข้อมูล')
                         : stage === 'failed'
-                          ? 'ค้นเว็บไม่สำเร็จ'
-                          : 'กำลังสรุปผลค้นเว็บ',
+                          ? tm('ค้นเว็บไม่สำเร็จ')
+                          : tm('กำลังสรุปผลค้นเว็บ'),
                   );
                 },
               },
@@ -503,7 +504,7 @@ export class WorkService {
             break;
           } catch (error) {
             if (controller.signal.aborted || !RETRYABLE_CODES.has(codeOf(error)) || attempt > this.retryDelays.length) throw error;
-            status(`บริการค้นเว็บขัดข้องชั่วคราว กำลังลองใหม่ (${attempt}/${this.retryDelays.length})`);
+            status(tm('บริการค้นเว็บขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})', attempt, this.retryDelays.length));
             await pause(retryDelay(attempt, error, this.retryDelays), controller.signal);
             arm();
           } finally {
@@ -516,7 +517,7 @@ export class WorkService {
           }
         }
         retrieved = outgoing(retrieved.slice(0, 40000), true);
-        activity('ค้นเว็บแล้ว · กำลังเตรียมคำตอบจากแหล่งข้อมูล');
+        activity(tm('ค้นเว็บแล้ว · กำลังเตรียมคำตอบจากแหล่งข้อมูล'));
       }
       if (mode === 'image') {
         if (this.harness.permissionMode?.() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
@@ -535,12 +536,12 @@ export class WorkService {
         ].join('\n\n');
         if (imagePrompt.length > 180000) throw new Error('CONTEXT_LIMIT');
         // Images are another routed provider operation; authority and privacy still apply.
-        status('กำลังสร้างรูป');
+        status(tm('กำลังสร้างรูป'));
         const image = await this.generateImage(connection, imagePrompt, imageModel, controller.signal);
         checkAbort();
         session = this.store.session(id);
         session.images = [...(session.images || []), image].slice(-50);
-        session.messages.push({ role: 'assistant', text: `สร้างรูปแล้ว · ${image.model}`, at: image.at });
+        session.messages.push({ role: 'assistant', text: tm('สร้างรูปแล้ว · {0}', image.model), at: image.at });
         session.status = 'review';
         session.clarification = false;
         delete session.lastRun;
@@ -551,7 +552,7 @@ export class WorkService {
       const planned =
         contract.mode === 'PLAYBOOK' && contract.steps?.length
           ? contract.steps
-          : [{ skill: contract.skill, skillPath: contract.skillPath, description: chat ? 'กำลังตอบ' : 'จัดทำร่าง' }];
+          : [{ skill: contract.skill, skillPath: contract.skillPath, description: chat ? tm('กำลังตอบ') : tm('จัดทำร่าง') }];
       // A revision only needs the final drafting step, not a full replay of the playbook.
       const steps =
         revising || (options.draftOnly && options.mergeOnly)
@@ -596,12 +597,12 @@ export class WorkService {
         sessionId: id,
         type: 'plan',
         plan: steps.map((step: any) => ({
-          label: String(step.description || step.skill || step.skillId || 'จัดทำร่าง').slice(0, 300),
+          label: String(step.description || step.skill || step.skillId || tm('จัดทำร่าง')).slice(0, 300),
           ...(isAction(step) ? { action: true } : {}),
         })),
       });
       for (let index = 0; index < first; index++) this.emit({ sessionId: id, type: 'step', index, state: 'done' });
-      if (first) status(`ทำต่อจากขั้นที่ ${first + 1} โดยใช้ผลของขั้นที่ทำเสร็จแล้ว`);
+      if (first) status(tm('ทำต่อจากขั้นที่ {0} โดยใช้ผลของขั้นที่ทำเสร็จแล้ว', first + 1));
       const requestText = masked([session.originalQuery, ...session.answers].join('\n'));
       for (const [index, step] of steps.entries()) {
         if (index < first) continue;
@@ -609,7 +610,7 @@ export class WorkService {
         // External action steps are never executed by the drafting desktop.
         if (isAction(step)) {
           this.emit({ sessionId: id, type: 'step', index, state: 'skipped' });
-          status('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ');
+          status(tm('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ'));
           break;
         }
         this.emit({ sessionId: id, type: 'step', index, state: 'running' });
@@ -633,7 +634,7 @@ export class WorkService {
           paths.push(routed.selectedPlaybook.specPath);
         }
         sources = [...new Set([...sources, ...paths])];
-        status(step.description || 'กำลังจัดทำร่าง');
+        status(step.description || tm('กำลังจัดทำร่าง'));
         // Stable parts first (rules, preferences, Skill), so providers can reuse the cached prefix across turns.
         const toolsEnabled = Boolean(!options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
         const baseRules = chat ? CHAT_RULES : DRAFTING_RULES;
@@ -681,7 +682,7 @@ export class WorkService {
           ...(revising ? [section('revision_requests', masked((session.followUps || []).join('\n')))] : []),
         ].join('\n\n');
         const stepTrace: StepTrace = {
-          label: String(step.description || skillId || 'จัดทำร่าง').slice(0, 120),
+          label: String(step.description || skillId || tm('จัดทำร่าง')).slice(0, 120),
           systemChars: system.length,
           promptChars: prompt.length,
           references: paths.slice(0, 20),
@@ -715,7 +716,7 @@ export class WorkService {
             },
             hook: (event, before, after) => this.harness.compactHook?.(event, id, before, after) || Promise.resolve(),
             summarize: async data => {
-              activity('กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้');
+              activity(tm('กำลังย่อบทสนทนาเก่า โดยเก็บสถานะงานไว้'));
               let counted: TokenCount = { input: 0, output: 0, total: 0 };
               try {
                 return await runtime.adapter.run(section('conversation', data), connection, {
@@ -751,7 +752,7 @@ export class WorkService {
           return result.prompt;
         };
         prompt = await compactPrompt(prompt);
-        activity('กำลังรอ AI เตรียมคำตอบ');
+        activity(tm('กำลังรอ AI เตรียมคำตอบ'));
         const callProvider = async (nextPrompt: string, selectedRuntime = runtime, search = false) => {
           if (!search) nextPrompt = await compactPrompt(nextPrompt);
           let reactiveRetried = false;
@@ -765,7 +766,7 @@ export class WorkService {
               if (tokens(system + nextPrompt) > 48_000) throw new Error('CONTEXT_LIMIT');
               if (!search && options.images?.length && !this.harness.visionEnabled?.()) throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
-              if (!search) status('กำลังเตรียมคำตอบ');
+              if (!search) status(tm('กำลังเตรียมคำตอบ'));
               const answer = await selectedRuntime.adapter.run(nextPrompt, connection, {
                 ...selectedRuntime.context,
                 system: search
@@ -809,7 +810,7 @@ export class WorkService {
                   if (search) return;
                   if (!receiving) {
                     receiving = true;
-                    activity('กำลังเขียนคำตอบ');
+                    activity(tm('กำลังเขียนคำตอบ'));
                   }
                   this.emit({ sessionId: id, type: 'delta', text: delta });
                 },
@@ -825,7 +826,7 @@ export class WorkService {
               }
               const retries = this.retryDelays.length;
               if (controller.signal.aborted || !RETRYABLE_CODES.has(codeOf(error)) || attempt > retries) throw error;
-              status(`บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ (${attempt}/${retries})`);
+              status(tm('บริการ AI ขัดข้องชั่วคราว กำลังลองใหม่ ({0}/{1})', attempt, retries));
               await pause(retryDelay(attempt, error, this.retryDelays), controller.signal);
               arm();
             } finally {
@@ -891,7 +892,7 @@ export class WorkService {
       if (done && session.status === 'error')
         session.messages.push({
           role: 'status',
-          text: `ขั้นที่ 1–${done} ทำเสร็จแล้ว กด “ลองอีกครั้ง” เพื่อทำต่อจากขั้นที่ ${done + 1}`,
+          text: tm('ขั้นที่ 1–{0} ทำเสร็จแล้ว กด “ลองอีกครั้ง” เพื่อทำต่อจากขั้นที่ {1}', done, done + 1),
           at: new Date().toISOString(),
         });
       finish(session, session.status, shown);
@@ -920,18 +921,22 @@ export function draftSummary(text: string, previous: string, skillTitle: string,
   if (revision) {
     const added = now.filter(h => !before.includes(h)),
       removed = before.filter(h => !now.includes(h));
-    lines.push(`แก้ร่างตามคำขอ “${revision.slice(0, 120)}” แล้ว`);
-    if (added.length) lines.push(`- เพิ่มหัวข้อ: ${added.slice(0, 6).join(', ')}`);
-    if (removed.length) lines.push(`- ตัดหัวข้อ: ${removed.slice(0, 6).join(', ')}`);
+    lines.push(tm('แก้ร่างตามคำขอ “{0}” แล้ว', revision.slice(0, 120)));
+    if (added.length) lines.push(tm('- เพิ่มหัวข้อ: {0}', added.slice(0, 6).join(', ')));
+    if (removed.length) lines.push(tm('- ตัดหัวข้อ: {0}', removed.slice(0, 6).join(', ')));
     if (previous.trim())
-      lines.push(`- ความยาว ${previous.length.toLocaleString('th-TH')} → ${text.length.toLocaleString('th-TH')} ตัวอักษร`);
+      lines.push(
+        tm('- ความยาว {0} → {1} ตัวอักษร', previous.length.toLocaleString(mainLocale()), text.length.toLocaleString(mainLocale())),
+      );
   } else {
-    lines.push(`จัดทำร่าง${skillTitle ? `ด้วย Skill “${skillTitle}” ` : ''}แล้ว${now.length ? ` มี ${now.length} หัวข้อ` : ''}`);
+    lines.push(
+      tm('จัดทำร่าง{0}แล้ว{1}', skillTitle ? tm('ด้วย Skill “{0}” ', skillTitle) : '', now.length ? tm(' มี {0} หัวข้อ', now.length) : ''),
+    );
     if (now.length) lines.push(`- ${now.slice(0, 8).join(', ')}${now.length > 8 ? ' …' : ''}`);
   }
-  if (blanks > 0) lines.push(`- มี ${blanks} จุดในวงเล็บ [ ] ที่ต้องเติมหรือยืนยันก่อนใช้`);
-  if (masked > 0) lines.push(`- มี ${masked} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง`);
-  lines.push('', 'ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”');
+  if (blanks > 0) lines.push(tm('- มี {0} จุดในวงเล็บ [ ] ที่ต้องเติมหรือยืนยันก่อนใช้', blanks));
+  if (masked > 0) lines.push(tm('- มี {0} จุดที่ระบบปิดบังข้อมูลส่วนบุคคลไว้ ใส่ข้อมูลจริงเองหลังตรวจร่าง', masked));
+  lines.push('', tm('ตรวจในแผงผลงาน แล้วกด “ใช้ร่างนี้”'));
   return lines.join('\n');
 }
 

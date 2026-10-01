@@ -2,6 +2,7 @@ import { Store } from './store';
 import { WorkService, MAX_PARALLEL_RUNS } from './service';
 import type { Policy } from './policy';
 import { section } from './prompt';
+import { tm } from './i18n';
 
 export type Subtask = { id: string; query: string; dependsOn: string[]; skill?: string };
 export function dependencyWaves(tasks: Subtask[]) {
@@ -168,7 +169,7 @@ export class Coordinator {
       let tasks: Subtask[];
       if (contract.mode === 'PLAYBOOK' && routed.selectedPlaybook?.steps?.length) tasks = playbookTasks(routed.selectedPlaybook.steps);
       else {
-        this.activity(id, 'กำลังวางแผนงานย่อย');
+        this.activity(id, tm('กำลังวางแผนงานย่อย'));
         tasks = parsePlan(
           await execute(
             'Decompose the request below into 2–8 draft-only subtasks. Return only JSON {"tasks":[{"id":"a","query":"...","dependsOn":[]}]}. Declare all dependencies. Do not grant authority or propose external actions.\n' +
@@ -185,7 +186,7 @@ export class Coordinator {
       for (const wave of waves) {
         for (let i = 0; i < wave.length; i += MAX_PARALLEL_RUNS) {
           const batch = wave.slice(i, i + MAX_PARALLEL_RUNS);
-          this.activity(id, `กำลังทำงานย่อย ${batch.map(t => t.id).join(', ')}`);
+          this.activity(id, tm('กำลังทำงานย่อย {0}', batch.map(t => t.id).join(', ')));
           const outcomes = await Promise.allSettled(
             batch.map(async task => {
               const data = source + '\n' + section('tool_results', task.dependsOn.map(d => `${d}: ${results.get(d)}`).join('\n'));
@@ -200,7 +201,7 @@ export class Coordinator {
       check();
       const combined = source + '\n' + section('tool_results', JSON.stringify([...results]));
       if (combined.length > 100_000) throw new Error('CONTEXT_LIMIT');
-      this.activity(id, 'กำลังรวมผลเป็นร่างรอตรวจ');
+      this.activity(id, tm('กำลังรวมผลเป็นร่างรอตรวจ'));
       await this.service.run(id, query, combined, true, undefined, 'draft', undefined, ['Subtask drafts'], {
         draftOnly: true,
         mergeOnly: true,

@@ -3,6 +3,7 @@ import { ConfirmDialog } from './ui';
 import { explainError, providerLabel } from './messages';
 import type { Connection, DesktopAPI } from './types';
 import type { Automation, AutomationRun } from '../electron/cron';
+import { locale, t } from './i18n';
 
 const schedules = [
   { label: 'ทุกชั่วโมง', value: '0 * * * *' },
@@ -60,10 +61,10 @@ export function AutomationDialog({
     }
   };
   return (
-    <ConfirmDialog title="งานตามรอบและเครื่องมือเพิ่มเติม" confirmLabel="ปิด" onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog title={t('งานตามรอบและเครื่องมือเพิ่มเติม')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       {error && <p role="alert">{error}</p>}
-      <p className="small muted">งานตามรอบทำเมื่อเปิดแอปและใช้บัญชีที่คุณเลือก ผลเป็นร่างให้คุณตรวจ ก่อนส่งออกหรือนำไปใช้</p>
-      {!data?.enabled && <p>ผู้ดูแลยังไม่เปิดใช้งานตามรอบ</p>}
+      <p className="small muted">{t('งานตามรอบทำเมื่อเปิดแอปและใช้บัญชีที่คุณเลือก ผลเป็นร่างให้คุณตรวจ ก่อนส่งออกหรือนำไปใช้')}</p>
+      {!data?.enabled && <p>{t('ผู้ดูแลยังไม่เปิดใช้งานตามรอบ')}</p>}
       {data?.enabled && (
         <form
           className="memory-editor"
@@ -76,9 +77,9 @@ export function AutomationDialog({
           }}
         >
           <label>
-            ชื่องาน
+            {t('ชื่องาน')}
             <input
-              aria-label="ชื่องานตามรอบ"
+              aria-label={t('ชื่องานตามรอบ')}
               required
               maxLength={120}
               value={edit.name}
@@ -87,9 +88,9 @@ export function AutomationDialog({
             />
           </label>
           <label>
-            คำขอ
+            {t('คำขอ')}
             <textarea
-              aria-label="คำขอตามรอบ"
+              aria-label={t('คำขอตามรอบ')}
               required
               rows={3}
               maxLength={4000}
@@ -99,31 +100,31 @@ export function AutomationDialog({
             />
           </label>
           <label>
-            รอบการทำงาน
+            {t('รอบการทำงาน')}
             <select
-              aria-label="รอบการทำงาน"
+              aria-label={t('รอบการทำงาน')}
               value={edit.schedule}
               disabled={busy}
               onChange={e => setEdit({ ...edit, schedule: e.target.value })}
             >
-              {!schedules.some(s => s.value === edit.schedule) && <option value={edit.schedule}>ตารางที่บันทึกไว้</option>}
+              {!schedules.some(s => s.value === edit.schedule) && <option value={edit.schedule}>{t('ตารางที่บันทึกไว้')}</option>}
               {schedules.map(s => (
                 <option key={s.value} value={s.value}>
-                  {s.label}
+                  {t(s.label)}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            บัญชี AI
+            {t('บัญชี AI')}
             <select
-              aria-label="บัญชีงานตามรอบ"
+              aria-label={t('บัญชีงานตามรอบ')}
               required
               value={edit.connectionId}
               disabled={busy}
               onChange={e => setEdit({ ...edit, connectionId: e.target.value })}
             >
-              <option value="">เลือกบัญชี</option>
+              <option value="">{t('เลือกบัญชี')}</option>
               {connections
                 .filter(c => c.ready)
                 .map(c => (
@@ -135,14 +136,14 @@ export function AutomationDialog({
           </label>
           <label>
             <input type="checkbox" checked={edit.enabled} disabled={busy} onChange={e => setEdit({ ...edit, enabled: e.target.checked })} />
-            เปิดรอบอัตโนมัติ
+            {t('เปิดรอบอัตโนมัติ')}
           </label>
           <button disabled={busy} type="submit">
-            บันทึกงานตามรอบ
+            {t('บันทึกงานตามรอบ')}
           </button>
           {edit.id && (
             <button type="button" disabled={busy} onClick={() => setEdit(empty())}>
-              ยกเลิกการแก้ไข
+              {t('ยกเลิกการแก้ไข')}
             </button>
           )}
         </form>
@@ -151,26 +152,26 @@ export function AutomationDialog({
         <article key={job.id} className="memory-item">
           <strong>{job.name}</strong>
           <p>
-            {job.enabled ? 'เปิดรอบอัตโนมัติ' : 'พักรอบอัตโนมัติ'} · รอบถัดไป {new Date(job.nextAt).toLocaleString('th-TH')}
+            {job.enabled ? t('เปิดรอบอัตโนมัติ') : t('พักรอบอัตโนมัติ')} {t('· รอบถัดไป')} {new Date(job.nextAt).toLocaleString(locale())}
           </p>
           <button disabled={busy || !!job.running} onClick={() => setEdit({ ...job })}>
-            แก้ไขงาน
+            {t('แก้ไขงาน')}
           </button>
           <button
             disabled={busy || !!job.running || !data.enabled}
             onClick={() => void act(() => api.call('automationRun', { id: job.id }))}
           >
-            เริ่มตอนนี้
+            {t('เริ่มตอนนี้')}
           </button>
           <button disabled={busy} onClick={() => void act(() => api.call('automationCancel', { id: job.id }))}>
-            หยุดงาน
+            {t('หยุดงาน')}
           </button>
           <button disabled={busy} onClick={() => setRemove(job.id)}>
-            ลบงาน
+            {t('ลบงาน')}
           </button>
           {remove === job.id && (
             <p>
-              ลบงานนี้และหยุดรอบที่รออยู่?
+              {t('ลบงานนี้และหยุดรอบที่รออยู่?')}
               <button
                 disabled={busy}
                 onClick={() =>
@@ -180,54 +181,69 @@ export function AutomationDialog({
                   })
                 }
               >
-                ยืนยันลบงาน
+                {t('ยืนยันลบงาน')}
               </button>
-              <button onClick={() => setRemove('')}>ยกเลิก</button>
+              <button onClick={() => setRemove('')}>{t('ยกเลิก')}</button>
             </p>
           )}
         </article>
       ))}
       <details>
-        <summary>ประวัติงาน ({data?.history.length || 0})</summary>
+        <summary>
+          {t('ประวัติงาน (')}
+          {data?.history.length || 0})
+        </summary>
         {data?.history.map(run => (
           <p key={run.id}>
-            {new Date(run.at).toLocaleString('th-TH')} ·{' '}
+            {new Date(run.at).toLocaleString(locale())} ·{' '}
             {
               {
-                queued: 'รอคิว',
-                running: 'กำลังทำ',
-                review: 'ร่างรอตรวจ',
-                error: 'เกิดข้อผิดพลาด',
-                cancelled: 'ยกเลิก',
-                interrupted: 'หยุดระหว่างทำ',
+                queued: t('รอคิว'),
+                running: t('กำลังทำ'),
+                review: t('ร่างรอตรวจ'),
+                error: t('เกิดข้อผิดพลาด'),
+                cancelled: t('ยกเลิก'),
+                interrupted: t('หยุดระหว่างทำ'),
               }[run.status]
             }{' '}
             {run.code && `(${run.code})`}
-            {run.sessionId && <button onClick={() => onOpen(run.sessionId!)}>เปิดผล</button>}
+            {run.sessionId && <button onClick={() => onOpen(run.sessionId!)}>{t('เปิดผล')}</button>}
           </p>
         ))}
       </details>
       <details>
-        <summary>เครื่องมือ MCP {features.mcp ? '' : '(ยังไม่เปิดใช้)'}</summary>
-        <p className="small muted">ตรวจปลายทาง ข้อมูล และผลทุกครั้ง เครื่องมืออาจแก้ข้อมูลในบริการที่เชื่อมต่อ</p>
+        <summary>
+          {t('เครื่องมือ MCP')} {features.mcp ? '' : t('(ยังไม่เปิดใช้)')}
+        </summary>
+        <p className="small muted">{t('ตรวจปลายทาง ข้อมูล และผลทุกครั้ง เครื่องมืออาจแก้ข้อมูลในบริการที่เชื่อมต่อ')}</p>
         <label>
           Server
           <select aria-label="MCP server" value={server} onChange={e => setServer(e.target.value)}>
-            <option value="">เลือก server ที่ผู้ดูแลกำหนด</option>
+            <option value="">{t('เลือก server ที่ผู้ดูแลกำหนด')}</option>
             {servers.map(s => (
               <option key={s.name}>{s.name}</option>
             ))}
           </select>
         </label>
-        <input aria-label="ค้นหาเครื่องมือ MCP" placeholder="ค้นหาเครื่องมือ" value={search} onChange={e => setSearch(e.target.value)} />
+        <input
+          aria-label={t('ค้นหาเครื่องมือ MCP')}
+          placeholder={t('ค้นหาเครื่องมือ')}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
         <button
           disabled={busy || !features.mcp || !server}
           onClick={() => void act(async () => setResult(JSON.stringify(await api.call('mcpSearch', { server, query: search }), null, 2)))}
         >
-          ค้นหาเครื่องมือ
+          {t('ค้นหาเครื่องมือ')}
         </button>
-        <input aria-label="ชื่อเครื่องมือ MCP" placeholder="ชื่อเครื่องมือ" value={tool} onChange={e => setTool(e.target.value)} />
-        <textarea aria-label="ข้อมูลเครื่องมือ MCP" value={args} onChange={e => setArgs(e.target.value)} maxLength={30000} />
+        <input
+          aria-label={t('ชื่อเครื่องมือ MCP')}
+          placeholder={t('ชื่อเครื่องมือ')}
+          value={tool}
+          onChange={e => setTool(e.target.value)}
+        />
+        <textarea aria-label={t('ข้อมูลเครื่องมือ MCP')} value={args} onChange={e => setArgs(e.target.value)} maxLength={30000} />
         <button
           disabled={busy || !features.mcp || !server || !tool}
           onClick={() =>
@@ -236,22 +252,22 @@ export function AutomationDialog({
             )
           }
         >
-          ตรวจและเรียกเครื่องมือ
+          {t('ตรวจและเรียกเครื่องมือ')}
         </button>
       </details>
       <details>
-        <summary>Docker sandbox {features.sandbox ? '' : '(ยังไม่เปิดใช้)'}</summary>
-        <p className="small muted">รันใน container ที่ผู้ดูแลกำหนด ปิดเครือข่าย และอ่านเฉพาะสำเนาไฟล์ที่คุณแนบ</p>
+        <summary>Docker sandbox {features.sandbox ? '' : t('(ยังไม่เปิดใช้)')}</summary>
+        <p className="small muted">{t('รันใน container ที่ผู้ดูแลกำหนด ปิดเครือข่าย และอ่านเฉพาะสำเนาไฟล์ที่คุณแนบ')}</p>
         <input
-          aria-label="คำสั่ง sandbox"
-          placeholder="คำสั่ง"
+          aria-label={t('คำสั่ง sandbox')}
+          placeholder={t('คำสั่ง')}
           value={command}
           onChange={e => setCommand(e.target.value)}
           maxLength={2000}
         />
         <input
-          aria-label="ไฟล์ sandbox"
-          placeholder="path ไฟล์ในพื้นที่งาน คั่นด้วย comma"
+          aria-label={t('ไฟล์ sandbox')}
+          placeholder={t('path ไฟล์ในพื้นที่งาน คั่นด้วย comma')}
           value={files}
           onChange={e => setFiles(e.target.value)}
         />
@@ -275,7 +291,7 @@ export function AutomationDialog({
             )
           }
         >
-          ตรวจและรันใน sandbox
+          {t('ตรวจและรันใน sandbox')}
         </button>
       </details>
       {result && <pre className="tool-output">{result}</pre>}

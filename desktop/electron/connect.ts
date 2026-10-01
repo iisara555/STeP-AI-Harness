@@ -3,6 +3,7 @@ import { errorCode, explainRuntimeFailure } from './diagnostics';
 import type { Connection } from '../src/types';
 import { claudeLogin } from './claude-auth';
 import { anthropicLogin } from './anthropic-auth';
+import { tm } from './i18n';
 
 // Plain-language notes for connection failures; anything else shows its code.
 export const connectNotes: Record<string, string> = {
@@ -52,7 +53,7 @@ export const connectNotes: Record<string, string> = {
   RUNTIME_UNAVAILABLE: 'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่',
 };
 export const connectFailureNote = (code: string) =>
-  `${connectNotes[code] || 'เชื่อมต่อไม่สำเร็จ ตรวจบัญชี โควตา และ runtime แล้วลองใหม่'} (${code})`;
+  `${connectNotes[code] ? tm(connectNotes[code]) : tm('เชื่อมต่อไม่สำเร็จ ตรวจบัญชี โควตา และ runtime แล้วลองใหม่')} (${code})`;
 
 const LOGIN_MS = 300_000,
   TEST_MS = 120_000;
@@ -87,7 +88,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     deps.signedIn?.();
   }
   if (['openai', 'gemini'].includes(connection.provider)) {
-    progress('กำลังเปิดตัวเชื่อม ' + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
+    progress(tm('กำลังเปิดตัวเชื่อม ') + (connection.provider === 'openai' ? 'OpenAI' : 'Gemini'));
     const rpc = createRpc(connection, runtime.context);
     const close = () => rpc.close('CANCELLED');
     signal.addEventListener('abort', close, { once: true });
@@ -111,10 +112,10 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
   // The test gets its own short budget so a stalled provider is reported instead of spinning for minutes.
   progress(
     connection.provider === 'claude' && connection.mode === 'oauth'
-      ? 'ยืนยัน Claude Console OAuth แล้ว · กำลังทดสอบส่งข้อความสั้น ๆ'
+      ? tm('ยืนยัน Claude Console OAuth แล้ว · กำลังทดสอบส่งข้อความสั้น ๆ')
       : connection.provider === 'antigravity'
         ? 'Checking the native Google session and testing one short request'
-        : 'ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ',
+        : tm('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ'),
   );
   if (signal.aborted) throw new Error('CANCELLED');
   let timedOut = false;
@@ -174,7 +175,7 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
   // say "chatgpt" even when its access token can no longer be refreshed.
   const saved = await rpc.request('account/read', { refreshToken: true }).catch(() => null);
   if (saved?.account?.type === 'chatgpt') {
-    deps.progress('ใช้บัญชี ChatGPT ที่ลงชื่อไว้แล้ว');
+    deps.progress(tm('ใช้บัญชี ChatGPT ที่ลงชื่อไว้แล้ว'));
     deps.signedIn?.();
     return;
   }
@@ -197,7 +198,7 @@ async function openAiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
   if (url.protocol !== 'https:' || !OPENAI_LOGIN_HOSTS.includes(url.hostname) || url.port || url.username || url.password || url.hash)
     throw new Error('INVALID_LOGIN_URL');
   const loginId = login.loginId;
-  deps.progress('รอให้ลงชื่อ ChatGPT ในเบราว์เซอร์…');
+  deps.progress(tm('รอให้ลงชื่อ ChatGPT ในเบราว์เซอร์…'));
 
   const cancel = async () => {
     await rpc.request('account/login/cancel', { loginId }, 10_000).catch(() => {});
@@ -269,7 +270,7 @@ async function geminiSignIn(rpc: ReturnType<typeof createRpc>, connection: Conne
     let sawLoginUrl = false;
     rpc.onText = line => {
       if (!googleLoginUrl(line)) return;
-      if (!sawLoginUrl) deps.progress('เปิดหน้าลงชื่อ Google แล้ว · รอการยืนยันจากเบราว์เซอร์');
+      if (!sawLoginUrl) deps.progress(tm('เปิดหน้าลงชื่อ Google แล้ว · รอการยืนยันจากเบราว์เซอร์'));
       sawLoginUrl = true;
     };
   }

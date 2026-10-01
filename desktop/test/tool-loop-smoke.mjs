@@ -67,6 +67,8 @@ try {
     { workspace, executable },
   );
   await page.reload();
+  // Send only once the seeded connection is loaded; an Enter before that is ignored as "no AI selected".
+  await page.locator('.statusbar .status-dot.ok').waitFor();
   await page.locator('.composer textarea').fill('Read local note and prepare summary');
   await page.keyboard.press('Enter');
   const consent = () => page.getByRole('alertdialog', { name: 'ส่งผลเครื่องมือให้ AI?' });

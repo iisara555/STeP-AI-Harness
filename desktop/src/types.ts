@@ -147,6 +147,8 @@ export type Settings = {
   assistant: string;
   workspace: string;
   theme: 'system' | 'light' | 'dark';
+  /** Interface language; Thai when unset. */
+  language?: 'th' | 'en';
   onboarding: boolean;
   ocrDir?: string;
   userName?: string;
@@ -197,7 +199,7 @@ export type Snapshot = {
   settings: Settings;
   connections: Connection[];
   sessions: Session[];
-  teams: { id: string; name: string }[];
+  teams: { id: string; name: string; nameEn?: string }[];
   userFile: string;
 };
 export type PermissionMode = 'ask' | 'plan' | 'auto';

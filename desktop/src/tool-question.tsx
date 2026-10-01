@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ToolQuestion } from './types';
 import { explainError } from './messages';
+import { t } from './i18n';
 export function QuestionCard({ question, onAnswer }: { question: ToolQuestion; onAnswer: (answer: string | null) => Promise<void> }) {
   const [answer, setAnswer] = useState(''),
     [busy, setBusy] = useState(false);
@@ -34,16 +35,16 @@ export function QuestionCard({ question, onAnswer }: { question: ToolQuestion; o
         }}
       >
         <input
-          aria-label="คำตอบสำหรับ AI"
-          placeholder="เลือกตัวเลือกหรือพิมพ์คำตอบ"
+          aria-label={t('คำตอบสำหรับ AI')}
+          placeholder={t('เลือกตัวเลือกหรือพิมพ์คำตอบ')}
           value={answer}
           onChange={e => setAnswer(e.target.value)}
           maxLength={2000}
         />
         <div className="tool-actions">
-          <button disabled={busy || !answer.trim()}>ส่งคำตอบ</button>
+          <button disabled={busy || !answer.trim()}>{t('ส่งคำตอบ')}</button>
           <button type="button" className="quiet" disabled={busy} onClick={() => void send(null)}>
-            ยกเลิกงานนี้
+            {t('ยกเลิกงานนี้')}
           </button>
         </div>
       </form>

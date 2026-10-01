@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { browserUrl } from './workbench';
 import type { LoopRequest } from '../src/tools';
+import { tm } from './i18n';
 
 // Runs in an isolated world. The page cannot replace these helpers or manufacture references.
 const helpers = `
@@ -90,9 +91,14 @@ export class AgentBrowser {
     if (action === 'open') {
       const url = browserUrl(request.input);
       context.review(decodeURIComponent(url));
-      context.activity?.(`รออนุญาตเปิดเว็บ ${new URL(url).host}`);
+      context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
-      if (!(await context.approve('เปิดเว็บให้ Agent ทำงาน?', url + '\nเปิดในเบราว์เซอร์แยกของ STeP เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ')))
+      if (
+        !(await context.approve(
+          tm('เปิดเว็บให้ Agent ทำงาน?'),
+          url + tm('\nเปิดในเบราว์เซอร์แยกของ STeP เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
+        ))
+      )
         throw new Error('BROWSER_ACTION_DECLINED');
       await context.check();
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
@@ -149,7 +155,7 @@ export class AgentBrowser {
     }
     const entry = this.get(request.input, context.sessionId);
     context.activity?.(
-      `${action === 'read' ? 'กำลังอ่านผลจากเว็บ' : action === 'close' ? 'กำลังปิดเว็บ' : action === 'fill' ? 'ตรวจเป้าหมายก่อนขอกรอกข้อมูล' : 'ตรวจเป้าหมายก่อนขอคลิก'} ${new URL(entry.origin).host}`,
+      `${action === 'read' ? tm('กำลังอ่านผลจากเว็บ') : action === 'close' ? tm('กำลังปิดเว็บ') : action === 'fill' ? tm('ตรวจเป้าหมายก่อนขอกรอกข้อมูล') : tm('ตรวจเป้าหมายก่อนขอคลิก')} ${new URL(entry.origin).host}`,
     );
     if (entry.busy) throw new Error('BROWSER_BUSY');
     entry.busy = true;
@@ -177,12 +183,12 @@ export class AgentBrowser {
       context.review(info.url + '\n' + info.label);
       if (
         !(await context.approve(
-          action === 'fill' ? 'ให้ Agent กรอกข้อมูลนี้?' : 'ให้ Agent คลิกเป้าหมายนี้?',
+          action === 'fill' ? tm('ให้ Agent กรอกข้อมูลนี้?') : tm('ให้ Agent คลิกเป้าหมายนี้?'),
           info.url +
             '\n' +
             info.label +
-            (action === 'fill' ? '\nข้อความ: ' + value : '') +
-            '\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าต่างเบราว์เซอร์ก่อนอนุมัติ',
+            (action === 'fill' ? tm('\nข้อความ: ') + value : '') +
+            tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าต่างเบราว์เซอร์ก่อนอนุมัติ'),
         ))
       )
         throw new Error('BROWSER_ACTION_DECLINED');

@@ -1,6 +1,7 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
+import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
-export const errorText: Record<string, string> = {
+export const errorText: Record<string, string> = localized({
   PROVIDER_PROXY_UNAVAILABLE: 'ปลายทางนี้ยังไม่รองรับ proxy ที่นโยบายกำหนด กรุณาแจ้งผู้ดูแล',
   PROVIDER_DESTINATION_DENIED: 'ผู้ดูแลยังไม่รับรองปลายทาง AI นี้ กรุณาตรวจ Base URL ในนโยบาย',
   PROVIDER_URL_INVALID: 'Base URL ต้องเป็น HTTPS หรือ HTTP ของ localhost และไม่มีข้อมูลรับรองใน URL',
@@ -164,7 +165,7 @@ export const errorText: Record<string, string> = {
   CONTEXT_UNAVAILABLE: 'แหล่งอ้างอิงที่จำเป็นยังไม่พร้อม',
   EMPTY_RESULT: 'AI ยังไม่ได้ส่งร่างกลับมา กรุณาลองใหม่',
   INPUT_LIMIT: 'เนื้อหายาวเกินขอบเขต กรุณาแบ่งงานเป็นส่วนเล็กลง',
-};
+});
 export const effortLabel: Record<string, string> = {
   none: 'None',
   minimal: 'Minimal',
@@ -177,13 +178,13 @@ export const effortLabel: Record<string, string> = {
 };
 export const explainError = (value: unknown) => {
   const text = String(value);
-  return Object.entries(errorText).find(([key]) => text.includes(key))?.[1] || 'ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่';
+  return Object.entries(errorText).find(([key]) => text.includes(key))?.[1] || t('ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่');
 };
 // First visible character: Thai marks stay attached to their base letter (ต้น → ต้, not ต + ้).
 export const initial = (name: string) =>
   [...new Intl.Segmenter('th', { granularity: 'grapheme' }).segment(name.trim())][0]?.segment.replace(/[ัิ-ฺ็-๎]/g, '') || '';
 export const shortcut = /Mac/i.test(navigator.platform) ? '⌘K' : 'Ctrl+K';
-export const statusText: Record<string, string> = {
+export const statusText: Record<string, string> = localized({
   idle: 'พร้อมเริ่ม',
   running: 'กำลังทำงาน',
   review: 'รอตรวจร่าง',
@@ -191,7 +192,7 @@ export const statusText: Record<string, string> = {
   error: 'ไม่สำเร็จ',
   cancelled: 'หยุดแล้ว',
   interrupted: 'งานหยุดเมื่อปิดแอป',
-};
+});
 
 export const providerLabel = (provider?: string) =>
   provider === 'antigravity'

@@ -64,6 +64,7 @@ import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
+import { tm, useLanguage } from './i18n';
 
 let window: BrowserWindow, store: Store, service: WorkService;
 const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; image?: VisionInput }>();
@@ -105,9 +106,9 @@ async function makeWindow() {
     // Keep the window open by default when the editor has unsaved content.
     const result = await dialog.showMessageBox(window, {
       type: 'warning',
-      message: 'มีร่างที่ยังไม่บันทึก',
-      detail: 'กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก',
-      buttons: ['กลับไปบันทึก', 'ปิดโดยไม่บันทึก'],
+      message: tm('มีร่างที่ยังไม่บันทึก'),
+      detail: tm('กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก'),
+      buttons: [tm('กลับไปบันทึก'), tm('ปิดโดยไม่บันทึก')],
       defaultId: 0,
       cancelId: 0,
     });
@@ -152,6 +153,7 @@ async function main() {
         details.mediaType === 'audio'),
   );
   store = new Store(join(data, 'workspace.sqlite'));
+  useLanguage(() => store?.settings().language);
   const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
     import(pathToFileURL(join(root, 'src/modules/router/index.js')).href),
@@ -382,7 +384,7 @@ async function main() {
     workbench,
     () => policyState.policy,
     harness.privacy,
-    (body, signal) => phase4Consent('รันคำสั่งใน Docker sandbox?', body, signal),
+    (body, signal) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal),
   );
   tools.closeBrowser = id => agentBrowser.closeOwner(id);
   tools.external = (request, scope, check) => {
@@ -449,8 +451,8 @@ async function main() {
             .digest('hex'),
         ),
         {
-          title: 'ใช้บริบทที่บันทึกไว้กับงานนี้?',
-          body: `จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ ${connection.provider}\n${text.slice(0, 2000)}`,
+          title: tm('ใช้บริบทที่บันทึกไว้กับงานนี้?'),
+          body: tm('จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}', connection.provider, text.slice(0, 2000)),
           privacyClass: 'internal',
           allowRemember: false,
         },
@@ -530,8 +532,8 @@ async function main() {
     },
     (id, tasks, signal) =>
       phase4Consent(
-        'ตรวจแผนงานย่อยก่อนเริ่ม?',
-        `งาน ${id}\n${JSON.stringify(tasks, null, 2)}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ`,
+        tm('ตรวจแผนงานย่อยก่อนเริ่ม?'),
+        tm('งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ', id, JSON.stringify(tasks, null, 2)),
         signal,
       ),
     (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
@@ -596,7 +598,7 @@ async function main() {
       if (Notification.isSupported()) {
         const notification = new Notification({
           title: 'STeP Desktop',
-          body: run.status === 'review' ? 'งานตามรอบมีร่างรอตรวจแล้ว' : 'งานตามรอบต้องการให้ตรวจสถานะ',
+          body: run.status === 'review' ? tm('งานตามรอบมีร่างรอตรวจแล้ว') : tm('งานตามรอบต้องการให้ตรวจสถานะ'),
         });
         notification.on('click', () => {
           window.show();
@@ -743,7 +745,7 @@ async function main() {
           }
         }
         const result = await dialog.showSaveDialog(window, {
-          title: 'บันทึกบทสนทนา',
+          title: tm('บันทึกบทสนทนา'),
           defaultPath: `conversation.${format}`,
           filters: [{ name: format === 'json' ? 'JSON' : 'Markdown', extensions: [format] }],
         });
@@ -819,8 +821,8 @@ async function main() {
         return gate.run(
           { tool: 'write', readOnly: false, path: change.path },
           {
-            title: 'เขียนไฟล์ที่ตรวจแล้ว?',
-            body: change.path + '\nตรวจ Before / After ใน Changes ก่อนบันทึก',
+            title: tm('เขียนไฟล์ที่ตรวจแล้ว?'),
+            body: change.path + tm('\nตรวจ Before / After ใน Changes ก่อนบันทึก'),
             key: change.path,
             privacyClass: review.classification === 'public' ? 'internal' : review.classification,
           },
@@ -844,8 +846,8 @@ async function main() {
         return gate.run(
           { tool: 'terminal', readOnly: false, execute: true, command },
           {
-            title: 'รันคำสั่งนี้บนเครื่อง?',
-            body: command + '\n\nWorking directory: ' + cwd + '\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย',
+            title: tm('รันคำสั่งนี้บนเครื่อง?'),
+            body: command + '\n\nWorking directory: ' + cwd + tm('\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย'),
             key: command,
             privacyClass: review.classification === 'public' ? 'internal' : review.classification,
           },
@@ -945,8 +947,13 @@ async function main() {
         if (
           input.enabled &&
           !(await phase4Consent(
-            'อนุมัติงานตามรอบ?',
-            `${query}\nตาราง UTC: ${input.schedule}\nใช้บัญชี ${input.connectionId} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ`,
+            tm('อนุมัติงานตามรอบ?'),
+            tm(
+              '{0}\nตาราง UTC: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ',
+              query,
+              input.schedule,
+              input.connectionId,
+            ),
           ))
         )
           throw new Error('CANCELLED');
@@ -966,7 +973,7 @@ async function main() {
         const id = inputText(input.id, 60),
           job = automations.list().find(j => j.id === id);
         if (!job) throw new Error('AUTOMATION_NOT_FOUND');
-        if (!(await phase4Consent('เริ่มงานตามรอบ?', job.query))) throw new Error('CANCELLED');
+        if (!(await phase4Consent(tm('เริ่มงานตามรอบ?'), job.query))) throw new Error('CANCELLED');
         if (JSON.stringify(job) !== JSON.stringify(automations.list().find(j => j.id === id)))
           throw new Error('AUTOMATION_CONTEXT_CHANGED');
         return automations.enqueue(id);
@@ -974,17 +981,19 @@ async function main() {
       case 'mcpServers':
         return mcp.servers();
       case 'mcpSearch':
-        return gate.run({ tool: 'mcp_search', readOnly: false }, { title: 'ค้นหา MCP?', body: input.server, key: input.server }, () =>
+        return gate.run({ tool: 'mcp_search', readOnly: false }, { title: tm('ค้นหา MCP?'), body: input.server, key: input.server }, () =>
           mcp.search(inputText(input.server, 60), input.query || ''),
         );
       case 'mcpCall':
-        return gate.run({ tool: 'mcp_call', readOnly: false }, { title: 'เรียก MCP?', body: input.name, key: JSON.stringify(input) }, () =>
-          mcp.call(inputText(input.server, 60), inputText(input.name, 120), input.arguments),
+        return gate.run(
+          { tool: 'mcp_call', readOnly: false },
+          { title: tm('เรียก MCP?'), body: input.name, key: JSON.stringify(input) },
+          () => mcp.call(inputText(input.server, 60), inputText(input.name, 120), input.arguments),
         );
       case 'sandboxRun':
         return gate.run(
           { tool: 'sandbox', readOnly: false, command: inputText(input.command, 2000), execute: true },
-          { title: 'รันใน Docker?', body: input.command, key: JSON.stringify(input) },
+          { title: tm('รันใน Docker?'), body: input.command, key: JSON.stringify(input) },
           () => sandbox.run(input.command, input.files || []),
         );
       case 'permissionMode': {
@@ -1033,6 +1042,7 @@ async function main() {
           userName: input.userName === undefined ? store.settings().userName : inputText(input.userName, 60).trim(),
           personality,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
+          language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
         };
         store.put('settings', 'main', s);
         nativeTheme.themeSource = theme;
@@ -1044,7 +1054,10 @@ async function main() {
       case 'packList':
         return listPacks(store.settings().workspace || data, policyState.policy);
       case 'packInstall': {
-        const selected = await dialog.showOpenDialog(window!, { title: 'นำเข้า Skill Pack จากโฟลเดอร์', properties: ['openDirectory'] });
+        const selected = await dialog.showOpenDialog(window!, {
+          title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
+          properties: ['openDirectory'],
+        });
         if (selected.canceled || !selected.filePaths[0]) return null;
         return installPack(store.settings().workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64) });
       }
@@ -1054,11 +1067,16 @@ async function main() {
           id = inputText(input.id, 64);
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
-          buttons: ['ยกเลิก', 'ยืนยัน'],
+          buttons: [tm('ยกเลิก'), tm('ยืนยัน')],
           defaultId: 0,
           cancelId: 0,
-          message: input.disable ? 'ปิด Skill Pack นี้' : 'เปิด Skill Pack ที่ผู้ดูแลรับรอง',
-          detail: `${id}\nHooks: ${input.hooks === true ? 'เปิด command/HTTP hooks ที่รับรอง' : 'ปิด'}\nAgent templates: ${input.agents === true ? 'เปิด' : 'ปิด'}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้`,
+          message: input.disable ? tm('ปิด Skill Pack นี้') : tm('เปิด Skill Pack ที่ผู้ดูแลรับรอง'),
+          detail: tm(
+            '{0}\nHooks: {1}\nAgent templates: {2}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้',
+            id,
+            input.hooks === true ? tm('เปิด command/HTTP hooks ที่รับรอง') : tm('ปิด'),
+            input.agents === true ? tm('เปิด') : tm('ปิด'),
+          ),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
@@ -1078,7 +1096,10 @@ async function main() {
           policyState.policy,
         );
       case 'packExport': {
-        const selected = await dialog.showSaveDialog(window!, { title: 'ส่งออก Skill ไปยังโฟลเดอร์ใหม่', defaultPath: 'exported-skills' });
+        const selected = await dialog.showSaveDialog(window!, {
+          title: tm('ส่งออก Skill ไปยังโฟลเดอร์ใหม่'),
+          defaultPath: 'exported-skills',
+        });
         if (selected.canceled || !selected.filePath) return null;
         return exportPack(store.settings().workspace || data, inputText(input.id, 64), selected.filePath, { approve: true });
       }
@@ -1091,11 +1112,11 @@ async function main() {
         if (!policyState.policy.features.voice) throw new Error('VOICE_DISABLED');
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
-          buttons: ['ยกเลิก', 'ดาวน์โหลดส่วนเสริมเสียง'],
+          buttons: [tm('ยกเลิก'), tm('ดาวน์โหลดส่วนเสริมเสียง')],
           defaultId: 0,
           cancelId: 0,
-          message: 'ดาวน์โหลดโมเดลและตัวถอดเสียงที่ผู้ดูแลรับรอง',
-          detail: 'ระบบตรวจ SHA-256 ก่อนติดตั้ง เสียงถอดข้อความในเครื่อง และคุณตรวจข้อความก่อนส่งให้ AI',
+          message: tm('ดาวน์โหลดโมเดลและตัวถอดเสียงที่ผู้ดูแลรับรอง'),
+          detail: tm('ระบบตรวจ SHA-256 ก่อนติดตั้ง เสียงถอดข้อความในเครื่อง และคุณตรวจข้อความก่อนส่งให้ AI'),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         return voice.install();
@@ -1105,11 +1126,11 @@ async function main() {
         if (!status.installed) throw new Error('VOICE_DISABLED');
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
-          buttons: ['ยกเลิก', 'บันทึกเสียงครั้งนี้'],
+          buttons: [tm('ยกเลิก'), tm('บันทึกเสียงครั้งนี้')],
           defaultId: 0,
           cancelId: 0,
-          message: 'อนุญาตไมโครโฟนสำหรับคำขอนี้',
-          detail: 'บันทึกได้ไม่เกิน 60 วินาที คุณตรวจและแก้ข้อความก่อนส่ง',
+          message: tm('อนุญาตไมโครโฟนสำหรับคำขอนี้'),
+          detail: tm('บันทึกได้ไม่เกิน 60 วินาที คุณตรวจและแก้ข้อความก่อนส่ง'),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         voicePermissionUntil = Date.now() + 65_000;
@@ -1177,7 +1198,7 @@ async function main() {
             ? { baseUrl: inputText(input.baseUrl, 2000), protocol: input.protocol, label: inputText(input.label || 'Compatible', 120) }
             : {}),
           ready: false,
-          note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ',
+          note: tm('ยังไม่ได้ทดสอบการเชื่อมต่อ'),
         };
         if (input.apiKey) {
           if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
@@ -1197,7 +1218,7 @@ async function main() {
           connection.note =
             connection.provider === 'antigravity'
               ? 'Use installed Antigravity; connection needs a new test.'
-              : 'ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ';
+              : tm('ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ');
           store.put('connection', connection.id, connection);
           return connection;
         }
@@ -1210,7 +1231,7 @@ async function main() {
           connection.executable = result.filePaths[0];
           connection.customRuntime = true;
           connection.ready = false;
-          connection.note = 'ใช้ตัวเชื่อมที่เลือกเอง · ยังไม่ได้ทดสอบการเชื่อมต่อ';
+          connection.note = tm('ใช้ตัวเชื่อมที่เลือกเอง · ยังไม่ได้ทดสอบการเชื่อมต่อ');
           store.put('connection', connection.id, connection);
         }
         return connection;
@@ -1245,7 +1266,12 @@ async function main() {
             if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
             const currentPolicy = policyState.policy;
             const token = await copilotDeviceLogin(currentPolicy.providers!.copilot!.clientId, controller.signal, async (code, url) => {
-              emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: `GitHub: ใส่รหัส ${code} ในหน้าที่เปิด` });
+              emit({
+                sessionId: '',
+                type: 'connect-progress',
+                connectionId: connection.id,
+                text: tm('GitHub: ใส่รหัส {0} ในหน้าที่เปิด', code),
+              });
               await shell.openExternal(url);
             });
             if (controller.signal.aborted || currentPolicy !== policyState.policy) throw new Error('CANCELLED');
@@ -1275,9 +1301,9 @@ async function main() {
             },
             controller.signal,
           );
-          emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: 'กำลังโหลดรายชื่อโมเดล' });
+          emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: tm('กำลังโหลดรายชื่อโมเดล') });
           connection.ready = true;
-          connection.note = 'ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว';
+          connection.note = tm('ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว');
           try {
             await refreshModels(connection);
           } catch {
@@ -1395,7 +1421,7 @@ async function main() {
         };
       }
       case 'ocrFolder': {
-        const picked = await dialog.showOpenDialog(window, { title: 'เลือกโฟลเดอร์ local-thai-ocr', properties: ['openDirectory'] });
+        const picked = await dialog.showOpenDialog(window, { title: tm('เลือกโฟลเดอร์ local-thai-ocr'), properties: ['openDirectory'] });
         if (picked.canceled) return ocr.status();
         if (!isOcrFolder(picked.filePaths[0])) throw new Error('OCR_FOLDER_INVALID');
         store.put('settings', 'main', { ...store.settings(), ocrDir: picked.filePaths[0] });
@@ -1407,7 +1433,7 @@ async function main() {
         const health = await ocr.health();
         if (!health.running) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
-          title: 'เลือกใบเสร็จ',
+          title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
           filters: [{ name: 'Receipts', extensions: OCR_EXTENSIONS }],
         });
@@ -1433,11 +1459,12 @@ async function main() {
         if (!settings.ocrAiConsentedAt) {
           const answer = await dialog.showMessageBox(window, {
             type: 'question',
-            title: 'ให้ AI ช่วยกรองผล OCR',
-            message: 'ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ',
-            detail:
+            title: tm('ให้ AI ช่วยกรองผล OCR'),
+            message: tm('ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ'),
+            detail: tm(
               'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
-            buttons: ['ยกเลิก', 'ใช้ AI กรอง'],
+            ),
+            buttons: [tm('ยกเลิก'), tm('ใช้ AI กรอง')],
             defaultId: 1,
             cancelId: 0,
           });
@@ -1482,7 +1509,7 @@ async function main() {
         if (!input.draft || typeof input.draft !== 'object' || text.length > 2_000_000) throw new Error('INVALID_INPUT');
         const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const saved = await dialog.showSaveDialog(window, {
-          title: 'บันทึกร่างการตรวจใบเสร็จ',
+          title: tm('บันทึกร่างการตรวจใบเสร็จ'),
           defaultPath: join(store.settings().workspace || app.getPath('documents') || tmpdir(), `receipt-review-${date}.json`),
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
@@ -1519,7 +1546,7 @@ async function main() {
         c.note =
           c.provider === 'antigravity'
             ? 'Disconnected from STeP. The native Google account remains signed in to Antigravity.'
-            : 'ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่';
+            : tm('ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่');
         delete c.models;
         delete c.modelsAt;
         store.put('connection', c.id, c);
@@ -1849,11 +1876,11 @@ async function main() {
           name: basename(path),
           status: usable
             ? image
-              ? 'ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน'
+              ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
               : report.ocr
-                ? 'อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง'
-                : 'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง'
-            : 'ส่งไฟล์นี้ให้ AI ไม่ได้',
+                ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
+                : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+            : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
           preview: usable ? report.redactedText : '',
           usable,
           ...(image ? { vision: true, imagePreview: `data:${image.mime};base64,${image.data}` } : {}),
@@ -1953,6 +1980,6 @@ async function main() {
 app.on('window-all-closed', () => app.quit());
 main().catch(error => {
   diagnose('startup-failed', { code: errorCode(error), message: String(error instanceof Error ? error.message : error).slice(0, 300) });
-  dialog.showErrorBox('STeP Desktop', 'เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง');
+  dialog.showErrorBox('STeP Desktop', tm('เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง'));
   app.quit();
 });

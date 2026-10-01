@@ -1,4 +1,5 @@
 import type { PaletteItem } from './ui';
+import { t } from './i18n';
 
 export const COMMANDS = [
   ['palette', 'เปิดคำสั่ง', 'Mod+k'],
@@ -58,8 +59,8 @@ export function commandPalette(
   return [
     ...COMMANDS.filter(([id]) => actions[id]).map(([id, label, fallback]) => ({
       id,
-      label,
-      group: 'คำสั่ง',
+      label: t(label),
+      group: t('คำสั่ง'),
       hint: bindings[id] ?? fallback,
       run: actions[id]!,
     })),
