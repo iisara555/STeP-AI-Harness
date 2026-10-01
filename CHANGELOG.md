@@ -6,6 +6,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop OpenHarness adaptation — Phase 4
+
+- Add bounded coordinator sessions, declared Playbook dependencies, a shared three-run provider limit and reviewed final merge proposals.
+- Add app-open cron CRUD, serialized background drafts, context binding, restart recovery, history and status-only notifications.
+- Add managed stdio/HTTP MCP with separate destination consent, bounded discovery/search, no uncertain-call retry and host tool governance.
+- Add a Docker backend with digest-pinned preinstalled images, no network and explicitly selected privacy-checked read-only snapshots.
+- Add read-only GitHub autopilot inspection and gated worktree coding via host-validated JSON proposals, isolated validation profiles, reviewed PR publication and exact-head human-gated merge.
+- Cover the local flows with synthetic tests and real Electron UI/IPC; live providers, Docker engines, organization servers, remote autopilot writes and release acceptance remain pending.
+
 ### Desktop OpenHarness adaptation — Phase 3
 
 - Add script-aware context estimates, older-source previews, bounded summaries, prompt-overflow retry and compact hooks while retaining host task state.

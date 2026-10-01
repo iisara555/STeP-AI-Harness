@@ -25,6 +25,7 @@ export { fence, section } from './prompt';
 export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
 
 export const STEP_TIMEOUT_MS = 600_000;
+export const MAX_PARALLEL_RUNS = 3;
 // Failures that usually pass on their own: a dropped connection, a busy service, a runtime that exited.
 const TRACE_LIMIT = 20;
 // Chat keeps the conversation, like any chat app: recent turns and every file sent in it, within these budgets.
@@ -156,7 +157,7 @@ export function conversationFiles(files: ConversationFile[]) {
   ].join('\n');
 }
 
-export type RunOptions = { retry?: boolean; images?: VisionInput[] };
+export type RunOptions = { retry?: boolean; images?: VisionInput[]; draftOnly?: boolean; mergeOnly?: boolean };
 
 export class WorkService {
   private active = new Map<string, AbortController>();
@@ -228,6 +229,7 @@ export class WorkService {
     options: RunOptions = {},
   ) {
     if (this.active.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+    if (this.active.size >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
     // Claimed before the first await, so two quick sends to one session cannot both start.
     const controller = new AbortController();
     this.active.set(id, controller);
@@ -447,6 +449,7 @@ export class WorkService {
       let retrieved = '';
       let searchUsage: TokenCount = { input: 0, output: 0, total: 0 };
       const searchPublic =
+        !options.draftOnly &&
         mode !== 'image' &&
         !revising &&
         !session.skill &&
@@ -550,11 +553,12 @@ export class WorkService {
           ? contract.steps
           : [{ skill: contract.skill, skillPath: contract.skillPath, description: chat ? 'กำลังตอบ' : 'จัดทำร่าง' }];
       // A revision only needs the final drafting step, not a full replay of the playbook.
-      const steps = revising
-        ? [planned.filter((s: any) => !(s.kind === 'action' || s.action || s.actionId)).at(-1) || planned[0]]
-        : planned;
+      const steps =
+        revising || (options.draftOnly && options.mergeOnly)
+          ? [planned.filter((s: any) => !(s.kind === 'action' || s.action || s.actionId)).at(-1) || planned[0]]
+          : planned;
       const runtime = await this.runtime(connection, false);
-      const extra = await this.harness.extraContext?.(id, latest, connection, controller.signal);
+      const extra = options.draftOnly ? undefined : await this.harness.extraContext?.(id, latest, connection, controller.signal);
       if (extra) {
         const current = this.store.session(id);
         current.loadedContext = extra.loaded;
@@ -631,9 +635,12 @@ export class WorkService {
         sources = [...new Set([...sources, ...paths])];
         status(step.description || 'กำลังจัดทำร่าง');
         // Stable parts first (rules, preferences, Skill), so providers can reuse the cached prefix across turns.
-        const toolsEnabled = Boolean(this.harness.tools && this.harness.toolLoop?.());
+        const toolsEnabled = Boolean(!options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
         const baseRules = chat ? CHAT_RULES : DRAFTING_RULES;
         const system = [
+          options.draftOnly &&
+            options.mergeOnly &&
+            'Integrate the supplied subtask drafts into the requested deliverable. Preserve evidence, expose conflicts and missing facts, and do not repeat the subtask execution.',
           toolsEnabled
             ? baseRules
                 .replace(
