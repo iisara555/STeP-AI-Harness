@@ -42,6 +42,8 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  // Skipping saves settings before the wizard closes; reading the store earlier races that write.
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ state: 'detached' });
   await child.evaluate(
     ({ app }, data) => {
       const { DatabaseSync } = process.mainModule.require('node:sqlite');

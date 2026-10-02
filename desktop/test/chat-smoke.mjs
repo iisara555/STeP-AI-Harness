@@ -73,6 +73,8 @@ try {
   }
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  // Skipping saves settings before the wizard closes; reading the store earlier races that write.
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ state: 'detached' });
   await page.setViewportSize({ width: 1000, height: 760 });
   // Populate only this synthetic SQLite store, leaving the installed profile untouched.
   await app.evaluate(
