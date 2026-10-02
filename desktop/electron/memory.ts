@@ -155,19 +155,22 @@ export class Memories {
       base = folder;
       segments = [];
     }
-    // Reject junction/symlink components; nothing may redirect a memory operation.
+    // The memory base and every folder below it must be real directories, so nothing inside them can redirect a
+    // memory operation. Folders above the base belong to the operating system (macOS /var → /private/var), so a
+    // link there is resolved rather than refused, and both the given and the resolved path pass the same checks.
     const absolute = resolve(base);
-    let check = absolute;
-    for (;;) {
-      const info = await lstat(check);
-      if (info.isSymbolicLink()) throw new Error('INVALID_PATH');
-      const sensitive = scope === 'private' ? undefined : sensitivePath(check);
-      if (sensitive && !sensitive.includes('/.step/memory')) throw new Error('INVALID_PATH');
-      const parent = resolve(check, '..');
-      if (parent === check) break;
-      check = parent;
-    }
+    if ((await lstat(absolute)).isSymbolicLink()) throw new Error('INVALID_PATH');
     let path = await realpath(absolute);
+    for (const start of new Set([absolute, path])) {
+      let check = start;
+      for (;;) {
+        const sensitive = scope === 'private' ? undefined : sensitivePath(check);
+        if (sensitive && !sensitive.includes('/.step/memory')) throw new Error('INVALID_PATH');
+        const parent = resolve(check, '..');
+        if (parent === check) break;
+        check = parent;
+      }
+    }
     if (scope !== 'private') {
       // Windows 8.3 aliases must not make a workspace-relative denial miss its canonical target.
       const configuredRoot = s.workspace || absolute,
