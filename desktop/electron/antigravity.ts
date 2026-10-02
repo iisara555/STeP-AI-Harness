@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { scrub, explainRuntimeFailure } from './diagnostics';
@@ -190,8 +191,16 @@ export function runAntigravity(
   });
 }
 
+// The runtime reports its real working folder, which can differ from ours by an OS link (macOS /var → /private/var).
+const canonical = (path: string) => {
+  try {
+    return realpathSync.native(path);
+  } catch {
+    return resolve(path);
+  }
+};
 const samePath = (a: string, b: string) =>
-  process.platform === 'win32' ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b);
+  process.platform === 'win32' ? canonical(a).toLowerCase() === canonical(b).toLowerCase() : canonical(a) === canonical(b);
 
 export function antigravityUsage(value: any): TokenCount | undefined {
   if (value === undefined) return undefined;
