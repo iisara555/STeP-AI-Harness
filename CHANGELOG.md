@@ -10,6 +10,10 @@ STeP Desktop version 0.5.4 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Work like a general AI harness (Claude Code, opencode), keeping STeP's knowledge and Skills:
+  - **Skill registry:** the AI sees a registry of STeP Skills, one line each with name and description. It loads only the Skill a request needs with the `skill` tool, instead of the app choosing a Skill or reading them all. The status line names the Skill or document being read.
+  - **Images:** images go to vision models by default (`features.vision: true`). With privacy checks off, an image is sent as it is, with no local OCR service needed.
+  - **No dialogs at send:** with privacy checks off, the only question when sending is the one-time usage terms. Images, pasted sources and multi-worker runs no longer ask.
 - Ask each employee to tick the **usage terms** once, instead of the app checking for them.
   - The terms appear on the last setup step. If setup was skipped, they appear at the first send, where the button reads "รับทราบและส่ง".
   - Starting or sending stays disabled until the box is ticked.

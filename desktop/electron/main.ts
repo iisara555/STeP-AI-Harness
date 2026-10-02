@@ -14,7 +14,7 @@ import {
   Notification,
   session as electronSession,
 } from 'electron';
-import { mkdir, writeFile, stat, appendFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, stat, appendFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -167,6 +167,18 @@ async function main() {
     import(pathToFileURL(join(root, 'src/modules/skills/catalog.js')).href),
   ]);
   // Every privacy scan in the app goes through here, so policy checks.privacy (off by default) switches them all.
+  /** A PNG, JPEG or WebP image checked by its signature, ready for a vision model. */
+  function visionImage(extension: string, bytes: Buffer): VisionInput {
+    const mime = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+    const valid =
+      mime === 'image/png'
+        ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+        : mime === 'image/jpeg'
+          ? bytes[0] === 255 && bytes[1] === 216
+          : bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP';
+    if (!valid) throw new Error('ATTACH_UNSUPPORTED');
+    return { mime, data: bytes.toString('base64') };
+  }
   function acceptTerms() {
     const s = store.settings();
     if (s.termsVersion !== TERMS_VERSION)
@@ -1754,18 +1766,21 @@ async function main() {
         const first = store.settings().termsVersion !== TERMS_VERSION;
         const vision = selected.some(a => Boolean(a.image));
         const pilot = Boolean(policyState.policy.pilot);
-        const { block, ask, warning } = sendConsent(
-          {
-            action: review.action as SendSignals['action'],
-            keywordOnly: review.keywordOnly,
-            first,
-            attachment: selected.length > 0,
-            source: Boolean(sourceText),
-            vision,
-            coordinated,
-          },
-          pilot,
-        );
+        // With privacy checks off (the default) the only question is the one-time usage terms, as in other AI apps.
+        const { block, ask, warning } = policyState.policy.checks.privacy
+          ? sendConsent(
+              {
+                action: review.action as SendSignals['action'],
+                keywordOnly: review.keywordOnly,
+                first,
+                attachment: selected.length > 0,
+                source: Boolean(sourceText),
+                vision,
+                coordinated,
+              },
+              pilot,
+            )
+          : { block: false, ask: first, warning: false };
         if (block) throw new Error('PRIVACY_REVIEW_REQUIRED');
         if (pilot && !ask) {
           const s = store.session(id);
@@ -1931,7 +1946,16 @@ async function main() {
           extension = extname(path).slice(1).toLowerCase();
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
           image: VisionInput | undefined;
+        // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
+        const directImage = vision && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+        if (directImage) {
+          const bytes = await readFile(path);
+          if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+          image = visionImage(extension, bytes);
+          report = { ...unscanned(''), extractionStatus: 'text-extracted' };
+        }
         const scanNeeded =
+          !directImage &&
           OCR_EXTENSIONS.includes(extension) &&
           (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
         if (scanNeeded && report.action !== 'block-external') {
@@ -1944,15 +1968,7 @@ async function main() {
             if (vision && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
             if (vision && !attachmentReason(report)) {
               if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-              const mime = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
-              const valid =
-                mime === 'image/png'
-                  ? read.bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
-                  : mime === 'image/jpeg'
-                    ? read.bytes[0] === 255 && read.bytes[1] === 216
-                    : read.bytes.subarray(0, 4).toString() === 'RIFF' && read.bytes.subarray(8, 12).toString() === 'WEBP';
-              if (!valid) throw new Error('ATTACH_UNSUPPORTED');
-              image = { mime, data: read.bytes.toString('base64') };
+              image = visionImage(extension, read.bytes);
             }
           }
         }

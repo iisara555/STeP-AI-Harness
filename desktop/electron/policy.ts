@@ -126,7 +126,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   sandbox: false,
   mcp: false,
   lineGateway: false,
-  vision: false,
+  // Images go to vision models like in other AI apps; with checks.privacy on they still pass the OCR scan first.
+  vision: true,
   voice: false,
   copilot: false,
   compatibleProviders: false,

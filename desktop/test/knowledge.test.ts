@@ -41,7 +41,13 @@ test('staff questions find the right section of the organization documents; unre
   for (const s of await knowledge.search('สวัสดิการบุคลากรมีอะไรบ้าง')) assert.ok(s.score >= MATCH_THRESHOLD);
 });
 
-function service(captured: { prompt: string; system: string; webSearch: boolean[] }, autoRoute = true, checks = true) {
+function service(
+  captured: { prompt: string; system: string; webSearch: boolean[] },
+  autoRoute = true,
+  checks = true,
+  extra: Partial<Harness> = {},
+  replies: string[] = [],
+) {
   const harness: Harness = {
     root,
     route: (query: string, options: any = {}) => routing.queryStepRouter(query, { autoRoute, authorityChecks: checks, ...options }),
@@ -54,6 +60,7 @@ function service(captured: { prompt: string; system: string; webSearch: boolean[
     documentCatalog: routing.loadDocumentCatalog,
     documentPrivacy: async () => ({}),
     nextOutput: async () => ({}),
+    ...extra,
   };
   const store = new Store(':memory:');
   store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
@@ -68,7 +75,7 @@ function service(captured: { prompt: string; system: string; webSearch: boolean[
           run: async (prompt, _c, context) => {
             captured.prompt = prompt;
             captured.system = context.system || '';
-            return 'คำตอบทดสอบ';
+            return replies.shift() ?? 'คำตอบทดสอบ';
           },
         },
         context: { cwd: tmpdir(), env: {} },
@@ -189,5 +196,38 @@ test('with the organization checks off (the default), nothing is masked or block
   assert.ok(captured.prompt.includes(`นายสมชาย ใจดี โทร ${phone}`), 'sent unmasked');
   await work.run(session.id, 'ช่วยลงนามแทนผู้อำนวยการ', '', true, undefined, 'chat');
   assert.equal(store.session(session.id).messages.at(-1)!.text, 'คำตอบทดสอบ', 'answered, not blocked');
+  store.close();
+});
+
+test('the AI sees a registry of Skills by name and description and loads only the one it needs', async () => {
+  const skillCatalog: any = await import('../../src/modules/skills/catalog.js');
+  const loaded: string[] = [];
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const call = '```json\n{"tool":"skill","input":"meeting-summary"}\n```';
+  const { store, work, session } = service(
+    captured,
+    false,
+    false,
+    {
+      catalog: () => skillCatalog.loadSkillCatalog(root),
+      toolLoop: () => true,
+      tools: async () => ({
+        enabled: () => true,
+        check: async () => {},
+        readOnly: () => true,
+        execute: async (r: any) => (loaded.push(r.input), 'SKILL TEXT: สรุปมติและ Action item'),
+        outgoing: async (t: string) => t,
+      }),
+    },
+    [call, 'สรุปการประชุมตาม Skill'],
+  );
+  await work.run(session.id, 'สรุปบันทึกการประชุมนี้ให้หน่อย', '', true, undefined, 'chat');
+  // The registry names every routed Skill; no Skill's instructions are sent until the AI asks.
+  assert.match(captured.system, /- meeting-summary: /);
+  assert.match(captured.system, /- hr-policy-lookup: /);
+  assert.doesNotMatch(captured.system, /# STeP Meeting Summary/);
+  assert.deepEqual(loaded, ['meeting-summary']);
+  assert.equal(store.session(session.id).messages.at(-1)!.text, 'สรุปการประชุมตาม Skill');
+  assert.match(captured.prompt, /SKILL TEXT/);
   store.close();
 });

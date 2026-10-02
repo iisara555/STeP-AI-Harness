@@ -1116,6 +1116,8 @@ export const en: Record<string, string> = {
   'ใช้บริบทที่บันทึกไว้กับงานนี้?': 'Use the context saved for this task?',
   'จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}': 'Workspace guidance and selected memories will be sent to {0}\n{1}',
   'ความจำ: {0}': 'Memory: {0}',
+  'กำลังอ่าน Skill {0}': 'Reading Skill {0}',
+  'กำลังอ่านเอกสาร {0}': 'Reading document {0}',
   ข้อตกลงการใช้งาน: 'Terms of use',
   'ข้อความ ไฟล์ และรูปที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ (เช่น Google, OpenAI, Anthropic) ตามที่พิมพ์':
     'Messages, files and images you send go to the connected AI provider (such as Google, OpenAI or Anthropic) as you wrote them.',

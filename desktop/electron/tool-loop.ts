@@ -46,7 +46,8 @@ export class ToolLoop {
         const page = () => this.page(r.input, Number(r.args?.offset || 0));
         return { tool: r.tool, ok: true, ...(this.host.readPage ? await this.host.readPage(r, page, signal) : page()) };
       }
-      this.host.activity?.(r.tool);
+      // Name the Skill or document being read, so the employee sees which organization knowledge the answer uses.
+      this.host.activity?.(['skill', 'reference'].includes(r.tool) ? `${r.tool} ${r.input}` : r.tool);
       const value = await this.host.execute(r, signal);
       if (signal.aborted) throw new Error('CANCELLED');
       const raw = typeof value === 'string' ? value : JSON.stringify(value ?? { cancelled: true });

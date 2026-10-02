@@ -29,6 +29,8 @@ if(m.method==='tools/call')result={content:[{type:'text',text:'MCP synthetic res
 await writeFile(
   join(home, 'desktop-policy.json'),
   JSON.stringify({
+    // The coordinator dialog is part of the send-time privacy checks.
+    checks: { authority: true, privacy: true },
     features: { coordinator: true, cron: true, mcp: true, sandbox: false, toolLoop: false },
     mcpServers: [{ name: 'fixture', transport: 'stdio', command: process.execPath, args: [mcp] }],
   }),

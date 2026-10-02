@@ -106,6 +106,12 @@ export const CHAT_RULES = [
 ].join(' ');
 
 // Questions about STeP itself are answered from its own registered documents first, never from guesses or the web.
+const SKILL_RULE =
+  'STeP Skills are procedures written by STeP teams. When the request is work a Skill below covers, load it first with the skill tool (input = its name) and follow it; load only the Skill the request needs. Otherwise help directly. The employee can also pick a Skill with / in the composer.';
+/** One line per Skill: name and its description, cut short. */
+function skillRegistryText(entries: { name: string; description?: string }[]) {
+  return entries.map(e => `- ${e.name}: ${String(e.description || '').slice(0, 220)}`).join('\n');
+}
 const ORGANIZATION_RULE =
   'For anything about STeP itself (people and HR, welfare, leave, careers, procedures, policies, the quality system, facilities, contacts), answer from <organization_knowledge> or a registered document read with the reference tool, and name the document and section you used. If the organization documents do not cover it, say so plainly and suggest the owning team; never fill the gap from general knowledge, other organizations or the web.';
 
@@ -484,6 +490,9 @@ export class WorkService {
         ? await knowledge.search([...new Set([session.originalQuery, latest].filter(Boolean))].join('\n')).catch(() => [])
         : [];
       const catalog: CatalogEntry[] = knowledge ? await knowledge.entries() : [];
+      // The organization's Skills, listed by name and description only; the model loads a Skill's full text with the
+      // skill tool when the request needs it (like Claude Code and opencode), instead of every Skill being read.
+      const skillRegistry = ((await this.harness.catalog?.().catch(() => [])) || []).filter((e: any) => e.status === 'routed');
       // A request to work in STeP MIS is done in the STeP Browser, not answered from the web or memory.
       const internal = knowledgeTurn
         ? await internalSystemFor(this.harness.root, [session.originalQuery, latest].filter(Boolean).join('\n'))
@@ -698,6 +707,7 @@ export class WorkService {
           toolsEnabled &&
             catalog.length &&
             'Registered STeP documents (read one with the reference tool, input = its ID):\n' + catalogText(catalog),
+          toolsEnabled && general && skillRegistry.length && SKILL_RULE + '\n' + skillRegistryText(skillRegistry),
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           ...personal(this.store.settings()),

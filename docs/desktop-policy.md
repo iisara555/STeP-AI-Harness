@@ -16,7 +16,7 @@ An unpackaged development app using `STEP_DESKTOP_TEST_HOME` reads `desktop-poli
 
 ## Defaults and example
 
-Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `autopilot`, `sandbox`, `mcp`, `lineGateway`, `vision`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator`, `memoryTeam` and `autoRouting` default to false. `toolLoop` defaults to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. [Phase 4 automation and tools](desktop-automation.md) implements coordinator, cron, MCP, sandbox and gated autopilot. Other feature flags grant permission and do not establish that future implementations are available.
+Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `autopilot`, `sandbox`, `mcp`, `lineGateway`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator`, `memoryTeam` and `autoRouting` default to false. `toolLoop` and `vision` default to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. [Phase 4 automation and tools](desktop-automation.md) implements coordinator, cron, MCP, sandbox and gated autopilot. Other feature flags grant permission and do not establish that future implementations are available.
 
 ```json
 {
@@ -83,7 +83,9 @@ By default STeP Desktop does not run the local Router's Skill selection.
 - Every message goes straight to the AI as general help, with the organization documents that match it.
 - The app never asks "งานนี้ตรงกับข้อนี้ไหม".
 - It never picks a Skill or Playbook for the employee.
-- A Skill is used only when the employee picks one (`/` in the composer) or the AI loads one with the `skill` tool.
+- The AI sees a **Skill registry**: one line per routed Skill, giving its name and description. It does not see the Skill text.
+- When a request is work a Skill covers, the AI loads that one Skill's full text with the `skill` tool, the same progressive loading Claude Code and opencode use. The status line shows "กำลังอ่าน Skill …".
+- The employee can also pick a Skill with `/` in the composer.
 
 The Router still runs on every message:
 - With `checks.authority` on, authority checks (`manifest/authority.yaml`) and the best-matching Skill's own scope rules still BLOCK or ESCALATE. Examples are approving, signing on someone's behalf, or issuing a document number.

@@ -37,6 +37,7 @@ const baseUrl = `http://127.0.0.1:${server.address().port}/v1`;
 // Strict consent: this smoke checks the source dialog.
 const policy = {
   pilot: false,
+  checks: { authority: true, privacy: true },
   features: { compatibleProviders: true, voice: true, skillPacks: true, toolLoop: false },
   providers: { compatible: [{ name: 'Fixture', baseUrl, protocol: 'openai' }] },
   skillPacks: { approvedDigests: [pack.digest] },

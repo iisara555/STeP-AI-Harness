@@ -223,7 +223,14 @@ export class DesktopTools {
           'sandbox',
           'browser_control',
         ].includes(r.tool),
-      activity: t => scope.activity(tm('กำลังใช้เครื่องมือ ') + t),
+      activity: t =>
+        scope.activity(
+          t.startsWith('skill ')
+            ? tm('กำลังอ่าน Skill {0}', t.slice(6))
+            : t.startsWith('reference ')
+              ? tm('กำลังอ่านเอกสาร {0}', t.slice(10))
+              : tm('กำลังใช้เครื่องมือ ') + t,
+        ),
       outgoing: async (text, _signal, r) => {
         await check();
         const approved = await this.outgoing(text, transmissionScope, undefined, transmission, await sourceFor(r));

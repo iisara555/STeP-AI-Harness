@@ -24,8 +24,10 @@ test('managed policy is optional, administrator-only and fail closed', async () 
 
 test('auto mode needs both organization feature and allowed mode', () => {
   const defaultValue = defaultPolicy();
-  for (const feature of ['autoMode', 'shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'vision', 'coordinator', 'cron'] as const)
+  for (const feature of ['autoMode', 'shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator', 'cron'] as const)
     assert.equal(defaultValue.features[feature], false);
+  // Images reach vision models by default, as in other AI apps.
+  assert.equal(defaultValue.features.vision, true);
   assert.deepEqual(parsePolicy({ permission: { modes: ['auto'], defaultMode: 'auto' } }).policy.permission.modes, ['ask']);
   const p = parsePolicy({ features: { autoMode: true }, permission: { modes: ['ask', 'plan', 'auto'], defaultMode: 'auto' } });
   assert.equal(p.policy.permission.defaultMode, 'auto');

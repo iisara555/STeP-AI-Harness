@@ -262,6 +262,17 @@ try {
   assert.equal(await page.locator('.composer textarea').inputValue(), 'สรุปไฟล์นี้');
   await page.getByRole('button', { name: 'นำไฟล์ออก' }).click();
   await page.locator('.composer textarea').fill('');
+  // With privacy checks off (the default) an image goes to a vision model as it is: no local OCR service is needed.
+  const photo = join(home, 'photo.png');
+  await writeFile(
+    photo,
+    Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aTj4AAAAASUVORK5CYII=', 'base64'),
+  );
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+  }, photo);
+  const attached = await page.evaluate(id => window.step.call('attach', { id, vision: true }), id);
+  assert.equal(attached.usable, true, JSON.stringify(attached));
   // An unready connection reports the blocker and preserves the typed request.
   await app.evaluate(async ({ app }) => {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
