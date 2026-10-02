@@ -71,6 +71,8 @@ jobs:
             echo "::notice::Rosetta is not available on this runner; the x64 app was built and tested but not launched."
             exit 0
           fi
+          # Rosetta translates the Intel app on its first launch; give it time.
+          [ "${{ matrix.name }}" = "macos-x64" ] && export STEP_LAUNCH_TIMEOUT=420000
           MNT=$(mktemp -d)
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
           trap 'hdiutil detach "$MNT" -force || true' EXIT

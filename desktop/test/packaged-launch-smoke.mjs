@@ -12,12 +12,14 @@ assert.ok(executablePath, 'pass the packaged app executable');
 const home = await mkdtemp(join(tmpdir(), 'step-packaged-'));
 const env = { ...process.env, HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
-const app = await electron.launch({ executablePath, env, timeout: 90000 });
+// An Intel build on Apple silicon is translated by Rosetta on its first launch, which takes minutes.
+const timeout = Number(process.env.STEP_LAUNCH_TIMEOUT) || 90000;
+const app = await electron.launch({ executablePath, env, timeout });
 try {
-  const page = await app.firstWindow({ timeout: 90000 });
+  const page = await app.firstWindow({ timeout });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout: 60000 });
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout });
   const shipped = await app.evaluate(async ({ app }) => {
     const { existsSync } = process.mainModule.require('node:fs');
     const { join } = process.mainModule.require('node:path');
