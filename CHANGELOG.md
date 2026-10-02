@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+STeP Desktop version 0.5.0 (`desktop/package.json`) contains the changes below.
+
 ### Desktop permission modes and answer feedback
 
 - Lay out the Chat tab like Claude Desktop:

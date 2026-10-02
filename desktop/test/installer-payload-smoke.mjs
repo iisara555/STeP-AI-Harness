@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const { UUID } = require('builder-util-runtime');
@@ -18,6 +19,7 @@ const destination = join(root, 'application');
 const profile = join(root, 'profile');
 const data = join(root, 'user-conversations.txt');
 const installer = resolve('release/STeP-Installer-Test.exe');
+const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const nsis = await getMakeNsisPath();
 const reg = args => execFileSync('reg.exe', args, { encoding: 'utf8', windowsHide: true });
 const set = (key, name, value) => reg(['add', key, '/v', name, '/t', 'REG_SZ', '/d', value, '/f']);
@@ -29,7 +31,7 @@ let app;
 try {
   await writeFile(data, 'Synthetic conversation retained');
   install();
-  assert.ok(reg(['query', uninstallKey, '/v', 'DisplayVersion']).includes('0.4.1'));
+  assert.ok(reg(['query', uninstallKey, '/v', 'DisplayVersion']).includes(version));
   // The failing legacy uninstaller is never allowed to remove user files.
   const brokenSource = join(root, 'broken.nsi');
   await writeFile(
@@ -40,7 +42,7 @@ try {
   set(uninstallKey, 'DisplayVersion', '0.3.2');
   set(key, 'ShortcutName', 'STeP Installer Test');
   install();
-  assert.ok(reg(['query', uninstallKey, '/v', 'DisplayVersion']).includes('0.4.1'));
+  assert.ok(reg(['query', uninstallKey, '/v', 'DisplayVersion']).includes(version));
   assert.equal(await readFile(data, 'utf8'), 'Synthetic conversation retained');
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
