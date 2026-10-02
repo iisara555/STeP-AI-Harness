@@ -317,25 +317,13 @@
   font-size: 10px;
   padding: 5px;
 }
-.composer-mode {
+.composer-chips {
   display: flex;
-  gap: 4px;
-  align-items: center;
-  padding: 6px 8px 0;
   flex-wrap: wrap;
-}
-.composer-mode button {
-  font-size: 12.5px;
-  padding: 5px 11px;
-  border: 0;
-  border-radius: 5px;
-}
-.composer-mode .active {
-  background: var(--selected);
-  color: var(--accent-ink);
+  gap: 6px;
+  padding: 8px 10px 0;
 }
 .source-chip {
-  margin-left: auto;
   color: var(--accent-ink);
 }
 .image-route {
@@ -366,6 +354,10 @@
   border: 0;
   color: var(--muted);
   padding: 4px 7px;
+}
+.message-actions .icon {
+  padding: 5px;
+  border-radius: 6px;
 }
 .message-actions button:hover {
   background: var(--selected);

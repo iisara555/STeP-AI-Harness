@@ -1311,4 +1311,5 @@ export const en: Record<string, string> = {
     'Stored on this computer only. Text with personal data or secrets is not remembered.',
   แก้ข้อความให้เหลือเฉพาะสิ่งที่ควรจำ: 'Edit the text down to what should be remembered',
   ให้ความเห็นต่อคำตอบนี้: 'Rate this answer',
+  ตัวเลือกงานนี้: 'Task options',
 };

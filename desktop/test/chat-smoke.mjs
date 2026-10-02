@@ -143,6 +143,12 @@ try {
   await rememberDialog.waitFor({ state: 'detached' });
   memory = await page.evaluate(() => window.step.call('memoryList'));
   assert.ok(memory.entries.some(m => m.text === 'First answer received' && m.scope === 'private'));
+  // Task commands sit in the title menu, as in Claude Desktop.
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(5);
+  await page.screenshot({ path: 'release/qa/chat-title-menu.png' });
+  await page.keyboard.press('Escape');
+  await page.getByRole('menu').waitFor({ state: 'detached' });
   await page.locator('.composer textarea').fill('ประกาศวันหยุดราชการปีงบ 2570');
   await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
   await page.keyboard.press('Enter');
@@ -161,7 +167,7 @@ try {
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'สร้างเอกสาร', exact: true }).click();
+  await page.getByRole('combobox', { name: 'โหมดทำงาน' }).selectOption('draft');
   await page.locator('.composer textarea').fill('Draft request');
   await page.keyboard.press('Enter');
   await waitComplete(id);
@@ -170,7 +176,7 @@ try {
   assert.match(snapshot.sessions[0].proposals.at(-1).text, /Synthetic draft/);
   await page.getByText('ใช้ร่างนี้', { exact: true }).click();
   await page.locator('.draft-editor').filter({ hasText: 'Synthetic draft' }).waitFor();
-  await page.getByRole('button', { name: 'คุยกับผู้ช่วย', exact: true }).click();
+  await page.getByRole('combobox', { name: 'โหมดทำงาน' }).selectOption('chat');
   await page.locator('.composer textarea').fill('Tool proposal');
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: /ตรวจ terminal: echo proposed/ }).click();

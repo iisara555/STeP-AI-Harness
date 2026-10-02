@@ -221,6 +221,60 @@ nav button,
   min-width: 0;
   flex: 1;
 }
+.topbar-title {
+  position: relative;
+}
+.topbar-heading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.topbar-heading .icon {
+  padding: 3px;
+  flex: none;
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.title-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 41;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+.title-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-content: flex-start;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.title-menu button:hover:not(:disabled),
+.title-menu button:focus-visible {
+  background: var(--hover);
+}
+.title-menu hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 2px;
+}
 .topbar strong {
   display: block;
   font-size: 14px;
@@ -339,19 +393,37 @@ nav button,
 .composer-tools {
   display: flex;
   align-items: center;
-  padding: 2px 8px 7px;
-  gap: 7px;
+  flex-wrap: wrap;
+  padding: 2px 8px 8px;
+  gap: 4px;
 }
-.composer-tools select {
+/* Compact pickers like Claude Desktop: as wide as the chosen option, highlighted on hover. */
+.composer-tools .pill-select {
+  field-sizing: content;
+  min-width: 0;
+  max-width: 190px;
   font-size: 12.5px;
-  max-width: 230px;
-  border: 0;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: var(--muted);
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.composer-tools .pill-select:hover:not(:disabled),
+.composer-tools .pill-select:focus-visible {
+  background: var(--hover);
+  color: var(--text);
 }
 .composer-tools .model-select {
   color: var(--text);
-  max-width: 200px;
+  max-width: 170px;
+}
+.composer-add {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px;
 }
 .auth-code {
   display: flex;
@@ -2217,12 +2289,6 @@ nav .count {
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
-.composer-mode select {
-  margin-left: auto;
-  width: auto;
-  max-width: 240px;
-  font-size: 12px;
-}
 /* Context and local memory controls. */
 .context-bar {
   display: flex;
@@ -2379,8 +2445,7 @@ nav .count {
 }
 .feedback-actions {
   display: inline-flex;
-  gap: 4px;
-  margin-left: auto;
+  gap: 2px;
 }
 .feedback-actions button.active {
   color: var(--accent-ink);

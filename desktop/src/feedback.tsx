@@ -29,7 +29,8 @@ export function FeedbackButtons({
   return (
     <span className="feedback-actions" role="group" aria-label={t('ให้ความเห็นต่อคำตอบนี้')}>
       <button
-        className={good ? 'quiet active' : 'quiet'}
+        className={good ? 'icon active' : 'icon'}
+        aria-label={t('ดี')}
         aria-pressed={good}
         title={t('คำตอบนี้ดี')}
         onClick={() =>
@@ -38,11 +39,11 @@ export function FeedbackButtons({
             .catch(e => onDone(explainError(e)))
         }
       >
-        <ThumbsUp size={14} />
-        {t('ดี')}
+        <ThumbsUp size={15} />
       </button>
       <button
-        className={fix ? 'quiet active' : 'quiet'}
+        className={fix ? 'icon active' : 'icon'}
+        aria-label={t('ต้องแก้')}
         aria-pressed={fix}
         title={t('คำตอบนี้ต้องแก้')}
         onClick={() =>
@@ -51,16 +52,15 @@ export function FeedbackButtons({
             : onAsk({ sessionId, index, kind: 'fix', text: '' })
         }
       >
-        <ThumbsDown size={14} />
-        {t('ต้องแก้')}
+        <ThumbsDown size={15} />
       </button>
       <button
-        className="quiet"
+        className="icon"
+        aria-label={t('จำสิ่งนี้')}
         title={t('จำสิ่งนี้ไว้ใช้กับงานถัดไป')}
         onClick={() => onAsk({ sessionId, index, kind: 'remember', text: message.text.trim().slice(0, 600) })}
       >
-        <Bookmark size={14} />
-        {t('จำสิ่งนี้')}
+        <Bookmark size={15} />
       </button>
     </span>
   );

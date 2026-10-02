@@ -32,6 +32,9 @@ import {
   Circle,
   ReceiptText,
   Blocks,
+  Copy,
+  ImagePlus,
+  ChevronDown,
 } from 'lucide-react';
 import { ReceiptApp } from './receipt';
 import { SkillsHub, toolCount } from './skills';
@@ -146,6 +149,7 @@ export default function App() {
     [startedAt, setStartedAt] = useState(0),
     [now, setNow] = useState(Date.now());
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
+  const [chatMenu, setChatMenu] = useState(false);
   const [consentAsk, setConsentAsk] = useState<{
     sessionId: string;
     text: string;
@@ -206,6 +210,7 @@ export default function App() {
   dirtyRef.current = dirty;
   const currentId = useRef(selected);
   currentId.current = selected;
+  useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
   const editor = useEditor({
     extensions: [
@@ -985,16 +990,112 @@ export default function App() {
               <PanelLeftClose size={18} />
             </button>
           )}
-          <div>
-            <strong>
-              {settings
-                ? t('ตั้งค่าพื้นที่ทำงาน')
-                : view === 'receipt'
-                  ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-                  : view === 'skills'
-                    ? t('ศูนย์รวม Skill')
-                    : session?.title || t('เริ่มต้นงานที่อยากทำ')}
-            </strong>
+          <div className="topbar-title">
+            <span className="topbar-heading">
+              <strong>
+                {settings
+                  ? t('ตั้งค่าพื้นที่ทำงาน')
+                  : view === 'receipt'
+                    ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+                    : view === 'skills'
+                      ? t('ศูนย์รวม Skill')
+                      : session?.title || t('เริ่มต้นงานที่อยากทำ')}
+              </strong>
+              {/* Like Claude Desktop, task commands live in a menu next to the title. */}
+              {!settings && view === 'chat' && session && (
+                <button
+                  className="icon"
+                  aria-label={t('ตัวเลือกงานนี้')}
+                  title={t('ตัวเลือกงานนี้')}
+                  aria-haspopup="menu"
+                  aria-expanded={chatMenu}
+                  onClick={() => setChatMenu(!chatMenu)}
+                >
+                  <ChevronDown size={16} />
+                </button>
+              )}
+            </span>
+            {chatMenu && session && (
+              <>
+                <div className="menu-backdrop" onClick={() => setChatMenu(false)} />
+                <div
+                  className="title-menu"
+                  role="menu"
+                  aria-label={t('ตัวเลือกงานนี้')}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setChatMenu(false);
+                  }}
+                >
+                  <button
+                    role="menuitem"
+                    autoFocus
+                    disabled={running}
+                    onClick={() =>
+                      void action(async () => {
+                        setChatMenu(false);
+                        await save();
+                        const forked = await api.call('sessionFork', { id: session.id });
+                        await refresh();
+                        await selectSession(forked.id);
+                      })
+                    }
+                  >
+                    <Copy size={15} />
+                    {t('ทำสำเนาเป็นงานใหม่')}
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() =>
+                      void action(async () => {
+                        setChatMenu(false);
+                        await save();
+                        const result = await api.call('sessionExport', { id: session.id, format: 'md' });
+                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
+                      })
+                    }
+                  >
+                    <Download size={15} />
+                    {t('ส่งออก Markdown')}
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() =>
+                      void action(async () => {
+                        setChatMenu(false);
+                        await save();
+                        const result = await api.call('sessionExport', { id: session.id, format: 'json' });
+                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
+                      })
+                    }
+                  >
+                    <Download size={15} />
+                    {t('ส่งออก JSON')}
+                  </button>
+                  <hr />
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setChatMenu(false);
+                      setMemoryOpen(true);
+                    }}
+                  >
+                    <Brain size={15} />
+                    {t('ความจำ')}
+                  </button>
+                  <button
+                    role="menuitem"
+                    title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
+                    onClick={() => {
+                      setChatMenu(false);
+                      setAutomationOpen(true);
+                    }}
+                  >
+                    <Timer size={15} />
+                    {t('งานตามรอบ')}
+                  </button>
+                </div>
+              </>
+            )}
             <small>
               {settings
                 ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
@@ -1042,56 +1143,8 @@ export default function App() {
         ) : (
           <>
             <div className="conversation" aria-live="polite">
-              {session && (
+              {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
                 <div className="context-bar">
-                  <button
-                    className="quiet"
-                    disabled={running}
-                    onClick={() =>
-                      void action(async () => {
-                        await save();
-                        const forked = await api.call('sessionFork', { id: session.id });
-                        await refresh();
-                        await selectSession(forked.id);
-                      })
-                    }
-                  >
-                    {t('ทำสำเนาเป็นงานใหม่')}
-                  </button>
-                  <button
-                    className="quiet"
-                    onClick={() =>
-                      void action(async () => {
-                        await save();
-                        const result = await api.call('sessionExport', { id: session.id, format: 'md' });
-                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
-                      })
-                    }
-                  >
-                    {t('ส่งออก Markdown')}
-                  </button>
-                  <button
-                    className="quiet"
-                    onClick={() =>
-                      void action(async () => {
-                        await save();
-                        const result = await api.call('sessionExport', { id: session.id, format: 'json' });
-                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
-                      })
-                    }
-                  >
-                    {t('ส่งออก JSON')}
-                  </button>
-                  <button className="quiet" onClick={() => setMemoryOpen(true)}>
-                    {t('ความจำ')}
-                  </button>
-                  <button
-                    className="quiet"
-                    title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
-                    onClick={() => setAutomationOpen(true)}
-                  >
-                    {t('งานตามรอบ')}
-                  </button>
                   {snapshot.policy?.features.coordinator && (
                     <label>
                       <input
@@ -1224,13 +1277,22 @@ export default function App() {
                   {message.role === 'assistant' && (
                     <div className="message-actions">
                       <button
-                        className="quiet"
-                        onClick={() => void navigator.clipboard.writeText(message.text).catch(e => notify(explainError(e), 'error'))}
+                        className="icon"
+                        aria-label={t('คัดลอก')}
+                        title={t('คัดลอก')}
+                        onClick={() =>
+                          void navigator.clipboard
+                            .writeText(message.text)
+                            .then(() => notify(t('คัดลอกแล้ว'), 'success'))
+                            .catch(e => notify(explainError(e), 'error'))
+                        }
                       >
-                        {t('คัดลอก')}
+                        <Copy size={15} />
                       </button>
                       <button
-                        className="quiet"
+                        className="icon"
+                        aria-label={t('เปิดใน Output')}
+                        title={t('เปิดใน Output')}
                         onClick={() =>
                           void action(async () => {
                             await save();
@@ -1241,7 +1303,7 @@ export default function App() {
                           })
                         }
                       >
-                        {t('เปิดใน Output')}
+                        <FileText size={15} />
                       </button>
                       <FeedbackButtons
                         sessionId={session.id}
@@ -1420,51 +1482,13 @@ export default function App() {
                   </div>
                 ))}
               <div className="composer" data-tour="composer">
-                <div className="composer-mode" role="group" aria-label={t('โหมดทำงาน')}>
-                  {(['chat', 'draft', 'image'] as WorkMode[]).map(mode => (
-                    <button
-                      key={mode}
-                      className={workMode === mode ? 'active' : 'quiet'}
-                      disabled={running || submitting}
-                      onClick={() => setWorkMode(mode)}
-                    >
-                      {mode === 'chat' ? t('คุยกับผู้ช่วย') : mode === 'draft' ? t('สร้างเอกสาร') : t('สร้างรูป')}
-                    </button>
-                  ))}
-                  {snapshot.policy && (
-                    <select
-                      aria-label={t('สิทธิ์เครื่องมือ')}
-                      value={snapshot.policy.mode}
-                      disabled={running || submitting}
-                      onChange={e =>
-                        void action(async () => {
-                          await api.call('permissionMode', { mode: e.target.value });
-                          await refresh();
-                        })
-                      }
-                    >
-                      <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                        {t('ถามก่อนแก้ไข')}
-                      </option>
-                      <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
-                        {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
-                        {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                      </option>
-                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                        {t('อัตโนมัติเต็มรูปแบบ')}
-                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                      </option>
-                      <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
-                        {t('วางแผน · อ่านอย่างเดียว')}
-                      </option>
-                    </select>
-                  )}
-                  {pendingSource && (
+                {pendingSource && (
+                  <div className="composer-chips">
                     <button className="source-chip quiet" onClick={() => setPendingSource('')}>
                       {t('ข้อมูลต้นทางแนบแล้ว ×')}
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
                 {wantsImage && (
                   <div className="image-route" role="status">
                     <Sparkles size={14} />
@@ -1596,37 +1620,11 @@ export default function App() {
                 />
                 {snapshot.settings.vimMode && <span className="small muted">Vim: {vimNormal ? 'Normal' : 'Insert'}</span>}
                 <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
+                {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
                 <div className="composer-tools">
-                  {snapshot.policy?.features.voice && (
-                    <VoiceButton
-                      key={session?.id || 'composer'}
-                      api={api}
-                      disabled={running}
-                      onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
-                    />
-                  )}
-                  {snapshot.policy?.features.vision && (
-                    <button
-                      className="quiet"
-                      title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
-                      disabled={running}
-                      onClick={() =>
-                        void action(async () => {
-                          const id = session?.id || (await createTask())?.id;
-                          if (!id) return;
-                          const f = await api.call('attach', { id, vision: true });
-                          if (f) {
-                            setFiles([f]);
-                            setInspecting(f);
-                          }
-                        })
-                      }
-                    >
-                      {t('แนบภาพให้ AI')}
-                    </button>
-                  )}
                   <button
-                    className="icon"
+                    className="icon composer-add"
+                    aria-label={t('ตรวจและแนบเอกสาร')}
                     title={t('ตรวจและแนบเอกสาร')}
                     disabled={running || (!session && connectionId === CLAUDE_CODE)}
                     onClick={() =>
@@ -1641,9 +1639,82 @@ export default function App() {
                       })
                     }
                   >
-                    <Paperclip size={18} />
+                    <Plus size={18} />
                   </button>
+                  {snapshot.policy?.features.voice && (
+                    <VoiceButton
+                      key={session?.id || 'composer'}
+                      api={api}
+                      disabled={running}
+                      onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
+                    />
+                  )}
+                  {snapshot.policy?.features.vision && (
+                    <button
+                      className="icon"
+                      aria-label={t('แนบภาพให้ AI')}
+                      title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
+                      disabled={running}
+                      onClick={() =>
+                        void action(async () => {
+                          const id = session?.id || (await createTask())?.id;
+                          if (!id) return;
+                          const f = await api.call('attach', { id, vision: true });
+                          if (f) {
+                            setFiles([f]);
+                            setInspecting(f);
+                          }
+                        })
+                      }
+                    >
+                      <ImagePlus size={18} />
+                    </button>
+                  )}
                   <select
+                    className="pill-select"
+                    aria-label={t('โหมดทำงาน')}
+                    title={t('โหมดทำงาน')}
+                    value={workMode}
+                    disabled={running || submitting}
+                    onChange={e => setWorkMode(e.target.value as WorkMode)}
+                  >
+                    <option value="chat">{t('คุยกับผู้ช่วย')}</option>
+                    <option value="draft">{t('สร้างเอกสาร')}</option>
+                    <option value="image">{t('สร้างรูป')}</option>
+                  </select>
+                  {snapshot.policy && (
+                    <select
+                      className="pill-select"
+                      aria-label={t('สิทธิ์เครื่องมือ')}
+                      title={t('สิทธิ์เครื่องมือ')}
+                      value={snapshot.policy.mode}
+                      disabled={running || submitting}
+                      onChange={e =>
+                        void action(async () => {
+                          await api.call('permissionMode', { mode: e.target.value });
+                          await refresh();
+                        })
+                      }
+                    >
+                      <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
+                        {t('ถามก่อนแก้ไข')}
+                      </option>
+                      <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
+                        {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
+                        {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                      </option>
+                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                        {t('อัตโนมัติเต็มรูปแบบ')}
+                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                      </option>
+                      <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
+                        {t('วางแผน · อ่านอย่างเดียว')}
+                      </option>
+                    </select>
+                  )}
+                  <span className="spacer" />
+                  <select
+                    className="pill-select"
                     aria-label={t('เลือกการเชื่อมต่อ AI')}
                     value={session ? session.connectionId : connectionId}
                     disabled={running}
@@ -1662,7 +1733,7 @@ export default function App() {
                     <select
                       aria-label={t('เลือกโมเดล')}
                       data-tour="model"
-                      className="model-select"
+                      className="pill-select model-select"
                       title={
                         connection.models?.find(m => m.id === currentModel)?.description || t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
                       }
@@ -1684,7 +1755,7 @@ export default function App() {
                   {activeModel?.efforts?.length ? (
                     <select
                       aria-label={t('เลือกระดับการคิด')}
-                      className="model-select"
+                      className="pill-select model-select"
                       title={
                         activeModel.efforts.find(e => e.id === currentEffort)?.description ||
                         t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น')
@@ -1705,7 +1776,6 @@ export default function App() {
                       ))}
                     </select>
                   ) : null}
-                  <span className="spacer" />
                   {running ? (
                     <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
                       <Square size={17} />

@@ -103,7 +103,8 @@ try {
   const coordinated = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(coordinated.sessions.filter(s => s.parentId === 'parent').length, 3);
   assert.equal(coordinated.sessions.find(s => s.id === 'parent').proposals[0].text, 'Phase 4 synthetic draft');
-  await page.getByRole('button', { name: 'งานตามรอบ', exact: true }).click();
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'งานตามรอบ', exact: true }).click();
   const jobs = page.getByRole('alertdialog', { name: 'งานตามรอบและเครื่องมือเพิ่มเติม' });
   await jobs.getByLabel('ชื่องานตามรอบ', { exact: true }).fill('Synthetic recurring draft');
   await jobs.getByLabel('คำขอตามรอบ', { exact: true }).fill('Prepare a concise public draft.');

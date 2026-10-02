@@ -8,6 +8,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ### Desktop permission modes and answer feedback
 
+- Lay out the Chat tab like Claude Desktop:
+  - **Text box:** starts at one line and grows as you type.
+  - **Bottom-left:** `+` (attach), then compact work-mode and permission pickers.
+  - **Bottom-right:** AI and model pickers, then send.
+  - **Under each answer:** icon buttons for copy, open in Output, 👍, 👎 and remember.
+  - **Task commands:** duplicate, export, memory and scheduled jobs move into a ⌄ menu next to the task title.
 - Offer four modes in the composer, as in Claude Code and ChatGPT:
   - **Ask before edits:** every edit and command asks first.
   - **Accept edits** (new, on by default): AI edits are applied right away, with a snapshot to undo them; commands still ask.
