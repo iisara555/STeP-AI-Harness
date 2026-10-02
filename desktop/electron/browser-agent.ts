@@ -165,13 +165,17 @@ export class AgentBrowser {
         ? undefined
         : new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition } });
       const contents = view ? view.webContents : this.dock!.create(id, 'agent', partition);
+      // Forget the tab at once: closing a page finishes later (on Windows noticeably), and a read in between must
+      // report the tab closed instead of waiting on a page that is going away.
+      const contentsId = contents.id;
       const dispose = () => {
+        this.tabs.delete(id);
+        this.origins.delete(contentsId);
         if (this.dock) this.dock.remove(id);
         else if (!contents.isDestroyed()) contents.close();
       };
       const entry: Entry = { contents, view, dispose, owner: context.sessionId, origin: new URL(url).origin, opened: url, busy: true };
       this.tabs.set(id, entry);
-      const contentsId = contents.id;
       this.origins.set(contentsId, entry.origin);
       contents.once('destroyed', () => {
         this.tabs.delete(id);
