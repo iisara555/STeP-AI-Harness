@@ -338,7 +338,17 @@ export async function queryStepRouter(query, options = {}) {
     && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
     && !CONSEQUENTIAL_INTENTS.has(context.intent) && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
     && INTERNAL_SYSTEM_PATTERN.test(originalQuery);
-  const generalAssist = invitationDraft || publicInformation || conversationalAssist || internalSystem || (isAmbiguous
+  // In chat the employee already answered a clarifying question and did not pick a menu option ("ไม่ตรง", or more
+  // detail). Asking again loops; the model has the whole conversation, so it helps from there.
+  const answeredInChat = options.conversational === true
+    && isAmbiguous
+    && countClarificationRounds(options.clarificationAnswer) > 0
+    && !competingPlaybooks.length
+    && scopeResult.status === 'ALLOW'
+    && !ATTACHMENT_PURPOSE_PATTERN.test(query)
+    && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query);
+  const generalAssist = invitationDraft || publicInformation || conversationalAssist || internalSystem || answeredInChat || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'
@@ -547,6 +557,14 @@ function countClarificationRounds(answer) {
   return answer.split(/\r?\n/).filter((line) => line.trim()).length;
 }
 
+const DECLINE_PATTERN = /^(?:ไม่(?:ตรง|ใช่)?(?:สักข้อ|เลย)?(?:ครับ|ค่ะ|คะ|จ้า)?|no|nope|none|not (?:this|that|it))$/i;
+/** The latest answer turns the offered choice down. */
+function declinedMenu(answer) {
+  if (typeof answer !== 'string') return false;
+  const last = answer.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).at(-1) || '';
+  return DECLINE_PATTERN.test(last.replace(/[\s.!?,。]+/g, ''));
+}
+
 /**
  * Ask for one missing piece at a time and never repeat a question already asked.
  * When every question has been asked and routing is still unresolved, stop
@@ -567,7 +585,8 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
   // single candidate, one yes/no) answers in a single reply what open questions
   // would take up to three rounds to reach. Offer it in the first two rounds,
   // since the first may have been spent learning what the task was at all.
-  const offerMenuNow = !purpose && tier === 'AMBIGUOUS' && options.length >= 1 && round <= 1;
+  // A menu the employee turned down ("ไม่ตรง") is never offered again.
+  const offerMenuNow = !purpose && tier === 'AMBIGUOUS' && options.length >= 1 && round <= 1 && !declinedMenu(answer);
   const field = offerMenuNow ? 'skill' : fields[round];
 
   if (field && field !== 'skill') {

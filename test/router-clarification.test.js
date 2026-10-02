@@ -500,3 +500,22 @@ test('a conversational host lets the model answer messages that match no Skill; 
   const summary = await queryStepRouter('ช่วยสรุปบันทึกประชุมเป็นรายการงาน', { ...options, conversational: true });
   assert.equal(summary.routingContract.skill, 'meeting-summary');
 });
+
+test('a declined clarification menu is never offered again; in chat the assistant helps from the conversation', async () => {
+  const query = '12:00 น. D204 การประชุมการใช้ ai Harness 3 อิศรา แก้เรื่อง';
+  const first = await queryStepRouter(query, { team: 'cc', conversational: true });
+  assert.equal(first.routingContract.mode, 'CLARIFY');
+  assert.equal(first.clarification.field, 'skill');
+  for (const answer of ['ไม่ตรง', 'ไม่ใช่ครับ', 'ไม่ตรง\nเป็นนัดประชุม']) {
+    const chat = await queryStepRouter(query, { team: 'cc', conversational: true, clarificationAnswer: answer });
+    assert.equal(chat.routingContract.mode, 'GENERAL', answer);
+    const draft = await queryStepRouter(query, { team: 'cc', clarificationAnswer: answer });
+    assert.notEqual(draft.clarification?.field, 'skill', answer);
+  }
+  // Picking the option still selects its Skill.
+  const picked = await queryStepRouter(query, { team: 'cc', conversational: true, clarificationAnswer: '1' });
+  assert.equal(picked.routingContract.mode, 'SKILL');
+  // Consequential requests keep asking even in chat.
+  const approve = await queryStepRouter('อนุมัติเอกสาร', { team: 'cc', conversational: true, clarificationAnswer: 'ไม่ตรง' });
+  assert.notEqual(approve.routingContract.mode, 'GENERAL');
+});

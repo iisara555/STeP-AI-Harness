@@ -131,3 +131,17 @@ test('a request about STeP MIS is sent to the STeP Browser with the registered a
   assert.ok(!captured.webSearch.includes(true), 'MIS is never searched on the public web');
   store.close();
 });
+
+test('declining the clarifying menu in chat gets an answer instead of the same question again', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, '12:00 น. D204 การประชุมการใช้ ai Harness 3 อิศรา แก้เรื่อง', '', true, undefined, 'chat');
+  const asked = store.session(session.id);
+  assert.equal(asked.status, 'waiting');
+  assert.match(asked.messages.at(-1)!.text, /ตรงกับข้อนี้ไหม/);
+  await work.run(session.id, 'ไม่ตรง', '', true, undefined, 'chat');
+  const answered = store.session(session.id);
+  assert.equal(answered.messages.at(-1)!.text, 'คำตอบทดสอบ');
+  assert.match(captured.prompt, /D204/, 'the model sees the original request');
+  store.close();
+});

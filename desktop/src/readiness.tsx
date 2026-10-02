@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DesktopAPI } from './types';
 import { formatTokens } from './ui';
-import { errorText } from './messages';
 import { t } from './i18n';
 export function Readiness({ api, query, connectionId, model }: { api: DesktopAPI; query: string; connectionId: string; model: string }) {
   const [result, setResult] = useState<any>();
@@ -26,33 +25,17 @@ export function Readiness({ api, query, connectionId, model }: { api: DesktopAPI
       clearTimeout(timer);
     };
   }, [api, query, connectionId, model]);
-  if (!query.trim() || !result) return null;
+  // Like Claude Desktop, typing shows nothing about routing or review: the send itself asks when it must. Only an
+  // organization that set prices sees what this request is expected to cost.
+  if (!query.trim() || typeof result?.estimate?.usd !== 'number') return null;
   return (
     <div className="small muted" aria-label={t('ตรวจความพร้อมก่อนส่ง')} aria-live="polite">
-      {result.estimate && (
-        <>
-          {result.estimate.usd === null
-            ? t(
-                'ประมาณ {0} tokens เข้า / {1} ออก · ยังไม่มีราคาในนโยบาย · เฉพาะคำขอปัจจุบัน',
-                formatTokens(result.estimate.inputTokens),
-                formatTokens(result.estimate.outputTokens),
-              )
-            : t(
-                'ประมาณ {0} tokens เข้า / {1} ออก · ${2} · เฉพาะคำขอปัจจุบัน',
-                formatTokens(result.estimate.inputTokens),
-                formatTokens(result.estimate.outputTokens),
-                result.estimate.usd.toFixed(4),
-              )}
-        </>
+      {t(
+        'ประมาณ {0} tokens เข้า / {1} ออก · ${2} · เฉพาะคำขอปัจจุบัน',
+        formatTokens(result.estimate.inputTokens),
+        formatTokens(result.estimate.outputTokens),
+        result.estimate.usd.toFixed(4),
       )}
-      {result.status === 'needs-input' && t('ต้องตอบคำถามแยกประเภทงานก่อน')}
-      {result.blockers?.length > 0 && (
-        <span>
-          {' '}
-          {t('ต้องตรวจ:')} {result.blockers.map((c: string) => errorText[c] || t('คำขอนี้ต้องตรวจเพิ่มเติม')).join(', ')}
-        </span>
-      )}
-      <span> {t('· ตรวจปลายทางและร่างก่อนใช้ ตัวเลขเป็นการประมาณ')}</span>
     </div>
   );
 }
