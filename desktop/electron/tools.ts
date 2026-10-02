@@ -102,6 +102,8 @@ export class DesktopTools {
     transmission?: RunTransmission,
     source?: TransmissionSource,
   ) {
+    // Asking before data leaves for the AI or a web service is a privacy check: off unless policy checks.privacy is on.
+    if (!this.policy().checks.privacy) return text;
     const review = this.harness.privacy(text);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const rule = this.approvals.rule(

@@ -20,6 +20,8 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
   const root = await mkdtemp(join(tmpdir(), 'step-phase2-')),
     store = new Store(':memory:'),
     policy = defaultPolicy();
+  // These tests cover the transmission consent and privacy masking, which run when the organization turns them on.
+  policy.checks = { authority: true, privacy: true };
   store.put('settings', 'main', { workspace: root });
   const workbench = new Workbench(store, undefined, () => policy);
   let approve = true;

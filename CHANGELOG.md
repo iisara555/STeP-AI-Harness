@@ -10,6 +10,11 @@ STeP Desktop version 0.5.4 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Turn off the organization checks by default (`checks: { "authority": false, "privacy": false }`).
+  - **Authority:** requests about approving, signing on someone's behalf, issuing document numbers or submitting are answered as help instead of blocked. The AI cannot perform these acts.
+  - **Privacy:** nothing is scanned or masked, and there is no dialog before data goes to the AI or a web service. This covers text, attachments, memories, tool results and web queries. National ID numbers, names, phone numbers, passwords and API keys are sent as typed.
+  - Side-effect tools (file writes, commands, browser actions, MCP) still ask each time.
+  - Administrators can turn either check back on in the policy file. See [organization checks](docs/desktop-policy.md#organization-checks-checks).
 - Turn off the local Router's Skill selection in STeP Desktop by default (`features.autoRouting: false`).
   - Every message goes straight to the AI with the matching organization documents.
   - The app no longer asks "งานนี้ตรงกับข้อนี้ไหม" and never picks a Skill or Playbook by itself. Employees pick a Skill with `/` when they want one.

@@ -12,7 +12,12 @@ await writeFile(join(workspace, 'note.txt'), 'Synthetic source note');
 await writeFile(
   join(home, 'desktop-policy.json'),
   // Strict consent: this smoke checks the per-result dialogs.
-  JSON.stringify({ pilot: false, prices: { 'openai:*': { input: 1, output: 2 } }, budgets: { dailyTokens: 100 } }),
+  JSON.stringify({
+    pilot: false,
+    checks: { authority: true, privacy: true },
+    prices: { 'openai:*': { input: 1, output: 2 } },
+    budgets: { dailyTokens: 100 },
+  }),
 );
 await writeFile(
   executable,

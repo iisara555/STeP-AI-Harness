@@ -103,11 +103,17 @@ export type Policy = {
   skillPacks?: { approvedDigests: string[] };
   transmissionConsent?: { allowRunScope: boolean };
   /**
-   * Standard consent (on by default, the behavior first trialled as "pilot mode"): fewer confirmation dialogs.
-   * The floors stay: credentials and sensitive data tied to a person are still blocked, national ID numbers are still
-   * masked, and every side-effect tool still asks each time. `false` restores the strict dialogs.
+   * Standard consent (on by default, the behavior first trialled as "pilot mode"): fewer confirmation dialogs. Every
+   * side-effect tool still asks each time. `false` restores the strict dialogs. With `checks.privacy` on, credentials
+   * and sensitive data tied to a person are blocked and national ID numbers masked in both modes.
    */
   pilot: boolean;
+  /**
+   * Organization checks, off by default. authority: the router's approve/sign/submit BLOCK and ESCALATE (the AI cannot
+   * perform those acts anyway). privacy: the personal-data and credential scan on text, files, memories and tool
+   * results; off, nothing is masked, blocked or asked about on privacy grounds.
+   */
+  checks: { authority: boolean; privacy: boolean };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -130,7 +136,7 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   coordinator: false,
   memoryTeam: false,
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
-  // Off, every request goes to the AI as general help; authority and privacy checks run either way.
+  // Off, every request goes to the AI as general help.
   autoRouting: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
@@ -164,6 +170,7 @@ export function defaultPolicy(): Policy {
     prices: {},
     budgets: {},
     pilot: true,
+    checks: { authority: false, privacy: false },
   };
 }
 
@@ -194,6 +201,15 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   if (raw.pilot !== undefined) {
     if (typeof raw.pilot !== 'boolean') problems.push('pilot must be true or false');
     else policy.pilot = raw.pilot;
+  }
+  if (raw.checks !== undefined) {
+    if (
+      !isObject(raw.checks) ||
+      Object.keys(raw.checks).some(k => !['authority', 'privacy'].includes(k)) ||
+      Object.values(raw.checks).some(v => typeof v !== 'boolean')
+    )
+      problems.push('checks must be an object with boolean authority and privacy');
+    else policy.checks = { ...policy.checks, ...raw.checks };
   }
   if (raw.transmissionConsent !== undefined) {
     if (

@@ -18,7 +18,11 @@ export function unavailableDocument(reason, sourceHash = null) {
  * No original text, document name or parser exception is included in the report.
  * This is a pre-attachment tool, not an interceptor for AI client uploads.
  */
-export async function evaluateDocumentPrivacy(file, { includeRedacted = false } = {}) {
+/**
+ * scan: false extracts text without the privacy scan (a host whose organization turned privacy checks off): the text is
+ * returned as is with action pass. Extraction limits and incomplete-document handling still apply.
+ */
+export async function evaluateDocumentPrivacy(file, { includeRedacted = false, scan = true } = {}) {
   const extension = extname(String(file)).toLowerCase();
   if (!TEXT_EXTENSIONS.has(extension) && extension !== '.pdf' && extension !== '.docx') {
     return unavailableDocument('unsupported-file-type');
@@ -59,7 +63,7 @@ export async function evaluateDocumentPrivacy(file, { includeRedacted = false } 
     };
     try {
       worker = new Worker(new URL('./document-worker.js', import.meta.url), {
-        workerData: { bytes, extension, includeRedacted, limits: DOCUMENT_LIMITS },
+        workerData: { bytes, extension, includeRedacted, scan, limits: DOCUMENT_LIMITS },
         transferList: [bytes.buffer], execArgv: [], stdout: true, stderr: true,
         resourceLimits: { maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 },
       });

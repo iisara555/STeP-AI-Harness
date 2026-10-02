@@ -56,6 +56,17 @@ The composer offers four modes, in the same spirit as Claude Code and ChatGPT:
 
 Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an employee choice for bounded clean-read transmission within one loop (pre-checked in standard consent, see [pilot mode](#pilot-mode)); it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
 
+## Organization checks (`checks`)
+
+Both checks are **off by default**: `{ "checks": { "authority": false, "privacy": false } }`.
+
+| Check | Off (default) | On |
+|---|---|---|
+| `authority` | Every request is answered as help, including ones about approving, signing on someone's behalf, issuing document numbers or submitting. The AI has no tool that can perform these acts | The router's authority registry and Skill scope rules BLOCK or ESCALATE these requests |
+| `privacy` | Nothing is scanned. Text, attachments, memories, tool results and web queries go to the AI provider unchanged. National ID numbers, phone numbers, names, passwords and API keys are **not** masked or blocked, and there is no dialog before data leaves | The personal-data and credential scan masks, blocks or asks as described in [pilot mode](#pilot-mode) and the [privacy gate](privacy-preflight.md) |
+
+With `privacy` off, the organization relies on employees not to paste personal data or credentials into the app; the administrator is responsible for that choice under PDPA. Side-effect tools (writing files, running commands, browser open/fill/click, MCP calls) still ask each time; that is a permission, not a privacy check.
+
 ## Automatic routing (`features.autoRouting`)
 
 By default STeP Desktop does not run the local Router's Skill selection.
@@ -64,14 +75,16 @@ By default STeP Desktop does not run the local Router's Skill selection.
 - It never picks a Skill or Playbook for the employee.
 - A Skill is used only when the employee picks one (`/` in the composer) or the AI loads one with the `skill` tool.
 
-The Router still runs on every message for safety:
-- Authority checks (`manifest/authority.yaml`) and the best-matching Skill's own scope rules still BLOCK or ESCALATE. Examples are approving, signing on someone's behalf, or issuing a document number.
-- The privacy gate is unchanged.
+The Router still runs on every message:
+- With `checks.authority` on, authority checks (`manifest/authority.yaml`) and the best-matching Skill's own scope rules still BLOCK or ESCALATE. Examples are approving, signing on someone's behalf, or issuing a document number.
+- The privacy gate follows `checks.privacy`.
 - General help always loads the Human Approval and Data Classification rules.
 
 `{ "features": { "autoRouting": true } }` restores automatic Skill and Playbook selection and clarifying questions. See [STeP Router](step-router.md#manual-skill-selection-autoroute-false).
 
 ## Pilot mode
+
+The privacy rows below apply only when `checks.privacy` is on.
 
 Standard consent, first trialled as pilot mode, is now the default. Administrators can set `{ "pilot": false }` to return to strict mode, with the extra dialogs in the first column below. Any value other than `true` or `false` rejects the whole policy. A change applies on the next policy reload.
 
@@ -88,7 +101,7 @@ Standard consent, first trialled as pilot mode, is now the default. Administrato
 | Tool results sent to the AI | Per source; "this run" unchecked | One answer covers every clean result in the run; the "this run" box starts checked. Results with findings still ask each time |
 | Plan approval (`plan` tool) | Dialog | No dialog. The plan is noted but not stored as approved; it never granted anything beyond drafting |
 
-These floors are the same in both modes and covered by `desktop/test/pilot.test.ts` and `desktop/test/policy-smoke.mjs`:
+With `checks.privacy` on, these floors are the same in both modes and covered by `desktop/test/pilot.test.ts` and `desktop/test/policy-smoke.mjs`:
 
 - Credentials, passwords, API keys and tokens stop the send (`PRIVACY_REVIEW_REQUIRED`), in the message or in an attachment.
 - Sensitive data together with a person identifier stops the send.

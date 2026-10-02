@@ -1,5 +1,6 @@
 import { approvedProfile } from '../../src/modules/providers/compatible.js';
 import { copilotDeviceLogin } from './copilot-auth';
+import { unscanned } from './checks';
 import {
   app,
   BrowserWindow,
@@ -164,16 +165,24 @@ async function main() {
     import(pathToFileURL(join(root, 'src/modules/output-manager.js')).href),
     import(pathToFileURL(join(root, 'src/modules/skills/catalog.js')).href),
   ]);
+  // Every privacy scan in the app goes through here, so policy checks.privacy (off by default) switches them all.
+  function scanText(text: string, options?: any) {
+    return policyState.policy.checks.privacy ? privacy.evaluatePrivacyGate(text, options) : unscanned(text);
+  }
   const harness: Harness = {
     permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
     // Skills are used only when the employee picks one (or the AI loads one with the skill tool) unless policy turns
-    // automatic routing on. Authority and privacy checks run on every route either way.
+    // automatic routing on. Authority checks run only when policy turns them on (checks.authority).
     route: (query: string, options: any = {}) =>
-      routing.queryStepRouter(query, { autoRoute: policyState.policy.features.autoRouting, ...options }),
+      routing.queryStepRouter(query, {
+        autoRoute: policyState.policy.features.autoRouting,
+        authorityChecks: policyState.policy.checks.authority,
+        ...options,
+      }),
     contextPolicy: routerPolicy.classifyContextPolicy,
-    privacy: privacy.evaluatePrivacyGate,
+    privacy: scanText,
     catalog: () => skillCatalog.loadSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
     documentCatalog: routing.loadDocumentCatalog,
@@ -183,7 +192,8 @@ async function main() {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
     },
-    documentPrivacy: documents.evaluateDocumentPrivacy,
+    documentPrivacy: (path: string, options: any = {}) =>
+      documents.evaluateDocumentPrivacy(path, { ...options, scan: policyState.policy.checks.privacy }),
     nextOutput: outputs.getNextOutputPath,
   };
   const actions = await import(pathToFileURL(join(root, 'src/modules/actions/index.js')).href);
@@ -280,7 +290,7 @@ async function main() {
   const voice = new Voice(join(data, 'components', 'voice'), () => policyState.policy);
   const workbench = new Workbench(
     store,
-    text => privacy.evaluatePrivacyGate(text).redactedText,
+    text => scanText(text).redactedText,
     () => policyState.policy,
   );
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
@@ -300,7 +310,7 @@ async function main() {
       hooks: [...policyState.policy.hooks, ...enabledPackHooks(store.settings().workspace || data, policyState.policy)],
     }),
     async (prompt, payload, signal) => {
-      if (privacy.evaluatePrivacyGate(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+      if (scanText(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
       const session = payload.sessionId ? store.session(String(payload.sessionId)) : undefined;
       const connection = session ? store.get<Connection>('connection', session.connectionId) : store.connections().find(c => c.ready);
       if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
@@ -853,7 +863,7 @@ async function main() {
         });
       case 'toolApply': {
         const change = workbench.change(inputText(input.id, 60));
-        const review = privacy.evaluatePrivacyGate(change.before + '\n' + change.after);
+        const review = scanText(change.before + '\n' + change.after);
         return gate.run(
           { tool: 'write', readOnly: false, path: change.path },
           {
@@ -877,7 +887,7 @@ async function main() {
       case 'toolRun': {
         const command = inputText(input.command, 2000),
           cwd = await workbench.root();
-        const review = privacy.evaluatePrivacyGate(command);
+        const review = scanText(command);
         if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
         return gate.run(
           { tool: 'terminal', readOnly: false, execute: true, command },

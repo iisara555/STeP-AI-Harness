@@ -83,8 +83,9 @@ try {
   );
   await page.locator('.composer textarea').fill(`ช่วยอ่านเว็บ ${url} และกรอกข้อความ Synthetic success แล้วคลิก Apply เพื่อทดสอบในเครื่อง`);
   await page.keyboard.press('Enter');
+  // Open, fill and click each ask once. With privacy checks off (the default), page text goes to the AI without asking.
   const titles = [];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 3; i++) {
     // Each approval follows a model step; slow runners (macOS x64) need more than the 5 s default.
     await expect.poll(() => page.evaluate(() => Boolean(window.auditApproval)), { timeout: 30000 }).toBe(true);
     const dialog = page.getByRole('alertdialog');
@@ -102,9 +103,10 @@ try {
   );
   assert.equal(browsers.length, 1);
   assert.equal(browsers[0].partition, false);
-  assert.equal(titles.filter(t => t === 'ส่งผลเครื่องมือให้ AI?').length, 5);
+  assert.equal(titles.filter(t => t === 'ส่งผลเครื่องมือให้ AI?').length, 0);
+  assert.equal(await page.getByRole('alertdialog').count(), 0);
   console.log(
-    'Browser chat loop passed: open -> fill -> read -> click -> read -> verified, 3 action approvals and 5 separate data approvals; local fixtures only.',
+    'Browser chat loop passed: open -> fill -> read -> click -> read -> verified, 3 action approvals and no data approvals with privacy checks off; local fixtures only.',
   );
 } finally {
   await app?.close();

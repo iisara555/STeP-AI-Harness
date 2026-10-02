@@ -304,6 +304,10 @@ export async function queryStepRouter(query, options = {}) {
     }
   }
 
+  // authorityChecks: false (STeP Desktop's default) lets every request through as help: the AI cannot approve, sign
+  // or submit anything itself, so the organization's approval and scope rules are left to people.
+  if (options.authorityChecks === false) scopeResult = { status: 'ALLOW', inScope: true, source: 'authority-checks-off' };
+
   const primaryTeamCode = selectedPlaybook?.owner || selectedSkill?.teams?.primary?.[0] || 'common';
   const teamInfo = teams[primaryTeamCode] || { id: primaryTeamCode, name: primaryTeamCode };
 

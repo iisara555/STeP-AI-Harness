@@ -45,7 +45,11 @@ await writeFile(join(workspace, 'pii.png'), png);
 await writeFile(join(workspace, 'scan.pdf'), minimalPdf(['']));
 await writeFile(
   join(home, 'desktop-policy.json'),
-  JSON.stringify({ features: { toolLoop: false, vision: true }, prices: { 'openai:*': { input: 1, output: 2 } } }),
+  JSON.stringify({
+    checks: { authority: true, privacy: true },
+    features: { toolLoop: false, vision: true },
+    prices: { 'openai:*': { input: 1, output: 2 } },
+  }),
 );
 await writeFile(
   executable,

@@ -10,6 +10,8 @@ const home = await mkdtemp(join(tmpdir(), 'step-policy-smoke-'));
 const workspace = join(home, 'work');
 await mkdir(workspace);
 await mkdir('release/qa', { recursive: true });
+// This smoke covers the organization checks, which are off unless policy turns them on.
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ checks: { authority: true, privacy: true } }));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = await electron.launch({ args: ['.'], env, timeout: 45000 });
@@ -38,7 +40,7 @@ try {
   await page.evaluate(() => window.step.call('workspace'));
   await page.reload();
   const state = await page.evaluate(() => window.step.call('snapshot'));
-  assert.equal(state.policy.source, 'default');
+  assert.equal(state.policy.source, 'managed');
   assert.equal(state.policy.features.autoMode, false);
   await assert.rejects(
     page.evaluate(() => window.step.call('permissionMode', { mode: 'auto' })),

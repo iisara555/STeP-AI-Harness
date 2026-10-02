@@ -42,6 +42,7 @@ await writeFile(
   // Strict consent: this smoke checks per-source run scopes.
   JSON.stringify({
     pilot: false,
+    checks: { authority: true, privacy: true },
     features: { compatibleProviders: true },
     providers: { compatible: [{ name: 'Fixture', baseUrl, protocol: 'openai' }] },
   }),

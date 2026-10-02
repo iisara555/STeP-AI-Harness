@@ -539,3 +539,12 @@ test('with automatic routing off, nothing is picked or asked; the employee\'s Sk
   // Automatic routing is unchanged when it is on (the CLI default).
   assert.equal((await queryStepRouter('ลาป่วยได้กี่วัน', { team: 'cc' })).routingContract.skill, 'hr-policy-lookup');
 });
+
+test('authorityChecks: false lets approve/sign/submit requests through as help; the CLI default keeps blocking them', async () => {
+  for (const query of ['อนุมัติรายการใน MIS ให้หน่อย', 'ช่วยลงนามแทนผู้อำนวยการ']) {
+    const off = await queryStepRouter(query, { team: 'cc', autoRoute: false, authorityChecks: false, conversational: true });
+    assert.equal(off.routingContract.mode, 'GENERAL', query);
+    assert.equal(off.routingContract.authority.status, 'ALLOW', query);
+    assert.equal((await queryStepRouter(query, { team: 'cc' })).routingContract.mode, 'BLOCK', query);
+  }
+});

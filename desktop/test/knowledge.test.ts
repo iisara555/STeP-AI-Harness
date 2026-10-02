@@ -6,6 +6,7 @@ import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
 import { OrganizationKnowledge, MATCH_THRESHOLD } from '../electron/knowledge';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
+import { unscanned } from '../electron/checks';
 
 const routing: any = await import('../../src/modules/router/service.js');
 const policy: any = await import('../../src/modules/router/task-boundary.js');
@@ -40,12 +41,12 @@ test('staff questions find the right section of the organization documents; unre
   for (const s of await knowledge.search('สวัสดิการบุคลากรมีอะไรบ้าง')) assert.ok(s.score >= MATCH_THRESHOLD);
 });
 
-function service(captured: { prompt: string; system: string; webSearch: boolean[] }, autoRoute = true) {
+function service(captured: { prompt: string; system: string; webSearch: boolean[] }, autoRoute = true, checks = true) {
   const harness: Harness = {
     root,
-    route: (query: string, options: any = {}) => routing.queryStepRouter(query, { autoRoute, ...options }),
+    route: (query: string, options: any = {}) => routing.queryStepRouter(query, { autoRoute, authorityChecks: checks, ...options }),
     contextPolicy: policy.classifyContextPolicy,
-    privacy: privacy.evaluatePrivacyGate,
+    privacy: checks ? privacy.evaluatePrivacyGate : unscanned,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m.mandatory) };
@@ -173,5 +174,20 @@ test('the desktop sends requests straight to the AI unless policy turns automati
   // Organization documents still come first.
   await work.run(session.id, 'ลาป่วยได้กี่วัน', '', true, undefined, 'chat');
   assert.match(captured.prompt, /\[hr-personnel-welfare-2569\]/);
+  store.close();
+});
+
+test('with the organization checks off (the default), nothing is masked or blocked', async () => {
+  assert.deepEqual(defaultPolicy().checks, { authority: false, privacy: false });
+  assert.deepEqual(parsePolicy({ checks: { privacy: true } }).policy.checks, { authority: false, privacy: true });
+  assert.ok(parsePolicy({ checks: { privacy: 'yes' } }).problems.length);
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false, false);
+  const phone = ['081', '234', '5678'].join('-');
+  await work.run(session.id, `ร่างอีเมลถึงนายสมชาย ใจดี โทร ${phone}`, '', true, undefined, 'chat');
+  assert.equal(store.session(session.id).messages.at(-1)!.text, 'คำตอบทดสอบ');
+  assert.ok(captured.prompt.includes(`นายสมชาย ใจดี โทร ${phone}`), 'sent unmasked');
+  await work.run(session.id, 'ช่วยลงนามแทนผู้อำนวยการ', '', true, undefined, 'chat');
+  assert.equal(store.session(session.id).messages.at(-1)!.text, 'คำตอบทดสอบ', 'answered, not blocked');
   store.close();
 });
