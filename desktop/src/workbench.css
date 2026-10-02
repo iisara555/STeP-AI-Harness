@@ -321,7 +321,7 @@
   display: flex;
   gap: 4px;
   align-items: center;
-  padding: 9px 11px 2px;
+  padding: 6px 8px 0;
   flex-wrap: wrap;
 }
 .composer-mode button {

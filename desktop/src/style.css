@@ -316,7 +316,7 @@ nav button,
   margin-top: 15px;
 }
 .composer-area {
-  padding: 0 26px 18px;
+  padding: 0 26px 12px;
 }
 .composer {
   border: 1px solid var(--line-strong);
@@ -325,19 +325,21 @@ nav button,
 }
 .composer textarea {
   display: block;
-  resize: vertical;
+  /* Starts at one line and grows with the text, up to the max height. */
+  field-sizing: content;
+  resize: none;
   width: 100%;
-  min-height: 86px;
+  min-height: 44px;
   max-height: 200px;
   border: 0;
   background: transparent;
-  padding: 15px 17px;
+  padding: 10px 16px 6px;
   outline: none;
 }
 .composer-tools {
   display: flex;
   align-items: center;
-  padding: 6px 10px 10px;
+  padding: 2px 8px 7px;
   gap: 7px;
 }
 .composer-tools select {
@@ -362,10 +364,10 @@ nav button,
   flex: 1;
 }
 .send {
-  padding: 7px;
+  padding: 6px;
   border-radius: 8px;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
 }
 .stop {
   background: var(--danger);
@@ -374,7 +376,7 @@ nav button,
 .composer-note {
   text-align: center;
   font-size: 10px;
-  margin-top: 10px;
+  margin-top: 6px;
   color: var(--muted);
 }
 .text-link {
