@@ -20,6 +20,14 @@ STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
   - its first line of purpose;
   - its section headings.
   When the matched excerpts do not hold the answer, the AI opens the right document, or one section of it, with `reference(input=ID, args.section=heading)`. It no longer reports the information as missing. `reference` also accepts a document's path or title.
+- **Five more registered documents:** the administrator confirmed them as published for every employee (`sensitivity: public`):
+  - `step-teams-directory` (`docs/teams.md`)
+  - `step-public-profile`
+  - `project-code-scheme` (the owner of the table is still unconfirmed)
+  - `step-context`
+  - `step-ai-employee-guide` (`docs/employee-guide.md`)
+
+  The HR Service Channels title now says "ติดต่อฝ่ายบุคคล", so HR contact questions still find it first.
 
 ### Desktop permission modes and answer feedback
 

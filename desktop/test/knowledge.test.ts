@@ -18,7 +18,18 @@ const knowledge = new OrganizationKnowledge(root, routing.loadDocumentCatalog);
 test('documents kept as a summary index are readable; restricted and missing ones never are', async () => {
   const catalog = await routing.loadDocumentCatalog();
   const ids = catalog.map((d: any) => d.id);
-  for (const id of ['hr-service-channels', 'hr-personnel-welfare-2569', 'step-career-path-2569', 'step-facility-equipment-inventory-2020'])
+  for (const id of [
+    'hr-service-channels',
+    'hr-personnel-welfare-2569',
+    'step-career-path-2569',
+    'step-facility-equipment-inventory-2020',
+    // Organization documents in docs/ the administrator confirmed as published for every employee.
+    'step-teams-directory',
+    'step-public-profile',
+    'project-code-scheme',
+    'step-context',
+    'step-ai-employee-guide',
+  ])
     assert.ok(ids.includes(id), id);
   assert.ok(!ids.includes('hr-personnel-welfare-2566'), 'restricted (superseded) announcement');
   assert.ok(!ids.includes('procurement-policy'), 'not provided to the harness');
