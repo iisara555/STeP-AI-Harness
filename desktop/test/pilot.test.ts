@@ -166,3 +166,49 @@ test('pilot: one run-scope answer covers the rest of the run; results with findi
   });
   assert.equal(asks, 2);
 });
+
+test('like Claude and ChatGPT: reviewed file writes can be remembered, commands always ask', async () => {
+  const store = new Store(':memory:');
+  let approval: ApprovalRequest | undefined;
+  const approvals = new Approvals(store, request => {
+    if (request) approval = request;
+  });
+  let policy = parsePolicy({}).policy;
+  const gate = new ToolGate(
+    () => policy,
+    () => 'ask',
+    async () => '/workspace',
+    approvals,
+    async () => ({ blocked: false, reason: '', results: [] }),
+  );
+  const pending = () => new Promise(r => setTimeout(r, 0));
+  const ask = async (request: Parameters<ToolGate['run']>[0], key: string, answer: 'once' | 'workspace' | 'none') => {
+    approval = undefined;
+    const run = gate.run(request, { title: 't', body: 'b', key }, () => 'ran');
+    await pending();
+    const asked = approval as ApprovalRequest | undefined;
+    if (answer !== 'none' && asked) approvals.respond(asked.id, answer);
+    return { result: await run, asked };
+  };
+  const write = { tool: 'write', readOnly: false, path: 'notes.md' };
+  const command = { tool: 'terminal', readOnly: false, execute: true, command: 'echo hi' };
+
+  const first = await ask(write, 'notes.md', 'workspace');
+  assert.equal(first.asked?.allowRemember, true);
+  assert.equal((await ask(write, 'notes.md', 'none')).asked, undefined, 'the same file is not asked again');
+  assert.ok((await ask(write, 'other.md', 'once')).asked, 'a different file still asks');
+
+  const run = await ask(command, 'echo hi', 'once');
+  assert.equal(run.asked?.allowRemember, false, 'commands cannot be remembered');
+  // A rule remembered by an older version is ignored for commands.
+  const rule = approvals.rule('/workspace', 'terminal', 'echo hi');
+  store.put('approval', rule.id, rule);
+  assert.ok((await ask(command, 'echo hi', 'once')).asked, 'an old remembered command rule does not skip the dialog');
+
+  policy = parsePolicy({ permission: { rememberApprovals: false } }).policy;
+  const strict = await ask(write, 'notes.md', 'once');
+  assert.equal(strict.asked?.allowRemember, false, 'administrators can turn remembering off');
+  assert.equal(parsePolicy({ permission: { rememberApprovals: 'no' } }).problems.length, 1);
+  approvals.close();
+  store.close();
+});

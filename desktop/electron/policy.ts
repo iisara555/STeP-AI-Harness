@@ -80,7 +80,14 @@ export type McpServer =
 export type Policy = {
   source: 'managed' | 'default';
   features: Record<Feature, boolean>;
-  permission: { modes: PermissionMode[]; defaultMode: PermissionMode; pathRules: PathRule[]; deniedCommands: string[] };
+  permission: {
+    modes: PermissionMode[];
+    defaultMode: PermissionMode;
+    pathRules: PathRule[];
+    deniedCommands: string[];
+    /** Lets people remember a reviewed file write for the same file in the same workspace. Commands never are. */
+    rememberApprovals: boolean;
+  };
   hooks: HookDefinition[];
   mcpServers: McpServer[];
   /** US dollars per million tokens, keyed by model id or `provider:*`. */
@@ -140,7 +147,13 @@ export function defaultPolicy(): Policy {
   return {
     source: 'default',
     features: { ...DEFAULT_FEATURES },
-    permission: { modes: ['ask', 'plan'], defaultMode: 'ask', pathRules: [], deniedCommands: [...DEFAULT_DENIED_COMMANDS] },
+    permission: {
+      modes: ['ask', 'plan'],
+      defaultMode: 'ask',
+      pathRules: [],
+      deniedCommands: [...DEFAULT_DENIED_COMMANDS],
+      rememberApprovals: true,
+    },
     hooks: [],
     mcpServers: [],
     prices: {},
@@ -337,6 +350,10 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
             if (!pattern || typeof rule?.allow !== 'boolean') problems.push('each path rule needs pattern and allow');
             else policy.permission.pathRules.push({ pattern, allow: rule.allow });
           }
+      }
+      if (permission.rememberApprovals !== undefined) {
+        if (typeof permission.rememberApprovals !== 'boolean') problems.push('permission.rememberApprovals must be true or false');
+        else policy.permission.rememberApprovals = permission.rememberApprovals;
       }
       if (permission.deniedCommands !== undefined) {
         if (!Array.isArray(permission.deniedCommands)) problems.push('permission.deniedCommands must be a list');

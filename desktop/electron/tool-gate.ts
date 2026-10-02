@@ -3,6 +3,9 @@ import { evaluatePermission, type ToolRequest } from './permissions';
 import { approvalHash, Approvals } from './approvals';
 import type { HookPayload, HookOutcome } from './hooks';
 
+/** Only a reviewed write to one workspace file can be remembered; anything that runs code or acts outside cannot. */
+export const rememberableTool = (request: ToolRequest) => request.tool === 'write' && !request.execute && Boolean(request.path);
+
 export class ToolGate {
   constructor(
     private policy: () => Policy,
@@ -41,14 +44,18 @@ export class ToolGate {
     const pre = await this.hook({ event: 'pre_tool_use', ...metadata });
     if (pre.blocked) throw new Error('HOOK_BLOCKED');
     const rule = this.approvals.rule(workspace, request.tool, detail.key);
-    if (decision.requiresConfirmation && !this.approvals.remembered(rule)) {
+    // Like Claude and ChatGPT: a reviewed file write may be remembered for the same file, because the diff was shown
+    // and a snapshot can undo it. Commands, the sandbox and external tool calls ask every time; an older remembered
+    // rule for them is ignored. Administrators can turn remembering off.
+    const rememberable = rememberableTool(request) && this.policy().permission.rememberApprovals !== false;
+    if (decision.requiresConfirmation && !(rememberable && this.approvals.remembered(rule))) {
       const accepted = await this.approvals.request(
         rule,
         {
           title: detail.title,
           body: detail.body,
           privacyClass: detail.privacyClass || 'internal',
-          allowRemember: true,
+          allowRemember: rememberable,
           sessionId: detail.sessionId,
         },
         signal,
