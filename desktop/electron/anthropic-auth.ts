@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir, mkdtemp, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { tm } from './i18n';
 
 export type AnthropicContext = { cwd: string; env: NodeJS.ProcessEnv };
 
@@ -173,7 +174,7 @@ export async function anthropicLogin(
   signal: AbortSignal,
 ) {
   if (await anthropicStatus(executable, context, signal)) return;
-  deps.progress('กำลังเปิด Claude Console เพื่อลงชื่อเข้าใช้…');
+  deps.progress(tm('กำลังเปิด Claude Console เพื่อลงชื่อเข้าใช้…'));
   try {
     const result = await runAnt(executable, ['auth', 'login'], context, { signal, timeout: 300_000 });
     if (result.code !== 0) throw new Error('LOGIN_FAILED');
@@ -274,14 +275,14 @@ export async function installAnthropicCli(
   const url = `https://github.com/anthropics/anthropic-cli/releases/download/v${ANT_VERSION}/${spec.asset}`;
   const work = await mkdtemp(join(tmpdir(), 'step-ant-'));
   try {
-    log(`กำลังดาวน์โหลด ant CLI ${ANT_VERSION} ของ Anthropic (ประมาณ 10 MB)`);
+    log(tm('กำลังดาวน์โหลด ant CLI {0} ของ Anthropic (ประมาณ 10 MB)', ANT_VERSION));
     const bytes = await (deps.download || downloadRelease)(url, signal);
     if (createHash('sha256').update(bytes).digest('hex') !== spec.sha256) throw new Error('ANTHROPIC_CLI_CHECKSUM_FAILED');
     const archive = join(work, spec.asset),
       unpacked = join(work, 'unpacked');
     await writeFile(archive, bytes);
     await mkdir(unpacked);
-    log('ตรวจ checksum ผ่านแล้ว กำลังแตกไฟล์');
+    log(tm('ตรวจ checksum ผ่านแล้ว กำลังแตกไฟล์'));
     if (!(await (deps.extract || extractArchive)(archive, unpacked))) throw new Error('ANTHROPIC_CLI_INSTALL_FAILED');
     const found = await findBinary(unpacked, process.platform === 'win32' ? 'ant.exe' : 'ant');
     if (!found) throw new Error('ANTHROPIC_CLI_INSTALL_FAILED');
@@ -315,7 +316,7 @@ export async function installAnthropicCli(
     }
     await rm(target, { force: true });
     await rename(staged, target);
-    log('ติดตั้ง ant CLI เรียบร้อย');
+    log(tm('ติดตั้ง ant CLI เรียบร้อย'));
     return target;
   } finally {
     await rm(work, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

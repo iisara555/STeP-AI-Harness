@@ -10,6 +10,12 @@ const home = await mkdtemp(join(tmpdir(), 'step-policy-smoke-'));
 const workspace = join(home, 'work');
 await mkdir(workspace);
 await mkdir('release/qa', { recursive: true });
+// This smoke covers the organization checks, which are off unless policy turns them on.
+// Full auto is offered by default; this smoke covers an organization that turns it off.
+await writeFile(
+  join(home, 'desktop-policy.json'),
+  JSON.stringify({ checks: { authority: true, privacy: true }, features: { autoMode: false } }),
+);
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = await electron.launch({ args: ['.'], env, timeout: 45000 });
@@ -38,7 +44,7 @@ try {
   await page.evaluate(() => window.step.call('workspace'));
   await page.reload();
   const state = await page.evaluate(() => window.step.call('snapshot'));
-  assert.equal(state.policy.source, 'default');
+  assert.equal(state.policy.source, 'managed');
   assert.equal(state.policy.features.autoMode, false);
   await assert.rejects(
     page.evaluate(() => window.step.call('permissionMode', { mode: 'auto' })),
@@ -124,9 +130,23 @@ try {
     page.evaluate(() => window.step.call('toolFiles')),
     /HOOK_BLOCKED/,
   );
+  // Pilot mode asks less elsewhere, but a write is still asked about every time and counted locally.
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ pilot: true }));
+  await waitPolicy(policy => policy.pilot === true && policy.hooks === 0);
+  const before = (await page.evaluate(() => window.step.call('snapshot'))).consentMetrics;
+  const pilotChange = await page.evaluate(() => window.step.call('toolStage', { path: 'notes.md', content: 'Pilot content' }));
+  await apply(pilotChange.id);
+  await approval.waitFor();
+  await approval.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await page.waitForFunction(() => window.policyApply.done);
+  assert.equal(await readFile(join(workspace, 'notes.md'), 'utf8'), 'Second reviewed content');
+  const after = (await page.evaluate(() => window.step.call('snapshot'))).consentMetrics;
+  assert.equal(after.prompts, before.prompts + 1);
+  assert.equal(after.cancelled, before.cancelled + 1);
   await writeFile(join(home, 'desktop-policy.json'), '{broken');
   await waitPolicy(policy => policy.problems.length > 0);
-  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).policy.features.autoMode, false);
+  // A broken file falls back to the defaults, never to what the broken file asked for.
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).policy.source, 'default');
   await page.evaluate(() => window.step.call('toolFiles'));
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'นโยบายองค์กร' }).click();
@@ -145,6 +165,7 @@ try {
           'policy reload cancels consent',
           'sensitive paths',
           'hook blocks',
+          'pilot keeps write consent',
           'invalid policy defaults',
           'policy settings UI',
         ],

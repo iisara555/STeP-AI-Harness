@@ -88,6 +88,8 @@ export type Message = {
   webSources?: { title: string; url: string }[];
   /** Files sent with this message, shown on it in the transcript. */
   files?: { name: string }[];
+  /** The person's rating of an answer; stays on this computer with the conversation. */
+  feedback?: 'good' | 'fix';
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -98,6 +100,8 @@ export type Session = {
   loadedContext?: string[];
   compaction?: { before: number; after: number; method: string; at: string };
   approvedPlan?: string;
+  /** The plan approved in the native 'plan' workflow, ticked off by the 'execute' workflow. */
+  workPlan?: WorkPlan;
   id: string;
   title: string;
   project: string;
@@ -147,6 +151,8 @@ export type Settings = {
   assistant: string;
   workspace: string;
   theme: 'system' | 'light' | 'dark';
+  /** Interface language; Thai when unset. */
+  language?: 'th' | 'en';
   onboarding: boolean;
   ocrDir?: string;
   userName?: string;
@@ -154,6 +160,8 @@ export type Settings = {
   assistantTone?: string;
   tourDone?: boolean;
   consentedAt?: string;
+  /** Version of the usage terms this person accepted (src/terms-version.ts). */
+  termsVersion?: string;
   ocrAiConsentedAt?: string;
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
@@ -193,14 +201,15 @@ export type Snapshot = {
   policy?: PolicySnapshot;
   approvals?: ApprovalRule[];
   transmissionGrants?: TransmissionGrant[];
+  consentMetrics?: ConsentSummary;
   features?: { claudeSubscription?: boolean };
   settings: Settings;
   connections: Connection[];
   sessions: Session[];
-  teams: { id: string; name: string }[];
+  teams: { id: string; name: string; nameEn?: string }[];
   userFile: string;
 };
-export type PermissionMode = 'ask' | 'plan' | 'auto';
+export type PermissionMode = 'ask' | 'acceptEdits' | 'plan' | 'auto';
 export type PolicySnapshot = {
   source: 'managed' | 'default';
   path: string;
@@ -210,6 +219,16 @@ export type PolicySnapshot = {
   defaultMode: PermissionMode;
   mode: PermissionMode;
   hooks: number;
+  pilot?: boolean;
+  checks?: { authority: boolean; privacy: boolean };
+};
+export type ConsentSummary = {
+  prompts: number;
+  confirmed: number;
+  cancelled: number;
+  tasks: number;
+  tasksAsked: number;
+  perTask: number;
 };
 export type ApprovalRule = { id: string; workspaceHash: string; tool: string; targetHash: string; at: string };
 export type ApprovalAnswer = 'cancel' | 'once' | 'workspace' | 'run';
@@ -230,9 +249,19 @@ export type ApprovalRequest = {
   privacyClass: string;
   allowRemember: boolean;
   runScope?: string;
+  /** Pilot mode pre-selects the run scope, so one answer covers the rest of the run. */
+  runDefault?: boolean;
+  sessionId?: string;
 };
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };
+/** Native workflows of the harness (electron/workflows.ts), picked in the composer. */
+export type Workflow = 'plan' | 'execute' | 'requirements' | 'diagnose';
+export type WorkTask = { title: string; status: 'todo' | 'doing' | 'done' | 'blocked'; note?: string };
+export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
+/** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
+export type BrowserDockTab = { id: string; title: string; url: string; kind: 'agent' | 'manual'; loading: boolean };
+export type BrowserDockState = { tabs: BrowserDockTab[]; active: string; focus?: boolean };
 export type RunEvent = {
   sessionId: string;
   type:
@@ -253,7 +282,9 @@ export type RunEvent = {
     | 'approval-close'
     | 'question'
     | 'question-close'
-    | 'trace';
+    | 'trace'
+    | 'browser';
+  browser?: BrowserDockState;
   question?: ToolQuestion;
   questionId?: string;
   approval?: ApprovalRequest;

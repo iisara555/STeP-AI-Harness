@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { findClaudeCode } from './handoff';
 import { explainRuntimeFailure } from './diagnostics';
+import { tm } from './i18n';
 
 export type ClaudeContext = { cwd: string; env: NodeJS.ProcessEnv };
 
@@ -163,7 +164,7 @@ export async function claudeLogin(
   signal: AbortSignal,
 ) {
   if (await claudeStatus(executable, context, signal)) return;
-  deps.progress('รอลงชื่อบัญชี Claude ในเบราว์เซอร์…');
+  deps.progress(tm('รอลงชื่อบัญชี Claude ในเบราว์เซอร์…'));
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal.addEventListener('abort', abort, { once: true });

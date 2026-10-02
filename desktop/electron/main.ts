@@ -1,5 +1,7 @@
 import { approvedProfile } from '../../src/modules/providers/compatible.js';
 import { copilotDeviceLogin } from './copilot-auth';
+import { unscanned, credentialsOnly } from './checks';
+import { TERMS_VERSION } from '../src/terms-version';
 import {
   app,
   BrowserWindow,
@@ -12,7 +14,7 @@ import {
   Notification,
   session as electronSession,
 } from 'electron';
-import { mkdir, writeFile, stat, appendFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, stat, appendFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -20,6 +22,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
+import { BrowserDock } from './browser-dock';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -52,6 +55,8 @@ import {
 } from './anthropic-auth';
 import { existsSync, watchFile, unwatchFile } from 'node:fs';
 import { loadPolicy, type PermissionMode } from './policy';
+import { ConsentMetrics } from './consent-metrics';
+import { sendConsent, type SendSignals } from './consent-plan';
 import { Approvals } from './approvals';
 import { ToolGate } from './tool-gate';
 import { HookEngine, type HookPayload } from './hooks';
@@ -63,10 +68,13 @@ import { Memories, safeMemory } from './memory';
 import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
+import { pdfPageImages } from './pdf-pages';
+import { isWorkflow } from './workflows';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
+import { tm, useLanguage } from './i18n';
 
 let window: BrowserWindow, store: Store, service: WorkService;
-const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; image?: VisionInput }>();
+const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }>();
 const exportPaths = new Set<string>();
 const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
@@ -105,9 +113,9 @@ async function makeWindow() {
     // Keep the window open by default when the editor has unsaved content.
     const result = await dialog.showMessageBox(window, {
       type: 'warning',
-      message: 'มีร่างที่ยังไม่บันทึก',
-      detail: 'กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก',
-      buttons: ['กลับไปบันทึก', 'ปิดโดยไม่บันทึก'],
+      message: tm('มีร่างที่ยังไม่บันทึก'),
+      detail: tm('กลับไปบันทึกร่างก่อนปิด หรือเลือกปิดโดยไม่บันทึก'),
+      buttons: [tm('กลับไปบันทึก'), tm('ปิดโดยไม่บันทึก')],
       defaultId: 0,
       cancelId: 0,
     });
@@ -152,6 +160,7 @@ async function main() {
         details.mediaType === 'audio'),
   );
   store = new Store(join(data, 'workspace.sqlite'));
+  useLanguage(() => store?.settings().language);
   const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
     import(pathToFileURL(join(root, 'src/modules/router/index.js')).href),
@@ -160,22 +169,61 @@ async function main() {
     import(pathToFileURL(join(root, 'src/modules/output-manager.js')).href),
     import(pathToFileURL(join(root, 'src/modules/skills/catalog.js')).href),
   ]);
+  // Every privacy scan in the app goes through here, so policy checks.privacy (off by default) switches them all.
+  /** A PNG, JPEG or WebP image checked by its signature, ready for a vision model. */
+  function visionImage(extension: string, bytes: Buffer): VisionInput {
+    const mime = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+    const valid =
+      mime === 'image/png'
+        ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+        : mime === 'image/jpeg'
+          ? bytes[0] === 255 && bytes[1] === 216
+          : bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP';
+    if (!valid) throw new Error('ATTACH_UNSUPPORTED');
+    return { mime, data: bytes.toString('base64') };
+  }
+  function acceptTerms() {
+    const s = store.settings();
+    if (s.termsVersion !== TERMS_VERSION)
+      store.put('settings', 'main', { ...s, consentedAt: new Date().toISOString(), termsVersion: TERMS_VERSION });
+  }
+  function scanText(text: string, options?: any) {
+    return policyState.policy.checks.privacy
+      ? privacy.evaluatePrivacyGate(text, options)
+      : credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
+  }
   const harness: Harness = {
     permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
-    route: routing.queryStepRouter,
+    // Skills are used only when the employee picks one (or the AI loads one with the skill tool) unless policy turns
+    // automatic routing on. Authority checks run only when policy turns them on (checks.authority).
+    route: (query: string, options: any = {}) =>
+      routing.queryStepRouter(query, {
+        autoRoute: policyState.policy.features.autoRouting,
+        authorityChecks: policyState.policy.checks.authority,
+        ...options,
+      }),
     contextPolicy: routerPolicy.classifyContextPolicy,
-    privacy: privacy.evaluatePrivacyGate,
+    privacy: scanText,
     catalog: () => skillCatalog.loadSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
+    documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
     visionEnabled: () => policyState.policy.features.vision,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
     },
-    documentPrivacy: documents.evaluateDocumentPrivacy,
+    documentPrivacy: async (path: string, options: any = {}) => {
+      const report = await documents.evaluateDocumentPrivacy(path, { ...options, scan: policyState.policy.checks.privacy });
+      if (policyState.policy.checks.privacy || typeof report?.redactedText !== 'string') return report;
+      // Unscanned documents still have credentials masked (or are withheld when masking is incomplete).
+      const credentials = scanText(report.redactedText);
+      return credentials.action === 'pass'
+        ? report
+        : { ...report, action: credentials.action, findings: credentials.findings, redactedText: credentials.redactedText };
+    },
     nextOutput: outputs.getNextOutputPath,
   };
   const actions = await import(pathToFileURL(join(root, 'src/modules/actions/index.js')).href);
@@ -250,6 +298,9 @@ async function main() {
     if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection);
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection, webSearch);
+    // Development test runs only: point the bundled Gemini CLI at a local fake API. Installed copies ignore this.
+    if (!app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_TEST_GEMINI_BASE_URL)
+      env.GOOGLE_GEMINI_BASE_URL = process.env.STEP_TEST_GEMINI_BASE_URL;
     let authExecutable: string | undefined;
     if (connection.provider === 'claude' && connection.mode === 'subscription') {
       await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
@@ -269,7 +320,7 @@ async function main() {
   const voice = new Voice(join(data, 'components', 'voice'), () => policyState.policy);
   const workbench = new Workbench(
     store,
-    text => privacy.evaluatePrivacyGate(text).redactedText,
+    text => scanText(text).redactedText,
     () => policyState.policy,
   );
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
@@ -289,7 +340,7 @@ async function main() {
       hooks: [...policyState.policy.hooks, ...enabledPackHooks(store.settings().workspace || data, policyState.policy)],
     }),
     async (prompt, payload, signal) => {
-      if (privacy.evaluatePrivacyGate(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+      if (scanText(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
       const session = payload.sessionId ? store.session(String(payload.sessionId)) : undefined;
       const connection = session ? store.get<Connection>('connection', session.connectionId) : store.connections().find(c => c.ready);
       if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
@@ -323,8 +374,11 @@ async function main() {
       });
     return outcome;
   };
-  const approvals = new Approvals(store, (approval, approvalId) =>
-    emit({ sessionId: '', type: approval ? 'approval' : 'approval-close', approval, approvalId }),
+  const consentMetrics = new ConsentMetrics(store);
+  const approvals = new Approvals(
+    store,
+    (approval, approvalId) => emit({ sessionId: '', type: approval ? 'approval' : 'approval-close', approval, approvalId }),
+    consentMetrics,
   );
   const gate = new ToolGate(
     () => policyState.policy,
@@ -337,8 +391,13 @@ async function main() {
     approvals,
     fireHook,
   );
-  const browsers = new Map<string, BrowserWindow>();
-  const agentBrowser = new AgentBrowser();
+  // Web pages, the assistant's and the employee's own, show in the Web tab of the main window (no pop-up windows).
+  const dock = new BrowserDock(
+    () => window,
+    state => emit({ sessionId: '', type: 'browser', browser: state }),
+  );
+  const browsers = new Set<string>();
+  const agentBrowser = new AgentBrowser(dock, () => policyState.policy.network?.privateHosts || []);
   const questions = new Questions(emit);
   const ledger = new CostLedger(store, () => policyState.policy);
   const tools = new DesktopTools(
@@ -382,7 +441,7 @@ async function main() {
     workbench,
     () => policyState.policy,
     harness.privacy,
-    (body, signal) => phase4Consent('รันคำสั่งใน Docker sandbox?', body, signal),
+    (body, signal) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal),
   );
   tools.closeBrowser = id => agentBrowser.closeOwner(id);
   tools.external = (request, scope, check) => {
@@ -398,7 +457,7 @@ async function main() {
         approve: (title, body) =>
           approvals.request(
             approvals.rule(store.settings().workspace || data, 'browser_control', randomUUID()),
-            { title, body, privacyClass: 'internal', allowRemember: false },
+            { title, body, privacyClass: 'internal', allowRemember: false, sessionId: scope.sessionId },
             scope.signal,
           ),
       });
@@ -439,7 +498,10 @@ async function main() {
     ]
       .filter(Boolean)
       .join('\n\n');
-    if (text) {
+    // Standard mode sends the person's own saved preferences and confirmed memories without asking each time, as
+    // Claude and ChatGPT do with custom instructions and memory; both already passed the privacy check when loaded.
+    if (text && !policy.pilot) {
+      const listed = [...preferences.map(p => '• ' + p.path), ...selected.map(m => '• ' + tm('ความจำ: {0}', m.name))].join('\n');
       const approved = await approvals.request(
         approvals.rule(
           settings.workspace || data,
@@ -449,10 +511,11 @@ async function main() {
             .digest('hex'),
         ),
         {
-          title: 'ใช้บริบทที่บันทึกไว้กับงานนี้?',
-          body: `จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ ${connection.provider}\n${text.slice(0, 2000)}`,
+          title: tm('ใช้บริบทที่บันทึกไว้กับงานนี้?'),
+          body: tm('จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}', connection.provider, listed),
           privacyClass: 'internal',
           allowRemember: false,
+          sessionId: id,
         },
         signal,
       );
@@ -530,8 +593,8 @@ async function main() {
     },
     (id, tasks, signal) =>
       phase4Consent(
-        'ตรวจแผนงานย่อยก่อนเริ่ม?',
-        `งาน ${id}\n${JSON.stringify(tasks, null, 2)}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ`,
+        tm('ตรวจแผนงานย่อยก่อนเริ่ม?'),
+        tm('งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ', id, JSON.stringify(tasks, null, 2)),
         signal,
       ),
     (query, team) => harness.route(query, { team, workspace: store.settings().workspace }),
@@ -596,7 +659,7 @@ async function main() {
       if (Notification.isSupported()) {
         const notification = new Notification({
           title: 'STeP Desktop',
-          body: run.status === 'review' ? 'งานตามรอบมีร่างรอตรวจแล้ว' : 'งานตามรอบต้องการให้ตรวจสถานะ',
+          body: run.status === 'review' ? tm('งานตามรอบมีร่างรอตรวจแล้ว') : tm('งานตามรอบต้องการให้ตรวจสถานะ'),
         });
         notification.on('click', () => {
           window.show();
@@ -672,9 +735,12 @@ async function main() {
       defaultMode: policyState.policy.permission.defaultMode,
       mode: permissionMode(),
       hooks: policyState.policy.hooks.length,
+      pilot: Boolean(policyState.policy.pilot),
+      checks: policyState.policy.checks,
     },
     approvals: approvals.list(),
     transmissionGrants: tools.transmissionGrants(),
+    consentMetrics: consentMetrics.summary(store.list('session').length),
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections(),
@@ -701,6 +767,24 @@ async function main() {
         if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         await memories.remove(inputText(input.id, 60));
         return true;
+      case 'messageFeedback': {
+        // Rates one answer. "Needs fixing" with a note also proposes a memory the person confirms later.
+        const s = store.session(inputText(input.id, 60));
+        const index = Number(input.index);
+        const message = Number.isInteger(index) ? s.messages[index] : undefined;
+        if (!message || message.role !== 'assistant') throw new Error('INVALID_INPUT');
+        const rating = input.rating === 'good' || input.rating === 'fix' ? input.rating : undefined;
+        if (input.rating !== null && !rating) throw new Error('INVALID_INPUT');
+        const note = typeof input.note === 'string' ? input.note.slice(0, 1000).trim() : '';
+        // The proposal is checked first, so a refused note leaves the rating unchanged and the person can edit it.
+        if (rating === 'fix' && note && permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        const proposed = rating === 'fix' && note ? Boolean(memories.proposeFeedback(s.id, note)) : false;
+        if (rating) message.feedback = rating;
+        else delete message.feedback;
+        store.save(s);
+        emit({ sessionId: s.id, type: 'changed' });
+        return { rating: rating || null, proposed };
+      }
       case 'memoryDismiss':
         memories.dismiss(inputText(input.id, 60));
         return true;
@@ -743,7 +827,7 @@ async function main() {
           }
         }
         const result = await dialog.showSaveDialog(window, {
-          title: 'บันทึกบทสนทนา',
+          title: tm('บันทึกบทสนทนา'),
           defaultPath: `conversation.${format}`,
           filters: [{ name: format === 'json' ? 'JSON' : 'Markdown', extensions: [format] }],
         });
@@ -815,12 +899,12 @@ async function main() {
         });
       case 'toolApply': {
         const change = workbench.change(inputText(input.id, 60));
-        const review = privacy.evaluatePrivacyGate(change.before + '\n' + change.after);
+        const review = scanText(change.before + '\n' + change.after);
         return gate.run(
           { tool: 'write', readOnly: false, path: change.path },
           {
-            title: 'เขียนไฟล์ที่ตรวจแล้ว?',
-            body: change.path + '\nตรวจ Before / After ใน Changes ก่อนบันทึก',
+            title: tm('เขียนไฟล์ที่ตรวจแล้ว?'),
+            body: change.path + tm('\nตรวจ Before / After ใน Changes ก่อนบันทึก'),
             key: change.path,
             privacyClass: review.classification === 'public' ? 'internal' : review.classification,
           },
@@ -839,13 +923,13 @@ async function main() {
       case 'toolRun': {
         const command = inputText(input.command, 2000),
           cwd = await workbench.root();
-        const review = privacy.evaluatePrivacyGate(command);
+        const review = scanText(command);
         if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
         return gate.run(
           { tool: 'terminal', readOnly: false, execute: true, command },
           {
-            title: 'รันคำสั่งนี้บนเครื่อง?',
-            body: command + '\n\nWorking directory: ' + cwd + '\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย',
+            title: tm('รันคำสั่งนี้บนเครื่อง?'),
+            body: command + '\n\nWorking directory: ' + cwd + tm('\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย'),
             key: command,
             privacyClass: review.classification === 'public' ? 'internal' : review.classification,
           },
@@ -857,27 +941,22 @@ async function main() {
         return gate.run({ tool: 'browser', readOnly: true }, { title: '', body: '', key: url }, async () => {
           if (browsers.size >= 4) throw new Error('TASK_LIMIT');
           const id = randomUUID();
-          const browser = new BrowserWindow({
-            width: 1100,
-            height: 800,
-            title: 'STeP Browser',
-            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-browser-' + id },
-          });
-          browsers.set(id, browser);
-          browser.on('closed', () => browsers.delete(id));
-          const network = browser.webContents.session;
+          const browser = dock.create(id, 'manual', 'step-browser-' + id);
+          browsers.add(id);
+          browser.once('destroyed', () => browsers.delete(id));
+          const network = browser.session;
           network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
           network.setPermissionCheckHandler(() => false);
           network.on('will-download', e => e.preventDefault());
-          browser.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-          browser.webContents.on('will-navigate', (e, target) => {
+          browser.setWindowOpenHandler(() => ({ action: 'deny' }));
+          browser.on('will-navigate', (e, target) => {
             try {
               browserUrl(target);
             } catch {
               e.preventDefault();
             }
           });
-          browser.webContents.on('will-redirect', (e, target) => {
+          browser.on('will-redirect', (e, target) => {
             try {
               browserUrl(target);
             } catch {
@@ -887,20 +966,44 @@ async function main() {
           try {
             await browser.loadURL(url);
           } catch {
-            browser.destroy();
+            dock.remove(id);
             throw new Error('BROWSER_LOAD_FAILED');
           }
-          return { id, url, title: browser.webContents.getTitle() };
+          return { id, url, title: browser.getTitle() };
         });
       }
       case 'toolBrowserRead': {
-        const browser = browsers.get(inputText(input.id, 60));
-        if (!browser || browser.isDestroyed()) throw new Error('BROWSER_CLOSED');
-        return gate.run({ tool: 'browser_read', readOnly: true }, { title: '', body: '', key: browser.webContents.getURL() }, async () => ({
-          url: browser.webContents.getURL(),
-          title: browser.webContents.getTitle(),
-          text: await browser.webContents.executeJavaScript('document.body.innerText.slice(0,50000)'),
+        // The employee's own pages only: the assistant reads its pages through browser_control.
+        const id = inputText(input.id, 60),
+          browser = browsers.has(id) ? dock.contents(id) : undefined;
+        if (!browser) throw new Error('BROWSER_CLOSED');
+        return gate.run({ tool: 'browser_read', readOnly: true }, { title: '', body: '', key: browser.getURL() }, async () => ({
+          url: browser.getURL(),
+          title: browser.getTitle(),
+          // Read in an isolated world, so the page's own scripts cannot fake the text, and give up after 10 seconds.
+          text: await new Promise<string>((done, fail) => {
+            const timer = setTimeout(() => fail(new Error('BROWSER_TIMEOUT')), 10_000);
+            browser
+              .executeJavaScriptInIsolatedWorld(1006, [{ code: "String(document.body?.innerText || '').slice(0, 50000)" }])
+              .then(text => done(String(text || '')), fail)
+              .finally(() => clearTimeout(timer));
+          }),
         }));
+      }
+      case 'browserDock': {
+        const action = inputText(input.action, 20);
+        if (action === 'state') return dock.state();
+        if (action === 'bounds') {
+          const b = input.bounds;
+          dock.setBounds(b && typeof b === 'object' ? { x: +b.x, y: +b.y, width: +b.width, height: +b.height } : null);
+          return true;
+        }
+        if (action === 'capture') return dock.capture();
+        const id = inputText(input.id, 60);
+        if (action === 'select') return (dock.select(id), dock.state());
+        if (action === 'close') return (dock.remove(id), dock.state());
+        if (['back', 'forward', 'reload'].includes(action)) return (dock.navigate(id, action as 'back'), true);
+        throw new Error('INVALID_INPUT');
       }
       case 'dryRun': {
         const query = inputText(input.query, 30_000),
@@ -945,8 +1048,13 @@ async function main() {
         if (
           input.enabled &&
           !(await phase4Consent(
-            'อนุมัติงานตามรอบ?',
-            `${query}\nตาราง UTC: ${input.schedule}\nใช้บัญชี ${input.connectionId} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ`,
+            tm('อนุมัติงานตามรอบ?'),
+            tm(
+              '{0}\nตาราง UTC: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ',
+              query,
+              input.schedule,
+              input.connectionId,
+            ),
           ))
         )
           throw new Error('CANCELLED');
@@ -966,7 +1074,7 @@ async function main() {
         const id = inputText(input.id, 60),
           job = automations.list().find(j => j.id === id);
         if (!job) throw new Error('AUTOMATION_NOT_FOUND');
-        if (!(await phase4Consent('เริ่มงานเบื้องหลัง?', job.query))) throw new Error('CANCELLED');
+        if (!(await phase4Consent(tm('เริ่มงานตามรอบ?'), job.query))) throw new Error('CANCELLED');
         if (JSON.stringify(job) !== JSON.stringify(automations.list().find(j => j.id === id)))
           throw new Error('AUTOMATION_CONTEXT_CHANGED');
         return automations.enqueue(id);
@@ -974,17 +1082,19 @@ async function main() {
       case 'mcpServers':
         return mcp.servers();
       case 'mcpSearch':
-        return gate.run({ tool: 'mcp_search', readOnly: false }, { title: 'ค้นหา MCP?', body: input.server, key: input.server }, () =>
+        return gate.run({ tool: 'mcp_search', readOnly: false }, { title: tm('ค้นหา MCP?'), body: input.server, key: input.server }, () =>
           mcp.search(inputText(input.server, 60), input.query || ''),
         );
       case 'mcpCall':
-        return gate.run({ tool: 'mcp_call', readOnly: false }, { title: 'เรียก MCP?', body: input.name, key: JSON.stringify(input) }, () =>
-          mcp.call(inputText(input.server, 60), inputText(input.name, 120), input.arguments),
+        return gate.run(
+          { tool: 'mcp_call', readOnly: false },
+          { title: tm('เรียก MCP?'), body: input.name, key: JSON.stringify(input) },
+          () => mcp.call(inputText(input.server, 60), inputText(input.name, 120), input.arguments),
         );
       case 'sandboxRun':
         return gate.run(
           { tool: 'sandbox', readOnly: false, command: inputText(input.command, 2000), execute: true },
-          { title: 'รันใน Docker?', body: input.command, key: JSON.stringify(input) },
+          { title: tm('รันใน Docker?'), body: input.command, key: JSON.stringify(input) },
           () => sandbox.run(input.command, input.files || []),
         );
       case 'permissionMode': {
@@ -1016,6 +1126,15 @@ async function main() {
         }
         return store.settings();
       }
+      case 'consentDeclined':
+        // Counted only; a declined send has nothing else to undo.
+        consentMetrics.record(inputText(input.id, 60), 'external_ai', 'cancelled');
+        return true;
+      case 'acknowledgeData': {
+        // Accepting the usage terms on the last setup step stands in for the first-send dialog.
+        acceptTerms();
+        return true;
+      }
       case 'settings': {
         const teams = await routing.loadTeamsDictionary();
         const team = inputText(input.team, 40),
@@ -1033,6 +1152,7 @@ async function main() {
           userName: input.userName === undefined ? store.settings().userName : inputText(input.userName, 60).trim(),
           personality,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
+          language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
         };
         store.put('settings', 'main', s);
         nativeTheme.themeSource = theme;
@@ -1044,7 +1164,10 @@ async function main() {
       case 'packList':
         return listPacks(store.settings().workspace || data, policyState.policy);
       case 'packInstall': {
-        const selected = await dialog.showOpenDialog(window!, { title: 'นำเข้า Skill Pack จากโฟลเดอร์', properties: ['openDirectory'] });
+        const selected = await dialog.showOpenDialog(window!, {
+          title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
+          properties: ['openDirectory'],
+        });
         if (selected.canceled || !selected.filePaths[0]) return null;
         return installPack(store.settings().workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64) });
       }
@@ -1054,11 +1177,16 @@ async function main() {
           id = inputText(input.id, 64);
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
-          buttons: ['ยกเลิก', 'ยืนยัน'],
+          buttons: [tm('ยกเลิก'), tm('ยืนยัน')],
           defaultId: 0,
           cancelId: 0,
-          message: input.disable ? 'ปิด Skill Pack นี้' : 'เปิด Skill Pack ที่ผู้ดูแลรับรอง',
-          detail: `${id}\nHooks: ${input.hooks === true ? 'เปิด command/HTTP hooks ที่รับรอง' : 'ปิด'}\nAgent templates: ${input.agents === true ? 'เปิด' : 'ปิด'}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้`,
+          message: input.disable ? tm('ปิด Skill Pack นี้') : tm('เปิด Skill Pack ที่ผู้ดูแลรับรอง'),
+          detail: tm(
+            '{0}\nHooks: {1}\nAgent templates: {2}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้',
+            id,
+            input.hooks === true ? tm('เปิด command/HTTP hooks ที่รับรอง') : tm('ปิด'),
+            input.agents === true ? tm('เปิด') : tm('ปิด'),
+          ),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
@@ -1078,7 +1206,10 @@ async function main() {
           policyState.policy,
         );
       case 'packExport': {
-        const selected = await dialog.showSaveDialog(window!, { title: 'ส่งออก Skill ไปยังโฟลเดอร์ใหม่', defaultPath: 'exported-skills' });
+        const selected = await dialog.showSaveDialog(window!, {
+          title: tm('ส่งออก Skill ไปยังโฟลเดอร์ใหม่'),
+          defaultPath: 'exported-skills',
+        });
         if (selected.canceled || !selected.filePath) return null;
         return exportPack(store.settings().workspace || data, inputText(input.id, 64), selected.filePath, { approve: true });
       }
@@ -1091,11 +1222,11 @@ async function main() {
         if (!policyState.policy.features.voice) throw new Error('VOICE_DISABLED');
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
-          buttons: ['ยกเลิก', 'ดาวน์โหลดส่วนเสริมเสียง'],
+          buttons: [tm('ยกเลิก'), tm('ดาวน์โหลดส่วนเสริมเสียง')],
           defaultId: 0,
           cancelId: 0,
-          message: 'ดาวน์โหลดโมเดลและตัวถอดเสียงที่ผู้ดูแลรับรอง',
-          detail: 'ระบบตรวจ SHA-256 ก่อนติดตั้ง เสียงถอดข้อความในเครื่อง และคุณตรวจข้อความก่อนส่งให้ AI',
+          message: tm('ดาวน์โหลดโมเดลและตัวถอดเสียงที่ผู้ดูแลรับรอง'),
+          detail: tm('ระบบตรวจ SHA-256 ก่อนติดตั้ง เสียงถอดข้อความในเครื่อง และคุณตรวจข้อความก่อนส่งให้ AI'),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         return voice.install();
@@ -1105,11 +1236,11 @@ async function main() {
         if (!status.installed) throw new Error('VOICE_DISABLED');
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
-          buttons: ['ยกเลิก', 'บันทึกเสียงครั้งนี้'],
+          buttons: [tm('ยกเลิก'), tm('บันทึกเสียงครั้งนี้')],
           defaultId: 0,
           cancelId: 0,
-          message: 'อนุญาตไมโครโฟนสำหรับคำขอนี้',
-          detail: 'บันทึกได้ไม่เกิน 60 วินาที คุณตรวจและแก้ข้อความก่อนส่ง',
+          message: tm('อนุญาตไมโครโฟนสำหรับคำขอนี้'),
+          detail: tm('บันทึกได้ไม่เกิน 60 วินาที คุณตรวจและแก้ข้อความก่อนส่ง'),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         voicePermissionUntil = Date.now() + 65_000;
@@ -1177,7 +1308,7 @@ async function main() {
             ? { baseUrl: inputText(input.baseUrl, 2000), protocol: input.protocol, label: inputText(input.label || 'Compatible', 120) }
             : {}),
           ready: false,
-          note: 'ยังไม่ได้ทดสอบการเชื่อมต่อ',
+          note: tm('ยังไม่ได้ทดสอบการเชื่อมต่อ'),
         };
         if (input.apiKey) {
           if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
@@ -1197,7 +1328,7 @@ async function main() {
           connection.note =
             connection.provider === 'antigravity'
               ? 'Use installed Antigravity; connection needs a new test.'
-              : 'ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ';
+              : tm('ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ');
           store.put('connection', connection.id, connection);
           return connection;
         }
@@ -1210,7 +1341,7 @@ async function main() {
           connection.executable = result.filePaths[0];
           connection.customRuntime = true;
           connection.ready = false;
-          connection.note = 'ใช้ตัวเชื่อมที่เลือกเอง · ยังไม่ได้ทดสอบการเชื่อมต่อ';
+          connection.note = tm('ใช้ตัวเชื่อมที่เลือกเอง · ยังไม่ได้ทดสอบการเชื่อมต่อ');
           store.put('connection', connection.id, connection);
         }
         return connection;
@@ -1245,7 +1376,12 @@ async function main() {
             if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
             const currentPolicy = policyState.policy;
             const token = await copilotDeviceLogin(currentPolicy.providers!.copilot!.clientId, controller.signal, async (code, url) => {
-              emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: `GitHub: ใส่รหัส ${code} ในหน้าที่เปิด` });
+              emit({
+                sessionId: '',
+                type: 'connect-progress',
+                connectionId: connection.id,
+                text: tm('GitHub: ใส่รหัส {0} ในหน้าที่เปิด', code),
+              });
               await shell.openExternal(url);
             });
             if (controller.signal.aborted || currentPolicy !== policyState.policy) throw new Error('CANCELLED');
@@ -1275,9 +1411,9 @@ async function main() {
             },
             controller.signal,
           );
-          emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: 'กำลังโหลดรายชื่อโมเดล' });
+          emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: tm('กำลังโหลดรายชื่อโมเดล') });
           connection.ready = true;
-          connection.note = 'ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว';
+          connection.note = tm('ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว');
           try {
             await refreshModels(connection);
           } catch {
@@ -1356,6 +1492,7 @@ async function main() {
           claudeCode: 'https://code.claude.com/docs/en/setup',
           anthropicCli: 'https://platform.claude.com/docs/en/cli-sdks-libraries/cli/quickstart',
           tesseract: 'https://tesseract-ocr.github.io/tessdoc/Installation.html',
+          geminiKey: 'https://aistudio.google.com/apikey',
         };
         const url = pages[input.topic];
         if (!url) throw new Error('INVALID_INPUT');
@@ -1395,7 +1532,7 @@ async function main() {
         };
       }
       case 'ocrFolder': {
-        const picked = await dialog.showOpenDialog(window, { title: 'เลือกโฟลเดอร์ local-thai-ocr', properties: ['openDirectory'] });
+        const picked = await dialog.showOpenDialog(window, { title: tm('เลือกโฟลเดอร์ local-thai-ocr'), properties: ['openDirectory'] });
         if (picked.canceled) return ocr.status();
         if (!isOcrFolder(picked.filePaths[0])) throw new Error('OCR_FOLDER_INVALID');
         store.put('settings', 'main', { ...store.settings(), ocrDir: picked.filePaths[0] });
@@ -1407,7 +1544,7 @@ async function main() {
         const health = await ocr.health();
         if (!health.running) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
-          title: 'เลือกใบเสร็จ',
+          title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
           filters: [{ name: 'Receipts', extensions: OCR_EXTENSIONS }],
         });
@@ -1433,11 +1570,12 @@ async function main() {
         if (!settings.ocrAiConsentedAt) {
           const answer = await dialog.showMessageBox(window, {
             type: 'question',
-            title: 'ให้ AI ช่วยกรองผล OCR',
-            message: 'ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ',
-            detail:
+            title: tm('ให้ AI ช่วยกรองผล OCR'),
+            message: tm('ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ'),
+            detail: tm(
               'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
-            buttons: ['ยกเลิก', 'ใช้ AI กรอง'],
+            ),
+            buttons: [tm('ยกเลิก'), tm('ใช้ AI กรอง')],
             defaultId: 1,
             cancelId: 0,
           });
@@ -1482,7 +1620,7 @@ async function main() {
         if (!input.draft || typeof input.draft !== 'object' || text.length > 2_000_000) throw new Error('INVALID_INPUT');
         const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const saved = await dialog.showSaveDialog(window, {
-          title: 'บันทึกร่างการตรวจใบเสร็จ',
+          title: tm('บันทึกร่างการตรวจใบเสร็จ'),
           defaultPath: join(store.settings().workspace || app.getPath('documents') || tmpdir(), `receipt-review-${date}.json`),
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
@@ -1519,7 +1657,7 @@ async function main() {
         c.note =
           c.provider === 'antigravity'
             ? 'Disconnected from STeP. The native Google account remains signed in to Antigravity.'
-            : 'ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่';
+            : tm('ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่');
         delete c.models;
         delete c.modelsAt;
         store.put('connection', c.id, c);
@@ -1620,7 +1758,10 @@ async function main() {
         const sendingConnection = store.get<Connection>('connection', sending.connectionId);
         if (!sendingConnection?.ready) throw new Error('CONNECTION_NOT_READY');
         const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
-        const workMode = mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : mode;
+        // A native workflow (plan, execute, requirements, diagnose) runs as chat, never as an image request.
+        const workflow = isWorkflow(input.workflow) ? input.workflow : undefined;
+        const workMode =
+          !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
         const coordinated = input.coordinator === true;
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
           throw new Error('COORDINATOR_DISABLED');
@@ -1632,16 +1773,17 @@ async function main() {
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
           throw new Error('SKILL_NOT_ROUTED');
         if (Array.isArray(input.attachments) && input.attachments.length > 1) throw new Error('ONE_SOURCE_PER_RUN');
-        const selected: { view: Attachment; text: string; sessionId: string; image?: VisionInput }[] = (
+        const selected: { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }[] = (
           Array.isArray(input.attachments) ? input.attachments : []
         ).map((aid: string) => {
           const a = attachments.get(aid);
           if (!a || !a.view.usable || a.sessionId !== id) throw new Error('ATTACHMENT_NOT_APPROVED');
           return a;
         });
-        if (selected.some(a => a.image) && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
-        if (selected.some(a => a.image) && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
-        if (coordinated && selected.some(a => a.image)) throw new Error('VISION_UNAVAILABLE');
+        const vision = selected.some(a => Boolean(a.images?.length));
+        if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
+        if (vision && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
+        if (coordinated && vision) throw new Error('VISION_UNAVAILABLE');
         const attachmentText = selected.map((a: any) => a.text).join('\n\n');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
@@ -1657,11 +1799,36 @@ async function main() {
           store.put('session', s.id, s);
         }
         const review = service.review(text, combinedSource, store.session(id).allowedIdentifiers || []);
-        if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
         // Ask only when it adds information: the first send on this computer, a new attachment, or a privacy review signal.
+        // Pilot mode (policy) asks less; see sendConsent. Blocking and masking are the same in every mode.
         const flagged = review.action === 'human-confirm';
-        const first = !store.settings().consentedAt;
-        if (first || selected.length || sourceText || flagged || coordinated) {
+        // The first send, or the first since the usage terms changed, shows the terms to accept.
+        const first = store.settings().termsVersion !== TERMS_VERSION;
+        const pilot = Boolean(policyState.policy.pilot);
+        // With privacy checks off (the default) the only question is the one-time usage terms, as in other AI apps.
+        const { block, ask, warning } = policyState.policy.checks.privacy
+          ? sendConsent(
+              {
+                action: review.action as SendSignals['action'],
+                keywordOnly: review.keywordOnly,
+                first,
+                attachment: selected.length > 0,
+                source: Boolean(sourceText),
+                vision,
+                coordinated,
+              },
+              pilot,
+            )
+          : { block: false, ask: first, warning: false };
+        if (block) throw new Error('PRIVACY_REVIEW_REQUIRED');
+        if (pilot && !ask) {
+          const s = store.session(id);
+          if (!s.consentedAt) {
+            s.consentedAt = new Date().toISOString();
+            store.save(s);
+          }
+        }
+        if (ask) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
           const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
           const fingerprint = createHash('sha256')
@@ -1681,6 +1848,7 @@ async function main() {
           const token = typeof input.consent === 'string' ? input.consent : '';
           if (!token || consents.get(token) !== fingerprint) {
             const issued = randomUUID();
+            consentMetrics.record(id, 'external_ai', 'prompt');
             consents.set(issued, fingerprint);
             if (consents.size > 20) consents.delete(consents.keys().next().value!);
             return {
@@ -1690,18 +1858,19 @@ async function main() {
                 flagged,
                 labels: review.labels,
                 attachment: selected.length > 0,
-                vision: selected.some(a => Boolean(a.image)),
+                vision,
                 source: Boolean(sourceText),
               },
             };
           }
+          consentMetrics.record(id, 'external_ai', 'confirmed');
           consents.delete(token);
           const s = store.session(id);
           if (!s.consentedAt) {
             s.consentedAt = new Date().toISOString();
             store.save(s);
           }
-          if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
+          acceptTerms();
         }
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
@@ -1736,7 +1905,7 @@ async function main() {
                   // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
                   ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
                 ],
-                { retry: input.retry === true, images: selected.flatMap(a => (a.image ? [a.image] : [])) },
+                { retry: input.retry === true, images: selected.flatMap(a => a.images || []), ...(workflow ? { workflow } : {}) },
               )
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
@@ -1750,7 +1919,7 @@ async function main() {
         });
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
-        return { started: true, mode: workMode, masked: review.labels };
+        return { started: true, mode: workMode, masked: review.labels, warning };
       }
       case 'cancel':
         coordinator.cancel(input.id);
@@ -1815,8 +1984,30 @@ async function main() {
         const path = result.filePaths[0],
           extension = extname(path).slice(1).toLowerCase();
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
-          image: VisionInput | undefined;
+          images: VisionInput[] | undefined;
+        // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
+        const directImage = vision && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+        if (directImage) {
+          const bytes = await readFile(path);
+          if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+          images = [visionImage(extension, bytes)];
+          report = { ...unscanned(''), extractionStatus: 'text-extracted' };
+        }
+        // A scanned PDF goes to the AI as page pictures when privacy checks are off; the vision model reads them,
+        // with whatever text layer the PDF has alongside. No local OCR install is needed.
+        const scannedPdf =
+          !vision &&
+          extension === 'pdf' &&
+          !policyState.policy.checks.privacy &&
+          policyState.policy.features.vision &&
+          ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '');
+        if (scannedPdf) {
+          images = await pdfPageImages(path, join(root, 'src/vendor/privacy'));
+          report = { ...unscanned(typeof report.redactedText === 'string' ? report.redactedText : ''), extractionStatus: 'text-extracted' };
+        }
         const scanNeeded =
+          !directImage &&
+          !scannedPdf &&
           OCR_EXTENSIONS.includes(extension) &&
           (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
         if (scanNeeded && report.action !== 'block-external') {
@@ -1829,15 +2020,7 @@ async function main() {
             if (vision && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
             if (vision && !attachmentReason(report)) {
               if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-              const mime = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
-              const valid =
-                mime === 'image/png'
-                  ? read.bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
-                  : mime === 'image/jpeg'
-                    ? read.bytes[0] === 255 && read.bytes[1] === 216
-                    : read.bytes.subarray(0, 4).toString() === 'RIFF' && read.bytes.subarray(8, 12).toString() === 'WEBP';
-              if (!valid) throw new Error('ATTACH_UNSUPPORTED');
-              image = { mime, data: read.bytes.toString('base64') };
+              images = [visionImage(extension, read.bytes)];
             }
           }
         }
@@ -1848,19 +2031,21 @@ async function main() {
           id: randomUUID(),
           name: basename(path),
           status: usable
-            ? image
-              ? 'ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน'
-              : report.ocr
-                ? 'อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง'
-                : 'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง'
-            : 'ส่งไฟล์นี้ให้ AI ไม่ได้',
+            ? scannedPdf
+              ? tm('PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน', images?.length || 0)
+              : images
+                ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
+                : report.ocr
+                  ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
+                  : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+            : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
           preview: usable ? report.redactedText : '',
           usable,
-          ...(image ? { vision: true, imagePreview: `data:${image.mime};base64,${image.data}` } : {}),
+          ...(images?.length ? { vision: true, imagePreview: `data:${images[0].mime};base64,${images[0].data}` } : {}),
           ...(reason ? { reason } : {}),
         };
         if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId, image });
+        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId, images });
         return view;
       }
       case 'export': {
@@ -1936,8 +2121,8 @@ async function main() {
     if (closing) return;
     event.preventDefault();
     closing = true;
-    for (const browser of browsers.values()) browser.destroy();
     agentBrowser.close();
+    dock.close();
     void Promise.allSettled([
       voice.close(),
       workbench.close(),
@@ -1953,6 +2138,6 @@ async function main() {
 app.on('window-all-closed', () => app.quit());
 main().catch(error => {
   diagnose('startup-failed', { code: errorCode(error), message: String(error instanceof Error ? error.message : error).slice(0, 300) });
-  dialog.showErrorBox('STeP Desktop', 'เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง');
+  dialog.showErrorBox('STeP Desktop', tm('เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง'));
   app.quit();
 });

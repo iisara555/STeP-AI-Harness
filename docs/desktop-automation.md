@@ -10,7 +10,7 @@ Explicit Playbook `consumes`/`produces` declarations determine dependencies. Mis
 
 ## Background drafts and schedules
 
-Open **งานเบื้องหลัง** from a conversation or **งานเบื้องหลังและเครื่องมือเพิ่มเติม** in Ctrl+K. Create, edit, pause, remove, run or cancel a job and inspect its history. The UI offers hourly and daily/weekday 09:00 Thailand presets. The host uses five-field UTC cron syntax (`minute hour day month weekday`), supporting lists, ranges and steps. DOM and DOW use standard OR semantics when both are restricted; Sunday is `0`. Schedules without a match within 370 days are rejected.
+Open **งานตามรอบ** from a conversation or **งานตามรอบและเครื่องมือเพิ่มเติม** in Ctrl+K (the **งานเบื้องหลัง** workbench tab lists running tool tasks instead). Create, edit, pause, remove, run or cancel a job and inspect its history. The UI offers hourly and daily/weekday 09:00 Thailand presets. The host uses five-field UTC cron syntax (`minute hour day month weekday`), supporting lists, ranges and steps. DOM and DOW use standard OR semantics when both are restricted; Sunday is `0`. Schedules without a match within 370 days are rejected.
 
 Enabling a schedule requires explicit approval of its request, account and workspace. Only text passing the local privacy check unchanged can be stored as a scheduled request. Running a paused job manually requires fresh approval. Scheduled work shares the three-run service limit; the background queue executes one job at a time and permits up to 50 jobs/queued entries. It binds account/model/team/workspace, records up to 200 runs and opens the resulting draft from history. A Desktop notification reports completion or attention without including the request, result or personal data.
 

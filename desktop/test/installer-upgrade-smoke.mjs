@@ -24,13 +24,16 @@ const compile = async (name, source) => {
   return join(folder, name + '.exe');
 };
 try {
-  const broken = await compile('broken-uninstaller', `Unicode true
+  const broken = await compile(
+    'broken-uninstaller',
+    `Unicode true
 RequestExecutionLevel user
 SilentInstall silent
 OutFile "${path(join(folder, 'broken-uninstaller.exe'))}"
 Section
 SetErrorLevel 7
-SectionEnd`);
+SectionEnd`,
+  );
   for (const [name, version, migration, sameFolder, expected] of [
     ['original', '0.3.2', false, true, 2],
     ['fixed', '0.3.2', true, true, 0],
@@ -43,7 +46,9 @@ SectionEnd`);
     await writeFile(join(install, 'Uninstall STeP Desktop.exe'), await readFile(broken));
     const data = join(folder, name + '-userdata.txt');
     await writeFile(data, 'Preserve conversations and account settings');
-    const file = await compile(name, `Unicode true
+    const file = await compile(
+      name,
+      `Unicode true
 RequestExecutionLevel user
 SilentInstall silent
 OutFile "${path(join(folder, name + '.exe'))}"
@@ -85,7 +90,8 @@ FileClose $1
 DeleteRegKey HKCU "${key}"
 ${migration ? '' : '!insertmacro handleUninstallResult SHELL_CONTEXT'}
 ${expected === 0 ? 'FileOpen $1 "$INSTDIR\\STeP Desktop.exe" w\nFileWrite $1 "New binary"\nFileClose $1' : ''}
-SectionEnd`);
+SectionEnd`,
+    );
     const result = spawnSync(file, [], { timeout: 40000, windowsHide: true });
     assert.equal(result.status, expected, `${name}: ${result.error || result.stderr || ''}`);
     assert.equal(await readFile(data, 'utf8'), 'Preserve conversations and account settings');
@@ -95,7 +101,9 @@ SectionEnd`);
     }
     console.log(`${name}: exit ${result.status}; user data retained`);
   }
-  console.log('Legacy 0.3.2 upgrade regression passed: original uninstall fails, same-folder recovery succeeds, other versions/folders remain blocked.');
+  console.log(
+    'Legacy 0.3.2 upgrade regression passed: original uninstall fails, same-folder recovery succeeds, other versions/folders remain blocked.',
+  );
 } finally {
   spawnSync('reg.exe', ['delete', `HKCU\\${key}`, '/f'], { stdio: 'ignore', windowsHide: true });
   await rm(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

@@ -5,6 +5,7 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { StringDecoder } from 'node:string_decoder';
 import type { BackgroundTask, FileChange } from '../src/tools';
+import type { WorkPlan, WorkTask } from '../src/types';
 import { Store } from './store';
 import { sensitivePath, evaluatePermission } from './permissions';
 import type { Policy } from './policy';
@@ -30,6 +31,22 @@ export class Workbench {
     const session = this.store.session(sessionId);
     session.approvedPlan = text;
     this.store.save(session);
+  }
+  /** The plan approved in the native plan workflow, kept on the task for the execute workflow. */
+  setWorkPlan(sessionId: string, plan: WorkPlan, text: string) {
+    const session = this.store.session(sessionId);
+    session.workPlan = plan;
+    session.approvedPlan = text;
+    this.store.save(session);
+  }
+  /** Ticks one task of the approved plan (1-based number); returns how many tasks are not done yet. */
+  updateWorkTask(sessionId: string, number: number, status: WorkTask['status'], note: string) {
+    const session = this.store.session(sessionId);
+    const plan = session.workPlan;
+    if (!plan || !Number.isSafeInteger(number) || !plan.tasks[number - 1]) throw new Error('PLAN_TASK_UNKNOWN');
+    plan.tasks[number - 1] = { ...plan.tasks[number - 1], status, ...(note ? { note } : {}) };
+    this.store.save(session);
+    return plan.tasks.filter(t => t.status !== 'done').length;
   }
   constructor(
     private store: Store,

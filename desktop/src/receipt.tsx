@@ -4,6 +4,7 @@ import { Check, Download, FileSearch, FolderOpen, LoaderCircle, Play, RefreshCw,
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import ideaArt from './assets/illustrations/idea.png';
 import { receiptSourceText } from './receipt-source';
+import { localized, t } from './i18n';
 
 type MappingCandidate = {
   value: string;
@@ -94,7 +95,7 @@ type AiDecision = {
 };
 type Doc = { name: string; preview: string; result: any };
 
-const labels: Record<string, string> = {
+const labels: Record<string, string> = localized({
   merchant: 'ผู้ออกใบเสร็จ / ร้านค้า',
   receiptNumber: 'เลขที่ใบเสร็จ',
   date: 'วันที่',
@@ -102,7 +103,7 @@ const labels: Record<string, string> = {
   subtotal: 'ยอดก่อนภาษี',
   vat: 'ภาษีมูลค่าเพิ่ม',
   total: 'ยอดรวมที่ชำระ',
-};
+});
 const issueText: Record<string, string | ((issue: Issue) => string)> = {
   missing_merchant: 'ยังไม่มีชื่อร้านค้าหรือผู้ออกใบเสร็จ',
   missing_date: 'ยังไม่มีวันที่บนใบเสร็จ',
@@ -112,14 +113,14 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
   invalid_vat: 'ภาษีมูลค่าเพิ่มยังไม่ใช่ตัวเลขที่อ่านได้',
   amount_mismatch: 'ยอดก่อนภาษีบวกภาษีมูลค่าเพิ่มไม่เท่ากับยอดรวม โปรดเทียบใบเสร็จ',
   tax_id_length: 'เลขประจำตัวผู้เสียภาษีที่กรอกมีไม่ครบ 13 หลัก',
-  unconfirmed_fields: issue => `มีข้อมูล ${issue.count} ช่องที่ยังไม่ได้ทำเครื่องหมายว่าตรวจแล้ว`,
-  review_lines: issue => `มี ${issue.count} บรรทัดที่ต้องตรวจจากภาพต้นฉบับ รวมจุดที่ OCR สองตัวอ่านต่างกัน`,
+  unconfirmed_fields: issue => t('มีข้อมูล {0} ช่องที่ยังไม่ได้ทำเครื่องหมายว่าตรวจแล้ว', issue.count),
+  review_lines: issue => t('มี {0} บรรทัดที่ต้องตรวจจากภาพต้นฉบับ รวมจุดที่ OCR สองตัวอ่านต่างกัน', issue.count),
   resized_image: 'ภาพถูกย่อก่อน OCR โปรดตรวจข้อความขนาดเล็กบนใบเสร็จ',
   buyer_tax_id_excluded: 'พบเลขผู้เสียภาษีในส่วนของผู้ซื้อ จึงไม่เติมเป็นเลขของผู้ออกใบเสร็จ',
 };
 const describe = (issue: Issue) => {
   const text = issueText[issue.code];
-  return typeof text === 'function' ? text(issue) : text || issue.code;
+  return typeof text === 'function' ? text(issue) : text ? t(text) : issue.code;
 };
 
 export function ReceiptApp({
@@ -262,20 +263,23 @@ export function ReceiptApp({
   });
   const summary = () =>
     [
-      'ช่วย pre-check ใบเสร็จก่อนส่ง AFP',
+      t('ช่วย pre-check ใบเสร็จก่อนส่ง AFP'),
       '',
-      `ข้อมูลจากใบเสร็จ “${doc?.name}” (อ่านด้วย OCR ในเครื่องและให้คนตรวจแล้ว):`,
+      t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่องและให้คนตรวจแล้ว):', doc?.name),
       ...review.fieldKeys.map(
-        k => `- ${labels[k]}: ${values[k] || '(ไม่มี)'}${values[k] ? (confirmed[k] ? ' · ตรวจแล้ว' : ' · ยังไม่ตรวจ') : ''}`,
+        k => `- ${labels[k]}: ${values[k] || t('(ไม่มี)')}${values[k] ? (confirmed[k] ? t(' · ตรวจแล้ว') : t(' · ยังไม่ตรวจ')) : ''}`,
       ),
-      ...(note.trim() ? ['', 'หมายเหตุผู้เบิก: ' + note.trim()] : []),
+      ...(note.trim() ? ['', t('หมายเหตุผู้เบิก: ') + note.trim()] : []),
       ...(mapping?.unresolved_field_lines?.length
         ? [
             '',
-            `OCR พบข้อความที่ดูเหมือนข้อมูลสำหรับ AFP แต่ยัง map เข้าช่องไม่ได้ ${mapping.unresolved_field_lines.length} บรรทัด — โปรดดู afp_mapping ใน JSON`,
+            t(
+              'OCR พบข้อความที่ดูเหมือนข้อมูลสำหรับ AFP แต่ยัง map เข้าช่องไม่ได้ {0} บรรทัด — โปรดดู afp_mapping ใน JSON',
+              mapping.unresolved_field_lines.length,
+            ),
           ]
         : []),
-      ...(result.issues.length ? ['', 'ประเด็นที่ระบบตรวจพบ:', ...result.issues.map(i => '- ' + describe(i))] : []),
+      ...(result.issues.length ? ['', t('ประเด็นที่ระบบตรวจพบ:'), ...result.issues.map(i => '- ' + describe(i))] : []),
     ].join('\n');
 
   const ready = status?.running;
@@ -286,19 +290,25 @@ export function ReceiptApp({
         <span className={`status-dot ${ready ? 'ok' : ''}`} aria-hidden="true" />
         <span>
           {!status
-            ? 'กำลังตรวจบริการ OCR…'
+            ? t('กำลังตรวจบริการ OCR…')
             : ready
-              ? `OCR ในเครื่องพร้อมใช้${status.tesseract ? ' · Tesseract' : ''}${status.handwriting ? ' · ลายมือ' : ''}${status.crosscheck ? ' · EasyOCR' : ''}`
+              ? t(
+                  'OCR ในเครื่องพร้อมใช้{0}{1}{2}',
+                  status.tesseract ? ' · Tesseract' : '',
+                  status.handwriting ? t(' · ลายมือ') : '',
+                  status.crosscheck ? ' · EasyOCR' : '',
+                )
               : status.installed
-                ? 'บริการ OCR ในเครื่องยังไม่เปิด'
+                ? t('บริการ OCR ในเครื่องยังไม่เปิด')
                 : status.updateAvailable
-                  ? 'OCR ที่ติดตั้งไว้ต้องอัปเดตให้ตรงกับแอปเวอร์ชันนี้'
-                  : 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้'}
+                  ? t('OCR ที่ติดตั้งไว้ต้องอัปเดตให้ตรงกับแอปเวอร์ชันนี้')
+                  : t('ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้')}
         </span>
         <span className="spacer" />
         {status && !ready && status.installed && (
           <button disabled={Boolean(busy)} onClick={() => void run('start', async () => setStatus(await call('ocrStart')))}>
-            {busy === 'start' ? <LoaderCircle size={15} className="spin" /> : <Play size={15} />}เปิดบริการ OCR
+            {busy === 'start' ? <LoaderCircle size={15} className="spin" /> : <Play size={15} />}
+            {t('เปิดบริการ OCR')}
           </button>
         )}
         {status && !ready && !status.installed && (
@@ -307,12 +317,12 @@ export function ReceiptApp({
               disabled={Boolean(busy)}
               onClick={() =>
                 void run('install', async () => {
-                  setInstallProgress('กำลังเตรียมส่วนเสริม OCR');
+                  setInstallProgress(t('กำลังเตรียมส่วนเสริม OCR'));
                   try {
                     const installed = await call('ocrInstall', { crosscheck: false });
                     setStatus(installed);
                     setStatus(await call('ocrStart'));
-                    notify('ติดตั้ง OCR ในเครื่องนี้แล้ว', 'success');
+                    notify(t('ติดตั้ง OCR ในเครื่องนี้แล้ว'), 'success');
                   } finally {
                     setInstallProgress('');
                   }
@@ -320,7 +330,7 @@ export function ReceiptApp({
               }
             >
               {busy === 'install' ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
-              {busy === 'install' ? 'กำลังติดตั้ง OCR…' : status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}
+              {busy === 'install' ? t('กำลังติดตั้ง OCR…') : status.updateAvailable ? t('อัปเดต OCR') : t('ติดตั้ง OCR')}
             </button>
             <button
               className="quiet"
@@ -328,23 +338,23 @@ export function ReceiptApp({
               onClick={() => void run('folder', async () => setStatus(await call('ocrFolder')))}
             >
               <FolderOpen size={15} />
-              ใช้ OCR ที่มีอยู่
+              {t('ใช้ OCR ที่มีอยู่')}
             </button>
           </>
         )}
-        <button className="icon" aria-label="ตรวจสถานะบริการอีกครั้ง" disabled={Boolean(busy)} onClick={() => void refresh()}>
+        <button className="icon" aria-label={t('ตรวจสถานะบริการอีกครั้ง')} disabled={Boolean(busy)} onClick={() => void refresh()}>
           <RefreshCw size={15} />
         </button>
       </div>
       {status?.running && (
         <div className="receipt-ocr-layers small muted">
-          <span>Tesseract: {status.tesseract ? 'พร้อมตรวจตัวพิมพ์/ตัวเลข' : 'ยังไม่พบ tha+eng'}</span>
+          <span>Tesseract: {status.tesseract ? t('พร้อมตรวจตัวพิมพ์/ตัวเลข') : t('ยังไม่พบ tha+eng')}</span>
           {!status.tesseract && (
             <button className="text-link" type="button" onClick={() => void call('openHelp', { topic: 'tesseract' })}>
-              วิธีติดตั้ง
+              {t('วิธีติดตั้ง')}
             </button>
           )}
-          <span>Thai-TrOCR: {status.handwriting ? 'พร้อมอ่านลายมือ' : 'ยังไม่ติดตั้ง'}</span>
+          <span>Thai-TrOCR: {status.handwriting ? t('พร้อมอ่านลายมือ') : t('ยังไม่ติดตั้ง')}</span>
           {!status.handwriting && (
             <button
               className="text-link"
@@ -352,19 +362,19 @@ export function ReceiptApp({
               disabled={Boolean(busy)}
               onClick={() =>
                 void run('handwriting', async () => {
-                  setInstallProgress('กำลังเตรียมโมเดลอ่านลายมือภาษาไทย');
+                  setInstallProgress(t('กำลังเตรียมโมเดลอ่านลายมือภาษาไทย'));
                   try {
                     const installed = await call('ocrInstall', { handwriting: true });
                     setStatus(installed);
                     setStatus(await call('ocrStart'));
-                    notify('ติดตั้งโมเดลอ่านลายมือภาษาไทยแล้ว', 'success');
+                    notify(t('ติดตั้งโมเดลอ่านลายมือภาษาไทยแล้ว'), 'success');
                   } finally {
                     setInstallProgress('');
                   }
                 })
               }
             >
-              เพิ่มอ่านลายมือ
+              {t('เพิ่มอ่านลายมือ')}
             </button>
           )}
         </div>
@@ -374,42 +384,45 @@ export function ReceiptApp({
       )}
       {status && !ready && !status.installed && (
         <p className="small muted receipt-hint">
-          OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{status.updateAvailable ? 'อัปเดต OCR' : 'ติดตั้ง OCR'}” เมื่อต้องการใช้
-          ระบบจะดาวน์โหลด Python ที่ตรวจสอบ checksum แล้ว จากนั้นติดตั้ง Paddle และโมเดล OCR ไว้ใน App Data ของผู้ใช้นี้
-          การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต
+          {t(
+            'OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก กด “{0}” เมื่อต้องการใช้ ระบบจะดาวน์โหลด Python ที่ตรวจสอบ checksum แล้ว จากนั้นติดตั้ง Paddle และโมเดล OCR ไว้ใน App Data ของผู้ใช้นี้ การอ่านใบเสร็จทำบนเครื่องและไม่ส่งไฟล์ไปบริการ OCR บนอินเทอร์เน็ต',
+            status.updateAvailable ? t('อัปเดต OCR') : t('ติดตั้ง OCR'),
+          )}
         </p>
       )}
 
       {!doc ? (
         <div className="receipt-empty">
           <img className="illustration empty-art" src={ideaArt} alt="" />
-          <h2>ตรวจใบเสร็จก่อนส่ง AFP</h2>
+          <h2>{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h2>
           <p className="muted">
-            เลือกรูปหรือ PDF ของใบเสร็จ ระบบจะอ่านข้อความและเสนอข้อมูลสำคัญ
+            {t('เลือกรูปหรือ PDF ของใบเสร็จ ระบบจะอ่านข้อความและเสนอข้อมูลสำคัญ')}
             <br />
-            คุณเทียบกับต้นฉบับ แก้ไข และทำเครื่องหมายว่าตรวจแล้วทีละช่อง
+            {t('คุณเทียบกับต้นฉบับ แก้ไข และทำเครื่องหมายว่าตรวจแล้วทีละช่อง')}
           </p>
           <button disabled={!ready || Boolean(busy)} onClick={() => void run('read', read)}>
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
-            {busy === 'read' ? 'กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที' : 'เลือกใบเสร็จ'}
+            {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
           </button>
-          <p className="small muted">รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB</p>
+          <p className="small muted">{t('รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB')}</p>
         </div>
       ) : (
         <div className="receipt-grid">
-          <section className="receipt-source" aria-label="ใบเสร็จต้นฉบับ">
+          <section className="receipt-source" aria-label={t('ใบเสร็จต้นฉบับ')}>
             <header>
               <ScanText size={16} />
               <strong>{doc.name}</strong>
             </header>
             {doc.preview ? (
-              <img className="receipt-preview" src={doc.preview} alt={'ภาพใบเสร็จ ' + doc.name} />
+              <img className="receipt-preview" src={doc.preview} alt={t('ภาพใบเสร็จ ') + doc.name} />
             ) : (
-              <p className="small muted">ไฟล์ชนิดนี้แสดงภาพในแอปไม่ได้ โปรดเปิดต้นฉบับเทียบกับข้อความด้านล่าง</p>
+              <p className="small muted">{t('ไฟล์ชนิดนี้แสดงภาพในแอปไม่ได้ โปรดเปิดต้นฉบับเทียบกับข้อความด้านล่าง')}</p>
             )}
             <details open={reviewLines > 0}>
               <summary>
-                ข้อความที่อ่านได้ ({records.length} บรรทัด{reviewLines ? ` · ต้องตรวจ ${reviewLines}` : ''})
+                {reviewLines
+                  ? t('ข้อความที่อ่านได้ ({0} บรรทัด · ต้องตรวจ {1})', records.length, reviewLines)
+                  : t('ข้อความที่อ่านได้ ({0} บรรทัด)', records.length)}
               </summary>
               <ol className="ocr-lines">
                 {records.map((r, i) => (
@@ -417,24 +430,30 @@ export function ReceiptApp({
                     <span>{r.text}</span>
                     {r.tesseractCandidate && r.tesseractCandidate !== r.text && (
                       <small>
-                        Tesseract อ่านว่า “{r.tesseractCandidate}”
+                        {t('Tesseract อ่านว่า “{0}”', r.tesseractCandidate)}
                         {r.tesseractConfidence !== null && r.tesseractConfidence !== undefined
                           ? ` · ${Math.round(r.tesseractConfidence * 100)}%`
                           : ''}
                       </small>
                     )}
                     {r.handwritingCandidate && r.handwritingCandidate !== r.text && (
-                      <small>โมเดลลายมืออ่านว่า “{r.handwritingCandidate}” · ยังไม่ยืนยัน</small>
+                      <small>{t('โมเดลลายมืออ่านว่า “{0}” · ยังไม่ยืนยัน', r.handwritingCandidate)}</small>
                     )}
-                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && <small>EasyOCR อ่านว่า “{r.crosscheckCandidate}”</small>}
-                    {r.textKind && <small>ประเภท: {r.textKind}</small>}
+                    {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
+                      <small>{t('EasyOCR อ่านว่า “{0}”', r.crosscheckCandidate)}</small>
+                    )}
+                    {r.textKind && (
+                      <small>
+                        {t('ประเภท:')} {r.textKind}
+                      </small>
+                    )}
                     {r.confidence !== null && <small className="conf">{Math.round(r.confidence * 100)}%</small>}
                   </li>
                 ))}
               </ol>
             </details>
           </section>
-          <section className="receipt-form" aria-label="ข้อมูลที่ต้องตรวจ">
+          <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
             {review.fieldKeys.map(k => (
               <div className="receipt-field" key={k}>
                 <label htmlFor={'rf-' + k}>
@@ -457,19 +476,19 @@ export function ReceiptApp({
                       checked={Boolean(confirmed[k])}
                       onChange={e => setConfirmed({ ...confirmed, [k]: e.target.checked })}
                     />
-                    ตรวจแล้ว
+                    {t('ตรวจแล้ว')}
                   </label>
                 </div>
                 {fields[k]?.evidence && (
                   <small className="muted">
-                    จากบรรทัด “{fields[k].evidence}”
+                    {t('จากบรรทัด “{0}”', fields[k].evidence)}
                     {fields[k].confidence !== null ? ` · ${Math.round((fields[k].confidence || 0) * 100)}%` : ''}
                     {fields[k].mappingMethod ? ` · map: ${fields[k].mappingMethod}` : ''}
                   </small>
                 )}
                 {!String(values[k] || '').trim() && (fields[k]?.candidates?.length || 0) > 0 && (
                   <div className="receipt-candidates">
-                    <small>OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:</small>
+                    <small>{t('OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:')}</small>
                     <div>
                       {(fields[k]?.candidates || []).slice(0, 3).map((candidate, index) => (
                         <button
@@ -481,7 +500,7 @@ export function ReceiptApp({
                             setConfirmed({ ...confirmed, [k]: false });
                           }}
                         >
-                          ใช้ “{candidate.value}”
+                          {t('ใช้ “{0}”', candidate.value)}
                         </button>
                       ))}
                     </div>
@@ -493,12 +512,12 @@ export function ReceiptApp({
                     <small className="receipt-ai-decision" key={decision.field + index}>
                       AI filter:{' '}
                       {decision.status === 'suggested'
-                        ? `แนะนำ candidate “${decision.value}”`
+                        ? t('แนะนำ candidate “{0}”', decision.value)
                         : decision.status === 'keep'
-                          ? 'เห็นด้วยกับค่าปัจจุบัน'
+                          ? t('เห็นด้วยกับค่าปัจจุบัน')
                           : decision.status === 'ambiguous'
-                            ? 'ยังไม่แน่ใจ ให้คนเลือก'
-                            : 'หลักฐานยังไม่พอ map'}
+                            ? t('ยังไม่แน่ใจ ให้คนเลือก')
+                            : t('หลักฐานยังไม่พอ map')}
                       {decision.reason ? ` · ${decision.reason}` : ''}
                     </small>
                   ))}
@@ -507,31 +526,33 @@ export function ReceiptApp({
             {reviewLines > 0 && (
               <label className="check lines-check">
                 <input type="checkbox" checked={linesChecked} onChange={e => setLinesChecked(e.target.checked)} />
-                ตรวจ {reviewLines} บรรทัดที่ต้องตรวจเทียบกับต้นฉบับแล้ว
+                {t('ตรวจ')} {reviewLines} {t('บรรทัดที่ต้องตรวจเทียบกับต้นฉบับแล้ว')}
               </label>
             )}
             {mapping?.unresolved_field_lines?.length ? (
               <details className="receipt-mapping-warning">
-                <summary>พบข้อมูลลักษณะช่อง AFP ที่ยัง map ไม่สำเร็จ {mapping.unresolved_field_lines.length} บรรทัด</summary>
+                <summary>
+                  {t('พบข้อมูลลักษณะช่อง AFP ที่ยัง map ไม่สำเร็จ')} {mapping.unresolved_field_lines.length} {t('บรรทัด')}
+                </summary>
                 <ul>
                   {mapping.unresolved_field_lines.slice(0, 8).map((line, index) => (
                     <li key={line.text + index}>{line.text}</li>
                   ))}
                 </ul>
-                <small className="muted">ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง เพียงแต่ระบบไม่เดาใส่ช่องให้อัตโนมัติ</small>
+                <small className="muted">{t('ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง เพียงแต่ระบบไม่เดาใส่ช่องให้อัตโนมัติ')}</small>
               </details>
             ) : null}
             <label className="receipt-note">
-              หมายเหตุการเบิก
-              <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="เช่น ใช้ในโครงการ… (กรอกเอง)" />
+              {t('หมายเหตุการเบิก')}
+              <textarea value={note} onChange={e => setNote(e.target.value)} placeholder={t('เช่น ใช้ในโครงการ… (กรอกเอง)')} />
             </label>
             <div className={`receipt-verdict ${result.complete ? 'ok' : ''}`} role="status">
               {result.complete ? <Check size={16} /> : <TriangleAlert size={16} />}
               <div>
-                <strong>{result.complete ? 'พร้อมให้ AFP ตรวจ' : 'ยังต้องตรวจหรือแก้เพิ่ม'}</strong>{' '}
+                <strong>{result.complete ? t('พร้อมให้ AFP ตรวจ') : t('ยังต้องตรวจหรือแก้เพิ่ม')}</strong>{' '}
                 <small>
-                  {result.complete ? 'READY-FOR-AFP-REVIEW' : 'NEEDS-DOCUMENT-FIX'} · ตรวจแล้ว {result.confirmedCount}/{result.filledCount}{' '}
-                  ช่อง
+                  {result.complete ? 'READY-FOR-AFP-REVIEW' : 'NEEDS-DOCUMENT-FIX'}{' '}
+                  {t('· ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}
                 </small>
                 {result.issues.length > 0 && (
                   <ul>
@@ -543,7 +564,7 @@ export function ReceiptApp({
                   </ul>
                 )}
                 <p className="small muted">
-                  ผลนี้เป็นการตรวจเอกสารเบื้องต้น ไม่ใช่การอนุมัติเบิกจ่าย และยังไม่ได้เทียบกับระเบียบการเงินฉบับปัจจุบัน
+                  {t('ผลนี้เป็นการตรวจเอกสารเบื้องต้น ไม่ใช่การอนุมัติเบิกจ่าย และยังไม่ได้เทียบกับระเบียบการเงินฉบับปัจจุบัน')}
                 </p>
               </div>
             </div>
@@ -554,19 +575,19 @@ export function ReceiptApp({
                   void run('save', async () => {
                     const saved = await call('ocrSave', { draft: draft() });
                     if (saved)
-                      notify('บันทึกร่างการตรวจแล้ว', 'success', {
-                        label: 'เปิดโฟลเดอร์',
+                      notify(t('บันทึกร่างการตรวจแล้ว'), 'success', {
+                        label: t('เปิดโฟลเดอร์'),
                         run: () => call('reveal', { path: saved.path }),
                       });
                   })
                 }
               >
                 <Save size={15} />
-                บันทึกร่าง (JSON)
+                {t('บันทึกร่าง (JSON)')}
               </button>
               <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('read', read)}>
                 <FileSearch size={15} />
-                ตรวจใบใหม่
+                {t('ตรวจใบใหม่')}
               </button>
               <button
                 className="quiet"
@@ -588,16 +609,16 @@ export function ReceiptApp({
                     }
                     setValues(nextValues);
                     setConfirmed(nextConfirmed);
-                    notify('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”', 'success');
+                    notify(t('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
                   })
                 }
               >
                 {busy === 'ai-filter' ? <LoaderCircle size={15} className="spin" /> : <ScanText size={15} />}
-                AI กรอง OCR อีกชั้น
+                {t('AI กรอง OCR อีกชั้น')}
               </button>
               <span className="spacer" />
               {/* AI pre-check follows the person's check: the required fields must be ticked first. A checked vendor tax ID stays readable. */}
-              {!requiredChecked && <small className="muted">ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI</small>}
+              {!requiredChecked && <small className="muted">{t('ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI')}</small>}
               <button
                 disabled={!requiredChecked || Boolean(busy)}
                 onClick={() =>
@@ -613,7 +634,7 @@ export function ReceiptApp({
                 }
               >
                 <Send size={15} />
-                ให้ AI pre-check ต่อ
+                {t('ให้ AI pre-check ต่อ')}
               </button>
             </div>
           </section>

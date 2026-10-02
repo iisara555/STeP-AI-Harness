@@ -711,6 +711,28 @@ test('a follow-up that asks for approval is stopped before the model, in chat an
   }
 });
 
+test('a follow-up whose route check fails is stopped, not sent without the authority check', async () => {
+  const { store, session } = fixture();
+  const { calls, runtime } = recorder();
+  let fail = false;
+  const flaky = {
+    ...harness,
+    route: async (...args: any[]) => {
+      if (fail) throw new Error('ROUTER_DOWN');
+      return (harness as any).route(...args);
+    },
+  };
+  const service = new WorkService(store, flaky as any, runtime, () => {});
+  await service.run(session.id, 'ทำ Designer Brief งานประชาสัมพันธ์กิจกรรม', '');
+  fail = true;
+  await service.run(session.id, 'ขอแบบสั้นกว่านี้', '');
+  const after = store.session(session.id);
+  assert.equal(calls.length, 1, 'the follow-up never reaches the provider');
+  assert.equal(after.messages.at(-1)?.text, 'ROUTE_CHECK_FAILED');
+  assert.equal(after.status, 'review', 'the existing draft stays ready to review');
+  store.close();
+});
+
 test('standing rules and the Skill travel as system instructions; documents cannot open or close sections', async () => {
   const { store, session } = fixture();
   const { calls, runtime } = recorder();

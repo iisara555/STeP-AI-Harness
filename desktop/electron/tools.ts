@@ -1,7 +1,8 @@
 import { readFile, realpath, lstat } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, extname, dirname } from 'node:path';
+import { resolve, relative, isAbsolute, extname, dirname, sep } from 'node:path';
 import { createHash } from 'node:crypto';
-import type { Connection } from '../src/types';
+import type { Connection, Workflow, WorkTask } from '../src/types';
+import { parsePlan } from './workflows';
 import type { LoopRequest } from '../src/tools';
 import type { Harness } from './service';
 import { Workbench } from './workbench';
@@ -12,9 +13,22 @@ import type { Policy, PermissionMode } from './policy';
 import type { LoopHost } from './tool-loop';
 import { fetchPublic, publicUrl } from './web-fetch';
 import { sheetWorker } from './sheets';
-import { sensitivePath, evaluatePermission } from './permissions';
+import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
+import { documentSection } from './knowledge';
+import { mainLocale, tm } from './i18n';
 
+// What the employee reads on the status line while a tool runs, in plain words instead of the tool's name.
+const TOOL_ACTIVITY: Record<string, string> = {
+  ask_user: 'รอคำตอบจากคุณ',
+  plan: 'ส่งแผนให้คุณอนุมัติ',
+  plan_update: 'บันทึกความคืบหน้าของแผน',
+  browser_control: 'กำลังทำงานบนเว็บ',
+  web_search: 'กำลังค้นเว็บ',
+  web_fetch: 'กำลังอ่านเว็บไซต์',
+  files: 'กำลังอ่านไฟล์งาน',
+  changes: 'กำลังเตรียมการแก้ไขไฟล์',
+};
 export type ToolScope = {
   cancel: () => void;
   sessionId: string;
@@ -25,6 +39,8 @@ export type ToolScope = {
   signal: AbortSignal;
   search: (query: string) => Promise<string>;
   activity: (text: string) => void;
+  /** The native workflow of this run (electron/workflows.ts), if the employee picked one. */
+  workflow?: Workflow;
 };
 const blocked = (c: any) => c?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'UNAVAILABLE', 'CLARIFY'].includes(c?.mode);
 export function documentSections(text: string) {
@@ -81,16 +97,18 @@ export class DesktopTools {
       full = resolve(root, path),
       actual = await realpath(full);
     const r = relative(root, actual);
+    // Only the part inside the harness is checked against the sensitive-path patterns: the app is installed under a
+    // folder named "STeP Desktop" on Windows, which those patterns protect where it holds the app's own data.
+    const inside = (path: string) => '/harness/' + relative(root, path).split(sep).join('/');
     if (
       isAbsolute(r) ||
       r.startsWith('..') ||
-      sensitivePath(full, root) ||
-      sensitivePath(actual, root) ||
+      sensitivePath(inside(full), '/') ||
+      sensitivePath(inside(actual), '/') ||
       (await lstat(full)).isSymbolicLink()
     )
       throw new Error('INVALID_CONTEXT_PATH');
-    if (!evaluatePermission({ tool: 'reference', readOnly: true, path: actual }, this.mode(), this.policy(), { root }).allowed)
-      throw new Error('PATH_RULE_DENIED');
+    if (deniedPath(actual, this.policy().permission.pathRules, root)) throw new Error('PATH_RULE_DENIED');
     if ((await lstat(actual)).size > 1_000_000) throw new Error('CONTEXT_LIMIT');
     return readFile(actual, 'utf8');
   }
@@ -101,6 +119,8 @@ export class DesktopTools {
     transmission?: RunTransmission,
     source?: TransmissionSource,
   ) {
+    // Asking before data leaves for the AI or a web service is a privacy check: off unless policy checks.privacy is on.
+    if (!this.policy().checks.privacy) return text;
     const review = this.harness.privacy(text);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     const rule = this.approvals.rule(
@@ -111,19 +131,30 @@ export class DesktopTools {
     const detail = {
       title:
         destination === 'web-query'
-          ? 'ส่งคำค้นให้บริการค้นเว็บ?'
+          ? tm('ส่งคำค้นให้บริการค้นเว็บ?')
           : destination === 'web-url'
-            ? 'เข้าถึงเว็บปลายทางนี้?'
-            : 'ส่งผลเครื่องมือให้ AI?',
-      body: `ข้อมูลใหม่ ${text.length.toLocaleString('th-TH')} ตัวอักษร จะส่งให้ ${destination === 'web-query' ? scope.connection.provider + ' และบริการค้นเว็บของบัญชีนี้' : destination === 'web-url' ? 'เว็บปลายทางที่ระบุ' : scope.connection.provider}\n${(review.findings || []).map((f: any) => f.label).join(', ')}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n${review.redactedText.slice(0, 1500)}`,
+            ? tm('เข้าถึงเว็บปลายทางนี้?')
+            : tm('ส่งผลเครื่องมือให้ AI?'),
+      body: tm(
+        'ข้อมูลใหม่ {0} ตัวอักษร จะส่งให้ {1}\n{2}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n{3}',
+        text.length.toLocaleString(mainLocale()),
+        destination === 'web-query'
+          ? scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
+          : destination === 'web-url'
+            ? tm('เว็บปลายทางที่ระบุ')
+            : scope.connection.provider,
+        (review.findings || []).map((f: any) => f.label).join(', '),
+        review.redactedText.slice(0, 1500),
+      ),
       privacyClass: review.classification === 'public' ? 'internal' : review.classification,
       allowRemember: false,
+      sessionId: scope.sessionId,
     };
     if (transmission && !destination) {
       const clean =
         review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text;
       await transmission.authorize(text.length, clean ? source : undefined, runScope =>
-        this.approvals.choose(rule, { ...detail, runScope }, scope.signal),
+        this.approvals.choose(rule, { ...detail, runScope, runDefault: Boolean(runScope && this.policy().pilot) }, scope.signal),
       );
       return review.redactedText;
     }
@@ -131,6 +162,56 @@ export class DesktopTools {
     if (scope.signal.aborted) throw new Error('CANCELLED');
     if (!approved) throw new Error('TOOL_DATA_DECLINED');
     return review.redactedText;
+  }
+  /** Asks the employee to approve the plan, then keeps it on the task as goal and tasks for the execute workflow. */
+  private async approveWorkPlan(text: string, scope: ToolScope) {
+    const parsed = parsePlan(text);
+    if (!parsed.tasks.length) throw new Error('PLAN_NO_TASKS');
+    const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'plan', text);
+    const approved = await this.approvals.request(
+      rule,
+      {
+        title: tm('อนุมัติแผนงานนี้?'),
+        body: text + tm('\nหลังอนุมัติ กด "ลงมือทำตามแผน" ให้ผู้ช่วยทำทีละขั้น งานที่ต้องอนุมัติ ลงนาม หรือส่งจริง ยังเป็นของผู้มีอำนาจ'),
+        privacyClass: 'internal',
+        allowRemember: false,
+        sessionId: scope.sessionId,
+      },
+      scope.signal,
+    );
+    if (scope.signal.aborted) throw new Error('CANCELLED');
+    if (!approved) return { approved: false, status: 'revise-the-plan-with-the-employee' };
+    this.workbench.setWorkPlan(scope.sessionId, { ...parsed, approvedAt: new Date().toISOString() }, text);
+    this.notify();
+    return { approved: true, tasks: parsed.tasks.length, next: 'tell the employee to press ลงมือทำตามแผน' };
+  }
+  // Sites the employee let the AI read in each task (session), by host.
+  private sites = new Map<string, Set<string>>();
+  /**
+   * The AI reads a website only after the employee allows that site once in the task, in every permission mode, as
+   * Claude Code asks per domain. A page or file with hidden instructions could otherwise make the AI send task data to
+   * any address in a URL without anyone seeing it. The full URL is shown, so data carried in it is visible.
+   */
+  private async siteConsent(url: string, scope: ToolScope) {
+    const host = new URL(url).host;
+    const allowed = this.sites.get(scope.sessionId) || new Set<string>();
+    if (allowed.has(host)) return;
+    const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'web_fetch', host);
+    const approved = await this.approvals.request(
+      rule,
+      {
+        title: tm('ให้ AI อ่านเว็บไซต์นี้?'),
+        body: url + tm('\nอนุญาตครั้งเดียวต่อเว็บไซต์ในงานนี้ ตรวจว่าที่อยู่ไม่มีข้อมูลของงานแฝงอยู่'),
+        privacyClass: 'internal',
+        allowRemember: false,
+        sessionId: scope.sessionId,
+      },
+      scope.signal,
+    );
+    if (scope.signal.aborted) throw new Error('CANCELLED');
+    if (!approved) throw new Error('WEB_SITE_DECLINED');
+    allowed.add(host);
+    this.sites.set(scope.sessionId, allowed);
   }
   async host(scope: ToolScope): Promise<LoopHost> {
     const jobs = new Set<string>();
@@ -166,19 +247,33 @@ export class DesktopTools {
       consentStop.abort();
       scope.cancel();
     });
+    // Pilot mode: one answer covers every clean result in this run. Results with findings still ask each time.
     const sourceFor = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
+      const source = await sourceOf(r);
+      if (!source || !this.policy().pilot) return source;
+      return { key: 'pilot-run', label: tm('ผลการอ่านในงานนี้ที่ตรวจแล้วไม่พบข้อมูลส่วนบุคคล (ไฟล์ เว็บ และสถานะร่าง)') };
+    };
+    const sourceOf = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
       if (!r || this.policy().transmissionConsent?.allowRunScope === false) return;
-      if (r.tool === 'ask_user' || r.tool === 'plan' || (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string'))
-        return { key: 'draft-progress', label: 'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)' };
+      if (
+        r.tool === 'ask_user' ||
+        r.tool === 'plan' ||
+        r.tool === 'plan_update' ||
+        (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string')
+      )
+        return {
+          key: 'draft-progress',
+          label: tm('คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)'),
+        };
       if (r.tool === 'files') {
         if (this.sourceClean.get(r) === false) return;
         const folder =
           r.args?.action === 'list' || !r.input ? await this.workbench.path(r.input || '.') : dirname(await this.workbench.path(r.input));
-        return { key: `files:${folder}`, label: `ไฟล์ข้อความในโฟลเดอร์ ${relative(workspace, folder) || '.'} (ไม่รวมโฟลเดอร์ย่อย)` };
+        return { key: `files:${folder}`, label: tm('ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)', relative(workspace, folder) || '.') };
       }
       if (['browser', 'web_fetch'].includes(r.tool)) {
         const origin = publicUrl(r.input).origin;
-        return { key: `web:${origin}`, label: `ผลการอ่านเว็บ ${origin}` };
+        return { key: `web:${origin}`, label: tm('ผลการอ่านเว็บ {0}', origin) };
       }
       if (['skill', 'reference'].includes(r.tool)) return { key: `${r.tool}:${r.input}`, label: `${r.tool}: ${r.input}` };
     };
@@ -200,7 +295,16 @@ export class DesktopTools {
           'sandbox',
           'browser_control',
         ].includes(r.tool),
-      activity: t => scope.activity('กำลังใช้เครื่องมือ ' + t),
+      activity: t =>
+        scope.activity(
+          t.startsWith('skill ')
+            ? tm('กำลังอ่าน Skill {0}', t.slice(6))
+            : t.startsWith('reference ')
+              ? tm('กำลังอ่านเอกสาร {0}', t.slice(10))
+              : TOOL_ACTIVITY[t]
+                ? tm(TOOL_ACTIVITY[t])
+                : tm('กำลังใช้เครื่องมือ ') + t,
+        ),
       outgoing: async (text, _signal, r) => {
         await check();
         const approved = await this.outgoing(text, transmissionScope, undefined, transmission, await sourceFor(r));
@@ -229,6 +333,23 @@ export class DesktopTools {
       },
     };
   }
+  /**
+   * Accept edits and full auto apply a staged AI edit right away, through the same gate (path rules, hooks) and with a
+   * snapshot to undo it. Ask mode, or any decision that still needs a person, leaves it staged for review.
+   */
+  private async settle<T extends { id: string; path: string }>(change: T, scope: ToolScope) {
+    const request = { tool: 'write', readOnly: false, path: change.path };
+    const root = await this.workbench.root().catch(() => '');
+    const decision = evaluatePermission(request, this.mode(), this.policy(), { root });
+    if (!decision.allowed || decision.requiresConfirmation) return { ...change, status: 'staged-for-human-review' };
+    const applied = await this.gate.run(
+      request,
+      { title: tm('เขียนไฟล์ที่ตรวจแล้ว?'), body: change.path, key: change.path, sessionId: scope.sessionId },
+      () => this.workbench.apply(change.id),
+      scope.signal,
+    );
+    return applied ? { ...change, status: 'applied', snapshotId: applied.snapshotId } : { ...change, status: 'staged-for-human-review' };
+  }
   async execute(r: LoopRequest, scope: ToolScope, check: () => Promise<void> = async () => {}) {
     const a = r.args || {},
       target = r.input;
@@ -246,8 +367,8 @@ export class DesktopTools {
     return this.gate.run(
       request,
       {
-        title: 'รันคำสั่งจาก AI?',
-        body: target + '\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ',
+        title: tm('รันคำสั่งจาก AI?'),
+        body: target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
         key: target,
         sessionId: scope.sessionId,
       },
@@ -290,7 +411,7 @@ export class DesktopTools {
             if (a.action === 'diff') return this.workbench.diff();
             if (a.action === 'list') return this.workbench.changes();
             if ((a.action && a.action !== 'stage') || r.content === undefined) throw new Error('INVALID_INPUT');
-            return this.workbench.stage(target, r.content).then(c => ({ id: c.id, path: c.path, status: 'staged-for-human-review' }));
+            return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'terminal':
             return this.workbench.start(target);
           case 'tasks':
@@ -300,6 +421,7 @@ export class DesktopTools {
             const url = publicUrl(target).href;
             // A URL can leak task data through its path/query even on an otherwise public host.
             if (this.harness.privacy(decodeURIComponent(url)).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+            await this.siteConsent(url, scope);
             await this.outgoing(url, scope, 'web-url');
             await check();
             return fetchPublic(url, scope.signal, this.policy().network?.proxyUrl);
@@ -328,9 +450,18 @@ export class DesktopTools {
             return { id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') };
           }
           case 'reference': {
-            const ref = (await this.harness.documentMetadata?.([target]))?.[0];
+            let ref = (await this.harness.documentMetadata?.([target]))?.[0];
+            // The AI sometimes names a document by its path or title instead of its ID; resolve those to the registered ID.
+            if (!ref?.path || ref.status === 'unregistered') {
+              const named = ((await this.harness.documentCatalog?.().catch(() => [])) || []).find(
+                (e: any) => e.path === target || e.title === target || target.endsWith('/' + e.path),
+              );
+              if (named) ref = (await this.harness.documentMetadata?.([named.id]))?.[0];
+            }
             if (!ref?.path || ref.status === 'unregistered') throw new Error('REFERENCE_UNAVAILABLE');
-            return { ...ref, text: await this.context(ref.path) };
+            const text = await this.context(ref.path);
+            const part = typeof a.section === 'string' && a.section.trim() ? documentSection(text, a.section) : undefined;
+            return part ? { ...ref, section: a.section, text: part } : { ...ref, text };
           }
           case 'doc_outline':
           case 'doc_section': {
@@ -365,7 +496,7 @@ export class DesktopTools {
             if (!a.edits || !value.binary) throw new Error('INVALID_INPUT');
             await check();
             const change = await this.workbench.stageBytes(target, Buffer.from(value.binary, 'base64'), value.before, value.after, hash);
-            return { ...change, status: 'staged-for-human-review' };
+            return this.settle(change, scope);
           }
           case 'ask_user': {
             const options = Array.isArray(a.options) ? a.options : [];
@@ -377,15 +508,39 @@ export class DesktopTools {
           }
           case 'plan': {
             if (!target.trim()) throw new Error('INVALID_INPUT');
+            // The native plan workflow always asks: the employee approves the plan that "execute" will follow.
+            if (scope.workflow === 'plan') return this.approveWorkPlan(target, scope);
+            // A plan grants nothing beyond drafting; each side-effect tool still asks on its own. Pilot mode skips this dialog.
+            // Nobody reviewed it, so it is not stored as an approved plan.
+            if (this.policy().pilot)
+              return {
+                approved: false,
+                status: 'noted-continue-drafting',
+                scope: 'draft-only; business actions require separate authority',
+              };
             const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'plan', target);
             const approved = await this.approvals.request(
               rule,
-              { title: 'อนุมัติแผนก่อนจัดทำร่าง?', body: target, privacyClass: 'internal', allowRemember: false },
+              {
+                title: tm('อนุมัติแผนก่อนจัดทำร่าง?'),
+                body: target,
+                privacyClass: 'internal',
+                allowRemember: false,
+                sessionId: scope.sessionId,
+              },
               scope.signal,
             );
             if (!approved) throw new Error('CANCELLED');
             this.workbench.rememberPlan(scope.sessionId, target);
             return { approved: true, scope: 'draft-only; business actions require separate authority' };
+          }
+          case 'plan_update': {
+            const status = String(a.status || '');
+            if (!['todo', 'doing', 'done', 'blocked'].includes(status)) throw new Error('INVALID_INPUT');
+            const note = typeof r.content === 'string' ? r.content.trim().slice(0, 300) : '';
+            const remaining = this.workbench.updateWorkTask(scope.sessionId, Number(target), status as WorkTask['status'], note);
+            this.notify();
+            return { task: Number(target), status, remaining };
           }
           case 'snapshot':
             if (a.action === 'list') return this.workbench.snapshots();

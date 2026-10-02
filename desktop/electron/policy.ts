@@ -28,10 +28,12 @@ export const FEATURES = [
   'cron',
   'coordinator',
   'memoryTeam',
+  'autoRouting',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
-export type PermissionMode = 'ask' | 'plan' | 'auto';
-export const PERMISSION_MODES: PermissionMode[] = ['ask', 'plan', 'auto'];
+/** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
+export type PermissionMode = 'ask' | 'acceptEdits' | 'plan' | 'auto';
+export const PERMISSION_MODES: PermissionMode[] = ['ask', 'acceptEdits', 'plan', 'auto'];
 export type PathRule = { pattern: string; allow: boolean };
 export type HookEvent =
   'session_start' | 'session_end' | 'user_prompt_submit' | 'pre_tool_use' | 'post_tool_use' | 'pre_compact' | 'post_compact' | 'stop';
@@ -80,32 +82,54 @@ export type McpServer =
 export type Policy = {
   source: 'managed' | 'default';
   features: Record<Feature, boolean>;
-  permission: { modes: PermissionMode[]; defaultMode: PermissionMode; pathRules: PathRule[]; deniedCommands: string[] };
+  permission: {
+    modes: PermissionMode[];
+    defaultMode: PermissionMode;
+    pathRules: PathRule[];
+    deniedCommands: string[];
+    /** Lets people remember a reviewed file write for the same file in the same workspace. Commands never are. */
+    rememberApprovals: boolean;
+  };
   hooks: HookDefinition[];
   mcpServers: McpServer[];
   /** US dollars per million tokens, keyed by model id or `provider:*`. */
   prices: Record<string, { input: number; output: number }>;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
-  network?: { proxyUrl?: string };
+  /** privateHosts: intranet hosts the assistant's browser may open although they resolve to private addresses. */
+  network?: { proxyUrl?: string; privateHosts?: string[] };
   memory?: { teamDirectories: Record<string, string> };
   sandbox?: { image: string };
   providers?: { compatible: { name: string; baseUrl: string; protocol: 'openai' | 'anthropic' }[]; copilot?: { clientId: string } };
   voice?: { components: Record<string, { runtime: { url: string; sha256: string }; model: { url: string; sha256: string } }> };
   skillPacks?: { approvedDigests: string[] };
   transmissionConsent?: { allowRunScope: boolean };
+  /**
+   * Standard consent (on by default, the behavior first trialled as "pilot mode"): fewer confirmation dialogs. Every
+   * side-effect tool still asks each time. `false` restores the strict dialogs. With `checks.privacy` on, credentials
+   * and sensitive data tied to a person are blocked and national ID numbers masked in both modes.
+   */
+  pilot: boolean;
+  /**
+   * Organization checks, off by default. authority: the router's approve/sign/submit BLOCK and ESCALATE (the AI cannot
+   * perform those acts anyway). privacy: the personal-data and credential scan on text, files, memories and tool
+   * results; off, nothing is masked, blocked or asked about on privacy grounds.
+   */
+  checks: { authority: boolean; privacy: boolean };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
 const DEFAULT_FEATURES: Record<Feature, boolean> = {
   toolLoop: true,
-  autoMode: false,
+  // Full auto is offered like in other AI coding apps; commands still ask unless shellByAi is on.
+  autoMode: true,
   shellByAi: false,
   autoMerge: false,
   autopilot: false,
   sandbox: false,
   mcp: false,
   lineGateway: false,
-  vision: false,
+  // Images go to vision models like in other AI apps; with checks.privacy on they still pass the OCR scan first.
+  vision: true,
   voice: false,
   copilot: false,
   compatibleProviders: false,
@@ -114,6 +138,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   cron: false,
   coordinator: false,
   memoryTeam: false,
+  // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
+  // Off, every request goes to the AI as general help.
+  autoRouting: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',
@@ -134,11 +161,19 @@ export function defaultPolicy(): Policy {
   return {
     source: 'default',
     features: { ...DEFAULT_FEATURES },
-    permission: { modes: ['ask', 'plan'], defaultMode: 'ask', pathRules: [], deniedCommands: [...DEFAULT_DENIED_COMMANDS] },
+    permission: {
+      modes: ['ask', 'acceptEdits', 'plan', 'auto'],
+      defaultMode: 'ask',
+      pathRules: [],
+      deniedCommands: [...DEFAULT_DENIED_COMMANDS],
+      rememberApprovals: true,
+    },
     hooks: [],
     mcpServers: [],
     prices: {},
     budgets: {},
+    pilot: true,
+    checks: { authority: false, privacy: false },
   };
 }
 
@@ -166,6 +201,19 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.pilot !== undefined) {
+    if (typeof raw.pilot !== 'boolean') problems.push('pilot must be true or false');
+    else policy.pilot = raw.pilot;
+  }
+  if (raw.checks !== undefined) {
+    if (
+      !isObject(raw.checks) ||
+      Object.keys(raw.checks).some(k => !['authority', 'privacy'].includes(k)) ||
+      Object.values(raw.checks).some(v => typeof v !== 'boolean')
+    )
+      problems.push('checks must be an object with boolean authority and privacy');
+    else policy.checks = { ...policy.checks, ...raw.checks };
+  }
   if (raw.transmissionConsent !== undefined) {
     if (
       !isObject(raw.transmissionConsent) ||
@@ -272,8 +320,19 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     }
   }
   if (raw.network !== undefined) {
-    if (!isObject(raw.network) || Object.keys(raw.network).some(k => k !== 'proxyUrl')) problems.push('invalid network configuration');
-    else if (raw.network.proxyUrl !== undefined) {
+    if (!isObject(raw.network) || Object.keys(raw.network).some(k => !['proxyUrl', 'privateHosts'].includes(k)))
+      problems.push('invalid network configuration');
+    else if (raw.network.privateHosts !== undefined) {
+      const hosts = raw.network.privateHosts;
+      if (
+        !Array.isArray(hosts) ||
+        hosts.length > 50 ||
+        hosts.some((h: unknown) => typeof h !== 'string' || !/^[a-z0-9.-]{1,253}$/i.test(h) || h.startsWith('.'))
+      )
+        problems.push('invalid network privateHosts');
+      else policy.network = { ...policy.network, privateHosts: hosts.map((h: string) => h.toLowerCase()) };
+    }
+    if (isObject(raw.network) && raw.network.proxyUrl !== undefined) {
       try {
         const url = new URL(raw.network.proxyUrl);
         if (
@@ -287,7 +346,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
           url.hash
         )
           throw new Error();
-        policy.network = { proxyUrl: url.href };
+        policy.network = { ...policy.network, proxyUrl: url.href };
       } catch {
         problems.push('invalid network proxyUrl');
       }
@@ -310,11 +369,13 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
         const modes = Array.isArray(permission.modes)
           ? permission.modes.filter((m: unknown) => PERMISSION_MODES.includes(m as PermissionMode))
           : [];
-        if (!modes.length || modes.length !== permission.modes.length) problems.push('permission.modes must list ask, plan or auto');
+        if (!modes.length || modes.length !== permission.modes.length)
+          problems.push('permission.modes must list ask, acceptEdits, plan or auto');
         else policy.permission.modes = [...new Set(modes as PermissionMode[])];
       }
       if (permission.defaultMode !== undefined) {
-        if (!PERMISSION_MODES.includes(permission.defaultMode)) problems.push('permission.defaultMode must be ask, plan or auto');
+        if (!PERMISSION_MODES.includes(permission.defaultMode))
+          problems.push('permission.defaultMode must be ask, acceptEdits, plan or auto');
         else policy.permission.defaultMode = permission.defaultMode;
       }
       if (permission.pathRules !== undefined) {
@@ -326,6 +387,10 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
             if (!pattern || typeof rule?.allow !== 'boolean') problems.push('each path rule needs pattern and allow');
             else policy.permission.pathRules.push({ pattern, allow: rule.allow });
           }
+      }
+      if (permission.rememberApprovals !== undefined) {
+        if (typeof permission.rememberApprovals !== 'boolean') problems.push('permission.rememberApprovals must be true or false');
+        else policy.permission.rememberApprovals = permission.rememberApprovals;
       }
       if (permission.deniedCommands !== undefined) {
         if (!Array.isArray(permission.deniedCommands)) problems.push('permission.deniedCommands must be a list');

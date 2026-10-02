@@ -4,6 +4,7 @@ import { ConfirmDialog, ProviderFields, providerChoiceReady, initialChoice, type
 import { explainError, providerLabel, shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import type { Connection, Snapshot } from './types';
+import { language, locale, t, teamName } from './i18n';
 
 export function SettingsPanel({
   initialPage,
@@ -32,6 +33,8 @@ export function SettingsPanel({
     [assistantTone, setAssistantTone] = useState(snapshot.settings.assistantTone || '');
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
   const accountSignIn = choice.mode === 'subscription' && ['openai', 'claude'].includes(choice.provider);
+  // The main-page Gemini key is tested right away like an account sign-in, so it is ready to use or shows why not.
+  const connectNow = accountSignIn || (choice.provider === 'gemini' && choice.mode === 'api');
   const [busy, setBusy] = useState(''),
     [progress, setProgress] = useState<Record<string, string>>({}),
     [removingConnection, setRemovingConnection] = useState<Connection | null>(null);
@@ -58,58 +61,58 @@ export function SettingsPanel({
     }
   };
   const pages = [
-    ['general', 'ทั่วไป', Settings2],
-    ['ai', 'การเชื่อมต่อ AI', Sparkles],
-    ['appearance', 'รูปลักษณ์', Sun],
-    ['privacy', 'ความเป็นส่วนตัว', ShieldCheck],
-    ['policy', 'นโยบายองค์กร', ShieldCheck],
+    ['general', t('ทั่วไป'), Settings2],
+    ['ai', t('การเชื่อมต่อ AI'), Sparkles],
+    ['appearance', t('รูปลักษณ์และภาษา'), Sun],
+    ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
+    ['policy', t('นโยบายองค์กร'), ShieldCheck],
   ] as const;
   return (
     <div className="settings-content">
       <div className="settings-hero">
         <div>
-          <h1>พร้อมทำงาน ในแบบของคุณ</h1>
-          <p className="muted">ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา</p>
+          <h1>{t('พร้อมทำงาน ในแบบของคุณ')}</h1>
+          <p className="muted">{t('ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา')}</p>
         </div>
         <img className="illustration settings-art" src={teamworkArt} alt="" />
       </div>
-      <div className="settings-tabs" role="tablist" aria-label="หมวดการตั้งค่า">
+      <div className="settings-tabs" role="tablist" aria-label={t('หมวดการตั้งค่า')}>
         {pages.map(([id, label, Icon]) => (
           <button key={id} role="tab" aria-selected={page === id} className={page === id ? 'active' : ''} onClick={() => setPage(id)}>
             <Icon size={15} />
             {label}
-            {id === 'ai' && !snapshot.connections.some(c => c.ready) && <span className="tab-dot" aria-label="ยังไม่พร้อม" />}
+            {id === 'ai' && !snapshot.connections.some(c => c.ready) && <span className="tab-dot" aria-label={t('ยังไม่พร้อม')} />}
           </button>
         ))}
       </div>
       {page === 'general' && (
         <section>
-          <h2>ผู้ช่วยและทีม</h2>
+          <h2>{t('ผู้ช่วยและทีม')}</h2>
           <div className="form-grid">
             <label>
-              ชื่อเรียกของคุณ
-              <input value={userName} maxLength={60} placeholder="เช่น ต้น" onChange={e => setUserName(e.target.value)} />
+              {t('ชื่อเรียกของคุณ')}
+              <input value={userName} maxLength={60} placeholder={t('เช่น ต้น')} onChange={e => setUserName(e.target.value)} />
             </label>
             <label>
-              ชื่อผู้ช่วย
+              {t('ชื่อผู้ช่วย')}
               <input value={assistant} onChange={e => setAssistant(e.target.value)} />
             </label>
             <label>
-              วิธีพูดคุย
+              {t('วิธีพูดคุย')}
               <select value={personality} onChange={e => setPersonality(e.target.value as any)}>
-                <option value="coworker">เพื่อนร่วมงาน · เป็นกันเอง สุภาพ</option>
-                <option value="professional">มืออาชีพ · มีโครงสร้าง ชัดเจน</option>
-                <option value="concise">กระชับ · สั้น ตรงประเด็น</option>
-                <option value="custom">กำหนดเอง</option>
+                <option value="coworker">{t('เพื่อนร่วมงาน · เป็นกันเอง สุภาพ')}</option>
+                <option value="professional">{t('มืออาชีพ · มีโครงสร้าง ชัดเจน')}</option>
+                <option value="concise">{t('กระชับ · สั้น ตรงประเด็น')}</option>
+                <option value="custom">{t('กำหนดเอง')}</option>
               </select>
             </label>
             {personality === 'custom' ? (
               <label>
-                สไตล์ที่ต้องการ
+                {t('สไตล์ที่ต้องการ')}
                 <input
                   value={assistantTone}
                   maxLength={300}
-                  placeholder="เช่น ตอบเป็นข้อ ๆ และสรุปสิ่งที่ต้องทำท้ายคำตอบ"
+                  placeholder={t('เช่น ตอบเป็นข้อ ๆ และสรุปสิ่งที่ต้องทำท้ายคำตอบ')}
                   onChange={e => setAssistantTone(e.target.value)}
                 />
               </label>
@@ -117,57 +120,84 @@ export function SettingsPanel({
               <span />
             )}
             <label>
-              ทีมหลัก
+              {t('ทีมหลัก')}
               <select value={team} onChange={e => setTeam(e.target.value)}>
-                <option value="">ยังไม่แน่ใจ · เลือกภายหลัง</option>
-                {snapshot.teams.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.id.toUpperCase()} · {t.name}
+                <option value="">{t('ยังไม่แน่ใจ · เลือกภายหลัง')}</option>
+                {snapshot.teams.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {option.id.toUpperCase()} · {teamName(option)}
                   </option>
                 ))}
               </select>
             </label>
           </div>
-          <label>โฟลเดอร์เก็บผลงาน</label>
+          <label>{t('โฟลเดอร์เก็บผลงาน')}</label>
           <div className="folder-row">
-            <span>{snapshot.settings.workspace || 'ยังไม่เลือกโฟลเดอร์'}</span>
+            <span>{snapshot.settings.workspace || t('ยังไม่เลือกโฟลเดอร์')}</span>
             <button className="quiet" onClick={() => void run('workspace', () => call('workspace'))}>
               <FolderOpen size={16} />
-              เลือกโฟลเดอร์
+              {t('เลือกโฟลเดอร์')}
             </button>
           </div>
           <p className="small muted">
-            ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ส่วน USER.md (ชื่อ ผู้ช่วย และวิธีพูดคุย) เก็บในโฟลเดอร์นี้เพื่อใช้ร่วมกับ
-            STeP AI บน CLI
+            {t(
+              'ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ส่วน USER.md (ชื่อ ผู้ช่วย และวิธีพูดคุย) เก็บในโฟลเดอร์นี้เพื่อใช้ร่วมกับ STeP AI บน CLI',
+            )}
           </p>
           <div className="folder-row">
-            <span>{snapshot.userFile || 'USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า'}</span>
+            <span>{snapshot.userFile || t('USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า')}</span>
             {snapshot.userFile && (
               <button className="quiet" onClick={() => void run('user', () => call('reveal', { path: snapshot.userFile }))}>
-                เปิดตำแหน่งไฟล์
+                {t('เปิดตำแหน่งไฟล์')}
               </button>
             )}
           </div>
           <div className="choice-row" style={{ marginTop: 14 }}>
             <button className="quiet" onClick={openWizard}>
-              เปิดตัวช่วยตั้งค่าเริ่มต้น
+              {t('เปิดตัวช่วยตั้งค่าเริ่มต้น')}
             </button>
             <button className="quiet" onClick={openTour}>
-              ดูทัวร์แนะนำอีกครั้ง
+              {t('ดูทัวร์แนะนำอีกครั้ง')}
             </button>
           </div>
         </section>
       )}
       {page === 'appearance' && (
         <section>
-          <h2>ธีม</h2>
-          <p className="muted small">เลือกให้ตามระบบปฏิบัติการ หรือกำหนดเอง</p>
+          <h2>{language() === 'en' ? 'Language · ภาษา' : 'ภาษา · Language'}</h2>
+          <p className="muted small">{t('เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์')}</p>
+          <div className="theme-options" role="radiogroup" aria-label="Language">
+            {(
+              [
+                ['th', 'ไทย'],
+                ['en', 'English'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                role="radio"
+                aria-checked={(snapshot.settings.language || 'th') === id}
+                className={(snapshot.settings.language || 'th') === id ? 'active' : 'quiet'}
+                disabled={busy === 'language'}
+                onClick={() =>
+                  void run('language', () => {
+                    const s = snapshot.settings;
+                    return call('settings', { assistant: s.assistant, team: s.team, theme: s.theme, language: id });
+                  })
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <h2>{t('ธีม')}</h2>
+          <p className="muted small">{t('เลือกให้ตามระบบปฏิบัติการ หรือกำหนดเอง')}</p>
           <div className="theme-options">
             {(
               [
-                ['system', 'ตามระบบ', Monitor],
-                ['light', 'สว่าง', Sun],
-                ['dark', 'มืด', Moon],
+                ['system', t('ตามระบบ'), Monitor],
+                ['light', t('สว่าง'), Sun],
+                ['dark', t('มืด'), Moon],
               ] as const
             ).map(([id, label, Icon]) => (
               <button key={id} className={theme === id ? 'active' : 'quiet'} onClick={() => setTheme(id)}>
@@ -176,72 +206,99 @@ export function SettingsPanel({
               </button>
             ))}
           </div>
-          <p className="small muted">ทางลัด: กด {shortcut} แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า</p>
+          <p className="small muted">{t('ทางลัด: กด {0} แล้วพิมพ์ “ธีม” เพื่อสลับได้จากทุกหน้า', shortcut)}</p>
         </section>
       )}
       {page === 'policy' && snapshot.policy && (
         <section>
-          <h2>นโยบายที่ผู้ดูแลกำหนด</h2>
+          <h2>{t('นโยบายที่ผู้ดูแลกำหนด')}</h2>
           <p>
-            {snapshot.policy.source === 'managed' ? 'ใช้นโยบายองค์กร' : 'ใช้ค่าเริ่มต้นที่ปิดความสามารถเสี่ยงไว้'} · Hooks:{' '}
+            {snapshot.policy.source === 'managed' ? t('ใช้นโยบายองค์กร') : t('ใช้ค่าเริ่มต้นที่ปิดความสามารถเสี่ยงไว้')} · Hooks:{' '}
             {snapshot.policy.hooks}
           </p>
           <p className="small muted">{snapshot.policy.path}</p>
-          {snapshot.policy.problems.length > 0 && <p role="alert">อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล</p>}
+          <p className="pilot-note">
+            {snapshot.policy.pilot === false
+              ? t('โหมดเข้มงวด: ผู้ดูแลตั้งให้ถามยืนยันก่อนส่งไฟล์แนบ ส่งครั้งแรก และส่งผลเครื่องมือแต่ละแหล่ง')
+              : t(
+                  'ถามยืนยันเฉพาะเมื่อจำเป็น: ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล ปิดบังเลขบัตรประชาชน และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง',
+                )}
+          </p>
+          {snapshot.policy.problems.length > 0 && <p role="alert">{t('อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล')}</p>}
           <div className="policy-features">
             {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
               <p key={name}>
                 <code>{name}</code>
-                <span>{enabled ? 'เปิดในนโยบาย' : 'ปิดโดยผู้ดูแล'}</span>
+                <span>{enabled ? t('เปิดในนโยบาย') : t('ปิดโดยผู้ดูแล')}</span>
               </p>
             ))}
           </div>
-          <p className="small muted">สถานะนี้แสดงสิทธิ์ตามนโยบาย ความสามารถที่อยู่ระหว่างพัฒนาจะพร้อมใช้เมื่อส่งมอบแล้ว</p>
-          <h3>สิทธิ์ที่คุณอนุญาตไว้</h3>
-          {!snapshot.approvals?.length && <p className="muted">ยังไม่มีสิทธิ์ที่บันทึกไว้</p>}
+          <p className="small muted">{t('สถานะนี้แสดงสิทธิ์ตามนโยบาย ความสามารถที่อยู่ระหว่างพัฒนาจะพร้อมใช้เมื่อส่งมอบแล้ว')}</p>
+          {snapshot.consentMetrics && (
+            <>
+              <h3>{t('สถิติการถามยืนยันในเครื่องนี้')}</h3>
+              <p className="small">
+                {t(
+                  'ถาม {0} ครั้ง · ยืนยัน {1} · ยกเลิก {2} · เฉลี่ย {3} ครั้งต่องาน ({4} งาน)',
+                  snapshot.consentMetrics.prompts,
+                  snapshot.consentMetrics.confirmed,
+                  snapshot.consentMetrics.cancelled,
+                  snapshot.consentMetrics.perTask,
+                  snapshot.consentMetrics.tasks,
+                )}
+              </p>
+              <p className="small muted">{t('นับเฉพาะจำนวนครั้งและชื่อเครื่องมือ ไม่เก็บเนื้อหาที่ถาม และไม่ส่งออกจากเครื่อง')}</p>
+            </>
+          )}
+          <h3>{t('สิทธิ์ที่คุณอนุญาตไว้')}</h3>
+          {!snapshot.approvals?.length && <p className="muted">{t('ยังไม่มีสิทธิ์ที่บันทึกไว้')}</p>}
           {snapshot.approvals?.map(rule => (
             <div className="folder-row" key={rule.id}>
               <span>
                 {rule.tool} · {rule.targetHash.slice(0, 12)}
               </span>
               <button className="quiet" onClick={() => void run(rule.id, () => call('approvalRemove', { id: rule.id }))}>
-                ถอนสิทธิ์
+                {t('ถอนสิทธิ์')}
               </button>
             </div>
           ))}
-          <p className="small muted">สิทธิ์ผูกกับเครื่องมือ เป้าหมาย และโฟลเดอร์ที่ยืนยันเท่านั้น นโยบายองค์กรยังตรวจทุกครั้ง</p>
+          <p className="small muted">{t('สิทธิ์ผูกกับเครื่องมือ เป้าหมาย และโฟลเดอร์ที่ยืนยันเท่านั้น นโยบายองค์กรยังตรวจทุกครั้ง')}</p>
         </section>
       )}
       {page === 'privacy' && (
         <section className="privacy-info">
-          <h2>ข้อมูลของคุณ</h2>
-          <h3>อะไรถูกส่งให้ AI</h3>
-          <p>เฉพาะคำขอ ร่างของงานนั้น บทสนทนาล่าสุด และข้อความที่ตรวจแล้วจากไฟล์แนบ ไม่ส่งไฟล์ต้นฉบับ</p>
-          <h3>ก่อนส่ง ระบบตรวจอะไร</h3>
+          <h2>{t('ข้อมูลของคุณ')}</h2>
+          <h3>{t('อะไรถูกส่งให้ AI')}</h3>
+          <p>{t('เฉพาะคำขอ ร่างของงานนั้น บทสนทนาล่าสุด และข้อความที่ตรวจแล้วจากไฟล์แนบ ไม่ส่งไฟล์ต้นฉบับ')}</p>
+          <h3>{t('ก่อนส่ง ระบบตรวจอะไร')}</h3>
           <p>
-            ปิดบังเลขบัตรประชาชน เบอร์โทร อีเมล และเลขบัญชีที่ตรวจพบ ถ้าพบรหัสผ่านหรือ API key หรือข้อมูลอ่อนไหวคู่กับตัวบุคคล
-            ระบบจะไม่ส่งเลย ถ้าพบสัญญาณข้อมูลบุคคล เช่น รายชื่อ จะถามยืนยันก่อน
+            {t(
+              'ปิดบังเลขบัตรประชาชน เบอร์โทร อีเมล และเลขบัญชีที่ตรวจพบ ถ้าพบรหัสผ่านหรือ API key หรือข้อมูลอ่อนไหวคู่กับตัวบุคคล ระบบจะไม่ส่งเลย ถ้าพบสัญญาณข้อมูลบุคคล เช่น รายชื่อ จะถามยืนยันก่อน',
+            )}
           </p>
-          <h3>เมื่อไรจะถามยืนยัน</h3>
+          <h3>{t('เมื่อไรจะถามยืนยัน')}</h3>
           <p>
-            ครั้งแรกที่ใช้บนเครื่องนี้ เมื่อแนบไฟล์ และเมื่อพบข้อมูลที่ควรตรวจ ส่วนข้อมูลที่ปิดบังให้อัตโนมัติจะแจ้งทุกครั้ง
-            ผลสแกนเป็นตัวช่วย ไม่ใช่การอนุญาตจากองค์กร
+            {t(
+              'ครั้งแรกที่ใช้บนเครื่องนี้ เมื่อแนบไฟล์ และเมื่อพบข้อมูลที่ควรตรวจ ส่วนข้อมูลที่ปิดบังให้อัตโนมัติจะแจ้งทุกครั้ง ผลสแกนเป็นตัวช่วย ไม่ใช่การอนุญาตจากองค์กร',
+            )}
           </p>
-          <h3>เก็บข้อมูลที่ไหน</h3>
-          <p>บทสนทนาและร่างอยู่ในเครื่องนี้เท่านั้น API key เข้ารหัสด้วยระบบของ Windows/macOS การลบงานจะลบออกจากเครื่องถาวร</p>
-          <h3>สิ่งที่ AI ทำไม่ได้</h3>
+          <h3>{t('เก็บข้อมูลที่ไหน')}</h3>
+          <p>{t('บทสนทนาและร่างอยู่ในเครื่องนี้เท่านั้น API key เข้ารหัสด้วยระบบของ Windows/macOS การลบงานจะลบออกจากเครื่องถาวร')}</p>
+          <h3>{t('สิ่งที่ AI ทำไม่ได้')}</h3>
           <p>
-            AI ในแอปนี้จัดทำร่างเท่านั้น ไม่มีสิทธิ์รันคำสั่ง เปิดไฟล์ในเครื่อง หรือส่ง อนุมัติ และเบิกจ่ายแทนคุณ
-            ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ
+            {t(
+              'AI ในแอปนี้จัดทำร่างเท่านั้น ไม่มีสิทธิ์รันคำสั่ง เปิดไฟล์ในเครื่อง หรือส่ง อนุมัติ และเบิกจ่ายแทนคุณ ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ',
+            )}
           </p>
         </section>
       )}
       {page === 'ai' && (
         <section>
-          <h2>การเชื่อมต่อ AI</h2>
+          <h2>{t('การเชื่อมต่อ AI')}</h2>
           <p className="muted small">
-            เลือกการเชื่อมต่อที่รองรับด้านล่าง ตรวจสิทธิ์และผู้รับผิดชอบค่าใช้จ่ายของบัญชีก่อนเริ่ม
-            การทดสอบจะส่งคำขอสั้น ๆ หนึ่งครั้ง
+            {t(
+              'เลือกการเชื่อมต่อที่รองรับด้านล่าง ตรวจสิทธิ์และผู้รับผิดชอบค่าใช้จ่ายของบัญชีก่อนเริ่ม การทดสอบจะส่งคำขอสั้น ๆ หนึ่งครั้ง',
+            )}
           </p>
           {snapshot.connections.map(c => (
             <div className="connection-row" key={c.id}>
@@ -255,7 +312,7 @@ export function SettingsPanel({
                         ? c.provider === 'copilot'
                           ? 'GitHub OAuth'
                           : 'Claude Console OAuth'
-                        : 'บัญชีส่วนตัว'}
+                        : t('บัญชีส่วนตัว')}
                   </small>
                 </strong>
                 {busy === c.id && progress[c.id] ? (
@@ -264,7 +321,7 @@ export function SettingsPanel({
                     {progress[c.id]}
                   </p>
                 ) : (
-                  <p className={c.ready ? 'connected' : 'muted'}>{c.note}</p>
+                  <p className={c.ready ? 'connected' : 'muted'}>{t(c.note)}</p>
                 )}
                 {((c.provider === 'claude' && (c.mode === 'subscription' || c.mode === 'oauth')) ||
                   ((c.provider === 'openai' || c.provider === 'gemini') && c.mode === 'subscription')) &&
@@ -272,19 +329,19 @@ export function SettingsPanel({
                     <p className={c.signedIn ? 'small connected' : 'small muted'}>
                       {c.provider === 'openai'
                         ? c.signedIn
-                          ? 'ลงชื่อ ChatGPT แล้ว'
-                          : 'ยังไม่ได้ลงชื่อ ChatGPT'
+                          ? t('ลงชื่อ ChatGPT แล้ว')
+                          : t('ยังไม่ได้ลงชื่อ ChatGPT')
                         : c.provider === 'gemini'
                           ? c.signedIn
-                            ? 'ลงชื่อ Google แล้ว'
-                            : 'ยังไม่ได้ลงชื่อ Google'
+                            ? t('ลงชื่อ Google แล้ว')
+                            : t('ยังไม่ได้ลงชื่อ Google')
                           : c.signedIn
                             ? c.mode === 'oauth'
-                              ? 'เชื่อม Claude Console OAuth แล้ว'
-                              : 'ลงชื่อบัญชี Claude แล้ว'
+                              ? t('เชื่อม Claude Console OAuth แล้ว')
+                              : t('ลงชื่อบัญชี Claude แล้ว')
                             : c.mode === 'oauth'
-                              ? 'ยังไม่ได้เชื่อม Claude Console OAuth'
-                              : 'ยังไม่ได้ลงชื่อบัญชี Claude'}
+                              ? t('ยังไม่ได้เชื่อม Claude Console OAuth')
+                              : t('ยังไม่ได้ลงชื่อบัญชี Claude')}
                     </p>
                   )}
                 {c.provider === 'gemini' && c.googleCloudProject && (
@@ -292,7 +349,7 @@ export function SettingsPanel({
                 )}
                 {c.modelsAt && (
                   <p className="small muted">
-                    โมเดล {c.models?.length || 0} รายการ · อัปเดต {new Date(c.modelsAt).toLocaleString('th-TH')}
+                    {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {new Date(c.modelsAt).toLocaleString(locale())}
                   </p>
                 )}
               </div>
@@ -300,18 +357,18 @@ export function SettingsPanel({
                 <button disabled={Boolean(busy)} onClick={() => void run(c.id, () => call('connect', { id: c.id }))}>
                   {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
                   {c.provider === 'openai' && c.mode === 'subscription'
-                    ? 'เชื่อมต่อ ChatGPT'
+                    ? t('เชื่อมต่อ ChatGPT')
                     : c.provider === 'gemini' && c.mode === 'subscription'
-                      ? 'เชื่อมต่อ Google'
+                      ? t('เชื่อมต่อ Google')
                       : c.provider === 'claude' && c.mode === 'oauth'
-                        ? 'เชื่อมต่อ OAuth'
+                        ? t('เชื่อมต่อ OAuth')
                         : c.provider === 'claude' && c.mode === 'subscription'
-                          ? 'เชื่อมต่อ Claude'
-                          : 'เชื่อมต่อและทดสอบ'}
+                          ? t('เชื่อมต่อ Claude')
+                          : t('เชื่อมต่อและทดสอบ')}
                 </button>
                 {busy === c.id && (
                   <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
-                    ยกเลิก
+                    {t('ยกเลิก')}
                   </button>
                 )}
                 {c.ready && (
@@ -320,7 +377,8 @@ export function SettingsPanel({
                     disabled={Boolean(busy)}
                     onClick={() => void run(c.id + ':models', () => call('models', { id: c.id }))}
                   >
-                    {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : null}โหลดรายชื่อโมเดล
+                    {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : null}
+                    {t('โหลดรายชื่อโมเดล')}
                   </button>
                 )}
                 {c.provider !== 'claude' &&
@@ -328,19 +386,19 @@ export function SettingsPanel({
                     <button
                       className="quiet"
                       disabled={Boolean(busy)}
-                      title="เลิกใช้ runtime ที่เลือกเอง"
+                      title={t('เลิกใช้ runtime ที่เลือกเอง')}
                       onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
                     >
-                      {c.provider === 'antigravity' ? 'Use installed Antigravity' : 'ใช้ตัวเชื่อมที่มากับแอป'}
+                      {c.provider === 'antigravity' ? 'Use installed Antigravity' : t('ใช้ตัวเชื่อมที่มากับแอป')}
                     </button>
                   ) : (
                     <button
                       className="quiet"
                       disabled={Boolean(busy)}
-                      title="สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง"
+                      title={t('สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง')}
                       onClick={() => void run(c.id, () => call('runtime', { id: c.id }))}
                     >
-                      เลือก runtime
+                      {t('เลือก runtime')}
                     </button>
                   ))}
                 {(c.ready || c.mode === 'subscription' || c.mode === 'oauth') && (
@@ -350,24 +408,24 @@ export function SettingsPanel({
                     title={
                       c.provider === 'antigravity'
                         ? 'Disconnect STeP; keep the native Antigravity account signed in'
-                        : 'ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง'
+                        : t('ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง')
                     }
                     onClick={() => void run(c.id, () => call('disconnect', { id: c.id }))}
                   >
-                    {c.provider === 'antigravity' ? 'Disconnect STeP' : 'ออกจากระบบ'}
+                    {c.provider === 'antigravity' ? 'Disconnect STeP' : t('ออกจากระบบ')}
                   </button>
                 )}
                 <button className="quiet danger-text" disabled={Boolean(busy)} onClick={() => setRemovingConnection(c)}>
-                  ลบ
+                  {t('ลบ')}
                 </button>
               </div>
             </div>
           ))}
           {removingConnection && (
             <ConfirmDialog
-              title="ลบการเชื่อมต่อนี้?"
+              title={t('ลบการเชื่อมต่อนี้?')}
               tone="danger"
-              confirmLabel="ลบการเชื่อมต่อ"
+              confirmLabel={t('ลบการเชื่อมต่อ')}
               onCancel={() => setRemovingConnection(null)}
               onConfirm={async () => {
                 try {
@@ -381,9 +439,15 @@ export function SettingsPanel({
             >
               {removingConnection.provider !== 'antigravity' && (
                 <p>
-                  {providerLabel(removingConnection.provider)} (
-                  {removingConnection.mode === 'api' ? 'API key' : removingConnection.mode === 'oauth' ? 'Claude Console OAuth' : 'บัญชี'})
-                  จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ
+                  {t(
+                    '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ',
+                    providerLabel(removingConnection.provider),
+                    removingConnection.mode === 'api'
+                      ? 'API key'
+                      : removingConnection.mode === 'oauth'
+                        ? 'Claude Console OAuth'
+                        : t('บัญชี'),
+                  )}
                 </p>
               )}
               {removingConnection.provider === 'antigravity' && (
@@ -391,7 +455,7 @@ export function SettingsPanel({
                   The native Antigravity Google account remains signed in. STeP does not remove credentials from its shared OS keyring.
                 </p>
               )}
-              <p className="small muted">งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น</p>
+              <p className="small muted">{t('งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น')}</p>
             </ConfirmDialog>
           )}
           <div className="connection-form">
@@ -403,7 +467,7 @@ export function SettingsPanel({
             />
             {choice.mode !== 'claude-code' && (
               <>
-                <p className="small muted">รายชื่อโมเดลจะโหลดจากบริการอัตโนมัติหลังเชื่อมต่อสำเร็จ แล้วเลือกได้จากกล่องพิมพ์</p>
+                <p className="small muted">{t('รายชื่อโมเดลจะโหลดจากบริการอัตโนมัติหลังเชื่อมต่อสำเร็จ แล้วเลือกได้จากกล่องพิมพ์')}</p>
                 <button
                   className="connect-primary"
                   disabled={Boolean(busy) || !providerChoiceReady(choice)}
@@ -419,7 +483,7 @@ export function SettingsPanel({
                         model: choice.model,
                       });
                       setChoice({ ...choice, key: '' });
-                      if (accountSignIn) {
+                      if (connectNow) {
                         setBusy(connection.id);
                         // Show the pending account immediately so progress and cancellation remain available.
                         await refresh();
@@ -430,10 +494,12 @@ export function SettingsPanel({
                 >
                   <Plus size={16} />
                   {busy
-                    ? 'กำลังเชื่อมต่อ…'
+                    ? t('กำลังเชื่อมต่อ…')
                     : accountSignIn
-                      ? `เชื่อมต่อ ${choice.provider === 'openai' ? 'ChatGPT' : 'Claude'}`
-                      : 'เพิ่มการเชื่อมต่อ'}
+                      ? t('เชื่อมต่อ {0}', choice.provider === 'openai' ? 'ChatGPT' : 'Claude')
+                      : choice.provider === 'gemini' && choice.mode === 'api'
+                        ? t('เชื่อมต่อ Gemini')
+                        : t('เพิ่มการเชื่อมต่อ')}
                 </button>
               </>
             )}
@@ -443,7 +509,7 @@ export function SettingsPanel({
       <div className="settings-save">
         {page === 'ai' || page === 'privacy' ? (
           <button className="quiet" onClick={close}>
-            กลับไปที่งาน
+            {t('กลับไปที่งาน')}
           </button>
         ) : (
           <button
@@ -456,7 +522,7 @@ export function SettingsPanel({
             }
           >
             <Check size={17} />
-            บันทึกและไปที่งาน
+            {t('บันทึกและไปที่งาน')}
           </button>
         )}
       </div>

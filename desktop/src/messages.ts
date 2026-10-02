@@ -1,6 +1,7 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
+import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
-export const errorText: Record<string, string> = {
+export const errorText: Record<string, string> = localized({
   PROVIDER_PROXY_UNAVAILABLE: 'ปลายทางนี้ยังไม่รองรับ proxy ที่นโยบายกำหนด กรุณาแจ้งผู้ดูแล',
   PROVIDER_DESTINATION_DENIED: 'ผู้ดูแลยังไม่รับรองปลายทาง AI นี้ กรุณาตรวจ Base URL ในนโยบาย',
   PROVIDER_URL_INVALID: 'Base URL ต้องเป็น HTTPS หรือ HTTP ของ localhost และไม่มีข้อมูลรับรองใน URL',
@@ -52,18 +53,22 @@ export const errorText: Record<string, string> = {
   PRIVATE_FILES_NOT_IGNORED: 'ตั้งค่าให้ไฟล์ความจำไม่เข้า Git ไม่สำเร็จ จึงยังไม่บันทึกความจำ กรุณาตรวจสิทธิ์พื้นที่งาน',
   MEMORY_LIMIT: 'ความจำในขอบเขตนี้ครบ 200 รายการแล้ว กรุณาตรวจและลบรายการที่ไม่ใช้',
   OCR_FILE_CHANGED: 'ไฟล์เปลี่ยนระหว่างอ่าน กรุณาแนบไฟล์อีกครั้ง',
+  MEMORY_PROPOSAL_LIMIT: 'มีข้อเสนอความจำรอยืนยัน 20 รายการแล้ว กรุณายืนยันหรือปัดในหน้าความจำก่อน',
   MEMORY_PRIVACY_BLOCKED: 'ข้อมูลนี้มีข้อมูลส่วนบุคคล ความลับ หรือเนื้อหาที่ต้องตรวจเพิ่มเติม จึงบันทึกเป็นความจำไม่ได้',
   MEMORY_INVALID: 'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ',
   MEMORY_NOT_FOUND: 'ไม่พบความจำในขอบเขตที่เลือก',
   MEMORY_TEAM_DISABLED: 'ผู้ดูแลยังไม่เปิดความจำร่วมสำหรับทีมนี้',
   VISION_DISABLED: 'ผู้ดูแลยังไม่อนุญาตการส่งภาพต้นฉบับให้ AI',
-  VISION_UNAVAILABLE: 'การเชื่อมต่อ AI นี้ยังไม่รองรับภาพ ใช้ข้อความ OCR แทน',
+  VISION_UNAVAILABLE: 'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ',
   INVALID_OUTPUT_STYLE: 'ไม่พบรูปแบบคำตอบที่เลือกในพื้นที่งานนี้',
   PROMPT_TOO_LONG: 'บริการ AI รับบริบทนี้ไม่ได้ ระบบย่อบริบทแล้วแต่ยังไม่พอ กรุณาแบ่งไฟล์หรือเริ่มงานใหม่',
   TOOL_TURN_LIMIT: 'เครื่องมือทำงานครบจำนวนรอบที่กำหนดแล้ว ตรวจ Changes และ Tasks ก่อนสั่งทำต่อ',
   TOOL_LOOP_DISABLED: 'ผู้ดูแลปิดวงจรเครื่องมืออัตโนมัติแล้ว',
   TOOL_DATA_DECLINED: 'ยังไม่ส่งผลเครื่องมือให้ AI เพราะไม่ได้รับความยินยอม',
   TOOL_OUTPUT_LIMIT: 'ผลเครื่องมือเกินขอบเขตการอ่าน ลองระบุช่วงที่เล็กลง',
+  PLAN_TASK_UNKNOWN: 'ยังไม่มีแผนที่อนุมัติในงานนี้ ใช้ "วางแผนก่อนลงมือ" ก่อน',
+  PLAN_NO_TASKS: 'แผนต้องมีขั้นงานอย่างน้อยหนึ่งข้อ',
+  WEB_SITE_DECLINED: 'ไม่ได้อนุญาตให้ AI อ่านเว็บไซต์นี้ AI จะทำงานต่อโดยไม่ใช้เว็บนั้น',
   WEB_ADDRESS_BLOCKED: 'เครื่องมือเว็บเข้าถึงได้เฉพาะปลายทางสาธารณะ',
   WEB_PROXY_FAILED: 'เชื่อมต่อผ่าน proxy ขององค์กรไม่ได้ กรุณาแจ้งผู้ดูแล',
   WEB_TIMEOUT: 'อ่านหน้าเว็บไม่เสร็จในเวลาที่กำหนด',
@@ -85,6 +90,7 @@ export const errorText: Record<string, string> = {
   ATTACH_NO_TEXT: 'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน',
   ATTACH_PAGES_WITHOUT_TEXT:
     'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก',
+  ATTACH_SCANNED_TOO_LONG: 'PDF สแกนยาวเกิน 20 หน้า แบ่งไฟล์แล้วแนบทีละส่วน',
   ATTACH_TIMEOUT: 'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง',
   ATTACH_READ_FAILED: 'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้',
   ATTACH_PARTIAL: 'อ่านเนื้อหาได้ไม่ครบ ระบบจึงยังไม่ส่ง',
@@ -98,7 +104,8 @@ export const errorText: Record<string, string> = {
   FILE_CONFLICT: 'ไฟล์ถูกแก้หลังเตรียม diff กรุณาอ่านและตรวจใหม่',
   INVALID_URL: 'กรุณาใส่ URL แบบ http หรือ https',
   BROWSER_LOAD_FAILED: 'เปิดเว็บไม่สำเร็จ กรุณาตรวจ URL และเครือข่าย',
-  BROWSER_CLOSED: 'หน้าต่าง Browser ถูกปิดแล้ว กรุณาเปิดอีกครั้ง',
+  BROWSER_CLOSED: 'หน้าเว็บนี้ถูกปิดแล้ว กรุณาเปิดอีกครั้ง',
+  BROWSER_TIMEOUT: 'หน้าเว็บตอบช้าเกินไป ลองโหลดใหม่แล้วลองอีกครั้ง',
   GIT_DIFF_UNAVAILABLE: 'อ่าน Git diff ไม่ได้ โฟลเดอร์นี้อาจไม่มี Git repository',
   TASK_LIMIT: 'มีงานหรือหน้าต่าง Browser ครบ 4 รายการแล้ว กรุณาหยุดหรือปิดบางรายการ',
   IMAGE_API_REQUIRED: 'การสร้างรูปต้องใช้ OpenAI หรือ Google ที่เชื่อมด้วย API key กรุณาเลือกบัญชีที่รองรับ',
@@ -146,7 +153,7 @@ export const errorText: Record<string, string> = {
   RUNTIME_EXITED: 'ตัวเชื่อม AI หยุดทำงานกลางคัน ลองใหม่อีกครั้ง',
   CLAUDE_CODE_NOT_FOUND: 'ไม่พบ Claude Code ในเครื่องนี้ ติดตั้งและลงชื่อเข้าใช้ Claude Code ก่อน',
   SKILL_NOT_FOUND: 'ไม่พบไฟล์ Skill นี้',
-  RUN_TIMEOUT: 'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ ลองใหม่หรือลดระดับ Reasoning',
+  RUN_TIMEOUT: 'AI ใช้เวลานานเกินกำหนดในขั้นตอนนี้ ลองใหม่หรือลดระดับการคิด',
   PROVIDER_TIMEOUT: 'บริการ AI ตอบช้าเกินกำหนด ลองใหม่อีกครั้ง',
   PYTHON_REQUIRED: 'ไม่พบ Python ที่รองรับ',
   OCR_COMPONENT_DOWNLOAD_FAILED: 'ดาวน์โหลดส่วนเสริม OCR ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่',
@@ -164,7 +171,8 @@ export const errorText: Record<string, string> = {
   CONTEXT_UNAVAILABLE: 'แหล่งอ้างอิงที่จำเป็นยังไม่พร้อม',
   EMPTY_RESULT: 'AI ยังไม่ได้ส่งร่างกลับมา กรุณาลองใหม่',
   INPUT_LIMIT: 'เนื้อหายาวเกินขอบเขต กรุณาแบ่งงานเป็นส่วนเล็กลง',
-};
+  ROUTE_CHECK_FAILED: 'ตรวจขอบเขตของข้อความนี้ไม่สำเร็จ จึงยังไม่ส่งให้ AI กรุณาส่งอีกครั้ง',
+});
 export const effortLabel: Record<string, string> = {
   none: 'None',
   minimal: 'Minimal',
@@ -177,13 +185,13 @@ export const effortLabel: Record<string, string> = {
 };
 export const explainError = (value: unknown) => {
   const text = String(value);
-  return Object.entries(errorText).find(([key]) => text.includes(key))?.[1] || 'ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่';
+  return Object.entries(errorText).find(([key]) => text.includes(key))?.[1] || t('ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่');
 };
 // First visible character: Thai marks stay attached to their base letter (ต้น → ต้, not ต + ้).
 export const initial = (name: string) =>
   [...new Intl.Segmenter('th', { granularity: 'grapheme' }).segment(name.trim())][0]?.segment.replace(/[ัิ-ฺ็-๎]/g, '') || '';
 export const shortcut = /Mac/i.test(navigator.platform) ? '⌘K' : 'Ctrl+K';
-export const statusText: Record<string, string> = {
+export const statusText: Record<string, string> = localized({
   idle: 'พร้อมเริ่ม',
   running: 'กำลังทำงาน',
   review: 'รอตรวจร่าง',
@@ -191,7 +199,7 @@ export const statusText: Record<string, string> = {
   error: 'ไม่สำเร็จ',
   cancelled: 'หยุดแล้ว',
   interrupted: 'งานหยุดเมื่อปิดแอป',
-};
+});
 
 export const providerLabel = (provider?: string) =>
   provider === 'antigravity'

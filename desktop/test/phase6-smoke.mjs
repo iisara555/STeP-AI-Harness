@@ -39,7 +39,10 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const baseUrl = `http://127.0.0.1:${server.address().port}/v1`;
 await writeFile(
   join(home, 'desktop-policy.json'),
+  // Strict consent: this smoke checks per-source run scopes.
   JSON.stringify({
+    pilot: false,
+    checks: { authority: true, privacy: true },
     features: { compatibleProviders: true },
     providers: { compatible: [{ name: 'Fixture', baseUrl, protocol: 'openai' }] },
   }),
@@ -57,6 +60,7 @@ db.prepare('INSERT INTO records VALUES(?,?,?)').run(
     onboarding: true,
     tourDone: true,
     consentedAt: new Date().toISOString(),
+    termsVersion: '2026-10-02',
   }),
 );
 db.close();
@@ -78,17 +82,20 @@ try {
   await composer.fill('Read the notes and prepare a preview EVAL_SCOPED');
   await composer.press('Enter');
   await expect(consent).toContainText('Synthetic public');
-  const scopeChoice = consent.getByRole('checkbox', { name: /อนุญาตผลการอ่านใหม่ในขอบเขตนี้/ });
+  const scopeChoice = consent.getByRole('checkbox', { name: /อนุญาตส่งข้อมูลในขอบเขตนี้/ });
   await expect(scopeChoice).not.toBeChecked();
   await scopeChoice.check();
   await consent.getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
   await expect(page.locator('.transmission-scope')).toContainText('fixture');
   await expect(consent).toContainText('draft.txt');
-  await expect(consent.getByRole('checkbox')).toHaveCount(0);
+  // Draft progress now offers its own opt-in run scope (UX audit F04); it must start unchecked.
+  await expect(consent.getByRole('checkbox')).toHaveCount(1);
+  await expect(consent).toContainText('สถานะการเตรียมร่าง');
+  await expect(consent.getByRole('checkbox')).not.toBeChecked();
   await mkdir('release/qa', { recursive: true });
   await page.screenshot({ path: 'release/qa/phase6-scoped-consent.png' });
   await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-  await expect(page.getByText('Scoped tool flow completed', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scoped tool flow completed', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.transmission-scope')).toHaveCount(0);
   await assert.rejects(readFile(join(workspace, 'draft.txt')));
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).approvals.length, 0);

@@ -5,6 +5,8 @@ import { ProviderFields, providerChoiceReady, initialChoice, type ProviderChoice
 import { providerLabel } from './messages';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
+import { t, teamName } from './i18n';
+import { Terms } from './terms';
 
 type Call = (method: string, input?: unknown) => Promise<any>;
 type Personality = NonNullable<Settings['personality']>;
@@ -14,20 +16,25 @@ const styles: { id: Personality; label: string; tone: string; sample: (user: str
     id: 'coworker',
     label: 'เพื่อนร่วมงาน',
     tone: 'เป็นกันเอง สุภาพ พูดธรรมชาติ',
-    sample: (u, a) => `สวัสดีครับ${u ? 'คุณ' + u : ''} ${a} พร้อมช่วยแล้ว วันนี้มีงานอะไรให้ลุยด้วยกันครับ`,
+    sample: (u, a) => t('สวัสดีครับ{0} {1} พร้อมช่วยแล้ว วันนี้มีงานอะไรให้ลุยด้วยกันครับ', u ? t('คุณ{0}', u) : '', a),
   },
   {
     id: 'professional',
     label: 'มืออาชีพ',
     tone: 'สุภาพ มีโครงสร้าง ชัดเจน',
-    sample: (u, a) => `เรียน${u ? 'คุณ' + u : 'ท่าน'} ${a} พร้อมให้การสนับสนุน กรุณาระบุงานที่ต้องการดำเนินการครับ`,
+    sample: (u, a) => t('เรียน{0} {1} พร้อมให้การสนับสนุน กรุณาระบุงานที่ต้องการดำเนินการครับ', u ? t('คุณ{0}', u) : t('ท่าน'), a),
   },
-  { id: 'concise', label: 'กระชับ', tone: 'ตอบสั้น ตรงประเด็น', sample: (u, a) => `${u ? u + ' ' : ''}พร้อมครับ บอกงานมาได้เลย — ${a}` },
+  {
+    id: 'concise',
+    label: 'กระชับ',
+    tone: 'ตอบสั้น ตรงประเด็น',
+    sample: (u, a) => (u ? t('{0} พร้อมครับ บอกงานมาได้เลย — {1}', u, a) : t('พร้อมครับ บอกงานมาได้เลย — {0}', a)),
+  },
   {
     id: 'custom',
     label: 'กำหนดเอง',
     tone: 'เขียนสไตล์ที่ต้องการ',
-    sample: (u, a) => `${a} จะคุยกับ${u ? 'คุณ' + u : 'คุณ'}ตามสไตล์ที่กำหนดไว้ครับ`,
+    sample: (u, a) => (u ? t('{0} จะคุยกับคุณ{1}ตามสไตล์ที่กำหนดไว้ครับ', a, u) : t('{0} จะคุยกับคุณตามสไตล์ที่กำหนดไว้ครับ', a)),
   },
 ];
 const steps = ['ต้อนรับ', 'เกี่ยวกับคุณ', 'ผู้ช่วย AI', 'เชื่อมต่อ AI', 'โฟลเดอร์และส่วนเสริม', 'เสร็จสิ้น'];
@@ -77,12 +84,13 @@ export function SetupWizard({
     [],
   );
 
-
   const save = (extra: object = {}) =>
     call('settings', { userName, team, assistant, personality, assistantTone: tone, theme: s.theme, ...extra });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const finish = (tour: boolean) =>
     run('finish', async () => {
       await save();
+      await call('acknowledgeData');
       await refresh();
       onDone(tour);
     });
@@ -101,74 +109,125 @@ export function SetupWizard({
   }, [step]);
 
   return (
-    <div ref={dialogRef} className="wizard" role="dialog" aria-modal="true" aria-label="ตั้งค่าเริ่มต้น STeP Desktop"
+    <div
+      ref={dialogRef}
+      className="wizard"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('ตั้งค่าเริ่มต้น STeP Desktop')}
       onKeyDown={e => {
         e.stopPropagation();
         if (e.key !== 'Tab') return;
-        const items = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]') || []).filter(el => el.getClientRects().length > 0);
+        const items = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]',
+          ) || [],
+        ).filter(el => el.getClientRects().length > 0);
         const index = items.indexOf(document.activeElement as HTMLElement);
         if (index < 0 || (e.shiftKey ? index === 0 : index === items.length - 1)) {
           e.preventDefault();
           (e.shiftKey ? items.at(-1) : items[0])?.focus();
         }
-      }}>
+      }}
+    >
       <div className="wizard-card">
-        <ol className="wizard-steps" aria-label="ขั้นตอน">
-          {steps.map((label, i) => ({ label, i })).filter(({ i }) => (customize ? [0, 1, 2, 3, 5] : [0, 3, 5]).includes(i)).map(({ label, i }, index) => (
-            <li key={label} className={i === step ? 'current' : i < step && !(i === 3 && !ready) ? 'done' : ''}>
-              <span>{i < step && !(i === 3 && !ready) ? <Check size={11} /> : index + 1}</span>
-              {label}{i === 3 && i < step && !ready ? ' · ทำภายหลัง' : ''}
-            </li>
-          ))}
+        <ol className="wizard-steps" aria-label={t('ขั้นตอน')}>
+          {steps
+            .map((label, i) => ({ label, i }))
+            .filter(({ i }) => (customize ? [0, 1, 2, 3, 5] : [0, 3, 5]).includes(i))
+            .map(({ label, i }, index) => (
+              <li key={label} className={i === step ? 'current' : i < step && !(i === 3 && !ready) ? 'done' : ''}>
+                <span>{i < step && !(i === 3 && !ready) ? <Check size={11} /> : index + 1}</span>
+                {t(label)}
+                {i === 3 && i < step && !ready ? t(' · ทำภายหลัง') : ''}
+              </li>
+            ))}
         </ol>
 
         {step === 0 && (
           <section className="wizard-body center">
+            <div className="language-switch" role="radiogroup" aria-label="Language">
+              {(
+                [
+                  ['th', 'ไทย'],
+                  ['en', 'English'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  role="radio"
+                  aria-checked={(s.language || 'th') === id}
+                  className={(s.language || 'th') === id ? 'active' : ''}
+                  onClick={() =>
+                    void run('language', async () => {
+                      await call('settings', {
+                        userName: s.userName || '',
+                        team: s.team || '',
+                        assistant: s.assistant || 'STeP Mate',
+                        theme: s.theme,
+                        language: id,
+                      });
+                      await refresh();
+                    })
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <img className="illustration wizard-art" src={launchArt} alt="" />
-            <h1>ยินดีต้อนรับสู่ STeP Desktop</h1>
-            <p className="muted">เชื่อมบัญชี AI แล้วเริ่มงานแรกได้เลย ชื่อผู้ช่วยและส่วนเสริมตั้งภายหลังได้</p>
+            <h1>{t('ยินดีต้อนรับสู่ STeP Desktop')}</h1>
+            <p className="muted">{t('เชื่อมบัญชี AI แล้วเริ่มงานแรกได้เลย ชื่อผู้ช่วยและส่วนเสริมตั้งภายหลังได้')}</p>
             <ul className="wizard-points">
-              <li>ใช้บัญชี AI ของคุณเอง ร่างและบทสนทนาเก็บในเครื่องนี้</li>
-              <li>ระบบปิดบังข้อมูลส่วนบุคคลที่ตรวจพบและถามก่อนส่งข้อมูลให้ AI</li>
-              <li>AI จัดทำร่างเท่านั้น การส่ง อนุมัติ และเบิกจ่ายเป็นหน้าที่ของคน</li>
+              <li>{t('ใช้บัญชี AI ของคุณเอง ร่างและบทสนทนาเก็บในเครื่องนี้')}</li>
+              <li>{t('ระบบปิดบังข้อมูลส่วนบุคคลที่ตรวจพบและถามก่อนส่งข้อมูลให้ AI')}</li>
+              <li>{t('AI จัดทำร่างเท่านั้น การส่ง อนุมัติ และเบิกจ่ายเป็นหน้าที่ของคน')}</li>
             </ul>
-            <button className="text-link" onClick={() => { setCustomize(true); setStep(1); }}>ตั้งชื่อและรูปแบบผู้ช่วยก่อน (ไม่บังคับ)</button>
+            <button
+              className="text-link"
+              onClick={() => {
+                setCustomize(true);
+                setStep(1);
+              }}
+            >
+              {t('ตั้งชื่อและรูปแบบผู้ช่วยก่อน (ไม่บังคับ)')}
+            </button>
           </section>
         )}
 
         {step === 1 && (
           <section className="wizard-body">
             <img className="illustration wizard-art small" src={teamworkArt} alt="" />
-            <h1>อยากให้เรียกคุณว่าอะไร</h1>
+            <h1>{t('อยากให้เรียกคุณว่าอะไร')}</h1>
             <label>
-              ชื่อเรียก
+              {t('ชื่อเรียก')}
               <input
                 autoFocus
                 value={userName}
                 maxLength={60}
-                placeholder="เช่น ต้น, พี่นุ่น"
+                placeholder={t('เช่น ต้น, พี่นุ่น')}
                 onChange={e => setUserName(e.target.value)}
               />
             </label>
             <label>
-              ทีมหลัก
+              {t('ทีมหลัก')}
               <select value={team} onChange={e => setTeam(e.target.value)}>
-                <option value="">ยังไม่แน่ใจ · เลือกภายหลัง</option>
-                {snapshot.teams.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.id.toUpperCase()} · {t.name}
+                <option value="">{t('ยังไม่แน่ใจ · เลือกภายหลัง')}</option>
+                {snapshot.teams.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {option.id.toUpperCase()} · {teamName(option)}
                   </option>
                 ))}
               </select>
             </label>
-            <p className="small muted">ทีมช่วยให้ระบบเลือกวิธีทำงานที่ตรงกับคุณได้แม่นขึ้น</p>
+            <p className="small muted">{t('ทีมช่วยให้ระบบเลือกวิธีทำงานที่ตรงกับคุณได้แม่นขึ้น')}</p>
           </section>
         )}
 
         {step === 2 && (
           <section className="wizard-body">
-            <h1>ตั้งค่าผู้ช่วย AI ของคุณ</h1>
-            <label>ชื่อผู้ช่วย</label>
+            <h1>{t('ตั้งค่าผู้ช่วย AI ของคุณ')}</h1>
+            <label>{t('ชื่อผู้ช่วย')}</label>
             <div className="choice-row">
               {assistantPresets.map(name => (
                 <button key={name} className={assistant === name ? 'choice active' : 'choice'} onClick={() => setAssistant(name)}>
@@ -176,14 +235,14 @@ export function SetupWizard({
                 </button>
               ))}
               <input
-                aria-label="ชื่อผู้ช่วยแบบกำหนดเอง"
-                placeholder="หรือพิมพ์ชื่อเอง"
+                aria-label={t('ชื่อผู้ช่วยแบบกำหนดเอง')}
+                placeholder={t('หรือพิมพ์ชื่อเอง')}
                 maxLength={60}
                 value={assistantPresets.includes(assistant) ? '' : assistant}
                 onChange={e => setAssistant(e.target.value || 'STeP Mate')}
               />
             </div>
-            <label>วิธีพูดคุย</label>
+            <label>{t('วิธีพูดคุย')}</label>
             <div className="style-grid">
               {styles.map(x => (
                 <button
@@ -191,16 +250,16 @@ export function SetupWizard({
                   className={personality === x.id ? 'style-card active' : 'style-card'}
                   onClick={() => setPersonality(x.id)}
                 >
-                  <strong>{x.label}</strong>
-                  <small>{x.tone}</small>
+                  <strong>{t(x.label)}</strong>
+                  <small>{t(x.tone)}</small>
                 </button>
               ))}
             </div>
             {personality === 'custom' && (
               <textarea
-                aria-label="สไตล์ที่ต้องการ"
+                aria-label={t('สไตล์ที่ต้องการ')}
                 maxLength={300}
-                placeholder="เช่น เรียกผมว่าพี่ ตอบเป็นข้อ ๆ และสรุปสิ่งที่ต้องทำท้ายคำตอบ"
+                placeholder={t('เช่น เรียกผมว่าพี่ ตอบเป็นข้อ ๆ และสรุปสิ่งที่ต้องทำท้ายคำตอบ')}
                 value={tone}
                 onChange={e => setTone(e.target.value)}
               />
@@ -214,19 +273,17 @@ export function SetupWizard({
                 <p>{style.sample(userName, assistant)}</p>
               </div>
             </div>
-            <p className="small muted">
-              บันทึกความชอบไว้ในเครื่อง เปลี่ยนภายหลังได้ในการตั้งค่า
-            </p>
+            <p className="small muted">{t('บันทึกความชอบไว้ในเครื่อง เปลี่ยนภายหลังได้ในการตั้งค่า')}</p>
           </section>
         )}
 
         {step === 3 && (
           <section className="wizard-body">
-            <h1>เชื่อมต่อ AI</h1>
-            <p className="muted">เลือกบริการที่คุณมีบัญชีอยู่แล้ว ระบบจะส่งคำขอสั้น ๆ หนึ่งครั้งเพื่อทดสอบ</p>
+            <h1>{t('เชื่อมต่อ AI')}</h1>
+            <p className="muted">{t('เลือกบริการที่คุณมีบัญชีอยู่แล้ว ระบบจะส่งคำขอสั้น ๆ หนึ่งครั้งเพื่อทดสอบ')}</p>
             {snapshot.connections.map(c => (
               <p key={c.id} className={c.ready ? 'connected small' : 'small muted'}>
-                <Plug size={13} /> {providerLabel(c.provider)} · {c.note}
+                <Plug size={13} /> {providerLabel(c.provider)} · {t(c.note)}
               </p>
             ))}
             <ProviderFields
@@ -252,7 +309,7 @@ export function SetupWizard({
                         model: choice.model,
                       });
                       setChoice({ ...choice, key: '' });
-                      setConnecting({ id: c.id, text: 'กำลังเริ่มเชื่อมต่อ' });
+                      setConnecting({ id: c.id, text: t('กำลังเริ่มเชื่อมต่อ') });
                       try {
                         setTested(await call('connect', { id: c.id }));
                       } finally {
@@ -264,27 +321,31 @@ export function SetupWizard({
                 >
                   {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
                   {busy === 'connect'
-                    ? 'กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์'
+                    ? choice.mode === 'api'
+                      ? t('กำลังเชื่อมต่อ…')
+                      : t('กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์')
                     : choice.provider === 'openai' && choice.mode === 'subscription'
-                      ? 'เชื่อมต่อ ChatGPT'
+                      ? t('เชื่อมต่อ ChatGPT')
                       : choice.provider === 'gemini' && choice.mode === 'subscription'
-                        ? 'เชื่อมต่อ Google'
-                        : choice.provider === 'claude' && choice.mode === 'oauth'
-                          ? 'เชื่อมต่อ Claude OAuth'
-                          : choice.provider === 'claude' && choice.mode === 'subscription'
-                            ? 'เชื่อมต่อ Claude'
-                            : 'เชื่อมต่อและทดสอบ'}
+                        ? t('เชื่อมต่อ Google')
+                        : choice.provider === 'gemini' && choice.mode === 'api'
+                          ? t('เชื่อมต่อ Gemini')
+                          : choice.provider === 'claude' && choice.mode === 'oauth'
+                            ? t('เชื่อมต่อ Claude OAuth')
+                            : choice.provider === 'claude' && choice.mode === 'subscription'
+                              ? t('เชื่อมต่อ Claude')
+                              : t('เชื่อมต่อและทดสอบ')}
                 </button>
                 {busy === 'connect' && connecting && (
                   <p className="connect-progress">
                     <LoaderCircle size={13} className="spin" />
                     {connecting.text}
                     <button className="text-link" onClick={() => void call('cancelConnect', { id: connecting.id })}>
-                      ยกเลิก
+                      {t('ยกเลิก')}
                     </button>
                   </p>
                 )}
-                {tested && <p className={tested.ready ? 'connected small' : 'small danger-text'}>{tested.note}</p>}
+                {tested && <p className={tested.ready ? 'connected small' : 'small danger-text'}>{t(tested.note)}</p>}
               </>
             )}
           </section>
@@ -293,11 +354,12 @@ export function SetupWizard({
         {step === 5 && (
           <section className="wizard-body center">
             <img className="illustration wizard-art" src={teamworkArt} alt="" />
-            <h1>{ready ? (userName ? `พร้อมแล้ว คุณ${userName}` : 'พร้อมเริ่มงานแล้ว') : 'บันทึกการตั้งค่าแล้ว'}</h1>
+            <h1>{ready ? (userName ? t('พร้อมแล้ว คุณ{0}', userName) : t('พร้อมเริ่มงานแล้ว')) : t('บันทึกการตั้งค่าแล้ว')}</h1>
             <p className="muted">
-              {ready ? `${assistant} พร้อมช่วยงานแรกของคุณ` : 'ยังไม่ได้เชื่อมต่อ AI เชื่อมบัญชีก่อนเริ่มคุยกับผู้ช่วย'}
+              {ready ? t('{0} พร้อมช่วยงานแรกของคุณ', assistant) : t('ยังไม่ได้เชื่อมต่อ AI เชื่อมบัญชีก่อนเริ่มคุยกับผู้ช่วย')}
             </p>
-            <p className="small muted">เริ่มจากงานตัวอย่าง หรือปรับผู้ช่วยและส่วนเสริมภายหลังในการตั้งค่า</p>
+            <p className="small muted">{t('เริ่มจากงานตัวอย่าง หรือปรับผู้ช่วยและส่วนเสริมภายหลังในการตั้งค่า')}</p>
+            <Terms privacyChecks={Boolean(snapshot.policy?.checks?.privacy)} accepted={termsAccepted} onChange={setTermsAccepted} />
           </section>
         )}
 
@@ -305,27 +367,40 @@ export function SetupWizard({
           {step > 0 && step < 5 && (
             <button className="quiet" disabled={Boolean(busy)} onClick={() => setStep(step === 3 ? (customize ? 2 : 0) : step - 1)}>
               <ArrowLeft size={15} />
-              ย้อนกลับ
+              {t('ย้อนกลับ')}
             </button>
           )}
           {step < 5 && (
             <button className="text-link" disabled={Boolean(busy)} onClick={skip}>
-              ข้าม ตั้งค่าทีหลัง
+              {t('ข้าม ตั้งค่าทีหลัง')}
             </button>
           )}
           <span className="spacer" />
           {step < 5 ? (
-            <button className={step === 3 && !ready ? 'quiet' : ''} disabled={Boolean(busy)} onClick={() => setStep(step === 0 ? 3 : step === 3 ? 5 : step + 1)}>
-              {step === 0 ? 'เริ่มตั้งค่า' : step === 3 && !ready ? 'ทำภายหลัง' : 'ถัดไป'}
+            <button
+              className={step === 3 && !ready ? 'quiet' : ''}
+              disabled={Boolean(busy)}
+              onClick={() => setStep(step === 0 ? 3 : step === 3 ? 5 : step + 1)}
+            >
+              {step === 0 ? t('เริ่มตั้งค่า') : step === 3 && !ready ? t('ทำภายหลัง') : t('ถัดไป')}
               <ArrowRight size={15} />
             </button>
           ) : (
             <>
-              <button className="quiet" disabled={Boolean(busy)} onClick={() => finish(false)}>
-                {ready ? 'เริ่มใช้งานเลย' : 'เข้าชมพื้นที่ทำงาน'}
+              <button
+                className="quiet"
+                disabled={Boolean(busy) || !termsAccepted}
+                title={termsAccepted ? undefined : t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม')}
+                onClick={() => finish(false)}
+              >
+                {ready ? t('เริ่มใช้งานเลย') : t('เข้าชมพื้นที่ทำงาน')}
               </button>
-              <button disabled={Boolean(busy)} onClick={() => ready ? finish(true) : setStep(3)}>
-                {ready ? 'ดูทัวร์แนะนำ' : 'เชื่อมต่อ AI'}
+              <button
+                disabled={Boolean(busy) || (ready && !termsAccepted)}
+                title={ready && !termsAccepted ? t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม') : undefined}
+                onClick={() => (ready ? finish(true) : setStep(3))}
+              >
+                {ready ? t('ดูทัวร์แนะนำ') : t('เชื่อมต่อ AI')}
                 <ArrowRight size={15} />
               </button>
             </>

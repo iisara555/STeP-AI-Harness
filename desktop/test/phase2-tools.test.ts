@@ -16,10 +16,12 @@ import { sheetWorker } from '../electron/sheets';
 import type { Harness } from '../electron/service';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
-async function fixture(mode: 'ask' | 'plan' = 'ask') {
+async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
   const root = await mkdtemp(join(tmpdir(), 'step-phase2-')),
     store = new Store(':memory:'),
     policy = defaultPolicy();
+  // These tests cover the transmission consent and privacy masking, which run when the organization turns them on.
+  policy.checks = { authority: true, privacy: true };
   store.put('settings', 'main', { workspace: root });
   const workbench = new Workbench(store, undefined, () => policy);
   let approve = true;
@@ -175,6 +177,7 @@ test('plan mode refuses browser interactions before invoking the connector', asy
 
 test('scoped file consent batches clean reads but re-prompts masked sources and different folders', async () => {
   const f = await fixture();
+  f.policy.pilot = false; // per-source scopes are the strict-mode behavior
   f.allowRun();
   await mkdir(join(f.root, 'other'));
   await writeFile(join(f.root, 'a.txt'), 'Public A');
@@ -218,6 +221,7 @@ test('disposing a loop cancels its pending transmission dialog without waiting f
 });
 test('administrator one-time setting disables scopes; web-result scopes do not authorize destinations', async () => {
   const f = await fixture();
+  f.policy.pilot = false; // per-source scopes are the strict-mode behavior
   f.allowRun();
   let host = await f.tools.host(f.scope);
   const request = { tool: 'web_fetch' as const, input: 'https://example.org/one' };
@@ -319,6 +323,9 @@ test('only routed Skills and registered references load; every tool passes hooks
     await assert.rejects(f.tools.execute({ tool: 'skill', input: 'unknown' }, f.scope), /SKILL_NOT_ROUTED/);
     await assert.rejects(f.tools.execute({ tool: 'reference', input: 'unknown' }, f.scope), /REFERENCE_UNAVAILABLE/);
     assert.match(JSON.stringify(await f.tools.execute({ tool: 'reference', input: 'registered' }, f.scope)), /Registered source/);
+    await writeFile(join(f.root, 'known.md'), '# Known\nIntro\n## First\nOne\n## Second\nTwo');
+    const one: any = await f.tools.execute({ tool: 'reference', input: 'registered', args: { section: 'Second' } }, f.scope);
+    assert.equal(one.text, '## Second\nTwo');
     const outline: any = await f.tools.execute({ tool: 'doc_outline', input: 'test.docx' }, f.scope).catch(() => null);
     assert.equal(outline, null);
     assert.ok(f.events.includes('pre_tool_use'));
@@ -327,6 +334,77 @@ test('only routed Skills and registered references load; every tool passes hooks
     const host = await f.tools.host(f.scope);
     await assert.rejects(host.check(), /AUTHORITY_REVIEW_REQUIRED/);
     await host.dispose?.();
+  } finally {
+    f.store.close();
+  }
+});
+test('the plan workflow asks the employee to approve the plan, keeps it on the task, and execute ticks it off', async () => {
+  const f = await fixture();
+  try {
+    const session = f.store.create('plan task', 'cc');
+    const scope = { ...f.scope, sessionId: session.id, workflow: 'plan' as const };
+    const before = f.requests();
+    const plan = '# เป้าหมาย: จัดสัมมนา\n- [ ] ร่างกำหนดการ\n- [ ] ขออนุมัติงบ (ผู้มีอำนาจ)';
+    const approved: any = await f.tools.execute({ tool: 'plan', input: plan }, scope);
+    assert.equal(approved.approved, true);
+    assert.equal(f.requests(), before + 1, 'asked even in pilot mode');
+    const saved = f.store.session(session.id).workPlan!;
+    assert.equal(saved.goal, 'จัดสัมมนา');
+    assert.deepEqual(
+      saved.tasks.map(t => t.status),
+      ['todo', 'todo'],
+    );
+    const executing = { ...scope, workflow: 'execute' as const };
+    const ticked: any = await f.tools.execute({ tool: 'plan_update', input: '1', args: { status: 'done' }, content: 'ส่งแล้ว' }, executing);
+    assert.deepEqual(ticked, { task: 1, status: 'done', remaining: 1 });
+    assert.deepEqual(f.store.session(session.id).workPlan!.tasks[0], { title: 'ร่างกำหนดการ', status: 'done', note: 'ส่งแล้ว' });
+    await assert.rejects(f.tools.execute({ tool: 'plan_update', input: '9', args: { status: 'done' } }, executing), /PLAN_TASK_UNKNOWN/);
+    await assert.rejects(f.tools.execute({ tool: 'plan_update', input: '2', args: { status: 'approved' } }, executing), /INVALID_INPUT/);
+    f.deny();
+    const declined: any = await f.tools.execute({ tool: 'plan', input: '# อื่น\n- [ ] งานใหม่' }, scope);
+    assert.equal(declined.approved, false);
+    assert.equal(f.store.session(session.id).workPlan!.goal, 'จัดสัมมนา', 'a declined plan leaves the approved one');
+  } finally {
+    f.store.close();
+  }
+});
+test('the AI reads a website only after the employee allows that site once in the task', async () => {
+  const f = await fixture();
+  f.policy.checks = { authority: false, privacy: false };
+  const fetchSite = (url: string) =>
+    f.tools.execute({ tool: 'web_fetch', input: url }, f.scope).then(
+      () => 'ok',
+      (e: Error) => e.message,
+    );
+  try {
+    const before = f.requests();
+    await fetchSite('https://no-such-host.example/one');
+    assert.equal(f.requests(), before + 1, 'a new site asks');
+    await fetchSite('https://no-such-host.example/two');
+    assert.equal(f.requests(), before + 1, 'the same site in the same task does not ask again');
+    await fetchSite('https://another-host.example/');
+    assert.equal(f.requests(), before + 2);
+    f.deny();
+    assert.equal(await fetchSite('https://third-host.example/'), 'WEB_SITE_DECLINED');
+  } finally {
+    f.store.close();
+  }
+});
+test('references and Skills load when the app is installed under a folder named STeP Desktop (Windows)', async () => {
+  const f = await fixture();
+  try {
+    const installed = join(f.root, 'Programs', 'STeP Desktop', 'resources', 'harness');
+    await mkdir(join(installed, 'docs'), { recursive: true });
+    await writeFile(join(installed, 'known.md'), 'Installed source');
+    await writeFile(join(installed, '.env'), 'TOKEN=x');
+    const harness = (f.tools as any).harness;
+    harness.root = installed;
+    harness.documentMetadata = async (ids: string[]) =>
+      ids.map(id => ({ id, path: id === 'secret' ? '.env' : 'known.md', status: 'active' }));
+    assert.match(JSON.stringify(await f.tools.execute({ tool: 'reference', input: 'registered' }, f.scope)), /Installed source/);
+    assert.match(JSON.stringify(await f.tools.execute({ tool: 'skill', input: 'known' }, f.scope)), /Installed source/);
+    // Sensitive files inside the harness stay closed.
+    await assert.rejects(f.tools.execute({ tool: 'reference', input: 'secret' }, f.scope), /INVALID_CONTEXT_PATH/);
   } finally {
     f.store.close();
   }
@@ -440,4 +518,31 @@ test('document outlines split headings and supply exact section text', () => {
   const parts = documentSections('# A\nBody\n# B\nMore');
   assert.equal(parts.length, 2);
   assert.equal(parts[1].text, '# B\nMore');
+});
+
+test('accept edits applies an AI edit with a snapshot; ask mode leaves it staged for review', async () => {
+  for (const mode of ['acceptEdits', 'ask'] as const) {
+    const f = await fixture(mode);
+    await writeFile(join(f.root, 'draft.md'), 'Before');
+    const result: any = await f.tools.execute({ tool: 'changes', input: 'draft.md', content: 'After' }, f.scope);
+    if (mode === 'acceptEdits') {
+      assert.equal(result.status, 'applied');
+      assert.ok(result.snapshotId, 'a snapshot can undo the edit');
+      assert.equal(await readFile(join(f.root, 'draft.md'), 'utf8'), 'After');
+      assert.equal(f.requests(), 0, 'no dialog for the edit');
+      assert.ok(f.events.includes('pre_tool_use') && f.events.includes('post_tool_use'), 'hooks still run');
+    } else {
+      assert.equal(result.status, 'staged-for-human-review');
+      assert.equal(await readFile(join(f.root, 'draft.md'), 'utf8'), 'Before');
+    }
+    f.store.close();
+  }
+});
+
+test('accept edits never runs a command without asking', async () => {
+  const f = await fixture('acceptEdits');
+  f.deny();
+  assert.equal(await f.tools.execute({ tool: 'terminal', input: 'echo should-not-run' }, f.scope), null, 'declined, not run');
+  assert.equal(f.requests(), 1, 'the command asked first');
+  f.store.close();
 });

@@ -21,7 +21,12 @@ try {
   const assertVisibleButton = async locator => {
     const bounds = await locator.boundingBox();
     assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 650, JSON.stringify(bounds));
-    assert.ok(await locator.evaluate(el => { const r = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x + r.width/2, r.y + r.height/2)); }));
+    assert.ok(
+      await locator.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      }),
+    );
   };
   await assertVisibleButton(wizard.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   for (let i = 0; i < 14; i++) {
@@ -34,12 +39,31 @@ try {
   await page.getByRole('button', { name: 'เชื่อมต่อ AI', exact: true }).click();
   await expect(wizard.getByRole('heading')).toHaveText('เชื่อมต่อ AI');
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
-  await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true }).click();
+  // The usage terms must be ticked before the workspace opens; ticking records the accepted version.
+  const enter = page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true });
+  await expect(enter).toBeDisabled();
+  await expect(wizard.getByLabel('ข้อตกลงการใช้งาน', { exact: true })).toContainText('ระบบไม่ได้ตรวจหรือปิดบังข้อมูลให้');
+  await wizard.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
+  await enter.click();
   await expect(wizard).toHaveCount(0);
-  await page.keyboard.press('Control+,');
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
+  await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
+  // Gemini API key sits on the main page: the connect button waits for a key, cost shows as API budget,
+  // and going back to ChatGPT drops the key.
+  await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+  const geminiConnect = page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true });
+  await expect(geminiConnect).toBeDisabled();
+  await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
+  await page.getByLabel('Gemini API key').fill('synthetic-gemini-key');
+  await expect(geminiConnect).toBeEnabled();
+  await assertVisibleButton(geminiConnect);
+  await page.getByRole('button', { name: 'ChatGPT', exact: true }).click();
+  await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+  await expect(page.getByLabel('Gemini API key')).toHaveValue('');
+  await page.getByRole('button', { name: 'ChatGPT', exact: true }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('claude');
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
@@ -54,7 +78,9 @@ try {
   await expect(page.locator('.composer textarea')).toHaveValue(/ให้ผู้ช่วยทำงานบนเว็บ/);
   await expect(page.locator('.composer textarea')).toBeFocused();
   assert.deepEqual(errors, []);
-  console.log('UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels and browser task entry.');
+  console.log(
+    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels and browser task entry.',
+  );
 } finally {
   await app.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

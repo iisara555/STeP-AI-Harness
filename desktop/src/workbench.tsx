@@ -3,6 +3,8 @@ import { Folder, FileText, RefreshCw, Play, Square, Globe, ArrowLeft, Download, 
 import type { DesktopAPI, Session } from './types';
 import type { ToolTab, BackgroundTask, FileChange, ToolRequest } from './tools';
 import { explainError } from './messages';
+import { t } from './i18n';
+import { BrowserDockView } from './browser';
 type Props = {
   api: DesktopAPI;
   tab: ToolTab;
@@ -21,8 +23,6 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
   const [command, setCommand] = useState(''),
     [tasks, setTasks] = useState<BackgroundTask[]>([]),
     [changes, setChanges] = useState<FileChange[]>([]);
-  const [url, setUrl] = useState('https://'),
-    [browser, setBrowser] = useState<{ id: string; url: string; title: string; text?: string } | null>(null);
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [git, setGit] = useState<{ status: string; diff: string } | null>(null);
@@ -74,7 +74,6 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
   useEffect(() => {
     if (!request) return;
     if (request.tool === 'terminal') setCommand(request.input);
-    if (request.tool === 'browser') setUrl(request.input);
     if (request.tool === 'files' || request.tool === 'changes') {
       setFile({ path: request.input, text: '' });
       setContent(request.content || '');
@@ -110,7 +109,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
         <div className="image-gallery">
           {session?.images?.slice(-10).map(image => (
             <figure key={image.id}>
-              {previews[image.id] ? <img src={previews[image.id]} alt={image.model} /> : <p>กำลังอ่านรูป…</p>}
+              {previews[image.id] ? <img src={previews[image.id]} alt={image.model} /> : <p>{t('กำลังอ่านรูป…')}</p>}
               <figcaption>
                 <span>{image.model}</span>
                 <button
@@ -122,7 +121,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   }
                 >
                   <Download size={14} />
-                  บันทึกรูป
+                  {t('บันทึกรูป')}
                 </button>
               </figcaption>
             </figure>
@@ -132,7 +131,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
         <>
           <div className="tool-context">
             <Folder size={14} />
-            <span title={workspace}>{workspace || 'เลือกโฟลเดอร์ทำงานเพื่อใช้ Files และ Terminal'}</span>
+            <span title={workspace}>{workspace || t('เลือกโฟลเดอร์ทำงานเพื่อใช้แท็บไฟล์งานและคำสั่งขั้นสูง')}</span>
             <button
               className="quiet"
               onClick={() =>
@@ -142,57 +141,41 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                 })
               }
             >
-              เลือกโฟลเดอร์
+              {t('เลือกโฟลเดอร์')}
             </button>
           </div>
           {tab === 'browser' && (
-            <div className="tool-section">
-              <h2>
-                <Globe size={20} />
-                เว็บ
-              </h2>
-              <button onClick={() => onBrowserTask(url)}>ให้ผู้ช่วยทำงานบนเว็บ</button>
-              <p className="small muted">ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น</p>
-              <p className="small muted">ลงชื่อเข้าใช้ด้วยตนเองในหน้าต่าง STeP ที่แยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์</p>
-              <h3>เปิดอ่านด้วยตนเอง</h3>
-              <form
-                onSubmit={e => {
-                  e.preventDefault();
-                  void action(async () => {
-                    setBrowser(await api.call('toolBrowser', { url }));
-                  });
-                }}
-              >
-                <input aria-label="Browser URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.com" />
-                <button disabled={busy}>เปิดเว็บ</button>
-              </form>
-              <p className="muted small">เปิดในหน้าต่าง Browser แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจและส่งเข้า Chat ได้</p>
-              {browser && (
-                <section className="browser-preview">
-                  <h3>{browser.title || browser.url}</h3>
-                  <small>{browser.url}</small>
-                  <div className="tool-actions">
-                    <button
-                      className="quiet"
-                      onClick={() =>
-                        void action(async () => {
-                          const data = await api.call('toolBrowserRead', { id: browser.id });
-                          setBrowser({ ...browser, ...data });
-                        })
-                      }
-                    >
-                      อ่านหน้าเว็บปัจจุบัน
-                    </button>
-                    {browser.text && <button onClick={() => onSource(`Web source: ${browser.url}\n\n${browser.text}`)}>ใช้ใน Chat</button>}
-                  </div>
-                  {browser.text && <pre>{browser.text}</pre>}
-                </section>
-              )}
-            </div>
+            <BrowserDockView
+              api={api}
+              suggested={request?.tool === 'browser' ? request.input : undefined}
+              run={fn => void action(fn)}
+              onSource={onSource}
+              onBrowserTask={onBrowserTask}
+              intro={
+                <>
+                  <h2>
+                    <Globe size={20} />
+                    {t('เว็บ')}
+                  </h2>
+                  <button onClick={() => onBrowserTask('https://')}>{t('ให้ผู้ช่วยทำงานบนเว็บ')}</button>
+                  <p className="small muted">
+                    {t(
+                      'ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น',
+                    )}
+                  </p>
+                  <p className="small muted">
+                    {t(
+                      'ลงชื่อเข้าใช้ด้วยตนเองในแท็บเว็บนี้ ซึ่งแยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์',
+                    )}
+                  </p>
+                  <h3>{t('เปิดอ่านด้วยตนเอง')}</h3>
+                </>
+              }
+            />
           )}
           {(tab === 'terminal' || tab === 'tasks') && (
             <div className="tool-section">
-              <h2>{tab === 'terminal' ? 'Terminal' : 'Background Tasks'}</h2>
+              <h2>{tab === 'terminal' ? t('คำสั่งขั้นสูง') : t('งานเบื้องหลัง')}</h2>
               {tab === 'terminal' && (
                 <form
                   onSubmit={e => {
@@ -214,12 +197,12 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   />
                   <button disabled={!workspace || !command.trim() || busy}>
                     <Play size={14} />
-                    ตรวจและรัน
+                    {t('ตรวจและรัน')}
                   </button>
                 </form>
               )}
-              <p className="muted small">งานทำต่อได้ระหว่างคุยใน Chat · ไม่รันซ้ำหลังเปิดแอปใหม่</p>
-              {tasks.length === 0 && <div className="tool-empty">ยังไม่มีงานที่รัน</div>}
+              <p className="muted small">{t('งานทำต่อได้ระหว่างคุยกับผู้ช่วย · ไม่รันซ้ำหลังเปิดแอปใหม่')}</p>
+              {tasks.length === 0 && <div className="tool-empty">{t('ยังไม่มีงานที่รัน')}</div>}
               {tasks.map(task => (
                 <section className="task-card" key={task.id}>
                   <header>
@@ -227,7 +210,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                     <span className={'task-state ' + task.status}>{task.status}</span>
                   </header>
                   <small>{task.cwd}</small>
-                  <pre>{task.output || 'กำลังรอ output…'}</pre>
+                  <pre>{task.output || t('กำลังรอ output…')}</pre>
                   <div className="tool-actions">
                     {task.status === 'running' && (
                       <button
@@ -240,7 +223,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         }
                       >
                         <Square size={13} />
-                        หยุดงาน
+                        {t('หยุดงาน')}
                       </button>
                     )}
                     {task.output && (
@@ -248,7 +231,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         className="quiet"
                         onClick={() => onSource(`Command: ${task.command}\nStatus: ${task.status}\n\n${task.output}`)}
                       >
-                        ใช้ผลใน Chat
+                        {t('ใช้ผลใน Chat')}
                       </button>
                     )}
                   </div>
@@ -263,7 +246,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   <ArrowLeft size={14} />
                 </button>
                 <code>{path || '/'}</code>
-                <button className="icon" aria-label="Refresh files" onClick={() => void action(() => list(path))}>
+                <button className="icon" aria-label={t('รีเฟรชรายการไฟล์')} onClick={() => void action(() => list(path))}>
                   <RefreshCw size={14} />
                 </button>
               </div>
@@ -295,15 +278,19 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                   setContent('');
                 }}
               >
-                สร้างไฟล์ใหม่
+                {t('สร้างไฟล์ใหม่')}
               </button>
               {file && (
                 <section className="file-editor">
                   <input aria-label="File path" value={file.path} onChange={e => setFile({ ...file, path: e.target.value })} />
                   {file.total !== undefined && file.total > file.text.length && (
                     <p className="muted small">
-                      แสดงช่วง {(file.offset || 0) + 1}–{(file.offset || 0) + file.text.length} จาก {file.total} ตัวอักษร
-                      ไฟล์ยาวเปิดอ่านเป็นช่วงได้
+                      {t(
+                        'แสดงช่วง {0}–{1} จาก {2} ตัวอักษร ไฟล์ยาวเปิดอ่านเป็นช่วงได้',
+                        (file.offset || 0) + 1,
+                        (file.offset || 0) + file.text.length,
+                        file.total,
+                      )}
                     </p>
                   )}
                   <textarea
@@ -323,7 +310,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         })
                       }
                     >
-                      อ่านช่วงถัดไป
+                      {t('อ่านช่วงถัดไป')}
                     </button>
                   )}
                   <div className="tool-actions">
@@ -336,7 +323,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         })
                       }
                     >
-                      ตรวจใน Changes
+                      {t('ตรวจใน Changes')}
                     </button>
                     <button
                       className="quiet"
@@ -346,7 +333,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         )
                       }
                     >
-                      ใช้ใน Chat
+                      {t('ส่งเข้าช่องคุย')}
                     </button>
                   </div>
                 </section>
@@ -355,9 +342,9 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
           )}
           {tab === 'changes' && (
             <div className="tool-section">
-              <h2>Changes</h2>
+              <h2>{t('รายการแก้ไข')}</h2>
               <button className="quiet" onClick={() => void action(async () => setSnapshots(await api.call('toolSnapshots')))}>
-                ดูไฟล์สำรอง
+                {t('ดูไฟล์สำรอง')}
               </button>
               {snapshots.map(s => (
                 <section className="change-card" key={s.id}>
@@ -372,7 +359,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         })
                       }
                     >
-                      เตรียมคืนไฟล์ใน Changes
+                      {t('เตรียมคืนไฟล์ใน Changes')}
                     </button>
                     <button
                       className="quiet"
@@ -383,7 +370,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         })
                       }
                     >
-                      ลบไฟล์สำรองนี้
+                      {t('ลบไฟล์สำรองนี้')}
                     </button>
                   </div>
                 </section>
@@ -413,7 +400,9 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
               </div>
               {request?.tool === 'changes' && (
                 <section className="change-card">
-                  <h3>ข้อเสนอจาก AI: {request.input}</h3>
+                  <h3>
+                    {t('ข้อเสนอจาก AI:')} {request.input}
+                  </h3>
                   <pre>{request.content || ''}</pre>
                   <button
                     onClick={() =>
@@ -423,25 +412,27 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                       })
                     }
                   >
-                    เตรียม diff
+                    {t('เตรียม diff')}
                   </button>
                 </section>
               )}
-              {!changes.length && !git && <div className="tool-empty">การแก้ไฟล์จาก Files หรือข้อเสนอจาก AI จะรอตรวจที่นี่</div>}
+              {!changes.length && !git && <div className="tool-empty">{t('การแก้ไฟล์จาก Files หรือข้อเสนอจาก AI จะรอตรวจที่นี่')}</div>}
               {changes.map(change => (
                 <section className="change-card" key={change.id}>
                   <h3>{change.path}</h3>
                   {change.path.toLowerCase().endsWith('.xlsx') && (
-                    <p className="small muted">ตรวจสูตร รูปแบบ และองค์ประกอบของตารางหลังบันทึก ไฟล์เดิมจะสำรองไว้ใน Changes</p>
+                    <p className="small muted">
+                      {t('ตรวจสูตร รูปแบบ และองค์ประกอบของตารางหลังบันทึก ไฟล์เดิมจะสำรองไว้ในแท็บรายการแก้ไข')}
+                    </p>
                   )}
                   <small>{change.root}</small>
                   <div className="change-diff">
                     <div>
-                      <h4>Before</h4>
+                      <h4>{t('ก่อนแก้')}</h4>
                       <pre className="removed">{change.before || '(new file)'}</pre>
                     </div>
                     <div>
-                      <h4>After</h4>
+                      <h4>{t('หลังแก้')}</h4>
                       <pre className="added">{change.after}</pre>
                     </div>
                   </div>
@@ -455,7 +446,7 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         })
                       }
                     >
-                      บันทึกที่ตรวจแล้ว
+                      {t('บันทึกที่ตรวจแล้ว')}
                     </button>
                     <button
                       className="quiet"
@@ -466,15 +457,15 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                         })
                       }
                     >
-                      ปฏิเสธ
+                      {t('ปฏิเสธ')}
                     </button>
                   </div>
                 </section>
               ))}
               {git && (
                 <section className="change-card">
-                  <h3>Git working tree</h3>
-                  <pre>{git.status || 'No changes'}</pre>
+                  <h3>{t('สถานะไฟล์ใน Git')}</h3>
+                  <pre>{git.status || t('ไม่มีการเปลี่ยนแปลง')}</pre>
                   <pre>{git.diff}</pre>
                 </section>
               )}

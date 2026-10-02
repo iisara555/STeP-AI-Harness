@@ -120,8 +120,13 @@ try {
   enforce(extraction.text.length <= limits.characters, 'text-size-limit');
   enforce(extraction.text.trim().length > 0, 'no-extractable-text');
   enforce(!extraction.text.includes('\0'), 'invalid-text-encoding');
-  const gate = evaluatePrivacyGate(extraction.text);
   const { text, incomplete, ...metadata } = extraction;
+  if (workerData.scan === false) {
+    parentPort.postMessage({ ...metadata, action: 'pass', classification: 'unscanned', containsPersonalData: false, findings: [],
+      requiresHumanConfirmation: false, extractionStatus: incomplete ? 'partial' : 'text-extracted', originalFileSanitized: false,
+      ...(includeRedacted && !incomplete ? { redactedText: text } : {}) });
+  } else {
+  const gate = evaluatePrivacyGate(extraction.text);
   const { redactedText, logSafeMetadata, hash, ...report } = gate;
   const action = gate.action === 'block-external' ? gate.action : document ? 'human-confirm' : gate.action;
   parentPort.postMessage({ ...report, ...metadata, action,
@@ -131,6 +136,7 @@ try {
     ...(includeRedacted && !incomplete && !gate.unresolvedIdentifiers && !['human-confirm', 'block-external'].includes(gate.action)
       ? { redactedText } : {}),
   });
+  }
 } catch (error) {
   const safeCodes = new Set(['invalid-document', 'page-limit', 'text-size-limit', 'archive-entry-limit',
     'archive-size-limit', 'xml-depth-limit', 'xml-entities-disabled', 'no-extractable-text', 'invalid-text-encoding']);

@@ -43,6 +43,9 @@ const allowed = new Set([
   'transmissionRevoke',
   'approvalRemove',
   'settings',
+  'acknowledgeData',
+  'consentDeclined',
+  'messageFeedback',
   'workspace',
   'connection',
   'runtime',
@@ -95,6 +98,7 @@ const allowed = new Set([
   'toolCancel',
   'toolBrowser',
   'toolBrowserRead',
+  'browserDock',
 ]);
 contextBridge.exposeInMainWorld('step', {
   call: (method: string, input: unknown) => {

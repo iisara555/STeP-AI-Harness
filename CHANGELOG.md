@@ -6,6 +6,165 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
+
+### Faster tool runs, clickable cards, questions above the composer
+
+- **Faster runs on an OpenAI (Codex) account:**
+  - Every tool turn of a run now continues on one `codex app-server` process and thread, sending only the new tool results (`ProviderSession`).
+  - **Before:** each turn started a new process and thread, and resent the whole prompt with every earlier result.
+  - The thread is closed when the run step ends. A changed or compacted prompt starts a fresh thread.
+  - Usage is counted per turn from the thread total.
+- **The assistant's browser sees clickable cards:** product cards and tiles that a page makes clickable with its own script are now click targets, alongside buttons and links.
+  - These are elements with a pointer cursor; for nested ones only the outermost counts.
+  - ARIA roles such as menuitem, tab and option are targets too.
+  - Pages are laid out at 1280×900 before the Web tab reports where to draw them. At 0×0, every block was zero wide and looked invisible, so the coffee cards in the report could not be clicked.
+- **A tool request in an unclosed fence runs:** a `step-tool` fence opened mid-sentence and never closed now runs. Before, it showed in the answer as raw JSON.
+- **Questions and the plan sit above the composer**, under the newest message, instead of between older messages.
+  - The question card answers with one click on an option, or its number key.
+  - It takes another answer as free text.
+  - It shows "ผู้ช่วยถาม" in the accent colour.
+- **Plain status lines:** the status line names what a tool is doing ("รอคำตอบจากคุณ", "กำลังทำงานบนเว็บ") instead of the tool's ID.
+
+### Native workflows: plan, execute, requirements, diagnose
+
+- **Built into the harness:** the composer's mode picker now offers four ways of working under **ขั้นตอนทำงาน**, as Claude Code's plan mode is built in rather than loaded as a Skill:
+  - วางแผนก่อนลงมือ (plan)
+  - ลงมือทำตามแผน (execute)
+  - เขียนเอกสารความต้องการ (requirements)
+  - วิเคราะห์ปัญหา (diagnose)
+- **Plan:** the assistant clarifies with up to 5 questions and breaks the work into tasks with checkpoints. The employee must approve the plan, in pilot mode too.
+- **Execute:** works through the plan task by task with the new `plan_update` tool, and leaves approvals, signatures and submissions to people.
+- **Plan card:** shows progress in the chat and has a "ลงมือทำตามแผน" button. Details: [Native workflows](docs/desktop-workflows.md).
+- **Requirements:** interviews, then writes testable requirements.
+- **Diagnose:** ranks hypotheses, tests them and names a root cause only with evidence.
+
+### Security fixes from the audit, and live text while working
+
+- **Reading a website asks once per site per task:** `web_fetch` reads a site only after the employee allows it, in every mode.
+  - **Before:** a page or PDF with hidden instructions could make the AI read workspace files and send them to any address in a URL. No dialog appeared, because `web_fetch` counted as read-only and privacy checks were off.
+- **Credentials are always masked:** passwords, tokens, API keys and signed URL parameters are masked even with privacy checks off. This covers messages, attachments, file reads and URLs.
+  - A credential that cannot be fully masked is withheld.
+  - A URL that carries one is never fetched.
+- **The assistant's browser opens public sites only:** localhost, private IPs and names that resolve to them are blocked, both for pages it opens and for anything those pages load.
+  - Intranet hosts can be listed in policy `network.privateHosts`.
+- **"Send to chat" in the Web tab:** reads the page in an isolated world, so the page cannot fake the text, and gives up after 10 seconds.
+- **Live text while working:** in chat, the text from every turn stays on screen while the assistant works, as in Claude, ChatGPT and Cursor. Before, each tool step cleared it.
+  - Tool requests (`step-tool` fences and JSON) are hidden from the live text.
+  - The AI's thinking shows open until the answer starts.
+  - The status line sits under the text.
+
+### Browser inside the main window
+
+- Web pages now open in the **Web tab of the right panel** instead of a pop-up window, as in Claude and Codex. This covers pages the assistant opens with `browser_control` (MIS included) and pages the employee opens.
+  - The tab strip marks the assistant's pages with an icon.
+  - Back, forward, reload and close are in the bar.
+  - A page the employee opens can be sent to the chat or handed to the assistant.
+  - When the assistant opens a page, the panel switches to the Web tab.
+- Each page is a sandboxed `WebContentsView` with its own session (`electron/browser-dock.ts`), drawn over the space the window reserves for it.
+  - A dialog, notification, menu or tour card that overlaps that space hides the page and shows a still picture of it, so the page never covers an approval.
+  - A dialog beside the panel leaves the page live, so it can be checked before approving.
+- **Sign-in loop fixed:** after the employee signed in to MIS and said "เข้าสู่ระบบแล้ว", the assistant opened a new tab with no sign-in and asked to sign in again. The AI keeps no tab IDs between messages, so:
+  - opening a site the task already has open now returns that tab with its sign-in, without asking again (`reused: true`);
+  - all tabs of a task share one session.
+- The "browser use failed" report on Windows (`INVALID_CONTEXT_PATH` when loading the `browser-form-assistant` Skill) is the path fix below.
+
+### Scanned PDFs, opening documents on Windows, and the knowledge registry
+
+- **Scanned PDFs:** a PDF with no text layer, or with some pages that are only pictures, now goes to the AI as page images when privacy checks are off (the default). Before, it was refused with "ไฟล์นี้ไม่มีตัวอักษรให้อ่าน" unless the local OCR component was installed.
+  - pdf.js draws up to 20 pages in a hidden, sandboxed window that can load only pdf.js itself.
+  - The chip reads "PDF สแกน · ส่งเป็นภาพ N หน้าให้ AI อ่าน". A longer scan asks to split the file.
+  - The connected model must read images.
+- **Opening documents and Skills on Windows:** fixed. The installer puts the app under a folder named `STeP Desktop`, the same name the sensitive-path patterns use for the app's own data folder. As a result, every `reference` and `skill` read failed: the AI saw only excerpts and reported that "the full document could not be opened". Those patterns now check only the part of the path inside the harness.
+- **STeP knowledge registry:** scanned from the registered document files, like the Skill registry. The AI sees every readable document with:
+  - its ID, title and owner;
+  - its first line of purpose;
+  - its section headings.
+  When the matched excerpts do not hold the answer, the AI opens the right document, or one section of it, with `reference(input=ID, args.section=heading)`. It no longer reports the information as missing. `reference` also accepts a document's path or title.
+- **Five more registered documents:** the administrator confirmed them as published for every employee (`sensitivity: public`):
+  - `step-teams-directory` (`docs/teams.md`)
+  - `step-public-profile`
+  - `project-code-scheme` (the owner of the table is still unconfirmed)
+  - `step-context`
+  - `step-ai-employee-guide` (`docs/employee-guide.md`)
+
+  The HR Service Channels title now says "ติดต่อฝ่ายบุคคล", so HR contact questions still find it first.
+
+### Desktop permission modes and answer feedback
+
+- Closer to opencode and Claude Code:
+  - **One everyday mode:** Chat is the everyday mode. The work-mode picker offers Chat and Image only. Chat answers can be opened in Output, and the AI can stage file changes. The separate drafting mode stays for tasks already in it and for multi-worker drafting.
+  - **Web search:** with tools, the AI decides when to search the web. It calls `web_search` for public facts that change over time, and the results still appear as source links under the answer. The app no longer searches ahead or shows "Web Search อัตโนมัติ" while typing. The host search remains only for runs without tools.
+  - **Full auto:** offered by default (`features.autoMode: true`, `auto` in the default modes). The default mode is still "ask before edits". In Full auto, terminal commands still ask unless the administrator turns on `shellByAi`.
+- Work like a general AI harness (Claude Code, opencode), keeping STeP's knowledge and Skills:
+  - **Skill registry:** the AI sees a registry of STeP Skills, one line each with name and description. It loads only the Skill a request needs with the `skill` tool, instead of the app choosing a Skill or reading them all. The status line names the Skill or document being read.
+  - **Images:** images go to vision models by default (`features.vision: true`). With privacy checks off, an image is sent as it is, with no local OCR service needed.
+  - **No dialogs at send:** with privacy checks off, the only question when sending is the one-time usage terms. Images, pasted sources and multi-worker runs no longer ask.
+- Ask each employee to tick the **usage terms** once, instead of the app checking for them.
+  - The terms appear on the last setup step. If setup was skipped, they appear at the first send, where the button reads "รับทราบและส่ง".
+  - Starting or sending stays disabled until the box is ticked.
+  - The terms cover:
+    - data going to the AI provider unscanned;
+    - not sending passwords, keys, ID or account numbers, health or salary data, or other people's personal data;
+    - approvals and signing staying with people;
+    - checking answers before use;
+    - history staying on the computer.
+  - The accepted version is saved. Changing `TERMS_VERSION` asks everyone again, so people who accepted the earlier text, which promised masking, see the new terms once.
+- Turn off the organization checks by default (`checks: { "authority": false, "privacy": false }`).
+  - **Authority:** requests about approving, signing on someone's behalf, issuing document numbers or submitting are answered as help instead of blocked. The AI cannot perform these acts.
+  - **Privacy:** nothing is scanned or masked, and there is no dialog before data goes to the AI or a web service. This covers text, attachments, memories, tool results and web queries. National ID numbers, names, phone numbers, passwords and API keys are sent as typed.
+  - Side-effect tools (file writes, commands, browser actions, MCP) still ask each time.
+  - Administrators can turn either check back on in the policy file. See [organization checks](docs/desktop-policy.md#organization-checks-checks).
+- Turn off the local Router's Skill selection in STeP Desktop by default (`features.autoRouting: false`).
+  - Every message goes straight to the AI with the matching organization documents.
+  - The app no longer asks "งานนี้ตรงกับข้อนี้ไหม" and never picks a Skill or Playbook by itself. Employees pick a Skill with `/` when they want one.
+  - Authority checks (approving, signing on someone's behalf, issuing document numbers), Skill scope rules and the privacy gate still run on every message.
+  - Administrators can turn automatic routing back on. The CLI is unchanged.
+- Register the executive board as an organization document (`step-executive-board`, `docs/step-executive-board.md`). It is built from the maintainer-confirmed `executiveOversight` in `manifest/organization.yaml` (checked 2026-09-20). "ผู้อำนวยการ STeP ชื่ออะไร", "ผอ.คือใคร", "รองผู้อำนวยการมีใครบ้าง" and "ทีม HD อยู่ภายใต้การกำกับของใคร" are now answered from it instead of a web search, which had returned a former director. A test keeps the document in step with `organization.yaml`.
+- Stop the clarifying question from looping. Answering "ไม่ตรง" to "งานนี้ตรงกับข้อนี้ไหมครับ?" asked the same question again. A declined menu is never offered again. In chat, once the employee has answered a clarifying question without picking an option, the assistant helps from the conversation. Approving, submitting or signing still asks.
+- Remove the routing notice under the text box while typing ("ต้องตอบคำถามแยกประเภทงานก่อน · ต้องตรวจ: …"). It looked like an error before anything was sent. The send itself still asks when it must. Only organizations that set prices see the cost estimate there.
+- Fix answers that showed a raw tool request (`{"tool": "reference", ...}`) instead of the answer. Some models, such as Gemini Flash-Lite, put the request in a ```json fence instead of ```step-tool. A reply that is only one valid tool request (json fence, unlabelled fence or bare JSON) now runs the tool through the same checks, so the AI reads the document and answers. A JSON example inside a longer answer is never treated as a request.
+- Stop asking "ใช้บริบทที่บันทึกไว้กับงานนี้?" on every message in standard consent. Saved preferences (`ASSISTANT.md`, `STEP.md`, `AGENTS.md`, output style) and confirmed memories are sent like custom instructions and memory in Claude and ChatGPT. They still pass the privacy check when loaded. Strict mode (`"pilot": false`) still asks, and now lists the file and memory names instead of raw JSON.
+
+- Mac installer builds now open the `.dmg` and launch the packaged app (`test/packaged-launch-smoke.mjs`). The smoke checks that setup and IPC work and that the organization documents and Skills are bundled.
+- Requests to work in **STeP MIS** now open the STeP Browser instead of being answered from memory or the web. The router treats them as general help instead of a clarifying menu. The AI is told to open `https://mis.step.cmu.ac.th/` (from `manifest/services.yaml`) with the browser tool. The employee signs in themselves, and every click or fill still asks. The AI never submits, approves or e-signs. Approving in MIS is still blocked.
+- Keep the waiting spinner turning when the OS reduces motion, so a wait never looks frozen.
+- Answer from STeP's own documents before the web or general knowledge.
+  - **Before:** general questions carried no organization documents, and the AI was never told which document IDs existed. Documents kept as a summary index (HR welfare 2569, career path, HR service channels, facility inventory) could not be read by the `reference` tool, so even `hr-policy-lookup` answered without the welfare data.
+  - **Now:** every chat and draft turn includes the best-matching document sections, the "context used" list names them, and the AI is told to cite them or say the documents do not cover the question. Restricted and missing documents are never read. See [organization knowledge first](docs/desktop-context-memory.md#organization-knowledge-first).
+- Fix Gemini API key in Settings appearing stuck: "เชื่อมต่อ Gemini" saved the key without testing it, so the connection stayed "not tested" with no progress. It now tests the key right away and ends ready or with a clear error (for example a full quota). A new smoke (`gemini-api-smoke`) runs the bundled Gemini CLI against a local fake API.
+- Lay out the Chat tab like Claude Desktop:
+  - **Text box:** starts at one line and grows as you type.
+  - **Bottom-left:** `+` (attach), then compact work-mode and permission pickers.
+  - **Bottom-right:** AI and model pickers, then send.
+  - **Under each answer:** icon buttons for copy, open in Output, 👍, 👎 and remember.
+  - **Task commands:** duplicate, export, memory and scheduled jobs move into a ⌄ menu next to the task title.
+- Offer four modes in the composer, as in Claude Code and ChatGPT:
+  - **Ask before edits:** every edit and command asks first.
+  - **Accept edits** (new, on by default): AI edits are applied right away, with a snapshot to undo them; commands still ask.
+  - **Full auto:** an administrator must enable it.
+  - **Plan:** read only.
+- Add **Good / Needs fixing / Remember this** under each answer.
+  - Ratings stay on this computer.
+  - A "needs fixing" note becomes a feedback memory proposal that the person confirms.
+  - "Remember this" saves an edited memory after a dialog.
+  - Text with personal data or secrets is never remembered.
+
+### Desktop standard consent (formerly pilot mode)
+
+- Make fewer confirmation dialogs the default after the pilot trial; administrators can set `"pilot": false` for strict mode. Standard mode cuts routine dialogs: plain text attachments, sensitive words with no person identifier (now a warning), plan approval, and per-source tool-result consent (one answer per run). The first-send dialog becomes a one-time acknowledgment in the setup wizard.
+- Keep the floors in both modes: credentials and sensitive data tied to a person are blocked, national ID numbers are masked, images and multi-worker runs still ask, and file writes, commands and browser actions still ask through ToolGate. See [pilot mode](docs/desktop-policy.md#pilot-mode).
+- Follow Claude and ChatGPT for remembered approvals: only a reviewed file write can be remembered, for the same file in the same workspace. Commands, the sandbox and MCP calls ask every time, and older remembered rules for them are ignored. Administrators can turn remembering off with `permission.rememberApprovals: false`.
+- Count consent prompts, confirmations and cancellations per task on this computer (counts and tool names only) and show them in Settings → Organization policy.
+- Stop a follow-up message when its route check fails instead of sending it without the authority check.
+
+### Desktop English UI, new welcome and team starters
+
+- Add a Thai/English switch on the first setup step and in Settings → Appearance & language. Thai stays the source text; English comes from `desktop/src/locales/en.ts`, and a unit test fails when wrapped Thai text has no English entry. Main-process dialogs, statuses and connection notes follow the same setting; prompts sent to the AI are unchanged. See [desktop i18n](docs/desktop-i18n.md).
+- Rewrite the chat welcome around "AI drafts, you decide" with three trust points, and show three first tasks for each of the 21 STeP teams (general ones when no team is set), each checked against the router.
+- Offer **Gemini · API key** on the main connection page (setup wizard and Settings) with a link to Google AI Studio, instead of only under admin settings.
+- Rename the conversation toolbar's scheduled-jobs button to "งานตามรอบ", polish the workbench tabs, composer and consent labels, and fix Prettier drift that failed desktop CI.
+
 ### Experimental Gemini via Antigravity
 
 - Add a separate personal Google connection, native NDJSON adapter, Gemini-only catalog and per-invocation configuration isolation. Preserve existing Gemini API and organization CLI routes.

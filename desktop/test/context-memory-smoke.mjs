@@ -45,7 +45,11 @@ await writeFile(join(workspace, 'pii.png'), png);
 await writeFile(join(workspace, 'scan.pdf'), minimalPdf(['']));
 await writeFile(
   join(home, 'desktop-policy.json'),
-  JSON.stringify({ features: { toolLoop: false, vision: true }, prices: { 'openai:*': { input: 1, output: 2 } } }),
+  JSON.stringify({
+    checks: { authority: true, privacy: true },
+    features: { toolLoop: false, vision: true },
+    prices: { 'openai:*': { input: 1, output: 2 } },
+  }),
 );
 await writeFile(
   executable,
@@ -70,6 +74,7 @@ put('settings', 'main', {
   onboarding: true,
   tourDone: true,
   consentedAt: new Date().toISOString(),
+  termsVersion: '2026-10-02',
 });
 put('connection', 'fake', {
   id: 'fake',
@@ -114,7 +119,10 @@ try {
   let page = await child.firstWindow();
   page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole('button', { name: 'ความจำ', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'ความจำ', exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.getByRole('menu').waitFor({ state: 'detached' });
   await page.locator('.composer textarea').fill('/memory');
   await page.keyboard.press('Enter');
   const memory = page.getByRole('alertdialog', { name: 'ความจำและรูปแบบคำตอบ' });
@@ -148,13 +156,11 @@ try {
   assert.ok(rejected.includes('MEMORY_PRIVACY_BLOCKED'));
   await page.locator('.composer textarea').fill('Summarize earlier notes briefly.');
   await page.keyboard.press('Enter');
-  const contextConsent = page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?' });
-  await contextConsent.waitFor();
-  await expect(contextConsent).toContainText('Source preference');
-  await contextConsent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === 'source').status)
     .toBe('review');
+  // Standard mode sends saved preferences and confirmed memories without a dialog, like Claude and ChatGPT.
+  await expect(page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?' })).toHaveCount(0);
   let state = await page.evaluate(() => window.step.call('snapshot'));
   const source = state.sessions.find(s => s.id === 'source');
   assert.equal(source.compaction.method, 'summary');
@@ -169,7 +175,8 @@ try {
   await page.getByPlaceholder('ค้นหางานหรือเนื้อหา').fill('Distinct source');
   await expect(page.locator('.session-open')).toHaveCount(1);
   await page.getByPlaceholder('ค้นหางานหรือเนื้อหา').fill('');
-  await page.getByRole('button', { name: 'Fork บทสนทนา', exact: true }).click();
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'ทำสำเนาเป็นงานใหม่', exact: true }).click();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.length).toBe(2);
   state = await page.evaluate(() => window.step.call('snapshot'));
   const fork = state.sessions.find(s => s.parentId === 'source');
@@ -184,7 +191,8 @@ try {
     },
     { home },
   );
-  await page.getByRole('button', { name: 'ส่งออก JSON', exact: true }).click();
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'ส่งออก JSON', exact: true }).click();
   await expect
     .poll(async () =>
       readFile(join(home, 'conversation.json'), 'utf8')
@@ -194,7 +202,8 @@ try {
     .toBe(fork.id);
   const exported = JSON.parse(await readFile(join(home, 'conversation.json'), 'utf8'));
   assert.equal(exported.connectionId, undefined);
-  await page.getByRole('button', { name: 'ส่งออก Markdown', exact: true }).click();
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'ส่งออก Markdown', exact: true }).click();
   await expect
     .poll(async () =>
       readFile(join(home, 'conversation.md'), 'utf8')
@@ -241,10 +250,11 @@ try {
       }),
     { id: fork.id, aid: image.id, consent: send.consent.token },
   );
-  await contextConsent.waitFor();
-  await contextConsent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+  // The vision run takes about 2 s here and longer on the Windows runner; allow more than the 5 s default.
   await expect
-    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === fork.id).status)
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === fork.id).status, {
+      timeout: 30000,
+    })
     .toBe('review');
   calls = (await readFile(audit, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.equal(calls.at(-1).images, 1);
@@ -275,7 +285,8 @@ try {
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.length).toBe(2);
   const resumed = await page.evaluate(id => window.step.call('sessionResume', { id }), fork.id);
   assert.ok(resumed.messages.length > 24);
-  await page.getByRole('button', { name: 'ความจำ', exact: true }).click();
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'ความจำ', exact: true }).click();
   const resumedMemory = page.getByRole('alertdialog', { name: 'ความจำและรูปแบบคำตอบ' });
   await resumedMemory.getByRole('button', { name: 'ลบความจำ', exact: true }).click();
   await expect(resumedMemory).toContainText('ยังไม่มีความจำที่ยืนยันแล้ว');

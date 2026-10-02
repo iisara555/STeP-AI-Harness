@@ -221,6 +221,60 @@ nav button,
   min-width: 0;
   flex: 1;
 }
+.topbar-title {
+  position: relative;
+}
+.topbar-heading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.topbar-heading .icon {
+  padding: 3px;
+  flex: none;
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.title-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 41;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+.title-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-content: flex-start;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.title-menu button:hover:not(:disabled),
+.title-menu button:focus-visible {
+  background: var(--hover);
+}
+.title-menu hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 2px;
+}
 .topbar strong {
   display: block;
   font-size: 14px;
@@ -316,7 +370,7 @@ nav button,
   margin-top: 15px;
 }
 .composer-area {
-  padding: 0 26px 18px;
+  padding: 0 26px 12px;
 }
 .composer {
   border: 1px solid var(--line-strong);
@@ -325,31 +379,51 @@ nav button,
 }
 .composer textarea {
   display: block;
-  resize: vertical;
+  /* Starts at one line and grows with the text, up to the max height. */
+  field-sizing: content;
+  resize: none;
   width: 100%;
-  min-height: 86px;
+  min-height: 44px;
   max-height: 200px;
   border: 0;
   background: transparent;
-  padding: 15px 17px;
+  padding: 10px 16px 6px;
   outline: none;
 }
 .composer-tools {
   display: flex;
   align-items: center;
-  padding: 6px 10px 10px;
-  gap: 7px;
+  flex-wrap: wrap;
+  padding: 2px 8px 8px;
+  gap: 4px;
 }
-.composer-tools select {
-  font-size: 11px;
-  max-width: 230px;
-  border: 0;
+/* Compact pickers like Claude Desktop: as wide as the chosen option, highlighted on hover. */
+.composer-tools .pill-select {
+  field-sizing: content;
+  min-width: 0;
+  max-width: 190px;
+  font-size: 12.5px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: var(--muted);
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.composer-tools .pill-select:hover:not(:disabled),
+.composer-tools .pill-select:focus-visible {
+  background: var(--hover);
+  color: var(--text);
 }
 .composer-tools .model-select {
   color: var(--text);
-  max-width: 200px;
+  max-width: 170px;
+}
+.composer-add {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px;
 }
 .auth-code {
   display: flex;
@@ -362,10 +436,10 @@ nav button,
   flex: 1;
 }
 .send {
-  padding: 7px;
+  padding: 6px;
   border-radius: 8px;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
 }
 .stop {
   background: var(--danger);
@@ -374,7 +448,7 @@ nav button,
 .composer-note {
   text-align: center;
   font-size: 10px;
-  margin-top: 10px;
+  margin-top: 6px;
   color: var(--muted);
 }
 .text-link {
@@ -787,6 +861,13 @@ nav button,
     transition: none !important;
   }
 }
+/* A loading spinner is progress information, not decoration: keep it turning, slower, when motion is reduced
+   (Windows "Show animations" off, remote desktops), so a wait never looks frozen. */
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: spin 2.4s linear infinite !important;
+  }
+}
 .format-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -869,6 +950,10 @@ nav button,
   white-space: nowrap;
 }
 .session-open small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 11px;
 }
@@ -2177,8 +2262,10 @@ nav .count {
 }
 .session-filter button {
   flex: 1;
-  padding: 5px 8px;
+  min-width: 0;
+  padding: 5px 6px;
   font-size: 12px;
+  white-space: nowrap;
   background: transparent;
   color: var(--muted);
 }
@@ -2209,20 +2296,26 @@ nav .count {
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
-.composer-mode select {
-  margin-left: auto;
-  width: auto;
-  max-width: 240px;
-  font-size: 12px;
-}
 /* Context and local memory controls. */
 .context-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
-  padding: 10px 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--border);
+}
+/* Secondary task actions stay light so the conversation, not the toolbar, leads the page. */
+.context-bar > button {
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-color: transparent;
+  color: var(--muted);
+}
+.context-bar > button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+  filter: none;
 }
 .memory-editor {
   display: grid;
@@ -2248,4 +2341,337 @@ nav .count {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
+}
+/* Language choice on the first wizard step: small, visible before anything else. */
+.language-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  background: var(--hover, var(--selected));
+}
+.language-switch button {
+  padding: 4px 12px;
+  font-size: 12.5px;
+  background: transparent;
+  color: var(--muted);
+}
+.language-switch button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px #0001;
+}
+/* Welcome: a short promise, team-specific first tasks right away, then three trust points. */
+.welcome {
+  max-width: 560px;
+  padding-top: 24px;
+}
+.welcome .welcome-art {
+  width: 84px;
+  height: 84px;
+}
+.welcome h1 {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+.welcome .welcome-lede {
+  margin: 22px 0 0;
+  font-size: 13px;
+}
+.welcome h1 + .suggestions-label {
+  margin-top: 18px;
+}
+/* On shorter windows the starters matter more than the illustration. */
+@media (max-height: 900px) {
+  .welcome .welcome-art {
+    display: none;
+  }
+}
+.welcome-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 18px 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.welcome-trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.welcome-trust svg {
+  color: var(--accent-ink);
+}
+.welcome .suggestions-label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.suggestions button {
+  align-items: flex-start;
+  line-height: 1.6;
+  text-align: left;
+}
+.suggestions button > svg:first-child {
+  margin-top: 3px;
+  color: var(--accent-ink);
+  flex-shrink: 0;
+}
+.starter-tag {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+/* Gemini API key on the main connection page: key, where to get one, and who pays. */
+.gemini-key {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.gemini-key button {
+  justify-self: start;
+}
+.pilot-note,
+.wizard-ack {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  line-height: 1.6;
+}
+.wizard-ack {
+  max-width: 520px;
+  margin: 12px auto 0;
+}
+.feedback-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+.feedback-actions button.active {
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+.feedback-field {
+  display: grid;
+  gap: 6px;
+}
+.feedback-field textarea {
+  width: 100%;
+  resize: vertical;
+}
+.feedback-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+}
+.feedback-scope label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.feedback-scope input {
+  width: auto;
+}
+
+/* Usage terms on the last setup step and in the first-send dialog. */
+.terms {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0 4px;
+  background: var(--surface);
+}
+.terms .terms-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.terms ul {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.terms li + li {
+  margin-top: 4px;
+}
+.terms-accept {
+  display: flex;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  gap: 8px;
+  align-items: flex-start;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.terms .terms-accept {
+  flex-direction: row;
+}
+.terms-accept input {
+  width: auto;
+  flex: none;
+  margin: 2px 0 0;
+}
+/* The approved plan of the native plan workflow (src/work-plan.tsx), ticked off while "execute" runs. */
+.work-plan {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.work-plan summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.work-plan summary > svg {
+  color: var(--accent-ink);
+}
+.work-plan summary .muted {
+  margin-left: auto;
+  font-size: 12px;
+}
+.work-plan-goal {
+  margin: 8px 0 4px;
+  color: var(--muted);
+}
+.work-plan ol {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.work-plan li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.work-plan li > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.work-plan li.done > svg,
+.work-plan li.doing > svg {
+  color: var(--accent-ink);
+}
+.work-plan li.done span {
+  color: var(--muted);
+}
+.work-plan li.blocked > svg {
+  color: var(--danger);
+}
+.work-plan li small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.work-plan-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+/* Above the composer: the plan and the assistant's questions, where the employee types (src/App.tsx). */
+.composer-dock:empty {
+  display: none;
+}
+.composer-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.composer-dock .work-plan {
+  margin: 0;
+  max-height: 34vh;
+  overflow: auto;
+}
+.tool-question {
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--paper);
+  padding: 12px 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+.tool-question header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.tool-question-text {
+  margin: 6px 0 10px;
+  font-size: 14px;
+}
+.tool-question-options {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tool-question-options button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.tool-question-options button:hover,
+.tool-question-options button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.tool-question-options kbd {
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.tool-question-other {
+  display: flex;
+  gap: 6px;
+}
+.tool-question-other input {
+  flex: 1;
+  min-width: 0;
+}
+.tool-question-cancel {
+  margin-top: 6px;
+  font-size: 11px;
+  padding: 2px 4px;
+  color: var(--muted);
 }

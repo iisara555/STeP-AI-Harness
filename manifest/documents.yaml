@@ -162,9 +162,105 @@ documents:
       รายการเอกสารที่ถูกยกเลิก และกฎว่าต้องดาวน์โหลดจาก STeP MIS เท่านั้น
       เพื่อป้องกันการใช้เอกสารผิด Revision
 
+  # ผังผู้บริหาร: สร้างจาก manifest/organization.yaml → executiveOversight (test/executive-board-document.test.js ตรวจว่าตรงกัน)
+  step-executive-board:
+    title: "คณะผู้บริหาร STeP และผู้กำกับดูแลแต่ละทีม (ผู้อำนวยการ รองผู้อำนวยการ ผู้ช่วยผู้อำนวยการ ผู้จัดการ)"
+    path: docs/step-executive-board.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: owner-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-09-20"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันตำแหน่งและการกำกับร่วม 2026-09-20; ตรวจทานได้จาก https://www.step.cmu.ac.th/executive"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "ชื่อและตำแหน่งผู้บริหารที่เผยแพร่บนเว็บไซต์ STeP (OIT O2) ไม่มีช่องทางติดต่อส่วนบุคคล"
+    note: "ผังการกำกับดูแล ไม่ใช่อำนาจอนุมัติ (ดู manifest/authority.yaml); เมื่อผังเปลี่ยนให้แก้ organization.yaml และเอกสารนี้พร้อมกัน"
+
+  # เอกสารความรู้องค์กรใน docs/ ที่ผู้ดูแลยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ (2026-10-02)
+  step-teams-directory:
+    title: "รายชื่อ 22 ทีมของ STeP และ RSP North กลุ่มงาน 5 กลุ่ม และขอบเขตการทำงานร่วมกับ AI"
+    path: docs/teams.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "ชื่อทีม หน้าที่ และกลุ่มงาน ไม่มีข้อมูลรายบุคคล"
+
+  step-public-profile:
+    title: "ข้อมูลทั่วไปของ STeP จากแหล่งสาธารณะ (พันธกิจ บริการ ช่องทางทางการ)"
+    path: docs/step-public-profile.md
+    owner: cc
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: derived-from-public-sources
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "รวบรวมจากเว็บไซต์ทางการสาธารณะของ STeP"
+    note: "ข้อมูลสาธารณะไม่ใช่สิทธิ์อนุมัติและไม่แทนการยืนยันจากเจ้าของกระบวนการ"
+
+  project-code-scheme:
+    title: "โครงสร้างรหัสโครงการ (Project Code) ปีงบประมาณ 2569–2570"
+    path: docs/project-code-scheme.md
+    owner: afp
+    type: working-index
+    sourceLevel: derived-working-reference
+    authority: unverified
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "เก็บเฉพาะโครงสร้างรหัส ไม่มีรายชื่อคู่สัญญาหรือผู้ประกอบการ"
+    note: "เจ้าของตารางยังไม่ยืนยันอย่างเป็นทางการ ต้องยืนยันกับ AFP/SIT ก่อนใช้ผูกกับระบบการเงิน"
+
+  step-context:
+    title: "บริบทองค์กร STeP โดยสังเขป (หน่วยงาน งานหลัก ผู้รับสาร)"
+    path: docs/step-context.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "บริบทระดับกว้าง ไม่มีข้อมูลรายบุคคล"
+    note: "ไม่ใช่แหล่งอ้างอิงแทนเว็บไซต์ทางการ ระเบียบ มติ หรือเอกสารโครงการล่าสุด"
+
+  step-ai-employee-guide:
+    title: "คู่มือการใช้งาน STeP AI สำหรับพนักงาน"
+    path: docs/employee-guide.md
+    owner: developer
+    type: organization-guideline
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "วิธีใช้แอป ไม่มี credential หรือข้อมูลรายบุคคล"
+
   # --- STeP Quality Layer v0.1 ---
   hr-service-channels:
-    title: "ระบบและช่องทางปฏิบัติงานด้านบุคคล (HR Service Channels)"
+    title: "ระบบและช่องทางติดต่อฝ่ายบุคคล งานด้านบุคคลของทีม HD (HR Service Channels)"
     owner: hd
     type: internal-practice
     process: people.personnel-welfare

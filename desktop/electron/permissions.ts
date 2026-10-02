@@ -132,6 +132,10 @@ export function evaluatePermission(
   const effective = policy.permission.modes.includes(mode) ? mode : 'ask';
   if (request.readOnly) return { allowed: true, requiresConfirmation: false, reason: 'read-only' };
   if (effective === 'plan') return { allowed: false, requiresConfirmation: false, reason: 'PLAN_MODE' };
+  // Accept edits: a write to one workspace file goes ahead (its diff is staged and a snapshot can undo it).
+  // Commands, the sandbox and external tool calls still ask.
+  if (effective === 'acceptEdits' && request.tool === 'write' && request.path && !request.execute)
+    return { allowed: true, requiresConfirmation: false, reason: 'accept edits' };
   if (effective === 'auto' && policy.features.autoMode) {
     // Commands the model starts still need a person unless the organization also allowed that.
     if (request.execute && !policy.features.shellByAi) return { allowed: true, requiresConfirmation: true, reason: 'shell needs approval' };

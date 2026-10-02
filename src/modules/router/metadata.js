@@ -258,12 +258,32 @@ export async function loadDocumentContextMetadata(ids = []) {
     if (title) current.title = stripYamlScalar(title[1]);
     const pathMatch = line.match(/^    path:\s*(.+)/);
     if (pathMatch) current.path = stripYamlScalar(pathMatch[1]);
+    // Announcements kept as a summary index (contentInRepo: false) are read through that index.
+    const index = line.match(/^    index:\s*(.+)/);
+    if (index && !current.path) current.path = stripYamlScalar(index[1]);
     const status = line.match(/^    status:\s*(.+)/);
     if (status) current.status = stripYamlScalar(status[1]);
-    const governance = line.match(/^    (authority|verification):\s*(.+)/);
+    const governance = line.match(/^    (authority|verification|sensitivity|owner):\s*(.+)/);
     if (governance) current[governance[1]] = stripYamlScalar(governance[2]);
   }
 
-  return [...wanted].map((id) => results.find((ref) => ref.id === id)
-    || { id, title: '', path: '', status: 'unregistered', authority: 'unverified', verification: '' });
+  return [...wanted].map((id) => {
+    const ref = results.find((item) => item.id === id);
+    if (!ref) return { id, title: '', path: '', status: 'unregistered', authority: 'unverified', verification: '' };
+    // A restricted document is never handed to an AI, even when someone names its ID.
+    return ref.sensitivity === 'restricted' ? { ...ref, path: '', status: 'restricted' } : ref;
+  });
+}
+
+const UNREADABLE_DOCUMENT = new Set(['not-provided', 'superseded', 'archived', 'withdrawn', 'restricted', 'unregistered']);
+
+/**
+ * Every registered document the assistant may read: it has a file in the harness, is current and is not
+ * restricted. Used to tell the assistant what organization knowledge exists before it answers.
+ */
+export async function loadDocumentCatalog() {
+  const text = await readFile(join(PACKAGE_ROOT, 'manifest', 'documents.yaml'), 'utf-8');
+  const ids = [...text.matchAll(/^  ([a-z0-9_-]+):\s*$/gm)].map((match) => match[1]);
+  const refs = await loadDocumentContextMetadata(ids);
+  return refs.filter((ref) => ref.path && ref.title && !UNREADABLE_DOCUMENT.has(ref.status));
 }

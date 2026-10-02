@@ -68,7 +68,7 @@ try {
   }, runtime);
   await writeFile(join(home, 'stall'), '1');
   await page.evaluate(() => window.step.call('snapshot'));
-  await page.keyboard.press('Control+K');
+  await page.keyboard.press('ControlOrMeta+K');
   await page.keyboard.type('ตั้งค่าพื้นที่ทำงาน');
   await page.keyboard.press('Enter');
   await page.getByRole('tab', { name: /การเชื่อมต่อ AI/ }).click();

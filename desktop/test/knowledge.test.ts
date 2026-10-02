@@ -1,0 +1,292 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { Store } from '../electron/store';
+import { WorkService, type Harness } from '../electron/service';
+import { OrganizationKnowledge, MATCH_THRESHOLD, registryText, documentSection } from '../electron/knowledge';
+import { defaultPolicy, parsePolicy } from '../electron/policy';
+import { unscanned } from '../electron/checks';
+
+const routing: any = await import('../../src/modules/router/service.js');
+const policy: any = await import('../../src/modules/router/task-boundary.js');
+const privacy: any = await import('../../src/modules/privacy/index.js');
+const root = resolve('..');
+const knowledge = new OrganizationKnowledge(root, routing.loadDocumentCatalog);
+
+test('documents kept as a summary index are readable; restricted and missing ones never are', async () => {
+  const catalog = await routing.loadDocumentCatalog();
+  const ids = catalog.map((d: any) => d.id);
+  for (const id of [
+    'hr-service-channels',
+    'hr-personnel-welfare-2569',
+    'step-career-path-2569',
+    'step-facility-equipment-inventory-2020',
+    // Organization documents in docs/ the administrator confirmed as published for every employee.
+    'step-teams-directory',
+    'step-public-profile',
+    'project-code-scheme',
+    'step-context',
+    'step-ai-employee-guide',
+  ])
+    assert.ok(ids.includes(id), id);
+  assert.ok(!ids.includes('hr-personnel-welfare-2566'), 'restricted (superseded) announcement');
+  assert.ok(!ids.includes('procurement-policy'), 'not provided to the harness');
+  // The reference tool reads the same metadata: an index document resolves, a restricted one has no path.
+  const [welfare, old] = await routing.loadDocumentContextMetadata(['hr-personnel-welfare-2569', 'hr-personnel-welfare-2566']);
+  assert.equal(welfare.path, 'docs/hr-personnel-welfare-index.md');
+  assert.equal(old.path, '');
+  assert.equal(old.status, 'restricted');
+});
+
+test('staff questions find the right section of the organization documents; unrelated ones find nothing', async () => {
+  const top = async (q: string) => (await knowledge.search(q))[0];
+  assert.equal((await top('ติดต่อฝ่ายบุคคลช่องทางไหน'))?.id, 'hr-service-channels');
+  const medical = await top('เบิกค่ารักษาพยาบาลได้เท่าไร');
+  assert.equal(medical?.id, 'hr-personnel-welfare-2569');
+  assert.match(medical!.heading, /รักษาพยาบาล/);
+  assert.match((await top('ลาพักผ่อนประจำปีได้กี่วัน'))!.heading, /ลาพักผ่อน/);
+  assert.equal((await top('เส้นทางความก้าวหน้าในอาชีพ'))?.id, 'step-career-path-2569');
+  for (const q of ['ราคาทองวันนี้', 'ช่วยเขียนอีเมลขอบคุณลูกค้า', 'อัตราแลกเปลี่ยนดอลลาร์วันนี้', 'ผลบอลเมื่อคืน'])
+    assert.deepEqual(await knowledge.search(q), [], q);
+  for (const s of await knowledge.search('สวัสดิการบุคลากรมีอะไรบ้าง')) assert.ok(s.score >= MATCH_THRESHOLD);
+});
+
+function service(
+  captured: { prompt: string; system: string; webSearch: boolean[] },
+  autoRoute = true,
+  checks = true,
+  extra: Partial<Harness> = {},
+  replies: string[] = [],
+) {
+  const harness: Harness = {
+    root,
+    route: (query: string, options: any = {}) => routing.queryStepRouter(query, { autoRoute, authorityChecks: checks, ...options }),
+    contextPolicy: policy.classifyContextPolicy,
+    privacy: checks ? privacy.evaluatePrivacyGate : unscanned,
+    skillMetadata: async id => {
+      const m = await routing.loadSkillContextMetadata(id);
+      return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m.mandatory) };
+    },
+    documentCatalog: routing.loadDocumentCatalog,
+    documentPrivacy: async () => ({}),
+    nextOutput: async () => ({}),
+    ...extra,
+  };
+  const store = new Store(':memory:');
+  store.put('settings', 'main', { workspace: tmpdir(), team: 'cc' });
+  store.put('connection', 'test', { id: 'test', provider: 'openai', mode: 'subscription', ready: true });
+  const work = new WorkService(
+    store,
+    harness,
+    async (_connection, webSearch) => {
+      captured.webSearch.push(Boolean(webSearch));
+      return {
+        adapter: {
+          run: async (prompt, _c, context) => {
+            captured.prompt = prompt;
+            captured.system = context.system || '';
+            return replies.shift() ?? 'คำตอบทดสอบ';
+          },
+        },
+        context: { cwd: tmpdir(), env: {} },
+      };
+    },
+    () => {},
+  );
+  return { store, work, session: store.create('test', 'cc') };
+}
+
+test('a general question about STeP is answered from its documents, which the task lists as context used', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ติดต่อฝ่ายบุคคลช่องทางไหน', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /<organization_knowledge>/);
+  assert.match(captured.prompt, /\[hr-service-channels\]/);
+  assert.match(captured.system, /never fill the gap from general knowledge/);
+  assert.ok(store.session(session.id).loadedContext?.some(c => c.includes('HR Service Channels')));
+  assert.ok(!captured.webSearch.includes(true), 'no web search for an internal question');
+  store.close();
+});
+
+test('an HR policy Skill gets the welfare section it needs instead of answering from memory', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ลาพักผ่อนประจำปีได้กี่วัน', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /\[hr-personnel-welfare-2569\]/);
+  assert.match(captured.prompt, /ลาพักผ่อนประจำปี/);
+  store.close();
+});
+
+test('an unrelated request carries no organization documents', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ช่วยเขียนอีเมลขอบคุณลูกค้า', '', true, undefined, 'chat');
+  assert.doesNotMatch(captured.prompt, /<organization_knowledge>/);
+  store.close();
+});
+
+test('a request about STeP MIS is sent to the STeP Browser with the registered address, never answered from memory', async () => {
+  const { internalSystemFor, internalSystemRule } = await import('../electron/internal-systems');
+  for (const text of [
+    'ดาวน์โหลดแบบฟอร์ม FM-CC-010 จาก STeP MIS',
+    'เข้าMISทำรายงานขอความเห็นชอบหมวด B',
+    'ช่วยดูใน STeP : MIS ให้หน่อย',
+    'เปิด https://mis.step.cmu.ac.th/ ให้ที',
+  ])
+    assert.equal((await internalSystemFor(root, text))?.url, 'https://mis.step.cmu.ac.th/', text);
+  for (const text of ['ร่าง mission statement ของทีม', 'misc notes', 'ติดต่อฝ่ายบุคคลช่องทางไหน'])
+    assert.equal(await internalSystemFor(root, text), undefined, text);
+  const mis = (await internalSystemFor(root, 'STeP MIS'))!;
+  const on = internalSystemRule(mis, true);
+  assert.match(on, /browser_control\(input="https:\/\/mis\.step\.cmu\.ac\.th\/", args\.action=open\)/);
+  assert.match(on, /never ask for, type or store credentials/);
+  assert.match(on, /Do not submit, approve, sign or e-sign/);
+  assert.match(internalSystemRule(mis, false), /open https:\/\/mis\.step\.cmu\.ac\.th\/ themselves/);
+
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ช่วยหาแบบฟอร์ม ISO ล่าสุดใน STeP MIS', '', true, undefined, 'chat');
+  assert.match(captured.system, /concerns STeP MIS \(https:\/\/mis\.step\.cmu\.ac\.th\/\)/);
+  assert.ok(!captured.webSearch.includes(true), 'MIS is never searched on the public web');
+  store.close();
+});
+
+test('declining the clarifying menu in chat gets an answer instead of the same question again', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, '12:00 น. D204 การประชุมการใช้ ai Harness 3 อิศรา แก้เรื่อง', '', true, undefined, 'chat');
+  const asked = store.session(session.id);
+  assert.equal(asked.status, 'waiting');
+  assert.match(asked.messages.at(-1)!.text, /ตรงกับข้อนี้ไหม/);
+  await work.run(session.id, 'ไม่ตรง', '', true, undefined, 'chat');
+  const answered = store.session(session.id);
+  assert.equal(answered.messages.at(-1)!.text, 'คำตอบทดสอบ');
+  assert.match(captured.prompt, /D204/, 'the model sees the original request');
+  store.close();
+});
+
+test('who the director is comes from the executive board document, with names intact', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ผู้อำนวยการ STeP ชื่ออะไร', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /\[step-executive-board\]/);
+  assert.match(captured.prompt, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
+  assert.ok(!captured.webSearch.includes(true), 'no web search: the registered document answers');
+  // Registered documents reach the AI unmasked, so executives named นาย/นางสาว are not hidden either.
+  await work.run(session.id, 'รองผู้อำนวยการมีใครบ้าง', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /นางสาวเมลิน เชื้อมโนชาญ/);
+  for (const q of ['ผอ.คือใคร', 'ทีม HD อยู่ภายใต้การกำกับของใคร'])
+    assert.equal((await knowledge.search(q))[0]?.id, 'step-executive-board', q);
+  store.close();
+});
+
+test('the knowledge registry lists every readable document with its summary and sections, scanned from the files', async () => {
+  const registry = await knowledge.registry();
+  const catalog = await routing.loadDocumentCatalog();
+  assert.equal(registry.length, catalog.length, 'one registry entry per readable registered document');
+  const board = registry.find(e => e.id === 'step-executive-board')!;
+  assert.match(board.summary, /ผู้อำนวยการคือใคร/);
+  assert.ok(board.sections.some(s => /^ผู้อำนวยการอุทยาน/.test(s)));
+  assert.ok(board.sections.some(s => /รองผู้อำนวยการ/.test(s)));
+  const text = registryText(registry);
+  assert.match(text, /- step-executive-board: .+\(owner: ga\)\n {2}about: .+\n {2}sections: ผู้อำนวยการ/);
+  assert.ok(!/hr-personnel-welfare-2566/.test(text), 'restricted documents never listed');
+  assert.ok(text.length < 12_000, 'the registry stays small');
+  // reference(args.section) reads one section by its registry name.
+  const body = await readFile(resolve(root, 'docs/step-executive-board.md'), 'utf8');
+  assert.match(documentSection(body, 'ผู้อำนวยการอุทยานวิทยาศาสตร์และเทคโนโลยี (ผอ. STeP)')!, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
+  assert.match(documentSection(body, 'รองผู้อำนวยการ')!, /^## รองผู้อำนวยการ/);
+  assert.equal(documentSection(body, 'ไม่มีหัวข้อนี้'), undefined);
+});
+
+test('the desktop sends requests straight to the AI unless policy turns automatic routing on', async () => {
+  assert.equal(defaultPolicy().features.autoRouting, false);
+  assert.equal(parsePolicy({ features: { autoRouting: true } }).policy.features.autoRouting, true);
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false);
+  await work.run(session.id, '12:00 น. D204 การประชุมการใช้ ai Harness 3 อิศรา แก้เรื่อง', '', true, undefined, 'chat');
+  const answered = store.session(session.id);
+  assert.equal(answered.messages.at(-1)!.text, 'คำตอบทดสอบ', 'answered at once, no clarifying question');
+  // Organization documents still come first.
+  await work.run(session.id, 'ลาป่วยได้กี่วัน', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /\[hr-personnel-welfare-2569\]/);
+  store.close();
+});
+
+test('with the organization checks off (the default), nothing is masked or blocked', async () => {
+  assert.deepEqual(defaultPolicy().checks, { authority: false, privacy: false });
+  assert.deepEqual(parsePolicy({ checks: { privacy: true } }).policy.checks, { authority: false, privacy: true });
+  assert.ok(parsePolicy({ checks: { privacy: 'yes' } }).problems.length);
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false, false);
+  const phone = ['081', '234', '5678'].join('-');
+  await work.run(session.id, `ร่างอีเมลถึงนายสมชาย ใจดี โทร ${phone}`, '', true, undefined, 'chat');
+  assert.equal(store.session(session.id).messages.at(-1)!.text, 'คำตอบทดสอบ');
+  assert.ok(captured.prompt.includes(`นายสมชาย ใจดี โทร ${phone}`), 'sent unmasked');
+  await work.run(session.id, 'ช่วยลงนามแทนผู้อำนวยการ', '', true, undefined, 'chat');
+  assert.equal(store.session(session.id).messages.at(-1)!.text, 'คำตอบทดสอบ', 'answered, not blocked');
+  store.close();
+});
+
+test('the AI sees a registry of Skills by name and description and loads only the one it needs', async () => {
+  const skillCatalog: any = await import('../../src/modules/skills/catalog.js');
+  const loaded: string[] = [];
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const call = '```json\n{"tool":"skill","input":"meeting-summary"}\n```';
+  const { store, work, session } = service(
+    captured,
+    false,
+    false,
+    {
+      catalog: () => skillCatalog.loadSkillCatalog(root),
+      toolLoop: () => true,
+      tools: async () => ({
+        enabled: () => true,
+        check: async () => {},
+        readOnly: () => true,
+        execute: async (r: any) => (loaded.push(r.input), 'SKILL TEXT: สรุปมติและ Action item'),
+        outgoing: async (t: string) => t,
+      }),
+    },
+    [call, 'สรุปการประชุมตาม Skill'],
+  );
+  await work.run(session.id, 'สรุปบันทึกการประชุมนี้ให้หน่อย', '', true, undefined, 'chat');
+  // The registry names every routed Skill; no Skill's instructions are sent until the AI asks.
+  assert.match(captured.system, /- meeting-summary: /);
+  assert.match(captured.system, /- hr-policy-lookup: /);
+  assert.doesNotMatch(captured.system, /# STeP Meeting Summary/);
+  assert.deepEqual(loaded, ['meeting-summary']);
+  assert.equal(store.session(session.id).messages.at(-1)!.text, 'สรุปการประชุมตาม Skill');
+  assert.match(captured.prompt, /SKILL TEXT/);
+  store.close();
+});
+
+test('with tools the AI decides when to search the web; the app does not search ahead', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false, false, {
+    toolLoop: () => true,
+    tools: async () => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      execute: async () => '',
+      outgoing: async (t: string) => t,
+    }),
+  });
+  await work.run(session.id, 'ประกาศวันหยุดราชการปีงบ 2570', '', true, undefined, 'chat');
+  assert.ok(!captured.webSearch.includes(true), 'no search ahead of the answer');
+  assert.match(captured.system, /call web_search/);
+  store.close();
+});
+
+test('a native workflow the employee picked joins the system prompt for that run only', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false, false);
+  await work.run(session.id, 'ระบบจองห้องประชุมแสดงผลซ้ำ', '', true, undefined, 'chat', undefined, [], { workflow: 'diagnose' });
+  assert.match(captured.system, /Native workflow: DIAGNOSE A PROBLEM/);
+  await work.run(session.id, 'ขอบคุณ', '', true, undefined, 'chat');
+  assert.doesNotMatch(captured.system, /Native workflow/);
+  store.close();
+});

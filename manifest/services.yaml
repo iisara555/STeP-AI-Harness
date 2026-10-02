@@ -74,7 +74,7 @@ sources:
     status: login-required
     lastChecked: "2026-09-20"
     contentInRepo: false
-    note: "ลงทะเบียนเป็น pointer เท่านั้น ห้ามคัดเนื้อหาหรือข้อมูลจากระบบนี้เข้า repository สาธารณะ ผู้ใช้ต้องเปิดเองและยืนยันข้อมูลกับเจ้าของระบบ"
+    note: "ลงทะเบียนเป็น pointer เท่านั้น ห้ามคัดเนื้อหาหรือข้อมูลจากระบบนี้เข้า repository สาธารณะ ผู้ใช้ต้องเปิดเองและยืนยันข้อมูลกับเจ้าของระบบ ลงชื่อเข้าใช้ในหน้าของ MIS เอง (ไม่ redirect ไป SSO โดเมนอื่น ยืนยันโดยผู้ดูแล STeP AI 2026-10-02) จึงใช้ใน STeP Browser ได้โดยพนักงานกรอกบัญชีเอง"
   abplas-service:
     title: "ABPlas Laboratory Management Platform"
     url: "https://abplas.step.cmu.ac.th/"

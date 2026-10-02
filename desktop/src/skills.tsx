@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, Blocks, ReceiptText, Search } from 'lucide-react';
 import type { SkillEntry } from './types';
+import { t } from './i18n';
 
 // Where each capability stands: governed in the registry, reachable through the router, or a standalone tool.
 export const statusTag: Record<string, { label: string; tone: string; hint: string }> = {
-  routed: { label: 'เชื่อม Routing แล้ว', tone: 'routed', hint: 'อยู่ใน Manifest และ Router เลือกให้อัตโนมัติ หรือเรียกตรงด้วย /ชื่อ' },
+  routed: {
+    label: 'เชื่อม Routing แล้ว',
+    tone: 'routed',
+    hint: 'อยู่ใน Manifest และ Router เลือกให้อัตโนมัติ หรือเรียกตรงด้วย /ชื่อ',
+  },
   registered: {
     label: 'Manifest · ยังไม่ Routing',
     tone: 'registered',
@@ -74,9 +79,9 @@ export function SkillsHub({
       <div className="skills-head">
         <label className="skills-search">
           <Search size={16} />
-          <input placeholder="ค้นหา Skill, ทีม หรือคำที่ใช้เรียก" value={query} onChange={e => setQuery(e.target.value)} />
+          <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
         </label>
-        <div className="skills-filters" role="tablist" aria-label="กรองตามสถานะ">
+        <div className="skills-filters" role="tablist" aria-label={t('กรองตามสถานะ')}>
           {filters.map(([id, label]) => (
             <button
               key={id}
@@ -85,32 +90,33 @@ export function SkillsHub({
               className={filter === id ? 'active' : ''}
               onClick={() => setFilter(id)}
             >
-              {label} <small>{count(id)}</small>
+              {t(label)} <small>{count(id)}</small>
             </button>
           ))}
         </div>
         <p className="small muted">
-          เรียก Skill ที่เชื่อม Routing แล้วได้ตรง ๆ โดยพิมพ์ <code>/ชื่อ-skill</code> ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง
+          {t('เรียก Skill ที่เชื่อม Routing แล้วได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
+          {t('ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง')}
         </p>
       </div>
-      {!skills && <p className="muted">กำลังโหลดรายชื่อ Skill…</p>}
+      {!skills && <p className="muted">{t('กำลังโหลดรายชื่อ Skill…')}</p>}
       <div className="skills-grid">
-        {visibleTools.map(t => (
-          <article key={t.id} className="skill-card">
+        {visibleTools.map(tool => (
+          <article key={tool.id} className="skill-card">
             <header>
               <ReceiptText size={16} />
-              <strong>{t.title}</strong>
+              <strong>{t(tool.title)}</strong>
             </header>
-            <p>{t.description}</p>
+            <p>{t(tool.description)}</p>
             <div className="skill-tags">
-              <span className="tag tool" title={statusTag.tool.hint}>
-                {statusTag.tool.label}
+              <span className="tag tool" title={t(statusTag.tool.hint)}>
+                {t(statusTag.tool.label)}
               </span>
-              <span className="tag">{t.stage}</span>
-              <span className="tag">{t.owner.toUpperCase()}</span>
+              <span className="tag">{t(tool.stage)}</span>
+              <span className="tag">{tool.owner.toUpperCase()}</span>
             </div>
-            <button className="quiet" onClick={() => onOpenTool(t.id)}>
-              เปิดเครื่องมือ
+            <button className="quiet" onClick={() => onOpenTool(tool.id)}>
+              {t('เปิดเครื่องมือ')}
               <ArrowRight size={14} />
             </button>
           </article>
@@ -127,25 +133,29 @@ export function SkillsHub({
               <p>{s.description}</p>
               {/* Release stage and category are internal bookkeeping; they stay in the tooltip for maintainers. */}
               <div className="skill-tags" title={[s.stage, s.category].filter(Boolean).join(' · ')}>
-                {mine(s) && <span className="tag team">ทีมคุณ</span>}
-                <span className={`tag ${tag.tone}`} title={tag.hint}>
-                  {tag.label}
+                {mine(s) && <span className="tag team">{t('ทีมคุณ')}</span>}
+                <span className={`tag ${tag.tone}`} title={t(tag.hint)}>
+                  {t(tag.label)}
                 </span>
-                {s.owner && <span className="tag">ทีม {s.owner.toUpperCase()}</span>}
+                {s.owner && (
+                  <span className="tag">
+                    {t('ทีม')} {s.owner.toUpperCase()}
+                  </span>
+                )}
               </div>
               {s.status === 'routed' ? (
                 <button className="quiet" onClick={() => onUse(s.name)}>
-                  ใช้ Skill นี้
+                  {t('ใช้ Skill นี้')}
                   <ArrowRight size={14} />
                 </button>
               ) : (
-                <small className="muted">{tag.hint}</small>
+                <small className="muted">{t(tag.hint)}</small>
               )}
             </article>
           );
         })}
       </div>
-      {skills && !visible.length && !visibleTools.length && <p className="muted">ไม่พบ Skill ที่ตรงกับคำค้นหรือตัวกรอง</p>}
+      {skills && !visible.length && !visibleTools.length && <p className="muted">{t('ไม่พบ Skill ที่ตรงกับคำค้นหรือตัวกรอง')}</p>}
     </div>
   );
 }

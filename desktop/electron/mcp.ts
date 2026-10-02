@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises';
 import type { McpServer, Policy } from './policy';
 import { sensitivePath, evaluatePermission } from './permissions';
 import { killPidTree } from './bounded-process';
+import { tm } from './i18n';
 
 export type McpTool = { server: string; name: string; description: string; inputSchema: unknown };
 type Consent = (title: string, text: string, signal?: AbortSignal) => Promise<boolean>;
@@ -39,7 +40,7 @@ export class Mcp {
       if (identity !== this.identity()) throw new Error('WORKSPACE_CHANGED');
     };
     check();
-    const client = new Client({ name: 'step-desktop', version: '0.4.1' }, { capabilities: {} });
+    const client = new Client({ name: 'step-desktop', version: '0.5.5' }, { capabilities: {} });
     await mkdir(this.home, { recursive: true, mode: 0o700 });
     let transport: StdioClientTransport | StreamableHTTPClientTransport;
     if (server.transport === 'stdio') {
@@ -143,7 +144,11 @@ export class Mcp {
       policy = this.policy(),
       identity = this.identity();
     if (
-      !(await this.consent('ค้นหาเครื่องมือจาก MCP?', `เชื่อมต่อ server ที่ผู้ดูแลกำหนด: ${name}\nจะส่งเฉพาะข้อมูลเริ่มต้นของแอป`, signal))
+      !(await this.consent(
+        tm('ค้นหาเครื่องมือจาก MCP?'),
+        tm('เชื่อมต่อ server ที่ผู้ดูแลกำหนด: {0}\nจะส่งเฉพาะข้อมูลเริ่มต้นของแอป', name),
+        signal,
+      ))
     )
       throw new Error('CANCELLED');
     if (policy !== this.policy() || identity !== this.identity()) throw new Error('POLICY_CHANGED');
@@ -200,8 +205,13 @@ export class Mcp {
     inspect(args);
     if (
       !(await this.consent(
-        'เรียกใช้เครื่องมือ MCP?',
-        `ปลายทาง: ${name}\nเครื่องมือ: ${tool}\nข้อมูลที่จะส่ง:\n${text}\nคำอธิบายและสิทธิ์ที่ server อ้างไม่ใช่การอนุมัติของ STeP`,
+        tm('เรียกใช้เครื่องมือ MCP?'),
+        tm(
+          'ปลายทาง: {0}\nเครื่องมือ: {1}\nข้อมูลที่จะส่ง:\n{2}\nคำอธิบายและสิทธิ์ที่ server อ้างไม่ใช่การอนุมัติของ STeP',
+          name,
+          tool,
+          text,
+        ),
         signal,
       ))
     )

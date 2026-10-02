@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { Policy } from './policy';
 import { Workbench } from './workbench';
 import { processResult } from './bounded-process';
+import { tm } from './i18n';
 export function sandboxArgs(image: string, folder: string, name: string, command: string) {
   if (!/^[a-z0-9][a-z0-9._/:\-]*@sha256:[a-f0-9]{64}$/.test(image)) throw new Error('SANDBOX_IMAGE_REQUIRED');
   return [
@@ -91,7 +92,12 @@ export class Sandbox {
     if (scan.action !== 'pass' || scan.redactedText !== command) throw new Error('PRIVACY_REVIEW_REQUIRED');
     if (
       !(await this.consent(
-        `Docker image: ${policy.sandbox.image}\nไม่มีเครือข่าย\nคำสั่ง: ${command}\nไฟล์ที่แนบแบบอ่านอย่างเดียว: ${entries.map(e => e.path).join(', ') || 'ไม่มี'}`,
+        tm(
+          'Docker image: {0}\nไม่มีเครือข่าย\nคำสั่ง: {1}\nไฟล์ที่แนบแบบอ่านอย่างเดียว: {2}',
+          policy.sandbox.image,
+          command,
+          entries.map(e => e.path).join(', ') || tm('ไม่มี'),
+        ),
         signal,
       ))
     )

@@ -11,16 +11,25 @@ await mkdir('release/qa', { recursive: true });
 await writeFile(join(workspace, 'note.txt'), 'Synthetic source note');
 await writeFile(
   join(home, 'desktop-policy.json'),
-  JSON.stringify({ prices: { 'openai:*': { input: 1, output: 2 } }, budgets: { dailyTokens: 100 } }),
+  // Strict consent: this smoke checks the per-result dialogs.
+  JSON.stringify({
+    pilot: false,
+    checks: { authority: true, privacy: true },
+    prices: { 'openai:*': { input: 1, output: 2 } },
+    budgets: { dailyTokens: 100 },
+  }),
 );
 await writeFile(
   executable,
   `import readline from 'node:readline';
 const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
+// Like a real Codex thread, the fixture keeps what it was sent and counts usage for the whole thread.
+let thread='',turns=0;
 readline.createInterface({input:process.stdin}).on('line',line=>{
- const m=JSON.parse(line);let result={};if(m.method==='thread/start')result={thread:{id:'fixture'}};send({id:m.id,result});
+ const m=JSON.parse(line);let result={};if(m.method==='thread/start'){result={thread:{id:'fixture'}};thread='';turns=0;}send({id:m.id,result});
  if(m.method==='turn/start'){
- const prompt=m.params.input?.map(i=>i.text||'').join('')||'';
+ thread+=m.params.input?.map(i=>i.text||'').join('')||'';turns++;
+ const prompt=thread;
  const tool=(tool,input,args,content)=>'\x60\x60\x60step-tool\\n'+JSON.stringify({tool,input,args,content})+'\\n\x60\x60\x60';
  let text;
  if(!prompt.includes('<tool_results>'))text=tool('files','note.txt');
@@ -28,7 +37,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  else if(!prompt.includes('"tool":"plan"'))text=tool('plan','Read the note and stage a reviewed summary.');
  else if(!prompt.includes('"tool":"changes"'))text=tool('changes','result.md',undefined,'Reviewed synthetic summary');
  else text='Completed with reviewed tools';
- send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:5,totalTokens:15}}}});
+ send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10*turns,outputTokens:5*turns,totalTokens:15*turns}}}});
  send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});
  }
 });`,
@@ -41,6 +50,8 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  // Skipping saves settings before the wizard closes; reading the store earlier races that write.
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ state: 'detached' });
   await child.evaluate(
     ({ app }, data) => {
       const { DatabaseSync } = process.mainModule.require('node:sqlite');
@@ -50,7 +61,13 @@ try {
           .prepare('INSERT INTO records VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value')
           .run(kind, id, JSON.stringify(value));
       const settings = JSON.parse(db.prepare("SELECT value FROM records WHERE kind='settings' AND id='main'").get().value);
-      put('settings', 'main', { ...settings, workspace: data.workspace, tourDone: true, consentedAt: new Date().toISOString() });
+      put('settings', 'main', {
+        ...settings,
+        workspace: data.workspace,
+        tourDone: true,
+        consentedAt: new Date().toISOString(),
+        termsVersion: '2026-10-02',
+      });
       put('connection', 'fake', {
         id: 'fake',
         provider: 'openai',
@@ -67,6 +84,8 @@ try {
     { workspace, executable },
   );
   await page.reload();
+  // Send only once the seeded connection is loaded; an Enter before that is ignored as "no AI selected".
+  await page.locator('.statusbar .status-dot.ok').waitFor();
   await page.locator('.composer textarea').fill('Read local note and prepare summary');
   await page.keyboard.press('Enter');
   const consent = () => page.getByRole('alertdialog', { name: 'ส่งผลเครื่องมือให้ AI?' });
@@ -74,8 +93,10 @@ try {
   await expect(consent()).toContainText('Synthetic source note');
   await consent().getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await page.getByText('Choose output style', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Brief', exact: true }).click();
-  await page.getByRole('button', { name: 'ส่งคำตอบ', exact: true }).click();
+  // The question sits above the composer; one click on an option answers it.
+  const question = page.locator('.composer-area .tool-question');
+  await question.getByText('Choose output style').waitFor();
+  await question.getByRole('button', { name: /Brief/ }).click();
   await consent().waitFor();
   await consent().getByRole('checkbox').check();
   await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();

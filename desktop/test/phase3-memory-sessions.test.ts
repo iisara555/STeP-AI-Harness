@@ -198,3 +198,46 @@ test('OCR attachments require complete pages and mask detected identifiers', () 
   );
   assert.equal(attachmentReason(ocrAttachmentReport({ text: '', pages: [] }, scan)), 'ATTACH_NO_TEXT');
 });
+
+test('"needs fixing" notes become proposals the person confirms, never memories, and personal data is refused', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-feedback-'));
+  const store = new Store(':memory:'),
+    policy = defaultPolicy();
+  store.put('settings', 'main', { workspace: '', team: 'cc' });
+  const memories = new Memories(store, home, () => policy, scan);
+  const proposal = memories.proposeFeedback('s1', 'สรุปเป็นตารางท้ายคำตอบเสมอ');
+  assert.equal(proposal.type, 'feedback');
+  assert.equal((await memories.list()).length, 0, 'nothing is remembered before confirmation');
+  assert.equal(memories.proposeFeedback('s1', 'สรุปเป็นตารางท้ายคำตอบเสมอ').id, proposal.id, 'the same note is not proposed twice');
+  assert.throws(() => memories.proposeFeedback('s1', 'ส่งให้ somchai@example.com ทุกครั้ง'), /MEMORY_PRIVACY_BLOCKED/);
+  assert.throws(() => memories.proposeFeedback('s1', 'เลขบัตร 1101700203451'), /MEMORY_PRIVACY_BLOCKED/);
+  assert.equal(memories.proposals().length, 1, 'a refused note is not kept for review');
+  await memories.confirm(proposal.id, {});
+  // Confirmed answer feedback applies to unrelated later tasks, like a stated preference.
+  const used = await memories.relevant('ร่างหนังสือเชิญประชุม');
+  assert.ok(used.some(m => m.type === 'feedback' && m.text.includes('ตาราง')));
+  store.close();
+});
+
+test('a link above the memory folder (macOS /var → /private/var) is resolved, while links inside it are refused', async () => {
+  // Reproduces macOS, where the temp and data folders sit below the /var symlink, on any platform.
+  const real = await mkdtemp(join(tmpdir(), 'step-real-'));
+  const alias = join(await mkdtemp(join(tmpdir(), 'step-alias-')), 'linked');
+  await symlink(real, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const home = join(alias, 'home'),
+    workspace = join(alias, 'work');
+  await mkdir(home);
+  await mkdir(workspace);
+  spawnSync('git', ['init', '-q'], { cwd: workspace });
+  const store = new Store(':memory:');
+  store.put('settings', 'main', { workspace, team: 'cc' });
+  const policy = defaultPolicy();
+  const memories = new Memories(store, home, () => policy, scan);
+  await memories.save(entry);
+  await memories.save({ ...entry, name: 'Workspace style', scope: 'project' });
+  assert.equal((await memories.list()).length, 2);
+  // The memory base itself may not be a link.
+  store.put('settings', 'main', { workspace: alias, team: 'cc' });
+  await assert.rejects(memories.save({ ...entry, scope: 'project' }), /INVALID_PATH/);
+  store.close();
+});

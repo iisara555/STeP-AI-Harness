@@ -10,6 +10,15 @@ The host first reduces older file and tool-result text to marked previews. The l
 
 `pre_compact` and `post_compact` hooks receive session id and before/after token estimates only. A blocking hook stops the run. A provider prompt-length failure triggers one smaller retry; quota errors do not. Summary calls use no tools, images or native web search, receive privacy-checked data and contribute provider-reported usage to `/usage`. Original provider calls still use the selected account and model.
 
+## Organization knowledge first
+
+Before a chat or draft turn reaches the AI, the app searches STeP's registered documents (`manifest/documents.yaml`) on this computer.
+- **What it sends:** the best-matching sections (at most 4 sections, 9,000 characters) as `<organization_knowledge>`. Each section is labelled with its document ID and heading, and the task's "context used" list shows them.
+- **How matching works:** the question is compared with document titles, headings and text using character trigrams, because Thai has no spaces between words. Questions below the 0.3 match score get no documents.
+- **Which documents qualify:** a document must have a file in the harness (`path`, or `index` for announcements kept as a summary). Restricted, superseded, archived and not-provided documents are never offered or read; the `reference` tool also refuses a restricted document.
+- **Rule for the AI:** it must answer STeP facts from these documents or from one it reads with `reference(id)`, and name the document and section. When the documents do not cover a question, it says so and suggests the owning team. It never fills the gap from general knowledge or the web. When tools are on, the catalog of document IDs is in the system prompt.
+- **Web search:** a public web search still runs for public-information questions, but only after the documents. A strong match (score ≥ 0.5) answers from the documents alone.
+
 ## Confirmed memory
 
 Open `/memory`, the command palette or the conversation's memory button. Employees can add, review, edit and delete memories. The editor explains that selected memories may be sent to the configured AI after per-run context review. Memory proposals retain the exact matching user evidence and source session id. No proposal becomes durable memory until the employee confirms it.
@@ -21,6 +30,12 @@ Storage uses Markdown frontmatter inspired by [OpenHarness schema v1](https://gi
 - Team: an existing shared folder explicitly assigned to the employee's team by managed policy. Both `features.memoryTeam` and that team's folder are required. The OS must also grant access; changing teams cannot expose another team's assigned folder.
 
 Every proposed, saved and loaded item passes `evaluatePrivacyGate`. Personal-data findings, masking, human-review signals, restricted data and secrets are rejected. No identifiers are allowlisted for memory. Schema and body sizes are bounded; symlinks/junctions, hard-linked files, credential locations and administrator path denials are refused. Path rules check both configured and canonical locations, including Windows 8.3 aliases and project `.gitignore` updates. Absolute rule prefixes resolve through existing ancestors, preserving denials for mixed short/long names even before memory folders exist. Writes replace verified records atomically. Each scope permits at most 200 files; bodies are at most 4,000 characters. The privacy detector recognizes text patterns; it cannot certify that all personal or organizational data has been identified. Employees must keep memory free of such data.
+
+Each answer has **Good**, **Needs fixing** and **Remember this** buttons:
+
+- **Good** and **Needs fixing** are stored on the message, on this computer only.
+- A **Needs fixing** note becomes a `feedback` memory proposal. It is privacy-checked first, and a refused note is discarded, not queued. The proposal waits in Memory until the employee confirms it. Once confirmed, the feedback applies to later tasks the way a stated preference does.
+- **Remember this** opens an editable dialog with the answer text and a private or workspace scope. Saving that dialog is the confirmation, and the same privacy check applies.
 
 Relevance selects at most five confirmed, unexpired memories using lexical overlap, importance and durable user preferences. Selection uses local computation. Autodream is a bounded local background queue after completed tasks: it proposes only conservative response preferences from user messages. It never learns assistant claims, server addresses, credentials, names or financial facts, and makes no additional provider call. This deliberately adapts [OpenHarness personalization extraction](https://github.com/HKUDS/OpenHarness/blob/main/src/openharness/personalization/extractor.py) to STeP evidence and privacy discipline.
 

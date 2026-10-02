@@ -25,6 +25,32 @@ test('protocol ignores arbitrary prose, invalid fields, NUL and unknown tools', 
     assert.equal(loopRequests('```step-tool\n' + JSON.stringify(value) + '\n```').length, 0);
   assert.equal(loopRequests(request('sheet_read', 'a.xlsx', { range: 'A1:C2' }))[0].tool, 'sheet_read');
 });
+test('a reply that is only a tool request in a json fence or bare JSON is a request; an example inside an answer is not', () => {
+  const call = JSON.stringify({ tool: 'reference', input: 'hr-personnel-welfare-2569' }, null, 2);
+  for (const reply of ['```json\n' + call + '\n```', '```\n' + call + '\n```', call, '\n ```json\n' + call + '\n```\n'])
+    assert.deepEqual(loopRequests(reply), [{ tool: 'reference', input: 'hr-personnel-welfare-2569' }], reply);
+  assert.equal(loopRequests('ตัวอย่างคำขอ:\n```json\n' + call + '\n```').length, 0);
+  assert.equal(loopRequests('```json\n{"tool":"delete","input":"a"}\n```').length, 0);
+  assert.equal(loopRequests('```json\n{"name":"x"}\n```').length, 0);
+  // When step-tool fences are present, other fences are left alone.
+  assert.deepEqual(
+    loopRequests(request('files', 'a.md') + '\n```json\n' + call + '\n```').map(r => r.tool),
+    ['files'],
+  );
+});
+test('a model that fences its tool request as json still gets the document and then answers', async () => {
+  const read: string[] = [];
+  const loop = new ToolLoop(host({ execute: async r => (read.push(r.input), '4.2 การลาป่วย: ไม่เกิน 15 วัน/ปีงบประมาณ') }));
+  const replies = [
+    '```json\n{"tool":"reference","input":"hr-personnel-welfare-2569"}\n```',
+    'ลาป่วยได้ไม่เกิน 15 วันต่อปีงบประมาณ (ข้อ 4.2)',
+  ];
+  const prompts: string[] = [];
+  const result = await loop.run('question', async p => (prompts.push(p), replies[prompts.length - 1]), signal());
+  assert.deepEqual(read, ['hr-personnel-welfare-2569']);
+  assert.match(prompts[1], /15 วัน/);
+  assert.equal(result, replies[1]);
+});
 test('loop bounds concurrent reads and serializes mutations, preserves result order', async () => {
   let active = 0,
     peak = 0,
@@ -177,5 +203,18 @@ test('tool data cannot open current-message, routing or system-instruction secti
       return 'done';
     },
     signal(),
+  );
+});
+
+test('a tool request whose fence opens mid-sentence and is never closed still runs', () => {
+  const reply =
+    'ขอเริ่มจากกลุ่มผู้เข้าร่วมหลักก่อนครับ.```step-tool\n{"tool":"ask_user","input":"ผู้เข้าร่วมหลักคือใคร?","args":{"options":["พนักงาน","ผู้ประกอบการ"]}}';
+  assert.deepEqual(loopRequests(reply), [
+    { tool: 'ask_user', input: 'ผู้เข้าร่วมหลักคือใคร?', args: { options: ['พนักงาน', 'ผู้ประกอบการ'] } },
+  ]);
+  const two = '```step-tool\n{"tool":"files","input":"a.txt"}\n```\nแล้ว\n```step-tool\n{"tool":"files","input":"b.txt"}';
+  assert.deepEqual(
+    loopRequests(two).map(r => r.input),
+    ['a.txt', 'b.txt'],
   );
 });

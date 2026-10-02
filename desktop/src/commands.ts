@@ -1,11 +1,12 @@
 import type { PaletteItem } from './ui';
+import { t } from './i18n';
 
 export const COMMANDS = [
   ['palette', 'เปิดคำสั่ง', 'Mod+k'],
   ['new', 'เริ่มงานใหม่', 'Mod+Alt+n'],
   ['usage', 'ดูการใช้งาน AI', 'Mod+Shift+u'],
   ['memory', 'ดูและแก้ไขความจำ', 'Mod+Shift+m'],
-  ['automations', 'งานเบื้องหลังและเครื่องมือเพิ่มเติม', 'Mod+Shift+b'],
+  ['automations', 'งานตามรอบและเครื่องมือเพิ่มเติม', 'Mod+Shift+b'],
   ['settings', 'ตั้งค่าพื้นที่ทำงาน', 'Mod+,'],
   ['keyboard', 'คีย์ลัดและ Vim', ''],
   ['packs', 'Skill Packs', ''],
@@ -58,8 +59,8 @@ export function commandPalette(
   return [
     ...COMMANDS.filter(([id]) => actions[id]).map(([id, label, fallback]) => ({
       id,
-      label,
-      group: 'คำสั่ง',
+      label: t(label),
+      group: t('คำสั่ง'),
       hint: bindings[id] ?? fallback,
       run: actions[id]!,
     })),

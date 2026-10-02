@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ApprovalAnswer, TransmissionGrant } from '../src/types';
+import { tm } from './i18n';
 
 export const TRANSMISSION_LIMITS = { chars: 200_000, results: 24, ms: 600_000 };
 export type TransmissionSource = { key: string; label: string };
@@ -37,7 +38,11 @@ export class RunTransmission {
         if (source) this.grants.delete(source.key);
         const scope =
           source && chars <= TRANSMISSION_LIMITS.chars
-            ? `${source.label}\nส่งให้ ${this.destination} เฉพาะรอบการทำงานนี้ ไม่เกิน 10 นาที, 24 ผลการอ่าน และ 200,000 ตัวอักษรรวม\nฉันตรวจสิทธิ์ต้นทางแล้ว และอนุญาตให้ส่งข้อความทั่วไปหรือภายในในขอบเขตนี้`
+            ? tm(
+                '{0}\nส่งให้ {1} เฉพาะรอบการทำงานนี้ ไม่เกิน 10 นาที, 24 ผลการอ่าน และ 200,000 ตัวอักษรรวม\nฉันตรวจสิทธิ์ต้นทางแล้ว และอนุญาตให้ส่งข้อความทั่วไปหรือภายในในขอบเขตนี้',
+                source.label,
+                this.destination,
+              )
             : undefined;
         const answer = await ask(scope);
         if (this.closed) throw new Error('CANCELLED');

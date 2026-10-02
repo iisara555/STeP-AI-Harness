@@ -1,7 +1,10 @@
-import { BrowserWindow } from 'electron';
-import { randomUUID } from 'node:crypto';
+import { WebContentsView, type WebContents } from 'electron';
+import type { BrowserDock } from './browser-dock';
+import { createHash, randomUUID } from 'node:crypto';
 import { browserUrl } from './workbench';
+import { privateHostName, publicSite } from './web-fetch';
 import type { LoopRequest } from '../src/tools';
+import { tm } from './i18n';
 
 // Runs in an isolated world. The page cannot replace these helpers or manufacture references.
 const helpers = `
@@ -11,7 +14,15 @@ const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText 
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
 const WORLD = 1005;
-type Entry = { window: BrowserWindow; owner: string; origin: string; busy: boolean };
+type Entry = {
+  contents: WebContents;
+  view?: WebContentsView;
+  dispose: () => void;
+  owner: string;
+  origin: string;
+  opened: string;
+  busy: boolean;
+};
 type Context = {
   sessionId: string;
   signal: AbortSignal;
@@ -24,22 +35,28 @@ type Context = {
 /** Task-owned, temporary browsers. No arbitrary JS, credential access or personal profile attachment. */
 export class AgentBrowser {
   private tabs = new Map<string, Entry>();
-  constructor(private visible = true) {}
+  // The origin each page may navigate in, by web contents; one network listener serves all tabs of a task.
+  private origins = new Map<number, string>();
+  private configured = new WeakSet<Electron.Session>();
+  // With a dock the pages show in the main window's Web tab; without one (tests) they load unseen.
+  constructor(
+    private dock?: BrowserDock,
+    // Intranet hosts the organization lets the assistant open (policy network.privateHosts).
+    private privateHosts: () => string[] = () => [],
+  ) {}
   private get(id: string, owner: string) {
     const entry = this.tabs.get(id);
-    if (!entry || entry.owner !== owner || entry.window.isDestroyed()) throw new Error('BROWSER_CLOSED');
+    if (!entry || entry.owner !== owner || entry.contents.isDestroyed()) throw new Error('BROWSER_CLOSED');
     return entry;
   }
   private async script(entry: Entry, code: string, signal: AbortSignal): Promise<any> {
     if (signal.aborted) throw new Error('CANCELLED');
     let timer: ReturnType<typeof setTimeout>;
-    const stop = () => {
-      if (!entry.window.isDestroyed()) entry.window.destroy();
-    };
+    const stop = () => entry.dispose();
     signal.addEventListener('abort', stop, { once: true });
     try {
       return await Promise.race([
-        entry.window.webContents.executeJavaScriptInIsolatedWorld(WORLD, [{ code }]),
+        entry.contents.executeJavaScriptInIsolatedWorld(WORLD, [{ code }]),
         new Promise((_, reject) => {
           timer = setTimeout(() => {
             stop();
@@ -61,13 +78,20 @@ export class AgentBrowser {
     const result = await this.script(
       entry,
       `(() => { ${helpers}
-      const all = Array.from(document.querySelectorAll('a[href],button,input,textarea,select,[role="button"]')).filter(visible);
+      // Native controls and ARIA roles, plus what a page made clickable itself (a card or tile with a click handler shows
+      // a pointer cursor); for nested pointer areas only the outermost counts, so a card is one target, not five.
+      const native = 'a[href],button,input,textarea,select,summary,[role="button"],[role="link"],[role="menuitem"],[role="tab"],[role="option"],[role="checkbox"],[role="radio"],[role="switch"],[onclick],[tabindex]:not([tabindex="-1"])';
+      const pointer = el => getComputedStyle(el).cursor === 'pointer';
+      const found = new Set(document.querySelectorAll(native));
+      for (const el of Array.from(document.body?.querySelectorAll('*') || []).slice(0, 4000))
+        if (!found.has(el) && pointer(el) && !(el.parentElement && pointer(el.parentElement)) && !el.closest(native)) found.add(el);
+      const all = Array.from(found).filter(visible).sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
       const login = all.some(el => sensitive(el) && el.type !== 'hidden' && el.type !== 'file');
       const controls = all.slice(0,150);
       const refs = new Map();
       const elements = login ? [] : controls.filter(el => !sensitive(el) && !el.disabled).map((el,i) => {
         const ref = 'e'+(i+1); refs.set(ref,{el, fingerprint:fingerprint(el)});
-        return {ref, role:el.tagName.toLowerCase(), label:label(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
+        return {ref, role:el.getAttribute('role') || el.tagName.toLowerCase(), label:label(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
       });
       globalThis.__stepBrowser?.observer.disconnect();
       globalThis.__stepBrowser?.controller.abort();
@@ -83,6 +107,42 @@ export class AgentBrowser {
     );
     return { tab: id, ...result };
   }
+  /**
+   * A task that opens a site it already has open gets that tab back, already approved and with the employee's sign-in,
+   * instead of a fresh page at the login screen. The AI does not keep tab IDs between messages, so "open" again is how it
+   * continues after "เข้าสู่ระบบแล้ว".
+   */
+  private async reuse(url: string, context: Context) {
+    const origin = new URL(url).origin;
+    const found = [...this.tabs.entries()].find(
+      ([, e]) => e.owner === context.sessionId && e.origin === origin && !e.contents.isDestroyed(),
+    );
+    if (!found) return undefined;
+    const [id, entry] = found;
+    if (entry.busy) throw new Error('BROWSER_BUSY');
+    entry.busy = true;
+    try {
+      this.dock?.select(id);
+      // The site's front page or the page first opened means "continue here": read the page as the employee left it.
+      const target = new URL(url);
+      if (url !== entry.opened && target.pathname !== '/' && url !== entry.contents.getURL()) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([
+          entry.contents.loadURL(url),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('BROWSER_LOAD_FAILED')), 30000);
+          }),
+        ])
+          .catch(() => {
+            throw new Error(context.signal.aborted ? 'CANCELLED' : 'BROWSER_LOAD_FAILED');
+          })
+          .finally(() => clearTimeout(timer));
+      }
+      return { ...(await this.snapshot(id, entry, context.signal)), reused: true };
+    } finally {
+      entry.busy = false;
+    }
+  }
   async run(request: LoopRequest, context: Context) {
     const action = request.args?.action;
     if (!['open', 'read', 'click', 'fill', 'close'].includes(String(action))) throw new Error('INVALID_BROWSER_ACTION');
@@ -90,36 +150,66 @@ export class AgentBrowser {
     if (action === 'open') {
       const url = browserUrl(request.input);
       context.review(decodeURIComponent(url));
-      context.activity?.(`รออนุญาตเปิดเว็บ ${new URL(url).host}`);
+      context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
+      await publicSite(new URL(url), this.privateHosts());
+      const reused = await this.reuse(url, context);
+      if (reused) return reused;
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
-      if (!(await context.approve('เปิดเว็บให้ Agent ทำงาน?', url + '\nเปิดในเบราว์เซอร์แยกของ STeP เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ')))
+      if (
+        !(await context.approve(
+          tm('เปิดเว็บให้ Agent ทำงาน?'),
+          url + tm('\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
+        ))
+      )
         throw new Error('BROWSER_ACTION_DECLINED');
       await context.check();
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
-      const id = randomUUID();
-      const window = new BrowserWindow({
-        width: 1100,
-        height: 800,
-        show: this.visible,
-        title: 'STeP Agent Browser',
-        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-agent-' + id },
-      });
-      const entry = { window, owner: context.sessionId, origin: new URL(url).origin, busy: true };
+      const id = randomUUID(),
+        // One session per task: a later tab on a site keeps the sign-in the employee did in an earlier one.
+        partition = 'step-agent-' + createHash('sha256').update(context.sessionId).digest('hex').slice(0, 24);
+      // Without a dock the view is held by the entry, or garbage collection would close the page.
+      const view = this.dock
+        ? undefined
+        : new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition } });
+      // A page needs a size to lay out: at 0x0 every block (a product card, a tile) is zero wide and looks invisible.
+      view?.setBounds({ x: 0, y: 0, width: 1280, height: 900 });
+      const contents = view ? view.webContents : this.dock!.create(id, 'agent', partition);
+      // Forget the tab at once: closing a page finishes later (on Windows noticeably), and a read in between must
+      // report the tab closed instead of waiting on a page that is going away.
+      const contentsId = contents.id;
+      const dispose = () => {
+        this.tabs.delete(id);
+        this.origins.delete(contentsId);
+        if (this.dock) this.dock.remove(id);
+        else if (!contents.isDestroyed()) contents.close();
+      };
+      const entry: Entry = { contents, view, dispose, owner: context.sessionId, origin: new URL(url).origin, opened: url, busy: true };
       this.tabs.set(id, entry);
-      window.on('closed', () => this.tabs.delete(id));
-      const network = window.webContents.session;
-      network.setPermissionRequestHandler((_w, _p, cb) => cb(false));
-      network.setPermissionCheckHandler(() => false);
-      network.on('will-download', event => event.preventDefault());
-      network.webRequest.onBeforeRequest((details, cb) => {
-        try {
-          browserUrl(details.url);
-          cb({ cancel: details.resourceType === 'mainFrame' && new URL(details.url).origin !== entry.origin });
-        } catch {
-          cb({ cancel: true });
-        }
+      this.origins.set(contentsId, entry.origin);
+      contents.once('destroyed', () => {
+        this.tabs.delete(id);
+        this.origins.delete(contentsId);
       });
-      window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      const network = contents.session;
+      if (!this.configured.has(network)) {
+        this.configured.add(network);
+        network.setPermissionRequestHandler((_w, _p, cb) => cb(false));
+        network.setPermissionCheckHandler(() => false);
+        network.on('will-download', event => event.preventDefault());
+        network.webRequest.onBeforeRequest((details, cb) => {
+          try {
+            const target = new URL(browserUrl(details.url));
+            // A public page cannot reach local or intranet addresses through the assistant's browser either.
+            if (privateHostName(target.hostname) && !this.privateHosts().includes(target.hostname.toLowerCase()))
+              return cb({ cancel: true });
+            const origin = this.origins.get(details.webContentsId ?? -1);
+            cb({ cancel: details.resourceType === 'mainFrame' && (!origin || new URL(details.url).origin !== origin) });
+          } catch {
+            cb({ cancel: true });
+          }
+        });
+      }
+      contents.setWindowOpenHandler(() => ({ action: 'deny' }));
       const prevent = (event: Electron.Event, target: string) => {
         try {
           if (new URL(browserUrl(target)).origin !== entry.origin) event.preventDefault();
@@ -127,16 +217,14 @@ export class AgentBrowser {
           event.preventDefault();
         }
       };
-      window.webContents.on('will-navigate', prevent);
-      window.webContents.on('will-redirect', prevent);
-      const stop = () => {
-        if (!window.isDestroyed()) window.destroy();
-      };
+      contents.on('will-navigate', prevent);
+      contents.on('will-redirect', prevent);
+      const stop = dispose;
       context.signal.addEventListener('abort', stop, { once: true });
       const timeout = setTimeout(stop, 30000);
       try {
         if (context.signal.aborted) throw new Error('CANCELLED');
-        await window.loadURL(url);
+        await contents.loadURL(url);
         return await this.snapshot(id, entry, context.signal);
       } catch {
         stop();
@@ -148,12 +236,14 @@ export class AgentBrowser {
       }
     }
     const entry = this.get(request.input, context.sessionId);
-    context.activity?.(`${action === 'read' ? 'กำลังอ่านผลจากเว็บ' : action === 'close' ? 'กำลังปิดเว็บ' : action === 'fill' ? 'ตรวจเป้าหมายก่อนขอกรอกข้อมูล' : 'ตรวจเป้าหมายก่อนขอคลิก'} ${new URL(entry.origin).host}`);
+    context.activity?.(
+      `${action === 'read' ? tm('กำลังอ่านผลจากเว็บ') : action === 'close' ? tm('กำลังปิดเว็บ') : action === 'fill' ? tm('ตรวจเป้าหมายก่อนขอกรอกข้อมูล') : tm('ตรวจเป้าหมายก่อนขอคลิก')} ${new URL(entry.origin).host}`,
+    );
     if (entry.busy) throw new Error('BROWSER_BUSY');
     entry.busy = true;
     try {
       if (action === 'close') {
-        entry.window.destroy();
+        entry.dispose();
         return { closed: true };
       }
       if (action === 'read') return await this.snapshot(request.input, entry, context.signal);
@@ -175,12 +265,12 @@ export class AgentBrowser {
       context.review(info.url + '\n' + info.label);
       if (
         !(await context.approve(
-          action === 'fill' ? 'ให้ Agent กรอกข้อมูลนี้?' : 'ให้ Agent คลิกเป้าหมายนี้?',
+          action === 'fill' ? tm('ให้ Agent กรอกข้อมูลนี้?') : tm('ให้ Agent คลิกเป้าหมายนี้?'),
           info.url +
             '\n' +
             info.label +
-            (action === 'fill' ? '\nข้อความ: ' + value : '') +
-            '\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าต่างเบราว์เซอร์ก่อนอนุมัติ',
+            (action === 'fill' ? tm('\nข้อความ: ') + value : '') +
+            tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ'),
         ))
       )
         throw new Error('BROWSER_ACTION_DECLINED');
@@ -206,9 +296,9 @@ export class AgentBrowser {
     }
   }
   closeOwner(owner: string) {
-    for (const entry of this.tabs.values()) if (entry.owner === owner && !entry.window.isDestroyed()) entry.window.destroy();
+    for (const entry of [...this.tabs.values()]) if (entry.owner === owner) entry.dispose();
   }
   close() {
-    for (const entry of this.tabs.values()) if (!entry.window.isDestroyed()) entry.window.destroy();
+    for (const entry of [...this.tabs.values()]) entry.dispose();
   }
 }

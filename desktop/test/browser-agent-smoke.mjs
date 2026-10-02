@@ -26,7 +26,9 @@ const server = createServer((req, res) => {
   res.end(
     req.url === '/login'
       ? '<input type="password" aria-label="Password"><p>Private login screen</p>'
-      : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
+      : req.url === '/shop'
+        ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
+        : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
   );
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -36,8 +38,9 @@ delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: [entry], env, timeout: 45000 });
 try {
   await app.firstWindow();
-  await app.evaluate(({ BrowserWindow }, bundle) => {
-    globalThis.agentBrowser = new globalThis.AgentBrowser(false);
+  await app.evaluate(({ webContents }, bundle) => {
+    // The local fixture server is a private address: listed as an intranet host, as policy network.privateHosts would.
+    globalThis.agentBrowser = new globalThis.AgentBrowser(undefined, () => ['127.0.0.1']);
     globalThis.approvalCount = 0;
     globalThis.accept = true;
     globalThis.changeDuringApproval = false;
@@ -49,8 +52,8 @@ try {
       approve: async () => {
         globalThis.approvalCount++;
         if (globalThis.changeDuringApproval) {
-          const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http:'));
-          await w.webContents.executeJavaScript(`document.querySelector('button').textContent='Changed target'`);
+          const w = webContents.getAllWebContents().find(w => w.getURL().startsWith('http:'));
+          await w.executeJavaScript(`document.querySelector('button').textContent='Changed target'`);
         }
         return globalThis.accept;
       },
@@ -70,6 +73,13 @@ try {
   let snapshot = await run(url, { action: 'open' });
   const tab = snapshot.tab;
   assert.ok(tab && snapshot.elements.length === 2);
+  // Opening the same site again in the same task returns that tab (with any sign-in), without asking again.
+  const asked = await app.evaluate(() => globalThis.approvalCount);
+  const again = await run(url + '/', { action: 'open' });
+  assert.equal(again.tab, tab);
+  assert.equal(again.reused, true);
+  assert.equal(await app.evaluate(() => globalThis.approvalCount), asked);
+  snapshot = again;
   const fill = { action: 'fill', snapshot: snapshot.snapshot, ref: snapshot.elements.find(e => e.editable).ref };
   assert.equal((await run(tab, fill, 'Browser agent works')).performed, true);
   assert.equal((await run(tab, fill, 'Must not repeat')).error, 'BROWSER_STALE_TARGET');
@@ -103,6 +113,18 @@ try {
   assert.deepEqual(login.elements, []);
   assert.equal(login.text, '');
   assert.equal((await run('file:///C:/Windows/win.ini', { action: 'open' })).error, 'INVALID_URL');
+  // A card a page made clickable with its own script (a pointer cursor, no button or link) is a target too, once.
+  const shop = await run(url + '/shop', { action: 'open' });
+  const cards = shop.elements.filter(e => /Americano|Cappuccino/.test(e.label));
+  assert.equal(cards.length, 2, JSON.stringify(shop.elements));
+  assert.equal(
+    (await run(shop.tab, { action: 'click', snapshot: shop.snapshot, ref: cards.find(e => /Americano/.test(e.label)).ref })).performed,
+    true,
+  );
+  assert.match((await run(shop.tab, { action: 'read' })).text, /Cart: 1/);
+  // Other local or private addresses stay closed to the assistant.
+  for (const blocked of ['http://localhost:9/', 'http://192.168.1.1/', 'http://10.0.0.1/'])
+    assert.equal((await run(blocked, { action: 'open' })).error, 'WEB_ADDRESS_BLOCKED', blocked);
   await run(tab, { action: 'close' });
   assert.equal((await run(tab, { action: 'read' })).error, 'BROWSER_CLOSED');
   console.log(

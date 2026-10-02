@@ -3,17 +3,19 @@ import { CircleAlert, CircleCheck, LoaderCircle, Search, X } from 'lucide-react'
 import type { Session } from './types';
 import { markdownDocument, type DraftNode } from './draft';
 import { explainError } from './messages';
+import { t } from './i18n';
 
 // The one way the app asks "are you sure": focused, Enter confirms, Esc cancels, errors stay inline.
 export function ConfirmDialog({
   title,
   children,
   confirmLabel,
-  cancelLabel = 'ยกเลิก',
+  cancelLabel = t('ยกเลิก'),
   tone = 'default',
   onConfirm,
   onCancel,
   focusCancel = false,
+  confirmDisabled = false,
 }: {
   title: string;
   children: ReactNode;
@@ -23,11 +25,13 @@ export function ConfirmDialog({
   onConfirm: () => Promise<unknown> | unknown;
   onCancel: () => void;
   focusCancel?: boolean;
+  /** Keeps the confirm button off until the dialog's own condition (such as an accepted checkbox) is met. */
+  confirmDisabled?: boolean;
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState('');
   const confirm = async () => {
-    if (pending) return;
+    if (pending || confirmDisabled) return;
     setPending(true);
     setError('');
     try {
@@ -56,7 +60,12 @@ export function ConfirmDialog({
           <button autoFocus={focusCancel} className="quiet" onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button autoFocus={!focusCancel} className={tone === 'danger' ? 'danger' : ''} disabled={pending} onClick={() => void confirm()}>
+          <button
+            autoFocus={!focusCancel}
+            className={tone === 'danger' ? 'danger' : ''}
+            disabled={pending || confirmDisabled}
+            onClick={() => void confirm()}
+          >
             {pending && <LoaderCircle size={15} className="spin" />}
             {confirmLabel}
           </button>
@@ -99,12 +108,12 @@ export function CommandPalette({ items, onClose }: { items: PaletteItem[]; onClo
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <section role="dialog" aria-modal="true" aria-label="คำสั่ง" className="palette">
+      <section role="dialog" aria-modal="true" aria-label={t('คำสั่ง')} className="palette">
         <label className="palette-search">
           <Search size={16} />
           <input
             autoFocus
-            placeholder="พิมพ์เพื่อค้นหางานหรือคำสั่ง…"
+            placeholder={t('พิมพ์เพื่อค้นหางานหรือคำสั่ง…')}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => {
@@ -146,7 +155,7 @@ export function CommandPalette({ items, onClose }: { items: PaletteItem[]; onClo
               </div>
             );
           })}
-          {!matches.length && <p className="muted small palette-empty">ไม่พบงานหรือคำสั่งที่ตรงกัน</p>}
+          {!matches.length && <p className="muted small palette-empty">{t('ไม่พบงานหรือคำสั่งที่ตรงกัน')}</p>}
         </div>
       </section>
     </div>
@@ -158,16 +167,16 @@ const DAY = 86_400_000;
 export function groupSessions(sessions: Session[], now = new Date()) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const buckets: [string, (t: number) => boolean][] = [
-    ['วันนี้', t => t >= today],
-    ['เมื่อวาน', t => t >= today - DAY],
-    ['7 วันที่ผ่านมา', t => t >= today - 7 * DAY],
-    ['30 วันที่ผ่านมา', t => t >= today - 30 * DAY],
-    ['เก่ากว่านั้น', () => true],
+    [t('วันนี้'), t => t >= today],
+    [t('เมื่อวาน'), t => t >= today - DAY],
+    [t('7 วันที่ผ่านมา'), t => t >= today - 7 * DAY],
+    [t('30 วันที่ผ่านมา'), t => t >= today - 30 * DAY],
+    [t('เก่ากว่านั้น'), () => true],
   ];
   const sorted = [...sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const groups: { label: string; sessions: Session[] }[] = [];
   const pinned = sorted.filter(s => s.pinned);
-  if (pinned.length) groups.push({ label: 'ปักหมุด', sessions: pinned });
+  if (pinned.length) groups.push({ label: t('ปักหมุด'), sessions: pinned });
   for (const s of sorted.filter(s => !s.pinned)) {
     const label = buckets.find(([, test]) => test(new Date(s.updatedAt).getTime()))![0];
     const group = groups.find(g => g.label === label);
@@ -278,7 +287,7 @@ function CodeBlock({ block }: { block: ChatBlock }) {
               .catch(() => setCopied(false))
           }
         >
-          {copied ? 'คัดลอกแล้ว' : 'คัดลอกโค้ด'}
+          {copied ? t('คัดลอกแล้ว') : t('คัดลอกโค้ด')}
         </button>
       </header>
       <pre>
@@ -332,22 +341,22 @@ export function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
   }, [toasts, dismiss]);
   return (
     <div className="toasts" aria-live="polite">
-      {toasts.map(t => (
-        <div key={t.id} className={`toast ${t.tone}`} role={t.tone === 'error' ? 'alert' : 'status'}>
-          {t.tone === 'error' ? <CircleAlert size={16} /> : <CircleCheck size={16} />}
-          <span>{t.text}</span>
-          {t.action && (
+      {toasts.map(toast => (
+        <div key={toast.id} className={`toast ${toast.tone}`} role={toast.tone === 'error' ? 'alert' : 'status'}>
+          {toast.tone === 'error' ? <CircleAlert size={16} /> : <CircleCheck size={16} />}
+          <span>{toast.text}</span>
+          {toast.action && (
             <button
               className="text-link"
               onClick={() => {
-                dismiss(t.id);
-                void t.action!.run();
+                dismiss(toast.id);
+                void toast.action!.run();
               }}
             >
-              {t.action.label}
+              {toast.action.label}
             </button>
           )}
-          <button className="icon" aria-label="ปิดข้อความ" onClick={() => dismiss(t.id)}>
+          <button className="icon" aria-label={t('ปิดข้อความ')} onClick={() => dismiss(toast.id)}>
             <X size={14} />
           </button>
         </div>
@@ -377,23 +386,25 @@ export function ClaudeCodeNote({
     <div className="claude-code-note">
       <p className="small">
         {subscription
-          ? 'ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วกลับมารับคำตอบใน STeP'
-          : 'ส่งงานต่อให้ Claude Code ส่วนตัว: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้'}
+          ? t('ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วกลับมารับคำตอบใน STeP')
+          : t(
+              'ส่งงานต่อให้ Claude Code ส่วนตัว: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้',
+            )}
       </p>
       <p className={installed ? 'connected small' : 'small muted'}>
         {installed === null
-          ? 'กำลังตรวจความพร้อม…'
+          ? t('กำลังตรวจความพร้อม…')
           : installed
-            ? 'พบตัวเชื่อมต่อ · จะตรวจความพร้อมอีกครั้งเมื่อเชื่อมต่อ'
-            : 'เครื่องนี้ยังขาดส่วนเสริมสำหรับ Claude ให้ผู้ดูแลช่วยติดตั้งครั้งแรก'}
+            ? t('พบตัวเชื่อมต่อ · จะตรวจความพร้อมอีกครั้งเมื่อเชื่อมต่อ')
+            : t('เครื่องนี้ยังขาดส่วนเสริมสำหรับ Claude ให้ผู้ดูแลช่วยติดตั้งครั้งแรก')}
       </p>
       {installed === false && (
         <button className="quiet" onClick={() => void call('openHelp', { topic: 'claudeCode' })}>
-          เปิดวิธีติดตั้ง Claude Code
+          {t('เปิดวิธีติดตั้ง Claude Code')}
         </button>
       )}
       <button className="quiet" onClick={check}>
-        ตรวจอีกครั้ง
+        {t('ตรวจอีกครั้ง')}
       </button>
     </div>
   );
@@ -427,33 +438,36 @@ export function AnthropicOAuthNote({ call }: { call: (method: string, input?: an
   return (
     <div className="claude-code-note">
       <p className="small">
-        OAuth นี้เป็นของ Claude Console และใช้ค่าใช้จ่าย/โควตา API ของ workspace ที่เลือก ไม่ใช่โควตา Claude Pro/Max STeP เก็บ profile
-        แยกในเครื่องและให้ ant CLI จัดการ token กับการ refresh
+        {t(
+          'OAuth นี้เป็นของ Claude Console และใช้ค่าใช้จ่าย/โควตา API ของ workspace ที่เลือก ไม่ใช่โควตา Claude Pro/Max STeP เก็บ profile แยกในเครื่องและให้ ant CLI จัดการ token กับการ refresh',
+        )}
       </p>
       <p className={installed ? 'connected small' : 'small muted'}>
         {installed === null
-          ? 'กำลังตรวจหา ant CLI…'
+          ? t('กำลังตรวจหา ant CLI…')
           : installed
-            ? 'พบ Anthropic ant CLI · พร้อมเปิด OAuth'
+            ? t('พบ Anthropic ant CLI · พร้อมเปิด OAuth')
             : installing
-              ? 'กำลังติดตั้ง ant CLI ทางการของ Anthropic…'
+              ? t('กำลังติดตั้ง ant CLI ทางการของ Anthropic…')
               : installable
-                ? 'ยังไม่มี ant CLI · STeP ติดตั้งรุ่นทางการ (ตรวจ checksum แล้ว ~10 MB) ให้ได้ หรือจะติดตั้งให้อัตโนมัติเมื่อกดเชื่อมต่อ'
-                : 'ยังไม่พบ Anthropic ant CLI ในเครื่องนี้'}
+                ? t(
+                    'ยังไม่มี ant CLI · STeP ติดตั้งรุ่นทางการ (ตรวจ checksum แล้ว ~10 MB) ให้ได้ หรือจะติดตั้งให้อัตโนมัติเมื่อกดเชื่อมต่อ',
+                  )
+                : t('ยังไม่พบ Anthropic ant CLI ในเครื่องนี้')}
       </p>
       {failure && <p className="small danger-text">{failure}</p>}
       {installed === false && installable && (
         <button disabled={installing} onClick={install}>
-          {installing ? 'กำลังติดตั้ง…' : 'ติดตั้ง ant CLI'}
+          {installing ? t('กำลังติดตั้ง…') : t('ติดตั้ง ant CLI')}
         </button>
       )}
       {installed === false && (
         <button className="quiet" onClick={() => void call('openHelp', { topic: 'anthropicCli' })}>
-          เปิดวิธีติดตั้งเอง
+          {t('เปิดวิธีติดตั้งเอง')}
         </button>
       )}
       <button className="quiet" onClick={check}>
-        ตรวจอีกครั้ง
+        {t('ตรวจอีกครั้ง')}
       </button>
     </div>
   );
@@ -489,8 +503,8 @@ export function ProviderFields(props: {
     <>
       {!advanced ? (
         <div>
-          <p>บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ลงชื่อในเบราว์เซอร์และกลับมาที่นี่</p>
-          <div className="choice-row" role="group" aria-label="เลือกบัญชี AI">
+          <p>{t('บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ChatGPT จะเปิดหน้าลงชื่อในเบราว์เซอร์ ส่วน Gemini ใช้ API key')}</p>
+          <div className="choice-row" role="group" aria-label={t('เลือกบัญชี AI')}>
             <button
               type="button"
               className={props.value.provider === 'openai' ? 'choice active' : 'choice'}
@@ -499,21 +513,61 @@ export function ProviderFields(props: {
             >
               ChatGPT
             </button>
-            {props.claudeSubscription && <button
+            {props.claudeSubscription && (
+              <button
+                type="button"
+                className={props.value.provider === 'claude' ? 'choice active' : 'choice'}
+                aria-pressed={props.value.provider === 'claude'}
+                onClick={() => props.onChange({ ...initialChoice, provider: 'claude', mode: 'subscription' })}
+              >
+                Claude Pro / Max
+              </button>
+            )}
+            <button
               type="button"
-              className={props.value.provider === 'claude' ? 'choice active' : 'choice'}
-              aria-pressed={props.value.provider === 'claude'}
-              onClick={() => props.onChange({ ...initialChoice, provider: 'claude', mode: 'subscription' })}
+              className={props.value.provider === 'gemini' && props.value.mode === 'api' ? 'choice active' : 'choice'}
+              aria-pressed={props.value.provider === 'gemini' && props.value.mode === 'api'}
+              onClick={() => props.onChange({ ...initialChoice, provider: 'gemini', mode: 'api' })}
             >
-              Claude Pro / Max
-            </button>}
+              Gemini · API key
+            </button>
           </div>
+          {props.value.provider === 'gemini' && props.value.mode === 'api' && (
+            <div className="gemini-key">
+              <label>
+                Gemini API key
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={props.value.key}
+                  onChange={e => props.onChange({ ...props.value, key: e.target.value })}
+                  placeholder={t('วางคีย์จาก Google AI Studio · เก็บเข้ารหัสในเครื่องนี้')}
+                />
+              </label>
+              <button type="button" className="quiet" onClick={() => void props.call('openHelp', { topic: 'geminiKey' })}>
+                {t('ขอ API key จาก Google AI Studio')}
+              </button>
+              <p className="small muted">{t('ถ้าใช้คีย์แบบฟรี ให้ตรวจเงื่อนไขของ Google เรื่องการนำข้อมูลไปใช้ก่อนส่งงานขององค์กร')}</p>
+            </div>
+          )}
           <details>
-            <summary>มีบัญชี Claude หรือ Gemini อยู่แล้ว?</summary>
-            {!props.claudeSubscription && <p className="small muted">Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้</p>}
-            <p className="small muted">Gemini ส่วนตัว: ยังไม่รองรับการลงชื่อใน STeP ให้ผู้ดูแลเตรียมการเชื่อมต่อที่องค์กรรองรับในส่วนขั้นสูง</p>
+            <summary>{t('มีบัญชี Claude หรือ Gemini อยู่แล้ว?')}</summary>
+            {!props.claudeSubscription && (
+              <p className="small muted">
+                {t('Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้')}
+              </p>
+            )}
+            <p className="small muted">
+              {t(
+                'Gemini: ใช้ API key จาก Google AI Studio ได้จากปุ่ม “Gemini · API key” ด้านบน ส่วนการลงชื่อด้วยบัญชี Google ส่วนตัวใช้ไม่ได้แล้ว เพราะ Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัว',
+              )}
+            </p>
           </details>
-          <p className="small muted">ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ</p>
+          <p className="small muted">
+            {props.value.mode === 'api'
+              ? t('ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้งโดยใช้คีย์นี้')
+              : t('ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ')}
+          </p>
           {props.value.provider === 'claude' && props.claudeSubscription && <ClaudeCodeNote call={props.call} subscription />}
         </div>
       ) : (
@@ -521,12 +575,14 @@ export function ProviderFields(props: {
       )}
       <p className="connection-cost" role="status">
         {props.value.mode === 'claude-code'
-          ? 'เปิดแอปอื่น · ใช้บัญชี Claude Code ของคุณ ผลงานจะไม่กลับเข้า STeP อัตโนมัติ'
+          ? t('เปิดแอปอื่น · ใช้บัญชี Claude Code ของคุณ ผลงานจะไม่กลับเข้า STeP อัตโนมัติ')
           : props.value.mode === 'api' || (props.value.provider === 'claude' && props.value.mode === 'oauth')
-            ? 'ใช้งบ API · คิดตามการใช้กับบัญชีหรือโครงการของเจ้าของคีย์/สิทธิ์ที่เลือก โปรดยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ ไม่ใช้แพ็กเกจแชตส่วนตัว'
+            ? t(
+                'ใช้งบ API · คิดตามการใช้กับบัญชีหรือโครงการของเจ้าของคีย์/สิทธิ์ที่เลือก โปรดยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ ไม่ใช้แพ็กเกจแชตส่วนตัว',
+              )
             : props.value.provider === 'gemini' || props.value.provider === 'copilot'
-              ? 'ใช้สิทธิ์บัญชีองค์กรที่ลงชื่อ · ให้ผู้ดูแลยืนยันสิทธิ์และโควตาก่อนใช้งาน'
-              : 'ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ'}
+              ? t('ใช้สิทธิ์บัญชีองค์กรที่ลงชื่อ · ให้ผู้ดูแลยืนยันสิทธิ์และโควตาก่อนใช้งาน')
+              : t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')}
       </p>
       <button
         type="button"
@@ -538,7 +594,7 @@ export function ProviderFields(props: {
           if (advanced) props.onChange({ ...initialChoice });
         }}
       >
-        {advanced ? 'กลับไปเชื่อมต่อบัญชีส่วนตัว' : 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล'}
+        {advanced ? t('กลับไปเชื่อมต่อบัญชีส่วนตัว') : t('ตั้งค่าขั้นสูงสำหรับผู้ดูแล')}
       </button>
     </>
   );
@@ -561,7 +617,7 @@ function AdvancedProviderFields({
     <>
       <div className="form-grid">
         <label>
-          ผู้ให้บริการ
+          {t('ผู้ให้บริการ')}
           <select
             value={provider}
             onChange={e =>
@@ -586,22 +642,22 @@ function AdvancedProviderFields({
           </select>
         </label>
         <label>
-          วิธีเชื่อมต่อ
+          {t('วิธีเชื่อมต่อ')}
           <select value={mode} onChange={e => onChange({ ...value, mode: e.target.value })}>
-            {provider === 'copilot' && <option value="oauth">GitHub OAuth (บัญชี Copilot)</option>}
-            {provider === 'claude' && <option value="oauth">Claude Console OAuth (ไม่ต้องใช้ API key)</option>}
+            {provider === 'copilot' && <option value="oauth">{t('GitHub OAuth (บัญชี Copilot)')}</option>}
+            {provider === 'claude' && <option value="oauth">{t('Claude Console OAuth (ไม่ต้องใช้ API key)')}</option>}
             {subscription && (
               <option value="subscription">
                 {provider === 'antigravity'
                   ? 'Personal Google account (native Antigravity sign-in)'
                   : provider === 'claude'
-                    ? 'บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)'
+                    ? t('บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)')
                     : provider === 'gemini'
-                      ? 'บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)'
-                      : 'บัญชีส่วนตัว (ลงชื่อเข้าใช้)'}
+                      ? t('บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)')
+                      : t('บัญชีส่วนตัว (ลงชื่อเข้าใช้)')}
               </option>
             )}
-            {provider === 'claude' && <option value="claude-code">Claude Pro/Max (เปิดใน Claude Code ภายนอก)</option>}
+            {provider === 'claude' && <option value="claude-code">{t('Claude Pro/Max (เปิดใน Claude Code ภายนอก)')}</option>}
             {!['copilot', 'antigravity'].includes(provider) && <option value="api">API key</option>}
           </select>
         </label>
@@ -619,7 +675,7 @@ function AdvancedProviderFields({
             </select>
           </label>
           <label>
-            ชื่อ model
+            {t('ชื่อ model')}
             <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value })} autoComplete="off" />
           </label>
           <label>
@@ -630,13 +686,13 @@ function AdvancedProviderFields({
             className="quiet"
             onClick={() => onChange({ ...value, baseUrl: 'http://127.0.0.1:11434/v1', protocol: 'openai', key: '' })}
           >
-            ใช้ Ollama ในเครื่อง
+            {t('ใช้ Ollama ในเครื่อง')}
           </button>
-          <p className="small muted">ใช้ได้เฉพาะปลายทางที่ผู้ดูแลอนุญาต ต้องตรวจข้อมูลและอนุมัติส่งเช่นเดียวกับบัญชีอื่น</p>
+          <p className="small muted">{t('ใช้ได้เฉพาะปลายทางที่ผู้ดูแลอนุญาต ต้องตรวจข้อมูลและอนุมัติส่งเช่นเดียวกับบัญชีอื่น')}</p>
         </div>
       )}
       {provider === 'copilot' && (
-        <p className="small muted">ลงชื่อผ่าน GitHub OAuth App ที่องค์กรกำหนด ใช้สิทธิ์และโควตาของบัญชี Copilot ที่ลงชื่อ</p>
+        <p className="small muted">{t('ลงชื่อผ่าน GitHub OAuth App ที่องค์กรกำหนด ใช้สิทธิ์และโควตาของบัญชี Copilot ที่ลงชื่อ')}</p>
       )}
       {provider === 'antigravity' && (
         <div>
@@ -655,17 +711,17 @@ function AdvancedProviderFields({
       )}
       {provider === 'gemini' && mode === 'subscription' && (
         <label>
-          Google Cloud Project ID <span className="muted small">(จำเป็น)</span>
+          Google Cloud Project ID <span className="muted small">{t('(จำเป็น)')}</span>
           <input
             value={googleCloudProject}
             onChange={e => onChange({ ...value, googleCloudProject: e.target.value.trim() })}
-            placeholder="เช่น my-project-123456"
+            placeholder={t('เช่น my-project-123456')}
             autoComplete="off"
           />
           <span className="small muted">
-            Google หยุดให้บริการ Gemini CLI กับบัญชี Google ส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569
-            วิธีนี้ใช้ได้เฉพาะบัญชีองค์กรที่มี Gemini Code Assist Standard/Enterprise ผูกกับ Project นี้ บัญชีส่วนตัวให้เลือก “API key”
-            แล้วใช้ Gemini API key แทน
+            {t(
+              'Google หยุดให้บริการ Gemini CLI กับบัญชี Google ส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569 วิธีนี้ใช้ได้เฉพาะบัญชีองค์กรที่มี Gemini Code Assist Standard/Enterprise ผูกกับ Project นี้ บัญชีส่วนตัวให้เลือก “API key” แล้วใช้ Gemini API key แทน',
+            )}
           </span>
         </label>
       )}
@@ -682,7 +738,7 @@ function AdvancedProviderFields({
               autoComplete="off"
               value={key}
               onChange={e => onChange({ ...value, key: e.target.value })}
-              placeholder="เก็บเข้ารหัสในเครื่องนี้"
+              placeholder={t('เก็บเข้ารหัสในเครื่องนี้')}
             />
           </label>
         )

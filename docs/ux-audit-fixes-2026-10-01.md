@@ -27,6 +27,6 @@
 
 F02 ยังต้องใช้บัญชีผู้ให้บริการจริงที่ได้รับอนุญาตทดสอบ sign-in, คำตอบแรก, restart และ token expiry; F07 ยังต้องมีเว็บองค์กรและเส้นทาง SSO ที่กำหนดชัด การแก้โค้ดและผลจำลองไม่พิสูจน์สองเรื่องนี้ ยังไม่ประกาศรองรับ upload/download/iframe หรือ OAuth ส่วนตัวครบทั้งสามค่าย
 
-ยังไม่ได้ทำ employee study 5 คนตามรายงานเดิม และยังไม่ commit/push/deploy การเปลี่ยนแปลง
+ยังไม่ได้ทำ employee study 5 คนตามรายงานเดิม การเปลี่ยนแปลงอยู่ใน `main` แล้ว (commit `0d7481a`) แต่ยังไม่ deploy ให้พนักงาน และต้องปรับ selector ของ `phase4-smoke` และ `phase6-smoke` ตามป้ายภาษาไทยและสิทธิ์สถานะร่างที่เพิ่มใหม่
 
 หลักฐานภาพในเครื่อง: [หน้าต่างเล็กหลังแก้](../desktop/release/qa/ux-fixes/small-window.png) ไฟล์ release ถูก Git ignore; สคริปต์ที่ทำซ้ำได้อยู่ใน `desktop/test/ux-audit-smoke.mjs` และ `desktop/test/browser-loop-smoke.mjs`

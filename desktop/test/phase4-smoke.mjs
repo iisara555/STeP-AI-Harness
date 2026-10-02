@@ -29,6 +29,8 @@ if(m.method==='tools/call')result={content:[{type:'text',text:'MCP synthetic res
 await writeFile(
   join(home, 'desktop-policy.json'),
   JSON.stringify({
+    // The coordinator dialog is part of the send-time privacy checks.
+    checks: { authority: true, privacy: true },
     features: { coordinator: true, cron: true, mcp: true, sandbox: false, toolLoop: false },
     mcpServers: [{ name: 'fixture', transport: 'stdio', command: process.execPath, args: [mcp] }],
   }),
@@ -44,6 +46,7 @@ put('settings', 'main', {
   onboarding: true,
   tourDone: true,
   consentedAt: new Date().toISOString(),
+  termsVersion: '2026-10-02',
 });
 put('connection', 'fake', {
   id: 'fake',
@@ -103,8 +106,9 @@ try {
   const coordinated = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(coordinated.sessions.filter(s => s.parentId === 'parent').length, 3);
   assert.equal(coordinated.sessions.find(s => s.id === 'parent').proposals[0].text, 'Phase 4 synthetic draft');
-  await page.getByRole('button', { name: 'งานเบื้องหลัง', exact: true }).click();
-  const jobs = page.getByRole('alertdialog', { name: 'งานเบื้องหลังและเครื่องมือเพิ่มเติม' });
+  await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  await page.getByRole('menuitem', { name: 'งานตามรอบ', exact: true }).click();
+  const jobs = page.getByRole('alertdialog', { name: 'งานตามรอบและเครื่องมือเพิ่มเติม' });
   await jobs.getByLabel('ชื่องานตามรอบ', { exact: true }).fill('Synthetic recurring draft');
   await jobs.getByLabel('คำขอตามรอบ', { exact: true }).fill('Prepare a concise public draft.');
   await jobs.getByLabel('บัญชีงานตามรอบ', { exact: true }).selectOption('fake');
@@ -115,7 +119,7 @@ try {
   await jobs.getByRole('button', { name: 'บันทึกงานตามรอบ', exact: true }).click();
   await expect(jobs).toContainText('Updated recurring draft');
   await jobs.getByRole('button', { name: 'เริ่มตอนนี้', exact: true }).click();
-  await approve('เริ่มงานเบื้องหลัง?');
+  await approve('เริ่มงานตามรอบ?');
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('automationList'))).history[0]?.status, { timeout: 30000 })
     .toBe('review');

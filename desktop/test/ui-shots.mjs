@@ -27,8 +27,9 @@ try {
   await page.screenshot({ path: join(out, 'wizard-4-connect.png') });
   await page.getByRole('button', { name: 'ทำภายหลัง' }).click();
   await page.screenshot({ path: join(out, 'wizard-ready-without-ai.png') });
+  await page.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
   await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน' }).click();
-  await wizard.waitFor({state:'detached'});
+  await wizard.waitFor({ state: 'detached' });
   const saved = await page.evaluate(() => window.step.call('snapshot'));
   if (
     saved.settings.userName !== 'ต้น' ||
@@ -52,6 +53,17 @@ try {
       if (pinned) await window.step.call('pin', { id: s.id, pinned: true });
     }
   });
+  // The consent screenshot needs a ready account; mark the seeded connection ready in this isolated
+  // profile only. Consent is shown before any provider call, so nothing is sent.
+  await app.evaluate(async ({ app }) => {
+    const { DatabaseSync } = process.mainModule.require('node:sqlite');
+    const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
+    for (const row of db.prepare("SELECT id, value FROM records WHERE kind='connection'").all()) {
+      const value = { ...JSON.parse(row.value), ready: true, note: 'Screenshot fixture' };
+      db.prepare("UPDATE records SET value=? WHERE kind='connection' AND id=?").run(JSON.stringify(value), row.id);
+    }
+    db.close();
+  });
   await page.reload();
   await page.locator('.session-group').first().waitFor();
   await page.locator('.session-open').nth(1).click();
@@ -71,7 +83,7 @@ try {
   await page.locator('.skill-chip').waitFor();
   await page.screenshot({ path: join(out, 'skill-chip.png') });
   await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
-  await page.keyboard.press('Control+K');
+  await page.keyboard.press('ControlOrMeta+K');
   await page.getByRole('dialog', { name: 'คำสั่ง' }).waitFor();
   await page.keyboard.type('ธีม');
   await page.screenshot({ path: join(out, 'palette.png') });

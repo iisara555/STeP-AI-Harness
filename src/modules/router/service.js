@@ -27,6 +27,7 @@ import {
   loadTeamsDictionary,
   loadSkillContextMetadata,
   loadDocumentContextMetadata,
+  loadDocumentCatalog,
 } from '../../modules/router/metadata.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
 import { hasStartupIntakeDecision } from '../../modules/router/scope-guard.js';
@@ -40,7 +41,7 @@ import { needsPublicWebSearch } from './public-information.js';
 /**
  * Router metadata loaders live in the router module. Keep CLI exports stable.
  */
-export { loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDocumentContextMetadata };
+export { loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDocumentContextMetadata, loadDocumentCatalog };
 
 /**
  * Programmatic query function for testing and external consumers
@@ -116,7 +117,11 @@ export async function queryStepRouter(query, options = {}) {
   // An employee who invokes a routed Skill by name skips scoring and playbooks, never
   // the authority preflight or the Skill's own scope check below.
   const explicitSkillName = typeof options.skill === 'string' && skills.some((skill) => skill.name === options.skill) ? options.skill : '';
-  const playbookMatch = options.disablePlaybooks || explicitSkillName ? null : detectCompositePlaybook(playbooks, query, {
+  // autoRoute: false (STeP Desktop's default) never picks a Skill or Playbook and never asks a clarifying question:
+  // the request goes to the model as general help, and a Skill is used only when the employee chooses one. The best
+  // candidate's own scope rules and the organization authority registry still BLOCK or ESCALATE below.
+  const manualRouting = options.autoRoute === false && !explicitSkillName;
+  const playbookMatch = options.disablePlaybooks || explicitSkillName || manualRouting ? null : detectCompositePlaybook(playbooks, query, {
     clarificationAnswer: options.clarificationAnswer,
   });
   const competingPlaybooks = playbookMatch?.ambiguous ? playbookMatch.candidates : [];
@@ -146,7 +151,7 @@ export async function queryStepRouter(query, options = {}) {
     ? 'coding-git-workflow'
     : /(?:checklist|เช็กลิสต์|รายการตรวจ).*(?:ตรวจติดตาม|audit|คุณภาพ).*ISO\s*9001|ISO\s*9001.*(?:checklist|เช็กลิสต์|รายการตรวจ)/i.test(taskText)
       ? 'iso9001-audit-readiness' : '';
-  const chosenSkillName = explicitSkillName || (selectedPlaybook || competingPlaybooks.length
+  const chosenSkillName = explicitSkillName || (manualRouting || selectedPlaybook || competingPlaybooks.length
     ? ''
     : resolveSkillMenuChoice(options.clarificationAnswer, ranked, skills) || concreteSkill);
   if (chosenSkillName) {
@@ -299,6 +304,10 @@ export async function queryStepRouter(query, options = {}) {
     }
   }
 
+  // authorityChecks: false (STeP Desktop's default) lets every request through as help: the AI cannot approve, sign
+  // or submit anything itself, so the organization's approval and scope rules are left to people.
+  if (options.authorityChecks === false) scopeResult = { status: 'ALLOW', inScope: true, source: 'authority-checks-off' };
+
   const primaryTeamCode = selectedPlaybook?.owner || selectedSkill?.teams?.primary?.[0] || 'common';
   const teamInfo = teams[primaryTeamCode] || { id: primaryTeamCode, name: primaryTeamCode };
 
@@ -330,7 +339,24 @@ export async function queryStepRouter(query, options = {}) {
     && /(?:ร่าง|เขียน).*(?:อีเมล|email|ข้อความ|จดหมาย).*เชิญประชุม/i.test(taskText)
     && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
     && !CONSEQUENTIAL_ACTION_PATTERN.test(query) && !CONSEQUENTIAL_INTENTS.has(context.intent);
-  const generalAssist = invitationDraft || publicInformation || conversationalAssist || (isAmbiguous
+  // Working in a registered internal system ("เปิด STeP MIS", "หาแบบฟอร์มใน MIS") is done by the employee and the
+  // assistant together in the host's isolated browser, so it is general help rather than a Skill guess. Consequential
+  // requests (submit, approve, sign) and Authority BLOCK/ESCALATE still stop here.
+  const internalSystem = isAmbiguous && !competingPlaybooks.length
+    && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
+    && !CONSEQUENTIAL_INTENTS.has(context.intent) && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
+    && INTERNAL_SYSTEM_PATTERN.test(originalQuery);
+  // In chat the employee already answered a clarifying question and did not pick a menu option ("ไม่ตรง", or more
+  // detail). Asking again loops; the model has the whole conversation, so it helps from there.
+  const answeredInChat = options.conversational === true
+    && isAmbiguous
+    && countClarificationRounds(options.clarificationAnswer) > 0
+    && !competingPlaybooks.length
+    && scopeResult.status === 'ALLOW'
+    && !ATTACHMENT_PURPOSE_PATTERN.test(query)
+    && !CONSEQUENTIAL_INTENTS.has(context.intent)
+    && !CONSEQUENTIAL_ACTION_PATTERN.test(query);
+  const generalAssist = manualRouting || invitationDraft || publicInformation || conversationalAssist || internalSystem || answeredInChat || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'
@@ -494,6 +520,8 @@ const FILLER_TERMS = [
   'please', 'help', 'pls',
 ];
 const MIN_CONCRETE_CHARS = 3;
+// STeP MIS (manifest/services.yaml → sources.step-mis); the desktop opens it in its isolated browser.
+const INTERNAL_SYSTEM_PATTERN = /\bmis\b|mis\.step\.cmu/i;
 
 // A request that names a STeP team or internal system ("AFP ตีกลับ", "ระเบียบ
 // ISO"), or asks what the organization pays or grants ("เบิกได้เท่าไหร่",
@@ -537,6 +565,14 @@ function countClarificationRounds(answer) {
   return answer.split(/\r?\n/).filter((line) => line.trim()).length;
 }
 
+const DECLINE_PATTERN = /^(?:ไม่(?:ตรง|ใช่)?(?:สักข้อ|เลย)?(?:ครับ|ค่ะ|คะ|จ้า)?|no|nope|none|not (?:this|that|it))$/i;
+/** The latest answer turns the offered choice down. */
+function declinedMenu(answer) {
+  if (typeof answer !== 'string') return false;
+  const last = answer.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).at(-1) || '';
+  return DECLINE_PATTERN.test(last.replace(/[\s.!?,。]+/g, ''));
+}
+
 /**
  * Ask for one missing piece at a time and never repeat a question already asked.
  * When every question has been asked and routing is still unresolved, stop
@@ -557,7 +593,8 @@ function buildRoutingClarification(query, context, answer, ranked = [], skills =
   // single candidate, one yes/no) answers in a single reply what open questions
   // would take up to three rounds to reach. Offer it in the first two rounds,
   // since the first may have been spent learning what the task was at all.
-  const offerMenuNow = !purpose && tier === 'AMBIGUOUS' && options.length >= 1 && round <= 1;
+  // A menu the employee turned down ("ไม่ตรง") is never offered again.
+  const offerMenuNow = !purpose && tier === 'AMBIGUOUS' && options.length >= 1 && round <= 1 && !declinedMenu(answer);
   const field = offerMenuNow ? 'skill' : fields[round];
 
   if (field && field !== 'skill') {
