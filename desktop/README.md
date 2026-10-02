@@ -90,3 +90,5 @@ Anthropic ไม่มีตัวติดตั้ง `ant` สำหรับ
 ## Managed organization policy
 
 Desktop permissions and hooks are documented in [desktop-policy.md](../docs/desktop-policy.md). The OpenHarness adaptation roadmap and remaining phases are tracked in [openharness-parity.md](../docs/openharness-parity.md).
+
+Release acceptance: [automated checks and pending real-account/device gates](../docs/desktop-release-acceptance.md). The manual recorder is `node test/live-check.mjs <packaged-executable|--dev> <report.json>`.

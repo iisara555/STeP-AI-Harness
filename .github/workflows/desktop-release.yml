@@ -4,6 +4,8 @@ name: Build STeP Desktop installers
 # for Intel). Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
 # run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
 on:
+  pull_request:
+    paths: ['desktop/**', 'docs/desktop-*.md', '.github/workflows/desktop-release.yml']
   workflow_dispatch:
   push:
     tags: ['desktop-v*']
@@ -20,13 +22,13 @@ jobs:
           - name: windows-x64
             os: windows-latest
             script: dist:win
-            artifact: release/*.exe
+            artifact: release/STeP-Desktop-Setup-*.exe
           - name: macos-arm64
             os: macos-latest
             script: dist:mac
             artifact: release/*.dmg
           - name: macos-x64
-            os: macos-latest
+            os: macos-15-intel
             script: dist:mac:x64
             artifact: release/*.dmg
     runs-on: ${{ matrix.os }}
@@ -47,6 +49,9 @@ jobs:
       - run: npm run build
       - name: Verify chat and tools with a synthetic provider
         run: npm run test:electron
+      - name: Verify NSIS upgrade seam
+        if: runner.os == 'Windows'
+        run: npm run test:installer
       - name: Build installer
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -67,16 +72,30 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           DMG=$(ls release/*.dmg | head -1)
-          if [ "${{ matrix.name }}" = "macos-x64" ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
-            echo "::notice::Rosetta is not available on this runner; the x64 app was built and tested but not launched."
-            exit 0
-          fi
-          # Rosetta translates the Intel app on its first launch; give it time.
-          [ "${{ matrix.name }}" = "macos-x64" ] && export STEP_LAUNCH_TIMEOUT=420000
+          export STEP_EXPECT_ARCH=arm64
+          [ "${{ matrix.name }}" = "macos-x64" ] && export STEP_EXPECT_ARCH=x64
           MNT=$(mktemp -d)
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
           trap 'hdiutil detach "$MNT" -force || true' EXIT
           node test/packaged-launch-smoke.mjs "$MNT/STeP Desktop.app/Contents/MacOS/STeP Desktop"
+      - name: Verify packaged Windows chat and restart
+        if: runner.os == 'Windows'
+        env:
+          STEP_EXPECT_ARCH: x64
+        run: node test/packaged-launch-smoke.mjs "release/win-unpacked/STeP Desktop.exe"
+      - name: Verify full isolated NSIS install and upgrade
+        if: runner.os == 'Windows'
+        env:
+          STEP_INSTALLER_FIXTURE_ID: th.ac.cmu.step.installer-test.ci-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          node scripts/package-windows.mjs --prepackaged release/win-unpacked --artifact-name STeP-Installer-Test.exe --fixture-id "$STEP_INSTALLER_FIXTURE_ID"
+          node test/installer-payload-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-${{ matrix.name }}
+          path: desktop/release/qa/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: step-desktop-${{ matrix.name }}

@@ -11,6 +11,8 @@ const helpers = `
 const visible = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
 const sensitive = el => /password|hidden|file/i.test(el.type || '') || /password|passwd|otp|one.time|verification|credit.card|cc-number|cc-csc|token|secret/i.test([el.name,el.id,el.autocomplete,el.getAttribute('aria-label')].join(' '));
 const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || el.innerText || el.getAttribute('placeholder') || el.name || el.tagName).trim().slice(0,160);
+// Page semantics are imperfect: detected final actions are blocked in the host, unknown controls still need review.
+const humanOnly = el => Boolean(el.form && ['submit','image'].includes(el.type)) || /(?:อนุมัติ|ลงนาม|ลายเซ็น|ส่งคำขอ|ส่งเอกสาร|ยืนยันรายการ|ชำระเงิน|โอนเงิน|สั่งซื้อ|ลบรายการ|\\b(?:submit|approve|authorize|publish|send|pay|purchase|checkout|delete|e.?sign|sign document)\\b)/i.test([label(el),el.name,el.id,el.getAttribute('title')].join(' '));
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
 const WORLD = 1005;
@@ -91,7 +93,8 @@ export class AgentBrowser {
       const refs = new Map();
       const elements = login ? [] : controls.filter(el => !sensitive(el) && !el.disabled).map((el,i) => {
         const ref = 'e'+(i+1); refs.set(ref,{el, fingerprint:fingerprint(el)});
-        return {ref, role:el.getAttribute('role') || el.tagName.toLowerCase(), label:label(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
+        return {ref, role:el.getAttribute('role') || el.tagName.toLowerCase(), label:label(el), humanOnly:humanOnly(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type)),
+          ...(el instanceof HTMLSelectElement && !el.multiple ? {options:Array.from(el.options).slice(0,100).map(o=>({value:o.value,label:o.text.slice(0,160),disabled:o.disabled || Boolean(o.parentElement?.disabled)}))} : {})};
       });
       globalThis.__stepBrowser?.observer.disconnect();
       globalThis.__stepBrowser?.controller.abort();
@@ -145,7 +148,7 @@ export class AgentBrowser {
   }
   async run(request: LoopRequest, context: Context) {
     const action = request.args?.action;
-    if (!['open', 'read', 'click', 'fill', 'close'].includes(String(action))) throw new Error('INVALID_BROWSER_ACTION');
+    if (!['open', 'read', 'click', 'fill', 'select', 'close'].includes(String(action))) throw new Error('INVALID_BROWSER_ACTION');
     await context.check();
     if (action === 'open') {
       const url = browserUrl(request.input);
@@ -249,13 +252,14 @@ export class AgentBrowser {
       if (action === 'read') return await this.snapshot(request.input, entry, context.signal);
       const { snapshot, ref } = request.args || {};
       if (typeof snapshot !== 'string' || typeof ref !== 'string' || !/^e\d{1,3}$/.test(ref)) throw new Error('INVALID_BROWSER_TARGET');
-      const value = action === 'fill' ? request.content : '';
+      const value = action === 'fill' || action === 'select' ? request.content : '';
       if (typeof value !== 'string' || value.length > 4000) throw new Error('INVALID_INPUT');
       context.review(value);
       const selection = `const state=globalThis.__stepBrowser;
         if(!state || state.dirty || state.snapshot!==${JSON.stringify(snapshot)} || state.url!==location.href) return {error:'BROWSER_STALE_TARGET'};
         const target=state.refs.get(${JSON.stringify(ref)}); const el=target?.el;
-        if(!el || !el.isConnected || !visible(el) || sensitive(el) || el.disabled || fingerprint(el)!==target.fingerprint) return {error:'BROWSER_STALE_TARGET'};`;
+        if(!el || !el.isConnected || !visible(el) || sensitive(el) || el.disabled || fingerprint(el)!==target.fingerprint) return {error:'BROWSER_STALE_TARGET'};
+        if(humanOnly(el)) return {error:'BROWSER_HUMAN_ACTION_REQUIRED'};`;
       const info = await this.script(
         entry,
         `(() => {${helpers}${selection} return {label:label(el),url:location.href};})()`,
@@ -265,11 +269,15 @@ export class AgentBrowser {
       context.review(info.url + '\n' + info.label);
       if (
         !(await context.approve(
-          action === 'fill' ? tm('ให้ Agent กรอกข้อมูลนี้?') : tm('ให้ Agent คลิกเป้าหมายนี้?'),
+          action === 'select'
+            ? tm('ให้ Agent เลือกตัวเลือกนี้?')
+            : action === 'fill'
+              ? tm('ให้ Agent กรอกข้อมูลนี้?')
+              : tm('ให้ Agent คลิกเป้าหมายนี้?'),
           info.url +
             '\n' +
             info.label +
-            (action === 'fill' ? tm('\nข้อความ: ') + value : '') +
+            (action === 'fill' || action === 'select' ? tm('\nข้อความ: ') + value : '') +
             tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ'),
         ))
       )
@@ -283,6 +291,12 @@ export class AgentBrowser {
           if(!(el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && ['text','search','email','url','tel','number'].includes(el.type))) || el.readOnly) return {error:'BROWSER_NOT_EDITABLE'};
           const proto=el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
           Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});
+          el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
+        } else if(${JSON.stringify(action)}==='select') {
+          if(!(el instanceof HTMLSelectElement) || el.multiple) return {error:'BROWSER_NOT_EDITABLE'};
+          const options=Array.from(el.options).filter(o=>o.value===${JSON.stringify(value)});
+          if(options.length!==1 || options[0].disabled || options[0].parentElement?.disabled) return {error:'INVALID_BROWSER_OPTION'};
+          Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el,${JSON.stringify(value)});
           el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
         } else el.click();
         return {performed:true,action:${JSON.stringify(action)},readAgain:true};

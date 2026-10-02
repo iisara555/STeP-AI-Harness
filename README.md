@@ -105,7 +105,7 @@ STeP Desktop รองรับหลายวิธี โดยแต่ละ
 | Provider | วิธีที่ใช้ได้ |
 | --- | --- |
 | OpenAI | ลงชื่อ ChatGPT ผ่าน browser หรือ API key |
-| Gemini | ลงชื่อ Google ผ่าน browser หรือ API key |
+| Gemini | API key หรือบัญชีองค์กรที่มี Gemini Code Assist Standard/Enterprise และ Project ID |
 | Claude | Claude Console OAuth, API key และ Claude Code ภายนอก |
 | Claude Pro/Max | ใช้ผ่าน Claude Code ภายนอกเป็นค่าเริ่มต้น; direct in-app subscription ใช้เฉพาะ deployment ที่ได้รับอนุมัติ |
 
@@ -123,17 +123,20 @@ Browser จะเปิดหน้าลงชื่อเข้าใช้ �
 
 ### Gemini
 
-เลือก:
+สำหรับบัญชีส่วนตัว ให้เลือก **Gemini → API key** และใช้คีย์ Gemini API ที่มีสิทธิ์ใช้งานและโควตาแยกจาก Google AI Pro/Ultra ส่วนการลงชื่อเข้าใช้ใช้ได้เฉพาะบัญชีองค์กรที่มี Gemini Code Assist Standard/Enterprise และ Project ID ที่ผู้ดูแลจัดให้:
 
 ```text
 Gemini (Google)
-→ บัญชีส่วนตัว (ลงชื่อเข้าใช้)
+→ บัญชีองค์กร (ลงชื่อเข้าใช้)
+→ ระบุ Google Cloud Project ID
 → เชื่อมต่อ Google
 ```
 
-บัญชี Google Workspace/องค์กรบางบัญชีอาจต้องระบุ **Google Cloud Project ID** ส่วนบัญชีส่วนตัวทั่วไปปล่อยว่างได้
+[Google ยุติสิทธิ์ Gemini CLI สำหรับบัญชี consumer ตั้งแต่ 18 มิถุนายน 2026](https://developers.google.com/gemini-code-assist/docs/deprecations/code-assist-individuals) การมี Google Workspace หรือ Project ID เพียงอย่างเดียวไม่ได้ยืนยัน license/API entitlement
 
 Gemini CLI เป็นผู้จัดการ browser OAuth และ local callback โดยตรง ไม่ต้องคัดลอก authorization code มาใส่ใน STeP Desktop
+
+Antigravity เป็น adapter ทดลอง ไม่ใช่ทางเลี่ยงสิทธิ์ Gemini CLI: CLI 1.2.14 ที่ตรวจไว้ยังถูกบล็อกด้วย `ANTIGRAVITY_TOOLS_UNAVAILABLE` ก่อนส่ง prompt เพราะยังปิด native tools ไม่ได้ ดู [ขอบเขต adapter](docs/antigravity-adapter.md) และ [เกณฑ์ตรวจ release](docs/desktop-release-acceptance.md) ก่อนเปิดให้พนักงานใช้
 
 ### Claude
 
@@ -147,7 +150,7 @@ Gemini CLI เป็นผู้จัดการ browser OAuth และ local
 
 ![หน้าการเชื่อมต่อ AI ใน STeP Desktop](docs/images/gui/05-ai-connections.png)
 
-*หน้าการเชื่อมต่อ AI จริง แสดงสถานะบัญชี โมเดล และการเพิ่ม connection ใหม่*
+*ภาพจาก UI ปัจจุบัน ใช้บัญชีและข้อมูลจำลองสำหรับสาธิต ไม่ใช่หลักฐาน OAuth บัญชีจริง*
 
 ---
 

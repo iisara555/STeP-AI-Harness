@@ -110,9 +110,8 @@ export type Policy = {
    */
   pilot: boolean;
   /**
-   * Organization checks, off by default. authority: the router's approve/sign/submit BLOCK and ESCALATE (the AI cannot
-   * perform those acts anyway). privacy: the personal-data and credential scan on text, files, memories and tool
-   * results; off, nothing is masked, blocked or asked about on privacy grounds.
+   * Organization checks, off by default. authority: the router's approve/sign/submit BLOCK and ESCALATE. privacy: the personal-data and credential scan on text, files, memories and tool
+   * results; off, the independent credential-only guard still redacts recognized secrets.
    */
   checks: { authority: boolean; privacy: boolean };
 };

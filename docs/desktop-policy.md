@@ -1,6 +1,6 @@
 # STeP Desktop managed policy
 
-Phase 1 of the OpenHarness adaptation adds organization-managed permissions and hooks. The Router authority gate, Privacy Gate and built-in credential-path exclusions remain independent of permission mode and remembered approvals.
+Phase 1 of the OpenHarness adaptation adds organization-managed permissions and hooks. Organization checks are opt-in; credential redaction, credential-path exclusions and Browser approvals remain independent of permission mode and remembered approvals.
 
 ## Policy location and trust
 
@@ -56,26 +56,28 @@ The composer offers four modes, in the same spirit as Claude Code and ChatGPT:
 
 Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an employee choice for bounded clean-read transmission within one loop (pre-checked in standard consent, see [pilot mode](#pilot-mode)); it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
 
+For an organization pilot requiring both checks, start from [`desktop/policies/organization.json`](../desktop/policies/organization.json), provision it at the trusted path above, and verify Settings reports both checks enabled. This file is an example, not an installed policy.
+
 ## Organization checks (`checks`)
 
 Both checks are **off by default**: `{ "checks": { "authority": false, "privacy": false } }`.
 
 | Check | Off (default) | On |
 |---|---|---|
-| `authority` | Every request is answered as help, including ones about approving, signing on someone's behalf, issuing document numbers or submitting. The AI has no tool that can perform these acts | The router's authority registry and Skill scope rules BLOCK or ESCALATE these requests |
-| `privacy` | Nothing is scanned. Text, attachments, memories, tool results and web queries go to the AI provider unchanged. National ID numbers, phone numbers, names, passwords and API keys are **not** masked or blocked, and there is no dialog before data leaves | The personal-data and credential scan masks, blocks or asks as described in [pilot mode](#pilot-mode) and the [privacy gate](privacy-preflight.md) |
+| `authority` | Every request is answered as help, including questions about approval or submission. Recognized Browser submit/approval controls are blocked by the host; unknown custom controls still require human review | The router's authority registry and Skill scope rules BLOCK or ESCALATE these requests |
+| `privacy` | The credential-only guard masks recognized passwords, tokens and API keys, and withholds unmaskable findings. General personal data (IDs, phone numbers, names) is not masked or blocked; clean text has no privacy consent dialog. Detection is not exhaustive | The personal-data and credential scan masks, blocks or asks as described in [pilot mode](#pilot-mode) and the [privacy gate](privacy-preflight.md) |
 
 With `privacy` off, responsibility moves to the employee through the **usage terms**:
 - Each person ticks the terms once, on the last setup step, or at the first send if they skipped setup.
 - The terms say:
-  - what is sent to the AI provider, and that the app does not scan or mask it;
+  - what is sent to the AI provider, the credential-only guard, and that general personal data is not masked;
   - not to send passwords, API keys, national ID or account numbers, health or salary data, or other people's personal data (PDPA and university rules);
   - that approving, signing, submitting, issuing numbers and transferring money stay with people and the proper systems;
   - to check every answer before use;
   - that history stays on the computer.
 - The accepted version is stored as `settings.termsVersion`.
 - When `TERMS_VERSION` in `desktop/src/terms-version.ts` changes, everyone is asked once more.
-- The administrator remains responsible for choosing this setup under PDPA. Side-effect tools (writing files, running commands, browser open/fill/click, MCP calls) still ask each time; that is a permission, not a privacy check.
+- The administrator remains responsible for choosing this setup under PDPA. Browser open/fill/select/click and command/MCP approvals remain separate from privacy consent. File-write approvals depend on the chosen permission mode (see above).
 
 ## Web and credential guards (always on)
 

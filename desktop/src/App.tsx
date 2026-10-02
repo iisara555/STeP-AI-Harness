@@ -1883,6 +1883,11 @@ export default function App() {
             </span>
           )}
           <span className="spacer" />
+          {Boolean(snapshot.pendingMemories) && (
+            <button className="status-item status-button" onClick={() => setMemoryOpen(true)}>
+              {t('ความจำรอยืนยัน {0} รายการ', snapshot.pendingMemories)}
+            </button>
+          )}
           {session?.usage && (
             <span
               className="status-item"

@@ -1,6 +1,15 @@
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 export const en: Record<string, string> = {
+  'รายการนี้ต้องให้คุณดำเนินการเองในหน้าเว็บ ผู้ช่วยคลิกหรือส่งแทนไม่ได้':
+    'Complete this action yourself on the page. The assistant cannot click or submit it.',
+  'ตัวเลือกนี้ใช้ไม่ได้ กรุณาอ่านหน้าเว็บใหม่แล้วเลือกจากรายการล่าสุด':
+    'This option is unavailable. Read the page again and choose a current option.',
+
+  'ให้ Agent เลือกตัวเลือกนี้?': 'Let the assistant select this option?',
+  'ความจำรอยืนยัน {0} รายการ': '{0} memories awaiting confirmation',
+  ' ระบบกรองรหัสผ่านและคีย์ที่ตรวจพบ แต่ไม่ได้ปิดบังข้อมูลส่วนบุคคลทั่วไป และตรวจไม่ได้ทุกกรณี':
+    ' Detected passwords and keys are filtered, but other personal data is not masked. Detection is not complete.',
   ร่างที่แก้ไขได้: 'Editable draft',
   '“{0}” มีร่างให้ตรวจแล้ว': '“{0}” has a draft ready to review',
   '“{0}” รอข้อมูลเพิ่มจากคุณ': '“{0}” needs more information from you',
