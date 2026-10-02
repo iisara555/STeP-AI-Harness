@@ -10,6 +10,9 @@ STeP Desktop version 0.5.1 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Answer from STeP's own documents before the web or general knowledge.
+  - **Before:** general questions carried no organization documents, and the AI was never told which document IDs existed. Documents kept as a summary index (HR welfare 2569, career path, HR service channels, facility inventory) could not be read by the `reference` tool, so even `hr-policy-lookup` answered without the welfare data.
+  - **Now:** every chat and draft turn includes the best-matching document sections, the "context used" list names them, and the AI is told to cite them or say the documents do not cover the question. Restricted and missing documents are never read. See [organization knowledge first](docs/desktop-context-memory.md#organization-knowledge-first).
 - Fix Gemini API key in Settings appearing stuck: "เชื่อมต่อ Gemini" saved the key without testing it, so the connection stayed "not tested" with no progress. It now tests the key right away and ends ready or with a clear error (for example a full quota). A new smoke (`gemini-api-smoke`) runs the bundled Gemini CLI against a local fake API.
 - Lay out the Chat tab like Claude Desktop:
   - **Text box:** starts at one line and grows as you type.

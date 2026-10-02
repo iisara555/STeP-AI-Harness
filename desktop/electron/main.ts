@@ -173,6 +173,7 @@ async function main() {
     privacy: privacy.evaluatePrivacyGate,
     catalog: () => skillCatalog.loadSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
+    documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
     visionEnabled: () => policyState.policy.features.vision,
     skillMetadata: async id => {

@@ -27,6 +27,7 @@ import {
   loadTeamsDictionary,
   loadSkillContextMetadata,
   loadDocumentContextMetadata,
+  loadDocumentCatalog,
 } from '../../modules/router/metadata.js';
 import { loadAuthorityRegistry, evaluateAuthorityPreflight } from '../../modules/router/authority-preflight.js';
 import { hasStartupIntakeDecision } from '../../modules/router/scope-guard.js';
@@ -40,7 +41,7 @@ import { needsPublicWebSearch } from './public-information.js';
 /**
  * Router metadata loaders live in the router module. Keep CLI exports stable.
  */
-export { loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDocumentContextMetadata };
+export { loadRouterIndex, loadTeamsDictionary, loadSkillContextMetadata, loadDocumentContextMetadata, loadDocumentCatalog };
 
 /**
  * Programmatic query function for testing and external consumers
