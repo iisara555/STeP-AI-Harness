@@ -23,7 +23,15 @@ import { section } from './prompt';
 import { compact, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
-import { OrganizationKnowledge, STRONG_MATCH, catalogText, knowledgeText, type CatalogEntry, type KnowledgeSection } from './knowledge';
+import {
+  OrganizationKnowledge,
+  STRONG_MATCH,
+  registryText,
+  knowledgeText,
+  type CatalogEntry,
+  type RegistryEntry,
+  type KnowledgeSection,
+} from './knowledge';
 export { fence, section } from './prompt';
 export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
 
@@ -114,6 +122,8 @@ const SKILL_RULE =
 function skillRegistryText(entries: { name: string; description?: string }[]) {
   return entries.map(e => `- ${e.name}: ${String(e.description || '').slice(0, 220)}`).join('\n');
 }
+const KNOWLEDGE_RULE =
+  'STeP knowledge registry: every registered STeP document with what it covers and its sections. <organization_knowledge> holds only the excerpts that matched the question; when they do not contain the answer, open the document listed here that covers it with the reference tool (input = its ID, args.section = a section name to read one section) before saying the documents do not cover it.';
 const ORGANIZATION_RULE =
   'For anything about STeP itself (people and HR, welfare, leave, careers, procedures, policies, the quality system, facilities, contacts), answer from <organization_knowledge> or a registered document read with the reference tool, and name the document and section you used. If the organization documents do not cover it, say so plainly and suggest the owning team; never fill the gap from general knowledge, other organizations or the web.';
 
@@ -493,7 +503,8 @@ export class WorkService {
       const known: KnowledgeSection[] = knowledge
         ? await knowledge.search([...new Set([session.originalQuery, latest].filter(Boolean))].join('\n')).catch(() => [])
         : [];
-      const catalog: CatalogEntry[] = knowledge ? await knowledge.entries() : [];
+      // The STeP knowledge registry: each registered document's summary and sections, scanned from its file.
+      const catalog: RegistryEntry[] = knowledge ? await knowledge.registry().catch(() => []) : [];
       // The organization's Skills, listed by name and description only; the model loads a Skill's full text with the
       // skill tool when the request needs it (like Claude Code and opencode), instead of every Skill being read.
       const skillRegistry = ((await this.harness.catalog?.().catch(() => [])) || []).filter((e: any) => e.status === 'routed');
@@ -713,9 +724,7 @@ export class WorkService {
           toolsEnabled && WEB_RULE,
           catalog.length && ORGANIZATION_RULE,
           internal && internalSystemRule(internal, toolsEnabled),
-          toolsEnabled &&
-            catalog.length &&
-            'Registered STeP documents (read one with the reference tool, input = its ID):\n' + catalogText(catalog),
+          toolsEnabled && catalog.length && KNOWLEDGE_RULE + '\n' + registryText(catalog),
           toolsEnabled && general && skillRegistry.length && SKILL_RULE + '\n' + skillRegistryText(skillRegistry),
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',

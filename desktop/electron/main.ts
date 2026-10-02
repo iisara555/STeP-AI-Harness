@@ -67,11 +67,12 @@ import { Memories, safeMemory } from './memory';
 import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
+import { pdfPageImages } from './pdf-pages';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 
 let window: BrowserWindow, store: Store, service: WorkService;
-const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; image?: VisionInput }>();
+const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }>();
 const exportPaths = new Set<string>();
 const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
@@ -1734,16 +1735,17 @@ async function main() {
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
           throw new Error('SKILL_NOT_ROUTED');
         if (Array.isArray(input.attachments) && input.attachments.length > 1) throw new Error('ONE_SOURCE_PER_RUN');
-        const selected: { view: Attachment; text: string; sessionId: string; image?: VisionInput }[] = (
+        const selected: { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }[] = (
           Array.isArray(input.attachments) ? input.attachments : []
         ).map((aid: string) => {
           const a = attachments.get(aid);
           if (!a || !a.view.usable || a.sessionId !== id) throw new Error('ATTACHMENT_NOT_APPROVED');
           return a;
         });
-        if (selected.some(a => a.image) && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
-        if (selected.some(a => a.image) && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
-        if (coordinated && selected.some(a => a.image)) throw new Error('VISION_UNAVAILABLE');
+        const vision = selected.some(a => Boolean(a.images?.length));
+        if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
+        if (vision && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
+        if (coordinated && vision) throw new Error('VISION_UNAVAILABLE');
         const attachmentText = selected.map((a: any) => a.text).join('\n\n');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
@@ -1764,7 +1766,6 @@ async function main() {
         const flagged = review.action === 'human-confirm';
         // The first send, or the first since the usage terms changed, shows the terms to accept.
         const first = store.settings().termsVersion !== TERMS_VERSION;
-        const vision = selected.some(a => Boolean(a.image));
         const pilot = Boolean(policyState.policy.pilot);
         // With privacy checks off (the default) the only question is the one-time usage terms, as in other AI apps.
         const { block, ask, warning } = policyState.policy.checks.privacy
@@ -1866,7 +1867,7 @@ async function main() {
                   // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
                   ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
                 ],
-                { retry: input.retry === true, images: selected.flatMap(a => (a.image ? [a.image] : [])) },
+                { retry: input.retry === true, images: selected.flatMap(a => a.images || []) },
               )
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });
@@ -1945,17 +1946,30 @@ async function main() {
         const path = result.filePaths[0],
           extension = extname(path).slice(1).toLowerCase();
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
-          image: VisionInput | undefined;
+          images: VisionInput[] | undefined;
         // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
         const directImage = vision && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
         if (directImage) {
           const bytes = await readFile(path);
           if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-          image = visionImage(extension, bytes);
+          images = [visionImage(extension, bytes)];
           report = { ...unscanned(''), extractionStatus: 'text-extracted' };
+        }
+        // A scanned PDF goes to the AI as page pictures when privacy checks are off; the vision model reads them,
+        // with whatever text layer the PDF has alongside. No local OCR install is needed.
+        const scannedPdf =
+          !vision &&
+          extension === 'pdf' &&
+          !policyState.policy.checks.privacy &&
+          policyState.policy.features.vision &&
+          ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '');
+        if (scannedPdf) {
+          images = await pdfPageImages(path, join(root, 'src/vendor/privacy'));
+          report = { ...unscanned(typeof report.redactedText === 'string' ? report.redactedText : ''), extractionStatus: 'text-extracted' };
         }
         const scanNeeded =
           !directImage &&
+          !scannedPdf &&
           OCR_EXTENSIONS.includes(extension) &&
           (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
         if (scanNeeded && report.action !== 'block-external') {
@@ -1968,7 +1982,7 @@ async function main() {
             if (vision && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
             if (vision && !attachmentReason(report)) {
               if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-              image = visionImage(extension, read.bytes);
+              images = [visionImage(extension, read.bytes)];
             }
           }
         }
@@ -1979,19 +1993,21 @@ async function main() {
           id: randomUUID(),
           name: basename(path),
           status: usable
-            ? image
-              ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
-              : report.ocr
-                ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+            ? scannedPdf
+              ? tm('PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน', images?.length || 0)
+              : images
+                ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
+                : report.ocr
+                  ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
+                  : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
             : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
           preview: usable ? report.redactedText : '',
           usable,
-          ...(image ? { vision: true, imagePreview: `data:${image.mime};base64,${image.data}` } : {}),
+          ...(images?.length ? { vision: true, imagePreview: `data:${images[0].mime};base64,${images[0].data}` } : {}),
           ...(reason ? { reason } : {}),
         };
         if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId, image });
+        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId, images });
         return view;
       }
       case 'export': {

@@ -323,6 +323,9 @@ test('only routed Skills and registered references load; every tool passes hooks
     await assert.rejects(f.tools.execute({ tool: 'skill', input: 'unknown' }, f.scope), /SKILL_NOT_ROUTED/);
     await assert.rejects(f.tools.execute({ tool: 'reference', input: 'unknown' }, f.scope), /REFERENCE_UNAVAILABLE/);
     assert.match(JSON.stringify(await f.tools.execute({ tool: 'reference', input: 'registered' }, f.scope)), /Registered source/);
+    await writeFile(join(f.root, 'known.md'), '# Known\nIntro\n## First\nOne\n## Second\nTwo');
+    const one: any = await f.tools.execute({ tool: 'reference', input: 'registered', args: { section: 'Second' } }, f.scope);
+    assert.equal(one.text, '## Second\nTwo');
     const outline: any = await f.tools.execute({ tool: 'doc_outline', input: 'test.docx' }, f.scope).catch(() => null);
     assert.equal(outline, null);
     assert.ok(f.events.includes('pre_tool_use'));
@@ -331,6 +334,25 @@ test('only routed Skills and registered references load; every tool passes hooks
     const host = await f.tools.host(f.scope);
     await assert.rejects(host.check(), /AUTHORITY_REVIEW_REQUIRED/);
     await host.dispose?.();
+  } finally {
+    f.store.close();
+  }
+});
+test('references and Skills load when the app is installed under a folder named STeP Desktop (Windows)', async () => {
+  const f = await fixture();
+  try {
+    const installed = join(f.root, 'Programs', 'STeP Desktop', 'resources', 'harness');
+    await mkdir(join(installed, 'docs'), { recursive: true });
+    await writeFile(join(installed, 'known.md'), 'Installed source');
+    await writeFile(join(installed, '.env'), 'TOKEN=x');
+    const harness = (f.tools as any).harness;
+    harness.root = installed;
+    harness.documentMetadata = async (ids: string[]) =>
+      ids.map(id => ({ id, path: id === 'secret' ? '.env' : 'known.md', status: 'active' }));
+    assert.match(JSON.stringify(await f.tools.execute({ tool: 'reference', input: 'registered' }, f.scope)), /Installed source/);
+    assert.match(JSON.stringify(await f.tools.execute({ tool: 'skill', input: 'known' }, f.scope)), /Installed source/);
+    // Sensitive files inside the harness stay closed.
+    await assert.rejects(f.tools.execute({ tool: 'reference', input: 'secret' }, f.scope), /INVALID_CONTEXT_PATH/);
   } finally {
     f.store.close();
   }

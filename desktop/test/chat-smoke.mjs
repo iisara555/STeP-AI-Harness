@@ -257,21 +257,33 @@ try {
   if (await openOutput.count()) await openOutput.click();
   await page.locator('.draft-editor').waitFor();
   await page.screenshot({ path: 'release/qa/chat-workspace-dark.png', fullPage: true });
-  // A file the scan withholds (here a PDF whose second page has no text layer, like a scanned signature page)
-  // is marked on its chip, and sending is refused with the reason instead of dropping the file quietly.
+  // A PDF whose second page has no text layer (like a scanned signature page) goes to the AI as page images when
+  // privacy checks are off (the default), without a local OCR install.
   const signed = join(home, 'signed-minutes.pdf');
   await writeFile(signed, minimalPdf(['Meeting minutes: team A sends the draft', '']));
   await app.evaluate(({ dialog }, file) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
   }, signed);
+  const scanned = await page.evaluate(id => window.step.call('attach', { id }), id);
+  assert.equal(scanned.usable, true, JSON.stringify(scanned));
+  assert.equal(scanned.vision, true);
+  assert.match(scanned.status, /PDF สแกน · ส่งเป็นภาพ 2 หน้า/);
+  assert.match(scanned.imagePreview, /^data:image\/jpeg;base64,/);
+  // A file that cannot be read is marked on its chip, and sending is refused with the reason instead of dropping
+  // the file quietly.
+  const broken = join(home, 'signed-minutes-broken.pdf');
+  await writeFile(broken, '%PDF-1.4\nnot a real document');
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+  }, broken);
   const before = (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.length;
   await page.getByRole('button', { name: 'ตรวจและแนบเอกสาร' }).click();
-  await page.getByRole('dialog', { name: 'ตรวจข้อความแนบ' }).getByText('บางหน้าใน PDF เป็นภาพสแกน', { exact: false }).waitFor();
+  await page.getByRole('dialog', { name: 'ตรวจข้อความแนบ' }).getByText('เปิดหรืออ่านไฟล์นี้ไม่ได้', { exact: false }).waitFor();
   await page.getByRole('button', { name: 'กลับไปที่งาน' }).click();
-  await page.locator('.attachments .refused').filter({ hasText: 'signed-minutes.pdf' }).waitFor();
+  await page.locator('.attachments .refused').filter({ hasText: 'signed-minutes-broken.pdf' }).waitFor();
   await page.locator('.composer textarea').fill('สรุปไฟล์นี้');
   await page.keyboard.press('Enter');
-  await page.getByText('ส่งไฟล์ “signed-minutes.pdf” ให้ AI ไม่ได้', { exact: false }).waitFor();
+  await page.getByText('ส่งไฟล์ “signed-minutes-broken.pdf” ให้ AI ไม่ได้', { exact: false }).waitFor();
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.length, before, 'nothing was sent');
   assert.equal(await page.locator('.composer textarea').inputValue(), 'สรุปไฟล์นี้');
   await page.getByRole('button', { name: 'นำไฟล์ออก' }).click();
@@ -318,6 +330,7 @@ try {
           'native web-search progress',
           'heartbeat preserves streaming',
           'web source cards',
+          'scanned PDF sent as page images',
           'draft output',
           'inert AI tool proposals',
           'terminal output',

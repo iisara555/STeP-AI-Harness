@@ -6,7 +6,20 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.4 (`desktop/package.json`) contains the changes below.
+STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
+
+### Scanned PDFs, opening documents on Windows, and the knowledge registry
+
+- **Scanned PDFs:** a PDF with no text layer, or with some pages that are only pictures, now goes to the AI as page images when privacy checks are off (the default). Before, it was refused with "ไฟล์นี้ไม่มีตัวอักษรให้อ่าน" unless the local OCR component was installed.
+  - pdf.js draws up to 20 pages in a hidden, sandboxed window that can load only pdf.js itself.
+  - The chip reads "PDF สแกน · ส่งเป็นภาพ N หน้าให้ AI อ่าน". A longer scan asks to split the file.
+  - The connected model must read images.
+- **Opening documents and Skills on Windows:** fixed. The installer puts the app under a folder named `STeP Desktop`, the same name the sensitive-path patterns use for the app's own data folder. As a result, every `reference` and `skill` read failed: the AI saw only excerpts and reported that "the full document could not be opened". Those patterns now check only the part of the path inside the harness.
+- **STeP knowledge registry:** scanned from the registered document files, like the Skill registry. The AI sees every readable document with:
+  - its ID, title and owner;
+  - its first line of purpose;
+  - its section headings.
+  When the matched excerpts do not hold the answer, the AI opens the right document, or one section of it, with `reference(input=ID, args.section=heading)`. It no longer reports the information as missing. `reference` also accepts a document's path or title.
 
 ### Desktop permission modes and answer feedback
 

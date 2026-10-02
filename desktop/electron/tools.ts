@@ -1,5 +1,5 @@
 import { readFile, realpath, lstat } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, extname, dirname } from 'node:path';
+import { resolve, relative, isAbsolute, extname, dirname, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { Connection } from '../src/types';
 import type { LoopRequest } from '../src/tools';
@@ -12,8 +12,9 @@ import type { Policy, PermissionMode } from './policy';
 import type { LoopHost } from './tool-loop';
 import { fetchPublic, publicUrl } from './web-fetch';
 import { sheetWorker } from './sheets';
-import { sensitivePath, evaluatePermission } from './permissions';
+import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
+import { documentSection } from './knowledge';
 import { mainLocale, tm } from './i18n';
 
 export type ToolScope = {
@@ -82,16 +83,18 @@ export class DesktopTools {
       full = resolve(root, path),
       actual = await realpath(full);
     const r = relative(root, actual);
+    // Only the part inside the harness is checked against the sensitive-path patterns: the app is installed under a
+    // folder named "STeP Desktop" on Windows, which those patterns protect where it holds the app's own data.
+    const inside = (path: string) => '/harness/' + relative(root, path).split(sep).join('/');
     if (
       isAbsolute(r) ||
       r.startsWith('..') ||
-      sensitivePath(full, root) ||
-      sensitivePath(actual, root) ||
+      sensitivePath(inside(full), '/') ||
+      sensitivePath(inside(actual), '/') ||
       (await lstat(full)).isSymbolicLink()
     )
       throw new Error('INVALID_CONTEXT_PATH');
-    if (!evaluatePermission({ tool: 'reference', readOnly: true, path: actual }, this.mode(), this.policy(), { root }).allowed)
-      throw new Error('PATH_RULE_DENIED');
+    if (deniedPath(actual, this.policy().permission.pathRules, root)) throw new Error('PATH_RULE_DENIED');
     if ((await lstat(actual)).size > 1_000_000) throw new Error('CONTEXT_LIMIT');
     return readFile(actual, 'utf8');
   }
@@ -375,9 +378,18 @@ export class DesktopTools {
             return { id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') };
           }
           case 'reference': {
-            const ref = (await this.harness.documentMetadata?.([target]))?.[0];
+            let ref = (await this.harness.documentMetadata?.([target]))?.[0];
+            // The AI sometimes names a document by its path or title instead of its ID; resolve those to the registered ID.
+            if (!ref?.path || ref.status === 'unregistered') {
+              const named = ((await this.harness.documentCatalog?.().catch(() => [])) || []).find(
+                (e: any) => e.path === target || e.title === target || target.endsWith('/' + e.path),
+              );
+              if (named) ref = (await this.harness.documentMetadata?.([named.id]))?.[0];
+            }
             if (!ref?.path || ref.status === 'unregistered') throw new Error('REFERENCE_UNAVAILABLE');
-            return { ...ref, text: await this.context(ref.path) };
+            const text = await this.context(ref.path);
+            const part = typeof a.section === 'string' && a.section.trim() ? documentSection(text, a.section) : undefined;
+            return part ? { ...ref, section: a.section, text: part } : { ...ref, text };
           }
           case 'doc_outline':
           case 'doc_section': {

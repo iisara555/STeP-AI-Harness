@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
-import { OrganizationKnowledge, MATCH_THRESHOLD } from '../electron/knowledge';
+import { OrganizationKnowledge, MATCH_THRESHOLD, registryText, documentSection } from '../electron/knowledge';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
 import { unscanned } from '../electron/checks';
 
@@ -168,6 +169,25 @@ test('who the director is comes from the executive board document, with names in
   for (const q of ['ผอ.คือใคร', 'ทีม HD อยู่ภายใต้การกำกับของใคร'])
     assert.equal((await knowledge.search(q))[0]?.id, 'step-executive-board', q);
   store.close();
+});
+
+test('the knowledge registry lists every readable document with its summary and sections, scanned from the files', async () => {
+  const registry = await knowledge.registry();
+  const catalog = await routing.loadDocumentCatalog();
+  assert.equal(registry.length, catalog.length, 'one registry entry per readable registered document');
+  const board = registry.find(e => e.id === 'step-executive-board')!;
+  assert.match(board.summary, /ผู้อำนวยการคือใคร/);
+  assert.ok(board.sections.some(s => /^ผู้อำนวยการอุทยาน/.test(s)));
+  assert.ok(board.sections.some(s => /รองผู้อำนวยการ/.test(s)));
+  const text = registryText(registry);
+  assert.match(text, /- step-executive-board: .+\(owner: ga\)\n {2}about: .+\n {2}sections: ผู้อำนวยการ/);
+  assert.ok(!/hr-personnel-welfare-2566/.test(text), 'restricted documents never listed');
+  assert.ok(text.length < 12_000, 'the registry stays small');
+  // reference(args.section) reads one section by its registry name.
+  const body = await readFile(resolve(root, 'docs/step-executive-board.md'), 'utf8');
+  assert.match(documentSection(body, 'ผู้อำนวยการอุทยานวิทยาศาสตร์และเทคโนโลยี (ผอ. STeP)')!, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
+  assert.match(documentSection(body, 'รองผู้อำนวยการ')!, /^## รองผู้อำนวยการ/);
+  assert.equal(documentSection(body, 'ไม่มีหัวข้อนี้'), undefined);
 });
 
 test('the desktop sends requests straight to the AI unless policy turns automatic routing on', async () => {

@@ -3,6 +3,8 @@ import { isAbsolute, relative, resolve } from 'node:path';
 
 export type CatalogEntry = { id: string; title: string; path: string; owner?: string; status?: string };
 export type KnowledgeSection = { id: string; title: string; path: string; heading: string; text: string; score: number };
+/** A registered document as the AI sees it in the knowledge registry: what it is about and which sections it has. */
+export type RegistryEntry = CatalogEntry & { summary: string; sections: string[] };
 type Section = Omit<KnowledgeSection, 'score'> & { headGrams: Set<string>; bodyGrams: Set<string> };
 
 // Thai has no spaces between words, so documents and questions are compared as character trigrams.
@@ -62,6 +64,24 @@ export class OrganizationKnowledge {
     });
     return this.sections;
   }
+  /**
+   * The STeP knowledge registry: every readable registered document with a one-line summary and its section headings,
+   * scanned from the files themselves. Like the Skill registry, the AI sees what each document covers without reading
+   * them all, then opens the one it needs with the reference tool.
+   */
+  async registry(): Promise<RegistryEntry[]> {
+    const sections = await this.load();
+    const entries = await this.entries();
+    return entries
+      .map(entry => {
+        const own = sections.filter(s => s.id === entry.id && s.path === entry.path);
+        if (!own.length) return undefined;
+        const summary = documentSummary(own[0].text);
+        const headings = own.slice(1).map(s => clip(s.heading, 90));
+        return { ...entry, summary, sections: headings.slice(0, REGISTRY_SECTIONS) };
+      })
+      .filter((e): e is RegistryEntry => Boolean(e));
+  }
   /** The best-matching sections, strongest first; empty when the documents do not cover the question. */
   async search(question: string): Promise<KnowledgeSection[]> {
     const query = [...trigrams(question)];
@@ -96,7 +116,38 @@ export function knowledgeText(sections: KnowledgeSection[]) {
   return sections.map(s => `[${s.id}] ${s.title}\n§ ${s.heading}\n${s.text}`).join('\n\n---\n\n');
 }
 
-/** One line per registered document, for the reference(id) tool. */
-export function catalogText(entries: CatalogEntry[]) {
-  return entries.map(e => `- ${e.id}: ${e.title}${e.owner ? ` (owner: ${e.owner})` : ''}`).join('\n');
+const REGISTRY_SECTIONS = 16;
+const clip = (text: string, max: number) => (text.length > max ? text.slice(0, max - 1).trimEnd() + '…' : text);
+/** The first plain sentence of a document: its purpose, without the title, metadata lines, tables or Markdown marks. */
+function documentSummary(intro: string) {
+  const line = intro
+    .split('\n')
+    .slice(1)
+    .map(l => l.trim())
+    .find(l => l && !/^(#|\||>|-{3}|\*\*[^*]+:\*\*|<!--)/.test(l));
+  return clip((line || '').replace(/\*\*|`|\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/^[-*] /, ''), 200);
+}
+
+/** The knowledge registry as prompt text: ID, title, owner, summary and sections of each document. */
+export function registryText(entries: RegistryEntry[]) {
+  return entries
+    .map(e =>
+      [
+        `- ${e.id}: ${e.title}${e.owner ? ` (owner: ${e.owner})` : ''}`,
+        e.summary && `  about: ${e.summary}`,
+        e.sections.length && `  sections: ${e.sections.join(' | ')}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    )
+    .join('\n');
+}
+
+/** One section of a document by its heading (exact, then partial match); undefined when none matches. */
+export function documentSection(text: string, wanted: string) {
+  const parts = text.split(/\n(?=#{1,3} )/);
+  const want = normalize(wanted);
+  if (!want) return undefined;
+  const heading = (part: string) => normalize(/^#{1,3} (.+)/.exec(part)?.[1] || '');
+  return parts.find(p => heading(p) === want) || parts.find(p => heading(p) && (heading(p).includes(want) || want.includes(heading(p))));
 }

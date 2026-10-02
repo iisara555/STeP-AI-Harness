@@ -429,7 +429,12 @@ export const en: Record<string, string> = {
   ไม่พบความจำในขอบเขตที่เลือก: 'No memories found in the selected scope',
   ผู้ดูแลยังไม่เปิดความจำร่วมสำหรับทีมนี้: "Your admin hasn't enabled shared memory for this team",
   'ผู้ดูแลยังไม่อนุญาตการส่งภาพต้นฉบับให้ AI': "Your admin doesn't allow sending source images to the AI",
-  'การเชื่อมต่อ AI นี้ยังไม่รองรับภาพ ใช้ข้อความ OCR แทน': "This AI connection doesn't support images yet; OCR text is used instead",
+  'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ':
+    "This AI connection doesn't take images (scanned PDFs included). Pick a model that reads images, or use the original file with text",
+  'PDF สแกนยาวเกิน 20 หน้า แบ่งไฟล์แล้วแนบทีละส่วน': 'The scanned PDF is over 20 pages. Split it and attach one part at a time',
+  'ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง':
+    'The image goes to the AI as it is. Check you may share what it shows before sending',
+  'PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน': 'Scanned PDF · {0} pages go to the AI as images',
   ไม่พบรูปแบบคำตอบที่เลือกในพื้นที่งานนี้: "The selected answer style wasn't found in this workspace",
   'บริการ AI รับบริบทนี้ไม่ได้ ระบบย่อบริบทแล้วแต่ยังไม่พอ กรุณาแบ่งไฟล์หรือเริ่มงานใหม่':
     "The AI service can't take this much context, even after compacting. Split the file or start a new task",

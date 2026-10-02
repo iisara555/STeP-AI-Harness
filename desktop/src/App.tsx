@@ -2416,13 +2416,18 @@ export default function App() {
             </p>
             <p className="small muted">
               {inspecting.vision
-                ? t('ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้')
+                ? snapshot.policy?.checks?.privacy
+                  ? t('ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้')
+                  : t('ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง')
                 : t('ตรวจเฉพาะข้อความที่อ่านได้ ไม่รับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง')}
             </p>
             {inspecting.imagePreview && (
               <img className="attachment-image" src={inspecting.imagePreview} alt={t('ภาพต้นฉบับที่จะส่งให้ AI')} />
             )}
-            <pre>{inspecting.preview || t('ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน')}</pre>
+            {/* A scanned PDF or a picture sent as it is has no text to show; the image above is what goes. */}
+            {(inspecting.preview || !inspecting.vision) && (
+              <pre>{inspecting.preview || t('ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน')}</pre>
+            )}
             <button onClick={() => setInspecting(null)}>{t('กลับไปที่งาน')}</button>
           </section>
         </div>
