@@ -861,6 +861,13 @@ nav button,
     transition: none !important;
   }
 }
+/* A loading spinner is progress information, not decoration: keep it turning, slower, when motion is reduced
+   (Windows "Show animations" off, remote desktops), so a wait never looks frozen. */
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: spin 2.4s linear infinite !important;
+  }
+}
 .format-toolbar {
   display: flex;
   flex-wrap: wrap;

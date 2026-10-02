@@ -155,6 +155,10 @@ try {
   await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
   await page.keyboard.press('Enter');
   await page.getByText('กำลังค้นเว็บ', { exact: true }).waitFor();
+  // The waiting spinner keeps turning even when the OS asks for reduced motion (Windows animations off).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  assert.equal(await page.locator('.activity .spin').evaluate(el => getComputedStyle(el).animationName), 'spin');
+  await page.emulateMedia({ reducedMotion: null });
   await expect(page.locator('.activity-detail')).toContainText('แอปยังทำงานอยู่');
   await page.screenshot({ path: 'release/qa/web-search-running.png', fullPage: true });
   await page.getByText('Synthetic holiday answer', { exact: false }).waitFor();
