@@ -2363,3 +2363,15 @@ nav .count {
 .gemini-key button {
   justify-self: start;
 }
+.pilot-note,
+.wizard-ack {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  line-height: 1.6;
+}
+.wizard-ack {
+  max-width: 520px;
+  margin: 12px auto 0;
+}

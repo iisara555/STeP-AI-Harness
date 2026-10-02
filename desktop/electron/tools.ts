@@ -129,12 +129,13 @@ export class DesktopTools {
       ),
       privacyClass: review.classification === 'public' ? 'internal' : review.classification,
       allowRemember: false,
+      sessionId: scope.sessionId,
     };
     if (transmission && !destination) {
       const clean =
         review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text;
       await transmission.authorize(text.length, clean ? source : undefined, runScope =>
-        this.approvals.choose(rule, { ...detail, runScope }, scope.signal),
+        this.approvals.choose(rule, { ...detail, runScope, runDefault: Boolean(runScope && this.policy().pilot) }, scope.signal),
       );
       return review.redactedText;
     }
@@ -177,7 +178,13 @@ export class DesktopTools {
       consentStop.abort();
       scope.cancel();
     });
+    // Pilot mode: one answer covers every clean result in this run. Results with findings still ask each time.
     const sourceFor = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
+      const source = await sourceOf(r);
+      if (!source || !this.policy().pilot) return source;
+      return { key: 'pilot-run', label: tm('ผลการอ่านในงานนี้ที่ตรวจแล้วไม่พบข้อมูลส่วนบุคคล (ไฟล์ เว็บ และสถานะร่าง)') };
+    };
+    const sourceOf = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
       if (!r || this.policy().transmissionConsent?.allowRunScope === false) return;
       if (r.tool === 'ask_user' || r.tool === 'plan' || (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string'))
         return {
@@ -391,10 +398,24 @@ export class DesktopTools {
           }
           case 'plan': {
             if (!target.trim()) throw new Error('INVALID_INPUT');
+            // A plan grants nothing beyond drafting; each side-effect tool still asks on its own. Pilot mode skips this dialog.
+            // Nobody reviewed it, so it is not stored as an approved plan.
+            if (this.policy().pilot)
+              return {
+                approved: false,
+                status: 'noted-continue-drafting',
+                scope: 'draft-only; business actions require separate authority',
+              };
             const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'plan', target);
             const approved = await this.approvals.request(
               rule,
-              { title: tm('อนุมัติแผนก่อนจัดทำร่าง?'), body: target, privacyClass: 'internal', allowRemember: false },
+              {
+                title: tm('อนุมัติแผนก่อนจัดทำร่าง?'),
+                body: target,
+                privacyClass: 'internal',
+                allowRemember: false,
+                sessionId: scope.sessionId,
+              },
               scope.signal,
             );
             if (!approved) throw new Error('CANCELLED');

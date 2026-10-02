@@ -44,7 +44,7 @@ export function ApprovalDialog({
   onCancel: () => void;
 }) {
   const [remember, setRemember] = useState(false);
-  const [run, setRun] = useState(false);
+  const [run, setRun] = useState(Boolean(request.runDefault && request.runScope));
   return (
     <ConfirmDialog
       title={t(request.title)}

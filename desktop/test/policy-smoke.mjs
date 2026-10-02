@@ -124,6 +124,19 @@ try {
     page.evaluate(() => window.step.call('toolFiles')),
     /HOOK_BLOCKED/,
   );
+  // Pilot mode asks less elsewhere, but a write is still asked about every time and counted locally.
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ pilot: true }));
+  await waitPolicy(policy => policy.pilot === true && policy.hooks === 0);
+  const before = (await page.evaluate(() => window.step.call('snapshot'))).consentMetrics;
+  const pilotChange = await page.evaluate(() => window.step.call('toolStage', { path: 'notes.md', content: 'Pilot content' }));
+  await apply(pilotChange.id);
+  await approval.waitFor();
+  await approval.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await page.waitForFunction(() => window.policyApply.done);
+  assert.equal(await readFile(join(workspace, 'notes.md'), 'utf8'), 'Second reviewed content');
+  const after = (await page.evaluate(() => window.step.call('snapshot'))).consentMetrics;
+  assert.equal(after.prompts, before.prompts + 1);
+  assert.equal(after.cancelled, before.cancelled + 1);
   await writeFile(join(home, 'desktop-policy.json'), '{broken');
   await waitPolicy(policy => policy.problems.length > 0);
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).policy.features.autoMode, false);
@@ -145,6 +158,7 @@ try {
           'policy reload cancels consent',
           'sensitive paths',
           'hook blocks',
+          'pilot keeps write consent',
           'invalid policy defaults',
           'policy settings UI',
         ],

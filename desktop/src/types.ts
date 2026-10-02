@@ -195,6 +195,7 @@ export type Snapshot = {
   policy?: PolicySnapshot;
   approvals?: ApprovalRule[];
   transmissionGrants?: TransmissionGrant[];
+  consentMetrics?: ConsentSummary;
   features?: { claudeSubscription?: boolean };
   settings: Settings;
   connections: Connection[];
@@ -212,6 +213,15 @@ export type PolicySnapshot = {
   defaultMode: PermissionMode;
   mode: PermissionMode;
   hooks: number;
+  pilot?: boolean;
+};
+export type ConsentSummary = {
+  prompts: number;
+  confirmed: number;
+  cancelled: number;
+  tasks: number;
+  tasksAsked: number;
+  perTask: number;
 };
 export type ApprovalRule = { id: string; workspaceHash: string; tool: string; targetHash: string; at: string };
 export type ApprovalAnswer = 'cancel' | 'once' | 'workspace' | 'run';
@@ -232,6 +242,9 @@ export type ApprovalRequest = {
   privacyClass: string;
   allowRemember: boolean;
   runScope?: string;
+  /** Pilot mode pre-selects the run scope, so one answer covers the rest of the run. */
+  runDefault?: boolean;
+  sessionId?: string;
 };
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };

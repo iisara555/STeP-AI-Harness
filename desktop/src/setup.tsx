@@ -85,9 +85,11 @@ export function SetupWizard({
 
   const save = (extra: object = {}) =>
     call('settings', { userName, team, assistant, personality, assistantTone: tone, theme: s.theme, ...extra });
+  const pilot = Boolean(snapshot.policy?.pilot);
   const finish = (tour: boolean) =>
     run('finish', async () => {
       await save();
+      if (pilot) await call('acknowledgeData');
       await refresh();
       onDone(tour);
     });
@@ -354,6 +356,13 @@ export function SetupWizard({
               {ready ? t('{0} พร้อมช่วยงานแรกของคุณ', assistant) : t('ยังไม่ได้เชื่อมต่อ AI เชื่อมบัญชีก่อนเริ่มคุยกับผู้ช่วย')}
             </p>
             <p className="small muted">{t('เริ่มจากงานตัวอย่าง หรือปรับผู้ช่วยและส่วนเสริมภายหลังในการตั้งค่า')}</p>
+            {pilot && (
+              <p className="wizard-ack small">
+                {t(
+                  'ช่วงทดลองใช้: ข้อความและไฟล์ที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ ระบบบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล และปิดบังเลขบัตรประชาชนให้อัตโนมัติ ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้ การกดปุ่มด้านล่างถือว่ารับทราบ',
+                )}
+              </p>
+            )}
           </section>
         )}
 

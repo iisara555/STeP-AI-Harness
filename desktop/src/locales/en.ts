@@ -1269,4 +1269,17 @@ export const en: Record<string, string> = {
   'เชื่อมต่อ Gemini': 'Connect Gemini',
   'ตรวจขอบเขตของข้อความนี้ไม่สำเร็จ จึงยังไม่ส่งให้ AI กรุณาส่งอีกครั้ง':
     "Couldn't check the scope of this message, so it wasn't sent to the AI. Please send it again",
+  'ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้':
+    "Sent. This message mentions a topic that may be sensitive, so don't include names or IDs of people in this task.",
+  'ผลการอ่านในงานนี้ที่ตรวจแล้วไม่พบข้อมูลส่วนบุคคล (ไฟล์ เว็บ และสถานะร่าง)':
+    'Results in this task with no personal data found (files, web pages and draft status)',
+  'ช่วงทดลองใช้: ข้อความและไฟล์ที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ ระบบบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล และปิดบังเลขบัตรประชาชนให้อัตโนมัติ ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้ การกดปุ่มด้านล่างถือว่ารับทราบ':
+    'During the pilot, the messages and files you send go to the AI provider you connected. Passwords and sensitive data that identify a person are blocked, and national ID numbers are masked automatically. Only send data you are allowed to use. Pressing a button below confirms you understand.',
+  'โหมดทดลองใช้ (Pilot) เปิดอยู่: ถามยืนยันน้อยลง แต่ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง':
+    'Pilot mode is on: fewer confirmations. Passwords and sensitive data that identify a person are still blocked, and tools that change anything still ask every time.',
+  สถิติการถามยืนยันในเครื่องนี้: 'Confirmation prompts on this computer',
+  'ถาม {0} ครั้ง · ยืนยัน {1} · ยกเลิก {2} · เฉลี่ย {3} ครั้งต่องาน ({4} งาน)':
+    'Asked {0} times · confirmed {1} · cancelled {2} · {3} per task on average ({4} tasks)',
+  'นับเฉพาะจำนวนครั้งและชื่อเครื่องมือ ไม่เก็บเนื้อหาที่ถาม และไม่ส่งออกจากเครื่อง':
+    'Only counts and tool names are kept, never what was asked, and they never leave this computer.',
 };

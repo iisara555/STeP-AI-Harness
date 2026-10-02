@@ -584,7 +584,8 @@ export default function App() {
       });
       return;
     }
-    if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
+    if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
+    else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
       setForcedSkill('');
       setQuery('');
@@ -2051,7 +2052,10 @@ export default function App() {
             allowRemember: false,
           }}
           confirmLabel={t('มีสิทธิ์ส่งข้อมูลนี้')}
-          onCancel={() => setConsentAsk(null)}
+          onCancel={() => {
+            void api.call('consentDeclined', { id: consentAsk.sessionId }).catch(() => {});
+            setConsentAsk(null);
+          }}
           onConfirm={async () => {
             const ask = consentAsk;
             setConsentAsk(null);

@@ -215,6 +215,13 @@ export function SettingsPanel({
             {snapshot.policy.hooks}
           </p>
           <p className="small muted">{snapshot.policy.path}</p>
+          {snapshot.policy.pilot && (
+            <p className="pilot-note">
+              {t(
+                'โหมดทดลองใช้ (Pilot) เปิดอยู่: ถามยืนยันน้อยลง แต่ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง',
+              )}
+            </p>
+          )}
           {snapshot.policy.problems.length > 0 && <p role="alert">{t('อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล')}</p>}
           <div className="policy-features">
             {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
@@ -225,6 +232,22 @@ export function SettingsPanel({
             ))}
           </div>
           <p className="small muted">{t('สถานะนี้แสดงสิทธิ์ตามนโยบาย ความสามารถที่อยู่ระหว่างพัฒนาจะพร้อมใช้เมื่อส่งมอบแล้ว')}</p>
+          {snapshot.consentMetrics && (
+            <>
+              <h3>{t('สถิติการถามยืนยันในเครื่องนี้')}</h3>
+              <p className="small">
+                {t(
+                  'ถาม {0} ครั้ง · ยืนยัน {1} · ยกเลิก {2} · เฉลี่ย {3} ครั้งต่องาน ({4} งาน)',
+                  snapshot.consentMetrics.prompts,
+                  snapshot.consentMetrics.confirmed,
+                  snapshot.consentMetrics.cancelled,
+                  snapshot.consentMetrics.perTask,
+                  snapshot.consentMetrics.tasks,
+                )}
+              </p>
+              <p className="small muted">{t('นับเฉพาะจำนวนครั้งและชื่อเครื่องมือ ไม่เก็บเนื้อหาที่ถาม และไม่ส่งออกจากเครื่อง')}</p>
+            </>
+          )}
           <h3>{t('สิทธิ์ที่คุณอนุญาตไว้')}</h3>
           {!snapshot.approvals?.length && <p className="muted">{t('ยังไม่มีสิทธิ์ที่บันทึกไว้')}</p>}
           {snapshot.approvals?.map(rule => (

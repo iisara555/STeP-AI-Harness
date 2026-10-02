@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop pilot mode
+
+- Add an administrator-only `pilot` policy flag that cuts routine confirmation dialogs: plain text attachments, sensitive words with no person identifier (now a warning), plan approval, and per-source tool-result consent (one answer per run). The first-send dialog becomes a one-time acknowledgment in the setup wizard.
+- Keep the floors in both modes: credentials and sensitive data tied to a person are blocked, national ID numbers are masked, images and multi-worker runs still ask, and file writes, commands and browser actions still ask through ToolGate. See [pilot mode](docs/desktop-policy.md#pilot-mode).
+- Count consent prompts, confirmations and cancellations per task on this computer (counts and tool names only) and show them in Settings → Organization policy.
+- Stop a follow-up message when its route check fails instead of sending it without the authority check.
+
 ### Desktop English UI, new welcome and team starters
 
 - Add a Thai/English switch on the first setup step and in Settings → Appearance & language. Thai stays the source text; English comes from `desktop/src/locales/en.ts`, and a unit test fails when wrapped Thai text has no English entry. Main-process dialogs, statuses and connection notes follow the same setting; prompts sent to the AI are unchanged. See [desktop i18n](docs/desktop-i18n.md).

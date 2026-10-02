@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import type { ApprovalRequest, ApprovalRule, ApprovalAnswer } from '../src/types';
 import { Store } from './store';
+import type { ConsentMetrics } from './consent-metrics';
 
 export const approvalHash = (value: string) => createHash('sha256').update(value).digest('hex');
 export class Approvals {
@@ -11,6 +12,7 @@ export class Approvals {
   constructor(
     private store: Store,
     private emit: (request?: ApprovalRequest, closedId?: string) => void,
+    private metrics?: ConsentMetrics,
   ) {}
   rule(workspace: string, tool: string, target: string): ApprovalRule {
     const workspaceHash = approvalHash(workspace);
@@ -55,6 +57,7 @@ export class Approvals {
         rule,
         timer,
       });
+      this.metrics?.record(request.sessionId, rule.tool, 'prompt');
       this.emit(request);
     });
   }
@@ -70,6 +73,7 @@ export class Approvals {
     clearTimeout(pending.timer);
     this.pending.delete(id);
     if (answer === 'workspace') this.store.put('approval', pending.rule.id, pending.rule);
+    this.metrics?.record(pending.request.sessionId, pending.rule.tool, answer === 'cancel' ? 'cancelled' : 'confirmed');
     pending.resolve(answer);
     this.emit(undefined, id);
   }

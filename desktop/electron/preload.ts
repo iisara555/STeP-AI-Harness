@@ -43,6 +43,8 @@ const allowed = new Set([
   'transmissionRevoke',
   'approvalRemove',
   'settings',
+  'acknowledgeData',
+  'consentDeclined',
   'workspace',
   'connection',
   'runtime',

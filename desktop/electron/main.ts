@@ -52,6 +52,8 @@ import {
 } from './anthropic-auth';
 import { existsSync, watchFile, unwatchFile } from 'node:fs';
 import { loadPolicy, type PermissionMode } from './policy';
+import { ConsentMetrics } from './consent-metrics';
+import { sendConsent, type SendSignals } from './consent-plan';
 import { Approvals } from './approvals';
 import { ToolGate } from './tool-gate';
 import { HookEngine, type HookPayload } from './hooks';
@@ -325,8 +327,11 @@ async function main() {
       });
     return outcome;
   };
-  const approvals = new Approvals(store, (approval, approvalId) =>
-    emit({ sessionId: '', type: approval ? 'approval' : 'approval-close', approval, approvalId }),
+  const consentMetrics = new ConsentMetrics(store);
+  const approvals = new Approvals(
+    store,
+    (approval, approvalId) => emit({ sessionId: '', type: approval ? 'approval' : 'approval-close', approval, approvalId }),
+    consentMetrics,
   );
   const gate = new ToolGate(
     () => policyState.policy,
@@ -400,7 +405,7 @@ async function main() {
         approve: (title, body) =>
           approvals.request(
             approvals.rule(store.settings().workspace || data, 'browser_control', randomUUID()),
-            { title, body, privacyClass: 'internal', allowRemember: false },
+            { title, body, privacyClass: 'internal', allowRemember: false, sessionId: scope.sessionId },
             scope.signal,
           ),
       });
@@ -455,6 +460,7 @@ async function main() {
           body: tm('จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}', connection.provider, text.slice(0, 2000)),
           privacyClass: 'internal',
           allowRemember: false,
+          sessionId: id,
         },
         signal,
       );
@@ -674,9 +680,11 @@ async function main() {
       defaultMode: policyState.policy.permission.defaultMode,
       mode: permissionMode(),
       hooks: policyState.policy.hooks.length,
+      pilot: Boolean(policyState.policy.pilot),
     },
     approvals: approvals.list(),
     transmissionGrants: tools.transmissionGrants(),
+    consentMetrics: consentMetrics.summary(store.list('session').length),
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections(),
@@ -1024,6 +1032,15 @@ async function main() {
           await writeUserMemory().catch(() => {});
         }
         return store.settings();
+      }
+      case 'consentDeclined':
+        // Counted only; a declined send has nothing else to undo.
+        consentMetrics.record(inputText(input.id, 60), 'external_ai', 'cancelled');
+        return true;
+      case 'acknowledgeData': {
+        // The setup wizard's one-time acknowledgment stands in for the first-send dialog.
+        if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
+        return true;
       }
       case 'settings': {
         const teams = await routing.loadTeamsDictionary();
@@ -1685,11 +1702,33 @@ async function main() {
           store.put('session', s.id, s);
         }
         const review = service.review(text, combinedSource, store.session(id).allowedIdentifiers || []);
-        if (review.action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
         // Ask only when it adds information: the first send on this computer, a new attachment, or a privacy review signal.
+        // Pilot mode (policy) asks less; see sendConsent. Blocking and masking are the same in every mode.
         const flagged = review.action === 'human-confirm';
         const first = !store.settings().consentedAt;
-        if (first || selected.length || sourceText || flagged || coordinated) {
+        const vision = selected.some(a => Boolean(a.image));
+        const pilot = Boolean(policyState.policy.pilot);
+        const { block, ask, warning } = sendConsent(
+          {
+            action: review.action as SendSignals['action'],
+            keywordOnly: review.keywordOnly,
+            first,
+            attachment: selected.length > 0,
+            source: Boolean(sourceText),
+            vision,
+            coordinated,
+          },
+          pilot,
+        );
+        if (block) throw new Error('PRIVACY_REVIEW_REQUIRED');
+        if (pilot && !ask) {
+          const s = store.session(id);
+          if (!s.consentedAt) {
+            s.consentedAt = new Date().toISOString();
+            store.save(s);
+          }
+        }
+        if (ask) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
           const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
           const fingerprint = createHash('sha256')
@@ -1709,6 +1748,7 @@ async function main() {
           const token = typeof input.consent === 'string' ? input.consent : '';
           if (!token || consents.get(token) !== fingerprint) {
             const issued = randomUUID();
+            consentMetrics.record(id, 'external_ai', 'prompt');
             consents.set(issued, fingerprint);
             if (consents.size > 20) consents.delete(consents.keys().next().value!);
             return {
@@ -1718,11 +1758,12 @@ async function main() {
                 flagged,
                 labels: review.labels,
                 attachment: selected.length > 0,
-                vision: selected.some(a => Boolean(a.image)),
+                vision,
                 source: Boolean(sourceText),
               },
             };
           }
+          consentMetrics.record(id, 'external_ai', 'confirmed');
           consents.delete(token);
           const s = store.session(id);
           if (!s.consentedAt) {
@@ -1778,7 +1819,7 @@ async function main() {
         });
         for (const a of selected) attachments.delete(a.view.id);
         // Without a dialog, the person still learns what was masked before sending.
-        return { started: true, mode: workMode, masked: review.labels };
+        return { started: true, mode: workMode, masked: review.labels, warning };
       }
       case 'cancel':
         coordinator.cancel(input.id);

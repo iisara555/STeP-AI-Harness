@@ -49,6 +49,7 @@ export class ToolGate {
           body: detail.body,
           privacyClass: detail.privacyClass || 'internal',
           allowRemember: true,
+          sessionId: detail.sessionId,
         },
         signal,
       );

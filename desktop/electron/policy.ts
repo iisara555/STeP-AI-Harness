@@ -93,6 +93,11 @@ export type Policy = {
   voice?: { components: Record<string, { runtime: { url: string; sha256: string }; model: { url: string; sha256: string } }> };
   skillPacks?: { approvedDigests: string[] };
   transmissionConsent?: { allowRunScope: boolean };
+  /**
+   * Pilot mode: fewer confirmation dialogs for a trial. The floors stay: credentials and sensitive data tied to a
+   * person are still blocked, national ID numbers are still masked, and every side-effect tool still asks each time.
+   */
+  pilot?: boolean;
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -166,6 +171,10 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.pilot !== undefined) {
+    if (typeof raw.pilot !== 'boolean') problems.push('pilot must be true or false');
+    else policy.pilot = raw.pilot;
+  }
   if (raw.transmissionConsent !== undefined) {
     if (
       !isObject(raw.transmissionConsent) ||

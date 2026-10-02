@@ -206,7 +206,14 @@ export class WorkService {
         ? 'human-confirm'
         : 'pass';
     const labels: string[] = [...new Set<string>(scans.flatMap(s => (s.findings || []).map((f: any) => String(f.label))))];
-    return { action, labels };
+    // A sensitive word with nothing that points to a person ("leave policy", "salary bands"): pilot mode warns instead of asking.
+    const keywordOnly =
+      action === 'human-confirm' &&
+      scans
+        .filter(s => s.action === 'human-confirm')
+        .every(s => s.sensitiveKeywordsCount > 0 && !s.unresolvedIdentifiers && typeof s.redactedText === 'string');
+    const masked = scans.some(s => s.redactionApplied);
+    return { action, labels, keywordOnly, masked };
   }
   private async contextFile(path: string) {
     const full = resolve(this.harness.root, path),

@@ -45,6 +45,32 @@ Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`
 
 Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an unchecked employee choice for bounded clean-read transmission within one loop; it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
 
+## Pilot mode
+
+`{ "pilot": true }` reduces confirmation dialogs for a trial. It is off unless the managed policy sets it, any value other than `true` or `false` rejects the whole policy, and removing the key or setting `false` restores the normal dialogs on the next policy reload.
+
+| | Normal | Pilot |
+|---|---|---|
+| First send on this computer | Dialog | One-time acknowledgment on the last setup-wizard step. Skipping the wizard keeps the first-send dialog |
+| Text attachment or pasted source | Dialog per send | No dialog unless the privacy review flags it |
+| Image attachment (vision) | Dialog | Dialog |
+| Sensitive word with no person identifier | Dialog | Sent with a warning notice |
+| Name table or unresolved person identifier | Dialog | Dialog |
+| Several AI workers (coordinator) | Dialog | Dialog |
+| Masked national ID, phone or e-mail | Masked, notice | Masked, notice |
+| Tool results sent to the AI | Per source; "this run" unchecked | One answer covers every clean result in the run; the "this run" box starts checked. Results with findings still ask each time |
+| Plan approval (`plan` tool) | Dialog | No dialog. The plan is noted but not stored as approved; it never granted anything beyond drafting |
+
+These floors are the same in both modes and covered by `desktop/test/pilot.test.ts` and `desktop/test/policy-smoke.mjs`:
+
+- Credentials, passwords, API keys and tokens stop the send (`PRIVACY_REVIEW_REQUIRED`), in the message or in an attachment.
+- Sensitive data together with a person identifier stops the send.
+- National ID numbers are masked before anything leaves the computer.
+- Writing files, running commands and browser actions ask through `ToolGate` every time. Pilot mode does not change `ToolGate`; the existing per-workspace "remember this exact tool and target" choice, denied paths, denied commands, plan mode and hooks behave as before.
+- `transmissionConsent.allowRunScope: false` still forces one-time result consent in pilot mode.
+
+The app counts consent dialogs on this computer: prompts, confirmations and cancellations per task and per tool. It stores counts and tool names only, never the text that was asked about, and does not send them anywhere. Settings → Organization policy shows the totals and the average per task, so a pilot can report how often people were asked before and after.
+
 Every Workbench IPC operation passes through `ToolGate`: Files, Read, Stage, Changes, Reject, Apply, Diff, Tasks, Cancel, Browser, Browser Read and Terminal. Checks run before the pre-tool hook and again immediately before the operation. A workspace, mode or policy change during an approval aborts or cancels it.
 
 - Read-only operations do not ask for consent. Staging a diff is a preview stored in the local review queue and does not write the workspace. Rejecting a preview and cancelling a running task remain available in plan mode.
