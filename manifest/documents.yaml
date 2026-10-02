@@ -162,6 +162,23 @@ documents:
       รายการเอกสารที่ถูกยกเลิก และกฎว่าต้องดาวน์โหลดจาก STeP MIS เท่านั้น
       เพื่อป้องกันการใช้เอกสารผิด Revision
 
+  # ผังผู้บริหาร: สร้างจาก manifest/organization.yaml → executiveOversight (test/executive-board-document.test.js ตรวจว่าตรงกัน)
+  step-executive-board:
+    title: "คณะผู้บริหาร STeP และผู้กำกับดูแลแต่ละทีม (ผู้อำนวยการ รองผู้อำนวยการ ผู้ช่วยผู้อำนวยการ ผู้จัดการ)"
+    path: docs/step-executive-board.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: owner-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-09-20"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันตำแหน่งและการกำกับร่วม 2026-09-20; ตรวจทานได้จาก https://www.step.cmu.ac.th/executive"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "ชื่อและตำแหน่งผู้บริหารที่เผยแพร่บนเว็บไซต์ STeP (OIT O2) ไม่มีช่องทางติดต่อส่วนบุคคล"
+    note: "ผังการกำกับดูแล ไม่ใช่อำนาจอนุมัติ (ดู manifest/authority.yaml); เมื่อผังเปลี่ยนให้แก้ organization.yaml และเอกสารนี้พร้อมกัน"
+
   # --- STeP Quality Layer v0.1 ---
   hr-service-channels:
     title: "ระบบและช่องทางปฏิบัติงานด้านบุคคล (HR Service Channels)"

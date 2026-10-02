@@ -145,3 +145,18 @@ test('declining the clarifying menu in chat gets an answer instead of the same q
   assert.match(captured.prompt, /D204/, 'the model sees the original request');
   store.close();
 });
+
+test('who the director is comes from the executive board document, with names intact', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ผู้อำนวยการ STeP ชื่ออะไร', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /\[step-executive-board\]/);
+  assert.match(captured.prompt, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
+  assert.ok(!captured.webSearch.includes(true), 'no web search: the registered document answers');
+  // Registered documents reach the AI unmasked, so executives named นาย/นางสาว are not hidden either.
+  await work.run(session.id, 'รองผู้อำนวยการมีใครบ้าง', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /นางสาวเมลิน เชื้อมโนชาญ/);
+  for (const q of ['ผอ.คือใคร', 'ทีม HD อยู่ภายใต้การกำกับของใคร'])
+    assert.equal((await knowledge.search(q))[0]?.id, 'step-executive-board', q);
+  store.close();
+});

@@ -33,6 +33,7 @@ try {
           'manifest/services.yaml',
           'docs/hr-personnel-welfare-index.md',
           'docs/hr-service-channels.md',
+          'docs/step-executive-board.md',
           'skills/common/hr-policy-lookup/SKILL.md',
           'rules/human-approval.md',
         ].map(file => [file, existsSync(join(harness, file))]),
