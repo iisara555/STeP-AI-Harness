@@ -39,6 +39,17 @@ Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`
 }
 ```
 
+The composer offers four modes, in the same spirit as Claude Code and ChatGPT:
+
+| Mode | Value | File edits | Commands, sandbox, MCP calls |
+|---|---|---|---|
+| Ask before edits | `ask` | Ask each time (a reviewed write can be remembered for the same file) | Ask each time |
+| Accept edits | `acceptEdits` | AI edits are applied right away, with a snapshot to undo them | Ask each time |
+| Full auto | `auto` | Applied without asking | Without asking only when `features.shellByAi=true`; otherwise they ask |
+| Plan | `plan` | Blocked (read only) | Blocked |
+
+`ask`, `acceptEdits` and `plan` are available by default. A policy that lists `permission.modes` without `acceptEdits` removes it. In every mode, sensitive paths, denied paths, denied commands and blocking hooks still apply. Privacy blocks and browser business actions also still apply.
+
 `auto` requires both `features.autoMode=true` and inclusion in `permission.modes`. Shell execution in auto also requires `features.shellByAi=true`; otherwise it still asks. Omitted or disabled modes fall back to the organization's permitted default. No production policy is installed or changed by this repository.
 
 ## Workbench permissions and approvals

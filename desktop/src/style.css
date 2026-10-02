@@ -2375,3 +2375,34 @@ nav .count {
   max-width: 520px;
   margin: 12px auto 0;
 }
+.feedback-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.feedback-actions button.active {
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+.feedback-field {
+  display: grid;
+  gap: 6px;
+}
+.feedback-field textarea {
+  width: 100%;
+  resize: vertical;
+}
+.feedback-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+}
+.feedback-scope label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.feedback-scope input {
+  width: auto;
+}

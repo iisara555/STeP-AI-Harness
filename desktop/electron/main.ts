@@ -711,6 +711,24 @@ async function main() {
         if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         await memories.remove(inputText(input.id, 60));
         return true;
+      case 'messageFeedback': {
+        // Rates one answer. "Needs fixing" with a note also proposes a memory the person confirms later.
+        const s = store.session(inputText(input.id, 60));
+        const index = Number(input.index);
+        const message = Number.isInteger(index) ? s.messages[index] : undefined;
+        if (!message || message.role !== 'assistant') throw new Error('INVALID_INPUT');
+        const rating = input.rating === 'good' || input.rating === 'fix' ? input.rating : undefined;
+        if (input.rating !== null && !rating) throw new Error('INVALID_INPUT');
+        const note = typeof input.note === 'string' ? input.note.slice(0, 1000).trim() : '';
+        // The proposal is checked first, so a refused note leaves the rating unchanged and the person can edit it.
+        if (rating === 'fix' && note && permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        const proposed = rating === 'fix' && note ? Boolean(memories.proposeFeedback(s.id, note)) : false;
+        if (rating) message.feedback = rating;
+        else delete message.feedback;
+        store.save(s);
+        emit({ sessionId: s.id, type: 'changed' });
+        return { rating: rating || null, proposed };
+      }
       case 'memoryDismiss':
         memories.dismiss(inputText(input.id, 60));
         return true;

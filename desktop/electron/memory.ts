@@ -281,6 +281,33 @@ export class Memories {
     if (!this.proposals().some(p => p.id === id)) throw new Error('MEMORY_NOT_FOUND');
     this.store.remove('memory-proposal', id);
   }
+  /**
+   * "Needs fixing" with a note becomes a pending proposal, never a memory, until the person confirms it.
+   * A note that fails the privacy check is refused, not kept for review.
+   */
+  proposeFeedback(sessionId: string, note: string) {
+    const text = safeMemory(note.trim(), this.privacy);
+    if (!text || text.length > 1000) throw new Error('MEMORY_INVALID');
+    const pending = this.proposals();
+    const existing = pending.find(p => p.text === text);
+    if (existing) return existing;
+    if (pending.length >= 20) throw new Error('MEMORY_PROPOSAL_LIMIT');
+    const proposal: MemoryProposal = {
+      id: randomUUID(),
+      name: 'Answer feedback',
+      text,
+      type: 'feedback',
+      scope: 'private',
+      importance: 0.8,
+      ttl_days: 0,
+      evidence: text,
+      sessionId,
+      context: this.context(),
+      at: new Date().toISOString(),
+    };
+    this.store.put('memory-proposal', proposal.id, proposal);
+    return proposal;
+  }
   /** Autodream is a local background queue, never a provider call or automatic memory write. */
   dream(session: Session) {
     const context = this.context();
@@ -319,15 +346,21 @@ export class Memories {
   }
   async relevant(query: string) {
     const terms = [...new Set(query.toLowerCase().match(/[a-z0-9]{3,}|[\u0E00-\u0E7F]{2,}/g) || [])];
-    return (await this.list())
-      .filter(m => !m.expired)
-      .map(m => ({
-        m,
-        score: terms.filter(t => (m.name + ' ' + m.text).toLowerCase().includes(t)).length + m.importance + (m.type === 'user' ? 2 : 0),
-      }))
-      .filter(v => v.m.type === 'user' || v.score > 1)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(v => v.m);
+    return (
+      (await this.list())
+        .filter(m => !m.expired)
+        .map(m => ({
+          m,
+          score:
+            terms.filter(t => (m.name + ' ' + m.text).toLowerCase().includes(t)).length +
+            m.importance +
+            (m.type === 'user' ? 2 : m.type === 'feedback' ? 1 : 0),
+        }))
+        // Confirmed preferences and answer feedback apply to every task; other memories only when they match.
+        .filter(v => v.m.type === 'user' || v.m.type === 'feedback' || v.score > 1)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(v => v.m)
+    );
   }
 }

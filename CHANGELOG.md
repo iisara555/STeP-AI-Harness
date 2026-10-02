@@ -6,6 +6,19 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop permission modes and answer feedback
+
+- Offer four modes in the composer, as in Claude Code and ChatGPT:
+  - **Ask before edits:** every edit and command asks first.
+  - **Accept edits** (new, on by default): AI edits are applied right away, with a snapshot to undo them; commands still ask.
+  - **Full auto:** an administrator must enable it.
+  - **Plan:** read only.
+- Add **Good / Needs fixing / Remember this** under each answer.
+  - Ratings stay on this computer.
+  - A "needs fixing" note becomes a feedback memory proposal that the person confirms.
+  - "Remember this" saves an edited memory after a dialog.
+  - Text with personal data or secrets is never remembered.
+
 ### Desktop standard consent (formerly pilot mode)
 
 - Make fewer confirmation dialogs the default after the pilot trial; administrators can set `"pilot": false` for strict mode. Standard mode cuts routine dialogs: plain text attachments, sensitive words with no person identifier (now a warning), plan approval, and per-source tool-result consent (one answer per run). The first-send dialog becomes a one-time acknowledgment in the setup wizard.

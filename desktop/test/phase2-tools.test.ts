@@ -16,7 +16,7 @@ import { sheetWorker } from '../electron/sheets';
 import type { Harness } from '../electron/service';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
-async function fixture(mode: 'ask' | 'plan' = 'ask') {
+async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
   const root = await mkdtemp(join(tmpdir(), 'step-phase2-')),
     store = new Store(':memory:'),
     policy = defaultPolicy();
@@ -442,4 +442,31 @@ test('document outlines split headings and supply exact section text', () => {
   const parts = documentSections('# A\nBody\n# B\nMore');
   assert.equal(parts.length, 2);
   assert.equal(parts[1].text, '# B\nMore');
+});
+
+test('accept edits applies an AI edit with a snapshot; ask mode leaves it staged for review', async () => {
+  for (const mode of ['acceptEdits', 'ask'] as const) {
+    const f = await fixture(mode);
+    await writeFile(join(f.root, 'draft.md'), 'Before');
+    const result: any = await f.tools.execute({ tool: 'changes', input: 'draft.md', content: 'After' }, f.scope);
+    if (mode === 'acceptEdits') {
+      assert.equal(result.status, 'applied');
+      assert.ok(result.snapshotId, 'a snapshot can undo the edit');
+      assert.equal(await readFile(join(f.root, 'draft.md'), 'utf8'), 'After');
+      assert.equal(f.requests(), 0, 'no dialog for the edit');
+      assert.ok(f.events.includes('pre_tool_use') && f.events.includes('post_tool_use'), 'hooks still run');
+    } else {
+      assert.equal(result.status, 'staged-for-human-review');
+      assert.equal(await readFile(join(f.root, 'draft.md'), 'utf8'), 'Before');
+    }
+    f.store.close();
+  }
+});
+
+test('accept edits never runs a command without asking', async () => {
+  const f = await fixture('acceptEdits');
+  f.deny();
+  assert.equal(await f.tools.execute({ tool: 'terminal', input: 'echo should-not-run' }, f.scope), null, 'declined, not run');
+  assert.equal(f.requests(), 1, 'the command asked first');
+  f.store.close();
 });

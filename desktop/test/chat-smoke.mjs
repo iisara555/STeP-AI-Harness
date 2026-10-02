@@ -121,6 +121,28 @@ try {
   );
   assert.equal(snapshot.sessions[0].proposals.length, 0);
   assert.equal(await page.locator('.composer textarea').inputValue(), '');
+  // Feedback under an answer: a rating stays on the message; "needs fixing" proposes, "remember this" saves after the dialog.
+  const answer = page.locator('article.message.assistant').first();
+  await answer.getByRole('button', { name: 'ดี', exact: true }).click();
+  await expect(answer.getByRole('button', { name: 'ดี', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const rated = (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].messages.find(m => m.role === 'assistant');
+  assert.equal(rated.feedback, 'good');
+  await answer.getByRole('button', { name: 'ต้องแก้', exact: true }).click();
+  const fixDialog = page.getByRole('alertdialog', { name: 'คำตอบนี้ต้องแก้อะไร' });
+  await fixDialog.locator('textarea').fill('สรุปเป็นตารางท้ายคำตอบ');
+  await fixDialog.getByRole('button', { name: 'ส่งความเห็น' }).click();
+  await fixDialog.waitFor({ state: 'detached' });
+  let memory = await page.evaluate(() => window.step.call('memoryList'));
+  assert.ok(memory.proposals.some(p => p.type === 'feedback' && p.text === 'สรุปเป็นตารางท้ายคำตอบ'));
+  assert.equal(memory.entries.length, 0, 'feedback waits for confirmation');
+  await expect(answer.getByRole('button', { name: 'ต้องแก้', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await answer.getByRole('button', { name: 'จำสิ่งนี้', exact: true }).click();
+  const rememberDialog = page.getByRole('alertdialog', { name: 'จำสิ่งนี้ไว้ใช้กับงานถัดไป' });
+  assert.equal(await rememberDialog.locator('textarea').inputValue(), 'First answer received');
+  await rememberDialog.getByRole('button', { name: 'จำไว้', exact: true }).click();
+  await rememberDialog.waitFor({ state: 'detached' });
+  memory = await page.evaluate(() => window.step.call('memoryList'));
+  assert.ok(memory.entries.some(m => m.text === 'First answer received' && m.scope === 'private'));
   await page.locator('.composer textarea').fill('ประกาศวันหยุดราชการปีงบ 2570');
   await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
   await page.keyboard.press('Enter');
@@ -258,6 +280,7 @@ try {
           'inert AI tool proposals',
           'terminal output',
           'tool-result privacy consent',
+          'answer feedback and remember this',
           'reviewed file changes',
           'sandbox browser reader',
           'unready connection keeps input',

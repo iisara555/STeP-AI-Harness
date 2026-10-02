@@ -30,8 +30,9 @@ export const FEATURES = [
   'memoryTeam',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
-export type PermissionMode = 'ask' | 'plan' | 'auto';
-export const PERMISSION_MODES: PermissionMode[] = ['ask', 'plan', 'auto'];
+/** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
+export type PermissionMode = 'ask' | 'acceptEdits' | 'plan' | 'auto';
+export const PERMISSION_MODES: PermissionMode[] = ['ask', 'acceptEdits', 'plan', 'auto'];
 export type PathRule = { pattern: string; allow: boolean };
 export type HookEvent =
   'session_start' | 'session_end' | 'user_prompt_submit' | 'pre_tool_use' | 'post_tool_use' | 'pre_compact' | 'post_compact' | 'stop';
@@ -148,7 +149,7 @@ export function defaultPolicy(): Policy {
     source: 'default',
     features: { ...DEFAULT_FEATURES },
     permission: {
-      modes: ['ask', 'plan'],
+      modes: ['ask', 'acceptEdits', 'plan'],
       defaultMode: 'ask',
       pathRules: [],
       deniedCommands: [...DEFAULT_DENIED_COMMANDS],
@@ -334,11 +335,13 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
         const modes = Array.isArray(permission.modes)
           ? permission.modes.filter((m: unknown) => PERMISSION_MODES.includes(m as PermissionMode))
           : [];
-        if (!modes.length || modes.length !== permission.modes.length) problems.push('permission.modes must list ask, plan or auto');
+        if (!modes.length || modes.length !== permission.modes.length)
+          problems.push('permission.modes must list ask, acceptEdits, plan or auto');
         else policy.permission.modes = [...new Set(modes as PermissionMode[])];
       }
       if (permission.defaultMode !== undefined) {
-        if (!PERMISSION_MODES.includes(permission.defaultMode)) problems.push('permission.defaultMode must be ask, plan or auto');
+        if (!PERMISSION_MODES.includes(permission.defaultMode))
+          problems.push('permission.defaultMode must be ask, acceptEdits, plan or auto');
         else policy.permission.defaultMode = permission.defaultMode;
       }
       if (permission.pathRules !== undefined) {

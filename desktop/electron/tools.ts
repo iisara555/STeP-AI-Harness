@@ -250,6 +250,23 @@ export class DesktopTools {
       },
     };
   }
+  /**
+   * Accept edits and full auto apply a staged AI edit right away, through the same gate (path rules, hooks) and with a
+   * snapshot to undo it. Ask mode, or any decision that still needs a person, leaves it staged for review.
+   */
+  private async settle<T extends { id: string; path: string }>(change: T, scope: ToolScope) {
+    const request = { tool: 'write', readOnly: false, path: change.path };
+    const root = await this.workbench.root().catch(() => '');
+    const decision = evaluatePermission(request, this.mode(), this.policy(), { root });
+    if (!decision.allowed || decision.requiresConfirmation) return { ...change, status: 'staged-for-human-review' };
+    const applied = await this.gate.run(
+      request,
+      { title: tm('เขียนไฟล์ที่ตรวจแล้ว?'), body: change.path, key: change.path, sessionId: scope.sessionId },
+      () => this.workbench.apply(change.id),
+      scope.signal,
+    );
+    return applied ? { ...change, status: 'applied', snapshotId: applied.snapshotId } : { ...change, status: 'staged-for-human-review' };
+  }
   async execute(r: LoopRequest, scope: ToolScope, check: () => Promise<void> = async () => {}) {
     const a = r.args || {},
       target = r.input;
@@ -311,7 +328,7 @@ export class DesktopTools {
             if (a.action === 'diff') return this.workbench.diff();
             if (a.action === 'list') return this.workbench.changes();
             if ((a.action && a.action !== 'stage') || r.content === undefined) throw new Error('INVALID_INPUT');
-            return this.workbench.stage(target, r.content).then(c => ({ id: c.id, path: c.path, status: 'staged-for-human-review' }));
+            return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'terminal':
             return this.workbench.start(target);
           case 'tasks':
@@ -386,7 +403,7 @@ export class DesktopTools {
             if (!a.edits || !value.binary) throw new Error('INVALID_INPUT');
             await check();
             const change = await this.workbench.stageBytes(target, Buffer.from(value.binary, 'base64'), value.before, value.after, hash);
-            return { ...change, status: 'staged-for-human-review' };
+            return this.settle(change, scope);
           }
           case 'ask_user': {
             const options = Array.isArray(a.options) ? a.options : [];

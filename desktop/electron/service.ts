@@ -44,7 +44,7 @@ export type Harness = {
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
   documentMetadata?: (ids: string[]) => Promise<any[]>;
-  permissionMode?: () => 'ask' | 'plan' | 'auto';
+  permissionMode?: () => 'ask' | 'acceptEdits' | 'plan' | 'auto';
   memoryDir?: () => string;
   root: string;
   route: (text: string, options: any) => Promise<any>;

@@ -67,6 +67,7 @@ import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
+import { FeedbackButtons, FeedbackDialog, type FeedbackAsk } from './feedback';
 import { AutomationDialog } from './automations';
 import { commandPalette, commandForKey, vimEdit } from './commands';
 import { KeyboardDialog } from './keyboard';
@@ -144,6 +145,7 @@ export default function App() {
   const [reasoning, setReasoning] = useState(''),
     [startedAt, setStartedAt] = useState(0),
     [now, setNow] = useState(Date.now());
+  const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
   const [consentAsk, setConsentAsk] = useState<{
     sessionId: string;
     text: string;
@@ -1241,6 +1243,14 @@ export default function App() {
                       >
                         {t('เปิดใน Output')}
                       </button>
+                      <FeedbackButtons
+                        sessionId={session.id}
+                        index={index}
+                        message={message}
+                        call={api.call}
+                        onAsk={setFeedbackAsk}
+                        onDone={text => text && notify(text)}
+                      />
                       {toolRequests(message.text).map((request, i) => (
                         <button
                           className="tool-request quiet"
@@ -1434,14 +1444,18 @@ export default function App() {
                       }
                     >
                       <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                        {t('ถามก่อนทำ')}
+                        {t('ถามก่อนแก้ไข')}
+                      </option>
+                      <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
+                        {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
+                        {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                      </option>
+                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                        {t('อัตโนมัติเต็มรูปแบบ')}
+                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
                       </option>
                       <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
                         {t('วางแผน · อ่านอย่างเดียว')}
-                      </option>
-                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                        {t('อัตโนมัติ')}
-                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
                       </option>
                     </select>
                   )}
@@ -2039,6 +2053,15 @@ export default function App() {
             await api.call('approvalRespond', { id: toolApprovals[0].id, answer: remember ? 'workspace' : 'once' });
             await refresh();
           }}
+        />
+      )}
+      {feedbackAsk && api && (
+        <FeedbackDialog
+          ask={feedbackAsk}
+          call={api.call}
+          hasWorkspace={Boolean(snapshot?.settings.workspace)}
+          onClose={() => setFeedbackAsk(null)}
+          onDone={text => notify(text, 'success')}
         />
       )}
       {consentAsk && (

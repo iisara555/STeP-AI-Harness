@@ -88,6 +88,8 @@ export type Message = {
   webSources?: { title: string; url: string }[];
   /** Files sent with this message, shown on it in the transcript. */
   files?: { name: string }[];
+  /** The person's rating of an answer; stays on this computer with the conversation. */
+  feedback?: 'good' | 'fix';
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -203,7 +205,7 @@ export type Snapshot = {
   teams: { id: string; name: string; nameEn?: string }[];
   userFile: string;
 };
-export type PermissionMode = 'ask' | 'plan' | 'auto';
+export type PermissionMode = 'ask' | 'acceptEdits' | 'plan' | 'auto';
 export type PolicySnapshot = {
   source: 'managed' | 'default';
   path: string;

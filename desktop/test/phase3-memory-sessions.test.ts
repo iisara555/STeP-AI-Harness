@@ -198,3 +198,23 @@ test('OCR attachments require complete pages and mask detected identifiers', () 
   );
   assert.equal(attachmentReason(ocrAttachmentReport({ text: '', pages: [] }, scan)), 'ATTACH_NO_TEXT');
 });
+
+test('"needs fixing" notes become proposals the person confirms, never memories, and personal data is refused', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'step-feedback-'));
+  const store = new Store(':memory:'),
+    policy = defaultPolicy();
+  store.put('settings', 'main', { workspace: '', team: 'cc' });
+  const memories = new Memories(store, home, () => policy, scan);
+  const proposal = memories.proposeFeedback('s1', 'สรุปเป็นตารางท้ายคำตอบเสมอ');
+  assert.equal(proposal.type, 'feedback');
+  assert.equal((await memories.list()).length, 0, 'nothing is remembered before confirmation');
+  assert.equal(memories.proposeFeedback('s1', 'สรุปเป็นตารางท้ายคำตอบเสมอ').id, proposal.id, 'the same note is not proposed twice');
+  assert.throws(() => memories.proposeFeedback('s1', 'ส่งให้ somchai@example.com ทุกครั้ง'), /MEMORY_PRIVACY_BLOCKED/);
+  assert.throws(() => memories.proposeFeedback('s1', 'เลขบัตร 1101700203451'), /MEMORY_PRIVACY_BLOCKED/);
+  assert.equal(memories.proposals().length, 1, 'a refused note is not kept for review');
+  await memories.confirm(proposal.id, {});
+  // Confirmed answer feedback applies to unrelated later tasks, like a stated preference.
+  const used = await memories.relevant('ร่างหนังสือเชิญประชุม');
+  assert.ok(used.some(m => m.type === 'feedback' && m.text.includes('ตาราง')));
+  store.close();
+});

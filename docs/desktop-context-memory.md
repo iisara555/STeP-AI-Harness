@@ -22,6 +22,12 @@ Storage uses Markdown frontmatter inspired by [OpenHarness schema v1](https://gi
 
 Every proposed, saved and loaded item passes `evaluatePrivacyGate`. Personal-data findings, masking, human-review signals, restricted data and secrets are rejected. No identifiers are allowlisted for memory. Schema and body sizes are bounded; symlinks/junctions, hard-linked files, credential locations and administrator path denials are refused. Path rules check both configured and canonical locations, including Windows 8.3 aliases and project `.gitignore` updates. Absolute rule prefixes resolve through existing ancestors, preserving denials for mixed short/long names even before memory folders exist. Writes replace verified records atomically. Each scope permits at most 200 files; bodies are at most 4,000 characters. The privacy detector recognizes text patterns; it cannot certify that all personal or organizational data has been identified. Employees must keep memory free of such data.
 
+Each answer has **Good**, **Needs fixing** and **Remember this** buttons:
+
+- **Good** and **Needs fixing** are stored on the message, on this computer only.
+- A **Needs fixing** note becomes a `feedback` memory proposal. It is privacy-checked first, and a refused note is discarded, not queued. The proposal waits in Memory until the employee confirms it. Once confirmed, the feedback applies to later tasks the way a stated preference does.
+- **Remember this** opens an editable dialog with the answer text and a private or workspace scope. Saving that dialog is the confirmation, and the same privacy check applies.
+
 Relevance selects at most five confirmed, unexpired memories using lexical overlap, importance and durable user preferences. Selection uses local computation. Autodream is a bounded local background queue after completed tasks: it proposes only conservative response preferences from user messages. It never learns assistant claims, server addresses, credentials, names or financial facts, and makes no additional provider call. This deliberately adapts [OpenHarness personalization extraction](https://github.com/HKUDS/OpenHarness/blob/main/src/openharness/personalization/extractor.py) to STeP evidence and privacy discipline.
 
 Managed policy example:

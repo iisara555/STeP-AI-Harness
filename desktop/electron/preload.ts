@@ -45,6 +45,7 @@ const allowed = new Set([
   'settings',
   'acknowledgeData',
   'consentDeclined',
+  'messageFeedback',
   'workspace',
   'connection',
   'runtime',

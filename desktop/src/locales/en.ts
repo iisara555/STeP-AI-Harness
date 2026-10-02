@@ -106,9 +106,10 @@ export const en: Record<string, string> = {
   สร้างเอกสาร: 'Create document',
   สร้างรูป: 'Create image',
   สิทธิ์เครื่องมือ: 'Tool permissions',
-  ถามก่อนทำ: 'Ask first',
+  ถามก่อนแก้ไข: 'Ask before edits',
+  'แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง': 'Accept edits · ask before commands',
+  อัตโนมัติเต็มรูปแบบ: 'Full auto',
   'วางแผน · อ่านอย่างเดียว': 'Plan · read only',
-  อัตโนมัติ: 'Automatic',
   ' · ปิดโดยผู้ดูแล': ' · Disabled by admin',
   'ข้อมูลต้นทางแนบแล้ว ×': 'Source data attached ×',
   'กำลังตรวจโมเดลของบัญชี…': "Checking this account's models…",
@@ -1284,4 +1285,30 @@ export const en: Record<string, string> = {
     'Strict mode: your administrator requires confirmation before sending attachments, the first message and each tool result source.',
   'ถามยืนยันเฉพาะเมื่อจำเป็น: ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล ปิดบังเลขบัตรประชาชน และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง':
     'Confirmations only when needed: passwords and sensitive data that identify a person are blocked, national ID numbers are masked, and tools that change anything ask every time.',
+  'ขอบคุณครับ บันทึกว่าคำตอบนี้ดี': 'Thanks, marked this answer as good',
+  'ความเห็นพร้อมข้อความจะกลายเป็นข้อเสนอความจำ ต้องยืนยันก่อนใช้ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ':
+    'A note becomes a memory proposal that you confirm before it is used. Notes with personal data are not remembered.',
+  คำตอบนี้ดี: 'This answer is good',
+  คำตอบนี้ต้องแก้: 'This answer needs fixing',
+  คำตอบนี้ต้องแก้อะไร: 'What should be fixed in this answer?',
+  จำสิ่งนี้: 'Remember this',
+  จำสิ่งนี้ไว้ใช้กับงานถัดไป: 'Remember this for later tasks',
+  'จำแล้ว ผู้ช่วยจะใช้กับงานถัดไปที่เกี่ยวข้อง ดูหรือลบได้ในหน้าความจำ':
+    'Remembered. The assistant will use it in related tasks; view or delete it in Memory.',
+  จำไว้: 'Remember',
+  ดี: 'Good',
+  ต้องแก้: 'Needs fixing',
+  'บอกสั้น ๆ ว่าควรแก้อะไร (ไม่บังคับ) เช่น “สรุปเป็นตาราง” หรือ “ใช้ภาษาทางการกว่านี้”':
+    'Say briefly what to fix (optional), such as “summarize as a table” or “use a more formal tone”',
+  บันทึกว่าคำตอบนี้ต้องแก้: 'Marked this answer as needing fixes',
+  'บันทึกแล้ว ข้อเสนอความจำรอคุณยืนยันในหน้าความจำ': 'Saved. A memory proposal is waiting for you to confirm in Memory.',
+  พื้นที่งานนี้: 'This workspace',
+  'มีข้อเสนอความจำรอยืนยัน 20 รายการแล้ว กรุณายืนยันหรือปัดในหน้าความจำก่อน':
+    '20 memory proposals are already waiting. Confirm or dismiss some in Memory first',
+  ส่งความเห็น: 'Send feedback',
+  'ส่วนตัว (เฉพาะคุณในเครื่องนี้)': 'Private (only you, on this computer)',
+  'เก็บในเครื่องนี้เท่านั้น ข้อความที่มีข้อมูลส่วนบุคคลหรือความลับจะไม่ถูกจำ':
+    'Stored on this computer only. Text with personal data or secrets is not remembered.',
+  แก้ข้อความให้เหลือเฉพาะสิ่งที่ควรจำ: 'Edit the text down to what should be remembered',
+  ให้ความเห็นต่อคำตอบนี้: 'Rate this answer',
 };
