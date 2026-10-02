@@ -42,7 +42,9 @@ try {
   // The usage terms must be ticked before the workspace opens; ticking records the accepted version.
   const enter = page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true });
   await expect(enter).toBeDisabled();
-  await expect(wizard.getByLabel('ข้อตกลงการใช้งาน', { exact: true })).toContainText('ระบบไม่ได้ตรวจหรือปิดบังข้อมูลให้');
+  await expect(wizard.getByLabel('ข้อตกลงการใช้งาน', { exact: true })).toContainText(
+    'ระบบกรองรหัสผ่านและคีย์ที่ตรวจพบ แต่ไม่ได้ปิดบังข้อมูลส่วนบุคคลทั่วไป',
+  );
   await wizard.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
   await enter.click();
   await expect(wizard).toHaveCount(0);

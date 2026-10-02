@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatElapsed, formatTokens, groupSessions, matchesSession, chatBlocks, RichText } from '../src/ui';
+import {
+  formatElapsed,
+  formatTokens,
+  groupSessions,
+  matchesSession,
+  chatBlocks,
+  RichText,
+  providerChoiceReady,
+  initialChoice,
+} from '../src/ui';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Session } from '../src/types';
@@ -98,4 +107,12 @@ test('Claude provider offers supported Console OAuth and clearly separates it fr
   assert.equal(providerDefaultMode('compatible'), 'api');
   assert.match(source, /โควตา API/);
   assert.match(source, /ไม่ใช่โควตา Claude Pro\/Max/);
+});
+
+test('Gemini organization sign-in needs a valid project before connecting; API keys remain independent', () => {
+  const org = { ...initialChoice, provider: 'gemini', mode: 'subscription' };
+  assert.equal(providerChoiceReady(org), false);
+  assert.equal(providerChoiceReady({ ...org, googleCloudProject: 'bad project' }), false);
+  assert.equal(providerChoiceReady({ ...org, googleCloudProject: 'step-test-123' }), true);
+  assert.equal(providerChoiceReady({ ...org, mode: 'api', key: 'synthetic-test-only' }), true);
 });

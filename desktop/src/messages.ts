@@ -103,6 +103,8 @@ export const errorText: Record<string, string> = localized({
   FILE_BINARY: 'ไฟล์นี้เป็น binary ให้เปิดด้วยโปรแกรมที่รองรับ',
   FILE_CONFLICT: 'ไฟล์ถูกแก้หลังเตรียม diff กรุณาอ่านและตรวจใหม่',
   INVALID_URL: 'กรุณาใส่ URL แบบ http หรือ https',
+  BROWSER_HUMAN_ACTION_REQUIRED: 'รายการนี้ต้องให้คุณดำเนินการเองในหน้าเว็บ ผู้ช่วยคลิกหรือส่งแทนไม่ได้',
+  INVALID_BROWSER_OPTION: 'ตัวเลือกนี้ใช้ไม่ได้ กรุณาอ่านหน้าเว็บใหม่แล้วเลือกจากรายการล่าสุด',
   BROWSER_LOAD_FAILED: 'เปิดเว็บไม่สำเร็จ กรุณาตรวจ URL และเครือข่าย',
   BROWSER_CLOSED: 'หน้าเว็บนี้ถูกปิดแล้ว กรุณาเปิดอีกครั้ง',
   BROWSER_TIMEOUT: 'หน้าเว็บตอบช้าเกินไป ลองโหลดใหม่แล้วลองอีกครั้ง',

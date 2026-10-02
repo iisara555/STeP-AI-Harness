@@ -142,6 +142,7 @@ try {
   let memory = await page.evaluate(() => window.step.call('memoryList'));
   assert.ok(memory.proposals.some(p => p.type === 'feedback' && p.text === 'สรุปเป็นตารางท้ายคำตอบ'));
   assert.equal(memory.entries.length, 0, 'feedback waits for confirmation');
+  await expect(page.getByRole('button', { name: 'ความจำรอยืนยัน 1 รายการ', exact: true })).toBeVisible();
   await expect(answer.getByRole('button', { name: 'ต้องแก้', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await answer.getByRole('button', { name: 'จำสิ่งนี้', exact: true }).click();
   const rememberDialog = page.getByRole('alertdialog', { name: 'จำสิ่งนี้ไว้ใช้กับงานถัดไป' });

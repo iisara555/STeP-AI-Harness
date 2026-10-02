@@ -741,6 +741,7 @@ async function main() {
     approvals: approvals.list(),
     transmissionGrants: tools.transmissionGrants(),
     consentMetrics: consentMetrics.summary(store.list('session').length),
+    pendingMemories: memories.proposals().length,
     userFile: knownUserFile(),
     settings: store.settings(),
     connections: store.connections(),

@@ -77,6 +77,8 @@ export type RunTrace = {
   outcome: string;
   code?: string;
   ms: number;
+  /** Time to first provider text delta (including tool protocol); absent if none. */
+  firstResponseMs?: number;
   steps: StepTrace[];
 };
 /** Finished Playbook steps of a run that stopped, so the same task can continue after them. */
@@ -202,6 +204,7 @@ export type Snapshot = {
   approvals?: ApprovalRule[];
   transmissionGrants?: TransmissionGrant[];
   consentMetrics?: ConsentSummary;
+  pendingMemories?: number;
   features?: { claudeSubscription?: boolean };
   settings: Settings;
   connections: Connection[];

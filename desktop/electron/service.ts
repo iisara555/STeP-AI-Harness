@@ -902,6 +902,7 @@ export class WorkService {
                 signal: controller.signal,
                 emit: delta => {
                   if (search) return;
+                  if (delta && trace.firstResponseMs === undefined) trace.firstResponseMs = Date.now() - started;
                   if (!receiving) {
                     receiving = true;
                     activity(tm('กำลังเขียนคำตอบ'));

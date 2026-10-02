@@ -52,6 +52,7 @@ test('chat and draft both run gated tools and count retries and every model turn
               return '```step-tool\n{"tool":"files","input":"a.txt"}\n```';
             }
             assert.ok(prompt.includes('checked data'));
+            context.emit('Completed draft');
             return 'Completed draft';
           },
         },
@@ -69,6 +70,8 @@ test('chat and draft both run gated tools and count retries and every model turn
     assert.equal(done.usage?.total, 15);
     assert.deepEqual(counts, [5, 5, 5]);
     assert.equal(done.runs?.[0].steps[0].usage?.total, 15);
+    assert.ok(typeof done.runs?.[0].firstResponseMs === 'number');
+    assert.ok(done.runs[0].firstResponseMs! <= done.runs[0].ms);
     assert.equal(done.messages.at(-1)?.text.includes('step-tool'), false);
     if (mode === 'draft') assert.equal(done.proposals[0].text, 'Completed draft');
     store.close();

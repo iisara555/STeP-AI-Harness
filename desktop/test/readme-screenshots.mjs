@@ -20,7 +20,8 @@ try {
   await page.screenshot({ path: join(out, '01-setup-wizard.png'), fullPage: true });
 
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย', exact: false }).waitFor();
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ state: 'detached' });
+  await page.locator('.composer textarea').waitFor();
 
   await page.evaluate(async () => {
     const snapshot = await window.step.call('snapshot');
@@ -86,7 +87,7 @@ try {
     put('connection', connection.id, connection);
 
     const session = get('session', seeded.sessionId);
-    session.status = 'done';
+    session.status = 'review';
     session.model = 'gpt-5.6-sol';
     session.messages = [
       {

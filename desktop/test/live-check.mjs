@@ -1,113 +1,89 @@
-// Manual only (not part of npm test).
-// Live check with the user's own accounts, in a separate test profile (not the real app data).
-// The user signs in in the browser. Gemini uses its local loopback callback; no pasted authorization code is required.
-// Usage (from desktop/): node <this file> <profile-dir> <log-file> openai|gemini ...
+// Manual acceptance recorder. Does not sign in, send prompts, or approve dialogs for the operator.
+// node test/live-check.mjs <packaged-executable|--dev> <report.json>
 import { _electron as electron } from '@playwright/test';
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { createInterface } from 'node:readline/promises';
+import assert from 'node:assert/strict';
 
-const [home, logFile, ...providers] = process.argv.slice(2);
-mkdirSync(home, { recursive: true });
-const log = (...parts) => {
-  const line = `[${new Date().toLocaleTimeString('th-TH')}] ${parts.join(' ')}`;
-  console.log(line);
-  appendFileSync(logFile, line + '\n');
-};
-const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
+const [executable, reportPath] = process.argv.slice(2);
+assert.ok(executable && reportPath, 'Pass a packaged executable (or --dev) and a report JSON path');
+const profile = await mkdtemp(join(tmpdir(), 'step-live-acceptance-'));
+const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
-const app = await electron.launch({ args: ['.'], env, timeout: 60000 });
-const page = await app.firstWindow();
-await page.evaluate(async () => {
-  window.__events = [];
-  window.step.onEvent(e => {
-    if (['connect-progress', 'auth-code', 'status', 'step'].includes(e.type)) window.__events.push(`${e.type}: ${e.text || e.state || ''}`);
+delete env.STEP_DESKTOP_TEST_HOME;
+const terminal = createInterface({ input: process.stdin, output: process.stdout });
+const observations = [];
+let app;
+const launch = async () => {
+  app = await electron.launch({
+    ...(executable === '--dev'
+      ? { args: ['.', '--user-data-dir=' + profile] }
+      : { executablePath: resolve(executable), args: ['--user-data-dir=' + profile] }),
+    env,
+    timeout: 90000,
   });
-  const s = await window.step.call('snapshot');
-  if (!s.settings.onboarding) await window.step.call('settings', { ...s.settings, onboarding: true });
-});
-const drain = async () => {
-  for (const e of await page.evaluate(() => window.__events.splice(0))) log('  event', e);
+  assert.equal(resolve(await app.evaluate(({ app }) => app.getPath('userData'))), profile);
+  return app.firstWindow();
 };
-const pollUntil = async (fn, ms) => {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
-    await drain();
-    const v = await fn();
-    if (v) return v;
-    await new Promise(r => setTimeout(r, 2000));
-  }
-  return null;
+const record = async page => {
+  const snapshot = await page.evaluate(() => window.step.call('snapshot'));
+  observations.push({
+    at: new Date().toISOString(),
+    connections: snapshot.connections.map(c => ({ provider: c.provider, mode: c.mode, ready: c.ready, signedIn: c.signedIn })),
+    runs: snapshot.sessions.flatMap(s =>
+      (s.runs || []).map(r => ({
+        id: r.id,
+        at: r.at,
+        outcome: r.outcome,
+        code: r.code,
+        firstProviderDeltaMs: r.firstResponseMs,
+        totalMs: r.ms,
+        providerSteps: r.steps.length,
+        providerAttempts: r.steps.reduce((total, step) => total + step.attempts, 0),
+      })),
+    ),
+  });
 };
-
-for (const provider of providers) {
-  log(`== ${provider}: connecting (sign in in the browser; STeP waits for the provider callback)`);
-  const snap = await page.evaluate(() => window.step.call('snapshot'));
-  let c = snap.connections.find(x => x.provider === provider && x.mode === 'subscription');
-  if (!c) c = await page.evaluate(p => window.step.call('connection', { provider: p, mode: 'subscription' }), provider);
-  await page.evaluate(id => {
-    window.__connect = window.step.call('connect', { id }).then(
-      r => (window.__connected = r),
-      e => (window.__connected = { ready: false, note: String(e) }),
-    );
-  }, c.id);
-  const connected = await pollUntil(
-    () =>
-      page.evaluate(() => {
-        const r = window.__connected;
-        window.__connected = undefined;
-        return r;
-      }),
-    9 * 60_000,
-  );
-  if (!connected) {
-    log(`${provider}: connect did not finish in 9 minutes`);
-    continue;
-  }
-  log(
-    `${provider}: ready=${connected.ready} note=${connected.note} models=${(connected.models || []).map(m => m.id + (m.efforts?.length ? `[${m.efforts.map(e => e.id).join('/')}]` : '')).join(', ')}`,
-  );
-  if (!connected.ready) continue;
-
-  const runs = [{ label: 'default model' }];
-  const other = (connected.models || []).find(m => !m.isDefault);
-  if (other) runs.push({ label: `model ${other.id}`, model: other.id, effort: other.efforts?.[0]?.id || '' });
-  for (const run of runs) {
-    const task = await page.evaluate(
-      ({ id, run }) =>
-        window.step.call('create', {
-          connectionId: id,
-          project: 'live check',
-          ...(run.model ? { model: run.model, effort: run.effort } : {}),
-        }),
-      { id: c.id, run },
-    );
-    const text = 'ช่วยร่างข้อความสั้น 2 ประโยค แจ้งทีมว่าประชุมประจำสัปดาห์เลื่อนเป็นวันศุกร์ 10:00 น. ที่ห้องประชุมเล็ก';
-    let sent = await page.evaluate(({ id, text }) => window.step.call('send', { id, text, attachments: [] }), { id: task.id, text });
-    if (sent.consent)
-      sent = await page.evaluate(({ id, text, token }) => window.step.call('send', { id, text, attachments: [], consent: token }), {
-        id: task.id,
-        text,
-        token: sent.consent.token,
-      });
-    log(`${provider} (${run.label}): run started=${Boolean(sent.started)}`);
-    const done = await pollUntil(async () => {
-      const s = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(x => x.id === task.id);
-      return s && s.status !== 'running' ? s : null;
-    }, 10 * 60_000);
-    if (!done) {
-      log(`${provider} (${run.label}): still running after 10 minutes`);
-      continue;
+try {
+  let page = await launch();
+  console.log('Use the app manually: sign in, accept terms, chat, use tools, cancel, sign out. See docs/desktop-release-acceptance.md.');
+  console.log('This is an isolated profile:', profile);
+  for (;;) {
+    const command = (await terminal.question('Enter r to record and restart, s to record, or q to record and finish: ')).trim();
+    if (!['r', 's', 'q'].includes(command)) continue;
+    await record(page);
+    if (command === 'q') break;
+    if (command === 'r') {
+      await app.close();
+      app = null;
+      page = await launch();
     }
-    const answer = done.proposals.at(-1)?.text || '';
-    log(
-      `${provider} (${run.label}): status=${done.status} statusMessages=${done.messages
-        .filter(m => m.role === 'status')
-        .map(m => m.text)
-        .join(' | ')} usage=${JSON.stringify(done.usage || {})}`,
-    );
-    log(`${provider} (${run.label}): answer (${answer.length} chars): ${answer.replace(/\s+/g, ' ').slice(0, 300)}`);
   }
+  await writeFile(
+    resolve(reportPath),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        synthetic: false,
+        operatorAcceptance: 'pending-review',
+        platform: process.platform,
+        hostArch: process.arch,
+        packaged: executable !== '--dev',
+        observations,
+        exclusions: [
+          'No prompt, answer, auth URL, code, token or account identifier recorded.',
+          'Timings include user/tool waits; first delta may be tool protocol. Complete the manual matrix separately.',
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  console.log('Metadata written to', resolve(reportPath));
+} finally {
+  terminal.close();
+  await app?.close();
+  console.log('The isolated profile is retained for inspection. Sign out in the app before deleting it:', profile);
 }
-log('== done; the STeP window stays open 20 seconds');
-await new Promise(r => setTimeout(r, 20000));
-await Promise.race([app.close(), new Promise(r => setTimeout(r, 10000))]);
-app.process().kill();

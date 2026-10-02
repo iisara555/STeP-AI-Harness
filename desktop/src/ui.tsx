@@ -486,6 +486,7 @@ export type ProviderChoice = {
 export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '', googleCloudProject: '' };
 export function providerChoiceReady(c: ProviderChoice) {
   if (c.provider === 'antigravity') return c.mode === 'subscription' && /^gemini-[\w.-]+$/.test(c.model || '') && !c.key;
+  if (c.provider === 'gemini' && c.mode === 'subscription') return /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(c.googleCloudProject);
   if (c.provider === 'compatible') return Boolean(c.baseUrl?.trim() && c.model?.trim() && (c.protocol !== 'anthropic' || c.key.trim()));
   return c.mode !== 'api' || Boolean(c.key.trim());
 }

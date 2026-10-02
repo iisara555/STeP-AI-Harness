@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { defaultPolicy, parsePolicy, loadPolicy, policyPath, trustedPolicyPath } from '../electron/policy';
@@ -63,4 +63,13 @@ test('invalid blocking definitions cannot silently enable risky features', () =>
   const parsed = parsePolicy({ hooks: [{ event: 'pre_tool_use', type: 'prompt', prompt: 'Check metadata', block_on_failure: true }] });
   assert.equal(parsed.policy.hooks[0].type, 'prompt');
   assert.equal(parsed.policy.hooks[0].blockOnFailure, true);
+});
+
+test('organization rollout example enables both checks without enabling automatic routing or shell', async () => {
+  const example = JSON.parse(await readFile(new URL('../policies/organization.json', import.meta.url), 'utf8'));
+  const parsed = parsePolicy(example);
+  assert.deepEqual(parsed.problems, []);
+  assert.deepEqual(parsed.policy.checks, { authority: true, privacy: true });
+  assert.equal(parsed.policy.features.autoRouting, false);
+  assert.equal(parsed.policy.features.shellByAi, false);
 });

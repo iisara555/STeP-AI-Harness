@@ -24,11 +24,13 @@ await writeFile(
 const server = createServer((req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end(
-    req.url === '/login'
-      ? '<input type="password" aria-label="Password"><p>Private login screen</p>'
-      : req.url === '/shop'
-        ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
-        : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
+    req.url === '/controls'
+      ? '<label>Department<select><option value="cc">CC</option><option value="qs">QS</option><option value="afp" disabled>AFP</option></select></label><form><button>Continue</button></form><button type="button" aria-label="อนุมัติ">Approve</button><p id="result">none</p><script>document.querySelector("select").onchange=e=>document.querySelector("p").textContent=e.target.value</script>'
+      : req.url === '/login'
+        ? '<input type="password" aria-label="Password"><p>Private login screen</p>'
+        : req.url === '/shop'
+          ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
+          : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
   );
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -122,6 +124,33 @@ try {
     true,
   );
   assert.match((await run(shop.tab, { action: 'read' })).text, /Cart: 1/);
+  // Native selects have exact options and the same approval / stale-target contract as fills.
+  let controls = await run(url + '/controls', { action: 'open' });
+  const selection = controls.elements.find(e => e.role === 'select');
+  assert.equal(selection.options.find(o => o.value === 'afp').disabled, true);
+  assert.equal((await run(controls.tab, { action: 'select', snapshot: controls.snapshot, ref: selection.ref }, 'qs')).performed, true);
+  controls = await run(controls.tab, { action: 'read' });
+  assert.match(controls.text, /QS[\s\S]*qs/);
+  assert.equal(
+    (
+      await run(
+        controls.tab,
+        { action: 'select', snapshot: controls.snapshot, ref: controls.elements.find(e => e.role === 'select').ref },
+        'afp',
+      )
+    ).error,
+    'INVALID_BROWSER_OPTION',
+  );
+  controls = await run(controls.tab, { action: 'read' });
+  const beforeFinal = await app.evaluate(() => globalThis.approvalCount);
+  for (const target of controls.elements.filter(e => e.humanOnly)) {
+    assert.equal(
+      (await run(controls.tab, { action: 'click', snapshot: controls.snapshot, ref: target.ref })).error,
+      'BROWSER_HUMAN_ACTION_REQUIRED',
+    );
+  }
+  assert.equal(controls.elements.filter(e => e.humanOnly).length, 2, 'implicit form submit and named final action');
+  assert.equal(await app.evaluate(() => globalThis.approvalCount), beforeFinal, 'final actions never offer an override approval');
   // Other local or private addresses stay closed to the assistant.
   for (const blocked of ['http://localhost:9/', 'http://192.168.1.1/', 'http://10.0.0.1/'])
     assert.equal((await run(blocked, { action: 'open' })).error, 'WEB_ADDRESS_BLOCKED', blocked);
