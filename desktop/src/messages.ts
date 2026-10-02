@@ -165,6 +165,7 @@ export const errorText: Record<string, string> = localized({
   CONTEXT_UNAVAILABLE: 'แหล่งอ้างอิงที่จำเป็นยังไม่พร้อม',
   EMPTY_RESULT: 'AI ยังไม่ได้ส่งร่างกลับมา กรุณาลองใหม่',
   INPUT_LIMIT: 'เนื้อหายาวเกินขอบเขต กรุณาแบ่งงานเป็นส่วนเล็กลง',
+  ROUTE_CHECK_FAILED: 'ตรวจขอบเขตของข้อความนี้ไม่สำเร็จ จึงยังไม่ส่งให้ AI กรุณาส่งอีกครั้ง',
 });
 export const effortLabel: Record<string, string> = {
   none: 'None',

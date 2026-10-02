@@ -1267,4 +1267,6 @@ export const en: Record<string, string> = {
     'Gemini: use an API key from Google AI Studio with the “Gemini · API key” button above. Signing in with a personal Google account no longer works, because Google stopped serving Gemini CLI to personal accounts',
   ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้งโดยใช้คีย์นี้: 'The app sends one short test message using this key',
   'เชื่อมต่อ Gemini': 'Connect Gemini',
+  'ตรวจขอบเขตของข้อความนี้ไม่สำเร็จ จึงยังไม่ส่งให้ AI กรุณาส่งอีกครั้ง':
+    "Couldn't check the scope of this message, so it wasn't sent to the AI. Please send it again",
 };

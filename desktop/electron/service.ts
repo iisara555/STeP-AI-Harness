@@ -297,16 +297,22 @@ export class WorkService {
         (Boolean(policy.deictic) || Boolean(incomingSource && text.trim().length <= SHORT_WITH_FILE) || (chat && carriesPrevious));
       if (revising || mayContinue) {
         // Both keep the earlier route, so the latest message gets the authority check its own route would have had.
+        // A failed check must stop the message, not skip the authority check (fail closed).
         let fresh: any;
+        let routeFailed = false;
         try {
           fresh = (await this.harness.route(text, { team: session.team, workspaceDir, conversational: chat })).routingContract;
         } catch {
-          fresh = undefined;
+          routeFailed = true;
         }
-        if (fresh && blockedRoute(fresh)) {
+        if (routeFailed || (fresh && blockedRoute(fresh))) {
           session = this.store.session(id);
           session.messages.push({ role: 'user', text, at: new Date().toISOString() });
-          session.messages.push({ role: 'status', text: 'AUTHORITY_REVIEW_REQUIRED', at: new Date().toISOString() });
+          session.messages.push({
+            role: 'status',
+            text: routeFailed ? 'ROUTE_CHECK_FAILED' : 'AUTHORITY_REVIEW_REQUIRED',
+            at: new Date().toISOString(),
+          });
           this.store.save(session);
           this.emit({ sessionId: id, type: 'changed' });
           return;
