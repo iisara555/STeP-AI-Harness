@@ -40,7 +40,7 @@ export class Mcp {
       if (identity !== this.identity()) throw new Error('WORKSPACE_CHANGED');
     };
     check();
-    const client = new Client({ name: 'step-desktop', version: '0.5.0' }, { capabilities: {} });
+    const client = new Client({ name: 'step-desktop', version: '0.5.1' }, { capabilities: {} });
     await mkdir(this.home, { recursive: true, mode: 0o700 });
     let transport: StdioClientTransport | StreamableHTTPClientTransport;
     if (server.transport === 'stdio') {
