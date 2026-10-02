@@ -1,7 +1,8 @@
 import { readFile, realpath, lstat } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, extname, dirname, sep } from 'node:path';
 import { createHash } from 'node:crypto';
-import type { Connection } from '../src/types';
+import type { Connection, Workflow, WorkTask } from '../src/types';
+import { parsePlan } from './workflows';
 import type { LoopRequest } from '../src/tools';
 import type { Harness } from './service';
 import { Workbench } from './workbench';
@@ -27,6 +28,8 @@ export type ToolScope = {
   signal: AbortSignal;
   search: (query: string) => Promise<string>;
   activity: (text: string) => void;
+  /** The native workflow of this run (electron/workflows.ts), if the employee picked one. */
+  workflow?: Workflow;
 };
 const blocked = (c: any) => c?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'UNAVAILABLE', 'CLARIFY'].includes(c?.mode);
 export function documentSections(text: string) {
@@ -149,6 +152,28 @@ export class DesktopTools {
     if (!approved) throw new Error('TOOL_DATA_DECLINED');
     return review.redactedText;
   }
+  /** Asks the employee to approve the plan, then keeps it on the task as goal and tasks for the execute workflow. */
+  private async approveWorkPlan(text: string, scope: ToolScope) {
+    const parsed = parsePlan(text);
+    if (!parsed.tasks.length) throw new Error('PLAN_NO_TASKS');
+    const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'plan', text);
+    const approved = await this.approvals.request(
+      rule,
+      {
+        title: tm('อนุมัติแผนงานนี้?'),
+        body: text + tm('\nหลังอนุมัติ กด "ลงมือทำตามแผน" ให้ผู้ช่วยทำทีละขั้น งานที่ต้องอนุมัติ ลงนาม หรือส่งจริง ยังเป็นของผู้มีอำนาจ'),
+        privacyClass: 'internal',
+        allowRemember: false,
+        sessionId: scope.sessionId,
+      },
+      scope.signal,
+    );
+    if (scope.signal.aborted) throw new Error('CANCELLED');
+    if (!approved) return { approved: false, status: 'revise-the-plan-with-the-employee' };
+    this.workbench.setWorkPlan(scope.sessionId, { ...parsed, approvedAt: new Date().toISOString() }, text);
+    this.notify();
+    return { approved: true, tasks: parsed.tasks.length, next: 'tell the employee to press ลงมือทำตามแผน' };
+  }
   // Sites the employee let the AI read in each task (session), by host.
   private sites = new Map<string, Set<string>>();
   /**
@@ -219,7 +244,12 @@ export class DesktopTools {
     };
     const sourceOf = async (r?: LoopRequest): Promise<TransmissionSource | undefined> => {
       if (!r || this.policy().transmissionConsent?.allowRunScope === false) return;
-      if (r.tool === 'ask_user' || r.tool === 'plan' || (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string'))
+      if (
+        r.tool === 'ask_user' ||
+        r.tool === 'plan' ||
+        r.tool === 'plan_update' ||
+        (r.tool === 'changes' && !r.args?.action && typeof r.content === 'string')
+      )
         return {
           key: 'draft-progress',
           label: tm('คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)'),
@@ -465,6 +495,8 @@ export class DesktopTools {
           }
           case 'plan': {
             if (!target.trim()) throw new Error('INVALID_INPUT');
+            // The native plan workflow always asks: the employee approves the plan that "execute" will follow.
+            if (scope.workflow === 'plan') return this.approveWorkPlan(target, scope);
             // A plan grants nothing beyond drafting; each side-effect tool still asks on its own. Pilot mode skips this dialog.
             // Nobody reviewed it, so it is not stored as an approved plan.
             if (this.policy().pilot)
@@ -488,6 +520,14 @@ export class DesktopTools {
             if (!approved) throw new Error('CANCELLED');
             this.workbench.rememberPlan(scope.sessionId, target);
             return { approved: true, scope: 'draft-only; business actions require separate authority' };
+          }
+          case 'plan_update': {
+            const status = String(a.status || '');
+            if (!['todo', 'doing', 'done', 'blocked'].includes(status)) throw new Error('INVALID_INPUT');
+            const note = typeof r.content === 'string' ? r.content.trim().slice(0, 300) : '';
+            const remaining = this.workbench.updateWorkTask(scope.sessionId, Number(target), status as WorkTask['status'], note);
+            this.notify();
+            return { task: Number(target), status, remaining };
           }
           case 'snapshot':
             if (a.action === 'list') return this.workbench.snapshots();

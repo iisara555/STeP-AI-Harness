@@ -69,6 +69,7 @@ import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
+import { isWorkflow } from './workflows';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 
@@ -1757,7 +1758,10 @@ async function main() {
         const sendingConnection = store.get<Connection>('connection', sending.connectionId);
         if (!sendingConnection?.ready) throw new Error('CONNECTION_NOT_READY');
         const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
-        const workMode = mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : mode;
+        // A native workflow (plan, execute, requirements, diagnose) runs as chat, never as an image request.
+        const workflow = isWorkflow(input.workflow) ? input.workflow : undefined;
+        const workMode =
+          !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
         const coordinated = input.coordinator === true;
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
           throw new Error('COORDINATOR_DISABLED');
@@ -1901,7 +1905,7 @@ async function main() {
                   // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
                   ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
                 ],
-                { retry: input.retry === true, images: selected.flatMap(a => a.images || []) },
+                { retry: input.retry === true, images: selected.flatMap(a => a.images || []), ...(workflow ? { workflow } : {}) },
               )
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });

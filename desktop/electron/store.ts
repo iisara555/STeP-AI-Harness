@@ -76,6 +76,7 @@ export class Store {
     delete s.images;
     delete s.runs;
     delete s.approvedPlan;
+    delete s.workPlan;
     this.save(s);
     return s;
   }

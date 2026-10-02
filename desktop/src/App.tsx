@@ -64,7 +64,8 @@ import type { ApprovalRequest } from './types';
 import { WorkbenchPanel } from './workbench';
 import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './tools';
 import { isImageRequest, imageModels } from './image-routing';
-import type { WorkMode } from './types';
+import type { WorkMode, Workflow } from './types';
+import { WorkPlanCard, WORKFLOW_LABELS } from './work-plan';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
@@ -180,6 +181,10 @@ export default function App() {
   const [pendingModel, setPendingModel] = useState<string | undefined>(undefined),
     [pendingEffort, setPendingEffort] = useState(''),
     modelsRequested = useRef(new Set<string>());
+  // A native workflow (plan, execute, requirements, diagnose) chosen in the composer; '' is plain chat.
+  const [workflow, setWorkflow] = useState<Workflow | ''>('');
+  const workflowRef = useRef<Workflow | ''>('');
+  workflowRef.current = workflow;
   const [workMode, setWorkMode] = useState<WorkMode>('chat'),
     [imageModel, setImageModel] = useState('');
   const [availableImages, setAvailableImages] = useState<string[]>([]),
@@ -580,6 +585,7 @@ export default function App() {
         imageModel: selectedImageModel,
         retry,
         coordinator,
+        ...(mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
       });
     } catch (e) {
       setRunning(false);
@@ -1353,6 +1359,20 @@ export default function App() {
                   )}
                 </article>
               ))}
+              {session?.workPlan?.tasks.length ? (
+                <WorkPlanCard
+                  plan={session.workPlan}
+                  running={running || submitting}
+                  onExecute={() =>
+                    void action(async () => {
+                      setWorkflow('execute');
+                      workflowRef.current = 'execute';
+                      setWorkMode('chat');
+                      await start(session.id, t('ลงมือทำตามแผน'), [], undefined, undefined, undefined, undefined, 'chat');
+                    })
+                  }
+                />
+              ) : null}
               {questions
                 .filter(q => q.sessionId === selected)
                 .map(q => (
@@ -1698,11 +1718,28 @@ export default function App() {
                     className="pill-select"
                     aria-label={t('โหมดทำงาน')}
                     title={t('โหมดทำงาน')}
-                    value={workMode}
+                    value={workflow || workMode}
                     disabled={running || submitting}
-                    onChange={e => setWorkMode(e.target.value as WorkMode)}
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value in WORKFLOW_LABELS) {
+                        setWorkflow(value as Workflow);
+                        setWorkMode('chat');
+                      } else {
+                        setWorkflow('');
+                        setWorkMode(value as WorkMode);
+                      }
+                    }}
                   >
                     <option value="chat">{t('คุยกับผู้ช่วย')}</option>
+                    {/* Native workflows of the harness, like Claude Code's plan mode: rules for how the assistant works. */}
+                    <optgroup label={t('ขั้นตอนทำงาน')}>
+                      {(Object.keys(WORKFLOW_LABELS) as Workflow[]).map(id => (
+                        <option key={id} value={id} disabled={id === 'execute' && !session?.workPlan?.tasks.length}>
+                          {t(WORKFLOW_LABELS[id])}
+                        </option>
+                      ))}
+                    </optgroup>
                     {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
                         drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
                     {(workMode === 'draft' || snapshot.policy?.features.coordinator) && <option value="draft">{t('สร้างเอกสาร')}</option>}

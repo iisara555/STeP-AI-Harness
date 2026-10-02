@@ -280,3 +280,13 @@ test('with tools the AI decides when to search the web; the app does not search 
   assert.match(captured.system, /call web_search/);
   store.close();
 });
+
+test('a native workflow the employee picked joins the system prompt for that run only', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false, false);
+  await work.run(session.id, 'ระบบจองห้องประชุมแสดงผลซ้ำ', '', true, undefined, 'chat', undefined, [], { workflow: 'diagnose' });
+  assert.match(captured.system, /Native workflow: DIAGNOSE A PROBLEM/);
+  await work.run(session.id, 'ขอบคุณ', '', true, undefined, 'chat');
+  assert.doesNotMatch(captured.system, /Native workflow/);
+  store.close();
+});

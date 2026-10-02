@@ -8,6 +8,19 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Native workflows: plan, execute, requirements, diagnose
+
+- **Built into the harness:** the composer's mode picker now offers four ways of working under **ขั้นตอนทำงาน**, as Claude Code's plan mode is built in rather than loaded as a Skill:
+  - วางแผนก่อนลงมือ (plan)
+  - ลงมือทำตามแผน (execute)
+  - เขียนเอกสารความต้องการ (requirements)
+  - วิเคราะห์ปัญหา (diagnose)
+- **Plan:** the assistant clarifies with up to 5 questions and breaks the work into tasks with checkpoints. The employee must approve the plan, in pilot mode too.
+- **Execute:** works through the plan task by task with the new `plan_update` tool, and leaves approvals, signatures and submissions to people.
+- **Plan card:** shows progress in the chat and has a "ลงมือทำตามแผน" button. Details: [Native workflows](docs/desktop-workflows.md).
+- **Requirements:** interviews, then writes testable requirements.
+- **Diagnose:** ranks hypotheses, tests them and names a root cause only with evidence.
+
 ### Security fixes from the audit, and live text while working
 
 - **Reading a website asks once per site per task:** `web_fetch` reads a site only after the employee allows it, in every mode.

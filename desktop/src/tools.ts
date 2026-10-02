@@ -40,6 +40,7 @@ export const LOOP_TOOLS = [
   'sheet_edit',
   'ask_user',
   'plan',
+  'plan_update',
   'snapshot',
   'read_remaining',
 ] as const;

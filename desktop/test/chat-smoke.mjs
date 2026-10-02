@@ -307,6 +307,43 @@ try {
   }, photo);
   const attached = await page.evaluate(id => window.step.call('attach', { id, vision: true }), id);
   assert.equal(attached.usable, true, JSON.stringify(attached));
+  // Native workflows: the composer offers them, and an approved plan shows as a card whose button runs the execute workflow.
+  const picker = page.getByRole('combobox', { name: 'โหมดทำงาน' });
+  for (const workflow of ['plan', 'requirements', 'diagnose']) assert.equal(await picker.locator(`option[value="${workflow}"]`).count(), 1);
+  assert.equal(await picker.locator('option[value="execute"]').isDisabled(), true, 'nothing to execute before a plan is approved');
+  await app.evaluate(async ({ app }, id) => {
+    const { DatabaseSync } = process.mainModule.require('node:sqlite');
+    const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
+    const s = JSON.parse(db.prepare("SELECT value FROM records WHERE kind='session' AND id=?").get(id).value);
+    s.workPlan = {
+      goal: 'จัดสัมมนา AI Harness',
+      tasks: [
+        { title: 'ร่างกำหนดการ', status: 'done', note: 'ส่งให้ทีมแล้ว' },
+        { title: 'ขออนุมัติงบ (ผู้มีอำนาจ)', status: 'todo' },
+      ],
+      approvedAt: new Date().toISOString(),
+    };
+    db.prepare("UPDATE records SET value=? WHERE kind='session' AND id=?").run(JSON.stringify(s), id);
+    db.close();
+  }, id);
+  await page.reload();
+  const card = page.locator('.work-plan');
+  await card.getByText('เสร็จ 1/2').waitFor();
+  await card.getByText('ส่งให้ทีมแล้ว').waitFor();
+  const sent = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === id).messages.length;
+  await card.getByRole('button', { name: 'ทำตามแผนต่อ' }).click();
+  await expect(picker).toHaveValue('execute');
+  await expect
+    .poll(async () => {
+      const s = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === id);
+      return s.messages.slice(sent).find(m => m.role === 'user')?.text || '';
+    })
+    .toBe('ลงมือทำตามแผน');
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === id).status)
+    .not.toBe('running');
+  await page.screenshot({ path: 'release/qa/work-plan.png' });
+  await picker.selectOption('chat');
   // An unready connection reports the blocker and preserves the typed request.
   await app.evaluate(async ({ app }) => {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
@@ -339,6 +376,7 @@ try {
           'heartbeat preserves streaming',
           'web source cards',
           'scanned PDF sent as page images',
+          'native workflows and the plan card',
           'draft output',
           'inert AI tool proposals',
           'terminal output',

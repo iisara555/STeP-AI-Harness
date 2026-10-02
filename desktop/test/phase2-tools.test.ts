@@ -338,6 +338,36 @@ test('only routed Skills and registered references load; every tool passes hooks
     f.store.close();
   }
 });
+test('the plan workflow asks the employee to approve the plan, keeps it on the task, and execute ticks it off', async () => {
+  const f = await fixture();
+  try {
+    const session = f.store.create('plan task', 'cc');
+    const scope = { ...f.scope, sessionId: session.id, workflow: 'plan' as const };
+    const before = f.requests();
+    const plan = '# เป้าหมาย: จัดสัมมนา\n- [ ] ร่างกำหนดการ\n- [ ] ขออนุมัติงบ (ผู้มีอำนาจ)';
+    const approved: any = await f.tools.execute({ tool: 'plan', input: plan }, scope);
+    assert.equal(approved.approved, true);
+    assert.equal(f.requests(), before + 1, 'asked even in pilot mode');
+    const saved = f.store.session(session.id).workPlan!;
+    assert.equal(saved.goal, 'จัดสัมมนา');
+    assert.deepEqual(
+      saved.tasks.map(t => t.status),
+      ['todo', 'todo'],
+    );
+    const executing = { ...scope, workflow: 'execute' as const };
+    const ticked: any = await f.tools.execute({ tool: 'plan_update', input: '1', args: { status: 'done' }, content: 'ส่งแล้ว' }, executing);
+    assert.deepEqual(ticked, { task: 1, status: 'done', remaining: 1 });
+    assert.deepEqual(f.store.session(session.id).workPlan!.tasks[0], { title: 'ร่างกำหนดการ', status: 'done', note: 'ส่งแล้ว' });
+    await assert.rejects(f.tools.execute({ tool: 'plan_update', input: '9', args: { status: 'done' } }, executing), /PLAN_TASK_UNKNOWN/);
+    await assert.rejects(f.tools.execute({ tool: 'plan_update', input: '2', args: { status: 'approved' } }, executing), /INVALID_INPUT/);
+    f.deny();
+    const declined: any = await f.tools.execute({ tool: 'plan', input: '# อื่น\n- [ ] งานใหม่' }, scope);
+    assert.equal(declined.approved, false);
+    assert.equal(f.store.session(session.id).workPlan!.goal, 'จัดสัมมนา', 'a declined plan leaves the approved one');
+  } finally {
+    f.store.close();
+  }
+});
 test('the AI reads a website only after the employee allows that site once in the task', async () => {
   const f = await fixture();
   f.policy.checks = { authority: false, privacy: false };

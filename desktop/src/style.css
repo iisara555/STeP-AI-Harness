@@ -2524,3 +2524,70 @@ nav .count {
   flex: none;
   margin: 2px 0 0;
 }
+/* The approved plan of the native plan workflow (src/work-plan.tsx), ticked off while "execute" runs. */
+.work-plan {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.work-plan summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.work-plan summary > svg {
+  color: var(--accent-ink);
+}
+.work-plan summary .muted {
+  margin-left: auto;
+  font-size: 12px;
+}
+.work-plan-goal {
+  margin: 8px 0 4px;
+  color: var(--muted);
+}
+.work-plan ol {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.work-plan li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.work-plan li > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.work-plan li.done > svg,
+.work-plan li.doing > svg {
+  color: var(--accent-ink);
+}
+.work-plan li.done span {
+  color: var(--muted);
+}
+.work-plan li.blocked > svg {
+  color: var(--danger);
+}
+.work-plan li small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.work-plan-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+}

@@ -11,6 +11,7 @@ import type {
   StepTrace,
   WorkMode,
   VisionInput,
+  Workflow,
 } from '../src/types';
 import { Store } from './store';
 import type { ProviderAdapter, ProviderContext, TokenCount } from './providers';
@@ -23,6 +24,7 @@ import { section } from './prompt';
 import { compact, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
+import { workflowRule } from './workflows';
 import {
   OrganizationKnowledge,
   STRONG_MATCH,
@@ -184,7 +186,13 @@ export function conversationFiles(files: ConversationFile[]) {
   ].join('\n');
 }
 
-export type RunOptions = { retry?: boolean; images?: VisionInput[]; draftOnly?: boolean; mergeOnly?: boolean };
+export type RunOptions = {
+  retry?: boolean;
+  images?: VisionInput[];
+  draftOnly?: boolean;
+  mergeOnly?: boolean;
+  workflow?: Workflow;
+};
 
 export class WorkService {
   private active = new Map<string, AbortController>();
@@ -728,6 +736,8 @@ export class WorkService {
           toolsEnabled && general && skillRegistry.length && SKILL_RULE + '\n' + skillRegistryText(skillRegistry),
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
+          // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
+          options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
           ...personal(this.store.settings()),
           section('skill_instructions', instructions.join('\n\n')),
         ]
@@ -925,6 +935,7 @@ export class WorkService {
             connection,
             signal: controller.signal,
             activity,
+            workflow: options.workflow,
             search: async query => {
               const found = await callProvider(section('current_message', query), await this.runtime(connection, true), true);
               searched.push(found);
