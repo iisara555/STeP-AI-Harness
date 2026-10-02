@@ -1,6 +1,6 @@
 import { WebContentsView, type WebContents } from 'electron';
 import type { BrowserDock } from './browser-dock';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { browserUrl } from './workbench';
 import type { LoopRequest } from '../src/tools';
 import { tm } from './i18n';
@@ -13,7 +13,15 @@ const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText 
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
 const WORLD = 1005;
-type Entry = { contents: WebContents; view?: WebContentsView; dispose: () => void; owner: string; origin: string; busy: boolean };
+type Entry = {
+  contents: WebContents;
+  view?: WebContentsView;
+  dispose: () => void;
+  owner: string;
+  origin: string;
+  opened: string;
+  busy: boolean;
+};
 type Context = {
   sessionId: string;
   signal: AbortSignal;
@@ -26,6 +34,9 @@ type Context = {
 /** Task-owned, temporary browsers. No arbitrary JS, credential access or personal profile attachment. */
 export class AgentBrowser {
   private tabs = new Map<string, Entry>();
+  // The origin each page may navigate in, by web contents; one network listener serves all tabs of a task.
+  private origins = new Map<number, string>();
+  private configured = new WeakSet<Electron.Session>();
   // With a dock the pages show in the main window's Web tab; without one (tests) they load unseen.
   constructor(private dock?: BrowserDock) {}
   private get(id: string, owner: string) {
@@ -84,6 +95,42 @@ export class AgentBrowser {
     );
     return { tab: id, ...result };
   }
+  /**
+   * A task that opens a site it already has open gets that tab back, already approved and with the employee's sign-in,
+   * instead of a fresh page at the login screen. The AI does not keep tab IDs between messages, so "open" again is how it
+   * continues after "เข้าสู่ระบบแล้ว".
+   */
+  private async reuse(url: string, context: Context) {
+    const origin = new URL(url).origin;
+    const found = [...this.tabs.entries()].find(
+      ([, e]) => e.owner === context.sessionId && e.origin === origin && !e.contents.isDestroyed(),
+    );
+    if (!found) return undefined;
+    const [id, entry] = found;
+    if (entry.busy) throw new Error('BROWSER_BUSY');
+    entry.busy = true;
+    try {
+      this.dock?.select(id);
+      // The site's front page or the page first opened means "continue here": read the page as the employee left it.
+      const target = new URL(url);
+      if (url !== entry.opened && target.pathname !== '/' && url !== entry.contents.getURL()) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([
+          entry.contents.loadURL(url),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('BROWSER_LOAD_FAILED')), 30000);
+          }),
+        ])
+          .catch(() => {
+            throw new Error(context.signal.aborted ? 'CANCELLED' : 'BROWSER_LOAD_FAILED');
+          })
+          .finally(() => clearTimeout(timer));
+      }
+      return { ...(await this.snapshot(id, entry, context.signal)), reused: true };
+    } finally {
+      entry.busy = false;
+    }
+  }
   async run(request: LoopRequest, context: Context) {
     const action = request.args?.action;
     if (!['open', 'read', 'click', 'fill', 'close'].includes(String(action))) throw new Error('INVALID_BROWSER_ACTION');
@@ -92,6 +139,8 @@ export class AgentBrowser {
       const url = browserUrl(request.input);
       context.review(decodeURIComponent(url));
       context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
+      const reused = await this.reuse(url, context);
+      if (reused) return reused;
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
       if (
         !(await context.approve(
@@ -103,7 +152,8 @@ export class AgentBrowser {
       await context.check();
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
       const id = randomUUID(),
-        partition = 'step-agent-' + id;
+        // One session per task: a later tab on a site keeps the sign-in the employee did in an earlier one.
+        partition = 'step-agent-' + createHash('sha256').update(context.sessionId).digest('hex').slice(0, 24);
       // Without a dock the view is held by the entry, or garbage collection would close the page.
       const view = this.dock
         ? undefined
@@ -113,21 +163,30 @@ export class AgentBrowser {
         if (this.dock) this.dock.remove(id);
         else if (!contents.isDestroyed()) contents.close();
       };
-      const entry: Entry = { contents, view, dispose, owner: context.sessionId, origin: new URL(url).origin, busy: true };
+      const entry: Entry = { contents, view, dispose, owner: context.sessionId, origin: new URL(url).origin, opened: url, busy: true };
       this.tabs.set(id, entry);
-      contents.once('destroyed', () => this.tabs.delete(id));
-      const network = contents.session;
-      network.setPermissionRequestHandler((_w, _p, cb) => cb(false));
-      network.setPermissionCheckHandler(() => false);
-      network.on('will-download', event => event.preventDefault());
-      network.webRequest.onBeforeRequest((details, cb) => {
-        try {
-          browserUrl(details.url);
-          cb({ cancel: details.resourceType === 'mainFrame' && new URL(details.url).origin !== entry.origin });
-        } catch {
-          cb({ cancel: true });
-        }
+      const contentsId = contents.id;
+      this.origins.set(contentsId, entry.origin);
+      contents.once('destroyed', () => {
+        this.tabs.delete(id);
+        this.origins.delete(contentsId);
       });
+      const network = contents.session;
+      if (!this.configured.has(network)) {
+        this.configured.add(network);
+        network.setPermissionRequestHandler((_w, _p, cb) => cb(false));
+        network.setPermissionCheckHandler(() => false);
+        network.on('will-download', event => event.preventDefault());
+        network.webRequest.onBeforeRequest((details, cb) => {
+          try {
+            browserUrl(details.url);
+            const origin = this.origins.get(details.webContentsId ?? -1);
+            cb({ cancel: details.resourceType === 'mainFrame' && (!origin || new URL(details.url).origin !== origin) });
+          } catch {
+            cb({ cancel: true });
+          }
+        });
+      }
       contents.setWindowOpenHandler(() => ({ action: 'deny' }));
       const prevent = (event: Electron.Event, target: string) => {
         try {

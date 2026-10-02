@@ -55,7 +55,7 @@ export class BrowserDock {
     if (!this.views.has(id)) throw new Error('BROWSER_CLOSED');
     this.active = id;
     this.layout();
-    this.publish();
+    this.publish(true);
   }
   /** Where the window wants the page drawn, in window coordinates; null hides it (other tab, or a dialog on top). */
   setBounds(bounds: Rectangle | null) {

@@ -18,6 +18,9 @@ STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 - Each page is a sandboxed `WebContentsView` with its own session (`electron/browser-dock.ts`), drawn over the space the window reserves for it.
   - A dialog, notification, menu or tour card that overlaps that space hides the page and shows a still picture of it, so the page never covers an approval.
   - A dialog beside the panel leaves the page live, so it can be checked before approving.
+- **Sign-in loop fixed:** after the employee signed in to MIS and said "เข้าสู่ระบบแล้ว", the assistant opened a new tab with no sign-in and asked to sign in again. The AI keeps no tab IDs between messages, so:
+  - opening a site the task already has open now returns that tab with its sign-in, without asking again (`reused: true`);
+  - all tabs of a task share one session.
 - The "browser use failed" report on Windows (`INVALID_CONTEXT_PATH` when loading the `browser-form-assistant` Skill) is the path fix below.
 
 ### Scanned PDFs, opening documents on Windows, and the knowledge registry

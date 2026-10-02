@@ -70,6 +70,13 @@ try {
   let snapshot = await run(url, { action: 'open' });
   const tab = snapshot.tab;
   assert.ok(tab && snapshot.elements.length === 2);
+  // Opening the same site again in the same task returns that tab (with any sign-in), without asking again.
+  const asked = await app.evaluate(() => globalThis.approvalCount);
+  const again = await run(url + '/', { action: 'open' });
+  assert.equal(again.tab, tab);
+  assert.equal(again.reused, true);
+  assert.equal(await app.evaluate(() => globalThis.approvalCount), asked);
+  snapshot = again;
   const fill = { action: 'fill', snapshot: snapshot.snapshot, ref: snapshot.elements.find(e => e.editable).ref };
   assert.equal((await run(tab, fill, 'Browser agent works')).performed, true);
   assert.equal((await run(tab, fill, 'Must not repeat')).error, 'BROWSER_STALE_TARGET');
