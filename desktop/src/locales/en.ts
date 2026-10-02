@@ -999,11 +999,17 @@ export const en: Record<string, string> = {
   ให้ผู้ช่วยทำงานบนเว็บ: 'Let the assistant work on the web',
   'ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น':
     'Name the site and the task in the chat. The assistant asks before opening, filling in or clicking anything. Press Stop in the conversation to end the task and close its web window',
-  'ลงชื่อเข้าใช้ด้วยตนเองในหน้าต่าง STeP ที่แยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์':
-    "Sign in yourself in the STeP window, which is kept separate from your personal accounts. File uploads/downloads and some cross-site sign-ins aren't supported yet",
+  'ลงชื่อเข้าใช้ด้วยตนเองในแท็บเว็บนี้ ซึ่งแยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์':
+    "Sign in yourself in this Web tab, which is kept separate from your personal accounts. File uploads/downloads and some cross-site sign-ins aren't supported yet",
   เปิดอ่านด้วยตนเอง: 'Open and read yourself',
-  'เปิดในหน้าต่างเว็บที่แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจ แล้วส่งเข้าช่องคุยได้':
-    'Opens in a web window separate from your AI account. Read the page back to check it, then send it to the chat',
+  'เปิดในแท็บนี้ แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจ แล้วส่งเข้าช่องคุยได้':
+    'Opens in this tab, separate from your AI account. Read the page back to check it, then send it to the chat',
+  ปิดเว็บนี้: 'Close this page',
+  ไปข้างหน้า: 'Forward',
+  โหลดใหม่: 'Reload',
+  ผู้ช่วย: 'Assistant',
+  หน้าเว็บที่เปิด: 'Open pages',
+  'กำลังโหลด…': 'Loading…',
   อ่านหน้าเว็บปัจจุบัน: 'Read current page',
   ส่งเข้าช่องคุย: 'Send to chat',
   ตรวจและรัน: 'Check and run',
@@ -1036,8 +1042,8 @@ export const en: Record<string, string> = {
   'ติดตั้ง ant CLI เรียบร้อย': 'ant CLI installed',
   'รออนุญาตเปิดเว็บ {0}': 'Waiting for permission to open {0}',
   'เปิดเว็บให้ Agent ทำงาน?': 'Open this website for the Agent?',
-  '\nเปิดในเบราว์เซอร์แยกของ STeP เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ':
-    "\nOpens in STeP's separate browser; the website may receive your connection details",
+  '\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ':
+    "\nOpens in STeP's Web tab, separate from your personal accounts; the website may receive your connection details",
   กำลังอ่านผลจากเว็บ: 'Reading the result from the web',
   กำลังปิดเว็บ: 'Closing the web page',
   ตรวจเป้าหมายก่อนขอกรอกข้อมูล: 'Checking the target before asking to fill it in',
@@ -1045,8 +1051,8 @@ export const en: Record<string, string> = {
   'ให้ Agent กรอกข้อมูลนี้?': 'Let the Agent fill in this data?',
   'ให้ Agent คลิกเป้าหมายนี้?': 'Let the Agent click this target?',
   '\nข้อความ: ': '\nText: ',
-  '\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าต่างเบราว์เซอร์ก่อนอนุมัติ':
-    '\nThis action may submit data or confirm something on the website. Check the browser window before approving',
+  '\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ':
+    '\nThis action may submit data or confirm something on the website. Check the page in the Web tab before approving',
   'รอลงชื่อบัญชี Claude ในเบราว์เซอร์…': 'Waiting for Claude sign-in in your browser…',
   'STEP ดาวน์โหลด Python สำหรับ OCR': 'STeP is downloading Python for OCR',
   'STEP ตรวจสอบและแตกไฟล์ Python': 'STeP is verifying and extracting Python',
@@ -1338,5 +1344,5 @@ export const en: Record<string, string> = {
   แก้ข้อความให้เหลือเฉพาะสิ่งที่ควรจำ: 'Edit the text down to what should be remembered',
   ให้ความเห็นต่อคำตอบนี้: 'Rate this answer',
   ตัวเลือกงานนี้: 'Task options',
-  'งานนี้ใช้ {0} · จะเปิดใน STeP Browser': 'This task uses {0} · opening it in the STeP Browser',
+  'งานนี้ใช้ {0} · จะเปิดในแท็บเว็บ': 'This task uses {0} · opening it in the Web tab',
 };

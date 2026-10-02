@@ -1,4 +1,5 @@
-import { BrowserWindow } from 'electron';
+import { WebContentsView, type WebContents } from 'electron';
+import type { BrowserDock } from './browser-dock';
 import { randomUUID } from 'node:crypto';
 import { browserUrl } from './workbench';
 import type { LoopRequest } from '../src/tools';
@@ -12,7 +13,7 @@ const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText 
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
 const WORLD = 1005;
-type Entry = { window: BrowserWindow; owner: string; origin: string; busy: boolean };
+type Entry = { contents: WebContents; view?: WebContentsView; dispose: () => void; owner: string; origin: string; busy: boolean };
 type Context = {
   sessionId: string;
   signal: AbortSignal;
@@ -25,22 +26,21 @@ type Context = {
 /** Task-owned, temporary browsers. No arbitrary JS, credential access or personal profile attachment. */
 export class AgentBrowser {
   private tabs = new Map<string, Entry>();
-  constructor(private visible = true) {}
+  // With a dock the pages show in the main window's Web tab; without one (tests) they load unseen.
+  constructor(private dock?: BrowserDock) {}
   private get(id: string, owner: string) {
     const entry = this.tabs.get(id);
-    if (!entry || entry.owner !== owner || entry.window.isDestroyed()) throw new Error('BROWSER_CLOSED');
+    if (!entry || entry.owner !== owner || entry.contents.isDestroyed()) throw new Error('BROWSER_CLOSED');
     return entry;
   }
   private async script(entry: Entry, code: string, signal: AbortSignal): Promise<any> {
     if (signal.aborted) throw new Error('CANCELLED');
     let timer: ReturnType<typeof setTimeout>;
-    const stop = () => {
-      if (!entry.window.isDestroyed()) entry.window.destroy();
-    };
+    const stop = () => entry.dispose();
     signal.addEventListener('abort', stop, { once: true });
     try {
       return await Promise.race([
-        entry.window.webContents.executeJavaScriptInIsolatedWorld(WORLD, [{ code }]),
+        entry.contents.executeJavaScriptInIsolatedWorld(WORLD, [{ code }]),
         new Promise((_, reject) => {
           timer = setTimeout(() => {
             stop();
@@ -96,24 +96,27 @@ export class AgentBrowser {
       if (
         !(await context.approve(
           tm('เปิดเว็บให้ Agent ทำงาน?'),
-          url + tm('\nเปิดในเบราว์เซอร์แยกของ STeP เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
+          url + tm('\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
         ))
       )
         throw new Error('BROWSER_ACTION_DECLINED');
       await context.check();
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
-      const id = randomUUID();
-      const window = new BrowserWindow({
-        width: 1100,
-        height: 800,
-        show: this.visible,
-        title: 'STeP Agent Browser',
-        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-agent-' + id },
-      });
-      const entry = { window, owner: context.sessionId, origin: new URL(url).origin, busy: true };
+      const id = randomUUID(),
+        partition = 'step-agent-' + id;
+      // Without a dock the view is held by the entry, or garbage collection would close the page.
+      const view = this.dock
+        ? undefined
+        : new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition } });
+      const contents = view ? view.webContents : this.dock!.create(id, 'agent', partition);
+      const dispose = () => {
+        if (this.dock) this.dock.remove(id);
+        else if (!contents.isDestroyed()) contents.close();
+      };
+      const entry: Entry = { contents, view, dispose, owner: context.sessionId, origin: new URL(url).origin, busy: true };
       this.tabs.set(id, entry);
-      window.on('closed', () => this.tabs.delete(id));
-      const network = window.webContents.session;
+      contents.once('destroyed', () => this.tabs.delete(id));
+      const network = contents.session;
       network.setPermissionRequestHandler((_w, _p, cb) => cb(false));
       network.setPermissionCheckHandler(() => false);
       network.on('will-download', event => event.preventDefault());
@@ -125,7 +128,7 @@ export class AgentBrowser {
           cb({ cancel: true });
         }
       });
-      window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      contents.setWindowOpenHandler(() => ({ action: 'deny' }));
       const prevent = (event: Electron.Event, target: string) => {
         try {
           if (new URL(browserUrl(target)).origin !== entry.origin) event.preventDefault();
@@ -133,16 +136,14 @@ export class AgentBrowser {
           event.preventDefault();
         }
       };
-      window.webContents.on('will-navigate', prevent);
-      window.webContents.on('will-redirect', prevent);
-      const stop = () => {
-        if (!window.isDestroyed()) window.destroy();
-      };
+      contents.on('will-navigate', prevent);
+      contents.on('will-redirect', prevent);
+      const stop = dispose;
       context.signal.addEventListener('abort', stop, { once: true });
       const timeout = setTimeout(stop, 30000);
       try {
         if (context.signal.aborted) throw new Error('CANCELLED');
-        await window.loadURL(url);
+        await contents.loadURL(url);
         return await this.snapshot(id, entry, context.signal);
       } catch {
         stop();
@@ -161,7 +162,7 @@ export class AgentBrowser {
     entry.busy = true;
     try {
       if (action === 'close') {
-        entry.window.destroy();
+        entry.dispose();
         return { closed: true };
       }
       if (action === 'read') return await this.snapshot(request.input, entry, context.signal);
@@ -188,7 +189,7 @@ export class AgentBrowser {
             '\n' +
             info.label +
             (action === 'fill' ? tm('\nข้อความ: ') + value : '') +
-            tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าต่างเบราว์เซอร์ก่อนอนุมัติ'),
+            tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ'),
         ))
       )
         throw new Error('BROWSER_ACTION_DECLINED');
@@ -214,9 +215,9 @@ export class AgentBrowser {
     }
   }
   closeOwner(owner: string) {
-    for (const entry of this.tabs.values()) if (entry.owner === owner && !entry.window.isDestroyed()) entry.window.destroy();
+    for (const entry of [...this.tabs.values()]) if (entry.owner === owner) entry.dispose();
   }
   close() {
-    for (const entry of this.tabs.values()) if (!entry.window.isDestroyed()) entry.window.destroy();
+    for (const entry of [...this.tabs.values()]) entry.dispose();
   }
 }

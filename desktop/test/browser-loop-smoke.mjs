@@ -96,13 +96,45 @@ try {
     await expect.poll(() => page.evaluate(() => window.auditApproval?.id)).not.toBe(approval.id);
   }
   await expect(page.getByText('Browser task verified', { exact: true })).toBeVisible({ timeout: 15000 });
-  const browsers = await app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()
-      .filter(w => w.webContents.getURL().startsWith('http:'))
-      .map(w => ({ partition: w.webContents.session.isPersistent(), url: w.webContents.getURL() })),
+  const browsers = await app.evaluate(({ webContents }) =>
+    webContents
+      .getAllWebContents()
+      .filter(w => w.getURL().startsWith('http:'))
+      .map(w => ({ partition: w.session.isPersistent(), url: w.getURL() })),
   );
   assert.equal(browsers.length, 1);
   assert.equal(browsers[0].partition, false);
+  // The page shows inside the main window's Web tab, not in a pop-up window.
+  const docked = await app.evaluate(({ BrowserWindow }) => {
+    const windows = BrowserWindow.getAllWindows();
+    const view = windows[0].contentView.children.find(v => v.webContents?.getURL().startsWith('http:'));
+    return { windows: windows.length, bounds: view?.getBounds(), visible: view?.getVisible() };
+  });
+  assert.equal(docked.windows, 1, 'no pop-up browser window');
+  assert.ok(docked.bounds && docked.bounds.width > 100 && docked.bounds.height > 100, JSON.stringify(docked));
+  assert.equal(docked.visible, true);
+  await page.locator('.browser-tab.active').waitFor();
+  const host = await page.locator('.browser-host').boundingBox();
+  assert.ok(Math.abs(host.x - docked.bounds.x) <= 1 && Math.abs(host.width - docked.bounds.width) <= 1, 'page drawn over the Web tab');
+  await page.screenshot({ path: 'release/qa/browser-docked.png' });
+  // A dialog over the panel hides the page and shows its picture instead, so the dialog is never drawn under it.
+  const shown = () =>
+    app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]
+        .contentView.children.filter(v => v.webContents?.getURL().startsWith('http:'))
+        .map(v => v.getVisible()),
+    );
+  await page.locator('[data-tour="palette"]').click();
+  await page.getByRole('dialog', { name: 'คำสั่ง' }).waitFor();
+  await expect.poll(shown).toEqual([false]);
+  await page.locator('.browser-host img').waitFor({ state: 'attached' });
+  await page.keyboard.press('Escape');
+  await expect.poll(shown).toEqual([true]);
+  await expect(page.locator('.browser-host img')).toHaveCount(0);
+  // Closing the tab closes the page.
+  await page.getByRole('button', { name: 'ปิดเว็บนี้' }).click();
+  await expect.poll(shown).toEqual([]);
+  await expect(page.locator('.browser-tab')).toHaveCount(0);
   assert.equal(titles.filter(t => t === 'ส่งผลเครื่องมือให้ AI?').length, 0);
   assert.equal(await page.getByRole('alertdialog').count(), 0);
   console.log(

@@ -243,8 +243,16 @@ try {
   await page.getByRole('button', { name: 'เว็บ', exact: true }).click();
   await page.getByRole('textbox', { name: 'Browser URL' }).fill('http://127.0.0.1:' + server.address().port);
   await page.getByRole('button', { name: 'เปิดเว็บ', exact: true }).click();
-  await page.getByRole('button', { name: 'อ่านหน้าเว็บปัจจุบัน' }).click();
-  await page.locator('.browser-preview pre').filter({ hasText: 'Browser fixture' }).waitFor();
+  // The page opens inside the Web tab (no pop-up window) and reads back for the chat.
+  await page.locator('.browser-tab.active').waitFor();
+  assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length), 1, 'no pop-up browser window');
+  const opened = await page.evaluate(async () => {
+    const dock = await window.step.call('browserDock', { action: 'state' });
+    return window.step.call('toolBrowserRead', { id: dock.active });
+  });
+  assert.match(opened.text, /Browser fixture/);
+  await page.getByRole('button', { name: 'ปิดเว็บนี้' }).click();
+  await page.locator('.browser-tab').waitFor({ state: 'detached' });
   await page.getByRole('button', { name: 'ผลงาน', exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: 'release/qa/chat-workspace-light.png', fullPage: true });

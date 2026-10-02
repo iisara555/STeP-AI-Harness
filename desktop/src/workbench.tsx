@@ -4,6 +4,7 @@ import type { DesktopAPI, Session } from './types';
 import type { ToolTab, BackgroundTask, FileChange, ToolRequest } from './tools';
 import { explainError } from './messages';
 import { t } from './i18n';
+import { BrowserDockView } from './browser';
 type Props = {
   api: DesktopAPI;
   tab: ToolTab;
@@ -22,8 +23,6 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
   const [command, setCommand] = useState(''),
     [tasks, setTasks] = useState<BackgroundTask[]>([]),
     [changes, setChanges] = useState<FileChange[]>([]);
-  const [url, setUrl] = useState('https://'),
-    [browser, setBrowser] = useState<{ id: string; url: string; title: string; text?: string } | null>(null);
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [git, setGit] = useState<{ status: string; diff: string } | null>(null);
@@ -75,7 +74,6 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
   useEffect(() => {
     if (!request) return;
     if (request.tool === 'terminal') setCommand(request.input);
-    if (request.tool === 'browser') setUrl(request.input);
     if (request.tool === 'files' || request.tool === 'changes') {
       setFile({ path: request.input, text: '' });
       setContent(request.content || '');
@@ -147,55 +145,33 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
             </button>
           </div>
           {tab === 'browser' && (
-            <div className="tool-section">
-              <h2>
-                <Globe size={20} />
-                {t('เว็บ')}
-              </h2>
-              <button onClick={() => onBrowserTask(url)}>{t('ให้ผู้ช่วยทำงานบนเว็บ')}</button>
-              <p className="small muted">
-                {t('ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น')}
-              </p>
-              <p className="small muted">
-                {t('ลงชื่อเข้าใช้ด้วยตนเองในหน้าต่าง STeP ที่แยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์')}
-              </p>
-              <h3>{t('เปิดอ่านด้วยตนเอง')}</h3>
-              <form
-                onSubmit={e => {
-                  e.preventDefault();
-                  void action(async () => {
-                    setBrowser(await api.call('toolBrowser', { url }));
-                  });
-                }}
-              >
-                <input aria-label="Browser URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.com" />
-                <button disabled={busy}>{t('เปิดเว็บ')}</button>
-              </form>
-              <p className="muted small">{t('เปิดในหน้าต่างเว็บที่แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจ แล้วส่งเข้าช่องคุยได้')}</p>
-              {browser && (
-                <section className="browser-preview">
-                  <h3>{browser.title || browser.url}</h3>
-                  <small>{browser.url}</small>
-                  <div className="tool-actions">
-                    <button
-                      className="quiet"
-                      onClick={() =>
-                        void action(async () => {
-                          const data = await api.call('toolBrowserRead', { id: browser.id });
-                          setBrowser({ ...browser, ...data });
-                        })
-                      }
-                    >
-                      {t('อ่านหน้าเว็บปัจจุบัน')}
-                    </button>
-                    {browser.text && (
-                      <button onClick={() => onSource(`Web source: ${browser.url}\n\n${browser.text}`)}>{t('ส่งเข้าช่องคุย')}</button>
+            <BrowserDockView
+              api={api}
+              suggested={request?.tool === 'browser' ? request.input : undefined}
+              run={fn => void action(fn)}
+              onSource={onSource}
+              onBrowserTask={onBrowserTask}
+              intro={
+                <>
+                  <h2>
+                    <Globe size={20} />
+                    {t('เว็บ')}
+                  </h2>
+                  <button onClick={() => onBrowserTask('https://')}>{t('ให้ผู้ช่วยทำงานบนเว็บ')}</button>
+                  <p className="small muted">
+                    {t(
+                      'ระบุเว็บและงานในช่องคุย ผู้ช่วยจะขออนุญาตก่อนเปิด กรอก หรือคลิก ใช้ปุ่มหยุดในบทสนทนาเพื่อหยุดงานและปิดเว็บของงานนั้น',
                     )}
-                  </div>
-                  {browser.text && <pre>{browser.text}</pre>}
-                </section>
-              )}
-            </div>
+                  </p>
+                  <p className="small muted">
+                    {t(
+                      'ลงชื่อเข้าใช้ด้วยตนเองในแท็บเว็บนี้ ซึ่งแยกจากบัญชีส่วนตัว ยังไม่รองรับแนบ/ดาวน์โหลดไฟล์และบางระบบลงชื่อข้ามเว็บไซต์',
+                    )}
+                  </p>
+                  <h3>{t('เปิดอ่านด้วยตนเอง')}</h3>
+                </>
+              }
+            />
           )}
           {(tab === 'terminal' || tab === 'tasks') && (
             <div className="tool-section">

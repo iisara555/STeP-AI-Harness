@@ -8,6 +8,18 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Browser inside the main window
+
+- Web pages now open in the **Web tab of the right panel** instead of a pop-up window, as in Claude and Codex. This covers pages the assistant opens with `browser_control` (MIS included) and pages the employee opens.
+  - The tab strip marks the assistant's pages with an icon.
+  - Back, forward, reload and close are in the bar.
+  - A page the employee opens can be sent to the chat or handed to the assistant.
+  - When the assistant opens a page, the panel switches to the Web tab.
+- Each page is a sandboxed `WebContentsView` with its own session (`electron/browser-dock.ts`), drawn over the space the window reserves for it.
+  - A dialog, notification, menu or tour card that overlaps that space hides the page and shows a still picture of it, so the page never covers an approval.
+  - A dialog beside the panel leaves the page live, so it can be checked before approving.
+- The "browser use failed" report on Windows (`INVALID_CONTEXT_PATH` when loading the `browser-form-assistant` Skill) is the path fix below.
+
 ### Scanned PDFs, opening documents on Windows, and the knowledge registry
 
 - **Scanned PDFs:** a PDF with no text layer, or with some pages that are only pictures, now goes to the AI as page images when privacy checks are off (the default). Before, it was refused with "ไฟล์นี้ไม่มีตัวอักษรให้อ่าน" unless the local OCR component was installed.

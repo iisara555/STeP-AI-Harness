@@ -275,6 +275,11 @@ export default function App() {
         if (event.type === 'question' && event.question)
           setQuestions(list => [...list.filter(q => q.id !== event.question!.id), event.question!]);
         if (event.type === 'question-close') setQuestions(list => list.filter(q => q.id !== event.questionId));
+        // A page the assistant (or the employee) opens shows in the Web tab, so bring that tab forward.
+        if (event.type === 'browser' && event.browser?.focus) {
+          setRight(true);
+          setToolTab('browser');
+        }
         if (event.sessionId === currentId.current) {
           if (['heartbeat', 'status', 'activity', 'delta', 'reasoning'].includes(event.type)) setHeartbeatAt(Date.now());
           if (event.type === 'activity') {

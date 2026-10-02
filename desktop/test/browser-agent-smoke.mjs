@@ -36,8 +36,8 @@ delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: [entry], env, timeout: 45000 });
 try {
   await app.firstWindow();
-  await app.evaluate(({ BrowserWindow }, bundle) => {
-    globalThis.agentBrowser = new globalThis.AgentBrowser(false);
+  await app.evaluate(({ webContents }, bundle) => {
+    globalThis.agentBrowser = new globalThis.AgentBrowser();
     globalThis.approvalCount = 0;
     globalThis.accept = true;
     globalThis.changeDuringApproval = false;
@@ -49,8 +49,8 @@ try {
       approve: async () => {
         globalThis.approvalCount++;
         if (globalThis.changeDuringApproval) {
-          const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http:'));
-          await w.webContents.executeJavaScript(`document.querySelector('button').textContent='Changed target'`);
+          const w = webContents.getAllWebContents().find(w => w.getURL().startsWith('http:'));
+          await w.executeJavaScript(`document.querySelector('button').textContent='Changed target'`);
         }
         return globalThis.accept;
       },

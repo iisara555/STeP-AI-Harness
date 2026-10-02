@@ -253,6 +253,9 @@ export type ApprovalRequest = {
 };
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };
+/** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
+export type BrowserDockTab = { id: string; title: string; url: string; kind: 'agent' | 'manual'; loading: boolean };
+export type BrowserDockState = { tabs: BrowserDockTab[]; active: string; focus?: boolean };
 export type RunEvent = {
   sessionId: string;
   type:
@@ -273,7 +276,9 @@ export type RunEvent = {
     | 'approval-close'
     | 'question'
     | 'question-close'
-    | 'trace';
+    | 'trace'
+    | 'browser';
+  browser?: BrowserDockState;
   question?: ToolQuestion;
   questionId?: string;
   approval?: ApprovalRequest;

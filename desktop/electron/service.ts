@@ -512,7 +512,7 @@ export class WorkService {
       const internal = knowledgeTurn
         ? await internalSystemFor(this.harness.root, [session.originalQuery, latest].filter(Boolean).join('\n'))
         : undefined;
-      if (internal) activity(tm('งานนี้ใช้ {0} · จะเปิดใน STeP Browser', internal.name));
+      if (internal) activity(tm('งานนี้ใช้ {0} · จะเปิดในแท็บเว็บ', internal.name));
       // With tools, the AI decides when to search the web (web_search), as in Claude Code and opencode. The host searches
       // ahead only for a run without tools.
       const modelTools = Boolean(!options.draftOnly && this.harness.tools && this.harness.toolLoop?.());

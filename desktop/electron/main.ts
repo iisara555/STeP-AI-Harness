@@ -22,6 +22,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
+import { BrowserDock } from './browser-dock';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -380,8 +381,13 @@ async function main() {
     approvals,
     fireHook,
   );
-  const browsers = new Map<string, BrowserWindow>();
-  const agentBrowser = new AgentBrowser();
+  // Web pages, the assistant's and the employee's own, show in the Web tab of the main window (no pop-up windows).
+  const dock = new BrowserDock(
+    () => window,
+    state => emit({ sessionId: '', type: 'browser', browser: state }),
+  );
+  const browsers = new Set<string>();
+  const agentBrowser = new AgentBrowser(dock);
   const questions = new Questions(emit);
   const ledger = new CostLedger(store, () => policyState.policy);
   const tools = new DesktopTools(
@@ -925,27 +931,22 @@ async function main() {
         return gate.run({ tool: 'browser', readOnly: true }, { title: '', body: '', key: url }, async () => {
           if (browsers.size >= 4) throw new Error('TASK_LIMIT');
           const id = randomUUID();
-          const browser = new BrowserWindow({
-            width: 1100,
-            height: 800,
-            title: 'STeP Browser',
-            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition: 'step-browser-' + id },
-          });
-          browsers.set(id, browser);
-          browser.on('closed', () => browsers.delete(id));
-          const network = browser.webContents.session;
+          const browser = dock.create(id, 'manual', 'step-browser-' + id);
+          browsers.add(id);
+          browser.once('destroyed', () => browsers.delete(id));
+          const network = browser.session;
           network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
           network.setPermissionCheckHandler(() => false);
           network.on('will-download', e => e.preventDefault());
-          browser.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-          browser.webContents.on('will-navigate', (e, target) => {
+          browser.setWindowOpenHandler(() => ({ action: 'deny' }));
+          browser.on('will-navigate', (e, target) => {
             try {
               browserUrl(target);
             } catch {
               e.preventDefault();
             }
           });
-          browser.webContents.on('will-redirect', (e, target) => {
+          browser.on('will-redirect', (e, target) => {
             try {
               browserUrl(target);
             } catch {
@@ -955,20 +956,37 @@ async function main() {
           try {
             await browser.loadURL(url);
           } catch {
-            browser.destroy();
+            dock.remove(id);
             throw new Error('BROWSER_LOAD_FAILED');
           }
-          return { id, url, title: browser.webContents.getTitle() };
+          return { id, url, title: browser.getTitle() };
         });
       }
       case 'toolBrowserRead': {
-        const browser = browsers.get(inputText(input.id, 60));
-        if (!browser || browser.isDestroyed()) throw new Error('BROWSER_CLOSED');
-        return gate.run({ tool: 'browser_read', readOnly: true }, { title: '', body: '', key: browser.webContents.getURL() }, async () => ({
-          url: browser.webContents.getURL(),
-          title: browser.webContents.getTitle(),
-          text: await browser.webContents.executeJavaScript('document.body.innerText.slice(0,50000)'),
+        // The employee's own pages only: the assistant reads its pages through browser_control.
+        const id = inputText(input.id, 60),
+          browser = browsers.has(id) ? dock.contents(id) : undefined;
+        if (!browser) throw new Error('BROWSER_CLOSED');
+        return gate.run({ tool: 'browser_read', readOnly: true }, { title: '', body: '', key: browser.getURL() }, async () => ({
+          url: browser.getURL(),
+          title: browser.getTitle(),
+          text: await browser.executeJavaScript('document.body.innerText.slice(0,50000)'),
         }));
+      }
+      case 'browserDock': {
+        const action = inputText(input.action, 20);
+        if (action === 'state') return dock.state();
+        if (action === 'bounds') {
+          const b = input.bounds;
+          dock.setBounds(b && typeof b === 'object' ? { x: +b.x, y: +b.y, width: +b.width, height: +b.height } : null);
+          return true;
+        }
+        if (action === 'capture') return dock.capture();
+        const id = inputText(input.id, 60);
+        if (action === 'select') return (dock.select(id), dock.state());
+        if (action === 'close') return (dock.remove(id), dock.state());
+        if (['back', 'forward', 'reload'].includes(action)) return (dock.navigate(id, action as 'back'), true);
+        throw new Error('INVALID_INPUT');
       }
       case 'dryRun': {
         const query = inputText(input.query, 30_000),
@@ -2083,8 +2101,8 @@ async function main() {
     if (closing) return;
     event.preventDefault();
     closing = true;
-    for (const browser of browsers.values()) browser.destroy();
     agentBrowser.close();
+    dock.close();
     void Promise.allSettled([
       voice.close(),
       workbench.close(),
