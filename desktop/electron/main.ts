@@ -168,7 +168,10 @@ async function main() {
     permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
-    route: routing.queryStepRouter,
+    // Skills are used only when the employee picks one (or the AI loads one with the skill tool) unless policy turns
+    // automatic routing on. Authority and privacy checks run on every route either way.
+    route: (query: string, options: any = {}) =>
+      routing.queryStepRouter(query, { autoRoute: policyState.policy.features.autoRouting, ...options }),
     contextPolicy: routerPolicy.classifyContextPolicy,
     privacy: privacy.evaluatePrivacyGate,
     catalog: () => skillCatalog.loadSkillCatalog(root),

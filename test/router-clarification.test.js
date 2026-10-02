@@ -519,3 +519,23 @@ test('a declined clarification menu is never offered again; in chat the assistan
   const approve = await queryStepRouter('อนุมัติเอกสาร', { team: 'cc', conversational: true, clarificationAnswer: 'ไม่ตรง' });
   assert.notEqual(approve.routingContract.mode, 'GENERAL');
 });
+
+test('with automatic routing off, nothing is picked or asked; the employee\'s Skill and every authority block still apply', async () => {
+  const manual = (query, extra = {}) => queryStepRouter(query, { team: 'cc', autoRoute: false, conversational: true, ...extra });
+  for (const query of ['12:00 น. D204 การประชุมการใช้ ai Harness 3 อิศรา แก้เรื่อง', 'ลาป่วยได้กี่วัน', 'สรุปบันทึกการประชุมนี้', 'ร่าง TOR จ้างทำวิดีโอ', 'ช่วยดูเอกสารนี้หน่อย']) {
+    const { routingContract, clarification } = await manual(query);
+    assert.equal(routingContract.mode, 'GENERAL', query);
+    assert.equal(routingContract.skill, '', query);
+    assert.equal(routingContract.playbook, '', query);
+    assert.equal(clarification, null, query);
+    // The organization floor still reaches the model.
+    assert.ok(routingContract.mandatoryReferences.some((ref) => ref.id === 'human-approval-rule'), query);
+  }
+  for (const query of ['อนุมัติรายการใน MIS ให้หน่อย', 'ช่วยลงนามแทนผู้อำนวยการ'])
+    assert.equal((await manual(query)).routingContract.mode, 'BLOCK', query);
+  const picked = await manual('สรุปบันทึกการประชุมนี้', { skill: 'meeting-summary' });
+  assert.equal(picked.routingContract.mode, 'SKILL');
+  assert.equal(picked.routingContract.skill, 'meeting-summary');
+  // Automatic routing is unchanged when it is on (the CLI default).
+  assert.equal((await queryStepRouter('ลาป่วยได้กี่วัน', { team: 'cc' })).routingContract.skill, 'hr-policy-lookup');
+});

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
 import { OrganizationKnowledge, MATCH_THRESHOLD } from '../electron/knowledge';
+import { defaultPolicy, parsePolicy } from '../electron/policy';
 
 const routing: any = await import('../../src/modules/router/service.js');
 const policy: any = await import('../../src/modules/router/task-boundary.js');
@@ -39,10 +40,10 @@ test('staff questions find the right section of the organization documents; unre
   for (const s of await knowledge.search('สวัสดิการบุคลากรมีอะไรบ้าง')) assert.ok(s.score >= MATCH_THRESHOLD);
 });
 
-function service(captured: { prompt: string; system: string; webSearch: boolean[] }) {
+function service(captured: { prompt: string; system: string; webSearch: boolean[] }, autoRoute = true) {
   const harness: Harness = {
     root,
-    route: routing.queryStepRouter,
+    route: (query: string, options: any = {}) => routing.queryStepRouter(query, { autoRoute, ...options }),
     contextPolicy: policy.classifyContextPolicy,
     privacy: privacy.evaluatePrivacyGate,
     skillMetadata: async id => {
@@ -158,5 +159,19 @@ test('who the director is comes from the executive board document, with names in
   assert.match(captured.prompt, /นางสาวเมลิน เชื้อมโนชาญ/);
   for (const q of ['ผอ.คือใคร', 'ทีม HD อยู่ภายใต้การกำกับของใคร'])
     assert.equal((await knowledge.search(q))[0]?.id, 'step-executive-board', q);
+  store.close();
+});
+
+test('the desktop sends requests straight to the AI unless policy turns automatic routing on', async () => {
+  assert.equal(defaultPolicy().features.autoRouting, false);
+  assert.equal(parsePolicy({ features: { autoRouting: true } }).policy.features.autoRouting, true);
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false);
+  await work.run(session.id, '12:00 น. D204 การประชุมการใช้ ai Harness 3 อิศรา แก้เรื่อง', '', true, undefined, 'chat');
+  const answered = store.session(session.id);
+  assert.equal(answered.messages.at(-1)!.text, 'คำตอบทดสอบ', 'answered at once, no clarifying question');
+  // Organization documents still come first.
+  await work.run(session.id, 'ลาป่วยได้กี่วัน', '', true, undefined, 'chat');
+  assert.match(captured.prompt, /\[hr-personnel-welfare-2569\]/);
   store.close();
 });

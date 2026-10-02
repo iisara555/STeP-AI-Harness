@@ -28,6 +28,7 @@ export const FEATURES = [
   'cron',
   'coordinator',
   'memoryTeam',
+  'autoRouting',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -128,6 +129,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   cron: false,
   coordinator: false,
   memoryTeam: false,
+  // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
+  // Off, every request goes to the AI as general help; authority and privacy checks run either way.
+  autoRouting: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',

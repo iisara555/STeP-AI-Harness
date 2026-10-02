@@ -117,7 +117,11 @@ export async function queryStepRouter(query, options = {}) {
   // An employee who invokes a routed Skill by name skips scoring and playbooks, never
   // the authority preflight or the Skill's own scope check below.
   const explicitSkillName = typeof options.skill === 'string' && skills.some((skill) => skill.name === options.skill) ? options.skill : '';
-  const playbookMatch = options.disablePlaybooks || explicitSkillName ? null : detectCompositePlaybook(playbooks, query, {
+  // autoRoute: false (STeP Desktop's default) never picks a Skill or Playbook and never asks a clarifying question:
+  // the request goes to the model as general help, and a Skill is used only when the employee chooses one. The best
+  // candidate's own scope rules and the organization authority registry still BLOCK or ESCALATE below.
+  const manualRouting = options.autoRoute === false && !explicitSkillName;
+  const playbookMatch = options.disablePlaybooks || explicitSkillName || manualRouting ? null : detectCompositePlaybook(playbooks, query, {
     clarificationAnswer: options.clarificationAnswer,
   });
   const competingPlaybooks = playbookMatch?.ambiguous ? playbookMatch.candidates : [];
@@ -147,7 +151,7 @@ export async function queryStepRouter(query, options = {}) {
     ? 'coding-git-workflow'
     : /(?:checklist|เช็กลิสต์|รายการตรวจ).*(?:ตรวจติดตาม|audit|คุณภาพ).*ISO\s*9001|ISO\s*9001.*(?:checklist|เช็กลิสต์|รายการตรวจ)/i.test(taskText)
       ? 'iso9001-audit-readiness' : '';
-  const chosenSkillName = explicitSkillName || (selectedPlaybook || competingPlaybooks.length
+  const chosenSkillName = explicitSkillName || (manualRouting || selectedPlaybook || competingPlaybooks.length
     ? ''
     : resolveSkillMenuChoice(options.clarificationAnswer, ranked, skills) || concreteSkill);
   if (chosenSkillName) {
@@ -348,7 +352,7 @@ export async function queryStepRouter(query, options = {}) {
     && !ATTACHMENT_PURPOSE_PATTERN.test(query)
     && !CONSEQUENTIAL_INTENTS.has(context.intent)
     && !CONSEQUENTIAL_ACTION_PATTERN.test(query);
-  const generalAssist = invitationDraft || publicInformation || conversationalAssist || internalSystem || answeredInChat || (isAmbiguous
+  const generalAssist = manualRouting || invitationDraft || publicInformation || conversationalAssist || internalSystem || answeredInChat || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'

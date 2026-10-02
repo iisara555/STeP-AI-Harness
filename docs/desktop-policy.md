@@ -16,7 +16,7 @@ An unpackaged development app using `STEP_DESKTOP_TEST_HOME` reads `desktop-poli
 
 ## Defaults and example
 
-Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `autopilot`, `sandbox`, `mcp`, `lineGateway`, `vision`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator` and `memoryTeam` default to false. `toolLoop` defaults to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. [Phase 4 automation and tools](desktop-automation.md) implements coordinator, cron, MCP, sandbox and gated autopilot. Other feature flags grant permission and do not establish that future implementations are available.
+Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `autopilot`, `sandbox`, `mcp`, `lineGateway`, `vision`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator`, `memoryTeam` and `autoRouting` default to false. `toolLoop` defaults to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. [Phase 4 automation and tools](desktop-automation.md) implements coordinator, cron, MCP, sandbox and gated autopilot. Other feature flags grant permission and do not establish that future implementations are available.
 
 ```json
 {
@@ -55,6 +55,21 @@ The composer offers four modes, in the same spirit as Claude Code and ChatGPT:
 ## Workbench permissions and approvals
 
 Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an employee choice for bounded clean-read transmission within one loop (pre-checked in standard consent, see [pilot mode](#pilot-mode)); it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
+
+## Automatic routing (`features.autoRouting`)
+
+By default STeP Desktop does not run the local Router's Skill selection.
+- Every message goes straight to the AI as general help, with the organization documents that match it.
+- The app never asks "งานนี้ตรงกับข้อนี้ไหม".
+- It never picks a Skill or Playbook for the employee.
+- A Skill is used only when the employee picks one (`/` in the composer) or the AI loads one with the `skill` tool.
+
+The Router still runs on every message for safety:
+- Authority checks (`manifest/authority.yaml`) and the best-matching Skill's own scope rules still BLOCK or ESCALATE. Examples are approving, signing on someone's behalf, or issuing a document number.
+- The privacy gate is unchanged.
+- General help always loads the Human Approval and Data Classification rules.
+
+`{ "features": { "autoRouting": true } }` restores automatic Skill and Playbook selection and clarifying questions. See [STeP Router](step-router.md#manual-skill-selection-autoroute-false).
 
 ## Pilot mode
 
