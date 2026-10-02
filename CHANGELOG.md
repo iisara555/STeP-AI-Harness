@@ -6,9 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.3 (`desktop/package.json`) contains the changes below.
+STeP Desktop version 0.5.4 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
+
+- Fix answers that showed a raw tool request (`{"tool": "reference", ...}`) instead of the answer. Some models, such as Gemini Flash-Lite, put the request in a ```json fence instead of ```step-tool. A reply that is only one valid tool request (json fence, unlabelled fence or bare JSON) now runs the tool through the same checks, so the AI reads the document and answers. A JSON example inside a longer answer is never treated as a request.
+- Stop asking "ใช้บริบทที่บันทึกไว้กับงานนี้?" on every message in standard consent. Saved preferences (`ASSISTANT.md`, `STEP.md`, `AGENTS.md`, output style) and confirmed memories are sent like custom instructions and memory in Claude and ChatGPT. They still pass the privacy check when loaded. Strict mode (`"pilot": false`) still asks, and now lists the file and memory names instead of raw JSON.
 
 - Mac installer builds now open the `.dmg` and launch the packaged app (`test/packaged-launch-smoke.mjs`). The smoke checks that setup and IPC work and that the organization documents and Skills are bundled.
 - Requests to work in **STeP MIS** now open the STeP Browser instead of being answered from memory or the web. The router treats them as general help instead of a clarifying menu. The AI is told to open `https://mis.step.cmu.ac.th/` (from `manifest/services.yaml`) with the browser tool. The employee signs in themselves, and every click or fill still asks. The AI never submits, approves or e-signs. Approving in MIS is still blocked.

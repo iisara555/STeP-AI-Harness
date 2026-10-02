@@ -1115,6 +1115,7 @@ export const en: Record<string, string> = {
   'รันคำสั่งใน Docker sandbox?': 'Run the command in the Docker sandbox?',
   'ใช้บริบทที่บันทึกไว้กับงานนี้?': 'Use the context saved for this task?',
   'จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}': 'Workspace guidance and selected memories will be sent to {0}\n{1}',
+  'ความจำ: {0}': 'Memory: {0}',
   'ตรวจแผนงานย่อยก่อนเริ่ม?': 'Review the subtask plan before starting?',
   'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ':
     'Task {0}\n{1}\nEach subtask uses the same AI account; the combined result is a draft for review',

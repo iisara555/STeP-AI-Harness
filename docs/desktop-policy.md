@@ -68,6 +68,7 @@ Standard consent, first trialled as pilot mode, is now the default. Administrato
 | Sensitive word with no person identifier | Dialog | Sent with a warning notice |
 | Name table or unresolved person identifier | Dialog | Dialog |
 | Several AI workers (coordinator) | Dialog | Dialog |
+| Saved preferences (`STEP.md`, `AGENTS.md`, `ASSISTANT.md`, output style) and confirmed memories | Dialog per task, listing the files and memory names | Sent without a dialog, like custom instructions and memory in Claude and ChatGPT. They pass the same privacy check when loaded; anything with personal data or secrets is refused |
 | Masked national ID, phone or e-mail | Masked, notice | Masked, notice |
 | Tool results sent to the AI | Per source; "this run" unchecked | One answer covers every clean result in the run; the "this run" box starts checked. Results with findings still ask each time |
 | Plan approval (`plan` tool) | Dialog | No dialog. The plan is noted but not stored as approved; it never granted anything beyond drafting |

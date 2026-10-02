@@ -151,13 +151,11 @@ try {
   assert.ok(rejected.includes('MEMORY_PRIVACY_BLOCKED'));
   await page.locator('.composer textarea').fill('Summarize earlier notes briefly.');
   await page.keyboard.press('Enter');
-  const contextConsent = page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?' });
-  await contextConsent.waitFor();
-  await expect(contextConsent).toContainText('Source preference');
-  await contextConsent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === 'source').status)
     .toBe('review');
+  // Standard mode sends saved preferences and confirmed memories without a dialog, like Claude and ChatGPT.
+  await expect(page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?' })).toHaveCount(0);
   let state = await page.evaluate(() => window.step.call('snapshot'));
   const source = state.sessions.find(s => s.id === 'source');
   assert.equal(source.compaction.method, 'summary');
@@ -247,8 +245,6 @@ try {
       }),
     { id: fork.id, aid: image.id, consent: send.consent.token },
   );
-  await contextConsent.waitFor();
-  await contextConsent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === fork.id).status)
     .toBe('review');

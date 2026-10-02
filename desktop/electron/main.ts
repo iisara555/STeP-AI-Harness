@@ -450,7 +450,10 @@ async function main() {
     ]
       .filter(Boolean)
       .join('\n\n');
-    if (text) {
+    // Standard mode sends the person's own saved preferences and confirmed memories without asking each time, as
+    // Claude and ChatGPT do with custom instructions and memory; both already passed the privacy check when loaded.
+    if (text && !policy.pilot) {
+      const listed = [...preferences.map(p => '• ' + p.path), ...selected.map(m => '• ' + tm('ความจำ: {0}', m.name))].join('\n');
       const approved = await approvals.request(
         approvals.rule(
           settings.workspace || data,
@@ -461,7 +464,7 @@ async function main() {
         ),
         {
           title: tm('ใช้บริบทที่บันทึกไว้กับงานนี้?'),
-          body: tm('จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}', connection.provider, text.slice(0, 2000)),
+          body: tm('จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}', connection.provider, listed),
           privacyClass: 'internal',
           allowRemember: false,
           sessionId: id,
