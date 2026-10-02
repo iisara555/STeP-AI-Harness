@@ -85,7 +85,8 @@ try {
   await page.keyboard.press('Enter');
   const titles = [];
   for (let i = 0; i < 8; i++) {
-    await expect.poll(() => page.evaluate(() => Boolean(window.auditApproval))).toBe(true);
+    // Each approval follows a model step; slow runners (macOS x64) need more than the 5 s default.
+    await expect.poll(() => page.evaluate(() => Boolean(window.auditApproval)), { timeout: 30000 }).toBe(true);
     const dialog = page.getByRole('alertdialog');
     await dialog.waitFor();
     const approval = await page.evaluate(() => window.auditApproval);
