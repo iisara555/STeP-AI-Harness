@@ -1312,4 +1312,5 @@ export const en: Record<string, string> = {
   แก้ข้อความให้เหลือเฉพาะสิ่งที่ควรจำ: 'Edit the text down to what should be remembered',
   ให้ความเห็นต่อคำตอบนี้: 'Rate this answer',
   ตัวเลือกงานนี้: 'Task options',
+  'งานนี้ใช้ {0} · จะเปิดใน STeP Browser': 'This task uses {0} · opening it in the STeP Browser',
 };

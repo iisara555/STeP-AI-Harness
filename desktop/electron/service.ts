@@ -22,6 +22,7 @@ import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
 import { compact, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
+import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { OrganizationKnowledge, STRONG_MATCH, catalogText, knowledgeText, type CatalogEntry, type KnowledgeSection } from './knowledge';
 export { fence, section } from './prompt';
 export { RETRYABLE_CODES, RETRY_DELAYS_MS } from './retry';
@@ -483,8 +484,14 @@ export class WorkService {
         ? await knowledge.search([...new Set([session.originalQuery, latest].filter(Boolean))].join('\n')).catch(() => [])
         : [];
       const catalog: CatalogEntry[] = knowledge ? await knowledge.entries() : [];
+      // A request to work in STeP MIS is done in the STeP Browser, not answered from the web or memory.
+      const internal = knowledgeTurn
+        ? await internalSystemFor(this.harness.root, [session.originalQuery, latest].filter(Boolean).join('\n'))
+        : undefined;
+      if (internal) activity(tm('งานนี้ใช้ {0} · จะเปิดใน STeP Browser', internal.name));
       const searchPublic =
         !options.draftOnly &&
+        !internal &&
         (known[0]?.score || 0) < STRONG_MATCH &&
         mode !== 'image' &&
         !revising &&
@@ -687,6 +694,7 @@ export class WorkService {
             : baseRules,
           toolsEnabled && TOOL_RULES,
           catalog.length && ORGANIZATION_RULE,
+          internal && internalSystemRule(internal, toolsEnabled),
           toolsEnabled &&
             catalog.length &&
             'Registered STeP documents (read one with the reference tool, input = its ID):\n' + catalogText(catalog),

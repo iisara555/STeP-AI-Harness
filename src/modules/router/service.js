@@ -331,7 +331,14 @@ export async function queryStepRouter(query, options = {}) {
     && /(?:ร่าง|เขียน).*(?:อีเมล|email|ข้อความ|จดหมาย).*เชิญประชุม/i.test(taskText)
     && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
     && !CONSEQUENTIAL_ACTION_PATTERN.test(query) && !CONSEQUENTIAL_INTENTS.has(context.intent);
-  const generalAssist = invitationDraft || publicInformation || conversationalAssist || (isAmbiguous
+  // Working in a registered internal system ("เปิด STeP MIS", "หาแบบฟอร์มใน MIS") is done by the employee and the
+  // assistant together in the host's isolated browser, so it is general help rather than a Skill guess. Consequential
+  // requests (submit, approve, sign) and Authority BLOCK/ESCALATE still stop here.
+  const internalSystem = isAmbiguous && !competingPlaybooks.length
+    && scopeResult.status === 'ALLOW' && privacy.action === 'pass'
+    && !CONSEQUENTIAL_INTENTS.has(context.intent) && !CONSEQUENTIAL_ACTION_PATTERN.test(query)
+    && INTERNAL_SYSTEM_PATTERN.test(originalQuery);
+  const generalAssist = invitationDraft || publicInformation || conversationalAssist || internalSystem || (isAmbiguous
     && !competingPlaybooks.length
     && routingConfidence.tier === 'FALLBACK'
     && scopeResult.status === 'ALLOW'
@@ -495,6 +502,8 @@ const FILLER_TERMS = [
   'please', 'help', 'pls',
 ];
 const MIN_CONCRETE_CHARS = 3;
+// STeP MIS (manifest/services.yaml → sources.step-mis); the desktop opens it in its isolated browser.
+const INTERNAL_SYSTEM_PATTERN = /\bmis\b|mis\.step\.cmu/i;
 
 // A request that names a STeP team or internal system ("AFP ตีกลับ", "ระเบียบ
 // ISO"), or asks what the organization pays or grants ("เบิกได้เท่าไหร่",

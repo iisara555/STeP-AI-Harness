@@ -105,3 +105,29 @@ test('an unrelated request carries no organization documents', async () => {
   assert.doesNotMatch(captured.prompt, /<organization_knowledge>/);
   store.close();
 });
+
+test('a request about STeP MIS is sent to the STeP Browser with the registered address, never answered from memory', async () => {
+  const { internalSystemFor, internalSystemRule } = await import('../electron/internal-systems');
+  for (const text of [
+    'ดาวน์โหลดแบบฟอร์ม FM-CC-010 จาก STeP MIS',
+    'เข้าMISทำรายงานขอความเห็นชอบหมวด B',
+    'ช่วยดูใน STeP : MIS ให้หน่อย',
+    'เปิด https://mis.step.cmu.ac.th/ ให้ที',
+  ])
+    assert.equal((await internalSystemFor(root, text))?.url, 'https://mis.step.cmu.ac.th/', text);
+  for (const text of ['ร่าง mission statement ของทีม', 'misc notes', 'ติดต่อฝ่ายบุคคลช่องทางไหน'])
+    assert.equal(await internalSystemFor(root, text), undefined, text);
+  const mis = (await internalSystemFor(root, 'STeP MIS'))!;
+  const on = internalSystemRule(mis, true);
+  assert.match(on, /browser_control\(input="https:\/\/mis\.step\.cmu\.ac\.th\/", args\.action=open\)/);
+  assert.match(on, /never ask for, type or store credentials/);
+  assert.match(on, /Do not submit, approve, sign or e-sign/);
+  assert.match(internalSystemRule(mis, false), /open https:\/\/mis\.step\.cmu\.ac\.th\/ themselves/);
+
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured);
+  await work.run(session.id, 'ช่วยหาแบบฟอร์ม ISO ล่าสุดใน STeP MIS', '', true, undefined, 'chat');
+  assert.match(captured.system, /concerns STeP MIS \(https:\/\/mis\.step\.cmu\.ac\.th\/\)/);
+  assert.ok(!captured.webSearch.includes(true), 'MIS is never searched on the public web');
+  store.close();
+});

@@ -10,6 +10,8 @@ STeP Desktop version 0.5.2 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Requests to work in **STeP MIS** now open the STeP Browser instead of being answered from memory or the web. The router treats them as general help instead of a clarifying menu. The AI is told to open `https://mis.step.cmu.ac.th/` (from `manifest/services.yaml`) with the browser tool. The employee signs in themselves, and every click or fill still asks. The AI never submits, approves or e-signs. Approving in MIS is still blocked.
+- Keep the waiting spinner turning when the OS reduces motion, so a wait never looks frozen.
 - Answer from STeP's own documents before the web or general knowledge.
   - **Before:** general questions carried no organization documents, and the AI was never told which document IDs existed. Documents kept as a summary index (HR welfare 2569, career path, HR service channels, facility inventory) could not be read by the `reference` tool, so even `hr-policy-lookup` answered without the welfare data.
   - **Now:** every chat and draft turn includes the best-matching document sections, the "context used" list names them, and the AI is told to cite them or say the documents do not cover the question. Restricted and missing documents are never read. See [organization knowledge first](docs/desktop-context-memory.md#organization-knowledge-first).
