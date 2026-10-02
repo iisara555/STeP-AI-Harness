@@ -180,7 +180,20 @@ try {
   await page.getByText('Second answer received', { exact: true }).waitFor();
   // Chat is the one everyday mode, like other AI apps; the drafting mode stays for tasks that use it.
   await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' }).locator('option[value="draft"]')).toHaveCount(0);
-  await page.evaluate(id => window.step.call('send', { id, text: 'Draft request', mode: 'draft' }), id);
+  // The earlier run saves its answer just before it releases the task; wait until a new run is accepted.
+  await waitComplete(id);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        id =>
+          window.step.call('send', { id, text: 'Draft request', mode: 'draft' }).then(
+            () => 'sent',
+            e => String(e),
+          ),
+        id,
+      ),
+    )
+    .toBe('sent');
   await waitComplete(id);
   const showDraft = page.getByRole('button', { name: 'เปิดร่าง', exact: true });
   if (await showDraft.count()) await showDraft.click();
