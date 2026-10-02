@@ -227,6 +227,9 @@ function collectMatches(text, pattern, allowedIdentifiers = new Set()) {
   return matches;
 }
 
+/** The credential pattern (passwords, tokens, API keys, signed URL parameters), for masking credentials alone. */
+export const CREDENTIAL_PATTERN = PATTERNS.find((pattern) => pattern.id === 'credential').regex;
+
 export function scanPrivacyText(text = '', { allowedIdentifiers = [] } = {}) {
   const input = String(text || '');
   const allowed = organizationAllowlist(allowedIdentifiers);

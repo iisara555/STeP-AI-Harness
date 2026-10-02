@@ -62,7 +62,7 @@ import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
 import type { ApprovalRequest } from './types';
 import { WorkbenchPanel } from './workbench';
-import { toolRequests, type ToolTab, type ToolRequest } from './tools';
+import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './tools';
 import { isImageRequest, imageModels } from './image-routing';
 import type { WorkMode } from './types';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
@@ -213,6 +213,9 @@ export default function App() {
   dirtyRef.current = dirty;
   const currentId = useRef(selected);
   currentId.current = selected;
+  // Whether the running task drafts (each step replaces the live text) or chats (the live text grows turn by turn).
+  const sessionMode = useRef<string | undefined>(undefined);
+  sessionMode.current = session?.mode === 'draft' || workMode === 'draft' ? 'draft' : 'chat';
   useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
   const editor = useEditor({
@@ -293,11 +296,17 @@ export default function App() {
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
           if (event.type === 'step' && event.index !== undefined)
             setPlan(steps => steps.map((step, i) => (i === event.index ? { ...step, state: event.state || step.state } : step)));
-          // Each step rewrites the whole draft, so a new step replaces the streamed text instead of appending to it.
+          // Each draft step rewrites the whole draft, so a new step replaces the streamed text. In chat the text of every
+          // turn stays on screen while the assistant works (as in Claude, ChatGPT and Cursor), each turn after the last.
           if (event.type === 'status') {
             setProgress(errorText[event.text || ''] || event.text || '');
-            setStream('');
-            setReasoning('');
+            if (sessionMode.current === 'draft') {
+              setStream('');
+              setReasoning('');
+            } else {
+              setStream(s => (s.trim() && !s.endsWith('\n\n') ? s + '\n\n' : s));
+              setReasoning(s => (s.trim() && !s.endsWith('\n\n') ? s + '\n\n' : s));
+            }
           }
         }
         if (event.type === 'changed') {
@@ -763,7 +772,12 @@ export default function App() {
   // A refresh can land after main saved the answer but before it reports the run finished; the saved message
   // then already shows the streamed text, so the live copy is hidden instead of appearing twice.
   const lastMessage = session?.messages.at(-1);
-  const streamSaved = Boolean(stream) && lastMessage?.role === 'assistant' && lastMessage.text.trim() === stream.trim();
+  const liveText = visibleStream(stream);
+  const streamSaved =
+    Boolean(liveText) &&
+    lastMessage?.role === 'assistant' &&
+    Boolean(lastMessage.text.trim()) &&
+    liveText.endsWith(lastMessage.text.trim());
   const commandRef = useRef(commands);
   commandRef.current = commands;
   // Read the bindings during the key press rather than re-registering the listener: a shortcut pressed right
@@ -1360,30 +1374,6 @@ export default function App() {
               ) : null}
               {running && (
                 <article className="message assistant">
-                  <div className="activity" role="status" aria-live="polite">
-                    <LoaderCircle className="spin" size={15} />
-                    {progress ? t(progress) : t('กำลังทำงาน')}
-                  </div>
-                  <div className="activity-detail">
-                    <span className="activity-pulse" aria-hidden="true" />
-                    <span>
-                      {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
-                      {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
-                    </span>
-                  </div>
-                  {now - activityAt > 45000 && !stream && (
-                    <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
-                  )}
-                  {activities.length > 1 && (
-                    <details className="activity-history">
-                      <summary>{t('ดูขั้นตอนที่ทำแล้ว')}</summary>
-                      <ol>
-                        {activities.slice(0, -1).map((label, index) => (
-                          <li key={index}>{label}</li>
-                        ))}
-                      </ol>
-                    </details>
-                  )}
                   {plan.length > 1 && (
                     <ol className="plan-card" aria-label={t('ขั้นตอนของงาน')}>
                       {plan.map((step, i) => (
@@ -1406,7 +1396,7 @@ export default function App() {
                     </ol>
                   )}
                   {reasoning && (
-                    <details className="thinking">
+                    <details className="thinking" open={!liveText}>
                       <summary>
                         <Brain size={14} />
                         {t('ความคิดของ AI')}
@@ -1414,7 +1404,31 @@ export default function App() {
                       <div>{reasoning}</div>
                     </details>
                   )}
-                  {stream && !streamSaved && <RichText className="message-body streaming" text={stream} />}
+                  {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} />}
+                  <div className="activity" role="status" aria-live="polite">
+                    <LoaderCircle className="spin" size={15} />
+                    {progress ? t(progress) : t('กำลังทำงาน')}
+                  </div>
+                  <div className="activity-detail">
+                    <span className="activity-pulse" aria-hidden="true" />
+                    <span>
+                      {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
+                      {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
+                    </span>
+                  </div>
+                  {now - activityAt > 45000 && !liveText && (
+                    <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
+                  )}
+                  {activities.length > 1 && (
+                    <details className="activity-history">
+                      <summary>{t('ดูขั้นตอนที่ทำแล้ว')}</summary>
+                      <ol>
+                        {activities.slice(0, -1).map((label, index) => (
+                          <li key={index}>{label}</li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
                 </article>
               )}
               {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (

@@ -77,6 +77,22 @@ With `privacy` off, responsibility moves to the employee through the **usage ter
 - When `TERMS_VERSION` in `desktop/src/terms-version.ts` changes, everyone is asked once more.
 - The administrator remains responsible for choosing this setup under PDPA. Side-effect tools (writing files, running commands, browser open/fill/click, MCP calls) still ask each time; that is a permission, not a privacy check.
 
+## Web and credential guards (always on)
+
+These guards stay on whatever `checks` says. They stop a page or file with hidden instructions (prompt injection) from sending task data out without anyone seeing it:
+
+- **Reading a website (`web_fetch`):** the AI reads a site only after the employee allows that site once in the task. This applies in every mode, Full auto included. The full URL is shown, so data hidden in the address is visible. `web_search` does not ask.
+- **Credentials:**
+  - With `checks.privacy` off, text going to the AI or a web service is still scanned for credentials alone. This covers messages, attachments, file reads and URLs.
+  - Credentials are passwords, tokens, API keys and signed URL parameters. They are masked as `[credential-redacted]`.
+  - Text whose credential cannot be fully masked is withheld.
+  - A URL that carries a credential is never fetched.
+- **The assistant's browser:** it opens public sites only.
+  - localhost, private IP addresses, `.local` and `.internal` names, and public names that resolve to private addresses are blocked.
+  - A page cannot load anything from those addresses either.
+  - To allow an intranet system, list its host in `"network": {"privateHosts": ["intranet.step"]}` (at most 50 plain host names).
+  - Pages the employee opens in the Web tab are not restricted.
+
 ## Automatic routing (`features.autoRouting`)
 
 By default STeP Desktop does not run the local Router's Skill selection.

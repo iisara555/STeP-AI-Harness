@@ -39,6 +39,8 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});
 });`,
 );
+// The local fixture site is a private address, which the assistant's browser opens only when policy lists it.
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ network: { privateHosts: ['127.0.0.1'] } }));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 let app;

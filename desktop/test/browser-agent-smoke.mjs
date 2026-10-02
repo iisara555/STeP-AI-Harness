@@ -37,7 +37,8 @@ const app = await electron.launch({ args: [entry], env, timeout: 45000 });
 try {
   await app.firstWindow();
   await app.evaluate(({ webContents }, bundle) => {
-    globalThis.agentBrowser = new globalThis.AgentBrowser();
+    // The local fixture server is a private address: listed as an intranet host, as policy network.privateHosts would.
+    globalThis.agentBrowser = new globalThis.AgentBrowser(undefined, () => ['127.0.0.1']);
     globalThis.approvalCount = 0;
     globalThis.accept = true;
     globalThis.changeDuringApproval = false;
@@ -110,6 +111,9 @@ try {
   assert.deepEqual(login.elements, []);
   assert.equal(login.text, '');
   assert.equal((await run('file:///C:/Windows/win.ini', { action: 'open' })).error, 'INVALID_URL');
+  // Other local or private addresses stay closed to the assistant.
+  for (const blocked of ['http://localhost:9/', 'http://192.168.1.1/', 'http://10.0.0.1/'])
+    assert.equal((await run(blocked, { action: 'open' })).error, 'WEB_ADDRESS_BLOCKED', blocked);
   await run(tab, { action: 'close' });
   assert.equal((await run(tab, { action: 'read' })).error, 'BROWSER_CLOSED');
   console.log(

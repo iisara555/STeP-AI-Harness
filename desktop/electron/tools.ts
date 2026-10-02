@@ -149,6 +149,34 @@ export class DesktopTools {
     if (!approved) throw new Error('TOOL_DATA_DECLINED');
     return review.redactedText;
   }
+  // Sites the employee let the AI read in each task (session), by host.
+  private sites = new Map<string, Set<string>>();
+  /**
+   * The AI reads a website only after the employee allows that site once in the task, in every permission mode, as
+   * Claude Code asks per domain. A page or file with hidden instructions could otherwise make the AI send task data to
+   * any address in a URL without anyone seeing it. The full URL is shown, so data carried in it is visible.
+   */
+  private async siteConsent(url: string, scope: ToolScope) {
+    const host = new URL(url).host;
+    const allowed = this.sites.get(scope.sessionId) || new Set<string>();
+    if (allowed.has(host)) return;
+    const rule = this.approvals.rule(await this.workbench.root().catch(() => ''), 'web_fetch', host);
+    const approved = await this.approvals.request(
+      rule,
+      {
+        title: tm('ให้ AI อ่านเว็บไซต์นี้?'),
+        body: url + tm('\nอนุญาตครั้งเดียวต่อเว็บไซต์ในงานนี้ ตรวจว่าที่อยู่ไม่มีข้อมูลของงานแฝงอยู่'),
+        privacyClass: 'internal',
+        allowRemember: false,
+        sessionId: scope.sessionId,
+      },
+      scope.signal,
+    );
+    if (scope.signal.aborted) throw new Error('CANCELLED');
+    if (!approved) throw new Error('WEB_SITE_DECLINED');
+    allowed.add(host);
+    this.sites.set(scope.sessionId, allowed);
+  }
   async host(scope: ToolScope): Promise<LoopHost> {
     const jobs = new Set<string>();
     const stopJobs = () => {
@@ -350,6 +378,7 @@ export class DesktopTools {
             const url = publicUrl(target).href;
             // A URL can leak task data through its path/query even on an otherwise public host.
             if (this.harness.privacy(decodeURIComponent(url)).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+            await this.siteConsent(url, scope);
             await this.outgoing(url, scope, 'web-url');
             await check();
             return fetchPublic(url, scope.signal, this.policy().network?.proxyUrl);

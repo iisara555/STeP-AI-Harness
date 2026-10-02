@@ -2,6 +2,7 @@ import { WebContentsView, type WebContents } from 'electron';
 import type { BrowserDock } from './browser-dock';
 import { createHash, randomUUID } from 'node:crypto';
 import { browserUrl } from './workbench';
+import { privateHostName, publicSite } from './web-fetch';
 import type { LoopRequest } from '../src/tools';
 import { tm } from './i18n';
 
@@ -38,7 +39,11 @@ export class AgentBrowser {
   private origins = new Map<number, string>();
   private configured = new WeakSet<Electron.Session>();
   // With a dock the pages show in the main window's Web tab; without one (tests) they load unseen.
-  constructor(private dock?: BrowserDock) {}
+  constructor(
+    private dock?: BrowserDock,
+    // Intranet hosts the organization lets the assistant open (policy network.privateHosts).
+    private privateHosts: () => string[] = () => [],
+  ) {}
   private get(id: string, owner: string) {
     const entry = this.tabs.get(id);
     if (!entry || entry.owner !== owner || entry.contents.isDestroyed()) throw new Error('BROWSER_CLOSED');
@@ -139,6 +144,7 @@ export class AgentBrowser {
       const url = browserUrl(request.input);
       context.review(decodeURIComponent(url));
       context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
+      await publicSite(new URL(url), this.privateHosts());
       const reused = await this.reuse(url, context);
       if (reused) return reused;
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
@@ -179,7 +185,10 @@ export class AgentBrowser {
         network.on('will-download', event => event.preventDefault());
         network.webRequest.onBeforeRequest((details, cb) => {
           try {
-            browserUrl(details.url);
+            const target = new URL(browserUrl(details.url));
+            // A public page cannot reach local or intranet addresses through the assistant's browser either.
+            if (privateHostName(target.hostname) && !this.privateHosts().includes(target.hostname.toLowerCase()))
+              return cb({ cancel: true });
             const origin = this.origins.get(details.webContentsId ?? -1);
             cb({ cancel: details.resourceType === 'mainFrame' && (!origin || new URL(details.url).origin !== origin) });
           } catch {

@@ -66,6 +66,28 @@ export function publicUrl(input: string) {
   return url;
 }
 type Resolve = (host: string) => Promise<{ address: string; family: number }[]>;
+/** A host name that is plainly local or private without a DNS lookup (localhost, .local, a private IP literal). */
+export function privateHostName(hostname: string) {
+  const host = hostname
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.$/, '')
+    .toLowerCase();
+  return (
+    host === 'localhost' ||
+    (!host.includes('.') && !isIP(host)) ||
+    /\.(localhost|local|internal|test|invalid|onion)$/.test(host) ||
+    (isIP(host) > 0 && !publicAddress(host))
+  );
+}
+/**
+ * The assistant's browser opens public sites only, unless the organization lists an intranet host in policy
+ * (network.privateHosts): a prompt-injected page must not steer it to a router, a local service or the intranet.
+ */
+export async function publicSite(url: URL, allowed: string[] = [], resolve?: Resolve) {
+  if (allowed.includes(url.hostname.toLowerCase())) return;
+  if (privateHostName(url.hostname)) throw new Error('WEB_ADDRESS_BLOCKED');
+  await resolvePublic(url, resolve);
+}
 export async function resolvePublic(url: URL, resolve: Resolve = host => lookup(host, { all: true, verbatim: true })) {
   const host = url.hostname.replace(/^\[|\]$/g, '');
   const addresses = isIP(host) ? [{ address: host, family: isIP(host) }] : await resolve(host);

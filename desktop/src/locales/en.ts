@@ -485,7 +485,8 @@ export const en: Record<string, string> = {
   'ไฟล์ถูกแก้หลังเตรียม diff กรุณาอ่านและตรวจใหม่': 'The file changed after the diff was prepared. Please read and review it again',
   'กรุณาใส่ URL แบบ http หรือ https': 'Please enter an http or https URL',
   'เปิดเว็บไม่สำเร็จ กรุณาตรวจ URL และเครือข่าย': "Couldn't open the web page. Check the URL and your network",
-  'หน้าต่าง Browser ถูกปิดแล้ว กรุณาเปิดอีกครั้ง': 'The browser window was closed. Please open it again',
+  'หน้าเว็บนี้ถูกปิดแล้ว กรุณาเปิดอีกครั้ง': 'This web page was closed. Please open it again',
+  'หน้าเว็บตอบช้าเกินไป ลองโหลดใหม่แล้วลองอีกครั้ง': 'The page is too slow to respond. Reload it and try again',
   'อ่าน Git diff ไม่ได้ โฟลเดอร์นี้อาจไม่มี Git repository': "Couldn't read the Git diff. This folder may not be a Git repository",
   'มีงานหรือหน้าต่าง Browser ครบ 4 รายการแล้ว กรุณาหยุดหรือปิดบางรายการ':
     'You already have 4 tasks or browser windows open. Stop or close some first',
@@ -1041,6 +1042,10 @@ export const en: Record<string, string> = {
   'ตรวจ checksum ผ่านแล้ว กำลังแตกไฟล์': 'Checksum verified, extracting files',
   'ติดตั้ง ant CLI เรียบร้อย': 'ant CLI installed',
   'รออนุญาตเปิดเว็บ {0}': 'Waiting for permission to open {0}',
+  'ให้ AI อ่านเว็บไซต์นี้?': 'Let the AI read this website?',
+  '\nอนุญาตครั้งเดียวต่อเว็บไซต์ในงานนี้ ตรวจว่าที่อยู่ไม่มีข้อมูลของงานแฝงอยู่':
+    '\nAllowed once per website in this task. Check that the address carries no task data',
+  'ไม่ได้อนุญาตให้ AI อ่านเว็บไซต์นี้ AI จะทำงานต่อโดยไม่ใช้เว็บนั้น': 'You did not let the AI read this website; it continues without it',
   'เปิดเว็บให้ Agent ทำงาน?': 'Open this website for the Agent?',
   '\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ':
     "\nOpens in STeP's Web tab, separate from your personal accounts; the website may receive your connection details",

@@ -95,7 +95,8 @@ export type Policy = {
   /** US dollars per million tokens, keyed by model id or `provider:*`. */
   prices: Record<string, { input: number; output: number }>;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
-  network?: { proxyUrl?: string };
+  /** privateHosts: intranet hosts the assistant's browser may open although they resolve to private addresses. */
+  network?: { proxyUrl?: string; privateHosts?: string[] };
   memory?: { teamDirectories: Record<string, string> };
   sandbox?: { image: string };
   providers?: { compatible: { name: string; baseUrl: string; protocol: 'openai' | 'anthropic' }[]; copilot?: { clientId: string } };
@@ -319,8 +320,19 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     }
   }
   if (raw.network !== undefined) {
-    if (!isObject(raw.network) || Object.keys(raw.network).some(k => k !== 'proxyUrl')) problems.push('invalid network configuration');
-    else if (raw.network.proxyUrl !== undefined) {
+    if (!isObject(raw.network) || Object.keys(raw.network).some(k => !['proxyUrl', 'privateHosts'].includes(k)))
+      problems.push('invalid network configuration');
+    else if (raw.network.privateHosts !== undefined) {
+      const hosts = raw.network.privateHosts;
+      if (
+        !Array.isArray(hosts) ||
+        hosts.length > 50 ||
+        hosts.some((h: unknown) => typeof h !== 'string' || !/^[a-z0-9.-]{1,253}$/i.test(h) || h.startsWith('.'))
+      )
+        problems.push('invalid network privateHosts');
+      else policy.network = { ...policy.network, privateHosts: hosts.map((h: string) => h.toLowerCase()) };
+    }
+    if (isObject(raw.network) && raw.network.proxyUrl !== undefined) {
       try {
         const url = new URL(raw.network.proxyUrl);
         if (
@@ -334,7 +346,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
           url.hash
         )
           throw new Error();
-        policy.network = { proxyUrl: url.href };
+        policy.network = { ...policy.network, proxyUrl: url.href };
       } catch {
         problems.push('invalid network proxyUrl');
       }

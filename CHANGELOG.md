@@ -8,6 +8,21 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Security fixes from the audit, and live text while working
+
+- **Reading a website asks once per site per task:** `web_fetch` reads a site only after the employee allows it, in every mode.
+  - **Before:** a page or PDF with hidden instructions could make the AI read workspace files and send them to any address in a URL. No dialog appeared, because `web_fetch` counted as read-only and privacy checks were off.
+- **Credentials are always masked:** passwords, tokens, API keys and signed URL parameters are masked even with privacy checks off. This covers messages, attachments, file reads and URLs.
+  - A credential that cannot be fully masked is withheld.
+  - A URL that carries one is never fetched.
+- **The assistant's browser opens public sites only:** localhost, private IPs and names that resolve to them are blocked, both for pages it opens and for anything those pages load.
+  - Intranet hosts can be listed in policy `network.privateHosts`.
+- **"Send to chat" in the Web tab:** reads the page in an isolated world, so the page cannot fake the text, and gives up after 10 seconds.
+- **Live text while working:** in chat, the text from every turn stays on screen while the assistant works, as in Claude, ChatGPT and Cursor. Before, each tool step cleared it.
+  - Tool requests (`step-tool` fences and JSON) are hidden from the live text.
+  - The AI's thinking shows open until the answer starts.
+  - The status line sits under the text.
+
 ### Browser inside the main window
 
 - Web pages now open in the **Web tab of the right panel** instead of a pop-up window, as in Claude and Codex. This covers pages the assistant opens with `browser_control` (MIS included) and pages the employee opens.

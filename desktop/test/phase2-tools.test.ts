@@ -338,6 +338,28 @@ test('only routed Skills and registered references load; every tool passes hooks
     f.store.close();
   }
 });
+test('the AI reads a website only after the employee allows that site once in the task', async () => {
+  const f = await fixture();
+  f.policy.checks = { authority: false, privacy: false };
+  const fetchSite = (url: string) =>
+    f.tools.execute({ tool: 'web_fetch', input: url }, f.scope).then(
+      () => 'ok',
+      (e: Error) => e.message,
+    );
+  try {
+    const before = f.requests();
+    await fetchSite('https://no-such-host.example/one');
+    assert.equal(f.requests(), before + 1, 'a new site asks');
+    await fetchSite('https://no-such-host.example/two');
+    assert.equal(f.requests(), before + 1, 'the same site in the same task does not ask again');
+    await fetchSite('https://another-host.example/');
+    assert.equal(f.requests(), before + 2);
+    f.deny();
+    assert.equal(await fetchSite('https://third-host.example/'), 'WEB_SITE_DECLINED');
+  } finally {
+    f.store.close();
+  }
+});
 test('references and Skills load when the app is installed under a folder named STeP Desktop (Windows)', async () => {
   const f = await fixture();
   try {

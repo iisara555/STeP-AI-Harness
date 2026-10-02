@@ -1,6 +1,6 @@
 import { approvedProfile } from '../../src/modules/providers/compatible.js';
 import { copilotDeviceLogin } from './copilot-auth';
-import { unscanned } from './checks';
+import { unscanned, credentialsOnly } from './checks';
 import { TERMS_VERSION } from '../src/terms-version';
 import {
   app,
@@ -187,7 +187,9 @@ async function main() {
       store.put('settings', 'main', { ...s, consentedAt: new Date().toISOString(), termsVersion: TERMS_VERSION });
   }
   function scanText(text: string, options?: any) {
-    return policyState.policy.checks.privacy ? privacy.evaluatePrivacyGate(text, options) : unscanned(text);
+    return policyState.policy.checks.privacy
+      ? privacy.evaluatePrivacyGate(text, options)
+      : credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
   }
   const harness: Harness = {
     permissionMode: () => permissionMode(),
@@ -212,8 +214,15 @@ async function main() {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
     },
-    documentPrivacy: (path: string, options: any = {}) =>
-      documents.evaluateDocumentPrivacy(path, { ...options, scan: policyState.policy.checks.privacy }),
+    documentPrivacy: async (path: string, options: any = {}) => {
+      const report = await documents.evaluateDocumentPrivacy(path, { ...options, scan: policyState.policy.checks.privacy });
+      if (policyState.policy.checks.privacy || typeof report?.redactedText !== 'string') return report;
+      // Unscanned documents still have credentials masked (or are withheld when masking is incomplete).
+      const credentials = scanText(report.redactedText);
+      return credentials.action === 'pass'
+        ? report
+        : { ...report, action: credentials.action, findings: credentials.findings, redactedText: credentials.redactedText };
+    },
     nextOutput: outputs.getNextOutputPath,
   };
   const actions = await import(pathToFileURL(join(root, 'src/modules/actions/index.js')).href);
@@ -387,7 +396,7 @@ async function main() {
     state => emit({ sessionId: '', type: 'browser', browser: state }),
   );
   const browsers = new Set<string>();
-  const agentBrowser = new AgentBrowser(dock);
+  const agentBrowser = new AgentBrowser(dock, () => policyState.policy.network?.privateHosts || []);
   const questions = new Questions(emit);
   const ledger = new CostLedger(store, () => policyState.policy);
   const tools = new DesktopTools(
@@ -970,7 +979,14 @@ async function main() {
         return gate.run({ tool: 'browser_read', readOnly: true }, { title: '', body: '', key: browser.getURL() }, async () => ({
           url: browser.getURL(),
           title: browser.getTitle(),
-          text: await browser.executeJavaScript('document.body.innerText.slice(0,50000)'),
+          // Read in an isolated world, so the page's own scripts cannot fake the text, and give up after 10 seconds.
+          text: await new Promise<string>((done, fail) => {
+            const timer = setTimeout(() => fail(new Error('BROWSER_TIMEOUT')), 10_000);
+            browser
+              .executeJavaScriptInIsolatedWorld(1006, [{ code: "String(document.body?.innerText || '').slice(0, 50000)" }])
+              .then(text => done(String(text || '')), fail)
+              .finally(() => clearTimeout(timer));
+          }),
         }));
       }
       case 'browserDock': {

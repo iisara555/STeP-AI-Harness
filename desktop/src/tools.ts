@@ -98,3 +98,20 @@ export function toolRequests(text: string): ToolRequest[] {
   }
   return results.slice(0, 8);
 }
+
+/**
+ * What the employee sees of a reply while it streams: the model's own words, without the tool requests it writes
+ * between them (step-tool fences, a json fence or bare JSON holding {"tool": ...}), including one still being typed.
+ */
+export function visibleStream(text: string) {
+  let shown = text
+    .replace(/```(?:step-tool|json)?[ \t]*\n?\s*\{\s*"tool"\s*:[\s\S]*?(?:```|$)/g, '')
+    .replace(/```step-tool[\s\S]*?(?:```|$)/g, '')
+    .replace(/(^|\n\n)\s*\{\s*"tool"\s*:[\s\S]*?(?=\n\n|$)/g, '$1');
+  // A fence just opened (its language not yet known) may still become a tool request; wait for the next characters.
+  if ((shown.match(/```/g) || []).length % 2 === 1) shown = shown.replace(/```[a-z-]*$/, '');
+  return shown
+    .replace(/(?<!`)`{1,2}$/, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
