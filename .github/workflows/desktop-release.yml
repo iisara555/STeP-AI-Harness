@@ -63,6 +63,18 @@ jobs:
             if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
           fi
           npm run ${{ matrix.script }} -- $EXTRA
+      - name: Launch the packaged Mac app from the disk image
+        if: runner.os == 'macOS'
+        run: |
+          DMG=$(ls release/*.dmg | head -1)
+          if [ "${{ matrix.name }}" = "macos-x64" ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+            echo "::notice::Rosetta is not available on this runner; the x64 app was built and tested but not launched."
+            exit 0
+          fi
+          MNT=$(mktemp -d)
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
+          trap 'hdiutil detach "$MNT" -force || true' EXIT
+          node test/packaged-launch-smoke.mjs "$MNT/STeP Desktop.app/Contents/MacOS/STeP Desktop"
       - uses: actions/upload-artifact@v4
         with:
           name: step-desktop-${{ matrix.name }}
