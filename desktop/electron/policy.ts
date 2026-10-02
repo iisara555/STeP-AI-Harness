@@ -94,10 +94,11 @@ export type Policy = {
   skillPacks?: { approvedDigests: string[] };
   transmissionConsent?: { allowRunScope: boolean };
   /**
-   * Pilot mode: fewer confirmation dialogs for a trial. The floors stay: credentials and sensitive data tied to a
-   * person are still blocked, national ID numbers are still masked, and every side-effect tool still asks each time.
+   * Standard consent (on by default, the behavior first trialled as "pilot mode"): fewer confirmation dialogs.
+   * The floors stay: credentials and sensitive data tied to a person are still blocked, national ID numbers are still
+   * masked, and every side-effect tool still asks each time. `false` restores the strict dialogs.
    */
-  pilot?: boolean;
+  pilot: boolean;
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -144,6 +145,7 @@ export function defaultPolicy(): Policy {
     mcpServers: [],
     prices: {},
     budgets: {},
+    pilot: true,
   };
 }
 

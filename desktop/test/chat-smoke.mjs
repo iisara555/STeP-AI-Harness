@@ -167,10 +167,10 @@ try {
   await toolApproval.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await page.locator('.task-card pre').filter({ hasText: 'terminal-ui-ok' }).waitFor();
   await page.getByRole('button', { name: 'ใช้ผลใน Chat', exact: true }).click();
+  // Standard consent: a clean source the person picked is sent without another dialog.
   await page.locator('.send').click();
-  await consent.waitFor();
-  await consent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้' }).click();
   await waitComplete(id);
+  assert.equal(await consent.count(), 0);
   const withSource = await page.evaluate(() => window.step.call('snapshot'));
   // In chat, tool results stay with the conversation's files and are shown on the message they came with.
   assert.match(withSource.sessions[0].files.at(-1).text, /terminal-ui-ok/);

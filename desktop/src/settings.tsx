@@ -215,13 +215,13 @@ export function SettingsPanel({
             {snapshot.policy.hooks}
           </p>
           <p className="small muted">{snapshot.policy.path}</p>
-          {snapshot.policy.pilot && (
-            <p className="pilot-note">
-              {t(
-                'โหมดทดลองใช้ (Pilot) เปิดอยู่: ถามยืนยันน้อยลง แต่ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง',
-              )}
-            </p>
-          )}
+          <p className="pilot-note">
+            {snapshot.policy.pilot === false
+              ? t('โหมดเข้มงวด: ผู้ดูแลตั้งให้ถามยืนยันก่อนส่งไฟล์แนบ ส่งครั้งแรก และส่งผลเครื่องมือแต่ละแหล่ง')
+              : t(
+                  'ถามยืนยันเฉพาะเมื่อจำเป็น: ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล ปิดบังเลขบัตรประชาชน และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง',
+                )}
+          </p>
           {snapshot.policy.problems.length > 0 && <p role="alert">{t('อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล')}</p>}
           <div className="policy-features">
             {Object.entries(snapshot.policy.features).map(([name, enabled]) => (

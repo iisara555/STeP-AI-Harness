@@ -175,6 +175,7 @@ test('plan mode refuses browser interactions before invoking the connector', asy
 
 test('scoped file consent batches clean reads but re-prompts masked sources and different folders', async () => {
   const f = await fixture();
+  f.policy.pilot = false; // per-source scopes are the strict-mode behavior
   f.allowRun();
   await mkdir(join(f.root, 'other'));
   await writeFile(join(f.root, 'a.txt'), 'Public A');
@@ -218,6 +219,7 @@ test('disposing a loop cancels its pending transmission dialog without waiting f
 });
 test('administrator one-time setting disables scopes; web-result scopes do not authorize destinations', async () => {
   const f = await fixture();
+  f.policy.pilot = false; // per-source scopes are the strict-mode behavior
   f.allowRun();
   let host = await f.tools.host(f.scope);
   const request = { tool: 'web_fetch' as const, input: 'https://example.org/one' };

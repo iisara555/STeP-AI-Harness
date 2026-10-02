@@ -191,6 +191,7 @@ export async function runFeatureMatrix(options: {
       return result.prompt;
     });
     await run('read-consent-write-preview-hooks', 'local', async checks => {
+      policy.pilot = false; // checks per-source read scopes, the strict-mode behavior
       await Promise.all(['a', 'b', 'c'].map(name => writeFile(join(root, name + '.txt'), 'Synthetic public ' + name)));
       const workbench = new Workbench(store, undefined, () => policy);
       let scopes = true,

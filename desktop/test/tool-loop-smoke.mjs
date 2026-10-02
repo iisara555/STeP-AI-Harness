@@ -11,7 +11,8 @@ await mkdir('release/qa', { recursive: true });
 await writeFile(join(workspace, 'note.txt'), 'Synthetic source note');
 await writeFile(
   join(home, 'desktop-policy.json'),
-  JSON.stringify({ prices: { 'openai:*': { input: 1, output: 2 } }, budgets: { dailyTokens: 100 } }),
+  // Strict consent: this smoke checks the per-result dialogs.
+  JSON.stringify({ pilot: false, prices: { 'openai:*': { input: 1, output: 2 } }, budgets: { dailyTokens: 100 } }),
 );
 await writeFile(
   executable,

@@ -43,13 +43,13 @@ Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`
 
 ## Workbench permissions and approvals
 
-Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an unchecked employee choice for bounded clean-read transmission within one loop; it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
+Phase 6 adds optional `transmissionConsent: { "allowRunScope": false }` to force one-time result consent. Omission permits an employee choice for bounded clean-read transmission within one loop (pre-checked in standard consent, see [pilot mode](#pilot-mode)); it never grants execution permission. See [scoped consent](desktop-phase6.md) for source, risk, destination and revocation boundaries.
 
 ## Pilot mode
 
-`{ "pilot": true }` reduces confirmation dialogs for a trial. It is off unless the managed policy sets it, any value other than `true` or `false` rejects the whole policy, and removing the key or setting `false` restores the normal dialogs on the next policy reload.
+Standard consent, first trialled as pilot mode, is now the default. Administrators can set `{ "pilot": false }` to return to strict mode, with the extra dialogs in the first column below. Any value other than `true` or `false` rejects the whole policy. A change applies on the next policy reload.
 
-| | Normal | Pilot |
+| | Strict (`"pilot": false`) | Standard (default) |
 |---|---|---|
 | First send on this computer | Dialog | One-time acknowledgment on the last setup-wizard step. Skipping the wizard keeps the first-send dialog |
 | Text attachment or pasted source | Dialog per send | No dialog unless the privacy review flags it |

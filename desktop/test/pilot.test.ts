@@ -30,13 +30,13 @@ const plain: SendSignals = {
   coordinated: false,
 };
 
-test('pilot is an administrator switch: off by default, true or false only', () => {
-  assert.equal(parsePolicy({}).policy.pilot, undefined);
+test('standard consent (pilot) is on by default; administrators can switch to strict with false', () => {
+  assert.equal(parsePolicy({}).policy.pilot, true);
   assert.equal(parsePolicy({ pilot: true }).policy.pilot, true);
   assert.equal(parsePolicy({ pilot: false }).policy.pilot, false);
   const bad = parsePolicy({ pilot: 'yes' });
   assert.equal(bad.problems.length, 1, 'a malformed flag rejects the whole policy');
-  assert.equal(bad.policy.pilot, undefined);
+  assert.equal(bad.policy.pilot, true);
 });
 
 test('floor: credentials and sensitive data tied to a person are blocked in pilot mode', () => {

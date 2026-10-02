@@ -39,7 +39,9 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const baseUrl = `http://127.0.0.1:${server.address().port}/v1`;
 await writeFile(
   join(home, 'desktop-policy.json'),
+  // Strict consent: this smoke checks per-source run scopes.
   JSON.stringify({
+    pilot: false,
     features: { compatibleProviders: true },
     providers: { compatible: [{ name: 'Fixture', baseUrl, protocol: 'openai' }] },
   }),
