@@ -78,13 +78,20 @@ export class AgentBrowser {
     const result = await this.script(
       entry,
       `(() => { ${helpers}
-      const all = Array.from(document.querySelectorAll('a[href],button,input,textarea,select,[role="button"]')).filter(visible);
+      // Native controls and ARIA roles, plus what a page made clickable itself (a card or tile with a click handler shows
+      // a pointer cursor); for nested pointer areas only the outermost counts, so a card is one target, not five.
+      const native = 'a[href],button,input,textarea,select,summary,[role="button"],[role="link"],[role="menuitem"],[role="tab"],[role="option"],[role="checkbox"],[role="radio"],[role="switch"],[onclick],[tabindex]:not([tabindex="-1"])';
+      const pointer = el => getComputedStyle(el).cursor === 'pointer';
+      const found = new Set(document.querySelectorAll(native));
+      for (const el of Array.from(document.body?.querySelectorAll('*') || []).slice(0, 4000))
+        if (!found.has(el) && pointer(el) && !(el.parentElement && pointer(el.parentElement)) && !el.closest(native)) found.add(el);
+      const all = Array.from(found).filter(visible).sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
       const login = all.some(el => sensitive(el) && el.type !== 'hidden' && el.type !== 'file');
       const controls = all.slice(0,150);
       const refs = new Map();
       const elements = login ? [] : controls.filter(el => !sensitive(el) && !el.disabled).map((el,i) => {
         const ref = 'e'+(i+1); refs.set(ref,{el, fingerprint:fingerprint(el)});
-        return {ref, role:el.tagName.toLowerCase(), label:label(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
+        return {ref, role:el.getAttribute('role') || el.tagName.toLowerCase(), label:label(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
       });
       globalThis.__stepBrowser?.observer.disconnect();
       globalThis.__stepBrowser?.controller.abort();
@@ -164,6 +171,8 @@ export class AgentBrowser {
       const view = this.dock
         ? undefined
         : new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition } });
+      // A page needs a size to lay out: at 0x0 every block (a product card, a tile) is zero wide and looks invisible.
+      view?.setBounds({ x: 0, y: 0, width: 1280, height: 900 });
       const contents = view ? view.webContents : this.dock!.create(id, 'agent', partition);
       // Forget the tab at once: closing a page finishes later (on Windows noticeably), and a read in between must
       // report the tab closed instead of waiting on a page that is going away.

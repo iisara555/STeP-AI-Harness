@@ -8,6 +8,24 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Faster tool runs, clickable cards, questions above the composer
+
+- **Faster runs on an OpenAI (Codex) account:**
+  - Every tool turn of a run now continues on one `codex app-server` process and thread, sending only the new tool results (`ProviderSession`).
+  - **Before:** each turn started a new process and thread, and resent the whole prompt with every earlier result.
+  - The thread is closed when the run step ends. A changed or compacted prompt starts a fresh thread.
+  - Usage is counted per turn from the thread total.
+- **The assistant's browser sees clickable cards:** product cards and tiles that a page makes clickable with its own script are now click targets, alongside buttons and links.
+  - These are elements with a pointer cursor; for nested ones only the outermost counts.
+  - ARIA roles such as menuitem, tab and option are targets too.
+  - Pages are laid out at 1280×900 before the Web tab reports where to draw them. At 0×0, every block was zero wide and looked invisible, so the coffee cards in the report could not be clicked.
+- **A tool request in an unclosed fence runs:** a `step-tool` fence opened mid-sentence and never closed now runs. Before, it showed in the answer as raw JSON.
+- **Questions and the plan sit above the composer**, under the newest message, instead of between older messages.
+  - The question card answers with one click on an option, or its number key.
+  - It takes another answer as free text.
+  - It shows "ผู้ช่วยถาม" in the accent colour.
+- **Plain status lines:** the status line names what a tool is doing ("รอคำตอบจากคุณ", "กำลังทำงานบนเว็บ") instead of the tool's ID.
+
 ### Native workflows: plan, execute, requirements, diagnose
 
 - **Built into the harness:** the composer's mode picker now offers four ways of working under **ขั้นตอนทำงาน**, as Claude Code's plan mode is built in rather than loaded as a Skill:

@@ -37,7 +37,30 @@ export type ProviderContext = {
   onUsage?: (usage: TokenCount) => void;
   webSearch?: boolean;
   onWebActivity?: (stage: 'search' | 'read' | 'complete' | 'failed') => void;
+  /** Keeps the runtime conversation open between the tool turns of one run (see ProviderSession). */
+  session?: ProviderSession;
 };
+/**
+ * One runtime conversation kept open across the tool turns of a run. The tool loop sends the whole prompt every turn,
+ * each one the previous prompt plus new tool results; a runtime that holds a conversation (Codex app-server) then sends
+ * only the new part on the same thread, instead of starting a process and a thread and resending everything per turn.
+ */
+export class ProviderSession {
+  rpc?: Rpc;
+  threadId = '';
+  sent = '';
+  system = '';
+  model = '';
+  usage: TokenCount = { input: 0, output: 0, total: 0 };
+  close() {
+    const rpc = this.rpc;
+    this.rpc = undefined;
+    this.threadId = '';
+    this.sent = '';
+    this.usage = { input: 0, output: 0, total: 0 };
+    void rpc?.closeAndWait().catch(() => {});
+  }
+}
 export interface ProviderAdapter {
   run(prompt: string, connection: Connection, context: ProviderContext): Promise<string>;
 }
@@ -90,100 +113,137 @@ export async function initialize(rpc: Rpc, provider: string) {
 export class CodexAdapter implements ProviderAdapter {
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
-    const rpc = createRpc(connection, context);
+    const session = context.webSearch ? undefined : context.session;
+    const system = context.system || '';
+    // Continue the run's open thread when this prompt only adds to what it already holds (tool results).
+    const reuse = Boolean(
+      session?.rpc &&
+      session.threadId &&
+      session.system === system &&
+      session.model === (connection.model || '') &&
+      session.sent &&
+      prompt.startsWith(session.sent) &&
+      !context.images?.length,
+    );
+    if (session && !reuse) session.close();
+    const rpc = reuse ? session!.rpc! : createRpc(connection, context);
     let text = '';
-    const abort = () => rpc.close();
+    const abort = () => (session ? session.close() : rpc.close());
     context.signal.addEventListener('abort', abort, { once: true });
+    let keep = false;
     try {
-      await initialize(rpc, 'openai');
-      if (context.key) await rpc.request('account/login/start', { type: 'apiKey', apiKey: context.key });
-      // No file or shell tools. Documents and instructions are supplied by the host.
-      const result = await rpc.request('thread/start', {
-        cwd: context.cwd,
-        model: connection.model || undefined,
-        approvalPolicy: 'untrusted',
-        sandbox: 'read-only',
-        config: { web_search: context.webSearch ? 'live' : 'disabled', features: { shell_tool: false }, mcp_servers: {} },
-        // Developer instructions rank above the user message. The Codex base prompt stays in place:
-        // ChatGPT-plan sign-ins have rejected requests whose base instructions were replaced.
-        ...(context.system ? { developerInstructions: context.system } : {}),
-        ephemeral: true,
-      });
-      return await new Promise<string>((resolve, reject) => {
-        let unsubscribe = () => {};
-        const cleanup = () => {
-          clearTimeout(timer);
-          unsubscribe();
-          context.signal.removeEventListener('abort', onAbort);
-        };
-        const fail = (error: Error) => {
-          cleanup();
-          reject(error);
-        };
-        const timer = setTimeout(() => {
-          fail(new Error('PROVIDER_TIMEOUT'));
-          rpc.close();
-        }, 600_000);
-        const onAbort = () => fail(new Error('CANCELLED'));
-        context.signal.addEventListener('abort', onAbort, { once: true });
-        unsubscribe = rpc.onClose(fail);
-        if (context.signal.aborted) {
-          onAbort();
-          return;
+      let threadId = session?.threadId || '';
+      if (!reuse) {
+        await initialize(rpc, 'openai');
+        if (context.key) await rpc.request('account/login/start', { type: 'apiKey', apiKey: context.key });
+        // No file or shell tools. Documents and instructions are supplied by the host.
+        const result = await rpc.request('thread/start', {
+          cwd: context.cwd,
+          model: connection.model || undefined,
+          approvalPolicy: 'untrusted',
+          sandbox: 'read-only',
+          config: { web_search: context.webSearch ? 'live' : 'disabled', features: { shell_tool: false }, mcp_servers: {} },
+          // Developer instructions rank above the user message. The Codex base prompt stays in place:
+          // ChatGPT-plan sign-ins have rejected requests whose base instructions were replaced.
+          ...(context.system ? { developerInstructions: context.system } : {}),
+          ephemeral: true,
+        });
+        threadId = result.thread.id;
+        if (session) {
+          Object.assign(session, { rpc, threadId, system, model: connection.model || '', usage: { input: 0, output: 0, total: 0 } });
+          rpc.onClose(() => {
+            if (session.rpc === rpc) session.close();
+          });
         }
-        rpc.onNotification = (method, params) => {
-          if (context.webSearch && ['item/started', 'item/completed'].includes(method) && params.item?.type === 'webSearch') {
-            context.onWebActivity?.(
-              method === 'item/completed'
-                ? 'complete'
-                : params.item.action?.type === 'openPage' || params.item.action?.type === 'findInPage'
-                  ? 'read'
-                  : 'search',
-            );
-          }
-          if (method === 'item/agentMessage/delta') {
-            text += params.delta;
-            context.emit(params.delta);
-          }
-          if (method === 'item/reasoning/summaryTextDelta' && typeof params.delta === 'string') context.onReasoning?.(params.delta);
-          // Each run uses an ephemeral thread, so the thread total is this run's usage.
-          if (method === 'thread/tokenUsage/updated' && params.tokenUsage?.total) {
-            const t = params.tokenUsage.total;
-            context.onUsage?.({ input: t.inputTokens || 0, output: t.outputTokens || 0, total: t.totalTokens || 0 });
-          }
-          // Codex reports why a turn failed (usage limit, unsupported model, expired sign-in) here.
-          if (method === 'error' && params?.error?.message)
-            rpc.note(
-              'error: ' + params.error.message + (params.error.codexErrorInfo ? ' ' + JSON.stringify(params.error.codexErrorInfo) : ''),
-            );
-          if (method === 'turn/completed') {
+      }
+      const input = reuse ? prompt.slice(session!.sent.length) : prompt;
+      const base = session?.usage || { input: 0, output: 0, total: 0 };
+      const answer = await (async () => {
+        const result = { thread: { id: threadId } };
+        return await new Promise<string>((resolve, reject) => {
+          let unsubscribe = () => {};
+          const cleanup = () => {
+            clearTimeout(timer);
+            unsubscribe();
+            context.signal.removeEventListener('abort', onAbort);
+          };
+          const fail = (error: Error) => {
             cleanup();
-            if (params.turn?.error?.message)
-              rpc.note(
-                'turn failed: ' +
-                  params.turn.error.message +
-                  (params.turn.error.codexErrorInfo ? ' ' + JSON.stringify(params.turn.error.codexErrorInfo) : ''),
-              );
-            if (params.turn?.status === 'completed') resolve(text);
-            else reject(new Error('PROVIDER_REQUEST_FAILED'));
+            reject(error);
+          };
+          const timer = setTimeout(() => {
+            fail(new Error('PROVIDER_TIMEOUT'));
+            rpc.close();
+          }, 600_000);
+          const onAbort = () => fail(new Error('CANCELLED'));
+          context.signal.addEventListener('abort', onAbort, { once: true });
+          unsubscribe = rpc.onClose(fail);
+          if (context.signal.aborted) {
+            onAbort();
+            return;
           }
-        };
-        rpc
-          .request('turn/start', {
-            threadId: result.thread.id,
-            input: [
-              { type: 'text', text: prompt },
-              ...(context.images || []).map(i => ({ type: 'image', url: `data:${i.mime};base64,${i.data}` })),
-            ],
-            ...(context.effort ? { effort: context.effort } : {}),
-          })
-          .catch(fail);
-      });
+          rpc.onNotification = (method, params) => {
+            if (context.webSearch && ['item/started', 'item/completed'].includes(method) && params.item?.type === 'webSearch') {
+              context.onWebActivity?.(
+                method === 'item/completed'
+                  ? 'complete'
+                  : params.item.action?.type === 'openPage' || params.item.action?.type === 'findInPage'
+                    ? 'read'
+                    : 'search',
+              );
+            }
+            if (method === 'item/agentMessage/delta') {
+              text += params.delta;
+              context.emit(params.delta);
+            }
+            if (method === 'item/reasoning/summaryTextDelta' && typeof params.delta === 'string') context.onReasoning?.(params.delta);
+            // The thread total covers every turn on the thread; report this turn's part of it.
+            if (method === 'thread/tokenUsage/updated' && params.tokenUsage?.total) {
+              const t = params.tokenUsage.total;
+              const now = { input: t.inputTokens || 0, output: t.outputTokens || 0, total: t.totalTokens || 0 };
+              if (session) session.usage = now;
+              context.onUsage?.({ input: now.input - base.input, output: now.output - base.output, total: now.total - base.total });
+            }
+            // Codex reports why a turn failed (usage limit, unsupported model, expired sign-in) here.
+            if (method === 'error' && params?.error?.message)
+              rpc.note(
+                'error: ' + params.error.message + (params.error.codexErrorInfo ? ' ' + JSON.stringify(params.error.codexErrorInfo) : ''),
+              );
+            if (method === 'turn/completed') {
+              cleanup();
+              if (params.turn?.error?.message)
+                rpc.note(
+                  'turn failed: ' +
+                    params.turn.error.message +
+                    (params.turn.error.codexErrorInfo ? ' ' + JSON.stringify(params.turn.error.codexErrorInfo) : ''),
+                );
+              if (params.turn?.status === 'completed') resolve(text);
+              else reject(new Error('PROVIDER_REQUEST_FAILED'));
+            }
+          };
+          rpc
+            .request('turn/start', {
+              threadId: result.thread.id,
+              input: [
+                { type: 'text', text: input },
+                ...(context.images || []).map(i => ({ type: 'image', url: `data:${i.mime};base64,${i.data}` })),
+              ],
+              ...(context.effort ? { effort: context.effort } : {}),
+            })
+            .catch(fail);
+        });
+      })();
+      if (session) {
+        session.sent = prompt;
+        keep = true;
+      }
+      return answer;
     } catch (error) {
+      session?.close();
       throw runtimeError(error, rpc);
     } finally {
       context.signal.removeEventListener('abort', abort);
-      await rpc.closeAndWait().catch(() => {});
+      if (!keep) await rpc.closeAndWait().catch(() => {});
     }
   }
 }

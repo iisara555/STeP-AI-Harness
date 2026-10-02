@@ -23,10 +23,13 @@ await writeFile(
   executable,
   `import readline from 'node:readline';
 const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
+// Like a real Codex thread, the fixture keeps what it was sent and counts usage for the whole thread.
+let thread='',turns=0;
 readline.createInterface({input:process.stdin}).on('line',line=>{
- const m=JSON.parse(line);let result={};if(m.method==='thread/start')result={thread:{id:'fixture'}};send({id:m.id,result});
+ const m=JSON.parse(line);let result={};if(m.method==='thread/start'){result={thread:{id:'fixture'}};thread='';turns=0;}send({id:m.id,result});
  if(m.method==='turn/start'){
- const prompt=m.params.input?.map(i=>i.text||'').join('')||'';
+ thread+=m.params.input?.map(i=>i.text||'').join('')||'';turns++;
+ const prompt=thread;
  const tool=(tool,input,args,content)=>'\x60\x60\x60step-tool\\n'+JSON.stringify({tool,input,args,content})+'\\n\x60\x60\x60';
  let text;
  if(!prompt.includes('<tool_results>'))text=tool('files','note.txt');
@@ -34,7 +37,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  else if(!prompt.includes('"tool":"plan"'))text=tool('plan','Read the note and stage a reviewed summary.');
  else if(!prompt.includes('"tool":"changes"'))text=tool('changes','result.md',undefined,'Reviewed synthetic summary');
  else text='Completed with reviewed tools';
- send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10,outputTokens:5,totalTokens:15}}}});
+ send({method:'thread/tokenUsage/updated',params:{tokenUsage:{total:{inputTokens:10*turns,outputTokens:5*turns,totalTokens:15*turns}}}});
  send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});
  }
 });`,
@@ -90,8 +93,10 @@ try {
   await expect(consent()).toContainText('Synthetic source note');
   await consent().getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
   await page.getByText('Choose output style', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Brief', exact: true }).click();
-  await page.getByRole('button', { name: 'ส่งคำตอบ', exact: true }).click();
+  // The question sits above the composer; one click on an option answers it.
+  const question = page.locator('.composer-area .tool-question');
+  await question.getByText('Choose output style').waitFor();
+  await question.getByRole('button', { name: /Brief/ }).click();
   await consent().waitFor();
   await consent().getByRole('checkbox').check();
   await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();

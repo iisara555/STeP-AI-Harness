@@ -1359,31 +1359,6 @@ export default function App() {
                   )}
                 </article>
               ))}
-              {session?.workPlan?.tasks.length ? (
-                <WorkPlanCard
-                  plan={session.workPlan}
-                  running={running || submitting}
-                  onExecute={() =>
-                    void action(async () => {
-                      setWorkflow('execute');
-                      workflowRef.current = 'execute';
-                      setWorkMode('chat');
-                      await start(session.id, t('ลงมือทำตามแผน'), [], undefined, undefined, undefined, undefined, 'chat');
-                    })
-                  }
-                />
-              ) : null}
-              {questions
-                .filter(q => q.sessionId === selected)
-                .map(q => (
-                  <QuestionCard
-                    key={q.id}
-                    question={q}
-                    onAnswer={async answer => {
-                      await api!.call('questionRespond', { id: q.id, answer });
-                    }}
-                  />
-                ))}
               {snapshot?.usage?.warnings.length ? (
                 <p className="small muted" role="status">
                   {t('การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้')}{' '}
@@ -1525,6 +1500,35 @@ export default function App() {
                     </button>
                   </div>
                 ))}
+              {/* The assistant's questions and the task's plan sit right above the composer, under the newest message,
+                  as in Claude and ChatGPT: what needs the employee is where they type. */}
+              <div className="composer-dock">
+                {session?.workPlan?.tasks.length ? (
+                  <WorkPlanCard
+                    plan={session.workPlan}
+                    running={running || submitting}
+                    onExecute={() =>
+                      void action(async () => {
+                        setWorkflow('execute');
+                        workflowRef.current = 'execute';
+                        setWorkMode('chat');
+                        await start(session.id, t('ลงมือทำตามแผน'), [], undefined, undefined, undefined, undefined, 'chat');
+                      })
+                    }
+                  />
+                ) : null}
+                {questions
+                  .filter(q => q.sessionId === selected)
+                  .map(q => (
+                    <QuestionCard
+                      key={q.id}
+                      question={q}
+                      onAnswer={async answer => {
+                        await api!.call('questionRespond', { id: q.id, answer });
+                      }}
+                    />
+                  ))}
+              </div>
               <div className="composer" data-tour="composer">
                 {pendingSource && (
                   <div className="composer-chips">

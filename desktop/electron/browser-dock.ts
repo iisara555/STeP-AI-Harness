@@ -24,6 +24,9 @@ export class BrowserDock {
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, partition },
     });
     view.setBackgroundColor('#ffffff');
+    // Lay the page out at a real size before the window reports where to draw it: at 0x0 every block (a product card,
+    // a tile) is zero wide, and the assistant would not see it as something to click.
+    view.setBounds(this.bounds || { x: 0, y: 0, width: 1280, height: 900 });
     view.setVisible(false);
     this.views.set(id, { view, kind });
     const window = this.host();

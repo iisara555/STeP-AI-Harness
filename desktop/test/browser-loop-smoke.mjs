@@ -1,6 +1,6 @@
 // Real chat -> tool loop -> isolated browser, with a deterministic local provider and website.
 import { _electron as electron, expect } from '@playwright/test';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
@@ -22,11 +22,16 @@ await writeFile(
   executable,
   `
 import readline from 'node:readline';
+import { appendFileSync } from 'node:fs';
 const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
+// A thread keeps what it was sent, as a real Codex thread does: later turns carry only the new tool results.
+let thread='';
 readline.createInterface({input:process.stdin}).on('line',line=>{
  const m=JSON.parse(line);send({id:m.id,result:m.method==='thread/start'?{thread:{id:'fixture'}}:{}});
+ if(m.method==='thread/start'){thread='';appendFileSync(${JSON.stringify(join(home, 'threads.log'))},'thread\\n');}
  if(m.method!=='turn/start')return;
- const prompt=m.params.input.map(i=>i.text||'').join('');
+ thread+=m.params.input.map(i=>i.text||'').join('');
+ const prompt=thread;
  const results=[...prompt.matchAll(/<tool_results>\\s*([\\s\\S]*?)\\s*<\\/tool_results>/g)].map(m=>JSON.parse(m[1])[0]);
  const snapshots=results.filter(r=>r.ok).map(r=>JSON.parse(r.text)).filter(r=>r.snapshot);
  const current=snapshots.at(-1);
@@ -138,6 +143,8 @@ try {
   await expect.poll(shown).toEqual([]);
   await expect(page.locator('.browser-tab')).toHaveCount(0);
   assert.equal(titles.filter(t => t === 'ส่งผลเครื่องมือให้ AI?').length, 0);
+  // Five model turns in one run share one runtime process and thread: later turns send only the new tool results.
+  assert.equal((await readFile(join(home, 'threads.log'), 'utf8')).trim().split('\n').length, 1, 'one thread for the whole run');
   assert.equal(await page.getByRole('alertdialog').count(), 0);
   console.log(
     'Browser chat loop passed: open -> fill -> read -> click -> read -> verified, 3 action approvals and no data approvals with privacy checks off; local fixtures only.',

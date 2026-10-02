@@ -2591,3 +2591,87 @@ nav .count {
   margin-top: 12px;
   font-size: 12px;
 }
+/* Above the composer: the plan and the assistant's questions, where the employee types (src/App.tsx). */
+.composer-dock:empty {
+  display: none;
+}
+.composer-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.composer-dock .work-plan {
+  margin: 0;
+  max-height: 34vh;
+  overflow: auto;
+}
+.tool-question {
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--paper);
+  padding: 12px 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+.tool-question header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.tool-question-text {
+  margin: 6px 0 10px;
+  font-size: 14px;
+}
+.tool-question-options {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tool-question-options button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.tool-question-options button:hover,
+.tool-question-options button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.tool-question-options kbd {
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.tool-question-other {
+  display: flex;
+  gap: 6px;
+}
+.tool-question-other input {
+  flex: 1;
+  min-width: 0;
+}
+.tool-question-cancel {
+  margin-top: 6px;
+  font-size: 11px;
+  padding: 2px 4px;
+  color: var(--muted);
+}

@@ -18,6 +18,17 @@ import { RunTransmission, type TransmissionSource } from './transmission';
 import { documentSection } from './knowledge';
 import { mainLocale, tm } from './i18n';
 
+// What the employee reads on the status line while a tool runs, in plain words instead of the tool's name.
+const TOOL_ACTIVITY: Record<string, string> = {
+  ask_user: 'รอคำตอบจากคุณ',
+  plan: 'ส่งแผนให้คุณอนุมัติ',
+  plan_update: 'บันทึกความคืบหน้าของแผน',
+  browser_control: 'กำลังทำงานบนเว็บ',
+  web_search: 'กำลังค้นเว็บ',
+  web_fetch: 'กำลังอ่านเว็บไซต์',
+  files: 'กำลังอ่านไฟล์งาน',
+  changes: 'กำลังเตรียมการแก้ไขไฟล์',
+};
 export type ToolScope = {
   cancel: () => void;
   sessionId: string;
@@ -290,7 +301,9 @@ export class DesktopTools {
             ? tm('กำลังอ่าน Skill {0}', t.slice(6))
             : t.startsWith('reference ')
               ? tm('กำลังอ่านเอกสาร {0}', t.slice(10))
-              : tm('กำลังใช้เครื่องมือ ') + t,
+              : TOOL_ACTIVITY[t]
+                ? tm(TOOL_ACTIVITY[t])
+                : tm('กำลังใช้เครื่องมือ ') + t,
         ),
       outgoing: async (text, _signal, r) => {
         await check();

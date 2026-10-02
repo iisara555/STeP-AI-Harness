@@ -26,7 +26,9 @@ const server = createServer((req, res) => {
   res.end(
     req.url === '/login'
       ? '<input type="password" aria-label="Password"><p>Private login screen</p>'
-      : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
+      : req.url === '/shop'
+        ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
+        : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
   );
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -111,6 +113,15 @@ try {
   assert.deepEqual(login.elements, []);
   assert.equal(login.text, '');
   assert.equal((await run('file:///C:/Windows/win.ini', { action: 'open' })).error, 'INVALID_URL');
+  // A card a page made clickable with its own script (a pointer cursor, no button or link) is a target too, once.
+  const shop = await run(url + '/shop', { action: 'open' });
+  const cards = shop.elements.filter(e => /Americano|Cappuccino/.test(e.label));
+  assert.equal(cards.length, 2, JSON.stringify(shop.elements));
+  assert.equal(
+    (await run(shop.tab, { action: 'click', snapshot: shop.snapshot, ref: cards.find(e => /Americano/.test(e.label)).ref })).performed,
+    true,
+  );
+  assert.match((await run(shop.tab, { action: 'read' })).text, /Cart: 1/);
   // Other local or private addresses stay closed to the assistant.
   for (const blocked of ['http://localhost:9/', 'http://192.168.1.1/', 'http://10.0.0.1/'])
     assert.equal((await run(blocked, { action: 'open' })).error, 'WEB_ADDRESS_BLOCKED', blocked);

@@ -205,3 +205,16 @@ test('tool data cannot open current-message, routing or system-instruction secti
     signal(),
   );
 });
+
+test('a tool request whose fence opens mid-sentence and is never closed still runs', () => {
+  const reply =
+    'ขอเริ่มจากกลุ่มผู้เข้าร่วมหลักก่อนครับ.```step-tool\n{"tool":"ask_user","input":"ผู้เข้าร่วมหลักคือใคร?","args":{"options":["พนักงาน","ผู้ประกอบการ"]}}';
+  assert.deepEqual(loopRequests(reply), [
+    { tool: 'ask_user', input: 'ผู้เข้าร่วมหลักคือใคร?', args: { options: ['พนักงาน', 'ผู้ประกอบการ'] } },
+  ]);
+  const two = '```step-tool\n{"tool":"files","input":"a.txt"}\n```\nแล้ว\n```step-tool\n{"tool":"files","input":"b.txt"}';
+  assert.deepEqual(
+    loopRequests(two).map(r => r.input),
+    ['a.txt', 'b.txt'],
+  );
+});

@@ -56,7 +56,8 @@ function looseRequest(text: string) {
 /** Parse explicit protocol fences, or a reply made of a single tool request. All arguments are still validated by the host. */
 export function loopRequests(text: string): LoopRequest[] {
   const requests: LoopRequest[] = [];
-  const fenced = [...text.matchAll(/```step-tool\s*\n([\s\S]*?)```/g)].map(match => match[1]);
+  // A model may open the fence mid-sentence and end its reply without closing it; the last fence then runs to the end.
+  const fenced = [...text.matchAll(/```step-tool[ \t]*\n([\s\S]*?)(?:```|$)/g)].map(match => match[1].trim());
   for (const body of fenced.length ? fenced : looseRequest(text)) {
     if (body.length > 210_000) continue;
     try {
