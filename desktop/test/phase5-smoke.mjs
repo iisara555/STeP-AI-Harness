@@ -57,6 +57,7 @@ db.prepare('INSERT INTO records VALUES(?,?,?)').run(
     onboarding: true,
     tourDone: true,
     consentedAt: new Date().toISOString(),
+    termsVersion: '2026-10-02',
   }),
 );
 db.close();

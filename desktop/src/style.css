@@ -2480,3 +2480,47 @@ nav .count {
 .feedback-scope input {
   width: auto;
 }
+
+/* Usage terms on the last setup step and in the first-send dialog. */
+.terms {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0 4px;
+  background: var(--surface);
+}
+.terms .terms-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.terms ul {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.terms li + li {
+  margin-top: 4px;
+}
+.terms-accept {
+  display: flex;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  gap: 8px;
+  align-items: flex-start;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.terms .terms-accept {
+  flex-direction: row;
+}
+.terms-accept input {
+  width: auto;
+  flex: none;
+  margin: 2px 0 0;
+}

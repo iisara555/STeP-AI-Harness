@@ -6,6 +6,7 @@ import { providerLabel } from './messages';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { t, teamName } from './i18n';
+import { Terms } from './terms';
 
 type Call = (method: string, input?: unknown) => Promise<any>;
 type Personality = NonNullable<Settings['personality']>;
@@ -85,11 +86,11 @@ export function SetupWizard({
 
   const save = (extra: object = {}) =>
     call('settings', { userName, team, assistant, personality, assistantTone: tone, theme: s.theme, ...extra });
-  const pilot = Boolean(snapshot.policy?.pilot);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const finish = (tour: boolean) =>
     run('finish', async () => {
       await save();
-      if (pilot) await call('acknowledgeData');
+      await call('acknowledgeData');
       await refresh();
       onDone(tour);
     });
@@ -358,13 +359,7 @@ export function SetupWizard({
               {ready ? t('{0} พร้อมช่วยงานแรกของคุณ', assistant) : t('ยังไม่ได้เชื่อมต่อ AI เชื่อมบัญชีก่อนเริ่มคุยกับผู้ช่วย')}
             </p>
             <p className="small muted">{t('เริ่มจากงานตัวอย่าง หรือปรับผู้ช่วยและส่วนเสริมภายหลังในการตั้งค่า')}</p>
-            {pilot && (
-              <p className="wizard-ack small">
-                {t(
-                  'ข้อความและไฟล์ที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ ระบบบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล และปิดบังเลขบัตรประชาชนให้อัตโนมัติ ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้ การกดปุ่มด้านล่างถือว่ารับทราบ',
-                )}
-              </p>
-            )}
+            <Terms privacyChecks={Boolean(snapshot.policy?.checks?.privacy)} accepted={termsAccepted} onChange={setTermsAccepted} />
           </section>
         )}
 
@@ -392,10 +387,19 @@ export function SetupWizard({
             </button>
           ) : (
             <>
-              <button className="quiet" disabled={Boolean(busy)} onClick={() => finish(false)}>
+              <button
+                className="quiet"
+                disabled={Boolean(busy) || !termsAccepted}
+                title={termsAccepted ? undefined : t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม')}
+                onClick={() => finish(false)}
+              >
                 {ready ? t('เริ่มใช้งานเลย') : t('เข้าชมพื้นที่ทำงาน')}
               </button>
-              <button disabled={Boolean(busy)} onClick={() => (ready ? finish(true) : setStep(3))}>
+              <button
+                disabled={Boolean(busy) || (ready && !termsAccepted)}
+                title={ready && !termsAccepted ? t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม') : undefined}
+                onClick={() => (ready ? finish(true) : setStep(3))}
+              >
                 {ready ? t('ดูทัวร์แนะนำ') : t('เชื่อมต่อ AI')}
                 <ArrowRight size={15} />
               </button>

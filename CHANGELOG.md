@@ -10,6 +10,16 @@ STeP Desktop version 0.5.4 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Ask each employee to tick the **usage terms** once, instead of the app checking for them.
+  - The terms appear on the last setup step. If setup was skipped, they appear at the first send, where the button reads "รับทราบและส่ง".
+  - Starting or sending stays disabled until the box is ticked.
+  - The terms cover:
+    - data going to the AI provider unscanned;
+    - not sending passwords, keys, ID or account numbers, health or salary data, or other people's personal data;
+    - approvals and signing staying with people;
+    - checking answers before use;
+    - history staying on the computer.
+  - The accepted version is saved. Changing `TERMS_VERSION` asks everyone again, so people who accepted the earlier text, which promised masking, see the new terms once.
 - Turn off the organization checks by default (`checks: { "authority": false, "privacy": false }`).
   - **Authority:** requests about approving, signing on someone's behalf, issuing document numbers or submitting are answered as help instead of blocked. The AI cannot perform these acts.
   - **Privacy:** nothing is scanned or masked, and there is no dialog before data goes to the AI or a web service. This covers text, attachments, memories, tool results and web queries. National ID numbers, names, phone numbers, passwords and API keys are sent as typed.

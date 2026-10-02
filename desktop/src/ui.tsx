@@ -15,6 +15,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   focusCancel = false,
+  confirmDisabled = false,
 }: {
   title: string;
   children: ReactNode;
@@ -24,11 +25,13 @@ export function ConfirmDialog({
   onConfirm: () => Promise<unknown> | unknown;
   onCancel: () => void;
   focusCancel?: boolean;
+  /** Keeps the confirm button off until the dialog's own condition (such as an accepted checkbox) is met. */
+  confirmDisabled?: boolean;
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState('');
   const confirm = async () => {
-    if (pending) return;
+    if (pending || confirmDisabled) return;
     setPending(true);
     setError('');
     try {
@@ -57,7 +60,12 @@ export function ConfirmDialog({
           <button autoFocus={focusCancel} className="quiet" onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button autoFocus={!focusCancel} className={tone === 'danger' ? 'danger' : ''} disabled={pending} onClick={() => void confirm()}>
+          <button
+            autoFocus={!focusCancel}
+            className={tone === 'danger' ? 'danger' : ''}
+            disabled={pending || confirmDisabled}
+            onClick={() => void confirm()}
+          >
             {pending && <LoaderCircle size={15} className="spin" />}
             {confirmLabel}
           </button>

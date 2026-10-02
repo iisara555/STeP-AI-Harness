@@ -75,6 +75,7 @@ import { AutomationDialog } from './automations';
 import { commandPalette, commandForKey, vimEdit } from './commands';
 import { KeyboardDialog } from './keyboard';
 import { Readiness } from './readiness';
+import { Terms } from './terms';
 import { VoiceButton } from './voice';
 import { PacksDialog } from './packs';
 import type { ToolQuestion } from './types';
@@ -168,6 +169,8 @@ export default function App() {
     retry?: boolean;
     coordinator?: boolean;
   } | null>(null);
+  // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
+  const [termsAccepted, setTermsAccepted] = useState(false);
   // Claude Pro/Max works only inside Anthropic's own apps, so that choice hands the request to the employee's Claude Code.
   const [handoffAsk, setHandoffAsk] = useState<{ text: string; skill?: string } | null>(null),
     [claudeCode, setClaudeCode] = useState<boolean | null>(null);
@@ -576,6 +579,7 @@ export default function App() {
       runningId.current = '';
       setProgress('');
       setStartedAt(0);
+      setTermsAccepted(false);
       setConsentAsk({
         sessionId: id,
         text,
@@ -2144,7 +2148,8 @@ export default function App() {
             privacyClass: consentAsk.flagged ? 'restricted' : 'internal',
             allowRemember: false,
           }}
-          confirmLabel={t('มีสิทธิ์ส่งข้อมูลนี้')}
+          confirmLabel={consentAsk.first ? t('รับทราบและส่ง') : t('มีสิทธิ์ส่งข้อมูลนี้')}
+          confirmDisabled={consentAsk.first && !termsAccepted}
           onCancel={() => {
             void api.call('consentDeclined', { id: consentAsk.sessionId }).catch(() => {});
             setConsentAsk(null);
@@ -2198,10 +2203,15 @@ export default function App() {
               'คำถามข้อมูลสาธารณะที่เปลี่ยนตามเวลาอาจใช้ Web Search ของบัญชี AI นี้ โดยส่งเฉพาะคำถามสาธารณะไปค้น ไม่ส่งไฟล์แนบหรือบทสนทนาไปเป็นคำค้น',
             )}
           </p>
+          {consentAsk.first && (
+            <Terms privacyChecks={Boolean(snapshot.policy?.checks?.privacy)} accepted={termsAccepted} onChange={setTermsAccepted} />
+          )}
           <p className="small muted">
-            {t(
-              'ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ',
-            )}
+            {snapshot.policy?.checks?.privacy
+              ? t(
+                  'ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ',
+                )
+              : t('ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้')}
             {consentAsk.vision
               ? t(' ภาพต้นฉบับจะถูกส่งด้วย ตรวจภาพว่าไม่มีข้อมูลส่วนบุคคลหรือความลับที่ OCR อาจอ่านไม่พบก่อนยืนยัน')
               : t(' และไม่ส่งไฟล์ต้นฉบับ')}

@@ -27,6 +27,7 @@ try {
   await page.screenshot({ path: join(out, 'wizard-4-connect.png') });
   await page.getByRole('button', { name: 'ทำภายหลัง' }).click();
   await page.screenshot({ path: join(out, 'wizard-ready-without-ai.png') });
+  await page.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
   await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน' }).click();
   await wizard.waitFor({ state: 'detached' });
   const saved = await page.evaluate(() => window.step.call('snapshot'));

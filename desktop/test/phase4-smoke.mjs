@@ -44,6 +44,7 @@ put('settings', 'main', {
   onboarding: true,
   tourDone: true,
   consentedAt: new Date().toISOString(),
+  termsVersion: '2026-10-02',
 });
 put('connection', 'fake', {
   id: 'fake',

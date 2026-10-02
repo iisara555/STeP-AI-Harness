@@ -39,8 +39,14 @@ try {
   await page.getByRole('button', { name: 'เชื่อมต่อ AI', exact: true }).click();
   await expect(wizard.getByRole('heading')).toHaveText('เชื่อมต่อ AI');
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
-  await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true }).click();
+  // The usage terms must be ticked before the workspace opens; ticking records the accepted version.
+  const enter = page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true });
+  await expect(enter).toBeDisabled();
+  await expect(wizard.getByLabel('ข้อตกลงการใช้งาน', { exact: true })).toContainText('ระบบไม่ได้ตรวจหรือปิดบังข้อมูลให้');
+  await wizard.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
+  await enter.click();
   await expect(wizard).toHaveCount(0);
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));

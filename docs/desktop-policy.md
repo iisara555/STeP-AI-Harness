@@ -65,7 +65,17 @@ Both checks are **off by default**: `{ "checks": { "authority": false, "privacy"
 | `authority` | Every request is answered as help, including ones about approving, signing on someone's behalf, issuing document numbers or submitting. The AI has no tool that can perform these acts | The router's authority registry and Skill scope rules BLOCK or ESCALATE these requests |
 | `privacy` | Nothing is scanned. Text, attachments, memories, tool results and web queries go to the AI provider unchanged. National ID numbers, phone numbers, names, passwords and API keys are **not** masked or blocked, and there is no dialog before data leaves | The personal-data and credential scan masks, blocks or asks as described in [pilot mode](#pilot-mode) and the [privacy gate](privacy-preflight.md) |
 
-With `privacy` off, the organization relies on employees not to paste personal data or credentials into the app; the administrator is responsible for that choice under PDPA. Side-effect tools (writing files, running commands, browser open/fill/click, MCP calls) still ask each time; that is a permission, not a privacy check.
+With `privacy` off, responsibility moves to the employee through the **usage terms**:
+- Each person ticks the terms once, on the last setup step, or at the first send if they skipped setup.
+- The terms say:
+  - what is sent to the AI provider, and that the app does not scan or mask it;
+  - not to send passwords, API keys, national ID or account numbers, health or salary data, or other people's personal data (PDPA and university rules);
+  - that approving, signing, submitting, issuing numbers and transferring money stay with people and the proper systems;
+  - to check every answer before use;
+  - that history stays on the computer.
+- The accepted version is stored as `settings.termsVersion`.
+- When `TERMS_VERSION` in `desktop/src/terms-version.ts` changes, everyone is asked once more.
+- The administrator remains responsible for choosing this setup under PDPA. Side-effect tools (writing files, running commands, browser open/fill/click, MCP calls) still ask each time; that is a permission, not a privacy check.
 
 ## Automatic routing (`features.autoRouting`)
 
@@ -90,7 +100,7 @@ Standard consent, first trialled as pilot mode, is now the default. Administrato
 
 | | Strict (`"pilot": false`) | Standard (default) |
 |---|---|---|
-| First send on this computer | Dialog | One-time acknowledgment on the last setup-wizard step. Skipping the wizard keeps the first-send dialog |
+| First send on this computer | Dialog with the usage terms to tick | Usage terms ticked on the last setup-wizard step. Skipping the wizard shows them at the first send. In both modes they appear again when the terms version changes |
 | Text attachment or pasted source | Dialog per send | No dialog unless the privacy review flags it |
 | Image attachment (vision) | Dialog | Dialog |
 | Sensitive word with no person identifier | Dialog | Sent with a warning notice |

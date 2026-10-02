@@ -35,6 +35,7 @@ export function ApprovalDialog({
   onConfirm,
   onRun,
   onCancel,
+  confirmDisabled,
 }: {
   request: ApprovalRequest;
   children?: ReactNode;
@@ -42,6 +43,7 @@ export function ApprovalDialog({
   onConfirm: (remember: boolean) => Promise<unknown> | unknown;
   onRun?: () => Promise<unknown> | unknown;
   onCancel: () => void;
+  confirmDisabled?: boolean;
 }) {
   const [remember, setRemember] = useState(false);
   const [run, setRun] = useState(Boolean(request.runDefault && request.runScope));
@@ -52,6 +54,7 @@ export function ApprovalDialog({
       onConfirm={() => (run && onRun ? onRun() : onConfirm(remember))}
       onCancel={onCancel}
       focusCancel
+      confirmDisabled={confirmDisabled}
     >
       <p className="small muted">
         {t('เครื่องมือ:')} {toolLabels[request.tool] || request.tool} {t('· ระดับข้อมูลจากการตรวจรูปแบบ:')}{' '}

@@ -112,7 +112,12 @@ try {
   const consent = page.getByRole('alertdialog', { name: 'ยืนยันการส่งข้อมูลให้ AI' });
   await consent.waitFor();
   assert.equal(await page.locator('.composer textarea').inputValue(), 'First message');
-  await consent.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้' }).click();
+  // The first send shows the usage terms; sending waits until they are ticked.
+  const acceptAndSend = consent.getByRole('button', { name: 'รับทราบและส่ง' });
+  await expect(acceptAndSend).toBeDisabled();
+  await consent.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
+  await acceptAndSend.click();
+  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion).toBe('2026-10-02');
   await page.getByText('First answer received', { exact: true }).waitFor();
   await waitComplete();
   let snapshot = await page.evaluate(() => window.step.call('snapshot'));

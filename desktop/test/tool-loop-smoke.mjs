@@ -58,7 +58,13 @@ try {
           .prepare('INSERT INTO records VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value')
           .run(kind, id, JSON.stringify(value));
       const settings = JSON.parse(db.prepare("SELECT value FROM records WHERE kind='settings' AND id='main'").get().value);
-      put('settings', 'main', { ...settings, workspace: data.workspace, tourDone: true, consentedAt: new Date().toISOString() });
+      put('settings', 'main', {
+        ...settings,
+        workspace: data.workspace,
+        tourDone: true,
+        consentedAt: new Date().toISOString(),
+        termsVersion: '2026-10-02',
+      });
       put('connection', 'fake', {
         id: 'fake',
         provider: 'openai',

@@ -1,6 +1,7 @@
 import { approvedProfile } from '../../src/modules/providers/compatible.js';
 import { copilotDeviceLogin } from './copilot-auth';
 import { unscanned } from './checks';
+import { TERMS_VERSION } from '../src/terms-version';
 import {
   app,
   BrowserWindow,
@@ -166,6 +167,11 @@ async function main() {
     import(pathToFileURL(join(root, 'src/modules/skills/catalog.js')).href),
   ]);
   // Every privacy scan in the app goes through here, so policy checks.privacy (off by default) switches them all.
+  function acceptTerms() {
+    const s = store.settings();
+    if (s.termsVersion !== TERMS_VERSION)
+      store.put('settings', 'main', { ...s, consentedAt: new Date().toISOString(), termsVersion: TERMS_VERSION });
+  }
   function scanText(text: string, options?: any) {
     return policyState.policy.checks.privacy ? privacy.evaluatePrivacyGate(text, options) : unscanned(text);
   }
@@ -701,6 +707,7 @@ async function main() {
       mode: permissionMode(),
       hooks: policyState.policy.hooks.length,
       pilot: Boolean(policyState.policy.pilot),
+      checks: policyState.policy.checks,
     },
     approvals: approvals.list(),
     transmissionGrants: tools.transmissionGrants(),
@@ -1076,8 +1083,8 @@ async function main() {
         consentMetrics.record(inputText(input.id, 60), 'external_ai', 'cancelled');
         return true;
       case 'acknowledgeData': {
-        // The setup wizard's one-time acknowledgment stands in for the first-send dialog.
-        if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
+        // Accepting the usage terms on the last setup step stands in for the first-send dialog.
+        acceptTerms();
         return true;
       }
       case 'settings': {
@@ -1743,7 +1750,8 @@ async function main() {
         // Ask only when it adds information: the first send on this computer, a new attachment, or a privacy review signal.
         // Pilot mode (policy) asks less; see sendConsent. Blocking and masking are the same in every mode.
         const flagged = review.action === 'human-confirm';
-        const first = !store.settings().consentedAt;
+        // The first send, or the first since the usage terms changed, shows the terms to accept.
+        const first = store.settings().termsVersion !== TERMS_VERSION;
         const vision = selected.some(a => Boolean(a.image));
         const pilot = Boolean(policyState.policy.pilot);
         const { block, ask, warning } = sendConsent(
@@ -1808,7 +1816,7 @@ async function main() {
             s.consentedAt = new Date().toISOString();
             store.save(s);
           }
-          if (!store.settings().consentedAt) store.put('settings', 'main', { ...store.settings(), consentedAt: new Date().toISOString() });
+          acceptTerms();
         }
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');

@@ -158,6 +158,8 @@ export type Settings = {
   assistantTone?: string;
   tourDone?: boolean;
   consentedAt?: string;
+  /** Version of the usage terms this person accepted (src/terms-version.ts). */
+  termsVersion?: string;
   ocrAiConsentedAt?: string;
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
@@ -216,6 +218,7 @@ export type PolicySnapshot = {
   mode: PermissionMode;
   hooks: number;
   pilot?: boolean;
+  checks?: { authority: boolean; privacy: boolean };
 };
 export type ConsentSummary = {
   prompts: number;

@@ -53,7 +53,7 @@ try {
       const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
       const settings = JSON.parse(db.prepare("SELECT value FROM records WHERE kind='settings' AND id='main'").get().value);
       db.prepare("UPDATE records SET value=? WHERE kind='settings' AND id='main'").run(
-        JSON.stringify({ ...settings, workspace, tourDone: true, consentedAt: new Date().toISOString() }),
+        JSON.stringify({ ...settings, workspace, tourDone: true, consentedAt: new Date().toISOString(), termsVersion: '2026-10-02' }),
       );
       db.prepare('INSERT INTO records VALUES (?,?,?)').run(
         'connection',

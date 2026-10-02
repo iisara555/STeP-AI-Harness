@@ -1116,6 +1116,24 @@ export const en: Record<string, string> = {
   'ใช้บริบทที่บันทึกไว้กับงานนี้?': 'Use the context saved for this task?',
   'จะส่งคำแนะนำพื้นที่งานและความจำที่เลือกให้ {0}\n{1}': 'Workspace guidance and selected memories will be sent to {0}\n{1}',
   'ความจำ: {0}': 'Memory: {0}',
+  ข้อตกลงการใช้งาน: 'Terms of use',
+  'ข้อความ ไฟล์ และรูปที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ (เช่น Google, OpenAI, Anthropic) ตามที่พิมพ์':
+    'Messages, files and images you send go to the connected AI provider (such as Google, OpenAI or Anthropic) as you wrote them.',
+  ' ระบบช่วยบล็อกรหัสผ่านและปิดบังเลขบัตรประชาชนที่ตรวจพบ แต่ตรวจไม่ได้ทุกกรณี':
+    ' The app blocks passwords and masks national ID numbers it detects, but it cannot catch everything.',
+  ' ระบบไม่ได้ตรวจหรือปิดบังข้อมูลให้': ' The app does not scan or mask anything for you.',
+  'ห้ามส่งรหัสผ่าน API key เลขบัตรประชาชน เลขบัญชี ข้อมูลสุขภาพ เงินเดือน หรือข้อมูลส่วนบุคคลของผู้อื่นที่ไม่จำเป็นต่องาน ตาม PDPA และระเบียบของมหาวิทยาลัย ผู้ส่งรับผิดชอบข้อมูลที่ส่งเอง':
+    "Do not send passwords, API keys, national ID numbers, bank account numbers, health or salary data, or other people's personal data the work does not need, under the PDPA and university rules. You are responsible for what you send.",
+  'AI ช่วยร่าง สรุป และค้นข้อมูลเท่านั้น การอนุมัติ ลงนาม ส่งเอกสาร ออกเลขหนังสือ หรือโอนเงิน ต้องทำเองผ่านระบบและผู้มีอำนาจตามระเบียบ':
+    'The AI only drafts, summarizes and looks things up. Approving, signing, submitting, issuing document numbers and transferring money are done by you, through the proper systems and approvers.',
+  'ตรวจข้อเท็จจริง ตัวเลข ชื่อ และการอ้างอิงในคำตอบทุกครั้งก่อนนำไปใช้ คุณเป็นผู้รับผิดชอบงานที่ส่งออกไป':
+    'Check facts, numbers, names and references in every answer before you use it. You are responsible for the work you send out.',
+  'ประวัติการสนทนาเก็บในเครื่องนี้ ส่วนข้อมูลที่ส่งให้ผู้ให้บริการ AI อยู่ภายใต้เงื่อนไขของบัญชีที่เชื่อมไว้':
+    "Conversation history stays on this computer; what is sent to the AI provider falls under the connected account's terms.",
+  ฉันอ่านและรับทราบข้อตกลงการใช้งาน: 'I have read and accept the terms of use',
+  ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม: 'Accept the terms of use to start',
+  รับทราบและส่ง: 'Accept and send',
+  ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้: 'Confirm only data you are allowed to send through this service.',
   'ตรวจแผนงานย่อยก่อนเริ่ม?': 'Review the subtask plan before starting?',
   'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ':
     'Task {0}\n{1}\nEach subtask uses the same AI account; the combined result is a draft for review',
