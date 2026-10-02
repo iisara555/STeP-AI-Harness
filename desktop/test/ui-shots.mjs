@@ -82,7 +82,7 @@ try {
   await page.locator('.skill-chip').waitFor();
   await page.screenshot({ path: join(out, 'skill-chip.png') });
   await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
-  await page.keyboard.press('Control+K');
+  await page.keyboard.press('ControlOrMeta+K');
   await page.getByRole('dialog', { name: 'คำสั่ง' }).waitFor();
   await page.keyboard.type('ธีม');
   await page.screenshot({ path: join(out, 'palette.png') });

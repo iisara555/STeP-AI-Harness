@@ -89,23 +89,24 @@ try {
     ),
     true,
   );
-  await page.keyboard.press('Control+k');
+  // ControlOrMeta matches the app's Mod key: Ctrl on Windows and Linux, ⌘ on macOS (where ⌘Q quits the app).
+  await page.keyboard.press('ControlOrMeta+k');
   const palette = page.getByRole('dialog', { name: 'คำสั่ง' });
   await expect(palette).toBeVisible();
   await palette.getByRole('option', { name: /คีย์ลัดและ Vim/ }).click();
   const keyboard = page.getByRole('alertdialog', { name: 'คีย์ลัดและ Vim' });
-  await keyboard.getByRole('textbox', { name: 'คีย์ลัด palette', exact: true }).fill('Mod+q');
+  await keyboard.getByRole('textbox', { name: 'คีย์ลัด palette', exact: true }).fill('Mod+j');
   await keyboard.getByRole('checkbox', { name: 'เปิด Vim ในช่องพิมพ์คำขอ' }).check();
   await keyboard.getByRole('button', { name: 'บันทึก', exact: true }).click();
   await expect(keyboard).not.toBeVisible();
-  await page.keyboard.press('Control+q');
+  await page.keyboard.press('ControlOrMeta+j');
   await expect(palette).toBeVisible();
   await page.keyboard.press('Escape');
   await composer.fill('abc');
   await composer.press('Escape');
   await composer.press('i');
   await composer.fill('Prepare a public community draft');
-  await page.keyboard.press('Control+q');
+  await page.keyboard.press('ControlOrMeta+j');
   await palette.getByRole('option', { name: 'Skill Packs', exact: true }).click();
   const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
   await expect(packs).toContainText('public-writing');

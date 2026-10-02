@@ -41,7 +41,7 @@ try {
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
   await page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true }).click();
   await expect(wizard).toHaveCount(0);
-  await page.keyboard.press('Control+,');
+  await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
