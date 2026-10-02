@@ -10,6 +10,7 @@ STeP Desktop version 0.5.0 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Fix Gemini API key in Settings appearing stuck: "เชื่อมต่อ Gemini" saved the key without testing it, so the connection stayed "not tested" with no progress. It now tests the key right away and ends ready or with a clear error (for example a full quota). A new smoke (`gemini-api-smoke`) runs the bundled Gemini CLI against a local fake API.
 - Lay out the Chat tab like Claude Desktop:
   - **Text box:** starts at one line and grows as you type.
   - **Bottom-left:** `+` (attach), then compact work-mode and permission pickers.

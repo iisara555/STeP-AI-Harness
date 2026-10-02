@@ -254,6 +254,9 @@ async function main() {
     if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection);
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection, webSearch);
+    // Development test runs only: point the bundled Gemini CLI at a local fake API. Installed copies ignore this.
+    if (!app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_TEST_GEMINI_BASE_URL)
+      env.GOOGLE_GEMINI_BASE_URL = process.env.STEP_TEST_GEMINI_BASE_URL;
     let authExecutable: string | undefined;
     if (connection.provider === 'claude' && connection.mode === 'subscription') {
       await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });

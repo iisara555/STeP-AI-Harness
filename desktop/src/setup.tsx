@@ -320,7 +320,9 @@ export function SetupWizard({
                 >
                   {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
                   {busy === 'connect'
-                    ? t('กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์')
+                    ? choice.mode === 'api'
+                      ? t('กำลังเชื่อมต่อ…')
+                      : t('กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์')
                     : choice.provider === 'openai' && choice.mode === 'subscription'
                       ? t('เชื่อมต่อ ChatGPT')
                       : choice.provider === 'gemini' && choice.mode === 'subscription'

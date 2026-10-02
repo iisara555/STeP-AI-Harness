@@ -33,6 +33,8 @@ export function SettingsPanel({
     [assistantTone, setAssistantTone] = useState(snapshot.settings.assistantTone || '');
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
   const accountSignIn = choice.mode === 'subscription' && ['openai', 'claude'].includes(choice.provider);
+  // The main-page Gemini key is tested right away like an account sign-in, so it is ready to use or shows why not.
+  const connectNow = accountSignIn || (choice.provider === 'gemini' && choice.mode === 'api');
   const [busy, setBusy] = useState(''),
     [progress, setProgress] = useState<Record<string, string>>({}),
     [removingConnection, setRemovingConnection] = useState<Connection | null>(null);
@@ -481,7 +483,7 @@ export function SettingsPanel({
                         model: choice.model,
                       });
                       setChoice({ ...choice, key: '' });
-                      if (accountSignIn) {
+                      if (connectNow) {
                         setBusy(connection.id);
                         // Show the pending account immediately so progress and cancellation remain available.
                         await refresh();
