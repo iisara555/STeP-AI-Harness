@@ -250,8 +250,11 @@ try {
       }),
     { id: fork.id, aid: image.id, consent: send.consent.token },
   );
+  // The vision run takes about 2 s here and longer on the Windows runner; allow more than the 5 s default.
   await expect
-    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === fork.id).status)
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === fork.id).status, {
+      timeout: 30000,
+    })
     .toBe('review');
   calls = (await readFile(audit, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.equal(calls.at(-1).images, 1);
