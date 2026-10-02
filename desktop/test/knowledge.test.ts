@@ -231,3 +231,21 @@ test('the AI sees a registry of Skills by name and description and loads only th
   assert.match(captured.prompt, /SKILL TEXT/);
   store.close();
 });
+
+test('with tools the AI decides when to search the web; the app does not search ahead', async () => {
+  const captured = { prompt: '', system: '', webSearch: [] as boolean[] };
+  const { store, work, session } = service(captured, false, false, {
+    toolLoop: () => true,
+    tools: async () => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      execute: async () => '',
+      outgoing: async (t: string) => t,
+    }),
+  });
+  await work.run(session.id, 'ประกาศวันหยุดราชการปีงบ 2570', '', true, undefined, 'chat');
+  assert.ok(!captured.webSearch.includes(true), 'no search ahead of the answer');
+  assert.match(captured.system, /call web_search/);
+  store.close();
+});

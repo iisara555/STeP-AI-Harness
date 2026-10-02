@@ -119,7 +119,8 @@ export type Policy = {
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
 const DEFAULT_FEATURES: Record<Feature, boolean> = {
   toolLoop: true,
-  autoMode: false,
+  // Full auto is offered like in other AI coding apps; commands still ask unless shellByAi is on.
+  autoMode: true,
   shellByAi: false,
   autoMerge: false,
   autopilot: false,
@@ -160,7 +161,7 @@ export function defaultPolicy(): Policy {
     source: 'default',
     features: { ...DEFAULT_FEATURES },
     permission: {
-      modes: ['ask', 'acceptEdits', 'plan'],
+      modes: ['ask', 'acceptEdits', 'plan', 'auto'],
       defaultMode: 'ask',
       pathRules: [],
       deniedCommands: [...DEFAULT_DENIED_COMMANDS],

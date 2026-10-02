@@ -1450,7 +1450,8 @@ export default function App() {
                 </div>
               )}
               {!running && progress && <p className="muted small">{t(progress)}</p>}
-              {!running && workMode !== 'image' && needsPublicWebSearch(query) && (
+              {/* Without tools the app searches ahead; with tools the AI decides, so nothing pops up while typing. */}
+              {!running && workMode !== 'image' && !snapshot.policy?.features.toolLoop && needsPublicWebSearch(query) && (
                 <p className="web-route small" role="status">
                   {t('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ')}
                 </p>
@@ -1683,7 +1684,9 @@ export default function App() {
                     onChange={e => setWorkMode(e.target.value as WorkMode)}
                   >
                     <option value="chat">{t('คุยกับผู้ช่วย')}</option>
-                    <option value="draft">{t('สร้างเอกสาร')}</option>
+                    {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
+                        drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
+                    {(workMode === 'draft' || snapshot.policy?.features.coordinator) && <option value="draft">{t('สร้างเอกสาร')}</option>}
                     <option value="image">{t('สร้างรูป')}</option>
                   </select>
                   {snapshot.policy && (

@@ -178,16 +178,17 @@ try {
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();
-  await page.getByRole('combobox', { name: 'โหมดทำงาน' }).selectOption('draft');
-  await page.locator('.composer textarea').fill('Draft request');
-  await page.keyboard.press('Enter');
+  // Chat is the one everyday mode, like other AI apps; the drafting mode stays for tasks that use it.
+  await expect(page.getByRole('combobox', { name: 'โหมดทำงาน' }).locator('option[value="draft"]')).toHaveCount(0);
+  await page.evaluate(id => window.step.call('send', { id, text: 'Draft request', mode: 'draft' }), id);
   await waitComplete(id);
+  const showDraft = page.getByRole('button', { name: 'เปิดร่าง', exact: true });
+  if (await showDraft.count()) await showDraft.click();
   await page.getByText('ใช้ร่างนี้', { exact: true }).waitFor();
   snapshot = await page.evaluate(() => window.step.call('snapshot'));
   assert.match(snapshot.sessions[0].proposals.at(-1).text, /Synthetic draft/);
   await page.getByText('ใช้ร่างนี้', { exact: true }).click();
   await page.locator('.draft-editor').filter({ hasText: 'Synthetic draft' }).waitFor();
-  await page.getByRole('combobox', { name: 'โหมดทำงาน' }).selectOption('chat');
   await page.locator('.composer textarea').fill('Tool proposal');
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: /ตรวจ terminal: echo proposed/ }).click();

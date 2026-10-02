@@ -10,6 +10,10 @@ STeP Desktop version 0.5.4 (`desktop/package.json`) contains the changes below.
 
 ### Desktop permission modes and answer feedback
 
+- Closer to opencode and Claude Code:
+  - **One everyday mode:** Chat is the everyday mode. The work-mode picker offers Chat and Image only. Chat answers can be opened in Output, and the AI can stage file changes. The separate drafting mode stays for tasks already in it and for multi-worker drafting.
+  - **Web search:** with tools, the AI decides when to search the web. It calls `web_search` for public facts that change over time, and the results still appear as source links under the answer. The app no longer searches ahead or shows "Web Search อัตโนมัติ" while typing. The host search remains only for runs without tools.
+  - **Full auto:** offered by default (`features.autoMode: true`, `auto` in the default modes). The default mode is still "ask before edits". In Full auto, terminal commands still ask unless the administrator turns on `shellByAi`.
 - Work like a general AI harness (Claude Code, opencode), keeping STeP's knowledge and Skills:
   - **Skill registry:** the AI sees a registry of STeP Skills, one line each with name and description. It loads only the Skill a request needs with the `skill` tool, instead of the app choosing a Skill or reading them all. The status line names the Skill or document being read.
   - **Images:** images go to vision models by default (`features.vision: true`). With privacy checks off, an image is sent as it is, with no local OCR service needed.

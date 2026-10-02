@@ -16,7 +16,7 @@ An unpackaged development app using `STEP_DESKTOP_TEST_HOME` reads `desktop-poli
 
 ## Defaults and example
 
-Default modes are `ask` and `plan`, with `ask` selected. `autoMode`, `shellByAi`, `autoMerge`, `autopilot`, `sandbox`, `mcp`, `lineGateway`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator`, `memoryTeam` and `autoRouting` default to false. `toolLoop` and `vision` default to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. [Phase 4 automation and tools](desktop-automation.md) implements coordinator, cron, MCP, sandbox and gated autopilot. Other feature flags grant permission and do not establish that future implementations are available.
+Default modes are `ask`, `acceptEdits`, `plan` and `auto` (Full auto), with `ask` selected. `autoMode` defaults to true so Full auto is offered, as in other AI coding apps; terminal commands still ask unless `shellByAi` is on. `shellByAi`, `autoMerge`, `autopilot`, `sandbox`, `mcp`, `lineGateway`, `voice`, `copilot`, `compatibleProviders`, `cron`, `coordinator`, `memoryTeam` and `autoRouting` default to false. `vision` defaults to true. `toolLoop` defaults to true and enables the [Phase 2 host tool loop](desktop-tool-loop.md), with independent outgoing-data consent and human-reviewed file changes. [Phase 4 automation and tools](desktop-automation.md) implements coordinator, cron, MCP, sandbox and gated autopilot. Other feature flags grant permission and do not establish that future implementations are available.
 
 ```json
 {

@@ -10,12 +10,15 @@ test('managed policy is optional, administrator-only and fail closed', async () 
   const path = join(root, 'desktop-policy.json');
   try {
     assert.equal(loadPolicy(path).policy.source, 'default');
-    await writeFile(path, JSON.stringify({ features: { autoMode: true }, permission: { modes: ['ask', 'auto'] } }));
-    assert.equal(loadPolicy(path, () => false).policy.features.autoMode, false);
+    await writeFile(path, JSON.stringify({ features: { shellByAi: true }, permission: { modes: ['ask', 'auto'] } }));
+    // A file an administrator does not own is ignored: the defaults apply and nothing it asks for is enabled.
+    assert.equal(loadPolicy(path, () => false).policy.source, 'default');
+    assert.equal(loadPolicy(path, () => false).policy.features.shellByAi, false);
     if (process.platform === 'win32') assert.equal(trustedPolicyPath(path), false);
-    assert.equal(loadPolicy(path, () => true).policy.features.autoMode, true);
+    assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, true);
     await writeFile(path, '{broken');
-    assert.equal(loadPolicy(path, () => true).policy.features.autoMode, false);
+    assert.equal(loadPolicy(path, () => true).policy.source, 'default');
+    assert.equal(loadPolicy(path, () => true).policy.features.shellByAi, false);
     assert.equal(loadPolicy(path, () => true).problems.length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -24,11 +27,16 @@ test('managed policy is optional, administrator-only and fail closed', async () 
 
 test('auto mode needs both organization feature and allowed mode', () => {
   const defaultValue = defaultPolicy();
-  for (const feature of ['autoMode', 'shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator', 'cron'] as const)
+  for (const feature of ['shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator', 'cron'] as const)
     assert.equal(defaultValue.features[feature], false);
-  // Images reach vision models by default, as in other AI apps.
+  // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.
   assert.equal(defaultValue.features.vision, true);
-  assert.deepEqual(parsePolicy({ permission: { modes: ['auto'], defaultMode: 'auto' } }).policy.permission.modes, ['ask']);
+  assert.equal(defaultValue.features.autoMode, true);
+  assert.ok(defaultValue.permission.modes.includes('auto'));
+  assert.deepEqual(
+    parsePolicy({ features: { autoMode: false }, permission: { modes: ['auto'], defaultMode: 'auto' } }).policy.permission.modes,
+    ['ask'],
+  );
   const p = parsePolicy({ features: { autoMode: true }, permission: { modes: ['ask', 'plan', 'auto'], defaultMode: 'auto' } });
   assert.equal(p.policy.permission.defaultMode, 'auto');
   assert.deepEqual(p.problems, []);
@@ -50,7 +58,7 @@ test('invalid blocking definitions cannot silently enable risky features', () =>
     const parsed = parsePolicy(raw && !Array.isArray(raw) ? { ...raw, features: { autoMode: true, ...(raw as any).features } } : raw);
     assert.ok(parsed.problems.length);
     assert.equal(parsed.policy.source, 'default');
-    assert.equal(parsed.policy.features.autoMode, false);
+    assert.equal(parsed.policy.features.shellByAi, false);
   }
   const parsed = parsePolicy({ hooks: [{ event: 'pre_tool_use', type: 'prompt', prompt: 'Check metadata', block_on_failure: true }] });
   assert.equal(parsed.policy.hooks[0].type, 'prompt');

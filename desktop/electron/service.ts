@@ -106,6 +106,8 @@ export const CHAT_RULES = [
 ].join(' ');
 
 // Questions about STeP itself are answered from its own registered documents first, never from guesses or the web.
+const WEB_RULE =
+  'For public facts that change over time (dates, holidays, announcements, news, prices, laws), call web_search with a short public query instead of answering from memory, then cite the sources with Markdown links. Never put private or STeP-internal details in a search query.';
 const SKILL_RULE =
   'STeP Skills are procedures written by STeP teams. When the request is work a Skill below covers, load it first with the skill tool (input = its name) and follow it; load only the Skill the request needs. Otherwise help directly. The employee can also pick a Skill with / in the composer.';
 /** One line per Skill: name and its description, cut short. */
@@ -481,6 +483,8 @@ export class WorkService {
       if (blockedRoute(contract) || contract.mode === 'UNAVAILABLE') throw new Error('AUTHORITY_REVIEW_REQUIRED');
       if (contract.readiness?.status === 'unavailable') throw new Error('CONTEXT_UNAVAILABLE');
       let retrieved = '';
+      // What the AI's own web_search calls returned in this run, for the sources shown under the answer.
+      const searched: string[] = [];
       let searchUsage: TokenCount = { input: 0, output: 0, total: 0 };
       // Every chat or draft turn reads the organization's own documents first (a lookup Skill such as hr-policy-lookup
       // depends on them). A public web search still follows unless the documents clearly answer the question.
@@ -498,7 +502,11 @@ export class WorkService {
         ? await internalSystemFor(this.harness.root, [session.originalQuery, latest].filter(Boolean).join('\n'))
         : undefined;
       if (internal) activity(tm('งานนี้ใช้ {0} · จะเปิดใน STeP Browser', internal.name));
+      // With tools, the AI decides when to search the web (web_search), as in Claude Code and opencode. The host searches
+      // ahead only for a run without tools.
+      const modelTools = Boolean(!options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
       const searchPublic =
+        !modelTools &&
         !options.draftOnly &&
         !internal &&
         (known[0]?.score || 0) < STRONG_MATCH &&
@@ -702,6 +710,7 @@ export class WorkService {
                 .replace(/The workspace has Browser[\s\S]*?Never request credentials\./, '')
             : baseRules,
           toolsEnabled && TOOL_RULES,
+          toolsEnabled && WEB_RULE,
           catalog.length && ORGANIZATION_RULE,
           internal && internalSystemRule(internal, toolsEnabled),
           toolsEnabled &&
@@ -907,7 +916,11 @@ export class WorkService {
             connection,
             signal: controller.signal,
             activity,
-            search: async query => callProvider(section('current_message', query), await this.runtime(connection, true), true),
+            search: async query => {
+              const found = await callProvider(section('current_message', query), await this.runtime(connection, true), true);
+              searched.push(found);
+              return found;
+            },
           });
           result = await new ToolLoop(host).run(prompt, next => callProvider(next), controller.signal);
         } else result = await callProvider(prompt);
@@ -940,7 +953,7 @@ export class WorkService {
         role: 'assistant',
         text: chat ? handoff : draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''),
         at: new Date().toISOString(),
-        ...(retrieved ? { webSources: webSources(retrieved) } : {}),
+        ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
       });
       finish(session, 'review');
       this.store.save(session);

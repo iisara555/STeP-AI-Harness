@@ -68,7 +68,7 @@ test('workspace-relative deny rules and denied shell segments take precedence', 
 test('accept edits writes reviewed files without asking but still asks for commands and external tools', () => {
   const policy = defaultPolicy();
   assert.ok(policy.permission.modes.includes('acceptEdits'), 'available by default, like ask and plan');
-  assert.ok(!policy.permission.modes.includes('auto'), 'full auto stays off until an administrator enables it');
+  assert.ok(policy.permission.modes.includes('auto'), 'full auto is offered by default, as in other AI apps');
   const root = '/workspace';
   const write = evaluatePermission({ tool: 'write', readOnly: false, path: 'notes.md' }, 'acceptEdits', policy, { root });
   assert.deepEqual([write.allowed, write.requiresConfirmation], [true, false]);

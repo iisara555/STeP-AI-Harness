@@ -11,7 +11,11 @@ const workspace = join(home, 'work');
 await mkdir(workspace);
 await mkdir('release/qa', { recursive: true });
 // This smoke covers the organization checks, which are off unless policy turns them on.
-await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ checks: { authority: true, privacy: true } }));
+// Full auto is offered by default; this smoke covers an organization that turns it off.
+await writeFile(
+  join(home, 'desktop-policy.json'),
+  JSON.stringify({ checks: { authority: true, privacy: true }, features: { autoMode: false } }),
+);
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = await electron.launch({ args: ['.'], env, timeout: 45000 });
@@ -141,7 +145,8 @@ try {
   assert.equal(after.cancelled, before.cancelled + 1);
   await writeFile(join(home, 'desktop-policy.json'), '{broken');
   await waitPolicy(policy => policy.problems.length > 0);
-  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).policy.features.autoMode, false);
+  // A broken file falls back to the defaults, never to what the broken file asked for.
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).policy.source, 'default');
   await page.evaluate(() => window.step.call('toolFiles'));
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'นโยบายองค์กร' }).click();
