@@ -323,11 +323,13 @@ export function SetupWizard({
                       ? t('เชื่อมต่อ ChatGPT')
                       : choice.provider === 'gemini' && choice.mode === 'subscription'
                         ? t('เชื่อมต่อ Google')
-                        : choice.provider === 'claude' && choice.mode === 'oauth'
-                          ? t('เชื่อมต่อ Claude OAuth')
-                          : choice.provider === 'claude' && choice.mode === 'subscription'
-                            ? t('เชื่อมต่อ Claude')
-                            : t('เชื่อมต่อและทดสอบ')}
+                        : choice.provider === 'gemini' && choice.mode === 'api'
+                          ? t('เชื่อมต่อ Gemini')
+                          : choice.provider === 'claude' && choice.mode === 'oauth'
+                            ? t('เชื่อมต่อ Claude OAuth')
+                            : choice.provider === 'claude' && choice.mode === 'subscription'
+                              ? t('เชื่อมต่อ Claude')
+                              : t('เชื่อมต่อและทดสอบ')}
                 </button>
                 {busy === 'connect' && connecting && (
                   <p className="connect-progress">

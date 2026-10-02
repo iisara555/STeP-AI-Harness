@@ -495,7 +495,7 @@ export function ProviderFields(props: {
     <>
       {!advanced ? (
         <div>
-          <p>{t('บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ลงชื่อในเบราว์เซอร์และกลับมาที่นี่')}</p>
+          <p>{t('บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ChatGPT จะเปิดหน้าลงชื่อในเบราว์เซอร์ ส่วน Gemini ใช้ API key')}</p>
           <div className="choice-row" role="group" aria-label={t('เลือกบัญชี AI')}>
             <button
               type="button"
@@ -515,7 +515,33 @@ export function ProviderFields(props: {
                 Claude Pro / Max
               </button>
             )}
+            <button
+              type="button"
+              className={props.value.provider === 'gemini' && props.value.mode === 'api' ? 'choice active' : 'choice'}
+              aria-pressed={props.value.provider === 'gemini' && props.value.mode === 'api'}
+              onClick={() => props.onChange({ ...initialChoice, provider: 'gemini', mode: 'api' })}
+            >
+              Gemini · API key
+            </button>
           </div>
+          {props.value.provider === 'gemini' && props.value.mode === 'api' && (
+            <div className="gemini-key">
+              <label>
+                Gemini API key
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={props.value.key}
+                  onChange={e => props.onChange({ ...props.value, key: e.target.value })}
+                  placeholder={t('วางคีย์จาก Google AI Studio · เก็บเข้ารหัสในเครื่องนี้')}
+                />
+              </label>
+              <button type="button" className="quiet" onClick={() => void props.call('openHelp', { topic: 'geminiKey' })}>
+                {t('ขอ API key จาก Google AI Studio')}
+              </button>
+              <p className="small muted">{t('ถ้าใช้คีย์แบบฟรี ให้ตรวจเงื่อนไขของ Google เรื่องการนำข้อมูลไปใช้ก่อนส่งงานขององค์กร')}</p>
+            </div>
+          )}
           <details>
             <summary>{t('มีบัญชี Claude หรือ Gemini อยู่แล้ว?')}</summary>
             {!props.claudeSubscription && (
@@ -524,10 +550,16 @@ export function ProviderFields(props: {
               </p>
             )}
             <p className="small muted">
-              {t('Gemini ส่วนตัว: ยังไม่รองรับการลงชื่อใน STeP ให้ผู้ดูแลเตรียมการเชื่อมต่อที่องค์กรรองรับในส่วนขั้นสูง')}
+              {t(
+                'Gemini: ใช้ API key จาก Google AI Studio ได้จากปุ่ม “Gemini · API key” ด้านบน ส่วนการลงชื่อด้วยบัญชี Google ส่วนตัวใช้ไม่ได้แล้ว เพราะ Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัว',
+              )}
             </p>
           </details>
-          <p className="small muted">{t('ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ')}</p>
+          <p className="small muted">
+            {props.value.mode === 'api'
+              ? t('ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้งโดยใช้คีย์นี้')
+              : t('ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ')}
+          </p>
           {props.value.provider === 'claude' && props.claudeSubscription && <ClaudeCodeNote call={props.call} subscription />}
         </div>
       ) : (

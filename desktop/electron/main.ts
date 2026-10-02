@@ -1382,6 +1382,7 @@ async function main() {
           claudeCode: 'https://code.claude.com/docs/en/setup',
           anthropicCli: 'https://platform.claude.com/docs/en/cli-sdks-libraries/cli/quickstart',
           tesseract: 'https://tesseract-ocr.github.io/tessdoc/Installation.html',
+          geminiKey: 'https://aistudio.google.com/apikey',
         };
         const url = pages[input.topic];
         if (!url) throw new Error('INVALID_INPUT');

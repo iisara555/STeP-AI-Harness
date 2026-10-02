@@ -2354,3 +2354,12 @@ nav .count {
   font-weight: 600;
   color: var(--muted);
 }
+/* Gemini API key on the main connection page: key, where to get one, and who pays. */
+.gemini-key {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.gemini-key button {
+  justify-self: start;
+}

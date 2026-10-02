@@ -472,7 +472,9 @@ export function SettingsPanel({
                     ? t('กำลังเชื่อมต่อ…')
                     : accountSignIn
                       ? t('เชื่อมต่อ {0}', choice.provider === 'openai' ? 'ChatGPT' : 'Claude')
-                      : t('เพิ่มการเชื่อมต่อ')}
+                      : choice.provider === 'gemini' && choice.mode === 'api'
+                        ? t('เชื่อมต่อ Gemini')
+                        : t('เพิ่มการเชื่อมต่อ')}
                 </button>
               </>
             )}

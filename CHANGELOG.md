@@ -10,6 +10,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 - Add a Thai/English switch on the first setup step and in Settings → Appearance & language. Thai stays the source text; English comes from `desktop/src/locales/en.ts`, and a unit test fails when wrapped Thai text has no English entry. Main-process dialogs, statuses and connection notes follow the same setting; prompts sent to the AI are unchanged. See [desktop i18n](docs/desktop-i18n.md).
 - Rewrite the chat welcome around "AI drafts, you decide" with three trust points, and show three first tasks for each of the 21 STeP teams (general ones when no team is set), each checked against the router.
+- Offer **Gemini · API key** on the main connection page (setup wizard and Settings) with a link to Google AI Studio, instead of only under admin settings.
 - Rename the conversation toolbar's scheduled-jobs button to "งานตามรอบ", polish the workbench tabs, composer and consent labels, and fix Prettier drift that failed desktop CI.
 
 ### Experimental Gemini via Antigravity

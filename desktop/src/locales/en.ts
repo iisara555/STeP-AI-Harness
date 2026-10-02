@@ -933,14 +933,12 @@ export const en: Record<string, string> = {
   'กำลังติดตั้ง…': 'Installing…',
   'ติดตั้ง ant CLI': 'Install ant CLI',
   เปิดวิธีติดตั้งเอง: 'Open manual install guide',
-  'บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ลงชื่อในเบราว์เซอร์และกลับมาที่นี่':
-    'Accounts you can use in STeP: choose one, press Connect, sign in in your browser, then come back here',
+  'บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ChatGPT จะเปิดหน้าลงชื่อในเบราว์เซอร์ ส่วน Gemini ใช้ API key':
+    'Accounts you can use in STeP: choose one and press Connect. ChatGPT opens a sign-in page in your browser; Gemini uses an API key',
   'เลือกบัญชี AI': 'Choose AI account',
   'มีบัญชี Claude หรือ Gemini อยู่แล้ว?': 'Already have a Claude or Gemini account?',
   'Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้':
     "Claude Pro/Max: use it through Claude Code from the AI picker on the task page. Chatting inside STeP isn't available for this account yet",
-  'Gemini ส่วนตัว: ยังไม่รองรับการลงชื่อใน STeP ให้ผู้ดูแลเตรียมการเชื่อมต่อที่องค์กรรองรับในส่วนขั้นสูง':
-    "Personal Gemini: signing in within STeP isn't supported yet. Ask your admin to set up an organisation-supported connection under Advanced",
   'ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ':
     'No API key needed — the app sends one short test message using your account',
   'เปิดแอปอื่น · ใช้บัญชี Claude Code ของคุณ ผลงานจะไม่กลับเข้า STeP อัตโนมัติ':
@@ -1261,4 +1259,12 @@ export const en: Record<string, string> = {
   จัดทำร่างแล้ว: 'Draft ready',
   '{0} พร้อมครับ บอกงานมาได้เลย — {1}': "Ready, {0}. What's the task? — {1}",
   'พร้อมครับ บอกงานมาได้เลย — {0}': "Ready. What's the task? — {0}",
+  'วางคีย์จาก Google AI Studio · เก็บเข้ารหัสในเครื่องนี้': 'Paste the key from Google AI Studio · stored encrypted on this computer',
+  'ขอ API key จาก Google AI Studio': 'Get an API key from Google AI Studio',
+  'ถ้าใช้คีย์แบบฟรี ให้ตรวจเงื่อนไขของ Google เรื่องการนำข้อมูลไปใช้ก่อนส่งงานขององค์กร':
+    "On a free-tier key, check Google's terms on how your data may be used before sending work content",
+  'Gemini: ใช้ API key จาก Google AI Studio ได้จากปุ่ม “Gemini · API key” ด้านบน ส่วนการลงชื่อด้วยบัญชี Google ส่วนตัวใช้ไม่ได้แล้ว เพราะ Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัว':
+    'Gemini: use an API key from Google AI Studio with the “Gemini · API key” button above. Signing in with a personal Google account no longer works, because Google stopped serving Gemini CLI to personal accounts',
+  ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้งโดยใช้คีย์นี้: 'The app sends one short test message using this key',
+  'เชื่อมต่อ Gemini': 'Connect Gemini',
 };
