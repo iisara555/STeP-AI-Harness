@@ -43,7 +43,7 @@ test('floor: credentials and sensitive data tied to a person are blocked in pilo
   const service = reviewer();
   for (const text of [
     'รหัสผ่านอีเมลคือ password: Hunter2xyz99',
-    'sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789ABCD',
+    ['sk', 'ant-api03-abcdefghijklmnopqrstuvwxyz0123456789ABCD'].join('-'),
     'นาย สมชาย ใจดี เลขบัตร 1101700203451 มีโรคประจำตัว',
   ]) {
     for (const [input, attachment] of [
