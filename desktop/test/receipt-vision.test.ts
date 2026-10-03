@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { amount, compareField, parseVisionReading, receiptRuleChecks, validThaiTaxId } from '../src/receipt-vision';
+import { amount, compareField, parseVisionReading, receiptRuleChecks, thaiBahtWords, validThaiTaxId } from '../src/receipt-vision';
 
 // A 13-digit ID with a correct check digit, built with the Revenue Department's mod-11 rule.
 const withCheckDigit = (twelve: string) => {
@@ -64,4 +64,41 @@ test('receiptRuleChecks flags a bad check digit, VAT that is not 7% and amounts 
   }).map(r => r.code);
   assert.deepEqual(codes, ['tax_id_checksum', 'vat_not_7_percent', 'amounts_do_not_add_up']);
   assert.deepEqual(receiptRuleChecks({ taxId: '123', vat: '5' }), [], 'nothing to check is not a finding');
+});
+
+test('thaiBahtWords reads the total written in Thai words', () => {
+  assert.equal(thaiBahtWords('แปดร้อยแปดบาทถ้วน'), 808);
+  assert.equal(thaiBahtWords('(หนึ่งพันสองร้อยห้าสิบบาทถ้วน)'), 1250);
+  assert.equal(thaiBahtWords('สิบเอ็ดบาท'), 11);
+  assert.equal(thaiBahtWords('ยี่สิบเอ็ดบาทห้าสิบสตางค์'), 21.5);
+  assert.equal(thaiBahtWords('หนึ่งล้านสองแสนบาทถ้วน'), 1_200_000);
+  assert.equal(thaiBahtWords('หนึ่งร้อยเจ็ดบาทตัว'), 107);
+  assert.ok(Number.isNaN(thaiBahtWords('ขอบคุณที่อุดหนุน')));
+  assert.ok(Number.isNaN(thaiBahtWords('')));
+});
+
+test('a handwritten cash bill: a government-body tax ID in the issuer box and the total in words', () => {
+  // The pattern of a real cash bill: no VAT, the customer (a university unit) has a 0994… tax ID, and the shop wrote
+  // it in its own box. Values here are synthetic.
+  const governmentId = withCheckDigit('099400012345');
+  const values = { merchant: 'ร้านตัวอย่าง Smoothies', receiptNumber: 'เล่ม 001 เลขที่ 005', taxId: governmentId, total: '808.00' };
+  assert.deepEqual(
+    receiptRuleChecks(values, { amountInWords: 'แปดร้อยแปดบาทถ้วน' }).map(r => r.code),
+    ['tax_id_may_be_buyer'],
+  );
+  assert.deepEqual(
+    receiptRuleChecks({ ...values, taxId: TAX_ID }, { amountInWords: 'แปดร้อยแปดบาทถ้วน' }).map(r => r.code),
+    [],
+    'a shop ID with words that match is clean',
+  );
+  assert.deepEqual(
+    receiptRuleChecks({ ...values, taxId: TAX_ID, total: '880.00' }, { amountInWords: 'แปดร้อยแปดบาทถ้วน' }).map(r => r.code),
+    ['amount_words_differ'],
+  );
+  assert.deepEqual(
+    receiptRuleChecks({ taxId: TAX_ID }, { buyerTaxId: TAX_ID }).map(r => r.code),
+    ['tax_id_may_be_buyer'],
+    "the same ID as the buyer is the buyer's",
+  );
+  assert.equal(parseVisionReading('{"fields":{},"amountInWords":"แปดร้อยแปดบาทถ้วน"}').amountInWords, 'แปดร้อยแปดบาทถ้วน');
 });

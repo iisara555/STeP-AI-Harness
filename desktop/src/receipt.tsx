@@ -102,7 +102,7 @@ type OcrStatus = {
   /** A vision model may read the receipt image too (policy receiptVision, privacy checks off). */
   vision?: boolean;
 };
-type Vision = { fields: VisionReading; buyerTaxId: string; notes: string; model: string };
+type Vision = { fields: VisionReading; buyerTaxId: string; amountInWords: string; notes: string; model: string };
 type AiDecision = {
   field: string;
   status: 'keep' | 'suggested' | 'ambiguous' | 'unmapped';
@@ -138,7 +138,10 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
 // Checks that need no AI (src/receipt-vision.ts); amounts adding up is already one of the page's own review rules.
 const ruleText: Record<string, string> = {
   tax_id_checksum: 'เลขผู้เสียภาษีไม่ผ่านการตรวจเลขหลักสุดท้าย อาจอ่านผิดหนึ่งหลัก โปรดเทียบกับต้นฉบับ',
+  tax_id_may_be_buyer:
+    'เลขผู้เสียภาษีนี้อาจเป็นของผู้ซื้อ (เช่น มหาวิทยาลัย) ไม่ใช่ของร้าน ร้านบางแห่งเขียนเลขลูกค้าลงช่องผู้ออก โปรดตรวจกับต้นฉบับ',
   vat_not_7_percent: 'ภาษีมูลค่าเพิ่มไม่เท่ากับ 7% ของยอดก่อนภาษี โปรดตรวจตัวเลขทั้งสองช่อง',
+  amount_words_differ: 'ยอดเงินตัวอักษรไม่ตรงกับยอดรวมตัวเลข โปรดตรวจยอดรวมกับต้นฉบับ',
 };
 const describe = (issue: Issue) => {
   const text = issueText[issue.code];
@@ -250,7 +253,15 @@ export function ReceiptApp({
   }
   const matchOf = (k: string) =>
     vision ? compareField(k as ReceiptField, fields[k]?.value || '', vision.fields[k as ReceiptField]?.value || '') : undefined;
-  const rules = receiptRuleChecks(values as Partial<Record<ReceiptField, string>>).filter(r => ruleText[r.code]);
+  // The total in Thai words, from the AI's reading or an OCR line such as "แปดร้อยแปดบาทถ้วน".
+  const amountInWords =
+    vision?.amountInWords ||
+    records.map(r => String(r.text || '').replace(/\s/g, '')).find(text => /^[ก-๙()]+บาท(ถ้วน|ตัว|[ก-๙]+สตางค์)$/.test(text)) ||
+    '';
+  const rules = receiptRuleChecks(values as Partial<Record<ReceiptField, string>>, {
+    buyerTaxId: vision?.buyerTaxId,
+    amountInWords,
+  }).filter(r => ruleText[r.code]);
   const draft = () => ({
     schema: 'step-receipt-review/v1',
     filename: doc?.name,
@@ -308,6 +319,8 @@ export function ReceiptApp({
             'A vision model read the receipt image independently; each field is compared with the OCR. Human confirmation is still required.',
           model: vision.model,
           notes: vision.notes,
+          amount_in_words: vision.amountInWords,
+          buyer_tax_id: vision.buyerTaxId,
           fields: Object.fromEntries(
             review.fieldKeys.map(k => [k, { ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) }]),
           ),

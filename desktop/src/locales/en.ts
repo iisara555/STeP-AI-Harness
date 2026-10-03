@@ -1420,4 +1420,8 @@ export const en: Record<string, string> = {
     'The AI replied in a form that cannot be read. Have it read the image again, or use the OCR result',
   'แปลงภาพใบเสร็จเพื่อส่งให้ AI ไม่ได้ ลองบันทึกเป็น JPG หรือ PNG แล้วเลือกใหม่':
     'The receipt image could not be prepared for the AI. Save it as JPG or PNG and choose it again',
+  'เลขผู้เสียภาษีนี้อาจเป็นของผู้ซื้อ (เช่น มหาวิทยาลัย) ไม่ใช่ของร้าน ร้านบางแห่งเขียนเลขลูกค้าลงช่องผู้ออก โปรดตรวจกับต้นฉบับ':
+    'This tax ID may be the buyer’s (for example the university’s), not the shop’s; some shops write the customer’s ID in the issuer’s box. Check it against the original',
+  'ยอดเงินตัวอักษรไม่ตรงกับยอดรวมตัวเลข โปรดตรวจยอดรวมกับต้นฉบับ':
+    'The amount in words does not match the total in figures. Check the total against the original',
 };

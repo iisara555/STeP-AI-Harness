@@ -360,7 +360,7 @@
   }
 
   function findTaxId(records) {
-    const buyerMarker = /ชื่อลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
+    const buyerMarker = /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
     const buyerStart = records.findIndex((record) => buyerMarker.test(record.text));
     const sellerRecords = buyerStart < 0 ? records : records.slice(0, buyerStart);
     const buyerRecords = buyerStart < 0 ? [] : records.slice(buyerStart);

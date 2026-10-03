@@ -16,7 +16,12 @@ STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
   - **Only the AI read it:** the empty field takes the AI's value, unconfirmed and marked for checking against the image.
 - **The person still confirms:** nothing is ticked as checked for them; every field still needs "ตรวจแล้ว", and the AI's reading never approves anything.
 - **No OCR installed yet:** the page can read a receipt with the AI alone (one reading). Installing the OCR adds the second reading.
-- **Rule checks that need no AI:** the seller's 13-digit tax ID check digit and VAT at 7% of the amount before VAT are flagged as advisories, beside the existing amounts-add-up rule.
+- **Rule checks that need no AI**, flagged as advisories beside the existing amounts-add-up rule:
+  - the seller's 13-digit tax ID fails its check digit;
+  - the seller's tax ID looks like the buyer's: it equals the buyer ID the receipt names, or it is a government-body ID (0994…, such as a university's). Shops sometimes write the customer's ID in their own box, as on a real handwritten cash bill tested for this release;
+  - VAT is not 7% of the amount before VAT;
+  - the total written in Thai words (แปดร้อยแปดบาทถ้วน) does not match the total in figures.
+- **Cash bills:** the OCR treats a นามลูกค้า box as the buyer's section, so a tax ID written there is not taken as the seller's. The AI writes a book and receipt number together ("เล่ม 001 เลขที่ 005").
 - **Consent and policy:** the first image sent asks once. The draft JSON records the AI's reading and the per-field match under `vision_check`. Policy feature `receiptVision` (default on, and only with `vision` on) turns it off; with `checks.privacy` on, no receipt image is sent and only the earlier candidate-only AI filter remains.
 - **Shared rules and tests:** `desktop/src/receipt-vision.ts` holds the prompt, parsing and comparison, with unit tests. The Gemini API smoke reads a receipt image end to end against a fake Gemini API.
 
