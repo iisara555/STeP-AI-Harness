@@ -1542,6 +1542,115 @@ button.danger {
   user-select: none;
   pointer-events: none;
 }
+
+/* Contextual hand-drawn scenes. The single approved sheet is clipped in the renderer, so its captions never
+   enter the UI. Blend the paper away in both themes while keeping the drawing's pencil texture. */
+.section-art {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  width: 160px;
+  max-width: 100%;
+  aspect-ratio: 440 / 390;
+  flex-shrink: 0;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  user-select: none;
+}
+.section-art img {
+  position: absolute;
+  display: block;
+  width: 349.090909%;
+  max-width: none;
+  height: auto;
+}
+:root[data-theme='dark'] .section-art {
+  mix-blend-mode: screen;
+  filter: invert(1);
+  opacity: 0.86;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .section-art {
+    mix-blend-mode: screen;
+    filter: invert(1);
+    opacity: 0.86;
+  }
+}
+.welcome-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+.welcome-heading {
+  min-width: 0;
+}
+.welcome-illustration {
+  width: clamp(84px, 10vw, 140px);
+}
+.empty-illustration {
+  width: 170px;
+  margin: 0 auto 12px;
+}
+.receipt-illustration {
+  width: 190px;
+  margin: 0 auto 8px;
+}
+.settings-illustration {
+  width: 136px;
+}
+.skills-head {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.skills-controls {
+  flex: 1;
+  min-width: 0;
+}
+.skills-illustration {
+  width: 124px;
+}
+.browser-empty-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.browser-empty-intro > div {
+  min-width: 0;
+}
+.browser-illustration {
+  width: 100px;
+}
+@media (max-width: 1000px) {
+  .skills-head {
+    gap: 14px;
+  }
+  .skills-illustration,
+  .settings-illustration {
+    width: 96px;
+  }
+  .browser-illustration {
+    width: 76px;
+  }
+  .welcome-intro {
+    gap: 12px;
+  }
+}
+@media (max-height: 740px) {
+  .welcome-illustration {
+    width: 84px;
+  }
+  .receipt-illustration {
+    width: 140px;
+  }
+  .empty-illustration {
+    width: 130px;
+  }
+}
 :root[data-theme='dark'] .illustration {
   filter: invert(1);
   opacity: 0.88;

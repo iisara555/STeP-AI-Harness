@@ -3,6 +3,7 @@ import { Check, FolderOpen, LoaderCircle, Monitor, Moon, Plus, Settings2, Shield
 import { ConfirmDialog, ProviderFields, providerChoiceReady, initialChoice, type ProviderChoice } from './ui';
 import { explainError, providerLabel, shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
+import { SectionArt } from './illustration';
 import type { Connection, Snapshot } from './types';
 import { language, locale, t, teamName } from './i18n';
 
@@ -74,7 +75,11 @@ export function SettingsPanel({
           <h1>{t('พร้อมทำงาน ในแบบของคุณ')}</h1>
           <p className="muted">{t('ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา')}</p>
         </div>
-        <img className="illustration settings-art" src={teamworkArt} alt="" />
+        {page === 'ai' ? (
+          <SectionArt scene="connections" className="settings-illustration" />
+        ) : (
+          <img className="illustration settings-art" src={teamworkArt} alt="" />
+        )}
       </div>
       <div className="settings-tabs" role="tablist" aria-label={t('หมวดการตั้งค่า')}>
         {pages.map(([id, label, Icon]) => (

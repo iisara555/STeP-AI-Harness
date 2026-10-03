@@ -52,9 +52,8 @@ import {
 } from './ui';
 import symbolColour from './assets/step-symbol-colour.svg';
 import symbolWhite from './assets/step-symbol-mono-white.svg';
-import launchArt from './assets/illustrations/launch.png';
-import draftingArt from './assets/illustrations/drafting.png';
 import ideaArt from './assets/illustrations/idea.png';
+import { SectionArt } from './illustration';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
@@ -1223,16 +1222,20 @@ export default function App() {
                 )}
                 {!session?.messages.length && (
                   <div className="welcome">
-                    <img className="illustration welcome-art" src={launchArt} alt="" />
-                    <p className="greet">
-                      {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
-                      {myTeamName ? ` · ${myTeamName}` : ''}
-                    </p>
-                    <h1>
-                      {t('ให้ AI ร่างงานหนัก')}
-                      <br />
-                      <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
-                    </h1>
+                    <div className="welcome-intro">
+                      <div className="welcome-heading">
+                        <p className="greet">
+                          {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
+                          {myTeamName ? ` · ${myTeamName}` : ''}
+                        </p>
+                        <h1>
+                          {t('ให้ AI ร่างงานหนัก')}
+                          <br />
+                          <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
+                        </h1>
+                      </div>
+                      <SectionArt scene="chat" className="welcome-illustration" />
+                    </div>
                     <p className="suggestions-label">
                       {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
                     </p>
@@ -2009,7 +2012,7 @@ export default function App() {
                 </header>
                 {!session ? (
                   <div className="artifact-empty">
-                    <img className="illustration empty-art" src={draftingArt} alt="" />
+                    <SectionArt scene="workspace" className="empty-illustration" />
                     <h2>{t('พื้นที่สำหรับร่างของคุณ')}</h2>
                     <p>
                       {t('เมื่อ AI จัดทำร่างแล้ว')}
