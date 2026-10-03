@@ -1554,6 +1554,7 @@ button.danger {
   aspect-ratio: 440 / 390;
   flex-shrink: 0;
   mix-blend-mode: multiply;
+  filter: contrast(1.12);
   pointer-events: none;
   user-select: none;
 }
@@ -1564,15 +1565,19 @@ button.danger {
   max-width: none;
   height: auto;
 }
+.section-art:is([data-scene='chat'], [data-scene='workspace'], [data-scene='skills']) {
+  /* The upper-row captions sit in this otherwise empty corner; preserve the drawing above and beside it. */
+  clip-path: polygon(0 7%, 45% 7%, 45% 0, 100% 0, 100% 100%, 0 100%);
+}
 :root[data-theme='dark'] .section-art {
   mix-blend-mode: screen;
-  filter: invert(1);
+  filter: invert(1) contrast(1.12);
   opacity: 0.86;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-theme='system'] .section-art {
     mix-blend-mode: screen;
-    filter: invert(1);
+    filter: invert(1) contrast(1.12);
     opacity: 0.86;
   }
 }
@@ -1585,6 +1590,12 @@ button.danger {
 }
 .welcome-heading {
   min-width: 0;
+}
+.app .welcome h1 {
+  font-size: clamp(25px, 2.1vw, 30px);
+}
+.welcome .greet {
+  margin: 0 0 12px;
 }
 .welcome-illustration {
   width: clamp(84px, 10vw, 140px);

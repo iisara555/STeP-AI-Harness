@@ -1,7 +1,7 @@
 import sheet from './assets/illustrations/section-art-sheet.png';
 
-// Viewports into the approved artwork keep all six scenes on one cached image. Presentation labels stay outside
-// these bounds; the drawings are decorative, with the surrounding headings providing their meaning.
+// Viewports into the approved artwork keep all six scenes on one cached image. CSS corner masks exclude the
+// presentation labels; the drawings are decorative, with the surrounding headings providing their meaning.
 const scenes = {
   chat: [35, 166],
   workspace: [545, 166],
