@@ -553,6 +553,23 @@ npm run desktop:start
 
 รายละเอียด packaging และข้อจำกัดของ Electron build อยู่ใน [desktop/README.md](desktop/README.md)
 
+## STeP Skills ใน Claude Code / Claude Desktop (plugin)
+
+ใช้ Skills และกติกาของ STeP ใน Claude ได้โดยไม่ต้องติดตั้ง STeP Desktop หรือรันตัวติดตั้ง CLI ใน Claude Code พิมพ์:
+
+```text
+/plugin marketplace add iisara555/STeP-AI-Harness
+/plugin install step@step-ai
+```
+
+- เรียก Skill ด้วย `/step:<ชื่อ>` เช่น `/step:meeting-summary` หรือพิมพ์งานตามปกติให้ Claude เลือกเอง
+- ทุกแชตเริ่มด้วยกติกาของ STeP: มนุษย์อนุมัติ ข้อมูลส่วนบุคคล ความลับ การเขียน และที่เก็บไฟล์ผลงาน
+- ต้องมีสิทธิ์อ่าน repository นี้บน GitHub
+- อัปเดตด้วย `/plugin marketplace update step-ai`
+- โฟลเดอร์ที่ติดตั้งด้วย `step-ai install` แล้ว ไม่ต้องติดตั้ง plugin ซ้ำ จะได้ไม่มี Skill สองชุด
+
+ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ)
+
 ## Legacy CLI / folder workflow
 
 CLI, `START-HERE.md`, `Install-STeP-AI.bat`, `Install-STeP-AI.command`, privacy preflight scripts และ workflow แบบเปิดโฟลเดอร์ด้วย AI client ยังอยู่เพื่อรองรับ pilot/legacy use case

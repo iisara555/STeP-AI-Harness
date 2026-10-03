@@ -1,0 +1,227 @@
+version: 1
+
+# Playbooks are lightweight multi-skill flows for composite work.
+# They do not replace Skills, Processes, Authority, or human approval.
+playbooks:
+  - id: tor-to-project-plan
+    name: "TOR → Project Plan"
+    clarificationLabel: "แปลง TOR เป็นแผนโครงการ"
+    owner: pm
+    consumers: ["*"]
+    description: "แปลง TOR หนึ่งฉบับต่อหนึ่ง run เป็น Action Plan/WBS, milestones, dependencies, budget categories และแผนงานพร้อม Google Sheet/XLSX + Gantt"
+    sourcePolicy: one-tor-per-run
+    factPolicy: facts-and-assumptions-separated
+    budgetPolicy: source-only-no-auto-allocation
+    schedulePolicy: source-dates-first
+    parameters: [contract-start, event-start, event-end, contract-end]
+    outputSchema: project-master-plan-v1
+    specPath: docs/tor-to-project-plan.md
+    requiredSignals: [source]
+    minSignals: 3
+    signals:
+      source: [tor, terms of reference, ขอบเขตของงาน]
+      planning: [แตกกิจกรรม, กิจกรรม, แตกเป็นแผนงาน, แผนงาน, action plan, project plan, wbs, work breakdown, แตกงาน]
+      budget: [งบประมาณ, budget, cost, ค่าใช้จ่าย]
+      schedule: [ระยะเวลา, timeline, gantt, grantt, milestone, แผนงาน]
+      spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง]
+    steps:
+      - id: review-source
+        type: skill
+        skill: tor-review
+        description: "อ่าน TOR ทีละฉบับและสกัด TOR Facts แยกจาก Planning Assumptions พร้อม scope, deliverables, constraints, source dates, budget facts และ missing information"
+        produces: [source-facts, planning-assumptions, requirements, deliverables, constraints, project-parameters, missing-information]
+      - id: build-plan
+        type: skill
+        skill: project-plan
+        description: "แตก TOR Facts เป็น Action Plan/WBS พร้อม owner, milestone, dependency, approval gate, deliverable, budget category และ timeline โดยไม่แต่งงบหรือตั้งวันที่เป็นข้อเท็จจริง"
+        consumes: [source-facts, planning-assumptions, requirements, deliverables, constraints, project-parameters, missing-information]
+        produces: [wbs, activities, owners, milestones, dependencies, approval-gates, deliverables-plan, budget-categories, timeline]
+      - id: create-spreadsheet
+        type: action
+        action: spreadsheet-project-plan
+        when: spreadsheet
+        preferredTool: google-sheets
+        fallback: xlsx
+        capability: spreadsheet-write
+        actionSpecPath: docs/spreadsheet-project-plan.md
+        completionCriteria: output-reference-required
+        description: "สร้าง Project Parameters + Project Master Plan + Gantt ตาม Action Contract; ถ้าไม่มี Google Sheets ให้ fallback เป็น XLSX และห้าม claim ว่าสร้างไฟล์สำเร็จหากยังไม่มี output reference จริง"
+        consumes: [wbs, activities, owners, milestones, dependencies, approval-gates, deliverables-plan, budget-categories, timeline, project-parameters]
+        produces: [project-master-plan-sheet, gantt-view]
+
+  - id: meeting-to-action-plan
+    name: "Meeting → Action Plan"
+    clarificationLabel: "ต่อยอดบันทึกประชุมเป็นแผนงาน"
+    owner: pm
+    consumers: ["*"]
+    description: "เปลี่ยนบันทึกประชุมเป็น Action Items แล้วต่อเป็นแผนงาน/Timeline/Spreadsheet เมื่อผู้ใช้ต้องการหลายขั้น"
+    requiredSignals: [source]
+    minSignals: 3
+    signals:
+      source: [ประชุม, meeting, minutes, บันทึกประชุม]
+      action: [action plan, action item, สิ่งที่ต้องทำต่อ, งานที่ต้องทำ, ผู้รับผิดชอบ, owner]
+      planning: [project plan, แผนงาน, แตกงาน, milestone]
+      schedule: [timeline, deadline, due date, ระยะเวลา, gantt]
+      spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง]
+    steps:
+      - id: summarize-meeting
+        type: skill
+        skill: meeting-summary
+        description: "สรุป Decision / Action / Owner / Due date / Open issue จากการประชุม"
+        produces: [decisions, actions, owners, due-dates, open-issues]
+      - id: build-action-plan
+        type: skill
+        skill: project-plan
+        description: "จัด Action Items เป็นแผนงานที่มี action, owner/รอยืนยัน, due date/รอยืนยัน, source reference, status, dependency, milestone และ timeline"
+        consumes: [decisions, actions, owners, due-dates, open-issues]
+        produces: [activities, actions, owners, due-dates, source-references, statuses, milestones, dependencies, timeline]
+      - id: create-action-sheet
+        type: action
+        action: spreadsheet-action-plan
+        when: spreadsheet
+        preferredTool: google-sheets
+        fallback: xlsx
+        actionSpecPath: docs/action-verification.md
+        completionCriteria: output-reference-required
+        description: "สร้าง Action Tracker / Timeline / Gantt จากแผนที่ได้"
+        consumes: [activities, actions, owners, due-dates, source-references, statuses, milestones, dependencies, timeline]
+        produces: [action-plan-sheet]
+
+  - id: iso-audit-readiness-flow
+    name: "ISO Audit Readiness"
+    clarificationLabel: "เตรียมความพร้อมตรวจ ISO หลายด้าน"
+    owner: qs
+    consumers: ["*"]
+    description: "ประสานหลายทักษะ ISO/QMS เมื่อผู้ใช้ต้องเตรียม audit หลายด้านในคำขอเดียว"
+    requiredSignals: [audit]
+    minSignals: 3
+    signals:
+      audit: [external audit, internal audit, iso 9001, surveillance audit, recertification, audit readiness]
+      evidence: [evidence matrix, หลักฐาน audit, รายการหลักฐาน, pbc]
+      documents: [document control, record control, revision, obsolete document, ควบคุมเอกสาร]
+      interview: [mock audit, audit interview, ซ้อมตอบ auditor, ซ้อม audit]
+      performance: [quality objective, kpi iso, ตัวชี้วัดคุณภาพ, risk opportunity, qms risk]
+      capa: [ncr, capa, corrective action, nonconformity, nc audit]
+      management: [management review, qmr, ทบทวนฝ่ายบริหาร]
+    steps:
+      - id: readiness-baseline
+        type: skill
+        skill: iso9001-audit-readiness
+        description: "ยืนยัน scope/criteria/process owner และสร้าง readiness baseline"
+        produces: [audit-scope, process-profile, readiness-gaps]
+      - id: evidence-matrix
+        type: skill
+        skill: audit-evidence-matrix
+        when: evidence
+        consumes: [audit-scope, process-profile]
+        produces: [evidence-matrix, evidence-gaps]
+      - id: document-control
+        type: skill
+        skill: document-record-control
+        when: documents
+        consumes: [audit-scope, process-profile]
+        produces: [document-record-gaps]
+      - id: interview-coaching
+        type: skill
+        skill: audit-interview-coach
+        when: interview
+        consumes: [process-profile, evidence-matrix]
+        produces: [interview-readiness]
+      - id: qms-performance
+        type: skill
+        skill: quality-objective-kpi-review
+        when: performance
+        consumes: [process-profile]
+        produces: [objective-kpi-gaps]
+      - id: capa-review
+        type: skill
+        skill: ncr-capa
+        when: capa
+        consumes: [readiness-gaps, evidence-gaps]
+        produces: [capa-actions]
+      - id: management-review
+        type: skill
+        skill: management-review-prep
+        when: management
+        consumes: [readiness-gaps, objective-kpi-gaps, capa-actions]
+        produces: [management-review-pack]
+
+  - id: skill-to-pilot
+    name: "Skill → Pilot"
+    clarificationLabel: "พัฒนาทักษะผู้ช่วยใหม่แล้วทดลองใช้งาน"
+    owner: ai-admin
+    consumers: ["*"]
+    description: "เปลี่ยนความต้องการ Skill ใหม่/การปรับ Skill เป็น Skill Contract, repo change set และ evidence review ก่อนเข้าสู่ Pilot โดยไม่เพิ่ม Layer หรือ auto-approve"
+    requiredSignals: [skill]
+    minSignals: 1
+    signals:
+      skill: [create skill, add skill, สร้าง skill, สร้างสกิล, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring]
+      implementation: [ลง repo, แก้ repo, implement, register, registry, router, manifest, commit, pull request]
+      pilot: [pilot, test, eval, validation, พร้อมใช้, production ready, production-ready, ทดลองใช้]
+    steps:
+      - id: author-skill
+        type: skill
+        skill: step-skill-authoring
+        description: "ทำ Need Gate และสร้าง Skill Contract พร้อม Trigger/Anti-trigger, Source, Authority, Handoff, Context Budget และ Eval plan"
+        produces: [need-classification, skill-contract, skill-draft, registry-plan, eval-plan, known-gaps]
+      - id: implement-skill
+        type: skill
+        skill: coding-git-workflow
+        when: implementation
+        description: "นำ approved design ไปแก้ไฟล์ที่จำเป็นแบบ minimal diff พร้อม registry/router/tests โดยรักษาการเปลี่ยนแปลงเดิมของผู้อื่น"
+        consumes: [skill-contract, skill-draft, registry-plan, eval-plan, known-gaps]
+        produces: [repo-change-set, validation-results]
+      - id: verify-pilot
+        type: skill
+        skill: evidence-before-approval
+        when: pilot
+        description: "ตรวจ claim ว่า Skill พร้อม Pilot จากไฟล์จริง dependency, routing/collision/source/authority eval และ known gaps; ถ้าหลักฐานไม่ครบให้คงสถานะ PARTIAL/UNVERIFIED"
+        consumes: [skill-contract, repo-change-set, validation-results, eval-plan, known-gaps]
+        produces: [pilot-readiness-evidence, remaining-gaps]
+
+
+  - id: brief-to-run-of-show
+    name: "Agenda to Run of Show"
+    clarificationLabel: "แปลงกำหนดการเป็นรันคิวเวที"
+    owner: cc
+    consumers: [cc, eic, crm, imo, nmco, ga]
+    description: "แปลงกำหนดการหรือบรีฟงานหนึ่งงานต่อหนึ่ง run เป็น Run of Show ระดับคิว พร้อม lane จอ เสียง แสง เวที ผู้รับผิดชอบรายคิว และออกเป็น Google Sheet หรือ XLSX"
+    sourcePolicy: one-event-per-run
+    factPolicy: facts-and-assumptions-separated
+    timePolicy: source-times-first-no-silent-correction
+    enumPolicy: scene-codes-require-confirmation
+    piiPolicy: no-contact-details-in-sheet
+    outputSchema: run-of-show-v1
+    specPath: docs/event-run-of-show.md
+    requiredSignals: [source, spreadsheet]
+    minSignals: 3
+    signals:
+      source: [กำหนดการ, agenda, บรีฟงาน, rundown, sequence, ลำดับงาน, tor, คิวเดิม]
+      sequencing: [รันคิว, run of show, run-of-show, คิวงาน, คิวเวที, ลำดับเวที, cue sheet, สคริปต์เวที, ซ้อมใหญ่, run through, นาทีต่อนาที]
+      lanes: [แสงเสียง, คิวจอ, คิวเสียง, คิวไฟ, ขึ้นจอ, light, sound, av, สไลด์ขึ้นจอ, จอซ้าย, จอขวา]
+      ownership: [ผู้รับผิดชอบ, lead, ใครดูแล, staff, ทีมงาน, คนคุมคิว]
+      spreadsheet: [google sheet, google sheets, spreadsheet, ชีต, ตาราง, xlsx]
+    steps:
+      - id: read-source
+        type: skill
+        skill: document-review
+        description: "อ่านกำหนดการ บรีฟ หรือ sequence เดิม แยกข้อเท็จจริงที่ยืนยันแล้วออกจาก placeholder ระบุ block ที่ยังไม่มีเวลา ไม่มีเจ้าของ หรือยังรอคอนเฟิร์ม"
+        produces: [event-facts, agenda-blocks, placeholders, missing-information]
+      - id: build-sequence
+        type: skill
+        skill: event-run-of-show
+        description: "แตก block เป็น cue ตาม Lane Contract กำหนด lane จอ เสียง แสง เวที ผู้รับผิดชอบรายคิว ตรวจผลรวมเวลาและ Timer แล้วติดป้าย provenance ทุกค่า"
+        consumes: [event-facts, agenda-blocks, placeholders, missing-information]
+        produces: [show-parameters, cue-list, lane-assignments, cue-enums, open-items, provenance-labels]
+      - id: create-run-of-show-sheet
+        type: action
+        action: spreadsheet-run-of-show
+        when: spreadsheet
+        preferredTool: google-sheets
+        fallback: xlsx
+        capability: spreadsheet-write
+        actionSpecPath: docs/spreadsheet-run-of-show.md
+        completionCriteria: output-reference-required
+        description: "สร้าง Show Parameters, Run of Show, Cue Enums และ Open Items ตาม Action Contract ถ้าไม่มี Google Sheets ให้ fallback เป็น XLSX และห้าม claim ว่าสร้างไฟล์สำเร็จหากยังไม่มี output reference จริง"
+        consumes: [show-parameters, cue-list, lane-assignments, cue-enums, open-items, provenance-labels]
+        produces: [run-of-show-sheet, cue-enums-sheet, open-items-sheet]

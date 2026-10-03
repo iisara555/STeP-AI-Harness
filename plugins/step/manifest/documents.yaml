@@ -1,0 +1,517 @@
+version: 1
+description: Official STeP Controlled Document Registry — Policies, SOPs, Rules, and Templates
+
+documents:
+  procurement-policy:
+    title: "นโยบายและหลักเกณฑ์การจัดซื้อจัดจ้างและการบริหารพัสดุ STeP"
+    owner: afp
+    type: policy
+    process: procurement.tor
+    sourceLevel: organization-policy
+    authority: unverified
+    verification: afp-not-provided-2026-09-25
+    status: not-provided
+    workingSubstitute: afp-regulation-hierarchy
+
+
+  finance-disbursement-policy:
+    title: "นโยบาย/แนวปฏิบัติการเบิกจ่ายและชุดเอกสารประกอบปัจจุบันของ STeP/CMU"
+    owner: afp
+    type: policy
+    process: procurement.request
+    sourceLevel: organization-policy
+    authority: unverified
+    verification: afp-not-provided-2026-09-25
+    status: not-provided
+    workingSubstitute: afp-regulation-hierarchy
+
+  # AFP ไม่ได้ส่งนโยบายฉบับ STeP (25 ก.ย. 2569) — ใช้ลำดับชั้นระเบียบของหน่วยงานเหนือขึ้นไป (มช.) เป็นกรอบ
+  afp-regulation-hierarchy:
+    title: "ลำดับชั้นระเบียบงานการเงินและพัสดุ (ฉบับทำงาน — มีแต่ชื่อฉบับ ไม่มีเนื้อความ)"
+    path: docs/afp-regulation-hierarchy.md
+    owner: afp
+    type: working-index
+    process: procurement.request
+    sourceLevel: derived-working-reference
+    authority: derived-from-public-titles
+    verification: titles-identified-2026-09-25-text-not-in-harness
+    status: active-reference
+
+  qs-doc-control-procedure:
+    title: "QP-DC-001 การควบคุมเอกสารและข้อมูล"
+    owner: qs
+    type: quality-procedure
+    process: quality.document-control
+    version: "06"
+    effectiveDate: "2026-04-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  data-classification-rule:
+    title: "ระเบียบการจำแนกชั้นความลับและการคุ้มครองข้อมูลส่วนบุคคล (PDPA)"
+    owner: qs
+    type: rule
+    process: quality.data-privacy
+    version: "1.0"
+    path: rules/data-classification.md
+    status: active
+
+  human-approval-rule:
+    title: "เกณฑ์การขอความเห็นชอบและการอนุมัติโดยบุคลากรผู้มีอำนาจ (Human-in-the-loop)"
+    owner: ga
+    type: rule
+    process: procurement.tor
+    version: "1.2"
+    path: rules/human-approval.md
+    status: active
+
+  secret-safety-rule:
+    title: "แนวปฏิบัติความปลอดภัยด้านความลับและ Credentials ในการพัฒนาซอฟต์แวร์"
+    owner: developer
+    type: rule
+    process: engineering.code-delivery
+    version: "1.1"
+    path: rules/secret-safety.md
+    status: active
+
+  step-brand-ci-guideline:
+    title: "STeP Corporate Identity Manual Digest (โลโก้ สี และการใช้งาน)"
+    owner: cc
+    type: organization-guideline
+    process: creative.branding
+    sourceLevel: organization-policy
+    authority: unverified
+    verification: pending-cc-confirmation
+    status: provided-unverified
+    publicationDate: "2021-02-18"
+    receivedDate: "2026-09-20"
+    sourceFile: "STeP Corporate Idenity Manual Digest.pdf"
+    sourceSha256: "07773e1140b24f8d23fe14c073e08bb04630555a7cfba7e79bc36e9eeb8dac7a"
+    index: skills/common/step-brand/references/ci-manual-digest.md
+    digitalPaletteVerification: user-confirmed
+    digitalPaletteConfirmedDate: "2026-09-20"
+    digitalPaletteConfirmation: "ผู้ใช้ยืนยัน Yellow #FFC709 และ Dark #231F20 เพื่อแก้ conflict หน้า 3; ไม่ใช่การยืนยัน CMYK หรือสถานะคู่มือทั้งฉบับ"
+    note: "ได้รับ digest 5 หน้า มี logo construction/clear space, variants/backgrounds และ minimum height 8 mm สำหรับ full lockup และ symbol; ไม่ระบุ revision, effective date, typography หรือ co-branding; ยังรอ CC ยืนยันฉบับปัจจุบันและสีพิมพ์ เก็บ PDF ต้นฉบับนอก repo"
+
+  step-writing-rule:
+    title: "คู่มือมาตรฐานการเขียนและการใช้ภาษาไทยสำหรับสื่อสารองค์กร STeP"
+    owner: cc
+    type: rule
+    process: creative.branding
+    version: "1.0"
+    path: rules/step-writing.md
+    status: active
+
+  naming-convention-rule:
+    title: "มาตรฐานการตั้งชื่อไฟล์ รหัสโครงการ และเวอร์ชันเอกสาร"
+    owner: qs
+    type: rule
+    process: quality.document-control
+    version: "1.0"
+    path: rules/naming.md
+    status: active
+
+  tor-template:
+    title: "แบบฟอร์มมาตรฐานร่างขอบเขตของงาน (TOR) พัสดุ"
+    owner: afp
+    type: template
+    process: procurement.tor
+    version: "2026.1"
+    status: active
+
+  creative-brief-template:
+    title: "แบบฟอร์ม Creative Brief สำหรับสั่งงานออกแบบและผลิตสื่อ"
+    owner: cc
+    type: template
+    process: creative.branding
+    version: "1.0"
+    status: active
+
+  browser-credential-safety-rule:
+    title: "แนวปฏิบัติการจดจำ Login และ Credential สำหรับ Browser Automation"
+    owner: ga
+    type: rule
+    process: governance.facility-booking
+    version: "1.0"
+    path: rules/browser-credential-safety.md
+    status: pilot
+
+
+  afp-operational-circulars:
+    title: 'แนวปฏิบัติงาน AFP: Lead Time, หมวดค่าใช้จ่าย และ E-Signature'
+    path: docs/afp-operational-circulars.md
+    owner: afp
+    documentType: team-circular
+    effectiveDate: '2026-09-01'
+    source: อีเมลแจ้งเวียนจาก finance@step.cmu.ac.th และ procurement@step.cmu.ac.th
+    summary: >-
+      Lead Time งานการเงินและงานพัสดุ หมวดค่าใช้จ่าย B/BV/B9.2
+      การจ้างเหมารถตู้ ค่าตอบแทนวิทยากร ข้อควรระวังการยืมเงิน
+      E-Signature ใน STeP MIS และเงินชดเชยคอมพิวเตอร์พกพา
+  cc-iso-document-register:
+    title: ทะเบียนเอกสารระบบคุณภาพ ทีม CC (ISO Document Register)
+    path: docs/cc-iso-document-register.md
+    owner: qs
+    documentType: team-circular
+    effectiveDate: '2026-09-01'
+    source: อีเมลแจ้งเวียนจาก iso@step.cmu.ac.th
+    summary: >-
+      แบบฟอร์มและขั้นตอนระบบคุณภาพของทีม CC ที่บังคับใช้ปัจจุบัน
+      รายการเอกสารที่ถูกยกเลิก และกฎว่าต้องดาวน์โหลดจาก STeP MIS เท่านั้น
+      เพื่อป้องกันการใช้เอกสารผิด Revision
+
+  # ผังผู้บริหาร: สร้างจาก manifest/organization.yaml → executiveOversight (test/executive-board-document.test.js ตรวจว่าตรงกัน)
+  step-executive-board:
+    title: "คณะผู้บริหาร STeP และผู้กำกับดูแลแต่ละทีม (ผู้อำนวยการ รองผู้อำนวยการ ผู้ช่วยผู้อำนวยการ ผู้จัดการ)"
+    path: docs/step-executive-board.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: owner-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-09-20"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันตำแหน่งและการกำกับร่วม 2026-09-20; ตรวจทานได้จาก https://www.step.cmu.ac.th/executive"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "ชื่อและตำแหน่งผู้บริหารที่เผยแพร่บนเว็บไซต์ STeP (OIT O2) ไม่มีช่องทางติดต่อส่วนบุคคล"
+    note: "ผังการกำกับดูแล ไม่ใช่อำนาจอนุมัติ (ดู manifest/authority.yaml); เมื่อผังเปลี่ยนให้แก้ organization.yaml และเอกสารนี้พร้อมกัน"
+
+  # เอกสารความรู้องค์กรใน docs/ ที่ผู้ดูแลยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ (2026-10-02)
+  step-teams-directory:
+    title: "รายชื่อ 22 ทีมของ STeP และ RSP North กลุ่มงาน 5 กลุ่ม และขอบเขตการทำงานร่วมกับ AI"
+    path: docs/teams.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "ชื่อทีม หน้าที่ และกลุ่มงาน ไม่มีข้อมูลรายบุคคล"
+
+  step-public-profile:
+    title: "ข้อมูลทั่วไปของ STeP จากแหล่งสาธารณะ (พันธกิจ บริการ ช่องทางทางการ)"
+    path: docs/step-public-profile.md
+    owner: cc
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: derived-from-public-sources
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "รวบรวมจากเว็บไซต์ทางการสาธารณะของ STeP"
+    note: "ข้อมูลสาธารณะไม่ใช่สิทธิ์อนุมัติและไม่แทนการยืนยันจากเจ้าของกระบวนการ"
+
+  project-code-scheme:
+    title: "โครงสร้างรหัสโครงการ (Project Code) ปีงบประมาณ 2569–2570"
+    path: docs/project-code-scheme.md
+    owner: afp
+    type: working-index
+    sourceLevel: derived-working-reference
+    authority: unverified
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "เก็บเฉพาะโครงสร้างรหัส ไม่มีรายชื่อคู่สัญญาหรือผู้ประกอบการ"
+    note: "เจ้าของตารางยังไม่ยืนยันอย่างเป็นทางการ ต้องยืนยันกับ AFP/SIT ก่อนใช้ผูกกับระบบการเงิน"
+
+  step-context:
+    title: "บริบทองค์กร STeP โดยสังเขป (หน่วยงาน งานหลัก ผู้รับสาร)"
+    path: docs/step-context.md
+    owner: ga
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "บริบทระดับกว้าง ไม่มีข้อมูลรายบุคคล"
+    note: "ไม่ใช่แหล่งอ้างอิงแทนเว็บไซต์ทางการ ระเบียบ มติ หรือเอกสารโครงการล่าสุด"
+
+  step-ai-employee-guide:
+    title: "คู่มือการใช้งาน STeP AI สำหรับพนักงาน"
+    path: docs/employee-guide.md
+    owner: developer
+    type: organization-guideline
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-confirmed-current
+    status: active-reference
+    confirmedDate: "2026-10-02"
+    confirmedBy: "ผู้ดูแล STeP AI ยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ 2026-10-02"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "วิธีใช้แอป ไม่มี credential หรือข้อมูลรายบุคคล"
+
+  # --- STeP Quality Layer v0.1 ---
+  hr-service-channels:
+    title: "ระบบและช่องทางติดต่อฝ่ายบุคคล งานด้านบุคคลของทีม HD (HR Service Channels)"
+    owner: hd
+    type: internal-practice
+    process: people.personnel-welfare
+    version: "2569"
+    sourceLevel: team-circular
+    authority: team-communicated-practice
+    verification: derived-from-hd-circulars
+    status: active
+    confirmedBy: "รวบรวมจากอีเมลแจ้งเวียนของ hr@step.cmu.ac.th ปี 2568-2569 ผู้ดูแล STeP AI อนุมัติให้บันทึก 2026-09-24"
+    index: docs/hr-service-channels.md
+    contentInRepo: true
+    sensitivity: internal-published
+    sensitivityReason: "ชื่อระบบและขั้นตอนที่ทีม HD แจ้งเวียนถึงพนักงานทุกคน ไม่มี credential และไม่มีข้อมูลรายบุคคล"
+    disclosureApprovedBy: "ผู้ดูแล STeP AI ยืนยัน 2026-09-24"
+    note: "แนวปฏิบัติระดับทีม ไม่ใช่ประกาศตราครุฑ เปลี่ยนได้โดยไม่ต้องออกประกาศใหม่ ถ้าขัดกับประกาศให้ยึดประกาศเป็นหลัก; ห้ามเก็บ URL ของ SharePoint รายทีม บัญชีผู้ใช้ หรือคำร้องรายบุคคล"
+
+  hr-personnel-welfare-2569:
+    title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคล และสวัสดิการพนักงาน พ.ศ. 2569"
+    owner: hd
+    type: organization-announcement
+    process: people.personnel-welfare
+    version: "2569"
+    announcedDate: "2026-09-23"
+    effectiveDate: "2026-10-01"
+    effectiveDateSource: "ข้อ 2 ของประกาศ: ใช้บังคับตั้งแต่วันที่ 1 ตุลาคม 2569"
+    supersedes: hr-personnel-welfare-2566
+    legalBasis: "ข้อ 18 ข้อ 30 และข้อ 32 ของข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 ประกอบมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 1/2569 เมื่อ 21 พฤษภาคม 2569"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: owner-confirmed-current
+    status: active
+    confirmedBy: "ได้รับไฟล์ประกาศฉบับลงนามจากผู้ดูแล STeP AI 2026-09-23"
+    index: docs/hr-personnel-welfare-index.md
+    contentInRepo: false
+    sensitivity: internal-published
+    sensitivityReason: "ประกาศตราครุฑที่ลงนามและประกาศใช้กับบุคลากรทั้งองค์กร HD อนุมัติให้เก็บสาระสำคัญพร้อมอัตราและจำนวนวันไว้ใน repository ได้"
+    disclosureApprovedBy: "HD (เจ้าของเอกสาร) ยืนยัน 2026-09-23"
+    note: "ดัชนีเก็บหัวข้อ อัตรา และจำนวนวันตามประกาศ ตอบอ้างเลขข้อได้ แต่ไม่ใช่สำเนาฉบับเต็ม ถ้อยคำบังคับและการตีความเฉพาะกรณีต้องเปิดฉบับจริงจาก HD; ข้อมูลรายบุคคล (เงินเดือนจริง วันลาคงเหลือ ผลประเมิน) ยังห้ามเข้า repository ตามข้อ 5.1.14"
+
+  hr-personnel-welfare-2566:
+    title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคลและสวัสดิการพนักงาน พ.ศ. 2566"
+    owner: hd
+    type: organization-announcement
+    process: people.personnel-welfare
+    version: "2566"
+    effectiveDate: "2023-01-26"
+    effectiveDateSource: "ชื่อไฟล์ต้นฉบับ (20230126); หน้าลงนามไม่ปรากฏในไฟล์ที่ได้รับ"
+    legalBasis: "ข้อ 18 แห่งข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 และมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 2/2565 เมื่อ 6 ธันวาคม 2565"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: superseded
+    status: superseded
+    supersededBy: hr-personnel-welfare-2569
+    supersededDate: "2026-10-01"
+    supersededNote: "ยกเลิกโดยข้อ 3 ของประกาศฯ ฉบับ พ.ศ. 2569 ใช้อ้างอิงได้เฉพาะเหตุการณ์ก่อน 1 ตุลาคม 2569"
+    contentInRepo: false
+    sensitivity: restricted
+    sensitivityReason: "เอกสารแนบท้ายมีตารางเงินเดือนต่ำสุด/สูงสุด ค่าความเชี่ยวชาญ และสิทธิ์ค่ารักษาพยาบาลรายตำแหน่ง"
+    note: "ฉบับถูกยกเลิกแล้ว เลขข้อไม่ตรงกับฉบับ 2569 (เช่น ข้อวินัยรักษาความลับ 5.1.16 -> 5.1.14) ห้ามใช้ตอบสิทธิปัจจุบัน"
+
+  step-career-path-2569:
+    title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย เส้นทางความก้าวหน้าในสายอาชีพ (Career path) ของอุทยานฯ"
+    owner: hd
+    type: organization-announcement
+    process: people.personnel-welfare
+    version: "2569"
+    announcedDate: "2026-09-23"
+    legalBasis: "ข้อ 18 แห่งข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารหน่วยงานของส่วนงานวิชาการและส่วนงานวิชาการภายในของมหาวิทยาลัย พ.ศ. 2555 และมติที่ประชุมคณะกรรมการอำนวยการอุทยานฯ ครั้งที่ 1/2569 เมื่อ 21 พฤษภาคม 2569"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: owner-confirmed-current
+    status: active
+    confirmedBy: "ได้รับไฟล์ประกาศฉบับลงนามจากผู้ดูแล STeP AI 2026-09-23"
+    index: docs/career-path-index.md
+    contentInRepo: false
+    sensitivity: internal-published
+    sensitivityReason: "ประกาศตราครุฑที่ลงนามและประกาศใช้กับบุคลากรทั้งองค์กร HD อนุมัติให้เก็บตารางขั้นพร้อมอัตราเงินเดือนและค่าตำแหน่งไว้ใน repository ได้"
+    disclosureApprovedBy: "HD (เจ้าของเอกสาร) ยืนยัน 2026-09-23"
+    note: "ฉบับ 2569 แยกออกจากเอกสารแนบท้ายของประกาศหลักเกณฑ์บริหารงานบุคคลฯ เป็นประกาศเอกเทศ ดัชนีเก็บตารางขั้น อัตราเงินเดือน ค่าความเชี่ยวชาญ/ค่าตำแหน่ง และผู้มีอำนาจอนุมัติ; ข้อมูลรายบุคคล (ใครอยู่ขั้นไหน ได้เท่าไหร่) ยังห้ามเข้า repository ตามข้อ 5.1.14"
+
+  iso-9001-2015:
+    title: "ISO 9001:2015 Quality management systems — Requirements"
+    owner: qs
+    type: external-standard
+    process: quality.audit-readiness
+    version: "2015"
+    sourceLevel: external-standard
+    authority: normative-external
+    verification: user-confirmed-current-standard
+    status: active-reference
+
+  step-quality-policy-v2:
+    title: "STeP Quality Policy and Quality Objectives"
+    owner: qs
+    type: organization-policy
+    process: quality.management-review
+    version: "2"
+    effectiveDate: "2026-09-08"
+    sourceLevel: organization-policy
+    authority: approved-organization-policy
+    verification: user-confirmed-current
+    status: active
+
+  # QS แจ้งว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List ทางการ (25 ก.ย. 2569)
+  # Harness ใช้เอกสารอ้างอิงฉบับทำงานด้านล่างแทน โดยไม่แอบอ้างว่าเป็นเอกสารควบคุม
+  qms-quality-manual:
+    title: "STeP Quality Manual (current revision)"
+    owner: qs
+    type: quality-manual
+    process: quality.document-control
+    sourceLevel: quality-manual
+    authority: controlled-document
+    verification: qs-declined-2026-09-25
+    status: not-provided
+    workingSubstitute: qms-working-reference
+
+  qms-master-document-list:
+    title: "STeP Master Document List (current)"
+    owner: qs
+    type: master-list
+    process: quality.document-control
+    sourceLevel: document-control-index
+    authority: revision-source-of-truth
+    verification: qs-declined-2026-09-25
+    status: not-provided
+    workingSubstitute: qms-working-master-list
+
+  qms-working-master-list:
+    title: "Master Document List ฉบับทำงาน (รวบรวมจาก QP ที่ QS ส่งมาและหนังสือเวียนของ QS)"
+    path: docs/qms-working-master-list.md
+    owner: qs
+    type: working-index
+    process: quality.document-control
+    sourceLevel: derived-working-reference
+    authority: derived-from-provided-documents
+    verification: compiled-2026-09-25-confirm-revision-on-step-mis
+    status: active-reference
+
+  qms-working-reference:
+    title: "แผนที่ ISO 9001:2015 กับเอกสารของ STeP (ใช้แทน Quality Manual)"
+    path: docs/qms-working-reference.md
+    owner: qs
+    type: working-index
+    process: quality.audit-readiness
+    sourceLevel: derived-working-reference
+    authority: derived-from-provided-documents
+    verification: compiled-2026-09-25
+    status: active-reference
+
+  qms-quality-record-control:
+    title: "QP-DC-002 การควบคุมบันทึกคุณภาพ"
+    owner: qs
+    type: quality-procedure
+    process: quality.document-control
+    version: "02"
+    effectiveDate: "2023-09-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  qms-risk-management:
+    title: "QP-QS-001 การวิเคราะห์และการจัดการความเสี่ยง"
+    owner: qs
+    type: quality-procedure
+    process: quality.management-review
+    version: "00"
+    effectiveDate: "2023-04-16"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  qms-nonconformity:
+    title: "QP-QS-002 การปฏิบัติงานที่เกิดข้อผิดพลาด"
+    owner: qs
+    type: quality-procedure
+    process: quality.corrective-action
+    version: "02"
+    effectiveDate: "2025-07-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  qms-corrective-preventive-action:
+    title: "QP-QM-001 การปฏิบัติการแก้ไข และป้องกัน"
+    owner: qs
+    type: quality-procedure
+    process: quality.corrective-action
+    version: "02"
+    effectiveDate: "2023-12-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  qms-internal-audit:
+    title: "QP-QM-002 การตรวจติดตามคุณภาพภายใน"
+    owner: qs
+    type: quality-procedure
+    process: quality.audit-readiness
+    version: "01"
+    effectiveDate: "2023-09-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  qms-management-review:
+    title: "QP-QM-003 การประชุมทบทวนฝ่ายบริหาร"
+    owner: qs
+    type: quality-procedure
+    process: quality.management-review
+    version: "03"
+    effectiveDate: "2023-12-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  qms-complaint-management:
+    title: "QP-QM-004 การจัดการข้อร้องเรียนของผู้ใช้บริการ"
+    owner: qs
+    type: quality-procedure
+    process: quality.corrective-action
+    version: "01"
+    effectiveDate: "2023-09-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: listed-in-working-master-list
+    status: provided-text-not-in-harness
+
+  step-facility-equipment-inventory-2020:
+    title: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่อาคารอำนวยการอุทยานวิทยาศาสตร์ภาคเหนือ (จ.เชียงใหม่)"
+    owner: les
+    coOwners: [foodfabr]
+    type: facility-equipment-inventory
+    process: client.inquiry-triage
+    version: "2020-06-19-source-metadata"
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: owner-confirmed-current
+    status: active-reference
+    receivedDate: "2026-09-20"
+    sourceFile: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่.pdf"
+    sourceSha256: "74288e1558f3a4d30c6e42af1189ef76d1f436f9be3ff4350f79c0f37e349e2d"
+    pageCount: 42
+    index: docs/facility-equipment-index.md
+    contentInRepo: false
+    sensitivity: internal-reference
+    confirmedDate: "2026-09-20"
+    confirmedBy: "เจ้าของบริการ; ผู้ใช้บันทึกคำยืนยันใน session 2026-09-20"
+    note: "เจ้าของบริการยืนยัน 2026-09-20 ว่า LES ดูแล CIMO, INFRI และ RF ส่วน FOODFABR ดูแล Innovative Food Fabrication Pilot Plant; NSP Central Laboratory ในเอกสารคือ INFRI และ FABLAB ไม่มีบริการแล้ว; PDF ไม่ระบุ revision/effective date จึงยังต้องตรวจข้อมูลที่เปลี่ยนตามเวลา"

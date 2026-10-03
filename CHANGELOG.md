@@ -8,6 +8,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.7 (`desktop/package.json`) contains the changes below. 0.5.7 adds the first six sections, from "The browser agent can click tiles" through "Update card above the profile". "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### STeP Skills as a Claude plugin (harness, not part of the desktop app)
+
+- **One-command install:** this repository is now a Claude plugin marketplace (`.claude-plugin/marketplace.json`). In Claude Code, `/plugin marketplace add iisara555/STeP-AI-Harness` then `/plugin install step@step-ai` installs all 51 STeP Skills as `/step:<name>`. No STeP Desktop and no `step-ai install` are needed.
+- **Rules in every session:** a SessionStart hook adds a short brief to the start of every session, with the rules on human approval, personal data, secrets, writing and output folders. Its full rules files ship with the plugin.
+- **Built, not copied by hand:** `scripts/build-claude-plugin.mjs` builds `plugins/step/` from `skills/`, `rules/`, `docs/` and `manifest/`. It flattens Skills to the `skills/<name>/` layout Claude Code scans, rewrites every Markdown link and bare repository path relative to the copied file, and copies what they point at. The sources stay where they are, so the CLI, STeP Desktop and the router are unchanged.
+- **Checks:** `test/claude-plugin.test.js` (in `npm test`) fails when `plugins/step/` is out of date with its sources, when a Skill is missing or duplicated, or when a relative link in the plugin does not resolve inside it. `claude plugin validate` passes for the plugin and the marketplace. A local install lists 51 Skills and the hook. A live session received the rules and picked `/step:meeting-summary` for a meeting summary.
+
 ### The browser agent can click tiles that only a script makes clickable
 
 - **The problem:** on sites built with Vue, Svelte or plain `addEventListener` (for example the coffee menu at seleniumbase.io/coffee), a drink is a `<div>` with a click listener. It has no button, link, role or `onclick` attribute, and its pointer cursor shows only on hover. The page snapshot found clickable elements from markup and the resting cursor, so it never offered the cups. The AI could only see **Total: $0.00** and told the employee to click by hand.

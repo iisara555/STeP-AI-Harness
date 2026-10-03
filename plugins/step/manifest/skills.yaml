@@ -1,0 +1,1002 @@
+version: 1
+# Lifecycle evidence rule: approvedBy identifies the required approver role, not proof that approval occurred.
+# draft -> pilot needs registry/router integrity, source/authority mapping and routing evals (docs/skill-authoring-standard.md).
+# pilot -> approved needs explicit owner-review evidence recorded outside this manifest; until then stay at pilot.
+# Skills listed in manifest/skill-evals.json legacyWithoutEvals reached pilot before per-Skill evals existed.
+description: Official STeP AI Skill Registry — Governance, Ownership, Process Links & Lifecycle Status
+
+skills:
+  step-router:
+    owner: ai-admin
+    version: 2.0.0
+    domain: [routing]
+    process: [strategy.weekly-review]
+    path: skills/common/step-router/SKILL.md
+    description: Central Layer 1 Router Skill implementing Progressive Disclosure & 5-Factor Scoring
+    governance:
+      owner: ai-admin
+      reviewer: [qs]
+      approvedBy: [tech-director]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: []
+      optional: []
+
+
+  step-skill-authoring:
+    owner: ai-admin
+    version: 1.0.0
+    domain: [ai-governance, skill-authoring]
+    process: [ai.skill-governance]
+    path: skills/common/step-skill-authoring/SKILL.md
+    description: ออกแบบหรือปรับ Skill ของ STeP AI Harness โดยตรวจ Need Gate, Trigger/Anti-trigger, Source, Authority, Handoff, Context Budget และ Eval ก่อนเข้าสู่ Pilot
+    governance:
+      owner: ai-admin
+      reviewer: [qs, developer]
+      approvedBy: [ai-admin]
+      reviewedAt: "2026-09-20"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  tor-review:
+    owner: afp
+    version: 1.1.1
+    domain: [procurement]
+    process: [procurement.tor]
+    service: [tech-commercialization, public-sector-innovation]
+    path: skills/pm/tor-review/SKILL.md
+    description: ตรวจ TOR ก่อนส่ง AFP โดยแยก structural review ออกจาก source-backed compliance และไม่อ้าง current rule เมื่อ Source ยังไม่ยืนยัน
+    governance:
+      owner: afp
+      reviewer: [qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [procurement-policy, human-approval-rule, data-classification-rule]
+      optional: [tor-template, afp-regulation-hierarchy]
+
+  tor-government-writing:
+    owner: afp
+    version: 1.1.0
+    domain: [procurement]
+    process: [procurement.tor]
+    service: [public-sector-innovation]
+    path: skills/pm/tor-government-writing/SKILL.md
+    description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability/acceptance criteria โดยไม่แต่ง procurement rule
+    governance:
+      owner: afp
+      reviewer: [qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [procurement-policy, human-approval-rule]
+      optional: [tor-template, afp-regulation-hierarchy]
+
+  document-review:
+    owner: ga
+    version: 1.0.0
+    domain: [governance, document-review]
+    process: [governance.document-review]
+    path: skills/common/document-review/SKILL.md
+    description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน owner/deadline placeholder และความเหมาะสมต่อผู้รับ ก่อน handoff ไป Skill เฉพาะทาง
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-20"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  stakeholder-questionnaire:
+    owner: qs
+    version: 1.0.0
+    domain: [governance, source-control]
+    process: [quality.document-control]
+    path: skills/common/stakeholder-questionnaire/SKILL.md
+    description: ร่างชุดคำถามส่งให้คนหรือทีมที่มีคำตอบ เมื่องานติดที่ข้อมูลซึ่งผู้ใช้ตอบเองไม่ได้ เช่น เอกสารหรือระเบียบที่ยังรอยืนยัน
+    governance:
+      owner: qs
+      reviewer: [ga, ai-admin]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-25"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [data-classification-rule]
+      optional: []
+
+  meeting-summary:
+    owner: ga
+    version: 1.0.1
+    domain: [governance]
+    process: [governance.meeting]
+    path: skills/pm/meeting-summary/SKILL.md
+    description: สรุปบันทึกการประชุม แยกมติ Action item และผู้รับผิดชอบ
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  browser-form-assistant:
+    owner: ga
+    version: 1.1.0
+    domain: [operations, automation]
+    process: [governance.facility-booking]
+    path: skills/common/browser-form-assistant/SKILL.md
+    description: ผู้ช่วยร่างและตรวจทานข้อมูลแบบฟอร์มออนไลน์แบบมีมนุษย์กำกับ ไม่ส่งแทนโดยพลการ
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, secret-safety-rule, data-classification-rule, browser-credential-safety-rule]
+      optional: []
+
+  project-plan:
+    owner: pm
+    version: 2.0.0
+    domain: [project-management]
+    process: [project.planning]
+    service: [incubation-startup, public-sector-innovation]
+    path: skills/pm/project-plan/SKILL.md
+    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
+    governance:
+      owner: pm
+      reviewer: [sit, qs]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  startup-discovery:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, project-management]
+    process: [incubation.startup-intake]
+    service: [incubation-startup, tech-commercialization]
+    path: skills/pm/startup-discovery/SKILL.md
+    description: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพและงานวิจัย ด้วย Value Proposition Canvas (VPC) และ The Mom Test
+    governance:
+      owner: piti
+      reviewer: [isi, qs]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  entrepreneur-annual-goal:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, business-planning]
+    process: [incubation.business-growth-planning]
+    service: [incubation-startup]
+    path: skills/pm/entrepreneur-annual-goal/SKILL.md
+    description: โค้ชผู้ประกอบการตั้งเป้ารายได้หนึ่งปีด้วยฐานจริง ย้อนเป็นยอดขาย ลูกค้า กำลังผลิต เงินทุนและงานรายเดือน
+    governance:
+      owner: piti
+      reviewer: [isi, eic, mi, qs]
+      approvedBy: [project-director]
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  executive-status-update:
+    owner: sit
+    version: 1.0.0
+    domain: [strategy, project-management]
+    process: [strategy.weekly-review]
+    service: [public-sector-innovation]
+    path: skills/pm/executive-status-update/SKILL.md
+    description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
+    governance:
+      owner: sit
+      reviewer: [qs]
+      approvedBy: [sit-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  project-pre-mortem:
+    owner: pm
+    version: 1.0.0
+    domain: [project-management]
+    process: [project.planning]
+    service: [public-sector-innovation, tech-commercialization]
+    path: skills/pm/project-pre-mortem/SKILL.md
+    description: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาหรือโครงการ จำแนกความเสี่ยงแบบ Tiger, Paper Tiger และ Elephant in the room
+    governance:
+      owner: pm
+      reviewer: [qs]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  innovation-okr-mapping:
+    owner: sit
+    version: 1.0.0
+    domain: [strategy]
+    process: [strategy.weekly-review]
+    service: [public-sector-innovation]
+    path: skills/pm/innovation-okr-mapping/SKILL.md
+    description: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม (North Star & Input Metrics)
+    governance:
+      owner: sit
+      reviewer: [qs]
+      approvedBy: [sit-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  designer-brief:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/designer-brief/SKILL.md
+    description: จัดทำและตรวจ Creative Brief สำหรับงานออกแบบ Artwork
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: [creative-brief-template]
+
+  event-concept:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.event]
+    service: [creative-marketing]
+    path: skills/creative/event-concept/SKILL.md
+    description: ออกแบบแนวคิดงาน Event ผังบูธ และประสบการณ์ผู้เข้าร่วมงาน
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: []
+
+  event-run-of-show:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.event]
+    service: [creative-marketing]
+    path: skills/creative/event-run-of-show/SKILL.md
+    description: สร้างและตรวจ Run of Show หรือ Sequence เวที ระดับคิว พร้อม lane เวลา จอ เสียง แสง เวที และผู้รับผิดชอบรายคิว
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-22"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
+      optional: [naming-convention-rule, step-brand-ci-guideline]
+
+  presentation-design:
+    owner: cc
+    version: 2.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/presentation-design/SKILL.md
+    description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck และ Pitching ในรูปแบบ Interactive 16:9 HTML พร้อมโหมดแก้ไขข้อความในเบราว์เซอร์
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  coding-git-workflow:
+    owner: developer
+    version: 1.0.0
+    domain: [engineering]
+    process: [engineering.code-delivery]
+    path: skills/dev/coding-git-workflow/SKILL.md
+    description: มาตรฐานการเขียนโค้ด การแตก branch การ commit และ pull request
+    governance:
+      owner: developer
+      reviewer: [qs]
+      approvedBy: [tech-lead]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [secret-safety-rule, human-approval-rule]
+      optional: []
+
+  github-workflow:
+    owner: developer
+    version: 1.0.0
+    domain: [engineering]
+    process: [engineering.code-delivery]
+    path: skills/dev/github-workflow/SKILL.md
+    description: แนวทางการตั้งค่า GitHub Issues, Projects, Labels และ Automation
+    governance:
+      owner: developer
+      reviewer: [qs]
+      approvedBy: [tech-lead]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [secret-safety-rule]
+      optional: []
+
+  vercel-deploy:
+    owner: developer
+    version: 1.0.0
+    domain: [engineering]
+    process: [engineering.code-delivery]
+    path: skills/dev/vercel-deploy/SKILL.md
+    description: การตรวจสอบความพร้อม สภาพแวดล้อม และขั้นตอน Deploy เว็บแอปขึ้น Vercel
+    governance:
+      owner: developer
+      reviewer: [qs]
+      approvedBy: [tech-lead]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [secret-safety-rule, human-approval-rule]
+      optional: []
+
+  step-writing:
+    owner: cc
+    version: 1.0.0
+    domain: [communication]
+    process: [creative.branding]
+    path: skills/common/step-writing/SKILL.md
+    description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้อง
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  thai-official-documents:
+    owner: ga
+    version: 1.0.0
+    domain: [governance]
+    process: [governance.correspondence]
+    path: skills/common/thai-official-documents/SKILL.md
+    description: ตรวจและจัดรูปแบบหนังสือราชการไทย หนังสือภายนอก หนังสือภายใน
+    governance:
+      owner: ga
+      reviewer: [qs]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  brand-tone-of-voice:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/common/brand-tone-of-voice/SKILL.md
+    description: รักษาอัตลักษณ์และน้ำเสียงของ STeP และ RSP North ตาม Brand CI
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  step-brand:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/common/step-brand/SKILL.md
+    description: อ้างอิงและตรวจสอบการใช้ตราสัญลักษณ์และทรัพยากรแบรนด์ STeP
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule]
+      optional: []
+
+  step-image-prompt:
+    owner: cc
+    version: 2.3.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/step-image-prompt/SKILL.md
+    description: สร้าง Prompt Spec กลางครั้งเดียวแล้ว render เป็น syntax family ของเครื่องมือปลายทางสำหรับงานสร้างหรือแก้ภาพ โดยรักษา brand/reference constraints
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule]
+      optional: [creative-brief-template]
+
+  data-privacy-compliance:
+    owner: qs
+    version: 1.0.0
+    domain: [compliance]
+    process: [quality.data-privacy]
+    path: skills/common/data-privacy-compliance/SKILL.md
+    description: ตรวจจับและควบคุมข้อมูลส่วนบุคคล (PDPA/PII) และความลับทางการค้า
+    governance:
+      owner: qs
+      reviewer: [iasa]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [data-classification-rule, secret-safety-rule]
+      optional: []
+
+  customer-support-faq-triage:
+    owner: crm
+    version: 1.0.0
+    domain: [client-services]
+    process: [client.inquiry-triage]
+    service: [infrastructure-testing]
+    path: skills/common/customer-support-faq-triage/SKILL.md
+    description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
+    governance:
+      owner: crm
+      reviewer: [qs]
+      approvedBy: [crm-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  sop-authoring:
+    owner: qs
+    version: 1.0.1
+    domain: [quality]
+    process: [quality.document-control]
+    path: skills/common/sop-authoring/SKILL.md
+    description: ถอดวิธีปฏิบัติงานมาตรฐาน (SOP / WI) ให้อยู่ในรูปแบบที่คนอื่นทำซ้ำได้
+    governance:
+      owner: qs
+      reviewer: [qs]
+      approvedBy: [qmr]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [qs-doc-control-procedure, naming-convention-rule]
+      optional: [qms-working-master-list]
+
+  team-weekly-review:
+    owner: sit
+    version: 1.0.0
+    domain: [strategy]
+    process: [strategy.weekly-review]
+    path: skills/common/team-weekly-review/SKILL.md
+    description: รวบรวมและวิเคราะห์ผลการทำงานประจำสัปดาห์ ปัญหาคอขวด และแผนงาน
+    governance:
+      owner: sit
+      reviewer: [qs]
+      approvedBy: [sit-head]
+      reviewedAt: "2026-09-01"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  receipt-audit:
+    owner: afp
+    version: 1.0.1
+    domain: [finance, procurement]
+    process: [procurement.request]
+    service: [public-sector-innovation]
+    path: skills/common/receipt-audit/SKILL.md
+    description: Pre-check ใบเสร็จ/ใบกำกับภาษี/ชุดเบิกโดยเทียบหลักฐานกับ current verified source และเปิดเผย source gap
+    governance:
+      owner: afp
+      reviewer: [qs]
+      approvedBy: [afp-finance-head]
+      reviewedAt: "2026-09-16"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [finance-disbursement-policy, human-approval-rule, data-classification-rule]
+      optional: [afp-regulation-hierarchy]
+
+  creative-art-director:
+    owner: cc
+    version: 1.0.0
+    domain: [creative]
+    process: [creative.branding]
+    service: [creative-marketing]
+    path: skills/creative/creative-art-director/SKILL.md
+    description: กำหนด Creative Direction จาก Intent, Audience, Feeling, Visual Hammer และ Anti-AI-Slop ก่อนส่งต่อไปยัง Skill ผลิตงาน
+    governance:
+      owner: cc
+      reviewer: [qs]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-writing-rule, human-approval-rule]
+      optional: [creative-brief-template]
+
+  evidence-before-approval:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, governance]
+    process: [quality.document-control]
+    path: skills/common/evidence-before-approval/SKILL.md
+    description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ โดยแยก VERIFIED / PARTIAL / UNVERIFIED
+    governance:
+      owner: qs
+      reviewer: [ga, sit]
+      approvedBy: [qs-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  afp-operations-lookup:
+    owner: afp
+    version: 1.0.0
+    domain: [finance, procurement]
+    process: [procurement.request]
+    path: skills/common/afp-operations-lookup/SKILL.md
+    description: ตอบ Lead Time งานการเงินและพัสดุ หมวดค่าใช้จ่าย และเงื่อนไขการเบิกจ่ายตามแนวปฏิบัติที่ AFP แจ้งเวียน โดยไม่สรุปว่าเบิกได้หรือไม่ได้
+    governance:
+      owner: afp
+      reviewer: [ga, qs]
+      approvedBy: [afp-head]
+      reviewedAt: "2026-09-24"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: [afp-regulation-hierarchy]
+
+  hr-policy-lookup:
+    owner: hd
+    version: 1.0.0
+    domain: [people-development, hr-policy]
+    process: [people.personnel-welfare]
+    path: skills/common/hr-policy-lookup/SKILL.md
+    description: ตอบสิทธิและเงื่อนไขตามประกาศงานบุคคลและ Career Path ของอุทยานฯ พร้อมอ้างเลขข้อ โดยไม่คำนวณสิทธิคงเหลือรายบุคคล
+    governance:
+      owner: hd
+      reviewer: [ga, qs]
+      approvedBy: [hd-head]
+      reviewedAt: "2026-09-23"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  learning-designer:
+    owner: hd
+    version: 1.0.0
+    domain: [people-development, learning]
+    process: [people.learning-development]
+    path: skills/common/learning-designer/SKILL.md
+    description: ออกแบบ Learning Outcome, Practice, Feedback, Assessment, Workshop และ Onboarding จากเป้าหมายการทำงานจริง
+    governance:
+      owner: hd
+      reviewer: [eic, qs]
+      approvedBy: [hd-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  assumption-challenger:
+    owner: piti
+    version: 1.0.0
+    domain: [incubation, innovation]
+    process: [incubation.startup-intake]
+    service: [incubation-startup, tech-commercialization]
+    path: skills/pm/assumption-challenger/SKILL.md
+    description: แยก Fact / Assumption / Decision / Unknown จัดลำดับสมมติฐานสำคัญ และออกแบบการทดสอบที่ประหยัดที่สุด
+    governance:
+      owner: piti
+      reviewer: [isi, mi]
+      approvedBy: [project-director]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  decision-memo:
+    owner: imo
+    version: 1.0.0
+    domain: [strategy, decision-support]
+    process: [strategy.weekly-review]
+    service: [public-sector-innovation]
+    path: skills/pm/decision-memo/SKILL.md
+    description: สังเคราะห์ข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation เป็น Decision Memo สำหรับผู้มีอำนาจตัดสินใจ
+    governance:
+      owner: imo
+      reviewer: [sit, qs]
+      approvedBy: [imo-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  industry-problem-discovery:
+    owner: linc
+    version: 1.0.0
+    domain: [industry-collaboration, discovery]
+    process: [industry.problem-discovery]
+    service: [tech-commercialization, public-sector-innovation]
+    path: skills/pm/industry-problem-discovery/SKILL.md
+    description: ถอดโจทย์โรงงาน/ชุมชน แยกอาการ หลักฐาน กระบวนการ ข้อจำกัด และ Desired Outcome ก่อนเสนอเทคโนโลยีหรือจับคู่ผู้เชี่ยวชาญ
+    governance:
+      owner: linc
+      reviewer: [tech-up, qs]
+      approvedBy: [linc-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+
+  expert-resource-matching:
+    owner: linc
+    version: 1.0.0
+    domain: [industry-collaboration, resource-discovery]
+    process: [industry.problem-discovery]
+    service: [industry-problem-solving, infrastructure-testing, tech-commercialization]
+    path: skills/pm/expert-resource-matching/SKILL.md
+    description: จับคู่โจทย์ที่ชัดแล้วกับบริการ STeP, Expert, Lab, Equipment หรือ Pilot Plant จาก Service Registry และแหล่ง discovery ทางการ พร้อม Human Verification ก่อนส่งต่อจริง
+    governance:
+      owner: linc
+      reviewer: [tech-up, les, qs]
+      approvedBy: [linc-head]
+      reviewedAt: "2026-09-19"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  market-signal-radar:
+    owner: mi
+    version: 1.0.0
+    domain: [market-intelligence, research]
+    process: [market.insight-research]
+    service: [creative-marketing, incubation-startup, tech-commercialization]
+    path: skills/common/market-signal-radar/SKILL.md
+    description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของหลักฐาน
+    governance:
+      owner: mi
+      reviewer: [piti, crm]
+      approvedBy: [mi-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [data-classification-rule]
+      optional: []
+
+  voice-of-customer:
+    owner: crm
+    version: 1.0.0
+    domain: [client-services, market-intelligence]
+    process: [market.insight-research]
+    path: skills/common/voice-of-customer/SKILL.md
+    description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยรักษาความหมายลูกค้าและระวัง sample bias/PII
+    governance:
+      owner: crm
+      reviewer: [mi, qs]
+      approvedBy: [crm-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [data-classification-rule, secret-safety-rule]
+      optional: []
+
+  lab-result-review:
+    owner: les
+    version: 1.0.0
+    domain: [laboratory, quality]
+    process: [laboratory.result-review]
+    service: [infrastructure-testing]
+    path: skills/common/lab-result-review/SKILL.md
+    description: ทบทวนผลทดสอบและข้อมูลห้องปฏิบัติการ ตรวจ completeness, units, QC, replicates, outliers และ method/spec alignment ก่อน qualified review
+    governance:
+      owner: les
+      reviewer: [qs, foodfabr, tech-up]
+      approvedBy: [les-head]
+      reviewedAt: "2026-09-17"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
+  # --- ISO 9001 / QMS Audit Readiness Pack ---
+  iso9001-audit-readiness:
+    owner: qs
+    version: 1.0.2
+    domain: [quality, audit, compliance]
+    process: [quality.audit-readiness]
+    path: skills/common/iso9001-audit-readiness/SKILL.md
+    description: เตรียม Internal/External Audit ISO 9001 แบบ process-based สำหรับ 22 ทีม โดยเชื่อม scope, criteria, evidence, KPI, risk, records และ prior findings
+    governance:
+      owner: qs
+      reviewer: [sit, ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [iso-9001-2015, step-quality-policy-v2, human-approval-rule]
+      optional: [qms-working-reference, qms-working-master-list, qms-internal-audit]
+
+  audit-evidence-matrix:
+    owner: qs
+    version: 1.0.1
+    domain: [quality, audit, evidence]
+    process: [quality.audit-readiness]
+    path: skills/common/audit-evidence-matrix/SKILL.md
+    description: สร้าง Evidence Matrix เชื่อม process/criteria กับหลักฐาน ช่วงเวลา source owner status และ evidence gap
+    governance:
+      owner: qs
+      reviewer: [ga, sit]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [iso-9001-2015, human-approval-rule, data-classification-rule]
+      optional: [qms-working-reference, qms-working-master-list, qms-internal-audit]
+
+  document-record-control:
+    owner: qs
+    version: 1.0.1
+    domain: [quality, document-control]
+    process: [quality.document-control]
+    path: skills/common/document-record-control/SKILL.md
+    description: ตรวจ owner, version, approval, effective date, current/obsolete, retention และ traceability ของ Controlled Documents และ Records
+    governance:
+      owner: qs
+      reviewer: [ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [qs-doc-control-procedure, qms-quality-record-control, human-approval-rule, data-classification-rule]
+      optional: [qms-working-master-list]
+
+  audit-interview-coach:
+    owner: qs
+    version: 1.0.0
+    domain: [quality, audit, people-readiness]
+    process: [quality.audit-readiness]
+    path: skills/common/audit-interview-coach/SKILL.md
+    description: จำลอง Auditor Interview ให้ Process Owner และพนักงานอธิบายสิ่งที่ทำจริงและเปิดหลักฐานได้โดยไม่แต่งหรือท่องคำตอบ
+    governance:
+      owner: qs
+      reviewer: [hd, ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [human-approval-rule]
+      optional: []
+
+  ncr-capa:
+    owner: qs
+    version: 1.0.1
+    domain: [quality, corrective-action]
+    process: [quality.corrective-action]
+    path: skills/common/ncr-capa/SKILL.md
+    description: จัดการ NC/CAPA ตั้งแต่ข้อเท็จจริง containment/correction, root cause, corrective action และ effectiveness check จนพร้อมให้มนุษย์ปิด
+    governance:
+      owner: qs
+      reviewer: [sit]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [qms-nonconformity, qms-corrective-preventive-action, human-approval-rule]
+      optional: [qms-complaint-management, qms-internal-audit]
+
+  qms-risk-opportunity-review:
+    owner: qs
+    version: 1.0.1
+    domain: [quality, risk-management]
+    process: [quality.management-review]
+    path: skills/common/qms-risk-opportunity-review/SKILL.md
+    description: ทบทวน QMS Risks/Opportunities แบบ evidence-based เชื่อม event/cause/consequence, current controls, action, owner และ follow-up
+    governance:
+      owner: qs
+      reviewer: [sit, imo]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [qms-risk-management, human-approval-rule]
+      optional: [qms-working-reference]
+
+  quality-objective-kpi-review:
+    owner: qs
+    version: 1.0.1
+    domain: [quality, performance]
+    process: [quality.management-review]
+    path: skills/common/quality-objective-kpi-review/SKILL.md
+    description: ทบทวน Quality Objective/KPI ให้ measurable และ traceable ด้วย formula, source, baseline, target, cadence, owner, actual และ action
+    governance:
+      owner: qs
+      reviewer: [sit, imo]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [step-quality-policy-v2, human-approval-rule]
+      optional: [qms-working-reference, qms-management-review]
+
+  management-review-prep:
+    owner: qs
+    version: 1.0.1
+    domain: [quality, management-review]
+    process: [quality.management-review]
+    path: skills/common/management-review-prep/SKILL.md
+    description: เตรียม Management Review จาก evidence ของ 22 ทีม รวม KPI, customer feedback, audit, NC/CAPA, risks/opportunities, resources และ decisions required
+    governance:
+      owner: qs
+      reviewer: [sit, ga]
+      approvedBy: []
+      reviewedAt: "2026-09-18"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: pilot
+    references:
+      mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
+      optional: [qms-working-reference]

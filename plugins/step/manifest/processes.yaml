@@ -1,0 +1,299 @@
+version: 1
+description: Official STeP Process Registry — Process Categories, Process IDs, Owners & Subprocesses
+
+processes:
+  procurement.tor:
+    name: "การจัดทำและตรวจสอบขอบเขตงาน (TOR) พัสดุ"
+    category: procurement
+    owner: afp
+    consumers: [piti, linc, mi, cc, pubsec, qs, ga]
+    subprocesses:
+      - procurement.tor.drafting
+      - procurement.tor.review
+      - procurement.tor.vendor-selection
+      - procurement.tor.inspection
+    associatedSops:
+      - procurement-policy
+      - tor-guidelines
+    description: "กระบวนการจัดทำ ตรวจสอบ และบริหารขอบเขตงานจัดซื้อจัดจ้างตามระเบียบพัสดุ มช."
+
+  procurement.request:
+    name: "การขออนุมัติจัดซื้อจัดจ้างและขอความเห็นชอบ"
+    category: procurement
+    owner: afp
+    consumers: ["*"]
+    subprocesses:
+      - procurement.request.initiation
+      - procurement.request.budget-verification
+      - procurement.request.approval
+    associatedSops:
+      - procurement-policy
+
+  quality.document-control:
+    name: "การควบคุมเอกสารในระบบบริหารคุณภาพ (ISO / SOP / WI)"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.document-control.sop-drafting
+      - quality.document-control.review
+      - quality.document-control.enactment
+    associatedSops:
+      - qs-doc-control-procedure
+
+  quality.data-privacy:
+    name: "การคุ้มครองข้อมูลส่วนบุคคลและข้อมูลลับ (PDPA / Confidentiality)"
+    category: compliance
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.data-privacy.pii-scan
+      - quality.data-privacy.consent-management
+    associatedSops:
+      - pdpa-compliance-rule
+
+  incubation.startup-intake:
+    name: "การรับสมัครและคัดกรองผู้ประกอบการเข้าสู่โครงการบ่มเพาะ"
+    category: incubation
+    owner: piti
+    consumers: [isi, eic, imo]
+    subprocesses:
+      - incubation.startup-intake.application
+      - incubation.startup-intake.evaluation
+      - incubation.startup-intake.onboarding
+
+  incubation.business-growth-planning:
+    name: "การวางเป้าหมายรายได้ธุรกิจและติดตามแผนเติบโต 1 ปี"
+    category: incubation
+    owner: piti
+    consumers: [isi, eic, mi]
+    subprocesses:
+      - incubation.business-growth-planning.baseline
+      - incubation.business-growth-planning.reverse-planning
+      - incubation.business-growth-planning.monthly-reforecast
+
+  project.planning:
+    name: "การจัดทำแผนงานโครงการ งวดงาน และบริหารความเสี่ยง"
+    category: project-management
+    owner: pm
+    consumers: [sit, imo, piti, pubsec, linc]
+    subprocesses:
+      - project.planning.wbs
+      - project.planning.milestone
+      - project.planning.risk-assessment
+
+  technology.commercialization:
+    name: "การบริหารจัดการทรัพย์สินทางปัญญาและการถ่ายทอดเทคโนโลยี"
+    category: technology-transfer
+    owner: tech-spin
+    consumers: [tech-up, linc, pubsec]
+    subprocesses:
+      - technology.commercialization.ip-disclosure
+      - technology.commercialization.licensing
+      - technology.commercialization.spin-off
+
+  creative.branding:
+    name: "การบริหารอัตลักษณ์แบรนด์ ตราสัญลักษณ์ และสื่อประชาสัมพันธ์"
+    category: creative
+    owner: cc
+    consumers: ["*"]
+    subprocesses:
+      - creative.branding.tone-review
+      - creative.branding.ci-audit
+      - creative.branding.briefing
+
+  creative.event:
+    name: "การออกแบบและบริหารการจัดงานนิทรรศการและอีเวนต์"
+    category: creative
+    owner: cc
+    consumers: [crm, eic, imo]
+    subprocesses:
+      - creative.event.concept-design
+      - creative.event.booth-layout
+      - creative.event.execution
+
+  governance.document-review:
+    name: "การตรวจเอกสารทั่วไปก่อนส่ง"
+    category: governance
+    owner: ga
+    consumers: ["*"]
+    subprocesses:
+      - governance.document-review.completeness
+      - governance.document-review.internal-consistency
+      - governance.document-review.specialist-handoff
+    associatedSops:
+      - human-approval-rule
+      - data-classification-rule
+    description: "ตรวจความครบถ้วนและความสอดคล้องภายในของเอกสารทั่วไปก่อนส่ง โดยไม่แทน compliance review เฉพาะทาง"
+
+  governance.correspondence:
+    name: "การจัดการงานสารบรรณและหนังสือราชการ"
+    category: governance
+    owner: ga
+    consumers: [afp, qs, pubsec, iasa]
+    subprocesses:
+      - governance.correspondence.drafting
+      - governance.correspondence.formatting-review
+      - governance.correspondence.signing
+
+  governance.meeting:
+    name: "การบริหารการประชุมและการถอดบันทึกมติ"
+    category: governance
+    owner: ga
+    consumers: ["*"]
+    subprocesses:
+      - governance.meeting.agenda-prep
+      - governance.meeting.minutes-recording
+      - governance.meeting.action-item-tracking
+
+  governance.facility-booking:
+    name: "การขอใช้สถานที่ ห้องประชุม และบริการยานพาหนะผ่านระบบอิเล็กทรอนิกส์"
+    category: governance
+    owner: ga
+    consumers: ["*"]
+    subprocesses:
+      - governance.facility-booking.request
+      - governance.facility-booking.verification
+      - governance.facility-booking.confirmation
+    associatedSops:
+      - human-approval-rule
+    description: "กระบวนการสำรวจ จอง และประสานงานขอใช้ห้องประชุมและสถานที่ของอุทยานฯ"
+
+  client.inquiry-triage:
+    name: "การรับเรื่อง คัดแยก และส่งต่อความต้องการของลูกค้าอุทยานฯ"
+    category: client-services
+    owner: crm
+    consumers: [ga, ifu, les, cc]
+    subprocesses:
+      - client.inquiry-triage.intake
+      - client.inquiry-triage.routing
+      - client.inquiry-triage.follow-up
+
+  engineering.code-delivery:
+    name: "มาตรฐานการเขียนโค้ด การรีวิว และส่งมอบซอฟต์แวร์"
+    category: engineering
+    owner: developer
+    consumers: [sit, tech-up]
+    subprocesses:
+      - engineering.code-delivery.branching
+      - engineering.code-delivery.pr-review
+      - engineering.code-delivery.deployment
+
+  strategy.weekly-review:
+    name: "การทบทวนผลงานประจำสัปดาห์และการประสานงานระหว่างฝ่าย"
+    category: strategy
+    owner: sit
+    consumers: ["*"]
+    subprocesses:
+      - strategy.weekly-review.status-collection
+      - strategy.weekly-review.bottleneck-escalation
+
+  people.personnel-welfare:
+    name: "การบริหารงานบุคคลและสวัสดิการพนักงาน"
+    category: people-development
+    owner: hd
+    consumers: ["*"]
+    subprocesses:
+      - people.personnel-welfare.employment
+      - people.personnel-welfare.work-rules
+      - people.personnel-welfare.compensation-benefits
+      - people.personnel-welfare.leave
+      - people.personnel-welfare.discipline
+      - people.personnel-welfare.separation
+    associatedSops:
+      - hr-personnel-welfare-2569
+      - step-career-path-2569
+    description: "หลักเกณฑ์การจ้างงาน เวลาทำงาน เงินเดือนและสวัสดิการ การลา ระเบียบวินัย การลาออก และการพ้นสภาพ ตามประกาศอุทยานฯ พ.ศ. 2569 (บังคับใช้ 1 ตุลาคม 2569) ประกอบประกาศฯ เส้นทางความก้าวหน้าในสายอาชีพ"
+
+  people.learning-development:
+    name: "การออกแบบการเรียนรู้ การอบรม และพัฒนาศักยภาพบุคลากร"
+    category: people-development
+    owner: hd
+    consumers: ["*"]
+    subprocesses:
+      - people.learning-development.needs-analysis
+      - people.learning-development.learning-design
+      - people.learning-development.assessment
+
+  industry.problem-discovery:
+    name: "การค้นหาและถอดโจทย์จากภาคอุตสาหกรรมและชุมชน"
+    category: industry-collaboration
+    owner: linc
+    consumers: [tech-up, tech-spin, pubsec, mi]
+    subprocesses:
+      - industry.problem-discovery.intake
+      - industry.problem-discovery.evidence-gathering
+      - industry.problem-discovery.expert-matching
+
+  market.insight-research:
+    name: "การติดตามสัญญาณตลาดและสังเคราะห์ข้อมูลลูกค้าเพื่อการทดสอบตลาด"
+    category: market-intelligence
+    owner: mi
+    consumers: [piti, isi, eic, tech-spin, linc, crm]
+    subprocesses:
+      - market.insight-research.signal-scan
+      - market.insight-research.customer-synthesis
+      - market.insight-research.validation-plan
+
+  laboratory.result-review:
+    name: "การทบทวนหลักฐาน ผลทดสอบ และข้อมูลการทดลองก่อนออกผลหรือสรุปผล"
+    category: laboratory
+    owner: les
+    consumers: [foodfabr, tech-up, iqi]
+    subprocesses:
+      - laboratory.result-review.completeness
+      - laboratory.result-review.qc-review
+      - laboratory.result-review.qualified-signoff
+
+  quality.audit-readiness:
+    name: "การเตรียมความพร้อมและหลักฐานสำหรับ Internal / External Audit"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.audit-readiness.scope-confirmation
+      - quality.audit-readiness.evidence-preparation
+      - quality.audit-readiness.mock-interview
+      - quality.audit-readiness.readiness-review
+    description: "เตรียม Process Owner, audit criteria, evidence และ team readiness โดยไม่ตัดสิน conformity แทน auditor หรือ QMR"
+
+  quality.corrective-action:
+    name: "การจัดการ Nonconformity และ Corrective Action"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.corrective-action.nc-record
+      - quality.corrective-action.containment
+      - quality.corrective-action.root-cause
+      - quality.corrective-action.action
+      - quality.corrective-action.effectiveness
+      - quality.corrective-action.human-closure
+    description: "กระบวนการ NC/CAPA ตั้งแต่ข้อเท็จจริงถึง effectiveness verification และการปิดโดยผู้มีอำนาจ"
+
+  quality.management-review:
+    name: "การทบทวนผลการดำเนินงานระบบบริหารคุณภาพโดยฝ่ายบริหาร"
+    category: quality
+    owner: qs
+    consumers: ["*"]
+    subprocesses:
+      - quality.management-review.input-collection
+      - quality.management-review.objective-kpi
+      - quality.management-review.risk-opportunity
+      - quality.management-review.decision-prep
+      - quality.management-review.action-follow-up
+    description: "รวบรวมและทบทวนผลการดำเนินงาน QMS เพื่อเตรียมข้อมูลและประเด็นตัดสินใจสำหรับฝ่ายบริหาร"
+
+  ai.skill-governance:
+    name: "การสร้าง ทบทวน และนำ Skill ของ STeP AI Harness เข้าสู่ Pilot"
+    category: ai-governance
+    owner: ai-admin
+    consumers: ["*"]
+    subprocesses:
+      - ai.skill-governance.need-gate
+      - ai.skill-governance.authoring
+      - ai.skill-governance.registry-routing
+      - ai.skill-governance.evaluation
+      - ai.skill-governance.pilot-promotion
+    description: "กำกับการสร้าง/ปรับ Skill ให้แยกจาก Playbook, Rule, Registry และ Action พร้อม routing, source, authority และ eval ก่อน Pilot"
+

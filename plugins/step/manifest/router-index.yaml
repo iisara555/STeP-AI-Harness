@@ -1,0 +1,1321 @@
+version: 1
+router:
+  name: step-router
+  version: 2.8.2
+  description: Single Source of Truth for STeP AI Skill Discovery & 5-Factor Routing
+  scoring:
+    weights:
+      intent: 0.30
+      keyword: 0.25
+      path: 0.20
+      team: 0.15
+      fileType: 0.10
+    thresholds:
+      high: 0.80
+      ambiguous: 0.50
+
+skills:
+  # --- AI Harness Governance ---
+  - name: step-skill-authoring
+    cluster: governance-operations
+    domain: ai-governance
+    processId: ai.skill-governance
+    teams:
+      primary: [ai-admin]
+      consumers: []
+    description: ใช้เมื่อจะสร้างหรือปรับ Skill ของ STeP AI Harness; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action และออกแบบ Trigger/Anti-trigger, Source, Authority, Handoff และ Eval ก่อน Pilot
+    intent: [create, improve]
+    triggers: [สร้าง skill, สร้างสกิล, create skill, add skill, เพิ่ม skill, เพิ่มสกิล, ปรับ skill, แก้ skill, skill ใหม่, skill authoring, skill contract, skill eval, ทำ skill ให้พร้อม pilot]
+    paths: ["**/skills/**", "**/manifest/**", "**/router-index.yaml", "**/skill-*"]
+    fileTypes: [md, yaml, yml, json]
+    requires: [skill_need]
+    scope:
+      allow:
+        - ตรวจ Need Gate ว่าควรเป็น Skill, Playbook, Rule, Registry หรือ Action
+        - ออกแบบ Trigger/Anti-trigger, Input, Output, Source, Authority, Handoff และ Context Budget
+        - สร้าง eval plan และรายการ registry/router changes ที่จำเป็น
+      escalate: {}
+      human_only: {}
+
+  # --- Procurement & TOR ---
+  - name: tor-review
+    cluster: governance-operations
+    domain: procurement
+    processId: procurement.tor
+    teams:
+      primary: [afp]
+      consumers: [piti, linc, mi, cc, pubsec, qs, ga]
+    description: ตรวจ TOR ขอบเขตงาน และความพร้อมของเอกสารจัดซื้อจัดจ้างก่อนส่ง AFP ด้านความครบถ้วน ความสอดคล้อง เกณฑ์ตรวจรับ และความชัดเจน
+    intent: [review, check, compare, evaluate]
+    triggers: [TOR, ทีโออาร์, ขอบเขตงาน, จัดซื้อ, จัดจ้าง, ข้อกำหนด, เกณฑ์ตรวจรับ, specification, scope of work, ครบถ้วน, เอกสารจัดซื้อ, เอกสารจัดจ้าง, เอกสารพัสดุ, ต้องเตรียมเอกสารอะไร, เอกสารอะไรบ้าง, ข้อกฎหมาย, วินิจฉัยข้อกฎหมาย, ตีความสัญญา, legal interpretation]
+    paths: ["**/TOR/**", "**/procurement/**", "**/AFP/**"]
+    fileTypes: [docx, pdf, txt]
+    requires: [tor_file]
+    scope:
+      allow:
+        - ตรวจความครบถ้วนของโครงสร้าง TOR และขอบเขตงาน
+        - ทำ Traceability Matrix (วัตถุประสงค์ -> งาน -> ผลส่งมอบ -> เกณฑ์ตรวจรับ)
+        - ตรวจสอบคำกำกวม ข้อกำหนดที่ขัดแย้งกันเอง หรือการล็อกสเปกโดยไม่จำเป็น
+        - ช่วยจัดรายการเอกสารจัดซื้อจัดจ้างเบื้องต้นจากแหล่งอ้างอิงที่ยืนยันแล้ว และระบุสิ่งที่ยังต้องให้ AFP ยืนยัน
+      escalate: {}
+      human_only:
+        vendor_selection:
+          role: procurement-committee
+          authority: procurement-approval
+          description: การคัดเลือก ให้คะแนนผู้ยื่นข้อเสนอ หรือตัดสินผู้ชนะเป็นอำนาจของคณะกรรมการจัดซื้อจัดจ้าง
+        legal_advice:
+          role: human-legal-officer
+          authority: legal-advice
+          description: การวินิจฉัยข้อกฎหมายหรือความเห็นทางนิติกร
+        budget_approval:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติงบประมาณหรือเปลี่ยนแปลงวงเงิน
+
+  - name: tor-government-writing
+    cluster: governance-operations
+    domain: procurement
+    processId: procurement.tor
+    teams:
+      primary: [afp]
+      consumers: [pm, pubsec, sit]
+    description: ร่าง TOR จาก project facts และ current verified source พร้อม traceability และเกณฑ์ตรวจรับ โดยเปิดเผย source gaps
+    intent: [create, plan]
+    triggers: [ร่าง TOR, เขียน TOR, แบบฟอร์มจัดซื้อ, เอกสารพัสดุ, draft tor, ทำ TOR, TOR ซื้อ, TOR จ้าง]
+    paths: ["**/TOR/**", "**/procurement/**"]
+    fileTypes: [docx, txt]
+    requires: [project_objective, estimated_budget]
+    scope:
+      allow:
+        - ร่างโครงสร้างจาก current template/source หรือ working template ที่ระบุสถานะชัด
+        - ทำ requirement/deliverable/acceptance traceability
+        - ใช้วัน งบ เกณฑ์ และข้อบังคับเฉพาะเมื่อมี source รองรับ; ถ้าไม่มีให้รอยืนยัน
+      escalate: {}
+      human_only:
+        budget_allocation:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติวงเงินจัดจ้างจริง
+
+  - name: document-review
+    cluster: governance-operations
+    domain: governance
+    processId: governance.document-review
+    teams:
+      primary: [ga]
+      consumers: ["*"]
+    wildcardReason: "all teams create general documents that need a pre-send completeness check"
+    description: ตรวจเอกสารทั่วไปก่อนส่งด้านความครบถ้วน ความสอดคล้องภายใน placeholder owner/deadline และสิ่งที่เจ้าของงานต้องแก้เอง
+    intent: [review, check, summarize]
+    triggers: [ช่วยตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารนี้ก่อนส่ง, ตรวจเอกสารก่อนส่ง, เอกสารก่อนส่ง, pre-send review, ตรวจความครบถ้วนเอกสาร, สิ่งที่ฉันต้องแก้เอง, เช็คเอกสาร, ร่างเอกสารทั่วไป, ช่องไหนยังเว้นว่าง]
+    paths: ["**/draft/**", "**/documents/**", "**/review/**"]
+    fileTypes: [docx, pdf, txt, md, xlsx]
+    requires: [target_document]
+    scope:
+      allow:
+        - ตรวจความครบถ้วนและความสอดคล้องภายในของเอกสาร
+        - flag วันที่ ตัวเลข ชื่อ owner deadline placeholder หรือ claim ที่ยังรอยืนยัน
+        - สรุปสิ่งที่เจ้าของเอกสารต้องแก้เองก่อนส่ง
+      escalate:
+        tor_or_procurement:
+          skill: tor-review
+          description: เอกสารเป็น TOR หรือเกี่ยวกับการจัดซื้อจัดจ้าง
+        official_correspondence:
+          skill: thai-official-documents
+          description: เอกสารเป็นหนังสือราชการหรือบันทึกข้อความ
+        privacy_or_pii:
+          skill: data-privacy-compliance
+          description: เอกสารมีข้อมูลส่วนบุคคลหรือความลับที่ต้อง privacy review
+        receipt_or_disbursement:
+          skill: receipt-audit
+          description: เอกสารเป็นใบเสร็จหรือหลักฐานเบิกจ่าย
+        lab_result:
+          skill: lab-result-review
+          description: เอกสารเป็นผลทดสอบหรือข้อมูลห้องปฏิบัติการ
+        controlled_qms_document:
+          skill: document-record-control
+          description: เอกสารเป็น controlled QMS document หรือ record
+      human_only:
+        final_approval_or_release:
+          role: document-owner-or-authorized-signatory
+          authority: official-signing
+          description: การอนุมัติ ลงนาม ส่งจริง หรือรับรองเอกสารเป็นอำนาจของมนุษย์
+
+  - name: meeting-summary
+    cluster: governance-operations
+    domain: governance
+    processId: governance.meeting
+    teams:
+      primary: [ga]
+      consumers: ["*"]
+    wildcardReason: "all teams participate in meetings and need action/milestone extraction"
+    description: สรุปบันทึกการประชุม แยกมติ Action item ผู้รับผิดชอบ และประเด็นที่ยังค้าง
+    intent: [summarize, review]
+    triggers: [ประชุม, meeting, minutes, มติ, รายงานการประชุม, จดประชุม, action item]
+    paths: ["**/meeting*/**", "**/minutes/**", "**/notes/**"]
+    fileTypes: [txt, md, docx]
+    requires: [raw_meeting_notes]
+    scope:
+      allow:
+        - สกัดมติที่ประชุมและข้อตกลง
+        - กำหนดผู้รับผิดชอบและวันส่งมอบ
+        - ระบุข้อที่ยังไม่ชัดเจนเป็น 'รอยืนยัน'
+      escalate: {}
+      human_only:
+        invented_resolutions:
+          role: meeting-chairperson
+          authority: official-signing
+          description: การแต่งมติหรือสถานะที่ไม่มีในบันทึกจริง
+
+  - name: browser-form-assistant
+    cluster: governance-operations
+    domain: operations
+    processId: governance.facility-booking
+    teams:
+      primary: [ga]
+      consumers: ["*"]
+    wildcardReason: "all teams may use approved online forms with confirmation gates"
+    description: ผู้ช่วยร่างและตรวจทานข้อมูลแบบฟอร์มออนไลน์แบบมีมนุษย์กำกับ ไม่ส่งแทนโดยพลการ
+    intent: [form-submit, fill, create, plan, review]
+    triggers: [กรอกฟอร์ม, กรอกแบบฟอร์ม, กดส่งแบบฟอร์ม, ส่งแบบฟอร์ม, submit form, ล็อกอินเว็บ, จองห้องประชุม, ขอใช้ห้องประชุม, ขอใช้สถานที่]
+    paths: ["**/form*/**", "**/booking*/**", "**/request*/**"]
+    fileTypes: [pdf, docx, txt, html]
+    requires: [form_objective]
+    scope:
+      allow:
+        - เปิดเว็บไซต์ สำรวจและอ่านข้อกำหนดของแบบฟอร์ม
+        - กรอกข้อมูลฉบับร่างและเลือกตัวเลือกใน dropdown
+        - reuse authenticated session ที่ผู้ใช้ opt-in ไว้ โดยไม่เปิดเผยหรือบันทึก plaintext credential
+        - แนบไฟล์เอกสารประกอบฉบับร่างและถ่ายภาพหน้าจอตรวจสอบเมื่อไม่มี secret ที่ไม่จำเป็น
+        - สรุปข้อมูลที่กรอกทั้งหมดให้ผู้ใช้ตรวจทาน
+      escalate:
+        form_submission:
+          skill: browser-form-assistant
+          description: การกดยืนยันส่งฟอร์ม (Submit) หรือจองสิทธิ์ที่มีผลผูกพัน ต้องได้รับคำยืนยันจากผู้ใช้ก่อน
+      human_only:
+        budget_approval:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติงบประมาณหรือเปลี่ยนแปลงวงเงิน
+        official_signing:
+          role: authorized-signatory
+          authority: official-signing
+          description: การลงนามในหนังสือราชการ สัญญา หรือข้อตกลงผูกพันนิติบุคคล
+
+  - name: project-plan
+    cluster: incubation-strategy
+    domain: project-management
+    processId: project.planning
+    teams:
+      primary: [pm]
+      consumers: [imo, sit, linc, pubsec, piti]
+    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
+    intent: [plan, review, create]
+    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ, timeline โครงการ, ไทม์ไลน์โครงการ, ทำ timeline]
+    paths: ["**/project*/**", "**/plan/**", "**/PM/**"]
+    fileTypes: [xlsx, csv, md]
+    requires: [project_scope, timeline]
+    scope:
+      allow:
+        - แตก Work Breakdown Structure (WBS)
+        - กำหนด Milestone และ Dependency
+        - คำนวณ Critical Path และ RICE Scoring
+        - วิเคราะห์ความเสี่ยงและมาตรการรับมือ
+      escalate: {}
+      human_only:
+        deadline_extension_approval:
+          role: project-director
+          authority: budget-allocation
+          description: การอนุมัติขยายเวลาโครงการจริง
+
+  - name: project-pre-mortem
+    cluster: incubation-strategy
+    domain: project-management
+    processId: project.planning
+    teams:
+      primary: [pm]
+      consumers: [pubsec, tech-up, tech-spin, foodfabr]
+    description: วิเคราะห์และดักจับความเสี่ยงล่วงหน้าก่อนเริ่มสัญญาหรือโครงการ จำแนกความเสี่ยงแบบ Tiger, Paper Tiger และ Elephant in the room
+    intent: [analyze, review, plan]
+    triggers: [pre-mortem, ความเสี่ยงล่วงหน้า, premortem, tiger paper tiger, elephant in the room, ดักจับความเสี่ยง, จำลองความล้มเหลว, โครงการนี้อาจพัง, โครงการล้มเหลวล่วงหน้า]
+    paths: ["**/risk/**", "**/premortem/**", "**/pre-mortem/**", "**/PM/**"]
+    fileTypes: [md, docx, xlsx]
+    requires: [project_scope]
+    scope:
+      allow:
+        - จำลองสาเหตุความล้มเหลวของโครงการล่วงหน้า
+        - จัดกลุ่มความเสี่ยง Tiger, Paper Tiger และ Elephant
+        - เสนอมาตรการป้องกันและสัญญาณเตือนล่วงหน้า
+      escalate: {}
+      human_only:
+        policy_waiver_signing:
+          role: executive-director
+          authority: policy-waiver
+          description: การอนุมัติผ่อนผันข้อกำหนดหรือระเบียบความเสี่ยง
+
+  - name: startup-discovery
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.startup-intake
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, imo, mi]
+    description: ค้นหาและทดสอบสมมติฐานตลาดสำหรับสตาร์ทอัพและงานวิจัย ด้วย Value Proposition Canvas และ The Mom Test
+    intent: [create, review, interview, plan, evaluate]
+    triggers: [vpc, value proposition, value proposition canvas, สมมติฐานตลาด, สัมภาษณ์ลูกค้า, customer interview, mom test, problem-solution fit, บ่มเพาะสตาร์ทอัพ, ค้นหาความต้องการลูกค้า, เทคโนโลยีจากอาจารย์, เทคโนโลยีจากงานวิจัย, ผลงานวิจัยไปต่อ]
+    paths: ["**/startup/**", "**/incubation/**", "**/discovery/**", "**/PITI/**"]
+    fileTypes: [md, docx, pdf]
+    requires: [target_customer, core_technology]
+    scope:
+      allow:
+        - จัดทำ Value Proposition Canvas (Customer Profile & Value Map)
+        - ออกแบบสคริปต์สัมภาษณ์ The Mom Test
+        - สรุปสมมติฐานความต้องการตลาด
+      escalate: {}
+      human_only:
+        grant_intake_approval:
+          role: project-director
+          authority: budget-allocation
+          description: การอนุมัติคัดเลือกสตาร์ทอัพรับทุนหรือเข้าโครงการบ่มเพาะ
+
+  - name: entrepreneur-annual-goal
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.business-growth-planning
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, mi]
+    description: โค้ชเป้ารายได้ธุรกิจ 1 ปีโดยเริ่มจากฐานจริง ย้อนยอดขาย ลูกค้า funnel กำลังผลิต คนและเงินสด ก่อนลงแผนรายเดือน
+    intent: [plan, calculate, review]
+    triggers: [ตั้งเป้ารายได้ธุรกิจ 1 ปี, ตั้งเป้ารายได้ธุรกิจปีหน้า, ทำเป้ารายได้ธุรกิจปีหน้า, เป้ารายได้ธุรกิจ 1 ปี, เป้ารายได้ปีหน้า, ตั้งเป้าหมายธุรกิจ 1 ปี, เป้าหมายธุรกิจรายปี, แผนรายได้ธุรกิจ 12 เดือน, ต้องขายกี่ชิ้น, ลูกค้าใหม่กี่ราย, ลูกค้ากี่ราย, ต้องขายเพิ่มกี่ชุด, รายได้เพิ่มจาก subscription, แผนรายได้ปีหน้า, ยอดขายปีหน้า, แผนยอดขายทั้งปี, 1-year business goal, annual business revenue goal, re-forecast ยอดขายปี, re-forecast ที่เหลือทั้งปี, ยอดขายไม่ถึงเป้ารายเดือน, ยังไม่รู้เป้ารายได้, ทำแผน 12 เดือนพร้อมคนขาย]
+    paths: ["**/business-goal/**", "**/sales-forecast/**", "**/growth-plan/**"]
+    fileTypes: [md, xlsx, csv, txt]
+    requires: [target_or_baseline]
+    scope:
+      allow:
+        - ถามทีละข้อและยืนยันฐานรายได้ก่อนตั้งเป้าหมาย
+        - จำลอง Conservative Target Stretch โดยแยก Actual Benchmark Assumption
+        - ย้อนรายได้เป็นสินค้า ลูกค้า funnel กำลังผลิต วัตถุดิบ กำลังคน และเงินสด
+        - ลงแผนรายเดือนเฉพาะเมื่อยืนยันข้อมูลสำคัญและข้อจำกัดแล้ว
+      escalate:
+        market_only:
+          skill: market-signal-radar
+          description: ค้นหาตลาดและราคาคู่แข่งโดยยังไม่วางเป้าหมายกิจการ
+        discovery_only:
+          skill: startup-discovery
+          description: พิสูจน์โจทย์ลูกค้าและสมมติฐานตลาดก่อนวางยอดขาย
+      human_only:
+        entrepreneur_commitment:
+          role: business-owner
+          authority: entrepreneur-commitment
+          description: การเลือกเป้า อนุมัติลงทุน จ้างคน หรือสั่งซื้อจริงเป็นอำนาจเจ้าของกิจการ ไม่ใช่งบ STeP
+
+  - name: executive-status-update
+    cluster: incubation-strategy
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [sit]
+      consumers: [imo, pm, pubsec, nmco]
+    description: รายงานสถานะโครงการพอร์ตโฟลิโอสำหรับผู้บริหารและบอร์ด ด้วย SBNR Framework และไฟจราจร Traffic-Light
+    intent: [summarize, report, review]
+    triggers: [status update, sbnr, traffic light, รายงานผู้บริหาร, สรุปสถานะโครงการ, ไฟจราจร, exec update, รายงานบอร์ด, ส่งผู้บริหาร, รายงานสถานะโครงการ, รายงานผลการดำเนินงานโครงการ]
+    paths: ["**/status/**", "**/executive/**", "**/portfolio/**", "**/SIT/**"]
+    fileTypes: [md, xlsx, docx, pdf]
+    requires: [project_list, progress_data]
+    scope:
+      allow:
+        - จัดทำรายงานสรุป SBNR (Status, Blockers, Next Steps, Risks)
+        - ประเมินสัญญาณไฟจราจร Green/Yellow/Red
+        - สรุปประเด็นตัดสินใจของผู้บริหาร
+      escalate: {}
+      human_only:
+        budget_adjustment_approval:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติปรับแผนงบประมาณหรือเปลี่ยนแปลงงวดเงิน
+
+  - name: innovation-okr-mapping
+    cluster: incubation-strategy
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [sit]
+      consumers: [qs, imo, piti, crm]
+    description: ถ่ายทอดเป้าหมายยุทธศาสตร์ อว./มช. สู่ OKRs รายไตรมาสของทีม พร้อมตัวชี้วัดนำและตัวชี้วัดตาม (North Star & Input Metrics)
+    intent: [plan, align, review]
+    triggers: [okr, okrs, north star, เป้าหมายไตรมาส, ตัวชี้วัด อว, key results, ถ่ายทอดยุทธศาสตร์, input metrics, แปลงเป้าหมายองค์กร, เป้าทีมไตรมาส]
+    paths: ["**/okr/**", "**/strategy/**", "**/SIT/**"]
+    fileTypes: [md, xlsx, docx]
+    requires: [strategic_goals]
+    scope:
+      allow:
+        - กำหนด Objective และ 3 Measurable Key Results
+        - วางผัง North Star Metric และ Input Metrics Tree
+        - หลีกเลี่ยง Output Trap
+      escalate: {}
+      human_only:
+        kpi_target_approval:
+          role: executive-director
+          authority: hr-performance-evaluation
+          description: การอนุมัติรับรองตัวชี้วัดประเมินผลการปฏิบัติงานองค์กร
+
+  # --- Creative & Communication ---
+  - name: designer-brief
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: [mi, crm, piti, eic]
+    description: จัดทำและตรวจ Creative Brief สำหรับงานออกแบบ Artwork สื่อ และนิทรรศการ
+    intent: [create, review, check]
+    triggers: [brief, บรีฟ, artwork, โปสเตอร์, ไวนิล, ออกแบบ, graphic, สื่อประชาสัมพันธ์, ดีไซเนอร์, บรีฟดีไซเนอร์, brief ดีไซเนอร์, ส่งงานให้ดีไซเนอร์]
+    paths: ["**/CC/**", "**/Creative/**", "**/artwork/**", "**/brief/**"]
+    fileTypes: [ai, psd, pdf, docx, png, jpg]
+    requires: [project_objective, target_audience, dimension_or_format]
+    scope:
+      allow:
+        - รวบรวมขนาดจริง สเปกวัสดุ ข้อความหลัก วันส่งมอบ และผู้ตัดสินใจ
+      escalate: {}
+      human_only:
+        final_print_approval:
+          role: cc-lead-designer
+          authority: brand-alteration
+          description: การอนุมัติแบบรอบสุดท้ายเพื่อสั่งพิมพ์จริง
+
+  - name: event-concept
+    cluster: market-creative
+    domain: creative
+    processId: creative.event
+    teams:
+      primary: [cc]
+      consumers: [crm, eic, imo]
+    description: ออกแบบแนวคิดงาน Event ผังบูธ และประสบการณ์ผู้เข้าร่วมงาน
+    intent: [create, plan]
+    triggers: [event, event concept, คอนเซ็ปต์งาน, แนวคิดงาน, จัดงาน, อีเวนต์, ผังบูธ, นิทรรศการ, exhibition, booth, จัดสัมมนา, ออกแบบงานสัมมนา, concept งานสัมมนา, งานเปิดบ้าน, กิจกรรมในงาน]
+    paths: ["**/event*/**", "**/exhibition/**", "**/booth/**"]
+    fileTypes: [pdf, pptx, docx]
+    requires: [event_goal, audience_type, venue_constraints]
+    scope:
+      allow:
+        - วาง Storyline ธีมงาน Layout จำลอง และเส้นทางเดินของผู้ร่วมงาน
+      escalate:
+        venue_procurement:
+          skill: tor-government-writing
+          description: การจัดซื้อจัดจ้างสถานที่หรือจ้างออแกไนเซอร์
+      human_only: {}
+
+  - name: event-run-of-show
+    cluster: market-creative
+    domain: creative
+    processId: creative.event
+    teams:
+      primary: [cc]
+      consumers: [eic, crm, imo, nmco, ga]
+    description: สร้างและตรวจ Run of Show หรือ Sequence เวที ระดับคิว พร้อม lane เวลา จอ เสียง แสง เวที และ Lead รายคิว
+    intent: [create, plan, review, check]
+    triggers: [run of show, run-of-show, rundown, cue sheet, cue-to-cue, show flow, stage sequence, showtime, run through, run-through, show calling, รันคิว, รันทรู, คิวงาน, คิวเวที, คิวจอ, คิวเสียง, คิวไฟ, ลำดับเวที, ลำดับคิว, ลำดับพิธีการ, ลำดับพิธีเปิด, sequence เวที, ซีเควนซ์, กำหนดการเวที, สคริปต์เวที, บทพิธีกร, คิวพิธีกร, ไทม์ไลน์เวที, ซ้อมใหญ่, จับเวลาบนเวที, นาทีต่อนาที, ตารางคิว, ผังคิว]
+    paths: ["**/run-of-show/**", "**/sequence/**", "**/rundown/**", "**/stage/**"]
+    fileTypes: [csv, xlsx, pdf, docx]
+    requires: [event_date, agenda_blocks, venue]
+    scope:
+      allow:
+        - แตก agenda เป็น cue รายแถว พร้อม block time และ cue time สองระดับ
+        - แยก lane เวลา จอ เสียง แสง เวที ของประกอบฉาก และผู้รับผิดชอบรายคิว
+        - ตรวจผลรวมเวลา คิวที่ไม่มี Lead lane ที่ประกาศแต่ไม่มีข้อมูล และ placeholder ที่ยังค้าง
+        - เสนอรหัส Scene หรือ Format เป็นข้อเสนอที่ต้องให้ทีม AV ยืนยันก่อนใช้
+      escalate:
+        event_concept_and_zoning:
+          skill: event-concept
+          description: ธีมงาน คอนเซ็ปต์ ผังโซน และเส้นทางผู้เข้าร่วมยังไม่ได้ตัดสิน
+        speaker_deck_and_vtr:
+          skill: presentation-design
+          description: การทำหรือแก้สไลด์ VTR หรือกราฟิกที่คิวอ้างถึง
+        pii_in_contact_lane:
+          skill: data-privacy-compliance
+          description: เอกสารมีเบอร์โทร ทะเบียนรถ หรือข้อมูลการเดินทางของบุคคลในคอลัมน์ติดต่อ
+        av_and_venue_procurement:
+          skill: tor-government-writing
+          description: การเขียนขอบเขตงานเพื่อจ้างทีมแสงเสียง จอ หรือออแกไนเซอร์
+      human_only:
+        vip_protocol_and_opening_speech:
+          role: authorized-signatory
+          authority: official-signing
+          description: ลำดับเกียรติ ลำดับการเชิญ VIP และถ้อยคำในคำกล่าวเปิดงานหรือหนังสือเชิญ
+        av_vendor_selection:
+          role: procurement-committee
+          authority: procurement-approval
+          description: การคัดเลือกผู้รับจ้างระบบแสงเสียง จอ LED หรือออแกไนเซอร์
+
+  - name: presentation-design
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: [imo, mi, piti, sit]
+    description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck ในรูปแบบ Interactive 16:9 HTML และ Pitching สำหรับผู้บริหาร
+    intent: [create, review]
+    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, keynote, frontend-slides, html slide, pitch deck, สไลด์นำเสนอ, งานนำเสนอ]
+    paths: ["**/slides/**", "**/presentation/**", "**/deck/**"]
+    fileTypes: [pptx, pdf, key, html]
+    requires: [narrative_goal, key_takeaways]
+    scope:
+      allow:
+        - จัด Story flow 1-slide-1-message
+        - วาง Visual Hierarchy และคัดเลือกเนื้อหาสำคัญ
+        - สร้างและปรับแต่ง 16:9 Interactive HTML Presentation พร้อมโหมดแก้ไขในเบราว์เซอร์
+      escalate: {}
+      human_only:
+        fabricated_metrics:
+          role: project-owner
+          authority: official-signing
+          description: การแต่งข้อมูลสถิติที่ไม่มีผลการทดสอบจริง
+
+  # --- Engineering & Tech ---
+  - name: coding-git-workflow
+    cluster: tech-industry
+    domain: engineering
+    processId: engineering.code-delivery
+    teams:
+      primary: [developer]
+      consumers: [sit, tech-up]
+    description: มาตรฐานการเขียนโค้ด การแตก branch การ commit และ pull request ในองค์กร
+    intent: [create, review]
+    triggers: [git, commit, branch, pull request, pr, code review, workflow, รีวิวโค้ด, ตรวจโค้ด, รวมเข้ากิ่งหลัก]
+    paths: ["**/src/**", "**/.git/**", "**/scripts/**"]
+    fileTypes: [js, ts, py, sh]
+    requires: [git_context]
+    scope:
+      allow:
+        - Conventional Commits, Branching strategy, Secret detection
+      escalate: {}
+      human_only:
+        bypass_branch_protection:
+          role: tech-lead
+          authority: official-signing
+          description: การ bypass branch protection หรือ force push โดยพลการ
+
+  - name: github-workflow
+    cluster: tech-industry
+    domain: engineering
+    processId: engineering.code-delivery
+    teams:
+      primary: [developer]
+      consumers: [sit]
+    description: แนวทางการตั้งค่า GitHub Issues, Projects, Labels และ Automation
+    intent: [plan, create, review]
+    triggers: [github, issue, board, milestone, label, project board, กิตฮับ, บอร์ดงาน]
+    paths: ["**/.github/**"]
+    fileTypes: [yaml, yml, md]
+    requires: [workflow_objective]
+    scope:
+      allow:
+        - Issue templates, PR templates, Label naming
+      escalate: {}
+      human_only:
+        repo_deletion:
+          role: org-admin
+          authority: official-signing
+          description: การลบ repository หรือย้ายสิทธิ์ organization
+
+  - name: vercel-deploy
+    cluster: tech-industry
+    domain: engineering
+    processId: engineering.code-delivery
+    teams:
+      primary: [developer]
+      consumers: [sit]
+    description: การตรวจสอบความพร้อม สภาพแวดล้อม และขั้นตอน Deploy เว็บแอปขึ้น Vercel
+    intent: [deploy, check, review]
+    triggers: [vercel, deploy, production, preview, environment variable, dns, เวอร์เซล]
+    paths: ["**/vercel.json", "**/frontend/**", "**/web/**"]
+    fileTypes: [json, env, js]
+    requires: [build_output, env_vars]
+    scope:
+      allow:
+        - ตรวจ build passing, ตรวจสอบ Env vars ไม่มี secret รั่วไหล
+      escalate: {}
+      human_only:
+        production_force_deploy:
+          role: tech-lead
+          authority: official-signing
+          description: การ deploy ทับ production โดยไม่ผ่านการทดสอบ staging
+
+  # --- Common & Governance ---
+  - name: step-writing
+    cluster: governance-operations
+    domain: communication
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: ["*"]
+    wildcardReason: "all teams produce internal or external organizational communication"
+    description: ตรวจทานสำนวนภาษาไทยสำหรับสื่อสารองค์กร สุภาพ กระชับ ถูกต้องตามกติกา STeP
+    intent: [social-writing, review, create]
+    triggers: [ตรวจสำนวน, ปรับคำ, สำนวน, คำพูด, ปรับข้อความ, เขียนข้อความ, ข้อความประชาสัมพันธ์, ให้สุภาพ, สุภาพขึ้น, สุภาพพอไหม, สุภาพไหม, tone, writing, ภาษาไทย, แคปชัน, แคปชั่น, เขียนแคปชั่น, แคปชั่นเฟซบุ๊ก, เขียนโพสต์เฟซบุ๊ก, social post, caption, copy writing, ตรวจภาษา, โพสต์เฟซบุ๊ก, คำผิด, ตรวจคำผิด, พิสูจน์อักษร, สะกดผิด, โพสต์, ข่าวประชาสัมพันธ์]
+    paths: ["**/*.md", "**/*.docx", "**/*.txt"]
+    fileTypes: [md, docx, txt]
+    requires: [draft_text]
+    scope:
+      allow:
+        - ปรับภาษาให้เป็นกลาง ชัดเจน กระชับ ไม่ใช้คำโอ้อวดเกินจริง
+      escalate: {}
+      human_only:
+        policy_modification:
+          role: policy-owner
+          authority: official-signing
+          description: การเปลี่ยนสาระสำคัญของนโยบายหรือมติ
+
+  - name: thai-official-documents
+    cluster: governance-operations
+    domain: governance
+    processId: governance.correspondence
+    teams:
+      primary: [ga]
+      consumers: [afp, qs, pubsec, iasa]
+    description: ตรวจและจัดรูปแบบหนังสือราชการไทย หนังสือภายนอก หนังสือภายใน และบันทึกข้อความ
+    intent: [create, review, check]
+    triggers: [หนังสือราชการ, บันทึกข้อความ, หนังสือภายนอก, หนังสือภายใน, ตราครุฑ, คำขึ้นต้น, หนังสือส่ง, หนังสือเชิญ, ขอความอนุเคราะห์, ร่างหนังสือ, หนังสือแจ้ง, หน่วยงานภายนอก, จัดทำหนังสือ, รูปแบบหนังสือ, ผู้ลงนาม, เสนอลงนาม]
+    paths: ["**/official/**", "**/letters/**", "**/memo/**", "**/GA/**"]
+    fileTypes: [docx, pdf]
+    requires: [memo_topic, recipient, content_body]
+    scope:
+      allow:
+        - ตรวจโครงสร้างหนังสือราชการ การใช้คำสรรพนาม คำขึ้นต้น คำลงท้ายตามระเบียบสำนักนายกฯ
+      escalate: {}
+      human_only:
+        official_signing:
+          role: authorized-signatory
+          authority: official-signing
+          description: การลงนามหรือออกเลขหนังสือจริง
+        approval_decision:
+          role: authorized-signatory
+          authority: official-signing
+          description: การอนุมัติหรือลงนามอนุมัติในบันทึกข้อความแทนผู้มีอำนาจ
+
+  - name: stakeholder-questionnaire
+    cluster: governance-operations
+    domain: governance
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: [afp, ga, hd, sit, imo]
+    description: ร่างชุดคำถามส่งให้เจ้าของข้อมูลเมื่องานติดที่ข้อมูลหรือเอกสารที่ยังรอยืนยัน
+    intent: [create, triage]
+    triggers: [ชุดคำถาม, ลิสต์คำถาม, รายการคำถาม, คำถามส่งให้, ส่งคำถามให้, ร่างคำถาม, รอยืนยัน, questionnaire]
+    paths: []
+    fileTypes: [md, docx]
+    requires: [recipient, needed_answers]
+    scope:
+      allow:
+        - ร่างและจัดลำดับคำถามถึงเจ้าของข้อมูลจากช่องว่างที่ระบุได้
+      escalate: {}
+      human_only:
+        policy_interpretation:
+          role: policy-owner
+          authority: policy-waiver
+          description: การตีความคำตอบที่มีผลต่อระเบียบหรือข้อยกเว้น
+
+  - name: brand-tone-of-voice
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: [mi, crm, eic]
+    description: รักษาอัตลักษณ์และน้ำเสียงของ STeP และ RSP North ให้เป็นไปตาม Brand CI
+    intent: [brand-review]
+    triggers: [brand, tone of voice, น้ำเสียงแบรนด์, CI, โลโก้, logo, identity, บุคลิกแบรนด์]
+    paths: ["**/branding/**", "**/marketing/**"]
+    fileTypes: [ai, pdf, png]
+    requires: [creative_asset_or_copy]
+    scope:
+      allow:
+        - ตรวจสอบ Simple / Service / Sincere, การใช้คู่สีและโลโก้ที่ถูกต้อง
+      escalate: {}
+      human_only:
+        logo_alteration:
+          role: executive-director
+          authority: brand-alteration
+          description: การสร้างหรือดัดแปลงโลโก้ใหม่โดยไม่ผ่านการอนุมัติ
+
+  - name: data-privacy-compliance
+    cluster: governance-operations
+    domain: compliance
+    processId: quality.data-privacy
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    wildcardReason: "privacy and secret checks apply to documents from every team"
+    description: ตรวจจับและควบคุมข้อมูลส่วนบุคคล (PDPA/PII) และความลับทางการค้าก่อนเผยแพร่
+    intent: [privacy-review, check, audit, review]
+    triggers: [pdpa, privacy, ความเป็นส่วนตัว, ข้อมูลส่วนบุคคล, เลขบัตรประชาชน, เลขบัตร, pii, credential, password, ข้อมูลสุขภาพ, ความลับ, ส่งต่อได้ไหม]
+    paths: ["**/*"]
+    fileTypes: [xlsx, docx, pdf, csv]
+    requires: [target_document]
+    scope:
+      allow:
+        - ตรวจหาชื่อ เบอร์โทร เลขบัตรประชาชน เงินเดือน ข้อมูลสุขภาพ แล้วแจ้งเตือนให้ตัดทิ้ง
+      escalate: {}
+      human_only:
+        legal_liability_assessment:
+          role: dpo-legal-team
+          authority: legal-advice
+          description: การตัดสินความรับผิดทางกฎหมาย
+
+  - name: customer-support-faq-triage
+    cluster: market-creative
+    domain: client-services
+    processId: client.inquiry-triage
+    teams:
+      primary: [crm]
+      consumers: [ga, ifu, les, cc]
+    description: คัดแยกคำถามจากลูกค้าและจับคู่บริการที่ถูกต้องของ 22 ทีมในอุทยานฯ
+    intent: [triage, check, review]
+    triggers: [faq, ลูกค้าสอบถาม, คำถามลูกค้า, ลูกค้าถาม, ลูกค้าทักมา, ลูกค้าร้องเรียน, คัดแยกข้อร้องเรียน, ตอบลูกค้ายังไง, สอบถามบริการ, ขอข้อมูลบริการ, ช่องทางติดต่อบริการ, service intake, triage]
+    paths: ["**/support/**", "**/inquiry/**", "**/CRM/**"]
+    fileTypes: [txt, md, docx]
+    requires: [customer_message]
+    scope:
+      allow:
+        - ระบุว่าความต้องการตรงกับทีมใดใน 22 ทีม, สรุปประเด็นและสิ่งที่ต้องถามเพิ่ม
+      escalate: {}
+      human_only:
+        price_commitment:
+          role: service-owner-team
+          authority: budget-allocation
+          description: การรับปากราคาหรือเงื่อนไขพิเศษโดยไม่ได้รับอนุมัติ
+
+  - name: sop-authoring
+    cluster: governance-operations
+    domain: quality
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: [hd, les, foodfabr, ga]
+    description: ถอดวิธีปฏิบัติงานมาตรฐาน (SOP / WI) ของทีมให้อยู่ในรูปแบบที่คนอื่นทำซ้ำได้
+    intent: [create, plan, review]
+    triggers: [sop, wi, คู่มือ, ขั้นตอนการทำงาน, วิธีทำงาน, มาตรฐานการทำงาน, playbook, ขั้นตอนงานประจำ]
+    paths: ["**/SOP/**", "**/procedures/**", "**/playbook/**"]
+    fileTypes: [docx, md]
+    requires: [process_steps, roles_involved]
+    scope:
+      allow:
+        - จัดโครงสร้างวัตถุประสงค์ ขอบเขต ผู้รับผิดชอบ ขั้นตอน และแบบฟอร์มที่เกี่ยวข้อง
+      escalate: {}
+      human_only:
+        iso_enactment_approval:
+          role: qs-iso-manager
+          authority: iso-enactment
+          description: การประกาศบังคับใช้ SOP โดยไม่มีการอนุมัติระบบ ISO
+
+  - name: team-weekly-review
+    cluster: governance-operations
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [sit]
+      consumers: ["*"]
+    wildcardReason: "every team may run a weekly work review"
+    description: รวบรวมและวิเคราะห์ผลการทำงานประจำสัปดาห์ ปัญหาคอขวด และแผนงานสัปดาห์ถัดไป
+    intent: [summarize, report, review]
+    triggers: [weekly, ประจำสัปดาห์, ทบทวนงาน, รายงานประจำสัปดาห์, weekly review, ติดตามงาน, งานทีมอาทิตย์นี้, งานทีมรอบสัปดาห์]
+    paths: ["**/weekly/**", "**/reports/**"]
+    fileTypes: [md, docx, xlsx]
+    requires: [weekly_tasks_status]
+    scope:
+      allow:
+        - สรุปงานเสร็จ งานล่าช้า ปัญหาที่ต้องการความช่วยเหลือ และ Next Steps
+      escalate: {}
+      human_only:
+        hr_performance_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การประเมินผลการปฏิบัติงานรายบุคคล (KPI/HR)
+
+  - name: step-brand
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: ["*"]
+    wildcardReason: "any team may create or review material using STeP brand assets"
+    description: อ้างอิงและตรวจสอบการใช้ตราสัญลักษณ์และทรัพยากรแบรนด์ STeP / RSP North
+    intent: [brand-review]
+    triggers: [step brand, ตราอุทยาน, สัญลักษณ์, ci guideline, คู่มือแบรนด์]
+    paths: ["**/brand/**", "**/CI/**"]
+    fileTypes: [ai, eps, pdf, png]
+    requires: [brand_usage_context]
+    scope:
+      allow:
+        - ตรวจสอบระยะปลอดภัย ตราสัญลักษณ์ร่วม และคู่สีองค์กร
+      escalate: {}
+      human_only:
+        ci_governance:
+          role: executive-director
+          authority: brand-alteration
+          description: การอนุมัติการดัดแปลงตราสัญลักษณ์องค์กร
+
+  - name: step-image-prompt
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: ["*"]
+    wildcardReason: "any team may need an AI visual prompt for communication, concept, or image-edit work"
+    description: สร้าง Prompt Spec กลางแล้ว render เป็น syntax family ที่เหมาะกับเครื่องมือสำหรับงานสร้างหรือแก้ภาพ โดยรักษา reference และ brand constraints
+    intent: [create, draft, design]
+    triggers: [prompt, ขอ prompt, ขอ prompt ภาพ, ขอ prompt รูป, ขอ prompt โปสเตอร์, prompt ภาพโปสเตอร์, prompt งานสัมมนา, สร้างภาพ, gen ภาพ, เจนภาพ, gen รูป, เจนรูป, prompt รูป, prompt ภาพ, prompt poster, infographic prompt, ภาพนวัตกรรม, สื่อประชาสัมพันธ์ ai, notion, สไตล์ notion, ภาพ notion, วาด notion, art direction, visual direction, reference image, ภาพอ้างอิง, ตาม ref, ตาม reference, photorealistic, ภาพสมจริง, product hero, technology hero, architectural visual, exhibition visual, visual campaign]
+    paths: ["**/creative/**", "**/poster/**", "**/media/**", "**/visual/**", "**/campaign/**"]
+    fileTypes: [png, jpg, jpeg, webp, md, prompt]
+    requires: [image_theme_context]
+    scope:
+      allow:
+        - สร้าง Prompt Spec จาก brief, reference หรือ existing image แล้ว render ตาม syntax family ของเครื่องมือปลายทาง
+        - เลือก Art Direction, composition, lighting, medium และ palette ตาม purpose/audience โดยไม่ผูกกับชื่อรุ่น
+        - แยก MUST_KEEP / CHANGE_ONLY สำหรับ edit หรือ inpaint และรักษา reference constraints
+        - ใช้ Brand context เฉพาะจาก source ที่ยืนยันได้หรือข้อมูลที่ผู้ใช้ให้ในงานปัจจุบัน
+        - สร้าง visual prompt ได้หลายแนว เช่น Editorial, Photorealistic, Architectural, Technology/Product หรือ Reference-Led โดยไม่สร้างโลโก้หรือ claim ที่ไม่มีหลักฐาน
+      escalate: {}
+      human_only:
+        ci_governance:
+          role: executive-director
+          authority: brand-alteration
+          description: การอนุมัติการดัดแปลงหรือเผยแพร่สื่ออัตลักษณ์องค์กรภายนอก
+
+  - name: receipt-audit
+    cluster: governance-operations
+    domain: finance
+    processId: procurement.request
+    teams:
+      primary: [afp]
+      consumers: ["*"]
+    wildcardReason: "staff across teams may pre-check reimbursement evidence before AFP review"
+    description: Pre-check ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ และหลักฐานเบิก โดยแยก document facts, cross-document evidence และ current-source policy checks
+    intent: [review, verify, audit, check]
+    triggers: [ใบเสร็จ, ใบกำกับภาษี, เบิกจ่าย, เบิกได้มั้ย, เบิกได้ไหม, ใบสำคัญรับเงิน, e-tax, vat, ค่าเดินทาง, ค่าอาหาร, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าที่พัก, ใบเสร็จรับเงิน, receipt]
+    paths: ["**/finance/**", "**/receipts/**", "**/billing/**"]
+    fileTypes: [pdf, png, jpg, xlsx, docx]
+    requires: [receipt_document_context]
+    scope:
+      allow:
+        - ตรวจ document facts, arithmetic และความครบถ้วนตามหลักฐานที่มี
+        - ตรวจ cross-document consistency กับ approval/PO/quotation/delivery evidence
+        - ตรวจ policy/เพดาน/required documents เฉพาะเมื่อ resolve current verified source ได้
+        - ระบุ NEED-SOURCE / NEED-INFO แทนการแต่งกฎเมื่อ Source ยังไม่ยืนยัน
+      escalate:
+        tax_exemption_conflict:
+          skill: tor-review
+          reason: ข้อพิพาทเรื่องการยกเว้นภาษีหรือการหักภาษี ณ ที่จ่ายที่ไม่มีในระเบียบ
+      human_only:
+        disbursement_approval:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติสั่งจ่ายเงินหรือการอนุมัติเบิกจ่ายจริง
+        policy_waiver:
+          role: executive-director
+          authority: policy-waiver
+          description: การอนุมัติผ่อนผันกรณีใบเสร็จไม่ครบหรือเกินเพดานค่าใช้จ่าย
+
+  # --- Creative Direction ---
+  - name: creative-art-director
+    cluster: market-creative
+    domain: creative
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: [mi, eic, piti, imo]
+    description: กำหนด Creative Direction จาก Intent, Audience, Feeling, Visual Hammer และ Anti-AI-Slop ก่อนส่งต่อไปยัง Skill ผลิตงาน
+    intent: [create, review, plan]
+    triggers: [creative direction, design direction, visual hammer, anti-ai-slop, ai slop, งานดู ai, หา visual hammer, ควรไปทางไหนดี, ทิศทางงานออกแบบ, critique direction, art direction ก่อนทำ, ทิศทางภาพรวมงานออกแบบ, concept ภาพ, ภาพให้มีเอกลักษณ์]
+    paths: ["**/Creative/**", "**/branding/**", "**/campaign/**", "**/exhibition/**"]
+    fileTypes: [pdf, pptx, png, jpg, md]
+    requires: [creative_objective, audience]
+    scope:
+      allow:
+        - วิเคราะห์ Intent, Audience State, Target Feeling และ Core Scene
+        - กำหนด Visual Hammer, Design Language และ Brand Relationship
+        - วิจารณ์ AI Slop / visual cliché จากเหตุผลของงาน
+      escalate: {}
+      human_only:
+        ci_governance:
+          role: executive-director
+          authority: brand-alteration
+          description: การอนุมัติดัดแปลง CI หรือ Brand Identity อย่างเป็นทางการ
+
+  # --- High-Leverage Cross-Team Skills ---
+  - name: evidence-before-approval
+    cluster: governance-operations
+    domain: quality
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: ["*"]
+    wildcardReason: "evidence-before-claim discipline applies across all teams"
+    description: ตรวจหลักฐานก่อนกล่าวว่างานเสร็จ ถูกต้อง พร้อมส่ง หรือพร้อมอนุมัติ
+    intent: [review, check]
+    triggers: [พร้อมส่งไหม, พร้อมส่ง, ก่อนส่งงาน, ก่อนปิดงาน, ตรวจหลักฐานก่อนปิดงาน, evidence check, verification before completion, ยืนยันว่าครบ, พร้อมใช้งานหรือยัง, หลักฐานรองรับครบ, ก่อนบอกว่างานเสร็จ]
+    paths: ["**/review/**", "**/final/**", "**/handoff/**"]
+    fileTypes: [md, docx, pdf, xlsx, pptx]
+    requires: [claim_or_output]
+    scope:
+      allow:
+        - แยก Claim กับ Evidence และตรวจความตรงกัน
+        - ระบุ VERIFIED / PARTIAL / UNVERIFIED
+        - ระบุ evidence gap และสิ่งที่ต้องตรวจเพิ่มก่อนส่ง
+      escalate: {}
+      human_only: {}
+
+  - name: afp-operations-lookup
+    cluster: governance-operations
+    domain: finance
+    processId: procurement.request
+    teams:
+      primary: [afp]
+      consumers: ["*"]
+    wildcardReason: "every team sends finance and procurement paperwork to AFP, so anyone planning an activity must be able to look up the lead time and expense category before they commit to a date"
+    description: ตอบ Lead Time งานการเงินและงานพัสดุ หมวดค่าใช้จ่าย B/BV/B9.2 การจ้างเหมารถตู้ ค่าตอบแทนวิทยากร ข้อควรระวังการยืมเงิน และ E-Signature ตามแนวปฏิบัติที่ AFP แจ้งเวียน
+    intent: [afp-operations]
+    triggers: [lead time, leadtime, ระยะเวลาดำเนินงาน, ใช้เวลากี่วัน, กี่วันทำการ, เสร็จเมื่อไหร่, ทันไหม, ปิดรับเอกสาร, รอบปิดรับ, ปฏิทินการเงิน, ยืมเงิน, สัญญายืมเงิน, เคลียร์เงิน, สำรองจ่าย, เบิกเงินสำรองจ่าย, เงินอุดหนุนโครงการ, ใบแจ้งหนี้, ขอออกใบเสร็จ, ใบเสร็จรับเงิน, หมวดค่าใช้จ่าย, ลงหมวดอะไร, หมวด B, หมวด BV, จ้างเหมารถตู้, เช่ารถตู้, ค่าตอบแทนวิทยากร, วิทยากร, นับชั่วโมงวิทยากร, จัดซื้อจัดจ้าง, งานพัสดุ, ใบสั่งซื้อ, ใบสั่งจ้าง, PR, PO, e-signature, อีลายเซ็น, ลายเซ็นอิเล็กทรอนิกส์, STeP MIS, เงินชดเชยคอมพิวเตอร์, คอมพิวเตอร์พกพา, เอกสารภาษาต่างประเทศ, อัตราแลกเปลี่ยน]
+    paths: ["**/AFP/**", "**/Finance/**", "**/Procurement/**"]
+    fileTypes: [md, pdf, xlsx]
+    requires: []
+    scope:
+      allow:
+        - อ้าง Lead Time พร้อมเงื่อนไขว่านับเมื่อเอกสารครบถ้วนถูกต้อง และเริ่มนับใหม่เมื่อมีการแก้ไข
+        - ชี้หมวดค่าใช้จ่ายตามขอบเขตที่แนวปฏิบัติระบุ
+        - อธิบายวิธีนับชั่วโมงวิทยากรและข้อควรระวังการยืมเงิน
+      escalate:
+        disbursement_decision:
+          to: afp
+          description: การสรุปว่าเบิกได้หรือไม่ได้ในกรณีเฉพาะ เป็นดุลพินิจของเจ้าหน้าที่ AFP
+        unregistered_rate:
+          to: afp
+          description: อัตราค่าตอบแทนวิทยากรและเงินชดเชยคอมพิวเตอร์ยังไม่มีในเอกสารที่ลงทะเบียน
+      human_only: {}
+
+  - name: hr-policy-lookup
+    cluster: governance-operations
+    domain: people-development
+    processId: people.personnel-welfare
+    teams:
+      primary: [hd]
+      consumers: ["*"]
+    wildcardReason: "every employee in every team is bound by the HR and career-path announcements, so anyone must be able to look up their own entitlements"
+    description: ตอบสิทธิและเงื่อนไขตามประกาศงานบุคคลและ Career Path ของอุทยานฯ พร้อมอ้างเลขข้อ — วันลา เบี้ยขยัน เบี้ยเลี้ยง ค่าที่พัก ค่ายานพาหนะ เงินเดือน ค่าตำแหน่ง การลาออก การพ้นสภาพ และระเบียบวินัย
+    intent: [hr-entitlement]
+    triggers: [ลาพักผ่อน, ลาป่วย, ลากิจ, ลาคลอด, ลาบวช, ลาอุปสมบท, ลาปฏิบัติธรรม, ลากิจพิเศษ, ลารับปริญญา, ลาไปดูแลคู่สมรส, ลาเกณฑ์ทหาร, ลาตรวจเลือก, วันลา, ลาได้กี่วัน, สิทธิวันลา, ลาออก, ยื่นใบลาออก, พ้นสภาพพนักงาน, เบี้ยขยัน, เบี้ยเลี้ยง, ค่าที่พัก, ค่าเบี้ยเลี้ยงไปราชการ, ค่ายานพาหนะ, ค่าน้ำมัน, เบิกค่าเดินทาง, เงินเดือนออกวันไหน, รอบจ่ายเงินเดือน, ปรับเงินเดือน, ค่าตอบแทนตามผลงาน, pay for performance, กองทุนสำรองเลี้ยงชีพ, ประกันสังคม, ค่าพิธีศพ, ตรวจสุขภาพประจำปี, ประกันสุขภาพกลุ่ม, ระเบียบวินัย, โทษทางวินัย, ภาคทัณฑ์, เวลาทำงาน, บันทึกเวลา, สแกนนิ้ว, มาสาย, การแต่งกาย, ระเบียบการแต่งกาย, career path, เส้นทางความก้าวหน้า, เลื่อนขั้น, เลื่อนตำแหน่ง, ค่าตำแหน่ง, ค่าความเชี่ยวชาญ, ขั้นเงินเดือน, หัวหน้าทีม, พนักงานประจำ, พนักงานโครงการ, พนักงานทดลองงาน, สวัสดิการพนักงาน, ระเบียบบุคคล, ประกาศงานบุคคล, สลิปเงินเดือน, ขอสลิปเงินเดือน, หนังสือรับรองเงินเดือน, Favpo, ยื่นใบลา, ยื่นคำร้อง, logbook, log book, วันหยุดชดเชย, วันหยุดเพิ่มเติม, วันหยุดราชการ, ไปต่างประเทศ, เดินทางไปปฏิบัติงานต่างประเทศ, business travel, บันทึกการพัฒนาบุคลากร, หลักฐานการอบรม, เบิกค่าน้ำมัน, เบิกค่ารถ, รถไฟฟ้า, ยื่นเรื่องที่ไหน, ทำที่ระบบไหน, ใบรับรองแพทย์, ค่ารักษาพยาบาล, รักษาพยาบาล]
+    paths: ["**/HD/**", "**/HR/**", "**/HRD/**", "**/Personnel/**"]
+    fileTypes: [md, pdf, docx]
+    requires: []
+    scope:
+      allow:
+        - อ้างอัตราและเงื่อนไขตามประกาศ พร้อมเลขข้อกำกับทุกครั้ง
+        - เทียบสิทธิระหว่างสถานะการจ้างและระหว่างสาย S กับสาย L
+        - ระบุผู้มีอำนาจอนุมัติหรือแต่งตั้งในแต่ละขั้น
+      escalate:
+        individual_entitlement:
+          to: hd
+          description: สิทธิคงเหลือ ยอดเบิกจริง หรือประวัติการลาของพนักงานรายบุคคล ต้องดูจากระบบของ HD
+        unregistered_rates:
+          to: hd
+          description: วงเงินค่ารักษาพยาบาล เงินชดเชยคอมพิวเตอร์ ค่าโทรศัพท์ และเบี้ยเลี้ยงต่างประเทศ อยู่ในประกาศแยกที่ยังไม่ลงทะเบียน
+      human_only:
+        staff_performance_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การประเมินผลงานรายบุคคล การพิจารณาทางวินัย และการเสนอเลื่อนขั้น
+        policy_exception:
+          role: executive-director
+          authority: policy-waiver
+          description: การผ่อนผันระเบียบหรือการพิจารณากรณีพิเศษที่ประกาศระบุว่าเป็นดุลยพินิจของผู้อำนวยการ
+
+  - name: learning-designer
+    cluster: governance-operations
+    domain: people-development
+    processId: people.learning-development
+    teams:
+      primary: [hd]
+      consumers: [eic, piti, isi, qs, ga, nmco]
+    description: ออกแบบ Learning Outcome, Practice, Feedback, Assessment, Workshop และ Onboarding จากเป้าหมายงานจริง
+    intent: [onboarding-plan, create, plan]
+    triggers: [ออกแบบการเรียนรู้, learning design, learning outcome, หลักสูตรอบรม, training plan, lesson plan, microlearning, onboarding curriculum, onboarding พนักงาน, พนักงานใหม่, น้องใหม่, เตรียมคนใหม่, กิจกรรมการเรียนรู้, แบบทดสอบหลังอบรม]
+    paths: ["**/Training/**", "**/Onboarding/**", "**/learning/**", "**/workshop/**"]
+    fileTypes: [pptx, docx, md, pdf]
+    requires: [learner_profile, learning_goal]
+    scope:
+      allow:
+        - กำหนด outcome, practice, feedback และ evidence of learning
+        - ออกแบบ microlearning, workshop, onboarding และ job aid
+      escalate: {}
+      human_only:
+        staff_performance_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การใช้ผลการเรียนเพื่อประเมิน KPI หรือผลการปฏิบัติงานรายบุคคล
+
+  - name: assumption-challenger
+    cluster: incubation-strategy
+    domain: incubation
+    processId: incubation.startup-intake
+    teams:
+      primary: [piti]
+      consumers: [isi, eic, mi, tech-spin, tech-up]
+    description: ท้าทายสมมติฐาน แยก Fact / Assumption / Decision / Unknown และออกแบบการทดสอบที่ประหยัดที่สุด
+    intent: [review, evaluate, plan]
+    triggers: [ท้าทายสมมติฐาน, challenge assumption, stress test idea, grill idea, assumption map, สมมติฐานธุรกิจ, ถามให้ครบก่อนทำ, what are we assuming, critical assumption, คิดไปเอง, เชื่อแต่ยังไม่มีหลักฐาน, ยังไม่ได้พิสูจน์]
+    paths: ["**/startup/**", "**/discovery/**", "**/innovation/**"]
+    fileTypes: [md, docx, pdf]
+    requires: [idea_or_plan]
+    scope:
+      allow:
+        - จัดกลุ่ม Fact / Assumption / Decision / Unknown
+        - จัดลำดับ Critical / Important / Monitor
+        - เสนอ Cheapest Valid Test และ evidence threshold
+      escalate: {}
+      human_only: {}
+
+  - name: decision-memo
+    cluster: incubation-strategy
+    domain: strategy
+    processId: strategy.weekly-review
+    teams:
+      primary: [imo]
+      consumers: [sit, pm, pubsec, nmco, tech-spin]
+    description: สร้าง Decision Memo ที่แยกข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation
+    intent: [review, evaluate, plan]
+    triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร, เปรียบเทียบทางเลือก, ข้อมูลประกอบการตัดสินใจ]
+    paths: ["**/decision/**", "**/portfolio/**", "**/executive/**"]
+    fileTypes: [md, docx, pdf, pptx, xlsx]
+    requires: [decision_question]
+    scope:
+      allow:
+        - แยก Fact / Assumption / Unknown
+        - เปรียบเทียบทางเลือกและ trade-off
+        - เสนอ working recommendation พร้อม uncertainty
+      escalate: {}
+      human_only:
+        budget_decision:
+          role: afp-finance-head
+          authority: budget-allocation
+          description: การอนุมัติงบหรือเปลี่ยนวงเงินจริงเป็นอำนาจมนุษย์
+
+  - name: industry-problem-discovery
+    cluster: tech-industry
+    domain: industry-collaboration
+    processId: industry.problem-discovery
+    teams:
+      primary: [linc]
+      consumers: [tech-up, tech-spin, pubsec, mi]
+    description: ถอดโจทย์โรงงาน/ชุมชนก่อนเสนอเทคโนโลยี แยกอาการ หลักฐาน กระบวนการ ข้อจำกัด และ Desired Outcome
+    intent: [create, review, plan, summarize]
+    triggers: [ถอดโจทย์โรงงาน, โจทย์อุตสาหกรรม, problem discovery, pain point โรงงาน, จับโจทย์อุตสาหกรรม, constraint discovery, industry problem brief, โจทย์ชุมชน, current workaround, โจทย์จากที่คุยกับโรงงาน, ปัญหาหน้างานโรงงาน]
+    paths: ["**/LINC/**", "**/Industry/**", "**/Local/**", "**/discovery/**"]
+    fileTypes: [md, docx, pdf, xlsx]
+    requires: [reported_problem]
+    scope:
+      allow:
+        - แยก symptom, evidence, current process, workaround และ constraints
+        - สร้าง root-cause hypotheses โดยไม่สรุปเกินหลักฐาน
+        - กำหนด expert matching criteria
+      escalate: {}
+      human_only: {}
+
+
+  - name: expert-resource-matching
+    cluster: tech-industry
+    domain: resource-discovery
+    processId: industry.problem-discovery
+    teams:
+      primary: [linc]
+      consumers: [tech-up, tech-spin, les, foodfabr, piti, crm, mi, pubsec]
+    description: จับคู่โจทย์ที่ชัดแล้วกับบริการ ผู้เชี่ยวชาญ Lab เครื่องมือ หรือ Pilot Plant จาก Service Registry/NSP/NSTIS โดยให้เจ้าของบริการยืนยันก่อนส่งต่อจริง
+    intent: [search, recommend, plan]
+    triggers: [หา expert, หาอาจารย์, หานักวิจัย, ผู้เชี่ยวชาญ, expert matching, resource matching, หา lab, หาแล็บ, ห้องปฏิบัติการที่เหมาะ, หาเครื่องมือ, หาเครื่อง, มีเครื่อง, เครื่องมืออะไรบ้าง, รายการเครื่องมือ, scientific equipment, pilot plant, โรงงานต้นแบบ, freeze dryer, spray dryer, HPLC, GC-MS, AFM, เครื่องพลาสมา, 3D printer, laser cutter, NSTIS, หาคนช่วยแก้ปัญหาโรงงาน, ต้องใช้อาจารย์ด้านไหน]
+    paths: ["**/LINC/**", "**/Industry/**", "**/Expert/**", "**/Resource/**", "**/Lab/**"]
+    fileTypes: [md, docx, pdf, xlsx, csv]
+    requires: [problem_or_capability_need]
+    scope:
+      allow:
+        - จับคู่ service capability ก่อนค้นชื่อบุคคล
+        - สร้าง candidate list พร้อม source, วันที่ตรวจ, เหตุผลที่ match และสิ่งที่ยังไม่ยืนยัน
+        - ใช้ NSP/NSTIS เป็น discovery source เมื่อ registry ภายในไม่พอ
+      escalate: {}
+      human_only: {}
+
+  - name: market-signal-radar
+    cluster: market-creative
+    domain: market-intelligence
+    processId: market.insight-research
+    teams:
+      primary: [mi]
+      consumers: [piti, isi, eic, tech-spin, linc, crm, cc]
+    description: สแกนสัญญาณตลาดล่าสุดจากหลายแหล่ง แยก Trend, Anecdote, Competitor Signal และระดับความแข็งแรงของ evidence
+    intent: [market-test, review, plan, competitor-comparison]
+    triggers: [สัญญาณตลาด, market signal, trend ล่าสุด, เทรนด์ล่าสุด, กระแสตลาด, social listening, recent market, คู่แข่งล่าสุด, เทียบคู่แข่ง, เปรียบเทียบคู่แข่ง, competitor comparison, trend radar, ตลาดพูดถึงอะไร, ทดสอบตลาด, ทดลองตลาด, ขายได้ไหม, สินค้าจะขายได้ไหม, market test]
+    paths: ["**/MI/**", "**/Market/**", "**/research/**", "**/insight/**"]
+    fileTypes: [md, docx, xlsx, csv]
+    requires: [market_question]
+    scope:
+      allow:
+        - แยก demand, behavior, competitor, technology และ ecosystem signals
+        - ระบุ timeframe, source type, strength และ next validation
+        - เปิดเผยเมื่อไม่มี access ถึงข้อมูลปัจจุบัน
+      escalate: {}
+      human_only: {}
+
+  - name: voice-of-customer
+    cluster: market-creative
+    domain: client-services
+    processId: market.insight-research
+    teams:
+      primary: [crm]
+      consumers: [mi, ifu, les, foodfabr, cc, piti]
+    description: สังเคราะห์ Survey, Complaint, Inquiry และ Feedback เป็น Pain, Need, Expectation และ Opportunity โดยระวัง sample bias/PII
+    intent: [summarize, review, customer-feedback-synthesis]
+    triggers: [voice of customer, voc, เสียงลูกค้า, จัดกลุ่ม feedback, customer feedback, complaint themes, คำร้องเรียนลูกค้า, survey feedback, customer pain, ความเห็นลูกค้า, ลูกค้าบ่น, จัดกลุ่มความเห็นลูกค้า]
+    paths: ["**/CRM/**", "**/Customer/**", "**/survey/**", "**/feedback/**"]
+    fileTypes: [xlsx, csv, md, docx, txt]
+    requires: [customer_feedback]
+    scope:
+      allow:
+        - จัดกลุ่ม pain, need, expectation, positive driver และ information gap
+        - แยก frequency จาก severity และระบุ sample bias
+        - สกัด underlying need โดยรักษาความหมายเดิมของลูกค้า
+      escalate:
+        pii_or_sensitive_feedback:
+          skill: data-privacy-compliance
+          description: ข้อมูลลูกค้าที่มี PII หรือข้อมูลอ่อนไหวต้องผ่าน privacy review
+      human_only: {}
+
+  - name: lab-result-review
+    cluster: facilities-labs
+    domain: laboratory
+    processId: laboratory.result-review
+    teams:
+      primary: [les]
+      consumers: [foodfabr, tech-up, iqi, qs]
+    description: ทบทวนผลทดสอบและข้อมูลทดลอง ตรวจ completeness, units, QC, replicates, outliers และ method/spec alignment ก่อน qualified review
+    intent: [lab-review, review, check]
+    triggers: [ทบทวนผลทดสอบ, ตรวจผลทดสอบ, ผลทดสอบ, หน่วยวัดไม่ตรง, หน่วยผลทดสอบ, ใบคำขอ, lab result, ผลวิเคราะห์, ผลแล็บ, method validation, qc result, replicate, outlier, analytical result, repeatability, reproducibility]
+    paths: ["**/LES/**", "**/Lab/**", "**/Testing/**", "**/PilotPlant/**"]
+    fileTypes: [xlsx, csv, pdf, docx, txt]
+    requires: [test_results]
+    scope:
+      allow:
+        - ตรวจ completeness, traceability, QC/control, replicates และ calculations
+        - flag outlier โดยไม่ลบข้อมูลอัตโนมัติ
+        - เทียบ method/spec เฉพาะเกณฑ์ที่มีหลักฐานจริง
+      escalate: {}
+      human_only:
+        official_result_release:
+          role: authorized-lab-signatory
+          authority: lab-result-release
+          description: การออกหรือรับรองรายงานผลทดสอบอย่างเป็นทางการต้องมีผู้มีอำนาจ/ผู้เชี่ยวชาญลงนาม
+
+  # --- ISO 9001 / QMS Audit Readiness Pack ---
+  - name: iso9001-audit-readiness
+    cluster: governance-operations
+    domain: quality
+    processId: quality.audit-readiness
+    teams:
+      primary: [qs]
+      consumers: []
+    description: เตรียม External/Internal Audit ISO 9001 แบบ process-based สำหรับทีมและทั้งองค์กร
+    intent: [review, plan, evaluate]
+    triggers: [external audit iso 9001, เตรียม external audit, เตรียม audit iso, เตรียมเอกสาร audit iso, เตรียมเอกสารสำหรับ audit iso, เอกสาร audit iso, เอกสารสำหรับ audit iso, audit iso, iso audit, iso 9001 audit, surveillance audit, recertification audit, audit readiness, ทีมพร้อม audit, เตรียม iso]
+    paths: ["**/ISO/**", "**/Audit/**", "**/Quality/**"]
+    fileTypes: [md, docx, pdf, xlsx]
+    requires: [audit_scope_or_plan]
+    scope:
+      allow:
+        - สรุป process readiness, evidence gap, KPI, risk และ interview readiness
+        - เตรียม action list ก่อน fieldwork
+      escalate: {}
+      human_only:
+        iso_conformity_claim:
+          role: qs-iso-manager
+          authority: qms-conformity-decision
+          description: การรับรองว่าผ่าน ISO หรือยืนยัน conformity/certification อย่างเป็นทางการ
+
+  - name: audit-evidence-matrix
+    cluster: governance-operations
+    domain: quality
+    processId: quality.audit-readiness
+    teams:
+      primary: [qs]
+      consumers: []
+    description: ทำ Evidence Matrix/PBC list เชื่อม requirement กับหลักฐาน period source owner และ gap
+    intent: [create, review, summarize]
+    triggers: [audit evidence matrix, evidence matrix, pbc list, รายการหลักฐาน audit, หลักฐาน audit อยู่ไหน, audit evidence, evidence request, หลักฐาน iso, ผู้ตรวจจะขอหลักฐาน, รายการหลักฐานให้ผู้ตรวจ]
+    paths: ["**/Audit/**", "**/Evidence/**", "**/ISO/**"]
+    fileTypes: [xlsx, csv, md, docx, pdf]
+    requires: [audit_scope_or_evidence_request]
+    scope:
+      allow:
+        - สร้าง evidence register และตรวจ relevance/completeness/period/traceability
+        - ระบุ READY / PARTIAL / MISSING / STALE
+      escalate:
+        pii_sensitive_material:
+          skill: data-privacy-compliance
+          description: หลักฐาน audit มีข้อมูลส่วนบุคคลหรือข้อมูลลับที่ต้องลด/ปกปิดก่อนส่ง
+      human_only: {}
+
+  - name: document-record-control
+    cluster: governance-operations
+    domain: quality
+    processId: quality.document-control
+    teams:
+      primary: [qs]
+      consumers: []
+    description: ตรวจ Controlled Document และ Record เรื่อง owner revision approval current/obsolete retention และ traceability
+    intent: [review, check]
+    triggers: [document control, record control, ควบคุมเอกสาร, ควบคุมบันทึก, master document list, master list, obsolete document, revision control, retention, เอกสารล้าสมัย, เอกสารในระบบคุณภาพ, ทะเบียนเอกสาร, ฉบับไหนเลิกใช้]
+    paths: ["**/ISO/**", "**/SOP/**", "**/records/**", "**/documents/**"]
+    fileTypes: [docx, pdf, xlsx, md]
+    requires: [document_or_record]
+    scope:
+      allow:
+        - ตรวจ current/review-due/obsolete/uncontrolled/record-gap
+        - ตรวจ owner version approval effective date และ traceability
+      escalate:
+        sop_rewrite:
+          skill: sop-authoring
+          description: ต้องยกร่างหรือแก้เนื้อหา SOP/WI หลังพบ document gap
+      human_only:
+        formal_enactment:
+          role: qs-iso-manager
+          authority: iso-enactment
+          description: การประกาศใช้ แก้ไข หรือยกเลิก controlled document อย่างเป็นทางการ
+
+  - name: audit-interview-coach
+    cluster: governance-operations
+    domain: quality
+    processId: quality.audit-readiness
+    teams:
+      primary: [qs]
+      consumers: []
+    description: ซ้อม Auditor Interview ให้พนักงานอธิบาย process จริงและเปิด evidence ได้โดยไม่แต่งคำตอบ
+    intent: [review, interview]
+    triggers: [mock audit interview, audit interview, ซ้อม audit, ซ้อมตอบ auditor, ซ้อมสัมภาษณ์ audit, auditor interview, interview coach, mock audit, ซ้อมตอบผู้ตรวจ, ซ้อมสัมภาษณ์ตอนตรวจระบบคุณภาพ, สัมภาษณ์ตรวจ, สัมภาษณ์ตรวจ iso, ตอบผู้ตรวจ]
+    paths: ["**/Audit/**", "**/ISO/**", "**/Training/**"]
+    fileTypes: [md, docx, pdf]
+    requires: [team_or_process_context]
+    scope:
+      allow:
+        - จำลองคำถาม process/evidence/KPI/risk/improvement
+        - debrief knowledge/process/evidence gaps
+      escalate: {}
+      human_only: {}
+
+  - name: ncr-capa
+    cluster: governance-operations
+    domain: quality
+    processId: quality.corrective-action
+    teams:
+      primary: [qs]
+      consumers: []
+    description: จัดการ NC/NCR/CAPA ตั้งแต่ fact, containment, RCA, corrective action และ effectiveness check
+    intent: [nonconformity, create, review, evaluate]
+    triggers: [ncr capa, ncr, capa, nonconformity, non-conformity, ไม่ได้มาตรฐาน, ของไม่ได้มาตรฐาน, ไม่เป็นไปตามข้อกำหนด, เปิด nc, เปิด ncr, corrective action, แก้ nc, ปิด nc, root cause audit finding, audit finding capa, nc audit, corrective action plan, pareto, จัดลำดับสาเหตุ, สาเหตุหลักของ nc, root cause ของ nc, สาเหตุของ nc, ข้อร้องเรียนซ้ำ]
+    paths: ["**/CAPA/**", "**/NCR/**", "**/Audit/**", "**/Quality/**"]
+    fileTypes: [xlsx, md, docx, pdf]
+    requires: [nonconformity_or_finding]
+    scope:
+      allow:
+        - เขียน NC statement จาก requirement เทียบกับ evidence
+        - ช่วยทำ containment, root cause, corrective action และ effectiveness plan
+      escalate:
+        controlled_document_change:
+          skill: sop-authoring
+          description: Corrective action ต้องแก้ SOP/WI หรือ controlled process document
+      human_only:
+        formal_closure:
+          role: qs-iso-manager
+          authority: qms-conformity-decision
+          description: การปิด NC/CAPA หรือยืนยัน corrective action ว่าปิดอย่างเป็นทางการ
+
+  - name: qms-risk-opportunity-review
+    cluster: governance-operations
+    domain: quality
+    processId: quality.management-review
+    teams:
+      primary: [qs]
+      consumers: []
+    description: ทบทวน QMS Risks/Opportunities ของ process และ evidence ของ current controls/actions
+    intent: [review, evaluate]
+    triggers: [qms risk opportunity, risk opportunity iso, risk and opportunity, ความเสี่ยงและโอกาส qms, qms risk, risk register iso, ทบทวนความเสี่ยง iso, โอกาสปรับปรุง qms, ความเสี่ยงของระบบคุณภาพ, ความเสี่ยงระบบคุณภาพ, ความเสี่ยงของกระบวนการ, ประเมินความเสี่ยงกระบวนการ]
+    paths: ["**/Risk/**", "**/ISO/**", "**/Quality/**"]
+    fileTypes: [xlsx, md, docx]
+    requires: [process_or_qms_context]
+    scope:
+      allow:
+        - แยก risk event/cause/consequence จาก control gap
+        - ตรวจ current controls, action, owner และ follow-up evidence
+      escalate:
+        project_context:
+          skill: project-pre-mortem
+          description: ความเสี่ยงเฉพาะโครงการหรือสัญญาควรใช้ Project Pre-Mortem
+      human_only:
+        formal_acceptance:
+          role: executive-director
+          authority: policy-waiver
+          description: การยอมรับความเสี่ยงหรือผ่อนผัน control อย่างเป็นทางการ
+
+  - name: quality-objective-kpi-review
+    cluster: governance-operations
+    domain: quality
+    processId: quality.management-review
+    teams:
+      primary: [qs]
+      consumers: []
+    description: ทบทวน Quality Objective/KPI ให้ measurable, traceable และเชื่อม result กับ action
+    intent: [review, evaluate, report]
+    triggers: [quality objective kpi, quality objective, kpi iso, ตัวชี้วัดคุณภาพ, ทบทวน kpi iso, เป้าหมายคุณภาพ, objective measurable, quality metrics, เป้าด้านคุณภาพ, รายงานผล kpi, รายงาน kpi, ผล kpi, kpi ประจำเดือน, kpi ประจำไตรมาส, รีวิว kpi, ทบทวน kpi]
+    paths: ["**/KPI/**", "**/Quality/**", "**/ISO/**"]
+    fileTypes: [xlsx, csv, md, docx, pptx]
+    requires: [objective_or_kpi]
+    scope:
+      allow:
+        - ตรวจ formula/source/baseline/target/cadence/owner/actual/action
+        - แยก activity/output กับ outcome
+      escalate:
+        strategic_okr_design:
+          skill: innovation-okr-mapping
+          description: การออกแบบ OKR เชิงยุทธศาสตร์ทั้งชุดควรใช้ innovation-okr-mapping
+      human_only:
+        hr_evaluation:
+          role: hd-hr-lead
+          authority: hr-performance-evaluation
+          description: การกำหนดหรือรับรอง KPI ประเมินผลรายบุคคล
+
+  - name: management-review-prep
+    cluster: governance-operations
+    domain: quality
+    processId: quality.management-review
+    teams:
+      primary: [qs]
+      consumers: []
+    description: เตรียม Management Review Pack จาก KPI, customer feedback, audit, CAPA, risk, resources และ prior actions
+    intent: [create, summarize, review]
+    triggers: [management review iso, management review, ทบทวนฝ่ายบริหาร, เตรียม management review, qmr meeting, ประชุม qmr, management review pack, input management review, ผู้บริหารทบทวนระบบคุณภาพ]
+    paths: ["**/ManagementReview/**", "**/ISO/**", "**/Quality/**", "**/QMR/**"]
+    fileTypes: [pptx, xlsx, md, docx, pdf]
+    requires: [management_review_period]
+    scope:
+      allow:
+        - รวม source completeness, trends, exceptions, prior actions และ decision queue
+        - เตรียม pre-read โดยไม่แก้ source records
+      escalate:
+        decision_analysis:
+          skill: decision-memo
+          description: ประเด็นที่ต้องเปรียบเทียบทางเลือกเชิงลึกควรใช้ Decision Memo
+      human_only:
+        formal_qms_approval:
+          role: executive-director
+          authority: qms-conformity-decision
+          description: การตัดสินใจ รับรองผล หรืออนุมัติการเปลี่ยนแปลง QMS ใน Management Review

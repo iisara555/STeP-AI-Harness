@@ -1,0 +1,28 @@
+version: 1
+
+# Shared provenance labels used across Skills and Playbooks.
+# These labels describe where a statement came from, not how confident the model feels.
+types:
+  - id: SOURCE_FACT
+    description: "ข้อเท็จจริงที่อ่านตรงจากแหล่งข้อมูลต้นทาง"
+    sourceRequired: true
+
+  - id: DERIVED_FACT
+    description: "ข้อเท็จจริงที่คำนวณหรืออนุมานโดยตรงจาก Source Fact ที่ระบุได้"
+    sourceRequired: true
+
+  - id: USER_INPUT
+    description: "ข้อมูลที่ผู้ใช้ระบุโดยตรงในคำขอหรือระหว่าง Run"
+    sourceRequired: false
+
+  - id: PLANNING_ASSUMPTION
+    description: "สมมติฐานเพื่อการวางแผนที่ยังไม่ควรถูกนำเสนอเป็นข้อเท็จจริง"
+    sourceRequired: false
+
+  - id: ORGANIZATION_RULE
+    description: "กฎ กระบวนการ หรือ Authority ขององค์กรที่มาจากแหล่งควบคุม"
+    sourceRequired: true
+
+  - id: AI_RECOMMENDATION
+    description: "ข้อเสนอของ AI ที่ต้องแยกจากข้อเท็จจริงและอำนาจตัดสินใจของมนุษย์"
+    sourceRequired: false
