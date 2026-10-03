@@ -112,17 +112,27 @@ try {
   assert.equal(browsers.length, 1);
   assert.equal(browsers[0].partition, false);
   // The page shows inside the main window's Web tab, not in a pop-up window.
-  const docked = await app.evaluate(({ BrowserWindow }) => {
-    const windows = BrowserWindow.getAllWindows();
-    const view = windows[0].contentView.children.find(v => v.webContents?.getURL().startsWith('http:'));
-    return { windows: windows.length, bounds: view?.getBounds(), visible: view?.getVisible() };
-  });
-  assert.equal(docked.windows, 1, 'no pop-up browser window');
-  assert.ok(docked.bounds && docked.bounds.width > 100 && docked.bounds.height > 100, JSON.stringify(docked));
-  assert.equal(docked.visible, true);
+  const dockedView = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const windows = BrowserWindow.getAllWindows();
+      const view = windows[0].contentView.children.find(v => v.webContents?.getURL().startsWith('http:'));
+      return { windows: windows.length, bounds: view?.getBounds(), visible: view?.getVisible() };
+    });
   await page.locator('.browser-tab.active').waitFor();
+  // Pages are laid out at a default size before the panel reports its box, so wait until the page is shown over it.
   const host = await page.locator('.browser-host').boundingBox();
-  assert.ok(Math.abs(host.x - docked.bounds.x) <= 1 && Math.abs(host.width - docked.bounds.width) <= 1, 'page drawn over the Web tab');
+  await expect
+    .poll(
+      async () => {
+        const d = await dockedView();
+        return Boolean(d.visible && Math.abs(host.x - d.bounds.x) <= 1 && Math.abs(host.width - d.bounds.width) <= 1);
+      },
+      { timeout: 15000 },
+    )
+    .toBe(true);
+  const docked = await dockedView();
+  assert.equal(docked.windows, 1, 'no pop-up browser window');
+  assert.ok(docked.bounds.height > 100, JSON.stringify(docked));
   await page.screenshot({ path: 'release/qa/browser-docked.png' });
   // A dialog over the panel hides the page and shows its picture instead, so the dialog is never drawn under it.
   const shown = () =>
