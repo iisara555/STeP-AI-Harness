@@ -15,6 +15,7 @@ STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
   - **Before:** each turn started a new process and thread, and resent the whole prompt with every earlier result.
   - The thread is closed when the run step ends. A changed or compacted prompt starts a fresh thread.
   - Usage is counted per turn from the thread total.
+  - **Fallback:** if a turn on the open thread fails (the runtime dropped the thread or refused a second turn), the same turn is retried once on a fresh thread with the whole prompt. Keeping the thread is therefore never worse than not keeping it.
 - **The assistant's browser sees clickable cards:** product cards and tiles that a page makes clickable with its own script are now click targets, alongside buttons and links.
   - These are elements with a pointer cursor; for nested ones only the outermost counts.
   - ARIA roles such as menuitem, tab and option are targets too.
