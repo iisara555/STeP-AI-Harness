@@ -8,6 +8,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### A gooey waiting motion
+
+- While the AI works, the activity line now shows ink-like drops instead of the turning spinner. A head pulls up out of a body on a neck, two drops leave to the left, and all of them melt back in on a 3.2-second loop.
+- It is drawn in SVG: the shapes are blurred, then a colour matrix sharpens the blur's alpha into one edge. No image or library is needed. It takes the text colour, so it fits the light and dark themes.
+- When the system asks for reduced motion (Windows animations off), it keeps moving at half speed, as the spinner did, so a wait never looks frozen.
+
 ### Sidebar checked end to end
 
 - **New smoke test:** `test/sidebar-smoke.mjs` uses every sidebar control in the real app against a local fake AI:

@@ -662,3 +662,89 @@
   font-size: 12px;
   padding: 5px 9px;
 }
+/* GooLoader (src/goo-loader.tsx): a body with a head and two drops that leave and melt back, on a 3.2 s loop. */
+.goo {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text);
+}
+.goo svg {
+  display: block;
+  overflow: visible;
+}
+.goo ellipse,
+.goo circle {
+  fill: currentColor;
+  transform-box: view-box;
+}
+.goo-body {
+  transform-origin: 50px 32px;
+  animation: goo-body 3.2s ease-in-out infinite;
+}
+.goo-a {
+  animation: goo-a 3.2s ease-in-out infinite;
+}
+.goo-b {
+  animation: goo-b 3.2s ease-in-out infinite;
+}
+.goo-c {
+  animation: goo-c 3.2s ease-in-out infinite;
+}
+@keyframes goo-body {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1, 1);
+  }
+  25% {
+    transform: rotate(-14deg) scale(1.06, 0.94);
+  }
+  50% {
+    transform: rotate(8deg) scale(0.95, 1.06);
+  }
+  75% {
+    transform: rotate(-4deg) scale(1.04, 0.97);
+  }
+}
+/* The head pulls up out of the body on a neck, then sinks back in. */
+@keyframes goo-a {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(-4px, -21px);
+  }
+  55% {
+    transform: translate(-5px, -23px);
+  }
+  80% {
+    transform: translate(0, -2px);
+  }
+}
+/* Two drops leave on the left and come back. */
+@keyframes goo-b {
+  0%,
+  10%,
+  100% {
+    transform: translate(0, 0);
+  }
+  45% {
+    transform: translate(-27px, -9px);
+  }
+  70% {
+    transform: translate(-25px, -7px);
+  }
+}
+@keyframes goo-c {
+  0%,
+  25%,
+  100% {
+    transform: translate(0, 0);
+  }
+  60% {
+    transform: translate(-28px, 9px);
+  }
+  82% {
+    transform: translate(-22px, 7px);
+  }
+}

@@ -1230,6 +1230,18 @@ nav button,
   .spin {
     animation: spin 2.4s linear infinite !important;
   }
+  .goo-body {
+    animation: goo-body 6.4s ease-in-out infinite !important;
+  }
+  .goo-a {
+    animation: goo-a 6.4s ease-in-out infinite !important;
+  }
+  .goo-b {
+    animation: goo-b 6.4s ease-in-out infinite !important;
+  }
+  .goo-c {
+    animation: goo-c 6.4s ease-in-out infinite !important;
+  }
 }
 .format-toolbar {
   display: flex;
