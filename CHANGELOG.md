@@ -8,6 +8,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### The browser agent can click tiles that only a script makes clickable
+
+- **The problem:** on sites built with Vue, Svelte or plain `addEventListener` (for example the coffee menu at seleniumbase.io/coffee), a drink is a `<div>` with a click listener. It has no button, link, role or `onclick` attribute, and its pointer cursor shows only on hover. The page snapshot found clickable elements from markup and the resting cursor, so it never offered the cups. The AI could only see **Total: $0.00** and told the employee to click by hand.
+- **The fix:** before each snapshot, the main process asks the DevTools protocol's DOM domain which elements have click, mouse or pointer listeners. This needs no JavaScript in the page; listeners live in the page's own world, which the isolated snapshot cannot see. Those elements get a random attribute that the snapshot reads and removes at once. A framework root that listens for every click is not offered, because a container of real controls is not a target, and only the outermost of nested targets counts. If the protocol is unavailable (DevTools already open on that page), the snapshot works as before.
+- **Better names for tiles:** a tile's label comes from its inner `aria-label` or image alt text before its raw text, so the AI sees "Americano" rather than "espresso water". A new `context` field gives the heading of the card or list item, such as "Americano $7.00". The browser rules tell the AI to match by label or context, click once per snapshot when adding several items, and read again before saying something cannot be clicked.
+- The browser-agent smoke now has a page built like the coffee menu. Both cups are found with their names and prices, the root is not offered, and two clicks on Americano make the total $14.00. It also checks that no marker attribute remains on the page.
+
 ### A gooey waiting motion
 
 - While the AI works, the activity line now shows ink-like drops instead of the turning spinner. A head pulls up out of a body on a neck, two drops leave to the left, and all of them melt back in on a 3.2-second loop.

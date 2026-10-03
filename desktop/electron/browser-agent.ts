@@ -10,7 +10,13 @@ import { tm } from './i18n';
 const helpers = `
 const visible = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
 const sensitive = el => /password|hidden|file/i.test(el.type || '') || /password|passwd|otp|one.time|verification|credit.card|cc-number|cc-csc|token|secret/i.test([el.name,el.id,el.autocomplete,el.getAttribute('aria-label')].join(' '));
-const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || el.innerText || el.getAttribute('placeholder') || el.name || el.tagName).trim().slice(0,160);
+const native = 'a[href],button,input,textarea,select,summary,[role="button"],[role="link"],[role="menuitem"],[role="tab"],[role="option"],[role="checkbox"],[role="radio"],[role="switch"],[onclick],[tabindex]:not([tabindex="-1"])';
+// A tile a page made clickable itself (a picture of a cup, a product card) often has no text of its own worth reading;
+// its name is on an inner element (aria-label, an image's alt text), so that comes before the raw text.
+const inner = el => el.matches(native) ? '' : (el.querySelector('[aria-label]')?.getAttribute('aria-label') || el.querySelector('img[alt]')?.alt || '');
+const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || inner(el) || el.innerText || el.getAttribute('placeholder') || el.name || el.tagName).trim().slice(0,160);
+// The heading of the card or list item the target sits in ("Americano $7.00"), so the AI can tell similar tiles apart.
+const near = el => { const box = el.closest('li,article,section,tr,[role="listitem"],[role="row"]'); const h = box?.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"]'); const text = (h && !el.contains(h) ? h.innerText : '').replace(/\\s+/g,' ').trim().slice(0,120); return text && !label(el).includes(text) ? text : ''; };
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
 const WORLD = 1005;
@@ -73,25 +79,95 @@ export class AgentBrowser {
       signal.removeEventListener('abort', stop);
     }
   }
+  /**
+   * Marks elements that have a click listener of their own. Sites built with Vue, Svelte or plain addEventListener make a
+   * <div> clickable with no button, link, role or pointer cursor (a cup on a coffee menu turns a pointer only on hover),
+   * so the page's markup alone does not show it. The DevTools protocol's DOM domain lists every listener in the page
+   * without running any of the page's JavaScript or ours in it (listeners belong to the page's own world, which the
+   * isolated snapshot cannot see), and adds a random, short-lived attribute that the snapshot reads and removes.
+   * Without the protocol (DevTools already open on the page) the snapshot works as before.
+   */
+  private async markListeners(entry: Entry, signal: AbortSignal) {
+    const tool = entry.contents.debugger;
+    const marker = 'data-step-' + randomUUID().slice(0, 8);
+    let attached = false;
+    try {
+      if (!tool.isAttached()) {
+        tool.attach('1.3');
+        attached = true;
+      }
+      const send = (method: string, params?: object) => tool.sendCommand(method, params);
+      const work = (async () => {
+        const { root } = await send('DOM.getDocument', { depth: 0 });
+        const { object } = await send('DOM.resolveNode', { nodeId: root.nodeId });
+        try {
+          const { listeners } = await send('DOMDebugger.getEventListeners', { objectId: object.objectId, depth: -1, pierce: false });
+          const ids = [
+            ...new Set(
+              (listeners as { type: string; backendNodeId?: number }[])
+                .filter(l => l.backendNodeId && ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup'].includes(l.type))
+                .map(l => l.backendNodeId!),
+            ),
+          ].slice(0, 500);
+          if (!ids.length) return 0;
+          const { nodeIds } = await send('DOM.pushNodesByBackendIdsToFrontend', { backendNodeIds: ids });
+          let marked = 0;
+          for (const nodeId of nodeIds as number[]) {
+            if (signal.aborted) break;
+            // The document and window have listeners too but no attributes; they are skipped.
+            if (nodeId)
+              marked += await send('DOM.setAttributeValue', { nodeId, name: marker, value: '' }).then(
+                () => 1,
+                () => 0,
+              );
+          }
+          return marked;
+        } finally {
+          await send('Runtime.releaseObject', { objectId: object.objectId }).catch(() => {});
+        }
+      })();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const found = await Promise.race([
+        work,
+        new Promise<number>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('BROWSER_TIMEOUT')), 5000);
+        }),
+      ]).finally(() => clearTimeout(timer));
+      if (signal.aborted) throw new Error('CANCELLED');
+      return found ? marker : '';
+    } catch {
+      if (signal.aborted) throw new Error('CANCELLED');
+      return '';
+    } finally {
+      if (attached && tool.isAttached()) tool.detach();
+    }
+  }
   private async snapshot(id: string, entry: Entry, signal: AbortSignal) {
     const snapshot = randomUUID();
+    const marker = await this.markListeners(entry, signal);
     const result = await this.script(
       entry,
       `(() => { ${helpers}
-      // Native controls and ARIA roles, plus what a page made clickable itself (a card or tile with a click handler shows
-      // a pointer cursor); for nested pointer areas only the outermost counts, so a card is one target, not five.
-      const native = 'a[href],button,input,textarea,select,summary,[role="button"],[role="link"],[role="menuitem"],[role="tab"],[role="option"],[role="checkbox"],[role="radio"],[role="switch"],[onclick],[tabindex]:not([tabindex="-1"])';
+      // Native controls and ARIA roles, plus what a page made clickable itself: a card or tile with a pointer cursor, or
+      // one with a click listener (found by the main process through the DevTools protocol and marked for this read).
+      // For nested areas only the outermost counts, so a card is one target, not five; an element that only holds real
+      // controls (a framework's root listening for every click) is not a target itself.
       const pointer = el => getComputedStyle(el).cursor === 'pointer';
       const found = new Set(document.querySelectorAll(native));
+      const marked = ${JSON.stringify(marker)} ? Array.from(document.querySelectorAll('[' + ${JSON.stringify(marker)} + ']')) : [];
+      for (const el of marked) el.removeAttribute(${JSON.stringify(marker)});
+      const listening = new Set(marked.filter(el => el !== document.body && el !== document.documentElement && !el.querySelector(native) && !el.closest(native)));
+      for (const el of listening) { let up = el.parentElement, outer = true; for (; up; up = up.parentElement) if (listening.has(up)) { outer = false; break; } if (outer) found.add(el); }
       for (const el of Array.from(document.body?.querySelectorAll('*') || []).slice(0, 4000))
-        if (!found.has(el) && pointer(el) && !(el.parentElement && pointer(el.parentElement)) && !el.closest(native)) found.add(el);
+        if (!found.has(el) && pointer(el) && !(el.parentElement && pointer(el.parentElement)) && !el.closest(native) && ![...found].some(f => f !== el && !f.matches(native) && f.contains(el))) found.add(el);
       const all = Array.from(found).filter(visible).sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
       const login = all.some(el => sensitive(el) && el.type !== 'hidden' && el.type !== 'file');
       const controls = all.slice(0,150);
       const refs = new Map();
       const elements = login ? [] : controls.filter(el => !sensitive(el) && !el.disabled).map((el,i) => {
         const ref = 'e'+(i+1); refs.set(ref,{el, fingerprint:fingerprint(el)});
-        return {ref, role:el.getAttribute('role') || el.tagName.toLowerCase(), label:label(el), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
+        const context = near(el);
+        return {ref, role:el.getAttribute('role') || el.tagName.toLowerCase(), label:label(el), ...(context ? {context} : {}), editable:el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text','search','email','url','tel','number'].includes(el.type))};
       });
       globalThis.__stepBrowser?.observer.disconnect();
       globalThis.__stepBrowser?.controller.abort();
