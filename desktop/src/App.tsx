@@ -10,7 +10,6 @@ import {
   History,
   LoaderCircle,
   MessageSquare,
-  PanelLeftClose,
   PanelRightClose,
   Paperclip,
   Plus,
@@ -73,7 +72,8 @@ import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { FeedbackButtons, FeedbackDialog, type FeedbackAsk } from './feedback';
 import { AutomationDialog } from './automations';
-import { commandPalette, commandForKey, vimEdit } from './commands';
+import { commandPalette, commandForKey, vimEdit, COMMANDS } from './commands';
+import { TitleBar, shortcutText } from './titlebar';
 import { KeyboardDialog } from './keyboard';
 import { Readiness } from './readiness';
 import { Terms } from './terms';
@@ -792,7 +792,15 @@ export default function App() {
   keybindingsRef.current = snapshot?.settings.keybindings;
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      const id = commandForKey(e, keybindingsRef.current, /Mac/.test(navigator.platform));
+      // Zoom, which the menu bar used to give: Ctrl/⌘ with = (or +), - and 0.
+      const macKeys = /Mac/.test(navigator.platform);
+      if ((macKeys ? e.metaKey : e.ctrlKey) && !e.altKey && ['=', '+', '-', '0'].includes(e.key)) {
+        e.preventDefault();
+        const action = e.key === '0' ? 'zoomReset' : e.key === '-' ? 'zoomOut' : 'zoomIn';
+        void window.step?.call('windowControl', { action }).catch(() => {});
+        return;
+      }
+      const id = commandForKey(e, keybindingsRef.current, macKeys);
       if (id && id in commandRef.current) {
         e.preventDefault();
         commandRef.current[id as keyof typeof commands]();
@@ -848,866 +856,841 @@ export default function App() {
       </main>
     );
   return (
-    <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
-      {left && (
-        <aside className="sidebar">
-          <div className="brand">
-            <div>
-              <span className="brand-symbol" role="img" aria-label="STeP">
-                <img className="on-light" src={symbolColour} alt="" />
-                <img className="on-dark" src={symbolWhite} alt="" />
-              </span>
-              <span className="brand-tagline">MAKE INNOVATION SIMPLE</span>
+    <div className="shell">
+      <TitleBar
+        api={api}
+        title={settings ? t('ตั้งค่าพื้นที่ทำงาน') : session?.title || ''}
+        run={id => commandRef.current[id]?.()}
+        hint={id => shortcutText(snapshot.settings.keybindings?.[id] ?? COMMANDS.find(c => c[0] === id)?.[2] ?? '')}
+        left={left}
+        right={right}
+        showRight={!settings && view === 'chat'}
+        theme={snapshot.settings.theme}
+      />
+      <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
+        {left && (
+          <aside className="sidebar">
+            <div className="brand">
+              <div>
+                <span className="brand-symbol" role="img" aria-label="STeP">
+                  <img className="on-light" src={symbolColour} alt="" />
+                  <img className="on-dark" src={symbolWhite} alt="" />
+                </span>
+                <span className="brand-tagline">MAKE INNOVATION SIMPLE</span>
+              </div>
             </div>
-            <button className="icon" title={t('ซ่อนแถบงาน')} onClick={() => setLeft(false)}>
-              <PanelLeftClose size={17} />
+            <button className="new-work" data-tour="new-work" onClick={() => void action(create)}>
+              <Plus size={18} /> {t('เริ่มงานใหม่')}
             </button>
-          </div>
-          <button className="new-work" data-tour="new-work" onClick={() => void action(create)}>
-            <Plus size={18} /> {t('เริ่มงานใหม่')}
-          </button>
-          <label className="search">
-            <Search size={16} />
-            <input placeholder={t('ค้นหางานหรือเนื้อหา')} value={search} onChange={e => setSearch(e.target.value)} />
-            <button className="icon palette-hint" aria-label={t('เปิดคำสั่ง')} onClick={() => setPalette(true)}>
-              {shortcut}
-            </button>
-          </label>
-          <div className="session-filter" role="tablist" aria-label={t('กรองงาน')}>
-            {(
-              [
-                ['all', t('งานทั้งหมด'), MessageSquare],
-                ['artifacts', t('มีผลงาน'), FileText],
-              ] as const
-            ).map(([value, label, Icon]) => (
-              <button
-                key={value}
-                role="tab"
-                aria-selected={filter === value}
-                className={filter === value ? 'active' : ''}
-                onClick={() => {
-                  setFilter(value);
-                  setSettings(false);
-                  setView('chat');
-                }}
-              >
-                <Icon size={14} />
-                {label}
+            <label className="search">
+              <Search size={16} />
+              <input placeholder={t('ค้นหางานหรือเนื้อหา')} value={search} onChange={e => setSearch(e.target.value)} />
+              <button className="icon palette-hint" aria-label={t('เปิดคำสั่ง')} onClick={() => setPalette(true)}>
+                {shortcut}
               </button>
-            ))}
-          </div>
-          {filter !== 'all' && <div className="recent-label">{t('ร่างที่บันทึกแล้ว')}</div>}
-          <div className="sessions">
-            {groupSessions(filtered).map(group => (
-              <section key={group.label} aria-label={group.label}>
-                <div className="session-group">{group.label}</div>
-                {group.sessions.map(s =>
-                  renaming?.id === s.id ? (
-                    <input
-                      key={s.id}
-                      className="session-rename"
-                      aria-label={t('ชื่องาน')}
-                      autoFocus
-                      value={renaming.title}
-                      onChange={e => setRenaming({ ...renaming, title: e.target.value })}
-                      onBlur={() => setRenaming(null)}
-                      onKeyDown={e => {
-                        if (e.key === 'Escape') setRenaming(null);
-                        if (e.key === 'Enter' && renaming.title.trim())
-                          void action(async () => {
-                            await api.call('rename', renaming);
-                            setRenaming(null);
-                            await refresh();
-                          });
-                      }}
-                    />
-                  ) : (
-                    <div key={s.id} className={`session ${selected === s.id ? 'selected' : ''}`}>
-                      <button className="session-open" onClick={() => void action(() => selectSession(s.id))}>
-                        <span>{t(s.title)}</span>
-                        <small>
-                          {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {statusText[s.status] || s.status}
-                        </small>
-                      </button>
-                      <span className="session-actions">
-                        <button
-                          className="icon"
-                          aria-label={s.pinned ? t('เลิกปักหมุด') : t('ปักหมุด')}
-                          onClick={() =>
-                            void action(async () => {
-                              await api.call('pin', { id: s.id, pinned: !s.pinned });
-                              await refresh();
-                            })
-                          }
-                        >
-                          {s.pinned ? <PinOff size={14} /> : <Pin size={14} />}
-                        </button>
-                        <button className="icon" aria-label={t('เปลี่ยนชื่อ')} onClick={() => setRenaming({ id: s.id, title: s.title })}>
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          className="icon"
-                          aria-label={t('ลบงาน')}
-                          disabled={running && selected === s.id}
-                          onClick={() => setRemoving(s)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </span>
-                    </div>
-                  ),
-                )}
-              </section>
-            ))}
-            {!filtered.length && (
-              <p className="muted small">{search ? t('ไม่พบงานที่ตรงกับคำค้น') : t('เมื่อเริ่มงาน บทสนทนาจะอยู่ที่นี่')}</p>
-            )}
-          </div>
-          <div className="session-group tools-group">{t('เครื่องมือ')}</div>
-          <nav>
-            <button
-              data-tour="skills"
-              className={view === 'skills' && !settings ? 'nav-active' : ''}
-              onClick={() => {
-                setSettings(false);
-                setView('skills');
-              }}
-            >
-              <Blocks size={17} />
-              {t('ศูนย์รวม Skill')}
-              <span className="count">{skills ? skills.length + toolCount : ''}</span>
-            </button>
-            <button
-              data-tour="tools"
-              className={view === 'receipt' && !settings ? 'nav-active' : ''}
-              onClick={() => {
-                setSettings(false);
-                setView('receipt');
-              }}
-            >
-              <ReceiptText size={17} />
-              {t('ตรวจใบเสร็จ AFP')}
-              <span className="beta">{t('ทดลอง')}</span>
-            </button>
-          </nav>
-          <button
-            className={`settings-button ${settings ? 'nav-active' : ''}`}
-            onClick={() => {
-              setSettingsPage('general');
-              setSettings(true);
-            }}
-          >
-            <Settings2 size={18} />
-            <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
-          </button>
-          <div className="profile">
-            <span>{initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}</span>
-            <div>
-              {snapshot.settings.userName || snapshot.settings.assistant}
-              <small>
-                {snapshot.settings.userName ? t('ผู้ช่วย {0} · ', snapshot.settings.assistant) : ''}
-                {snapshot.settings.team ? t('ทีม {0}', snapshot.settings.team.toUpperCase()) : t('ยังไม่เลือกทีม')}
-              </small>
-            </div>
-          </div>
-        </aside>
-      )}
-      <main className="main-pane">
-        <header className="topbar">
-          {!left && (
-            <button className="icon" title={t('แสดงแถบงาน')} onClick={() => setLeft(true)}>
-              <PanelLeftClose size={18} />
-            </button>
-          )}
-          <div className="topbar-title">
-            <span className="topbar-heading">
-              <strong>
-                {settings
-                  ? t('ตั้งค่าพื้นที่ทำงาน')
-                  : view === 'receipt'
-                    ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-                    : view === 'skills'
-                      ? t('ศูนย์รวม Skill')
-                      : session?.title || t('เริ่มต้นงานที่อยากทำ')}
-              </strong>
-              {/* Like Claude Desktop, task commands live in a menu next to the title. */}
-              {!settings && view === 'chat' && session && (
+            </label>
+            <div className="session-filter" role="tablist" aria-label={t('กรองงาน')}>
+              {(
+                [
+                  ['all', t('งานทั้งหมด'), MessageSquare],
+                  ['artifacts', t('มีผลงาน'), FileText],
+                ] as const
+              ).map(([value, label, Icon]) => (
                 <button
-                  className="icon"
-                  aria-label={t('ตัวเลือกงานนี้')}
-                  title={t('ตัวเลือกงานนี้')}
-                  aria-haspopup="menu"
-                  aria-expanded={chatMenu}
-                  onClick={() => setChatMenu(!chatMenu)}
-                >
-                  <ChevronDown size={16} />
-                </button>
-              )}
-            </span>
-            {chatMenu && session && (
-              <>
-                <div className="menu-backdrop" onClick={() => setChatMenu(false)} />
-                <div
-                  className="title-menu"
-                  role="menu"
-                  aria-label={t('ตัวเลือกงานนี้')}
-                  onKeyDown={e => {
-                    if (e.key === 'Escape') setChatMenu(false);
+                  key={value}
+                  role="tab"
+                  aria-selected={filter === value}
+                  className={filter === value ? 'active' : ''}
+                  onClick={() => {
+                    setFilter(value);
+                    setSettings(false);
+                    setView('chat');
                   }}
                 >
-                  <button
-                    role="menuitem"
-                    autoFocus
-                    disabled={running}
-                    onClick={() =>
-                      void action(async () => {
-                        setChatMenu(false);
-                        await save();
-                        const forked = await api.call('sessionFork', { id: session.id });
-                        await refresh();
-                        await selectSession(forked.id);
-                      })
-                    }
-                  >
-                    <Copy size={15} />
-                    {t('ทำสำเนาเป็นงานใหม่')}
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() =>
-                      void action(async () => {
-                        setChatMenu(false);
-                        await save();
-                        const result = await api.call('sessionExport', { id: session.id, format: 'md' });
-                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
-                      })
-                    }
-                  >
-                    <Download size={15} />
-                    {t('ส่งออก Markdown')}
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() =>
-                      void action(async () => {
-                        setChatMenu(false);
-                        await save();
-                        const result = await api.call('sessionExport', { id: session.id, format: 'json' });
-                        if (result) notify(t('บันทึกบทสนทนาแล้ว'));
-                      })
-                    }
-                  >
-                    <Download size={15} />
-                    {t('ส่งออก JSON')}
-                  </button>
-                  <hr />
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setChatMenu(false);
-                      setMemoryOpen(true);
-                    }}
-                  >
-                    <Brain size={15} />
-                    {t('ความจำ')}
-                  </button>
-                  <button
-                    role="menuitem"
-                    title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
-                    onClick={() => {
-                      setChatMenu(false);
-                      setAutomationOpen(true);
-                    }}
-                  >
-                    <Timer size={15} />
-                    {t('งานตามรอบ')}
-                  </button>
-                </div>
-              </>
-            )}
-            <small>
-              {settings
-                ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
-                : view === 'receipt'
-                  ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง ไม่ส่งเอกสารขึ้น cloud')
-                  : view === 'skills'
-                    ? t('Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing')
-                    : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
-            </small>
-          </div>
-          {!settings && view === 'chat' && (
-            <button className="quiet" onClick={() => setRight(!right)}>
-              <FileText size={16} />
-              {right ? t('ซ่อนร่าง') : t('เปิดร่าง')}
-            </button>
-          )}
-        </header>
-        {settings ? (
-          <SettingsPanel
-            key={settingsPage}
-            initialPage={settingsPage}
-            snapshot={snapshot}
-            call={api.call}
-            refresh={refresh}
-            openWizard={() => setWizard(true)}
-            openTour={() => {
-              setSettings(false);
-              setView('chat');
-              setTour(true);
-            }}
-            close={() => setSettings(false)}
-            onError={e => notify(explainError(e), 'error')}
-          />
-        ) : view === 'receipt' ? (
-          <ReceiptApp
-            call={api.call}
-            onEvent={api.onEvent}
-            notify={notify}
-            onError={e => notify(explainError(e), 'error')}
-            handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
-            connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
-          />
-        ) : view === 'skills' ? (
-          <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />
-        ) : (
-          <>
-            <div className="conversation" aria-live="polite">
-              {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
-                <div className="context-bar">
-                  {snapshot.policy?.features.coordinator && (
-                    <label>
-                      <input
-                        aria-label={t('แบ่งงานย่อย')}
-                        type="checkbox"
-                        checked={coordinated}
-                        disabled={running || workMode !== 'draft'}
-                        onChange={e => setCoordinated(e.target.checked)}
-                      />
-                      {t('แบ่งงานย่อย')}
-                    </label>
-                  )}
-                  {!!session.loadedContext?.length && (
-                    <details>
-                      <summary>
-                        {t('บริบทที่ใช้ (')}
-                        {session.loadedContext.length})
-                      </summary>
-                      <ul>
-                        {session.loadedContext.map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
-                  {session.compaction && (
-                    <span className="muted small">
-                      {t(
-                        'ย่อบริบทแล้ว {0} → {1} tokens (ประมาณการ)',
-                        session.compaction.before.toLocaleString(locale()),
-                        session.compaction.after.toLocaleString(locale()),
-                      )}
-                    </span>
-                  )}
-                </div>
-              )}
-              {!session?.messages.length && (
-                <div className="welcome">
-                  <img className="illustration welcome-art" src={launchArt} alt="" />
-                  <p className="greet">
-                    {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
-                    {myTeamName ? ` · ${myTeamName}` : ''}
-                  </p>
-                  <h1>
-                    {t('ให้ AI ร่างงานหนัก')}
-                    <br />
-                    <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
-                  </h1>
-                  <p className="suggestions-label">
-                    {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
-                  </p>
-                  <div className="suggestions">
-                    {startersFor(snapshot.settings.team).map(starter => {
-                      const text = starterText(starter);
-                      return (
-                        <button key={text} onClick={() => setQuery(text)}>
-                          <Sparkles size={16} />
-                          <span>
-                            <small className="starter-tag">{starterTag(starter)}</small>
-                            {text}
-                          </span>
-                          <ChevronLeft className="point-right" size={15} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="welcome-lede">
-                    {t(
-                      'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง',
-                    )}
-                  </p>
-                  <ul className="welcome-trust">
-                    <li>
-                      <ShieldCheck size={14} />
-                      {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
-                    </li>
-                    <li>
-                      <Check size={14} />
-                      {t('AI ร่าง คนตรวจและอนุมัติ')}
-                    </li>
-                    <li>
-                      <Blocks size={14} />
-                      {t('รู้จักทีมและ Skill ของ STeP')}
-                    </li>
-                  </ul>
-                </div>
-              )}
-              {session?.messages.map((message, index) => (
-                <article
-                  key={index}
-                  className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}`}
-                >
-                  <div className="message-author">
-                    {message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant}
-                  </div>
-                  {message.role === 'assistant' ? (
-                    <RichText className="message-body" text={message.text} />
-                  ) : (
-                    <div className="message-body">
-                      {message.role === 'status' ? errorText[message.text] || t(message.text) : message.text}
-                    </div>
-                  )}
-                  {!!message.files?.length && (
-                    <div className="message-files" aria-label={t('ไฟล์ที่ส่งกับข้อความนี้')}>
-                      {message.files.map((file, i) => (
-                        <span key={i}>
-                          <Paperclip size={12} />
-                          {file.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {!!message.webSources?.length && (
-                    <div className="web-sources" aria-label={t('แหล่งข้อมูลจากการค้นเว็บ')}>
-                      <span>{t('แหล่งข้อมูลจาก Web Search')}</span>
-                      {message.webSources
-                        .filter(source => publicSourceUrl(source.url))
-                        .map(source => (
-                          <button
-                            className="quiet"
-                            key={source.url}
-                            title={source.url}
-                            onClick={() => void action(() => api.call('toolBrowser', { url: source.url }))}
-                          >
-                            {source.title} · {new URL(source.url).hostname}
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                  {message.role === 'assistant' && (
-                    <div className="message-actions">
-                      <button
-                        className="icon"
-                        aria-label={t('คัดลอก')}
-                        title={t('คัดลอก')}
-                        onClick={() =>
-                          void navigator.clipboard
-                            .writeText(message.text)
-                            .then(() => notify(t('คัดลอกแล้ว'), 'success'))
-                            .catch(e => notify(explainError(e), 'error'))
-                        }
-                      >
-                        <Copy size={15} />
-                      </button>
-                      <button
-                        className="icon"
-                        aria-label={t('เปิดใน Output')}
-                        title={t('เปิดใน Output')}
-                        onClick={() =>
-                          void action(async () => {
-                            await save();
-                            await api.call('edit', { id: session.id, text: message.text, revision: session.revision });
-                            await refresh();
-                            setToolTab('output');
-                            setRight(true);
-                          })
-                        }
-                      >
-                        <FileText size={15} />
-                      </button>
-                      <FeedbackButtons
-                        sessionId={session.id}
-                        index={index}
-                        message={message}
-                        call={api.call}
-                        onAsk={setFeedbackAsk}
-                        onDone={text => text && notify(text)}
-                      />
-                      {toolRequests(message.text).map((request, i) => (
-                        <button
-                          className="tool-request quiet"
-                          key={i}
-                          onClick={() => {
-                            setToolRequest({ ...request });
-                            setToolTab(request.tool);
-                            setRight(true);
-                          }}
-                        >
-                          {t('ตรวจ')} {request.tool}: {request.input.slice(0, 50)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </article>
+                  <Icon size={14} />
+                  {label}
+                </button>
               ))}
-              {snapshot?.usage?.warnings.length ? (
-                <p className="small muted" role="status">
-                  {t('การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้')}{' '}
-                  <button className="quiet" onClick={() => setUsageOpen(true)}>
-                    {t('ดูการใช้งาน')}
-                  </button>
-                </p>
-              ) : null}
-              {running && (
-                <article className="message assistant">
-                  {plan.length > 1 && (
-                    <ol className="plan-card" aria-label={t('ขั้นตอนของงาน')}>
-                      {plan.map((step, i) => (
-                        <li key={i} className={step.state}>
-                          {step.state === 'running' ? (
-                            <LoaderCircle size={14} className="spin" />
-                          ) : step.state === 'done' ? (
-                            <Check size={14} />
-                          ) : step.action ? (
-                            <ShieldCheck size={14} />
-                          ) : (
-                            <Circle size={14} />
-                          )}
-                          <span>
-                            {step.label}
-                            {step.action && <small> {t('· ต้องทำโดยผู้มีอำนาจ')}</small>}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
+            </div>
+            {filter !== 'all' && <div className="recent-label">{t('ร่างที่บันทึกแล้ว')}</div>}
+            <div className="sessions">
+              {groupSessions(filtered).map(group => (
+                <section key={group.label} aria-label={group.label}>
+                  <div className="session-group">{group.label}</div>
+                  {group.sessions.map(s =>
+                    renaming?.id === s.id ? (
+                      <input
+                        key={s.id}
+                        className="session-rename"
+                        aria-label={t('ชื่องาน')}
+                        autoFocus
+                        value={renaming.title}
+                        onChange={e => setRenaming({ ...renaming, title: e.target.value })}
+                        onBlur={() => setRenaming(null)}
+                        onKeyDown={e => {
+                          if (e.key === 'Escape') setRenaming(null);
+                          if (e.key === 'Enter' && renaming.title.trim())
+                            void action(async () => {
+                              await api.call('rename', renaming);
+                              setRenaming(null);
+                              await refresh();
+                            });
+                        }}
+                      />
+                    ) : (
+                      <div key={s.id} className={`session ${selected === s.id ? 'selected' : ''}`}>
+                        <button className="session-open" onClick={() => void action(() => selectSession(s.id))}>
+                          <span>{t(s.title)}</span>
+                          <small>
+                            {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {statusText[s.status] || s.status}
+                          </small>
+                        </button>
+                        <span className="session-actions">
+                          <button
+                            className="icon"
+                            aria-label={s.pinned ? t('เลิกปักหมุด') : t('ปักหมุด')}
+                            onClick={() =>
+                              void action(async () => {
+                                await api.call('pin', { id: s.id, pinned: !s.pinned });
+                                await refresh();
+                              })
+                            }
+                          >
+                            {s.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                          </button>
+                          <button className="icon" aria-label={t('เปลี่ยนชื่อ')} onClick={() => setRenaming({ id: s.id, title: s.title })}>
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            className="icon"
+                            aria-label={t('ลบงาน')}
+                            disabled={running && selected === s.id}
+                            onClick={() => setRemoving(s)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </span>
+                      </div>
+                    ),
                   )}
-                  {reasoning && (
-                    <details className="thinking" open={!liveText}>
-                      <summary>
-                        <Brain size={14} />
-                        {t('ความคิดของ AI')}
-                      </summary>
-                      <div>{reasoning}</div>
-                    </details>
-                  )}
-                  {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} />}
-                  <div className="activity" role="status" aria-live="polite">
-                    <LoaderCircle className="spin" size={15} />
-                    {progress ? t(progress) : t('กำลังทำงาน')}
-                  </div>
-                  <div className="activity-detail">
-                    <span className="activity-pulse" aria-hidden="true" />
-                    <span>
-                      {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
-                      {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
-                    </span>
-                  </div>
-                  {now - activityAt > 45000 && !liveText && (
-                    <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
-                  )}
-                  {activities.length > 1 && (
-                    <details className="activity-history">
-                      <summary>{t('ดูขั้นตอนที่ทำแล้ว')}</summary>
-                      <ol>
-                        {activities.slice(0, -1).map((label, index) => (
-                          <li key={index}>{label}</li>
-                        ))}
-                      </ol>
-                    </details>
-                  )}
-                </article>
+                </section>
+              ))}
+              {!filtered.length && (
+                <p className="muted small">{search ? t('ไม่พบงานที่ตรงกับคำค้น') : t('เมื่อเริ่มงาน บทสนทนาจะอยู่ที่นี่')}</p>
               )}
-              {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
-                <div className="retry-row">
-                  {/* Continues the stopped task, after any Playbook steps it already finished. */}
+            </div>
+            <div className="session-group tools-group">{t('เครื่องมือ')}</div>
+            <nav>
+              <button
+                data-tour="skills"
+                className={view === 'skills' && !settings ? 'nav-active' : ''}
+                onClick={() => {
+                  setSettings(false);
+                  setView('skills');
+                }}
+              >
+                <Blocks size={17} />
+                {t('ศูนย์รวม Skill')}
+                <span className="count">{skills ? skills.length + toolCount : ''}</span>
+              </button>
+              <button
+                data-tour="tools"
+                className={view === 'receipt' && !settings ? 'nav-active' : ''}
+                onClick={() => {
+                  setSettings(false);
+                  setView('receipt');
+                }}
+              >
+                <ReceiptText size={17} />
+                {t('ตรวจใบเสร็จ AFP')}
+                <span className="beta">{t('ทดลอง')}</span>
+              </button>
+            </nav>
+            <button
+              className={`settings-button ${settings ? 'nav-active' : ''}`}
+              onClick={() => {
+                setSettingsPage('general');
+                setSettings(true);
+              }}
+            >
+              <Settings2 size={18} />
+              <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
+            </button>
+            <div className="profile">
+              <span>{initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}</span>
+              <div>
+                {snapshot.settings.userName || snapshot.settings.assistant}
+                <small>
+                  {snapshot.settings.userName ? t('ผู้ช่วย {0} · ', snapshot.settings.assistant) : ''}
+                  {snapshot.settings.team ? t('ทีม {0}', snapshot.settings.team.toUpperCase()) : t('ยังไม่เลือกทีม')}
+                </small>
+              </div>
+            </div>
+          </aside>
+        )}
+        <main className="main-pane">
+          <header className="topbar">
+            <div className="topbar-title">
+              <span className="topbar-heading">
+                <strong>
+                  {settings
+                    ? t('ตั้งค่าพื้นที่ทำงาน')
+                    : view === 'receipt'
+                      ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+                      : view === 'skills'
+                        ? t('ศูนย์รวม Skill')
+                        : session?.title || t('เริ่มต้นงานที่อยากทำ')}
+                </strong>
+                {/* Like Claude Desktop, task commands live in a menu next to the title. */}
+                {!settings && view === 'chat' && session && (
                   <button
-                    onClick={() =>
-                      void action(() =>
-                        start(
-                          session.id,
-                          lastRequest,
-                          [],
-                          undefined,
-                          session.skill,
-                          undefined,
-                          undefined,
-                          session.mode || workMode,
-                          imageModel,
-                          true,
-                        ),
-                      )
-                    }
+                    className="icon"
+                    aria-label={t('ตัวเลือกงานนี้')}
+                    title={t('ตัวเลือกงานนี้')}
+                    aria-haspopup="menu"
+                    aria-expanded={chatMenu}
+                    onClick={() => setChatMenu(!chatMenu)}
                   >
-                    {t('ลองอีกครั้ง')}
+                    <ChevronDown size={16} />
                   </button>
-                  <button
-                    className="quiet"
-                    onClick={() => {
-                      setQuery(lastRequest);
-                      setTimeout(() => composerRef.current?.focus(), 0);
+                )}
+              </span>
+              {chatMenu && session && (
+                <>
+                  <div className="menu-backdrop" onClick={() => setChatMenu(false)} />
+                  <div
+                    className="title-menu"
+                    role="menu"
+                    aria-label={t('ตัวเลือกงานนี้')}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') setChatMenu(false);
                     }}
                   >
-                    {t('แก้คำขอ')}
-                  </button>
-                  {(connection?.models?.length || 0) > 1 && (
-                    <span className="small muted">{t('หรือเลือกโมเดลอื่นในกล่องพิมพ์ก่อนลองใหม่')}</span>
-                  )}
-                </div>
-              )}
-              {!running && progress && <p className="muted small">{t(progress)}</p>}
-              {/* Without tools the app searches ahead; with tools the AI decides, so nothing pops up while typing. */}
-              {!running && workMode !== 'image' && !snapshot.policy?.features.toolLoop && needsPublicWebSearch(query) && (
-                <p className="web-route small" role="status">
-                  {t('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ')}
-                </p>
-              )}
-              <div ref={conversationEnd} />
-            </div>
-            <div className="composer-area">
-              {(snapshot.transmissionGrants || [])
-                .filter(g => g.sessionId === selected)
-                .map(g => (
-                  <div className="transmission-scope" key={g.id} role="status">
-                    <span>
-                      {t(
-                        'อนุญาตส่งผลการอ่าน: {0} → {1} · เหลือ {2} ผล / {3} ตัวอักษร · ถึง {4}',
-                        g.source,
-                        g.destination,
-                        g.remainingResults,
-                        g.remainingChars.toLocaleString(locale()),
-                        new Date(g.expiresAt).toLocaleTimeString(locale()),
-                      )}
-                    </span>
                     <button
-                      className="quiet"
+                      role="menuitem"
+                      autoFocus
+                      disabled={running}
                       onClick={() =>
                         void action(async () => {
-                          await api.call('transmissionRevoke', { id: g.id });
+                          setChatMenu(false);
+                          await save();
+                          const forked = await api.call('sessionFork', { id: session.id });
                           await refresh();
+                          await selectSession(forked.id);
                         })
                       }
                     >
-                      {t('ถอนสิทธิ์และหยุดงาน')}
+                      <Copy size={15} />
+                      {t('ทำสำเนาเป็นงานใหม่')}
                     </button>
-                  </div>
-                ))}
-              {/* The assistant's questions and the task's plan sit right above the composer, under the newest message,
-                  as in Claude and ChatGPT: what needs the employee is where they type. */}
-              <div className="composer-dock">
-                {session?.workPlan?.tasks.length ? (
-                  <WorkPlanCard
-                    plan={session.workPlan}
-                    running={running || submitting}
-                    onExecute={() =>
-                      void action(async () => {
-                        setWorkflow('execute');
-                        workflowRef.current = 'execute';
-                        setWorkMode('chat');
-                        await start(session.id, t('ลงมือทำตามแผน'), [], undefined, undefined, undefined, undefined, 'chat');
-                      })
-                    }
-                  />
-                ) : null}
-                {questions
-                  .filter(q => q.sessionId === selected)
-                  .map(q => (
-                    <QuestionCard
-                      key={q.id}
-                      question={q}
-                      onAnswer={async answer => {
-                        await api!.call('questionRespond', { id: q.id, answer });
+                    <button
+                      role="menuitem"
+                      onClick={() =>
+                        void action(async () => {
+                          setChatMenu(false);
+                          await save();
+                          const result = await api.call('sessionExport', { id: session.id, format: 'md' });
+                          if (result) notify(t('บันทึกบทสนทนาแล้ว'));
+                        })
+                      }
+                    >
+                      <Download size={15} />
+                      {t('ส่งออก Markdown')}
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() =>
+                        void action(async () => {
+                          setChatMenu(false);
+                          await save();
+                          const result = await api.call('sessionExport', { id: session.id, format: 'json' });
+                          if (result) notify(t('บันทึกบทสนทนาแล้ว'));
+                        })
+                      }
+                    >
+                      <Download size={15} />
+                      {t('ส่งออก JSON')}
+                    </button>
+                    <hr />
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setChatMenu(false);
+                        setMemoryOpen(true);
                       }}
-                    />
-                  ))}
-              </div>
-              <div className="composer" data-tour="composer">
-                {pendingSource && (
-                  <div className="composer-chips">
-                    <button className="source-chip quiet" onClick={() => setPendingSource('')}>
-                      {t('ข้อมูลต้นทางแนบแล้ว ×')}
+                    >
+                      <Brain size={15} />
+                      {t('ความจำ')}
+                    </button>
+                    <button
+                      role="menuitem"
+                      title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
+                      onClick={() => {
+                        setChatMenu(false);
+                        setAutomationOpen(true);
+                      }}
+                    >
+                      <Timer size={15} />
+                      {t('งานตามรอบ')}
                     </button>
                   </div>
-                )}
-                {wantsImage && (
-                  <div className="image-route" role="status">
-                    <Sparkles size={14} />
-                    {imageModels(connection).length ? (
-                      <>
-                        <span>Image API</span>
-                        <select
-                          aria-label="Image model"
-                          value={imageModel}
-                          onChange={e => setImageModel(e.target.value)}
-                          disabled={running}
-                        >
-                          <option value="">{availableImages[0] || t('กำลังตรวจโมเดลของบัญชี…')}</option>
-                          {availableImages.map(id => (
-                            <option key={id} value={id}>
-                              {id}
-                            </option>
+                </>
+              )}
+              <small>
+                {settings
+                  ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
+                  : view === 'receipt'
+                    ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
+                    : view === 'skills'
+                      ? t('Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing')
+                      : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+              </small>
+            </div>
+            {!settings && view === 'chat' && (
+              <button className="quiet" onClick={() => setRight(!right)}>
+                <FileText size={16} />
+                {right ? t('ซ่อนร่าง') : t('เปิดร่าง')}
+              </button>
+            )}
+          </header>
+          {settings ? (
+            <SettingsPanel
+              key={settingsPage}
+              initialPage={settingsPage}
+              snapshot={snapshot}
+              call={api.call}
+              refresh={refresh}
+              openWizard={() => setWizard(true)}
+              openTour={() => {
+                setSettings(false);
+                setView('chat');
+                setTour(true);
+              }}
+              close={() => setSettings(false)}
+              onError={e => notify(explainError(e), 'error')}
+            />
+          ) : view === 'receipt' ? (
+            <ReceiptApp
+              call={api.call}
+              onEvent={api.onEvent}
+              notify={notify}
+              onError={e => notify(explainError(e), 'error')}
+              handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
+              connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
+            />
+          ) : view === 'skills' ? (
+            <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />
+          ) : (
+            <>
+              <div className="conversation" aria-live="polite">
+                {session && (snapshot.policy?.features.coordinator || !!session.loadedContext?.length || session.compaction) && (
+                  <div className="context-bar">
+                    {snapshot.policy?.features.coordinator && (
+                      <label>
+                        <input
+                          aria-label={t('แบ่งงานย่อย')}
+                          type="checkbox"
+                          checked={coordinated}
+                          disabled={running || workMode !== 'draft'}
+                          onChange={e => setCoordinated(e.target.checked)}
+                        />
+                        {t('แบ่งงานย่อย')}
+                      </label>
+                    )}
+                    {!!session.loadedContext?.length && (
+                      <details>
+                        <summary>
+                          {t('บริบทที่ใช้ (')}
+                          {session.loadedContext.length})
+                        </summary>
+                        <ul>
+                          {session.loadedContext.map((s, i) => (
+                            <li key={i}>{s}</li>
                           ))}
-                        </select>
-                        {imageCatalogError && <small>{imageCatalogError}</small>}
-                      </>
-                    ) : (
-                      <span>{t('เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key เพื่อสร้างรูป · OAuth นี้ยังไม่มี Image API')}</span>
+                        </ul>
+                      </details>
                     )}
-                  </div>
-                )}
-                {files.length > 0 && (
-                  <div className="attachments">
-                    {files.map(f => (
-                      <span key={f.id} className={f.usable ? undefined : 'refused'}>
-                        <button onClick={() => setInspecting(f)} title={f.usable ? f.status : errorText[f.reason || ''] || f.status}>
-                          <Paperclip size={13} />
-                          {f.name}
-                          {!f.usable && <small> {t('· ส่งไม่ได้')}</small>}
-                        </button>
-                        <button title={t('นำไฟล์ออก')} onClick={() => setFiles(files.filter(x => x.id !== f.id))}>
-                          <X size={13} />
-                        </button>
+                    {session.compaction && (
+                      <span className="muted small">
+                        {t(
+                          'ย่อบริบทแล้ว {0} → {1} tokens (ประมาณการ)',
+                          session.compaction.before.toLocaleString(locale()),
+                          session.compaction.after.toLocaleString(locale()),
+                        )}
                       </span>
-                    ))}
-                  </div>
-                )}
-                {session && !running && !connection?.ready && (
-                  <div className="connection-warning" role="status">
-                    <Sparkles size={14} />
-                    <span>{connection ? t('{0} ของงานนี้ยังไม่พร้อม', providerName(connection)) : t('งานนี้ยังไม่ได้เลือก AI')}</span>
-                    {readyConnection && readyConnection.id !== session.connectionId ? (
-                      <button className="quiet" onClick={() => void action(() => chooseConnection(readyConnection.id))}>
-                        {t('เปลี่ยนเป็น')} {providerName(readyConnection)}
-                      </button>
-                    ) : (
-                      <button className="quiet" onClick={openAiSettings}>
-                        {t('ไปที่การเชื่อมต่อ AI')}
-                      </button>
                     )}
                   </div>
                 )}
-                {forced && (
-                  <div className="skill-chip">
-                    <Blocks size={13} />
-                    {t('ใช้ Skill:')} <strong>{forced.title}</strong>
-                    <code>/{forced.name}</code>
-                    <button className="icon" aria-label={t('เลิกใช้ Skill นี้')} onClick={() => setForcedSkill('')}>
-                      <X size={13} />
+                {!session?.messages.length && (
+                  <div className="welcome">
+                    <img className="illustration welcome-art" src={launchArt} alt="" />
+                    <p className="greet">
+                      {snapshot.settings.userName ? t('สวัสดีครับ คุณ{0}', snapshot.settings.userName) : t('สวัสดีครับ')}
+                      {myTeamName ? ` · ${myTeamName}` : ''}
+                    </p>
+                    <h1>
+                      {t('ให้ AI ร่างงานหนัก')}
+                      <br />
+                      <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
+                    </h1>
+                    <p className="suggestions-label">
+                      {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
+                    </p>
+                    <div className="suggestions">
+                      {startersFor(snapshot.settings.team).map(starter => {
+                        const text = starterText(starter);
+                        return (
+                          <button key={text} onClick={() => setQuery(text)}>
+                            <Sparkles size={16} />
+                            <span>
+                              <small className="starter-tag">{starterTag(starter)}</small>
+                              {text}
+                            </span>
+                            <ChevronLeft className="point-right" size={15} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="welcome-lede">
+                      {t(
+                        'ผู้ช่วยที่รู้จักงานของ STeP สรุปเอกสารยาว ร่างหนังสือ วางแผนโครงการ และตรวจความพร้อมก่อนส่ง ทุกร่างผ่านตาคุณก่อนใช้จริง',
+                      )}
+                    </p>
+                    <ul className="welcome-trust">
+                      <li>
+                        <ShieldCheck size={14} />
+                        {t('ข้อมูลอยู่ในเครื่อง ปิดบังข้อมูลส่วนบุคคลก่อนส่ง')}
+                      </li>
+                      <li>
+                        <Check size={14} />
+                        {t('AI ร่าง คนตรวจและอนุมัติ')}
+                      </li>
+                      <li>
+                        <Blocks size={14} />
+                        {t('รู้จักทีมและ Skill ของ STeP')}
+                      </li>
+                    </ul>
+                  </div>
+                )}
+                {session?.messages.map((message, index) => (
+                  <article
+                    key={index}
+                    className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}`}
+                  >
+                    <div className="message-author">
+                      {message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant}
+                    </div>
+                    {message.role === 'assistant' ? (
+                      <RichText className="message-body" text={message.text} />
+                    ) : (
+                      <div className="message-body">
+                        {message.role === 'status' ? errorText[message.text] || t(message.text) : message.text}
+                      </div>
+                    )}
+                    {!!message.files?.length && (
+                      <div className="message-files" aria-label={t('ไฟล์ที่ส่งกับข้อความนี้')}>
+                        {message.files.map((file, i) => (
+                          <span key={i}>
+                            <Paperclip size={12} />
+                            {file.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {!!message.webSources?.length && (
+                      <div className="web-sources" aria-label={t('แหล่งข้อมูลจากการค้นเว็บ')}>
+                        <span>{t('แหล่งข้อมูลจาก Web Search')}</span>
+                        {message.webSources
+                          .filter(source => publicSourceUrl(source.url))
+                          .map(source => (
+                            <button
+                              className="quiet"
+                              key={source.url}
+                              title={source.url}
+                              onClick={() => void action(() => api.call('toolBrowser', { url: source.url }))}
+                            >
+                              {source.title} · {new URL(source.url).hostname}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    {message.role === 'assistant' && (
+                      <div className="message-actions">
+                        <button
+                          className="icon"
+                          aria-label={t('คัดลอก')}
+                          title={t('คัดลอก')}
+                          onClick={() =>
+                            void navigator.clipboard
+                              .writeText(message.text)
+                              .then(() => notify(t('คัดลอกแล้ว'), 'success'))
+                              .catch(e => notify(explainError(e), 'error'))
+                          }
+                        >
+                          <Copy size={15} />
+                        </button>
+                        <button
+                          className="icon"
+                          aria-label={t('เปิดใน Output')}
+                          title={t('เปิดใน Output')}
+                          onClick={() =>
+                            void action(async () => {
+                              await save();
+                              await api.call('edit', { id: session.id, text: message.text, revision: session.revision });
+                              await refresh();
+                              setToolTab('output');
+                              setRight(true);
+                            })
+                          }
+                        >
+                          <FileText size={15} />
+                        </button>
+                        <FeedbackButtons
+                          sessionId={session.id}
+                          index={index}
+                          message={message}
+                          call={api.call}
+                          onAsk={setFeedbackAsk}
+                          onDone={text => text && notify(text)}
+                        />
+                        {toolRequests(message.text).map((request, i) => (
+                          <button
+                            className="tool-request quiet"
+                            key={i}
+                            onClick={() => {
+                              setToolRequest({ ...request });
+                              setToolTab(request.tool);
+                              setRight(true);
+                            }}
+                          >
+                            {t('ตรวจ')} {request.tool}: {request.input.slice(0, 50)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
+                {snapshot?.usage?.warnings.length ? (
+                  <p className="small muted" role="status">
+                    {t('การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้')}{' '}
+                    <button className="quiet" onClick={() => setUsageOpen(true)}>
+                      {t('ดูการใช้งาน')}
                     </button>
+                  </p>
+                ) : null}
+                {running && (
+                  <article className="message assistant">
+                    {plan.length > 1 && (
+                      <ol className="plan-card" aria-label={t('ขั้นตอนของงาน')}>
+                        {plan.map((step, i) => (
+                          <li key={i} className={step.state}>
+                            {step.state === 'running' ? (
+                              <LoaderCircle size={14} className="spin" />
+                            ) : step.state === 'done' ? (
+                              <Check size={14} />
+                            ) : step.action ? (
+                              <ShieldCheck size={14} />
+                            ) : (
+                              <Circle size={14} />
+                            )}
+                            <span>
+                              {step.label}
+                              {step.action && <small> {t('· ต้องทำโดยผู้มีอำนาจ')}</small>}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    {reasoning && (
+                      <details className="thinking" open={!liveText}>
+                        <summary>
+                          <Brain size={14} />
+                          {t('ความคิดของ AI')}
+                        </summary>
+                        <div>{reasoning}</div>
+                      </details>
+                    )}
+                    {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} />}
+                    <div className="activity" role="status" aria-live="polite">
+                      <LoaderCircle className="spin" size={15} />
+                      {progress ? t(progress) : t('กำลังทำงาน')}
+                    </div>
+                    <div className="activity-detail">
+                      <span className="activity-pulse" aria-hidden="true" />
+                      <span>
+                        {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
+                        {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
+                      </span>
+                    </div>
+                    {now - activityAt > 45000 && !liveText && (
+                      <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
+                    )}
+                    {activities.length > 1 && (
+                      <details className="activity-history">
+                        <summary>{t('ดูขั้นตอนที่ทำแล้ว')}</summary>
+                        <ol>
+                          {activities.slice(0, -1).map((label, index) => (
+                            <li key={index}>{label}</li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
+                  </article>
+                )}
+                {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
+                  <div className="retry-row">
+                    {/* Continues the stopped task, after any Playbook steps it already finished. */}
+                    <button
+                      onClick={() =>
+                        void action(() =>
+                          start(
+                            session.id,
+                            lastRequest,
+                            [],
+                            undefined,
+                            session.skill,
+                            undefined,
+                            undefined,
+                            session.mode || workMode,
+                            imageModel,
+                            true,
+                          ),
+                        )
+                      }
+                    >
+                      {t('ลองอีกครั้ง')}
+                    </button>
+                    <button
+                      className="quiet"
+                      onClick={() => {
+                        setQuery(lastRequest);
+                        setTimeout(() => composerRef.current?.focus(), 0);
+                      }}
+                    >
+                      {t('แก้คำขอ')}
+                    </button>
+                    {(connection?.models?.length || 0) > 1 && (
+                      <span className="small muted">{t('หรือเลือกโมเดลอื่นในกล่องพิมพ์ก่อนลองใหม่')}</span>
+                    )}
                   </div>
                 )}
-                {slashMatches.length > 0 && (
-                  <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
-                    {slashMatches.map((s, i) => (
+                {!running && progress && <p className="muted small">{t(progress)}</p>}
+                {/* Without tools the app searches ahead; with tools the AI decides, so nothing pops up while typing. */}
+                {!running && workMode !== 'image' && !snapshot.policy?.features.toolLoop && needsPublicWebSearch(query) && (
+                  <p className="web-route small" role="status">
+                    {t('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ')}
+                  </p>
+                )}
+                <div ref={conversationEnd} />
+              </div>
+              <div className="composer-area">
+                {(snapshot.transmissionGrants || [])
+                  .filter(g => g.sessionId === selected)
+                  .map(g => (
+                    <div className="transmission-scope" key={g.id} role="status">
+                      <span>
+                        {t(
+                          'อนุญาตส่งผลการอ่าน: {0} → {1} · เหลือ {2} ผล / {3} ตัวอักษร · ถึง {4}',
+                          g.source,
+                          g.destination,
+                          g.remainingResults,
+                          g.remainingChars.toLocaleString(locale()),
+                          new Date(g.expiresAt).toLocaleTimeString(locale()),
+                        )}
+                      </span>
                       <button
-                        key={s.name}
-                        role="option"
-                        aria-selected={i === slashIndex}
-                        className={i === slashIndex ? 'active' : ''}
-                        onMouseDown={e => {
-                          e.preventDefault();
-                          useSkill(s.name);
-                        }}
+                        className="quiet"
+                        onClick={() =>
+                          void action(async () => {
+                            await api.call('transmissionRevoke', { id: g.id });
+                            await refresh();
+                          })
+                        }
                       >
-                        <span className="slash-title">
-                          {s.title}
-                          {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
-                        </span>
-                        <small className="slash-desc">{s.description}</small>
-                        <code>/{s.name}</code>
+                        {t('ถอนสิทธิ์และหยุดงาน')}
                       </button>
+                    </div>
+                  ))}
+                {/* The assistant's questions and the task's plan sit right above the composer, under the newest message,
+                  as in Claude and ChatGPT: what needs the employee is where they type. */}
+                <div className="composer-dock">
+                  {session?.workPlan?.tasks.length ? (
+                    <WorkPlanCard
+                      plan={session.workPlan}
+                      running={running || submitting}
+                      onExecute={() =>
+                        void action(async () => {
+                          setWorkflow('execute');
+                          workflowRef.current = 'execute';
+                          setWorkMode('chat');
+                          await start(session.id, t('ลงมือทำตามแผน'), [], undefined, undefined, undefined, undefined, 'chat');
+                        })
+                      }
+                    />
+                  ) : null}
+                  {questions
+                    .filter(q => q.sessionId === selected)
+                    .map(q => (
+                      <QuestionCard
+                        key={q.id}
+                        question={q}
+                        onAnswer={async answer => {
+                          await api!.call('questionRespond', { id: q.id, answer });
+                        }}
+                      />
                     ))}
-                  </div>
-                )}
-                <textarea
-                  ref={composerRef}
-                  aria-label={t('พิมพ์คำขอ')}
-                  placeholder={forced ? t('บอกงานสำหรับ {0}…', forced.title) : t('พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill')}
-                  value={query}
-                  onChange={e => {
-                    setQuery(e.target.value);
-                    setSlashIndex(0);
-                  }}
-                  onKeyDown={e => {
-                    if (e.nativeEvent.isComposing) return;
-                    if (snapshot.settings.vimMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                      const next = vimEdit(e.key, query, e.currentTarget.selectionStart, vimNormal);
-                      if (next) {
+                </div>
+                <div className="composer" data-tour="composer">
+                  {pendingSource && (
+                    <div className="composer-chips">
+                      <button className="source-chip quiet" onClick={() => setPendingSource('')}>
+                        {t('ข้อมูลต้นทางแนบแล้ว ×')}
+                      </button>
+                    </div>
+                  )}
+                  {wantsImage && (
+                    <div className="image-route" role="status">
+                      <Sparkles size={14} />
+                      {imageModels(connection).length ? (
+                        <>
+                          <span>Image API</span>
+                          <select
+                            aria-label="Image model"
+                            value={imageModel}
+                            onChange={e => setImageModel(e.target.value)}
+                            disabled={running}
+                          >
+                            <option value="">{availableImages[0] || t('กำลังตรวจโมเดลของบัญชี…')}</option>
+                            {availableImages.map(id => (
+                              <option key={id} value={id}>
+                                {id}
+                              </option>
+                            ))}
+                          </select>
+                          {imageCatalogError && <small>{imageCatalogError}</small>}
+                        </>
+                      ) : (
+                        <span>{t('เลือก OpenAI หรือ Google ที่เชื่อมด้วย API key เพื่อสร้างรูป · OAuth นี้ยังไม่มี Image API')}</span>
+                      )}
+                    </div>
+                  )}
+                  {files.length > 0 && (
+                    <div className="attachments">
+                      {files.map(f => (
+                        <span key={f.id} className={f.usable ? undefined : 'refused'}>
+                          <button onClick={() => setInspecting(f)} title={f.usable ? f.status : errorText[f.reason || ''] || f.status}>
+                            <Paperclip size={13} />
+                            {f.name}
+                            {!f.usable && <small> {t('· ส่งไม่ได้')}</small>}
+                          </button>
+                          <button title={t('นำไฟล์ออก')} onClick={() => setFiles(files.filter(x => x.id !== f.id))}>
+                            <X size={13} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {session && !running && !connection?.ready && (
+                    <div className="connection-warning" role="status">
+                      <Sparkles size={14} />
+                      <span>{connection ? t('{0} ของงานนี้ยังไม่พร้อม', providerName(connection)) : t('งานนี้ยังไม่ได้เลือก AI')}</span>
+                      {readyConnection && readyConnection.id !== session.connectionId ? (
+                        <button className="quiet" onClick={() => void action(() => chooseConnection(readyConnection.id))}>
+                          {t('เปลี่ยนเป็น')} {providerName(readyConnection)}
+                        </button>
+                      ) : (
+                        <button className="quiet" onClick={openAiSettings}>
+                          {t('ไปที่การเชื่อมต่อ AI')}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {forced && (
+                    <div className="skill-chip">
+                      <Blocks size={13} />
+                      {t('ใช้ Skill:')} <strong>{forced.title}</strong>
+                      <code>/{forced.name}</code>
+                      <button className="icon" aria-label={t('เลิกใช้ Skill นี้')} onClick={() => setForcedSkill('')}>
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
+                  {slashMatches.length > 0 && (
+                    <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
+                      {slashMatches.map((s, i) => (
+                        <button
+                          key={s.name}
+                          role="option"
+                          aria-selected={i === slashIndex}
+                          className={i === slashIndex ? 'active' : ''}
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            useSkill(s.name);
+                          }}
+                        >
+                          <span className="slash-title">
+                            {s.title}
+                            {forTeam(s) && <small className="team-mark">{t('ทีมคุณ')}</small>}
+                          </span>
+                          <small className="slash-desc">{s.description}</small>
+                          <code>/{s.name}</code>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <textarea
+                    ref={composerRef}
+                    aria-label={t('พิมพ์คำขอ')}
+                    placeholder={forced ? t('บอกงานสำหรับ {0}…', forced.title) : t('พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill')}
+                    value={query}
+                    onChange={e => {
+                      setQuery(e.target.value);
+                      setSlashIndex(0);
+                    }}
+                    onKeyDown={e => {
+                      if (e.nativeEvent.isComposing) return;
+                      if (snapshot.settings.vimMode && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                        const next = vimEdit(e.key, query, e.currentTarget.selectionStart, vimNormal);
+                        if (next) {
+                          e.preventDefault();
+                          setQuery(next.text);
+                          setVimNormal(next.normal);
+                          requestAnimationFrame(() => composerRef.current?.setSelectionRange(next.cursor, next.cursor));
+                          return;
+                        }
+                      }
+                      if (slashMatches.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
                         e.preventDefault();
-                        setQuery(next.text);
-                        setVimNormal(next.normal);
-                        requestAnimationFrame(() => composerRef.current?.setSelectionRange(next.cursor, next.cursor));
+                        if (e.key === 'ArrowDown') setSlashIndex(i => Math.min(i + 1, slashMatches.length - 1));
+                        else if (e.key === 'ArrowUp') setSlashIndex(i => Math.max(i - 1, 0));
+                        else if (e.key === 'Escape') setQuery('');
+                        else useSkill(slashMatches[slashIndex]?.name || slashMatches[0].name);
                         return;
                       }
-                    }
-                    if (slashMatches.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
-                      e.preventDefault();
-                      if (e.key === 'ArrowDown') setSlashIndex(i => Math.min(i + 1, slashMatches.length - 1));
-                      else if (e.key === 'ArrowUp') setSlashIndex(i => Math.max(i - 1, 0));
-                      else if (e.key === 'Escape') setQuery('');
-                      else useSkill(slashMatches[slashIndex]?.name || slashMatches[0].name);
-                      return;
-                    }
-                    if (e.key === 'Backspace' && !query && forcedSkill) {
-                      setForcedSkill('');
-                      return;
-                    }
-                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                      e.preventDefault();
-                      void action(send);
-                    }
-                  }}
-                />
-                {snapshot.settings.vimMode && <span className="small muted">Vim: {vimNormal ? 'Normal' : 'Insert'}</span>}
-                <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
-                {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
-                <div className="composer-tools">
-                  <button
-                    className="icon composer-add"
-                    aria-label={t('ตรวจและแนบเอกสาร')}
-                    title={t('ตรวจและแนบเอกสาร')}
-                    disabled={running || (!session && connectionId === CLAUDE_CODE)}
-                    onClick={() =>
-                      void action(async () => {
-                        const id = session?.id || (await createTask())?.id;
-                        if (!id) return;
-                        const f = await api.call('attach', { id });
-                        if (f) {
-                          setFiles([f]);
-                          setInspecting(f);
-                        }
-                      })
-                    }
-                  >
-                    <Plus size={18} />
-                  </button>
-                  {snapshot.policy?.features.voice && (
-                    <VoiceButton
-                      key={session?.id || 'composer'}
-                      api={api}
-                      disabled={running}
-                      onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
-                    />
-                  )}
-                  {snapshot.policy?.features.vision && (
+                      if (e.key === 'Backspace' && !query && forcedSkill) {
+                        setForcedSkill('');
+                        return;
+                      }
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        void action(send);
+                      }
+                    }}
+                  />
+                  {snapshot.settings.vimMode && <span className="small muted">Vim: {vimNormal ? 'Normal' : 'Insert'}</span>}
+                  <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
+                  {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
+                  <div className="composer-tools">
                     <button
-                      className="icon"
-                      aria-label={t('แนบภาพให้ AI')}
-                      title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
-                      disabled={running}
+                      className="icon composer-add"
+                      aria-label={t('ตรวจและแนบเอกสาร')}
+                      title={t('ตรวจและแนบเอกสาร')}
+                      disabled={running || (!session && connectionId === CLAUDE_CODE)}
                       onClick={() =>
                         void action(async () => {
                           const id = session?.id || (await createTask())?.id;
                           if (!id) return;
-                          const f = await api.call('attach', { id, vision: true });
+                          const f = await api.call('attach', { id });
                           if (f) {
                             setFiles([f]);
                             setInspecting(f);
@@ -1715,783 +1698,812 @@ export default function App() {
                         })
                       }
                     >
-                      <ImagePlus size={18} />
+                      <Plus size={18} />
                     </button>
-                  )}
-                  <select
-                    className="pill-select"
-                    aria-label={t('โหมดทำงาน')}
-                    title={t('โหมดทำงาน')}
-                    value={workflow || workMode}
-                    disabled={running || submitting}
-                    onChange={e => {
-                      const value = e.target.value;
-                      if (value in WORKFLOW_LABELS) {
-                        setWorkflow(value as Workflow);
-                        setWorkMode('chat');
-                      } else {
-                        setWorkflow('');
-                        setWorkMode(value as WorkMode);
-                      }
-                    }}
-                  >
-                    <option value="chat">{t('คุยกับผู้ช่วย')}</option>
-                    {/* Native workflows of the harness, like Claude Code's plan mode: rules for how the assistant works. */}
-                    <optgroup label={t('ขั้นตอนทำงาน')}>
-                      {(Object.keys(WORKFLOW_LABELS) as Workflow[]).map(id => (
-                        <option key={id} value={id} disabled={id === 'execute' && !session?.workPlan?.tasks.length}>
-                          {t(WORKFLOW_LABELS[id])}
-                        </option>
-                      ))}
-                    </optgroup>
-                    {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
-                        drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
-                    {(workMode === 'draft' || snapshot.policy?.features.coordinator) && <option value="draft">{t('สร้างเอกสาร')}</option>}
-                    <option value="image">{t('สร้างรูป')}</option>
-                  </select>
-                  {snapshot.policy && (
+                    {snapshot.policy?.features.voice && (
+                      <VoiceButton
+                        key={session?.id || 'composer'}
+                        api={api}
+                        disabled={running}
+                        onText={text => setQuery(q => (q ? q + '\n' : '') + text)}
+                      />
+                    )}
+                    {snapshot.policy?.features.vision && (
+                      <button
+                        className="icon"
+                        aria-label={t('แนบภาพให้ AI')}
+                        title={t('ตรวจและแนบภาพต้นฉบับให้ AI')}
+                        disabled={running}
+                        onClick={() =>
+                          void action(async () => {
+                            const id = session?.id || (await createTask())?.id;
+                            if (!id) return;
+                            const f = await api.call('attach', { id, vision: true });
+                            if (f) {
+                              setFiles([f]);
+                              setInspecting(f);
+                            }
+                          })
+                        }
+                      >
+                        <ImagePlus size={18} />
+                      </button>
+                    )}
                     <select
                       className="pill-select"
-                      aria-label={t('สิทธิ์เครื่องมือ')}
-                      title={t('สิทธิ์เครื่องมือ')}
-                      value={snapshot.policy.mode}
+                      aria-label={t('โหมดทำงาน')}
+                      title={t('โหมดทำงาน')}
+                      value={workflow || workMode}
                       disabled={running || submitting}
-                      onChange={e =>
-                        void action(async () => {
-                          await api.call('permissionMode', { mode: e.target.value });
-                          await refresh();
-                        })
-                      }
+                      onChange={e => {
+                        const value = e.target.value;
+                        if (value in WORKFLOW_LABELS) {
+                          setWorkflow(value as Workflow);
+                          setWorkMode('chat');
+                        } else {
+                          setWorkflow('');
+                          setWorkMode(value as WorkMode);
+                        }
+                      }}
                     >
-                      <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                        {t('ถามก่อนแก้ไข')}
-                      </option>
-                      <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
-                        {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
-                        {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                      </option>
-                      <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                        {t('อัตโนมัติเต็มรูปแบบ')}
-                        {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                      </option>
-                      <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
-                        {t('วางแผน · อ่านอย่างเดียว')}
-                      </option>
+                      <option value="chat">{t('คุยกับผู้ช่วย')}</option>
+                      {/* Native workflows of the harness, like Claude Code's plan mode: rules for how the assistant works. */}
+                      <optgroup label={t('ขั้นตอนทำงาน')}>
+                        {(Object.keys(WORKFLOW_LABELS) as Workflow[]).map(id => (
+                          <option key={id} value={id} disabled={id === 'execute' && !session?.workPlan?.tasks.length}>
+                            {t(WORKFLOW_LABELS[id])}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
+                        drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
+                      {(workMode === 'draft' || snapshot.policy?.features.coordinator) && <option value="draft">{t('สร้างเอกสาร')}</option>}
+                      <option value="image">{t('สร้างรูป')}</option>
                     </select>
-                  )}
-                  <span className="spacer" />
-                  <select
-                    className="pill-select"
-                    aria-label={t('เลือกการเชื่อมต่อ AI')}
-                    value={session ? session.connectionId : connectionId}
-                    disabled={running}
-                    onChange={e => void action(() => chooseConnection(e.target.value))}
-                  >
-                    <option value="">{t('เลือก AI')}</option>
-                    {snapshot.connections.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {providerLabel(c.provider)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
-                        {c.ready ? '' : t(' · ยังไม่พร้อม')}
-                      </option>
-                    ))}
-                    {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
-                  </select>
-                  {connection && (
+                    {snapshot.policy && (
+                      <select
+                        className="pill-select"
+                        aria-label={t('สิทธิ์เครื่องมือ')}
+                        title={t('สิทธิ์เครื่องมือ')}
+                        value={snapshot.policy.mode}
+                        disabled={running || submitting}
+                        onChange={e =>
+                          void action(async () => {
+                            await api.call('permissionMode', { mode: e.target.value });
+                            await refresh();
+                          })
+                        }
+                      >
+                        <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
+                          {t('ถามก่อนแก้ไข')}
+                        </option>
+                        <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
+                          {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
+                          {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                        </option>
+                        <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                          {t('อัตโนมัติเต็มรูปแบบ')}
+                          {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                        </option>
+                        <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
+                          {t('วางแผน · อ่านอย่างเดียว')}
+                        </option>
+                      </select>
+                    )}
+                    <span className="spacer" />
                     <select
-                      aria-label={t('เลือกโมเดล')}
-                      data-tour="model"
-                      className="pill-select model-select"
-                      title={
-                        connection.models?.find(m => m.id === currentModel)?.description || t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
-                      }
-                      value={currentModel}
+                      className="pill-select"
+                      aria-label={t('เลือกการเชื่อมต่อ AI')}
+                      value={session ? session.connectionId : connectionId}
                       disabled={running}
-                      onChange={e => void action(() => chooseModel(e.target.value))}
+                      onChange={e => void action(() => chooseConnection(e.target.value))}
                     >
-                      <option value="">{defaultModel ? t('ค่าเริ่มต้น ({0})', defaultModel.label) : t('ค่าเริ่มต้นของบริการ')}</option>
-                      {(connection.models || []).map(m => (
-                        <option key={m.id} value={m.id} title={m.description}>
-                          {m.label}
+                      <option value="">{t('เลือก AI')}</option>
+                      {snapshot.connections.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {providerLabel(c.provider)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
+                          {c.ready ? '' : t(' · ยังไม่พร้อม')}
                         </option>
                       ))}
-                      {currentModel && !connection.models?.some(m => m.id === currentModel) && (
-                        <option value={currentModel}>{currentModel}</option>
-                      )}
+                      {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
                     </select>
-                  )}
-                  {activeModel?.efforts?.length ? (
-                    <select
-                      aria-label={t('เลือกระดับการคิด')}
-                      className="pill-select model-select"
-                      title={
-                        activeModel.efforts.find(e => e.id === currentEffort)?.description ||
-                        t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น')
-                      }
-                      value={currentEffort}
-                      disabled={running}
-                      onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
-                    >
-                      <option value="">
-                        {activeModel.defaultEffort
-                          ? t('ระดับการคิด: ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
-                          : t('ระดับการคิด: ค่าเริ่มต้น')}
-                      </option>
-                      {activeModel.efforts.map(e => (
-                        <option key={e.id} value={e.id} title={e.description}>
-                          {t('ระดับการคิด:')} {effortLabel[e.id] || e.id}
+                    {connection && (
+                      <select
+                        aria-label={t('เลือกโมเดล')}
+                        data-tour="model"
+                        className="pill-select model-select"
+                        title={
+                          connection.models?.find(m => m.id === currentModel)?.description || t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
+                        }
+                        value={currentModel}
+                        disabled={running}
+                        onChange={e => void action(() => chooseModel(e.target.value))}
+                      >
+                        <option value="">{defaultModel ? t('ค่าเริ่มต้น ({0})', defaultModel.label) : t('ค่าเริ่มต้นของบริการ')}</option>
+                        {(connection.models || []).map(m => (
+                          <option key={m.id} value={m.id} title={m.description}>
+                            {m.label}
+                          </option>
+                        ))}
+                        {currentModel && !connection.models?.some(m => m.id === currentModel) && (
+                          <option value={currentModel}>{currentModel}</option>
+                        )}
+                      </select>
+                    )}
+                    {activeModel?.efforts?.length ? (
+                      <select
+                        aria-label={t('เลือกระดับการคิด')}
+                        className="pill-select model-select"
+                        title={
+                          activeModel.efforts.find(e => e.id === currentEffort)?.description ||
+                          t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น')
+                        }
+                        value={currentEffort}
+                        disabled={running}
+                        onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
+                      >
+                        <option value="">
+                          {activeModel.defaultEffort
+                            ? t('ระดับการคิด: ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
+                            : t('ระดับการคิด: ค่าเริ่มต้น')}
                         </option>
-                      ))}
-                    </select>
-                  ) : null}
-                  {running ? (
-                    <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
-                      <Square size={17} />
-                    </button>
-                  ) : (
-                    <button
-                      className="send"
-                      title={t('ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)')}
-                      disabled={!query.trim() || submitting}
-                      onClick={() => void action(send)}
-                    >
-                      {submitting ? <LoaderCircle size={20} className="spin" /> : <ArrowUp size={20} />}
-                    </button>
-                  )}
+                        {activeModel.efforts.map(e => (
+                          <option key={e.id} value={e.id} title={e.description}>
+                            {t('ระดับการคิด:')} {effortLabel[e.id] || e.id}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                    {running ? (
+                      <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
+                        <Square size={17} />
+                      </button>
+                    ) : (
+                      <button
+                        className="send"
+                        title={t('ส่งคำขอ (Enter) · ขึ้นบรรทัดใหม่ (Shift+Enter)')}
+                        disabled={!query.trim() || submitting}
+                        onClick={() => void action(send)}
+                      >
+                        {submitting ? <LoaderCircle size={20} className="spin" /> : <ArrowUp size={20} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
-              {/* With a task open, the connection warning above the box already offers this action. */}
-              {!connection?.ready && !session && (
-                <button className="text-link" onClick={openAiSettings}>
-                  {t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}
-                </button>
-              )}
-            </div>
-          </>
-        )}
-        <footer className="statusbar" aria-label={t('สถานะ')}>
-          <span className={`status-dot ${connection?.ready ? 'ok' : ''}`} aria-hidden="true" />
-          <span>
-            {connection
-              ? `${providerName(connection)} · ${connection.ready ? t('พร้อมทำงาน') : t('ยังไม่พร้อม')}`
-              : t('ยังไม่เชื่อมต่อ AI')}
-          </span>
-          {elapsed && (
-            <span className="status-item">
-              <Timer size={12} />
-              {elapsed}
-            </span>
-          )}
-          <span className="spacer" />
-          {session?.usage && (
-            <span
-              className="status-item"
-              title={t(
-                'ส่งเข้า {0} · ตอบกลับ {1} token จาก {2} รอบ',
-                session.usage.input.toLocaleString(locale()),
-                session.usage.output.toLocaleString(locale()),
-                session.usage.runs,
-              )}
-            >
-              {formatTokens(session.usage.total)} token
-            </span>
-          )}
-          {connection && (
-            <span className="status-item">
-              {activeModel?.label || currentModel || t('โมเดลค่าเริ่มต้น')}
-              {currentEffort ? ` · ${effortLabel[currentEffort] || currentEffort}` : ''}
-            </span>
-          )}
-          <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
-            <Command size={12} />
-            {t('คำสั่ง')} {shortcut}
-          </button>
-        </footer>
-      </main>
-      {right && !settings && view === 'chat' && (
-        <>
-          <div
-            className="resize-handle"
-            role="separator"
-            aria-label={t('ปรับความกว้างร่าง')}
-            tabIndex={0}
-            onKeyDown={e => {
-              if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
-              if (e.key === 'ArrowRight') setWidth(w => Math.max(w - 20, 300));
-            }}
-            onPointerDown={e => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={e => {
-              if (e.currentTarget.hasPointerCapture(e.pointerId)) setWidth(Math.min(700, Math.max(300, window.innerWidth - e.clientX)));
-            }}
-          />
-          <aside className="artifact-pane" data-tour="artifact">
-            <nav className="workbench-tabs" aria-label="Workspace tools">
-              {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
-                .filter(tab => advancedTools || tab !== 'terminal')
-                .map(tab => (
-                  <button
-                    key={tab}
-                    className={toolTab === tab ? 'active' : ''}
-                    aria-current={toolTab === tab ? 'page' : undefined}
-                    onClick={() => setToolTab(tab)}
-                  >
-                    {
-                      {
-                        output: t('ผลงาน'),
-                        browser: t('เว็บ'),
-                        terminal: t('คำสั่งขั้นสูง'),
-                        tasks: t('งานเบื้องหลัง'),
-                        files: t('ไฟล์งาน'),
-                        changes: t('รายการแก้ไข'),
-                      }[tab]
-                    }
+                <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
+                {/* With a task open, the connection warning above the box already offers this action. */}
+                {!connection?.ready && !session && (
+                  <button className="text-link" onClick={openAiSettings}>
+                    {t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}
                   </button>
-                ))}
-              <button
-                className="workbench-advanced"
-                aria-expanded={advancedTools}
-                aria-label={t('เครื่องมือขั้นสูง')}
-                title={
-                  advancedTools
-                    ? t('ซ่อนแท็บคำสั่งขั้นสูง')
-                    : t('เครื่องมือขั้นสูง: แสดงแท็บคำสั่งขั้นสูงสำหรับผู้ใช้ที่คุ้นเคยกับ Terminal')
-                }
-                onClick={() => {
-                  setAdvancedTools(!advancedTools);
-                  if (toolTab === 'terminal') setToolTab('output');
-                }}
+                )}
+              </div>
+            </>
+          )}
+          <footer className="statusbar" aria-label={t('สถานะ')}>
+            <span className={`status-dot ${connection?.ready ? 'ok' : ''}`} aria-hidden="true" />
+            <span>
+              {connection
+                ? `${providerName(connection)} · ${connection.ready ? t('พร้อมทำงาน') : t('ยังไม่พร้อม')}`
+                : t('ยังไม่เชื่อมต่อ AI')}
+            </span>
+            {elapsed && (
+              <span className="status-item">
+                <Timer size={12} />
+                {elapsed}
+              </span>
+            )}
+            <span className="spacer" />
+            {session?.usage && (
+              <span
+                className="status-item"
+                title={t(
+                  'ส่งเข้า {0} · ตอบกลับ {1} token จาก {2} รอบ',
+                  session.usage.input.toLocaleString(locale()),
+                  session.usage.output.toLocaleString(locale()),
+                  session.usage.runs,
+                )}
               >
-                <Settings2 size={15} />
-              </button>
-            </nav>
-            <WorkbenchPanel
-              api={api}
-              tab={toolTab}
-              session={session}
-              workspace={snapshot.settings.workspace}
-              request={toolRequest}
-              onTab={setToolTab}
-              onBrowserTask={url => {
-                setWorkMode('chat');
-                setQuery(t('ให้ผู้ช่วยทำงานบนเว็บ {0} โดย [ระบุสิ่งที่ต้องการทำ]', url === 'https://' ? t('[ใส่ URL]') : url));
-                composerRef.current?.focus();
+                {formatTokens(session.usage.total)} token
+              </span>
+            )}
+            {connection && (
+              <span className="status-item">
+                {activeModel?.label || currentModel || t('โมเดลค่าเริ่มต้น')}
+                {currentEffort ? ` · ${effortLabel[currentEffort] || currentEffort}` : ''}
+              </span>
+            )}
+            <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
+              <Command size={12} />
+              {t('คำสั่ง')} {shortcut}
+            </button>
+          </footer>
+        </main>
+        {right && !settings && view === 'chat' && (
+          <>
+            <div
+              className="resize-handle"
+              role="separator"
+              aria-label={t('ปรับความกว้างร่าง')}
+              tabIndex={0}
+              onKeyDown={e => {
+                if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
+                if (e.key === 'ArrowRight') setWidth(w => Math.max(w - 20, 300));
               }}
-              onSource={text => {
-                setPendingSource(text.slice(0, 100000));
-                setQuery(t('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา'));
-                composerRef.current?.focus();
+              onPointerDown={e => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={e => {
+                if (e.currentTarget.hasPointerCapture(e.pointerId)) setWidth(Math.min(700, Math.max(300, window.innerWidth - e.clientX)));
               }}
             />
-            <div className="output-document" hidden={toolTab !== 'output'}>
-              <header className="artifact-header">
-                <FileText size={18} />
-                <strong>{t('ผลงาน')}</strong>
-                <span className="spacer" />
-                <button className="icon" title={t('ประวัติเวอร์ชัน')} onClick={() => setHistory(!history)}>
-                  <History size={17} />
-                </button>
-                <button className="icon" title={t('ซ่อนร่าง')} onClick={() => setRight(false)}>
-                  <PanelRightClose size={17} />
-                </button>
-              </header>
-              {!session ? (
-                <div className="artifact-empty">
-                  <img className="illustration empty-art" src={draftingArt} alt="" />
-                  <h2>{t('พื้นที่สำหรับร่างของคุณ')}</h2>
-                  <p>
-                    {t('เมื่อ AI จัดทำร่างแล้ว')}
-                    <br />
-                    {t('คุณจะตรวจและแก้ไขได้ตรงนี้')}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="draft-title">
-                    <span>{t(session.title)}</span>
-                    <small>
-                      {t('เวอร์ชัน')} {session.revision}
-                      {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
-                    </small>
-                  </div>
-                  {history && (
-                    <div className="version-list">
-                      {session.versions.some(v => v.text.trim()) ? (
-                        session.versions
-                          .filter(v => v.text.trim())
-                          .slice()
-                          .reverse()
-                          .map(v => (
-                            <button
-                              key={v.revision}
-                              disabled={dirty}
-                              onClick={() =>
-                                void action(async () => {
-                                  await api.call('restore', { id: selected, revision: v.revision });
-                                  await refresh();
-                                })
-                              }
-                            >
-                              {t('คืนค่าเวอร์ชัน')} {v.revision} <small>{new Date(v.at).toLocaleString(locale())}</small>
-                            </button>
-                          ))
-                      ) : (
-                        <p>{t('ยังไม่มีเวอร์ชันก่อนหน้า')}</p>
-                      )}
-                    </div>
-                  )}
-                  {session.proposals.map(p => (
-                    <section className="proposal" key={p.id}>
-                      <div>
-                        <Sparkles size={16} />
-                        <strong>{t('ข้อเสนอจาก AI')}</strong>
-                      </div>
-                      <p className="small muted">
-                        {p.baseRevision === session.revision
-                          ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
-                          : t('ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้')}
-                      </p>
-                      <details open={!session.draft.trim()}>
-                        <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
-                        <RichText className="proposal-text" text={p.text} />
-                      </details>
-                      <div className="proposal-actions">
-                        <button
-                          disabled={dirty || p.baseRevision !== session.revision}
-                          onClick={() =>
-                            void action(async () => {
-                              await api.call('accept', { id: selected, proposalId: p.id });
-                              await refresh();
-                            })
-                          }
-                        >
-                          <Check size={15} />
-                          {t('ใช้ร่างนี้')}
-                        </button>
-                        <button
-                          className="quiet"
-                          onClick={() =>
-                            void action(async () => {
-                              await api.call('reject', { id: selected, proposalId: p.id });
-                              await refresh();
-                            })
-                          }
-                        >
-                          {t('ไม่ใช้')}
-                        </button>
-                      </div>
-                    </section>
-                  ))}
-                  <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
-                    <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
-                      {t('ข้อความ')}
-                    </button>
-                    <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
-                      {t('หัวข้อ')}
-                    </button>
-                    <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
-                      {t('ตัวหนา')}
-                    </button>
-                    <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
-                      {t('ตัวเอียง')}
-                    </button>
-                    <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
-                      {t('รายการ')}
-                    </button>
-                    <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
-                      {t('ลำดับ')}
-                    </button>
-                  </div>
-                  <div className="editor-scroll">
-                    <EditorContent editor={editor} />
-                  </div>
-                  <details className="sources">
-                    <summary>
-                      {t('แหล่งอ้างอิงที่ใช้ (')}
-                      {session.sources.length})
-                    </summary>
-                    {session.sources.map(path => (
-                      <p key={path}>{path}</p>
-                    ))}
-                  </details>
-                  <footer className="artifact-footer">
-                    <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
-                      <Save size={16} />
-                      {t('บันทึก')}
-                    </button>
-                    <select aria-label={t('รูปแบบส่งออก')} value={format} onChange={e => setFormat(e.target.value)}>
-                      {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
-                        <option key={f}>{f}</option>
-                      ))}
-                    </select>
+            <aside className="artifact-pane" data-tour="artifact">
+              <nav className="workbench-tabs" aria-label="Workspace tools">
+                {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
+                  .filter(tab => advancedTools || tab !== 'terminal')
+                  .map(tab => (
                     <button
-                      disabled={!session.draft && !dirty}
-                      onClick={() =>
-                        void action(async () => {
-                          await save();
-                          const output = await api.call('export', { id: selected, format });
-                          setExportPath(output.path);
-                          notify(t('บันทึก {0} แล้ว', output.filename), 'success', {
-                            label: t('เปิดโฟลเดอร์'),
-                            run: () => api.call('reveal', { path: output.path }),
-                          });
-                        })
-                      }
+                      key={tab}
+                      className={toolTab === tab ? 'active' : ''}
+                      aria-current={toolTab === tab ? 'page' : undefined}
+                      onClick={() => setToolTab(tab)}
                     >
-                      <Download size={16} />
-                      {t('ส่งออก')}
+                      {
+                        {
+                          output: t('ผลงาน'),
+                          browser: t('เว็บ'),
+                          terminal: t('คำสั่งขั้นสูง'),
+                          tasks: t('งานเบื้องหลัง'),
+                          files: t('ไฟล์งาน'),
+                          changes: t('รายการแก้ไข'),
+                        }[tab]
+                      }
                     </button>
-                  </footer>
-                  {exportPath && (
-                    <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
-                      {t('เปิดโฟลเดอร์ไฟล์ล่าสุด')}
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </aside>
-        </>
-      )}
-      {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
-      {memoryOpen && api && snapshot && (
-        <MemoryDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setMemoryOpen(false)} />
-      )}
-      {automationOpen && (
-        <AutomationDialog
-          api={api}
-          connections={snapshot.connections}
-          features={snapshot.policy?.features || {}}
-          onClose={() => setAutomationOpen(false)}
-          onOpen={id => {
-            setAutomationOpen(false);
-            void action(async () => {
+                  ))}
+                <button
+                  className="workbench-advanced"
+                  aria-expanded={advancedTools}
+                  aria-label={t('เครื่องมือขั้นสูง')}
+                  title={
+                    advancedTools
+                      ? t('ซ่อนแท็บคำสั่งขั้นสูง')
+                      : t('เครื่องมือขั้นสูง: แสดงแท็บคำสั่งขั้นสูงสำหรับผู้ใช้ที่คุ้นเคยกับ Terminal')
+                  }
+                  onClick={() => {
+                    setAdvancedTools(!advancedTools);
+                    if (toolTab === 'terminal') setToolTab('output');
+                  }}
+                >
+                  <Settings2 size={15} />
+                </button>
+              </nav>
+              <WorkbenchPanel
+                api={api}
+                tab={toolTab}
+                session={session}
+                workspace={snapshot.settings.workspace}
+                request={toolRequest}
+                onTab={setToolTab}
+                onBrowserTask={url => {
+                  setWorkMode('chat');
+                  setQuery(t('ให้ผู้ช่วยทำงานบนเว็บ {0} โดย [ระบุสิ่งที่ต้องการทำ]', url === 'https://' ? t('[ใส่ URL]') : url));
+                  composerRef.current?.focus();
+                }}
+                onSource={text => {
+                  setPendingSource(text.slice(0, 100000));
+                  setQuery(t('ช่วยวิเคราะห์ข้อมูลจากเครื่องมือที่แนบมา'));
+                  composerRef.current?.focus();
+                }}
+              />
+              <div className="output-document" hidden={toolTab !== 'output'}>
+                <header className="artifact-header">
+                  <FileText size={18} />
+                  <strong>{t('ผลงาน')}</strong>
+                  <span className="spacer" />
+                  <button className="icon" title={t('ประวัติเวอร์ชัน')} onClick={() => setHistory(!history)}>
+                    <History size={17} />
+                  </button>
+                  <button className="icon" title={t('ซ่อนร่าง')} onClick={() => setRight(false)}>
+                    <PanelRightClose size={17} />
+                  </button>
+                </header>
+                {!session ? (
+                  <div className="artifact-empty">
+                    <img className="illustration empty-art" src={draftingArt} alt="" />
+                    <h2>{t('พื้นที่สำหรับร่างของคุณ')}</h2>
+                    <p>
+                      {t('เมื่อ AI จัดทำร่างแล้ว')}
+                      <br />
+                      {t('คุณจะตรวจและแก้ไขได้ตรงนี้')}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="draft-title">
+                      <span>{t(session.title)}</span>
+                      <small>
+                        {t('เวอร์ชัน')} {session.revision}
+                        {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
+                      </small>
+                    </div>
+                    {history && (
+                      <div className="version-list">
+                        {session.versions.some(v => v.text.trim()) ? (
+                          session.versions
+                            .filter(v => v.text.trim())
+                            .slice()
+                            .reverse()
+                            .map(v => (
+                              <button
+                                key={v.revision}
+                                disabled={dirty}
+                                onClick={() =>
+                                  void action(async () => {
+                                    await api.call('restore', { id: selected, revision: v.revision });
+                                    await refresh();
+                                  })
+                                }
+                              >
+                                {t('คืนค่าเวอร์ชัน')} {v.revision} <small>{new Date(v.at).toLocaleString(locale())}</small>
+                              </button>
+                            ))
+                        ) : (
+                          <p>{t('ยังไม่มีเวอร์ชันก่อนหน้า')}</p>
+                        )}
+                      </div>
+                    )}
+                    {session.proposals.map(p => (
+                      <section className="proposal" key={p.id}>
+                        <div>
+                          <Sparkles size={16} />
+                          <strong>{t('ข้อเสนอจาก AI')}</strong>
+                        </div>
+                        <p className="small muted">
+                          {p.baseRevision === session.revision
+                            ? t('ตรวจร่างนี้ก่อนแทนที่ร่างปัจจุบัน')
+                            : t('ร่างปัจจุบันเปลี่ยนแล้ว ข้อเสนอนี้ถูกเก็บแยกไว้')}
+                        </p>
+                        <details open={!session.draft.trim()}>
+                          <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
+                          <RichText className="proposal-text" text={p.text} />
+                        </details>
+                        <div className="proposal-actions">
+                          <button
+                            disabled={dirty || p.baseRevision !== session.revision}
+                            onClick={() =>
+                              void action(async () => {
+                                await api.call('accept', { id: selected, proposalId: p.id });
+                                await refresh();
+                              })
+                            }
+                          >
+                            <Check size={15} />
+                            {t('ใช้ร่างนี้')}
+                          </button>
+                          <button
+                            className="quiet"
+                            onClick={() =>
+                              void action(async () => {
+                                await api.call('reject', { id: selected, proposalId: p.id });
+                                await refresh();
+                              })
+                            }
+                          >
+                            {t('ไม่ใช้')}
+                          </button>
+                        </div>
+                      </section>
+                    ))}
+                    <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
+                      <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
+                        {t('ข้อความ')}
+                      </button>
+                      <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
+                        {t('หัวข้อ')}
+                      </button>
+                      <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
+                        {t('ตัวหนา')}
+                      </button>
+                      <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
+                        {t('ตัวเอียง')}
+                      </button>
+                      <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
+                        {t('รายการ')}
+                      </button>
+                      <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
+                        {t('ลำดับ')}
+                      </button>
+                    </div>
+                    <div className="editor-scroll">
+                      <EditorContent editor={editor} />
+                    </div>
+                    <details className="sources">
+                      <summary>
+                        {t('แหล่งอ้างอิงที่ใช้ (')}
+                        {session.sources.length})
+                      </summary>
+                      {session.sources.map(path => (
+                        <p key={path}>{path}</p>
+                      ))}
+                    </details>
+                    <footer className="artifact-footer">
+                      <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
+                        <Save size={16} />
+                        {t('บันทึก')}
+                      </button>
+                      <select aria-label={t('รูปแบบส่งออก')} value={format} onChange={e => setFormat(e.target.value)}>
+                        {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
+                          <option key={f}>{f}</option>
+                        ))}
+                      </select>
+                      <button
+                        disabled={!session.draft && !dirty}
+                        onClick={() =>
+                          void action(async () => {
+                            await save();
+                            const output = await api.call('export', { id: selected, format });
+                            setExportPath(output.path);
+                            notify(t('บันทึก {0} แล้ว', output.filename), 'success', {
+                              label: t('เปิดโฟลเดอร์'),
+                              run: () => api.call('reveal', { path: output.path }),
+                            });
+                          })
+                        }
+                      >
+                        <Download size={16} />
+                        {t('ส่งออก')}
+                      </button>
+                    </footer>
+                    {exportPath && (
+                      <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
+                        {t('เปิดโฟลเดอร์ไฟล์ล่าสุด')}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </aside>
+          </>
+        )}
+        {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
+        {memoryOpen && api && snapshot && (
+          <MemoryDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setMemoryOpen(false)} />
+        )}
+        {automationOpen && (
+          <AutomationDialog
+            api={api}
+            connections={snapshot.connections}
+            features={snapshot.policy?.features || {}}
+            onClose={() => setAutomationOpen(false)}
+            onOpen={id => {
+              setAutomationOpen(false);
+              void action(async () => {
+                await refresh();
+                await selectSession(id);
+              });
+            }}
+          />
+        )}
+        {toolApprovals[0] && (
+          <ApprovalDialog
+            key={toolApprovals[0].id}
+            request={toolApprovals[0]}
+            onRun={async () => {
+              await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'run' });
               await refresh();
-              await selectSession(id);
-            });
-          }}
-        />
-      )}
-      {toolApprovals[0] && (
-        <ApprovalDialog
-          key={toolApprovals[0].id}
-          request={toolApprovals[0]}
-          onRun={async () => {
-            await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'run' });
-            await refresh();
-          }}
-          onCancel={() =>
-            void action(async () => {
-              await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'cancel' });
-            })
-          }
-          onConfirm={async remember => {
-            await api.call('approvalRespond', { id: toolApprovals[0].id, answer: remember ? 'workspace' : 'once' });
-            await refresh();
-          }}
-        />
-      )}
-      {feedbackAsk && api && (
-        <FeedbackDialog
-          ask={feedbackAsk}
-          call={api.call}
-          hasWorkspace={Boolean(snapshot?.settings.workspace)}
-          onClose={() => setFeedbackAsk(null)}
-          onDone={text => notify(text, 'success')}
-        />
-      )}
-      {consentAsk && (
-        <ApprovalDialog
-          request={{
-            id: consentAsk.token,
-            tool: 'external_ai',
-            title: consentAsk.flagged ? t('ตรวจข้อความก่อนส่งให้ AI') : t('ยืนยันการส่งข้อมูลให้ AI'),
-            body: '',
-            privacyClass: consentAsk.flagged ? 'restricted' : 'internal',
-            allowRemember: false,
-          }}
-          confirmLabel={consentAsk.first ? t('รับทราบและส่ง') : t('มีสิทธิ์ส่งข้อมูลนี้')}
-          confirmDisabled={consentAsk.first && !termsAccepted}
-          onCancel={() => {
-            void api.call('consentDeclined', { id: consentAsk.sessionId }).catch(() => {});
-            setConsentAsk(null);
-          }}
-          onConfirm={async () => {
-            const ask = consentAsk;
-            setConsentAsk(null);
-            await action(() =>
-              start(
-                ask.sessionId,
-                ask.text,
-                ask.attachments,
-                ask.token,
-                ask.skill,
-                ask.allowIds,
-                ask.sourceText,
-                ask.mode,
-                ask.imageModel,
-                ask.retry,
-                ask.coordinator,
-              ),
-            );
-          }}
-        >
-          {consentAsk.flagged ? (
-            <p className="confirm-warning">
-              <ShieldCheck size={16} />
-              {t('ระบบพบสิ่งที่ควรตรวจ:')} {consentAsk.labels.join(', ')}
-            </p>
-          ) : (
-            consentAsk.labels.length > 0 && (
+            }}
+            onCancel={() =>
+              void action(async () => {
+                await api.call('approvalRespond', { id: toolApprovals[0].id, answer: 'cancel' });
+              })
+            }
+            onConfirm={async remember => {
+              await api.call('approvalRespond', { id: toolApprovals[0].id, answer: remember ? 'workspace' : 'once' });
+              await refresh();
+            }}
+          />
+        )}
+        {feedbackAsk && api && (
+          <FeedbackDialog
+            ask={feedbackAsk}
+            call={api.call}
+            hasWorkspace={Boolean(snapshot?.settings.workspace)}
+            onClose={() => setFeedbackAsk(null)}
+            onDone={text => notify(text, 'success')}
+          />
+        )}
+        {consentAsk && (
+          <ApprovalDialog
+            request={{
+              id: consentAsk.token,
+              tool: 'external_ai',
+              title: consentAsk.flagged ? t('ตรวจข้อความก่อนส่งให้ AI') : t('ยืนยันการส่งข้อมูลให้ AI'),
+              body: '',
+              privacyClass: consentAsk.flagged ? 'restricted' : 'internal',
+              allowRemember: false,
+            }}
+            confirmLabel={consentAsk.first ? t('รับทราบและส่ง') : t('มีสิทธิ์ส่งข้อมูลนี้')}
+            confirmDisabled={consentAsk.first && !termsAccepted}
+            onCancel={() => {
+              void api.call('consentDeclined', { id: consentAsk.sessionId }).catch(() => {});
+              setConsentAsk(null);
+            }}
+            onConfirm={async () => {
+              const ask = consentAsk;
+              setConsentAsk(null);
+              await action(() =>
+                start(
+                  ask.sessionId,
+                  ask.text,
+                  ask.attachments,
+                  ask.token,
+                  ask.skill,
+                  ask.allowIds,
+                  ask.sourceText,
+                  ask.mode,
+                  ask.imageModel,
+                  ask.retry,
+                  ask.coordinator,
+                ),
+              );
+            }}
+          >
+            {consentAsk.flagged ? (
               <p className="confirm-warning">
                 <ShieldCheck size={16} />
-                {t('ระบบจะปิดบังก่อนส่ง: {0} ร่างที่ได้จะมีข้อความในวงเล็บแทน ให้ใส่ข้อมูลจริงเองหลังตรวจ', consentAsk.labels.join(', '))}
+                {t('ระบบพบสิ่งที่ควรตรวจ:')} {consentAsk.labels.join(', ')}
               </p>
-            )
-          )}
-          <p>
-            {t(
-              consentAsk.attachment || consentAsk.sourceText
-                ? 'คำขอ พร้อมข้อมูลต้นทางที่ตรวจแล้ว ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้ {0}'
-                : 'คำขอ ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้ {0}',
-              providerName(
-                snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
-                  connection,
-              ),
+            ) : (
+              consentAsk.labels.length > 0 && (
+                <p className="confirm-warning">
+                  <ShieldCheck size={16} />
+                  {t('ระบบจะปิดบังก่อนส่ง: {0} ร่างที่ได้จะมีข้อความในวงเล็บแทน ให้ใส่ข้อมูลจริงเองหลังตรวจ', consentAsk.labels.join(', '))}
+                </p>
+              )
             )}
-          </p>
-          <p className="small muted">
-            {t(
-              'คำถามข้อมูลสาธารณะที่เปลี่ยนตามเวลาอาจใช้ Web Search ของบัญชี AI นี้ โดยส่งเฉพาะคำถามสาธารณะไปค้น ไม่ส่งไฟล์แนบหรือบทสนทนาไปเป็นคำค้น',
-            )}
-          </p>
-          {consentAsk.first && (
-            <Terms privacyChecks={Boolean(snapshot.policy?.checks?.privacy)} accepted={termsAccepted} onChange={setTermsAccepted} />
-          )}
-          <p className="small muted">
-            {snapshot.policy?.checks?.privacy
-              ? t(
-                  'ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ',
-                )
-              : t('ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้')}
-            {consentAsk.vision
-              ? t(' ภาพต้นฉบับจะถูกส่งด้วย ตรวจภาพว่าไม่มีข้อมูลส่วนบุคคลหรือความลับที่ OCR อาจอ่านไม่พบก่อนยืนยัน')
-              : t(' และไม่ส่งไฟล์ต้นฉบับ')}
-            {consentAsk.first && !consentAsk.flagged && !consentAsk.attachment && !consentAsk.sourceText
-              ? t(' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ')
-              : ''}
-          </p>
-        </ApprovalDialog>
-      )}
-      {handoffAsk &&
-        (claudeCode === false ? (
-          <ConfirmDialog
-            title={t('ยังไม่พบ Claude Code')}
-            confirmLabel={t('เปิดวิธีติดตั้ง')}
-            cancelLabel={t('ปิด')}
-            onCancel={() => setHandoffAsk(null)}
-            onConfirm={async () => {
-              await api.call('openHelp', { topic: 'claudeCode' });
-              setHandoffAsk(null);
-            }}
-          >
             <p>
               {t(
-                'ใช้ Claude แบบ Pro/Max ได้ผ่าน Claude Code ของ Anthropic ที่ติดตั้งในเครื่องนี้ ติดตั้งแล้วเปิด Claude Code หนึ่งครั้งเพื่อลงชื่อเข้าใช้บัญชี Claude ของคุณ แล้วกลับมาส่งใหม่',
+                consentAsk.attachment || consentAsk.sourceText
+                  ? 'คำขอ พร้อมข้อมูลต้นทางที่ตรวจแล้ว ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้ {0}'
+                  : 'คำขอ ร่าง และบทสนทนาที่เกี่ยวข้องจะส่งให้ {0}',
+                providerName(
+                  snapshot.connections.find(c => c.id === snapshot.sessions.find(x => x.id === consentAsk.sessionId)?.connectionId) ||
+                    connection,
+                ),
               )}
             </p>
             <p className="small muted">
               {t(
-                'STeP Desktop ลงชื่อเข้าใช้ Claude แทนคุณไม่ได้ เพราะเงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Pro/Max ในแอปของ Anthropic เท่านั้น',
+                'คำถามข้อมูลสาธารณะที่เปลี่ยนตามเวลาอาจใช้ Web Search ของบัญชี AI นี้ โดยส่งเฉพาะคำถามสาธารณะไปค้น ไม่ส่งไฟล์แนบหรือบทสนทนาไปเป็นคำค้น',
               )}
             </p>
-          </ConfirmDialog>
-        ) : (
-          <ConfirmDialog
-            title={t('ส่งต่อไปทำใน Claude Code')}
-            confirmLabel={t('คัดลอกและเปิด Claude Code')}
-            onCancel={() => setHandoffAsk(null)}
-            onConfirm={async () => {
-              try {
-                await api.call('handoff', handoffAsk);
-              } catch (e) {
-                throw new Error(explainError(e));
-              }
-              setHandoffAsk(null);
-              setQuery('');
-              setForcedSkill('');
-              notify(t('คัดลอกคำขอแล้ว วางในหน้าต่าง Claude Code (Ctrl+V หรือ ⌘V) แล้วกด Enter'), 'success');
-            }}
-          >
-            <p>
-              {handoffAsk.skill
+            {consentAsk.first && (
+              <Terms privacyChecks={Boolean(snapshot.policy?.checks?.privacy)} accepted={termsAccepted} onChange={setTermsAccepted} />
+            )}
+            <p className="small muted">
+              {snapshot.policy?.checks?.privacy
                 ? t(
-                    'แอปจะคัดลอกคำขอ พร้อมตำแหน่งไฟล์ Skill แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง',
+                    'ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้ ผลสแกนไม่ใช่การอนุญาตจากองค์กร ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบ',
                   )
-                : t('แอปจะคัดลอกคำขอ แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง')}
+                : t('ยืนยันเฉพาะข้อมูลที่คุณมีสิทธิ์ส่งผ่านบริการนี้')}
+              {consentAsk.vision
+                ? t(' ภาพต้นฉบับจะถูกส่งด้วย ตรวจภาพว่าไม่มีข้อมูลส่วนบุคคลหรือความลับที่ OCR อาจอ่านไม่พบก่อนยืนยัน')
+                : t(' และไม่ส่งไฟล์ต้นฉบับ')}
+              {consentAsk.first && !consentAsk.flagged && !consentAsk.attachment && !consentAsk.sourceText
+                ? t(' ครั้งต่อไปจะไม่ถามซ้ำ เว้นแต่มีไฟล์แนบหรือพบข้อมูลที่ควรตรวจ')
+                : ''}
             </p>
-            <p className="small muted">
+          </ApprovalDialog>
+        )}
+        {handoffAsk &&
+          (claudeCode === false ? (
+            <ConfirmDialog
+              title={t('ยังไม่พบ Claude Code')}
+              confirmLabel={t('เปิดวิธีติดตั้ง')}
+              cancelLabel={t('ปิด')}
+              onCancel={() => setHandoffAsk(null)}
+              onConfirm={async () => {
+                await api.call('openHelp', { topic: 'claudeCode' });
+                setHandoffAsk(null);
+              }}
+            >
+              <p>
+                {t(
+                  'ใช้ Claude แบบ Pro/Max ได้ผ่าน Claude Code ของ Anthropic ที่ติดตั้งในเครื่องนี้ ติดตั้งแล้วเปิด Claude Code หนึ่งครั้งเพื่อลงชื่อเข้าใช้บัญชี Claude ของคุณ แล้วกลับมาส่งใหม่',
+                )}
+              </p>
+              <p className="small muted">
+                {t(
+                  'STeP Desktop ลงชื่อเข้าใช้ Claude แทนคุณไม่ได้ เพราะเงื่อนไขของ Anthropic อนุญาตให้ใช้บัญชี Pro/Max ในแอปของ Anthropic เท่านั้น',
+                )}
+              </p>
+            </ConfirmDialog>
+          ) : (
+            <ConfirmDialog
+              title={t('ส่งต่อไปทำใน Claude Code')}
+              confirmLabel={t('คัดลอกและเปิด Claude Code')}
+              onCancel={() => setHandoffAsk(null)}
+              onConfirm={async () => {
+                try {
+                  await api.call('handoff', handoffAsk);
+                } catch (e) {
+                  throw new Error(explainError(e));
+                }
+                setHandoffAsk(null);
+                setQuery('');
+                setForcedSkill('');
+                notify(t('คัดลอกคำขอแล้ว วางในหน้าต่าง Claude Code (Ctrl+V หรือ ⌘V) แล้วกด Enter'), 'success');
+              }}
+            >
+              <p>
+                {handoffAsk.skill
+                  ? t(
+                      'แอปจะคัดลอกคำขอ พร้อมตำแหน่งไฟล์ Skill แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง',
+                    )
+                  : t('แอปจะคัดลอกคำขอ แล้วเปิด Claude Code ในโฟลเดอร์งาน คุณวางคำขอและทำงานต่อในหน้าต่างนั้นด้วยบัญชี Claude ของคุณเอง')}
+              </p>
+              <p className="small muted">
+                {t(
+                  'คำตอบจะอยู่ใน Claude Code ไม่กลับมาที่แอปนี้ ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบก่อนคัดลอก ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้กับ Claude',
+                )}
+              </p>
+            </ConfirmDialog>
+          ))}
+        {removing && (
+          <ConfirmDialog
+            title={t('ลบงานนี้?')}
+            tone="danger"
+            confirmLabel={t('ลบงาน')}
+            onCancel={() => setRemoving(null)}
+            onConfirm={async () => {
+              await api.call('remove', { id: removing.id });
+              if (selected === removing.id) {
+                setSelected('');
+                setDirty(false);
+                dirtyRef.current = false;
+              }
+              setRemoving(null);
+              await refresh();
+            }}
+          >
+            <p>
               {t(
-                'คำตอบจะอยู่ใน Claude Code ไม่กลับมาที่แอปนี้ ระบบปิดบังเลขบัตร เบอร์โทร และอีเมลที่ตรวจพบก่อนคัดลอก ส่งเฉพาะข้อมูลที่คุณมีสิทธิ์ใช้กับ Claude',
+                '“{0}” พร้อมบทสนทนา ร่าง และประวัติเวอร์ชันจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้ ไฟล์ที่ส่งออกไว้แล้วในโฟลเดอร์ผลงานยังอยู่',
+                removing.title,
               )}
             </p>
           </ConfirmDialog>
-        ))}
-      {removing && (
-        <ConfirmDialog
-          title={t('ลบงานนี้?')}
-          tone="danger"
-          confirmLabel={t('ลบงาน')}
-          onCancel={() => setRemoving(null)}
-          onConfirm={async () => {
-            await api.call('remove', { id: removing.id });
-            if (selected === removing.id) {
-              setSelected('');
-              setDirty(false);
-              dirtyRef.current = false;
-            }
-            setRemoving(null);
-            await refresh();
-          }}
-        >
-          <p>
-            {t(
-              '“{0}” พร้อมบทสนทนา ร่าง และประวัติเวอร์ชันจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้ ไฟล์ที่ส่งออกไว้แล้วในโฟลเดอร์ผลงานยังอยู่',
-              removing.title,
-            )}
-          </p>
-        </ConfirmDialog>
-      )}
-      {packsOpen && (
-        <PacksDialog
-          api={api}
-          onClose={() => setPacksOpen(false)}
-          onSelect={text => {
-            setPendingSource(text);
-            notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
-          }}
-        />
-      )}
-      {keyboardOpen && <KeyboardDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setKeyboardOpen(false)} />}
-      {palette && <CommandPalette items={paletteItems} onClose={() => setPalette(false)} />}
-      {wizard && (
-        <SetupWizard
-          snapshot={snapshot}
-          call={api.call}
-          refresh={refresh}
-          onError={e => notify(explainError(e), 'error')}
-          onDone={startTour => {
-            setWizard(false);
-            setSettings(false);
-            setView('chat');
-            if (startTour) setTour(true);
-          }}
-        />
-      )}
-      {tour && (
-        <Tour
-          onClose={() => {
-            setTour(false);
-            void api.call('tour', { done: true }).then(refresh);
-          }}
-        />
-      )}
-      <Toasts toasts={toasts} dismiss={dismiss} />
-      {authCode && (
-        <div className="dialog-backdrop">
-          <section role="dialog" aria-modal="true" aria-label={t('ลงชื่อเข้าใช้ Google')} className="attachment-dialog">
-            <header>
-              <h2>{t('ลงชื่อเข้าใช้บริการ AI')}</h2>
-            </header>
-            <p>
-              {t(
-                'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
-              )}
-            </p>
-            <label className="auth-code">
-              Authorization code
-              <input
-                autoFocus
-                autoComplete="off"
-                spellCheck={false}
-                value={authCode.code}
-                onChange={e => setAuthCode({ ...authCode, code: e.target.value })}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && authCode.code.trim()) {
-                    e.preventDefault();
+        )}
+        {packsOpen && (
+          <PacksDialog
+            api={api}
+            onClose={() => setPacksOpen(false)}
+            onSelect={text => {
+              setPendingSource(text);
+              notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
+            }}
+          />
+        )}
+        {keyboardOpen && <KeyboardDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setKeyboardOpen(false)} />}
+        {palette && <CommandPalette items={paletteItems} onClose={() => setPalette(false)} />}
+        {wizard && (
+          <SetupWizard
+            snapshot={snapshot}
+            call={api.call}
+            refresh={refresh}
+            onError={e => notify(explainError(e), 'error')}
+            onDone={startTour => {
+              setWizard(false);
+              setSettings(false);
+              setView('chat');
+              if (startTour) setTour(true);
+            }}
+          />
+        )}
+        {tour && (
+          <Tour
+            onClose={() => {
+              setTour(false);
+              void api.call('tour', { done: true }).then(refresh);
+            }}
+          />
+        )}
+        <Toasts toasts={toasts} dismiss={dismiss} />
+        {authCode && (
+          <div className="dialog-backdrop">
+            <section role="dialog" aria-modal="true" aria-label={t('ลงชื่อเข้าใช้ Google')} className="attachment-dialog">
+              <header>
+                <h2>{t('ลงชื่อเข้าใช้บริการ AI')}</h2>
+              </header>
+              <p>
+                {t(
+                  'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
+                )}
+              </p>
+              <label className="auth-code">
+                Authorization code
+                <input
+                  autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={authCode.code}
+                  onChange={e => setAuthCode({ ...authCode, code: e.target.value })}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && authCode.code.trim()) {
+                      e.preventDefault();
+                      void action(async () => {
+                        await api.call('authCode', authCode);
+                        setAuthCode(null);
+                      });
+                    }
+                  }}
+                />
+              </label>
+              <div className="proposal-actions">
+                <button
+                  disabled={!authCode.code.trim()}
+                  onClick={() =>
                     void action(async () => {
                       await api.call('authCode', authCode);
                       setAuthCode(null);
-                    });
+                    })
                   }
-                }}
-              />
-            </label>
-            <div className="proposal-actions">
-              <button
-                disabled={!authCode.code.trim()}
-                onClick={() =>
-                  void action(async () => {
-                    await api.call('authCode', authCode);
-                    setAuthCode(null);
-                  })
-                }
-              >
-                <Check size={15} />
-                {t('ยืนยัน')}
-              </button>
-              <button
-                className="quiet"
-                onClick={() =>
-                  void action(async () => {
-                    const id = authCode.id;
-                    setAuthCode(null);
-                    await api.call('authCode', { id, code: '' });
-                  })
-                }
-              >
-                {t('ยกเลิก')}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-      {inspecting && (
-        <div
-          className="dialog-backdrop"
-          onKeyDown={e => {
-            if (e.key === 'Escape') setInspecting(null);
-          }}
-        >
-          <section role="dialog" aria-modal="true" aria-label={t('ตรวจข้อความแนบ')} className="attachment-dialog">
-            <header>
-              <h2>{inspecting.name}</h2>
-              <button className="icon" autoFocus onClick={() => setInspecting(null)} title={t('ปิด')}>
-                <X />
-              </button>
-            </header>
-            <p className={inspecting.usable ? undefined : 'danger-text'}>
-              {inspecting.usable ? inspecting.status : `${inspecting.status}: ${errorText[inspecting.reason || ''] || ''}`}
-            </p>
-            <p className="small muted">
-              {inspecting.vision
-                ? snapshot.policy?.checks?.privacy
-                  ? t('ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้')
-                  : t('ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง')
-                : t('ตรวจเฉพาะข้อความที่อ่านได้ ไม่รับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง')}
-            </p>
-            {inspecting.imagePreview && (
-              <img className="attachment-image" src={inspecting.imagePreview} alt={t('ภาพต้นฉบับที่จะส่งให้ AI')} />
-            )}
-            {/* A scanned PDF or a picture sent as it is has no text to show; the image above is what goes. */}
-            {(inspecting.preview || !inspecting.vision) && (
-              <pre>{inspecting.preview || t('ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน')}</pre>
-            )}
-            <button onClick={() => setInspecting(null)}>{t('กลับไปที่งาน')}</button>
-          </section>
-        </div>
-      )}
+                >
+                  <Check size={15} />
+                  {t('ยืนยัน')}
+                </button>
+                <button
+                  className="quiet"
+                  onClick={() =>
+                    void action(async () => {
+                      const id = authCode.id;
+                      setAuthCode(null);
+                      await api.call('authCode', { id, code: '' });
+                    })
+                  }
+                >
+                  {t('ยกเลิก')}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {inspecting && (
+          <div
+            className="dialog-backdrop"
+            onKeyDown={e => {
+              if (e.key === 'Escape') setInspecting(null);
+            }}
+          >
+            <section role="dialog" aria-modal="true" aria-label={t('ตรวจข้อความแนบ')} className="attachment-dialog">
+              <header>
+                <h2>{inspecting.name}</h2>
+                <button className="icon" autoFocus onClick={() => setInspecting(null)} title={t('ปิด')}>
+                  <X />
+                </button>
+              </header>
+              <p className={inspecting.usable ? undefined : 'danger-text'}>
+                {inspecting.usable ? inspecting.status : `${inspecting.status}: ${errorText[inspecting.reason || ''] || ''}`}
+              </p>
+              <p className="small muted">
+                {inspecting.vision
+                  ? snapshot.policy?.checks?.privacy
+                    ? t('ส่งภาพต้นฉบับให้ AI พร้อมข้อความ OCR ตรวจภาพและสิทธิ์ส่งข้อมูลก่อนยืนยัน ระบบตรวจเฉพาะข้อความที่ OCR อ่านได้')
+                    : t('ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง')
+                  : t('ตรวจเฉพาะข้อความที่อ่านได้ ไม่รับรองสิทธิ์ส่งข้อมูล ไฟล์ต้นฉบับไม่ถูกส่ง')}
+              </p>
+              {inspecting.imagePreview && (
+                <img className="attachment-image" src={inspecting.imagePreview} alt={t('ภาพต้นฉบับที่จะส่งให้ AI')} />
+              )}
+              {/* A scanned PDF or a picture sent as it is has no text to show; the image above is what goes. */}
+              {(inspecting.preview || !inspecting.vision) && (
+                <pre>{inspecting.preview || t('ไม่สามารถเตรียมข้อความที่ตรวจแล้วได้ กรุณาใช้สำเนาที่ปิดบังข้อมูลและตรวจทานก่อน')}</pre>
+              )}
+              <button onClick={() => setInspecting(null)}>{t('กลับไปที่งาน')}</button>
+            </section>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

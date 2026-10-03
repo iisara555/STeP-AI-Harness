@@ -29,6 +29,8 @@ export const FEATURES = [
   'coordinator',
   'memoryTeam',
   'autoRouting',
+  'receiptVision',
+  'autoUpdate',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -141,6 +143,12 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
   // Off, every request goes to the AI as general help.
   autoRouting: false,
+  // The receipt check also lets a vision model read the receipt image and compares it with the local OCR, field by
+  // field. Needs vision; with checks.privacy on the receipt image is never sent (strict, OCR-candidates-only mode).
+  receiptVision: true,
+  // The installed app checks for a newer version, downloads it in the background and offers "restart to update".
+  // IT can set it to false where software is rolled out centrally.
+  autoUpdate: true,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',

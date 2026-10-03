@@ -163,6 +163,7 @@ export type Settings = {
   /** Version of the usage terms this person accepted (src/terms-version.ts). */
   termsVersion?: string;
   ocrAiConsentedAt?: string;
+  receiptVisionConsentedAt?: string;
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
 export type Attachment = {
@@ -262,6 +263,16 @@ export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
 /** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
 export type BrowserDockTab = { id: string; title: string; url: string; kind: 'agent' | 'manual'; loading: boolean };
 export type BrowserDockState = { tabs: BrowserDockTab[]; active: string; focus?: boolean };
+/** The in-app updater's state (electron/updater.ts). */
+export type UpdateState = {
+  status: 'disabled' | 'idle' | 'checking' | 'none' | 'downloading' | 'ready' | 'manual' | 'error';
+  current: string;
+  version?: string;
+  percent?: number;
+  reason?: string;
+  url?: string;
+  checkedAt?: string;
+};
 export type RunEvent = {
   sessionId: string;
   type:
@@ -283,8 +294,10 @@ export type RunEvent = {
     | 'question'
     | 'question-close'
     | 'trace'
-    | 'browser';
+    | 'browser'
+    | 'update';
   browser?: BrowserDockState;
+  update?: UpdateState;
   question?: ToolQuestion;
   questionId?: string;
   approval?: ApprovalRequest;

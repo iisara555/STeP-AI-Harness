@@ -22,13 +22,17 @@ await writeFile(
 await writeFile(
   executable,
   `import readline from 'node:readline';
+import { existsSync, writeFileSync } from 'node:fs';
 const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
 // Like a real Codex thread, the fixture keeps what it was sent and counts usage for the whole thread.
 let thread='',turns=0;
+// The first second turn on a thread fails once (as a runtime that drops a thread would): the app retries it on a fresh one.
+const failMarker=${JSON.stringify(join(home, 'failed-once'))};
 readline.createInterface({input:process.stdin}).on('line',line=>{
  const m=JSON.parse(line);let result={};if(m.method==='thread/start'){result={thread:{id:'fixture'}};thread='';turns=0;}send({id:m.id,result});
  if(m.method==='turn/start'){
  thread+=m.params.input?.map(i=>i.text||'').join('')||'';turns++;
+ if(turns===2&&!existsSync(failMarker)){writeFileSync(failMarker,'1');send({method:'turn/completed',params:{turn:{status:'failed',error:{message:'thread dropped'}}}});return;}
  const prompt=thread;
  const tool=(tool,input,args,content)=>'\x60\x60\x60step-tool\\n'+JSON.stringify({tool,input,args,content})+'\\n\x60\x60\x60';
  let text;
@@ -138,6 +142,8 @@ try {
       2,
     ),
   );
+  // The dropped thread above really happened, and the run still finished on a fresh thread.
+  assert.equal(await readFile(join(home, 'failed-once'), 'utf8'), '1');
   console.log('Synthetic tool loop, consent, ask_user, plan, staged changes, usage and cancellation passed');
 } finally {
   await child.close();

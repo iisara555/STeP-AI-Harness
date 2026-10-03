@@ -51,7 +51,8 @@ export const en: Record<string, string> = {
   'ตรวจใบเสร็จก่อนส่ง AFP': 'Check receipts before sending to AFP',
   เริ่มต้นงานที่อยากทำ: 'What would you like to work on?',
   'บัญชี AI และข้อมูลอยู่ในเครื่องนี้': 'Your AI account and data stay on this computer',
-  'ทดลอง · อ่านด้วย OCR ในเครื่อง ไม่ส่งเอกสารขึ้น cloud': 'Beta · Reads receipts with on-device OCR; nothing is uploaded to the cloud',
+  'ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต':
+    'Beta · Reads receipts with on-device OCR, and has the AI read the image to compare when your organisation allows it',
   'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing': 'Skills in this workspace, with their Manifest and Routing status',
   'จากคำขอ สู่ผลงานที่ใช้ต่อได้': 'From request to ready-to-use work',
   ซ่อนร่าง: 'Hide draft',
@@ -1053,6 +1054,16 @@ export const en: Record<string, string> = {
   กำลังอ่านเว็บไซต์: 'Reading the website',
   กำลังอ่านไฟล์งาน: 'Reading workspace files',
   กำลังเตรียมการแก้ไขไฟล์: 'Preparing file changes',
+  'เมนู STeP': 'STeP menu',
+  ค้นหางานและคำสั่ง: 'Search tasks and commands',
+  มุมมอง: 'View',
+  ช่วยเหลือ: 'Help',
+  ซ่อนแผงขวา: 'Hide side panel',
+  แสดงแผงขวา: 'Show side panel',
+  ขยายตัวอักษร: 'Zoom in',
+  ย่อตัวอักษร: 'Zoom out',
+  ขนาดปกติ: 'Actual size',
+  ออกจากแอป: 'Quit STeP Desktop',
   วางแผนก่อนลงมือ: 'Plan before doing',
   ลงมือทำตามแผน: 'Carry out the plan',
   เขียนเอกสารความต้องการ: 'Write requirements',
@@ -1376,4 +1387,143 @@ export const en: Record<string, string> = {
   ให้ความเห็นต่อคำตอบนี้: 'Rate this answer',
   ตัวเลือกงานนี้: 'Task options',
   'งานนี้ใช้ {0} · จะเปิดในแท็บเว็บ': 'This task uses {0} · opening it in the Web tab',
+  'AI อ่านภาพใบเสร็จแล้ว ตรวจช่องที่อ่านต่างกันและเทียบกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว”':
+    'The AI has read the receipt image. Check the fields where the readings differ against the original before ticking “Checked”',
+  'ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย AI จากภาพและให้คนตรวจแล้ว):':
+    'Details from receipt “{0}” (read from the image by AI and checked by a person):',
+  'ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่อง เทียบกับ AI อ่านภาพ และให้คนตรวจแล้ว):':
+    'Details from receipt “{0}” (read by on-device OCR, compared with an AI reading of the image, and checked by a person):',
+  'อ่าน 2 ทาง: OCR ในเครื่อง และ AI อ่านภาพแยกกัน แล้วเทียบผลทีละช่อง':
+    'Two readings: on-device OCR and a separate AI reading of the image, compared field by field',
+  'ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย (อ่านทางเดียว ติดตั้ง OCR เพิ่มเพื่อเทียบ 2 ทาง)':
+    'No on-device OCR yet: the AI can read the image now (one reading; install OCR to compare two)',
+  'เชื่อมต่อ AI ก่อน เพื่อให้ AI อ่านภาพใบเสร็จ': 'Connect an AI first so it can read the receipt image',
+  'AI ฝากตรวจ: {0}': 'The AI asks you to check: {0}',
+  'OCR และ AI อ่านตรงกัน': 'OCR and AI agree',
+  'AI อ่านจากภาพ · ตรวจกับต้นฉบับ': 'Read from the image by AI · check against the original',
+  'OCR ไม่พบ AI อ่านได้ “{0}” · ตรวจกับภาพ': 'OCR found nothing; the AI read “{0}” · check against the image',
+  ใช้ค่านี้: 'Use this value',
+  'AI อ่านช่องนี้ไม่เห็น ใช้ค่าจาก OCR · ตรวจกับภาพ': 'The AI could not read this field; using the OCR value · check against the image',
+  'อ่านต่างกัน: AI อ่านว่า “{0}”': 'Readings differ: the AI read “{0}”',
+  'ให้ AI อ่านภาพอีกครั้ง': 'Have the AI read the image again',
+  'ให้ AI อ่านภาพเทียบ': 'Have the AI read the image to compare',
+  'ให้ AI อ่านภาพใบเสร็จ': 'Let the AI read the receipt image',
+  'ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง':
+    'Send the receipt image to your connected AI to read separately from the OCR, then compare field by field',
+  'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง':
+    'The image shows the shop name, address and tax ID. Send only receipts you are allowed to share. Every value the AI reads must still be checked against the original before you tick “Checked”',
+  'ให้ AI อ่านภาพ': 'Let the AI read it',
+  'เลขผู้เสียภาษีไม่ผ่านการตรวจเลขหลักสุดท้าย อาจอ่านผิดหนึ่งหลัก โปรดเทียบกับต้นฉบับ':
+    'The tax ID fails its check digit; one digit may be misread. Compare it with the original',
+  'ภาษีมูลค่าเพิ่มไม่เท่ากับ 7% ของยอดก่อนภาษี โปรดตรวจตัวเลขทั้งสองช่อง': 'VAT is not 7% of the amount before VAT. Check both figures',
+  'AI ตอบกลับในรูปแบบที่อ่านไม่ได้ ลองให้ AI อ่านภาพอีกครั้ง หรือใช้ผลจาก OCR':
+    'The AI replied in a form that cannot be read. Have it read the image again, or use the OCR result',
+  'แปลงภาพใบเสร็จเพื่อส่งให้ AI ไม่ได้ ลองบันทึกเป็น JPG หรือ PNG แล้วเลือกใหม่':
+    'The receipt image could not be prepared for the AI. Save it as JPG or PNG and choose it again',
+  'เลขผู้เสียภาษีนี้อาจเป็นของผู้ซื้อ (เช่น มหาวิทยาลัย) ไม่ใช่ของร้าน ร้านบางแห่งเขียนเลขลูกค้าลงช่องผู้ออก โปรดตรวจกับต้นฉบับ':
+    'This tax ID may be the buyer’s (for example the university’s), not the shop’s; some shops write the customer’s ID in the issuer’s box. Check it against the original',
+  'ยอดเงินตัวอักษรไม่ตรงกับยอดรวมตัวเลข โปรดตรวจยอดรวมกับต้นฉบับ':
+    'The amount in words does not match the total in figures. Check the total against the original',
+  'ส่วนเสริม OCR': 'OCR add-ons',
+  'ส่วนเสริม OCR · ใบเขียนมือ? เพิ่มโมเดลอ่านลายมือได้ที่นี่': 'OCR add-ons · Handwritten receipts? Add the handwriting model here',
+  ย่อภาพใบเสร็จ: 'Zoom out of the receipt',
+  ขยายภาพใบเสร็จ: 'Zoom in on the receipt',
+  'ตรวจแล้ว {0}/{1} ช่อง': '{0}/{1} fields checked',
+  'ตรงกัน {0}': '{0} agree',
+  'อ่านต่างกัน {0}': '{0} differ',
+  'อ่านได้ทางเดียว {0}': '{0} read by one side',
+  'เทียบแต่ละช่องกับภาพ แล้วกด Enter เพื่อติ๊ก “ตรวจแล้ว” และไปช่องถัดไป':
+    'Compare each field with the image, then press Enter to tick “Checked” and move to the next field',
+  'ประเภทเอกสาร: {0}': 'Document type: {0}',
+  ยังไม่ทราบ: 'Not known yet',
+  'หมวดที่จะเบิก: {0}': 'Claim category: {0}',
+  ประเภทเอกสารและสิ่งที่ต้องมี: 'Document type and what it needs',
+  ประเภทเอกสาร: 'Document type',
+  หมวดที่จะเบิก: 'Claim category',
+  'AI จำแนกจากภาพ เปลี่ยนได้ถ้าไม่ถูก': 'Classified by the AI from the image; change it if it is wrong',
+  'จำแนกจากหัวเอกสารที่ OCR อ่านได้ เปลี่ยนได้ถ้าไม่ถูก': 'Classified from the heading the OCR read; change it if it is wrong',
+  คุณเลือกประเภทเอง: 'You chose the type',
+  'ยังจำแนกไม่ได้ เลือกประเภทเอง หรือให้ AI อ่านภาพ': 'Not classified yet: choose the type, or have the AI read the image',
+  สิ่งที่ต้องมีและต้องทำ: 'What it needs and what to do',
+  'ขาด {0}': '{0} missing',
+  'ควรตรวจ {0}': '{0} to check',
+  'ต้องเตรียม {0}': '{0} to prepare',
+  'รายการนี้ช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย ข้อที่ยังไม่มีแหล่งยืนยันให้ถาม AFP':
+    'This list helps you prepare the documents; it is not a payment approval. Ask AFP about items with no confirmed source',
+  'ถ้าเบิกหมวด B: ': 'If claimed under category B: ',
+  'ใบกำกับภาษี (เต็มรูป)': 'Tax invoice (full)',
+  ใบกำกับภาษีอย่างย่อ: 'Abbreviated tax invoice',
+  ใบเสร็จรับเงิน: 'Receipt',
+  บิลเงินสด: 'Cash bill',
+  ใบสำคัญรับเงิน: 'Payment voucher',
+  'ใบแจ้งหนี้ / ใบเสนอราคา / ใบส่งของ': 'Invoice / quotation / delivery note',
+  สลิปโอนเงิน: 'Transfer slip',
+  ไม่แน่ใจประเภท: 'Type unclear',
+  ยังไม่แน่ใจ: 'Not sure yet',
+  'หมวด B (B1–B12)': 'Category B (B1–B12)',
+  'หมวด BV ค่าพาหนะ': 'Category BV (vehicles)',
+  หมวดฉุกเฉิน: 'Emergency category',
+  หมวดอื่น: 'Other category',
+  'AFP แจ้งเวียน': 'AFP circular',
+  'หลักทั่วไป · ยืนยันกับ AFP': 'General practice · confirm with AFP',
+  'ยังไม่มีแหล่งในระบบ · ถาม AFP': 'No source in the app yet · ask AFP',
+  'สลิปโอนเงินไม่ใช่ใบเสร็จ ชุดเคลียร์เงินของ AFP ใช้ใบเสร็จรับเงิน หรือใบสำคัญรับเงิน (FM-AF-014) ขอใบเสร็จจากผู้รับเงิน หรือใช้ใบสำคัญรับเงินพร้อมสำเนาบัตรประชาชนผู้รับเงิน':
+    'A transfer slip is not a receipt. AFP’s clearing set uses a receipt or a payment voucher (FM-AF-014): ask the payee for a receipt, or use a payment voucher with a copy of the payee’s ID card',
+  'ใบแจ้งหนี้หรือใบเสนอราคาเป็นเอกสารก่อนจ่ายเงิน ใช้ประกอบตอนยืมเงินได้ แต่ตอนเคลียร์เงินต้องมีใบเสร็จรับเงิน หรือใบสำคัญรับเงิน (FM-AF-014)':
+    'An invoice or quotation comes before payment. It can support a cash advance, but clearing needs a receipt or a payment voucher (FM-AF-014)',
+  'มีชื่อผู้รับเงิน / ร้าน': 'Payee / shop name shown',
+  'ยังไม่เห็นชื่อผู้รับเงิน / ร้าน': 'No payee / shop name seen',
+  มีวันที่รับเงิน: 'Payment date shown',
+  ยังไม่เห็นวันที่รับเงิน: 'No payment date seen',
+  มีรายการว่าจ่ายค่าอะไร: 'What was paid for is listed',
+  ยังไม่เห็นรายการว่าจ่ายค่าอะไร: 'What was paid for is not listed',
+  มีจำนวนเงินทั้งตัวเลขและตัวอักษร: 'Amount shown in figures and in words',
+  'มีจำนวนเงินตัวเลข แต่ยังไม่เห็นจำนวนเงินตัวอักษร': 'Amount in figures, but not in words',
+  ยังไม่เห็นจำนวนเงิน: 'No amount seen',
+  มีลายมือชื่อผู้รับเงิน: 'Payee signature shown',
+  'ยังไม่เห็นลายมือชื่อผู้รับเงิน ขอให้ผู้รับเงินลงชื่อ (ห้ามลงชื่อแทนผู้อื่น)':
+    'No payee signature seen: ask the payee to sign (never sign for someone else)',
+  'ระบุชื่อผู้ซื้อแล้ว ชื่อและที่อยู่ผู้ซื้อที่ต้องใช้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP':
+    'A buyer is named. The buyer name and address to use have no confirmed source in the app yet; ask AFP',
+  'ยังไม่เห็นชื่อผู้ซื้อ ชื่อและที่อยู่ผู้ซื้อที่ต้องใช้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP':
+    'No buyer named. The buyer name and address to use have no confirmed source in the app yet; ask AFP',
+  'เอกสารกระดาษความร้อน (เช่น ใบเสร็จอย่างย่อ สลิป) ต้องถ่ายสำเนาแนบทุกครั้ง เพราะตัวหนังสือจะจางหาย':
+    'Thermal paper (abbreviated receipts, slips) must always be photocopied and attached, because the print fades',
+  'เอกสารภาษาต่างประเทศ ต้องแนบต้นฉบับพร้อมคำแปลภาษาไทยที่มีผู้แปลลงชื่อและวันที่ (ห้ามใช้ Google Translate)':
+    'Foreign-language documents need the original plus a Thai translation signed and dated by the translator (no Google Translate)',
+  'มีรายการที่อาจเป็นเครื่องดื่มที่ไม่เหมาะสม AFP ห้ามซื้อเครื่องดื่มที่ไม่เหมาะสม โปรดตรวจรายการ':
+    'An item may be an inappropriate drink, which AFP does not allow. Check the items',
+  'ใบเสร็จเขียนด้วยลายมือ ตรวจว่าไม่มีรอยขูดลบหรือแก้ไขตัวเลข ถ้ามีการแก้ ควรให้ผู้รับเงินลงชื่อกำกับ':
+    'Handwritten receipt: check for erasures or changed figures; any correction should be initialled by the payee',
+  'บิลเงินสดจากร้านที่ไม่ได้จดทะเบียนภาษีมูลค่าเพิ่มไม่มีภาษีแยก ใช้เป็นหลักฐานการจ่ายได้หรือไม่ในกรณีนี้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP':
+    'A cash bill from a shop not registered for VAT shows no separate tax. Whether it is accepted as proof of payment here has no confirmed source in the app yet; ask AFP',
+  'ยอด {0} บาท เกินเพดานหมวด BV (ไม่เกิน 10,000 บาท/คนขับรถ/กิจกรรม)': '{0} baht is over the BV cap (10,000 baht per driver per activity)',
+  'ยอด {0} บาท เกินวงเงินหมวดฉุกเฉิน (ไม่เกิน 10,000 บาท)': '{0} baht is over the emergency limit (10,000 baht)',
+  'ยอด {0} บาท เกินเพดานหมวด B (ไม่เกิน 10,000 บาทต่อหมวดย่อย) งานที่เกิน 10,000 บาทต้องผ่านพัสดุ (หมวด C)':
+    '{0} baht is over the category B cap (10,000 baht per sub-category); work over 10,000 baht goes through procurement (category C)',
+  'เลยกำหนดรายงานขอความเห็นชอบแล้ว (ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ ครบ {1}) AFP แจ้งว่าค่าใช้จ่ายส่วนเกินจะเบิกไม่ได้ โปรดติดต่อ AFP':
+    'The approval report is overdue ({0} working days after the receipt date, due {1}). AFP says the excess cannot be claimed; contact AFP',
+  'ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ: ภายใน {1} (ไม่นับวันหยุดนักขัตฤกษ์ โปรดดูปฏิทินด้วย)':
+    'File the approval report in STeP MIS within {0} working days after the receipt date: by {1} (public holidays not counted; check the calendar)',
+  'ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ':
+    'File the approval report in STeP MIS within {0} working days after the receipt date',
+  'หมวดฉุกเฉินต้องได้รับความเห็นชอบจากหัวหน้าทีมหรือผู้บริหารทีมก่อนดำเนินการ และเข้าเงื่อนไขครบ 3 ข้อ (เร่งด่วน, ไม่ได้คาดการณ์ไว้, ทำตามระยะเวลาปกติไม่ทัน)':
+    'The emergency category needs the team lead’s or team executive’s agreement first, and all 3 conditions (urgent, unforeseen, not possible in the normal time)',
+  'ชุดเคลียร์เงิน: ใบขอเบิกค่าใช้จ่าย (FM-AF-002) + ใบเสร็จรับเงินหรือใบสำคัญรับเงิน (FM-AF-014) + สำเนาบัตรประชาชนผู้รับเงินหรือใบรับรองแทนใบเสร็จ (FM-AF-035/036) + รายงานขอความเห็นชอบ':
+    'Clearing set: expense claim (FM-AF-002) + receipt or payment voucher (FM-AF-014) + copy of the payee’s ID card or a receipt substitute certificate (FM-AF-035/036) + approval report',
+  'กฎของหมวดนี้ยังไม่มีในระบบ ชุดเอกสารและกำหนดเวลาโปรดถาม AFP':
+    'This category’s rules are not in the app yet; ask AFP for the documents and deadlines',
+  'ครบแล้ว {0} ข้อ: {1}': '{0} complete: {1}',
+  'กำลังตรวจหาอัปเดต…': 'Checking for updates…',
+  'ตรวจหาอัปเดตไม่สำเร็จ ลองใหม่ภายหลัง': 'Could not check for updates; try again later',
+  'องค์กรปิดการอัปเดตในแอป ติดต่อ IT เพื่อรับเวอร์ชันใหม่': 'Your organisation turned off in-app updates; ask IT for new versions',
+  รุ่นทดสอบนี้ไม่อัปเดตตัวเอง: 'This development build does not update itself',
+  'เป็นเวอร์ชันล่าสุดแล้ว ({0})': 'You have the latest version ({0})',
+  'ตรวจหาอัปเดต · เวอร์ชัน {0}': 'Check for updates · version {0}',
+  ตรวจหาอัปเดต: 'Check for updates',
+  'ติดตั้งเวอร์ชัน {0} แล้วเปิดแอปใหม่ งานที่ค้างไว้ยังอยู่': 'Install version {0} and reopen the app; your work stays',
+  รีสตาร์ทเพื่ออัปเดต: 'Restart to update',
+  'Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดเวอร์ชัน {0} แล้วลากไปที่ Applications':
+    'This Mac build cannot install updates itself; download version {0} and drag it to Applications',
+  'ดาวน์โหลดเวอร์ชัน {0}': 'Download version {0}',
 };

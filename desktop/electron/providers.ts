@@ -112,6 +112,18 @@ export async function initialize(rpc: Rpc, provider: string) {
 
 export class CodexAdapter implements ProviderAdapter {
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    const continuing = Boolean(context.session?.rpc && !context.webSearch);
+    try {
+      return await this.turn(prompt, connection, context);
+    } catch (error) {
+      // A turn on the run's open thread that fails (the runtime dropped the thread or refused a second turn) is tried
+      // once more on a fresh thread with the whole prompt, as before threads were kept: never worse than not reusing.
+      if (!continuing || context.signal.aborted || (error instanceof Error && error.message === 'CANCELLED')) throw error;
+      context.session?.close();
+      return this.turn(prompt, connection, context);
+    }
+  }
+  private async turn(prompt: string, connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
     const session = context.webSearch ? undefined : context.session;
     const system = context.system || '';

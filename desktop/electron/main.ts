@@ -6,6 +6,8 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  Menu,
+  nativeImage,
   dialog,
   shell,
   safeStorage,
@@ -23,6 +25,8 @@ import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
+import { autoUpdater } from 'electron-updater';
+import { Updater, RELEASES_URL } from './updater';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -70,6 +74,7 @@ import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
+import { RECEIPT_VISION_SYSTEM, parseVisionReading } from '../src/receipt-vision';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 
@@ -95,7 +100,11 @@ const inputText = (value: unknown, limit = 30000) => {
   return value;
 };
 
+const TITLEBAR_HEIGHT = 40;
 async function makeWindow() {
+  // Windows and Linux get no menu bar: the app's own menu lives in the title bar. Edit shortcuts (copy, paste, undo)
+  // still work in text fields. macOS keeps its standard menu at the top of the screen.
+  if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
   window = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -104,6 +113,12 @@ async function makeWindow() {
     title: 'STeP Desktop',
     backgroundColor: '#fafaf8',
     show: false,
+    // The app draws its own title bar (as Codex and Cursor do): on Windows and Linux the window buttons sit over it in
+    // the app's colours (src/titlebar.tsx sends them per theme); on macOS the traffic lights sit inside it.
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'darwin'
+      ? { trafficLightPosition: { x: 14, y: 13 } }
+      : { titleBarOverlay: { color: '#f7f6f3', symbolColor: '#231f20', height: TITLEBAR_HEIGHT } }),
     ...(app.isPackaged ? {} : { icon: resolve(__dirname, '../build/icon.ico') }),
     webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
@@ -324,6 +339,22 @@ async function main() {
     () => policyState.policy,
   );
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  // In-app updates (electron/updater.ts): only an installed build updates itself; the policy can turn it off.
+  const updates = new Updater(app.isPackaged ? autoUpdater : undefined, {
+    current: app.getVersion(),
+    platform: process.platform,
+    disabledReason: !app.isPackaged
+      ? 'UPDATE_DEV_BUILD'
+      : !policyState.policy.features.autoUpdate
+        ? 'UPDATE_POLICY_OFF'
+        : process.env.STEP_DISABLE_UPDATES === '1'
+          ? 'UPDATE_ENV_OFF'
+          : '',
+    emit: update => emit({ sessionId: '', type: 'update', update }),
+    log: diagnose,
+  });
+  updates.start();
+  app.on('before-quit', () => updates.stop());
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
     voice.cancel();
@@ -689,6 +720,22 @@ async function main() {
   );
   let installing = false;
   app.on('before-quit', () => ocr.stop());
+  // The receipt last opened on the receipt page, kept so the vision model can read the same file.
+  let lastReceipt: { name: string; path: string; extension: string; bytes: Buffer } | undefined;
+  const receiptVisionAllowed = () =>
+    policyState.policy.features.vision && policyState.policy.features.receiptVision && !policyState.policy.checks.privacy;
+  /** The receipt as pictures for a vision model: images resized to 1800 px at most, a PDF's first three pages. */
+  async function receiptImages(receipt: NonNullable<typeof lastReceipt>): Promise<VisionInput[]> {
+    if (receipt.extension === 'pdf') return (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'))).slice(0, 3);
+    const image = nativeImage.createFromBuffer(receipt.bytes);
+    if (image.isEmpty()) throw new Error('RECEIPT_VISION_FORMAT');
+    const size = image.getSize();
+    const scale = Math.min(1, 1800 / Math.max(size.width, size.height));
+    const fitted = scale < 1 ? image.resize({ width: Math.round(size.width * scale), quality: 'best' }) : image;
+    const jpeg = fitted.toJPEG(88);
+    if (jpeg.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+    return [{ mime: 'image/jpeg', data: jpeg.toString('base64') }];
+  }
   const previewTypes: Record<string, string> = {
     png: 'image/png',
     jpg: 'image/jpeg',
@@ -989,6 +1036,33 @@ async function main() {
               .finally(() => clearTimeout(timer));
           }),
         }));
+      }
+      case 'updateState':
+        return updates.snapshot;
+      case 'updateCheck':
+        return updates.check();
+      case 'updateInstall':
+        updates.install();
+        return true;
+      case 'updateDownload':
+        await shell.openExternal(RELEASES_URL);
+        return true;
+      case 'windowControl': {
+        const action = inputText(input.action, 20);
+        const contents = window.webContents;
+        if (action === 'zoomIn') contents.setZoomLevel(Math.min(contents.getZoomLevel() + 0.5, 3));
+        else if (action === 'zoomOut') contents.setZoomLevel(Math.max(contents.getZoomLevel() - 0.5, -3));
+        else if (action === 'zoomReset') contents.setZoomLevel(0);
+        else if (action === 'quit') app.quit();
+        else if (action === 'titleBar') {
+          // The window buttons follow the app's theme; colours are plain #rrggbb from the renderer's CSS variables.
+          const colour = (value: unknown) => (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined);
+          const color = colour(input.color),
+            symbolColor = colour(input.symbolColor);
+          if (process.platform !== 'darwin' && color && symbolColor)
+            window.setTitleBarOverlay({ color, symbolColor, height: TITLEBAR_HEIGHT });
+        } else throw new Error('INVALID_INPUT');
+        return { zoom: contents.getZoomLevel(), platform: process.platform };
       }
       case 'browserDock': {
         const action = inputText(input.action, 20);
@@ -1529,6 +1603,7 @@ async function main() {
           installed: status.installed && current,
           updateAvailable: managed && status.installed && !current,
           installing,
+          vision: receiptVisionAllowed(),
         };
       }
       case 'ocrFolder': {
@@ -1542,15 +1617,26 @@ async function main() {
         return ocr.start();
       case 'ocrRead': {
         const health = await ocr.health();
-        if (!health.running) throw new Error('OCR_UNAVAILABLE');
+        // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
+        if (!health.running && !receiptVisionAllowed()) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
           title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
           filters: [{ name: 'Receipts', extensions: OCR_EXTENSIONS }],
         });
         if (picked.canceled) return null;
-        const path = picked.filePaths[0],
-          read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+        const path = picked.filePaths[0];
+        if (!health.running) {
+          const bytes = await readFile(path);
+          if (bytes.length > 25 * 1024 * 1024) throw new Error('ATTACH_TOO_LARGE');
+          const extension = extname(path).slice(1).toLowerCase();
+          lastReceipt = { name: basename(path), path, extension, bytes };
+          const type = previewTypes[extension];
+          const preview = type && bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : '';
+          return { name: basename(path), preview, result: null, visionOnly: true };
+        }
+        const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+        lastReceipt = { name: basename(path), path, extension: read.extension, bytes: read.bytes };
         // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
         const type = previewTypes[read.extension];
         const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
@@ -1608,6 +1694,55 @@ async function main() {
           return { decisions };
         } catch (error) {
           diagnose('ocr-ai-filter-failed', { provider: connection.provider, code: errorCode(error) });
+          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+          throw error;
+        } finally {
+          clearTimeout(timeout);
+          ocrResolving = false;
+        }
+      }
+      case 'receiptVision': {
+        // A second, independent reading of the receipt by a vision model; the page compares it with the OCR field by field.
+        if (!receiptVisionAllowed()) throw new Error('VISION_DISABLED');
+        if (!lastReceipt) throw new Error('INVALID_INPUT');
+        if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
+        const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
+        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+        const settings = store.settings();
+        if (!settings.receiptVisionConsentedAt) {
+          const answer = await dialog.showMessageBox(window, {
+            type: 'question',
+            title: tm('ให้ AI อ่านภาพใบเสร็จ'),
+            message: tm('ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง'),
+            detail: tm(
+              'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง',
+            ),
+            buttons: [tm('ยกเลิก'), tm('ให้ AI อ่านภาพ')],
+            defaultId: 1,
+            cancelId: 0,
+          });
+          if (answer.response !== 1) return { cancelled: true };
+          store.put('settings', 'main', { ...settings, receiptVisionConsentedAt: new Date().toISOString() });
+        }
+        const images = await receiptImages(lastReceipt);
+        ocrResolving = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 180_000);
+        try {
+          const current = await runtime(connection);
+          const reply = await current.adapter.run('อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น', connection, {
+            ...current.context,
+            system: RECEIPT_VISION_SYSTEM,
+            images,
+            signal: controller.signal,
+            emit: () => {},
+          });
+          const reading = parseVisionReading(reply);
+          diagnose('receipt-vision', { provider: connection.provider, fields: String(Object.keys(reading.fields).length) });
+          return { ...reading, model: connection.model || '' };
+        } catch (error) {
+          diagnose('receipt-vision-failed', { provider: connection.provider, code: errorCode(error) });
           if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
           throw error;
         } finally {

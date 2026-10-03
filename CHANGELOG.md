@@ -8,6 +8,64 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Updates inside the app, as in Claude, Cursor and Codex
+
+- **No reinstalling:** an installed STeP Desktop checks for a newer version 15 seconds after it opens and every 4 hours, and downloads it in the background. A **รีสตาร์ทเพื่ออัปเดต** button then appears in the title bar. A downloaded update also installs when the app quits. Work and settings stay, because they live in the user's app data.
+- **Check now:** STeP menu → ช่วยเหลือ → "ตรวจหาอัปเดต · เวอร์ชัน x.y.z" checks immediately and says whether this is the latest version.
+- **Where updates come from:** the `desktop-latest` release of this repository, which always holds only the newest desktop build (`electron-updater`, generic provider over HTTPS, each file checked against the SHA-512 in `latest.yml`). The harness's own pilot releases (`v0.7.x`) are never mistaken for a desktop update.
+- **Publishing a version:** bump `desktop/package.json`, then either push the tag `desktop-v<version>`, or run the installer workflow by hand with **publish** ticked (it creates the tag on the commit it built). The installer workflow builds the three installers, publishes the `desktop-v<version>` release, and replaces the files in `desktop-latest`. The two Mac builds' update files merge into one (`desktop/scripts/merge-mac-update-info.mjs`). Runs without a tag only keep workflow artifacts, as before.
+- **Mac:** macOS installs an update only when both versions carry the organisation's Developer ID signature (the `CSC_*` and `APPLE_*` secrets). Until then a Mac build learns that a new version exists and shows **ดาวน์โหลดเวอร์ชัน x.y.z**, which opens the release page. Windows updates itself either way.
+- **Policy:** feature `autoUpdate` (default on) lets IT turn this off where software is rolled out centrally. Development builds never update themselves.
+- **One manual install first:** builds made before this change have no updater. Install a build with it once; later versions arrive by themselves.
+
+### Receipt type and what the claim still needs
+
+- **Document type:** the AI classifies the receipt from the image as a full or abbreviated tax invoice, receipt, cash bill, payment voucher, invoice or quotation, or transfer slip. Without the AI, the printed heading decides. The person can change it.
+- **Claim category:** the person picks B, BV, emergency or other (or "not sure"). The checklist follows it.
+- **Checklist with its source on every item**, ordered missing → to check → to prepare → notes, with complete items folded into one line:
+  - **AFP circulars** (`docs/afp-operational-circulars.md`): the category B approval report within 3 working days after the receipt date, with the due date worked out (5 days for emergency; public holidays not counted, so check the calendar); the 10,000-baht caps; the clearing set (FM-AF-002, FM-AF-014, FM-AF-035/036, approval report); photocopying thermal paper; translating foreign-language documents; no inappropriate drinks; emergency pre-approval. A transfer slip, invoice or quotation is flagged as not a proof of payment for clearing.
+  - **General payment-document elements**, marked "confirm with AFP": payee, date, what was paid for, amount in figures and words, payee signature.
+  - **No source in the app yet**, marked "ask AFP": the buyer name and address to use, and whether a cash bill is accepted. These are never decided by the AI.
+- **The AI reports what it sees** (handwritten, thermal paper, foreign language, payee signature, buyer named, items listed, inappropriate drinks); the checklist itself is fixed rules in `desktop/src/receipt-compliance.ts`, with unit tests.
+- **Draft and handoff:** the draft JSON records the type, category and checklist under `compliance`; the AI pre-check handoff includes the open items.
+
+### A receipt page that is quicker to check
+
+- **The receipt stays in view:** the image column stays beside the fields while you scroll. A zoom button (or a click on the image) enlarges it for handwriting.
+- **Progress at the top:** "ตรวจแล้ว 2/5 ช่อง" with a progress bar and counts of fields where OCR and AI agree, differ, or only one read it. The AI buttons (read the image again, filter the OCR) sit there too.
+- **Fields show their state:** a red edge where the readings differ, a yellow fill once ticked. "ตรวจแล้ว" is a pill button.
+- **Enter to check:** pressing Enter in a filled field ticks it and moves to the next field.
+- **The next step stays reachable:** save, new receipt and "ให้ AI pre-check ต่อ" stay at the bottom of the window, with the checked count beside them.
+- **Less jargon:** mapping methods, OCR line types and verdict codes (NEEDS-DOCUMENT-FIX) are kept in the JSON draft but no longer shown. The Tesseract and handwriting add-ons fold into one "ส่วนเสริม OCR" line.
+
+### Receipts read twice: on-device OCR and an AI reading of the image
+
+- **Two readings, compared field by field:** after the local OCR reads a receipt, the connected AI reads the image on its own (the seller, receipt number, date, tax ID and amounts). Each field shows whether the two agree:
+  - **Agree:** "OCR และ AI อ่านตรงกัน".
+  - **Differ:** the AI's reading is shown beside the OCR value with a **ใช้ค่านี้** button. The OCR value is kept until the person chooses.
+  - **Only the AI read it:** the empty field takes the AI's value, unconfirmed and marked for checking against the image.
+- **The person still confirms:** nothing is ticked as checked for them; every field still needs "ตรวจแล้ว", and the AI's reading never approves anything.
+- **No OCR installed yet:** the page can read a receipt with the AI alone (one reading). Installing the OCR adds the second reading.
+- **Rule checks that need no AI**, flagged as advisories beside the existing amounts-add-up rule:
+  - the seller's 13-digit tax ID fails its check digit;
+  - the seller's tax ID looks like the buyer's: it equals the buyer ID the receipt names, or it is a government-body ID (0994…, such as a university's). Shops sometimes write the customer's ID in their own box, as on a real handwritten cash bill tested for this release;
+  - VAT is not 7% of the amount before VAT;
+  - the total written in Thai words (แปดร้อยแปดบาทถ้วน) does not match the total in figures.
+- **Cash bills:** the OCR treats a นามลูกค้า box as the buyer's section, so a tax ID written there is not taken as the seller's. The AI writes a book and receipt number together ("เล่ม 001 เลขที่ 005").
+- **Consent and policy:** the first image sent asks once. The draft JSON records the AI's reading and the per-field match under `vision_check`. Policy feature `receiptVision` (default on, and only with `vision` on) turns it off; with `checks.privacy` on, no receipt image is sent and only the earlier candidate-only AI filter remains.
+- **Shared rules and tests:** `desktop/src/receipt-vision.ts` holds the prompt, parsing and comparison, with unit tests. The Gemini API smoke reads a receipt image end to end against a fake Gemini API.
+
+### The app's own title bar, as in Codex and Cursor
+
+- **No Windows menu bar:** the File / Edit / View / Window menu bar is gone. The window has the app's own title bar instead.
+  - Left: the **STeP** menu, which groups the commands under งาน, มุมมอง, เครื่องมือ and ช่วยเหลือ, with each command's shortcut and a one-row theme picker. Next to it is a task-list toggle.
+  - Middle: a command bar showing the current task. It opens the command palette (Ctrl+K).
+  - Right: a side-panel toggle.
+  - The bar drags the window.
+- **Window buttons:** Windows and Linux keep their minimise, maximise and close buttons, drawn over the bar in the app's colours. They follow light, dark and system themes. macOS keeps its traffic lights in the bar and its standard menu at the top of the screen.
+- **Shortcuts:** edit shortcuts still work in text fields. Zoom (Ctrl/⌘ with =, - and 0) moved from the menu bar to the app and the STeP menu.
+- **Duplicate buttons removed:** the duplicate task-list buttons in the sidebar and top bar are gone.
+
 ### Faster tool runs, clickable cards, questions above the composer
 
 - **Faster runs on an OpenAI (Codex) account:**
@@ -15,6 +73,7 @@ STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
   - **Before:** each turn started a new process and thread, and resent the whole prompt with every earlier result.
   - The thread is closed when the run step ends. A changed or compacted prompt starts a fresh thread.
   - Usage is counted per turn from the thread total.
+  - **Fallback:** if a turn on the open thread fails (the runtime dropped the thread or refused a second turn), the same turn is retried once on a fresh thread with the whole prompt. Keeping the thread is therefore never worse than not keeping it.
 - **The assistant's browser sees clickable cards:** product cards and tiles that a page makes clickable with its own script are now click targets, alongside buttons and links.
   - These are elements with a pointer cursor; for nested ones only the outermost counts.
   - ARIA roles such as menuitem, tab and option are targets too.

@@ -71,10 +71,221 @@ a,
 .text-link {
   text-underline-offset: 3px;
 }
-.app {
+/* The window: the app's own title bar (src/titlebar.tsx) over the three columns. */
+.shell {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
+}
+.app {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.titlebar {
+  position: relative;
+  z-index: 45;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Leave room for the window buttons the system draws over the bar (Windows, Linux: on the right). */
+  padding: 0 calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 10px) 0 10px;
+  background: var(--sidebar);
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar.mac {
+  /* The traffic lights sit at the left of the bar on macOS. */
+  padding-left: 80px;
+  padding-right: 10px;
+}
+.titlebar button,
+.titlebar-dropdown {
+  -webkit-app-region: no-drag;
+}
+.titlebar-start,
+.titlebar-end {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.titlebar-end {
+  justify-content: flex-end;
+}
+.titlebar-update {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  margin-right: 4px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.titlebar-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-right: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.titlebar-menu {
+  position: relative;
+}
+.titlebar-app {
+  height: 28px;
+  padding: 0 7px 0 5px;
+  gap: 5px;
+  background: transparent;
+  color: var(--text);
+  border-radius: 7px;
+}
+.titlebar-app:hover,
+.titlebar-app[aria-expanded='true'],
+.titlebar-icon:hover {
+  background: var(--selected);
+  filter: none;
+}
+.titlebar-mark {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.titlebar-icon {
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px;
+}
+.titlebar-icon[aria-pressed='true'] {
+  color: var(--text);
+}
+.titlebar-command {
+  flex: 0 1 460px;
+  min-width: 140px;
+  height: 27px;
+  padding: 0 6px 0 10px;
+  gap: 8px;
+  justify-content: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.titlebar-command span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.titlebar-command kbd,
+.titlebar-dropdown kbd {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.titlebar-backdrop {
+  -webkit-app-region: no-drag;
+}
+.titlebar-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 300px;
+  max-height: calc(100vh - 60px);
+  overflow: auto;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+.titlebar-group + .titlebar-group {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.titlebar-group-label {
+  padding: 4px 10px 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.titlebar-dropdown .titlebar-item {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.titlebar-dropdown .titlebar-item:hover,
+.titlebar-dropdown .titlebar-item:focus-visible {
+  background: var(--selected);
+  filter: none;
+  outline: none;
+}
+.titlebar-dropdown .titlebar-danger {
+  color: var(--danger);
+}
+.titlebar-theme {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.titlebar-theme > span {
+  margin-right: auto;
+}
+.titlebar-chip {
+  padding: 2px 9px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.titlebar-chip:hover {
+  background: var(--selected);
+  filter: none;
+}
+.titlebar-chip[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .titlebar-command kbd {
+    display: none;
+  }
 }
 .sidebar {
   width: 246px;
@@ -1484,13 +1695,39 @@ nav button:hover,
   margin-bottom: 10px;
   font-size: 13px;
 }
-.receipt-preview {
-  width: 100%;
-  max-height: 60vh;
-  object-fit: contain;
+.receipt-source {
+  /* The receipt stays in view beside the fields while the person scrolls through them. */
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 190px);
+  overflow: auto;
+  padding-right: 4px;
+}
+.receipt-preview-frame {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 10px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.receipt-preview {
+  display: block;
+  width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+.receipt-preview-frame.zoomed {
+  max-height: 70vh;
+  overflow: auto;
+}
+.receipt-preview-frame.zoomed .receipt-preview {
+  width: 220%;
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+.receipt-zoom {
+  margin-left: auto;
 }
 .receipt-source details {
   margin-top: 12px;
@@ -1521,8 +1758,104 @@ nav button:hover,
   display: inline;
   margin-left: 6px;
 }
+.receipt-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.receipt-progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.receipt-progress-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.receipt-progress-chips .chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.receipt-progress-chips .chip.agree {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.receipt-progress-chips .chip.differ {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.receipt-progress-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.receipt-progress-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.receipt-progress small {
+  font-size: 11px;
+}
+.receipt-ai-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+.receipt-ai-tools .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+}
 .receipt-field {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  padding: 8px 10px 8px 12px;
+  border-left: 3px solid transparent;
+  border-radius: 0 8px 8px 0;
+  transition: background 0.15s ease;
+}
+.receipt-field.match-differ {
+  border-left-color: var(--danger);
+}
+.receipt-field.match-ai-only,
+.receipt-field.match-ocr-only {
+  border-left-color: var(--line-strong);
+}
+.receipt-field.confirmed {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+.receipt-field .check {
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.receipt-field .check:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.receipt-field .check:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
 }
 .receipt-field > label {
   font-size: 12px;
@@ -1570,11 +1903,19 @@ nav button:hover,
   font-size: 12px;
 }
 .receipt-ocr-layers {
+  margin: 6px 2px 10px;
+}
+.receipt-ocr-layers summary {
+  cursor: pointer;
+}
+.receipt-ocr-layers[open] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
-  margin: 6px 0 10px;
+}
+.receipt-ocr-layers[open] summary {
+  flex-basis: 100%;
 }
 .receipt-ai-decision {
   display: block;
@@ -1649,17 +1990,34 @@ nav button:hover,
   margin: 6px 0 0;
 }
 .receipt-actions {
+  /* The next step stays reachable at the bottom while the person works through the fields. */
+  position: sticky;
+  bottom: -30px;
+  z-index: 2;
   display: flex;
   gap: 8px;
-  margin-top: 14px;
+  align-items: center;
+  margin: 14px 0 0;
+  padding: 12px 0 30px;
   flex-wrap: wrap;
+  background: linear-gradient(transparent, var(--surface) 12px);
 }
 .receipt-actions button {
   font-size: 12.5px;
 }
+.receipt-actions-hint {
+  flex-basis: 100%;
+  order: -1;
+  text-align: right;
+  font-size: 11px;
+}
 @media (max-width: 1150px) {
   .receipt-grid {
     grid-template-columns: 1fr;
+  }
+  .receipt-source {
+    position: static;
+    max-height: none;
   }
 }
 nav .count {
@@ -1887,7 +2245,7 @@ nav .count {
 }
 .wizard-card {
   width: min(760px, 100%);
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 88px);
   overflow: hidden;
   background: var(--paper);
   border: 1px solid var(--line);
@@ -2674,4 +3032,132 @@ nav .count {
   font-size: 11px;
   padding: 2px 4px;
   color: var(--muted);
+}
+.receipt-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.receipt-match.agree {
+  color: var(--accent-ink);
+}
+.receipt-match.differ {
+  color: var(--danger);
+}
+.receipt-match .text-link {
+  padding: 0 4px;
+  font-size: 11px;
+}
+.receipt-vision-note {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 8px 0;
+}
+
+.receipt-compliance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 12.5px;
+}
+.receipt-compliance-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+.receipt-compliance-head label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 180px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.receipt-compliance-head select {
+  font-size: 13px;
+  color: var(--text);
+}
+.receipt-compliance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.receipt-compliance-summary .chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.receipt-compliance-summary .chip.differ {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.receipt-compliance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.receipt-compliance-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  line-height: 1.55;
+}
+.receipt-compliance-list .mark {
+  flex: 0 0 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.receipt-compliance-list .status-ok .mark {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.receipt-compliance-list .status-missing .mark,
+.receipt-compliance-list .status-warn .mark {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.receipt-compliance-list .status-missing > span:last-child {
+  color: var(--danger);
+}
+.receipt-compliance-list .source {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.receipt-compliance-list .source-afp {
+  color: var(--accent-ink);
+}
+.receipt-compliance-done summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.receipt-compliance-done[open] summary {
+  margin-bottom: 6px;
 }

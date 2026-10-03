@@ -132,6 +132,8 @@ export const errorText: Record<string, string> = localized({
   OCR_FILE_TOO_LARGE: 'ไฟล์ใหญ่เกิน 25 MB',
   OCR_UNSUPPORTED_FILE: 'รองรับเฉพาะ PDF และไฟล์ภาพ',
   OCR_FOLDER_INVALID: 'โฟลเดอร์นี้ไม่ใช่ local-thai-ocr ของ STeP',
+  RECEIPT_VISION_UNREADABLE: 'AI ตอบกลับในรูปแบบที่อ่านไม่ได้ ลองให้ AI อ่านภาพอีกครั้ง หรือใช้ผลจาก OCR',
+  RECEIPT_VISION_FORMAT: 'แปลงภาพใบเสร็จเพื่อส่งให้ AI ไม่ได้ ลองบันทึกเป็น JPG หรือ PNG แล้วเลือกใหม่',
   SKILL_NOT_ROUTED: 'Skill นี้ยังไม่เชื่อม Routing จึงเรียกจากแชทไม่ได้',
   RUNTIME_INVALID: 'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ ใช้ตัวเชื่อมที่มากับแอปแทนได้',
   RUNTIME_UNAVAILABLE: 'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่',

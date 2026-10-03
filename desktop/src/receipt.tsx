@@ -1,5 +1,32 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Download, FileSearch, FolderOpen, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, TriangleAlert } from 'lucide-react';
+import {
+  Check,
+  Download,
+  Eye,
+  FileSearch,
+  FolderOpen,
+  LoaderCircle,
+  Play,
+  RefreshCw,
+  Save,
+  ScanText,
+  Send,
+  TriangleAlert,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
+import {
+  DOCUMENT_TYPES,
+  DOCUMENT_TYPE_LABELS,
+  classifyFromText,
+  complianceChecklist,
+  complianceSummary,
+  type ClaimCategory,
+  type ComplianceItem,
+  type DocumentFeatures,
+  type DocumentType,
+} from './receipt-compliance';
+import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading } from './receipt-vision';
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import ideaArt from './assets/illustrations/idea.png';
@@ -85,7 +112,31 @@ type OcrStatus = {
   folder: string;
   installing?: boolean;
   updateAvailable?: boolean;
+  /** A vision model may read the receipt image too (policy receiptVision, privacy checks off). */
+  vision?: boolean;
 };
+type Vision = {
+  fields: VisionReading;
+  buyerTaxId: string;
+  amountInWords: string;
+  documentType: DocumentType | '';
+  features: DocumentFeatures;
+  notes: string;
+  model: string;
+};
+const CATEGORY_LABELS: Record<ClaimCategory, string> = {
+  unsure: 'ยังไม่แน่ใจ',
+  B: 'หมวด B (B1–B12)',
+  BV: 'หมวด BV ค่าพาหนะ',
+  emergency: 'หมวดฉุกเฉิน',
+  other: 'หมวดอื่น',
+};
+const SOURCE_LABELS: Record<ComplianceItem['source'], string> = {
+  afp: 'AFP แจ้งเวียน',
+  general: 'หลักทั่วไป · ยืนยันกับ AFP',
+  'need-source': 'ยังไม่มีแหล่งในระบบ · ถาม AFP',
+};
+const STATUS_MARK: Record<ComplianceItem['status'], string> = { ok: '✓', missing: '✕', warn: '!', todo: '○', info: 'i' };
 type AiDecision = {
   field: string;
   status: 'keep' | 'suggested' | 'ambiguous' | 'unmapped';
@@ -93,7 +144,7 @@ type AiDecision = {
   token?: string;
   reason: string;
 };
-type Doc = { name: string; preview: string; result: any };
+type Doc = { name: string; preview: string; result: any; visionOnly?: boolean };
 
 const labels: Record<string, string> = localized({
   merchant: 'ผู้ออกใบเสร็จ / ร้านค้า',
@@ -117,6 +168,14 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
   review_lines: issue => t('มี {0} บรรทัดที่ต้องตรวจจากภาพต้นฉบับ รวมจุดที่ OCR สองตัวอ่านต่างกัน', issue.count),
   resized_image: 'ภาพถูกย่อก่อน OCR โปรดตรวจข้อความขนาดเล็กบนใบเสร็จ',
   buyer_tax_id_excluded: 'พบเลขผู้เสียภาษีในส่วนของผู้ซื้อ จึงไม่เติมเป็นเลขของผู้ออกใบเสร็จ',
+};
+// Checks that need no AI (src/receipt-vision.ts); amounts adding up is already one of the page's own review rules.
+const ruleText: Record<string, string> = {
+  tax_id_checksum: 'เลขผู้เสียภาษีไม่ผ่านการตรวจเลขหลักสุดท้าย อาจอ่านผิดหนึ่งหลัก โปรดเทียบกับต้นฉบับ',
+  tax_id_may_be_buyer:
+    'เลขผู้เสียภาษีนี้อาจเป็นของผู้ซื้อ (เช่น มหาวิทยาลัย) ไม่ใช่ของร้าน ร้านบางแห่งเขียนเลขลูกค้าลงช่องผู้ออก โปรดตรวจกับต้นฉบับ',
+  vat_not_7_percent: 'ภาษีมูลค่าเพิ่มไม่เท่ากับ 7% ของยอดก่อนภาษี โปรดตรวจตัวเลขทั้งสองช่อง',
+  amount_words_differ: 'ยอดเงินตัวอักษรไม่ตรงกับยอดรวมตัวเลข โปรดตรวจยอดรวมกับต้นฉบับ',
 };
 const describe = (issue: Issue) => {
   const text = issueText[issue.code];
@@ -150,7 +209,11 @@ export function ReceiptApp({
   const [linesChecked, setLinesChecked] = useState(false),
     [note, setNote] = useState(''),
     [buyerExcluded, setBuyerExcluded] = useState(false),
-    [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]);
+    [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]),
+    [vision, setVision] = useState<Vision | null>(null),
+    [zoom, setZoom] = useState(false),
+    [typeOverride, setTypeOverride] = useState<DocumentType | ''>(''),
+    [category, setCategory] = useState<ClaimCategory>('unsure');
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -194,18 +257,61 @@ export function ReceiptApp({
   async function read() {
     const read: Doc | null = await call('ocrRead');
     if (!read) return;
-    const extracted = review.extractReceipt(read.result);
+    const extracted = read.visionOnly ? null : review.extractReceipt(read.result);
+    const nextValues = Object.fromEntries(review.fieldKeys.map(k => [k, extracted?.fields[k]?.value || '']));
     setDoc(read);
-    setFields(extracted.fields);
-    setRecords(extracted.records);
-    setMapping(extracted.afpMapping);
-    setBuyerExcluded(extracted.buyerTaxIdExcluded);
-    setValues(Object.fromEntries(review.fieldKeys.map(k => [k, extracted.fields[k]?.value || ''])));
+    setFields(extracted?.fields || {});
+    setRecords(extracted?.records || []);
+    setMapping(extracted?.afpMapping || null);
+    setBuyerExcluded(Boolean(extracted?.buyerTaxIdExcluded));
+    setValues(nextValues);
     setConfirmed({});
     setLinesChecked(false);
     setNote('');
     setAiDecisions([]);
+    setVision(null);
+    setZoom(false);
+    setTypeOverride('');
+    // The second, independent reading by a vision model, compared with the OCR field by field below.
+    if (status?.vision && connectionId) await readWithAi(nextValues);
   }
+  async function readWithAi(current = values) {
+    const reading = await call('receiptVision', { connectionId });
+    if (!reading || reading.cancelled) return;
+    setVision(reading);
+    // A field the OCR left empty takes the AI's reading, still unconfirmed; a field both read keeps the OCR value and
+    // shows the AI's reading beside it when they differ.
+    const next = { ...current };
+    for (const k of review.fieldKeys as ReceiptField[]) {
+      const ai = reading.fields?.[k]?.value || '';
+      if (ai && !String(next[k] || '').trim()) next[k] = ai;
+    }
+    setValues(next);
+    setConfirmed(c => Object.fromEntries(Object.entries(c).filter(([k]) => next[k] === current[k])));
+    notify(t('AI อ่านภาพใบเสร็จแล้ว ตรวจช่องที่อ่านต่างกันและเทียบกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
+  }
+  const matchOf = (k: string) =>
+    vision ? compareField(k as ReceiptField, fields[k]?.value || '', vision.fields[k as ReceiptField]?.value || '') : undefined;
+  // The total in Thai words, from the AI's reading or an OCR line such as "แปดร้อยแปดบาทถ้วน".
+  const amountInWords =
+    vision?.amountInWords ||
+    records.map(r => String(r.text || '').replace(/\s/g, '')).find(text => /^[ก-๙()]+บาท(ถ้วน|ตัว|[ก-๙]+สตางค์)$/.test(text)) ||
+    '';
+  // The kind of document and what the claim still needs (src/receipt-compliance.ts).
+  const detectedType = vision?.documentType || classifyFromText(String(doc?.result?.text || '')) || '';
+  const docType = typeOverride || detectedType;
+  const typeSource = typeOverride ? 'person' : vision?.documentType ? 'ai' : detectedType ? 'heading' : '';
+  const features: DocumentFeatures = {
+    ...vision?.features,
+    handwritten: vision?.features.handwritten ?? (records.some(r => r.textKind === 'handwriting-likely') || undefined),
+  };
+  const compliance = complianceChecklist({ type: docType, features, values, amountInWords, category });
+  const complianceCount = complianceSummary(compliance);
+  const itemText = (item: ComplianceItem) => (item.ifCategoryB ? t('ถ้าเบิกหมวด B: ') : '') + t(item.text, ...(item.vars || []));
+  const rules = receiptRuleChecks(values as Partial<Record<ReceiptField, string>>, {
+    buyerTaxId: vision?.buyerTaxId,
+    amountInWords,
+  }).filter(r => ruleText[r.code]);
   const draft = () => ({
     schema: 'step-receipt-review/v1',
     filename: doc?.name,
@@ -257,18 +363,50 @@ export function ReceiptApp({
           decisions: aiDecisions,
         }
       : null,
+    vision_check: vision
+      ? {
+          notice:
+            'A vision model read the receipt image independently; each field is compared with the OCR. Human confirmation is still required.',
+          model: vision.model,
+          notes: vision.notes,
+          amount_in_words: vision.amountInWords,
+          buyer_tax_id: vision.buyerTaxId,
+          fields: Object.fromEntries(
+            review.fieldKeys.map(k => [k, { ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) }]),
+          ),
+        }
+      : null,
+    compliance: {
+      notice:
+        'Document type and checklist: fixed rules tied to their source (AFP circulars, general payment-document elements to confirm with AFP, or no source yet). Not an approval.',
+      document_type: docType || null,
+      document_type_source: typeSource || null,
+      claim_category: category,
+      items: compliance.map(item => ({ id: item.id, status: item.status, source: item.source, text: itemText(item) })),
+    },
     expense_note: note,
-    issues: result.issues.map(i => ({ ...i, message: describe(i) })),
+    issues: [
+      ...result.issues.map(i => ({ ...i, message: describe(i) })),
+      ...rules.map(r => ({ code: r.code, severity: 'advisory', message: t(ruleText[r.code]) })),
+    ],
     ocr: { text: doc?.result?.text || '', lines: records },
   });
   const summary = () =>
     [
       t('ช่วย pre-check ใบเสร็จก่อนส่ง AFP'),
       '',
-      t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่องและให้คนตรวจแล้ว):', doc?.name),
+      doc?.visionOnly
+        ? t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย AI จากภาพและให้คนตรวจแล้ว):', doc?.name)
+        : vision
+          ? t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่อง เทียบกับ AI อ่านภาพ และให้คนตรวจแล้ว):', doc?.name)
+          : t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่องและให้คนตรวจแล้ว):', doc?.name),
       ...review.fieldKeys.map(
         k => `- ${labels[k]}: ${values[k] || t('(ไม่มี)')}${values[k] ? (confirmed[k] ? t(' · ตรวจแล้ว') : t(' · ยังไม่ตรวจ')) : ''}`,
       ),
+      '',
+      t('ประเภทเอกสาร: {0}', docType ? t(DOCUMENT_TYPE_LABELS[docType]) : t('ยังไม่ทราบ')),
+      t('หมวดที่จะเบิก: {0}', t(CATEGORY_LABELS[category])),
+      ...compliance.filter(i => i.status !== 'ok').map(i => `- [${i.status}] ${itemText(i)} (${t(SOURCE_LABELS[i.source])})`),
       ...(note.trim() ? ['', t('หมายเหตุผู้เบิก: ') + note.trim()] : []),
       ...(mapping?.unresolved_field_lines?.length
         ? [
@@ -279,9 +417,39 @@ export function ReceiptApp({
             ),
           ]
         : []),
-      ...(result.issues.length ? ['', t('ประเด็นที่ระบบตรวจพบ:'), ...result.issues.map(i => '- ' + describe(i))] : []),
+      ...(result.issues.length || rules.length
+        ? ['', t('ประเด็นที่ระบบตรวจพบ:'), ...result.issues.map(i => '- ' + describe(i)), ...rules.map(r => '- ' + t(ruleText[r.code]))]
+        : []),
     ].join('\n');
 
+  const counts = review.fieldKeys.reduce(
+    (total: { agree: number; differ: number; single: number }, k: string) => {
+      const match = matchOf(k);
+      if (match === 'agree') total.agree++;
+      else if (match === 'differ') total.differ++;
+      else if (match === 'ai-only' || match === 'ocr-only') total.single++;
+      return total;
+    },
+    { agree: 0, differ: 0, single: 0 },
+  );
+  async function aiFilter() {
+    const currentMapping = draft().afp_mapping;
+    const filtered = await call('ocrResolve', { connectionId, mapping: currentMapping });
+    if (filtered?.cancelled) return;
+    const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
+    setAiDecisions(decisions);
+    const nextValues = { ...values };
+    const nextConfirmed = { ...confirmed };
+    for (const decision of decisions) {
+      if (decision.status === 'suggested' && decision.value && !String(nextValues[decision.field] || '').trim()) {
+        nextValues[decision.field] = decision.value;
+        nextConfirmed[decision.field] = false;
+      }
+    }
+    setValues(nextValues);
+    setConfirmed(nextConfirmed);
+    notify(t('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
+  }
   const ready = status?.running;
   const requiredChecked = review.requiredKeys.every((k: string) => confirmed[k]);
   return (
@@ -347,7 +515,8 @@ export function ReceiptApp({
         </button>
       </div>
       {status?.running && (
-        <div className="receipt-ocr-layers small muted">
+        <details className="receipt-ocr-layers small muted">
+          <summary>{status.handwriting ? t('ส่วนเสริม OCR') : t('ส่วนเสริม OCR · ใบเขียนมือ? เพิ่มโมเดลอ่านลายมือได้ที่นี่')}</summary>
           <span>Tesseract: {status.tesseract ? t('พร้อมตรวจตัวพิมพ์/ตัวเลข') : t('ยังไม่พบ tha+eng')}</span>
           {!status.tesseract && (
             <button className="text-link" type="button" onClick={() => void call('openHelp', { topic: 'tesseract' })}>
@@ -377,7 +546,7 @@ export function ReceiptApp({
               {t('เพิ่มอ่านลายมือ')}
             </button>
           )}
-        </div>
+        </details>
       )}
       {(busy === 'install' || busy === 'handwriting') && installProgress && (
         <p className="small muted receipt-hint">{installProgress.replace(/^STEP\s*/, '')}</p>
@@ -400,10 +569,19 @@ export function ReceiptApp({
             <br />
             {t('คุณเทียบกับต้นฉบับ แก้ไข และทำเครื่องหมายว่าตรวจแล้วทีละช่อง')}
           </p>
-          <button disabled={!ready || Boolean(busy)} onClick={() => void run('read', read)}>
+          <button disabled={!(ready || (status?.vision && connectionId)) || Boolean(busy)} onClick={() => void run('read', read)}>
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
             {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
           </button>
+          {status?.vision && (
+            <p className="small muted">
+              {ready
+                ? t('อ่าน 2 ทาง: OCR ในเครื่อง และ AI อ่านภาพแยกกัน แล้วเทียบผลทีละช่อง')
+                : connectionId
+                  ? t('ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย (อ่านทางเดียว ติดตั้ง OCR เพิ่มเพื่อเทียบ 2 ทาง)')
+                  : t('เชื่อมต่อ AI ก่อน เพื่อให้ AI อ่านภาพใบเสร็จ')}
+            </p>
+          )}
           <p className="small muted">{t('รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB')}</p>
         </div>
       ) : (
@@ -412,11 +590,31 @@ export function ReceiptApp({
             <header>
               <ScanText size={16} />
               <strong>{doc.name}</strong>
+              {doc.preview && (
+                <button
+                  type="button"
+                  className="icon receipt-zoom"
+                  aria-pressed={zoom}
+                  aria-label={zoom ? t('ย่อภาพใบเสร็จ') : t('ขยายภาพใบเสร็จ')}
+                  title={zoom ? t('ย่อภาพใบเสร็จ') : t('ขยายภาพใบเสร็จ')}
+                  onClick={() => setZoom(!zoom)}
+                >
+                  {zoom ? <ZoomOut size={15} /> : <ZoomIn size={15} />}
+                </button>
+              )}
             </header>
             {doc.preview ? (
-              <img className="receipt-preview" src={doc.preview} alt={t('ภาพใบเสร็จ ') + doc.name} />
+              <div className={'receipt-preview-frame' + (zoom ? ' zoomed' : '')}>
+                <img className="receipt-preview" src={doc.preview} alt={t('ภาพใบเสร็จ ') + doc.name} onClick={() => setZoom(!zoom)} />
+              </div>
             ) : (
               <p className="small muted">{t('ไฟล์ชนิดนี้แสดงภาพในแอปไม่ได้ โปรดเปิดต้นฉบับเทียบกับข้อความด้านล่าง')}</p>
+            )}
+            {vision?.notes && (
+              <p className="receipt-vision-note small">
+                <Eye size={14} />
+                {t('AI ฝากตรวจ: {0}', vision.notes)}
+              </p>
             )}
             <details open={reviewLines > 0}>
               <summary>
@@ -442,11 +640,6 @@ export function ReceiptApp({
                     {r.crosscheckCandidate && r.crosscheckCandidate !== r.text && (
                       <small>{t('EasyOCR อ่านว่า “{0}”', r.crosscheckCandidate)}</small>
                     )}
-                    {r.textKind && (
-                      <small>
-                        {t('ประเภท:')} {r.textKind}
-                      </small>
-                    )}
                     {r.confidence !== null && <small className="conf">{Math.round(r.confidence * 100)}%</small>}
                   </li>
                 ))}
@@ -454,8 +647,118 @@ export function ReceiptApp({
             </details>
           </section>
           <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
-            {review.fieldKeys.map(k => (
-              <div className="receipt-field" key={k}>
+            <div className="receipt-progress" role="status">
+              <div className="receipt-progress-head">
+                <strong>{t('ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}</strong>
+                {vision && (
+                  <span className="receipt-progress-chips">
+                    {counts.agree > 0 && <span className="chip agree">{t('ตรงกัน {0}', counts.agree)}</span>}
+                    {counts.differ > 0 && <span className="chip differ">{t('อ่านต่างกัน {0}', counts.differ)}</span>}
+                    {counts.single > 0 && <span className="chip">{t('อ่านได้ทางเดียว {0}', counts.single)}</span>}
+                  </span>
+                )}
+              </div>
+              <div className="receipt-progress-bar" aria-hidden="true">
+                <span style={{ width: `${result.filledCount ? (100 * result.confirmedCount) / result.filledCount : 0}%` }} />
+              </div>
+              <small className="muted">{t('เทียบแต่ละช่องกับภาพ แล้วกด Enter เพื่อติ๊ก “ตรวจแล้ว” และไปช่องถัดไป')}</small>
+              {(status?.vision || mapping) && (
+                <div className="receipt-ai-tools">
+                  {status?.vision && (
+                    <button
+                      className="text-link"
+                      type="button"
+                      disabled={!connectionId || Boolean(busy)}
+                      onClick={() => void run('vision', () => readWithAi())}
+                    >
+                      {busy === 'vision' ? <LoaderCircle size={13} className="spin" /> : <Eye size={13} />}
+                      {vision ? t('ให้ AI อ่านภาพอีกครั้ง') : t('ให้ AI อ่านภาพเทียบ')}
+                    </button>
+                  )}
+                  {mapping && (
+                    <button
+                      className="text-link"
+                      type="button"
+                      disabled={!connectionId || Boolean(busy)}
+                      onClick={() => void run('ai-filter', aiFilter)}
+                    >
+                      {busy === 'ai-filter' ? <LoaderCircle size={13} className="spin" /> : <ScanText size={13} />}
+                      {t('AI กรอง OCR อีกชั้น')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="receipt-compliance" aria-label={t('ประเภทเอกสารและสิ่งที่ต้องมี')}>
+              <div className="receipt-compliance-head">
+                <label>
+                  {t('ประเภทเอกสาร')}
+                  <select aria-label={t('ประเภทเอกสาร')} value={docType} onChange={e => setTypeOverride(e.target.value as DocumentType)}>
+                    {!docType && <option value="">{t('ยังไม่ทราบ')}</option>}
+                    {DOCUMENT_TYPES.map(type => (
+                      <option key={type} value={type}>
+                        {t(DOCUMENT_TYPE_LABELS[type])}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t('หมวดที่จะเบิก')}
+                  <select aria-label={t('หมวดที่จะเบิก')} value={category} onChange={e => setCategory(e.target.value as ClaimCategory)}>
+                    {(Object.keys(CATEGORY_LABELS) as ClaimCategory[]).map(c => (
+                      <option key={c} value={c}>
+                        {t(CATEGORY_LABELS[c])}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <small className="muted">
+                {typeSource === 'ai'
+                  ? t('AI จำแนกจากภาพ เปลี่ยนได้ถ้าไม่ถูก')
+                  : typeSource === 'heading'
+                    ? t('จำแนกจากหัวเอกสารที่ OCR อ่านได้ เปลี่ยนได้ถ้าไม่ถูก')
+                    : typeSource === 'person'
+                      ? t('คุณเลือกประเภทเอง')
+                      : t('ยังจำแนกไม่ได้ เลือกประเภทเอง หรือให้ AI อ่านภาพ')}
+              </small>
+              <div className="receipt-compliance-summary">
+                <strong>{t('สิ่งที่ต้องมีและต้องทำ')}</strong>
+                {complianceCount.missing > 0 && <span className="chip differ">{t('ขาด {0}', complianceCount.missing)}</span>}
+                {complianceCount.warn > 0 && <span className="chip differ">{t('ควรตรวจ {0}', complianceCount.warn)}</span>}
+                {complianceCount.todo > 0 && <span className="chip">{t('ต้องเตรียม {0}', complianceCount.todo)}</span>}
+              </div>
+              {(() => {
+                const order: ComplianceItem['status'][] = ['missing', 'warn', 'todo', 'info'];
+                const open = compliance.filter(i => i.status !== 'ok').sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
+                const done = compliance.filter(i => i.status === 'ok');
+                const row = (item: ComplianceItem) => (
+                  <li key={item.id} className={'status-' + item.status}>
+                    <span className="mark" aria-hidden="true">
+                      {STATUS_MARK[item.status]}
+                    </span>
+                    <span>
+                      {itemText(item)}
+                      <small className={'source source-' + item.source}>{t(SOURCE_LABELS[item.source])}</small>
+                    </span>
+                  </li>
+                );
+                return (
+                  <>
+                    {open.length > 0 && <ul className="receipt-compliance-list">{open.map(row)}</ul>}
+                    {done.length > 0 && (
+                      <details className="receipt-compliance-done">
+                        <summary>{t('ครบแล้ว {0} ข้อ: {1}', done.length, done.map(i => itemText(i)).join(' · '))}</summary>
+                        <ul className="receipt-compliance-list">{done.map(row)}</ul>
+                      </details>
+                    )}
+                  </>
+                );
+              })()}
+              <small className="muted">{t('รายการนี้ช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย ข้อที่ยังไม่มีแหล่งยืนยันให้ถาม AFP')}</small>
+            </div>
+            {review.fieldKeys.map((k, index) => (
+              <div className={'receipt-field' + (matchOf(k) ? ' match-' + matchOf(k) : '') + (confirmed[k] ? ' confirmed' : '')} key={k}>
                 <label htmlFor={'rf-' + k}>
                   {labels[k]}
                   {review.requiredKeys.includes(k) && <span className="required"> *</span>}
@@ -467,6 +770,14 @@ export function ReceiptApp({
                     onChange={e => {
                       setValues({ ...values, [k]: e.target.value });
                       setConfirmed({ ...confirmed, [k]: false });
+                    }}
+                    onKeyDown={e => {
+                      // Enter: the person has compared this field with the image; tick it and move on.
+                      if (e.key !== 'Enter' || e.nativeEvent.isComposing || !String(values[k] || '').trim()) return;
+                      e.preventDefault();
+                      setConfirmed({ ...confirmed, [k]: true });
+                      const next = review.fieldKeys[index + 1];
+                      (document.getElementById(next ? 'rf-' + next : 'receipt-note') as HTMLElement | null)?.focus();
                     }}
                   />
                   <label className="check">
@@ -483,9 +794,52 @@ export function ReceiptApp({
                   <small className="muted">
                     {t('จากบรรทัด “{0}”', fields[k].evidence)}
                     {fields[k].confidence !== null ? ` · ${Math.round((fields[k].confidence || 0) * 100)}%` : ''}
-                    {fields[k].mappingMethod ? ` · map: ${fields[k].mappingMethod}` : ''}
                   </small>
                 )}
+                {(() => {
+                  const match = matchOf(k),
+                    ai = vision?.fields[k as ReceiptField]?.value || '';
+                  if (!match || match === 'empty') return null;
+                  if (match === 'agree')
+                    return (
+                      <small className="receipt-match agree">
+                        <Check size={12} />
+                        {t('OCR และ AI อ่านตรงกัน')}
+                      </small>
+                    );
+                  if (match === 'ai-only')
+                    return (
+                      <small className="receipt-match ai-only">
+                        <Eye size={12} />
+                        {doc?.visionOnly ? t('AI อ่านจากภาพ · ตรวจกับต้นฉบับ') : t('OCR ไม่พบ AI อ่านได้ “{0}” · ตรวจกับภาพ', ai)}
+                        {values[k] !== ai && (
+                          <button className="text-link" type="button" onClick={() => setValues({ ...values, [k]: ai })}>
+                            {t('ใช้ค่านี้')}
+                          </button>
+                        )}
+                      </small>
+                    );
+                  if (match === 'ocr-only')
+                    return <small className="receipt-match ocr-only">{t('AI อ่านช่องนี้ไม่เห็น ใช้ค่าจาก OCR · ตรวจกับภาพ')}</small>;
+                  return (
+                    <small className="receipt-match differ">
+                      <TriangleAlert size={12} />
+                      {t('อ่านต่างกัน: AI อ่านว่า “{0}”', ai)}
+                      {values[k] !== ai && (
+                        <button
+                          className="text-link"
+                          type="button"
+                          onClick={() => {
+                            setValues({ ...values, [k]: ai });
+                            setConfirmed({ ...confirmed, [k]: false });
+                          }}
+                        >
+                          {t('ใช้ค่านี้')}
+                        </button>
+                      )}
+                    </small>
+                  );
+                })()}
                 {!String(values[k] || '').trim() && (fields[k]?.candidates?.length || 0) > 0 && (
                   <div className="receipt-candidates">
                     <small>{t('OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:')}</small>
@@ -544,21 +898,28 @@ export function ReceiptApp({
             ) : null}
             <label className="receipt-note">
               {t('หมายเหตุการเบิก')}
-              <textarea value={note} onChange={e => setNote(e.target.value)} placeholder={t('เช่น ใช้ในโครงการ… (กรอกเอง)')} />
+              <textarea
+                id="receipt-note"
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder={t('เช่น ใช้ในโครงการ… (กรอกเอง)')}
+              />
             </label>
             <div className={`receipt-verdict ${result.complete ? 'ok' : ''}`} role="status">
               {result.complete ? <Check size={16} /> : <TriangleAlert size={16} />}
               <div>
                 <strong>{result.complete ? t('พร้อมให้ AFP ตรวจ') : t('ยังต้องตรวจหรือแก้เพิ่ม')}</strong>{' '}
-                <small>
-                  {result.complete ? 'READY-FOR-AFP-REVIEW' : 'NEEDS-DOCUMENT-FIX'}{' '}
-                  {t('· ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}
-                </small>
-                {result.issues.length > 0 && (
+                <small>{t('· ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}</small>
+                {result.issues.length + rules.length > 0 && (
                   <ul>
                     {result.issues.map(i => (
                       <li key={i.code} className={i.severity}>
                         {describe(i)}
+                      </li>
+                    ))}
+                    {rules.map(r => (
+                      <li key={r.code} className="advisory">
+                        {t(ruleText[r.code])}
                       </li>
                     ))}
                   </ul>
@@ -589,36 +950,12 @@ export function ReceiptApp({
                 <FileSearch size={15} />
                 {t('ตรวจใบใหม่')}
               </button>
-              <button
-                className="quiet"
-                disabled={!connectionId || !mapping || Boolean(busy)}
-                onClick={() =>
-                  void run('ai-filter', async () => {
-                    const currentMapping = draft().afp_mapping;
-                    const filtered = await call('ocrResolve', { connectionId, mapping: currentMapping });
-                    if (filtered?.cancelled) return;
-                    const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
-                    setAiDecisions(decisions);
-                    const nextValues = { ...values };
-                    const nextConfirmed = { ...confirmed };
-                    for (const decision of decisions) {
-                      if (decision.status === 'suggested' && decision.value && !String(nextValues[decision.field] || '').trim()) {
-                        nextValues[decision.field] = decision.value;
-                        nextConfirmed[decision.field] = false;
-                      }
-                    }
-                    setValues(nextValues);
-                    setConfirmed(nextConfirmed);
-                    notify(t('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
-                  })
-                }
-              >
-                {busy === 'ai-filter' ? <LoaderCircle size={15} className="spin" /> : <ScanText size={15} />}
-                {t('AI กรอง OCR อีกชั้น')}
-              </button>
               <span className="spacer" />
               {/* AI pre-check follows the person's check: the required fields must be ticked first. A checked vendor tax ID stays readable. */}
-              {!requiredChecked && <small className="muted">{t('ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI')}</small>}
+              <small className="muted receipt-actions-hint">
+                {t('ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}
+                {!requiredChecked && ' · ' + t('ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI')}
+              </small>
               <button
                 disabled={!requiredChecked || Boolean(busy)}
                 onClick={() =>

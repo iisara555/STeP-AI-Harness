@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'updateState',
+  'updateCheck',
+  'updateInstall',
+  'updateDownload',
   'packList',
   'packInstall',
   'packEnable',
@@ -70,6 +74,7 @@ const allowed = new Set([
   'ocrStart',
   'ocrRead',
   'ocrResolve',
+  'receiptVision',
   'ocrSave',
   'send',
   'cancel',
@@ -99,6 +104,7 @@ const allowed = new Set([
   'toolBrowser',
   'toolBrowserRead',
   'browserDock',
+  'windowControl',
 ]);
 contextBridge.exposeInMainWorld('step', {
   call: (method: string, input: unknown) => {

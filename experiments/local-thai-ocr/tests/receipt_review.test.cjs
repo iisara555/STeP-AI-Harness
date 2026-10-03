@@ -108,3 +108,14 @@ test("keeps independent OCR readings and requires review of disagreements", () =
   assert.ok(pending.issues.some((issue) => issue.code === "review_lines"));
   assert.equal(review.reviewIssues(values, confirmed, { reviewLineCount: 1, reviewLinesChecked: true }).complete, true);
 });
+
+test("treats นามลูกค้า (cash-bill customer box) as the buyer section", () => {
+  const lines = [
+    { text: "ร้านตัวอย่าง", box: [100, 30, 400, 65] },
+    { text: "นามลูกค้า หน่วยงานผู้ซื้อ", box: [100, 140, 500, 175] },
+    { text: "เลขประจำตัวผู้เสียภาษี 1234567890123", box: [100, 180, 650, 215] },
+  ].map((line) => ({ ...line, confidence: 0.95 }));
+  const extracted = review.extractReceipt({ pages: [{ page: 1, source: "ocr", lines }] });
+  assert.equal(extracted.fields.taxId.value, "");
+  assert.equal(extracted.buyerTaxIdExcluded, true);
+});

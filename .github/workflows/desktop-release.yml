@@ -3,8 +3,17 @@ name: Build STeP Desktop installers
 # Each installer is built on its own OS: Windows (NSIS .exe) and macOS (.dmg for Apple silicon and
 # for Intel). Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
 # run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
+#
+# A `desktop-v<version>` tag, or a manual run with "publish" ticked (which creates that tag), also publishes: a release for that version, and the rolling `desktop-latest` release
+# that installed apps read as their update feed (package.json build.publish). Other runs only keep the files as
+# workflow artifacts.
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish this commit as desktop-v<package.json version> and update the in-app update feed'
+        type: boolean
+        default: false
   push:
     tags: ['desktop-v*']
 
@@ -20,15 +29,29 @@ jobs:
           - name: windows-x64
             os: windows-latest
             script: dist:win
-            artifact: release/*.exe
+            artifact: |
+              desktop/release/*.exe
+              desktop/release/*.exe.blockmap
+              desktop/release/latest.yml
+            feed: latest.yml
           - name: macos-arm64
             os: macos-latest
             script: dist:mac
-            artifact: release/*.dmg
+            artifact: |
+              desktop/release/*.dmg
+              desktop/release/*.zip
+              desktop/release/*.blockmap
+              desktop/release/latest-mac.yml
+            feed: latest-mac.yml
           - name: macos-x64
             os: macos-latest
             script: dist:mac:x64
-            artifact: release/*.dmg
+            artifact: |
+              desktop/release/*.dmg
+              desktop/release/*.zip
+              desktop/release/*.blockmap
+              desktop/release/latest-mac.yml
+            feed: latest-mac.yml
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -63,6 +86,10 @@ jobs:
             if [ "$RUNNER_OS" = "macOS" ]; then EXTRA="-c.mac.identity=-"; fi
           fi
           npm run ${{ matrix.script }} -- $EXTRA
+      - name: Check the update feed file was written
+        run: |
+          test -s "release/${{ matrix.feed }}"
+          grep -q "^version: $(node -p "require('./package.json').version")$" "release/${{ matrix.feed }}"
       - name: Launch the packaged Mac app from the disk image
         if: runner.os == 'macOS'
         run: |
@@ -80,5 +107,73 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: step-desktop-${{ matrix.name }}
-          path: desktop/${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
           if-no-files-found: error
+
+  publish:
+    # Only a version tag publishes; installed apps then find the new version in `desktop-latest`.
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install the merge script's dependencies
+        working-directory: desktop
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          path: built
+      - name: Check the tag matches the app version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./desktop/package.json').version")"
+          TAG="desktop-v${VERSION}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match desktop/package.json version ${VERSION}"; exit 1
+          fi
+          # A version is published once: bump desktop/package.json for the next one.
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 1; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Collect the release files
+        run: |
+          mkdir -p out
+          cp built/step-desktop-windows-x64/* out/
+          for arch in arm64 x64; do
+            find "built/step-desktop-macos-$arch" -maxdepth 1 -type f ! -name latest-mac.yml -exec cp {} out/ \;
+          done
+          node desktop/scripts/merge-mac-update-info.mjs out/latest-mac.yml \
+            built/step-desktop-macos-arm64/latest-mac.yml built/step-desktop-macos-x64/latest-mac.yml
+          ls -l out
+      - name: Publish the version and update the feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          NOTES="STeP Desktop ${VERSION} — what changed is in CHANGELOG.md. Installed apps update themselves from the desktop-latest release."
+          gh release create "$TAG" out/* --target "$GITHUB_SHA" --title "STeP Desktop ${VERSION}" --notes "$NOTES" --latest=false
+          if ! gh release view desktop-latest >/dev/null 2>&1; then
+            gh release create desktop-latest --target "$GITHUB_SHA" --latest=false --title "STeP Desktop · update feed" \
+              --notes "The update feed of the STeP Desktop app: always the newest version. Download installers from the desktop-v* releases."
+          fi
+          # New installers first, the feed files last, so an app never reads a feed whose files are not there yet.
+          gh release upload desktop-latest $(ls out/* | grep -v '\.yml$') --clobber
+          gh release upload desktop-latest out/latest.yml out/latest-mac.yml --clobber
+          for asset in $(gh release view desktop-latest --json assets -q '.assets[].name'); do
+            [ -e "out/$asset" ] || gh release delete-asset desktop-latest "$asset" --yes
+          done

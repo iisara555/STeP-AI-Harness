@@ -58,6 +58,12 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 `npm run package` creates an unpacked app. `npm run dist:win` creates an NSIS installer. `npm run dist:mac` must run on a macOS build host for each architecture. A signed, notarized release and clean-machine tests remain release gates; unsigned development builds are not production releases.
 
+### Updates
+
+An installed STeP Desktop updates itself, as Claude, Cursor and Codex do. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** in the title bar. A downloaded update also installs when the app quits. STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต checks immediately. Policy feature `autoUpdate` turns this off.
+
+To publish a version, bump `version` in `desktop/package.json`, then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow then builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. On macOS the app installs updates itself only when it is signed with the organisation's Developer ID; an ad-hoc signed build shows a download button instead.
+
 ### Optional local Thai OCR
 
 The base STeP Desktop installer intentionally does **not** include Python, PaddlePaddle or OCR model weights. Employees who never use receipt OCR therefore do not download or install that runtime. The small STeP OCR application code and requirements are included so the Receipt page can install the component later.
@@ -65,6 +71,12 @@ The base STeP Desktop installer intentionally does **not** include Python, Paddl
 When an employee opens **ตรวจใบเสร็จ AFP** and chooses **ติดตั้ง OCR**, STeP Desktop downloads a pinned Python build, verifies its SHA-256 checksum, installs PaddlePaddle and the Thai OCR requirements into the employee's app-data folder, and prepares the OCR models. The component remains local to that user and can be retried cleanly after a partial failure. Receipt recognition continues to bind only to `127.0.0.1`; original receipt files are not uploaded to an OCR web service.
 
 The automatic component currently supports Windows x64, macOS Apple silicon, and Intel macOS. Intel macOS uses the last PaddlePaddle CPU build supported by that architecture.
+
+### AI reading of the receipt image
+
+With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, the Receipt page also sends the receipt image to the connected AI, after a one-time consent. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads the fields independently of the OCR, and the page compares the two field by field; a person still confirms every field. Without the OCR component, the AI reading alone is available. With `checks.privacy` on, no image is sent.
+
+The page also shows the document type (from the AI or the printed heading) and a checklist for the chosen claim category. Each item names its source: AFP circulars, general payment-document elements to confirm with AFP, or "no source yet, ask AFP". The checklist prepares documents; it is not an approval.
 
 ## Boundaries
 
