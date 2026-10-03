@@ -840,6 +840,10 @@ export default function App() {
       ])
     : [];
   const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
+  // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.
+  const lastAnswer = session ? session.messages.map(m => m.role).lastIndexOf('assistant') : -1;
+  // Links in answers open in the browser panel beside the chat, never in this window.
+  const openLink = (url: string) => void action(() => api!.call('toolBrowser', { url }));
   if (!api)
     return (
       <main className="browser-message">
@@ -1285,13 +1289,17 @@ export default function App() {
                 {session?.messages.map((message, index) => (
                   <article
                     key={index}
-                    className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}`}
+                    // Like other AI chat apps: no name above each turn; the user's turn is a bubble, the answer is plain text.
+                    aria-label={
+                      message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant
+                    }
+                    className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}${
+                      index === lastAnswer && !running ? ' latest' : ''
+                    }`}
                   >
-                    <div className="message-author">
-                      {message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant}
-                    </div>
+                    {message.role === 'status' && <div className="message-author">{t('สถานะงาน')}</div>}
                     {message.role === 'assistant' ? (
-                      <RichText className="message-body" text={message.text} />
+                      <RichText className="message-body" text={message.text} onLink={openLink} />
                     ) : (
                       <div className="message-body">
                         {message.role === 'status' ? errorText[message.text] || t(message.text) : message.text}
@@ -1420,16 +1428,14 @@ export default function App() {
                         <div>{reasoning}</div>
                       </details>
                     )}
-                    {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} />}
+                    {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
+                    {/* One quiet line while working, as in Claude and Codex: what is happening and for how long. */}
                     <div className="activity" role="status" aria-live="polite">
-                      <LoaderCircle className="spin" size={15} />
-                      {progress ? t(progress) : t('กำลังทำงาน')}
-                    </div>
-                    <div className="activity-detail">
-                      <span className="activity-pulse" aria-hidden="true" />
-                      <span>
-                        {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
-                        {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
+                      <LoaderCircle className="spin" size={14} />
+                      <span>{progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด')}</span>
+                      <span className="activity-detail">
+                        {elapsed || t('0 วินาที')}
+                        {now - heartbeatAt > 15000 && <> · {t('ยังไม่ได้รับสถานะจากแอป')}</>}
                       </span>
                     </div>
                     {now - activityAt > 45000 && !liveText && (

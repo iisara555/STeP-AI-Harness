@@ -1,6 +1,8 @@
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 export const en: Record<string, string> = {
+  กำลังคิด: 'Thinking',
+  รูปภาพ: 'Image',
   'ดูบริการอื่นอีก {0} รายการ': 'Show {0} more services',
   ทดสอบอีกครั้ง: 'Test again',
   'ลงชื่อด้วย {0}': 'Sign in with {0}',

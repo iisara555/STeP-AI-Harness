@@ -8,6 +8,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### Chat answers that look like Claude, ChatGPT and Cursor
+
+- **Full Markdown in answers:** answers now render GitHub-flavoured Markdown (react-markdown with remark-gfm). This covers headings at every level, nested and task lists, tables, quotes, `inline code`, strikethrough, horizontal rules and links. Before, inline code, quotes and links showed as plain text.
+- **Code blocks with colours:** fenced code is highlighted for common languages (Python, JavaScript/TypeScript, JSON, Bash, SQL, HTML/XML, CSS, YAML, Markdown) in light and dark themes, with a copy button.
+- **Calmer conversation:** no name label above every turn. Your message is a right-aligned bubble and the answer is plain text on the page, with larger type and spacing. Copy and feedback buttons stay on the newest answer and appear on hover for older ones.
+- **While the AI works:** a blinking caret follows the streamed text, and a single line shows what is happening and the elapsed time. The "app is still working" line now appears only when the app stops reporting.
+- **Safety unchanged:** raw HTML in an answer is dropped, never rendered. `javascript:` and other non-web links are not clickable, and web links open in the app's browser panel. Images in answers are not loaded; a link is shown instead. `step-tool` requests stay hidden, including while they stream.
+
 ### More AI services, and a simpler connection page
 
 - **Pick a service from tiles:** the AI connection page (Settings and the setup wizard) now lists each service as a tile with how it connects (sign in, API key, or on this computer) and one line about it. The chosen tile opens a card with the key field, a link to where the service issues keys, an optional model and who pays, with the connect button inside it. The old sticky button that covered the text below it is gone; choosing a tile scrolls its card into view. The setup wizard shows the main services first, with the rest behind **ดูบริการอื่น**.

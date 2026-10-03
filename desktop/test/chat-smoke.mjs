@@ -164,7 +164,8 @@ try {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   assert.equal(await page.locator('.activity .spin').evaluate(el => getComputedStyle(el).animationName), 'spin');
   await page.emulateMedia({ reducedMotion: null });
-  await expect(page.locator('.activity-detail')).toContainText('แอปยังทำงานอยู่');
+  // One quiet working line: what is happening and how long it has taken.
+  await expect(page.locator('.activity-detail')).toHaveText(/^\d+:\d{2}$|0 วินาที/);
   await page.screenshot({ path: 'release/qa/web-search-running.png', fullPage: true });
   await page.getByText('Synthetic holiday answer', { exact: false }).waitFor();
   // A heartbeat must keep the already streamed answer visible until completion.
