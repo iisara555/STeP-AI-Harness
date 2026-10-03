@@ -70,6 +70,8 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 
 With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, the Receipt page also sends the receipt image to the connected AI, after a one-time consent. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads the fields independently of the OCR, and the page compares the two field by field; a person still confirms every field. Without the OCR component, the AI reading alone is available. With `checks.privacy` on, no image is sent.
 
+The page also shows the document type (from the AI or the printed heading) and a checklist for the chosen claim category. Each item names its source: AFP circulars, general payment-document elements to confirm with AFP, or "no source yet, ask AFP". The checklist prepares documents; it is not an approval.
+
 ## Boundaries
 
 - Conversation history and drafts are local application data, not diagnostic logs. API secrets use Electron secure storage. Most provider-managed authentication uses an isolated runtime profile. Experimental Antigravity uses a shared native OS keyring: configuration isolation does not isolate Google identities, and STeP disconnect does not log out that native account. See [current compatibility blocker](../docs/antigravity-adapter.md).

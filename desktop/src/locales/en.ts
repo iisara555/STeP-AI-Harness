@@ -1434,4 +1434,84 @@ export const en: Record<string, string> = {
   'อ่านได้ทางเดียว {0}': '{0} read by one side',
   'เทียบแต่ละช่องกับภาพ แล้วกด Enter เพื่อติ๊ก “ตรวจแล้ว” และไปช่องถัดไป':
     'Compare each field with the image, then press Enter to tick “Checked” and move to the next field',
+  'ประเภทเอกสาร: {0}': 'Document type: {0}',
+  ยังไม่ทราบ: 'Not known yet',
+  'หมวดที่จะเบิก: {0}': 'Claim category: {0}',
+  ประเภทเอกสารและสิ่งที่ต้องมี: 'Document type and what it needs',
+  ประเภทเอกสาร: 'Document type',
+  หมวดที่จะเบิก: 'Claim category',
+  'AI จำแนกจากภาพ เปลี่ยนได้ถ้าไม่ถูก': 'Classified by the AI from the image; change it if it is wrong',
+  'จำแนกจากหัวเอกสารที่ OCR อ่านได้ เปลี่ยนได้ถ้าไม่ถูก': 'Classified from the heading the OCR read; change it if it is wrong',
+  คุณเลือกประเภทเอง: 'You chose the type',
+  'ยังจำแนกไม่ได้ เลือกประเภทเอง หรือให้ AI อ่านภาพ': 'Not classified yet: choose the type, or have the AI read the image',
+  สิ่งที่ต้องมีและต้องทำ: 'What it needs and what to do',
+  'ขาด {0}': '{0} missing',
+  'ควรตรวจ {0}': '{0} to check',
+  'ต้องเตรียม {0}': '{0} to prepare',
+  'รายการนี้ช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย ข้อที่ยังไม่มีแหล่งยืนยันให้ถาม AFP':
+    'This list helps you prepare the documents; it is not a payment approval. Ask AFP about items with no confirmed source',
+  'ถ้าเบิกหมวด B: ': 'If claimed under category B: ',
+  'ใบกำกับภาษี (เต็มรูป)': 'Tax invoice (full)',
+  ใบกำกับภาษีอย่างย่อ: 'Abbreviated tax invoice',
+  ใบเสร็จรับเงิน: 'Receipt',
+  บิลเงินสด: 'Cash bill',
+  ใบสำคัญรับเงิน: 'Payment voucher',
+  'ใบแจ้งหนี้ / ใบเสนอราคา / ใบส่งของ': 'Invoice / quotation / delivery note',
+  สลิปโอนเงิน: 'Transfer slip',
+  ไม่แน่ใจประเภท: 'Type unclear',
+  ยังไม่แน่ใจ: 'Not sure yet',
+  'หมวด B (B1–B12)': 'Category B (B1–B12)',
+  'หมวด BV ค่าพาหนะ': 'Category BV (vehicles)',
+  หมวดฉุกเฉิน: 'Emergency category',
+  หมวดอื่น: 'Other category',
+  'AFP แจ้งเวียน': 'AFP circular',
+  'หลักทั่วไป · ยืนยันกับ AFP': 'General practice · confirm with AFP',
+  'ยังไม่มีแหล่งในระบบ · ถาม AFP': 'No source in the app yet · ask AFP',
+  'สลิปโอนเงินไม่ใช่ใบเสร็จ ชุดเคลียร์เงินของ AFP ใช้ใบเสร็จรับเงิน หรือใบสำคัญรับเงิน (FM-AF-014) ขอใบเสร็จจากผู้รับเงิน หรือใช้ใบสำคัญรับเงินพร้อมสำเนาบัตรประชาชนผู้รับเงิน':
+    'A transfer slip is not a receipt. AFP’s clearing set uses a receipt or a payment voucher (FM-AF-014): ask the payee for a receipt, or use a payment voucher with a copy of the payee’s ID card',
+  'ใบแจ้งหนี้หรือใบเสนอราคาเป็นเอกสารก่อนจ่ายเงิน ใช้ประกอบตอนยืมเงินได้ แต่ตอนเคลียร์เงินต้องมีใบเสร็จรับเงิน หรือใบสำคัญรับเงิน (FM-AF-014)':
+    'An invoice or quotation comes before payment. It can support a cash advance, but clearing needs a receipt or a payment voucher (FM-AF-014)',
+  'มีชื่อผู้รับเงิน / ร้าน': 'Payee / shop name shown',
+  'ยังไม่เห็นชื่อผู้รับเงิน / ร้าน': 'No payee / shop name seen',
+  มีวันที่รับเงิน: 'Payment date shown',
+  ยังไม่เห็นวันที่รับเงิน: 'No payment date seen',
+  มีรายการว่าจ่ายค่าอะไร: 'What was paid for is listed',
+  ยังไม่เห็นรายการว่าจ่ายค่าอะไร: 'What was paid for is not listed',
+  มีจำนวนเงินทั้งตัวเลขและตัวอักษร: 'Amount shown in figures and in words',
+  'มีจำนวนเงินตัวเลข แต่ยังไม่เห็นจำนวนเงินตัวอักษร': 'Amount in figures, but not in words',
+  ยังไม่เห็นจำนวนเงิน: 'No amount seen',
+  มีลายมือชื่อผู้รับเงิน: 'Payee signature shown',
+  'ยังไม่เห็นลายมือชื่อผู้รับเงิน ขอให้ผู้รับเงินลงชื่อ (ห้ามลงชื่อแทนผู้อื่น)':
+    'No payee signature seen: ask the payee to sign (never sign for someone else)',
+  'ระบุชื่อผู้ซื้อแล้ว ชื่อและที่อยู่ผู้ซื้อที่ต้องใช้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP':
+    'A buyer is named. The buyer name and address to use have no confirmed source in the app yet; ask AFP',
+  'ยังไม่เห็นชื่อผู้ซื้อ ชื่อและที่อยู่ผู้ซื้อที่ต้องใช้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP':
+    'No buyer named. The buyer name and address to use have no confirmed source in the app yet; ask AFP',
+  'เอกสารกระดาษความร้อน (เช่น ใบเสร็จอย่างย่อ สลิป) ต้องถ่ายสำเนาแนบทุกครั้ง เพราะตัวหนังสือจะจางหาย':
+    'Thermal paper (abbreviated receipts, slips) must always be photocopied and attached, because the print fades',
+  'เอกสารภาษาต่างประเทศ ต้องแนบต้นฉบับพร้อมคำแปลภาษาไทยที่มีผู้แปลลงชื่อและวันที่ (ห้ามใช้ Google Translate)':
+    'Foreign-language documents need the original plus a Thai translation signed and dated by the translator (no Google Translate)',
+  'มีรายการที่อาจเป็นเครื่องดื่มที่ไม่เหมาะสม AFP ห้ามซื้อเครื่องดื่มที่ไม่เหมาะสม โปรดตรวจรายการ':
+    'An item may be an inappropriate drink, which AFP does not allow. Check the items',
+  'ใบเสร็จเขียนด้วยลายมือ ตรวจว่าไม่มีรอยขูดลบหรือแก้ไขตัวเลข ถ้ามีการแก้ ควรให้ผู้รับเงินลงชื่อกำกับ':
+    'Handwritten receipt: check for erasures or changed figures; any correction should be initialled by the payee',
+  'บิลเงินสดจากร้านที่ไม่ได้จดทะเบียนภาษีมูลค่าเพิ่มไม่มีภาษีแยก ใช้เป็นหลักฐานการจ่ายได้หรือไม่ในกรณีนี้ ยังไม่มีแหล่งยืนยันในระบบ โปรดถาม AFP':
+    'A cash bill from a shop not registered for VAT shows no separate tax. Whether it is accepted as proof of payment here has no confirmed source in the app yet; ask AFP',
+  'ยอด {0} บาท เกินเพดานหมวด BV (ไม่เกิน 10,000 บาท/คนขับรถ/กิจกรรม)': '{0} baht is over the BV cap (10,000 baht per driver per activity)',
+  'ยอด {0} บาท เกินวงเงินหมวดฉุกเฉิน (ไม่เกิน 10,000 บาท)': '{0} baht is over the emergency limit (10,000 baht)',
+  'ยอด {0} บาท เกินเพดานหมวด B (ไม่เกิน 10,000 บาทต่อหมวดย่อย) งานที่เกิน 10,000 บาทต้องผ่านพัสดุ (หมวด C)':
+    '{0} baht is over the category B cap (10,000 baht per sub-category); work over 10,000 baht goes through procurement (category C)',
+  'เลยกำหนดรายงานขอความเห็นชอบแล้ว (ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ ครบ {1}) AFP แจ้งว่าค่าใช้จ่ายส่วนเกินจะเบิกไม่ได้ โปรดติดต่อ AFP':
+    'The approval report is overdue ({0} working days after the receipt date, due {1}). AFP says the excess cannot be claimed; contact AFP',
+  'ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ: ภายใน {1} (ไม่นับวันหยุดนักขัตฤกษ์ โปรดดูปฏิทินด้วย)':
+    'File the approval report in STeP MIS within {0} working days after the receipt date: by {1} (public holidays not counted; check the calendar)',
+  'ทำรายงานขอความเห็นชอบใน STeP MIS ภายใน {0} วันทำการนับถัดจากวันที่ในใบเสร็จ':
+    'File the approval report in STeP MIS within {0} working days after the receipt date',
+  'หมวดฉุกเฉินต้องได้รับความเห็นชอบจากหัวหน้าทีมหรือผู้บริหารทีมก่อนดำเนินการ และเข้าเงื่อนไขครบ 3 ข้อ (เร่งด่วน, ไม่ได้คาดการณ์ไว้, ทำตามระยะเวลาปกติไม่ทัน)':
+    'The emergency category needs the team lead’s or team executive’s agreement first, and all 3 conditions (urgent, unforeseen, not possible in the normal time)',
+  'ชุดเคลียร์เงิน: ใบขอเบิกค่าใช้จ่าย (FM-AF-002) + ใบเสร็จรับเงินหรือใบสำคัญรับเงิน (FM-AF-014) + สำเนาบัตรประชาชนผู้รับเงินหรือใบรับรองแทนใบเสร็จ (FM-AF-035/036) + รายงานขอความเห็นชอบ':
+    'Clearing set: expense claim (FM-AF-002) + receipt or payment voucher (FM-AF-014) + copy of the payee’s ID card or a receipt substitute certificate (FM-AF-035/036) + approval report',
+  'กฎของหมวดนี้ยังไม่มีในระบบ ชุดเอกสารและกำหนดเวลาโปรดถาม AFP':
+    'This category’s rules are not in the app yet; ask AFP for the documents and deadlines',
+  'ครบแล้ว {0} ข้อ: {1}': '{0} complete: {1}',
 };

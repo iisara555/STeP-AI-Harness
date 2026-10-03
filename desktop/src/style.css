@@ -3037,3 +3037,107 @@ nav .count {
   align-items: flex-start;
   margin: 8px 0;
 }
+
+.receipt-compliance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 12.5px;
+}
+.receipt-compliance-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+.receipt-compliance-head label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 180px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.receipt-compliance-head select {
+  font-size: 13px;
+  color: var(--text);
+}
+.receipt-compliance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.receipt-compliance-summary .chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.receipt-compliance-summary .chip.differ {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.receipt-compliance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.receipt-compliance-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  line-height: 1.55;
+}
+.receipt-compliance-list .mark {
+  flex: 0 0 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.receipt-compliance-list .status-ok .mark {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.receipt-compliance-list .status-missing .mark,
+.receipt-compliance-list .status-warn .mark {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.receipt-compliance-list .status-missing > span:last-child {
+  color: var(--danger);
+}
+.receipt-compliance-list .source {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.receipt-compliance-list .source-afp {
+  color: var(--accent-ink);
+}
+.receipt-compliance-done summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.receipt-compliance-done[open] summary {
+  margin-bottom: 6px;
+}

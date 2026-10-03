@@ -15,6 +15,17 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import {
+  DOCUMENT_TYPES,
+  DOCUMENT_TYPE_LABELS,
+  classifyFromText,
+  complianceChecklist,
+  complianceSummary,
+  type ClaimCategory,
+  type ComplianceItem,
+  type DocumentFeatures,
+  type DocumentType,
+} from './receipt-compliance';
 import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading } from './receipt-vision';
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
@@ -104,7 +115,28 @@ type OcrStatus = {
   /** A vision model may read the receipt image too (policy receiptVision, privacy checks off). */
   vision?: boolean;
 };
-type Vision = { fields: VisionReading; buyerTaxId: string; amountInWords: string; notes: string; model: string };
+type Vision = {
+  fields: VisionReading;
+  buyerTaxId: string;
+  amountInWords: string;
+  documentType: DocumentType | '';
+  features: DocumentFeatures;
+  notes: string;
+  model: string;
+};
+const CATEGORY_LABELS: Record<ClaimCategory, string> = {
+  unsure: 'ยังไม่แน่ใจ',
+  B: 'หมวด B (B1–B12)',
+  BV: 'หมวด BV ค่าพาหนะ',
+  emergency: 'หมวดฉุกเฉิน',
+  other: 'หมวดอื่น',
+};
+const SOURCE_LABELS: Record<ComplianceItem['source'], string> = {
+  afp: 'AFP แจ้งเวียน',
+  general: 'หลักทั่วไป · ยืนยันกับ AFP',
+  'need-source': 'ยังไม่มีแหล่งในระบบ · ถาม AFP',
+};
+const STATUS_MARK: Record<ComplianceItem['status'], string> = { ok: '✓', missing: '✕', warn: '!', todo: '○', info: 'i' };
 type AiDecision = {
   field: string;
   status: 'keep' | 'suggested' | 'ambiguous' | 'unmapped';
@@ -179,7 +211,9 @@ export function ReceiptApp({
     [buyerExcluded, setBuyerExcluded] = useState(false),
     [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]),
     [vision, setVision] = useState<Vision | null>(null),
-    [zoom, setZoom] = useState(false);
+    [zoom, setZoom] = useState(false),
+    [typeOverride, setTypeOverride] = useState<DocumentType | ''>(''),
+    [category, setCategory] = useState<ClaimCategory>('unsure');
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -237,6 +271,7 @@ export function ReceiptApp({
     setAiDecisions([]);
     setVision(null);
     setZoom(false);
+    setTypeOverride('');
     // The second, independent reading by a vision model, compared with the OCR field by field below.
     if (status?.vision && connectionId) await readWithAi(nextValues);
   }
@@ -262,6 +297,17 @@ export function ReceiptApp({
     vision?.amountInWords ||
     records.map(r => String(r.text || '').replace(/\s/g, '')).find(text => /^[ก-๙()]+บาท(ถ้วน|ตัว|[ก-๙]+สตางค์)$/.test(text)) ||
     '';
+  // The kind of document and what the claim still needs (src/receipt-compliance.ts).
+  const detectedType = vision?.documentType || classifyFromText(String(doc?.result?.text || '')) || '';
+  const docType = typeOverride || detectedType;
+  const typeSource = typeOverride ? 'person' : vision?.documentType ? 'ai' : detectedType ? 'heading' : '';
+  const features: DocumentFeatures = {
+    ...vision?.features,
+    handwritten: vision?.features.handwritten ?? (records.some(r => r.textKind === 'handwriting-likely') || undefined),
+  };
+  const compliance = complianceChecklist({ type: docType, features, values, amountInWords, category });
+  const complianceCount = complianceSummary(compliance);
+  const itemText = (item: ComplianceItem) => (item.ifCategoryB ? t('ถ้าเบิกหมวด B: ') : '') + t(item.text, ...(item.vars || []));
   const rules = receiptRuleChecks(values as Partial<Record<ReceiptField, string>>, {
     buyerTaxId: vision?.buyerTaxId,
     amountInWords,
@@ -330,6 +376,14 @@ export function ReceiptApp({
           ),
         }
       : null,
+    compliance: {
+      notice:
+        'Document type and checklist: fixed rules tied to their source (AFP circulars, general payment-document elements to confirm with AFP, or no source yet). Not an approval.',
+      document_type: docType || null,
+      document_type_source: typeSource || null,
+      claim_category: category,
+      items: compliance.map(item => ({ id: item.id, status: item.status, source: item.source, text: itemText(item) })),
+    },
     expense_note: note,
     issues: [
       ...result.issues.map(i => ({ ...i, message: describe(i) })),
@@ -349,6 +403,10 @@ export function ReceiptApp({
       ...review.fieldKeys.map(
         k => `- ${labels[k]}: ${values[k] || t('(ไม่มี)')}${values[k] ? (confirmed[k] ? t(' · ตรวจแล้ว') : t(' · ยังไม่ตรวจ')) : ''}`,
       ),
+      '',
+      t('ประเภทเอกสาร: {0}', docType ? t(DOCUMENT_TYPE_LABELS[docType]) : t('ยังไม่ทราบ')),
+      t('หมวดที่จะเบิก: {0}', t(CATEGORY_LABELS[category])),
+      ...compliance.filter(i => i.status !== 'ok').map(i => `- [${i.status}] ${itemText(i)} (${t(SOURCE_LABELS[i.source])})`),
       ...(note.trim() ? ['', t('หมายเหตุผู้เบิก: ') + note.trim()] : []),
       ...(mapping?.unresolved_field_lines?.length
         ? [
@@ -630,6 +688,74 @@ export function ReceiptApp({
                   )}
                 </div>
               )}
+            </div>
+            <div className="receipt-compliance" aria-label={t('ประเภทเอกสารและสิ่งที่ต้องมี')}>
+              <div className="receipt-compliance-head">
+                <label>
+                  {t('ประเภทเอกสาร')}
+                  <select aria-label={t('ประเภทเอกสาร')} value={docType} onChange={e => setTypeOverride(e.target.value as DocumentType)}>
+                    {!docType && <option value="">{t('ยังไม่ทราบ')}</option>}
+                    {DOCUMENT_TYPES.map(type => (
+                      <option key={type} value={type}>
+                        {t(DOCUMENT_TYPE_LABELS[type])}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t('หมวดที่จะเบิก')}
+                  <select aria-label={t('หมวดที่จะเบิก')} value={category} onChange={e => setCategory(e.target.value as ClaimCategory)}>
+                    {(Object.keys(CATEGORY_LABELS) as ClaimCategory[]).map(c => (
+                      <option key={c} value={c}>
+                        {t(CATEGORY_LABELS[c])}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <small className="muted">
+                {typeSource === 'ai'
+                  ? t('AI จำแนกจากภาพ เปลี่ยนได้ถ้าไม่ถูก')
+                  : typeSource === 'heading'
+                    ? t('จำแนกจากหัวเอกสารที่ OCR อ่านได้ เปลี่ยนได้ถ้าไม่ถูก')
+                    : typeSource === 'person'
+                      ? t('คุณเลือกประเภทเอง')
+                      : t('ยังจำแนกไม่ได้ เลือกประเภทเอง หรือให้ AI อ่านภาพ')}
+              </small>
+              <div className="receipt-compliance-summary">
+                <strong>{t('สิ่งที่ต้องมีและต้องทำ')}</strong>
+                {complianceCount.missing > 0 && <span className="chip differ">{t('ขาด {0}', complianceCount.missing)}</span>}
+                {complianceCount.warn > 0 && <span className="chip differ">{t('ควรตรวจ {0}', complianceCount.warn)}</span>}
+                {complianceCount.todo > 0 && <span className="chip">{t('ต้องเตรียม {0}', complianceCount.todo)}</span>}
+              </div>
+              {(() => {
+                const order: ComplianceItem['status'][] = ['missing', 'warn', 'todo', 'info'];
+                const open = compliance.filter(i => i.status !== 'ok').sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
+                const done = compliance.filter(i => i.status === 'ok');
+                const row = (item: ComplianceItem) => (
+                  <li key={item.id} className={'status-' + item.status}>
+                    <span className="mark" aria-hidden="true">
+                      {STATUS_MARK[item.status]}
+                    </span>
+                    <span>
+                      {itemText(item)}
+                      <small className={'source source-' + item.source}>{t(SOURCE_LABELS[item.source])}</small>
+                    </span>
+                  </li>
+                );
+                return (
+                  <>
+                    {open.length > 0 && <ul className="receipt-compliance-list">{open.map(row)}</ul>}
+                    {done.length > 0 && (
+                      <details className="receipt-compliance-done">
+                        <summary>{t('ครบแล้ว {0} ข้อ: {1}', done.length, done.map(i => itemText(i)).join(' · '))}</summary>
+                        <ul className="receipt-compliance-list">{done.map(row)}</ul>
+                      </details>
+                    )}
+                  </>
+                );
+              })()}
+              <small className="muted">{t('รายการนี้ช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย ข้อที่ยังไม่มีแหล่งยืนยันให้ถาม AFP')}</small>
             </div>
             {review.fieldKeys.map((k, index) => (
               <div className={'receipt-field' + (matchOf(k) ? ' match-' + matchOf(k) : '') + (confirmed[k] ? ' confirmed' : '')} key={k}>

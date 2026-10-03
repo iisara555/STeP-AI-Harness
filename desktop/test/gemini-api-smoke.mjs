@@ -16,6 +16,8 @@ const receiptReply = {
     vat: { value: '7.00', evidence: 'ภาษีมูลค่าเพิ่ม 7.00' },
   },
   buyerTaxId: '',
+  documentType: 'cash_bill',
+  features: { handwritten: true, receiverSigned: false, itemsListed: true },
   notes: 'ตัวเลขยอดสุทธิจางเล็กน้อย',
 };
 const prompts = [];
@@ -115,6 +117,12 @@ try {
   assert.ok((await page.getByText('AI อ่านจากภาพ · ตรวจกับต้นฉบับ').count()) >= 3, 'each AI-read field is marked');
   assert.equal(await page.locator('.receipt-field .check input:checked').count(), 0, 'nothing is confirmed for the person');
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
+  // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
+  assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
+  await page.getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).waitFor();
+  await page.getByText('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน', { exact: false }).waitFor();
+  await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('other');
+  assert.equal(await page.getByText('ชุดเคลียร์เงิน', { exact: false }).count(), 0);
   // Enter in a filled field ticks it as checked and moves to the next field.
   await page.getByLabel('ภาษีมูลค่าเพิ่ม').press('Enter');
   assert.equal(await page.locator('.receipt-field .check input:checked').count(), 1);

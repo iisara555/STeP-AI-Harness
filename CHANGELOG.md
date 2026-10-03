@@ -8,6 +8,17 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Receipt type and what the claim still needs
+
+- **Document type:** the AI classifies the receipt from the image as a full or abbreviated tax invoice, receipt, cash bill, payment voucher, invoice or quotation, or transfer slip. Without the AI, the printed heading decides. The person can change it.
+- **Claim category:** the person picks B, BV, emergency or other (or "not sure"). The checklist follows it.
+- **Checklist with its source on every item**, ordered missing → to check → to prepare → notes, with complete items folded into one line:
+  - **AFP circulars** (`docs/afp-operational-circulars.md`): the category B approval report within 3 working days after the receipt date, with the due date worked out (5 days for emergency; public holidays not counted, so check the calendar); the 10,000-baht caps; the clearing set (FM-AF-002, FM-AF-014, FM-AF-035/036, approval report); photocopying thermal paper; translating foreign-language documents; no inappropriate drinks; emergency pre-approval. A transfer slip, invoice or quotation is flagged as not a proof of payment for clearing.
+  - **General payment-document elements**, marked "confirm with AFP": payee, date, what was paid for, amount in figures and words, payee signature.
+  - **No source in the app yet**, marked "ask AFP": the buyer name and address to use, and whether a cash bill is accepted. These are never decided by the AI.
+- **The AI reports what it sees** (handwritten, thermal paper, foreign language, payee signature, buyer named, items listed, inappropriate drinks); the checklist itself is fixed rules in `desktop/src/receipt-compliance.ts`, with unit tests.
+- **Draft and handoff:** the draft JSON records the type, category and checklist under `compliance`; the AI pre-check handoff includes the open items.
+
 ### A receipt page that is quicker to check
 
 - **The receipt stays in view:** the image column stays beside the fields while you scroll. A zoom button (or a click on the image) enlarges it for handwriting.

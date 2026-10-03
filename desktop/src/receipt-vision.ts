@@ -1,6 +1,8 @@
 // The receipt's second reading: a vision model reads the image on its own, then each field is compared with the local
 // OCR reading. Shared by the main process (prompt and parsing) and the receipt page (comparison and rule checks).
 
+import { FEATURE_KEYS, parseDocumentType, type DocumentFeatures, type DocumentType } from './receipt-compliance';
+
 export const RECEIPT_FIELDS = ['merchant', 'receiptNumber', 'date', 'taxId', 'subtotal', 'vat', 'total'] as const;
 export type ReceiptField = (typeof RECEIPT_FIELDS)[number];
 export type VisionReading = Partial<Record<ReceiptField, { value: string; evidence: string }>>;
@@ -9,13 +11,15 @@ export type FieldMatch = 'agree' | 'differ' | 'ai-only' | 'ocr-only' | 'empty';
 
 export const RECEIPT_VISION_SYSTEM = `You read Thai and English receipts and tax invoices from images for an expense pre-check. You only transcribe what is printed; you never guess, complete or calculate a value.
 Return ONLY one JSON object, no prose, no code fence:
-{"fields":{"merchant":{"value":"","evidence":""},"receiptNumber":{...},"date":{...},"taxId":{...},"subtotal":{...},"vat":{...},"total":{...}},"buyerTaxId":"","amountInWords":"","notes":""}
+{"fields":{"merchant":{"value":"","evidence":""},"receiptNumber":{...},"date":{...},"taxId":{...},"subtotal":{...},"vat":{...},"total":{...}},"buyerTaxId":"","amountInWords":"","documentType":"","features":{"handwritten":false,"thermalPaper":false,"foreignLanguage":false,"receiverSigned":false,"buyerNamed":false,"itemsListed":false,"inappropriateDrinks":false},"notes":""}
 - merchant: the seller / issuer name as printed (company or shop), not the buyer.
 - receiptNumber: the receipt or tax-invoice number (เลขที่). When a book number (เล่มที่) is printed too, write both as "เล่ม 001 เลขที่ 005".
 - date: the document date exactly as printed, keeping a Buddhist year (พ.ศ.) as it is.
 - taxId: the SELLER's 13-digit tax ID (เลขประจำตัวผู้เสียภาษี of the issuer). A buyer's tax ID goes in buyerTaxId, never in taxId. Shops sometimes write the customer's tax ID in the issuer's box; when the printed ID plainly belongs to the customer named on the receipt, put it in buyerTaxId and say so in notes.
 - subtotal: the amount before VAT; vat: the VAT amount; total: the amount paid. Digits only with a decimal point (e.g. 1250.00): no currency, no commas.
 - amountInWords: the total written in Thai words (e.g. แปดร้อยแปดบาทถ้วน) exactly as printed, or "".
+- documentType: exactly one of tax_invoice (ใบกำกับภาษี, full), abbreviated_tax_invoice (ใบกำกับภาษีอย่างย่อ / ABB, usually a till slip), receipt (ใบเสร็จรับเงิน), cash_bill (บิลเงินสด / cash sale), payment_voucher (ใบสำคัญรับเงิน), invoice_or_quotation (ใบแจ้งหนี้, ใบเสนอราคา, ใบส่งของ: not a proof of payment), transfer_slip (a bank or PromptPay transfer slip), other. Judge from the printed title first.
+- features, each true or false from what is visible: handwritten (values written by hand), thermalPaper (a till or thermal slip), foreignLanguage (mostly not Thai), receiverSigned (a signature in the receiver / ผู้รับเงิน space), buyerNamed (a buyer or customer name is filled in), itemsListed (what was paid for is written), inappropriateDrinks (alcohol or similar among the items).
 - evidence: the printed line the value comes from, copied as it appears.
 - Use Arabic digits for every number (convert Thai digits ๐-๙).
 - When a value is not printed, unreadable, cut off or you are unsure, use "" for value. An empty field is correct; a guessed one is a defect.
@@ -25,7 +29,14 @@ const clip = (value: unknown, max = 200) => (typeof value === 'string' ? value.r
 const thaiDigits = (value: string) => value.replace(/[๐-๙]/g, d => String('๐๑๒๓๔๕๖๗๘๙'.indexOf(d)));
 
 /** The model's JSON reply as field values; anything outside the seven fields, or not text, is dropped. */
-export function parseVisionReading(reply: string): { fields: VisionReading; buyerTaxId: string; amountInWords: string; notes: string } {
+export function parseVisionReading(reply: string): {
+  fields: VisionReading;
+  buyerTaxId: string;
+  amountInWords: string;
+  documentType: DocumentType | '';
+  features: DocumentFeatures;
+  notes: string;
+} {
   const start = reply.indexOf('{'),
     end = reply.lastIndexOf('}');
   if (start < 0 || end <= start) throw new Error('RECEIPT_VISION_UNREADABLE');
@@ -45,6 +56,11 @@ export function parseVisionReading(reply: string): { fields: VisionReading; buye
     fields,
     buyerTaxId: thaiDigits(clip(data?.buyerTaxId, 40)),
     amountInWords: clip(data?.amountInWords, 200),
+    documentType: parseDocumentType(data?.documentType),
+    // Only real booleans count: a missing or odd value stays unknown rather than "no".
+    features: Object.fromEntries(
+      FEATURE_KEYS.filter(key => typeof data?.features?.[key] === 'boolean').map(key => [key, data.features[key]]),
+    ) as DocumentFeatures,
     notes: clip(data?.notes, 300),
   };
 }
