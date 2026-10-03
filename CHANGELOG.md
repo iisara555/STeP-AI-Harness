@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
+STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Receipts read twice" down was published as `desktop-v0.5.5`.
 
 ### Gemini: faster tool turns and fewer failed answers
 
