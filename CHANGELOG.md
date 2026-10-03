@@ -8,6 +8,18 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### Sidebar checked end to end
+
+- **New smoke test:** `test/sidebar-smoke.mjs` uses every sidebar control in the real app against a local fake AI:
+  - new task (a blank page, nothing saved until the first message)
+  - opening tasks, Thai full-text search and the "no results" message
+  - the command-palette button and the **มีผลงาน** filter
+  - pin and unpin, rename, and delete (cancel and confirm, including the open task)
+  - the Skill hub, the receipt check and settings
+  - the profile line, and hiding and showing the sidebar
+- **Search no longer flashes "ไม่พบงาน":** while the full-text search is still answering, the list filters by title and loaded text instead of going empty on every keystroke.
+- **Renaming keeps what you typed:** clicking away from the name box now saves the new name, as in other chat apps. Before, it threw the edit away. Escape still cancels.
+
 ### Chat answers that look like Claude, ChatGPT and Cursor
 
 - **Full Markdown in answers:** answers now render GitHub-flavoured Markdown (react-markdown with remark-gfm). This covers headings at every level, nested and task lists, tables, quotes, `inline code`, strikethrough, horizontal rules and links. Before, inline code, quotes and links showed as plain text.

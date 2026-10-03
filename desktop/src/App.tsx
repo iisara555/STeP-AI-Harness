@@ -43,6 +43,7 @@ import {
   CommandPalette,
   ConfirmDialog,
   RichText,
+  matchesSession,
   Toasts,
   type Toast,
   formatElapsed,
@@ -736,9 +737,26 @@ export default function App() {
     snapshot?.sessions.filter(
       s =>
         (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
-        (!search.trim() || (searchMatches?.query === search && searchMatches.ids.includes(s.id))) &&
+        // Until the full-text search answers, match titles and loaded text here, so the list never flashes "no results".
+        (!search.trim() || (searchMatches?.query === search ? searchMatches.ids.includes(s.id) : matchesSession(s, search))) &&
         (filter !== 'artifacts' || s.draft),
     ) || [];
+  // Escape cancels; the blur that follows the input closing must not save the name it was holding.
+  const renameCancelled = useRef(false);
+  async function saveRename() {
+    const current = renaming;
+    if (renameCancelled.current || !current) {
+      renameCancelled.current = false;
+      return;
+    }
+    setRenaming(null);
+    const before = snapshot?.sessions.find(s => s.id === current.id)?.title;
+    if (!current.title.trim() || current.title.trim() === before) return;
+    await action(async () => {
+      await api!.call('rename', { id: current.id, title: current.title.trim() });
+      await refresh();
+    });
+  }
   const providerName = (c?: Connection) => (c ? connectionLabel(c) : '');
   const setTheme = (theme: string) =>
     action(async () => {
@@ -930,17 +948,17 @@ export default function App() {
                         className="session-rename"
                         aria-label={t('ชื่องาน')}
                         autoFocus
+                        onFocus={() => (renameCancelled.current = false)}
                         value={renaming.title}
                         onChange={e => setRenaming({ ...renaming, title: e.target.value })}
-                        onBlur={() => setRenaming(null)}
+                        // Like other chat apps, clicking away keeps the new name; Escape is the way to cancel.
+                        onBlur={() => void saveRename()}
                         onKeyDown={e => {
-                          if (e.key === 'Escape') setRenaming(null);
-                          if (e.key === 'Enter' && renaming.title.trim())
-                            void action(async () => {
-                              await api.call('rename', renaming);
-                              setRenaming(null);
-                              await refresh();
-                            });
+                          if (e.key === 'Escape') {
+                            renameCancelled.current = true;
+                            setRenaming(null);
+                          }
+                          if (e.key === 'Enter') e.currentTarget.blur();
                         }}
                       />
                     ) : (
