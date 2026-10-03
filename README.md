@@ -553,7 +553,7 @@ npm run desktop:start
 
 รายละเอียด packaging และข้อจำกัดของ Electron build อยู่ใน [desktop/README.md](desktop/README.md)
 
-## STeP Skills ใน Claude Code / Claude Desktop (plugin)
+## STeP Skills ใน Claude Code / Claude Desktop / Gemini CLI (plugin)
 
 ใช้ Skills และกติกาของ STeP ใน Claude ได้โดยไม่ต้องติดตั้ง STeP Desktop หรือรันตัวติดตั้ง CLI ใน Claude Code พิมพ์:
 
@@ -567,6 +567,8 @@ npm run desktop:start
 - ต้องมีสิทธิ์อ่าน repository นี้บน GitHub
 - อัปเดตด้วย `/plugin marketplace update step-ai`
 - โฟลเดอร์ที่ติดตั้งด้วย `step-ai install` แล้ว ไม่ต้องติดตั้ง plugin ซ้ำ จะได้ไม่มี Skill สองชุด
+
+Gemini CLI: ดาวน์โหลด repository แล้วรัน `gemini extensions link STeP-AI-Harness/plugins/step` (โฟลเดอร์เดียวกันเป็น Gemini extension ด้วย กติกามาจาก `GEMINI.md`) อัปเดตด้วย `git pull` ต้องใช้ Gemini API key หรือบัญชีองค์กรที่มี Gemini Code Assist บัญชี Google AI Plus/Pro ส่วนตัวใช้กับ Gemini CLI ไม่ได้
 
 ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ)
 

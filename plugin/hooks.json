@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/session-brief.md\""
+            "command": "f=\"${CLAUDE_PLUGIN_ROOT}/session-brief.md\"; if [ -f \"$f\" ]; then cat \"$f\"; fi"
           }
         ]
       }

@@ -1,8 +1,8 @@
-# STeP AI Skills (Claude plugin)
+# STeP AI Skills (Claude plugin / Gemini CLI extension)
 
-Skills และกติกาการทำงานของ STeP สำหรับ Claude Code และ Claude Desktop
+Skills และกติกาการทำงานของ STeP สำหรับ Claude Code, Claude Desktop และ Gemini CLI
 
-## ติดตั้ง
+## ติดตั้งใน Claude
 
 ใน Claude Code พิมพ์:
 
@@ -15,9 +15,22 @@ Skills และกติกาการทำงานของ STeP สำห�
 
 ทุกแชตเริ่มด้วยกติกาของ STeP (การอนุมัติโดยมนุษย์ ข้อมูลส่วนบุคคล ความลับ และการเขียน) จาก `session-brief.md`
 
-## อัปเดต
+## อัปเดตใน Claude
 
 `/plugin marketplace update step-ai` แล้วเริ่มแชตใหม่
+
+## ติดตั้งใน Gemini CLI
+
+ดาวน์โหลด repository นี้ (ต้องมีสิทธิ์อ่าน) แล้วลิงก์โฟลเดอร์ `plugins/step` เป็น extension:
+
+```text
+git clone https://github.com/iisara555/STeP-AI-Harness.git
+gemini extensions link STeP-AI-Harness/plugins/step
+```
+
+Gemini จะถามว่าเชื่อถือโฟลเดอร์นี้ไหม ตอบ y แล้วเริ่มแชตใหม่ Gemini เห็น Skills ของ STeP และกติกาจาก `GEMINI.md` ทุกแชต อัปเดตด้วย `git pull` ในโฟลเดอร์ที่ดาวน์โหลดไว้
+
+Gemini CLI ต้องลงชื่อด้วย Gemini API key หรือบัญชีองค์กรที่มี Gemini Code Assist Standard/Enterprise บัญชี Google ส่วนตัว (รวม Google AI Plus/Pro) ใช้กับ Gemini CLI ไม่ได้แล้ว
 
 ## ใช้ร่วมกับ step-ai installer
 
