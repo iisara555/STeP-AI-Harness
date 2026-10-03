@@ -1526,4 +1526,9 @@ export const en: Record<string, string> = {
   'Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดเวอร์ชัน {0} แล้วลากไปที่ Applications':
     'This Mac build cannot install updates itself; download version {0} and drag it to Applications',
   'ดาวน์โหลดเวอร์ชัน {0}': 'Download version {0}',
+  รูปโปรไฟล์: 'Profile picture',
+  'เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น':
+    'Choose a drawing you like. They are illustrations, not photos of anyone, and your choice stays on this computer',
+  ใช้ตัวอักษรแรกของชื่อ: 'Use the first letter of your name',
+  'ภาพที่ {0}': 'Picture {0}',
 };

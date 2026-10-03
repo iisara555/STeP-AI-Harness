@@ -105,9 +105,31 @@ try {
   );
   await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
   await page.screenshot({ path: 'release/qa/ux-fixes/update-ready.png' });
+  // Profile pictures: choose a bundled drawing in Settings; the sidebar shows it, and only bundled ids are stored.
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
+  await page.getByRole('tab', { name: 'ทั่วไป' }).click();
+  const pictures = page.getByRole('radiogroup', { name: 'รูปโปรไฟล์' });
+  await expect(pictures.getByRole('radio')).toHaveCount(37);
+  await pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true }).click();
+  await expect(pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await page.screenshot({ path: 'release/qa/ux-fixes/profile-pictures.png' });
+  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  await expect(page.locator('.profile .avatar-badge img')).toHaveAttribute('src', /avatar-05/);
+  await page.locator('.profile').screenshot({ path: 'release/qa/ux-fixes/profile-sidebar.png' });
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-05');
+  const rejected = await page.evaluate(async () => {
+    const { settings } = await window.step.call('snapshot');
+    return window.step.call('settings', { ...settings, avatar: '../../secret.png' }).then(
+      () => 'accepted',
+      e => String(e.message || e),
+    );
+  });
+  assert.match(rejected, /INVALID_SETTINGS/);
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-05');
   assert.deepEqual(errors, []);
   console.log(
-    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels, browser task entry, the app-drawn title bar and in-app updates.',
+    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels, browser task entry, the app-drawn title bar, in-app updates and profile pictures.',
   );
 } finally {
   await app.close();

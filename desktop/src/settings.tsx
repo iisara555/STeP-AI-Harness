@@ -4,6 +4,8 @@ import { ConfirmDialog, ProviderFields, providerChoiceReady, initialChoice, type
 import { explainError, providerLabel, shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
+import { AVATARS, Avatar } from './avatars';
+import { initial } from './messages';
 import type { Connection, Snapshot } from './types';
 import { language, locale, t, teamName } from './i18n';
 
@@ -31,7 +33,8 @@ export function SettingsPanel({
     [theme, setTheme] = useState(snapshot.settings.theme);
   const [userName, setUserName] = useState(snapshot.settings.userName || ''),
     [personality, setPersonality] = useState(snapshot.settings.personality || 'coworker'),
-    [assistantTone, setAssistantTone] = useState(snapshot.settings.assistantTone || '');
+    [assistantTone, setAssistantTone] = useState(snapshot.settings.assistantTone || ''),
+    [avatar, setAvatar] = useState(snapshot.settings.avatar || '');
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
   const accountSignIn = choice.mode === 'subscription' && ['openai', 'claude'].includes(choice.provider);
   // The main-page Gemini key is tested right away like an account sign-in, so it is ready to use or shows why not.
@@ -90,6 +93,39 @@ export function SettingsPanel({
           </button>
         ))}
       </div>
+      {page === 'general' && (
+        <section className="avatar-section">
+          <h2>{t('รูปโปรไฟล์')}</h2>
+          <p className="muted small">{t('เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น')}</p>
+          <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!avatar}
+              aria-label={t('ใช้ตัวอักษรแรกของชื่อ')}
+              title={t('ใช้ตัวอักษรแรกของชื่อ')}
+              className="avatar-option"
+              onClick={() => setAvatar('')}
+            >
+              <Avatar fallback={initial(userName) || 'ST'} />
+            </button>
+            {AVATARS.map((a, i) => (
+              <button
+                key={a.id}
+                type="button"
+                role="radio"
+                aria-checked={avatar === a.id}
+                aria-label={t('ภาพที่ {0}', i + 1)}
+                title={t('ภาพที่ {0}', i + 1)}
+                className="avatar-option"
+                onClick={() => setAvatar(a.id)}
+              >
+                <Avatar id={a.id} fallback="" />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {page === 'general' && (
         <section>
           <h2>{t('ผู้ช่วยและทีม')}</h2>
@@ -521,7 +557,7 @@ export function SettingsPanel({
             disabled={Boolean(busy)}
             onClick={() =>
               void run('settings', async () => {
-                await call('settings', { assistant, team, theme, userName, personality, assistantTone });
+                await call('settings', { assistant, team, theme, userName, personality, assistantTone, avatar });
                 close();
               })
             }

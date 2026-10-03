@@ -27,6 +27,7 @@ import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL } from './updater';
+import { isAvatarId } from '../src/avatar-ids';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -1210,6 +1211,10 @@ async function main() {
         return true;
       }
       case 'settings': {
+        const avatarId = (value: unknown) => {
+          if (!isAvatarId(value)) throw new Error('INVALID_SETTINGS');
+          return value;
+        };
         const teams = await routing.loadTeamsDictionary();
         const team = inputText(input.team, 40),
           theme = input.theme;
@@ -1224,6 +1229,7 @@ async function main() {
           theme,
           onboarding: true,
           userName: input.userName === undefined ? store.settings().userName : inputText(input.userName, 60).trim(),
+          avatar: input.avatar === undefined ? store.settings().avatar : input.avatar === '' ? '' : avatarId(input.avatar),
           personality,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,

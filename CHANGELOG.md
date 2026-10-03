@@ -8,6 +8,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Profile pictures for employees
+
+- **36 hand-drawn profile pictures** (black-ink portraits in the app's illustration style) to choose from in Settings → ทั่วไป → รูปโปรไฟล์. The first option keeps the initial in a circle, as before.
+- **The chosen picture shows** at the bottom of the task list, next to the employee's name.
+- **Drawings, not photos:** the pictures are illustrations of no one in particular, bundled with the app (`desktop/src/assets/avatars/`, 192 px WebP, about 290 KB in all). Nothing loads from the network or the employee's disk, and settings store only the picture's id; any other value is refused (`INVALID_SETTINGS`).
+- Tests: the bundled files match the ids, and the UX smoke chooses a picture, saves it, sees it in the sidebar and checks that a path is refused.
+
 ### Updates inside the app, as in Claude, Cursor and Codex
 
 - **No reinstalling:** an installed STeP Desktop checks for a newer version 15 seconds after it opens and every 4 hours, and downloads it in the background. A **รีสตาร์ทเพื่ออัปเดต** button then appears in the title bar. A downloaded update also installs when the app quits. Work and settings stay, because they live in the user's app data.
