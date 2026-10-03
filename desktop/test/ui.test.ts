@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatElapsed, formatTokens, groupSessions, matchesSession, chatBlocks, RichText } from '../src/ui';
+import { formatElapsed, formatTokens, groupSessions, matchesSession, RichText } from '../src/ui';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Session } from '../src/types';
@@ -25,19 +25,45 @@ const session = (id: string, updatedAt: string, extra: Partial<Session> = {}) =>
     sources: [],
     ...extra,
   }) as Session;
-test('chat Markdown renders fenced code and tables as escaped content without executing tool proposals', () => {
-  const text =
-    'Hello\n\n```js\n<script>alert(1)</script>\n```\n\n| Name | Value |\n| --- | --- |\n| x | 1 |\n\n```step-tool\n{"tool":"terminal","input":"echo hidden"}\n```';
-  assert.deepEqual(
-    chatBlocks(text)
-      .filter(b => b.kind !== 'text')
-      .map(b => b.kind),
-    ['code', 'table'],
-  );
+test('chat Markdown renders like other AI apps and keeps HTML, scripts, images and tool requests out', () => {
+  const text = [
+    'Hello **bold** and `inline` and ~~old~~',
+    '',
+    '```js',
+    '<script>alert(1)</script>',
+    'const x = 1;',
+    '```',
+    '',
+    '| Name | Value |',
+    '| --- | --- |',
+    '| x | 1 |',
+    '',
+    '> a quote',
+    '',
+    '- [x] done',
+    '- [ ] todo',
+    '',
+    '[docs](https://example.com/a) [bad](javascript:alert(1)) ![pixel](https://tracker.example/p.png)',
+    '',
+    '<img src=x onerror=alert(1)><b>raw</b>',
+    '',
+    '```step-tool',
+    '{"tool":"terminal","input":"echo hidden"}',
+    '```',
+  ].join('\n');
   const html = renderToStaticMarkup(createElement(RichText, { text }));
+  assert.match(html, /<strong>bold<\/strong>/);
+  assert.match(html, /<code>inline<\/code>/);
+  assert.match(html, /<del>old<\/del>/);
   assert.match(html, /&lt;script&gt;/);
+  assert.match(html, /class="hljs-keyword">const</);
   assert.match(html, /<table>/);
-  assert.doesNotMatch(html, /<script>|echo hidden/);
+  assert.match(html, /<blockquote>/);
+  assert.match(html, /type="checkbox"[^>]*checked/);
+  assert.match(html, /href="https:\/\/example.com\/a"/);
+  assert.doesNotMatch(html, /javascript:|<script>|<img|onerror|<b>raw|echo hidden/);
+  // A streamed answer with an unclosed tool request shows nothing of it yet.
+  assert.doesNotMatch(renderToStaticMarkup(createElement(RichText, { text: 'ok\n```step-tool\n{"tool":"ter' })), /tool/);
 });
 
 test('sessions group pinned first, then by recency', () => {

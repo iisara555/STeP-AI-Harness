@@ -1,3 +1,4 @@
+import { GooLoader } from './goo-loader';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -43,6 +44,7 @@ import {
   CommandPalette,
   ConfirmDialog,
   RichText,
+  matchesSession,
   Toasts,
   type Toast,
   formatElapsed,
@@ -55,8 +57,9 @@ import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
+import { UpdateCard, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
-import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
+import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
 import type { ApprovalRequest } from './types';
@@ -85,6 +88,7 @@ import { startersFor, starterTag, starterText } from './starters';
 
 export default function App() {
   const api = window.step;
+  const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
@@ -734,10 +738,27 @@ export default function App() {
     snapshot?.sessions.filter(
       s =>
         (s.messages.length > 0 || Boolean(s.draft) || s.id === selected) &&
-        (!search.trim() || (searchMatches?.query === search && searchMatches.ids.includes(s.id))) &&
+        // Until the full-text search answers, match titles and loaded text here, so the list never flashes "no results".
+        (!search.trim() || (searchMatches?.query === search ? searchMatches.ids.includes(s.id) : matchesSession(s, search))) &&
         (filter !== 'artifacts' || s.draft),
     ) || [];
-  const providerName = (c?: Connection) => (c ? providerLabel(c.provider) : '');
+  // Escape cancels; the blur that follows the input closing must not save the name it was holding.
+  const renameCancelled = useRef(false);
+  async function saveRename() {
+    const current = renaming;
+    if (renameCancelled.current || !current) {
+      renameCancelled.current = false;
+      return;
+    }
+    setRenaming(null);
+    const before = snapshot?.sessions.find(s => s.id === current.id)?.title;
+    if (!current.title.trim() || current.title.trim() === before) return;
+    await action(async () => {
+      await api!.call('rename', { id: current.id, title: current.title.trim() });
+      await refresh();
+    });
+  }
+  const providerName = (c?: Connection) => (c ? connectionLabel(c) : '');
   const setTheme = (theme: string) =>
     action(async () => {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
@@ -838,6 +859,10 @@ export default function App() {
       ])
     : [];
   const elapsed = running && startedAt ? formatElapsed(now - startedAt) : '';
+  // The newest answer keeps its copy and feedback buttons in view; older ones show them on hover, as in other AI apps.
+  const lastAnswer = session ? session.messages.map(m => m.role).lastIndexOf('assistant') : -1;
+  // Links in answers open in the browser panel beside the chat, never in this window.
+  const openLink = (url: string) => void action(() => api!.call('toolBrowser', { url }));
   if (!api)
     return (
       <main className="browser-message">
@@ -924,17 +949,17 @@ export default function App() {
                         className="session-rename"
                         aria-label={t('ชื่องาน')}
                         autoFocus
+                        onFocus={() => (renameCancelled.current = false)}
                         value={renaming.title}
                         onChange={e => setRenaming({ ...renaming, title: e.target.value })}
-                        onBlur={() => setRenaming(null)}
+                        // Like other chat apps, clicking away keeps the new name; Escape is the way to cancel.
+                        onBlur={() => void saveRename()}
                         onKeyDown={e => {
-                          if (e.key === 'Escape') setRenaming(null);
-                          if (e.key === 'Enter' && renaming.title.trim())
-                            void action(async () => {
-                              await api.call('rename', renaming);
-                              setRenaming(null);
-                              await refresh();
-                            });
+                          if (e.key === 'Escape') {
+                            renameCancelled.current = true;
+                            setRenaming(null);
+                          }
+                          if (e.key === 'Enter') e.currentTarget.blur();
                         }}
                       />
                     ) : (
@@ -1016,6 +1041,7 @@ export default function App() {
               <Settings2 size={18} />
               <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
             </button>
+            <UpdateCard api={api} update={update} />
             <div className="profile">
               <Avatar
                 id={snapshot.settings.avatar}
@@ -1282,13 +1308,17 @@ export default function App() {
                 {session?.messages.map((message, index) => (
                   <article
                     key={index}
-                    className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}`}
+                    // Like other AI chat apps: no name above each turn; the user's turn is a bubble, the answer is plain text.
+                    aria-label={
+                      message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant
+                    }
+                    className={`message ${message.role}${message.role === 'status' && message.text === 'CANCELLED' ? ' neutral' : ''}${
+                      index === lastAnswer && !running ? ' latest' : ''
+                    }`}
                   >
-                    <div className="message-author">
-                      {message.role === 'user' ? t('คุณ') : message.role === 'status' ? t('สถานะงาน') : snapshot.settings.assistant}
-                    </div>
+                    {message.role === 'status' && <div className="message-author">{t('สถานะงาน')}</div>}
                     {message.role === 'assistant' ? (
-                      <RichText className="message-body" text={message.text} />
+                      <RichText className="message-body" text={message.text} onLink={openLink} />
                     ) : (
                       <div className="message-body">
                         {message.role === 'status' ? errorText[message.text] || t(message.text) : message.text}
@@ -1417,16 +1447,14 @@ export default function App() {
                         <div>{reasoning}</div>
                       </details>
                     )}
-                    {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} />}
+                    {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
+                    {/* One quiet line while working, as in Claude and Codex: what is happening and for how long. */}
                     <div className="activity" role="status" aria-live="polite">
-                      <LoaderCircle className="spin" size={15} />
-                      {progress ? t(progress) : t('กำลังทำงาน')}
-                    </div>
-                    <div className="activity-detail">
-                      <span className="activity-pulse" aria-hidden="true" />
-                      <span>
-                        {t('ใช้เวลา')} {elapsed || t('0 วินาที')} ·{' '}
-                        {now - heartbeatAt > 15000 ? t('ยังไม่ได้รับสถานะจากแอป') : t('แอปยังทำงานอยู่')}
+                      <GooLoader />
+                      <span>{progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด')}</span>
+                      <span className="activity-detail">
+                        {elapsed || t('0 วินาที')}
+                        {now - heartbeatAt > 15000 && <> · {t('ยังไม่ได้รับสถานะจากแอป')}</>}
                       </span>
                     </div>
                     {now - activityAt > 45000 && !liveText && (
@@ -1808,7 +1836,7 @@ export default function App() {
                       <option value="">{t('เลือก AI')}</option>
                       {snapshot.connections.map(c => (
                         <option key={c.id} value={c.id}>
-                          {providerLabel(c.provider)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
+                          {connectionLabel(c)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
                           {c.ready ? '' : t(' · ยังไม่พร้อม')}
                         </option>
                       ))}

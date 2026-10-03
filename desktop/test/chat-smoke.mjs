@@ -160,11 +160,12 @@ try {
   await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
   await page.keyboard.press('Enter');
   await page.getByText('กำลังค้นเว็บ', { exact: true }).waitFor();
-  // The waiting spinner keeps turning even when the OS asks for reduced motion (Windows animations off).
+  // The waiting motion keeps moving even when the OS asks for reduced motion (Windows animations off).
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  assert.equal(await page.locator('.activity .spin').evaluate(el => getComputedStyle(el).animationName), 'spin');
+  assert.equal(await page.locator('.activity .goo-a').evaluate(el => getComputedStyle(el).animationName), 'goo-a');
   await page.emulateMedia({ reducedMotion: null });
-  await expect(page.locator('.activity-detail')).toContainText('แอปยังทำงานอยู่');
+  // One quiet working line: what is happening and how long it has taken.
+  await expect(page.locator('.activity-detail')).toHaveText(/^\d+:\d{2}$|0 วินาที/);
   await page.screenshot({ path: 'release/qa/web-search-running.png', fullPage: true });
   await page.getByText('Synthetic holiday answer', { exact: false }).waitFor();
   // A heartbeat must keep the already streamed answer visible until completion.

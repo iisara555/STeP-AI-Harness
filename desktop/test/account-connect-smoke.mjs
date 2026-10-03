@@ -23,7 +23,7 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('gemini');
   await page.getByLabel('API key', { exact: true }).fill('synthetic-only');
-  await page.getByRole('button', { name: 'กลับไปเชื่อมต่อบัญชีส่วนตัว' }).click();
+  await page.getByRole('button', { name: 'กลับไปเลือกบริการ' }).click();
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
   await app.evaluate(
     ({ ipcMain }, snapshot) => {

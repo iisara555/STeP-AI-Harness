@@ -14,6 +14,8 @@ export type Connection = {
   baseUrl?: string;
   protocol?: 'openai' | 'anthropic';
   label?: string;
+  /** A well-known service from provider-presets (OpenRouter, DeepSeek, ...), fixed to its official endpoint. */
+  preset?: string;
   provider: Provider;
   mode: 'api' | 'subscription' | 'oauth';
   model: string;
@@ -205,7 +207,7 @@ export type Snapshot = {
   approvals?: ApprovalRule[];
   transmissionGrants?: TransmissionGrant[];
   consentMetrics?: ConsentSummary;
-  features?: { claudeSubscription?: boolean };
+  features?: { claudeSubscription?: boolean; providerPresets?: boolean };
   settings: Settings;
   connections: Connection[];
   sessions: Session[];

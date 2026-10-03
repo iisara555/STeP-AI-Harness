@@ -1,6 +1,45 @@
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 export const en: Record<string, string> = {
+  กำลังคิด: 'Thinking',
+  รูปภาพ: 'Image',
+  'ดูบริการอื่นอีก {0} รายการ': 'Show {0} more services',
+  ทดสอบอีกครั้ง: 'Test again',
+  'ลงชื่อด้วย {0}': 'Sign in with {0}',
+  'ใช้แพ็กเกจ ChatGPT Plus/Pro ที่คุณมี': 'Use your ChatGPT Plus/Pro plan',
+  'ใช้แพ็กเกจ Claude ที่คุณมี': 'Use your Claude plan',
+  'คีย์จาก Google AI Studio มีแบบใช้ฟรี': 'Key from Google AI Studio, free tier available',
+  'คีย์จาก Anthropic Console คิดตามการใช้': 'Key from the Anthropic Console, pay as you go',
+  'คีย์จาก OpenAI Platform คิดตามการใช้': 'Key from the OpenAI Platform, pay as you go',
+  ลงชื่อเข้าใช้: 'Sign in',
+  ในเครื่องนี้: 'On this computer',
+  'เลือกบริการ AI': 'Choose an AI service',
+  กลับไปเลือกบริการ: 'Back to services',
+  'กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key': 'Press the button below and sign in in your browser. No API key needed',
+  'กดลงชื่อแล้วอนุญาตในหน้า {0} ระบบจะได้คีย์ของแอปนี้มาเก็บเข้ารหัสเอง หรือวางคีย์ที่มีอยู่แล้วด้านล่าง':
+    'Sign in and approve on the {0} page; the app receives its own key and stores it encrypted. Or paste a key you already have below',
+  'ติดตั้งและเปิด {0} ในเครื่องนี้ก่อน แล้วดาวน์โหลดโมเดลอย่างน้อยหนึ่งตัว':
+    'Install and start {0} on this computer first, then download at least one model',
+  'API key (ไม่บังคับ)': 'API key (optional)',
+  '(ไม่บังคับ)': '(optional)',
+  ใช้โมเดลแรกที่บริการมี: "Use the service's first model",
+  'ดาวน์โหลด {0}': 'Download {0}',
+  'ขอ API key จาก {0}': 'Get an API key from {0}',
+  'ร่างข้อความได้อย่างเดียว ยังไม่รองรับรูปภาพและการค้นเว็บ': 'Text drafting only; images and web search are not supported yet',
+  'ไม่มีค่าใช้จ่าย · ข้อมูลอยู่ในเครื่องนี้': 'No cost · data stays on this computer',
+  'ใช้งบ API · คิดตามการใช้กับบัญชีเจ้าของคีย์ ยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ':
+    "Uses API budget · billed to the key owner's account. Confirm who pays before connecting",
+  โมเดลหลายร้อยตัวจากหลายบริษัทในบัญชีเดียว: 'Hundreds of models from many companies in one account',
+  โมเดลคุยและให้เหตุผลราคาประหยัด: 'Low-cost chat and reasoning models',
+  'โมเดลเปิด ตอบเร็วมาก': 'Open models with very fast replies',
+  โมเดลจากยุโรป: 'Models from Europe',
+  'โมเดล Grok ของ xAI': "xAI's Grok models",
+  'โมเดลที่รันในเครื่องนี้ ข้อมูลไม่ออกนอกเครื่อง': 'Models that run on this computer; data never leaves it',
+  'บริการนี้ไม่ได้แนะนำโมเดล กรุณาพิมพ์ชื่อโมเดลที่จะใช้': 'This service did not suggest a model. Type the model name to use',
+  'ลงชื่อด้วย OpenRouter ไม่สำเร็จ ลองใหม่ หรือใส่ API key ของ OpenRouter แทน':
+    'OpenRouter sign-in failed. Try again, or paste an OpenRouter API key instead',
+  'ไม่ได้รับการยืนยันจาก OpenRouter ภายใน 5 นาที กรุณาเริ่มใหม่': 'OpenRouter did not confirm within 5 minutes. Please start again',
+  'ยืนยันการเชื่อมในหน้า OpenRouter ที่เปิดขึ้น': 'Approve the connection on the OpenRouter page that opened',
   ร่างที่แก้ไขได้: 'Editable draft',
   '“{0}” มีร่างให้ตรวจแล้ว': '“{0}” has a draft ready to review',
   '“{0}” รอข้อมูลเพิ่มจากคุณ': '“{0}” needs more information from you',
@@ -1533,4 +1572,9 @@ export const en: Record<string, string> = {
   'ภาพที่ {0}': 'Picture {0}',
   'AI ส่งคำตอบไม่ครบหรือว่างเปล่า ระบบลองใหม่ให้แล้วแต่ยังไม่สำเร็จ ลองส่งอีกครั้ง หรือเลือกรุ่นโมเดลอื่น':
     'The AI returned an incomplete or empty answer, and retrying did not help. Send again or choose another model',
+  'กำลังดาวน์โหลดเวอร์ชัน {0}': 'Downloading version {0}',
+  'มีเวอร์ชันใหม่ {0}': 'New version {0}',
+  'ดาวน์โหลดแล้ว รีสตาร์ทเพื่อใช้เวอร์ชันใหม่ งานที่ค้างไว้ยังอยู่': 'Downloaded. Restart to use it; your work stays',
+  'Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดแล้วลากไปที่ Applications':
+    'This Mac build cannot install updates itself; download it and drag it to Applications',
 };

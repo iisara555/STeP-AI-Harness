@@ -6,7 +6,56 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+STeP Desktop version 0.5.7 (`desktop/package.json`) contains the changes below. 0.5.7 adds the first six sections, from "The browser agent can click tiles" through "Update card above the profile". "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### The browser agent can click tiles that only a script makes clickable
+
+- **The problem:** on sites built with Vue, Svelte or plain `addEventListener` (for example the coffee menu at seleniumbase.io/coffee), a drink is a `<div>` with a click listener. It has no button, link, role or `onclick` attribute, and its pointer cursor shows only on hover. The page snapshot found clickable elements from markup and the resting cursor, so it never offered the cups. The AI could only see **Total: $0.00** and told the employee to click by hand.
+- **The fix:** before each snapshot, the main process asks the DevTools protocol's DOM domain which elements have click, mouse or pointer listeners. This needs no JavaScript in the page; listeners live in the page's own world, which the isolated snapshot cannot see. Those elements get a random attribute that the snapshot reads and removes at once. A framework root that listens for every click is not offered, because a container of real controls is not a target, and only the outermost of nested targets counts. If the protocol is unavailable (DevTools already open on that page), the snapshot works as before.
+- **Better names for tiles:** a tile's label comes from its inner `aria-label` or image alt text before its raw text, so the AI sees "Americano" rather than "espresso water". A new `context` field gives the heading of the card or list item, such as "Americano $7.00". The browser rules tell the AI to match by label or context, click once per snapshot when adding several items, and read again before saying something cannot be clicked.
+- The browser-agent smoke now has a page built like the coffee menu. Both cups are found with their names and prices, the root is not offered, and two clicks on Americano make the total $14.00. It also checks that no marker attribute remains on the page.
+
+### A gooey waiting motion
+
+- While the AI works, the activity line now shows ink-like drops instead of the turning spinner. A head pulls up out of a body on a neck, two drops leave to the left, and all of them melt back in on a 3.2-second loop.
+- It is drawn in SVG: the shapes are blurred, then a colour matrix sharpens the blur's alpha into one edge. No image or library is needed. It takes the text colour, so it fits the light and dark themes.
+- When the system asks for reduced motion (Windows animations off), it keeps moving at half speed, as the spinner did, so a wait never looks frozen.
+
+### Sidebar checked end to end
+
+- **New smoke test:** `test/sidebar-smoke.mjs` uses every sidebar control in the real app against a local fake AI:
+  - new task (a blank page, nothing saved until the first message)
+  - opening tasks, Thai full-text search and the "no results" message
+  - the command-palette button and the **มีผลงาน** filter
+  - pin and unpin, rename, and delete (cancel and confirm, including the open task)
+  - the Skill hub, the receipt check and settings
+  - the profile line, and hiding and showing the sidebar
+- **Search no longer flashes "ไม่พบงาน":** while the full-text search is still answering, the list filters by title and loaded text instead of going empty on every keystroke.
+- **Renaming keeps what you typed:** clicking away from the name box now saves the new name, as in other chat apps. Before, it threw the edit away. Escape still cancels.
+
+### Chat answers that look like Claude, ChatGPT and Cursor
+
+- **Full Markdown in answers:** answers now render GitHub-flavoured Markdown (react-markdown with remark-gfm). This covers headings at every level, nested and task lists, tables, quotes, `inline code`, strikethrough, horizontal rules and links. Before, inline code, quotes and links showed as plain text.
+- **Code blocks with colours:** fenced code is highlighted for common languages (Python, JavaScript/TypeScript, JSON, Bash, SQL, HTML/XML, CSS, YAML, Markdown) in light and dark themes, with a copy button.
+- **Calmer conversation:** no name label above every turn. Your message is a right-aligned bubble and the answer is plain text on the page, with larger type and spacing. Copy and feedback buttons stay on the newest answer and appear on hover for older ones.
+- **While the AI works:** a blinking caret follows the streamed text, and a single line shows what is happening and the elapsed time. The "app is still working" line now appears only when the app stops reporting.
+- **Safety unchanged:** raw HTML in an answer is dropped, never rendered. `javascript:` and other non-web links are not clickable, and web links open in the app's browser panel. Images in answers are not loaded; a link is shown instead. `step-tool` requests stay hidden, including while they stream.
+
+### More AI services, and a simpler connection page
+
+- **Pick a service from tiles:** the AI connection page (Settings and the setup wizard) now lists each service as a tile with how it connects (sign in, API key, or on this computer) and one line about it. The chosen tile opens a card with the key field, a link to where the service issues keys, an optional model and who pays, with the connect button inside it. The old sticky button that covered the text below it is gone; choosing a tile scrolls its card into view. The setup wizard shows the main services first, with the rest behind **ดูบริการอื่น**.
+- **New services:** OpenRouter, Claude API, OpenAI API, DeepSeek, Groq, Mistral, xAI Grok and Ollama (local) join ChatGPT and Gemini. Each new service is fixed to its official endpoint and uses the employee's own key, stored encrypted like other keys. These services draft text only; images and web search are not supported yet.
+- **Sign in with OpenRouter:** OpenRouter can issue a key for the app through its own sign-in page (OAuth PKCE with a one-time loopback callback on this computer), so nobody copies a key by hand; pasting an existing key also works.
+- **Models from the service:** API-compatible connections now load the service's model list (`GET /models`) after connecting. When no model was typed, the service's recommended model is used.
+- **Tidier connection rows:** a connection shows its own name (OpenRouter, Groq, ...). A working connection offers **ทดสอบอีกครั้ง** as a quiet button. Runtime and sign-out buttons appear only where they apply.
+- **Policy:** new feature `providerPresets` (default on) allows the services above. Set it to false to offer only ChatGPT, Claude, Gemini and administrator-approved endpoints. A free-form endpoint still needs `compatibleProviders` and an approved profile, and preset endpoints are refused while `network.proxyUrl` is set.
+- Tests: unit tests for the presets, endpoint checks, model lists and OpenRouter PKCE. A new Electron smoke signs in to a fake OpenRouter and connects Groq with a key; no real service is called. The OpenRouter sign-in has not been tried against the live service yet.
+
+### Update card above the profile, as in Claude and Codex
+
+- **Next to the profile:** when a new version is on its way, a card at the bottom of the task list, above the profile, shows the download with its progress, then **รีสตาร์ทเพื่ออัปเดต** once it is ready (Windows). On a Mac build that cannot install updates itself, it shows **ดาวน์โหลดเวอร์ชัน x.y.z**.
+- **One place at a time:** the title-bar button now appears only while the task list is hidden.
+- The UX smoke checks the downloading, ready and Mac states of the card and the title-bar fallback.
 
 ### Gemini: faster tool turns and fewer failed answers
 

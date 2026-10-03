@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CircleAlert, CircleCheck, LoaderCircle, Search, X } from 'lucide-react';
 import type { Session } from './types';
-import { markdownDocument, type DraftNode } from './draft';
 import { explainError } from './messages';
 import { t } from './i18n';
+import { presetFor } from './provider-presets';
+import { ChatMarkdown } from './chat-markdown';
 
 // The one way the app asks "are you sure": focused, Enter confirms, Esc cancels, errors stay inline.
 export function ConfirmDialog({
@@ -202,134 +203,9 @@ export const formatElapsed = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
-// Renders model Markdown through the bounded draft schema: no HTML, links, or images reach the DOM.
-function node(n: DraftNode, key: number): ReactNode {
-  const children = (n.content || []).map(node);
-  switch (n.type) {
-    case 'text': {
-      let out: ReactNode = n.text;
-      for (const m of n.marks || []) out = m.type === 'bold' ? <strong>{out}</strong> : <em>{out}</em>;
-      return <span key={key}>{out}</span>;
-    }
-    case 'hardBreak':
-      return <br key={key} />;
-    case 'heading':
-      return n.attrs?.level === 1 ? <h3 key={key}>{children}</h3> : <h4 key={key}>{children}</h4>;
-    case 'bulletList':
-      return <ul key={key}>{children}</ul>;
-    case 'orderedList':
-      return (
-        <ol key={key} start={n.attrs?.start}>
-          {children}
-        </ol>
-      );
-    case 'listItem':
-      return <li key={key}>{children}</li>;
-    default:
-      return <p key={key}>{children}</p>;
-  }
-}
-export type ChatBlock = { kind: 'text' | 'code' | 'table'; text: string; language?: string; rows?: string[][] };
-export function chatBlocks(text: string): ChatBlock[] {
-  const blocks: ChatBlock[] = [];
-  const lines = text.replace(/\r\n/g, '\n').slice(0, 150000).split('\n');
-  let pending: string[] = [];
-  const flush = () => {
-    if (pending.length) blocks.push({ kind: 'text', text: pending.join('\n') });
-    pending = [];
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const fence = /^\s{0,3}(`{3,}|~{3,})([\w+-]*)\s*$/.exec(lines[i]);
-    if (fence) {
-      flush();
-      const content: string[] = [];
-      i++;
-      for (; i < lines.length && !lines[i].trim().startsWith(fence[1]); i++) content.push(lines[i]);
-      if (fence[2] !== 'step-tool') blocks.push({ kind: 'code', text: content.join('\n'), language: fence[2] });
-      continue;
-    }
-    if (lines[i].includes('|') && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1] || '')) {
-      flush();
-      const row = (line: string) =>
-        line
-          .trim()
-          .replace(/^\||\|$/g, '')
-          .split('|')
-          .slice(0, 20)
-          .map(c => c.trim());
-      const rows = [row(lines[i])];
-      i += 2;
-      for (; i < lines.length && lines[i].trim() && lines[i].includes('|') && rows.length < 100; i++) rows.push(row(lines[i]));
-      i--;
-      blocks.push({ kind: 'table', text: '', rows });
-      continue;
-    }
-    pending.push(lines[i]);
-  }
-  flush();
-  return blocks;
-}
-function CodeBlock({ block }: { block: ChatBlock }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <figure className="chat-code">
-      <header>
-        <span>{block.language || 'text'}</span>
-        <button
-          className="quiet"
-          onClick={() =>
-            void navigator.clipboard
-              .writeText(block.text)
-              .then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              })
-              .catch(() => setCopied(false))
-          }
-        >
-          {copied ? t('คัดลอกแล้ว') : t('คัดลอกโค้ด')}
-        </button>
-      </header>
-      <pre>
-        <code>{block.text}</code>
-      </pre>
-    </figure>
-  );
-}
-export function RichText({ text, className = '' }: { text: string; className?: string }) {
-  const blocks = useMemo(() => chatBlocks(text), [text]);
-  return (
-    <div className={'rich-text ' + className}>
-      {blocks.map((block, i) =>
-        block.kind === 'code' ? (
-          <CodeBlock key={i} block={block} />
-        ) : block.kind === 'table' ? (
-          <div className="chat-table" key={i}>
-            <table>
-              <thead>
-                <tr>
-                  {block.rows?.[0].map((cell, j) => (
-                    <th key={j}>{cell}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {block.rows?.slice(1).map((row, j) => (
-                  <tr key={j}>
-                    {row.map((cell, k) => (
-                      <td key={k}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div key={i}>{(markdownDocument(block.text).content || []).map(node)}</div>
-        ),
-      )}
-    </div>
-  );
+/** Chat answers: GitHub-flavoured Markdown as in other AI apps (see chat-markdown). */
+export function RichText({ text, className = '', onLink }: { text: string; className?: string; onLink?: (url: string) => void }) {
+  return <ChatMarkdown text={text} className={className} onLink={onLink} />;
 }
 
 export type Toast = { id: number; text: string; tone: 'info' | 'success' | 'error'; action?: { label: string; run: () => unknown } };
@@ -482,121 +358,278 @@ export type ProviderChoice = {
   baseUrl?: string;
   protocol?: 'openai' | 'anthropic';
   model?: string;
+  /** A well-known service from provider-presets (OpenRouter, DeepSeek, ...). */
+  preset?: string;
 };
 export const initialChoice: ProviderChoice = { provider: 'openai', mode: 'subscription', key: '', googleCloudProject: '' };
 export function providerChoiceReady(c: ProviderChoice) {
   if (c.provider === 'antigravity') return c.mode === 'subscription' && /^gemini-[\w.-]+$/.test(c.model || '') && !c.key;
+  if (c.provider === 'compatible' && c.preset) {
+    const preset = presetFor(c.preset);
+    // OpenRouter can issue the key itself through its sign-in page.
+    return Boolean(preset && (preset.key === 'none' || preset.signIn || c.key.trim()));
+  }
   if (c.provider === 'compatible') return Boolean(c.baseUrl?.trim() && c.model?.trim() && (c.protocol !== 'anthropic' || c.key.trim()));
   return c.mode !== 'api' || Boolean(c.key.trim());
 }
 export function providerDefaultMode(provider: string): ProviderChoice['mode'] {
   return ['claude', 'copilot'].includes(provider) ? 'oauth' : ['gemini', 'compatible'].includes(provider) ? 'api' : 'subscription';
 }
+/** What the 'connection' call stores for this choice. */
+export const connectionInput = (c: ProviderChoice) => ({
+  provider: c.provider,
+  mode: c.mode,
+  apiKey: c.key,
+  googleCloudProject: c.googleCloudProject,
+  model: c.model,
+  ...(c.preset ? { preset: c.preset } : { baseUrl: c.baseUrl, protocol: c.protocol }),
+});
+/** The connect button's words: what happens when it is pressed. */
+export function connectLabel(c: ProviderChoice, fallback = t('เพิ่มการเชื่อมต่อ')) {
+  const preset = c.provider === 'compatible' ? presetFor(c.preset) : undefined;
+  if (preset?.signIn && !c.key.trim()) return t('ลงชื่อด้วย {0}', preset.label);
+  if (preset) return t('เชื่อมต่อ {0}', preset.label);
+  if (c.mode === 'subscription' && c.provider === 'openai') return t('เชื่อมต่อ ChatGPT');
+  if (c.mode === 'subscription' && c.provider === 'claude') return t('เชื่อมต่อ Claude');
+  if (c.mode === 'subscription' && c.provider === 'gemini') return t('เชื่อมต่อ Google');
+  if (c.mode === 'oauth' && c.provider === 'claude') return t('เชื่อมต่อ Claude OAuth');
+  if (c.mode === 'api' && ['gemini', 'claude', 'openai'].includes(c.provider)) return t('เชื่อมต่อ {0}', tileName(c));
+  return fallback;
+}
+const tileName = (c: ProviderChoice) =>
+  c.provider === 'gemini' ? 'Gemini' : c.provider === 'claude' ? 'Claude API' : c.provider === 'openai' ? 'OpenAI API' : c.provider;
+
+type Tile = {
+  id: string;
+  label: string;
+  description: string;
+  kind: 'account' | 'key' | 'local';
+  choice: ProviderChoice;
+};
+function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
+  const key = (provider: string, label: string, description: string): Tile => ({
+    id: provider + '-api',
+    label,
+    description,
+    kind: 'key',
+    choice: { ...initialChoice, provider, mode: 'api' },
+  });
+  const preset = (id: string): Tile => {
+    const p = presetFor(id)!;
+    return {
+      id,
+      label: p.label,
+      description: t(p.description),
+      kind: p.key === 'none' ? 'local' : p.signIn ? 'account' : 'key',
+      choice: { ...initialChoice, provider: 'compatible', mode: 'api', preset: id },
+    };
+  };
+  return [
+    {
+      id: 'chatgpt',
+      label: 'ChatGPT',
+      description: t('ใช้แพ็กเกจ ChatGPT Plus/Pro ที่คุณมี'),
+      kind: 'account',
+      choice: { ...initialChoice },
+    },
+    ...(claudeSubscription
+      ? [
+          {
+            id: 'claude-sub',
+            label: 'Claude Pro / Max',
+            description: t('ใช้แพ็กเกจ Claude ที่คุณมี'),
+            kind: 'account' as const,
+            choice: { ...initialChoice, provider: 'claude', mode: 'subscription' },
+          },
+        ]
+      : []),
+    ...(presets ? [preset('openrouter')] : []),
+    key('gemini', 'Gemini', t('คีย์จาก Google AI Studio มีแบบใช้ฟรี')),
+    key('claude', 'Claude API', t('คีย์จาก Anthropic Console คิดตามการใช้')),
+    key('openai', 'OpenAI API', t('คีย์จาก OpenAI Platform คิดตามการใช้')),
+    ...(presets ? ['deepseek', 'groq', 'mistral', 'xai', 'ollama'].map(preset) : []),
+  ];
+}
+const tileFor = (tiles: Tile[], c: ProviderChoice) =>
+  tiles.find(tile =>
+    c.preset ? tile.choice.preset === c.preset : !tile.choice.preset && tile.choice.provider === c.provider && tile.choice.mode === c.mode,
+  );
+const MAIN_TILES = ['chatgpt', 'claude-sub', 'openrouter', 'gemini-api'];
+const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'API key', local: 'ในเครื่องนี้' };
+
 export function ProviderFields(props: {
   value: ProviderChoice;
   onChange: (next: ProviderChoice) => void;
   call: (method: string, input?: any) => Promise<any>;
   claudeSubscription?: boolean;
+  presets?: boolean;
+  /** The connect button (and its progress), shown with the chosen service. */
+  action?: ReactNode;
+  /** First-run setup: the main services first, the rest behind "more services". */
+  compact?: boolean;
 }) {
-  const [advanced, setAdvanced] = useState(false);
+  const all = providerTiles(Boolean(props.claudeSubscription), props.presets !== false);
+  const selected = tileFor(all, props.value);
+  const [advanced, setAdvanced] = useState(false),
+    [more, setMore] = useState(false);
+  const main = all.filter(tile => MAIN_TILES.includes(tile.id));
+  const tiles = props.compact && !more && (!selected || MAIN_TILES.includes(selected.id)) ? main : all;
   return (
     <>
       {!advanced ? (
-        <div>
-          <p>{t('บัญชีที่ใช้งานใน STeP ได้: เลือกแล้วกดเชื่อมต่อ ChatGPT จะเปิดหน้าลงชื่อในเบราว์เซอร์ ส่วน Gemini ใช้ API key')}</p>
-          <div className="choice-row" role="group" aria-label={t('เลือกบัญชี AI')}>
-            <button
-              type="button"
-              className={props.value.provider === 'openai' ? 'choice active' : 'choice'}
-              aria-pressed={props.value.provider === 'openai'}
-              onClick={() => props.onChange({ ...initialChoice })}
-            >
-              ChatGPT
-            </button>
-            {props.claudeSubscription && (
+        <div className="provider-picker">
+          <div className="provider-tiles" role="radiogroup" aria-label={t('เลือกบริการ AI')}>
+            {tiles.map(tile => (
               <button
+                key={tile.id}
                 type="button"
-                className={props.value.provider === 'claude' ? 'choice active' : 'choice'}
-                aria-pressed={props.value.provider === 'claude'}
-                onClick={() => props.onChange({ ...initialChoice, provider: 'claude', mode: 'subscription' })}
+                role="radio"
+                aria-checked={selected?.id === tile.id}
+                className={selected?.id === tile.id ? 'provider-tile active' : 'provider-tile'}
+                onClick={() => props.onChange({ ...tile.choice })}
               >
-                Claude Pro / Max
+                <span className="provider-tile-head">
+                  <strong>{tile.label}</strong>
+                  <span className={'provider-kind ' + tile.kind}>{t(KIND_LABEL[tile.kind])}</span>
+                </span>
+                <span className="provider-tile-text">{tile.description}</span>
               </button>
-            )}
-            <button
-              type="button"
-              className={props.value.provider === 'gemini' && props.value.mode === 'api' ? 'choice active' : 'choice'}
-              aria-pressed={props.value.provider === 'gemini' && props.value.mode === 'api'}
-              onClick={() => props.onChange({ ...initialChoice, provider: 'gemini', mode: 'api' })}
-            >
-              Gemini · API key
-            </button>
+            ))}
           </div>
-          {props.value.provider === 'gemini' && props.value.mode === 'api' && (
-            <div className="gemini-key">
-              <label>
-                Gemini API key
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={props.value.key}
-                  onChange={e => props.onChange({ ...props.value, key: e.target.value })}
-                  placeholder={t('วางคีย์จาก Google AI Studio · เก็บเข้ารหัสในเครื่องนี้')}
-                />
-              </label>
-              <button type="button" className="quiet" onClick={() => void props.call('openHelp', { topic: 'geminiKey' })}>
-                {t('ขอ API key จาก Google AI Studio')}
-              </button>
-              <p className="small muted">{t('ถ้าใช้คีย์แบบฟรี ให้ตรวจเงื่อนไขของ Google เรื่องการนำข้อมูลไปใช้ก่อนส่งงานขององค์กร')}</p>
-            </div>
+          {tiles.length < all.length && (
+            <button type="button" className="text-link" onClick={() => setMore(true)}>
+              {t('ดูบริการอื่นอีก {0} รายการ', all.length - tiles.length)}
+            </button>
           )}
-          <details>
-            <summary>{t('มีบัญชี Claude หรือ Gemini อยู่แล้ว?')}</summary>
-            {!props.claudeSubscription && (
-              <p className="small muted">
-                {t('Claude Pro/Max: ใช้ผ่าน Claude Code ภายนอกได้จากตัวเลือก AI ในหน้างาน การคุยใน STeP ยังไม่เปิดสำหรับบัญชีนี้')}
-              </p>
-            )}
-            <p className="small muted">
-              {t(
-                'Gemini: ใช้ API key จาก Google AI Studio ได้จากปุ่ม “Gemini · API key” ด้านบน ส่วนการลงชื่อด้วยบัญชี Google ส่วนตัวใช้ไม่ได้แล้ว เพราะ Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัว',
-              )}
-            </p>
-          </details>
-          <p className="small muted">
-            {props.value.mode === 'api'
-              ? t('ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้งโดยใช้คีย์นี้')
-              : t('ไม่ต้องกรอก API key ระบบจะทดสอบด้วยข้อความสั้นหนึ่งครั้ง โดยใช้สิทธิ์ของบัญชีคุณ')}
-          </p>
-          {props.value.provider === 'claude' && props.claudeSubscription && <ClaudeCodeNote call={props.call} subscription />}
+          {selected && (
+            <ProviderDetail tile={selected} value={props.value} onChange={props.onChange} call={props.call}>
+              {props.action}
+            </ProviderDetail>
+          )}
         </div>
       ) : (
-        <AdvancedProviderFields {...props} />
+        <>
+          <AdvancedProviderFields {...props} />
+          <p className="connection-cost" role="status">
+            {props.value.mode === 'claude-code'
+              ? t('เปิดแอปอื่น · ใช้บัญชี Claude Code ของคุณ ผลงานจะไม่กลับเข้า STeP อัตโนมัติ')
+              : props.value.mode === 'api' || (props.value.provider === 'claude' && props.value.mode === 'oauth')
+                ? t(
+                    'ใช้งบ API · คิดตามการใช้กับบัญชีหรือโครงการของเจ้าของคีย์/สิทธิ์ที่เลือก โปรดยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ ไม่ใช้แพ็กเกจแชตส่วนตัว',
+                  )
+                : props.value.provider === 'gemini' || props.value.provider === 'copilot'
+                  ? t('ใช้สิทธิ์บัญชีองค์กรที่ลงชื่อ · ให้ผู้ดูแลยืนยันสิทธิ์และโควตาก่อนใช้งาน')
+                  : t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')}
+          </p>
+          {props.action}
+        </>
       )}
-      <p className="connection-cost" role="status">
-        {props.value.mode === 'claude-code'
-          ? t('เปิดแอปอื่น · ใช้บัญชี Claude Code ของคุณ ผลงานจะไม่กลับเข้า STeP อัตโนมัติ')
-          : props.value.mode === 'api' || (props.value.provider === 'claude' && props.value.mode === 'oauth')
-            ? t(
-                'ใช้งบ API · คิดตามการใช้กับบัญชีหรือโครงการของเจ้าของคีย์/สิทธิ์ที่เลือก โปรดยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ ไม่ใช้แพ็กเกจแชตส่วนตัว',
-              )
-            : props.value.provider === 'gemini' || props.value.provider === 'copilot'
-              ? t('ใช้สิทธิ์บัญชีองค์กรที่ลงชื่อ · ให้ผู้ดูแลยืนยันสิทธิ์และโควตาก่อนใช้งาน')
-              : t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')}
+      <p>
+        <button
+          type="button"
+          className="text-link"
+          aria-expanded={advanced}
+          onClick={() => {
+            setAdvanced(!advanced);
+            // Switching views starts from a clean choice: no API key, Console billing route or preset carries over.
+            props.onChange({ ...initialChoice });
+          }}
+        >
+          {advanced ? t('กลับไปเลือกบริการ') : t('ตั้งค่าขั้นสูงสำหรับผู้ดูแล')}
+        </button>
       </p>
-      <button
-        type="button"
-        className="text-link"
-        aria-expanded={advanced}
-        onClick={() => {
-          setAdvanced(!advanced);
-          // Returning to account sign-in must never retain an API key or a Console billing route.
-          if (advanced) props.onChange({ ...initialChoice });
-        }}
-      >
-        {advanced ? t('กลับไปเชื่อมต่อบัญชีส่วนตัว') : t('ตั้งค่าขั้นสูงสำหรับผู้ดูแล')}
-      </button>
     </>
+  );
+}
+
+// The selected service: its key (and where to get one), an optional model, and who pays.
+function ProviderDetail({
+  tile,
+  value,
+  onChange,
+  call,
+  children,
+}: {
+  tile: Tile;
+  value: ProviderChoice;
+  onChange: (next: ProviderChoice) => void;
+  call: (method: string, input?: any) => Promise<any>;
+  children?: ReactNode;
+}) {
+  const preset = presetFor(value.preset);
+  const help =
+    value.provider === 'gemini'
+      ? 'geminiKey'
+      : value.provider === 'claude' && value.mode === 'api'
+        ? 'anthropicKey'
+        : value.provider === 'openai' && value.mode === 'api'
+          ? 'openaiKey'
+          : preset?.keyUrl
+            ? 'preset:' + preset.id
+            : '';
+  const needsKey = value.mode === 'api' && preset?.key !== 'none';
+  // Choosing a service brings its key field and connect button into view; the first render leaves the page where it is.
+  const card = useRef<HTMLDivElement>(null),
+    shown = useRef(false);
+  useEffect(() => {
+    if (shown.current) card.current?.scrollIntoView?.({ block: 'nearest' });
+    shown.current = true;
+  }, [tile.id]);
+  return (
+    <div className="provider-detail" ref={card}>
+      {tile.kind === 'account' && !preset && <p className="small">{t('กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key')}</p>}
+      {value.provider === 'claude' && value.mode === 'subscription' && <ClaudeCodeNote call={call} subscription />}
+      {preset?.signIn && (
+        <p className="small">
+          {t('กดลงชื่อแล้วอนุญาตในหน้า {0} ระบบจะได้คีย์ของแอปนี้มาเก็บเข้ารหัสเอง หรือวางคีย์ที่มีอยู่แล้วด้านล่าง', preset.label)}
+        </p>
+      )}
+      {preset?.key === 'none' && (
+        <p className="small">{t('ติดตั้งและเปิด {0} ในเครื่องนี้ก่อน แล้วดาวน์โหลดโมเดลอย่างน้อยหนึ่งตัว', preset.label)}</p>
+      )}
+      {needsKey && (
+        <label>
+          {preset?.signIn ? t('API key (ไม่บังคับ)') : `${tile.label} API key`}
+          <input
+            type="password"
+            autoComplete="off"
+            value={value.key}
+            onChange={e => onChange({ ...value, key: e.target.value })}
+            placeholder={t('เก็บเข้ารหัสในเครื่องนี้')}
+          />
+        </label>
+      )}
+      {preset && (
+        <label>
+          <span>
+            {t('โมเดล')} <span className="muted small">{t('(ไม่บังคับ)')}</span>
+          </span>
+          <input
+            value={value.model || ''}
+            onChange={e => onChange({ ...value, model: e.target.value.trim() })}
+            placeholder={preset.defaultModel || t('ใช้โมเดลแรกที่บริการมี')}
+            autoComplete="off"
+          />
+        </label>
+      )}
+      {help && (
+        <button type="button" className="text-link" onClick={() => void call('openHelp', { topic: help })}>
+          {preset?.key === 'none' ? t('ดาวน์โหลด {0}', preset.label) : t('ขอ API key จาก {0}', preset?.label || tileName(value))}
+        </button>
+      )}
+      {value.provider === 'gemini' && value.mode === 'api' && (
+        <p className="small muted">{t('ถ้าใช้คีย์แบบฟรี ให้ตรวจเงื่อนไขของ Google เรื่องการนำข้อมูลไปใช้ก่อนส่งงานขององค์กร')}</p>
+      )}
+      {preset && preset.key !== 'none' && <p className="small muted">{t('ร่างข้อความได้อย่างเดียว ยังไม่รองรับรูปภาพและการค้นเว็บ')}</p>}
+      <p className="connection-cost" role="status">
+        {preset?.key === 'none'
+          ? t('ไม่มีค่าใช้จ่าย · ข้อมูลอยู่ในเครื่องนี้')
+          : tile.kind === 'account' && !preset
+            ? t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')
+            : t('ใช้งบ API · คิดตามการใช้กับบัญชีเจ้าของคีย์ ยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ')}
+      </p>
+      {children}
+    </div>
   );
 }
 
@@ -682,12 +715,6 @@ function AdvancedProviderFields({
             Base URL
             <input value={value.baseUrl || ''} onChange={e => onChange({ ...value, baseUrl: e.target.value })} autoComplete="off" />
           </label>
-          <button
-            className="quiet"
-            onClick={() => onChange({ ...value, baseUrl: 'http://127.0.0.1:11434/v1', protocol: 'openai', key: '' })}
-          >
-            {t('ใช้ Ollama ในเครื่อง')}
-          </button>
           <p className="small muted">{t('ใช้ได้เฉพาะปลายทางที่ผู้ดูแลอนุญาต ต้องตรวจข้อมูลและอนุมัติส่งเช่นเดียวกับบัญชีอื่น')}</p>
         </div>
       )}

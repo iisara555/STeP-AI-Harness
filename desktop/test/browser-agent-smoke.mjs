@@ -26,9 +26,21 @@ const server = createServer((req, res) => {
   res.end(
     req.url === '/login'
       ? '<input type="password" aria-label="Password"><p>Private login screen</p>'
-      : req.url === '/shop'
-        ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
-        : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
+      : req.url === '/coffee'
+        ? // As on seleniumbase.io/coffee (coffee-cart, Vue): the cup is a plain <div> with a click listener, the pointer
+          // cursor shows only on hover, the name is the inner aria-label and the price is in the list item's heading.
+          // The app root listens for every click too, as frameworks that delegate events do; it is not a target itself.
+          '<style>.cup:hover{cursor:pointer}</style><div id="app"><ul>' +
+          ['Espresso:10.00', 'Americano:7.00']
+            .map(c => {
+              const [n, p] = c.split(':');
+              return `<li><h4>${n}<br><small>$${p}</small></h4><div class="w"><div class="cup"><div class="cup-body" aria-label="${n}"><div>espresso</div><div>water</div></div></div></div></li>`;
+            })
+            .join('') +
+          '</ul><button id="pay">Total: $0.00</button></div><script>let t=0;document.getElementById("app").addEventListener("click",()=>{});for(const w of document.querySelectorAll(".w"))w.addEventListener("click",()=>{t+=w.querySelector(".cup-body").getAttribute("aria-label")==="Americano"?7:10;document.getElementById("pay").textContent="Total: $"+t.toFixed(2)})</script>'
+        : req.url === '/shop'
+          ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
+          : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
   );
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -122,6 +134,36 @@ try {
     true,
   );
   assert.match((await run(shop.tab, { action: 'read' })).text, /Cart: 1/);
+  // A tile made clickable only by a script's click listener, with no pointer cursor until hovered, is found through
+  // its listener, named by its inner label and placed by its heading; the framework's root is not offered.
+  const coffee = await run(url + '/coffee', { action: 'open' });
+  const americano = coffee.elements.find(e => e.label === 'Americano');
+  assert.ok(americano, JSON.stringify(coffee.elements));
+  assert.equal(americano.context, 'Americano $7.00');
+  assert.equal(coffee.elements.filter(e => e.label === 'Espresso').length, 1);
+  assert.equal(
+    coffee.elements.some(e => /Espresso.*Americano/s.test(e.label)),
+    false,
+    'the app root is not a target',
+  );
+  for (let i = 0; i < 2; i++) {
+    const page = await run(coffee.tab, { action: 'read' });
+    const cup = page.elements.find(e => e.label === 'Americano');
+    assert.equal((await run(coffee.tab, { action: 'click', snapshot: page.snapshot, ref: cup.ref })).performed, true);
+  }
+  const paid = await run(coffee.tab, { action: 'read' });
+  assert.match(paid.text, /Total: \$14\.00/);
+  // The temporary marks are gone from the page after each read.
+  assert.equal(
+    await app.evaluate(({ webContents }) =>
+      webContents
+        .getAllWebContents()
+        .find(w => w.getURL().endsWith('/coffee'))
+        .executeJavaScript('[...document.querySelectorAll("*")].some(el => [...el.attributes].some(a => a.name.startsWith("data-step-")))'),
+    ),
+    false,
+  );
+  await run(coffee.tab, { action: 'close' });
   // Other local or private addresses stay closed to the assistant.
   for (const blocked of ['http://localhost:9/', 'http://192.168.1.1/', 'http://10.0.0.1/'])
     assert.equal((await run(blocked, { action: 'open' })).error, 'WEB_ADDRESS_BLOCKED', blocked);

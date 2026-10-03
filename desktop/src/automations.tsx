@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ConfirmDialog } from './ui';
-import { explainError, providerLabel } from './messages';
+import { explainError, connectionLabel } from './messages';
 import type { Connection, DesktopAPI } from './types';
 import type { Automation, AutomationRun } from '../electron/cron';
 import { locale, t } from './i18n';
@@ -129,7 +129,7 @@ export function AutomationDialog({
                 .filter(c => c.ready)
                 .map(c => (
                   <option key={c.id} value={c.id}>
-                    {providerLabel(c.provider)} {c.model}
+                    {connectionLabel(c)} {c.model}
                   </option>
                 ))}
             </select>

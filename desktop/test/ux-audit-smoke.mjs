@@ -49,25 +49,28 @@ try {
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  // Choosing a service scrolls its card, with the connect button, into view.
+  await page.getByRole('radio', { name: /^Gemini/ }).click();
+  await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
   // Gemini API key sits on the main page: the connect button waits for a key, cost shows as API budget,
   // and going back to ChatGPT drops the key.
-  await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+  await page.getByRole('radio', { name: /^Gemini/ }).click();
   const geminiConnect = page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true });
   await expect(geminiConnect).toBeDisabled();
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
   await page.getByLabel('Gemini API key').fill('synthetic-gemini-key');
   await expect(geminiConnect).toBeEnabled();
   await assertVisibleButton(geminiConnect);
-  await page.getByRole('button', { name: 'ChatGPT', exact: true }).click();
-  await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+  await page.getByRole('radio', { name: /^ChatGPT/ }).click();
+  await page.getByRole('radio', { name: /^Gemini/ }).click();
   await expect(page.getByLabel('Gemini API key')).toHaveValue('');
-  await page.getByRole('button', { name: 'ChatGPT', exact: true }).click();
+  await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('claude');
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
-  await page.getByRole('button', { name: 'กลับไปเชื่อมต่อบัญชีส่วนตัว' }).click();
+  await page.getByRole('button', { name: 'กลับไปเลือกบริการ' }).click();
   await mkdir('release/qa/ux-fixes', { recursive: true });
   await page.screenshot({ path: 'release/qa/ux-fixes/small-window.png' });
   await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
@@ -96,15 +99,29 @@ try {
   await titlebar.getByRole('button', { name: 'เมนู STeP' }).click();
   await menu.getByRole('menuitem', { name: /ตรวจหาอัปเดต · เวอร์ชัน/ }).click();
   await titlebar.getByText('รุ่นทดสอบนี้ไม่อัปเดตตัวเอง').waitFor();
-  await app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.send('step:event', {
-      sessionId: '',
-      type: 'update',
-      update: { status: 'ready', current: '0.5.5', version: '0.5.6' },
-    }),
-  );
+  const sendUpdate = update =>
+    app.evaluate(
+      ({ BrowserWindow }, update) =>
+        BrowserWindow.getAllWindows()[0].webContents.send('step:event', { sessionId: '', type: 'update', update }),
+      update,
+    );
+  // The update card sits above the profile at the bottom of the task list, as in Claude and Codex.
+  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  await sendUpdate({ status: 'downloading', current: '0.5.5', version: '0.5.6', percent: 40 });
+  await page.locator('.update-card').getByText('กำลังดาวน์โหลดเวอร์ชัน 0.5.6').waitFor();
+  await sendUpdate({ status: 'ready', current: '0.5.5', version: '0.5.6' });
+  const card = page.locator('.update-card');
+  await card.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
+  assert.equal(await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).count(), 0, 'one place at a time');
+  await page.locator('.sidebar').screenshot({ path: 'release/qa/ux-fixes/update-card.png' });
+  // With the task list hidden, the title bar offers it instead.
+  await titlebar.getByRole('button', { name: 'ซ่อนแถบงาน' }).click();
   await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
   await page.screenshot({ path: 'release/qa/ux-fixes/update-ready.png' });
+  await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  // A Mac build that cannot install the update itself offers the download instead.
+  await sendUpdate({ status: 'manual', current: '0.5.5', version: '0.5.6', url: 'https://example.invalid' });
+  await card.getByRole('button', { name: 'ดาวน์โหลดเวอร์ชัน 0.5.6' }).waitFor();
   // Profile pictures: choose a bundled drawing in Settings; the sidebar shows it, and only bundled ids are stored.
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
   await page.getByRole('tab', { name: 'ทั่วไป' }).click();

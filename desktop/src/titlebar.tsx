@@ -3,6 +3,7 @@ import { ArrowDownToLine, ChevronDown, PanelLeft, PanelRight, RefreshCw, Search 
 import type { DesktopAPI, UpdateState } from './types';
 import type { CommandId } from './commands';
 import { t } from './i18n';
+import { useUpdate } from './update';
 
 const mac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
 const mod = mac ? '⌘' : 'Ctrl+';
@@ -45,18 +46,10 @@ export function TitleBar({
 }) {
   const [open, setOpen] = useState(false);
   const bar = useRef<HTMLElement>(null);
-  // In-app updates: a downloaded version waits behind "restart to update", as in Cursor and Codex.
-  const [update, setUpdate] = useState<UpdateState | null>(null),
+  // In-app updates: the card above the profile offers "restart to update"; the title bar shows it only while the
+  // task list (and so the card) is hidden.
+  const [update, setUpdate] = useUpdate(api),
     [checked, setChecked] = useState('');
-  useEffect(() => {
-    void api
-      .call('updateState')
-      .then(setUpdate)
-      .catch(() => {});
-    return api.onEvent(event => {
-      if (event.type === 'update' && event.update) setUpdate(event.update);
-    });
-  }, [api]);
   const checkUpdates = async () => {
     setChecked(t('กำลังตรวจหาอัปเดต…'));
     const state: UpdateState | null = await api.call('updateCheck').catch(() => null);
@@ -247,7 +240,7 @@ export function TitleBar({
             {checked}
           </span>
         )}
-        {update?.status === 'ready' && (
+        {!left && update?.status === 'ready' && (
           <button
             className="titlebar-update"
             title={t('ติดตั้งเวอร์ชัน {0} แล้วเปิดแอปใหม่ งานที่ค้างไว้ยังอยู่', update.version || '')}
@@ -257,7 +250,7 @@ export function TitleBar({
             {t('รีสตาร์ทเพื่ออัปเดต')}
           </button>
         )}
-        {update?.status === 'manual' && (
+        {!left && update?.status === 'manual' && (
           <button
             className="titlebar-update"
             title={t('Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดเวอร์ชัน {0} แล้วลากไปที่ Applications', update.version || '')}

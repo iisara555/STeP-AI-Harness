@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "private": true,
   "description": "Local STeP employee workspace",
   "author": "STeP AI Working Group",
@@ -11,7 +11,7 @@
     "start": "electron .",
     "test": "tsx --test test/*.test.ts",
     "test:installer": "node test/installer-upgrade-smoke.mjs",
-    "test:electron": "node test/ux-audit-smoke.mjs && node test/i18n-smoke.mjs && node test/browser-loop-smoke.mjs && node test/browser-agent-smoke.mjs && node test/account-connect-smoke.mjs && node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs && node test/antigravity-smoke.mjs && node test/gemini-api-smoke.mjs",
+    "test:electron": "node test/ux-audit-smoke.mjs && node test/i18n-smoke.mjs && node test/browser-loop-smoke.mjs && node test/browser-agent-smoke.mjs && node test/account-connect-smoke.mjs && node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs && node test/antigravity-smoke.mjs && node test/gemini-api-smoke.mjs && node test/provider-presets-smoke.mjs && node test/sidebar-smoke.mjs",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && node scripts/package-windows.mjs",
@@ -50,8 +50,11 @@
     "electron": "44.4.5",
     "electron-builder": "^26.0.0",
     "esbuild": "^0.25.0",
+    "highlight.js": "^11.12.0",
     "js-yaml": "^4.3.2",
     "prettier": "3.9.9",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tsx": "^4.0.0",
     "typescript": "^5.8.0",
     "vite": "^6.0.0"
