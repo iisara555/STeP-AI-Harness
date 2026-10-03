@@ -4,11 +4,16 @@ name: Build STeP Desktop installers
 # for Intel). Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
 # run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
 #
-# A `desktop-v<version>` tag also publishes: a release for that version, and the rolling `desktop-latest` release
+# A `desktop-v<version>` tag, or a manual run with "publish" ticked (which creates that tag), also publishes: a release for that version, and the rolling `desktop-latest` release
 # that installed apps read as their update feed (package.json build.publish). Other runs only keep the files as
 # workflow artifacts.
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish this commit as desktop-v<package.json version> and update the in-app update feed'
+        type: boolean
+        default: false
   push:
     tags: ['desktop-v*']
 
@@ -108,7 +113,7 @@ jobs:
   publish:
     # Only a version tag publishes; installed apps then find the new version in `desktop-latest`.
     needs: build
-    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -132,12 +137,18 @@ jobs:
           path: built
       - name: Check the tag matches the app version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(node -p "require('./desktop/package.json').version")"
-          if [ "${GITHUB_REF_NAME}" != "desktop-v${VERSION}" ]; then
+          TAG="desktop-v${VERSION}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
             echo "Tag ${GITHUB_REF_NAME} does not match desktop/package.json version ${VERSION}"; exit 1
           fi
+          # A version is published once: bump desktop/package.json for the next one.
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 1; fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Collect the release files
         run: |
           mkdir -p out
@@ -152,9 +163,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           NOTES="STeP Desktop ${VERSION} — what changed is in CHANGELOG.md. Installed apps update themselves from the desktop-latest release."
-          gh release create "$GITHUB_REF_NAME" out/* --title "STeP Desktop ${VERSION}" --notes "$NOTES" --latest=false
+          gh release create "$TAG" out/* --target "$GITHUB_SHA" --title "STeP Desktop ${VERSION}" --notes "$NOTES" --latest=false
           if ! gh release view desktop-latest >/dev/null 2>&1; then
             gh release create desktop-latest --target "$GITHUB_SHA" --latest=false --title "STeP Desktop · update feed" \
               --notes "The update feed of the STeP Desktop app: always the newest version. Download installers from the desktop-v* releases."
