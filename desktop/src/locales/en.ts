@@ -1424,4 +1424,14 @@ export const en: Record<string, string> = {
     'This tax ID may be the buyer’s (for example the university’s), not the shop’s; some shops write the customer’s ID in the issuer’s box. Check it against the original',
   'ยอดเงินตัวอักษรไม่ตรงกับยอดรวมตัวเลข โปรดตรวจยอดรวมกับต้นฉบับ':
     'The amount in words does not match the total in figures. Check the total against the original',
+  'ส่วนเสริม OCR': 'OCR add-ons',
+  'ส่วนเสริม OCR · ใบเขียนมือ? เพิ่มโมเดลอ่านลายมือได้ที่นี่': 'OCR add-ons · Handwritten receipts? Add the handwriting model here',
+  ย่อภาพใบเสร็จ: 'Zoom out of the receipt',
+  ขยายภาพใบเสร็จ: 'Zoom in on the receipt',
+  'ตรวจแล้ว {0}/{1} ช่อง': '{0}/{1} fields checked',
+  'ตรงกัน {0}': '{0} agree',
+  'อ่านต่างกัน {0}': '{0} differ',
+  'อ่านได้ทางเดียว {0}': '{0} read by one side',
+  'เทียบแต่ละช่องกับภาพ แล้วกด Enter เพื่อติ๊ก “ตรวจแล้ว” และไปช่องถัดไป':
+    'Compare each field with the image, then press Enter to tick “Checked” and move to the next field',
 };

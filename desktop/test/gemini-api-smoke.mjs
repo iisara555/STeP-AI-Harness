@@ -115,6 +115,10 @@ try {
   assert.ok((await page.getByText('AI อ่านจากภาพ · ตรวจกับต้นฉบับ').count()) >= 3, 'each AI-read field is marked');
   assert.equal(await page.locator('.receipt-field .check input:checked').count(), 0, 'nothing is confirmed for the person');
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
+  // Enter in a filled field ticks it as checked and moves to the next field.
+  await page.getByLabel('ภาษีมูลค่าเพิ่ม').press('Enter');
+  assert.equal(await page.locator('.receipt-field .check input:checked').count(), 1);
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeFocused();
   const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
   assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
   assert.deepEqual(errors, []);

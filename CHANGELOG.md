@@ -8,6 +8,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### A receipt page that is quicker to check
+
+- **The receipt stays in view:** the image column stays beside the fields while you scroll. A zoom button (or a click on the image) enlarges it for handwriting.
+- **Progress at the top:** "ตรวจแล้ว 2/5 ช่อง" with a progress bar and counts of fields where OCR and AI agree, differ, or only one read it. The AI buttons (read the image again, filter the OCR) sit there too.
+- **Fields show their state:** a red edge where the readings differ, a yellow fill once ticked. "ตรวจแล้ว" is a pill button.
+- **Enter to check:** pressing Enter in a filled field ticks it and moves to the next field.
+- **The next step stays reachable:** save, new receipt and "ให้ AI pre-check ต่อ" stay at the bottom of the window, with the checked count beside them.
+- **Less jargon:** mapping methods, OCR line types and verdict codes (NEEDS-DOCUMENT-FIX) are kept in the JSON draft but no longer shown. The Tesseract and handwriting add-ons fold into one "ส่วนเสริม OCR" line.
+
 ### Receipts read twice: on-device OCR and an AI reading of the image
 
 - **Two readings, compared field by field:** after the local OCR reads a receipt, the connected AI reads the image on its own (the seller, receipt number, date, tax ID and amounts). Each field shows whether the two agree:
