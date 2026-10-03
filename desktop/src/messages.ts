@@ -118,6 +118,9 @@ export const errorText: Record<string, string> = localized({
   IMAGE_LIMIT: 'ผลลัพธ์รูปใหญ่เกินขนาดที่รองรับ',
   CONNECTION_NOT_READY: 'กรุณาเชื่อมต่อและทดสอบ AI ในการตั้งค่าก่อน',
   API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
+  MODEL_REQUIRED: 'บริการนี้ไม่ได้แนะนำโมเดล กรุณาพิมพ์ชื่อโมเดลที่จะใช้',
+  OPENROUTER_SIGNIN_FAILED: 'ลงชื่อด้วย OpenRouter ไม่สำเร็จ ลองใหม่ หรือใส่ API key ของ OpenRouter แทน',
+  OPENROUTER_SIGNIN_TIMEOUT: 'ไม่ได้รับการยืนยันจาก OpenRouter ภายใน 5 นาที กรุณาเริ่มใหม่',
   DRAFT_CONFLICT: 'ร่างมีการแก้ไขหลังจาก AI เริ่มทำงาน ข้อเสนอจึงยังไม่แทนที่ร่าง คุณคัดลอกส่วนที่ต้องการมาแก้เองได้',
   PRIVACY_REVIEW_REQUIRED: 'พบข้อมูลที่ต้องตรวจเพิ่มเติม กรุณาปิดบังข้อมูลส่วนบุคคลหรือข้อมูลลับก่อนส่ง',
   LOGIN_REQUIRED: 'การลงชื่อเข้าใช้หมดอายุ กดเชื่อมต่อและทดสอบในหน้าตั้งค่าอีกครั้ง',
@@ -204,6 +207,9 @@ export const statusText: Record<string, string> = localized({
   interrupted: 'งานหยุดเมื่อปิดแอป',
 });
 
+/** A connection's name: a preset or custom endpoint shows its own label (OpenRouter, Groq, ...). */
+export const connectionLabel = (c: { provider?: string; label?: string }) =>
+  c.provider === 'compatible' && c.label ? c.label : providerLabel(c.provider);
 export const providerLabel = (provider?: string) =>
   provider === 'antigravity'
     ? 'Gemini / Antigravity'

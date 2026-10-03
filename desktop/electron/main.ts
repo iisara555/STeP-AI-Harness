@@ -1,4 +1,3 @@
-import { approvedProfile } from '../../src/modules/providers/compatible.js';
 import { copilotDeviceLogin } from './copilot-auth';
 import { unscanned, credentialsOnly } from './checks';
 import { TERMS_VERSION } from '../src/terms-version';
@@ -36,6 +35,9 @@ import { Automations, connectionBinding } from './cron';
 import { Mcp } from './mcp';
 import { Sandbox } from './sandbox';
 import { adapter, listModels } from './providers';
+import { compatibleEndpoint, presetBaseUrl } from './preset-endpoint';
+import { openRouterSignIn } from './openrouter-auth';
+import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets';
 import { errorCode } from './diagnostics';
 import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
@@ -308,8 +310,7 @@ async function main() {
   async function runtime(connection: Connection, signOut = false, webSearch = false) {
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription && !signOut)
       throw new Error('FEATURE_DISABLED');
-    if (connection.provider === 'compatible')
-      approvedProfile({ baseUrl: connection.baseUrl || '', protocol: connection.protocol, model: connection.model }, policyState.policy);
+    if (connection.provider === 'compatible') compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
     if (connection.provider === 'copilot' && !signOut && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
     if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection);
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
@@ -744,6 +745,44 @@ async function main() {
     webp: 'image/webp',
     bmp: 'image/bmp',
   };
+  // Development test runs only: every preset (and OpenRouter's sign-in) goes to one local fake service.
+  const testPresetBaseUrl = () =>
+    !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? process.env.STEP_TEST_PRESET_BASE_URL || undefined : undefined;
+  const approvedProfileFor = (input: any) =>
+    compatibleEndpoint({ baseUrl: input.baseUrl, protocol: input.protocol, model: input.model }, policyState.policy);
+  // A preset connection gets its key (OpenRouter can issue one through its sign-in page) and, when the employee chose
+  // no model, the service's recommended one, before the usual test request.
+  async function prepareCompatiblePreset(connection: Connection, preset: NonNullable<ReturnType<typeof presetFor>>, signal: AbortSignal) {
+    let apiKey = await key(connection);
+    if (!apiKey && preset.signIn === 'openrouter') {
+      if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+      emit({
+        sessionId: '',
+        type: 'connect-progress',
+        connectionId: connection.id,
+        text: tm('ยืนยันการเชื่อมในหน้า OpenRouter ที่เปิดขึ้น'),
+      });
+      const test = testPresetBaseUrl();
+      apiKey = await openRouterSignIn({
+        openExternal: url => shell.openExternal(url),
+        signal,
+        ...(test ? { authUrl: test.replace(/\/v1$/, '') + '/auth', keysUrl: test + '/auth/keys', port: 0 } : {}),
+      });
+      store.put('secret', connection.id, safeStorage.encryptString(apiKey).toString('base64'));
+      connection.signedIn = true;
+    }
+    if (!apiKey && preset.key === 'required') throw new Error('API_KEY_REQUIRED');
+    if (!connection.model) {
+      emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: tm('กำลังโหลดรายชื่อโมเดล') });
+      const models = await listModels(connection, { cwd: data, env: {}, key: apiKey });
+      connection.model = pickModel(
+        '',
+        preset,
+        models.map(m => m.id),
+      );
+      if (!connection.model) throw new Error('MODEL_REQUIRED');
+    }
+  }
   async function refreshModels(connection: Connection) {
     const current = await runtime(connection);
     connection.models = await listModels(connection, current.context);
@@ -773,7 +812,7 @@ async function main() {
   };
   const snapshot = async () => ({
     usage: ledger.report(),
-    features: { claudeSubscription },
+    features: { claudeSubscription, providerPresets: policyState.policy.features.providerPresets },
     policy: {
       source: policyState.policy.source,
       path: policyState.path,
@@ -1095,11 +1134,7 @@ async function main() {
             },
             { harness },
           );
-          if (connection?.provider === 'compatible')
-            approvedProfile(
-              { baseUrl: connection.baseUrl || '', protocol: connection.protocol || 'openai', model: connection.model },
-              policyState.policy,
-            );
+          if (connection?.provider === 'compatible') compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
           if (connection?.provider === 'copilot' && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
           if (!connection?.ready) return { ...plan.readiness, status: 'blocked', blockers: ['CONNECTION_NOT_READY'] };
           return plan.readiness;
@@ -1352,9 +1387,11 @@ async function main() {
           (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscription)
         )
           throw new Error('INVALID_CONNECTION');
+        const preset = input.provider === 'compatible' && input.preset !== undefined ? presetFor(input.preset) : undefined;
         if (input.provider === 'compatible') {
-          if (input.mode !== 'api') throw new Error('INVALID_CONNECTION');
-          approvedProfile({ baseUrl: input.baseUrl, protocol: input.protocol, model: input.model }, policyState.policy);
+          if (input.mode !== 'api' || (input.preset !== undefined && !preset)) throw new Error('INVALID_CONNECTION');
+          if (preset) compatibleEndpoint({ preset: preset.id }, policyState.policy, testPresetBaseUrl());
+          else approvedProfileFor(input);
         }
         if (
           input.provider === 'copilot' &&
@@ -1384,9 +1421,11 @@ async function main() {
           ...(previous?.customRuntime && previous.provider === input.provider ? { customRuntime: true } : {}),
           ...(previous?.claudeAuthStarted ? { claudeAuthStarted: true } : {}),
           ...(input.provider === 'gemini' && input.mode === 'subscription' && googleCloudProject ? { googleCloudProject } : {}),
-          ...(input.provider === 'compatible'
-            ? { baseUrl: inputText(input.baseUrl, 2000), protocol: input.protocol, label: inputText(input.label || 'Compatible', 120) }
-            : {}),
+          ...(input.provider === 'compatible' && preset
+            ? { preset: preset.id, baseUrl: presetBaseUrl(preset.id, testPresetBaseUrl()), protocol: preset.protocol, label: preset.label }
+            : input.provider === 'compatible'
+              ? { baseUrl: inputText(input.baseUrl, 2000), protocol: input.protocol, label: inputText(input.label || 'Compatible', 120) }
+              : {}),
           ready: false,
           note: tm('ยังไม่ได้ทดสอบการเชื่อมต่อ'),
         };
@@ -1468,6 +1507,8 @@ async function main() {
             store.put('secret', connection.id, safeStorage.encryptString(token).toString('base64'));
             connection.signedIn = true;
           }
+          const preset = connection.provider === 'compatible' ? presetFor(connection.preset) : undefined;
+          if (preset) await prepareCompatiblePreset(connection, preset, controller.signal);
           const connectionRuntime = await runtime(connection);
           if (connection.provider === 'claude' && connection.mode === 'subscription') {
             connection.claudeAuthStarted = true;
@@ -1574,7 +1615,11 @@ async function main() {
           tesseract: 'https://tesseract-ocr.github.io/tessdoc/Installation.html',
           geminiKey: 'https://aistudio.google.com/apikey',
         };
-        const url = pages[input.topic];
+        // Where each well-known service issues API keys (provider-presets), plus the Claude and OpenAI consoles.
+        pages.anthropicKey = 'https://console.anthropic.com/settings/keys';
+        pages.openaiKey = 'https://platform.openai.com/api-keys';
+        for (const preset of PROVIDER_PRESETS) if (preset.keyUrl) pages['preset:' + preset.id] = preset.keyUrl;
+        const url = Object.hasOwn(pages, input.topic) ? pages[input.topic] : undefined;
         if (!url) throw new Error('INVALID_INPUT');
         await shell.openExternal(url);
         return true;

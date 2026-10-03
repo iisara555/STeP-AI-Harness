@@ -8,6 +8,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### More AI services, and a simpler connection page
+
+- **Pick a service from tiles:** the AI connection page (Settings and the setup wizard) now lists each service as a tile with how it connects (sign in, API key, or on this computer) and one line about it. The chosen tile opens a card with the key field, a link to where the service issues keys, an optional model and who pays, with the connect button inside it. The old sticky button that covered the text below it is gone; choosing a tile scrolls its card into view. The setup wizard shows the main services first, with the rest behind **ดูบริการอื่น**.
+- **New services:** OpenRouter, Claude API, OpenAI API, DeepSeek, Groq, Mistral, xAI Grok and Ollama (local) join ChatGPT and Gemini. Each new service is fixed to its official endpoint and uses the employee's own key, stored encrypted like other keys. These services draft text only; images and web search are not supported yet.
+- **Sign in with OpenRouter:** OpenRouter can issue a key for the app through its own sign-in page (OAuth PKCE with a one-time loopback callback on this computer), so nobody copies a key by hand; pasting an existing key also works.
+- **Models from the service:** API-compatible connections now load the service's model list (`GET /models`) after connecting. When no model was typed, the service's recommended model is used.
+- **Tidier connection rows:** a connection shows its own name (OpenRouter, Groq, ...). A working connection offers **ทดสอบอีกครั้ง** as a quiet button. Runtime and sign-out buttons appear only where they apply.
+- **Policy:** new feature `providerPresets` (default on) allows the services above. Set it to false to offer only ChatGPT, Claude, Gemini and administrator-approved endpoints. A free-form endpoint still needs `compatibleProviders` and an approved profile, and preset endpoints are refused while `network.proxyUrl` is set.
+- Tests: unit tests for the presets, endpoint checks, model lists and OpenRouter PKCE. A new Electron smoke signs in to a fake OpenRouter and connects Groq with a key; no real service is called. The OpenRouter sign-in has not been tried against the live service yet.
+
 ### Update card above the profile, as in Claude and Codex
 
 - **Next to the profile:** when a new version is on its way, a card at the bottom of the task list, above the profile, shows the download with its progress, then **รีสตาร์ทเพื่ออัปเดต** once it is ready (Windows). On a Mac build that cannot install updates itself, it shows **ดาวน์โหลดเวอร์ชัน x.y.z**.

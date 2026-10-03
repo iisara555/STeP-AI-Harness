@@ -603,7 +603,7 @@ export function normalizeModels(items: unknown[]): ModelOption[] {
 // Read provider catalogs through isolated runtime configuration. Antigravity's catalog does not prove account entitlement.
 export async function listModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env' | 'key'>): Promise<ModelOption[]> {
   if (connection.provider === 'antigravity') return antigravityModels(connection, context);
-  if (connection.provider === 'compatible') return [{ id: connection.model, label: connection.model }];
+  if (connection.provider === 'compatible') return compatibleModels(connection, context.key);
   if (connection.provider === 'copilot') return copilotModels(context);
   if (connection.provider === 'claude') {
     const authOptions = claudeSdkOptions(connection, context);
@@ -696,6 +696,46 @@ export async function listModels(connection: Connection, context: Pick<ProviderC
     );
   } finally {
     rpc.close();
+  }
+}
+
+/**
+ * The models an OpenAI-compatible (or Anthropic) service lists at GET {baseUrl}/models. A service without that list
+ * still works with the model the employee typed, so a failure falls back to it.
+ */
+export async function compatibleModels(connection: Connection, key?: string, fetcher: typeof fetch = fetch): Promise<ModelOption[]> {
+  const fallback = connection.model ? [{ id: connection.model, label: connection.model }] : [];
+  let url: URL;
+  try {
+    url = new URL(String(connection.baseUrl || '').replace(/\/$/, '') + '/models');
+  } catch {
+    return fallback;
+  }
+  const headers: Record<string, string> = { accept: 'application/json' };
+  if (connection.protocol === 'anthropic') {
+    if (key) headers['x-api-key'] = key;
+    headers['anthropic-version'] = '2023-06-01';
+  } else if (key) headers.authorization = 'Bearer ' + key;
+  try {
+    const response = await fetcher(url, { headers, redirect: 'error', signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return fallback;
+    }
+    const body = (await response.json()) as { data?: unknown; models?: unknown };
+    const items = Array.isArray(body?.data) ? body.data : Array.isArray(body?.models) ? body.models : [];
+    const models: ModelOption[] = [];
+    for (const item of items.slice(0, 2000) as any[]) {
+      const id = text(item?.id ?? item?.name, 160);
+      if (!id || models.some(m => m.id === id)) continue;
+      const label = text(item?.name ?? item?.display_name, 160) || id;
+      models.push({ id, label, ...(id === connection.model ? { isDefault: true } : {}) });
+      if (models.length >= 500) break;
+    }
+    if (connection.model && !models.some(m => m.id === connection.model)) models.unshift(...fallback);
+    return models.length ? models : fallback;
+  } catch {
+    return fallback;
   }
 }
 

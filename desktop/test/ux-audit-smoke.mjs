@@ -49,25 +49,28 @@ try {
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  // Choosing a service scrolls its card, with the connect button, into view.
+  await page.getByRole('radio', { name: /^Gemini/ }).click();
+  await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
   // Gemini API key sits on the main page: the connect button waits for a key, cost shows as API budget,
   // and going back to ChatGPT drops the key.
-  await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+  await page.getByRole('radio', { name: /^Gemini/ }).click();
   const geminiConnect = page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true });
   await expect(geminiConnect).toBeDisabled();
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
   await page.getByLabel('Gemini API key').fill('synthetic-gemini-key');
   await expect(geminiConnect).toBeEnabled();
   await assertVisibleButton(geminiConnect);
-  await page.getByRole('button', { name: 'ChatGPT', exact: true }).click();
-  await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+  await page.getByRole('radio', { name: /^ChatGPT/ }).click();
+  await page.getByRole('radio', { name: /^Gemini/ }).click();
   await expect(page.getByLabel('Gemini API key')).toHaveValue('');
-  await page.getByRole('button', { name: 'ChatGPT', exact: true }).click();
+  await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('claude');
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
-  await page.getByRole('button', { name: 'กลับไปเชื่อมต่อบัญชีส่วนตัว' }).click();
+  await page.getByRole('button', { name: 'กลับไปเลือกบริการ' }).click();
   await mkdir('release/qa/ux-fixes', { recursive: true });
   await page.screenshot({ path: 'release/qa/ux-fixes/small-window.png' });
   await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();

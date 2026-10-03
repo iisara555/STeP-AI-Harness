@@ -87,7 +87,7 @@ try {
   });
   const gemini = async () => (await page.evaluate(() => window.step.call('snapshot'))).connections.filter(c => c.provider === 'gemini');
   const connect = async () => {
-    await page.getByRole('button', { name: 'Gemini · API key', exact: true }).click();
+    await page.getByRole('radio', { name: /^Gemini/ }).click();
     await page.getByLabel('Gemini API key').fill('synthetic-gemini-key-for-smoke');
     await page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true }).click();
   };

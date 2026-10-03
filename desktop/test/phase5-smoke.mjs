@@ -19,6 +19,8 @@ let calls = 0;
 const server = createServer(async (req, res) => {
   let body = '';
   for await (const b of req) body += b;
+  // No model catalog here: the connection keeps the model it was given.
+  if (req.method === 'GET') return res.writeHead(404).end();
   const value = JSON.parse(body);
   assert.equal(value.tools, undefined);
   calls++;

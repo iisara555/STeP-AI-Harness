@@ -23,6 +23,7 @@ export const FEATURES = [
   'voice',
   'copilot',
   'compatibleProviders',
+  'providerPresets',
   'headless',
   'skillPacks',
   'cron',
@@ -135,6 +136,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   voice: false,
   copilot: false,
   compatibleProviders: false,
+  // Well-known AI services (OpenRouter, DeepSeek, Groq, Mistral, xAI, Ollama) at their official endpoints, each with the
+  // employee's own key, like the ChatGPT, Claude and Gemini connections. A free-form endpoint still needs
+  // compatibleProviders and an approved profile.
+  providerPresets: true,
   headless: false,
   skillPacks: false,
   cron: false,

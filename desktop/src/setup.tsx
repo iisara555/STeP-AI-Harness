@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, LoaderCircle, Plug, Sparkles } from 'lucide-react';
 import type { Connection, Settings, Snapshot } from './types';
-import { ProviderFields, providerChoiceReady, initialChoice, type ProviderChoice } from './ui';
-import { providerLabel } from './messages';
+import { ProviderFields, providerChoiceReady, initialChoice, connectionInput, connectLabel, type ProviderChoice } from './ui';
+import { connectionLabel } from './messages';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { t, teamName } from './i18n';
@@ -283,7 +283,7 @@ export function SetupWizard({
             <p className="muted">{t('เลือกบริการที่คุณมีบัญชีอยู่แล้ว ระบบจะส่งคำขอสั้น ๆ หนึ่งครั้งเพื่อทดสอบ')}</p>
             {snapshot.connections.map(c => (
               <p key={c.id} className={c.ready ? 'connected small' : 'small muted'}>
-                <Plug size={13} /> {providerLabel(c.provider)} · {t(c.note)}
+                <Plug size={13} /> {connectionLabel(c)} · {t(c.note)}
               </p>
             ))}
             <ProviderFields
@@ -291,63 +291,49 @@ export function SetupWizard({
               onChange={setChoice}
               call={call}
               claudeSubscription={Boolean(snapshot.features?.claudeSubscription)}
-            />
-            {choice.mode !== 'claude-code' && (
-              <>
-                <button
-                  className="connect-primary"
-                  disabled={Boolean(busy) || !providerChoiceReady(choice)}
-                  onClick={() =>
-                    void run('connect', async () => {
-                      const c = await call('connection', {
-                        provider: choice.provider,
-                        mode: choice.mode,
-                        apiKey: choice.key,
-                        googleCloudProject: choice.googleCloudProject,
-                        baseUrl: choice.baseUrl,
-                        protocol: choice.protocol,
-                        model: choice.model,
-                      });
-                      setChoice({ ...choice, key: '' });
-                      setConnecting({ id: c.id, text: t('กำลังเริ่มเชื่อมต่อ') });
-                      try {
-                        setTested(await call('connect', { id: c.id }));
-                      } finally {
-                        setConnecting(null);
+              presets={snapshot.features?.providerPresets !== false}
+              compact
+              action={
+                choice.mode !== 'claude-code' && (
+                  <>
+                    <button
+                      className="connect-primary"
+                      disabled={Boolean(busy) || !providerChoiceReady(choice)}
+                      onClick={() =>
+                        void run('connect', async () => {
+                          const c = await call('connection', connectionInput(choice));
+                          setChoice({ ...choice, key: '' });
+                          setConnecting({ id: c.id, text: t('กำลังเริ่มเชื่อมต่อ') });
+                          try {
+                            setTested(await call('connect', { id: c.id }));
+                          } finally {
+                            setConnecting(null);
+                          }
+                          await refresh();
+                        })
                       }
-                      await refresh();
-                    })
-                  }
-                >
-                  {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
-                  {busy === 'connect'
-                    ? choice.mode === 'api'
-                      ? t('กำลังเชื่อมต่อ…')
-                      : t('กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์')
-                    : choice.provider === 'openai' && choice.mode === 'subscription'
-                      ? t('เชื่อมต่อ ChatGPT')
-                      : choice.provider === 'gemini' && choice.mode === 'subscription'
-                        ? t('เชื่อมต่อ Google')
-                        : choice.provider === 'gemini' && choice.mode === 'api'
-                          ? t('เชื่อมต่อ Gemini')
-                          : choice.provider === 'claude' && choice.mode === 'oauth'
-                            ? t('เชื่อมต่อ Claude OAuth')
-                            : choice.provider === 'claude' && choice.mode === 'subscription'
-                              ? t('เชื่อมต่อ Claude')
-                              : t('เชื่อมต่อและทดสอบ')}
-                </button>
-                {busy === 'connect' && connecting && (
-                  <p className="connect-progress">
-                    <LoaderCircle size={13} className="spin" />
-                    {connecting.text}
-                    <button className="text-link" onClick={() => void call('cancelConnect', { id: connecting.id })}>
-                      {t('ยกเลิก')}
+                    >
+                      {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
+                      {busy === 'connect'
+                        ? choice.mode === 'api'
+                          ? t('กำลังเชื่อมต่อ…')
+                          : t('กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์')
+                        : connectLabel(choice, t('เชื่อมต่อและทดสอบ'))}
                     </button>
-                  </p>
-                )}
-                {tested && <p className={tested.ready ? 'connected small' : 'small danger-text'}>{t(tested.note)}</p>}
-              </>
-            )}
+                    {busy === 'connect' && connecting && (
+                      <p className="connect-progress">
+                        <LoaderCircle size={13} className="spin" />
+                        {connecting.text}
+                        <button className="text-link" onClick={() => void call('cancelConnect', { id: connecting.id })}>
+                          {t('ยกเลิก')}
+                        </button>
+                      </p>
+                    )}
+                    {tested && <p className={tested.ready ? 'connected small' : 'small danger-text'}>{t(tested.note)}</p>}
+                  </>
+                )
+              }
+            />
           </section>
         )}
 

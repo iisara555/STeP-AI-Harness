@@ -57,7 +57,7 @@ import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
 import { UpdateCard, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
-import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
+import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
 import type { ApprovalRequest } from './types';
@@ -739,7 +739,7 @@ export default function App() {
         (!search.trim() || (searchMatches?.query === search && searchMatches.ids.includes(s.id))) &&
         (filter !== 'artifacts' || s.draft),
     ) || [];
-  const providerName = (c?: Connection) => (c ? providerLabel(c.provider) : '');
+  const providerName = (c?: Connection) => (c ? connectionLabel(c) : '');
   const setTheme = (theme: string) =>
     action(async () => {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
@@ -1811,7 +1811,7 @@ export default function App() {
                       <option value="">{t('เลือก AI')}</option>
                       {snapshot.connections.map(c => (
                         <option key={c.id} value={c.id}>
-                          {providerLabel(c.provider)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
+                          {connectionLabel(c)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
                           {c.ready ? '' : t(' · ยังไม่พร้อม')}
                         </option>
                       ))}
