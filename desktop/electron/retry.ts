@@ -1,5 +1,5 @@
 export const RETRY_DELAYS_MS = [2000, 4000, 8000];
-export const RETRYABLE_CODES = new Set(['PROVIDER_NETWORK', 'PROVIDER_BUSY', 'RUNTIME_EXITED']);
+export const RETRYABLE_CODES = new Set(['PROVIDER_NETWORK', 'PROVIDER_BUSY', 'RUNTIME_EXITED', 'PROVIDER_EMPTY_RESPONSE']);
 export function retryAfterMs(value: unknown, now = Date.now()) {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined;
   const seconds = Number(value);

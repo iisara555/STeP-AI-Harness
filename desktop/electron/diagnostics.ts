@@ -17,6 +17,12 @@ const KNOWN: [RegExp, string][] = [
   // Since 18 June 2026 Google serves Gemini CLI only to API keys and Code Assist Standard/Enterprise licenses.
   [/no longer supported for Gemini Code Assist for individuals|IneligibleTier|migrate to the Antigravity/i, 'GEMINI_PERSONAL_DISCONTINUED'],
   [/GOOGLE_CLOUD_PROJECT/i, 'GOOGLE_CLOUD_PROJECT_REQUIRED'],
+  // The model's reply ended before it was complete or came back empty (seen with Gemini when a turn stalls on a tool
+  // call): a fresh attempt usually works.
+  [
+    /invalid chunk|missing finish reason|empty response|MALFORMED_FUNCTION_CALL|finish.?reason.{0,20}(?:MALFORMED|OTHER)/i,
+    'PROVIDER_EMPTY_RESPONSE',
+  ],
   // Exhausted quota or plan limits do not pass by waiting a few seconds; a busy or rate-limited service usually does.
   [/RESOURCE_EXHAUSTED|quota|usage.?limit|usageLimitExceeded|out of extra usage/i, 'PROVIDER_QUOTA'],
   [

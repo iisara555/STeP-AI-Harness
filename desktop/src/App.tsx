@@ -54,6 +54,7 @@ import symbolColour from './assets/step-symbol-colour.svg';
 import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
+import { Avatar } from './avatars';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
@@ -1016,7 +1017,10 @@ export default function App() {
               <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
             </button>
             <div className="profile">
-              <span>{initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}</span>
+              <Avatar
+                id={snapshot.settings.avatar}
+                fallback={initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}
+              />
               <div>
                 {snapshot.settings.userName || snapshot.settings.assistant}
                 <small>

@@ -169,6 +169,7 @@ export const errorText: Record<string, string> = localized({
   AUTHORITY_REVIEW_REQUIRED: 'งานนี้ต้องให้ผู้รับผิดชอบหรือผู้มีอำนาจตรวจสอบก่อน',
   CANCELLED: 'หยุดงานแล้ว ร่างเดิมยังอยู่',
   PROVIDER_REQUEST_FAILED: 'AI ทำงานไม่สำเร็จ ตรวจการเชื่อมต่อและโควตาแล้วลองใหม่',
+  PROVIDER_EMPTY_RESPONSE: 'AI ส่งคำตอบไม่ครบหรือว่างเปล่า ระบบลองใหม่ให้แล้วแต่ยังไม่สำเร็จ ลองส่งอีกครั้ง หรือเลือกรุ่นโมเดลอื่น',
   RUN_ALREADY_ACTIVE: 'มีงานกำลังทำอยู่ รอให้เสร็จหรือหยุดงานก่อน',
   CONTEXT_UNAVAILABLE: 'แหล่งอ้างอิงที่จำเป็นยังไม่พร้อม',
   EMPTY_RESULT: 'AI ยังไม่ได้ส่งร่างกลับมา กรุณาลองใหม่',

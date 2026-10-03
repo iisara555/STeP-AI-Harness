@@ -5,7 +5,14 @@ import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { Store } from '../electron/store';
 import { WorkService, type Harness } from '../electron/service';
-import { OrganizationKnowledge, MATCH_THRESHOLD, registryText, documentSection } from '../electron/knowledge';
+import {
+  OrganizationKnowledge,
+  MATCH_THRESHOLD,
+  STRONG_MATCH,
+  expandAbbreviations,
+  registryText,
+  documentSection,
+} from '../electron/knowledge';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
 import { unscanned } from '../electron/checks';
 
@@ -177,8 +184,15 @@ test('who the director is comes from the executive board document, with names in
   // Registered documents reach the AI unmasked, so executives named นาย/นางสาว are not hidden either.
   await work.run(session.id, 'รองผู้อำนวยการมีใครบ้าง', '', true, undefined, 'chat');
   assert.match(captured.prompt, /นางสาวเมลิน เชื้อมโนชาญ/);
-  for (const q of ['ผอ.คือใคร', 'ทีม HD อยู่ภายใต้การกำกับของใคร'])
+  for (const q of ['ผอ.คือใคร', 'ทีม HD อยู่ภายใต้การกำกับของใคร', 'ผอ.วิน คือใคร', 'รอง ผอ. มีใครบ้าง'])
     assert.equal((await knowledge.search(q))[0]?.id, 'step-executive-board', q);
+  // An abbreviation with a nickname the documents do not hold still reaches the director's section, strongly enough
+  // to answer from the document without a tool turn or a web search.
+  const found = await knowledge.search('ผอ.วิน คือใคร');
+  assert.match(found.map(f => f.text).join('\n'), /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
+  assert.ok(found[0].score >= STRONG_MATCH, String(found[0].score));
+  assert.equal(expandAbbreviations('ผอ.วิน คือใคร'), 'ผอ.วิน คือใคร\nผู้อำนวยการ วิน คือใคร');
+  assert.equal(expandAbbreviations('ผอมลงไหม'), 'ผอมลงไหม', 'ordinary words are left alone');
   store.close();
 });
 

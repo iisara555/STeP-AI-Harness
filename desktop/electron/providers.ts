@@ -52,13 +52,21 @@ export class ProviderSession {
   system = '';
   model = '';
   usage: TokenCount = { input: 0, output: 0, total: 0 };
+  /** Runs when the conversation closes, after its runtime stops (for example, removing a per-run instructions file). */
+  onClose?: () => void;
   close() {
-    const rpc = this.rpc;
+    const rpc = this.rpc,
+      onClose = this.onClose;
     this.rpc = undefined;
+    this.onClose = undefined;
     this.threadId = '';
     this.sent = '';
     this.usage = { input: 0, output: 0, total: 0 };
-    void rpc?.closeAndWait().catch(() => {});
+    void rpc
+      ?.closeAndWait()
+      .catch(() => {})
+      .finally(() => onClose?.());
+    if (!rpc) onClose?.();
   }
 }
 export interface ProviderAdapter {
@@ -262,29 +270,68 @@ export class CodexAdapter implements ProviderAdapter {
 
 export class GeminiAdapter implements ProviderAdapter {
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    const continuing = Boolean(context.session?.rpc && !context.webSearch);
+    try {
+      return await this.turn(prompt, connection, context);
+    } catch (error) {
+      // As with Codex: a turn on the run's open conversation that fails is tried once more from a fresh start.
+      if (!continuing || context.signal.aborted || (error instanceof Error && error.message === 'CANCELLED')) throw error;
+      context.session?.close();
+      return this.turn(prompt, connection, context);
+    }
+  }
+  private async turn(prompt: string, connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
+    const session = context.webSearch ? undefined : context.session;
+    const system = context.system || '';
+    // Every tool turn of a run continues on one Gemini CLI process and ACP session, sending only the new tool results,
+    // instead of starting the CLI again and resending the whole prompt each turn.
+    const reuse = Boolean(
+      session?.rpc &&
+      session.threadId &&
+      session.system === system &&
+      session.model === (connection.model || '') &&
+      session.sent &&
+      prompt.startsWith(session.sent) &&
+      !context.images?.length,
+    );
+    if (session && !reuse) session.close();
     // Gemini CLI replaces its own coding-agent system prompt with the file named in GEMINI_SYSTEM_MD.
-    // One file per run, so parallel tasks on the same connection never read each other's instructions.
-    const systemFile = context.system ? join(dirname(context.cwd), `system-${randomUUID()}.md`) : '';
-    if (systemFile) await writeFile(systemFile, context.system!, 'utf8');
-    const rpc = createRpc(connection, systemFile ? { ...context, env: { ...context.env, GEMINI_SYSTEM_MD: systemFile } } : context);
+    // One file per conversation, so parallel tasks on the same connection never read each other's instructions.
+    const systemFile = !reuse && system ? join(dirname(context.cwd), `system-${randomUUID()}.md`) : '';
+    if (systemFile) await writeFile(systemFile, system, 'utf8');
+    const removeSystemFile = () => (systemFile ? void rm(systemFile, { force: true }).catch(() => {}) : undefined);
+    const rpc = reuse
+      ? session!.rpc!
+      : createRpc(connection, systemFile ? { ...context, env: { ...context.env, GEMINI_SYSTEM_MD: systemFile } } : context);
     let text = '';
+    let keep = false;
     const searches = new Set<string>();
-    const abort = () => rpc.close();
+    const abort = () => (session ? session.close() : rpc.close());
     context.signal.addEventListener('abort', abort, { once: true });
     try {
-      rpc.onText = line => {
-        if (isGoogleLogin(line)) rpc.close('LOGIN_REQUIRED');
-      };
-      const capabilities = await initialize(rpc, 'gemini');
-      if (context.images?.length && !capabilities.agentCapabilities?.promptCapabilities?.image) throw new Error('VISION_UNAVAILABLE');
-      rpc.onRequest = async method => {
-        if (method === 'session/request_permission') return { outcome: { outcome: 'cancelled' } };
-        throw new Error('TOOL_DENIED');
-      };
-      await rpc.request('authenticate', { methodId: connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal' });
-      const session = await rpc.request('session/new', { cwd: context.cwd, mcpServers: [] });
-      if (connection.model) await rpc.request('session/set_model', { sessionId: session.sessionId, modelId: connection.model });
+      let sessionId = reuse ? session!.threadId : '';
+      if (!reuse) {
+        rpc.onText = line => {
+          if (isGoogleLogin(line)) rpc.close('LOGIN_REQUIRED');
+        };
+        const capabilities = await initialize(rpc, 'gemini');
+        if (context.images?.length && !capabilities.agentCapabilities?.promptCapabilities?.image) throw new Error('VISION_UNAVAILABLE');
+        rpc.onRequest = async method => {
+          if (method === 'session/request_permission') return { outcome: { outcome: 'cancelled' } };
+          throw new Error('TOOL_DENIED');
+        };
+        await rpc.request('authenticate', { methodId: connection.mode === 'api' ? 'gemini-api-key' : 'oauth-personal' });
+        sessionId = (await rpc.request('session/new', { cwd: context.cwd, mcpServers: [] })).sessionId;
+        if (connection.model) await rpc.request('session/set_model', { sessionId, modelId: connection.model });
+        if (session) {
+          Object.assign(session, { rpc, threadId: sessionId, system, model: connection.model || '', sent: '' });
+          session.onClose = removeSystemFile;
+          rpc.onClose(() => {
+            if (session.rpc === rpc) session.close();
+          });
+        }
+      }
       rpc.onNotification = (method, params) => {
         const update = params.update;
         if (update?.kind === 'search' && typeof update.toolCallId === 'string') searches.add(update.toolCallId);
@@ -311,21 +358,29 @@ export class GeminiAdapter implements ProviderAdapter {
         if (method === 'session/update' && params.update?.sessionUpdate === 'agent_thought_chunk' && params.update.content?.type === 'text')
           context.onReasoning?.(params.update.content.text);
       };
+      const input = reuse ? prompt.slice(session!.sent.length) : prompt;
       await rpc.request(
         'session/prompt',
         {
-          sessionId: session.sessionId,
-          prompt: [{ type: 'text', text: prompt }, ...(context.images || []).map(i => ({ type: 'image', data: i.data, mimeType: i.mime }))],
+          sessionId,
+          prompt: [{ type: 'text', text: input }, ...(context.images || []).map(i => ({ type: 'image', data: i.data, mimeType: i.mime }))],
         },
         600_000,
       );
+      if (session) {
+        session.sent = prompt;
+        keep = true;
+      }
       return text;
     } catch (error) {
+      session?.close();
       throw runtimeError(error, rpc);
     } finally {
       context.signal.removeEventListener('abort', abort);
-      await rpc.closeAndWait().catch(() => {});
-      if (systemFile) await rm(systemFile, { force: true }).catch(() => {});
+      if (!keep) {
+        await rpc.closeAndWait().catch(() => {});
+        removeSystemFile();
+      }
     }
   }
 }
