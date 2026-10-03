@@ -15,12 +15,19 @@ const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 940 });
+  const capture = async name => {
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await Promise.all([...document.querySelectorAll('.section-art img')].map(image => image.decode()));
+    });
+    await page.screenshot({ path: join(out, name), fullPage: true });
+  };
 
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor();
-  await page.screenshot({ path: join(out, '01-setup-wizard.png'), fullPage: true });
+  await capture('01-setup-wizard.png');
 
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.getByRole('heading', { name: 'วันนี้อยากให้ช่วย', exact: false }).waitFor();
+  await page.locator('.welcome h1').waitFor();
 
   await page.evaluate(async () => {
     const snapshot = await window.step.call('snapshot');
@@ -34,6 +41,30 @@ try {
       tourDone: true,
     });
   });
+
+  await page.reload();
+  await page.locator('.welcome h1').waitFor();
+  await capture('06-welcome.png');
+  await page.setViewportSize({ width: 800, height: 650 });
+  await capture('07-welcome-compact.png');
+  await page.setViewportSize({ width: 1440, height: 940 });
+  await page.evaluate(async () => {
+    const snapshot = await window.step.call('snapshot');
+    await window.step.call('settings', { ...snapshot.settings, theme: 'dark' });
+  });
+  await page.reload();
+  await page.locator('.welcome h1').waitFor();
+  await capture('08-welcome-dark.png');
+  await page.evaluate(async () => {
+    const snapshot = await window.step.call('snapshot');
+    await window.step.call('settings', { ...snapshot.settings, theme: 'light' });
+  });
+  await page.reload();
+  await page.locator('.welcome h1').waitFor();
+  await page.getByRole('navigation', { name: 'Workspace tools' }).getByRole('button', { name: 'เว็บ', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Browser URL' }).waitFor();
+  await capture('09-browser.png');
+  await page.getByRole('navigation', { name: 'Workspace tools' }).getByRole('button', { name: 'ผลงาน', exact: true }).click();
 
   const seeded = await page.evaluate(async () => {
     const connection = await window.step.call('connection', {
@@ -82,7 +113,7 @@ try {
     connection.signedIn = true;
     connection.note = 'พร้อมทำงาน';
     connection.models = [{ id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', description: 'งานความรู้และงานซับซ้อน', isDefault: true }];
-    connection.modelsAt = '2026-09-30T03:30:00.000Z';
+    connection.modelsAt = new Date().toISOString();
     put('connection', connection.id, connection);
 
     const session = get('session', seeded.sessionId);
@@ -112,20 +143,20 @@ try {
   await page.reload();
   await page.getByText('สรุปประชุม Food Hall', { exact: true }).first().waitFor();
   await page.locator('.draft-editor').waitFor();
-  await page.screenshot({ path: join(out, '02-workspace.png'), fullPage: true });
+  await capture('02-workspace.png');
 
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByPlaceholder('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก').waitFor();
-  await page.screenshot({ path: join(out, '03-skill-hub.png'), fullPage: true });
+  await capture('03-skill-hub.png');
 
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await page.getByRole('heading', { name: 'ตรวจใบเสร็จก่อนส่ง AFP' }).waitFor();
-  await page.screenshot({ path: join(out, '04-receipt-afp.png'), fullPage: true });
+  await capture('04-receipt-afp.png');
 
   await page.getByRole('button', { name: /ตั้งค่าพื้นที่ทำงาน/ }).click();
   await page.getByRole('tab', { name: /การเชื่อมต่อ AI/ }).click();
   await page.getByRole('heading', { name: 'การเชื่อมต่อ AI' }).waitFor();
-  await page.screenshot({ path: join(out, '05-ai-connections.png'), fullPage: true });
+  await capture('05-ai-connections.png');
 
   console.log('README GUI screenshots created in', out);
 } finally {

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { ArrowLeft, ArrowRight, RotateCw, X, Bot, Send } from 'lucide-react';
 import type { BrowserDockState, DesktopAPI } from './types';
 import { t } from './i18n';
+import { SectionArt } from './illustration';
 
 // Anything drawn over the page area (a dialog, a notification, a menu, the tour) would sit under the native page, so the
 // page is hidden while one overlaps it. A dialog beside the panel leaves the page live, to check before approving.
@@ -121,7 +122,10 @@ export function BrowserDockView({
   if (!active)
     return (
       <div className="tool-section">
-        {intro}
+        <div className="browser-empty-intro">
+          <div>{intro}</div>
+          <SectionArt scene="browser" className="browser-illustration" />
+        </div>
         {open}
         <p className="muted small">{t('เปิดในแท็บนี้ แยกจากบัญชี AI อ่านหน้าเว็บกลับมาเพื่อตรวจ แล้วส่งเข้าช่องคุยได้')}</p>
       </div>

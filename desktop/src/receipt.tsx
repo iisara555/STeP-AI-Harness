@@ -29,7 +29,7 @@ import {
 import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading } from './receipt-vision';
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
-import ideaArt from './assets/illustrations/idea.png';
+import { SectionArt } from './illustration';
 import { receiptSourceText } from './receipt-source';
 import { localized, t } from './i18n';
 
@@ -562,7 +562,7 @@ export function ReceiptApp({
 
       {!doc ? (
         <div className="receipt-empty">
-          <img className="illustration empty-art" src={ideaArt} alt="" />
+          <SectionArt scene="receipt" className="receipt-illustration" />
           <h2>{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h2>
           <p className="muted">
             {t('เลือกรูปหรือ PDF ของใบเสร็จ ระบบจะอ่านข้อความและเสนอข้อมูลสำคัญ')}

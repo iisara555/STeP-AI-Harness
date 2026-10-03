@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowRight, Blocks, ReceiptText, Search } from 'lucide-react';
 import type { SkillEntry } from './types';
 import { t } from './i18n';
+import { SectionArt } from './illustration';
 
 // Where each capability stands: governed in the registry, reachable through the router, or a standalone tool.
 export const statusTag: Record<string, { label: string; tone: string; hint: string }> = {
@@ -77,27 +78,30 @@ export function SkillsHub({
   return (
     <div className="skills-hub">
       <div className="skills-head">
-        <label className="skills-search">
-          <Search size={16} />
-          <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
-        </label>
-        <div className="skills-filters" role="tablist" aria-label={t('กรองตามสถานะ')}>
-          {filters.map(([id, label]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={filter === id}
-              className={filter === id ? 'active' : ''}
-              onClick={() => setFilter(id)}
-            >
-              {t(label)} <small>{count(id)}</small>
-            </button>
-          ))}
+        <div className="skills-controls">
+          <label className="skills-search">
+            <Search size={16} />
+            <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
+          </label>
+          <div className="skills-filters" role="tablist" aria-label={t('กรองตามสถานะ')}>
+            {filters.map(([id, label]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={filter === id}
+                className={filter === id ? 'active' : ''}
+                onClick={() => setFilter(id)}
+              >
+                {t(label)} <small>{count(id)}</small>
+              </button>
+            ))}
+          </div>
+          <p className="small muted">
+            {t('เรียก Skill ที่เชื่อม Routing แล้วได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
+            {t('ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง')}
+          </p>
         </div>
-        <p className="small muted">
-          {t('เรียก Skill ที่เชื่อม Routing แล้วได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
-          {t('ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง')}
-        </p>
+        <SectionArt scene="skills" className="skills-illustration" />
       </div>
       {!skills && <p className="muted">{t('กำลังโหลดรายชื่อ Skill…')}</p>}
       <div className="skills-grid">
