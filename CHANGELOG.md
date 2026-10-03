@@ -8,6 +8,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Updates inside the app, as in Claude, Cursor and Codex
+
+- **No reinstalling:** an installed STeP Desktop checks for a newer version 15 seconds after it opens and every 4 hours, and downloads it in the background. A **รีสตาร์ทเพื่ออัปเดต** button then appears in the title bar. A downloaded update also installs when the app quits. Work and settings stay, because they live in the user's app data.
+- **Check now:** STeP menu → ช่วยเหลือ → "ตรวจหาอัปเดต · เวอร์ชัน x.y.z" checks immediately and says whether this is the latest version.
+- **Where updates come from:** the `desktop-latest` release of this repository, which always holds only the newest desktop build (`electron-updater`, generic provider over HTTPS, each file checked against the SHA-512 in `latest.yml`). The harness's own pilot releases (`v0.7.x`) are never mistaken for a desktop update.
+- **Publishing a version:** bump `desktop/package.json`, then push the tag `desktop-v<version>`. The installer workflow builds the three installers, publishes the `desktop-v<version>` release, and replaces the files in `desktop-latest`. The two Mac builds' update files merge into one (`desktop/scripts/merge-mac-update-info.mjs`). Runs without a tag only keep workflow artifacts, as before.
+- **Mac:** macOS installs an update only when both versions carry the organisation's Developer ID signature (the `CSC_*` and `APPLE_*` secrets). Until then a Mac build learns that a new version exists and shows **ดาวน์โหลดเวอร์ชัน x.y.z**, which opens the release page. Windows updates itself either way.
+- **Policy:** feature `autoUpdate` (default on) lets IT turn this off where software is rolled out centrally. Development builds never update themselves.
+- **One manual install first:** builds made before this change have no updater. Install a build with it once; later versions arrive by themselves.
+
 ### Receipt type and what the claim still needs
 
 - **Document type:** the AI classifies the receipt from the image as a full or abbreviated tax invoice, receipt, cash bill, payment voucher, invoice or quotation, or transfer slip. Without the AI, the printed heading decides. The person can change it.

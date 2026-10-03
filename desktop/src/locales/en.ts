@@ -1514,4 +1514,16 @@ export const en: Record<string, string> = {
   'กฎของหมวดนี้ยังไม่มีในระบบ ชุดเอกสารและกำหนดเวลาโปรดถาม AFP':
     'This category’s rules are not in the app yet; ask AFP for the documents and deadlines',
   'ครบแล้ว {0} ข้อ: {1}': '{0} complete: {1}',
+  'กำลังตรวจหาอัปเดต…': 'Checking for updates…',
+  'ตรวจหาอัปเดตไม่สำเร็จ ลองใหม่ภายหลัง': 'Could not check for updates; try again later',
+  'องค์กรปิดการอัปเดตในแอป ติดต่อ IT เพื่อรับเวอร์ชันใหม่': 'Your organisation turned off in-app updates; ask IT for new versions',
+  รุ่นทดสอบนี้ไม่อัปเดตตัวเอง: 'This development build does not update itself',
+  'เป็นเวอร์ชันล่าสุดแล้ว ({0})': 'You have the latest version ({0})',
+  'ตรวจหาอัปเดต · เวอร์ชัน {0}': 'Check for updates · version {0}',
+  ตรวจหาอัปเดต: 'Check for updates',
+  'ติดตั้งเวอร์ชัน {0} แล้วเปิดแอปใหม่ งานที่ค้างไว้ยังอยู่': 'Install version {0} and reopen the app; your work stays',
+  รีสตาร์ทเพื่ออัปเดต: 'Restart to update',
+  'Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดเวอร์ชัน {0} แล้วลากไปที่ Applications':
+    'This Mac build cannot install updates itself; download version {0} and drag it to Applications',
+  'ดาวน์โหลดเวอร์ชัน {0}': 'Download version {0}',
 };

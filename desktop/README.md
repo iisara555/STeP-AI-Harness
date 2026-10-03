@@ -58,6 +58,12 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 `npm run package` creates an unpacked app. `npm run dist:win` creates an NSIS installer. `npm run dist:mac` must run on a macOS build host for each architecture. A signed, notarized release and clean-machine tests remain release gates; unsigned development builds are not production releases.
 
+### Updates
+
+An installed STeP Desktop updates itself, as Claude, Cursor and Codex do. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** in the title bar. A downloaded update also installs when the app quits. STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต checks immediately. Policy feature `autoUpdate` turns this off.
+
+To publish a version, bump `version` in `desktop/package.json` and push the tag `desktop-v<version>`. The `Build STeP Desktop installers` workflow then builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. On macOS the app installs updates itself only when it is signed with the organisation's Developer ID; an ad-hoc signed build shows a download button instead.
+
 ### Optional local Thai OCR
 
 The base STeP Desktop installer intentionally does **not** include Python, PaddlePaddle or OCR model weights. Employees who never use receipt OCR therefore do not download or install that runtime. The small STeP OCR application code and requirements are included so the Receipt page can install the component later.

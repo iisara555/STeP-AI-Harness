@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, PanelLeft, PanelRight, Search } from 'lucide-react';
-import type { DesktopAPI } from './types';
+import { ArrowDownToLine, ChevronDown, PanelLeft, PanelRight, RefreshCw, Search } from 'lucide-react';
+import type { DesktopAPI, UpdateState } from './types';
 import type { CommandId } from './commands';
 import { t } from './i18n';
 
@@ -45,6 +45,35 @@ export function TitleBar({
 }) {
   const [open, setOpen] = useState(false);
   const bar = useRef<HTMLElement>(null);
+  // In-app updates: a downloaded version waits behind "restart to update", as in Cursor and Codex.
+  const [update, setUpdate] = useState<UpdateState | null>(null),
+    [checked, setChecked] = useState('');
+  useEffect(() => {
+    void api
+      .call('updateState')
+      .then(setUpdate)
+      .catch(() => {});
+    return api.onEvent(event => {
+      if (event.type === 'update' && event.update) setUpdate(event.update);
+    });
+  }, [api]);
+  const checkUpdates = async () => {
+    setChecked(t('กำลังตรวจหาอัปเดต…'));
+    const state: UpdateState | null = await api.call('updateCheck').catch(() => null);
+    if (state) setUpdate(state);
+    setChecked(
+      !state || state.status === 'error'
+        ? t('ตรวจหาอัปเดตไม่สำเร็จ ลองใหม่ภายหลัง')
+        : state.status === 'disabled'
+          ? state.reason === 'UPDATE_POLICY_OFF'
+            ? t('องค์กรปิดการอัปเดตในแอป ติดต่อ IT เพื่อรับเวอร์ชันใหม่')
+            : t('รุ่นทดสอบนี้ไม่อัปเดตตัวเอง')
+          : state.status === 'none'
+            ? t('เป็นเวอร์ชันล่าสุดแล้ว ({0})', state.current)
+            : '',
+    );
+    setTimeout(() => setChecked(''), 6000);
+  };
   // Keep the Windows window buttons in the app's colours, following the theme (light, dark or the system's).
   useEffect(() => {
     const paint = () => {
@@ -110,6 +139,12 @@ export function TitleBar({
         command('settings', t('ตั้งค่าพื้นที่ทำงาน')),
         command('keyboard', t('คีย์ลัดและ Vim')),
         command('tour', t('ดูทัวร์แนะนำอีกครั้ง')),
+        {
+          id: 'update',
+          label: update?.current ? t('ตรวจหาอัปเดต · เวอร์ชัน {0}', update.current) : t('ตรวจหาอัปเดต'),
+          hint: '',
+          run: () => void checkUpdates(),
+        },
         ...(mac ? [] : [{ id: 'quit', label: t('ออกจากแอป'), hint: '', run: windowAction('quit'), danger: true }]),
       ],
     },
@@ -207,6 +242,31 @@ export function TitleBar({
         <kbd>{hint('palette')}</kbd>
       </button>
       <div className="titlebar-end">
+        {checked && (
+          <span className="titlebar-note" role="status">
+            {checked}
+          </span>
+        )}
+        {update?.status === 'ready' && (
+          <button
+            className="titlebar-update"
+            title={t('ติดตั้งเวอร์ชัน {0} แล้วเปิดแอปใหม่ งานที่ค้างไว้ยังอยู่', update.version || '')}
+            onClick={() => void api.call('updateInstall').catch(() => {})}
+          >
+            <RefreshCw size={13} />
+            {t('รีสตาร์ทเพื่ออัปเดต')}
+          </button>
+        )}
+        {update?.status === 'manual' && (
+          <button
+            className="titlebar-update"
+            title={t('Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดเวอร์ชัน {0} แล้วลากไปที่ Applications', update.version || '')}
+            onClick={() => void api.call('updateDownload').catch(() => {})}
+          >
+            <ArrowDownToLine size={13} />
+            {t('ดาวน์โหลดเวอร์ชัน {0}', update.version || '')}
+          </button>
+        )}
         {showRight && (
           <button
             className="icon titlebar-icon"

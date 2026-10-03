@@ -25,6 +25,8 @@ import { Store } from './store';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
+import { autoUpdater } from 'electron-updater';
+import { Updater, RELEASES_URL } from './updater';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -337,6 +339,22 @@ async function main() {
     () => policyState.policy,
   );
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  // In-app updates (electron/updater.ts): only an installed build updates itself; the policy can turn it off.
+  const updates = new Updater(app.isPackaged ? autoUpdater : undefined, {
+    current: app.getVersion(),
+    platform: process.platform,
+    disabledReason: !app.isPackaged
+      ? 'UPDATE_DEV_BUILD'
+      : !policyState.policy.features.autoUpdate
+        ? 'UPDATE_POLICY_OFF'
+        : process.env.STEP_DISABLE_UPDATES === '1'
+          ? 'UPDATE_ENV_OFF'
+          : '',
+    emit: update => emit({ sessionId: '', type: 'update', update }),
+    log: diagnose,
+  });
+  updates.start();
+  app.on('before-quit', () => updates.stop());
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
     voice.cancel();
@@ -1019,6 +1037,16 @@ async function main() {
           }),
         }));
       }
+      case 'updateState':
+        return updates.snapshot;
+      case 'updateCheck':
+        return updates.check();
+      case 'updateInstall':
+        updates.install();
+        return true;
+      case 'updateDownload':
+        await shell.openExternal(RELEASES_URL);
+        return true;
       case 'windowControl': {
         const action = inputText(input.action, 20);
         const contents = window.webContents;

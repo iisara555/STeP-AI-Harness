@@ -15,9 +15,9 @@
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && node scripts/package-windows.mjs",
-    "dist:mac": "npm run build && electron-builder --publish never --mac dmg --arm64",
+    "dist:mac": "npm run build && electron-builder --publish never --mac dmg zip --arm64",
     "icon": "electron scripts/make-icon.cjs",
-    "dist:mac:x64": "npm run build && node scripts/fetch-mac-x64-runtimes.mjs && electron-builder --publish never --mac dmg --x64",
+    "dist:mac:x64": "npm run build && node scripts/fetch-mac-x64-runtimes.mjs && electron-builder --publish never --mac dmg zip --x64",
     "bundle:ocr": "node scripts/bundle-ocr.mjs",
     "format": "prettier --write \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
     "format:check": "prettier --check \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
@@ -34,6 +34,7 @@
     "@tiptap/react": "^3.0.0",
     "@tiptap/starter-kit": "^3.0.0",
     "docx": "^9.0.0",
+    "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.468.0",
     "pptxgenjs": "^4.0.0",
@@ -49,6 +50,7 @@
     "electron": "44.4.5",
     "electron-builder": "^26.0.0",
     "esbuild": "^0.25.0",
+    "js-yaml": "^4.3.2",
     "prettier": "3.9.9",
     "tsx": "^4.0.0",
     "typescript": "^5.8.0",
@@ -57,6 +59,12 @@
   "build": {
     "asar": false,
     "appId": "th.ac.cmu.step.desktop",
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/iisara555/STeP-AI-Harness/releases/download/desktop-latest"
+      }
+    ],
     "productName": "STeP Desktop",
     "directories": {
       "output": "release"
@@ -133,7 +141,8 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "artifactName": "STeP-Desktop-${version}-${arch}.${ext}"
     },

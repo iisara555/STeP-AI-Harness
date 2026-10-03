@@ -91,9 +91,23 @@ try {
   await page.getByRole('dialog', { name: 'คำสั่ง' }).waitFor();
   await page.keyboard.press('Escape');
   await page.screenshot({ path: 'release/qa/ux-fixes/titlebar.png' });
+  // In-app updates: the STeP menu checks for updates (a development build says it does not update itself), and a
+  // downloaded update shows "restart to update" in the title bar.
+  await titlebar.getByRole('button', { name: 'เมนู STeP' }).click();
+  await menu.getByRole('menuitem', { name: /ตรวจหาอัปเดต · เวอร์ชัน/ }).click();
+  await titlebar.getByText('รุ่นทดสอบนี้ไม่อัปเดตตัวเอง').waitFor();
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].webContents.send('step:event', {
+      sessionId: '',
+      type: 'update',
+      update: { status: 'ready', current: '0.5.5', version: '0.5.6' },
+    }),
+  );
+  await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
+  await page.screenshot({ path: 'release/qa/ux-fixes/update-ready.png' });
   assert.deepEqual(errors, []);
   console.log(
-    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels, browser task entry and the app-drawn title bar.',
+    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels, browser task entry, the app-drawn title bar and in-app updates.',
   );
 } finally {
   await app.close();

@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'updateState',
+  'updateCheck',
+  'updateInstall',
+  'updateDownload',
   'packList',
   'packInstall',
   'packEnable',
