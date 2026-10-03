@@ -70,6 +70,7 @@ const allowed = new Set([
   'ocrStart',
   'ocrRead',
   'ocrResolve',
+  'receiptVision',
   'ocrSave',
   'send',
   'cancel',

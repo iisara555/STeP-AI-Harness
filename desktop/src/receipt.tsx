@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Download, FileSearch, FolderOpen, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, TriangleAlert } from 'lucide-react';
+import {
+  Check,
+  Download,
+  Eye,
+  FileSearch,
+  FolderOpen,
+  LoaderCircle,
+  Play,
+  RefreshCw,
+  Save,
+  ScanText,
+  Send,
+  TriangleAlert,
+} from 'lucide-react';
+import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading } from './receipt-vision';
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import ideaArt from './assets/illustrations/idea.png';
@@ -85,7 +99,10 @@ type OcrStatus = {
   folder: string;
   installing?: boolean;
   updateAvailable?: boolean;
+  /** A vision model may read the receipt image too (policy receiptVision, privacy checks off). */
+  vision?: boolean;
 };
+type Vision = { fields: VisionReading; buyerTaxId: string; notes: string; model: string };
 type AiDecision = {
   field: string;
   status: 'keep' | 'suggested' | 'ambiguous' | 'unmapped';
@@ -93,7 +110,7 @@ type AiDecision = {
   token?: string;
   reason: string;
 };
-type Doc = { name: string; preview: string; result: any };
+type Doc = { name: string; preview: string; result: any; visionOnly?: boolean };
 
 const labels: Record<string, string> = localized({
   merchant: 'ผู้ออกใบเสร็จ / ร้านค้า',
@@ -117,6 +134,11 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
   review_lines: issue => t('มี {0} บรรทัดที่ต้องตรวจจากภาพต้นฉบับ รวมจุดที่ OCR สองตัวอ่านต่างกัน', issue.count),
   resized_image: 'ภาพถูกย่อก่อน OCR โปรดตรวจข้อความขนาดเล็กบนใบเสร็จ',
   buyer_tax_id_excluded: 'พบเลขผู้เสียภาษีในส่วนของผู้ซื้อ จึงไม่เติมเป็นเลขของผู้ออกใบเสร็จ',
+};
+// Checks that need no AI (src/receipt-vision.ts); amounts adding up is already one of the page's own review rules.
+const ruleText: Record<string, string> = {
+  tax_id_checksum: 'เลขผู้เสียภาษีไม่ผ่านการตรวจเลขหลักสุดท้าย อาจอ่านผิดหนึ่งหลัก โปรดเทียบกับต้นฉบับ',
+  vat_not_7_percent: 'ภาษีมูลค่าเพิ่มไม่เท่ากับ 7% ของยอดก่อนภาษี โปรดตรวจตัวเลขทั้งสองช่อง',
 };
 const describe = (issue: Issue) => {
   const text = issueText[issue.code];
@@ -150,7 +172,8 @@ export function ReceiptApp({
   const [linesChecked, setLinesChecked] = useState(false),
     [note, setNote] = useState(''),
     [buyerExcluded, setBuyerExcluded] = useState(false),
-    [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]);
+    [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]),
+    [vision, setVision] = useState<Vision | null>(null);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -194,18 +217,40 @@ export function ReceiptApp({
   async function read() {
     const read: Doc | null = await call('ocrRead');
     if (!read) return;
-    const extracted = review.extractReceipt(read.result);
+    const extracted = read.visionOnly ? null : review.extractReceipt(read.result);
+    const nextValues = Object.fromEntries(review.fieldKeys.map(k => [k, extracted?.fields[k]?.value || '']));
     setDoc(read);
-    setFields(extracted.fields);
-    setRecords(extracted.records);
-    setMapping(extracted.afpMapping);
-    setBuyerExcluded(extracted.buyerTaxIdExcluded);
-    setValues(Object.fromEntries(review.fieldKeys.map(k => [k, extracted.fields[k]?.value || ''])));
+    setFields(extracted?.fields || {});
+    setRecords(extracted?.records || []);
+    setMapping(extracted?.afpMapping || null);
+    setBuyerExcluded(Boolean(extracted?.buyerTaxIdExcluded));
+    setValues(nextValues);
     setConfirmed({});
     setLinesChecked(false);
     setNote('');
     setAiDecisions([]);
+    setVision(null);
+    // The second, independent reading by a vision model, compared with the OCR field by field below.
+    if (status?.vision && connectionId) await readWithAi(nextValues);
   }
+  async function readWithAi(current = values) {
+    const reading = await call('receiptVision', { connectionId });
+    if (!reading || reading.cancelled) return;
+    setVision(reading);
+    // A field the OCR left empty takes the AI's reading, still unconfirmed; a field both read keeps the OCR value and
+    // shows the AI's reading beside it when they differ.
+    const next = { ...current };
+    for (const k of review.fieldKeys as ReceiptField[]) {
+      const ai = reading.fields?.[k]?.value || '';
+      if (ai && !String(next[k] || '').trim()) next[k] = ai;
+    }
+    setValues(next);
+    setConfirmed(c => Object.fromEntries(Object.entries(c).filter(([k]) => next[k] === current[k])));
+    notify(t('AI อ่านภาพใบเสร็จแล้ว ตรวจช่องที่อ่านต่างกันและเทียบกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
+  }
+  const matchOf = (k: string) =>
+    vision ? compareField(k as ReceiptField, fields[k]?.value || '', vision.fields[k as ReceiptField]?.value || '') : undefined;
+  const rules = receiptRuleChecks(values as Partial<Record<ReceiptField, string>>).filter(r => ruleText[r.code]);
   const draft = () => ({
     schema: 'step-receipt-review/v1',
     filename: doc?.name,
@@ -257,15 +302,33 @@ export function ReceiptApp({
           decisions: aiDecisions,
         }
       : null,
+    vision_check: vision
+      ? {
+          notice:
+            'A vision model read the receipt image independently; each field is compared with the OCR. Human confirmation is still required.',
+          model: vision.model,
+          notes: vision.notes,
+          fields: Object.fromEntries(
+            review.fieldKeys.map(k => [k, { ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) }]),
+          ),
+        }
+      : null,
     expense_note: note,
-    issues: result.issues.map(i => ({ ...i, message: describe(i) })),
+    issues: [
+      ...result.issues.map(i => ({ ...i, message: describe(i) })),
+      ...rules.map(r => ({ code: r.code, severity: 'advisory', message: t(ruleText[r.code]) })),
+    ],
     ocr: { text: doc?.result?.text || '', lines: records },
   });
   const summary = () =>
     [
       t('ช่วย pre-check ใบเสร็จก่อนส่ง AFP'),
       '',
-      t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่องและให้คนตรวจแล้ว):', doc?.name),
+      doc?.visionOnly
+        ? t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย AI จากภาพและให้คนตรวจแล้ว):', doc?.name)
+        : vision
+          ? t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่อง เทียบกับ AI อ่านภาพ และให้คนตรวจแล้ว):', doc?.name)
+          : t('ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่องและให้คนตรวจแล้ว):', doc?.name),
       ...review.fieldKeys.map(
         k => `- ${labels[k]}: ${values[k] || t('(ไม่มี)')}${values[k] ? (confirmed[k] ? t(' · ตรวจแล้ว') : t(' · ยังไม่ตรวจ')) : ''}`,
       ),
@@ -279,7 +342,9 @@ export function ReceiptApp({
             ),
           ]
         : []),
-      ...(result.issues.length ? ['', t('ประเด็นที่ระบบตรวจพบ:'), ...result.issues.map(i => '- ' + describe(i))] : []),
+      ...(result.issues.length || rules.length
+        ? ['', t('ประเด็นที่ระบบตรวจพบ:'), ...result.issues.map(i => '- ' + describe(i)), ...rules.map(r => '- ' + t(ruleText[r.code]))]
+        : []),
     ].join('\n');
 
   const ready = status?.running;
@@ -400,10 +465,19 @@ export function ReceiptApp({
             <br />
             {t('คุณเทียบกับต้นฉบับ แก้ไข และทำเครื่องหมายว่าตรวจแล้วทีละช่อง')}
           </p>
-          <button disabled={!ready || Boolean(busy)} onClick={() => void run('read', read)}>
+          <button disabled={!(ready || (status?.vision && connectionId)) || Boolean(busy)} onClick={() => void run('read', read)}>
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
             {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
           </button>
+          {status?.vision && (
+            <p className="small muted">
+              {ready
+                ? t('อ่าน 2 ทาง: OCR ในเครื่อง และ AI อ่านภาพแยกกัน แล้วเทียบผลทีละช่อง')
+                : connectionId
+                  ? t('ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย (อ่านทางเดียว ติดตั้ง OCR เพิ่มเพื่อเทียบ 2 ทาง)')
+                  : t('เชื่อมต่อ AI ก่อน เพื่อให้ AI อ่านภาพใบเสร็จ')}
+            </p>
+          )}
           <p className="small muted">{t('รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB')}</p>
         </div>
       ) : (
@@ -417,6 +491,12 @@ export function ReceiptApp({
               <img className="receipt-preview" src={doc.preview} alt={t('ภาพใบเสร็จ ') + doc.name} />
             ) : (
               <p className="small muted">{t('ไฟล์ชนิดนี้แสดงภาพในแอปไม่ได้ โปรดเปิดต้นฉบับเทียบกับข้อความด้านล่าง')}</p>
+            )}
+            {vision?.notes && (
+              <p className="receipt-vision-note small">
+                <Eye size={14} />
+                {t('AI ฝากตรวจ: {0}', vision.notes)}
+              </p>
             )}
             <details open={reviewLines > 0}>
               <summary>
@@ -486,6 +566,50 @@ export function ReceiptApp({
                     {fields[k].mappingMethod ? ` · map: ${fields[k].mappingMethod}` : ''}
                   </small>
                 )}
+                {(() => {
+                  const match = matchOf(k),
+                    ai = vision?.fields[k as ReceiptField]?.value || '';
+                  if (!match || match === 'empty') return null;
+                  if (match === 'agree')
+                    return (
+                      <small className="receipt-match agree">
+                        <Check size={12} />
+                        {t('OCR และ AI อ่านตรงกัน')}
+                      </small>
+                    );
+                  if (match === 'ai-only')
+                    return (
+                      <small className="receipt-match ai-only">
+                        <Eye size={12} />
+                        {doc?.visionOnly ? t('AI อ่านจากภาพ · ตรวจกับต้นฉบับ') : t('OCR ไม่พบ AI อ่านได้ “{0}” · ตรวจกับภาพ', ai)}
+                        {values[k] !== ai && (
+                          <button className="text-link" type="button" onClick={() => setValues({ ...values, [k]: ai })}>
+                            {t('ใช้ค่านี้')}
+                          </button>
+                        )}
+                      </small>
+                    );
+                  if (match === 'ocr-only')
+                    return <small className="receipt-match ocr-only">{t('AI อ่านช่องนี้ไม่เห็น ใช้ค่าจาก OCR · ตรวจกับภาพ')}</small>;
+                  return (
+                    <small className="receipt-match differ">
+                      <TriangleAlert size={12} />
+                      {t('อ่านต่างกัน: AI อ่านว่า “{0}”', ai)}
+                      {values[k] !== ai && (
+                        <button
+                          className="text-link"
+                          type="button"
+                          onClick={() => {
+                            setValues({ ...values, [k]: ai });
+                            setConfirmed({ ...confirmed, [k]: false });
+                          }}
+                        >
+                          {t('ใช้ค่านี้')}
+                        </button>
+                      )}
+                    </small>
+                  );
+                })()}
                 {!String(values[k] || '').trim() && (fields[k]?.candidates?.length || 0) > 0 && (
                   <div className="receipt-candidates">
                     <small>{t('OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:')}</small>
@@ -554,11 +678,16 @@ export function ReceiptApp({
                   {result.complete ? 'READY-FOR-AFP-REVIEW' : 'NEEDS-DOCUMENT-FIX'}{' '}
                   {t('· ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}
                 </small>
-                {result.issues.length > 0 && (
+                {result.issues.length + rules.length > 0 && (
                   <ul>
                     {result.issues.map(i => (
                       <li key={i.code} className={i.severity}>
                         {describe(i)}
+                      </li>
+                    ))}
+                    {rules.map(r => (
+                      <li key={r.code} className="advisory">
+                        {t(ruleText[r.code])}
                       </li>
                     ))}
                   </ul>
@@ -589,6 +718,12 @@ export function ReceiptApp({
                 <FileSearch size={15} />
                 {t('ตรวจใบใหม่')}
               </button>
+              {status?.vision && (
+                <button className="quiet" disabled={!connectionId || Boolean(busy)} onClick={() => void run('vision', () => readWithAi())}>
+                  {busy === 'vision' ? <LoaderCircle size={15} className="spin" /> : <Eye size={15} />}
+                  {vision ? t('ให้ AI อ่านภาพอีกครั้ง') : t('ให้ AI อ่านภาพเทียบ')}
+                </button>
+              )}
               <button
                 className="quiet"
                 disabled={!connectionId || !mapping || Boolean(busy)}

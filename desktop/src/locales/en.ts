@@ -51,7 +51,8 @@ export const en: Record<string, string> = {
   'ตรวจใบเสร็จก่อนส่ง AFP': 'Check receipts before sending to AFP',
   เริ่มต้นงานที่อยากทำ: 'What would you like to work on?',
   'บัญชี AI และข้อมูลอยู่ในเครื่องนี้': 'Your AI account and data stay on this computer',
-  'ทดลอง · อ่านด้วย OCR ในเครื่อง ไม่ส่งเอกสารขึ้น cloud': 'Beta · Reads receipts with on-device OCR; nothing is uploaded to the cloud',
+  'ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต':
+    'Beta · Reads receipts with on-device OCR, and has the AI read the image to compare when your organisation allows it',
   'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing': 'Skills in this workspace, with their Manifest and Routing status',
   'จากคำขอ สู่ผลงานที่ใช้ต่อได้': 'From request to ready-to-use work',
   ซ่อนร่าง: 'Hide draft',
@@ -1386,4 +1387,37 @@ export const en: Record<string, string> = {
   ให้ความเห็นต่อคำตอบนี้: 'Rate this answer',
   ตัวเลือกงานนี้: 'Task options',
   'งานนี้ใช้ {0} · จะเปิดในแท็บเว็บ': 'This task uses {0} · opening it in the Web tab',
+  'AI อ่านภาพใบเสร็จแล้ว ตรวจช่องที่อ่านต่างกันและเทียบกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว”':
+    'The AI has read the receipt image. Check the fields where the readings differ against the original before ticking “Checked”',
+  'ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย AI จากภาพและให้คนตรวจแล้ว):':
+    'Details from receipt “{0}” (read from the image by AI and checked by a person):',
+  'ข้อมูลจากใบเสร็จ “{0}” (อ่านด้วย OCR ในเครื่อง เทียบกับ AI อ่านภาพ และให้คนตรวจแล้ว):':
+    'Details from receipt “{0}” (read by on-device OCR, compared with an AI reading of the image, and checked by a person):',
+  'อ่าน 2 ทาง: OCR ในเครื่อง และ AI อ่านภาพแยกกัน แล้วเทียบผลทีละช่อง':
+    'Two readings: on-device OCR and a separate AI reading of the image, compared field by field',
+  'ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย (อ่านทางเดียว ติดตั้ง OCR เพิ่มเพื่อเทียบ 2 ทาง)':
+    'No on-device OCR yet: the AI can read the image now (one reading; install OCR to compare two)',
+  'เชื่อมต่อ AI ก่อน เพื่อให้ AI อ่านภาพใบเสร็จ': 'Connect an AI first so it can read the receipt image',
+  'AI ฝากตรวจ: {0}': 'The AI asks you to check: {0}',
+  'OCR และ AI อ่านตรงกัน': 'OCR and AI agree',
+  'AI อ่านจากภาพ · ตรวจกับต้นฉบับ': 'Read from the image by AI · check against the original',
+  'OCR ไม่พบ AI อ่านได้ “{0}” · ตรวจกับภาพ': 'OCR found nothing; the AI read “{0}” · check against the image',
+  ใช้ค่านี้: 'Use this value',
+  'AI อ่านช่องนี้ไม่เห็น ใช้ค่าจาก OCR · ตรวจกับภาพ': 'The AI could not read this field; using the OCR value · check against the image',
+  'อ่านต่างกัน: AI อ่านว่า “{0}”': 'Readings differ: the AI read “{0}”',
+  'ให้ AI อ่านภาพอีกครั้ง': 'Have the AI read the image again',
+  'ให้ AI อ่านภาพเทียบ': 'Have the AI read the image to compare',
+  'ให้ AI อ่านภาพใบเสร็จ': 'Let the AI read the receipt image',
+  'ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง':
+    'Send the receipt image to your connected AI to read separately from the OCR, then compare field by field',
+  'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง':
+    'The image shows the shop name, address and tax ID. Send only receipts you are allowed to share. Every value the AI reads must still be checked against the original before you tick “Checked”',
+  'ให้ AI อ่านภาพ': 'Let the AI read it',
+  'เลขผู้เสียภาษีไม่ผ่านการตรวจเลขหลักสุดท้าย อาจอ่านผิดหนึ่งหลัก โปรดเทียบกับต้นฉบับ':
+    'The tax ID fails its check digit; one digit may be misread. Compare it with the original',
+  'ภาษีมูลค่าเพิ่มไม่เท่ากับ 7% ของยอดก่อนภาษี โปรดตรวจตัวเลขทั้งสองช่อง': 'VAT is not 7% of the amount before VAT. Check both figures',
+  'AI ตอบกลับในรูปแบบที่อ่านไม่ได้ ลองให้ AI อ่านภาพอีกครั้ง หรือใช้ผลจาก OCR':
+    'The AI replied in a form that cannot be read. Have it read the image again, or use the OCR result',
+  'แปลงภาพใบเสร็จเพื่อส่งให้ AI ไม่ได้ ลองบันทึกเป็น JPG หรือ PNG แล้วเลือกใหม่':
+    'The receipt image could not be prepared for the AI. Save it as JPG or PNG and choose it again',
 };

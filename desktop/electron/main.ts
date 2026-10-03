@@ -7,6 +7,7 @@ import {
   BrowserWindow,
   ipcMain,
   Menu,
+  nativeImage,
   dialog,
   shell,
   safeStorage,
@@ -71,6 +72,7 @@ import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
+import { RECEIPT_VISION_SYSTEM, parseVisionReading } from '../src/receipt-vision';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 
@@ -700,6 +702,22 @@ async function main() {
   );
   let installing = false;
   app.on('before-quit', () => ocr.stop());
+  // The receipt last opened on the receipt page, kept so the vision model can read the same file.
+  let lastReceipt: { name: string; path: string; extension: string; bytes: Buffer } | undefined;
+  const receiptVisionAllowed = () =>
+    policyState.policy.features.vision && policyState.policy.features.receiptVision && !policyState.policy.checks.privacy;
+  /** The receipt as pictures for a vision model: images resized to 1800 px at most, a PDF's first three pages. */
+  async function receiptImages(receipt: NonNullable<typeof lastReceipt>): Promise<VisionInput[]> {
+    if (receipt.extension === 'pdf') return (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'))).slice(0, 3);
+    const image = nativeImage.createFromBuffer(receipt.bytes);
+    if (image.isEmpty()) throw new Error('RECEIPT_VISION_FORMAT');
+    const size = image.getSize();
+    const scale = Math.min(1, 1800 / Math.max(size.width, size.height));
+    const fitted = scale < 1 ? image.resize({ width: Math.round(size.width * scale), quality: 'best' }) : image;
+    const jpeg = fitted.toJPEG(88);
+    if (jpeg.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
+    return [{ mime: 'image/jpeg', data: jpeg.toString('base64') }];
+  }
   const previewTypes: Record<string, string> = {
     png: 'image/png',
     jpg: 'image/jpeg',
@@ -1557,6 +1575,7 @@ async function main() {
           installed: status.installed && current,
           updateAvailable: managed && status.installed && !current,
           installing,
+          vision: receiptVisionAllowed(),
         };
       }
       case 'ocrFolder': {
@@ -1570,15 +1589,26 @@ async function main() {
         return ocr.start();
       case 'ocrRead': {
         const health = await ocr.health();
-        if (!health.running) throw new Error('OCR_UNAVAILABLE');
+        // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
+        if (!health.running && !receiptVisionAllowed()) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
           title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
           filters: [{ name: 'Receipts', extensions: OCR_EXTENSIONS }],
         });
         if (picked.canceled) return null;
-        const path = picked.filePaths[0],
-          read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+        const path = picked.filePaths[0];
+        if (!health.running) {
+          const bytes = await readFile(path);
+          if (bytes.length > 25 * 1024 * 1024) throw new Error('ATTACH_TOO_LARGE');
+          const extension = extname(path).slice(1).toLowerCase();
+          lastReceipt = { name: basename(path), path, extension, bytes };
+          const type = previewTypes[extension];
+          const preview = type && bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : '';
+          return { name: basename(path), preview, result: null, visionOnly: true };
+        }
+        const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+        lastReceipt = { name: basename(path), path, extension: read.extension, bytes: read.bytes };
         // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
         const type = previewTypes[read.extension];
         const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
@@ -1636,6 +1666,55 @@ async function main() {
           return { decisions };
         } catch (error) {
           diagnose('ocr-ai-filter-failed', { provider: connection.provider, code: errorCode(error) });
+          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+          throw error;
+        } finally {
+          clearTimeout(timeout);
+          ocrResolving = false;
+        }
+      }
+      case 'receiptVision': {
+        // A second, independent reading of the receipt by a vision model; the page compares it with the OCR field by field.
+        if (!receiptVisionAllowed()) throw new Error('VISION_DISABLED');
+        if (!lastReceipt) throw new Error('INVALID_INPUT');
+        if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
+        const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
+        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+        const settings = store.settings();
+        if (!settings.receiptVisionConsentedAt) {
+          const answer = await dialog.showMessageBox(window, {
+            type: 'question',
+            title: tm('ให้ AI อ่านภาพใบเสร็จ'),
+            message: tm('ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง'),
+            detail: tm(
+              'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง',
+            ),
+            buttons: [tm('ยกเลิก'), tm('ให้ AI อ่านภาพ')],
+            defaultId: 1,
+            cancelId: 0,
+          });
+          if (answer.response !== 1) return { cancelled: true };
+          store.put('settings', 'main', { ...settings, receiptVisionConsentedAt: new Date().toISOString() });
+        }
+        const images = await receiptImages(lastReceipt);
+        ocrResolving = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 180_000);
+        try {
+          const current = await runtime(connection);
+          const reply = await current.adapter.run('อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น', connection, {
+            ...current.context,
+            system: RECEIPT_VISION_SYSTEM,
+            images,
+            signal: controller.signal,
+            emit: () => {},
+          });
+          const reading = parseVisionReading(reply);
+          diagnose('receipt-vision', { provider: connection.provider, fields: String(Object.keys(reading.fields).length) });
+          return { ...reading, model: connection.model || '' };
+        } catch (error) {
+          diagnose('receipt-vision-failed', { provider: connection.provider, code: errorCode(error) });
           if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
           throw error;
         } finally {

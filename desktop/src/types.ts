@@ -163,6 +163,7 @@ export type Settings = {
   /** Version of the usage terms this person accepted (src/terms-version.ts). */
   termsVersion?: string;
   ocrAiConsentedAt?: string;
+  receiptVisionConsentedAt?: string;
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
 export type Attachment = {

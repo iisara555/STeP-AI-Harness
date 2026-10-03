@@ -2866,3 +2866,27 @@ nav .count {
   padding: 2px 4px;
   color: var(--muted);
 }
+.receipt-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.receipt-match.agree {
+  color: var(--accent-ink);
+}
+.receipt-match.differ {
+  color: var(--danger);
+}
+.receipt-match .text-link {
+  padding: 0 4px;
+  font-size: 11px;
+}
+.receipt-vision-note {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 8px 0;
+}

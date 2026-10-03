@@ -1,7 +1,7 @@
 // Gemini API key from Settings: pressing "connect" must test the key and finish ready or with a clear error, never
 // sit untested. Runs the bundled Gemini CLI against a local fake Gemini API; no Google account, key or quota is used.
 import { _electron as electron, expect } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
@@ -9,6 +9,15 @@ import { once } from 'node:events';
 import assert from 'node:assert/strict';
 
 let mode = 'quota';
+const receiptReply = {
+  fields: {
+    merchant: { value: 'ร้านตัวอย่าง จำกัด', evidence: 'ร้านตัวอย่าง จำกัด' },
+    total: { value: '๑๐๗.๐๐', evidence: 'ยอดสุทธิ ๑๐๗.๐๐' },
+    vat: { value: '7.00', evidence: 'ภาษีมูลค่าเพิ่ม 7.00' },
+  },
+  buyerTaxId: '',
+  notes: 'ตัวเลขยอดสุทธิจางเล็กน้อย',
+};
 const prompts = [];
 const server = createServer((req, res) => {
   let body = '';
@@ -24,8 +33,10 @@ const server = createServer((req, res) => {
     });
     if (req.url.includes('streamGenerateContent')) {
       prompts.push(body);
+      // The receipt page's vision reading: answer with the JSON the receipt prompt asks for.
+      const text = body.includes('You read Thai and English receipts') ? JSON.stringify(receiptReply) : 'OK';
       res.writeHead(200, { 'content-type': 'text/event-stream' });
-      return res.end('data: ' + JSON.stringify(reply('OK')) + '\r\n\r\n');
+      return res.end('data: ' + JSON.stringify(reply(text)) + '\r\n\r\n');
     }
     // The CLI's model router asks a small model which model to use before the real request.
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -78,8 +89,38 @@ try {
     prompts.some(p => p.includes('Reply with exactly OK')),
     'the connection test reached the Gemini API',
   );
+
+  // With no local OCR, the receipt page reads a receipt with the connected vision model alone: one consent, the image
+  // sent as image data, and every field it fills left unconfirmed for a person to check.
+  await page.keyboard.press('Escape');
+  const receipt = join(home, 'receipt.png');
+  const png = await app.evaluate(({ nativeImage }) =>
+    nativeImage
+      .createFromBitmap(Buffer.alloc(64 * 64 * 4, 0xff), { width: 64, height: 64 })
+      .toPNG()
+      .toString('base64'),
+  );
+  await writeFile(receipt, Buffer.from(png, 'base64'));
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+    globalThis.receiptConsents = 0;
+    dialog.showMessageBox = async () => (globalThis.receiptConsents++, { response: 1 });
+  }, receipt);
+  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByText('ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00', { timeout: 60000 });
+  assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
+  await page.getByText('AI ฝากตรวจ: ตัวเลขยอดสุทธิจางเล็กน้อย').waitFor();
+  assert.ok((await page.getByText('AI อ่านจากภาพ · ตรวจกับต้นฉบับ').count()) >= 3, 'each AI-read field is marked');
+  assert.equal(await page.locator('.receipt-field .check input:checked').count(), 0, 'nothing is confirmed for the person');
+  assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
+  const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
+  assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
   assert.deepEqual(errors, []);
-  console.log('Gemini API key smoke passed: Settings tests the key on connect; quota errors and success both finish.');
+  console.log(
+    'Gemini API key smoke passed: Settings tests the key on connect; quota errors and success both finish; the receipt page reads an image with the vision model.',
+  );
 } finally {
   await app.close().catch(() => {});
   server.close();
