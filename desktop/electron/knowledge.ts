@@ -17,6 +17,23 @@ function trigrams(text: string) {
 }
 const share = (query: string[], grams: Set<string>) => query.filter(g => grams.has(g)).length / Math.max(query.length, 1);
 
+// Thai title abbreviations as people type them ("ผอ.วิน คือใคร"), spelled out the way the documents write them.
+// Each needs its dot or a following space, so ordinary words that start the same way (ผอม, หนัง) are left alone.
+const ABBREVIATIONS: [RegExp, string][] = [
+  [/รอง\s*ผอ(?:\.|\s|$)/g, 'รองผู้อำนวยการ '],
+  [/ผช\.?\s*ผอ(?:\.|\s|$)/g, 'ผู้ช่วยผู้อำนวยการ '],
+  [/ผอ(?:\.|\s|$)/g, 'ผู้อำนวยการ '],
+  [/ผจก(?:\.|\s|$)/g, 'ผู้จัดการ '],
+  [/จนท(?:\.|\s|$)/g, 'เจ้าหน้าที่ '],
+  [/หน\.\s*ทีม/g, 'หัวหน้าทีม'],
+];
+/** The question with its abbreviations spelled out, kept beside the original so both forms can match. */
+export function expandAbbreviations(text: string) {
+  let expanded = text;
+  for (const [pattern, full] of ABBREVIATIONS) expanded = expanded.replace(pattern, full);
+  return expanded === text ? text : text + '\n' + expanded;
+}
+
 /** Below this a question is about something the organization documents do not cover (tested on staff questions). */
 export const MATCH_THRESHOLD = 0.3;
 /** A match this strong answers from the documents alone; weaker matches still allow a public web search afterwards. */
@@ -84,7 +101,7 @@ export class OrganizationKnowledge {
   }
   /** The best-matching sections, strongest first; empty when the documents do not cover the question. */
   async search(question: string): Promise<KnowledgeSection[]> {
-    const query = [...trigrams(question)];
+    const query = [...trigrams(expandAbbreviations(question))];
     if (query.length < 2) return [];
     const scored = (await this.load())
       .map(section => ({ section, score: 0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams) }))

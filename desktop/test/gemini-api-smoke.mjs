@@ -9,6 +9,7 @@ import { once } from 'node:events';
 import assert from 'node:assert/strict';
 
 let mode = 'quota';
+const chatTurns = [];
 const receiptReply = {
   fields: {
     merchant: { value: 'ร้านตัวอย่าง จำกัด', evidence: 'ร้านตัวอย่าง จำกัด' },
@@ -36,7 +37,22 @@ const server = createServer((req, res) => {
     if (req.url.includes('streamGenerateContent')) {
       prompts.push(body);
       // The receipt page's vision reading: answer with the JSON the receipt prompt asks for.
-      const text = body.includes('You read Thai and English receipts') ? JSON.stringify(receiptReply) : 'OK';
+      let text = body.includes('You read Thai and English receipts') ? JSON.stringify(receiptReply) : 'OK';
+      // A chat question: the first turn asks for the reference tool, the next answers from its result.
+      const request = JSON.parse(body);
+      const said = (request.contents || []).map(c => (c.parts || []).map(p => p.text || '').join('')).join('\n');
+      if (said.includes('ผอ.วิน คือใคร')) {
+        chatTurns.push({
+          contents: request.contents.length,
+          last: request.contents
+            .at(-1)
+            .parts.map(p => p.text || '')
+            .join(''),
+        });
+        text = said.includes('<tool_results>')
+          ? 'ผอ. STeP คือ รศ.ดร.ปิติวัฒน์ วัฒนชัย (จากเอกสาร step-executive-board)'
+          : '```step-tool\n{"tool":"reference","input":"step-executive-board"}\n```';
+      }
       res.writeHead(200, { 'content-type': 'text/event-stream' });
       return res.end('data: ' + JSON.stringify(reply(text)) + '\r\n\r\n');
     }
@@ -129,9 +145,28 @@ try {
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeFocused();
   const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
   assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
+
+  // Chat with tools on Gemini: the reference turn and the answer turn share one Gemini CLI conversation, so the second
+  // request carries the first exchange plus only the new tool results, not the whole prompt again.
+  await page.getByRole('button', { name: 'เริ่มงานใหม่' }).first().click();
+  await page.locator('.composer textarea').fill('ผอ.วิน คือใคร');
+  await page.keyboard.press('Enter');
+  // The usage terms appear on the first send on this computer; wait for them, or for the answer if they do not.
+  const terms = page.getByText('ฉันอ่านและรับทราบข้อตกลงการใช้งาน');
+  const answer = page.getByText('รศ.ดร.ปิติวัฒน์ วัฒนชัย (จากเอกสาร step-executive-board)');
+  await terms.or(answer).first().waitFor({ timeout: 60000 });
+  if (await terms.isVisible()) {
+    await terms.click();
+    await page.getByRole('button', { name: 'รับทราบและส่ง' }).click();
+  }
+  await page.getByText('รศ.ดร.ปิติวัฒน์ วัฒนชัย (จากเอกสาร step-executive-board)').waitFor({ timeout: 90000 });
+  assert.equal(chatTurns.length, 2, JSON.stringify(chatTurns.map(t => t.contents)));
+  assert.equal(chatTurns[0].contents, 1);
+  assert.ok(chatTurns[1].contents >= 3, 'the second turn continues the same conversation');
+  assert.ok(chatTurns[1].last.includes('<tool_results>') && !chatTurns[1].last.includes('<routing_contract>'), 'only the new part is sent');
   assert.deepEqual(errors, []);
   console.log(
-    'Gemini API key smoke passed: Settings tests the key on connect; quota errors and success both finish; the receipt page reads an image with the vision model.',
+    'Gemini API key smoke passed: Settings tests the key on connect; quota errors and success both finish; the receipt page reads an image with the vision model; chat tool turns share one Gemini conversation.',
   );
 } finally {
   await app.close().catch(() => {});

@@ -1531,4 +1531,6 @@ export const en: Record<string, string> = {
     'Choose a drawing you like. They are illustrations, not photos of anyone, and your choice stays on this computer',
   ใช้ตัวอักษรแรกของชื่อ: 'Use the first letter of your name',
   'ภาพที่ {0}': 'Picture {0}',
+  'AI ส่งคำตอบไม่ครบหรือว่างเปล่า ระบบลองใหม่ให้แล้วแต่ยังไม่สำเร็จ ลองส่งอีกครั้ง หรือเลือกรุ่นโมเดลอื่น':
+    'The AI returned an incomplete or empty answer, and retrying did not help. Send again or choose another model',
 };

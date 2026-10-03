@@ -227,6 +227,11 @@ test('runtime stderr is scrubbed and known provider failures become codes', asyn
   assert.ok(!line.includes('me@cmu.ac.th') && !line.includes('ya29.') && !line.includes('code=abc') && !line.includes('x'.repeat(40)));
   assert.equal(explainRuntimeFailure(['[API Error: 429 RESOURCE_EXHAUSTED] quota']), 'PROVIDER_QUOTA');
   assert.equal(explainRuntimeFailure(['Please set GOOGLE_CLOUD_PROJECT']), 'GOOGLE_CLOUD_PROJECT_REQUIRED');
+  assert.equal(
+    explainRuntimeFailure(['error: Model stream ended with an invalid chunk or missing finish reason.']),
+    'PROVIDER_EMPTY_RESPONSE',
+  );
+  assert.equal(explainRuntimeFailure(['finishReason: MALFORMED_FUNCTION_CALL']), 'PROVIDER_EMPTY_RESPONSE');
   assert.equal(explainRuntimeFailure(['all good']), undefined);
 });
 

@@ -8,6 +8,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### Gemini: faster tool turns and fewer failed answers
+
+Found while checking a slow, failed answer to "ผอ.วิน คือใคร" on a Gemini API key.
+
+- **Abbreviations find the documents:** the organization knowledge search spells out Thai title abbreviations (ผอ., รอง ผอ., ผช. ผอ., ผจก., จนท., หน. ทีม) beside the original question. "ผอ.วิน คือใคร" previously matched nothing, so the model had to open documents with tool turns; it now matches the executive board document strongly enough to answer from it directly.
+- **One Gemini conversation per run:** every tool turn now continues on one Gemini CLI process and ACP session and sends only the new tool results, as Codex already does. Previously each turn started the CLI again and resent the whole prompt (about 25,000 characters of rules, registries and context) every time. A turn that fails on the open conversation is retried once from a fresh start.
+- **Clearer tool format:** the tool rules show an exact `step-tool` example and say it is plain text, not a native function call, for models that stalled on the format.
+- **Incomplete answers retry:** a reply that ends early or comes back empty (`invalid chunk`, `missing finish reason`, `MALFORMED_FUNCTION_CALL`) is reported as `PROVIDER_EMPTY_RESPONSE` and retried with the usual backoff, instead of the generic "check the connection and quota".
+- Tests: abbreviation and search cases, the new error mapping, and the Gemini API smoke checks that the second tool turn continues the same conversation and carries only the tool results.
+
 ### Profile pictures for employees
 
 - **36 hand-drawn profile pictures** (black-ink portraits in the app's illustration style) to choose from in Settings → ทั่วไป → รูปโปรไฟล์. The first option keeps the initial in a circle, as before.
