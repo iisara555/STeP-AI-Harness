@@ -1533,4 +1533,9 @@ export const en: Record<string, string> = {
   'ภาพที่ {0}': 'Picture {0}',
   'AI ส่งคำตอบไม่ครบหรือว่างเปล่า ระบบลองใหม่ให้แล้วแต่ยังไม่สำเร็จ ลองส่งอีกครั้ง หรือเลือกรุ่นโมเดลอื่น':
     'The AI returned an incomplete or empty answer, and retrying did not help. Send again or choose another model',
+  'กำลังดาวน์โหลดเวอร์ชัน {0}': 'Downloading version {0}',
+  'มีเวอร์ชันใหม่ {0}': 'New version {0}',
+  'ดาวน์โหลดแล้ว รีสตาร์ทเพื่อใช้เวอร์ชันใหม่ งานที่ค้างไว้ยังอยู่': 'Downloaded. Restart to use it; your work stays',
+  'Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดแล้วลากไปที่ Applications':
+    'This Mac build cannot install updates itself; download it and drag it to Applications',
 };

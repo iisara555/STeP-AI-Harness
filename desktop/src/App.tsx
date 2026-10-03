@@ -55,6 +55,7 @@ import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
+import { UpdateCard, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, providerLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
@@ -85,6 +86,7 @@ import { startersFor, starterTag, starterText } from './starters';
 
 export default function App() {
   const api = window.step;
+  const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
@@ -1016,6 +1018,7 @@ export default function App() {
               <Settings2 size={18} />
               <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
             </button>
+            <UpdateCard api={api} update={update} />
             <div className="profile">
               <Avatar
                 id={snapshot.settings.avatar}

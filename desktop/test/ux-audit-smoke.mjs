@@ -96,15 +96,29 @@ try {
   await titlebar.getByRole('button', { name: 'เมนู STeP' }).click();
   await menu.getByRole('menuitem', { name: /ตรวจหาอัปเดต · เวอร์ชัน/ }).click();
   await titlebar.getByText('รุ่นทดสอบนี้ไม่อัปเดตตัวเอง').waitFor();
-  await app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.send('step:event', {
-      sessionId: '',
-      type: 'update',
-      update: { status: 'ready', current: '0.5.5', version: '0.5.6' },
-    }),
-  );
+  const sendUpdate = update =>
+    app.evaluate(
+      ({ BrowserWindow }, update) =>
+        BrowserWindow.getAllWindows()[0].webContents.send('step:event', { sessionId: '', type: 'update', update }),
+      update,
+    );
+  // The update card sits above the profile at the bottom of the task list, as in Claude and Codex.
+  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  await sendUpdate({ status: 'downloading', current: '0.5.5', version: '0.5.6', percent: 40 });
+  await page.locator('.update-card').getByText('กำลังดาวน์โหลดเวอร์ชัน 0.5.6').waitFor();
+  await sendUpdate({ status: 'ready', current: '0.5.5', version: '0.5.6' });
+  const card = page.locator('.update-card');
+  await card.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
+  assert.equal(await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).count(), 0, 'one place at a time');
+  await page.locator('.sidebar').screenshot({ path: 'release/qa/ux-fixes/update-card.png' });
+  // With the task list hidden, the title bar offers it instead.
+  await titlebar.getByRole('button', { name: 'ซ่อนแถบงาน' }).click();
   await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
   await page.screenshot({ path: 'release/qa/ux-fixes/update-ready.png' });
+  await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  // A Mac build that cannot install the update itself offers the download instead.
+  await sendUpdate({ status: 'manual', current: '0.5.5', version: '0.5.6', url: 'https://example.invalid' });
+  await card.getByRole('button', { name: 'ดาวน์โหลดเวอร์ชัน 0.5.6' }).waitFor();
   // Profile pictures: choose a bundled drawing in Settings; the sidebar shows it, and only bundled ids are stored.
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
   await page.getByRole('tab', { name: 'ทั่วไป' }).click();

@@ -8,6 +8,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.6 (`desktop/package.json`) contains the changes below. 0.5.6 adds the first two sections (Gemini fixes and profile pictures) and the contextual empty-state illustrations (PR #91); everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### Update card above the profile, as in Claude and Codex
+
+- **Next to the profile:** when a new version is on its way, a card at the bottom of the task list, above the profile, shows the download with its progress, then **รีสตาร์ทเพื่ออัปเดต** once it is ready (Windows). On a Mac build that cannot install updates itself, it shows **ดาวน์โหลดเวอร์ชัน x.y.z**.
+- **One place at a time:** the title-bar button now appears only while the task list is hidden.
+- The UX smoke checks the downloading, ready and Mac states of the card and the title-bar fallback.
+
 ### Gemini: faster tool turns and fewer failed answers
 
 Found while checking a slow, failed answer to "ผอ.วิน คือใคร" on a Gemini API key.

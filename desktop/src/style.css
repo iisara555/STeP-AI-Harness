@@ -399,6 +399,49 @@ nav button,
   align-items: center;
   font-size: 12px;
 }
+.update-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 12px;
+}
+.update-card.ready {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.update-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.update-card-head small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.update-card small.muted {
+  line-height: 1.5;
+}
+.update-card button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.update-card-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.update-card-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
 .avatar-badge {
   width: 34px;
   height: 34px;
