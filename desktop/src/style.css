@@ -71,10 +71,201 @@ a,
 .text-link {
   text-underline-offset: 3px;
 }
-.app {
+/* The window: the app's own title bar (src/titlebar.tsx) over the three columns. */
+.shell {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
+}
+.app {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.titlebar {
+  position: relative;
+  z-index: 45;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Leave room for the window buttons the system draws over the bar (Windows, Linux: on the right). */
+  padding: 0 calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 10px) 0 10px;
+  background: var(--sidebar);
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar.mac {
+  /* The traffic lights sit at the left of the bar on macOS. */
+  padding-left: 80px;
+  padding-right: 10px;
+}
+.titlebar button,
+.titlebar-dropdown {
+  -webkit-app-region: no-drag;
+}
+.titlebar-start,
+.titlebar-end {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.titlebar-end {
+  justify-content: flex-end;
+}
+.titlebar-menu {
+  position: relative;
+}
+.titlebar-app {
+  height: 28px;
+  padding: 0 7px 0 5px;
+  gap: 5px;
+  background: transparent;
+  color: var(--text);
+  border-radius: 7px;
+}
+.titlebar-app:hover,
+.titlebar-app[aria-expanded='true'],
+.titlebar-icon:hover {
+  background: var(--selected);
+  filter: none;
+}
+.titlebar-mark {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.titlebar-icon {
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px;
+}
+.titlebar-icon[aria-pressed='true'] {
+  color: var(--text);
+}
+.titlebar-command {
+  flex: 0 1 460px;
+  min-width: 140px;
+  height: 27px;
+  padding: 0 6px 0 10px;
+  gap: 8px;
+  justify-content: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.titlebar-command span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.titlebar-command kbd,
+.titlebar-dropdown kbd {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.titlebar-backdrop {
+  -webkit-app-region: no-drag;
+}
+.titlebar-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 300px;
+  max-height: calc(100vh - 60px);
+  overflow: auto;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+.titlebar-group + .titlebar-group {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.titlebar-group-label {
+  padding: 4px 10px 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.titlebar-dropdown .titlebar-item {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.titlebar-dropdown .titlebar-item:hover,
+.titlebar-dropdown .titlebar-item:focus-visible {
+  background: var(--selected);
+  filter: none;
+  outline: none;
+}
+.titlebar-dropdown .titlebar-danger {
+  color: var(--danger);
+}
+.titlebar-theme {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.titlebar-theme > span {
+  margin-right: auto;
+}
+.titlebar-chip {
+  padding: 2px 9px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.titlebar-chip:hover {
+  background: var(--selected);
+  filter: none;
+}
+.titlebar-chip[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .titlebar-command kbd {
+    display: none;
+  }
 }
 .sidebar {
   width: 246px;
@@ -1887,7 +2078,7 @@ nav .count {
 }
 .wizard-card {
   width: min(760px, 100%);
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 88px);
   overflow: hidden;
   background: var(--paper);
   border: 1px solid var(--line);

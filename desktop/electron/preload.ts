@@ -99,6 +99,7 @@ const allowed = new Set([
   'toolBrowser',
   'toolBrowserRead',
   'browserDock',
+  'windowControl',
 ]);
 contextBridge.exposeInMainWorld('step', {
   call: (method: string, input: unknown) => {

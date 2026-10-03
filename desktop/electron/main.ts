@@ -6,6 +6,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  Menu,
   dialog,
   shell,
   safeStorage,
@@ -95,7 +96,11 @@ const inputText = (value: unknown, limit = 30000) => {
   return value;
 };
 
+const TITLEBAR_HEIGHT = 40;
 async function makeWindow() {
+  // Windows and Linux get no menu bar: the app's own menu lives in the title bar. Edit shortcuts (copy, paste, undo)
+  // still work in text fields. macOS keeps its standard menu at the top of the screen.
+  if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
   window = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -104,6 +109,12 @@ async function makeWindow() {
     title: 'STeP Desktop',
     backgroundColor: '#fafaf8',
     show: false,
+    // The app draws its own title bar (as Codex and Cursor do): on Windows and Linux the window buttons sit over it in
+    // the app's colours (src/titlebar.tsx sends them per theme); on macOS the traffic lights sit inside it.
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'darwin'
+      ? { trafficLightPosition: { x: 14, y: 13 } }
+      : { titleBarOverlay: { color: '#f7f6f3', symbolColor: '#231f20', height: TITLEBAR_HEIGHT } }),
     ...(app.isPackaged ? {} : { icon: resolve(__dirname, '../build/icon.ico') }),
     webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
@@ -989,6 +1000,23 @@ async function main() {
               .finally(() => clearTimeout(timer));
           }),
         }));
+      }
+      case 'windowControl': {
+        const action = inputText(input.action, 20);
+        const contents = window.webContents;
+        if (action === 'zoomIn') contents.setZoomLevel(Math.min(contents.getZoomLevel() + 0.5, 3));
+        else if (action === 'zoomOut') contents.setZoomLevel(Math.max(contents.getZoomLevel() - 0.5, -3));
+        else if (action === 'zoomReset') contents.setZoomLevel(0);
+        else if (action === 'quit') app.quit();
+        else if (action === 'titleBar') {
+          // The window buttons follow the app's theme; colours are plain #rrggbb from the renderer's CSS variables.
+          const colour = (value: unknown) => (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined);
+          const color = colour(input.color),
+            symbolColor = colour(input.symbolColor);
+          if (process.platform !== 'darwin' && color && symbolColor)
+            window.setTitleBarOverlay({ color, symbolColor, height: TITLEBAR_HEIGHT });
+        } else throw new Error('INVALID_INPUT');
+        return { zoom: contents.getZoomLevel(), platform: process.platform };
       }
       case 'browserDock': {
         const action = inputText(input.action, 20);

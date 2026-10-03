@@ -8,6 +8,17 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.5 (`desktop/package.json`) contains the changes below.
 
+### The app's own title bar, as in Codex and Cursor
+
+- **No Windows menu bar:** the File / Edit / View / Window menu bar is gone. The window has the app's own title bar instead.
+  - Left: the **STeP** menu, which groups the commands under งาน, มุมมอง, เครื่องมือ and ช่วยเหลือ, with each command's shortcut and a one-row theme picker. Next to it is a task-list toggle.
+  - Middle: a command bar showing the current task. It opens the command palette (Ctrl+K).
+  - Right: a side-panel toggle.
+  - The bar drags the window.
+- **Window buttons:** Windows and Linux keep their minimise, maximise and close buttons, drawn over the bar in the app's colours. They follow light, dark and system themes. macOS keeps its traffic lights in the bar and its standard menu at the top of the screen.
+- **Shortcuts:** edit shortcuts still work in text fields. Zoom (Ctrl/⌘ with =, - and 0) moved from the menu bar to the app and the STeP menu.
+- **Duplicate buttons removed:** the duplicate task-list buttons in the sidebar and top bar are gone.
+
 ### Faster tool runs, clickable cards, questions above the composer
 
 - **Faster runs on an OpenAI (Codex) account:**

@@ -77,9 +77,23 @@ try {
   await page.getByRole('button', { name: 'ให้ผู้ช่วยทำงานบนเว็บ', exact: true }).click();
   await expect(page.locator('.composer textarea')).toHaveValue(/ให้ผู้ช่วยทำงานบนเว็บ/);
   await expect(page.locator('.composer textarea')).toBeFocused();
+  // The app draws its own title bar: no system menu bar on Windows/Linux, the STeP menu holds the commands,
+  // and zoom (which the menu bar used to give) still works.
+  assert.equal(await app.evaluate(({ Menu }) => Menu.getApplicationMenu() === null), process.platform !== 'darwin');
+  const titlebar = page.locator('header.titlebar');
+  await titlebar.getByRole('button', { name: 'เมนู STeP' }).click();
+  const menu = page.getByRole('menu', { name: 'เมนู STeP' });
+  await menu.getByRole('menuitem', { name: /ขยายตัวอักษร/ }).click();
+  await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getZoomLevel())).toBe(0.5);
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+0' : 'Control+0');
+  await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getZoomLevel())).toBe(0);
+  await titlebar.getByRole('button', { name: 'ค้นหางานและคำสั่ง' }).click();
+  await page.getByRole('dialog', { name: 'คำสั่ง' }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.screenshot({ path: 'release/qa/ux-fixes/titlebar.png' });
   assert.deepEqual(errors, []);
   console.log(
-    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels and browser task entry.',
+    'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels, browser task entry and the app-drawn title bar.',
   );
 } finally {
   await app.close();
