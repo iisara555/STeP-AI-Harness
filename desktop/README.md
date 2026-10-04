@@ -20,7 +20,7 @@ npm run desktop:start
 
 Open Settings, select a workspace and team (optional), add a provider connection, then run its explicit connection test. That test sends one short request and may consume provider quota. No credentials are imported from personal CLI installations.
 
-In-app Claude subscription chat is off by default and needs `STEP_CLAUDE_SUBSCRIPTION=1` in the environment. Keep it off in releases until Anthropic approves offering claude.ai login in STeP (the Agent SDK terms require prior approval). With the flag off, existing subscription connections can still sign out and be removed, but cannot connect, list models or chat.
+In-app Claude Pro/Max chat runs the official, unmodified Claude Code and each employee signs in to their own Claude account through Anthropic's flow. It is on by default (policy `features.claudeSubscription`; a managed policy can turn it off, and `STEP_CLAUDE_SUBSCRIPTION=0/1` forces it in development). Anthropic's Claude Code terms allow this for the organization's own people under its Commercial Terms; see [docs/claude-subscription.md](../docs/claude-subscription.md). With the feature off, existing subscription connections can still sign out and be removed, but cannot connect, list models or chat.
 
 For Claude subscription chat, install Claude Code 2.1.268 or newer yourself, choose Claude → บัญชี Claude, then connect. Claude Code opens the browser and manages authentication; paste a code into STeP only if prompted. Login, status, SDK inference and logout share a per-connection `CLAUDE_CONFIG_DIR` under STeP app data. The installed executable is used for both authentication and SDK requests. STeP does not copy personal Claude credentials, implement OAuth itself, or automatically install Claude Code. API-key chat and the optional external Claude Code handoff remain available. If the runtime is removed, reinstall it before signing out so it can clear its credential store. Live Pro access and macOS credential isolation require separate live validation; automated tests do not prove subscription entitlement.
 
@@ -98,7 +98,7 @@ STeP Desktop รองรับ OAuth แบบ official ผ่าน Anthropic 
 
 Anthropic ไม่มีตัวติดตั้ง `ant` สำหรับ Windows ถ้าเครื่องยังไม่มี `ant` STeP Desktop จะดาวน์โหลด release ทางการ v1.36.0 จาก `github.com/anthropics/anthropic-cli` (MIT) เมื่อผู้ใช้กดเชื่อมต่อหรือกด “ติดตั้ง ant CLI” ตรวจ SHA-256 ที่ปักไว้ในโค้ด และตรวจใน profile ชั่วคราวว่าเป็น `ant` 1.5 ขึ้นไปที่รองรับ OAuth ก่อนติดตั้งไว้ที่ `components/ant` ใน app data ถ้า `ant` ของผู้ใช้เองอยู่บน PATH จะใช้ตัวนั้นก่อน
 
-โหมดนี้ใช้ Claude API workspace/usage ของ Claude Console ไม่ใช่โควตา Claude Pro/Max. การใช้ Pro/Max ภายในแอปยังคงปิดไว้หลัง `STEP_CLAUDE_SUBSCRIPTION` จนกว่าจะได้รับอนุมัติที่เหมาะสม; ผู้ใช้ Pro/Max ยังส่งต่องานไป Claude Code ภายนอกได้ตามเดิม
+โหมดนี้ใช้ Claude API workspace/usage ของ Claude Console ไม่ใช่โควตา Claude Pro/Max. การใช้ Pro/Max ภายในแอปเป็นการเชื่อมต่อแยก (Claude Pro / Max) ดู [docs/claude-subscription.md](../docs/claude-subscription.md)
 ## Managed organization policy
 
 Desktop permissions and hooks are documented in [desktop-policy.md](../docs/desktop-policy.md). The OpenHarness adaptation roadmap and remaining phases are tracked in [openharness-parity.md](../docs/openharness-parity.md).

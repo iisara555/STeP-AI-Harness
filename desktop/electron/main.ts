@@ -314,9 +314,13 @@ async function main() {
     if (!/^[\w-]{1,60}$/.test(id) || dirname(home) !== resolve(base)) throw new Error('INVALID_INPUT');
     await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
-  // In-app Claude subscription login stays off until Anthropic approves offering claude.ai login.
-  // Sign-out and removal keep working with the flag off so an earlier login can always be cleared.
-  const claudeSubscription = process.env.STEP_CLAUDE_SUBSCRIPTION === '1';
+  // In-app Claude Pro/Max (docs/claude-subscription.md): on by default, off by managed policy. Development runs can
+  // force it with STEP_CLAUDE_SUBSCRIPTION=0/1. Sign-out and removal keep working when it is off, so an earlier login
+  // can always be cleared.
+  const claudeSubscriptionOn = () =>
+    process.env.STEP_CLAUDE_SUBSCRIPTION === '0'
+      ? false
+      : process.env.STEP_CLAUDE_SUBSCRIPTION === '1' || policyState.policy.features.claudeSubscription;
   // The official ant CLI that STeP installs for Claude Console OAuth when the employee has none.
   const antHome = join(data, 'components', 'ant');
   const findAnt = () => findAnthropicCli([antComponentPath(antHome)]);
@@ -334,7 +338,7 @@ async function main() {
     }
   }
   async function runtime(connection: Connection, signOut = false, webSearch = false) {
-    if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription && !signOut)
+    if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn() && !signOut)
       throw new Error('FEATURE_DISABLED');
     if (connection.provider === 'compatible') compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
     if (connection.provider === 'copilot' && !signOut && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
@@ -838,7 +842,7 @@ async function main() {
   };
   const snapshot = async () => ({
     usage: ledger.report(),
-    features: { claudeSubscription, providerPresets: policyState.policy.features.providerPresets },
+    features: { claudeSubscription: claudeSubscriptionOn(), providerPresets: policyState.policy.features.providerPresets },
     policy: {
       source: policyState.policy.source,
       path: policyState.path,
@@ -1412,7 +1416,7 @@ async function main() {
               typeof input.model !== 'string' ||
               !/^gemini-[\w.-]{1,93}$/.test(input.model))) ||
           (input.mode === 'oauth' && !['claude', 'copilot'].includes(input.provider)) ||
-          (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscription)
+          (input.provider === 'claude' && input.mode === 'subscription' && !claudeSubscriptionOn())
         )
           throw new Error('INVALID_CONNECTION');
         const preset = input.provider === 'compatible' && input.preset !== undefined ? presetFor(input.preset) : undefined;
@@ -1496,7 +1500,7 @@ async function main() {
       case 'connect': {
         const connection = store.get<Connection>('connection', input.id);
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');
-        if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscription)
+        if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn())
           throw new Error('FEATURE_DISABLED');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         connecting.add(connection.id);

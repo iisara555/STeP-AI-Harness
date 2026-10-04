@@ -262,7 +262,7 @@ export function ClaudeCodeNote({
     <div className="claude-code-note">
       <p className="small">
         {subscription
-          ? t('ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วกลับมารับคำตอบใน STeP')
+          ? t('ลงชื่อบัญชี Claude ของคุณในหน้าของ Anthropic แล้วกลับมาคุยใน STeP ใช้โควตาแพ็กเกจของคุณเอง STeP ไม่เห็นรหัสผ่านหรือ token')
           : t(
               'ส่งงานต่อให้ Claude Code ส่วนตัว: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้',
             )}

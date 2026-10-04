@@ -6,7 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-The first section below is not released yet. STeP Desktop version 0.5.8 (`desktop/package.json`) contains the changes below. 0.5.8 adds three sections: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+The first two sections below are not released yet. STeP Desktop version 0.5.8 (`desktop/package.json`) contains the changes below. 0.5.8 adds three sections: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### Claude Pro / Max in the app, on by default
+
+- The in-app Claude Pro/Max connection is now on by default, as a policy feature: `features.claudeSubscription`, which a managed policy can turn off. It used to be an off-by-default `STEP_CLAUDE_SUBSCRIPTION=1` switch. `STEP_CLAUDE_SUBSCRIPTION=0/1` still forces it in development. It runs the official, unmodified Claude Code, and each employee signs in to their own Claude account through Anthropic's page, so usage counts against their own plan. STeP never reads or stores the password or token. Claude Code's legal terms (checked 2026-10-04) allow a product to run Claude Code this way when the organization accepts Anthropic's Commercial Terms and does not intermediate usage. The STeP director decided to enable it for STeP staff. [docs/claude-subscription.md](docs/claude-subscription.md) records the conditions. It also leaves one point open: the connection still starts a claude.ai sign-in and accepts only that, which may count as restricting a sign-in method.
+- The connection note now says this in the app: sign in on Anthropic's page, usage counts against your own plan, and STeP never sees your password or token.
+- `test/electron-smoke.mjs` now expects the feature to be on unless `STEP_CLAUDE_SUBSCRIPTION=0`.
 
 ### Apps set up before 0.5.8 share their profile too
 

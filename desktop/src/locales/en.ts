@@ -959,8 +959,8 @@ export const en: Record<string, string> = {
   คัดลอกแล้ว: 'Copied',
   คัดลอกโค้ด: 'Copy code',
   ปิดข้อความ: 'Dismiss',
-  'ลงชื่อบัญชี Claude ผ่านเบราว์เซอร์ แล้วกลับมารับคำตอบใน STeP':
-    'Sign in to Claude in your browser, then come back to get answers in STeP',
+  'ลงชื่อบัญชี Claude ของคุณในหน้าของ Anthropic แล้วกลับมาคุยใน STeP ใช้โควตาแพ็กเกจของคุณเอง STeP ไม่เห็นรหัสผ่านหรือ token':
+    'Sign in to your Claude account on Anthropic’s page, then chat here in STeP. Usage counts against your own plan; STeP never sees your password or token.',
   'ส่งงานต่อให้ Claude Code ส่วนตัว: เลือก “Claude · Pro/Max (เปิดใน Claude Code)” ในกล่องพิมพ์ แอปจะคัดลอกคำขอและเปิด Claude Code ในโฟลเดอร์งานให้':
     'Hand work off to your own Claude Code: choose “Claude · Pro/Max (opens in Claude Code)” in the message box, and the app copies your request and opens Claude Code in your work folder',
   'กำลังตรวจความพร้อม…': 'Checking readiness…',

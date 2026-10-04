@@ -56,11 +56,12 @@ try {
   await handoff.waitFor();
   await handoff.getByRole('button', { name: /^(ยกเลิก|ปิด)$/ }).click();
   await page.locator('.composer textarea').fill('');
-  // In-app Claude subscription is behind STEP_CLAUDE_SUBSCRIPTION=1. Off: the host refuses it.
+  // In-app Claude Pro/Max is on by default (policy features.claudeSubscription); STEP_CLAUDE_SUBSCRIPTION=0 turns it
+  // off. Off: the host refuses it.
   // On: a connection can be created and removed before installing or logging in to Claude.
   // Either way this exercises the real host validation without launching a browser.
   const claudeFlag = (await page.evaluate(() => window.step.call('snapshot'))).features?.claudeSubscription === true;
-  assert.equal(claudeFlag, process.env.STEP_CLAUDE_SUBSCRIPTION === '1');
+  assert.equal(claudeFlag, process.env.STEP_CLAUDE_SUBSCRIPTION !== '0');
   const claudeId = await page.evaluate(async () => {
     try {
       return (await window.step.call('connection', { provider: 'claude', mode: 'subscription' })).id;

@@ -122,7 +122,7 @@ STeP Desktop รองรับหลายวิธี โดยแต่ละ
 | ใช้บัญชี/คีย์ | เลือก | ค่าใช้จ่าย |
 | --- | --- | --- |
 | ChatGPT Plus/Pro | **ChatGPT** → ลงชื่อผ่าน browser | ใช้แพ็กเกจที่มี |
-| Claude Pro/Max | ใช้ผ่าน Claude Code ภายนอก (ต้องติดตั้ง Claude Code) | ใช้แพ็กเกจที่มี |
+| Claude Pro/Max | **Claude Pro / Max** → ลงชื่อบัญชี Claude ในหน้าของ Anthropic (ต้องติดตั้ง Claude Code ในเครื่อง) | ใช้แพ็กเกจที่มี |
 | OpenRouter | **OpenRouter** → ลงชื่อผ่าน browser ไม่ต้องคัดลอกคีย์ | เติมเงินตามใช้ มีโมเดลฟรีบางตัว |
 | Gemini | **Gemini** → API key จาก Google AI Studio | มีแบบใช้ฟรี |
 | Claude API / OpenAI API | API key จาก Anthropic Console / OpenAI Platform | คิดตามการใช้ |
@@ -144,7 +144,8 @@ STeP Desktop รองรับหลายวิธี โดยแต่ละ
 
 มี 3 แนวทางหลัก:
 
-- **Claude Pro/Max ผ่าน Claude Code ภายนอก** — STeP Desktop คัดลอกงานและเปิด Claude Code ในโฟลเดอร์งาน (direct in-app subscription ใช้เฉพาะ deployment ที่ได้รับอนุมัติ)
+- **Claude Pro/Max ในแอป** — เลือก **Claude Pro / Max** แล้วลงชื่อบัญชี Claude ของคุณในหน้าของ Anthropic STeP รัน Claude Code ตัวจริงเบื้องหลัง ใช้โควตาแพ็กเกจของคุณเอง และไม่เห็นรหัสผ่านหรือ token ต้องติดตั้ง Claude Code ไว้ในเครื่อง ([รายละเอียดและเงื่อนไข](docs/claude-subscription.md))
+- **ส่งงานต่อให้ Claude Code** — STeP Desktop คัดลอกงานและเปิด Claude Code ในโฟลเดอร์งาน
 - **Claude Console OAuth** — ไม่ต้องใส่ API key แต่ใช้ billing/quota ของ Claude Console/API workspace
 - **API key**
 

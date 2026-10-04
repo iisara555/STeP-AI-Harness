@@ -32,6 +32,7 @@ export const FEATURES = [
   'autoRouting',
   'receiptVision',
   'autoUpdate',
+  'claudeSubscription',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -154,6 +155,11 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The installed app checks for a newer version, downloads it in the background and offers "restart to update".
   // IT can set it to false where software is rolled out centrally.
   autoUpdate: true,
+  // "Claude Pro / Max" in the app: the official, unmodified Claude Code runs the chat and each employee signs in to
+  // their own Claude account through Anthropic's own flow, so usage counts against their own plan. Anthropic's Claude
+  // Code terms allow a product to run Claude Code this way for the organization's own people, under its Commercial
+  // Terms (docs/claude-subscription.md). A managed policy can turn it off.
+  claudeSubscription: true,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',
