@@ -126,7 +126,9 @@ STeP Desktop รองรับหลายวิธี โดยแต่ละ
 | OpenRouter | **OpenRouter** → ลงชื่อผ่าน browser ไม่ต้องคัดลอกคีย์ | เติมเงินตามใช้ มีโมเดลฟรีบางตัว |
 | Gemini | **Gemini** → API key จาก Google AI Studio | มีแบบใช้ฟรี |
 | Claude API / OpenAI API | API key จาก Anthropic Console / OpenAI Platform | คิดตามการใช้ |
-| อื่น ๆ | DeepSeek, Groq, Mistral, xAI Grok หรือ Ollama (รันในเครื่อง) | ตามผู้ให้บริการ |
+| อื่น ๆ | DeepSeek, Qwen (Alibaba Cloud), MiniMax, Groq, Mistral, xAI Grok หรือ Ollama (รันในเครื่อง) ใส่คีย์ของตัวเอง | ตามผู้ให้บริการ |
+
+Qwen ใช้คีย์จาก Alibaba Cloud Model Studio **ภูมิภาค International (สิงคโปร์)** และ MiniMax ใช้คีย์จาก **platform.minimax.io** คีย์จากฝั่งจีน (Beijing / minimaxi.com) ใช้กับปุ่มนี้ไม่ได้
 
 ### ChatGPT
 

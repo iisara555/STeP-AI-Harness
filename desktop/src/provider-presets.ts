@@ -42,6 +42,29 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyUrl: 'https://platform.deepseek.com/api_keys',
   },
   {
+    // Alibaba Cloud Model Studio (international, Singapore). Keys are per region: a key from the China (Beijing) region
+    // does not work here.
+    id: 'qwen',
+    label: 'Qwen (Alibaba Cloud)',
+    description: 'โมเดล Qwen ของ Alibaba Cloud',
+    baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    protocol: 'openai',
+    key: 'required',
+    defaultModel: 'qwen-plus',
+    keyUrl: 'https://modelstudio.console.alibabacloud.com/',
+  },
+  {
+    // MiniMax international platform. Keys from the China platform (minimaxi.com) do not work here.
+    id: 'minimax',
+    label: 'MiniMax',
+    description: 'โมเดล MiniMax สำหรับคุยและเขียนงานยาว',
+    baseUrl: 'https://api.minimax.io/v1',
+    protocol: 'openai',
+    key: 'required',
+    defaultModel: 'MiniMax-M2',
+    keyUrl: 'https://platform.minimax.io/',
+  },
+  {
     id: 'groq',
     label: 'Groq',
     description: 'โมเดลเปิด ตอบเร็วมาก',

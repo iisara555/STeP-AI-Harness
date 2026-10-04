@@ -6,7 +6,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.10 (`desktop/package.json`) contains the changes below. 0.5.10 adds the first section, "Your plan through Claude Code: off by default, on for the pilot". "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+The first section below is not released yet. STeP Desktop version 0.5.10 (`desktop/package.json`) contains the changes below. 0.5.10 adds the first section, "Your plan through Claude Code: off by default, on for the pilot". "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### Qwen and MiniMax with the employee's own key
+
+- Staff use several AI services, so the connection page gains two well-known services next to DeepSeek, Groq and the others. Each is fixed to its official OpenAI-compatible endpoint and used with the employee's own key:
+  - **Qwen (Alibaba Cloud)**: Alibaba Cloud Model Studio international (Singapore), `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, default model `qwen-plus`.
+  - **MiniMax**: international platform, `https://api.minimax.io/v1`, default model `MiniMax-M2`.
+- Keys from the China regions (Alibaba Beijing, minimaxi.com) do not work with these presets, and the README says so. The existing preset checks cover both: a fixed destination, policy `providerPresets`, and no proxy. When a service does not list its models, the default model is used.
+- Neither was tried with a live account. The endpoints come from the providers' documentation, not from a live call.
 
 ### Your plan through Claude Code: off by default, on for the pilot
 

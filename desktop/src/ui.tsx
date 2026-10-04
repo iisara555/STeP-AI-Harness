@@ -447,7 +447,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     key('gemini', 'Gemini', t('คีย์จาก Google AI Studio มีแบบใช้ฟรี')),
     key('claude', 'Claude API', t('คีย์จาก Anthropic Console คิดตามการใช้')),
     key('openai', 'OpenAI API', t('คีย์จาก OpenAI Platform คิดตามการใช้')),
-    ...(presets ? ['deepseek', 'groq', 'mistral', 'xai', 'ollama'].map(preset) : []),
+    ...(presets ? ['deepseek', 'qwen', 'minimax', 'groq', 'mistral', 'xai', 'ollama'].map(preset) : []),
   ];
 }
 const tileFor = (tiles: Tile[], c: ProviderChoice) =>

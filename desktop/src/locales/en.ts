@@ -32,6 +32,8 @@ export const en: Record<string, string> = {
     "Uses API budget · billed to the key owner's account. Confirm who pays before connecting",
   โมเดลหลายร้อยตัวจากหลายบริษัทในบัญชีเดียว: 'Hundreds of models from many companies in one account',
   โมเดลคุยและให้เหตุผลราคาประหยัด: 'Low-cost chat and reasoning models',
+  'โมเดล Qwen ของ Alibaba Cloud': 'Qwen models from Alibaba Cloud',
+  'โมเดล MiniMax สำหรับคุยและเขียนงานยาว': 'MiniMax models for chat and long writing',
   'โมเดลเปิด ตอบเร็วมาก': 'Open models with very fast replies',
   โมเดลจากยุโรป: 'Models from Europe',
   'โมเดล Grok ของ xAI': "xAI's Grok models",
