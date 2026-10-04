@@ -53,8 +53,12 @@ const server = createServer((req, res) => {
           ? 'ผอ. STeP คือ รศ.ดร.ปิติวัฒน์ วัฒนชัย (จากเอกสาร step-executive-board)'
           : '```step-tool\n{"tool":"reference","input":"step-executive-board"}\n```';
       }
-      res.writeHead(200, { 'content-type': 'text/event-stream' });
-      return res.end('data: ' + JSON.stringify(reply(text)) + '\r\n\r\n');
+      // The receipt reading answers slowly, so the test can switch pages while it is still running.
+      const send = () => {
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.end('data: ' + JSON.stringify(reply(text)) + '\r\n\r\n');
+      };
+      return void (body.includes('You read Thai and English receipts') ? setTimeout(send, 2500) : send());
     }
     // The CLI's model router asks a small model which model to use before the real request.
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -127,6 +131,12 @@ try {
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await page.getByText('ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย', { exact: false }).waitFor();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  // Switching to another page while the receipt is read keeps the work: the sidebar shows it running, and the result
+  // is there on return.
+  await page.getByText('receipt.png', { exact: true }).waitFor();
+  await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
+  await page.getByLabel('กำลังตรวจใบเสร็จอยู่').waitFor();
+  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00', { timeout: 60000 });
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   await page.getByText('AI ฝากตรวจ: ตัวเลขยอดสุทธิจางเล็กน้อย').waitFor();
@@ -143,6 +153,14 @@ try {
   await page.getByLabel('ภาษีมูลค่าเพิ่ม').press('Enter');
   assert.equal(await page.locator('.receipt-field .check input:checked').count(), 1);
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeFocused();
+  // Checked fields survive a trip to Settings and back.
+  await page
+    .getByRole('button', { name: /ตั้งค่า/ })
+    .first()
+    .click();
+  await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  assert.equal(await page.locator('.receipt-field .check input:checked').count(), 1);
+  assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
   assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
 

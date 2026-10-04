@@ -189,6 +189,7 @@ export function ReceiptApp({
   handoff,
   onEvent,
   connectionId,
+  onBusy,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
@@ -196,6 +197,8 @@ export function ReceiptApp({
   handoff: (text: string, sourceText: string, allowIds?: string[]) => Promise<void>;
   onEvent: (callback: (event: { type: string; text?: string }) => void) => () => void;
   connectionId?: string;
+  /** Whether a read or check is running, so the sidebar can show it while another page is open. */
+  onBusy?: (busy: boolean) => void;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState(''),
@@ -214,6 +217,7 @@ export function ReceiptApp({
     [zoom, setZoom] = useState(false),
     [typeOverride, setTypeOverride] = useState<DocumentType | ''>(''),
     [category, setCategory] = useState<ClaimCategory>('unsure');
+  useEffect(() => onBusy?.(Boolean(busy) && busy !== 'status'), [busy, onBusy]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {

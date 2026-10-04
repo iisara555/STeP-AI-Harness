@@ -1134,6 +1134,7 @@ export const en: Record<string, string> = {
   ตรวจเป้าหมายก่อนขอคลิก: 'Checking the target before asking to click',
   'ให้ Agent กรอกข้อมูลนี้?': 'Let the Agent fill in this data?',
   'ให้ Agent คลิกเป้าหมายนี้?': 'Let the Agent click this target?',
+  กำลังตรวจใบเสร็จอยู่: 'Checking a receipt',
   'ให้ Agent กดขั้นสุดท้ายนี้?': 'Let the Agent press this final step?',
   'รออนุญาตขั้นสุดท้าย: {0}': 'Waiting for approval of the final step: {0}',
   '\nนี่คือการส่งหรือยืนยันรายการบนเว็บ ตรวจข้อมูลในแท็บเว็บให้ครบก่อนอนุมัติ':

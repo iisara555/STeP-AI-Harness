@@ -228,6 +228,11 @@ export default function App() {
   sessionMode.current = session?.mode === 'draft' || workMode === 'draft' ? 'draft' : 'chat';
   useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const [receiptOpened, setReceiptOpened] = useState(false);
+  useEffect(() => {
+    if (view === 'receipt' && !settings) setReceiptOpened(true);
+  }, [view, settings]);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -1033,7 +1038,11 @@ export default function App() {
               >
                 <ReceiptText size={17} />
                 {t('ตรวจใบเสร็จ AFP')}
-                <span className="beta">{t('ทดลอง')}</span>
+                {receiptBusy && view !== 'receipt' ? (
+                  <LoaderCircle size={14} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
+                ) : (
+                  <span className="beta">{t('ทดลอง')}</span>
+                )}
               </button>
             </nav>
             <button
@@ -1187,6 +1196,21 @@ export default function App() {
               </button>
             )}
           </header>
+          {/* The AFP checker stays mounted once opened, so a read in progress and the fields being checked survive a
+              switch to chat or Settings; it is only hidden. */}
+          {receiptOpened && (
+            <div style={{ display: view === 'receipt' && !settings ? 'contents' : 'none' }}>
+              <ReceiptApp
+                onBusy={setReceiptBusy}
+                call={api.call}
+                onEvent={api.onEvent}
+                notify={notify}
+                onError={e => notify(explainError(e), 'error')}
+                handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
+                connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
+              />
+            </div>
+          )}
           {settings ? (
             <SettingsPanel
               key={settingsPage}
@@ -1203,16 +1227,7 @@ export default function App() {
               close={() => setSettings(false)}
               onError={e => notify(explainError(e), 'error')}
             />
-          ) : view === 'receipt' ? (
-            <ReceiptApp
-              call={api.call}
-              onEvent={api.onEvent}
-              notify={notify}
-              onError={e => notify(explainError(e), 'error')}
-              handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
-              connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
-            />
-          ) : view === 'skills' ? (
+          ) : view === 'receipt' ? null : view === 'skills' ? (
             <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />
           ) : (
             <>
