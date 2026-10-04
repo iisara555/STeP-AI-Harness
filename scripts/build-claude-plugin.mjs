@@ -121,6 +121,14 @@ export function buildPlugin(outDir) {
   return { skills: skills.length, files: copied.size };
 }
 
+// A Windows checkout turns LF into CRLF in text files (core.autocrlf), so line endings are not a difference.
+const sameContent = (x, y) => {
+  const [left, right] = [readFileSync(x), readFileSync(y)];
+  if (left.equals(right)) return true;
+  const lf = buffer => buffer.toString('utf8').replace(/\r\n/g, '\n');
+  return !left.includes(0) && !right.includes(0) && lf(left) === lf(right);
+};
+
 function sameTree(a, b) {
   const list = dir => (existsSync(dir) ? walk(dir).map(path => toPosix(relative(dir, path))).sort() : []);
   const left = list(a),
@@ -128,7 +136,7 @@ function sameTree(a, b) {
   const differences = [
     ...left.filter(path => !right.includes(path)).map(path => `only in build: ${path}`),
     ...right.filter(path => !left.includes(path)).map(path => `only in ${OUT_RELATIVE}: ${path}`),
-    ...left.filter(path => right.includes(path) && !readFileSync(join(a, path)).equals(readFileSync(join(b, path)))).map(path => `changed: ${path}`),
+    ...left.filter(path => right.includes(path) && !sameContent(join(a, path), join(b, path))).map(path => `changed: ${path}`),
   ];
   return differences;
 }
