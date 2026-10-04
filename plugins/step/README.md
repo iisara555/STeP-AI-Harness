@@ -12,6 +12,10 @@ Skills และกติกาการทำงานของ STeP สำห�
 
 Gemini CLI ไม่รองรับแล้ว เพราะ Google หยุดให้บริการกับบัญชีส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569 คนที่ใช้บัญชี Google ให้ใช้ Antigravity แทน
 
+## ติดตั้งทุกโปรแกรมในครั้งเดียว
+
+ดาวน์โหลด repository (**Code → Download ZIP** บน GitHub) แตกไฟล์ แล้วดับเบิลคลิก `Setup-STeP-Skills.bat` (Windows) หรือ `Setup-STeP-Skills.command` (macOS) หรือรัน `node scripts/install-agent-skills.mjs setup` ไฟล์นี้ติดตั้ง Skills ลง Claude, Codex และ Antigravity ที่พบในเครื่อง ใส่กติกาของ Codex และถามโปรไฟล์ ต้องมี [Node.js](https://nodejs.org) 18 ขึ้นไป หัวข้อด้านล่างคือวิธีทำทีละโปรแกรม
+
 ## Claude
 
 ใน Claude Code พิมพ์:

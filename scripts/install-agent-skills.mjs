@@ -18,6 +18,11 @@
 //     step@step-ai) but does not run plugin hooks, so the STeP brief goes into Codex's global AGENTS.md
 //     (~/.codex/AGENTS.md, or $CODEX_HOME/AGENTS.md) between markers; running it again replaces that block only.
 //
+//   node scripts/install-agent-skills.mjs setup
+//     Everything at once, for Setup-STeP-Skills.bat / .command: installs the plugin in Claude and Codex through their
+//     own CLIs when they are on PATH, the Codex rules, the global Antigravity install when ~/.gemini exists, then
+//     asks the profile questions. Tools that are missing are skipped with what to do instead.
+//
 //   node scripts/install-agent-skills.mjs profile [--name=.. --team=.. --assistant=.. --style=..]
 //     The employee's own profile (what USER.md held in the folder workflow): nickname, team, assistant name and
 //     conversation style. Asked once, written between its own markers into the global instructions file of every tool
@@ -25,6 +30,7 @@
 //
 // Re-running any target updates it in place; Skills from an earlier run that no longer exist are removed, and
 // nothing else in the folder is touched.
+import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -187,17 +193,22 @@ export function installProfile(profile, targets = profileTargets()) {
   return targets;
 }
 
-async function askProfile() {
-  // Reads line by line, so answers typed ahead or piped in are not lost between questions.
+/** Questions on stdin, read line by line so answers typed ahead or piped in are not lost between questions. */
+function asker() {
   const rl = createInterface({ input: process.stdin, terminal: false });
   const lines = rl[Symbol.asyncIterator]();
+  const answer = async (question, fallback = '') => {
+    process.stdout.write(question);
+    const next = await lines.next();
+    if (!process.stdin.isTTY) process.stdout.write('\n');
+    return (next.done ? '' : next.value.trim()) || fallback;
+  };
+  return { answer, close: () => rl.close() };
+}
+
+async function askProfile(ask = asker()) {
+  const { answer } = ask;
   try {
-    const answer = async (question, fallback = '') => {
-      process.stdout.write(question);
-      const next = await lines.next();
-      if (!process.stdin.isTTY) process.stdout.write('\n');
-      return (next.done ? '' : next.value.trim()) || fallback;
-    };
     const name = await answer('ชื่อเล่น/ชื่อที่อยากให้ AI เรียก (Enter = ข้าม): ');
     const list = teams();
     console.log('\nทีมหลัก:');
@@ -210,13 +221,76 @@ async function askProfile() {
     const style = { 1: 'coworker', 2: 'professional', 3: 'concise' }[choice] || (choice === '4' ? await answer('อธิบายสไตล์ที่ต้องการ: ') : 'coworker');
     return { name, team, assistant, style };
   } finally {
-    rl.close();
+    ask.close();
   }
+}
+
+const MARKETPLACE = 'iisara555/STeP-AI-Harness';
+const onPath = command => spawnSync(process.platform === 'win32' ? 'where' : 'which', [command], { stdio: 'ignore' }).status === 0;
+/** Runs a tool's own CLI; .cmd shims on Windows need the shell. Arguments are fixed strings, never user input. */
+const run = (command, args) => spawnSync(command, args, { stdio: 'inherit', shell: process.platform === 'win32' }).status === 0;
+
+/** Installs into every tool found, then asks for the profile. Returns one line per tool for the summary. */
+export async function setup({ home = homedir(), env = process.env, has = onPath, exec = run, ask = asker() } = {}) {
+  const done = [];
+  const step = title => console.log(`\n=== ${title} ===`);
+  step('Claude');
+  if (has('claude')) {
+    // Adding a marketplace that is already there fails harmlessly; installing again updates nothing, so both are safe to repeat.
+    exec('claude', ['plugin', 'marketplace', 'add', MARKETPLACE]);
+    exec('claude', ['plugin', 'marketplace', 'update', 'step-ai']);
+    done.push(exec('claude', ['plugin', 'install', 'step@step-ai']) ? '✅ Claude: ติดตั้ง Skills แล้ว' : '⚠️ Claude: ติดตั้งไม่สำเร็จ ดูข้อความด้านบน');
+  } else
+    done.push(
+      existsSync(join(home, '.claude'))
+        ? '➖ Claude: ไม่พบคำสั่ง claude ให้พิมพ์ใน Claude Code เอง: /plugin marketplace add ' + MARKETPLACE + ' แล้ว /plugin install step@step-ai'
+        : '➖ Claude: ไม่พบในเครื่องนี้ ข้าม',
+    );
+  step('Codex');
+  const codexHome = env.CODEX_HOME || join(home, '.codex');
+  if (has('codex')) {
+    exec('codex', ['plugin', 'marketplace', 'add', MARKETPLACE]);
+    exec('codex', ['plugin', 'marketplace', 'upgrade']);
+    const ok = exec('codex', ['plugin', 'add', 'step@step-ai']);
+    installCodexRules(codexHome);
+    done.push(ok ? '✅ Codex: ติดตั้ง Skills และกติกาแล้ว' : '⚠️ Codex: ใส่กติกาแล้ว แต่ติดตั้ง Skills ไม่สำเร็จ ดูข้อความด้านบน');
+  } else if (existsSync(codexHome)) {
+    installCodexRules(codexHome);
+    done.push('➖ Codex: ใส่กติกาแล้ว แต่ไม่พบคำสั่ง codex ให้รันเอง: codex plugin marketplace add ' + MARKETPLACE + ' แล้ว codex plugin add step@step-ai');
+  } else done.push('➖ Codex: ไม่พบในเครื่องนี้ ข้าม');
+  step('Google Antigravity');
+  if (existsSync(join(home, '.gemini'))) {
+    const { skills } = installAntigravityGlobal(join(home, '.gemini'));
+    done.push(`✅ Antigravity: ติดตั้ง ${skills} Skills แล้ว (ปิดแล้วเปิด Antigravity ใหม่)`);
+  } else done.push('➖ Antigravity: ไม่พบในเครื่องนี้ (เปิด Antigravity อย่างน้อยหนึ่งครั้งก่อน แล้วรันใหม่)');
+  step('โปรไฟล์ของคุณ');
+  const targets = profileTargets(home, env);
+  if (targets.length) {
+    for (;;) {
+      try {
+        for (const { tool } of installProfile(await askProfile({ ...ask, close: () => {} }), targets)) done.push(`✅ โปรไฟล์: บันทึกลง ${tool} แล้ว`);
+        break;
+      } catch (error) {
+        console.log(`\n${error.message} ลองใหม่อีกครั้ง\n`);
+      }
+    }
+  } else done.push('➖ โปรไฟล์: ข้าม เพราะยังไม่มีโปรแกรมที่ติดตั้ง');
+  ask.close();
+  step('สรุป');
+  for (const line of done) console.log(line);
+  console.log('\nเริ่มแชตใหม่ในโปรแกรมแล้วลองถามว่า "มี skill สรุปประชุมไหม" รันไฟล์นี้ซ้ำเมื่อต้องการอัปเดตหรือแก้โปรไฟล์');
+  return done;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [target, where] = process.argv.slice(2);
-  if (target === 'profile') {
+  if (Number(process.versions.node.split('.')[0]) < 18) {
+    console.error(`ต้องใช้ Node.js 18 ขึ้นไป (เครื่องนี้มี ${process.version}) ติดตั้งรุ่นใหม่จาก https://nodejs.org แล้วลองอีกครั้ง`);
+    process.exit(1);
+  }
+  if (target === 'setup') {
+    await setup();
+  } else if (target === 'profile') {
     const flags = Object.fromEntries(process.argv.slice(3).map(a => /^--(\w+)=(.*)$/s.exec(a)).filter(Boolean).map(m => [m[1], m[2]]));
     const targets = profileTargets();
     if (!targets.length) {
@@ -241,7 +315,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const { file } = installCodexRules(where);
     console.log(`Wrote the STeP rules block to ${file}. Install the Skills with: codex plugin marketplace add iisara555/STeP-AI-Harness && codex plugin add step@step-ai`);
   } else {
-    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]\n       node scripts/install-agent-skills.mjs profile');
+    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]\n       node scripts/install-agent-skills.mjs profile\n       node scripts/install-agent-skills.mjs setup');
     process.exit(2);
   }
 }

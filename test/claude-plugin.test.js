@@ -152,3 +152,34 @@ test('Profile: the USER.md facts go into each tool’s global instructions once,
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('Setup: installs into the tools found, skips the rest with what to do, then writes the profile', async () => {
+  const { setup } = await import('../scripts/install-agent-skills.mjs');
+  const { mkdtempSync, mkdirSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const home = mkdtempSync(join(tmpdir(), 'step-setup-'));
+  const ran = [];
+  const answers = ['ต้น', 'cc', '', '3'];
+  const log = console.log;
+  console.log = () => {};
+  try {
+    mkdirSync(join(home, '.gemini'));
+    mkdirSync(join(home, '.codex'));
+    const done = await setup({
+      home,
+      env: {},
+      has: (cmd) => cmd === 'claude',
+      exec: (cmd, args) => (ran.push([cmd, ...args].join(' ')), mkdirSync(join(home, '.claude'), { recursive: true }), true),
+      ask: { answer: async () => answers.shift() ?? '', close: () => {} },
+    });
+    assert.ok(ran.includes('claude plugin install step@step-ai'));
+    assert.ok(!ran.some((r) => r.startsWith('codex')), 'no codex CLI, so none is run');
+    assert.match(done.join('\n'), /Codex: ใส่กติกาแล้ว แต่ไม่พบคำสั่ง codex/);
+    assert.match(readFileSync(join(home, '.codex', 'AGENTS.md'), 'utf8'), /STeP AI Skills: begin[\s\S]*STeP AI profile: begin/);
+    assert.ok(existsSync(join(home, '.gemini', 'config', 'skills', 'meeting-summary', 'SKILL.md')));
+    assert.match(readFileSync(join(home, '.claude', 'CLAUDE.md'), 'utf8'), /ทีมหลัก: CC/);
+  } finally {
+    console.log = log;
+    rmSync(home, { recursive: true, force: true });
+  }
+});

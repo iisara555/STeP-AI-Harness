@@ -490,6 +490,21 @@ STeP AI เป็น workspace สำหรับช่วยเตรียม�
 | **Codex** | ChatGPT Plus, Pro, Business, Enterprise | Node.js (ครั้งเดียว) |
 | **Google Antigravity** | บัญชี Google รวม Google AI Plus/Pro | Node.js (ครั้งเดียว) |
 
+## วิธีง่ายที่สุด: ดับเบิลคลิกไฟล์เดียว
+
+1. ติดตั้งโปรแกรม AI ที่จะใช้ (Claude Code, Codex หรือ Antigravity) และเปิดอย่างน้อยหนึ่งครั้ง
+2. ติดตั้ง [Node.js](https://nodejs.org) รุ่น LTS (ครั้งเดียว ถ้ายังไม่มี ไฟล์ในข้อ 4 จะเปิดหน้าดาวน์โหลดให้)
+3. เปิด github.com/iisara555/STeP-AI-Harness กด **Code → Download ZIP** แล้วแตกไฟล์
+4. ดับเบิลคลิก **`Setup-STeP-Skills.bat`** (Windows) หรือ **`Setup-STeP-Skills.command`** (macOS)
+5. ตอบ 4 คำถามเรื่องโปรไฟล์ (Enter ข้ามได้) แล้วเริ่มแชตใหม่
+
+ไฟล์นี้ติดตั้ง Skills ลงทุกโปรแกรมที่พบในเครื่อง ใส่กติกาของ Codex ติดตั้ง Antigravity แบบใช้ได้ทุก workspace และตั้งโปรไฟล์ในครั้งเดียว โปรแกรมที่ไม่มีจะถูกข้ามพร้อมบอกวิธีทำเอง ดับเบิลคลิกซ้ำเมื่อต้องการอัปเดตหรือแก้โปรไฟล์
+
+- Windows ขึ้นหน้าต่าง "Windows protected your PC": กด **More info → Run anyway** (ไฟล์มาจาก repository นี้)
+- macOS ขึ้นว่าเปิดไม่ได้เพราะไม่รู้จักผู้พัฒนา: คลิกขวาที่ไฟล์ → **Open** → **Open** อีกครั้ง
+
+วิธีด้านล่างคือการติดตั้งทีละโปรแกรมด้วยคำสั่ง สำหรับคนที่ถนัด terminal
+
 ## Claude
 
 ใน Claude Code พิมพ์:
