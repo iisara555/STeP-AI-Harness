@@ -208,6 +208,10 @@ async function main() {
         assistantTone: current.assistantTone || shared.assistantTone,
       });
     }
+  } else if (!existsSync(sharedProfile)) {
+    // Set up before the shared profile existed (or never saved since): share it now, so Setup-STeP-Skills offers it.
+    // An existing file is left alone; it may be newer than these settings.
+    await writeSharedProfile(sharedProfile, store.settings()).catch(error => diagnose('shared-profile-failed', { code: errorCode(error) }));
   }
   // Every privacy scan in the app goes through here, so policy checks.privacy (off by default) switches them all.
   /** A PNG, JPEG or WebP image checked by its signature, ready for a vision model. */

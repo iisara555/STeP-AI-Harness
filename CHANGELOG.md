@@ -6,7 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.8 (`desktop/package.json`) contains the changes below. 0.5.8 adds three sections: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+The first section below is not released yet. STeP Desktop version 0.5.8 (`desktop/package.json`) contains the changes below. 0.5.8 adds three sections: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### Apps set up before 0.5.8 share their profile too
+
+- STeP Desktop wrote `~/.step-ai/profile.json` only when the profile was saved, so someone who updated without opening settings had none, and Setup-STeP-Skills could not offer their nickname and team. At start, an app that has finished its first-run setup now writes the file if it does not exist. An existing file is left alone, because it may be newer, from Setup. `test/shared-profile-smoke.mjs` covers both cases.
 
 ### Uninstalling
 
