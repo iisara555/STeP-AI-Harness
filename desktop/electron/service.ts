@@ -21,7 +21,7 @@ import { ToolLoop, TOOL_RULES, type LoopHost } from './tool-loop';
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
 import { section } from './prompt';
-import { compact, promptTooLong, tokens } from './compact';
+import { compact, contextBudget, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
@@ -794,9 +794,12 @@ export class WorkService {
             plan: steps.map((s: any) => ({ id: s.id, skill: s.skill || s.skillId, description: s.description })),
             completedSteps: index,
           });
+        // Compact against the connected model's own window, not one size for all.
+        const budget = contextBudget(connection);
         const compactPrompt = async (value: string, reactive = false) => {
           const result = await compact(value, {
             system,
+            budget,
             state: taskState(),
             signal: controller.signal,
             reactive,
@@ -856,7 +859,7 @@ export class WorkService {
             let completed = 0,
               searchFailed = false;
             try {
-              if (tokens(system + nextPrompt) > 48_000) throw new Error('CONTEXT_LIMIT');
+              if (tokens(system + nextPrompt) > budget) throw new Error('CONTEXT_LIMIT');
               if (!search && options.images?.length && !this.harness.visionEnabled?.()) throw new Error('VISION_DISABLED');
               stepTrace.promptChars = Math.max(stepTrace.promptChars, nextPrompt.length);
               if (!search) status(tm('กำลังเตรียมคำตอบ'));

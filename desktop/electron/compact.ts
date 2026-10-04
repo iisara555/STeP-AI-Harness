@@ -1,7 +1,57 @@
 import { estimateTextTokens } from '../../src/modules/context-budget/index.js';
 import { section } from './prompt';
 
+/** The budget when the model's context window is not known (a custom endpoint, a local Ollama model). */
 export const CONTEXT_TOKENS = 48_000;
+/** Never more than this, even on a 1M-token model: every tool turn resends the prompt, so cost and wait grow with it. */
+export const MAX_CONTEXT_TOKENS = 160_000;
+
+/**
+ * Context window, in tokens, of the models this app connects to, from the providers' published limits. The first match
+ * wins; a model not listed uses its provider's default; anything else keeps the conservative CONTEXT_TOKENS.
+ */
+const WINDOWS: [RegExp, number][] = [
+  [/gemini/i, 1_000_000],
+  [/claude|opus|sonnet|haiku|fable/i, 200_000],
+  [/gpt-4\.1/i, 1_000_000],
+  [/gpt-[5-9]|codex/i, 400_000],
+  [/\bo[134]\b|\bo[134]-/i, 200_000],
+  [/gpt-4o|gpt-4-turbo/i, 128_000],
+  [/minimax/i, 200_000],
+  [/grok/i, 256_000],
+  [/qwen|deepseek|mistral|llama|kimi|glm/i, 128_000],
+];
+const PROVIDER_WINDOWS: Record<string, number> = {
+  claude: 200_000,
+  gemini: 1_000_000,
+  antigravity: 1_000_000,
+  openai: 400_000,
+  copilot: 128_000,
+};
+const PRESET_WINDOWS: Record<string, number> = {
+  deepseek: 128_000,
+  qwen: 128_000,
+  minimax: 200_000,
+  groq: 128_000,
+  mistral: 128_000,
+  xai: 256_000,
+};
+
+/**
+ * How many prompt tokens to send before compacting: 60% of the model's window (the rest is for the answer, the system
+ * prompt and estimation error), between CONTEXT_TOKENS and MAX_CONTEXT_TOKENS. Unknown models and custom runtimes keep CONTEXT_TOKENS.
+ */
+export function contextBudget(connection: { provider?: string; model?: string; preset?: string; customRuntime?: boolean }) {
+  // A runtime the organization points at its own executable may run any model.
+  if (connection.customRuntime) return CONTEXT_TOKENS;
+  const model = String(connection.model || '');
+  const window =
+    WINDOWS.find(([pattern]) => model && pattern.test(model))?.[1] ??
+    (connection.preset ? PRESET_WINDOWS[connection.preset] : undefined) ??
+    (connection.provider && connection.provider !== 'compatible' ? PROVIDER_WINDOWS[connection.provider] : undefined);
+  if (!window) return CONTEXT_TOKENS;
+  return Math.min(MAX_CONTEXT_TOKENS, Math.max(CONTEXT_TOKENS, Math.floor(window * 0.6)));
+}
 type Part = { tag: string; text: string };
 export type CompactResult = { prompt: string; before: number; after: number; method: 'none' | 'micro' | 'summary' };
 export type CompactOptions = {

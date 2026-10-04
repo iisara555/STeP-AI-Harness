@@ -481,8 +481,8 @@ export const en: Record<string, string> = {
   ไม่พบรูปแบบคำตอบที่เลือกในพื้นที่งานนี้: "The selected answer style wasn't found in this workspace",
   'บริการ AI รับบริบทนี้ไม่ได้ ระบบย่อบริบทแล้วแต่ยังไม่พอ กรุณาแบ่งไฟล์หรือเริ่มงานใหม่':
     "The AI service can't take this much context, even after compacting. Split the file or start a new task",
-  'เครื่องมือทำงานครบจำนวนรอบที่กำหนดแล้ว ตรวจ Changes และ Tasks ก่อนสั่งทำต่อ':
-    'The tools have reached their run limit. Check Changes and Tasks before continuing',
+  'เครื่องมือทำงานครบจำนวนรอบของข้อความนี้แล้ว ตรวจ Changes และ Tasks แล้วพิมพ์ “ต่อ” เพื่อทำต่อ':
+    'This message used all its tool turns. Check Changes and Tasks, then reply “continue” to carry on.',
   ผู้ดูแลปิดวงจรเครื่องมืออัตโนมัติแล้ว: 'Your admin has turned off the automatic tool loop',
   'ยังไม่ส่งผลเครื่องมือให้ AI เพราะไม่ได้รับความยินยอม': "Tool results weren't sent to the AI because consent wasn't given",
   'ผลเครื่องมือเกินขอบเขตการอ่าน ลองระบุช่วงที่เล็กลง': 'The tool result exceeds the read limit. Try a smaller range',

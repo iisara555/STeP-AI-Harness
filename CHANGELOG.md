@@ -6,7 +6,20 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-The first four sections below, "Work in progress survives switching pages", "Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode", "Tables, clean Excel and the Thai official layout" and "Qwen and MiniMax with the employee's own key", are not released yet. "Your plan through Claude Code: off by default, on for the pilot" was published as `desktop-v0.5.10`. "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+The first five sections below, "Long tasks: compaction sized to the model, more tool turns, a progress report at the limit", "Work in progress survives switching pages", "Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode", "Tables, clean Excel and the Thai official layout" and "Qwen and MiniMax with the employee's own key", are not released yet. "Your plan through Claude Code: off by default, on for the pilot" was published as `desktop-v0.5.10`. "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### Long tasks: compaction sized to the model, more tool turns, a progress report at the limit
+
+- The conversation was compacted at about 48,000 tokens on every model, although current models take 128,000 to 1,000,000. Older turns were summarized early and lost detail, and each summary cost tokens. The budget is now 60% of the connected model's window, between 48,000 and 160,000:
+  - Claude: 120,000.
+  - GPT-5 / Codex and Gemini: 160,000.
+  - DeepSeek and Qwen: 76,800.
+  - MiniMax: 120,000.
+  - A local or custom model of unknown size, or a custom runtime, keeps 48,000.
+- One message could make only 8 tool turns. A long web task (open, read, click, read again…) stopped with "เครื่องมือทำงานครบจำนวนรอบ" partway. It now allows 40.
+- At the limit, the AI no longer stops with an error. It gets one last turn without tools to say what is done and what remains, and the employee replies "ต่อ" to continue. The same happens early when the AI asks for the same tools three turns in a row, so a stuck task does not spend 40 turns.
+- Compaction still runs before every AI call, tool turns included. Task state, the current request and organization rules are never shortened. [docs/desktop-context-memory.md](docs/desktop-context-memory.md) lists the budgets.
+- Unit tests cover the budgets, a 70,000-token conversation (sent whole to Claude, compacted for an unknown model), the progress report at the limit and the stop on repeats. Not tried on a live account; the window sizes come from the providers' published limits.
 
 ### Work in progress survives switching pages
 

@@ -218,3 +218,51 @@ test('a tool request whose fence opens mid-sentence and is never closed still ru
     ['a.txt', 'b.txt'],
   );
 });
+test('a long task runs many tool turns, and at the limit the AI reports progress instead of failing', async () => {
+  let effects = 0;
+  const loop = new ToolLoop(
+    host({
+      readOnly: () => false,
+      execute: async r => {
+        effects++;
+        return r.input;
+      },
+    }),
+    3,
+  );
+  let wrapped = '';
+  const report = await loop.run(
+    '',
+    async prompt => {
+      if (prompt.includes('<tool_limit>')) return (wrapped = 'ทำแล้ว 2 ขั้น เหลือขั้นสุดท้าย พิมพ์ "ต่อ" เพื่อทำต่อ');
+      return request('files', 'step-' + effects);
+    },
+    signal(),
+  );
+  assert.equal(report, wrapped);
+  assert.equal(effects, 2, 'no effect is performed on the last turn, where nothing could explain it');
+});
+test('the same requests turn after turn stop early with a progress report', async () => {
+  let effects = 0,
+    calls = 0;
+  const loop = new ToolLoop(
+    host({
+      readOnly: () => false,
+      execute: async r => {
+        effects++;
+        return r.input;
+      },
+    }),
+  );
+  const report = await loop.run(
+    '',
+    async prompt => {
+      calls++;
+      return prompt.includes('<tool_limit>') ? 'ติดอยู่ที่ขั้นเดิม' : request('files', 'same');
+    },
+    signal(),
+  );
+  assert.equal(report, 'ติดอยู่ที่ขั้นเดิม');
+  assert.equal(effects, 2);
+  assert.equal(calls, 4);
+});

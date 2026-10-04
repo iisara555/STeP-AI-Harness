@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compact, tokens } from '../electron/compact';
+import { compact, contextBudget, CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, tokens } from '../electron/compact';
 import { section, fence } from '../electron/prompt';
 import { WorkService, type Harness } from '../electron/service';
 import { Store } from '../electron/store';
@@ -157,4 +157,32 @@ test('service reactively compacts once on provider overflow and accounts summary
   assert.deepEqual(events, ['pre_compact', 'post_compact']);
   assert.equal(store.session(s.id).status, 'review');
   store.close();
+});
+
+test('the compaction budget follows the connected model, within bounds', async () => {
+  assert.equal(contextBudget({ provider: 'claude', model: '' }), 120_000);
+  assert.equal(contextBudget({ provider: 'claude', model: 'claude-sonnet-x' }), 120_000);
+  assert.equal(contextBudget({ provider: 'gemini', model: 'gemini-pro' }), MAX_CONTEXT_TOKENS);
+  assert.equal(contextBudget({ provider: 'openai', model: 'gpt-5-codex' }), MAX_CONTEXT_TOKENS);
+  assert.equal(contextBudget({ provider: 'openai', model: 'gpt-4o' }), 76_800);
+  assert.equal(contextBudget({ provider: 'compatible', preset: 'deepseek', model: 'deepseek-chat' }), 76_800);
+  assert.equal(contextBudget({ provider: 'compatible', preset: 'minimax', model: 'MiniMax-M2' }), 120_000);
+  // A local or custom model of unknown size keeps the conservative budget.
+  assert.equal(contextBudget({ provider: 'compatible', preset: 'ollama', model: 'my-local' }), CONTEXT_TOKENS);
+  assert.equal(contextBudget({ provider: 'compatible', model: '' }), CONTEXT_TOKENS);
+  assert.equal(contextBudget({ provider: 'openai', model: '', customRuntime: true }), CONTEXT_TOKENS);
+  // A 70k-token conversation is sent whole to a large model and compacted for an unknown one.
+  const prompt = section(
+    'conversation',
+    JSON.stringify(Array.from({ length: 6 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', text: 'word '.repeat(14_000) }))),
+  );
+  const options = {
+    system: '',
+    state: '{}',
+    signal: new AbortController().signal,
+    summarize: async () => 'summary',
+    privacy: (t: string) => t,
+  };
+  assert.equal((await compact(prompt, { ...options, budget: contextBudget({ provider: 'claude', model: '' }) })).method, 'none');
+  assert.notEqual((await compact(prompt, { ...options, budget: CONTEXT_TOKENS })).method, 'none');
 });
