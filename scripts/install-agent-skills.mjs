@@ -227,12 +227,18 @@ async function askProfile(ask = asker()) {
 
 const MARKETPLACE = 'iisara555/STeP-AI-Harness';
 const onPath = command => spawnSync(process.platform === 'win32' ? 'where' : 'which', [command], { stdio: 'ignore' }).status === 0;
-/** Runs a tool's own CLI; .cmd shims on Windows need the shell. Arguments are fixed strings, never user input. */
-const run = (command, args) => spawnSync(command, args, { stdio: 'inherit', shell: process.platform === 'win32' }).status === 0;
+/** Runs a tool's own CLI. On Windows the .cmd shims need the shell; the line is joined here (Node warns when it is
+ * given arguments with shell: true). Every argument is a fixed string from this file, never user input. */
+const run = (command, args) =>
+  (process.platform === 'win32'
+    ? spawnSync([command, ...args].join(' '), { stdio: 'inherit', shell: true })
+    : spawnSync(command, args, { stdio: 'inherit' })
+  ).status === 0;
 
 /** Installs into every tool found, then asks for the profile. Returns one line per tool for the summary. */
 export async function setup({ home = homedir(), env = process.env, has = onPath, exec = run, ask = asker() } = {}) {
   const done = [];
+  done.push = (...lines) => (lines.forEach(line => console.log(line)), Array.prototype.push.apply(done, lines));
   const step = title => console.log(`\n=== ${title} ===`);
   step('Claude');
   if (has('claude')) {
@@ -260,6 +266,7 @@ export async function setup({ home = homedir(), env = process.env, has = onPath,
   } else done.push('➖ Codex: ไม่พบในเครื่องนี้ ข้าม');
   step('Google Antigravity');
   if (existsSync(join(home, '.gemini'))) {
+    console.log('กำลังคัดลอก Skills ไปที่ ~/.gemini/config/skills ...');
     const { skills } = installAntigravityGlobal(join(home, '.gemini'));
     done.push(`✅ Antigravity: ติดตั้ง ${skills} Skills แล้ว (ปิดแล้วเปิด Antigravity ใหม่)`);
   } else done.push('➖ Antigravity: ไม่พบในเครื่องนี้ (เปิด Antigravity อย่างน้อยหนึ่งครั้งก่อน แล้วรันใหม่)');
