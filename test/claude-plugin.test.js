@@ -184,22 +184,33 @@ test('Setup: installs into the tools found, skips the rest with what to do, then
   }
 });
 
-test('GitHub "Download ZIP" offers only the new setup: legacy launchers are export-ignored, Setup and what it needs are kept', (t) => {
-  let listing;
+test('Plugin directory: no export-ignore or export-subst rule, so the validated archive is what people install', () => {
+  const rules = walk(ROOT)
+    .filter((f) => f.endsWith('.gitattributes') && !/[\\/](node_modules|\.git)[\\/]/.test(f))
+    .flatMap((f) => readFileSync(f, 'utf8').split(/\r?\n/).filter((line) => /\bexport-(ignore|subst)\b/.test(line.replace(/#.*/, ''))).map((line) => `${relative(ROOT, f)}: ${line}`));
+  assert.deepEqual(rules, []);
+});
+
+test('Legacy Install/Update launchers hand over to Setup-STeP-Skills in a GitHub download, and stay as they are in the Pilot bundle', async () => {
+  const { mkdtempSync, writeFileSync, copyFileSync, rmSync, chmodSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  for (const name of ['Install-STeP-AI', 'Update-STeP-AI']) {
+    const bat = readFileSync(join(ROOT, `${name}.bat`), 'utf8');
+    assert.match(bat, /if exist "%~dp0Setup-STeP-Skills\.bat" \(\r\n[\s\S]*call "%~dp0Setup-STeP-Skills\.bat"\r\n\s*exit \/b/);
+  }
+  // The Pilot bundle is built without the new setup, so its launchers keep the folder workflow.
+  const bundle = readFileSync(join(ROOT, 'scripts', 'build_pilot_bundle.py'), 'utf8');
+  assert.doesNotMatch(bundle, /Setup-STeP-Skills/);
+  if (process.platform === 'win32') return;
+  const dir = mkdtempSync(join(tmpdir(), 'step-legacy-'));
   try {
-    listing = execFileSync('git', ['archive', '--worktree-attributes', '--format=tar', 'HEAD'], { cwd: ROOT, maxBuffer: 1 << 30 });
-  } catch {
-    t.skip('git archive is not available here');
-    return;
+    copyFileSync(join(ROOT, 'Install-STeP-AI.command'), join(dir, 'Install-STeP-AI.command'));
+    writeFileSync(join(dir, 'Setup-STeP-Skills.command'), '#!/bin/bash\necho NEW-SETUP-RAN\n');
+    chmodSync(join(dir, 'Setup-STeP-Skills.command'), 0o755);
+    const out = execFileSync('bash', [join(dir, 'Install-STeP-AI.command')], { encoding: 'utf8' });
+    assert.match(out, /เลิกใช้แล้ว/);
+    assert.match(out, /NEW-SETUP-RAN/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
-  // tar headers start with the 100-byte file name at each 512-byte block; collecting names is enough for this check.
-  const names = new Set();
-  for (let at = 0; at + 512 <= listing.length; at += 512) {
-    const name = listing.subarray(at, at + 100).toString('utf8').replace(/\0.*$/s, '');
-    if (name && /^[\w./-]+$/.test(name)) names.add(name);
-  }
-  for (const legacy of ['Install-STeP-AI.bat', 'Install-STeP-AI.command', 'Update-STeP-AI.bat', 'Feedback-STeP-AI.bat', 'Check-Privacy-STeP-AI.bat', 'START-HERE.md', 'step-ai.cmd'])
-    assert.ok(!names.has(legacy), `${legacy} must not be in the download`);
-  for (const needed of ['Setup-STeP-Skills.bat', 'Setup-STeP-Skills.command', 'scripts/install-agent-skills.mjs', 'src/modules/role-resolver.js', 'src/utils/file-ops.js', 'manifest/teams.yaml', 'plugins/step/session-brief.md', 'README.md'])
-    assert.ok(names.has(needed), `${needed} must be in the download`);
 });

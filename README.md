@@ -501,7 +501,7 @@ STeP AI เป็น workspace สำหรับช่วยเตรียม�
 ไฟล์นี้ติดตั้ง Skills ลงทุกโปรแกรมที่พบในเครื่อง ใส่กติกาของ Codex ติดตั้ง Antigravity แบบใช้ได้ทุก workspace และตั้งโปรไฟล์ในครั้งเดียว โปรแกรมที่ไม่มีจะถูกข้ามพร้อมบอกวิธีทำเอง ดับเบิลคลิกซ้ำเมื่อต้องการอัปเดตหรือแก้โปรไฟล์
 
 - Windows ขึ้นหน้าต่าง "Windows protected your PC": กด **More info → Run anyway** (ไฟล์มาจาก repository นี้)
-- macOS ขึ้นว่าเปิดไม่ได้เพราะไม่รู้จักผู้พัฒนา: คลิกขวาที่ไฟล์ → **Open** → **Open** อีกครั้ง
+- macOS ขึ้นว่าเปิดไม่ได้เพราะไม่รู้จักผู้พัฒนา: เปิด **System Settings → Privacy & Security** เลื่อนลงไปกด **Open Anyway** แล้วดับเบิลคลิกอีกครั้ง (macOS 15 ขึ้นไปไม่มีทางลัดคลิกขวา → Open แล้ว)
 
 วิธีด้านล่างคือการติดตั้งทีละโปรแกรมด้วยคำสั่ง สำหรับคนที่ถนัด terminal
 
@@ -645,7 +645,7 @@ Claude และ Codex ดึง plugin จาก `main` ของ repository �
 
 ## ช่องทางที่เลิกใช้แล้ว
 
-- **ชุด ZIP + CLI `step-ai`** (`Install-STeP-AI.bat` / `.command`, `Update-STeP-AI.*`, `START-HERE.md`, `OPEN-IN-CODEX.md`) — เลิกแจกพนักงานใหม่แล้ว และไม่อยู่ใน **Download ZIP** ของ GitHub อีก (`export-ignore` ใน `.gitattributes`) พนักงานที่ดาวน์โหลดจึงเห็นแค่ `Setup-STeP-Skills` โค้ดยังอยู่เพราะ Router และ Skills ใน `src/` เป็นแกนที่ STeP Desktop ใช้ร่วม และผู้ทดสอบ Pilot รุ่นเก่ายังอัปเดตได้ ผู้ใช้เดิมให้ย้ายไป STeP Desktop หรือหัวข้อ 13
+- **ชุด ZIP + CLI `step-ai`** (`Install-STeP-AI.bat` / `.command`, `Update-STeP-AI.*`, `START-HERE.md`, `OPEN-IN-CODEX.md`) — เลิกแจกพนักงานใหม่แล้ว ถ้าดับเบิลคลิก `Install-STeP-AI` หรือ `Update-STeP-AI` ในชุดที่ดาวน์โหลดจาก GitHub ตัวเก่าจะบอกว่าเลิกใช้แล้วและเปิด `Setup-STeP-Skills` แทน (ชุด ZIP ของ Pilot ไม่มี Setup จึงทำงานแบบเดิม) ห้ามใช้ `export-ignore` ซ่อนไฟล์ เพราะ plugin directory ไม่รับ repository ที่มีกฎนี้ โค้ดยังอยู่เพราะ Router และ Skills ใน `src/` เป็นแกนที่ STeP Desktop ใช้ร่วม และผู้ทดสอบ Pilot รุ่นเก่ายังอัปเดตได้ ผู้ใช้เดิมให้ย้ายไป STeP Desktop หรือหัวข้อ 13
 - **Gemini CLI extension** — ถอดออกแล้ว Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569 ใช้ Antigravity แทน
 - **LINE gateway** (`gateway/line/`) — โค้ดทดลอง ยังไม่เคยเปิดใช้และไม่ใช่ช่องทางสำหรับพนักงาน
 

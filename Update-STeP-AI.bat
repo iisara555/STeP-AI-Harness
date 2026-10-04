@@ -2,6 +2,16 @@
 chcp 65001 > nul
 title STeP AI Update
 
+rem A copy downloaded from GitHub carries Setup-STeP-Skills.bat; the Pilot bundle does not. The folder workflow is
+rem retired for GitHub downloads, so hand over to the new setup there and keep this launcher for the Pilot bundle.
+if exist "%~dp0Setup-STeP-Skills.bat" (
+    echo วิธีติดตั้งแบบนี้เลิกใช้แล้ว กำลังเปิด Setup-STeP-Skills แทน
+    echo.
+    call "%~dp0Setup-STeP-Skills.bat"
+    exit /b
+)
+
+
 echo ================================================================
 echo    ____ _____     ____       _    ___ 
 echo   / ___^|_   _^|___^|  _ \     / \  ^|_ _^|   STeP AI Update and Sync
