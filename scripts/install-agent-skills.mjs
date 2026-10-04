@@ -18,17 +18,26 @@
 //     step@step-ai) but does not run plugin hooks, so the STeP brief goes into Codex's global AGENTS.md
 //     (~/.codex/AGENTS.md, or $CODEX_HOME/AGENTS.md) between markers; running it again replaces that block only.
 //
-// Re-running either target updates it in place; Skills from an earlier run that no longer exist are removed, and
+//   node scripts/install-agent-skills.mjs profile [--name=.. --team=.. --assistant=.. --style=..]
+//     The employee's own profile (what USER.md held in the folder workflow): nickname, team, assistant name and
+//     conversation style. Asked once, written between its own markers into the global instructions file of every tool
+//     found on this computer: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md and ~/.gemini/GEMINI.md. Run it again to change it.
+//
+// Re-running any target updates it in place; Skills from an earlier run that no longer exist are removed, and
 // nothing else in the folder is touched.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { parseTeamsYaml } from '../src/modules/role-resolver.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGIN = join(ROOT, 'plugins', 'step');
 const BEGIN = '<!-- STeP AI Skills: begin (managed by scripts/install-agent-skills.mjs) -->';
 const END = '<!-- STeP AI Skills: end -->';
+const PROFILE_BEGIN = '<!-- STeP AI profile: begin (managed by scripts/install-agent-skills.mjs profile) -->';
+const PROFILE_END = '<!-- STeP AI profile: end -->';
 
 const toPosix = path => path.split(sep).join('/');
 const walk = dir =>
@@ -78,14 +87,14 @@ const briefFor = rulesDir =>
     .replace(/ไฟล์ rules\/ ที่อ้างถึงอยู่ในโฟลเดอร์ที่ติดตั้ง `step` ไว้/, `ไฟล์กติกาฉบับเต็มอยู่ใน \`${rulesDir}/\``);
 
 /** Writes `body` between the STeP markers in `file`, replacing an earlier block and keeping everything else. */
-function writeBlock(file, body) {
+function writeBlock(file, body, begin = BEGIN, finish = END) {
   const current = existsSync(file) ? readFileSync(file, 'utf8') : '';
-  const block = `${BEGIN}\n${body.trim()}\n${END}\n`;
-  const start = current.indexOf(BEGIN),
-    end = current.indexOf(END);
+  const block = `${begin}\n${body.trim()}\n${finish}\n`;
+  const start = current.indexOf(begin),
+    end = current.indexOf(finish);
   const next =
     start >= 0 && end > start
-      ? current.slice(0, start) + block + current.slice(end + END.length).replace(/^\n/, '')
+      ? current.slice(0, start) + block + current.slice(end + finish.length).replace(/^\n/, '')
       : current + (current && !current.endsWith('\n\n') ? (current.endsWith('\n') ? '\n' : '\n\n') : '') + block;
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, next);
@@ -122,9 +131,107 @@ export function installCodexRules(codexHome = process.env.CODEX_HOME || join(hom
   return { file };
 }
 
+export const STYLES = {
+  coworker: 'เป็นกันเอง สุภาพ พูดธรรมชาติ ไม่ใช้ภาษาทางการเกินจำเป็น',
+  professional: 'สุภาพ มีโครงสร้าง ชัดเจน เหมาะกับงานองค์กร',
+  concise: 'ตอบสั้น ตรงประเด็น เน้นสิ่งที่ต้องทำต่อ',
+};
+export const teams = () => parseTeamsYaml(readFileSync(join(ROOT, 'manifest', 'teams.yaml'), 'utf8'));
+
+/** One line of free text: no line breaks or markup that could end the block, and nothing that looks like an ID or phone number. */
+function clean(value, max, label) {
+  const text = String(value ?? '').replace(/[\r\n<>`]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (text.length > max) throw new Error(`${label} ยาวเกิน ${max} ตัวอักษร`);
+  if (/\d[\d -]{7,}\d/.test(text)) throw new Error(`${label} มีตัวเลขยาวคล้ายเลขบัตรหรือเบอร์โทร ห้ามใส่ข้อมูลส่วนบุคคล`);
+  return text;
+}
+
+/** The profile block: the same facts USER.md carried, as instructions every session reads. */
+export function profileText({ name = '', team = '', assistant = '', style = 'coworker' } = {}) {
+  const nickname = clean(name, 60, 'ชื่อเรียก');
+  const assistantName = clean(assistant, 60, 'ชื่อผู้ช่วย') || 'STeP Mate';
+  const tone = STYLES[style] || clean(style, 300, 'สไตล์การคุย') || STYLES.coworker;
+  const code = String(team || '').trim().toLowerCase();
+  const found = code ? teams().find(t => t.id === code) : undefined;
+  if (code && !found) throw new Error(`ไม่รู้จักทีม "${team}" ดูรหัสทีมใน manifest/teams.yaml`);
+  const folder = found ? found.id.toUpperCase() : 'SHARED';
+  return [
+    '# ข้อมูลผู้ใช้ STeP',
+    '',
+    `- ชื่อเรียกผู้ใช้: ${nickname || '(ยังไม่ระบุ)'}`,
+    `- ทีมหลัก: ${found ? `${folder} — ${found.name} (${found.clusterName.replace(/\s*\(.*\)\s*$/, '')})` : 'ยังไม่ระบุ'}`,
+    `- ชื่อผู้ช่วย: ${assistantName}`,
+    `- สไตล์การคุย: ${tone}`,
+    '- ภาษาหลัก: ไทย',
+    '',
+    `ใช้รหัสทีม ${folder} ในโฟลเดอร์ผลงาน (output/${folder}/...) และเลือก Skill ที่ตรงกับงานของทีมนี้ก่อน ` +
+      'ข้อมูลนี้เป็นความชอบในการคุย กติกาของ STeP และของ Skill มาก่อนเสมอ ถ้าโฟลเดอร์งานมี USER.md ให้ใช้ข้อมูลในนั้นแทน',
+  ].join('\n');
+}
+
+/** The global instructions file of each tool, when that tool is on this computer (its home folder exists). */
+export function profileTargets(home = homedir(), env = process.env) {
+  return [
+    ['Claude', join(home, '.claude'), 'CLAUDE.md'],
+    ['Codex', env.CODEX_HOME || join(home, '.codex'), 'AGENTS.md'],
+    ['Antigravity', join(home, '.gemini'), 'GEMINI.md'],
+  ]
+    .filter(([, dir]) => existsSync(dir))
+    .map(([tool, dir, file]) => ({ tool, file: join(dir, file) }));
+}
+
+/** Writes the profile block into every target file; re-running replaces it and keeps everything else. */
+export function installProfile(profile, targets = profileTargets()) {
+  const text = profileText(profile);
+  for (const { file } of targets) writeBlock(file, text, PROFILE_BEGIN, PROFILE_END);
+  return targets;
+}
+
+async function askProfile() {
+  // Reads line by line, so answers typed ahead or piped in are not lost between questions.
+  const rl = createInterface({ input: process.stdin, terminal: false });
+  const lines = rl[Symbol.asyncIterator]();
+  try {
+    const answer = async (question, fallback = '') => {
+      process.stdout.write(question);
+      const next = await lines.next();
+      if (!process.stdin.isTTY) process.stdout.write('\n');
+      return (next.done ? '' : next.value.trim()) || fallback;
+    };
+    const name = await answer('ชื่อเล่น/ชื่อที่อยากให้ AI เรียก (Enter = ข้าม): ');
+    const list = teams();
+    console.log('\nทีมหลัก:');
+    list.forEach((t, i) => console.log(`  ${String(i + 1).padStart(2)}. ${t.id.toUpperCase().padEnd(6)} ${t.name}`));
+    const pick = await answer('เลือกเลขหรือรหัสทีม (Enter = ยังไม่แน่ใจ): ');
+    const team = /^\d+$/.test(pick) ? list[Number(pick) - 1]?.id || pick : pick;
+    const assistant = await answer('ตั้งชื่อผู้ช่วย (Enter = STeP Mate): ');
+    console.log('\nสไตล์การคุย: 1. เพื่อนร่วมงาน  2. มืออาชีพ  3. กระชับ  4. กำหนดเอง');
+    const choice = await answer('เลือก 1-4 (Enter = 1): ', '1');
+    const style = { 1: 'coworker', 2: 'professional', 3: 'concise' }[choice] || (choice === '4' ? await answer('อธิบายสไตล์ที่ต้องการ: ') : 'coworker');
+    return { name, team, assistant, style };
+  } finally {
+    rl.close();
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [target, where] = process.argv.slice(2);
-  if (target === 'antigravity' && where) {
+  if (target === 'profile') {
+    const flags = Object.fromEntries(process.argv.slice(3).map(a => /^--(\w+)=(.*)$/s.exec(a)).filter(Boolean).map(m => [m[1], m[2]]));
+    const targets = profileTargets();
+    if (!targets.length) {
+      console.error('ยังไม่พบ Claude, Codex หรือ Antigravity ในเครื่องนี้ ติดตั้งและเปิดโปรแกรมอย่างน้อยหนึ่งครั้งก่อน แล้วรันคำสั่งนี้ใหม่');
+      process.exit(1);
+    }
+    try {
+      const profile = Object.keys(flags).length ? flags : await askProfile();
+      for (const { tool, file } of installProfile(profile, targets)) console.log(`บันทึกโปรไฟล์ลง ${tool}: ${file}`);
+      console.log('เริ่มแชตใหม่เพื่อให้ AI ใช้ข้อมูลนี้ รันคำสั่งเดิมอีกครั้งเมื่อต้องการแก้');
+    } catch (error) {
+      console.error(error.message);
+      process.exit(1);
+    }
+  } else if (target === 'antigravity' && where) {
     const { skills, agents } = installAntigravity(where);
     console.log(`Installed ${skills} STeP Skills for Antigravity in ${agents} (rules: .agents/rules/step.md). Open the folder in Antigravity.`);
   } else if (target === 'antigravity') {
@@ -134,7 +241,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const { file } = installCodexRules(where);
     console.log(`Wrote the STeP rules block to ${file}. Install the Skills with: codex plugin marketplace add iisara555/STeP-AI-Harness && codex plugin add step@step-ai`);
   } else {
-    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]');
+    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]\n       node scripts/install-agent-skills.mjs profile');
     process.exit(2);
   }
 }

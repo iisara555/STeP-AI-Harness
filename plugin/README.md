@@ -72,6 +72,16 @@ node scripts/install-agent-skills.mjs antigravity <โฟลเดอร์ง�
 
 ถ้าติดตั้งแบบ global แล้ว Antigravity ไม่เห็น Skills (รุ่นเก่าบางรุ่นอ่าน global Skills จากที่อื่น) ให้ใช้แบบ workspace แทน
 
+## ตั้งโปรไฟล์ (แทน USER.md)
+
+หลังติดตั้งโปรแกรมแล้ว รันในโฟลเดอร์ของ repository ครั้งเดียว:
+
+```text
+node scripts/install-agent-skills.mjs profile
+```
+
+ตอบชื่อเรียก ทีม ชื่อผู้ช่วย และสไตล์การคุย (Enter ข้ามได้) ระบบเขียนบล็อก "ข้อมูลผู้ใช้ STeP" ลง `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` และ `~/.gemini/GEMINI.md` ของโปรแกรมที่มีในเครื่อง ใช้ทุกแชต รันซ้ำเพื่อแก้ ถ้าโฟลเดอร์งานมี `USER.md` ของชุดเดิม AI ใช้ไฟล์นั้นแทน ห้ามใส่เลขบัตร เบอร์โทร หรือรหัสผ่าน
+
 ## ใช้กับ STeP Desktop ได้ไหม
 
 ได้ ใช้คู่กันได้ STeP Desktop มี Skills ชุดเดียวกันอยู่แล้ว ไม่ต้องติดตั้ง plugin เพิ่มสำหรับ Desktop

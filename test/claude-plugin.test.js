@@ -122,3 +122,33 @@ test('Antigravity global install: Skills in ~/.gemini/config/skills, brief in GE
     rmSync(gemini, { recursive: true, force: true });
   }
 });
+
+test('Profile: the USER.md facts go into each tool’s global instructions once, kept text intact, personal numbers refused', async () => {
+  const { installProfile, profileTargets, profileText } = await import('../scripts/install-agent-skills.mjs');
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const home = mkdtempSync(join(tmpdir(), 'step-profile-'));
+  try {
+    mkdirSync(join(home, '.claude'));
+    mkdirSync(join(home, '.gemini'));
+    writeFileSync(join(home, '.claude', 'CLAUDE.md'), '# Mine\n\nkeep me\n');
+    const targets = profileTargets(home, {});
+    assert.deepEqual(targets.map((t) => t.tool), ['Claude', 'Antigravity'], 'only tools present on the computer');
+    installProfile({ name: 'ต้น', team: 'afp', style: 'concise' }, targets);
+    installProfile({ name: 'ต้น', team: 'cc', style: 'professional' }, targets);
+    const claude = readFileSync(join(home, '.claude', 'CLAUDE.md'), 'utf8');
+    assert.ok(claude.startsWith('# Mine\n\nkeep me\n'));
+    assert.equal(claude.split('STeP AI profile: begin').length - 1, 1);
+    assert.match(claude, /ชื่อเรียกผู้ใช้: ต้น/);
+    assert.match(claude, /output\/CC\//);
+    assert.doesNotMatch(claude, /AFP/);
+    assert.match(readFileSync(join(home, '.gemini', 'GEMINI.md'), 'utf8'), /ทีมหลัก: CC/);
+    assert.match(profileText({}), /output\/SHARED\//);
+    assert.throws(() => profileText({ name: '1103700012345' }), /เลขบัตร/);
+    assert.throws(() => profileText({ name: '081-234-5678' }), /เบอร์โทร/);
+    assert.throws(() => profileText({ team: 'nope' }), /ไม่รู้จักทีม/);
+    assert.ok(!profileText({ name: 'a\n<!-- STeP AI profile: end -->' }).includes('<!--'));
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
