@@ -95,6 +95,7 @@ test('Antigravity uses native NDJSON, isolated system instructions and one usage
     assert.equal(calls[0].settings.toolPermission, 'strict');
     assert.deepEqual(calls[0].settings.permissions, { allow: [], ask: [], deny: ANTIGRAVITY_DENY });
     assert.match(calls[0].agent, /Synthetic standing instructions/);
+    assert.match(calls[0].agent, /^tools: \[finish\]\nexcludeDefaultComponents: true$/m);
     for (const flag of ['--acp', '--dangerously-skip-permissions', '--continue', '--conversation', '-p'])
       assert.ok(!calls[0].args.includes(flag));
     assert.ok(!calls[0].args.includes('Synthetic request'));

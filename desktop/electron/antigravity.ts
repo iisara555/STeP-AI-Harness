@@ -38,10 +38,12 @@ export async function antigravityHome(context: Pick<ProviderContext, 'cwd' | 'en
       }),
       { mode: 0o600 },
     );
-    // Declare only harmless finish; still require runtime confirmation before sending the request.
+    // Declare only harmless finish and opt out of the built-in tools and prompt sections (excludeDefaultComponents,
+    // agy 1.2.1+): a tools list alone did not narrow the init catalog on 1.2.14. Whether this does is still decided by
+    // the init check below, which withholds the request unless the runtime declares nothing but finish.
     await writeFile(
       agent,
-      '---\nname: step-draft\ndescription: STeP governed text generation\ntools: [finish]\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nmcpServers: []\nskills: []\nplugins: []\n---\n' +
+      '---\nname: step-draft\ndescription: STeP governed text generation\ntools: [finish]\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nmcpServers: []\nskills: []\nplugins: []\n---\n' +
         (context.system || 'Answer the supplied request as a text-only assistant. Do not use tools.'),
       { mode: 0o600 },
     );

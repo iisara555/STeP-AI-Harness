@@ -32,6 +32,14 @@ The official Windows amd64 manifest selected **1.2.14**:
 - **0 reported tokens**, **11 Gemini catalog entries**. OAuth refresh, account identity and generation were not tested. Zero reported tokens is not a billing measurement.
 - The binary, private probes and metadata-only evidence are ignored under `desktop/release/qa/antigravity/`; they are not dependencies or release assets.
 
+## Follow-up (2026-10-04): `excludeDefaultComponents` on 1.2.17
+
+- The latest official CLI is **1.2.17** (`antigravity-cli/latest` → `1.2.17/manifest.json`). Its [changelog](https://github.com/google-antigravity/antigravity-cli/blob/main/CHANGELOG.md) for 1.2.15–1.2.17 does not mention narrowing the `init` tool catalog.
+- Since **1.2.1**, custom agents accept `excludeDefaultComponents: true`, which opts out of default prompt sections and **built-in tools**. The adapter had not set it. `step-draft` now declares it alongside `tools: [finish]`.
+- The Linux x64 1.2.17 binary (SHA-512 verified against the manifest) lists `step-draft` with the new frontmatter. A headless run stops at `authentication required` before any `init` event, so whether the catalog now narrows to `finish` could not be observed without a signed-in Google account.
+- Nothing is relaxed. The `init` check still withholds the user message unless the runtime declares nothing but `finish`. If the option does not narrow the catalog, the connection keeps failing with `ANTIGRAVITY_TOOLS_UNAVAILABLE` exactly as before.
+- **To accept:** on a machine signed in to Antigravity, connect "Gemini via Antigravity (experimental)" in STeP Desktop and send a short message. A reply means `init` declared only `finish`. `ANTIGRAVITY_TOOLS_UNAVAILABLE` means it did not. Record the result here before changing experimental status.
+
 ## Validation
 
 - **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.
