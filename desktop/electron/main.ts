@@ -42,7 +42,7 @@ import { errorCode } from './diagnostics';
 import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
 import { isolatedRuntimeHome } from './runtime-home';
-import { exportDocument, exportFormats } from './export';
+import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
 import { installOcr, ocrComponentCurrent } from './components';
@@ -2288,7 +2288,7 @@ async function main() {
               return await print.webContents.printToPDF({
                 printBackground: true,
                 pageSize: 'A4',
-                margins: { top: 0.6, bottom: 0.6, left: 0.6, right: 0.6 },
+                margins: PDF_MARGINS,
               });
             } finally {
               print.destroy();

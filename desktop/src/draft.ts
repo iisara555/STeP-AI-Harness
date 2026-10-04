@@ -36,12 +36,47 @@ function inline(text: string): DraftNode[] {
   }, []);
 }
 
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+/** A GFM delimiter row under a header: pipes, hyphens, colons and spaces only, e.g. |---|:-:|. */
+const isTableRule = (line: string) => /^[\s|:-]+$/.test(line) && line.includes('|') && line.includes('-');
+export const MAX_TABLE_ROWS = 500;
+export const MAX_TABLE_COLUMNS = 30;
+
+/** A Markdown table row's cells; `\|` stays a literal pipe inside a cell. */
+function tableCells(row: string) {
+  return row
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/(?<!\\)\|$/, '')
+    .split(/(?<!\\)\|/)
+    .map(cell => cell.trim().replace(/\\\|/g, '|'))
+    .slice(0, MAX_TABLE_COLUMNS);
+}
+
+/** A GFM table (header row, rule, body rows) as a draft table; every row is padded to the header's width. */
+function tableNode(rows: string[][]): DraftNode {
+  const width = Math.max(...rows.map(row => row.length));
+  return {
+    type: 'table',
+    content: rows.slice(0, MAX_TABLE_ROWS).map((row, index) => ({
+      type: 'tableRow',
+      content: Array.from({ length: width }, (_, column) => ({
+        type: index === 0 ? 'tableHeader' : 'tableCell',
+        content: [{ type: 'paragraph', content: inline(row[column] || '') }],
+      })),
+    })),
+  };
+}
+
 // Model output is Markdown; map the subset the draft schema supports and keep everything else as plain paragraphs.
 export function markdownDocument(markdown: string): DraftNode {
   const doc: DraftNode = { type: 'doc', content: [] };
   const lists: { node: DraftNode; indent: number }[] = [];
   let fenced = false;
-  for (const raw of markdown.replace(/\r\n?/g, '\n').split('\n')) {
+  const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
+  for (let at = 0; at < lines.length; at++) {
+    const raw = lines[at];
     if (/^\s*(```|~~~)/.test(raw)) {
       fenced = !fenced;
       lists.length = 0;
@@ -75,13 +110,22 @@ export function markdownDocument(markdown: string): DraftNode {
       continue;
     }
     lists.length = 0;
-    if (!raw.trim() || /^\s*([-*_])(\s*\1){2,}\s*$/.test(raw) || /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(raw)) continue;
+    // A header row followed by a rule starts a table; it runs while rows keep their pipes.
+    if (TABLE_ROW.test(raw) && isTableRule(lines[at + 1] || '')) {
+      const rows = [tableCells(raw)];
+      at += 2;
+      while (at < lines.length && TABLE_ROW.test(lines[at])) rows.push(tableCells(lines[at++]));
+      at--;
+      doc.content!.push(tableNode(rows));
+      continue;
+    }
+    if (!raw.trim() || /^\s*([-*_])(\s*\1){2,}\s*$/.test(raw) || TABLE_RULE.test(raw)) continue;
     const heading = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(raw);
     if (heading) {
       doc.content!.push({ type: 'heading', attrs: { level: Math.min(heading[1].length, 3) }, content: inline(heading[2]) });
       continue;
     }
-    // Tables stay readable as one line per row; quotes lose their marker.
+    // A pipe row without a rule stays readable as one line; quotes lose their marker.
     const text = /^\s*\|.*\|\s*$/.test(raw)
       ? raw
           .trim()
@@ -101,7 +145,11 @@ export function validateDocument(value: unknown): DraftNode {
   const visit = (node: any, depth: number): DraftNode => {
     if (++count > 30000 || depth > 16 || !node || typeof node !== 'object') throw new Error('INVALID_DOCUMENT');
     const children: Record<string, string[]> = {
-      doc: ['paragraph', 'heading', 'bulletList', 'orderedList'],
+      doc: ['paragraph', 'heading', 'bulletList', 'orderedList', 'table'],
+      table: ['tableRow'],
+      tableRow: ['tableHeader', 'tableCell'],
+      tableHeader: ['paragraph'],
+      tableCell: ['paragraph'],
       paragraph: ['text', 'hardBreak'],
       heading: ['text', 'hardBreak'],
       bulletList: ['listItem'],
@@ -133,6 +181,8 @@ export function validateDocument(value: unknown): DraftNode {
     if (node.content !== undefined) {
       if (!Array.isArray(node.content) || node.content.some((c: any) => !children[node.type].includes(c?.type)))
         throw new Error('INVALID_DOCUMENT');
+      if (node.type === 'table' && node.content.length > MAX_TABLE_ROWS) throw new Error('INVALID_DOCUMENT');
+      if (node.type === 'tableRow' && node.content.length > MAX_TABLE_COLUMNS) throw new Error('INVALID_DOCUMENT');
       result.content = node.content.map((c: any) => visit(c, depth + 1));
     }
     return result;
@@ -145,6 +195,8 @@ export function validateDocument(value: unknown): DraftNode {
 export function documentText(node: DraftNode): string {
   if (node.type === 'text') return node.text || '';
   if (node.type === 'hardBreak') return '\n';
+  // A table as tab-separated rows, which spreadsheets and the plain-text exports read as columns.
+  if (node.type === 'tableRow') return (node.content || []).map(cell => documentText(cell).replace(/[\t\n]+/g, ' ')).join('\t');
   return (node.content || []).map(documentText).join(['paragraph', 'heading'].includes(node.type) ? '' : '\n');
 }
 
@@ -155,6 +207,20 @@ export function documentMarkdown(node: DraftNode, indent = ''): string {
     return text;
   }
   if (node.type === 'hardBreak') return '  \n';
+  if (node.type === 'table') {
+    const rows = (node.content || []).map(row =>
+      (row.content || []).map(cell =>
+        (cell.content || [])
+          .map(child => documentMarkdown(child))
+          .join(' ')
+          .replace(/\n+/g, ' ')
+          .replace(/\|/g, '\\|'),
+      ),
+    );
+    if (!rows.length) return '';
+    const line = (cells: string[]) => '| ' + cells.join(' | ') + ' |';
+    return [line(rows[0]), line(rows[0].map(() => '---')), ...rows.slice(1).map(line)].map(row => indent + row).join('\n');
+  }
   if (node.type === 'bulletList' || node.type === 'orderedList')
     return (node.content || [])
       .map((item, index) => {

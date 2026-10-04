@@ -1264,6 +1264,31 @@ nav button,
 .draft-editor ol {
   padding-left: 1.5em;
 }
+.draft-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 4px 0 12px;
+  table-layout: fixed;
+}
+.draft-editor th,
+.draft-editor td {
+  border: 1px solid var(--line-strong);
+  padding: 4px 8px;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.draft-editor th {
+  background: var(--hover);
+  font-weight: 600;
+}
+.draft-editor th p,
+.draft-editor td p {
+  margin: 0;
+}
+.draft-editor .selectedCell {
+  background: var(--selection);
+}
 .statusbar {
   display: flex;
   align-items: center;

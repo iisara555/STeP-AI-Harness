@@ -120,6 +120,40 @@ try {
     exported.push({ format, path: result.path, bytes: bytes.length });
   }
   await writeFile('release/qa/exports.json', JSON.stringify(exported, null, 2));
+  // A table drafted by the model shows as a table, stays one after an edit in the editor, and exports as one.
+  await page.evaluate(async id => {
+    const s = (await window.step.call('snapshot')).sessions.find(session => session.id === id);
+    const cell = (type, text) => ({ type, content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });
+    await window.step.call('edit', {
+      id,
+      text: '',
+      revision: s.revision,
+      document: {
+        type: 'doc',
+        content: [
+          {
+            type: 'table',
+            content: [
+              { type: 'tableRow', content: [cell('tableHeader', 'งาน'), cell('tableHeader', 'กำหนด')] },
+              { type: 'tableRow', content: [cell('tableCell', 'โปสเตอร์'), cell('tableCell', '10 ต.ค.')] },
+            ],
+          },
+        ],
+      },
+    });
+  }, restored.sessions[0].id);
+  await page.reload();
+  await page.locator('.draft-editor table th').first().waitFor();
+  await page.locator('.draft-editor td').first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' ฉบับใหม่');
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await page.waitForTimeout(200);
+  const tabled = (await page.evaluate(() => window.step.call('snapshot'))).sessions[0];
+  assert.equal(tabled.document.content[0].type, 'table');
+  assert.match(tabled.draft, /โปสเตอร์ ฉบับใหม่\t10 ต\.ค\./);
+  const tableExport = await page.evaluate(id => window.step.call('export', { id, format: 'xlsx' }), tabled.id);
+  assert.ok((await readFile(tableExport.path)).length > 50);
   await page.evaluate(async () => {
     const s = await window.step.call('snapshot');
     await window.step.call('settings', { ...s.settings, theme: 'dark' });

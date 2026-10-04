@@ -2,6 +2,7 @@ import { GooLoader } from './goo-loader';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { plainDocument as toDoc, documentText } from './draft';
 import {
   ArrowUp,
@@ -239,6 +240,10 @@ export default function App() {
         blockquote: false,
         horizontalRule: false,
       }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: toDoc(''),
     editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false' } },
