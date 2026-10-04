@@ -43,7 +43,7 @@ export function installAntigravity(workspace) {
   for (const name of previous) rmSync(join(agents, 'skills', name), { recursive: true, force: true });
   rmSync(join(agents, 'step'), { recursive: true, force: true });
   const skills = readdirSync(join(PLUGIN, 'skills')).filter(name => existsSync(join(PLUGIN, 'skills', name, 'SKILL.md')));
-  const skip = new Set(['.claude-plugin', 'hooks', 'gemini-extension.json', 'GEMINI.md', 'README.md', 'session-brief.md'].map(p => join(PLUGIN, p)));
+  const skip = new Set(['.claude-plugin', 'hooks', 'README.md', 'session-brief.md'].map(p => join(PLUGIN, p)));
   for (const file of walk(PLUGIN)) {
     if ([...skip].some(s => file === s || file.startsWith(s + sep))) continue;
     const to = place(file);
@@ -69,7 +69,7 @@ export function installAntigravity(workspace) {
       .replace(/, rules\//g, ', .agents/step/rules/')
       .replace(/ไฟล์ rules\/ ที่อ้างถึงอยู่ในโฟลเดอร์ที่ติดตั้ง `step` ไว้/, 'ไฟล์กติกาฉบับเต็มอยู่ใน `.agents/step/rules/`'),
   );
-  writeFileSync(record, JSON.stringify({ skills, from: 'plugins/step', version: JSON.parse(readFileSync(join(PLUGIN, 'gemini-extension.json'), 'utf8')).version }, null, 2) + '\n');
+  writeFileSync(record, JSON.stringify({ skills, from: 'plugins/step', version: JSON.parse(readFileSync(join(PLUGIN, '.claude-plugin', 'plugin.json'), 'utf8')).version }, null, 2) + '\n');
   return { skills: skills.length, agents };
 }
 

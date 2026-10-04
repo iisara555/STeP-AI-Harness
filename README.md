@@ -3,7 +3,18 @@
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI Harness สำหรับพนักงาน STeP / RSP North ใช้สำหรับคุยกับ AI, แนบเอกสาร, ใช้ Skill/Playbook, ตรวจร่าง, ส่งออกไฟล์ และใช้เครื่องมือเฉพาะ เช่น **ตรวจใบเสร็จก่อนส่ง AFP** โดยไม่ต้องใช้ Git, Terminal หรือจำชื่อ Skill
 
 > สำหรับผู้ใช้ทั่วไป: เริ่มจาก **STeP Desktop GUI**  
-> สำหรับผู้ดูแล/นักพัฒนา: รายละเอียด Harness, Router, manifests และ CLI อยู่ช่วงท้ายของ README นี้
+> สำหรับผู้ดูแล/นักพัฒนา: รายละเอียด Harness, Router และ manifests อยู่ช่วงท้ายของ README นี้
+
+## เลือกวิธีใช้ STeP AI
+
+มี 2 วิธีเท่านั้น ใช้ Skills และกติกาชุดเดียวกัน
+
+| วิธี | เหมาะกับ | อ่านต่อ |
+| --- | --- | --- |
+| **STeP Desktop** (แนะนำ) | พนักงานทุกคน ไม่ต้องใช้ terminal มีหน้าตรวจใบเสร็จ AFP แถบผลงาน และส่งออกไฟล์ | หัวข้อ 1–12 |
+| **STeP Skills ในโปรแกรม AI ที่มีอยู่แล้ว** | คนที่ใช้ **Claude**, **Codex** หรือ **Google Antigravity** อยู่แล้วและอยากได้ Skills ของ STeP ในโปรแกรมนั้น | [หัวข้อ 13](#13-ใช้-step-skills-ใน-claude-codex-หรือ-antigravity) |
+
+ช่องทางที่**เลิกใช้แล้ว**: ชุด ZIP + `Install-STeP-AI.bat` / `.command` แบบเปิดโฟลเดอร์ด้วยโปรแกรม AI และ Gemini CLI (Google หยุดให้บริการกับบัญชีส่วนตัวตั้งแต่ 18 มิ.ย. 2569) ใครยังใช้อยู่ให้ย้ายมาใช้ STeP Desktop หรือหัวข้อ 13
 
 **เอกสารที่เกี่ยวข้อง:** [คู่มือพนักงาน](docs/employee-guide.md) · [คู่มือ Desktop สำหรับนักพัฒนา](desktop/README.md) · [STeP AI Support](SUPPORT.md)
 
@@ -102,46 +113,38 @@ STeP-Desktop-<version>-x64.dmg
 
 STeP Desktop รองรับหลายวิธี โดยแต่ละ connection แยก profile ออกจากกัน
 
-| Provider | วิธีที่ใช้ได้ |
-| --- | --- |
-| OpenAI | ลงชื่อ ChatGPT ผ่าน browser หรือ API key |
-| Gemini | ลงชื่อ Google ผ่าน browser หรือ API key |
-| Claude | Claude Console OAuth, API key และ Claude Code ภายนอก |
-| Claude Pro/Max | ใช้ผ่าน Claude Code ภายนอกเป็นค่าเริ่มต้น; direct in-app subscription ใช้เฉพาะ deployment ที่ได้รับอนุมัติ |
+| ใช้บัญชี/คีย์ | เลือก | ค่าใช้จ่าย |
+| --- | --- | --- |
+| ChatGPT Plus/Pro | **ChatGPT** → ลงชื่อผ่าน browser | ใช้แพ็กเกจที่มี |
+| Claude Pro/Max | ใช้ผ่าน Claude Code ภายนอก (ต้องติดตั้ง Claude Code) | ใช้แพ็กเกจที่มี |
+| OpenRouter | **OpenRouter** → ลงชื่อผ่าน browser ไม่ต้องคัดลอกคีย์ | เติมเงินตามใช้ มีโมเดลฟรีบางตัว |
+| Gemini | **Gemini** → API key จาก Google AI Studio | มีแบบใช้ฟรี |
+| Claude API / OpenAI API | API key จาก Anthropic Console / OpenAI Platform | คิดตามการใช้ |
+| อื่น ๆ | DeepSeek, Groq, Mistral, xAI Grok หรือ Ollama (รันในเครื่อง) | ตามผู้ให้บริการ |
 
 ### ChatGPT
 
-เลือก:
-
-```text
-OpenAI (ChatGPT)
-→ บัญชีส่วนตัว (ลงชื่อเข้าใช้)
-→ เชื่อมต่อ ChatGPT
-```
-
-Browser จะเปิดหน้าลงชื่อเข้าใช้ เมื่อเสร็จ STeP Desktop จะตรวจสถานะบัญชีและทดสอบ connection
+เลือก **ChatGPT** แล้วกด **เชื่อมต่อ ChatGPT** browser จะเปิดหน้าลงชื่อเข้าใช้ เมื่อเสร็จ STeP Desktop จะตรวจสถานะบัญชีและทดสอบ connection
 
 ### Gemini
 
-เลือก:
+บัญชี Google ส่วนตัวและ Google AI Plus/Pro **ลงชื่อเข้า Gemini ใน STeP Desktop ไม่ได้แล้ว** เพราะ Google หยุดให้บริการ Gemini CLI กับบัญชีเหล่านี้ตั้งแต่ 18 มิ.ย. 2569 ให้ใช้วิธีใดวิธีหนึ่ง:
 
-```text
-Gemini (Google)
-→ บัญชีส่วนตัว (ลงชื่อเข้าใช้)
-→ เชื่อมต่อ Google
-```
-
-บัญชี Google Workspace/องค์กรบางบัญชีอาจต้องระบุ **Google Cloud Project ID** ส่วนบัญชีส่วนตัวทั่วไปปล่อยว่างได้
-
-Gemini CLI เป็นผู้จัดการ browser OAuth และ local callback โดยตรง ไม่ต้องคัดลอก authorization code มาใส่ใน STeP Desktop
+- **Gemini API key** — สร้างที่ Google AI Studio (มีแบบใช้ฟรี แต่โควตาต่ำ) แล้วเลือก **Gemini** ในหน้าเชื่อมต่อ
+- **บัญชีองค์กร** ที่มี Gemini Code Assist Standard/Enterprise — เลือก Gemini → บัญชีองค์กร แล้วใส่ **Google Cloud Project ID**
+- ถ้าอยากใช้แพ็กเกจ Google AI Plus/Pro ของตัวเอง ให้ใช้ STeP Skills ใน **Google Antigravity** ([หัวข้อ 13](#13-ใช้-step-skills-ใน-claude-codex-หรือ-antigravity))
 
 ### Claude
 
 มี 3 แนวทางหลัก:
 
+- **Claude Pro/Max ผ่าน Claude Code ภายนอก** — STeP Desktop คัดลอกงานและเปิด Claude Code ในโฟลเดอร์งาน (direct in-app subscription ใช้เฉพาะ deployment ที่ได้รับอนุมัติ)
 - **Claude Console OAuth** — ไม่ต้องใส่ API key แต่ใช้ billing/quota ของ Claude Console/API workspace
 - **API key**
-- **Claude Pro/Max ผ่าน Claude Code ภายนอก** — STeP Desktop คัดลอกงานและเปิด Claude Code ในโฟลเดอร์งาน
+
+### OpenRouter
+
+เลือก **OpenRouter** แล้วกด **ลงชื่อด้วย OpenRouter** browser จะเปิดหน้าอนุญาต เมื่อกดอนุญาตแล้ว STeP Desktop ได้คีย์โดยไม่ต้องคัดลอกเอง จากนั้นเลือกโมเดลจากรายการ
 
 การเชื่อมต่อแต่ละรายการมีปุ่ม **เชื่อมต่อ**, **โหลดรายชื่อโมเดล**, **ออกจากระบบ** และ **ลบ**
 
@@ -433,7 +436,7 @@ Harness แยก “รู้วิธีทำงาน” ออกจาก 
 
 ลอง **ยกเลิก** แล้วเชื่อมใหม่
 
-สำหรับ Gemini ให้ปล่อย browser OAuth/local callback ทำงานจนจบ ไม่ต้องนำ authorization code มาวางเอง
+ปล่อยหน้าลงชื่อใน browser ทำงานจนขึ้นว่าสำเร็จ ไม่ต้องนำ authorization code มาวางเอง ถ้าเป็นบัญชี Google ส่วนตัวที่ขึ้นว่าหยุดให้บริการ ให้เปลี่ยนไปใช้ Gemini API key (ดูหัวข้อ 3)
 
 ## OCR ไม่พร้อม
 
@@ -477,7 +480,59 @@ STeP AI เป็น workspace สำหรับช่วยเตรียม�
 
 ---
 
-# 13. สำหรับผู้ดูแลและนักพัฒนา
+# 13. ใช้ STeP Skills ใน Claude, Codex หรือ Antigravity
+
+ถ้าคุณใช้โปรแกรม AI เหล่านี้อยู่แล้ว ติดตั้ง Skills และกติกาของ STeP ลงไปได้เลย ไม่ต้องติดตั้ง STeP Desktop พิมพ์งานภาษาไทยตามปกติ โปรแกรมจะเลือก Skill ที่ตรงกับงานเอง และทำตามกติกาเดียวกับ Desktop: มนุษย์อนุมัติเอง ไม่ส่งข้อมูลส่วนบุคคลหรือความลับ และเก็บผลงานในโฟลเดอร์ที่กำหนด
+
+| โปรแกรม | บัญชีที่ใช้ได้ | ต้องมีเพิ่ม |
+| --- | --- | --- |
+| **Claude** Code / Desktop | Claude Pro, Max, Team, Enterprise | — |
+| **Codex** | ChatGPT Plus, Pro, Business, Enterprise | Node.js (ครั้งเดียว) |
+| **Google Antigravity** | บัญชี Google รวม Google AI Plus/Pro | Node.js |
+
+## Claude
+
+ใน Claude Code พิมพ์:
+
+```text
+/plugin marketplace add iisara555/STeP-AI-Harness
+/plugin install step@step-ai
+```
+
+เริ่มแชตใหม่ แล้วพิมพ์งานตามปกติ หรือเรียก Skill เองด้วย `/step:<ชื่อ>` เช่น `/step:meeting-summary` อัปเดตด้วย `/plugin marketplace update step-ai`
+
+## Codex
+
+```text
+codex plugin marketplace add iisara555/STeP-AI-Harness
+codex plugin add step@step-ai
+```
+
+จากนั้นดาวน์โหลด repository นี้ (`git clone` หรือ **Code → Download ZIP** บน GitHub) แล้วรันในโฟลเดอร์นั้นครั้งเดียว เพื่อใส่กติกาของ STeP ลง `~/.codex/AGENTS.md` (Codex ไม่รัน hook ของ plugin):
+
+```text
+node scripts/install-agent-skills.mjs codex
+```
+
+อัปเดตด้วย `codex plugin marketplace upgrade`
+
+## Google Antigravity
+
+ดาวน์โหลด repository นี้เหมือนกัน แล้วรันในโฟลเดอร์นั้น โดยระบุโฟลเดอร์งานที่จะเปิดใน Antigravity:
+
+```text
+node scripts/install-agent-skills.mjs antigravity <โฟลเดอร์งาน>
+```
+
+เปิดโฟลเดอร์งานนั้นใน Antigravity แล้วเริ่มงานได้เลย Skills อยู่ที่ `.agents/skills/` กติกาฉบับย่อที่ `.agents/rules/step.md` (ใช้ทุกแชต) และไฟล์กติกาเต็มที่ `.agents/step/` อัปเดตด้วยการดาวน์โหลดรุ่นใหม่แล้วรันคำสั่งเดิมซ้ำ Skills ของคุณเองใน `.agents/skills/` จะไม่ถูกแตะ
+
+รายละเอียดเพิ่มเติม: [plugins/step/README.md](plugins/step/README.md)
+
+ข้อจำกัด: ไม่มีหน้าตรวจใบเสร็จ AFP, แถบผลงาน, Version history และการตรวจ privacy ก่อนส่งแบบใน STeP Desktop งานเหล่านี้ให้ใช้ Desktop
+
+---
+
+# 14. สำหรับผู้ดูแลและนักพัฒนา
 
 README ส่วนบนตั้งใจให้เป็น **GUI-first employee guide** ส่วนรายละเอียดเชิงระบบยังอยู่ใน repo
 
@@ -553,36 +608,17 @@ npm run desktop:start
 
 รายละเอียด packaging และข้อจำกัดของ Electron build อยู่ใน [desktop/README.md](desktop/README.md)
 
-## STeP Skills ใน Claude / Codex / Gemini CLI / Antigravity (plugin)
+## ดูแล STeP Skills plugin
 
-ใช้ Skills และกติกาของ STeP ใน Claude ได้โดยไม่ต้องติดตั้ง STeP Desktop หรือรันตัวติดตั้ง CLI ใน Claude Code พิมพ์:
+ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ) กติกาที่ขึ้นต้นทุกแชตแก้ที่ `plugin/session-brief.md` ส่วน `scripts/install-agent-skills.mjs` ลงชุดเดียวกันให้ Codex (กติกา) และ Antigravity
 
-```text
-/plugin marketplace add iisara555/STeP-AI-Harness
-/plugin install step@step-ai
-```
+Claude และ Codex ดึง plugin จาก `main` ของ repository นี้ การ merge เข้า `main` จึงเท่ากับปล่อย Skills รุ่นใหม่ให้คนที่ติดตั้ง plugin
 
-- เรียก Skill ด้วย `/step:<ชื่อ>` เช่น `/step:meeting-summary` หรือพิมพ์งานตามปกติให้ Claude เลือกเอง
-- ทุกแชตเริ่มด้วยกติกาของ STeP: มนุษย์อนุมัติ ข้อมูลส่วนบุคคล ความลับ การเขียน และที่เก็บไฟล์ผลงาน
-- ต้องมีสิทธิ์อ่าน repository นี้บน GitHub
-- อัปเดตด้วย `/plugin marketplace update step-ai`
-- โฟลเดอร์ที่ติดตั้งด้วย `step-ai install` แล้ว ไม่ต้องติดตั้ง plugin ซ้ำ จะได้ไม่มี Skill สองชุด
+## ช่องทางที่เลิกใช้แล้ว
 
-Gemini CLI: ดาวน์โหลด repository แล้วรัน `gemini extensions link STeP-AI-Harness/plugins/step` (โฟลเดอร์เดียวกันเป็น Gemini extension ด้วย กติกามาจาก `GEMINI.md`) อัปเดตด้วย `git pull` ต้องใช้ Gemini API key หรือบัญชีองค์กรที่มี Gemini Code Assist บัญชี Google AI Plus/Pro ส่วนตัวใช้กับ Gemini CLI ไม่ได้
-
-Codex: `codex plugin marketplace add iisara555/STeP-AI-Harness` แล้ว `codex plugin add step@step-ai` จากนั้นรัน `node scripts/install-agent-skills.mjs codex` ครั้งเดียว เพื่อใส่กติกาของ STeP ลง `~/.codex/AGENTS.md` (Codex ไม่รัน hook ของ plugin)
-
-Google Antigravity: `node scripts/install-agent-skills.mjs antigravity <โฟลเดอร์งาน>` ลง Skills ที่ `.agents/skills/` กติกาฉบับย่อที่ `.agents/rules/step.md` และไฟล์เต็มที่ `.agents/step/` ลงชื่อด้วยบัญชี Google ได้
-
-รายละเอียดทุกแบบอยู่ใน [plugins/step/README.md](plugins/step/README.md)
-
-ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ)
-
-## Legacy CLI / folder workflow
-
-CLI, `START-HERE.md`, `Install-STeP-AI.bat`, `Install-STeP-AI.command`, privacy preflight scripts และ workflow แบบเปิดโฟลเดอร์ด้วย AI client ยังอยู่เพื่อรองรับ pilot/legacy use case
-
-สำหรับผู้ใช้ใหม่ ให้เริ่มจาก **STeP Desktop GUI** ก่อน แล้วใช้ CLI เฉพาะเมื่อ workflow ของทีมจำเป็นต้องใช้
+- **ชุด ZIP + CLI `step-ai`** (`Install-STeP-AI.bat` / `.command`, `Update-STeP-AI.*`, `START-HERE.md`, `OPEN-IN-CODEX.md`) — เลิกแจกพนักงานใหม่แล้ว โค้ดยังอยู่เพราะ Router และ Skills ใน `src/` เป็นแกนที่ STeP Desktop ใช้ร่วม และผู้ทดสอบ Pilot รุ่นเก่ายังอัปเดตได้ ผู้ใช้เดิมให้ย้ายไป STeP Desktop หรือหัวข้อ 13
+- **Gemini CLI extension** — ถอดออกแล้ว Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569 ใช้ Antigravity แทน
+- **LINE gateway** (`gateway/line/`) — โค้ดทดลอง ยังไม่เคยเปิดใช้และไม่ใช่ช่องทางสำหรับพนักงาน
 
 ---
 
@@ -592,7 +628,8 @@ CLI, `START-HERE.md`, `Install-STeP-AI.bat`, `Install-STeP-AI.command`, privacy 
 
 - ติดตั้งและเปิด STeP Desktop บน Windows หรือ macOS ได้
 - ผ่าน Setup Wizard และเลือกทีมได้
-- เชื่อมต่อ ChatGPT, Gemini หรือ Claude ได้ตามสิทธิ์ที่มี
+- เลือกได้ว่าจะใช้ STeP Desktop หรือ STeP Skills ใน Claude / Codex / Antigravity
+- เชื่อมต่อ ChatGPT, Claude, OpenRouter หรือ Gemini API key ได้ตามสิทธิ์ที่มี
 - เริ่มงานใหม่และพิมพ์งานแรกเป็นภาษาไทยได้
 - แนบเอกสารและรู้ว่าควรตรวจ source ก่อนใช้
 - ตรวจ proposal และแก้ร่างในแถบ **ผลงาน** ได้

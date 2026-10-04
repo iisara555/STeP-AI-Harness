@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds the STeP Claude plugin and Gemini CLI extension (plugins/step) from the repository's own Skills, so employees can install the STeP
+// Builds the STeP Claude plugin (plugins/step) from the repository's own Skills, so employees can install the STeP
 // Skills into Claude Code or Claude Desktop with one command instead of running the step-ai installer:
 //   /plugin marketplace add iisara555/STeP-AI-Harness
 //   /plugin install step@step-ai
@@ -111,12 +111,6 @@ export function buildPlugin(outDir) {
   mkdirSync(join(outDir, '.claude-plugin'), { recursive: true });
   writeFileSync(join(outDir, '.claude-plugin', 'plugin.json'), JSON.stringify(manifest, null, 2) + '\n');
   cpSync(join(ROOT, 'plugin', 'session-brief.md'), join(outDir, 'session-brief.md'));
-  // The same folder is a Gemini CLI extension: Gemini loads skills/<name>/SKILL.md and adds GEMINI.md to every session.
-  cpSync(join(ROOT, 'plugin', 'session-brief.md'), join(outDir, 'GEMINI.md'));
-  writeFileSync(
-    join(outDir, 'gemini-extension.json'),
-    JSON.stringify({ name: PLUGIN_NAME, version, description: manifest.description, contextFileName: 'GEMINI.md' }, null, 2) + '\n',
-  );
   mkdirSync(join(outDir, 'hooks'), { recursive: true });
   cpSync(join(ROOT, 'plugin', 'hooks.json'), join(outDir, 'hooks', 'hooks.json'));
   writeFileSync(

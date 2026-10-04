@@ -10,7 +10,7 @@ const PLUGIN = join(ROOT, 'plugins', 'step');
 const walk = (dir) =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 
-test('the Claude plugin / Gemini extension is rebuilt from skills/, rules/, docs/ and manifest/ (no hand edits, nothing stale)', () => {
+test('the Claude plugin is rebuilt from skills/, rules/, docs/ and manifest/ (no hand edits, nothing stale)', () => {
   // Fails with the files that differ when someone edits a Skill without running scripts/build-claude-plugin.mjs.
   execFileSync(process.execPath, [join(ROOT, 'scripts', 'build-claude-plugin.mjs'), '--check'], { stdio: 'pipe' });
 });
@@ -32,13 +32,9 @@ test('the marketplace lists the plugin and the plugin carries every Skill once, 
   const hooks = JSON.parse(readFileSync(join(PLUGIN, 'hooks', 'hooks.json'), 'utf8'));
   assert.match(hooks.hooks.SessionStart[0].hooks[0].command, /session-brief\.md/);
   assert.ok(existsSync(join(PLUGIN, 'session-brief.md')));
-  // The same folder is a Gemini CLI extension: same name and version, GEMINI.md carries the session brief there.
-  const gemini = JSON.parse(readFileSync(join(PLUGIN, 'gemini-extension.json'), 'utf8'));
-  assert.equal(gemini.name, manifest.name);
-  assert.equal(gemini.version, manifest.version);
-  assert.equal(readFileSync(join(PLUGIN, gemini.contextFileName), 'utf8'), readFileSync(join(PLUGIN, 'session-brief.md'), 'utf8'));
-  // Gemini reads hooks/hooks.json too, without CLAUDE_PLUGIN_ROOT: the hook must stay silent there, not fail.
-  assert.match(hooks.hooks.SessionStart[0].hooks[0].command, /if \[ -f/);
+  // Gemini CLI no longer serves personal Google accounts (June 2026), so the plugin is not a Gemini extension any more.
+  assert.equal(existsSync(join(PLUGIN, 'gemini-extension.json')), false);
+  assert.equal(existsSync(join(PLUGIN, 'GEMINI.md')), false);
 });
 
 test('every relative Markdown link in the plugin resolves inside the plugin', () => {
