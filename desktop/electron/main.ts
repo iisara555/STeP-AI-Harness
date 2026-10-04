@@ -314,7 +314,7 @@ async function main() {
     if (!/^[\w-]{1,60}$/.test(id) || dirname(home) !== resolve(base)) throw new Error('INVALID_INPUT');
     await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
-  // In-app Claude Pro/Max (docs/claude-subscription.md): on by default, off by managed policy. Development runs can
+  // The employee's own Claude plan through Claude Code (docs/claude-subscription.md): off by default, on by managed policy. Development runs can
   // force it with STEP_CLAUDE_SUBSCRIPTION=0/1. Sign-out and removal keep working when it is off, so an earlier login
   // can always be cleared.
   const claudeSubscriptionOn = () =>

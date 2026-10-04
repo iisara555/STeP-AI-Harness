@@ -155,11 +155,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The installed app checks for a newer version, downloads it in the background and offers "restart to update".
   // IT can set it to false where software is rolled out centrally.
   autoUpdate: true,
-  // "Claude Pro / Max" in the app: the official, unmodified Claude Code runs the chat and each employee signs in to
-  // their own Claude account through Anthropic's own flow, so usage counts against their own plan. Anthropic's Claude
-  // Code terms allow a product to run Claude Code this way for the organization's own people, under its Commercial
-  // Terms (docs/claude-subscription.md). A managed policy can turn it off.
-  claudeSubscription: true,
+  // The employee's own Claude plan through Claude Code in the app: the official, unmodified Claude Code runs the chat
+  // and each employee signs in to their own Claude account on Anthropic's page. Off until Anthropic confirms how its
+  // Claude Code terms apply (docs/claude-subscription.md); pilot machines turn it on in the managed policy.
+  claudeSubscription: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',

@@ -1,12 +1,12 @@
-# Claude Pro / Max ใน STeP Desktop
+# แพ็กเกจ Claude ของพนักงานผ่าน Claude Code ใน STeP Desktop
 
-**สถานะ: เปิดเป็นค่าเริ่มต้นตั้งแต่ Desktop รุ่นถัดจาก 0.5.8** (policy `features.claudeSubscription`, ปิดได้ด้วย managed policy)
+**สถานะ: ปิดเป็นค่าเริ่มต้น เปิดเฉพาะเครื่อง Pilot** (policy `features.claudeSubscription`) ระหว่างรอ Anthropic ยืนยันว่าเงื่อนไขของ Claude Code ใช้กับการออกแบบนี้อย่างไร ใน 0.5.9 เคยเปิดเป็นค่าเริ่มต้น แต่ 0.5.10 กลับมาปิด
 
 ## ทำงานอย่างไร
 
 STeP Desktop รัน **Claude Code ตัวจริงที่ไม่ถูกแก้ไข** (ต้องติดตั้งไว้ในเครื่อง รุ่น 2.1.268 ขึ้นไป) ในโฟลเดอร์ profile แยกของแต่ละการเชื่อมต่อ
 
-- พนักงานกด **Claude Pro / Max → เชื่อมต่อ** แล้ว Claude Code เปิดหน้าลงชื่อของ Anthropic (`claude.com/oauth/authorize`) ในเบราว์เซอร์
+- พนักงานกด **แพ็กเกจของคุณผ่าน Claude Code → เชื่อมต่อ** แล้ว Claude Code เปิดหน้าลงชื่อของ Anthropic (`claude.com/oauth/authorize`) ในเบราว์เซอร์
 - การลงชื่อ การเก็บ token และการต่ออายุ token เป็นหน้าที่ของ Claude Code ทั้งหมด STeP ไม่อ่าน ไม่คัดลอก และไม่บันทึกรหัสผ่านหรือ token
 - คำถามในแชตถูกส่งผ่าน Claude Code การใช้งานนับรวมในโควตาแพ็กเกจของพนักงานเอง ไม่มีการจ่ายแทนหรือเป็นตัวกลาง
 - เครื่องมือของ Claude Code ถูกปิด STeP ทำหน้าที่ตรวจข้อมูลส่วนบุคคล ขออนุญาตก่อนทำสิ่งที่มีผล และใช้เครื่องมือของ STeP เอง
@@ -31,9 +31,29 @@ STeP Desktop รัน **Claude Code ตัวจริงที่ไม่ถ�
 - **ข้อ 2 (จำกัดวิธีลงชื่อ):** ตัวเชื่อมตอนนี้เริ่มการลงชื่อด้วย `auth login --claudeai` และรับเฉพาะ `authMethod: claude.ai` ถ้าใน profile นั้นลงชื่อด้วยบัญชี Console จะขึ้น `CLAUDE_SUBSCRIPTION_REQUIRED` นอกจากนี้ยังไม่ส่งตัวแปร `ANTHROPIC_API_KEY` ที่ค้างในเครื่องเข้าไปใน Claude Code ทั้งสองอย่างตั้งใจไว้ให้การเชื่อมต่อนี้ใช้แพ็กเกจ Pro/Max เท่านั้น แต่อาจเข้าข่าย "จำกัดวิธีลงชื่อ" ควรตีความร่วมกับฝ่ายกฎหมายหรือสอบถาม Anthropic ส่วนผู้ใช้ API key และบัญชี Console ใช้การเชื่อมต่อ Claude API และ Claude Console OAuth ของ STeP ได้อยู่แล้ว
 - **การปิดเครื่องมือของ Claude Code:** ไม่ใช่วิธีลงชื่อ จึงไม่อยู่ในข้อ 2
 
+## คำตอบจาก Anthropic (4 ต.ค. 2569)
+
+ส่งคำถาม 6 ข้อไปแล้ว ได้คำตอบที่สรุปเงื่อนไขที่เผยแพร่อยู่ แต่**ไม่ตีความหรืออนุมัติ**การออกแบบนี้ และแนะนำให้ถามฝ่ายขายที่ https://claude.com/contact-sales สรุป:
+
+1. หน้าเงื่อนไขมีทั้งข้อยกเว้นให้ผู้ใช้ลงชื่อ Claude Code ตัวจริงด้วยบัญชีตัวเอง และข้อห้ามไม่ให้นักพัฒนาเสนอการลงชื่อ Claude.ai หรือส่งคำขอผ่านแพ็กเกจ Free/Pro/Max แทนผู้ใช้ ไม่ระบุว่าข้อไหนใช้กับเรา และระบุว่าโควตา Pro/Max ตั้งไว้สำหรับการใช้ส่วนบุคคลตามปกติ
+2. ผู้ยอมรับ Commercial Terms ต้องมีอำนาจผูกพันองค์กรตามกฎหมาย ไม่ยืนยันว่ายอมรับผ่าน Claude Console พอหรือไม่ Pro/Max อยู่ใต้ Consumer Terms ส่วน Team, Enterprise และ API อยู่ใต้ Commercial Terms
+3. ห้ามจำกัดวิธีลงชื่อ ไม่ระบุว่าการแยกเป็นหลายการเชื่อมต่อพอหรือไม่
+4. ต้องรัน Claude Code ตามที่เผยแพร่โดยไม่แก้ไข ไม่พูดถึงการปิดเครื่องมือผ่านการตั้งค่า
+5. ไม่ครอบคลุมกรณี open source โดยเฉพาะ แต่ละคนต้องใช้บัญชีของตัวเอง
+6. ห้ามใช้ชื่อ Claude Code หรือ Anthropic เป็นชื่อฟีเจอร์ของเรา บอกเป็นข้อความธรรมดาว่ารัน Claude Code ได้ ปุ่มจึงเปลี่ยนจาก "Claude Pro / Max" เป็น "แพ็กเกจของคุณผ่าน Claude Code"
+
+## เปิดใช้บนเครื่อง Pilot
+
+ผู้ดูแลเครื่องรันครั้งเดียว แล้วเปิด STeP Desktop ใหม่:
+
+- Windows (PowerShell แบบ Administrator): `powershell -ExecutionPolicy Bypass -File scripts\pilot\enable-claude-code.ps1`
+- macOS: `sudo bash scripts/pilot/enable-claude-code.sh`
+
+สคริปต์ตั้ง `features.claudeSubscription` ใน managed policy (ไฟล์ที่ผู้ดูแลระบบเป็นเจ้าของ ตามที่แอปกำหนด) ปิดด้วย `-Off` หรือ `--off`
+
 ## ปิดใช้
 
-ใส่ใน managed policy:
+ใส่ใน managed policy (หรือรันสคริปต์ข้างบนด้วย `-Off` / `--off`):
 
 ```json
 { "features": { "claudeSubscription": false } }

@@ -436,8 +436,8 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
       ? [
           {
             id: 'claude-sub',
-            label: 'Claude Pro / Max',
-            description: t('ใช้แพ็กเกจ Claude ที่คุณมี'),
+            label: t('แพ็กเกจของคุณผ่าน Claude Code'),
+            description: t('ใช้แพ็กเกจ Claude ของคุณ ลงชื่อในหน้าของ Anthropic'),
             kind: 'account' as const,
             choice: { ...initialChoice, provider: 'claude', mode: 'subscription' },
           },
@@ -684,7 +684,7 @@ function AdvancedProviderFields({
                 {provider === 'antigravity'
                   ? 'Personal Google account (native Antigravity sign-in)'
                   : provider === 'claude'
-                    ? t('บัญชี Claude Pro/Max (เฉพาะ deployment ที่ได้รับอนุมัติ)')
+                    ? t('แพ็กเกจของคุณผ่าน Claude Code ในเครื่อง (ทดลอง)')
                     : provider === 'gemini'
                       ? t('บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)')
                       : t('บัญชีส่วนตัว (ลงชื่อเข้าใช้)')}

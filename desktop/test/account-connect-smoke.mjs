@@ -17,7 +17,7 @@ try {
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Claude Pro / Max', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /แพ็กเกจของคุณผ่าน Claude Code/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Gemini', exact: true })).toHaveCount(0);
   // Switching back from administrator settings discards API credentials and billing mode.
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();

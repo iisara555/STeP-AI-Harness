@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "license": "MIT",
   "private": true,
   "description": "Local STeP employee workspace",
