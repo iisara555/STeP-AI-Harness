@@ -4,10 +4,10 @@
   "version": "0.7.6",
   "description": "Skills, writing rules and safety rules of Science and Technology Park, Chiang Mai University (STeP): Thai official documents, AFP receipts, ISO 9001, PM and creative work.",
   "author": {
-    "name": "STeP / RSP North"
+    "name": "Science and Technology Park, Chiang Mai University (STeP)"
   },
   "repository": "https://github.com/iisara555/STeP-AI-Harness",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "keywords": [
     "step",
     "thai",

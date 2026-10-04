@@ -103,13 +103,16 @@ export function buildPlugin(outDir) {
     version,
     description:
       'Skills, writing rules and safety rules of Science and Technology Park, Chiang Mai University (STeP): Thai official documents, AFP receipts, ISO 9001, PM and creative work.',
-    author: { name: 'STeP / RSP North' },
+    author: { name: 'Science and Technology Park, Chiang Mai University (STeP)' },
     repository: 'https://github.com/iisara555/STeP-AI-Harness',
-    license: 'UNLICENSED',
+    license: 'MIT',
     keywords: ['step', 'thai', 'government-documents', 'iso9001', 'afp'],
   };
   mkdirSync(join(outDir, '.claude-plugin'), { recursive: true });
   writeFileSync(join(outDir, '.claude-plugin', 'plugin.json'), JSON.stringify(manifest, null, 2) + '\n');
+  // The plugin directory takes its listing icon from .claude-plugin/icon.png: the STeP Desktop app icon (1024 px, square).
+  cpSync(join(ROOT, 'desktop', 'build', 'icon.png'), join(outDir, '.claude-plugin', 'icon.png'));
+  cpSync(join(ROOT, 'plugin', 'LICENSE'), join(outDir, 'LICENSE'));
   cpSync(join(ROOT, 'plugin', 'session-brief.md'), join(outDir, 'session-brief.md'));
   mkdirSync(join(outDir, 'hooks'), { recursive: true });
   cpSync(join(ROOT, 'plugin', 'hooks.json'), join(outDir, 'hooks', 'hooks.json'));

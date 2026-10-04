@@ -27,6 +27,12 @@ test('the marketplace lists the plugin and the plugin carries every Skill once, 
   const plugin = readdirSync(join(PLUGIN, 'skills')).filter((d) => existsSync(join(PLUGIN, 'skills', d, 'SKILL.md')));
   assert.equal(plugin.length, source.length);
   assert.deepEqual(plugin.sort(), source.map((f) => dirname(f).split(/[\\/]/).pop()).sort());
+  // The directory needs a licence it can publish under and a square PNG icon of 512 to 2048 px under 2 MB.
+  assert.equal(manifest.license, 'MIT');
+  assert.match(readFileSync(join(PLUGIN, 'LICENSE'), 'utf8'), /^MIT License/);
+  const icon = readFileSync(join(PLUGIN, '.claude-plugin', 'icon.png'));
+  const [width, height] = [icon.readUInt32BE(16), icon.readUInt32BE(20)];
+  assert.ok(icon.subarray(1, 4).toString() === 'PNG' && width === height && width >= 512 && width <= 2048 && icon.length < 2e6);
   // No bin/: claude.ai and Cowork refuse a plugin with one, and the plugin should not put commands on PATH.
   assert.equal(existsSync(join(PLUGIN, 'bin')), false);
   const hooks = JSON.parse(readFileSync(join(PLUGIN, 'hooks', 'hooks.json'), 'utf8'));
