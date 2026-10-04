@@ -228,7 +228,13 @@ export default function App() {
   sessionMode.current = session?.mode === 'draft' || workMode === 'draft' ? 'draft' : 'chat';
   useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
+  const showPanel = right && !settings && view === 'chat';
+  const [panelOpened, setPanelOpened] = useState(false);
+  useEffect(() => {
+    if (showPanel) setPanelOpened(true);
+  }, [showPanel]);
   const [receiptBusy, setReceiptBusy] = useState(false);
+  const [settingsBusy, setSettingsBusy] = useState(false);
   const [receiptOpened, setReceiptOpened] = useState(false);
   useEffect(() => {
     if (view === 'receipt' && !settings) setReceiptOpened(true);
@@ -1211,23 +1217,29 @@ export default function App() {
               />
             </div>
           )}
-          {settings ? (
-            <SettingsPanel
-              key={settingsPage}
-              initialPage={settingsPage}
-              snapshot={snapshot}
-              call={api.call}
-              refresh={refresh}
-              openWizard={() => setWizard(true)}
-              openTour={() => {
-                setSettings(false);
-                setView('chat');
-                setTour(true);
-              }}
-              close={() => setSettings(false)}
-              onError={e => notify(explainError(e), 'error')}
-            />
-          ) : view === 'receipt' ? null : view === 'skills' ? (
+          {/* A connection being set up keeps going when Settings is closed: the panel stays mounted, hidden, until it
+              finishes, so reopening shows its progress instead of offering to start it again. */}
+          {(settings || settingsBusy) && (
+            <div style={{ display: settings ? 'contents' : 'none' }}>
+              <SettingsPanel
+                onBusy={setSettingsBusy}
+                key={settingsPage}
+                initialPage={settingsPage}
+                snapshot={snapshot}
+                call={api.call}
+                refresh={refresh}
+                openWizard={() => setWizard(true)}
+                openTour={() => {
+                  setSettings(false);
+                  setView('chat');
+                  setTour(true);
+                }}
+                close={() => setSettings(false)}
+                onError={e => notify(explainError(e), 'error')}
+              />
+            </div>
+          )}
+          {settings ? null : view === 'receipt' ? null : view === 'skills' ? (
             <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />
           ) : (
             <>
@@ -1974,25 +1986,29 @@ export default function App() {
             </button>
           </footer>
         </main>
-        {right && !settings && view === 'chat' && (
+        {/* The workbench stays mounted once shown, so a file opened in Files with unsaved edits, a typed command or the
+            folder being browsed survive Settings, another page or hiding the panel; it is only hidden. */}
+        {(showPanel || panelOpened) && (
           <>
-            <div
-              className="resize-handle"
-              role="separator"
-              aria-label={t('ปรับความกว้างร่าง')}
-              tabIndex={0}
-              onKeyDown={e => {
-                if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
-                if (e.key === 'ArrowRight') setWidth(w => Math.max(w - 20, 300));
-              }}
-              onPointerDown={e => {
-                e.currentTarget.setPointerCapture(e.pointerId);
-              }}
-              onPointerMove={e => {
-                if (e.currentTarget.hasPointerCapture(e.pointerId)) setWidth(Math.min(700, Math.max(300, window.innerWidth - e.clientX)));
-              }}
-            />
-            <aside className="artifact-pane" data-tour="artifact">
+            {showPanel && (
+              <div
+                className="resize-handle"
+                role="separator"
+                aria-label={t('ปรับความกว้างร่าง')}
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
+                  if (e.key === 'ArrowRight') setWidth(w => Math.max(w - 20, 300));
+                }}
+                onPointerDown={e => {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={e => {
+                  if (e.currentTarget.hasPointerCapture(e.pointerId)) setWidth(Math.min(700, Math.max(300, window.innerWidth - e.clientX)));
+                }}
+              />
+            )}
+            <aside className="artifact-pane" data-tour="artifact" style={showPanel ? undefined : { display: 'none' }}>
               <nav className="workbench-tabs" aria-label="Workspace tools">
                 {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
                   .filter(tab => advancedTools || tab !== 'terminal')

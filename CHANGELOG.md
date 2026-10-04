@@ -6,12 +6,20 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-The first four sections below, "AFP receipt check keeps its work when you switch pages", "Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode", "Tables, clean Excel and the Thai official layout" and "Qwen and MiniMax with the employee's own key", are not released yet. "Your plan through Claude Code: off by default, on for the pilot" was published as `desktop-v0.5.10`. "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+The first four sections below, "Work in progress survives switching pages", "Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode", "Tables, clean Excel and the Thai official layout" and "Qwen and MiniMax with the employee's own key", are not released yet. "Your plan through Claude Code: off by default, on for the pilot" was published as `desktop-v0.5.10`. "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
-### AFP receipt check keeps its work when you switch pages
+### Work in progress survives switching pages
 
 - Switching from "ตรวจใบเสร็จ AFP" to chat, the Skill hub or Settings closed the page. A reading in progress was thrown away, along with the fields already filled and ticked. The page now stays open in the background once it has been opened, and is only hidden. While it reads, a spinner replaces the "ทดลอง" badge in the sidebar.
-- `test/gemini-api-smoke.mjs` now switches to the Skill hub while a slow receipt reading runs, then returns and checks the result. It also checks that a ticked field survives a trip to Settings. The test fails on the previous code.
+- The same check across the rest of the app found two more:
+  - A file opened in the Files tab with unsaved edits, a typed advanced command and the folder being browsed were lost when leaving chat or hiding the panel. The panel now stays mounted once shown, and is only hidden. A web page in the Web tab is hidden with it.
+  - Leaving Settings while an AI connection was being set up or tested lost its "กำลังเชื่อมต่อ…" state, and the connect button was offered again. Settings now stays mounted, hidden, until that finishes. Profile fields typed in Settings but never saved are still discarded on leaving, as before.
+- Draft edits that are not yet saved and text typed in the composer already survived page switches. They are now covered by a test.
+- Tests:
+  - `test/gemini-api-smoke.mjs` switches to the Skill hub while a slow receipt reading runs, then checks the result, and checks that a ticked field survives Settings.
+  - The same test leaves Settings during a slow Gemini connection test and reopens it.
+  - The new `test/view-switch-smoke.mjs` covers the draft, the composer and an unsaved file across pages and a hidden panel.
+  - The receipt and Settings tests fail on the previous code.
 
 ### Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode
 

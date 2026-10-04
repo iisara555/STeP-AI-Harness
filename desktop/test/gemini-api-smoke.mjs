@@ -22,6 +22,7 @@ const receiptReply = {
   notes: 'ตัวเลขยอดสุทธิจางเล็กน้อย',
 };
 const prompts = [];
+let slowTest = false;
 const server = createServer((req, res) => {
   let body = '';
   req.on('data', d => (body += d));
@@ -58,7 +59,8 @@ const server = createServer((req, res) => {
         res.writeHead(200, { 'content-type': 'text/event-stream' });
         res.end('data: ' + JSON.stringify(reply(text)) + '\r\n\r\n');
       };
-      return void (body.includes('You read Thai and English receipts') ? setTimeout(send, 2500) : send());
+      const slow = body.includes('You read Thai and English receipts') || (slowTest && body.includes('Reply with exactly OK'));
+      return void (slow ? setTimeout(send, 2500) : send());
     }
     // The CLI's model router asks a small model which model to use before the real request.
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -103,10 +105,19 @@ try {
   await expect.poll(async () => (await gemini())[0]?.note || '', { timeout: 60000 }).toContain('PROVIDER_QUOTA');
   assert.equal((await gemini())[0].ready, false);
 
-  // A working key is tested right away and becomes ready.
+  // A working key is tested right away and becomes ready. Closing Settings while the test runs keeps it going, and
+  // reopening shows it still connecting rather than offering to start again.
   mode = 'ok';
+  slowTest = true;
   await connect();
+  await page.getByText('กำลังเชื่อมต่อ…').waitFor();
+  await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
+  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).waitFor({ state: 'hidden' });
+  await page.keyboard.press('ControlOrMeta+,');
+  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByText('กำลังเชื่อมต่อ…').waitFor();
   await expect.poll(async () => (await gemini()).some(c => c.ready), { timeout: 60000 }).toBe(true);
+  slowTest = false;
   assert.ok(
     prompts.some(p => p.includes('Reply with exactly OK')),
     'the connection test reached the Gemini API',

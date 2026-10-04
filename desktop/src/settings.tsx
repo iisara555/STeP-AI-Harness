@@ -26,8 +26,11 @@ export function SettingsPanel({
   onError,
   openWizard,
   openTour,
+  onBusy,
 }: {
   initialPage: 'general' | 'ai';
+  /** Whether an operation (connecting an account, testing a key) is running, so the app keeps the panel while it does. */
+  onBusy?: (busy: boolean) => void;
   openWizard: () => void;
   openTour: () => void;
   snapshot: Snapshot;
@@ -61,6 +64,8 @@ export function SettingsPanel({
   const [page, setPage] = useState<'general' | 'ai' | 'appearance' | 'privacy' | 'policy'>(
     initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length) ? 'ai' : 'general',
   );
+  useEffect(() => onBusy?.(Boolean(busy)), [busy, onBusy]);
+  useEffect(() => () => onBusy?.(false), [onBusy]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {

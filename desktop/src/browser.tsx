@@ -69,6 +69,13 @@ export function BrowserDockView({
       frame = requestAnimationFrame(async () => {
         if (!live) return;
         const r = el.getBoundingClientRect();
+        // A hidden panel (another page open, or the panel closed) has no box: the page is hidden with it.
+        if (!r.width || !r.height) {
+          hidden = false;
+          last = '';
+          void api.call('browserDock', { action: 'bounds', bounds: null });
+          return;
+        }
         if (covered(r)) {
           if (hidden) return;
           hidden = true;
