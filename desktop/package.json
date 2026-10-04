@@ -1,6 +1,7 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.5.8",
+  "version": "0.5.9",
+  "license": "MIT",
   "private": true,
   "description": "Local STeP employee workspace",
   "author": "STeP AI Working Group",

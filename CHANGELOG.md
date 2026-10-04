@@ -6,7 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-The first two sections below are not released yet. STeP Desktop version 0.5.8 (`desktop/package.json`) contains the changes below. 0.5.8 adds three sections: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+STeP Desktop version 0.5.9 (`desktop/package.json`) contains the changes below. 0.5.9 adds the first three sections: "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too". Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### Open source under the MIT License
+
+- The whole repository is now MIT-licensed, as the STeP director decided: the harness, STeP Desktop and the STeP Skills plugin. It was `UNLICENSED` except for the plugin. `LICENSE` is at the repository root, and `package.json` and `desktop/package.json` say `"license": "MIT"`. Third-party fonts and cmaps in `src/vendor/privacy/` keep their own licences, and the README says so.
 
 ### Claude Pro / Max in the app, on by default
 

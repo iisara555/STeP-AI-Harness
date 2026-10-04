@@ -127,7 +127,7 @@
     "agent"
   ],
   "author": "STeP AI Working Group",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   }

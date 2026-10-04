@@ -585,7 +585,7 @@ README ส่วนบนตั้งใจให้เป็น **GUI-first emp
 
 ## Version / inventory
 
-README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.8**
+README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.9**
 
 | รายการใน Harness source | จำนวน |
 | --- | --- |
@@ -626,6 +626,8 @@ Proposal / verified output
 ## Repository visibility
 
 repository นี้มีสถานะ **Public** จึงห้าม commit เอกสารภายใน, credential, token, ข้อมูลพนักงาน หรือข้อมูลลูกค้าที่ไม่ควรเผยแพร่
+
+เผยแพร่แบบ open source ภายใต้ [MIT License](LICENSE) ทั้ง Harness, STeP Desktop และ STeP Skills ไฟล์ของบุคคลที่สามใน `src/vendor/privacy/` (ฟอนต์และ cmaps) ใช้ license ของตัวเองตามไฟล์ LICENSE ในโฟลเดอร์นั้น
 
 ## Release
 
