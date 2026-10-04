@@ -187,10 +187,47 @@ export function profileTargets(home = homedir(), env = process.env) {
 }
 
 /** Writes the profile block into every target file; re-running replaces it and keeps everything else. */
-export function installProfile(profile, targets = profileTargets()) {
+export function installProfile(profile, targets = profileTargets(), shared = sharedProfileFile()) {
   const text = profileText(profile);
   for (const { file } of targets) writeBlock(file, text, PROFILE_BEGIN, PROFILE_END);
+  if (shared) writeSharedProfile(shared, profile);
   return targets;
+}
+
+/** The profile STeP Desktop also reads and writes (desktop/electron/shared-profile.ts): ~/.step-ai/profile.json. */
+export const sharedProfileFile = (home = homedir(), env = process.env) => env.STEP_SHARED_PROFILE || join(home, '.step-ai', 'profile.json');
+
+/** The shared profile as Setup's answers ({ name, team, assistant, style }), or {} when there is none or it is unreadable. */
+export function readSharedProfile(file) {
+  try {
+    const value = JSON.parse(readFileSync(file, 'utf8'));
+    if (!value || value.version !== 1) return {};
+    const team = String(value.team || '').toLowerCase();
+    const style = STYLES[value.style] ? value.style : value.style === 'custom' && value.tone ? String(value.tone) : 'coworker';
+    return {
+      name: String(value.name || '').slice(0, 60),
+      team: teams().some(t => t.id === team) ? team : '',
+      assistant: String(value.assistant || '').slice(0, 60),
+      style,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function writeSharedProfile(file, profile) {
+  const custom = profile.style && !STYLES[profile.style];
+  const body = {
+    version: 1,
+    name: clean(profile.name, 60, 'ชื่อเรียก'),
+    team: String(profile.team || '').trim().toLowerCase(),
+    assistant: clean(profile.assistant, 60, 'ชื่อผู้ช่วย') || 'STeP Mate',
+    style: custom ? 'custom' : profile.style || 'coworker',
+    tone: custom ? clean(profile.style, 300, 'สไตล์การคุย') : '',
+    updatedAt: new Date().toISOString(),
+  };
+  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+  writeFileSync(file, JSON.stringify(body, null, 2) + '\n', { mode: 0o600 });
 }
 
 /** Questions on stdin, read line by line so answers typed ahead or piped in are not lost between questions. */
@@ -206,19 +243,25 @@ function asker() {
   return { answer, close: () => rl.close() };
 }
 
-async function askProfile(ask = asker()) {
+/** Asks the four profile questions; Enter keeps `current` (the shared profile from STeP Desktop or an earlier run). */
+async function askProfile(ask = asker(), current = {}) {
   const { answer } = ask;
   try {
-    const name = await answer('ชื่อเล่น/ชื่อที่อยากให้ AI เรียก (Enter = ข้าม): ');
+    if (current.name || current.team) console.log('ค่าเดิมมาจากโปรไฟล์ที่ตั้งไว้ใน STeP Desktop หรือรอบก่อน กด Enter เพื่อใช้ค่าเดิม\n');
+    const name = await answer(`ชื่อเล่น/ชื่อที่อยากให้ AI เรียก (Enter = ${current.name || 'ข้าม'}): `, current.name || '');
     const list = teams();
     console.log('\nทีมหลัก:');
     list.forEach((t, i) => console.log(`  ${String(i + 1).padStart(2)}. ${t.id.toUpperCase().padEnd(6)} ${t.name}`));
-    const pick = await answer('เลือกเลขหรือรหัสทีม (Enter = ยังไม่แน่ใจ): ');
+    const pick = await answer(`เลือกเลขหรือรหัสทีม (Enter = ${current.team ? current.team.toUpperCase() : 'ยังไม่แน่ใจ'}): `, current.team || '');
     const team = /^\d+$/.test(pick) ? list[Number(pick) - 1]?.id || pick : pick;
-    const assistant = await answer('ตั้งชื่อผู้ช่วย (Enter = STeP Mate): ');
+    const assistant = await answer(`ตั้งชื่อผู้ช่วย (Enter = ${current.assistant || 'STeP Mate'}): `, current.assistant || '');
+    const keys = ['coworker', 'professional', 'concise'];
+    const was = keys.indexOf(current.style) + 1 || (current.style ? 4 : 1);
     console.log('\nสไตล์การคุย: 1. เพื่อนร่วมงาน  2. มืออาชีพ  3. กระชับ  4. กำหนดเอง');
-    const choice = await answer('เลือก 1-4 (Enter = 1): ', '1');
-    const style = { 1: 'coworker', 2: 'professional', 3: 'concise' }[choice] || (choice === '4' ? await answer('อธิบายสไตล์ที่ต้องการ: ') : 'coworker');
+    const choice = await answer(`เลือก 1-4 (Enter = ${was}): `, String(was));
+    const style =
+      keys[Number(choice) - 1] ||
+      (choice === '4' ? await answer('อธิบายสไตล์ที่ต้องการ: ', was === 4 ? current.style : '') || 'coworker' : 'coworker');
     return { name, team, assistant, style };
   } finally {
     ask.close();
@@ -275,7 +318,9 @@ export async function setup({ home = homedir(), env = process.env, has = onPath,
   if (targets.length) {
     for (;;) {
       try {
-        for (const { tool } of installProfile(await askProfile({ ...ask, close: () => {} }), targets)) done.push(`✅ โปรไฟล์: บันทึกลง ${tool} แล้ว`);
+        const shared = sharedProfileFile(home, env);
+        const answers = await askProfile({ ...ask, close: () => {} }, readSharedProfile(shared));
+        for (const { tool } of installProfile(answers, targets, shared)) done.push(`✅ โปรไฟล์: บันทึกลง ${tool} แล้ว`);
         break;
       } catch (error) {
         console.log(`\n${error.message} ลองใหม่อีกครั้ง\n`);
@@ -305,7 +350,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       process.exit(1);
     }
     try {
-      const profile = Object.keys(flags).length ? flags : await askProfile();
+      const profile = Object.keys(flags).length ? flags : await askProfile(asker(), readSharedProfile(sharedProfileFile()));
       for (const { tool, file } of installProfile(profile, targets)) console.log(`บันทึกโปรไฟล์ลง ${tool}: ${file}`);
       console.log('เริ่มแชตใหม่เพื่อให้ AI ใช้ข้อมูลนี้ รันคำสั่งเดิมอีกครั้งเมื่อต้องการแก้');
     } catch (error) {

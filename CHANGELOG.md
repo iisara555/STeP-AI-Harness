@@ -8,6 +8,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 STeP Desktop version 0.5.7 (`desktop/package.json`) contains the changes below. 0.5.7 adds the first six sections, from "The browser agent can click tiles" through "Update card above the profile". "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
+### One profile for STeP Desktop and Setup-STeP-Skills
+
+- **Shared profile:** `~/.step-ai/profile.json` holds the profile as `{ version: 1, name, team, assistant, style, tone }`. That is the nickname, team, assistant name and conversation style. `Setup-STeP-Skills` (`scripts/install-agent-skills.mjs`) writes it with the profile answers, and offers it as the defaults next time, so pressing Enter keeps each value. STeP Desktop (`electron/shared-profile.ts`) fills an unfinished first-run wizard from it. Teams are checked against the router's team list. Desktop writes the profile back whenever it is saved. The file is written atomically with mode 0600, and anything unreadable, oversized or of another version is ignored. Development test runs keep their copy in the test home. Desktop does not edit Claude, Codex or Antigravity files; Setup does.
+- **Tests:** `test/shared-profile.test.ts` covers the round trip and malformed files, and Setup's tests check the same format. `test/shared-profile-smoke.mjs` (in `npm run test:electron`) opens the real wizard prefilled from a Setup profile, then saves a changed profile in the app and reads it back from the file.
+
+### Gemini via Antigravity: opt the STeP agent out of built-in tools
+
+- The latest Antigravity CLI is 1.2.17. Since 1.2.1, a custom agent can declare `excludeDefaultComponents: true` to drop the built-in tools and prompt sections. The adapter had relied on `tools: [finish]` alone, which did not narrow the `init` catalog on 1.2.14. `step-draft` now declares both.
+- The `init` check is unchanged. The message is still withheld unless the runtime declares only `finish`, so nothing is sent if the option does not take effect. The Linux 1.2.17 binary (SHA-512 verified) accepts the agent, but `init` needs a signed-in Google account, so the effect could not be observed here. See [the adapter notes](docs/antigravity-adapter.md) for how to accept it on a signed-in machine.
+
 ### STeP Skills for Claude, Codex and Antigravity (harness, not part of the desktop app)
 
 - **One-command install:** this repository is now a Claude plugin marketplace (`.claude-plugin/marketplace.json`). In Claude Code, `/plugin marketplace add iisara555/STeP-AI-Harness` then `/plugin install step@step-ai` installs all 51 STeP Skills as `/step:<name>`. No STeP Desktop and no `step-ai install` are needed.

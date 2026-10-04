@@ -80,6 +80,7 @@ import { isWorkflow } from './workflows';
 import { RECEIPT_VISION_SYSTEM, parseVisionReading } from '../src/receipt-vision';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
+import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
 
 let window: BrowserWindow, store: Store, service: WorkService;
 const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }>();
@@ -187,6 +188,27 @@ async function main() {
     import(pathToFileURL(join(root, 'src/modules/output-manager.js')).href),
     import(pathToFileURL(join(root, 'src/modules/skills/catalog.js')).href),
   ]);
+  // The profile shared with Setup-STeP-Skills (electron/shared-profile.ts). Development test runs keep their own copy.
+  const sharedProfile =
+    !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME
+      ? process.env.STEP_SHARED_PROFILE || join(data, 'shared-profile.json')
+      : sharedProfilePath();
+  // Before the first-run wizard, start it from the profile set in Setup-STeP-Skills, if there is one.
+  if (!store.settings().onboarding) {
+    const shared = await readSharedProfile(sharedProfile);
+    if (shared) {
+      const teams = await routing.loadTeamsDictionary();
+      const current = store.settings();
+      store.put('settings', 'main', {
+        ...current,
+        userName: current.userName || shared.userName,
+        team: current.team || (teams[shared.team] ? shared.team : ''),
+        assistant: current.assistant && current.assistant !== 'STeP Mate' ? current.assistant : shared.assistant || 'STeP Mate',
+        personality: current.personality || shared.personality,
+        assistantTone: current.assistantTone || shared.assistantTone,
+      });
+    }
+  }
   // Every privacy scan in the app goes through here, so policy checks.privacy (off by default) switches them all.
   /** A PNG, JPEG or WebP image checked by its signature, ready for a vision model. */
   function visionImage(extension: string, bytes: Buffer): VisionInput {
@@ -1272,6 +1294,8 @@ async function main() {
         store.put('settings', 'main', s);
         nativeTheme.themeSource = theme;
         await writeUserMemory().catch(error => diagnose('user-memory-failed', { code: errorCode(error) }));
+        // Setup-STeP-Skills offers this profile as its defaults, so Claude, Codex and Antigravity get the same one.
+        await writeSharedProfile(sharedProfile, s).catch(error => diagnose('shared-profile-failed', { code: errorCode(error) }));
         return s;
       }
       case 'voiceStatus':

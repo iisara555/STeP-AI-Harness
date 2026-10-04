@@ -130,7 +130,7 @@ test('Antigravity global install: Skills in ~/.gemini/config/skills, brief in GE
 });
 
 test('Profile: the USER.md facts go into each tool’s global instructions once, kept text intact, personal numbers refused', async () => {
-  const { installProfile, profileTargets, profileText } = await import('../scripts/install-agent-skills.mjs');
+  const { installProfile, profileTargets, profileText, readSharedProfile, sharedProfileFile } = await import('../scripts/install-agent-skills.mjs');
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const home = mkdtempSync(join(tmpdir(), 'step-profile-'));
@@ -140,8 +140,18 @@ test('Profile: the USER.md facts go into each tool’s global instructions once,
     writeFileSync(join(home, '.claude', 'CLAUDE.md'), '# Mine\n\nkeep me\n');
     const targets = profileTargets(home, {});
     assert.deepEqual(targets.map((t) => t.tool), ['Claude', 'Antigravity'], 'only tools present on the computer');
-    installProfile({ name: 'ต้น', team: 'afp', style: 'concise' }, targets);
-    installProfile({ name: 'ต้น', team: 'cc', style: 'professional' }, targets);
+    const shared = sharedProfileFile(home, {});
+    assert.equal(shared, join(home, '.step-ai', 'profile.json'));
+    installProfile({ name: 'ต้น', team: 'afp', style: 'concise' }, targets, shared);
+    installProfile({ name: 'ต้น', team: 'cc', style: 'professional' }, targets, shared);
+    // The same answers land in the profile STeP Desktop reads (desktop/electron/shared-profile.ts).
+    const sharedJson = JSON.parse(readFileSync(shared, 'utf8'));
+    assert.deepEqual({ ...sharedJson, updatedAt: 0 }, { version: 1, name: 'ต้น', team: 'cc', assistant: 'STeP Mate', style: 'professional', tone: '', updatedAt: 0 });
+    assert.deepEqual(readSharedProfile(shared), { name: 'ต้น', team: 'cc', assistant: 'STeP Mate', style: 'professional' });
+    installProfile({ name: 'ต้น', team: 'cc', style: 'ตอบสั้นมาก' }, [], shared);
+    assert.equal(JSON.parse(readFileSync(shared, 'utf8')).tone, 'ตอบสั้นมาก');
+    assert.equal(readSharedProfile(shared).style, 'ตอบสั้นมาก');
+    assert.deepEqual(readSharedProfile(join(home, 'none.json')), {});
     const claude = readFileSync(join(home, '.claude', 'CLAUDE.md'), 'utf8');
     assert.ok(claude.startsWith('# Mine\n\nkeep me\n'));
     assert.equal(claude.split('STeP AI profile: begin').length - 1, 1);
@@ -161,29 +171,37 @@ test('Profile: the USER.md facts go into each tool’s global instructions once,
 
 test('Setup: installs into the tools found, skips the rest with what to do, then writes the profile', async () => {
   const { setup } = await import('../scripts/install-agent-skills.mjs');
-  const { mkdtempSync, mkdirSync, rmSync } = await import('node:fs');
+  const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const home = mkdtempSync(join(tmpdir(), 'step-setup-'));
   const ran = [];
-  const answers = ['ต้น', 'cc', '', '3'];
+  const answers = ['', '', '', '3'];
   const log = console.log;
   console.log = () => {};
   try {
     mkdirSync(join(home, '.gemini'));
     mkdirSync(join(home, '.codex'));
+    // A profile set earlier in STeP Desktop: pressing Enter keeps its nickname and team.
+    mkdirSync(join(home, '.step-ai'));
+    writeFileSync(join(home, '.step-ai', 'profile.json'), JSON.stringify({ version: 1, name: 'ต้น', team: 'cc', assistant: 'น้องสเต็ป', style: 'coworker', tone: '' }));
     const done = await setup({
       home,
       env: {},
       has: (cmd) => cmd === 'claude',
       exec: (cmd, args) => (ran.push([cmd, ...args].join(' ')), mkdirSync(join(home, '.claude'), { recursive: true }), true),
-      ask: { answer: async () => answers.shift() ?? '', close: () => {} },
+      ask: { answer: async (_question, fallback = '') => answers.shift() || fallback, close: () => {} },
     });
     assert.ok(ran.includes('claude plugin install step@step-ai'));
     assert.ok(!ran.some((r) => r.startsWith('codex')), 'no codex CLI, so none is run');
     assert.match(done.join('\n'), /Codex: ใส่กติกาแล้ว แต่ไม่พบคำสั่ง codex/);
     assert.match(readFileSync(join(home, '.codex', 'AGENTS.md'), 'utf8'), /STeP AI Skills: begin[\s\S]*STeP AI profile: begin/);
     assert.ok(existsSync(join(home, '.gemini', 'config', 'skills', 'meeting-summary', 'SKILL.md')));
-    assert.match(readFileSync(join(home, '.claude', 'CLAUDE.md'), 'utf8'), /ทีมหลัก: CC/);
+    const claude = readFileSync(join(home, '.claude', 'CLAUDE.md'), 'utf8');
+    assert.match(claude, /ชื่อเรียกผู้ใช้: ต้น/);
+    assert.match(claude, /ทีมหลัก: CC/);
+    assert.match(claude, /ชื่อผู้ช่วย: น้องสเต็ป/);
+    assert.match(claude, /ตอบสั้น ตรงประเด็น/, 'the style answered (3) replaces the old one');
+    assert.equal(JSON.parse(readFileSync(join(home, '.step-ai', 'profile.json'), 'utf8')).style, 'concise');
   } finally {
     console.log = log;
     rmSync(home, { recursive: true, force: true });
