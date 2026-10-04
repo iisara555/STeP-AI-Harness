@@ -553,7 +553,7 @@ npm run desktop:start
 
 รายละเอียด packaging และข้อจำกัดของ Electron build อยู่ใน [desktop/README.md](desktop/README.md)
 
-## STeP Skills ใน Claude Code / Claude Desktop / Gemini CLI (plugin)
+## STeP Skills ใน Claude / Codex / Gemini CLI / Antigravity (plugin)
 
 ใช้ Skills และกติกาของ STeP ใน Claude ได้โดยไม่ต้องติดตั้ง STeP Desktop หรือรันตัวติดตั้ง CLI ใน Claude Code พิมพ์:
 
@@ -569,6 +569,12 @@ npm run desktop:start
 - โฟลเดอร์ที่ติดตั้งด้วย `step-ai install` แล้ว ไม่ต้องติดตั้ง plugin ซ้ำ จะได้ไม่มี Skill สองชุด
 
 Gemini CLI: ดาวน์โหลด repository แล้วรัน `gemini extensions link STeP-AI-Harness/plugins/step` (โฟลเดอร์เดียวกันเป็น Gemini extension ด้วย กติกามาจาก `GEMINI.md`) อัปเดตด้วย `git pull` ต้องใช้ Gemini API key หรือบัญชีองค์กรที่มี Gemini Code Assist บัญชี Google AI Plus/Pro ส่วนตัวใช้กับ Gemini CLI ไม่ได้
+
+Codex: `codex plugin marketplace add iisara555/STeP-AI-Harness` แล้ว `codex plugin add step@step-ai` จากนั้นรัน `node scripts/install-agent-skills.mjs codex` ครั้งเดียว เพื่อใส่กติกาของ STeP ลง `~/.codex/AGENTS.md` (Codex ไม่รัน hook ของ plugin)
+
+Google Antigravity: `node scripts/install-agent-skills.mjs antigravity <โฟลเดอร์งาน>` ลง Skills ที่ `.agents/skills/` กติกาฉบับย่อที่ `.agents/rules/step.md` และไฟล์เต็มที่ `.agents/step/` ลงชื่อด้วยบัญชี Google ได้
+
+รายละเอียดทุกแบบอยู่ใน [plugins/step/README.md](plugins/step/README.md)
 
 ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ)
 

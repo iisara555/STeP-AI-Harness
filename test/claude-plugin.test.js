@@ -54,3 +54,49 @@ test('every relative Markdown link in the plugin resolves inside the plugin', ()
   }
   assert.deepEqual(broken, []);
 });
+
+test('Antigravity install: Skills in .agents/skills, short rules always on, full files under .agents/step, links intact, re-runnable', async () => {
+  const { installAntigravity } = await import('../scripts/install-agent-skills.mjs');
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const work = mkdtempSync(join(tmpdir(), 'step-antigravity-'));
+  try {
+    mkdirSync(join(work, '.agents', 'skills', 'my-own'), { recursive: true });
+    writeFileSync(join(work, '.agents', 'skills', 'my-own', 'SKILL.md'), 'mine');
+    installAntigravity(work);
+    installAntigravity(work);
+    const agents = join(work, '.agents');
+    const skills = readdirSync(join(agents, 'skills'));
+    assert.equal(skills.length, readdirSync(join(PLUGIN, 'skills')).length + 1, 'every STeP Skill once, and the employee’s own Skill kept');
+    assert.equal(readFileSync(join(agents, 'skills', 'my-own', 'SKILL.md'), 'utf8'), 'mine');
+    assert.deepEqual(readdirSync(join(agents, 'rules')), ['step.md'], 'only the short brief is an always-on rule');
+    assert.match(readFileSync(join(agents, 'rules', 'step.md'), 'utf8'), /\.agents\/step\/rules\/human-approval\.md/);
+    const broken = [];
+    for (const file of walk(agents).filter((f) => f.endsWith('.md')))
+      for (const [, path] of readFileSync(file, 'utf8').matchAll(/\]\(([^)\s#:]+)(?:#[^)\s]*)?\)/g))
+        if (/\.(md|ya?ml|json)$/.test(path) && !existsSync(resolve(dirname(file), path))) broken.push(`${relative(agents, file)} → ${path}`);
+    assert.deepEqual(broken, []);
+    assert.ok(existsSync(join(agents, 'step', 'manifest', 'documents.yaml')));
+    assert.match(readFileSync(join(agents, 'skills', 'receipt-audit', 'SKILL.md'), 'utf8'), /`\.\.\/\.\.\/step\/manifest\/documents\.yaml`/);
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+});
+
+test('Codex rules: one managed STeP block in AGENTS.md, replaced on re-run, the employee’s own text kept', async () => {
+  const { installCodexRules } = await import('../scripts/install-agent-skills.mjs');
+  const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const home = mkdtempSync(join(tmpdir(), 'step-codex-'));
+  try {
+    writeFileSync(join(home, 'AGENTS.md'), '# My rules\n\nkeep me\n');
+    installCodexRules(home);
+    installCodexRules(home);
+    const text = readFileSync(join(home, 'AGENTS.md'), 'utf8');
+    assert.ok(text.startsWith('# My rules\n\nkeep me\n'));
+    assert.equal(text.split('STeP AI Skills: begin').length - 1, 1);
+    assert.match(text, /มนุษย์อนุมัติ/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
