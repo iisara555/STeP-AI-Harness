@@ -183,3 +183,23 @@ test('Setup: installs into the tools found, skips the rest with what to do, then
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('GitHub "Download ZIP" offers only the new setup: legacy launchers are export-ignored, Setup and what it needs are kept', (t) => {
+  let listing;
+  try {
+    listing = execFileSync('git', ['archive', '--worktree-attributes', '--format=tar', 'HEAD'], { cwd: ROOT, maxBuffer: 1 << 30 });
+  } catch {
+    t.skip('git archive is not available here');
+    return;
+  }
+  // tar headers start with the 100-byte file name at each 512-byte block; collecting names is enough for this check.
+  const names = new Set();
+  for (let at = 0; at + 512 <= listing.length; at += 512) {
+    const name = listing.subarray(at, at + 100).toString('utf8').replace(/\0.*$/s, '');
+    if (name && /^[\w./-]+$/.test(name)) names.add(name);
+  }
+  for (const legacy of ['Install-STeP-AI.bat', 'Install-STeP-AI.command', 'Update-STeP-AI.bat', 'Feedback-STeP-AI.bat', 'Check-Privacy-STeP-AI.bat', 'START-HERE.md', 'step-ai.cmd'])
+    assert.ok(!names.has(legacy), `${legacy} must not be in the download`);
+  for (const needed of ['Setup-STeP-Skills.bat', 'Setup-STeP-Skills.command', 'scripts/install-agent-skills.mjs', 'src/modules/role-resolver.js', 'src/utils/file-ops.js', 'manifest/teams.yaml', 'plugins/step/session-brief.md', 'README.md'])
+    assert.ok(names.has(needed), `${needed} must be in the download`);
+});

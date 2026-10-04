@@ -13,3 +13,20 @@
 # files must never be EOL-converted: autocrlf rewrote 15 of them on Windows
 # checkouts and made the integrity check fail on files nobody had touched.
 src/vendor/privacy/** -text
+
+# Legacy folder-workflow kit (ZIP + step-ai CLI), no longer offered to employees. It stays in the repository for
+# the Pilot bundle (scripts/build_pilot_bundle.py copies from the checkout) and for Pilot testers' updates, but it is
+# left out of GitHub's "Download ZIP" so employees see only Setup-STeP-Skills.bat / .command there.
+/Install-STeP-AI.bat export-ignore
+/Install-STeP-AI.command export-ignore
+/Update-STeP-AI.bat export-ignore
+/Update-STeP-AI.command export-ignore
+/Feedback-STeP-AI.bat export-ignore
+/Feedback-STeP-AI.command export-ignore
+/Check-Privacy-STeP-AI.bat export-ignore
+/Check-Privacy-STeP-AI.command export-ignore
+/START-HERE.md export-ignore
+/MAC-START-HERE.txt export-ignore
+/OPEN-IN-CODEX.md export-ignore
+/START-PROMPT.txt export-ignore
+/step-ai.cmd export-ignore

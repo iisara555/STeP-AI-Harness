@@ -645,7 +645,7 @@ Claude และ Codex ดึง plugin จาก `main` ของ repository �
 
 ## ช่องทางที่เลิกใช้แล้ว
 
-- **ชุด ZIP + CLI `step-ai`** (`Install-STeP-AI.bat` / `.command`, `Update-STeP-AI.*`, `START-HERE.md`, `OPEN-IN-CODEX.md`) — เลิกแจกพนักงานใหม่แล้ว โค้ดยังอยู่เพราะ Router และ Skills ใน `src/` เป็นแกนที่ STeP Desktop ใช้ร่วม และผู้ทดสอบ Pilot รุ่นเก่ายังอัปเดตได้ ผู้ใช้เดิมให้ย้ายไป STeP Desktop หรือหัวข้อ 13
+- **ชุด ZIP + CLI `step-ai`** (`Install-STeP-AI.bat` / `.command`, `Update-STeP-AI.*`, `START-HERE.md`, `OPEN-IN-CODEX.md`) — เลิกแจกพนักงานใหม่แล้ว และไม่อยู่ใน **Download ZIP** ของ GitHub อีก (`export-ignore` ใน `.gitattributes`) พนักงานที่ดาวน์โหลดจึงเห็นแค่ `Setup-STeP-Skills` โค้ดยังอยู่เพราะ Router และ Skills ใน `src/` เป็นแกนที่ STeP Desktop ใช้ร่วม และผู้ทดสอบ Pilot รุ่นเก่ายังอัปเดตได้ ผู้ใช้เดิมให้ย้ายไป STeP Desktop หรือหัวข้อ 13
 - **Gemini CLI extension** — ถอดออกแล้ว Google หยุดให้บริการ Gemini CLI กับบัญชีส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569 ใช้ Antigravity แทน
 - **LINE gateway** (`gateway/line/`) — โค้ดทดลอง ยังไม่เคยเปิดใช้และไม่ใช่ช่องทางสำหรับพนักงาน
 
