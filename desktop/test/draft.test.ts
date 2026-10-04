@@ -139,7 +139,9 @@ test('exports keep tables as tables and use the Thai official page', async () =>
   );
   const text = documentText(doc);
   const html = pdfHtml(doc);
-  assert.match(html, /<table><tr><th><p>รายการ<\/p><\/th>/);
+  // The header row repeats on every page; the figures column is right-aligned.
+  assert.match(html, /<thead><tr><th><p>รายการ<\/p><\/th><th class="num"><p>จำนวน<\/p><\/th>/);
+  assert.match(html, /<td class="num"><p>1,500<\/p><\/td>/);
   assert.match(html, /<td><p>ป้าย &lt;A&gt;<\/p><\/td>/);
   assert.match(html, /TH Sarabun New/);
   assert.match(html, /font-size:16pt/);
@@ -153,6 +155,10 @@ test('exports keep tables as tables and use the Thai official page', async () =>
   assert.match(word, /<w:szCs w:val="32"\/>/);
   assert.match(word, /<w:pgSz w:w="11906" w:h="16838"/);
   assert.match(word, /w:left="1701"/);
+  assert.match(word, /<w:tblLayout w:type="fixed"\/>/);
+  assert.match(word, /<w:jc w:val="right"\/>/);
+  // Single line spacing: an exact 12 pt line would overlap 16 pt Thai text.
+  assert.doesNotMatch(word, /w:line="240"/);
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(join(home, 'd.xlsx'));
   assert.deepEqual(
@@ -163,6 +169,7 @@ test('exports keep tables as tables and use the Thai official page', async () =>
   assert.equal(sheet.getCell('A1').value, 'รายการ');
   assert.equal(sheet.getCell('A1').font.bold, true);
   assert.equal(sheet.getCell('B2').value, 1500);
+  assert.equal(sheet.getCell('B2').numFmt, '#,##0');
   // Codes keep their leading zero and formula-like text stays text.
   assert.equal(sheet.getCell('C2').value, '007');
   assert.equal(sheet.getCell('A3').value, '=SUM(A1)');
@@ -180,4 +187,42 @@ test('exports keep tables as tables and use the Thai official page', async () =>
   );
   assert.ok(slides.some(xml => /<a:tbl>/.test(xml) && /รายการ/.test(xml)));
   assert.ok(slides.some(xml => /สรุปงบประมาณ/.test(xml)));
+});
+
+test('tables share one layout across Word and PDF and spreadsheets keep figures as written', async () => {
+  const { tableLayout } = await import('../electron/export');
+  const narrow = tableLayout([
+    ['ลำดับ', 'รายการ', 'ราคา (บาท)'],
+    ['1', 'ป้ายไวนิล ขนาด 1x3 เมตร', '1,500'],
+  ]);
+  assert.equal(narrow.points, 16);
+  // The description column gets most of the line; the widths fill the A4 text width (16 cm).
+  assert.ok(narrow.columns[1] > narrow.columns[0] * 2);
+  assert.ok(Math.abs(narrow.columns.reduce((a, b) => a + b) - 9072) < 4);
+  const header = ['โครงการ', 'ผู้รับผิดชอบ', 'ไตรมาส 1', 'ไตรมาส 2', 'ไตรมาส 3', 'ไตรมาส 4', 'สถานะ', 'หมายเหตุ'];
+  // Eight columns do not fit at 16 pt without breaking header words, so the table drops to a smaller size.
+  assert.ok(tableLayout([header, header.map(() => 'x')]).points < 16);
+
+  const home = await mkdtemp(join(tmpdir(), 'step-figures-'));
+  const doc = markdownDocument(
+    '## สรุป\n\n| งาน | ราคา | สัดส่วน | ปี |\n|---|---|---|---|\n| ก | 650.50 | 25% | 2570 |\n| ข | 1,000.5 | 12.5% | 2571 |',
+  );
+  await exportDocument(join(home, 'f.xlsx'), 'xlsx', documentText(doc), async () => Buffer.alloc(0), doc);
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(join(home, 'f.xlsx'));
+  const sheet = workbook.worksheets[0];
+  assert.deepEqual([sheet.getCell('B2').value, sheet.getCell('B2').numFmt], [650.5, '0.00']);
+  assert.deepEqual([sheet.getCell('B3').value, sheet.getCell('B3').numFmt], [1000.5, '#,##0.0']);
+  assert.deepEqual([sheet.getCell('C2').value, sheet.getCell('C2').numFmt], [0.25, '0%']);
+  assert.deepEqual([sheet.getCell('C3').value, sheet.getCell('C3').numFmt], [0.125, '0.0%']);
+  assert.deepEqual([sheet.getCell('D2').value, sheet.getCell('D2').numFmt], [2570, '0']);
+
+  // A heading right before a table titles the table's slide rather than taking a slide of its own.
+  await exportDocument(join(home, 'f.pptx'), 'pptx', documentText(doc), async () => Buffer.alloc(0), doc);
+  const deck = await createRequire(import.meta.url)('jszip').loadAsync(await readFile(join(home, 'f.pptx')));
+  const slides = Object.keys(deck.files).filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name));
+  assert.equal(slides.length, 1);
+  const xml = await deck.file(slides[0]).async('string');
+  assert.match(xml, /สรุป/);
+  assert.match(xml, /<a:tbl>/);
 });

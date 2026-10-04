@@ -4,8 +4,10 @@ import {
   HeadingLevel,
   Packer,
   Paragraph,
+  AlignmentType,
   ShadingType,
   Table,
+  TableLayoutType,
   TableCell,
   TableRow,
   TextRun,
@@ -33,6 +35,50 @@ export function escapeHtml(text: string) {
 /** A cell's or block's text on one line, for spreadsheets and slides. */
 const flat = (node: DraftNode) => documentText(node).replace(/\s*\n\s*/g, ' ');
 const tableRows = (table: DraftNode) => (table.content || []).map(row => (row.content || []).map(flat));
+const AMOUNT = /^[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?$/;
+/** Columns whose body cells are all amounts (at least one), right-aligned as figures are in Thai official tables. */
+const numericColumns = (rows: string[][]) =>
+  Array.from({ length: Math.max(0, ...rows.map(row => row.length)) }, (_, column) => {
+    const body = rows
+      .slice(1)
+      .map(row => (row[column] || '').trim())
+      .filter(Boolean);
+    return body.length > 0 && body.every(text => AMOUNT.test(text));
+  });
+
+const TEXT_WIDTH = 11906 - 3 * CM - 2 * CM; // A4 width less the official margins, in twips
+// Thai vowel and tone marks take no width of their own.
+const visible = (text = '') => text.replace(/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g, '').length;
+
+/**
+ * Font size and column widths (twips) of a table, for Word and PDF alike. Each column first gets room for its longest
+ * header word and its figures, which must not wrap; the rest of the line goes to columns with longer text. A table
+ * whose header words do not fit at 16 pt drops to 14 or 12 pt, as Thai official documents do with wide tables.
+ */
+export function tableLayout(rows: string[][]) {
+  const count = Math.max(1, ...rows.map(row => row.length));
+  const numeric = numericColumns(rows);
+  const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+  const sized = (points: number) => {
+    const span = (chars: number) => (chars + 1) * points * 20 * 0.55 + 220;
+    const minimum = Array.from({ length: count }, (_, column) => {
+      const header = (rows[0]?.[column] || '').split(/\s+/).map(visible);
+      const figures = numeric[column] ? rows.slice(1).map(row => visible(row[column])) : [];
+      return span(Math.max(2, ...header, ...figures));
+    });
+    const desired = minimum.map((least, column) => Math.max(least, span(Math.min(Math.max(...rows.map(row => visible(row[column]))), 40))));
+    return { points, minimum, desired };
+  };
+  const { points, minimum, desired } = [16, 14].map(sized).find(size => sum(size.minimum) <= TEXT_WIDTH) || sized(12);
+  let widths: number[];
+  if (sum(desired) <= TEXT_WIDTH) widths = desired.map(width => (width * TEXT_WIDTH) / sum(desired));
+  else if (sum(minimum) <= TEXT_WIDTH) {
+    const spare = TEXT_WIDTH - sum(minimum),
+      wanted = sum(desired) - sum(minimum);
+    widths = minimum.map((least, column) => least + (spare * (desired[column] - least)) / wanted);
+  } else widths = minimum.map(width => (width * TEXT_WIDTH) / sum(minimum));
+  return { points, columns: widths.map(Math.floor) };
+}
 
 function richHtml(node: DraftNode): string {
   if (node.type === 'text') {
@@ -42,10 +88,22 @@ function richHtml(node: DraftNode): string {
   }
   if (node.type === 'hardBreak') return '<br>';
   const text = (node.content || []).map(richHtml).join('');
-  if (node.type === 'table') return `<table>${text}</table>`;
-  if (node.type === 'tableHeader' || node.type === 'tableCell') {
-    const tag = node.type === 'tableHeader' ? 'th' : 'td';
-    return `<${tag}>${text}</${tag}>`;
+  if (node.type === 'table') {
+    const text = tableRows(node);
+    const numeric = numericColumns(text);
+    const { points, columns } = tableLayout(text);
+    const total = columns.reduce((sum, width) => sum + width, 0);
+    const rows = (node.content || []).map(
+      row =>
+        `<tr>${(row.content || [])
+          .map((cell, column) => {
+            const tag = cell.type === 'tableHeader' ? 'th' : 'td';
+            return `<${tag}${numeric[column] ? ' class="num"' : ''}>${(cell.content || []).map(richHtml).join('')}</${tag}>`;
+          })
+          .join('')}</tr>`,
+    );
+    const colgroup = columns.map(width => `<col style="width:${((width * 100) / total).toFixed(2)}%">`).join('');
+    return `<table style="font-size:${points}pt"><colgroup>${colgroup}</colgroup><thead>${rows[0] || ''}</thead><tbody>${rows.slice(1).join('')}</tbody></table>`;
   }
   const tag = (
     {
@@ -88,9 +146,9 @@ export function pdfHtml(document: DraftNode) {
     'body{font-family:"TH Sarabun New","TH SarabunPSK","STeP Fallback",sans-serif;font-size:16pt;line-height:1.35;overflow-wrap:anywhere;margin:0}',
     'p{white-space:pre-wrap;margin:0 0 6pt}h1{font-size:20pt}h2{font-size:18pt}h3{font-size:16pt}',
     'h1,h2,h3{margin:12pt 0 6pt;break-after:avoid}ul,ol{margin:0 0 6pt;padding-left:1.5em}',
-    'table{border-collapse:collapse;width:100%;margin:6pt 0 10pt}tr{break-inside:avoid}thead{display:table-header-group}',
+    'table{border-collapse:collapse;width:100%;table-layout:fixed;margin:6pt 0 10pt}tr{break-inside:avoid}thead{display:table-header-group}',
     'th,td{border:0.75pt solid #444;padding:2pt 5pt;vertical-align:top;text-align:left}th{background:#eee;font-weight:bold}',
-    'th p,td p{margin:0}',
+    'th p,td p{margin:0}th.num,td.num{text-align:right}',
   ].join('');
   return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}</style><body>${richHtml(document)}</body></html>`;
 }
@@ -111,9 +169,15 @@ function runs(node: DraftNode, size: number, bold = false): ParagraphChild[] {
 
 function docxTable(table: DraftNode) {
   const rows = table.content || [];
+  const text = tableRows(table);
   const width = Math.max(1, ...rows.map(row => (row.content || []).length));
+  const numeric = numericColumns(text);
+  const { points, columns } = tableLayout(text);
+  const size = points * 2;
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: TEXT_WIDTH, type: WidthType.DXA },
+    columnWidths: columns,
+    layout: TableLayoutType.FIXED,
     rows: rows.map(
       (row, index) =>
         new TableRow({
@@ -123,11 +187,11 @@ function docxTable(table: DraftNode) {
             const cell = row.content?.[column];
             const header = cell?.type === 'tableHeader';
             return new TableCell({
-              width: { size: Math.floor(5000 / width), type: WidthType.PERCENTAGE },
+              width: { size: columns[column], type: WidthType.DXA },
               shading: header ? { type: ShadingType.CLEAR, color: 'auto', fill: 'EEEEEE' } : undefined,
               margins: { left: 100, right: 100 },
               children: (cell?.content?.length ? cell.content : [{ type: 'paragraph' }]).map(
-                p => new Paragraph({ children: runs(p, 32, header) }),
+                p => new Paragraph({ alignment: numeric[column] ? AlignmentType.RIGHT : undefined, children: runs(p, size, header) }),
               ),
             });
           }),
@@ -177,7 +241,7 @@ function docx(document: DraftNode) {
   return new Document({
     styles: {
       default: {
-        document: { run: { font: OFFICIAL_FONT, size: 32 }, paragraph: { spacing: { after: 0, line: 240 } } },
+        document: { run: { font: OFFICIAL_FONT, size: 32 }, paragraph: { spacing: { after: 0 } } },
         heading1: heading(40),
         heading2: heading(36),
         heading3: heading(32),
@@ -230,8 +294,17 @@ function outline(document: DraftNode) {
 }
 
 // A cell that is plainly a number becomes one, so sums and sorting work; codes with a leading zero stay text.
-const NUMBER = /^-?(?:\d{1,3}(?:,\d{3})+|0|[1-9]\d{0,14})(?:\.\d+)?$/;
-const cellValue = (text: string) => (NUMBER.test(text) ? Number(text.replace(/,/g, '')) : text);
+const NUMBER = /^-?(?:\d{1,3}(?:,\d{3})+|0|[1-9]\d{0,14})(?:\.(\d{1,6}))?$/;
+const PERCENT = /^-?(?:0|[1-9]\d{0,5})(?:\.(\d{1,4}))?%$/;
+const cellValue = (text: string) =>
+  NUMBER.test(text) ? Number(text.replace(/,/g, '')) : PERCENT.test(text) ? Number(text.slice(0, -1)) / 100 : text;
+/** The number format that shows a figure as it was written: thousands separators, decimal places and percent. */
+const numberFormat = (text: string) => {
+  const percent = PERCENT.exec(text);
+  const decimals = (percent || NUMBER.exec(text))?.[1]?.length || 0;
+  const places = decimals ? '.' + '0'.repeat(decimals) : '';
+  return percent ? '0' + places + '%' : (text.includes(',') ? '#,##0' : '0') + places;
+};
 
 async function xlsx(path: string, document: DraftNode) {
   const workbook = new ExcelJS.Workbook();
@@ -250,7 +323,7 @@ async function xlsx(path: string, document: DraftNode) {
         cell.border = { top: border, bottom: border, left: border, right: border };
         cell.alignment = { wrapText: true, vertical: 'top' };
         if (rowIndex === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
-        if (typeof cell.value === 'number' && /,/.test(cells[Number(cell.col) - 1] || '')) cell.numFmt = '#,##0.##';
+        if (typeof cell.value === 'number') cell.numFmt = numberFormat(cells[Number(cell.col) - 1]);
       });
     });
     const width = Math.max(1, ...rows.map(row => row.length));
@@ -309,26 +382,41 @@ async function pptx(path: string, document: DraftNode) {
       });
     text = '';
   };
+  // A heading right before a table titles the table's slide instead of sitting alone on a slide of its own.
+  let heading: { text: string; at: number } | undefined;
   for (const entry of order) {
     if ('line' in entry) {
       const line = lines[entry.line];
+      heading = line.kind === 'heading' ? { text: line.text, at: text.length } : undefined;
       text += '  '.repeat(Math.max(line.depth - 1, 0)) + line.text + '\n';
       continue;
     }
+    const title = heading?.text;
+    if (heading) text = text.slice(0, heading.at);
+    heading = undefined;
     flush();
     const rows = tableRows(tables[entry.table]);
     const width = Math.max(1, ...rows.map(row => row.length));
-    slide().addTable(
+    const numeric = numericColumns(rows);
+    const { columns } = tableLayout(rows);
+    const total = columns.reduce((sum, column) => sum + column, 0);
+    const target = slide();
+    if (title) target.addText(title, { x: 0.6, y: 0.75, w: 12, h: 0.5, fontFace: SCREEN_FONT, fontSize: 22, bold: true });
+    target.addTable(
       rows.map((cells, index) =>
         Array.from({ length: width }, (_, column) => ({
           text: cells[column] || '',
-          options: index === 0 ? { bold: true, fill: { color: 'EEEEEE' } } : {},
+          options: {
+            ...(index === 0 ? { bold: true, fill: { color: 'EEEEEE' } } : {}),
+            ...(numeric[column] ? { align: 'right' as const } : {}),
+          },
         })),
       ),
       {
         x: 0.6,
-        y: 1,
+        y: title ? 1.35 : 1,
         w: 12,
+        colW: columns.map(column => (12 * column) / total),
         fontFace: SCREEN_FONT,
         fontSize: 14,
         border: { type: 'solid', pt: 0.75, color: '999999' },
