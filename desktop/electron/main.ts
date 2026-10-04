@@ -517,6 +517,8 @@ async function main() {
         review: text => {
           if (harness.privacy(text).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
         },
+        // Auto mode, when the organization allows it, asks only before a final step such as send, pay or confirm.
+        routine: () => permissionMode() === 'auto' && policyState.policy.features.autoMode,
         approve: (title, body) =>
           approvals.request(
             approvals.rule(store.settings().workspace || data, 'browser_control', randomUUID()),

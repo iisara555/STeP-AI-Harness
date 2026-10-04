@@ -1134,6 +1134,10 @@ export const en: Record<string, string> = {
   ตรวจเป้าหมายก่อนขอคลิก: 'Checking the target before asking to click',
   'ให้ Agent กรอกข้อมูลนี้?': 'Let the Agent fill in this data?',
   'ให้ Agent คลิกเป้าหมายนี้?': 'Let the Agent click this target?',
+  'ให้ Agent กดขั้นสุดท้ายนี้?': 'Let the Agent press this final step?',
+  'รออนุญาตขั้นสุดท้าย: {0}': 'Waiting for approval of the final step: {0}',
+  '\nนี่คือการส่งหรือยืนยันรายการบนเว็บ ตรวจข้อมูลในแท็บเว็บให้ครบก่อนอนุมัติ':
+    '\nThis sends or confirms something on the website. Check everything in the Web tab before you approve.',
   '\nข้อความ: ': '\nText: ',
   '\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ':
     '\nThis action may submit data or confirm something on the website. Check the page in the Web tab before approving',

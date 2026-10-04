@@ -17,6 +17,10 @@ const inner = el => el.matches(native) ? '' : (el.querySelector('[aria-label]')?
 const label = el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || inner(el) || el.innerText || el.getAttribute('placeholder') || el.name || el.tagName).trim().slice(0,160);
 // The heading of the card or list item the target sits in ("Americano $7.00"), so the AI can tell similar tiles apart.
 const near = el => { const box = el.closest('li,article,section,tr,[role="listitem"],[role="row"]'); const h = box?.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"]'); const text = (h && !el.contains(h) ? h.innerText : '').replace(/\\s+/g,' ').trim().slice(0,120); return text && !label(el).includes(text) ? text : ''; };
+// A final step: a form's submit button, or a control named for sending, paying, ordering, confirming or deleting. The
+// employee approves these even in auto mode; adding to a cart, opening a menu or typing in a field is routine.
+const FINAL = /\\b(submit|send|pay|payment|checkout|check out|place order|order now|buy|purchase|confirm|book now|reserve|register|sign up|subscribe|delete|transfer|donate|approve|sign(?! ?in)|publish|post)\\b|ส่ง|ยืนยัน|ชำระ|จ่าย|สั่งซื้อ|ซื้อ|จอง|ลงทะเบียน|สมัคร|ลบ|โอน|บริจาค|อนุมัติ|ลงนาม|เผยแพร่|โพสต์|บันทึก/i;
+const final = el => ((el.tagName === 'BUTTON' || el.tagName === 'INPUT') && el.type === 'submit' && Boolean(el.form)) || el.type === 'image' || FINAL.test([label(el), el.value || '', el.getAttribute('title') || ''].join(' '));
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
 const WORLD = 1005;
@@ -34,6 +38,8 @@ type Context = {
   signal: AbortSignal;
   check: () => Promise<void>;
   approve: (title: string, body: string) => Promise<boolean>;
+  /** Auto mode: opening a site, clicking and filling go ahead, and only a final step (send, pay, confirm) asks. */
+  routine?: () => boolean;
   review: (text: string) => void;
   activity?: (text: string) => void;
 };
@@ -44,12 +50,20 @@ export class AgentBrowser {
   // The origin each page may navigate in, by web contents; one network listener serves all tabs of a task.
   private origins = new Map<number, string>();
   private configured = new WeakSet<Electron.Session>();
+  // Requests each page still has open, and when its network was last busy, so a read waits for content still loading.
+  private inflight = new Map<number, number>();
+  private busyAt = new Map<number, number>();
   // With a dock the pages show in the main window's Web tab; without one (tests) they load unseen.
   constructor(
     private dock?: BrowserDock,
     // Intranet hosts the organization lets the assistant open (policy network.privateHosts).
     private privateHosts: () => string[] = () => [],
   ) {}
+  private track(contents: number, change: number) {
+    if (!this.origins.has(contents)) return;
+    this.inflight.set(contents, Math.max(0, (this.inflight.get(contents) || 0) + change));
+    this.busyAt.set(contents, Date.now());
+  }
   private get(id: string, owner: string) {
     const entry = this.tabs.get(id);
     if (!entry || entry.owner !== owner || entry.contents.isDestroyed()) throw new Error('BROWSER_CLOSED');
@@ -142,8 +156,34 @@ export class AgentBrowser {
       if (attached && tool.isAttached()) tool.detach();
     }
   }
+  /**
+   * Waits for content still loading. Single-page apps such as a coffee menu fetch their content after the page itself
+   * has loaded; read too early, the menu is not there yet. First the page's requests finish (none open for 500 ms),
+   * then the page stops changing (no DOM change for 300 ms). Each wait is capped, so a page that never goes quiet
+   * (polling, a live feed) is read after about 6 s.
+   */
+  private async settle(entry: Entry, signal: AbortSignal) {
+    const id = entry.contents.id,
+      start = Date.now();
+    while (Date.now() - start < 4000) {
+      if (signal.aborted) throw new Error('CANCELLED');
+      if (!this.inflight.get(id) && Date.now() - (this.busyAt.get(id) || 0) >= 500) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    await this.script(
+      entry,
+      `new Promise(resolve => {
+        let quiet; const done = () => { observer.disconnect(); clearTimeout(quiet); clearTimeout(limit); resolve(true); };
+        const observer = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(done, 300); });
+        observer.observe(document.documentElement, {subtree:true, childList:true, attributes:true, characterData:true});
+        quiet = setTimeout(done, 300); const limit = setTimeout(done, 2000);
+      })`,
+      signal,
+    );
+  }
   private async snapshot(id: string, entry: Entry, signal: AbortSignal) {
     const snapshot = randomUUID();
+    await this.settle(entry, signal);
     const marker = await this.markListeners(entry, signal);
     const result = await this.script(
       entry,
@@ -152,7 +192,15 @@ export class AgentBrowser {
       // one with a click listener (found by the main process through the DevTools protocol and marked for this read).
       // For nested areas only the outermost counts, so a card is one target, not five; an element that only holds real
       // controls (a framework's root listening for every click) is not a target itself.
-      const pointer = el => getComputedStyle(el).cursor === 'pointer';
+      // A pointer that shows only on hover (.cup:hover{cursor:pointer}) is read from the page's own style sheets.
+      const hovered = new Set();
+      let budget = 3000;
+      const rules = list => { for (const rule of Array.from(list || [])) { if (--budget < 0) return; if (rule.cssRules) rules(rule.cssRules);
+        if (rule.selectorText && rule.style?.cursor === 'pointer') for (const part of rule.selectorText.split(',')) {
+          const plain = part.replace(/:(hover|focus|focus-visible|focus-within|active)\\b/g, '').trim();
+          if (plain) try { for (const el of Array.from(document.querySelectorAll(plain)).slice(0, 200)) hovered.add(el); } catch {} } } };
+      for (const sheet of Array.from(document.styleSheets)) { try { rules(sheet.cssRules); } catch {} }
+      const pointer = el => hovered.has(el) || getComputedStyle(el).cursor === 'pointer';
       const found = new Set(document.querySelectorAll(native));
       const marked = ${JSON.stringify(marker)} ? Array.from(document.querySelectorAll('[' + ${JSON.stringify(marker)} + ']')) : [];
       for (const el of marked) el.removeAttribute(${JSON.stringify(marker)});
@@ -232,6 +280,7 @@ export class AgentBrowser {
       if (reused) return reused;
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
       if (
+        !context.routine?.() &&
         !(await context.approve(
           tm('เปิดเว็บให้ Agent ทำงาน?'),
           url + tm('\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
@@ -256,6 +305,8 @@ export class AgentBrowser {
       const dispose = () => {
         this.tabs.delete(id);
         this.origins.delete(contentsId);
+        this.inflight.delete(contentsId);
+        this.busyAt.delete(contentsId);
         if (this.dock) this.dock.remove(id);
         else if (!contents.isDestroyed()) contents.close();
       };
@@ -272,6 +323,8 @@ export class AgentBrowser {
         network.setPermissionRequestHandler((_w, _p, cb) => cb(false));
         network.setPermissionCheckHandler(() => false);
         network.on('will-download', event => event.preventDefault());
+        network.webRequest.onCompleted(details => details.webContentsId !== undefined && this.track(details.webContentsId, -1));
+        network.webRequest.onErrorOccurred(details => details.webContentsId !== undefined && this.track(details.webContentsId, -1));
         network.webRequest.onBeforeRequest((details, cb) => {
           try {
             const target = new URL(browserUrl(details.url));
@@ -279,7 +332,9 @@ export class AgentBrowser {
             if (privateHostName(target.hostname) && !this.privateHosts().includes(target.hostname.toLowerCase()))
               return cb({ cancel: true });
             const origin = this.origins.get(details.webContentsId ?? -1);
-            cb({ cancel: details.resourceType === 'mainFrame' && (!origin || new URL(details.url).origin !== origin) });
+            const cancel = details.resourceType === 'mainFrame' && (!origin || new URL(details.url).origin !== origin);
+            if (!cancel && details.webContentsId !== undefined) this.track(details.webContentsId, 1);
+            cb({ cancel });
           } catch {
             cb({ cancel: true });
           }
@@ -334,19 +389,24 @@ export class AgentBrowser {
         if(!el || !el.isConnected || !visible(el) || sensitive(el) || el.disabled || fingerprint(el)!==target.fingerprint) return {error:'BROWSER_STALE_TARGET'};`;
       const info = await this.script(
         entry,
-        `(() => {${helpers}${selection} return {label:label(el),url:location.href};})()`,
+        `(() => {${helpers}${selection} return {label:label(el),url:location.href,final:final(el)};})()`,
         context.signal,
       );
       if (info.error) throw new Error(info.error);
       context.review(info.url + '\n' + info.label);
+      const final = action === 'click' && info.final === true;
+      if (final) context.activity?.(tm('รออนุญาตขั้นสุดท้าย: {0}', info.label));
       if (
+        (final || !context.routine?.()) &&
         !(await context.approve(
-          action === 'fill' ? tm('ให้ Agent กรอกข้อมูลนี้?') : tm('ให้ Agent คลิกเป้าหมายนี้?'),
+          final ? tm('ให้ Agent กดขั้นสุดท้ายนี้?') : action === 'fill' ? tm('ให้ Agent กรอกข้อมูลนี้?') : tm('ให้ Agent คลิกเป้าหมายนี้?'),
           info.url +
             '\n' +
             info.label +
             (action === 'fill' ? tm('\nข้อความ: ') + value : '') +
-            tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ'),
+            (final
+              ? tm('\nนี่คือการส่งหรือยืนยันรายการบนเว็บ ตรวจข้อมูลในแท็บเว็บให้ครบก่อนอนุมัติ')
+              : tm('\nการกระทำนี้อาจส่งข้อมูลหรือยืนยันรายการบนเว็บ ตรวจหน้าเว็บในแท็บเว็บก่อนอนุมัติ')),
         ))
       )
         throw new Error('BROWSER_ACTION_DECLINED');
@@ -361,7 +421,7 @@ export class AgentBrowser {
           Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});
           el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
         } else el.click();
-        return {performed:true,action:${JSON.stringify(action)},readAgain:true};
+        return {performed:true,action:${JSON.stringify(action)},readAgain:true${final ? ',final:true' : ''}};
       })()`,
         context.signal,
       );

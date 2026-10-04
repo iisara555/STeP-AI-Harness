@@ -22,6 +22,8 @@ await writeFile(
   `const {app,BrowserWindow}=require('electron');globalThis.AgentBrowser=require(${JSON.stringify(bundle)}).AgentBrowser;app.setPath('userData',${JSON.stringify(join(home, 'profile'))});app.whenReady().then(()=>{globalThis.testWindow=new BrowserWindow({show:false});return globalThis.testWindow.loadURL('about:blank');});`,
 );
 const server = createServer((req, res) => {
+  // The cafe's menu arrives from the network after the page has loaded, as on a real single-page app.
+  if (req.url === '/cafe/menu.json') return void setTimeout(() => res.end(JSON.stringify(['Espresso:10', 'Americano:7'])), 700);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end(
     req.url === '/login'
@@ -38,9 +40,14 @@ const server = createServer((req, res) => {
             })
             .join('') +
           '</ul><button id="pay">Total: $0.00</button></div><script>let t=0;document.getElementById("app").addEventListener("click",()=>{});for(const w of document.querySelectorAll(".w"))w.addEventListener("click",()=>{t+=w.querySelector(".cup-body").getAttribute("aria-label")==="Americano"?7:10;document.getElementById("pay").textContent="Total: $"+t.toFixed(2)})</script>'
-        : req.url === '/shop'
-          ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
-          : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
+        : req.url === '/cafe'
+          ? // The harder variant: the menu arrives after the page has loaded, one listener on the document handles every
+            // click (event delegation, so no cup has a listener of its own), and only a :hover rule gives the pointer.
+            // Total opens a checkout form whose Submit is the final step.
+            '<style>.cup-body:hover{cursor:pointer}</style><main id="app">Loading menu…</main><script>let t=0;fetch("/cafe/menu.json").then(r=>r.json()).then(menu=>{document.getElementById("app").innerHTML=menu.map(c=>{const[n,p]=c.split(":");return `<li><h4>${n} <small>$${p}.00</small></h4><div class="cup-body" aria-label="${n}" data-price="${p}"><div>espresso</div></div></li>`}).join("")+"<button id=total>Total: $0.00</button><div id=pay></div>"});document.addEventListener("click",e=>{const cup=e.target.closest(".cup-body");if(cup){t+=+cup.dataset.price;document.getElementById("total").textContent="Total: $"+t.toFixed(2)}if(e.target.id==="total")document.getElementById("pay").innerHTML="<form onsubmit=\\"event.preventDefault();this.outerHTML=\'<p>Thanks for your order</p>\'\\"><input name=name aria-label=Name><button type=submit>Submit</button></form>"})</script>'
+          : req.url === '/shop'
+            ? '<div id="menu"><div class="card" style="cursor:pointer"><h3>Americano</h3><span style="cursor:pointer">$3.00</span></div><div class="card" style="cursor:pointer"><h3>Cappuccino</h3></div></div><p id="cart">Cart: 0</p><script>let n=0;for(const c of document.querySelectorAll(".card"))c.addEventListener("click",()=>{document.getElementById("cart").textContent="Cart: "+(++n)})</script>'
+            : '<label>Search<input name="search"></label><button onclick="document.querySelector(\'p\').textContent=document.querySelector(\'input\').value">Apply</button><p>Unchanged</p>',
   );
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -164,13 +171,57 @@ try {
     false,
   );
   await run(coffee.tab, { action: 'close' });
+  // Auto mode: opening the site, adding cups, opening checkout and typing a name go ahead without asking; the form's
+  // Submit is the final step and asks. The menu that loads late, delegated clicks and a :hover-only pointer still
+  // leave the cups as targets.
+  await app.evaluate(() => {
+    globalThis.context.routine = () => true;
+    globalThis.approvalCount = 0;
+  });
+  const cafe = await run(url + '/cafe', { action: 'open' });
+  assert.ok(
+    cafe.elements.find(e => e.label === 'Americano'),
+    JSON.stringify(cafe),
+  );
+  for (let i = 0; i < 2; i++) {
+    const page = await run(cafe.tab, { action: 'read' });
+    const cup = page.elements.find(e => e.label === 'Americano');
+    assert.equal((await run(cafe.tab, { action: 'click', snapshot: page.snapshot, ref: cup.ref })).performed, true);
+  }
+  let page = await run(cafe.tab, { action: 'read' });
+  assert.match(page.text, /Total: \$14\.00/);
+  const total = page.elements.find(e => /^Total/.test(e.label));
+  assert.equal((await run(cafe.tab, { action: 'click', snapshot: page.snapshot, ref: total.ref })).final, undefined);
+  page = await run(cafe.tab, { action: 'read' });
+  assert.equal(
+    (await run(cafe.tab, { action: 'fill', snapshot: page.snapshot, ref: page.elements.find(e => e.editable).ref }, 'Itsara')).performed,
+    true,
+  );
+  assert.equal(await app.evaluate(() => globalThis.approvalCount), 0, 'routine steps do not ask in auto mode');
+  page = await run(cafe.tab, { action: 'read' });
+  const submit = { action: 'click', snapshot: page.snapshot, ref: page.elements.find(e => e.label === 'Submit').ref };
+  await app.evaluate(() => {
+    globalThis.accept = false;
+  });
+  assert.equal((await run(cafe.tab, submit)).error, 'BROWSER_ACTION_DECLINED');
+  assert.equal(await app.evaluate(() => globalThis.approvalCount), 1);
+  await app.evaluate(() => {
+    globalThis.accept = true;
+  });
+  const sent = await run(cafe.tab, submit);
+  assert.equal(sent.final, true);
+  assert.match((await run(cafe.tab, { action: 'read' })).text, /Thanks for your order/);
+  await run(cafe.tab, { action: 'close' });
+  await app.evaluate(() => {
+    delete globalThis.context.routine;
+  });
   // Other local or private addresses stay closed to the assistant.
   for (const blocked of ['http://localhost:9/', 'http://192.168.1.1/', 'http://10.0.0.1/'])
     assert.equal((await run(blocked, { action: 'open' })).error, 'WEB_ADDRESS_BLOCKED', blocked);
   await run(tab, { action: 'close' });
   assert.equal((await run(tab, { action: 'read' })).error, 'BROWSER_CLOSED');
   console.log(
-    'Browser agent smoke passed: real isolated pages, fill/click/read, denial, stale references, changed approval target, task ownership, login masking and URL rejection. No external sites or AI calls.',
+    'Browser agent smoke passed: real isolated pages, fill/click/read, denial, stale references, changed approval target, task ownership, login masking, URL rejection, a late-loading menu with delegated clicks, and auto mode asking only at the final submit. No external sites or AI calls.',
   );
 } finally {
   await app.evaluate(() => globalThis.agentBrowser?.close()).catch(() => {});
