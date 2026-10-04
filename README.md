@@ -488,7 +488,7 @@ STeP AI เป็น workspace สำหรับช่วยเตรียม�
 | --- | --- | --- |
 | **Claude** Code / Desktop | Claude Pro, Max, Team, Enterprise | — |
 | **Codex** | ChatGPT Plus, Pro, Business, Enterprise | Node.js (ครั้งเดียว) |
-| **Google Antigravity** | บัญชี Google รวม Google AI Plus/Pro | Node.js |
+| **Google Antigravity** | บัญชี Google รวม Google AI Plus/Pro | Node.js (ครั้งเดียว) |
 
 ## Claude
 
@@ -518,13 +518,15 @@ node scripts/install-agent-skills.mjs codex
 
 ## Google Antigravity
 
-ดาวน์โหลด repository นี้เหมือนกัน แล้วรันในโฟลเดอร์นั้น โดยระบุโฟลเดอร์งานที่จะเปิดใน Antigravity:
+ดาวน์โหลด repository นี้เหมือนกัน แล้วรันในโฟลเดอร์นั้น:
 
 ```text
-node scripts/install-agent-skills.mjs antigravity <โฟลเดอร์งาน>
+node scripts/install-agent-skills.mjs antigravity
 ```
 
-เปิดโฟลเดอร์งานนั้นใน Antigravity แล้วเริ่มงานได้เลย Skills อยู่ที่ `.agents/skills/` กติกาฉบับย่อที่ `.agents/rules/step.md` (ใช้ทุกแชต) และไฟล์กติกาเต็มที่ `.agents/step/` อัปเดตด้วยการดาวน์โหลดรุ่นใหม่แล้วรันคำสั่งเดิมซ้ำ Skills ของคุณเองใน `.agents/skills/` จะไม่ถูกแตะ
+ติดตั้งครั้งเดียวใช้ได้**ทุก workspace** ปิดแล้วเปิด Antigravity ใหม่ Skills อยู่ที่ `~/.gemini/config/skills/` ไฟล์กติกาเต็มที่ `~/.gemini/config/step/` และกติกาฉบับย่อถูกเพิ่มท้าย `~/.gemini/GEMINI.md` (กติกา global ของ Antigravity ข้อความเดิมในไฟล์นั้นยังอยู่) อัปเดตด้วยการดาวน์โหลดรุ่นใหม่แล้วรันคำสั่งเดิมซ้ำ Skills ของคุณเองจะไม่ถูกแตะ
+
+ถ้าต้องการให้มีเฉพาะบาง workspace ให้ระบุโฟลเดอร์ต่อท้าย เช่น `node scripts/install-agent-skills.mjs antigravity ~/Documents/งานSTeP` จะลงที่ `.agents/` ของโฟลเดอร์นั้นแทน ใช้แบบใดแบบหนึ่ง ไม่ต้องทั้งสองแบบ จะได้ไม่มี Skill ซ้ำ
 
 รายละเอียดเพิ่มเติม: [plugins/step/README.md](plugins/step/README.md)
 
@@ -610,7 +612,7 @@ npm run desktop:start
 
 ## ดูแล STeP Skills plugin
 
-ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ) กติกาที่ขึ้นต้นทุกแชตแก้ที่ `plugin/session-brief.md` ส่วน `scripts/install-agent-skills.mjs` ลงชุดเดียวกันให้ Codex (กติกา) และ Antigravity
+ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ) กติกาที่ขึ้นต้นทุกแชตแก้ที่ `plugin/session-brief.md` ส่วน `scripts/install-agent-skills.mjs` ลงชุดเดียวกันให้ Codex (กติกา) และ Antigravity (global หรือราย workspace)
 
 Claude และ Codex ดึง plugin จาก `main` ของ repository นี้ การ merge เข้า `main` จึงเท่ากับปล่อย Skills รุ่นใหม่ให้คนที่ติดตั้ง plugin
 

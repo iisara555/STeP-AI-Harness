@@ -6,7 +6,7 @@ Skills และกติกาการทำงานของ STeP สำห�
 | --- | --- | --- |
 | Claude Code / Claude Desktop | Claude Pro, Max, Team หรือ Enterprise | พิมพ์ 2 คำสั่งใน Claude |
 | Codex | ChatGPT Plus, Pro, Business หรือ Enterprise | 2 คำสั่งใน Codex + สคริปต์ 1 ครั้ง |
-| Google Antigravity | บัญชี Google (รวม Google AI Plus/Pro) | สคริปต์ลงโฟลเดอร์งาน |
+| Google Antigravity | บัญชี Google (รวม Google AI Plus/Pro) | สคริปต์ 1 ครั้ง (ใช้ได้ทุก workspace) |
 
 ทุกโปรแกรมได้ Skills ชุดเดียวกันและกติกาเดียวกัน: มนุษย์อนุมัติเอง ข้อมูลส่วนบุคคล ความลับ การเขียน และที่เก็บไฟล์ผลงาน
 
@@ -46,21 +46,31 @@ node scripts/install-agent-skills.mjs codex
 
 ## Google Antigravity
 
-Antigravity อ่าน Skills จากโฟลเดอร์งานที่เปิดอยู่ จึงติดตั้งลงโฟลเดอร์งานทีละโฟลเดอร์ ต้องมี [Node.js](https://nodejs.org) และโฟลเดอร์ของ repository นี้ (clone หรือ Download ZIP แบบเดียวกับ Codex) จากนั้นรันในโฟลเดอร์ของ repository:
+ต้องมี [Node.js](https://nodejs.org) และโฟลเดอร์ของ repository นี้ (clone หรือ Download ZIP แบบเดียวกับ Codex) จากนั้นรันในโฟลเดอร์ของ repository:
+
+```text
+node scripts/install-agent-skills.mjs antigravity
+```
+
+ติดตั้งครั้งเดียวใช้ได้ทุก workspace ปิดแล้วเปิด Antigravity ใหม่ สิ่งที่ได้:
+
+- `~/.gemini/config/skills/` — Skills ของ STeP (global Skills ของ Antigravity)
+- `~/.gemini/config/step/` — กติกาฉบับเต็ม เอกสาร และ manifest ที่ Skills อ้างถึง
+- `~/.gemini/GEMINI.md` — กติกาฉบับย่อ เพิ่มเป็นบล็อกท้ายไฟล์ (กติกา global ใช้ทุกแชต) ข้อความเดิมของคุณในไฟล์นั้นยังอยู่
+
+อัปเดต: ดึงรุ่นใหม่ของ repository (`git pull` หรือ Download ZIP ใหม่) แล้วรันคำสั่งเดิมซ้ำ Skills ของคุณเองจะไม่ถูกแตะ
+
+### ติดตั้งเฉพาะ workspace เดียว
+
+ระบุโฟลเดอร์งานต่อท้าย:
 
 ```text
 node scripts/install-agent-skills.mjs antigravity <โฟลเดอร์งาน>
 ```
 
-เช่น `node scripts/install-agent-skills.mjs antigravity ~/Documents/งานSTeP` แล้วเปิดโฟลเดอร์งานนั้นใน Antigravity
+ได้ `.agents/skills/` `.agents/rules/step.md` และ `.agents/step/` ในโฟลเดอร์นั้น ใช้แบบ global หรือแบบ workspace อย่างใดอย่างหนึ่ง ถ้าใช้ทั้งสองแบบ Skill จะซ้ำสองชุด
 
-สิ่งที่ได้ในโฟลเดอร์งาน:
-
-- `.agents/skills/` — Skills ของ STeP
-- `.agents/rules/step.md` — กติกาฉบับย่อ Antigravity ใช้ทุกแชต
-- `.agents/step/` — กติกาฉบับเต็ม เอกสาร และ manifest ที่ Skills อ้างถึง
-
-อัปเดต: ดึงรุ่นใหม่ของ repository (`git pull` หรือ Download ZIP ใหม่) แล้วรันคำสั่งเดิมซ้ำ Skills ของคุณเองใน `.agents/skills/` จะไม่ถูกแตะ
+ถ้าติดตั้งแบบ global แล้ว Antigravity ไม่เห็น Skills (รุ่นเก่าบางรุ่นอ่าน global Skills จากที่อื่น) ให้ใช้แบบ workspace แทน
 
 ## ใช้กับ STeP Desktop ได้ไหม
 

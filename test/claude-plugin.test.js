@@ -96,3 +96,29 @@ test('Codex rules: one managed STeP block in AGENTS.md, replaced on re-run, the 
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('Antigravity global install: Skills in ~/.gemini/config/skills, brief in GEMINI.md once, the user’s own text and Skills kept', async () => {
+  const { installAntigravityGlobal } = await import('../scripts/install-agent-skills.mjs');
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const gemini = mkdtempSync(join(tmpdir(), 'step-gemini-home-'));
+  try {
+    writeFileSync(join(gemini, 'GEMINI.md'), '# Mine\n\nตอบภาษาไทย\n');
+    mkdirSync(join(gemini, 'config', 'skills', 'my-own'), { recursive: true });
+    writeFileSync(join(gemini, 'config', 'skills', 'my-own', 'SKILL.md'), 'mine');
+    installAntigravityGlobal(gemini);
+    installAntigravityGlobal(gemini);
+    const config = join(gemini, 'config');
+    assert.equal(readdirSync(join(config, 'skills')).length, readdirSync(join(PLUGIN, 'skills')).length + 1);
+    assert.equal(readFileSync(join(config, 'skills', 'my-own', 'SKILL.md'), 'utf8'), 'mine');
+    const rules = readFileSync(join(gemini, 'GEMINI.md'), 'utf8');
+    assert.ok(rules.startsWith('# Mine\n\nตอบภาษาไทย\n'));
+    assert.equal(rules.split('STeP AI Skills: begin').length - 1, 1);
+    const linked = [...rules.matchAll(/([^\s(),`]+\/step\/rules\/[\w-]+\.md)/g)].map((m) => m[1]);
+    assert.ok(linked.length > 0);
+    for (const path of linked) assert.ok(existsSync(path), `GEMINI.md links to ${path}`);
+    assert.match(readFileSync(join(config, 'skills', 'receipt-audit', 'SKILL.md'), 'utf8'), /`\.\.\/\.\.\/step\/manifest\/documents\.yaml`/);
+  } finally {
+    rmSync(gemini, { recursive: true, force: true });
+  }
+});

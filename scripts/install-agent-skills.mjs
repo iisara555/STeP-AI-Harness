@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 // Puts the STeP Skills (plugins/step, built by scripts/build-claude-plugin.mjs) where tools without a plugin hook look:
 //
+//   node scripts/install-agent-skills.mjs antigravity
+//     Every Antigravity workspace: global Skills in ~/.gemini/config/skills/<name>/SKILL.md, the full rules, documents
+//     and manifest the Skills link to in ~/.gemini/config/step/, and the short STeP brief in the global rules file
+//     ~/.gemini/GEMINI.md between markers (the rest of that file is kept).
+//
 //   node scripts/install-agent-skills.mjs antigravity <work folder>
-//     Google Antigravity reads <folder>/.agents/skills/<name>/SKILL.md and always applies <folder>/.agents/rules/*.md.
-//     The Skills go to .agents/skills/, the short STeP brief to .agents/rules/step.md, and the full rules, documents
-//     and manifest the Skills link to go to .agents/step/ (kept out of .agents/rules so they are read only when needed).
-//     Links inside the copies are rewritten to the new places.
+//     One workspace only: Antigravity reads <folder>/.agents/skills/<name>/SKILL.md and always applies
+//     <folder>/.agents/rules/*.md. The Skills go to .agents/skills/, the short brief to .agents/rules/step.md, and the
+//     full files to .agents/step/ (kept out of .agents/rules so they are read only when needed).
+//
+//   Links inside the copies are rewritten to the new places.
 //
 //   node scripts/install-agent-skills.mjs codex [CODEX_HOME]
 //     Codex installs the Skills as a plugin (codex plugin marketplace add iisara555/STeP-AI-Harness; codex plugin add
@@ -29,10 +35,9 @@ const walk = dir =>
   readdirSync(dir, { withFileTypes: true }).flatMap(e => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 const brief = () => readFileSync(join(PLUGIN, 'session-brief.md'), 'utf8');
 
-/** Copies the plugin into an Antigravity workspace: skills/ → .agents/skills/, everything else → .agents/step/. */
-export function installAntigravity(workspace) {
+/** Copies the plugin under `agents`: skills/ → <agents>/skills/, everything else → <agents>/step/. Returns the Skill names. */
+function copySkills(agents) {
   if (!existsSync(join(PLUGIN, 'skills'))) throw new Error('plugins/step is missing; run node scripts/build-claude-plugin.mjs');
-  const agents = join(resolve(workspace), '.agents');
   const place = pluginFile => {
     const rel = toPosix(relative(PLUGIN, pluginFile));
     return rel.startsWith('skills/') ? join(agents, rel) : join(agents, 'step', rel);
@@ -61,31 +66,59 @@ export function installAntigravity(workspace) {
     });
     writeFileSync(to, text);
   }
-  mkdirSync(join(agents, 'rules'), { recursive: true });
-  writeFileSync(
-    join(agents, 'rules', 'step.md'),
-    brief()
-      .replace(/\(rules\//g, '(.agents/step/rules/')
-      .replace(/, rules\//g, ', .agents/step/rules/')
-      .replace(/ไฟล์ rules\/ ที่อ้างถึงอยู่ในโฟลเดอร์ที่ติดตั้ง `step` ไว้/, 'ไฟล์กติกาฉบับเต็มอยู่ใน `.agents/step/rules/`'),
-  );
   writeFileSync(record, JSON.stringify({ skills, from: 'plugins/step', version: JSON.parse(readFileSync(join(PLUGIN, '.claude-plugin', 'plugin.json'), 'utf8')).version }, null, 2) + '\n');
-  return { skills: skills.length, agents };
+  return skills;
 }
 
-/** Writes or replaces the STeP block in Codex's global AGENTS.md. */
-export function installCodexRules(codexHome = process.env.CODEX_HOME || join(homedir(), '.codex')) {
-  const file = join(codexHome, 'AGENTS.md');
+/** The session brief with its rules/ paths pointing at `rulesDir`. */
+const briefFor = rulesDir =>
+  brief()
+    .replace(/\(rules\//g, `(${rulesDir}/`)
+    .replace(/, rules\//g, `, ${rulesDir}/`)
+    .replace(/ไฟล์ rules\/ ที่อ้างถึงอยู่ในโฟลเดอร์ที่ติดตั้ง `step` ไว้/, `ไฟล์กติกาฉบับเต็มอยู่ใน \`${rulesDir}/\``);
+
+/** Writes `body` between the STeP markers in `file`, replacing an earlier block and keeping everything else. */
+function writeBlock(file, body) {
   const current = existsSync(file) ? readFileSync(file, 'utf8') : '';
-  const block = `${BEGIN}\n${brief().replace(/ไฟล์ rules\/ ที่อ้างถึงอยู่ในโฟลเดอร์ที่ติดตั้ง `step` ไว้/, 'ไฟล์ rules/ ที่อ้างถึงอยู่ในโฟลเดอร์ของ plugin `step` (ติดตั้งด้วย `codex plugin add step@step-ai`)').trim()}\n${END}\n`;
+  const block = `${BEGIN}\n${body.trim()}\n${END}\n`;
   const start = current.indexOf(BEGIN),
     end = current.indexOf(END);
   const next =
     start >= 0 && end > start
       ? current.slice(0, start) + block + current.slice(end + END.length).replace(/^\n/, '')
       : current + (current && !current.endsWith('\n\n') ? (current.endsWith('\n') ? '\n' : '\n\n') : '') + block;
-  mkdirSync(codexHome, { recursive: true });
+  mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, next);
+}
+
+/** One Antigravity workspace: skills/ → .agents/skills/, everything else → .agents/step/, brief → .agents/rules/step.md. */
+export function installAntigravity(workspace) {
+  const agents = join(resolve(workspace), '.agents');
+  const skills = copySkills(agents);
+  mkdirSync(join(agents, 'rules'), { recursive: true });
+  writeFileSync(join(agents, 'rules', 'step.md'), briefFor('.agents/step/rules'));
+  return { skills: skills.length, agents };
+}
+
+/** Every Antigravity workspace: Skills in <geminiHome>/config/skills/, full files in <geminiHome>/config/step/, brief in GEMINI.md. */
+export function installAntigravityGlobal(geminiHome = join(homedir(), '.gemini')) {
+  const config = join(geminiHome, 'config');
+  const skills = copySkills(config);
+  // Written as ~/... under the home folder, so the rules file carries no user name.
+  const full = join(config, 'step', 'rules'),
+    home = relative(homedir(), full);
+  const rulesDir = home && !home.startsWith('..') && !home.startsWith(sep) && !/^[A-Za-z]:/.test(home) ? `~/${toPosix(home)}` : toPosix(full);
+  writeBlock(join(geminiHome, 'GEMINI.md'), briefFor(rulesDir));
+  return { skills: skills.length, agents: config, rules: join(geminiHome, 'GEMINI.md') };
+}
+
+/** Writes or replaces the STeP block in Codex's global AGENTS.md. */
+export function installCodexRules(codexHome = process.env.CODEX_HOME || join(homedir(), '.codex')) {
+  const file = join(codexHome, 'AGENTS.md');
+  writeBlock(
+    file,
+    brief().replace(/ไฟล์ rules\/ ที่อ้างถึงอยู่ในโฟลเดอร์ที่ติดตั้ง `step` ไว้/, 'ไฟล์ rules/ ที่อ้างถึงอยู่ในโฟลเดอร์ของ plugin `step` (ติดตั้งด้วย `codex plugin add step@step-ai`)'),
+  );
   return { file };
 }
 
@@ -94,11 +127,14 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (target === 'antigravity' && where) {
     const { skills, agents } = installAntigravity(where);
     console.log(`Installed ${skills} STeP Skills for Antigravity in ${agents} (rules: .agents/rules/step.md). Open the folder in Antigravity.`);
+  } else if (target === 'antigravity') {
+    const { skills, agents, rules } = installAntigravityGlobal();
+    console.log(`Installed ${skills} STeP Skills for every Antigravity workspace in ${agents} (rules: ${rules}). Restart Antigravity.`);
   } else if (target === 'codex') {
     const { file } = installCodexRules(where);
     console.log(`Wrote the STeP rules block to ${file}. Install the Skills with: codex plugin marketplace add iisara555/STeP-AI-Harness && codex plugin add step@step-ai`);
   } else {
-    console.error('Usage: node scripts/install-agent-skills.mjs antigravity <work folder>\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]');
+    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]');
     process.exit(2);
   }
 }
