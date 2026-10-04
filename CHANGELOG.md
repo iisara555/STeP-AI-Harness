@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.7 (`desktop/package.json`) contains the changes below. 0.5.7 adds the first six sections, from "The browser agent can click tiles" through "Update card above the profile". "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+STeP Desktop version 0.5.8 (`desktop/package.json`) contains the changes below. 0.5.8 adds three sections: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
 
 ### Uninstalling
 
