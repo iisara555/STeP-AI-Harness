@@ -23,6 +23,13 @@
 //     own CLIs when they are on PATH, the Codex rules, the global Antigravity install when ~/.gemini exists, then
 //     asks the profile questions. Tools that are missing are skipped with what to do instead.
 //
+//   node scripts/install-agent-skills.mjs uninstall [work folder]
+//     Undoes setup, for Uninstall-STeP-Skills.bat / .command: removes the plugin from Claude and Codex through their
+//     CLIs, the STeP rules and profile blocks from ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md and ~/.gemini/GEMINI.md
+//     (everything else in those files stays), the Antigravity Skills this script installed (by its installed.json,
+//     so the employee's own Skills stay) and, with a work folder, that folder's .agents install. It asks before
+//     removing the profile shared with STeP Desktop. Work files (output/) are never touched.
+//
 //   node scripts/install-agent-skills.mjs profile [--name=.. --team=.. --assistant=.. --style=..]
 //     The employee's own profile (what USER.md held in the folder workflow): nickname, team, assistant name and
 //     conversation style. Asked once, written between its own markers into the global instructions file of every tool
@@ -278,6 +285,87 @@ const run = (command, args) =>
     : spawnSync(command, args, { stdio: 'inherit' })
   ).status === 0;
 
+/** Removes the text between `begin` and `finish` from `file`; deletes the file when nothing else is left in it. */
+function removeBlock(file, begin = BEGIN, finish = END) {
+  if (!existsSync(file)) return false;
+  const current = readFileSync(file, 'utf8');
+  const start = current.indexOf(begin),
+    end = current.indexOf(finish);
+  if (start < 0 || end < start) return false;
+  const next = (current.slice(0, start).replace(/\n+$/, '\n') + current.slice(end + finish.length).replace(/^\n+/, '')).replace(/^\n+$/, '');
+  if (next.trim()) writeFileSync(file, next);
+  else rmSync(file);
+  return true;
+}
+
+/** Removes what copySkills put under `agents`: the recorded Skills and the step/ folder. Returns how many Skills. */
+function removeSkills(agents) {
+  const record = join(agents, 'step', 'installed.json');
+  if (!existsSync(record)) return 0;
+  let skills = [];
+  try {
+    skills = JSON.parse(readFileSync(record, 'utf8')).skills || [];
+  } catch {}
+  // Only plain folder names from the record, so a damaged record cannot point outside the skills folder.
+  const names = skills.filter(name => typeof name === 'string' && /^[\w-]+$/.test(name));
+  for (const name of names) rmSync(join(agents, 'skills', name), { recursive: true, force: true });
+  rmSync(join(agents, 'step'), { recursive: true, force: true });
+  return names.length;
+}
+
+/** Undoes setup (and, given a work folder, a workspace Antigravity install). Returns one line per item for the summary. */
+export async function uninstall({ home = homedir(), env = process.env, has = onPath, exec = run, ask = asker(), workspace } = {}) {
+  const done = [];
+  done.push = (...lines) => (lines.forEach(line => console.log(line)), Array.prototype.push.apply(done, lines));
+  const step = title => console.log(`\n=== ${title} ===`);
+  const blocks = file => [removeBlock(file), removeBlock(file, PROFILE_BEGIN, PROFILE_END)].some(Boolean);
+
+  step('Claude');
+  if (has('claude')) {
+    const removed = exec('claude', ['plugin', 'uninstall', 'step@step-ai']);
+    exec('claude', ['plugin', 'marketplace', 'remove', 'step-ai']);
+    done.push(removed ? '✅ Claude: ถอน Skills แล้ว' : '➖ Claude: ไม่พบ Skills ของ STeP (อาจถอนไปแล้ว)');
+  } else done.push('➖ Claude: ไม่พบคำสั่ง claude ถ้าเคยติดตั้งไว้ ให้พิมพ์ใน Claude Code: /plugin uninstall step@step-ai');
+  if (blocks(join(home, '.claude', 'CLAUDE.md'))) done.push('✅ Claude: ลบโปรไฟล์ STeP ออกจาก ~/.claude/CLAUDE.md แล้ว');
+
+  step('Codex');
+  const codexHome = env.CODEX_HOME || join(home, '.codex');
+  if (has('codex')) {
+    const removed = exec('codex', ['plugin', 'remove', 'step@step-ai']);
+    exec('codex', ['plugin', 'marketplace', 'remove', 'step-ai']);
+    done.push(removed ? '✅ Codex: ถอน Skills แล้ว' : '➖ Codex: ไม่พบ Skills ของ STeP (อาจถอนไปแล้ว)');
+  } else if (existsSync(codexHome)) done.push('➖ Codex: ไม่พบคำสั่ง codex ถ้าเคยติดตั้ง Skills ไว้ ให้รัน: codex plugin remove step@step-ai');
+  if (blocks(join(codexHome, 'AGENTS.md'))) done.push('✅ Codex: ลบกติกาและโปรไฟล์ STeP ออกจาก AGENTS.md แล้ว');
+
+  step('Google Antigravity');
+  const gemini = join(home, '.gemini');
+  const globalSkills = removeSkills(join(gemini, 'config'));
+  if (globalSkills) done.push(`✅ Antigravity: ลบ ${globalSkills} Skills ของ STeP แล้ว (Skills ของคุณเองยังอยู่)`);
+  if (blocks(join(gemini, 'GEMINI.md'))) done.push('✅ Antigravity: ลบกติกาและโปรไฟล์ STeP ออกจาก ~/.gemini/GEMINI.md แล้ว');
+  if (workspace) {
+    const agents = join(resolve(workspace), '.agents');
+    const count = removeSkills(agents);
+    rmSync(join(agents, 'rules', 'step.md'), { force: true });
+    done.push(count ? `✅ Antigravity: ลบ ${count} Skills ของ STeP ออกจาก ${agents} แล้ว` : `➖ Antigravity: ไม่พบ Skills ของ STeP ใน ${agents}`);
+  }
+  if (!globalSkills && !workspace && !existsSync(join(gemini, 'GEMINI.md'))) done.push('➖ Antigravity: ไม่พบสิ่งที่ STeP ติดตั้งไว้');
+
+  step('โปรไฟล์');
+  const shared = sharedProfileFile(home, env);
+  if (existsSync(shared)) {
+    const answer = await ask.answer('ลบโปรไฟล์ที่ใช้ร่วมกับ STeP Desktop ด้วยไหม? ถ้ายังใช้ STeP Desktop ควรเก็บไว้ (y = ลบ, Enter = เก็บ): ', 'n');
+    if (/^(y|yes|ใช่|ลบ)$/i.test(answer.trim())) {
+      rmSync(shared, { force: true });
+      done.push('✅ โปรไฟล์: ลบ ~/.step-ai/profile.json แล้ว');
+    } else done.push('➖ โปรไฟล์: เก็บไว้ให้ STeP Desktop');
+  }
+  ask.close();
+  step('สรุป');
+  for (const line of done) console.log(line);
+  console.log('\nไฟล์ผลงานใน output/ และข้อมูลของ STeP Desktop ไม่ถูกแตะ เริ่มแชตใหม่ในแต่ละโปรแกรมเพื่อให้การเปลี่ยนแปลงมีผล');
+  return done;
+}
+
 /** Installs into every tool found, then asks for the profile. Returns one line per tool for the summary. */
 export async function setup({ home = homedir(), env = process.env, has = onPath, exec = run, ask = asker() } = {}) {
   const done = [];
@@ -342,6 +430,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   }
   if (target === 'setup') {
     await setup();
+  } else if (target === 'uninstall') {
+    await uninstall({ workspace: where });
   } else if (target === 'profile') {
     const flags = Object.fromEntries(process.argv.slice(3).map(a => /^--(\w+)=(.*)$/s.exec(a)).filter(Boolean).map(m => [m[1], m[2]]));
     const targets = profileTargets();
@@ -367,7 +457,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const { file } = installCodexRules(where);
     console.log(`Wrote the STeP rules block to ${file}. Install the Skills with: codex plugin marketplace add iisara555/STeP-AI-Harness && codex plugin add step@step-ai`);
   } else {
-    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]\n       node scripts/install-agent-skills.mjs profile\n       node scripts/install-agent-skills.mjs setup');
+    console.error('Usage: node scripts/install-agent-skills.mjs antigravity [work folder]\n       node scripts/install-agent-skills.mjs codex [CODEX_HOME]\n       node scripts/install-agent-skills.mjs profile\n       node scripts/install-agent-skills.mjs setup\n       node scripts/install-agent-skills.mjs uninstall [work folder]');
     process.exit(2);
   }
 }

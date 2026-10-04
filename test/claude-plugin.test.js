@@ -238,3 +238,57 @@ test('Legacy Install/Update launchers hand over to Setup-STeP-Skills in a GitHub
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Uninstall: undoes setup in every tool, keeps the employee’s own text and Skills, asks before removing the shared profile', async () => {
+  const { setup, uninstall } = await import('../scripts/install-agent-skills.mjs');
+  const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const home = mkdtempSync(join(tmpdir(), 'step-uninstall-'));
+  const work = mkdtempSync(join(tmpdir(), 'step-uninstall-work-'));
+  const ran = [];
+  const fake = (answers) => ({ answer: async (_q, fallback = '') => answers.shift() || fallback, close: () => {} });
+  const log = console.log;
+  console.log = () => {};
+  try {
+    mkdirSync(join(home, '.gemini', 'config', 'skills', 'my-own'), { recursive: true });
+    writeFileSync(join(home, '.gemini', 'config', 'skills', 'my-own', 'SKILL.md'), 'mine');
+    mkdirSync(join(home, '.codex'));
+    writeFileSync(join(home, '.codex', 'AGENTS.md'), '# My rules\n\nkeep me\n');
+    const exec = (cmd, args) => (ran.push([cmd, ...args].join(' ')), mkdirSync(join(home, '.claude'), { recursive: true }), true);
+    const has = (cmd) => cmd === 'claude' || cmd === 'codex';
+    await setup({ home, env: {}, has, exec, ask: fake(['ต้น', 'cc', '', '']) });
+    const { installAntigravity } = await import('../scripts/install-agent-skills.mjs');
+    installAntigravity(work);
+
+    // Enter keeps the shared profile (STeP Desktop still uses it).
+    await uninstall({ home, env: {}, has, exec, ask: fake(['']), workspace: work });
+    assert.ok(ran.includes('claude plugin uninstall step@step-ai') && ran.includes('claude plugin marketplace remove step-ai'));
+    assert.ok(ran.includes('codex plugin remove step@step-ai') && ran.includes('codex plugin marketplace remove step-ai'));
+    assert.equal(readFileSync(join(home, '.codex', 'AGENTS.md'), 'utf8'), '# My rules\n\nkeep me\n', 'the employee’s own rules are left exactly');
+    assert.equal(existsSync(join(home, '.claude', 'CLAUDE.md')), false, 'a file holding only STeP blocks is removed');
+    assert.equal(existsSync(join(home, '.gemini', 'GEMINI.md')), false);
+    assert.deepEqual(readdirSync(join(home, '.gemini', 'config', 'skills')), ['my-own']);
+    assert.equal(existsSync(join(home, '.gemini', 'config', 'step')), false);
+    assert.deepEqual(readdirSync(join(work, '.agents', 'skills')), []);
+    assert.equal(existsSync(join(work, '.agents', 'rules', 'step.md')), false);
+    assert.ok(existsSync(join(home, '.step-ai', 'profile.json')), 'kept unless the person says y');
+
+    // Running it again is harmless, and y removes the shared profile.
+    await uninstall({ home, env: {}, has: () => false, exec, ask: fake(['y']) });
+    assert.equal(existsSync(join(home, '.step-ai', 'profile.json')), false);
+    assert.equal(readFileSync(join(home, '.codex', 'AGENTS.md'), 'utf8'), '# My rules\n\nkeep me\n');
+  } finally {
+    console.log = log;
+    rmSync(home, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true });
+  }
+});
+
+test('Desktop uninstaller offers to remove the app data, unticked, and never on update', () => {
+  const nsh = readFileSync(join(ROOT, 'desktop', 'build', 'installer.nsh'), 'utf8');
+  assert.ok(nsh.startsWith('﻿'), 'UTF-8 with BOM, so NSIS reads the Thai text as Unicode');
+  assert.match(nsh, /!macro customUnWelcomePage[\s\S]*NSD_CreateCheckbox[\s\S]*UninstPage custom un\.stepDataPage un\.stepDataLeave/);
+  assert.match(nsh, /!macro customUnInstall\s+\$\{IfNot\} \$\{isUpdated\}\s+\$\{AndIf\} \$stepDeleteData == \$\{BST_CHECKED\}/);
+  const pkg = JSON.parse(readFileSync(join(ROOT, 'desktop', 'package.json'), 'utf8'));
+  assert.equal(pkg.build.nsis.deleteAppDataOnUninstall, false, 'the default stays: keep data unless the box is ticked');
+});

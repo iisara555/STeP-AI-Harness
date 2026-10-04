@@ -86,6 +86,10 @@ node scripts/install-agent-skills.mjs profile
 
 ตอบชื่อเรียก ทีม ชื่อผู้ช่วย และสไตล์การคุย (Enter ข้ามได้) ระบบเขียนบล็อก "ข้อมูลผู้ใช้ STeP" ลง `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` และ `~/.gemini/GEMINI.md` ของโปรแกรมที่มีในเครื่อง ใช้ทุกแชต รันซ้ำเพื่อแก้ ถ้าโฟลเดอร์งานมี `USER.md` ของชุดเดิม AI ใช้ไฟล์นั้นแทน ห้ามใส่เลขบัตร เบอร์โทร หรือรหัสผ่าน
 
+## ถอนการติดตั้ง
+
+ดับเบิลคลิก `Uninstall-STeP-Skills.bat` (Windows) หรือ `Uninstall-STeP-Skills.command` (macOS) หรือรัน `node scripts/install-agent-skills.mjs uninstall [โฟลเดอร์งาน]` ถอน plugin ออกจาก Claude และ Codex ลบกติกาและโปรไฟล์ที่ Setup เขียนไว้ (ข้อความอื่นในไฟล์ยังอยู่) ลบ Skills ของ STeP ใน Antigravity (Skills ของคุณเองยังอยู่) และถามก่อนลบโปรไฟล์ `~/.step-ai/profile.json` ไฟล์ผลงานไม่ถูกแตะ
+
 ## ใช้กับ STeP Desktop ได้ไหม
 
 ได้ ใช้คู่กันได้ STeP Desktop มี Skills ชุดเดียวกันอยู่แล้ว ไม่ต้องติดตั้ง plugin เพิ่มสำหรับ Desktop
