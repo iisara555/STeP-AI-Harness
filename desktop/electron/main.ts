@@ -74,6 +74,7 @@ import { CostLedger } from './cost';
 import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
+import { proposalMarkdown, type SkillInfo } from './skill-proposal';
 import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
@@ -954,6 +955,52 @@ async function main() {
         } finally {
           clearTimeout(timeout);
         }
+      }
+      case 'skillProposal': {
+        // A confirmed lesson becomes a proposal file for an organization Skill's maintainers: the lesson, its evidence,
+        // a patch to SKILL.md and a regression case. The app never edits the Skill; the maintainer applies it in Git.
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        const state = learning.snapshot();
+        if (input.context !== state.context) throw new Error('WORKSPACE_CHANGED');
+        const lesson = state.lessons.find(l => l.id === input.lessonId);
+        const head = lesson?.revisions.at(-1);
+        if (!lesson || !head?.content) throw new Error('LEARNING_NOT_FOUND');
+        const skill = ((await skillCatalog.loadSkillCatalog(root)) as SkillInfo[]).find(
+          entry => entry.name === inputText(input.skill, 80) && /^skills\/[\w./-]+\/SKILL\.md$/.test(entry.path),
+        );
+        if (!skill || skill.path.split('/').includes('..')) throw new Error('SKILL_NOT_FOUND');
+        const skillText = await readFile(join(root, skill.path), 'utf8');
+        // The evidence of the revision being proposed, or of the confirmed one it was restored from.
+        const confirmed = [...lesson.revisions]
+          .reverse()
+          .find(r => r.candidateId && JSON.stringify(r.content) === JSON.stringify(head.content));
+        const evidence = state.candidates.find(c => c.id === confirmed?.candidateId)?.evidence || '';
+        const at = new Date().toISOString();
+        const markdown = proposalMarkdown({
+          skill,
+          skillText,
+          lesson: head.content,
+          lessonId: lesson.id,
+          revision: head.revision,
+          evidence,
+          team: store.settings().team,
+          at,
+        });
+        // The file leaves this computer through the employee, so it is checked like anything sent out.
+        const scan = harness.privacy(markdown);
+        if (scan.action !== 'pass' || scan.redactedText !== markdown) throw new Error('PRIVACY_REVIEW_REQUIRED');
+        const saved = await dialog.showSaveDialog(window, {
+          title: tm('บันทึกข้อเสนอแก้ Skill'),
+          defaultPath: join(
+            store.settings().workspace || app.getPath('documents') || tmpdir(),
+            `skill-proposal-${skill.name}-${at.slice(0, 10)}.md`,
+          ),
+          filters: [{ name: 'Markdown', extensions: ['md'] }],
+        });
+        if (saved.canceled || !saved.filePath) return null;
+        await writeFile(saved.filePath, markdown, 'utf8');
+        exportPaths.add(saved.filePath);
+        return { path: saved.filePath, skill: skill.name, owner: skill.owner };
       }
       case 'learningPropose':
       case 'learningRevise':

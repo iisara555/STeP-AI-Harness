@@ -6,7 +6,21 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-The first section below is not released yet. STeP Desktop version 0.5.11 contains the next five sections, published as `desktop-v0.5.11`: "Long tasks: compaction sized to the model, more tool turns, a progress report at the limit", "Work in progress survives switching pages", "Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode", "Tables, clean Excel and the Thai official layout" and "Qwen and MiniMax with the employee's own key". "Your plan through Claude Code: off by default, on for the pilot" was published as `desktop-v0.5.10`. "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+The first two sections below are not released yet. STeP Desktop version 0.5.11 contains the next five sections, published as `desktop-v0.5.11`: "Long tasks: compaction sized to the model, more tool turns, a progress report at the limit", "Work in progress survives switching pages", "Web agent: finds tiles on menus that load late, and asks only at the final step in auto mode", "Tables, clean Excel and the Thai official layout" and "Qwen and MiniMax with the employee's own key". "Your plan through Claude Code: off by default, on for the pilot" was published as `desktop-v0.5.10`. "Open source under the MIT License", "Claude Pro / Max in the app, on by default" and "Apps set up before 0.5.8 share their profile too" were published as `desktop-v0.5.9`. Three further sections were published as `desktop-v0.5.8`: "Uninstalling" (the uninstaller's data choice), "One profile for STeP Desktop and Setup-STeP-Skills" and "Gemini via Antigravity: opt the STeP agent out of built-in tools". "STeP Skills for Claude, Codex and Antigravity" belongs to the harness, not the app. The six sections from "The browser agent can click tiles" through "Update card above the profile" were published as `desktop-v0.5.7`. "Gemini: faster tool turns", "Profile pictures" and the contextual empty-state illustrations (PR #91) were published as `desktop-v0.5.6`. Everything from "Updates inside the app" down was published as `desktop-v0.5.5`.
+
+### Learning from work, part 2: propose a lesson to a Skill's maintainers
+
+- A confirmed lesson in the Learning Inbox can be sent to the maintainers of an organization Skill ("Propose to the Skill maintainers"). The app writes a proposal file containing:
+  - the lesson and its evidence;
+  - a patch that adds the lesson to the Skill's `SKILL.md` under "## บทเรียนจากการใช้งาน";
+  - a regression test case for `evals/skills/<skill>.json`.
+- The app never edits an organization Skill. The whole file passes the privacy check before it is saved, and Plan mode cannot create one.
+- For maintainers, `node scripts/apply-skill-proposal.mjs <file>` (with `--dry-run`):
+  - checks the patch touches only that Skill and still applies;
+  - refuses a test case whose prompt is still the TODO placeholder;
+  - applies the patch, adds the case and runs the repository validator, without committing.
+  - The Pull Request then goes through the usual review and CI, which routes the case's prompt.
+- Tests: `test/skill-proposal.test.ts` applies the patch with `git apply` and runs the script on a full checkout, including the validator. `test/learning-smoke.mjs` creates a proposal from the real app and checks the Skill file is unchanged.
 
 ### Learning from work, part 1: Learning Inbox, lesson rollback and AI drafts
 

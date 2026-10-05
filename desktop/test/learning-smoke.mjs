@@ -110,6 +110,22 @@ try {
   assert.equal((await state()).lessons[0].revisions.at(-1).content.text, marker);
   assert.equal((await runTask()).learned, true, 'restored lesson survives restart');
   const context = (await state()).context;
+  // A confirmed lesson becomes a proposal file for a Skill's maintainers: lesson, patch and test case; the Skill itself
+  // is not touched.
+  const proposalFile = join(home, 'skill-proposal.md');
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+  }, proposalFile);
+  const skillBefore = await readFile('../skills/pm/meeting-summary/SKILL.md', 'utf8');
+  const lessonId = (await state()).lessons[0].id;
+  const proposal = await call('skillProposal', { context, lessonId, skill: 'meeting-summary' });
+  assert.equal(proposal.path, proposalFile);
+  const markdown = await readFile(proposalFile, 'utf8');
+  assert.match(markdown, /- Skill: `meeting-summary` \(skills\/pm\/meeting-summary\/SKILL\.md\)/);
+  assert.match(markdown, /```diff\n--- a\/skills\/pm\/meeting-summary\/SKILL\.md/);
+  assert.ok(markdown.includes(marker));
+  assert.equal(await readFile('../skills/pm/meeting-summary/SKILL.md', 'utf8'), skillBefore, 'the Skill itself is unchanged');
+  await assert.rejects(call('skillProposal', { context, lessonId, skill: '../../etc' }), /SKILL_NOT_FOUND/);
   // The AI drafts lessons from a finished task: a draft is a pending candidate marked as the AI's, one with personal
   // data is dropped, and nothing reaches later prompts until it is confirmed.
   const finished = (await call('snapshot')).sessions.find(s => s.status === 'review');
@@ -142,7 +158,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Learning smoke passed: /learn UI, AI drafts as pending candidates, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
+    'Learning smoke passed: /learn UI, AI drafts as pending candidates, Skill change proposal files, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
   );
 } finally {
   await app?.close();

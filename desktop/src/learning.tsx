@@ -25,10 +25,17 @@ export function LearningDialog({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [focus, setFocus] = useState(''),
-    [drafted, setDrafted] = useState('');
+    [drafted, setDrafted] = useState(''),
+    [skills, setSkills] = useState<{ name: string; title: string; owner: string }[]>([]),
+    [skillFor, setSkillFor] = useState<Record<string, string>>({}),
+    [proposed, setProposed] = useState<Record<string, string>>({});
   const load = async () => setData(await api.call('learningList'));
   useEffect(() => {
     void load().catch(e => setError(explainError(e)));
+    void api
+      .call('skills')
+      .then(list => setSkills(list.filter((skill: any) => skill.path)))
+      .catch(() => {});
   }, []);
   const act = async (run: () => Promise<unknown>) => {
     if (busy) return;
@@ -258,6 +265,47 @@ export function LearningDialog({
                 >
                   {t('หยุดใช้บทเรียน')}
                 </button>
+                <details className="skill-proposal">
+                  <summary>{t('เสนอให้ผู้ดูแล Skill')}</summary>
+                  <p className="small muted">
+                    {t(
+                      'ถ้าบทเรียนนี้ควรใช้กับทุกคนที่ใช้ Skill นั้น ให้ส่งเป็นข้อเสนอ แอปไม่แก้ Skill ขององค์กรเอง ไฟล์ที่ได้มีบทเรียน หลักฐาน patch และกรณีทดสอบ ส่งให้ผู้ดูแล Skill ตรวจผ่าน Git',
+                    )}
+                  </p>
+                  <select
+                    aria-label={t('Skill ที่บทเรียนนี้ปรับปรุง')}
+                    value={skillFor[l.id] || ''}
+                    onChange={e => setSkillFor({ ...skillFor, [l.id]: e.target.value })}
+                  >
+                    <option value="">{t('เลือก Skill')}</option>
+                    {skills.map(skill => (
+                      <option key={skill.name} value={skill.name}>
+                        {skill.title || skill.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="quiet"
+                    disabled={busy || !skillFor[l.id]}
+                    onClick={() =>
+                      void act(async () => {
+                        const result = await api.call('skillProposal', { context: data.context, lessonId: l.id, skill: skillFor[l.id] });
+                        if (result)
+                          setProposed({
+                            ...proposed,
+                            [l.id]: t('บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแล Skill ทีม {1}', result.path, result.owner || '-'),
+                          });
+                      })
+                    }
+                  >
+                    {t('สร้างไฟล์ข้อเสนอ')}
+                  </button>
+                  {proposed[l.id] && (
+                    <p className="small" role="status">
+                      {proposed[l.id]}
+                    </p>
+                  )}
+                </details>
               </>
             )}
             <details>

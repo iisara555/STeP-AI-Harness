@@ -1186,6 +1186,13 @@ export const en: Record<string, string> = {
   'ที่มา: AI ร่างจากงาน ตรวจให้แน่ใจก่อนยืนยัน': 'Source: drafted by the AI from the task. Check it before confirming',
   'งานนี้ยังไม่มีคำตอบจาก AI ให้ร่างบทเรียน ทำงานก่อนแล้วค่อยให้ AI ร่าง':
     'This task has no AI answer to learn from yet. Do the work first, then have the AI draft lessons',
+  'เสนอให้ผู้ดูแล Skill': 'Propose to the Skill maintainers',
+  'ถ้าบทเรียนนี้ควรใช้กับทุกคนที่ใช้ Skill นั้น ให้ส่งเป็นข้อเสนอ แอปไม่แก้ Skill ขององค์กรเอง ไฟล์ที่ได้มีบทเรียน หลักฐาน patch และกรณีทดสอบ ส่งให้ผู้ดูแล Skill ตรวจผ่าน Git':
+    'If this lesson should apply to everyone who uses that Skill, send it as a proposal. The app never changes organization Skills itself. The file has the lesson, its evidence, a patch and a test case for the Skill maintainers to review in Git.',
+  'Skill ที่บทเรียนนี้ปรับปรุง': 'The Skill this lesson improves',
+  สร้างไฟล์ข้อเสนอ: 'Create the proposal file',
+  'บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแล Skill ทีม {1}': 'Proposal saved to {0}. Send this file to the Skill maintainers of team {1}',
+  'บันทึกข้อเสนอแก้ Skill': 'Save the Skill change proposal',
   'ให้ Agent กดขั้นสุดท้ายนี้?': 'Let the Agent press this final step?',
   'รออนุญาตขั้นสุดท้าย: {0}': 'Waiting for approval of the final step: {0}',
   '\nนี่คือการส่งหรือยืนยันรายการบนเว็บ ตรวจข้อมูลในแท็บเว็บให้ครบก่อนอนุมัติ':
