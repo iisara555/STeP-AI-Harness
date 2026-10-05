@@ -53,7 +53,7 @@ const PATTERNS = [
   },
   {
     id: 'credit-card', label: 'หมายเลขบัตรที่ผ่าน Luhn', class: 'restricted',
-    regex: /(?<![\d-])(?:\d[ -]?){12,18}\d(?![\d-])/g,
+    regex: /(?<![\dA-Za-z-])(?:\d[ -]?){12,18}\d(?![\dA-Za-z-])/g, // not inside a UUID or hex identifier
     validate: (value) => isLuhnCard(value),
     replacement: '[หมายเลขบัตรถูกปิดบัง]',
   },
