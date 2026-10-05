@@ -74,6 +74,7 @@ import { publicSourceUrl } from './web';
 import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
+import { LearningDialog } from './learning';
 import { FeedbackButtons, FeedbackDialog, type FeedbackAsk } from './feedback';
 import { AutomationDialog } from './automations';
 import { commandPalette, commandForKey, vimEdit, COMMANDS } from './commands';
@@ -94,6 +95,8 @@ export default function App() {
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
     [memoryOpen, setMemoryOpen] = useState(false);
+  const [learningOpen, setLearningOpen] = useState(false),
+    [learningText, setLearningText] = useState('');
   const [packsOpen, setPacksOpen] = useState(false),
     [keyboardOpen, setKeyboardOpen] = useState(false),
     [vimNormal, setVimNormal] = useState(false);
@@ -511,6 +514,12 @@ export default function App() {
     return s;
   }
   async function send() {
+    if (/^\/(learn|learning)(?:\s|$)/.test(query.trim())) {
+      setLearningText(query.trim().replace(/^\/(learn|learning)\s*/, ''));
+      setLearningOpen(true);
+      setQuery('');
+      return;
+    }
     if (query.trim() === '/memory') {
       setQuery('');
       setMemoryOpen(true);
@@ -786,6 +795,10 @@ export default function App() {
     new: () => void action(create),
     usage: () => setUsageOpen(true),
     memory: () => setMemoryOpen(true),
+    learning: () => {
+      setLearningText('');
+      setLearningOpen(true);
+    },
     automations: () => setAutomationOpen(true),
     settings: () => {
       setSettingsPage('general');
@@ -1170,6 +1183,17 @@ export default function App() {
                     >
                       <Brain size={15} />
                       {t('ความจำ')}
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setChatMenu(false);
+                        setLearningText('');
+                        setLearningOpen(true);
+                      }}
+                    >
+                      <Brain size={15} />
+                      {t('กล่องบทเรียน')}
                     </button>
                     <button
                       role="menuitem"
@@ -2237,6 +2261,7 @@ export default function App() {
           </>
         )}
         {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
+        {learningOpen && api && <LearningDialog api={api} initialText={learningText} onClose={() => setLearningOpen(false)} />}
         {memoryOpen && api && snapshot && (
           <MemoryDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setMemoryOpen(false)} />
         )}

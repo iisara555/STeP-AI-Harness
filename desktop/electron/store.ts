@@ -31,6 +31,17 @@ export class Store {
       .run(kind, id, JSON.stringify(value));
     if (kind === 'session') this.index(value as Session);
   }
+  transaction<T>(action: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = action();
+      this.db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+  }
   private index(s: Session) {
     this.db.prepare('DELETE FROM session_search WHERE id=?').run(s.id);
     this.db

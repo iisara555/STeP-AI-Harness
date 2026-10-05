@@ -2,6 +2,10 @@
 import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  LEARNING_INVALID: 'กรุณากรอกชื่อ บทเรียน ที่มา และคำที่ใช้เลือกวิธีทำงานให้ครบ',
+  LEARNING_NOT_FOUND: 'ข้อเสนอหรือรุ่นนี้เปลี่ยนไปแล้ว ปิดแล้วเปิดกล่องบทเรียนอีกครั้ง',
+  LEARNING_CONFLICT: 'บทเรียนมีรุ่นใหม่แล้ว กรุณาตรวจรุ่นปัจจุบันและเสนออีกครั้ง',
+  LEARNING_LIMIT: 'จำนวนบทเรียน ข้อเสนอ หรือประวัติถึงขีดจำกัดแล้ว',
   PROVIDER_PROXY_UNAVAILABLE: 'ปลายทางนี้ยังไม่รองรับ proxy ที่นโยบายกำหนด กรุณาแจ้งผู้ดูแล',
   PROVIDER_DESTINATION_DENIED: 'ผู้ดูแลยังไม่รับรองปลายทาง AI นี้ กรุณาตรวจ Base URL ในนโยบาย',
   PROVIDER_URL_INVALID: 'Base URL ต้องเป็น HTTPS หรือ HTTP ของ localhost และไม่มีข้อมูลรับรองใน URL',

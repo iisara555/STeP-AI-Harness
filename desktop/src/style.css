@@ -3544,3 +3544,17 @@ nav .count {
 .receipt-compliance-done[open] summary {
   margin-bottom: 6px;
 }
+.learning-item pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  padding: 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.learning-item blockquote {
+  margin: 0.5rem 0;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 3px solid var(--border);
+}
