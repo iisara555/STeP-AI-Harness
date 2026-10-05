@@ -2,7 +2,7 @@
 // No real OCR, provider, or receipt data is used. Usage: node test/receipt-smoke.mjs <receipt-image> [screenshot-dir]
 import { _electron as electron } from '@playwright/test';
 import { createServer } from 'node:http';
-import { mkdtemp, mkdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -70,9 +70,37 @@ try {
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();
   assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), false);
+  const saved = resolve(out, 'receipt-provenance.json');
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+  }, saved);
+  const saveDraft = async () => {
+    await page.getByRole('button', { name: 'บันทึกร่าง (JSON)' }).click();
+    await page.getByText('บันทึกร่างการตรวจแล้ว', { exact: true }).waitFor();
+    return JSON.parse(await readFile(saved, 'utf8'));
+  };
+  const checkedDraft = await saveDraft();
+  assert.equal(checkedDraft.fields.total.provenance, 'SOURCE_FACT');
+  assert.equal(checkedDraft.fields.total.verification, 'human-source-comparison');
+  assert.equal(checkedDraft.ocr.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(checkedDraft.afp_mapping.fields.total.candidates[0].provenance, 'EXTRACTED_UNVERIFIED');
   // Editing a field after confirming clears the confirmation.
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.50');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
+  // Await the changed file content, rather than a toast left over from the preceding save.
+  await page.getByRole('button', { name: 'บันทึกร่าง (JSON)' }).click();
+  await page.waitForFunction(async path => {
+    // The save completed when the host's source revision is reflected by the next toast.
+    return Boolean(path && document.body.textContent.includes('บันทึกร่างการตรวจแล้ว'));
+  }, saved);
+  let editedDraft;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    editedDraft = JSON.parse(await readFile(saved, 'utf8'));
+    if (editedDraft.fields.total.value === '107.50') break;
+    await page.waitForTimeout(50);
+  }
+  assert.equal(editedDraft.fields.total.provenance, 'USER_INPUT');
+  assert.equal(editedDraft.fields.total.verification, null);
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();

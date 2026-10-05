@@ -82,7 +82,7 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
     assert.equal(resolved.confirmation, 'none');
   });
 
-  await t.test('Provenance registry matches the six shared labels', async () => {
+  await t.test('Provenance registry matches the shared labels including unverified extraction', async () => {
     const text = await readFile(resolve('manifest/provenance.yaml'), 'utf-8');
     const types = parseProvenanceYaml(text);
     const result = validateProvenanceTypes(types);
@@ -296,6 +296,6 @@ test('Lightweight Organization AI Harness foundation', async (t) => {
     const integrity = await loadAndValidateManifests(resolve('manifest'));
     assert.equal(integrity.valid, true, integrity.errors.join('\n'));
     assert.equal(integrity.summary.actionsCount, 4);
-    assert.equal(integrity.summary.provenanceTypesCount, 6);
+    assert.equal(integrity.summary.provenanceTypesCount, 7);
   });
 });

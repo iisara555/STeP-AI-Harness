@@ -26,3 +26,13 @@ types:
   - id: AI_RECOMMENDATION
     description: "ข้อเสนอของ AI ที่ต้องแยกจากข้อเท็จจริงและอำนาจตัดสินใจของมนุษย์"
     sourceRequired: false
+
+  - id: EXTRACTED_UNVERIFIED
+    description: "ค่าหรือข้อความที่ OCR/AI สกัดจากเอกสาร แต่คนยังไม่ตรวจเทียบต้นฉบับ; การเห็นตรงกันหรือยืนยันส่งไม่ใช่การตรวจค่า"
+    sourceRequired: true
+
+# Only the selected value checked against its source becomes SOURCE_FACT.
+# Manual values without source comparison are USER_INPUT. Original readings and
+# alternatives remain EXTRACTED_UNVERIFIED; confirmation never approves payment
+# or establishes document authenticity. Calculations from verified facts retain
+# DERIVED_FACT and their input references.

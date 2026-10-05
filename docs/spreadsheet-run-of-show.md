@@ -118,7 +118,7 @@
 | กติกาว่าทุกคิวต้องมี Lead, enum `Status`, และ naming convention | `ORGANIZATION_RULE` |
 | ความหมายรหัส Scene ที่เสนอ และช่วงเวลาซ้อมที่แนะนำ | `AI_RECOMMENDATION` |
 
-6 label นี้ปิดตายตาม `manifest/provenance.yaml` ห้ามเพิ่ม label ที่เจ็ด
+ใช้ป้ายที่ลงทะเบียนใน `manifest/provenance.yaml` เท่านั้น รายการตัวอย่างข้างต้นไม่รวม `EXTRACTED_UNVERIFIED` สำหรับข้อความ OCR/AI ที่คนยังไม่ตรวจเทียบต้นฉบับ ห้ามสร้างป้ายนอก registry เอง
 
 ## 6. Privacy Rules
 

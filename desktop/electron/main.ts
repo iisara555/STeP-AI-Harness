@@ -86,7 +86,7 @@ import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
 import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
-import { ocrAttachmentReport } from './ocr-attachment';
+import { ocrAttachmentReport, ocrAttachmentSource } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
 import { RECEIPT_VISION_SYSTEM, parseVisionReading } from '../src/receipt-vision';
@@ -2530,7 +2530,7 @@ async function main() {
           ...(reason ? { reason } : {}),
         };
         if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-        attachments.set(view.id, { view, text: usable ? report.redactedText : '', sessionId, images });
+        attachments.set(view.id, { view, text: usable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '', sessionId, images });
         return view;
       }
       case 'export': {

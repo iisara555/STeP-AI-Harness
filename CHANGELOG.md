@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Receipt extraction provenance: unverified readings and human source comparison
+
+- Add source-required `EXTRACTED_UNVERIFIED` for OCR/AI readings. Only the selected value checked against its document becomes `SOURCE_FACT`; unverified manual entry is `USER_INPUT`.
+- Preserve provenance in receipt JSON and chat handoff. Raw OCR, independent vision and alternatives remain unverified; ordinary OCR attachment consent does not verify its text.
+- Editing or a successful reread withdraws receipt confirmation. Human checking does not approve reimbursement or establish document authenticity.
+- Synthetic unit/IPC smoke checks only; no real-document accuracy claim, new OCR Router integration or privacy-policy default change.
+
 ### Local Thai OCR: synthetic acceptance benchmark and private pilot tooling
 
 - Generate 80 seeded Thai receipt/ground-truth pairs covering H–O, including simulated (not real) handwriting.

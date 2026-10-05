@@ -310,7 +310,7 @@ Master Document List        ← missing source
 - 51 Skills ใน `manifest/skills.yaml` โดยเป็นปลายทางที่ Router เลือกได้ 50 รายการ ส่วน `step-router` ทำหน้าที่จัดเส้นทางเอง
 - 5 Playbooks
 - 4 executable Actions
-- 6 provenance types
+- 7 provenance types, including unverified OCR/AI extraction
 - 22 teams ใน 5 AI routing clusters
 
 ความสัมพันธ์:

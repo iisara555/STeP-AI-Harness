@@ -70,6 +70,20 @@ The conversation exports Markdown or JSON through a Save dialog. Exports include
 
 ## OCR and optional vision
 
+OCR attachment text is transmitted with `EXTRACTED_UNVERIFIED` and an attachment
+reference. Transmission consent does not verify transcription. In the receipt mini
+app, only a selected value explicitly checked against its source becomes
+`SOURCE_FACT`; manual values without source comparison are `USER_INPUT`. Raw OCR,
+vision readings and alternatives retain `EXTRACTED_UNVERIFIED` even when they agree.
+Editing or rereading withdraws confirmation. Receipt JSON keeps per-value metadata
+in saved drafts and persistent task source; legacy records without explicit checking
+remain unverified. Verification does not approve payment or establish authenticity.
+
+Receipt vision is separate from ordinary image attachment below: its existing
+policy permits image reading when vision/receiptVision are on and privacy checks
+are off, with stored first-use consent. It can run without local OCR. Its consent
+does not verify extracted values, and text masking does not mask image pixels.
+
 Ordinary attachments accept supported images and scanned PDFs. The host uses `OcrService` on the fixed local loopback address, checks complete page text and then applies Privacy Gate. Employees inspect OCR text and confirm transmission. Empty/partial OCR results are refused. If OCR is unavailable, a scanned PDF keeps its explicit refusal reason; image attachments explain that OCR must be ready. Actual OCR accuracy, handwriting and full production document coverage remain separate acceptance checks.
 
 Original-image input is off by default. With managed `features.vision`, the separate **attach image to AI** control accepts PNG/JPEG/WebP up to 4 MB. It requires OCR first; any flagged OCR forbids original-image transmission because text redaction cannot mask pixels. The employee sees the image and explicitly confirms sending it. OCR cannot detect hidden visual personal data; the employee must inspect the entire image and have permission to transmit it. Raw images are transient, sent only with the current Chat/Draft run, excluded from summaries/search and not stored in sessions. Reference-image generation/editing is not part of this input feature.

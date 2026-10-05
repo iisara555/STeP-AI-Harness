@@ -31,6 +31,7 @@ import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading 
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import { SectionArt } from './illustration';
 import { receiptSourceText } from './receipt-source';
+import { receiptProvenance, type ExtractionMethod } from './extraction-provenance';
 import { localized, t } from './i18n';
 
 type MappingCandidate = {
@@ -144,7 +145,7 @@ type AiDecision = {
   token?: string;
   reason: string;
 };
-type Doc = { name: string; preview: string; result: any; visionOnly?: boolean };
+type Doc = { name: string; preview: string; result: any; visionOnly?: boolean; sourceId?: string };
 
 const labels: Record<string, string> = localized({
   merchant: 'ผู้ออกใบเสร็จ / ร้านค้า',
@@ -212,6 +213,7 @@ export function ReceiptApp({
     [allChecked, setAllChecked] = useState(false),
     // Fields the app filled from a low-score OCR candidate or the AI, which the person has not edited yet.
     [guessed, setGuessed] = useState<Record<string, 'ocr' | 'ai'>>({});
+  const [origins, setOrigins] = useState<Record<string, ExtractionMethod>>({});
   const confirmed = useMemo(
     () => (allChecked ? Object.fromEntries(review.fieldKeys.map(k => [k, true])) : {}) as Record<string, boolean>,
     [allChecked],
@@ -219,6 +221,7 @@ export function ReceiptApp({
   const edit = (k: string, value: string) => {
     setValues(v => ({ ...v, [k]: value }));
     setGuessed(({ [k]: _, ...rest }) => rest);
+    setOrigins(v => ({ ...v, [k]: 'manual' }));
     setAllChecked(false);
   };
   const [note, setNote] = useState(''),
@@ -289,12 +292,13 @@ export function ReceiptApp({
         nextGuessed[k] = 'ocr';
       }
     }
-    setDoc(read);
+    setDoc({ ...read, sourceId: crypto.randomUUID() });
     setFields(extracted?.fields || {});
     setRecords(extracted?.records || []);
     setMapping(extracted?.afpMapping || null);
     setBuyerExcluded(Boolean(extracted?.buyerTaxIdExcluded));
     setValues(nextValues);
+    setOrigins(Object.fromEntries(review.fieldKeys.map(k => [k, 'ocr'])));
     setGuessed(nextGuessed);
     setAllChecked(false);
     setNote('');
@@ -329,8 +333,16 @@ export function ReceiptApp({
       }
     }
     setValues(next);
+    setOrigins(previous => ({
+      ...previous,
+      ...Object.fromEntries(
+        review.fieldKeys
+          .filter(k => next[k] !== current[k] || (reading.fields?.[k]?.value && (!current[k] || currentGuessed[k])))
+          .map(k => [k, 'vision']),
+      ),
+    }));
     setGuessed(nextGuessed);
-    if (Object.keys(next).some(k => next[k] !== current[k])) setAllChecked(false);
+    setAllChecked(false);
     notify(t('AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const matchOf = (k: string) =>
@@ -355,89 +367,100 @@ export function ReceiptApp({
     buyerTaxId: vision?.buyerTaxId,
     amountInWords,
   }).filter(r => ruleText[r.code]);
-  const draft = () => ({
-    schema: 'step-receipt-review/v1',
-    filename: doc?.name,
-    created_at: new Date().toISOString(),
-    review_state: result.complete ? 'fields_checked' : 'draft_needs_review',
-    notice: 'OCR suggestions checked by a person. This is not a reimbursement approval.',
-    fields: Object.fromEntries(
-      review.fieldKeys.map(k => [k, { value: values[k] || '', checked: Boolean(confirmed[k]), ocr_evidence: fields[k]?.evidence || '' }]),
-    ),
-    afp_mapping: mapping
-      ? {
-          ...mapping,
-          fields: Object.fromEntries(
-            review.fieldKeys.map(k => {
-              const original = fields[k]?.value || '';
-              const selected = values[k] || '';
-              const aiSuggested = aiDecisions.some(
-                decision => decision.field === k && decision.status === 'suggested' && decision.value === selected,
-              );
-              const base = mapping.fields[k] || {
-                label: labels[k],
-                required_for_desktop_precheck: review.requiredKeys.includes(k),
-                status: 'unmapped',
-                method: '',
-                selected_value: '',
-                evidence: '',
-                candidates: [],
-              };
-              return [
-                k,
-                {
-                  ...base,
-                  selected_value: selected,
-                  status: aiSuggested
-                    ? 'ai-suggested-unconfirmed'
-                    : guessed[k] && selected
-                      ? guessed[k] === 'ai'
-                        ? 'ai-filled'
-                        : 'low-score-candidate-filled'
-                      : selected && selected !== original
-                        ? 'user-selected-or-edited'
-                        : base.status,
-                },
-              ];
-            }),
-          ),
-        }
-      : null,
-    ai_filter: aiDecisions.length
-      ? {
-          mode: 'candidate-only',
-          notice: 'AI may select only OCR candidate tokens. Human confirmation is still required.',
-          decisions: aiDecisions,
-        }
-      : null,
-    vision_check: vision
-      ? {
-          notice:
-            'A vision model read the receipt image independently; each field is compared with the OCR. Human confirmation is still required.',
-          model: vision.model,
-          notes: vision.notes,
-          amount_in_words: vision.amountInWords,
-          buyer_tax_id: vision.buyerTaxId,
-          fields: Object.fromEntries(
-            review.fieldKeys.map(k => [k, { ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) }]),
-          ),
-        }
-      : null,
-    compliance: {
-      notice:
-        'Document type and checklist: fixed rules tied to their source (AFP circulars, general payment-document elements to confirm with AFP, or no source yet). Not an approval.',
-      document_type: docType || null,
-      document_type_source: typeSource || null,
-      claim_category: category,
-      items: compliance.map(item => ({ id: item.id, status: item.status, source: item.source, text: itemText(item) })),
-    },
-    expense_note: note,
-    issues: [
-      ...result.issues.map(i => ({ ...i, message: describe(i) })),
-      ...rules.map(r => ({ code: r.code, severity: 'advisory', message: t(ruleText[r.code]) })),
-    ],
-    ocr: { text: doc?.result?.text || '', lines: records },
-  });
+  const draft = () =>
+    receiptProvenance({
+      schema: 'step-receipt-review/v1',
+      filename: doc?.name,
+      source_id: doc?.sourceId,
+      created_at: new Date().toISOString(),
+      review_state: result.complete ? 'fields_checked' : 'draft_needs_review',
+      notice: 'OCR suggestions checked by a person. This is not a reimbursement approval.',
+      fields: Object.fromEntries(
+        review.fieldKeys.map(k => [
+          k,
+          {
+            value: values[k] || '',
+            checked: Boolean(confirmed[k]),
+            input_origin: origins[k] || 'ocr',
+            ocr_evidence: fields[k]?.evidence || '',
+            page: fields[k]?.page,
+          },
+        ]),
+      ),
+      afp_mapping: mapping
+        ? {
+            ...mapping,
+            fields: Object.fromEntries(
+              review.fieldKeys.map(k => {
+                const original = fields[k]?.value || '';
+                const selected = values[k] || '';
+                const aiSuggested = aiDecisions.some(
+                  decision => decision.field === k && decision.status === 'suggested' && decision.value === selected,
+                );
+                const base = mapping.fields[k] || {
+                  label: labels[k],
+                  required_for_desktop_precheck: review.requiredKeys.includes(k),
+                  status: 'unmapped',
+                  method: '',
+                  selected_value: '',
+                  evidence: '',
+                  candidates: [],
+                };
+                return [
+                  k,
+                  {
+                    ...base,
+                    selected_value: selected,
+                    status: aiSuggested
+                      ? 'ai-suggested-unconfirmed'
+                      : guessed[k] && selected
+                        ? guessed[k] === 'ai'
+                          ? 'ai-filled'
+                          : 'low-score-candidate-filled'
+                        : selected && selected !== original
+                          ? 'user-selected-or-edited'
+                          : base.status,
+                  },
+                ];
+              }),
+            ),
+          }
+        : null,
+      ai_filter: aiDecisions.length
+        ? {
+            mode: 'candidate-only',
+            notice: 'AI may select only OCR candidate tokens. Human confirmation is still required.',
+            decisions: aiDecisions,
+          }
+        : null,
+      vision_check: vision
+        ? {
+            notice:
+              'A vision model read the receipt image independently; each field is compared with the OCR. Human confirmation is still required.',
+            model: vision.model,
+            notes: vision.notes,
+            amount_in_words: vision.amountInWords,
+            buyer_tax_id: vision.buyerTaxId,
+            fields: Object.fromEntries(
+              review.fieldKeys.map(k => [k, { ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) }]),
+            ),
+          }
+        : null,
+      compliance: {
+        notice:
+          'Document type and checklist: fixed rules tied to their source (AFP circulars, general payment-document elements to confirm with AFP, or no source yet). Not an approval.',
+        document_type: docType || null,
+        document_type_source: typeSource || null,
+        claim_category: category,
+        items: compliance.map(item => ({ id: item.id, status: item.status, source: item.source, text: itemText(item) })),
+      },
+      expense_note: note,
+      issues: [
+        ...result.issues.map(i => ({ ...i, message: describe(i) })),
+        ...rules.map(r => ({ code: r.code, severity: 'advisory', message: t(ruleText[r.code]) })),
+      ],
+      ocr: { text: doc?.result?.text || '', lines: records },
+    });
   const summary = () =>
     [
       t('ช่วย pre-check ใบเสร็จก่อนส่ง AFP'),
@@ -510,7 +533,11 @@ export function ReceiptApp({
     }
     setValues(nextValues);
     setGuessed(nextGuessed);
-    if (review.fieldKeys.some(k => nextValues[k] !== current[k])) setAllChecked(false);
+    setOrigins(previous => ({
+      ...previous,
+      ...Object.fromEntries(review.fieldKeys.filter(k => nextValues[k] !== current[k]).map(k => [k, 'ai-candidate-filter'])),
+    }));
+    setAllChecked(false);
     notify(t('AI จัดข้อความ OCR เข้าช่องให้แล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const ready = status?.running;
