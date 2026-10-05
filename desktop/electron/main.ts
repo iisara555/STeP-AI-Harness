@@ -42,6 +42,14 @@ import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets'
 import { errorCode } from './diagnostics';
 import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
+import {
+  agyComponentPath,
+  agyComponentSpec,
+  antigravityCurrent,
+  antigravitySignIn,
+  installAntigravityCli,
+  openAntigravitySignIn,
+} from './antigravity-install';
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
@@ -341,12 +349,38 @@ async function main() {
       installingAnt = false;
     }
   }
+  // Google's official Antigravity CLI, which STeP installs when the employee has none (or one too old).
+  const agyHome = join(data, 'components', 'agy');
+  const agyPath = () => (existsSync(agyComponentPath(agyHome)) ? agyComponentPath(agyHome) : undefined);
+  let installingAgy = false;
+  async function ensureAgy(connection: Connection, log: (line: string) => void, signal?: AbortSignal) {
+    if (connection.customRuntime) return;
+    let found = '';
+    try {
+      found = resolveRuntime(connection, agyPath());
+    } catch {
+      /* Not installed anywhere STeP looks. */
+    }
+    if (found && (await antigravityCurrent(found, join(data, 'runtimes', 'agy-check'), signal))) return;
+    if (!agyComponentSpec()) throw new Error(found ? 'ANTIGRAVITY_UPDATE_REQUIRED' : 'ANTIGRAVITY_RUNTIME_REQUIRED');
+    if (installingAgy) throw new Error('INSTALL_BUSY');
+    installingAgy = true;
+    try {
+      await installAntigravityCli(agyHome, log, {}, signal);
+      diagnose('agy-installed');
+    } catch (error) {
+      diagnose('agy-install-failed', { code: errorCode(error) });
+      throw error;
+    } finally {
+      installingAgy = false;
+    }
+  }
   async function runtime(connection: Connection, signOut = false, webSearch = false) {
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn() && !signOut)
       throw new Error('FEATURE_DISABLED');
     if (connection.provider === 'compatible') compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
     if (connection.provider === 'copilot' && !signOut && !policyState.policy.features.copilot) throw new Error('FEATURE_DISABLED');
-    if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection);
+    if (!['compatible', 'copilot'].includes(connection.provider)) connection.executable = resolveRuntime(connection, agyPath());
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection, webSearch);
     // Development test runs only: point the bundled Gemini CLI at a local fake API. Installed copies ignore this.
@@ -1724,7 +1758,8 @@ async function main() {
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         connecting.add(connection.id);
         const controller = new AbortController(),
-          timer = setTimeout(() => controller.abort(), 480_000);
+          // Antigravity may first download its CLI (about 190 MB on Windows) and wait for the Google sign-in.
+          timer = setTimeout(() => controller.abort(), connection.provider === 'antigravity' ? 900_000 : 480_000);
         connectControllers.set(connection.id, controller);
         const dropCode = () => {
           authCodes.get(connection.id)?.(null);
@@ -1760,7 +1795,19 @@ async function main() {
           }
           const preset = connection.provider === 'compatible' ? presetFor(connection.preset) : undefined;
           if (preset) await prepareCompatiblePreset(connection, preset, controller.signal);
+          const progress = (text: string) => emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text });
+          // One click for Antigravity: install the official CLI when needed, sign in through Google, then the test below.
+          if (connection.provider === 'antigravity') await ensureAgy(connection, progress, controller.signal);
           const connectionRuntime = await runtime(connection);
+          if (connection.provider === 'antigravity') {
+            const executable = connection.executable;
+            await antigravitySignIn(
+              executable,
+              connectionRuntime.context,
+              { progress, openSignIn: () => openAntigravitySignIn(executable, join(data, 'runtimes', 'agy-signin')) },
+              controller.signal,
+            );
+          }
           if (connection.provider === 'claude' && connection.mode === 'subscription') {
             connection.claudeAuthStarted = true;
             store.put('connection', connection.id, connection);

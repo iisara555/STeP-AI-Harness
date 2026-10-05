@@ -7,8 +7,12 @@ import { tm } from './i18n';
 
 // Plain-language notes for connection failures; anything else shows its code.
 export const connectNotes: Record<string, string> = {
-  ANTIGRAVITY_RUNTIME_REQUIRED: 'Install the official Antigravity CLI, or select its agy runtime, then test again.',
-  ANTIGRAVITY_UPDATE_REQUIRED: 'Antigravity CLI 1.2.14 or newer is required.',
+  ANTIGRAVITY_RUNTIME_REQUIRED: 'ยังไม่พบ Antigravity CLI กดเชื่อมต่อเพื่อให้ STeP ติดตั้งให้',
+  ANTIGRAVITY_UPDATE_REQUIRED: 'ต้องใช้ Antigravity CLI รุ่น 1.2.14 ขึ้นไป กดเชื่อมต่อเพื่อให้ STeP ติดตั้งรุ่นใหม่ให้',
+  ANTIGRAVITY_DOWNLOAD_FAILED: 'ดาวน์โหลด Antigravity CLI ไม่สำเร็จ ตรวจอินเทอร์เน็ตหรือการเข้าถึง storage.googleapis.com แล้วลองใหม่',
+  ANTIGRAVITY_CHECKSUM_FAILED: 'ไฟล์ Antigravity CLI ที่ดาวน์โหลดไม่ตรงกับ checksum ทางการ จึงยกเลิกการติดตั้ง',
+  ANTIGRAVITY_INSTALL_FAILED: 'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ',
+  ANTIGRAVITY_UNSUPPORTED: 'เครื่องรุ่นนี้ยังติดตั้ง Antigravity CLI อัตโนมัติไม่ได้ ติดตั้งเองตามคู่มือ',
   ANTIGRAVITY_POLICY_UNCONFIRMED: 'Antigravity did not confirm the isolated STeP policy. No request was sent.',
   ANTIGRAVITY_TOOLS_UNAVAILABLE:
     'This Antigravity runtime declares native tools without confirming that they are disabled. No request was sent. Gemini API remains available.',

@@ -7,12 +7,14 @@ import { checkAntigravity } from './antigravity';
 import type { Connection } from '../src/types';
 
 // The Codex or Gemini CLI that ships with the app, or the one the user picked while it still exists.
-export function resolveRuntime(connection: Connection) {
+// `managed` is the agy STeP installed itself (antigravity-install.ts); it is pinned and verified, so it comes first.
+export function resolveRuntime(connection: Connection, managed?: string) {
   if (connection.provider === 'claude') return '';
   if (connection.customRuntime && connection.executable && existsSync(connection.executable)) return connection.executable;
   if (connection.provider === 'antigravity') {
     const binary = process.platform === 'win32' ? 'agy.exe' : 'agy';
     const candidates = [
+      ...(managed ? [managed] : []),
       ...(process.env.PATH || '')
         .split(process.platform === 'win32' ? ';' : ':')
         .filter(isAbsolute)

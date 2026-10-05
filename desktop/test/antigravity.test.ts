@@ -22,7 +22,7 @@ import {createInterface} from 'node:readline';
 const kind=${JSON.stringify(kind)}, log=${JSON.stringify(log)};
 const args=process.argv.slice(2);
 if(args[0]==='--version'){console.log(${JSON.stringify(version)});process.exit(0);}
-fs.appendFileSync(log, JSON.stringify({args,cwd:process.cwd(),home:process.env.HOME,api:!!process.env.GEMINI_API_KEY,settings:JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json'),'utf8')),agent:fs.readFileSync(path.join(process.env.HOME,'.gemini','config','agents','step-draft','agent.md'),'utf8')})+'\\n');
+fs.appendFileSync(log, JSON.stringify({args,cwd:process.cwd(),home:process.env.HOME,api:!!process.env.GEMINI_API_KEY,settings:JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json'),'utf8')),agent:fs.readFileSync(path.join(process.env.HOME,'.gemini','config','agents','step-draft','agent.md'),'utf8'),updaterCheck:Date.now()-fs.statSync(path.join(process.env.HOME,'.gemini','antigravity-cli','last_check.timestamp')).mtimeMs})+'\\n');
 if(args[0]==='models'){console.log('gemini-test\\tGemini test\\ngemini-test\\tDuplicate\\nclaude-other\\tOther provider\\ngemini-second\\tSecond');process.exit(0);}
 const send=x=>console.log(JSON.stringify(x));
 if(kind==='auth'){send({event:'result',result:{status:'ERROR',error:'authentication required: user@example.com https://accounts.google.com/oauth?code=private-code',usage:{input_tokens:0,output_tokens:0,total_tokens:0}}});process.exit(1);}
@@ -33,6 +33,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  const step=(delta,state='ACTIVE')=>({event:'step_update',step_update:{conversation_id:'session',step_type:'agent_response',state,text_delta:delta}});
  if(kind==='malformed') return console.log('not json');
  if(kind==='tool') return send({event:'step_update',step_update:{conversation_id:'session',step_type:'tool',state:'ACTIVE',tool_name:'run_command'}});
+ if(kind==='tool-call') return send({event:'step_update',step_update:{conversation_id:'session',step_type:'action',state:'ACTIVE',tool_call:{name:'view_file'}}});
  if(kind==='oversize') return console.log('x'.repeat(4000001));
  if(kind==='null') return send(null);
  if(kind==='missing') return;
@@ -92,6 +93,8 @@ test('Antigravity uses native NDJSON, isolated system instructions and one usage
     assert.equal(calls.length, 2);
     assert.deepEqual(calls[1].input, { event: 'user', message: { content: 'Synthetic request' } });
     assert.equal(calls[0].api, false);
+    // A fresh update-check stamp keeps agy from starting its background updater (a console window on Windows).
+    assert.ok(calls[0].updaterCheck >= 0 && calls[0].updaterCheck < 60_000);
     assert.equal(calls[0].settings.toolPermission, 'strict');
     assert.deepEqual(calls[0].settings.permissions, { allow: [], ask: [], deny: ANTIGRAVITY_DENY });
     assert.match(calls[0].agent, /Synthetic standing instructions/);
@@ -105,10 +108,9 @@ test('Antigravity uses native NDJSON, isolated system instructions and one usage
   }
 });
 
-test('Antigravity rejects unconfirmed policy and active tools before writing the request', async () => {
+test('Antigravity rejects an unconfirmed policy before writing the request', async () => {
   for (const [kind, code] of [
-    ['tools', 'ANTIGRAVITY_TOOLS_UNAVAILABLE'],
-    ['missing-tools', 'ANTIGRAVITY_TOOLS_UNAVAILABLE'],
+    ['missing-tools', 'ANTIGRAVITY_POLICY_UNCONFIRMED'],
     ['policy', 'ANTIGRAVITY_POLICY_UNCONFIRMED'],
     ['cwd', 'ANTIGRAVITY_POLICY_UNCONFIRMED'],
     ['agent', 'ANTIGRAVITY_POLICY_UNCONFIRMED'],
@@ -143,6 +145,7 @@ test('Antigravity accepts final-only output and fails closed on invalid, incompl
     ['waiting', 'PROVIDER_REQUEST_FAILED'],
     ['exit', 'RUNTIME_EXITED'],
     ['tool', 'TOOL_DENIED'],
+    ['tool-call', 'TOOL_DENIED'],
     ['oversize', 'PROVIDER_OUTPUT_LIMIT'],
   ]) {
     const f = await fixture(kind);
@@ -220,7 +223,7 @@ test('Antigravity catalog is bounded to Gemini and does not imply account readin
 });
 
 test('Antigravity connection requires successful generation and never logs out the shared native account', async () => {
-  for (const kind of ['success', 'exit', 'auth', 'tools']) {
+  for (const kind of ['success', 'tools', 'exit', 'auth']) {
     const f = await fixture(kind);
     let signedIn = false;
     let opened = false;
@@ -237,12 +240,12 @@ test('Antigravity connection requires successful generation and never logs out t
       },
     };
     try {
-      if (kind === 'success') await signInAndTest(f.connection, deps, f.context.signal);
+      if (kind === 'success' || kind === 'tools') await signInAndTest(f.connection, deps, f.context.signal);
       else
         await assert.rejects(signInAndTest(f.connection, deps, f.context.signal), {
-          message: kind === 'auth' ? 'LOGIN_REQUIRED' : kind === 'tools' ? 'ANTIGRAVITY_TOOLS_UNAVAILABLE' : 'RUNTIME_EXITED',
+          message: kind === 'auth' ? 'LOGIN_REQUIRED' : 'RUNTIME_EXITED',
         });
-      assert.equal(signedIn, kind === 'success');
+      assert.equal(signedIn, kind === 'success' || kind === 'tools');
       assert.equal(opened, false);
       const before = await f.calls();
       await signOutManagedProvider(f.connection, deps.runtime);

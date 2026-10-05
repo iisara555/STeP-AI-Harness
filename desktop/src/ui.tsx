@@ -594,7 +594,7 @@ function ProviderDetail({
         <>
           <p className="small">
             {t(
-              'ติดตั้งและลงชื่อเข้าใช้ Antigravity ในเครื่องนี้ก่อน STeP ใช้บัญชีนั้นโดยไม่ต้องใช้ API key และเมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่',
+              'กดเชื่อมต่อครั้งเดียว STeP จะติดตั้ง Antigravity CLI ของ Google ให้ถ้ายังไม่มี เปิดหน้าลงชื่อบัญชี Google แล้วทดสอบให้เอง ไม่ต้องใช้ API key เมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่',
             )}
           </p>
           <label>
@@ -756,7 +756,7 @@ function AdvancedProviderFields({
           </label>
           <p className="small muted">
             Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account
-            signed in. Current CLI 1.2.14 cannot confirm that all native tools are disabled, so STeP stops before sending a request.
+            signed in. STeP denies every native tool (files, commands, web, MCP) and stops the reply if the AI tries to use one.
           </p>
           <button className="quiet" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
             Antigravity installation and sign-in guide
