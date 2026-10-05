@@ -392,6 +392,7 @@ export function connectLabel(c: ProviderChoice, fallback = t('เพิ่มก
   if (c.mode === 'subscription' && c.provider === 'openai') return t('เชื่อมต่อ ChatGPT');
   if (c.mode === 'subscription' && c.provider === 'claude') return t('เชื่อมต่อ Claude');
   if (c.mode === 'subscription' && c.provider === 'gemini') return t('เชื่อมต่อ Google');
+  if (c.provider === 'antigravity') return t('เชื่อมต่อ {0}', 'Antigravity');
   if (c.mode === 'oauth' && c.provider === 'claude') return t('เชื่อมต่อ Claude OAuth');
   if (c.mode === 'api' && ['gemini', 'claude', 'openai'].includes(c.provider)) return t('เชื่อมต่อ {0}', tileName(c));
   return fallback;
@@ -399,6 +400,7 @@ export function connectLabel(c: ProviderChoice, fallback = t('เพิ่มก
 const tileName = (c: ProviderChoice) =>
   c.provider === 'gemini' ? 'Gemini' : c.provider === 'claude' ? 'Claude API' : c.provider === 'openai' ? 'OpenAI API' : c.provider;
 
+const ANTIGRAVITY_MODEL = 'gemini-3.8-flash-medium';
 type Tile = {
   id: string;
   label: string;
@@ -445,6 +447,13 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
       : []),
     ...(presets ? [preset('openrouter')] : []),
     key('gemini', 'Gemini', t('คีย์จาก Google AI Studio มีแบบใช้ฟรี')),
+    {
+      id: 'antigravity',
+      label: 'Gemini via Antigravity',
+      description: t('ใช้บัญชี Google ที่ลงชื่อในแอป Antigravity บนเครื่องนี้ (ทดลอง)'),
+      kind: 'account',
+      choice: { ...initialChoice, provider: 'antigravity', mode: 'subscription', model: ANTIGRAVITY_MODEL },
+    },
     key('claude', 'Claude API', t('คีย์จาก Anthropic Console คิดตามการใช้')),
     key('openai', 'OpenAI API', t('คีย์จาก OpenAI Platform คิดตามการใช้')),
     ...(presets ? ['deepseek', 'qwen', 'minimax', 'groq', 'mistral', 'xai', 'ollama'].map(preset) : []),
@@ -577,8 +586,26 @@ function ProviderDetail({
   }, [tile.id]);
   return (
     <div className="provider-detail" ref={card}>
-      {tile.kind === 'account' && !preset && <p className="small">{t('กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key')}</p>}
+      {tile.kind === 'account' && !preset && value.provider !== 'antigravity' && (
+        <p className="small">{t('กดปุ่มด้านล่างแล้วลงชื่อในเบราว์เซอร์ ไม่ต้องใช้ API key')}</p>
+      )}
       {value.provider === 'claude' && value.mode === 'subscription' && <ClaudeCodeNote call={call} subscription />}
+      {value.provider === 'antigravity' && (
+        <>
+          <p className="small">
+            {t(
+              'ติดตั้งและลงชื่อเข้าใช้ Antigravity ในเครื่องนี้ก่อน STeP ใช้บัญชีนั้นโดยไม่ต้องใช้ API key และเมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่',
+            )}
+          </p>
+          <label>
+            {t('โมเดล')}
+            <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
+          </label>
+          <button type="button" className="text-link" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
+            {t('วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity')}
+          </button>
+        </>
+      )}
       {preset?.signIn && (
         <p className="small">
           {t('กดลงชื่อแล้วอนุญาตในหน้า {0} ระบบจะได้คีย์ของแอปนี้มาเก็บเข้ารหัสเอง หรือวางคีย์ที่มีอยู่แล้วด้านล่าง', preset.label)}
@@ -660,7 +687,7 @@ function AdvancedProviderFields({
                 mode: providerDefaultMode(e.target.value),
                 baseUrl: 'https://api.openai.com/v1',
                 protocol: 'openai',
-                model: e.target.value === 'antigravity' ? 'gemini-3.8-flash-medium' : '',
+                model: e.target.value === 'antigravity' ? ANTIGRAVITY_MODEL : '',
                 key: '',
                 googleCloudProject: '',
               })

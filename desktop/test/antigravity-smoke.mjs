@@ -34,6 +34,11 @@ try {
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  // Employees find Antigravity among the services, not only in the administrators' form.
+  await page.getByRole('radio', { name: /Gemini via Antigravity/ }).click();
+  assert.equal(await page.getByLabel('โมเดล', { exact: true }).inputValue(), 'gemini-3.8-flash-medium');
+  assert.equal(await page.getByLabel(/API key/).count(), 0);
+  await expect(page.getByRole('button', { name: 'วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity' })).toBeVisible();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('antigravity');
   assert.equal(await page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ }).inputValue(), 'subscription');

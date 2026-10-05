@@ -403,6 +403,31 @@ export function SettingsPanel({
                 {c.provider === 'gemini' && c.googleCloudProject && (
                   <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>
                 )}
+                {Boolean(c.models?.length || c.model) && (
+                  <label className="connection-model">
+                    {t('โมเดลเริ่มต้นสำหรับงานใหม่')}
+                    <select
+                      value={c.model}
+                      disabled={Boolean(busy)}
+                      onChange={e => void run(c.id + ':model', () => call('connectionModel', { id: c.id, model: e.target.value }))}
+                    >
+                      {c.provider !== 'antigravity' && (
+                        <option value="">
+                          {(() => {
+                            const fallback = c.models?.find(m => m.isDefault);
+                            return fallback ? t('ค่าเริ่มต้น ({0})', fallback.label) : t('ค่าเริ่มต้นของบริการ');
+                          })()}
+                        </option>
+                      )}
+                      {(c.models || []).map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ))}
+                      {c.model && !c.models?.some(m => m.id === c.model) && <option value={c.model}>{c.model}</option>}
+                    </select>
+                  </label>
+                )}
                 {c.modelsAt && (
                   <p className="small muted">
                     {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {new Date(c.modelsAt).toLocaleString(locale())}

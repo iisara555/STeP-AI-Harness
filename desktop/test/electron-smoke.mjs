@@ -75,6 +75,10 @@ try {
     assert.ok(withClaude.connections.some(c => c.id === claudeId && c.mode === 'subscription' && !c.ready));
     await page.evaluate(id => window.step.call('removeConnection', { id }), claudeId);
   }
+  // A Claude Console OAuth connection that never signed in (no `ant` CLI here) can still be removed.
+  const oauthId = (await page.evaluate(() => window.step.call('connection', { provider: 'claude', mode: 'oauth' }))).id;
+  await page.evaluate(id => window.step.call('removeConnection', { id }), oauthId);
+  assert.ok(!(await page.evaluate(() => window.step.call('snapshot'))).connections.some(c => c.id === oauthId));
   await page.evaluate(async () => {
     const connection = await window.step.call('connection', { provider: 'openai', mode: 'subscription', model: '' });
     const session = await window.step.call('create', { connectionId: connection.id, project: 'Desktop verification' });

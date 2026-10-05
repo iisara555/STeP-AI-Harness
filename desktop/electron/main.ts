@@ -1666,6 +1666,16 @@ async function main() {
         store.put('connection', id, connection);
         return connection;
       }
+      case 'connectionModel': {
+        // The model new tasks on this connection start with; a task's own choice is unchanged.
+        const connection = store.get<Connection>('connection', inputText(input.id, 60));
+        if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        const model = modelChoice(connection, input.model);
+        if (connection.provider === 'antigravity' && !/^gemini-[\w.-]{1,93}$/.test(model)) throw new Error('INVALID_MODEL');
+        connection.model = model;
+        store.put('connection', connection.id, connection);
+        return connection;
+      }
       case 'runtime': {
         const connection = store.get<Connection>('connection', input.id);
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');
@@ -2085,20 +2095,21 @@ async function main() {
         if (connecting.has(c.id)) throw new Error('CONNECTION_BUSY');
         const sessions = store.list<Session>('session').filter(session => session.connectionId === c.id);
         if (sessions.some(session => service.isActive(session.id))) throw new Error('RUN_ALREADY_ACTIVE');
-        if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
-          const r = await runtime(c, true);
-          await claudeLogout(c.executable, r.context);
-        }
-        if (c.provider === 'claude' && c.mode === 'oauth') {
-          const r = await runtime(c, true);
-          if (!r.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
-          await anthropicLogout(r.authExecutable, r.context);
-        }
-        if (c.provider === 'openai') {
-          const r = await runtime(c, true);
-          await signOutManagedProvider(c, r).catch(error =>
-            diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) }),
-          );
+        // Signing out is best effort: a connection that never signed in, or whose CLI is gone, must still be removable.
+        // Its runtime home, which holds the sign-in tokens, is deleted below either way.
+        try {
+          if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
+            const r = await runtime(c, true);
+            await claudeLogout(c.executable, r.context);
+          }
+          if (c.provider === 'claude' && c.mode === 'oauth') {
+            const r = await runtime(c, true);
+            if (!r.authExecutable) throw new Error('ANTHROPIC_CLI_NOT_FOUND');
+            await anthropicLogout(r.authExecutable, r.context);
+          }
+          if (c.provider === 'openai') await signOutManagedProvider(c, await runtime(c, true));
+        } catch (error) {
+          diagnose('provider-logout-failed', { provider: c.provider, code: errorCode(error) });
         }
         await removeRuntimeHome(c.id);
         store.remove('connection', c.id);
