@@ -52,8 +52,8 @@ export const en: Record<string, string> = {
   'ใช้แพ็กเกจ ChatGPT Plus/Pro ที่คุณมี': 'Use your ChatGPT Plus/Pro plan',
   'ใช้บัญชี Google ที่ลงชื่อในแอป Antigravity บนเครื่องนี้ (ทดลอง)':
     'Uses the Google account signed in to Antigravity on this device (experimental)',
-  'ติดตั้งและลงชื่อเข้าใช้ Antigravity ในเครื่องนี้ก่อน STeP ใช้บัญชีนั้นโดยไม่ต้องใช้ API key และเมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่':
-    'Install Antigravity and sign in on this device first. STeP uses that account without an API key, and disconnecting keeps Antigravity signed in',
+  'กดเชื่อมต่อครั้งเดียว STeP จะติดตั้ง Antigravity CLI ของ Google ให้ถ้ายังไม่มี เปิดหน้าลงชื่อบัญชี Google แล้วทดสอบให้เอง ไม่ต้องใช้ API key เมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่':
+    "Press connect once: STeP installs Google's Antigravity CLI if it is missing, opens the Google sign-in, then runs the test. No API key needed. Disconnecting keeps the Antigravity account signed in.",
   'วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity': 'How to install and sign in to Antigravity',
   โมเดลเริ่มต้นสำหรับงานใหม่: 'Default model for new tasks',
   'แพ็กเกจของคุณผ่าน Claude Code': 'Your plan through Claude Code',
@@ -1700,4 +1700,22 @@ export const en: Record<string, string> = {
   'ดาวน์โหลดแล้ว รีสตาร์ทเพื่อใช้เวอร์ชันใหม่ งานที่ค้างไว้ยังอยู่': 'Downloaded. Restart to use it; your work stays',
   'Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดแล้วลากไปที่ Applications':
     'This Mac build cannot install updates itself; download it and drag it to Applications',
+  'กำลังดาวน์โหลด Antigravity CLI {0} ของ Google': "Downloading Google's Antigravity CLI {0}",
+  'กำลังดาวน์โหลด Antigravity CLI {0}%': 'Downloading Antigravity CLI {0}%',
+  'ตรวจ checksum ผ่านแล้ว กำลังติดตั้ง': 'Checksum verified, installing',
+  'ติดตั้ง Antigravity CLI เรียบร้อย': 'Antigravity CLI installed',
+  'กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity': 'Checking the Google sign-in in Antigravity',
+  'ลงชื่อด้วยบัญชี Google ในเบราว์เซอร์ที่เปิดขึ้น เสร็จแล้ว STeP จะทดสอบให้เอง':
+    'Sign in with your Google account in the browser that opened. STeP runs the test when you are done',
+  'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ':
+    'Could not install the Antigravity CLI. Press connect again, or install it from the guide',
+  'ดาวน์โหลด Antigravity CLI ไม่สำเร็จ ตรวจอินเทอร์เน็ตหรือการเข้าถึง storage.googleapis.com แล้วลองใหม่':
+    'Could not download the Antigravity CLI. Check the internet or access to storage.googleapis.com, then try again',
+  'ไฟล์ Antigravity CLI ที่ดาวน์โหลดไม่ตรงกับ checksum ทางการ จึงยกเลิกการติดตั้ง':
+    'The downloaded Antigravity CLI did not match the official checksum, so it was not installed',
+  'เครื่องรุ่นนี้ยังติดตั้ง Antigravity CLI อัตโนมัติไม่ได้ ติดตั้งเองตามคู่มือ':
+    'This device cannot install the Antigravity CLI automatically; install it from the guide',
+  'ยังไม่พบ Antigravity CLI กดเชื่อมต่อเพื่อให้ STeP ติดตั้งให้': 'Antigravity CLI not found. Press connect and STeP installs it',
+  'ต้องใช้ Antigravity CLI รุ่น 1.2.14 ขึ้นไป กดเชื่อมต่อเพื่อให้ STeP ติดตั้งรุ่นใหม่ให้':
+    'Antigravity CLI 1.2.14 or newer is required. Press connect and STeP installs it',
 };

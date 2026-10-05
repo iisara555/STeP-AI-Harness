@@ -2,14 +2,14 @@
 
 STeP has an `AntigravityAdapter` and a separate `antigravity` subscription connection in Setup and Settings. It uses official `agy` NDJSON. Existing Gemini API and organization Gemini CLI connections retain their behavior.
 
-**Status: implemented and validated with synthetic generation; blocked before user-prompt transmission on official Windows CLI 1.2.14. Native OAuth and live generation are not accepted. Signing in again does not resolve this compatibility blocker.**
+**Status: experimental. Since 2026-10-05 the init tool catalog no longer blocks the request (owner decision, see below). Live generation still needs acceptance on a signed-in machine.**
 
 ## Implemented behavior
 
 - Discover an installed native `agy` or accept an explicitly selected runtime. Require version 1.2.14 or newer, subscription mode and a pinned `gemini-*` model. No global installer, update command or native logout is run by STeP.
 - Create a fresh configuration home and empty workspace for each invocation. A global custom `step-draft` agent carries host standing instructions separately from the user message. Personal MCP, plugins, skills, environment credentials and workspace files are not copied into the configuration home.
 - Deny every documented native action namespace: file read/write, URL read/actuation, command, unsandboxed command and MCP. No shell, ACP, permission bypass or conversation continuation is used.
-- Withhold the user message until `init` confirms the expected cwd, agent, `strict` mode and no tools except harmless `finish`. A broad catalog is insufficient proof of effective tool filtering. Failure returns `ANTIGRAVITY_TOOLS_UNAVAILABLE`; additional user confirmation cannot override this compatibility check.
+- Withhold the user message until `init` confirms the expected cwd, agent and `strict` mode (`ANTIGRAVITY_POLICY_UNCONFIRMED` otherwise). The declared tool catalog is not required to be empty: the CLI always lists its built-in tools. Enforcement is the denied permissions, the empty temporary workspace, and stopping on the first tool step (`TOOL_DENIED`).
 - Send one NDJSON user message on stdin, then close stdin. Stream text deltas once and require the final text to agree with them. Completion requires one successful result and process exit 0. Usage is reported once per invocation. Malformed messages, tool steps, duplicate results, extra turns, mismatched sessions and nonzero exits cannot produce readiness.
 - Bound output and lifetime; terminate the owned process tree on cancellation and wait before deleting its temporary home. Scrub diagnostic tails. Retain the home if shutdown cannot be confirmed.
 - Reject vision and native web search explicitly. Existing routing, Privacy Gate, transmission consent and host tool permissions stay in force. This adds no recurring consent prompt.
@@ -39,6 +39,22 @@ The official Windows amd64 manifest selected **1.2.14**:
 - The Linux x64 1.2.17 binary (SHA-512 verified against the manifest) lists `step-draft` with the new frontmatter. A headless run stops at `authentication required` before any `init` event, so whether the catalog now narrows to `finish` could not be observed without a signed-in Google account.
 - Nothing is relaxed. The `init` check still withholds the user message unless the runtime declares nothing but `finish`. If the option does not narrow the catalog, the connection keeps failing with `ANTIGRAVITY_TOOLS_UNAVAILABLE` exactly as before.
 - **To accept:** on a machine signed in to Antigravity, connect "Gemini via Antigravity (experimental)" in STeP Desktop and send a short message. A reply means `init` declared only `finish`. `ANTIGRAVITY_TOOLS_UNAVAILABLE` means it did not. Record the result here before changing experimental status.
+
+## Live acceptance (2026-10-05): failed on Windows
+
+- Owner's Windows machine, STeP Desktop 0.5.13 (includes `excludeDefaultComponents`), official CLI installed with `install.ps1` and signed in to a personal Google account.
+- Connecting "Gemini via Antigravity" reached `init` (sign-in worked) and returned **`ANTIGRAVITY_TOOLS_UNAVAILABLE`**: the init catalog still declared native tools beyond `finish`. No user message was sent.
+- So neither `tools: [finish]` nor `excludeDefaultComponents: true` narrows the catalog on the current CLI.
+- **Owner decision (Itsara, 2026-10-05):** accept a non-empty catalog and rely on runtime enforcement instead: `strict` mode confirmed in `init` (which proves the isolated settings with every native action namespace denied were loaded), an empty temporary workspace with `allowNonWorkspaceAccess: false`, and terminating the process on the first step that reports a tool (`step_type: tool`, `tool_name` or `tool_call`). Residual risk: STeP relies on the CLI honouring its deny rules; this cannot be proven from STeP's side. Re-run live acceptance after this change and record the result here.
+- **Retest (2026-10-05, PR #99 test build, Windows):** connect and test returned a real reply. Black console windows flashed on every message. Process listing on the owner's machine showed `agy.exe --bg-updater` started by the run. With the Windows 1.2.17 binary under Wine, the updater is skipped only when `~/.gemini/antigravity-cli/last_check.timestamp` was modified in the last 15 minutes; `AGY_CLI_DISABLE_AUTO_UPDATE=1` does not stop the spawn. Because every run uses a fresh home, STeP now writes that stamp into the home before each run.
+
+## One-click install and sign-in (2026-10-05)
+
+Owner request: staff should not install or sign in to the CLI by hand. `electron/antigravity-install.ts`:
+
+- Installs the pinned CLI 1.2.17 into `<app data>/components/agy` when no agy 1.2.14+ is found. Assets and sha512 values come from `antigravity-cli/1.2.17/manifest.json`. Windows assets are the bare exe; macOS assets are a tar.gz whose binary is named `antigravity` and is installed as `agy`. The staged copy must answer `--version` as 1.2.14+ in an isolated home before it replaces anything. The managed copy is preferred over other installs.
+- Sign-in state is read with `agy models` in an isolated home (exit 1 with "Please sign in" means signed out). The credential is in the OS keyring, so isolated homes still see it.
+- The CLI has no login subcommand, and print mode with piped stdin refuses to start OAuth. So STeP opens the interactive CLI in a terminal window with the real profile (Windows: `cmd /c start /wait`; macOS: `open -a Terminal`). The CLI opens Google's page itself. STeP polls every 3 seconds for up to 5 minutes, then closes the Windows window (macOS leaves Terminal for the person to close) and runs the normal test.
 
 ## Validation
 
