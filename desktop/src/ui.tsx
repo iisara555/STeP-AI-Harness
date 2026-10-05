@@ -756,7 +756,7 @@ function AdvancedProviderFields({
           </label>
           <p className="small muted">
             Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account
-            signed in. Current CLI 1.2.14 cannot confirm that all native tools are disabled, so STeP stops before sending a request.
+            signed in. STeP denies every native tool (files, commands, web, MCP) and stops the reply if the AI tries to use one.
           </p>
           <button className="quiet" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
             Antigravity installation and sign-in guide

@@ -39,8 +39,7 @@ export async function antigravityHome(context: Pick<ProviderContext, 'cwd' | 'en
       { mode: 0o600 },
     );
     // Declare only harmless finish and opt out of the built-in tools and prompt sections (excludeDefaultComponents,
-    // agy 1.2.1+): a tools list alone did not narrow the init catalog on 1.2.14. Whether this does is still decided by
-    // the init check below, which withholds the request unless the runtime declares nothing but finish.
+    // agy 1.2.1+). Neither narrows the init catalog; the denied permissions and the tool-step stop below enforce it.
     await writeFile(
       agent,
       '---\nname: step-draft\ndescription: STeP governed text generation\ntools: [finish]\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nmcpServers: []\nskills: []\nplugins: []\n---\n' +
@@ -266,10 +265,11 @@ export class AntigravityAdapter implements ProviderAdapter {
             )
               throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
             if (init.model !== undefined && init.model !== connection.model) throw new Error('MODEL_NOT_AVAILABLE');
-            // Catalog-only defaults are insufficient evidence that native tools are disabled.
-            // Withhold the request until the runtime declares only harmless capabilities.
-            if (!Array.isArray(init.tools) || init.tools.some((tool: unknown) => tool !== 'finish'))
-              throw new Error('ANTIGRAVITY_TOOLS_UNAVAILABLE');
+            // The CLI lists its built-in tools in init whatever the agent declares (live-tested 2026-10-05), so the
+            // listing is a catalog, not permission. Strict mode, confirmed above, proves the isolated settings that deny
+            // every native action were loaded; the workspace is an empty temporary folder; and the first tool step
+            // below stops the process. The owner accepted relying on these instead of an empty catalog.
+            if (!Array.isArray(init.tools)) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
             if (typeof event.conversation_id !== 'string' || !event.conversation_id || event.conversation_id.length > 128)
               throw new Error('PROVIDER_STREAM_INVALID');
             initialized = true;
@@ -278,7 +278,7 @@ export class AntigravityAdapter implements ProviderAdapter {
           } else if (event.event === 'step_update') {
             const step = event.step_update;
             if (!initialized || result || !step || step.conversation_id !== conversation) throw new Error('PROVIDER_STREAM_INVALID');
-            if (step.step_type === 'tool') throw new Error('TOOL_DENIED');
+            if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) throw new Error('TOOL_DENIED');
             if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
               if (typeof step.text_delta !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
               text += step.text_delta;

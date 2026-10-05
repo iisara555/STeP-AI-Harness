@@ -17,7 +17,7 @@ const args=process.argv.slice(2),marker=${JSON.stringify(marker)},calls=${JSON.s
 if(args[0]==='--version'){console.log('1.2.14');process.exit(0);}
 if(args[0]==='models'){console.log('gemini-3.8-flash-medium\\tGemini fixture');process.exit(0);}
 const send=x=>console.log(JSON.stringify(x));
-send({event:'init',conversation_id:'fixture',init:{cwd:process.cwd(),agent:'step-draft',model:'gemini-3.8-flash-medium',permission_mode:'strict',tools:fs.existsSync(marker)?['run_command']:['finish']}});
+send({event:'init',conversation_id:'fixture',init:{cwd:process.cwd(),agent:'step-draft',model:'gemini-3.8-flash-medium',permission_mode:fs.existsSync(marker)?'always-proceed':'strict',tools:['run_command','view_file','finish']}});
 createInterface({input:process.stdin}).on('line',line=>{
 fs.appendFileSync(calls,'prompt\\n');
 send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response:'OK',usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});
@@ -45,7 +45,7 @@ try {
   assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
   assert.equal(await page.getByLabel(/Google Cloud Project ID/).count(), 0);
   assert.equal(await page.getByLabel('Gemini model').inputValue(), 'gemini-3.8-flash-medium');
-  await expect(page.getByText(/Current CLI 1.2.14 cannot confirm/)).toBeVisible();
+  await expect(page.getByText(/denies every native tool/)).toBeVisible();
   await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
   const connection = snapshot.connections.find(c => c.provider === 'antigravity');
@@ -63,7 +63,7 @@ try {
   const stopped = await page.evaluate(id => window.step.call('connect', { id }), connection.id);
   assert.equal(stopped.ready, false);
   assert.equal(stopped.signedIn, undefined);
-  assert.match(stopped.note, /ANTIGRAVITY_TOOLS_UNAVAILABLE/);
+  assert.match(stopped.note, /ANTIGRAVITY_POLICY_UNCONFIRMED/);
   assert.equal((await readFile(calls, 'utf8')).trim(), 'prompt', 'unsafe init must not transmit another request');
   for (const input of [
     { provider: 'antigravity', mode: 'api', model: 'gemini-test' },

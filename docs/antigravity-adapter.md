@@ -2,14 +2,14 @@
 
 STeP has an `AntigravityAdapter` and a separate `antigravity` subscription connection in Setup and Settings. It uses official `agy` NDJSON. Existing Gemini API and organization Gemini CLI connections retain their behavior.
 
-**Status: implemented and validated with synthetic generation; blocked before user-prompt transmission on official Windows CLI 1.2.14. Native OAuth and live generation are not accepted. Signing in again does not resolve this compatibility blocker.**
+**Status: experimental. Since 2026-10-05 the init tool catalog no longer blocks the request (owner decision, see below). Live generation still needs acceptance on a signed-in machine.**
 
 ## Implemented behavior
 
 - Discover an installed native `agy` or accept an explicitly selected runtime. Require version 1.2.14 or newer, subscription mode and a pinned `gemini-*` model. No global installer, update command or native logout is run by STeP.
 - Create a fresh configuration home and empty workspace for each invocation. A global custom `step-draft` agent carries host standing instructions separately from the user message. Personal MCP, plugins, skills, environment credentials and workspace files are not copied into the configuration home.
 - Deny every documented native action namespace: file read/write, URL read/actuation, command, unsandboxed command and MCP. No shell, ACP, permission bypass or conversation continuation is used.
-- Withhold the user message until `init` confirms the expected cwd, agent, `strict` mode and no tools except harmless `finish`. A broad catalog is insufficient proof of effective tool filtering. Failure returns `ANTIGRAVITY_TOOLS_UNAVAILABLE`; additional user confirmation cannot override this compatibility check.
+- Withhold the user message until `init` confirms the expected cwd, agent and `strict` mode (`ANTIGRAVITY_POLICY_UNCONFIRMED` otherwise). The declared tool catalog is not required to be empty: the CLI always lists its built-in tools. Enforcement is the denied permissions, the empty temporary workspace, and stopping on the first tool step (`TOOL_DENIED`).
 - Send one NDJSON user message on stdin, then close stdin. Stream text deltas once and require the final text to agree with them. Completion requires one successful result and process exit 0. Usage is reported once per invocation. Malformed messages, tool steps, duplicate results, extra turns, mismatched sessions and nonzero exits cannot produce readiness.
 - Bound output and lifetime; terminate the owned process tree on cancellation and wait before deleting its temporary home. Scrub diagnostic tails. Retain the home if shutdown cannot be confirmed.
 - Reject vision and native web search explicitly. Existing routing, Privacy Gate, transmission consent and host tool permissions stay in force. This adds no recurring consent prompt.
@@ -44,7 +44,8 @@ The official Windows amd64 manifest selected **1.2.14**:
 
 - Owner's Windows machine, STeP Desktop 0.5.13 (includes `excludeDefaultComponents`), official CLI installed with `install.ps1` and signed in to a personal Google account.
 - Connecting "Gemini via Antigravity" reached `init` (sign-in worked) and returned **`ANTIGRAVITY_TOOLS_UNAVAILABLE`**: the init catalog still declared native tools beyond `finish`. No user message was sent.
-- So neither `tools: [finish]` nor `excludeDefaultComponents: true` narrows the catalog on the current CLI. The connection stays experimental and unusable; Gemini API is the working Google route. An in-app installer for `agy` was considered and put on hold because installing it cannot make this connection work.
+- So neither `tools: [finish]` nor `excludeDefaultComponents: true` narrows the catalog on the current CLI.
+- **Owner decision (Itsara, 2026-10-05):** accept a non-empty catalog and rely on runtime enforcement instead: `strict` mode confirmed in `init` (which proves the isolated settings with every native action namespace denied were loaded), an empty temporary workspace with `allowNonWorkspaceAccess: false`, and terminating the process on the first step that reports a tool (`step_type: tool`, `tool_name` or `tool_call`). Residual risk: STeP relies on the CLI honouring its deny rules; this cannot be proven from STeP's side. Re-run live acceptance after this change and record the result here.
 
 ## Validation
 
