@@ -22,7 +22,7 @@ import {createInterface} from 'node:readline';
 const kind=${JSON.stringify(kind)}, log=${JSON.stringify(log)};
 const args=process.argv.slice(2);
 if(args[0]==='--version'){console.log(${JSON.stringify(version)});process.exit(0);}
-fs.appendFileSync(log, JSON.stringify({args,cwd:process.cwd(),home:process.env.HOME,api:!!process.env.GEMINI_API_KEY,settings:JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json'),'utf8')),agent:fs.readFileSync(path.join(process.env.HOME,'.gemini','config','agents','step-draft','agent.md'),'utf8')})+'\\n');
+fs.appendFileSync(log, JSON.stringify({args,cwd:process.cwd(),home:process.env.HOME,api:!!process.env.GEMINI_API_KEY,settings:JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json'),'utf8')),agent:fs.readFileSync(path.join(process.env.HOME,'.gemini','config','agents','step-draft','agent.md'),'utf8'),updaterCheck:Date.now()-fs.statSync(path.join(process.env.HOME,'.gemini','antigravity-cli','last_check.timestamp')).mtimeMs})+'\\n');
 if(args[0]==='models'){console.log('gemini-test\\tGemini test\\ngemini-test\\tDuplicate\\nclaude-other\\tOther provider\\ngemini-second\\tSecond');process.exit(0);}
 const send=x=>console.log(JSON.stringify(x));
 if(kind==='auth'){send({event:'result',result:{status:'ERROR',error:'authentication required: user@example.com https://accounts.google.com/oauth?code=private-code',usage:{input_tokens:0,output_tokens:0,total_tokens:0}}});process.exit(1);}
@@ -93,6 +93,8 @@ test('Antigravity uses native NDJSON, isolated system instructions and one usage
     assert.equal(calls.length, 2);
     assert.deepEqual(calls[1].input, { event: 'user', message: { content: 'Synthetic request' } });
     assert.equal(calls[0].api, false);
+    // A fresh update-check stamp keeps agy from starting its background updater (a console window on Windows).
+    assert.ok(calls[0].updaterCheck >= 0 && calls[0].updaterCheck < 60_000);
     assert.equal(calls[0].settings.toolPermission, 'strict');
     assert.deepEqual(calls[0].settings.permissions, { allow: [], ask: [], deny: ANTIGRAVITY_DENY });
     assert.match(calls[0].agent, /Synthetic standing instructions/);

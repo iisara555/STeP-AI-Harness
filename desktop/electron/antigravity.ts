@@ -28,6 +28,10 @@ export async function antigravityHome(context: Pick<ProviderContext, 'cwd' | 'en
     await mkdir(cwd, { recursive: true });
     await mkdir(dirname(settings), { recursive: true });
     await mkdir(dirname(agent), { recursive: true });
+    // agy skips its background updater when this file was touched in the last 15 minutes. Each run has a fresh home,
+    // so without it every message started `agy --bg-updater`, which flashed a console window on Windows.
+    // AGY_CLI_DISABLE_AUTO_UPDATE below does not stop that spawn (checked with the Windows 1.2.17 binary).
+    await writeFile(join(dirname(settings), 'last_check.timestamp'), '');
     await writeFile(
       settings,
       JSON.stringify({
