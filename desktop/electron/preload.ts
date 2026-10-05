@@ -27,6 +27,7 @@ const allowed = new Set([
   'sandboxRun',
   'memoryList',
   'learningList',
+  'learningDraft',
   'learningPropose',
   'learningRevise',
   'learningImport',

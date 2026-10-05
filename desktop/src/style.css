@@ -3558,3 +3558,18 @@ nav .count {
   padding-inline-start: 0.75rem;
   border-inline-start: 3px solid var(--border);
 }
+
+.learning-draft {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+.learning-draft input {
+  flex: 1 1 220px;
+}
+.learning-draft p {
+  flex-basis: 100%;
+  margin: 0;
+}

@@ -73,6 +73,7 @@ import { Questions } from './questions';
 import { CostLedger } from './cost';
 import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
+import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
 import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
 import { ocrAttachmentReport } from './ocr-attachment';
@@ -899,6 +900,61 @@ async function main() {
     switch (method) {
       case 'learningList':
         return { ...learning.snapshot(), feedback: memories.proposals() };
+      case 'learningDraft': {
+        // The connected AI drafts lessons from a finished task (masked input, no tools). Each draft is a pending
+        // candidate in the Learning Inbox; one failing the privacy check is dropped. Nothing applies until confirmed.
+        if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
+        const s = store.session(inputText(input.sessionId, 60));
+        if (service.isActive(s.id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (!s.messages.some(m => m.role === 'assistant')) throw new Error('LEARN_NOTHING_YET');
+        const connection = store.get<Connection>('connection', s.connectionId);
+        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+        const context = learning.snapshot().context;
+        if (input.context !== context) throw new Error('WORKSPACE_CHANGED');
+        const review = harness.privacy(draftInput(s, typeof input.focus === 'string' ? input.focus : ''));
+        if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120_000);
+        try {
+          const current = await runtime(connection);
+          let counted = { input: 0, output: 0, total: 0 };
+          const reply = await current.adapter
+            .run(review.redactedText, connection, {
+              ...current.context,
+              system: DRAFT_SYSTEM,
+              signal: controller.signal,
+              emit: () => {},
+              // Drafting costs tokens too: counted in the usage ledger like any other call.
+              onUsage: count => {
+                counted = {
+                  input: Math.max(counted.input, count.input || 0),
+                  output: Math.max(counted.output, count.output || 0),
+                  total: Math.max(counted.total, count.total || 0),
+                };
+              },
+            })
+            .finally(() => counted.total && ledger.record(connection, counted));
+          let drafted = 0,
+            skipped = 0;
+          for (const draft of parseDrafts(reply)) {
+            try {
+              learning.propose(context, draft, 'ai', s.id);
+              drafted++;
+            } catch (error) {
+              if (errorCode(error) === 'LEARNING_LIMIT') break;
+              skipped++;
+            }
+          }
+          diagnose('learning-draft', { provider: connection.provider, drafted: String(drafted), skipped: String(skipped) });
+          return { drafted, skipped };
+        } catch (error) {
+          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+          throw error;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
       case 'learningPropose':
       case 'learningRevise':
       case 'learningImport':

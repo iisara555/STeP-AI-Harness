@@ -152,7 +152,8 @@ try {
   assert.ok(memory.entries.some(m => m.text === 'First answer received' && m.scope === 'private'));
   // Task commands sit in the title menu, as in Claude Desktop.
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
-  await expect(page.getByRole('menuitem')).toHaveCount(5);
+  await expect(page.getByRole('menuitem')).toHaveCount(6);
+  await page.getByRole('menuitem', { name: 'กล่องบทเรียน', exact: true }).waitFor();
   await page.screenshot({ path: 'release/qa/chat-title-menu.png' });
   await page.keyboard.press('Escape');
   await page.getByRole('menu').waitFor({ state: 'detached' });

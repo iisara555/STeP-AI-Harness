@@ -2261,7 +2261,9 @@ export default function App() {
           </>
         )}
         {usageOpen && api && <UsageDialog api={api} onClose={() => setUsageOpen(false)} />}
-        {learningOpen && api && <LearningDialog api={api} initialText={learningText} onClose={() => setLearningOpen(false)} />}
+        {learningOpen && api && (
+          <LearningDialog api={api} initialText={learningText} sessionId={session?.id} onClose={() => setLearningOpen(false)} />
+        )}
         {memoryOpen && api && snapshot && (
           <MemoryDialog api={api} settings={snapshot.settings} refresh={refresh} onClose={() => setMemoryOpen(false)} />
         )}

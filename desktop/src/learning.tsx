@@ -8,11 +8,24 @@ import { t } from './i18n';
 type Data = LearningSnapshot & { feedback: MemoryProposal[] };
 type Edit = { content: LessonContent; evidence: string; lessonId?: string; baseRevision?: number; candidateId?: string };
 const fresh = (text = ''): Edit => ({ content: { name: '', kind: 'preference', trigger: '', text }, evidence: text });
-export function LearningDialog({ api, initialText, onClose }: { api: DesktopAPI; initialText: string; onClose: () => void }) {
+export function LearningDialog({
+  api,
+  initialText,
+  sessionId,
+  onClose,
+}: {
+  api: DesktopAPI;
+  initialText: string;
+  /** The open task, which the AI can draft lessons from. */
+  sessionId?: string;
+  onClose: () => void;
+}) {
   const [data, setData] = useState<Data>(),
     [edit, setEdit] = useState<Edit | undefined>(initialText ? fresh(initialText) : undefined);
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [focus, setFocus] = useState(''),
+    [drafted, setDrafted] = useState('');
   const load = async () => setData(await api.call('learningList'));
   useEffect(() => {
     void load().catch(e => setError(explainError(e)));
@@ -44,6 +57,44 @@ export function LearningDialog({ api, initialText, onClose }: { api: DesktopAPI;
       <button className="quiet" disabled={busy || !data} onClick={() => setEdit(fresh())}>
         {t('เสนอบทเรียน')}
       </button>
+      {sessionId && (
+        <div className="learning-draft">
+          <input
+            aria-label={t('ให้ AI เน้นเรื่อง (ไม่บังคับ)')}
+            placeholder={t('ให้ AI เน้นเรื่อง (ไม่บังคับ)')}
+            maxLength={500}
+            value={focus}
+            onChange={e => setFocus(e.target.value)}
+          />
+          <button
+            className="quiet"
+            disabled={busy || !data}
+            onClick={() =>
+              void act(async () => {
+                setDrafted(t('AI กำลังอ่านงานนี้และร่างบทเรียน…'));
+                try {
+                  const result = await api.call('learningDraft', { context: data?.context, sessionId, focus });
+                  setDrafted(
+                    result.drafted
+                      ? t('AI ร่างบทเรียน {0} รายการ ตรวจด้านล่างก่อนยืนยัน', result.drafted)
+                      : t('AI ไม่พบบทเรียนที่ควรเก็บจากงานนี้'),
+                  );
+                } catch (e) {
+                  setDrafted('');
+                  throw e;
+                }
+              })
+            }
+          >
+            {t('ให้ AI ร่างบทเรียนจากงานนี้')}
+          </button>
+          {drafted && (
+            <p className="small muted" role="status">
+              {drafted}
+            </p>
+          )}
+        </div>
+      )}
       {edit && (
         <form
           className="memory-editor"
@@ -128,7 +179,13 @@ export function LearningDialog({ api, initialText, onClose }: { api: DesktopAPI;
           return (
             <article className="memory-item learning-item" key={c.id}>
               <strong>{c.content.name}</strong>
-              <p className="small muted">{c.source === 'feedback' ? t('ที่มา: ข้อเสนอความจำจากบทสนทนา') : t('ที่มา: คุณเสนอเอง')}</p>
+              <p className="small muted">
+                {c.source === 'feedback'
+                  ? t('ที่มา: ข้อเสนอความจำจากบทสนทนา')
+                  : c.source === 'ai'
+                    ? t('ที่มา: AI ร่างจากงาน ตรวจให้แน่ใจก่อนยืนยัน')
+                    : t('ที่มา: คุณเสนอเอง')}
+              </p>
               <blockquote>{c.evidence}</blockquote>
               {before && (
                 <>

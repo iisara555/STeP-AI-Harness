@@ -5,6 +5,7 @@ export const errorText: Record<string, string> = localized({
   LEARNING_INVALID: 'กรุณากรอกชื่อ บทเรียน ที่มา และคำที่ใช้เลือกวิธีทำงานให้ครบ',
   LEARNING_NOT_FOUND: 'ข้อเสนอหรือรุ่นนี้เปลี่ยนไปแล้ว ปิดแล้วเปิดกล่องบทเรียนอีกครั้ง',
   LEARNING_CONFLICT: 'บทเรียนมีรุ่นใหม่แล้ว กรุณาตรวจรุ่นปัจจุบันและเสนออีกครั้ง',
+  LEARN_NOTHING_YET: 'งานนี้ยังไม่มีคำตอบจาก AI ให้ร่างบทเรียน ทำงานก่อนแล้วค่อยให้ AI ร่าง',
   LEARNING_LIMIT: 'จำนวนบทเรียน ข้อเสนอ หรือประวัติถึงขีดจำกัดแล้ว',
   PROVIDER_PROXY_UNAVAILABLE: 'ปลายทางนี้ยังไม่รองรับ proxy ที่นโยบายกำหนด กรุณาแจ้งผู้ดูแล',
   PROVIDER_DESTINATION_DENIED: 'ผู้ดูแลยังไม่รับรองปลายทาง AI นี้ กรุณาตรวจ Base URL ในนโยบาย',

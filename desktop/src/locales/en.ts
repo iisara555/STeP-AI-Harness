@@ -1178,6 +1178,14 @@ export const en: Record<string, string> = {
   'ให้ Agent กรอกข้อมูลนี้?': 'Let the Agent fill in this data?',
   'ให้ Agent คลิกเป้าหมายนี้?': 'Let the Agent click this target?',
   กำลังตรวจใบเสร็จอยู่: 'Checking a receipt',
+  'ให้ AI เน้นเรื่อง (ไม่บังคับ)': 'What the AI should focus on (optional)',
+  'AI กำลังอ่านงานนี้และร่างบทเรียน…': 'The AI is reading this task and drafting lessons…',
+  'AI ร่างบทเรียน {0} รายการ ตรวจด้านล่างก่อนยืนยัน': 'The AI drafted {0} lessons. Review them below before confirming',
+  'AI ไม่พบบทเรียนที่ควรเก็บจากงานนี้': 'The AI found no lesson worth keeping in this task',
+  'ให้ AI ร่างบทเรียนจากงานนี้': 'Have the AI draft lessons from this task',
+  'ที่มา: AI ร่างจากงาน ตรวจให้แน่ใจก่อนยืนยัน': 'Source: drafted by the AI from the task. Check it before confirming',
+  'งานนี้ยังไม่มีคำตอบจาก AI ให้ร่างบทเรียน ทำงานก่อนแล้วค่อยให้ AI ร่าง':
+    'This task has no AI answer to learn from yet. Do the work first, then have the AI draft lessons',
   'ให้ Agent กดขั้นสุดท้ายนี้?': 'Let the Agent press this final step?',
   'รออนุญาตขั้นสุดท้าย: {0}': 'Waiting for approval of the final step: {0}',
   '\nนี่คือการส่งหรือยืนยันรายการบนเว็บ ตรวจข้อมูลในแท็บเว็บให้ครบก่อนอนุมัติ':

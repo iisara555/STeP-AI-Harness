@@ -10,7 +10,8 @@ export type LearningCandidate = {
   baseRevision: number;
   content: LessonContent;
   evidence: string;
-  source: 'manual' | 'feedback';
+  /** manual: typed by the person; feedback: imported from a memory proposal; ai: drafted by /learn's AI review. */
+  source: 'manual' | 'feedback' | 'ai';
   sessionId?: string;
   at: string;
   status: 'pending' | 'approved' | 'rejected';

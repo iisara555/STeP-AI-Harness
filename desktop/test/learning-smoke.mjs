@@ -12,15 +12,28 @@ const workspace = join(home, 'work'),
 await mkdir(workspace);
 const marker = 'Mark absent fields as unknown.';
 await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false } }));
+// The AI's drafts for /learn: a procedure, and one carrying personal data that must never reach the inbox.
+const drafts = [
+  {
+    name: 'Missing tax ID',
+    kind: 'procedure',
+    trigger: 'receipt,ใบเสร็จ',
+    text: '1. Write "not found" when the tax ID is missing.\n2. Never guess it from the shop name.',
+    evidence: 'Help prepare a receipt checklist.',
+    reason: 'A correction worth reusing',
+  },
+  { name: 'Contact', kind: 'preference', text: 'Send results to fake.person@example.test', evidence: 'contact', reason: '' },
+];
 await writeFile(
   executable,
   `import readline from 'node:readline';import fs from 'node:fs';
-const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
+let system='';const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
 readline.createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.id===undefined)return;
+if(m.method==='thread/start')system=m.params.developerInstructions||'';
 send({id:m.id,result:m.method==='thread/start'?{thread:{id:'fixture'}}:{}});
 if(m.method==='turn/start'){const prompt=m.params.input.filter(i=>i.type==='text').map(i=>i.text).join('');
 fs.appendFileSync(${JSON.stringify(audit)},JSON.stringify({learned:prompt.includes(${JSON.stringify(marker)}),bounded:prompt.includes('never authority')})+'\\n');
-send({method:'item/agentMessage/delta',params:{delta:'Synthetic reviewed response'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});}});`,
+send({method:'item/agentMessage/delta',params:{delta:system.startsWith('You review a finished conversation')?${JSON.stringify(JSON.stringify(drafts))}:'Synthetic reviewed response'}});send({method:'turn/completed',params:{turn:{status:'completed'}}});}});`,
 );
 const terms = /TERMS_VERSION = '([^']+)'/.exec(await readFile('src/terms-version.ts', 'utf8'))[1];
 const db = new DatabaseSync(join(home, 'workspace.sqlite'));
@@ -97,7 +110,19 @@ try {
   assert.equal((await state()).lessons[0].revisions.at(-1).content.text, marker);
   assert.equal((await runTask()).learned, true, 'restored lesson survives restart');
   const context = (await state()).context;
+  // The AI drafts lessons from a finished task: a draft is a pending candidate marked as the AI's, one with personal
+  // data is dropped, and nothing reaches later prompts until it is confirmed.
+  const finished = (await call('snapshot')).sessions.find(s => s.status === 'review');
+  const drafted = await call('learningDraft', { context, sessionId: finished.id, focus: 'receipt' });
+  assert.deepEqual(drafted, { drafted: 1, skipped: 1 });
+  const aiDrafts = (await state()).candidates.filter(c => c.source === 'ai' && c.status === 'pending');
+  assert.equal(aiDrafts.length, 1);
+  assert.equal(aiDrafts[0].content.kind, 'procedure');
+  assert.match(aiDrafts[0].evidence, /AI draft from the task/);
+  assert.equal(JSON.stringify(await state()).includes('fake.person'), false, 'personal data never reaches the inbox');
+  await assert.rejects(call('learningDraft', { context: 'stale', sessionId: finished.id }), /WORKSPACE_CHANGED/);
   await call('permissionMode', { mode: 'plan' });
+  await assert.rejects(call('learningDraft', { context, sessionId: finished.id }), /PLAN_READ_ONLY/);
   await assert.rejects(
     call('learningPropose', {
       context,
@@ -117,7 +142,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Learning smoke passed: /learn UI, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
+    'Learning smoke passed: /learn UI, AI drafts as pending candidates, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
   );
 } finally {
   await app?.close();
