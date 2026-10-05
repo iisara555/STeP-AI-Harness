@@ -1716,4 +1716,24 @@ export const en: Record<string, string> = {
   'ยังไม่พบ Antigravity CLI กดเชื่อมต่อเพื่อให้ STeP ติดตั้งให้': 'Antigravity CLI not found. Press connect and STeP installs it',
   'ต้องใช้ Antigravity CLI รุ่น 1.2.14 ขึ้นไป กดเชื่อมต่อเพื่อให้ STeP ติดตั้งรุ่นใหม่ให้':
     'Antigravity CLI 1.2.14 or newer is required. Press connect and STeP installs it',
+  '{0} คำตอบ ให้คะแนน {1} · ดี {2}% · ต้องแก้ {3}%': '{0} answers, {1} rated · good {2}% · needs fixing {3}%',
+  '{0} คำตอบ ยังไม่มีคะแนน': '{0} answers, none rated yet',
+  'ผลการใช้บทเรียน ({0} บทเรียนยังต้องแก้ซ้ำ)': 'How lessons are doing ({0} still corrected again)',
+  ผลการใช้บทเรียน: 'How lessons are doing',
+  'นับตั้งแต่ {0} บนเครื่องนี้ คะแนนมาจากปุ่มดี/ต้องแก้ใต้คำตอบ ตัวเลขเป็นสัญญาณให้คุณตัดสิน ไม่ใช่หลักฐานว่า AI เก่งขึ้น':
+    'Counted since {0} on this computer. Ratings come from the good / needs fixing buttons under answers. The numbers are signals for you to judge, not proof the AI got better',
+  'ยังไม่มีงานที่บันทึกผล เริ่มนับเมื่อใช้งานครั้งถัดไป': 'Nothing recorded yet. Counting starts with your next task',
+  'ใช้บทเรียน:': 'With lessons:',
+  'ไม่ใช้บทเรียน:': 'Without lessons:',
+  'ยังมีคำตอบที่ให้คะแนนน้อยกว่า {0} ครั้งในแต่ละกลุ่ม ยังเทียบกันไม่ได้':
+    'Fewer than {0} rated answers in each group, too few to compare yet',
+  '“{0}” ยังต้องแก้เรื่องเดียวกันซ้ำ {1} ครั้งหลังยืนยัน ลองเสนอแก้บทเรียนให้ชัดขึ้น หรือตรวจคำกระตุ้น':
+    '“{0}” was corrected on the same point {1} times after you confirmed it. Try proposing a clearer version or check its trigger words',
+  บทเรียน: 'Lesson',
+  'ใช้กับคำตอบ (งาน)': 'Answers (tasks)',
+  'ดี / ต้องแก้': 'Good / needs fixing',
+  แก้ซ้ำ: 'Corrected again',
+  ใช้ล่าสุด: 'Last used',
+  '{0} (หยุดใช้แล้ว)': '{0} (disabled)',
+  ยังไม่ถูกใช้: 'Not used yet',
 };

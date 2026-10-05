@@ -26,6 +26,16 @@ export function similarity(a: string, b: string) {
   for (const gram of x) if (y.has(gram)) shared++;
   return shared / (x.size + y.size - shared);
 }
+/** How much of the shorter text the longer one covers, so a short correction can match a longer lesson. Texts under
+ * six bigrams score 0: too short to say they are about the same thing. */
+export function overlap(a: string, b: string) {
+  const x = bigrams(a),
+    y = bigrams(b);
+  if (Math.min(x.size, y.size) < 6) return 0;
+  let shared = 0;
+  for (const gram of x) if (y.has(gram)) shared++;
+  return shared / Math.min(x.size, y.size);
+}
 const triggers = (content: LessonContent) =>
   content.kind === 'procedure'
     ? content.trigger

@@ -83,6 +83,7 @@ import { CostLedger } from './cost';
 import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
+import { learningMetrics } from '../src/learning-metrics';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
 import { WorkspaceContext } from './workspace-context';
 import { section } from './prompt';
@@ -665,6 +666,22 @@ async function main() {
         reviewing = false;
       });
   };
+  // Phase 5: measure lessons from what the app already records. Each turn's rating is the person's rating of the first
+  // answer after it, before the task's next recorded turn.
+  const measureLessons = () => {
+    const usage = learning.usage();
+    const starts = new Map<string, number[]>();
+    for (const use of usage.uses) starts.set(use.sessionId, [...(starts.get(use.sessionId) || []), use.index]);
+    const sessions = new Map<string, Session | undefined>();
+    return learningMetrics(learning.snapshot().lessons, usage, use => {
+      if (!sessions.has(use.sessionId)) sessions.set(use.sessionId, store.get<Session>('session', use.sessionId));
+      const s = sessions.get(use.sessionId);
+      if (!s) return undefined;
+      const end = Math.min(s.messages.length, ...(starts.get(use.sessionId) || []).filter(i => i > use.index));
+      for (let i = use.index; i < end; i++) if (s.messages[i]?.role === 'assistant') return s.messages[i].feedback;
+      return undefined;
+    });
+  };
   harness.completed = async session => {
     reviewInBackground(session);
     await memories.dream(session);
@@ -736,6 +753,11 @@ async function main() {
       learningVersion !== learning.snapshot().generation
     )
       throw new Error('WORKSPACE_CHANGED');
+    try {
+      learning.recordUse(id, store.session(id).messages.length, lessons);
+    } catch (error) {
+      diagnose('learning-usage-failed', { code: errorCode(error) });
+    }
     return {
       text,
       loaded: [
@@ -1021,7 +1043,7 @@ async function main() {
     const input = raw ?? {};
     switch (method) {
       case 'learningList':
-        return { ...learning.snapshot(), feedback: memories.proposals(), review: reviewState() };
+        return { ...learning.snapshot(), feedback: memories.proposals(), review: reviewState(), metrics: measureLessons() };
       case 'learningDraft': {
         // The connected AI drafts lessons from a finished task on request (masked input, no tools). Each draft is a
         // pending candidate in the Learning Inbox; one failing the privacy check is dropped. Nothing applies until confirmed.
@@ -1128,6 +1150,12 @@ async function main() {
         // The proposal is checked first, so a refused note leaves the rating unchanged and the person can edit it.
         if (rating === 'fix' && note && permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         const proposed = rating === 'fix' && note ? Boolean(memories.proposeFeedback(s.id, note)) : false;
+        if (rating === 'fix' && note && message.feedback !== 'fix')
+          try {
+            learning.noteRepeat(note, 'fix');
+          } catch (error) {
+            diagnose('learning-usage-failed', { code: errorCode(error) });
+          }
         if (rating) message.feedback = rating;
         else delete message.feedback;
         store.save(s);
