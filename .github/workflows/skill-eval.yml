@@ -1,0 +1,56 @@
+name: Skill eval (old vs new)
+
+# Run by a Skill maintainer before merging a Skill change: compares the Skill on a branch with its version on the base
+# branch, case by case, with a real model. Needs the repository secrets STEP_EVAL_BASE_URL, STEP_EVAL_MODEL and
+# STEP_EVAL_KEY (and optionally STEP_EVAL_JUDGE_MODEL, STEP_EVAL_PROTOCOL). Uses model tokens on that account.
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: Skill name, for example meeting-summary
+        required: true
+      base:
+        description: Git ref with the old version of the Skill
+        default: origin/main
+      cases:
+        description: Case ids to run, comma-separated (empty runs every case with outputAssertions)
+        default: ''
+      runs:
+        description: Runs per version (1-5)
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Compare old and new Skill
+        env:
+          STEP_EVAL_BASE_URL: ${{ secrets.STEP_EVAL_BASE_URL }}
+          STEP_EVAL_PROTOCOL: ${{ secrets.STEP_EVAL_PROTOCOL }}
+          STEP_EVAL_MODEL: ${{ secrets.STEP_EVAL_MODEL }}
+          STEP_EVAL_JUDGE_MODEL: ${{ secrets.STEP_EVAL_JUDGE_MODEL }}
+          STEP_EVAL_KEY: ${{ secrets.STEP_EVAL_KEY }}
+          SKILL: ${{ inputs.skill }}
+          BASE: ${{ inputs.base }}
+          CASES: ${{ inputs.cases }}
+          RUNS: ${{ inputs.runs }}
+        run: |
+          args=("$SKILL" --base "$BASE" --runs "$RUNS" --out skill-eval-report.md)
+          if [ -n "$CASES" ]; then args+=(--cases "$CASES"); fi
+          node scripts/skill-eval-compare.mjs "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skill-eval-report
+          path: skill-eval-report.md
+          if-no-files-found: ignore

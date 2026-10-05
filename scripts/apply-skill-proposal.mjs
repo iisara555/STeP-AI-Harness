@@ -67,19 +67,34 @@ if (/TODO/.test(lesson.prompt))
 if (lesson.expect?.skill !== name)
   fail(`the test case must expect the Skill ${name}`);
 
-const git = (...command) =>
-  execFileSync("git", command, {
-    cwd: root,
-    input: patch,
-    stdio: ["pipe", "pipe", "pipe"],
-  }).toString();
-try {
-  git("apply", "--check", "-");
-} catch (error) {
-  fail(
-    `the patch no longer applies to ${path} (the Skill changed since the proposal): ${String(error.stderr || error.message).trim()}`,
-  );
+// The patch appends to the end of SKILL.md. It is applied here rather than with `git apply`, so a checkout with CRLF
+// line endings (Windows, core.autocrlf) takes it too: the context is compared without line endings and the file keeps
+// its own line ending style.
+const hunk = patch
+  .split("\n")
+  .slice(patch.split("\n").findIndex((line) => line.startsWith("@@")) + 1);
+const context = [],
+  added = [];
+let removed = 0;
+for (const line of hunk) {
+  if (line.startsWith("\\") || line === "") continue;
+  if (line.startsWith(" ") || line.startsWith("-")) {
+    context.push(line.slice(1));
+    if (line.startsWith("-")) removed++;
+  } else if (line.startsWith("+")) added.push(line.slice(1));
+  else fail("the patch has an unexpected line: " + line.slice(0, 40));
 }
+const original = readFileSync(join(root, path), "utf8");
+const eol = original.includes("\r\n") ? "\r\n" : "\n";
+const lines = original.replace(/\r\n/g, "\n").replace(/\n$/, "").split("\n");
+const tail = lines.slice(-context.length);
+if (!context.length || tail.join("\n") !== context.join("\n"))
+  fail(
+    `the patch no longer applies to ${path}: the end of the Skill changed since the proposal was made`,
+  );
+// A removed line is the old last line without a final newline; the patch adds it back unchanged first. The result is
+// the old lines plus the new ones, ending in one newline.
+const updated = [...lines, ...added.slice(removed)].join(eol) + eol;
 
 const evalFile = join(root, "evals", "skills", name + ".json");
 // A Skill without its full eval file cannot take a lone case (CI requires all four dimensions): it waits beside it.
@@ -98,13 +113,13 @@ if (evals.cases.some((item) => item.id === lesson.id))
   fail(`${target} already has the case ${lesson.id}`);
 
 console.log(`Skill: ${name} (${path})`);
-console.log(`Patch: applies cleanly`);
+console.log(`Patch: applies cleanly (${added.length} lines added)`);
 console.log(`Test case: ${lesson.id} → ${target.slice(root.length + 1)}`);
 if (dry) {
   console.log("Dry run: nothing changed.");
   process.exit(0);
 }
-git("apply", "-");
+writeFileSync(join(root, path), updated);
 evals.cases.push(lesson);
 mkdirSync(dirname(target), { recursive: true });
 writeFileSync(target, JSON.stringify(evals, null, 2) + "\n");

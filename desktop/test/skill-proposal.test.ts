@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, writeFile, cp, mkdir, symlink } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, cp, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { LESSONS_HEADING, evalCase, proposalMarkdown, skillPatch } from '../electron/skill-proposal';
@@ -64,7 +64,6 @@ test('the maintainer script refuses the TODO prompt, then applies the patch and 
   execFileSync('git', ['worktree', 'add', '-q', '--detach', copy, 'HEAD'], { cwd: repo });
   t.after(() => execFileSync('git', ['worktree', 'remove', '--force', copy], { cwd: repo }));
   await cp(join(repo, 'scripts/apply-skill-proposal.mjs'), join(copy, 'scripts/apply-skill-proposal.mjs'));
-  await symlink(join(repo, 'node_modules'), join(copy, 'node_modules'), 'junction');
   const skillPath = 'skills/pm/meeting-summary/SKILL.md';
   const skill = { name: 'meeting-summary', title: 'สรุปประชุม', path: skillPath, owner: 'pm' };
   const markdown = proposalMarkdown({
@@ -77,6 +76,9 @@ test('the maintainer script refuses the TODO prompt, then applies the patch and 
     team: 'pm',
     at,
   });
+  // A Windows checkout (core.autocrlf) has CRLF line endings; the proposal, made from LF text, still applies.
+  const crlf = (await readFile(join(copy, skillPath), 'utf8')).replace(/\r?\n/g, '\r\n');
+  await writeFile(join(copy, skillPath), crlf);
   const file = join(copy, 'proposal.md');
   await writeFile(file, markdown);
   const run = () => spawnSync(process.execPath, ['scripts/apply-skill-proposal.mjs', file], { cwd: copy, encoding: 'utf8' });
@@ -86,7 +88,10 @@ test('the maintainer script refuses the TODO prompt, then applies the patch and 
   await writeFile(file, markdown.replace(/TODO: [^"]*/, 'สรุปประชุมนี้ให้หน่อย ในบันทึกไม่ระบุว่าใครรับผิดชอบงานไหน'));
   const applied = run();
   assert.equal(applied.status, 0, applied.stderr + applied.stdout);
-  assert.match(await readFile(join(copy, skillPath), 'utf8'), /ถ้าบันทึกไม่ระบุผู้รับผิดชอบ ให้เขียนว่ารอยืนยัน/);
+  const after = await readFile(join(copy, skillPath), 'utf8');
+  assert.match(after, /ถ้าบันทึกไม่ระบุผู้รับผิดชอบ ให้เขียนว่ารอยืนยัน\r\n/);
+  assert.ok(after.startsWith(crlf.slice(0, -2)), 'the Skill is unchanged above the lesson');
+  assert.equal(after.replace(/\r\n/g, '').includes('\n'), false, 'the file keeps CRLF throughout');
   const evals = JSON.parse(await readFile(join(copy, 'evals/skills/meeting-summary.json'), 'utf8'));
   assert.ok(evals.cases.some((c: any) => c.id === 'lesson-12345678' && c.dimension === 'regression'));
   // The same proposal again: the patch no longer applies.
