@@ -164,6 +164,10 @@ export type Settings = {
   avatar?: string;
   personality?: 'coworker' | 'professional' | 'concise' | 'custom';
   assistantTone?: string;
+  /** How answers flow (src/speaking-styles.ts); Standard when unset. */
+  interactionStyle?: 'standard' | 'witty' | 'ob-oon';
+  /** A wording layer that stacks on the interaction style; Standard when unset. */
+  languageStyle?: 'standard' | 'northern-thai';
   tourDone?: boolean;
   consentedAt?: string;
   /** Version of the usage terms this person accepted (src/terms-version.ts). */

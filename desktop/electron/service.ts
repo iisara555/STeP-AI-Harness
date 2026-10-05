@@ -17,6 +17,7 @@ import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { webSources } from '../src/web';
+import { speakingStyleRules } from '../src/speaking-styles';
 import { ToolLoop, TOOL_RULES, type LoopHost } from './tool-loop';
 import type { ToolScope } from './tools';
 import { RETRYABLE_CODES, RETRY_DELAYS_MS, retryDelay } from './retry';
@@ -739,6 +740,7 @@ export class WorkService {
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
           ...personal(this.store.settings()),
+          ...speakingStyleRules(this.store.settings()),
           section('skill_instructions', instructions.join('\n\n')),
         ]
           .filter(Boolean)

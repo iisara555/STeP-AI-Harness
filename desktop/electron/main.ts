@@ -27,6 +27,7 @@ import { BrowserDock } from './browser-dock';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL } from './updater';
 import { isAvatarId } from '../src/avatar-ids';
+import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
@@ -1477,6 +1478,11 @@ async function main() {
           if (!isAvatarId(value)) throw new Error('INVALID_SETTINGS');
           return value;
         };
+        // An unknown speaking style is a bad request, not a silent fallback to Standard.
+        const styleInput = <T extends string>(value: unknown, known: (value: unknown) => T) => {
+          if (known(value) !== value) throw new Error('INVALID_SETTINGS');
+          return value as T;
+        };
         const teams = await routing.loadTeamsDictionary();
         const team = inputText(input.team, 40),
           theme = input.theme;
@@ -1495,6 +1501,12 @@ async function main() {
           personality,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
+          interactionStyle:
+            input.interactionStyle === undefined
+              ? store.settings().interactionStyle
+              : styleInput(input.interactionStyle, interactionStyleId),
+          languageStyle:
+            input.languageStyle === undefined ? store.settings().languageStyle : styleInput(input.languageStyle, languageStyleId),
         };
         store.put('settings', 'main', s);
         nativeTheme.themeSource = theme;

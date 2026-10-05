@@ -2801,6 +2801,10 @@ nav .count {
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
+.speaking-styles {
+  grid-template-columns: repeat(3, 1fr);
+  margin: 6px 0 20px;
+}
 .style-card {
   flex-direction: column;
   align-items: flex-start;
