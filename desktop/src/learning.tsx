@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react';
 import type { DesktopAPI, MemoryProposal } from './types';
-import type { LessonContent, LearningSnapshot } from './learning-types';
+import type { LessonContent, LearningReviewState, LearningSnapshot } from './learning-types';
+import { curatorReport, type CuratorFinding } from './learning-curator';
 import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
 import { t } from './i18n';
 
-type Data = LearningSnapshot & { feedback: MemoryProposal[] };
+type Data = LearningSnapshot & { feedback: MemoryProposal[]; review?: LearningReviewState };
 type Edit = { content: LessonContent; evidence: string; lessonId?: string; baseRevision?: number; candidateId?: string };
+const findings = (data: LearningSnapshot) => curatorReport(data);
+function describe(f: CuratorFinding) {
+  if (f.kind === 'duplicate')
+    return t('“{0}” กับ “{1}” เนื้อหาคล้ายกัน {2}% อาจรวมเป็นบทเรียนเดียว', f.lessons[0], f.lessons[1], Math.round(f.similarity * 100));
+  if (f.kind === 'sharedTrigger')
+    return t('“{0}” กับ “{1}” ใช้คำกระตุ้นเดียวกัน ({2}) ตรวจว่าไม่ขัดกัน', f.lessons[0], f.lessons[1], f.words.join(', '));
+  if (f.kind === 'stalePending') return t('ข้อเสนอ “{0}” รอตรวจมา {1} วันแล้ว', f.candidate, f.days);
+  if (f.kind === 'long') return t('“{0}” ยาว {1} ตัวอักษร บทเรียนที่สั้นกว่าใช้บริบทน้อยกว่า', f.lesson, f.chars);
+  return f.what === 'pending'
+    ? t('ข้อเสนอรอตรวจ {0} จาก {1} รายการ ตรวจหรือปฏิเสธบ้างก่อนเต็ม', f.used, f.limit)
+    : t('บทเรียน {0} จาก {1} รายการ', f.used, f.limit);
+}
 const fresh = (text = ''): Edit => ({ content: { name: '', kind: 'preference', trigger: '', text }, evidence: text });
 export function LearningDialog({
   api,
@@ -191,7 +204,9 @@ export function LearningDialog({
                   ? t('ที่มา: ข้อเสนอความจำจากบทสนทนา')
                   : c.source === 'ai'
                     ? t('ที่มา: AI ร่างจากงาน ตรวจให้แน่ใจก่อนยืนยัน')
-                    : t('ที่มา: คุณเสนอเอง')}
+                    : c.source === 'review'
+                      ? t('ที่มา: การทบทวนงานอัตโนมัติ ตรวจให้แน่ใจก่อนยืนยัน')
+                      : t('ที่มา: คุณเสนอเอง')}
               </p>
               <blockquote>{c.evidence}</blockquote>
               {before && (
@@ -232,6 +247,36 @@ export function LearningDialog({
             </article>
           );
         })}
+      {data?.review?.allowed && (
+        <label className="learning-review">
+          <input
+            type="checkbox"
+            checked={data.review.enabled}
+            disabled={busy}
+            onChange={e => void act(() => api.call('learningReviewSetting', { enabled: e.target.checked }))}
+          />
+          {t(
+            'ทบทวนงานอัตโนมัติ: ทุก 10 ข้อความของงาน AI ร่างบทเรียนมารอตรวจที่นี่ (ไม่เกิน {0} ครั้งต่อวัน วันนี้ใช้ไป {1} ครั้ง) ใช้ tokens ของบัญชีนี้',
+            data.review.dailyLimit,
+            data.review.today,
+          )}
+        </label>
+      )}
+      {data && findings(data).length > 0 && (
+        <details className="learning-health">
+          <summary>{t('ตรวจสุขภาพคลังบทเรียน ({0} เรื่องที่ควรดู)', findings(data).length)}</summary>
+          <p className="small muted">
+            {t('รายงานอย่างเดียว ระบบไม่รวม ไม่ลบ และไม่หยุดใช้บทเรียนเอง บทเรียนที่ใช้นาน ๆ ครั้งไม่ได้แปลว่าไม่มีค่า')}
+          </p>
+          <ul>
+            {findings(data).map((f, i) => (
+              <li key={i} className="small">
+                {describe(f)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <h3>{t('บทเรียนและประวัติรุ่น')}</h3>
       {data?.lessons.map(l => {
         const head = l.revisions[l.revisions.length - 1];

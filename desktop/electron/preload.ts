@@ -29,6 +29,7 @@ const allowed = new Set([
   'learningList',
   'learningDraft',
   'skillProposal',
+  'learningReviewSetting',
   'learningPropose',
   'learningRevise',
   'learningImport',

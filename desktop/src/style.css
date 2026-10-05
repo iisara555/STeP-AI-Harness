@@ -3573,3 +3573,14 @@ nav .count {
   flex-basis: 100%;
   margin: 0;
 }
+
+.learning-review {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0;
+}
+.learning-health ul {
+  margin: 6px 0;
+  padding-left: 1.2em;
+}

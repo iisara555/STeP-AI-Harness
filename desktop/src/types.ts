@@ -145,6 +145,8 @@ export type Session = {
   runs?: RunTrace[];
 };
 export type Settings = {
+  /** The employee turned on the background learning review (policy features.learningReview must allow it). */
+  learningReview?: boolean;
   keybindings?: import('./commands').Keybindings;
   vimMode?: boolean;
   outputStyle?: string;

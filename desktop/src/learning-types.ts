@@ -10,8 +10,8 @@ export type LearningCandidate = {
   baseRevision: number;
   content: LessonContent;
   evidence: string;
-  /** manual: typed by the person; feedback: imported from a memory proposal; ai: drafted by /learn's AI review. */
-  source: 'manual' | 'feedback' | 'ai';
+  /** manual: typed by the person; feedback: imported from a memory proposal; ai: drafted on request; review: drafted by the background review. */
+  source: 'manual' | 'feedback' | 'ai' | 'review';
   sessionId?: string;
   at: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -30,3 +30,5 @@ export type LearningSnapshot = {
   candidates: LearningCandidate[];
   lessons: LearnedLesson[];
 };
+/** The background review: allowed by policy, turned on by the employee, and how much of today's budget is left. */
+export type LearningReviewState = { allowed: boolean; enabled: boolean; today: number; dailyLimit: number };

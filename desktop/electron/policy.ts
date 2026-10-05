@@ -33,6 +33,7 @@ export const FEATURES = [
   'receiptVision',
   'autoUpdate',
   'claudeSubscription',
+  'learningReview',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -159,6 +160,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // and each employee signs in to their own Claude account on Anthropic's page. Off until Anthropic confirms how its
   // Claude Code terms apply (docs/claude-subscription.md); pilot machines turn it on in the managed policy.
   claudeSubscription: false,
+  // A background review after every 10 user turns drafts lessons into the Learning Inbox (proposals only), as Hermes
+  // Agent does. Each review is a model call on the employee's account, so it is off until an administrator allows it,
+  // and each employee then turns it on in the Learning Inbox.
+  learningReview: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',

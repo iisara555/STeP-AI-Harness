@@ -11,7 +11,7 @@ const workspace = join(home, 'work'),
   audit = join(home, 'calls.jsonl');
 await mkdir(workspace);
 const marker = 'Mark absent fields as unknown.';
-await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false } }));
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false, learningReview: true } }));
 // The AI's drafts for /learn: a procedure, and one carrying personal data that must never reach the inbox.
 const drafts = [
   {
@@ -137,6 +137,21 @@ try {
   assert.match(aiDrafts[0].evidence, /AI draft from the task/);
   assert.equal(JSON.stringify(await state()).includes('fake.person'), false, 'personal data never reaches the inbox');
   await assert.rejects(call('learningDraft', { context: 'stale', sessionId: finished.id }), /WORKSPACE_CHANGED/);
+  // The background review: allowed by policy but off until the employee turns it on; then a task reaching 10 user
+  // turns gets one review, which drafts lessons as pending candidates marked as the review's, within a daily budget.
+  assert.deepEqual((await state()).review, { allowed: true, enabled: false, today: 0, dailyLimit: 10 });
+  await call('learningDecide', { context, id: aiDrafts[0].id, approve: false });
+  await call('learningReviewSetting', { enabled: true });
+  const long = await call('create', { connectionId: 'fake' });
+  const status = async () => (await call('snapshot')).sessions.find(s => s.id === long.id)?.status;
+  for (let turn = 1; turn <= 10; turn++) {
+    await call('send', { id: long.id, text: 'Receipt step ' + turn, mode: 'chat', autoImage: false });
+    await expect.poll(status, { timeout: 15000 }).toBe('review');
+    if (turn === 9) assert.equal((await state()).review.today, 0, 'no review before 10 turns');
+  }
+  await expect.poll(async () => (await state()).candidates.filter(c => c.source === 'review' && c.status === 'pending').length).toBe(1);
+  assert.equal((await state()).review.today, 1);
+  await call('learningReviewSetting', { enabled: false });
   await call('permissionMode', { mode: 'plan' });
   await assert.rejects(call('learningDraft', { context, sessionId: finished.id }), /PLAN_READ_ONLY/);
   await assert.rejects(
@@ -158,7 +173,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Learning smoke passed: /learn UI, AI drafts as pending candidates, Skill change proposal files, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
+    'Learning smoke passed: /learn UI, AI drafts as pending candidates, the opt-in background review every 10 turns, Skill change proposal files, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
   );
 } finally {
   await app?.close();

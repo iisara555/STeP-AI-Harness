@@ -545,7 +545,93 @@ async function main() {
     const result = await fireHook({ event, sessionId: id, beforeTokens: before, afterTokens: after });
     if (result.blocked) throw new Error('HOOK_BLOCKED');
   };
+  /**
+   * Drafts lessons from a task with its own connected AI (masked input, no tools) into the Learning Inbox as pending
+   * candidates. Used on request ("draft lessons from this task") and by the background review.
+   */
+  const draftLessons = async (s: Session, focus: string, source: 'ai' | 'review') => {
+    if (!s.messages.some(m => m.role === 'assistant')) throw new Error('LEARN_NOTHING_YET');
+    const connection = store.get<Connection>('connection', s.connectionId);
+    if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+    if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+    const context = learning.snapshot().context;
+    const review = harness.privacy(draftInput(s, focus));
+    if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+    try {
+      const current = await runtime(connection);
+      let counted = { input: 0, output: 0, total: 0 };
+      const reply = await current.adapter
+        .run(review.redactedText, connection, {
+          ...current.context,
+          system: DRAFT_SYSTEM,
+          signal: controller.signal,
+          emit: () => {},
+          // Drafting costs tokens too: counted in the usage ledger like any other call.
+          onUsage: count => {
+            counted = {
+              input: Math.max(counted.input, count.input || 0),
+              output: Math.max(counted.output, count.output || 0),
+              total: Math.max(counted.total, count.total || 0),
+            };
+          },
+        })
+        .finally(() => counted.total && ledger.record(connection, counted));
+      let drafted = 0,
+        skipped = 0;
+      for (const draft of parseDrafts(reply)) {
+        try {
+          learning.propose(context, draft, source, s.id);
+          drafted++;
+        } catch (error) {
+          if (errorCode(error) === 'LEARNING_LIMIT') break;
+          skipped++;
+        }
+      }
+      diagnose('learning-draft', { provider: connection.provider, source, drafted: String(drafted), skipped: String(skipped) });
+      return { drafted, skipped };
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+  // The background review, after Hermes Agent: every REVIEW_TURNS user turns of a task, at most REVIEW_DAILY times a
+  // day, one at a time. It only drafts proposals; it never runs while the task does, in Plan mode, or when not allowed.
+  const REVIEW_TURNS = 10,
+    REVIEW_DAILY = 10;
+  let reviewing = false;
+  const reviewBudget = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const used = store.get<{ day: string; count: number }>('learning-review', 'budget');
+    return { today, count: used?.day === today ? used.count : 0 };
+  };
+  const reviewState = () => ({
+    allowed: policyState.policy.features.learningReview,
+    enabled: Boolean(policyState.policy.features.learningReview && store.settings().learningReview),
+    today: reviewBudget().count,
+    dailyLimit: REVIEW_DAILY,
+  });
+  const reviewInBackground = (session: Session) => {
+    if (!reviewState().enabled || reviewing || permissionMode() === 'plan' || session.status !== 'review') return;
+    const turns = session.messages.filter(m => m.role === 'user').length;
+    const done = store.get<{ turns: number }>('learning-review', session.id)?.turns || 0;
+    const budget = reviewBudget();
+    if (turns - done < REVIEW_TURNS || budget.count >= REVIEW_DAILY) return;
+    reviewing = true;
+    store.put('learning-review', session.id, { turns });
+    store.put('learning-review', 'budget', { day: budget.today, count: budget.count + 1 });
+    void draftLessons(session, '', 'review')
+      .then(result => result.drafted && emit({ sessionId: session.id, type: 'changed' }))
+      .catch(error => diagnose('learning-review-failed', { code: errorCode(error) }))
+      .finally(() => {
+        reviewing = false;
+      });
+  };
   harness.completed = async session => {
+    reviewInBackground(session);
     await memories.dream(session);
     emit({ sessionId: session.id, type: 'changed' });
   };
@@ -900,61 +986,20 @@ async function main() {
     const input = raw ?? {};
     switch (method) {
       case 'learningList':
-        return { ...learning.snapshot(), feedback: memories.proposals() };
+        return { ...learning.snapshot(), feedback: memories.proposals(), review: reviewState() };
       case 'learningDraft': {
-        // The connected AI drafts lessons from a finished task (masked input, no tools). Each draft is a pending
-        // candidate in the Learning Inbox; one failing the privacy check is dropped. Nothing applies until confirmed.
+        // The connected AI drafts lessons from a finished task on request (masked input, no tools). Each draft is a
+        // pending candidate in the Learning Inbox; one failing the privacy check is dropped. Nothing applies until confirmed.
         if (permissionMode() === 'plan') throw new Error('PLAN_READ_ONLY');
         const s = store.session(inputText(input.sessionId, 60));
         if (service.isActive(s.id)) throw new Error('RUN_ALREADY_ACTIVE');
-        if (!s.messages.some(m => m.role === 'assistant')) throw new Error('LEARN_NOTHING_YET');
-        const connection = store.get<Connection>('connection', s.connectionId);
-        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
-        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-        const context = learning.snapshot().context;
-        if (input.context !== context) throw new Error('WORKSPACE_CHANGED');
-        const review = harness.privacy(draftInput(s, typeof input.focus === 'string' ? input.focus : ''));
-        if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120_000);
-        try {
-          const current = await runtime(connection);
-          let counted = { input: 0, output: 0, total: 0 };
-          const reply = await current.adapter
-            .run(review.redactedText, connection, {
-              ...current.context,
-              system: DRAFT_SYSTEM,
-              signal: controller.signal,
-              emit: () => {},
-              // Drafting costs tokens too: counted in the usage ledger like any other call.
-              onUsage: count => {
-                counted = {
-                  input: Math.max(counted.input, count.input || 0),
-                  output: Math.max(counted.output, count.output || 0),
-                  total: Math.max(counted.total, count.total || 0),
-                };
-              },
-            })
-            .finally(() => counted.total && ledger.record(connection, counted));
-          let drafted = 0,
-            skipped = 0;
-          for (const draft of parseDrafts(reply)) {
-            try {
-              learning.propose(context, draft, 'ai', s.id);
-              drafted++;
-            } catch (error) {
-              if (errorCode(error) === 'LEARNING_LIMIT') break;
-              skipped++;
-            }
-          }
-          diagnose('learning-draft', { provider: connection.provider, drafted: String(drafted), skipped: String(skipped) });
-          return { drafted, skipped };
-        } catch (error) {
-          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
-          throw error;
-        } finally {
-          clearTimeout(timeout);
-        }
+        if (input.context !== learning.snapshot().context) throw new Error('WORKSPACE_CHANGED');
+        return draftLessons(s, typeof input.focus === 'string' ? input.focus : '', 'ai');
+      }
+      case 'learningReviewSetting': {
+        if (!policyState.policy.features.learningReview) throw new Error('FEATURE_DISABLED');
+        store.put('settings', 'main', { ...store.settings(), learningReview: input.enabled === true });
+        return reviewState();
       }
       case 'skillProposal': {
         // A confirmed lesson becomes a proposal file for an organization Skill's maintainers: the lesson, its evidence,

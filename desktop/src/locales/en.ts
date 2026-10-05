@@ -1193,6 +1193,19 @@ export const en: Record<string, string> = {
   สร้างไฟล์ข้อเสนอ: 'Create the proposal file',
   'บันทึกข้อเสนอที่ {0} ส่งไฟล์นี้ให้ผู้ดูแล Skill ทีม {1}': 'Proposal saved to {0}. Send this file to the Skill maintainers of team {1}',
   'บันทึกข้อเสนอแก้ Skill': 'Save the Skill change proposal',
+  'ทบทวนงานอัตโนมัติ: ทุก 10 ข้อความของงาน AI ร่างบทเรียนมารอตรวจที่นี่ (ไม่เกิน {0} ครั้งต่อวัน วันนี้ใช้ไป {1} ครั้ง) ใช้ tokens ของบัญชีนี้':
+    "Automatic task review: every 10 messages of a task, the AI drafts lessons to wait here for review (at most {0} a day, {1} used today). Uses this account's tokens",
+  'ตรวจสุขภาพคลังบทเรียน ({0} เรื่องที่ควรดู)': 'Lesson store health ({0} things to look at)',
+  'รายงานอย่างเดียว ระบบไม่รวม ไม่ลบ และไม่หยุดใช้บทเรียนเอง บทเรียนที่ใช้นาน ๆ ครั้งไม่ได้แปลว่าไม่มีค่า':
+    'Report only: nothing is merged, deleted or disabled automatically. A lesson used rarely is not worthless.',
+  '“{0}” กับ “{1}” เนื้อหาคล้ายกัน {2}% อาจรวมเป็นบทเรียนเดียว': '“{0}” and “{1}” are {2}% alike and could be one lesson',
+  '“{0}” กับ “{1}” ใช้คำกระตุ้นเดียวกัน ({2}) ตรวจว่าไม่ขัดกัน': '“{0}” and “{1}” share trigger words ({2}). Check they do not conflict',
+  'ข้อเสนอ “{0}” รอตรวจมา {1} วันแล้ว': 'Proposal “{0}” has waited {1} days for review',
+  '“{0}” ยาว {1} ตัวอักษร บทเรียนที่สั้นกว่าใช้บริบทน้อยกว่า': '“{0}” is {1} characters long. Shorter lessons use less context',
+  'ข้อเสนอรอตรวจ {0} จาก {1} รายการ ตรวจหรือปฏิเสธบ้างก่อนเต็ม':
+    '{0} of {1} proposals pending. Review or reject some before the inbox is full',
+  'บทเรียน {0} จาก {1} รายการ': '{0} of {1} lessons',
+  'ที่มา: การทบทวนงานอัตโนมัติ ตรวจให้แน่ใจก่อนยืนยัน': 'Source: the automatic task review. Check it before confirming',
   'ให้ Agent กดขั้นสุดท้ายนี้?': 'Let the Agent press this final step?',
   'รออนุญาตขั้นสุดท้าย: {0}': 'Waiting for approval of the final step: {0}',
   '\nนี่คือการส่งหรือยืนยันรายการบนเว็บ ตรวจข้อมูลในแท็บเว็บให้ครบก่อนอนุมัติ':
