@@ -40,6 +40,12 @@ The official Windows amd64 manifest selected **1.2.14**:
 - Nothing is relaxed. The `init` check still withholds the user message unless the runtime declares nothing but `finish`. If the option does not narrow the catalog, the connection keeps failing with `ANTIGRAVITY_TOOLS_UNAVAILABLE` exactly as before.
 - **To accept:** on a machine signed in to Antigravity, connect "Gemini via Antigravity (experimental)" in STeP Desktop and send a short message. A reply means `init` declared only `finish`. `ANTIGRAVITY_TOOLS_UNAVAILABLE` means it did not. Record the result here before changing experimental status.
 
+## Live acceptance (2026-10-05): failed on Windows
+
+- Owner's Windows machine, STeP Desktop 0.5.13 (includes `excludeDefaultComponents`), official CLI installed with `install.ps1` and signed in to a personal Google account.
+- Connecting "Gemini via Antigravity" reached `init` (sign-in worked) and returned **`ANTIGRAVITY_TOOLS_UNAVAILABLE`**: the init catalog still declared native tools beyond `finish`. No user message was sent.
+- So neither `tools: [finish]` nor `excludeDefaultComponents: true` narrows the catalog on the current CLI. The connection stays experimental and unusable; Gemini API is the working Google route. An in-app installer for `agy` was considered and put on hold because installing it cannot make this connection work.
+
 ## Validation
 
 - **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.
