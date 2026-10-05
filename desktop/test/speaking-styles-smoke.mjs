@@ -23,7 +23,7 @@ try {
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true }).click();
 
   const open = async () => {
-    await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน' }).click();
+    await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
     await page.getByRole('tab', { name: 'รูปลักษณ์และภาษา' }).click();
     return page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' });
   };
