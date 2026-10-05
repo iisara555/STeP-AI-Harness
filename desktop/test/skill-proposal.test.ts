@@ -23,7 +23,8 @@ test('the SKILL.md patch applies with git, with or without a final newline, and 
     const patch = skillPatch('skills/x/SKILL.md', original, lesson, at);
     const applied = spawnSync('git', ['apply', '-'], { cwd: dir, input: patch });
     assert.equal(applied.status, 0, String(applied.stderr) + '\n' + patch);
-    const after = await readFile(join(dir, 'skills/x/SKILL.md'), 'utf8');
+    // git on Windows (core.autocrlf) writes CRLF; the content is what matters here.
+    const after = (await readFile(join(dir, 'skills/x/SKILL.md'), 'utf8')).replace(/\r\n/g, '\n');
     assert.equal(after.split(LESSONS_HEADING).length, 2, 'one lessons section');
     assert.match(after, /### ห้ามเดาเลขภาษี \(ใช้เมื่อคำขอเกี่ยวกับ: ใบเสร็จ,receipt\)\n\n1\. ระบุว่าไม่พบ\n2\. ห้ามเดาจากชื่อร้าน\n/);
     assert.ok(after.endsWith('รอผู้ดูแล Skill ตรวจ_\n'));
