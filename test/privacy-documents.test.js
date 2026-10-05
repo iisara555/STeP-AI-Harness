@@ -72,6 +72,9 @@ test('reported identifiers are masked; sensitive English and ambiguous labels ne
   assert.equal(evaluatePrivacyGate('TOR public information').canSendToExternalAI, false);
   assert.equal(evaluatePrivacyGate('4111111111111112').findings.some((f) => f.type === 'credit-card'), false);
   assert.equal(evaluatePrivacyGate('4111111111111111').findings.some((f) => f.type === 'credit-card'), true);
+  // A UUID whose digit run happens to pass Luhn is an identifier, not a card number.
+  assert.equal(evaluatePrivacyGate('16ea376b-50f7-4450-8091-675861e61abc').findings.some((f) => f.type === 'credit-card'), false);
+  assert.equal(evaluatePrivacyGate('card: 4111 1111 1111 1111.').findings.some((f) => f.type === 'credit-card'), true);
   assert.equal(evaluatePrivacyGate('4111111111111111', { allowedIdentifiers: ['4111111111111111'] }).findings.some((f) => f.type === 'credit-card'), true);
 });
 
