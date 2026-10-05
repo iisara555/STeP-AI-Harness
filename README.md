@@ -587,7 +587,7 @@ README ส่วนบนตั้งใจให้เป็น **GUI-first emp
 
 ## Version / inventory
 
-README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.11**
+README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.12**
 
 | รายการใน Harness source | จำนวน |
 | --- | --- |
