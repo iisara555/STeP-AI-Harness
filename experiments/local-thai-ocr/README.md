@@ -128,6 +128,13 @@ Content-Type: application/octet-stream
 
 ใช้ `TEST-PLAN.md` บันทึกผลก่อนตัดสินใจ integration.
 
+Developer tooling: [synthetic benchmark and private pilot](benchmark/README.md)
+generates 80 paired Thai receipt images for H–O, scores independent OCR/vision and
+combined readings, and measures processing time/RAM. Synthetic/replay results do
+not close this gate. Authorized real-document inputs, answers and outputs stay
+outside the public checkout. Target pilot machines: Windows 2 cores and macOS M1
+4 GB RAM; the repository owner decides the acceptance thresholds after baseline review.
+
 ## หมายเหตุด้านความเบา
 
 `th_PP-OCRv5_mobile_rec` เป็น recognition model ขนาดเล็ก แต่ PaddleOCR runtime และ text detector ใช้ทรัพยากรมากกว่าขนาด model file. Prototype นี้จึง:

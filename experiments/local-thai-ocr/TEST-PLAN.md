@@ -2,6 +2,13 @@
 
 ใช้เอกสารตัวอย่างที่ไม่มี secret/credential และใช้ข้อมูลส่วนบุคคลเท่าที่จำเป็นตามกติกาองค์กร.
 
+**Acceptance status: OPEN.** Synthetic benchmark tooling is documented in
+`benchmark/README.md`; synthetic or replay results are not real-document acceptance.
+Run private pilot inputs/answers/results outside this public repository with
+`--private`. Record Windows 2-core machine RAM/CPU/OS and macOS M1 4 GB RAM evidence
+separately. The repository owner reviews baseline and sets the gates; no Router or
+Skill-registry integration is authorized by benchmark completion.
+
 ## ชุดทดสอบขั้นต่ำ
 
 | Scenario | ตัวอย่าง | สิ่งที่ดู |

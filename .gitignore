@@ -20,6 +20,9 @@ ASSISTANT.md
 
 # Local or restricted source material
 artifacts/
+**/ocr-benchmark-results/
+**/ocr-pilot-private/
+**/__pycache__/
 output/
 dist/
 docs/staff-abbreviations.md
