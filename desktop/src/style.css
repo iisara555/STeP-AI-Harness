@@ -2229,6 +2229,17 @@ nav button:hover,
 .receipt-field.match-ocr-only {
   border-left-color: var(--line-strong);
 }
+.receipt-field.guessed {
+  border-left: 3px dashed var(--accent);
+  background: var(--accent-soft);
+}
+.receipt-guess {
+  display: inline-flex;
+  color: var(--accent-ink);
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+}
 .receipt-field.confirmed {
   border-left-color: var(--accent);
   background: var(--accent-soft);
@@ -2330,8 +2341,36 @@ nav button:hover,
 .check input {
   accent-color: var(--text);
 }
-.lines-check {
-  margin: 4px 0 12px;
+.receipt-confirm {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.receipt-confirm input {
+  margin-top: 3px;
+  accent-color: var(--text);
+}
+.receipt-confirm span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.receipt-confirm small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.receipt-confirm.checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.receipt-confirm:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
 }
 .receipt-note {
   display: flex;

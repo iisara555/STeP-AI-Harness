@@ -65,9 +65,16 @@ try {
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   await page.getByText('ยังต้องตรวจหรือแก้เพิ่ม').waitFor();
   await page.screenshot({ path: join(out, 'receipt-review.png') });
-  // Check every field and the flagged line: the verdict flips to ready, never to "approved".
-  for (const box of await page.locator('.receipt-field .check input:not([disabled])').all()) await box.check();
-  await page.getByText(/บรรทัดที่ต้องตรวจเทียบกับต้นฉบับแล้ว/).click();
+  // One confirmation covers every field and the flagged line: the verdict flips to ready, never to "approved".
+  assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), true);
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
+  await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();
+  assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), false);
+  // Editing a field after confirming clears the confirmation.
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('107.50');
+  assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();
   await page.screenshot({ path: join(out, 'receipt-ready.png') });
   console.log('Receipt mini app smoke passed with a fake local OCR service.');

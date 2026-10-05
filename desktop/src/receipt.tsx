@@ -164,7 +164,7 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
   invalid_vat: 'ภาษีมูลค่าเพิ่มยังไม่ใช่ตัวเลขที่อ่านได้',
   amount_mismatch: 'ยอดก่อนภาษีบวกภาษีมูลค่าเพิ่มไม่เท่ากับยอดรวม โปรดเทียบใบเสร็จ',
   tax_id_length: 'เลขประจำตัวผู้เสียภาษีที่กรอกมีไม่ครบ 13 หลัก',
-  unconfirmed_fields: issue => t('มีข้อมูล {0} ช่องที่ยังไม่ได้ทำเครื่องหมายว่าตรวจแล้ว', issue.count),
+  unconfirmed_fields: () => t('ยังไม่ได้ติ๊กยืนยันว่าตรวจทุกช่องกับต้นฉบับแล้ว'),
   review_lines: issue => t('มี {0} บรรทัดที่ต้องตรวจจากภาพต้นฉบับ รวมจุดที่ OCR สองตัวอ่านต่างกัน', issue.count),
   resized_image: 'ภาพถูกย่อก่อน OCR โปรดตรวจข้อความขนาดเล็กบนใบเสร็จ',
   buyer_tax_id_excluded: 'พบเลขผู้เสียภาษีในส่วนของผู้ซื้อ จึงไม่เติมเป็นเลขของผู้ออกใบเสร็จ',
@@ -207,10 +207,21 @@ export function ReceiptApp({
     [fields, setFields] = useState<Record<string, Field>>({}),
     [records, setRecords] = useState<LineRecord[]>([]),
     [mapping, setMapping] = useState<AfpMapping | null>(null);
+  // One confirmation covers every field and every flagged OCR line; editing anything clears it.
   const [values, setValues] = useState<Record<string, string>>({}),
-    [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
-  const [linesChecked, setLinesChecked] = useState(false),
-    [note, setNote] = useState(''),
+    [allChecked, setAllChecked] = useState(false),
+    // Fields the app filled from a low-score OCR candidate or the AI, which the person has not edited yet.
+    [guessed, setGuessed] = useState<Record<string, 'ocr' | 'ai'>>({});
+  const confirmed = useMemo(
+    () => (allChecked ? Object.fromEntries(review.fieldKeys.map(k => [k, true])) : {}) as Record<string, boolean>,
+    [allChecked],
+  );
+  const edit = (k: string, value: string) => {
+    setValues(v => ({ ...v, [k]: value }));
+    setGuessed(({ [k]: _, ...rest }) => rest);
+    setAllChecked(false);
+  };
+  const [note, setNote] = useState(''),
     [buyerExcluded, setBuyerExcluded] = useState(false),
     [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]),
     [vision, setVision] = useState<Vision | null>(null),
@@ -251,48 +262,76 @@ export function ReceiptApp({
     () =>
       review.reviewIssues(values, confirmed, {
         reviewLineCount: reviewLines,
-        reviewLinesChecked: linesChecked,
+        reviewLinesChecked: allChecked,
         resized,
         buyerTaxIdExcluded: buyerExcluded,
       }),
-    [values, confirmed, reviewLines, linesChecked, resized, buyerExcluded],
+    [values, confirmed, reviewLines, allChecked, resized, buyerExcluded],
   );
+  // The single confirmation stands for both the fields and the flagged lines, so it is listed once.
+  const issues = result.issues.some(i => i.code === 'unconfirmed_fields')
+    ? result.issues.filter(i => i.code !== 'review_lines')
+    : result.issues;
+  const guessCount = Object.keys(guessed).filter(k => String(values[k] || '').trim()).length;
 
   async function read() {
     const read: Doc | null = await call('ocrRead');
     if (!read) return;
     const extracted = read.visionOnly ? null : review.extractReceipt(read.result);
     const nextValues = Object.fromEntries(review.fieldKeys.map(k => [k, extracted?.fields[k]?.value || '']));
+    // A field the rules left empty because its candidates scored close or low still gets the best candidate,
+    // marked as a guess for the person to look at, instead of an empty box to fill by hand.
+    const nextGuessed: Record<string, 'ocr' | 'ai'> = {};
+    for (const k of review.fieldKeys) {
+      const best = [...(extracted?.fields[k]?.candidates || [])].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
+      if (!nextValues[k] && best?.value) {
+        nextValues[k] = best.value;
+        nextGuessed[k] = 'ocr';
+      }
+    }
     setDoc(read);
     setFields(extracted?.fields || {});
     setRecords(extracted?.records || []);
     setMapping(extracted?.afpMapping || null);
     setBuyerExcluded(Boolean(extracted?.buyerTaxIdExcluded));
     setValues(nextValues);
-    setConfirmed({});
-    setLinesChecked(false);
+    setGuessed(nextGuessed);
+    setAllChecked(false);
     setNote('');
     setAiDecisions([]);
     setVision(null);
     setZoom(false);
     setTypeOverride('');
     // The second, independent reading by a vision model, compared with the OCR field by field below.
-    if (status?.vision && connectionId) await readWithAi(nextValues);
+    if (status?.vision && connectionId) await readWithAi(nextValues, nextGuessed);
+    // Without the image reading, the AI still sorts the OCR candidates into the fields (OCR text only, masked).
+    else if (
+      connectionId &&
+      extracted?.afpMapping &&
+      (Object.keys(nextGuessed).length ||
+        (extracted.afpMapping.unresolved_field_lines.length && review.fieldKeys.some(k => !nextValues[k])))
+    )
+      await aiFilter(nextValues, nextGuessed, extracted.afpMapping).catch(() => undefined);
   }
-  async function readWithAi(current = values) {
+  async function readWithAi(current = values, currentGuessed = guessed) {
     const reading = await call('receiptVision', { connectionId });
     if (!reading || reading.cancelled) return;
     setVision(reading);
-    // A field the OCR left empty takes the AI's reading, still unconfirmed; a field both read keeps the OCR value and
-    // shows the AI's reading beside it when they differ.
-    const next = { ...current };
+    // A field the OCR left empty, or only guessed from a low-score candidate, takes the AI's reading (still a guess
+    // to look at); a field the OCR read with confidence keeps its value and shows the AI's reading beside it when they differ.
+    const next = { ...current },
+      nextGuessed = { ...currentGuessed };
     for (const k of review.fieldKeys as ReceiptField[]) {
       const ai = reading.fields?.[k]?.value || '';
-      if (ai && !String(next[k] || '').trim()) next[k] = ai;
+      if (ai && (!String(next[k] || '').trim() || currentGuessed[k])) {
+        next[k] = ai;
+        nextGuessed[k] = 'ai';
+      }
     }
     setValues(next);
-    setConfirmed(c => Object.fromEntries(Object.entries(c).filter(([k]) => next[k] === current[k])));
-    notify(t('AI อ่านภาพใบเสร็จแล้ว ตรวจช่องที่อ่านต่างกันและเทียบกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
+    setGuessed(nextGuessed);
+    if (Object.keys(next).some(k => next[k] !== current[k])) setAllChecked(false);
+    notify(t('AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const matchOf = (k: string) =>
     vision ? compareField(k as ReceiptField, fields[k]?.value || '', vision.fields[k as ReceiptField]?.value || '') : undefined;
@@ -351,9 +390,13 @@ export function ReceiptApp({
                   selected_value: selected,
                   status: aiSuggested
                     ? 'ai-suggested-unconfirmed'
-                    : selected && selected !== original
-                      ? 'user-selected-or-edited'
-                      : base.status,
+                    : guessed[k] && selected
+                      ? guessed[k] === 'ai'
+                        ? 'ai-filled'
+                        : 'low-score-candidate-filled'
+                      : selected && selected !== original
+                        ? 'user-selected-or-edited'
+                        : base.status,
                 },
               ];
             }),
@@ -436,26 +479,43 @@ export function ReceiptApp({
     },
     { agree: 0, differ: 0, single: 0 },
   );
-  async function aiFilter() {
-    const currentMapping = draft().afp_mapping;
-    const filtered = await call('ocrResolve', { connectionId, mapping: currentMapping });
+  // The AI picks among the OCR's own candidate tokens for each field; it fills empty and guessed fields only.
+  async function aiFilter(current = values, currentGuessed = guessed, currentMapping = mapping) {
+    if (!currentMapping) return;
+    const filtered = await call('ocrResolve', {
+      connectionId,
+      mapping: {
+        ...currentMapping,
+        fields: Object.fromEntries(
+          review.fieldKeys.map(k => {
+            const base = currentMapping.fields[k];
+            // A guess is not a reading, so the AI sees the field as still open and chooses among all candidates.
+            const open = !String(current[k] || '').trim() || currentGuessed[k];
+            return [k, { ...base, selected_value: open ? '' : current[k], status: open ? 'ambiguous' : base?.status }];
+          }),
+        ),
+      },
+    });
     if (filtered?.cancelled) return;
     const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
     setAiDecisions(decisions);
-    const nextValues = { ...values };
-    const nextConfirmed = { ...confirmed };
+    const nextValues = { ...current },
+      nextGuessed = { ...currentGuessed };
     for (const decision of decisions) {
-      if (decision.status === 'suggested' && decision.value && !String(nextValues[decision.field] || '').trim()) {
-        nextValues[decision.field] = decision.value;
-        nextConfirmed[decision.field] = false;
+      const k = decision.field;
+      if (decision.status === 'suggested' && decision.value && (!String(nextValues[k] || '').trim() || currentGuessed[k])) {
+        nextValues[k] = decision.value;
+        nextGuessed[k] = 'ai';
       }
     }
     setValues(nextValues);
-    setConfirmed(nextConfirmed);
-    notify(t('AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”'), 'success');
+    setGuessed(nextGuessed);
+    if (review.fieldKeys.some(k => nextValues[k] !== current[k])) setAllChecked(false);
+    notify(t('AI จัดข้อความ OCR เข้าช่องให้แล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const ready = status?.running;
-  const requiredChecked = review.requiredKeys.every((k: string) => confirmed[k]);
+  const requiredFilled = review.requiredKeys.every((k: string) => String(values[k] || '').trim());
+  const requiredChecked = allChecked && requiredFilled;
   return (
     <div className="receipt-app">
       <div className="receipt-service">
@@ -571,7 +631,7 @@ export function ReceiptApp({
           <p className="muted">
             {t('เลือกรูปหรือ PDF ของใบเสร็จ ระบบจะอ่านข้อความและเสนอข้อมูลสำคัญ')}
             <br />
-            {t('คุณเทียบกับต้นฉบับ แก้ไข และทำเครื่องหมายว่าตรวจแล้วทีละช่อง')}
+            {t('ระบบกรอกให้ทุกช่องที่อ่านได้ คุณเทียบกับต้นฉบับ แก้ที่ผิด แล้วติ๊กยืนยันครั้งเดียว')}
           </p>
           <button disabled={!(ready || (status?.vision && connectionId)) || Boolean(busy)} onClick={() => void run('read', read)}>
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
@@ -653,7 +713,10 @@ export function ReceiptApp({
           <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
             <div className="receipt-progress" role="status">
               <div className="receipt-progress-head">
-                <strong>{t('ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}</strong>
+                <strong>
+                  {t('กรอกให้แล้ว {0}/{1} ช่อง', result.filledCount, review.fieldKeys.length)}
+                  {guessCount > 0 && ' · ' + t('เดาให้ {0} ช่อง', guessCount)}
+                </strong>
                 {vision && (
                   <span className="receipt-progress-chips">
                     {counts.agree > 0 && <span className="chip agree">{t('ตรงกัน {0}', counts.agree)}</span>}
@@ -663,9 +726,9 @@ export function ReceiptApp({
                 )}
               </div>
               <div className="receipt-progress-bar" aria-hidden="true">
-                <span style={{ width: `${result.filledCount ? (100 * result.confirmedCount) / result.filledCount : 0}%` }} />
+                <span style={{ width: `${(100 * result.filledCount) / review.fieldKeys.length}%` }} />
               </div>
-              <small className="muted">{t('เทียบแต่ละช่องกับภาพ แล้วกด Enter เพื่อติ๊ก “ตรวจแล้ว” และไปช่องถัดไป')}</small>
+              <small className="muted">{t('ช่องสีเหลืองคือค่าที่ระบบเดาให้จาก OCR คะแนนต่ำหรือจาก AI ดูให้แน่ใจก่อนยืนยัน')}</small>
               {(status?.vision || mapping) && (
                 <div className="receipt-ai-tools">
                   {status?.vision && (
@@ -684,7 +747,7 @@ export function ReceiptApp({
                       className="text-link"
                       type="button"
                       disabled={!connectionId || Boolean(busy)}
-                      onClick={() => void run('ai-filter', aiFilter)}
+                      onClick={() => void run('ai-filter', () => aiFilter())}
                     >
                       {busy === 'ai-filter' ? <LoaderCircle size={13} className="spin" /> : <ScanText size={13} />}
                       {t('AI กรอง OCR อีกชั้น')}
@@ -762,7 +825,15 @@ export function ReceiptApp({
               <small className="muted">{t('รายการนี้ช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย ข้อที่ยังไม่มีแหล่งยืนยันให้ถาม AFP')}</small>
             </div>
             {review.fieldKeys.map((k, index) => (
-              <div className={'receipt-field' + (matchOf(k) ? ' match-' + matchOf(k) : '') + (confirmed[k] ? ' confirmed' : '')} key={k}>
+              <div
+                className={
+                  'receipt-field' +
+                  (matchOf(k) ? ' match-' + matchOf(k) : '') +
+                  (guessed[k] && values[k] ? ' guessed' : '') +
+                  (allChecked && values[k] ? ' confirmed' : '')
+                }
+                key={k}
+              >
                 <label htmlFor={'rf-' + k}>
                   {labels[k]}
                   {review.requiredKeys.includes(k) && <span className="required"> *</span>}
@@ -771,29 +842,22 @@ export function ReceiptApp({
                   <input
                     id={'rf-' + k}
                     value={values[k] || ''}
-                    onChange={e => {
-                      setValues({ ...values, [k]: e.target.value });
-                      setConfirmed({ ...confirmed, [k]: false });
-                    }}
+                    onChange={e => edit(k, e.target.value)}
                     onKeyDown={e => {
-                      // Enter: the person has compared this field with the image; tick it and move on.
-                      if (e.key !== 'Enter' || e.nativeEvent.isComposing || !String(values[k] || '').trim()) return;
+                      // Enter moves on to the next field.
+                      if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
                       e.preventDefault();
-                      setConfirmed({ ...confirmed, [k]: true });
                       const next = review.fieldKeys[index + 1];
-                      (document.getElementById(next ? 'rf-' + next : 'receipt-note') as HTMLElement | null)?.focus();
+                      (document.getElementById(next ? 'rf-' + next : 'receipt-confirm') as HTMLElement | null)?.focus();
                     }}
                   />
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      disabled={!String(values[k] || '').trim()}
-                      checked={Boolean(confirmed[k])}
-                      onChange={e => setConfirmed({ ...confirmed, [k]: e.target.checked })}
-                    />
-                    {t('ตรวจแล้ว')}
-                  </label>
                 </div>
+                {guessed[k] && values[k] && (
+                  <small className="receipt-guess">
+                    <TriangleAlert size={12} />
+                    {guessed[k] === 'ai' ? t('AI เลือกให้ · ดูกับภาพ') : t('เดาจาก OCR ที่ยังไม่แน่ใจ · ดูกับภาพ')}
+                  </small>
+                )}
                 {fields[k]?.evidence && (
                   <small className="muted">
                     {t('จากบรรทัด “{0}”', fields[k].evidence)}
@@ -817,7 +881,7 @@ export function ReceiptApp({
                         <Eye size={12} />
                         {doc?.visionOnly ? t('AI อ่านจากภาพ · ตรวจกับต้นฉบับ') : t('OCR ไม่พบ AI อ่านได้ “{0}” · ตรวจกับภาพ', ai)}
                         {values[k] !== ai && (
-                          <button className="text-link" type="button" onClick={() => setValues({ ...values, [k]: ai })}>
+                          <button className="text-link" type="button" onClick={() => edit(k, ai)}>
                             {t('ใช้ค่านี้')}
                           </button>
                         )}
@@ -830,40 +894,29 @@ export function ReceiptApp({
                       <TriangleAlert size={12} />
                       {t('อ่านต่างกัน: AI อ่านว่า “{0}”', ai)}
                       {values[k] !== ai && (
-                        <button
-                          className="text-link"
-                          type="button"
-                          onClick={() => {
-                            setValues({ ...values, [k]: ai });
-                            setConfirmed({ ...confirmed, [k]: false });
-                          }}
-                        >
+                        <button className="text-link" type="button" onClick={() => edit(k, ai)}>
                           {t('ใช้ค่านี้')}
                         </button>
                       )}
                     </small>
                   );
                 })()}
-                {!String(values[k] || '').trim() && (fields[k]?.candidates?.length || 0) > 0 && (
-                  <div className="receipt-candidates">
-                    <small>{t('OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:')}</small>
-                    <div>
-                      {(fields[k]?.candidates || []).slice(0, 3).map((candidate, index) => (
-                        <button
-                          className="quiet"
-                          type="button"
-                          key={candidate.value + index}
-                          onClick={() => {
-                            setValues({ ...values, [k]: candidate.value });
-                            setConfirmed({ ...confirmed, [k]: false });
-                          }}
-                        >
-                          {t('ใช้ “{0}”', candidate.value)}
-                        </button>
-                      ))}
+                {(!String(values[k] || '').trim() || guessed[k]) &&
+                  (fields[k]?.candidates || []).some(candidate => candidate.value !== values[k]) && (
+                    <div className="receipt-candidates">
+                      <small>{t('ค่าอื่นที่ OCR อ่านได้สำหรับช่องนี้:')}</small>
+                      <div>
+                        {(fields[k]?.candidates || [])
+                          .filter(candidate => candidate.value !== values[k])
+                          .slice(0, 3)
+                          .map((candidate, index) => (
+                            <button className="quiet" type="button" key={candidate.value + index} onClick={() => edit(k, candidate.value)}>
+                              {t('ใช้ “{0}”', candidate.value)}
+                            </button>
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 {aiDecisions
                   .filter(decision => decision.field === k)
                   .map((decision, index) => (
@@ -881,12 +934,6 @@ export function ReceiptApp({
                   ))}
               </div>
             ))}
-            {reviewLines > 0 && (
-              <label className="check lines-check">
-                <input type="checkbox" checked={linesChecked} onChange={e => setLinesChecked(e.target.checked)} />
-                {t('ตรวจ')} {reviewLines} {t('บรรทัดที่ต้องตรวจเทียบกับต้นฉบับแล้ว')}
-              </label>
-            )}
             {mapping?.unresolved_field_lines?.length ? (
               <details className="receipt-mapping-warning">
                 <summary>
@@ -897,7 +944,9 @@ export function ReceiptApp({
                     <li key={line.text + index}>{line.text}</li>
                   ))}
                 </ul>
-                <small className="muted">{t('ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง เพียงแต่ระบบไม่เดาใส่ช่องให้อัตโนมัติ')}</small>
+                <small className="muted">
+                  {t('ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง AI ใช้บรรทัดเหล่านี้ช่วยจัดเข้าช่องได้')}
+                </small>
               </details>
             ) : null}
             <label className="receipt-note">
@@ -909,14 +958,30 @@ export function ReceiptApp({
                 placeholder={t('เช่น ใช้ในโครงการ… (กรอกเอง)')}
               />
             </label>
+            <label className={'receipt-confirm' + (allChecked ? ' checked' : '')}>
+              <input
+                id="receipt-confirm"
+                type="checkbox"
+                disabled={!result.filledCount}
+                checked={allChecked}
+                onChange={e => setAllChecked(e.target.checked)}
+              />
+              <span>
+                <strong>{t('ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว')}</strong>
+                <small>
+                  {t('ทุกช่องด้านบน')}
+                  {guessCount > 0 && t(' รวม {0} ช่องที่ระบบเดาให้', guessCount)}
+                  {reviewLines > 0 && t(' และ {0} บรรทัดที่ไฮไลต์ในข้อความที่อ่านได้', reviewLines)}
+                </small>
+              </span>
+            </label>
             <div className={`receipt-verdict ${result.complete ? 'ok' : ''}`} role="status">
               {result.complete ? <Check size={16} /> : <TriangleAlert size={16} />}
               <div>
                 <strong>{result.complete ? t('พร้อมให้ AFP ตรวจ') : t('ยังต้องตรวจหรือแก้เพิ่ม')}</strong>{' '}
-                <small>{t('· ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}</small>
-                {result.issues.length + rules.length > 0 && (
+                {issues.length + rules.length > 0 && (
                   <ul>
-                    {result.issues.map(i => (
+                    {issues.map(i => (
                       <li key={i.code} className={i.severity}>
                         {describe(i)}
                       </li>
@@ -955,11 +1020,12 @@ export function ReceiptApp({
                 {t('ตรวจใบใหม่')}
               </button>
               <span className="spacer" />
-              {/* AI pre-check follows the person's check: the required fields must be ticked first. A checked vendor tax ID stays readable. */}
-              <small className="muted receipt-actions-hint">
-                {t('ตรวจแล้ว {0}/{1} ช่อง', result.confirmedCount, result.filledCount)}
-                {!requiredChecked && ' · ' + t('ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI')}
-              </small>
+              {/* AI pre-check follows the person's one confirmation of every field. A checked vendor tax ID stays readable. */}
+              {!requiredChecked && (
+                <small className="muted receipt-actions-hint">
+                  {requiredFilled ? t('ติ๊ก “ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว” ก่อนส่งให้ AI') : t('กรอกช่องที่มี * ให้ครบก่อนส่งให้ AI')}
+                </small>
+              )}
               <button
                 disabled={!requiredChecked || Boolean(busy)}
                 onClick={() =>

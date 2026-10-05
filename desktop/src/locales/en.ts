@@ -780,6 +780,28 @@ export const en: Record<string, string> = {
   'AI กรอง OCR อีกชั้น': 'Let AI narrow down the OCR',
   'ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI': 'Tick “Checked” on fields marked * before sending to the AI',
   'ให้ AI pre-check ต่อ': 'Let AI pre-check the rest',
+  ยังไม่ได้ติ๊กยืนยันว่าตรวจทุกช่องกับต้นฉบับแล้ว: "You haven't confirmed that every field was checked against the original",
+  'AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว':
+    'AI read the receipt image. Compare the highlighted fields with the original, then confirm once',
+  'AI จัดข้อความ OCR เข้าช่องให้แล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว':
+    'AI sorted the OCR text into the fields. Compare the highlighted fields with the original, then confirm once',
+  'ระบบกรอกให้ทุกช่องที่อ่านได้ คุณเทียบกับต้นฉบับ แก้ที่ผิด แล้วติ๊กยืนยันครั้งเดียว':
+    'The app fills every field it can read. Compare with the original, fix anything wrong, then confirm once',
+  'กรอกให้แล้ว {0}/{1} ช่อง': '{0}/{1} fields filled',
+  'เดาให้ {0} ช่อง': '{0} guessed',
+  'ช่องสีเหลืองคือค่าที่ระบบเดาให้จาก OCR คะแนนต่ำหรือจาก AI ดูให้แน่ใจก่อนยืนยัน':
+    'Yellow fields are values guessed from low-score OCR or by the AI. Look at them before you confirm',
+  'AI เลือกให้ · ดูกับภาพ': 'Picked by AI · compare with the image',
+  'เดาจาก OCR ที่ยังไม่แน่ใจ · ดูกับภาพ': 'Guessed from uncertain OCR · compare with the image',
+  'ค่าอื่นที่ OCR อ่านได้สำหรับช่องนี้:': 'Other values the OCR read for this field:',
+  'ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง AI ใช้บรรทัดเหล่านี้ช่วยจัดเข้าช่องได้':
+    "The data stays in the JSON/workspace and isn't discarded; the AI can use these lines to fill fields",
+  ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว: 'I checked everything against the original',
+  ทุกช่องด้านบน: 'Every field above',
+  ' รวม {0} ช่องที่ระบบเดาให้': ', including {0} guessed',
+  ' และ {0} บรรทัดที่ไฮไลต์ในข้อความที่อ่านได้': ', and {0} highlighted lines in the read text',
+  'ติ๊ก “ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว” ก่อนส่งให้ AI': 'Tick “I checked everything against the original” before sending to the AI',
+  'กรอกช่องที่มี * ให้ครบก่อนส่งให้ AI': 'Fill the fields marked * before sending to the AI',
   'การเชื่อมต่อ AI': 'AI connections',
   รูปลักษณ์และภาษา: 'Appearance & language',
   ความเป็นส่วนตัว: 'Privacy',
