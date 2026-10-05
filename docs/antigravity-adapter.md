@@ -46,6 +46,7 @@ The official Windows amd64 manifest selected **1.2.14**:
 - Connecting "Gemini via Antigravity" reached `init` (sign-in worked) and returned **`ANTIGRAVITY_TOOLS_UNAVAILABLE`**: the init catalog still declared native tools beyond `finish`. No user message was sent.
 - So neither `tools: [finish]` nor `excludeDefaultComponents: true` narrows the catalog on the current CLI.
 - **Owner decision (Itsara, 2026-10-05):** accept a non-empty catalog and rely on runtime enforcement instead: `strict` mode confirmed in `init` (which proves the isolated settings with every native action namespace denied were loaded), an empty temporary workspace with `allowNonWorkspaceAccess: false`, and terminating the process on the first step that reports a tool (`step_type: tool`, `tool_name` or `tool_call`). Residual risk: STeP relies on the CLI honouring its deny rules; this cannot be proven from STeP's side. Re-run live acceptance after this change and record the result here.
+- **Retest (2026-10-05, PR #99 test build, Windows):** connect and test returned a real reply. Open issue: black console windows appear during runs; cause not yet identified.
 
 ## Validation
 
