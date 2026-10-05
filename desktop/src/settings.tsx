@@ -16,6 +16,7 @@ import { AVATARS, Avatar } from './avatars';
 import { initial } from './messages';
 import type { Connection, Snapshot } from './types';
 import { language, locale, t, teamName } from './i18n';
+import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleId } from './speaking-styles';
 
 export function SettingsPanel({
   initialPage,
@@ -46,6 +47,8 @@ export function SettingsPanel({
     [personality, setPersonality] = useState(snapshot.settings.personality || 'coworker'),
     [assistantTone, setAssistantTone] = useState(snapshot.settings.assistantTone || ''),
     [avatar, setAvatar] = useState(snapshot.settings.avatar || '');
+  const [interactionStyle, setInteractionStyle] = useState(interactionStyleId(snapshot.settings.interactionStyle)),
+    [languageStyle, setLanguageStyle] = useState(languageStyleId(snapshot.settings.languageStyle));
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
   // Account sign-ins and API keys are tested right away, so they are ready to use or show why not. Administrator
   // routes that need more setup (an organization Google project, Antigravity, Copilot) are saved first.
@@ -241,6 +244,52 @@ export function SettingsPanel({
                 }
               >
                 {label}
+              </button>
+            ))}
+          </div>
+          <h2>{t('สไตล์การพูดของผู้ช่วย')}</h2>
+          <p className="muted small">
+            {t('เปลี่ยนเฉพาะวิธีพูดในแชท ข้อเท็จจริง แหล่งอ้างอิง สิทธิ์ และมาตรฐานเอกสารยังเหมือนเดิม และไม่ได้สวมบทเป็นบุคคลจริง')}
+          </p>
+          <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สไตล์การพูดของผู้ช่วย')}>
+            {(
+              [
+                ['standard', t('มาตรฐาน'), t('ตอบตามวิธีพูดคุยที่ตั้งไว้ในหน้าทั่วไป')],
+                ...Object.values(INTERACTION_STYLES).map(style => [style.id, style.displayName, t(style.summary)]),
+              ] as [typeof interactionStyle, string, string][]
+            ).map(([id, label, summary]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={interactionStyle === id}
+                className={interactionStyle === id ? 'style-card active' : 'style-card'}
+                onClick={() => setInteractionStyle(id)}
+              >
+                <strong>{label}</strong>
+                <small>{summary}</small>
+              </button>
+            ))}
+          </div>
+          <h3>{t('สำเนียงภาษา')}</h3>
+          <p className="muted small">{t('ใช้ร่วมกับสไตล์ด้านบนได้')}</p>
+          <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สำเนียงภาษา')}>
+            {(
+              [
+                ['standard', t('ภาษาไทยมาตรฐาน'), t('ไม่เพิ่มสำเนียงท้องถิ่น')],
+                ...Object.values(LANGUAGE_STYLES).map(style => [style.id, t(style.displayName), t(style.summary)]),
+              ] as [typeof languageStyle, string, string][]
+            ).map(([id, label, summary]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={languageStyle === id}
+                className={languageStyle === id ? 'style-card active' : 'style-card'}
+                onClick={() => setLanguageStyle(id)}
+              >
+                <strong>{label}</strong>
+                <small>{summary}</small>
               </button>
             ))}
           </div>
@@ -593,7 +642,17 @@ export function SettingsPanel({
             disabled={Boolean(busy)}
             onClick={() =>
               void run('settings', async () => {
-                await call('settings', { assistant, team, theme, userName, personality, assistantTone, avatar });
+                await call('settings', {
+                  assistant,
+                  team,
+                  theme,
+                  userName,
+                  personality,
+                  assistantTone,
+                  avatar,
+                  interactionStyle,
+                  languageStyle,
+                });
                 close();
               })
             }
