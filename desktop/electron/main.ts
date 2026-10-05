@@ -1666,6 +1666,16 @@ async function main() {
         store.put('connection', id, connection);
         return connection;
       }
+      case 'connectionModel': {
+        // The model new tasks on this connection start with; a task's own choice is unchanged.
+        const connection = store.get<Connection>('connection', inputText(input.id, 60));
+        if (!connection) throw new Error('CONNECTION_NOT_FOUND');
+        const model = modelChoice(connection, input.model);
+        if (connection.provider === 'antigravity' && !/^gemini-[\w.-]{1,93}$/.test(model)) throw new Error('INVALID_MODEL');
+        connection.model = model;
+        store.put('connection', connection.id, connection);
+        return connection;
+      }
       case 'runtime': {
         const connection = store.get<Connection>('connection', input.id);
         if (!connection) throw new Error('CONNECTION_NOT_FOUND');

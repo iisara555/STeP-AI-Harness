@@ -55,6 +55,7 @@ export const en: Record<string, string> = {
   'ติดตั้งและลงชื่อเข้าใช้ Antigravity ในเครื่องนี้ก่อน STeP ใช้บัญชีนั้นโดยไม่ต้องใช้ API key และเมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่':
     'Install Antigravity and sign in on this device first. STeP uses that account without an API key, and disconnecting keeps Antigravity signed in',
   'วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity': 'How to install and sign in to Antigravity',
+  โมเดลเริ่มต้นสำหรับงานใหม่: 'Default model for new tasks',
   'แพ็กเกจของคุณผ่าน Claude Code': 'Your plan through Claude Code',
   'ใช้แพ็กเกจ Claude ของคุณ ลงชื่อในหน้าของ Anthropic': 'Uses your Claude plan; sign in on Anthropic’s page',
   'คีย์จาก Google AI Studio มีแบบใช้ฟรี': 'Key from Google AI Studio, free tier available',
