@@ -15,7 +15,8 @@ import {
 import type { Connection } from '../src/types';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 
-const doc = async (name: string) => readFile(new URL(`../../docs/speaking-styles/${name}.md`, import.meta.url), 'utf8');
+const doc = async (name: string) =>
+  readFile(new URL(`../../docs/speaking-styles/${name}.md`, import.meta.url), 'utf8').then(text => text.replace(/\r\n/g, '\n'));
 const front = (text: string, key: string) => text.match(new RegExp(`^${key}: "?([^"\\n]*)"?$`, 'm'))?.[1];
 
 test('each speaking style matches its source document: metadata and the System Prompt Fragment', async () => {
