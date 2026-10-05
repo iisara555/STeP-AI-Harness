@@ -152,7 +152,8 @@ try {
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   await page.getByText('AI ฝากตรวจ: ตัวเลขยอดสุทธิจางเล็กน้อย').waitFor();
   assert.ok((await page.getByText('AI อ่านจากภาพ · ตรวจกับต้นฉบับ').count()) >= 3, 'each AI-read field is marked');
-  assert.equal(await page.locator('.receipt-field .check input:checked').count(), 0, 'nothing is confirmed for the person');
+  const confirmAll = page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/);
+  assert.equal(await confirmAll.isChecked(), false, 'nothing is confirmed for the person');
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
   // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
   assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
@@ -160,17 +161,17 @@ try {
   await page.getByText('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน', { exact: false }).waitFor();
   await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('other');
   assert.equal(await page.getByText('ชุดเคลียร์เงิน', { exact: false }).count(), 0);
-  // Enter in a filled field ticks it as checked and moves to the next field.
+  // Enter in a field moves to the next one; one confirmation then covers every field.
   await page.getByLabel('ภาษีมูลค่าเพิ่ม').press('Enter');
-  assert.equal(await page.locator('.receipt-field .check input:checked').count(), 1);
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeFocused();
-  // Checked fields survive a trip to Settings and back.
+  await confirmAll.check();
+  // The confirmation survives a trip to Settings and back.
   await page
     .getByRole('button', { name: /ตั้งค่า/ })
     .first()
     .click();
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  assert.equal(await page.locator('.receipt-field .check input:checked').count(), 1);
+  assert.equal(await confirmAll.isChecked(), true);
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
   assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
