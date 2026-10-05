@@ -50,13 +50,13 @@ try {
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   // Choosing a service scrolls its card, with the connect button, into view.
-  await page.getByRole('radio', { name: /^Gemini/ }).click();
+  await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
   // Gemini API key sits on the main page: the connect button waits for a key, cost shows as API budget,
   // and going back to ChatGPT drops the key.
-  await page.getByRole('radio', { name: /^Gemini/ }).click();
+  await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
   const geminiConnect = page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true });
   await expect(geminiConnect).toBeDisabled();
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
@@ -64,7 +64,7 @@ try {
   await expect(geminiConnect).toBeEnabled();
   await assertVisibleButton(geminiConnect);
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
-  await page.getByRole('radio', { name: /^Gemini/ }).click();
+  await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
   await expect(page.getByLabel('Gemini API key')).toHaveValue('');
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
