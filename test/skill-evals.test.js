@@ -48,6 +48,16 @@ test('legacyWithoutEvals is a closed list that cannot grow', () => {
   assert.ok(legacy.size <= policy.legacyCeiling, `legacyWithoutEvals grew past ${policy.legacyCeiling}`);
 });
 
+test('receipt-audit has explicit extraction uncertainty and missing-finance-source evals', () => {
+  const receipt = evals.find(item => item.skill === 'receipt-audit');
+  assert.ok(receipt, 'receipt-audit needs its own four-dimensional eval');
+  assert.ok(!legacy.has('receipt-audit'), 'remove completed eval coverage from legacy debt');
+  assert.ok(receipt.cases.some(item => item.dimension === 'positive' &&
+    item.outputAssertions?.some(assertion => assertion.includes('EXTRACTED_UNVERIFIED'))));
+  assert.ok(receipt.cases.some(item => item.dimension === 'missingSource' &&
+    item.outputAssertions?.some(assertion => assertion.includes('NEED-SOURCE'))));
+});
+
 for (const spec of evals) {
   test(`evals: ${spec.skill}`, async (t) => {
     await t.test('covers all four dimensions with provenance', () => {
@@ -75,6 +85,8 @@ for (const spec of evals) {
         if (item.expect.skill) assert.equal(contract.skill, item.expect.skill, 'skill');
         if (item.expect.playbook) assert.equal(contract.playbook, item.expect.playbook, 'playbook');
         if (item.expect.tier) assert.equal(result.routingConfidence.tier, item.expect.tier, 'tier');
+        if (item.expect.authorityStatus) assert.equal(contract.authority?.status, item.expect.authorityStatus, 'authority');
+        if (item.expect.permittedUse) assert.equal(contract.permittedUse, item.expect.permittedUse, 'source-permitted use');
         if (item.expect.notSkill && item.expect.mode !== 'PLAYBOOK') {
           assert.notEqual(contract.skill, item.expect.notSkill, 'routed into the Skill it should stay out of');
         }

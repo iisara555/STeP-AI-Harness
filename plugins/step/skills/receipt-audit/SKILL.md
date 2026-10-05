@@ -57,6 +57,17 @@ standardVersion: 2
 
 ## Output
 
+Worked synthetic examples: [conflicting unverified readings](examples/synthetic-precheck.md)
+and [balanced amounts with a missing current policy](examples/missing-current-source.md).
+These are methodology examples, not real-document accuracy or model-side evaluation evidence.
+
+Preserve `EXTRACTED_UNVERIFIED` on OCR/AI readings until a person compares the
+selected value with the source. Only that checked value becomes `SOURCE_FACT`;
+raw readings and alternatives stay unverified. A manual value without source
+comparison is `USER_INPUT`. Transmission consent, model agreement and confidence
+do not verify a value or authorize payment. Calculations from unverified readings
+are conditional checks; do not present them as established `DERIVED_FACT`.
+
 ### Receipt Pre-check
 
 | Check | Status | Evidence | Source | Next action |

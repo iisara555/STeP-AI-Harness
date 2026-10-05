@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Receipt-audit: four-dimensional eval coverage and synthetic worked outputs
+
+- Add positive, anti-trigger, collision and missing-source evals covering extraction uncertainty, arithmetic mismatch, AFP authority and missing current finance rules.
+- Add synthetic worked outputs and preserve the boundary between human-checked values, raw extraction and policy authority; remove receipt-audit from `legacyWithoutEvals`.
+- Routing/source/authority checks run in CI. Model-side output assertions remain `not-yet-run`; examples and tests do not establish real-document OCR accuracy or payment eligibility. No lifecycle promotion or OCR registry integration.
+
 ### Receipt extraction provenance: unverified readings and human source comparison
 
 - Add source-required `EXTRACTED_UNVERIFIED` for OCR/AI readings. Only the selected value checked against its document becomes `SOURCE_FACT`; unverified manual entry is `USER_INPUT`.
