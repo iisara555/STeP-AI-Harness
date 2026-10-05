@@ -50,10 +50,23 @@ export function parseDocumentType(value: unknown): DocumentType | '' {
   return typeof value === 'string' && (DOCUMENT_TYPES as readonly string[]).includes(value) ? (value as DocumentType) : '';
 }
 
-/** The document type from its printed heading, for when there is no vision reading. The most specific match wins. */
+/**
+ * The document type from its printed heading, for when there is no vision reading. The heading (the first lines) is
+ * read first, so a quotation that mentions "receipt" in its terms is still a quotation; the whole text is the fallback.
+ * Within either, the most specific match wins.
+ */
 export function classifyFromText(text: string): DocumentType | '' {
+  const heading = text
+    .split('\n')
+    .filter(line => line.trim())
+    .slice(0, 8)
+    .join('\n');
+  return classifyText(heading) || classifyText(text);
+}
+
+function classifyText(text: string): DocumentType | '' {
   const t = text.replace(/\s+/g, ' ');
-  if (/ใบกำกับภาษีอย่างย่อ|abb\.?|tax invoice\s*\(abb/i.test(t)) return 'abbreviated_tax_invoice';
+  if (/ใบกำกับภาษีอย่างย่อ|\babb\b|tax invoice\s*\(abb/i.test(t)) return 'abbreviated_tax_invoice';
   if (/ใบกำกับภาษี|tax invoice/i.test(t)) return 'tax_invoice';
   if (/ใบสำคัญรับเงิน|FM-AF-014/i.test(t)) return 'payment_voucher';
   if (/บิลเงินสด|cash sale|cash bill/i.test(t)) return 'cash_bill';
