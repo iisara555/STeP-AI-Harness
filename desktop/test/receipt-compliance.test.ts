@@ -36,6 +36,14 @@ test('classifyFromText takes the most specific printed heading', () => {
   assert.equal(classifyFromText('ใบเสร็จรับเงิน'), 'receipt');
   assert.equal(classifyFromText('ใบแจ้งหนี้ / ใบวางบิล'), 'invoice_or_quotation');
   assert.equal(classifyFromText('โอนเงินสำเร็จ 15 ก.ย. 69'), 'transfer_slip');
+  // The heading wins over words further down, such as a quotation's terms mentioning a receipt.
+  assert.equal(
+    classifyFromText(
+      'cnx\nใบเสนอราคา\n/ Quotation\nเลขที่ QT26-0022\nวันที่ 20 สิงหาคม 2569\nลูกโป่งเชียงใหม่\nโทร 098-8187883\nลูกค้า / Customer\nรายการ\nยืนราคา 30 วัน ออกใบเสร็จเมื่อชำระเงิน',
+    ),
+    'invoice_or_quotation',
+  );
+  assert.equal(classifyFromText('ร้านตัวอย่าง\nCASH SALE\nAbbott Laboratories'), 'cash_bill', 'a word containing "abb" is not ABB');
   assert.equal(classifyFromText('ขอบคุณที่อุดหนุน'), '');
 });
 
