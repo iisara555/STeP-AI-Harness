@@ -68,6 +68,8 @@ async function launch() {
   page = await app.firstWindow();
   page.on('pageerror', e => errors.push(e.message));
   await page.waitForFunction(() => Boolean(window.step));
+  // CI runners clamp the window to a small display; the inbox must scroll to its lower buttons there too.
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 700));
 }
 const call = (method, input) => page.evaluate(({ method, input }) => window.step.call(method, input), { method, input });
 const state = () => call('learningList');
