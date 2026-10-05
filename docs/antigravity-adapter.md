@@ -48,6 +48,14 @@ The official Windows amd64 manifest selected **1.2.14**:
 - **Owner decision (Itsara, 2026-10-05):** accept a non-empty catalog and rely on runtime enforcement instead: `strict` mode confirmed in `init` (which proves the isolated settings with every native action namespace denied were loaded), an empty temporary workspace with `allowNonWorkspaceAccess: false`, and terminating the process on the first step that reports a tool (`step_type: tool`, `tool_name` or `tool_call`). Residual risk: STeP relies on the CLI honouring its deny rules; this cannot be proven from STeP's side. Re-run live acceptance after this change and record the result here.
 - **Retest (2026-10-05, PR #99 test build, Windows):** connect and test returned a real reply. Black console windows flashed on every message. Process listing on the owner's machine showed `agy.exe --bg-updater` started by the run. With the Windows 1.2.17 binary under Wine, the updater is skipped only when `~/.gemini/antigravity-cli/last_check.timestamp` was modified in the last 15 minutes; `AGY_CLI_DISABLE_AUTO_UPDATE=1` does not stop the spawn. Because every run uses a fresh home, STeP now writes that stamp into the home before each run.
 
+## One-click install and sign-in (2026-10-05)
+
+Owner request: staff should not install or sign in to the CLI by hand. `electron/antigravity-install.ts`:
+
+- Installs the pinned CLI 1.2.17 into `<app data>/components/agy` when no agy 1.2.14+ is found. Assets and sha512 values come from `antigravity-cli/1.2.17/manifest.json`. Windows assets are the bare exe; macOS assets are a tar.gz whose binary is named `antigravity` and is installed as `agy`. The staged copy must answer `--version` as 1.2.14+ in an isolated home before it replaces anything. The managed copy is preferred over other installs.
+- Sign-in state is read with `agy models` in an isolated home (exit 1 with "Please sign in" means signed out). The credential is in the OS keyring, so isolated homes still see it.
+- The CLI has no login subcommand, and print mode with piped stdin refuses to start OAuth. So STeP opens the interactive CLI in a terminal window with the real profile (Windows: `cmd /c start /wait`; macOS: `open -a Terminal`). The CLI opens Google's page itself. STeP polls every 3 seconds for up to 5 minutes, then closes the Windows window (macOS leaves Terminal for the person to close) and runs the normal test.
+
 ## Validation
 
 - **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.

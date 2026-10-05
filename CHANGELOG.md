@@ -17,6 +17,11 @@ STeP Desktop version 0.5.14 (`desktop/package.json`) contains the first section 
 
 - The first live test on 2026-10-05 showed that the signed-in CLI always lists its built-in tools, so STeP refused every request (`ANTIGRAVITY_TOOLS_UNAVAILABLE`). STeP no longer requires an empty tool list. It still confirms strict mode with every native action denied, runs in an empty temporary folder and stops the reply on the first tool use. Owner decision recorded in `docs/antigravity-adapter.md` (not yet in a release).
 
+### Gemini via Antigravity: one click installs, signs in and tests
+
+- "Connect and test" on the Antigravity connection now installs Google's official Antigravity CLI 1.2.17 when it is missing or older than 1.2.14 (Windows x64/arm64, macOS arm64/x64; the download is checked against the sha512 in Google's release manifest before anything is replaced). If the Google account is not signed in yet, STeP opens the CLI's own sign-in window, which opens Google's page in the browser, waits until the sign-in works, then runs the test. On Windows the sign-in window closes itself afterwards.
+- Each run no longer starts the CLI's background updater, which flashed a console window on Windows.
+
 ### Receipt check: one confirmation, and the document type from its title
 
 - Fields the rules left empty, because candidates scored close or low, now get the best OCR candidate marked as a guess. The AI image reading replaces guesses. The per-field "checked" boxes and the separate flagged-lines box are now one confirmation, and editing any field clears it (PR #97).
