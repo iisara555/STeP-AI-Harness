@@ -155,28 +155,6 @@ export function SettingsPanel({
               <input value={assistant} onChange={e => setAssistant(e.target.value)} />
             </label>
             <label>
-              {t('วิธีพูดคุย')}
-              <select value={personality} onChange={e => setPersonality(e.target.value as any)}>
-                <option value="coworker">{t('เพื่อนร่วมงาน · เป็นกันเอง สุภาพ')}</option>
-                <option value="professional">{t('มืออาชีพ · มีโครงสร้าง ชัดเจน')}</option>
-                <option value="concise">{t('กระชับ · สั้น ตรงประเด็น')}</option>
-                <option value="custom">{t('กำหนดเอง')}</option>
-              </select>
-            </label>
-            {personality === 'custom' ? (
-              <label>
-                {t('สไตล์ที่ต้องการ')}
-                <input
-                  value={assistantTone}
-                  maxLength={300}
-                  placeholder={t('เช่น ตอบเป็นข้อ ๆ และสรุปสิ่งที่ต้องทำท้ายคำตอบ')}
-                  onChange={e => setAssistantTone(e.target.value)}
-                />
-              </label>
-            ) : (
-              <span />
-            )}
-            <label>
               {t('ทีมหลัก')}
               <select value={team} onChange={e => setTeam(e.target.value)}>
                 <option value="">{t('ยังไม่แน่ใจ · เลือกภายหลัง')}</option>
@@ -251,26 +229,52 @@ export function SettingsPanel({
           <p className="muted small">
             {t('เปลี่ยนเฉพาะวิธีพูดในแชท ข้อเท็จจริง แหล่งอ้างอิง สิทธิ์ และมาตรฐานเอกสารยังเหมือนเดิม และไม่ได้สวมบทเป็นบุคคลจริง')}
           </p>
+          {/* One picker for every way of talking: the four First Run presets and the documented styles. A preset sets
+              the conversation style in Personal preferences; a documented style is layered over it. */}
           <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สไตล์การพูดของผู้ช่วย')}>
             {(
               [
-                ['standard', t('มาตรฐาน'), t('ตอบตามวิธีพูดคุยที่ตั้งไว้ในหน้าทั่วไป')],
+                ['coworker', t('เพื่อนร่วมงาน'), t('เป็นกันเอง สุภาพ พูดธรรมชาติ')],
+                ['professional', t('มืออาชีพ'), t('สุภาพ มีโครงสร้าง ชัดเจน')],
+                ['concise', t('กระชับ'), t('ตอบสั้น ตรงประเด็น')],
+                ['custom', t('กำหนดเอง'), t('เขียนสไตล์ที่ต้องการ')],
                 ...Object.values(INTERACTION_STYLES).map(style => [style.id, style.displayName, t(style.summary)]),
-              ] as [typeof interactionStyle, string, string][]
-            ).map(([id, label, summary]) => (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={interactionStyle === id}
-                className={interactionStyle === id ? 'style-card active' : 'style-card'}
-                onClick={() => setInteractionStyle(id)}
-              >
-                <strong>{label}</strong>
-                <small>{summary}</small>
-              </button>
-            ))}
+              ] as [string, string, string][]
+            ).map(([id, label, summary]) => {
+              const documented = id in INTERACTION_STYLES;
+              const active = documented ? interactionStyle === id : interactionStyle === 'standard' && personality === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  className={active ? 'style-card active' : 'style-card'}
+                  onClick={() => {
+                    if (documented) setInteractionStyle(interactionStyleId(id));
+                    else {
+                      setPersonality(id as typeof personality);
+                      setInteractionStyle('standard');
+                    }
+                  }}
+                >
+                  <strong>{label}</strong>
+                  <small>{summary}</small>
+                </button>
+              );
+            })}
           </div>
+          {interactionStyle === 'standard' && personality === 'custom' && (
+            <label className="speaking-style-custom">
+              {t('สไตล์ที่ต้องการ')}
+              <input
+                value={assistantTone}
+                maxLength={300}
+                placeholder={t('เช่น ตอบเป็นข้อ ๆ และสรุปสิ่งที่ต้องทำท้ายคำตอบ')}
+                onChange={e => setAssistantTone(e.target.value)}
+              />
+            </label>
+          )}
           <h3>{t('สำเนียงภาษา')}</h3>
           <p className="muted small">{t('ใช้ร่วมกับสไตล์ด้านบนได้')}</p>
           <div className="style-grid speaking-styles" role="radiogroup" aria-label={t('สำเนียงภาษา')}>

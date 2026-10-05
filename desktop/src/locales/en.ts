@@ -813,8 +813,6 @@ export const en: Record<string, string> = {
   สไตล์การพูดของผู้ช่วย: 'Assistant speaking style',
   'เปลี่ยนเฉพาะวิธีพูดในแชท ข้อเท็จจริง แหล่งอ้างอิง สิทธิ์ และมาตรฐานเอกสารยังเหมือนเดิม และไม่ได้สวมบทเป็นบุคคลจริง':
     'Changes only how the assistant talks in chat. Facts, sources, permissions and document standards stay the same, and it never role-plays a real person',
-  มาตรฐาน: 'Standard',
-  ตอบตามวิธีพูดคุยที่ตั้งไว้ในหน้าทั่วไป: 'Replies in the conversation style set under General',
   'จับภาพรวม ตรงประเด็น เชื่อมกับผลลัพธ์ แล้วจบด้วยสิ่งที่ต้องทำต่อ':
     'Big picture first, straight to the point, tied to outcomes, ending with the next action',
   'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและ Impact':
