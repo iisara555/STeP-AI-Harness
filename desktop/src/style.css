@@ -3639,3 +3639,27 @@ nav .count {
   margin: 6px 0;
   padding-left: 1.2em;
 }
+.learning-metrics ul {
+  margin: 6px 0;
+  padding-left: 1.2em;
+}
+.learning-metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+.learning-metrics-table th,
+.learning-metrics-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.learning-metrics-table td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.learning-metrics-table tbody th {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
