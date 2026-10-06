@@ -13,6 +13,7 @@ import {
   nativeTheme,
   clipboard,
   Notification,
+  net,
   session as electronSession,
 } from 'electron';
 import { mkdir, writeFile, stat, appendFile, rm, readFile } from 'node:fs/promises';
@@ -25,7 +26,8 @@ import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { autoUpdater } from 'electron-updater';
-import { Updater, RELEASES_URL } from './updater';
+import { Updater, RELEASES_URL, type SelfInstall } from './updater';
+import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
 import { isAvatarId } from '../src/avatar-ids';
 import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
@@ -415,6 +417,25 @@ async function main() {
     () => policyState.policy,
   );
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  // Mac updates without a Developer ID (electron/mac-update.ts): download the zip, check it, swap the bundle after quit.
+  function macSelfInstall(): SelfInstall {
+    const dir = join(data, 'updates');
+    return {
+      prepare: async (info, onProgress) => {
+        const bundle = appBundlePath(process.execPath);
+        if (!bundle || !(await canReplace(bundle))) throw new Error('UPDATE_NOT_REPLACEABLE');
+        const asset = macUpdateAsset(info.files, String(info.version || ''), process.arch);
+        if (!asset) throw new Error('UPDATE_NO_MAC_FILE');
+        const zip = await downloadVerified(asset, join(dir, asset.name), onProgress, (url, init) => net.fetch(url, init));
+        return () => {
+          void startSwap(bundle, zip, process.pid, dir).then(
+            () => app.quit(),
+            () => diagnose('update-swap-failed'),
+          );
+        };
+      },
+    };
+  }
   // In-app updates (electron/updater.ts): only an installed build updates itself; the policy can turn it off.
   const updates = new Updater(app.isPackaged ? autoUpdater : undefined, {
     current: app.getVersion(),
@@ -428,6 +449,7 @@ async function main() {
           : '',
     emit: update => emit({ sessionId: '', type: 'update', update }),
     log: diagnose,
+    selfInstall: process.platform === 'darwin' ? macSelfInstall() : undefined,
   });
   updates.start();
   app.on('before-quit', () => updates.stop());
