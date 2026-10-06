@@ -10,6 +10,8 @@ import { createWriteStream } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 /** Where the update feed's files are downloaded from (package.json build.publish: the rolling desktop-latest release). */
 export const FEED_DOWNLOAD_BASE = 'https://github.com/iisara555/STeP-AI-Harness/releases/download/desktop-latest/';
@@ -59,28 +61,34 @@ export async function downloadVerified(
   if (!response.ok || !response.body) throw new Error('UPDATE_DOWNLOAD_FAILED');
   const total = asset.size || Number(response.headers.get('content-length')) || 0;
   const hash = createHash('sha512');
-  const out = createWriteStream(dest, { mode: 0o600 });
   let received = 0,
     last = -1;
   try {
-    const reader = response.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      hash.update(value);
-      received += value.length;
-      if (!out.write(value)) await new Promise<void>(resolveDrain => out.once('drain', () => resolveDrain()));
-      const percent = total ? Math.min(100, Math.floor((received / total) * 100)) : 0;
-      if (percent !== last) onProgress((last = percent));
-    }
-  } finally {
-    await new Promise<void>(resolveClose => out.end(resolveClose));
+    // Pipeline propagates both read and write failures and waits for the destination to finish.
+    await pipeline(
+      Readable.fromWeb(response.body as any),
+      new Transform({
+        transform(chunk: Buffer, _encoding, callback) {
+          hash.update(chunk);
+          received += chunk.length;
+          const percent = total ? Math.min(100, Math.floor((received / total) * 100)) : 0;
+          try {
+            if (percent !== last) onProgress((last = percent));
+            callback(null, chunk);
+          } catch (error) {
+            callback(error as Error);
+          }
+        },
+      }),
+      createWriteStream(dest, { mode: 0o600 }),
+      { signal },
+    );
+    if (hash.digest('base64') !== asset.sha512) throw new Error('UPDATE_CHECKSUM_MISMATCH');
+    return dest;
+  } catch (error) {
+    await rm(dest, { force: true }).catch(() => {});
+    throw error;
   }
-  if (hash.digest('base64') !== asset.sha512) {
-    await rm(dest, { force: true });
-    throw new Error('UPDATE_CHECKSUM_MISMATCH');
-  }
-  return dest;
 }
 
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
@@ -100,7 +108,7 @@ while /bin/kill -0 ${pid} 2>/dev/null; do /bin/sleep 0.5; done
 fail() { /bin/rm -rf ${stage}; /usr/bin/open ${app}; exit 1; }
 /bin/rm -rf ${stage} && /bin/mkdir -p ${stage} || fail
 /usr/bin/ditto -x -k ${archive} ${stage} || fail
-NEW=${stage}/${quote(basename(bundle))}
+NEW=${stage}/'STeP Desktop.app'
 [ -d "$NEW" ] || fail
 /usr/bin/codesign --verify --deep --strict "$NEW" || fail
 /usr/bin/xattr -cr "$NEW" 2>/dev/null

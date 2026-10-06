@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: reliable Mac updates and Antigravity retry cleanup
+
+- Reject Mac update read/write failures through the download pipeline and remove incomplete archives while retaining SHA-512 checks. Locate the zip's canonical app bundle independently of a renamed installed `.app`.
+- Keep browser timeout cleanup distinct from user cancellation; a late Antigravity process exit cannot close a newer attempt's code prompt. Explicit cancellation still stops sign-in.
+- Regression tests use synthetic archives and simulated sign-in. Native macOS update/sign-in and real-account results remain unverified; no version bump or release.
+
 STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next four sections, published as `desktop-v0.5.18`: "What's new after an update", "Antigravity on the first page of setup", "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
 
 ### What's new after an update

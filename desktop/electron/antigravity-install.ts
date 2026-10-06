@@ -278,8 +278,10 @@ export async function antigravitySignIn(
     const browser = await deps.openBrowserSignIn();
     if (!browser) break;
     let ended = false,
-      cancelled = false;
+      cancelled = false,
+      finished = false;
     void browser.exited.then(() => {
+      if (finished) return;
       ended = true;
       deps.dropCode?.();
     });
@@ -294,19 +296,22 @@ export async function antigravitySignIn(
     if (canPaste)
       void deps.askForCode!().then(
         code => {
-          if (ended) return;
+          if (ended || finished) return;
           if (code) {
             browser.sendCode!(code);
             deps.progress(tm('ได้รับรหัสแล้ว กำลังตรวจการลงชื่อ'));
           } else cancelled = true;
         },
         () => {
-          cancelled = true;
+          if (!ended && !finished) cancelled = true;
         },
       );
     try {
       if (await waitUntilSignedIn(deps.browserTimeoutMs ?? 90_000, () => ended || cancelled)) return;
     } finally {
+      // Closing a prompt resolves it with null, but cleanup is not a user cancellation. A late exit from this
+      // attempt must also leave the next attempt's prompt alone.
+      finished = true;
       deps.dropCode?.();
       await browser.close();
     }

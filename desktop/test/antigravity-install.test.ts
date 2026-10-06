@@ -281,6 +281,94 @@ test('the browser sign-in comes first and the terminal is only the fallback', as
   assert.equal(terminal, 2, 'no sign-in page printed: straight to the terminal');
 });
 
+test('browser timeout closes the pending code prompt without becoming user cancellation', async () => {
+  let resolveCode: ((code: string | null) => void) | undefined;
+  let opened = 0,
+    terminal = 0;
+  await assert.rejects(
+    antigravitySignIn(
+      'agy',
+      { cwd: tmpdir(), env: {} },
+      {
+        progress: () => {},
+        signedIn: async () => false,
+        openBrowserSignIn: async () => {
+          opened++;
+          return { close: () => {}, exited: new Promise(() => {}), sendCode: () => {} };
+        },
+        askForCode: () =>
+          new Promise(resolve => {
+            resolveCode = resolve;
+          }),
+        dropCode: () => {
+          resolveCode?.(null);
+          resolveCode = undefined;
+        },
+        openSignIn: async () => {
+          terminal++;
+          return () => {};
+        },
+        browserAttempts: 3,
+        browserTimeoutMs: 5,
+        timeoutMs: 5,
+        pollMs: 1,
+      },
+      new AbortController().signal,
+    ),
+    /LOGIN_TIMEOUT/,
+  );
+  assert.deepEqual([opened, terminal], [3, 1], 'retry all browser attempts then use the terminal');
+});
+
+test('a late exit from an earlier browser attempt does not close the next code prompt', async () => {
+  let resolveCode: ((code: string | null) => void) | undefined;
+  let firstExit!: () => void;
+  let opened = 0,
+    ready = false;
+  const sent: string[] = [];
+  await antigravitySignIn(
+    'agy',
+    { cwd: tmpdir(), env: {} },
+    {
+      progress: () => {},
+      signedIn: async () => ready,
+      openBrowserSignIn: async () => {
+        const attempt = ++opened;
+        return {
+          close: () => {},
+          exited: new Promise<void>(resolve => {
+            if (attempt === 1) firstExit = resolve;
+          }),
+          sendCode: code => {
+            sent.push(code);
+            if (attempt === 2) ready = true;
+          },
+        };
+      },
+      askForCode: () =>
+        new Promise(resolve => {
+          resolveCode = resolve;
+          if (opened === 1) resolve('synthetic-wrong');
+          if (opened === 2) {
+            firstExit();
+            setTimeout(() => resolveCode?.('synthetic-code'), 2);
+          }
+        }),
+      dropCode: () => {
+        resolveCode?.(null);
+        resolveCode = undefined;
+      },
+      openSignIn: async () => assert.fail('the second browser attempt should succeed'),
+      browserAttempts: 2,
+      browserTimeoutMs: 30,
+      timeoutMs: 5,
+      pollMs: 1,
+    },
+    new AbortController().signal,
+  );
+  assert.deepEqual(sent, ['synthetic-wrong', 'synthetic-code']);
+});
+
 test('the code Google shows is asked for and typed into the waiting CLI, with a fresh page when it fails', async () => {
   const context = { cwd: tmpdir(), env: {} };
   const sent: string[] = [];
