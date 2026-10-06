@@ -3,6 +3,8 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth':
+    'The system key store is unavailable. Unlock it or ask your administrator to configure it before saving an API key or signing in with OAuth.',
   ...documentToolsEn,
   ...usageEn,
   'ดำเนินการค่าพาหนะผ่านกระบวนการจัดซื้อจัดจ้าง และตรวจยอดรวมไม่เกิน 10,000 บาทต่อคนขับรถต่อกิจกรรม':

@@ -2,7 +2,7 @@ import { WebContentsView, type WebContents } from 'electron';
 import type { BrowserDock } from './browser-dock';
 import { createHash, randomUUID } from 'node:crypto';
 import { browserUrl } from './workbench';
-import { privateHostName, publicSite } from './web-fetch';
+import { publicSite, type Resolve } from './web-fetch';
 import type { LoopRequest } from '../src/tools';
 import { tm } from './i18n';
 
@@ -58,6 +58,7 @@ export class AgentBrowser {
     private dock?: BrowserDock,
     // Intranet hosts the organization lets the assistant open (policy network.privateHosts).
     private privateHosts: () => string[] = () => [],
+    private resolve?: Resolve,
   ) {}
   private track(contents: number, change: number) {
     if (!this.origins.has(contents)) return;
@@ -275,7 +276,7 @@ export class AgentBrowser {
       const url = browserUrl(request.input);
       context.review(decodeURIComponent(url));
       context.activity?.(tm('รออนุญาตเปิดเว็บ {0}', new URL(url).host));
-      await publicSite(new URL(url), this.privateHosts());
+      await publicSite(new URL(url), this.privateHosts(), this.resolve);
       const reused = await this.reuse(url, context);
       if (reused) return reused;
       if (this.tabs.size >= 4) throw new Error('TASK_LIMIT');
@@ -326,18 +327,29 @@ export class AgentBrowser {
         network.webRequest.onCompleted(details => details.webContentsId !== undefined && this.track(details.webContentsId, -1));
         network.webRequest.onErrorOccurred(details => details.webContentsId !== undefined && this.track(details.webContentsId, -1));
         network.webRequest.onBeforeRequest((details, cb) => {
-          try {
-            const target = new URL(browserUrl(details.url));
-            // A public page cannot reach local or intranet addresses through the assistant's browser either.
-            if (privateHostName(target.hostname) && !this.privateHosts().includes(target.hostname.toLowerCase()))
-              return cb({ cancel: true });
-            const origin = this.origins.get(details.webContentsId ?? -1);
-            const cancel = details.resourceType === 'mainFrame' && (!origin || new URL(details.url).origin !== origin);
-            if (!cancel && details.webContentsId !== undefined) this.track(details.webContentsId, 1);
-            cb({ cancel });
-          } catch {
-            cb({ cancel: true });
-          }
+          void (async () => {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              const target = new URL(browserUrl(details.url));
+              const origin = this.origins.get(details.webContentsId ?? -1);
+              if (details.resourceType === 'mainFrame' && (!origin || target.origin !== origin)) return cb({ cancel: true });
+              // Check DNS on subresources and redirects too, not just the first page. A public-looking name may resolve
+              // to loopback or the intranet. Chromium still owns the connection; this is not DNS pinning.
+              await Promise.race([
+                publicSite(target, this.privateHosts(), this.resolve),
+                new Promise<never>((_done, fail) => {
+                  timer = setTimeout(() => fail(new Error('WEB_TIMEOUT')), 5000);
+                }),
+              ]);
+              if (details.webContentsId !== undefined && !this.origins.has(details.webContentsId)) return cb({ cancel: true });
+              if (details.webContentsId !== undefined) this.track(details.webContentsId, 1);
+              cb({ cancel: false });
+            } catch {
+              cb({ cancel: true });
+            } finally {
+              clearTimeout(timer);
+            }
+          })();
         });
       }
       contents.setWindowOpenHandler(() => ({ action: 'deny' }));

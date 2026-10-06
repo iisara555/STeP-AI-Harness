@@ -30,6 +30,8 @@ For Claude subscription chat, install Claude Code 2.1.268 or newer yourself, cho
 
 ## Verification
 
+See the [2026-10-06 security review](../docs/desktop-security-review.md) for corrected file/OCR boundaries, dependency audit evidence and the native-platform, signing, DNS and policy limits that remain before organizational rollout.
+
 Phase 6 adds [bounded clean-read transmission consent and a feature matrix](../docs/desktop-phase6.md). Employees can explicitly approve a source scope for one round and revoke it from the composer. When `checks.privacy` is on (it is off by default, see [organization checks](../docs/desktop-policy.md#organization-checks-checks)), privacy checks run on every result; new scopes, masking, document/MCP/command/write results and business actions retain their own gates. Administrators can disable the scoped choice with `transmissionConsent.allowRunScope=false`.
 
 ```sh

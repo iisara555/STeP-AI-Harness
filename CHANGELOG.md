@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: file, credential and local OCR security
+
+- Reject multiply-linked workspace files and existing linked SQLite database/journal files. Use literal Git pathspecs and hide denied filenames, including staged rename sources, from status and diff results.
+- Check agent-browser DNS for subresources and redirects; reject private destinations unless explicitly allowed by managed policy. Keep POSIX app-data/log directories private and refuse Electron's Linux `basic_text` credential fallback.
+- Reject foreign Host/Origin requests to the loopback OCR service before reading documents. Return immediately when the worker is busy, bound upload reads and omit filenames/query values from service logs.
+- Update vulnerable build/download dependency chains with targeted overrides. Full Desktop, production-only Desktop and privacy-vendor audits report zero known advisories at review time.
+- Add synthetic security regression tests and real Electron sandbox/CSP/IPC checks; record evidence and remaining deployment limits in `docs/desktop-security-review.md`. No real documents or live-provider accounts were used; native Windows/macOS behavior and publisher signing remain unverified. No OCR accuracy claim, policy-default change, version bump or release.
+
 ### Desktop: reliable Mac updates and Antigravity retry cleanup
 
 - Reject Mac update read/write failures through the download pipeline and remove incomplete archives while retaining SHA-512 checks. Locate the zip's canonical app bundle independently of a renamed installed `.app`.

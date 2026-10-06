@@ -2,6 +2,8 @@
 import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  SECURE_STORAGE_UNAVAILABLE:
+    'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth',
   INVALID_DOCUMENT_TOOL: 'ชนิดเครื่องมือร่างเอกสารไม่ถูกต้อง หรือ Skill ที่เลือกไม่ตรงกับเครื่องมือ',
   INVALID_DOCUMENT_VARIANT: 'ชนิดเอกสารย่อยไม่ถูกต้อง กรุณาเลือกใหม่',
   INVALID_DOCUMENT_FIELDS: 'ข้อมูลฟอร์มร่างเอกสารไม่ถูกต้อง กรุณาตรวจช่องที่กรอก',

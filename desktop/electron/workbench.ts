@@ -81,7 +81,7 @@ export class Workbench {
     within(full);
     try {
       const info = await lstat(full);
-      if (info.isSymbolicLink()) throw new Error('INVALID_PATH');
+      if (info.isSymbolicLink() || (info.isFile() && info.nlink > 1)) throw new Error('INVALID_PATH');
       const actual = await realpath(full);
       within(actual);
       permitted(actual);
@@ -129,6 +129,7 @@ export class Workbench {
     try {
       const stat = await handle.stat();
       if (!stat.isFile() || stat.size > limit) throw new Error('FILE_LIMIT');
+      if (stat.nlink > 1) throw new Error('INVALID_PATH');
       const buffer = Buffer.alloc(stat.size + 1);
       let offset = 0;
       while (offset < buffer.length) {
@@ -308,11 +309,40 @@ export class Workbench {
   async diff() {
     const root = await this.root();
     try {
-      const status = await execute('git', ['-C', root, '-c', 'core.fsmonitor=false', 'status', '--short'], {
+      const status = await execute('git', ['-C', root, '-c', 'core.fsmonitor=false', 'status', '--short', '-z'], {
         windowsHide: true,
         timeout: 15000,
         maxBuffer: 500000,
       });
+      const statusEntries = status.stdout.split('\0'),
+        visibleStatus: string[] = [],
+        hiddenDiffPaths = new Set<string>();
+      for (let i = 0; i < statusEntries.length; i++) {
+        const entry = statusEntries[i];
+        if (entry.length < 4) continue;
+        const code = entry.slice(0, 2),
+          targets = [entry.slice(3)];
+        // Porcelain -z gives the destination first, followed by the source for a rename/copy.
+        if (/[RC]/.test(code)) {
+          const source = statusEntries[++i];
+          if (!source) continue;
+          targets.push(source);
+        }
+        try {
+          for (const target of targets) await this.path(target, true);
+          visibleStatus.push(
+            code +
+              ' ' +
+              targets
+                .map(target => JSON.stringify(target))
+                .reverse()
+                .join(' -> '),
+          );
+        } catch {
+          for (const target of targets) hiddenDiffPaths.add(target);
+        }
+      }
+      const cleanStatus = this.scrub(visibleStatus.join('\n'));
       const names = await execute('git', ['-C', root, '-c', 'core.fsmonitor=false', 'diff', '--name-only', '-z', 'HEAD', '--'], {
         windowsHide: true,
         timeout: 15000,
@@ -320,6 +350,7 @@ export class Workbench {
       });
       const paths: string[] = [];
       for (const path of names.stdout.split('\0').filter(Boolean)) {
+        if (hiddenDiffPaths.has(path)) continue;
         try {
           await this.path(path, true);
           paths.push(path);
@@ -327,17 +358,30 @@ export class Workbench {
           /* Hidden and inaccessible files never enter the diff. */
         }
       }
-      if (!paths.length) return { status: this.scrub(status.stdout), diff: '' };
+      if (!paths.length) return { status: cleanStatus, diff: '' };
       const diff = await execute(
         'git',
-        ['-C', root, '-c', 'core.fsmonitor=false', '--no-pager', 'diff', '--no-ext-diff', '--no-textconv', 'HEAD', '--', ...paths],
+        [
+          '-C',
+          root,
+          '--literal-pathspecs',
+          '-c',
+          'core.fsmonitor=false',
+          '--no-pager',
+          'diff',
+          '--no-ext-diff',
+          '--no-textconv',
+          'HEAD',
+          '--',
+          ...paths,
+        ],
         {
           windowsHide: true,
           timeout: 15000,
           maxBuffer: 500000,
         },
       );
-      return { status: this.scrub(status.stdout), diff: this.scrub(diff.stdout) };
+      return { status: cleanStatus, diff: this.scrub(diff.stdout) };
     } catch {
       throw new Error('GIT_DIFF_UNAVAILABLE');
     }

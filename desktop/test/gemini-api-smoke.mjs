@@ -88,6 +88,7 @@ try {
   // CI runners may have no OS keychain; this stands in for it so the key can be stored.
   await app.evaluate(({ safeStorage }) => {
     safeStorage.isEncryptionAvailable = () => true;
+    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
     safeStorage.encryptString = s => Buffer.from('k' + s);
     safeStorage.decryptString = b => b.toString().slice(1);
   });

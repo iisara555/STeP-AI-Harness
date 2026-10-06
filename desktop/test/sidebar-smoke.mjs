@@ -56,6 +56,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await app.evaluate(({ safeStorage }) => {
     safeStorage.isEncryptionAvailable = () => true;
+    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
     safeStorage.encryptString = s => Buffer.from('k' + s);
     safeStorage.decryptString = b => b.toString().slice(1);
   });

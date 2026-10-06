@@ -22,6 +22,8 @@ import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
+import { prepareLocalData } from './local-data';
+import { requireSecureStorage } from './secure-storage';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
@@ -174,8 +176,7 @@ async function main() {
   const root = app.isPackaged ? join(process.resourcesPath, 'harness') : resolve(__dirname, '../..');
   const data = app.getPath('userData');
   const { prepareDraft } = await import(pathToFileURL(join(root, 'src/modules/runner/index.js')).href);
-  await mkdir(data, { recursive: true });
-  await mkdir(join(data, 'logs'), { recursive: true });
+  await prepareLocalData(data);
   logFile = join(data, 'logs', 'diagnostics.jsonl');
   let voicePermissionUntil = 0,
     voiceTicketUntil = 0;
@@ -327,7 +328,7 @@ async function main() {
   async function key(connection: Connection) {
     const encrypted = store.get<string>('secret', connection.id);
     if (!encrypted) return undefined;
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+    requireSecureStorage(safeStorage);
     return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
   }
   // Each connection keeps its runtime's sign-in and state in its own folder under app data.
@@ -993,7 +994,7 @@ async function main() {
   async function prepareCompatiblePreset(connection: Connection, preset: NonNullable<ReturnType<typeof presetFor>>, signal: AbortSignal) {
     let apiKey = await key(connection);
     if (!apiKey && preset.signIn === 'openrouter') {
-      if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+      requireSecureStorage(safeStorage);
       emit({
         sessionId: '',
         type: 'connect-progress',
@@ -1791,7 +1792,7 @@ async function main() {
           note: tm('ยังไม่ได้ทดสอบการเชื่อมต่อ'),
         };
         if (input.apiKey) {
-          if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+          requireSecureStorage(safeStorage);
           store.put('secret', id, safeStorage.encryptString(inputText(input.apiKey, 1000)).toString('base64'));
         }
         if (input.mode === 'subscription' || input.mode === 'oauth') store.put('secret', id, null);
@@ -1866,7 +1867,7 @@ async function main() {
             );
           if (connection.provider === 'copilot') {
             if (!policyState.policy.features.copilot || !policyState.policy.providers?.copilot) throw new Error('FEATURE_DISABLED');
-            if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+            requireSecureStorage(safeStorage);
             const currentPolicy = policyState.policy;
             const token = await copilotDeviceLogin(currentPolicy.providers!.copilot!.clientId, controller.signal, async (code, url) => {
               emit({

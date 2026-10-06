@@ -65,7 +65,7 @@ export function publicUrl(input: string) {
     throw new Error('WEB_ADDRESS_BLOCKED');
   return url;
 }
-type Resolve = (host: string) => Promise<{ address: string; family: number }[]>;
+export type Resolve = (host: string) => Promise<{ address: string; family: number }[]>;
 /** A host name that is plainly local or private without a DNS lookup (localhost, .local, a private IP literal). */
 export function privateHostName(hostname: string) {
   const host = hostname

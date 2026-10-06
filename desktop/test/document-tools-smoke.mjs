@@ -77,6 +77,7 @@ try {
   });
   await app.evaluate(({ safeStorage, dialog }, file) => {
     safeStorage.isEncryptionAvailable = () => true;
+    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
     safeStorage.encryptString = s => Buffer.from('k' + s);
     safeStorage.decryptString = b => b.toString().slice(1);
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
