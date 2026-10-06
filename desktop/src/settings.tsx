@@ -568,7 +568,7 @@ export function SettingsPanel({
                       title={t('เลิกใช้ runtime ที่เลือกเอง')}
                       onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
                     >
-                      {c.provider === 'antigravity' ? 'Use installed Antigravity' : t('ใช้ตัวเชื่อมที่มากับแอป')}
+                      {c.provider === 'antigravity' ? t('ใช้ Antigravity ที่ STeP ติดตั้ง') : t('ใช้ตัวเชื่อมที่มากับแอป')}
                     </button>
                   ) : (
                     <button
@@ -587,12 +587,12 @@ export function SettingsPanel({
                     disabled={Boolean(busy)}
                     title={
                       c.provider === 'antigravity'
-                        ? 'Disconnect STeP; keep the native Antigravity account signed in'
+                        ? t('เลิกเชื่อมต่อกับ STeP บัญชี Google ใน Antigravity ยังลงชื่ออยู่')
                         : t('ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง')
                     }
                     onClick={() => void run(c.id, () => call('disconnect', { id: c.id }))}
                   >
-                    {c.provider === 'antigravity' ? 'Disconnect STeP' : t('ออกจากระบบ')}
+                    {c.provider === 'antigravity' ? t('เลิกเชื่อมต่อ') : t('ออกจากระบบ')}
                   </button>
                 )}
                 <button className="quiet danger-text" disabled={Boolean(busy)} onClick={() => setRemovingConnection(c)}>
@@ -632,7 +632,7 @@ export function SettingsPanel({
               )}
               {removingConnection.provider === 'antigravity' && (
                 <p className="small muted">
-                  The native Antigravity Google account remains signed in. STeP does not remove credentials from its shared OS keyring.
+                  {t('บัญชี Google ใน Antigravity ยังลงชื่ออยู่บนเครื่องนี้ STeP ไม่ลบข้อมูลลงชื่อของบัญชีนั้น')}
                 </p>
               )}
               <p className="small muted">{t('งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น')}</p>

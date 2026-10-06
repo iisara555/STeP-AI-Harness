@@ -157,8 +157,11 @@ try {
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
   // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
   assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
-  await page.getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).waitFor();
-  await page.getByText('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน', { exact: false }).waitFor();
+  // Since the outcome-first receipt page, a flagged item shows in "ทำอะไรต่อ" and again in the full checklist.
+  await page.getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).first().waitFor();
+  // The B clearing set sits in the folded full checklist, so it is present but not on screen.
+  await page.getByText('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน', { exact: false }).first().waitFor({ state: 'attached' });
+  await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();
   await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('other');
   assert.equal(await page.getByText('ชุดเคลียร์เงิน', { exact: false }).count(), 0);
   // Enter in a field moves to the next one; one confirmation then covers every field.

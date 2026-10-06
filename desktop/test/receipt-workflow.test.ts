@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { expenseCategorySuggestion, expenseDescriptionFromText, formValues, receiptAssessment } from '../src/receipt-workflow';
+import {
+  expenseCategorySuggestion,
+  expenseCodeLabel,
+  expenseDescriptionFromText,
+  formValues,
+  receiptAssessment,
+} from '../src/receipt-workflow';
 
 test('form filling formats only source-backed digits, dates and money without inventing absent VAT', () => {
   const values = formValues({
@@ -95,4 +101,15 @@ test('cash-bill source gaps and arithmetic warnings stay unresolved after human 
     receiptAssessment({ ...input, items: [{ id: 'clearing_set', status: 'todo', source: 'afp', text: 'เตรียมชุดเบิก' }] }).status,
     'needs-actions',
   );
+});
+
+test('a suggested category shows its plain name beside the AFP code', () => {
+  assert.equal(expenseCodeLabel('B10'), 'B10 · ค่าน้ำดื่ม');
+  assert.equal(expenseCodeLabel('BV2'), 'BV2 · ค่าพาหนะไม่รวมน้ำมันเชื้อเพลิง');
+  assert.equal(expenseCodeLabel(''), '');
+  // Every code the suggestion can return has a name.
+  for (const text of ['ค่าน้ำดื่ม', 'หนังสือ', 'ค่าโล่', 'พ่นฆ่าเชื้อ', 'จัดเก็บขยะ']) {
+    const code = expenseCategorySuggestion(text).code;
+    assert.notEqual(expenseCodeLabel(code), code, text);
+  }
 });

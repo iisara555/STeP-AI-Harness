@@ -45,7 +45,7 @@ try {
   assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
   assert.equal(await page.getByLabel(/Google Cloud Project ID/).count(), 0);
   assert.equal(await page.getByLabel('Gemini model').inputValue(), 'gemini-3.8-flash-medium');
-  await expect(page.getByText(/denies every native tool/)).toBeVisible();
+  await expect(page.getByText(/ปิดเครื่องมือของ Antigravity ทั้งหมด/)).toBeVisible();
   await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
   const connection = snapshot.connections.find(c => c.provider === 'antigravity');

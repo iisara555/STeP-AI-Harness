@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdtemp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -10,7 +10,9 @@ import {
   agyComponentSpec,
   antigravitySignIn,
   antigravitySignedIn,
+  googleSignInUrl,
   installAntigravityCli,
+  openAntigravityBrowserSignIn,
 } from '../electron/antigravity-install';
 
 test('Antigravity CLI builds are pinned for Windows and macOS', () => {
@@ -155,4 +157,111 @@ test('opens Google sign-in only when needed and waits until it is usable', async
   setTimeout(() => controller.abort(), 20);
   await assert.rejects(pending, /CANCELLED/);
   assert.equal(closed, 3);
+});
+
+const SIGN_IN =
+  'https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=synthetic.apps.googleusercontent.com&code_challenge=x&redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback&response_type=code&state=s';
+
+test('only a Google sign-in page from the CLI output is opened', () => {
+  assert.equal(googleSignInUrl(`Authentication required. Please visit the URL to log in:\n  ${SIGN_IN}\n\nWaiting`), SIGN_IN);
+  assert.equal(googleSignInUrl('http://accounts.google.com/o/oauth2/auth?x=1'), null);
+  assert.equal(googleSignInUrl('https://accounts.google.com.evil.example/o/oauth2/auth'), null);
+  assert.equal(googleSignInUrl('https://evil.example/?next=https://accounts.google.com/o/oauth2/auth'), null);
+  assert.equal(googleSignInUrl('https://accounts.google.com/ServiceLogin'), null);
+});
+
+// A stand-in for `agy -p` that prints what the signed-out CLI prints (checked with agy 1.2.17), then waits.
+async function fakeHeadlessAgy(body: string) {
+  const dir = await mkdtemp(join(tmpdir(), 'step-agy-browser-'));
+  const executable = join(dir, 'agy');
+  await writeFile(executable, `#!/usr/bin/env node\n${body}`);
+  await chmod(executable, 0o755);
+  return { dir, executable };
+}
+
+test(
+  'browser sign-in opens the printed Google page with no terminal and stops the CLI after',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const printing = await fakeHeadlessAgy(
+      `console.error('Authentication required. Please visit the URL to log in:\\n  ${SIGN_IN}\\n\\nWaiting for authentication (timeout 60s)...'); setTimeout(() => {}, 60000);`,
+    );
+    const opened: string[] = [];
+    const handle = await openAntigravityBrowserSignIn(printing.executable, join(printing.dir, 'cwd'), async url => {
+      opened.push(url);
+    });
+    assert.ok(handle);
+    assert.deepEqual(opened, [SIGN_IN]);
+    await handle!.close();
+    await handle!.exited;
+
+    const silent = await fakeHeadlessAgy("console.error('Error: authentication required.'); process.exit(1);");
+    assert.equal(
+      await openAntigravityBrowserSignIn(silent.executable, join(silent.dir, 'cwd'), async () => assert.fail('nothing to open')),
+      null,
+    );
+    assert.equal(await openAntigravityBrowserSignIn(join(silent.dir, 'missing'), join(silent.dir, 'cwd'), async () => {}), null);
+  },
+);
+
+test('the browser sign-in comes first and the terminal is only the fallback', async () => {
+  const context = { cwd: tmpdir(), env: {} };
+  const answers =
+    (...values: boolean[]) =>
+    async () =>
+      values.shift() ?? false;
+  let terminal = 0,
+    browserClosed = 0;
+  const openSignIn = async () => {
+    terminal++;
+    return () => {};
+  };
+  const browser = (exited: Promise<void>) => async () => ({
+    close: () => {
+      browserClosed++;
+    },
+    exited,
+  });
+  const progress: string[] = [];
+
+  await antigravitySignIn(
+    'agy',
+    context,
+    {
+      progress: t => progress.push(t),
+      openSignIn,
+      openBrowserSignIn: browser(new Promise(() => {})),
+      signedIn: answers(false, false, true),
+      pollMs: 1,
+    },
+    new AbortController().signal,
+  );
+  assert.deepEqual([terminal, browserClosed], [0, 1], 'signed in through the browser, no terminal window');
+  assert.ok(progress.some(t => /Allow/.test(t)));
+
+  await antigravitySignIn(
+    'agy',
+    context,
+    {
+      progress: t => progress.push(t),
+      openSignIn,
+      openBrowserSignIn: browser(Promise.resolve()),
+      signedIn: answers(false, false, false, true),
+      pollMs: 1,
+    },
+    new AbortController().signal,
+  );
+  assert.deepEqual([terminal, browserClosed], [1, 2], 'the CLI gave up waiting, so the terminal opens');
+  assert.ok(
+    progress.some(t => /Enter/.test(t)),
+    'the terminal step says to press Enter',
+  );
+
+  await antigravitySignIn(
+    'agy',
+    context,
+    { progress: () => {}, openSignIn, openBrowserSignIn: async () => null, signedIn: answers(false, true), pollMs: 1 },
+    new AbortController().signal,
+  );
+  assert.equal(terminal, 2, 'no sign-in page printed: straight to the terminal');
 });

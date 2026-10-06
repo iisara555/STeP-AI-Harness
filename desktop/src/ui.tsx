@@ -450,7 +450,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     {
       id: 'antigravity',
       label: 'Gemini via Antigravity',
-      description: t('ใช้บัญชี Google ที่ลงชื่อในแอป Antigravity บนเครื่องนี้ (ทดลอง)'),
+      description: t('ใช้บัญชี Google ของคุณ กดครั้งเดียว STeP ติดตั้งและพาลงชื่อให้ (ทดลอง)'),
       kind: 'account',
       choice: { ...initialChoice, provider: 'antigravity', mode: 'subscription', model: ANTIGRAVITY_MODEL },
     },
@@ -709,7 +709,7 @@ function AdvancedProviderFields({
             {subscription && (
               <option value="subscription">
                 {provider === 'antigravity'
-                  ? 'Personal Google account (native Antigravity sign-in)'
+                  ? t('บัญชี Google ส่วนตัว (ลงชื่อผ่าน Antigravity)')
                   : provider === 'claude'
                     ? t('แพ็กเกจของคุณผ่าน Claude Code ในเครื่อง (ทดลอง)')
                     : provider === 'gemini'
@@ -755,11 +755,12 @@ function AdvancedProviderFields({
             <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
           </label>
           <p className="small muted">
-            Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account
-            signed in. STeP denies every native tool (files, commands, web, MCP) and stops the reply if the AI tries to use one.
+            {t(
+              'ทดลอง: ใช้บัญชี Google ที่ลงชื่อใน Antigravity บนเครื่องนี้ เลิกเชื่อมต่อ STeP แล้วบัญชีนั้นยังลงชื่ออยู่ STeP ปิดเครื่องมือของ Antigravity ทั้งหมด (ไฟล์ คำสั่ง เว็บ MCP) และหยุดคำตอบถ้า AI พยายามใช้',
+            )}
           </p>
           <button className="quiet" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
-            Antigravity installation and sign-in guide
+            {t('วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity')}
           </button>
         </div>
       )}

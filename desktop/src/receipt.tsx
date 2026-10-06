@@ -33,7 +33,7 @@ import { SectionArt } from './illustration';
 import { receiptSourceText } from './receipt-source';
 import { receiptProvenance, type ExtractionMethod } from './extraction-provenance';
 import { trialReading, trialReport, type TrialReading } from './receipt-trial';
-import { expenseCategorySuggestion, expenseDescriptionFromText, formValues, receiptAssessment } from './receipt-workflow';
+import { expenseCategorySuggestion, expenseCodeLabel, expenseDescriptionFromText, formValues, receiptAssessment } from './receipt-workflow';
 import { localized, t } from './i18n';
 
 type MappingCandidate = {
@@ -194,6 +194,7 @@ export function ReceiptApp({
   onEvent,
   connectionId,
   onBusy,
+  trialTools = false,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
@@ -203,6 +204,8 @@ export function ReceiptApp({
   connectionId?: string;
   /** Whether a read or check is running, so the sidebar can show it while another page is open. */
   onBusy?: (busy: boolean) => void;
+  /** The OCR trial and measurement tools, for the team running the OCR pilot (policy features.ocrTrial). */
+  trialTools?: boolean;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState(''),
@@ -549,7 +552,9 @@ export function ReceiptApp({
       t('รายการค่าใช้จ่าย: {0}', expenseDescription || t('(ไม่มี)')),
       t(
         'หมวดที่แนะนำ: {0}',
-        categoryOverride === null ? categorySuggestion.code || t('ยังระบุหมวดจากรายการนี้ไม่ได้') : t(CATEGORY_LABELS[categoryOverride]),
+        categoryOverride === null
+          ? expenseCodeLabel(categorySuggestion.code) || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
+          : t(CATEGORY_LABELS[categoryOverride]),
       ),
       t('ผลตรวจ: {0}', assessmentTitles[assessment.status]),
       '',
@@ -730,18 +735,20 @@ export function ReceiptApp({
         </p>
       )}
 
-      <details className="receipt-hint">
-        <summary>{t('เครื่องมือทดลองและวัดผล OCR')}</summary>
-        <label className="receipt-hint">
-          <input type="checkbox" checked={trialMode} disabled={Boolean(busy)} onChange={e => setTrialMode(e.target.checked)} />
-          {t('ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)')}
-        </label>
-        {trialMode && (
-          <p className="small muted receipt-hint">
-            {t('อ่านด้วย OCR ในเครื่องก่อน เก็บผลก่อนแก้และเวลาอ่านไว้ให้เทียบกับค่าที่คุณตรวจแล้ว AI จะทำงานเมื่อคุณกดเรียกเอง')}
-          </p>
-        )}
-      </details>
+      {trialTools && (
+        <details className="receipt-hint">
+          <summary>{t('เครื่องมือทดลองและวัดผล OCR')}</summary>
+          <label className="receipt-hint">
+            <input type="checkbox" checked={trialMode} disabled={Boolean(busy)} onChange={e => setTrialMode(e.target.checked)} />
+            {t('ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)')}
+          </label>
+          {trialMode && (
+            <p className="small muted receipt-hint">
+              {t('อ่านด้วย OCR ในเครื่องก่อน เก็บผลก่อนแก้และเวลาอ่านไว้ให้เทียบกับค่าที่คุณตรวจแล้ว AI จะทำงานเมื่อคุณกดเรียกเอง')}
+            </p>
+          )}
+        </details>
+      )}
       {!doc ? (
         <div className="receipt-empty">
           <SectionArt scene="receipt" className="receipt-illustration" />
@@ -840,7 +847,7 @@ export function ReceiptApp({
                 <dt>{t('หมวดที่แนะนำ')}</dt>
                 <dd>
                   {categoryOverride === null
-                    ? categorySuggestion.code || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
+                    ? expenseCodeLabel(categorySuggestion.code) || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
                     : t(CATEGORY_LABELS[categoryOverride])}
                 </dd>
                 <dt>{t('งบที่ใช้')}</dt>
@@ -1207,12 +1214,12 @@ export function ReceiptApp({
                       <small className="receipt-ai-decision" key={decision.field + index}>
                         AI filter:{' '}
                         {decision.status === 'suggested'
-                          ? t('แนะนำ candidate “{0}”', decision.value)
+                          ? t('แนะนำค่า “{0}”', decision.value)
                           : decision.status === 'keep'
                             ? t('เห็นด้วยกับค่าปัจจุบัน')
                             : decision.status === 'ambiguous'
                               ? t('ยังไม่แน่ใจ ให้คนเลือก')
-                              : t('หลักฐานยังไม่พอ map')}
+                              : t('หลักฐานยังไม่พอจะใส่ในช่องนี้')}
                         {decision.reason ? ` · ${decision.reason}` : ''}
                       </small>
                     ))}
@@ -1302,7 +1309,7 @@ export function ReceiptApp({
                 }
               >
                 <Save size={15} />
-                {t('บันทึกร่าง (JSON)')}
+                {t('บันทึกผลตรวจเก็บไว้')}
               </button>
               <button className="quiet" disabled={Boolean(busy)} onClick={() => void run('read', read)}>
                 <FileSearch size={15} />
@@ -1330,7 +1337,7 @@ export function ReceiptApp({
                 }
               >
                 <Send size={15} />
-                {t('ให้ AI pre-check ต่อ')}
+                {t('ให้ AI ตรวจทานต่อ')}
               </button>
             </div>
           </section>

@@ -126,8 +126,16 @@ export const en: Record<string, string> = {
   ทดสอบอีกครั้ง: 'Test again',
   'ลงชื่อด้วย {0}': 'Sign in with {0}',
   'ใช้แพ็กเกจ ChatGPT Plus/Pro ที่คุณมี': 'Use your ChatGPT Plus/Pro plan',
-  'ใช้บัญชี Google ที่ลงชื่อในแอป Antigravity บนเครื่องนี้ (ทดลอง)':
-    'Uses the Google account signed in to Antigravity on this device (experimental)',
+  'ใช้บัญชี Google ของคุณ กดครั้งเดียว STeP ติดตั้งและพาลงชื่อให้ (ทดลอง)':
+    'Your Google account. One click and STeP installs and signs you in (experimental)',
+  'บัญชี Google ส่วนตัว (ลงชื่อผ่าน Antigravity)': 'Personal Google account (native Antigravity sign-in)',
+  'ทดลอง: ใช้บัญชี Google ที่ลงชื่อใน Antigravity บนเครื่องนี้ เลิกเชื่อมต่อ STeP แล้วบัญชีนั้นยังลงชื่ออยู่ STeP ปิดเครื่องมือของ Antigravity ทั้งหมด (ไฟล์ คำสั่ง เว็บ MCP) และหยุดคำตอบถ้า AI พยายามใช้':
+    'Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account signed in. STeP denies every native tool (files, commands, web, MCP) and stops the reply if the AI tries to use one.',
+  'ใช้ Antigravity ที่ STeP ติดตั้ง': 'Use installed Antigravity',
+  'เลิกเชื่อมต่อกับ STeP บัญชี Google ใน Antigravity ยังลงชื่ออยู่': 'Disconnect STeP; keep the native Antigravity account signed in',
+  เลิกเชื่อมต่อ: 'Disconnect STeP',
+  'บัญชี Google ใน Antigravity ยังลงชื่ออยู่บนเครื่องนี้ STeP ไม่ลบข้อมูลลงชื่อของบัญชีนั้น':
+    'The native Antigravity Google account remains signed in. STeP does not remove credentials from its shared OS keyring.',
   'กดเชื่อมต่อครั้งเดียว STeP จะติดตั้ง Antigravity CLI ของ Google ให้ถ้ายังไม่มี เปิดหน้าลงชื่อบัญชี Google แล้วทดสอบให้เอง ไม่ต้องใช้ API key เมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่':
     "Press connect once: STeP installs Google's Antigravity CLI if it is missing, opens the Google sign-in, then runs the test. No API key needed. Disconnecting keeps the Antigravity account signed in.",
   'วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity': 'How to install and sign in to Antigravity',
@@ -840,10 +848,10 @@ export const en: Record<string, string> = {
   ข้อมูลที่ต้องตรวจ: 'Fields to check',
   ตรวจแล้ว: 'Checked',
   'OCR อ่านพบค่าที่อาจตรงกับช่องนี้ แต่ยังไม่ควรเลือกแทนคุณ:': "OCR found values that might fit this field, but won't pick one for you:",
-  'แนะนำ candidate “{0}”': 'Suggests candidate “{0}”',
+  'แนะนำค่า “{0}”': 'Suggests “{0}”',
   เห็นด้วยกับค่าปัจจุบัน: 'Agrees with the current value',
   'ยังไม่แน่ใจ ให้คนเลือก': 'Unsure — let a person choose',
-  'หลักฐานยังไม่พอ map': 'Not enough evidence to map',
+  หลักฐานยังไม่พอจะใส่ในช่องนี้: 'Not enough evidence for this field',
   บรรทัดที่ต้องตรวจเทียบกับต้นฉบับแล้ว: 'All flagged lines have been checked against the original',
   'พบข้อมูลลักษณะช่อง AFP ที่ยัง map ไม่สำเร็จ': "Found AFP-like data that couldn't be mapped",
   'ข้อมูลยังอยู่ใน JSON/Workspace และจะไม่ถูกทิ้ง เพียงแต่ระบบไม่เดาใส่ช่องให้อัตโนมัติ':
@@ -855,13 +863,13 @@ export const en: Record<string, string> = {
   'ผลนี้เป็นการตรวจเอกสารเบื้องต้น ไม่ใช่การอนุมัติเบิกจ่าย และยังไม่ได้เทียบกับระเบียบการเงินฉบับปัจจุบัน':
     "This is a preliminary document check, not a payment approval, and it hasn't been checked against the current finance regulations",
   บันทึกร่างการตรวจแล้ว: 'Review draft saved',
-  'บันทึกร่าง (JSON)': 'Save draft (JSON)',
+  บันทึกผลตรวจเก็บไว้: 'Save the check',
   ตรวจใบใหม่: 'Check a new receipt',
   'AI กรอง candidate OCR แล้ว ยังต้องตรวจต้นฉบับก่อนติ๊ก “ตรวจแล้ว”':
     'AI narrowed down the OCR candidates — still check the original before ticking “Checked”',
   'AI กรอง OCR อีกชั้น': 'Let AI narrow down the OCR',
   'ติ๊ก “ตรวจแล้ว” ช่องที่มี * ก่อนส่งให้ AI': 'Tick “Checked” on fields marked * before sending to the AI',
-  'ให้ AI pre-check ต่อ': 'Let AI pre-check the rest',
+  'ให้ AI ตรวจทานต่อ': 'Let AI review the rest',
   ยังไม่ได้ติ๊กยืนยันว่าตรวจทุกช่องกับต้นฉบับแล้ว: "You haven't confirmed that every field was checked against the original",
   'AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว':
     'AI read the receipt image. Compare the highlighted fields with the original, then confirm once',
@@ -1779,8 +1787,12 @@ export const en: Record<string, string> = {
   'ตรวจ checksum ผ่านแล้ว กำลังติดตั้ง': 'Checksum verified, installing',
   'ติดตั้ง Antigravity CLI เรียบร้อย': 'Antigravity CLI installed',
   'กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity': 'Checking the Google sign-in in Antigravity',
-  'ลงชื่อด้วยบัญชี Google ในเบราว์เซอร์ที่เปิดขึ้น เสร็จแล้ว STeP จะทดสอบให้เอง':
-    'Sign in with your Google account in the browser that opened. STeP runs the test when you are done',
+  'เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี แล้วกด "อนุญาต" (Allow) ภายใน 1 นาที เสร็จแล้ว STeP จะทดสอบให้เอง':
+    'Google sign-in opened in your browser. Pick your account and press Allow within a minute. STeP runs the test when you are done',
+  'หน้าลงชื่อในเบราว์เซอร์หมดเวลา STeP จะเปิดหน้าต่างลงชื่อของ Antigravity ให้แทน':
+    'The browser sign-in timed out. STeP will open the Antigravity sign-in window instead',
+  'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ เสร็จแล้ว STeP จะทดสอบให้เอง':
+    'The Antigravity sign-in window will open. Press Enter once (Google OAuth), then sign in with Google in the browser. STeP runs the test when you are done',
   'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ':
     'Could not install the Antigravity CLI. Press connect again, or install it from the guide',
   'ดาวน์โหลด Antigravity CLI ไม่สำเร็จ ตรวจอินเทอร์เน็ตหรือการเข้าถึง storage.googleapis.com แล้วลองใหม่':

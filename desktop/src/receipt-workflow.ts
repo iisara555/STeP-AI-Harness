@@ -46,6 +46,25 @@ export function expenseDescriptionFromText(text: string) {
   return '';
 }
 
+// Names from the AFP circular table (docs/afp-operational-circulars.md §3), so a person who does not know the codes
+// can read the suggestion.
+const EXPENSE_CODE_NAMES: Record<string, string> = {
+  B1: 'จัดประชุม อบรม สัมมนา หรือจัดงาน',
+  B3: 'ค่าโล่ ใบประกาศนียบัตร กรอบใบประกาศ',
+  B6: 'ค่ากำจัดสัตว์พาหะ เชื้อโรค เชื้อรา',
+  B7: 'สมาชิก หนังสือ วารสาร สื่ออิเล็กทรอนิกส์',
+  B8: 'ค่ากำจัดสิ่งปฏิกูล จัดเก็บขยะ',
+  'B9.2': 'วัตถุดิบสำหรับกิจกรรม',
+  B10: 'ค่าน้ำดื่ม',
+  BV: 'ค่าพาหนะ',
+  BV1: 'ค่าพาหนะรวมน้ำมันเชื้อเพลิง',
+  BV2: 'ค่าพาหนะไม่รวมน้ำมันเชื้อเพลิง',
+};
+/** "B10 · ค่าน้ำดื่ม": the code AFP uses plus its plain name. */
+export function expenseCodeLabel(code: string) {
+  return EXPENSE_CODE_NAMES[code] ? `${code} · ${EXPENSE_CODE_NAMES[code]}` : code;
+}
+
 /** Suggestions reference the registered AFP circular; receipt transcription cannot prove eligibility or budget. */
 export function expenseCategorySuggestion(description: string, purpose = '', date = '') {
   const evidence = `${description} ${purpose}`.trim();

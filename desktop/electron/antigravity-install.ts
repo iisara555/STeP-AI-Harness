@@ -187,6 +187,7 @@ export async function antigravitySignedIn(executable: string, context: Pick<Prov
 }
 const errorCodeOf = (error: unknown) => (error instanceof Error ? error.message : '');
 
+export type AgyBrowserSignIn = { close: () => Promise<void> | void; exited: Promise<void> };
 export type AgySignInDeps = {
   progress: (text: string) => void;
   /**
@@ -194,9 +195,16 @@ export type AgySignInDeps = {
    * returns a function that closes it again where the OS allows.
    */
   openSignIn: () => Promise<() => Promise<void> | void>;
+  /**
+   * Tried first: the CLI's non-interactive sign-in, with Google's page opened straight in the browser and no terminal
+   * window. Resolves null when the CLI printed no sign-in page, and the terminal is used instead.
+   */
+  openBrowserSignIn?: () => Promise<AgyBrowserSignIn | null>;
   signedIn?: typeof antigravitySignedIn;
   pollMs?: number;
   timeoutMs?: number;
+  /** How long the browser sign-in may take; agy itself waits about a minute. */
+  browserTimeoutMs?: number;
 };
 
 /** Signs in through Google's own flow when needed, then returns once the sign-in is usable. */
@@ -207,31 +215,147 @@ export async function antigravitySignIn(
   signal: AbortSignal,
 ) {
   const signedIn = deps.signedIn || antigravitySignedIn;
-  deps.progress(tm('กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity'));
-  if (await signedIn(executable, context, signal)) return;
-  deps.progress(tm('ลงชื่อด้วยบัญชี Google ในเบราว์เซอร์ที่เปิดขึ้น เสร็จแล้ว STeP จะทดสอบให้เอง'));
-  const close = await deps.openSignIn();
-  try {
-    const deadline = Date.now() + (deps.timeoutMs ?? 300_000);
+  // Polls until the sign-in is usable; false once `stop` says the flow ended (after one last check) or time is up.
+  async function waitUntilSignedIn(timeoutMs: number, stop: () => boolean) {
+    const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
+      const ended = stop();
       await new Promise<void>((resolveWait, reject) => {
         const timer = setTimeout(() => {
-          signal.removeEventListener('abort', stop);
+          signal.removeEventListener('abort', cancel);
           resolveWait();
         }, deps.pollMs ?? 3000);
-        const stop = () => {
+        const cancel = () => {
           clearTimeout(timer);
           reject(new Error('CANCELLED'));
         };
-        if (signal.aborted) return stop();
-        signal.addEventListener('abort', stop, { once: true });
+        if (signal.aborted) return cancel();
+        signal.addEventListener('abort', cancel, { once: true });
       });
-      if (await signedIn(executable, context, signal)) return;
+      if (await signedIn(executable, context, signal)) return true;
+      if (ended) return false;
     }
+    return false;
+  }
+  deps.progress(tm('กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity'));
+  if (await signedIn(executable, context, signal)) return;
+  if (deps.openBrowserSignIn) {
+    const browser = await deps.openBrowserSignIn();
+    if (browser) {
+      let ended = false;
+      void browser.exited.then(() => {
+        ended = true;
+      });
+      deps.progress(
+        tm('เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี แล้วกด "อนุญาต" (Allow) ภายใน 1 นาที เสร็จแล้ว STeP จะทดสอบให้เอง'),
+      );
+      try {
+        if (await waitUntilSignedIn(deps.browserTimeoutMs ?? 90_000, () => ended)) return;
+      } finally {
+        await browser.close();
+      }
+      deps.progress(tm('หน้าลงชื่อในเบราว์เซอร์หมดเวลา STeP จะเปิดหน้าต่างลงชื่อของ Antigravity ให้แทน'));
+    }
+  }
+  deps.progress(
+    tm(
+      'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ เสร็จแล้ว STeP จะทดสอบให้เอง',
+    ),
+  );
+  const close = await deps.openSignIn();
+  try {
+    if (await waitUntilSignedIn(deps.timeoutMs ?? 300_000, () => false)) return;
     throw new Error('LOGIN_TIMEOUT');
   } finally {
     await close();
   }
+}
+
+/** Google's sign-in page as agy prints it; nothing else is ever opened in the browser. */
+export function googleSignInUrl(text: string) {
+  // Only an address on its own, never one embedded in another address.
+  for (const match of text.matchAll(/(?:^|\s)(https:\/\/accounts\.google\.com\/[^\s"'<>]+)/g)) {
+    try {
+      const url = new URL(match[1]);
+      if (url.protocol === 'https:' && url.hostname === 'accounts.google.com' && url.pathname.startsWith('/o/oauth2/'))
+        return url.toString();
+    } catch {
+      /* Not a URL. */
+    }
+  }
+  return null;
+}
+
+function stopTree(pid: number | undefined, child: { kill: (signal?: NodeJS.Signals) => boolean; exitCode: number | null }) {
+  return new Promise<void>(done => {
+    if (!pid || child.exitCode !== null) return done();
+    if (process.platform !== 'win32') {
+      child.kill('SIGTERM');
+      return done();
+    }
+    const kill = spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' });
+    kill.once('error', () => done());
+    kill.once('close', () => done());
+  });
+}
+
+/**
+ * Starts agy's non-interactive sign-in with the employee's real profile, hidden, and opens the Google page it prints in
+ * the browser. Signed out, `agy -p` prints that page and waits about a minute; once signed in it would answer a
+ * one-word prompt, which `--print-timeout` cuts short and STeP stops as soon as it sees the sign-in.
+ */
+export async function openAntigravityBrowserSignIn(
+  executable: string,
+  cwd: string,
+  openUrl: (url: string) => Promise<void>,
+  waitMs = 20_000,
+): Promise<AgyBrowserSignIn | null> {
+  await mkdir(cwd, { recursive: true });
+  let child: ReturnType<typeof spawn>;
+  try {
+    child = spawn(executable, ['-p', 'Reply with OK only.', '--print-timeout', '1s'], {
+      cwd,
+      env: process.env,
+      windowsHide: true,
+      shell: false,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+  } catch {
+    return null;
+  }
+  const exited = new Promise<void>(done => {
+    child.once('close', () => done());
+    child.once('error', () => done());
+  });
+  const close = () => stopTree(child.pid, child);
+  const url = await new Promise<string | null>(resolveUrl => {
+    let text = '';
+    const timer = setTimeout(() => resolveUrl(null), waitMs);
+    child.stderr?.on('data', (chunk: Buffer) => {
+      if (text.length > 65_536) return;
+      text += chunk.toString('utf8');
+      const found = googleSignInUrl(text);
+      if (found) {
+        clearTimeout(timer);
+        resolveUrl(found);
+      }
+    });
+    void exited.then(() => {
+      clearTimeout(timer);
+      resolveUrl(googleSignInUrl(text));
+    });
+  });
+  if (!url) {
+    await close();
+    return null;
+  }
+  try {
+    await openUrl(url);
+  } catch {
+    await close();
+    return null;
+  }
+  return { close, exited };
 }
 
 /**
