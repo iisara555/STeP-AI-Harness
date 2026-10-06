@@ -58,7 +58,7 @@ The host discovers only root-level `STEP.md`, `AGENTS.md`, `ASSISTANT.md` and th
 
 Workspace instructions and output styles are user preferences beneath organization governance and the current route. They cannot enable tools, change authority or waive confirmation. All reserved prompt tags are fenced in these sections, summaries, memory and task state.
 
-The existing profile remains in `USER.md` through `src/modules/user-memory.js`. `generateAssistantPreferences` derives an assistant-only `ASSISTANT.md` when one does not exist, excluding employee profile data. Existing employee-authored persona files are preserved. Edit the persona through the Files pane; the current in-app profile remains the standing personalization source. `/memory` also selects available output-style files. Persona and memory files stay local and are ignored by Git.
+The existing profile remains in `USER.md` through `src/modules/user-memory.js`. `generateAssistantPreferences` derives an assistant-only `ASSISTANT.md` when one does not exist, excluding employee profile data. Existing employee-authored persona files are preserved. Edit the persona through the Files pane; the current in-app profile remains the standing personalization source. Settings → General is the single place for speaking styles, dialect and available output-style files; `/memory` manages saved memories. Existing style values are preserved. Persona and memory files stay local and are ignored by Git.
 
 ## Sessions
 

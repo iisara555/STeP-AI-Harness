@@ -49,6 +49,8 @@ export function SettingsPanel({
     [avatar, setAvatar] = useState(snapshot.settings.avatar || '');
   const [interactionStyle, setInteractionStyle] = useState(interactionStyleId(snapshot.settings.interactionStyle)),
     [languageStyle, setLanguageStyle] = useState(languageStyleId(snapshot.settings.languageStyle));
+  const [outputStyle, setOutputStyle] = useState(snapshot.settings.outputStyle || '');
+  const [outputStyles, setOutputStyles] = useState<string[] | null>(null);
   const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
   // Account sign-ins and API keys are tested right away, so they are ready to use or show why not. Administrator
   // routes that need more setup (an organization Google project, Antigravity, Copilot) are saved first.
@@ -67,6 +69,21 @@ export function SettingsPanel({
   const [page, setPage] = useState<'general' | 'ai' | 'appearance' | 'privacy' | 'policy'>(
     initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length) ? 'ai' : 'general',
   );
+  useEffect(() => {
+    if (page !== 'general') return;
+    let active = true;
+    setOutputStyles(null);
+    void call('contextStyles')
+      .then(styles => {
+        if (active) setOutputStyles(styles);
+      })
+      .catch(error => {
+        if (active) onError(error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [page, snapshot.settings.workspace]);
   useEffect(() => onBusy?.(Boolean(busy)), [busy, onBusy]);
   useEffect(() => () => onBusy?.(false), [onBusy]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
@@ -197,34 +214,8 @@ export function SettingsPanel({
           </div>
         </section>
       )}
-      {page === 'appearance' && (
+      {page === 'general' && (
         <section>
-          <h2>{language() === 'en' ? 'Language · ภาษา' : 'ภาษา · Language'}</h2>
-          <p className="muted small">{t('เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์')}</p>
-          <div className="theme-options" role="radiogroup" aria-label="Language">
-            {(
-              [
-                ['th', 'ไทย'],
-                ['en', 'English'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                role="radio"
-                aria-checked={(snapshot.settings.language || 'th') === id}
-                className={(snapshot.settings.language || 'th') === id ? 'active' : 'quiet'}
-                disabled={busy === 'language'}
-                onClick={() =>
-                  void run('language', () => {
-                    const s = snapshot.settings;
-                    return call('settings', { assistant: s.assistant, team: s.team, theme: s.theme, language: id });
-                  })
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
           <h2>{t('สไตล์การพูดของผู้ช่วย')}</h2>
           <p className="muted small">
             {t('เปลี่ยนเฉพาะวิธีพูดในแชท ข้อเท็จจริง แหล่งอ้างอิง สิทธิ์ และมาตรฐานเอกสารยังเหมือนเดิม และไม่ได้สวมบทเป็นบุคคลจริง')}
@@ -294,6 +285,53 @@ export function SettingsPanel({
               >
                 <strong>{label}</strong>
                 <small>{summary}</small>
+              </button>
+            ))}
+          </div>
+          <label>
+            {t('รูปแบบคำตอบ')}
+            <select
+              aria-label={t('รูปแบบคำตอบ')}
+              value={outputStyle}
+              disabled={outputStyles === null || Boolean(busy)}
+              onChange={e => setOutputStyle(e.target.value)}
+            >
+              <option value="">{t('ใช้รูปแบบมาตรฐาน')}</option>
+              {outputStyle && outputStyles && !outputStyles.includes(outputStyle) && <option value={outputStyle}>{outputStyle}</option>}
+              {(outputStyles || []).map(style => (
+                <option key={style} value={style}>
+                  {style}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+      )}
+      {page === 'appearance' && (
+        <section>
+          <h2>{language() === 'en' ? 'Language · ภาษา' : 'ภาษา · Language'}</h2>
+          <p className="muted small">{t('เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์')}</p>
+          <div className="theme-options" role="radiogroup" aria-label="Language">
+            {(
+              [
+                ['th', 'ไทย'],
+                ['en', 'English'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                role="radio"
+                aria-checked={(snapshot.settings.language || 'th') === id}
+                className={(snapshot.settings.language || 'th') === id ? 'active' : 'quiet'}
+                disabled={busy === 'language'}
+                onClick={() =>
+                  void run('language', () => {
+                    const s = snapshot.settings;
+                    return call('settings', { assistant: s.assistant, team: s.team, theme: s.theme, language: id });
+                  })
+                }
+              >
+                {label}
               </button>
             ))}
           </div>
@@ -656,6 +694,7 @@ export function SettingsPanel({
                   avatar,
                   interactionStyle,
                   languageStyle,
+                  outputStyle,
                 });
                 close();
               })

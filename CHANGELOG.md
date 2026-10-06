@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop settings: one style configuration point under General
+
+- Move assistant speaking styles and dialect from Appearance & language to General, alongside answer styles previously selected in Memory.
+- Save style selections together with general settings, validate changed answer styles against the local catalog before saving, and retain existing selections. Appearance keeps UI language/themes; Memory keeps memory management.
+- Verify preset/custom/dialect persistence, unique picker placement and answer-style saving with isolated Electron profiles and synthetic fixtures. No version bump, release or policy-default change.
+
 ### Desktop receipt review: outcome first, automatic form filling, one final confirmation
 
 - Lead with document usability, detected type, a source-linked expense-category suggestion and next steps. Read item descriptions from vision or explicit OCR labels; never infer a purchase from the shop name or invent an approved project budget.

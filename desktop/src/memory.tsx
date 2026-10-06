@@ -21,12 +21,9 @@ export function MemoryDialog({
   const [data, setData] = useState<{ entries: MemoryEntry[]; proposals: MemoryProposal[]; teamEnabled: boolean }>(),
     [edit, setEdit] = useState<Edit>(),
     [error, setError] = useState(''),
-    [busy, setBusy] = useState(false),
-    [styles, setStyles] = useState<string[]>([]),
-    [style, setStyle] = useState(settings.outputStyle || '');
+    [busy, setBusy] = useState(false);
   const load = async () => {
     setData(await api.call('memoryList'));
-    setStyles(await api.call('contextStyles'));
   };
   useEffect(() => {
     void load().catch(e => setError(explainError(e)));
@@ -46,33 +43,13 @@ export function MemoryDialog({
     }
   };
   return (
-    <ConfirmDialog title={t('ความจำและรูปแบบคำตอบ')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog title={t('ความจำ')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p className="small muted">
         {t(
           'บันทึกเฉพาะข้อมูลที่ไม่มีข้อมูลส่วนบุคคลหรือความลับ ความจำที่ยืนยันแล้วอาจถูกเลือกส่งให้ AI ในงานถัดไป คุณจะได้ตรวจบริบทก่อนส่ง',
         )}
       </p>
       {error && <p role="alert">{error}</p>}
-      <label>
-        {t('รูปแบบคำตอบ')}{' '}
-        <select
-          aria-label={t('รูปแบบคำตอบ')}
-          value={style}
-          disabled={busy}
-          onChange={e => {
-            const value = e.target.value;
-            void act(async () => {
-              await api.call('contextStyle', { style: value });
-              setStyle(value);
-            });
-          }}
-        >
-          <option value="">{t('ใช้รูปแบบมาตรฐาน')}</option>
-          {styles.map(s => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
-      </label>
       {!edit && (
         <button className="quiet" disabled={busy} onClick={() => setEdit(fresh())}>
           {t('เพิ่มความจำ')}

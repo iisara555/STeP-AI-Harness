@@ -1525,6 +1525,10 @@ async function main() {
         const personality = ['coworker', 'professional', 'concise', 'custom'].includes(input.personality)
           ? input.personality
           : store.settings().personality || 'coworker';
+        const outputStyle = input.outputStyle === undefined ? store.settings().outputStyle : inputText(input.outputStyle, 64);
+        const outputStyleChanged = (outputStyle || '') !== (store.settings().outputStyle || '');
+        if (outputStyleChanged && outputStyle && !(await workspaceContext.styles()).includes(outputStyle))
+          throw new Error('INVALID_OUTPUT_STYLE');
         const s: Settings = {
           ...store.settings(),
           team,
@@ -1534,6 +1538,7 @@ async function main() {
           userName: input.userName === undefined ? store.settings().userName : inputText(input.userName, 60).trim(),
           avatar: input.avatar === undefined ? store.settings().avatar : input.avatar === '' ? '' : avatarId(input.avatar),
           personality,
+          outputStyle,
           assistantTone: input.assistantTone === undefined ? store.settings().assistantTone : inputText(input.assistantTone, 300).trim(),
           language: input.language === 'en' || input.language === 'th' ? input.language : store.settings().language,
           interactionStyle:
@@ -1543,6 +1548,10 @@ async function main() {
           languageStyle:
             input.languageStyle === undefined ? store.settings().languageStyle : styleInput(input.languageStyle, languageStyleId),
         };
+        if (outputStyleChanged) {
+          approvals.close();
+          questions.close();
+        }
         store.put('settings', 'main', s);
         nativeTheme.themeSource = theme;
         await writeUserMemory().catch(error => diagnose('user-memory-failed', { code: errorCode(error) }));

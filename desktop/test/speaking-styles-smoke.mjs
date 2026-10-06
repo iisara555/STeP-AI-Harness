@@ -1,4 +1,4 @@
-// Speaking styles in Settings > Appearance & language: one picker holds the four First Run presets and the documented
+// Speaking styles in Settings > General: one picker holds the four First Run presets and the documented
 // styles (src/speaking-styles.ts), so nothing a person picked before goes missing. Uses an isolated profile and never
 // calls a provider. Pass a folder to also save a screenshot.
 import { _electron as electron, expect } from '@playwright/test';
@@ -24,7 +24,14 @@ try {
 
   const open = async () => {
     await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+    await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
+    await expect(page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' })).toHaveCount(1);
+    await expect(page.getByLabel('รูปแบบคำตอบ', { exact: true })).toHaveCount(1);
     await page.getByRole('tab', { name: 'รูปลักษณ์และภาษา' }).click();
+    await expect(page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' })).toHaveCount(0);
+    await expect(page.getByRole('radiogroup', { name: 'สำเนียงภาษา' })).toHaveCount(0);
+    await expect(page.getByLabel('รูปแบบคำตอบ', { exact: true })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
     return page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' });
   };
   let picker = await open();

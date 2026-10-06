@@ -125,7 +125,7 @@ try {
   await page.getByRole('menu').waitFor({ state: 'detached' });
   await page.locator('.composer textarea').fill('/memory');
   await page.keyboard.press('Enter');
-  const memory = page.getByRole('alertdialog', { name: 'ความจำและรูปแบบคำตอบ' });
+  const memory = page.getByRole('alertdialog', { name: 'ความจำ', exact: true });
   await memory.getByRole('button', { name: 'เพิ่มความจำ', exact: true }).click();
   await memory.getByLabel('ชื่อความจำ', { exact: true }).fill('Source preference');
   await memory.getByLabel('ข้อความความจำ', { exact: true }).fill('Prefer concise responses with source evidence.');
@@ -136,11 +136,29 @@ try {
   await memory.getByRole('button', { name: 'ยืนยันบันทึกความจำ', exact: true }).click();
   await expect(memory).toContainText('identify missing evidence');
   await expect(memory.getByLabel('ข้อความความจำ', { exact: true })).toHaveCount(0);
-  await memory.getByLabel('รูปแบบคำตอบ', { exact: true }).selectOption('brief.md');
-  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).settings.outputStyle).toBe('brief.md');
+  await expect(memory.getByLabel('รูปแบบคำตอบ', { exact: true })).toHaveCount(0);
   await expect(memory.getByRole('button', { name: 'แก้ไข', exact: true })).toBeEnabled();
   await page.screenshot({ path: 'release/qa/phase3-memory.png' });
   await memory.getByRole('button', { name: 'ปิด', exact: true }).click();
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
+  await page.getByLabel('รูปแบบคำตอบ', { exact: true }).selectOption('brief.md');
+  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).settings.outputStyle).toBe('brief.md');
+  const currentSettings = (await page.evaluate(() => window.step.call('snapshot'))).settings;
+  assert.equal(
+    await page.evaluate(async saved => {
+      try {
+        await window.step.call('settings', { ...saved, assistant: 'Should not save', outputStyle: 'missing-style.md' });
+        return false;
+      } catch (error) {
+        return String(error).includes('INVALID_OUTPUT_STYLE');
+      }
+    }, currentSettings),
+    true,
+  );
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.assistant, currentSettings.assistant);
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.outputStyle, 'brief.md');
   const rejected = await page.evaluate(() =>
     window.step
       .call('memorySave', {
@@ -287,7 +305,7 @@ try {
   assert.ok(resumed.messages.length > 24);
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
   await page.getByRole('menuitem', { name: 'ความจำ', exact: true }).click();
-  const resumedMemory = page.getByRole('alertdialog', { name: 'ความจำและรูปแบบคำตอบ' });
+  const resumedMemory = page.getByRole('alertdialog', { name: 'ความจำ', exact: true });
   await resumedMemory.getByRole('button', { name: 'ลบความจำ', exact: true }).click();
   await expect(resumedMemory).toContainText('ยังไม่มีความจำที่ยืนยันแล้ว');
   assert.equal((await readFile(audit, 'utf8')).trim().split('\n').length, beforeRestart);
