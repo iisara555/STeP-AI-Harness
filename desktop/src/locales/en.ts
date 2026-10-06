@@ -3,6 +3,10 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ':
+    'The selected AI helps map OCR text into the form. This connection does not read receipt images.',
+  'ถ้า OCR อ่านตัวอักษรผิด AI แบบข้อความแก้จากภาพไม่ได้ ใช้ AI ที่รองรับภาพเพื่ออ่านต้นฉบับ':
+    'Text-only AI cannot correct misread characters from the image. Use an image-capable AI to read the original.',
   'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth':
     'The system key store is unavailable. Unlock it or ask your administrator to configure it before saving an API key or signing in with OAuth.',
   ...documentToolsEn,

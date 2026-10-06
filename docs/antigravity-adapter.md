@@ -6,6 +6,7 @@ STeP has an `AntigravityAdapter` and a separate `antigravity` subscription conne
 
 ## Implemented behavior
 
+- The current adapter is text-only and rejects image input before transmission. The receipt page uses local OCR followed by masked candidate-token reconciliation, including the expense description, and states this mode explicitly. It does not claim Antigravity read the receipt image. Direct image reading remains available through an image-capable connection such as Gemini API/ACP.
 - Discover an installed native `agy` or accept an explicitly selected runtime. Require version 1.2.14 or newer, subscription mode and a pinned `gemini-*` model. No global installer, update command or native logout is run by STeP.
 - Create a fresh configuration home and empty workspace for each invocation. A global custom `step-draft` agent carries host standing instructions separately from the user message. Personal MCP, plugins, skills, environment credentials and workspace files are not copied into the configuration home.
 - Deny every documented native action namespace: file read/write, URL read/actuation, command, unsandboxed command and MCP. No shell, ACP, permission bypass or conversation continuation is used.

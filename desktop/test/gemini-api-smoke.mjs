@@ -9,6 +9,7 @@ import { once } from 'node:events';
 import assert from 'node:assert/strict';
 
 let mode = 'quota';
+let ocrServer;
 const chatTurns = [];
 const receiptReply = {
   fields: {
@@ -198,12 +199,30 @@ try {
   assert.equal(chatTurns[0].contents, 1);
   assert.ok(chatTurns[1].contents >= 3, 'the second turn continues the same conversation');
   assert.ok(chatTurns[1].last.includes('<tool_results>') && !chatTurns[1].last.includes('<routing_contract>'), 'only the new part is sent');
+  // Every OCR lifecycle result must retain Gemini's image capability, not just ocrStatus.
+  ocrServer = createServer((_req, res) => res.end(JSON.stringify({ ok: true, service: 'STeP Local Thai OCR' })));
+  await new Promise((resolve, reject) => {
+    ocrServer.once('error', reject);
+    ocrServer.listen(8765, '127.0.0.1', resolve);
+  });
+  const connectionId = (await gemini()).find(c => c.ready).id;
+  const started = await page.evaluate(connectionId => window.step.call('ocrStart', { connectionId }), connectionId);
+  assert.equal(started.vision, true);
+  assert.equal(started.textOnly, false);
+  assert.equal(started.installing, false);
+  await app.evaluate(({ dialog }) => {
+    dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
+  });
+  const canceled = await page.evaluate(connectionId => window.step.call('ocrFolder', { connectionId }), connectionId);
+  assert.equal(canceled.vision, true);
+  assert.equal(canceled.textOnly, false);
   assert.deepEqual(errors, []);
   console.log(
     'Gemini API key smoke passed: Settings tests the key on connect; quota errors and success both finish; the receipt page reads an image with the vision model; chat tool turns share one Gemini conversation.',
   );
 } finally {
   await app.close().catch(() => {});
+  if (ocrServer) await new Promise(resolve => ocrServer.close(resolve));
   server.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch(() => {});
 }

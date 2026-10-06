@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: receipt mapping with Gemini via Antigravity
+
+- Report the selected transport's receipt capability consistently after status, start, install and folder selection. Antigravity is text-only; do not offer or attempt image reading through it. Gemini API/ACP retains its image capability and existing permission checks.
+- Automatically ask a connected text-only AI to reconcile OCR candidates after reading, including the source-backed expense description, with the existing masking/consent and token-only rules. Preserve manual edits and the single final source-comparison confirmation; do not silently discard filter failures.
+- Improve synthetic cash-bill mapping for seller/buyer separation, book/bill identifiers, Thai month dates and item tables whose column headings/numeric cells precede descriptions.
+- Verify with synthetic unit tests and Electron/IPC fixtures; no real receipt accuracy, native handwriting quality or live Antigravity image support is claimed. No new OCR model, Router integration, policy-default change, version bump or release.
+
 ### Desktop: scribbled thinking motion
 
 - Replace the gooey waiting indicator in chat with original overlapping hand-drawn loops that retrace at different speeds, inspired by the supplied scribble reference. Keep the progress text, elapsed time and stop control.

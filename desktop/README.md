@@ -83,8 +83,10 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 The receipt page leads with document usability, detected type, a suggested expense
 category and next steps. OCR and optional vision fill the existing form; source-backed
 Thai digits, valid dates and money are formatted without filling absent values. Vision
-also transcribes expense item descriptions. The local fallback uses explicit item
-labels, never the merchant name. Category suggestions reference the registered AFP
+also transcribes expense item descriptions. The local fallback reads the explicitly
+labelled item table, skipping column headings and numeric cells, never the merchant
+name. Cash-bill mapping preserves book/bill numbers and Thai month dates and excludes
+the buyer section from issuer candidates. Category suggestions reference the registered AFP
 circular and remain recommendations after human checking (for example, drinking water
 can suggest B10; generic drinks cannot). Mixed categories or insufficient purpose stay
 unresolved. BV suggestions require a date on/after the registered 1 September 2026 change.
@@ -117,7 +119,9 @@ differences; this panel does not replace the benchmark's canonical scoring. RAM 
 explicitly unmeasured. A single document does not close the acceptance gate or prove
 model accuracy. Record employee-machine RAM separately for the broader pilot.
 
-With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, the Receipt page also sends the receipt image to the connected AI, after a one-time consent. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads the fields independently of the OCR, and the page compares the two field by field; a person still confirms every field. Without the OCR component, the AI reading alone is available. With `checks.privacy` on, no image is sent.
+With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, an image-capable connection reads the receipt image after a one-time consent. Gemini API/organization CLI uses its advertised ACP image capability; **Gemini via Antigravity, compatible endpoints and Copilot currently use text-only transports**. The page displays the selected reading mode, including after OCR startup, installation or folder selection. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads independently of OCR and the page compares the readings; the person confirms the populated form once. With an image-capable connection, AI-only reading is available without local OCR. With `checks.privacy` on, no image is sent.
+
+For a text-only connection, local OCR is required. After opening a receipt, the connected AI automatically reconciles existing OCR candidates, including the source-backed expense description, after the existing text-transmission consent. Masking and typed candidate-token restrictions remain enforced. The AI may correct a selected OCR candidate but cannot overwrite manual edits, invent missing values or recover text that OCR never read from the image. Real handwriting/image accuracy remains subject to pilot acceptance; use an image-capable connection such as Gemini API to read the original directly.
 
 The page also shows the document type (from the AI or the printed heading) and a checklist for the chosen claim category. Each item names its source: AFP circulars, general payment-document elements to confirm with AFP, or "no source yet, ask AFP". The checklist prepares documents; it is not an approval.
 

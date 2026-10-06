@@ -60,7 +60,8 @@ import {
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
-import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
+import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus } from './ocr';
+import { receiptReadingMode } from './receipt-status';
 import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
@@ -963,8 +964,22 @@ async function main() {
   app.on('before-quit', () => ocr.stop());
   // The receipt last opened on the receipt page, kept so the vision model can read the same file.
   let lastReceipt: { name: string; path: string; extension: string; bytes: Buffer } | undefined;
-  const receiptVisionAllowed = () =>
-    policyState.policy.features.vision && policyState.policy.features.receiptVision && !policyState.policy.checks.privacy;
+  const receiptVisionAllowed = (connection?: Connection) => receiptReadingMode(policyState.policy, connection?.provider).vision;
+  async function receiptOcrStatus(input: { connectionId?: unknown }, rawStatus?: OcrStatus) {
+    const status = rawStatus || (await ocr.status());
+    const connection =
+      typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
+    const managed = existsSync(ocrPython(ocrHome));
+    const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
+    return {
+      ...status,
+      running: status.running && current,
+      installed: status.installed && current,
+      updateAvailable: managed && status.installed && !current,
+      installing,
+      ...receiptReadingMode(policyState.policy, connection?.provider),
+    };
+  }
   /** The receipt as pictures for a vision model: images resized to 1800 px at most, a PDF's first three pages. */
   async function receiptImages(receipt: NonNullable<typeof lastReceipt>): Promise<VisionInput[]> {
     if (receipt.extension === 'pdf') return (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'))).slice(0, 3);
@@ -2047,34 +2062,26 @@ async function main() {
         } finally {
           installing = false;
         }
-        return ocr.status();
+        return receiptOcrStatus(input);
       }
       case 'ocrStatus': {
-        const status = await ocr.status();
-        const managed = existsSync(ocrPython(ocrHome));
-        const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
-        return {
-          ...status,
-          running: status.running && current,
-          installed: status.installed && current,
-          updateAvailable: managed && status.installed && !current,
-          installing,
-          vision: receiptVisionAllowed(),
-        };
+        return receiptOcrStatus(input);
       }
       case 'ocrFolder': {
         const picked = await dialog.showOpenDialog(window, { title: tm('เลือกโฟลเดอร์ local-thai-ocr'), properties: ['openDirectory'] });
-        if (picked.canceled) return ocr.status();
+        if (picked.canceled) return receiptOcrStatus(input);
         if (!isOcrFolder(picked.filePaths[0])) throw new Error('OCR_FOLDER_INVALID');
         store.put('settings', 'main', { ...store.settings(), ocrDir: picked.filePaths[0] });
-        return ocr.status();
+        return receiptOcrStatus(input);
       }
       case 'ocrStart':
-        return ocr.start();
+        return receiptOcrStatus(input, await ocr.start());
       case 'ocrRead': {
         const health = await ocr.health();
         // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
-        if (!health.running && (input.localOnly === true || !receiptVisionAllowed())) throw new Error('OCR_UNAVAILABLE');
+        const connection =
+          typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
+        if (!health.running && (input.localOnly === true || !receiptVisionAllowed(connection))) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
           title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
@@ -2167,6 +2174,7 @@ async function main() {
         if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
         const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
         if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        if (!receiptVisionAllowed(connection)) throw new Error('VISION_UNAVAILABLE');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         const settings = store.settings();
         if (!settings.receiptVisionConsentedAt) {

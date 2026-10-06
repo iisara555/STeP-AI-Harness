@@ -12,7 +12,7 @@
     receiptNumber: {
       label: "เลขที่ใบเสร็จ",
       requiredForPrecheck: false,
-      aliases: /เลขที่ใบเสร็จ|เลขที่เอกสาร|เลขที่ใบกำกับภาษี|receipt\s*(?:no\.?|number|#)|invoice\s*(?:no\.?|number|#)|document\s*(?:no\.?|number)|inv\s*(?:no\.?|#)/i,
+      aliases: /เลขที่ใบเสร็จ|เลขที่เอกสาร|เลขที่ใบกำกับภาษี|receipt\s*(?:no\.?|number|#)|invoice\s*(?:no\.?|number|#)|document\s*(?:no\.?|number)|bill\s*(?:no\.?|number|#)|inv\s*(?:no\.?|#)|^เลขที่(?:\s*[:：]\s*|\s+(?=\d)|$)/i,
     },
     date: {
       label: "วันที่",
@@ -173,7 +173,10 @@
 
   function dateValue(value) {
     const pattern = /(?:^|[^\d])((?:19|20|25)\d{2}[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}[/.\-]\d{1,2}[/.\-](?:\d{4}|\d{2}))(?=$|[^\d])/;
-    return normalizeText(value).match(pattern)?.[1] || "";
+    const text = normalizeText(value);
+    const months = "ม\\.?ค\\.?|ก\\.?พ\\.?|มี\\.?ค\\.?|เม\\.?ย\\.?|พ\\.?ค\\.?|มิ\\.?ย\\.?|ก\\.?ค\\.?|ส\\.?ค\\.?|ก\\.?ย\\.?|ต\\.?ค\\.?|พ\\.?ย\\.?|ธ\\.?ค\\.?|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม";
+    const thai = new RegExp(`(?:^|[^\\d])(\\d{1,2}\\s*(?:${months})\\s*(?:พ\\.?ศ\\.?\\s*)?(?:19|20|25)\\d{2})(?=$|[^\\d])`);
+    return text.match(pattern)?.[1] || text.match(thai)?.[1] || "";
   }
 
   function taxIdValue(value) {
@@ -393,10 +396,23 @@
   }
 
   function findReceiptNumber(records) {
-    return selectCandidate(labeledCandidates(records, afpFieldSchema.receiptNumber.aliases, receiptNumberValue));
+    const bill = selectCandidate(labeledCandidates(records, afpFieldSchema.receiptNumber.aliases, receiptNumberValue));
+    const book = selectCandidate(labeledCandidates(records, /เล่มที่(?:\s*book\s*(?:no\.?|number|#))?|book\s*(?:no\.?|number|#)/i, receiptNumberValue));
+    if (!bill.value || !book.value) return bill;
+    return {
+      ...bill,
+      value: `เล่ม ${book.value} เลขที่ ${bill.value}`,
+      evidence: `${book.evidence} ↔ ${bill.evidence}`,
+      mappingMethod: "book-and-bill",
+      sourceTexts: [...new Set([...(book.sourceTexts || []), ...(bill.sourceTexts || [])])],
+      candidates: bill.candidates.map(item => ({ ...item, value: `เล่ม ${book.value} เลขที่ ${item.value}`, evidence: `${book.evidence} ↔ ${item.evidence}` })),
+    };
   }
 
   function findMerchant(records) {
+    // A buyer can be another company. Its name and the table below it are never seller-header evidence.
+    const buyerStart = records.findIndex(record => /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i.test(record.text));
+    if (buyerStart >= 0) records = records.slice(0, buyerStart);
     const labeled = labeledCandidates(records, afpFieldSchema.merchant.aliases, (value) => {
       const text = normalizeText(value);
       if (text.length < 3 || text.length > 85) return "";
@@ -404,8 +420,8 @@
     });
     if (labeled.length) return selectCandidate(labeled);
 
-    const generic = /^(ใบเสร็จรับเงิน|ใบกำกับภาษี|ใบรับเงิน|receipt|tax invoice|invoice|ต้นฉบับ|สำเนา)$/i;
-    const label = /วันที่|date|เลขที่|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer/i;
+    const generic = /^(?:(?:ใบเสร็จรับเงิน|ใบกำกับภาษี|ใบรับเงิน|บิลเงินสด|cash\s*sale|cash\s*bill|receipt|tax invoice|invoice|ต้นฉบับ|สำเนา)\s*)+$/i;
+    const label = /วันที่|date|เลขที่|เล่มที่|book\s*no|bill\s*no|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer/i;
     const merchantHint = /ร้าน|บริษัท|ห้างหุ้นส่วน|หจก\.?|จำกัด|\b(?:co\.?|ltd\.?|company|store|shop)\b/i;
     const plausible = [];
     for (const record of records.slice(0, 8)) {

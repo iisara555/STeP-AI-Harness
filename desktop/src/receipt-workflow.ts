@@ -34,14 +34,19 @@ export function expenseDescriptionFromText(text: string) {
   for (let index = 0; index < lines.length; index++) {
     const match = /^(?:รายการ(?:\s*DESCRIPTION)?|description)\s*[:：]?\s*(.*)$/i.exec(lines[index]);
     if (!match) continue;
-    const next = match[1] || lines[index + 1] || '';
-    if (
-      !next ||
-      /^(?:จำนวน|quantity|หน่วย|unit|ยอด|total|amount|ผู้|ชื่อ|name|ที่อยู่|address|เลข|วันที่|date)\b/i.test(next) ||
-      /^(?:จำนวน|หน่วย|ยอด|ผู้|ชื่อ|ที่อยู่|เลข|วันที่)/.test(next)
-    )
-      return '';
-    return next.slice(0, 300);
+    const items: string[] = [];
+    const column = /^(?:จำนวน(?:\s*QUANTITY)?|quantity|หน่วย(?:\s*UNIT)?|unit|จำนวนเงิน(?:\s*AMOUNT)?|amount)(?:\s*(?:บาท|BAHT))?$/i;
+    const boundary = /^(?:ยอด|รวม|ภาษี|ผู้|ชื่อ|นามลูกค้า|ที่อยู่|เลข|วันที่|total\b|subtotal\b|vat\b|received\b|name\b|address\b|date\b)/i;
+    const source = match[1] ? [match[1]] : lines.slice(index + 1, index + 21);
+    for (const line of source) {
+      if (column.test(line)) continue;
+      if (boundary.test(line)) break;
+      if (/^[๐-๙\d\s,.฿/+-]+(?:\s*(?:บาท|THB))?$/i.test(line)) continue;
+      // Unrecognized column labels are not items; do not continue into unrelated sections.
+      if (/^(?:จำนวน|quantity|หน่วย|unit|amount)\b/i.test(line) || /^(?:จำนวน|หน่วย)/.test(line)) break;
+      items.push(line);
+    }
+    return items.join('; ').slice(0, 300);
   }
   return '';
 }
