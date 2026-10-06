@@ -1870,6 +1870,12 @@ async function main() {
                 openSignIn: () => openAntigravitySignIn(executable, join(data, 'runtimes', 'agy-signin')),
                 openBrowserSignIn: () =>
                   openAntigravityBrowserSignIn(executable, join(data, 'runtimes', 'agy-signin'), url => shell.openExternal(url)),
+                askForCode: () =>
+                  new Promise(resolveCode => {
+                    authCodes.set(connection.id, resolveCode);
+                    emit({ sessionId: '', type: 'auth-code', connectionId: connection.id });
+                  }),
+                dropCode,
               },
               controller.signal,
             );

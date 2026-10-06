@@ -6,7 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. "Mac disk image: a Thai first-open guide" below is not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide" below are not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### Antigravity sign-in: paste the code Google shows into STeP
+
+- **Before (0.5.16):** after Allow, Google sent the browser to Antigravity's page, which shows an authorization code to paste into the CLI. The CLI ran hidden with no input, so there was nowhere to paste it and sign-in stalled. Reported on a Mac on 2026-10-06.
+- **After, Mac:** STeP runs the hidden `agy -p` behind a pseudo-terminal (`/usr/bin/script`) and opens a box, **รหัสจากหน้าเว็บ**, with three numbered steps. The pasted code is typed into the waiting CLI. A wrong or late code opens a fresh Google page, up to three tries, then the terminal window.
+- **After, Windows:** there is no pseudo-terminal to borrow without a native module, so STeP opens the Antigravity sign-in window straight away. Its progress text now says to paste the code there (right-click or Ctrl+V) and press Enter.
+- Checked with the real agy 1.2.17 on Linux: a code typed through the pseudo-terminal reaches Google's token exchange (a fake code returns `invalid_grant`). Not yet tried with a real Google account on a Mac or Windows.
 
 ### Mac disk image: a Thai first-open guide
 

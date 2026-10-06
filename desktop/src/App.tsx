@@ -2610,13 +2610,21 @@ export default function App() {
               <header>
                 <h2>{t('ลงชื่อเข้าใช้บริการ AI')}</h2>
               </header>
-              <p>
-                {t(
-                  'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
-                )}
-              </p>
+              {snapshot?.connections.find(c => c.id === authCode.id)?.provider === 'antigravity' ? (
+                <ol className="auth-code-steps">
+                  <li>{t('ในเบราว์เซอร์ เลือกบัญชี Google แล้วกด "อนุญาต" (Allow)')}</li>
+                  <li>{t('หน้าเว็บ Antigravity จะแสดงรหัส (authorization code) ให้กดคัดลอก')}</li>
+                  <li>{t('กลับมาวางรหัสในช่องนี้ แล้วกดยืนยัน ภายใน 1 นาที')}</li>
+                </ol>
+              ) : (
+                <p>
+                  {t(
+                    'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
+                  )}
+                </p>
+              )}
               <label className="auth-code">
-                Authorization code
+                {t('รหัสจากหน้าเว็บ')} (authorization code)
                 <input
                   autoFocus
                   autoComplete="off"
