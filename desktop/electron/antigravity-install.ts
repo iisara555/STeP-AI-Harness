@@ -357,7 +357,10 @@ function stopTree(pid: number | undefined, child: { kill: (signal?: NodeJS.Signa
 
 /** The command that runs `agy -p` behind a pseudo-terminal, since agy reads the pasted code only from a terminal. */
 export function agyPtyCommand(executable: string, args: string[], platform = process.platform): [string, string[]] | null {
-  if (platform === 'darwin') return ['/usr/bin/script', ['-q', '/dev/null', executable, ...args]];
+  // macOS `script` refuses a socket as its input (Node's pipes are sockets there), so `cat` turns it into a real pipe.
+  // `cat` keeps no other stream open, so the process ends as soon as `script` does.
+  if (platform === 'darwin')
+    return ['/bin/bash', ['-c', 'exec /usr/bin/script -q /dev/null "$@" < <(exec cat 2>/dev/null)', 'agy-sign-in', executable, ...args]];
   if (platform === 'linux') {
     const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
     return ['script', ['-qfec', [executable, ...args].map(quote).join(' '), '/dev/null']];
@@ -398,7 +401,12 @@ export async function openAntigravityBrowserSignIn(
     child.once('close', () => done());
     child.once('error', () => done());
   });
-  const close = () => stopTree(child.pid, child);
+  // Ending the input also ends the helper that feeds it on macOS.
+  void exited.then(() => child.stdin?.end());
+  const close = async () => {
+    child.stdin?.end();
+    await stopTree(child.pid, child);
+  };
   const url = await new Promise<string | null>(resolveUrl => {
     let text = '';
     const timer = setTimeout(() => resolveUrl(null), waitMs);
