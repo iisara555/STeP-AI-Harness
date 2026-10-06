@@ -6,14 +6,33 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-"Mac updates install inside the app" below is not published yet. STeP Desktop version 0.5.17 (`desktop/package.json`) contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next four sections, published as `desktop-v0.5.18`: "What's new after an update", "Antigravity on the first page of setup", "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### What's new after an update
+
+- **Before:** after an update nothing said what had changed; staff had to read this file on GitHub.
+- **After:** the first time the app opens on a new version, a "มีอะไรใหม่" window lists what changed since the version the person last saw, in plain Thai (or English). "รับทราบ" closes it for good; the command palette ("มีอะไรใหม่ในรุ่นนี้") opens it again. A new install does not show it.
+- The notes live in `desktop/src/whats-new.ts`; a unit test fails a release whose version has no notes there.
+- Tests: `whats-new.test.ts` (version order, which notes show) and `whats-new-smoke.mjs` (new install, an older profile, the palette).
+
+### Antigravity on the first page of setup
+
+- **Before:** the setup wizard's "เชื่อมต่อ AI" step showed ChatGPT, OpenRouter and Gemini (API key); Gemini via Antigravity was behind "ดูบริการอื่น".
+- **After:** Gemini via Antigravity is on the first page, so someone with only a Google account can connect without a key. The wizard puts the four services in one row and the connect button stays in view at 800×650.
+
+### Word files with pictures can be attached
+
+- **Before:** a Word file with any picture in it, such as the Garuda emblem or a letterhead on a บันทึกข้อความ, was refused as "อ่านเนื้อหาได้ไม่ครบ" and the drafting tool only said "ส่งไฟล์นี้ให้ AI ไม่ได้". Reported on 2026-10-06 with a ขออนุมัติใช้จ่ายหมวด A2 memo.
+- **After:** pictures are left out and named in the status line ("รูปภาพ N รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม"); the file's full text goes to the AI. Text in text boxes is read as before. Charts, SmartArt, embedded objects (an Excel table) and imported chunks still withhold the file, because their content lives outside the text; the message now says so and what to do.
+- The document drafting tool shows the specific reason a file was refused instead of one generic line.
+- Harness `src/modules/privacy/document-worker.js` changes with it (CLI and app alike). Pictures were never sent to the AI either way.
 
 ### Mac updates install inside the app
 
 - **Before:** on a Mac, the update card's button opened the GitHub release page. The person had to download the disk image, drag the app over the old one and get past the "Move to Trash" warning again. macOS's own updater (Squirrel.Mac) installs only updates signed with the same Developer ID, which STeP does not have.
 - **After:** a Mac downloads the update in the background like Windows and shows **รีสตาร์ทเพื่ออัปเดต** (restart to update). STeP fetches the zip for its processor from the update feed and keeps it only when its sha512 matches the feed. When the person restarts, a small script waits for the app to quit, unpacks the zip next to the app, checks the new bundle with `codesign --verify --deep --strict`, swaps it in and opens it. A file the app downloads itself has no quarantine flag, so the new version opens without the warning.
 - Any failure before the swap leaves the installed app as it was and opens it again. When the app cannot be replaced in place (run from the disk image, a translocated copy, or a folder the person cannot write), or the download fails, the card falls back to the release page as before.
-- The update from 0.5.17 to the next version is the first to use this; 0.5.17 itself still opens the release page.
+- Updates from 0.5.18 to later versions use this. Moving from 0.5.17 to 0.5.18 still opens the release page, because 0.5.17 has the old updater.
 - Tests: the update flow with a fake feed; the sha512 check; and, on the macOS CI runners, the real script swapping an ad-hoc signed bundle and refusing a tampered one. Not yet tried as a real update on a real Mac.
 
 ### Antigravity sign-in: paste the code Google shows into STeP

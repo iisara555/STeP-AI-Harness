@@ -213,6 +213,9 @@ async function main() {
     !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME
       ? process.env.STEP_SHARED_PROFILE || join(data, 'shared-profile.json')
       : sharedProfilePath();
+  // A new install has nothing to catch up on: "What's new" starts from the version it was installed with.
+  if (!store.settings().onboarding && !store.settings().whatsNewSeen)
+    store.put('settings', 'main', { ...store.settings(), whatsNewSeen: app.getVersion() });
   // Before the first-run wizard, start it from the profile set in Setup-STeP-Skills, if there is one.
   if (!store.settings().onboarding) {
     const shared = await readSharedProfile(sharedProfile);
@@ -1046,6 +1049,7 @@ async function main() {
     return file;
   };
   const snapshot = async () => ({
+    appVersion: app.getVersion(),
     usage: ledger.report(),
     features: { claudeSubscription: claudeSubscriptionOn(), providerPresets: policyState.policy.features.providerPresets },
     policy: {
@@ -1976,6 +1980,11 @@ async function main() {
         store.put('settings', 'main', s);
         return s;
       }
+      case 'whatsNewSeen': {
+        const s = { ...store.settings(), whatsNewSeen: app.getVersion() };
+        store.put('settings', 'main', s);
+        return s;
+      }
       // Only fixed help pages open in the browser; nothing from the renderer becomes a URL.
       case 'claudeCode':
         return { installed: Boolean(await findClaudeCode()) };
@@ -2640,7 +2649,9 @@ async function main() {
                 ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
                 : report.ocr
                   ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                  : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+                  : report.images
+                    ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
+                    : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
             : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
           preview: usable ? report.redactedText : '',
           usable,

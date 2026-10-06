@@ -126,8 +126,7 @@ export const en: Record<string, string> = {
   ทดสอบอีกครั้ง: 'Test again',
   'ลงชื่อด้วย {0}': 'Sign in with {0}',
   'ใช้แพ็กเกจ ChatGPT Plus/Pro ที่คุณมี': 'Use your ChatGPT Plus/Pro plan',
-  'ใช้บัญชี Google ของคุณ กดครั้งเดียว STeP ติดตั้งและพาลงชื่อให้ (ทดลอง)':
-    'Your Google account. One click and STeP installs and signs you in (experimental)',
+  'ใช้บัญชี Google ไม่ต้องใช้คีย์ (ทดลอง)': 'Your Google account, no key (experimental)',
   'บัญชี Google ส่วนตัว (ลงชื่อผ่าน Antigravity)': 'Personal Google account (native Antigravity sign-in)',
   'ทดลอง: ใช้บัญชี Google ที่ลงชื่อใน Antigravity บนเครื่องนี้ เลิกเชื่อมต่อ STeP แล้วบัญชีนั้นยังลงชื่ออยู่ STeP ปิดเครื่องมือของ Antigravity ทั้งหมด (ไฟล์ คำสั่ง เว็บ MCP) และหยุดคำตอบถ้า AI พยายามใช้':
     'Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account signed in. STeP denies every native tool (files, commands, web, MCP) and stops the reply if the AI tries to use one.',
@@ -653,7 +652,8 @@ export const en: Record<string, string> = {
     'Some PDF pages are scanned images with unreadable text, so nothing was sent to avoid the AI summarising incomplete content. Use the original file or remove the image pages',
   'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง': 'Reading the file took too long. Try splitting it into smaller files',
   'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้': "This file can't be opened or read. It may be damaged or password protected",
-  'อ่านเนื้อหาได้ไม่ครบ ระบบจึงยังไม่ส่ง': "The content couldn't be read completely, so it wasn't sent",
+  'ไฟล์มีส่วนที่อ่านเป็นข้อความไม่ได้ เช่น กราฟ SmartArt หรือตาราง Excel ที่ฝังไว้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI ร่างจากเนื้อหาที่ขาดไป พิมพ์ข้อมูลส่วนนั้นเป็นข้อความในไฟล์ หรือบันทึกเป็น PDF แล้วแนบใหม่':
+    "Part of this file can't be read as text, such as a chart, SmartArt or an embedded Excel table, so it wasn't sent and the AI won't draft from missing content. Type that part into the file as text, or save it as PDF, and attach it again",
   'พบข้อมูลที่ต้องให้คนตรวจก่อน และระบบปิดบังให้อัตโนมัติไม่ได้ ปิดบังในไฟล์แล้วแนบใหม่':
     "Found data that needs human review and can't be masked automatically. Mask it in the file and attach it again",
   'ยังยืนยันผลค้นเว็บไม่ได้ บัญชีหรือโมเดลนี้อาจไม่รองรับ Web Search หรือบริการค้นหาขัดข้อง กรุณาลองใหม่หรือเลือก AI อื่น ระบบยังไม่ใช้ความจำตอบแทนข้อมูลล่าสุด':
@@ -1491,6 +1491,8 @@ export const en: Record<string, string> = {
   'ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน': 'Sends the source image with OCR text · check the image before confirming',
   'อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง': 'Text read with OCR · check accuracy before sending',
   'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง': 'Text checked · review before sending',
+  'ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม':
+    'Text checked · {0} picture(s) in the file are not sent to the AI; type in anything important they show',
   'ส่งไฟล์นี้ให้ AI ไม่ได้': "This file can't be sent to the AI",
   'เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง': "The app couldn't start. Please check the installation",
   'ค้นหาเครื่องมือจาก MCP?': 'Search tools from MCP?',
@@ -1832,4 +1834,25 @@ export const en: Record<string, string> = {
   ใช้ล่าสุด: 'Last used',
   '{0} (หยุดใช้แล้ว)': '{0} (disabled)',
   ยังไม่ถูกใช้: 'Not used yet',
+  'แนบไฟล์ Word ที่มีรูป เช่น ตราครุฑหรือหัวกระดาษ ในเครื่องมือร่างเอกสารได้แล้ว ข้อความในไฟล์ส่งให้ AI ครบ ส่วนรูปไม่ได้ส่ง':
+    'Word files with pictures, such as the Garuda emblem or a letterhead, can be attached in the document tools. All the text goes to the AI; the pictures are not sent.',
+  'ถ้าแนบไฟล์ไม่ผ่าน ระบบบอกเหตุผลและวิธีแก้ เช่น ไฟล์มีกราฟหรือตาราง Excel ที่ฝังไว้':
+    'When a file cannot be attached, STeP says why and how to fix it, for example a chart or an embedded Excel table.',
+  'Mac: ตั้งแต่การอัปเดตครั้งถัดไป กดอัปเดตแล้วแอปดาวน์โหลดและติดตั้งเอง ไม่ต้องไปหน้า GitHub':
+    'Mac: from the next update on, the app downloads and installs updates itself, with no trip to GitHub.',
+  'หน้าตั้งค่าเริ่มต้นมี Gemini via Antigravity ให้เลือกทันที ใช้บัญชี Google ได้โดยไม่ต้องมีคีย์':
+    'First-run setup offers Gemini via Antigravity right away: use your Google account, no key needed.',
+  'หน้าต่าง "มีอะไรใหม่" นี้จะขึ้นหลังอัปเดตทุกครั้ง เปิดดูอีกได้จากคำสั่ง (Ctrl+K หรือ ⌘K บน Mac)':
+    'This "What\'s new" window appears after every update. Open it again from the command palette (Ctrl+K, or ⌘K on Mac).',
+  'Antigravity บน Mac: วางรหัสจากหน้าเว็บ Google ในแอปได้ และไม่ค้างที่ "กำลังเชื่อมต่อ"':
+    'Antigravity on Mac: paste the code from Google\'s page into the app, and no more hanging on "connecting".',
+  'ไฟล์ติดตั้งสำหรับ Mac มีคู่มือเปิดแอปครั้งแรกเป็นภาษาไทย': 'The Mac installer includes a Thai guide to opening the app the first time.',
+  'เชื่อมต่อ Antigravity แล้วหน้าลงชื่อ Google เปิดในเบราว์เซอร์ให้เลย':
+    'Connecting Antigravity opens the Google sign-in page in your browser.',
+  'เครื่องมือร่างเอกสาร หน้าตรวจใบเสร็จแบบใหม่ และหน้าดูการใช้งาน AI': 'Document tools, a new receipt check page and an AI usage page.',
+  กล่องบทเรียนบอกได้ว่าบทเรียนที่อนุมัติไว้ช่วยงานจริงหรือไม่: 'The Learning Inbox shows whether approved lessons actually help.',
+  มีอะไรใหม่: "What's new",
+  รับทราบ: 'Got it',
+  'STeP Desktop รุ่น {0}': 'STeP Desktop {0}',
+  มีอะไรใหม่ในรุ่นนี้: "What's new in this version",
 };

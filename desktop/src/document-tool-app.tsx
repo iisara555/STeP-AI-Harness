@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from 'lucide-react';
 import type { Attachment, Connection } from './types';
 import { DOCUMENT_TOOLS, documentTool, type DocumentToolId } from './document-tools';
-import { connectionLabel } from './messages';
+import { connectionLabel, errorText } from './messages';
 import { t } from './i18n';
 import './document-tools.css';
 
@@ -181,7 +181,12 @@ export function DocumentTools({
                   <pre>{form.source.file.preview || t('ไม่มีข้อความที่อ่านได้')}</pre>
                 </details>
               )}
-              {!form.source.file.usable && <p className="small">{t('ไฟล์นี้ส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อนร่าง')}</p>}
+              {!form.source.file.usable && (
+                <p className="small">
+                  {(form.source.file.reason && errorText[form.source.file.reason]) ||
+                    t('ไฟล์นี้ส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อนร่าง')}
+                </p>
+              )}
             </div>
           )}
           <p className="small muted">

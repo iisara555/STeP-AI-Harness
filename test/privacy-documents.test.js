@@ -203,7 +203,22 @@ test('DOCX reads split runs, tables, headers and comments; no raw names in repor
   assert.equal(result.action, 'block-external');
   assert.equal(result.redactedText, undefined);
   assert.ok(!JSON.stringify(result).includes('สมชาย'));
+  // A picture (a letterhead or the Garuda emblem) is left out and named; the complete text still goes.
   await writeFile(file, docx('<w:p><w:r><w:t>hello</w:t></w:r></w:p>', { 'word/media/image1.png': new Uint8Array([1]) }));
+  const pictured = await evaluateDocumentPrivacy(file, { includeRedacted: true });
+  assert.equal(pictured.extractionStatus, 'text-extracted');
+  assert.equal(pictured.images, 1);
+  assert.ok(pictured.reviewReasons.includes('images-not-sent'));
+  assert.equal(pictured.redactedText.trim(), 'hello');
+  // An inline picture is still an image; its text box text is read; a chart keeps its numbers elsewhere.
+  await writeFile(file, docx('<w:p><w:r><w:drawing><wp:inline><w:txbxContent><w:p><w:r><w:t>boxed</w:t></w:r></w:p></w:txbxContent></wp:inline></w:drawing></w:r></w:p>', { 'word/media/image1.png': new Uint8Array([1]) }));
+  const inline = await evaluateDocumentPrivacy(file, { includeRedacted: true });
+  assert.equal(inline.extractionStatus, 'text-extracted');
+  assert.match(inline.redactedText, /boxed/);
+  await writeFile(file, docx('<w:p><w:r><w:drawing><c:chart/></w:drawing><w:t>x</w:t></w:r></w:p>', { 'word/charts/chart1.xml': strToU8('<c:chartSpace xmlns:c="c"/>') }));
+  assert.equal((await evaluateDocumentPrivacy(file, { includeRedacted: true })).extractionStatus, 'partial');
+  // An embedded object (a spreadsheet or another document) can hold content the text leaves out: withheld.
+  await writeFile(file, docx('<w:p><w:r><w:t>hello</w:t></w:r></w:p>', { 'word/embeddings/sheet1.xlsx': new Uint8Array([1]) }));
   const embedded = await evaluateDocumentPrivacy(file, { includeRedacted: true });
   assert.equal(embedded.extractionStatus, 'partial');
   assert.equal(embedded.redactedText, undefined);

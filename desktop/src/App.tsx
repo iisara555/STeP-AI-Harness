@@ -86,6 +86,8 @@ import { Readiness } from './readiness';
 import { Terms } from './terms';
 import { VoiceButton } from './voice';
 import { PacksDialog } from './packs';
+import { RELEASE_NOTES, compareVersions, unseenNotes, type ReleaseNote } from './whats-new';
+import { WhatsNewDialog } from './whats-new-dialog';
 import type { ToolQuestion } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
@@ -151,6 +153,7 @@ export default function App() {
   }, [view]);
   const [wizard, setWizard] = useState(false),
     [tour, setTour] = useState(false);
+  const [whatsNew, setWhatsNew] = useState<ReleaseNote[] | null>(null);
   const [skills, setSkills] = useState<SkillEntry[] | null>(null),
     [forcedSkill, setForcedSkill] = useState(''),
     [slashIndex, setSlashIndex] = useState(0);
@@ -291,6 +294,9 @@ export default function App() {
       .then(s => {
         if (s) {
           setWizard(!s.settings.onboarding);
+          // After an update, once: what changed since the version the person last saw.
+          const notes = s.settings.onboarding ? unseenNotes(s.settings.whatsNewSeen, s.appVersion || '') : [];
+          if (notes.length) setWhatsNew(notes);
           setSelected(s.sessions[0]?.id || '');
           setWorkMode(s.sessions[0]?.mode || (s.sessions[0]?.draft ? 'draft' : 'chat'));
           setConnectionId(s.connections[0]?.id || '');
@@ -868,6 +874,7 @@ export default function App() {
       setTour(true);
     },
     wizard: () => setWizard(true),
+    'whats-new': () => setWhatsNew(RELEASE_NOTES.filter(n => compareVersions(n.version, snapshot?.appVersion || '0') <= 0)),
     left: () => setLeft(p => !p),
     right: () => setRight(p => !p),
     skills: () => {
@@ -2592,6 +2599,15 @@ export default function App() {
               setSettings(false);
               setView('chat');
               if (startTour) setTour(true);
+            }}
+          />
+        )}
+        {whatsNew && !wizard && !tour && (
+          <WhatsNewDialog
+            notes={whatsNew}
+            onClose={() => {
+              setWhatsNew(null);
+              void api.call('whatsNewSeen').then(refresh);
             }}
           />
         )}
