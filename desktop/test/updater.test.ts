@@ -123,3 +123,63 @@ test('the two Mac builds merge into one feed that lists a zip for each processor
   assert.throws(() => mergeMacUpdateInfo(arm, { ...intel, version: '0.5.5' }), /same version/);
   assert.throws(() => mergeMacUpdateInfo(arm, arm), /same file/);
 });
+
+test('a Mac build installs the update itself: macOS updater only reads the feed, STeP downloads and swaps', async () => {
+  const fake = new FakeUpdater();
+  const states: UpdateState[] = [];
+  let swapped = 0;
+  const seen: unknown[] = [];
+  const updater = new Updater(fake, {
+    current: '0.5.17',
+    platform: 'darwin',
+    disabledReason: '',
+    emit: s => states.push(s),
+    selfInstall: {
+      prepare: async (info, onProgress) => {
+        seen.push(info);
+        onProgress(50);
+        onProgress(100);
+        return () => {
+          swapped++;
+        };
+      },
+    },
+  });
+  assert.equal(fake.autoDownload, false, 'macOS never downloads an update it would refuse');
+  assert.equal(fake.autoInstallOnAppQuit, false);
+  const files = [{ url: 'STeP-Desktop-0.5.18-arm64.zip', sha512: 'x', size: 1 }];
+  fake.next = f => f.emit('update-available', { version: '0.5.18', files });
+  await updater.check();
+  await new Promise(r => setImmediate(r));
+  assert.deepEqual(seen, [{ version: '0.5.18', files }]);
+  assert.ok(states.some(s => s.status === 'downloading' && s.percent === 50));
+  assert.deepEqual(updater.snapshot, { status: 'ready', current: '0.5.17', version: '0.5.18' });
+  updater.install();
+  assert.equal(swapped, 1);
+  assert.deepEqual(fake.installed, [], "macOS's own installer is never called");
+});
+
+test('when the Mac self-install cannot run, the download page is offered as before', async () => {
+  const fake = new FakeUpdater();
+  const updater = new Updater(fake, {
+    current: '0.5.17',
+    platform: 'darwin',
+    disabledReason: '',
+    emit: () => {},
+    selfInstall: {
+      prepare: async () => {
+        throw new Error('UPDATE_NOT_REPLACEABLE');
+      },
+    },
+  });
+  fake.next = f => f.emit('update-available', { version: '0.5.18', files: [] });
+  await updater.check();
+  await new Promise(r => setImmediate(r));
+  assert.deepEqual(updater.snapshot, {
+    status: 'manual',
+    current: '0.5.17',
+    version: '0.5.18',
+    reason: 'UPDATE_NEEDS_SIGNED_BUILD',
+    url: RELEASES_URL,
+  });
+});

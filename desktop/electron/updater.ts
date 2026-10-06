@@ -27,6 +27,15 @@ export type AutoUpdaterLike = {
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
 };
 
+/** A Mac build without a Developer ID installs updates itself (electron/mac-update.ts) instead of through macOS. */
+export type SelfInstall = {
+  /** Downloads and checks the version in `info`; resolves to the step that quits the app and swaps it in. */
+  prepare: (
+    info: { version?: string; files?: { url?: string; sha512?: string; size?: number }[] },
+    onProgress: (percent: number) => void,
+  ) => Promise<() => void>;
+};
+
 export const RELEASES_URL = 'https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest';
 const FOUR_HOURS = 4 * 60 * 60 * 1000;
 
@@ -42,20 +51,25 @@ export class Updater {
       disabledReason: string;
       emit: (state: UpdateState) => void;
       log?: (event: string, detail?: Record<string, string>) => void;
+      /** Mac only: STeP downloads and installs the update itself, since macOS would refuse an unsigned one. */
+      selfInstall?: SelfInstall;
     },
   ) {
     this.state = { status: options.disabledReason || !updater ? 'disabled' : 'idle', current: options.current };
     if (options.disabledReason) this.state.reason = options.disabledReason;
     if (this.state.status === 'disabled' || !updater) return;
-    updater.autoDownload = true;
-    updater.autoInstallOnAppQuit = true;
+    const self = options.platform === 'darwin' ? options.selfInstall : undefined;
+    // With its own installer, macOS's updater only reads the feed; it never downloads or installs anything.
+    updater.autoDownload = !self;
+    updater.autoInstallOnAppQuit = !self;
     updater.allowPrerelease = false;
     updater.allowDowngrade = false;
     updater.on('checking-for-update', () => this.set({ status: 'checking' }));
     updater.on('update-not-available', () => this.set({ status: 'none', checkedAt: new Date().toISOString() }));
-    updater.on('update-available', (info: { version?: string }) =>
-      this.set({ status: 'downloading', version: String(info?.version || ''), percent: 0 }),
-    );
+    updater.on('update-available', (info: { version?: string; files?: { url?: string; sha512?: string; size?: number }[] }) => {
+      this.set({ status: 'downloading', version: String(info?.version || ''), percent: 0 });
+      if (self) void this.selfDownload(self, info);
+    });
     updater.on('download-progress', (progress: { percent?: number }) =>
       this.set({ status: 'downloading', percent: Math.max(0, Math.min(100, Math.round(Number(progress?.percent) || 0))) }),
     );
@@ -89,17 +103,30 @@ export class Updater {
     }
     return this.snapshot;
   }
+  private selfInstaller: (() => void) | undefined;
+  private async selfDownload(self: SelfInstall, info: Parameters<SelfInstall['prepare']>[0]) {
+    try {
+      this.selfInstaller = await self.prepare(info, percent => {
+        if (this.state.status === 'downloading' && percent !== this.state.percent) this.set({ percent });
+      });
+      this.set({ status: 'ready' });
+    } catch (error) {
+      this.fail(error);
+    }
+  }
   /** Restart into the downloaded version. */
   install() {
     if (!this.updater || this.state.status !== 'ready') throw new Error('UPDATE_NOT_READY');
     this.options.log?.('update-install', { version: this.state.version || '' });
+    if (this.selfInstaller) return this.selfInstaller();
     // isSilent: the Windows installer runs without its wizard; isForceRunAfter: the app opens again afterwards.
     this.updater.quitAndInstall(true, true);
   }
   private fail(error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     const code =
-      /ERR_UPDATER_[A-Z_]+/.exec(message)?.[0] || (/ENOTFOUND|ECONN|ETIMEDOUT|net::/i.test(message) ? 'UPDATE_OFFLINE' : 'UPDATE_FAILED');
+      /ERR_UPDATER_[A-Z_]+|UPDATE_[A-Z_]+/.exec(message)?.[0] ||
+      (/ENOTFOUND|ECONN|ETIMEDOUT|net::/i.test(message) ? 'UPDATE_OFFLINE' : 'UPDATE_FAILED');
     this.options.log?.('update-failed', { code });
     // macOS installs an update only when both versions carry the same Developer ID signature. A build without one can
     // still learn that a new version exists; the person then downloads it from the release page.
