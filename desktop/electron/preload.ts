@@ -81,6 +81,7 @@ const allowed = new Set([
   'sessionConnection',
   'openHelp',
   'tour',
+  'whatsNewSeen',
   'ocrStatus',
   'ocrFolder',
   'ocrStart',

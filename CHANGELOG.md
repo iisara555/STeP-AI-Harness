@@ -6,7 +6,19 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next two sections, published as `desktop-v0.5.18`: "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next four sections, published as `desktop-v0.5.18`: "What's new after an update", "Antigravity on the first page of setup", "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### What's new after an update
+
+- **Before:** after an update nothing said what had changed; staff had to read this file on GitHub.
+- **After:** the first time the app opens on a new version, a "มีอะไรใหม่" window lists what changed since the version the person last saw, in plain Thai (or English). "รับทราบ" closes it for good; the command palette ("มีอะไรใหม่ในรุ่นนี้") opens it again. A new install does not show it.
+- The notes live in `desktop/src/whats-new.ts`; a unit test fails a release whose version has no notes there.
+- Tests: `whats-new.test.ts` (version order, which notes show) and `whats-new-smoke.mjs` (new install, an older profile, the palette).
+
+### Antigravity on the first page of setup
+
+- **Before:** the setup wizard's "เชื่อมต่อ AI" step showed ChatGPT, OpenRouter and Gemini (API key); Gemini via Antigravity was behind "ดูบริการอื่น".
+- **After:** Gemini via Antigravity is on the first page, so someone with only a Google account can connect without a key. The wizard puts the four services in one row and the connect button stays in view at 800×650.
 
 ### Word files with pictures can be attached
 

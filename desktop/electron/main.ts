@@ -213,6 +213,9 @@ async function main() {
     !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME
       ? process.env.STEP_SHARED_PROFILE || join(data, 'shared-profile.json')
       : sharedProfilePath();
+  // A new install has nothing to catch up on: "What's new" starts from the version it was installed with.
+  if (!store.settings().onboarding && !store.settings().whatsNewSeen)
+    store.put('settings', 'main', { ...store.settings(), whatsNewSeen: app.getVersion() });
   // Before the first-run wizard, start it from the profile set in Setup-STeP-Skills, if there is one.
   if (!store.settings().onboarding) {
     const shared = await readSharedProfile(sharedProfile);
@@ -1046,6 +1049,7 @@ async function main() {
     return file;
   };
   const snapshot = async () => ({
+    appVersion: app.getVersion(),
     usage: ledger.report(),
     features: { claudeSubscription: claudeSubscriptionOn(), providerPresets: policyState.policy.features.providerPresets },
     policy: {
@@ -1973,6 +1977,11 @@ async function main() {
         return skillCatalog.loadSkillCatalog(root);
       case 'tour': {
         const s = { ...store.settings(), tourDone: input.done === true };
+        store.put('settings', 'main', s);
+        return s;
+      }
+      case 'whatsNewSeen': {
+        const s = { ...store.settings(), whatsNewSeen: app.getVersion() };
         store.put('settings', 'main', s);
         return s;
       }

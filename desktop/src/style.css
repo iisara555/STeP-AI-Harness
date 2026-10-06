@@ -1010,6 +1010,10 @@ nav button,
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 8px;
 }
+/* First-run setup shows its four main services in one row, so the connect button stays above the fold. */
+.wizard .provider-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
 .provider-tile {
   display: grid;
   gap: 4px;
@@ -1145,6 +1149,25 @@ nav button,
 .attachment-dialog h2 {
   font-size: 17px;
   flex: 1;
+}
+.whats-new {
+  width: min(560px, 100%);
+}
+.whats-new h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.whats-new h3 {
+  font-size: 14px;
+  margin: 16px 0 6px;
+}
+.whats-new ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  line-height: 1.55;
 }
 .attachment-dialog pre {
   max-height: 45vh;
@@ -2742,6 +2765,9 @@ nav .count {
   font-size: 24px;
   font-weight: 600;
   margin: 4px 0;
+}
+.wizard-body h1 + p.muted {
+  margin: 0;
 }
 .wizard-body label {
   display: flex;
