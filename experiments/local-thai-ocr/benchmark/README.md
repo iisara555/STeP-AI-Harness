@@ -1,6 +1,8 @@
 # Synthetic receipt benchmark and private pilot
 
 This is development tooling, not an OCR/Router integration or an accuracy certificate.
+See [synthetic quality evidence, 2026-10-06](QUALITY-RESULTS-2026-10-06.md) for the
+measured before/after comparisons and remaining errors.
 The acceptance gate stays **OPEN** until the repository owner reviews authorized
 real-document pilot evidence. Windows with 2 CPU cores and macOS M1 with 4 GB RAM
 are the target machines; Linux cloud timings do not establish readiness on either.
@@ -19,11 +21,18 @@ From `experiments/local-thai-ocr`:
 
 ```sh
 python -m benchmark.generate --font /path/to/NotoSerifThai-Regular.ttf \
-  --output /path/outside/repo/synthetic-80
+  --fallback-font /path/to/DejaVuSans.ttf --output /path/outside/repo/synthetic-80
 python -m benchmark.run --input /path/outside/repo/synthetic-80 \
   --output /path/outside/repo/paddle-run --mode ocr --limit 80 \
   --runtime-path /path/to/ocr-venv --model-cache /path/to/model-cache
 ```
+
+Some packaged Thai fonts contain no Arabic digits or Latin letters. The generator
+checks glyph coverage before rendering and rejects missing glyphs rather than
+producing boxes with a numeric answer file. Supply a licensed `--fallback-font`
+for those glyphs; both font digests enter the truth. Thai runs remain RAQM-shaped.
+`--include-phone-rotation` adds one JPEG with sideways pixels and EXIF orientation
+to check phone-image handling. This is metadata rotation, not automatic deskew.
 
 The seeded default creates 80 image/answer pairs: ten per H–O. `.truth.json`
 contains canonical and raw fields, synthetic provenance, scenario, distortions,
@@ -77,7 +86,8 @@ mapped OCR fields just as Desktop currently does; it does not simulate human edi
 `report.json` has per-document and per-field raw/canonical exact match, wrong,
 missing and invented values, critical number/money/date/reference errors and review
 TP/FP/FN/TN. Raw exact uses printed digits; canonical converts Thai digits, money
-format and explicit full-year dates. It preserves reference leading zeroes and
+format and explicit full-year dates. Malformed comma/decimal groups are errors,
+not silently repaired amounts. It preserves reference leading zeroes and
 merchant distinctions rather than using the UI's loose agreement heuristic.
 Review flags are attributed using the mapping's source evidence; ambiguous/empty
 fields also flag, and combined disagreement adds a flag. Errors that both engines

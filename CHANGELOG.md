@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Local Thai OCR: preserve critical values and reduce avoidable work
+
+- Apply phone EXIF orientation before OCR and stretch contrast only on faded images with a bounded tonal range, preserving the source file and recording preprocessing. Recover overlap-only tile lines with review flags and preserve conflicting tile readings as unverified candidates. Reject invalid confidence values instead of treating them as reliable.
+- Match receipt amounts to the actual row using detected text polygons for mild skew and nearby next-line evidence. Recognize explicit buyer-number labels even in seller tax rows. Keep malformed decimals, comma groups and signed amounts out of positive payment fields; independent cross-checks retain numeric punctuation and reference separators.
+- Import PaddleOCR only when image recognition is needed, so native-text PDFs avoid model startup. Bound CPU threads to available cores, maximum four, without adding models or changing policy defaults.
+- Validate synthetic image font coverage, support a licensed Latin/digit fallback with its digest and an optional EXIF phone-rotation case. Reject malformed money in benchmark scoring; never measure boxes as printed numeric answers.
+- Keep private pilot paths outside all Git checkouts; refuse linked export targets and write to the checked canonical destination. OCR installers include runtime sources only, excluding development benchmarks and private image/report files. Saved drafts describe selected-value verification without claiming unchecked OCR was reviewed.
+- Add test-first synthetic regressions to the root/desktop test scripts. Evidence uses synthetic images and local CPU models only; it does not establish real-document accuracy or close the acceptance gate. No Router integration, version bump or release publication.
+- On the same nine generated images, canonical field matches improved from 50/63 to 59/63 (including two annotated absences); two merchant errors and two missing money fields remain. A three-process native-text PDF check reduced median startup from 2.322 s to 0.279 s on this Linux host. Details and limitations: [synthetic quality evidence](experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md).
+
 ## Desktop v0.5.19 — 2026-10-06
 
 STeP Desktop version 0.5.19 (`desktop/package.json`) packages the next four sections for `desktop-v0.5.19`. The in-app "What's new" window summarizes them in Thai and English. Receipt and provider checks use synthetic data and simulated services; real-document OCR accuracy remains unverified. Harness package version remains 0.7.6.

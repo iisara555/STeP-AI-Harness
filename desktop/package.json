@@ -101,15 +101,10 @@
         "from": "../experiments/local-thai-ocr",
         "to": "ocr",
         "filter": [
-          "**/*",
-          "!.venv{,/**}",
-          "!tests{,/**}",
-          "!**/__pycache__{,/**}",
-          "!output{,/**}",
-          "!*.bat",
-          "!*.command",
-          "!.gitignore",
-          "!.DS_Store"
+          "*.py",
+          "requirements-*.txt",
+          "web/**/*",
+          "!**/__pycache__{,/**}"
         ]
       }
     ],

@@ -442,7 +442,6 @@ export function ReceiptApp({
       source_id: doc?.sourceId,
       created_at: new Date().toISOString(),
       review_state: result.complete ? 'fields_checked' : 'draft_needs_review',
-      notice: 'OCR suggestions checked by a person. This is not a reimbursement approval.',
       fields: Object.fromEntries(
         review.fieldKeys.map(k => [
           k,

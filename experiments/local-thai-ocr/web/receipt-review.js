@@ -42,6 +42,7 @@
   };
   const fieldKeys = Object.keys(afpFieldSchema);
   const requiredKeys = fieldKeys.filter((key) => afpFieldSchema[key].requiredForPrecheck);
+  const buyerMarker = /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|เลข(?:ประจำตัว)?(?:ผู้เสียภาษี)?(?:ของ)?(?:ผู้ซื้อ|ลูกค้า)|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
   const thaiDigits = "๐๑๒๓๔๕๖๗๘๙";
 
   function normalizeDigits(value) {
@@ -67,6 +68,7 @@
               page: page.page,
               confidence: line.confidence ?? null,
               box: line.box || null,
+              polygon: line.polygon || null,
               needsReview: Boolean(line.needs_review),
               crosscheckCandidate: line.crosscheck_candidate || "",
               crosscheckConfidence: line.crosscheck_confidence ?? null,
@@ -77,6 +79,7 @@
               handwritingCandidate: line.handwriting_candidate || "",
               textKind: line.text_kind || "uncertain",
               fusionCandidates: Array.isArray(line.fusion_candidates) ? line.fusion_candidates : [],
+              tileCandidates: Array.isArray(line.tile_candidates) ? line.tile_candidates : [],
               engine: "paddle",
             });
           }
@@ -105,6 +108,7 @@
     for (const record of records) {
       expanded.push(record);
       const alternatives = [
+        ...(record.tileCandidates || []).map((item) => ({ engine: "paddle-overlap", text: item.text || "", confidence: item.confidence ?? null, usable: Boolean(item.text) })),
         {
           engine: "tesseract",
           text: record.tesseractCandidate || "",
@@ -160,14 +164,14 @@
 
   function amountTokens(value) {
     const text = normalizeDigits(value);
-    const matches = [...text.matchAll(/(^|[^\d])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?=$|[^\d])/g)];
-    return matches.map((match) => match[2]).filter((token) => token.replace(/\D/g, "").length < 11);
+    const matches = [...text.matchAll(/(?<![A-Za-z\d.,/+-])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?![A-Za-z\d.,/%])/g)];
+    return matches.map((match) => match[1]).filter((token) => token.replace(/\D/g, "").length < 11);
   }
 
   function parseMoney(value) {
-    const text = normalizeDigits(value).replace(/[฿\s,]/g, "");
-    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
-    const amount = Number(text);
+    const text = normalizeDigits(value).replace(/[฿\s]/g, "");
+    if (!/^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?$/.test(text)) return null;
+    const amount = Number(text.replace(/,/g, ""));
     return Number.isFinite(amount) ? amount : null;
   }
 
@@ -200,6 +204,15 @@
     return box ? (box[1] + box[3]) / 2 : null;
   }
 
+  function rowSlope(record) {
+    const points = record.polygon;
+    if (!Array.isArray(points) || points.length !== 4 || points.some(p => !Array.isArray(p) || p.length !== 2 || p.some(v => !Number.isFinite(v)))) return null;
+    const dx = points[1][0] + points[2][0] - points[0][0] - points[3][0];
+    const dy = points[1][1] + points[2][1] - points[0][1] - points[3][1];
+    const slope = dx > 0 ? dy / dx : NaN;
+    return Number.isFinite(slope) && Math.abs(slope) <= 0.2 ? slope : null;
+  }
+
   function sameRowCandidates(records, labelRecord, parseValue) {
     if (!labelRecord?.box) return [];
     const labelY = centerY(labelRecord.box);
@@ -207,9 +220,12 @@
       .filter((record) => {
         if (record === labelRecord || record.page !== labelRecord.page || !record.box || record.box[0] < labelRecord.box[2] - 12) return false;
         if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) return false;
-        const otherY = centerY(record.box);
-        const tolerance = Math.max(30, Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]) * 1.25);
-        return Math.abs(labelY - otherY) <= tolerance;
+        const shift = (rowSlope(labelRecord) ?? rowSlope(record) ?? 0) *
+          ((record.box[0] + record.box[2] - labelRecord.box[0] - labelRecord.box[2]) / 2);
+        const otherY = centerY(record.box) - shift;
+        const height = Math.min(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]);
+        const overlap = Math.min(labelRecord.box[3], record.box[3] - shift) - Math.max(labelRecord.box[1], record.box[1] - shift);
+        return height > 0 && overlap / height >= 0.45 && Math.abs(labelY - otherY) <= Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]) * 0.6;
       })
       .map((record) => ({ value: parseValue(record.text), record }))
       .filter((item) => item.value)
@@ -224,6 +240,13 @@
       if (!record || record.page !== labelRecord.page) break;
       // Stop at another recognized field label before parsing it as a value.
       if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) break;
+      if (labelRecord.box && record.box) {
+        const height = Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]);
+        const gap = record.box[1] - labelRecord.box[3];
+        // Same-row values use geometry above. Following values must actually
+        // be nearby on the next row, rather than a distant table/footer number.
+        if (gap < 0 || gap > height * 3) continue;
+      }
       const value = parseValue(record.text);
       if (value) results.push({ value, record, offset });
     }
@@ -238,7 +261,7 @@
       const match = text.match(labelRegex);
       if (!match) continue;
 
-      const trailing = text.slice((match.index || 0) + match[0].length).replace(/^[\s:#.\-]+/, "").trim();
+      const trailing = text.slice((match.index || 0) + match[0].length).replace(/^[\s:#]+/, "").trim();
       const sameLine = parseValue(trailing);
       if (sameLine) {
         found.push({
@@ -363,7 +386,6 @@
   }
 
   function findTaxId(records) {
-    const buyerMarker = /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
     const buyerStart = records.findIndex((record) => buyerMarker.test(record.text));
     const sellerRecords = buyerStart < 0 ? records : records.slice(0, buyerStart);
     const buyerRecords = buyerStart < 0 ? [] : records.slice(buyerStart);
@@ -411,7 +433,7 @@
 
   function findMerchant(records) {
     // A buyer can be another company. Its name and the table below it are never seller-header evidence.
-    const buyerStart = records.findIndex(record => /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i.test(record.text));
+    const buyerStart = records.findIndex(record => buyerMarker.test(record.text));
     if (buyerStart >= 0) records = records.slice(0, buyerStart);
     const labeled = labeledCandidates(records, afpFieldSchema.merchant.aliases, (value) => {
       const text = normalizeText(value);

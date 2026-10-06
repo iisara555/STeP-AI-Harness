@@ -93,3 +93,13 @@ test('ordinary OCR attachments remain unverified despite transmission consent', 
   assert.match(ocrAttachmentSource(result, 'attachment:SYN-01'), /EXTRACTED_UNVERIFIED — attachment:SYN-01/);
   assert.match(ocrAttachmentSource(result, 'attachment:SYN-01'), /Transmission consent is not value verification/);
 });
+
+test('saving an unchecked draft never claims a person has already verified its OCR', () => {
+  const result = receiptProvenance({
+    notice: 'OCR suggestions checked by a person. This is not a reimbursement approval.',
+    fields: { total: { value: '107.00', checked: false } },
+  });
+  assert.equal(result.fields.total.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.doesNotMatch(result.notice, /suggestions checked by a person/);
+  assert.match(result.notice, /selected values/);
+});
