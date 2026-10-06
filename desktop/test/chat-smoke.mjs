@@ -161,10 +161,56 @@ try {
   await page.getByText('Web Search อัตโนมัติ · ค้นแหล่งข้อมูลล่าสุดก่อนตอบ', { exact: true }).waitFor();
   await page.keyboard.press('Enter');
   await page.getByText('กำลังค้นเว็บ', { exact: true }).waitFor();
-  // The waiting motion keeps moving even when the OS asks for reduced motion (Windows animations off).
+  // Hand-drawn threads move while the provider is busy, including a gentler reduced-motion mode.
+  const scribble = page.locator('.activity .thinking-scribble');
+  await expect(scribble).toHaveAttribute('aria-hidden', 'true');
+  await expect(scribble.locator('path')).toHaveCount(3);
+  assert.equal(await scribble.locator('svg').getAttribute('width'), '36');
+  const normalMotion = await scribble
+    .locator('path')
+    .first()
+    .evaluate(el => {
+      const motion = el.getAnimations()[0];
+      motion.pause();
+      motion.currentTime = 0;
+      const start = getComputedStyle(el).strokeDashoffset;
+      motion.currentTime = 600;
+      const end = getComputedStyle(el).strokeDashoffset;
+      motion.play();
+      return { start, end, duration: parseFloat(getComputedStyle(el).animationDuration), fill: getComputedStyle(el).fill };
+    });
+  assert.notEqual(normalMotion.start, normalMotion.end, 'ink must actually move, not only declare an animation');
+  assert.equal(normalMotion.fill, 'none');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  assert.equal(await page.locator('.activity .goo-a').evaluate(el => getComputedStyle(el).animationName), 'goo-a');
+  const reducedMotion = await scribble
+    .locator('path')
+    .first()
+    .evaluate(el => ({
+      name: getComputedStyle(el).animationName,
+      duration: parseFloat(getComputedStyle(el).animationDuration),
+    }));
+  assert.equal(reducedMotion.name, 'scribble-trace');
+  assert.ok(reducedMotion.duration > normalMotion.duration, 'reduced motion must slow the tracing');
+  assert.equal(await scribble.locator('g').evaluate(el => getComputedStyle(el).animationName), 'none');
   await page.emulateMedia({ reducedMotion: null });
+  const colors = await scribble
+    .locator('path')
+    .first()
+    .evaluate(el => {
+      const root = document.documentElement,
+        previous = root.dataset.theme;
+      try {
+        root.dataset.theme = 'light';
+        const light = getComputedStyle(el).stroke;
+        root.dataset.theme = 'dark';
+        const dark = getComputedStyle(el).stroke;
+        return { light, dark };
+      } finally {
+        if (previous === undefined) delete root.dataset.theme;
+        else root.dataset.theme = previous;
+      }
+    });
+  assert.notEqual(colors.light, colors.dark, 'ink must follow the light/dark theme');
   // One quiet working line: what is happening and how long it has taken.
   await expect(page.locator('.activity-detail')).toHaveText(/^\d+:\d{2}$|0 วินาที/);
   await page.screenshot({ path: 'release/qa/web-search-running.png', fullPage: true });
@@ -173,6 +219,7 @@ try {
   await page.waitForTimeout(3100);
   await expect(page.locator('.message-body').last()).toContainText('Synthetic holiday answer');
   await waitComplete(id);
+  await expect(scribble, 'the motion stops when the task completes').toHaveCount(0);
   await page.getByRole('button', { name: 'Government fixture · www.thaigov.go.th' }).waitFor();
   const searched = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(searched.sessions[0].messages.at(-1).text, 'Synthetic holiday answer from retrieved evidence');

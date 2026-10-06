@@ -1,4 +1,4 @@
-import { GooLoader } from './goo-loader';
+import { ThinkingScribble } from './thinking-scribble';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -1609,7 +1609,7 @@ export default function App() {
                     {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
                     {/* One quiet line while working, as in Claude and Codex: what is happening and for how long. */}
                     <div className="activity" role="status" aria-live="polite">
-                      <GooLoader />
+                      <ThinkingScribble />
                       <span>{progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด')}</span>
                       <span className="activity-detail">
                         {elapsed || t('0 วินาที')}

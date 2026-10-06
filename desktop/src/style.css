@@ -1247,23 +1247,14 @@ nav button,
     transition: none !important;
   }
 }
-/* A loading spinner is progress information, not decoration: keep it turning, slower, when motion is reduced
+/* A loading indicator is progress information: keep a gentle trace when motion is reduced
    (Windows "Show animations" off, remote desktops), so a wait never looks frozen. */
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: spin 2.4s linear infinite !important;
   }
-  .goo-body {
-    animation: goo-body 6.4s ease-in-out infinite !important;
-  }
-  .goo-a {
-    animation: goo-a 6.4s ease-in-out infinite !important;
-  }
-  .goo-b {
-    animation: goo-b 6.4s ease-in-out infinite !important;
-  }
-  .goo-c {
-    animation: goo-c 6.4s ease-in-out infinite !important;
+  .thinking-scribble .scribble-stroke {
+    animation: scribble-trace 7.2s linear infinite !important;
   }
 }
 .format-toolbar {

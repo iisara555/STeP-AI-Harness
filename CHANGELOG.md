@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: scribbled thinking motion
+
+- Replace the gooey waiting indicator in chat with original overlapping hand-drawn loops that retrace at different speeds, inspired by the supplied scribble reference. Keep the progress text, elapsed time and stop control.
+- Use theme-aware SVG/CSS with no image assets, animation dependency or per-frame JavaScript. Reduced-motion mode traces slowly without the shape's sway.
+- Verify the running chat, actual stroke motion and reduced-motion behavior with the existing synthetic-provider Electron smoke test. No version bump or release.
+
 ### Desktop: file, credential and local OCR security
 
 - Reject multiply-linked workspace files and existing linked SQLite database/journal files. Use literal Git pathspecs and hide denied filenames, including staged rename sources, from status and diff results.
