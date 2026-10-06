@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-"Word files with pictures can be attached" and "Mac updates install inside the app" below are not published yet. STeP Desktop version 0.5.17 (`desktop/package.json`) contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next two sections, published as `desktop-v0.5.18`: "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
 
 ### Word files with pictures can be attached
 
@@ -20,7 +20,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - **Before:** on a Mac, the update card's button opened the GitHub release page. The person had to download the disk image, drag the app over the old one and get past the "Move to Trash" warning again. macOS's own updater (Squirrel.Mac) installs only updates signed with the same Developer ID, which STeP does not have.
 - **After:** a Mac downloads the update in the background like Windows and shows **รีสตาร์ทเพื่ออัปเดต** (restart to update). STeP fetches the zip for its processor from the update feed and keeps it only when its sha512 matches the feed. When the person restarts, a small script waits for the app to quit, unpacks the zip next to the app, checks the new bundle with `codesign --verify --deep --strict`, swaps it in and opens it. A file the app downloads itself has no quarantine flag, so the new version opens without the warning.
 - Any failure before the swap leaves the installed app as it was and opens it again. When the app cannot be replaced in place (run from the disk image, a translocated copy, or a folder the person cannot write), or the download fails, the card falls back to the release page as before.
-- The update from 0.5.17 to the next version is the first to use this; 0.5.17 itself still opens the release page.
+- Updates from 0.5.18 to later versions use this. Moving from 0.5.17 to 0.5.18 still opens the release page, because 0.5.17 has the old updater.
 - Tests: the update flow with a fake feed; the sha512 check; and, on the macOS CI runners, the real script swapping an ad-hoc signed bundle and refusing a tampered one. Not yet tried as a real update on a real Mac.
 
 ### Antigravity sign-in: paste the code Google shows into STeP
