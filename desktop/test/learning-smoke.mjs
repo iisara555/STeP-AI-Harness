@@ -79,7 +79,7 @@ async function runTask() {
   await expect
     .poll(async () => (await call('snapshot')).sessions.find(s => s.id === session.id)?.status, { timeout: 15000 })
     .toBe('review');
-  return JSON.parse((await readFile(audit, 'utf8')).trim().split('\n').at(-1));
+  return { ...JSON.parse((await readFile(audit, 'utf8')).trim().split('\n').at(-1)), id: session.id };
 }
 try {
   await launch();
@@ -110,7 +110,32 @@ try {
   app = undefined;
   await launch();
   assert.equal((await state()).lessons[0].revisions.at(-1).content.text, marker);
-  assert.equal((await runTask()).learned, true, 'restored lesson survives restart');
+  const restored = await runTask();
+  assert.equal(restored.learned, true, 'restored lesson survives restart');
+  // Phase 5: every turn records which lessons it sent (ids only), ratings come from the answer buttons, and a "needs
+  // fixing" note that restates a lesson in use counts as a repeated correction. The inbox shows it; nothing changes.
+  const before = (await state()).metrics;
+  assert.deepEqual([before.withLessons.answers, before.withoutLessons.answers], [2, 2]);
+  const answer = (await call('snapshot')).sessions.find(s => s.id === restored.id).messages.findIndex(m => m.role === 'assistant');
+  await call('messageFeedback', { id: restored.id, index: answer, rating: 'fix', note: 'Absent fields again: mark them as unknown' });
+  const after = (await state()).metrics;
+  assert.deepEqual(after.withLessons, { answers: 2, good: 0, fix: 1 });
+  assert.deepEqual(
+    after.lessons.map(l => [l.answers, l.tasks, l.fix, l.repeats]),
+    [[2, 2, 1, 1]],
+  );
+  assert.equal(JSON.stringify(after).includes(marker), false, 'metrics carry no lesson text');
+  // A bare "/learn" would pick the skill suggestion; the text after it only prefills a proposal form.
+  await page.locator('.composer textarea').fill('/learn ' + marker);
+  await page.locator('.composer textarea').press('Enter');
+  const inbox = page.getByRole('alertdialog', { name: 'กล่องบทเรียน' });
+  await inbox.waitFor();
+  await expect(inbox.getByText('ผลการใช้บทเรียน (1 บทเรียนยังต้องแก้ซ้ำ)')).toBeVisible();
+  await expect(inbox.locator('.learning-metrics-table tbody tr')).toHaveCount(1);
+  if (process.env.STEP_LEARNING_METRICS_SCREENSHOT) {
+    await inbox.locator('.learning-metrics').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: process.env.STEP_LEARNING_METRICS_SCREENSHOT });
+  }
   const context = (await state()).context;
   // A confirmed lesson becomes a proposal file for a Skill's maintainers: lesson, patch and test case; the Skill itself
   // is not touched.

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { DesktopAPI, MemoryProposal } from './types';
-import type { LessonContent, LearningReviewState, LearningSnapshot } from './learning-types';
+import type { LessonContent, LearningMetrics, LearningReviewState, LearningSnapshot, LearningTally } from './learning-types';
 import { curatorReport, type CuratorFinding } from './learning-curator';
+import { MIN_RATED } from './learning-metrics';
 import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
 import { t } from './i18n';
 
-type Data = LearningSnapshot & { feedback: MemoryProposal[]; review?: LearningReviewState };
+type Data = LearningSnapshot & { feedback: MemoryProposal[]; review?: LearningReviewState; metrics?: LearningMetrics };
 type Edit = { content: LessonContent; evidence: string; lessonId?: string; baseRevision?: number; candidateId?: string };
 const findings = (data: LearningSnapshot) => curatorReport(data);
 function describe(f: CuratorFinding) {
@@ -19,6 +20,83 @@ function describe(f: CuratorFinding) {
   return f.what === 'pending'
     ? t('ข้อเสนอรอตรวจ {0} จาก {1} รายการ ตรวจหรือปฏิเสธบ้างก่อนเต็ม', f.used, f.limit)
     : t('บทเรียน {0} จาก {1} รายการ', f.used, f.limit);
+}
+const rated = (tally: LearningTally) => tally.good + tally.fix;
+function rates(tally: LearningTally) {
+  const count = rated(tally);
+  return count
+    ? t(
+        '{0} คำตอบ ให้คะแนน {1} · ดี {2}% · ต้องแก้ {3}%',
+        tally.answers,
+        count,
+        Math.round((tally.good / count) * 100),
+        Math.round((tally.fix / count) * 100),
+      )
+    : t('{0} คำตอบ ยังไม่มีคะแนน', tally.answers);
+}
+/** Phase 5: how lessons are doing. Signals for the person to judge; it never changes or disables a lesson itself. */
+function LessonResults({ metrics }: { metrics: LearningMetrics }) {
+  const enough = rated(metrics.withLessons) >= MIN_RATED && rated(metrics.withoutLessons) >= MIN_RATED;
+  const repeated = metrics.lessons.filter(l => l.active && l.repeats);
+  return (
+    <details className="learning-metrics" open={repeated.length > 0}>
+      <summary>{repeated.length ? t('ผลการใช้บทเรียน ({0} บทเรียนยังต้องแก้ซ้ำ)', repeated.length) : t('ผลการใช้บทเรียน')}</summary>
+      <p className="small muted">
+        {metrics.since
+          ? t(
+              'นับตั้งแต่ {0} บนเครื่องนี้ คะแนนมาจากปุ่มดี/ต้องแก้ใต้คำตอบ ตัวเลขเป็นสัญญาณให้คุณตัดสิน ไม่ใช่หลักฐานว่า AI เก่งขึ้น',
+              new Date(metrics.since).toLocaleDateString(),
+            )
+          : t('ยังไม่มีงานที่บันทึกผล เริ่มนับเมื่อใช้งานครั้งถัดไป')}
+      </p>
+      {metrics.since && (
+        <ul className="small">
+          <li>
+            {t('ใช้บทเรียน:')} {rates(metrics.withLessons)}
+          </li>
+          <li>
+            {t('ไม่ใช้บทเรียน:')} {rates(metrics.withoutLessons)}
+          </li>
+        </ul>
+      )}
+      {metrics.since && !enough && (
+        <p className="small muted">{t('ยังมีคำตอบที่ให้คะแนนน้อยกว่า {0} ครั้งในแต่ละกลุ่ม ยังเทียบกันไม่ได้', MIN_RATED)}</p>
+      )}
+      {repeated.map(l => (
+        <p key={l.id} className="small" role="note">
+          {t('“{0}” ยังต้องแก้เรื่องเดียวกันซ้ำ {1} ครั้งหลังยืนยัน ลองเสนอแก้บทเรียนให้ชัดขึ้น หรือตรวจคำกระตุ้น', l.name, l.repeats)}
+        </p>
+      ))}
+      {metrics.lessons.length > 0 && (
+        <table className="learning-metrics-table small">
+          <thead>
+            <tr>
+              <th scope="col">{t('บทเรียน')}</th>
+              <th scope="col">{t('ใช้กับคำตอบ (งาน)')}</th>
+              <th scope="col">{t('ดี / ต้องแก้')}</th>
+              <th scope="col">{t('แก้ซ้ำ')}</th>
+              <th scope="col">{t('ใช้ล่าสุด')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.lessons.map(l => (
+              <tr key={l.id} className={l.active ? '' : 'muted'}>
+                <th scope="row">{l.active ? l.name : t('{0} (หยุดใช้แล้ว)', l.name)}</th>
+                <td>
+                  {l.answers} ({l.tasks})
+                </td>
+                <td>
+                  {l.good} / {l.fix}
+                </td>
+                <td>{l.repeats}</td>
+                <td>{l.lastUsed ? new Date(l.lastUsed).toLocaleDateString() : t('ยังไม่ถูกใช้')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </details>
+  );
 }
 const fresh = (text = ''): Edit => ({ content: { name: '', kind: 'preference', trigger: '', text }, evidence: text });
 export function LearningDialog({
@@ -277,6 +355,7 @@ export function LearningDialog({
           </ul>
         </details>
       )}
+      {data?.metrics && <LessonResults metrics={data.metrics} />}
       <h3>{t('บทเรียนและประวัติรุ่น')}</h3>
       {data?.lessons.map(l => {
         const head = l.revisions[l.revisions.length - 1];

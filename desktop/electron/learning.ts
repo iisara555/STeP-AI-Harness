@@ -2,11 +2,23 @@ import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { Store } from './store';
 import { safeMemory } from './memory';
-import type { LessonContent, LearningCandidate, LearningSnapshot, LearnedLesson } from '../src/learning-types';
+import { overlap } from '../src/learning-curator';
+import type {
+  LessonContent,
+  LearningCandidate,
+  LearningRepeat,
+  LearningSnapshot,
+  LearnedLesson,
+  LearningUsage,
+} from '../src/learning-types';
 
 type Saved = Omit<LearningSnapshot, 'context'>;
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
 const current = (lesson: LearnedLesson) => lesson.revisions[lesson.revisions.length - 1];
+// Usage is kept apart from the lessons so recording it never bumps their generation (which aborts a running task).
+const MAX_USES = 2000,
+  MAX_REPEATS = 500,
+  REPEAT_OVERLAP = 0.5;
 const checkedText = (value: unknown, max: number) => {
   if (typeof value !== 'string' || !value.trim() || value.length > max) throw new Error('LEARNING_INVALID');
   return value.trim();
@@ -53,7 +65,7 @@ export class Learning {
     safeMemory([value.name, value.trigger, value.text].join('\n'), this.privacy);
     return value;
   }
-  propose(context: unknown, raw: any, source: LearningCandidate['source'] = 'manual', sessionId?: string) {
+  propose(context: unknown, raw: any, source: LearningCandidate['source'] = 'manual', sessionId?: string, countRepeat = true) {
     const state = this.check(context),
       content = this.content(raw?.content);
     const evidence = safeMemory(checkedText(raw?.evidence, 2000), this.privacy);
@@ -85,6 +97,8 @@ export class Learning {
     const referenced = new Set(state.lessons.flatMap(l => l.revisions.map(r => r.candidateId)));
     state.candidates = state.candidates.filter(c => c.status === 'pending' || referenced.has(c.id)).concat(candidate);
     this.commit(state);
+    // A new lesson typed by the person that restates one already in use means it had to be corrected again.
+    if (countRepeat && !lesson && source === 'manual') this.noteRepeat([content.name, content.text].join('\n'), 'manual');
     return candidate;
   }
   importFeedback(context: unknown, proposal: import('../src/types').MemoryProposal) {
@@ -118,6 +132,7 @@ export class Learning {
         },
         candidate.source,
         candidate.sessionId,
+        false,
       );
     });
   }
@@ -164,6 +179,29 @@ export class Learning {
       at: new Date().toISOString(),
     });
     this.commit(state);
+  }
+  usage(): LearningUsage {
+    return this.store.get<LearningUsage>('learning-usage', this.context()) || { uses: [], repeats: [] };
+  }
+  /** Records which confirmed lessons one turn of a task sent (ids and revisions only). A retried turn replaces its record. */
+  recordUse(sessionId: string, index: number, lessons: { id: string; revision: number }[]) {
+    const usage = this.usage();
+    const last = usage.uses.findLastIndex(u => u.sessionId === sessionId);
+    if (last >= 0 && usage.uses[last].index === index) usage.uses.splice(last, 1);
+    usage.uses.push({ sessionId, index, at: new Date().toISOString(), lessons: lessons.map(l => `${l.id}@${l.revision}`) });
+    this.store.put('learning-usage', this.context(), { ...usage, uses: usage.uses.slice(-MAX_USES) });
+  }
+  /** Counts a human correction against each lesson in use that already covers it. Stores no text. */
+  noteRepeat(text: string, source: LearningRepeat['source']) {
+    const usage = this.usage(),
+      at = new Date().toISOString();
+    const matched = this.snapshot()
+      .lessons.map(lesson => ({ lesson, head: current(lesson) }))
+      .filter(({ head }) => head.content && overlap(text, [head.content.name, head.content.text].join('\n')) >= REPEAT_OVERLAP)
+      .map(({ lesson, head }) => ({ lessonId: lesson.id, revision: head.revision, source, at }));
+    if (!matched.length) return [];
+    this.store.put('learning-usage', this.context(), { ...usage, repeats: [...usage.repeats, ...matched].slice(-MAX_REPEATS) });
+    return matched;
   }
   relevant(query: string) {
     const selected: { id: string; revision: number; name: string; text: string; type: string; scope: string }[] = [];
