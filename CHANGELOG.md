@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: document drafting forms backed by actual Skills
+
+- Add TOR, internal memo, official letter, project proposal and meeting-minutes forms under Tools and the Skill hub. Enter known facts or attach one source, draft with the selected connected AI, then use the existing editor and export controls.
+- Load the selected Skill's actual procedures and mandatory references, supporting document-format Skill and working template through the normal routed WorkService. Retain the contract for revisions/retry; preserve privacy, consent, provenance and Human Authority checks. Missing context never falls back to a generic prompt.
+- Keep missing data as `[รอยืนยัน]`; do not invent document numbers, budgets, legal clauses, resolutions or approvals. Working templates are not verified agency forms and text drafting does not claim exported-file layout checks.
+- Extend `project-plan` with a proposal workflow, synthetic example and four-dimensional eval; remove its completed coverage from `legacyWithoutEvals`. No Skill lifecycle promotion, new model dependency, version bump, release or policy-default change.
+- Verify with synthetic unit/routing tests and Desktop UI/IPC using a local fake AI, including attachment-consent cancellation, editor changes and DOCX export. Live-model writing quality and real agency-form acceptance remain unmeasured.
+
 ### Desktop settings: one style configuration point under General
 
 - Move assistant speaking styles and dialect from Appearance & language to General, alongside answer styles previously selected in Memory.

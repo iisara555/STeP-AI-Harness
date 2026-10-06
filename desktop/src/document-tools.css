@@ -1,0 +1,93 @@
+.document-tools {
+  overflow: auto;
+  padding: 22px 28px;
+}
+.document-tool-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+.document-tool-picker button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  text-align: left;
+  white-space: normal;
+  height: 100%;
+}
+.document-tool-picker button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.document-tool-picker small {
+  font-weight: normal;
+  line-height: 1.5;
+}
+.document-form {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.document-form h2 {
+  margin-bottom: 4px;
+}
+.document-form-options,
+.document-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.document-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.document-form input,
+.document-form textarea,
+.document-form select {
+  width: 100%;
+}
+.document-form textarea {
+  resize: vertical;
+}
+.document-fields .wide {
+  grid-column: 1 / -1;
+}
+.document-skill-info,
+.document-source {
+  margin: 18px 0;
+}
+.document-source-preview {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+.document-source-preview > .icon {
+  float: right;
+}
+.document-source-preview pre {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.document-form footer {
+  margin: 24px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+@media (max-width: 680px) {
+  .document-tools {
+    padding: 16px;
+  }
+  .document-form-options,
+  .document-fields {
+    grid-template-columns: 1fr;
+  }
+}

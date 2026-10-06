@@ -2,6 +2,9 @@
 import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  INVALID_DOCUMENT_TOOL: 'ชนิดเครื่องมือร่างเอกสารไม่ถูกต้อง หรือ Skill ที่เลือกไม่ตรงกับเครื่องมือ',
+  INVALID_DOCUMENT_VARIANT: 'ชนิดเอกสารย่อยไม่ถูกต้อง กรุณาเลือกใหม่',
+  INVALID_DOCUMENT_FIELDS: 'ข้อมูลฟอร์มร่างเอกสารไม่ถูกต้อง กรุณาตรวจช่องที่กรอก',
   LEARNING_INVALID: 'กรุณากรอกชื่อ บทเรียน ที่มา และคำที่ใช้เลือกวิธีทำงานให้ครบ',
   LEARNING_NOT_FOUND: 'ข้อเสนอหรือรุ่นนี้เปลี่ยนไปแล้ว ปิดแล้วเปิดกล่องบทเรียนอีกครั้ง',
   LEARNING_CONFLICT: 'บทเรียนมีรุ่นใหม่แล้ว กรุณาตรวจรุ่นปัจจุบันและเสนออีกครั้ง',

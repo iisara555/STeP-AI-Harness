@@ -1,4 +1,5 @@
 const SECTIONS = [
+  'document_tool_contract',
   'task_state',
   'context_summary',
   'memory_context',

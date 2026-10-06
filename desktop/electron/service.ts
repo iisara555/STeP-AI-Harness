@@ -26,6 +26,8 @@ import { compact, contextBudget, promptTooLong, tokens } from './compact';
 import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
+import { documentTool, type DocumentToolId } from '../src/document-tools';
+import { documentToolRule } from './document-tools';
 import {
   OrganizationKnowledge,
   STRONG_MATCH,
@@ -188,6 +190,7 @@ export function conversationFiles(files: ConversationFile[]) {
 }
 
 export type RunOptions = {
+  documentTool?: DocumentToolId;
   retry?: boolean;
   images?: VisionInput[];
   draftOnly?: boolean;
@@ -300,6 +303,10 @@ export class WorkService {
     options: RunOptions,
     controller: AbortController,
   ) {
+    const selectedDocument = options.documentTool ? documentTool(options.documentTool) : undefined;
+    if (options.documentTool && (!selectedDocument || mode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
+    if (selectedDocument && skill && skill !== selectedDocument.skill) throw new Error('INVALID_DOCUMENT_TOOL');
+    skill = selectedDocument?.skill || skill;
     if (!input.trim() || input.length > 30_000 || attachmentText.length > 100_000) throw new Error('INPUT_LIMIT');
     // Identifiers a person confirmed stay with this run only, so parallel runs never share them.
     const allowed = this.store.session(id).allowedIdentifiers || [];
@@ -423,6 +430,7 @@ export class WorkService {
         session.answers = [];
         session.followUps = [];
         session.skill = skill || undefined;
+        session.documentTool = selectedDocument?.id;
         session.contextStart = session.messages.length;
         delete session.checkpoint;
         delete session.approvedPlan;
@@ -501,6 +509,9 @@ export class WorkService {
       }
       if (blockedRoute(contract) || contract.mode === 'UNAVAILABLE') throw new Error('AUTHORITY_REVIEW_REQUIRED');
       if (contract.readiness?.status === 'unavailable') throw new Error('CONTEXT_UNAVAILABLE');
+      const draftingTool = mode === 'draft' ? documentTool(session.documentTool) : undefined;
+      // A fixed form never falls back to a generic prompt or a neighboring Skill.
+      if (draftingTool && (contract.mode !== 'SKILL' || contract.skill !== draftingTool.skill)) throw new Error('CONTEXT_UNAVAILABLE');
       let retrieved = '';
       // What the AI's own web_search calls returned in this run, for the sources shown under the answer.
       const searched: string[] = [];
@@ -661,6 +672,7 @@ export class WorkService {
             session.answers,
             revising ? session.followUps || [] : [],
             trace.route,
+            draftingTool?.id,
             steps.map((s: any) => s.skill || s.skillId || s.description || ''),
           ]),
         )
@@ -706,6 +718,18 @@ export class WorkService {
           ...(skillPath ? [skillPath] : []),
           ...(refs || []).map((r: any) => (typeof r === 'string' ? r : r.path)).filter(Boolean),
         ];
+        if (draftingTool) {
+          for (const id of draftingTool.supportSkills) {
+            const support = await this.harness.skillMetadata(id);
+            if (!support?.path) throw new Error('CONTEXT_UNAVAILABLE');
+            paths.push(
+              support.path,
+              ...(support.mandatoryReferences || []).map((r: any) => (typeof r === 'string' ? r : r.path)).filter(Boolean),
+            );
+          }
+          paths.push(draftingTool.template);
+        }
+        paths.splice(0, paths.length, ...new Set(paths));
         const instructions = await Promise.all(paths.map(path => this.contextFile(path)));
         skillTitle = general ? '' : /^#\s+(.+)$/m.exec(instructions[0] || '')?.[1]?.trim() || String(skillId || '');
         if (routed.selectedPlaybook?.specPath) {
@@ -739,6 +763,7 @@ export class WorkService {
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
+          draftingTool && documentToolRule(draftingTool.id),
           ...personal(this.store.settings()),
           ...speakingStyleRules(this.store.settings()),
           section('skill_instructions', instructions.join('\n\n')),

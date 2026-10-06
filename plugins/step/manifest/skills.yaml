@@ -168,7 +168,7 @@ skills:
     process: [project.planning]
     service: [incubation-startup, public-sector-innovation]
     path: skills/pm/project-plan/SKILL.md
-    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
+    description: ร่างข้อเสนอโครงการจากข้อมูลต้นเรื่อง วัตถุประสงค์ กิจกรรม งบที่มีหลักฐานและตัวชี้วัด หรือจัดทำแผนปฏิบัติการ WBS, Milestone และ Risk Register
     governance:
       owner: pm
       reviewer: [sit, qs]

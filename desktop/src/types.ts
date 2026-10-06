@@ -1,4 +1,5 @@
 import type { DraftNode } from './draft';
+import type { DocumentToolId } from './document-tools';
 export type Provider = 'openai' | 'claude' | 'gemini' | 'antigravity' | 'compatible' | 'copilot';
 export type EffortOption = { id: string; description?: string };
 export type ModelOption = {
@@ -98,6 +99,8 @@ export type ConversationFile = { name: string; text: string; at: string };
 export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
 export type Proposal = { id: string; text: string; baseRevision: number; sources: string[]; at: string };
 export type Session = {
+  /** The selected form's Skill/template contract, retained for revisions and retry. */
+  documentTool?: DocumentToolId;
   parentId?: string;
   loadedContext?: string[];
   compaction?: { before: number; after: number; method: string; at: string };

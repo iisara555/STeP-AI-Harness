@@ -17,6 +17,7 @@ export const COMMANDS = [
   ['right', 'สลับร่าง', ''],
   ['skills', 'ศูนย์รวม Skill', ''],
   ['receipt', 'ตรวจใบเสร็จก่อนส่ง AFP', ''],
+  ['documents', 'เครื่องมือร่างเอกสาร', ''],
   ['theme-system', 'ธีมตามระบบ', ''],
   ['theme-light', 'ธีมสว่าง', ''],
   ['theme-dark', 'ธีมมืด', ''],

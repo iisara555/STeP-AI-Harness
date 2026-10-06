@@ -1,0 +1,78 @@
+{
+  "skill": "project-plan",
+  "version": 1,
+  "source": "synthetic-2026-10-06",
+  "note": "Routing runs in test/skill-evals.test.js. Model output assertions are not graded in CI. No real project, budget or approval evidence is used.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ร่างข้อเสนอเป็นข้อความทั่วไปหรือแผน Timeline อย่างเดียว ไม่เชื่อมวัตถุประสงค์ กิจกรรม และตัวชี้วัด และเติมวงเงินหรือค่าเป้าหมายที่ต้นทางไม่มี",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-proposal",
+      "dimension": "positive",
+      "team": "pm",
+      "prompt": "ร่างโครงการฝึกทักษะดิจิทัลจากต้นเรื่องนี้ จัดหลักการและเหตุผล วัตถุประสงค์ กิจกรรม งบประมาณ และตัวชี้วัด",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "project-plan"
+      },
+      "outputAssertions": [
+        "ได้ร่างข้อเสนอโครงการครบหัวข้อ ไม่ใช่แค่ WBS/Gantt",
+        "เชื่อมวัตถุประสงค์ กิจกรรม ผลผลิต และตัวชี้วัด",
+        "แยกข้อมูลต้นทาง แหล่งงบที่ตรวจได้ และ source gaps"
+      ]
+    },
+    {
+      "id": "positive-operational-plan",
+      "dimension": "positive",
+      "team": "pm",
+      "prompt": "ทำแผนโครงการจากขอบเขตนี้ แบ่งงาน WBS และ milestone พร้อมความเสี่ยง",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "project-plan"
+      },
+      "outputAssertions": [
+        "ใช้ planning workflow ทำ WBS งวดงาน dependency และความเสี่ยง",
+        "ไม่อ้างงบหรือสถานะอนุมัติจากแม่แบบตัวอย่าง"
+      ]
+    },
+    {
+      "id": "anti-draft-tor",
+      "dimension": "antiTrigger",
+      "team": "afp",
+      "prompt": "ร่าง TOR จ้างบริการจากวัตถุประสงค์ ขอบเขต ผลส่งมอบ และเกณฑ์ตรวจรับนี้",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-government-writing",
+        "notSkill": "project-plan"
+      }
+    },
+    {
+      "id": "collision-official-memo",
+      "dimension": "collision",
+      "team": "ga",
+      "prompt": "ร่างบันทึกข้อความขออนุมัติจัดอบรม เสนอผู้อำนวยการพิจารณา",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "notSkill": "project-plan"
+      }
+    },
+    {
+      "id": "missing-budget-indicators",
+      "dimension": "missingSource",
+      "team": "pm",
+      "prompt": "ร่างโครงการอบรมจากกิจกรรมที่มี แต่ยังไม่มีงบประมาณ จำนวนคน ค่าเป้าหมายตัวชี้วัด และแบบแหล่งทุน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "project-plan"
+      },
+      "outputAssertions": [
+        "คง [รอยืนยัน] สำหรับวงเงิน จำนวนคน ค่าเป้าหมาย และวันที่ ไม่แต่งตัวเลข",
+        "บอกว่าใช้ working template เพราะไม่มีแบบแหล่งทุนที่ตรวจได้",
+        "ระบุว่าการอนุมัติโครงการและงบเป็น Human Authority"
+      ]
+    }
+  ]
+}

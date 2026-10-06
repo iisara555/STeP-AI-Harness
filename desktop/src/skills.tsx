@@ -22,6 +22,14 @@ export const statusTag: Record<string, { label: string; tone: string; hint: stri
 };
 const tools = [
   {
+    id: 'documents',
+    title: 'เครื่องมือร่างเอกสาร',
+    description:
+      'ร่าง TOR บันทึกข้อความ หนังสือราชการ โครงการ และรายงานประชุมด้วย Skill ที่เกี่ยวข้อง กรอกข้อมูลหรือแนบต้นเรื่อง แล้วแก้ไขและส่งออก',
+    owner: 'common',
+    stage: 'ทดลอง',
+  },
+  {
     id: 'receipt',
     title: 'ตรวจใบเสร็จก่อนส่ง AFP',
     description: 'อ่านใบเสร็จด้วย OCR ในเครื่อง ให้คนตรวจทีละช่อง แล้วส่งข้อมูลที่ตรวจแล้วให้ receipt-audit pre-check ต่อ',
@@ -113,8 +121,11 @@ export function SkillsHub({
             </header>
             <p>{t(tool.description)}</p>
             <div className="skill-tags">
-              <span className="tag tool" title={t(statusTag.tool.hint)}>
-                {t(statusTag.tool.label)}
+              <span
+                className="tag tool"
+                title={t(tool.id === 'documents' ? 'ฟอร์มเรียก Skill ที่เกี่ยวข้องโดยตรง พร้อมกฎและแม่แบบ' : statusTag.tool.hint)}
+              >
+                {t(tool.id === 'documents' ? 'ฟอร์มร่างด้วย Skill' : statusTag.tool.label)}
               </span>
               <span className="tag">{t(tool.stage)}</span>
               <span className="tag">{tool.owner.toUpperCase()}</span>

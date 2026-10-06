@@ -209,14 +209,15 @@ skills:
     teams:
       primary: [pm]
       consumers: [imo, sit, linc, pubsec, piti]
-    description: จัดทำและทบทวนแผนโครงการ แผนงานงวด Milestone, Critical Path, RICE Prioritization และ Risk Register
+    description: ร่างข้อเสนอโครงการจากข้อมูลต้นเรื่อง วัตถุประสงค์ กิจกรรม งบที่มีหลักฐานและตัวชี้วัด หรือจัดทำแผนปฏิบัติการ WBS, Milestone และ Risk Register
     intent: [plan, review, create]
-    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ, timeline โครงการ, ไทม์ไลน์โครงการ, ทำ timeline]
+    triggers: [แผนงาน, project plan, milestone, แผนโครงการ, gantt, กำหนดส่ง, ไทม์ไลน์, wbs, critical path, rice scoring, แบ่งงานโครงการ, กะเวลางานโครงการ, timeline โครงการ, ไทม์ไลน์โครงการ, ทำ timeline, ร่างโครงการ, ข้อเสนอโครงการ, เขียนโครงการ]
     paths: ["**/project*/**", "**/plan/**", "**/PM/**"]
     fileTypes: [xlsx, csv, md]
     requires: [project_scope, timeline]
     scope:
       allow:
+        - ร่างข้อเสนอโครงการเพื่อพิจารณา โดยเปิดเผยข้อมูลและแหล่งที่ขาด
         - แตก Work Breakdown Structure (WBS)
         - กำหนด Milestone และ Dependency
         - คำนวณ Critical Path และ RICE Scoring

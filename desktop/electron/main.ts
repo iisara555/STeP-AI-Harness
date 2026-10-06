@@ -31,6 +31,7 @@ import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
+import { documentTool } from '../src/document-tools';
 import { Coordinator } from './coordinator';
 import { Automations, connectionBinding } from './cron';
 import { Mcp } from './mcp';
@@ -2266,14 +2267,18 @@ async function main() {
         const workflow = isWorkflow(input.workflow) ? input.workflow : undefined;
         const workMode =
           !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
+        const draftingTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
+        if (input.documentTool !== undefined && (!draftingTool || workMode !== 'draft')) throw new Error('INVALID_DOCUMENT_TOOL');
         const coordinated = input.coordinator === true;
+        if (draftingTool && coordinated) throw new Error('INVALID_DOCUMENT_TOOL');
         if (coordinated && (!policyState.policy.features.coordinator || workMode !== 'draft' || input.skill || input.retry))
           throw new Error('COORDINATOR_DISABLED');
         if (workMode === 'image' && (sendingConnection.mode !== 'api' || sendingConnection.provider === 'claude'))
           throw new Error('IMAGE_API_REQUIRED');
         const selectedImageModel = input.imageModel ? inputText(input.imageModel, 120) : undefined;
         // A directly invoked Skill must be one the router can reach.
-        const skill = input.skill ? inputText(input.skill, 80) : '';
+        const skill = draftingTool?.skill || (input.skill ? inputText(input.skill, 80) : '');
+        if (draftingTool && input.skill && input.skill !== draftingTool.skill) throw new Error('INVALID_DOCUMENT_TOOL');
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
           throw new Error('SKILL_NOT_ROUTED');
         if (Array.isArray(input.attachments) && input.attachments.length > 1) throw new Error('ONE_SOURCE_PER_RUN');
@@ -2341,6 +2346,7 @@ async function main() {
                 id,
                 text,
                 skill,
+                draftingTool?.id || '',
                 workMode,
                 input.imageModel || '',
                 String(coordinated),
@@ -2409,7 +2415,12 @@ async function main() {
                   // Reviewed text handed over by an in-app tool (Terminal, Browser, Files) or the receipt page.
                   ...(sourceText ? ['ผลจากเครื่องมือในแอป'] : []),
                 ],
-                { retry: input.retry === true, images: selected.flatMap(a => a.images || []), ...(workflow ? { workflow } : {}) },
+                {
+                  retry: input.retry === true,
+                  images: selected.flatMap(a => a.images || []),
+                  ...(workflow ? { workflow } : {}),
+                  ...(draftingTool ? { documentTool: draftingTool.id } : {}),
+                },
               )
         ).catch(error => {
           diagnose('run-rejected', { code: errorCode(error) });

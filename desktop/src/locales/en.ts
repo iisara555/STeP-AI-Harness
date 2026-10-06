@@ -1,6 +1,8 @@
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
+import { documentToolsEn } from './document-tools-en';
 export const en: Record<string, string> = {
+  ...documentToolsEn,
   'ดำเนินการค่าพาหนะผ่านกระบวนการจัดซื้อจัดจ้าง และตรวจยอดรวมไม่เกิน 10,000 บาทต่อคนขับรถต่อกิจกรรม':
     'Use the procurement process for vehicle hire and check the aggregate limit of 10,000 baht per driver per activity',
   'ตรวจผลรวมทุกรายการในหมวดเดียวกัน ไม่เกิน 10,000 บาทต่อหมวด ไม่ใช่ตรวจเฉพาะใบนี้':

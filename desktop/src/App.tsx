@@ -38,6 +38,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { ReceiptApp } from './receipt';
+import { DocumentTools, type DocumentAttachment, type DocumentForm } from './document-tool-app';
+import { documentRequest, documentTool, type DocumentToolId } from './document-tools';
 import { SkillsHub, toolCount } from './skills';
 import { SetupWizard } from './setup';
 import { Tour } from './tour';
@@ -141,7 +143,12 @@ export default function App() {
     [exportPath, setExportPath] = useState('');
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
-  const [view, setView] = useState<'chat' | 'receipt' | 'skills'>('chat');
+  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents'>('chat');
+  const [documentsOpened, setDocumentsOpened] = useState(false);
+  const [consumedDocumentTask, setConsumedDocumentTask] = useState('');
+  useEffect(() => {
+    if (view === 'documents') setDocumentsOpened(true);
+  }, [view]);
   const [wizard, setWizard] = useState(false),
     [tour, setTour] = useState(false);
   const [skills, setSkills] = useState<SkillEntry[] | null>(null),
@@ -177,6 +184,7 @@ export default function App() {
     imageModel: string;
     retry?: boolean;
     coordinator?: boolean;
+    documentTool?: DocumentToolId;
   } | null>(null);
   // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -486,6 +494,51 @@ export default function App() {
     await refresh();
     await start(s.id, text, [], undefined, undefined, allowIds, sourceText, 'draft');
   }
+  async function createDocumentTask(tool: DocumentToolId) {
+    if (!snapshot?.connections.some(c => c.id === connectionId && c.ready)) {
+      needAi();
+      return null;
+    }
+    return api!.call('create', { connectionId, project: documentTool(tool)!.title });
+  }
+  async function attachDocument(tool: DocumentToolId): Promise<DocumentAttachment | null> {
+    const task = await createDocumentTask(tool);
+    if (!task) return null;
+    const file = await api!.call('attach', { id: task.id });
+    return file ? { sessionId: task.id, file } : null;
+  }
+  async function draftDocument(tool: DocumentToolId, form: DocumentForm) {
+    if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
+    const request = documentRequest(tool, form.values, form.variant);
+    const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
+    if (!id) return;
+    await save();
+    await api!.call('sessionConnection', { id, connectionId });
+    setWorkMode('draft');
+    setView('chat');
+    setSettings(false);
+    setSelected(id);
+    setQuery('');
+    setFiles([]);
+    setPendingSource('');
+    setRight(true);
+    setToolTab('output');
+    await refresh();
+    await start(
+      id,
+      request.text,
+      form.source ? [form.source.file.id] : [],
+      undefined,
+      undefined,
+      undefined,
+      request.sourceText,
+      'draft',
+      undefined,
+      undefined,
+      false,
+      tool,
+    );
+  }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
     await save();
@@ -589,6 +642,7 @@ export default function App() {
     selectedImageModel: string = imageModel,
     retry?: boolean,
     coordinator: boolean = coordinated && mode === 'draft' && !skill && !retry,
+    documentTool?: DocumentToolId,
   ) {
     runningId.current = id;
     currentId.current = id;
@@ -614,6 +668,7 @@ export default function App() {
         imageModel: selectedImageModel,
         retry,
         coordinator,
+        documentTool,
         ...(mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
       });
     } catch (e) {
@@ -640,6 +695,7 @@ export default function App() {
         imageModel: selectedImageModel,
         retry,
         coordinator,
+        documentTool,
         ...result.consent,
       });
       return;
@@ -647,6 +703,7 @@ export default function App() {
     if (result.started && result.warning) notify(t('ส่งแล้ว ข้อความนี้มีคำที่อาจเป็นข้อมูลอ่อนไหว อย่าใส่ชื่อหรือรหัสของบุคคลในงานนี้'));
     else if (result.started && result.masked?.length) notify(t('ระบบปิดบังก่อนส่งให้ AI: {0}', result.masked.join(', ')));
     if (result.started) {
+      if (documentTool) setConsumedDocumentTask(id);
       setForcedSkill('');
       setQuery('');
       setPendingSource('');
@@ -820,6 +877,10 @@ export default function App() {
     receipt: () => {
       setSettings(false);
       setView('receipt');
+    },
+    documents: () => {
+      setSettings(false);
+      setView('documents');
     },
     'theme-system': () => void setTheme('system'),
     'theme-light': () => void setTheme('light'),
@@ -1036,6 +1097,16 @@ export default function App() {
             <div className="session-group tools-group">{t('เครื่องมือ')}</div>
             <nav>
               <button
+                className={view === 'documents' && !settings ? 'nav-active' : ''}
+                onClick={() => {
+                  setSettings(false);
+                  setView('documents');
+                }}
+              >
+                <FileText size={17} />
+                {t('เครื่องมือร่างเอกสาร')}
+              </button>
+              <button
                 data-tour="skills"
                 className={view === 'skills' && !settings ? 'nav-active' : ''}
                 onClick={() => {
@@ -1097,11 +1168,13 @@ export default function App() {
                 <strong>
                   {settings
                     ? t('ตั้งค่าพื้นที่ทำงาน')
-                    : view === 'receipt'
-                      ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-                      : view === 'skills'
-                        ? t('ศูนย์รวม Skill')
-                        : session?.title || t('เริ่มต้นงานที่อยากทำ')}
+                    : view === 'documents'
+                      ? t('เครื่องมือร่างเอกสาร')
+                      : view === 'receipt'
+                        ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+                        : view === 'skills'
+                          ? t('ศูนย์รวม Skill')
+                          : session?.title || t('เริ่มต้นงานที่อยากทำ')}
                 </strong>
                 {/* Like Claude Desktop, task commands live in a menu next to the title. */}
                 {!settings && view === 'chat' && session && (
@@ -1212,11 +1285,13 @@ export default function App() {
               <small>
                 {settings
                   ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
-                  : view === 'receipt'
-                    ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
-                    : view === 'skills'
-                      ? t('Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing')
-                      : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                  : view === 'documents'
+                    ? t('กรอกข้อมูลหรือต้นเรื่อง ให้ AI ร่างด้วย Skill แล้วแก้ไขและส่งออก')
+                    : view === 'receipt'
+                      ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
+                      : view === 'skills'
+                        ? t('Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing')
+                        : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -1238,6 +1313,21 @@ export default function App() {
                 onError={e => notify(explainError(e), 'error')}
                 handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
                 connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
+              />
+            </div>
+          )}
+          {documentsOpened && (
+            <div style={{ display: view === 'documents' && !settings ? 'contents' : 'none' }}>
+              <DocumentTools
+                connections={snapshot.connections}
+                connectionId={connectionId}
+                chooseConnection={setConnectionId}
+                attach={attachDocument}
+                draft={draftDocument}
+                consumedTask={consumedDocumentTask}
+                busy={running}
+                onError={e => notify(explainError(e), 'error')}
+                openAiSettings={openAiSettings}
               />
             </div>
           )}
@@ -1263,8 +1353,13 @@ export default function App() {
               />
             </div>
           )}
-          {settings ? null : view === 'receipt' ? null : view === 'skills' ? (
-            <SkillsHub skills={skills} team={myTeam} onUse={useSkill} onOpenTool={() => setView('receipt')} />
+          {settings ? null : view === 'receipt' || view === 'documents' ? null : view === 'skills' ? (
+            <SkillsHub
+              skills={skills}
+              team={myTeam}
+              onUse={useSkill}
+              onOpenTool={id => setView(id === 'documents' ? 'documents' : 'receipt')}
+            />
           ) : (
             <>
               <div className="conversation" aria-live="polite">
@@ -2342,6 +2437,7 @@ export default function App() {
                   ask.imageModel,
                   ask.retry,
                   ask.coordinator,
+                  ask.documentTool,
                 ),
               );
             }}
