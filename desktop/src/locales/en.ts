@@ -409,6 +409,10 @@ export const en: Record<string, string> = {
   'ลงชื่อเข้าใช้บริการ AI': 'Sign in to the AI service',
   'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง':
     'Sign in and approve in your browser. If the service shows an authorization code, paste it here; if it reconnects automatically, this window closes on its own',
+  'ในเบราว์เซอร์ เลือกบัญชี Google แล้วกด "อนุญาต" (Allow)': 'In the browser, choose your Google account and press Allow',
+  'หน้าเว็บ Antigravity จะแสดงรหัส (authorization code) ให้กดคัดลอก': 'The Antigravity page shows an authorization code. Copy it',
+  'กลับมาวางรหัสในช่องนี้ แล้วกดยืนยัน ภายใน 1 นาที': 'Paste the code here and press Confirm within a minute',
+  รหัสจากหน้าเว็บ: 'Code from the page',
   ยืนยัน: 'Confirm',
   ยกเลิก: 'Cancel',
   ตรวจข้อความแนบ: 'Check attached text',
@@ -1386,6 +1390,8 @@ export const en: Record<string, string> = {
   'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม':
     "No sign-in or code within 5 minutes. Press Connect again when you're ready",
   'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง': 'Sign-in failed. Please try again',
+  'ลงชื่อ Google ใน Antigravity สำเร็จแล้ว แต่ STeP ยังอ่านการลงชื่อนั้นไม่ได้ ปิดหน้าต่าง Terminal แล้วกดเชื่อมต่อใหม่ ถ้ายังไม่ได้ให้ส่ง log วินิจฉัยให้ผู้ดูแล':
+    "You're signed in to Google in Antigravity, but STeP can't read that sign-in yet. Close the Terminal window and connect again. If it still fails, send the diagnostic log to your administrator",
   'Google ไม่รับ code ที่วาง 3 ครั้ง กดปุ่ม Copy ในหน้า Google แล้ววางใหม่ภายในไม่กี่นาที':
     'Google rejected the pasted code 3 times. Press Copy on the Google page and paste it again within a few minutes',
   ยกเลิกการเชื่อมต่อแล้ว: 'Connection cancelled',
@@ -1789,10 +1795,12 @@ export const en: Record<string, string> = {
   'กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity': 'Checking the Google sign-in in Antigravity',
   'เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี แล้วกด "อนุญาต" (Allow) ภายใน 1 นาที เสร็จแล้ว STeP จะทดสอบให้เอง':
     'Google sign-in opened in your browser. Pick your account and press Allow within a minute. STeP runs the test when you are done',
-  'หน้าลงชื่อในเบราว์เซอร์หมดเวลา STeP จะเปิดหน้าต่างลงชื่อของ Antigravity ให้แทน':
-    'The browser sign-in timed out. STeP will open the Antigravity sign-in window instead',
-  'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ เสร็จแล้ว STeP จะทดสอบให้เอง':
-    'The Antigravity sign-in window will open. Press Enter once (Google OAuth), then sign in with Google in the browser. STeP runs the test when you are done',
+  'ยังลงชื่อไม่สำเร็จ STeP จะเปิดหน้าลงชื่อ Google ให้อีกครั้ง': 'Not signed in yet. STeP will open the Google sign-in page again',
+  'เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี กด "อนุญาต" (Allow) แล้วคัดลอกรหัสที่หน้าเว็บแสดง มาวางในช่องของ STeP ภายใน 1 นาที':
+    'Google sign-in is open in your browser. Choose your account, press Allow, then copy the code the page shows and paste it into STeP within a minute',
+  'ได้รับรหัสแล้ว กำลังตรวจการลงชื่อ': 'Code received. Checking the sign-in',
+  'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ ถ้าหน้าเว็บแสดงรหัส ให้คัดลอกมาวางในหน้าต่างนั้น (คลิกขวาหรือ Ctrl+V บน Windows, Command+V บน Mac) แล้วกด Enter เสร็จแล้ว STeP จะทดสอบให้เอง':
+    'The Antigravity sign-in window will open. Press Enter once (Google OAuth), then sign in with Google in the browser. If the page shows a code, copy it, paste it into that window (right-click or Ctrl+V on Windows, Command+V on Mac) and press Enter. STeP runs the test when you are done',
   'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ':
     'Could not install the Antigravity CLI. Press connect again, or install it from the guide',
   'ดาวน์โหลด Antigravity CLI ไม่สำเร็จ ตรวจอินเทอร์เน็ตหรือการเข้าถึง storage.googleapis.com แล้วลองใหม่':

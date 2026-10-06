@@ -195,6 +195,20 @@ test(
     await handle!.close();
     await handle!.exited;
 
+    // agy reads the code from a terminal only; STeP types it in through the pseudo-terminal.
+    const reading = await fakeHeadlessAgy(
+      `if (!process.stdin.isTTY) { console.error('stdin is not a terminal'); process.exit(2); }
+console.error('Authentication required. Please visit the URL to log in:\\n  ${SIGN_IN}\\n\\nOr, paste the authorization code here and press Enter:');
+process.stdin.once('data', d => { require('fs').writeFileSync(__dirname + '/code.txt', String(d).trim()); process.exit(0); });`,
+    );
+    const typed = await openAntigravityBrowserSignIn(reading.executable, join(reading.dir, 'cwd'), async () => {});
+    assert.ok(typed?.sendCode, 'the pasted code has a way in');
+    typed!.sendCode!('4/0Ab-synthetic_code');
+    typed!.sendCode!('bad code; rm -rf ~');
+    await typed!.exited;
+    assert.equal(await readFile(join(reading.dir, 'code.txt'), 'utf8'), '4/0Ab-synthetic_code');
+    assert.equal(await openAntigravityBrowserSignIn(reading.executable, join(reading.dir, 'cwd'), async () => {}, 1000, 'win32'), null);
+
     const silent = await fakeHeadlessAgy("console.error('Error: authentication required.'); process.exit(1);");
     assert.equal(
       await openAntigravityBrowserSignIn(silent.executable, join(silent.dir, 'cwd'), async () => assert.fail('nothing to open')),
@@ -247,6 +261,7 @@ test('the browser sign-in comes first and the terminal is only the fallback', as
       openSignIn,
       openBrowserSignIn: browser(Promise.resolve()),
       signedIn: answers(false, false, false, true),
+      browserAttempts: 1,
       pollMs: 1,
     },
     new AbortController().signal,
@@ -264,4 +279,89 @@ test('the browser sign-in comes first and the terminal is only the fallback', as
     new AbortController().signal,
   );
   assert.equal(terminal, 2, 'no sign-in page printed: straight to the terminal');
+});
+
+test('the code Google shows is asked for and typed into the waiting CLI, with a fresh page when it fails', async () => {
+  const context = { cwd: tmpdir(), env: {} };
+  const sent: string[] = [];
+  let opened = 0,
+    dropped = 0,
+    signedInNow = false;
+  const progress: string[] = [];
+  await antigravitySignIn(
+    'agy',
+    context,
+    {
+      progress: t => progress.push(t),
+      openSignIn: async () => assert.fail('no terminal needed'),
+      openBrowserSignIn: async () => {
+        opened++;
+        let exit!: () => void;
+        const exited = new Promise<void>(done => (exit = done));
+        return {
+          close: () => exit(),
+          exited,
+          sendCode: code => {
+            sent.push(code);
+            // The first code is wrong: agy gives up; the second signs in.
+            if (sent.length === 1) exit();
+            else signedInNow = true;
+          },
+        };
+      },
+      askForCode: async () => (opened === 1 ? 'wrong' : 'right'),
+      dropCode: () => {
+        dropped++;
+      },
+      signedIn: async () => signedInNow,
+      pollMs: 1,
+    },
+    new AbortController().signal,
+  );
+  assert.deepEqual(sent, ['wrong', 'right']);
+  assert.equal(opened, 2, 'a new Google page for the second try');
+  assert.ok(dropped >= 2, 'the code box closes after each try');
+  assert.ok(progress.some(t => /คัดลอกรหัส/.test(t)));
+
+  await assert.rejects(
+    antigravitySignIn(
+      'agy',
+      context,
+      {
+        progress: () => {},
+        openSignIn: async () => assert.fail('cancel stops, no terminal'),
+        openBrowserSignIn: async () => ({ close: () => {}, exited: new Promise(() => {}), sendCode: () => {} }),
+        askForCode: async () => null,
+        signedIn: async () => false,
+        pollMs: 1,
+      },
+      new AbortController().signal,
+    ),
+    /CANCELLED/,
+  );
+});
+
+test('stops waiting when only the real profile sees the sign-in', async () => {
+  let profileChecks = 0;
+  await assert.rejects(
+    antigravitySignIn(
+      'agy',
+      { cwd: tmpdir(), env: {} },
+      {
+        progress: () => {},
+        openSignIn: async () => () => {},
+        openBrowserSignIn: async () => null,
+        signedIn: async () => false,
+        signedInWithProfile: async () => {
+          profileChecks++;
+          return true;
+        },
+        pollMs: 1,
+        timeoutMs: 60_000,
+      },
+      new AbortController().signal,
+    ),
+    /ANTIGRAVITY_SIGNIN_HIDDEN/,
+  );
+  assert.equal(profileChecks, 2, 'checked twice, every third poll');
 });

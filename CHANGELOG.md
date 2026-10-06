@@ -6,7 +6,22 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help"; it is not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide" below are not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### Antigravity sign-in: paste the code Google shows into STeP
+
+- **Before (0.5.16):** after Allow, Google sent the browser to Antigravity's page, which shows an authorization code to paste into the CLI. The CLI ran hidden with no input, so there was nowhere to paste it and sign-in stalled. Reported on a Mac on 2026-10-06.
+- **After, Mac:** STeP runs the hidden `agy -p` behind a pseudo-terminal (`/usr/bin/script`) and opens a box, **รหัสจากหน้าเว็บ**, with three numbered steps. The pasted code is typed into the waiting CLI. A wrong or late code opens a fresh Google page, up to three tries, then the terminal window.
+- **After, Windows:** there is no pseudo-terminal to borrow without a native module, so STeP opens the Antigravity sign-in window straight away. Its progress text now says to paste the code there (right-click or Ctrl+V) and press Enter.
+- **Mac kept saying "connecting" after a successful sign-in (reported 2026-10-06):** STeP checks the sign-in with `agy models` in an isolated home, which hides the real profile's sign-in on macOS. The isolated home now links `~/Library/Keychains` back to the real one (the link is removed before the folder is deleted) and copies agy's token file (`~/.gemini/antigravity-cli/antigravity-oauth-token`, used when the keyring is unavailable) when it exists. If the real profile is signed in but STeP still cannot see it, the connection stops after two checks with a Thai message instead of waiting five minutes.
+- Checked with the real agy 1.2.17 on Linux: a code typed through the pseudo-terminal reaches Google's token exchange (a fake code returns `invalid_grant`). Not yet tried with a real Google account on a Mac or Windows.
+
+### Mac disk image: a Thai first-open guide
+
+- **Before:** on macOS 15 and later, opening STeP Desktop for the first time showed a dialog with **Move to Trash**, and the disk image said nothing about what to do. The only guidance was in the README.
+- **After:** the disk image window holds **อ่านก่อนเปิดครั้งแรก.html** next to the app and the Applications folder. It opens in the browser and explains, in Thai, both dialogs staff can see: "Apple could not verify…" (Privacy & Security → Open Anyway) and "is damaged" (one `xattr -cr` command in Terminal). The README's macOS section says the same.
+- The dialog itself stays: removing it needs an Apple Developer ID certificate and notarization, which the project does not have.
+- The installer build now runs `codesign --verify --deep --strict` on the app inside the disk image, so a broken ad-hoc signature (which turns the dialog into "is damaged") fails the build instead of reaching staff.
 
 ### Antigravity sign-in opens the browser, and the receipt page speaks plainly
 

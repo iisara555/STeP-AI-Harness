@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { realpathSync } from 'node:fs';
+import { chmod, copyFile, mkdir, mkdtemp, rm, symlink, unlink, writeFile } from 'node:fs/promises';
+import { existsSync, realpathSync } from 'node:fs';
+import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { scrub, explainRuntimeFailure } from './diagnostics';
@@ -13,8 +14,42 @@ export const ANTIGRAVITY_DENY = ['read_file', 'write_file', 'read_url', 'execute
   action => `${action}(*)`,
 );
 
+/** The employee's real home, where agy keeps its sign-in. */
+function profileHome() {
+  try {
+    return userInfo().homedir;
+  } catch {
+    return homedir();
+  }
+}
+
+const TOKEN_FILE = join('.gemini', 'antigravity-cli', 'antigravity-oauth-token');
+
+/**
+ * Lets an isolated run see the sign-in made with the real profile. agy keeps it in the OS keyring, or in a token file
+ * under the real home when the keyring is unavailable or timed out. macOS looks for the login keychain under
+ * $HOME/Library/Keychains, which the isolated HOME hides, so that one folder is linked back to the real one.
+ */
+async function shareSignIn(home: string, profile: string, platform: NodeJS.Platform) {
+  if (!profile || resolve(profile) === resolve(home)) return;
+  try {
+    await copyFile(join(profile, TOKEN_FILE), join(home, TOKEN_FILE));
+    await chmod(join(home, TOKEN_FILE), 0o600);
+  } catch {
+    /* No token file: the keyring holds the sign-in. */
+  }
+  const keychains = join(profile, 'Library', 'Keychains');
+  if (platform === 'darwin' && existsSync(keychains)) {
+    await mkdir(join(home, 'Library'), { recursive: true });
+    await symlink(keychains, join(home, 'Library', 'Keychains')).catch(() => {});
+  }
+}
+
 /** Native credentials stay in the OS keyring. Configuration and request state are isolated per invocation. */
-export async function antigravityHome(context: Pick<ProviderContext, 'cwd' | 'env' | 'system'>) {
+export async function antigravityHome(
+  context: Pick<ProviderContext, 'cwd' | 'env' | 'system'>,
+  profile = { home: profileHome(), platform: process.platform },
+) {
   const base = resolve(context.cwd);
   const home = await mkdtemp(join(base, 'antigravity-'));
   const cwd = join(home, 'workspace');
@@ -22,6 +57,8 @@ export async function antigravityHome(context: Pick<ProviderContext, 'cwd' | 'en
   const agent = join(home, '.gemini', 'config', 'agents', AGENT, 'agent.md');
   const close = async () => {
     if (dirname(resolve(home)) !== base || !home.startsWith(join(base, 'antigravity-'))) throw new Error('INVALID_RUNTIME_HOME');
+    // Remove the link to the real keychain folder first, so nothing below it can ever be deleted.
+    await unlink(join(home, 'Library', 'Keychains')).catch(() => {});
     await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   };
   try {
@@ -50,6 +87,7 @@ export async function antigravityHome(context: Pick<ProviderContext, 'cwd' | 'en
         (context.system || 'Answer the supplied request as a text-only assistant. Do not use tools.'),
       { mode: 0o600 },
     );
+    await shareSignIn(home, profile.home, profile.platform);
   } catch (error) {
     await close().catch(() => {});
     throw error;

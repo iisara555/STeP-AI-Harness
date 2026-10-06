@@ -90,6 +90,16 @@ jobs:
         run: |
           test -s "release/${{ matrix.feed }}"
           grep -q "^version: $(node -p "require('./package.json').version")$" "release/${{ matrix.feed }}"
+      - name: Check the Mac disk image signature and first-open guide
+        if: runner.os == 'macOS'
+        run: |
+          DMG=$(ls release/*.dmg | head -1)
+          MNT=$(mktemp -d)
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
+          trap 'hdiutil detach "$MNT" -force || true' EXIT
+          # A broken signature makes macOS say the app "is damaged" instead of offering Open Anyway.
+          codesign --verify --deep --strict --verbose=2 "$MNT/STeP Desktop.app"
+          test -s "$MNT/อ่านก่อนเปิดครั้งแรก.html"
       - name: Launch the packaged Mac app from the disk image
         if: runner.os == 'macOS'
         run: |

@@ -3708,3 +3708,9 @@ nav .count {
   font-weight: 500;
   overflow-wrap: anywhere;
 }
+
+.auth-code-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  line-height: 1.6;
+}

@@ -48,6 +48,8 @@ export const connectNotes: Record<string, string> = {
   CONNECT_TEST_TIMEOUT: 'ลงชื่อสำเร็จ แต่ AI ไม่ตอบภายใน 2 นาที มักเกิดจากโควตาเต็มหรือบัญชียังไม่เปิดสิทธิ์ใช้งาน',
   LOGIN_TIMEOUT: 'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม',
   LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง',
+  ANTIGRAVITY_SIGNIN_HIDDEN:
+    'ลงชื่อ Google ใน Antigravity สำเร็จแล้ว แต่ STeP ยังอ่านการลงชื่อนั้นไม่ได้ ปิดหน้าต่าง Terminal แล้วกดเชื่อมต่อใหม่ ถ้ายังไม่ได้ให้ส่ง log วินิจฉัยให้ผู้ดูแล',
   LOGIN_CODE_REJECTED: 'Google ไม่รับ code ที่วาง 3 ครั้ง กดปุ่ม Copy ในหน้า Google แล้ววางใหม่ภายในไม่กี่นาที',
   CANCELLED: 'ยกเลิกการเชื่อมต่อแล้ว',
   API_KEY_REQUIRED: 'กรุณาเพิ่ม API key',
