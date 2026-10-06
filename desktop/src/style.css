@@ -3507,6 +3507,23 @@ nav .count {
   background: var(--paper);
   font-size: 12.5px;
 }
+.receipt-trial table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.receipt-trial th,
+.receipt-trial td {
+  padding: 7px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.receipt-trial summary {
+  cursor: pointer;
+  font-weight: 600;
+}
 .receipt-compliance-head {
   display: flex;
   flex-wrap: wrap;

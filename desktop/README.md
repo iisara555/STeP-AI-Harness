@@ -76,6 +76,25 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 
 ### AI reading of the receipt image
 
+For a local pilot inside Desktop, open **ตรวจใบเสร็จ AFP**, install OCR there if needed,
+then select **ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)** before choosing a document.
+This per-read option requires local OCR and suppresses automatic AI image reading and
+candidate filtering. It preserves the initial OCR field suggestions, review flags and
+elapsed recognition time (including model initialization, excluding the file picker).
+Edit the fields against the source, including absent values, then check the existing
+source-comparison checkbox. The trial panel compares the frozen reading with those
+human-checked values. Independent AI image reading remains an explicit button under
+the existing policy and consent; its request time includes the consent dialog.
+
+**บันทึกผลทดลอง (JSON)** exports the readings, human answers and per-field exact/review
+outcomes. Real input images and trial reports must be outside Git checkouts; the pilot
+checks Git ancestors and resolves symlinks for input and export. Reports stay on the
+local machine unless the person explicitly uses an AI/chat action. Comparison is NFC
+and trimmed text exact match, so date/money formatting differences can count as
+differences; this panel does not replace the benchmark's canonical scoring. RAM is
+explicitly unmeasured. A single document does not close the acceptance gate or prove
+model accuracy. Record employee-machine RAM separately for the broader pilot.
+
 With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, the Receipt page also sends the receipt image to the connected AI, after a one-time consent. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads the fields independently of the OCR, and the page compares the two field by field; a person still confirms every field. Without the OCR component, the AI reading alone is available. With `checks.privacy` on, no image is sent.
 
 The page also shows the document type (from the AI or the printed heading) and a checklist for the chosen claim category. Each item names its source: AFP circulars, general payment-document elements to confirm with AFP, or "no source yet, ask AFP". The checklist prepares documents; it is not an approval.

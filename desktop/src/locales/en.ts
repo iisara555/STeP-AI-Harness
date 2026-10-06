@@ -1,6 +1,35 @@
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 export const en: Record<string, string> = {
+  'ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)': 'Local OCR trial (for the next selected receipt)',
+  'อ่านด้วย OCR ในเครื่องก่อน เก็บผลก่อนแก้และเวลาอ่านไว้ให้เทียบกับค่าที่คุณตรวจแล้ว AI จะทำงานเมื่อคุณกดเรียกเอง':
+    'Read with local OCR first and keep its original values and timing for comparison with your checked values. AI runs only when you request it.',
+  'ผลทดลอง OCR': 'OCR trial results',
+  'ผลทดลอง OCR · ก่อนแก้เทียบกับค่าที่คนตรวจ': 'OCR trial: original reading compared with human-checked values',
+  'เวลา OCR {0} วินาที · รวมการโหลดโมเดลถ้ามี · ยังไม่ได้วัด RAM':
+    'OCR time: {0} seconds, including model initialization if needed. RAM has not been measured.',
+  'เวลา AI {0} วินาที (รวมเวลายืนยันส่งภาพ)': 'AI time: {0} seconds (including image consent)',
+  ช่อง: 'Field',
+  'OCR ก่อนแก้': 'Original OCR',
+  'AI อ่านภาพ': 'AI image reading',
+  ค่าที่คนตรวจ: 'Human-checked value',
+  'ผล OCR': 'OCR result',
+  รอยืนยัน: 'Awaiting confirmation',
+  ตรง: 'Exact match',
+  ต่าง: 'Different',
+  เตือนให้ตรวจ: 'Review flagged',
+  'OCR ตรง {0}/7 ช่อง · ต่าง {1} · ต่างแต่ไม่เตือน {2} · เตือนช่องที่ตรง {3}':
+    'OCR matches: {0}/7 fields. Differences: {1}. Unflagged differences: {2}. Flagged matches: {3}.',
+  'แก้ค่าตามภาพ รวมถึงช่องที่ไม่มีค่า แล้วติ๊กตรวจทั้งหมด จึงจะคำนวณผลทดลอง':
+    'Correct values against the image, including absent fields, then confirm all fields to calculate trial results.',
+  'เทียบข้อความตรงตัว โดยคงเลขศูนย์นำหน้าและรูปแบบวันที่/เงินไว้ รูปแบบต่างกันอาจนับว่าต่าง ผลใบเดียวไม่ยืนยันความแม่นยำหรือการผ่านเกณฑ์':
+    'Exact text comparison preserves leading zeros and date/money formatting. Different formats may count as differences. One document does not establish accuracy or acceptance.',
+  บันทึกผลทดลองในเครื่องแล้ว: 'Trial results saved locally',
+  'บันทึกผลทดลอง (JSON)': 'Save trial results (JSON)',
+  'รายงานมีข้อมูลจากเอกสารจริง เลือกเก็บนอก Git repo และดูแลตามข้อกำหนดองค์กร':
+    "Reports contain document data. Save outside Git repositories and follow your organization's retention rules.",
+  'ข้อมูลทดลอง OCR ต้องอยู่นอก Git repo กรุณาเลือกโฟลเดอร์ส่วนตัวบนเครื่อง':
+    'OCR trial data must stay outside Git repositories. Choose a private folder on your machine.',
   กำลังโหลด: 'Loading',
   'ที่มา:': 'Source:',
   กล่องบทเรียน: 'Learning inbox',

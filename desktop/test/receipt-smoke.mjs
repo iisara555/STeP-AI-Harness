@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 
 const image = resolve(process.argv[2]),
-  out = process.argv[3] || 'release/qa';
+  out = process.argv[3] || (await mkdtemp(join(tmpdir(), 'step-receipt-qa-')));
 await mkdir(out, { recursive: true });
 const lines = [
   'ใบเสร็จรับเงิน',
@@ -105,6 +105,46 @@ try {
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();
   await page.screenshot({ path: join(out, 'receipt-ready.png') });
+  // The Desktop pilot freezes the local reading before edits and requires a fresh source comparison.
+  await page.getByLabel('ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)').check();
+  await page.getByRole('button', { name: 'ตรวจใบใหม่' }).click();
+  const trial = page.getByLabel('ผลทดลอง OCR');
+  await trial.waitFor();
+  assert.equal(await page.getByRole('button', { name: 'บันทึกผลทดลอง (JSON)' }).isDisabled(), true);
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('108.00');
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
+  await trial.getByText(/OCR ตรง 6\/7 ช่อง/).waitFor();
+  const trialPath = resolve(out, 'receipt-trial.json');
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+  }, trialPath);
+  await page.getByRole('button', { name: 'บันทึกผลทดลอง (JSON)' }).click();
+  await page.getByText('บันทึกผลทดลองในเครื่องแล้ว', { exact: true }).waitFor();
+  const pilot = JSON.parse(await readFile(trialPath, 'utf8'));
+  assert.equal(pilot.ocr.fields.total.value, '107.00');
+  assert.equal(pilot.fields.total.human.value, '108.00');
+  assert.equal(pilot.fields.total.ocr.match, false);
+  assert.equal(pilot.summary.ocr.errors, 1);
+  assert.equal(pilot.vision, null);
+  assert.equal(pilot.acceptanceGate, 'OPEN');
+  assert.ok(pilot.ocr.elapsedMs > 0);
+  // Verify the actual IPC export guard rejects the checkout before writing the report.
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+  }, resolve('receipt-trial-forbidden.json'));
+  const denied = await page.evaluate(async draft => {
+    try {
+      await window.step.call('ocrTrialSave', { draft });
+      return '';
+    } catch (error) {
+      return String(error);
+    }
+  }, pilot);
+  assert.match(denied, /OCR_TRIAL_REPO_PATH/);
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
+  assert.equal(await page.getByRole('button', { name: 'บันทึกผลทดลอง (JSON)' }).isDisabled(), true);
+  await trial.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(out, 'receipt-trial.png') });
   console.log('Receipt mini app smoke passed with a fake local OCR service.');
 } finally {
   await app.close();

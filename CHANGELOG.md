@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: local OCR trial and human-reviewed field report
+
+- Add an opt-in local OCR trial to the Receipt page: install/read within Desktop, preserve the initial field suggestions and review flags, and show recognition time and differences against human-checked values.
+- Suppress automatic AI image reading and candidate filtering for trial reads; independent vision remains an explicit action under existing policy and consent. Editing withdraws confirmation and disables trial export until rechecked.
+- Export a private JSON pilot report with unverified machine readings, human source comparison, exact-match/review outcomes and an open acceptance gate. Reject trial inputs/exports inside Git checkouts, including symlinks; RAM remains explicitly unmeasured.
+- Synthetic unit and fake-OCR Desktop IPC/UI checks only. No real-document model accuracy, Windows/macOS hardware acceptance, version bump, release, OCR registry integration or policy-default change.
+
 ### Receipt-audit: four-dimensional eval coverage and synthetic worked outputs
 
 - Add positive, anti-trigger, collision and missing-source evals covering extraction uncertainty, arithmetic mismatch, AFP authority and missing current finance rules.

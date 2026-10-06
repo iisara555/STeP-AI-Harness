@@ -86,6 +86,7 @@ const allowed = new Set([
   'ocrResolve',
   'receiptVision',
   'ocrSave',
+  'ocrTrialSave',
   'send',
   'cancel',
   'pin',

@@ -54,6 +54,7 @@ import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
+import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
@@ -1967,7 +1968,7 @@ async function main() {
       case 'ocrRead': {
         const health = await ocr.health();
         // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
-        if (!health.running && !receiptVisionAllowed()) throw new Error('OCR_UNAVAILABLE');
+        if (!health.running && (input.localOnly === true || !receiptVisionAllowed())) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
           title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
@@ -1975,6 +1976,7 @@ async function main() {
         });
         if (picked.canceled) return null;
         const path = picked.filePaths[0];
+        if (input.localOnly === true) await assertPrivateTrialPath(path);
         if (!health.running) {
           const bytes = await readFile(path);
           if (bytes.length > 25 * 1024 * 1024) throw new Error('ATTACH_TOO_LARGE');
@@ -1984,12 +1986,14 @@ async function main() {
           const preview = type && bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : '';
           return { name: basename(path), preview, result: null, visionOnly: true };
         }
+        const started = performance.now();
         const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
+        const elapsedMs = performance.now() - started;
         lastReceipt = { name: basename(path), path, extension: read.extension, bytes: read.bytes };
         // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
         const type = previewTypes[read.extension];
         const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
-        return { name: basename(path), preview, result: read.result };
+        return { name: basename(path), preview, result: read.result, elapsedMs };
       }
       case 'ocrResolve': {
         if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
@@ -2099,16 +2103,22 @@ async function main() {
           ocrResolving = false;
         }
       }
+      case 'ocrTrialSave':
       case 'ocrSave': {
+        const trial = method === 'ocrTrialSave';
         const text = JSON.stringify(input.draft ?? null, null, 2);
         if (!input.draft || typeof input.draft !== 'object' || text.length > 2_000_000) throw new Error('INVALID_INPUT');
+        if (trial && (input.draft.schema !== 'step-receipt-trial/v1' || input.draft.checked !== true)) throw new Error('INVALID_INPUT');
         const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const saved = await dialog.showSaveDialog(window, {
-          title: tm('บันทึกร่างการตรวจใบเสร็จ'),
-          defaultPath: join(store.settings().workspace || app.getPath('documents') || tmpdir(), `receipt-review-${date}.json`),
+          title: tm(trial ? 'บันทึกผลทดลอง OCR ในเครื่อง' : 'บันทึกร่างการตรวจใบเสร็จ'),
+          defaultPath: trial
+            ? join(app.getPath('documents'), `ocr-trial-${date}.json`)
+            : join(store.settings().workspace || app.getPath('documents') || tmpdir(), `receipt-review-${date}.json`),
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
         if (saved.canceled || !saved.filePath) return null;
+        if (trial) await assertPrivateTrialPath(saved.filePath);
         await writeFile(saved.filePath, text, 'utf8');
         exportPaths.add(saved.filePath);
         return { path: saved.filePath };

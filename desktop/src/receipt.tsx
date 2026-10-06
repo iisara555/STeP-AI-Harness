@@ -32,6 +32,7 @@ import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import { SectionArt } from './illustration';
 import { receiptSourceText } from './receipt-source';
 import { receiptProvenance, type ExtractionMethod } from './extraction-provenance';
+import { trialReading, trialReport, type TrialReading } from './receipt-trial';
 import { localized, t } from './i18n';
 
 type MappingCandidate = {
@@ -214,6 +215,10 @@ export function ReceiptApp({
     // Fields the app filled from a low-score OCR candidate or the AI, which the person has not edited yet.
     [guessed, setGuessed] = useState<Record<string, 'ocr' | 'ai'>>({});
   const [origins, setOrigins] = useState<Record<string, ExtractionMethod>>({});
+  const [trialMode, setTrialMode] = useState(false);
+  const [trialOcr, setTrialOcr] = useState<TrialReading | null>(null);
+  const [trialVision, setTrialVision] = useState<TrialReading | null>(null);
+  const pilot = trialOcr ? trialReport(trialOcr, trialVision, values, allChecked, `receipt:${doc?.sourceId}`) : null;
   const confirmed = useMemo(
     () => (allChecked ? Object.fromEntries(review.fieldKeys.map(k => [k, true])) : {}) as Record<string, boolean>,
     [allChecked],
@@ -278,7 +283,7 @@ export function ReceiptApp({
   const guessCount = Object.keys(guessed).filter(k => String(values[k] || '').trim()).length;
 
   async function read() {
-    const read: Doc | null = await call('ocrRead');
+    const read: (Doc & { elapsedMs?: number }) | null = await call('ocrRead', { localOnly: trialMode });
     if (!read) return;
     const extracted = read.visionOnly ? null : review.extractReceipt(read.result);
     const nextValues = Object.fromEntries(review.fieldKeys.map(k => [k, extracted?.fields[k]?.value || '']));
@@ -306,6 +311,26 @@ export function ReceiptApp({
     setVision(null);
     setZoom(false);
     setTypeOverride('');
+    setTrialVision(null);
+    setTrialOcr(
+      trialMode && extracted
+        ? trialReading(
+            nextValues,
+            review.fieldKeys.filter(k => {
+              const field = extracted.fields[k];
+              return (
+                Boolean(nextGuessed[k]) ||
+                !nextValues[k] ||
+                field.mappingStatus === 'ambiguous' ||
+                extracted.records.some(line => line.needsReview && (field.sourceTexts || []).includes(line.text))
+              );
+            }),
+            read.elapsedMs || 0,
+          )
+        : null,
+    );
+    // A local pilot never calls a provider automatically. The independent AI button remains explicit.
+    if (trialMode) return;
     // The second, independent reading by a vision model, compared with the OCR field by field below.
     if (status?.vision && connectionId) await readWithAi(nextValues, nextGuessed);
     // Without the image reading, the AI still sorts the OCR candidates into the fields (OCR text only, masked).
@@ -318,9 +343,18 @@ export function ReceiptApp({
       await aiFilter(nextValues, nextGuessed, extracted.afpMapping).catch(() => undefined);
   }
   async function readWithAi(current = values, currentGuessed = guessed) {
+    const started = performance.now();
     const reading = await call('receiptVision', { connectionId });
     if (!reading || reading.cancelled) return;
     setVision(reading);
+    if (trialOcr)
+      setTrialVision(
+        trialReading(
+          Object.fromEntries(review.fieldKeys.map(k => [k, reading.fields?.[k]?.value || ''])),
+          review.fieldKeys.filter(k => !reading.fields?.[k]?.value),
+          performance.now() - started,
+        ),
+      );
     // A field the OCR left empty, or only guessed from a low-score candidate, takes the AI's reading (still a guess
     // to look at); a field the OCR read with confidence keeps its value and shows the AI's reading beside it when they differ.
     const next = { ...current },
@@ -651,6 +685,15 @@ export function ReceiptApp({
         </p>
       )}
 
+      <label className="receipt-hint">
+        <input type="checkbox" checked={trialMode} disabled={Boolean(busy)} onChange={e => setTrialMode(e.target.checked)} />
+        {t('ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)')}
+      </label>
+      {trialMode && (
+        <p className="small muted receipt-hint">
+          {t('อ่านด้วย OCR ในเครื่องก่อน เก็บผลก่อนแก้และเวลาอ่านไว้ให้เทียบกับค่าที่คุณตรวจแล้ว AI จะทำงานเมื่อคุณกดเรียกเอง')}
+        </p>
+      )}
       {!doc ? (
         <div className="receipt-empty">
           <SectionArt scene="receipt" className="receipt-illustration" />
@@ -660,11 +703,14 @@ export function ReceiptApp({
             <br />
             {t('ระบบกรอกให้ทุกช่องที่อ่านได้ คุณเทียบกับต้นฉบับ แก้ที่ผิด แล้วติ๊กยืนยันครั้งเดียว')}
           </p>
-          <button disabled={!(ready || (status?.vision && connectionId)) || Boolean(busy)} onClick={() => void run('read', read)}>
+          <button
+            disabled={!(trialMode ? ready : ready || (status?.vision && connectionId)) || Boolean(busy)}
+            onClick={() => void run('read', read)}
+          >
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
             {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
           </button>
-          {status?.vision && (
+          {status?.vision && !trialMode && (
             <p className="small muted">
               {ready
                 ? t('อ่าน 2 ทาง: OCR ในเครื่อง และ AI อ่านภาพแยกกัน แล้วเทียบผลทีละช่อง')
@@ -738,6 +784,89 @@ export function ReceiptApp({
             </details>
           </section>
           <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
+            {pilot && (
+              <details open className="receipt-compliance receipt-trial" aria-label={t('ผลทดลอง OCR')}>
+                <summary>{t('ผลทดลอง OCR · ก่อนแก้เทียบกับค่าที่คนตรวจ')}</summary>
+                <p className="small muted">
+                  {t('เวลา OCR {0} วินาที · รวมการโหลดโมเดลถ้ามี · ยังไม่ได้วัด RAM', (pilot.ocr.elapsedMs / 1000).toFixed(2))}
+                  {pilot.vision && ' · ' + t('เวลา AI {0} วินาที (รวมเวลายืนยันส่งภาพ)', (pilot.vision.elapsedMs / 1000).toFixed(2))}
+                </p>
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t('ช่อง')}</th>
+                        <th>{t('OCR ก่อนแก้')}</th>
+                        {pilot.vision && <th>{t('AI อ่านภาพ')}</th>}
+                        <th>{t('ค่าที่คนตรวจ')}</th>
+                        <th>{t('ผล OCR')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {review.fieldKeys.map(k => {
+                        const row = pilot.fields[k as ReceiptField];
+                        return (
+                          <tr key={k}>
+                            <th>{labels[k]}</th>
+                            <td>{row.ocr.value || '—'}</td>
+                            {pilot.vision && (
+                              <td>
+                                {row.vision?.value || '—'}
+                                {row.vision?.match !== null && (row.vision?.match ? ' ✓' : ' ✕')}
+                              </td>
+                            )}
+                            <td>{row.human.value || '—'}</td>
+                            <td>
+                              {row.ocr.match === null ? t('รอยืนยัน') : row.ocr.match ? t('ตรง') : t('ต่าง')}
+                              {row.ocr.needsReview && ' · ' + t('เตือนให้ตรวจ')}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pilot.summary ? (
+                  <p className="small">
+                    {t(
+                      'OCR ตรง {0}/7 ช่อง · ต่าง {1} · ต่างแต่ไม่เตือน {2} · เตือนช่องที่ตรง {3}',
+                      pilot.summary.ocr.exact,
+                      pilot.summary.ocr.errors,
+                      pilot.summary.ocr.missedErrors,
+                      pilot.summary.ocr.extraWarnings,
+                    )}
+                  </p>
+                ) : (
+                  <p className="small muted">{t('แก้ค่าตามภาพ รวมถึงช่องที่ไม่มีค่า แล้วติ๊กตรวจทั้งหมด จึงจะคำนวณผลทดลอง')}</p>
+                )}
+                <p className="small muted">
+                  {t(
+                    'เทียบข้อความตรงตัว โดยคงเลขศูนย์นำหน้าและรูปแบบวันที่/เงินไว้ รูปแบบต่างกันอาจนับว่าต่าง ผลใบเดียวไม่ยืนยันความแม่นยำหรือการผ่านเกณฑ์',
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="quiet"
+                  disabled={!allChecked || Boolean(busy)}
+                  onClick={() =>
+                    void run('trial-save', async () => {
+                      const saved = await call('ocrTrialSave', {
+                        draft: { ...pilot, source_id: doc.sourceId, created_at: new Date().toISOString() },
+                      });
+                      if (saved)
+                        notify(t('บันทึกผลทดลองในเครื่องแล้ว'), 'success', {
+                          label: t('เปิดโฟลเดอร์'),
+                          run: () => call('reveal', { path: saved.path }),
+                        });
+                    })
+                  }
+                >
+                  <Save size={15} />
+                  {t('บันทึกผลทดลอง (JSON)')}
+                </button>
+                <p className="small muted">{t('รายงานมีข้อมูลจากเอกสารจริง เลือกเก็บนอก Git repo และดูแลตามข้อกำหนดองค์กร')}</p>
+              </details>
+            )}
             <div className="receipt-progress" role="status">
               <div className="receipt-progress-head">
                 <strong>
