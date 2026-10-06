@@ -3512,6 +3512,34 @@ nav .count {
   border-collapse: collapse;
   font-size: 12px;
 }
+.receipt-outcome > strong {
+  display: block;
+  font-size: 15px;
+}
+.receipt-outcome dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 14px 0;
+}
+.receipt-outcome dt {
+  color: var(--muted);
+}
+.receipt-outcome dd {
+  margin: 0;
+}
+.receipt-next-actions {
+  padding-left: 20px;
+  line-height: 1.7;
+}
+.receipt-field-evidence {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.receipt-field-evidence summary {
+  cursor: pointer;
+  color: var(--muted);
+}
 .receipt-trial th,
 .receipt-trial td {
   padding: 7px;

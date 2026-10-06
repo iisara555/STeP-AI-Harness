@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop receipt review: outcome first, automatic form filling, one final confirmation
+
+- Lead with document usability, detected type, a source-linked expense-category suggestion and next steps. Read item descriptions from vision or explicit OCR labels; never infer a purchase from the shop name or invent an approved project budget.
+- Format source-backed Thai digits, valid dates and monetary amounts for the existing OCR form. Preserve missing amounts, leading zeros, raw readings and alternatives; collapse OCR evidence, reread tools, the full checklist and pilot controls.
+- Keep one final source-comparison confirmation for all populated fields and the expense description. Editing description, purpose, type or category withdraws confirmation; category suggestions remain recommendations, and transcription confirmation never resolves missing policy or approves payment.
+- Add synthetic workflow/provenance tests and fake-OCR Desktop UI/IPC coverage. No real-document accuracy claim, new OCR dependency, policy-default change, version bump, release or OCR registry integration.
+
 ### Desktop: local OCR trial and human-reviewed field report
 
 - Add an opt-in local OCR trial to the Receipt page: install/read within Desktop, preserve the initial field suggestions and review flags, and show recognition time and differences against human-checked values.

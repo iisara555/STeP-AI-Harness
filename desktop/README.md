@@ -76,6 +76,24 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 
 ### AI reading of the receipt image
 
+The receipt page leads with document usability, detected type, a suggested expense
+category and next steps. OCR and optional vision fill the existing form; source-backed
+Thai digits, valid dates and money are formatted without filling absent values. Vision
+also transcribes expense item descriptions. The local fallback uses explicit item
+labels, never the merchant name. Category suggestions reference the registered AFP
+circular and remain recommendations after human checking (for example, drinking water
+can suggest B10; generic drinks cannot). Mixed categories or insufficient purpose stay
+unresolved. BV suggestions require a date on/after the registered 1 September 2026 change.
+The receipt alone cannot identify an approved project budget. Rules not represented
+in the registered source must be confirmed with AFP; no live policy validation or
+payment approval is claimed.
+
+Review/correct the populated form, then use the single existing source-comparison
+checkbox. There are no per-field confirmation requirements. Editing an expense
+description, purpose, type or category withdraws the confirmation too. Raw evidence,
+alternative readings, reread controls, the complete checklist and pilot tools are
+available in collapsed details. Saving and chat handoff are optional subsequent actions.
+
 For a local pilot inside Desktop, open **ตรวจใบเสร็จ AFP**, install OCR there if needed,
 then select **ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)** before choosing a document.
 This per-read option requires local OCR and suppresses automatic AI image reading and

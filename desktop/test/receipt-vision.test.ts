@@ -9,6 +9,16 @@ const withCheckDigit = (twelve: string) => {
 };
 const TAX_ID = withCheckDigit('010555012345');
 
+test('vision transcribes item descriptions without creating a project, budget or category field', () => {
+  const reading = parseVisionReading(
+    JSON.stringify({ fields: {}, expenseDescription: 'ค่าน้ำดื่ม', claimCategory: 'B10', budget: 'INVENTED' }),
+  );
+  assert.equal(reading.expenseDescription, 'ค่าน้ำดื่ม');
+  assert.equal('budget' in reading, false);
+  assert.equal('claimCategory' in reading, false);
+  assert.equal(parseVisionReading('{"fields":{}}').expenseDescription, '');
+});
+
 test('parseVisionReading keeps the seven fields, converts Thai digits and drops the rest', () => {
   const reading = parseVisionReading(
     'Here it is:\n```json\n' +

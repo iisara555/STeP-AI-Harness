@@ -19,6 +19,7 @@ const lines = [
   'ยอดก่อนภาษี 100.00',
   'ภาษีมูลค่าเพิ่ม 7.00',
   'ยอดสุทธิ 107.00',
+  'รายการ ค่าน้ำดื่ม',
 ];
 const ocr = createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -63,12 +64,16 @@ try {
   await page.getByLabel('ยอดรวมที่ชำระ').waitFor();
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
+  assert.equal(await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).inputValue(), 'ค่าน้ำดื่ม');
+  const outcome = page.getByLabel('สรุปการใช้ใบเสร็จ');
+  await outcome.getByText('B10', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).count(), 1);
   await page.getByText('ยังต้องตรวจหรือแก้เพิ่ม').waitFor();
   await page.screenshot({ path: join(out, 'receipt-review.png') });
   // One confirmation covers every field and the flagged line: the verdict flips to ready, never to "approved".
   assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), true);
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();
+  await page.getByText('ตรวจยืนยันข้อมูลแล้ว').waitFor();
   assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), false);
   const saved = resolve(out, 'receipt-provenance.json');
   await app.evaluate(({ dialog }, path) => {
@@ -84,6 +89,11 @@ try {
   assert.equal(checkedDraft.fields.total.verification, 'human-source-comparison');
   assert.equal(checkedDraft.ocr.provenance, 'EXTRACTED_UNVERIFIED');
   assert.equal(checkedDraft.afp_mapping.fields.total.candidates[0].provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(checkedDraft.expense_description.provenance, 'SOURCE_FACT');
+  assert.equal(checkedDraft.compliance.claim_category, 'B');
+  assert.equal(checkedDraft.compliance.category_suggestion.code, 'B10');
+  assert.equal(checkedDraft.compliance.category_suggestion.provenance, 'AI_RECOMMENDATION');
+  assert.equal(checkedDraft.compliance.assessment.paymentApproved, false);
   // Editing a field after confirming clears the confirmation.
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.50');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
@@ -103,9 +113,30 @@ try {
   assert.equal(editedDraft.fields.total.verification, null);
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await page.getByText('พร้อมให้ AFP ตรวจ').waitFor();
+  await page.getByText('ตรวจยืนยันข้อมูลแล้ว').waitFor();
+  await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).fill('ค่าเครื่องดื่ม');
+  assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
+  await outcome.getByText('ยังระบุหมวดจากรายการนี้ไม่ได้').waitFor();
+  await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).fill('ค่าน้ำดื่ม');
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
+  await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();
+  await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('other');
+  assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
+  await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('auto');
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
+  await page.getByLabel('ประเภทเอกสาร', { exact: true }).selectOption('invoice_or_quotation');
+  await outcome.getByText('ยังใช้แทนหลักฐานรับเงินไม่ได้', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
+  await page.getByLabel('ประเภทเอกสาร', { exact: true }).selectOption('receipt');
+  await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
+  await page.getByLabel('หมายเหตุการเบิก', { exact: true }).fill('ใช้ในกิจกรรมสังเคราะห์');
+  assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
+  await page.getByLabel('หมายเหตุการเบิก', { exact: true }).fill('');
+  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.screenshot({ path: join(out, 'receipt-ready.png') });
   // The Desktop pilot freezes the local reading before edits and requires a fresh source comparison.
+  await page.getByText('เครื่องมือทดลองและวัดผล OCR', { exact: true }).click();
   await page.getByLabel('ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)').check();
   await page.getByRole('button', { name: 'ตรวจใบใหม่' }).click();
   const trial = page.getByLabel('ผลทดลอง OCR');

@@ -4,6 +4,26 @@ import { receiptProvenance } from '../src/extraction-provenance';
 import { ocrAttachmentReport, ocrAttachmentSource } from '../electron/ocr-attachment';
 import { receiptSourceText } from '../src/receipt-source';
 
+test('expense descriptions keep source comparison separate from a suggested claim category', () => {
+  const draft = receiptProvenance({
+    source_id: 'SYN-DESC',
+    fields: {},
+    expense_description: { value: 'ค่าน้ำดื่ม', checked: true, input_origin: 'vision' },
+    vision_check: { fields: {}, expense_description: { value: 'ค่าน้ำดื่ม' } },
+    compliance: { category_suggestion: { code: 'B10', provenance: 'AI_RECOMMENDATION' } },
+  });
+  assert.equal(draft.expense_description.provenance, 'SOURCE_FACT');
+  assert.equal(draft.expense_description.verification, 'human-source-comparison');
+  assert.equal(draft.vision_check.expense_description.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(draft.compliance.category_suggestion.provenance, 'AI_RECOMMENDATION');
+  assert.equal(
+    receiptProvenance({ ...draft, expense_description: { ...draft.expense_description, value: 'ค่าหนังสือ' } }).expense_description
+      .provenance,
+    'EXTRACTED_UNVERIFIED',
+  );
+  assert.equal(receiptProvenance({ ...draft, source_id: 'SYN-OTHER' }).expense_description.provenance, 'EXTRACTED_UNVERIFIED');
+});
+
 test('only the checked selected value becomes SOURCE_FACT, alternatives remain unverified', () => {
   const draft = {
     source_id: 'SYN-01',

@@ -16,28 +16,25 @@ export function receiptProvenance(input: unknown): any {
     reviewed_value: null,
     reviewed_source_ref: null,
   });
-  draft.fields = Object.fromEntries(
-    Object.entries(draft.fields || {}).map(([key, value]) => {
-      const field: any = value && typeof value === 'object' ? value : { value: '' };
-      const checked =
-        field.checked === true &&
-        typeof field.value === 'string' &&
-        Boolean(field.value.trim()) &&
-        (field.reviewed_value === undefined || field.reviewed_value === field.value) &&
-        (field.reviewed_source_ref === undefined || field.reviewed_source_ref === sourceRef);
-      return [
-        key,
-        {
-          ...unverified(field, field.input_origin || 'ocr'),
-          checked,
-          provenance: checked ? 'SOURCE_FACT' : field.input_origin === 'manual' ? 'USER_INPUT' : 'EXTRACTED_UNVERIFIED',
-          verification: checked ? 'human-source-comparison' : null,
-          reviewed_value: checked ? field.value : null,
-          reviewed_source_ref: checked ? sourceRef : null,
-        },
-      ];
-    }),
-  );
+  const selectedValue = (value: any) => {
+    const field: any = value && typeof value === 'object' ? value : { value: '' };
+    const checked =
+      field.checked === true &&
+      typeof field.value === 'string' &&
+      Boolean(field.value.trim()) &&
+      (field.reviewed_value === undefined || field.reviewed_value === field.value) &&
+      (field.reviewed_source_ref === undefined || field.reviewed_source_ref === sourceRef);
+    return {
+      ...unverified(field, field.input_origin || 'ocr'),
+      checked,
+      provenance: checked ? 'SOURCE_FACT' : field.input_origin === 'manual' ? 'USER_INPUT' : 'EXTRACTED_UNVERIFIED',
+      verification: checked ? 'human-source-comparison' : null,
+      reviewed_value: checked ? field.value : null,
+      reviewed_source_ref: checked ? sourceRef : null,
+    };
+  };
+  draft.fields = Object.fromEntries(Object.entries(draft.fields || {}).map(([key, value]) => [key, selectedValue(value)]));
+  if (draft.expense_description) draft.expense_description = selectedValue(draft.expense_description);
   if (draft.afp_mapping) {
     draft.afp_mapping.fields = Object.fromEntries(
       Object.entries(draft.afp_mapping.fields || {}).map(([key, value]) => {
@@ -64,6 +61,9 @@ export function receiptProvenance(input: unknown): any {
     draft.vision_check = {
       ...unverified(draft.vision_check, 'vision'),
       fields: Object.fromEntries(Object.entries(draft.vision_check.fields || {}).map(([key, value]) => [key, unverified(value, 'vision')])),
+      ...(draft.vision_check.expense_description
+        ? { expense_description: unverified(draft.vision_check.expense_description, 'vision') }
+        : {}),
     };
   if (draft.ai_filter)
     draft.ai_filter = {

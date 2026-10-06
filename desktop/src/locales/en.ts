@@ -1,6 +1,49 @@
 // English UI text keyed by the Thai source text (see src/i18n.ts). Generated once from the UI and then
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 export const en: Record<string, string> = {
+  'ดำเนินการค่าพาหนะผ่านกระบวนการจัดซื้อจัดจ้าง และตรวจยอดรวมไม่เกิน 10,000 บาทต่อคนขับรถต่อกิจกรรม':
+    'Use the procurement process for vehicle hire and check the aggregate limit of 10,000 baht per driver per activity',
+  'ตรวจผลรวมทุกรายการในหมวดเดียวกัน ไม่เกิน 10,000 บาทต่อหมวด ไม่ใช่ตรวจเฉพาะใบนี้':
+    'Check all expenses in the same category against the 10,000-baht category limit, rather than this receipt alone',
+  'ดำเนินการผ่าน 5/10000 และแนบรูปถ่ายของไหว้ที่วางหน้าศาลเรียบร้อยแล้ว':
+    'Use the 5/10000 process and attach a photograph of the offerings already placed at the shrine',
+  'หากเป็นการซื้อโปรแกรมหรือสิทธิ์เว็บไซต์ ต้องได้รับอนุมัติ ICT Committee ก่อน ผ่านทีม IQI ที่ cmu.to/it-request':
+    'For software or website rights, obtain ICT Committee approval first through IQI at cmu.to/it-request',
+  ต้องเตรียมเอกสารหรือยืนยันเงื่อนไขเพิ่มเติม: 'Prepare supporting documents or confirm additional requirements',
+  'รายการค่าใช้จ่าย: {0}': 'Expense description: {0}',
+  'หมวดที่แนะนำ: {0}': 'Suggested category: {0}',
+  ยังระบุหมวดจากรายการนี้ไม่ได้: 'Category cannot yet be determined from these items',
+  'ผลตรวจ: {0}': 'Assessment: {0}',
+  'เครื่องมือทดลองและวัดผล OCR': 'OCR trial and measurement tools',
+  สรุปการใช้ใบเสร็จ: 'Receipt use summary',
+  หมวดที่แนะนำ: 'Suggested category',
+  งบที่ใช้: 'Budget',
+  'ต้องอ้างอิงโครงการหรืองบที่ได้รับอนุมัติ ใบเสร็จอย่างเดียวระบุไม่ได้':
+    'Requires an approved project or budget source; a receipt alone cannot determine it',
+  ทำอะไรต่อ: 'Next steps',
+  'เติมวัตถุประสงค์การใช้จ่ายเฉพาะเมื่อรายการยังแยกหมวดไม่ได้ หรือให้ AFP ระบุหมวด':
+    'Add the expense purpose only if the items do not establish a category, or ask AFP to classify it',
+  'เก็บใบเสร็จต้นฉบับและเตรียมเอกสารตามรายการด้านบนส่ง AFP': 'Keep the original receipt and prepare the listed documents for AFP',
+  'ดูข้อมูลที่ระบบกรอก แก้เฉพาะจุดที่ผิด แล้วตรวจยืนยันทั้งหมดครั้งเดียวด้านล่าง':
+    'Review the filled values, correct errors, then confirm everything once below',
+  'หมวดเป็นข้อเสนอจากรายการและแนวปฏิบัติ AFP ที่มีในระบบ ไม่ใช่การอนุมัติงบหรือเบิกจ่าย':
+    'The category is a suggestion based on expense items and registered AFP guidance. It does not approve a budget or payment.',
+  'อ่านซ้ำหรือดูรายละเอียด AI': 'Read again or view AI details',
+  'แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด': 'Edit type/category and view all checks',
+  ใช้หมวดที่ระบบแนะนำ: 'Use the suggested category',
+  รายการค่าใช้จ่าย: 'Expense description',
+  'ระบบอ่านจากรายการบนใบเสร็จ ใช้แนะนำหมวดโดยไม่เดาจากชื่อร้าน':
+    'Read from receipt items to suggest a category without guessing from the shop name',
+  'OCR กับ AI อ่านต่างกัน ตรวจช่องนี้กับภาพ': 'OCR and AI disagree. Check this field against the image.',
+  ดูหลักฐานและค่าอื่นของช่องนี้: 'View evidence and alternatives for this field',
+  'ทุกช่องด้านบน รวมรายการค่าใช้จ่าย ตรวจครั้งเดียว ไม่ต้องยืนยันทีละช่อง':
+    'All fields above, including the expense description. Confirm once, without individual field confirmations.',
+  ตรวจยืนยันข้อมูลแล้ว: 'Transcription confirmed',
+  ยังใช้แทนหลักฐานรับเงินไม่ได้: 'Cannot yet serve as proof of payment',
+  ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก: 'Correct or complete the data before using it for a claim',
+  'รอ AFP ยืนยันเงื่อนไขการใช้เอกสาร': 'Awaiting AFP confirmation of document requirements',
+  รอคุณตรวจยืนยันข้อมูลครั้งเดียว: 'Awaiting your single transcription confirmation',
+  'พร้อมเตรียมชุดเบิกให้ AFP ตรวจ': 'Ready to prepare the claim documents for AFP review',
   'ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)': 'Local OCR trial (for the next selected receipt)',
   'อ่านด้วย OCR ในเครื่องก่อน เก็บผลก่อนแก้และเวลาอ่านไว้ให้เทียบกับค่าที่คุณตรวจแล้ว AI จะทำงานเมื่อคุณกดเรียกเอง':
     'Read with local OCR first and keep its original values and timing for comparison with your checked values. AI runs only when you request it.',

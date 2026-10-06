@@ -11,13 +11,14 @@ export type FieldMatch = 'agree' | 'differ' | 'ai-only' | 'ocr-only' | 'empty';
 
 export const RECEIPT_VISION_SYSTEM = `You read Thai and English receipts and tax invoices from images for an expense pre-check. You only transcribe what is printed; you never guess, complete or calculate a value.
 Return ONLY one JSON object, no prose, no code fence:
-{"fields":{"merchant":{"value":"","evidence":""},"receiptNumber":{...},"date":{...},"taxId":{...},"subtotal":{...},"vat":{...},"total":{...}},"buyerTaxId":"","amountInWords":"","documentType":"","features":{"handwritten":false,"thermalPaper":false,"foreignLanguage":false,"receiverSigned":false,"buyerNamed":false,"itemsListed":false,"inappropriateDrinks":false},"notes":""}
+{"fields":{"merchant":{"value":"","evidence":""},"receiptNumber":{...},"date":{...},"taxId":{...},"subtotal":{...},"vat":{...},"total":{...}},"expenseDescription":"","buyerTaxId":"","amountInWords":"","documentType":"","features":{"handwritten":false,"thermalPaper":false,"foreignLanguage":false,"receiverSigned":false,"buyerNamed":false,"itemsListed":false,"inappropriateDrinks":false},"notes":""}
 - merchant: the seller / issuer name as printed (company or shop), not the buyer.
 - receiptNumber: the receipt or tax-invoice number (เลขที่). When a book number (เล่มที่) is printed too, write both as "เล่ม 001 เลขที่ 005".
 - date: the document date exactly as printed, keeping a Buddhist year (พ.ศ.) as it is.
 - taxId: the SELLER's 13-digit tax ID (เลขประจำตัวผู้เสียภาษี of the issuer). A buyer's tax ID goes in buyerTaxId, never in taxId. Shops sometimes write the customer's tax ID in the issuer's box; when the printed ID plainly belongs to the customer named on the receipt, put it in buyerTaxId and say so in notes.
 - subtotal: the amount before VAT; vat: the VAT amount; total: the amount paid. Digits only with a decimal point (e.g. 1250.00): no currency, no commas.
 - amountInWords: the total written in Thai words (e.g. แปดร้อยแปดบาทถ้วน) exactly as printed, or "".
+- expenseDescription: the expense item descriptions exactly as written, joined with "; " when there are several. Never infer a purchase from the shop name. Never infer a project, budget or claim category. If unreadable, use "".
 - documentType: exactly one of tax_invoice (ใบกำกับภาษี, full), abbreviated_tax_invoice (ใบกำกับภาษีอย่างย่อ / ABB, usually a till slip), receipt (ใบเสร็จรับเงิน), cash_bill (บิลเงินสด / cash sale), payment_voucher (ใบสำคัญรับเงิน), invoice_or_quotation (ใบแจ้งหนี้, ใบเสนอราคา, ใบส่งของ: not a proof of payment), transfer_slip (a bank or PromptPay transfer slip), other. Judge from the printed title first.
 - features, each true or false from what is visible: handwritten (values written by hand), thermalPaper (a till or thermal slip), foreignLanguage (mostly not Thai), receiverSigned (a signature in the receiver / ผู้รับเงิน space), buyerNamed (a buyer or customer name is filled in), itemsListed (what was paid for is written), inappropriateDrinks (alcohol or similar among the items).
 - evidence: the printed line the value comes from, copied as it appears.
@@ -32,6 +33,7 @@ const thaiDigits = (value: string) => value.replace(/[๐-๙]/g, d => String('�
 export function parseVisionReading(reply: string): {
   fields: VisionReading;
   buyerTaxId: string;
+  expenseDescription: string;
   amountInWords: string;
   documentType: DocumentType | '';
   features: DocumentFeatures;
@@ -55,6 +57,7 @@ export function parseVisionReading(reply: string): {
   return {
     fields,
     buyerTaxId: thaiDigits(clip(data?.buyerTaxId, 40)),
+    expenseDescription: clip(data?.expenseDescription, 300),
     amountInWords: clip(data?.amountInWords, 200),
     documentType: parseDocumentType(data?.documentType),
     // Only real booleans count: a missing or odd value stays unknown rather than "no".

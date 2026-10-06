@@ -70,6 +70,17 @@ The conversation exports Markdown or JSON through a Save dialog. Exports include
 
 ## OCR and optional vision
 
+The receipt page presents usability, type, a source-linked category suggestion and
+next steps before the form. OCR/vision fill and format source-backed fields; vision
+also transcribes item descriptions, with an explicit-item-label local fallback.
+Classification uses item descriptions and optional user purpose, not shop identity.
+Generic drinks are not automatically B10; a receipt does not identify an approved
+budget. Suggestions remain recommendations under the registered AFP circular, never
+live policy verification. One source-comparison checkbox covers all populated fields
+and the selected item description. Edits to type/category/purpose also revoke it.
+Raw OCR/vision evidence, alternatives, full compliance checks and pilot controls are
+collapsed by default. Saving and chat handoff are optional after review.
+
 OCR attachment text is transmitted with `EXTRACTED_UNVERIFIED` and an attachment
 reference. Transmission consent does not verify transcription. In the receipt mini
 app, only a selected value explicitly checked against its source becomes
