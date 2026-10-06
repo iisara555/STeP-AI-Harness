@@ -65,10 +65,14 @@ async function docxText() {
   let entries = 0;
   let expanded = 0;
   let embedded = false;
+  let images = 0;
   const parts = unzipSync(bytes, { filter: (entry) => {
     enforce(++entries <= limits.entries, 'archive-entry-limit');
     enforce(!entry.name.includes('..') && !entry.name.startsWith('/'), 'invalid-document');
-    if (/^word\/(?:media|embeddings|activeX)\//.test(entry.name)) embedded = true;
+    // Pictures (a letterhead, the Garuda emblem, a signature) are never sent, and the text around them is complete.
+    // Embedded objects (a spreadsheet, another document, a control) can hold content the text leaves out.
+    if (/^word\/media\//.test(entry.name)) images++;
+    if (/^word\/(?:embeddings|activeX|charts|diagrams)\//.test(entry.name)) embedded = true;
     const include = /^word\/(?:document|header\d*|footer\d*|footnotes|endnotes|comments)\.xml$/.test(entry.name);
     if (include) {
       expanded += entry.originalSize;
@@ -93,7 +97,9 @@ async function docxText() {
         const local = key.split(':').at(-1);
         if (key === '#text' && textNode) append(String(value));
         else if (Array.isArray(value)) {
-          if (['altChunk', 'drawing', 'pict', 'object'].includes(local)) embedded = true;
+          // A drawing or picture is an image (text in its text boxes is read like any other text); a chart, SmartArt,
+          // embedded object or imported chunk keeps its content elsewhere.
+          if (['altChunk', 'object', 'chart', 'relIds'].includes(local)) embedded = true;
           walk(value, depth + 1, ['t', 'delText', 'instrText'].includes(local));
           if (['p', 'tr', 'br', 'cr'].includes(local)) append('\n');
           if (['tc', 'tab'].includes(local)) append('\t');
@@ -109,8 +115,9 @@ async function docxText() {
     walk(parser.parse(source));
     append('\n');
   }
-  return { text: output.join(''), extractionScope: 'docx-word-text-only', incomplete: embedded,
-    reviewReasons: ['layout-images-metadata-and-embedded-content-not-scanned', ...(embedded ? ['embedded-content'] : [])] };
+  return { text: output.join(''), extractionScope: 'docx-word-text-only', incomplete: embedded, images,
+    reviewReasons: ['layout-images-metadata-and-embedded-content-not-scanned', ...(embedded ? ['embedded-content'] : []),
+      ...(images ? ['images-not-sent'] : [])] };
 }
 
 try {

@@ -6,7 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-"Mac updates install inside the app" below is not published yet. STeP Desktop version 0.5.17 (`desktop/package.json`) contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+"Word files with pictures can be attached" and "Mac updates install inside the app" below are not published yet. STeP Desktop version 0.5.17 (`desktop/package.json`) contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### Word files with pictures can be attached
+
+- **Before:** a Word file with any picture in it, such as the Garuda emblem or a letterhead on a บันทึกข้อความ, was refused as "อ่านเนื้อหาได้ไม่ครบ" and the drafting tool only said "ส่งไฟล์นี้ให้ AI ไม่ได้". Reported on 2026-10-06 with a ขออนุมัติใช้จ่ายหมวด A2 memo.
+- **After:** pictures are left out and named in the status line ("รูปภาพ N รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม"); the file's full text goes to the AI. Text in text boxes is read as before. Charts, SmartArt, embedded objects (an Excel table) and imported chunks still withhold the file, because their content lives outside the text; the message now says so and what to do.
+- The document drafting tool shows the specific reason a file was refused instead of one generic line.
+- Harness `src/modules/privacy/document-worker.js` changes with it (CLI and app alike). Pictures were never sent to the AI either way.
 
 ### Mac updates install inside the app
 

@@ -653,7 +653,8 @@ export const en: Record<string, string> = {
     'Some PDF pages are scanned images with unreadable text, so nothing was sent to avoid the AI summarising incomplete content. Use the original file or remove the image pages',
   'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง': 'Reading the file took too long. Try splitting it into smaller files',
   'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้': "This file can't be opened or read. It may be damaged or password protected",
-  'อ่านเนื้อหาได้ไม่ครบ ระบบจึงยังไม่ส่ง': "The content couldn't be read completely, so it wasn't sent",
+  'ไฟล์มีส่วนที่อ่านเป็นข้อความไม่ได้ เช่น กราฟ SmartArt หรือตาราง Excel ที่ฝังไว้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI ร่างจากเนื้อหาที่ขาดไป พิมพ์ข้อมูลส่วนนั้นเป็นข้อความในไฟล์ หรือบันทึกเป็น PDF แล้วแนบใหม่':
+    "Part of this file can't be read as text, such as a chart, SmartArt or an embedded Excel table, so it wasn't sent and the AI won't draft from missing content. Type that part into the file as text, or save it as PDF, and attach it again",
   'พบข้อมูลที่ต้องให้คนตรวจก่อน และระบบปิดบังให้อัตโนมัติไม่ได้ ปิดบังในไฟล์แล้วแนบใหม่':
     "Found data that needs human review and can't be masked automatically. Mask it in the file and attach it again",
   'ยังยืนยันผลค้นเว็บไม่ได้ บัญชีหรือโมเดลนี้อาจไม่รองรับ Web Search หรือบริการค้นหาขัดข้อง กรุณาลองใหม่หรือเลือก AI อื่น ระบบยังไม่ใช้ความจำตอบแทนข้อมูลล่าสุด':
@@ -1491,6 +1492,8 @@ export const en: Record<string, string> = {
   'ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน': 'Sends the source image with OCR text · check the image before confirming',
   'อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง': 'Text read with OCR · check accuracy before sending',
   'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง': 'Text checked · review before sending',
+  'ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม':
+    'Text checked · {0} picture(s) in the file are not sent to the AI; type in anything important they show',
   'ส่งไฟล์นี้ให้ AI ไม่ได้': "This file can't be sent to the AI",
   'เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง': "The app couldn't start. Please check the installation",
   'ค้นหาเครื่องมือจาก MCP?': 'Search tools from MCP?',
