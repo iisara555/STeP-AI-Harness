@@ -1,5 +1,7 @@
 # STeP AI
 
+> **Branch `improve-office-workflows`: Office preview.** ความสามารถ Excel/PowerPoint และ coauthoring ที่อธิบายด้านล่างเป็นงานพัฒนาของ branch นี้ ยังไม่รวมใน release OCR [Desktop 0.5.21](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.21) ตัวเลข inventory อ้างอิง working tree ของ Office ไม่ใช่ชุดติดตั้งรุ่นนั้น
+
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI Harness สำหรับพนักงาน STeP / RSP North ใช้สำหรับคุยกับ AI, แนบเอกสาร, ใช้ Skill/Playbook, ตรวจร่าง, ส่งออกไฟล์ และใช้เครื่องมือเฉพาะ เช่น **ตรวจใบเสร็จก่อนส่ง AFP** โดยไม่ต้องใช้ Git, Terminal หรือจำชื่อ Skill
 
 > สำหรับผู้ใช้ทั่วไป: เริ่มจาก **STeP Desktop GUI**  
@@ -39,7 +41,7 @@
 
 > สรุปการประชุมนี้ แยกมติ งานที่ต้องทำ ผู้รับผิดชอบ วันครบกำหนด และเรื่องที่ยังรอยืนยัน
 
-STeP AI จะเลือก Skill หรือ Playbook ที่เหมาะสมให้เองในงานส่วนใหญ่ ไม่จำเป็นต้องเลือกจากรายการก่อนทุกครั้ง
+พิมพ์งานตรง ๆ เพื่อคุยกับ AI ได้เลย เมื่อผู้ดูแลเปิด `autoRouting` ระบบจะเลือก Skill หรือ Playbook ให้อัตโนมัติ หรือเลือก Skill ที่ต้องการจากศูนย์รวม Skill ได้
 
 ## หน้าตา STeP Desktop
 
@@ -211,7 +213,7 @@ STeP Desktop แบ่งการทำงานหลักเป็น 3 ส�
 - กด Enter เพื่อส่ง และ Shift+Enter เพื่อขึ้นบรรทัดใหม่
 - หยุดงานที่กำลังทำได้
 
-โดยปกติ **ไม่ต้องเลือก Skill เอง** Router จะดูงานล่าสุดแล้วเลือก Skill/Playbook ที่เหมาะสม
+พิมพ์งานใน Chat ได้โดยไม่ต้องเลือก Skill เมื่อผู้ดูแลเปิด `autoRouting` Router จะดูงานล่าสุดแล้วเลือก Skill/Playbook ที่เหมาะสม; ค่าเริ่มต้นยังเลือก Skill เองจากศูนย์รวม Skill ได้
 
 ใช้ `/skill-name` เฉพาะเมื่อคุณต้องการบังคับวิธีทำงาน เช่น ต้องการใช้ Skill เฉพาะเจาะจง
 
@@ -273,6 +275,30 @@ STeP Desktop จำกัดหนึ่ง source attachment ต่อ request 
 
 งานลักษณะนี้สามารถเข้า Playbook หลายขั้นแทนการใช้ Skill เดี่ยว
 
+## Office preview: Excel, PowerPoint และการเขียนร่วม
+
+เมื่อรัน build ที่รวมงาน Office ของ branch นี้ สามารถขอใน Chat ได้ เช่น:
+
+> สร้างไฟล์ Excel สรุปรายการตัวอย่าง เก็บรหัส 00123 เป็นข้อความ และให้ฉันตรวจสูตรก่อนใช้
+
+> สร้าง PowerPoint 3 สไลด์จาก brief นี้ พร้อมตาราง กราฟ และ speaker notes ที่แก้ไขต่อได้
+
+> ช่วยเขียนเอกสารนี้ร่วมกับฉัน เริ่มจากผู้อ่าน เป้าหมาย และโครงเรื่อง แล้วทบทวนทีละส่วน
+
+- **Excel:** สร้าง workbook ใหม่ หรือแก้ scalar input cells ที่อนุญาตในไฟล์เดิม ตรวจ formula recalculation กับ Excel/LibreOffice หลังใช้จริง การแก้ไม่ทับ formula/protected cells และรักษา ZIP parts ที่ไม่ได้แก้; ยังไม่รับรองทุก feature หรือ digital signatures
+- **PowerPoint:** สร้าง PPTX ใหม่ที่มีข้อความ ตาราง กราฟ และ notes ที่แก้ไขได้ ยังไม่ได้แก้ PPTX เดิมหรือสร้าง CI template ที่ไม่มีต้นฉบับ
+- **ตรวจการเปลี่ยนแปลง:** ไฟล์ที่ AI สร้างหรือแก้เข้ารายการแก้ไขก่อน ให้ตรวจ preview แล้วใช้ตามสิทธิ์เครื่องมือเดิม ยังไม่มีการเปิด policy ใหม่ให้เอง
+- **Coauthoring:** แยกข้อเสนอผู้เขียนออกจากการทดสอบกับผู้อ่านอีกคน ไม่ใช้คะแนนตรวจโครงสร้างแทนผลใช้งานจริง
+- **Google Workspace:** connector เป็นส่วน optional แยก ยังไม่เชื่อม Desktop tool loop หรือลงชื่อ Google ให้อัตโนมัติ การทดสอบด้วย mock ไม่ยืนยัน live Google API
+
+ผลทดสอบ Office ใช้ข้อมูลสังเคราะห์และ controlled tool contracts; ต้องตรวจฟอนต์ การจัดหน้า และสูตรบนเครื่องปลายทางก่อนใช้เอกสารจริง
+
+## สร้างภาพจากข้อความ
+
+เชื่อม **OpenAI API key** หรือ **Gemini API key** เลือกโหมด **สร้างรูป** ระบุ brief ให้ครบ เลือกโมเดลที่บัญชีมีสิทธิ์ แล้วตรวจภาพในแถบ **ผลงาน** และกด **บันทึกรูป** Image API ใช้โควตา API แยกจาก subscription/OAuth และยังไม่รองรับภาพอ้างอิงหรือแก้ภาพเดิม
+
+ข้อจำกัดของเส้นทางเดิม: ใน Chat คำว่า “สร้างภาพรวม…” อาจเข้า Image API แม้ขอข้อความ ให้ใช้ “สรุปภาพรวม…” แทน และระบุ brief เต็มซ้ำเมื่อทำภาพอีกแบบ เพราะรอบสร้างภาพยังไม่ได้รวมบริบทก่อนหน้า การตรวจ UI/host ใช้ API จำลอง ยังไม่ยืนยันสิทธิ์บัญชีจริงหรือคุณภาพตัวอักษรไทย
+
 ## Privacy review
 
 > ช่วยตรวจเอกสารนี้ว่ามีข้อมูลส่วนบุคคลหรือ credential ที่ไม่ควรส่งต่อหรือไม่ และเสนอจุดที่ควรปิดบัง
@@ -297,7 +323,7 @@ STeP Desktop จำกัดหนึ่ง source attachment ต่อ request 
 
 > ช่วยตรวจ TOR นี้ก่อนส่ง AFP
 
-Router จะเลือก Skill ให้
+เมื่อผู้ดูแลเปิด `autoRouting` Router จะเลือก Skill ให้; ค่าเริ่มต้นเป็นการคุยกับ AI โดยเลือก Skill เองได้
 
 **แบบเลือกเอง**
 
@@ -598,11 +624,11 @@ README ฉบับนี้อ้างอิง Harness source **v0.7.6** แ�
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **52 Skills** |
+| Skills | **53 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 51 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
+Router มีเส้นทางเลือก Skill 52 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
 
 ต้นทาง: [Skills](manifest/skills.yaml) · [Router index](manifest/router-index.yaml) · [Playbooks](manifest/playbooks.yaml) · [Actions](manifest/actions.yaml)
 

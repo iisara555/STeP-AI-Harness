@@ -12,6 +12,20 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
+## Office workflow preview (`improve-office-workflows`)
+
+The Office working tree adds creation of XLSX and editable PPTX files through governed host tools, input-cell editing that preserves untouched ZIP parts, and document coauthoring methods. Generated or edited files enter Changes for review before application under the existing permission modes. Formula/protected-cell edits, complete Excel feature preservation and editing existing PPTX files are outside this implementation.
+
+Google Workspace is a separate optional connector requiring an organization-installed and signed-in CLI. It does not install/authenticate the CLI, join the Desktop tool loop or establish live Google access. Controlled synthetic tool contracts and LibreOffice rendering checks do not prove model-side usefulness or staff-machine acceptance.
+
+These Office changes are not included in the OCR release [Desktop 0.5.21](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.21). Preserve the current Office changes for their own implementation commit and release checks.
+
+## Text-to-image generation
+
+Use an OpenAI or Gemini API-key connection, choose **สร้างรูป**, provide a complete brief and select an account-listed model. Review the image in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth; reference images and image editing are unsupported.
+
+Current limitations: Chat can misroute Thai text-overview requests beginning with `สร้างภาพรวม` into paid image generation; use `สรุปภาพรวม` for text. Follow-up and clarification image prompts omit the original brief, so repeat it in full. Simulated-provider renderer/host checks verify the flow, not live access or image quality. This README update does not change that implementation.
+
 ## Run
 
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:
