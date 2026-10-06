@@ -12,6 +12,16 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
+## Desktop 0.5.20
+
+This version improves local Thai receipt OCR without adding models or changing policy defaults. Nine synthetic images improved canonical field matches from 50/63 to 59/63; four incorrect or absent fields remain. Native-text PDFs skip PaddleOCR import/startup. See the [synthetic quality report](../experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md) for timing, memory and remaining review failures. Real-document acceptance and employee-hardware performance remain unverified.
+
+## Text-to-image generation
+
+Connect an OpenAI or Gemini API-key account, choose **สร้างรูป**, provide a complete brief and select an account-listed image model. Review the result in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth access. Reference images, image editing and inpainting are not supported by this Desktop path.
+
+Known limitations in this version: Chat auto-routing can interpret Thai text-overview requests beginning with `สร้างภาพรวม` as paid image requests, even with a no-image instruction. Use `สรุปภาพรวม` for text. Follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
+
 ## Run
 
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:

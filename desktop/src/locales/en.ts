@@ -1873,4 +1873,13 @@ export const en: Record<string, string> = {
   รับทราบ: 'Got it',
   'STeP Desktop รุ่น {0}': 'STeP Desktop {0}',
   มีอะไรใหม่ในรุ่นนี้: "What's new in this version",
+  'ปรับ OCR สำหรับภาพซีด ภาพหมุน และตัวเลขใบเสร็จ โดยยังต้องตรวจเทียบต้นฉบับก่อนยืนยัน':
+    'Improved OCR for faded and rotated images and receipt numbers. Compare with the original before confirming.',
+  'PDF ที่มีข้อความอยู่แล้วเปิดอ่านได้เร็วขึ้น โดยไม่เริ่มโมเดล OCR': 'PDFs with existing text open faster without starting the OCR model.',
+  'ป้องกันการบันทึกผลทดลอง OCR เข้า Git และแยกค่าที่ยังไม่ได้ตรวจออกจากค่าที่คนยืนยัน':
+    'Keep OCR trial reports out of Git and distinguish unchecked readings from human-confirmed values.',
+  'ผลทดสอบรุ่นนี้ใช้ใบเสร็จสังเคราะห์ ยังไม่ยืนยันความแม่นยำกับเอกสารจริง':
+    'This version was tested with synthetic receipts. Accuracy on real documents remains unverified.',
+  'คู่มือเพิ่มวิธีสร้างรูปด้วย API key และข้อจำกัดของคำสั่งภาพรวมกับการทำภาพต่อจากเดิม':
+    'The guide explains API-key image generation and current text-overview and image follow-up limitations.',
 };
