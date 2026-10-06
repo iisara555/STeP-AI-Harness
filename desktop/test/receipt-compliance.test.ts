@@ -16,7 +16,7 @@ test('parseReceiptDate reads Thai and Christian dates as printed', () => {
   assert.equal(iso(parseReceiptDate('2 ต.ค. 2569')), '2026-10-02');
   assert.equal(iso(parseReceiptDate('๒ ตุลาคม ๒๕๖๙')), '2026-10-02');
   assert.equal(iso(parseReceiptDate('วันที่ 02/10/2569')), '2026-10-02');
-  assert.equal(iso(parseReceiptDate('2/10/69')), '2026-10-02');
+  assert.equal(parseReceiptDate('2/10/69'), null, 'a two-digit year requires confirmation of the full year');
   assert.equal(iso(parseReceiptDate('2026-10-02')), '2026-10-02');
   assert.equal(iso(parseReceiptDate('2 Oct 2026')), '2026-10-02');
   assert.equal(parseReceiptDate('31/02/2569'), null);

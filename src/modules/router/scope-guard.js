@@ -103,7 +103,11 @@ export function checkScope(skill, requestText = '') {
     if (key.includes('vendor') && (lower.includes('เลือกบริษัท') || lower.includes('เจ้าไหนดี') || lower.includes('ให้คะแนนซอง') || lower.includes('ตัดสินผู้ชนะ'))) heuristic = true;
     if (key.includes('sign') && (lower.includes('ลงนาม') || lower.includes('เซ็นอนุมัติ') || lower.includes('ออกเลขหนังสือ'))) heuristic = true;
     if ((key.includes('submit') || key.includes('submission')) && (lower.includes('กดส่ง') || lower.includes('ส่งฟอร์ม') || lower.includes('ยืนยันส่ง') || lower.includes('ส่งให้เลย') || lower.includes('กดยืนยัน') || lower.includes('submit'))) heuristic = true;
-    if ((key.includes('conformity') || key.includes('certification')) && (lower.includes('ผ่าน iso') || lower.includes('รับรอง iso') || lower.includes('iso compliant') || lower.includes('certified') || lower.includes('certification') || lower.includes('conformity'))) heuristic = true;
+    if (key === 'translation_certification') {
+      // A request to certify is an act of authority; explaining or checking an existing certification is not.
+      heuristic = /(?:^|ช่วย|แล้ว|และ|จากนั้น|\bplease|\band|\bthen)\s*(?:รับรองคำแปล|รับรองเอกสารแปล|certify(?:\s+(?:this|the|my))?\s+translation)/i.test(lower);
+    }
+    if (key !== 'translation_certification' && (key.includes('conformity') || key.includes('certification')) && (lower.includes('ผ่าน iso') || lower.includes('รับรอง iso') || lower.includes('iso compliant') || lower.includes('certified') || lower.includes('certification') || lower.includes('conformity'))) heuristic = true;
     if ((key.includes('closure') || key.includes('capa')) && (lower.includes('ปิด nc') || lower.includes('ปิด capa') || lower.includes('close nc') || lower.includes('close capa') || lower.includes('ปิดอย่างเป็นทางการ'))) heuristic = true;
     if ((key.includes('result') || key.includes('release')) && (lower.includes('ออกผลรับรอง') || lower.includes('รับรองผล') || lower.includes('ออกผลอย่างเป็นทางการ') || lower.includes('official result') || lower.includes('release result'))) heuristic = true;
     if (key.includes('enactment') && (lower.includes('ประกาศใช้') || lower.includes('ยกเลิกเอกสาร') || lower.includes('แก้ไขเอกสารอย่างเป็นทางการ'))) heuristic = true;

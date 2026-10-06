@@ -77,7 +77,8 @@ test('the real launcher routes a request end to end', { skip: !POSIX }, () => {
   const out = execFileSync('sh', ['./step-ai', 'ask', 'ช่วยแปลเป็นภาษาอังกฤษ', '--json'], {
     cwd: PACKAGE_ROOT, encoding: 'utf8', env: { ...process.env, PATH: `${dirname(process.execPath)}:${NO_NODE_PATH}` },
   });
-  assert.equal(JSON.parse(out).routing.mode, 'GENERAL');
+  assert.equal(JSON.parse(out).routing.mode, 'SKILL');
+  assert.equal(JSON.parse(out).routing.skill, 'thai-english-translation');
 });
 
 test('Windows launcher resolves the bundled runtime first and keeps CRLF', async () => {

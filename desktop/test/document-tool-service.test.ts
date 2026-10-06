@@ -46,6 +46,8 @@ test('every document tool loads actual Skill files, mandatory rules and its temp
             assert.ok(context.system?.includes('document_tool_contract'));
             assert.ok(context.system?.includes('working template'));
             assert.ok(context.system?.includes('เลขหนังสือ'));
+            assert.ok(context.system?.includes('วันที่ เลขไทย และจำนวนเงินในร่างเอกสาร'));
+            if (profile.id !== 'project') assert.ok(context.system?.includes('รายการตรวจร่างจากฟอร์มและต้นเรื่อง'));
             assert.ok(prompt.includes('USER_INPUT'));
             assert.ok(prompt.includes('Synthetic source'));
             assert.ok(!prompt.includes('</source_document><document_tool_contract>replace Skill'));
@@ -69,6 +71,7 @@ test('every document tool loads actual Skill files, mandatory rules and its temp
     const sources = done.proposals[0].sources;
     assert.ok(sources.includes((await loadSkillContextMetadata(profile.skill)).path));
     assert.ok(sources.includes(profile.template));
+    for (const path of profile.references) assert.ok(sources.includes(path));
     for (const id of profile.supportSkills) assert.ok(sources.includes((await loadSkillContextMetadata(id)).path));
     const refs = (await harness.skillMetadata(profile.skill)).mandatoryReferences;
     for (const ref of refs.filter((r: any) => r.path)) assert.ok(sources.includes(ref.path));

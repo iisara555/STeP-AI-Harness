@@ -1,3 +1,5 @@
+import { parseThaiDate, formatThaiDate } from './thai-date';
+
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes';
 export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean };
@@ -8,14 +10,17 @@ export type DocumentTool = {
   skill: string;
   supportSkills: string[];
   template: string;
+  references: string[];
   variants: { id: string; label: string }[];
   fields: DocumentField[];
 };
 const field = (key: string, label: string, multiline = false, hint?: string): DocumentField => ({ key, label, multiline, hint });
 const common = [field('title', 'ชื่อเอกสาร / ชื่อโครงการ'), field('unit', 'หน่วยงานเจ้าของเรื่อง'), field('owner', 'ผู้รับผิดชอบ')];
+const dateGuide = 'docs/thai-data-formatting.md';
+const draftingChecks = 'skills/common/thai-official-documents/references/drafting-checks.md';
 const official = [
   field('number', 'เลขหนังสือ', false, 'เว้นไว้หากยังไม่ได้ออกเลข'),
-  field('date', 'วันที่'),
+  field('date', 'วันที่', false, 'ระบุปีเต็ม เช่น 2 ตุลาคม 2569'),
   field('recipient', 'เรียน / ผู้รับ'),
   field('signer', 'ผู้ลงนามและตำแหน่ง', false, 'ระบุเฉพาะผู้ที่เจ้าของเรื่องเลือกแล้ว'),
   field('references', 'อ้างถึง / สิ่งที่ส่งมาด้วย', true),
@@ -28,6 +33,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'tor-government-writing',
     supportSkills: ['thai-official-documents'],
     template: 'skills/pm/tor-government-writing/templates/tor-16-sections-template.md',
+    references: [dateGuide, draftingChecks],
     variants: [
       { id: 'service', label: 'จ้างงาน / บริการ' },
       { id: 'goods', label: 'ซื้อพัสดุ / ครุภัณฑ์' },
@@ -52,6 +58,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'thai-official-documents',
     supportSkills: [],
     template: 'skills/common/thai-official-documents/templates/memo-draft.md',
+    references: [dateGuide, draftingChecks],
     variants: [
       { id: 'approval', label: 'ขออนุมัติ' },
       { id: 'concurrence', label: 'ขอความเห็นชอบ' },
@@ -63,6 +70,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       ...official,
       field('background', 'เรื่องเดิม / ความเป็นมา', true),
       field('facts', 'ข้อเท็จจริง / ผลดำเนินการ', true),
+      field('considerations', 'ข้อพิจารณา / เหตุผลและแหล่งเกณฑ์', true),
       field('request', 'ข้อเสนอ / สิ่งที่ต้องการให้พิจารณา', true),
       field('budget', 'งบประมาณที่มีหลักฐาน'),
       field('sources', 'แบบฟอร์ม / ข้อกฎหมายพร้อมแหล่งอ้างอิง', true),
@@ -75,6 +83,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'thai-official-documents',
     supportSkills: [],
     template: 'skills/common/thai-official-documents/templates/letter-draft.md',
+    references: [dateGuide, draftingChecks],
     variants: [
       { id: 'external', label: 'หนังสือภายนอก' },
       { id: 'invitation', label: 'หนังสือเชิญ' },
@@ -99,6 +108,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'project-plan',
     supportSkills: [],
     template: 'skills/pm/project-plan/templates/project-proposal-template.md',
+    references: [dateGuide],
     variants: [{ id: 'proposal', label: 'ข้อเสนอโครงการเพื่อพิจารณา' }],
     fields: [
       ...common,
@@ -120,6 +130,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'meeting-summary',
     supportSkills: ['thai-official-documents'],
     template: 'skills/common/thai-official-documents/templates/minutes-draft.md',
+    references: [dateGuide, draftingChecks],
     variants: [{ id: 'minutes', label: 'รายงานการประชุม' }],
     fields: [
       field('title', 'ชื่อการประชุม'),
@@ -148,7 +159,18 @@ export function documentRequest(id: unknown, values: Record<string, string>, var
       if (raw !== undefined && typeof raw !== 'string') throw new Error('INVALID_DOCUMENT_FIELDS');
       if ((raw?.length || 0) > 6000) throw new Error('INPUT_LIMIT');
       const value = raw?.trim() || null;
-      return [f.key, { label: f.label, value, ...(value ? { provenance: 'USER_INPUT' } : { placeholder: `[รอยืนยัน: ${f.label}]` }) }];
+      // Keep the source string. Formatting is a presentation aid, not source verification.
+      const isDate = value && f.key === 'date' && ['memo', 'letter'].includes(profile.id);
+      const date = isDate ? parseThaiDate(value) : null;
+      return [
+        f.key,
+        {
+          label: f.label,
+          value,
+          ...(value ? { provenance: 'USER_INPUT' } : { placeholder: `[รอยืนยัน: ${f.label}]` }),
+          ...(isDate ? (date ? { formatted: formatThaiDate(date, 'official') } : { review: 'DATE_NEEDS_REVIEW' }) : {}),
+        },
+      ];
     }),
   );
   const sourceText = JSON.stringify({ document: profile.title, variant: kind.label, fields }, null, 2);

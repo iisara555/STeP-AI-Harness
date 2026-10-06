@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Thai Skills: STeP contracts, connected handoffs and Desktop date review
+
+- Adapt six selected Thai methods from Boom-Vitt/claude-thai-skills (MIT, pinned upstream revision), rewriting the procedures and synthetic examples for STeP. Add `thai-english-translation` at draft; extend official documents, writing, brand tone, service replies and receipt arithmetic without importing tax rates or legal claims as current policy.
+- Document and test handoffs among translation, official drafting, brand review, service triage and AFP pre-check. Add four-dimensional translation/brand evals, extend neighboring collision and missing-source cases, and remove completed brand eval coverage from legacy debt. Preserve previous model-side evidence separately; these revised outputs remain not-yet-run.
+- Desktop drafting loads the added working references into model context, adds memo considerations, and retains original form dates alongside formatting/review metadata. Receipts and memo/letter forms share strict calendar/era parsing; two-digit years remain for full-year confirmation rather than guessed centuries. No new runtime dependencies or NLP models.
+- Validation uses synthetic deterministic tests and fake-provider integration only. No real-document OCR/translation accuracy, minimum-hardware acceptance or legal compliance is claimed. No OCR Router integration, lifecycle promotion, version bump, release or policy-default change.
+
 ### Desktop: document drafting forms backed by actual Skills
 
 - Add TOR, internal memo, official letter, project proposal and meeting-minutes forms under Tools and the Skill hub. Enter known facts or attach one source, draft with the selected connected AI, then use the existing editor and export controls.

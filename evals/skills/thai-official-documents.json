@@ -1,11 +1,12 @@
 {
   "skill": "thai-official-documents",
   "version": 1,
-  "source": "synthetic-2026-09-25",
+  "source": "synthetic-2026-10-06 (includes previous synthetic fixtures)",
   "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ได้จดหมายภาษาสุภาพ แต่ขาดส่วนประกอบตามระเบียบงานสารบรรณ และมักแต่งเลขที่หนังสือหรือชื่อผู้ลงนาม",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-06 Thai methods adaptation: added source/provenance/handoff assertions; routing-only validation does not establish model output quality."
   },
   "cases": [
     {
@@ -77,6 +78,47 @@
         "ระบุที่มาของชื่อและวันที่ lastChecked",
         "ไม่ถูกปฏิเสธว่าเป็นการลงนามแทน เพราะผู้ใช้ขอเพียงร่าง"
       ]
+    },
+    {
+      "id": "positive-concurrence-form",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "ช่วยร่างบันทึกข้อความขอความเห็นชอบจัดกิจกรรมตัวอย่าง",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents"
+      },
+      "outputAssertions": [
+        "มีเรื่องเดิม ข้อเท็จจริง ข้อพิจารณา และข้อเสนอ",
+        "ใช้คำขอความเห็นชอบ ไม่เปลี่ยนเป็นอนุมัติใช้เงินแล้ว"
+      ]
+    },
+    {
+      "id": "collision-translate-memo",
+      "dimension": "collision",
+      "team": "",
+      "prompt": "แปลบันทึกข้อความเป็นภาษาอังกฤษ โดยรักษาเลขหนังสือ 0007/2569",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation",
+        "notSkill": "thai-official-documents"
+      }
+    },
+    {
+      "id": "missing-memo-date",
+      "dimension": "missingSource",
+      "team": "",
+      "prompt": "ร่างบันทึกข้อความจากฟอร์ม วันที่ 1 ม.ค. 70 ยังไม่มีเลขหนังสือ งบ และผู้ลงนาม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents"
+      },
+      "outputAssertions": [
+        "เว้นเลขหนังสือ งบ และผู้ลงนาม",
+        "ให้ปีเต็มรอยืนยัน ไม่เดาศตวรรษ",
+        "ระบุ working template และยังไม่ตรวจหน้าของไฟล์ส่งออก"
+      ]
     }
-  ]
+  ],
+  "previousSource": "synthetic-2026-09-25"
 }

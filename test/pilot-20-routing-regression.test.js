@@ -336,7 +336,7 @@ const CASES = [
     ['ทำ TOR ซื้อคอมพิวเตอร์', 'tor-government-writing'],
     ['ทำ prompt รูปโปสเตอร์', 'step-image-prompt'],
     ['ลาป่วยต้องมีใบรับรองแพทย์ไหม', 'hr-policy-lookup'],
-    ['ช่วยแปลเป็นภาษาอังกฤษ', null],
+    ['ช่วยแปลเป็นภาษาอังกฤษ', 'thai-english-translation'],
     ['ช่วยเขียนอีเมลถึงลูกค้าหน่อย', null],
     ['ช่วยทำ excel สรุปยอด', null],
     ['สรุป PDF นี้เป็นข้อ ๆ', null],

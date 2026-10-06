@@ -1,0 +1,112 @@
+{
+  "skill": "thai-english-translation",
+  "version": 1,
+  "source": "synthetic-2026-10-06",
+  "note": "Routing runs in CI. Output assertions require a with/without-Skill model-side comparison; no such run is claimed. New Skill remains draft.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "อาจปรับภาษาได้แต่ไม่เทียบชื่อ/รหัส/ตัวเลข/สถานะกับต้นฉบับ ไม่แสดงความกำกวมของปีสั้น และไม่แยกร่างคำแปลออกจากการรับรองเอกสารเบิกจ่าย",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-preserve-facts",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "ช่วยแปลข้อความไทยเป็นอังกฤษ: โครงการตัวอย่างเสนอใช้งบ 1,234.50 บาท เลขอ้างอิง 0007/2569 โดยรออนุมัติ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation"
+      },
+      "outputAssertions": [
+        "คง THB 1,234.50 และ 0007/2569 ทุกหลัก",
+        "คง proposed/pending ไม่เปลี่ยนเป็น approved",
+        "มีรายการตรวจความหมายและตัวเลขกับต้นฉบับ"
+      ]
+    },
+    {
+      "id": "positive-official-source",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "แปลบันทึกข้อความเป็นภาษาอังกฤษ โดยรักษาเลขหนังสือ 0007/2569",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation"
+      },
+      "outputAssertions": [
+        "คงเลขอ้างอิง ไม่สร้างเลขหรือผู้ลงนาม",
+        "จัดรูปแบบหนังสือผ่าน thai-official-documents เฉพาะเมื่อขอรูปแบบ ไม่อ้างว่าคำแปลผ่านการรับรอง"
+      ]
+    },
+    {
+      "id": "anti-polish",
+      "dimension": "antiTrigger",
+      "team": "",
+      "prompt": "ช่วยปรับสำนวนอีเมลนี้ให้สุภาพและกระชับขึ้น",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "notSkill": "thai-english-translation"
+      }
+    },
+    {
+      "id": "collision-official-draft",
+      "dimension": "collision",
+      "team": "",
+      "prompt": "ร่างบันทึกข้อความขออนุมัติจัดอบรม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-official-documents",
+        "notSkill": "thai-english-translation"
+      }
+    },
+    {
+      "id": "collision-receipt",
+      "dimension": "collision",
+      "team": "",
+      "prompt": "ตรวจใบเสร็จภาษาอังกฤษก่อนส่ง AFP ว่ายอดเงินตรงกันไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit",
+        "notSkill": "thai-english-translation"
+      }
+    },
+    {
+      "id": "missing-source",
+      "dimension": "missingSource",
+      "team": "",
+      "prompt": "ช่วยแปลเป็นภาษาอังกฤษ แต่ยังไม่ได้ให้ต้นฉบับ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation"
+      },
+      "outputAssertions": [
+        "ขอต้นฉบับที่ต้องแปล ไม่สร้างเอกสารสมมติแทน",
+        "ไม่ขอข้อมูลส่วนบุคคลเกินจำเป็น"
+      ]
+    },
+    {
+      "id": "missing-full-year",
+      "dimension": "missingSource",
+      "team": "",
+      "prompt": "แปลข้อความเป็นอังกฤษ: เริ่มวันที่ 1 ม.ค. 70",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation"
+      },
+      "outputAssertions": [
+        "แสดงปีรอยืนยัน ไม่เดา 2470/2570",
+        "รักษาวันที่และเดือนตามต้นฉบับ"
+      ]
+    },
+    {
+      "id": "anti-other-language",
+      "dimension": "antiTrigger",
+      "team": "",
+      "prompt": "Translate this English email into French",
+      "expect": {
+        "mode": "GENERAL",
+        "notSkill": "thai-english-translation"
+      }
+    }
+  ]
+}

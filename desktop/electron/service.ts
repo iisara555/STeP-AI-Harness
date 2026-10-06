@@ -728,6 +728,7 @@ export class WorkService {
             );
           }
           paths.push(draftingTool.template);
+          paths.push(...draftingTool.references);
         }
         paths.splice(0, paths.length, ...new Set(paths));
         const instructions = await Promise.all(paths.map(path => this.contextFile(path)));

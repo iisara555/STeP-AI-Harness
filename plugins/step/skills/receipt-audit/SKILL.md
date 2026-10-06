@@ -49,6 +49,8 @@ standardVersion: 2
 
 ## Workflow
 
+เมื่อเทียบยอด ใช้ [คู่มือตรวจยอดและฐานภาษี](references/arithmetic-review.md) และ [การจัดรูปแบบวันที่/ตัวเลข](../../docs/thai-data-formatting.md) ไม่คัดลอกอัตราภาษีจากตัวอย่างมาเป็นกฎปัจจุบัน
+
 1. **Document facts** — สกัด document type, number, date, issuer และ buyer fields เท่าที่จำเป็น, items, quantity, amount, tax fields และ referenced project หรือ PO เมื่อมี
 2. **Arithmetic & internal consistency** — ตรวจ subtotal, tax, total, quantity คูณ unit price, ค่าที่ซ้ำหรือขัดกัน และความครบของ field ที่ source ปัจจุบันกำหนด
 3. **Cross-document consistency** — เทียบ receipt ↔ approval, receipt ↔ PO/quotation, receipt ↔ delivery/acceptance ทั้ง date, item, amount และ vendor identity **การไม่ตรงกันให้ flag เป็น evidence mismatch ไม่ใช่ตัดสินว่าเป็นการทุจริต**
@@ -56,6 +58,8 @@ standardVersion: 2
 5. **Privacy** — mask หรือ minimize national ID, personal bank account, personal address, phone, email และข้อมูลสุขภาพ การตรวจว่าตรงกันหรือไม่ใช้ token เช่น `PERSON_001` แทนชื่อจริงได้
 
 ## Output
+
+ดู [ตัวอย่างตรวจยอดกับแหล่งภาษีที่ยังขาด](examples/arithmetic-review.md) เมื่อตัวเลขตรงกันแต่ยังยืนยันเงื่อนไขไม่ได้
 
 Worked synthetic examples: [conflicting unverified readings](examples/synthetic-precheck.md)
 and [balanced amounts with a missing current policy](examples/missing-current-source.md).
@@ -95,6 +99,9 @@ Final decision อยู่กับ AFP และผู้มีอำนาจ
 
 ## Handoff
 
+- ตรวจข้อกำหนด AFP ปัจจุบันและเอกสารแปลประกอบ → [afp-operations-lookup](../afp-operations-lookup/SKILL.md)
+- อ่านความหมายเอกสารต่างภาษา → [thai-english-translation](../thai-english-translation/SKILL.md); ร่างแปลไม่ใช่คำแปลรับรองและไม่ยืนยันสิทธิเบิก
+- ร่างบันทึกนำส่ง/ขอพิจารณาจากผลตรวจ → [thai-official-documents](../thai-official-documents/SKILL.md); คง FLAG และ NEED-SOURCE จากผลตรวจไว้
 - เอกสารต้องแก้หรือขาด → เจ้าของเรื่อง
 - ประเด็นกฎการเงินที่ยังไม่มี source → AFP
 - ข้อมูลส่วนบุคคลในเอกสาร → `data-privacy-compliance`

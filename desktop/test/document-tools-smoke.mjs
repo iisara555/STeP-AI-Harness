@@ -129,6 +129,8 @@ try {
       await form.getByRole('button', { name: 'แนบต้นเรื่อง / แบบฟอร์มหน่วยงาน' }).click();
       await expect(form.getByText('synthetic-source.txt', { exact: true })).toBeVisible();
       await form.getByLabel('เลขหนังสือ', { exact: true }).fill('0007/๖๙');
+      await form.getByLabel('วันที่', { exact: true }).fill('1 ม.ค. 70');
+      await form.getByLabel('ข้อพิจารณา / เหตุผลและแหล่งเกณฑ์', { exact: true }).fill('Synthetic considerations');
       await form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' }).click();
       await expect(page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
@@ -143,6 +145,8 @@ try {
     last = (await snapshot()).sessions.find(s => s.documentTool === id);
     assert.equal(last.skill, skill);
     assert.ok(last.proposals[0].sources.some(p => p.endsWith(template)));
+    assert.ok(last.proposals[0].sources.includes('docs/thai-data-formatting.md'));
+    if (id !== 'project') assert.ok(last.proposals[0].sources.some(p => p.endsWith('drafting-checks.md')));
     const call = requests.at(-1);
     assert.ok(call.system.includes(`Primary Skill: ${skill}`));
     assert.ok(call.system.includes('## Workflow'));

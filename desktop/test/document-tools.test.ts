@@ -13,7 +13,7 @@ test('five document tools select related Skills and every requested form field',
   );
   for (const [id, fields] of Object.entries({
     tor: ['objectives', 'scope', 'qualifications', 'acceptance'],
-    memo: ['subject', 'background', 'request'],
+    memo: ['subject', 'background', 'considerations', 'request'],
     letter: ['subject', 'recipient', 'content'],
     project: ['rationale', 'objectives', 'activities', 'budget', 'indicators'],
     minutes: ['agendas', 'notes', 'decisions', 'owners'],

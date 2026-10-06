@@ -22,7 +22,30 @@
 | [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) `product-management/skills/synthesize-research/SKILL.md` @ `da38ec1` | Apache-2.0 (plugin LICENSE) | ทำ Interview Evidence Grid ผูก finding กับจำนวนผู้ให้ข้อมูล บันทึกต้นทาง ข้อขัดกัน และข้อจำกัดของ sample โดยไม่ถือจำนวนสัมภาษณ์เป็นเกณฑ์อนุมัติ | `startup-discovery` |
 | [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) `product-management/skills/competitive-brief/SKILL.md` @ `da38ec1` | Apache-2.0 (plugin LICENSE) | เทียบข้ออ้าง/positioning คู่แข่งพร้อมแหล่งลงวันที่ แยกคำโฆษณาจากพฤติกรรมซื้อและระบุสิ่งที่ยังต้องตรวจ | `market-signal-radar` |
 
-## ที่ตัดสินใจไม่นำมาใช้
+## วิธีการภาษาไทยที่ดัดแปลงเมื่อ 6 ตุลาคม 2569
+
+ต้นทาง: [Boom-Vitt/claude-thai-skills](https://github.com/Boom-Vitt/claude-thai-skills/tree/62929a2092e193a64676170a58b8286eaf41c4bc/skills) @ `62929a2092e193a64676170a58b8286eaf41c4bc` — MIT © 2026 Vittawat (Boom-Vitt) เก็บ [MIT notice](third-party-notices/claude-thai-skills-MIT.txt) คู่กับการดัดแปลง ข้อความ contract, methodology และตัวอย่างเขียนใหม่สำหรับ STeP ไม่ติดตั้ง marketplace ต้นทางหรือรัน installer ของต้นทาง
+
+| ต้นทาง | ส่วนที่ดัดแปลง | จุดใช้ใน STeP |
+|---|---|---|
+| thai-translate | เลือกระดับภาษา ศัพท์ และตรวจความหมายกลับกับต้นฉบับ | thai-english-translation (draft), translation-review และตัวอย่างสังเคราะห์ |
+| thai-government-form | โครงบันทึก/หนังสือตามวัตถุประสงค์ | thai-official-documents/drafting-checks และฟอร์ม Desktop |
+| thai-date-format | เดือนไทย เลขไทย และการจัดรูปแบบ พ.ศ./ค.ศ. | thai-data-formatting และ parser ใหม่ของ Desktop ที่ตรวจวันจริง/ศักราช ไม่เดาปีสองหลัก |
+| thai-social-caption | เลือกโครงข้อความตามช่องทาง | step-writing/channel-writing และ brand-tone-of-voice |
+| thai-customer-service | รับเรื่อง → ชี้แจง → ขั้นตอนถัดไป | customer-support-faq-triage/channel-replies |
+| thai-invoice | แยกค่าต้นทาง ฐาน อัตรา สูตรและผลคำนวณ | receipt-audit/arithmetic-review; ไม่ออกเอกสารภาษีหรือยื่นแบบ |
+
+สิ่งที่ไม่รับจากต้นทาง:
+- ไม่คัดลอก parser วันที่ที่เดาศตวรรษและปล่อยวันที่ไม่มีจริงเลื่อนไปเดือนอื่น
+- ไม่รับข้อความเรื่อง PDF/A, CA, ผลทางกฎหมายของลายเซ็น อัตราภาษี หรือฐานกฎหมาย PDPA เป็น current rule ต้องตรวจ Controlled Source และเจ้าของงาน
+- ไม่ใช้การเดาอายุ/เพศจากรูปหรือโปรไฟล์ในการเลือกคำเรียกผู้รับ
+- ไม่สร้าง Skill ตรวจ ID ซ้ำ เพราะ Desktop มี checksum อยู่แล้ว ไม่เพิ่ม PromptPay/payment/slip verification ในงานนี้
+- ไม่คัดลอก provinces.json ซึ่ง notices ต้นทางระบุว่ามีข้อมูลอ้าง Wikipedia (CC BY-SA 4.0); ไม่ถือ MIT ของ repo เป็นใบอนุญาตข้อมูลทั้งหมด
+- ไม่เพิ่มโมเดลตัดคำ Python/NLP, resume หรือ festival-card เป็น Skill ใหม่ ยังไม่มี use case ที่ต้องนำเข้าชุดนี้
+
+ดู [การเชื่อมโยงและขอบเขตการทดสอบ](thai-skill-connections.md) ผล model-side ของการดัดแปลงนี้ยัง not-yet-run ไม่ใช่หลักฐานความแม่นยำกับเอกสารจริง
+
+## ที่ตัดสินใจไม่นำมาใช้ (แหล่งอื่น)
 
 | ต้นทาง | เหตุผล |
 | --- | --- |

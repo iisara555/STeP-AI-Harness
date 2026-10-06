@@ -8,7 +8,7 @@
 
 **Repository scope:** `main` may contain post-v0.7.3 changes; do not treat `main` as a released employee package until tagged/released.
 
-**Repository tree inventory:** 51 Skills / 50 router entries / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
+**Repository tree inventory:** 52 Skills / 51 router entries / 5 Playbooks / 4 Actions / 22 teams / 5 routing clusters
 
 ## ขอบเขต
 

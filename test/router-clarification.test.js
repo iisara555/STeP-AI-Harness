@@ -282,7 +282,7 @@ test('authority blocks still precede the clarification menu and its choice', asy
 });
 
 test('a concrete request with no matching Skill gets help instead of questions', async () => {
-  for (const query of ['ช่วยแปลเป็นภาษาอังกฤษ', 'ช่วยเขียนอีเมลถึงลูกค้าหน่อย', 'ช่วยทำ excel สรุปยอด', 'ขอไอเดียกิจกรรม team building']) {
+  for (const query of ['ช่วยเขียนอีเมลถึงลูกค้าหน่อย', 'ช่วยทำ excel สรุปยอด', 'ขอไอเดียกิจกรรม team building']) {
     const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir });
     assert.equal(result.routingMode, 'GENERAL', query);
     assert.equal(result.clarification, null, query);
@@ -321,7 +321,7 @@ test('authority blocks precede general help', async () => {
 
 test('a clarification answer that names a plain task ends the questions', async () => {
   const result = await queryStepRouter('ช่วยหน่อย', {
-    workspaceDir: options.workspaceDir, clarificationAnswer: 'แปลอีเมลเป็นภาษาอังกฤษ',
+    workspaceDir: options.workspaceDir, clarificationAnswer: 'ช่วยทำ excel สรุปยอด',
   });
   assert.equal(result.routingMode, 'GENERAL');
   assert.equal(result.clarification, null);
@@ -355,7 +355,7 @@ test('adapters help directly on GENERAL and know the workspace launchers', () =>
 
 test('a single weak candidate is confirmed in one question, not three', async () => {
   const query = 'ช่วยหน่อย';
-  const answer = 'แปลอีเมลภาษาไทยเป็นภาษาอังกฤษ';
+  const answer = 'FAQ';
   const result = await queryStepRouter(query, { workspaceDir: options.workspaceDir, clarificationAnswer: answer });
   assert.equal(result.routingMode, 'CLARIFY');
   assert.equal(result.clarification.field, 'skill');

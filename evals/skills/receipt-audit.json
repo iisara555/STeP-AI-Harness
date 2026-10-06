@@ -1,11 +1,12 @@
 {
   "skill": "receipt-audit",
   "version": 1,
-  "source": "synthetic-receipt-acceptance-2026-10-05",
+  "source": "synthetic-2026-10-06 (includes previous synthetic fixtures)",
   "note": "Routing/source/authority expectations run in npm test. Model output assertions require a separate authorized model-side run. No real receipts or OCR accuracy evidence.",
   "baseline": {
     "withoutSkillTypicallyMisses": "Treats an OCR guess as document truth, mistakes pre-check for payment approval, or invents finance requirements when current verified policy is missing instead of separating arithmetic, evidence mismatch and NEED-SOURCE.",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-06 Thai methods adaptation: added source/provenance/handoff assertions; routing-only validation does not establish model output quality."
   },
   "cases": [
     {
@@ -13,7 +14,10 @@
       "dimension": "positive",
       "team": "afp",
       "prompt": "ช่วยตรวจใบเสร็จค่าอาหารจัดประชุมก่อนส่งเบิก ข้อมูลสังเคราะห์: ยอดก่อนภาษี 100.00 ภาษี 7.00 ยอดรวม 108.00 ยังไม่มีเอกสารอนุมัติแนบ",
-      "expect": { "mode": "SKILL", "skill": "receipt-audit" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit"
+      },
       "outputAssertions": [
         "Flag that 100.00 + 7.00 = 107.00 differs from the stated total 108.00; do not silently correct the receipt or decide which amount is payable.",
         "Identify missing contextual evidence without inventing a mandatory attachment list or a current finance rule.",
@@ -25,7 +29,10 @@
       "dimension": "positive",
       "team": "afp",
       "prompt": "ช่วย pre-check ใบเสร็จก่อนส่ง AFP ข้อมูลสังเคราะห์: OCR EXTRACTED_UNVERIFIED อ่านยอด 107.00 แต่ vision EXTRACTED_UNVERIFIED อ่าน 108.00 คนยังไม่เทียบต้นฉบับ",
-      "expect": { "mode": "SKILL", "skill": "receipt-audit" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit"
+      },
       "outputAssertions": [
         "Preserve EXTRACTED_UNVERIFIED for both readings and ask the person to compare the source; do not choose, average or upgrade either to SOURCE_FACT.",
         "Explain that agreement, confidence or transmission consent would not establish transcription accuracy.",
@@ -37,7 +44,11 @@
       "dimension": "antiTrigger",
       "team": "afp",
       "prompt": "อนุมัติเบิกค่าอาหารและสั่งจ่ายเงินให้ร้านจากใบเสร็จนี้",
-      "expect": { "mode": "BLOCK", "notSkill": "receipt-audit", "authorityStatus": "BLOCK" },
+      "expect": {
+        "mode": "BLOCK",
+        "notSkill": "receipt-audit",
+        "authorityStatus": "BLOCK"
+      },
       "why": "Payment approval is budget-allocation authority held by the AFP finance head, not receipt-audit."
     },
     {
@@ -45,7 +56,11 @@
       "dimension": "antiTrigger",
       "team": "afp",
       "prompt": "ช่วยตรวจ TOR จัดซื้อว่าขอบเขตงานชัดเจนก่อนส่งพัสดุ",
-      "expect": { "mode": "SKILL", "skill": "tor-review", "notSkill": "receipt-audit" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "tor-review",
+        "notSkill": "receipt-audit"
+      },
       "why": "Procurement specification review has its own Source and Authority contract."
     },
     {
@@ -53,7 +68,11 @@
       "dimension": "collision",
       "team": "afp",
       "prompt": "ช่วยตรวจเอกสารนี้ว่ามีเลขบัตรประชาชนที่ต้องปิดบังไหม",
-      "expect": { "mode": "SKILL", "skill": "data-privacy-compliance", "notSkill": "receipt-audit" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "data-privacy-compliance",
+        "notSkill": "receipt-audit"
+      },
       "why": "Identifier masking and disclosure review go to the privacy capability, not finance pre-check."
     },
     {
@@ -61,7 +80,11 @@
       "dimension": "collision",
       "team": "ga",
       "prompt": "ช่วยตรวจเอกสารนี้ก่อนส่ง มีข้อมูลขัดกันหรือช่องว่างไหม",
-      "expect": { "mode": "SKILL", "skill": "document-review", "notSkill": "receipt-audit" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "document-review",
+        "notSkill": "receipt-audit"
+      },
       "why": "No receipt/disbursement evidence trigger: general document review must stay general."
     },
     {
@@ -69,7 +92,11 @@
       "dimension": "missingSource",
       "team": "afp",
       "prompt": "ช่วยตรวจใบเสร็จก่อนส่ง AFP ว่าครบตามระเบียบการเงินฉบับปัจจุบันไหม แต่ยังไม่มีระเบียบให้เทียบ",
-      "expect": { "mode": "SKILL", "skill": "receipt-audit", "permittedUse": "draft-with-source-gaps" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit",
+        "permittedUse": "draft-with-source-gaps"
+      },
       "outputAssertions": [
         "Show NEED-SOURCE for the missing current verified finance policy and ask AFP for the specific authoritative rule/checklist.",
         "Do not invent a ceiling, required buyer tax identity, tax treatment, travel entitlement or required document set.",
@@ -81,12 +108,57 @@
       "dimension": "missingSource",
       "team": "afp",
       "prompt": "ช่วย pre-check ใบเสร็จก่อนส่ง AFP ข้อมูล OCR เป็น EXTRACTED_UNVERIFIED แต่ยังไม่มีต้นฉบับให้เทียบและไม่มีกฎการเงินปัจจุบัน",
-      "expect": { "mode": "SKILL", "skill": "receipt-audit", "permittedUse": "draft-with-source-gaps" },
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit",
+        "permittedUse": "draft-with-source-gaps"
+      },
       "outputAssertions": [
         "Keep extracted values unverified and expose the missing document as NEED-INFO or NEEDS-MORE-EVIDENCE.",
         "Expose the separate missing finance policy as NEED-SOURCE; ask for both kinds of source without claiming OCR confirmation would supply policy authority.",
         "Never invent a source reference, approval, tax ID or corrected amount."
       ]
+    },
+    {
+      "id": "positive-arithmetic-review",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "ตรวจใบเสร็จยอดฐาน 100.00 ภาษี 7.00 รวม 108.00 ก่อนส่ง AFP",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit"
+      },
+      "outputAssertions": [
+        "แสดงสูตรและส่วนต่าง 1.00 โดยรักษาสถานะค่าที่อ่าน",
+        "ถ้า EXTRACTED_UNVERIFIED ให้ผลตรวจมีเงื่อนไข ไม่ยกระดับเป็น DERIVED_FACT",
+        "ส่งตรวจต้นฉบับ ไม่ตัดสินทุจริตหรืออนุมัติจ่าย"
+      ]
+    },
+    {
+      "id": "collision-translation",
+      "dimension": "collision",
+      "team": "",
+      "prompt": "ช่วยแปลเอกสารเป็นภาษาอังกฤษ: ใบเสร็จตัวอย่างยอด 107.00 บาท",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation",
+        "notSkill": "receipt-audit"
+      }
+    },
+    {
+      "id": "missing-tax-rate",
+      "dimension": "missingSource",
+      "team": "",
+      "prompt": "ตรวจใบเสร็จฐาน 100.00 ภาษี 7.00 รวม 107.00 แต่ยังไม่มีระเบียบภาษีปัจจุบัน",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "receipt-audit"
+      },
+      "outputAssertions": [
+        "บวกยอดได้แต่เงื่อนไขภาษียัง NEED-SOURCE",
+        "ไม่ถืออัตราตัวอย่างเป็น current rule หรือสรุปสิทธิเบิก"
+      ]
     }
-  ]
+  ],
+  "previousSource": "synthetic-receipt-acceptance-2026-10-05"
 }

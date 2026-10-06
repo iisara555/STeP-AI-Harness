@@ -12,6 +12,8 @@
  * All weights and thresholds are configurable via router-index.yaml
  */
 
+import { translationTargetInScope } from './translation-scope.js';
+
 export const DEFAULT_WEIGHTS = {
   INTENT: 0.30,
   KEYWORD: 0.25,
@@ -300,12 +302,15 @@ export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
 }
 
 export function rankSkillCandidates(skills, context, options = {}) {
-  const scored = skills.map((s) => scoreSkillCandidate(s, context, options));
+  const scored = skills
+    .filter(s => !s.intent?.includes('translation') || translationTargetInScope(context.text))
+    .map((s) => scoreSkillCandidate(s, context, options));
   const lowerText = (context.text || '').toLowerCase();
   const actionFirstIntents = new Set([
     'privacy-review',
     'form-submit',
     'social-writing',
+    'translation',
     'lab-review',
     'market-test',
     'onboarding-plan',

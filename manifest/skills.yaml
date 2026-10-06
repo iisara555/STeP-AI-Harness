@@ -436,6 +436,25 @@ skills:
       mandatory: [step-writing-rule]
       optional: []
 
+  thai-english-translation:
+    owner: cc
+    version: 1.0.0
+    domain: [communication, translation]
+    process: [creative.branding]
+    path: skills/common/thai-english-translation/SKILL.md
+    description: ร่างและตรวจคำแปลไทย–อังกฤษจากต้นฉบับ โดยรักษาความหมาย ตัวเลข รหัส และสถานะ พร้อมแสดงข้อมูลที่รอยืนยัน
+    governance:
+      owner: cc
+      reviewer: [ga, qs, afp]
+      approvedBy: [cc-head]
+      reviewedAt: "2026-10-06"
+      reviewCycle: { months: 12 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [step-writing-rule, human-approval-rule, data-classification-rule]
+      optional: []
+
   thai-official-documents:
     owner: ga
     version: 1.0.0

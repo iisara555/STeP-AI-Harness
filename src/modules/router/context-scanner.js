@@ -7,6 +7,7 @@
 import { extname, basename, dirname } from 'node:path';
 import { scoreSkillCandidate } from './scorer.js';
 import { neutralizeDraftingPhrases } from './authority-preflight.js';
+import { translationTargetInScope } from './translation-scope.js';
 
 export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
 
@@ -52,7 +53,21 @@ export const QUALIFIED_INTENT_RULES = [
       ['ไม่ตรง', 'ไม่ตรงกัน', 'หน่วย', 'ตรวจ', 'ทบทวน'],
     ],
   },
+  {
+    intent: 'translation',
+    allAny: [
+      ['แปลเป็น', 'แปลไทย', 'แปลอังกฤษ', 'แปลข้อความ', 'แปลอีเมล', 'แปลเอกสาร', 'แปลบันทึกข้อความ', 'แปลหนังสือราชการ', 'ตรวจคำแปล', 'translate', 'translation'],
+      ['ไทย', 'อังกฤษ', 'thai', 'english'],
+    ],
+  },
   { intent: 'market-test', any: ['ขายได้ไหม', 'จะขายได้ไหม', 'ทดสอบตลาด', 'ทดลองตลาด', 'market test', 'test market'] },
+  {
+    intent: 'triage',
+    allAny: [
+      ['faq', 'คำถามผู้รับบริการ', 'คำถามลูกค้า', 'ตอบลูกค้า'],
+      ['ร่างคำตอบ', 'ช่วยตอบ', 'ตอบคำถาม', 'คัดแยก'],
+    ],
+  },
   // A one-year revenue target is a business-planning request even when the
   // owner says "ตั้งเป้า" or "ต้องขายกี่ชิ้น" instead of "วางแผน". Require the
   // financial subject, time horizon and business context together so salary
@@ -130,6 +145,7 @@ export function inferIntentFromText(promptText = '') {
   const lower = neutralizeDraftingPhrases(promptText).toLowerCase();
 
   for (const rule of QUALIFIED_INTENT_RULES) {
+    if (rule.intent === 'translation' && !translationTargetInScope(lower)) continue;
     if (matchesQualifiedIntent(lower, rule)) return rule.intent;
   }
 

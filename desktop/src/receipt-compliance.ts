@@ -3,6 +3,8 @@
 // from, so no rule is made up by the AI. AFP rules come from its circulars (docs/afp-operational-circulars.md); items
 // whose source is not in the harness say so and send the person to AFP.
 
+import { parseThaiDate } from './thai-date';
+
 export const DOCUMENT_TYPES = [
   'tax_invoice',
   'abbreviated_tax_invoice',
@@ -76,45 +78,11 @@ function classifyText(text: string): DocumentType | '' {
   return '';
 }
 
-const THAI_MONTHS = [
-  ['ม.ค', 'มกราคม', 'jan'],
-  ['ก.พ', 'กุมภาพันธ์', 'feb'],
-  ['มี.ค', 'มีนาคม', 'mar'],
-  ['เม.ย', 'เมษายน', 'apr'],
-  ['พ.ค', 'พฤษภาคม', 'may'],
-  ['มิ.ย', 'มิถุนายน', 'jun'],
-  ['ก.ค', 'กรกฎาคม', 'jul'],
-  ['ส.ค', 'สิงหาคม', 'aug'],
-  ['ก.ย', 'กันยายน', 'sep'],
-  ['ต.ค', 'ตุลาคม', 'oct'],
-  ['พ.ย', 'พฤศจิกายน', 'nov'],
-  ['ธ.ค', 'ธันวาคม', 'dec'],
-];
 const thaiDigits = (value: string) => value.replace(/[๐-๙]/g, d => String('๐๑๒๓๔๕๖๗๘๙'.indexOf(d)));
-/** A year as printed: Buddhist (2569, or 69) or Christian (2026, or 26 when it cannot be Buddhist). */
-function fullYear(raw: string) {
-  let year = Number(raw);
-  if (raw.length <= 2) year += year >= 40 ? 2500 : 2000; // 69 → 2569, 26 → 2026
-  return year > 2400 ? year - 543 : year;
-}
 /** A receipt date as printed (2 ต.ค. 2569, 02/10/2569, 2026-10-02, 2 October 2026); null when it cannot be read. */
 export function parseReceiptDate(value: string): Date | null {
-  const text = thaiDigits(value).toLowerCase().replace(/\s+/g, ' ').trim();
-  let day: number, month: number, year: number;
-  let m = /(\d{4})-(\d{1,2})-(\d{1,2})/.exec(text);
-  if (m) [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  else if ((m = /(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{2,4})/.exec(text))) {
-    [day, month, year] = [Number(m[1]), Number(m[2]), fullYear(m[3])];
-  } else {
-    const named = /(\d{1,2})\s*([ก-๙a-z.]+)\s*(\d{2,4})/.exec(text);
-    if (!named) return null;
-    const word = named[2].replace(/\.$/, '');
-    const index = THAI_MONTHS.findIndex(([abbr, full, en]) => word === abbr.replace(/\.$/, '') || word === full || word.startsWith(en));
-    if (index < 0) return null;
-    [day, month, year] = [Number(named[1]), index + 1, fullYear(named[3])];
-  }
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day && year > 1990 && year < 2200 ? date : null;
+  const date = parseThaiDate(value);
+  return date && date.getUTCFullYear() > 1990 ? date : null;
 }
 /** The day `count` working days after `from` (Monday to Friday; public holidays are not known here). */
 export function addWorkingDays(from: Date, count: number) {

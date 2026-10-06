@@ -569,6 +569,29 @@ skills:
           authority: official-signing
           description: การเปลี่ยนสาระสำคัญของนโยบายหรือมติ
 
+  - name: thai-english-translation
+    cluster: governance-operations
+    domain: communication
+    processId: creative.branding
+    teams:
+      primary: [cc]
+      consumers: [ga, afp, crm, imo, pubsec]
+    description: แปลหรือทบทวนคำแปลไทย–อังกฤษจากต้นฉบับ ไม่รับรองคำแปลหรือสิทธิเบิกจ่าย
+    intent: [translation, create, review]
+    triggers: [แปลเป็นภาษาอังกฤษ, แปลเป็นภาษาไทย, แปลไทยเป็นอังกฤษ, แปลอังกฤษเป็นไทย, แปลข้อความ, แปลอีเมล, แปลเอกสาร, แปลบันทึกข้อความ, แปลหนังสือราชการ, ตรวจคำแปล, translate, translation]
+    paths: []
+    fileTypes: [txt, md, docx, pdf]
+    requires: [source_text, target_language]
+    scope:
+      allow:
+        - แปลและเทียบความหมายกับต้นฉบับ พร้อมระบุความกำกวมและรายการที่ต้องยืนยัน
+      escalate: {}
+      human_only:
+        translation_certification:
+          role: authorized-signatory
+          authority: official-signing
+          description: การรับรองคำแปลหรือใช้ร่างเป็นหลักฐานรับรองแทนผู้แปลที่ได้รับอนุญาต
+
   - name: thai-official-documents
     cluster: governance-operations
     domain: governance

@@ -1,11 +1,12 @@
 {
   "skill": "step-writing",
   "version": 1,
-  "source": "synthetic-2026-09-25",
+  "source": "synthetic-2026-10-06 (includes previous synthetic fixtures)",
   "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ขัดเกลาภาษาได้ แต่เติมข้อเท็จจริง เช่น วัน เวลา สถานที่ ที่ต้นทางไม่มี และไม่ยึดกติกาการเขียนของ STeP",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-06 Thai methods adaptation: added source/provenance/handoff assertions; routing-only validation does not establish model output quality."
   },
   "cases": [
     {
@@ -88,6 +89,46 @@
         "ใช้ช่องว่างที่เห็นชัด เช่น [วันที่] [สถานที่] แทนการเดาข้อมูล",
         "บอกผู้ใช้ว่าต้องเติมข้อมูลใดก่อนเผยแพร่"
       ]
+    },
+    {
+      "id": "positive-channel-announcement",
+      "dimension": "positive",
+      "team": "",
+      "prompt": "ช่วยเขียนแคปชั่น Facebook ประชาสัมพันธ์กิจกรรมตัวอย่าง",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing"
+      },
+      "outputAssertions": [
+        "มีข้อความตามช่องทางและขั้นตอนถัดไปจากต้นเรื่อง",
+        "ไม่แต่งวันเวลา ราคา ที่นั่งจำกัด หรือ URL สมัคร"
+      ]
+    },
+    {
+      "id": "collision-translation",
+      "dimension": "collision",
+      "team": "",
+      "prompt": "ช่วยแปลข้อความไทยเป็นอังกฤษ: กิจกรรมตัวอย่างรออนุมัติ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation",
+        "notSkill": "step-writing"
+      }
+    },
+    {
+      "id": "missing-channel-registration",
+      "dimension": "missingSource",
+      "team": "",
+      "prompt": "ช่วยเขียนแคปชั่น Facebook แต่ยังไม่ยืนยันวัน สถานที่ และลิงก์สมัคร",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing"
+      },
+      "outputAssertions": [
+        "เว้นช่องรอยืนยันและแยกรายการก่อนเผยแพร่",
+        "ไม่สร้างลิงก์ ไม่เติมฟรีหรือ urgency"
+      ]
     }
-  ]
+  ],
+  "previousSource": "synthetic-2026-09-25"
 }

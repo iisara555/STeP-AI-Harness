@@ -65,6 +65,8 @@ export const documentToolsEn: Record<string, string> = {
   เรื่อง: 'Subject',
   'เรื่องเดิม / ความเป็นมา': 'Prior matter / background',
   'ข้อเท็จจริง / ผลดำเนินการ': 'Facts / results',
+  'ข้อพิจารณา / เหตุผลและแหล่งเกณฑ์': 'Considerations / rationale and criteria sources',
+  'ระบุปีเต็ม เช่น 2 ตุลาคม 2569': 'Use a full year, e.g. 2 October 2569 BE',
   'ข้อเสนอ / สิ่งที่ต้องการให้พิจารณา': 'Proposal / requested consideration',
   'แบบฟอร์ม / ข้อกฎหมายพร้อมแหล่งอ้างอิง': 'Form / legal clauses with sources',
   หนังสือภายนอก: 'External letter',

@@ -1,0 +1,62 @@
+{
+  "skill": "brand-tone-of-voice",
+  "version": 1,
+  "source": "synthetic-2026-10-06",
+  "note": "Routing/source-boundary regression only; outputAssertions await model-side grading. No lifecycle promotion.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "อาจเพิ่มภาษาโฆษณาและเติมคำมั่นแทนการตรวจข้อเท็จจริง หรือกล่าวว่าตรง Brand CI ทั้งที่ไม่มีเอกสารปัจจุบัน",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-tone",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยเช็คน้ำเสียงแบรนด์ในโพสต์นี้ว่าเข้ากับ STeP ไหม",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "brand-tone-of-voice"
+      },
+      "outputAssertions": [
+        "แยกผลตรวจภาษาออกจากข้อเท็จจริงที่ต้องยืนยัน",
+        "ไม่รับรองว่าเข้ากับ CI เมื่อยังไม่มีแหล่งปัจจุบัน"
+      ]
+    },
+    {
+      "id": "anti-writing",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยเขียนแคปชั่นชวนคนมางานเปิดบ้านหน่อย",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "step-writing",
+        "notSkill": "brand-tone-of-voice"
+      }
+    },
+    {
+      "id": "collision-translation",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยแปลข้อความไทยเป็นอังกฤษ: กิจกรรมตัวอย่างรออนุมัติ",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "thai-english-translation",
+        "notSkill": "brand-tone-of-voice"
+      }
+    },
+    {
+      "id": "missing-ci",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยตรวจน้ำเสียงแบรนด์ STeP แต่ยังไม่มี Brand CI ที่อนุมัติแล้ว",
+      "expect": {
+        "mode": "SKILL",
+        "skill": "brand-tone-of-voice"
+      },
+      "outputAssertions": [
+        "ให้ข้อเสนอภาษาแบบเบื้องต้นและระบุ CI รอยืนยัน",
+        "ไม่แต่งค่าธรรมเนียม วันเวลา หรือคำกล่าวรับรองผล"
+      ]
+    }
+  ]
+}

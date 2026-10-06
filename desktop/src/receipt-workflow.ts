@@ -1,5 +1,6 @@
 import { parseReceiptDate, type ClaimCategory, type ComplianceItem, type DocumentType } from './receipt-compliance';
 import { amount, RECEIPT_FIELDS, type ReceiptField } from './receipt-vision';
+import { formatThaiDate } from './thai-date';
 
 const digits = (value: string) => value.replace(/[๐-๙]/g, d => String('๐๑๒๓๔๕๖๗๘๙'.indexOf(d)));
 
@@ -10,8 +11,7 @@ export function formValues(input: Partial<Record<ReceiptField, string>>): Record
       let value = digits(input[key] || '').trim();
       if (key === 'date' && value) {
         const date = parseReceiptDate(value);
-        if (date)
-          value = `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${date.getUTCFullYear() + 543}`;
+        if (date) value = formatThaiDate(date);
       }
       if (['subtotal', 'vat', 'total'].includes(key) && value) {
         const number = amount(value);
