@@ -6,7 +6,7 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: '0.5.20',
+    version: '0.5.21',
     items: () => [
       t('ปรับ OCR สำหรับภาพซีด ภาพหมุน และตัวเลขใบเสร็จ โดยยังต้องตรวจเทียบต้นฉบับก่อนยืนยัน'),
       t('PDF ที่มีข้อความอยู่แล้วเปิดอ่านได้เร็วขึ้น โดยไม่เริ่มโมเดล OCR'),

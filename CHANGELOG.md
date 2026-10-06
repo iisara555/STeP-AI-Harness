@@ -6,11 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-## Desktop v0.5.20 — 2026-10-06
+## Desktop v0.5.21 — 2026-10-06
 
-STeP Desktop version 0.5.20 packages the OCR improvements below for `desktop-v0.5.20`. The in-app update notes are available in Thai and English. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
+STeP Desktop version 0.5.21 packages the OCR improvements below for `desktop-v0.5.21`. The in-app update notes are available in Thai and English. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
 
 ### Desktop: documentation and release notes
+
+- Correct the private-pilot path test to expect the canonical destination when temporary directories have symlinked ancestors, as on macOS. The `desktop-v0.5.20` tag did not publish installers because its Mac unit-test job failed; 0.5.21 replaces that unpublished candidate without rewriting its tag. Linked-file rejection and the canonical-path implementation are unchanged.
 
 - Update the employee and developer README with current receipt behavior, synthetic OCR evidence and text-to-image API instructions. Document image intent/context limitations found with simulated providers; these image behaviors are not changed by this release.
 - Add in-app update notes and synchronize Desktop package/lockfile versions. Windows/macOS installers and the rolling update feed are published by the existing tag workflow after its checks.

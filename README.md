@@ -375,7 +375,7 @@ mapped / ambiguous / unmapped
 
 Tesseract ไม่ได้ถูกใช้เป็น handwriting authority และ candidate จากลายมืออย่างเดียวจะไม่ถูก auto-confirm
 
-### ผลทดสอบ OCR รุ่น 0.5.20
+### ผลทดสอบ OCR รุ่น 0.5.21
 
 รุ่นนี้ปรับภาพซีด/ภาพหมุน การอ่านรอยต่อภาพ และการจับตัวเลขตามแถว พร้อมป้องกันการบันทึกผล pilot เข้า Git บนชุดใบเสร็จสังเคราะห์ 9 ภาพ ค่ารายช่องที่ตรงคำตอบเพิ่มจาก **50/63 เป็น 59/63**; ยังมี 4 ช่องผิดหรืออ่านไม่พบ จึงต้องตรวจเทียบต้นฉบับและยืนยันเอง ผลนี้ยังไม่ใช่ความแม่นยำกับใบเสร็จจริงหรือการปิด Acceptance Gate ([รายละเอียดและข้อจำกัด](experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md))
 
@@ -613,7 +613,7 @@ README ส่วนบนตั้งใจให้เป็น **GUI-first emp
 
 ## Version / inventory
 
-README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.20**
+README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.21**
 
 | รายการใน Harness source | จำนวน |
 | --- | --- |

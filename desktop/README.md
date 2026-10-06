@@ -12,7 +12,7 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
-## Desktop 0.5.20
+## Desktop 0.5.21
 
 This version improves local Thai receipt OCR without adding models or changing policy defaults. Nine synthetic images improved canonical field matches from 50/63 to 59/63; four incorrect or absent fields remain. Native-text PDFs skip PaddleOCR import/startup. See the [synthetic quality report](../experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md) for timing, memory and remaining review failures. Real-document acceptance and employee-hardware performance remain unverified.
 
