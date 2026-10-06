@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: per-account provider quotas, credits and API usage
+
+- Add provider-reported Usage cards to the existing `/usage` dialog: Codex quota windows/credits, Claude subscription windows/extra usage, Copilot request entitlements, OpenRouter key spend/account credit and DeepSeek currency balances. Claude/Copilot readers remain explicitly experimental; other connections show local accounting and a provider link without invented quota readings.
+- Keep 5h/weekly windows, credit units, USD/CNY balances, API key limits, UTC API spend and app estimates distinct. Attribute new token ledger entries to their connection/mode while retaining historical unattributed totals.
+- Refresh on request with memory-only snapshots, one-minute deduplication, serial runtime reads, managed credentials, bounded official-endpoint HTTP and runtime cleanup. No prompts, automatic login, transcript scans, added dependencies, policy-default change, version bump or release.
+- Validation uses synthetic provider responses and fake-runtime Desktop UI/IPC only. Real-account access, billing reconciliation and Windows/macOS minimum-machine performance remain unverified.
+
 ### Thai Skills: STeP contracts, connected handoffs and Desktop date review
 
 - Adapt six selected Thai methods from Boom-Vitt/claude-thai-skills (MIT, pinned upstream revision), rewriting the procedures and synthetic examples for STeP. Add `thai-english-translation` at draft; extend official documents, writing, brand tone, service replies and receipt arithmetic without importing tax rates or legal claims as current policy.

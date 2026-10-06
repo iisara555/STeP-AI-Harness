@@ -47,6 +47,8 @@ const allowed = new Set([
   'sessionExport',
   'snapshot',
   'usage',
+  'providerUsage',
+  'providerUsagePage',
   'questionRespond',
   'toolSnapshots',
   'toolSnapshotRestore',

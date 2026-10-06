@@ -3,7 +3,16 @@ import { Store } from './store';
 import type { Connection } from '../src/types';
 import type { TokenCount } from './providers';
 import type { Policy } from './policy';
-type Entry = TokenCount & { day: string; provider: string; model: string; usd: number; unpricedTokens: number; calls: number };
+type Entry = TokenCount & {
+  day: string;
+  provider: string;
+  model: string;
+  connectionId?: string;
+  mode?: Connection['mode'];
+  usd: number;
+  unpricedTokens: number;
+  calls: number;
+};
 const dollars = (n: number) => Math.round(n * 1e12) / 1e12;
 export class CostLedger {
   constructor(
@@ -21,13 +30,15 @@ export class CostLedger {
       model = connection.model || 'provider-default';
     const price = this.policy().prices[model] || this.policy().prices[connection.provider + ':*'];
     const id = createHash('sha256')
-      .update(JSON.stringify([day, connection.provider, model]))
+      .update(JSON.stringify([day, connection.provider, model, connection.id || null, connection.mode || null]))
       .digest('hex');
     const old = this.store.get<Entry>('usage-ledger', id);
     this.store.put('usage-ledger', id, {
       day,
       provider: connection.provider,
       model,
+      connectionId: connection.id,
+      mode: connection.mode,
       input: input + (old?.input || 0),
       output: output + (old?.output || 0),
       total: total + (old?.total || 0),

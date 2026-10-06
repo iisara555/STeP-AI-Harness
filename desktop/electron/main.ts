@@ -82,6 +82,7 @@ import { attachmentReason } from './attachments';
 import { DesktopTools } from './tools';
 import { Questions } from './questions';
 import { CostLedger } from './cost';
+import { ProviderUsage, usageDashboard } from './provider-usage';
 import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
@@ -503,6 +504,11 @@ async function main() {
   const agentBrowser = new AgentBrowser(dock, () => policyState.policy.network?.privateHosts || []);
   const questions = new Questions(emit);
   const ledger = new CostLedger(store, () => policyState.policy);
+  const providerUsage = new ProviderUsage(async connection => {
+    // Use exactly the selected connection's managed credentials and current policy.
+    if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+    return (await runtime(connection)).context;
+  });
   const tools = new DesktopTools(
     workbench,
     harness,
@@ -1208,7 +1214,20 @@ async function main() {
         return { path: result.filePath };
       }
       case 'usage':
-        return ledger.report();
+        return { ...ledger.report(), accounts: store.connections().map(c => providerUsage.snapshot(c)) };
+      case 'providerUsage': {
+        const c = store.get<Connection>('connection', inputText(input.id, 60));
+        if (!c) throw new Error('CONNECTION_NOT_FOUND');
+        return providerUsage.refresh(c);
+      }
+      case 'providerUsagePage': {
+        const c = store.get<Connection>('connection', inputText(input.id, 60));
+        if (!c) throw new Error('CONNECTION_NOT_FOUND');
+        const url = usageDashboard(c);
+        if (!url) throw new Error('INVALID_INPUT');
+        await shell.openExternal(url);
+        return true;
+      }
       case 'questionRespond':
         questions.respond(inputText(input.id, 60), input.answer);
         return true;
@@ -1720,6 +1739,7 @@ async function main() {
           store.put('secret', id, safeStorage.encryptString(inputText(input.apiKey, 1000)).toString('base64'));
         }
         if (input.mode === 'subscription' || input.mode === 'oauth') store.put('secret', id, null);
+        providerUsage.forget(id);
         store.put('connection', id, connection);
         return connection;
       }
@@ -1767,6 +1787,7 @@ async function main() {
         if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn())
           throw new Error('FEATURE_DISABLED');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+        providerUsage.forget(connection.id);
         connecting.add(connection.id);
         const controller = new AbortController(),
           // Antigravity may first download its CLI (about 190 MB on Windows) and wait for the Google sign-in.
@@ -2137,6 +2158,7 @@ async function main() {
         const c = store.get<Connection>('connection', input.id);
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(c.id)) throw new Error('RUN_ALREADY_ACTIVE');
+        providerUsage.forget(c.id);
         for (const session of store.list<any>('session')) if (session.connectionId === c.id) service.cancel(session.id);
         if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
           const r = await runtime(c, true);
@@ -2172,6 +2194,7 @@ async function main() {
         const c = store.get<Connection>('connection', inputText(input.id, 60));
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(c.id)) throw new Error('CONNECTION_BUSY');
+        providerUsage.forget(c.id);
         const sessions = store.list<Session>('session').filter(session => session.connectionId === c.id);
         if (sessions.some(session => service.isActive(session.id))) throw new Error('RUN_ALREADY_ACTIVE');
         // Signing out is best effort: a connection that never signed in, or whose CLI is gone, must still be removable.

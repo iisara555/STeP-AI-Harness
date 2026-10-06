@@ -4,6 +4,8 @@ Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, co
 
 The Phase 2 [governed tool loop](../docs/desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
 
+The same `/usage` dialog also shows [per-account provider quotas, credits and API usage](../docs/desktop-provider-usage.md), with explicit refresh, reported units/reset times and separate local estimates. Supported account readers use managed credentials without sending a model prompt; unsupported connections retain local accounting and provider links when available. Claude/Copilot interfaces are experimental, and real-account access remains separately unverified.
+
 Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
 
 [Learning Inbox](../docs/desktop-learning.md) adds `/learn`, explicit review of local preference/procedure proposals, version history, disable and rollback. Only approved lessons enter later tasks; this phase does not include automatic review or measured quality improvement.

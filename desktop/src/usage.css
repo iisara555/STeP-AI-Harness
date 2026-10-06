@@ -1,0 +1,35 @@
+.usage-account {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0 16px;
+  overflow-wrap: anywhere;
+}
+.usage-account h4 {
+  margin: 0 0 8px;
+}
+.usage-meter,
+.usage-credit,
+.usage-api-spend {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 10px;
+}
+.usage-meter-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+.usage-meter progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+  margin-top: 6px;
+}
+.usage-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}

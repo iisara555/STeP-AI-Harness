@@ -50,6 +50,47 @@ export type SkillEntry = {
   triggers: string[];
 };
 export type Usage = { input: number; output: number; total: number; runs: number };
+/** Only provider-reported account meters. Unknown values stay absent, never zero. */
+export type ProviderUsageData = {
+  status: 'ok' | 'unavailable';
+  source: 'codex' | 'claude' | 'copilot' | 'openrouter' | 'deepseek';
+  experimental?: boolean;
+  plan?: string;
+  reason?: string;
+  limits: {
+    name: string;
+    scope?: string;
+    windowMinutes?: number;
+    usedPercent?: number;
+    used?: number;
+    total?: number;
+    unlimited?: boolean;
+    resetsAt?: string;
+  }[];
+  credits: {
+    name: 'balance' | 'key_limit' | 'extra_usage';
+    scope?: string;
+    unit: 'USD' | 'CNY' | 'credits' | 'minor-units';
+    remaining?: number;
+    used?: number;
+    total?: number;
+    unlimited?: boolean;
+    available?: boolean;
+    hasCredits?: boolean;
+  }[];
+  spend: { period: 'day' | 'week' | 'month' | 'all'; scope: 'key' | 'byok'; amount: number; unit: 'USD' }[];
+};
+export type ProviderUsageReport = Omit<ProviderUsageData, 'status' | 'source'> & {
+  connectionId: string;
+  provider: Provider;
+  mode: Connection['mode'];
+  label: string;
+  status: ProviderUsageData['status'] | 'idle' | 'unsupported' | 'disconnected' | 'error';
+  source?: ProviderUsageData['source'];
+  checkedAt?: string;
+  canRefresh: boolean;
+  hasDashboard: boolean;
+};
 export type UsageReport = {
   day: string;
   month: string;
@@ -58,7 +99,17 @@ export type UsageReport = {
   unpricedTokens: number;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
   warnings: string[];
-  entries: { day: string; provider: string; model: string; total: number; usd: number; unpricedTokens: number }[];
+  accounts?: ProviderUsageReport[];
+  entries: {
+    day: string;
+    provider: string;
+    model: string;
+    connectionId?: string;
+    mode?: Connection['mode'];
+    total: number;
+    usd: number;
+    unpricedTokens: number;
+  }[];
 };
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
