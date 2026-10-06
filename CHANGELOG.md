@@ -6,7 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help"; it is not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. "Mac disk image: a Thai first-open guide" below is not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### Mac disk image: a Thai first-open guide
+
+- **Before:** on macOS 15 and later, opening STeP Desktop for the first time showed a dialog with **Move to Trash**, and the disk image said nothing about what to do. The only guidance was in the README.
+- **After:** the disk image window holds **อ่านก่อนเปิดครั้งแรก.html** next to the app and the Applications folder. It opens in the browser and explains, in Thai, both dialogs staff can see: "Apple could not verify…" (Privacy & Security → Open Anyway) and "is damaged" (one `xattr -cr` command in Terminal). The README's macOS section says the same.
+- The dialog itself stays: removing it needs an Apple Developer ID certificate and notarization, which the project does not have.
+- The installer build now runs `codesign --verify --deep --strict` on the app inside the disk image, so a broken ad-hoc signature (which turns the dialog into "is damaged") fails the build instead of reaching staff.
 
 ### Antigravity sign-in opens the browser, and the receipt page speaks plainly
 
