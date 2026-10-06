@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 import pypdfium2 as pdfium
-from PIL import Image
+from PIL import Image, ImageOps
 from paddleocr import PaddleOCR
 
 MAX_OCR_IMAGE_SIDE = 2400
@@ -22,6 +22,11 @@ MAX_CROSSCHECK_LINES_PER_TILE = 80
 MAX_CROSSCHECK_LINES_PER_REQUEST = 100
 MAX_HANDWRITING_LINES_PER_REQUEST = 20
 MAX_TESSERACT_LINES_PER_REQUEST = 80
+# Text detection works on a copy scaled so its longest side is at most this many pixels.
+# 960 shrank a receipt tile to under half size and lost small print; recognition always reads full-size crops.
+DETECTION_SIDE = int(os.environ.get("STEP_OCR_DET_SIDE", "1280"))
+# Grey levels between the darkest ink and the paper; less than this is washed out, e.g. faded thermal paper.
+LOW_CONTRAST_SPAN = 110
 
 
 @dataclass(frozen=True)
@@ -31,7 +36,7 @@ class OCRConfig:
     crosscheck: bool = False
     tesseract_crosscheck: bool = False
     native_pdf_min_chars: int = 40
-    render_dpi: int = 150
+    render_dpi: int = 200
 
 
 class LocalThaiOCR:
@@ -68,7 +73,7 @@ class LocalThaiOCR:
                 text_recognition_model_name="th_PP-OCRv5_mobile_rec",
                 **model_dirs,
                 text_det_limit_type="max",
-                text_det_limit_side_len=960,
+                text_det_limit_side_len=DETECTION_SIDE,
                 use_doc_orientation_classify=False,
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
@@ -114,11 +119,14 @@ class LocalThaiOCR:
             pages = self._process_pdf(path, config, warnings)
         else:
             with Image.open(path) as source:
-                original_size = source.size
                 if source.format == "JPEG":
                     source.draft("RGB", (DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE))
-                source.thumbnail((DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
-                image = source.convert("RGB")
+                # Phone photos are usually stored sideways with an EXIF note saying how to turn them;
+                # without applying it, OCR reads the receipt on its side.
+                upright = ImageOps.exif_transpose(source)
+                original_size = upright.size
+                upright.thumbnail((DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
+                image = upright.convert("RGB")
             pages = [self._ocr_image(image, 1, config, warnings, original_size=original_size, detail=True)]
 
         lines = [line for page in pages for line in page.get("lines", [])]
@@ -240,11 +248,20 @@ class LocalThaiOCR:
                 f"Image resized from {original_width}x{original_height} to "
                 f"{image.width}x{image.height} before OCR; verify small text carefully.",
             )
-        if detail and max(image.size) > MAX_OCR_IMAGE_SIDE:
-            lines = self._ocr_tiled(image, config, warnings)
-            self._add_warning(warnings, "High-detail tiled OCR was used; verify critical fields against the original receipt.")
-        else:
-            lines = self._predict_lines(image, config, warnings)
+        image = self._stretch_contrast(image, warnings)
+        lines = self._read_page(image, config, warnings, detail)
+        if self._looks_sideways(lines):
+            # A scan or photo lying on its side: read both quarter turns and keep the clearer reading.
+            best_image, best_lines, best_score = image, lines, self._reading_score(lines)
+            for turn in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
+                turned = image.transpose(turn)
+                turned_lines = self._read_page(turned, config, warnings, detail)
+                score = self._reading_score(turned_lines)
+                if score > best_score:
+                    best_image, best_lines, best_score = turned, turned_lines, score
+            if best_image is not image:
+                image, lines = best_image, best_lines
+                self._add_warning(warnings, "The page was turned upright before OCR.")
 
         return {
             "page": page_number,
@@ -255,6 +272,49 @@ class LocalThaiOCR:
             "original_height": original_height,
             "lines": lines,
         }
+
+    def _read_page(self, image: Image.Image, config: OCRConfig, warnings: list[str], detail: bool) -> list[dict[str, Any]]:
+        if detail and max(image.size) > MAX_OCR_IMAGE_SIDE:
+            self._add_warning(warnings, "High-detail tiled OCR was used; verify critical fields against the original receipt.")
+            return self._ocr_tiled(image, config, warnings)
+        return self._predict_lines(image, config, warnings)
+
+    @staticmethod
+    def _stretch_contrast(image: Image.Image, warnings: list[str]) -> Image.Image:
+        """Darkens faded print (thermal slips, light scans); pages with normal contrast are left untouched."""
+        grey = image.convert("L")
+        histogram = grey.histogram()
+        total = sum(histogram)
+        if not total:
+            return image
+
+        def percentile(share: float) -> int:
+            seen = 0
+            for level, count in enumerate(histogram):
+                seen += count
+                if seen >= total * share:
+                    return level
+            return 255
+
+        # Ink is the darkest 0.2%; paper is the median, since most of a page is blank. A near-zero span is a blank page.
+        span = percentile(0.5) - percentile(0.002)
+        if span >= LOW_CONTRAST_SPAN or span < 15:
+            return image
+        LocalThaiOCR._add_warning(warnings, "Faded print was darkened before OCR; check amounts against the original.")
+        return ImageOps.autocontrast(grey, cutoff=1).convert("RGB")
+
+    @staticmethod
+    def _looks_sideways(lines: list[dict[str, Any]]) -> bool:
+        # Short readings ("1", "2") are naturally tall, so only lines of a few characters count.
+        boxes = [line["box"] for line in lines if line.get("box") and len(str(line.get("text", "")).strip()) >= 3]
+        if len(boxes) < 3:
+            return False
+        tall = sum((box[3] - box[1]) > 1.5 * (box[2] - box[0]) for box in boxes)
+        return tall > len(boxes) / 2
+
+    @staticmethod
+    def _reading_score(lines: list[dict[str, Any]]) -> float:
+        return sum((line.get("confidence") or 0) * len(str(line.get("text", "")).strip()) for line in lines)
 
     def _ocr_tiled(self, image: Image.Image, config: OCRConfig, warnings: list[str]) -> list[dict[str, Any]]:
         columns = math.ceil(image.width / OCR_TILE_SIDE)
