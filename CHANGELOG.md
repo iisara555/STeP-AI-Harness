@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help"; it is not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
 ### Antigravity sign-in opens the browser, and the receipt page speaks plainly
 
 - **Antigravity sign-in without a terminal window:** "Connect and test" now runs the Antigravity CLI's own sign-in hidden and opens Google's sign-in page straight in the browser; the person picks an account and presses Allow. STeP stops the CLI as soon as the sign-in works. If the CLI shows no page, or its one minute runs out, STeP falls back to the terminal window as before, and now says to press Enter once, because that window first shows a "Select login method" menu. Only an `https://accounts.google.com/o/oauth2/` address from the CLI's own output is ever opened. Checked against the real 1.2.17 CLI on Linux (address in half a second, process stopped cleanly); not yet tried on Windows or macOS with a real Google account.
