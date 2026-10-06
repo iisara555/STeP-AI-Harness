@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, readdir, rm } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, writeFile, readdir, rm, stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { AntigravityAdapter, ANTIGRAVITY_DENY, antigravityModels, antigravityUsage } from '../electron/antigravity';
+import { AntigravityAdapter, ANTIGRAVITY_DENY, antigravityHome, antigravityModels, antigravityUsage } from '../electron/antigravity';
 import { adapter, listModels } from '../electron/providers';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import { checkRuntime } from '../electron/runtimes';
@@ -271,4 +272,31 @@ test('Antigravity parallel requests do not share native configuration or system 
   } finally {
     await f.close();
   }
+});
+
+test('the isolated home sees the real sign-in: token file copied, Mac keychain folder linked and never deleted', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'step-agy-profile-'));
+  const profile = join(root, 'real-home');
+  await mkdir(join(profile, '.gemini', 'antigravity-cli'), { recursive: true });
+  await mkdir(join(profile, 'Library', 'Keychains'), { recursive: true });
+  await writeFile(join(profile, '.gemini', 'antigravity-cli', 'antigravity-oauth-token'), 'synthetic-token');
+  await writeFile(join(profile, 'Library', 'Keychains', 'login.keychain-db'), 'keep me');
+  const work = join(root, 'work');
+  await mkdir(work);
+
+  const mac = await antigravityHome({ cwd: work, env: {} }, { home: profile, platform: 'darwin' });
+  const home = mac.env.HOME!;
+  assert.equal(await readFile(join(home, '.gemini', 'antigravity-cli', 'antigravity-oauth-token'), 'utf8'), 'synthetic-token');
+  if (process.platform !== 'win32')
+    assert.equal((await stat(join(home, '.gemini', 'antigravity-cli', 'antigravity-oauth-token'))).mode & 0o777, 0o600);
+  assert.ok((await lstat(join(home, 'Library', 'Keychains'))).isSymbolicLink());
+  await mac.close();
+  assert.equal(existsSync(home), false);
+  assert.equal(await readFile(join(profile, 'Library', 'Keychains', 'login.keychain-db'), 'utf8'), 'keep me');
+  assert.equal(await readFile(join(profile, '.gemini', 'antigravity-cli', 'antigravity-oauth-token'), 'utf8'), 'synthetic-token');
+
+  const win = await antigravityHome({ cwd: work, env: {} }, { home: profile, platform: 'win32' });
+  assert.equal(existsSync(join(win.env.HOME!, 'Library')), false, 'only macOS links the keychain folder');
+  await win.close();
+  await rm(root, { recursive: true, force: true });
 });

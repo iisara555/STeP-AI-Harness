@@ -1390,6 +1390,8 @@ export const en: Record<string, string> = {
   'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม':
     "No sign-in or code within 5 minutes. Press Connect again when you're ready",
   'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง': 'Sign-in failed. Please try again',
+  'ลงชื่อ Google ใน Antigravity สำเร็จแล้ว แต่ STeP ยังอ่านการลงชื่อนั้นไม่ได้ ปิดหน้าต่าง Terminal แล้วกดเชื่อมต่อใหม่ ถ้ายังไม่ได้ให้ส่ง log วินิจฉัยให้ผู้ดูแล':
+    "You're signed in to Google in Antigravity, but STeP can't read that sign-in yet. Close the Terminal window and connect again. If it still fails, send the diagnostic log to your administrator",
   'Google ไม่รับ code ที่วาง 3 ครั้ง กดปุ่ม Copy ในหน้า Google แล้ววางใหม่ภายในไม่กี่นาที':
     'Google rejected the pasted code 3 times. Press Copy on the Google page and paste it again within a few minutes',
   ยกเลิกการเชื่อมต่อแล้ว: 'Connection cancelled',

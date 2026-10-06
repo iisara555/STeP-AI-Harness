@@ -187,6 +187,18 @@ export async function antigravitySignedIn(executable: string, context: Pick<Prov
 }
 const errorCodeOf = (error: unknown) => (error instanceof Error ? error.message : '');
 
+/** The same check with the employee's real profile: what the sign-in window itself would see. */
+export async function antigravitySignedInWithProfile(executable: string, cwd: string, signal?: AbortSignal) {
+  await mkdir(cwd, { recursive: true });
+  try {
+    await runAntigravity(executable, ['models'], { cwd, env: process.env }, { timeoutMs: 30_000, signal });
+    return true;
+  } catch (error) {
+    if (errorCodeOf(error) === 'CANCELLED') throw error;
+    return false;
+  }
+}
+
 export type AgyBrowserSignIn = {
   close: () => Promise<void> | void;
   exited: Promise<void>;
@@ -206,6 +218,11 @@ export type AgySignInDeps = {
    */
   openBrowserSignIn?: () => Promise<AgyBrowserSignIn | null>;
   signedIn?: typeof antigravitySignedIn;
+  /**
+   * Whether the real profile is signed in. When it is but STeP's isolated check still is not, waiting longer cannot
+   * help, so the sign-in stops with a clear message instead of spinning until the timeout.
+   */
+  signedInWithProfile?: () => Promise<boolean>;
   pollMs?: number;
   timeoutMs?: number;
   /** How long the browser sign-in may take; agy itself waits about a minute. */
@@ -244,10 +261,15 @@ export async function antigravitySignIn(
         signal.addEventListener('abort', cancel, { once: true });
       });
       if (await signedIn(executable, context, signal)) return true;
+      if (deps.signedInWithProfile && ++polls % 3 === 0 && (await deps.signedInWithProfile())) {
+        if (++hidden >= 2) throw new Error('ANTIGRAVITY_SIGNIN_HIDDEN');
+      } else if (polls % 3 === 0) hidden = 0;
       if (ended) return false;
     }
     return false;
   }
+  let polls = 0,
+    hidden = 0;
   deps.progress(tm('กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity'));
   if (await signedIn(executable, context, signal)) return;
   // Google sends the browser to antigravity.google/oauth-callback, which shows an authorization code to paste into

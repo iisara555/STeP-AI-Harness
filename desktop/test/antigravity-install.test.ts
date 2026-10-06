@@ -340,3 +340,28 @@ test('the code Google shows is asked for and typed into the waiting CLI, with a 
     /CANCELLED/,
   );
 });
+
+test('stops waiting when only the real profile sees the sign-in', async () => {
+  let profileChecks = 0;
+  await assert.rejects(
+    antigravitySignIn(
+      'agy',
+      { cwd: tmpdir(), env: {} },
+      {
+        progress: () => {},
+        openSignIn: async () => () => {},
+        openBrowserSignIn: async () => null,
+        signedIn: async () => false,
+        signedInWithProfile: async () => {
+          profileChecks++;
+          return true;
+        },
+        pollMs: 1,
+        timeoutMs: 60_000,
+      },
+      new AbortController().signal,
+    ),
+    /ANTIGRAVITY_SIGNIN_HIDDEN/,
+  );
+  assert.equal(profileChecks, 2, 'checked twice, every third poll');
+});

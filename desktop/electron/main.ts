@@ -51,6 +51,7 @@ import {
   installAntigravityCli,
   openAntigravitySignIn,
   openAntigravityBrowserSignIn,
+  antigravitySignedInWithProfile,
 } from './antigravity-install';
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
@@ -1876,6 +1877,8 @@ async function main() {
                     emit({ sessionId: '', type: 'auth-code', connectionId: connection.id });
                   }),
                 dropCode,
+                signedInWithProfile: () =>
+                  antigravitySignedInWithProfile(executable, join(data, 'runtimes', 'agy-signin'), controller.signal),
               },
               controller.signal,
             );
