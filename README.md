@@ -1,6 +1,6 @@
 # STeP AI
 
-> **Branch `improve-office-workflows`: Office preview.** ความสามารถ Excel/PowerPoint และ coauthoring ที่อธิบายด้านล่างเป็นงานพัฒนาของ branch นี้ ยังไม่รวมใน release OCR [Desktop 0.5.21](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.21) ตัวเลข inventory อ้างอิง working tree ของ Office ไม่ใช่ชุดติดตั้งรุ่นนั้น
+> **Branch `improve-office-workflows`: Office preview.** ความสามารถ Excel/PowerPoint และ coauthoring ที่อธิบายด้านล่างเป็นงานพัฒนาของ branch นี้ ยังไม่รวมใน release OCR [Desktop 0.5.21](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.21) ตัวเลข inventory ต้องเทียบกับ manifest ของ source/build ที่ใช้อยู่ ไม่ใช่ชุดติดตั้งรุ่นนั้น
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI Harness สำหรับพนักงาน STeP / RSP North ใช้สำหรับคุยกับ AI, แนบเอกสาร, ใช้ Skill/Playbook, ตรวจร่าง, ส่งออกไฟล์ และใช้เครื่องมือเฉพาะ เช่น **ตรวจใบเสร็จก่อนส่ง AFP** โดยไม่ต้องใช้ Git, Terminal หรือจำชื่อ Skill
 
@@ -624,11 +624,11 @@ README ฉบับนี้อ้างอิง Harness source **v0.7.6** แ�
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **53 Skills** |
+| Skills | **52 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 52 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
+Router มีเส้นทางเลือก Skill 51 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
 
 ต้นทาง: [Skills](manifest/skills.yaml) · [Router index](manifest/router-index.yaml) · [Playbooks](manifest/playbooks.yaml) · [Actions](manifest/actions.yaml)
 
