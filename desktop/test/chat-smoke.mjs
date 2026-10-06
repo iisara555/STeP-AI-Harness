@@ -165,7 +165,7 @@ try {
   const scribble = page.locator('.activity .thinking-scribble');
   await expect(scribble).toHaveAttribute('aria-hidden', 'true');
   await expect(scribble.locator('path')).toHaveCount(3);
-  assert.equal(await scribble.locator('svg').getAttribute('width'), '36');
+  assert.equal(await scribble.locator('svg').getAttribute('width'), '18');
   const normalMotion = await scribble
     .locator('path')
     .first()

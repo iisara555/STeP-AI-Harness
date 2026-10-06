@@ -9,6 +9,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ### Desktop: scribbled thinking motion
 
 - Replace the gooey waiting indicator in chat with original overlapping hand-drawn loops that retrace at different speeds, inspired by the supplied scribble reference. Keep the progress text, elapsed time and stop control.
+- Size the waiting motion at 18 × 18 pixels, half its initial 36 × 36 size.
 - Use theme-aware SVG/CSS with no image assets, animation dependency or per-frame JavaScript. Reduced-motion mode traces slowly without the shape's sway.
 - Verify the running chat, actual stroke motion and reduced-motion behavior with the existing synthetic-provider Electron smoke test. No version bump or release.
 

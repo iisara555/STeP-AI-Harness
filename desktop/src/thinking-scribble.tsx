@@ -1,6 +1,6 @@
 // Original hand-drawn loops, traced at different speeds while the AI works. Plain SVG/CSS: no images,
 // filters, timers or animation library. The surrounding status line supplies the accessible progress text.
-export function ThinkingScribble({ size = 36, label }: { size?: number; label?: string }) {
+export function ThinkingScribble({ size = 18, label }: { size?: number; label?: string }) {
   return (
     <span className="thinking-scribble" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       <svg
