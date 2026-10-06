@@ -6,6 +6,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Antigravity sign-in opens the browser, and the receipt page speaks plainly
+
+- **Antigravity sign-in without a terminal window:** "Connect and test" now runs the Antigravity CLI's own sign-in hidden and opens Google's sign-in page straight in the browser; the person picks an account and presses Allow. STeP stops the CLI as soon as the sign-in works. If the CLI shows no page, or its one minute runs out, STeP falls back to the terminal window as before, and now says to press Enter once, because that window first shows a "Select login method" menu. Only an `https://accounts.google.com/o/oauth2/` address from the CLI's own output is ever opened. Checked against the real 1.2.17 CLI on Linux (address in half a second, process stopped cleanly); not yet tried on Windows or macOS with a real Google account.
+- **Antigravity texts in Thai:** the service card now says STeP installs and signs in for you, and the disconnect button, its tooltip, the removal note and the administrators' form are in Thai.
+- **Receipt category with its name:** the suggested category reads "B10 · ค่าน้ำดื่ม" instead of the bare code, for every code the suggestion can return.
+- **Plain buttons:** "บันทึกร่าง (JSON)" is now "บันทึกผลตรวจเก็บไว้", "ให้ AI pre-check ต่อ" is "ให้ AI ตรวจทานต่อ", and the OCR evidence notes no longer say "candidate" or "map".
+- **OCR trial tools hidden from staff:** the trial and measurement tools on the Receipt page show only when the new policy feature `ocrTrial` is on (default off).
+- Tests: `test/antigravity-install.test.ts` (sign-in address filter, browser-first then terminal fallback, a stand-in CLI that prints the real sign-in text), `test/receipt-workflow.test.ts` (category names); `receipt-smoke.mjs` turns `ocrTrial` on and checks "B10 · ค่าน้ำดื่ม"; `antigravity-smoke.mjs` checks the Thai text. `gemini-api-smoke.mjs` failed on main since the outcome-first receipt page (a flagged item now shows twice, and the category picker is folded); it now opens the fold and takes the first match.
+
 ### Desktop: per-account provider quotas, credits and API usage
 
 - Add provider-reported Usage cards to the existing `/usage` dialog: Codex quota windows/credits, Claude subscription windows/extra usage, Copilot request entitlements, OpenRouter key spend/account credit and DeepSeek currency balances. Claude/Copilot readers remain explicitly experimental; other connections show local accounting and a provider link without invented quota readings.

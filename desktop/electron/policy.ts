@@ -34,6 +34,7 @@ export const FEATURES = [
   'autoUpdate',
   'claudeSubscription',
   'learningReview',
+  'ocrTrial',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -164,6 +165,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // Agent does. Each review is a model call on the employee's account, so it is off until an administrator allows it,
   // and each employee then turns it on in the Learning Inbox.
   learningReview: false,
+  // The Receipt page's OCR trial and measurement tools (local-only reads, a field-by-field report saved as JSON) are
+  // for the team running the OCR pilot, not for every employee, so they stay hidden until an administrator turns them on.
+  ocrTrial: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',

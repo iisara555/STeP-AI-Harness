@@ -50,6 +50,7 @@ import {
   antigravitySignIn,
   installAntigravityCli,
   openAntigravitySignIn,
+  openAntigravityBrowserSignIn,
 } from './antigravity-install';
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
@@ -1864,7 +1865,12 @@ async function main() {
             await antigravitySignIn(
               executable,
               connectionRuntime.context,
-              { progress, openSignIn: () => openAntigravitySignIn(executable, join(data, 'runtimes', 'agy-signin')) },
+              {
+                progress,
+                openSignIn: () => openAntigravitySignIn(executable, join(data, 'runtimes', 'agy-signin')),
+                openBrowserSignIn: () =>
+                  openAntigravityBrowserSignIn(executable, join(data, 'runtimes', 'agy-signin'), url => shell.openExternal(url)),
+              },
               controller.signal,
             );
           }

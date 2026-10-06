@@ -2,7 +2,7 @@
 // No real OCR, provider, or receipt data is used. Usage: node test/receipt-smoke.mjs <receipt-image> [screenshot-dir]
 import { _electron as electron } from '@playwright/test';
 import { createServer } from 'node:http';
-import { mkdtemp, mkdir, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -47,7 +47,10 @@ await new Promise((ok, fail) => {
   ocr.listen(8765, '127.0.0.1', ok);
 });
 
-const env = { ...process.env, STEP_DESKTOP_TEST_HOME: await mkdtemp(join(tmpdir(), 'step-receipt-')) };
+const home = await mkdtemp(join(tmpdir(), 'step-receipt-'));
+// The OCR trial tools are hidden unless the policy turns them on; this run checks them too.
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { ocrTrial: true } }));
+const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
@@ -66,21 +69,21 @@ try {
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   assert.equal(await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).inputValue(), 'ค่าน้ำดื่ม');
   const outcome = page.getByLabel('สรุปการใช้ใบเสร็จ');
-  await outcome.getByText('B10', { exact: true }).waitFor();
+  await outcome.getByText('B10 · ค่าน้ำดื่ม', { exact: true }).waitFor();
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).count(), 1);
   await page.getByText('ยังต้องตรวจหรือแก้เพิ่ม').waitFor();
   await page.screenshot({ path: join(out, 'receipt-review.png') });
   // One confirmation covers every field and the flagged line: the verdict flips to ready, never to "approved".
-  assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), true);
+  assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), true);
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByText('ตรวจยืนยันข้อมูลแล้ว').waitFor();
-  assert.equal(await page.getByRole('button', { name: 'ให้ AI pre-check ต่อ' }).isDisabled(), false);
+  assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), false);
   const saved = resolve(out, 'receipt-provenance.json');
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, saved);
   const saveDraft = async () => {
-    await page.getByRole('button', { name: 'บันทึกร่าง (JSON)' }).click();
+    await page.getByRole('button', { name: 'บันทึกผลตรวจเก็บไว้' }).click();
     await page.getByText('บันทึกร่างการตรวจแล้ว', { exact: true }).waitFor();
     return JSON.parse(await readFile(saved, 'utf8'));
   };
@@ -98,7 +101,7 @@ try {
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.50');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
   // Await the changed file content, rather than a toast left over from the preceding save.
-  await page.getByRole('button', { name: 'บันทึกร่าง (JSON)' }).click();
+  await page.getByRole('button', { name: 'บันทึกผลตรวจเก็บไว้' }).click();
   await page.waitForFunction(async path => {
     // The save completed when the host's source revision is reflected by the next toast.
     return Boolean(path && document.body.textContent.includes('บันทึกร่างการตรวจแล้ว'));

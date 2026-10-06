@@ -1313,6 +1313,7 @@ export default function App() {
                 onError={e => notify(explainError(e), 'error')}
                 handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
                 connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
+                trialTools={Boolean(snapshot.policy?.features.ocrTrial)}
               />
             </div>
           )}
