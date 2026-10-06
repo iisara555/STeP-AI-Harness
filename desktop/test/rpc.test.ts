@@ -356,6 +356,8 @@ test('Gemini replaces its coding system prompt through a per-run file that is re
   const { file, text: system } = JSON.parse(await readFile(seen, 'utf8'));
   assert.equal(system, 'STEP RULES');
   assert.ok(!file.startsWith(cwd), 'the file sits outside the runtime working folder');
+  // The adapter removes the file without waiting for it; give that removal a moment on slow machines.
+  for (let i = 0; i < 40 && existsSync(file); i++) await new Promise(r => setTimeout(r, 50));
   assert.equal(existsSync(file), false, 'the per-run file is removed');
 });
 

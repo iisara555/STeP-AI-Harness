@@ -190,6 +190,21 @@ test(
     const handle = await openAntigravityBrowserSignIn(printing.executable, join(printing.dir, 'cwd'), async url => {
       opened.push(url);
     });
+    if (!handle && process.platform === 'darwin') {
+      // Temporary: show what macOS `script` does with this command.
+      const { spawnSync } = await import('node:child_process');
+      const direct = spawnSync('/usr/bin/script', ['-q', '/dev/null', printing.executable], { input: '', timeout: 5000, encoding: 'utf8' });
+      const piped = spawnSync('/bin/sh', ['-c', 'sleep 2 | /usr/bin/script -q /dev/null "$0"', printing.executable], {
+        timeout: 8000,
+        encoding: 'utf8',
+      });
+      assert.fail(
+        JSON.stringify({
+          direct: [direct.status, direct.signal, direct.stdout, direct.stderr, String(direct.error)],
+          piped: [piped.status, piped.signal, piped.stdout, piped.stderr],
+        }),
+      );
+    }
     assert.ok(handle);
     assert.deepEqual(opened, [SIGN_IN]);
     await handle!.close();
