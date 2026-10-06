@@ -6,19 +6,23 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.19 — 2026-10-06
+
+STeP Desktop version 0.5.19 (`desktop/package.json`) packages the next four sections for `desktop-v0.5.19`. The in-app "What's new" window summarizes them in Thai and English. Receipt and provider checks use synthetic data and simulated services; real-document OCR accuracy remains unverified. Harness package version remains 0.7.6.
+
 ### Desktop: receipt mapping with Gemini via Antigravity
 
 - Report the selected transport's receipt capability consistently after status, start, install and folder selection. Antigravity is text-only; do not offer or attempt image reading through it. Gemini API/ACP retains its image capability and existing permission checks.
 - Automatically ask a connected text-only AI to reconcile OCR candidates after reading, including the source-backed expense description, with the existing masking/consent and token-only rules. Preserve manual edits and the single final source-comparison confirmation; do not silently discard filter failures.
 - Improve synthetic cash-bill mapping for seller/buyer separation, book/bill identifiers, Thai month dates and item tables whose column headings/numeric cells precede descriptions.
-- Verify with synthetic unit tests and Electron/IPC fixtures; no real receipt accuracy, native handwriting quality or live Antigravity image support is claimed. No new OCR model, Router integration, policy-default change, version bump or release.
+- Verify with synthetic unit tests and Electron/IPC fixtures; no real receipt accuracy, native handwriting quality or live Antigravity image support is claimed. No new OCR model, Router integration or policy-default change.
 
 ### Desktop: scribbled thinking motion
 
 - Replace the gooey waiting indicator in chat with original overlapping hand-drawn loops that retrace at different speeds, inspired by the supplied scribble reference. Keep the progress text, elapsed time and stop control.
 - Size the waiting motion at 18 × 18 pixels, half its initial 36 × 36 size.
 - Use theme-aware SVG/CSS with no image assets, animation dependency or per-frame JavaScript. Reduced-motion mode traces slowly without the shape's sway.
-- Verify the running chat, actual stroke motion and reduced-motion behavior with the existing synthetic-provider Electron smoke test. No version bump or release.
+- Verify the running chat, actual stroke motion and reduced-motion behavior with the existing synthetic-provider Electron smoke test.
 
 ### Desktop: file, credential and local OCR security
 
@@ -26,13 +30,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Check agent-browser DNS for subresources and redirects; reject private destinations unless explicitly allowed by managed policy. Keep POSIX app-data/log directories private and refuse Electron's Linux `basic_text` credential fallback.
 - Reject foreign Host/Origin requests to the loopback OCR service before reading documents. Return immediately when the worker is busy, bound upload reads and omit filenames/query values from service logs.
 - Update vulnerable build/download dependency chains with targeted overrides. Full Desktop, production-only Desktop and privacy-vendor audits report zero known advisories at review time.
-- Add synthetic security regression tests and real Electron sandbox/CSP/IPC checks; record evidence and remaining deployment limits in `docs/desktop-security-review.md`. No real documents or live-provider accounts were used; native Windows/macOS behavior and publisher signing remain unverified. No OCR accuracy claim, policy-default change, version bump or release.
+- Add synthetic security regression tests and real Electron sandbox/CSP/IPC checks; record evidence and remaining deployment limits in `docs/desktop-security-review.md`. No real documents or live-provider accounts were used; Windows/macOS behavior on staff machines and publisher signing remain unverified. No OCR accuracy claim or policy-default change.
 
 ### Desktop: reliable Mac updates and Antigravity retry cleanup
 
 - Reject Mac update read/write failures through the download pipeline and remove incomplete archives while retaining SHA-512 checks. Locate the zip's canonical app bundle independently of a renamed installed `.app`.
 - Keep browser timeout cleanup distinct from user cancellation; a late Antigravity process exit cannot close a newer attempt's code prompt. Explicit cancellation still stops sign-in.
-- Regression tests use synthetic archives and simulated sign-in. Native macOS update/sign-in and real-account results remain unverified; no version bump or release.
+- Regression tests use synthetic archives and simulated sign-in. macOS update/sign-in on staff machines and real-account results remain unverified.
+
+## Desktop v0.5.18 and earlier
 
 STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next four sections, published as `desktop-v0.5.18`: "What's new after an update", "Antigravity on the first page of setup", "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
 

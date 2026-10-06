@@ -68,7 +68,7 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 An installed STeP Desktop updates itself, as Claude, Cursor and Codex do. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** in the title bar. A downloaded update also installs when the app quits. STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต checks immediately. Policy feature `autoUpdate` turns this off.
 
-To publish a version, bump `version` in `desktop/package.json`, then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow then builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. On macOS the app installs updates itself only when it is signed with the organisation's Developer ID; an ad-hoc signed build shows a download button instead.
+To publish a version, bump `version` in `desktop/package.json` and its lockfile, add the version's in-app notes in `src/whats-new.ts`, and update the README version and CHANGELOG. Then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. From Desktop 0.5.18, macOS uses the verified ZIP update flow described above for the current ad-hoc signed builds.
 
 ### Optional local Thai OCR
 

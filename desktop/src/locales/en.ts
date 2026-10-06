@@ -1840,6 +1840,17 @@ export const en: Record<string, string> = {
   ใช้ล่าสุด: 'Last used',
   '{0} (หยุดใช้แล้ว)': '{0} (disabled)',
   ยังไม่ถูกใช้: 'Not used yet',
+  'หน้าตรวจใบเสร็จปรับการจับร้านค้า เล่มที่/เลขที่ วันที่ภาษาไทย และรายการค่าใช้จ่าย โดยยังต้องตรวจเทียบต้นฉบับแล้วกดยืนยันครั้งเดียว':
+    'Receipt review improves merchant, book/bill number, Thai date and expense-item mapping. Compare the form with the original and confirm once.',
+  'Gemini ผ่าน Antigravity ช่วยจัดข้อความ OCR เข้าฟอร์มอัตโนมัติ และไม่ทับข้อมูลที่คุณแก้เอง เส้นทางนี้ยังไม่อ่านภาพโดยตรง':
+    'Gemini via Antigravity automatically sorts OCR text into the form and preserves your edits. This connection still cannot read images directly.',
+  'ผลทดสอบ OCR รุ่นนี้ใช้ข้อมูลสังเคราะห์ ยังไม่ยืนยันความแม่นยำกับใบเสร็จจริง':
+    'OCR checks for this version use synthetic data; accuracy on real receipts remains unverified.',
+  'เพิ่มการป้องกันไฟล์ที่เชื่อมโยง ข้อมูลลงชื่อเข้าใช้ และบริการ OCR ในเครื่อง':
+    'Add protections for linked files, sign-in credentials and the local OCR service.',
+  'แก้การดาวน์โหลดอัปเดตบน Mac และการลองลงชื่อ Antigravity ใหม่หลังหมดเวลา':
+    'Fix Mac update downloads and Antigravity sign-in retries after a timeout.',
+  'สัญลักษณ์รอ AI เป็นลายเส้นขยุกขยิกขนาดเล็ก เหมือนกำลังคิด': 'The AI waiting indicator is a small animated scribble, as if thinking.',
   'แนบไฟล์ Word ที่มีรูป เช่น ตราครุฑหรือหัวกระดาษ ในเครื่องมือร่างเอกสารได้แล้ว ข้อความในไฟล์ส่งให้ AI ครบ ส่วนรูปไม่ได้ส่ง':
     'Word files with pictures, such as the Garuda emblem or a letterhead, can be attached in the document tools. All the text goes to the AI; the pictures are not sent.',
   'ถ้าแนบไฟล์ไม่ผ่าน ระบบบอกเหตุผลและวิธีแก้ เช่น ไฟล์มีกราฟหรือตาราง Excel ที่ฝังไว้':
