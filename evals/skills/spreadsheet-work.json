@@ -5,21 +5,22 @@
   "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ส่ง XLSX ผ่าน sheet_create พร้อม path/status จากผล tool จริง; รักษารหัสศูนย์นำหน้าเป็นข้อความและเงินเป็น number; ระบุสูตรจริงและ recalculate ยังไม่ได้รัน ไม่อ้าง zero format loss",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-07: self-contained synthetic inputs and concrete source/authority assertions; routing validation is not evidence of live model quality."
   },
   "cases": [
     {
       "id": "positive-workflow",
       "dimension": "positive",
       "team": "cc",
-      "prompt": "ช่วยสร้างไฟล์ Excel จากข้อมูลตารางนี้",
+      "prompt": "ข้อมูลทั้งหมดสังเคราะห์: ช่วยสร้างไฟล์ Excel office.xlsx ชีต ข้อมูล คอลัมน์ รหัส เป็นข้อความ และ ค่าใช้จ่าย เป็นเงิน สองแถวคือรหัส 00123 ยอด 100 และรหัส 00007 ยอด 200 ให้ B4 เป็นสูตร SUM(B2:B3) จริง ไม่มี template ต้นฉบับ สร้างร่างใหม่ตามนี้ได้เลย ใช้เครื่องมือที่มี อ่านข้อมูลกลับแล้วสรุป path/status และข้อจำกัดการคำนวณ ไม่ต้องถามเพิ่ม",
       "expect": {
         "skill": "spreadsheet-work"
       },
       "outputAssertions": [
-        "ส่ง XLSX ผ่าน sheet_create พร้อม path/status จากผล tool จริง",
-        "รักษารหัสศูนย์นำหน้าเป็นข้อความและเงินเป็น number",
-        "ระบุสูตรจริงและ recalculate ยังไม่ได้รัน ไม่อ้าง zero format loss"
+        "เมื่อ Desktop Office tools พร้อม สร้าง office.xlsx และอ่านผลที่ applied กลับจริง; หากยัง staging ให้บอกสถานะตามผล tool ไม่อ้างว่าบันทึกแล้ว",
+        "A2/A3 เป็นข้อความ 00123/00007, B2/B3 เป็นตัวเลข 100/200 และ B4 เป็นสูตร SUM(B2:B3)",
+        "ระบุว่ายังไม่ recalculate ใน Excel/LibreOffice และไม่อ้าง zero format loss"
       ]
     },
     {

@@ -5,21 +5,22 @@
   "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
   "baseline": {
     "withoutSkillTypicallyMisses": "แยกข้อเท็จจริง ทางเลือก trade-off และ recommendation; reader check ผูก question กับ section/evidence/gap; ไม่อ้าง independent-reader จาก author-review",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-07: self-contained synthetic inputs and concrete source/authority assertions; routing validation is not evidence of live model quality."
   },
   "cases": [
     {
       "id": "positive-workflow",
       "dimension": "positive",
       "team": "cc",
-      "prompt": "ช่วยทำ decision memo เปรียบเทียบทางเลือกนี้",
+      "prompt": "ข้อมูลทั้งหมดสังเคราะห์: ช่วยทำ decision memo เปรียบเทียบการทดสอบภายใน A: สองขั้นตอน ค่าใช้จ่าย 100 บาท; B: สามขั้นตอน ค่าใช้จ่าย 200 บาท ยังไม่มีหลักฐานว่าทางเลือกไหนสำเร็จกว่า ไม่ทราบผู้มีอำนาจตัดสินใจและกำหนดตัดสินใจ ขอเฉพาะส่วนข้อเสนอและ trade-off แล้วตรวจจากมุมผู้อ่าน แยก evidence/gap ไม่ต้องร่างทั้งฉบับหรือถามเพิ่ม ไม่ส่งหรืออนุมัติงานแทนคน",
       "expect": {
         "skill": "decision-memo"
       },
       "outputAssertions": [
-        "แยกข้อเท็จจริง ทางเลือก trade-off และ recommendation",
-        "reader check ผูก question กับ section/evidence/gap",
-        "ไม่อ้าง independent-reader จาก author-review"
+        "คงข้อมูล A=2 ขั้นตอน/100 บาท และ B=3 ขั้นตอน/200 บาท; แยก recommendation แบบมีเงื่อนไขจากข้อเท็จจริง",
+        "ระบุว่าไม่มีหลักฐานเรื่องความสำเร็จ ไม่อ้างว่า A หรือ B มีประสิทธิผลกว่า; ผู้ตัดสินใจ/กำหนดตัดสินใจเป็นรอยืนยัน",
+        "ร่างเฉพาะส่วนที่ขอ และ reader check ผูกคำถามกับ evidence/gap โดยระบุ author-review ไม่อ้าง independent-reader"
       ]
     },
     {

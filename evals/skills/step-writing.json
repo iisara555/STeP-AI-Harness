@@ -6,7 +6,7 @@
   "baseline": {
     "withoutSkillTypicallyMisses": "ขัดเกลาภาษาได้ แต่เติมข้อเท็จจริง เช่น วัน เวลา สถานที่ ที่ต้นทางไม่มี และไม่ยึดกติกาการเขียนของ STeP",
     "modelSideRun": "not-yet-run",
-    "adaptationNote": "2026-10-06 Thai methods adaptation: added source/provenance/handoff assertions; routing-only validation does not establish model output quality."
+    "adaptationNote": "2026-10-07: self-contained synthetic inputs and concrete source/authority assertions; routing validation is not evidence of live model quality."
   },
   "cases": [
     {
@@ -133,14 +133,14 @@
       "id": "positive-coauthoring-reader-evidence",
       "dimension": "positive",
       "team": "cc",
-      "prompt": "ช่วยปรับสำนวนร่างรายงานหลายหัวข้อนี้ให้ชัดเจน",
+      "prompt": "ข้อมูลทั้งหมดสังเคราะห์: ช่วยปรับสำนวนร่างรายงานหลายหัวข้อนี้ให้ชัดเจน ขอแก้เฉพาะส่วนข้อเสนอ: เสนอจัดกิจกรรมทดลองภายในหนึ่งครั้ง จำนวนผู้ร่วมที่เครื่องอ่านได้ 10 คนเป็น EXTRACTED_UNVERIFIED ยังไม่ทราบเจ้าของงานและวันจัด ห้ามเติมข้อมูลที่ขาด ช่วยตรวจจากมุมผู้อ่านด้วย ไม่ต้องร่างทั้งรายงานหรือถามเพิ่ม",
       "expect": {
         "skill": "step-writing"
       },
       "outputAssertions": [
-        "reader check ผูก question → evidence/gap และระบุ author-review จนมี independent reader จริง",
-        "คง owner/deadline ที่ขาดเป็นรอยืนยัน ไม่แต่งข้อมูลให้ครบหัวข้อ",
-        "รักษา EXTRACTED_UNVERIFIED ถ้าต้นทางมีค่าที่เครื่องอ่านและคนยังไม่ยืนยัน"
+        "แก้เฉพาะส่วนข้อเสนอและคงกิจกรรมหนึ่งครั้ง; ค่าผู้ร่วม 10 คนยังเป็น EXTRACTED_UNVERIFIED ไม่ยกระดับเป็น SOURCE_FACT",
+        "เจ้าของงานและวันจัดยังรอยืนยัน ไม่สร้างข้อเท็จจริงหรือมติใหม่",
+        "reader check ระบุ author-review พร้อมคำถาม → evidence/gap และไม่อ้าง independent reader"
       ]
     }
   ],

@@ -15,7 +15,8 @@
     "desktop:start": "npm --prefix desktop start",
     "desktop:test": "npm --prefix desktop test",
     "eval:tool-usability": "node scripts/tool-usability.mjs",
-    "desktop:eval:office": "npm --prefix desktop run eval:office"
+    "desktop:eval:office": "npm --prefix desktop run eval:office",
+    "desktop:eval:skill-benefit": "npm --prefix desktop run eval:skill-benefit --"
   },
   "files": [
     "bin",

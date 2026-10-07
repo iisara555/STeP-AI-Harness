@@ -13,7 +13,7 @@ Source ปัจจุบันเพิ่ม `spreadsheet-work` (สถาน�
 
 เปิด Excel/PowerPoint ตรวจสูตร ฟอนต์และทุกหน้าก่อนใช้งานจริง. สร้าง PPTX ใหม่ได้ แต่ยังไม่แก้ PPTX เดิมโดยรับรองว่ารักษาทุก feature. `step-writing`, `document-review`, `decision-memo` และ `sop-authoring` เพิ่มการร่างทีละส่วนและตรวจจากมุมผู้อ่าน.
 
-Google Sheets โดยตรงยังต้องมี connector และบัญชีที่เปิดใช้จริง; โมดูล Google Workspace แบบ opt-in ไม่ได้เปิดเป็นเครื่องมือ Desktop อัตโนมัติ. ใช้ XLSX นำเข้า Google Sheets ได้. ผลตรวจปัจจุบันเป็นข้อมูลสังเคราะห์; ยังไม่มีผลเปรียบเทียบโมเดลจริงแบบมี/ไม่มี Skill และยังไม่ยืนยัน PowerPoint บนเครื่องพนักงาน. ดู [ขอบเขต Office](docs/office-workflows.md) และ [แผนประเมิน](docs/tool-usability-eval.md) และ [วิธีตั้งค่าโมเดลใน cloud](docs/cloud-model-eval-setup.md). การเพิ่ม source นี้ไม่ได้ออก installer/release ใหม่.
+Google Sheets โดยตรงยังต้องมี connector และบัญชีที่เปิดใช้จริง; โมดูล Google Workspace แบบ opt-in ไม่ได้เปิดเป็นเครื่องมือ Desktop อัตโนมัติ. ใช้ XLSX นำเข้า Google Sheets ได้. ผลตรวจปัจจุบันเป็นข้อมูลสังเคราะห์; ยังไม่มีผลเปรียบเทียบโมเดลจริงแบบมี/ไม่มี Skill และยังไม่ยืนยัน PowerPoint บนเครื่องพนักงาน. ดู [ขอบเขต Office](docs/office-workflows.md) และ [แผนประเมิน](docs/tool-usability-eval.md) และ [วิธีรัน Office eval ด้วย ChatGPT/Codex OAuth บน Windows/macOS](docs/cloud-model-eval-setup.md). การเพิ่ม source นี้ไม่ได้ออก installer/release ใหม่.
 
 ## เลือกวิธีใช้ STeP AI
 

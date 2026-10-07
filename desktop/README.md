@@ -69,6 +69,10 @@ powershell -NoProfile -File test/office-smoke.ps1
 
 Unit tests use fake generation, real routing, SQLite and export libraries. Electron smoke tests exercise actual IPC, editing, version restore and themes without authenticating providers. Runtime probes initialize the bundled protocols without sending prompts. These checks do not prove live account access, quota handling, macOS support, or broad document layout coverage. The optional Windows Office smoke requires Word, Excel and PowerPoint and opens only synthetic exports.
 
+### Office Skill comparison with ChatGPT/Codex OAuth
+
+From the repository root, run `npm run desktop:eval:skill-benefit -- --self-test`, then `--list` and `--connection 1 --probe`. These send no model prompts. Explicit `--live` runs three WITH/WITHOUT Skill pairs per account-listed model using the existing Desktop OAuth profile, the same host Office tools, isolated sessions and a persistent call ledger outside the checkout. No API key or model judge is required. For this task's two prior cloud attempts include `--prior-calls gpt-6-astra=2`; use one machine per account and keep the entire results folder when resuming. See [Windows/macOS instructions and limits](../docs/cloud-model-eval-setup.md). This source-only runner does not establish model benefit, PowerPoint rendering, all coauthoring cases or real-document acceptance; those remain unrun.
+
 ### Golden-set evaluation (live model)
 
 Run whenever a model, Skill, source or prompt changes. It sends the three synthetic tasks from `docs/harness-quality-axes.md` through the real router, Skill loading and `WorkService`, grades each draft against `eval/golden.json`, and writes `eval-results/<time>-<provider>/report.md` plus every draft for a person to read. It consumes provider quota; the key is read from the environment only and never written to the report.
