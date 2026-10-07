@@ -56,3 +56,38 @@ export function UpdateCard({ api, update }: { api: DesktopAPI; update: UpdateSta
     </div>
   );
 }
+
+/**
+ * The app version under the person's name, with whether a newer one is out. Clicking it checks for updates, or
+ * installs a downloaded one, so nobody has to wonder whether they are on the latest version.
+ */
+export function VersionLine({ api, update, version }: { api: DesktopAPI; update: UpdateState | null; version: string }) {
+  const current = update?.current || version;
+  if (!current) return null;
+  const status = update?.status;
+  const available = status === 'ready' || status === 'manual' || status === 'downloading';
+  const note = available
+    ? t('มีอัปเดต {0}', update?.version || '')
+    : status === 'checking'
+      ? t('กำลังตรวจอัปเดต…')
+      : status === 'none'
+        ? t('เป็นเวอร์ชันล่าสุด')
+        : status === 'error'
+          ? t('ตรวจอัปเดตไม่สำเร็จ')
+          : status === 'disabled' || !update
+            ? ''
+            : t('ตรวจอัปเดต');
+  const action = status === 'ready' ? 'updateInstall' : status === 'manual' ? 'updateDownload' : 'updateCheck';
+  return (
+    <button
+      type="button"
+      className={available ? 'version-line available' : 'version-line'}
+      disabled={status === 'checking' || status === 'downloading' || status === 'disabled'}
+      title={available ? t('มีเวอร์ชันใหม่ {0}', update?.version || '') : t('ตรวจหาเวอร์ชันใหม่')}
+      onClick={() => void api.call(action).catch(() => {})}
+    >
+      <span>v{current}</span>
+      {note && <span>· {note}</span>}
+    </button>
+  );
+}

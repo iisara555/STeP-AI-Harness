@@ -60,7 +60,7 @@ import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
-import { UpdateCard, useUpdate } from './update';
+import { UpdateCard, VersionLine, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
@@ -1164,6 +1164,7 @@ export default function App() {
                   {snapshot.settings.userName ? t('ผู้ช่วย {0} · ', snapshot.settings.assistant) : ''}
                   {snapshot.settings.team ? t('ทีม {0}', snapshot.settings.team.toUpperCase()) : t('ยังไม่เลือกทีม')}
                 </small>
+                <VersionLine api={api} update={update} version={snapshot.appVersion || ''} />
               </div>
             </div>
           </aside>
