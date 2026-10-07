@@ -671,6 +671,31 @@ test('chat keeps the request across "อ่านยัง" and "อันนี
   store.close();
 });
 
+test('chat retains source and host context across a fact confirmation and acknowledgements', async () => {
+  const { store, session } = fixture();
+  const { calls, runtime } = recorder();
+  const service = new WorkService(store, harness, runtime, () => {});
+  const source = 'Synthetic TOR: งานวันที่ 8–9 พฤษภาคม เวลา 16.00–20.00 น. วันพิธีเปิดยังรอยืนยัน';
+  try {
+    await service.run(session.id, 'ช่วยร่าง Run of Show จาก TOR นี้', source, true, undefined, 'chat', undefined, ['synthetic-tor.docx']);
+    const saved = store.session(session.id);
+    saved.files![0].at = '2000-01-01T00:00:00.000Z';
+    store.save(saved);
+    for (const input of ['พิธีเปิดวันที่ 8 พฤษภาคม', 'ครับ', 'รับทราบ', 'ต่อเรื่อง Run of Show']) {
+      await service.run(session.id, input, '', true, undefined, 'chat');
+      const current = calls.at(-1)!;
+      assert.match(current.prompt, /<conversation_files>[^]*Synthetic TOR/);
+      const state = JSON.parse(/<task_state>\n([^]*?)\n<\/task_state>/.exec(current.prompt)![1]);
+      assert.deepEqual(state.files, [{ name: 'synthetic-tor.docx', at: '2000-01-01T00:00:00.000Z' }]);
+      assert.equal(state.latest, input);
+      assert.equal(store.session(session.id).files?.[0].text, source);
+    }
+    assert.match(calls.at(-1)!.prompt, /พิธีเปิดวันที่ 8 พฤษภาคม/);
+  } finally {
+    store.close();
+  }
+});
+
 test('a bare pointer that opens a chat is answered by the model, not a fixed router question', async () => {
   const { store, session } = fixture();
   const { calls, runtime } = recorder();

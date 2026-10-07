@@ -64,6 +64,14 @@ export class ToolLoop {
       return { tool: r.tool, ok: true, ...this.page(id) };
     } catch (error) {
       if (signal.aborted || code(error) === 'CANCELLED') throw error;
+      if (r.tool === 'read_remaining' && code(error) === 'TOOL_OUTPUT_EXPIRED') {
+        return {
+          tool: r.tool,
+          ok: false,
+          code: 'TOOL_OUTPUT_EXPIRED',
+          text: 'This paging handle is unavailable in the current run. It does not mean the original source has expired. Read the original source again with its permitted tool to obtain a fresh handle; a fresh read still requires the normal consent and policy checks.',
+        };
+      }
       return { tool: r.tool, ok: false, code: code(error) };
     }
   }

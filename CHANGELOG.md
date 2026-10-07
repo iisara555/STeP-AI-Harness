@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: grounded follow-ups and temporary tool handles
+
+- Include host task/source metadata in ordinary model turns, as well as compacted turns. Keep attached conversation sources available across factual clarification and acknowledgement turns.
+- Explain that an unavailable paging handle is limited to the current tool run and does not establish that the original document or Skill expired. A fresh source read retains existing consent, masking and policy checks; tool data and paging caches remain run-scoped.
+- Guide chat to continue an already requested draft after a clarification answer, keep acknowledgements brief, and ground loading/recovery/background-work claims in actual host results.
+- Verify with synthetic conversation and tool-loop regressions. These checks cover source retention, error contracts and prompt delivery; they do not establish live-model response quality. No policy default, provider credential, version or release change.
+
 ## Desktop v0.5.23 — 2026-10-07
 
 STeP Desktop version 0.5.23 packages the two sections below for `desktop-v0.5.23`. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
