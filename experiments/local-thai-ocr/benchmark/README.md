@@ -1,6 +1,10 @@
 # Synthetic receipt benchmark and private pilot
 
 This is development tooling, not an OCR/Router integration or an accuracy certificate.
+This branch predates the 0.5.21/0.5.23 OCR revisions on main. See the
+[main synthetic report](https://github.com/iisara555/STeP-AI-Harness/blob/main/experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md)
+for historical 0.5.21 evidence; it does not measure this branch or later changes.
+Compare exact revisions on identical inputs and record time/RAM before drawing conclusions.
 The acceptance gate stays **OPEN** until the repository owner reviews authorized
 real-document pilot evidence. Windows with 2 CPU cores and macOS M1 with 4 GB RAM
 are the target machines; Linux cloud timings do not establish readiness on either.
@@ -60,7 +64,9 @@ python -m benchmark.run --input /path/outside/repo/synthetic-80 \
 Live vision currently accepts PNG. Deliberately render PDF pages before benchmarking
 vision; do not silently treat the first page as the whole PDF. Set the model name
 for reproducibility; an omitted model is labeled `provider-default`. This helper is
-not a new production consent route. Private/live use requires document-owner permission
+not a new production consent route. This helper uses Codex; Desktop has other
+image-capable transports with different wire formats and entitlement. Reports must
+identify the actual provider/model and cannot stand for all Desktop providers. Private/live use requires document-owner permission
 and separate approval for external image transmission; `--private` alone never sends.
 The benchmark does not change Desktop privacy defaults or skip its production gates.
 

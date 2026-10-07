@@ -1,4 +1,6 @@
-# STeP Desktop (development preview)
+# STeP Desktop
+
+> อ้างอิง source ของ `improve-office-workflows`: Harness **0.7.6** / Desktop **0.5.19**. branch นี้ยังไม่ได้รวม OCR รอบใหม่และทัวร์ใช้งานของ main 0.5.23; ดู [คู่มือล่าสุดบน main](https://github.com/iisara555/STeP-AI-Harness/blob/main/README.md). เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -14,11 +16,11 @@ Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, 
 
 ## Office workflow preview (`improve-office-workflows`)
 
-The Office working tree adds creation of XLSX and editable PPTX files through governed host tools, input-cell editing that preserves untouched ZIP parts, and document coauthoring methods. Generated or edited files enter Changes for review before application under the existing permission modes. Formula/protected-cell edits, complete Excel feature preservation and editing existing PPTX files are outside this implementation.
+The uncommitted Office working tree proposes creation of XLSX and editable PPTX files through governed host tools, input-cell editing that preserves untouched ZIP parts, and document coauthoring methods. Generated or edited files enter Changes for review before application under the existing permission modes. Formula/protected-cell edits, complete Excel feature preservation and editing existing PPTX files are outside this implementation.
 
 Google Workspace is a separate optional connector requiring an organization-installed and signed-in CLI. It does not install/authenticate the CLI, join the Desktop tool loop or establish live Google access. Controlled synthetic tool contracts and LibreOffice rendering checks do not prove model-side usefulness or staff-machine acceptance.
 
-These Office changes are not included in the OCR release [Desktop 0.5.21](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.21). Preserve the current Office changes for their own implementation commit and release checks.
+The committed branch remains on Desktop 0.5.19 with README changes. Office implementation is uncommitted and is not part of main or any published Desktop installer. Main source is 0.5.23, with newer OCR and a two-part tour; see the [current Desktop guide](https://github.com/iisara555/STeP-AI-Harness/blob/main/desktop/README.md). Preserve Office changes for their own implementation commit and release checks.
 
 ## Text-to-image generation
 
@@ -76,7 +78,7 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 ## Distribution
 
-`npm run package` creates an unpacked app. `npm run dist:win` creates an NSIS installer. `npm run dist:mac` must run on a macOS build host for each architecture. A signed, notarized release and clean-machine tests remain release gates; unsigned development builds are not production releases.
+`npm run package` creates an unpacked app. `npm run dist:win` creates an NSIS installer. `npm run dist:mac` must run on a macOS build host for each architecture. Published installer builds and organizational rollout approval are separate. Current macOS builds use ad-hoc signing and are not Apple Developer notarized; clean-machine and organization acceptance remain required. Employees use their approved internal distribution channel.
 
 ### Updates
 
@@ -109,7 +111,9 @@ in the registered source must be confirmed with AFP; no live policy validation o
 payment approval is claimed.
 
 Review/correct the populated form, then use the single existing source-comparison
-checkbox. There are no per-field confirmation requirements. Editing an expense
+checkbox. Only selected, source-compared values become `SOURCE_FACT`; unchecked manual
+entries are `USER_INPUT`, while raw OCR/vision and alternatives remain
+`EXTRACTED_UNVERIFIED` even if they agree. There are no per-field confirmation requirements. Editing an expense
 description, purpose, type or category withdraws the confirmation too. Raw evidence,
 alternative readings, reread controls, the complete checklist and pilot tools are
 available in collapsed details. Saving and chat handoff are optional subsequent actions.
@@ -141,12 +145,14 @@ The page also shows the document type (from the AI or the printed heading) and a
 
 ## Boundaries
 
+`autoRouting`, `checks.privacy` and `checks.authority` are off by default. Managed policy controls them; attachment, memory, receipt and tool consent retain their own rules. Do not describe optional checks as active for every request.
+
 - Conversation history and drafts are local application data, not diagnostic logs. API secrets use Electron secure storage. Most provider-managed authentication uses an isolated runtime profile. Experimental Antigravity uses a shared native OS keyring: configuration isolation does not isolate Google identities, and STeP disconnect does not log out that native account. See [current compatibility blocker](../docs/antigravity-adapter.md).
-- Only extracted, reviewed text is sent for attachments; original documents are not uploaded. Unsupported/incomplete extraction is blocked. One source attachment per request preserves one-source Playbook constraints.
+- Ordinary document attachments send extracted, reviewed text and block unsupported/incomplete extraction. Receipt vision and the separate managed image-input control can transmit original image pixels under their own policy/consent gates; text masking does not redact pixels. One source attachment per request preserves one-source Playbook constraints.
 - The host rejects file, shell and action requests from provider runtimes and exposes no external submission or publishing IPC. A separate public retrieval run enables only native web search after privacy and authority checks. Runtime restrictions still require adversarial live verification. Export happens through host code.
 - DOCX/PDF/Markdown preserve headings, lists, bold, italic and tables (Markdown tables from the model become real tables in the editor, at most 500 rows by 30 columns, no merged cells). Word and PDF use the Thai official layout: TH Sarabun New 16 pt, A4, margins left 3 cm, right 2 cm, top 2.5 cm, bottom 2 cm. Word substitutes another font when TH Sarabun New is not installed; the PDF then uses Sarabun, Leelawadee UI or Thonburi scaled to the same size. XLSX puts each table on its own sheet (bold header, borders, filter, frozen header; plain numbers become numbers, codes with a leading zero stay text) and the rest of the draft as clean text. To use it in Google Sheets, upload the XLSX to Google Drive and open it with Google Sheets. PPTX puts tables on their own slides and paginates text; this is not an Office layout editor.
 - Graph edges are navigation aids, never authoritative evidence. Use `node scripts/graphify-local.js build` from the root and verify inferred edges against source.
-- Live account login, provider failure behavior, packaging, signing, and macOS require independent validation before release.
+- Native Windows/macOS CI builds validate installer creation for the tagged revision; they do not prove every provider account, clean-machine installation, receipt accuracy or staff workflow. Provider/hardware acceptance and organizational rollout remain separate.
 - Drafting rules and the Skill go to each runtime's system instructions (Claude `systemPrompt`, Codex `developerInstructions`, Gemini `GEMINI_SYSTEM_MD`); request, sources, conversation and draft travel in tagged sections that source text cannot open or close.
 - A busy service, dropped connection or exited runtime is retried twice; quota and sign-in failures are not. A Playbook that stops keeps its finished steps, and "ลองอีกครั้ง" continues from the step that stopped. Up to three tasks in different Workspaces may run at once.
 - A follow-up that revises a draft is routed on its own text for the authority check, so an approval request cannot ride on an earlier allowed route.
