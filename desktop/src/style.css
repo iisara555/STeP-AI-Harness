@@ -1023,7 +1023,126 @@ nav button,
   font-size: 11px;
 }
 .connection-form {
-  margin-top: 23px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ai-connect-step {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.ai-connect-step h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+.ai-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 13px;
+}
+.ai-connect-step summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: 13px;
+  padding: 8px 0;
+}
+.ai-connect-step summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+.ai-connect-empty {
+  margin: 14px 0 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13px;
+}
+.ai-readiness .connection-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.connection-row .ai-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ai-connection-status.ready {
+  color: var(--accent-ink);
+}
+.ai-account-management {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.ai-account-management[open] > div {
+  margin-top: 8px;
+}
+.ai-account-management .connection-actions {
+  margin-top: 14px;
+}
+.ai-primary-actions button {
+  font-size: 13px;
+}
+.ai-connect-step .provider-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+.ai-connect-flow .provider-tile-text {
+  display: none;
+}
+.ai-connect-flow .provider-tile {
+  min-height: 0;
+  padding: 8px;
+}
+.ai-provider-disclosure[data-first='true'] > summary {
+  display: none;
+}
+.wizard .ai-connect-flow > p {
+  display: none;
+}
+.wizard .ai-connect-step {
+  padding: 12px;
+  margin-top: 8px;
+}
+.wizard .ai-connect-step > p {
+  margin: 6px 0;
+}
+.wizard .ai-connect-step:first-of-type > p {
+  display: none;
+}
+.wizard .provider-detail {
+  padding: 8px;
+  margin-top: 8px;
+  gap: 6px;
+}
+.settings-hero-ai .settings-illustration {
+  width: 76px;
+  height: 56px;
+}
+.settings-hero-ai {
+  margin-bottom: 8px;
+}
+.provider-options summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+}
+.provider-options[open] label {
+  margin-top: 8px;
 }
 .connection-cost {
   padding: 10px;
@@ -1076,6 +1195,12 @@ nav button,
   justify-content: space-between;
   align-items: baseline;
   gap: 6px;
+  flex-wrap: wrap;
+}
+.provider-recommended {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent-ink);
 }
 .provider-tile-text {
   font-size: 12px;

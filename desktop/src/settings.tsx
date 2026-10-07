@@ -1,21 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Check, FolderOpen, LoaderCircle, Monitor, Moon, Plus, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
-import {
-  ConfirmDialog,
-  ProviderFields,
-  providerChoiceReady,
-  initialChoice,
-  connectionInput,
-  connectLabel,
-  type ProviderChoice,
-} from './ui';
-import { explainError, connectionLabel, shortcut } from './messages';
+import { Check, FolderOpen, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
+import { AIConnections } from './ai-connections';
+import { shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
 import { AVATARS, Avatar } from './avatars';
 import { initial } from './messages';
-import type { Connection, Snapshot } from './types';
-import { language, locale, t, teamName } from './i18n';
+import type { Snapshot } from './types';
+import { language, t, teamName } from './i18n';
 import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleId } from './speaking-styles';
 
 export function SettingsPanel({
@@ -51,20 +43,7 @@ export function SettingsPanel({
     [languageStyle, setLanguageStyle] = useState(languageStyleId(snapshot.settings.languageStyle));
   const [outputStyle, setOutputStyle] = useState(snapshot.settings.outputStyle || '');
   const [outputStyles, setOutputStyles] = useState<string[] | null>(null);
-  const [choice, setChoice] = useState<ProviderChoice>(initialChoice);
-  // Account sign-ins and API keys are tested right away, so they are ready to use or show why not. Administrator
-  // routes that need more setup (an organization Google project, Antigravity, Copilot) are saved first.
-  const connectNow = (choice.mode === 'subscription' && ['openai', 'claude'].includes(choice.provider)) || choice.mode === 'api';
-  const [busy, setBusy] = useState(''),
-    [progress, setProgress] = useState<Record<string, string>>({}),
-    [removingConnection, setRemovingConnection] = useState<Connection | null>(null);
-  useEffect(
-    () =>
-      window.step?.onEvent(event => {
-        if (event.type === 'connect-progress' && event.connectionId) setProgress(p => ({ ...p, [event.connectionId!]: event.text || '' }));
-      }),
-    [],
-  );
+  const [busy, setBusy] = useState('');
   // New users land on AI connections when none exist; otherwise on general settings.
   const [page, setPage] = useState<'general' | 'ai' | 'appearance' | 'privacy' | 'policy'>(
     initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length) ? 'ai' : 'general',
@@ -106,9 +85,9 @@ export function SettingsPanel({
   ] as const;
   return (
     <div className="settings-content">
-      <div className="settings-hero">
+      <div className={page === 'ai' ? 'settings-hero settings-hero-ai' : 'settings-hero'}>
         <div>
-          <h1>{t('พร้อมทำงาน ในแบบของคุณ')}</h1>
+          <h1>{page === 'ai' ? t('เชื่อมต่อ AI') : t('พร้อมทำงาน ในแบบของคุณ')}</h1>
           <p className="muted">{t('ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา')}</p>
         </div>
         {page === 'ai' ? (
@@ -119,7 +98,14 @@ export function SettingsPanel({
       </div>
       <div className="settings-tabs" role="tablist" aria-label={t('หมวดการตั้งค่า')}>
         {pages.map(([id, label, Icon]) => (
-          <button key={id} role="tab" aria-selected={page === id} className={page === id ? 'active' : ''} onClick={() => setPage(id)}>
+          <button
+            key={id}
+            role="tab"
+            disabled={Boolean(busy) && page !== id}
+            aria-selected={page === id}
+            className={page === id ? 'active' : ''}
+            onClick={() => setPage(id)}
+          >
             <Icon size={15} />
             {label}
             {id === 'ai' && !snapshot.connections.some(c => c.ready) && <span className="tab-dot" aria-label={t('ยังไม่พร้อม')} />}
@@ -440,244 +426,17 @@ export function SettingsPanel({
       {page === 'ai' && (
         <section>
           <h2>{t('การเชื่อมต่อ AI')}</h2>
-          <p className="muted small">
-            {t(
-              'เลือกการเชื่อมต่อที่รองรับด้านล่าง ตรวจสิทธิ์และผู้รับผิดชอบค่าใช้จ่ายของบัญชีก่อนเริ่ม การทดสอบจะส่งคำขอสั้น ๆ หนึ่งครั้ง',
-            )}
-          </p>
-          {snapshot.connections.map(c => (
-            <div className="connection-row" key={c.id}>
-              <div>
-                <strong>
-                  {connectionLabel(c)}{' '}
-                  <small>
-                    {c.mode === 'api'
-                      ? c.signedIn
-                        ? t('ลงชื่อเข้าใช้')
-                        : 'API key'
-                      : c.mode === 'oauth'
-                        ? c.provider === 'copilot'
-                          ? 'GitHub OAuth'
-                          : 'Claude Console OAuth'
-                        : t('บัญชีส่วนตัว')}
-                  </small>
-                </strong>
-                {busy === c.id && progress[c.id] ? (
-                  <p className="connect-progress">
-                    <LoaderCircle size={13} className="spin" />
-                    {progress[c.id]}
-                  </p>
-                ) : (
-                  <p className={c.ready ? 'connected' : 'muted'}>{t(c.note)}</p>
-                )}
-                {((c.provider === 'claude' && (c.mode === 'subscription' || c.mode === 'oauth')) ||
-                  ((c.provider === 'openai' || c.provider === 'gemini') && c.mode === 'subscription')) &&
-                  busy !== c.id && (
-                    <p className={c.signedIn ? 'small connected' : 'small muted'}>
-                      {c.provider === 'openai'
-                        ? c.signedIn
-                          ? t('ลงชื่อ ChatGPT แล้ว')
-                          : t('ยังไม่ได้ลงชื่อ ChatGPT')
-                        : c.provider === 'gemini'
-                          ? c.signedIn
-                            ? t('ลงชื่อ Google แล้ว')
-                            : t('ยังไม่ได้ลงชื่อ Google')
-                          : c.signedIn
-                            ? c.mode === 'oauth'
-                              ? t('เชื่อม Claude Console OAuth แล้ว')
-                              : t('ลงชื่อบัญชี Claude แล้ว')
-                            : c.mode === 'oauth'
-                              ? t('ยังไม่ได้เชื่อม Claude Console OAuth')
-                              : t('ยังไม่ได้ลงชื่อบัญชี Claude')}
-                    </p>
-                  )}
-                {c.provider === 'gemini' && c.googleCloudProject && (
-                  <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>
-                )}
-                {Boolean(c.models?.length || c.model) && (
-                  <label className="connection-model">
-                    {t('โมเดลเริ่มต้นสำหรับงานใหม่')}
-                    <select
-                      value={c.model}
-                      disabled={Boolean(busy)}
-                      onChange={e => void run(c.id + ':model', () => call('connectionModel', { id: c.id, model: e.target.value }))}
-                    >
-                      {c.provider !== 'antigravity' && (
-                        <option value="">
-                          {(() => {
-                            const fallback = c.models?.find(m => m.isDefault);
-                            return fallback ? t('ค่าเริ่มต้น ({0})', fallback.label) : t('ค่าเริ่มต้นของบริการ');
-                          })()}
-                        </option>
-                      )}
-                      {(c.models || []).map(m => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
-                        </option>
-                      ))}
-                      {c.model && !c.models?.some(m => m.id === c.model) && <option value={c.model}>{c.model}</option>}
-                    </select>
-                  </label>
-                )}
-                {c.modelsAt && (
-                  <p className="small muted">
-                    {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {new Date(c.modelsAt).toLocaleString(locale())}
-                  </p>
-                )}
-              </div>
-              <div className="connection-actions">
-                <button
-                  className={c.ready ? 'quiet' : undefined}
-                  disabled={Boolean(busy)}
-                  onClick={() => void run(c.id, () => call('connect', { id: c.id }))}
-                >
-                  {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
-                  {c.ready && busy !== c.id
-                    ? t('ทดสอบอีกครั้ง')
-                    : c.provider === 'openai' && c.mode === 'subscription'
-                      ? t('เชื่อมต่อ ChatGPT')
-                      : c.provider === 'gemini' && c.mode === 'subscription'
-                        ? t('เชื่อมต่อ Google')
-                        : c.provider === 'claude' && c.mode === 'oauth'
-                          ? t('เชื่อมต่อ OAuth')
-                          : c.provider === 'claude' && c.mode === 'subscription'
-                            ? t('เชื่อมต่อ Claude')
-                            : t('เชื่อมต่อและทดสอบ')}
-                </button>
-                {busy === c.id && (
-                  <button className="quiet" onClick={() => void call('cancelConnect', { id: c.id })}>
-                    {t('ยกเลิก')}
-                  </button>
-                )}
-                {c.ready && (
-                  <button
-                    className="quiet"
-                    disabled={Boolean(busy)}
-                    onClick={() => void run(c.id + ':models', () => call('models', { id: c.id }))}
-                  >
-                    {busy === c.id + ':models' ? <LoaderCircle size={15} className="spin" /> : null}
-                    {t('โหลดรายชื่อโมเดล')}
-                  </button>
-                )}
-                {/* Only the CLI-based connections have a runtime to choose; API endpoints and Copilot do not. */}
-                {!['claude', 'compatible', 'copilot'].includes(c.provider) &&
-                  (c.customRuntime ? (
-                    <button
-                      className="quiet"
-                      disabled={Boolean(busy)}
-                      title={t('เลิกใช้ runtime ที่เลือกเอง')}
-                      onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
-                    >
-                      {c.provider === 'antigravity' ? t('ใช้ Antigravity ที่ STeP ติดตั้ง') : t('ใช้ตัวเชื่อมที่มากับแอป')}
-                    </button>
-                  ) : (
-                    <button
-                      className="quiet"
-                      disabled={Boolean(busy)}
-                      title={t('สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง')}
-                      onClick={() => void run(c.id, () => call('runtime', { id: c.id }))}
-                    >
-                      {t('เลือก runtime')}
-                    </button>
-                  ))}
-                {/* Signing out of an API-key connection would only delete the key; removing it says that plainly. */}
-                {(c.mode === 'subscription' || c.mode === 'oauth' || c.signedIn || (c.ready && c.mode !== 'api')) && (
-                  <button
-                    className="quiet"
-                    disabled={Boolean(busy)}
-                    title={
-                      c.provider === 'antigravity'
-                        ? t('เลิกเชื่อมต่อกับ STeP บัญชี Google ใน Antigravity ยังลงชื่ออยู่')
-                        : t('ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง')
-                    }
-                    onClick={() => void run(c.id, () => call('disconnect', { id: c.id }))}
-                  >
-                    {c.provider === 'antigravity' ? t('เลิกเชื่อมต่อ') : t('ออกจากระบบ')}
-                  </button>
-                )}
-                <button className="quiet danger-text" disabled={Boolean(busy)} onClick={() => setRemovingConnection(c)}>
-                  {t('ลบ')}
-                </button>
-              </div>
-            </div>
-          ))}
-          {removingConnection && (
-            <ConfirmDialog
-              title={t('ลบการเชื่อมต่อนี้?')}
-              tone="danger"
-              confirmLabel={t('ลบการเชื่อมต่อ')}
-              onCancel={() => setRemovingConnection(null)}
-              onConfirm={async () => {
-                try {
-                  await call('removeConnection', { id: removingConnection.id });
-                } catch (e) {
-                  throw new Error(explainError(e));
-                }
-                setRemovingConnection(null);
-                await refresh();
-              }}
-            >
-              {removingConnection.provider !== 'antigravity' && (
-                <p>
-                  {t(
-                    '{0} ({1}) จะถูกลบพร้อมข้อมูลลงชื่อหรือ API key ที่เก็บในเครื่องนี้ บัญชีของคุณที่ผู้ให้บริการไม่ได้รับผลกระทบ',
-                    connectionLabel(removingConnection),
-                    removingConnection.mode === 'api'
-                      ? 'API key'
-                      : removingConnection.mode === 'oauth'
-                        ? 'Claude Console OAuth'
-                        : t('บัญชี'),
-                  )}
-                </p>
-              )}
-              {removingConnection.provider === 'antigravity' && (
-                <p className="small muted">
-                  {t('บัญชี Google ใน Antigravity ยังลงชื่ออยู่บนเครื่องนี้ STeP ไม่ลบข้อมูลลงชื่อของบัญชีนั้น')}
-                </p>
-              )}
-              <p className="small muted">{t('งานที่ใช้การเชื่อมต่อนี้ยังอยู่ครบ เลือก AI ใหม่ได้ในกล่องพิมพ์ของงานนั้น')}</p>
-            </ConfirmDialog>
-          )}
-          <div className="connection-form">
-            <ProviderFields
-              value={choice}
-              onChange={setChoice}
-              call={call}
-              claudeSubscription={Boolean(snapshot.features?.claudeSubscription)}
-              presets={snapshot.features?.providerPresets !== false}
-              action={
-                choice.mode !== 'claude-code' && (
-                  <>
-                    <button
-                      className="connect-primary"
-                      disabled={Boolean(busy) || !providerChoiceReady(choice)}
-                      onClick={() =>
-                        void run('new', async () => {
-                          const connection = await call('connection', connectionInput(choice));
-                          setChoice({ ...choice, key: '' });
-                          if (connectNow) {
-                            setBusy(connection.id);
-                            // Show the pending account immediately so progress and cancellation remain available.
-                            await refresh();
-                            await call('connect', { id: connection.id });
-                          }
-                        })
-                      }
-                    >
-                      <Plus size={16} />
-                      {busy ? t('กำลังเชื่อมต่อ…') : connectNow ? connectLabel(choice) : t('เพิ่มการเชื่อมต่อ')}
-                    </button>
-                  </>
-                )
-              }
-            />
-          </div>
+          <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
         </section>
       )}
       <div className="settings-save">
         {page === 'ai' || page === 'privacy' ? (
-          <button className="quiet" onClick={close}>
-            {t('กลับไปที่งาน')}
+          <button
+            className={page === 'ai' && snapshot.connections.some(c => c.ready) ? undefined : 'quiet'}
+            disabled={Boolean(busy)}
+            onClick={close}
+          >
+            {page === 'ai' && snapshot.connections.some(c => c.ready) ? t('เริ่มใช้งาน') : t('กลับไปที่งาน')}
           </button>
         ) : (
           <button

@@ -6,17 +6,33 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.24 — 2026-10-07
+
+STeP Desktop 0.5.24 packages the prepared Office/context work below together with the connection and updater fixes. Harness remains 0.7.6. Publishing installers does not establish live model benefit, real-document OCR acceptance or organizational rollout approval.
+
+### Desktop: guided AI connection in Settings and Setup
+
+- Share a two-step flow: choose an AI and connect, then show the result of the automatic one-message test. Distinguish signing in from a successful test, allow retry on the same connection, and offer Start working only after actual readiness.
+- Recommend and preselect Gemini via Antigravity for people with eligible Google/student access, without claiming every account is eligible. Connect/install/sign-in/test from one button. Other AI services remain selectable; extra services, model choices and account maintenance are available on demand.
+- Check the real renderer with synthetic connection IPC, including failed-test recovery, busy navigation, credential reset and narrow/light/dark layouts. These tests use no live sign-in or provider quota.
+
+### Desktop: retry macOS update failures in the app
+
+- Keep download, network, missing-feed-file and checksum failures retryable inside STeP. Previously every failure after discovering a Mac version pointed to GitHub and incorrectly claimed a signed build was needed.
+- Preserve the verified ZIP/self-install flow and actual error code. Offer explicit manual download only for an app bundle that cannot be replaced or a legacy native signature requirement; explain moving out of the DMG and retrying. Clicking the version line retries inside the app. Clear a stale manual link after a successful retry.
+- Add test-first updater recovery regressions and renderer action checks. Downloads/checksums use synthetic data; the native bundle-swap tests run only on macOS. Already-installed old versions keep their old updater behavior until upgraded.
+
 ### Router: missing SOP approval context
 
 - Treat an absent approved SOP or an unknown approver as missing draft context, rather than an approval request. A later instruction to approve or enact the SOP still hits the existing Human Authority gate.
-- Add test-first synthetic drafting/enactment regressions. No authority-registry, policy-default, lifecycle, version or release change; these tests do not establish live model quality.
+- Add test-first synthetic drafting/enactment regressions. No authority-registry, policy-default or lifecycle change; these tests do not establish live model quality.
 
 
 ### Office Skill evaluation with Desktop OAuth
 
 - Give Office and coauthoring positive evals self-contained synthetic inputs and concrete output assertions rather than expecting specific artifacts from prompts with no data.
 - Add a source-only ChatGPT/Codex OAuth Skill comparison runner with read-only Desktop connection discovery, zero-prompt self-test/backend probe, fresh WITH/WITHOUT sessions, bounded host tools and a persistent call ledger. Results remain outside the checkout and include a summary without raw outputs or user paths.
-- Validate using synthetic files, simulated profile metadata and a controlled six-trial RPC loop through real Office host tools. Explicit live uses the existing host consent for the built-in public synthetic cases; credential-shaped inputs still block before model execution. Live model quality, coauthoring/receipt cases not selected by the three-task runner, and Windows/macOS PowerPoint review remain unverified. Keep draft/modelSideRun statuses; no version bump or release.
+- Validate using synthetic files, simulated profile metadata and a controlled six-trial RPC loop through real Office host tools. Explicit live uses the existing host consent for the built-in public synthetic cases; credential-shaped inputs still block before model execution. Live model quality, coauthoring/receipt cases not selected by the three-task runner, and Windows/macOS PowerPoint review remain unverified. Keep draft/modelSideRun statuses; no live quality claim.
 
 
 ### Desktop: Excel export from conversation tables
@@ -32,14 +48,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Add isolated, counterbalanced tool-usability plans, host-evidence scoring and a controlled Office artifact runner. Scripted WITH/WITHOUT negative controls verify the interface/scorer only; live model-side usefulness remains unmeasured.
 - Extend step-writing, document-review, decision-memo and sop-authoring with context gathering, section refinement and reader evidence. Distinguish author-review from an independent reader; add evals/examples and reduce legacy evaluation debt.
 - Add an optional Google Workspace connector for bounded Drive/Docs/Sheets reads, draft creation, revision-bound text append and RAW cell updates. Writes require exact trusted-host authorization; no automatic sign-in, tool-loop enablement, sharing or send operations. Tests use simulated CLI responses; live OAuth/Google API remains unverified.
-- Validate with synthetic workbooks/decks and LibreOffice rendering/recalculation. No real-document accuracy, production model benefit, universal Office compatibility, release/version bump or policy-default change is claimed. Record method provenance without copying proprietary document Skills.
+- Validate with synthetic workbooks/decks and LibreOffice rendering/recalculation. No real-document accuracy, production model benefit, universal Office compatibility or policy-default change is claimed. Record method provenance without copying proprietary document Skills.
 
 ### Desktop: grounded follow-ups and temporary tool handles
 
 - Include host task/source metadata in ordinary model turns, as well as compacted turns. Keep attached conversation sources available across factual clarification and acknowledgement turns.
 - Explain that an unavailable paging handle is limited to the current tool run and does not establish that the original document or Skill expired. A fresh source read retains existing consent, masking and policy checks; tool data and paging caches remain run-scoped.
 - Guide chat to continue an already requested draft after a clarification answer, keep acknowledgements brief, and ground loading/recovery/background-work claims in actual host results.
-- Verify with synthetic conversation and tool-loop regressions. These checks cover source retention, error contracts and prompt delivery; they do not establish live-model response quality. No policy default, provider credential, version or release change.
+- Verify with synthetic conversation and tool-loop regressions. These checks cover source retention, error contracts and prompt delivery; they do not establish live-model response quality. No policy default or provider credential change.
 
 ## Desktop v0.5.23 — 2026-10-07
 

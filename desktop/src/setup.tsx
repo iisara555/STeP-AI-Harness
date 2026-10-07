@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, LoaderCircle, Plug, Sparkles } from 'lucide-react';
-import type { Connection, Settings, Snapshot } from './types';
-import { ProviderFields, providerChoiceReady, initialChoice, connectionInput, connectLabel, type ProviderChoice } from './ui';
-import { connectionLabel } from './messages';
+import { ArrowLeft, ArrowRight, Check, Sparkles } from 'lucide-react';
+import type { Settings, Snapshot } from './types';
+import { AIConnections } from './ai-connections';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { t, teamName } from './i18n';
@@ -63,9 +62,6 @@ export function SetupWizard({
   const [assistant, setAssistant] = useState(s.assistant || 'STeP Mate'),
     [personality, setPersonality] = useState<Personality>(s.personality || 'coworker'),
     [tone, setTone] = useState(s.assistantTone || '');
-  const [choice, setChoice] = useState<ProviderChoice>(initialChoice),
-    [tested, setTested] = useState<Connection | null>(null);
-  const [connecting, setConnecting] = useState<{ id: string; text: string } | null>(null);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
     try {
@@ -76,14 +72,6 @@ export function SetupWizard({
       setBusy('');
     }
   };
-  useEffect(
-    () =>
-      window.step?.onEvent(event => {
-        if (event.type === 'connect-progress' && event.connectionId) setConnecting({ id: event.connectionId, text: event.text || '' });
-      }),
-    [],
-  );
-
   const save = (extra: object = {}) =>
     call('settings', { userName, team, assistant, personality, assistantTone: tone, theme: s.theme, ...extra });
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -280,60 +268,7 @@ export function SetupWizard({
         {step === 3 && (
           <section className="wizard-body">
             <h1>{t('เชื่อมต่อ AI')}</h1>
-            <p className="muted">{t('เลือกบริการที่คุณมีบัญชีอยู่แล้ว ระบบจะส่งคำขอสั้น ๆ หนึ่งครั้งเพื่อทดสอบ')}</p>
-            {snapshot.connections.map(c => (
-              <p key={c.id} className={c.ready ? 'connected small' : 'small muted'}>
-                <Plug size={13} /> {connectionLabel(c)} · {t(c.note)}
-              </p>
-            ))}
-            <ProviderFields
-              value={choice}
-              onChange={setChoice}
-              call={call}
-              claudeSubscription={Boolean(snapshot.features?.claudeSubscription)}
-              presets={snapshot.features?.providerPresets !== false}
-              compact
-              action={
-                choice.mode !== 'claude-code' && (
-                  <>
-                    <button
-                      className="connect-primary"
-                      disabled={Boolean(busy) || !providerChoiceReady(choice)}
-                      onClick={() =>
-                        void run('connect', async () => {
-                          const c = await call('connection', connectionInput(choice));
-                          setChoice({ ...choice, key: '' });
-                          setConnecting({ id: c.id, text: t('กำลังเริ่มเชื่อมต่อ') });
-                          try {
-                            setTested(await call('connect', { id: c.id }));
-                          } finally {
-                            setConnecting(null);
-                          }
-                          await refresh();
-                        })
-                      }
-                    >
-                      {busy === 'connect' ? <LoaderCircle size={15} className="spin" /> : <Plug size={15} />}
-                      {busy === 'connect'
-                        ? choice.mode === 'api'
-                          ? t('กำลังเชื่อมต่อ…')
-                          : t('กำลังเชื่อมต่อ… อาจมีหน้าลงชื่อเข้าใช้เปิดในเบราว์เซอร์')
-                        : connectLabel(choice, t('เชื่อมต่อและทดสอบ'))}
-                    </button>
-                    {busy === 'connect' && connecting && (
-                      <p className="connect-progress">
-                        <LoaderCircle size={13} className="spin" />
-                        {connecting.text}
-                        <button className="text-link" onClick={() => void call('cancelConnect', { id: connecting.id })}>
-                          {t('ยกเลิก')}
-                        </button>
-                      </p>
-                    )}
-                    {tested && <p className={tested.ready ? 'connected small' : 'small danger-text'}>{t(tested.note)}</p>}
-                  </>
-                )
-              }
-            />
+            <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
           </section>
         )}
 

@@ -11,7 +11,7 @@ export type UpdateState = {
   percent?: number;
   /** Why updates are off, or what failed (an error code, never a raw message with paths). */
   reason?: string;
-  /** Where to download the new version by hand, when the app cannot install it itself (an unsigned Mac build). */
+  /** Manual fallback only when an installed Mac bundle cannot be replaced or needs a compatible signature. */
   url?: string;
   checkedAt?: string;
 };
@@ -96,7 +96,7 @@ export class Updater {
     // A downloaded update stays ready; checking again would only download it twice.
     if (this.state.status === 'ready' || this.state.status === 'downloading' || this.state.status === 'checking') return this.snapshot;
     try {
-      this.set({ status: 'checking', reason: undefined });
+      this.set({ status: 'checking', reason: undefined, url: undefined });
       await this.updater.checkForUpdates();
     } catch (error) {
       this.fail(error);
@@ -128,12 +128,18 @@ export class Updater {
       /ERR_UPDATER_[A-Z_]+|UPDATE_[A-Z_]+/.exec(message)?.[0] ||
       (/ENOTFOUND|ECONN|ETIMEDOUT|net::/i.test(message) ? 'UPDATE_OFFLINE' : 'UPDATE_FAILED');
     this.options.log?.('update-failed', { code });
-    // macOS installs an update only when both versions carry the same Developer ID signature. A build without one can
-    // still learn that a new version exists; the person then downloads it from the release page.
-    if (this.options.platform === 'darwin' && this.state.version)
-      return this.set({ status: 'manual', reason: 'UPDATE_NEEDS_SIGNED_BUILD', url: RELEASES_URL });
+    // A failed download, missing feed asset or checksum failure is retryable in-app.
+    // Only a bundle that cannot be replaced (DMG, translocation, permissions) or
+    // the legacy native updater's signature requirement needs a manual fallback.
+    const signatureFailure = !this.options.selfInstall && /code signature|codesign|signature.*validation/i.test(message);
+    if (this.options.platform === 'darwin' && this.state.version && (code === 'UPDATE_NOT_REPLACEABLE' || signatureFailure))
+      return this.set({
+        status: 'manual',
+        reason: code === 'UPDATE_NOT_REPLACEABLE' ? code : 'UPDATE_NEEDS_SIGNED_BUILD',
+        url: RELEASES_URL,
+      });
     // Offline or no feed yet is not something the person must act on: say so quietly and try again on the next round.
-    this.set({ status: 'error', reason: code, checkedAt: new Date().toISOString() });
+    this.set({ status: 'error', reason: code, url: undefined, checkedAt: new Date().toISOString() });
   }
   private set(next: Partial<UpdateState>) {
     this.state = { ...this.state, ...next };

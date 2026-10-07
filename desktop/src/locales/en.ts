@@ -3,6 +3,50 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'ใช้บัญชี Google ที่มีสิทธิ์ เช่น สิทธินักศึกษา ระบบจะติดตั้งตัวเชื่อมและทดสอบให้':
+    'Use an eligible Google account, such as student access. We install the connector and test it for you.',
+  'ใช้สิทธิ์และโควตาของบัญชี Google ที่ลงชื่อ ไม่ต้องใช้ API key':
+    'Uses the signed-in Google account’s entitlement and quota; no API key is needed.',
+
+  'เชื่อมต่อ AI และตั้งค่าเริ่มต้นเป็น 2 ขั้น: เลือกบริการและเชื่อมต่อ แล้วดูผลทดสอบก่อนเริ่มงาน':
+    'AI connection and setup now have two steps: choose and connect a service, then check the test result before starting.',
+  'แนะนำ Antigravity สำหรับผู้มีสิทธิ์บัญชี Google เช่น สิทธินักศึกษา เลือก ChatGPT หรือบริการอื่นได้เหมือนเดิม':
+    'Antigravity is recommended for eligible Google accounts, including student access. ChatGPT and other services remain available.',
+  'Mac: ถ้าดาวน์โหลดอัปเดตไม่สำเร็จ ให้ลองใหม่ในแอปได้ ไม่พาไป GitHub ทุกครั้งที่เกิดข้อผิดพลาด':
+    'Mac: retry failed update downloads in the app instead of being sent to GitHub for every error.',
+  'สร้างไฟล์ Excel และ PowerPoint จากบทสนทนาได้ผ่านเครื่องมือของผู้ช่วย ตรวจไฟล์และสูตรก่อนใช้งานจริง':
+    'Create Excel and PowerPoint files from conversations using the assistant’s tools. Review files and formulas before use.',
+  'ลงชื่อด้วยบัญชี Google ระบบจะติดตั้งตัวเชื่อมและทดสอบให้ ตรวจสิทธิ์และโควตาของบัญชีก่อนเริ่ม':
+    'Sign in with Google. We install the connector and test it for you. Check your account’s entitlement and quota first.',
+  'ตัวเลือก Antigravity': 'Antigravity options',
+  'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องขอ API key': 'Antigravity and ChatGPT use account sign-in; no API key is needed.',
+
+  อัปเดตยังไม่สำเร็จ: 'Update did not complete',
+  'ตรวจอินเทอร์เน็ตแล้วลองใหม่ แอปเวอร์ชันเดิมและงานของคุณยังอยู่':
+    'Check your connection and try again. Your current app and work are preserved.',
+  ลองอัปเดตอีกครั้ง: 'Retry update',
+  'ย้ายแอปออกจาก DMG ไปไว้ใน Applications ที่คุณมีสิทธิ์เขียน แล้วเปิดแอปและลองอัปเดตอีกครั้ง':
+    'Move the app out of the DMG into an Applications folder you can write to, then reopen it and retry the update.',
+  แนะนำ: 'Recommended',
+  'แนะนำสำหรับผู้มีสิทธินักศึกษา ใช้บัญชี Google และตรวจสิทธิ์ของบัญชีก่อนเริ่ม (ทดลอง)':
+    'Recommended for students with eligible access. Use Google and check your account’s entitlement first (experimental).',
+  'เลือกบริการที่คุณมีบัญชีอยู่แล้ว เชื่อมต่อครั้งเดียว แล้วเริ่มงานได้เมื่อทดสอบผ่าน':
+    'Choose a service you already use. Connect once, then start when the test passes.',
+  'เลือก AI และเชื่อมต่อ': 'Choose AI and connect',
+  'ใช้บัญชี ChatGPT ให้เลือก ChatGPT ไม่ต้องขอ API key ส่วนบริการที่ใช้คีย์จะแสดงช่องให้กรอก':
+    'For a ChatGPT account, choose ChatGPT; no API key is needed. Services that use a key will show an input field.',
+  'เพิ่ม AI อีกบัญชี': 'Add another AI account',
+  ตรวจว่าพร้อมใช้งาน: 'Check readiness',
+  'หลังลงชื่อ ระบบทดสอบข้อความสั้น ๆ 1 ครั้ง โดยใช้โควตาของบัญชีนี้ ผ่านแล้วไม่ต้องทดสอบซ้ำ':
+    'After sign-in, we test one short message using this account’s quota. Once it passes, no further test is needed.',
+  'เชื่อมต่อก่อน แล้วระบบจะทดสอบให้โดยอัตโนมัติ': 'Connect first; we will test automatically.',
+  'กำลังเชื่อมต่อและทดสอบ…': 'Connecting and testing…',
+  'ทดสอบผ่าน · พร้อมใช้งาน': 'Test passed · Ready to use',
+  'ลงชื่อแล้ว แต่ยังไม่พร้อมใช้งาน': 'Signed in, but not ready yet',
+  ยังไม่พร้อมใช้งาน: 'Not ready yet',
+  ทดสอบใช้งาน: 'Test connection',
+  โมเดลและการจัดการบัญชี: 'Models and account management',
+
   'กำลังจัดทำไฟล์ Excel': 'Creating an Excel file',
   'กำลังจัดทำไฟล์ PowerPoint': 'Creating a PowerPoint file',
   'เซลล์นี้มีสูตรอยู่ กรุณาแก้เฉพาะช่องข้อมูลหรือให้เจ้าของไฟล์ตรวจสูตร':

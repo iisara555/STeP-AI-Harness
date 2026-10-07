@@ -24,7 +24,20 @@ export function useUpdate(api: DesktopAPI | undefined) {
  * then "restart to update" (Windows) or "download" (a Mac build that cannot install updates itself).
  */
 export function UpdateCard({ api, update }: { api: DesktopAPI; update: UpdateState | null }) {
-  if (!update || !['downloading', 'ready', 'manual'].includes(update.status)) return null;
+  if (!update || !['downloading', 'ready', 'manual', 'error'].includes(update.status)) return null;
+  if (update.status === 'error') {
+    if (!update.version) return null;
+    return (
+      <div className="update-card" role="status">
+        <strong>{t('อัปเดตยังไม่สำเร็จ')}</strong>
+        <small className="muted">{t('ตรวจอินเทอร์เน็ตแล้วลองใหม่ แอปเวอร์ชันเดิมและงานของคุณยังอยู่')}</small>
+        <button onClick={() => void api.call('updateCheck').catch(() => {})}>
+          <RefreshCw size={14} />
+          {t('ลองอัปเดตอีกครั้ง')}
+        </button>
+      </div>
+    );
+  }
   if (update.status === 'downloading')
     return (
       <div className="update-card" role="status">
@@ -47,8 +60,15 @@ export function UpdateCard({ api, update }: { api: DesktopAPI; update: UpdateSta
       <small className="muted">
         {ready
           ? t('ดาวน์โหลดแล้ว รีสตาร์ทเพื่อใช้เวอร์ชันใหม่ งานที่ค้างไว้ยังอยู่')
-          : t('Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดแล้วลากไปที่ Applications')}
+          : update.reason === 'UPDATE_NOT_REPLACEABLE'
+            ? t('ย้ายแอปออกจาก DMG ไปไว้ใน Applications ที่คุณมีสิทธิ์เขียน แล้วเปิดแอปและลองอัปเดตอีกครั้ง')
+            : t('Mac รุ่นนี้ติดตั้งอัปเดตเองไม่ได้ ดาวน์โหลดแล้วลากไปที่ Applications')}
       </small>
+      {!ready && (
+        <button className="quiet" onClick={() => void api.call('updateCheck').catch(() => {})}>
+          {t('ลองอัปเดตอีกครั้ง')}
+        </button>
+      )}
       <button onClick={() => void api.call(ready ? 'updateInstall' : 'updateDownload').catch(() => {})}>
         {ready ? <RefreshCw size={14} /> : <ArrowDownToLine size={14} />}
         {ready ? t('รีสตาร์ทเพื่ออัปเดต') : t('ดาวน์โหลดเวอร์ชัน {0}', update.version || '')}
@@ -77,7 +97,9 @@ export function VersionLine({ api, update, version }: { api: DesktopAPI; update:
           : status === 'disabled' || !update
             ? ''
             : t('ตรวจอัปเดต');
-  const action = status === 'ready' ? 'updateInstall' : status === 'manual' ? 'updateDownload' : 'updateCheck';
+  // A version/status click retries in the app. Only the explicit download
+  // button opens the manual fallback page.
+  const action = status === 'ready' ? 'updateInstall' : 'updateCheck';
   return (
     <button
       type="button"

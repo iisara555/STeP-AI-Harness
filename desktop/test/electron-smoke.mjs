@@ -35,6 +35,7 @@ try {
   await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
   const withGoogle = await page.evaluate(() => window.step.call('snapshot'));
   assert.ok(withGoogle.connections.some(c => c.provider === 'gemini' && c.mode === 'subscription' && !c.ready));
+  await page.getByText('เพิ่ม AI อีกบัญชี', { exact: true }).click();
   await providerField.selectOption('claude');
   assert.equal(await methodField.inputValue(), 'oauth');
   const availability = await page.evaluate(() => window.step.call('anthropicCli'));

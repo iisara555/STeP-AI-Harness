@@ -45,6 +45,7 @@ try {
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   // Employees find Antigravity among the services, not only in the administrators' form.
   await page.getByRole('radio', { name: /Gemini via Antigravity/ }).click();
+  await page.getByText('ตัวเลือก Antigravity', { exact: true }).click();
   assert.equal(await page.getByLabel('โมเดล', { exact: true }).inputValue(), 'gemini-3.8-flash-medium');
   assert.equal(await page.getByLabel(/API key/).count(), 0);
   await expect(page.getByRole('button', { name: 'วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity' })).toBeVisible();
@@ -55,7 +56,10 @@ try {
   assert.equal(await page.getByLabel(/Google Cloud Project ID/).count(), 0);
   assert.equal(await page.getByLabel('Gemini model').inputValue(), 'gemini-3.8-flash-medium');
   await expect(page.getByText(/ปิดเครื่องมือของ Antigravity ทั้งหมด/)).toBeVisible();
-  await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
+  // Save this test connection directly so the real one-click UI cannot install/sign in to a provider.
+  await page.evaluate(() =>
+    window.step.call('connection', { provider: 'antigravity', mode: 'subscription', model: 'gemini-3.8-flash-medium' }),
+  );
   const snapshot = await page.evaluate(() => window.step.call('snapshot'));
   const connection = snapshot.connections.find(c => c.provider === 'antigravity');
   assert.ok(connection && !connection.ready && connection.model === 'gemini-3.8-flash-medium');

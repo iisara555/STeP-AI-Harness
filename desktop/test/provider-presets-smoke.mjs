@@ -78,6 +78,7 @@ try {
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
 
   // OpenRouter: no key typed, so the button signs in; the key it issues is stored and used, never shown.
+  await page.getByRole('button', { name: /ดูบริการอื่นอีก/ }).click();
   await page.getByRole('radio', { name: /^OpenRouter/ }).click();
   await page.getByRole('button', { name: 'ลงชื่อด้วย OpenRouter', exact: true }).click();
   const connections = async () => (await page.evaluate(() => window.step.call('snapshot'))).connections;
@@ -98,6 +99,7 @@ try {
   await expect(page.locator('body')).not.toContainText('sk-or-v1-from-signin');
 
   // Groq: an API key is required before the button is enabled; the typed key is what the service receives.
+  await page.getByText('เพิ่ม AI อีกบัญชี', { exact: true }).click();
   await page.getByRole('radio', { name: /^Groq/ }).click();
   const groqConnect = page.getByRole('button', { name: 'เชื่อมต่อ Groq', exact: true });
   await expect(groqConnect).toBeDisabled();

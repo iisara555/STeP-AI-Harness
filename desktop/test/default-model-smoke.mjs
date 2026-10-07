@@ -50,6 +50,7 @@ try {
   const call = (method, input) => page.evaluate(({ method, input }) => window.step.call(method, input), { method, input });
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   const choose = page.getByLabel('โมเดลเริ่มต้นสำหรับงานใหม่');
   assert.equal(await choose.inputValue(), '');
   await expect(choose.locator('option').first()).toHaveText('ค่าเริ่มต้น (Fast 1)');

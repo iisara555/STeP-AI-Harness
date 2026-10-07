@@ -95,6 +95,8 @@ try {
   });
   const gemini = async () => (await page.evaluate(() => window.step.call('snapshot'))).connections.filter(c => c.provider === 'gemini');
   const connect = async () => {
+    const add = page.getByText('เพิ่ม AI อีกบัญชี', { exact: true });
+    if ((await add.count()) && !(await page.getByRole('radio', { name: /^Gemini(?! via)/ }).isVisible())) await add.click();
     await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
     await page.getByLabel('Gemini API key').fill('synthetic-gemini-key-for-smoke');
     await page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true }).click();
@@ -112,12 +114,12 @@ try {
   mode = 'ok';
   slowTest = true;
   await connect();
-  await page.getByText('กำลังเชื่อมต่อ…').waitFor();
+  await page.locator('.ai-connection-status').filter({ hasText: 'กำลังเชื่อมต่อและทดสอบ…' }).waitFor();
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).waitFor({ state: 'hidden' });
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
-  await page.getByText('กำลังเชื่อมต่อ…').waitFor();
+  await page.locator('.ai-connection-status').filter({ hasText: 'กำลังเชื่อมต่อและทดสอบ…' }).waitFor();
   await expect.poll(async () => (await gemini()).some(c => c.ready), { timeout: 60000 }).toBe(true);
   slowTest = false;
   assert.ok(

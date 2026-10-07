@@ -401,6 +401,7 @@ const tileName = (c: ProviderChoice) =>
   c.provider === 'gemini' ? 'Gemini' : c.provider === 'claude' ? 'Claude API' : c.provider === 'openai' ? 'OpenAI API' : c.provider;
 
 const ANTIGRAVITY_MODEL = 'gemini-3.8-flash-medium';
+export const recommendedChoice: ProviderChoice = { ...initialChoice, provider: 'antigravity', model: ANTIGRAVITY_MODEL };
 type Tile = {
   id: string;
   label: string;
@@ -450,7 +451,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     {
       id: 'antigravity',
       label: 'Gemini via Antigravity',
-      description: t('ใช้บัญชี Google ไม่ต้องใช้คีย์ (ทดลอง)'),
+      description: t('แนะนำสำหรับผู้มีสิทธินักศึกษา ใช้บัญชี Google และตรวจสิทธิ์ของบัญชีก่อนเริ่ม (ทดลอง)'),
       kind: 'account',
       choice: { ...initialChoice, provider: 'antigravity', mode: 'subscription', model: ANTIGRAVITY_MODEL },
     },
@@ -464,7 +465,7 @@ const tileFor = (tiles: Tile[], c: ProviderChoice) =>
     c.preset ? tile.choice.preset === c.preset : !tile.choice.preset && tile.choice.provider === c.provider && tile.choice.mode === c.mode,
   );
 // Antigravity is on the first page so staff with only a Google account can connect without a key.
-const MAIN_TILES = ['chatgpt', 'claude-sub', 'openrouter', 'gemini-api', 'antigravity'];
+const MAIN_TILES = ['chatgpt', 'claude-sub', 'gemini-api', 'antigravity'];
 const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'API key', local: 'ในเครื่องนี้' };
 
 export function ProviderFields(props: {
@@ -482,7 +483,9 @@ export function ProviderFields(props: {
   const selected = tileFor(all, props.value);
   const [advanced, setAdvanced] = useState(false),
     [more, setMore] = useState(false);
-  const main = all.filter(tile => MAIN_TILES.includes(tile.id));
+  const main = all
+    .filter(tile => MAIN_TILES.includes(tile.id))
+    .sort((a, b) => Number(b.id === 'antigravity') - Number(a.id === 'antigravity'));
   const tiles = props.compact && !more && (!selected || MAIN_TILES.includes(selected.id)) ? main : all;
   return (
     <>
@@ -500,21 +503,22 @@ export function ProviderFields(props: {
               >
                 <span className="provider-tile-head">
                   <strong>{tile.label}</strong>
+                  {tile.id === 'antigravity' && <span className="provider-recommended">{t('แนะนำ')}</span>}
                   <span className={'provider-kind ' + tile.kind}>{t(KIND_LABEL[tile.kind])}</span>
                 </span>
                 <span className="provider-tile-text">{tile.description}</span>
               </button>
             ))}
           </div>
-          {tiles.length < all.length && (
-            <button type="button" className="text-link" onClick={() => setMore(true)}>
-              {t('ดูบริการอื่นอีก {0} รายการ', all.length - tiles.length)}
-            </button>
-          )}
           {selected && (
             <ProviderDetail tile={selected} value={props.value} onChange={props.onChange} call={props.call}>
               {props.action}
             </ProviderDetail>
+          )}
+          {tiles.length < all.length && (
+            <button type="button" className="text-link" onClick={() => setMore(true)}>
+              {t('ดูบริการอื่นอีก {0} รายการ', all.length - tiles.length)}
+            </button>
           )}
         </div>
       ) : (
@@ -542,7 +546,7 @@ export function ProviderFields(props: {
           onClick={() => {
             setAdvanced(!advanced);
             // Switching views starts from a clean choice: no API key, Console billing route or preset carries over.
-            props.onChange({ ...initialChoice });
+            props.onChange({ ...recommendedChoice });
           }}
         >
           {advanced ? t('กลับไปเลือกบริการ') : t('ตั้งค่าขั้นสูงสำหรับผู้ดูแล')}
@@ -593,18 +597,7 @@ function ProviderDetail({
       {value.provider === 'claude' && value.mode === 'subscription' && <ClaudeCodeNote call={call} subscription />}
       {value.provider === 'antigravity' && (
         <>
-          <p className="small">
-            {t(
-              'กดเชื่อมต่อครั้งเดียว STeP จะติดตั้ง Antigravity CLI ของ Google ให้ถ้ายังไม่มี เปิดหน้าลงชื่อบัญชี Google แล้วทดสอบให้เอง ไม่ต้องใช้ API key เมื่อยกเลิกการเชื่อมต่อ บัญชีใน Antigravity ยังลงชื่ออยู่',
-            )}
-          </p>
-          <label>
-            {t('โมเดล')}
-            <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
-          </label>
-          <button type="button" className="text-link" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
-            {t('วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity')}
-          </button>
+          <p className="small">{t('ใช้บัญชี Google ที่มีสิทธิ์ เช่น สิทธินักศึกษา ระบบจะติดตั้งตัวเชื่อมและทดสอบให้')}</p>
         </>
       )}
       {preset?.signIn && (
@@ -650,13 +643,27 @@ function ProviderDetail({
       )}
       {preset && preset.key !== 'none' && <p className="small muted">{t('ร่างข้อความได้อย่างเดียว ยังไม่รองรับรูปภาพและการค้นเว็บ')}</p>}
       <p className="connection-cost" role="status">
-        {preset?.key === 'none'
-          ? t('ไม่มีค่าใช้จ่าย · ข้อมูลอยู่ในเครื่องนี้')
-          : tile.kind === 'account' && !preset
-            ? t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')
-            : t('ใช้งบ API · คิดตามการใช้กับบัญชีเจ้าของคีย์ ยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ')}
+        {value.provider === 'antigravity'
+          ? t('ใช้สิทธิ์และโควตาของบัญชี Google ที่ลงชื่อ ไม่ต้องใช้ API key')
+          : preset?.key === 'none'
+            ? t('ไม่มีค่าใช้จ่าย · ข้อมูลอยู่ในเครื่องนี้')
+            : tile.kind === 'account' && !preset
+              ? t('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ · ระบบไม่สลับไปใช้งบ API อัตโนมัติ')
+              : t('ใช้งบ API · คิดตามการใช้กับบัญชีเจ้าของคีย์ ยืนยันผู้รับผิดชอบค่าใช้จ่ายก่อนเชื่อมต่อ')}
       </p>
       {children}
+      {value.provider === 'antigravity' && (
+        <details className="provider-options">
+          <summary>{t('ตัวเลือก Antigravity')}</summary>
+          <label>
+            {t('โมเดล')}
+            <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
+          </label>
+          <button type="button" className="text-link" onClick={() => void call('openHelp', { topic: 'antigravity' })}>
+            {t('วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity')}
+          </button>
+        </details>
+      )}
     </div>
   );
 }

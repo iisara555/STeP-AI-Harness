@@ -179,7 +179,70 @@ test('when the Mac self-install cannot run, the download page is offered as befo
     status: 'manual',
     current: '0.5.17',
     version: '0.5.18',
-    reason: 'UPDATE_NEEDS_SIGNED_BUILD',
+    reason: 'UPDATE_NOT_REPLACEABLE',
     url: RELEASES_URL,
   });
+});
+
+test('Mac download and feed failures stay retryable in-app instead of opening GitHub', async () => {
+  for (const failure of ['UPDATE_DOWNLOAD_FAILED', 'UPDATE_CHECKSUM_MISMATCH', 'UPDATE_NO_MAC_FILE', 'getaddrinfo ENOTFOUND github.com']) {
+    const fake = new FakeUpdater();
+    let attempts = 0,
+      installed = 0;
+    const updater = new Updater(fake, {
+      current: '0.5.23',
+      platform: 'darwin',
+      disabledReason: '',
+      emit: () => {},
+      selfInstall: {
+        prepare: async () => {
+          if (++attempts === 1) throw new Error(failure);
+          return () => {
+            installed++;
+          };
+        },
+      },
+    });
+    fake.next = f => f.emit('update-available', { version: '0.5.24' });
+    await updater.check();
+    await new Promise(r => setImmediate(r));
+    assert.equal(updater.snapshot.status, 'error', failure);
+    assert.equal(updater.snapshot.reason, failure.includes('ENOTFOUND') ? 'UPDATE_OFFLINE' : failure);
+    assert.equal(updater.snapshot.url, undefined);
+    assert.throws(() => updater.install(), /UPDATE_NOT_READY/);
+    await updater.check();
+    await new Promise(r => setImmediate(r));
+    assert.equal(updater.snapshot.status, 'ready');
+    assert.equal(updater.snapshot.reason, undefined);
+    updater.install();
+    assert.equal(installed, 1);
+    assert.deepEqual(fake.installed, []);
+  }
+});
+
+test('Mac permission fallback clears its link when retry becomes possible', async () => {
+  const fake = new FakeUpdater();
+  let blocked = true;
+  const updater = new Updater(fake, {
+    current: '0.5.23',
+    platform: 'darwin',
+    disabledReason: '',
+    emit: () => {},
+    selfInstall: {
+      prepare: async () => {
+        if (blocked) throw new Error('UPDATE_NOT_REPLACEABLE');
+        return () => {};
+      },
+    },
+  });
+  fake.next = f => f.emit('update-available', { version: '0.5.24' });
+  await updater.check();
+  await new Promise(r => setImmediate(r));
+  assert.equal(updater.snapshot.status, 'manual');
+  blocked = false;
+  await updater.check();
+  await new Promise(r => setImmediate(r));
+  assert.equal(updater.snapshot.status, 'ready');
+  assert.equal(updater.snapshot.url, undefined);
+  assert.equal(updater.snapshot.reason, undefined);
 });

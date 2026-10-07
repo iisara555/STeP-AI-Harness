@@ -28,16 +28,16 @@ try {
       }),
     );
   };
-  await assertVisibleButton(wizard.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
+  await assertVisibleButton(wizard.getByRole('button', { name: 'เชื่อมต่อ Antigravity', exact: true }));
   for (let i = 0; i < 14; i++) {
     await page.keyboard.press('Tab');
     assert.ok(await wizard.evaluate(el => el.contains(document.activeElement)));
   }
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
-  await expect(wizard.getByRole('heading')).toHaveText('บันทึกการตั้งค่าแล้ว');
+  await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('บันทึกการตั้งค่าแล้ว');
   await expect(wizard).toContainText('เชื่อมต่อ AI · ทำภายหลัง');
   await page.getByRole('button', { name: 'เชื่อมต่อ AI', exact: true }).click();
-  await expect(wizard.getByRole('heading')).toHaveText('เชื่อมต่อ AI');
+  await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('เชื่อมต่อ AI');
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
   // The usage terms must be ticked before the workspace opens; ticking records the accepted version.
   const enter = page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true });
