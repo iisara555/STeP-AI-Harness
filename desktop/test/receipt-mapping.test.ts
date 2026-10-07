@@ -111,8 +111,8 @@ test('ambiguous OCR values are offered as candidates instead of silently choosin
         lines: [
           { text: 'ร้านตัวอย่าง จำกัด', confidence: 0.95 },
           { text: 'วันที่ 30/09/2569', confidence: 0.95 },
-          { text: 'ยอดรวม 107.00', confidence: 0.95 },
-          { text: 'ยอดสุทธิ 108.00', confidence: 0.95 },
+          { text: 'ยอดสุทธิ 107.00', confidence: 0.95 },
+          { text: 'รวมทั้งสิ้น 108.00', confidence: 0.95 },
         ],
       },
     ],
@@ -124,6 +124,27 @@ test('ambiguous OCR values are offered as candidates instead of silently choosin
     Array.from(extracted.fields.total.candidates, (candidate: any) => candidate.value),
     ['107.00', '108.00'],
   );
+});
+
+test('ยอดสุทธิ outranks a plain ยอดรวม, which stays listed as a candidate', async () => {
+  const review = await loadReview();
+  const extracted = review.extractReceipt({
+    pages: [
+      {
+        page: 1,
+        source: 'ocr',
+        lines: [
+          { text: 'ร้านตัวอย่าง จำกัด', confidence: 0.95 },
+          { text: 'ยอดรวม 107.00', confidence: 0.95 },
+          { text: 'ส่วนลด 1.00', confidence: 0.95 },
+          { text: 'ยอดสุทธิ 106.00', confidence: 0.95 },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(extracted.fields.total.value, '106.00');
+  assert.deepEqual(Array.from(extracted.fields.total.candidates, (candidate: any) => candidate.value).slice(0, 2), ['106.00', '107.00']);
 });
 
 test('a missing value is not stolen from the next AFP field label and remains traceable', async () => {

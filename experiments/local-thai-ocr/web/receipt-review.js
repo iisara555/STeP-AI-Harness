@@ -12,7 +12,7 @@
     receiptNumber: {
       label: "เลขที่ใบเสร็จ",
       requiredForPrecheck: false,
-      aliases: /เลขที่ใบเสร็จ|เลขที่เอกสาร|เลขที่ใบกำกับภาษี|receipt\s*(?:no\.?|number|#)|invoice\s*(?:no\.?|number|#)|document\s*(?:no\.?|number)|bill\s*(?:no\.?|number|#)|inv\s*(?:no\.?|#)|^เลขที่(?:\s*[:：]\s*|\s+(?=\d)|$)/i,
+      aliases: /เลขที่ใบเสร็จ(?:รับเงิน)?|เลขที่ใบกำกับ(?:ภาษี)?|เลขที่เอกสาร|เลขที่บิล|receipt\s*(?:no\.?|number|#)|invoice\s*(?:no\.?|number|#)|document\s*(?:no\.?|number)|bill\s*(?:no\.?|number|#)|inv\s*(?:no\.?|#)|เลขที่(?!\s*(?:ผู้เสียภาษี|ประจำตัว|บัญชี|สาขา))|^(?:no\.|no\s*:|no\s+(?=\d)|#)/i,
     },
     date: {
       label: "วันที่",
@@ -37,10 +37,15 @@
     total: {
       label: "ยอดรวมที่ชำระ",
       requiredForPrecheck: true,
-      aliases: /ยอดสุทธิ|รวมทั้งสิ้น|ยอดรวม|รวมเงิน|จำนวนเงิน|grand\s*total|\btotal\b|net\s*amount|amount\s*due|^รวม$/i,
+      aliases: /ยอดเงินสุทธิ|ยอดสุทธิ|รวมทั้งสิ้น|ยอดชำระ|ยอดรวม|รวมเงิน|จำนวนเงิน|grand\s*total|\btotal\b|net\s*amount|amount\s*due|^รวม$/i,
     },
   };
   const fieldKeys = Object.keys(afpFieldSchema);
+  // Words that name the amount actually paid; plain ยอดรวม / รวมเงิน / จำนวนเงิน are often the pre-VAT sum or a column header.
+  const strongTotal = /ยอดเงินสุทธิ|ยอดสุทธิ|รวมทั้งสิ้น|ยอดชำระ|ยอดที่ต้องชำระ|grand\s*total|net\s*(?:amount|total)|amount\s*due|total\s*(?:amount|due|paid)|(?:รวม|incl\.?|including)\s*(?:vat|ภาษี)/i;
+  const notVatAmount = /ไม่รวม|ก่อน|excl|before|(?:รวม|incl\.?|including)\s*(?:vat|ภาษี)|vat\s*(?:reg|no\.?\b|id)|ผู้เสียภาษี/i;
+  // Abbreviations need a space before them so "บจ." (a company) is not read as "จ." (a province).
+  const addressWords = /หมู่(?:ที่)?\s|ถนน|ซอย|ตำบล|อำเภอ|จังหวัด|แขวง|เขต|(?:^|\s)[ถซตอจ]\.|\b(?:road|soi|moo)\b/i;
   const requiredKeys = fieldKeys.filter((key) => afpFieldSchema[key].requiredForPrecheck);
   const buyerMarker = /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|เลข(?:ประจำตัว)?(?:ผู้เสียภาษี)?(?:ของ)?(?:ผู้ซื้อ|ลูกค้า)|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
   const thaiDigits = "๐๑๒๓๔๕๖๗๘๙";
@@ -51,6 +56,51 @@
 
   function normalizeText(value) {
     return normalizeDigits(value).replace(/\s+/g, " ").trim();
+  }
+
+  const thaiLetter = /[\u0E00-\u0E7F]/;
+
+  // Thai OCR often splits a word with a space ("ยอด รวม", "วัน ที่"), so labels are matched with the spaces
+  // between Thai letters ignored. Returns where the label sits in the original text.
+  function labelMatch(value, regex) {
+    const text = String(value ?? "");
+    let compact = "";
+    const at = [];
+    for (let index = 0; index < text.length; index++) {
+      if (/\s/.test(text[index]) && thaiLetter.test(text[index - 1] || "")) {
+        let next = index;
+        while (next < text.length && /\s/.test(text[next])) next++;
+        if (thaiLetter.test(text[next] || "")) {
+          index = next - 1;
+          continue;
+        }
+      }
+      compact += text[index];
+      at.push(index);
+    }
+    const match = compact.match(regex);
+    if (!match) return null;
+    const end = match.index + match[0].length;
+    return { index: at[match.index] ?? text.length, end: end < at.length ? at[end] : text.length };
+  }
+
+  function hasLabel(value, key) {
+    return Boolean(labelMatch(normalizeText(value), afpFieldSchema[key].aliases));
+  }
+
+  function isAnyLabel(value) {
+    return fieldKeys.some((key) => hasLabel(value, key));
+  }
+
+  // A value on the same line ends where another field's label starts ("IV-001 วันที่ 06/10/2569").
+  function cutAtOtherLabel(value, ownKey) {
+    let end = value.length;
+    for (const key of fieldKeys) {
+      if (key === ownKey) continue;
+      const match = labelMatch(value, afpFieldSchema[key].aliases);
+      if (match && match.index > 0 && match.index < end) end = match.index;
+    }
+    return value.slice(0, end).trim();
   }
 
   function lineRecords(result) {
@@ -162,9 +212,16 @@
     };
   }
 
+  // OCR often puts a space beside a separator ("1, 070.00"). Letters inside numbers ("1O7.00") are left
+  // unreadable on purpose so a person compares them with the receipt.
+  function cleanAmountText(value) {
+    return normalizeDigits(value).replace(/(\d)\s*([,.])\s*(?=\d)/g, "$1$2");
+  }
+
   function amountTokens(value) {
-    const text = normalizeDigits(value);
-    const matches = [...text.matchAll(/(?<![A-Za-z\d.,/+-])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?![A-Za-z\d.,/%])/g)];
+    const text = cleanAmountText(value);
+    // A percentage ("VAT 7%") is a rate, not an amount.
+    const matches = [...text.matchAll(/(?<![A-Za-z\d.,/+-])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?![A-Za-z\d.,/%]|\s*%)/g)];
     return matches.map((match) => match[1]).filter((token) => token.replace(/\D/g, "").length < 11);
   }
 
@@ -175,12 +232,38 @@
     return Number.isFinite(amount) ? amount : null;
   }
 
+  const thaiMonths = [
+    ["ม.ค.", "มกราคม"], ["ก.พ.", "กุมภาพันธ์"], ["มี.ค.", "มีนาคม"], ["เม.ย.", "เมษายน"],
+    ["พ.ค.", "พฤษภาคม"], ["มิ.ย.", "มิถุนายน"], ["ก.ค.", "กรกฎาคม"], ["ส.ค.", "สิงหาคม"],
+    ["ก.ย.", "กันยายน"], ["ต.ค.", "ตุลาคม"], ["พ.ย.", "พฤศจิกายน"], ["ธ.ค.", "ธันวาคม"],
+  ];
+  // "ต.ค." also arrives from OCR as "ต.ค", "ตค." or "ต. ค.".
+  const looseAbbreviation = (short) => short.replace(/\./g, "").split("").join("\\.?\\s?") + "\\.?";
+  const monthPattern = [
+    ...thaiMonths.map(([, full]) => full),
+    ...thaiMonths.map(([short]) => looseAbbreviation(short)),
+    "jan(?:uary)?", "feb(?:ruary)?", "mar(?:ch)?", "apr(?:il)?", "may", "june?", "july?", "aug(?:ust)?",
+    "sep(?:t(?:ember)?)?", "oct(?:ober)?", "nov(?:ember)?", "dec(?:ember)?",
+  ].join("|");
+  const era = "(?:พ\\.?\\s?ศ\\.?|ค\\.?\\s?ศ\\.?)";
+  const namedDate = new RegExp(`(?:^|[^\\d])(\\d{1,2})\\s*(${monthPattern})\\s*(?:${era}\\s*)?((?:19|20|25)\\d{2}|\\d{2})(?=$|[^\\d])`, "i");
+  const englishDate = new RegExp(`(?:^|[^a-z])(${monthPattern})\\s+(\\d{1,2}),?\\s+((?:19|20)\\d{2})(?=$|[^\\d])`, "i");
+
+  function canonicalMonth(word) {
+    const compact = word.replace(/[.\s]/g, "");
+    const thai = thaiMonths.find(([short, full]) => full === word || short.replace(/\./g, "") === compact);
+    return thai ? (thai[1] === word ? word : thai[0]) : word;
+  }
+
   function dateValue(value) {
-    const pattern = /(?:^|[^\d])((?:19|20|25)\d{2}[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}[/.\-]\d{1,2}[/.\-](?:\d{4}|\d{2}))(?=$|[^\d])/;
     const text = normalizeText(value);
-    const months = "ม\\.?ค\\.?|ก\\.?พ\\.?|มี\\.?ค\\.?|เม\\.?ย\\.?|พ\\.?ค\\.?|มิ\\.?ย\\.?|ก\\.?ค\\.?|ส\\.?ค\\.?|ก\\.?ย\\.?|ต\\.?ค\\.?|พ\\.?ย\\.?|ธ\\.?ค\\.?|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม";
-    const thai = new RegExp(`(?:^|[^\\d])(\\d{1,2}\\s*(?:${months})\\s*(?:พ\\.?ศ\\.?\\s*)?(?:19|20|25)\\d{2})(?=$|[^\\d])`);
-    return text.match(pattern)?.[1] || text.match(thai)?.[1] || "";
+    const pattern = /(?:^|[^\d])((?:19|20|25)\d{2}[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}[/.\-]\d{1,2}[/.\-](?:\d{4}|\d{2}))(?=$|[^\d])/;
+    const numeric = text.match(pattern)?.[1];
+    if (numeric) return numeric;
+    const named = text.match(namedDate);
+    if (named) return `${named[1]} ${canonicalMonth(named[2])} ${named[3]}`;
+    const english = text.match(englishDate);
+    return english ? `${english[2]} ${english[1]} ${english[3]}` : "";
   }
 
   function taxIdValue(value) {
@@ -191,13 +274,17 @@
   function receiptNumberValue(value) {
     const text = normalizeText(value).replace(/^[\s:#.\-]+/, "").trim();
     if (!text || text.length > 48 || /^(?:receipt|invoice|document|เลขที่)$/i.test(text)) return "";
-    if (!/[\dA-Za-zก-๙]/.test(text)) return "";
+    // A document number has a digit; "เลขที่ 99/1 หมู่ 3 ต.สุเทพ" is an address.
+    if (!/\d/.test(text) || addressWords.test(text)) return "";
     return text;
   }
 
   function amountValue(value) {
     const tokens = amountTokens(value);
-    return tokens.length ? tokens[tokens.length - 1] : "";
+    // Prefer an amount written with satang ("85.00") over a count on the same line ("3 รายการ").
+    const money = tokens.filter((token) => /\.\d{2}$/.test(token));
+    const pool = money.length ? money : tokens;
+    return pool.length ? pool[pool.length - 1] : "";
   }
 
   function centerY(box) {
@@ -219,7 +306,7 @@
     return records
       .filter((record) => {
         if (record === labelRecord || record.page !== labelRecord.page || !record.box || record.box[0] < labelRecord.box[2] - 12) return false;
-        if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) return false;
+        if (isAnyLabel(record.text)) return false;
         const shift = (rowSlope(labelRecord) ?? rowSlope(record) ?? 0) *
           ((record.box[0] + record.box[2] - labelRecord.box[0] - labelRecord.box[2]) / 2);
         const otherY = centerY(record.box) - shift;
@@ -239,7 +326,7 @@
       const record = records[labelIndex + offset];
       if (!record || record.page !== labelRecord.page) break;
       // Stop at another recognized field label before parsing it as a value.
-      if (fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text)))) break;
+      if (isAnyLabel(record.text)) break;
       if (labelRecord.box && record.box) {
         const height = Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]);
         const gap = record.box[1] - labelRecord.box[3];
@@ -253,21 +340,30 @@
     return results;
   }
 
-  function labeledCandidates(records, labelRegex, parseValue) {
+  // labelWeight(text) scales a label line's candidates; 0 skips the line (e.g. "Sub Total" is not the total).
+  // key names a schema field, or is a label pattern of its own (e.g. เล่มที่).
+  function labeledCandidates(records, key, parseValue, labelWeight = () => 1) {
+    const labelRegex = typeof key === "string" ? afpFieldSchema[key].aliases : key;
     const found = [];
     for (let index = 0; index < records.length; index++) {
       const labelRecord = records[index];
       const text = normalizeText(labelRecord.text);
-      const match = text.match(labelRegex);
+      const match = labelMatch(text, labelRegex);
       if (!match) continue;
+      const weight = labelWeight(text);
+      if (!weight) continue;
 
-      const trailing = text.slice((match.index || 0) + match[0].length).replace(/^[\s:#]+/, "").trim();
+      let trailing = cutAtOtherLabel(text.slice(match.end).replace(/^[\s:#]+/, "").trim(), key);
+      // Bilingual labels repeat themselves: "เลขที่ BILL NO. 042".
+      for (let again = labelMatch(trailing, labelRegex); again?.index === 0 && again.end > 0; again = labelMatch(trailing, labelRegex)) {
+        trailing = trailing.slice(again.end).replace(/^[\s:#]+/, "").trim();
+      }
       const sameLine = parseValue(trailing);
       if (sameLine) {
         found.push({
           value: sameLine,
           record: labelRecord,
-          score: 1 * engineWeight(labelRecord),
+          score: weight * engineWeight(labelRecord),
           method: "same-line",
           engine: labelRecord.engine || "paddle",
           evidence: labelRecord.text,
@@ -279,7 +375,7 @@
         found.push({
           value: item.value,
           record: item.record,
-          score: 0.95 * engineWeight(item.record),
+          score: 0.95 * weight * engineWeight(item.record),
           method: "same-row",
           engine: item.record.engine || "paddle",
           evidence: `${labelRecord.text} ↔ ${item.record.text}`,
@@ -294,7 +390,7 @@
         found.push({
           value: item.value,
           record: item.record,
-          score: (item.offset === 1 ? 0.86 : 0.78) * engineWeight(item.record),
+          score: (item.offset === 1 ? 0.86 : 0.78) * weight * engineWeight(item.record),
           method: "next-line",
           engine: item.record.engine || "paddle",
           evidence: `${labelRecord.text} → ${item.record.text}`,
@@ -372,8 +468,8 @@
   }
 
   function findDate(records) {
-    const labeled = labeledCandidates(records, afpFieldSchema.date.aliases, dateValue);
-    const ranked = [...records].sort((a, b) => Number(afpFieldSchema.date.aliases.test(b.text)) - Number(afpFieldSchema.date.aliases.test(a.text)));
+    const labeled = labeledCandidates(records, "date", dateValue);
+    const ranked = [...records].sort((a, b) => Number(hasLabel(b.text, "date")) - Number(hasLabel(a.text, "date")));
     let fallback = null;
     for (const record of ranked) {
       const value = dateValue(record.text);
@@ -391,7 +487,7 @@
     const buyerRecords = buyerStart < 0 ? [] : records.slice(buyerStart);
     const buyerIdExcluded = buyerRecords.some((record) => Boolean(taxIdValue(record.text)));
 
-    const labeled = labeledCandidates(sellerRecords, afpFieldSchema.taxId.aliases, taxIdValue);
+    const labeled = labeledCandidates(sellerRecords, "taxId", taxIdValue);
     let fallback = null;
     for (const record of sellerRecords) {
       const value = taxIdValue(record.text);
@@ -399,8 +495,8 @@
       fallback = {
         value,
         record,
-        score: afpFieldSchema.taxId.aliases.test(record.text) ? 0.92 : 0.60,
-        method: afpFieldSchema.taxId.aliases.test(record.text) ? "tax-label-pattern" : "seller-13-digit-pattern",
+        score: hasLabel(record.text, "taxId") ? 0.92 : 0.60,
+        method: hasLabel(record.text, "taxId") ? "tax-label-pattern" : "seller-13-digit-pattern",
         evidence: record.text,
         sourceTexts: [record.text],
       };
@@ -409,8 +505,15 @@
     return { field: selectCandidate(labeled, fallback), buyerIdExcluded };
   }
 
+  const amountWeights = {
+    subtotal: () => 1,
+    vat: (text) => (notVatAmount.test(text) && !/^(?:ภาษีมูลค่าเพิ่ม|vat)\b/i.test(text) ? 0 : 1),
+    // Sub Total / ยอดก่อนภาษี lines are never the amount paid; a plain ยอดรวม ranks below ยอดสุทธิ / รวมทั้งสิ้น.
+    total: (text) => (hasLabel(text, "subtotal") && !strongTotal.test(text) ? 0 : strongTotal.test(text) ? 1 : 0.8),
+  };
+
   function findAmount(records, key) {
-    return selectCandidate(labeledCandidates(records, afpFieldSchema[key].aliases, amountValue));
+    return selectCandidate(labeledCandidates(records, key, amountValue, amountWeights[key]));
   }
 
   function findTotal(records) {
@@ -418,7 +521,14 @@
   }
 
   function findReceiptNumber(records) {
-    const bill = selectCandidate(labeledCandidates(records, afpFieldSchema.receiptNumber.aliases, receiptNumberValue));
+    // A bare "เลขที่" or "No." is weaker evidence than "เลขที่ใบเสร็จ"; it also labels addresses.
+    const bare = /^(?:no\.?|#|เลขที่)$/i;
+    const bill = selectCandidate(
+      labeledCandidates(records, "receiptNumber", receiptNumberValue, (text) => {
+        const match = labelMatch(text, afpFieldSchema.receiptNumber.aliases);
+        return match && bare.test(text.slice(match.index, match.end).replace(/\s+/g, "").trim()) ? 0.9 : 1;
+      }),
+    );
     const book = selectCandidate(labeledCandidates(records, /เล่มที่(?:\s*book\s*(?:no\.?|number|#))?|book\s*(?:no\.?|number|#)/i, receiptNumberValue));
     if (!bill.value || !book.value) return bill;
     return {
@@ -431,24 +541,75 @@
     };
   }
 
+  // Subtotal + VAT = total: when one amount is missing or two totals compete, the arithmetic settles it.
+  function reconcileAmounts(fields, records) {
+    const vat = parseMoney(fields.vat.value);
+    if (vat === null || vat <= 0) return;
+    const close = (a, b) => Math.abs(a - b) <= 0.02;
+    const optionRecord = (option) => ({ text: option.evidence, page: option.page, confidence: option.confidence });
+    const pick = (option, method, sourceTexts) =>
+      candidate(option.value, optionRecord(option), {
+        mappingStatus: "mapped",
+        mappingMethod: method,
+        candidates: [option],
+        evidence: option.evidence,
+        sourceTexts,
+        engine: option.engine,
+      });
+
+    if (fields.total.mappingStatus === "ambiguous") {
+      const subtotal = parseMoney(fields.subtotal.value);
+      const options = fields.total.candidates || [];
+      for (const top of options) {
+        const total = parseMoney(top.value);
+        if (total === null) continue;
+        const base = subtotal !== null ? subtotal : options.map((item) => parseMoney(item.value)).find((value) => value !== null && close(value + vat, total));
+        if (base === undefined || base === null || !close(base + vat, total)) continue;
+        fields.total = pick(top, "subtotal-plus-vat", fields.total.sourceTexts);
+        if (subtotal === null) {
+          const option = options.find((item) => close(parseMoney(item.value) ?? NaN, base));
+          fields.subtotal = pick(option, "subtotal-plus-vat", [option.evidence]);
+        }
+        return;
+      }
+    }
+
+    const total = parseMoney(fields.total.value);
+    if (fields.subtotal.value || total === null) return;
+    for (const record of records) {
+      if (record.virtualCandidate) continue;
+      for (const token of amountTokens(record.text)) {
+        const value = parseMoney(token);
+        if (value !== null && value < total && close(value + vat, total)) {
+          fields.subtotal = candidate(token, record, { mappingMethod: "subtotal-plus-vat", sourceTexts: [record.text] });
+          return;
+        }
+      }
+    }
+  }
+
   function findMerchant(records) {
     // A buyer can be another company. Its name and the table below it are never seller-header evidence.
     const buyerStart = records.findIndex(record => buyerMarker.test(record.text));
     if (buyerStart >= 0) records = records.slice(0, buyerStart);
-    const labeled = labeledCandidates(records, afpFieldSchema.merchant.aliases, (value) => {
+    const labeled = labeledCandidates(records, "merchant", (value) => {
       const text = normalizeText(value);
       if (text.length < 3 || text.length > 85) return "";
       return text;
     });
     if (labeled.length) return selectCandidate(labeled);
 
-    const generic = /^(?:(?:ใบเสร็จรับเงิน|ใบกำกับภาษี|ใบรับเงิน|บิลเงินสด|cash\s*sale|cash\s*bill|receipt|tax invoice|invoice|ต้นฉบับ|สำเนา)\s*)+$/i;
-    const label = /วันที่|date|เลขที่|เล่มที่|book\s*no|bill\s*no|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer/i;
+    // Document titles alone ("ใบกำกับภาษี/ใบเสร็จรับเงิน (ต้นฉบับ)") are not a shop name.
+    const titleWords = /ใบกำกับภาษีอย่างย่อ|ใบกำกับภาษี|ใบเสร็จรับเงิน|ใบรับเงิน|ใบส่งของ|บิลเงินสด|cash\s*sale|cash\s*bill|tax\s*invoice|receipt|invoice|abb|ต้นฉบับ|สำเนา|original|copy/gi;
+    const isTitle = (text) => !text.replace(titleWords, "").replace(/[\s/()\-|,.:]/g, "");
+    const label = /วันที่|date|เลขที่|เล่มที่|book\s*no|bill\s*no|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer|cash|change|เงินสด|เงินทอน|pos\b|cashier|พนักงาน/i;
     const merchantHint = /ร้าน|บริษัท|ห้างหุ้นส่วน|หจก\.?|จำกัด|\b(?:co\.?|ltd\.?|company|store|shop)\b/i;
     const plausible = [];
     for (const record of records.slice(0, 8)) {
       const text = normalizeText(record.text);
-      if (text.length < 3 || text.length > 85 || generic.test(text) || label.test(text) || /^\d/.test(text)) continue;
+      if (text.length < 3 || text.length > 85 || isTitle(text) || label.test(text) || addressWords.test(text)) continue;
+      // An amount or a date is not a name; "7-Eleven" still is.
+      if (/\d[.,]\d{2}\b/.test(text) || (/^\d/.test(text) && (text.match(/[A-Za-zก-๙]/g) || []).length < 3)) continue;
       plausible.push(record);
     }
     const chosen = plausible.find((record) => merchantHint.test(normalizeText(record.text))) || plausible[0];
@@ -459,7 +620,7 @@
 
   function buildAfpMapping(fields, records) {
     const used = new Set(fieldKeys.flatMap((key) => fields[key]?.sourceTexts || []));
-    const fieldLike = records.filter((record) => fieldKeys.some((key) => afpFieldSchema[key].aliases.test(normalizeText(record.text))));
+    const fieldLike = records.filter((record) => isAnyLabel(record.text));
     return {
       schema: "step-afp-receipt-precheck-mapping/v1",
       notice: "Operational field mapping for AFP pre-check; not a controlled finance-policy requirement list.",
@@ -501,6 +662,7 @@
       vat: findAmount(mappedRecords, "vat"),
       total: findTotal(mappedRecords),
     };
+    reconcileAmounts(fields, mappedRecords);
     return {
       fields,
       records,
