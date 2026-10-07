@@ -6,14 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-## Desktop v0.5.25 — 2026-10-07
+## Desktop v0.5.26 — 2026-10-07
 
-STeP Desktop 0.5.25 packages the prepared Office/context work below together with the connection and updater fixes. Harness remains 0.7.6. Publishing installers does not establish live model benefit, real-document OCR acceptance or organizational rollout approval.
+STeP Desktop 0.5.26 packages the prepared Office/context work below together with the connection and updater fixes. Harness remains 0.7.6. Publishing installers does not establish live model benefit, real-document OCR acceptance or organizational rollout approval.
 
 ### Release checks: portable Office evaluation fixtures
 
 - Resolve temporary-directory aliases before comparing paths in the synthetic output-boundary test, matching the runner’s canonicalized repository. Use native temporary paths rather than Linux-only literals for the Windows assertions. Keep child/root rejection and sibling acceptance checks.
-- The `desktop-v0.5.24` build stopped at unit tests and published no installers or update feed. This version supersedes that source tag; it does not add dependencies or change the evaluation Privacy Gate. The aliased-temp failure was reproduced and corrected on Linux; native checks remain part of the release workflow.
+- The `desktop-v0.5.24` build stopped at unit tests and `desktop-v0.5.25` stopped at a renderer fixture; neither published installers or an update feed. This version supersedes those source tags; it does not add dependencies or change the evaluation Privacy Gate. The aliased-temp failure was reproduced and corrected on Linux; native checks remain part of the release workflow.
+
+- Synchronize the synthetic update-recovery fixture with the actual Retry response before injecting another state. Reproduce the previous timeout with delayed IPC and renderer scheduling, then verify the same sequence passes after the fix. Preserve every retry/install/call-count assertion and keep the version line disabled during downloading.
 
 ### Desktop: guided AI connection in Settings and Setup
 

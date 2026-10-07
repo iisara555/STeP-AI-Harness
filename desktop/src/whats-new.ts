@@ -6,7 +6,7 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: '0.5.25',
+    version: '0.5.26',
     items: () => [
       t('เชื่อมต่อ AI และตั้งค่าเริ่มต้นเป็น 2 ขั้น: เลือกบริการและเชื่อมต่อ แล้วดูผลทดสอบก่อนเริ่มงาน'),
       t('แนะนำ Antigravity สำหรับผู้มีสิทธิ์บัญชี Google เช่น สิทธินักศึกษา เลือก ChatGPT หรือบริการอื่นได้เหมือนเดิม'),

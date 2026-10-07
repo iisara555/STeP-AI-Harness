@@ -19,6 +19,8 @@ try {
     ipcMain.handle('step:call', async (_event, method) => {
       globalThis.updateCalls.push(method);
       if (method === 'updateCheck') {
+        // Exercise delayed IPC: a click can finish before its update event arrives.
+        await new Promise(resolve => setTimeout(resolve, 100));
         const update = { status: 'downloading', current: '0.5.23', version: '0.5.24', percent: 20 };
         BrowserWindow.getAllWindows()[0].webContents.send('step:event', { sessionId: '', type: 'update', update });
         return update;
@@ -45,7 +47,11 @@ try {
   await send({ status: 'manual', reason: 'UPDATE_NOT_REPLACEABLE' });
   await expect(card).toContainText('ย้ายแอปออกจาก DMG');
   await card.getByRole('button', { name: 'ลองอัปเดตอีกครั้ง', exact: true }).click();
+  // Finish this request before injecting another state; otherwise its late
+  // downloading event can overwrite manual and disable the version-line button.
+  await expect(card).toContainText('กำลังดาวน์โหลดเวอร์ชัน 0.5.24');
   await send({ status: 'manual', reason: 'UPDATE_NOT_REPLACEABLE' });
+  await expect(card).toContainText('ย้ายแอปออกจาก DMG');
   await page.locator('.profile .version-line').click();
   await expect(card).toContainText('กำลังดาวน์โหลดเวอร์ชัน 0.5.24');
   assert.deepEqual(await app.evaluate(() => globalThis.updateCalls), ['updateCheck', 'updateInstall', 'updateCheck', 'updateCheck']);

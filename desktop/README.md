@@ -1,6 +1,6 @@
 # STeP Desktop
 
-> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.25**. รวม flow เชื่อมต่อ AI/Setup แบบสองขั้น แนะนำ Antigravity การลองอัปเดตบน Mac และงาน Office แล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
+> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.26**. รวม flow เชื่อมต่อ AI/Setup แบบสองขั้น แนะนำ Antigravity การลองอัปเดตบน Mac และงาน Office แล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -14,15 +14,15 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
-## Office tools in Desktop 0.5.25
+## Office tools in Desktop 0.5.26
 
 The host tool loop can create actual XLSX workbooks (`sheet_create`) and editable PPTX decks (`slides_create`) from chat/draft, including a table from earlier conversation turns. Ask mode stages them in **Changes** for review/application; Accept Edits uses the existing write gate and reports `applied` only after writing. Existing files are not overwritten. Leading-zero identifiers remain text and missing facts remain pending confirmation. With tool execution disabled, use the draft's **XLSX** export; CSV is a separate format.
 
 `sheet_read` separates formulas from cached values; `sheet_edit` patches input cells while preserving unrelated ZIP parts and refuses formula/protected cells, macros and signed packages. Recalculate in Excel/LibreOffice and visually review every PPTX page. Creation does not support faithful editing of an existing PPTX. See [Office workflows](../docs/office-workflows.md) for bounds, synthetic evidence and the draft `spreadsheet-work` Skill.
 
-The optional Google Workspace module is not automatically registered in the Desktop loop or authenticated. Direct Google Sheets access requires an available authorized connector; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. These additions are included in the 0.5.25 source; installer publication is verified separately in Desktop releases.
+The optional Google Workspace module is not automatically registered in the Desktop loop or authenticated. Direct Google Sheets access requires an available authorized connector; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. These additions are included in the 0.5.26 source; installer publication is verified separately in Desktop releases.
 
-## Connect AI / Setup — Desktop 0.5.25
+## Connect AI / Setup — Desktop 0.5.26
 
 Both pages share two steps: **choose AI and connect → check the automatic one-message test**. Antigravity is recommended and preselected for users with eligible Google/student access; eligibility and quota still depend on the account. ChatGPT sign-in needs no API key. Gemini API and other key-based services show their own inputs and billing information. Extra services and model/account management are disclosed on demand.
 
@@ -100,7 +100,7 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 An installed STeP Desktop checks for updates in the app. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** above the profile (or in the title bar when the sidebar is hidden). Windows installs a downloaded update on quit; the macOS verified ZIP flow requires the explicit restart action. The version/status line beneath the user's name checks immediately when clicked or installs an already downloaded update; STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต also checks immediately. Policy feature `autoUpdate` turns this off.
 
-To publish a version, bump `version` in `desktop/package.json` and its lockfile, add the version's in-app notes in `src/whats-new.ts`, and update the README version and CHANGELOG. Then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. From Desktop 0.5.18, macOS uses the verified ZIP update flow for the current ad-hoc signed builds. In 0.5.25, network/download/feed/checksum failures offer Retry update inside the app; they no longer automatically redirect to GitHub. Manual fallback is reserved for a bundle that cannot be replaced (DMG, translocation, permissions), or legacy native signature validation. Move the app to an Applications folder you can write to, reopen and retry. Older installed updaters keep their previous behavior until upgraded, so a one-time manual upgrade may still be needed. Signing/checksum checks are preserved.
+To publish a version, bump `version` in `desktop/package.json` and its lockfile, add the version's in-app notes in `src/whats-new.ts`, and update the README version and CHANGELOG. Then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. From Desktop 0.5.18, macOS uses the verified ZIP update flow for the current ad-hoc signed builds. In 0.5.26, network/download/feed/checksum failures offer Retry update inside the app; they no longer automatically redirect to GitHub. Manual fallback is reserved for a bundle that cannot be replaced (DMG, translocation, permissions), or legacy native signature validation. Move the app to an Applications folder you can write to, reopen and retry. Older installed updaters keep their previous behavior until upgraded, so a one-time manual upgrade may still be needed. Signing/checksum checks are preserved.
 
 ### Optional local Thai OCR
 

@@ -1,6 +1,6 @@
 # STeP AI
 
-> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.25**. รวม flow เชื่อมต่อ AI/Setup แบบสองขั้น แนะนำ Antigravity การลองอัปเดตบน Mac และงาน Office แล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
+> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.26**. รวม flow เชื่อมต่อ AI/Setup แบบสองขั้น แนะนำ Antigravity การลองอัปเดตบน Mac และงาน Office แล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI Harness สำหรับพนักงาน STeP / RSP North ใช้สำหรับคุยกับ AI, แนบเอกสาร, ใช้ Skill/Playbook, ตรวจร่าง, ส่งออกไฟล์ และใช้เครื่องมือเฉพาะ เช่น **ตรวจใบเสร็จก่อนส่ง AFP** โดยไม่ต้องใช้ Git, Terminal หรือจำชื่อ Skill
 
@@ -13,7 +13,7 @@
 
 แนะนำ **Gemini via Antigravity** สำหรับผู้มีสิทธิ์บัญชี Google เช่น สิทธินักศึกษา ตรวจสิทธิ์และโควตาของบัญชีที่ใช้ก่อนเริ่ม เลือก ChatGPT หรือบริการอื่นได้; Antigravity/ChatGPT ใช้การลงชื่อ ไม่ต้องขอ API key ตัวเลือกโมเดลและการจัดการบัญชีเปิดดูเพิ่มได้
 
-Mac รุ่น 0.5.25 ให้ลองดาวน์โหลดอัปเดตใหม่ในแอปเมื่อ network/download ล้มเหลว ใช้ดาวน์โหลดเองเมื่อแทนที่แอปไม่ได้จริง รุ่นเก่าที่ติดตั้งอยู่ยังใช้ updater เดิมจนกว่าจะอัปเกรด [รายละเอียดอัปเดต](desktop/README.md#updates)
+Mac รุ่น 0.5.26 ให้ลองดาวน์โหลดอัปเดตใหม่ในแอปเมื่อ network/download ล้มเหลว ใช้ดาวน์โหลดเองเมื่อแทนที่แอปไม่ได้จริง รุ่นเก่าที่ติดตั้งอยู่ยังใช้ updater เดิมจนกว่าจะอัปเกรด [รายละเอียดอัปเดต](desktop/README.md#updates)
 
 ## Excel, PowerPoint และงานเขียนร่วมกับ AI
 
@@ -21,7 +21,7 @@ Source ปัจจุบันเพิ่ม `spreadsheet-work` (สถาน�
 
 เปิด Excel/PowerPoint ตรวจสูตร ฟอนต์และทุกหน้าก่อนใช้งานจริง. สร้าง PPTX ใหม่ได้ แต่ยังไม่แก้ PPTX เดิมโดยรับรองว่ารักษาทุก feature. `step-writing`, `document-review`, `decision-memo` และ `sop-authoring` เพิ่มการร่างทีละส่วนและตรวจจากมุมผู้อ่าน.
 
-Google Sheets โดยตรงยังต้องมี connector และบัญชีที่เปิดใช้จริง; โมดูล Google Workspace แบบ opt-in ไม่ได้เปิดเป็นเครื่องมือ Desktop อัตโนมัติ. ใช้ XLSX นำเข้า Google Sheets ได้. ผลตรวจปัจจุบันเป็นข้อมูลสังเคราะห์; ยังไม่มีผลเปรียบเทียบโมเดลจริงแบบมี/ไม่มี Skill และยังไม่ยืนยัน PowerPoint บนเครื่องพนักงาน. ดู [ขอบเขต Office](docs/office-workflows.md) และ [แผนประเมิน](docs/tool-usability-eval.md) และ [วิธีรัน Office eval ด้วย ChatGPT/Codex OAuth บน Windows/macOS](docs/cloud-model-eval-setup.md). งาน Office รวมใน Desktop 0.5.25; สถานะเผยแพร่ installer ตรวจจาก Desktop releases ข้างต้น.
+Google Sheets โดยตรงยังต้องมี connector และบัญชีที่เปิดใช้จริง; โมดูล Google Workspace แบบ opt-in ไม่ได้เปิดเป็นเครื่องมือ Desktop อัตโนมัติ. ใช้ XLSX นำเข้า Google Sheets ได้. ผลตรวจปัจจุบันเป็นข้อมูลสังเคราะห์; ยังไม่มีผลเปรียบเทียบโมเดลจริงแบบมี/ไม่มี Skill และยังไม่ยืนยัน PowerPoint บนเครื่องพนักงาน. ดู [ขอบเขต Office](docs/office-workflows.md) และ [แผนประเมิน](docs/tool-usability-eval.md) และ [วิธีรัน Office eval ด้วย ChatGPT/Codex OAuth บน Windows/macOS](docs/cloud-model-eval-setup.md). งาน Office รวมใน Desktop 0.5.26; สถานะเผยแพร่ installer ตรวจจาก Desktop releases ข้างต้น.
 
 ## เลือกวิธีใช้ STeP AI
 
@@ -653,7 +653,7 @@ README ส่วนบนตั้งใจให้เป็น **GUI-first emp
 
 ## Version / inventory
 
-README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.25**
+README ฉบับนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.26**
 
 | รายการใน Harness source | จำนวน |
 | --- | --- |
