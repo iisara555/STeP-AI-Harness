@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### A fuller welcome tour that is easier to start
+
+- **Before:** the tour had 7 short steps that skipped connecting AI, the document drafting tool, settings and updates; it could only be opened from the end of the Setup Wizard or the command palette, and there was no way to stop after the essentials.
+- **After:** the tour has 2 parts. Part 1 "พื้นฐาน" covers what is needed for a first task: new task, example tasks, asking in plain Thai, attaching files with personal-data masking, choosing how to work (including plan before acting and permissions), connecting AI when none is connected, and reviewing the draft. It stops at a checkpoint where people can start working or carry on. Part 2 "เครื่องมือช่วยงาน" covers document drafting, the AFP receipt check, Skills, model and reasoning level, settings, the version and update line, and Ctrl+K. Each step has a short tip in plain words, a part label and progress dots. New people also see "ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน" on the welcome screen until they finish the tour.
+- Tests: new `tour-smoke.mjs` walks the whole tour in light or dark theme and checks every card stays on screen; `i18n.test.ts` checks every tour step has English text.
+
 ## Desktop v0.5.22 — 2026-10-07
 
 STeP Desktop version 0.5.22 packages the section below for `desktop-v0.5.22`. Harness package version remains 0.7.6.
