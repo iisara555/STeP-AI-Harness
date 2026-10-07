@@ -131,6 +131,11 @@ const SKIP_SIGNER = new RegExp(`(?:ไม่ต้อง|ไม่จำเป�
 export function neutralizeDraftingPhrases(query = '') {
   return String(query)
     .replace(SKIP_SIGNER, ' ')
+    // Missing approval evidence or an unknown approver describes the source
+    // gap of a draft, not an order to approve it. Keep independent approval
+    // and enactment clauses visible, including later acts in the same request.
+    .replace(/((?:ยัง)?ไม่มี\s*(?:SOP|WI)\s*(?:ฉบับ\s*)?ที่\s*(?:ได้รับ|ผ่านการ)?\s*)อนุมัติ/gi, '$1ผ่านการพิจารณา')
+    .replace(/((?:ยัง)?ไม่(?:ทราบ|รู้)\s*ผู้)อนุมัติ/gi, '$1มีอำนาจ')
     .replace(/((?:ร่าง|จัดทำ|เขียน)\s*(?:บันทึก(?:ข้อความ)?|หนังสือ|เอกสาร)\s*(?:เพื่อ)?\s*(?:ขอ|เสนอขอ))\s*อนุมัติ/g, '$1เสนอพิจารณา')
     .replace(/((?:สรุป|อธิบาย)\s*ขั้นตอน)\s*อนุมัติ(?=งบ|วงเงิน)/g, '$1การพิจารณา')
     .replace(/((?:ช่วย)?เลือก)\s*(?=เกณฑ์ประเมินผู้ขาย(?:สำหรับ|เพื่อ))/g, 'จัดทำ')

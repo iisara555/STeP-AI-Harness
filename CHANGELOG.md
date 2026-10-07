@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Router: missing SOP approval context
+
+- Treat an absent approved SOP or an unknown approver as missing draft context, rather than an approval request. A later instruction to approve or enact the SOP still hits the existing Human Authority gate.
+- Add test-first synthetic drafting/enactment regressions. No authority-registry, policy-default, lifecycle, version or release change; these tests do not establish live model quality.
+
+
 ### Desktop: Excel export from conversation tables
 
 - Guide an Excel request to actual XLSX creation from the existing table/draft, instead of silently substituting CSV or promising a file without requesting the tool. With the tool loop disabled, describe the existing draft export UI.

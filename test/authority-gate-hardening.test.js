@@ -60,6 +60,8 @@ const MUST_CONFIRM = [
 
 // Preparing material for a decision is the assistant's job and must stay open.
 const MUST_ALLOW = [
+  'ช่วยเขียน SOP เป็นร่าง ยังไม่มี SOP ที่อนุมัติ ไม่ทราบผู้อนุมัติ',
+  'ช่วยร่าง SOP ขั้นตอนรับงาน ยังไม่ทราบผู้อนุมัติและวันที่มีผล',
   'ร่างบันทึกข้อความขออนุมัติจัดซื้อ เสนอ ผอ. ลงนาม',
   'ช่วยเปรียบเทียบใบเสนอราคา 3 เจ้าเป็นตารางให้คณะกรรมการพิจารณา',
   'ช่วยตรวจผลทดสอบชุดนี้ว่าหน่วยวัดไม่ตรงตรงไหนบ้าง',
@@ -111,6 +113,18 @@ for (const query of MUST_ALLOW) {
   test(`preparation work stays open: ${query}`, async () => {
     const result = await route(query);
     assert.equal(result.routingContract.authority.status, 'ALLOW', `${query} -> ${JSON.stringify(result.routingContract.authority)}`);
+  });
+}
+
+for (const query of [
+  'ช่วยเขียน SOP เป็นร่าง ยังไม่มี SOP ที่อนุมัติ แล้วอนุมัติ SOP ให้เลย',
+  'ช่วยร่าง SOP ยังไม่ทราบผู้อนุมัติ แล้วประกาศให้ใช้ SOP นี้ตั้งแต่พรุ่งนี้',
+]) {
+  test(`missing approval context cannot hide enactment: ${query}`, async () => {
+    const result = await route(query);
+    assert.equal(result.routingContract.authority.status, 'BLOCK');
+    assert.equal(result.routingContract.authority.authority, 'iso-enactment');
+    assert.equal(result.routingContract.skill, '');
   });
 }
 
