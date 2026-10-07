@@ -6,6 +6,19 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Router: missing SOP approval context
+
+- Treat an absent approved SOP or an unknown approver as missing draft context, rather than an approval request. A later instruction to approve or enact the SOP still hits the existing Human Authority gate.
+- Add test-first synthetic drafting/enactment regressions. No authority-registry, policy-default, lifecycle, version or release change; these tests do not establish live model quality.
+
+
+### Office Skill evaluation with Desktop OAuth
+
+- Give Office and coauthoring positive evals self-contained synthetic inputs and concrete output assertions rather than expecting specific artifacts from prompts with no data.
+- Add a source-only ChatGPT/Codex OAuth Skill comparison runner with read-only Desktop connection discovery, zero-prompt self-test/backend probe, fresh WITH/WITHOUT sessions, bounded host tools and a persistent call ledger. Results remain outside the checkout and include a summary without raw outputs or user paths.
+- Validate using synthetic files, simulated profile metadata and a controlled six-trial RPC loop through real Office host tools. Explicit live uses the existing host consent for the built-in public synthetic cases; credential-shaped inputs still block before model execution. Live model quality, coauthoring/receipt cases not selected by the three-task runner, and Windows/macOS PowerPoint review remain unverified. Keep draft/modelSideRun statuses; no version bump or release.
+
+
 ### Desktop: Excel export from conversation tables
 
 - Guide an Excel request to actual XLSX creation from the existing table/draft, instead of silently substituting CSV or promising a file without requesting the tool. With the tool loop disabled, describe the existing draft export UI.

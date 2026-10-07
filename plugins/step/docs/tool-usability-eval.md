@@ -36,6 +36,8 @@ Recordings: {suite:"office-tools-v1",synthetic:true,kind:"recorded-model-run",pr
 
 ขอบเขตที่ผู้ใช้อนุมัติวันที่ 2026-10-07: ทุก connection/โมเดลที่พร้อมใช้งาน สูงสุด 3 รอบ; ก่อนเรียกจริงให้บันทึก matrix และจำนวนคำขอรวม (แต่ละคู่ WITH/WITHOUT ใช้สองคำขอตอบ และ model judge ใช้โควตาเพิ่ม). จำกัด retry และ tool turns ในงบเดียวกัน ไม่เรียกบัญชีที่ยังไม่ได้ตั้งค่า และไม่เปลี่ยนโมเดลแทนโดยไม่บันทึก. ใช้ fixtures/outputAssertions ใน `evals/skills/` และตรวจ XLSX/PPTX อิสระ ไม่ใช้คำว่า “สร้างแล้ว” ของโมเดลเป็นหลักฐานไฟล์.
 
-Cloud รอบนี้ไม่พบ API key สำหรับ eval หรือโปรไฟล์ connection ของ Desktop ที่พร้อมใช้ จึงยังไม่เรียกโมเดลจริงและไม่ใช้โควตา. `modelSideRun: not-yet-run` และสถานะ draft คงเดิม. ห้ามนำ credentials มาใส่ Git/รายงาน; ผลส่วนตัวเก็บนอก repo. สคริปต์ `scripts/skill-eval-compare.mjs` เดิมเปรียบเทียบ old/new Skill และใช้ model judge จึงไม่ควรนำผลนั้นไปเรียกว่า WITH/WITHOUT Skill.
+ตัวรัน ChatGPT/Codex OAuth อยู่ใน source แล้ว: `npm run desktop:eval:skill-benefit -- --self-test`, `--list`, `--connection 1 --probe` และ `--connection 1 --live --prior-calls gpt-6-astra=2` สำหรับงบงานรอบนี้ ใช้ model catalog ของบัญชีและสามคู่ Excel/PPTX/decision memo ไม่ใช้ model judge และอ่าน positive prompts จาก evals/skills โดยตรง เครื่องมือเหมือนกันทั้งสอง arm; native CLI tools ปิด; results และ ledger อยู่นอก repo
 
-คู่มือตั้ง secrets และข้อแตกต่างของตัวประเมิน: [Cloud model evaluation setup](cloud-model-eval-setup.md).
+หลังเปิด network destinations แล้ว OAuth cloud ยังตอบ 401 และ refresh ไม่ผ่าน จึงยังไม่มีผลคุณภาพจากโมเดลจริง ไม่เติม API key แทนการล็อกอิน OAuth ผล live และ coauthoring/receipt cases ที่ยังไม่ได้รันคง `modelSideRun: not-yet-run`; Skill draft ไม่เลื่อนเองจาก unit checks `scripts/skill-eval-compare.mjs` เดิมเป็น old/new Skill พร้อม judge จึงไม่ใช้แทน WITH/WITHOUT Skill
+
+คำสั่ง Windows/macOS, ledger/resume, privacy และความต่างของตัวประเมิน: [Office OAuth evaluation setup](cloud-model-eval-setup.md)

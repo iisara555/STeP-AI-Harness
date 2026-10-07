@@ -5,21 +5,22 @@
   "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ใช้ slides_create ส่ง editable PPTX ไม่ส่งเฉพาะ HTML; ระบุ visual review ที่ยังไม่รันและ source ของตัวเลข; speaker notes และตารางกราฟแก้ต่อได้ตามผล tool",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-07: self-contained synthetic inputs and concrete source/authority assertions; routing validation is not evidence of live model quality."
   },
   "cases": [
     {
       "id": "positive-workflow",
       "dimension": "positive",
       "team": "cc",
-      "prompt": "ช่วยทำสไลด์ PowerPoint เป็นไฟล์ PPTX ที่แก้ต่อได้",
+      "prompt": "ข้อมูลทั้งหมดสังเคราะห์: ช่วยทำสไลด์ PowerPoint เป็นไฟล์ office.pptx ที่แก้ต่อได้ 3 สไลด์ภาษาไทย สไลด์แรกชื่อ ความคืบหน้า มีข้อความ เสร็จแล้วสองขั้นตอน และ รอยืนยันกำหนดส่ง สไลด์สองเป็นตาราง งาน/สถานะ แถว ทดสอบ/ร่าง สไลด์สามเป็นกราฟ bar รอบแรก=2 รอบสอง=3 ทุกสไลด์มี speaker notes ระบุ ข้อมูลสังเคราะห์ ไม่มี template ต้นฉบับ ใช้เครื่องมือที่มี สรุป path/status และ visual review ตามที่ทำจริง ไม่ต้องถามเพิ่ม",
       "expect": {
         "skill": "presentation-design"
       },
       "outputAssertions": [
-        "ใช้ slides_create ส่ง editable PPTX ไม่ส่งเฉพาะ HTML",
-        "ระบุ visual review ที่ยังไม่รันและ source ของตัวเลข",
-        "speaker notes และตารางกราฟแก้ต่อได้ตามผล tool"
+        "เมื่อ slides_create พร้อม สร้าง office.pptx ผ่านผล tool จริง ไม่ส่งเฉพาะ HTML หรืออ้างสร้างแล้วทั้งที่ยัง staging",
+        "มี 3 สไลด์และข้อความ ตาราง กราฟ รวมทั้ง notes ตรงข้อมูลสังเคราะห์ โดยเป็นองค์ประกอบ editable",
+        "ไม่อ้าง PowerPoint/visual review หรือ template CI ที่ยังไม่ได้ตรวจจริง"
       ]
     },
     {

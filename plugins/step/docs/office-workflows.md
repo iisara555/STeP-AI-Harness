@@ -30,4 +30,14 @@ Dependencies เพิ่มการประกาศ jszip/@xmldom/xmldom ท
 - Harness 937 passed, 2 skipped; Desktop 429 passed, 2 skipped. Validator ตรวจ 53 Skills; legacyWithoutEvals เหลือ 31. `spreadsheet-work` ยังเป็น draft และ eval ฉบับปรับใหม่ยังเป็น modelSideRun: not-yet-run
 - เพิ่ม regression แบบ test-first: ตารางจากข้อความก่อนหน้า → WorkService → tool loop → DesktopTools → XLSX จริง ตรวจทั้ง Ask/Accept Edits, รหัส 00123 และช่องรอยืนยัน. Scripted provider ตรวจการส่ง prompt/การทำงานของ host ไม่ใช่หลักฐานว่าโมเดลจริงเลือกเครื่องมือถูกเสมอ
 - Controlled Office runner ยืนยัน artifacts สังเคราะห์ 3 ไฟล์และ missing-sheet recovery 1 ครั้ง; worker ที่ build ลง dist สร้าง/อ่าน XLSX แล้วรหัส 00123 ยังตรง. [รายงานสังเคราะห์รอบนี้](https://github.com/iisara555/STeP-AI-Harness/blob/main/evals/tool-usability/office-contract-results-2026-10-07.json). รอบนี้ไม่รัน recalculation/visual review ใหม่; หลักฐาน LibreOffice วันที่ 6 ตุลาคมเป็นหลักฐานเดิม ไม่ใช่ PowerPoint บนเครื่องพนักงาน
-- ไม่มี key/connection สำหรับ live eval ใน cloud จึงยังไม่ใช้โควตา; ผู้ใช้อนุมัติทุกบัญชีที่พร้อม สูงสุด 3 รอบ. [วิธีตั้งค่า](cloud-model-eval-setup.md) อธิบาย secret bindings และขอบเขตตัวประเมิน
+- บันทึกเดิมก่อนตรวจ OAuth: ยังไม่มีบัญชีพร้อมสำหรับ live eval. ต่อมาพบ local ChatGPT metadata แต่ backend ยังตอบ 401 หลังเปิด network และ refresh ไม่ผ่าน; ยังไม่มีผลเปรียบเทียบ Skill จากโมเดลจริง. [วิธีรัน OAuth](cloud-model-eval-setup.md) ไม่ต้องใช้ API keys
+
+## งานต่อจาก merge — Office eval และ approval context
+
+- Positive eval ของ Office/coauthoring มีข้อมูลสังเคราะห์ครบที่ต้องตรวจ: ศูนย์นำหน้า เงิน/สูตร ตาราง/กราฟ/notes ทางเลือกและข้อจำกัดของ evidence รวมทั้งวันที่ขัดกันและ provenance เครื่องอ่าน ไม่ใช้โจทย์ไร้ข้อมูลแต่คาดหวังไฟล์เฉพาะ
+- Router แยก "ยังไม่มี SOP ที่อนุมัติ / ไม่ทราบผู้อนุมัติ" ออกจากคำสั่งอนุมัติหรือประกาศใช้; regression ยืนยันว่าคำสั่งจริงใน clause ถัดมายังถูกบล็อก ไม่เปลี่ยน authority registry หรือ policy default
+- ตัวรันใน repo ใช้ ChatGPT/Codex OAuth ของ connection บน Windows/macOS ไม่ต้องจัด model ID เอง มี zero-prompt self-test/list/probe และ explicit live/resume budget คำสั่งอยู่ใน [คู่มือ OAuth](cloud-model-eval-setup.md)
+- โมเดลจริง, coauthoring/receipt cases ที่ยังไม่ได้รัน และ PowerPoint ปลายทางยังค้าง; debt ครบสี่มิติยัง 31 Skills และ spreadsheet-work ยัง draft ไม่มี version/release ใหม่
+
+- ตรวจรอบงานต่อ: root 941 passed / 2 skipped, Desktop 442 passed / 2 skipped, validator 53 Skills, build และ formatter ผ่าน; OAuth runner self-test ตรวจ positive/negative artifacts 4 กรณีและ tests ใหม่ 13 ข้อผ่าน. Controlled RPC จำลอง 6 trials / 12 model turns ผ่าน host tools จริง สร้างและตรวจ XLSX/PPTX และ resume โดยไม่เพิ่ม turns; ไม่ใช่การเรียก provider จริงหรือผลประเมินคุณภาพโมเดล
+- Explicit live ใช้ consent เดิมของ host สำหรับโจทย์สังเคราะห์สาธารณะ; regression ยืนยันว่า credential-shaped data ยังถูก Privacy Gate บล็อกก่อนเรียกโมเดล. Live preflight ที่ backend 401 หยุดก่อน model prompts และปล่อย lock โดยไม่สร้าง trials. ผลนี้มาจาก Linux cloud; Windows/macOS execution และ Excel/PowerPoint ปลายทางยังไม่รัน

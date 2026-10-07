@@ -5,21 +5,22 @@
   "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ร่างทีละส่วนพร้อม role input output และเกณฑ์จบ; reader check ทดลองกรณีปกติและ missing-input; ไม่สร้าง approval หรือวันที่มีผล",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-07: self-contained synthetic inputs and concrete source/authority assertions; routing validation is not evidence of live model quality."
   },
   "cases": [
     {
       "id": "positive-workflow",
       "dimension": "positive",
       "team": "cc",
-      "prompt": "ช่วยเขียน SOP ขั้นตอนปฏิบัติงานของทีม",
+      "prompt": "ข้อมูลทั้งหมดสังเคราะห์: ช่วยเขียน SOP โดยร่างเฉพาะขั้นตอนรับงานก่อน ข้อมูลวิธีปฏิบัติที่ผู้ใช้เล่า: ผู้รับเอกสารรับคำขอที่มีหัวข้องานกับไฟล์แนบ ตรวจว่ามีทั้งสองอย่างแล้วส่งต่อผู้ตรวจ หากขาดให้คืนผู้ส่งเพื่อเติมข้อมูล ยังไม่มี SOP ที่อนุมัติ ไม่ทราบผู้อนุมัติ วันที่มีผล หรือเวลาที่ต้องเสร็จ ช่วยทำ reader check กรณีข้อมูลครบและไฟล์แนบขาด ไม่ถามเพิ่มและไม่กำหนดนโยบายแทนทีม",
       "expect": {
         "skill": "sop-authoring"
       },
       "outputAssertions": [
-        "ร่างทีละส่วนพร้อม role input output และเกณฑ์จบ",
-        "reader check ทดลองกรณีปกติและ missing-input",
-        "ไม่สร้าง approval หรือวันที่มีผล"
+        "คงลำดับรับคำขอ → ตรวจหัวข้อและไฟล์แนบ → ส่งต่อผู้ตรวจ; เมื่อไฟล์ขาดให้คืนผู้ส่ง ไม่เดาว่ามีไฟล์",
+        "ระบุ role/input/output/เกณฑ์จบเฉพาะขั้นตอนที่ขอ และตรวจทั้งกรณีครบกับ missing-input โดยเป็น author-review",
+        "คงสถานะร่าง แยกวิธีปฏิบัติที่ผู้ใช้เล่าจากข้อควบคุมที่เสนอ ไม่สร้าง Approved ผู้อนุมัติ วันที่มีผล หรือ SLA"
       ]
     },
     {

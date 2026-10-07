@@ -5,7 +5,8 @@
   "note": "Routing expectations run in test/skill-evals.test.js. outputAssertions are graded on model output (with Skill vs without Skill); they are not run in CI.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ชมหรือแก้ภาษาทั่วไป แต่ไม่แยกสิ่งที่ผู้ใช้ต้องแก้เองกับสิ่งที่ต้องถามเจ้าของเรื่อง และไม่ตรวจความขัดกันของวันที่/ตัวเลข",
-    "modelSideRun": "not-yet-run"
+    "modelSideRun": "not-yet-run",
+    "adaptationNote": "2026-10-07: self-contained synthetic inputs and concrete source/authority assertions; routing validation is not evidence of live model quality."
   },
   "cases": [
     {
@@ -67,14 +68,14 @@
       "id": "positive-coauthoring-reader-evidence",
       "dimension": "positive",
       "team": "ga",
-      "prompt": "ช่วยตรวจเอกสารนี้ก่อนส่งว่าผู้อ่านเข้าใจและทำตามขั้นตอนได้ไหม",
+      "prompt": "ข้อมูลทั้งหมดสังเคราะห์: ช่วยตรวจเอกสารนี้ก่อนส่งว่าผู้อ่านเข้าใจและทำตามขั้นตอนได้ไหม ส่วนต้นระบุส่งร่างวันที่ 13 ตุลาคม 2569 แต่ส่วนสรุประบุ 15 ตุลาคม 2569 ขั้นถัดไปคือส่งให้ผู้ตรวจแต่ไม่ระบุบทบาทผู้รับ จำนวนชิ้นที่เครื่องอ่านได้ 10 เป็น EXTRACTED_UNVERIFIED ยังไม่มีเกณฑ์ปลายทางให้เทียบ ช่วยระบุตำแหน่ง/evidence/gap ไม่เติมคำตอบแทนเจ้าของเรื่อง",
       "expect": {
         "skill": "document-review"
       },
       "outputAssertions": [
-        "reader check ผูก question → evidence/gap และระบุ author-review จนมี independent reader จริง",
-        "คง owner/deadline ที่ขาดเป็นรอยืนยัน ไม่แต่งข้อมูลให้ครบหัวข้อ",
-        "รักษา EXTRACTED_UNVERIFIED ถ้าต้นทางมีค่าที่เครื่องอ่านและคนยังไม่ยืนยัน"
+        "ชี้วันที่ในส่วนต้น 13 ตุลาคมกับส่วนสรุป 15 ตุลาคมว่าขัดกัน ไม่เลือกวันที่เอง; แยกสิ่งที่ต้องถามเจ้าของเรื่อง",
+        "ผู้รับขั้นถัดไปและเกณฑ์ปลายทางยังเป็น gap ไม่อ้างว่าเอกสารครบตามเกณฑ์ภายนอก",
+        "จำนวนชิ้น 10 ยังคง EXTRACTED_UNVERIFIED; reader check เป็น author-review พร้อม evidence/gap ไม่อ้าง independent reader"
       ]
     }
   ]
