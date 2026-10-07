@@ -3,6 +3,8 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต จึงยังตอบไม่สำเร็จ ลองเปลี่ยนโมเดลหรือแนบแหล่งข้อมูลให้สรุป':
+    'The AI attempted a tool this connection does not allow, so the reply could not finish. Try another model or attach a source to summarize.',
   'ใช้บัญชี Google ที่มีสิทธิ์ เช่น สิทธินักศึกษา ระบบจะติดตั้งตัวเชื่อมและทดสอบให้':
     'Use an eligible Google account, such as student access. We install the connector and test it for you.',
   'ใช้สิทธิ์และโควตาของบัญชี Google ที่ลงชื่อ ไม่ต้องใช้ API key':

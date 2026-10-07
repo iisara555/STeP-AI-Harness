@@ -10,6 +10,8 @@ import type { ProviderAdapter, ProviderContext, TokenCount } from './providers';
 
 const LIMIT = 4_000_000;
 const AGENT = 'step-draft';
+const TEXT_TRANSPORT_RULES = `Native tools are unavailable in this STeP connection, including finish, file access, commands, MCP and native web search. Return the host's requested text format, including JSON when required. If the host supplied tools, request only those tools using fenced step-tool JSON in your text, never native function calls. Do not invent current facts or claim a search was performed. For fresh information without supplied evidence, ask for a source or explain that live search requires a supported connection.`;
+const TOOL_RECOVERY_RULES = `The previous attempt was stopped because it requested a native tool. No native tool result is available. Answer the original request in its required text format or use the host's step-tool text protocol if supplied. Do not repeat the native tool call.`;
 export const ANTIGRAVITY_DENY = ['read_file', 'write_file', 'read_url', 'execute_url', 'command', 'unsandboxed', 'mcp'].map(
   action => `${action}(*)`,
 );
@@ -256,6 +258,47 @@ export function antigravityUsage(value: any): TokenCount | undefined {
 export class AntigravityAdapter implements ProviderAdapter {
   constructor(private timeoutMs = 600_000) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    const deadline = Date.now() + this.timeoutMs;
+    const timeout = AbortSignal.timeout(this.timeoutMs);
+    const signal = AbortSignal.any([context.signal, timeout]);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      // A failed stream can contain both partial prose and host tool requests.
+      // Publish only a complete validated attempt, so recovery cannot duplicate them.
+      const deltas: string[] = [];
+      let answer: string;
+      try {
+        answer = await this.runOnce(
+          prompt,
+          connection,
+          {
+            ...context,
+            signal,
+            system: [context.system || '', TEXT_TRANSPORT_RULES, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
+            emit: delta => deltas.push(delta),
+          },
+          deadline,
+        );
+      } catch (error) {
+        if (timeout.aborted && !context.signal.aborted && !(error as any)?.shutdownIncomplete) throw new Error('PROVIDER_TIMEOUT');
+        // runOnce waits for termination and deletes its isolated home first.
+        // Never replay quota/auth failures, unconfirmed policy or uncertain shutdown.
+        if (
+          attempt === 0 &&
+          error instanceof Error &&
+          error.message === 'TOOL_DENIED' &&
+          !signal.aborted &&
+          !(error as any)?.shutdownIncomplete
+        )
+          continue;
+        throw error;
+      }
+      if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
+      for (const delta of deltas) context.emit(delta);
+      return answer;
+    }
+    throw new Error('TOOL_DENIED');
+  }
+  private async runOnce(prompt: string, connection: Connection, context: ProviderContext, deadline: number) {
     if (context.signal.aborted) throw new Error('CANCELLED');
     if (connection.provider !== 'antigravity' || connection.mode !== 'subscription' || context.key) throw new Error('INVALID_CONNECTION');
     if (context.images?.length) throw new Error('VISION_UNAVAILABLE');
@@ -285,7 +328,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       if (context.effort) args.push('--effort', context.effort);
       await runAntigravity(connection.executable, args, home, {
         signal: context.signal,
-        timeoutMs: this.timeoutMs,
+        timeoutMs: Math.max(1, deadline - Date.now()),
         holdInput: true,
         line: (line, send) => {
           let event: any;

@@ -8,6 +8,7 @@ import { AntigravityAdapter, ANTIGRAVITY_DENY, antigravityHome, antigravityModel
 import { adapter, listModels } from '../electron/providers';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import { checkRuntime } from '../electron/runtimes';
+import { ToolLoop } from '../electron/tool-loop';
 import type { Connection } from '../src/types';
 
 async function fixture(kind = 'success', version = '1.2.14') {
@@ -26,12 +27,25 @@ if(args[0]==='--version'){console.log(${JSON.stringify(version)});process.exit(0
 fs.appendFileSync(log, JSON.stringify({args,cwd:process.cwd(),home:process.env.HOME,api:!!process.env.GEMINI_API_KEY,settings:JSON.parse(fs.readFileSync(path.join(process.env.HOME,'.gemini','antigravity-cli','settings.json'),'utf8')),agent:fs.readFileSync(path.join(process.env.HOME,'.gemini','config','agents','step-draft','agent.md'),'utf8'),updaterCheck:Date.now()-fs.statSync(path.join(process.env.HOME,'.gemini','antigravity-cli','last_check.timestamp')).mtimeMs})+'\\n');
 if(args[0]==='models'){console.log('gemini-test\\tGemini test\\ngemini-test\\tDuplicate\\nclaude-other\\tOther provider\\ngemini-second\\tSecond');process.exit(0);}
 const send=x=>console.log(JSON.stringify(x));
+const runNumber=fs.readFileSync(log,'utf8').trim().split('\\n').map(x=>JSON.parse(x)).filter(x=>x.args?.includes('--input-format')).length;
 if(kind==='auth'){send({event:'result',result:{status:'ERROR',error:'authentication required: user@example.com https://accounts.google.com/oauth?code=private-code',usage:{input_tokens:0,output_tokens:0,total_tokens:0}}});process.exit(1);}
 if(kind==='hang'){setInterval(()=>{},1000);}
-else send({event:'init',conversation_id:'session',init:{cwd:kind==='cwd'?'/wrong':process.cwd(),agent:kind==='agent'?'wrong':'step-draft',model:kind==='model'?'claude-other':args[args.indexOf('--model')+1],permission_mode:kind==='policy'?'always-proceed':'strict',tools:kind==='tools'?['run_command','view_file','finish']:kind==='missing-tools'?null:['finish']}});
+else send({event:'init',conversation_id:'session',init:{cwd:kind==='cwd'?'/wrong':process.cwd(),agent:kind==='agent'?'wrong':'step-draft',model:kind==='model'?'claude-other':args[args.indexOf('--model')+1],permission_mode:kind==='policy'||(kind==='recover-policy'&&runNumber===2)?'always-proceed':'strict',tools:kind==='tools'?['run_command','view_file','finish']:kind==='missing-tools'?null:['finish']}});
 createInterface({input:process.stdin}).on('line',line=>{
  const input=JSON.parse(line);fs.appendFileSync(log,JSON.stringify({input})+'\\n');
  const step=(delta,state='ACTIVE')=>({event:'step_update',step_update:{conversation_id:'session',step_type:'agent_response',state,text_delta:delta}});
+ const attempt=fs.readFileSync(log,'utf8').trim().split('\\n').map(x=>JSON.parse(x)).filter(x=>x.args?.includes('--input-format')).length;
+ if(kind.startsWith('recover-') && attempt===1){
+  send(step('UNVERIFIED FRAGMENT'));
+  return setTimeout(()=>send({event:'step_update',step_update:{conversation_id:'session',step_type:'tool',tool_name:'read_file'}}),kind==='recover-timeout'?650:0);
+ }
+ if(kind==='recover-timeout') return setTimeout(()=>send({event:'result',result:{status:'SUCCESS',conversation_id:'session',num_turns:1,response:'late'}}),650);
+ if(kind==='quota'){send({event:'result',result:{status:'ERROR',error:'RESOURCE_EXHAUSTED',usage:{input_tokens:1,output_tokens:0,total_tokens:1}}});return;}
+ if(kind==='recover-host'){
+  const ticks=String.fromCharCode(96).repeat(3);
+  const response=input.message.content.includes('<tool_results>')?'Host evidence received':ticks+'step-tool\\n'+JSON.stringify({tool:'reference',input:'synthetic-reference'})+'\\n'+ticks;
+  send({event:'result',result:{status:'SUCCESS',conversation_id:'session',num_turns:1,response}});return;
+ }
  if(kind==='malformed') return console.log('not json');
  if(kind==='tool') return send({event:'step_update',step_update:{conversation_id:'session',step_type:'tool',state:'ACTIVE',tool_name:'run_command'}});
  if(kind==='tool-call') return send({event:'step_update',step_update:{conversation_id:'session',step_type:'action',state:'ACTIVE',tool_call:{name:'view_file'}}});
@@ -106,6 +120,117 @@ test('Antigravity uses native NDJSON, isolated system instructions and one usage
     assert.deepEqual((await readdir(f.root)).sort(), ['agy.mjs', 'calls.jsonl']);
   } finally {
     await f.close();
+  }
+});
+
+test('a blocked native tool gets one fresh text-only attempt, with no failed text or tool arguments exposed', async () => {
+  const f = await fixture('recover-chat');
+  try {
+    assert.equal(await new AntigravityAdapter().run('Synthetic current-events question', f.connection, f.context), 'สวัสดีครับ');
+    assert.equal(f.deltas.join(''), 'สวัสดีครับ');
+    assert.deepEqual(f.counts, [{ input: 11, output: 5, total: 16 }]);
+    const calls = await f.calls();
+    const runs = calls.filter(c => c.args?.includes('--input-format'));
+    const inputs = calls.filter(c => c.input);
+    assert.equal(runs.length, 2);
+    assert.notEqual(runs[0].home, runs[1].home);
+    assert.equal(existsSync(runs[0].home), false);
+    for (const run of runs) {
+      assert.equal(run.settings.toolPermission, 'strict');
+      assert.deepEqual(run.settings.permissions.deny, ANTIGRAVITY_DENY);
+      assert.match(run.agent, /Synthetic standing instructions/);
+      assert.match(run.agent, /Native tools are unavailable/);
+    }
+    assert.match(runs[1].agent, /The previous attempt was stopped/);
+    assert.deepEqual(
+      inputs.map(c => c.input.message.content),
+      ['Synthetic current-events question', 'Synthetic current-events question'],
+    );
+    assert.deepEqual((await readdir(f.root)).sort(), ['agy.mjs', 'calls.jsonl']);
+  } finally {
+    await f.close();
+  }
+});
+
+test('recovery preserves the governed host tool loop and its outgoing-data check', async () => {
+  const f = await fixture('recover-host');
+  const tools: unknown[] = [];
+  const outgoing: string[] = [];
+  const loop = new ToolLoop({
+    enabled: () => true,
+    check: async () => {},
+    readOnly: () => true,
+    execute: async request => {
+      tools.push(request);
+      return 'Public synthetic reference';
+    },
+    outgoing: async text => {
+      outgoing.push(text);
+      return text;
+    },
+  });
+  try {
+    const provider = new AntigravityAdapter();
+    assert.equal(
+      await loop.run('Use the synthetic source', prompt => provider.run(prompt, f.connection, f.context), f.context.signal),
+      'Host evidence received',
+    );
+    assert.deepEqual(tools, [{ tool: 'reference', input: 'synthetic-reference' }]);
+    assert.deepEqual(outgoing, ['Public synthetic reference']);
+    assert.ok(!f.deltas.join('').includes('UNVERIFIED FRAGMENT'));
+    assert.equal((await f.calls()).filter(c => c.input).length, 3);
+  } finally {
+    await f.close();
+  }
+});
+
+test('persistent native tool requests stop after two attempts and publish no partial answer', async () => {
+  const f = await fixture('tool');
+  try {
+    await assert.rejects(new AntigravityAdapter().run('Synthetic', f.connection, f.context), { message: 'TOOL_DENIED' });
+    assert.equal((await f.calls()).filter(c => c.input).length, 2);
+    assert.deepEqual(f.deltas, []);
+  } finally {
+    await f.close();
+  }
+});
+
+test('an unsafe init in the recovery attempt blocks the original prompt again', async () => {
+  const f = await fixture('recover-policy');
+  try {
+    await assert.rejects(new AntigravityAdapter().run('Synthetic private request', f.connection, f.context), {
+      message: 'ANTIGRAVITY_POLICY_UNCONFIRMED',
+    });
+    const calls = await f.calls();
+    assert.equal(calls.filter(c => c.args?.includes('--input-format')).length, 2);
+    assert.equal(calls.filter(c => c.input).length, 1);
+    assert.deepEqual(f.deltas, []);
+  } finally {
+    await f.close();
+  }
+});
+
+test('recovery shares the original deadline and does not retry quota or invalid-policy errors', async () => {
+  const timed = await fixture('recover-timeout');
+  try {
+    await assert.rejects(new AntigravityAdapter(1000).run('Synthetic', timed.connection, timed.context), { message: 'PROVIDER_TIMEOUT' });
+    assert.deepEqual(timed.deltas, []);
+    assert.ok((await timed.calls()).filter(c => c.input).length <= 2);
+  } finally {
+    await timed.close();
+  }
+  for (const [kind, code] of [
+    ['quota', 'PROVIDER_QUOTA'],
+    ['policy', 'ANTIGRAVITY_POLICY_UNCONFIRMED'],
+  ]) {
+    const f = await fixture(kind);
+    try {
+      await assert.rejects(new AntigravityAdapter().run('Synthetic', f.connection, f.context), { message: code });
+      assert.equal((await f.calls()).filter(c => c.args?.includes('--input-format')).length, 1);
+      assert.deepEqual(f.deltas, []);
+    } finally {
+      await f.close();
+    }
   }
 });
 

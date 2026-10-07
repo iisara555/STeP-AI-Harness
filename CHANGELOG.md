@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: recover Antigravity chat after a blocked native tool
+
+- Guide Antigravity to text responses and the STeP `step-tool` protocol. Stop a native tool request, wait for process shutdown and cleanup, then allow one fresh attempt with explicit recovery instructions. Both attempts share the original deadline and retain strict native-tool denial. Authentication, quota, invalid-policy and uncertain-shutdown failures are not replayed.
+- Publish text only after an attempt completes and validates, so partial prose or tool requests from a failed attempt cannot leak into the recovered answer. A persistent denial has Thai/English guidance instead of a raw `TOOL_DENIED` status. Native web search remains unavailable; missing current information needs an actual source or a connection that supports search.
+- Add test-first synthetic NDJSON and Electron chat regressions for recovery, bounded repeated denial, timeout, host tool/data checks and localized errors. Include the new chat smoke in `test:electron`. These checks use simulated providers and local synthetic sources only; live Antigravity behavior and native Windows/macOS recovery remain unverified. Recovery can consume one additional provider request; failed-stream usage may be unavailable. No version, release or policy-default change.
+
 ## Desktop v0.5.27 — 2026-10-07
 
 STeP Desktop 0.5.27 packages the prepared Office/context work below together with the connection and updater fixes. Harness remains 0.7.6. Publishing installers does not establish live model benefit, real-document OCR acceptance or organizational rollout approval.
