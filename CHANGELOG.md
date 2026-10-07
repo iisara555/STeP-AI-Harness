@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.22 — 2026-10-07
+
+STeP Desktop version 0.5.22 packages the section below for `desktop-v0.5.22`. Harness package version remains 0.7.6.
+
+### Version and update status under your name; readable selected document type
+
+- **Before:** the app's version was not shown anywhere in the main window, so staff could not tell which version they had or whether a newer one was out until the update card appeared. In the document drafting tool the selected type (for example ร่างบันทึกข้อความ) turned pale, and in the dark theme its text almost disappeared; the unselected types looked selected.
+- **After:** under the person's name the sidebar shows `v<version>` with "เป็นเวอร์ชันล่าสุด", "มีอัปเดต <version>" (with a dot), "กำลังตรวจอัปเดต…" or "ตรวจอัปเดตไม่สำเร็จ". Clicking it checks for updates, or restarts into a downloaded one. The document type picker shows unselected types as plain cards and the selected one in solid yellow with dark text, in both themes.
+- Tests: `whats-new-smoke.mjs` checks the version line.
+
 ## Desktop v0.5.21 — 2026-10-06
 
 STeP Desktop version 0.5.21 packages the OCR improvements below for `desktop-v0.5.21`. The in-app update notes are available in Thai and English. Harness package version remains 0.7.6; real-document OCR acceptance remains open.

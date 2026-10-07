@@ -1882,4 +1882,14 @@ export const en: Record<string, string> = {
     'This version was tested with synthetic receipts. Accuracy on real documents remains unverified.',
   'คู่มือเพิ่มวิธีสร้างรูปด้วย API key และข้อจำกัดของคำสั่งภาพรวมกับการทำภาพต่อจากเดิม':
     'The guide explains API-key image generation and current text-overview and image follow-up limitations.',
+  'มีอัปเดต {0}': 'Update {0} available',
+  'กำลังตรวจอัปเดต…': 'Checking for updates…',
+  เป็นเวอร์ชันล่าสุด: 'Up to date',
+  ตรวจอัปเดตไม่สำเร็จ: 'Update check failed',
+  ตรวจอัปเดต: 'Check for updates',
+  ตรวจหาเวอร์ชันใหม่: 'Check for a new version',
+  'ใต้ชื่อของคุณแสดงเลขเวอร์ชัน และบอกว่าเป็นรุ่นล่าสุดหรือมีอัปเดตใหม่ กดที่บรรทัดนี้เพื่อตรวจอัปเดตได้':
+    'Your version number now shows under your name, with whether you are up to date or an update is out. Click it to check for updates.',
+  'หน้าร่างเอกสาร: ชนิดเอกสารที่เลือกเป็นพื้นเหลือง ตัวหนังสืออ่านชัดทั้งธีมสว่างและมืด':
+    'Document tools: the selected document type is solid yellow and easy to read in light and dark themes.',
 };
