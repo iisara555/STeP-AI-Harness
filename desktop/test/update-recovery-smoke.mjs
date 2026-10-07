@@ -12,6 +12,9 @@ const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
   const page = await app.firstWindow();
   await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง', exact: true }).click();
+  // The profile is visible behind the wizard. Finish its real settings/snapshot
+  // requests before replacing IPC, or a slow skip leaves the modal over Retry.
+  await expect(page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop', exact: true })).toHaveCount(0);
   await expect(page.locator('.profile .version-line')).toBeVisible();
   await app.evaluate(({ ipcMain, BrowserWindow }) => {
     globalThis.updateCalls = [];
