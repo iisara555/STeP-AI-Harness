@@ -2,7 +2,13 @@
 
 This is development tooling, not an OCR/Router integration or an accuracy certificate.
 See [synthetic quality evidence, 2026-10-06](QUALITY-RESULTS-2026-10-06.md) for the
-measured before/after comparisons and remaining errors.
+measured before/after comparisons and remaining errors of the 0.5.21 revision.
+That report is historical evidence, not a score for subsequent OCR changes. See the
+[current component guide](../README.md) for this checkout and the
+[main component guide](https://github.com/iisara555/STeP-AI-Harness/blob/main/experiments/local-thai-ocr/README.md)
+for the latest merged source. Compare exact revisions on identical inputs again
+when detection size, PDF DPI, rotation or mapping changes. Record extra model reads
+and employee-machine time/RAM rather than assuming higher resolution is faster.
 The acceptance gate stays **OPEN** until the repository owner reviews authorized
 real-document pilot evidence. Windows with 2 CPU cores and macOS M1 with 4 GB RAM
 are the target machines; Linux cloud timings do not establish readiness on either.
@@ -69,7 +75,9 @@ python -m benchmark.run --input /path/outside/repo/synthetic-80 \
 Live vision currently accepts PNG. Deliberately render PDF pages before benchmarking
 vision; do not silently treat the first page as the whole PDF. Set the model name
 for reproducibility; an omitted model is labeled `provider-default`. This helper is
-not a new production consent route. Private/live use requires document-owner permission
+not a new production consent route. This helper uses Codex; Desktop has other
+image-capable transports with different wire formats and entitlement. Reports must
+identify the actual provider/model and cannot stand for all Desktop providers. Private/live use requires document-owner permission
 and separate approval for external image transmission; `--private` alone never sends.
 The benchmark does not change Desktop privacy defaults or skip its production gates.
 
