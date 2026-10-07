@@ -2,7 +2,7 @@
 
 สถานะ: **Local OCR component สำหรับ STeP Desktop / standalone trial** (`v0.2`)
 
-> Component นี้อยู่ใน source Desktop 0.5.19 ของ branch `improve-office-workflows`; เวอร์ชัน standalone `v0.2` ไม่ใช่เลขเวอร์ชัน Desktop. ดู [คู่มือ Desktop](../../desktop/README.md) และ [สถานะ release](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v). Acceptance gate กับเอกสารจริงยัง **OPEN**.
+> Component นี้อยู่ใน source Desktop 0.5.23 ของ branch `main`; เวอร์ชัน standalone `v0.2` ไม่ใช่เลขเวอร์ชัน Desktop. ดู [คู่มือ Desktop](../../desktop/README.md) และ [สถานะ release](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v). Acceptance gate กับเอกสารจริงยัง **OPEN**.
 
 เป้าหมายคือทดสอบ OCR ภาษาไทยบนเครื่องพนักงานโดยไม่ส่งเอกสารไปยัง OCR cloud API และไม่ผูกเข้ากับ Router/Skill ของ Harness จนกว่าจะมีผลทดสอบจากเอกสารจริงเพียงพอ
 
@@ -21,6 +21,15 @@
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
+## OCR/mapping ใน source Desktop 0.5.23
+
+- แยก subtotal / VAT amount / paid total ตาม label และความสัมพันธ์ทางคณิตศาสตร์ ไม่ตีความ VAT rate เป็นจำนวนเงิน; ค่าที่คำนวณเติมยังต้องตรวจเทียบต้นฉบับ
+- รองรับเลขที่/No., label ไทยที่เว้นวรรค วันที่เดือนอังกฤษ และตัวเลขที่เว้นวรรคข้าง separator; ตัดบรรทัดเงินสด/ที่อยู่ออกจากชื่อร้าน ไม่แทนตัวอักษรในยอดเงินเป็นเลขเอง
+- ถ้า text boxes บ่งชี้ภาพตะแคง จะอ่านเพิ่มสอง quarter turns แล้วเลือก reading score ที่ดีกว่า; ไม่ใช่การรับรอง auto-deskew ทุกมุม
+- detection side default 1280 px (`STEP_OCR_DET_SIDE`) และ PDF scan 200 DPI. ภาพโทรศัพท์ใช้ EXIF orientation และภาพซีดใช้ bounded contrast normalization; native-text PDF ข้าม PaddleOCR startup
+
+Tests ของการเปลี่ยนนี้เป็น synthetic/mocked regressions. รายงาน [50/63 → 59/63 ของรอบ 0.5.21](benchmark/QUALITY-RESULTS-2026-10-06.md) เป็นหลักฐานก่อนการเปลี่ยน 0.5.23 ไม่ใช่ accuracy ปัจจุบันหรือผลกับเอกสารจริง. ต้องวัดภาพจริง เวลา และ RAM บนเครื่องพนักงานใหม่ก่อนปิด gate.
+
 ## Receipt review workflow
 
 The local page is designed for preparing STeP expense reimbursement evidence. Open `Start-OCR.bat` for each session, keep its server window running, then choose a receipt image or PDF in the page. The status badge and retry control show whether the local OCR service is reachable.
@@ -35,7 +44,7 @@ The draft can be downloaded as JSON or copied to the clipboard. It contains the 
 
 OCR service/engine ยัง **ไม่** ถูกลงทะเบียนเป็น Router Skill หรือ Playbook และยังไม่เพิ่ม table-structure model. Standalone ไม่ใช้ privacy preflight/output manager ของ Harness; Desktop มี attachment, candidate-filter, vision และ chat gates แยกตามโหมด การส่งผลที่คนตรวจเข้าแชตไม่ใช่การผูก engine เข้ากับ Router.
 
-**STeP Desktop mini app:** แอป Desktop มีเครื่องมือ “ตรวจใบเสร็จ AFP” (ป้าย *ทดลอง*) ที่เรียก service นี้ที่ `127.0.0.1:8765` โดยตรง ใช้ `web/receipt-review.js` ชุดเดียวกัน และใช้ runtime ใน App Data ที่ติดตั้งผ่าน Desktop หรือ `.venv` ของ standalone ที่พร้อมใช้อยู่แล้ว เครื่องมือนี้ยังไม่ผ่าน Router; ปุ่ม “ให้ AI ตรวจทานต่อ” ส่งค่าที่คนเลือกและตรวจแล้ว พร้อม JSON ที่ยังมี OCR ดิบ/candidate เข้า chat ปกติ โดยเลือก `receipt-audit` ได้ หรือให้ Router เลือกเมื่อเปิด `autoRouting` ค่าที่ตรวจเทียบต้นฉบับแล้วเป็น `SOURCE_FACT`; OCR/vision ดิบและ candidate อื่นยังเป็น `EXTRACTED_UNVERIFIED`; ค่าที่กรอกเองแต่ยังไม่ตรวจเป็น `USER_INPUT` การยืนยันส่งไม่ใช่การยืนยันค่า และการยืนยันค่าไม่ใช่การอนุมัติเบิก Acceptance gate ด้านล่างยังใช้กับการผูก OCR เข้ากับ Router
+**STeP Desktop mini app:** แอป Desktop มีเครื่องมือ “ตรวจใบเสร็จ AFP” (ป้าย *ทดลอง*) ที่เรียก service นี้ที่ `127.0.0.1:8765` โดยตรง ใช้ `web/receipt-review.js` ชุดเดียวกัน และใช้ runtime ใน App Data ที่ติดตั้งผ่าน Desktop หรือ `.venv` ของ standalone ที่พร้อมใช้อยู่แล้ว เครื่องมือนี้ยังไม่ผ่าน Router; ปุ่ม “ให้ AI ตรวจทานต่อ” ส่งค่าที่คนเลือกและตรวจแล้ว พร้อม JSON ที่ยังมี OCR ดิบ/candidate เข้า chat ปกติ โดยเลือก `receipt-audit` ได้ หรือให้ Router เลือกเมื่อเปิด `autoRouting`) ค่าที่ตรวจเทียบต้นฉบับแล้วเป็น `SOURCE_FACT`; OCR/vision ดิบและ candidate อื่นยังเป็น `EXTRACTED_UNVERIFIED`; ค่าที่กรอกเองแต่ยังไม่ตรวจเป็น `USER_INPUT` การยืนยันส่งไม่ใช่การยืนยันค่า และการยืนยันค่าไม่ใช่การอนุมัติเบิก Acceptance gate ด้านล่างยังใช้กับการผูก OCR เข้ากับ Router
 
 Receipt vision has a separate boundary from the masked candidate filter: it sends
 images to the connected provider only with its existing consent/policy conditions
@@ -148,6 +157,23 @@ outside the public checkout. Target pilot machines: Windows 2 cores and macOS M1
 4 GB RAM; the repository owner decides the acceptance thresholds after baseline review.
 
 ## หมายเหตุด้านความเบา
+
+OCR applies phone EXIF orientation before recognition and normalizes contrast only
+when the image's 0.5–99.5 percentile tonal span is 12–95 levels. This adds no model
+pass, records preprocessing, and preserves the original source file. Flat pages
+and ordinary contrast are left alone. Tile-overlap lines that
+the owning tile missed are retained with a review flag; conflicting tile readings
+remain candidates, never confirmed values. Decimal points/signs/reference separators
+are preserved by independent cross-checks. Receipt mapping uses detector polygons
+for mild-skew row alignment, excludes explicitly labeled buyer IDs from seller IDs,
+and keeps malformed amounts empty for source review.
+
+Native-text PDF requests avoid importing PaddleOCR. CPU threads are bounded by
+the available logical cores (maximum four); image/model limits and optional engines
+remain unchanged. Run `npm test` at the repository root for quality regressions;
+install the existing core Python dependencies or set `STEP_OCR_TEST_PYTHON` to
+their environment. A missing core environment is reported as a skipped engine test,
+not a passing OCR run. No image-generation fonts are shipped in the employee app.
 
 `th_PP-OCRv5_mobile_rec` เป็น recognition model ขนาดเล็ก แต่ PaddleOCR runtime และ text detector ใช้ทรัพยากรมากกว่าขนาด model file. Prototype นี้จึง:
 

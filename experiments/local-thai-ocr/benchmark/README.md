@@ -1,10 +1,14 @@
 # Synthetic receipt benchmark and private pilot
 
 This is development tooling, not an OCR/Router integration or an accuracy certificate.
-This branch predates the 0.5.21/0.5.23 OCR revisions on main. See the
-[main synthetic report](https://github.com/iisara555/STeP-AI-Harness/blob/main/experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md)
-for historical 0.5.21 evidence; it does not measure this branch or later changes.
-Compare exact revisions on identical inputs and record time/RAM before drawing conclusions.
+See [synthetic quality evidence, 2026-10-06](QUALITY-RESULTS-2026-10-06.md) for the
+measured before/after comparisons and remaining errors of the 0.5.21 revision.
+That report is historical evidence, not a score for subsequent OCR changes. See the
+[current component guide](../README.md) for this checkout and the
+[main component guide](https://github.com/iisara555/STeP-AI-Harness/blob/main/experiments/local-thai-ocr/README.md)
+for the latest merged source. Compare exact revisions on identical inputs again
+when detection size, PDF DPI, rotation or mapping changes. Record extra model reads
+and employee-machine time/RAM rather than assuming higher resolution is faster.
 The acceptance gate stays **OPEN** until the repository owner reviews authorized
 real-document pilot evidence. Windows with 2 CPU cores and macOS M1 with 4 GB RAM
 are the target machines; Linux cloud timings do not establish readiness on either.
@@ -23,11 +27,18 @@ From `experiments/local-thai-ocr`:
 
 ```sh
 python -m benchmark.generate --font /path/to/NotoSerifThai-Regular.ttf \
-  --output /path/outside/repo/synthetic-80
+  --fallback-font /path/to/DejaVuSans.ttf --output /path/outside/repo/synthetic-80
 python -m benchmark.run --input /path/outside/repo/synthetic-80 \
   --output /path/outside/repo/paddle-run --mode ocr --limit 80 \
   --runtime-path /path/to/ocr-venv --model-cache /path/to/model-cache
 ```
+
+Some packaged Thai fonts contain no Arabic digits or Latin letters. The generator
+checks glyph coverage before rendering and rejects missing glyphs rather than
+producing boxes with a numeric answer file. Supply a licensed `--fallback-font`
+for those glyphs; both font digests enter the truth. Thai runs remain RAQM-shaped.
+`--include-phone-rotation` adds one JPEG with sideways pixels and EXIF orientation
+to check phone-image handling. This is metadata rotation, not automatic deskew.
 
 The seeded default creates 80 image/answer pairs: ten per H–O. `.truth.json`
 contains canonical and raw fields, synthetic provenance, scenario, distortions,
@@ -83,7 +94,8 @@ mapped OCR fields just as Desktop currently does; it does not simulate human edi
 `report.json` has per-document and per-field raw/canonical exact match, wrong,
 missing and invented values, critical number/money/date/reference errors and review
 TP/FP/FN/TN. Raw exact uses printed digits; canonical converts Thai digits, money
-format and explicit full-year dates. It preserves reference leading zeroes and
+format and explicit full-year dates. Malformed comma/decimal groups are errors,
+not silently repaired amounts. It preserves reference leading zeroes and
 merchant distinctions rather than using the UI's loose agreement heuristic.
 Review flags are attributed using the mapping's source evidence; ambiguous/empty
 fields also flag, and combined disagreement adds a flag. Errors that both engines

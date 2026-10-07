@@ -70,5 +70,7 @@ export function receiptProvenance(input: unknown): any {
       ...unverified(draft.ai_filter, 'ai-candidate-filter'),
       decisions: (draft.ai_filter.decisions || []).map((decision: any) => unverified(decision, 'ai-candidate-filter')),
     };
+  draft.notice =
+    'Only selected values marked SOURCE_FACT with human-source-comparison were checked against the source. Raw OCR/AI readings and alternatives remain unverified. This is not a reimbursement approval.';
   return draft;
 }

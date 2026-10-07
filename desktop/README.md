@@ -1,6 +1,6 @@
 # STeP Desktop
 
-> อ้างอิง source ของ `improve-office-workflows`: Harness **0.7.6** / Desktop **0.5.19**. branch นี้ยังไม่ได้รวม OCR รอบใหม่และทัวร์ใช้งานของ main 0.5.23; ดู [คู่มือล่าสุดบน main](https://github.com/iisara555/STeP-AI-Harness/blob/main/README.md). เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
+> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.23**. รวม OCR รอบใหม่และทัวร์ใช้งานสองช่วงแล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -14,19 +14,17 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
-## Office workflow preview (`improve-office-workflows`)
+## Desktop 0.5.23 source
 
-The uncommitted Office working tree proposes creation of XLSX and editable PPTX files through governed host tools, input-cell editing that preserves untouched ZIP parts, and document coauthoring methods. Generated or edited files enter Changes for review before application under the existing permission modes. Formula/protected-cell edits, complete Excel feature preservation and editing existing PPTX files are outside this implementation.
+The merged source includes a two-part welcome tour, a version/update line beneath the user profile, readable selected document cards, and further Thai receipt mapping. Net-total labels outrank generic sums; VAT rates are not monetary amounts. Subtotal/VAT/total arithmetic reconciles candidates, while references and English dates tolerate common OCR spacing. Sideways-page detection can trigger two additional quarter-turn readings. Detection uses 1280 px (`STEP_OCR_DET_SIDE` overrides); scanned PDFs render at 200 DPI. These settings and extra reads require timing/RAM checks on employee hardware.
 
-Google Workspace is a separate optional connector requiring an organization-installed and signed-in CLI. It does not install/authenticate the CLI, join the Desktop tool loop or establish live Google access. Controlled synthetic tool contracts and LibreOffice rendering checks do not prove model-side usefulness or staff-machine acceptance.
-
-The committed branch remains on Desktop 0.5.19 with README changes. Office implementation is uncommitted and is not part of main or any published Desktop installer. Main source is 0.5.23, with newer OCR and a two-part tour; see the [current Desktop guide](https://github.com/iisara555/STeP-AI-Harness/blob/main/desktop/README.md). Preserve Office changes for their own implementation commit and release checks.
+The [0.5.21 synthetic report](../experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md) measured 50/63 → 59/63 canonical matches on nine images, including two annotated absences, with four wrong/missing fields and two merchant errors escaping review warnings. It is historical evidence for that revision, not a measurement of 0.5.23. Native-text PDFs skip PaddleOCR startup. Real-document acceptance remains **OPEN**; no general image-speed or accuracy guarantee is established.
 
 ## Text-to-image generation
 
-Use an OpenAI or Gemini API-key connection, choose **สร้างรูป**, provide a complete brief and select an account-listed model. Review the image in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth; reference images and image editing are unsupported.
+Connect an OpenAI or Gemini API-key account, choose **สร้างรูป**, provide a complete brief and select an account-listed image model. Review the result in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth access. Reference images, image editing and inpainting are not supported by this Desktop path.
 
-Current limitations: Chat can misroute Thai text-overview requests beginning with `สร้างภาพรวม` into paid image generation; use `สรุปภาพรวม` for text. Follow-up and clarification image prompts omit the original brief, so repeat it in full. Simulated-provider renderer/host checks verify the flow, not live access or image quality. This README update does not change that implementation.
+Known limitations in this version: Chat auto-routing can interpret Thai text-overview requests beginning with `สร้างภาพรวม` as paid image requests, even with a no-image instruction. Use `สรุปภาพรวม` for text. Follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
 
 ## Run
 
@@ -82,7 +80,7 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 ### Updates
 
-An installed STeP Desktop updates itself, as Claude, Cursor and Codex do. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** in the title bar. A downloaded update also installs when the app quits. STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต checks immediately. Policy feature `autoUpdate` turns this off.
+An installed STeP Desktop updates itself, as Claude, Cursor and Codex do. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** in the title bar. A downloaded update also installs when the app quits. The version/status line beneath the user's name checks immediately when clicked or installs an already downloaded update; STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต also checks immediately. Policy feature `autoUpdate` turns this off.
 
 To publish a version, bump `version` in `desktop/package.json` and its lockfile, add the version's in-app notes in `src/whats-new.ts`, and update the README version and CHANGELOG. Then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. From Desktop 0.5.18, macOS uses the verified ZIP update flow described above for the current ad-hoc signed builds.
 

@@ -119,3 +119,65 @@ test("treats นามลูกค้า (cash-bill customer box) as the buyer s
   assert.equal(extracted.fields.taxId.value, "");
   assert.equal(extracted.buyerTaxIdExcluded, true);
 });
+
+function fieldsOf(texts) {
+  const lines = texts.map((text) => ({ text, confidence: 0.95 }));
+  return review.extractReceipt({ pages: [{ page: 1, source: "ocr", lines }] }).fields;
+}
+
+test("full tax invoice: ยอดสุทธิ wins over รวมเงิน and the pre-VAT sum is found", () => {
+  const fields = fieldsOf([
+    "บริษัท ตัวอย่าง จำกัด",
+    "ใบกำกับภาษี/ใบเสร็จรับเงิน",
+    "เลขประจำตัวผู้เสียภาษี 0105559999999",
+    "เลขที่ IV6910-0012",
+    "วันที่ 06/10/2569",
+    "ลำดับ รายการ จำนวน ราคาต่อหน่วย จำนวนเงิน",
+    "1 กระดาษ A4 2 500.00 1,000.00",
+    "รวมเงิน 1,000.00",
+    "ภาษีมูลค่าเพิ่ม 7% 70.00",
+    "จำนวนเงินรวมทั้งสิ้น 1,070.00",
+  ]);
+  assert.equal(fields.receiptNumber.value, "IV6910-0012");
+  assert.equal(fields.total.value, "1,070.00");
+  assert.equal(fields.vat.value, "70.00");
+  assert.equal(fields.subtotal.value, "1,000.00");
+});
+
+test("reads Thai month names and a bare เลขที่ / No.", () => {
+  assert.equal(fieldsOf(["ร้านกาแฟ", "วันที่ 6 ต.ค. 2569"]).date.value, "6 ต.ค. 2569");
+  assert.equal(fieldsOf(["ร้านกาแฟ", "วันที่ 6 ตค 2569"]).date.value, "6 ต.ค. 2569");
+  assert.equal(fieldsOf(["ร้านกาแฟ", "วันที่ 6 ตุลาคม พ.ศ. 2569"]).date.value, "6 ตุลาคม 2569");
+  assert.equal(fieldsOf(["Cafe", "Date: Oct 6, 2026"]).date.value, "6 Oct 2026");
+  assert.equal(fieldsOf(["ร้านกาแฟ", "No. 000123"]).receiptNumber.value, "000123");
+  assert.equal(fieldsOf(["ร้านกาแฟ", "เลขที่ 000123 วันที่ 06/10/2569"]).receiptNumber.value, "000123");
+  assert.equal(fieldsOf(["ร้านกาแฟ", "เลขที่ 99/1 หมู่ 3 ต.สุเทพ"]).receiptNumber.value, "");
+});
+
+test("tolerates OCR spaces inside Thai labels and beside number separators", () => {
+  const fields = fieldsOf(["ร้านตัวอย่าง", "วัน ที่ 06/10/2569", "ยอด สุทธิ 1, 070.00"]);
+  assert.equal(fields.date.value, "06/10/2569");
+  assert.equal(fields.total.value, "1,070.00");
+});
+
+test("a VAT rate is not the VAT amount, and Sub Total is not the total", () => {
+  const lines = [
+    { text: "ภาษีมูลค่าเพิ่ม 7%", box: [100, 400, 400, 430] },
+    { text: "70.00", box: [900, 400, 1000, 430] },
+    { text: "Sub Total 1,000.00", box: [100, 300, 1000, 330] },
+    { text: "Total 1,070.00", box: [100, 500, 1000, 530] },
+  ].map((line) => ({ ...line, confidence: 0.95 }));
+  const { fields } = review.extractReceipt({ pages: [{ page: 1, source: "ocr", lines }] });
+  assert.equal(fields.vat.value, "70.00");
+  assert.equal(fields.subtotal.value, "1,000.00");
+  assert.equal(fields.total.value, "1,070.00");
+});
+
+test("till slip: payment lines are not the shop name", () => {
+  const fields = fieldsOf(["7-Eleven", "TAX ID 0107542000011", "Total 100.00", "Cash 100.00"]);
+  assert.equal(fields.merchant.value, "7-Eleven");
+});
+
+test("a company written บจ. is still a shop name", () => {
+  assert.equal(fieldsOf(["บจ. ดอยคำ", "ใบเสร็จรับเงิน", "ยอดรวม 85.00"]).merchant.value, "บจ. ดอยคำ");
+});

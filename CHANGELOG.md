@@ -15,6 +15,59 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Add an optional Google Workspace connector for bounded Drive/Docs/Sheets reads, draft creation, revision-bound text append and RAW cell updates. Writes require exact trusted-host authorization; no automatic sign-in, tool-loop enablement, sharing or send operations. Tests use simulated CLI responses; live OAuth/Google API remains unverified.
 - Validate with synthetic workbooks/decks and LibreOffice rendering/recalculation. No real-document accuracy, production model benefit, universal Office compatibility, release/version bump or policy-default change is claimed. Record method provenance without copying proprietary document Skills.
 
+### Desktop: grounded follow-ups and temporary tool handles
+
+- Include host task/source metadata in ordinary model turns, as well as compacted turns. Keep attached conversation sources available across factual clarification and acknowledgement turns.
+- Explain that an unavailable paging handle is limited to the current tool run and does not establish that the original document or Skill expired. A fresh source read retains existing consent, masking and policy checks; tool data and paging caches remain run-scoped.
+- Guide chat to continue an already requested draft after a clarification answer, keep acknowledgements brief, and ground loading/recovery/background-work claims in actual host results.
+- Verify with synthetic conversation and tool-loop regressions. These checks cover source retention, error contracts and prompt delivery; they do not establish live-model response quality. No policy default, provider credential, version or release change.
+
+## Desktop v0.5.23 — 2026-10-07
+
+STeP Desktop version 0.5.23 packages the two sections below for `desktop-v0.5.23`. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
+
+### Receipt OCR: key fields Thai receipts actually print
+
+- **Before:** on a normal Thai tax invoice (รวมเงิน, VAT 7%, จำนวนเงินรวมทั้งสิ้น) the receipt check left the total blank as "ambiguous" and never found the pre-VAT sum. A bare "เลขที่ 000123" or "No. 000123", labels OCR split with a space ("ยอด รวม"), English dates ("Oct 6, 2026") and amounts like "1, 070.00" were missed. A till slip could show "Cash 100.00" as the shop name, and a page lying on its side was read sideways.
+- **After:** ยอดสุทธิ / รวมทั้งสิ้น outrank a plain ยอดรวม / รวมเงิน; Sub Total is never taken as the total; subtotal + VAT = total settles competing totals and fills a missing subtotal. A VAT rate ("7%") is not read as the VAT amount. Bare เลขที่ / No. are read as the receipt number while address lines are rejected, and repeated bilingual labels ("เลขที่ BILL NO. 042") are skipped. Payment and address lines are kept out of the shop name. A page whose text runs sideways is read in both quarter turns and the clearer reading is kept. Text detection works at 1280 px instead of 960 (`STEP_OCR_DET_SIDE` overrides) and scanned PDF pages render at 200 DPI instead of 150. Two equally strong totals that disagree still stay empty for a person to choose, and letters inside numbers ("1O7.00") are still left for a person to check.
+- Tests: new cases in `experiments/local-thai-ocr/tests/receipt_review.test.cjs` and `tests/test_image_prep.py`. Not yet measured on real receipts or for speed on a 2-core Windows PC.
+
+### A fuller welcome tour that is easier to start
+
+- **Before:** the tour had 7 short steps that skipped connecting AI, the document drafting tool, settings and updates; it could only be opened from the end of the Setup Wizard or the command palette, and there was no way to stop after the essentials.
+- **After:** the tour has 2 parts. Part 1 "พื้นฐาน" covers what is needed for a first task: new task, example tasks, asking in plain Thai, attaching files with personal-data masking, choosing how to work (including plan before acting and permissions), connecting AI when none is connected, and reviewing the draft. It stops at a checkpoint where people can start working or carry on. Part 2 "เครื่องมือช่วยงาน" covers document drafting, the AFP receipt check, Skills, model and reasoning level, settings, the version and update line, and Ctrl+K. Each step has a short tip in plain words, a part label and progress dots. New people also see "ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน" on the welcome screen until they finish the tour.
+- Tests: new `tour-smoke.mjs` walks the whole tour in light or dark theme and checks every card stays on screen; `i18n.test.ts` checks every tour step has English text.
+
+## Desktop v0.5.22 — 2026-10-07
+
+STeP Desktop version 0.5.22 packages the section below for `desktop-v0.5.22`. Harness package version remains 0.7.6.
+
+### Version and update status under your name; readable selected document type
+
+- **Before:** the app's version was not shown anywhere in the main window, so staff could not tell which version they had or whether a newer one was out until the update card appeared. In the document drafting tool the selected type (for example ร่างบันทึกข้อความ) turned pale, and in the dark theme its text almost disappeared; the unselected types looked selected.
+- **After:** under the person's name the sidebar shows `v<version>` with "เป็นเวอร์ชันล่าสุด", "มีอัปเดต <version>" (with a dot), "กำลังตรวจอัปเดต…" or "ตรวจอัปเดตไม่สำเร็จ". Clicking it checks for updates, or restarts into a downloaded one. The document type picker shows unselected types as plain cards and the selected one in solid yellow with dark text, in both themes.
+- Tests: `whats-new-smoke.mjs` checks the version line.
+
+## Desktop v0.5.21 — 2026-10-06
+
+STeP Desktop version 0.5.21 packages the OCR improvements below for `desktop-v0.5.21`. The in-app update notes are available in Thai and English. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
+
+### Desktop: documentation and release notes
+
+- Correct the private-pilot path test to expect the canonical destination when temporary directories have symlinked ancestors, as on macOS. The `desktop-v0.5.20` tag did not publish installers because its Mac unit-test job failed; 0.5.21 replaces that unpublished candidate without rewriting its tag. Linked-file rejection and the canonical-path implementation are unchanged.
+
+- Update the employee and developer README with current receipt behavior, synthetic OCR evidence and text-to-image API instructions. Document image intent/context limitations found with simulated providers; these image behaviors are not changed by this release.
+- Add in-app update notes and synchronize Desktop package/lockfile versions. Windows/macOS installers and the rolling update feed are published by the existing tag workflow after its checks.
+
+### Local Thai OCR: preserve critical values and reduce avoidable work
+
+- Apply phone EXIF orientation before OCR and stretch contrast only on faded images with a bounded tonal range, preserving the source file and recording preprocessing. Recover overlap-only tile lines with review flags and preserve conflicting tile readings as unverified candidates. Reject invalid confidence values instead of treating them as reliable.
+- Match receipt amounts to the actual row using detected text polygons for mild skew and nearby next-line evidence. Recognize explicit buyer-number labels even in seller tax rows. Keep malformed decimals, comma groups and signed amounts out of positive payment fields; independent cross-checks retain numeric punctuation and reference separators.
+- Import PaddleOCR only when image recognition is needed, so native-text PDFs avoid model startup. Bound CPU threads to available cores, maximum four, without adding models or changing policy defaults.
+- Validate synthetic image font coverage, support a licensed Latin/digit fallback with its digest and an optional EXIF phone-rotation case. Reject malformed money in benchmark scoring; never measure boxes as printed numeric answers.
+- Keep private pilot paths outside all Git checkouts; refuse linked export targets and write to the checked canonical destination. OCR installers include runtime sources only, excluding development benchmarks and private image/report files. Saved drafts describe selected-value verification without claiming unchecked OCR was reviewed.
+- Add test-first synthetic regressions to the root/desktop test scripts. Evidence uses synthetic images and local CPU models only; it does not establish real-document accuracy or close the acceptance gate. No Router integration or policy-default change.
+- On the same nine generated images, canonical field matches improved from 50/63 to 59/63 (including two annotated absences); two merchant errors and two missing money fields remain. A three-process native-text PDF check reduced median startup from 2.322 s to 0.279 s on this Linux host. Details and limitations: [synthetic quality evidence](experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md).
 
 ## Desktop v0.5.19 — 2026-10-06
 

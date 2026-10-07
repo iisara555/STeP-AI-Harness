@@ -122,6 +122,61 @@ test('results are approved before caching, paginate without resending raw conten
   assert.equal(result, 'done');
   assert.equal(reviews, 1);
 });
+test('an earlier paging handle can recover through a fresh read without retaining old tool data', async () => {
+  let oldId = '';
+  let reads = 0;
+  let reviews = 0;
+  const makeLoop = () =>
+    new ToolLoop(
+      host({
+        execute: async () => {
+          reads++;
+          return 'synthetic source content';
+        },
+        outgoing: async text => {
+          reviews++;
+          return text;
+        },
+      }),
+      8,
+      6,
+    );
+  let turn = 0;
+  await makeLoop().run(
+    'first message',
+    async prompt => {
+      if (++turn === 1) return request('skill', 'event-run-of-show');
+      const results = [...prompt.matchAll(/<tool_results>\n(.+)\n<\/tool_results>/g)].map(m => JSON.parse(m[1]));
+      oldId = results[0][0].id;
+      return 'Which date should the opening use?';
+    },
+    signal(),
+  );
+  turn = 0;
+  const answer = await makeLoop().run(
+    'Use the confirmed date and continue',
+    async prompt => {
+      if (++turn === 1) return request('read_remaining', oldId, { offset: 6 });
+      const results = [...prompt.matchAll(/<tool_results>\n(.+)\n<\/tool_results>/g)].map(m => JSON.parse(m[1]));
+      if (turn === 2) {
+        assert.equal(results[0][0].ok, false);
+        assert.equal(results[0][0].code, 'TOOL_OUTPUT_EXPIRED');
+        assert.match(results[0][0].text, /paging handle/i);
+        assert.match(results[0][0].text, /not.*source.*expired/i);
+        assert.doesNotMatch(prompt, /source content/);
+        return request('skill', 'event-run-of-show');
+      }
+      assert.equal(results[1][0].ok, true);
+      assert.notEqual(results[1][0].id, oldId);
+      return 'Draft with unresolved times marked for review';
+    },
+    signal(),
+  );
+  assert.equal(answer, 'Draft with unresolved times marked for review');
+  assert.equal(reads, 2);
+  assert.equal(reviews, 2, 'a fresh source read passes outgoing consent again');
+});
+
 test('declined data is omitted and last turn never executes more effects', async () => {
   let effects = 0,
     calls = 0;

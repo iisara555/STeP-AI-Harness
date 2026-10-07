@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unicodedata
+import re
 from typing import Any
 
 import numpy as np
@@ -9,12 +10,24 @@ from PIL import Image
 
 def comparable_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKC", value).casefold()
+    normalized = "".join(str(unicodedata.digit(c, c)) if unicodedata.category(c).startswith("N") else c for c in normalized)
+    # Formatting may change, but a decimal point, sign or reference separator
+    # can change the value. Never discard all punctuation around numbers.
+    normalized = re.sub(r"(?<![\d.,])\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?(?![\d.,])",
+                        lambda match: match.group().replace(',', ''), normalized)
+    normalized = re.sub(r"(?<!\d)(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{4})(?!\d)",
+                        r"\1/\2/\3", normalized)
     characters: list[str] = []
-    for character in normalized:
+    for index, character in enumerate(normalized):
         category = unicodedata.category(character)
         if category.startswith("N"):
             characters.append(str(unicodedata.digit(character, character)))
         elif category.startswith(("L", "M")):
+            characters.append(character)
+        elif character in ".,/-+#" and (
+            index > 0 and normalized[index - 1].isdigit()
+            or index + 1 < len(normalized) and normalized[index + 1].isdigit()
+        ):
             characters.append(character)
     return "".join(characters)
 

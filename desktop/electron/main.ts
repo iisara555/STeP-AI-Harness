@@ -2232,10 +2232,10 @@ async function main() {
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
         if (saved.canceled || !saved.filePath) return null;
-        if (trial) await assertPrivateTrialPath(saved.filePath);
-        await writeFile(saved.filePath, text, 'utf8');
-        exportPaths.add(saved.filePath);
-        return { path: saved.filePath };
+        const destination = trial ? await assertPrivateTrialPath(saved.filePath) : saved.filePath;
+        await writeFile(destination, text, 'utf8');
+        exportPaths.add(destination);
+        return { path: destination };
       }
       case 'disconnect': {
         const c = store.get<Connection>('connection', input.id);

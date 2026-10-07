@@ -151,6 +151,7 @@ export const errorText: Record<string, string> = localized({
   GOOGLE_CLOUD_PROJECT_INVALID: 'Google Cloud Project ID ไม่ถูกต้อง ใช้ตัวพิมพ์เล็ก ตัวเลข และขีดกลาง 6–30 ตัวอักษร',
   OCR_UNAVAILABLE: 'บริการ OCR ในเครื่องยังไม่เปิด กด “เปิดบริการ OCR” ก่อน',
   OCR_TRIAL_REPO_PATH: 'ข้อมูลทดลอง OCR ต้องอยู่นอก Git repo กรุณาเลือกโฟลเดอร์ส่วนตัวบนเครื่อง',
+  OCR_TRIAL_UNSAFE_PATH: 'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR',
   OCR_NOT_INSTALLED: 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้ กด “ติดตั้ง OCR” ในหน้าตรวจใบเสร็จ',
   OCR_START_FAILED: 'เปิดบริการ OCR ไม่สำเร็จ กรุณาลองติดตั้ง OCR ใหม่หรือตรวจ Diagnostics',
   OCR_FAILED: 'อ่านใบเสร็จไม่สำเร็จ ลองใช้ภาพที่ชัดขึ้นหรือไฟล์อื่น',

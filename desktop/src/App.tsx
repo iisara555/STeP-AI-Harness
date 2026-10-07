@@ -36,6 +36,7 @@ import {
   Copy,
   ImagePlus,
   ChevronDown,
+  Compass,
 } from 'lucide-react';
 import { ReceiptApp } from './receipt';
 import { DocumentTools, type DocumentAttachment, type DocumentForm } from './document-tool-app';
@@ -60,7 +61,7 @@ import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
-import { UpdateCard, useUpdate } from './update';
+import { UpdateCard, VersionLine, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
@@ -1104,6 +1105,7 @@ export default function App() {
             <div className="session-group tools-group">{t('เครื่องมือ')}</div>
             <nav>
               <button
+                data-tour="documents"
                 className={view === 'documents' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
@@ -1126,7 +1128,7 @@ export default function App() {
                 <span className="count">{skills ? skills.length + toolCount : ''}</span>
               </button>
               <button
-                data-tour="tools"
+                data-tour="receipt"
                 className={view === 'receipt' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
@@ -1144,6 +1146,7 @@ export default function App() {
             </nav>
             <button
               className={`settings-button ${settings ? 'nav-active' : ''}`}
+              data-tour="settings"
               onClick={() => {
                 setSettingsPage('general');
                 setSettings(true);
@@ -1153,7 +1156,7 @@ export default function App() {
               <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
             </button>
             <UpdateCard api={api} update={update} />
-            <div className="profile">
+            <div className="profile" data-tour="version">
               <Avatar
                 id={snapshot.settings.avatar}
                 fallback={initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}
@@ -1164,6 +1167,7 @@ export default function App() {
                   {snapshot.settings.userName ? t('ผู้ช่วย {0} · ', snapshot.settings.assistant) : ''}
                   {snapshot.settings.team ? t('ทีม {0}', snapshot.settings.team.toUpperCase()) : t('ยังไม่เลือกทีม')}
                 </small>
+                <VersionLine api={api} update={update} version={snapshot.appVersion || ''} />
               </div>
             </div>
           </aside>
@@ -1428,7 +1432,7 @@ export default function App() {
                     <p className="suggestions-label">
                       {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
                     </p>
-                    <div className="suggestions">
+                    <div className="suggestions" data-tour="starters">
                       {startersFor(snapshot.settings.team).map(starter => {
                         const text = starterText(starter);
                         return (
@@ -1462,6 +1466,12 @@ export default function App() {
                         {t('รู้จักทีมและ Skill ของ STeP')}
                       </li>
                     </ul>
+                    {!snapshot.settings.tourDone && (
+                      <button className="welcome-tour quiet" onClick={commands.tour}>
+                        <Compass size={15} />
+                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                      </button>
+                    )}
                   </div>
                 )}
                 {session?.messages.map((message, index) => (
@@ -1877,6 +1887,7 @@ export default function App() {
                   <div className="composer-tools">
                     <button
                       className="icon composer-add"
+                      data-tour="attach"
                       aria-label={t('ตรวจและแนบเอกสาร')}
                       title={t('ตรวจและแนบเอกสาร')}
                       disabled={running || (!session && connectionId === CLAUDE_CODE)}
@@ -1925,6 +1936,7 @@ export default function App() {
                     )}
                     <select
                       className="pill-select"
+                      data-tour="mode"
                       aria-label={t('โหมดทำงาน')}
                       title={t('โหมดทำงาน')}
                       value={workflow || workMode}
@@ -2067,7 +2079,7 @@ export default function App() {
                 <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
                 {/* With a task open, the connection warning above the box already offers this action. */}
                 {!connection?.ready && !session && (
-                  <button className="text-link" onClick={openAiSettings}>
+                  <button className="text-link" data-tour="connect" onClick={openAiSettings}>
                     {t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}
                   </button>
                 )}
