@@ -12,9 +12,19 @@ Skills และกติกาการทำงานของ STeP สำห�
 
 Gemini CLI ไม่รองรับแล้ว เพราะ Google หยุดให้บริการกับบัญชีส่วนตัวและ Google AI Pro/Ultra ตั้งแต่ 18 มิ.ย. 2569 คนที่ใช้บัญชี Google ให้ใช้ Antigravity แทน
 
+## Skills plugin กับ Desktop ต่างกันอย่างไร
+
+Plugin ใช้ Harness version **0.7.6** แยกจากเลขรุ่น Desktop และใช้ source ที่ติดตั้ง; Claude/Codex marketplace ใช้ `main` ส่วนสคริปต์ใช้ checkout ที่ดาวน์โหลดมา. README บน branch preview ไม่ได้ทำให้ plugin ได้โค้ด preview ต้องอัปเดต installation แล้วเริ่มแชตใหม่.
+
+ชุดนี้ให้ Skills/กติกา ไม่ได้ติดตั้ง Electron, OCR runtime, หน้าตรวจใบเสร็จ AFP, Changes, ประวัติร่าง หรือ Image API ของ Desktop. การเลือก Skill และสิทธิ์เครื่องมือ/ส่งข้อมูลขึ้นกับโปรแกรม AI ที่ใช้ กติกาใน plugin ไม่ใช่การรับรองว่า native host จะบังคับทุก gate แบบ Desktop. ตรวจบัญชี/โมเดลที่โปรแกรมนั้นให้ใช้จริง.
+
+ดู [คู่มือ STeP Desktop ล่าสุด](https://github.com/iisara555/STeP-AI-Harness/blob/main/desktop/README.md) สำหรับ OCR/vision, ทัวร์, การสร้างภาพ และข้อจำกัด. Office workflow preview ยังไม่ใช่ความสามารถที่เผยแพร่ใน Desktop หรือ plugin บน main.
+
+Repository เป็น public: ห้ามเก็บเอกสารจริง ข้อมูลส่วนบุคคล OCR จากใบเสร็จจริง หรือ credentials ใน checkout. Controlled source ต้องอยู่ในช่องทางภายในที่ได้รับอนุญาต; AI ช่วยร่าง คนตรวจและผู้มีอำนาจเป็นผู้อนุมัติ.
+
 ## ติดตั้งทุกโปรแกรมในครั้งเดียว
 
-ดาวน์โหลด repository (**Code → Download ZIP** บน GitHub) แตกไฟล์ แล้วดับเบิลคลิก `Setup-STeP-Skills.bat` (Windows) หรือ `Setup-STeP-Skills.command` (macOS) หรือรัน `node scripts/install-agent-skills.mjs setup` ไฟล์นี้ติดตั้ง Skills ลง Claude, Codex และ Antigravity ที่พบในเครื่อง ใส่กติกาของ Codex และถามโปรไฟล์ ต้องมี [Node.js](https://nodejs.org) 18 ขึ้นไป หัวข้อด้านล่างคือวิธีทำทีละโปรแกรม
+ดาวน์โหลด repository (**Code → Download ZIP** บน GitHub) แตกไฟล์ แล้วดับเบิลคลิก `Setup-STeP-Skills.bat` (Windows) หรือ `Setup-STeP-Skills.command` (macOS) หรือรัน `node scripts/install-agent-skills.mjs setup` ไฟล์นี้ติดตั้ง Skills ลง Claude, Codex และ Antigravity ที่พบในเครื่อง ใส่กติกาของ Codex และถามโปรไฟล์ ต้องมี [Node.js](https://nodejs.org) LTS (แนะนำ Node 24; สคริปต์รองรับ 18 ขึ้นไป แต่ Harness runtime ต้อง 20 ขึ้นไป) หัวข้อด้านล่างคือวิธีทำทีละโปรแกรม
 
 ## Claude
 

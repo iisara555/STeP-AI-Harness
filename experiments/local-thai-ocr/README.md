@@ -2,9 +2,11 @@
 
 สถานะ: **Local OCR component สำหรับ STeP Desktop / standalone trial** (`v0.2`)
 
+> Component นี้อยู่ใน source Desktop 0.5.21 ของ branch `improve-thai-ocr`; เวอร์ชัน standalone `v0.2` ไม่ใช่เลขเวอร์ชัน Desktop. ดู [คู่มือ Desktop](../../desktop/README.md) และ [สถานะ release](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v). Acceptance gate กับเอกสารจริงยัง **OPEN**.
+
 เป้าหมายคือทดสอบ OCR ภาษาไทยบนเครื่องพนักงานโดยไม่ส่งเอกสารไปยัง OCR cloud API และไม่ผูกเข้ากับ Router/Skill ของ Harness จนกว่าจะมีผลทดสอบจากเอกสารจริงเพียงพอ
 
-## ขอบเขต v0.1
+## ความสามารถปัจจุบัน
 
 - PDF ที่มี text layer: อ่านข้อความตรงด้วย pypdfium2/PDFium ก่อน ไม่ทำ OCR โดยไม่จำเป็น
 - PDF scan / PNG / JPG / TIFF / WebP: ใช้ **PaddleOCR PP-OCRv5 Thai** บน CPU
@@ -15,7 +17,7 @@
 - Optional EasyOCR Thai/English recognition cross-checks PaddleOCR's detected lines, including lines with high PaddleOCR confidence. Different readings are flagged for human review; neither reading replaces the other automatically.
 - ถ้าเครื่องมี **Tesseract 5 + `tha` + `eng` traineddata** ระบบจะใช้เป็น independent verifier สำหรับตัวพิมพ์และตัวเลขโดยอัตโนมัติ ไม่ใช้ Tesseract เป็นผู้ตัดสินลายมือ
 - ระบบจัดประเภทบรรทัดเป็น `printed-likely`, `handwriting-likely`, `printed-conflict` หรือ `uncertain` จากการเห็นพ้อง/ขัดกันของ PaddleOCR, Tesseract และ Thai-TrOCR
-- STeP Desktop มี AI candidate filter แบบ opt-in: ส่งเฉพาะข้อความ OCR ที่ผ่าน privacy masking และ candidate token ไปยัง AI ที่ผู้ใช้เชื่อมต่ออยู่ **ไม่ส่งภาพใบเสร็จ** และไม่ยอมรับค่าที่ AI สร้างใหม่
+- STeP Desktop มี AI candidate filter: หลัง OCR บน connection แบบ text-only จะเลือก candidate หลัง consent; สั่งตรวจซ้ำด้วยปุ่มได้ ส่งเฉพาะข้อความที่ผ่าน privacy masking และ candidate token **ไม่ส่งภาพใบเสร็จ** และไม่ยอมรับค่าที่ AI สร้างใหม่
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
@@ -23,15 +25,17 @@
 
 The local page is designed for preparing STeP expense reimbursement evidence. Open `Start-OCR.bat` for each session, keep its server window running, then choose a receipt image or PDF in the page. The status badge and retry control show whether the local OCR service is reachable.
 
-After OCR, the page proposes the merchant, receipt number, date, tax ID, subtotal, VAT, and paid total. These are OCR suggestions. Compare each value against the receipt, correct it, and mark the populated field as checked. The review list also flags missing required values, a subtotal/VAT/total mismatch, incomplete tax ID length, and OCR lines below the confidence threshold. The expense note is entered manually.
+The standalone Web UI has per-field checkboxes and a manually entered expense note. Desktop uses its own form with one source-comparison checkbox, source-backed item descriptions and a preparation checklist; its AI modes are described below.
+
+After OCR, the standalone page proposes the merchant, receipt number, date, tax ID, subtotal, VAT, and paid total. These are OCR suggestions. Compare each value against the receipt, correct it, and mark the populated field as checked. The review list also flags missing required values, a subtotal/VAT/total mismatch, incomplete tax ID length, and OCR lines below the confidence threshold. The expense note is entered manually.
 
 High-resolution images are read in overlapping tiles after a bounded resize. This preserves more detail while keeping each OCR call small. A total label and amount on the same visual row can be paired even when OCR returns them as separate lines. A tax ID found only in the buyer/customer section is not proposed as the issuer's tax ID. The original OCR lines remain visible; reviewers can correct a separate text draft without overwriting that evidence. Corrected text and original OCR are both included in the JSON draft.
 
 The draft can be downloaded as JSON or copied to the clipboard. It contains the OCR output and may contain personal or financial data, so store it according to the organization's data classification rules. The “fields checked” state records document review only; it does not approve reimbursement or validate tax compliance. Receipt extraction heuristics and accuracy still require pilot testing with authorized sample documents.
 
-ยัง **ไม่** เชื่อมกับ Router, Skill registry, Playbook, privacy preflight หรือ output manager ของ Harness หลัก และยังไม่เพิ่ม table-structure model ในรอบนี้.
+OCR service/engine ยัง **ไม่** ถูกลงทะเบียนเป็น Router Skill หรือ Playbook และยังไม่เพิ่ม table-structure model. Standalone ไม่ใช้ privacy preflight/output manager ของ Harness; Desktop มี attachment, candidate-filter, vision และ chat gates แยกตามโหมด การส่งผลที่คนตรวจเข้าแชตไม่ใช่การผูก engine เข้ากับ Router.
 
-**STeP Desktop mini app:** แอป Desktop มีเครื่องมือ “ตรวจใบเสร็จ AFP” (ป้าย *ทดลอง*) ที่เรียก service นี้ที่ `127.0.0.1:8765` โดยตรง ใช้ `web/receipt-review.js` ชุดเดียวกัน และเปิด service จาก `.venv` ของโฟลเดอร์นี้ได้เมื่อติดตั้งแล้ว เครื่องมือนี้ยังไม่ผ่าน Router; ปุ่ม “ให้ AI ตรวจทานต่อ” ส่งค่าที่คนเลือกและตรวจแล้ว พร้อม JSON ที่ยังมี OCR ดิบ/candidate เข้า chat ปกติ แล้ว Router เลือก `receipt-audit` เอง ค่าที่ตรวจเทียบต้นฉบับแล้วเป็น `SOURCE_FACT`; OCR/vision ดิบและ candidate อื่นยังเป็น `EXTRACTED_UNVERIFIED`; ค่าที่กรอกเองแต่ยังไม่ตรวจเป็น `USER_INPUT` การยืนยันส่งไม่ใช่การยืนยันค่า และการยืนยันค่าไม่ใช่การอนุมัติเบิก Acceptance gate ด้านล่างยังใช้กับการผูก OCR เข้ากับ Router
+**STeP Desktop mini app:** แอป Desktop มีเครื่องมือ “ตรวจใบเสร็จ AFP” (ป้าย *ทดลอง*) ที่เรียก service นี้ที่ `127.0.0.1:8765` โดยตรง ใช้ `web/receipt-review.js` ชุดเดียวกัน และใช้ runtime ใน App Data ที่ติดตั้งผ่าน Desktop หรือ `.venv` ของ standalone ที่พร้อมใช้อยู่แล้ว เครื่องมือนี้ยังไม่ผ่าน Router; ปุ่ม “ให้ AI ตรวจทานต่อ” ส่งค่าที่คนเลือกและตรวจแล้ว พร้อม JSON ที่ยังมี OCR ดิบ/candidate เข้า chat ปกติ โดยเลือก `receipt-audit` ได้ หรือให้ Router เลือกเมื่อเปิด `autoRouting` ค่าที่ตรวจเทียบต้นฉบับแล้วเป็น `SOURCE_FACT`; OCR/vision ดิบและ candidate อื่นยังเป็น `EXTRACTED_UNVERIFIED`; ค่าที่กรอกเองแต่ยังไม่ตรวจเป็น `USER_INPUT` การยืนยันส่งไม่ใช่การยืนยันค่า และการยืนยันค่าไม่ใช่การอนุมัติเบิก Acceptance gate ด้านล่างยังใช้กับการผูก OCR เข้ากับ Router
 
 Receipt vision has a separate boundary from the masked candidate filter: it sends
 images to the connected provider only with its existing consent/policy conditions
@@ -50,7 +54,9 @@ privacy/consent policy. This work does not change either default or consent scop
 3. ครั้งแรกที่เปิด Thai-TrOCR หากยังไม่มี model weights ใน Hugging Face cache
 4. The first EasyOCR cross-check may download its Thai recognition model if it is not cached. Model download does not upload receipt bytes.
 5. Tesseract ไม่ได้ bundle มากับ installer หลัก; ถ้าต้องการชั้นนี้ให้ติดตั้ง Tesseract 5 และภาษา `tha` + `eng` ตามเอกสาร upstream แล้ว Desktop จะตรวจพบเอง
-6. AI candidate filter จะติดต่อ provider ที่ผู้ใช้เลือกเฉพาะเมื่อผู้ใช้กดใช้งานและยืนยันครั้งแรก โดยส่งเฉพาะ token + evidence ที่ผ่าน privacy gate
+6. ใน Desktop, candidate filter อาจติดต่อ provider หลัง OCR สำหรับ connection แบบ text-only เมื่อมี consent หรือเมื่อกดตรวจซ้ำ โดยส่ง token + evidence ที่ผ่าน privacy gate; receipt vision ส่งภาพแยกภายใต้ consent/policy ไม่ได้อยู่ใน local-only OCR path
+
+ต้องการทดสอบแบบ local-only ใน Desktop ให้เลือก **ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)** ก่อนเปิดเอกสาร โหมดนี้หยุดการเรียก AI อัตโนมัติ เก็บเอกสารจริงและผล JSON นอก Git checkout. การอ่านภาพหรือส่งแชตภายหลังเป็นการส่งข้อมูลแยกที่ผู้ใช้เลือกเอง
 
 **Model download ไม่ใช่ document upload** แต่เครื่องที่ต้อง air-gap ควรเตรียม dependency/model cache ล่วงหน้าก่อนนำไปใช้.
 
