@@ -38,6 +38,8 @@ export const LOOP_TOOLS = [
   'doc_section',
   'sheet_read',
   'sheet_edit',
+  'sheet_create',
+  'slides_create',
   'ask_user',
   'plan',
   'plan_update',

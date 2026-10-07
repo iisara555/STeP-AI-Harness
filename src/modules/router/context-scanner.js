@@ -13,6 +13,8 @@ export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเส�
 
 export const QUALIFIED_INTENT_RULES = [
   { intent: 'privacy-review', any: ['เลขบัตรประชาชน', 'เลขบัตร', 'ข้อมูลส่วนบุคคล', 'pii', 'pdpa', 'credential', 'password', 'ข้อมูลสุขภาพ'] },
+  { intent: 'spreadsheet-edit', allAny: [['excel', 'xlsx', 'workbook'], ['แก้ไฟล์', 'แก้เซลล์', 'เปลี่ยนค่าเซลล์', 'อ่านไฟล์', 'read workbook', 'edit workbook']] },
+  { intent: 'create', allAny: [['decision memo', 'บันทึกเพื่อการตัดสินใจ'], ['ช่วยทำ', 'ร่าง', 'จัดทำ', 'draft']] },
   // A complaint may be source material for survey synthesis, not an individual
   // service case to triage. Require the explicit VoC deliverable and survey.
   {

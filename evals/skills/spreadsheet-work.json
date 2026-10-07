@@ -1,0 +1,59 @@
+{
+  "skill": "spreadsheet-work",
+  "version": 1,
+  "source": "synthetic-office-2026-10-06",
+  "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ส่ง XLSX ผ่าน sheet_create พร้อม path/status จากผล tool จริง; รักษารหัสศูนย์นำหน้าเป็นข้อความและเงินเป็น number; ระบุสูตรจริงและ recalculate ยังไม่ได้รัน ไม่อ้าง zero format loss",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-workflow",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยสร้างไฟล์ Excel จากข้อมูลตารางนี้",
+      "expect": {
+        "skill": "spreadsheet-work"
+      },
+      "outputAssertions": [
+        "ส่ง XLSX ผ่าน sheet_create พร้อม path/status จากผล tool จริง",
+        "รักษารหัสศูนย์นำหน้าเป็นข้อความและเงินเป็น number",
+        "ระบุสูตรจริงและ recalculate ยังไม่ได้รัน ไม่อ้าง zero format loss"
+      ]
+    },
+    {
+      "id": "anti-receipt",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยตรวจใบเสร็จก่อนส่งเบิก",
+      "expect": {
+        "skill": "receipt-audit",
+        "notSkill": "spreadsheet-work"
+      }
+    },
+    {
+      "id": "collision-tor",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยตรวจ TOR ก่อนส่ง AFP",
+      "expect": {
+        "skill": "tor-review",
+        "notSkill": "spreadsheet-work"
+      }
+    },
+    {
+      "id": "missing-source",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยสร้างไฟล์ Excel ตาม template ที่ยังไม่ได้แนบ",
+      "expect": {
+        "skill": "spreadsheet-work"
+      },
+      "outputAssertions": [
+        "ขอ template หรือระบุร่างไม่ได้เทียบ template",
+        "ไม่แต่งอัตราการเงินหรือ approval"
+      ]
+    }
+  ]
+}

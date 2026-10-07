@@ -43,6 +43,8 @@ standardVersion: 2
 
 ## Workflow
 
+สำหรับเอกสารหลายหัวข้อหรือหลายรอบ ใช้ [coauthoring และ reader check](../../docs/document-coauthoring.md): เก็บบริบทที่ขาด ร่างทีละส่วน และผูกคำถามผู้อ่านกับ evidence/gap โดยรักษา Source/Authority ของ Skill นี้ งานสั้นทำตรงคำขอ ไม่บังคับ workflow ยาว ระบุ author-review เมื่อยังไม่มี independent reader จริง
+
 1. **Decision Required** — เขียนหนึ่งประโยคที่ชัดและตอบได้
 2. **Context** — เฉพาะข้อมูลที่เปลี่ยน decision ไม่เล่าประวัติทั้งหมด
 3. **Facts / Assumptions / Unknowns** — แยกสามกลุ่มให้ชัด เพื่อไม่ให้ข้อสันนิษฐานดูเหมือนข้อเท็จจริง
@@ -52,6 +54,8 @@ standardVersion: 2
 7. **Decision Record** — เว้นพื้นที่ให้บันทึก Decision made, Decision owner, Date และ Conditions/follow-up
 
 ## Output
+
+ดู [ตัวอย่าง coauthoring สังเคราะห์](examples/coauthoring.md) เมื่อ source/owner ยังไม่ครบ
 
 ```markdown
 # Decision Memo — <หัวข้อ>

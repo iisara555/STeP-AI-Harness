@@ -128,6 +128,20 @@
         "เว้นช่องรอยืนยันและแยกรายการก่อนเผยแพร่",
         "ไม่สร้างลิงก์ ไม่เติมฟรีหรือ urgency"
       ]
+    },
+    {
+      "id": "positive-coauthoring-reader-evidence",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยปรับสำนวนร่างรายงานหลายหัวข้อนี้ให้ชัดเจน",
+      "expect": {
+        "skill": "step-writing"
+      },
+      "outputAssertions": [
+        "reader check ผูก question → evidence/gap และระบุ author-review จนมี independent reader จริง",
+        "คง owner/deadline ที่ขาดเป็นรอยืนยัน ไม่แต่งข้อมูลให้ครบหัวข้อ",
+        "รักษา EXTRACTED_UNVERIFIED ถ้าต้นทางมีค่าที่เครื่องอ่านและคนยังไม่ยืนยัน"
+      ]
     }
   ],
   "previousSource": "synthetic-2026-09-25"

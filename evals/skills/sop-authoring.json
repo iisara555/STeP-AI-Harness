@@ -1,0 +1,59 @@
+{
+  "skill": "sop-authoring",
+  "version": 1,
+  "source": "synthetic-office-2026-10-06",
+  "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ร่างทีละส่วนพร้อม role input output และเกณฑ์จบ; reader check ทดลองกรณีปกติและ missing-input; ไม่สร้าง approval หรือวันที่มีผล",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-workflow",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยเขียน SOP ขั้นตอนปฏิบัติงานของทีม",
+      "expect": {
+        "skill": "sop-authoring"
+      },
+      "outputAssertions": [
+        "ร่างทีละส่วนพร้อม role input output และเกณฑ์จบ",
+        "reader check ทดลองกรณีปกติและ missing-input",
+        "ไม่สร้าง approval หรือวันที่มีผล"
+      ]
+    },
+    {
+      "id": "anti-receipt",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยตรวจใบเสร็จก่อนส่งเบิก",
+      "expect": {
+        "skill": "receipt-audit",
+        "notSkill": "sop-authoring"
+      }
+    },
+    {
+      "id": "collision-tor",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยตรวจ TOR ก่อนส่ง AFP",
+      "expect": {
+        "skill": "tor-review",
+        "notSkill": "sop-authoring"
+      }
+    },
+    {
+      "id": "missing-source",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยเขียน SOP แต่ยังไม่มีเอกสารต้นทางที่ได้รับอนุมัติ",
+      "expect": {
+        "skill": "sop-authoring"
+      },
+      "outputAssertions": [
+        "คงเป็นร่างพร้อมรายการ source ที่ต้องขอ",
+        "แยกวิธีปฏิบัติปัจจุบันกับข้อควบคุมที่เสนอ"
+      ]
+    }
+  ]
+}

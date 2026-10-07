@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Office tools, interface evaluation and document coauthoring
+
+- Add a draft `spreadsheet-work` Skill with four-dimensional routing evals and synthetic examples. Desktop can create typed XLSX workbooks with local formulas and editable PPTX decks with Thai text, tables, charts and speaker notes through the existing Changes/permission gates.
+- Patch XLSX input cells without rewriting unrelated ZIP parts. Refuse formula/protected cells, merged non-anchor cells, macros and signed packages; expose formulas/cached results separately and require spreadsheet-application recalculation. This is not a guarantee of every Excel feature round-tripping.
+- Add isolated, counterbalanced tool-usability plans, host-evidence scoring and a controlled Office artifact runner. Scripted WITH/WITHOUT negative controls verify the interface/scorer only; live model-side usefulness remains unmeasured.
+- Extend step-writing, document-review, decision-memo and sop-authoring with context gathering, section refinement and reader evidence. Distinguish author-review from an independent reader; add evals/examples and reduce legacy evaluation debt.
+- Add an optional Google Workspace connector for bounded Drive/Docs/Sheets reads, draft creation, revision-bound text append and RAW cell updates. Writes require exact trusted-host authorization; no automatic sign-in, tool-loop enablement, sharing or send operations. Tests use simulated CLI responses; live OAuth/Google API remains unverified.
+- Validate with synthetic workbooks/decks and LibreOffice rendering/recalculation. No real-document accuracy, production model benefit, universal Office compatibility, release/version bump or policy-default change is claimed. Record method provenance without copying proprietary document Skills.
+
+
 ## Desktop v0.5.19 — 2026-10-06
 
 STeP Desktop version 0.5.19 (`desktop/package.json`) packages the next four sections for `desktop-v0.5.19`. The in-app "What's new" window summarizes them in Thai and English. Receipt and provider checks use synthetic data and simulated services; real-document OCR accuracy remains unverified. Harness package version remains 0.7.6.

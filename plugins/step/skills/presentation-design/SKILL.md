@@ -1,6 +1,6 @@
 ---
 name: presentation-design
-description: วางโครงสร้าง ออกแบบ และสร้าง Interactive 16:9 HTML Presentation, Proposal Executive Deck, Startup Pitch และสไลด์รายงานของ STeP พร้อมโหมดแก้ไขเนื้อหาในเบราว์เซอร์และส่งออก PDF
+description: วางโครงสร้าง ออกแบบ และสร้าง Interactive 16:9 HTML Presentation, Proposal Executive Deck, Startup Pitch และสไลด์รายงานของ STeP พร้อมโหมดแก้ไขเนื้อหาในเบราว์เซอร์ ส่งออก PDF หรือสร้าง editable PPTX เมื่อผู้ใช้ขอ
 standardVersion: 2
 ---
 
@@ -44,6 +44,8 @@ standardVersion: 2
 ## Workflow
 
 **Phase 0 — ตรวจจับโหมดงาน**
+- ถ้าขอ `.pptx` ที่แก้ต่อได้ → ใช้ [editable PPTX workflow](references/editable-pptx.md) และ `slides_create`; ใช้ facts/story/source เดิม ไม่ส่ง HTML แทนไฟล์ที่ขอ
+- PPTX เดิม: สกัดเนื้อหาได้ แต่การรักษา template/animation ทั้งหมดขณะแก้ยังไม่รองรับ อย่าอ้าง preservation จนมีผลจริง
 - Mode A สร้างใหม่ → ไป Phase 1
 - Mode B แปลงไฟล์ `.pptx` → ไป Phase 4
 - Mode C ปรับสไลด์ HTML เดิม → รักษาขนาด 1920x1080 ตรวจเนื้อหาล้นการ์ด แล้วจัดสัดส่วนใหม่
@@ -95,6 +97,8 @@ bash scripts/export-pdf.sh presentation.html
 
 ## Output
 
+- Editable `.pptx` เมื่อผู้ใช้ขอ พร้อมสถานะ Changes และ visual review ที่เกิดขึ้นจริง ดู [ตัวอย่างสังเคราะห์ PPTX](examples/editable-pptx.md)
+
 - ไฟล์ HTML เดี่ยวที่เปิดแบบ offline ได้ พร้อมระบบนำทาง Speaker Notes และ Inline Editor
 - ถ้าเป็น Phase 2 จะได้ไฟล์ตัวอย่าง 3 สไตล์ก่อนตัดสินใจ
 - PDF 1920x1080 แนวนอน เมื่อผู้ใช้ขอส่งออก
@@ -120,7 +124,7 @@ AI ช่วยได้: วางโครงเรื่อง ออกแ�
 ## Guardrails
 
 1. **Fixed 16:9 Stage (1920x1080)** — ทุกสไลด์อยู่บนพื้นที่คงที่ในคอนเทนเนอร์ `.deck-stage` สเกลด้วย CSS Transform (`translate` + `scale`) ห้ามใช้ CSS Breakpoint หรือ reflow จนเสียทรง และควบคุมการแสดงผลด้วยคลาส `.active` / `.visible` คู่กับ `visibility`, `opacity`, `pointer-events` ไม่ใช้ `display: none / block`
-2. **Zero-Dependency Single File** — ผลลัพธ์ต้องเป็น HTML เดี่ยวที่บรรจุ CSS, JS และเนื้อหาครบ เปิด offline ได้
+2. **Zero-Dependency Single File (HTML mode)** — ผลลัพธ์ต้องเป็น HTML เดี่ยวที่บรรจุ CSS, JS และเนื้อหาครบ เปิด offline ได้
 3. **Brand CI** — ใช้สีและ logo rules จาก CI manual digest reference พร้อมคำยืนยันผู้ใช้; แยกสถานะสีดิจิทัลออกจากสีพิมพ์และฉบับควบคุม ใช้ official logo asset ตามพื้นหลังและขนาดปลายทาง ส่วน SIMPLE (เป้าหมายพื้นที่ว่าง 30%), SERVICE, SINCERE เป็นแนวทางออกแบบ ไม่ใช่ข้อกำหนดใน digest
 4. **Typography ภาษาไทย** — ค่าเริ่มต้นงานนำเสนอเลือก Prompt, Kanit, Sarabun หรือ IBM Plex Sans Thai ตามความอ่านง่าย; digest ไม่ได้ระบุฟอนต์องค์กรหรือห้าม Arial, Times New Roman, Tahoma
 5. **No Fabricated Metrics** — ห้ามกุตัวเลข สถิติ ผลทดสอบ รางวัล หรือชื่อผู้รับรอง ข้อมูลที่ยังไม่ยืนยันให้ใส่ `[รอยืนยัน]` หรือระบุว่าเป็นสมมติฐาน

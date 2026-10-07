@@ -28,6 +28,8 @@ const TOOL_ACTIVITY: Record<string, string> = {
   web_fetch: 'กำลังอ่านเว็บไซต์',
   files: 'กำลังอ่านไฟล์งาน',
   changes: 'กำลังเตรียมการแก้ไขไฟล์',
+  sheet_create: 'กำลังจัดทำไฟล์ Excel',
+  slides_create: 'กำลังจัดทำไฟล์ PowerPoint',
 };
 export type ToolScope = {
   cancel: () => void;
@@ -286,6 +288,8 @@ export class DesktopTools {
           'terminal',
           'changes',
           'sheet_edit',
+          'sheet_create',
+          'slides_create',
           'ask_user',
           'plan',
           'snapshot',
@@ -354,10 +358,20 @@ export class DesktopTools {
     const a = r.args || {},
       target = r.input;
     if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
-    const fileTool = ['files', 'changes', 'doc_outline', 'doc_section', 'sheet_read', 'sheet_edit'].includes(r.tool);
+    const fileTool = [
+      'files',
+      'changes',
+      'doc_outline',
+      'doc_section',
+      'sheet_read',
+      'sheet_edit',
+      'sheet_create',
+      'slides_create',
+    ].includes(r.tool);
     const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
     if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-    if (this.mode() === 'plan' && ['changes', 'sheet_edit'].includes(r.tool)) throw new Error('PLAN_MODE_BLOCKED');
+    if (this.mode() === 'plan' && ['changes', 'sheet_edit', 'sheet_create', 'slides_create'].includes(r.tool))
+      throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
       readOnly: !['terminal', 'sandbox', 'mcp_call', 'mcp_search'].includes(r.tool),
@@ -481,6 +495,29 @@ export class DesktopTools {
             if (!Number.isSafeInteger(index) || !parts[index]) throw new Error('INVALID_INPUT');
             return { path: target, index, ...parts[index] };
           }
+          case 'sheet_create':
+          case 'slides_create': {
+            const extension = r.tool === 'sheet_create' ? '.xlsx' : '.pptx';
+            if (extname(target).toLowerCase() !== extension) throw new Error('ATTACH_UNSUPPORTED');
+            await this.workbench.path(target, true);
+            const value = await sheetWorker(Buffer.alloc(0), { operation: r.tool, spec: a.spec }, scope.signal, this.sheetPath);
+            await check();
+            const change = await this.workbench.stageBytes(
+              target,
+              Buffer.from(value.binary, 'base64'),
+              value.before,
+              value.after,
+              undefined,
+              true,
+            );
+            const settled = await this.settle(change, scope);
+            return {
+              ...settled,
+              humanConfirmed: false,
+              ...(value.recalculation ? { recalculation: value.recalculation } : {}),
+              ...(value.visualReview ? { visualReview: value.visualReview } : {}),
+            };
+          }
           case 'sheet_read':
           case 'sheet_edit': {
             if (extname(target).toLowerCase() !== '.xlsx') throw new Error('ATTACH_UNSUPPORTED');
@@ -496,7 +533,7 @@ export class DesktopTools {
             if (!a.edits || !value.binary) throw new Error('INVALID_INPUT');
             await check();
             const change = await this.workbench.stageBytes(target, Buffer.from(value.binary, 'base64'), value.before, value.after, hash);
-            return this.settle(change, scope);
+            return { ...(await this.settle(change, scope)), recalculation: value.recalculation, preservation: value.preservation };
           }
           case 'ask_user': {
             const options = Array.isArray(a.options) ? a.options : [];

@@ -190,12 +190,18 @@ export class Workbench {
     }
     return visible;
   }
-  async stageBytes(input: string, bytes: Buffer, before: string, after: string, expectedHash?: string) {
+  async stageBytes(input: string, bytes: Buffer, before: string, after: string, expectedHash?: string, create = false) {
     if (bytes.length > 8_000_000) throw new Error('FILE_LIMIT');
     const root = await this.root(),
-      path = await this.path(input),
+      path = await this.path(input, create);
+    let existing: Buffer | undefined;
+    try {
       existing = await this.bytes(input);
-    if (expectedHash && digest(existing) !== expectedHash) throw new Error('FILE_CONFLICT');
+    } catch (e: any) {
+      if (!create || e.code !== 'ENOENT') throw e;
+    }
+    if (create && existing) throw new Error('FILE_EXISTS');
+    if (expectedHash && (!existing || digest(existing) !== expectedHash)) throw new Error('FILE_CONFLICT');
     if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
     const change: FileChange = {
       id: randomUUID(),
@@ -203,7 +209,7 @@ export class Workbench {
       path: relative(root, path),
       before,
       after,
-      hash: digest(existing),
+      hash: existing ? digest(existing) : 'missing',
       binary: bytes.toString('base64'),
       at: new Date().toISOString(),
     };

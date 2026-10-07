@@ -1019,3 +1019,22 @@ skills:
     references:
       mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
       optional: [qms-working-reference]
+
+  spreadsheet-work:
+    owner: ga
+    version: 1.0.0
+    domain: [operations, documents]
+    process: [governance.document-review]
+    path: skills/common/spreadsheet-work/SKILL.md
+    description: สร้าง อ่าน แก้ input cells และตรวจสูตร Excel โดยรักษาที่มา ชนิดข้อมูล และข้อจำกัดการ recalculate
+    governance:
+      owner: ga
+      reviewer: [qs, developer]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-10-06"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []

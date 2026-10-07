@@ -41,6 +41,8 @@ standardVersion: 2
 
 ## Workflow
 
+สำหรับเอกสารหลายหัวข้อหรือหลายรอบ ใช้ [coauthoring และ reader check](../../../docs/document-coauthoring.md): เก็บบริบทที่ขาด ร่างทีละส่วน และผูกคำถามผู้อ่านกับ evidence/gap โดยรักษา Source/Authority ของ Skill นี้ งานสั้นทำตรงคำขอ ไม่บังคับ workflow ยาว ระบุ author-review เมื่อยังไม่มี independent reader จริง
+
 **Writing Modes** — เลือกเฉพาะรูปแบบที่ตรงกับคำขอ: Email, หนังสือหรือข้อความทางการ, Internal message, Report section, Executive communication, Announcement, Caption หรือ Public communication, Rewrite/Polish ไม่จำเป็นต้องใช้โครงสร้างเดียวกันทุกประเภท
 
 1. ระบุผู้รับสาร วัตถุประสงค์ ช่องทาง และระดับความเป็นทางการจากคำขอ
@@ -60,6 +62,8 @@ standardVersion: 2
 - **Uncertainty** — ถ้าต้นทางไม่ชัด อย่าเติมเอง ใช้ถ้อยคำที่ไม่ทำให้สิ่งที่ยังไม่ยืนยันกลายเป็นข้อเท็จจริง และทำเครื่องหมายไว้ เช่น `[รอยืนยันวันที่]`
 
 ## Output
+
+ดู [ตัวอย่าง coauthoring และ reader evidence](examples/coauthoring.md) เมื่อตรวจร่างหลายหัวข้อ
 
 ดู [ตัวอย่างประกาศตามช่องทาง](examples/channel-announcement.md) เมื่อยังขาดวันเวลาและลิงก์สมัคร
 

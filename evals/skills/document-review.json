@@ -62,6 +62,20 @@
         "ตรวจได้เฉพาะความครบและความสอดคล้องภายในเอกสาร",
         "ขอแบบฟอร์มหรือเกณฑ์ของปลายทางแทนการเดาว่าครบแล้ว"
       ]
+    },
+    {
+      "id": "positive-coauthoring-reader-evidence",
+      "dimension": "positive",
+      "team": "ga",
+      "prompt": "ช่วยตรวจเอกสารนี้ก่อนส่งว่าผู้อ่านเข้าใจและทำตามขั้นตอนได้ไหม",
+      "expect": {
+        "skill": "document-review"
+      },
+      "outputAssertions": [
+        "reader check ผูก question → evidence/gap และระบุ author-review จนมี independent reader จริง",
+        "คง owner/deadline ที่ขาดเป็นรอยืนยัน ไม่แต่งข้อมูลให้ครบหัวข้อ",
+        "รักษา EXTRACTED_UNVERIFIED ถ้าต้นทางมีค่าที่เครื่องอ่านและคนยังไม่ยืนยัน"
+      ]
     }
   ]
 }
