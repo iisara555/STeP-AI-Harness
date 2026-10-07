@@ -3,6 +3,13 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR': 'Choose a new file in a private folder to save the OCR trial results.',
+  'AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ':
+    'The selected AI helps map OCR text into the form. This connection does not read receipt images.',
+  'ถ้า OCR อ่านตัวอักษรผิด AI แบบข้อความแก้จากภาพไม่ได้ ใช้ AI ที่รองรับภาพเพื่ออ่านต้นฉบับ':
+    'Text-only AI cannot correct misread characters from the image. Use an image-capable AI to read the original.',
+  'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth':
+    'The system key store is unavailable. Unlock it or ask your administrator to configure it before saving an API key or signing in with OAuth.',
   ...documentToolsEn,
   ...usageEn,
   'ดำเนินการค่าพาหนะผ่านกระบวนการจัดซื้อจัดจ้าง และตรวจยอดรวมไม่เกิน 10,000 บาทต่อคนขับรถต่อกิจกรรม':
@@ -126,8 +133,7 @@ export const en: Record<string, string> = {
   ทดสอบอีกครั้ง: 'Test again',
   'ลงชื่อด้วย {0}': 'Sign in with {0}',
   'ใช้แพ็กเกจ ChatGPT Plus/Pro ที่คุณมี': 'Use your ChatGPT Plus/Pro plan',
-  'ใช้บัญชี Google ของคุณ กดครั้งเดียว STeP ติดตั้งและพาลงชื่อให้ (ทดลอง)':
-    'Your Google account. One click and STeP installs and signs you in (experimental)',
+  'ใช้บัญชี Google ไม่ต้องใช้คีย์ (ทดลอง)': 'Your Google account, no key (experimental)',
   'บัญชี Google ส่วนตัว (ลงชื่อผ่าน Antigravity)': 'Personal Google account (native Antigravity sign-in)',
   'ทดลอง: ใช้บัญชี Google ที่ลงชื่อใน Antigravity บนเครื่องนี้ เลิกเชื่อมต่อ STeP แล้วบัญชีนั้นยังลงชื่ออยู่ STeP ปิดเครื่องมือของ Antigravity ทั้งหมด (ไฟล์ คำสั่ง เว็บ MCP) และหยุดคำตอบถ้า AI พยายามใช้':
     'Experimental: uses the Google account signed in to Antigravity on this device. Disconnecting STeP keeps that native account signed in. STeP denies every native tool (files, commands, web, MCP) and stops the reply if the AI tries to use one.',
@@ -409,6 +415,10 @@ export const en: Record<string, string> = {
   'ลงชื่อเข้าใช้บริการ AI': 'Sign in to the AI service',
   'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง':
     'Sign in and approve in your browser. If the service shows an authorization code, paste it here; if it reconnects automatically, this window closes on its own',
+  'ในเบราว์เซอร์ เลือกบัญชี Google แล้วกด "อนุญาต" (Allow)': 'In the browser, choose your Google account and press Allow',
+  'หน้าเว็บ Antigravity จะแสดงรหัส (authorization code) ให้กดคัดลอก': 'The Antigravity page shows an authorization code. Copy it',
+  'กลับมาวางรหัสในช่องนี้ แล้วกดยืนยัน ภายใน 1 นาที': 'Paste the code here and press Confirm within a minute',
+  รหัสจากหน้าเว็บ: 'Code from the page',
   ยืนยัน: 'Confirm',
   ยกเลิก: 'Cancel',
   ตรวจข้อความแนบ: 'Check attached text',
@@ -649,7 +659,8 @@ export const en: Record<string, string> = {
     'Some PDF pages are scanned images with unreadable text, so nothing was sent to avoid the AI summarising incomplete content. Use the original file or remove the image pages',
   'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง': 'Reading the file took too long. Try splitting it into smaller files',
   'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้': "This file can't be opened or read. It may be damaged or password protected",
-  'อ่านเนื้อหาได้ไม่ครบ ระบบจึงยังไม่ส่ง': "The content couldn't be read completely, so it wasn't sent",
+  'ไฟล์มีส่วนที่อ่านเป็นข้อความไม่ได้ เช่น กราฟ SmartArt หรือตาราง Excel ที่ฝังไว้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI ร่างจากเนื้อหาที่ขาดไป พิมพ์ข้อมูลส่วนนั้นเป็นข้อความในไฟล์ หรือบันทึกเป็น PDF แล้วแนบใหม่':
+    "Part of this file can't be read as text, such as a chart, SmartArt or an embedded Excel table, so it wasn't sent and the AI won't draft from missing content. Type that part into the file as text, or save it as PDF, and attach it again",
   'พบข้อมูลที่ต้องให้คนตรวจก่อน และระบบปิดบังให้อัตโนมัติไม่ได้ ปิดบังในไฟล์แล้วแนบใหม่':
     "Found data that needs human review and can't be masked automatically. Mask it in the file and attach it again",
   'ยังยืนยันผลค้นเว็บไม่ได้ บัญชีหรือโมเดลนี้อาจไม่รองรับ Web Search หรือบริการค้นหาขัดข้อง กรุณาลองใหม่หรือเลือก AI อื่น ระบบยังไม่ใช้ความจำตอบแทนข้อมูลล่าสุด':
@@ -1099,25 +1110,70 @@ export const en: Record<string, string> = {
   เลือกตัวเลือกหรือพิมพ์คำตอบ: 'Choose an option or type an answer',
   ส่งคำตอบ: 'Send answer',
   ยกเลิกงานนี้: 'Cancel this task',
-  'แต่ละงานมีบทสนทนาและร่างของตัวเอง งานเก่าอยู่ในแถบนี้ ปักหมุด เปลี่ยนชื่อ หรือค้นจากเนื้อหาได้':
-    'Each task has its own conversation and draft. Earlier tasks live in this list — pin, rename or search them by content',
-  บอกงานเป็นภาษาไทยธรรมดา: 'Describe the task in plain words',
-  'พิมพ์สิ่งที่อยากให้ช่วย กด Enter เพื่อส่ง Shift+Enter ขึ้นบรรทัดใหม่ แนบเอกสารได้ด้วยปุ่มคลิป ระบบจะตรวจข้อมูลส่วนบุคคลก่อนส่ง':
-    'Type what you need: Enter sends, Shift+Enter adds a new line. Attach documents with the paperclip; personal data is checked before anything is sent',
-  'เรียก Skill ได้ตรง ๆ': 'Call a Skill directly',
-  'พิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น /receipt-audit หรือดูทั้งหมดในศูนย์รวม Skill':
-    'Type / in the message box to pick a Skill such as /receipt-audit, or browse them all in the Skill Hub',
-  'เลือก AI และโมเดล': 'Choose AI and model',
-  'เปลี่ยนโมเดลและระดับการคิดได้ทุกเมื่อ ระดับสูงคิดละเอียดขึ้นแต่ช้าและใช้โควตามากขึ้น':
-    'Change model and reasoning level any time. Higher levels think more carefully but are slower and use more quota',
-  ร่างของคุณอยู่ตรงนี้: 'Your draft lives here',
-  'AI เสนอร่างให้ตรวจก่อนเสมอ กด “ใช้ร่างนี้” แล้วแก้ต่อได้ มีประวัติเวอร์ชันและส่งออกเป็น docx, pdf, xlsx, pptx':
-    'The AI always proposes a draft for you to review. Press “Use this draft” to keep editing, with version history and export to docx, pdf, xlsx and pptx',
   เครื่องมือเฉพาะงาน: 'Task-specific tools',
-  'เช่น ตรวจใบเสร็จก่อนส่ง AFP ด้วย OCR ในเครื่อง': 'e.g. checking receipts before sending to AFP, with on-device OCR',
-  ทางลัดทุกอย่าง: 'Shortcuts for everything',
-  'กด Ctrl+K (Mac: ⌘K) เพื่อค้นหางาน สลับโมเดล เปลี่ยนธีม หรือเปิดทัวร์นี้อีกครั้ง':
-    'Press Ctrl+K (Mac: ⌘K) to search tasks, switch models, change the theme or replay this tour',
+  'ผู้ช่วย AI ของ STeP ช่วยร่าง สรุป และตรวจงานให้ คุณแค่บอกเป็นภาษาไทยธรรมดา ไม่ต้องเขียนโปรแกรม และ AI จะเสนอร่างให้คุณตรวจก่อนใช้จริงเสมอ':
+    'The STeP AI assistant drafts, summarises and checks work for you. Just describe it in plain language, no programming needed, and the AI always proposes a draft for you to review before it is used.',
+  'ทัวร์มี 2 ส่วน: พื้นฐานสำหรับเริ่มงาน และเครื่องมือช่วยงาน กดปุ่มลูกศร ← → บนคีย์บอร์ดเพื่อเลื่อนได้':
+    'The tour has 2 parts: the basics for starting a task, and the work tools. Use the ← → arrow keys to move through it.',
+  'เริ่มงานใหม่ 1 เรื่อง ต่อ 1 งาน': 'One task per piece of work',
+  'แต่ละงานมีบทสนทนาและร่างของตัวเอง งานเก่าอยู่ในรายการใต้ปุ่มนี้ ค้นหา ปักหมุด หรือเปลี่ยนชื่อได้':
+    'Each task has its own conversation and draft. Earlier tasks are listed below this button, where you can search, pin or rename them.',
+  'แยกงานคนละเรื่องไว้คนละงาน AI จะได้ไม่สับสนข้อมูล': 'Keep unrelated work in separate tasks so the AI does not mix up information.',
+  'ไม่รู้จะเริ่มอย่างไร กดตัวอย่างงาน': 'Not sure where to start? Pick an example',
+  'ตัวอย่างงานเลือกมาตามทีมของคุณ กดแล้วข้อความจะไปอยู่ในกล่องพิมพ์ แก้รายละเอียดให้ตรงงานจริงก่อนส่งได้':
+    'The examples are chosen for your team. Picking one puts its text in the message box, so you can adjust the details to your real work before sending.',
+  สั่งงานเป็นภาษาไทยธรรมดา: 'Ask in plain language',
+  'บอกเหมือนฝากงานเพื่อนร่วมงาน: อยากได้อะไร ใช้กับใคร ยาวแค่ไหน กด Enter เพื่อส่ง Shift+Enter เพื่อขึ้นบรรทัดใหม่':
+    'Describe it as you would to a colleague: what you need, who it is for and how long it should be. Enter sends, Shift+Enter adds a new line.',
+  'ตัวอย่าง: “สรุปไฟล์นี้เป็น 5 ข้อ สำหรับรายงานผู้บริหาร ใช้ภาษาทางการ”':
+    'Example: “Summarise this file in 5 points for an executive report, in formal language”',
+  'แนบไฟล์ให้ AI อ่าน': 'Attach files for the AI to read',
+  'ปุ่ม + แนบไฟล์ Word, PDF, Excel ได้ ระบบตรวจและปิดบังข้อมูลส่วนบุคคล เช่น เลขบัตรประชาชน เบอร์โทร แล้วให้คุณดูข้อความก่อนส่งทุกครั้ง':
+    'The + button attaches Word, PDF or Excel files. Personal data such as national ID and phone numbers is detected and masked, and you see the text before anything is sent.',
+  เลือกวิธีทำงาน: 'Choose how to work',
+  '“คุยกับผู้ช่วย” ใช้ได้กับงานส่วนใหญ่ งานใหญ่หลายขั้นเลือก “วางแผนก่อนลงมือ” ให้ AI เสนอแผนให้คุณอนุมัติก่อน และเลือก “สร้างรูป” เมื่ออยากได้ภาพ':
+    '“Chat with the assistant” suits most work. For larger multi-step work choose “Plan before acting” so the AI proposes a plan for your approval first, and choose “Create image” when you want a picture.',
+  'ช่องถัดไปคือสิทธิ์เครื่องมือ ค่า “ถามก่อนแก้ไข” หมายถึง AI ต้องขออนุญาตคุณก่อนแก้ไฟล์ในเครื่อง':
+    'The next box is tool permissions. “Ask before editing” means the AI must ask you before changing files on this computer.',
+  ตรวจร่างก่อนใช้จริง: 'Review the draft before using it',
+  'เมื่อ AI ร่างเอกสาร ร่างจะเปิดในแผงทางขวา กด “ใช้ร่างนี้” แล้วแก้ต่อได้ มีประวัติเวอร์ชัน และส่งออกเป็น Word, PDF, Excel หรือ PowerPoint':
+    'When the AI drafts a document it opens in the pane on the right. Press “Use this draft” to keep editing, with version history and export to Word, PDF, Excel or PowerPoint.',
+  'AI ร่าง คนตรวจและอนุมัติ ตรวจตัวเลข ชื่อ และวันที่ทุกครั้งก่อนส่งต่อ':
+    'The AI drafts, people review and approve. Always check figures, names and dates before passing it on.',
+  เครื่องมือร่างเอกสาร: 'Document drafting tool',
+  'ร่าง TOR บันทึกข้อความ หนังสือราชการ โครงการ และรายงานการประชุมตามแบบของ STeP กรอกข้อมูลไม่กี่ช่อง แนบไฟล์อ้างอิงได้ แล้วส่งออกเป็น Word':
+    'Draft TORs, memos, official letters, project proposals and meeting minutes in STeP formats. Fill in a few fields, attach reference files and export to Word.',
+  'แนบรูปหรือสแกนใบเสร็จ ระบบอ่านตัวอักษรด้วย OCR (อ่านข้อความจากภาพ) ในเครื่องของคุณ แล้วบอกว่าข้อมูลครบไหมและควรเบิกหมวดใด':
+    'Attach a photo or scan of a receipt. OCR (reading text from an image) runs on your own computer, then the tool says whether the details are complete and which category to claim under.',
+  'ยังเป็นรุ่นทดลอง ตรวจผลกับใบเสร็จจริงอีกครั้งก่อนส่ง':
+    'Still a trial feature: check the result against the real receipt before submitting.',
+  'Skill คือสูตรงานสำเร็จรูป': 'A Skill is a ready-made work recipe',
+  'Skill รวมขั้นตอนและแบบฟอร์มของงานที่ทำบ่อยไว้ให้ AI ทำตาม ดูทั้งหมดได้ที่นี่ หรือพิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น /receipt-audit':
+    'A Skill bundles the steps and forms of frequent work for the AI to follow. Browse them all here, or type / in the message box to pick one such as /receipt-audit.',
+  'เลือก AI และระดับการคิด': 'Choose the AI and reasoning level',
+  'ปกติใช้ค่าเริ่มต้นได้เลย เปลี่ยนโมเดลหรือระดับการคิดได้ทุกเมื่อ ระดับสูงคิดละเอียดขึ้นแต่ช้าและใช้โควตามากขึ้น':
+    'The defaults are fine for everyday work. Change model or reasoning level any time; higher levels think more carefully but are slower and use more quota.',
+  ตั้งค่าให้เป็นของคุณ: 'Make it yours',
+  'เชื่อมต่อบัญชี AI เปลี่ยนทีม เลือกสไตล์การพูดของผู้ช่วย และสลับธีมสว่างหรือมืดได้ที่นี่':
+    'Connect AI accounts, change team, pick the assistant’s speaking style and switch between light and dark themes here.',
+  รุ่นของแอปและการอัปเดต: 'App version and updates',
+  'ใต้ชื่อของคุณบอกรุ่นที่ใช้อยู่ เมื่อมีรุ่นใหม่จะขึ้นปุ่มอัปเดตตรงนี้ ข้อมูลและงานเดิมยังอยู่ครบหลังอัปเดต':
+    'The line under your name shows the version you are using. When a new version is out, an update button appears here, and your tasks and data stay after updating.',
+  'ลืมว่าอยู่ตรงไหน กด Ctrl+K': 'Lost something? Press Ctrl+K',
+  'กด Ctrl+K (Mac: ⌘K) เพื่อค้นหางานและทุกคำสั่ง เช่น ดูการใช้งาน AI, ความจำของผู้ช่วย, กล่องบทเรียน, มีอะไรใหม่ในรุ่นนี้ หรือเปิดทัวร์นี้อีกครั้ง':
+    "Press Ctrl+K (Mac: ⌘K) to search tasks and every command, such as AI usage, the assistant's memory, the Learning Inbox, what's new in this version or replaying this tour.",
+  พื้นฐาน: 'Basics',
+  เครื่องมือช่วยงาน: 'Work tools',
+  'ยังไม่ได้เชื่อมต่อ AI เริ่มตรงนี้': 'No AI connected yet? Start here',
+  'ก่อนสั่งงานครั้งแรก ต้องเชื่อมต่อบัญชี AI 1 บัญชี กดลิงก์นี้แล้วเลือกบริการที่หน่วยงานใช้ ลงชื่อเข้าใช้ในเบราว์เซอร์ แล้วกลับมาที่แอป':
+    'Before your first request, connect one AI account. Press this link, choose the service your unit uses, sign in in the browser, then come back to the app.',
+  'ไม่แน่ใจว่าใช้บัญชีไหน ถามผู้ดูแลระบบของทีม': 'Not sure which account to use? Ask your team administrator.',
+  'ส่วนที่ {0}': 'Part {0}',
+  'พื้นฐานครบแล้ว เริ่มงานแรกได้เลย หรือดูเครื่องมือช่วยงานต่ออีก {0} ขั้น':
+    'That covers the basics. Start your first task now, or see the work tools in {0} more steps',
+  ดูเครื่องมือต่อ: 'See the tools',
+  เริ่มทัวร์: 'Start the tour',
+  'ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน': 'New here? Take the tour',
   'ทัวร์แนะนำ {0} จาก {1}: {2}': 'Tour {0} of {1}: {2}',
   ข้ามทัวร์: 'Skip tour',
   เริ่มใช้งาน: 'Get started',
@@ -1386,6 +1442,8 @@ export const en: Record<string, string> = {
   'ไม่ได้ลงชื่อหรือวาง code ภายใน 5 นาที กดเชื่อมต่อใหม่เมื่อพร้อม':
     "No sign-in or code within 5 minutes. Press Connect again when you're ready",
   'ลงชื่อเข้าใช้ไม่สำเร็จ ลองใหม่อีกครั้ง': 'Sign-in failed. Please try again',
+  'ลงชื่อ Google ใน Antigravity สำเร็จแล้ว แต่ STeP ยังอ่านการลงชื่อนั้นไม่ได้ ปิดหน้าต่าง Terminal แล้วกดเชื่อมต่อใหม่ ถ้ายังไม่ได้ให้ส่ง log วินิจฉัยให้ผู้ดูแล':
+    "You're signed in to Google in Antigravity, but STeP can't read that sign-in yet. Close the Terminal window and connect again. If it still fails, send the diagnostic log to your administrator",
   'Google ไม่รับ code ที่วาง 3 ครั้ง กดปุ่ม Copy ในหน้า Google แล้ววางใหม่ภายในไม่กี่นาที':
     'Google rejected the pasted code 3 times. Press Copy on the Google page and paste it again within a few minutes',
   ยกเลิกการเชื่อมต่อแล้ว: 'Connection cancelled',
@@ -1485,6 +1543,8 @@ export const en: Record<string, string> = {
   'ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน': 'Sends the source image with OCR text · check the image before confirming',
   'อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง': 'Text read with OCR · check accuracy before sending',
   'ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง': 'Text checked · review before sending',
+  'ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม':
+    'Text checked · {0} picture(s) in the file are not sent to the AI; type in anything important they show',
   'ส่งไฟล์นี้ให้ AI ไม่ได้': "This file can't be sent to the AI",
   'เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง': "The app couldn't start. Please check the installation",
   'ค้นหาเครื่องมือจาก MCP?': 'Search tools from MCP?',
@@ -1789,10 +1849,12 @@ export const en: Record<string, string> = {
   'กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity': 'Checking the Google sign-in in Antigravity',
   'เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี แล้วกด "อนุญาต" (Allow) ภายใน 1 นาที เสร็จแล้ว STeP จะทดสอบให้เอง':
     'Google sign-in opened in your browser. Pick your account and press Allow within a minute. STeP runs the test when you are done',
-  'หน้าลงชื่อในเบราว์เซอร์หมดเวลา STeP จะเปิดหน้าต่างลงชื่อของ Antigravity ให้แทน':
-    'The browser sign-in timed out. STeP will open the Antigravity sign-in window instead',
-  'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ เสร็จแล้ว STeP จะทดสอบให้เอง':
-    'The Antigravity sign-in window will open. Press Enter once (Google OAuth), then sign in with Google in the browser. STeP runs the test when you are done',
+  'ยังลงชื่อไม่สำเร็จ STeP จะเปิดหน้าลงชื่อ Google ให้อีกครั้ง': 'Not signed in yet. STeP will open the Google sign-in page again',
+  'เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี กด "อนุญาต" (Allow) แล้วคัดลอกรหัสที่หน้าเว็บแสดง มาวางในช่องของ STeP ภายใน 1 นาที':
+    'Google sign-in is open in your browser. Choose your account, press Allow, then copy the code the page shows and paste it into STeP within a minute',
+  'ได้รับรหัสแล้ว กำลังตรวจการลงชื่อ': 'Code received. Checking the sign-in',
+  'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ ถ้าหน้าเว็บแสดงรหัส ให้คัดลอกมาวางในหน้าต่างนั้น (คลิกขวาหรือ Ctrl+V บน Windows, Command+V บน Mac) แล้วกด Enter เสร็จแล้ว STeP จะทดสอบให้เอง':
+    'The Antigravity sign-in window will open. Press Enter once (Google OAuth), then sign in with Google in the browser. If the page shows a code, copy it, paste it into that window (right-click or Ctrl+V on Windows, Command+V on Mac) and press Enter. STeP runs the test when you are done',
   'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ':
     'Could not install the Antigravity CLI. Press connect again, or install it from the guide',
   'ดาวน์โหลด Antigravity CLI ไม่สำเร็จ ตรวจอินเทอร์เน็ตหรือการเข้าถึง storage.googleapis.com แล้วลองใหม่':
@@ -1824,4 +1886,55 @@ export const en: Record<string, string> = {
   ใช้ล่าสุด: 'Last used',
   '{0} (หยุดใช้แล้ว)': '{0} (disabled)',
   ยังไม่ถูกใช้: 'Not used yet',
+  'หน้าตรวจใบเสร็จปรับการจับร้านค้า เล่มที่/เลขที่ วันที่ภาษาไทย และรายการค่าใช้จ่าย โดยยังต้องตรวจเทียบต้นฉบับแล้วกดยืนยันครั้งเดียว':
+    'Receipt review improves merchant, book/bill number, Thai date and expense-item mapping. Compare the form with the original and confirm once.',
+  'Gemini ผ่าน Antigravity ช่วยจัดข้อความ OCR เข้าฟอร์มอัตโนมัติ และไม่ทับข้อมูลที่คุณแก้เอง เส้นทางนี้ยังไม่อ่านภาพโดยตรง':
+    'Gemini via Antigravity automatically sorts OCR text into the form and preserves your edits. This connection still cannot read images directly.',
+  'ผลทดสอบ OCR รุ่นนี้ใช้ข้อมูลสังเคราะห์ ยังไม่ยืนยันความแม่นยำกับใบเสร็จจริง':
+    'OCR checks for this version use synthetic data; accuracy on real receipts remains unverified.',
+  'เพิ่มการป้องกันไฟล์ที่เชื่อมโยง ข้อมูลลงชื่อเข้าใช้ และบริการ OCR ในเครื่อง':
+    'Add protections for linked files, sign-in credentials and the local OCR service.',
+  'แก้การดาวน์โหลดอัปเดตบน Mac และการลองลงชื่อ Antigravity ใหม่หลังหมดเวลา':
+    'Fix Mac update downloads and Antigravity sign-in retries after a timeout.',
+  'สัญลักษณ์รอ AI เป็นลายเส้นขยุกขยิกขนาดเล็ก เหมือนกำลังคิด': 'The AI waiting indicator is a small animated scribble, as if thinking.',
+  'แนบไฟล์ Word ที่มีรูป เช่น ตราครุฑหรือหัวกระดาษ ในเครื่องมือร่างเอกสารได้แล้ว ข้อความในไฟล์ส่งให้ AI ครบ ส่วนรูปไม่ได้ส่ง':
+    'Word files with pictures, such as the Garuda emblem or a letterhead, can be attached in the document tools. All the text goes to the AI; the pictures are not sent.',
+  'ถ้าแนบไฟล์ไม่ผ่าน ระบบบอกเหตุผลและวิธีแก้ เช่น ไฟล์มีกราฟหรือตาราง Excel ที่ฝังไว้':
+    'When a file cannot be attached, STeP says why and how to fix it, for example a chart or an embedded Excel table.',
+  'Mac: ตั้งแต่การอัปเดตครั้งถัดไป กดอัปเดตแล้วแอปดาวน์โหลดและติดตั้งเอง ไม่ต้องไปหน้า GitHub':
+    'Mac: from the next update on, the app downloads and installs updates itself, with no trip to GitHub.',
+  'หน้าตั้งค่าเริ่มต้นมี Gemini via Antigravity ให้เลือกทันที ใช้บัญชี Google ได้โดยไม่ต้องมีคีย์':
+    'First-run setup offers Gemini via Antigravity right away: use your Google account, no key needed.',
+  'หน้าต่าง "มีอะไรใหม่" นี้จะขึ้นหลังอัปเดตทุกครั้ง เปิดดูอีกได้จากคำสั่ง (Ctrl+K หรือ ⌘K บน Mac)':
+    'This "What\'s new" window appears after every update. Open it again from the command palette (Ctrl+K, or ⌘K on Mac).',
+  'Antigravity บน Mac: วางรหัสจากหน้าเว็บ Google ในแอปได้ และไม่ค้างที่ "กำลังเชื่อมต่อ"':
+    'Antigravity on Mac: paste the code from Google\'s page into the app, and no more hanging on "connecting".',
+  'ไฟล์ติดตั้งสำหรับ Mac มีคู่มือเปิดแอปครั้งแรกเป็นภาษาไทย': 'The Mac installer includes a Thai guide to opening the app the first time.',
+  'เชื่อมต่อ Antigravity แล้วหน้าลงชื่อ Google เปิดในเบราว์เซอร์ให้เลย':
+    'Connecting Antigravity opens the Google sign-in page in your browser.',
+  'เครื่องมือร่างเอกสาร หน้าตรวจใบเสร็จแบบใหม่ และหน้าดูการใช้งาน AI': 'Document tools, a new receipt check page and an AI usage page.',
+  กล่องบทเรียนบอกได้ว่าบทเรียนที่อนุมัติไว้ช่วยงานจริงหรือไม่: 'The Learning Inbox shows whether approved lessons actually help.',
+  มีอะไรใหม่: "What's new",
+  รับทราบ: 'Got it',
+  'STeP Desktop รุ่น {0}': 'STeP Desktop {0}',
+  มีอะไรใหม่ในรุ่นนี้: "What's new in this version",
+  'ปรับ OCR สำหรับภาพซีด ภาพหมุน และตัวเลขใบเสร็จ โดยยังต้องตรวจเทียบต้นฉบับก่อนยืนยัน':
+    'Improved OCR for faded and rotated images and receipt numbers. Compare with the original before confirming.',
+  'PDF ที่มีข้อความอยู่แล้วเปิดอ่านได้เร็วขึ้น โดยไม่เริ่มโมเดล OCR': 'PDFs with existing text open faster without starting the OCR model.',
+  'ป้องกันการบันทึกผลทดลอง OCR เข้า Git และแยกค่าที่ยังไม่ได้ตรวจออกจากค่าที่คนยืนยัน':
+    'Keep OCR trial reports out of Git and distinguish unchecked readings from human-confirmed values.',
+  'ผลทดสอบรุ่นนี้ใช้ใบเสร็จสังเคราะห์ ยังไม่ยืนยันความแม่นยำกับเอกสารจริง':
+    'This version was tested with synthetic receipts. Accuracy on real documents remains unverified.',
+  'คู่มือเพิ่มวิธีสร้างรูปด้วย API key และข้อจำกัดของคำสั่งภาพรวมกับการทำภาพต่อจากเดิม':
+    'The guide explains API-key image generation and current text-overview and image follow-up limitations.',
+  'มีอัปเดต {0}': 'Update {0} available',
+  'กำลังตรวจอัปเดต…': 'Checking for updates…',
+  เป็นเวอร์ชันล่าสุด: 'Up to date',
+  ตรวจอัปเดตไม่สำเร็จ: 'Update check failed',
+  ตรวจอัปเดต: 'Check for updates',
+  ตรวจหาเวอร์ชันใหม่: 'Check for a new version',
+  'ใต้ชื่อของคุณแสดงเลขเวอร์ชัน และบอกว่าเป็นรุ่นล่าสุดหรือมีอัปเดตใหม่ กดที่บรรทัดนี้เพื่อตรวจอัปเดตได้':
+    'Your version number now shows under your name, with whether you are up to date or an update is out. Click it to check for updates.',
+  'หน้าร่างเอกสาร: ชนิดเอกสารที่เลือกเป็นพื้นเหลือง ตัวหนังสืออ่านชัดทั้งธีมสว่างและมืด':
+    'Document tools: the selected document type is solid yellow and easy to read in light and dark themes.',
 };

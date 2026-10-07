@@ -32,6 +32,7 @@ put('settings', 'main', {
   workspace,
   theme: 'light',
   onboarding: true,
+  whatsNewSeen: '999.0.0',
   tourDone: true,
   consentedAt: new Date().toISOString(),
   termsVersion: '2026-10-02',

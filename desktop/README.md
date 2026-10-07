@@ -12,6 +12,16 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
+## Desktop 0.5.21
+
+This version improves local Thai receipt OCR without adding models or changing policy defaults. Nine synthetic images improved canonical field matches from 50/63 to 59/63; four incorrect or absent fields remain. Native-text PDFs skip PaddleOCR import/startup. See the [synthetic quality report](../experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md) for timing, memory and remaining review failures. Real-document acceptance and employee-hardware performance remain unverified.
+
+## Text-to-image generation
+
+Connect an OpenAI or Gemini API-key account, choose **สร้างรูป**, provide a complete brief and select an account-listed image model. Review the result in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth access. Reference images, image editing and inpainting are not supported by this Desktop path.
+
+Known limitations in this version: Chat auto-routing can interpret Thai text-overview requests beginning with `สร้างภาพรวม` as paid image requests, even with a no-image instruction. Use `สรุปภาพรวม` for text. Follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
+
 ## Run
 
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:
@@ -29,6 +39,8 @@ In-app chat on the employee's own Claude plan ("Your plan through Claude Code") 
 For Claude subscription chat, install Claude Code 2.1.268 or newer yourself, choose Claude → บัญชี Claude, then connect. Claude Code opens the browser and manages authentication; paste a code into STeP only if prompted. Login, status, SDK inference and logout share a per-connection `CLAUDE_CONFIG_DIR` under STeP app data. The installed executable is used for both authentication and SDK requests. STeP does not copy personal Claude credentials, implement OAuth itself, or automatically install Claude Code. API-key chat and the optional external Claude Code handoff remain available. If the runtime is removed, reinstall it before signing out so it can clear its credential store. Live Pro access and macOS credential isolation require separate live validation; automated tests do not prove subscription entitlement.
 
 ## Verification
+
+See the [2026-10-06 security review](../docs/desktop-security-review.md) for corrected file/OCR boundaries, dependency audit evidence and the native-platform, signing, DNS and policy limits that remain before organizational rollout.
 
 Phase 6 adds [bounded clean-read transmission consent and a feature matrix](../docs/desktop-phase6.md). Employees can explicitly approve a source scope for one round and revoke it from the composer. When `checks.privacy` is on (it is off by default, see [organization checks](../docs/desktop-policy.md#organization-checks-checks)), privacy checks run on every result; new scopes, masking, document/MCP/command/write results and business actions retain their own gates. Administrators can disable the scoped choice with `transmissionConsent.allowRunScope=false`.
 
@@ -66,7 +78,7 @@ STEP_EVAL_APPROVE_LIVE=1 STEP_EVAL_PROVIDER=claude STEP_EVAL_API_KEY=... STEP_EV
 
 An installed STeP Desktop updates itself, as Claude, Cursor and Codex do. It checks the `desktop-latest` release of this repository 15 seconds after opening and every 4 hours, downloads a newer version in the background, and shows **รีสตาร์ทเพื่ออัปเดต** in the title bar. A downloaded update also installs when the app quits. STeP menu → ช่วยเหลือ → ตรวจหาอัปเดต checks immediately. Policy feature `autoUpdate` turns this off.
 
-To publish a version, bump `version` in `desktop/package.json`, then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow then builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. On macOS the app installs updates itself only when it is signed with the organisation's Developer ID; an ad-hoc signed build shows a download button instead.
+To publish a version, bump `version` in `desktop/package.json` and its lockfile, add the version's in-app notes in `src/whats-new.ts`, and update the README version and CHANGELOG. Then push the tag `desktop-v<version>` or run the workflow by hand with **publish** ticked; a version is published only once. The `Build STeP Desktop installers` workflow builds and tests the three installers, publishes the `desktop-v<version>` release, and replaces the files of `desktop-latest`. From Desktop 0.5.18, macOS uses the verified ZIP update flow described above for the current ad-hoc signed builds.
 
 ### Optional local Thai OCR
 
@@ -81,8 +93,10 @@ The automatic component currently supports Windows x64, macOS Apple silicon, and
 The receipt page leads with document usability, detected type, a suggested expense
 category and next steps. OCR and optional vision fill the existing form; source-backed
 Thai digits, valid dates and money are formatted without filling absent values. Vision
-also transcribes expense item descriptions. The local fallback uses explicit item
-labels, never the merchant name. Category suggestions reference the registered AFP
+also transcribes expense item descriptions. The local fallback reads the explicitly
+labelled item table, skipping column headings and numeric cells, never the merchant
+name. Cash-bill mapping preserves book/bill numbers and Thai month dates and excludes
+the buyer section from issuer candidates. Category suggestions reference the registered AFP
 circular and remain recommendations after human checking (for example, drinking water
 can suggest B10; generic drinks cannot). Mixed categories or insufficient purpose stay
 unresolved. BV suggestions require a date on/after the registered 1 September 2026 change.
@@ -115,7 +129,9 @@ differences; this panel does not replace the benchmark's canonical scoring. RAM 
 explicitly unmeasured. A single document does not close the acceptance gate or prove
 model accuracy. Record employee-machine RAM separately for the broader pilot.
 
-With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, the Receipt page also sends the receipt image to the connected AI, after a one-time consent. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads the fields independently of the OCR, and the page compares the two field by field; a person still confirms every field. Without the OCR component, the AI reading alone is available. With `checks.privacy` on, no image is sent.
+With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, an image-capable connection reads the receipt image after a one-time consent. Gemini API/organization CLI uses its advertised ACP image capability; **Gemini via Antigravity, compatible endpoints and Copilot currently use text-only transports**. The page displays the selected reading mode, including after OCR startup, installation or folder selection. The image is resized to 1800 px at most; a PDF sends its first three pages. The AI reads independently of OCR and the page compares the readings; the person confirms the populated form once. With an image-capable connection, AI-only reading is available without local OCR. With `checks.privacy` on, no image is sent.
+
+For a text-only connection, local OCR is required. After opening a receipt, the connected AI automatically reconciles existing OCR candidates, including the source-backed expense description, after the existing text-transmission consent. Masking and typed candidate-token restrictions remain enforced. The AI may correct a selected OCR candidate but cannot overwrite manual edits, invent missing values or recover text that OCR never read from the image. Real handwriting/image accuracy remains subject to pilot acceptance; use an image-capable connection such as Gemini API to read the original directly.
 
 The page also shows the document type (from the AI or the printed heading) and a checklist for the chosen claim category. Each item names its source: AFP circulars, general payment-document elements to confirm with AFP, or "no source yet, ask AFP". The checklist prepares documents; it is not an approval.
 

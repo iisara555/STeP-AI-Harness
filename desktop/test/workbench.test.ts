@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, symlink, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rename, symlink, link, unlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from '../electron/store';
@@ -68,6 +68,63 @@ test('staging is inert and applying refuses stale content or a changed workspace
   }
 });
 
+test('hard links cannot expose or overwrite files outside the workspace', async () => {
+  const f = await fixture(),
+    outside = await mkdtemp(join(tmpdir(), 'step-hardlink-outside-'));
+  try {
+    const original = join(outside, 'private.txt');
+    await writeFile(original, 'synthetic private content');
+    await link(original, join(f.root, 'innocent.txt'));
+    await assert.rejects(f.tools.read('innocent.txt'), /INVALID_PATH/);
+    await assert.rejects(f.tools.bytes('innocent.txt'), /INVALID_PATH/);
+    await assert.rejects(f.tools.stage('innocent.txt', 'replacement'), /INVALID_PATH/);
+    await writeFile(join(f.root, 'reviewed.txt'), 'synthetic private content');
+    const change = await f.tools.stage('reviewed.txt', 'replacement');
+    await unlink(join(f.root, 'reviewed.txt'));
+    await link(original, join(f.root, 'reviewed.txt'));
+    await assert.rejects(f.tools.apply(change.id), /INVALID_PATH/);
+    assert.equal(await readFile(original, 'utf8'), 'synthetic private content');
+  } finally {
+    await f.close();
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test(
+  'Git diff treats workspace filenames literally rather than expanding a pathspec into denied files',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const f = await fixture(),
+      policy = defaultPolicy();
+    const tools = new Workbench(
+      f.store,
+      text => text,
+      () => policy,
+    );
+    const execute = promisify(execFile);
+    const git = (...args: string[]) =>
+      execute('git', ['-C', f.root, '--literal-pathspecs', '-c', 'user.name=Synthetic', '-c', 'user.email=test@example.invalid', ...args], {
+        windowsHide: true,
+      });
+    try {
+      await writeFile(join(f.root, '*.md'), 'before');
+      await writeFile(join(f.root, 'blocked.md'), 'before');
+      await git('init', '--quiet');
+      await git('add', '*.md', 'blocked.md');
+      await git('commit', '--quiet', '-m', 'Synthetic pathspec fixture');
+      await writeFile(join(f.root, '*.md'), 'allowed synthetic content');
+      await writeFile(join(f.root, 'blocked.md'), 'SYNTHETIC_DENIED_DOCUMENT');
+      policy.permission.pathRules = [{ pattern: 'blocked.md', allow: false }];
+      const result = await tools.diff();
+      assert.match(result.diff, /allowed synthetic content/);
+      assert.doesNotMatch(result.diff, /SYNTHETIC_DENIED_DOCUMENT/);
+    } finally {
+      await tools.close();
+      await f.close();
+    }
+  },
+);
+
 test('canonical credential paths and managed rules remain hidden in file listings and Git diff', async () => {
   const f = await fixture();
   const policy = defaultPolicy();
@@ -102,6 +159,13 @@ test('canonical credential paths and managed rules remain hidden in file listing
     const diff = await tools.diff();
     assert.match(diff.diff, /allowed public content/);
     assert.doesNotMatch(diff.diff, /excluded-credential-content|excluded managed content|\.env/);
+    assert.doesNotMatch(diff.status, /\.env|blocked\.md/, 'denied filenames must not leak through Git status either');
+    await writeFile(join(f.root, 'blocked.md'), 'before');
+    await rename(join(f.root, 'blocked.md'), join(f.root, 'renamed.md'));
+    await git('add', 'blocked.md', 'renamed.md');
+    const renamed = await tools.diff();
+    assert.doesNotMatch(renamed.status, /blocked\.md|renamed\.md/, 'a denied source also hides a staged rename');
+    assert.doesNotMatch(renamed.diff, /blocked\.md|renamed\.md/);
   } finally {
     await tools.close();
     await f.close();

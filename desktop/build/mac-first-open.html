@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>วิธีเปิด STeP Desktop ครั้งแรกบน Mac</title>
+<style>
+  body { font: 17px/1.6 -apple-system, "Sukhumvit Set", "Thonburi", sans-serif; max-width: 680px; margin: 32px auto; padding: 0 16px; color: #1d1d1f; background: #fff; }
+  h1 { font-size: 26px; margin-bottom: 4px; }
+  h2 { font-size: 20px; margin-top: 32px; }
+  .note { background: #f2f6ff; border-radius: 10px; padding: 12px 16px; }
+  .warn { background: #fff4e5; border-radius: 10px; padding: 12px 16px; }
+  code { display: block; background: #1d1d1f; color: #fff; padding: 12px 14px; border-radius: 8px; font: 15px/1.5 Menlo, monospace; user-select: all; overflow-wrap: anywhere; }
+  b { white-space: nowrap; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1d1d1f; color: #f5f5f7; }
+    .note { background: #1f2a40; }
+    .warn { background: #3a2c14; }
+    code { background: #000; }
+  }
+</style>
+</head>
+<body>
+<h1>วิธีเปิด STeP Desktop ครั้งแรกบน Mac</h1>
+<p>ทำครั้งเดียวต่อเครื่อง หลังจากนี้เปิดและอัปเดตได้ตามปกติ</p>
+
+<div class="warn"><b>อย่ากด Move to Trash</b> ถ้า macOS ถามตอนเปิดครั้งแรก STeP Desktop ยังไม่ได้ลงชื่อด้วยใบรับรองของ Apple macOS จึงบล็อกการเปิดครั้งแรกไว้ก่อน แอปไม่ได้เสียและไม่มีไวรัส</div>
+
+<h2>1. ย้ายแอปไปที่ Applications</h2>
+<p>ในหน้าต่างนี้ ลากไอคอน <b>STeP Desktop</b> ไปวางบนโฟลเดอร์ <b>Applications</b></p>
+
+<h2>2. เปิดแอปจาก Applications</h2>
+<p>เปิด Finder → Applications แล้วดับเบิลคลิก STeP Desktop ถ้าแอปเปิดได้เลยก็เสร็จแล้ว ถ้าขึ้นหน้าต่างเตือน ให้ดูข้อความในหน้าต่างแล้วทำตามข้อ 3 หรือข้อ 4</p>
+
+<h2>3. ถ้าขึ้นว่า “Apple could not verify…” หรือ “cannot be opened”</h2>
+<ol>
+  <li>กด <b>Done</b> (หรือ OK) ปิดหน้าต่าง</li>
+  <li>เปิด <b>System Settings → Privacy &amp; Security</b> แล้วเลื่อนลงล่างสุด</li>
+  <li>ตรงบรรทัด “STeP Desktop was blocked…” กด <b>Open Anyway</b> ใส่รหัสผ่านเครื่อง แล้วกด <b>Open Anyway</b> อีกครั้ง</li>
+</ol>
+
+<h2>4. ถ้าขึ้นว่า “is damaged and can’t be opened”</h2>
+<ol>
+  <li>กด <b>Cancel</b> (อย่ากด Move to Trash)</li>
+  <li>เปิดแอป <b>Terminal</b> (กด Command + Space พิมพ์ Terminal แล้วกด Enter)</li>
+  <li>คัดลอกคำสั่งนี้ไปวาง แล้วกด Enter
+    <code>xattr -cr "/Applications/STeP Desktop.app"</code>
+    คำสั่งนี้ลบป้าย “ไฟล์ที่ดาวน์โหลดจากอินเทอร์เน็ต” ออกจากแอป ไม่ได้เปลี่ยนอะไรอย่างอื่นในเครื่อง</li>
+  <li>ดับเบิลคลิก STeP Desktop ใน Applications อีกครั้ง</li>
+</ol>
+
+<div class="note">ดาวน์โหลด STeP Desktop จากหน้า Release ของ STeP เท่านั้น ถ้าได้ไฟล์มาจากที่อื่น อย่าข้ามคำเตือนของ macOS ให้ถามผู้ดูแล STeP ก่อน</div>
+</body>
+</html>

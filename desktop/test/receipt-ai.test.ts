@@ -2,6 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from '../electron/receipt-ai';
 
+test('text-only AI can select an expense description only from its existing source token', () => {
+  const built = buildReceiptAiResolver(
+    {
+      fields: {
+        expenseDescription: {
+          label: 'รายการค่าใช้จ่าย',
+          selected_value: 'ค่าเครื่องดื่ม',
+          candidates: [{ value: 'ค่าเครื่องดื่ม', evidence: 'รายการ ค่าเครื่องดื่ม' }],
+        },
+      },
+    },
+    text => text,
+  );
+  const selected = resolveReceiptAiResponse(
+    '{"decisions":{"expenseDescription":{"choice":"C_expenseDescription_1"}}}',
+    built.tokens,
+    built.fields,
+  );
+  assert.equal(selected[0].value, 'ค่าเครื่องดื่ม');
+  assert.throws(
+    () => resolveReceiptAiResponse('{"decisions":{"expenseDescription":{"choice":"ค่าหนังสือ"}}}', built.tokens, built.fields),
+    /OCR_AI_INVALID_RESPONSE/,
+  );
+});
+
 test('AI OCR resolver hides candidate values behind local tokens', () => {
   const mapping = {
     schema: 'step-afp-receipt-precheck-mapping/v1',

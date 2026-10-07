@@ -10,6 +10,37 @@ async function loadReview() {
   return context.window.ReceiptReview;
 }
 
+test('a synthetic cash bill keeps seller and buyer separate and maps book/bill numbers and a Thai month date', async () => {
+  const review = await loadReview();
+  const texts = [
+    'บิลเงินสด CASH SALE',
+    'ร้านสมมติ เครื่องดื่ม',
+    'เล่มที่ BOOK NO. 003',
+    'เลขที่ BILL NO. 042',
+    'วันที่ DATE',
+    '๔ พ.ย. ๒๕๖๙',
+    'นามลูกค้า NAME',
+    'บริษัท ผู้ซื้อสมมติ จำกัด',
+    'รายการ DESCRIPTION',
+    'ค่าเครื่องดื่ม',
+    'รวมเงิน 147.00',
+  ];
+  const fields = review.extractReceipt({
+    pages: [{ page: 1, source: 'ocr', lines: texts.map(text => ({ text, confidence: 0.96 })) }],
+  }).fields;
+  assert.equal(fields.merchant.value, 'ร้านสมมติ เครื่องดื่ม');
+  assert.equal(fields.receiptNumber.value, 'เล่ม 003 เลขที่ 042');
+  assert.equal(fields.date.value, '4 พ.ย. 2569');
+  assert.ok(fields.receiptNumber.sourceTexts.some((text: string) => text.includes('003')));
+  assert.ok(fields.receiptNumber.sourceTexts.some((text: string) => text.includes('042')));
+  const buyerOnly = review.extractReceipt({
+    pages: [
+      { page: 1, source: 'ocr', lines: texts.filter(text => text !== 'ร้านสมมติ เครื่องดื่ม').map(text => ({ text, confidence: 0.96 })) },
+    ],
+  });
+  assert.equal(buyerOnly.fields.merchant.value, '', 'neither the cash-sale heading nor the buyer is an issuer');
+});
+
 test('AFP mapping fills fields when OCR splits labels and values into separate boxes', async () => {
   const review = await loadReview();
   const lines = [

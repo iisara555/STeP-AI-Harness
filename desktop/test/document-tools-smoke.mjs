@@ -51,6 +51,7 @@ db.prepare('INSERT INTO records VALUES(?,?,?)').run(
     workspace,
     theme: 'light',
     onboarding: true,
+    whatsNewSeen: '999.0.0',
     tourDone: true,
     consentedAt: new Date().toISOString(),
     termsVersion: '2026-10-02',
@@ -76,6 +77,7 @@ try {
   });
   await app.evaluate(({ safeStorage, dialog }, file) => {
     safeStorage.isEncryptionAvailable = () => true;
+    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
     safeStorage.encryptString = s => Buffer.from('k' + s);
     safeStorage.decryptString = b => b.toString().slice(1);
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });

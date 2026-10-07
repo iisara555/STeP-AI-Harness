@@ -450,7 +450,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     {
       id: 'antigravity',
       label: 'Gemini via Antigravity',
-      description: t('ใช้บัญชี Google ของคุณ กดครั้งเดียว STeP ติดตั้งและพาลงชื่อให้ (ทดลอง)'),
+      description: t('ใช้บัญชี Google ไม่ต้องใช้คีย์ (ทดลอง)'),
       kind: 'account',
       choice: { ...initialChoice, provider: 'antigravity', mode: 'subscription', model: ANTIGRAVITY_MODEL },
     },
@@ -463,7 +463,8 @@ const tileFor = (tiles: Tile[], c: ProviderChoice) =>
   tiles.find(tile =>
     c.preset ? tile.choice.preset === c.preset : !tile.choice.preset && tile.choice.provider === c.provider && tile.choice.mode === c.mode,
   );
-const MAIN_TILES = ['chatgpt', 'claude-sub', 'openrouter', 'gemini-api'];
+// Antigravity is on the first page so staff with only a Google account can connect without a key.
+const MAIN_TILES = ['chatgpt', 'claude-sub', 'openrouter', 'gemini-api', 'antigravity'];
 const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'API key', local: 'ในเครื่องนี้' };
 
 export function ProviderFields(props: {

@@ -12,7 +12,7 @@
     receiptNumber: {
       label: "เลขที่ใบเสร็จ",
       requiredForPrecheck: false,
-      aliases: /เลขที่ใบเสร็จ(?:รับเงิน)?|เลขที่ใบกำกับ(?:ภาษี)?|เลขที่เอกสาร|เลขที่บิล|receipt\s*(?:no\.?|number|#)|invoice\s*(?:no\.?|number|#)|document\s*(?:no\.?|number)|bill\s*(?:no\.?|#)|inv\s*(?:no\.?|#)|เลขที่(?!\s*(?:ผู้เสียภาษี|ประจำตัว|บัญชี|สาขา))|^(?:no\.|no\s*:|no\s+(?=\d)|#)/i,
+      aliases: /เลขที่ใบเสร็จ(?:รับเงิน)?|เลขที่ใบกำกับ(?:ภาษี)?|เลขที่เอกสาร|เลขที่บิล|receipt\s*(?:no\.?|number|#)|invoice\s*(?:no\.?|number|#)|document\s*(?:no\.?|number)|bill\s*(?:no\.?|number|#)|inv\s*(?:no\.?|#)|เลขที่(?!\s*(?:ผู้เสียภาษี|ประจำตัว|บัญชี|สาขา))|^(?:no\.|no\s*:|no\s+(?=\d)|#)/i,
     },
     date: {
       label: "วันที่",
@@ -47,6 +47,7 @@
   // Abbreviations need a space before them so "บจ." (a company) is not read as "จ." (a province).
   const addressWords = /หมู่(?:ที่)?\s|ถนน|ซอย|ตำบล|อำเภอ|จังหวัด|แขวง|เขต|(?:^|\s)[ถซตอจ]\.|\b(?:road|soi|moo)\b/i;
   const requiredKeys = fieldKeys.filter((key) => afpFieldSchema[key].requiredForPrecheck);
+  const buyerMarker = /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|เลข(?:ประจำตัว)?(?:ผู้เสียภาษี)?(?:ของ)?(?:ผู้ซื้อ|ลูกค้า)|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
   const thaiDigits = "๐๑๒๓๔๕๖๗๘๙";
 
   function normalizeDigits(value) {
@@ -117,6 +118,7 @@
               page: page.page,
               confidence: line.confidence ?? null,
               box: line.box || null,
+              polygon: line.polygon || null,
               needsReview: Boolean(line.needs_review),
               crosscheckCandidate: line.crosscheck_candidate || "",
               crosscheckConfidence: line.crosscheck_confidence ?? null,
@@ -127,6 +129,7 @@
               handwritingCandidate: line.handwriting_candidate || "",
               textKind: line.text_kind || "uncertain",
               fusionCandidates: Array.isArray(line.fusion_candidates) ? line.fusion_candidates : [],
+              tileCandidates: Array.isArray(line.tile_candidates) ? line.tile_candidates : [],
               engine: "paddle",
             });
           }
@@ -155,6 +158,7 @@
     for (const record of records) {
       expanded.push(record);
       const alternatives = [
+        ...(record.tileCandidates || []).map((item) => ({ engine: "paddle-overlap", text: item.text || "", confidence: item.confidence ?? null, usable: Boolean(item.text) })),
         {
           engine: "tesseract",
           text: record.tesseractCandidate || "",
@@ -208,28 +212,23 @@
     };
   }
 
-  // Common OCR slips inside numbers: "1, 070.00", "1,07O.00", "l,070.00".
+  // OCR often puts a space beside a separator ("1, 070.00"). Letters inside numbers ("1O7.00") are left
+  // unreadable on purpose so a person compares them with the receipt.
   function cleanAmountText(value) {
-    let text = normalizeDigits(value).replace(/(\d)\s*([,.])\s*(?=\d)/g, "$1$2");
-    for (let pass = 0; pass < 3; pass++) {
-      text = text
-        .replace(/(?<=\d)[Oo](?=[\d,.Oo])|(?<=[\d,.])[Oo](?=\d)/g, "0")
-        .replace(/(?<=\d)[lI|](?=[\d,.])|(?<=[\d,.])[lI|](?=\d)/g, "1");
-    }
-    return text;
+    return normalizeDigits(value).replace(/(\d)\s*([,.])\s*(?=\d)/g, "$1$2");
   }
 
   function amountTokens(value) {
     const text = cleanAmountText(value);
     // A percentage ("VAT 7%") is a rate, not an amount.
-    const matches = [...text.matchAll(/(^|[^\d.,])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?![\d%]|\s*%)/g)];
-    return matches.map((match) => match[2]).filter((token) => token.replace(/\D/g, "").length < 11);
+    const matches = [...text.matchAll(/(?<![A-Za-z\d.,/+-])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?![A-Za-z\d.,/%]|\s*%)/g)];
+    return matches.map((match) => match[1]).filter((token) => token.replace(/\D/g, "").length < 11);
   }
 
   function parseMoney(value) {
-    const text = normalizeDigits(value).replace(/[฿\s,]/g, "");
-    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
-    const amount = Number(text);
+    const text = normalizeDigits(value).replace(/[฿\s]/g, "");
+    if (!/^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?$/.test(text)) return null;
+    const amount = Number(text.replace(/,/g, ""));
     return Number.isFinite(amount) ? amount : null;
   }
 
@@ -292,6 +291,15 @@
     return box ? (box[1] + box[3]) / 2 : null;
   }
 
+  function rowSlope(record) {
+    const points = record.polygon;
+    if (!Array.isArray(points) || points.length !== 4 || points.some(p => !Array.isArray(p) || p.length !== 2 || p.some(v => !Number.isFinite(v)))) return null;
+    const dx = points[1][0] + points[2][0] - points[0][0] - points[3][0];
+    const dy = points[1][1] + points[2][1] - points[0][1] - points[3][1];
+    const slope = dx > 0 ? dy / dx : NaN;
+    return Number.isFinite(slope) && Math.abs(slope) <= 0.2 ? slope : null;
+  }
+
   function sameRowCandidates(records, labelRecord, parseValue) {
     if (!labelRecord?.box) return [];
     const labelY = centerY(labelRecord.box);
@@ -299,9 +307,12 @@
       .filter((record) => {
         if (record === labelRecord || record.page !== labelRecord.page || !record.box || record.box[0] < labelRecord.box[2] - 12) return false;
         if (isAnyLabel(record.text)) return false;
-        const otherY = centerY(record.box);
-        const tolerance = Math.max(30, Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]) * 1.25);
-        return Math.abs(labelY - otherY) <= tolerance;
+        const shift = (rowSlope(labelRecord) ?? rowSlope(record) ?? 0) *
+          ((record.box[0] + record.box[2] - labelRecord.box[0] - labelRecord.box[2]) / 2);
+        const otherY = centerY(record.box) - shift;
+        const height = Math.min(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]);
+        const overlap = Math.min(labelRecord.box[3], record.box[3] - shift) - Math.max(labelRecord.box[1], record.box[1] - shift);
+        return height > 0 && overlap / height >= 0.45 && Math.abs(labelY - otherY) <= Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]) * 0.6;
       })
       .map((record) => ({ value: parseValue(record.text), record }))
       .filter((item) => item.value)
@@ -316,6 +327,13 @@
       if (!record || record.page !== labelRecord.page) break;
       // Stop at another recognized field label before parsing it as a value.
       if (isAnyLabel(record.text)) break;
+      if (labelRecord.box && record.box) {
+        const height = Math.max(labelRecord.box[3] - labelRecord.box[1], record.box[3] - record.box[1]);
+        const gap = record.box[1] - labelRecord.box[3];
+        // Same-row values use geometry above. Following values must actually
+        // be nearby on the next row, rather than a distant table/footer number.
+        if (gap < 0 || gap > height * 3) continue;
+      }
       const value = parseValue(record.text);
       if (value) results.push({ value, record, offset });
     }
@@ -323,8 +341,9 @@
   }
 
   // labelWeight(text) scales a label line's candidates; 0 skips the line (e.g. "Sub Total" is not the total).
+  // key names a schema field, or is a label pattern of its own (e.g. เล่มที่).
   function labeledCandidates(records, key, parseValue, labelWeight = () => 1) {
-    const labelRegex = afpFieldSchema[key].aliases;
+    const labelRegex = typeof key === "string" ? afpFieldSchema[key].aliases : key;
     const found = [];
     for (let index = 0; index < records.length; index++) {
       const labelRecord = records[index];
@@ -334,7 +353,11 @@
       const weight = labelWeight(text);
       if (!weight) continue;
 
-      const trailing = cutAtOtherLabel(text.slice(match.end).replace(/^[\s:#.\-]+/, "").trim(), key);
+      let trailing = cutAtOtherLabel(text.slice(match.end).replace(/^[\s:#]+/, "").trim(), key);
+      // Bilingual labels repeat themselves: "เลขที่ BILL NO. 042".
+      for (let again = labelMatch(trailing, labelRegex); again?.index === 0 && again.end > 0; again = labelMatch(trailing, labelRegex)) {
+        trailing = trailing.slice(again.end).replace(/^[\s:#]+/, "").trim();
+      }
       const sameLine = parseValue(trailing);
       if (sameLine) {
         found.push({
@@ -459,7 +482,6 @@
   }
 
   function findTaxId(records) {
-    const buyerMarker = /ชื่อลูกค้า|นามลูกค้า|ชื่อผู้ซื้อ|ข้อมูลผู้ซื้อ|ข้อมูลลูกค้า|\bcustomer\b|\bbuyer\b|\bbill\s*to\b/i;
     const buyerStart = records.findIndex((record) => buyerMarker.test(record.text));
     const sellerRecords = buyerStart < 0 ? records : records.slice(0, buyerStart);
     const buyerRecords = buyerStart < 0 ? [] : records.slice(buyerStart);
@@ -501,12 +523,22 @@
   function findReceiptNumber(records) {
     // A bare "เลขที่" or "No." is weaker evidence than "เลขที่ใบเสร็จ"; it also labels addresses.
     const bare = /^(?:no\.?|#|เลขที่)$/i;
-    return selectCandidate(
+    const bill = selectCandidate(
       labeledCandidates(records, "receiptNumber", receiptNumberValue, (text) => {
         const match = labelMatch(text, afpFieldSchema.receiptNumber.aliases);
         return match && bare.test(text.slice(match.index, match.end).replace(/\s+/g, "").trim()) ? 0.9 : 1;
       }),
     );
+    const book = selectCandidate(labeledCandidates(records, /เล่มที่(?:\s*book\s*(?:no\.?|number|#))?|book\s*(?:no\.?|number|#)/i, receiptNumberValue));
+    if (!bill.value || !book.value) return bill;
+    return {
+      ...bill,
+      value: `เล่ม ${book.value} เลขที่ ${bill.value}`,
+      evidence: `${book.evidence} ↔ ${bill.evidence}`,
+      mappingMethod: "book-and-bill",
+      sourceTexts: [...new Set([...(book.sourceTexts || []), ...(bill.sourceTexts || [])])],
+      candidates: bill.candidates.map(item => ({ ...item, value: `เล่ม ${book.value} เลขที่ ${item.value}`, evidence: `${book.evidence} ↔ ${item.evidence}` })),
+    };
   }
 
   // Subtotal + VAT = total: when one amount is missing or two totals compete, the arithmetic settles it.
@@ -557,6 +589,9 @@
   }
 
   function findMerchant(records) {
+    // A buyer can be another company. Its name and the table below it are never seller-header evidence.
+    const buyerStart = records.findIndex(record => buyerMarker.test(record.text));
+    if (buyerStart >= 0) records = records.slice(0, buyerStart);
     const labeled = labeledCandidates(records, "merchant", (value) => {
       const text = normalizeText(value);
       if (text.length < 3 || text.length > 85) return "";
@@ -565,9 +600,9 @@
     if (labeled.length) return selectCandidate(labeled);
 
     // Document titles alone ("ใบกำกับภาษี/ใบเสร็จรับเงิน (ต้นฉบับ)") are not a shop name.
-    const titleWords = /ใบกำกับภาษีอย่างย่อ|ใบกำกับภาษี|ใบเสร็จรับเงิน|ใบรับเงิน|ใบส่งของ|บิลเงินสด|tax\s*invoice|receipt|invoice|abb|ต้นฉบับ|สำเนา|original|copy/gi;
+    const titleWords = /ใบกำกับภาษีอย่างย่อ|ใบกำกับภาษี|ใบเสร็จรับเงิน|ใบรับเงิน|ใบส่งของ|บิลเงินสด|cash\s*sale|cash\s*bill|tax\s*invoice|receipt|invoice|abb|ต้นฉบับ|สำเนา|original|copy/gi;
     const isTitle = (text) => !text.replace(titleWords, "").replace(/[\s/()\-|,.:]/g, "");
-    const label = /วันที่|date|เลขที่|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer|cash|change|เงินสด|เงินทอน|pos\b|cashier|พนักงาน/i;
+    const label = /วันที่|date|เลขที่|เล่มที่|book\s*no|bill\s*no|ผู้เสียภาษี|tax\s*id|vat|subtotal|total|ยอดรวม|ยอดสุทธิ|โทร|tel\.?|www\.|http|sample|test only|ข้อมูลสมมติ|ห้ามใช้เบิกจ่าย|ลูกค้า|ผู้ซื้อ|customer|buyer|cash|change|เงินสด|เงินทอน|pos\b|cashier|พนักงาน/i;
     const merchantHint = /ร้าน|บริษัท|ห้างหุ้นส่วน|หจก\.?|จำกัด|\b(?:co\.?|ltd\.?|company|store|shop)\b/i;
     const plausible = [];
     for (const record of records.slice(0, 8)) {

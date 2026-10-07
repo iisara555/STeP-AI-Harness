@@ -13,6 +13,7 @@ import {
   nativeTheme,
   clipboard,
   Notification,
+  net,
   session as electronSession,
 } from 'electron';
 import { mkdir, writeFile, stat, appendFile, rm, readFile } from 'node:fs/promises';
@@ -21,11 +22,14 @@ import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { Store } from './store';
+import { prepareLocalData } from './local-data';
+import { requireSecureStorage } from './secure-storage';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
 import { autoUpdater } from 'electron-updater';
-import { Updater, RELEASES_URL } from './updater';
+import { Updater, RELEASES_URL, type SelfInstall } from './updater';
+import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
 import { isAvatarId } from '../src/avatar-ids';
 import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
@@ -51,11 +55,13 @@ import {
   installAntigravityCli,
   openAntigravitySignIn,
   openAntigravityBrowserSignIn,
+  antigravitySignedInWithProfile,
 } from './antigravity-install';
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { draftExportAction } from './actions';
-import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython } from './ocr';
+import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus } from './ocr';
+import { receiptReadingMode } from './receipt-status';
 import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
@@ -171,8 +177,7 @@ async function main() {
   const root = app.isPackaged ? join(process.resourcesPath, 'harness') : resolve(__dirname, '../..');
   const data = app.getPath('userData');
   const { prepareDraft } = await import(pathToFileURL(join(root, 'src/modules/runner/index.js')).href);
-  await mkdir(data, { recursive: true });
-  await mkdir(join(data, 'logs'), { recursive: true });
+  await prepareLocalData(data);
   logFile = join(data, 'logs', 'diagnostics.jsonl');
   let voicePermissionUntil = 0,
     voiceTicketUntil = 0;
@@ -210,6 +215,9 @@ async function main() {
     !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME
       ? process.env.STEP_SHARED_PROFILE || join(data, 'shared-profile.json')
       : sharedProfilePath();
+  // A new install has nothing to catch up on: "What's new" starts from the version it was installed with.
+  if (!store.settings().onboarding && !store.settings().whatsNewSeen)
+    store.put('settings', 'main', { ...store.settings(), whatsNewSeen: app.getVersion() });
   // Before the first-run wizard, start it from the profile set in Setup-STeP-Skills, if there is one.
   if (!store.settings().onboarding) {
     const shared = await readSharedProfile(sharedProfile);
@@ -321,7 +329,7 @@ async function main() {
   async function key(connection: Connection) {
     const encrypted = store.get<string>('secret', connection.id);
     if (!encrypted) return undefined;
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+    requireSecureStorage(safeStorage);
     return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
   }
   // Each connection keeps its runtime's sign-in and state in its own folder under app data.
@@ -414,6 +422,25 @@ async function main() {
     () => policyState.policy,
   );
   if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  // Mac updates without a Developer ID (electron/mac-update.ts): download the zip, check it, swap the bundle after quit.
+  function macSelfInstall(): SelfInstall {
+    const dir = join(data, 'updates');
+    return {
+      prepare: async (info, onProgress) => {
+        const bundle = appBundlePath(process.execPath);
+        if (!bundle || !(await canReplace(bundle))) throw new Error('UPDATE_NOT_REPLACEABLE');
+        const asset = macUpdateAsset(info.files, String(info.version || ''), process.arch);
+        if (!asset) throw new Error('UPDATE_NO_MAC_FILE');
+        const zip = await downloadVerified(asset, join(dir, asset.name), onProgress, (url, init) => net.fetch(url, init));
+        return () => {
+          void startSwap(bundle, zip, process.pid, dir).then(
+            () => app.quit(),
+            () => diagnose('update-swap-failed'),
+          );
+        };
+      },
+    };
+  }
   // In-app updates (electron/updater.ts): only an installed build updates itself; the policy can turn it off.
   const updates = new Updater(app.isPackaged ? autoUpdater : undefined, {
     current: app.getVersion(),
@@ -427,6 +454,7 @@ async function main() {
           : '',
     emit: update => emit({ sessionId: '', type: 'update', update }),
     log: diagnose,
+    selfInstall: process.platform === 'darwin' ? macSelfInstall() : undefined,
   });
   updates.start();
   app.on('before-quit', () => updates.stop());
@@ -936,8 +964,22 @@ async function main() {
   app.on('before-quit', () => ocr.stop());
   // The receipt last opened on the receipt page, kept so the vision model can read the same file.
   let lastReceipt: { name: string; path: string; extension: string; bytes: Buffer } | undefined;
-  const receiptVisionAllowed = () =>
-    policyState.policy.features.vision && policyState.policy.features.receiptVision && !policyState.policy.checks.privacy;
+  const receiptVisionAllowed = (connection?: Connection) => receiptReadingMode(policyState.policy, connection?.provider).vision;
+  async function receiptOcrStatus(input: { connectionId?: unknown }, rawStatus?: OcrStatus) {
+    const status = rawStatus || (await ocr.status());
+    const connection =
+      typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
+    const managed = existsSync(ocrPython(ocrHome));
+    const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
+    return {
+      ...status,
+      running: status.running && current,
+      installed: status.installed && current,
+      updateAvailable: managed && status.installed && !current,
+      installing,
+      ...receiptReadingMode(policyState.policy, connection?.provider),
+    };
+  }
   /** The receipt as pictures for a vision model: images resized to 1800 px at most, a PDF's first three pages. */
   async function receiptImages(receipt: NonNullable<typeof lastReceipt>): Promise<VisionInput[]> {
     if (receipt.extension === 'pdf') return (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'))).slice(0, 3);
@@ -967,7 +1009,7 @@ async function main() {
   async function prepareCompatiblePreset(connection: Connection, preset: NonNullable<ReturnType<typeof presetFor>>, signal: AbortSignal) {
     let apiKey = await key(connection);
     if (!apiKey && preset.signIn === 'openrouter') {
-      if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+      requireSecureStorage(safeStorage);
       emit({
         sessionId: '',
         type: 'connect-progress',
@@ -1023,6 +1065,7 @@ async function main() {
     return file;
   };
   const snapshot = async () => ({
+    appVersion: app.getVersion(),
     usage: ledger.report(),
     features: { claudeSubscription: claudeSubscriptionOn(), providerPresets: policyState.policy.features.providerPresets },
     policy: {
@@ -1764,7 +1807,7 @@ async function main() {
           note: tm('ยังไม่ได้ทดสอบการเชื่อมต่อ'),
         };
         if (input.apiKey) {
-          if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+          requireSecureStorage(safeStorage);
           store.put('secret', id, safeStorage.encryptString(inputText(input.apiKey, 1000)).toString('base64'));
         }
         if (input.mode === 'subscription' || input.mode === 'oauth') store.put('secret', id, null);
@@ -1839,7 +1882,7 @@ async function main() {
             );
           if (connection.provider === 'copilot') {
             if (!policyState.policy.features.copilot || !policyState.policy.providers?.copilot) throw new Error('FEATURE_DISABLED');
-            if (!safeStorage.isEncryptionAvailable()) throw new Error('SECURE_STORAGE_UNAVAILABLE');
+            requireSecureStorage(safeStorage);
             const currentPolicy = policyState.policy;
             const token = await copilotDeviceLogin(currentPolicy.providers!.copilot!.clientId, controller.signal, async (code, url) => {
               emit({
@@ -1870,6 +1913,14 @@ async function main() {
                 openSignIn: () => openAntigravitySignIn(executable, join(data, 'runtimes', 'agy-signin')),
                 openBrowserSignIn: () =>
                   openAntigravityBrowserSignIn(executable, join(data, 'runtimes', 'agy-signin'), url => shell.openExternal(url)),
+                askForCode: () =>
+                  new Promise(resolveCode => {
+                    authCodes.set(connection.id, resolveCode);
+                    emit({ sessionId: '', type: 'auth-code', connectionId: connection.id });
+                  }),
+                dropCode,
+                signedInWithProfile: () =>
+                  antigravitySignedInWithProfile(executable, join(data, 'runtimes', 'agy-signin'), controller.signal),
               },
               controller.signal,
             );
@@ -1945,6 +1996,11 @@ async function main() {
         store.put('settings', 'main', s);
         return s;
       }
+      case 'whatsNewSeen': {
+        const s = { ...store.settings(), whatsNewSeen: app.getVersion() };
+        store.put('settings', 'main', s);
+        return s;
+      }
       // Only fixed help pages open in the browser; nothing from the renderer becomes a URL.
       case 'claudeCode':
         return { installed: Boolean(await findClaudeCode()) };
@@ -2006,34 +2062,26 @@ async function main() {
         } finally {
           installing = false;
         }
-        return ocr.status();
+        return receiptOcrStatus(input);
       }
       case 'ocrStatus': {
-        const status = await ocr.status();
-        const managed = existsSync(ocrPython(ocrHome));
-        const current = !managed || (await ocrComponentCurrent(defaultOcrFolder, ocrHome));
-        return {
-          ...status,
-          running: status.running && current,
-          installed: status.installed && current,
-          updateAvailable: managed && status.installed && !current,
-          installing,
-          vision: receiptVisionAllowed(),
-        };
+        return receiptOcrStatus(input);
       }
       case 'ocrFolder': {
         const picked = await dialog.showOpenDialog(window, { title: tm('เลือกโฟลเดอร์ local-thai-ocr'), properties: ['openDirectory'] });
-        if (picked.canceled) return ocr.status();
+        if (picked.canceled) return receiptOcrStatus(input);
         if (!isOcrFolder(picked.filePaths[0])) throw new Error('OCR_FOLDER_INVALID');
         store.put('settings', 'main', { ...store.settings(), ocrDir: picked.filePaths[0] });
-        return ocr.status();
+        return receiptOcrStatus(input);
       }
       case 'ocrStart':
-        return ocr.start();
+        return receiptOcrStatus(input, await ocr.start());
       case 'ocrRead': {
         const health = await ocr.health();
         // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
-        if (!health.running && (input.localOnly === true || !receiptVisionAllowed())) throw new Error('OCR_UNAVAILABLE');
+        const connection =
+          typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
+        if (!health.running && (input.localOnly === true || !receiptVisionAllowed(connection))) throw new Error('OCR_UNAVAILABLE');
         const picked = await dialog.showOpenDialog(window, {
           title: tm('เลือกใบเสร็จ'),
           properties: ['openFile'],
@@ -2126,6 +2174,7 @@ async function main() {
         if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
         const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
         if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+        if (!receiptVisionAllowed(connection)) throw new Error('VISION_UNAVAILABLE');
         if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
         const settings = store.settings();
         if (!settings.receiptVisionConsentedAt) {
@@ -2183,10 +2232,10 @@ async function main() {
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
         if (saved.canceled || !saved.filePath) return null;
-        if (trial) await assertPrivateTrialPath(saved.filePath);
-        await writeFile(saved.filePath, text, 'utf8');
-        exportPaths.add(saved.filePath);
-        return { path: saved.filePath };
+        const destination = trial ? await assertPrivateTrialPath(saved.filePath) : saved.filePath;
+        await writeFile(destination, text, 'utf8');
+        exportPaths.add(destination);
+        return { path: destination };
       }
       case 'disconnect': {
         const c = store.get<Connection>('connection', input.id);
@@ -2609,7 +2658,9 @@ async function main() {
                 ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
                 : report.ocr
                   ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                  : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+                  : report.images
+                    ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
+                    : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
             : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
           preview: usable ? report.redactedText : '',
           usable,

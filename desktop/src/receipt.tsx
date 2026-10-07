@@ -117,6 +117,7 @@ type OcrStatus = {
   updateAvailable?: boolean;
   /** A vision model may read the receipt image too (policy receiptVision, privacy checks off). */
   vision?: boolean;
+  textOnly?: boolean;
 };
 type Vision = {
   fields: VisionReading;
@@ -242,7 +243,8 @@ export function ReceiptApp({
     [typeOverride, setTypeOverride] = useState<DocumentType | ''>(''),
     [categoryOverride, setCategory] = useState<ClaimCategory | null>(null),
     [expenseDescription, setExpenseDescription] = useState(''),
-    [descriptionEdited, setDescriptionEdited] = useState(false);
+    [descriptionEdited, setDescriptionEdited] = useState(false),
+    [descriptionOrigin, setDescriptionOrigin] = useState<ExtractionMethod>('ocr');
   useEffect(() => onBusy?.(Boolean(busy) && busy !== 'status'), [busy, onBusy]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusy(id);
@@ -254,7 +256,7 @@ export function ReceiptApp({
       setBusy('');
     }
   };
-  const refresh = () => run('status', async () => setStatus(await call('ocrStatus')));
+  const refresh = () => run('status', async () => setStatus(await call('ocrStatus', { connectionId })));
   useEffect(
     () =>
       onEvent(event => {
@@ -264,12 +266,17 @@ export function ReceiptApp({
   );
   // OCR is optional. If the employee installed it before, opening this page starts the local service; otherwise nothing is downloaded.
   useEffect(() => {
+    let current = true;
     void run('status', async () => {
-      const s = await call('ocrStatus');
-      setStatus(s);
-      if (s?.installed && !s.running) setStatus(await call('ocrStart'));
+      const s = await call('ocrStatus', { connectionId });
+      if (!current) return;
+      const next = s?.installed && !s.running ? await call('ocrStart', { connectionId }) : s;
+      if (current) setStatus(next);
     });
-  }, []);
+    return () => {
+      current = false;
+    };
+  }, [connectionId]);
 
   const reviewLines = doc?.result?.summary?.needs_review || 0;
   const resized = (doc?.result?.warnings || []).some((w: string) => /resized/i.test(w));
@@ -290,7 +297,7 @@ export function ReceiptApp({
   const guessCount = Object.keys(guessed).filter(k => String(values[k] || '').trim()).length;
 
   async function read() {
-    const read: (Doc & { elapsedMs?: number }) | null = await call('ocrRead', { localOnly: trialMode });
+    const read: (Doc & { elapsedMs?: number }) | null = await call('ocrRead', { localOnly: trialMode, connectionId });
     if (!read) return;
     const extracted = read.visionOnly ? null : review.extractReceipt(read.result);
     const nextValues = Object.fromEntries(review.fieldKeys.map(k => [k, extracted?.fields[k]?.value || '']));
@@ -321,6 +328,7 @@ export function ReceiptApp({
     setCategory(null);
     setExpenseDescription(expenseDescriptionFromText(String(read.result?.text || '')));
     setDescriptionEdited(false);
+    setDescriptionOrigin('ocr');
     setTrialVision(null);
     setTrialOcr(
       trialMode && extracted
@@ -344,20 +352,18 @@ export function ReceiptApp({
     // The second, independent reading by a vision model, compared with the OCR field by field below.
     if (status?.vision && connectionId) await readWithAi(formValues(nextValues), nextGuessed, true);
     // Without the image reading, the AI still sorts the OCR candidates into the fields (OCR text only, masked).
-    else if (
-      connectionId &&
-      extracted?.afpMapping &&
-      (Object.keys(nextGuessed).length ||
-        (extracted.afpMapping.unresolved_field_lines.length && review.fieldKeys.some(k => !nextValues[k])))
-    )
-      await aiFilter(nextValues, nextGuessed, extracted.afpMapping).catch(() => undefined);
+    else if (connectionId && extracted?.afpMapping)
+      await aiFilter(nextValues, nextGuessed, extracted.afpMapping, true, String(read.result?.text || ''));
   }
   async function readWithAi(current = values, currentGuessed = guessed, newDocument = false) {
     const started = performance.now();
     const reading = await call('receiptVision', { connectionId });
     if (!reading || reading.cancelled) return;
     setVision(reading);
-    if (reading.expenseDescription && (newDocument || !descriptionEdited)) setExpenseDescription(reading.expenseDescription);
+    if (reading.expenseDescription && (newDocument || !descriptionEdited)) {
+      setExpenseDescription(reading.expenseDescription);
+      setDescriptionOrigin('vision');
+    }
     if (trialOcr)
       setTrialVision(
         trialReading(
@@ -436,7 +442,6 @@ export function ReceiptApp({
       source_id: doc?.sourceId,
       created_at: new Date().toISOString(),
       review_state: result.complete ? 'fields_checked' : 'draft_needs_review',
-      notice: 'OCR suggestions checked by a person. This is not a reimbursement approval.',
       fields: Object.fromEntries(
         review.fieldKeys.map(k => [
           k,
@@ -525,7 +530,7 @@ export function ReceiptApp({
       expense_note: note,
       expense_description: {
         value: expenseDescription,
-        input_origin: descriptionEdited ? 'manual' : vision?.expenseDescription ? 'vision' : 'ocr',
+        input_origin: descriptionOrigin,
         checked: allChecked,
         provenance: allChecked && expenseDescription ? 'SOURCE_FACT' : descriptionEdited ? 'USER_INPUT' : 'EXTRACTED_UNVERIFIED',
         sourceRef: `receipt:${doc?.sourceId}`,
@@ -586,21 +591,39 @@ export function ReceiptApp({
     },
     { agree: 0, differ: 0, single: 0 },
   );
-  // The AI picks among the OCR's own candidate tokens for each field; it fills empty and guessed fields only.
-  async function aiFilter(current = values, currentGuessed = guessed, currentMapping = mapping) {
+  // Text-only connections choose existing OCR tokens; they never get image bytes or invent missing values.
+  async function aiFilter(
+    current = values,
+    currentGuessed = guessed,
+    currentMapping = mapping,
+    newDocument = false,
+    text = String(doc?.result?.text || ''),
+  ) {
     if (!currentMapping) return;
+    const sourceDescription = expenseDescriptionFromText(text);
     const filtered = await call('ocrResolve', {
       connectionId,
       mapping: {
         ...currentMapping,
-        fields: Object.fromEntries(
-          review.fieldKeys.map(k => {
-            const base = currentMapping.fields[k];
-            // A guess is not a reading, so the AI sees the field as still open and chooses among all candidates.
-            const open = !String(current[k] || '').trim() || currentGuessed[k];
-            return [k, { ...base, selected_value: open ? '' : current[k], status: open ? 'ambiguous' : base?.status }];
-          }),
-        ),
+        fields: {
+          ...Object.fromEntries(
+            review.fieldKeys.map(k => {
+              const base = currentMapping.fields[k];
+              // A guess is not a reading, so the AI sees the field as still open and chooses among all candidates.
+              const open = !String(current[k] || '').trim() || currentGuessed[k];
+              return [k, { ...base, selected_value: open ? '' : current[k], status: open ? 'ambiguous' : base?.status }];
+            }),
+          ),
+          expenseDescription: {
+            label: 'รายการค่าใช้จ่าย',
+            status: sourceDescription ? 'mapped' : 'unmapped',
+            selected_value: sourceDescription,
+            evidence: sourceDescription,
+            candidates: sourceDescription
+              ? [{ value: sourceDescription, evidence: sourceDescription, method: 'item-table', engine: 'paddle', score: 0.7 }]
+              : [],
+          },
+        },
       },
     });
     if (filtered?.cancelled) return;
@@ -610,7 +633,14 @@ export function ReceiptApp({
       nextGuessed = { ...currentGuessed };
     for (const decision of decisions) {
       const k = decision.field;
-      if (decision.status === 'suggested' && decision.value && (!String(nextValues[k] || '').trim() || currentGuessed[k])) {
+      if (k === 'expenseDescription') {
+        if (decision.status === 'suggested' && decision.value && (newDocument || !descriptionEdited)) {
+          setExpenseDescription(decision.value);
+          setDescriptionOrigin('ai-candidate-filter');
+        }
+        continue;
+      }
+      if (decision.status === 'suggested' && decision.value && (newDocument || origins[k] !== 'manual')) {
         nextValues[k] = decision.value;
         nextGuessed[k] = 'ai';
       }
@@ -649,7 +679,10 @@ export function ReceiptApp({
         </span>
         <span className="spacer" />
         {status && !ready && status.installed && (
-          <button disabled={Boolean(busy)} onClick={() => void run('start', async () => setStatus(await call('ocrStart')))}>
+          <button
+            disabled={Boolean(busy)}
+            onClick={() => void run('start', async () => setStatus(await call('ocrStart', { connectionId })))}
+          >
             {busy === 'start' ? <LoaderCircle size={15} className="spin" /> : <Play size={15} />}
             {t('เปิดบริการ OCR')}
           </button>
@@ -662,9 +695,9 @@ export function ReceiptApp({
                 void run('install', async () => {
                   setInstallProgress(t('กำลังเตรียมส่วนเสริม OCR'));
                   try {
-                    const installed = await call('ocrInstall', { crosscheck: false });
+                    const installed = await call('ocrInstall', { crosscheck: false, connectionId });
                     setStatus(installed);
-                    setStatus(await call('ocrStart'));
+                    setStatus(await call('ocrStart', { connectionId }));
                     notify(t('ติดตั้ง OCR ในเครื่องนี้แล้ว'), 'success');
                   } finally {
                     setInstallProgress('');
@@ -678,7 +711,7 @@ export function ReceiptApp({
             <button
               className="quiet"
               disabled={Boolean(busy)}
-              onClick={() => void run('folder', async () => setStatus(await call('ocrFolder')))}
+              onClick={() => void run('folder', async () => setStatus(await call('ocrFolder', { connectionId })))}
             >
               <FolderOpen size={15} />
               {t('ใช้ OCR ที่มีอยู่')}
@@ -708,9 +741,9 @@ export function ReceiptApp({
                 void run('handwriting', async () => {
                   setInstallProgress(t('กำลังเตรียมโมเดลอ่านลายมือภาษาไทย'));
                   try {
-                    const installed = await call('ocrInstall', { handwriting: true });
+                    const installed = await call('ocrInstall', { handwriting: true, connectionId });
                     setStatus(installed);
-                    setStatus(await call('ocrStart'));
+                    setStatus(await call('ocrStart', { connectionId }));
                     notify(t('ติดตั้งโมเดลอ่านลายมือภาษาไทยแล้ว'), 'success');
                   } finally {
                     setInstallProgress('');
@@ -767,11 +800,17 @@ export function ReceiptApp({
           </button>
           {status?.vision && !trialMode && (
             <p className="small muted">
-              {ready
+              {ready && connectionId
                 ? t('อ่าน 2 ทาง: OCR ในเครื่อง และ AI อ่านภาพแยกกัน แล้วเทียบผลทีละช่อง')
                 : connectionId
                   ? t('ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย (อ่านทางเดียว ติดตั้ง OCR เพิ่มเพื่อเทียบ 2 ทาง)')
                   : t('เชื่อมต่อ AI ก่อน เพื่อให้ AI อ่านภาพใบเสร็จ')}
+            </p>
+          )}
+          {status?.textOnly && !trialMode && (
+            <p className="small muted">
+              {t('AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ')}{' '}
+              {t('ถ้า OCR อ่านตัวอักษรผิด AI แบบข้อความแก้จากภาพไม่ได้ ใช้ AI ที่รองรับภาพเพื่ออ่านต้นฉบับ')}
             </p>
           )}
           <p className="small muted">{t('รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB')}</p>
@@ -1097,6 +1136,7 @@ export function ReceiptApp({
                 onChange={e => {
                   setExpenseDescription(e.target.value);
                   setDescriptionEdited(true);
+                  setDescriptionOrigin('manual');
                   setAllChecked(false);
                 }}
               />

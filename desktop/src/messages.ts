@@ -2,6 +2,8 @@
 import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  SECURE_STORAGE_UNAVAILABLE:
+    'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth',
   INVALID_DOCUMENT_TOOL: 'ชนิดเครื่องมือร่างเอกสารไม่ถูกต้อง หรือ Skill ที่เลือกไม่ตรงกับเครื่องมือ',
   INVALID_DOCUMENT_VARIANT: 'ชนิดเอกสารย่อยไม่ถูกต้อง กรุณาเลือกใหม่',
   INVALID_DOCUMENT_FIELDS: 'ข้อมูลฟอร์มร่างเอกสารไม่ถูกต้อง กรุณาตรวจช่องที่กรอก',
@@ -101,7 +103,8 @@ export const errorText: Record<string, string> = localized({
   ATTACH_SCANNED_TOO_LONG: 'PDF สแกนยาวเกิน 20 หน้า แบ่งไฟล์แล้วแนบทีละส่วน',
   ATTACH_TIMEOUT: 'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง',
   ATTACH_READ_FAILED: 'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้',
-  ATTACH_PARTIAL: 'อ่านเนื้อหาได้ไม่ครบ ระบบจึงยังไม่ส่ง',
+  ATTACH_PARTIAL:
+    'ไฟล์มีส่วนที่อ่านเป็นข้อความไม่ได้ เช่น กราฟ SmartArt หรือตาราง Excel ที่ฝังไว้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI ร่างจากเนื้อหาที่ขาดไป พิมพ์ข้อมูลส่วนนั้นเป็นข้อความในไฟล์ หรือบันทึกเป็น PDF แล้วแนบใหม่',
   ATTACH_NEEDS_REVIEW: 'พบข้อมูลที่ต้องให้คนตรวจก่อน และระบบปิดบังให้อัตโนมัติไม่ได้ ปิดบังในไฟล์แล้วแนบใหม่',
   WEB_SEARCH_UNAVAILABLE:
     'ยังยืนยันผลค้นเว็บไม่ได้ บัญชีหรือโมเดลนี้อาจไม่รองรับ Web Search หรือบริการค้นหาขัดข้อง กรุณาลองใหม่หรือเลือก AI อื่น ระบบยังไม่ใช้ความจำตอบแทนข้อมูลล่าสุด',
@@ -138,6 +141,7 @@ export const errorText: Record<string, string> = localized({
   GOOGLE_CLOUD_PROJECT_INVALID: 'Google Cloud Project ID ไม่ถูกต้อง ใช้ตัวพิมพ์เล็ก ตัวเลข และขีดกลาง 6–30 ตัวอักษร',
   OCR_UNAVAILABLE: 'บริการ OCR ในเครื่องยังไม่เปิด กด “เปิดบริการ OCR” ก่อน',
   OCR_TRIAL_REPO_PATH: 'ข้อมูลทดลอง OCR ต้องอยู่นอก Git repo กรุณาเลือกโฟลเดอร์ส่วนตัวบนเครื่อง',
+  OCR_TRIAL_UNSAFE_PATH: 'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR',
   OCR_NOT_INSTALLED: 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้ กด “ติดตั้ง OCR” ในหน้าตรวจใบเสร็จ',
   OCR_START_FAILED: 'เปิดบริการ OCR ไม่สำเร็จ กรุณาลองติดตั้ง OCR ใหม่หรือตรวจ Diagnostics',
   OCR_FAILED: 'อ่านใบเสร็จไม่สำเร็จ ลองใช้ภาพที่ชัดขึ้นหรือไฟล์อื่น',

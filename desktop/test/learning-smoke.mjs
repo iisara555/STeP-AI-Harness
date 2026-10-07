@@ -45,6 +45,7 @@ put('settings', 'main', {
   workspace,
   theme: 'light',
   onboarding: true,
+  whatsNewSeen: '999.0.0',
   tourDone: true,
   termsVersion: terms,
 });

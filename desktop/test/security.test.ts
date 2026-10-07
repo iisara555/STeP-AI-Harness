@@ -3,9 +3,75 @@ import assert from 'node:assert/strict';
 import { visibleStream } from '../src/tools';
 import { credentialsOnly, unscanned } from '../electron/checks';
 import { privateHostName, publicSite } from '../electron/web-fetch';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { ChatMarkdown } from '../src/chat-markdown';
+import { mkdtemp, mkdir, writeFile, chmod, lstat, link, symlink, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const credentials = (text: string) => credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
+
+test('untrusted model Markdown cannot render active HTML, executable links or remote images', () => {
+  const html = renderToStaticMarkup(
+    createElement(ChatMarkdown, {
+      text: [
+        'safe text',
+        '<script>alert(1)</script><iframe src="file:///private"></iframe>',
+        '<img src="https://example.com/track" onerror="alert(1)">',
+        '[danger](javascript:alert%281%29)',
+        '![tracker](https://example.com/track)',
+        '```html\n<script>alert(2)</script>\n```',
+      ].join('\n\n'),
+    }),
+  );
+  assert.match(html, /safe text/);
+  assert.doesNotMatch(html, /<(?:script|iframe|img)\b|href="javascript:/i);
+  assert.match(html, /&lt;/, 'code is escaped even when syntax highlighting inserts markup');
+});
+
+test('app data stays private and existing database links are rejected before SQLite opens them', async () => {
+  const { prepareLocalData } = await import('../electron/local-data');
+  const root = await mkdtemp(join(tmpdir(), 'step-private-data-'));
+  try {
+    const data = join(root, 'profile');
+    await mkdir(data, { mode: 0o755 });
+    await chmod(data, 0o755);
+    await prepareLocalData(data);
+    if (process.platform !== 'win32') {
+      assert.equal((await lstat(data)).mode & 0o777, 0o700);
+      assert.equal((await lstat(join(data, 'logs'))).mode & 0o777, 0o700);
+    }
+    const outside = join(root, 'outside.sqlite');
+    await writeFile(outside, 'synthetic data that must not be opened as SQLite');
+    await link(outside, join(data, 'workspace.sqlite'));
+    await assert.rejects(prepareLocalData(data), /LOCAL_DATA_INVALID/);
+    const alias = join(root, 'alias');
+    await symlink(data, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    await assert.rejects(prepareLocalData(alias), /LOCAL_DATA_INVALID/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('credentials require an OS-backed key store, including rejection of Linux basic_text fallback', async () => {
+  const { requireSecureStorage } = await import('../electron/secure-storage');
+  const unavailable = { isEncryptionAvailable: () => false };
+  for (const platform of ['win32', 'darwin', 'linux'] as const)
+    assert.throws(() => requireSecureStorage(unavailable, platform), /SECURE_STORAGE_UNAVAILABLE/);
+  for (const backend of ['basic_text', 'unknown', undefined])
+    assert.throws(
+      () => requireSecureStorage({ isEncryptionAvailable: () => true, getSelectedStorageBackend: () => backend }, 'linux'),
+      /SECURE_STORAGE_UNAVAILABLE/,
+    );
+  for (const backend of ['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'])
+    assert.doesNotThrow(() =>
+      requireSecureStorage({ isEncryptionAvailable: () => true, getSelectedStorageBackend: () => backend }, 'linux'),
+    );
+  for (const platform of ['win32', 'darwin'] as const)
+    assert.doesNotThrow(() => requireSecureStorage({ isEncryptionAvailable: () => true }, platform));
+});
 
 test('the live reply shows the model words without the tool requests written between them', () => {
   const tool = '```step-tool\n{"tool":"browser_control","input":"https://mis.step.cmu.ac.th/","args":{"action":"open"}}\n```';

@@ -7,12 +7,13 @@ import statistics
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 import pypdfium2 as pdfium
 from PIL import Image, ImageOps
-from paddleocr import PaddleOCR
+if TYPE_CHECKING:
+    from paddleocr import PaddleOCR
 
 MAX_OCR_IMAGE_SIDE = 2400
 DETAIL_OCR_IMAGE_SIDE = 4800
@@ -25,8 +26,6 @@ MAX_TESSERACT_LINES_PER_REQUEST = 80
 # Text detection works on a copy scaled so its longest side is at most this many pixels.
 # 960 shrank a receipt tile to under half size and lost small print; recognition always reads full-size crops.
 DETECTION_SIDE = int(os.environ.get("STEP_OCR_DET_SIDE", "1280"))
-# Grey levels between the darkest ink and the paper; less than this is washed out, e.g. faded thermal paper.
-LOW_CONTRAST_SPAN = 110
 
 
 @dataclass(frozen=True)
@@ -60,6 +59,8 @@ class LocalThaiOCR:
 
     def _get_ocr(self) -> PaddleOCR:
         if self._ocr is None:
+            # Native-text PDFs need no model import, host check or Paddle startup.
+            from paddleocr import PaddleOCR
             # Installers ship the two models; STEP_OCR_MODEL_DIR points at them so no download is needed.
             bundled = Path(os.environ.get("STEP_OCR_MODEL_DIR", ""))
             model_dirs: dict[str, str] = {}
@@ -78,7 +79,7 @@ class LocalThaiOCR:
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
                 device="cpu",
-                cpu_threads=4,
+                cpu_threads=max(1, min(4, os.cpu_count() or 1)),
                 # PaddlePaddle 3.3.0 oneDNN fails during CPU text detection.
                 enable_mkldnn=False,
             )
@@ -119,14 +120,16 @@ class LocalThaiOCR:
             pages = self._process_pdf(path, config, warnings)
         else:
             with Image.open(path) as source:
+                original_size = source.size
                 if source.format == "JPEG":
                     source.draft("RGB", (DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE))
-                # Phone photos are usually stored sideways with an EXIF note saying how to turn them;
-                # without applying it, OCR reads the receipt on its side.
-                upright = ImageOps.exif_transpose(source)
-                original_size = upright.size
-                upright.thumbnail((DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
-                image = upright.convert("RGB")
+                source.thumbnail((DETAIL_OCR_IMAGE_SIDE, DETAIL_OCR_IMAGE_SIDE), Image.Resampling.LANCZOS)
+                orientation = source.getexif().get(274, 1)
+                image = ImageOps.exif_transpose(source).convert("RGB")
+                if orientation in (5, 6, 7, 8):
+                    original_size = original_size[::-1]
+                if orientation in range(2, 9):
+                    self._add_warning(warnings, "EXIF orientation applied before OCR; coordinates refer to the oriented image.")
             pages = [self._ocr_image(image, 1, config, warnings, original_size=original_size, detail=True)]
 
         lines = [line for page in pages for line in page.get("lines", [])]
@@ -248,7 +251,9 @@ class LocalThaiOCR:
                 f"Image resized from {original_width}x{original_height} to "
                 f"{image.width}x{image.height} before OCR; verify small text carefully.",
             )
-        image = self._stretch_contrast(image, warnings)
+        prepared = self._normalize_low_contrast(image, warnings)
+        normalized_contrast = prepared is not image
+        image = prepared
         lines = self._read_page(image, config, warnings, detail)
         if self._looks_sideways(lines):
             # A scan or photo lying on its side: read both quarter turns and keep the clearer reading.
@@ -270,6 +275,7 @@ class LocalThaiOCR:
             "height": image.height,
             "original_width": original_width,
             "original_height": original_height,
+            "preprocessing": ["low-contrast-autocontrast"] if normalized_contrast else [],
             "lines": lines,
         }
 
@@ -278,30 +284,6 @@ class LocalThaiOCR:
             self._add_warning(warnings, "High-detail tiled OCR was used; verify critical fields against the original receipt.")
             return self._ocr_tiled(image, config, warnings)
         return self._predict_lines(image, config, warnings)
-
-    @staticmethod
-    def _stretch_contrast(image: Image.Image, warnings: list[str]) -> Image.Image:
-        """Darkens faded print (thermal slips, light scans); pages with normal contrast are left untouched."""
-        grey = image.convert("L")
-        histogram = grey.histogram()
-        total = sum(histogram)
-        if not total:
-            return image
-
-        def percentile(share: float) -> int:
-            seen = 0
-            for level, count in enumerate(histogram):
-                seen += count
-                if seen >= total * share:
-                    return level
-            return 255
-
-        # Ink is the darkest 0.2%; paper is the median, since most of a page is blank. A near-zero span is a blank page.
-        span = percentile(0.5) - percentile(0.002)
-        if span >= LOW_CONTRAST_SPAN or span < 15:
-            return image
-        LocalThaiOCR._add_warning(warnings, "Faded print was darkened before OCR; check amounts against the original.")
-        return ImageOps.autocontrast(grey, cutoff=1).convert("RGB")
 
     @staticmethod
     def _looks_sideways(lines: list[dict[str, Any]]) -> bool:
@@ -316,10 +298,31 @@ class LocalThaiOCR:
     def _reading_score(lines: list[dict[str, Any]]) -> float:
         return sum((line.get("confidence") or 0) * len(str(line.get("text", "")).strip()) for line in lines)
 
+    @staticmethod
+    def _normalize_low_contrast(image: Image.Image, warnings: list[str]) -> Image.Image:
+        # A cheap single-pass stretch for faded thermal paper only. Flat pages
+        # and normal-contrast photographs remain unchanged; no thresholding,
+        # sharpened glyphs, extra inference or modifications to the source file.
+        histogram = image.convert("L").histogram()
+        total = sum(histogram)
+        def percentile(fraction):
+            seen = 0
+            for value, count in enumerate(histogram):
+                seen += count
+                if seen >= total * fraction:
+                    return value
+            return 255
+        span = percentile(0.995) - percentile(0.005)
+        if not 12 <= span < 96:
+            return image
+        LocalThaiOCR._add_warning(warnings, "Low-contrast image normalized before OCR; verify faded text against the original.")
+        return ImageOps.autocontrast(image, cutoff=0, preserve_tone=True)
+
     def _ocr_tiled(self, image: Image.Image, config: OCRConfig, warnings: list[str]) -> list[dict[str, Any]]:
         columns = math.ceil(image.width / OCR_TILE_SIDE)
         rows = math.ceil(image.height / OCR_TILE_SIDE)
         lines: list[dict[str, Any]] = []
+        overlap_lines: list[dict[str, Any]] = []
 
         for row in range(rows):
             core_top = image.height * row // rows
@@ -339,10 +342,41 @@ class LocalThaiOCR:
                         box = [box[0] + crop_left, box[1] + crop_top, box[2] + crop_left, box[3] + crop_top]
                         center_x = (box[0] + box[2]) / 2
                         center_y = (box[1] + box[3]) / 2
-                        if not (core_left <= center_x < core_right and core_top <= center_y < core_bottom):
-                            continue
                         line["box"] = box
+                        if line.get("polygon"):
+                            line["polygon"] = [[x + crop_left, y + crop_top] for x, y in line["polygon"]]
+                        if not (core_left <= center_x < core_right and core_top <= center_y < core_bottom):
+                            overlap_lines.append(line)
+                            continue
                     lines.append(line)
+
+        # A neighbouring tile may find a seam line that its owning tile misses.
+        # Recover it conservatively instead of dropping it by center ownership.
+        for line in overlap_lines:
+            box = line["box"]
+            def overlaps(existing):
+                other = existing.get("box")
+                if not other:
+                    return False
+                intersection = max(0, min(box[2], other[2]) - max(box[0], other[0])) * max(0, min(box[3], other[3]) - max(box[1], other[1]))
+                area = min((box[2] - box[0]) * (box[3] - box[1]), (other[2] - other[0]) * (other[3] - other[1]))
+                return area > 0 and intersection / area >= 0.5
+            matching = [existing for existing in lines if overlaps(existing)]
+            if matching:
+                from crosscheck import comparable_text
+                for existing in matching:
+                    if comparable_text(existing['text']) == comparable_text(line['text']):
+                        continue
+                    alternatives = existing.setdefault('tile_candidates', [])
+                    if not any(item['text'] == line['text'] for item in alternatives):
+                        alternatives.append({key: line.get(key) for key in ('text', 'confidence', 'box')})
+                    existing['needs_review'] = True
+                    self._add_warning(warnings, "Overlapping tiles read a region differently; both readings are retained for source comparison.")
+                continue
+            line["needs_review"] = True
+            line["tile_overlap_recovery"] = True
+            lines.append(line)
+            self._add_warning(warnings, "Recovered an overlap-only OCR line; verify it against the original image.")
 
         lines.sort(key=lambda line: (
             (line["box"][1] + line["box"][3]) / 2 if line.get("box") else image.height,
@@ -361,6 +395,7 @@ class LocalThaiOCR:
             texts = payload.get("rec_texts") or []
             scores = payload.get("rec_scores") or []
             boxes = payload.get("rec_boxes") or []
+            polygons = payload.get("rec_polys") or []
 
             for idx, text in enumerate(texts):
                 score = self._to_float(scores[idx]) if idx < len(scores) else None
@@ -369,6 +404,7 @@ class LocalThaiOCR:
                     "text": str(text),
                     "confidence": score,
                     "box": box,
+                    "polygon": self._to_polygon(polygons[idx]) if idx < len(polygons) else None,
                     "low_confidence": score is None or score < config.low_confidence_threshold,
                     "needs_review": score is None or score < config.low_confidence_threshold,
                 }
@@ -626,7 +662,8 @@ class LocalThaiOCR:
     @staticmethod
     def _to_float(value: Any) -> float | None:
         try:
-            return round(float(value), 6)
+            confidence = float(value)
+            return round(confidence, 6) if math.isfinite(confidence) and 0 <= confidence <= 1 else None
         except (TypeError, ValueError):
             return None
 
@@ -637,6 +674,16 @@ class LocalThaiOCR:
             if len(coords) != 4:
                 return None
             return [int(round(float(v))) for v in coords]
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _to_polygon(value: Any) -> list[list[int]] | None:
+        try:
+            points = [[float(x), float(y)] for x, y in value]
+            if len(points) != 4 or not all(math.isfinite(v) for point in points for v in point):
+                return None
+            return [[int(round(x)), int(round(y))] for x, y in points]
         except (TypeError, ValueError):
             return None
 

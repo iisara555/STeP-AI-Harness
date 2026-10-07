@@ -8,6 +8,18 @@ import {
   receiptAssessment,
 } from '../src/receipt-workflow';
 
+test('an expense table skips column headings and numeric cells without turning customer details into items', () => {
+  assert.equal(
+    expenseDescriptionFromText('รายการ DESCRIPTION\nหน่วย UNIT\nจำนวนเงิน AMOUNT\n1\nค่าเครื่องดื่ม\n147.00\nรวมเงิน TOTAL\n147.00'),
+    'ค่าเครื่องดื่ม',
+  );
+  assert.equal(
+    expenseDescriptionFromText('รายการ DESCRIPTION\nจำนวน QUANTITY\n1\nค่าหนังสือ\n50.00\n2\nค่าน้ำดื่ม\n20.00\nรวมเงิน 70.00'),
+    'ค่าหนังสือ; ค่าน้ำดื่ม',
+  );
+  assert.equal(expenseDescriptionFromText('รายการ DESCRIPTION\nหน่วย UNIT\nนามลูกค้า NAME\nหน่วยงานสมมติ'), '');
+});
+
 test('form filling formats only source-backed digits, dates and money without inventing absent VAT', () => {
   const values = formValues({
     merchant: ' ร้านตัวอย่าง ',

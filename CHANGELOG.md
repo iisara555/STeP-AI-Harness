@@ -6,7 +6,120 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-STeP Desktop version 0.5.16 (`desktop/package.json`) contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help"; it is not published yet. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+### A fuller welcome tour that is easier to start
+
+- **Before:** the tour had 7 short steps that skipped connecting AI, the document drafting tool, settings and updates; it could only be opened from the end of the Setup Wizard or the command palette, and there was no way to stop after the essentials.
+- **After:** the tour has 2 parts. Part 1 "พื้นฐาน" covers what is needed for a first task: new task, example tasks, asking in plain Thai, attaching files with personal-data masking, choosing how to work (including plan before acting and permissions), connecting AI when none is connected, and reviewing the draft. It stops at a checkpoint where people can start working or carry on. Part 2 "เครื่องมือช่วยงาน" covers document drafting, the AFP receipt check, Skills, model and reasoning level, settings, the version and update line, and Ctrl+K. Each step has a short tip in plain words, a part label and progress dots. New people also see "ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน" on the welcome screen until they finish the tour.
+- Tests: new `tour-smoke.mjs` walks the whole tour in light or dark theme and checks every card stays on screen; `i18n.test.ts` checks every tour step has English text.
+
+## Desktop v0.5.22 — 2026-10-07
+
+STeP Desktop version 0.5.22 packages the section below for `desktop-v0.5.22`. Harness package version remains 0.7.6.
+
+### Version and update status under your name; readable selected document type
+
+- **Before:** the app's version was not shown anywhere in the main window, so staff could not tell which version they had or whether a newer one was out until the update card appeared. In the document drafting tool the selected type (for example ร่างบันทึกข้อความ) turned pale, and in the dark theme its text almost disappeared; the unselected types looked selected.
+- **After:** under the person's name the sidebar shows `v<version>` with "เป็นเวอร์ชันล่าสุด", "มีอัปเดต <version>" (with a dot), "กำลังตรวจอัปเดต…" or "ตรวจอัปเดตไม่สำเร็จ". Clicking it checks for updates, or restarts into a downloaded one. The document type picker shows unselected types as plain cards and the selected one in solid yellow with dark text, in both themes.
+- Tests: `whats-new-smoke.mjs` checks the version line.
+
+## Desktop v0.5.21 — 2026-10-06
+
+STeP Desktop version 0.5.21 packages the OCR improvements below for `desktop-v0.5.21`. The in-app update notes are available in Thai and English. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
+
+### Desktop: documentation and release notes
+
+- Correct the private-pilot path test to expect the canonical destination when temporary directories have symlinked ancestors, as on macOS. The `desktop-v0.5.20` tag did not publish installers because its Mac unit-test job failed; 0.5.21 replaces that unpublished candidate without rewriting its tag. Linked-file rejection and the canonical-path implementation are unchanged.
+
+- Update the employee and developer README with current receipt behavior, synthetic OCR evidence and text-to-image API instructions. Document image intent/context limitations found with simulated providers; these image behaviors are not changed by this release.
+- Add in-app update notes and synchronize Desktop package/lockfile versions. Windows/macOS installers and the rolling update feed are published by the existing tag workflow after its checks.
+
+### Local Thai OCR: preserve critical values and reduce avoidable work
+
+- Apply phone EXIF orientation before OCR and stretch contrast only on faded images with a bounded tonal range, preserving the source file and recording preprocessing. Recover overlap-only tile lines with review flags and preserve conflicting tile readings as unverified candidates. Reject invalid confidence values instead of treating them as reliable.
+- Match receipt amounts to the actual row using detected text polygons for mild skew and nearby next-line evidence. Recognize explicit buyer-number labels even in seller tax rows. Keep malformed decimals, comma groups and signed amounts out of positive payment fields; independent cross-checks retain numeric punctuation and reference separators.
+- Import PaddleOCR only when image recognition is needed, so native-text PDFs avoid model startup. Bound CPU threads to available cores, maximum four, without adding models or changing policy defaults.
+- Validate synthetic image font coverage, support a licensed Latin/digit fallback with its digest and an optional EXIF phone-rotation case. Reject malformed money in benchmark scoring; never measure boxes as printed numeric answers.
+- Keep private pilot paths outside all Git checkouts; refuse linked export targets and write to the checked canonical destination. OCR installers include runtime sources only, excluding development benchmarks and private image/report files. Saved drafts describe selected-value verification without claiming unchecked OCR was reviewed.
+- Add test-first synthetic regressions to the root/desktop test scripts. Evidence uses synthetic images and local CPU models only; it does not establish real-document accuracy or close the acceptance gate. No Router integration or policy-default change.
+- On the same nine generated images, canonical field matches improved from 50/63 to 59/63 (including two annotated absences); two merchant errors and two missing money fields remain. A three-process native-text PDF check reduced median startup from 2.322 s to 0.279 s on this Linux host. Details and limitations: [synthetic quality evidence](experiments/local-thai-ocr/benchmark/QUALITY-RESULTS-2026-10-06.md).
+
+## Desktop v0.5.19 — 2026-10-06
+
+STeP Desktop version 0.5.19 (`desktop/package.json`) packages the next four sections for `desktop-v0.5.19`. The in-app "What's new" window summarizes them in Thai and English. Receipt and provider checks use synthetic data and simulated services; real-document OCR accuracy remains unverified. Harness package version remains 0.7.6.
+
+### Desktop: receipt mapping with Gemini via Antigravity
+
+- Report the selected transport's receipt capability consistently after status, start, install and folder selection. Antigravity is text-only; do not offer or attempt image reading through it. Gemini API/ACP retains its image capability and existing permission checks.
+- Automatically ask a connected text-only AI to reconcile OCR candidates after reading, including the source-backed expense description, with the existing masking/consent and token-only rules. Preserve manual edits and the single final source-comparison confirmation; do not silently discard filter failures.
+- Improve synthetic cash-bill mapping for seller/buyer separation, book/bill identifiers, Thai month dates and item tables whose column headings/numeric cells precede descriptions.
+- Verify with synthetic unit tests and Electron/IPC fixtures; no real receipt accuracy, native handwriting quality or live Antigravity image support is claimed. No new OCR model, Router integration or policy-default change.
+
+### Desktop: scribbled thinking motion
+
+- Replace the gooey waiting indicator in chat with original overlapping hand-drawn loops that retrace at different speeds, inspired by the supplied scribble reference. Keep the progress text, elapsed time and stop control.
+- Size the waiting motion at 18 × 18 pixels, half its initial 36 × 36 size.
+- Use theme-aware SVG/CSS with no image assets, animation dependency or per-frame JavaScript. Reduced-motion mode traces slowly without the shape's sway.
+- Verify the running chat, actual stroke motion and reduced-motion behavior with the existing synthetic-provider Electron smoke test.
+
+### Desktop: file, credential and local OCR security
+
+- Reject multiply-linked workspace files and existing linked SQLite database/journal files. Use literal Git pathspecs and hide denied filenames, including staged rename sources, from status and diff results.
+- Check agent-browser DNS for subresources and redirects; reject private destinations unless explicitly allowed by managed policy. Keep POSIX app-data/log directories private and refuse Electron's Linux `basic_text` credential fallback.
+- Reject foreign Host/Origin requests to the loopback OCR service before reading documents. Return immediately when the worker is busy, bound upload reads and omit filenames/query values from service logs.
+- Update vulnerable build/download dependency chains with targeted overrides. Full Desktop, production-only Desktop and privacy-vendor audits report zero known advisories at review time.
+- Add synthetic security regression tests and real Electron sandbox/CSP/IPC checks; record evidence and remaining deployment limits in `docs/desktop-security-review.md`. No real documents or live-provider accounts were used; Windows/macOS behavior on staff machines and publisher signing remain unverified. No OCR accuracy claim or policy-default change.
+
+### Desktop: reliable Mac updates and Antigravity retry cleanup
+
+- Reject Mac update read/write failures through the download pipeline and remove incomplete archives while retaining SHA-512 checks. Locate the zip's canonical app bundle independently of a renamed installed `.app`.
+- Keep browser timeout cleanup distinct from user cancellation; a late Antigravity process exit cannot close a newer attempt's code prompt. Explicit cancellation still stops sign-in.
+- Regression tests use synthetic archives and simulated sign-in. macOS update/sign-in on staff machines and real-account results remain unverified.
+
+## Desktop v0.5.18 and earlier
+
+STeP Desktop version 0.5.18 (`desktop/package.json`) contains the next four sections, published as `desktop-v0.5.18`: "What's new after an update", "Antigravity on the first page of setup", "Word files with pictures can be attached" and "Mac updates install inside the app". Version 0.5.17 contains the next two sections, published as `desktop-v0.5.17`: "Antigravity sign-in: paste the code Google shows into STeP" and "Mac disk image: a Thai first-open guide". Version 0.5.16 contains the next eleven sections, from "Antigravity sign-in opens the browser, and the receipt page speaks plainly" to "Learning from work, part 5: see whether lessons help", published as `desktop-v0.5.16`. The harness-only sections among them (Thai Skills, receipt-audit evals, the local Thai OCR benchmark) also ship inside the app's harness copy.
+
+### What's new after an update
+
+- **Before:** after an update nothing said what had changed; staff had to read this file on GitHub.
+- **After:** the first time the app opens on a new version, a "มีอะไรใหม่" window lists what changed since the version the person last saw, in plain Thai (or English). "รับทราบ" closes it for good; the command palette ("มีอะไรใหม่ในรุ่นนี้") opens it again. A new install does not show it.
+- The notes live in `desktop/src/whats-new.ts`; a unit test fails a release whose version has no notes there.
+- Tests: `whats-new.test.ts` (version order, which notes show) and `whats-new-smoke.mjs` (new install, an older profile, the palette).
+
+### Antigravity on the first page of setup
+
+- **Before:** the setup wizard's "เชื่อมต่อ AI" step showed ChatGPT, OpenRouter and Gemini (API key); Gemini via Antigravity was behind "ดูบริการอื่น".
+- **After:** Gemini via Antigravity is on the first page, so someone with only a Google account can connect without a key. The wizard puts the four services in one row and the connect button stays in view at 800×650.
+
+### Word files with pictures can be attached
+
+- **Before:** a Word file with any picture in it, such as the Garuda emblem or a letterhead on a บันทึกข้อความ, was refused as "อ่านเนื้อหาได้ไม่ครบ" and the drafting tool only said "ส่งไฟล์นี้ให้ AI ไม่ได้". Reported on 2026-10-06 with a ขออนุมัติใช้จ่ายหมวด A2 memo.
+- **After:** pictures are left out and named in the status line ("รูปภาพ N รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม"); the file's full text goes to the AI. Text in text boxes is read as before. Charts, SmartArt, embedded objects (an Excel table) and imported chunks still withhold the file, because their content lives outside the text; the message now says so and what to do.
+- The document drafting tool shows the specific reason a file was refused instead of one generic line.
+- Harness `src/modules/privacy/document-worker.js` changes with it (CLI and app alike). Pictures were never sent to the AI either way.
+
+### Mac updates install inside the app
+
+- **Before:** on a Mac, the update card's button opened the GitHub release page. The person had to download the disk image, drag the app over the old one and get past the "Move to Trash" warning again. macOS's own updater (Squirrel.Mac) installs only updates signed with the same Developer ID, which STeP does not have.
+- **After:** a Mac downloads the update in the background like Windows and shows **รีสตาร์ทเพื่ออัปเดต** (restart to update). STeP fetches the zip for its processor from the update feed and keeps it only when its sha512 matches the feed. When the person restarts, a small script waits for the app to quit, unpacks the zip next to the app, checks the new bundle with `codesign --verify --deep --strict`, swaps it in and opens it. A file the app downloads itself has no quarantine flag, so the new version opens without the warning.
+- Any failure before the swap leaves the installed app as it was and opens it again. When the app cannot be replaced in place (run from the disk image, a translocated copy, or a folder the person cannot write), or the download fails, the card falls back to the release page as before.
+- Updates from 0.5.18 to later versions use this. Moving from 0.5.17 to 0.5.18 still opens the release page, because 0.5.17 has the old updater.
+- Tests: the update flow with a fake feed; the sha512 check; and, on the macOS CI runners, the real script swapping an ad-hoc signed bundle and refusing a tampered one. Not yet tried as a real update on a real Mac.
+
+### Antigravity sign-in: paste the code Google shows into STeP
+
+- **Before (0.5.16):** after Allow, Google sent the browser to Antigravity's page, which shows an authorization code to paste into the CLI. The CLI ran hidden with no input, so there was nowhere to paste it and sign-in stalled. Reported on a Mac on 2026-10-06.
+- **After, Mac:** STeP runs the hidden `agy -p` behind a pseudo-terminal (`/usr/bin/script`) and opens a box, **รหัสจากหน้าเว็บ**, with three numbered steps. The pasted code is typed into the waiting CLI. A wrong or late code opens a fresh Google page, up to three tries, then the terminal window.
+- **After, Windows:** there is no pseudo-terminal to borrow without a native module, so STeP opens the Antigravity sign-in window straight away. Its progress text now says to paste the code there (right-click or Ctrl+V) and press Enter.
+- **Mac kept saying "connecting" after a successful sign-in (reported 2026-10-06):** STeP checks the sign-in with `agy models` in an isolated home, which hides the real profile's sign-in on macOS. The isolated home now links `~/Library/Keychains` back to the real one (the link is removed before the folder is deleted) and copies agy's token file (`~/.gemini/antigravity-cli/antigravity-oauth-token`, used when the keyring is unavailable) when it exists. If the real profile is signed in but STeP still cannot see it, the connection stops after two checks with a Thai message instead of waiting five minutes.
+- Checked with the real agy 1.2.17 on Linux: a code typed through the pseudo-terminal reaches Google's token exchange (a fake code returns `invalid_grant`). Not yet tried with a real Google account on a Mac or Windows.
+
+### Mac disk image: a Thai first-open guide
+
+- **Before:** on macOS 15 and later, opening STeP Desktop for the first time showed a dialog with **Move to Trash**, and the disk image said nothing about what to do. The only guidance was in the README.
+- **After:** the disk image window holds **อ่านก่อนเปิดครั้งแรก.html** next to the app and the Applications folder. It opens in the browser and explains, in Thai, both dialogs staff can see: "Apple could not verify…" (Privacy & Security → Open Anyway) and "is damaged" (one `xattr -cr` command in Terminal). The README's macOS section says the same.
+- The dialog itself stays: removing it needs an Apple Developer ID certificate and notarization, which the project does not have.
+- The installer build now runs `codesign --verify --deep --strict` on the app inside the disk image, so a broken ad-hoc signature (which turns the dialog into "is damaged") fails the build instead of reaching staff.
 
 ### Antigravity sign-in opens the browser, and the receipt page speaks plainly
 

@@ -64,6 +64,7 @@ try {
   await app.evaluate(({ safeStorage, shell }) => {
     // CI runners may have no OS keychain; this stands in for it so keys can be stored.
     safeStorage.isEncryptionAvailable = () => true;
+    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
     safeStorage.encryptString = s => Buffer.from('k' + s);
     safeStorage.decryptString = b => b.toString().slice(1);
     // The "browser": follow OpenRouter's redirect back to the app's loopback callback.

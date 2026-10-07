@@ -35,6 +35,7 @@ db.prepare('INSERT INTO records VALUES(?,?,?)').run(
     workspace,
     theme: 'light',
     onboarding: true,
+    whatsNewSeen: '999.0.0',
     tourDone: true,
     consentedAt: new Date().toISOString(),
     termsVersion: '2026-10-02',
@@ -55,6 +56,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await app.evaluate(({ safeStorage }) => {
     safeStorage.isEncryptionAvailable = () => true;
+    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
     safeStorage.encryptString = s => Buffer.from('k' + s);
     safeStorage.decryptString = b => b.toString().slice(1);
   });

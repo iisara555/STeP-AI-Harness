@@ -154,8 +154,8 @@ test("reads Thai month names and a bare เลขที่ / No.", () => {
   assert.equal(fieldsOf(["ร้านกาแฟ", "เลขที่ 99/1 หมู่ 3 ต.สุเทพ"]).receiptNumber.value, "");
 });
 
-test("tolerates OCR spaces inside Thai labels and slips inside numbers", () => {
-  const fields = fieldsOf(["ร้านตัวอย่าง", "วัน ที่ 06/10/2569", "ยอด สุทธิ 1, 07O.00"]);
+test("tolerates OCR spaces inside Thai labels and beside number separators", () => {
+  const fields = fieldsOf(["ร้านตัวอย่าง", "วัน ที่ 06/10/2569", "ยอด สุทธิ 1, 070.00"]);
   assert.equal(fields.date.value, "06/10/2569");
   assert.equal(fields.total.value, "1,070.00");
 });

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir, mkdtemp, readdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -187,7 +187,24 @@ export async function antigravitySignedIn(executable: string, context: Pick<Prov
 }
 const errorCodeOf = (error: unknown) => (error instanceof Error ? error.message : '');
 
-export type AgyBrowserSignIn = { close: () => Promise<void> | void; exited: Promise<void> };
+/** The same check with the employee's real profile: what the sign-in window itself would see. */
+export async function antigravitySignedInWithProfile(executable: string, cwd: string, signal?: AbortSignal) {
+  await mkdir(cwd, { recursive: true });
+  try {
+    await runAntigravity(executable, ['models'], { cwd, env: process.env }, { timeoutMs: 30_000, signal });
+    return true;
+  } catch (error) {
+    if (errorCodeOf(error) === 'CANCELLED') throw error;
+    return false;
+  }
+}
+
+export type AgyBrowserSignIn = {
+  close: () => Promise<void> | void;
+  exited: Promise<void>;
+  /** Types the authorization code Google's page shows into the waiting CLI. */
+  sendCode?: (code: string) => void;
+};
 export type AgySignInDeps = {
   progress: (text: string) => void;
   /**
@@ -201,10 +218,21 @@ export type AgySignInDeps = {
    */
   openBrowserSignIn?: () => Promise<AgyBrowserSignIn | null>;
   signedIn?: typeof antigravitySignedIn;
+  /**
+   * Whether the real profile is signed in. When it is but STeP's isolated check still is not, waiting longer cannot
+   * help, so the sign-in stops with a clear message instead of spinning until the timeout.
+   */
+  signedInWithProfile?: () => Promise<boolean>;
   pollMs?: number;
   timeoutMs?: number;
   /** How long the browser sign-in may take; agy itself waits about a minute. */
   browserTimeoutMs?: number;
+  /** Asks the person for the code Google's page shows after Allow; null when they cancel. */
+  askForCode?: () => Promise<string | null>;
+  /** Closes the code prompt again. */
+  dropCode?: () => void;
+  /** Browser attempts before the terminal; each new attempt is quick once the browser is signed in to Google. */
+  browserAttempts?: number;
 };
 
 /** Signs in through Google's own flow when needed, then returns once the sign-in is usable. */
@@ -233,33 +261,66 @@ export async function antigravitySignIn(
         signal.addEventListener('abort', cancel, { once: true });
       });
       if (await signedIn(executable, context, signal)) return true;
+      if (deps.signedInWithProfile && ++polls % 3 === 0 && (await deps.signedInWithProfile())) {
+        if (++hidden >= 2) throw new Error('ANTIGRAVITY_SIGNIN_HIDDEN');
+      } else if (polls % 3 === 0) hidden = 0;
       if (ended) return false;
     }
     return false;
   }
+  let polls = 0,
+    hidden = 0;
   deps.progress(tm('กำลังตรวจการลงชื่อบัญชี Google ใน Antigravity'));
   if (await signedIn(executable, context, signal)) return;
-  if (deps.openBrowserSignIn) {
+  // Google sends the browser to antigravity.google/oauth-callback, which shows an authorization code to paste into
+  // the CLI. STeP asks for that code and types it into the hidden CLI, so nobody has to find a terminal window.
+  for (let attempt = 0; deps.openBrowserSignIn && attempt < (deps.browserAttempts ?? 3); attempt++) {
     const browser = await deps.openBrowserSignIn();
-    if (browser) {
-      let ended = false;
-      void browser.exited.then(() => {
-        ended = true;
-      });
-      deps.progress(
-        tm('เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี แล้วกด "อนุญาต" (Allow) ภายใน 1 นาที เสร็จแล้ว STeP จะทดสอบให้เอง'),
+    if (!browser) break;
+    let ended = false,
+      cancelled = false,
+      finished = false;
+    void browser.exited.then(() => {
+      if (finished) return;
+      ended = true;
+      deps.dropCode?.();
+    });
+    const canPaste = Boolean(browser.sendCode && deps.askForCode);
+    deps.progress(
+      canPaste
+        ? tm(
+            'เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี กด "อนุญาต" (Allow) แล้วคัดลอกรหัสที่หน้าเว็บแสดง มาวางในช่องของ STeP ภายใน 1 นาที',
+          )
+        : tm('เปิดหน้าลงชื่อ Google ในเบราว์เซอร์แล้ว เลือกบัญชี แล้วกด "อนุญาต" (Allow) ภายใน 1 นาที เสร็จแล้ว STeP จะทดสอบให้เอง'),
+    );
+    if (canPaste)
+      void deps.askForCode!().then(
+        code => {
+          if (ended || finished) return;
+          if (code) {
+            browser.sendCode!(code);
+            deps.progress(tm('ได้รับรหัสแล้ว กำลังตรวจการลงชื่อ'));
+          } else cancelled = true;
+        },
+        () => {
+          if (!ended && !finished) cancelled = true;
+        },
       );
-      try {
-        if (await waitUntilSignedIn(deps.browserTimeoutMs ?? 90_000, () => ended)) return;
-      } finally {
-        await browser.close();
-      }
-      deps.progress(tm('หน้าลงชื่อในเบราว์เซอร์หมดเวลา STeP จะเปิดหน้าต่างลงชื่อของ Antigravity ให้แทน'));
+    try {
+      if (await waitUntilSignedIn(deps.browserTimeoutMs ?? 90_000, () => ended || cancelled)) return;
+    } finally {
+      // Closing a prompt resolves it with null, but cleanup is not a user cancellation. A late exit from this
+      // attempt must also leave the next attempt's prompt alone.
+      finished = true;
+      deps.dropCode?.();
+      await browser.close();
     }
+    if (cancelled) throw new Error('CANCELLED');
+    deps.progress(tm('ยังลงชื่อไม่สำเร็จ STeP จะเปิดหน้าลงชื่อ Google ให้อีกครั้ง'));
   }
   deps.progress(
     tm(
-      'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ เสร็จแล้ว STeP จะทดสอบให้เอง',
+      'หน้าต่างลงชื่อของ Antigravity จะเปิดขึ้น กด Enter หนึ่งครั้ง (เลือก Google OAuth) แล้วลงชื่อ Google ในเบราว์เซอร์ ถ้าหน้าเว็บแสดงรหัส ให้คัดลอกมาวางในหน้าต่างนั้น (คลิกขวาหรือ Ctrl+V บน Windows, Command+V บน Mac) แล้วกด Enter เสร็จแล้ว STeP จะทดสอบให้เอง',
     ),
   );
   const close = await deps.openSignIn();
@@ -299,47 +360,73 @@ function stopTree(pid: number | undefined, child: { kill: (signal?: NodeJS.Signa
   });
 }
 
+/** The command that runs `agy -p` behind a pseudo-terminal, since agy reads the pasted code only from a terminal. */
+export function agyPtyCommand(executable: string, args: string[], platform = process.platform): [string, string[]] | null {
+  // macOS `script` refuses a socket as its input (Node's pipes are sockets there), so `cat` turns it into a real pipe.
+  // `cat` keeps no other stream open, so the process ends as soon as `script` does.
+  if (platform === 'darwin')
+    return ['/bin/bash', ['-c', 'exec /usr/bin/script -q /dev/null "$@" < <(exec cat 2>/dev/null)', 'agy-sign-in', executable, ...args]];
+  if (platform === 'linux') {
+    const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
+    return ['script', ['-qfec', [executable, ...args].map(quote).join(' '), '/dev/null']];
+  }
+  return null;
+}
+
 /**
- * Starts agy's non-interactive sign-in with the employee's real profile, hidden, and opens the Google page it prints in
- * the browser. Signed out, `agy -p` prints that page and waits about a minute; once signed in it would answer a
- * one-word prompt, which `--print-timeout` cuts short and STeP stops as soon as it sees the sign-in.
+ * Starts agy's non-interactive sign-in with the employee's real profile, hidden behind a pseudo-terminal, and opens the
+ * Google page it prints in the browser. Signed out, `agy -p` prints that page and waits about a minute for the code
+ * Google's page shows; once signed in it would answer a one-word prompt, which `--print-timeout` cuts short and STeP
+ * stops as soon as it sees the sign-in. Windows has no pseudo-terminal to borrow, so it returns null there and the
+ * terminal window is used, where the person pastes the code themselves.
  */
 export async function openAntigravityBrowserSignIn(
   executable: string,
   cwd: string,
   openUrl: (url: string) => Promise<void>,
   waitMs = 20_000,
+  platform = process.platform,
 ): Promise<AgyBrowserSignIn | null> {
+  const command = agyPtyCommand(executable, ['-p', 'Reply with OK only.', '--print-timeout', '1s'], platform);
+  if (!command || !existsSync(executable)) return null;
   await mkdir(cwd, { recursive: true });
   let child: ReturnType<typeof spawn>;
   try {
-    child = spawn(executable, ['-p', 'Reply with OK only.', '--print-timeout', '1s'], {
+    child = spawn(command[0], command[1], {
       cwd,
-      env: process.env,
-      windowsHide: true,
+      env: { ...process.env, TERM: 'dumb' },
       shell: false,
-      stdio: ['ignore', 'ignore', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch {
     return null;
   }
+  child.stdin?.on('error', () => {});
   const exited = new Promise<void>(done => {
     child.once('close', () => done());
     child.once('error', () => done());
   });
-  const close = () => stopTree(child.pid, child);
+  // Ending the input also ends the helper that feeds it on macOS.
+  void exited.then(() => child.stdin?.end());
+  const close = async () => {
+    child.stdin?.end();
+    await stopTree(child.pid, child);
+  };
   const url = await new Promise<string | null>(resolveUrl => {
     let text = '';
     const timer = setTimeout(() => resolveUrl(null), waitMs);
-    child.stderr?.on('data', (chunk: Buffer) => {
+    const read = (chunk: Buffer) => {
       if (text.length > 65_536) return;
-      text += chunk.toString('utf8');
+      // The terminal wraps long lines; the address itself never contains a carriage return.
+      text += chunk.toString('utf8').replace(/\r/g, '');
       const found = googleSignInUrl(text);
       if (found) {
         clearTimeout(timer);
         resolveUrl(found);
       }
-    });
+    };
+    child.stdout?.on('data', read);
+    child.stderr?.on('data', read);
     void exited.then(() => {
       clearTimeout(timer);
       resolveUrl(googleSignInUrl(text));
@@ -355,7 +442,10 @@ export async function openAntigravityBrowserSignIn(
     await close();
     return null;
   }
-  return { close, exited };
+  const sendCode = (code: string) => {
+    if (/^[\w\-/.~%#]+$/.test(code) && code.length <= 4096 && child.exitCode === null) child.stdin?.write(`${code}\n`);
+  };
+  return { close, exited, sendCode };
 }
 
 /**

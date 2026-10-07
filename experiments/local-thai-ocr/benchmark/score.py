@@ -15,10 +15,10 @@ def canonical(field, value):
     if not text:
         return ''
     if field in {'subtotal', 'vat', 'total'}:
-        clean = re.sub(r'บาท|฿|THB|[\s,]', '', text, flags=re.I)
-        if re.fullmatch(r'\d+(?:\.\d{1,2})?', clean):
+        clean = re.sub(r'บาท|฿|THB|\s', '', text, flags=re.I)
+        if re.fullmatch(r'(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?', clean):
             try:
-                return str(Decimal(clean).quantize(Decimal('0.01')))
+                return str(Decimal(clean.replace(',', '')).quantize(Decimal('0.01')))
             except InvalidOperation:
                 pass
     if field == 'taxId' and re.fullmatch(r'[\d\s-]+', text):

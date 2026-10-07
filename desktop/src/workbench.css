@@ -662,89 +662,54 @@
   font-size: 12px;
   padding: 5px 9px;
 }
-/* GooLoader (src/goo-loader.tsx): a body with a head and two drops that leave and melt back, on a 3.2 s loop. */
-.goo {
+/* Uneven overlapping pencil loops, continually retraced at different speeds. */
+.thinking-scribble {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--text);
 }
-.goo svg {
+.thinking-scribble svg {
   display: block;
-  overflow: visible;
 }
-.goo ellipse,
-.goo circle {
-  fill: currentColor;
+.scribble-threads {
   transform-box: view-box;
+  transform-origin: 50px 50px;
+  animation: scribble-shift 3.8s ease-in-out infinite;
 }
-.goo-body {
-  transform-origin: 50px 32px;
-  animation: goo-body 3.2s ease-in-out infinite;
+.scribble-stroke {
+  stroke-dasharray: 72 28;
+  animation: scribble-trace 2.4s linear infinite;
 }
-.goo-a {
-  animation: goo-a 3.2s ease-in-out infinite;
+.scribble-a {
+  stroke-width: 3.4;
+  animation-delay: -0.8s;
 }
-.goo-b {
-  animation: goo-b 3.2s ease-in-out infinite;
+.scribble-b {
+  stroke-width: 2.5;
+  stroke-dasharray: 58 42;
+  animation-duration: 2s;
+  animation-delay: -1.4s;
 }
-.goo-c {
-  animation: goo-c 3.2s ease-in-out infinite;
+.scribble-c {
+  stroke-width: 4.4;
+  stroke-dasharray: 48 52;
+  animation-duration: 1.7s;
+  animation-delay: -0.3s;
 }
-@keyframes goo-body {
+@keyframes scribble-trace {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes scribble-shift {
   0%,
   100% {
-    transform: rotate(0deg) scale(1, 1);
+    transform: rotate(-5deg) scale(0.96, 1.02);
   }
-  25% {
-    transform: rotate(-14deg) scale(1.06, 0.94);
+  32% {
+    transform: rotate(6deg) scale(1.03, 0.96);
   }
-  50% {
-    transform: rotate(8deg) scale(0.95, 1.06);
-  }
-  75% {
-    transform: rotate(-4deg) scale(1.04, 0.97);
-  }
-}
-/* The head pulls up out of the body on a neck, then sinks back in. */
-@keyframes goo-a {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  35% {
-    transform: translate(-4px, -21px);
-  }
-  55% {
-    transform: translate(-5px, -23px);
-  }
-  80% {
-    transform: translate(0, -2px);
-  }
-}
-/* Two drops leave on the left and come back. */
-@keyframes goo-b {
-  0%,
-  10%,
-  100% {
-    transform: translate(0, 0);
-  }
-  45% {
-    transform: translate(-27px, -9px);
-  }
-  70% {
-    transform: translate(-25px, -7px);
-  }
-}
-@keyframes goo-c {
-  0%,
-  25%,
-  100% {
-    transform: translate(0, 0);
-  }
-  60% {
-    transform: translate(-28px, 9px);
-  }
-  82% {
-    transform: translate(-22px, 7px);
+  67% {
+    transform: rotate(-2deg) scale(0.98, 1.04);
   }
 }

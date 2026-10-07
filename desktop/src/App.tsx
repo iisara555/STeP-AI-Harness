@@ -1,4 +1,4 @@
-import { GooLoader } from './goo-loader';
+import { ThinkingScribble } from './thinking-scribble';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -36,6 +36,7 @@ import {
   Copy,
   ImagePlus,
   ChevronDown,
+  Compass,
 } from 'lucide-react';
 import { ReceiptApp } from './receipt';
 import { DocumentTools, type DocumentAttachment, type DocumentForm } from './document-tool-app';
@@ -60,7 +61,7 @@ import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
-import { UpdateCard, useUpdate } from './update';
+import { UpdateCard, VersionLine, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
@@ -86,6 +87,8 @@ import { Readiness } from './readiness';
 import { Terms } from './terms';
 import { VoiceButton } from './voice';
 import { PacksDialog } from './packs';
+import { RELEASE_NOTES, compareVersions, unseenNotes, type ReleaseNote } from './whats-new';
+import { WhatsNewDialog } from './whats-new-dialog';
 import type { ToolQuestion } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
@@ -151,6 +154,7 @@ export default function App() {
   }, [view]);
   const [wizard, setWizard] = useState(false),
     [tour, setTour] = useState(false);
+  const [whatsNew, setWhatsNew] = useState<ReleaseNote[] | null>(null);
   const [skills, setSkills] = useState<SkillEntry[] | null>(null),
     [forcedSkill, setForcedSkill] = useState(''),
     [slashIndex, setSlashIndex] = useState(0);
@@ -291,6 +295,9 @@ export default function App() {
       .then(s => {
         if (s) {
           setWizard(!s.settings.onboarding);
+          // After an update, once: what changed since the version the person last saw.
+          const notes = s.settings.onboarding ? unseenNotes(s.settings.whatsNewSeen, s.appVersion || '') : [];
+          if (notes.length) setWhatsNew(notes);
           setSelected(s.sessions[0]?.id || '');
           setWorkMode(s.sessions[0]?.mode || (s.sessions[0]?.draft ? 'draft' : 'chat'));
           setConnectionId(s.connections[0]?.id || '');
@@ -868,6 +875,7 @@ export default function App() {
       setTour(true);
     },
     wizard: () => setWizard(true),
+    'whats-new': () => setWhatsNew(RELEASE_NOTES.filter(n => compareVersions(n.version, snapshot?.appVersion || '0') <= 0)),
     left: () => setLeft(p => !p),
     right: () => setRight(p => !p),
     skills: () => {
@@ -1097,6 +1105,7 @@ export default function App() {
             <div className="session-group tools-group">{t('เครื่องมือ')}</div>
             <nav>
               <button
+                data-tour="documents"
                 className={view === 'documents' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
@@ -1119,7 +1128,7 @@ export default function App() {
                 <span className="count">{skills ? skills.length + toolCount : ''}</span>
               </button>
               <button
-                data-tour="tools"
+                data-tour="receipt"
                 className={view === 'receipt' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
@@ -1137,6 +1146,7 @@ export default function App() {
             </nav>
             <button
               className={`settings-button ${settings ? 'nav-active' : ''}`}
+              data-tour="settings"
               onClick={() => {
                 setSettingsPage('general');
                 setSettings(true);
@@ -1146,7 +1156,7 @@ export default function App() {
               <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
             </button>
             <UpdateCard api={api} update={update} />
-            <div className="profile">
+            <div className="profile" data-tour="version">
               <Avatar
                 id={snapshot.settings.avatar}
                 fallback={initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}
@@ -1157,6 +1167,7 @@ export default function App() {
                   {snapshot.settings.userName ? t('ผู้ช่วย {0} · ', snapshot.settings.assistant) : ''}
                   {snapshot.settings.team ? t('ทีม {0}', snapshot.settings.team.toUpperCase()) : t('ยังไม่เลือกทีม')}
                 </small>
+                <VersionLine api={api} update={update} version={snapshot.appVersion || ''} />
               </div>
             </div>
           </aside>
@@ -1421,7 +1432,7 @@ export default function App() {
                     <p className="suggestions-label">
                       {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
                     </p>
-                    <div className="suggestions">
+                    <div className="suggestions" data-tour="starters">
                       {startersFor(snapshot.settings.team).map(starter => {
                         const text = starterText(starter);
                         return (
@@ -1455,6 +1466,12 @@ export default function App() {
                         {t('รู้จักทีมและ Skill ของ STeP')}
                       </li>
                     </ul>
+                    {!snapshot.settings.tourDone && (
+                      <button className="welcome-tour quiet" onClick={commands.tour}>
+                        <Compass size={15} />
+                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                      </button>
+                    )}
                   </div>
                 )}
                 {session?.messages.map((message, index) => (
@@ -1602,7 +1619,7 @@ export default function App() {
                     {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
                     {/* One quiet line while working, as in Claude and Codex: what is happening and for how long. */}
                     <div className="activity" role="status" aria-live="polite">
-                      <GooLoader />
+                      <ThinkingScribble />
                       <span>{progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด')}</span>
                       <span className="activity-detail">
                         {elapsed || t('0 วินาที')}
@@ -1870,6 +1887,7 @@ export default function App() {
                   <div className="composer-tools">
                     <button
                       className="icon composer-add"
+                      data-tour="attach"
                       aria-label={t('ตรวจและแนบเอกสาร')}
                       title={t('ตรวจและแนบเอกสาร')}
                       disabled={running || (!session && connectionId === CLAUDE_CODE)}
@@ -1918,6 +1936,7 @@ export default function App() {
                     )}
                     <select
                       className="pill-select"
+                      data-tour="mode"
                       aria-label={t('โหมดทำงาน')}
                       title={t('โหมดทำงาน')}
                       value={workflow || workMode}
@@ -2060,7 +2079,7 @@ export default function App() {
                 <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
                 {/* With a task open, the connection warning above the box already offers this action. */}
                 {!connection?.ready && !session && (
-                  <button className="text-link" onClick={openAiSettings}>
+                  <button className="text-link" data-tour="connect" onClick={openAiSettings}>
                     {t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}
                   </button>
                 )}
@@ -2595,6 +2614,15 @@ export default function App() {
             }}
           />
         )}
+        {whatsNew && !wizard && !tour && (
+          <WhatsNewDialog
+            notes={whatsNew}
+            onClose={() => {
+              setWhatsNew(null);
+              void api.call('whatsNewSeen').then(refresh);
+            }}
+          />
+        )}
         {tour && (
           <Tour
             onClose={() => {
@@ -2610,13 +2638,21 @@ export default function App() {
               <header>
                 <h2>{t('ลงชื่อเข้าใช้บริการ AI')}</h2>
               </header>
-              <p>
-                {t(
-                  'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
-                )}
-              </p>
+              {snapshot?.connections.find(c => c.id === authCode.id)?.provider === 'antigravity' ? (
+                <ol className="auth-code-steps">
+                  <li>{t('ในเบราว์เซอร์ เลือกบัญชี Google แล้วกด "อนุญาต" (Allow)')}</li>
+                  <li>{t('หน้าเว็บ Antigravity จะแสดงรหัส (authorization code) ให้กดคัดลอก')}</li>
+                  <li>{t('กลับมาวางรหัสในช่องนี้ แล้วกดยืนยัน ภายใน 1 นาที')}</li>
+                </ol>
+              ) : (
+                <p>
+                  {t(
+                    'ลงชื่อและกดอนุญาตในเบราว์เซอร์ หากบริการแสดง authorization code ให้คัดลอกมาวางที่นี่ หากเชื่อมต่อกลับอัตโนมัติ หน้าต่างนี้จะปิดเอง',
+                  )}
+                </p>
+              )}
               <label className="auth-code">
-                Authorization code
+                {t('รหัสจากหน้าเว็บ')} (authorization code)
                 <input
                   autoFocus
                   autoComplete="off"

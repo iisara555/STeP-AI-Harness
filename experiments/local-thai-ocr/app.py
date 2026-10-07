@@ -81,7 +81,27 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "STePLocalThaiOCR/0.1"
 
     def log_message(self, fmt: str, *args) -> None:
-        print(f"[local-ocr] {self.address_string()} - {fmt % args}")
+        route = urllib.parse.urlparse(getattr(self, "path", "")).path
+        if route not in WEB_FILES and route not in {"/api/health", "/api/ocr"}:
+            route = "unsupported-route"
+        # Receipt filenames and query parameters can contain personal data. Log the route only.
+        print(f"[local-ocr] {getattr(self, 'command', 'unknown')} {route}")
+
+    def _trusted_request(self) -> bool:
+        hosts = self.headers.get_all("Host", [])
+        origins = self.headers.get_all("Origin", [])
+        host = hosts[0].lower() if len(hosts) == 1 else ""
+        port = self.server.server_port
+        authorities = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if port == 80:
+            authorities.update({"127.0.0.1", "localhost"})
+        local = self.server.server_address[0] == "127.0.0.1"
+        # Loopback binding alone does not stop a web page using DNS rebinding or a simple cross-site POST.
+        if (local and host not in authorities) or len(origins) > 1 or (origins and origins[0] != f"http://{host}"):
+            self.close_connection = True
+            self._send_json({"ok": False, "error": "untrusted_request"}, 403)
+            return False
+        return True
 
     def _common_headers(self) -> None:
         self.send_header("Cache-Control", "no-store")
@@ -111,6 +131,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self) -> None:
+        if not self._trusted_request():
+            return
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path in WEB_FILES:
             return self._send_file(WEB_FILES[parsed.path])
@@ -133,6 +155,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
+        if not self._trusted_request():
+            return
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path != "/api/ocr":
             self.send_error(HTTPStatus.NOT_FOUND)
@@ -173,22 +197,37 @@ class Handler(BaseHTTPRequestHandler):
         crosscheck = query.get("crosscheck", ["off"])[0] in {"1", "true", "on"}
         tesseract = query.get("tesseract", ["off"])[0] in {"1", "true", "on"}
 
-        raw = self.rfile.read(length)
+        # Do not accumulate documents and waiting threads while the single OCR worker is busy.
+        if not _process_lock.acquire(blocking=False):
+            self.close_connection = True
+            return self._send_json({"ok": False, "error": "ocr_busy"}, 503)
+        try:
+            payload, status = self._process_upload(length, suffix, original_name, threshold, handwriting, crosscheck, tesseract)
+        finally:
+            _process_lock.release()
+        # Release after cleanup but before the response: a sequential next request must not see a completed job as busy.
+        return self._send_json(payload, status)
+
+    def _process_upload(self, length, suffix, original_name, threshold, handwriting, crosscheck, tesseract):
+        self.connection.settimeout(30)
+        try:
+            raw = self.rfile.read(length)
+        except TimeoutError:
+            self.close_connection = True
+            return {"ok": False, "error": "upload_timeout"}, 408
+        if len(raw) != length:
+            self.close_connection = True
+            return {"ok": False, "error": "incomplete_upload"}, 400
         with tempfile.TemporaryDirectory(prefix="step-local-ocr-") as tmp:
             input_path = Path(tmp) / f"input{suffix}"
             output_path = Path(tmp) / "result.json"
             input_path.write_bytes(raw)
             try:
-                with _process_lock:
-                    result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck, tesseract)
+                result = run_ocr_worker(input_path, output_path, threshold, handwriting, crosscheck, tesseract)
                 result["filename"] = original_name
-                return self._send_json({"ok": True, "result": result})
+                return {"ok": True, "result": result}, 200
             except Exception as exc:
-                return self._send_json({
-                    "ok": False,
-                    "error": "ocr_failed",
-                    "message": str(exc),
-                }, 500)
+                return {"ok": False, "error": "ocr_failed", "message": str(exc)}, 500
 
 
 def main() -> None:

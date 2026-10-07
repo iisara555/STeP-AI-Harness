@@ -143,6 +143,23 @@ outside the public checkout. Target pilot machines: Windows 2 cores and macOS M1
 
 ## หมายเหตุด้านความเบา
 
+OCR applies phone EXIF orientation before recognition and normalizes contrast only
+when the image's 0.5–99.5 percentile tonal span is 12–95 levels. This adds no model
+pass, records preprocessing, and preserves the original source file. Flat pages
+and ordinary contrast are left alone. Tile-overlap lines that
+the owning tile missed are retained with a review flag; conflicting tile readings
+remain candidates, never confirmed values. Decimal points/signs/reference separators
+are preserved by independent cross-checks. Receipt mapping uses detector polygons
+for mild-skew row alignment, excludes explicitly labeled buyer IDs from seller IDs,
+and keeps malformed amounts empty for source review.
+
+Native-text PDF requests avoid importing PaddleOCR. CPU threads are bounded by
+the available logical cores (maximum four); image/model limits and optional engines
+remain unchanged. Run `npm test` at the repository root for quality regressions;
+install the existing core Python dependencies or set `STEP_OCR_TEST_PYTHON` to
+their environment. A missing core environment is reported as a skipped engine test,
+not a passing OCR run. No image-generation fonts are shipped in the employee app.
+
 `th_PP-OCRv5_mobile_rec` เป็น recognition model ขนาดเล็ก แต่ PaddleOCR runtime และ text detector ใช้ทรัพยากรมากกว่าขนาด model file. Prototype นี้จึง:
 
 - บังคับ CPU

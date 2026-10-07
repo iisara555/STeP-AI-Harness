@@ -223,6 +223,8 @@ export type Settings = {
   /** A wording layer that stacks on the interaction style; Standard when unset. */
   languageStyle?: 'standard' | 'northern-thai';
   tourDone?: boolean;
+  /** The app version whose "What's new" the person has seen (src/whats-new.ts). */
+  whatsNewSeen?: string;
   consentedAt?: string;
   /** Version of the usage terms this person accepted (src/terms-version.ts). */
   termsVersion?: string;
@@ -273,6 +275,7 @@ export type Snapshot = {
   sessions: Session[];
   teams: { id: string; name: string; nameEn?: string }[];
   userFile: string;
+  appVersion?: string;
 };
 export type PermissionMode = 'ask' | 'acceptEdits' | 'plan' | 'auto';
 export type PolicySnapshot = {

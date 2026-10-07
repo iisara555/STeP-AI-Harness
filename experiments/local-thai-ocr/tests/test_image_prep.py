@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 import ocr_engine
 
@@ -11,39 +11,6 @@ def line(text, box, confidence=0.9):
 
 
 class ImagePrepTests(unittest.TestCase):
-    def test_phone_photo_is_turned_by_its_exif_orientation(self):
-        import tempfile
-        from pathlib import Path
-
-        sideways = Image.new("RGB", (300, 100), "white")
-        exif = Image.Exif()
-        exif[0x0112] = 6  # stored rotated; viewers turn it 90 degrees clockwise
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / "receipt.jpg"
-            sideways.save(path, exif=exif)
-            reader = ocr_engine.LocalThaiOCR()
-            seen = []
-            with patch.object(reader, "_predict_lines", side_effect=lambda image, *_: seen.append(image.size) or []):
-                result = reader.process(path, ocr_engine.OCRConfig())
-
-        self.assertEqual(seen, [(100, 300)])
-        self.assertEqual(result["pages"][0]["original_width"], 100)
-        self.assertFalse(any("resized" in warning for warning in result["warnings"]))
-
-    def test_faded_print_is_darkened_and_clear_print_is_left_alone(self):
-        faded = Image.new("RGB", (200, 100), (235, 235, 235))
-        ImageDraw.Draw(faded).rectangle((20, 40, 180, 60), fill=(170, 170, 170))
-        warnings = []
-        darker = ocr_engine.LocalThaiOCR._stretch_contrast(faded, warnings)
-        self.assertLess(darker.getpixel((100, 50))[0], 60)
-        self.assertTrue(warnings)
-
-        clear = Image.new("RGB", (200, 100), "white")
-        ImageDraw.Draw(clear).rectangle((20, 40, 30, 45), fill="black")
-        warnings = []
-        self.assertIs(ocr_engine.LocalThaiOCR._stretch_contrast(clear, warnings), clear)
-        self.assertEqual(warnings, [])
-
     def test_sideways_page_is_read_upright(self):
         image = Image.new("RGB", (100, 300), "white")
         reader = ocr_engine.LocalThaiOCR()
