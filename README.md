@@ -1,11 +1,19 @@
 # STeP AI
 
-> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.23**. รวม OCR รอบใหม่และทัวร์ใช้งานสองช่วงแล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
+> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.23**. รวม OCR รอบใหม่ ทัวร์ใช้งานสองช่วง และงาน Office ในส่วน Unreleased แล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI Harness สำหรับพนักงาน STeP / RSP North ใช้สำหรับคุยกับ AI, แนบเอกสาร, ใช้ Skill/Playbook, ตรวจร่าง, ส่งออกไฟล์ และใช้เครื่องมือเฉพาะ เช่น **ตรวจใบเสร็จก่อนส่ง AFP** โดยไม่ต้องใช้ Git, Terminal หรือจำชื่อ Skill
 
 > สำหรับผู้ใช้ทั่วไป: เริ่มจาก **STeP Desktop GUI**  
 > สำหรับผู้ดูแล/นักพัฒนา: รายละเอียด Harness, Router และ manifests อยู่ช่วงท้ายของ README นี้
+
+## Excel, PowerPoint และงานเขียนร่วมกับ AI
+
+Source ปัจจุบันเพิ่ม `spreadsheet-work` (สถานะ draft) สำหรับสร้าง/อ่าน XLSX แก้ช่องข้อมูลและตรวจสูตร รวมถึงสร้าง PPTX ที่แก้ข้อความ ตาราง กราฟ และ speaker notes ต่อได้ผ่าน `presentation-design`. ขอ “ส่งออกเป็น Excel” จากตารางที่คุยไว้ได้; AI ใช้ `sheet_create` สร้าง `.xlsx` ใน workspace ผ่านสิทธิ์เดิม โหมดถามจะรอตรวจและนำไปใช้ใน **Changes** ส่วนโหมดรับการแก้ไขรายงานผลเมื่อเขียนไฟล์แล้ว. ถ้าปิด tool loop ให้ใช้ส่งออก **XLSX** จากร่าง; CSV เป็นอีกฟอร์แมต ไม่ใช่ไฟล์ XLSX.
+
+เปิด Excel/PowerPoint ตรวจสูตร ฟอนต์และทุกหน้าก่อนใช้งานจริง. สร้าง PPTX ใหม่ได้ แต่ยังไม่แก้ PPTX เดิมโดยรับรองว่ารักษาทุก feature. `step-writing`, `document-review`, `decision-memo` และ `sop-authoring` เพิ่มการร่างทีละส่วนและตรวจจากมุมผู้อ่าน.
+
+Google Sheets โดยตรงยังต้องมี connector และบัญชีที่เปิดใช้จริง; โมดูล Google Workspace แบบ opt-in ไม่ได้เปิดเป็นเครื่องมือ Desktop อัตโนมัติ. ใช้ XLSX นำเข้า Google Sheets ได้. ผลตรวจปัจจุบันเป็นข้อมูลสังเคราะห์; ยังไม่มีผลเปรียบเทียบโมเดลจริงแบบมี/ไม่มี Skill และยังไม่ยืนยัน PowerPoint บนเครื่องพนักงาน. ดู [ขอบเขต Office](docs/office-workflows.md) และ [แผนประเมิน](docs/tool-usability-eval.md) และ [วิธีตั้งค่าโมเดลใน cloud](docs/cloud-model-eval-setup.md). การเพิ่ม source นี้ไม่ได้ออก installer/release ใหม่.
 
 ## เลือกวิธีใช้ STeP AI
 
@@ -643,11 +651,11 @@ README ฉบับนี้อ้างอิง Harness source **v0.7.6** แ�
 | --- | --- |
 | ทีม | **22 ทีม** |
 | กลุ่ม routing | **5 กลุ่ม** |
-| Skills | **52 Skills** |
+| Skills | **53 Skills** |
 | Playbooks | **5 Playbooks** |
 | Actions | **4 Actions** |
 
-Router มีเส้นทางเลือก Skill 51 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
+Router มีเส้นทางเลือก Skill 52 รายการ ส่วน `step-router` เป็น routing/orchestration Skill
 
 ต้นทาง: [Skills](manifest/skills.yaml) · [Router index](manifest/router-index.yaml) · [Playbooks](manifest/playbooks.yaml) · [Actions](manifest/actions.yaml)
 

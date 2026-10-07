@@ -758,6 +758,8 @@ export class WorkService {
                 .replace(/The workspace has Browser[\s\S]*?Never request credentials\./, '')
             : baseRules,
           toolsEnabled && TOOL_RULES,
+          !toolsEnabled &&
+            'Host tool execution is disabled for this turn. The Desktop draft export UI supports DOCX, PDF, Markdown, XLSX and PPTX where policy permits. For Excel provide the requested table in the draft and direct the user to XLSX export; do not claim a file was created or substitute CSV without their choice. Direct Google Sheets access requires an available authorized connector.',
           toolsEnabled && WEB_RULE,
           catalog.length && ORGANIZATION_RULE,
           internal && internalSystemRule(internal, toolsEnabled),

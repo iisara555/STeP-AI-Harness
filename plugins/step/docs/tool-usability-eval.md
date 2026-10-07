@@ -29,3 +29,13 @@ Recordings: {suite:"office-tools-v1",synthetic:true,kind:"recorded-model-run",pr
 มีเพียง 5 tasks ในชุดแรก จึงไม่ใช้เป็นตัวเลขรับรองผล production บันทึก samples/model/config และ paired outcomes ก่อนขยาย sample size ห้ามเลือกเฉพาะรอบที่สำเร็จ ห้ามรวม scripted results กับ model runs หรือกับเอกสารจริง
 
 ไม่เรียก provider อัตโนมัติ ไม่เพิ่ม OCR เข้า Router และไม่มี credential/setup side effect รายงานจริงที่อาจมีข้อมูลส่วนบุคคลต้องอยู่นอก repository ตาม repository-data-boundary
+
+## Skill benefit is a separate experiment
+
+การเปรียบเทียบ WITH/WITHOUT tools ด้านบนไม่ใช่ WITH/WITHOUT Skill. สำหรับ Skill ให้คง provider/model/config, prompt สังเคราะห์, source และเครื่องมือเหมือนกันทั้งสอง arm; เพิ่มเฉพาะ Skill และ references ที่จำเป็นใน WITH. ใช้ session ใหม่ที่ไม่รับ memory/history ของอีก arm และสลับลำดับตาม seed. ตรวจ antiTrigger/collision จาก Router แยกจากคุณภาพคำตอบเมื่อบังคับโหลด Skill.
+
+ขอบเขตที่ผู้ใช้อนุมัติวันที่ 2026-10-07: ทุก connection/โมเดลที่พร้อมใช้งาน สูงสุด 3 รอบ; ก่อนเรียกจริงให้บันทึก matrix และจำนวนคำขอรวม (แต่ละคู่ WITH/WITHOUT ใช้สองคำขอตอบ และ model judge ใช้โควตาเพิ่ม). จำกัด retry และ tool turns ในงบเดียวกัน ไม่เรียกบัญชีที่ยังไม่ได้ตั้งค่า และไม่เปลี่ยนโมเดลแทนโดยไม่บันทึก. ใช้ fixtures/outputAssertions ใน `evals/skills/` และตรวจ XLSX/PPTX อิสระ ไม่ใช้คำว่า “สร้างแล้ว” ของโมเดลเป็นหลักฐานไฟล์.
+
+Cloud รอบนี้ไม่พบ API key สำหรับ eval หรือโปรไฟล์ connection ของ Desktop ที่พร้อมใช้ จึงยังไม่เรียกโมเดลจริงและไม่ใช้โควตา. `modelSideRun: not-yet-run` และสถานะ draft คงเดิม. ห้ามนำ credentials มาใส่ Git/รายงาน; ผลส่วนตัวเก็บนอก repo. สคริปต์ `scripts/skill-eval-compare.mjs` เดิมเปรียบเทียบ old/new Skill และใช้ model judge จึงไม่ควรนำผลนั้นไปเรียกว่า WITH/WITHOUT Skill.
+
+คู่มือตั้ง secrets และข้อแตกต่างของตัวประเมิน: [Cloud model evaluation setup](cloud-model-eval-setup.md).

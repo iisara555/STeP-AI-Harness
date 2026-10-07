@@ -23,3 +23,11 @@ Dependencies เพิ่มการประกาศ jszip/@xmldom/xmldom ท
 - ตรวจภาพครบ 3 สไลด์สังเคราะห์: ข้อความไทย ตาราง และกราฟอ่านได้ ไม่มีการทับกันที่สังเกตพบในชุดนี้ Renderer ใช้ Noto Sans Thai แทนฟอนต์ IBM Plex Sans Thai ที่ไม่ได้ติดตั้งในระบบ จึงยังต้องตรวจฟอนต์บนเครื่องปลายทาง
 - บันทึก metrics/hash/ข้อจำกัดใน evals/tool-usability/office-contract-results-2026-10-06.json; artifacts อยู่ใน ignored QA folder ไม่ใช่เอกสารจริง
 - Tests ใน cloud ใช้ homedir จำลองใต้ /tmp เพราะ /home/agent เขียนไม่ได้ ไม่เปลี่ยน runtime config ของ Harness
+
+## Review และรวม main — 7 ตุลาคม 2569
+
+- รวม source Office กับ main ที่มี OCR 0.5.23, welcome tour และการรักษา context ระหว่างข้อความแล้ว. Harness 0.7.6 / Desktop 0.5.23 ไม่ได้ bump version หรือเผยแพร่ installer ใหม่
+- Harness 937 passed, 2 skipped; Desktop 429 passed, 2 skipped. Validator ตรวจ 53 Skills; legacyWithoutEvals เหลือ 31. `spreadsheet-work` ยังเป็น draft และ eval ฉบับปรับใหม่ยังเป็น modelSideRun: not-yet-run
+- เพิ่ม regression แบบ test-first: ตารางจากข้อความก่อนหน้า → WorkService → tool loop → DesktopTools → XLSX จริง ตรวจทั้ง Ask/Accept Edits, รหัส 00123 และช่องรอยืนยัน. Scripted provider ตรวจการส่ง prompt/การทำงานของ host ไม่ใช่หลักฐานว่าโมเดลจริงเลือกเครื่องมือถูกเสมอ
+- Controlled Office runner ยืนยัน artifacts สังเคราะห์ 3 ไฟล์และ missing-sheet recovery 1 ครั้ง; worker ที่ build ลง dist สร้าง/อ่าน XLSX แล้วรหัส 00123 ยังตรง. [รายงานสังเคราะห์รอบนี้](https://github.com/iisara555/STeP-AI-Harness/blob/main/evals/tool-usability/office-contract-results-2026-10-07.json). รอบนี้ไม่รัน recalculation/visual review ใหม่; หลักฐาน LibreOffice วันที่ 6 ตุลาคมเป็นหลักฐานเดิม ไม่ใช่ PowerPoint บนเครื่องพนักงาน
+- ไม่มี key/connection สำหรับ live eval ใน cloud จึงยังไม่ใช้โควตา; ผู้ใช้อนุมัติทุกบัญชีที่พร้อม สูงสุด 3 รอบ. [วิธีตั้งค่า](cloud-model-eval-setup.md) อธิบาย secret bindings และขอบเขตตัวประเมิน

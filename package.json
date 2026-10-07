@@ -119,7 +119,8 @@
     "docs/document-coauthoring.md",
     "docs/google-workspace-connector.md",
     "docs/tool-usability-eval.md",
-    "docs/office-workflows.md"
+    "docs/office-workflows.md",
+    "docs/cloud-model-eval-setup.md"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

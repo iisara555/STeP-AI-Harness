@@ -18,7 +18,7 @@ Plugin ใช้ Harness version **0.7.6** แยกจากเลขรุ่�
 
 ชุดนี้ให้ Skills/กติกา ไม่ได้ติดตั้ง Electron, OCR runtime, หน้าตรวจใบเสร็จ AFP, Changes, ประวัติร่าง หรือ Image API ของ Desktop. การเลือก Skill และสิทธิ์เครื่องมือ/ส่งข้อมูลขึ้นกับโปรแกรม AI ที่ใช้ กติกาใน plugin ไม่ใช่การรับรองว่า native host จะบังคับทุก gate แบบ Desktop. ตรวจบัญชี/โมเดลที่โปรแกรมนั้นให้ใช้จริง.
 
-ดู [คู่มือ STeP Desktop ล่าสุด](https://github.com/iisara555/STeP-AI-Harness/blob/main/desktop/README.md) สำหรับ OCR/vision, ทัวร์, การสร้างภาพ และข้อจำกัด. Office workflow preview ยังไม่ใช่ความสามารถที่เผยแพร่ใน Desktop หรือ plugin บน main.
+ดู [คู่มือ STeP Desktop ล่าสุด](https://github.com/iisara555/STeP-AI-Harness/blob/main/desktop/README.md) สำหรับ OCR/vision, ทัวร์, การสร้างภาพ และข้อจำกัด. Source ปัจจุบันเพิ่ม `spreadsheet-work` (draft), การสร้าง PPTX และการร่างเอกสารทีละส่วน. เครื่องมือ `sheet_create`/`slides_create` เป็นของ Desktop; ใน plugin ต้องตรวจเครื่องมือของ native host ก่อนเรียกใช้. ผลสังเคราะห์ไม่ได้ยืนยันคุณภาพโมเดลจริง และ source ใน Unreleased ไม่ยืนยันว่ามี installer ใหม่แล้ว.
 
 Repository เป็น public: ห้ามเก็บเอกสารจริง ข้อมูลส่วนบุคคล OCR จากใบเสร็จจริง หรือ credentials ใน checkout. Controlled source ต้องอยู่ในช่องทางภายในที่ได้รับอนุญาต; AI ช่วยร่าง คนตรวจและผู้มีอำนาจเป็นผู้อนุมัติ.
 

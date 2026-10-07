@@ -6,6 +6,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: Excel export from conversation tables
+
+- Guide an Excel request to actual XLSX creation from the existing table/draft, instead of silently substituting CSV or promising a file without requesting the tool. With the tool loop disabled, describe the existing draft export UI.
+- Report staged and applied results according to the existing permission mode. Preserve pending facts and leading-zero identifiers; direct Google Sheets access requires an actually available authorized connector.
+- Add a test-first chat-to-workbook regression using real host tools, synthetic conversation data and a scripted provider, covering Ask and Accept Edits. This verifies prompt delivery and file behavior; it does not establish live model compliance or Skill benefit.
+
 ### Office tools, interface evaluation and document coauthoring
 
 - Add a draft `spreadsheet-work` Skill with four-dimensional routing evals and synthetic examples. Desktop can create typed XLSX workbooks with local formulas and editable PPTX decks with Thai text, tables, charts and speaker notes through the existing Changes/permission gates.

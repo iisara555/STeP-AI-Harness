@@ -15,7 +15,8 @@ const cell = value => {
 (async () => {
   try {
     if (workerData.operation) {
-      const create = workerData.operation === 'sheet_create' ? createWorkbook : workerData.operation === 'slides_create' ? createPresentation : null;
+      const create =
+        workerData.operation === 'sheet_create' ? createWorkbook : workerData.operation === 'slides_create' ? createPresentation : null;
       if (!create) throw new Error('INVALID_INPUT');
       parentPort.postMessage(await create(workerData.spec));
       return;

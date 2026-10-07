@@ -1,6 +1,6 @@
 # STeP Desktop
 
-> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.23**. รวม OCR รอบใหม่และทัวร์ใช้งานสองช่วงแล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
+> อ้างอิง source ของ `main`: Harness **0.7.6** / Desktop **0.5.23**. รวม OCR รอบใหม่ ทัวร์ใช้งานสองช่วง และงาน Office ในส่วน Unreleased แล้ว. เลขเวอร์ชันใน source และ CI artifacts ไม่ยืนยันว่าแจกแล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest) ก่อนเลือกตัวติดตั้ง.
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -13,6 +13,14 @@ Phase 3 adds [context and memory controls](../docs/desktop-context-memory.md): `
 [Learning Inbox](../docs/desktop-learning.md) adds `/learn`, explicit review of local preference/procedure proposals, version history, disable and rollback. Only approved lessons enter later tasks; this phase does not include automatic review or measured quality improvement.
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](../docs/desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
+
+## Office tools in Unreleased
+
+The host tool loop can create actual XLSX workbooks (`sheet_create`) and editable PPTX decks (`slides_create`) from chat/draft, including a table from earlier conversation turns. Ask mode stages them in **Changes** for review/application; Accept Edits uses the existing write gate and reports `applied` only after writing. Existing files are not overwritten. Leading-zero identifiers remain text and missing facts remain pending confirmation. With tool execution disabled, use the draft's **XLSX** export; CSV is a separate format.
+
+`sheet_read` separates formulas from cached values; `sheet_edit` patches input cells while preserving unrelated ZIP parts and refuses formula/protected cells, macros and signed packages. Recalculate in Excel/LibreOffice and visually review every PPTX page. Creation does not support faithful editing of an existing PPTX. See [Office workflows](../docs/office-workflows.md) for bounds, synthetic evidence and the draft `spreadsheet-work` Skill.
+
+The optional Google Workspace module is not automatically registered in the Desktop loop or authenticated. Direct Google Sheets access requires an available authorized connector; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. These additions are source changes in Unreleased, not a newly published installer.
 
 ## Desktop 0.5.23 source
 

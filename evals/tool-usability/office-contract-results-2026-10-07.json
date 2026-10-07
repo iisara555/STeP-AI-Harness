@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "controlled-contract",
+  "pairedTasks": 5,
+  "arms": {
+    "with-tools": {
+      "trials": 5,
+      "successes": 5,
+      "discovered": 5,
+      "wrongSelection": 0,
+      "parameterErrors": 1,
+      "recovered": 1
+    },
+    "without-tools": {
+      "trials": 5,
+      "successes": 0,
+      "discovered": 0,
+      "wrongSelection": 0,
+      "parameterErrors": 0,
+      "recovered": 0
+    }
+  },
+  "rows": [
+    {
+      "taskId": "sheet-edit",
+      "arm": "with-tools",
+      "success": true,
+      "discovered": true,
+      "recovered": false
+    },
+    {
+      "taskId": "sheet-edit",
+      "arm": "without-tools",
+      "success": false,
+      "discovered": false,
+      "recovered": false
+    },
+    {
+      "taskId": "slide-create",
+      "arm": "without-tools",
+      "success": false,
+      "discovered": false,
+      "recovered": false
+    },
+    {
+      "taskId": "slide-create",
+      "arm": "with-tools",
+      "success": true,
+      "discovered": true,
+      "recovered": false
+    },
+    {
+      "taskId": "sheet-recovery",
+      "arm": "with-tools",
+      "success": true,
+      "discovered": true,
+      "recovered": true
+    },
+    {
+      "taskId": "sheet-recovery",
+      "arm": "without-tools",
+      "success": false,
+      "discovered": false,
+      "recovered": false
+    },
+    {
+      "taskId": "sheet-read",
+      "arm": "without-tools",
+      "success": false,
+      "discovered": false,
+      "recovered": false
+    },
+    {
+      "taskId": "sheet-read",
+      "arm": "with-tools",
+      "success": true,
+      "discovered": true,
+      "recovered": false
+    },
+    {
+      "taskId": "sheet-create",
+      "arm": "with-tools",
+      "success": true,
+      "discovered": true,
+      "recovered": false
+    },
+    {
+      "taskId": "sheet-create",
+      "arm": "without-tools",
+      "success": false,
+      "discovered": false,
+      "recovered": false
+    }
+  ],
+  "observedDifference": 1,
+  "modelBenefitEstablished": false,
+  "limitation": "Scripted tool contracts; no model performance measured.",
+  "artifacts": {
+    "identifiers.xlsx": "8389f7aaacef418b07e964dcfd8e6bc1389b5480d80a6e731e29e8a53fe7518e",
+    "edited.xlsx": "48488d8376a1e42bd45eaab9d2d3c339403714580b7da25063e13cb0d6f61e6e",
+    "synthetic-deck.pptx": "b037f9748a237fee5ce6d3e14a8aa6cce2c821fd995eaa6591175e19a7551cd0"
+  },
+  "recalculation": "not-run",
+  "visualReview": "not-run",
+  "synthetic": true,
+  "recordedAt": "2026-10-07",
+  "liveModelCalls": 0,
+  "builtWorker": {
+    "verified": true,
+    "leadingZeroPreserved": true
+  },
+  "reviewNotes": "Controlled synthetic artifacts only. Recalculation and visual review were not rerun; no staff-machine PowerPoint or live model benefit established."
+}
