@@ -6,18 +6,28 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.28 — 2026-10-07
+
+STeP Desktop 0.5.28 adds document-type Garuda exports and packages the Skill-backed document layouts and Antigravity chat recovery below. Harness remains 0.7.6.
+
+### Desktop: Garuda letterheads in editable DOCX and PDF
+
+- Export memos with a 1.5 cm-high Garuda and external letters with a 3 cm-high Garuda, preserving the graphic's aspect ratio. DOCX uses a first-page header, an editable 29 pt memo title with matching Thai/Latin properties, and live first-page/continuation page-number fields. PDF uses the same document-type/font selection and a first-page letterhead. TOR, project proposals, minutes and generic drafts receive no automatic emblem.
+- Add Thai/English export controls for the document default or **No Garuda emblem** and explicit PSK/New font choices in DOCX/PDF. The host derives the type from the stored Skill-backed task and rejects arbitrary emblem paths, URLs and option values before allocating output. The original 800 × 800 transparent graphic is bundled offline, preserving its fine lines instead of using a coarse scanned drawing; [provenance](docs/third-party-notices/thai-garuda.md) records its pinned source, checksum and separate historical sizing reference. No image or document is sent to AI during export; no new runtime dependency or policy-default change.
+- Add test-first physical-dimension, first-page-only, native-text/table, selected-font, source-byte, opt-out and invalid-input regressions to the Desktop test glob, plus real Electron controls/IPC/export checks. Validation uses synthetic documents and controlled providers only. Actual PSK rendering is reviewed with Electron/LibreOffice; native Microsoft Word and current agency-form approval still require review on employee devices. No real-document OCR accuracy claim.
+
 ### Desktop: editable DOCX with Skill-backed working layouts
 
 - Share one source-gated, 16-section TOR skeleton between drafting and official-document Skills. Replace fixed penalties, qualification thresholds, legal clauses and SLA defaults with pending-source fields. Regenerate the Claude plugin from the same source; drafting and acceptance do not establish procurement approval.
 - Select the DOCX working layout from the stored document-tool task. Format document titles, memo reference/date tabs (including bold labels), letter sender/date blocks, signatures and minutes headers; keep native paragraphs/tables, source numbers and unresolved fields editable. Add live page-number fields with a Thai-number format and keep headings with the following paragraph or table. Attached agency forms supply source text; their original Word layout is not preserved.
-- Use an explicit TH Sarabun PSK family for the five working layouts and offer an allowlisted TH Sarabun New override. Show the chosen face and a local font-availability notice without downloading fonts or treating the two families as equivalent. Generic exports retain their existing font; policy defaults and versions remain unchanged.
+- Use an explicit TH Sarabun PSK family for the five working layouts and offer an allowlisted TH Sarabun New override. Show the chosen face and a local font-availability notice without downloading fonts or treating the two families as equivalent. Generic exports retain their existing font; policy defaults remain unchanged.
 - Add test-first source/template, OOXML and Electron regressions to the existing root test file, Desktop test glob and document-tools smoke. Evidence uses synthetic documents and controlled providers only. Native Microsoft Word, real provider drafting quality, current agency-form approval and actual-font layout still require review on employee devices.
 
 ### Desktop: recover Antigravity chat after a blocked native tool
 
 - Guide Antigravity to text responses and the STeP `step-tool` protocol. Stop a native tool request, wait for process shutdown and cleanup, then allow one fresh attempt with explicit recovery instructions. Both attempts share the original deadline and retain strict native-tool denial. Authentication, quota, invalid-policy and uncertain-shutdown failures are not replayed.
 - Publish text only after an attempt completes and validates, so partial prose or tool requests from a failed attempt cannot leak into the recovered answer. A persistent denial has Thai/English guidance instead of a raw `TOOL_DENIED` status. Native web search remains unavailable; missing current information needs an actual source or a connection that supports search.
-- Add test-first synthetic NDJSON and Electron chat regressions for recovery, bounded repeated denial, timeout, host tool/data checks and localized errors. Include the new chat smoke in `test:electron`. These checks use simulated providers and local synthetic sources only; live Antigravity behavior and native Windows/macOS recovery remain unverified. Recovery can consume one additional provider request; failed-stream usage may be unavailable. No version, release or policy-default change.
+- Add test-first synthetic NDJSON and Electron chat regressions for recovery, bounded repeated denial, timeout, host tool/data checks and localized errors. Include the new chat smoke in `test:electron`. These checks use simulated providers and local synthetic sources only; live Antigravity behavior and native Windows/macOS recovery remain unverified. Recovery can consume one additional provider request; failed-stream usage may be unavailable. No policy-default change.
 
 ## Desktop v0.5.27 — 2026-10-07
 

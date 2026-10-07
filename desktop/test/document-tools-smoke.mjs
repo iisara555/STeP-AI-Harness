@@ -176,16 +176,36 @@ try {
     }
     await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
     await expect(page.getByLabel('ฟอนต์ DOCX', { exact: true })).toHaveValue('auto');
+    if (id === 'memo' || id === 'letter') await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveValue('auto');
+    else await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveCount(0);
     const exported = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), last.id);
     assert.equal(exported.layout.documentTool, id);
     assert.equal(exported.layout.font, 'TH Sarabun PSK');
     assert.equal(exported.layout.fontStatus, 'missing');
+    assert.equal(exported.layout.garudaHeightCm, id === 'memo' ? 1.5 : id === 'letter' ? 3 : undefined);
     const JSZip = createRequire(import.meta.url)('jszip');
     const zip = await JSZip.loadAsync(await readFile(exported.path), { checkCRC32: true });
     const document = await zip.file('word/document.xml').async('string');
     assert.match(document, /w:cs="TH Sarabun PSK"/);
     assert.match(document, /<w:keepNext\/>/);
     assert.match(await zip.file('word/footer1.xml').async('string'), /PAGE/);
+    if (id === 'memo' || id === 'letter') {
+      assert.match(document, /<w:titlePg\/>/);
+      const header = await zip.file('word/header1.xml').async('string');
+      assert.match(header, new RegExp(`cy="${id === 'memo' ? '540000' : '1080000'}"`));
+      await page.getByLabel('ตราครุฑ', { exact: true }).selectOption('none');
+      await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
+      await expect(page.locator('.document-export-info')).toContainText('ไม่ใส่ตราครุฑ');
+      await page.getByLabel('รูปแบบส่งออก', { exact: true }).selectOption('pdf');
+      await expect(page.getByLabel('ฟอนต์ PDF', { exact: true })).toHaveValue('auto');
+      await page.getByLabel('ตราครุฑ', { exact: true }).selectOption('auto');
+      await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
+      await expect(page.locator('.document-export-info')).toContainText(`ตราครุฑสูง ${id === 'memo' ? '1.5' : '3'} ซม.`);
+      const pdf = await page.evaluate(id => window.step.call('export', { id, format: 'pdf' }), last.id);
+      assert.equal((await readFile(pdf.path)).subarray(0, 5).toString(), '%PDF-');
+      assert.equal(pdf.layout.garudaHeightCm, id === 'memo' ? 1.5 : 3);
+      await page.getByLabel('รูปแบบส่งออก', { exact: true }).selectOption('docx');
+    }
   }
   assert.equal(requests.length, 5);
   const editor = page.locator('.tiptap[contenteditable="true"]');
@@ -216,6 +236,22 @@ try {
     last.id,
   );
   assert.ok(invalidFont.includes('INVALID_EXPORT_FONT'));
+  const invalidGaruda = await page.evaluate(
+    async id =>
+      window.step
+        .call('export', {
+          id,
+          format: 'docx',
+          garuda: '../../private.png',
+          documentTool: 'memo',
+        })
+        .then(
+          () => '',
+          e => String(e),
+        ),
+    last.id,
+  );
+  assert.ok(invalidGaruda.includes('INVALID_EXPORT_GARUDA'));
   const invalid = await page.evaluate(async connectionId => {
     const s = await window.step.call('create', { connectionId });
     const cases = [

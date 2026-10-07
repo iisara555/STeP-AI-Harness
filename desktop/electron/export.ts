@@ -3,6 +3,8 @@ import {
   Document,
   HeadingLevel,
   Footer,
+  Header,
+  ImageRun,
   PageNumber,
   NumberFormat,
   Packer,
@@ -23,6 +25,7 @@ import ExcelJS from 'exceljs';
 import PptxGenJS from 'pptxgenjs';
 import { type DraftNode, documentMarkdown, documentText, plainDocument, validateDocument } from '../src/draft';
 import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
+import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
@@ -123,7 +126,7 @@ function richHtml(node: DraftNode): string {
   return tag ? `<${tag}${node.type === 'orderedList' ? ` start="${node.attrs?.start || 1}"` : ''}>${text}</${tag}>` : text;
 }
 
-export function pdfHtml(document: DraftNode) {
+export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
   // TH Sarabun New when installed (the family brings its real bold); otherwise a common Thai font scaled down to the
   // same visual size, since TH Sarabun is drawn much smaller than other fonts at the same point size.
   const face = (weight: number, names: string[]) =>
@@ -148,14 +151,50 @@ export function pdfHtml(document: DraftNode) {
       'Noto Sans Thai Bold',
       'NotoSansThai-Bold',
     ]),
-    'body{font-family:"TH Sarabun New","TH SarabunPSK","STeP Fallback",sans-serif;font-size:16pt;line-height:1.35;overflow-wrap:anywhere;margin:0}',
+    `body{font-family:"${layout.font}","STeP Fallback",sans-serif;font-size:16pt;line-height:1.35;overflow-wrap:anywhere;margin:0}`,
     'p{white-space:pre-wrap;margin:0 0 6pt}h1{font-size:20pt}h2{font-size:18pt}h3{font-size:16pt}',
     'h1,h2,h3{margin:12pt 0 6pt;break-after:avoid}ul,ol{margin:0 0 6pt;padding-left:1.5em}',
     'table{border-collapse:collapse;width:100%;table-layout:fixed;margin:6pt 0 10pt}tr{break-inside:avoid}thead{display:table-header-group}',
     'th,td{border:0.75pt solid #444;padding:2pt 5pt;vertical-align:top;text-align:left}th{background:#eee;font-weight:bold}',
     'th p,td p{margin:0}th.num,td.num{text-align:right}',
+    ...(layout.id
+      ? [
+          '@page{size:A4;margin:2.5cm 2cm 2cm 3cm}body{line-height:1.15}.block p{margin:0}h1,h2,h3{font-size:16pt;margin:6pt 0 3pt}.block:has(h1,h2,h3){break-after:avoid}',
+          '.block.sender,.block.date,.block.front,.block.signature{break-after:avoid}',
+          `.block.title :is(h1,h2,h3){font-size:${layout.id === 'memo' ? 29 : 18}pt}`,
+        ]
+      : []),
+    ...(layout.garudaHeightCm
+      ? [
+          '@page:first{margin-top:1.5cm}',
+          '.letterhead{break-inside:avoid;margin-bottom:.5cm}.letterhead.letter{text-align:center;margin-left:-1cm}',
+          '.letterhead.memo{position:relative;min-height:1.5cm;display:flex;align-items:flex-end;justify-content:center}',
+          '.letterhead.memo img{position:absolute;left:0;bottom:0}.letterhead.memo :is(h1,h2,h3){font-size:29pt;margin:0 2cm;line-height:1.1}',
+        ]
+      : []),
   ].join('');
-  return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}</style><body>${richHtml(document)}</body></html>`;
+  const blocks = document.content || [];
+  const title = layout.id === 'memo' && layout.garudaHeightCm && blocks[0]?.type === 'heading' ? blocks[0] : undefined;
+  const roles = documentLayoutRoles(document, layout.id);
+  const content = layout.id
+    ? blocks
+        .map((node, index) => {
+          if (node === title) return '';
+          const role = roles[index];
+          const css = ['title', 'front', 'signature', 'date'].includes(role) ? 'text-align:center;' : '';
+          const indent = ['sender', 'signature'].includes(role)
+            ? 'margin-left:8cm;'
+            : role === 'body' && node.type === 'paragraph'
+              ? 'text-indent:2.5cm;text-align:justify;'
+              : '';
+          return `<div class="block ${role}" style="${css}${indent}">${richHtml(node)}</div>`;
+        })
+        .join('')
+    : richHtml(document);
+  const letterhead = layout.garudaHeightCm
+    ? `<div class="letterhead ${layout.id}"><img alt="ตราครุฑ" src="${GARUDA_DATA_URI}" style="height:${layout.garudaHeightCm}cm;width:${layout.garudaHeightCm}cm">${title ? richHtml(title) : ''}</div>`
+    : '';
+  return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}</style><body>${letterhead}${content}</body></html>`;
 }
 
 function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false): ParagraphChild[] {
@@ -173,6 +212,8 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
       font,
       size,
       bold: bold || child.marks?.some(m => m.type === 'bold'),
+      sizeComplexScript: size,
+      boldComplexScript: bold || child.marks?.some(m => m.type === 'bold'),
       italics: child.marks?.some(m => m.type === 'italic'),
     };
     const text = child.text || '';
@@ -227,14 +268,21 @@ function docxTable(table: DraftNode, font: string) {
   });
 }
 
-function docxBlocks(node: DraftNode, layout: DocumentLayout, role: LayoutRole = 'body', prefix = '', depth = 0): (Paragraph | Table)[] {
+function docxBlocks(
+  node: DraftNode,
+  layout: DocumentLayout,
+  role: LayoutRole = 'body',
+  prefix = '',
+  depth = 0,
+  firstPageSpace = false,
+): (Paragraph | Table)[] {
   if (node.type === 'table') return [docxTable(node, layout.font), new Paragraph({ children: [] })];
   if (node.type === 'paragraph' || node.type === 'heading') {
     const level = node.attrs?.level || 1;
     const size = layout.id
       ? role === 'title'
         ? layout.id === 'memo'
-          ? 40
+          ? 58
           : 36
         : 32
       : node.type === 'heading'
@@ -258,6 +306,7 @@ function docxBlocks(node: DraftNode, layout: DocumentLayout, role: LayoutRole = 
         keepNext: node.type === 'heading' || ['front', 'sender', 'date', 'memo-reference', 'signature'].includes(role),
         keepLines: node.type === 'heading' || role === 'signature',
         widowControl: true,
+        ...(firstPageSpace ? { spacing: { before: Math.round(0.5 * CM) } } : {}),
         children: [
           ...(prefix ? [new TextRun({ text: prefix, font: layout.font, size })] : []),
           ...runs(node, size, node.type === 'heading', layout.font, role === 'memo-reference'),
@@ -290,6 +339,38 @@ function docx(document: DraftNode, layout: DocumentLayout) {
     paragraph: { spacing: { before: 120, after: 60 }, keepNext: true, keepLines: true },
   });
   const roles = documentLayoutRoles(document, layout.id);
+  const blocks = document.content || [];
+  const title = layout.id === 'memo' && layout.garudaHeightCm && blocks[0]?.type === 'heading' ? blocks[0] : undefined;
+  const footer = () =>
+    new Footer({
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ font: layout.font, size: 28, children: ['หน้า ', PageNumber.CURRENT] })],
+        }),
+      ],
+    });
+  const header = layout.garudaHeightCm
+    ? new Header({
+        children: [
+          new Paragraph({
+            alignment: layout.id === 'memo' ? AlignmentType.LEFT : AlignmentType.CENTER,
+            indent: { left: layout.id === 'letter' ? -CM : 0, firstLine: 0 },
+            spacing: { before: 0, after: 0 },
+            tabStops: layout.id === 'memo' ? [{ type: TabStopType.CENTER, position: 8 * CM }] : undefined,
+            children: [
+              new ImageRun({
+                type: 'png',
+                data: GARUDA_PNG,
+                transformation: { width: (layout.garudaHeightCm * 96) / 2.54, height: (layout.garudaHeightCm * 96) / 2.54 },
+                altText: { name: 'Garuda', title: 'ตราครุฑ', description: `สูง ${layout.garudaHeightCm} ซม.` },
+              }),
+              ...(title ? [new TextRun({ children: [new Tab()] }), ...runs(title, 58, true, layout.font)] : []),
+            ],
+          }),
+        ],
+      })
+    : undefined;
   return new Document({
     styles: {
       default: {
@@ -302,27 +383,31 @@ function docx(document: DraftNode, layout: DocumentLayout) {
     sections: [
       {
         properties: {
+          ...(header ? { titlePage: true } : {}),
           page: {
             size: { width: 11906, height: 16838 },
-            margin: { top: Math.round(2.5 * CM), bottom: 2 * CM, left: 3 * CM, right: 2 * CM },
+            margin: {
+              top: Math.round(2.5 * CM),
+              bottom: 2 * CM,
+              left: 3 * CM,
+              right: 2 * CM,
+              ...(header ? { header: Math.round(1.5 * CM) } : {}),
+            },
             ...(layout.id ? { pageNumbers: { formatType: NumberFormat.THAI_NUMBERS } } : {}),
           },
         },
+        ...(header ? { headers: { first: header } } : {}),
         ...(layout.id
           ? {
               footers: {
-                default: new Footer({
-                  children: [
-                    new Paragraph({
-                      alignment: AlignmentType.CENTER,
-                      children: [new TextRun({ font: layout.font, size: 28, children: ['หน้า ', PageNumber.CURRENT] })],
-                    }),
-                  ],
-                }),
+                default: footer(),
+                ...(header ? { first: footer() } : {}),
               },
             }
           : {}),
-        children: (document.content || []).flatMap((node, index) => docxBlocks(node, layout, roles[index])),
+        children: blocks.flatMap((node, index) =>
+          node === title ? [] : docxBlocks(node, layout, roles[index], '', 0, Boolean(header && index === (title ? 1 : 0))),
+        ),
       },
     ],
   });
@@ -505,7 +590,7 @@ export async function exportDocument(
   text: string,
   pdf: (html: string) => Promise<Uint8Array>,
   document?: DraftNode,
-  options: { documentTool?: unknown; font?: unknown } = {},
+  options: { documentTool?: unknown; font?: unknown; garuda?: unknown } = {},
 ) {
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
@@ -513,8 +598,9 @@ export async function exportDocument(
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
   if (format === 'docx')
-    return writeFile(path, await Packer.toBuffer(docx(content, resolveDocumentLayout(options.documentTool, options.font))));
-  if (format === 'pdf') return writeFile(path, await pdf(pdfHtml(content)));
+    return writeFile(path, await Packer.toBuffer(docx(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda))));
+  if (format === 'pdf')
+    return writeFile(path, await pdf(pdfHtml(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda))));
   if (format === 'xlsx') return xlsx(path, content);
   return pptx(path, content);
 }

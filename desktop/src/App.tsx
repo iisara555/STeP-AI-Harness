@@ -146,9 +146,13 @@ export default function App() {
   const [format, setFormat] = useState('docx'),
     [exportPath, setExportPath] = useState('');
   const [exportFont, setExportFont] = useState('auto');
-  const [exportInfo, setExportInfo] = useState<{ documentTool?: string; font: string; fontStatus: string } | null>(null);
+  const [exportGaruda, setExportGaruda] = useState('auto');
+  const [exportInfo, setExportInfo] = useState<{ documentTool?: string; font: string; fontStatus: string; garudaHeightCm?: number } | null>(
+    null,
+  );
   useEffect(() => {
     setExportFont('auto');
+    setExportGaruda('auto');
     setExportInfo(null);
   }, [selected]);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
@@ -2368,7 +2372,12 @@ export default function App() {
                             const output = await api.call('export', {
                               id: selected,
                               format,
-                              ...(format === 'docx' && exportFont !== 'auto' ? { font: exportFont } : {}),
+                              ...(['docx', 'pdf'].includes(format)
+                                ? {
+                                    ...(exportFont !== 'auto' ? { font: exportFont } : {}),
+                                    garuda: exportGaruda,
+                                  }
+                                : {}),
                             });
                             setExportPath(output.path);
                             setExportInfo(output.layout || null);
@@ -2383,11 +2392,11 @@ export default function App() {
                         {t('ส่งออก')}
                       </button>
                     </footer>
-                    {format === 'docx' && (
+                    {['docx', 'pdf'].includes(format) && (
                       <label className="document-export-font">
-                        {t('ฟอนต์ DOCX')}
+                        {t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
                         <select
-                          aria-label={t('ฟอนต์ DOCX')}
+                          aria-label={t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
                           value={exportFont}
                           onChange={e => {
                             setExportFont(e.target.value);
@@ -2403,9 +2412,32 @@ export default function App() {
                         </select>
                       </label>
                     )}
+                    {['docx', 'pdf'].includes(format) && ['memo', 'letter'].includes(session.documentTool || '') && (
+                      <label className="document-export-font">
+                        {t('ตราครุฑ')}
+                        <select
+                          aria-label={t('ตราครุฑ')}
+                          value={exportGaruda}
+                          onChange={e => {
+                            setExportGaruda(e.target.value);
+                            setExportInfo(null);
+                          }}
+                        >
+                          <option value="auto">
+                            {t('ตามประเภทเอกสาร (สูง {0} ซม.)', resolveDocumentLayout(session.documentTool).garudaHeightCm)}
+                          </option>
+                          <option value="none">{t('ไม่ใส่ตราครุฑ')}</option>
+                        </select>
+                      </label>
+                    )}
                     {exportInfo && (
                       <div className="document-export-info" role="status">
                         <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
+                        {exportInfo.garudaHeightCm ? (
+                          <p>{t('ตราครุฑสูง {0} ซม. (เฉพาะหน้าแรก)', exportInfo.garudaHeightCm)}</p>
+                        ) : (
+                          <p>{t('ไม่ใส่ตราครุฑ')}</p>
+                        )}
                         {exportInfo.fontStatus === 'missing' && (
                           <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
                         )}

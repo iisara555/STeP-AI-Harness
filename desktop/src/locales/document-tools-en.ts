@@ -1,7 +1,21 @@
 export const documentToolsEn: Record<string, string> = {
+  'ส่งออก DOCX และ PDF พร้อมตราครุฑ: บันทึกข้อความสูง 1.5 ซม. หนังสือภายนอกสูง 3 ซม. เฉพาะหน้าแรก':
+    'DOCX/PDF Garuda letterheads: 1.5 cm high for memos, 3 cm for external letters, on the first page only',
+  'เลือกไม่ใส่ตราครุฑได้ TOR โครงการ และรายงานประชุมไม่ใส่ตราอัตโนมัติ':
+    'Choose No Garuda emblem for other agency forms. TORs, project proposals and minutes do not add it automatically',
+  'ร่างด้วย Skill และแม่แบบ ใช้ TH Sarabun PSK หรือเลือก TH Sarabun New ข้อมูลที่ขาดยังคงรอยืนยัน':
+    'Skill-backed drafting and working templates use TH Sarabun PSK or your TH Sarabun New choice. Missing facts stay pending',
+  'Antigravity: ลองกู้คำตอบหนึ่งครั้งเมื่อเครื่องมือถูกปฏิเสธ หากยังไม่สำเร็จจะแสดงคำแนะนำให้อ่านเข้าใจ':
+    'Antigravity retries once after a blocked tool request and shows readable guidance if recovery fails',
   'ใช้แม่แบบร่างตามชนิดเอกสาร ไฟล์แนบใช้เป็นต้นเรื่องและไม่เก็บรูปแบบ Word เดิม':
     'Uses a working layout for the document type. Attachments supply source text; their original Word layout is not preserved.',
   'ฟอนต์ DOCX': 'DOCX font',
+  'ฟอนต์ PDF': 'PDF font',
+  ตราครุฑ: 'Garuda emblem',
+  'ตามประเภทเอกสาร (สูง {0} ซม.)': 'Document type default ({0} cm high)',
+  ไม่ใส่ตราครุฑ: 'No Garuda emblem',
+  'ตราครุฑสูง {0} ซม. (เฉพาะหน้าแรก)': 'Garuda emblem: {0} cm high (first page only)',
+  'ตัวเลือกตราครุฑไม่ถูกต้อง กรุณาเลือกจากรายการ': 'Invalid Garuda option. Select one from the list.',
   'ตามแม่แบบร่าง ({0})': 'Working template ({0})',
   'ไฟล์ใช้ฟอนต์ {0}': 'This file uses {0}',
   'ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word':

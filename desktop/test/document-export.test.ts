@@ -16,7 +16,15 @@ async function word(markdown: string, options?: { documentTool?: string; font?: 
   const zip = await JSZip.loadAsync(await readFile(path), { checkCRC32: true });
   const xml = await zip.file('word/document.xml')!.async('string');
   const dom = new DOMParser().parseFromString(xml, 'application/xml');
-  const paragraphs = Array.from(dom.getElementsByTagNameNS(W, 'p'));
+  const headers = await Promise.all(
+    Object.keys(zip.files)
+      .filter(p => /^word\/header\d+\.xml$/.test(p))
+      .map(async p => new DOMParser().parseFromString(await zip.file(p)!.async('string'), 'application/xml')),
+  );
+  const paragraphs = [
+    ...headers.flatMap(h => Array.from(h.getElementsByTagNameNS(W, 'p'))),
+    ...Array.from(dom.getElementsByTagNameNS(W, 'p')),
+  ];
   const text = (p: Element) =>
     Array.from(p.getElementsByTagNameNS(W, 't'))
       .map(t => t.textContent)
@@ -37,7 +45,7 @@ test('five document profiles export native editable content with their selected 
       { documentTool },
     );
     assert.match(doc.xml, /w:cs="TH Sarabun PSK"/);
-    assert.equal(attr(doc.paragraph('ร่างสังเคราะห์'), 'jc', 'val'), 'center', documentTool);
+    assert.equal(attr(doc.paragraph('ร่างสังเคราะห์'), 'jc', 'val'), documentTool === 'memo' ? 'left' : 'center', documentTool);
     assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), '32');
     assert.match(doc.xml, /<w:pgNumType[^>]*w:fmt="thaiNumbers"/);
     assert.match(doc.xml, /<w:footerReference/);

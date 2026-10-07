@@ -2677,7 +2677,7 @@ async function main() {
           format = input.format;
         if (!exportFormats.includes(format) || !s.draft.trim()) throw new Error('INVALID_EXPORT');
         // The stored task selects the layout; renderer input cannot replace its Skill or template.
-        const layout = format === 'docx' ? resolveDocumentLayout(s.documentTool, input.font) : undefined;
+        const layout = ['docx', 'pdf'].includes(format) ? resolveDocumentLayout(s.documentTool, input.font, input.garuda) : undefined;
         if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
         const workspace = store.settings().workspace;
         if (!workspace || !(await stat(workspace)).isDirectory()) throw new Error('WORKSPACE_REQUIRED');
@@ -2697,20 +2697,21 @@ async function main() {
                 printBackground: true,
                 pageSize: 'A4',
                 margins: PDF_MARGINS,
+                preferCSSPageSize: true,
               });
             } finally {
               print.destroy();
             }
           },
           s.document,
-          layout ? { documentTool: layout.id, font: layout.font } : undefined,
+          layout ? { documentTool: layout.id, font: layout.font, garuda: input.garuda } : undefined,
         );
         exportPaths.add(result.path);
         if (!layout) return result;
         const fontStatus = await window.webContents
           .executeJavaScript(`(${probeDocumentFont.toString()})(${JSON.stringify(layout.font)})`)
           .catch(() => 'unknown');
-        return { ...result, layout: { documentTool: layout.id, font: layout.font, fontStatus } };
+        return { ...result, layout: { documentTool: layout.id, font: layout.font, fontStatus, garudaHeightCm: layout.garudaHeightCm } };
       }
       case 'reveal': {
         if (!exportPaths.has(input.path)) throw new Error('INVALID_PATH');
