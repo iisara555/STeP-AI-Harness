@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, cp, readdir, copyFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, cp, readdir, copyFile, realpath } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -64,9 +64,11 @@ test('rejects a connection id that escapes its runtime directory', async () => {
   }
 });
 test('rejects outputs in source checkout and permits a sibling with a similar name', () => {
-  assert.throws(() => outsideRepo('/tmp/repo/results', '/tmp/repo'), /OUTPUT_MUST_BE_OUTSIDE_REPO/);
-  assert.throws(() => outsideRepo('/tmp/repo', '/tmp/repo'), /OUTPUT_MUST_BE_OUTSIDE_REPO/);
-  assert.equal(outsideRepo('/tmp/repo-results', '/tmp/repo'), '/tmp/repo-results');
+  const repo = join(tmpdir(), 'step-output-fixture');
+  const sibling = join(tmpdir(), 'step-output-fixture-results');
+  assert.throws(() => outsideRepo(join(repo, 'results'), repo), /OUTPUT_MUST_BE_OUTSIDE_REPO/);
+  assert.throws(() => outsideRepo(repo, repo), /OUTPUT_MUST_BE_OUTSIDE_REPO/);
+  assert.equal(outsideRepo(sibling, repo), sibling);
 });
 test('runtime uses the selected Desktop OAuth profile and excludes inherited API keys', () => {
   const env = runtimeEnv('/tmp/selected-profile', {
@@ -82,12 +84,16 @@ test('runtime uses the selected Desktop OAuth profile and excludes inherited API
   assert.equal(env.HTTPS_PROXY, 'http://test-proxy');
 });
 test('resolves an aliased output before writing and recognizes dot-prefixed children', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'step-destination-test-'));
+  // macOS temporary directories can be aliases under /var of /private/var.
+  // The runner canonicalizes its repo before comparing it with the output.
+  const dir = await realpath(await mkdtemp(join(tmpdir(), 'step-destination-test-')));
   try {
     await mkdir(join(dir, 'repo'));
     await symlink(join(dir, 'repo'), join(dir, 'alias'), 'junction');
     const destination = resolvedDestination(join(dir, 'alias', 'new', 'result'));
     assert.throws(() => outsideRepo(destination, join(dir, 'repo')), /OUTPUT_MUST_BE_OUTSIDE_REPO/);
+    assert.throws(() => outsideRepo(resolvedDestination(join(dir, 'alias')), join(dir, 'repo')), /OUTPUT_MUST_BE_OUTSIDE_REPO/);
+    assert.equal(outsideRepo(resolvedDestination(join(dir, 'repo-results')), join(dir, 'repo')), join(dir, 'repo-results'));
     assert.equal(containsPath(join(dir, 'repo'), join(dir, 'repo', '..hidden')), true);
     assert.equal(containsPath(join(dir, 'repo'), join(dir, 'repo-results')), false);
   } finally {
