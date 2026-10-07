@@ -5,6 +5,20 @@ import { dirname, resolve } from 'node:path';
 import { queryStepRouter, loadSkillContextMetadata } from '../src/modules/router/service.js';
 
 const translation = 'thai-english-translation';
+test('TOR tools share one source-gated 16-section skeleton without default procurement terms', async () => {
+  const canonical = 'skills/common/thai-official-documents/templates/tor-16-sections-template.md';
+  const template = await readFile(canonical, 'utf8');
+  const headings = [...template.matchAll(/^([๐-๙]+)\. /gm)];
+  assert.equal(headings.length, 16);
+  assert.match(template, /working template/i);
+  for (const topic of ['ค่าปรับ', 'คุณสมบัติ', 'SLA', 'แหล่ง']) assert.ok(template.includes(topic));
+  assert.doesNotMatch(template, /(?:๐\.๒๐|๐\.๑๐|ร้อยละ ๕๐|ภายใน ๕ วัน|มาตรา ๙|ตามมาตรา ๔)/);
+  const forwarding = await readFile('skills/pm/tor-government-writing/templates/tor-16-sections-template.md', 'utf8');
+  assert.match(forwarding, /common\/thai-official-documents\/templates\/tor-16-sections-template\.md/);
+  assert.doesNotMatch(forwarding, /^๑\. /m);
+  const profiles = await readFile('desktop/src/document-tools.ts', 'utf8');
+  assert.ok(profiles.includes(`template: '${canonical}'`));
+});
 const routes = [
   ['ช่วยแปลเป็นภาษาอังกฤษ', translation],
   ['ช่วยแปลข้อความไทยเป็นอังกฤษ: โครงการตัวอย่างรับสมัครถึงวันที่ 15 ตุลาคม 2569', translation],

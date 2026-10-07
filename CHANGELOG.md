@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: editable DOCX with Skill-backed working layouts
+
+- Share one source-gated, 16-section TOR skeleton between drafting and official-document Skills. Replace fixed penalties, qualification thresholds, legal clauses and SLA defaults with pending-source fields. Regenerate the Claude plugin from the same source; drafting and acceptance do not establish procurement approval.
+- Select the DOCX working layout from the stored document-tool task. Format document titles, memo reference/date tabs (including bold labels), letter sender/date blocks, signatures and minutes headers; keep native paragraphs/tables, source numbers and unresolved fields editable. Add live page-number fields with a Thai-number format and keep headings with the following paragraph or table. Attached agency forms supply source text; their original Word layout is not preserved.
+- Use an explicit TH Sarabun PSK family for the five working layouts and offer an allowlisted TH Sarabun New override. Show the chosen face and a local font-availability notice without downloading fonts or treating the two families as equivalent. Generic exports retain their existing font; policy defaults and versions remain unchanged.
+- Add test-first source/template, OOXML and Electron regressions to the existing root test file, Desktop test glob and document-tools smoke. Evidence uses synthetic documents and controlled providers only. Native Microsoft Word, real provider drafting quality, current agency-form approval and actual-font layout still require review on employee devices.
+
 ### Desktop: recover Antigravity chat after a blocked native tool
 
 - Guide Antigravity to text responses and the STeP `step-tool` protocol. Stop a native tool request, wait for process shutdown and cleanup, then allow one fresh attempt with explicit recovery instructions. Both attempts share the original deadline and retain strict native-tool denial. Authentication, quota, invalid-policy and uncertain-shutdown failures are not replayed.

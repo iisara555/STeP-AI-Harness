@@ -1,4 +1,14 @@
 export const documentToolsEn: Record<string, string> = {
+  'ใช้แม่แบบร่างตามชนิดเอกสาร ไฟล์แนบใช้เป็นต้นเรื่องและไม่เก็บรูปแบบ Word เดิม':
+    'Uses a working layout for the document type. Attachments supply source text; their original Word layout is not preserved.',
+  'ฟอนต์ DOCX': 'DOCX font',
+  'ตามแม่แบบร่าง ({0})': 'Working template ({0})',
+  'ไฟล์ใช้ฟอนต์ {0}': 'This file uses {0}',
+  'ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word':
+    'This font was not detected on this device. Install the required face before reviewing pages in Word.',
+  'ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word': 'Font availability could not be checked. Review the font and pages in Word.',
+  'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ': 'Uses a working layout. Compare it with the current agency form before submission.',
+  'ฟอนต์ส่งออกไม่รองรับ กรุณาเลือกจากรายการ': 'Unsupported export font. Select one from the list.',
   เครื่องมือร่างเอกสาร: 'Document drafting tools',
   'กรอกข้อมูลหรือต้นเรื่อง ให้ AI ร่างด้วย Skill แล้วแก้ไขและส่งออก': 'Provide facts or a source; draft with a Skill, then edit and export',
   'เลือกชนิดเอกสาร → กรอกข้อมูลหรือแนบต้นเรื่อง → AI ร่าง → แก้ไขและส่งออก':

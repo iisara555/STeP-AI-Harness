@@ -58,7 +58,7 @@ standardVersion: 2
 
 3. **Draft structure** — ใช้ current template ที่ resolve ได้ ถ้าไม่มีให้ใช้โครงกลาง: ความเป็นมา, วัตถุประสงค์, Scope/specification, Deliverables, Timeline/delivery, Acceptance criteria, Budget facts/payment basis ที่ source รองรับ, Dependencies/owner-provided inputs, Required qualifications เฉพาะที่มี source, Attachments/references
 
-   `templates/tor-16-sections-template.md` ใช้เป็น working template ได้ แต่ current official structure ต้องยืนยันกับ AFP
+   [แม่แบบกลาง ๑๖ หัวข้อ](../../common/thai-official-documents/templates/tor-16-sections-template.md) ใช้เป็น working template ได้ แต่ current official structure ต้องยืนยันกับ AFP ไม่คัดอัตรา คุณสมบัติ SLA หรือข้อกฎหมายที่ยังไม่ resolve จาก source
 
 4. **Make requirements testable** — ทุก deliverable สำคัญเชื่อม `Need → Requirement → Evidence/Test → Acceptance condition` **ห้ามสร้างจำนวน ขนาด spec รอบแก้ไข SLA benchmark หรือ threshold เอง**
 5. **Neutrality & competition review** — ชี้ requirement ที่อาจล็อก brand/model/vendor หรือจำกัดการแข่งขันโดยไม่มี evidence ใน source แล้วส่งให้ owner หรือ AFP ยืนยัน

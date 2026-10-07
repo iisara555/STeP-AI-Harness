@@ -32,7 +32,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     description: 'วัตถุประสงค์ ขอบเขตงาน คุณสมบัติ และเกณฑ์ตรวจรับ',
     skill: 'tor-government-writing',
     supportSkills: ['thai-official-documents'],
-    template: 'skills/pm/tor-government-writing/templates/tor-16-sections-template.md',
+    template: 'skills/common/thai-official-documents/templates/tor-16-sections-template.md',
     references: [dateGuide, draftingChecks],
     variants: [
       { id: 'service', label: 'จ้างงาน / บริการ' },

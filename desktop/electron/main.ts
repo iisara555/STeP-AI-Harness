@@ -59,6 +59,7 @@ import {
 } from './antigravity-install';
 import { isolatedRuntimeHome } from './runtime-home';
 import { PDF_MARGINS, exportDocument, exportFormats } from './export';
+import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus } from './ocr';
 import { receiptReadingMode } from './receipt-status';
@@ -2675,6 +2676,8 @@ async function main() {
         const s = store.session(input.id),
           format = input.format;
         if (!exportFormats.includes(format) || !s.draft.trim()) throw new Error('INVALID_EXPORT');
+        // The stored task selects the layout; renderer input cannot replace its Skill or template.
+        const layout = format === 'docx' ? resolveDocumentLayout(s.documentTool, input.font) : undefined;
         if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
         const workspace = store.settings().workspace;
         if (!workspace || !(await stat(workspace)).isDirectory()) throw new Error('WORKSPACE_REQUIRED');
@@ -2700,9 +2703,14 @@ async function main() {
             }
           },
           s.document,
+          layout ? { documentTool: layout.id, font: layout.font } : undefined,
         );
         exportPaths.add(result.path);
-        return result;
+        if (!layout) return result;
+        const fontStatus = await window.webContents
+          .executeJavaScript(`(${probeDocumentFont.toString()})(${JSON.stringify(layout.font)})`)
+          .catch(() => 'unknown');
+        return { ...result, layout: { documentTool: layout.id, font: layout.font, fontStatus } };
       }
       case 'reveal': {
         if (!exportPaths.has(input.path)) throw new Error('INVALID_PATH');

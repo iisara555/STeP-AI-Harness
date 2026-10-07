@@ -841,6 +841,27 @@ nav button,
   font-size: 10px;
   color: var(--muted);
 }
+.document-export-font {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 24px;
+  font-size: 12px;
+}
+.document-export-font select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+}
+.document-export-info {
+  padding: 0 24px 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.document-export-info p {
+  margin: 4px 0;
+}
 .editor-scroll {
   flex: 1;
   min-height: 120px;

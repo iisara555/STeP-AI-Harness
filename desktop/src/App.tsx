@@ -41,6 +41,7 @@ import {
 import { ReceiptApp } from './receipt';
 import { DocumentTools, type DocumentAttachment, type DocumentForm } from './document-tool-app';
 import { documentRequest, documentTool, type DocumentToolId } from './document-tools';
+import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
 import { SkillsHub, toolCount } from './skills';
 import { SetupWizard } from './setup';
 import { Tour } from './tour';
@@ -144,6 +145,12 @@ export default function App() {
     [dirty, setDirty] = useState(false);
   const [format, setFormat] = useState('docx'),
     [exportPath, setExportPath] = useState('');
+  const [exportFont, setExportFont] = useState('auto');
+  const [exportInfo, setExportInfo] = useState<{ documentTool?: string; font: string; fontStatus: string } | null>(null);
+  useEffect(() => {
+    setExportFont('auto');
+    setExportInfo(null);
+  }, [selected]);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents'>('chat');
@@ -2341,7 +2348,14 @@ export default function App() {
                         <Save size={16} />
                         {t('บันทึก')}
                       </button>
-                      <select aria-label={t('รูปแบบส่งออก')} value={format} onChange={e => setFormat(e.target.value)}>
+                      <select
+                        aria-label={t('รูปแบบส่งออก')}
+                        value={format}
+                        onChange={e => {
+                          setFormat(e.target.value);
+                          setExportInfo(null);
+                        }}
+                      >
                         {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
                           <option key={f}>{f}</option>
                         ))}
@@ -2351,8 +2365,13 @@ export default function App() {
                         onClick={() =>
                           void action(async () => {
                             await save();
-                            const output = await api.call('export', { id: selected, format });
+                            const output = await api.call('export', {
+                              id: selected,
+                              format,
+                              ...(format === 'docx' && exportFont !== 'auto' ? { font: exportFont } : {}),
+                            });
                             setExportPath(output.path);
+                            setExportInfo(output.layout || null);
                             notify(t('บันทึก {0} แล้ว', output.filename), 'success', {
                               label: t('เปิดโฟลเดอร์'),
                               run: () => api.call('reveal', { path: output.path }),
@@ -2364,6 +2383,36 @@ export default function App() {
                         {t('ส่งออก')}
                       </button>
                     </footer>
+                    {format === 'docx' && (
+                      <label className="document-export-font">
+                        {t('ฟอนต์ DOCX')}
+                        <select
+                          aria-label={t('ฟอนต์ DOCX')}
+                          value={exportFont}
+                          onChange={e => {
+                            setExportFont(e.target.value);
+                            setExportInfo(null);
+                          }}
+                        >
+                          <option value="auto">{t('ตามแม่แบบร่าง ({0})', resolveDocumentLayout(session.documentTool).font)}</option>
+                          {DOCUMENT_FONTS.map(font => (
+                            <option key={font} value={font}>
+                              {font}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {exportInfo && (
+                      <div className="document-export-info" role="status">
+                        <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
+                        {exportInfo.fontStatus === 'missing' && (
+                          <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
+                        )}
+                        {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}
+                        {exportInfo.documentTool && <p>{t('จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ')}</p>}
+                      </div>
+                    )}
                     {exportPath && (
                       <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
                         {t('เปิดโฟลเดอร์ไฟล์ล่าสุด')}

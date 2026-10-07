@@ -2,6 +2,9 @@ import { writeFile } from 'node:fs/promises';
 import {
   Document,
   HeadingLevel,
+  Footer,
+  PageNumber,
+  NumberFormat,
   Packer,
   Paragraph,
   AlignmentType,
@@ -11,17 +14,19 @@ import {
   TableCell,
   TableRow,
   TextRun,
+  Tab,
+  TabStopType,
   WidthType,
   type ParagraphChild,
 } from 'docx';
 import ExcelJS from 'exceljs';
 import PptxGenJS from 'pptxgenjs';
 import { type DraftNode, documentMarkdown, documentText, plainDocument, validateDocument } from '../src/draft';
+import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
-// Thai official documents (หนังสือราชการ): TH Sarabun New 16 pt on A4, margins left 3 cm, right 2 cm, top 2.5 cm,
-// bottom 2 cm. Word and PDF follow it; spreadsheets and slides keep a screen font.
+// Generic exports keep their existing font. Skill-backed DOCX uses a working document layout and an explicit face.
 export const OFFICIAL_FONT = 'TH Sarabun New';
 const SCREEN_FONT = 'Leelawadee UI';
 const CM = 567; // twips per centimetre
@@ -153,21 +158,38 @@ export function pdfHtml(document: DraftNode) {
   return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}</style><body>${richHtml(document)}</body></html>`;
 }
 
-function runs(node: DraftNode, size: number, bold = false): ParagraphChild[] {
-  return (node.content || []).map(child =>
-    child.type === 'hardBreak'
-      ? new TextRun({ break: 1 })
-      : new TextRun({
-          text: child.text || '',
-          font: OFFICIAL_FONT,
-          size,
-          bold: bold || child.marks?.some(m => m.type === 'bold'),
-          italics: child.marks?.some(m => m.type === 'italic'),
-        }),
-  );
+function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false): ParagraphChild[] {
+  // Locate the label across rich-text runs, rather than matching a word inside its placeholder/value.
+  const date = dateTab ? /[ \t]+(วันที่[ \t])/.exec(documentText(node)) : null;
+  const spaceStart = date?.index ?? -1;
+  const labelStart = date ? date.index + date[0].length - date[1].length : -1;
+  let offset = 0;
+  return (node.content || []).flatMap(child => {
+    if (child.type === 'hardBreak') {
+      offset++;
+      return [new TextRun({ break: 1 })];
+    }
+    const style = {
+      font,
+      size,
+      bold: bold || child.marks?.some(m => m.type === 'bold'),
+      italics: child.marks?.some(m => m.type === 'italic'),
+    };
+    const text = child.text || '';
+    const start = offset;
+    offset += text.length;
+    // Layout only: retain all field characters, including unknown dates and leading zeroes.
+    return date && start < labelStart && offset > spaceStart
+      ? [
+          new TextRun({ ...style, text: text.slice(0, Math.max(0, spaceStart - start)) }),
+          ...(start <= spaceStart ? [new TextRun({ ...style, children: [new Tab()] })] : []),
+          new TextRun({ ...style, text: text.slice(labelStart - start) }),
+        ]
+      : [new TextRun({ ...style, text })];
+  });
 }
 
-function docxTable(table: DraftNode) {
+function docxTable(table: DraftNode, font: string) {
   const rows = table.content || [];
   const text = tableRows(table);
   const width = Math.max(1, ...rows.map(row => (row.content || []).length));
@@ -191,7 +213,12 @@ function docxTable(table: DraftNode) {
               shading: header ? { type: ShadingType.CLEAR, color: 'auto', fill: 'EEEEEE' } : undefined,
               margins: { left: 100, right: 100 },
               children: (cell?.content?.length ? cell.content : [{ type: 'paragraph' }]).map(
-                p => new Paragraph({ alignment: numeric[column] ? AlignmentType.RIGHT : undefined, children: runs(p, size, header) }),
+                p =>
+                  new Paragraph({
+                    alignment: numeric[column] ? AlignmentType.RIGHT : undefined,
+                    widowControl: true,
+                    children: runs(p, size, header, font),
+                  }),
               ),
             });
           }),
@@ -200,18 +227,40 @@ function docxTable(table: DraftNode) {
   });
 }
 
-function docxBlocks(node: DraftNode, prefix = '', depth = 0): (Paragraph | Table)[] {
-  if (node.type === 'table') return [docxTable(node), new Paragraph({ children: [] })];
+function docxBlocks(node: DraftNode, layout: DocumentLayout, role: LayoutRole = 'body', prefix = '', depth = 0): (Paragraph | Table)[] {
+  if (node.type === 'table') return [docxTable(node, layout.font), new Paragraph({ children: [] })];
   if (node.type === 'paragraph' || node.type === 'heading') {
     const level = node.attrs?.level || 1;
-    const size = node.type === 'heading' ? [40, 36, 32][level - 1] : 32;
+    const size = layout.id
+      ? role === 'title'
+        ? layout.id === 'memo'
+          ? 40
+          : 36
+        : 32
+      : node.type === 'heading'
+        ? [40, 36, 32][level - 1]
+        : 32;
+    const band = Math.floor(TEXT_WIDTH / 2);
+    const centered = ['title', 'front', 'signature', 'date'].includes(role);
+    const body = layout.id && role === 'body' && node.type === 'paragraph' && !depth;
     return [
       new Paragraph({
         heading: node.type === 'heading' ? [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][level - 1] : undefined,
-        indent: depth ? { left: 360 * depth, hanging: prefix ? 360 : 0 } : undefined,
+        alignment: centered ? AlignmentType.CENTER : body ? AlignmentType.THAI_DISTRIBUTE : undefined,
+        indent: depth
+          ? { left: 360 * depth, hanging: prefix ? 360 : 0 }
+          : ['signature', 'sender'].includes(role)
+            ? { left: band }
+            : body
+              ? { firstLine: Math.round(2.5 * CM) }
+              : undefined,
+        tabStops: role === 'memo-reference' ? [{ type: TabStopType.LEFT, position: band }] : undefined,
+        keepNext: node.type === 'heading' || ['front', 'sender', 'date', 'memo-reference', 'signature'].includes(role),
+        keepLines: node.type === 'heading' || role === 'signature',
+        widowControl: true,
         children: [
-          ...(prefix ? [new TextRun({ text: prefix, font: OFFICIAL_FONT, size })] : []),
-          ...runs(node, size, node.type === 'heading'),
+          ...(prefix ? [new TextRun({ text: prefix, font: layout.font, size })] : []),
+          ...runs(node, size, node.type === 'heading', layout.font, role === 'memo-reference'),
         ],
       }),
     ];
@@ -221,6 +270,8 @@ function docxBlocks(node: DraftNode, prefix = '', depth = 0): (Paragraph | Table
       (item.content || []).flatMap((child, childIndex) =>
         docxBlocks(
           child,
+          layout,
+          'body',
           childIndex === 0 && child.type === 'paragraph'
             ? node.type === 'bulletList'
               ? '• '
@@ -230,20 +281,21 @@ function docxBlocks(node: DraftNode, prefix = '', depth = 0): (Paragraph | Table
         ),
       ),
     );
-  return (node.content || []).flatMap(child => docxBlocks(child, '', depth));
+  return (node.content || []).flatMap(child => docxBlocks(child, layout, 'body', '', depth));
 }
 
-function docx(document: DraftNode) {
+function docx(document: DraftNode, layout: DocumentLayout) {
   const heading = (size: number) => ({
-    run: { font: OFFICIAL_FONT, size, bold: true, color: '000000' },
-    paragraph: { spacing: { before: 120, after: 60 } },
+    run: { font: layout.font, size, bold: true, color: '000000' },
+    paragraph: { spacing: { before: 120, after: 60 }, keepNext: true, keepLines: true },
   });
+  const roles = documentLayoutRoles(document, layout.id);
   return new Document({
     styles: {
       default: {
-        document: { run: { font: OFFICIAL_FONT, size: 32 }, paragraph: { spacing: { after: 0 } } },
-        heading1: heading(40),
-        heading2: heading(36),
+        document: { run: { font: layout.font, size: 32 }, paragraph: { spacing: { after: 0 } } },
+        heading1: heading(layout.id ? 32 : 40),
+        heading2: heading(layout.id ? 32 : 36),
         heading3: heading(32),
       },
     },
@@ -253,9 +305,24 @@ function docx(document: DraftNode) {
           page: {
             size: { width: 11906, height: 16838 },
             margin: { top: Math.round(2.5 * CM), bottom: 2 * CM, left: 3 * CM, right: 2 * CM },
+            ...(layout.id ? { pageNumbers: { formatType: NumberFormat.THAI_NUMBERS } } : {}),
           },
         },
-        children: docxBlocks(document),
+        ...(layout.id
+          ? {
+              footers: {
+                default: new Footer({
+                  children: [
+                    new Paragraph({
+                      alignment: AlignmentType.CENTER,
+                      children: [new TextRun({ font: layout.font, size: 28, children: ['หน้า ', PageNumber.CURRENT] })],
+                    }),
+                  ],
+                }),
+              },
+            }
+          : {}),
+        children: (document.content || []).flatMap((node, index) => docxBlocks(node, layout, roles[index])),
       },
     ],
   });
@@ -438,13 +505,15 @@ export async function exportDocument(
   text: string,
   pdf: (html: string) => Promise<Uint8Array>,
   document?: DraftNode,
+  options: { documentTool?: unknown; font?: unknown } = {},
 ) {
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
-  if (format === 'docx') return writeFile(path, await Packer.toBuffer(docx(content)));
+  if (format === 'docx')
+    return writeFile(path, await Packer.toBuffer(docx(content, resolveDocumentLayout(options.documentTool, options.font))));
   if (format === 'pdf') return writeFile(path, await pdf(pdfHtml(content)));
   if (format === 'xlsx') return xlsx(path, content);
   return pptx(path, content);

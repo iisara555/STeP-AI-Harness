@@ -21,7 +21,7 @@ const server = createServer(async (req, res) => {
   const prompt = messages.at(-1)?.content || '';
   if (system.includes('<document_tool_contract>')) requests.push({ system, prompt });
   const text =
-    'ร่างเพื่อพิจารณา\n\nเรื่อง ทดลองสังเคราะห์\n\n[รอยืนยัน: เลขหนังสือ]\n\n[รอยืนยัน: งบประมาณ]\n\nตรวจข้อมูลและแหล่งที่ขาดก่อนเสนอ';
+    '# ร่างเพื่อพิจารณา\n\nเรื่อง ทดลองสังเคราะห์\n\n[รอยืนยัน: เลขหนังสือ]\n\n[รอยืนยัน: งบประมาณ]\n\n## ตรวจข้อมูล\n\nตรวจข้อมูลและแหล่งที่ขาดก่อนเสนอ';
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
   res.end('data: [DONE]\n\n');
@@ -46,7 +46,7 @@ db.prepare('INSERT INTO records VALUES(?,?,?)').run(
   'settings',
   'main',
   JSON.stringify({
-    team: 'pm',
+    team: 'ga',
     assistant: 'STeP Mate',
     workspace,
     theme: 'light',
@@ -94,6 +94,15 @@ try {
     return c.id;
   });
   await page.reload();
+  // Force a reproducible missing-face result independent of fonts installed on the CI machine.
+  await page.evaluate(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (...args) {
+      const context = original.apply(this, args);
+      if (args[0] === '2d' && context) context.measureText = () => ({ width: 100 });
+      return context;
+    };
+  });
   const open = () => page.locator('aside.sidebar').getByRole('button', { name: 'เครื่องมือร่างเอกสาร', exact: true }).click();
   const snapshot = () => page.evaluate(() => window.step.call('snapshot'));
   await open();
@@ -165,9 +174,20 @@ try {
       await expect(form.getByText('synthetic-source.txt', { exact: true })).toHaveCount(0);
       await page.locator('aside.sidebar .session-open').filter({ hasText: last.title }).first().click();
     }
+    await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
+    await expect(page.getByLabel('ฟอนต์ DOCX', { exact: true })).toHaveValue('auto');
+    const exported = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), last.id);
+    assert.equal(exported.layout.documentTool, id);
+    assert.equal(exported.layout.font, 'TH Sarabun PSK');
+    assert.equal(exported.layout.fontStatus, 'missing');
+    const JSZip = createRequire(import.meta.url)('jszip');
+    const zip = await JSZip.loadAsync(await readFile(exported.path), { checkCRC32: true });
+    const document = await zip.file('word/document.xml').async('string');
+    assert.match(document, /w:cs="TH Sarabun PSK"/);
+    assert.match(document, /<w:keepNext\/>/);
+    assert.match(await zip.file('word/footer1.xml').async('string'), /PAGE/);
   }
   assert.equal(requests.length, 5);
-  await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
   const editor = page.locator('.tiptap[contenteditable="true"]');
   await expect(editor).toContainText('[รอยืนยัน: งบประมาณ]');
   await editor.fill('ร่างเพื่อพิจารณา\nแก้ไขสังเคราะห์โดยเจ้าของเรื่อง\n[รอยืนยัน: งบประมาณ]');
@@ -183,6 +203,19 @@ try {
   assert.ok(xml.includes('แก้ไขสังเคราะห์โดยเจ้าของเรื่อง'));
   assert.ok(xml.includes('[รอยืนยัน: งบประมาณ]'));
   assert.ok(output.path.startsWith(workspace));
+  await page.getByLabel('ฟอนต์ DOCX', { exact: true }).selectOption('TH Sarabun New');
+  await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
+  await expect(page.locator('.document-export-info')).toContainText('TH Sarabun New');
+  await expect(page.locator('.document-export-info')).toContainText('ตรวจไม่พบฟอนต์นี้');
+  const invalidFont = await page.evaluate(
+    async id =>
+      window.step.call('export', { id, format: 'docx', font: 'Unknown Font' }).then(
+        () => '',
+        e => String(e),
+      ),
+    last.id,
+  );
+  assert.ok(invalidFont.includes('INVALID_EXPORT_FONT'));
   const invalid = await page.evaluate(async connectionId => {
     const s = await window.step.call('create', { connectionId });
     const cases = [
@@ -209,6 +242,26 @@ try {
   }, connection);
   assert.equal(boundConsent.reissued, true, 'consent is bound to the tool even when both tools use the same Skill');
   assert.equal(boundConsent.started, undefined);
+  await page.evaluate(async () => {
+    const settings = (await window.step.call('snapshot')).settings;
+    await window.step.call('settings', { assistant: settings.assistant, team: settings.team, theme: settings.theme, language: 'en' });
+  });
+  await page.reload();
+  await page.locator('aside.sidebar .session-open').filter({ hasText: last.title }).first().click();
+  await expect(page.getByLabel('DOCX font', { exact: true })).toHaveValue('auto');
+  await page.evaluate(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (...args) {
+      const context = original.apply(this, args);
+      if (args[0] === '2d' && context) context.measureText = () => ({ width: context.font.includes('TH Sarabun PSK') ? 99 : 100 });
+      return context;
+    };
+  });
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await expect(page.locator('.document-export-info')).toContainText('This file uses TH Sarabun PSK');
+  await expect(page.locator('.document-export-info')).toContainText('Uses a working layout');
+  await expect(page.locator('.document-export-info')).not.toContainText('not detected');
+  assert.doesNotMatch(await page.locator('.document-export-info').innerText(), /[ก-๙]/);
   assert.deepEqual(errors, []);
   console.log(
     'PASS: five Skill-backed document forms, page state, attachment/consent cancellation, real IPC, editor and DOCX export (synthetic fake AI).',

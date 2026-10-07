@@ -86,6 +86,7 @@ export function DocumentTools({
         <header>
           <h2>{t(profile.title)}</h2>
           <p className="small muted">{t('ข้อมูลที่ขาดจะคงช่อง [รอยืนยัน] ให้ตรวจและเติมในร่างก่อนนำไปใช้')}</p>
+          <p className="small muted">{t('ใช้แม่แบบร่างตามชนิดเอกสาร ไฟล์แนบใช้เป็นต้นเรื่องและไม่เก็บรูปแบบ Word เดิม')}</p>
         </header>
         <div className="document-form-options">
           <label>
