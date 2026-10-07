@@ -1933,6 +1933,11 @@ export const en: Record<string, string> = {
   ตรวจอัปเดตไม่สำเร็จ: 'Update check failed',
   ตรวจอัปเดต: 'Check for updates',
   ตรวจหาเวอร์ชันใหม่: 'Check for a new version',
+  'ทัวร์แนะนำแบบใหม่ 2 ส่วน: พื้นฐานสำหรับเริ่มงานแรก และเครื่องมือช่วยงาน เปิดได้จาก Ctrl+K > ดูทัวร์แนะนำอีกครั้ง':
+    'A new two-part tour: the basics for your first task, then the work tools. Open it from Ctrl+K > Replay the tour',
+  'ตรวจใบเสร็จ: เลือกยอดสุทธิ/รวมทั้งสิ้นเป็นยอดที่ชำระ หายอดก่อนภาษีจากยอดรวมลบ VAT และอ่านเลขที่ วันที่ภาษาอังกฤษ และหน้าที่ตะแคงได้ดีขึ้น':
+    'Receipt check: takes the net or grand total as the amount paid, finds the pre-VAT sum from total minus VAT, and reads receipt numbers, English dates and sideways pages better',
+  ผลยังต้องตรวจเทียบใบเสร็จจริงก่อนยืนยันเหมือนเดิม: 'As before, check the results against the real receipt before confirming',
   'ใต้ชื่อของคุณแสดงเลขเวอร์ชัน และบอกว่าเป็นรุ่นล่าสุดหรือมีอัปเดตใหม่ กดที่บรรทัดนี้เพื่อตรวจอัปเดตได้':
     'Your version number now shows under your name, with whether you are up to date or an update is out. Click it to check for updates.',
   'หน้าร่างเอกสาร: ชนิดเอกสารที่เลือกเป็นพื้นเหลือง ตัวหนังสืออ่านชัดทั้งธีมสว่างและมืด':

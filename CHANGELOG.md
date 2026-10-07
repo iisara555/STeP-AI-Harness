@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.23 — 2026-10-07
+
+STeP Desktop version 0.5.23 packages the two sections below for `desktop-v0.5.23`. Harness package version remains 0.7.6; real-document OCR acceptance remains open.
+
+### Receipt OCR: key fields Thai receipts actually print
+
+- **Before:** on a normal Thai tax invoice (รวมเงิน, VAT 7%, จำนวนเงินรวมทั้งสิ้น) the receipt check left the total blank as "ambiguous" and never found the pre-VAT sum. A bare "เลขที่ 000123" or "No. 000123", labels OCR split with a space ("ยอด รวม"), English dates ("Oct 6, 2026") and amounts like "1, 070.00" were missed. A till slip could show "Cash 100.00" as the shop name, and a page lying on its side was read sideways.
+- **After:** ยอดสุทธิ / รวมทั้งสิ้น outrank a plain ยอดรวม / รวมเงิน; Sub Total is never taken as the total; subtotal + VAT = total settles competing totals and fills a missing subtotal. A VAT rate ("7%") is not read as the VAT amount. Bare เลขที่ / No. are read as the receipt number while address lines are rejected, and repeated bilingual labels ("เลขที่ BILL NO. 042") are skipped. Payment and address lines are kept out of the shop name. A page whose text runs sideways is read in both quarter turns and the clearer reading is kept. Text detection works at 1280 px instead of 960 (`STEP_OCR_DET_SIDE` overrides) and scanned PDF pages render at 200 DPI instead of 150. Two equally strong totals that disagree still stay empty for a person to choose, and letters inside numbers ("1O7.00") are still left for a person to check.
+- Tests: new cases in `experiments/local-thai-ocr/tests/receipt_review.test.cjs` and `tests/test_image_prep.py`. Not yet measured on real receipts or for speed on a 2-core Windows PC.
+
 ### A fuller welcome tour that is easier to start
 
 - **Before:** the tour had 7 short steps that skipped connecting AI, the document drafting tool, settings and updates; it could only be opened from the end of the Setup Wizard or the command palette, and there was no way to stop after the essentials.
