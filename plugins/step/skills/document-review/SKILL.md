@@ -38,6 +38,8 @@ Skill นี้ไม่แทนการตรวจเฉพาะทาง�
 
 ## Workflow
 
+สำหรับเอกสารหลายหัวข้อหรือหลายรอบ ใช้ [coauthoring และ reader check](../../docs/document-coauthoring.md): เก็บบริบทที่ขาด ร่างทีละส่วน และผูกคำถามผู้อ่านกับ evidence/gap โดยรักษา Source/Authority ของ Skill นี้ งานสั้นทำตรงคำขอ ไม่บังคับ workflow ยาว ระบุ author-review เมื่อยังไม่มี independent reader จริง
+
 1. **Identify document purpose** — เอกสารนี้จะส่งให้ใคร เพื่ออะไร และคาดหวัง action อะไร
 2. **Completeness** — หาหัวข้อ/ข้อมูล/เอกสารแนบ/ผู้รับผิดชอบ/วันครบกำหนดที่กล่าวถึงแต่ยังไม่มี
 3. **Internal consistency** — เทียบชื่อ วันที่ ตัวเลข จำนวนเงิน เวอร์ชัน สถานะ และคำเรียกเดียวกันว่าขัดกันเองหรือไม่
@@ -48,6 +50,8 @@ Skill นี้ไม่แทนการตรวจเฉพาะทาง�
 8. **Owner action list** — สรุปเฉพาะสิ่งที่เจ้าของเอกสารต้องแก้/ยืนยันเองก่อนส่ง
 
 ## Output
+
+ดู [ตัวอย่าง coauthoring และ reader evidence](examples/coauthoring.md) เมื่อตรวจร่างหลายหัวข้อ
 
 ตัวอย่างคำตอบที่ดีพร้อมเหตุผล (ข้อมูลสังเคราะห์): [examples/good-output.md](examples/good-output.md) เปิดดูเมื่อไม่แน่ใจรูปแบบ หรือเมื่อข้อมูลต้นทางไม่ครบ
 

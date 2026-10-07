@@ -3,7 +3,7 @@ import { join } from 'node:path';
 /** XLSX parsing is bounded in a disposable worker, without paths or network access. */
 export function sheetWorker(
   bytes: Buffer,
-  args: { sheet?: unknown; range?: unknown; edits?: unknown },
+  args: { sheet?: unknown; range?: unknown; edits?: unknown; operation?: 'sheet_create' | 'slides_create'; spec?: unknown },
   signal: AbortSignal,
   workerPath = join(process.cwd(), 'electron/sheet-worker.cjs'),
 ) {

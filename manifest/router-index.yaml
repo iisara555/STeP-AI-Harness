@@ -456,9 +456,9 @@ skills:
     teams:
       primary: [cc]
       consumers: [imo, mi, piti, sit]
-    description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck ในรูปแบบ Interactive 16:9 HTML และ Pitching สำหรับผู้บริหาร
+    description: โครงสร้างและออกแบบ Presentation Proposal Executive Deck ในรูปแบบ Interactive 16:9 HTML หรือ editable PPTX และ Pitching สำหรับผู้บริหาร
     intent: [create, review]
-    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, keynote, frontend-slides, html slide, pitch deck, สไลด์นำเสนอ, งานนำเสนอ]
+    triggers: [slide, สไลด์, presentation, pitch, นำเสนอ, deck, pptx, PowerPoint, keynote, frontend-slides, html slide, pitch deck, สไลด์นำเสนอ, งานนำเสนอ]
     paths: ["**/slides/**", "**/presentation/**", "**/deck/**"]
     fileTypes: [pptx, pdf, key, html]
     requires: [narrative_goal, key_takeaways]
@@ -1011,7 +1011,7 @@ skills:
       primary: [imo]
       consumers: [sit, pm, pubsec, nmco, tech-spin]
     description: สร้าง Decision Memo ที่แยกข้อเท็จจริง ทางเลือก Trade-off ความไม่แน่นอน และ Working Recommendation
-    intent: [review, evaluate, plan]
+    intent: [create, review, evaluate, plan]
     triggers: [decision memo, บันทึกเพื่อการตัดสินใจ, ทางเลือกเพื่อผู้บริหาร, options tradeoffs, option trade-off, ข้อดีข้อเสียเพื่อเลือก, recommendation memo, ต้องตัดสินใจอะไร, เปรียบเทียบทางเลือก, ข้อมูลประกอบการตัดสินใจ]
     paths: ["**/decision/**", "**/portfolio/**", "**/executive/**"]
     fileTypes: [md, docx, pdf, pptx, xlsx]
@@ -1343,3 +1343,23 @@ skills:
           role: executive-director
           authority: qms-conformity-decision
           description: การตัดสินใจ รับรองผล หรืออนุมัติการเปลี่ยนแปลง QMS ใน Management Review
+
+  - name: spreadsheet-work
+    cluster: governance-operations
+    domain: operations
+    processId: governance.document-review
+    teams:
+      primary: [ga]
+      consumers: [cc, afp, imo, sit, mi, piti]
+    description: สร้างไฟล์ Excel อ่านและแก้เซลล์ workbook หรือทบทวนสูตร โดยไม่วางแผนโครงการหรืออนุมัติงบแทนเจ้าของ
+    intent: [create, review, check, spreadsheet-edit]
+    triggers: [สร้างไฟล์ Excel, แก้ไฟล์ Excel, อ่านไฟล์ Excel, ตรวจสูตร Excel, แก้เซลล์ Excel, create xlsx, edit workbook, review spreadsheet formulas]
+    paths: ["**/spreadsheets/**"]
+    fileTypes: [xlsx]
+    requires: [source_table_or_workbook]
+    scope:
+      allow:
+        - สร้างและแก้ข้อมูลเซลล์พร้อม Changes preview
+        - ตรวจสูตรและแจ้ง cached result ที่ยังไม่ได้ recalculate
+      escalate: {}
+      human_only: {}

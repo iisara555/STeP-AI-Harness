@@ -61,3 +61,15 @@
 
 MIT License กำหนดให้แนบประกาศลิขสิทธิ์เมื่อคัดลอกส่วนสำคัญของซอฟต์แวร์ ไฟล์ใน repository นี้ไม่ได้คัดลอกข้อความต้นฉบับ แต่บันทึกที่มาไว้ที่นี่และท้ายไฟล์ที่ดัดแปลง เพื่อให้ตรวจย้อนได้
 Apache License 2.0 ให้ใช้และดัดแปลงได้โดยระบุที่มาและบอกว่ามีการเปลี่ยนแปลง ตารางด้านบนทำหน้าที่นั้น
+
+## Office / tool usability — 6 ตุลาคม 2569
+
+- [SerpApi agent-usability-test](https://github.com/serpapi/skills/blob/master/skills/agent-usability-test/SKILL.md), MIT: WITH/WITHOUT tools, isolated sessions, counterbalanced order และ interface failure modes; protocol/scorer/fixtures เขียนใหม่ใน STeP ไม่คัดลอก Skill
+- [MiniMax minimax-xlsx](https://github.com/MiniMax-AI/skills/blob/main/skills/minimax-xlsx/SKILL.md), MIT: เลือกแก้ XML เฉพาะเซลล์เพื่อเก็บ package parts และแยก formula/cache validation; implementation เขียนใหม่ด้วย JSZip/xmldom/ExcelJS ไม่มี claim zero format loss
+- [MiniMax pptx-generator](https://github.com/MiniMax-AI/skills/blob/main/skills/pptx-generator/SKILL.md), MIT: native editable PPTX และ visual QA; ใช้ public PptxGenJS API กับ fonts/limits/fixtures ของ STeP ไม่มีการคัดลอก template/code
+- [Anthropic doc-coauthoring](https://github.com/anthropics/skills/tree/main/skills/doc-coauthoring), Apache-2.0: context → section refinement → reader evidence; ขยาย skills เดิม ไม่ติดตั้ง Skill ใหม่ และไม่ถือ author-review เป็น independent reader
+- [Google Workspace CLI/gws-shared](https://github.com/googleworkspace/cli/blob/main/skills/gws-shared/SKILL.md), CLI repository Apache-2.0: อ้าง syntax CLI เป็น optional connector แยก ไม่คัดลอก Skill ไม่ auto-auth หรือแชร์ไฟล์
+
+อ้างเอกสารไลบรารีสำหรับ implementation: [ExcelJS](https://github.com/exceljs/exceljs), [PptxGenJS](https://gitbrent.github.io/PptxGenJS/), [JSZip](https://stuk.github.io/jszip/), [xmldom](https://github.com/xmldom/xmldom). ไม่มี Anthropic proprietary docx/pdf/pptx/xlsx materials ใน implementation นี้
+
+ดู [Office workflow limits](office-workflows.md), [tool usability protocol](tool-usability-eval.md), [coauthoring](document-coauthoring.md) และ [Google connector](google-workspace-connector.md). Routing/contract tests ไม่ใช่หลักฐาน model usefulness, live Workspace หรือความถูกต้องกับเอกสารจริง

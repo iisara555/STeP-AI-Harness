@@ -6,6 +6,21 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: Excel export from conversation tables
+
+- Guide an Excel request to actual XLSX creation from the existing table/draft, instead of silently substituting CSV or promising a file without requesting the tool. With the tool loop disabled, describe the existing draft export UI.
+- Report staged and applied results according to the existing permission mode. Preserve pending facts and leading-zero identifiers; direct Google Sheets access requires an actually available authorized connector.
+- Add a test-first chat-to-workbook regression using real host tools, synthetic conversation data and a scripted provider, covering Ask and Accept Edits. This verifies prompt delivery and file behavior; it does not establish live model compliance or Skill benefit.
+
+### Office tools, interface evaluation and document coauthoring
+
+- Add a draft `spreadsheet-work` Skill with four-dimensional routing evals and synthetic examples. Desktop can create typed XLSX workbooks with local formulas and editable PPTX decks with Thai text, tables, charts and speaker notes through the existing Changes/permission gates.
+- Patch XLSX input cells without rewriting unrelated ZIP parts. Refuse formula/protected cells, merged non-anchor cells, macros and signed packages; expose formulas/cached results separately and require spreadsheet-application recalculation. This is not a guarantee of every Excel feature round-tripping.
+- Add isolated, counterbalanced tool-usability plans, host-evidence scoring and a controlled Office artifact runner. Scripted WITH/WITHOUT negative controls verify the interface/scorer only; live model-side usefulness remains unmeasured.
+- Extend step-writing, document-review, decision-memo and sop-authoring with context gathering, section refinement and reader evidence. Distinguish author-review from an independent reader; add evals/examples and reduce legacy evaluation debt.
+- Add an optional Google Workspace connector for bounded Drive/Docs/Sheets reads, draft creation, revision-bound text append and RAW cell updates. Writes require exact trusted-host authorization; no automatic sign-in, tool-loop enablement, sharing or send operations. Tests use simulated CLI responses; live OAuth/Google API remains unverified.
+- Validate with synthetic workbooks/decks and LibreOffice rendering/recalculation. No real-document accuracy, production model benefit, universal Office compatibility, release/version bump or policy-default change is claimed. Record method provenance without copying proprietary document Skills.
+
 ### Desktop: grounded follow-ups and temporary tool handles
 
 - Include host task/source metadata in ordinary model turns, as well as compacted turns. Keep attached conversation sources available across factual clarification and acknowledgement turns.

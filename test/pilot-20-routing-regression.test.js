@@ -281,6 +281,7 @@ const SYNTHETIC_SKILLS = [
   ['entrepreneur-annual-goal', 'piti',
     'ช่วยตั้งเป้ารายได้ธุรกิจ 1 ปีจากยอดขายปัจจุบัน',
     'อยากได้รายได้ 3 ล้านบาทปีหน้า ต้องขายกี่ชิ้นและหาลูกค้าใหม่กี่ราย'],
+  ['spreadsheet-work', 'ga', 'ช่วยแก้ไฟล์ Excel เปลี่ยนค่าเซลล์ A2 เป็นรหัส 00123'],
 ];
 
 /**
@@ -303,7 +304,7 @@ const CASES = [
     return {
       id,
       name: `${skill} colloquial variant ${variant + 1}${ambiguous ? ` (clarifies: ${ambiguous})` : ''}`,
-      source: 'synthetic-2026-09-20',
+      source: skill === 'spreadsheet-work' ? 'synthetic-2026-10-06' : 'synthetic-2026-09-20',
       team,
       prompt,
       expect: ambiguous

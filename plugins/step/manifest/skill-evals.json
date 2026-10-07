@@ -80,7 +80,8 @@
     "team-weekly-review",
     "vercel-deploy",
     "voice-of-customer",
-    "thai-english-translation"
+    "thai-english-translation",
+    "spreadsheet-work"
   ],
   "note": "Many skills in needsDirectModelSideCoverage already have routing/authority regression tests. This list means they are not directly represented in pilot-30-v1 model-side benchmark.",
   "evalFiles": "evals/skills/<skill>.json",
@@ -96,7 +97,6 @@
     "coding-git-workflow",
     "creative-art-director",
     "data-privacy-compliance",
-    "decision-memo",
     "designer-brief",
     "document-record-control",
     "event-concept",
@@ -111,10 +111,8 @@
     "lab-result-review",
     "learning-designer",
     "management-review-prep",
-    "presentation-design",
     "project-pre-mortem",
     "qms-risk-opportunity-review",
-    "sop-authoring",
     "step-brand",
     "step-image-prompt",
     "step-skill-authoring",

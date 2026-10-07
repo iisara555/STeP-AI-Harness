@@ -1,0 +1,59 @@
+{
+  "skill": "presentation-design",
+  "version": 1,
+  "source": "synthetic-office-2026-10-06",
+  "note": "Routing runs in CI; model-side output quality requires isolated live/recorded evaluations.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ใช้ slides_create ส่ง editable PPTX ไม่ส่งเฉพาะ HTML; ระบุ visual review ที่ยังไม่รันและ source ของตัวเลข; speaker notes และตารางกราฟแก้ต่อได้ตามผล tool",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-workflow",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยทำสไลด์ PowerPoint เป็นไฟล์ PPTX ที่แก้ต่อได้",
+      "expect": {
+        "skill": "presentation-design"
+      },
+      "outputAssertions": [
+        "ใช้ slides_create ส่ง editable PPTX ไม่ส่งเฉพาะ HTML",
+        "ระบุ visual review ที่ยังไม่รันและ source ของตัวเลข",
+        "speaker notes และตารางกราฟแก้ต่อได้ตามผล tool"
+      ]
+    },
+    {
+      "id": "anti-receipt",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยตรวจใบเสร็จก่อนส่งเบิก",
+      "expect": {
+        "skill": "receipt-audit",
+        "notSkill": "presentation-design"
+      }
+    },
+    {
+      "id": "collision-tor",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยตรวจ TOR ก่อนส่ง AFP",
+      "expect": {
+        "skill": "tor-review",
+        "notSkill": "presentation-design"
+      }
+    },
+    {
+      "id": "missing-source",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยทำสไลด์ PowerPoint แต่ยังไม่มีข้อมูลตัวเลขยืนยัน",
+      "expect": {
+        "skill": "presentation-design"
+      },
+      "outputAssertions": [
+        "ติดรอยืนยันสำหรับตัวเลขที่ขาด ไม่แต่ง metrics",
+        "ไม่อ้างตรวจทุกสไลด์แล้วเมื่อยังไม่มี renderer evidence"
+      ]
+    }
+  ]
+}

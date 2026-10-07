@@ -3,6 +3,22 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'กำลังจัดทำไฟล์ Excel': 'Creating an Excel file',
+  'กำลังจัดทำไฟล์ PowerPoint': 'Creating a PowerPoint file',
+  'เซลล์นี้มีสูตรอยู่ กรุณาแก้เฉพาะช่องข้อมูลหรือให้เจ้าของไฟล์ตรวจสูตร':
+    'This cell contains a formula. Edit an input cell or ask the file owner to review the formula.',
+  กรุณาเลือกเซลล์แรกของช่องที่รวมไว้: 'Select the first cell in the merged range.',
+  'ตารางนี้ป้องกันการแก้ไขไว้ กรุณาให้เจ้าของไฟล์ตรวจ': 'This sheet is protected. Ask the file owner to review it.',
+  'สูตรนี้ไม่อยู่ในรูปแบบที่รองรับ กรุณาใช้สูตรคำนวณภายในไฟล์แบบง่าย':
+    'This formula is unsupported. Use a simple formula with references inside this worksheet.',
+  'ไฟล์นี้มีส่วนที่ยังไม่รองรับ กรุณาใช้ไฟล์ XLSX ที่ไม่มี macro หรือลายเซ็นดิจิทัล':
+    'This file has unsupported features. Use an XLSX file without macros or a digital signature.',
+  'ไฟล์ Office มีข้อมูลมากเกินขีดจำกัด กรุณาใช้ไฟล์ที่เล็กลง': 'This Office file exceeds the size limit. Use a smaller file.',
+  'อ่านโครงสร้างไฟล์ Office ไม่ได้ กรุณาตรวจไฟล์ต้นฉบับ': 'The Office file structure could not be read. Check the original file.',
+  'โครงสร้างไฟล์ Office นี้ยังไม่รองรับ กรุณาให้เจ้าของไฟล์ตรวจ':
+    'This Office file structure is unsupported. Ask the file owner to review it.',
+  'เนื้อหาสไลด์เกินรูปแบบที่รองรับ กรุณาแบ่งเป็นหลายสไลด์': 'The slide content exceeds the supported layout. Split it across more slides.',
+  'มีไฟล์ชื่อนี้อยู่แล้ว กรุณาเลือกชื่อใหม่': 'A file with this name already exists. Choose a new name.',
   'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR': 'Choose a new file in a private folder to save the OCR trial results.',
   'AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ':
     'The selected AI helps map OCR text into the form. This connection does not read receipt images.',

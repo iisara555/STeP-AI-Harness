@@ -490,6 +490,68 @@ test('spreadsheet edits preserve scalar types, stage a readable preview and reje
     f.store.close();
   }
 });
+test('Office creation stages binary files, preserves conflicts and obeys plan mode', async () => {
+  const f = await fixture();
+  try {
+    const created: any = await f.tools.execute(
+      {
+        tool: 'sheet_create',
+        input: 'new.xlsx',
+        args: {
+          spec: {
+            sheets: [{ name: 'งาน', columns: [{ label: 'รหัส' }], rows: [['00123']] }],
+          },
+        },
+      },
+      f.scope,
+    );
+    assert.equal(created.status, 'staged-for-human-review');
+    await assert.rejects(readFile(join(f.root, 'new.xlsx')), { code: 'ENOENT' });
+    assert.ok(f.store.get<any>('change', created.id).binary);
+    await f.workbench.apply(created.id);
+    const read: any = await f.tools.execute({ tool: 'sheet_read', input: 'new.xlsx', args: { range: 'A2' } }, f.scope);
+    assert.deepEqual(read.rows, [['00123']]);
+    await assert.rejects(
+      f.tools.execute(
+        {
+          tool: 'sheet_create',
+          input: 'new.xlsx',
+          args: {
+            spec: {
+              sheets: [{ name: 'งาน', columns: [{ label: 'รหัส' }], rows: [['other']] }],
+            },
+          },
+        },
+        f.scope,
+      ),
+      /FILE_EXISTS/,
+    );
+    const slides: any = await f.tools.execute(
+      {
+        tool: 'slides_create',
+        input: 'new.pptx',
+        args: {
+          spec: {
+            slides: [{ title: 'สังเคราะห์', bullets: ['หนึ่งขั้นตอน'] }],
+          },
+        },
+      },
+      f.scope,
+    );
+    assert.equal(slides.visualReview, 'required');
+    await writeFile(join(f.root, 'new.pptx'), 'human file');
+    await assert.rejects(f.workbench.apply(slides.id), /FILE_CONFLICT/);
+  } finally {
+    f.store.close();
+  }
+  const plan = await fixture('plan');
+  try {
+    for (const tool of ['sheet_create', 'slides_create'] as const)
+      await assert.rejects(plan.tools.execute({ tool, input: 'new.xlsx', args: {} }, plan.scope), /PLAN_MODE_BLOCKED/);
+  } finally {
+    plan.store.close();
+  }
+});
 test('DOCX tools use the actual privacy worker and retain section text', async () => {
   const f = await fixture();
   try {

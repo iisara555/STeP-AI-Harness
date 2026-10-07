@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-06",
+  "source": "synthetic-only",
+  "evidenceKind": "controlled-contract",
+  "suite": "office-tools-v1",
+  "baseCommit": "0241b3f",
+  "modelSideRun": "not-yet-run",
+  "liveGoogleWorkspace": "not-run",
+  "contract": {
+    "pairedTasks": 5,
+    "withTools": {
+      "trials": 5,
+      "successes": 5,
+      "discovered": 5,
+      "wrongSelection": 0,
+      "parameterErrors": 1,
+      "recovered": 1
+    },
+    "withoutTools": {
+      "trials": 5,
+      "successes": 0,
+      "discovered": 0,
+      "wrongSelection": 0,
+      "parameterErrors": 0,
+      "recovered": 0
+    },
+    "modelBenefitEstablished": false,
+    "note": "Without-tools arm is a scripted negative control, not a model baseline."
+  },
+  "artifactSha256": {
+    "identifiers.xlsx": "361f96e575dbae3bbdb0554ce675a24d9f999cb00909854af6dc6482b688e0e4",
+    "edited.xlsx": "6fde53831ecdd39ff00a0a6588cc07d5df3a2c2b6458f2ca2b547ced97aca3f9",
+    "synthetic-deck.pptx": "29e8b2900c9acbf4c48ddb94178f0be058a65da4397dbe60d1731b5803728730"
+  },
+  "spreadsheetApplication": {
+    "renderer": "LibreOfficeDev 26.8.0.0.alpha0 (2c87e51eeaa2b413ff4ae097b2705eea1995d8e5)",
+    "recalculatedTotals": {
+      "identifiers.xlsx": 300,
+      "edited.xlsx": 350
+    },
+    "identifierPreserved": "00123"
+  },
+  "visualReview": {
+    "slidesChecked": 3,
+    "result": "Thai text, native table and chart readable; no overlap observed in these three synthetic slides.",
+    "fontSubstitution": "Noto Sans Thai used by this renderer; IBM Plex Sans Thai is not installed as a system font here."
+  },
+  "limitations": [
+    "No live model comparison",
+    "No real-document accuracy measured",
+    "No universal Excel feature preservation claim",
+    "No Microsoft Office or Windows/macOS acceptance run",
+    "No live Google OAuth/API run"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "office-tools-v1",
+  "synthetic": true,
+  "source": "STeP synthetic tasks, 2026-10-06",
+  "tasks": [
+    { "id": "sheet-read", "prompt": "อ่านรหัสจากแถวแรกของข้อมูลใน identifiers.xlsx ให้คงศูนย์นำหน้า", "tools": ["sheet_read"], "expected": { "path": "rows.0.0", "equals": "00123" } },
+    { "id": "sheet-create", "prompt": "สร้าง Excel รหัส 00123 ค่า 100 และ 00007 ค่า 200 พร้อมสูตร SUM(B2:B3)", "tools": ["sheet_create"], "expected": { "path": "artifactVerified", "equals": true } },
+    { "id": "sheet-edit", "prompt": "เปลี่ยน input B2 เป็น 150 ใน preserved.xlsx โดยเก็บส่วนอื่นไว้และไม่แก้สูตร", "tools": ["sheet_edit"], "expected": { "path": "artifactVerified", "equals": true } },
+    { "id": "slide-create", "prompt": "สร้าง PPTX ไทยสามสไลด์ มีข้อความ ตาราง กราฟ และ speaker notes ที่แก้ต่อได้", "tools": ["slides_create"], "expected": { "path": "artifactVerified", "equals": true } },
+    { "id": "sheet-recovery", "prompt": "อ่านรหัสใน identifiers.xlsx; ถ้าชื่อ worksheet ไม่พบ ให้ค้นชื่อ sheet แล้วอ่านใหม่", "tools": ["sheet_read"], "expected": { "path": "rows.0.0", "equals": "00123" } }
+  ]
+}

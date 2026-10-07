@@ -10,7 +10,7 @@ stats/
 members/
 votes/
 tmp/
-node_modules/
+node_modules
 .step-ai/
 .step/memory/
 .step/packs/
