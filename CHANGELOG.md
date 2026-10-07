@@ -6,6 +6,10 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.22 — 2026-10-07
+
+STeP Desktop version 0.5.22 packages the section below for `desktop-v0.5.22`. Harness package version remains 0.7.6.
+
 ### Version and update status under your name; readable selected document type
 
 - **Before:** the app's version was not shown anywhere in the main window, so staff could not tell which version they had or whether a newer one was out until the update card appeared. In the document drafting tool the selected type (for example ร่างบันทึกข้อความ) turned pale, and in the dark theme its text almost disappeared; the unselected types looked selected.

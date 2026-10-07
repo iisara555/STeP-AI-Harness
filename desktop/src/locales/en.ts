@@ -1888,4 +1888,8 @@ export const en: Record<string, string> = {
   ตรวจอัปเดตไม่สำเร็จ: 'Update check failed',
   ตรวจอัปเดต: 'Check for updates',
   ตรวจหาเวอร์ชันใหม่: 'Check for a new version',
+  'ใต้ชื่อของคุณแสดงเลขเวอร์ชัน และบอกว่าเป็นรุ่นล่าสุดหรือมีอัปเดตใหม่ กดที่บรรทัดนี้เพื่อตรวจอัปเดตได้':
+    'Your version number now shows under your name, with whether you are up to date or an update is out. Click it to check for updates.',
+  'หน้าร่างเอกสาร: ชนิดเอกสารที่เลือกเป็นพื้นเหลือง ตัวหนังสืออ่านชัดทั้งธีมสว่างและมืด':
+    'Document tools: the selected document type is solid yellow and easy to read in light and dark themes.',
 };
