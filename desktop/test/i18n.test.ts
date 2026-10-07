@@ -78,3 +78,13 @@ test('welcome starters exist for every team in both languages and never ask the 
   setLanguage('th');
   assert.match(starterText(startersFor('qs')[0]), /ตรวจติดตามคุณภาพภายใน ISO 9001/);
 });
+
+test('every tour step has English text', async () => {
+  const { tourChapters, tourSteps } = await import('../src/tour');
+  const texts = [...tourChapters, ...tourSteps.flatMap(s => [s.title, s.body, ...(s.tip ? [s.tip] : [])])];
+  assert.deepEqual(
+    texts.filter(text => en[text] === undefined),
+    [],
+    'add these to src/locales/en.ts',
+  );
+});

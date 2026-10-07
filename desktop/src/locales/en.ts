@@ -1110,25 +1110,70 @@ export const en: Record<string, string> = {
   เลือกตัวเลือกหรือพิมพ์คำตอบ: 'Choose an option or type an answer',
   ส่งคำตอบ: 'Send answer',
   ยกเลิกงานนี้: 'Cancel this task',
-  'แต่ละงานมีบทสนทนาและร่างของตัวเอง งานเก่าอยู่ในแถบนี้ ปักหมุด เปลี่ยนชื่อ หรือค้นจากเนื้อหาได้':
-    'Each task has its own conversation and draft. Earlier tasks live in this list — pin, rename or search them by content',
-  บอกงานเป็นภาษาไทยธรรมดา: 'Describe the task in plain words',
-  'พิมพ์สิ่งที่อยากให้ช่วย กด Enter เพื่อส่ง Shift+Enter ขึ้นบรรทัดใหม่ แนบเอกสารได้ด้วยปุ่มคลิป ระบบจะตรวจข้อมูลส่วนบุคคลก่อนส่ง':
-    'Type what you need: Enter sends, Shift+Enter adds a new line. Attach documents with the paperclip; personal data is checked before anything is sent',
-  'เรียก Skill ได้ตรง ๆ': 'Call a Skill directly',
-  'พิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น /receipt-audit หรือดูทั้งหมดในศูนย์รวม Skill':
-    'Type / in the message box to pick a Skill such as /receipt-audit, or browse them all in the Skill Hub',
-  'เลือก AI และโมเดล': 'Choose AI and model',
-  'เปลี่ยนโมเดลและระดับการคิดได้ทุกเมื่อ ระดับสูงคิดละเอียดขึ้นแต่ช้าและใช้โควตามากขึ้น':
-    'Change model and reasoning level any time. Higher levels think more carefully but are slower and use more quota',
-  ร่างของคุณอยู่ตรงนี้: 'Your draft lives here',
-  'AI เสนอร่างให้ตรวจก่อนเสมอ กด “ใช้ร่างนี้” แล้วแก้ต่อได้ มีประวัติเวอร์ชันและส่งออกเป็น docx, pdf, xlsx, pptx':
-    'The AI always proposes a draft for you to review. Press “Use this draft” to keep editing, with version history and export to docx, pdf, xlsx and pptx',
   เครื่องมือเฉพาะงาน: 'Task-specific tools',
-  'เช่น ตรวจใบเสร็จก่อนส่ง AFP ด้วย OCR ในเครื่อง': 'e.g. checking receipts before sending to AFP, with on-device OCR',
-  ทางลัดทุกอย่าง: 'Shortcuts for everything',
-  'กด Ctrl+K (Mac: ⌘K) เพื่อค้นหางาน สลับโมเดล เปลี่ยนธีม หรือเปิดทัวร์นี้อีกครั้ง':
-    'Press Ctrl+K (Mac: ⌘K) to search tasks, switch models, change the theme or replay this tour',
+  'ผู้ช่วย AI ของ STeP ช่วยร่าง สรุป และตรวจงานให้ คุณแค่บอกเป็นภาษาไทยธรรมดา ไม่ต้องเขียนโปรแกรม และ AI จะเสนอร่างให้คุณตรวจก่อนใช้จริงเสมอ':
+    'The STeP AI assistant drafts, summarises and checks work for you. Just describe it in plain language, no programming needed, and the AI always proposes a draft for you to review before it is used.',
+  'ทัวร์มี 2 ส่วน: พื้นฐานสำหรับเริ่มงาน และเครื่องมือช่วยงาน กดปุ่มลูกศร ← → บนคีย์บอร์ดเพื่อเลื่อนได้':
+    'The tour has 2 parts: the basics for starting a task, and the work tools. Use the ← → arrow keys to move through it.',
+  'เริ่มงานใหม่ 1 เรื่อง ต่อ 1 งาน': 'One task per piece of work',
+  'แต่ละงานมีบทสนทนาและร่างของตัวเอง งานเก่าอยู่ในรายการใต้ปุ่มนี้ ค้นหา ปักหมุด หรือเปลี่ยนชื่อได้':
+    'Each task has its own conversation and draft. Earlier tasks are listed below this button, where you can search, pin or rename them.',
+  'แยกงานคนละเรื่องไว้คนละงาน AI จะได้ไม่สับสนข้อมูล': 'Keep unrelated work in separate tasks so the AI does not mix up information.',
+  'ไม่รู้จะเริ่มอย่างไร กดตัวอย่างงาน': 'Not sure where to start? Pick an example',
+  'ตัวอย่างงานเลือกมาตามทีมของคุณ กดแล้วข้อความจะไปอยู่ในกล่องพิมพ์ แก้รายละเอียดให้ตรงงานจริงก่อนส่งได้':
+    'The examples are chosen for your team. Picking one puts its text in the message box, so you can adjust the details to your real work before sending.',
+  สั่งงานเป็นภาษาไทยธรรมดา: 'Ask in plain language',
+  'บอกเหมือนฝากงานเพื่อนร่วมงาน: อยากได้อะไร ใช้กับใคร ยาวแค่ไหน กด Enter เพื่อส่ง Shift+Enter เพื่อขึ้นบรรทัดใหม่':
+    'Describe it as you would to a colleague: what you need, who it is for and how long it should be. Enter sends, Shift+Enter adds a new line.',
+  'ตัวอย่าง: “สรุปไฟล์นี้เป็น 5 ข้อ สำหรับรายงานผู้บริหาร ใช้ภาษาทางการ”':
+    'Example: “Summarise this file in 5 points for an executive report, in formal language”',
+  'แนบไฟล์ให้ AI อ่าน': 'Attach files for the AI to read',
+  'ปุ่ม + แนบไฟล์ Word, PDF, Excel ได้ ระบบตรวจและปิดบังข้อมูลส่วนบุคคล เช่น เลขบัตรประชาชน เบอร์โทร แล้วให้คุณดูข้อความก่อนส่งทุกครั้ง':
+    'The + button attaches Word, PDF or Excel files. Personal data such as national ID and phone numbers is detected and masked, and you see the text before anything is sent.',
+  เลือกวิธีทำงาน: 'Choose how to work',
+  '“คุยกับผู้ช่วย” ใช้ได้กับงานส่วนใหญ่ งานใหญ่หลายขั้นเลือก “วางแผนก่อนลงมือ” ให้ AI เสนอแผนให้คุณอนุมัติก่อน และเลือก “สร้างรูป” เมื่ออยากได้ภาพ':
+    '“Chat with the assistant” suits most work. For larger multi-step work choose “Plan before acting” so the AI proposes a plan for your approval first, and choose “Create image” when you want a picture.',
+  'ช่องถัดไปคือสิทธิ์เครื่องมือ ค่า “ถามก่อนแก้ไข” หมายถึง AI ต้องขออนุญาตคุณก่อนแก้ไฟล์ในเครื่อง':
+    'The next box is tool permissions. “Ask before editing” means the AI must ask you before changing files on this computer.',
+  ตรวจร่างก่อนใช้จริง: 'Review the draft before using it',
+  'เมื่อ AI ร่างเอกสาร ร่างจะเปิดในแผงทางขวา กด “ใช้ร่างนี้” แล้วแก้ต่อได้ มีประวัติเวอร์ชัน และส่งออกเป็น Word, PDF, Excel หรือ PowerPoint':
+    'When the AI drafts a document it opens in the pane on the right. Press “Use this draft” to keep editing, with version history and export to Word, PDF, Excel or PowerPoint.',
+  'AI ร่าง คนตรวจและอนุมัติ ตรวจตัวเลข ชื่อ และวันที่ทุกครั้งก่อนส่งต่อ':
+    'The AI drafts, people review and approve. Always check figures, names and dates before passing it on.',
+  เครื่องมือร่างเอกสาร: 'Document drafting tool',
+  'ร่าง TOR บันทึกข้อความ หนังสือราชการ โครงการ และรายงานการประชุมตามแบบของ STeP กรอกข้อมูลไม่กี่ช่อง แนบไฟล์อ้างอิงได้ แล้วส่งออกเป็น Word':
+    'Draft TORs, memos, official letters, project proposals and meeting minutes in STeP formats. Fill in a few fields, attach reference files and export to Word.',
+  'แนบรูปหรือสแกนใบเสร็จ ระบบอ่านตัวอักษรด้วย OCR (อ่านข้อความจากภาพ) ในเครื่องของคุณ แล้วบอกว่าข้อมูลครบไหมและควรเบิกหมวดใด':
+    'Attach a photo or scan of a receipt. OCR (reading text from an image) runs on your own computer, then the tool says whether the details are complete and which category to claim under.',
+  'ยังเป็นรุ่นทดลอง ตรวจผลกับใบเสร็จจริงอีกครั้งก่อนส่ง':
+    'Still a trial feature: check the result against the real receipt before submitting.',
+  'Skill คือสูตรงานสำเร็จรูป': 'A Skill is a ready-made work recipe',
+  'Skill รวมขั้นตอนและแบบฟอร์มของงานที่ทำบ่อยไว้ให้ AI ทำตาม ดูทั้งหมดได้ที่นี่ หรือพิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น /receipt-audit':
+    'A Skill bundles the steps and forms of frequent work for the AI to follow. Browse them all here, or type / in the message box to pick one such as /receipt-audit.',
+  'เลือก AI และระดับการคิด': 'Choose the AI and reasoning level',
+  'ปกติใช้ค่าเริ่มต้นได้เลย เปลี่ยนโมเดลหรือระดับการคิดได้ทุกเมื่อ ระดับสูงคิดละเอียดขึ้นแต่ช้าและใช้โควตามากขึ้น':
+    'The defaults are fine for everyday work. Change model or reasoning level any time; higher levels think more carefully but are slower and use more quota.',
+  ตั้งค่าให้เป็นของคุณ: 'Make it yours',
+  'เชื่อมต่อบัญชี AI เปลี่ยนทีม เลือกสไตล์การพูดของผู้ช่วย และสลับธีมสว่างหรือมืดได้ที่นี่':
+    'Connect AI accounts, change team, pick the assistant’s speaking style and switch between light and dark themes here.',
+  รุ่นของแอปและการอัปเดต: 'App version and updates',
+  'ใต้ชื่อของคุณบอกรุ่นที่ใช้อยู่ เมื่อมีรุ่นใหม่จะขึ้นปุ่มอัปเดตตรงนี้ ข้อมูลและงานเดิมยังอยู่ครบหลังอัปเดต':
+    'The line under your name shows the version you are using. When a new version is out, an update button appears here, and your tasks and data stay after updating.',
+  'ลืมว่าอยู่ตรงไหน กด Ctrl+K': 'Lost something? Press Ctrl+K',
+  'กด Ctrl+K (Mac: ⌘K) เพื่อค้นหางานและทุกคำสั่ง เช่น ดูการใช้งาน AI, ความจำของผู้ช่วย, กล่องบทเรียน, มีอะไรใหม่ในรุ่นนี้ หรือเปิดทัวร์นี้อีกครั้ง':
+    "Press Ctrl+K (Mac: ⌘K) to search tasks and every command, such as AI usage, the assistant's memory, the Learning Inbox, what's new in this version or replaying this tour.",
+  พื้นฐาน: 'Basics',
+  เครื่องมือช่วยงาน: 'Work tools',
+  'ยังไม่ได้เชื่อมต่อ AI เริ่มตรงนี้': 'No AI connected yet? Start here',
+  'ก่อนสั่งงานครั้งแรก ต้องเชื่อมต่อบัญชี AI 1 บัญชี กดลิงก์นี้แล้วเลือกบริการที่หน่วยงานใช้ ลงชื่อเข้าใช้ในเบราว์เซอร์ แล้วกลับมาที่แอป':
+    'Before your first request, connect one AI account. Press this link, choose the service your unit uses, sign in in the browser, then come back to the app.',
+  'ไม่แน่ใจว่าใช้บัญชีไหน ถามผู้ดูแลระบบของทีม': 'Not sure which account to use? Ask your team administrator.',
+  'ส่วนที่ {0}': 'Part {0}',
+  'พื้นฐานครบแล้ว เริ่มงานแรกได้เลย หรือดูเครื่องมือช่วยงานต่ออีก {0} ขั้น':
+    'That covers the basics. Start your first task now, or see the work tools in {0} more steps',
+  ดูเครื่องมือต่อ: 'See the tools',
+  เริ่มทัวร์: 'Start the tour',
+  'ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน': 'New here? Take the tour',
   'ทัวร์แนะนำ {0} จาก {1}: {2}': 'Tour {0} of {1}: {2}',
   ข้ามทัวร์: 'Skip tour',
   เริ่มใช้งาน: 'Get started',
