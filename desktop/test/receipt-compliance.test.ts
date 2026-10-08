@@ -5,6 +5,7 @@ import {
   classifyFromText,
   complianceChecklist,
   complianceSummary,
+  receiptCompleteness,
   parseReceiptDate,
   thaiDate,
 } from '../src/receipt-compliance';
@@ -111,4 +112,31 @@ test('the vision reading carries the document type and only boolean features', (
   assert.equal(reading.documentType, 'cash_bill');
   assert.deepEqual(reading.features, { handwritten: true, receiverSigned: false });
   assert.equal(parseVisionReading('{"fields":{},"documentType":"approved"}').documentType, '');
+});
+
+test('basic receipt completeness includes an issuer address and unknown signatures rather than silently passing them', () => {
+  const unknown = complianceChecklist({
+    type: 'receipt',
+    features: {},
+    values: { merchant: 'ร้านสังเคราะห์', date: '2/10/2569', total: '100' },
+    amountInWords: 'หนึ่งร้อยบาทถ้วน',
+    category: 'other',
+  });
+  for (const id of ['payee_address', 'items', 'signature']) assert.equal(unknown.find(item => item.id === id)?.status, 'warn', id);
+  assert.equal(receiptCompleteness(unknown).status, 'uncertain');
+  const complete = complianceChecklist({
+    ...cashBill,
+    values: { ...cashBill.values, merchantAddress: 'ที่อยู่สังเคราะห์สำหรับทดสอบ' },
+    category: 'other',
+  });
+  assert.equal(receiptCompleteness(complete).status, 'complete');
+  assert.equal(receiptCompleteness(complete).presentCount, 5);
+  const unsigned = complianceChecklist({
+    ...cashBill,
+    features: { ...cashBill.features, receiverSigned: false },
+    values: { ...cashBill.values, merchantAddress: 'ที่อยู่สังเคราะห์สำหรับทดสอบ' },
+    category: 'other',
+  });
+  assert.equal(receiptCompleteness(unsigned).status, 'incomplete');
+  assert.ok(receiptCompleteness(unsigned).missingIds.includes('signature'));
 });

@@ -160,13 +160,23 @@ export function complianceChecklist(input: {
       source: 'general',
       text: has('date') ? 'มีวันที่รับเงิน' : 'ยังไม่เห็นวันที่รับเงิน',
     });
-    if (f.itemsListed !== undefined)
-      items.push({
-        id: 'items',
-        status: f.itemsListed ? 'ok' : 'missing',
-        source: 'general',
-        text: f.itemsListed ? 'มีรายการว่าจ่ายค่าอะไร' : 'ยังไม่เห็นรายการว่าจ่ายค่าอะไร',
-      });
+    items.push({
+      id: 'payee_address',
+      status: has('merchantAddress') ? 'ok' : 'warn',
+      source: 'general',
+      text: has('merchantAddress') ? 'มีที่อยู่ผู้รับเงิน / ร้าน' : 'ยังอ่านที่อยู่ผู้รับเงิน / ร้านไม่ได้ โปรดตรวจต้นฉบับ',
+    });
+    items.push({
+      id: 'items',
+      status: f.itemsListed === undefined ? 'warn' : f.itemsListed ? 'ok' : 'missing',
+      source: 'general',
+      text:
+        f.itemsListed === undefined
+          ? 'ยังยืนยันรายการค่าใช้จ่ายไม่ได้ โปรดตรวจต้นฉบับ'
+          : f.itemsListed
+            ? 'มีรายการว่าจ่ายค่าอะไร'
+            : 'ยังไม่เห็นรายการว่าจ่ายค่าอะไร',
+    });
     items.push({
       id: 'amount',
       status: has('total') && input.amountInWords ? 'ok' : has('total') ? 'warn' : 'missing',
@@ -178,13 +188,17 @@ export function complianceChecklist(input: {
             ? 'มีจำนวนเงินตัวเลข แต่ยังไม่เห็นจำนวนเงินตัวอักษร'
             : 'ยังไม่เห็นจำนวนเงิน',
     });
-    if (f.receiverSigned !== undefined)
-      items.push({
-        id: 'signature',
-        status: f.receiverSigned ? 'ok' : 'missing',
-        source: 'general',
-        text: f.receiverSigned ? 'มีลายมือชื่อผู้รับเงิน' : 'ยังไม่เห็นลายมือชื่อผู้รับเงิน ขอให้ผู้รับเงินลงชื่อ (ห้ามลงชื่อแทนผู้อื่น)',
-      });
+    items.push({
+      id: 'signature',
+      status: f.receiverSigned === undefined ? 'warn' : f.receiverSigned ? 'ok' : 'missing',
+      source: 'general',
+      text:
+        f.receiverSigned === undefined
+          ? 'ยังยืนยันลายมือชื่อผู้รับเงินไม่ได้ โปรดตรวจช่องผู้รับเงินในต้นฉบับ'
+          : f.receiverSigned
+            ? 'มีลายมือชื่อผู้รับเงิน'
+            : 'ยังไม่เห็นลายมือชื่อผู้รับเงิน ขอให้ผู้รับเงินลงชื่อ (ห้ามลงชื่อแทนผู้อื่น)',
+    });
     items.push({
       id: 'buyer',
       status: f.buyerNamed ? 'ok' : 'info',
@@ -311,5 +325,37 @@ export function complianceSummary(items: ComplianceItem[]) {
     missing: items.filter(i => i.status === 'missing').length,
     warn: items.filter(i => i.status === 'warn').length,
     todo: items.filter(i => i.status === 'todo').length,
+  };
+}
+
+/** Preliminary document elements only; category policy and payment authority remain separate. */
+export function receiptCompleteness(items: ComplianceItem[]) {
+  const groups = [
+    { id: 'issuer', label: 'ชื่อและที่อยู่ผู้รับเงิน / ร้าน', ids: ['payee', 'payee_address'] },
+    { id: 'date', label: 'วันที่รับเงิน', ids: ['date'] },
+    { id: 'items', label: 'รายการค่าใช้จ่าย', ids: ['items'] },
+    { id: 'amount', label: 'จำนวนเงินตัวเลขและตัวอักษร', ids: ['amount'] },
+    { id: 'signature', label: 'ลายมือชื่อผู้รับเงิน', ids: ['signature'] },
+  ];
+  const byId = Object.fromEntries(items.map(item => [item.id, item]));
+  const components = groups.map(group => ({
+    ...group,
+    status: group.ids.some(id => byId[id]?.status === 'missing')
+      ? 'missing'
+      : group.ids.every(id => byId[id]?.status === 'ok')
+        ? 'present'
+        : 'uncertain',
+  }));
+  const missingIds = items
+    .filter(item => item.status === 'missing' && (groups.some(group => group.ids.includes(item.id)) || item.id === 'not_proof_of_payment'))
+    .map(item => item.id);
+  const uncertainIds = groups.flatMap(group => group.ids.filter(id => !byId[id] || !['ok', 'missing'].includes(byId[id].status)));
+  return {
+    status: missingIds.length ? 'incomplete' : uncertainIds.length ? 'uncertain' : 'complete',
+    presentCount: components.filter(item => item.status === 'present').length,
+    totalCount: groups.length,
+    missingIds,
+    uncertainIds,
+    components,
   };
 }

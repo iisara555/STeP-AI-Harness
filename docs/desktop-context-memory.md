@@ -70,6 +70,8 @@ The conversation exports Markdown or JSON through a Save dialog. Exports include
 
 ## OCR and optional vision
 
+Basic receipt completeness includes payee name/address, date, items, amount in digits/words and receiver signature. Unknown item/signature observations must remain visible. Signature metadata describes presence in a labeled space only; receiver, issuer and buyer are separate roles. Editable address, amount words and signature corrections share the final confirmation and must survive delayed AI readings. Presence does not authenticate a signer or supply an AFP acceptance rule.
+
 The receipt page presents usability, type, a source-linked category suggestion and
 next steps before the form. OCR/vision fill and format source-backed fields; vision
 also transcribes item descriptions, with an explicit-item-label local fallback.

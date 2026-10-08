@@ -12,8 +12,14 @@ const LONGEST_SIDE = 1600;
 const TOTAL_BYTES = 15_000_000;
 const TIME_LIMIT = 90_000;
 
-export async function pdfPageImages(path: string, vendorDir: string): Promise<VisionInput[]> {
-  const bytes = await readFile(path);
+export async function pdfPageImages(
+  path: string,
+  vendorDir: string,
+  options: { bytes?: Buffer; maxPages?: number } = {},
+): Promise<VisionInput[]> {
+  const maxPages = options.maxPages ?? SCANNED_PDF_PAGES;
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > SCANNED_PDF_PAGES) throw new Error('INVALID_INPUT');
+  const bytes = options.bytes ?? (await readFile(path));
   const vendor = pathToFileURL(join(vendorDir, '/')).href;
   const partition = session.fromPartition('step-pdf-pages');
   // Windows may change the drive letter's case, so compare without case.
@@ -36,7 +42,7 @@ export async function pdfPageImages(path: string, vendorDir: string): Promise<Vi
       const data = Uint8Array.from(atob(${JSON.stringify(bytes.toString('base64'))}), c => c.charCodeAt(0));
       const doc = await pdfjs.getDocument({ data, isEvalSupported: false, cMapUrl: './cmaps/', cMapPacked: true,
         standardFontDataUrl: './standard_fonts/' }).promise;
-      if (doc.numPages > ${SCANNED_PDF_PAGES}) return { tooLong: true };
+      if (doc.numPages > ${maxPages}) return { tooLong: true };
       const pages = [];
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i);

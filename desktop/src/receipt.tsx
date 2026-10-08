@@ -21,12 +21,20 @@ import {
   classifyFromText,
   complianceChecklist,
   complianceSummary,
+  receiptCompleteness,
   type ClaimCategory,
   type ComplianceItem,
   type DocumentFeatures,
   type DocumentType,
 } from './receipt-compliance';
-import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading } from './receipt-vision';
+import {
+  compareField,
+  receiptRuleChecks,
+  RECEIPT_SIGNATURE_ROLES,
+  type ReceiptField,
+  type ReceiptSignatureRole,
+  type SignatureStatus,
+} from './receipt-vision';
 // One extraction and review rule set, shared with the OCR trial's own web page and its tests.
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import { SectionArt } from './illustration';
@@ -36,6 +44,8 @@ import { trialReading, trialReport, type TrialReading } from './receipt-trial';
 import { expenseCategorySuggestion, expenseCodeLabel, expenseDescriptionFromText, formValues, receiptAssessment } from './receipt-workflow';
 import { localized, t } from './i18n';
 import { emptyReceiptForm, receiptFormReducer } from './receipt-form';
+import { visionFormSuggestions, receiptFocusStyle } from './receipt-hybrid';
+import type { ReceiptVisionResult } from '../electron/receipt-vision-recheck';
 
 type MappingCandidate = {
   value: string;
@@ -120,16 +130,7 @@ type OcrStatus = {
   vision?: boolean;
   textOnly?: boolean;
 };
-type Vision = {
-  fields: VisionReading;
-  expenseDescription: string;
-  buyerTaxId: string;
-  amountInWords: string;
-  documentType: DocumentType | '';
-  features: DocumentFeatures;
-  notes: string;
-  model: string;
-};
+type Vision = ReceiptVisionResult & { model: string; pagePreviews?: string[] };
 const CATEGORY_LABELS: Record<ClaimCategory, string> = {
   unsure: 'ยังไม่แน่ใจ',
   B: 'หมวด B (B1–B12)',
@@ -161,6 +162,11 @@ const labels: Record<string, string> = localized({
   vat: 'ภาษีมูลค่าเพิ่ม',
   total: 'ยอดรวมที่ชำระ',
 });
+const signatureLabels: Record<ReceiptSignatureRole, string> = localized({
+  receiver: 'ลายเซ็นผู้รับเงิน',
+  issuer: 'ลายเซ็นผู้ออกเอกสาร',
+  buyer: 'ลายเซ็นผู้ซื้อ / ผู้จ่ายเงิน',
+});
 const issueText: Record<string, string | ((issue: Issue) => string)> = {
   missing_merchant: 'ยังไม่มีชื่อร้านค้าหรือผู้ออกใบเสร็จ',
   missing_date: 'ยังไม่มีวันที่บนใบเสร็จ',
@@ -177,11 +183,18 @@ const issueText: Record<string, string | ((issue: Issue) => string)> = {
 };
 // Checks that need no AI (src/receipt-vision.ts); amounts adding up is already one of the page's own review rules.
 const ruleText: Record<string, string> = {
+  invalid_money: 'รูปแบบยอดเงินไม่ถูกต้องหรือมีเศษต่ำกว่าหนึ่งสตางค์ โปรดเทียบกับต้นฉบับ',
+  amounts_do_not_add_up: 'ยอดก่อนภาษีบวกภาษีไม่ตรงกับยอดรวม แม้ต่างหนึ่งสตางค์ก็ต้องตรวจต้นฉบับ',
   tax_id_checksum: 'เลขผู้เสียภาษีไม่ผ่านการตรวจเลขหลักสุดท้าย อาจอ่านผิดหนึ่งหลัก โปรดเทียบกับต้นฉบับ',
   tax_id_may_be_buyer:
     'เลขผู้เสียภาษีนี้อาจเป็นของผู้ซื้อ (เช่น มหาวิทยาลัย) ไม่ใช่ของร้าน ร้านบางแห่งเขียนเลขลูกค้าลงช่องผู้ออก โปรดตรวจกับต้นฉบับ',
   vat_not_7_percent: 'ภาษีมูลค่าเพิ่มไม่เท่ากับ 7% ของยอดก่อนภาษี โปรดตรวจตัวเลขทั้งสองช่อง',
   amount_words_differ: 'ยอดเงินตัวอักษรไม่ตรงกับยอดรวมตัวเลข โปรดตรวจยอดรวมกับต้นฉบับ',
+  amount_words_unreadable: 'ยังแปลงยอดเงินตัวอักษรไม่ได้ โปรดเทียบข้อความกับต้นฉบับ',
+  invalid_item_number: 'ตัวเลขในตารางรายการยังอ่านไม่ครบหรือรูปแบบไม่ถูกต้อง โปรดตรวจต้นฉบับ',
+  item_amount_mismatch: 'จำนวนคูณราคาต่อหน่วยไม่ตรงกับยอดรายการ โปรดตรวจตารางกับต้นฉบับ',
+  item_rounding_needs_review: 'รายการมีเศษต่ำกว่าหนึ่งสตางค์ ต้องยืนยันกติกาปัดเศษก่อนตรวจยอด',
+  items_total_mismatch: 'ผลรวมรายการไม่ตรงกับยอดรวมตารางที่ระบุบนใบเสร็จ โปรดตรวจต้นฉบับ',
 };
 const describe = (issue: Issue) => {
   const text = issueText[issue.code];
@@ -240,6 +253,20 @@ export function ReceiptApp({
     [zoom, setZoom] = useState(false),
     [typeOverride, setTypeOverride] = useState<DocumentType | ''>(''),
     [categoryOverride, setCategory] = useState<ClaimCategory | null>(null);
+  const [focusedField, setFocusedField] = useState<ReceiptField | null>(null);
+  const [signatureFocus, setSignatureFocus] = useState<ReceiptSignatureRole | null>(null);
+  const [signatureOverrides, setSignatureOverrides] = useState<Partial<Record<ReceiptSignatureRole, SignatureStatus>>>({});
+  const [previewPage, setPreviewPage] = useState(1);
+  const focusedRegion = signatureFocus
+    ? vision?.signatures?.[signatureFocus]?.region
+    : focusedField
+      ? vision?.fields[focusedField]?.region
+      : null;
+  const focusedLabel = signatureFocus ? signatureLabels[signatureFocus] : focusedField ? labels[focusedField] : '';
+  const previews = vision?.pagePreviews || [];
+  const currentPage = focusedRegion && (focusedRegion.page === 1 || previews[focusedRegion.page - 1]) ? focusedRegion.page : previewPage;
+  const preview = currentPage === 1 ? doc?.preview || previews[0] : previews[currentPage - 1];
+  const fieldRegion = focusedRegion?.page === currentPage && preview ? focusedRegion : null;
   useEffect(() => onBusy?.(Boolean(busy) && busy !== 'status'), [busy, onBusy]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
     const foreground = id !== 'status';
@@ -337,6 +364,10 @@ export function ReceiptApp({
     setNote('');
     setAiDecisions([]);
     setVision(null);
+    setSignatureFocus(null);
+    setSignatureOverrides({});
+    setPreviewPage(1);
+    setFocusedField(null);
     setZoom(false);
     setTypeOverride('');
     setCategory(null);
@@ -379,40 +410,58 @@ export function ReceiptApp({
           performance.now() - started,
         ),
       );
-    // A field the OCR left empty, or only guessed from a low-score candidate, takes the AI's reading (still a guess
-    // to look at); a field the OCR read with confidence keeps its value and shows the AI's reading beside it when they differ.
-    const suggestions: Record<string, string> = {};
-    const normalized = formValues(Object.fromEntries(review.fieldKeys.map(key => [key, reading.fields?.[key]?.value || ''])));
-    for (const k of review.fieldKeys as ReceiptField[]) {
-      const ai = normalized[k];
-      if (ai && (!String(current[k] || '').trim() || currentGuessed[k])) suggestions[k] = ai;
-    }
-    updateForm({ type: 'suggest', sourceId, origin: 'vision', values: suggestions, description: reading.expenseDescription });
+    // Handwriting uses Vision first. Printed OCR remains an independent comparison; manual edits always win in the reducer.
+    const suggestions = visionFormSuggestions(current, currentGuessed, reading);
+    updateForm({
+      type: 'suggest',
+      sourceId,
+      origin: 'vision',
+      values: { ...suggestions, merchantAddress: reading.merchantAddress || '', amountInWords: reading.amountInWords || '' },
+      description: reading.expenseDescription,
+    });
     notify(t('AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const matchOf = (k: string) =>
     vision ? compareField(k as ReceiptField, fields[k]?.value || '', vision.fields[k as ReceiptField]?.value || '') : undefined;
   // The total in Thai words, from the AI's reading or an OCR line such as "แปดร้อยแปดบาทถ้วน".
   const amountInWords =
-    vision?.amountInWords ||
-    records.map(r => String(r.text || '').replace(/\s/g, '')).find(text => /^[ก-๙()]+บาท(ถ้วน|ตัว|[ก-๙]+สตางค์)$/.test(text)) ||
-    '';
+    form.origins.amountInWords === 'manual'
+      ? values.amountInWords || ''
+      : values.amountInWords ||
+        vision?.amountInWords ||
+        records.map(r => String(r.text || '').replace(/\s/g, '')).find(text => /^[ก-๙()]+บาท(ถ้วน|ตัว|[ก-๙]+สตางค์)$/.test(text)) ||
+        '';
+  const signatureStatus = (role: ReceiptSignatureRole): SignatureStatus =>
+    signatureOverrides[role] ??
+    vision?.signatures?.[role]?.status ??
+    (role === 'receiver' && vision?.features.receiverSigned !== undefined
+      ? vision.features.receiverSigned
+        ? 'present'
+        : 'absent'
+      : 'uncertain');
   // The kind of document and what the claim still needs (src/receipt-compliance.ts).
   const detectedType = vision?.documentType || classifyFromText(String(doc?.result?.text || '')) || '';
   const docType = typeOverride || detectedType;
   const typeSource = typeOverride ? 'person' : vision?.documentType ? 'ai' : detectedType ? 'heading' : '';
   const features: DocumentFeatures = {
     ...vision?.features,
+    receiverSigned: signatureStatus('receiver') === 'uncertain' ? undefined : signatureStatus('receiver') === 'present',
+    itemsListed: descriptionEdited
+      ? Boolean(expenseDescription.trim())
+      : (vision?.features.itemsListed ?? (expenseDescription.trim() ? true : undefined)),
     handwritten: vision?.features.handwritten ?? (records.some(r => r.textKind === 'handwriting-likely') || undefined),
   };
   const categorySuggestion = expenseCategorySuggestion(expenseDescription, note, values.date);
   const category = categoryOverride ?? categorySuggestion.category;
   const compliance = complianceChecklist({ type: docType, features, values, amountInWords, category });
   const complianceCount = complianceSummary(compliance);
+  const completeness = receiptCompleteness(compliance);
   const itemText = (item: ComplianceItem) => (item.ifCategoryB ? t('ถ้าเบิกหมวด B: ') : '') + t(item.text, ...(item.vars || []));
   const rules = receiptRuleChecks(values as Partial<Record<ReceiptField, string>>, {
     buyerTaxId: vision?.buyerTaxId,
     amountInWords,
+    items: vision?.items,
+    itemsTotal: vision?.itemsTotal,
   }).filter(r => ruleText[r.code]);
   const assessment = receiptAssessment({
     type: docType,
@@ -504,9 +553,17 @@ export function ReceiptApp({
             notes: vision.notes,
             amount_in_words: vision.amountInWords,
             buyer_tax_id: vision.buyerTaxId,
+            merchant_address: vision.merchantAddress,
+            signatures: vision.signatures,
+            items: vision.items,
+            items_total: vision.itemsTotal,
+            recheck: vision.recheck,
             expense_description: { value: vision.expenseDescription || '' },
             fields: Object.fromEntries(
-              review.fieldKeys.map(k => [k, { ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) }]),
+              review.fieldKeys.map(k => [
+                k,
+                { ...vision.fields[k as ReceiptField], ai_value: vision.fields[k as ReceiptField]?.value || '', match: matchOf(k) },
+              ]),
             ),
           }
         : null,
@@ -519,9 +576,31 @@ export function ReceiptApp({
         category_source: categoryOverride === null ? 'source-backed-suggestion' : 'user-input',
         category_suggestion: categorySuggestion,
         assessment,
+        basic_elements: {
+          ...completeness,
+          human_checked: allChecked,
+          notice: 'Preliminary general receipt elements; confirm exact category requirements with AFP. Not payment approval.',
+        },
         items: compliance.map(item => ({ id: item.id, status: item.status, source: item.source, text: itemText(item) })),
       },
       expense_note: note,
+      issuer_address: { value: values.merchantAddress || '', input_origin: form.origins.merchantAddress || 'vision', checked: allChecked },
+      amount_in_words: {
+        value: amountInWords,
+        input_origin: form.origins.amountInWords || (vision?.amountInWords ? 'vision' : 'ocr'),
+        checked: allChecked,
+      },
+      signature_observations: Object.fromEntries(
+        RECEIPT_SIGNATURE_ROLES.filter(role => role === 'receiver' || vision?.signatures?.[role]).map(role => [
+          role,
+          {
+            value: signatureStatus(role),
+            input_origin: signatureOverrides[role] ? 'manual' : 'vision',
+            checked: allChecked && signatureStatus(role) !== 'uncertain',
+            scope: 'visible-presence-only',
+          },
+        ]),
+      ),
       expense_description: {
         value: expenseDescription,
         input_origin: descriptionOrigin,
@@ -805,30 +884,77 @@ export function ReceiptApp({
             <header>
               <ScanText size={16} />
               <strong>{doc.name}</strong>
-              {doc.preview && (
+              {preview && (
                 <button
                   type="button"
                   className="icon receipt-zoom"
-                  aria-pressed={zoom}
-                  aria-label={zoom ? t('ย่อภาพใบเสร็จ') : t('ขยายภาพใบเสร็จ')}
-                  title={zoom ? t('ย่อภาพใบเสร็จ') : t('ขยายภาพใบเสร็จ')}
-                  onClick={() => setZoom(!zoom)}
+                  aria-pressed={zoom || Boolean(fieldRegion)}
+                  aria-label={zoom || fieldRegion ? t('ย่อภาพใบเสร็จ') : t('ขยายภาพใบเสร็จ')}
+                  title={zoom || fieldRegion ? t('ย่อภาพใบเสร็จ') : t('ขยายภาพใบเสร็จ')}
+                  onClick={() => {
+                    setFocusedField(null);
+                    setSignatureFocus(null);
+                    setZoom(fieldRegion ? false : !zoom);
+                  }}
                 >
-                  {zoom ? <ZoomOut size={15} /> : <ZoomIn size={15} />}
+                  {zoom || fieldRegion ? <ZoomOut size={15} /> : <ZoomIn size={15} />}
                 </button>
               )}
             </header>
-            {doc.preview ? (
-              <div className={'receipt-preview-frame' + (zoom ? ' zoomed' : '')}>
-                <img className="receipt-preview" src={doc.preview} alt={t('ภาพใบเสร็จ ') + doc.name} onClick={() => setZoom(!zoom)} />
+            {previews.length > 1 && (
+              <label className="small">
+                {t('หน้าใบเสร็จ')}{' '}
+                <select
+                  aria-label={t('หน้าใบเสร็จ')}
+                  value={currentPage}
+                  onChange={e => {
+                    setFocusedField(null);
+                    setSignatureFocus(null);
+                    setPreviewPage(Number(e.target.value));
+                    setZoom(false);
+                  }}
+                >
+                  {previews.map((_, i) => (
+                    <option key={i} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {preview ? (
+              <div className={'receipt-preview-frame' + (fieldRegion ? ' field-focused' : zoom ? ' zoomed' : '')}>
+                <img
+                  className="receipt-preview"
+                  src={preview}
+                  alt={t('ภาพใบเสร็จ ') + doc.name}
+                  style={fieldRegion ? receiptFocusStyle(fieldRegion) : undefined}
+                  onClick={() => {
+                    setFocusedField(null);
+                    setSignatureFocus(null);
+                    setZoom(fieldRegion ? false : !zoom);
+                  }}
+                />
               </div>
             ) : (
               <p className="small muted">{t('ไฟล์ชนิดนี้แสดงภาพในแอปไม่ได้ โปรดเปิดต้นฉบับเทียบกับข้อความด้านล่าง')}</p>
+            )}
+            {fieldRegion && focusedLabel && (
+              <p className="small muted" role="status">
+                {t('ภาพขยายช่อง {0} · ตำแหน่งจาก AI โปรดเทียบต้นฉบับ', focusedLabel)}
+              </p>
             )}
             {vision?.notes && (
               <p className="receipt-vision-note small">
                 <Eye size={14} />
                 {t('AI ฝากตรวจ: {0}', vision.notes)}
+              </p>
+            )}
+            {vision?.recheck && (
+              <p className="receipt-vision-note small">
+                {vision.recheck.failed
+                  ? t('AI อ่านซ้ำไม่สำเร็จ เก็บค่ารอบแรกไว้ โปรดตรวจช่องที่เตือนกับต้นฉบับ')
+                  : t('AI อ่านซ้ำหนึ่งครั้งเพราะข้อมูลขัดกัน ค่าที่เปลี่ยนยังต้องตรวจต้นฉบับ')}
               </p>
             )}
             <details>
@@ -1028,6 +1154,30 @@ export function ReceiptApp({
                 </details>
               )}
             </div>
+            <section className="receipt-elements" aria-label={t('องค์ประกอบพื้นฐานใบเสร็จ')}>
+              <strong>
+                {completeness.status === 'incomplete'
+                  ? t('ใบเสร็จยังขาดองค์ประกอบ')
+                  : completeness.status === 'uncertain'
+                    ? t('องค์ประกอบใบเสร็จยังรอตรวจบางจุด')
+                    : rules.length
+                      ? t('มีองค์ประกอบแต่ข้อมูลยังขัดกัน')
+                      : allChecked
+                        ? t('ครบองค์ประกอบพื้นฐานที่ตรวจ')
+                        : t('พบองค์ประกอบพื้นฐานครบ · รอคุณยืนยัน')}
+              </strong>
+              <ul>
+                {completeness.components.map(component => (
+                  <li key={component.id}>
+                    <span>{t(component.label)}</span>
+                    <span className={'chip ' + (component.status === 'present' ? 'agree' : 'differ')}>
+                      {t(component.status === 'present' ? 'พบข้อมูล' : component.status === 'missing' ? 'ขาด' : 'รอตรวจ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <small className="muted">{t('องค์ประกอบเบื้องต้นตามหลักทั่วไป เงื่อนไขการรับเอกสารและหมวดเบิกให้ยืนยันกับ AFP')}</small>
+            </section>
             <details className="receipt-compliance" aria-label={t('ประเภทเอกสารและสิ่งที่ต้องมี')}>
               <summary>{t('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด')}</summary>
               <div className="receipt-compliance-head">
@@ -1123,13 +1273,81 @@ export function ReceiptApp({
               />
               <small className="muted">{t('ระบบอ่านจากรายการบนใบเสร็จ ใช้แนะนำหมวดโดยไม่เดาจากชื่อร้าน')}</small>
             </label>
+            <label className="receipt-note">
+              {t('ที่อยู่ผู้รับเงิน / ร้าน')}
+              <input
+                aria-label={t('ที่อยู่ผู้รับเงิน / ร้าน')}
+                value={values.merchantAddress || ''}
+                onChange={e => edit('merchantAddress', e.target.value)}
+              />
+              <small className="muted">{t('ใช้ที่อยู่ผู้ออกใบเสร็จจากต้นฉบับ แยกจากที่อยู่ผู้ซื้อ')}</small>
+            </label>
+            <label className="receipt-note">
+              {t('จำนวนเงินตัวอักษร')}
+              <input aria-label={t('จำนวนเงินตัวอักษร')} value={amountInWords} onChange={e => edit('amountInWords', e.target.value)} />
+            </label>
+            <section className="receipt-signatures" aria-label={t('ตรวจลายเซ็นในใบเสร็จ')}>
+              {RECEIPT_SIGNATURE_ROLES.filter(role => role === 'receiver' || vision?.signatures?.[role]).map(role => (
+                <label key={role}>
+                  {signatureLabels[role]}
+                  <select
+                    aria-label={signatureLabels[role]}
+                    value={signatureStatus(role)}
+                    onFocus={() => {
+                      setFocusedField(null);
+                      setSignatureFocus(role);
+                      setZoom(false);
+                    }}
+                    onChange={e => {
+                      setSignatureOverrides(previous => ({ ...previous, [role]: e.target.value as SignatureStatus }));
+                      setAllChecked(false);
+                    }}
+                  >
+                    <option value="present">{t('พบลายเซ็นในช่องนี้')}</option>
+                    <option value="absent">{t('ไม่พบลายเซ็นในช่องนี้')}</option>
+                    <option value="uncertain">{t('ยังไม่แน่ใจ')}</option>
+                  </select>
+                  {vision?.signatures?.[role]?.evidence && (
+                    <small className="muted">{t('AI สังเกต: {0}', vision.signatures[role]!.evidence)}</small>
+                  )}
+                </label>
+              ))}
+              <small className="muted">{t('ตรวจการมีลายเซ็นในช่องที่กำหนด รอยืนยันพร้อมข้อมูลทั้งหมดครั้งเดียว')}</small>
+            </section>
+            {vision && vision.items?.length > 0 && (
+              <details className="receipt-field-evidence">
+                <summary>{t('ตารางรายการที่ AI อ่านได้ · ยังไม่ยืนยัน')}</summary>
+                <table>
+                  <thead>
+                    <tr>
+                      {['รายการ', 'จำนวน', 'ราคาต่อหน่วย', 'ยอดรายการ'].map(label => (
+                        <th key={label}>{t(label)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vision.items.map((item, i) => (
+                      <tr key={i} className={item.needsReview || rules.some(rule => rule.itemIndex === i) ? 'receipt-item-warning' : ''}>
+                        <td>{item.description}</td>
+                        <td>{item.quantity}</td>
+                        <td>{item.unitPrice}</td>
+                        <td>{item.amount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <small className="muted">{t('ตรวจเฉพาะตัวเลขที่เห็น ไม่เติมรายการหรือคำนวณช่องที่ขาด')}</small>
+              </details>
+            )}
             {review.fieldKeys.map((k, index) => (
               <div
                 className={
                   'receipt-field' +
                   (matchOf(k) ? ' match-' + matchOf(k) : '') +
                   (guessed[k] && values[k] ? ' guessed' : '') +
-                  (allChecked && values[k] ? ' confirmed' : '')
+                  (allChecked && values[k] ? ' confirmed' : '') +
+                  (vision?.fields[k as ReceiptField]?.needsReview ? ' uncertain' : '') +
+                  (rules.some(rule => rule.field === k) ? ' rule-warning' : '')
                 }
                 key={k}
               >
@@ -1141,6 +1359,11 @@ export function ReceiptApp({
                   <input
                     id={'rf-' + k}
                     value={values[k] || ''}
+                    onFocus={() => {
+                      setSignatureFocus(null);
+                      setFocusedField(k as ReceiptField);
+                      setZoom(false);
+                    }}
                     onChange={e => edit(k, e.target.value)}
                     onKeyDown={e => {
                       // Enter moves on to the next field.
@@ -1162,6 +1385,28 @@ export function ReceiptApp({
                     <TriangleAlert size={12} />
                     {t('OCR กับ AI อ่านต่างกัน ตรวจช่องนี้กับภาพ')}
                   </small>
+                )}
+                {rules
+                  .filter(rule => rule.field === k)
+                  .map((rule, i) => (
+                    <small className="receipt-validation-warning" key={rule.code + i}>
+                      {rule.itemIndex !== undefined ? t('รายการที่ {0}: ', rule.itemIndex + 1) : ''}
+                      {t(ruleText[rule.code])}
+                    </small>
+                  ))}
+                {vision?.fields[k as ReceiptField]?.needsReview && (
+                  <small className="receipt-guess">{t('AI ระบุว่าช่องนี้ยังไม่แน่ใจ โปรดตรวจภาพขยาย')}</small>
+                )}
+                {vision?.fields[k as ReceiptField]?.confidence != null && (
+                  <small className="muted">
+                    {t(
+                      'ความมั่นใจที่ AI รายงาน: {0}% · ไม่ใช่ความแม่นยำที่วัด',
+                      Math.round(vision.fields[k as ReceiptField]!.confidence! * 100),
+                    )}
+                  </small>
+                )}
+                {vision?.fields[k as ReceiptField] && vision.fields[k as ReceiptField]?.confidence == null && (
+                  <small className="muted">{t('AI ไม่ได้ระบุความมั่นใจ โปรดเทียบต้นฉบับ')}</small>
                 )}
                 <details className="receipt-field-evidence">
                   <summary>{t('ดูหลักฐานและค่าอื่นของช่องนี้')}</summary>
@@ -1286,7 +1531,7 @@ export function ReceiptApp({
               <span>
                 <strong>{t('ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว')}</strong>
                 <small>
-                  {t('ทุกช่องด้านบน รวมรายการค่าใช้จ่าย ตรวจครั้งเดียว ไม่ต้องยืนยันทีละช่อง')}
+                  {t('ทุกช่องด้านบน รวมรายการค่าใช้จ่าย ที่อยู่ จำนวนเงินตัวอักษร และลายเซ็น ตรวจครั้งเดียว')}
                   {guessCount > 0 && t(' รวม {0} ช่องที่ระบบเดาให้', guessCount)}
                   {reviewLines > 0 && t(' และ {0} บรรทัดที่ไฮไลต์ในข้อความที่อ่านได้', reviewLines)}
                 </small>
@@ -1303,8 +1548,9 @@ export function ReceiptApp({
                         {describe(i)}
                       </li>
                     ))}
-                    {rules.map(r => (
-                      <li key={r.code} className="advisory">
+                    {rules.map((r, index) => (
+                      <li key={r.code + index} className="advisory">
+                        {r.itemIndex !== undefined ? t('รายการที่ {0}: ', r.itemIndex + 1) : ''}
                         {t(ruleText[r.code])}
                       </li>
                     ))}

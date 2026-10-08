@@ -19,6 +19,11 @@ test('feature matrix runs actual routing and host features with synthetic genera
     ready: true,
     note: '',
   };
+  let coordinatorCalls = 0;
+  let releaseCoordinator!: () => void;
+  const coordinatorReady = new Promise<void>(resolve => {
+    releaseCoordinator = resolve;
+  });
   const results = await runFeatureMatrix({
     harness,
     connection,
@@ -26,8 +31,22 @@ test('feature matrix runs actual routing and host features with synthetic genera
     runtime: async () => ({
       context: { cwd: tmpdir(), env: {} },
       adapter: {
-        run: async () => {
-          await new Promise(r => setTimeout(r, 5));
+        run: async prompt => {
+          // Hold the first child until the second actually starts, rather than assuming 5 ms of fake work overlaps.
+          if (prompt.includes('EVAL_COORDINATOR_12')) {
+            if (++coordinatorCalls === 2) releaseCoordinator();
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              await Promise.race([
+                coordinatorReady,
+                new Promise<never>((_, reject) => {
+                  timer = setTimeout(() => reject(new Error('COORDINATOR_OVERLAP_TIMEOUT')), 10_000);
+                }),
+              ]);
+            } finally {
+              clearTimeout(timer);
+            }
+          }
           return 'Synthetic draft EVAL_ORCHID_42';
         },
       },

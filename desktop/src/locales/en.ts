@@ -1794,6 +1794,65 @@ export const en: Record<string, string> = {
   'ส่วนเสริม OCR · ใบเขียนมือ? เพิ่มโมเดลอ่านลายมือได้ที่นี่': 'OCR add-ons · Handwritten receipts? Add the handwriting model here',
   ย่อภาพใบเสร็จ: 'Zoom out of the receipt',
   ขยายภาพใบเสร็จ: 'Zoom in on the receipt',
+  หน้าใบเสร็จ: 'Receipt page',
+  'AI สังเกต: {0}': 'AI observation: {0}',
+  องค์ประกอบพื้นฐานใบเสร็จ: 'Basic receipt elements',
+  'ชื่อและที่อยู่ผู้รับเงิน / ร้าน': 'Payee / merchant name and address',
+  วันที่รับเงิน: 'Payment date',
+  จำนวนเงินตัวเลขและตัวอักษร: 'Amount in digits and words',
+  ลายมือชื่อผู้รับเงิน: 'Receiver signature',
+  ใบเสร็จยังขาดองค์ประกอบ: 'Receipt elements are missing',
+  องค์ประกอบใบเสร็จยังรอตรวจบางจุด: 'Some receipt elements still need review',
+  มีองค์ประกอบแต่ข้อมูลยังขัดกัน: 'Elements are present but values contradict',
+  ครบองค์ประกอบพื้นฐานที่ตรวจ: 'Reviewed basic receipt elements are complete',
+  'พบองค์ประกอบพื้นฐานครบ · รอคุณยืนยัน': 'Basic elements found · awaiting your confirmation',
+  พบข้อมูล: 'Found',
+  รอตรวจ: 'Needs review',
+  'องค์ประกอบเบื้องต้นตามหลักทั่วไป เงื่อนไขการรับเอกสารและหมวดเบิกให้ยืนยันกับ AFP':
+    'Preliminary general elements; confirm document acceptance and claim-category requirements with AFP',
+  'ที่อยู่ผู้รับเงิน / ร้าน': 'Payee / merchant address',
+  'ใช้ที่อยู่ผู้ออกใบเสร็จจากต้นฉบับ แยกจากที่อยู่ผู้ซื้อ': 'Use the source issuer address, separate from the buyer address',
+  จำนวนเงินตัวอักษร: 'Amount in words',
+  ตรวจลายเซ็นในใบเสร็จ: 'Receipt signature review',
+  ลายเซ็นผู้รับเงิน: 'Receiver signature',
+  ลายเซ็นผู้ออกเอกสาร: 'Issuer signature',
+  'ลายเซ็นผู้ซื้อ / ผู้จ่ายเงิน': 'Buyer / payer signature',
+  พบลายเซ็นในช่องนี้: 'Signature found in this space',
+  ไม่พบลายเซ็นในช่องนี้: 'No signature found in this space',
+  'ตรวจการมีลายเซ็นในช่องที่กำหนด รอยืนยันพร้อมข้อมูลทั้งหมดครั้งเดียว':
+    'Check signature presence in its labeled space, then confirm it with all form values once',
+  'ทุกช่องด้านบน รวมรายการค่าใช้จ่าย ที่อยู่ จำนวนเงินตัวอักษร และลายเซ็น ตรวจครั้งเดียว':
+    'Review all fields, including items, address, amount in words and signature presence, then confirm once',
+  'มีที่อยู่ผู้รับเงิน / ร้าน': 'Payee / merchant address is present',
+  'ยังอ่านที่อยู่ผู้รับเงิน / ร้านไม่ได้ โปรดตรวจต้นฉบับ': 'Payee / merchant address could not be read; inspect the source',
+  'ยังยืนยันรายการค่าใช้จ่ายไม่ได้ โปรดตรวจต้นฉบับ': 'Expense items remain uncertain; inspect the source',
+  'ยังยืนยันลายมือชื่อผู้รับเงินไม่ได้ โปรดตรวจช่องผู้รับเงินในต้นฉบับ':
+    'Receiver signature remains uncertain; inspect its space in the source',
+  'ภาพขยายช่อง {0} · ตำแหน่งจาก AI โปรดเทียบต้นฉบับ': 'Zoomed field {0} · AI-proposed location; compare with the source',
+  'AI ระบุว่าช่องนี้ยังไม่แน่ใจ โปรดตรวจภาพขยาย': 'AI marked this field uncertain; inspect the detail image',
+  'ความมั่นใจที่ AI รายงาน: {0}% · ไม่ใช่ความแม่นยำที่วัด': 'AI-reported confidence: {0}% · not measured accuracy',
+  'AI ไม่ได้ระบุความมั่นใจ โปรดเทียบต้นฉบับ': 'AI did not report confidence; compare with the source',
+  'AI อ่านซ้ำไม่สำเร็จ เก็บค่ารอบแรกไว้ โปรดตรวจช่องที่เตือนกับต้นฉบับ':
+    'AI re-reading failed. The first reading is retained; check flagged fields against the source',
+  'AI อ่านซ้ำหนึ่งครั้งเพราะข้อมูลขัดกัน ค่าที่เปลี่ยนยังต้องตรวจต้นฉบับ':
+    'AI re-read once because values contradicted. Changed values still require source comparison',
+  'รูปแบบยอดเงินไม่ถูกต้องหรือมีเศษต่ำกว่าหนึ่งสตางค์ โปรดเทียบกับต้นฉบับ':
+    'Invalid amount format or fractional satang; compare with the source',
+  'ยอดก่อนภาษีบวกภาษีไม่ตรงกับยอดรวม แม้ต่างหนึ่งสตางค์ก็ต้องตรวจต้นฉบับ':
+    'Subtotal plus VAT differs from total; even a one-satang difference needs source comparison',
+  'ยังแปลงยอดเงินตัวอักษรไม่ได้ โปรดเทียบข้อความกับต้นฉบับ': 'Amount in words could not be parsed; compare with the source',
+  'ตัวเลขในตารางรายการยังอ่านไม่ครบหรือรูปแบบไม่ถูกต้อง โปรดตรวจต้นฉบับ': 'An item number has an invalid format; check the source',
+  'จำนวนคูณราคาต่อหน่วยไม่ตรงกับยอดรายการ โปรดตรวจตารางกับต้นฉบับ':
+    'Quantity times unit price differs from item amount; check the source table',
+  'รายการมีเศษต่ำกว่าหนึ่งสตางค์ ต้องยืนยันกติกาปัดเศษก่อนตรวจยอด':
+    'The item has fractional satang; confirm the rounding rule before checking its amount',
+  'ผลรวมรายการไม่ตรงกับยอดรวมตารางที่ระบุบนใบเสร็จ โปรดตรวจต้นฉบับ': 'Item sum differs from the stated table total; check the source',
+  'รายการที่ {0}: ': 'Item {0}: ',
+  'ตารางรายการที่ AI อ่านได้ · ยังไม่ยืนยัน': 'AI-read item table · unverified',
+  'ตรวจเฉพาะตัวเลขที่เห็น ไม่เติมรายการหรือคำนวณช่องที่ขาด':
+    'Only observed numbers are checked; missing rows and values are not calculated',
+  'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ระบบส่งภาพเต็มและภาพขยาย หากยอดขัดกันอาจอ่านซ้ำหนึ่งครั้ง ค่าที่ AI อ่านต้องเทียบต้นฉบับก่อนยืนยันทั้งหมดครั้งเดียว':
+    'Images contain merchant names, addresses and tax IDs. Send only receipts you may share. Full pages and detail images are sent; contradictory values may cause one re-reading. Compare AI-read values with the source before confirming the form once.',
   'ตรวจแล้ว {0}/{1} ช่อง': '{0}/{1} fields checked',
   'ตรงกัน {0}': '{0} agree',
   'อ่านต่างกัน {0}': '{0} differ',

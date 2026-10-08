@@ -112,7 +112,10 @@ try {
               total: { value: '107.00' },
             },
             expenseDescription: 'รายการจาก AI',
-            features: {},
+            merchantAddress: 'ที่อยู่จาก AI',
+            amountInWords: 'หนึ่งร้อยเจ็ดบาทถ้วน',
+            signatures: { receiver: { status: 'absent', evidence: 'ช่องว่างจาก AI', confidence: 0.9, region: null } },
+            features: { itemsListed: false },
             documentType: 'cash_bill',
             model: 'synthetic',
           };
@@ -220,12 +223,17 @@ try {
     เลขที่ใบเสร็จ: 'PERSON-002',
     วันที่: '02/01/2569',
     รายการค่าใช้จ่าย: 'รายการที่คนตรวจแก้',
+    'ที่อยู่ผู้รับเงิน / ร้าน': 'ที่อยู่สังเคราะห์ที่คนตรวจแก้',
+    จำนวนเงินตัวอักษร: 'หนึ่งร้อยเจ็ดบาทถ้วน',
   };
   for (const [name, value] of Object.entries(corrections)) await page.getByRole('textbox', { name, exact: false }).fill(value);
+  await page.getByLabel('ลายเซ็นผู้รับเงิน', { exact: true }).selectOption('present');
   await release('vision');
   await expect(page.getByRole('textbox', { name: 'ยอดรวมที่ชำระ', exact: false })).toHaveValue('107.00');
   for (const [name, value] of Object.entries(corrections))
     await expect(page.getByRole('textbox', { name, exact: false })).toHaveValue(value);
+  await expect(page.getByLabel('ลายเซ็นผู้รับเงิน', { exact: true })).toHaveValue('present');
+  await expect(page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' })).toContainText('พบองค์ประกอบพื้นฐานครบ');
 
   // Main-process receipt ownership starts before a file picker or consent dialog yields.
   await configure({ fakeVision: false, holdDialog: true });

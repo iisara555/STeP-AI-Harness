@@ -35,6 +35,21 @@ export function receiptProvenance(input: unknown): any {
   };
   draft.fields = Object.fromEntries(Object.entries(draft.fields || {}).map(([key, value]) => [key, selectedValue(value)]));
   if (draft.expense_description) draft.expense_description = selectedValue(draft.expense_description);
+  for (const key of ['issuer_address', 'amount_in_words']) if (draft[key]) draft[key] = selectedValue(draft[key]);
+  if (draft.signature_observations)
+    draft.signature_observations = Object.fromEntries(
+      Object.entries(draft.signature_observations).map(([key, value]) => {
+        const field: any = value || {};
+        return [
+          key,
+          selectedValue({
+            ...field,
+            checked: ['present', 'absent'].includes(field.value) && field.checked === true,
+            scope: 'visible-presence-only',
+          }),
+        ];
+      }),
+    );
   if (draft.afp_mapping) {
     draft.afp_mapping.fields = Object.fromEntries(
       Object.entries(draft.afp_mapping.fields || {}).map(([key, value]) => {
@@ -57,14 +72,23 @@ export function receiptProvenance(input: unknown): any {
     }
   }
   if (draft.ocr) draft.ocr = { ...unverified(draft.ocr), lines: (draft.ocr.lines || []).map((line: any) => unverified(line)) };
-  if (draft.vision_check)
-    draft.vision_check = {
-      ...unverified(draft.vision_check, 'vision'),
-      fields: Object.fromEntries(Object.entries(draft.vision_check.fields || {}).map(([key, value]) => [key, unverified(value, 'vision')])),
-      ...(draft.vision_check.expense_description
-        ? { expense_description: unverified(draft.vision_check.expense_description, 'vision') }
-        : {}),
-    };
+  const visionEvidence = (reading: any) => ({
+    ...unverified(reading, 'vision'),
+    fields: Object.fromEntries(Object.entries(reading.fields || {}).map(([key, value]) => [key, unverified(value, 'vision')])),
+    ...(Array.isArray(reading.items) ? { items: reading.items.map((item: any) => unverified(item, 'vision')) } : {}),
+    ...(reading.signatures
+      ? { signatures: Object.fromEntries(Object.entries(reading.signatures).map(([key, value]) => [key, unverified(value, 'vision')])) }
+      : {}),
+    ...(reading.expense_description ? { expense_description: unverified(reading.expense_description, 'vision') } : {}),
+  });
+  if (draft.vision_check) {
+    draft.vision_check = visionEvidence(draft.vision_check);
+    if (draft.vision_check.recheck?.first)
+      draft.vision_check.recheck = {
+        ...unverified(draft.vision_check.recheck, 'vision'),
+        first: visionEvidence(draft.vision_check.recheck.first),
+      };
+  }
   if (draft.ai_filter)
     draft.ai_filter = {
       ...unverified(draft.ai_filter, 'ai-candidate-filter'),
