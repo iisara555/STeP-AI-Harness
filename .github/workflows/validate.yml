@@ -57,7 +57,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm test
+      - name: Run root tests and annotate failures
+        shell: bash
+        run: |
+          if npm test > .root-test-ci.log 2>&1; then
+            cat .root-test-ci.log
+          else
+            cat .root-test-ci.log
+            node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const lines = readFileSync('.root-test-ci.log', 'utf8').split(/\r?\n/);
+          const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+          for (const [index, line] of lines.entries()) {
+            if (/^\s*not ok\b/.test(line)) {
+              console.log('::error title=Windows root test failure::' + escape(lines.slice(index, index + 45).join('\n').slice(0, 3500)));
+            }
+          }
+          NODE
+            exit 1
+          fi
       - run: npm run validate
       - uses: actions/setup-node@v4
         with:
