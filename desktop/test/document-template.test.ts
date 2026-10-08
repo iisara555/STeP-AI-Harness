@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
+import { DOMParser } from '@xmldom/xmldom';
 import { inspectDocumentTemplate, renderDocumentTemplate } from '../electron/document-template';
-import { markdownDocument } from '../src/draft';
+import { markdownDocument, type DraftNode } from '../src/draft';
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -97,6 +98,88 @@ test('native memo uses current editor content and keeps the agency font, tabs, m
     await (await JSZip.loadAsync(bytes)).file('word/footer1.xml')!.async('string'),
   );
   assert.equal(zip.file('docProps/core.xml'), null);
+});
+
+test('native fields keep manual line breaks and tabs and Word does not expand their short lines', async () => {
+  const bytes = await syntheticTemplate('memo');
+  const draft: DraftNode = {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'บันทึกข้อความ' }] },
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'เรื่อง ข้อความ  สังเคราะห์' },
+          { type: 'hardBreak' },
+          { type: 'text', text: 'รหัส\t0007\nรอยืนยัน' },
+          { type: 'hardBreak' },
+        ],
+      },
+    ],
+  };
+  const zip = await JSZip.loadAsync(await renderDocumentTemplate(bytes, 'memo', draft));
+  const xml = await zip.file('word/document.xml')!.async('string');
+  const dom = new DOMParser().parseFromString(xml, 'application/xml');
+  assert.equal(dom.getElementsByTagNameNS(W, 'br').length, 3);
+  assert.equal(dom.getElementsByTagNameNS(W, 'tab').length, 1);
+  assert.ok(xml.includes('ข้อความ  สังเคราะห์'));
+  assert.match(await zip.file('word/settings.xml')!.async('string'), /<w:doNotExpandShiftReturn\/>/);
+  assert.match(await zip.file('word/_rels/document.xml.rels')!.async('string'), /Target="settings.xml"/);
+  assert.match(await zip.file('[Content_Types].xml')!.async('string'), /PartName="\/word\/settings.xml"/);
+});
+
+test('a native memo reference on separate lines stays separate and existing settings are preserved', async () => {
+  const zip = await JSZip.loadAsync(await syntheticTemplate('memo'));
+  zip.file(
+    'word/local-settings.xml',
+    `<w:settings xmlns:w="${W}"><w:defaultTabStop w:val="720"/><w:compat><w:doNotExpandShiftReturn w:val="0"/><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`,
+  );
+  const rels = await zip.file('word/_rels/document.xml.rels')!.async('string');
+  zip.file(
+    'word/_rels/document.xml.rels',
+    rels.replace('</Relationships>', `<Relationship Id="settings" Type="${R}/settings" Target="local-settings.xml"/></Relationships>`),
+  );
+  const draft = markdownDocument('# บันทึกข้อความ\n\nที่ 0007<br>วันที่ [รอยืนยัน]');
+  const out = await JSZip.loadAsync(await renderDocumentTemplate(await zip.generateAsync({ type: 'nodebuffer' }), 'memo', draft));
+  const dom = new DOMParser().parseFromString(await out.file('word/document.xml')!.async('string'), 'application/xml');
+  assert.equal(dom.getElementsByTagNameNS(W, 'br').length, 1);
+  assert.equal(Array.from(dom.getElementsByTagNameNS(W, 'tab')).filter(tab => tab.parentNode?.nodeName === 'w:r').length, 0);
+  const settings = await out.file('word/local-settings.xml')!.async('string');
+  assert.match(settings, /<w:defaultTabStop w:val="720"\/>/);
+  assert.match(settings, /<w:doNotExpandShiftReturn\/>/);
+  assert.match(settings, /w:name="compatibilityMode"[^>]*w:val="15"/);
+  assert.equal(out.file('word/settings.xml'), null);
+});
+
+test('native signature spacing fills only the missing template space and keeps explicit blank lines plain', async () => {
+  const zip = await JSZip.loadAsync(await syntheticTemplate('memo'));
+  let xml = await zip.file('word/document.xml')!.async('string');
+  xml = xml.replace(p('(FILLED EXAMPLE)', '<w:jc w:val="center"/>'), p('') + p('') + p('(FILLED EXAMPLE)', '<w:jc w:val="center"/>'));
+  xml = xml.replace('<w:ind w:firstLine="1418"/>', '<w:spacing w:before="240"/><w:ind w:firstLine="1418"/>');
+  zip.file('word/document.xml', xml);
+  const bytes = await zip.generateAsync({ type: 'nodebuffer' });
+  for (const count of [0, 1, 2, 3]) {
+    const draft = markdownDocument('# บันทึกข้อความ\n\nด้วยเนื้อหาสังเคราะห์\n\n(ผู้เสนอสมมติ)');
+    draft.content!.splice(2, 0, ...Array.from({ length: count }, () => ({ type: 'paragraph' })));
+    const out = await JSZip.loadAsync(await renderDocumentTemplate(bytes, 'memo', draft));
+    const dom = new DOMParser().parseFromString(await out.file('word/document.xml')!.async('string'), 'application/xml');
+    const paragraphs = Array.from(dom.getElementsByTagNameNS(W, 'body')[0].childNodes).filter(n => n.nodeName === 'w:p') as Element[];
+    const blank = paragraphs.filter(n => !n.getElementsByTagNameNS(W, 't').length);
+    assert.equal(blank.length, Math.max(2, count), `explicit blanks: ${count}`);
+    for (const paragraph of blank) assert.equal(paragraph.getElementsByTagNameNS(W, 'spacing').length, 0);
+  }
+});
+
+test('native template indentation is not prepended a second time to an explicitly indented paragraph', async () => {
+  const zip = await JSZip.loadAsync(await syntheticTemplate('memo'));
+  let xml = await zip.file('word/document.xml')!.async('string');
+  xml = xml.replace('<w:t>ด้วย FILLED EXAMPLE</w:t>', '<w:tab/><w:t>ด้วย FILLED EXAMPLE</w:t>');
+  zip.file('word/document.xml', xml);
+  const draft = markdownDocument('# บันทึกข้อความ\n\n\tด้วยข้อความ  สังเคราะห์');
+  const out = await JSZip.loadAsync(await renderDocumentTemplate(await zip.generateAsync({ type: 'nodebuffer' }), 'memo', draft));
+  const dom = new DOMParser().parseFromString(await out.file('word/document.xml')!.async('string'), 'application/xml');
+  assert.equal(dom.getElementsByTagNameNS(W, 'tab').length, 1);
+  assert.ok(!Array.from(dom.getElementsByTagNameNS(W, 't')).some(t => t.textContent?.includes('\t')));
 });
 
 test('project and minutes retain native table grids/cell widths and every portrait/landscape section', async () => {

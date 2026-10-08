@@ -7,7 +7,7 @@ import JSZip from 'jszip';
 import { DOMParser } from '@xmldom/xmldom';
 import { exportDocument, pdfHtml } from '../electron/export';
 import { resolveDocumentLayout } from '../src/document-layout';
-import { markdownDocument, documentText } from '../src/draft';
+import { markdownDocument, documentText, type DraftNode } from '../src/draft';
 
 test('memo narrative, unit label and all signature lines use their own layout without spreading short lines', async () => {
   const doc = await word(
@@ -35,9 +35,9 @@ test('PDF memo separates reference and date into columns while preserving rich l
   assert.match(html, /<span class="memo-date"><strong>วันที่<\/strong> \[รอยืนยัน: ปีเต็มของ 1 ม.ค. 70\]<\/span>/);
   assert.ok(!html.includes('วันที่ 2570'));
 });
-async function word(markdown: string, options?: { documentTool?: string; font?: string }) {
+async function word(markdown: string | DraftNode, options?: { documentTool?: string; font?: string }) {
   const path = join(await mkdtemp(join(tmpdir(), 'step-document-layout-')), 'draft.docx');
-  const document = markdownDocument(markdown);
+  const document = typeof markdown === 'string' ? markdownDocument(markdown) : markdown;
   await exportDocument(path, 'docx', documentText(document), async () => Buffer.alloc(0), document, options);
   const zip = await JSZip.loadAsync(await readFile(path), { checkCRC32: true });
   const xml = await zip.file('word/document.xml')!.async('string');
@@ -63,6 +63,51 @@ async function word(markdown: string, options?: { documentTool?: string; font?: 
   return { zip, xml, paragraphs, paragraph, text };
 }
 const attr = (p: Element, element: string, name: string) => p.getElementsByTagNameNS(W, element)[0]?.getAttributeNS(W, name);
+
+test('Word uses explicit single line spacing and separates narrative paragraphs without spacing out fields', async () => {
+  const doc = await word(
+    '# บันทึกข้อความ\n\nเรื่อง ทดสอบระยะ\n\nเรียน [รอยืนยัน: ผู้รับ]\n\nด้วยข้อมูลสังเคราะห์สำหรับตรวจระยะย่อหน้า\n\nจึงเรียนมาเพื่อโปรดพิจารณา\n\n(ผู้เสนอสมมติ)\n\nผู้ดูแลโครงการ',
+    { documentTool: 'memo' },
+  );
+  const styles = new DOMParser().parseFromString(await doc.zip.file('word/styles.xml')!.async('string'), 'application/xml');
+  const defaults = styles.getElementsByTagNameNS(W, 'pPrDefault')[0];
+  assert.equal(attr(defaults, 'spacing', 'line'), '240');
+  assert.equal(attr(defaults, 'spacing', 'lineRule'), 'auto');
+  for (const start of ['ด้วยข้อมูล', 'จึงเรียน']) assert.equal(attr(doc.paragraph(start), 'spacing', 'after'), '120');
+  for (const start of ['เรื่อง', 'เรียน', '(ผู้เสนอ', 'ผู้ดูแล']) assert.equal(attr(doc.paragraph(start), 'spacing', 'after'), '0');
+});
+
+test('Word preserves repeated spaces, tabs and manual breaks without stretching a short justified line', async () => {
+  const document: DraftNode = {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'บันทึกข้อความ' }] },
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'ด้วยข้อความ  สังเคราะห์' },
+          { type: 'hardBreak' },
+          { type: 'text', text: 'รหัส\t0007\nวันที่ [รอยืนยัน]', marks: [{ type: 'bold' }] },
+        ],
+      },
+    ],
+  };
+  const doc = await word(document, { documentTool: 'memo' });
+  const paragraph = doc.paragraph('ด้วยข้อความ');
+  assert.equal(paragraph.getElementsByTagNameNS(W, 'br').length, 2);
+  assert.equal(paragraph.getElementsByTagNameNS(W, 'tab').length, 1);
+  assert.ok(doc.xml.includes('ข้อความ  สังเคราะห์'));
+  const settings = await doc.zip.file('word/settings.xml')!.async('string');
+  assert.match(settings, /<w:doNotExpandShiftReturn\/>/);
+});
+
+test('a manually wrapped memo date is not moved to a generated reference tab', async () => {
+  const doc = await word('# บันทึกข้อความ\n\nที่ 0007<br> วันที่ [รอยืนยัน]', { documentTool: 'memo' });
+  const reference = doc.paragraph('ที่ 0007');
+  assert.equal(reference.getElementsByTagNameNS(W, 'br').length, 1);
+  assert.equal(Array.from(reference.getElementsByTagNameNS(W, 'tab')).filter(tab => tab.parentNode?.nodeName === 'w:r').length, 0);
+  assert.ok(doc.text(reference).includes(' วันที่ [รอยืนยัน]'));
+});
 
 test('five document profiles export native editable content with their selected font and live page numbers', async () => {
   for (const documentTool of ['tor', 'memo', 'letter', 'project', 'minutes']) {

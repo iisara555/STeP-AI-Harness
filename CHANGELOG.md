@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.30 — 2026-10-08
+
+### Desktop: DOCX spacing
+
+- Give working-layout DOCX explicit single line spacing (`auto`, not an exact point height) and a 6 pt gap after narrative paragraphs while keeping fields and signature lines together. Preserve repeated spaces, inline tabs and manual line breaks as native Word content; prevent justified short lines ending with Shift+Enter from expanding their spaces.
+- Preserve manual breaks in native-template fields, including reference/date lines and trailing breaks. Reuse existing Word compatibility settings, avoid adding a second template indentation prefix, and fill only missing signature space when the editor already contains blank lines. Keep the agency template’s paragraph spacing, fonts, tables and sections.
+- Add synthetic DOCX regressions to the existing Desktop test command and review all pages of synthetic drafts across five profiles and four privately selected MIS templates. These checks cover exporter behavior; they do not certify live AI accuracy or exact pagination in every Word version. Update Desktop to 0.5.30 with Thai/English in-app notes; Harness remains 0.7.6. No new application dependency, bundled agency document or policy-default change.
+
 ## Desktop v0.5.29 — 2026-10-08
 
 ### Desktop: local agency DOCX templates

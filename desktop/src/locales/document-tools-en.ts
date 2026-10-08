@@ -1,4 +1,12 @@
 export const documentToolsEn: Record<string, string> = {
+  'ส่งออก DOCX: บรรทัดสั้นที่ขึ้นบรรทัดใหม่ไม่ยืดช่องว่างจนคำแยกไปคนละฝั่ง':
+    'DOCX export: short lines ending with a manual line break keep their spaces instead of spreading words across the page.',
+  'ปรับระยะบรรทัดและย่อหน้าของแบบร่าง เก็บแท็บและบรรทัดใหม่ที่คุณกรอกไว้':
+    'Improved line and paragraph spacing in working drafts, preserving the tabs and line breaks you enter.',
+  'แม่แบบ MIS คงรูปแบบต้นฉบับ และไม่เติมช่องว่างก่อนลงนามซ้ำกับบรรทัดว่างที่มีอยู่แล้ว':
+    'MIS templates retain their original formatting and avoid adding duplicate blank lines before signatures.',
+  'ตรวจทุกหน้าใน Word ที่ติดตั้งฟอนต์ตรงกับแม่แบบก่อนเสนอเอกสาร':
+    'Review every page in Word with the template fonts installed before submitting the document.',
   'แม่แบบ DOCX พร้อมใช้ · ข้อมูลตัวอย่างไม่ส่งให้ AI': 'DOCX template ready · sample facts are withheld from AI',
   'ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม':
     'Uses template structure and field labels. Enter the new task facts separately in the form.',

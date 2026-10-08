@@ -31,7 +31,7 @@ export function documentLayoutRoles(document: DraftNode, id?: DocumentToolId): L
     if (['tor', 'project'].includes(id) && section > 0 && index < section) return 'front';
     if (id === 'minutes' && index < (section >= 0 ? section : 12) && /^(?:ชื่อการประชุม|ครั้งที่|วัน เวลา สถานที่)/.test(text))
       return 'front';
-    if (id === 'memo' && index <= headerEnd && /^ที่\s/.test(text) && /\sวันที่\s/.test(text)) return 'memo-reference';
+    if (id === 'memo' && index <= headerEnd && /^ที่\s/.test(text) && /^[^\r\n]*[ \t]+วันที่[ \t]/.test(text)) return 'memo-reference';
     if (id === 'letter' && index <= headerEnd) {
       if (/^(?:หน่วยงาน|\[รอยืนยัน: หน่วยงาน)/.test(text)) return 'sender';
       if (/^(?:วันที่|\[รอยืนยัน: วันที่)/.test(text)) return 'date';

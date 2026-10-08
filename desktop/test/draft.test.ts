@@ -157,8 +157,10 @@ test('exports keep tables as tables and use the Thai official page', async () =>
   assert.match(word, /w:left="1701"/);
   assert.match(word, /<w:tblLayout w:type="fixed"\/>/);
   assert.match(word, /<w:jc w:val="right"\/>/);
-  // Single line spacing: an exact 12 pt line would overlap 16 pt Thai text.
-  assert.doesNotMatch(word, /w:line="240"/);
+  // Single line spacing is a multiple (auto), not an exact 12 pt line that clips 16 pt Thai marks.
+  const styles = await (await JSZip.loadAsync(await readFile(join(home, 'd.docx')))).file('word/styles.xml').async('string');
+  assert.match(styles, /w:line="240" w:lineRule="auto"/);
+  assert.doesNotMatch(styles, /w:lineRule="exact"/);
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(join(home, 'd.xlsx'));
   assert.deepEqual(

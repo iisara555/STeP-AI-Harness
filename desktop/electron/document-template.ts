@@ -266,6 +266,9 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
     paragraphs.find(p => !text(p) && !elements(p, 'sectPr').length) ||
     prototypes.get('body') ||
     firstText!;
+  const spacerPrototype = paragraphs
+    .slice(Math.max(0, recipientAt + 1, headingAt + 1))
+    .find(p => !text(p) && !elements(p, 'sectPr').length && !elements(p, 'drawing').length && !elements(p, 'pict').length);
   const nativeTables = original.filter(n => n.localName === 'tbl');
   const draftTables = (rich.content || []).filter(n => n.type === 'table');
   if (
@@ -308,10 +311,16 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
       }
       if (node.type === 'hardBreak') run.appendChild(create('br'));
       else {
-        const t = create('t');
-        t.setAttribute('xml:space', 'preserve');
-        t.appendChild(doc.createTextNode(node.text || ''));
-        run.appendChild(t);
+        for (const part of (node.text || '').split(/(\t|\r\n?|\n)/).filter(Boolean)) {
+          if (part === '\t') run.appendChild(create('tab'));
+          else if (/^[\r\n]/.test(part)) run.appendChild(create('br'));
+          else {
+            const t = create('t');
+            t.setAttribute('xml:space', 'preserve');
+            t.appendChild(doc.createTextNode(part));
+            run.appendChild(t);
+          }
+        }
       }
       p.appendChild(run);
     }
@@ -451,7 +460,21 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
       flattenList(node);
       continue;
     }
-    const value = documentText(node).trim();
+    const raw = documentText(node);
+    const value = raw.trim();
+    if (node.type === 'paragraph' && !value) {
+      const p = spacerPrototype ? blank(spacerPrototype) : blank(bodyPrototype);
+      if (!spacerPrototype) {
+        // An explicit empty editor paragraph is one empty line, not another narrative paragraph gap.
+        for (const spacing of elements(p, 'spacing')) {
+          spacing.removeAttributeNS(W, 'before');
+          spacing.removeAttributeNS(W, 'after');
+        }
+      }
+      inline(p, node.content || [], spacerPrototype || bodyPrototype);
+      out.push(p);
+      continue;
+    }
     const key =
       node.type === 'heading' && index === 0
         ? 'title'
@@ -474,7 +497,18 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
         before--
       )
         spaces.unshift(blank(paragraphs[before]));
-      out.push(...spaces);
+      let existing = 0;
+      for (
+        let before = out.length - 1;
+        before >= 0 &&
+        out[before].localName === 'p' &&
+        !text(out[before]) &&
+        !elements(out[before], 'drawing').length &&
+        !elements(out[before], 'pict').length;
+        before--
+      )
+        existing += 1 + elements(out[before], 'br').length;
+      out.push(...spaces.slice(existing));
       signatureSpace = true;
     }
     const p = blank(source);
@@ -482,15 +516,17 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
       appendFrames(p, source);
       frameTaken.add(source);
     }
-    appendPrefix(p, source);
-    if (info.documentTool === 'memo' && key === 'reference' && /\sวันที่\s/.test(value)) {
-      const match = /^(.*?)\s+(วันที่\s[\s\S]*)$/.exec(value)!;
+    // Keep a template's native prefix only when the editor has not supplied its own indentation.
+    if (!/^[ \t]/.test(raw)) appendPrefix(p, source);
+    const reference = info.documentTool === 'memo' && key === 'reference' ? /^(.*?)[ \t]+(วันที่[ \t][\s\S]*)$/.exec(raw) : null;
+    if (reference) {
+      const match = reference;
       field(p, match[1], source);
       const run = create('r');
       run.appendChild(create('tab'));
       p.appendChild(run);
       field(p, match[2], source);
-    } else if (['unit', 'reference', 'date', 'subject', 'recipient', 'references', 'attachments'].includes(key)) field(p, value, source);
+    } else if (['unit', 'reference', 'date', 'subject', 'recipient', 'references', 'attachments'].includes(key)) field(p, raw, source);
     else inline(p, node.content || [], source);
     out.push(p);
   }
@@ -523,6 +559,7 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
   for (const node of out) body.appendChild(node);
   body.appendChild(finalSection.cloneNode(true));
   zip.file('word/document.xml', SERIALIZER.serializeToString(doc));
+  if (elements(body, 'br').length) await preserveSoftBreakSpacing(zip);
   // Example signatures/photos in old body paragraphs are not task facts. Remove unused image bytes as well.
   const media = new Set<string>();
   for (const entry of Object.values(zip.files).filter(e => e.name.endsWith('.rels'))) {
@@ -553,4 +590,49 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
   for (const entry of Object.values(zip.files))
     if (entry.name.startsWith('word/media/') && !entry.dir && !media.has(entry.name)) zip.remove(entry.name);
   return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
+/** Word otherwise expands spaces on a justified line ending with Shift+Enter. Keep the remaining native settings. */
+async function preserveSoftBreakSpacing(zip: JSZip) {
+  const relationshipNamespace = 'http://schemas.openxmlformats.org/package/2006/relationships';
+  const type = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
+  const relsPath = 'word/_rels/document.xml.rels';
+  const rels = parse((await zip.file(relsPath)?.async('string')) || `<Relationships xmlns="${relationshipNamespace}"/>`);
+  const relationships = Array.from(rels.getElementsByTagNameNS(relationshipNamespace, 'Relationship'));
+  const existing = relationships.filter(rel => rel.getAttribute('Type') === type);
+  if (existing.length > 1) fail('DOCUMENT_TEMPLATE_UNSUPPORTED');
+  const target = existing[0]?.getAttribute('Target') || 'settings.xml';
+  const path = target.startsWith('/') ? target.slice(1) : posix.normalize(posix.join('word', target));
+  const settings = parse((await zip.file(path)?.async('string')) || `<w:settings xmlns:w="${W}"/>`);
+  if (settings.documentElement.localName !== 'settings' || settings.documentElement.namespaceURI !== W)
+    fail('DOCUMENT_TEMPLATE_UNSUPPORTED');
+  let compat = elements(settings, 'compat')[0];
+  if (!compat) {
+    compat = settings.createElementNS(W, 'w:compat');
+    settings.documentElement.appendChild(compat);
+  }
+  let option = elements(compat, 'doNotExpandShiftReturn')[0];
+  if (!option) {
+    option = settings.createElementNS(W, 'w:doNotExpandShiftReturn');
+    compat.appendChild(option);
+  }
+  option.removeAttributeNS(W, 'val');
+  zip.file(path, SERIALIZER.serializeToString(settings));
+  if (!existing.length) {
+    const ids = new Set(relationships.map(rel => rel.getAttribute('Id')));
+    let id = 'stepSettings';
+    while (ids.has(id)) id += '_';
+    const rel = rels.createElementNS(relationshipNamespace, 'Relationship');
+    for (const [name, value] of Object.entries({ Id: id, Type: type, Target: target })) rel.setAttribute(name, value);
+    rels.documentElement.appendChild(rel);
+    zip.file(relsPath, SERIALIZER.serializeToString(rels));
+  }
+  const types = parse(await zip.file('[Content_Types].xml')!.async('string'));
+  if (!Array.from(types.getElementsByTagNameNS('*', 'Override')).some(part => part.getAttribute('PartName') === '/' + path)) {
+    const part = types.createElementNS(types.documentElement.namespaceURI!, 'Override');
+    part.setAttribute('PartName', '/' + path);
+    part.setAttribute('ContentType', 'application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml');
+    types.documentElement.appendChild(part);
+    zip.file('[Content_Types].xml', SERIALIZER.serializeToString(types));
+  }
 }

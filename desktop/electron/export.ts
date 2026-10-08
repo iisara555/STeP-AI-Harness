@@ -10,6 +10,7 @@ import {
   Packer,
   Paragraph,
   AlignmentType,
+  LineRuleType,
   ShadingType,
   Table,
   TableLayoutType,
@@ -224,7 +225,7 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
 
 function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false): ParagraphChild[] {
   // Locate the label across rich-text runs, rather than matching a word inside its placeholder/value.
-  const date = dateTab ? /[ \t]+(วันที่[ \t])/.exec(documentText(node)) : null;
+  const date = dateTab ? /[ \t]+(วันที่[ \t])/.exec(documentText(node).split(/\r\n?|\n/)[0]) : null;
   const spaceStart = date?.index ?? -1;
   const labelStart = date ? date.index + date[0].length - date[1].length : -1;
   let offset = 0;
@@ -242,16 +243,27 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
       italics: child.marks?.some(m => m.type === 'italic'),
     };
     const text = child.text || '';
+    const textRuns = (value: string): ParagraphChild[] =>
+      value
+        .split(/(\t|\r\n?|\n)/)
+        .filter(Boolean)
+        .map(
+          part =>
+            new TextRun({
+              ...style,
+              ...(part === '\t' ? { children: [new Tab()] } : /^[\r\n]/.test(part) ? { break: 1 } : { text: part }),
+            }),
+        );
     const start = offset;
     offset += text.length;
     // Layout only: retain all field characters, including unknown dates and leading zeroes.
     return date && start < labelStart && offset > spaceStart
       ? [
-          new TextRun({ ...style, text: text.slice(0, Math.max(0, spaceStart - start)) }),
+          ...textRuns(text.slice(0, Math.max(0, spaceStart - start))),
           ...(start <= spaceStart ? [new TextRun({ ...style, children: [new Tab()] })] : []),
-          new TextRun({ ...style, text: text.slice(labelStart - start) }),
+          ...textRuns(text.slice(Math.max(0, labelStart - start))),
         ]
-      : [new TextRun({ ...style, text })];
+      : textRuns(text);
   });
 }
 
@@ -334,7 +346,11 @@ function docxBlocks(
           (role === 'signature' && /^(?:\(|ขอแสดงความนับถือ)/.test(documentText(node))),
         keepLines: node.type === 'heading' || role === 'signature',
         widowControl: true,
-        ...(firstPageSpace ? { spacing: { before: Math.round(0.5 * CM) } } : {}),
+        ...(node.type === 'paragraph'
+          ? { spacing: { before: firstPageSpace ? Math.round(0.5 * CM) : 0, after: body && documentText(node).trim() ? 120 : 0 } }
+          : firstPageSpace
+            ? { spacing: { before: Math.round(0.5 * CM) } }
+            : {}),
         children: [
           ...(prefix ? [new TextRun({ text: prefix, font: layout.font, size })] : []),
           ...runs(node, size, node.type === 'heading', layout.font, role === 'memo-reference'),
@@ -400,9 +416,13 @@ function docx(document: DraftNode, layout: DocumentLayout) {
       })
     : undefined;
   return new Document({
+    compatibility: { doNotExpandShiftReturn: true },
     styles: {
       default: {
-        document: { run: { font: layout.font, size: 32 }, paragraph: { spacing: { after: 0 } } },
+        document: {
+          run: { font: layout.font, size: 32 },
+          paragraph: { spacing: { before: 0, after: 0, line: 240, lineRule: LineRuleType.AUTO } },
+        },
         heading1: heading(layout.id ? 32 : 40),
         heading2: heading(layout.id ? 32 : 36),
         heading3: heading(32),
