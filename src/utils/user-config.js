@@ -45,7 +45,17 @@ export async function saveUserConfig(updates) {
   try {
     const merged = { ...await loadUserConfig(), ...updates, updatedAt: new Date().toISOString() };
     await writeFile(temporary, JSON.stringify(merged, null, 2), { flag: 'wx', mode: 0o600 });
-    await rename(temporary, USER_CONFIG_PATH);
+    // Windows readers or scanners can briefly prevent replacement. Keep the owned lock and old file intact.
+    const replacementDeadline = Date.now() + 1000;
+    for (;;) {
+      try {
+        await rename(temporary, USER_CONFIG_PATH);
+        break;
+      } catch (error) {
+        if (!['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || Date.now() >= replacementDeadline) throw error;
+        await delay(25);
+      }
+    }
     return merged;
   } finally {
     try {

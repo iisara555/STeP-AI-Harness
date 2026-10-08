@@ -61,4 +61,4 @@ Host เก็บ bytes ที่เลือกเป็น snapshot ส่ว�
 
 เก็บหลักฐานคลัง MIS, แหล่งที่มา, checksum, ข้อขัดแย้งของรุ่นและงานต่อยอดไว้นอก repo ตามคำขอเจ้าของ งานทะเบียนแหล่ง/ความสดใหม่, การเชื่อม WI/QP และ golden eval ทำต่อหลัง Release แม่แบบ ไม่เปลี่ยนกฎการเบิกหรือ default policy จากข้อมูลที่ยังไม่ทวน
 
-การตรวจรวมสำหรับ Desktop 0.5.29: `npm test` 948 ข้อ ผ่าน 946 ข้าม 2; `npm run desktop:test` 506 ข้อ ผ่าน 504 ข้าม 2 ตามเงื่อนไขเดิม ผ่าน validators, formatting, TypeScript/build และ package whitelist มี regression ผ่าน UI/IPC สำหรับการส่งซ้ำ/ลบงานระหว่างรอ hook และการคงขอบเขต Privacy Gate ของไฟล์ต้นเรื่อง ชุด Electron smoke และ installer checks บน Windows/macOS อยู่ใน release workflow ก่อนเผยแพร่
+การตรวจรวมสำหรับ Desktop 0.5.29: `npm test` 949 ข้อ ผ่าน 947 ข้าม 2; `npm run desktop:test` 506 ข้อ ผ่าน 504 ข้าม 2 ตามเงื่อนไขเดิม ผ่าน validators, formatting, TypeScript/build และ package whitelist มี regression ผ่าน UI/IPC สำหรับการส่งซ้ำ/ลบงานระหว่างรอ hook และการคงขอบเขต Privacy Gate ของไฟล์ต้นเรื่อง ชุด Electron smoke และ installer checks บน Windows/macOS อยู่ใน release workflow ก่อนเผยแพร่

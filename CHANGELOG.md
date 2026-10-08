@@ -31,6 +31,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Recheck task ownership after awaited organization hooks so duplicate sends cannot overwrite an active task's status and a delayed deletion cannot remove its draft or private template.
 - Preserve human receipt corrections and their provenance when delayed AI readings arrive; keep form values, descriptions and review state together. Serialize receipt read/vision/filter before dialogs, retain current settings when recording consent, and recheck/cancel on policy changes before sending images or OCR text.
 - Apply only current Desktop snapshots and task selection replies; track background completion per session/attempt. Serialize draft saves, configuration updates, personalization synchronization and shared-profile writes. Use atomic private temporary files for configuration/profile persistence and remove unused runtime imports.
+- Retry atomic configuration replacement briefly when Windows readers/scanners hold a sharing lock. Keep the previous file intact on persistent failure and clean up the writer lock and temporary file. Use portable test preload URLs and expose Windows CI failures without bypassing the gate.
 - Add synthetic concurrency regressions and a real Electron renderer/IPC smoke; record scope and limits in `docs/refactor-review.md`. No dependency, OCR acceptance gate, Skill registration or policy-default change; tests do not establish accuracy on real receipts.
 
 ### Documentation: task-first STeP AI, Desktop and Skills introductions

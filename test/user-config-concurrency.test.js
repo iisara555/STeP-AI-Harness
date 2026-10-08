@@ -52,6 +52,37 @@ test('readers see complete configuration while updates replace the file', async 
   `);
 });
 
+test('a temporary sharing lock retries atomic replacement; a persistent lock preserves the old configuration', async t => {
+  const { directory, file, run } = await fixture(t);
+  await run(`
+    import fs from 'node:fs/promises';
+    import { syncBuiltinESMExports } from 'node:module';
+    await saveUserConfig({ marker: 'keep' });
+    const realRename = fs.rename;
+    let transient = 2;
+    fs.rename = async (...args) => {
+      if (transient-- > 0) throw Object.assign(new Error('Synthetic sharing lock'), { code: 'EPERM' });
+      return realRename(...args);
+    };
+    syncBuiltinESMExports();
+    await saveUserConfig({ recovered: true });
+    const saved = await loadUserConfig();
+    if (saved.marker !== 'keep' || saved.recovered !== true) throw new Error('Atomic replacement lost fields');
+    fs.rename = async () => { throw Object.assign(new Error('Synthetic persistent sharing lock'), { code: 'EPERM' }); };
+    syncBuiltinESMExports();
+    try {
+      await saveUserConfig({ lost: true });
+      throw new Error('Persistent lock was ignored');
+    } catch (error) {
+      if (error.code !== 'EPERM') throw error;
+    }
+    const after = await loadUserConfig();
+    if (after.marker !== 'keep' || after.recovered !== true || after.lost) throw new Error('Failed replacement damaged configuration');
+  `);
+  assert.equal(JSON.parse(await readFile(file, 'utf8')).recovered, true);
+  assert.deepEqual(await readdir(directory), ['config.json']);
+});
+
 test('a failed configuration write releases its lock and leaves no temporary files', async t => {
   const { directory, file, run } = await fixture(t);
   await mkdir(file, { recursive: true });
