@@ -8,7 +8,7 @@ import { createSnapshot } from '../../modules/recovery.js';
 import { safeCopyFile } from '../../utils/file-ops.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
 import { getAdapter } from '../../modules/adapters/index.js';
-import { header, success, info, warn, error } from '../../utils/display.js';
+import { header, success, info, warn } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { runDoctor } from './doctor.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';

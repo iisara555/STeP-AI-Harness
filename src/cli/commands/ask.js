@@ -2,7 +2,7 @@ import { prepareDraft } from '../../modules/runner/index.js';
 import { readManagedPolicy } from '../../utils/managed-policy.js';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
 import readline from 'node:readline';
-import { header, success, info, warn, table } from '../../utils/display.js';
+import { header, success, info, warn } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { resolveRoutingIdentity } from '../../modules/routing-identity.js';
 import { queryStepRouter } from '../../modules/router/service.js';

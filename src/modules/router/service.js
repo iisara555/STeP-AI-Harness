@@ -3,7 +3,7 @@
  * `step-ai ask` command and the desktop app.
  */
 import { readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
 import { loadUserMemory } from '../../modules/user-memory.js';
 import {

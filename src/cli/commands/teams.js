@@ -1,5 +1,5 @@
 import { getAvailableTeams } from '../../modules/role-resolver.js';
-import { header, info, table } from '../../utils/display.js';
+import { header, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 
 export async function runTeams(args) {

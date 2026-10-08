@@ -1,5 +1,5 @@
 import { mkdir, writeFile, stat } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { safeCopyFile } from '../../utils/file-ops.js';
 import { safeWorkspacePath } from '../../utils/workspace-path.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';

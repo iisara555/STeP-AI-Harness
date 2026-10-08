@@ -1,7 +1,8 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { pathExists } from './file-ops.js';
+import { readFile, writeFile, mkdir, open, rename, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 
 export const USER_CONFIG_DIR = join(homedir(), '.step-ai');
 export const USER_CONFIG_PATH = join(USER_CONFIG_DIR, 'config.json');
@@ -12,10 +13,7 @@ export const USER_CONFIG_PATH = join(USER_CONFIG_DIR, 'config.json');
  */
 export async function loadUserConfig() {
   try {
-    if (await pathExists(USER_CONFIG_PATH)) {
-      const text = await readFile(USER_CONFIG_PATH, 'utf-8');
-      return JSON.parse(text);
-    }
+    return JSON.parse(await readFile(USER_CONFIG_PATH, 'utf-8'));
   } catch {
     // If parsing fails or corrupted, return empty config safely
   }
@@ -28,16 +26,35 @@ export async function loadUserConfig() {
  * @returns {Promise<Record<string, any>>}
  */
 export async function saveUserConfig(updates) {
-  const current = await loadUserConfig();
-  const merged = {
-    ...current,
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await mkdir(USER_CONFIG_DIR, { recursive: true });
-  await writeFile(USER_CONFIG_PATH, JSON.stringify(merged, null, 2), 'utf-8');
-  return merged;
+  await mkdir(USER_CONFIG_DIR, { recursive: true, mode: 0o700 });
+  const lockPath = USER_CONFIG_PATH + '.lock';
+  const deadline = Date.now() + 5000;
+  let lock;
+  // The read/merge/write is one transaction, including other CLI processes.
+  // Never remove another writer's lock, even after a timeout or crash.
+  while (!lock) {
+    try {
+      lock = await open(lockPath, 'wx', 0o600);
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      if (Date.now() >= deadline) throw new Error('USER_CONFIG_BUSY');
+      await delay(25);
+    }
+  }
+  const temporary = USER_CONFIG_PATH + '.' + randomUUID() + '.tmp';
+  try {
+    const merged = { ...await loadUserConfig(), ...updates, updatedAt: new Date().toISOString() };
+    await writeFile(temporary, JSON.stringify(merged, null, 2), { flag: 'wx', mode: 0o600 });
+    await rename(temporary, USER_CONFIG_PATH);
+    return merged;
+  } finally {
+    try {
+      await rm(temporary, { force: true });
+    } finally {
+      await lock.close();
+      await rm(lockPath, { force: true });
+    }
+  }
 }
 
 /**

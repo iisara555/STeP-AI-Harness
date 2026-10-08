@@ -9,7 +9,7 @@ import { saveUserConfig, getUserTeam, getUserCluster } from '../../utils/user-co
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import readline from 'node:readline';
-import { initUserMemory, ensureGitignored, updateUserMemoryProfile } from '../../modules/user-memory.js';
+import { initUserMemory, updateUserMemoryProfile } from '../../modules/user-memory.js';
 import { initOutputWorkspace } from '../../modules/output-manager.js';
 import {
   desiredManagedPaths,

@@ -5,7 +5,7 @@ import { resolveRoleFiles, resolveTeamFiles, PACKAGE_ROOT } from '../../modules/
 import { createSnapshot } from '../../modules/recovery.js';
 import { safeCopyFile } from '../../utils/file-ops.js';
 import { calculateFileSha256 } from '../../utils/checksum.js';
-import { header, success, info, warn, error } from '../../utils/display.js';
+import { header, success, info, warn } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import {
   desiredManagedPaths,

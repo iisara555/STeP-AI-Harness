@@ -1,5 +1,5 @@
-import { mkdir, readFile, stat, writeFile, rm } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { readFile, stat, writeFile, rm } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { calculateFileSha256 } from '../utils/checksum.js';
 import { ensureDir, listFilesRecursive, pathExists, safeCopyFile } from '../utils/file-ops.js';

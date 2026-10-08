@@ -2,7 +2,7 @@ import { resolve, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { inspectWorkspace } from '../../modules/manifest.js';
 import { listSnapshots } from '../../modules/recovery.js';
-import { header, info, warn, table } from '../../utils/display.js';
+import { header, warn, table } from '../../utils/display.js';
 import { colors } from '../../utils/colors.js';
 import { PACKAGE_ROOT } from '../../modules/role-resolver.js';
 
