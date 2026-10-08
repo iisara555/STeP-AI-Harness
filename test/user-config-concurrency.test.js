@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const exec = promisify(execFile);
 const moduleUrl = new URL('../src/utils/user-config.js', import.meta.url).href;
@@ -16,7 +17,7 @@ async function fixture(t) {
   t.after(() => rm(home, { recursive: true, force: true }));
   const directory = join(home, '.step-ai');
   const file = join(directory, 'config.json');
-  const run = code => exec(process.execPath, ['--import', preload, '--input-type=module', '--eval',
+  const run = code => exec(process.execPath, ['--import', pathToFileURL(preload).href, '--input-type=module', '--eval',
     `import { saveUserConfig, loadUserConfig } from ${JSON.stringify(moduleUrl)};\n${code}`], { timeout: 15_000 });
   return { directory, file, run };
 }
