@@ -119,15 +119,28 @@ try {
       return { windows: windows.length, bounds: view?.getBounds(), visible: view?.getVisible() };
     });
   await page.locator('.browser-tab.active').waitFor();
-  // Pages are laid out at a default size before the panel reports its box, so wait until the page is shown over it.
-  const host = await page.locator('.browser-host').boundingBox();
+  // Pages are laid out at a default size before the panel reports its box. Re-read both geometries
+  // while waiting: macOS can settle the renderer and native WebContentsView on adjacent frames, and
+  // fractional display scaling can round the native bounds a few physical pixels differently.
+  const geometryTolerance = 4;
+  let stableGeometrySamples = 0;
   await expect
     .poll(
       async () => {
-        const d = await dockedView();
-        return Boolean(d.visible && Math.abs(host.x - d.bounds.x) <= 1 && Math.abs(host.width - d.bounds.width) <= 1);
+        const [host, d] = await Promise.all([page.locator('.browser-host').boundingBox(), dockedView()]);
+        const aligned = Boolean(
+          host &&
+            d.visible &&
+            d.bounds &&
+            Math.abs(host.x - d.bounds.x) <= geometryTolerance &&
+            Math.abs(host.width - d.bounds.width) <= geometryTolerance &&
+            Math.abs(host.y - d.bounds.y) <= geometryTolerance &&
+            Math.abs(host.height - d.bounds.height) <= geometryTolerance,
+        );
+        stableGeometrySamples = aligned ? stableGeometrySamples + 1 : 0;
+        return stableGeometrySamples >= 2;
       },
-      { timeout: 15000 },
+      { timeout: 30000, intervals: [100, 250, 500] },
     )
     .toBe(true);
   const docked = await dockedView();
