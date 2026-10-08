@@ -38,7 +38,7 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
     }
   };
   return (
-    <ConfirmDialog title="Skill Packs" confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog info title="Skill Packs" confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p>
         {t(
           'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills ผู้ดูแลต้องรับรอง digest ก่อนเปิดใช้ เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง',

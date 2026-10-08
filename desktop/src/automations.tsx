@@ -61,7 +61,7 @@ export function AutomationDialog({
     }
   };
   return (
-    <ConfirmDialog title={t('งานตามรอบและเครื่องมือเพิ่มเติม')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog info title={t('งานตามรอบและเครื่องมือเพิ่มเติม')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       {error && <p role="alert">{error}</p>}
       <p className="small muted">{t('งานตามรอบทำเมื่อเปิดแอปและใช้บัญชีที่คุณเลือก ผลเป็นร่างให้คุณตรวจ ก่อนส่งออกหรือนำไปใช้')}</p>
       {!data?.enabled && <p>{t('ผู้ดูแลยังไม่เปิดใช้งานตามรอบ')}</p>}

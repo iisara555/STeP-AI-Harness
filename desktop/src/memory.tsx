@@ -43,7 +43,7 @@ export function MemoryDialog({
     }
   };
   return (
-    <ConfirmDialog title={t('ความจำ')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog info title={t('ความจำ')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p className="small muted">
         {t(
           'บันทึกเฉพาะข้อมูลที่ไม่มีข้อมูลส่วนบุคคลหรือความลับ ความจำที่ยืนยันแล้วอาจถูกเลือกส่งให้ AI ในงานถัดไป คุณจะได้ตรวจบริบทก่อนส่ง',

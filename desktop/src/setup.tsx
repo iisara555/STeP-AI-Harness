@@ -291,11 +291,13 @@ export function SetupWizard({
               {t('ย้อนกลับ')}
             </button>
           )}
-          {step < 5 && (
+          {/* On the connect step "do it later" already moves on, so a second skip link would only compete with it. */}
+          {step < 5 && !(step === 3 && !ready) && (
             <button className="text-link" disabled={Boolean(busy)} onClick={skip}>
               {t('ข้าม ตั้งค่าทีหลัง')}
             </button>
           )}
+          {step === 5 && !termsAccepted && <span className="small muted">{t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม')}</span>}
           <span className="spacer" />
           {step < 5 ? (
             <button

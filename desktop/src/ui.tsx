@@ -17,6 +17,7 @@ export function ConfirmDialog({
   onCancel,
   focusCancel = false,
   confirmDisabled = false,
+  info = false,
 }: {
   title: string;
   children: ReactNode;
@@ -28,6 +29,8 @@ export function ConfirmDialog({
   focusCancel?: boolean;
   /** Keeps the confirm button off until the dialog's own condition (such as an accepted checkbox) is met. */
   confirmDisabled?: boolean;
+  /** Information only: the one button closes, so no separate cancel button that does the same thing. */
+  info?: boolean;
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState('');
@@ -38,7 +41,9 @@ export function ConfirmDialog({
     try {
       await onConfirm();
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      const message = String(e instanceof Error ? e.message : e);
+      // Bridge errors and bare codes mean nothing to staff; translated messages are shown as they are.
+      setError(/Error invoking remote method|^[A-Z][A-Z0-9_]{2,}\b/.test(message) ? explainError(message) : message);
       setPending(false);
     }
   };
@@ -58,9 +63,11 @@ export function ConfirmDialog({
           </p>
         )}
         <div className="confirm-actions">
-          <button autoFocus={focusCancel} className="quiet" onClick={onCancel}>
-            {cancelLabel}
-          </button>
+          {!info && (
+            <button autoFocus={focusCancel} className="quiet" onClick={onCancel}>
+              {cancelLabel}
+            </button>
+          )}
           <button
             autoFocus={!focusCancel}
             className={tone === 'danger' ? 'danger' : ''}

@@ -290,6 +290,8 @@ a,
 .sidebar {
   width: 246px;
   flex-shrink: 0;
+  /* In a short window the task list keeps a few rows and the sidebar scrolls instead of squeezing it away. */
+  overflow-y: auto;
   background: var(--sidebar);
   padding: 25px 17px 14px;
   display: flex;
@@ -308,7 +310,7 @@ a,
 }
 .brand span {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .brand .icon {
@@ -348,6 +350,7 @@ nav {
 nav button,
 .settings-button {
   justify-content: flex-start;
+  text-align: left;
   background: transparent;
   color: var(--muted);
   padding: 9px 10px;
@@ -363,6 +366,7 @@ nav button,
 }
 .sessions {
   flex: 1;
+  min-height: 150px;
   overflow: auto;
 }
 .session {
@@ -447,10 +451,11 @@ nav button,
   height: 34px;
   flex-shrink: 0;
   background: var(--selected);
+  color: var(--text);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 11px;
   overflow: hidden;
 }
 /* The drawings are black ink on white paper: keep the paper in both themes, like a photo. */
@@ -602,6 +607,11 @@ nav button,
   border-top: 1px solid var(--line);
   margin: 4px 2px;
 }
+.topbar-name {
+  margin: 0;
+  min-width: 0;
+  font: inherit;
+}
 .topbar strong {
   display: block;
   font-size: 14px;
@@ -704,6 +714,10 @@ nav button,
   border-radius: 13px;
   background: var(--surface);
 }
+/* The textarea draws no outline of its own, so the box shows where typing goes. */
+.composer:focus-within {
+  border-color: var(--focus);
+}
 .composer textarea {
   display: block;
   /* Starts at one line and grows with the text, up to the max height. */
@@ -774,7 +788,7 @@ nav button,
 }
 .composer-note {
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 6px;
   color: var(--muted);
 }
@@ -838,7 +852,7 @@ nav button,
   display: block;
 }
 .draft-title small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .document-export-font {
@@ -903,7 +917,7 @@ nav button,
 }
 .sources p {
   overflow-wrap: anywhere;
-  font-size: 10px;
+  font-size: 11px;
 }
 .proposal {
   margin: 0 16px 16px;
@@ -956,7 +970,7 @@ nav button,
 }
 .version-list small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .muted {
   color: var(--muted);
@@ -1219,7 +1233,7 @@ nav button,
   flex-wrap: wrap;
 }
 .provider-recommended {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--accent-ink);
 }
@@ -1229,7 +1243,7 @@ nav button,
   line-height: 1.4;
 }
 .provider-kind {
-  font-size: 10.5px;
+  font-size: 11px;
   white-space: nowrap;
   padding: 1px 6px;
   border-radius: 999px;
@@ -1327,8 +1341,24 @@ nav button,
   font-size: 17px;
   flex: 1;
 }
+/* The notes scroll; the acknowledge button stays in view however many versions are listed. */
 .whats-new {
   width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.whats-new-notes {
+  overflow: auto;
+  min-height: 0;
+}
+.whats-new .proposal-actions {
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.whats-new .proposal-actions button {
+  font-size: 13px;
 }
 .whats-new h2 {
   display: flex;
@@ -1561,7 +1591,7 @@ nav button,
   padding: 4px;
 }
 .session-group {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   margin: 14px 10px 5px;
   letter-spacing: 0.02em;
@@ -1575,7 +1605,7 @@ nav button,
   position: relative;
 }
 .palette-hint {
-  font-size: 10px;
+  font-size: 11px;
   gap: 2px;
   padding: 3px 5px;
   border: 1px solid var(--line);
@@ -1680,7 +1710,7 @@ button.danger {
   padding: 6px;
 }
 .palette-group {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   padding: 10px 10px 4px;
 }
@@ -2114,6 +2144,12 @@ button.danger {
   }
 }
 @media (max-height: 740px) {
+  .sidebar {
+    padding-top: 14px;
+  }
+  .brand {
+    margin-bottom: 14px;
+  }
   .welcome-illustration {
     width: 84px;
   }
@@ -2212,7 +2248,7 @@ nav button:hover,
 }
 .beta {
   margin-left: auto;
-  font-size: 9.5px;
+  font-size: 11px;
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--accent-soft);
@@ -2643,7 +2679,7 @@ nav button:hover,
 }
 nav .count {
   margin-left: auto;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted);
 }
 .composer {
@@ -2758,7 +2794,7 @@ nav .count {
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 .skills-filters small {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted);
   margin-left: 2px;
 }
@@ -2825,7 +2861,7 @@ nav .count {
   flex-wrap: wrap;
 }
 .tag {
-  font-size: 10.5px;
+  font-size: 11px;
   padding: 1px 7px;
   border-radius: 4px;
   background: var(--hover);
@@ -2899,7 +2935,7 @@ nav .count {
   height: 20px;
   border-radius: 50%;
   border: 1px solid var(--line-strong);
-  font-size: 10.5px;
+  font-size: 11px;
 }
 .wizard-steps li.current {
   color: var(--text);
@@ -3297,7 +3333,7 @@ nav .count {
   white-space: nowrap;
 }
 .slash-menu code {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .team-mark,
@@ -3306,7 +3342,7 @@ nav .count {
   color: var(--on-accent);
   border-radius: 999px;
   padding: 0 7px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 /* Task list filter: one compact row so the list itself gets the height. */
@@ -3890,7 +3926,7 @@ nav .count {
 }
 .receipt-compliance-list .source {
   display: block;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted);
 }
 .receipt-compliance-list .source-afp {

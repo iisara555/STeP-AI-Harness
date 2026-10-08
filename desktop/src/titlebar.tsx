@@ -143,7 +143,7 @@ export function TitleBar({
     },
   ];
   return (
-    <header ref={bar} className={'titlebar' + (mac ? ' mac' : '')}>
+    <header ref={bar} className={'titlebar' + (mac ? ' mac' : '')} aria-label={t('แถบหัวหน้าต่าง')}>
       <div className="titlebar-start">
         <div className="titlebar-menu">
           <button

@@ -197,7 +197,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
     }
   };
   return (
-    <ConfirmDialog title={t('การใช้งาน AI')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog info title={t('การใช้งาน AI')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       {error && <p role="alert">{error}</p>}
       {report ? (
         <>
@@ -244,33 +244,37 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
           {report.entries.some(e => !e.connectionId) && (
             <p className="muted small">{t('ยอดเก่าที่ไม่มีรหัสบัญชีรวมอยู่ในยอดแอป แต่ไม่จัดให้บัญชีใด')}</p>
           )}
-          <div className="chat-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('วันที่')}</th>
-                  <th>Model</th>
-                  <th>Tokens</th>
-                  <th>USD</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.entries.map((e, i) => (
-                  <tr key={i}>
-                    <td>{e.day}</td>
-                    <td>
-                      {report.accounts?.find(a => a.connectionId === e.connectionId)?.label || e.provider} / {e.model}
-                    </td>
-                    <td>{e.total.toLocaleString(locale())}</td>
-                    <td>
-                      {e.usd.toFixed(4)}
-                      {e.unpricedTokens > 0 ? t(' + รอราคา') : ''}
-                    </td>
+          {report.entries.length === 0 ? (
+            <p className="muted small">{t('ยังไม่มีการใช้งานที่บันทึกในแอป')}</p>
+          ) : (
+            <div className="chat-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('วันที่')}</th>
+                    <th>Model</th>
+                    <th>Tokens</th>
+                    <th>USD</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {report.entries.map((e, i) => (
+                    <tr key={i}>
+                      <td>{e.day}</td>
+                      <td>
+                        {report.accounts?.find(a => a.connectionId === e.connectionId)?.label || e.provider} / {e.model}
+                      </td>
+                      <td>{e.total.toLocaleString(locale())}</td>
+                      <td>
+                        {e.usd.toFixed(4)}
+                        {e.unpricedTokens > 0 ? t(' + รอราคา') : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       ) : (
         <p>{t('กำลังอ่านการใช้งาน…')}</p>

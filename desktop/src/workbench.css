@@ -11,7 +11,7 @@
   align-items: center;
   padding: 6px 12px;
   background: var(--selected);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .chat-code header button {
@@ -220,7 +220,7 @@
   gap: 7px;
   padding: 10px 13px;
   border-bottom: 1px solid var(--line);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .tool-context span {
@@ -230,7 +230,7 @@
   flex: 1;
 }
 .tool-context button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 5px;
   flex-shrink: 0;
 }
@@ -304,11 +304,11 @@
 .task-card small,
 .change-card small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 .task-state {
-  font-size: 10px;
+  font-size: 11px;
   border-radius: 4px;
   background: var(--surface);
   padding: 2px 6px;
@@ -373,7 +373,7 @@
 }
 .change-diff h4 {
   margin: 14px 0 4px;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   color: var(--muted);
 }
@@ -405,14 +405,14 @@
   align-items: center;
   gap: 8px;
   padding: 9px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .image-gallery figcaption span {
   flex: 1;
   overflow-wrap: anywhere;
 }
 .image-gallery figcaption button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 5px;
 }
 .composer-chips {
@@ -437,7 +437,7 @@
 }
 .image-route select {
   max-width: 100%;
-  font-size: 10px;
+  font-size: 11px;
   padding: 4px;
   flex: 1;
 }
@@ -457,7 +457,7 @@
   opacity: 1;
 }
 .message-actions button {
-  font-size: 10px;
+  font-size: 11px;
   border: 0;
   color: var(--muted);
   padding: 4px 7px;

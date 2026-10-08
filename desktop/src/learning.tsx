@@ -143,7 +143,7 @@ export function LearningDialog({
   };
   const update = (value: Partial<LessonContent>) => edit && setEdit({ ...edit, content: { ...edit.content, ...value } });
   return (
-    <ConfirmDialog title={t('กล่องบทเรียน')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
+    <ConfirmDialog info title={t('กล่องบทเรียน')} confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p className="small muted">
         {t('บทเรียนใช้เฉพาะพื้นที่งานและทีมปัจจุบันบนเครื่องนี้ หลังคุณยืนยันจึงเลือกใช้กับงานถัดไป และอาจส่งให้ AI พร้อมบริบทงาน')}
       </p>
@@ -357,6 +357,7 @@ export function LearningDialog({
       )}
       {data?.metrics && <LessonResults metrics={data.metrics} />}
       <h3>{t('บทเรียนและประวัติรุ่น')}</h3>
+      {data && !data.lessons.length && <p className="small muted">{t('ยังไม่มีบทเรียนที่ยืนยันใช้')}</p>}
       {data?.lessons.map(l => {
         const head = l.revisions[l.revisions.length - 1];
         return (

@@ -16,7 +16,7 @@ export function Terms({
   return (
     <div className="terms" aria-label={t('ข้อตกลงการใช้งาน')}>
       <p className="terms-title">{t('ข้อตกลงการใช้งาน')}</p>
-      <ul>
+      <ul tabIndex={0} aria-label={t('รายการข้อตกลง')}>
         <li>
           {t('ข้อความ ไฟล์ และรูปที่คุณส่งจะไปถึงผู้ให้บริการ AI ที่เชื่อมไว้ (เช่น Google, OpenAI, Anthropic) ตามที่พิมพ์')}
           {privacyChecks

@@ -321,7 +321,8 @@ export default function App() {
     return () => window.removeEventListener('step-workspace', update);
   }, [refresh]);
   useEffect(() => {
-    conversationEnd.current?.scrollIntoView({ block: 'end' });
+    // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
+    if (session?.messages.length || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
   }, [session?.messages.length, stream, running]);
   useEffect(() => {
     void refresh()
@@ -1044,7 +1045,7 @@ export default function App() {
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
         {left && (
-          <aside className="sidebar">
+          <aside className="sidebar" aria-label={t('แถบงาน')}>
             <div className="brand">
               <div>
                 <span className="brand-symbol" role="img" aria-label="STeP">
@@ -1227,17 +1228,19 @@ export default function App() {
           <header className="topbar">
             <div className="topbar-title">
               <span className="topbar-heading">
-                <strong>
-                  {settings
-                    ? t('ตั้งค่าพื้นที่ทำงาน')
-                    : view === 'documents'
-                      ? t('เครื่องมือร่างเอกสาร')
-                      : view === 'receipt'
-                        ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-                        : view === 'skills'
-                          ? t('ศูนย์รวม Skill')
-                          : session?.title || t('เริ่มต้นงานที่อยากทำ')}
-                </strong>
+                <h1 className="topbar-name">
+                  <strong>
+                    {settings
+                      ? t('ตั้งค่าพื้นที่ทำงาน')
+                      : view === 'documents'
+                        ? t('เครื่องมือร่างเอกสาร')
+                        : view === 'receipt'
+                          ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+                          : view === 'skills'
+                            ? t('ศูนย์รวม Skill')
+                            : session?.title || t('เริ่มต้นงานที่อยากทำ')}
+                  </strong>
+                </h1>
                 {/* Like Claude Desktop, task commands live in a menu next to the title. */}
                 {!settings && view === 'chat' && session && (
                   <button
@@ -2185,6 +2188,10 @@ export default function App() {
                 className="resize-handle"
                 role="separator"
                 aria-label={t('ปรับความกว้างร่าง')}
+                aria-orientation="vertical"
+                aria-valuenow={width}
+                aria-valuemin={300}
+                aria-valuemax={700}
                 tabIndex={0}
                 onKeyDown={e => {
                   if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
@@ -2199,7 +2206,7 @@ export default function App() {
               />
             )}
             <aside className="artifact-pane" data-tour="artifact" style={showPanel ? undefined : { display: 'none' }}>
-              <nav className="workbench-tabs" aria-label="Workspace tools">
+              <nav className="workbench-tabs" aria-label={t('เครื่องมือข้างร่าง')}>
                 {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
                   .filter(tab => advancedTools || tab !== 'terminal')
                   .map(tab => (

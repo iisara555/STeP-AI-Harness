@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, FolderOpen, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
+import { Building2, Check, FolderOpen, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { AIConnections } from './ai-connections';
 import { shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
@@ -7,8 +7,36 @@ import { SectionArt } from './illustration';
 import { AVATARS, Avatar } from './avatars';
 import { initial } from './messages';
 import type { Snapshot } from './types';
-import { language, t, teamName } from './i18n';
+import { language, localized, t, teamName } from './i18n';
 import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleId } from './speaking-styles';
+
+/** Plain names for the policy switches; the technical key stays beside each for administrators. */
+const featureNames: Record<string, string> = localized({
+  toolLoop: 'ให้ AI ใช้เครื่องมือหลายขั้นตอน',
+  autoMode: 'โหมดอัตโนมัติเต็มรูปแบบ',
+  shellByAi: 'ให้ AI รันคำสั่งในเครื่อง',
+  autoMerge: 'รวมงานโค้ดอัตโนมัติ',
+  autopilot: 'ให้ AI ทำงานต่อเองหลายขั้น',
+  sandbox: 'รันคำสั่งในกล่องแยก (Docker)',
+  mcp: 'เครื่องมือเสริม MCP',
+  lineGateway: 'เชื่อมต่อ LINE',
+  vision: 'ให้ AI อ่านรูปภาพ',
+  voice: 'สั่งงานด้วยเสียง',
+  copilot: 'เชื่อมต่อ GitHub Copilot',
+  compatibleProviders: 'บริการ AI ที่ผู้ดูแลกำหนดเอง',
+  providerPresets: 'บริการ AI อื่นที่รู้จัก (OpenRouter, Groq ฯลฯ)',
+  headless: 'สั่งงานแบบไม่เปิดหน้าต่าง',
+  skillPacks: 'ติดตั้ง Skill Packs',
+  cron: 'งานตามรอบ',
+  coordinator: 'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว',
+  memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',
+  autoRouting: 'ให้ระบบเลือก Skill และถามเพิ่มให้เอง',
+  receiptVision: 'ให้ AI อ่านภาพใบเสร็จ',
+  autoUpdate: 'อัปเดตแอปอัตโนมัติ',
+  claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
+  learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
+  ocrTrial: 'เครื่องมือทดลอง OCR',
+});
 
 export function SettingsPanel({
   initialPage,
@@ -81,7 +109,7 @@ export function SettingsPanel({
     ['ai', t('การเชื่อมต่อ AI'), Sparkles],
     ['appearance', t('รูปลักษณ์และภาษา'), Sun],
     ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
-    ['policy', t('นโยบายองค์กร'), ShieldCheck],
+    ['policy', t('นโยบายองค์กร'), Building2],
   ] as const;
   return (
     <div className="settings-content">
@@ -359,7 +387,9 @@ export function SettingsPanel({
           <div className="policy-features">
             {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
               <p key={name}>
-                <code>{name}</code>
+                <span>
+                  {featureNames[name] || name} <code className="small muted">{name}</code>
+                </span>
                 <span>{enabled ? t('เปิดในนโยบาย') : t('ปิดโดยผู้ดูแล')}</span>
               </p>
             ))}
