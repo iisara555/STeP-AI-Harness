@@ -27,7 +27,7 @@ import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
 import { documentTool, type DocumentToolId } from '../src/document-tools';
-import { documentToolRule } from './document-tools';
+import { documentToolRule, isDocumentFieldReply, documentRevisionMarkdown } from './document-tools';
 import { parseDocumentOutput } from '../src/document-output';
 import {
   OrganizationKnowledge,
@@ -329,7 +329,7 @@ export class WorkService {
     // Chat is one continuous conversation. Drafts keep task boundaries so an unrelated task starts clean.
     const chat = mode === 'chat';
     const workspaceDir = this.harness.memoryDir?.() || this.store.settings().workspace;
-    const policy = this.harness.contextPolicy(text);
+    let policy = this.harness.contextPolicy(text);
     const hadTask = Boolean(session.originalQuery);
     const clarification = session.clarification;
     const stopped = ['error', 'interrupted', 'cancelled'].includes(session.status);
@@ -339,9 +339,29 @@ export class WorkService {
     const incomingSource = attachmentText ? outgoing(attachmentText, reviewed) : '';
     // The draft may hold user edits, so credentials still stop the run; name-like review signals do not.
     const baseRevision = session.revision,
-      draft = outgoing(session.draft, true);
+      plainDraft = outgoing(session.draft, true),
+      draft =
+        !chat && session.documentTool && session.document
+          ? outgoing(
+              documentRevisionMarkdown(session.document, plainDraft, value => outgoing(value, true)),
+              true,
+            )
+          : plainDraft;
     const pending = session.proposals.at(-1),
       working = pending && pending.baseRevision === baseRevision ? masked(pending.text) : draft;
+    // A labeled field value is an edit within a selected document, even without an edit verb.
+    // Explicit new tools/Skills, new source files and chat turns keep their normal task boundaries.
+    if (
+      !chat &&
+      session.mode === 'draft' &&
+      !selectedDocument &&
+      !skill &&
+      !incomingSource &&
+      working.trim() &&
+      isDocumentFieldReply(session.documentTool, text)
+    ) {
+      policy = { ...policy, history: 'relevant-only', carryover: true, revision: true, inferred: false };
+    }
     let carriesPrevious = hadTask && policy.carryover;
     let revising = !clarification && hadTask && Boolean(working.trim()) && Boolean(policy.revision || policy.resume);
     let continuing = false;
@@ -774,8 +794,8 @@ export class WorkService {
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
           draftingTool && documentToolRule(draftingTool.id, Boolean(session.documentTemplate)),
-          ...personal(this.store.settings()),
-          ...speakingStyleRules(this.store.settings()),
+          ...(!draftingTool ? personal(this.store.settings()) : []),
+          ...(!draftingTool ? speakingStyleRules(this.store.settings()) : []),
           section('skill_instructions', instructions.join('\n\n')),
         ]
           .filter(Boolean)
@@ -1004,7 +1024,7 @@ export class WorkService {
         }
       }
       if (!result.trim()) throw new Error('EMPTY_RESULT');
-      const documentOutput = draftingTool ? parseDocumentOutput(handoff, draftingTool.id) : undefined;
+      const documentOutput = draftingTool ? parseDocumentOutput(handoff, draftingTool.id, { requireEnvelope: true }) : undefined;
       if (documentOutput) handoff = documentOutput.draft;
       session = this.store.session(id);
       session.clarification = false;

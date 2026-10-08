@@ -33,12 +33,14 @@ function separateLegacy(text: string): DocumentOutput {
 }
 
 /** A document and its source/authority checks are different deliverables. Never drop the latter. */
-export function parseDocumentOutput(output: string, id: DocumentToolId): DocumentOutput {
+export function parseDocumentOutput(output: string, id: DocumentToolId, options: { requireEnvelope?: boolean } = {}): DocumentOutput {
   if (!documentTool(id)) throw new Error('INVALID_DOCUMENT_TOOL');
   const text = output.replace(/\r\n?/g, '\n').trim();
   let draft = '',
     review = '';
   const tags = [...text.matchAll(OUTPUT_TAG)].map(m => m[0]);
+  // Fresh AI responses must satisfy the trusted contract. Legacy saved proposals remain readable.
+  if (options.requireEnvelope && tags.length !== 4) throw new Error('DOCUMENT_OUTPUT_INVALID');
   if (tags.length) {
     const expected = ['<document_draft>', '</document_draft>'];
     if (tags.length === 4) expected.push('<document_review>', '</document_review>');

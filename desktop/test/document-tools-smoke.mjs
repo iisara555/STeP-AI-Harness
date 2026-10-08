@@ -31,8 +31,15 @@ const server = createServer(async (req, res) => {
     ร่างโครงการ: 'project',
     ร่างรายงานการประชุม: 'minutes',
   }[type];
+  const current = /<current_draft>\n([\s\S]*?)\n<\/current_draft>/.exec(prompt)?.[1];
+  let draftedBody = fixtures.documents[id];
+  if (id === 'project' && current) {
+    draftedBody = current;
+    if (prompt.includes('ชื่อโครงการ: SYNTHETIC-RENAMED')) draftedBody = draftedBody.replace(/^# .*$/m, '# SYNTHETIC-RENAMED');
+    if (prompt.includes('วัตถุประสงค์: SYNTHETIC-OBJECTIVE')) draftedBody += '\n\nSYNTHETIC-OBJECTIVE';
+  }
   const text = id
-    ? `<document_draft>\n${fixtures.documents[id]}\n</document_draft>\n<document_review>\n${fixtures.review}\n</document_review>`
+    ? `<document_draft>\n${draftedBody}\n</document_draft>\n<document_review>\n${fixtures.review}\n</document_review>`
     : 'Synthetic connection check';
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
@@ -166,6 +173,11 @@ try {
     await form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' }).click();
     await expect(page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true }).click();
+    if (id === 'minutes') {
+      // The preceding project case saved speaking preferences to the local workspace.
+      const contextConsent = page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?', exact: true });
+      await contextConsent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+    }
     await expect.poll(async () => (await snapshot()).sessions.find(s => s.documentTool === id)?.status, { timeout: 30000 }).toBe('review');
     last = (await snapshot()).sessions.find(s => s.documentTool === id);
     assert.ok(last.proposals[0].review.includes('Skill Verification'));
@@ -216,6 +228,54 @@ try {
     await expect(page.locator('.tiptap')).not.toContainText('Skill Verification');
     assert.match(document, /<w:keepNext\/>/);
     assert.match(await zip.file('word/footer1.xml').async('string'), /PAGE/);
+    if (id === 'project') {
+      await page.evaluate(async () => {
+        const s = await window.step.call('snapshot');
+        await window.step.call('settings', { ...s.settings, interactionStyle: 'ob-oon' });
+      });
+      const editor = page.locator('.tiptap[contenteditable="true"]');
+      await editor.click();
+      await editor.press('ControlOrMeta+End');
+      await editor.press('Enter');
+      await editor.pressSequentially('SYNTHETIC-MANUAL-EDIT');
+      for (const message of ['ชื่อโครงการ: SYNTHETIC-RENAMED', 'วัตถุประสงค์: SYNTHETIC-OBJECTIVE']) {
+        await page.locator('.composer textarea').fill(message);
+        await page.locator('.composer textarea').press('Enter');
+        const consent = page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true });
+        const contextConsent = page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?', exact: true });
+        // Changing preferences writes local context; approve its actual dialog instead of disabling the gate.
+        for (let gate = 0; gate < 3; gate++) {
+          await expect
+            .poll(
+              async () => {
+                const s = (await snapshot()).sessions.find(s => s.id === last.id);
+                if (s.status === 'error') throw new Error(JSON.stringify(s.runs?.at(-1)));
+                return s.proposals.length > 0 || (await consent.isVisible()) || (await contextConsent.isVisible());
+              },
+              { timeout: 30000 },
+            )
+            .toBe(true);
+          if (await consent.isVisible()) await consent.click();
+          else if (await contextConsent.isVisible())
+            await contextConsent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+          else break;
+        }
+        await expect
+          .poll(async () => (await snapshot()).sessions.find(s => s.id === last.id)?.proposals.length, { timeout: 30000 })
+          .toBe(1);
+        const revision = (await snapshot()).sessions.find(s => s.id === last.id);
+        assert.equal(revision.documentTool, 'project');
+        assert.equal(revision.skill, skill);
+        assert.ok(revision.proposals[0].text.includes('SYNTHETIC-MANUAL-EDIT'));
+        assert.ok(revision.proposals[0].text.includes('SYNTHETIC-RENAMED'));
+        assert.ok(requests.at(-1).prompt.includes('Synthetic form fact'));
+        assert.ok(requests.at(-1).prompt.includes('SYNTHETIC-MANUAL-EDIT'));
+        assert.ok(!requests.at(-1).system.includes('Respond using the "Ob-Oon"'));
+        await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
+        await expect(editor).toContainText('SYNTHETIC-RENAMED');
+      }
+      await expect(editor).toContainText('SYNTHETIC-OBJECTIVE');
+    }
     if (id === 'memo' || id === 'letter') {
       assert.match(document, /<w:titlePg\/>/);
       const header = await zip.file('word/header1.xml').async('string');
@@ -239,7 +299,7 @@ try {
       await writeFile(join(previewFolder, `app-${id}.pdf`), await readFile(pdf.path));
     }
   }
-  assert.equal(requests.length, 5);
+  assert.equal(requests.length, profiles.length + 2, 'one generation per profile and two project revisions');
   const editor = page.locator('.tiptap[contenteditable="true"]');
   await expect(editor).toContainText('[รอยืนยัน: เวลา]');
   await editor.fill('ร่างเพื่อพิจารณา\nแก้ไขสังเคราะห์โดยเจ้าของเรื่อง\n[รอยืนยัน: งบประมาณ]');

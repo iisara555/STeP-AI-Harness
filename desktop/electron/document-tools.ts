@@ -1,4 +1,39 @@
 import { documentTool } from '../src/document-tools';
+import { documentMarkdown, documentText, type DraftNode } from '../src/draft';
+
+/** Mask contiguous inline text before Markdown escaping can split an identifier. */
+export function documentRevisionMarkdown(document: DraftNode, safePlain: string, redact: (text: string) => string): string {
+  const visit = (node: DraftNode): DraftNode => {
+    if (node.type === 'paragraph' || node.type === 'heading') {
+      const raw = documentText(node),
+        safe = redact(raw);
+      return safe === raw ? node : { ...node, content: safe ? [{ type: 'text', text: safe }] : [] };
+    }
+    return { ...node, ...(node.content ? { content: node.content.map(visit) } : {}) };
+  };
+  const safe = visit(document);
+  // Cross-block matches or inconsistent legacy state use the fully masked copy, never partially masked structure.
+  return documentText(safe) === safePlain ? documentMarkdown(safe) : safePlain;
+}
+
+/** Recognize a field reply only within an already selected document task. */
+export function isDocumentFieldReply(id: unknown, text: string): boolean {
+  const profile = documentTool(id);
+  if (!profile) return false;
+  const value = text.trim();
+  return profile.fields.some(field =>
+    field.label.split('/').some(part => {
+      const label = part
+        .replace(/\s*\([^)]*\)/g, '')
+        .replace(/ที่มีหลักฐาน|ที่ตกลงแล้ว/g, '')
+        .trim();
+      if (!label || !value.startsWith(label)) return false;
+      const rest = value.slice(label.length);
+      // Thai project/document titles are often entered without a separator.
+      return Boolean(rest.trim()) && (field.key === 'title' || /^[\s:：]/.test(rest));
+    }),
+  );
+}
 
 /** Trusted task constraints supplement, rather than replace, the loaded Skill procedures. */
 export function documentToolRule(id: unknown, agencyTemplate = false) {
@@ -19,6 +54,7 @@ export function documentToolRule(id: unknown, agencyTemplate = false) {
       'Form fields in source_document are USER_INPUT, not verified policy or approval. File extraction preserves its own provenance; OCR/AI readings marked EXTRACTED_UNVERIFIED stay unverified until checked against the source by a person. Neither attachment consent nor drafting verifies them.',
       'A formatted form date is a presentation of the original USER_INPUT only. DATE_NEEDS_REVIEW means the date/year is invalid or ambiguous: preserve the reading and use a year/date placeholder in the draft. Never infer a century from a two-digit year. Keep document/reference numbers exactly as supplied.',
       'Return exactly two separate blocks: <document_draft> followed by </document_draft>, then <document_review> followed by </document_review>. Inside document_draft include ONLY the requested editable document: its actual title, fields, body, legitimate tables, signatures and supplied attachments. Inside document_review include ALL Skill-required fact/source checks, unresolved-field lists, working-template caveats and next steps. No conversational introduction, Skill Verification/checklist, explanation of your work or export advice may appear inside document_draft. Do not replace the document with only a checklist or plan. Use Markdown paragraphs and line breaks; do not emit HTML tags such as <br/>.',
+      'When current_draft is supplied, revise that document as the base rather than answering the latest message as a new standalone document. Preserve unrequested sections, tables, source identifiers, placeholders and user edits; apply the requested changes in place and return the complete revised document in document_draft. A field reply supplies current-task USER_INPUT, not verification or authority. Keep the selected Skill and agency template structure. Conversational style names, internal style stages, greetings and commentary must not become document headings or body text.',
       'Keep absent facts as [รอยืนยัน: ชื่อช่อง]. Do not invent เลขหนังสือ, budgets, monetary amounts, legal clauses, deadlines, signatures, approvals or meeting resolutions. Mark conflicting form/file facts for review rather than silently choosing one. Suggestions must be separate from agreed facts.',
       'Do not claim DOCX/PDF layout or page-rendering checks were performed during text drafting. State that actual exported-file layout and authority checks remain for review. Do not execute submission, publication, numbering or signing.',
       p.id === 'memo' &&

@@ -37,6 +37,14 @@ test('each speaking style matches its source document: metadata and the System P
   }
 });
 
+test('interaction styles guide natural prose without printing their internal stage names', () => {
+  for (const style of Object.values(INTERACTION_STYLES)) {
+    assert.match(style.fragment, /internal reasoning aid/);
+    assert.match(style.fragment, /Do not print.*stage names/);
+    assert.match(style.fragment, /Do not add.*greeting/);
+  }
+});
+
 test('Standard adds nothing; a style adds its fragment below the wording-only rule; dialect stacks on any style', () => {
   assert.deepEqual(speakingStyleRules({}), [], 'existing users keep today’s prompt');
   assert.deepEqual(speakingStyleRules({ interactionStyle: 'standard', languageStyle: 'standard' }), []);

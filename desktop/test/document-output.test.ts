@@ -11,6 +11,18 @@ const memo =
 const checks =
   '## ตารางผลตรวจ (Skill Verification)\n\n| รายการ | ผลตรวจ |\n|---|---|\n| รูปแบบ | รอยืนยัน |\n\n## รายการข้อมูลที่ต้องยืนยันเพิ่มเติม (Unresolved Fields)\n\n- งบประมาณและอำนาจลงนาม';
 
+test('new model output requires both document and review envelopes; saved legacy documents remain readable', () => {
+  for (const output of [memo, 'สวัสดีครับ\n\n[Perspective & Connection]\n\nข้อเสนอ', `<document_draft>${memo}</document_draft>`])
+    assert.throws(() => parseDocumentOutput(output, 'memo', { requireEnvelope: true }), /DOCUMENT_OUTPUT_INVALID/);
+  assert.equal(parseDocumentOutput(memo, 'memo').draft, memo);
+  assert.equal(
+    parseDocumentOutput(`<document_draft>${memo}</document_draft><document_review>${checks}</document_review>`, 'memo', {
+      requireEnvelope: true,
+    }).draft,
+    memo,
+  );
+});
+
 test('all five document tools separate editable body from Skill checks and conversation', () => {
   for (const tool of DOCUMENT_TOOLS) {
     const body =
