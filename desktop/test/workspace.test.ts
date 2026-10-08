@@ -947,3 +947,53 @@ test('tasks in different sessions run side by side; one session runs one task at
   assert.equal(service.activeCount(), 0);
   store.close();
 });
+
+test('a completion listener can start the next run without the previous run clearing its ownership', { timeout: 10_000 }, async () => {
+  const { store, session } = fixture();
+  let second: Promise<void> | undefined;
+  let calls = 0;
+  let enter!: () => void, release!: () => void;
+  const entered = new Promise<void>(resolve => {
+    enter = resolve;
+  });
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  let service: WorkService;
+  service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: tmpdir(), env: {} },
+      adapter: {
+        run: async (_prompt, _connection, context) => {
+          if (++calls === 2) {
+            enter();
+            await gate;
+            if (context.signal.aborted) throw new Error('CANCELLED');
+          }
+          return 'ร่างตัวอย่าง';
+        },
+      },
+    }),
+    event => {
+      if (event.type === 'changed' && !second) second = service.run(session.id, 'ทำ Designer Brief งานประชาสัมพันธ์กิจกรรม', '');
+    },
+  );
+  try {
+    await service.run(session.id, 'ทำ Designer Brief งานประชาสัมพันธ์กิจกรรม', '');
+    await entered;
+    assert.equal(service.isActive(session.id), true);
+    assert.equal(service.activeCount(), 1);
+    await assert.rejects(service.run(session.id, 'ปรับโทนให้สุภาพขึ้น', ''), /RUN_ALREADY_ACTIVE/);
+    service.cancel(session.id);
+    release();
+    await second;
+    assert.equal(store.session(session.id).status, 'cancelled');
+    assert.equal(service.activeCount(), 0);
+  } finally {
+    release();
+    await second;
+    store.close();
+  }
+});

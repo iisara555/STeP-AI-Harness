@@ -1,5 +1,7 @@
 const SECTIONS = [
   'document_tool_contract',
+  'document_draft',
+  'document_review',
   'task_state',
   'context_summary',
   'memory_context',

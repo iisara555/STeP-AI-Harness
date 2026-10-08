@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from 'lucide-react';
 import type { Attachment, Connection } from './types';
-import { DOCUMENT_TOOLS, documentTool, type DocumentToolId } from './document-tools';
+import { DOCUMENT_TOOLS, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
 import { connectionLabel, errorText } from './messages';
 import { t } from './i18n';
 import './document-tools.css';
 
 export type DocumentAttachment = { sessionId: string; file: Attachment };
-export type DocumentForm = { values: Record<string, string>; variant: string; source?: DocumentAttachment };
+export type DocumentForm = {
+  values: Record<string, string>;
+  variant: string;
+  source?: DocumentAttachment;
+  sourceRole?: DocumentAttachmentRole;
+};
 export function DocumentTools({
   connections,
   connectionId,
@@ -44,7 +49,10 @@ export function DocumentTools({
     if (!consumedTask) return;
     setForms(old =>
       Object.fromEntries(
-        Object.entries(old).map(([id, f]) => [id, f?.source?.sessionId === consumedTask ? { ...f, source: undefined } : f]),
+        Object.entries(old).map(([id, f]) => [
+          id,
+          f?.source?.sessionId === consumedTask ? { ...f, source: undefined, sourceRole: undefined } : f,
+        ]),
       ),
     );
   }, [consumedTask]);
@@ -86,7 +94,11 @@ export function DocumentTools({
         <header>
           <h2>{t(profile.title)}</h2>
           <p className="small muted">{t('ข้อมูลที่ขาดจะคงช่อง [รอยืนยัน] ให้ตรวจและเติมในร่างก่อนนำไปใช้')}</p>
-          <p className="small muted">{t('ใช้แม่แบบร่างตามชนิดเอกสาร ไฟล์แนบใช้เป็นต้นเรื่องและไม่เก็บรูปแบบ Word เดิม')}</p>
+          <p className="small muted">
+            {t(
+              'TOR ใช้แม่แบบ 16 หัวข้อเดิม เอกสารอีก 4 ประเภทเลือก DOCX จาก MIS เป็นแม่แบบเพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป',
+            )}
+          </p>
         </header>
         <div className="document-form-options">
           <label>
@@ -156,7 +168,7 @@ export function DocumentTools({
             onClick={() =>
               void run(async () => {
                 const source = await attach(selected);
-                if (source) update({ source });
+                if (source) update({ source, sourceRole: source.file.templateReady ? 'template' : 'source' });
               })
             }
           >
@@ -171,11 +183,33 @@ export function DocumentTools({
                 className="icon"
                 aria-label={t('นำต้นเรื่องออก')}
                 disabled={disabled}
-                onClick={() => update({ source: undefined })}
+                onClick={() => update({ source: undefined, sourceRole: undefined })}
               >
                 <X size={16} />
               </button>
               <p className={form.source.file.usable ? 'small muted' : 'small error'}>{form.source.file.status}</p>
+              <label>
+                {t('ใช้ไฟล์แนบเป็น')}
+                <select
+                  aria-label={t('ใช้ไฟล์แนบเป็น')}
+                  disabled={disabled}
+                  value={form.sourceRole || 'source'}
+                  onChange={e => update({ sourceRole: e.target.value as DocumentAttachmentRole })}
+                >
+                  <option value="source">{t('ต้นเรื่องของงานนี้')}</option>
+                  <option value="template">{t('แบบฟอร์ม / ตัวอย่าง (ใช้เฉพาะโครงสร้าง)')}</option>
+                </select>
+              </label>
+              {form.sourceRole === 'template' && (
+                <p className="small muted">
+                  {t(
+                    'เลือกแม่แบบ DOCX ข้อมูลตัวอย่างไม่ส่งให้ AI รักษาฟอนต์ ตาราง ระยะขอบและตราของแบบเมื่อส่งออก DOCX ส่วน PDF ให้เปิดจาก Word หลังตรวจหน้า',
+                  )}
+                </p>
+              )}
+              {form.sourceRole !== 'template' && form.source.file.sourceUsable === false && (
+                <p className="small error">{t('ไฟล์นี้ใช้เป็นแม่แบบได้เท่านั้น หากใช้เป็นต้นเรื่องให้แนบข้อความที่ตรวจแล้ว')}</p>
+              )}
               {form.source.file.usable && (
                 <details>
                   <summary>{t('ดูข้อความต้นเรื่องก่อนส่ง')}</summary>
@@ -229,7 +263,14 @@ export function DocumentTools({
           <button
             className="primary"
             type="submit"
-            disabled={disabled || !connected || !hasInput || Boolean(form.source && !form.source.file.usable)}
+            disabled={
+              disabled ||
+              !connected ||
+              !hasInput ||
+              Boolean(
+                form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
+              )
+            }
           >
             {working ? <LoaderCircle size={17} className="spin" /> : <Sparkles size={17} />}
             {t('ให้ AI ร่างเอกสาร')}

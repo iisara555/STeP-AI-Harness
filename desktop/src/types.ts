@@ -148,10 +148,15 @@ export type Message = {
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
 export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
-export type Proposal = { id: string; text: string; baseRevision: number; sources: string[]; at: string };
+export type Proposal = { id: string; text: string; review?: string; baseRevision: number; sources: string[]; at: string };
+export type DocumentTemplateInfo = { key: string; sha256: string; name: string; font: string };
 export type Session = {
   /** The selected form's Skill/template contract, retained for revisions and retry. */
   documentTool?: DocumentToolId;
+  /** Reference to a private, host-owned DOCX snapshot; bytes never go to the renderer or AI. */
+  documentTemplate?: DocumentTemplateInfo;
+  /** Checks for an accepted AI draft, kept outside editable/exported document content. */
+  documentReview?: { text: string; revision: number };
   parentId?: string;
   loadedContext?: string[];
   compaction?: { before: number; after: number; method: string; at: string };
@@ -233,6 +238,9 @@ export type Settings = {
 };
 /** `reason` says why a file cannot be sent (an ATTACH_* code), so the chip and the send button can tell the person. */
 export type Attachment = {
+  /** Native template capability is separate from permission to send its original extracted text. */
+  templateReady?: boolean;
+  sourceUsable?: boolean;
   id: string;
   name: string;
   status: string;

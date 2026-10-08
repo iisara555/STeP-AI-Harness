@@ -3,9 +3,10 @@
 // ~/.step-ai/profile.json, { version: 1, name, team, assistant, style, tone, updatedAt }.
 // Setup writes it after the profile questions; STeP Desktop fills its first-run wizard from it and writes it back
 // whenever the profile is saved. It holds no personal data beyond what the person typed as their profile.
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import type { Settings } from '../src/types';
 
 export type SharedProfile = {
@@ -56,7 +57,9 @@ export async function readSharedProfile(file: string): Promise<SharedProfile | u
   };
 }
 
-/** Writes the profile atomically, readable by this user only. */
+const profileWrites = new Map<string, Promise<void>>();
+
+/** Same-file writes finish in invocation order; readers see one complete, private profile. */
 export async function writeSharedProfile(
   file: string,
   s: Pick<Settings, 'userName' | 'team' | 'assistant' | 'personality' | 'assistantTone'>,
@@ -71,8 +74,24 @@ export async function writeSharedProfile(
     tone: personality === 'custom' ? text(s.assistantTone, 300) : '',
     updatedAt: new Date().toISOString(),
   };
-  await mkdir(dirname(file), { recursive: true, mode: 0o700 });
-  const temp = `${file}.${process.pid}.tmp`;
-  await writeFile(temp, JSON.stringify(body, null, 2) + '\n', { mode: 0o600 });
-  await rename(temp, file);
+  const path = resolve(file);
+  const previous = profileWrites.get(path) || Promise.resolve();
+  const task = previous
+    .catch(() => {})
+    .then(async () => {
+      await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+      const temp = `${path}.${randomUUID()}.tmp`;
+      try {
+        await writeFile(temp, JSON.stringify(body, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+        await rename(temp, path);
+      } finally {
+        await rm(temp, { force: true });
+      }
+    });
+  profileWrites.set(path, task);
+  try {
+    await task;
+  } finally {
+    if (profileWrites.get(path) === task) profileWrites.delete(path);
+  }
 }

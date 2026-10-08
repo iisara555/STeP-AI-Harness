@@ -76,13 +76,13 @@ test('DOCX embeds a pinned high-resolution graphic at its physical height on the
   }
 });
 
-test('memo header keeps the source title editable and gives Thai and Latin the same 29 pt bold face', async () => {
+test('memo header keeps the source title editable and gives Thai and Latin the same 30 pt bold face', async () => {
   for (const font of ['TH Sarabun PSK', 'TH Sarabun New']) {
     const { headers } = await word('memo', 'auto', font);
     const header = headers[0];
     assert.equal(texts(header), 'บันทึกข้อความ (ร่าง)');
-    assert.equal(attr(header, 'sz', 'val'), '58');
-    assert.equal(attr(header, 'szCs', 'val'), '58');
+    assert.equal(attr(header, 'sz', 'val'), '60');
+    assert.equal(attr(header, 'szCs', 'val'), '60');
     assert.equal(attr(header, 'rFonts', 'cs'), font);
     assert.ok(header.getElementsByTagNameNS(W, 'bCs').length);
   }
@@ -110,7 +110,7 @@ test('PDF export passes a local graphic, actual selected font and unchanged fact
       'pdf',
       documentText(draft),
       async html => {
-        assert.match(html, new RegExp(`font-family:"${id ? 'TH Sarabun PSK' : 'TH Sarabun New'}"`));
+        assert.match(html, new RegExp(`font-family:"${id && id !== 'memo' ? 'TH Sarabun PSK' : 'TH Sarabun New'}"`));
         assert.match(html, /00123/);
         assert.match(html, /\[รอยืนยัน: งบประมาณ\]/);
         assert.doesNotMatch(html, /<script|src="https?:|position:fixed/);

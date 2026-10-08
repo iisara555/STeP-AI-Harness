@@ -2,6 +2,7 @@ import { parseThaiDate, formatThaiDate } from './thai-date';
 
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes';
+export type DocumentAttachmentRole = 'source' | 'template';
 export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean };
 export type DocumentTool = {
   id: DocumentToolId;
@@ -68,6 +69,8 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       field('unit', 'ส่วนราชการ'),
       field('subject', 'เรื่อง'),
       ...official,
+      field('reviewer', 'ผู้เสนอความเห็นและตำแหน่ง (ถ้ามี)', true, 'เว้นไว้ถ้าแบบหน่วยงานไม่มีช่องนี้ ไม่ถือว่าให้ความเห็นแล้ว'),
+      field('decisionSigner', 'ผู้พิจารณาและตำแหน่ง (ถ้ามี)', true, 'ระบุผู้ที่เจ้าของเรื่องเลือก ช่องคำสั่งและลายมือชื่อเว้นไว้'),
       field('background', 'เรื่องเดิม / ความเป็นมา', true),
       field('facts', 'ข้อเท็จจริง / ผลดำเนินการ', true),
       field('considerations', 'ข้อพิจารณา / เหตุผลและแหล่งเกณฑ์', true),
@@ -147,9 +150,15 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
   },
 ];
 export const documentTool = (id: unknown) => DOCUMENT_TOOLS.find(p => p.id === id);
-export function documentRequest(id: unknown, values: Record<string, string>, variant?: string) {
+export function documentRequest(
+  id: unknown,
+  values: Record<string, string>,
+  variant?: string,
+  attachmentRole: DocumentAttachmentRole = 'source',
+) {
   const profile = documentTool(id);
   if (!profile) throw new Error('INVALID_DOCUMENT_TOOL');
+  if (!['source', 'template'].includes(attachmentRole)) throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
   const kind = profile.variants.find(v => v.id === (variant || profile.variants[0].id));
   if (!kind) throw new Error('INVALID_DOCUMENT_VARIANT');
   if (Object.keys(values).some(key => !profile.fields.some(f => f.key === key))) throw new Error('INVALID_DOCUMENT_FIELDS');
@@ -173,12 +182,12 @@ export function documentRequest(id: unknown, values: Record<string, string>, var
       ];
     }),
   );
-  const sourceText = JSON.stringify({ document: profile.title, variant: kind.label, fields }, null, 2);
+  const sourceText = JSON.stringify({ document: profile.title, variant: kind.label, attachmentRole, fields }, null, 2);
   if (sourceText.length > 90_000) throw new Error('INPUT_LIMIT');
   const task =
     profile.id === 'memo' ? profile.title + kind.label : profile.variants.length > 1 ? `${profile.title} (${kind.label})` : profile.title;
   return {
-    text: `${task} จากข้อมูลในฟอร์มและไฟล์ต้นเรื่องที่แนบ ใช้ Skill ที่เลือกเป็นหลักและแม่แบบที่โหลดในบริบท จัดทำร่างเพื่อพิจารณาที่แก้ไขและส่งออกได้ เว้นข้อมูลที่ขาดเป็น [รอยืนยัน: ชื่อช่อง] พร้อมรายการข้อมูลและแหล่งอ้างอิงที่ต้องตรวจท้ายร่าง`,
+    text: `${task} จากข้อมูลในฟอร์มและไฟล์ที่แนบ ใช้ Skill ที่เลือกเป็นหลักและแม่แบบที่โหลดในบริบท จัดทำตัวเอกสารที่แก้ไขและส่งออกได้ใน document_draft เว้นข้อมูลที่ขาดเป็น [รอยืนยัน: ชื่อช่อง] แยกผลตรวจ รายการข้อมูลและแหล่งอ้างอิงที่ต้องยืนยันไว้ใน document_review ซึ่งแสดงในแอปและไม่เป็นส่วนหนึ่งของเอกสาร${attachmentRole === 'template' ? ' ไฟล์ที่แนบเป็นแบบฟอร์ม/ตัวอย่าง ใช้เฉพาะโครงสร้างและชื่อช่อง ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ หรือข้อมูลที่กรอกเป็นตัวอย่างในไฟล์นั้นเป็นข้อเท็จจริงของงานใหม่ เติมข้อมูลของงานนี้จากฟอร์มหรือหลักฐานต้นเรื่องที่เจ้าของยืนยันแยกเท่านั้น' : ' ไฟล์ที่แนบเป็นต้นเรื่องของงานนี้ คง provenance และตรวจความขัดแย้งกับฟอร์มตาม Skill'}`,
     sourceText,
   };
 }

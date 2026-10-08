@@ -1,7 +1,9 @@
-import { test } from 'node:test';
+import { test, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { EventEmitter } from 'node:events';
+import { type ChildProcess, type spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OcrService } from '../electron/ocr';
@@ -127,4 +129,76 @@ test('optional OCR component pins the Paddle build supported by each desktop arc
   assert.equal(ocrComponentSpec('darwin', 'arm64')?.paddle, 'paddlepaddle==3.3.0');
   assert.equal(ocrComponentSpec('darwin', 'x64')?.paddle, 'paddlepaddle==3.0.0');
   assert.equal(ocrComponentSpec('linux', 'x64'), null);
+});
+
+async function startupFixture(t: TestContext) {
+  const dir = await mkdtemp(join(tmpdir(), 'step-ocr-start-'));
+  await mkdir(join(dir, 'web'));
+  await writeFile(join(dir, 'app.py'), '# Synthetic startup fixture');
+  await writeFile(join(dir, 'web', 'receipt-review.js'), '// Synthetic fixture');
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const children: (EventEmitter & { pid: number; exitCode: null; kills: number; kill(): boolean })[] = [];
+  let running = false;
+  const launch = ((command: string, args: string[]) => {
+    if (command === 'taskkill.exe') {
+      children.find(child => child.pid === Number(args[1]))?.kill();
+      return new EventEmitter() as unknown as ChildProcess;
+    }
+    const child = Object.assign(new EventEmitter(), {
+      pid: 999999 + children.length,
+      exitCode: null,
+      kills: 0,
+      kill() {
+        this.kills++;
+        running = false;
+        return true;
+      },
+    });
+    children.push(child);
+    running = true;
+    return child as unknown as ChildProcess;
+  }) as typeof spawn;
+  const service = new OcrService(
+    () => dir,
+    'http://127.0.0.1:9',
+    () => process.execPath,
+    () => process.env,
+    launch,
+  );
+  const health = (value: boolean) => ({ running: value, crosscheck: false, handwriting: false, tesseract: false });
+  service.health = async () => health(running);
+  t.after(() => service.stop());
+  return { service, children, health };
+}
+
+test('concurrent OCR starts share one child process', async t => {
+  const { service, children } = await startupFixture(t);
+  const results = await Promise.all([service.start(), service.start(), service.start()]);
+  assert.equal(children.length, 1);
+  assert.ok(results.every(result => result.running));
+});
+
+test('stopping during the initial health check prevents a late OCR spawn', async t => {
+  const { service, children, health } = await startupFixture(t);
+  let resolve!: (value: ReturnType<typeof health>) => void;
+  const pending = new Promise<ReturnType<typeof health>>(done => {
+    resolve = done;
+  });
+  service.health = () => pending;
+  const result = service.start();
+  service.stop();
+  resolve(health(false));
+  await assert.rejects(result, /OCR_START_FAILED/);
+  assert.equal(children.length, 0);
+});
+
+test('an old OCR child exit cannot clear the child owned by a restart', async t => {
+  const { service, children } = await startupFixture(t);
+  await service.start();
+  service.stop();
+  await service.start();
+  children[0].emit('exit', 0);
+  service.stop();
+  assert.equal(children[0].kills, 1);
+  assert.equal(children[1].kills, 1);
 });

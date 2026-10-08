@@ -16,7 +16,8 @@ import {
   net,
   session as electronSession,
 } from 'electron';
-import { mkdir, writeFile, stat, appendFile, rm, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, appendFile, rm, readFile } from 'node:fs/promises';
+import { ExportWorkspace } from './export-workspace';
 import { tmpdir } from 'node:os';
 import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -36,6 +37,8 @@ import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { documentTool } from '../src/document-tools';
+import { inspectDocumentTemplate } from './document-template';
+import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
 import { Coordinator } from './coordinator';
 import { Automations, connectionBinding } from './cron';
 import { Mcp } from './mcp';
@@ -62,6 +65,7 @@ import { PDF_MARGINS, exportDocument, exportFormats } from './export';
 import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout';
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus } from './ocr';
+import { ReceiptOperations } from './receipt-operations';
 import { receiptReadingMode } from './receipt-status';
 import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
@@ -86,7 +90,7 @@ import { sendConsent, type SendSignals } from './consent-plan';
 import { Approvals } from './approvals';
 import { ToolGate } from './tool-gate';
 import { HookEngine, type HookPayload } from './hooks';
-import { attachmentReason } from './attachments';
+import { attachmentReason, attachmentCapabilities } from './attachments';
 import { DesktopTools } from './tools';
 import { Questions } from './questions';
 import { CostLedger } from './cost';
@@ -107,15 +111,19 @@ import { tm, useLanguage } from './i18n';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
 
 let window: BrowserWindow, store: Store, service: WorkService;
-const attachments = new Map<string, { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }>();
+const attachments = new Map<
+  string,
+  { view: Attachment; text: string; sessionId: string; images?: VisionInput[]; nativeBytes?: Buffer; sourceUsable?: boolean }
+>();
 const exportPaths = new Set<string>();
+const exporting = new Set<string>();
 const connecting = new Set<string>();
 const authCodes = new Map<string, (code: string | null) => void>();
 const consents = new Map<string, string>();
 const connectControllers = new Map<string, AbortController>();
 // Tasks in different Workspaces may run side by side; each session still runs one task at a time.
 let installingAnt = false;
-let ocrResolving = false;
+const receiptOperations = new ReceiptOperations();
 const validProviders = new Set(['openai', 'claude', 'gemini', 'antigravity', 'compatible', 'copilot']);
 // Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
 let logFile = '';
@@ -202,6 +210,7 @@ async function main() {
         details.mediaType === 'audio'),
   );
   store = new Store(join(data, 'workspace.sqlite'));
+  const documentTemplates = new DocumentTemplates(store);
   useLanguage(() => store?.settings().language);
   const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
@@ -301,32 +310,59 @@ async function main() {
   // USER.md sits in the chosen work folder so CLI and desktop share it; before one is chosen it stays in app data.
   const memoryDir = () => store.settings().workspace || data;
   const userFile = () => join(memoryDir(), 'USER.md');
-  async function writeUserMemory() {
-    const s = store.settings();
-    await userMemory.savePersonalization(memoryDir(), {
-      name: s.userName || '',
-      assistantName: s.assistant,
-      personality: s.personality || 'coworker',
-      assistantTone: s.assistantTone || '',
-      team: s.team,
-    });
-    exportPaths.add(userFile());
-    const assistantPath = join(memoryDir(), 'ASSISTANT.md');
-    const assistantText = userMemory.generateAssistantPreferences({
-      assistantName: s.assistant,
-      personality: s.personality,
-      assistantTone: s.assistantTone,
-    });
-    safeMemory(assistantText, harness.privacy);
-    // Preserve an employee-authored persona; create the derived default only once.
-    const assistantTarget = s.workspace ? await workbench.path('ASSISTANT.md', true) : assistantPath;
-    await writeFile(assistantTarget, assistantText, { flag: 'wx', mode: 0o600 }).catch(e => {
-      if (e.code !== 'EEXIST') throw e;
-    });
+  let memoryWriting: Promise<void> = Promise.resolve();
+  function writeUserMemory() {
+    const task = memoryWriting
+      .catch(() => {})
+      .then(async () => {
+        const s = store.settings();
+        const directory = s.workspace || data;
+        await userMemory.savePersonalization(directory, {
+          name: s.userName || '',
+          assistantName: s.assistant,
+          personality: s.personality || 'coworker',
+          assistantTone: s.assistantTone || '',
+          team: s.team,
+        });
+        exportPaths.add(join(directory, 'USER.md'));
+        const assistantPath = join(directory, 'ASSISTANT.md');
+        const assistantText = userMemory.generateAssistantPreferences({
+          assistantName: s.assistant,
+          personality: s.personality,
+          assistantTone: s.assistantTone,
+        });
+        safeMemory(assistantText, harness.privacy);
+        // Preserve an employee-authored persona; create the derived default only once.
+        if (directory !== memoryDir()) return;
+        const assistantTarget = s.workspace ? await workbench.path('ASSISTANT.md', true) : assistantPath;
+        if (directory !== memoryDir()) return;
+        await writeFile(assistantTarget, assistantText, { flag: 'wx', mode: 0o600 }).catch(e => {
+          if (e.code !== 'EEXIST') throw e;
+        });
+      });
+    memoryWriting = task;
+    return task;
   }
   const emit = (event: any) => {
     if (window && !window.isDestroyed()) window.webContents.send('step:event', event);
   };
+  const exportWorkspace = new ExportWorkspace(
+    () => store.settings(),
+    settings => store.put('settings', 'main', settings),
+    async () => {
+      const picked = await dialog.showOpenDialog(window, {
+        title: tm('เลือกหรือสร้างโฟลเดอร์ทำงานเพื่อส่งออก'),
+        defaultPath: store.settings().workspace || app.getPath('documents'),
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      return picked.canceled ? null : picked.filePaths[0] || null;
+    },
+    async () => {
+      approvals.close();
+      questions.close();
+      await writeUserMemory().catch(() => {});
+    },
+  );
   async function key(connection: Connection) {
     const encrypted = store.get<string>('secret', connection.id);
     if (!encrypted) return undefined;
@@ -461,6 +497,7 @@ async function main() {
   app.on('before-quit', () => updates.stop());
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
+    receiptOperations.cancel();
     voice.cancel();
     voicePermissionUntil = 0;
     voiceTicketUntil = 0;
@@ -962,10 +999,20 @@ async function main() {
     }),
   );
   let installing = false;
-  app.on('before-quit', () => ocr.stop());
+  app.on('before-quit', () => {
+    receiptOperations.cancel();
+    ocr.stop();
+  });
   // The receipt last opened on the receipt page, kept so the vision model can read the same file.
   let lastReceipt: { name: string; path: string; extension: string; bytes: Buffer } | undefined;
   const receiptVisionAllowed = (connection?: Connection) => receiptReadingMode(policyState.policy, connection?.provider).vision;
+  const receiptPolicyGuard = (signal: AbortSignal) => {
+    const currentPolicy = policyState.policy;
+    return () => {
+      if (currentPolicy !== policyState.policy) throw new Error('POLICY_CHANGED');
+      if (signal.aborted) throw new Error('CANCELLED');
+    };
+  };
   async function receiptOcrStatus(input: { connectionId?: unknown }, rawStatus?: OcrStatus) {
     const status = rawStatus || (await ocr.status());
     const connection =
@@ -1581,15 +1628,7 @@ async function main() {
         tools.revokeTransmission(inputText(input.id, 60));
         return snapshot();
       case 'workspace': {
-        const result = await dialog.showOpenDialog(window, { properties: ['openDirectory', 'createDirectory'] });
-        if (!result.canceled) {
-          approvals.close();
-          questions.close();
-          const s = store.settings();
-          s.workspace = result.filePaths[0];
-          store.put('settings', 'main', s);
-          await writeUserMemory().catch(() => {});
-        }
+        await exportWorkspace.choose();
         return store.settings();
       }
       case 'consentDeclined':
@@ -1649,7 +1688,9 @@ async function main() {
         nativeTheme.themeSource = theme;
         await writeUserMemory().catch(error => diagnose('user-memory-failed', { code: errorCode(error) }));
         // Setup-STeP-Skills offers this profile as its defaults, so Claude, Codex and Antigravity get the same one.
-        await writeSharedProfile(sharedProfile, s).catch(error => diagnose('shared-profile-failed', { code: errorCode(error) }));
+        await writeSharedProfile(sharedProfile, store.settings()).catch(error =>
+          diagnose('shared-profile-failed', { code: errorCode(error) }),
+        );
         return s;
       }
       case 'voiceStatus':
@@ -2076,147 +2117,166 @@ async function main() {
         return receiptOcrStatus(input);
       }
       case 'ocrStart':
+        if (installing) throw new Error('INSTALL_BUSY');
         return receiptOcrStatus(input, await ocr.start());
       case 'ocrRead': {
-        const health = await ocr.health();
-        // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
-        const connection =
-          typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
-        if (!health.running && (input.localOnly === true || !receiptVisionAllowed(connection))) throw new Error('OCR_UNAVAILABLE');
-        const picked = await dialog.showOpenDialog(window, {
-          title: tm('เลือกใบเสร็จ'),
-          properties: ['openFile'],
-          filters: [{ name: 'Receipts', extensions: OCR_EXTENSIONS }],
+        return receiptOperations.run(async signal => {
+          const check = receiptPolicyGuard(signal);
+          if (installing) throw new Error('INSTALL_BUSY');
+          const health = await ocr.health();
+          check();
+          // Without the local OCR, a receipt can still be read by the vision model alone (one reading, no comparison).
+          const connection =
+            typeof input.connectionId === 'string' ? store.get<Connection>('connection', inputText(input.connectionId, 80)) : undefined;
+          if (!health.running && (input.localOnly === true || !receiptVisionAllowed(connection))) throw new Error('OCR_UNAVAILABLE');
+          const picked = await dialog.showOpenDialog(window, {
+            title: tm('เลือกใบเสร็จ'),
+            properties: ['openFile'],
+            filters: [{ name: 'Receipts', extensions: OCR_EXTENSIONS }],
+          });
+          check();
+          if (picked.canceled) return null;
+          const path = picked.filePaths[0];
+          if (input.localOnly === true) await assertPrivateTrialPath(path);
+          if (!health.running) {
+            const bytes = await readFile(path);
+            if (bytes.length > 25 * 1024 * 1024) throw new Error('ATTACH_TOO_LARGE');
+            const extension = extname(path).slice(1).toLowerCase();
+            check();
+            lastReceipt = { name: basename(path), path, extension, bytes };
+            const type = previewTypes[extension];
+            const preview = type && bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : '';
+            return { name: basename(path), preview, result: null, visionOnly: true };
+          }
+          const started = performance.now();
+          const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting, signal);
+          check();
+          const elapsedMs = performance.now() - started;
+          lastReceipt = { name: basename(path), path, extension: read.extension, bytes: read.bytes };
+          // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
+          const type = previewTypes[read.extension];
+          const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
+          return { name: basename(path), preview, result: read.result, elapsedMs };
         });
-        if (picked.canceled) return null;
-        const path = picked.filePaths[0];
-        if (input.localOnly === true) await assertPrivateTrialPath(path);
-        if (!health.running) {
-          const bytes = await readFile(path);
-          if (bytes.length > 25 * 1024 * 1024) throw new Error('ATTACH_TOO_LARGE');
-          const extension = extname(path).slice(1).toLowerCase();
-          lastReceipt = { name: basename(path), path, extension, bytes };
-          const type = previewTypes[extension];
-          const preview = type && bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : '';
-          return { name: basename(path), preview, result: null, visionOnly: true };
-        }
-        const started = performance.now();
-        const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
-        const elapsedMs = performance.now() - started;
-        lastReceipt = { name: basename(path), path, extension: read.extension, bytes: read.bytes };
-        // Show the receipt beside its fields; formats Chromium cannot draw (PDF, TIFF) fall back to text only.
-        const type = previewTypes[read.extension];
-        const preview = type && read.bytes.length <= 8 * 1024 * 1024 ? `data:${type};base64,${read.bytes.toString('base64')}` : '';
-        return { name: basename(path), preview, result: read.result, elapsedMs };
       }
       case 'ocrResolve': {
-        if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
-        const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
-        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
-        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-        const rawMapping = input.mapping;
-        if (!rawMapping || typeof rawMapping !== 'object' || Array.isArray(rawMapping)) throw new Error('INVALID_INPUT');
-        const serialized = JSON.stringify(rawMapping);
-        if (serialized.length > 120_000) throw new Error('INPUT_LIMIT');
+        return receiptOperations.run(async signal => {
+          const check = receiptPolicyGuard(signal);
+          if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
+          const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
+          if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+          if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+          const rawMapping = input.mapping;
+          if (!rawMapping || typeof rawMapping !== 'object' || Array.isArray(rawMapping)) throw new Error('INVALID_INPUT');
+          const serialized = JSON.stringify(rawMapping);
+          if (serialized.length > 120_000) throw new Error('INPUT_LIMIT');
 
-        const settings = store.settings();
-        if (!settings.ocrAiConsentedAt) {
-          const answer = await dialog.showMessageBox(window, {
-            type: 'question',
-            title: tm('ให้ AI ช่วยกรองผล OCR'),
-            message: tm('ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ'),
-            detail: tm(
-              'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
-            ),
-            buttons: [tm('ยกเลิก'), tm('ใช้ AI กรอง')],
-            defaultId: 1,
-            cancelId: 0,
-          });
-          if (answer.response !== 1) return { cancelled: true };
-          store.put('settings', 'main', { ...settings, ocrAiConsentedAt: new Date().toISOString() });
-        }
+          const settings = store.settings();
+          if (!settings.ocrAiConsentedAt) {
+            const answer = await dialog.showMessageBox(window, {
+              type: 'question',
+              title: tm('ให้ AI ช่วยกรองผล OCR'),
+              message: tm('ส่งเฉพาะข้อความ OCR ที่ปิดบังข้อมูลอ่อนไหวแล้วให้ AI ช่วยเลือก candidate หรือระบุว่าไม่แน่ใจ'),
+              detail: tm(
+                'จะไม่ส่งภาพใบเสร็จ และ AI ไม่มีสิทธิสร้างยอดเงิน เลขภาษี หรือเลขเอกสารใหม่ ระบบยอมรับได้เฉพาะ candidate token ที่ OCR สร้างไว้เท่านั้น',
+              ),
+              buttons: [tm('ยกเลิก'), tm('ใช้ AI กรอง')],
+              defaultId: 1,
+              cancelId: 0,
+            });
+            check();
+            if (answer.response !== 1) return { cancelled: true };
+            store.put('settings', 'main', { ...store.settings(), ocrAiConsentedAt: new Date().toISOString() });
+          }
 
-        let blockedByPrivacy = false;
-        const sanitize = (value: string) => {
-          const scan = harness.privacy(value);
-          if (scan.action === 'block-external') blockedByPrivacy = true;
-          return scan.redactedText;
-        };
-        const resolver = buildReceiptAiResolver(rawMapping, sanitize);
-        if (blockedByPrivacy) throw new Error('PRIVACY_REVIEW_REQUIRED');
-        if (!resolver.fields.length) throw new Error('INVALID_INPUT');
+          let blockedByPrivacy = false;
+          const sanitize = (value: string) => {
+            const scan = harness.privacy(value);
+            if (scan.action === 'block-external') blockedByPrivacy = true;
+            return scan.redactedText;
+          };
+          const resolver = buildReceiptAiResolver(rawMapping, sanitize);
+          if (blockedByPrivacy) throw new Error('PRIVACY_REVIEW_REQUIRED');
+          if (!resolver.fields.length) throw new Error('INVALID_INPUT');
 
-        ocrResolving = true;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120_000);
-        try {
-          const current = await runtime(connection);
-          const response = await current.adapter.run(resolver.prompt, connection, {
-            ...current.context,
-            signal: controller.signal,
-            emit: () => {},
-          });
-          const decisions = resolveReceiptAiResponse(response, resolver.tokens, resolver.fields);
-          diagnose('ocr-ai-filter', { provider: connection.provider, decisions: String(decisions.length) });
-          return { decisions };
-        } catch (error) {
-          diagnose('ocr-ai-filter-failed', { provider: connection.provider, code: errorCode(error) });
-          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
-          throw error;
-        } finally {
-          clearTimeout(timeout);
-          ocrResolving = false;
-        }
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 120_000);
+          try {
+            const current = await runtime(connection);
+            check();
+            const response = await current.adapter.run(resolver.prompt, connection, {
+              ...current.context,
+              signal: AbortSignal.any([signal, controller.signal]),
+              emit: () => {},
+            });
+            check();
+            const decisions = resolveReceiptAiResponse(response, resolver.tokens, resolver.fields);
+            diagnose('ocr-ai-filter', { provider: connection.provider, decisions: String(decisions.length) });
+            return { decisions };
+          } catch (error) {
+            diagnose('ocr-ai-filter-failed', { provider: connection.provider, code: errorCode(error) });
+            if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+            throw error;
+          } finally {
+            clearTimeout(timeout);
+          }
+        });
       }
       case 'receiptVision': {
-        // A second, independent reading of the receipt by a vision model; the page compares it with the OCR field by field.
-        if (!receiptVisionAllowed()) throw new Error('VISION_DISABLED');
-        if (!lastReceipt) throw new Error('INVALID_INPUT');
-        if (service.activeCount() >= MAX_PARALLEL_RUNS || ocrResolving) throw new Error('RUN_LIMIT');
-        const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
-        if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
-        if (!receiptVisionAllowed(connection)) throw new Error('VISION_UNAVAILABLE');
-        if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
-        const settings = store.settings();
-        if (!settings.receiptVisionConsentedAt) {
-          const answer = await dialog.showMessageBox(window, {
-            type: 'question',
-            title: tm('ให้ AI อ่านภาพใบเสร็จ'),
-            message: tm('ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง'),
-            detail: tm(
-              'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง',
-            ),
-            buttons: [tm('ยกเลิก'), tm('ให้ AI อ่านภาพ')],
-            defaultId: 1,
-            cancelId: 0,
-          });
-          if (answer.response !== 1) return { cancelled: true };
-          store.put('settings', 'main', { ...settings, receiptVisionConsentedAt: new Date().toISOString() });
-        }
-        const images = await receiptImages(lastReceipt);
-        ocrResolving = true;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 180_000);
-        try {
-          const current = await runtime(connection);
-          const reply = await current.adapter.run('อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น', connection, {
-            ...current.context,
-            system: RECEIPT_VISION_SYSTEM,
-            images,
-            signal: controller.signal,
-            emit: () => {},
-          });
-          const reading = parseVisionReading(reply);
-          diagnose('receipt-vision', { provider: connection.provider, fields: String(Object.keys(reading.fields).length) });
-          return { ...reading, model: connection.model || '' };
-        } catch (error) {
-          diagnose('receipt-vision-failed', { provider: connection.provider, code: errorCode(error) });
-          if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
-          throw error;
-        } finally {
-          clearTimeout(timeout);
-          ocrResolving = false;
-        }
+        return receiptOperations.run(async signal => {
+          const check = receiptPolicyGuard(signal);
+          // A second, independent reading of the receipt by a vision model; the page compares it with the OCR field by field.
+          if (!receiptVisionAllowed()) throw new Error('VISION_DISABLED');
+          if (!lastReceipt) throw new Error('INVALID_INPUT');
+          if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
+          const connection = store.get<Connection>('connection', inputText(input.connectionId, 80));
+          if (!connection?.ready) throw new Error('CONNECTION_NOT_READY');
+          if (!receiptVisionAllowed(connection)) throw new Error('VISION_UNAVAILABLE');
+          if (connecting.has(connection.id)) throw new Error('CONNECTION_BUSY');
+          const settings = store.settings();
+          if (!settings.receiptVisionConsentedAt) {
+            const answer = await dialog.showMessageBox(window, {
+              type: 'question',
+              title: tm('ให้ AI อ่านภาพใบเสร็จ'),
+              message: tm('ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง'),
+              detail: tm(
+                'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง',
+              ),
+              buttons: [tm('ยกเลิก'), tm('ให้ AI อ่านภาพ')],
+              defaultId: 1,
+              cancelId: 0,
+            });
+            check();
+            if (answer.response !== 1) return { cancelled: true };
+            store.put('settings', 'main', { ...store.settings(), receiptVisionConsentedAt: new Date().toISOString() });
+          }
+          check();
+          const images = await receiptImages(lastReceipt);
+          check();
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 180_000);
+          try {
+            const current = await runtime(connection);
+            check();
+            const reply = await current.adapter.run('อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น', connection, {
+              ...current.context,
+              system: RECEIPT_VISION_SYSTEM,
+              images,
+              signal: AbortSignal.any([signal, controller.signal]),
+              emit: () => {},
+            });
+            check();
+            const reading = parseVisionReading(reply);
+            diagnose('receipt-vision', { provider: connection.provider, fields: String(Object.keys(reading.fields).length) });
+            return { ...reading, model: connection.model || '' };
+          } catch (error) {
+            diagnose('receipt-vision-failed', { provider: connection.provider, code: errorCode(error) });
+            if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
+            throw error;
+          } finally {
+            clearTimeout(timeout);
+          }
+        });
       }
       case 'ocrTrialSave':
       case 'ocrSave': {
@@ -2389,18 +2449,31 @@ async function main() {
         if (skill && !(await skillCatalog.loadSkillCatalog(root)).some((s: any) => s.name === skill && s.inRouter))
           throw new Error('SKILL_NOT_ROUTED');
         if (Array.isArray(input.attachments) && input.attachments.length > 1) throw new Error('ONE_SOURCE_PER_RUN');
-        const selected: { view: Attachment; text: string; sessionId: string; images?: VisionInput[] }[] = (
-          Array.isArray(input.attachments) ? input.attachments : []
-        ).map((aid: string) => {
+        const attachmentRole = input.attachmentRole || 'source';
+        if (!['source', 'template'].includes(attachmentRole)) throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
+        const selected: {
+          view: Attachment;
+          text: string;
+          sessionId: string;
+          images?: VisionInput[];
+          nativeBytes?: Buffer;
+          sourceUsable?: boolean;
+        }[] = (Array.isArray(input.attachments) ? input.attachments : []).map((aid: string) => {
           const a = attachments.get(aid);
-          if (!a || !a.view.usable || a.sessionId !== id) throw new Error('ATTACHMENT_NOT_APPROVED');
+          if (!a || !a.view.usable || a.sessionId !== id || (attachmentRole !== 'template' && a.sourceUsable === false))
+            throw new Error('ATTACHMENT_NOT_APPROVED');
           return a;
         });
         const vision = selected.some(a => Boolean(a.images?.length));
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         if (vision && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
         if (coordinated && vision) throw new Error('VISION_UNAVAILABLE');
-        const attachmentText = selected.map((a: any) => a.text).join('\n\n');
+        if (!['source', 'template'].includes(attachmentRole) || (attachmentRole === 'template' && (!draftingTool || selected.length !== 1)))
+          throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
+        const nativeTemplate = attachmentRole === 'template' ? selected[0].nativeBytes : undefined;
+        if (attachmentRole === 'template' && !nativeTemplate) throw new Error('DOCUMENT_TEMPLATE_REQUIRED');
+        const templateDescription = nativeTemplate ? await inspectDocumentTemplate(nativeTemplate, draftingTool!.id) : undefined;
+        const attachmentText = templateDescription?.context || selected.map((a: any) => a.text).join('\n\n');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
         if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');
@@ -2454,6 +2527,7 @@ async function main() {
                 text,
                 skill,
                 draftingTool?.id || '',
+                attachmentRole,
                 workMode,
                 input.imageModel || '',
                 String(coordinated),
@@ -2503,7 +2577,14 @@ async function main() {
           diagnose('prompt-blocked', { code: 'HOOK_BLOCKED' });
           throw new Error('HOOK_BLOCKED');
         }
+        // Awaited hooks can admit another run. Check again before changing task state or snapshots.
+        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         const queued = store.session(id);
+        const templateInfo =
+          nativeTemplate && templateDescription
+            ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
+            : undefined;
         queued.status = 'queued';
         store.save(queued);
         void (
@@ -2527,6 +2608,7 @@ async function main() {
                   images: selected.flatMap(a => a.images || []),
                   ...(workflow ? { workflow } : {}),
                   ...(draftingTool ? { documentTool: draftingTool.id } : {}),
+                  ...(templateInfo ? { documentTemplate: templateInfo } : {}),
                 },
               )
         ).catch(error => {
@@ -2568,7 +2650,9 @@ async function main() {
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         const ended = await fireHook({ event: 'session_end', sessionId: id });
         if (ended.blocked) throw new Error('HOOK_BLOCKED');
+        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         store.remove('session', id);
+        documentTemplates.remove(id);
         for (const [aid, a] of attachments) if (a.sessionId === id) attachments.delete(aid);
         return true;
       }
@@ -2605,6 +2689,20 @@ async function main() {
         if (result.canceled) return null;
         const path = result.filePaths[0],
           extension = extname(path).slice(1).toLowerCase();
+        const attachmentTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
+        if (input.documentTool !== undefined && !attachmentTool) throw new Error('INVALID_DOCUMENT_TOOL');
+        let nativeBytes: Buffer | undefined;
+        let nativeDescription: Awaited<ReturnType<typeof inspectDocumentTemplate>> | undefined;
+        if (extension === 'docx' && attachmentTool && attachmentTool.id !== 'tor') {
+          try {
+            // Snapshot only a natively picked template candidate. General sources retain their own intake limits.
+            nativeBytes = await readTemplateSnapshot(path);
+            nativeDescription = await inspectDocumentTemplate(nativeBytes, attachmentTool.id);
+          } catch {
+            nativeBytes = undefined;
+            // A file unsuitable for native export may still be readable under the ordinary source privacy gate.
+          }
+        }
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
           images: VisionInput[] | undefined;
         // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
@@ -2647,29 +2745,41 @@ async function main() {
           }
         }
         // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
-        const reason = attachmentReason(report);
-        const usable = !reason;
+        // A sample-free native outline can be used even when original source text must be withheld.
+        // This does not approve sending the original text/images; source mode keeps its original gate.
+        const { sourceUsable, usable, reason } = attachmentCapabilities(report, Boolean(nativeDescription));
         const view: Attachment = {
           id: randomUUID(),
           name: basename(path),
-          status: usable
-            ? scannedPdf
-              ? tm('PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน', images?.length || 0)
-              : images
-                ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
-                : report.ocr
-                  ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
-                  : report.images
-                    ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
-                    : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
-            : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
-          preview: usable ? report.redactedText : '',
+          status: nativeDescription
+            ? tm('แม่แบบ DOCX พร้อมใช้ · ข้อมูลตัวอย่างไม่ส่งให้ AI')
+            : usable
+              ? scannedPdf
+                ? tm('PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน', images?.length || 0)
+                : images
+                  ? tm('ส่งภาพต้นฉบับพร้อมข้อความ OCR · ตรวจภาพก่อนยืนยัน')
+                  : report.ocr
+                    ? tm('อ่านข้อความด้วย OCR · ตรวจความถูกต้องก่อนส่ง')
+                    : report.images
+                      ? tm('ตรวจข้อความแล้ว · รูปภาพ {0} รูปในไฟล์ไม่ได้ส่งให้ AI ถ้ามีข้อมูลสำคัญในรูปให้พิมพ์เพิ่ม', report.images)
+                      : tm('ตรวจข้อความแล้ว · ต้องทบทวนก่อนส่ง')
+              : tm('ส่งไฟล์นี้ให้ AI ไม่ได้'),
+          preview: nativeDescription ? tm('ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม') : usable ? report.redactedText : '',
           usable,
+          ...(nativeDescription ? { templateReady: true } : {}),
+          sourceUsable,
           ...(images?.length ? { vision: true, imagePreview: `data:${images[0].mime};base64,${images[0].data}` } : {}),
           ...(reason ? { reason } : {}),
         };
         if (reason) diagnose('attach-refused', { reason, extension: extname(path).toLowerCase().slice(0, 8) });
-        attachments.set(view.id, { view, text: usable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '', sessionId, images });
+        attachments.set(view.id, {
+          view,
+          text: sourceUsable ? ocrAttachmentSource(report, 'attachment:' + view.id) : '',
+          sessionId,
+          images,
+          nativeBytes,
+          sourceUsable,
+        });
         return view;
       }
       case 'export': {
@@ -2678,40 +2788,60 @@ async function main() {
         if (!exportFormats.includes(format) || !s.draft.trim()) throw new Error('INVALID_EXPORT');
         // The stored task selects the layout; renderer input cannot replace its Skill or template.
         const layout = ['docx', 'pdf'].includes(format) ? resolveDocumentLayout(s.documentTool, input.font, input.garuda) : undefined;
+        if (s.documentTemplate && format === 'pdf') throw new Error('DOCUMENT_TEMPLATE_DOCX_ONLY');
+        if (s.documentTemplate && format === 'docx' && (input.font || (input.garuda && input.garuda !== 'auto')))
+          throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
+        const template = s.documentTemplate && format === 'docx' ? documentTemplates.load(s) : undefined;
         if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
-        const workspace = store.settings().workspace;
-        if (!workspace || !(await stat(workspace)).isDirectory()) throw new Error('WORKSPACE_REQUIRED');
-        const result = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title: s.title, extension: format });
-        await exportDocument(
-          result.path,
-          format,
-          s.draft,
-          async html => {
-            const print = new BrowserWindow({
-              show: false,
-              webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
-            });
-            try {
-              await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-              return await print.webContents.printToPDF({
-                printBackground: true,
-                pageSize: 'A4',
-                margins: PDF_MARGINS,
-                preferCSSPageSize: true,
+        if (exporting.has(s.id)) throw new Error('EXPORT_BUSY');
+        exporting.add(s.id);
+        try {
+          const workspace = await exportWorkspace.resolve();
+          if (!workspace) return { canceled: true };
+          if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
+          const result = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title: s.title, extension: format });
+          await exportDocument(
+            result.path,
+            format,
+            s.draft,
+            async html => {
+              const print = new BrowserWindow({
+                show: false,
+                webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
               });
-            } finally {
-              print.destroy();
-            }
-          },
-          s.document,
-          layout ? { documentTool: layout.id, font: layout.font, garuda: input.garuda } : undefined,
-        );
-        exportPaths.add(result.path);
-        if (!layout) return result;
-        const fontStatus = await window.webContents
-          .executeJavaScript(`(${probeDocumentFont.toString()})(${JSON.stringify(layout.font)})`)
-          .catch(() => 'unknown');
-        return { ...result, layout: { documentTool: layout.id, font: layout.font, fontStatus, garudaHeightCm: layout.garudaHeightCm } };
+              try {
+                await print.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+                return await print.webContents.printToPDF({
+                  printBackground: true,
+                  pageSize: 'A4',
+                  margins: PDF_MARGINS,
+                  preferCSSPageSize: true,
+                });
+              } finally {
+                print.destroy();
+              }
+            },
+            s.document,
+            layout ? { documentTool: layout.id, font: layout.font, garuda: input.garuda, template } : undefined,
+          );
+          exportPaths.add(result.path);
+          if (!layout) return result;
+          const font = template ? s.documentTemplate!.font : layout.font;
+          const fontStatus = await window.webContents
+            .executeJavaScript(`(${probeDocumentFont.toString()})(${JSON.stringify(font)})`)
+            .catch(() => 'unknown');
+          return {
+            ...result,
+            layout: {
+              documentTool: layout.id,
+              font,
+              fontStatus,
+              ...(template ? { templateName: s.documentTemplate!.name } : { garudaHeightCm: layout.garudaHeightCm }),
+            },
+          };
+        } finally {
+          exporting.delete(s.id);
+        }
       }
       case 'reveal': {
         if (!exportPaths.has(input.path)) throw new Error('INVALID_PATH');

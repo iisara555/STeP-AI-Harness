@@ -26,12 +26,15 @@ export const isOcrFolder = (folder: string) =>
 
 export class OcrService {
   private child?: ChildProcess;
+  private starting?: Promise<OcrStatus>;
+  private generation = 0;
   // `python` points at the interpreter to run; by default the experiment folder's own .venv.
   constructor(
     private folder: () => string,
     private base = OCR_URL,
     private python: () => string = () => ocrPython(this.folder()),
     private env: () => NodeJS.ProcessEnv = () => process.env,
+    private launch: typeof spawn = spawn,
   ) {}
 
   async health() {
@@ -59,30 +62,60 @@ export class OcrService {
   }
 
   async start() {
-    if ((await this.health()).running) return this.status();
+    if (this.starting) return this.starting;
+    const pending = this.startWorker(this.generation);
+    this.starting = pending;
+    try {
+      return await pending;
+    } finally {
+      if (this.starting === pending) this.starting = undefined;
+    }
+  }
+
+  private async startWorker(generation: number): Promise<OcrStatus> {
+    const check = () => {
+      if (generation !== this.generation) throw new Error('OCR_START_FAILED');
+    };
+    const current = await this.health();
+    check();
+    if (current.running) {
+      const status = await this.status();
+      check();
+      return status;
+    }
     const folder = this.folder();
     if (!isOcrFolder(folder) || !existsSync(this.python())) throw new Error('OCR_NOT_INSTALLED');
     // No shell, no console window; the service binds to 127.0.0.1 by default.
-    this.child = spawn(this.python(), ['app.py', '--no-browser'], {
+    const child = this.launch(this.python(), ['app.py', '--no-browser'], {
       cwd: folder,
       windowsHide: true,
       shell: false,
       stdio: 'ignore',
       env: this.env(),
     });
-    this.child.on('exit', () => {
-      this.child = undefined;
-    });
+    this.child = child;
+    const finished = () => {
+      if (this.child === child) this.child = undefined;
+    };
+    child.once('exit', finished);
+    child.once('error', finished);
     for (let waited = 0; waited < 90_000; waited += 1000) {
-      if ((await this.health()).running) return this.status();
-      if (!this.child) break;
+      const health = await this.health();
+      check();
+      if (this.child !== child) break;
+      if (health.running) {
+        const status = await this.status();
+        check();
+        return status;
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    this.stop();
+    check();
+    if (this.child === child) this.stop();
     throw new Error('OCR_START_FAILED');
   }
 
-  async recognize(path: string, crosscheck: boolean, tesseract = false, handwriting = false) {
+  async recognize(path: string, crosscheck: boolean, tesseract = false, handwriting = false, signal?: AbortSignal) {
     const extension = extname(path).slice(1).toLowerCase();
     if (!OCR_EXTENSIONS.includes(extension)) throw new Error('OCR_UNSUPPORTED_FILE');
     const handle = await open(path, 'r');
@@ -109,9 +142,10 @@ export class OcrService {
         method: 'POST',
         body: bytes,
         headers: { 'Content-Type': 'application/octet-stream' },
-        signal: AbortSignal.timeout(600_000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(600_000)]) : AbortSignal.timeout(600_000),
       });
     } catch {
+      if (signal?.aborted) throw new Error('CANCELLED');
       throw new Error('OCR_UNAVAILABLE');
     }
     const body: any = await response.json().catch(() => null);
@@ -121,11 +155,16 @@ export class OcrService {
 
   // Only a service this app started is stopped; a server the user runs themselves is left alone.
   stop() {
+    this.generation++;
+    this.starting = undefined;
     const child = this.child;
     this.child = undefined;
     if (!child?.pid || child.exitCode !== null) return;
     if (process.platform === 'win32')
-      spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' });
+      this.launch('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, shell: false, stdio: 'ignore' }).once(
+        'error',
+        () => {},
+      );
     else child.kill();
   }
 }

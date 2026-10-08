@@ -6,6 +6,38 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.29 — 2026-10-08
+
+### Desktop: local agency DOCX templates
+
+- Use a privately selected DOCX form for memos, external letters, project proposals and department minutes. TOR retains the existing 16-section working template by owner choice. Native export reflows the current editor content with the selected form’s paragraph/run styles, tabs, graphics, native table grids/merged budget bands, headers/footers and portrait/landscape sections. Keep source author/custom metadata and external hyperlinks out of the new document; retain missing facts as placeholders.
+- Send only a bounded, sample-free outline and column meanings to AI for an agency template. Keep selected file bytes in a session-owned local snapshot; preserve through retries/revisions, exclude snapshot references from JSON export and detach them from forks/new tasks. A verified outline does not authorize sending the original source text when the privacy intake withholds it. No MIS document, credential or image is bundled in the public repository or installer. Employees select their authorized MIS files locally.
+- Stop export on mismatched table/column counts or recognized column meanings rather than dropping content or exchanging quantity and money. Preserve native fonts/emblems; omit old body signature images and unused media. Native-template PDF is produced from the reviewed DOCX in Word. Reject macros, active fields, embedded objects, unsupported tracked/controlled content, external resources, unsafe ZIP/XML and over-limit files. Bound source reads even if a selected file grows. Reuse existing dependencies; no font/runtime download or policy-default change.
+- Add test-first synthetic native-template/storage/security tests to the Desktop test glob and a four-profile Electron smoke to `test:electron`. Private QA also exercises four MIS source forms with synthetic body facts outside the repo. TH SarabunIT๙ is unavailable on the cloud machine, so memo/letter fallback rendering does not establish font/layout conformance; review every exported page in Microsoft Word with the template fonts installed. No live AI factual-accuracy or real-document OCR claim.
+
+
+### Desktop: separate document bodies from Skill review and correct memo layout
+
+- Keep editable/exported document content separate from AI explanations, Skill verification tables, unresolved-field lists and export advice across all five drafting tools. Preserve review in the app after acceptance, indicate when the draft has changed, and handle existing proposal review headings without removing legitimate document tables or source placeholders. Reject incomplete/ambiguous output envelopes.
+- Use continuous narrative paragraphs for short memos and support optional reviewer/decision-maker fields without inventing approval or signatures. Recognize the agency unit label and signature names/positions, avoid distributing short final lines, use TH Sarabun New for memos and a 30 pt bold memo title. Map Markdown HTML break tokens to safe native line breaks; keep literal code and arbitrary HTML as text.
+- Add synthetic document-body/review, service/revision, native DOCX layout and renderer/IPC/export regressions. Real agency examples stay outside the repository; these checks do not establish live-model factual accuracy, legal compliance or approval. Included in Desktop 0.5.29; Harness remains 0.7.6.
+- When no working folder exists, Export opens a native folder picker with folder creation and continues exporting into the chosen folder. Cancellation keeps the draft and configuration intact; concurrent exports cannot open duplicate dialogs for the same document. Workspace selection merges current settings and retains the existing export action gate.
+- Align memo reference/date fields in two PDF columns while preserving their rich labels and ambiguous date placeholders, matching the native DOCX tab layout.
+- Let employees identify an attachment as the current task's source or an example agency form. Carry that purpose through the drafting request and Skill checks, directing example forms to supply structure rather than prior names, dates, project codes or amounts. Template choice does not verify extracted values or grant approval.
+
+### Runtime maintenance: task ownership, receipt review and concurrent persistence
+
+- Keep chat run cleanup under one owner so a new run started from a completion event retains cancellation and exclusivity. Share concurrent OCR startup, cancel stopped attempts, and prevent a late child exit from clearing a replacement.
+- Recheck task ownership after awaited organization hooks so duplicate sends cannot overwrite an active task's status and a delayed deletion cannot remove its draft or private template.
+- Preserve human receipt corrections and their provenance when delayed AI readings arrive; keep form values, descriptions and review state together. Serialize receipt read/vision/filter before dialogs, retain current settings when recording consent, and recheck/cancel on policy changes before sending images or OCR text.
+- Apply only current Desktop snapshots and task selection replies; track background completion per session/attempt. Serialize draft saves, configuration updates, personalization synchronization and shared-profile writes. Use atomic private temporary files for configuration/profile persistence and remove unused runtime imports.
+- Add synthetic concurrency regressions and a real Electron renderer/IPC smoke; record scope and limits in `docs/refactor-review.md`. No dependency, OCR acceptance gate, Skill registration or policy-default change; tests do not establish accuracy on real receipts.
+
+### Documentation: task-first STeP AI, Desktop and Skills introductions
+
+- Rewrite the product READMEs around employee tasks, first-use steps, drafting and export outcomes, with Thai examples and clear links for getting started or asking for help. Keep receipt review, pending-source fields, outgoing AI data and organizational approval limits visible without promising real-document accuracy or automatic privacy checks.
+- Move source inventories, development commands, packaging, evaluation and policy details to separate maintainer guides; include those guides in the package whitelist. Regenerate the Skills README from its source and update the existing documentation checks to verify inventory and links at their new locations. No application, Skill behavior, version or policy-default change.
+
 ## Desktop v0.5.28 — 2026-10-07
 
 STeP Desktop 0.5.28 adds document-type Garuda exports and packages the Skill-backed document layouts and Antigravity chat recovery below. Harness remains 0.7.6.

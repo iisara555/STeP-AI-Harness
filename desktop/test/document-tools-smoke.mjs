@@ -9,6 +9,9 @@ import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 
 const requests = [];
+const fixtures = JSON.parse(await readFile(new URL('./fixtures/document-drafts.json', import.meta.url), 'utf8'));
+const previewFolder = join(tmpdir(), 'step-document-review');
+await mkdir(previewFolder, { recursive: true });
 const server = createServer(async (req, res) => {
   let body = '';
   for await (const chunk of req) body += chunk;
@@ -20,8 +23,17 @@ const server = createServer(async (req, res) => {
     .join('\n');
   const prompt = messages.at(-1)?.content || '';
   if (system.includes('<document_tool_contract>')) requests.push({ system, prompt });
-  const text =
-    '# ร่างเพื่อพิจารณา\n\nเรื่อง ทดลองสังเคราะห์\n\n[รอยืนยัน: เลขหนังสือ]\n\n[รอยืนยัน: งบประมาณ]\n\n## ตรวจข้อมูล\n\nตรวจข้อมูลและแหล่งที่ขาดก่อนเสนอ';
+  const type = system.match(/Selected document: (.*?). Primary Skill:/)?.[1];
+  const id = {
+    'ร่าง TOR': 'tor',
+    ร่างบันทึกข้อความ: 'memo',
+    ร่างหนังสือราชการ: 'letter',
+    ร่างโครงการ: 'project',
+    ร่างรายงานการประชุม: 'minutes',
+  }[type];
+  const text = id
+    ? `<document_draft>\n${fixtures.documents[id]}\n</document_draft>\n<document_review>\n${fixtures.review}\n</document_review>`
+    : 'Synthetic connection check';
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
   res.end('data: [DONE]\n\n');
@@ -138,6 +150,7 @@ try {
     }
     if (id === 'memo') {
       await form.getByRole('button', { name: 'แนบต้นเรื่อง / แบบฟอร์มหน่วยงาน' }).click();
+      await form.getByLabel('ใช้ไฟล์แนบเป็น', { exact: true }).selectOption('source');
       await expect(form.getByText('synthetic-source.txt', { exact: true })).toBeVisible();
       await form.getByLabel('เลขหนังสือ', { exact: true }).fill('0007/๖๙');
       await form.getByLabel('วันที่', { exact: true }).fill('1 ม.ค. 70');
@@ -148,12 +161,18 @@ try {
       await open();
       await expect(form.getByText('synthetic-source.txt', { exact: true })).toBeVisible();
       await expect(form.getByLabel('เลขหนังสือ', { exact: true })).toHaveValue('0007/๖๙');
+      await expect(form.getByLabel('ใช้ไฟล์แนบเป็น', { exact: true })).toHaveValue('source');
     }
     await form.getByRole('button', { name: 'ให้ AI ร่างเอกสาร' }).click();
     await expect(page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true }).click();
     await expect.poll(async () => (await snapshot()).sessions.find(s => s.documentTool === id)?.status, { timeout: 30000 }).toBe('review');
     last = (await snapshot()).sessions.find(s => s.documentTool === id);
+    assert.ok(last.proposals[0].review.includes('Skill Verification'));
+    assert.ok(!last.proposals[0].text.includes('Skill Verification'));
+    const reviewPanel = page.locator('.proposal .document-review');
+    await reviewPanel.locator('summary').click();
+    await expect(reviewPanel).toContainText('Unresolved Fields');
     assert.equal(last.skill, skill);
     assert.ok(last.proposals[0].sources.some(p => p.endsWith(template)));
     assert.ok(last.proposals[0].sources.includes('docs/thai-data-formatting.md'));
@@ -169,6 +188,8 @@ try {
     }
     if (id === 'memo') {
       assert.ok(call.prompt.includes('SYNTHETIC ATTACHED SOURCE'));
+      assert.ok(call.prompt.includes('"attachmentRole": "source"'));
+      assert.ok(call.prompt.includes('คง provenance และตรวจความขัดแย้งกับฟอร์ม'));
       assert.ok(call.prompt.includes('0007/๖๙'));
       await open();
       await expect(form.getByText('synthetic-source.txt', { exact: true })).toHaveCount(0);
@@ -180,13 +201,19 @@ try {
     else await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveCount(0);
     const exported = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), last.id);
     assert.equal(exported.layout.documentTool, id);
-    assert.equal(exported.layout.font, 'TH Sarabun PSK');
+    assert.equal(exported.layout.font, id === 'memo' ? 'TH Sarabun New' : 'TH Sarabun PSK');
     assert.equal(exported.layout.fontStatus, 'missing');
     assert.equal(exported.layout.garudaHeightCm, id === 'memo' ? 1.5 : id === 'letter' ? 3 : undefined);
     const JSZip = createRequire(import.meta.url)('jszip');
     const zip = await JSZip.loadAsync(await readFile(exported.path), { checkCRC32: true });
+    await writeFile(join(previewFolder, `app-${id}.docx`), await readFile(exported.path));
     const document = await zip.file('word/document.xml').async('string');
-    assert.match(document, /w:cs="TH Sarabun PSK"/);
+    assert.ok(document.includes(`w:cs="${id === 'memo' ? 'TH Sarabun New' : 'TH Sarabun PSK'}"`));
+    assert.ok(!document.includes('Skill Verification') && !document.includes('Unresolved Fields'));
+    assert.ok(!document.includes('document_draft') && !document.includes('&lt;br'));
+    const accepted = (await snapshot()).sessions.find(s => s.id === last.id);
+    assert.ok(accepted.documentReview.text.includes('Skill Verification'));
+    await expect(page.locator('.tiptap')).not.toContainText('Skill Verification');
     assert.match(document, /<w:keepNext\/>/);
     assert.match(await zip.file('word/footer1.xml').async('string'), /PAGE/);
     if (id === 'memo' || id === 'letter') {
@@ -202,14 +229,19 @@ try {
       await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
       await expect(page.locator('.document-export-info')).toContainText(`ตราครุฑสูง ${id === 'memo' ? '1.5' : '3'} ซม.`);
       const pdf = await page.evaluate(id => window.step.call('export', { id, format: 'pdf' }), last.id);
+      await writeFile(join(previewFolder, `app-${id}.pdf`), await readFile(pdf.path));
       assert.equal((await readFile(pdf.path)).subarray(0, 5).toString(), '%PDF-');
       assert.equal(pdf.layout.garudaHeightCm, id === 'memo' ? 1.5 : 3);
       await page.getByLabel('รูปแบบส่งออก', { exact: true }).selectOption('docx');
+    } else {
+      const pdf = await page.evaluate(id => window.step.call('export', { id, format: 'pdf' }), last.id);
+      assert.equal((await readFile(pdf.path)).subarray(0, 5).toString(), '%PDF-');
+      await writeFile(join(previewFolder, `app-${id}.pdf`), await readFile(pdf.path));
     }
   }
   assert.equal(requests.length, 5);
   const editor = page.locator('.tiptap[contenteditable="true"]');
-  await expect(editor).toContainText('[รอยืนยัน: งบประมาณ]');
+  await expect(editor).toContainText('[รอยืนยัน: เวลา]');
   await editor.fill('ร่างเพื่อพิจารณา\nแก้ไขสังเคราะห์โดยเจ้าของเรื่อง\n[รอยืนยัน: งบประมาณ]');
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
   await expect
@@ -223,6 +255,49 @@ try {
   assert.ok(xml.includes('แก้ไขสังเคราะห์โดยเจ้าของเรื่อง'));
   assert.ok(xml.includes('[รอยืนยัน: งบประมาณ]'));
   assert.ok(output.path.startsWith(workspace));
+  // Export owns folder selection/creation, including cancellation, without a trip to Settings.
+  const savedDraft = (await snapshot()).sessions.find(s => s.id === last.id).draft;
+  // Simulate a fresh profile without weakening the public settings input validator.
+  const freshProfile = new DatabaseSync(join(home, 'workspace.sqlite'));
+  const settings = JSON.parse(freshProfile.prepare("SELECT value FROM records WHERE kind='settings' AND id='main'").get().value);
+  settings.workspace = '';
+  freshProfile.prepare("UPDATE records SET value=? WHERE kind='settings' AND id='main'").run(JSON.stringify(settings));
+  freshProfile.close();
+  await app.evaluate(({ dialog }) => {
+    dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
+  });
+  await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
+  await expect.poll(async () => page.getByRole('button', { name: 'ส่งออก', exact: true }).isEnabled()).toBe(true);
+  assert.equal((await snapshot()).settings.workspace, '');
+  assert.equal((await snapshot()).sessions.find(s => s.id === last.id).draft, savedDraft);
+  const newFolder = join(home, 'created-from-export');
+  await app.evaluate(({ dialog }, folder) => {
+    dialog.showOpenDialog = async (_window, options) => {
+      if (!options.properties.includes('createDirectory')) throw new Error('Folder creation must be available');
+      globalThis.__exportFolderPending = true;
+      await new Promise(resolve => {
+        globalThis.__releaseExportFolder = resolve;
+      });
+      return { canceled: false, filePaths: [folder] };
+    };
+  }, newFolder);
+  await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
+  await expect.poll(() => app.evaluate(() => globalThis.__exportFolderPending)).toBe(true);
+  const duplicate = await page.evaluate(
+    id =>
+      window.step.call('export', { id, format: 'docx' }).then(
+        () => '',
+        e => String(e),
+      ),
+    last.id,
+  );
+  assert.ok(duplicate.includes('EXPORT_BUSY'));
+  await app.evaluate(() => globalThis.__releaseExportFolder());
+  await expect.poll(async () => (await snapshot()).settings.workspace).toBe(newFolder);
+  await expect.poll(async () => page.getByRole('button', { name: 'ส่งออก', exact: true }).isEnabled()).toBe(true);
+  const createdExport = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), last.id);
+  assert.ok(createdExport.path.startsWith(newFolder));
+  assert.equal((await snapshot()).sessions.find(s => s.id === last.id).draft, savedDraft);
   await page.getByLabel('ฟอนต์ DOCX', { exact: true }).selectOption('TH Sarabun New');
   await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
   await expect(page.locator('.document-export-info')).toContainText('TH Sarabun New');
@@ -300,7 +375,7 @@ try {
   assert.doesNotMatch(await page.locator('.document-export-info').innerText(), /[ก-๙]/);
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: five Skill-backed document forms, page state, attachment/consent cancellation, real IPC, editor and DOCX export (synthetic fake AI).',
+    'PASS: five Skill-backed forms, separate review, native DOCX/PDF export, folder creation/cancellation and exclusive export (synthetic fake AI).',
   );
 } catch (error) {
   console.error('Document tools smoke failed:', error);

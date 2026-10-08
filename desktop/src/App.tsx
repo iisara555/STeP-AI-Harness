@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { ReceiptApp } from './receipt';
 import { DocumentTools, type DocumentAttachment, type DocumentForm } from './document-tool-app';
-import { documentRequest, documentTool, type DocumentToolId } from './document-tools';
+import { documentRequest, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
 import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
 import { SkillsHub, toolCount } from './skills';
 import { SetupWizard } from './setup';
@@ -111,6 +111,8 @@ export default function App() {
   const [searchMatches, setSearchMatches] = useState<{ query: string; ids: string[] }>();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [selected, setSelected] = useState('');
+  const snapshotVersion = useRef(0),
+    navigationVersion = useRef(0);
   const [settings, setSettings] = useState(false),
     [settingsPage, setSettingsPage] = useState<'general' | 'ai'>('general'),
     [query, setQuery] = useState(''),
@@ -147,9 +149,15 @@ export default function App() {
     [exportPath, setExportPath] = useState('');
   const [exportFont, setExportFont] = useState('auto');
   const [exportGaruda, setExportGaruda] = useState('auto');
-  const [exportInfo, setExportInfo] = useState<{ documentTool?: string; font: string; fontStatus: string; garudaHeightCm?: number } | null>(
-    null,
-  );
+  const [exporting, setExporting] = useState(false);
+  const exportPending = useRef(false);
+  const [exportInfo, setExportInfo] = useState<{
+    documentTool?: string;
+    font: string;
+    fontStatus: string;
+    garudaHeightCm?: number;
+    templateName?: string;
+  } | null>(null);
   useEffect(() => {
     setExportFont('auto');
     setExportGaruda('auto');
@@ -158,6 +166,10 @@ export default function App() {
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
   const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents'>('chat');
+  const navigate = (next: typeof view) => {
+    navigationVersion.current++;
+    setView(next);
+  };
   const [documentsOpened, setDocumentsOpened] = useState(false);
   const [consumedDocumentTask, setConsumedDocumentTask] = useState('');
   useEffect(() => {
@@ -172,7 +184,7 @@ export default function App() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [toasts, setToasts] = useState<Toast[]>([]),
     toastId = useRef(0),
-    runningId = useRef('');
+    runningIds = useRef(new Map<string, object>());
   const dismiss = useCallback((id: number) => setToasts(list => list.filter(t => t.id !== id)), []);
   const notify = useCallback((text: string, tone: Toast['tone'] = 'info', action?: Toast['action']) => {
     if (text) setToasts(list => [...list.filter(t => t.text !== text), { id: ++toastId.current, text, tone, action }].slice(-4));
@@ -200,6 +212,7 @@ export default function App() {
     retry?: boolean;
     coordinator?: boolean;
     documentTool?: DocumentToolId;
+    attachmentRole?: DocumentAttachmentRole;
   } | null>(null);
   // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -228,6 +241,14 @@ export default function App() {
   const sendInFlight = useRef(false),
     conversationEnd = useRef<HTMLDivElement>(null);
   const session = snapshot?.sessions.find(s => s.id === selected);
+  useEffect(() => {
+    if (session?.documentTemplate) {
+      setFormat('docx');
+      setExportFont('auto');
+      setExportGaruda('auto');
+      setExportInfo(null);
+    }
+  }, [session?.documentTemplate?.key]);
   useEffect(() => {
     let disposed = false;
     if (api && search.trim())
@@ -288,8 +309,9 @@ export default function App() {
   });
   const refresh = useCallback(async () => {
     if (api) {
+      const version = ++snapshotVersion.current;
       const data = await api.call('snapshot');
-      setSnapshot(data);
+      if (version === snapshotVersion.current) setSnapshot(data);
       return data as Snapshot;
     }
   }, [api]);
@@ -377,11 +399,13 @@ export default function App() {
           setProgress(p =>
             p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' || p === t('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ') ? p : '',
           );
-          const finished = event.sessionId === runningId.current ? event.sessionId : '';
-          runningId.current = '';
+          const attempt = runningIds.current.get(event.sessionId);
+          const finished = attempt ? event.sessionId : '';
           void refresh().then(data => {
             const done = finished && data?.sessions.find(s => s.id === finished);
-            if (!done) return;
+            if (!done || runningIds.current.get(done.id) !== attempt) return;
+            if (['running', 'queued'].includes(done.status)) return;
+            runningIds.current.delete(done.id);
             const text =
               done.status === 'review'
                 ? t('“{0}” มีร่างให้ตรวจแล้ว', done.title)
@@ -446,32 +470,37 @@ export default function App() {
     }
   };
   async function save() {
-    if (saveInFlight.current) await saveInFlight.current;
-    const current = sessionRef.current;
-    if (current && editor && dirtyRef.current) {
-      const document = editor.getJSON(),
-        text = documentText(document as any);
-      const serialized = JSON.stringify(document);
-      const task = (async () => {
-        const saved = await api!.call('edit', { id: current.id, text, document, revision: current.revision });
-        sessionRef.current = saved;
-        const changedAgain = JSON.stringify(editor.getJSON()) !== serialized;
-        setDirty(changedAgain);
-        dirtyRef.current = changedAgain;
-        await refresh();
-      })();
-      saveInFlight.current = task;
-      try {
-        await task;
-      } finally {
-        saveInFlight.current = null;
-      }
+    const previous = saveInFlight.current || Promise.resolve();
+    const task = previous
+      .catch(() => {})
+      .then(async () => {
+        const current = sessionRef.current;
+        if (current && editor && dirtyRef.current) {
+          const document = editor.getJSON(),
+            text = documentText(document as any);
+          const serialized = JSON.stringify(document);
+          const saved = await api!.call('edit', { id: current.id, text, document, revision: current.revision });
+          sessionRef.current = saved;
+          const changedAgain = JSON.stringify(editor.getJSON()) !== serialized;
+          setDirty(changedAgain);
+          dirtyRef.current = changedAgain;
+          await refresh();
+        }
+      });
+    saveInFlight.current = task;
+    try {
+      await task;
+    } finally {
+      if (saveInFlight.current === task) saveInFlight.current = null;
     }
   }
   const selectSessionRef = useRef<(id: string) => Promise<void>>(async () => {});
   async function selectSession(id: string) {
+    const version = ++navigationVersion.current;
     await save();
+    if (version !== navigationVersion.current) return;
     if (!['running', 'queued'].includes(snapshot?.sessions.find(s => s.id === id)?.status || '')) await api!.call('sessionResume', { id });
+    if (version !== navigationVersion.current) return;
     setView('chat');
     setSelected(id);
     const chosen = snapshot?.sessions.find(s => s.id === id);
@@ -485,10 +514,12 @@ export default function App() {
     setSettings(false);
   }
   selectSessionRef.current = selectSession;
-  const openAiSettings = () => {
-    setSettingsPage('ai');
+  const openSettings = (page: 'general' | 'ai' = 'general') => {
+    navigationVersion.current++;
+    setSettingsPage(page);
     setSettings(true);
   };
+  const openAiSettings = () => openSettings('ai');
   // Without a usable AI the request stays in the box and the person is told why, instead of being moved elsewhere.
   const needAi = () =>
     notify(t('ยังไม่ได้เลือก AI เลือกในกล่องพิมพ์ หรือเพิ่มการเชื่อมต่อ AI ก่อน'), 'info', {
@@ -522,12 +553,14 @@ export default function App() {
   async function attachDocument(tool: DocumentToolId): Promise<DocumentAttachment | null> {
     const task = await createDocumentTask(tool);
     if (!task) return null;
-    const file = await api!.call('attach', { id: task.id });
+    const file = await api!.call('attach', { id: task.id, documentTool: tool });
     return file ? { sessionId: task.id, file } : null;
   }
   async function draftDocument(tool: DocumentToolId, form: DocumentForm) {
     if (form.source && !form.source.file.usable) throw new Error('ATTACHMENT_NOT_APPROVED');
-    const request = documentRequest(tool, form.values, form.variant);
+    if (form.source && form.sourceRole !== 'template' && form.source.file.sourceUsable === false)
+      throw new Error('ATTACHMENT_NOT_APPROVED');
+    const request = documentRequest(tool, form.values, form.variant, form.source ? form.sourceRole : 'source');
     const id = form.source?.sessionId || (await createDocumentTask(tool))?.id;
     if (!id) return;
     await save();
@@ -555,11 +588,14 @@ export default function App() {
       undefined,
       false,
       tool,
+      form.source ? form.sourceRole : 'source',
     );
   }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
+    const version = ++navigationVersion.current;
     await save();
+    if (version !== navigationVersion.current) return;
     setSelected('');
     setWorkMode('chat');
     setPendingSource('');
@@ -661,8 +697,11 @@ export default function App() {
     retry?: boolean,
     coordinator: boolean = coordinated && mode === 'draft' && !skill && !retry,
     documentTool?: DocumentToolId,
+    attachmentRole?: DocumentAttachmentRole,
   ) {
-    runningId.current = id;
+    const attempt = {},
+      previousAttempt = runningIds.current.get(id);
+    runningIds.current.set(id, attempt);
     currentId.current = id;
     setRunning(true);
     setStream('');
@@ -687,18 +726,22 @@ export default function App() {
         retry,
         coordinator,
         documentTool,
+        attachmentRole,
         ...(mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
       });
     } catch (e) {
       setRunning(false);
-      runningId.current = '';
+      if (runningIds.current.get(id) === attempt) {
+        if (previousAttempt && String(e).includes('RUN_ALREADY_ACTIVE')) runningIds.current.set(id, previousAttempt);
+        else runningIds.current.delete(id);
+      }
       setProgress('');
       setStartedAt(0);
       throw e;
     }
     if (result.consent) {
       setRunning(false);
-      runningId.current = '';
+      if (runningIds.current.get(id) === attempt) runningIds.current.delete(id);
       setProgress('');
       setStartedAt(0);
       setTermsAccepted(false);
@@ -714,6 +757,7 @@ export default function App() {
         retry,
         coordinator,
         documentTool,
+        attachmentRole,
         ...result.consent,
       });
       return;
@@ -875,14 +919,11 @@ export default function App() {
       setLearningOpen(true);
     },
     automations: () => setAutomationOpen(true),
-    settings: () => {
-      setSettingsPage('general');
-      setSettings(true);
-    },
+    settings: () => openSettings(),
     keyboard: () => setKeyboardOpen(true),
     tour: () => {
       setSettings(false);
-      setView('chat');
+      navigate('chat');
       setTour(true);
     },
     wizard: () => setWizard(true),
@@ -891,15 +932,15 @@ export default function App() {
     right: () => setRight(p => !p),
     skills: () => {
       setSettings(false);
-      setView('skills');
+      navigate('skills');
     },
     receipt: () => {
       setSettings(false);
-      setView('receipt');
+      navigate('receipt');
     },
     documents: () => {
       setSettings(false);
-      setView('documents');
+      navigate('documents');
     },
     'theme-system': () => void setTheme('system'),
     'theme-light': () => void setTheme('light'),
@@ -1038,7 +1079,7 @@ export default function App() {
                   onClick={() => {
                     setFilter(value);
                     setSettings(false);
-                    setView('chat');
+                    navigate('chat');
                   }}
                 >
                   <Icon size={14} />
@@ -1120,7 +1161,7 @@ export default function App() {
                 className={view === 'documents' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
-                  setView('documents');
+                  navigate('documents');
                 }}
               >
                 <FileText size={17} />
@@ -1131,7 +1172,7 @@ export default function App() {
                 className={view === 'skills' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
-                  setView('skills');
+                  navigate('skills');
                 }}
               >
                 <Blocks size={17} />
@@ -1143,7 +1184,7 @@ export default function App() {
                 className={view === 'receipt' && !settings ? 'nav-active' : ''}
                 onClick={() => {
                   setSettings(false);
-                  setView('receipt');
+                  navigate('receipt');
                 }}
               >
                 <ReceiptText size={17} />
@@ -1159,8 +1200,7 @@ export default function App() {
               className={`settings-button ${settings ? 'nav-active' : ''}`}
               data-tour="settings"
               onClick={() => {
-                setSettingsPage('general');
-                setSettings(true);
+                openSettings();
               }}
             >
               <Settings2 size={18} />
@@ -1368,7 +1408,7 @@ export default function App() {
                 openWizard={() => setWizard(true)}
                 openTour={() => {
                   setSettings(false);
-                  setView('chat');
+                  navigate('chat');
                   setTour(true);
                 }}
                 close={() => setSettings(false)}
@@ -1381,7 +1421,7 @@ export default function App() {
               skills={skills}
               team={myTeam}
               onUse={useSkill}
-              onOpenTool={id => setView(id === 'documents' ? 'documents' : 'receipt')}
+              onOpenTool={id => navigate(id === 'documents' ? 'documents' : 'receipt')}
             />
           ) : (
             <>
@@ -2288,6 +2328,12 @@ export default function App() {
                           <summary>{session.draft.trim() ? t('อ่านข้อเสนอและเทียบกับร่างด้านล่าง') : t('อ่านร่างจาก AI')}</summary>
                           <RichText className="proposal-text" text={p.text} />
                         </details>
+                        {p.review && (
+                          <details className="document-review">
+                            <summary>{t('ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)')}</summary>
+                            <RichText text={p.review} />
+                          </details>
+                        )}
                         <div className="proposal-actions">
                           <button
                             disabled={dirty || p.baseRevision !== session.revision}
@@ -2315,6 +2361,17 @@ export default function App() {
                         </div>
                       </section>
                     ))}
+                    {session.documentReview && (
+                      <details className="document-review">
+                        <summary>{t('ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)')}</summary>
+                        <p className="small muted">
+                          {session.documentReview.revision === session.revision && !dirty
+                            ? t('ผลตรวจของร่างจาก AI ต้องตรวจไฟล์ส่งออกและผู้มีอำนาจก่อนเสนอ')
+                            : t('ร่างเปลี่ยนจากฉบับที่ AI ตรวจแล้ว กรุณาตรวจข้อมูลและรูปแบบอีกครั้ง')}
+                        </p>
+                        <RichText text={session.documentReview.text} />
+                      </details>
+                    )}
                     <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
                       <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
                         {t('ข้อความ')}
@@ -2361,30 +2418,42 @@ export default function App() {
                         }}
                       >
                         {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
-                          <option key={f}>{f}</option>
+                          <option key={f} disabled={f === 'pdf' && Boolean(session.documentTemplate)}>
+                            {f}
+                          </option>
                         ))}
                       </select>
                       <button
-                        disabled={!session.draft && !dirty}
+                        disabled={exporting || (!session.draft && !dirty)}
                         onClick={() =>
                           void action(async () => {
-                            await save();
-                            const output = await api.call('export', {
-                              id: selected,
-                              format,
-                              ...(['docx', 'pdf'].includes(format)
-                                ? {
-                                    ...(exportFont !== 'auto' ? { font: exportFont } : {}),
-                                    garuda: exportGaruda,
-                                  }
-                                : {}),
-                            });
-                            setExportPath(output.path);
-                            setExportInfo(output.layout || null);
-                            notify(t('บันทึก {0} แล้ว', output.filename), 'success', {
-                              label: t('เปิดโฟลเดอร์'),
-                              run: () => api.call('reveal', { path: output.path }),
-                            });
+                            if (exportPending.current) return;
+                            exportPending.current = true;
+                            setExporting(true);
+                            try {
+                              await save();
+                              const output = await api.call('export', {
+                                id: selected,
+                                format,
+                                ...(['docx', 'pdf'].includes(format)
+                                  ? {
+                                      ...(exportFont !== 'auto' ? { font: exportFont } : {}),
+                                      garuda: exportGaruda,
+                                    }
+                                  : {}),
+                              });
+                              if (output.canceled) return;
+                              await refresh();
+                              setExportPath(output.path);
+                              setExportInfo(output.layout || null);
+                              notify(t('บันทึก {0} แล้ว', output.filename), 'success', {
+                                label: t('เปิดโฟลเดอร์'),
+                                run: () => api.call('reveal', { path: output.path }),
+                              });
+                            } finally {
+                              exportPending.current = false;
+                              setExporting(false);
+                            }
                           })
                         }
                       >
@@ -2403,37 +2472,45 @@ export default function App() {
                             setExportInfo(null);
                           }}
                         >
-                          <option value="auto">{t('ตามแม่แบบร่าง ({0})', resolveDocumentLayout(session.documentTool).font)}</option>
+                          <option value="auto">
+                            {session.documentTemplate
+                              ? t('ตามแม่แบบ DOCX ({0})', session.documentTemplate.font)
+                              : t('ตามแม่แบบร่าง ({0})', resolveDocumentLayout(session.documentTool).font)}
+                          </option>
                           {DOCUMENT_FONTS.map(font => (
-                            <option key={font} value={font}>
+                            <option key={font} value={font} disabled={Boolean(session.documentTemplate)}>
                               {font}
                             </option>
                           ))}
                         </select>
                       </label>
                     )}
-                    {['docx', 'pdf'].includes(format) && ['memo', 'letter'].includes(session.documentTool || '') && (
-                      <label className="document-export-font">
-                        {t('ตราครุฑ')}
-                        <select
-                          aria-label={t('ตราครุฑ')}
-                          value={exportGaruda}
-                          onChange={e => {
-                            setExportGaruda(e.target.value);
-                            setExportInfo(null);
-                          }}
-                        >
-                          <option value="auto">
-                            {t('ตามประเภทเอกสาร (สูง {0} ซม.)', resolveDocumentLayout(session.documentTool).garudaHeightCm)}
-                          </option>
-                          <option value="none">{t('ไม่ใส่ตราครุฑ')}</option>
-                        </select>
-                      </label>
-                    )}
+                    {!session.documentTemplate &&
+                      ['docx', 'pdf'].includes(format) &&
+                      ['memo', 'letter'].includes(session.documentTool || '') && (
+                        <label className="document-export-font">
+                          {t('ตราครุฑ')}
+                          <select
+                            aria-label={t('ตราครุฑ')}
+                            value={exportGaruda}
+                            onChange={e => {
+                              setExportGaruda(e.target.value);
+                              setExportInfo(null);
+                            }}
+                          >
+                            <option value="auto">
+                              {t('ตามประเภทเอกสาร (สูง {0} ซม.)', resolveDocumentLayout(session.documentTool).garudaHeightCm)}
+                            </option>
+                            <option value="none">{t('ไม่ใส่ตราครุฑ')}</option>
+                          </select>
+                        </label>
+                      )}
                     {exportInfo && (
                       <div className="document-export-info" role="status">
                         <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
-                        {exportInfo.garudaHeightCm ? (
+                        {exportInfo.templateName ? (
+                          <p>{t('รักษารูปแบบและตราจากแม่แบบ {0}', exportInfo.templateName)}</p>
+                        ) : exportInfo.garudaHeightCm ? (
                           <p>{t('ตราครุฑสูง {0} ซม. (เฉพาะหน้าแรก)', exportInfo.garudaHeightCm)}</p>
                         ) : (
                           <p>{t('ไม่ใส่ตราครุฑ')}</p>
@@ -2442,7 +2519,15 @@ export default function App() {
                           <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
                         )}
                         {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}
-                        {exportInfo.documentTool && <p>{t('จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ')}</p>}
+                        {exportInfo.documentTool && (
+                          <p>
+                            {t(
+                              exportInfo.templateName
+                                ? 'ใช้รูปแบบต้นฉบับ DOCX ตรวจทุกหน้าใน Word ก่อนเสนอ'
+                                : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
+                            )}
+                          </p>
+                        )}
                       </div>
                     )}
                     {exportPath && (
@@ -2539,6 +2624,7 @@ export default function App() {
                   ask.retry,
                   ask.coordinator,
                   ask.documentTool,
+                  ask.attachmentRole,
                 ),
               );
             }}
@@ -2690,7 +2776,7 @@ export default function App() {
             onDone={startTour => {
               setWizard(false);
               setSettings(false);
-              setView('chat');
+              navigate('chat');
               if (startTour) setTour(true);
             }}
           />

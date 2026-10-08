@@ -26,6 +26,7 @@ import PptxGenJS from 'pptxgenjs';
 import { type DraftNode, documentMarkdown, documentText, plainDocument, validateDocument } from '../src/draft';
 import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
 import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
+import { renderDocumentTemplate } from './document-template';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
@@ -126,6 +127,29 @@ function richHtml(node: DraftNode): string {
   return tag ? `<${tag}${node.type === 'orderedList' ? ` start="${node.attrs?.start || 1}"` : ''}>${text}</${tag}>` : text;
 }
 
+function memoReferenceHtml(node: DraftNode) {
+  const date = /[ \t]+(วันที่[ \t])/.exec(documentText(node));
+  if (!date) return richHtml(node);
+  const labelStart = date.index + date[0].length - date[1].length;
+  const number: DraftNode[] = [],
+    value: DraftNode[] = [];
+  let offset = 0;
+  for (const child of node.content || []) {
+    const text = documentText(child);
+    if (child.type === 'hardBreak') {
+      if (offset < date.index) number.push(child);
+      if (offset >= labelStart) value.push(child);
+    } else {
+      const before = text.slice(0, Math.max(0, date.index - offset));
+      const after = text.slice(Math.max(0, labelStart - offset));
+      if (before) number.push({ ...child, text: before });
+      if (after) value.push({ ...child, text: after });
+    }
+    offset += text.length;
+  }
+  return `<p class="memo-reference-row"><span class="memo-number">${number.map(richHtml).join('')}</span><span class="memo-date">${value.map(richHtml).join('')}</span></p>`;
+}
+
 export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
   // TH Sarabun New when installed (the family brings its real bold); otherwise a common Thai font scaled down to the
   // same visual size, since TH Sarabun is drawn much smaller than other fonts at the same point size.
@@ -161,7 +185,8 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
       ? [
           '@page{size:A4;margin:2.5cm 2cm 2cm 3cm}body{line-height:1.15}.block p{margin:0}h1,h2,h3{font-size:16pt;margin:6pt 0 3pt}.block:has(h1,h2,h3){break-after:avoid}',
           '.block.sender,.block.date,.block.front,.block.signature{break-after:avoid}',
-          `.block.title :is(h1,h2,h3){font-size:${layout.id === 'memo' ? 29 : 18}pt}`,
+          '.memo-reference-row{display:grid;grid-template-columns:1fr 1fr;break-inside:avoid}',
+          `.block.title :is(h1,h2,h3){font-size:${layout.id === 'memo' ? 30 : 18}pt}`,
         ]
       : []),
     ...(layout.garudaHeightCm
@@ -169,7 +194,7 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
           '@page:first{margin-top:1.5cm}',
           '.letterhead{break-inside:avoid;margin-bottom:.5cm}.letterhead.letter{text-align:center;margin-left:-1cm}',
           '.letterhead.memo{position:relative;min-height:1.5cm;display:flex;align-items:flex-end;justify-content:center}',
-          '.letterhead.memo img{position:absolute;left:0;bottom:0}.letterhead.memo :is(h1,h2,h3){font-size:29pt;margin:0 2cm;line-height:1.1}',
+          '.letterhead.memo img{position:absolute;left:0;bottom:0}.letterhead.memo :is(h1,h2,h3){font-size:30pt;margin:0 2cm;line-height:1.1}',
         ]
       : []),
   ].join('');
@@ -187,7 +212,7 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
             : role === 'body' && node.type === 'paragraph'
               ? 'text-indent:2.5cm;text-align:justify;'
               : '';
-          return `<div class="block ${role}" style="${css}${indent}">${richHtml(node)}</div>`;
+          return `<div class="block ${role}" style="${css}${indent}">${role === 'memo-reference' ? memoReferenceHtml(node) : richHtml(node)}</div>`;
         })
         .join('')
     : richHtml(document);
@@ -282,7 +307,7 @@ function docxBlocks(
     const size = layout.id
       ? role === 'title'
         ? layout.id === 'memo'
-          ? 58
+          ? 60
           : 36
         : 32
       : node.type === 'heading'
@@ -294,7 +319,7 @@ function docxBlocks(
     return [
       new Paragraph({
         heading: node.type === 'heading' ? [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][level - 1] : undefined,
-        alignment: centered ? AlignmentType.CENTER : body ? AlignmentType.THAI_DISTRIBUTE : undefined,
+        alignment: centered ? AlignmentType.CENTER : body ? AlignmentType.JUSTIFIED : undefined,
         indent: depth
           ? { left: 360 * depth, hanging: prefix ? 360 : 0 }
           : ['signature', 'sender'].includes(role)
@@ -303,7 +328,10 @@ function docxBlocks(
               ? { firstLine: Math.round(2.5 * CM) }
               : undefined,
         tabStops: role === 'memo-reference' ? [{ type: TabStopType.LEFT, position: band }] : undefined,
-        keepNext: node.type === 'heading' || ['front', 'sender', 'date', 'memo-reference', 'signature'].includes(role),
+        keepNext:
+          node.type === 'heading' ||
+          ['front', 'sender', 'date', 'memo-reference'].includes(role) ||
+          (role === 'signature' && /^(?:\(|ขอแสดงความนับถือ)/.test(documentText(node))),
         keepLines: node.type === 'heading' || role === 'signature',
         widowControl: true,
         ...(firstPageSpace ? { spacing: { before: Math.round(0.5 * CM) } } : {}),
@@ -365,7 +393,7 @@ function docx(document: DraftNode, layout: DocumentLayout) {
                 transformation: { width: (layout.garudaHeightCm * 96) / 2.54, height: (layout.garudaHeightCm * 96) / 2.54 },
                 altText: { name: 'Garuda', title: 'ตราครุฑ', description: `สูง ${layout.garudaHeightCm} ซม.` },
               }),
-              ...(title ? [new TextRun({ children: [new Tab()] }), ...runs(title, 58, true, layout.font)] : []),
+              ...(title ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font)] : []),
             ],
           }),
         ],
@@ -590,13 +618,15 @@ export async function exportDocument(
   text: string,
   pdf: (html: string) => Promise<Uint8Array>,
   document?: DraftNode,
-  options: { documentTool?: unknown; font?: unknown; garuda?: unknown } = {},
+  options: { documentTool?: unknown; font?: unknown; garuda?: unknown; template?: Uint8Array } = {},
 ) {
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
+  if (format === 'docx' && options.template)
+    return writeFile(path, await renderDocumentTemplate(options.template, options.documentTool, content));
   if (format === 'docx')
     return writeFile(path, await Packer.toBuffer(docx(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda))));
   if (format === 'pdf')

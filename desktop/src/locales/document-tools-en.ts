@@ -1,4 +1,65 @@
 export const documentToolsEn: Record<string, string> = {
+  'แม่แบบ DOCX พร้อมใช้ · ข้อมูลตัวอย่างไม่ส่งให้ AI': 'DOCX template ready · sample facts are withheld from AI',
+  'ใช้โครงแม่แบบและชื่อช่อง กรอกข้อมูลของงานใหม่แยกในฟอร์ม':
+    'Uses template structure and field labels. Enter the new task facts separately in the form.',
+  'ไฟล์นี้ใช้เป็นแม่แบบได้เท่านั้น หากใช้เป็นต้นเรื่องให้แนบข้อความที่ตรวจแล้ว':
+    'This file can only supply a template. For a task source, attach reviewed text instead.',
+
+  'เลือกแม่แบบ DOCX จาก MIS สำหรับบันทึก หนังสือ โครงการ และรายงานประชุม ส่งออกโดยใช้รูปแบบต้นฉบับ TOR ใช้แบบ 16 หัวข้อเดิม':
+    'Select a MIS DOCX template for memos, letters, projects and minutes; export with native formatting. TOR retains the 16-section template.',
+  'ผลตรวจ AI แยกจากตัวเอกสาร ข้อมูลที่ขาดยังคงรอยืนยัน ตรวจทุกหน้าใน Word ก่อนเสนอ':
+    'AI checks stay separate from the document. Missing facts stay pending; review every page in Word before submission.',
+  'ส่งออกได้จากปุ่มเดียว เลือกหรือสร้างโฟลเดอร์ทำงานได้ทันทีเมื่อยังไม่มีโฟลเดอร์':
+    'Export from one button; choose or create a working folder if none is set.',
+  'เก็บการแก้ร่างและข้อมูลที่คุณยืนยันไว้ ปรับการทำงานพร้อมกันและอธิบายวิธีใช้แอปใหม่':
+    'Keep your edits and confirmed facts, improve concurrent work and refresh the app guides.',
+
+  'TOR ใช้แม่แบบ 16 หัวข้อเดิม เอกสารอีก 4 ประเภทเลือก DOCX จาก MIS เป็นแม่แบบเพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป':
+    'TOR uses the existing 16-section template. For the other four types, select a MIS DOCX template to preserve its formatting. Without an attachment, a working layout is used.',
+  'เลือกแม่แบบ DOCX ข้อมูลตัวอย่างไม่ส่งให้ AI รักษาฟอนต์ ตาราง ระยะขอบและตราของแบบเมื่อส่งออก DOCX ส่วน PDF ให้เปิดจาก Word หลังตรวจหน้า':
+    'Select a DOCX template. Sample facts are withheld from AI. DOCX export preserves template fonts, tables, margins and emblems. Review pages in Word before saving as PDF.',
+  'ตามแม่แบบ DOCX ({0})': 'From DOCX template ({0})',
+  'รักษารูปแบบและตราจากแม่แบบ {0}': 'Preserves formatting and emblems from template {0}',
+  'ใช้รูปแบบต้นฉบับ DOCX ตรวจทุกหน้าใน Word ก่อนเสนอ': 'Uses native DOCX formatting. Review every page in Word before submission.',
+  'โปรดแนบแม่แบบ DOCX จาก MIS หากเป็นต้นเรื่องให้เลือกใช้ไฟล์เป็นต้นเรื่อง':
+    'Attach a MIS DOCX template, or select task source for a source attachment.',
+  'แม่แบบ DOCX ไม่ตรงกับชนิดเอกสารที่เลือก กรุณาตรวจแม่แบบ':
+    'The DOCX template does not match the selected document type. Check the template.',
+  'รูปแบบแม่แบบนี้ยังไม่รองรับ TOR ใช้แม่แบบ 16 หัวข้อเดิม ส่วนเอกสารอื่นกรุณาใช้แม่แบบ DOCX เปล่าที่ตรงประเภท':
+    'This template structure is unsupported. TOR uses the existing 16-section template; other types require a matching blank DOCX form.',
+  'แม่แบบมีส่วนที่ไม่ปลอดภัยหรือโครงสร้างที่ตรวจไม่ได้ โปรดใช้ DOCX เปล่าที่ไม่มีมาโคร วัตถุฝัง หรือแหล่งภายนอก':
+    'The template has unsafe or unsupported parts. Use a blank DOCX without macros, embedded objects or external resources.',
+  'แม่แบบเกินขนาดที่รองรับ (DOCX ไม่เกิน 8 MB) กรุณาลดขนาดไฟล์':
+    'Template exceeds supported limits (DOCX up to 8 MB). Reduce the file size.',
+  'ตารางในร่างไม่ตรงกับแม่แบบ กรุณาแก้จำนวนตารางและคอลัมน์ให้ตรงก่อนส่งออก ข้อมูลยังอยู่ในร่างครบ':
+    'Draft tables do not match the template. Correct table and column counts before export. Draft content is retained.',
+  'ไม่พบต้นฉบับแม่แบบที่ตรวจไว้ กรุณาแนบแม่แบบใหม่ ข้อมูลในร่างยังอยู่':
+    'The checked template snapshot was not found. Attach it again; your draft remains.',
+  'ร่างที่ใช้แม่แบบต้นฉบับส่งออก DOCX ก่อน แล้วเปิดใน Word เพื่อตรวจหน้าและบันทึก PDF':
+    'Export the native-template draft as DOCX, then review pages and save as PDF in Word.',
+  'แม่แบบต้นฉบับใช้ฟอนต์และตราที่อยู่ใน DOCX กรุณาเลือกตามแม่แบบ':
+    'Native templates retain their DOCX fonts and emblems. Choose the template layout.',
+  ใช้ไฟล์แนบเป็น: 'Use the attachment as',
+  ต้นเรื่องของงานนี้: 'Source for this task',
+  'แบบฟอร์ม / ตัวอย่าง (ใช้เฉพาะโครงสร้าง)': 'Form / example (structure only)',
+  'ชื่อคน ตัวเลขและงบที่กรอกในแบบตัวอย่างจะไม่ถือเป็นข้อมูลของงานใหม่':
+    'Names, numbers and budgets filled in the example are not treated as facts of the new task.',
+  กรุณาเลือกใช้ไฟล์เป็นต้นเรื่องหรือแบบฟอร์มตัวอย่าง: 'Choose whether the attachment is a task source or an example form.',
+  เลือกหรือสร้างโฟลเดอร์ทำงานเพื่อส่งออก: 'Choose or create a working folder for export',
+  'เอกสารนี้กำลังส่งออก กรุณารอให้เสร็จก่อน': 'This document is being exported. Wait for it to finish.',
+  'AI ส่งตัวเอกสารกับผลตรวจมาไม่ครบหรือรูปแบบกำกวม กรุณาลองร่างใหม่':
+    'The AI document and review are incomplete or ambiguous. Try drafting again.',
+  'ผลตรวจและข้อมูลที่ต้องยืนยัน (ไม่ส่งออกในเอกสาร)': 'Checks and pending information (excluded from the exported document)',
+  'ผลตรวจของร่างจาก AI ต้องตรวจไฟล์ส่งออกและผู้มีอำนาจก่อนเสนอ':
+    'AI draft checks. Review the exported file and signing authority before submission.',
+  'ร่างเปลี่ยนจากฉบับที่ AI ตรวจแล้ว กรุณาตรวจข้อมูลและรูปแบบอีกครั้ง':
+    'The draft has changed since the AI check. Review its facts and layout again.',
+  'ผู้เสนอความเห็นและตำแหน่ง (ถ้ามี)': 'Reviewer and position (if applicable)',
+  'เว้นไว้ถ้าแบบหน่วยงานไม่มีช่องนี้ ไม่ถือว่าให้ความเห็นแล้ว':
+    'Leave blank if the agency form has no such field. This does not record a review decision.',
+  'ผู้พิจารณาและตำแหน่ง (ถ้ามี)': 'Decision maker and position (if applicable)',
+  'ระบุผู้ที่เจ้าของเรื่องเลือก ช่องคำสั่งและลายมือชื่อเว้นไว้':
+    'Use only the person selected by the document owner. Leave the decision and signature blank.',
   'ส่งออก DOCX และ PDF พร้อมตราครุฑ: บันทึกข้อความสูง 1.5 ซม. หนังสือภายนอกสูง 3 ซม. เฉพาะหน้าแรก':
     'DOCX/PDF Garuda letterheads: 1.5 cm high for memos, 3 cm for external letters, on the first page only',
   'เลือกไม่ใส่ตราครุฑได้ TOR โครงการ และรายงานประชุมไม่ใส่ตราอัตโนมัติ':

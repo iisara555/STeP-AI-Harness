@@ -3,6 +3,14 @@
 // never dropped without the person knowing why.
 const TOO_LARGE = new Set(['file-size-limit', 'text-size-limit', 'page-limit', 'archive-size-limit', 'archive-entry-limit']);
 
+/** A verified native outline is a separate capability, never permission to send the original source. */
+export function attachmentCapabilities(report: unknown, nativeOutlineVerified: boolean) {
+  const sourceReason = attachmentReason(report),
+    sourceUsable = !sourceReason;
+  const usable = sourceUsable || nativeOutlineVerified;
+  return { sourceUsable, usable, reason: usable ? undefined : sourceReason };
+}
+
 export function attachmentReason(report: any, limit = 100_000): string | undefined {
   const reasons: string[] = Array.isArray(report?.reviewReasons) ? report.reviewReasons : [];
   if (report?.action === 'block-external') return 'ATTACH_SENSITIVE';

@@ -61,3 +61,14 @@ test('invalid profiles, subtypes, fields and oversized form input fail before se
   assert.throws(() => documentRequest('memo', { invented: 'value' }), /INVALID_DOCUMENT_FIELDS/);
   assert.throws(() => documentRequest('memo', { subject: 'ก'.repeat(6001) }), /INPUT_LIMIT/);
 });
+
+test('an attached example form supplies structure only; its sample values are not facts of the new task', () => {
+  const template = documentRequest('memo', { subject: 'งานสังเคราะห์ใหม่' }, 'approval', 'template');
+  assert.equal(JSON.parse(template.sourceText).attachmentRole, 'template');
+  assert.equal(JSON.parse(template.sourceText).fields.number.value, null);
+  assert.equal(JSON.parse(template.sourceText).fields.budget.value, null);
+  assert.match(template.text, /ใช้เฉพาะโครงสร้างและชื่อช่อง/);
+  assert.match(template.text, /ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ/);
+  assert.equal(JSON.parse(documentRequest('memo', {}).sourceText).attachmentRole, 'source');
+  assert.throws(() => documentRequest('memo', {}, 'approval', 'unverified' as any), /INVALID_DOCUMENT_SOURCE_ROLE/);
+});

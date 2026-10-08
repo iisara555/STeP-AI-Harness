@@ -16,21 +16,26 @@ function inline(text: string): DraftNode[] {
     pattern = /(\*\*|__)(.+?)\1|(\*|_)(?!\s)(.+?)(?<!\s)\3|`([^`]+)`|\[([^\]]+)\]\([^)]*\)|\\([\\`*_[\]<>#])/g;
   let last = 0,
     match: RegExpExecArray | null;
-  const push = (value: string, mark?: string) => {
-    if (value) nodes.push(mark ? { type: 'text', text: value, marks: [{ type: mark }] } : { type: 'text', text: value });
+  const push = (value: string, mark?: string, breaks = true) => {
+    // The model sometimes uses a Markdown-compatible HTML break. Map that one token to the bounded schema;
+    // never parse arbitrary HTML or attributes. Fenced code bypasses inline parsing.
+    (breaks ? value.split(/<br\s*\/?>/i) : [value]).forEach((part, index) => {
+      if (index) nodes.push({ type: 'hardBreak' });
+      if (part) nodes.push(mark ? { type: 'text', text: part, marks: [{ type: mark }] } : { type: 'text', text: part });
+    });
   };
   while ((match = pattern.exec(text))) {
     push(text.slice(last, match.index));
     if (match[2] !== undefined) push(match[2], 'bold');
     else if (match[4] !== undefined) push(match[4], 'italic');
-    else push(match[5] ?? match[6] ?? match[7]);
+    else push(match[5] ?? match[6] ?? match[7], undefined, match[5] === undefined);
     last = pattern.lastIndex;
   }
   push(text.slice(last));
   // Adjacent plain runs merge so the editor sees one text node.
   return nodes.reduce<DraftNode[]>((all, node) => {
     const prev = all.at(-1);
-    if (prev && !prev.marks && !node.marks) prev.text += node.text || '';
+    if (prev?.type === 'text' && node.type === 'text' && !prev.marks && !node.marks) prev.text += node.text || '';
     else all.push({ ...node });
     return all;
   }, []);

@@ -28,6 +28,7 @@ import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
 import { documentTool, type DocumentToolId } from '../src/document-tools';
 import { documentToolRule } from './document-tools';
+import { parseDocumentOutput } from '../src/document-output';
 import {
   OrganizationKnowledge,
   STRONG_MATCH,
@@ -194,6 +195,7 @@ export function conversationFiles(files: ConversationFile[]) {
 
 export type RunOptions = {
   documentTool?: DocumentToolId;
+  documentTemplate?: import('../src/types').DocumentTemplateInfo;
   retry?: boolean;
   images?: VisionInput[];
   draftOnly?: boolean;
@@ -292,6 +294,7 @@ export class WorkService {
       await this.execute(id, input, attachmentText, reviewed, skill, mode, imageModel, fileNames, options, controller);
     } finally {
       this.active.delete(id);
+      this.emit({ sessionId: id, type: 'changed' });
     }
   }
   private async execute(
@@ -372,7 +375,6 @@ export class WorkService {
             at: new Date().toISOString(),
           });
           this.store.save(session);
-          this.emit({ sessionId: id, type: 'changed' });
           return;
         }
         // An inferred follow-up ("ทำเป็นภาษาอังกฤษด้วย") that brings a new document or routes to other work is a new task.
@@ -434,6 +436,8 @@ export class WorkService {
         session.followUps = [];
         session.skill = skill || undefined;
         session.documentTool = selectedDocument?.id;
+        session.documentTemplate = selectedDocument ? options.documentTemplate : undefined;
+        delete session.documentReview;
         session.contextStart = session.messages.length;
         delete session.checkpoint;
         delete session.approvedPlan;
@@ -769,7 +773,7 @@ export class WorkService {
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
           // A native workflow the employee picked (plan, execute, requirements, diagnose) shapes how this run works.
           options.workflow && workflowRule(options.workflow, this.store.session(id).workPlan),
-          draftingTool && documentToolRule(draftingTool.id),
+          draftingTool && documentToolRule(draftingTool.id, Boolean(session.documentTemplate)),
           ...personal(this.store.settings()),
           ...speakingStyleRules(this.store.settings()),
           section('skill_instructions', instructions.join('\n\n')),
@@ -1000,6 +1004,8 @@ export class WorkService {
         }
       }
       if (!result.trim()) throw new Error('EMPTY_RESULT');
+      const documentOutput = draftingTool ? parseDocumentOutput(handoff, draftingTool.id) : undefined;
+      if (documentOutput) handoff = documentOutput.draft;
       session = this.store.session(id);
       session.clarification = false;
       session.status = 'review';
@@ -1011,7 +1017,14 @@ export class WorkService {
         session.usage = { input: u.input + usage.input, output: u.output + usage.output, total: u.total + usage.total, runs: u.runs + 1 };
       }
       if (mode === 'draft')
-        session.proposals.push({ id: randomUUID(), text: handoff, baseRevision, sources, at: new Date().toISOString() });
+        session.proposals.push({
+          id: randomUUID(),
+          text: handoff,
+          ...(documentOutput?.review ? { review: documentOutput.review } : {}),
+          baseRevision,
+          sources,
+          at: new Date().toISOString(),
+        });
       session.messages.push({
         role: 'assistant',
         text: chat ? handoff : draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''),
@@ -1042,8 +1055,6 @@ export class WorkService {
     } finally {
       clearTimeout(timeout);
       clearInterval(heartbeat);
-      this.active.delete(id);
-      this.emit({ sessionId: id, type: 'changed' });
     }
   }
 }

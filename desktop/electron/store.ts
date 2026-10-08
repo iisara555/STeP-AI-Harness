@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import type { Session, Connection, Settings } from '../src/types';
 import { documentText, markdownDocument, validateDocument } from '../src/draft';
+import { parseDocumentOutput } from '../src/document-output';
 
 export class Store {
   private db: DatabaseSync;
@@ -88,6 +89,7 @@ export class Store {
     delete s.runs;
     delete s.approvedPlan;
     delete s.workPlan;
+    delete s.documentTemplate;
     this.save(s);
     return s;
   }
@@ -106,6 +108,7 @@ export class Store {
         connectionId: _connection,
         lastRun: _run,
         checkpoint: _checkpoint,
+        documentTemplate: _template,
         ...data
       } = s;
       return JSON.stringify({ schema_version: 1, ...data }, null, 2);
@@ -125,6 +128,12 @@ export class Store {
       .prepare('SELECT value FROM records WHERE kind=?')
       .all(kind)
       .map(r => JSON.parse(String(r.value)));
+  }
+  templateRecords(): { key: string; sessionId: string }[] {
+    return this.db
+      .prepare('SELECT id,value FROM records WHERE kind=?')
+      .all('document-template')
+      .map(row => ({ key: String(row.id), sessionId: JSON.parse(String(row.value)).sessionId }));
   }
   settings(): Settings {
     return this.get('settings', 'main') ?? { team: '', assistant: 'STeP Mate', workspace: '', theme: 'system', onboarding: false };
@@ -179,7 +188,11 @@ export class Store {
       proposal = session.proposals.find(p => p.id === proposalId);
     if (!proposal) throw new Error('PROPOSAL_NOT_FOUND');
     // Proposals are Markdown from the model; keep their headings, lists, and emphasis in the editable draft.
-    const edited = this.edit(id, proposal.text, proposal.baseRevision, markdownDocument(proposal.text));
+    const output = session.documentTool ? parseDocumentOutput(proposal.text, session.documentTool) : { draft: proposal.text, review: '' };
+    const edited = this.edit(id, output.draft, proposal.baseRevision, markdownDocument(output.draft));
+    const review = [proposal.review, output.review].filter(Boolean).join('\n\n');
+    if (review) edited.documentReview = { text: review, revision: edited.revision };
+    else delete edited.documentReview;
     edited.proposals = edited.proposals.filter(p => p.id !== proposalId);
     edited.sources = proposal.sources;
     this.save(edited);

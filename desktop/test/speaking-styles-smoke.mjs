@@ -34,6 +34,11 @@ try {
     await page.getByRole('tab', { name: 'ทั่วไป', exact: true }).click();
     return page.getByRole('radiogroup', { name: 'สไตล์การพูดของผู้ช่วย' });
   };
+  const save = async () => {
+    const button = page.getByRole('button', { name: 'บันทึกและไปที่งาน' });
+    await button.click();
+    await expect(button).toBeHidden();
+  };
   let picker = await open();
   const names = (await picker.getByRole('radio').allInnerTexts()).map(text => text.split('\n')[0].trim());
   assert.deepEqual(names, ['เพื่อนร่วมงาน', 'มืออาชีพ', 'กระชับ', 'กำหนดเอง', 'Witty', 'Ob-Oon']);
@@ -43,7 +48,7 @@ try {
   // A preset is saved as the conversation style; custom asks for the wording.
   await picker.getByRole('radio', { name: /กำหนดเอง/ }).click();
   await page.getByLabel('สไตล์ที่ต้องการ').fill('ตอบเป็นข้อ ๆ');
-  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  await save();
   let saved = await settings(page);
   assert.equal(saved.personality, 'custom');
   assert.equal(saved.assistantTone, 'ตอบเป็นข้อ ๆ');
@@ -57,7 +62,7 @@ try {
     .getByRole('radiogroup', { name: 'สำเนียงภาษา' })
     .getByRole('radio', { name: /ภาษาเหนือ/ })
     .click();
-  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  await save();
   saved = await settings(page);
   assert.equal(saved.interactionStyle, 'witty');
   assert.equal(saved.languageStyle, 'northern-thai');
@@ -66,7 +71,7 @@ try {
   picker = await open();
   await expect(picker.getByRole('radio', { name: /Witty/ })).toHaveAttribute('aria-checked', 'true');
   await picker.getByRole('radio', { name: /กระชับ/ }).click();
-  await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
+  await save();
   saved = await settings(page);
   assert.equal(saved.personality, 'concise');
   assert.equal(saved.interactionStyle, 'standard');

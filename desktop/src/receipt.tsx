@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   Check,
   Download,
@@ -31,10 +31,11 @@ import { compareField, receiptRuleChecks, type ReceiptField, type VisionReading 
 import '../../experiments/local-thai-ocr/web/receipt-review.js';
 import { SectionArt } from './illustration';
 import { receiptSourceText } from './receipt-source';
-import { receiptProvenance, type ExtractionMethod } from './extraction-provenance';
+import { receiptProvenance } from './extraction-provenance';
 import { trialReading, trialReport, type TrialReading } from './receipt-trial';
 import { expenseCategorySuggestion, expenseCodeLabel, expenseDescriptionFromText, formValues, receiptAssessment } from './receipt-workflow';
 import { localized, t } from './i18n';
+import { emptyReceiptForm, receiptFormReducer } from './receipt-form';
 
 type MappingCandidate = {
   value: string;
@@ -216,11 +217,13 @@ export function ReceiptApp({
     [records, setRecords] = useState<LineRecord[]>([]),
     [mapping, setMapping] = useState<AfpMapping | null>(null);
   // One confirmation covers every field and every flagged OCR line; editing anything clears it.
-  const [values, setValues] = useState<Record<string, string>>({}),
-    [allChecked, setAllChecked] = useState(false),
-    // Fields the app filled from a low-score OCR candidate or the AI, which the person has not edited yet.
-    [guessed, setGuessed] = useState<Record<string, 'ocr' | 'ai'>>({});
-  const [origins, setOrigins] = useState<Record<string, ExtractionMethod>>({});
+  const [form, updateForm] = useReducer(receiptFormReducer, emptyReceiptForm);
+  const { values, guessed, origins, checked: allChecked } = form;
+  const { value: expenseDescription, edited: descriptionEdited, origin: descriptionOrigin } = form.description;
+  const sourceIdRef = useRef('');
+  const actionPending = useRef(false);
+  const statusVersion = useRef(0);
+  const setAllChecked = (checked: boolean) => updateForm({ type: 'check', checked });
   const [trialMode, setTrialMode] = useState(false);
   const [trialOcr, setTrialOcr] = useState<TrialReading | null>(null);
   const [trialVision, setTrialVision] = useState<TrialReading | null>(null);
@@ -229,34 +232,39 @@ export function ReceiptApp({
     () => (allChecked ? Object.fromEntries(review.fieldKeys.map(k => [k, true])) : {}) as Record<string, boolean>,
     [allChecked],
   );
-  const edit = (k: string, value: string) => {
-    setValues(v => ({ ...v, [k]: value }));
-    setGuessed(({ [k]: _, ...rest }) => rest);
-    setOrigins(v => ({ ...v, [k]: 'manual' }));
-    setAllChecked(false);
-  };
+  const edit = (field: string, value: string) => updateForm({ type: 'edit', field, value });
   const [note, setNote] = useState(''),
     [buyerExcluded, setBuyerExcluded] = useState(false),
     [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]),
     [vision, setVision] = useState<Vision | null>(null),
     [zoom, setZoom] = useState(false),
     [typeOverride, setTypeOverride] = useState<DocumentType | ''>(''),
-    [categoryOverride, setCategory] = useState<ClaimCategory | null>(null),
-    [expenseDescription, setExpenseDescription] = useState(''),
-    [descriptionEdited, setDescriptionEdited] = useState(false),
-    [descriptionOrigin, setDescriptionOrigin] = useState<ExtractionMethod>('ocr');
+    [categoryOverride, setCategory] = useState<ClaimCategory | null>(null);
   useEffect(() => onBusy?.(Boolean(busy) && busy !== 'status'), [busy, onBusy]);
   const run = async (id: string, fn: () => Promise<unknown>) => {
-    setBusy(id);
+    const foreground = id !== 'status';
+    if (foreground && actionPending.current) return;
+    if (foreground) {
+      actionPending.current = true;
+      setBusy(id);
+    }
     try {
       await fn();
     } catch (e) {
       onError(e);
     } finally {
-      setBusy('');
+      if (foreground) {
+        actionPending.current = false;
+        setBusy('');
+      }
     }
   };
-  const refresh = () => run('status', async () => setStatus(await call('ocrStatus', { connectionId })));
+  const refresh = () =>
+    run('status', async () => {
+      const version = ++statusVersion.current;
+      const next = await call('ocrStatus', { connectionId });
+      if (version === statusVersion.current) setStatus(next);
+    });
   useEffect(
     () =>
       onEvent(event => {
@@ -267,11 +275,12 @@ export function ReceiptApp({
   // OCR is optional. If the employee installed it before, opening this page starts the local service; otherwise nothing is downloaded.
   useEffect(() => {
     let current = true;
+    const version = ++statusVersion.current;
     void run('status', async () => {
       const s = await call('ocrStatus', { connectionId });
-      if (!current) return;
+      if (!current || version !== statusVersion.current) return;
       const next = s?.installed && !s.running ? await call('ocrStart', { connectionId }) : s;
-      if (current) setStatus(next);
+      if (current && version === statusVersion.current) setStatus(next);
     });
     return () => {
       current = false;
@@ -311,24 +320,26 @@ export function ReceiptApp({
         nextGuessed[k] = 'ocr';
       }
     }
-    setDoc({ ...read, sourceId: crypto.randomUUID() });
+    const sourceId = crypto.randomUUID();
+    sourceIdRef.current = sourceId;
+    setDoc({ ...read, sourceId });
     setFields(extracted?.fields || {});
     setRecords(extracted?.records || []);
     setMapping(extracted?.afpMapping || null);
     setBuyerExcluded(Boolean(extracted?.buyerTaxIdExcluded));
-    setValues(formValues(nextValues));
-    setOrigins(Object.fromEntries(review.fieldKeys.map(k => [k, 'ocr'])));
-    setGuessed(nextGuessed);
-    setAllChecked(false);
+    updateForm({
+      type: 'load',
+      sourceId,
+      values: formValues(nextValues),
+      guessed: nextGuessed,
+      description: expenseDescriptionFromText(String(read.result?.text || '')),
+    });
     setNote('');
     setAiDecisions([]);
     setVision(null);
     setZoom(false);
     setTypeOverride('');
     setCategory(null);
-    setExpenseDescription(expenseDescriptionFromText(String(read.result?.text || '')));
-    setDescriptionEdited(false);
-    setDescriptionOrigin('ocr');
     setTrialVision(null);
     setTrialOcr(
       trialMode && extracted
@@ -350,20 +361,16 @@ export function ReceiptApp({
     // A local pilot never calls a provider automatically. The independent AI button remains explicit.
     if (trialMode) return;
     // The second, independent reading by a vision model, compared with the OCR field by field below.
-    if (status?.vision && connectionId) await readWithAi(formValues(nextValues), nextGuessed, true);
+    if (status?.vision && connectionId) await readWithAi(formValues(nextValues), nextGuessed, sourceId);
     // Without the image reading, the AI still sorts the OCR candidates into the fields (OCR text only, masked).
     else if (connectionId && extracted?.afpMapping)
-      await aiFilter(nextValues, nextGuessed, extracted.afpMapping, true, String(read.result?.text || ''));
+      await aiFilter(nextValues, nextGuessed, extracted.afpMapping, String(read.result?.text || ''), sourceId);
   }
-  async function readWithAi(current = values, currentGuessed = guessed, newDocument = false) {
+  async function readWithAi(current = values, currentGuessed = guessed, sourceId = sourceIdRef.current) {
     const started = performance.now();
     const reading = await call('receiptVision', { connectionId });
-    if (!reading || reading.cancelled) return;
+    if (!reading || reading.cancelled || sourceIdRef.current !== sourceId) return;
     setVision(reading);
-    if (reading.expenseDescription && (newDocument || !descriptionEdited)) {
-      setExpenseDescription(reading.expenseDescription);
-      setDescriptionOrigin('vision');
-    }
     if (trialOcr)
       setTrialVision(
         trialReading(
@@ -374,26 +381,13 @@ export function ReceiptApp({
       );
     // A field the OCR left empty, or only guessed from a low-score candidate, takes the AI's reading (still a guess
     // to look at); a field the OCR read with confidence keeps its value and shows the AI's reading beside it when they differ.
-    const next = { ...current },
-      nextGuessed = { ...currentGuessed };
+    const suggestions: Record<string, string> = {};
+    const normalized = formValues(Object.fromEntries(review.fieldKeys.map(key => [key, reading.fields?.[key]?.value || ''])));
     for (const k of review.fieldKeys as ReceiptField[]) {
-      const ai = formValues(Object.fromEntries(review.fieldKeys.map(key => [key, reading.fields?.[key]?.value || ''])))[k as ReceiptField];
-      if (ai && (!String(next[k] || '').trim() || currentGuessed[k])) {
-        next[k] = ai;
-        nextGuessed[k] = 'ai';
-      }
+      const ai = normalized[k];
+      if (ai && (!String(current[k] || '').trim() || currentGuessed[k])) suggestions[k] = ai;
     }
-    setValues(next);
-    setOrigins(previous => ({
-      ...previous,
-      ...Object.fromEntries(
-        review.fieldKeys
-          .filter(k => next[k] !== current[k] || (reading.fields?.[k]?.value && (!current[k] || currentGuessed[k])))
-          .map(k => [k, 'vision']),
-      ),
-    }));
-    setGuessed(nextGuessed);
-    setAllChecked(false);
+    updateForm({ type: 'suggest', sourceId, origin: 'vision', values: suggestions, description: reading.expenseDescription });
     notify(t('AI อ่านภาพใบเสร็จแล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const matchOf = (k: string) =>
@@ -596,8 +590,8 @@ export function ReceiptApp({
     current = values,
     currentGuessed = guessed,
     currentMapping = mapping,
-    newDocument = false,
     text = String(doc?.result?.text || ''),
+    sourceId = sourceIdRef.current,
   ) {
     if (!currentMapping) return;
     const sourceDescription = expenseDescriptionFromText(text);
@@ -627,31 +621,21 @@ export function ReceiptApp({
       },
     });
     if (filtered?.cancelled) return;
+    if (sourceIdRef.current !== sourceId || filtered?.cancelled) return;
     const decisions: AiDecision[] = Array.isArray(filtered?.decisions) ? filtered.decisions : [];
     setAiDecisions(decisions);
-    const nextValues = { ...current },
-      nextGuessed = { ...currentGuessed };
+    const suggestions: Record<string, string> = {};
+    let description: string | undefined;
     for (const decision of decisions) {
       const k = decision.field;
       if (k === 'expenseDescription') {
-        if (decision.status === 'suggested' && decision.value && (newDocument || !descriptionEdited)) {
-          setExpenseDescription(decision.value);
-          setDescriptionOrigin('ai-candidate-filter');
-        }
+        if (decision.status === 'suggested' && decision.value) description = decision.value;
         continue;
       }
-      if (decision.status === 'suggested' && decision.value && (newDocument || origins[k] !== 'manual')) {
-        nextValues[k] = decision.value;
-        nextGuessed[k] = 'ai';
-      }
+      if (review.fieldKeys.includes(k) && decision.status === 'suggested' && decision.value)
+        suggestions[k] = formValues({ [k]: decision.value })[k as ReceiptField];
     }
-    setValues(formValues(nextValues));
-    setGuessed(nextGuessed);
-    setOrigins(previous => ({
-      ...previous,
-      ...Object.fromEntries(review.fieldKeys.filter(k => nextValues[k] !== current[k]).map(k => [k, 'ai-candidate-filter'])),
-    }));
-    setAllChecked(false);
+    updateForm({ type: 'suggest', sourceId, origin: 'ai-candidate-filter', values: suggestions, description });
     notify(t('AI จัดข้อความ OCR เข้าช่องให้แล้ว ดูช่องที่ไฮไลต์เทียบกับต้นฉบับ แล้วติ๊กยืนยันครั้งเดียว'), 'success');
   }
   const ready = status?.running;
@@ -1134,10 +1118,7 @@ export function ReceiptApp({
                 aria-label={t('รายการค่าใช้จ่าย')}
                 value={expenseDescription}
                 onChange={e => {
-                  setExpenseDescription(e.target.value);
-                  setDescriptionEdited(true);
-                  setDescriptionOrigin('manual');
-                  setAllChecked(false);
+                  updateForm({ type: 'describe', value: e.target.value });
                 }}
               />
               <small className="muted">{t('ระบบอ่านจากรายการบนใบเสร็จ ใช้แนะนำหมวดโดยไม่เดาจากชื่อร้าน')}</small>

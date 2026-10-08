@@ -12,7 +12,7 @@ export function resolveDocumentLayout(id?: unknown, font?: unknown, garuda?: unk
   if (garuda !== undefined && garuda !== 'auto' && garuda !== 'none') throw new Error('INVALID_EXPORT_GARUDA');
   return {
     id: profile?.id,
-    font: (font as DocumentFont | undefined) || (profile ? 'TH Sarabun PSK' : 'TH Sarabun New'),
+    font: (font as DocumentFont | undefined) || (profile && profile.id !== 'memo' ? 'TH Sarabun PSK' : 'TH Sarabun New'),
     ...(garuda !== 'none' && ['memo', 'letter'].includes(profile?.id || '') ? { garudaHeightCm: profile?.id === 'memo' ? 1.5 : 3 } : {}),
   };
 }
@@ -38,11 +38,13 @@ export function documentLayoutRoles(document: DraftNode, id?: DocumentToolId): L
     }
     if (
       ['memo', 'letter', 'minutes'].includes(id) &&
-      /^(?:\(ลงชื่อ\)|ตำแหน่ง|ขอแสดงความนับถือ|ผู้จดรายงาน|ผู้ตรวจรายงาน|\[รอยืนยัน: (?:ผู้ลงนาม|ชื่อและตำแหน่ง|คำลงท้าย))/.test(text)
+      (/^(?:\(ลงชื่อ\)|ตำแหน่ง|ขอแสดงความนับถือ|ผู้จดรายงาน|ผู้ตรวจรายงาน|\[รอยืนยัน: (?:ผู้ลงนาม|ชื่อและตำแหน่ง|คำลงท้าย))/.test(text) ||
+        /^\([^\n]{1,160}\)$/.test(text) ||
+        /^(?:ผู้ดูแลโครงการ|ผู้จัดทำ|ผู้เสนอเรื่อง|หัวหน้าทีม|ผู้อำนวยการ)(?:\s|$)/.test(text))
     )
       return 'signature';
     if (
-      /^(?:ส่วนราชการ|ที่\s|วันที่|เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย|หน่วยงาน|ผู้รับผิดชอบ|ผู้มาประชุม|ผู้ไม่มาประชุม|ผู้เข้าร่วมประชุม|เริ่มประชุม|เลิกประชุม|ครั้งที่|วัน เวลา|มติ|สาระสำคัญ|ข้อเสนอที่ยังไม่ตกลง|การรับรองรายงาน|\[รอยืนยัน:)/.test(
+      /^(?:ส่วนราชการ|ส่วนงาน|ความเห็นผู้พิจารณา|ความเห็นผู้เสนอ|คำสั่ง\s*\/|ที่\s|วันที่|เรื่อง|เรียน|อ้างถึง|สิ่งที่ส่งมาด้วย|หน่วยงาน|ผู้รับผิดชอบ|ผู้มาประชุม|ผู้ไม่มาประชุม|ผู้เข้าร่วมประชุม|เริ่มประชุม|เลิกประชุม|ครั้งที่|วัน เวลา|มติ|สาระสำคัญ|ข้อเสนอที่ยังไม่ตกลง|การรับรองรายงาน|\[รอยืนยัน:)/.test(
         text,
       )
     )

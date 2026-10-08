@@ -1,9 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from '../electron/shared-profile';
+
+test('parallel profile saves finish in order with complete JSON and no temporary files', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-shared-parallel-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = join(dir, 'profile.json');
+  await Promise.all(
+    Array.from({ length: 30 }, (_, index) =>
+      writeSharedProfile(file, {
+        userName: 'Synthetic user',
+        team: 'cc',
+        assistant: `Synthetic assistant ${index}`,
+        personality: 'coworker',
+        assistantTone: '',
+      }),
+    ),
+  );
+  assert.equal((await readSharedProfile(file))?.assistant, 'Synthetic assistant 29');
+  assert.deepEqual(await readdir(dir), ['profile.json']);
+});
 
 test('shared profile: Desktop writes what Setup-STeP-Skills reads, and reads what it writes', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'step-shared-'));

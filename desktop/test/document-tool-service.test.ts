@@ -28,6 +28,47 @@ function fixture() {
   return { store, session, harness };
 }
 
+test('Skill review output is retained separately through drafting, acceptance and revision for every tool', async () => {
+  for (const { tool, variant } of DOCUMENT_TOOLS.flatMap(tool => tool.variants.map(variant => ({ tool, variant })))) {
+    const { store, session, harness } = fixture();
+    harness.contextPolicy = text =>
+      text === 'ปรับภาษาให้ชัดขึ้น'
+        ? { history: 'relevant-only', carryover: true, revision: true }
+        : { history: 'ignore', carryover: false };
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async (_prompt, _connection, context) => {
+            assert.ok(context.system?.includes('<document_draft>'));
+            return '<document_draft>\n# เอกสารสังเคราะห์\n\nรหัส 00123 [รอยืนยัน: งบ]\n</document_draft>\n<document_review>\n## ตรวจข้อมูลก่อนเสนอ\n\nยังไม่ได้ตรวจหน้าส่งออก\n</document_review>';
+          },
+        },
+      }),
+      () => {},
+    );
+    const request = documentRequest(tool.id, { [tool.fields[0].key]: 'Synthetic input' }, variant.id);
+    await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: tool.id });
+    const proposal = store.session(session.id).proposals[0];
+    assert.ok(proposal, JSON.stringify(store.session(session.id).runs));
+    assert.ok(!proposal.text.includes('ตรวจข้อมูลก่อนเสนอ'));
+    assert.ok(proposal.review?.includes('ยังไม่ได้ตรวจหน้าส่งออก'));
+    const accepted = store.accept(session.id, proposal.id);
+    assert.ok(!accepted.draft.includes('document_draft'));
+    assert.ok(!accepted.draft.includes('ตรวจข้อมูลก่อนเสนอ'));
+    assert.equal(accepted.documentReview?.text, proposal.review);
+    await service.run(session.id, 'ปรับภาษาให้ชัดขึ้น', '', true);
+    const revised = store.session(session.id);
+    assert.equal(revised.status, 'review');
+    assert.equal(revised.documentTool, tool.id);
+    assert.ok(!revised.proposals[0].text.includes('ตรวจข้อมูลก่อนเสนอ'));
+    assert.ok(revised.proposals[0].review?.includes('ยังไม่ได้ตรวจหน้าส่งออก'));
+    store.close();
+  }
+});
+
 test('every document tool loads actual Skill files, mandatory rules and its template before drafting', async () => {
   for (const profile of DOCUMENT_TOOLS) {
     const { store, session, harness } = fixture();
@@ -106,15 +147,21 @@ test('revisions and retries retain the selected Skill/template; a new task drops
     [],
   );
   const request = documentRequest('project', { rationale: 'Synthetic need' });
-  await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'project' });
+  const template = { key: 'synthetic', sha256: 'synthetic', name: 'synthetic.docx', font: 'TH Sarabun PSK' };
+  await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], {
+    documentTool: 'project',
+    documentTemplate: template,
+  });
   assert.equal(store.session(session.id).status, 'error');
   await service.run(session.id, 'ลองอีกครั้ง', '', true, undefined, 'draft', undefined, [], { retry: true });
   assert.equal(store.session(session.id).status, 'review');
   await service.run(session.id, 'ปรับภาษาให้ชัดขึ้น', '', true);
   assert.equal(store.session(session.id).documentTool, 'project');
+  assert.deepEqual(store.session(session.id).documentTemplate, template);
   assert.ok(seen.slice(0, 3).every(s => s.includes('Working template — ข้อเสนอโครงการ')));
   await service.run(session.id, 'ช่วยอธิบายคำว่า innovation', '', true, undefined, 'chat');
   assert.equal(store.session(session.id).documentTool, undefined);
+  assert.equal(store.session(session.id).documentTemplate, undefined);
   assert.ok(!seen.at(-1)?.includes('<document_tool_contract>'));
   store.close();
 });
@@ -187,4 +234,45 @@ test('privacy blocks form credentials before invoking the model', async () => {
     /PRIVACY_REVIEW_REQUIRED/,
   );
   store.close();
+});
+
+test('template attachment purpose reaches the Skill contract without verifying its example facts', async () => {
+  const { store, session, harness } = fixture();
+  try {
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            assert.ok(context.system?.includes('attachmentRole=template'));
+            assert.ok(prompt.includes('ใช้เฉพาะโครงสร้างและชื่อช่อง'));
+            assert.ok(prompt.includes('EXAMPLE-0009'));
+            assert.ok(prompt.includes('"attachmentRole": "template"'));
+            return '<document_draft>\n# บันทึกข้อความ\n\nเรื่อง งานสังเคราะห์ใหม่\n\nที่ [รอยืนยัน: เลขหนังสือ] วันที่ [รอยืนยัน: วันที่]\n\nงบประมาณ [รอยืนยัน: จำนวนเงิน]\n</document_draft>\n<document_review>ยังไม่มีเลขหนังสือและงบของงานใหม่</document_review>';
+          },
+        },
+      }),
+      () => {},
+    );
+    const request = documentRequest('memo', { subject: 'งานสังเคราะห์ใหม่' }, 'approval', 'template');
+    await service.run(
+      session.id,
+      request.text,
+      request.sourceText + '\nSYNTHETIC EXAMPLE FORM: EXAMPLE-0009, example budget 9,999.',
+      true,
+      undefined,
+      'draft',
+      undefined,
+      ['synthetic-example.txt'],
+      { documentTool: 'memo' },
+    );
+    const done = store.session(session.id);
+    assert.equal(done.status, 'review');
+    assert.ok(!done.proposals[0].text.includes('EXAMPLE-0009'));
+    assert.ok(done.proposals[0].review?.includes('ยังไม่มีเลขหนังสือ'));
+  } finally {
+    store.close();
+  }
 });
