@@ -114,3 +114,22 @@ jobs:
           fi
       - run: npm test
       - run: npm run build
+
+  desktop-macos-electron:
+    # Release packaging runs on macOS too. Keep its real Electron/browser smoke in main CI so
+    # native WebContentsView regressions are caught before a desktop-v* tag is created.
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Verify Electron chat, browser and tools on macOS
+        run: npm run test:electron
