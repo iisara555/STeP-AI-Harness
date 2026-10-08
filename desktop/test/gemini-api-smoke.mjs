@@ -14,13 +14,32 @@ const chatTurns = [];
 const receiptReply = {
   fields: {
     merchant: { value: 'ร้านตัวอย่าง จำกัด', evidence: 'ร้านตัวอย่าง จำกัด' },
-    total: { value: '๑๐๗.๐๐', evidence: 'ยอดสุทธิ ๑๐๗.๐๐' },
+    date: { value: '2 ต.ค. 2569', evidence: 'วันที่ 2 ต.ค. 2569' },
+    total: {
+      value: '๑๐๗.๐๐',
+      evidence: 'ยอดสุทธิ ๑๐๗.๐๐',
+      is_handwritten: true,
+      confidence: 0.7,
+      needs_review: true,
+      region: { page: 1, x: 0.5, y: 0.7, width: 0.4, height: 0.15 },
+    },
     vat: { value: '7.00', evidence: 'ภาษีมูลค่าเพิ่ม 7.00' },
   },
   buyerTaxId: '',
+  merchantAddress: 'ที่อยู่สังเคราะห์สำหรับทดสอบ',
+  amountInWords: 'หนึ่งร้อยเจ็ดบาทถ้วน',
+  signatures: {
+    receiver: {
+      status: 'absent',
+      evidence: 'ช่องผู้รับเงินว่าง',
+      confidence: 0.9,
+      region: { page: 1, x: 0.1, y: 0.85, width: 0.5, height: 0.1 },
+    },
+  },
   documentType: 'cash_bill',
   features: { handwritten: true, receiverSigned: false, itemsListed: true },
   notes: 'ตัวเลขยอดสุทธิจางเล็กน้อย',
+  items: [{ description: 'สินค้าสังเคราะห์', quantity: '2', unitPrice: '50.00', amount: '100.00' }],
 };
 const prompts = [];
 let slowTest = false;
@@ -158,6 +177,22 @@ try {
   assert.ok((await page.getByText('AI อ่านจากภาพ · ตรวจกับต้นฉบับ').count()) >= 3, 'each AI-read field is marked');
   const confirmAll = page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/);
   assert.equal(await confirmAll.isChecked(), false, 'nothing is confirmed for the person');
+  await expect(page.getByLabel('ที่อยู่ผู้รับเงิน / ร้าน', { exact: true })).toHaveValue(receiptReply.merchantAddress);
+  await expect(page.getByLabel('จำนวนเงินตัวอักษร', { exact: true })).toHaveValue(receiptReply.amountInWords);
+  const signature = page.getByLabel('ลายเซ็นผู้รับเงิน', { exact: true });
+  await expect(signature).toHaveValue('absent');
+  await signature.focus();
+  await page.getByText('ภาพขยายช่อง ลายเซ็นผู้รับเงิน · ตำแหน่งจาก AI โปรดเทียบต้นฉบับ').waitFor();
+  await expect(page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' })).toContainText('ใบเสร็จยังขาดองค์ประกอบ');
+  await page.getByLabel('ยอดรวมที่ชำระ').focus();
+  await expect(page.locator('.receipt-preview-frame')).toHaveClass(/field-focused/);
+  assert.equal(await page.locator('.receipt-preview').evaluate(image => image.style.width), '250%');
+  assert.equal(await page.locator('.receipt-preview').evaluate(image => image.style.transform), 'translate(-50%, -70%)');
+  await page.getByText('ภาพขยายช่อง ยอดรวมที่ชำระ · ตำแหน่งจาก AI โปรดเทียบต้นฉบับ').waitFor();
+  await expect(page.locator('#rf-total').locator('..').locator('..')).toHaveClass(/uncertain/);
+  await page.getByText('ความมั่นใจที่ AI รายงาน: 70% · ไม่ใช่ความแม่นยำที่วัด').waitFor();
+  await page.getByText('ตารางรายการที่ AI อ่านได้ · ยังไม่ยืนยัน', { exact: true }).click();
+  await page.getByRole('cell', { name: 'สินค้าสังเคราะห์', exact: true }).waitFor();
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
   // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
   assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
@@ -172,6 +207,11 @@ try {
   await page.getByLabel('ภาษีมูลค่าเพิ่ม').press('Enter');
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toBeFocused();
   await confirmAll.check();
+  await signature.selectOption('present');
+  assert.equal(await confirmAll.isChecked(), false, 'correcting signature presence revokes the one confirmation');
+  await expect(page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' })).toContainText('พบองค์ประกอบพื้นฐานครบ');
+  await confirmAll.check();
+  await expect(page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' })).toContainText('ครบองค์ประกอบพื้นฐานที่ตรวจ');
   // The confirmation survives a trip to Settings and back.
   await page
     .getByRole('button', { name: /ตั้งค่า/ })
@@ -182,6 +222,22 @@ try {
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
   assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
+  const imageParts = JSON.parse(visionRequest)
+    .contents.flatMap(c => c.parts)
+    .filter(part => part.inlineData || part.inline_data);
+  assert.equal(imageParts.length, 4, 'a full page and three detail crops use the same image consent');
+  const sizes = await app.evaluate(
+    ({ nativeImage }, data) => data.map(encoded => nativeImage.createFromBuffer(Buffer.from(encoded, 'base64')).getSize()),
+    imageParts.map(part => (part.inlineData || part.inline_data).data),
+  );
+  assert.deepEqual(sizes[0], { width: 64, height: 64 });
+  assert.ok(
+    sizes.slice(1).every(size => size.width === 64 && size.height < 64),
+    'detail images are actual crops, not full-image duplicates',
+  );
+  assert.ok(visionRequest.includes('detail of page 1') && visionRequest.includes('full page 1'));
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('108.00');
+  assert.equal(await confirmAll.isChecked(), false, 'editing after final confirmation revokes it');
 
   // Chat with tools on Gemini: the reference turn and the answer turn share one Gemini CLI conversation, so the second
   // request carries the first exchange plus only the new tool results, not the whole prompt again.
@@ -201,13 +257,55 @@ try {
   assert.equal(chatTurns[0].contents, 1);
   assert.ok(chatTurns[1].contents >= 3, 'the second turn continues the same conversation');
   assert.ok(chatTurns[1].last.includes('<tool_results>') && !chatTurns[1].last.includes('<routing_contract>'), 'only the new part is sent');
+
+  // PDF receipt reads use the selected snapshot, and never silently omit a fourth page.
+  const pdf = join(home, 'synthetic-receipt.pdf');
+  const pdfFixture = async count =>
+    Buffer.from(
+      await app.evaluate(async ({ BrowserWindow }, count) => {
+        const fixture = new BrowserWindow({
+          show: false,
+          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+        });
+        try {
+          const html =
+            '<style>@page{margin:0}.page{height:200mm;break-after:page}.page:last-child{break-after:auto}</style>' +
+            Array.from({ length: count }, (_, i) => `<div class="page">SYNTHETIC RECEIPT PAGE ${i + 1}</div>`).join('');
+          await fixture.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+          return (await fixture.webContents.printToPDF({ pageSize: 'A4' })).toString('base64');
+        } finally {
+          fixture.destroy();
+        }
+      }, count),
+      'base64',
+    );
+  await writeFile(pdf, await pdfFixture(3));
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+  }, pdf);
+  const connectionId = (await gemini()).find(c => c.ready).id;
+  await page.evaluate(connectionId => window.step.call('ocrRead', { connectionId }), connectionId);
+  await writeFile(pdf, await pdfFixture(4));
+  const pdfReading = await page.evaluate(connectionId => window.step.call('receiptVision', { connectionId }), connectionId);
+  assert.equal(pdfReading.pagePreviews.length, 3, 'changing a path cannot replace the consented snapshot');
+  await page.evaluate(connectionId => window.step.call('ocrRead', { connectionId }), connectionId);
+  const beforeLongPdf = prompts.length;
+  const tooLong = await page.evaluate(async connectionId => {
+    try {
+      await window.step.call('receiptVision', { connectionId });
+      return 'unexpected success';
+    } catch (error) {
+      return error.message;
+    }
+  }, connectionId);
+  assert.ok(tooLong.includes('ATTACH_SCANNED_TOO_LONG'), tooLong);
+  assert.equal(prompts.length, beforeLongPdf, 'incomplete PDF input is rejected before a provider call');
   // Every OCR lifecycle result must retain Gemini's image capability, not just ocrStatus.
   ocrServer = createServer((_req, res) => res.end(JSON.stringify({ ok: true, service: 'STeP Local Thai OCR' })));
   await new Promise((resolve, reject) => {
     ocrServer.once('error', reject);
     ocrServer.listen(8765, '127.0.0.1', resolve);
   });
-  const connectionId = (await gemini()).find(c => c.ready).id;
   const started = await page.evaluate(connectionId => window.step.call('ocrStart', { connectionId }), connectionId);
   assert.equal(started.vision, true);
   assert.equal(started.textOnly, false);

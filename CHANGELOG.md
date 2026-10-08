@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Desktop: handwritten receipt review with Hybrid OCR and Vision AI
+
+- Prefer independently read Vision values for handwriting while retaining OCR evidence and protecting manual corrections, including intentional blank fields. Add bounded confidence, handwriting, uncertainty and full-page coordinates; focusing a field opens its image detail, with PDF page previews when Vision is available. Keep the single final confirmation.
+- Show five preliminary receipt elements: payee name/address, payment date, expense items, amount in digits/words and receiver signature. Missing or unreadable signature/item information stays visible as missing or uncertain. AI transcribes issuer address and amount words into editable fields; signature observations distinguish receiver, issuer and buyer spaces and support corrections under the same final confirmation. Presence review does not identify or authenticate a signer, and exact category acceptance still needs AFP sources.
+- Send full-page context plus source-resolution detail crops for single-page images, under the existing image consent and policy gate. Read PDF bytes from the selected snapshot and reject more than three receipt pages instead of silently omitting pages. Keep image size limits and the shared timeout/cancellation checks; introduce no model dependency or policy-default change.
+- Check exact satang arithmetic, Thai amount words, tax-ID checksum, observed item quantity × price and an explicitly stated item-table sum. Invalid formats, contradictions and unknown rounding rules remain review findings. One independent re-reading may follow a numeric contradiction; it never calculates replacement values or retries indefinitely.
+- Preserve both Vision readings and table rows as `EXTRACTED_UNVERIFIED` even when equations agree or the selected form is confirmed. Only selected values compared by a person become `SOURCE_FACT`; this is transcription review, not proof of authenticity or reimbursement approval. Vendor master integration awaits an organization-confirmed source.
+- Validation uses synthetic amounts, metadata, images and a mocked Gemini API. These results do not establish accuracy on real handwriting or acceptance on Windows two-core / Mac M1 4 GB devices. Local OCR acceptance remains open; Antigravity remains a text-only receipt transport.
+- Make the synthetic coordinator overlap check wait for both child requests instead of assuming a 5 ms delay creates overlap under CI load. Keep its concurrency assertions and bounded failure deadline; limit Desktop test-file concurrency to two so process-based fixtures do not compete with every other test file at once.
+
 ## Desktop v0.5.30 — 2026-10-08
 
 ### Desktop: DOCX spacing

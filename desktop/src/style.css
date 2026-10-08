@@ -2344,6 +2344,15 @@ nav button:hover,
   max-height: none;
   cursor: zoom-out;
 }
+.receipt-preview-frame.field-focused {
+  height: min(350px, 52vh);
+  overflow: hidden;
+}
+.receipt-preview-frame.field-focused .receipt-preview {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
 .receipt-zoom {
   margin-left: auto;
 }
@@ -2460,6 +2469,10 @@ nav button:hover,
   border-left: 3px dashed var(--accent);
   background: var(--accent-soft);
 }
+.receipt-field.uncertain {
+  border-left: 3px dashed var(--accent);
+  background: var(--accent-soft);
+}
 .receipt-guess {
   display: inline-flex;
   color: var(--accent-ink);
@@ -2470,6 +2483,38 @@ nav button:hover,
 .receipt-field.confirmed {
   border-left-color: var(--accent);
   background: var(--accent-soft);
+}
+.receipt-field.rule-warning {
+  border-left: 3px solid var(--danger);
+}
+.receipt-validation-warning {
+  display: block;
+  color: var(--danger);
+}
+.receipt-item-warning {
+  color: var(--danger);
+}
+.receipt-elements,
+.receipt-signatures {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 12px 0;
+}
+.receipt-elements ul {
+  list-style: none;
+  padding: 0;
+}
+.receipt-elements li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
+}
+.receipt-signatures label,
+.receipt-signatures small {
+  display: block;
+  margin: 6px 0;
 }
 .receipt-field .check {
   padding: 7px 11px;

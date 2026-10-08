@@ -103,3 +103,47 @@ test('saving an unchecked draft never claims a person has already verified its O
   assert.doesNotMatch(result.notice, /suggestions checked by a person/);
   assert.match(result.notice, /selected values/);
 });
+
+test('successful independent re-reading does not verify either reading or extracted table rows', () => {
+  const result = receiptProvenance({
+    source_id: 'SYN-RECHECK',
+    fields: { total: { value: '107.00', checked: true } },
+    vision_check: {
+      fields: { total: { value: '107.00', confidence: 1 } },
+      items: [{ description: 'สินค้าสังเคราะห์', amount: '100.00', provenance: 'SOURCE_FACT' }],
+      recheck: {
+        failed: false,
+        changedFields: ['total'],
+        first: { fields: { total: { value: '170.00', provenance: 'SOURCE_FACT' } }, items: [{ amount: '100.00' }] },
+      },
+    },
+  });
+  assert.equal(result.fields.total.provenance, 'SOURCE_FACT');
+  assert.equal(result.vision_check.recheck.first.fields.total.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(result.vision_check.recheck.first.items[0].provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(result.vision_check.items[0].provenance, 'EXTRACTED_UNVERIFIED');
+  assert.deepEqual(receiptProvenance(result), result);
+});
+
+test('single human confirmation verifies a visible signature observation, never raw AI signature readings', () => {
+  const draft = receiptProvenance({
+    source_id: 'SYN-SIGNATURE',
+    fields: {},
+    signature_observations: { receiver: { value: 'present', checked: true, input_origin: 'vision' } },
+    vision_check: {
+      fields: {},
+      signatures: { receiver: { status: 'present', confidence: 1, provenance: 'SOURCE_FACT' } },
+      recheck: { first: { fields: {}, signatures: { receiver: { status: 'absent' } } } },
+    },
+  });
+  assert.equal(draft.signature_observations.receiver.provenance, 'SOURCE_FACT');
+  assert.equal(draft.vision_check.signatures.receiver.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(draft.vision_check.recheck.first.signatures.receiver.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.equal(receiptProvenance({ ...draft, source_id: 'SYN-OTHER' }).signature_observations.receiver.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.match(receiptSourceText(draft), /signature.*presence/i);
+  assert.equal(
+    receiptProvenance({ fields: {}, signature_observations: { receiver: { value: 'uncertain', checked: true } } }).signature_observations
+      .receiver.provenance,
+    'EXTRACTED_UNVERIFIED',
+  );
+});

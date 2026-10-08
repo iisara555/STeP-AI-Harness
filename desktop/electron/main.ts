@@ -66,6 +66,8 @@ import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout
 import { draftExportAction } from './actions';
 import { OcrService, OCR_EXTENSIONS, isOcrFolder, ocrPython, type OcrStatus } from './ocr';
 import { ReceiptOperations } from './receipt-operations';
+import { receiptVisionImages } from './receipt-image-input';
+import { readReceiptVision } from './receipt-vision-recheck';
 import { receiptReadingMode } from './receipt-status';
 import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
@@ -105,7 +107,7 @@ import { section } from './prompt';
 import { ocrAttachmentReport, ocrAttachmentSource } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
-import { RECEIPT_VISION_SYSTEM, parseVisionReading } from '../src/receipt-vision';
+import { RECEIPT_VISION_SYSTEM } from '../src/receipt-vision';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
@@ -1028,17 +1030,15 @@ async function main() {
       ...receiptReadingMode(policyState.policy, connection?.provider),
     };
   }
-  /** The receipt as pictures for a vision model: images resized to 1800 px at most, a PDF's first three pages. */
-  async function receiptImages(receipt: NonNullable<typeof lastReceipt>): Promise<VisionInput[]> {
-    if (receipt.extension === 'pdf') return (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'))).slice(0, 3);
-    const image = nativeImage.createFromBuffer(receipt.bytes);
-    if (image.isEmpty()) throw new Error('RECEIPT_VISION_FORMAT');
-    const size = image.getSize();
-    const scale = Math.min(1, 1800 / Math.max(size.width, size.height));
-    const fitted = scale < 1 ? image.resize({ width: Math.round(size.width * scale), quality: 'best' }) : image;
-    const jpeg = fitted.toJPEG(88);
-    if (jpeg.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
-    return [{ mime: 'image/jpeg', data: jpeg.toString('base64') }];
+  /** Retain full-page context and inspect handwriting with source-resolution crops under the same consent. */
+  async function receiptImages(receipt: NonNullable<typeof lastReceipt>) {
+    const pages =
+      receipt.extension === 'pdf'
+        ? (await pdfPageImages(receipt.path, join(root, 'src/vendor/privacy'), { bytes: receipt.bytes, maxPages: 3 })).map(page =>
+            nativeImage.createFromBuffer(Buffer.from(page.data, 'base64')),
+          )
+        : [nativeImage.createFromBuffer(receipt.bytes)];
+    return { ...receiptVisionImages(pages), pages };
   }
   const previewTypes: Record<string, string> = {
     png: 'image/png',
@@ -2240,7 +2240,7 @@ async function main() {
               title: tm('ให้ AI อ่านภาพใบเสร็จ'),
               message: tm('ส่งภาพใบเสร็จให้ AI ที่เชื่อมต่อไว้อ่านแยกจาก OCR แล้วเทียบผลทีละช่อง'),
               detail: tm(
-                'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ค่าที่ AI อ่านยังต้องตรวจกับต้นฉบับก่อนติ๊ก “ตรวจแล้ว” ทุกช่อง',
+                'ภาพมีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี ส่งเฉพาะใบเสร็จที่คุณมีสิทธิ์ส่ง ระบบส่งภาพเต็มและภาพขยาย หากยอดขัดกันอาจอ่านซ้ำหนึ่งครั้ง ค่าที่ AI อ่านต้องเทียบต้นฉบับก่อนยืนยันทั้งหมดครั้งเดียว',
               ),
               buttons: [tm('ยกเลิก'), tm('ให้ AI อ่านภาพ')],
               defaultId: 1,
@@ -2251,24 +2251,33 @@ async function main() {
             store.put('settings', 'main', { ...store.settings(), receiptVisionConsentedAt: new Date().toISOString() });
           }
           check();
-          const images = await receiptImages(lastReceipt);
+          const imageInput = await receiptImages(lastReceipt);
           check();
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 180_000);
           try {
             const current = await runtime(connection);
             check();
-            const reply = await current.adapter.run('อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น', connection, {
-              ...current.context,
-              system: RECEIPT_VISION_SYSTEM,
-              images,
-              signal: AbortSignal.any([signal, controller.signal]),
-              emit: () => {},
-            });
+            const combinedSignal = AbortSignal.any([signal, controller.signal]);
+            const reading = await readReceiptVision(async (focus, regions) => {
+              check();
+              const inspection = regions?.length ? receiptVisionImages(imageInput.pages, regions) : imageInput;
+              const instruction = focus
+                ? `ตรวจภาพต้นฉบับอีกครั้งเฉพาะช่อง ${focus.join(', ')} และยอดเงินตัวอักษร ค่ารอบก่อนขัดกัน ห้ามคำนวณหรือเดาค่าทดแทน ถ้าอ่านไม่ได้ให้เว้นว่าง ตอบ JSON ครบตามโครงเดิม\n`
+                : 'อ่านใบเสร็จในภาพแล้วตอบเป็น JSON ตามรูปแบบที่กำหนดเท่านั้น\n';
+              const reply = await current.adapter.run(instruction + inspection.description, connection, {
+                ...current.context,
+                system: RECEIPT_VISION_SYSTEM,
+                images: inspection.images,
+                signal: combinedSignal,
+                emit: () => {},
+              });
+              check();
+              return reply;
+            }, combinedSignal);
             check();
-            const reading = parseVisionReading(reply);
             diagnose('receipt-vision', { provider: connection.provider, fields: String(Object.keys(reading.fields).length) });
-            return { ...reading, model: connection.model || '' };
+            return { ...reading, model: connection.model || '', pagePreviews: imageInput.pagePreviews };
           } catch (error) {
             diagnose('receipt-vision-failed', { provider: connection.provider, code: errorCode(error) });
             if (controller.signal.aborted) throw new Error('RUN_TIMEOUT');
