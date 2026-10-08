@@ -130,12 +130,12 @@ try {
         const [host, d] = await Promise.all([page.locator('.browser-host').boundingBox(), dockedView()]);
         const aligned = Boolean(
           host &&
-            d.visible &&
-            d.bounds &&
-            Math.abs(host.x - d.bounds.x) <= geometryTolerance &&
-            Math.abs(host.width - d.bounds.width) <= geometryTolerance &&
-            Math.abs(host.y - d.bounds.y) <= geometryTolerance &&
-            Math.abs(host.height - d.bounds.height) <= geometryTolerance,
+          d.visible &&
+          d.bounds &&
+          Math.abs(host.x - d.bounds.x) <= geometryTolerance &&
+          Math.abs(host.width - d.bounds.width) <= geometryTolerance &&
+          Math.abs(host.y - d.bounds.y) <= geometryTolerance &&
+          Math.abs(host.height - d.bounds.height) <= geometryTolerance,
         );
         stableGeometrySamples = aligned ? stableGeometrySamples + 1 : 0;
         return stableGeometrySamples >= 2;
