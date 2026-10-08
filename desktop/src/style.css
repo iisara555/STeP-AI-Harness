@@ -2268,6 +2268,7 @@ nav button:hover,
 }
 .receipt-hint {
   margin: 8px 2px;
+  max-width: 72ch;
 }
 .receipt-hint code {
   background: var(--hover);
@@ -4101,4 +4102,58 @@ button:disabled {
   border-color: var(--disabled-line);
   opacity: 1;
   filter: none;
+}
+/* The grey fill is for filled buttons only. See-through buttons (outlined, icon, link and text) stay see-through
+   when disabled and only dim their text, so they never read as a pressed or selected control. */
+.attachments button:disabled,
+.avatar-option:disabled,
+.choice:disabled,
+.quiet:disabled,
+.style-card:disabled,
+.language-switch button:disabled,
+.browser-tab button[role='tab']:disabled,
+.icon:disabled,
+.palette-list button:disabled,
+.session-filter button:disabled,
+.session-open:disabled,
+.settings-button:disabled,
+.settings-tabs button:disabled,
+.skills-filters button:disabled,
+.slash-menu button:disabled,
+.status-button:disabled,
+.suggestions button:disabled,
+.text-link:disabled,
+.title-menu button:disabled,
+.titlebar-app:disabled,
+.titlebar-chip:disabled,
+.titlebar-dropdown .titlebar-item:disabled,
+.titlebar-icon:disabled,
+.version-line:disabled,
+.version-list button:disabled,
+.workbench-tabs button:disabled,
+nav button:disabled {
+  background: transparent;
+}
+.browser-tab button[role='tab']:disabled,
+.icon:disabled,
+.palette-list button:disabled,
+.session-filter button:disabled,
+.session-open:disabled,
+.settings-button:disabled,
+.settings-tabs button:disabled,
+.skills-filters button:disabled,
+.slash-menu button:disabled,
+.status-button:disabled,
+.suggestions button:disabled,
+.text-link:disabled,
+.title-menu button:disabled,
+.titlebar-app:disabled,
+.titlebar-chip:disabled,
+.titlebar-dropdown .titlebar-item:disabled,
+.titlebar-icon:disabled,
+.version-line:disabled,
+.version-list button:disabled,
+.workbench-tabs button:disabled,
+nav button:disabled {
+  border-color: transparent;
 }
