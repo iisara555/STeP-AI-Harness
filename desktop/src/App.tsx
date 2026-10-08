@@ -1228,19 +1228,17 @@ export default function App() {
           <header className="topbar">
             <div className="topbar-title">
               <span className="topbar-heading">
-                <h1 className="topbar-name">
-                  <strong>
-                    {settings
-                      ? t('ตั้งค่าพื้นที่ทำงาน')
-                      : view === 'documents'
-                        ? t('เครื่องมือร่างเอกสาร')
-                        : view === 'receipt'
-                          ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-                          : view === 'skills'
-                            ? t('ศูนย์รวม Skill')
-                            : session?.title || t('เริ่มต้นงานที่อยากทำ')}
-                  </strong>
-                </h1>
+                <strong>
+                  {settings
+                    ? t('ตั้งค่าพื้นที่ทำงาน')
+                    : view === 'documents'
+                      ? t('เครื่องมือร่างเอกสาร')
+                      : view === 'receipt'
+                        ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+                        : view === 'skills'
+                          ? t('ศูนย์รวม Skill')
+                          : session?.title || t('เริ่มต้นงานที่อยากทำ')}
+                </strong>
                 {/* Like Claude Desktop, task commands live in a menu next to the title. */}
                 {!settings && view === 'chat' && session && (
                   <button

@@ -607,11 +607,6 @@ nav button,
   border-top: 1px solid var(--line);
   margin: 4px 2px;
 }
-.topbar-name {
-  margin: 0;
-  min-width: 0;
-  font: inherit;
-}
 .topbar strong {
   display: block;
   font-size: 14px;

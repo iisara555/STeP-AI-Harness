@@ -62,10 +62,10 @@ try {
   });
   await page.reload();
   await page.locator('.welcome h1').waitFor();
-  await page.getByRole('navigation', { name: 'Workspace tools' }).getByRole('button', { name: 'เว็บ', exact: true }).click();
+  await page.getByRole('navigation', { name: 'เครื่องมือข้างร่าง' }).getByRole('button', { name: 'เว็บ', exact: true }).click();
   await page.getByRole('textbox', { name: 'Browser URL' }).waitFor();
   await capture('09-browser.png');
-  await page.getByRole('navigation', { name: 'Workspace tools' }).getByRole('button', { name: 'ผลงาน', exact: true }).click();
+  await page.getByRole('navigation', { name: 'เครื่องมือข้างร่าง' }).getByRole('button', { name: 'ผลงาน', exact: true }).click();
 
   const seeded = await page.evaluate(async () => {
     const connection = await window.step.call('connection', {
