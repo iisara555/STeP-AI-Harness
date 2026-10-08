@@ -68,6 +68,7 @@ export function DocumentTools({
   }
   return (
     <div className="document-tools">
+      <h1 className="sr-only">{t('เครื่องมือร่างเอกสาร')}</h1>
       <p className="muted">{t('เลือกชนิดเอกสาร → กรอกข้อมูลหรือแนบต้นเรื่อง → AI ร่าง → แก้ไขและส่งออก')}</p>
       <div className="document-tool-picker" aria-label={t('ชนิดเอกสาร')}>
         {DOCUMENT_TOOLS.map(p => (

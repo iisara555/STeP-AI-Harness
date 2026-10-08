@@ -20,13 +20,16 @@ export function AIConnections({
   refresh,
   onError,
   onBusy,
+  headingLevel = 3,
 }: {
   snapshot: Snapshot;
   call: (method: string, input?: any) => Promise<any>;
   refresh: () => Promise<Snapshot | undefined>;
   onError: (error: unknown) => void;
   onBusy: (id: string) => void;
+  headingLevel?: 2 | 3;
 }) {
+  const StepHeading = headingLevel === 2 ? 'h2' : 'h3';
   const [choice, setChoice] = useState<ProviderChoice>(recommendedChoice);
   const [pickerOpen, setPickerOpen] = useState(!snapshot.connections.length);
   const [newConnectionId, setNewConnectionId] = useState('');
@@ -64,12 +67,12 @@ export function AIConnections({
     <div className="ai-connect-flow">
       <p className="muted">{t('เลือกบริการที่คุณมีบัญชีอยู่แล้ว เชื่อมต่อครั้งเดียว แล้วเริ่มงานได้เมื่อทดสอบผ่าน')}</p>
       <div className="ai-connect-step">
-        <h3>
+        <StepHeading>
           <span className="ai-step-number" aria-hidden="true">
             1
           </span>
           {t('เลือก AI และเชื่อมต่อ')}
-        </h3>
+        </StepHeading>
         <p className="muted small">{t('Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องขอ API key')}</p>
         <details
           className="ai-provider-disclosure"
@@ -117,12 +120,12 @@ export function AIConnections({
         </details>
       </div>
       <div className="ai-connect-step ai-readiness" ref={readiness} tabIndex={-1}>
-        <h3>
+        <StepHeading>
           <span className="ai-step-number" aria-hidden="true">
             2
           </span>
           {t('ตรวจว่าพร้อมใช้งาน')}
-        </h3>
+        </StepHeading>
         <p className="muted small">{t('หลังลงชื่อ ระบบทดสอบข้อความสั้น ๆ 1 ครั้ง โดยใช้โควตาของบัญชีนี้ ผ่านแล้วไม่ต้องทดสอบซ้ำ')}</p>
         {!snapshot.connections.length && <p className="ai-connect-empty">{t('เชื่อมต่อก่อน แล้วระบบจะทดสอบให้โดยอัตโนมัติ')}</p>}
 

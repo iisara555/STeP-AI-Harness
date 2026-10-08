@@ -3,6 +3,36 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'แก้เอกสารผ่านแชตต่อจากร่างปัจจุบัน คง Skill แม่แบบ และข้อมูลที่แก้ไว้ก่อนหน้า':
+    'Chat edits build on the current draft, retaining its Skill, template and earlier edits',
+  'Ob-Oon และ Witty ตอบเป็นธรรมชาติ ไม่ใส่ชื่อหัวข้อของสไตล์ในคำตอบหรือเอกสาร':
+    'Ob-Oon and Witty use natural prose without style-stage headings in replies or documents',
+  'ปรับข้อความ ปุ่ม และการอ่านด้วยคีย์บอร์ด หน้าต่างเล็กใช้งานสะดวกขึ้นทั้งธีมสว่างและมืด':
+    'Clearer wording, buttons and keyboard access, with improved small-window layouts in both themes',
+  'ตรวจใบเสร็จ: Vision AI ช่วยอ่านลายมือ ตรวจยอดเงินและองค์ประกอบ รวมถึงการพบลายเซ็น ก่อนให้คนยืนยัน':
+    'Receipt review: Vision AI assists handwriting transcription, amount and element checks, including signature presence, before human confirmation',
+  'ผลทดสอบใช้ข้อมูลสังเคราะห์ ความแม่นยำบนใบเสร็จจริงยังต้องทดลองในหน่วยงาน':
+    'Tests use synthetic data; real-receipt accuracy still requires an organizational pilot',
+  'เปิดเครื่องมือไม่สำเร็จ ลองโหลดอีกครั้ง หรือกลับไปที่งานจากแถบงาน':
+    'Could not open this tool. Try loading it again, or return to a task from the sidebar.',
+  ลองโหลดอีกครั้ง: 'Try loading again',
+  'กำลังเปิดเครื่องมือ…': 'Opening tool…',
+  แถบปรับความกว้างร่าง: 'Draft width controls',
+  ผลงานและเครื่องมือ: 'Draft and tools',
+  'ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้': 'Find Skills and tools and see which are ready to use',
+  เรียกใช้ได้: 'Ready to use',
+  ยังเรียกใช้ไม่ได้: 'Not available in chat',
+  ไฟล์ไม่พร้อม: 'File unavailable',
+  'ให้ AI เลือกตามคำขอ หรือเรียกตรงด้วย /ชื่อ': 'Let AI select a Skill for your request, or call it with /name',
+  'อยู่ในรายการ Skill แต่ยังไม่เชื่อมให้ใช้ในแชต': 'Listed as a Skill, but not connected for use in chat',
+  'มีไฟล์ Skill แต่ยังไม่ได้ลงทะเบียนใช้งาน': 'The Skill file exists but is not registered for use',
+  'ระบบพบรายการ Skill แต่หาไฟล์ที่ต้องใช้ไม่ได้': 'The Skill is listed, but its file is unavailable',
+  เปิดจากเมนูเครื่องมือและตรวจผลก่อนใช้: 'Open from the tools menu and review results before use',
+  'อ่านใบเสร็จ เติมข้อมูลให้ตรวจครั้งเดียว แล้วเตรียมตรวจตามกฎ AFP':
+    'Read the receipt, fill the form for one final review, then prepare an AFP pre-check',
+  'เรียก Skill ที่พร้อมใช้ได้ตรง ๆ โดยพิมพ์': 'Call an available Skill directly by typing',
+  โทเคน: 'Tokens',
+  'ค่าใช้จ่าย (USD)': 'Cost (USD)',
   'AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต จึงยังตอบไม่สำเร็จ ลองเปลี่ยนโมเดลหรือแนบแหล่งข้อมูลให้สรุป':
     'The AI attempted a tool this connection does not allow, so the reply could not finish. Try another model or attach a source to summarize.',
   'ใช้บัญชี Google ที่มีสิทธิ์ เช่น สิทธินักศึกษา ระบบจะติดตั้งตัวเชื่อมและทดสอบให้':
@@ -382,6 +412,7 @@ export const en: Record<string, string> = {
   เลือกโมเดล: 'Choose model',
   'โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'The model for this task — change it any time',
   'ค่าเริ่มต้น ({0})': 'Default ({0})',
+  ค่าเริ่มต้น: 'Default',
   ค่าเริ่มต้นของบริการ: 'Service default',
   เลือกระดับการคิด: 'Choose reasoning level',
   'ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น':

@@ -25,7 +25,7 @@ Focused tools live under **เครื่องมือ** in the sidebar and r
 
 ## Skill hub
 
-**ศูนย์รวม Skill** lists every Skill from `src/modules/skills/catalog.js`, which reconciles SKILL.md files, `manifest/skills.yaml` and `manifest/router-index.yaml`, plus the mini apps. Tags state where each stands: *เชื่อม Routing แล้ว*, *Manifest · ยังไม่ Routing*, *ยังไม่ลงทะเบียน*, *ไม่พบไฟล์*, or *Mini App · ยังไม่ Routing*. Routed Skills can be invoked by name with `/skill-name` in the composer, the hub, Ctrl+K, or `step-ai ask --skill`; naming a Skill skips scoring and playbooks but never the authority preflight, the Skill's scope check, or the privacy gate. The CLI view is `step-ai skills`.
+**ศูนย์รวม Skill** lists every Skill from `src/modules/skills/catalog.js`, which reconciles SKILL.md files, `manifest/skills.yaml` and `manifest/router-index.yaml`, plus the mini apps. Tags state where each stands: *เรียกใช้ได้*, *ยังเรียกใช้ไม่ได้*, *ยังไม่พร้อม*, *ไฟล์ไม่พร้อม*, or *เครื่องมือเฉพาะงาน*. Routed Skills can be invoked by name with `/skill-name` in the composer, the hub, Ctrl+K, or `step-ai ask --skill`; naming a Skill skips scoring and playbooks but never the authority preflight, the Skill's scope check, or the privacy gate. The CLI view is `step-ai skills`.
 
 ## Layout and behaviour
 

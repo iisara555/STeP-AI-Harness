@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.5.30",
+  "version": "0.5.31",
   "license": "MIT",
   "private": true,
   "description": "Local STeP employee workspace",
@@ -13,7 +13,7 @@
     "test": "tsx --test --test-concurrency=2 test/*.test.ts test/office-skill-benefit.test.mjs",
     "test:installer": "node test/installer-upgrade-smoke.mjs",
     "qa:exports": "node scripts/export-qa.mjs",
-    "test:electron": "node test/ux-audit-smoke.mjs && node test/i18n-smoke.mjs && node test/browser-loop-smoke.mjs && node test/browser-agent-smoke.mjs && node test/account-connect-smoke.mjs && node test/setup-connect-smoke.mjs && node test/update-recovery-smoke.mjs && node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs && node test/antigravity-smoke.mjs && node test/antigravity-chat-recovery-smoke.mjs && node test/gemini-api-smoke.mjs && node test/provider-presets-smoke.mjs && node test/sidebar-smoke.mjs && node test/shared-profile-smoke.mjs && node test/view-switch-smoke.mjs && node test/learning-smoke.mjs && node test/default-model-smoke.mjs && node test/speaking-styles-smoke.mjs && node test/document-tools-smoke.mjs && node test/document-template-smoke.mjs && node test/provider-usage-smoke.mjs && node test/whats-new-smoke.mjs && node test/tour-smoke.mjs && node test/app-security-smoke.mjs && node test/browser-network-smoke.mjs && node test/async-lifecycle-smoke.mjs",
+    "test:electron": "node test/ux-audit-smoke.mjs && node test/i18n-smoke.mjs && node test/browser-loop-smoke.mjs && node test/browser-agent-smoke.mjs && node test/account-connect-smoke.mjs && node test/setup-connect-smoke.mjs && node test/update-recovery-smoke.mjs && node test/chat-smoke.mjs && node test/electron-smoke.mjs && node test/policy-smoke.mjs && node test/tool-loop-smoke.mjs && node test/context-memory-smoke.mjs && node test/phase4-smoke.mjs && node test/phase5-smoke.mjs && node test/phase6-smoke.mjs && node test/antigravity-smoke.mjs && node test/antigravity-chat-recovery-smoke.mjs && node test/gemini-api-smoke.mjs && node test/provider-presets-smoke.mjs && node test/sidebar-smoke.mjs && node test/shared-profile-smoke.mjs && node test/view-switch-smoke.mjs && node test/learning-smoke.mjs && node test/default-model-smoke.mjs && node test/speaking-styles-smoke.mjs && node test/document-tools-smoke.mjs && node test/document-template-smoke.mjs && node test/provider-usage-smoke.mjs && node test/whats-new-smoke.mjs && node test/tour-smoke.mjs && node test/app-security-smoke.mjs && node test/browser-network-smoke.mjs && node test/async-lifecycle-smoke.mjs && node test/ui-review-smoke.mjs",
     "preview": "vite --host 127.0.0.1",
     "package": "npm run build && electron-builder --dir",
     "dist:win": "npm run build && node scripts/package-windows.mjs",
@@ -38,15 +38,15 @@
     "@tiptap/extension-table": "^3.31.3",
     "@tiptap/react": "^3.0.0",
     "@tiptap/starter-kit": "^3.0.0",
+    "@xmldom/xmldom": "0.8.15",
     "docx": "^9.0.0",
     "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
+    "jszip": "3.10.2",
     "lucide-react": "^0.468.0",
     "pptxgenjs": "^4.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "jszip": "3.10.2",
-    "@xmldom/xmldom": "0.8.15"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
@@ -54,6 +54,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.4.0",
+    "axe-core": "4.14.0",
     "electron": "44.4.5",
     "electron-builder": "^26.0.0",
     "esbuild": "^0.25.0",

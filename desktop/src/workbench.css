@@ -37,28 +37,28 @@
 .chat-code .hljs-keyword,
 .chat-code .hljs-selector-tag,
 .chat-code .hljs-meta .hljs-keyword {
-  color: #a626a4;
+  color: var(--syntax-keyword);
 }
 .chat-code .hljs-string,
 .chat-code .hljs-attr-value,
 .chat-code .hljs-regexp,
 .chat-code .hljs-addition {
-  color: #50a14f;
+  color: var(--syntax-string);
 }
 .chat-code .hljs-number,
 .chat-code .hljs-literal,
 .chat-code .hljs-symbol {
-  color: #b76b01;
+  color: var(--syntax-number);
 }
 .chat-code .hljs-title,
 .chat-code .hljs-title.function_,
 .chat-code .hljs-section {
-  color: #4078f2;
+  color: var(--syntax-title);
 }
 .chat-code .hljs-built_in,
 .chat-code .hljs-type,
 .chat-code .hljs-title.class_ {
-  color: #c18401;
+  color: var(--syntax-type);
 }
 .chat-code .hljs-attr,
 .chat-code .hljs-attribute,
@@ -66,67 +66,16 @@
 .chat-code .hljs-template-variable,
 .chat-code .hljs-name,
 .chat-code .hljs-tag {
-  color: #e45649;
+  color: var(--syntax-attribute);
 }
 .chat-code .hljs-comment,
 .chat-code .hljs-quote,
 .chat-code .hljs-meta {
-  color: #8a8580;
+  color: var(--syntax-comment);
   font-style: italic;
 }
 .chat-code .hljs-deletion {
-  color: #e45649;
-}
-:root[data-theme='dark'] .chat-code .hljs-keyword,
-:root[data-theme='dark'] .chat-code .hljs-selector-tag {
-  color: #c678dd;
-}
-:root[data-theme='dark'] .chat-code .hljs-string,
-:root[data-theme='dark'] .chat-code .hljs-addition {
-  color: #98c379;
-}
-:root[data-theme='dark'] .chat-code .hljs-number,
-:root[data-theme='dark'] .chat-code .hljs-literal {
-  color: #d19a66;
-}
-:root[data-theme='dark'] .chat-code .hljs-title,
-:root[data-theme='dark'] .chat-code .hljs-section {
-  color: #61afef;
-}
-:root[data-theme='dark'] .chat-code .hljs-built_in,
-:root[data-theme='dark'] .chat-code .hljs-type {
-  color: #e5c07b;
-}
-:root[data-theme='dark'] .chat-code .hljs-attr,
-:root[data-theme='dark'] .chat-code .hljs-variable,
-:root[data-theme='dark'] .chat-code .hljs-name,
-:root[data-theme='dark'] .chat-code .hljs-tag {
-  color: #e06c75;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-theme='system'] .chat-code .hljs-keyword {
-    color: #c678dd;
-  }
-  :root[data-theme='system'] .chat-code .hljs-string {
-    color: #98c379;
-  }
-  :root[data-theme='system'] .chat-code .hljs-number,
-  :root[data-theme='system'] .chat-code .hljs-literal {
-    color: #d19a66;
-  }
-  :root[data-theme='system'] .chat-code .hljs-title {
-    color: #61afef;
-  }
-  :root[data-theme='system'] .chat-code .hljs-built_in,
-  :root[data-theme='system'] .chat-code .hljs-type {
-    color: #e5c07b;
-  }
-  :root[data-theme='system'] .chat-code .hljs-attr,
-  :root[data-theme='system'] .chat-code .hljs-variable,
-  :root[data-theme='system'] .chat-code .hljs-name,
-  :root[data-theme='system'] .chat-code .hljs-tag {
-    color: #e06c75;
-  }
+  color: var(--syntax-attribute);
 }
 .chat-table {
   overflow: auto;
@@ -378,10 +327,10 @@
   color: var(--muted);
 }
 .change-diff pre.removed {
-  border-left: 3px solid #bf6969;
+  border-left: 3px solid var(--diff-removed);
 }
 .change-diff pre.added {
-  border-left: 3px solid #559778;
+  border-left: 3px solid var(--diff-added);
 }
 .image-gallery {
   padding: 15px;
@@ -500,7 +449,7 @@
 }
 .app .composer {
   border-radius: 15px;
-  box-shadow: 0 3px 16px #00000006;
+  box-shadow: 0 3px 16px var(--shadow-faint);
 }
 .app .conversation {
   scroll-behavior: smooth;
@@ -636,7 +585,7 @@
   flex: 1;
   min-height: 120px;
   position: relative;
-  background: #fff;
+  background: var(--paper);
 }
 .browser-host img {
   position: absolute;

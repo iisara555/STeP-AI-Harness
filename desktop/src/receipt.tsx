@@ -722,6 +722,7 @@ export function ReceiptApp({
   const requiredChecked = allChecked && requiredFilled;
   return (
     <div className="receipt-app">
+      <h1 className="sr-only">{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h1>
       <div className="receipt-service">
         <span className={`status-dot ${ready ? 'ok' : ''}`} aria-hidden="true" />
         <span>

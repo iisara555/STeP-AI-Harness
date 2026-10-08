@@ -4,47 +4,9 @@ import type { SkillEntry } from './types';
 import { t } from './i18n';
 import { SectionArt } from './illustration';
 
-// Where each capability stands: governed in the registry, reachable through the router, or a standalone tool.
-export const statusTag: Record<string, { label: string; tone: string; hint: string }> = {
-  routed: {
-    label: 'เชื่อม Routing แล้ว',
-    tone: 'routed',
-    hint: 'อยู่ใน Manifest และ Router เลือกให้อัตโนมัติ หรือเรียกตรงด้วย /ชื่อ',
-  },
-  registered: {
-    label: 'Manifest · ยังไม่ Routing',
-    tone: 'registered',
-    hint: 'ลงทะเบียนแล้วแต่ Router ยังไม่เลือกให้ จึงเรียกจากแชทไม่ได้',
-  },
-  unregistered: { label: 'ยังไม่ลงทะเบียน', tone: 'unregistered', hint: 'มีไฟล์ SKILL.md แต่ยังไม่อยู่ใน Manifest' },
-  'missing-file': { label: 'ไม่พบไฟล์', tone: 'unregistered', hint: 'Manifest อ้างถึง Skill ที่ไม่มีไฟล์' },
-  tool: { label: 'Mini App · ยังไม่ Routing', tone: 'tool', hint: 'เครื่องมือเฉพาะงาน เปิดจากเมนูเครื่องมือ ยังไม่ผ่าน Router' },
-};
-const tools = [
-  {
-    id: 'documents',
-    title: 'เครื่องมือร่างเอกสาร',
-    description:
-      'ร่าง TOR บันทึกข้อความ หนังสือราชการ โครงการ และรายงานประชุมด้วย Skill ที่เกี่ยวข้อง กรอกข้อมูลหรือแนบต้นเรื่อง แล้วแก้ไขและส่งออก',
-    owner: 'common',
-    stage: 'ทดลอง',
-  },
-  {
-    id: 'receipt',
-    title: 'ตรวจใบเสร็จก่อนส่ง AFP',
-    description: 'อ่านใบเสร็จด้วย OCR ในเครื่อง ให้คนตรวจทีละช่อง แล้วส่งข้อมูลที่ตรวจแล้วให้ receipt-audit pre-check ต่อ',
-    owner: 'afp',
-    stage: 'ทดลอง',
-  },
-];
-export const toolCount = tools.length;
-const filters = [
-  ['all', 'ทั้งหมด'],
-  ['routed', 'Routing แล้ว'],
-  ['registered', 'Manifest เท่านั้น'],
-  ['unregistered', 'ยังไม่ลงทะเบียน'],
-  ['tool', 'Mini App'],
-] as const;
+import { statusTag, tools, filters } from './skill-capabilities';
+export { statusTag, toolCount } from './skill-capabilities';
+
 const fold = (value: string) => value.toLowerCase().replace(/[-_\s]+/g, ' ');
 
 export function SkillsHub({
@@ -85,6 +47,7 @@ export function SkillsHub({
 
   return (
     <div className="skills-hub">
+      <h1 className="sr-only">{t('ศูนย์รวม Skill')}</h1>
       <div className="skills-head">
         <div className="skills-controls">
           <label className="skills-search">
@@ -105,7 +68,7 @@ export function SkillsHub({
             ))}
           </div>
           <p className="small muted">
-            {t('เรียก Skill ที่เชื่อม Routing แล้วได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
+            {t('เรียก Skill ที่พร้อมใช้ได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
             {t('ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง')}
           </p>
         </div>

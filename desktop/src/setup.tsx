@@ -268,7 +268,7 @@ export function SetupWizard({
         {step === 3 && (
           <section className="wizard-body">
             <h1>{t('เชื่อมต่อ AI')}</h1>
-            <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
+            <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} headingLevel={2} />
           </section>
         )}
 

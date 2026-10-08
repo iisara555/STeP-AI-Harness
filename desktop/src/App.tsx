@@ -38,11 +38,11 @@ import {
   ChevronDown,
   Compass,
 } from 'lucide-react';
-import { ReceiptApp } from './receipt';
-import { DocumentTools, type DocumentAttachment, type DocumentForm } from './document-tool-app';
+import { lazyScreen } from './lazy-screen';
+import type { DocumentAttachment, DocumentForm } from './document-tool-app';
 import { documentRequest, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
 import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
-import { SkillsHub, toolCount } from './skills';
+import { toolCount } from './skill-capabilities';
 import { SetupWizard } from './setup';
 import { Tour } from './tour';
 import {
@@ -93,6 +93,10 @@ import { WhatsNewDialog } from './whats-new-dialog';
 import type { ToolQuestion } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
+
+const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
+const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
+const SkillsHub = lazyScreen(async () => ({ default: (await import('./skills')).SkillsHub }));
 
 export default function App() {
   const api = window.step;
@@ -1031,11 +1035,20 @@ export default function App() {
         <p>{error || t('กำลังเปิดพื้นที่ทำงาน…')}</p>
       </main>
     );
+  const pageTitle = settings
+    ? t('ตั้งค่าพื้นที่ทำงาน')
+    : view === 'documents'
+      ? t('เครื่องมือร่างเอกสาร')
+      : view === 'receipt'
+        ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+        : view === 'skills'
+          ? t('ศูนย์รวม Skill')
+          : session?.title || t('เริ่มต้นงานที่อยากทำ');
   return (
     <div className="shell">
       <TitleBar
         api={api}
-        title={settings ? t('ตั้งค่าพื้นที่ทำงาน') : session?.title || ''}
+        title={pageTitle}
         run={id => commandRef.current[id]?.()}
         hint={id => shortcutText(snapshot.settings.keybindings?.[id] ?? COMMANDS.find(c => c[0] === id)?.[2] ?? '')}
         left={left}
@@ -1166,7 +1179,7 @@ export default function App() {
                 }}
               >
                 <FileText size={17} />
-                {t('เครื่องมือร่างเอกสาร')}
+                <span className="nav-label">{t('เครื่องมือร่างเอกสาร')}</span>
               </button>
               <button
                 data-tour="skills"
@@ -1177,7 +1190,7 @@ export default function App() {
                 }}
               >
                 <Blocks size={17} />
-                {t('ศูนย์รวม Skill')}
+                <span className="nav-label">{t('ศูนย์รวม Skill')}</span>
                 <span className="count">{skills ? skills.length + toolCount : ''}</span>
               </button>
               <button
@@ -1189,7 +1202,7 @@ export default function App() {
                 }}
               >
                 <ReceiptText size={17} />
-                {t('ตรวจใบเสร็จ AFP')}
+                <span className="nav-label">{t('ตรวจใบเสร็จ AFP')}</span>
                 {receiptBusy && view !== 'receipt' ? (
                   <LoaderCircle size={14} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
                 ) : (
@@ -1228,17 +1241,7 @@ export default function App() {
           <header className="topbar">
             <div className="topbar-title">
               <span className="topbar-heading">
-                <strong>
-                  {settings
-                    ? t('ตั้งค่าพื้นที่ทำงาน')
-                    : view === 'documents'
-                      ? t('เครื่องมือร่างเอกสาร')
-                      : view === 'receipt'
-                        ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-                        : view === 'skills'
-                          ? t('ศูนย์รวม Skill')
-                          : session?.title || t('เริ่มต้นงานที่อยากทำ')}
-                </strong>
+                <strong>{pageTitle}</strong>
                 {/* Like Claude Desktop, task commands live in a menu next to the title. */}
                 {!settings && view === 'chat' && session && (
                   <button
@@ -1353,7 +1356,7 @@ export default function App() {
                     : view === 'receipt'
                       ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
                       : view === 'skills'
-                        ? t('Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing')
+                        ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
                         : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
@@ -1796,6 +1799,14 @@ export default function App() {
                       />
                     ))}
                 </div>
+                {!connection?.ready && !session && (
+                  <div className="connection-banner" role="status">
+                    <strong>{t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}</strong>
+                    <button data-tour="connect" onClick={openAiSettings}>
+                      {t('ไปที่การเชื่อมต่อ AI')}
+                    </button>
+                  </div>
+                )}
                 <div className="composer" data-tour="composer">
                   {pendingSource && (
                     <div className="composer-chips">
@@ -2102,12 +2113,12 @@ export default function App() {
                       >
                         <option value="">
                           {activeModel.defaultEffort
-                            ? t('ระดับการคิด: ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
-                            : t('ระดับการคิด: ค่าเริ่มต้น')}
+                            ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
+                            : t('ค่าเริ่มต้น')}
                         </option>
                         {activeModel.efforts.map(e => (
                           <option key={e.id} value={e.id} title={e.description}>
-                            {t('ระดับการคิด:')} {effortLabel[e.id] || e.id}
+                            {effortLabel[e.id] || e.id}
                           </option>
                         ))}
                       </select>
@@ -2129,12 +2140,6 @@ export default function App() {
                   </div>
                 </div>
                 <div className="composer-note">{t('ตรวจข้อมูลและร่างก่อนนำไปใช้ · ประวัติเก็บในเครื่อง')}</div>
-                {/* With a task open, the connection warning above the box already offers this action. */}
-                {!connection?.ready && !session && (
-                  <button className="text-link" data-tour="connect" onClick={openAiSettings}>
-                    {t('เชื่อมต่อ AI เพื่อเริ่มทำงาน')}
-                  </button>
-                )}
               </div>
             </>
           )}
@@ -2165,12 +2170,6 @@ export default function App() {
                 {formatTokens(session.usage.total)} token
               </span>
             )}
-            {connection && (
-              <span className="status-item">
-                {activeModel?.label || currentModel || t('โมเดลค่าเริ่มต้น')}
-                {currentEffort ? ` · ${effortLabel[currentEffort] || currentEffort}` : ''}
-              </span>
-            )}
             <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
               <Command size={12} />
               {t('คำสั่ง')} {shortcut}
@@ -2182,28 +2181,36 @@ export default function App() {
         {(showPanel || panelOpened) && (
           <>
             {showPanel && (
-              <div
-                className="resize-handle"
-                role="separator"
-                aria-label={t('ปรับความกว้างร่าง')}
-                aria-orientation="vertical"
-                aria-valuenow={width}
-                aria-valuemin={300}
-                aria-valuemax={700}
-                tabIndex={0}
-                onKeyDown={e => {
-                  if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
-                  if (e.key === 'ArrowRight') setWidth(w => Math.max(w - 20, 300));
-                }}
-                onPointerDown={e => {
-                  e.currentTarget.setPointerCapture(e.pointerId);
-                }}
-                onPointerMove={e => {
-                  if (e.currentTarget.hasPointerCapture(e.pointerId)) setWidth(Math.min(700, Math.max(300, window.innerWidth - e.clientX)));
-                }}
-              />
+              <aside className="resize-region" aria-label={t('แถบปรับความกว้างร่าง')}>
+                <div
+                  className="resize-handle"
+                  role="separator"
+                  aria-label={t('ปรับความกว้างร่าง')}
+                  aria-orientation="vertical"
+                  aria-valuenow={width}
+                  aria-valuemin={300}
+                  aria-valuemax={700}
+                  tabIndex={0}
+                  onKeyDown={e => {
+                    if (e.key === 'ArrowLeft') setWidth(w => Math.min(w + 20, 700));
+                    if (e.key === 'ArrowRight') setWidth(w => Math.max(w - 20, 300));
+                  }}
+                  onPointerDown={e => {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  onPointerMove={e => {
+                    if (e.currentTarget.hasPointerCapture(e.pointerId))
+                      setWidth(Math.min(700, Math.max(300, window.innerWidth - e.clientX)));
+                  }}
+                />
+              </aside>
             )}
-            <aside className="artifact-pane" data-tour="artifact" style={showPanel ? undefined : { display: 'none' }}>
+            <aside
+              aria-label={t('ผลงานและเครื่องมือ')}
+              className="artifact-pane"
+              data-tour="artifact"
+              style={showPanel ? undefined : { display: 'none' }}
+            >
               <nav className="workbench-tabs" aria-label={t('เครื่องมือข้างร่าง')}>
                 {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
                   .filter(tab => advancedTools || tab !== 'terminal')

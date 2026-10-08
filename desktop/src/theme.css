@@ -25,6 +25,24 @@
   --scroll: #cfcac2;
   --danger: #b3261e;
   --on-danger: #fff;
+  --overlay: #0007;
+  --shadow-faint: #00000006;
+  --shadow-soft: #0001;
+  --shadow-card: #0002;
+  --shadow-popover: #0003;
+  --shadow-dialog: #0004;
+  --disabled-bg: #e7e4de;
+  --disabled-text: #645e5f;
+  --disabled-line: #cfcac2;
+  --syntax-keyword: #7c258f;
+  --syntax-string: #296731;
+  --syntax-number: #8b4b00;
+  --syntax-title: #2457a6;
+  --syntax-type: #765800;
+  --syntax-attribute: #b3261e;
+  --syntax-comment: #645e5f;
+  --diff-removed: #b3261e;
+  --diff-added: #286740;
   color-scheme: light;
 }
 :root[data-theme='dark'] {
@@ -46,6 +64,18 @@
   --scroll: #4e4745;
   --danger: #f2a197;
   --on-danger: #231f20;
+  --disabled-bg: #37312f;
+  --disabled-text: #ada6a0;
+  --disabled-line: #4e4745;
+  --syntax-keyword: #c678dd;
+  --syntax-string: #98c379;
+  --syntax-number: #d19a66;
+  --syntax-title: #61afef;
+  --syntax-type: #e5c07b;
+  --syntax-attribute: #e06c75;
+  --syntax-comment: #ada6a0;
+  --diff-removed: #f2a197;
+  --diff-added: #98c379;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -68,6 +98,18 @@
     --scroll: #4e4745;
     --danger: #f2a197;
     --on-danger: #231f20;
+    --disabled-bg: #37312f;
+    --disabled-text: #ada6a0;
+    --disabled-line: #4e4745;
+    --syntax-keyword: #c678dd;
+    --syntax-string: #98c379;
+    --syntax-number: #d19a66;
+    --syntax-title: #61afef;
+    --syntax-type: #e5c07b;
+    --syntax-attribute: #e06c75;
+    --syntax-comment: #ada6a0;
+    --diff-removed: #f2a197;
+    --diff-added: #98c379;
     color-scheme: dark;
   }
 }

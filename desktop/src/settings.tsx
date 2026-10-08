@@ -115,8 +115,8 @@ export function SettingsPanel({
     <div className="settings-content">
       <div className={page === 'ai' ? 'settings-hero settings-hero-ai' : 'settings-hero'}>
         <div>
-          <h1>{page === 'ai' ? t('เชื่อมต่อ AI') : t('พร้อมทำงาน ในแบบของคุณ')}</h1>
-          <p className="muted">{t('ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา')}</p>
+          <h1>{page === 'ai' ? t('เชื่อมต่อ AI') : pages.find(entry => entry[0] === page)?.[1]}</h1>
+          {page === 'general' && <p className="muted">{t('ตั้งค่าเพียงครั้งแรก แล้วเริ่มงานได้จากบทสนทนา')}</p>}
         </div>
         {page === 'ai' ? (
           <SectionArt scene="connections" className="settings-illustration" />

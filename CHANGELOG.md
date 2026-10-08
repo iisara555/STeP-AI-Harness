@@ -6,6 +6,21 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.31 — 2026-10-08
+
+### Desktop: document revisions and natural speaking styles
+
+- Treat labeled field replies inside an active document task as revisions of the current draft, retaining the original Skill, template, reviewed source and earlier edits. Keep unrelated tasks separate and run the latest message through the authority gate. Pass native editor headings, lists and tables as Markdown instead of flattened text, after checking the raw draft for credentials and masking contiguous inline identifiers before Markdown escaping; cross-block redactions use the fully masked plain copy. Ask the model to preserve unrequested document sections and user edits.
+- Require separate document/review envelopes for new AI output before creating a proposal. A conversational answer or malformed response leaves the accepted draft and pending proposal intact; saved legacy proposals remain readable. Keep conversational personal preferences and speaking-style fragments out of the five document-tool generation prompts, so a chat display name is not treated as the document author.
+- Update the Ob-Oon/Witty style fragments and source documents to use their reasoning flow internally, without printed stage labels, fixed heading templates or repeated greetings. Add synthetic multi-turn, manual-edit, source-retention, malformed-output and authority-block regressions; these tests do not certify live provider drafting quality.
+
+### Desktop: accessibility, wording and interface edge cases
+
+- Complete the UI review for PR #112: improve contrast, heading/landmark order, keyboard focus, resize semantics and terms navigation; clarify policy, OCR and Skill availability labels; simplify dialogs, setup, Settings and empty states.
+- Keep model/reasoning selection in the composer, display the current page in title-bar search, truncate long navigation labels, retain hover/focus task actions and show a clear connection action before the first task. Match AI setup illustration sizes and theme disabled controls, syntax highlighting and diff colors.
+- Defer the Receipt, Document Tools and Skills screens into separate chunks with a loading/error state. Display readable usage-provider names and USD costs without rounding small charges to zero. Add synthetic renderer regressions and reproducible light/dark accessibility screenshots; axe-core is a development-only dependency.
+- Release Desktop 0.5.31; Harness remains 0.7.6. No bundled private agency forms, new runtime/model dependency or policy-default change.
+
 ### Desktop: handwritten receipt review with Hybrid OCR and Vision AI
 
 - Prefer independently read Vision values for handwriting while retaining OCR evidence and protecting manual corrections, including intentional blank fields. Add bounded confidence, handwriting, uncertainty and full-page coordinates; focusing a field opens its image detail, with PDF page previews when Vision is available. Keep the single final confirmation.

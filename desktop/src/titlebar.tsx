@@ -229,7 +229,13 @@ export function TitleBar({
           <PanelLeft size={16} />
         </button>
       </div>
-      <button className="titlebar-command quiet" onClick={() => run('palette')} title={t('ค้นหางานและคำสั่ง')}>
+      <button
+        className="titlebar-command quiet"
+        onClick={() => run('palette')}
+        title={t('ค้นหางานและคำสั่ง')}
+        aria-label={t('ค้นหางานและคำสั่ง')}
+        aria-description={title || undefined}
+      >
         <Search size={13} />
         <span>{title || t('ค้นหางานและคำสั่ง')}</span>
         <kbd>{hint('palette')}</kbd>

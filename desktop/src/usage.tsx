@@ -4,6 +4,7 @@ import type { DesktopAPI, ProviderUsageReport, UsageReport } from './types';
 import { explainError } from './messages';
 import { locale, t } from './i18n';
 import './usage.css';
+import { formatUsd, usageSourceName } from './usage-display';
 
 function statusText(account: ProviderUsageReport) {
   if (account.status === 'idle') return t('ยังไม่ได้อ่าน Usage จากผู้ให้บริการ');
@@ -73,7 +74,7 @@ function UsageAccount({
       <p className="small" role={account.status === 'error' ? 'status' : undefined}>
         {statusText(account)}
       </p>
-      {account.source && <p className="muted small">{t('แหล่งข้อมูล: {0}', account.source)}</p>}
+      {account.source && <p className="muted small">{t('แหล่งข้อมูล: {0}', usageSourceName(account.source))}</p>}
       {account.checkedAt && <p className="muted small">{t('อัปเดต: {0}', new Date(account.checkedAt).toLocaleString(locale()))}</p>}
       {account.experimental && <p className="muted small">{t('ช่องอ่าน Usage นี้ยังเป็น experimental และอาจเปลี่ยนได้')}</p>}
       {account.reason === 'CREDIT_UNAVAILABLE' && <p className="small">{t('อ่านยอดใช้ของ API key ได้ แต่ยังอ่านเครดิตบัญชีไม่ได้')}</p>}
@@ -118,7 +119,7 @@ function UsageAccount({
                   ? t('ยังไม่รายงานยอดคงเหลือ')
                   : t(
                       'คงเหลือ {0} {1}',
-                      displayNumber(credit.remaining),
+                      credit.unit === 'USD' ? formatUsd(credit.remaining) : displayNumber(credit.remaining),
                       credit.unit === 'minor-units' ? t('หน่วยย่อย (ไม่ระบุสกุลเงิน)') : credit.unit,
                     )}
           </p>
@@ -126,10 +127,10 @@ function UsageAccount({
             <p className="muted small">
               {t(
                 'ใช้แล้ว {0} {1}',
-                displayNumber(credit.used),
+                credit.unit === 'USD' ? formatUsd(credit.used) : displayNumber(credit.used),
                 credit.unit === 'minor-units' ? t('หน่วยย่อย (ไม่ระบุสกุลเงิน)') : credit.unit,
               )}
-              {credit.total !== undefined ? ` / ${displayNumber(credit.total)}` : ''}
+              {credit.total !== undefined ? ` / ${credit.unit === 'USD' ? formatUsd(credit.total) : displayNumber(credit.total)}` : ''}
             </p>
           )}
           {credit.available === false && <p className="small">{t('ผู้ให้บริการรายงานว่าเครดิตนี้ยังใช้ไม่ได้')}</p>}
@@ -149,13 +150,13 @@ function UsageAccount({
             };
             return (
               <p className="small" key={i}>
-                {periods[spend.period]} · {spend.scope === 'byok' ? t('BYOK ภายนอก') : t('API key นี้')}: ${displayNumber(spend.amount)}
+                {periods[spend.period]} · {spend.scope === 'byok' ? t('BYOK ภายนอก') : t('API key นี้')}: ${formatUsd(spend.amount)}
               </p>
             );
           })}
         </div>
       )}
-      <p className="muted small">{t('ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}', displayNumber(tokens), usd.toFixed(4))}</p>
+      <p className="muted small">{t('ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}', displayNumber(tokens), formatUsd(usd))}</p>
       <div className="usage-account-actions">
         {account.canRefresh && (
           <button className="quiet" disabled={Boolean(busy)} onClick={onRefresh}>
@@ -227,7 +228,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
           <p>
             {t('เดือน')} {report.month}
             {t(': ค่าใช้จ่ายประมาณ $')}
-            {report.monthlyUsd.toFixed(4)}
+            {formatUsd(report.monthlyUsd)}
             {report.budgets.monthlyCostUsd ? ` / $${report.budgets.monthlyCostUsd}` : ''}
           </p>
           <p className="muted small">
@@ -252,9 +253,9 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
                 <thead>
                   <tr>
                     <th>{t('วันที่')}</th>
-                    <th>Model</th>
-                    <th>Tokens</th>
-                    <th>USD</th>
+                    <th>{t('โมเดล')}</th>
+                    <th>{t('โทเคน')}</th>
+                    <th>{t('ค่าใช้จ่าย (USD)')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -266,7 +267,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
                       </td>
                       <td>{e.total.toLocaleString(locale())}</td>
                       <td>
-                        {e.usd.toFixed(4)}
+                        {formatUsd(e.usd)}
                         {e.unpricedTokens > 0 ? t(' + รอราคา') : ''}
                       </td>
                     </tr>

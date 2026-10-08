@@ -5,8 +5,10 @@ import { _electron as electron } from '@playwright/test';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 
-const [out = 'release/qa/ui-review', theme = 'light', width = '1440', height = '900', axePath] = process.argv.slice(2);
+const bundledAxe = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+const [out = 'release/qa/ui-review', theme = 'light', width = '1440', height = '900', axePath = bundledAxe] = process.argv.slice(2);
 await mkdir(out, { recursive: true });
 const home = await mkdtemp(join(tmpdir(), 'step-ui-review-'));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_CLAUDE_SUBSCRIPTION: '0' };
@@ -81,7 +83,13 @@ try {
     const { DatabaseSync } = process.mainModule.require('node:sqlite');
     const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
     for (const row of db.prepare("SELECT id, value FROM records WHERE kind='connection'").all()) {
-      const value = { ...JSON.parse(row.value), ready: true, note: 'Screenshot fixture' };
+      const value = {
+        ...JSON.parse(row.value),
+        ready: true,
+        note: 'Screenshot fixture',
+        modelsAt: new Date().toISOString(),
+        models: [{ id: 'synthetic-model', label: 'โมเดลสังเคราะห์', isDefault: true }],
+      };
       db.prepare("UPDATE records SET value=? WHERE kind='connection' AND id=?").run(JSON.stringify(value), row.id);
     }
     db.close();
@@ -95,13 +103,13 @@ try {
   await shot('06-task-with-draft');
 
   const screens = [
-    ['07-skills-hub', 'ศูนย์รวม Skill'],
-    ['08-documents', 'เครื่องมือร่างเอกสาร'],
-    ['09-receipt', 'ตรวจใบเสร็จก่อนส่ง AFP'],
+    ['07-skills-hub', 'ศูนย์รวม Skill', '.skills-hub'],
+    ['08-documents', 'เครื่องมือร่างเอกสาร', '.document-tools'],
+    ['09-receipt', 'ตรวจใบเสร็จก่อนส่ง AFP', '.receipt-app'],
   ];
-  for (const [name, label] of screens) {
+  for (const [name, label, selector] of screens) {
     await palette(label);
-    await page.waitForTimeout(500);
+    await page.locator(selector).waitFor();
     await shot(name);
   }
   await page.locator('.session-open').first().click();
@@ -138,7 +146,11 @@ try {
   await shot('20-confirm-delete');
   await page.getByRole('button', { name: 'ยกเลิก' }).click();
   if (axeSource) await writeFile(join(out, 'axe.json'), JSON.stringify(report, null, 1));
-  if (errors.length) console.log('Page errors:', errors);
+  if (errors.length) throw new Error('UI_PAGE_ERRORS: ' + errors.join('; '));
+  const blocking = Object.entries(report).flatMap(([screen, issues]) =>
+    issues.filter(issue => ['critical', 'serious'].includes(issue.impact)).map(issue => ({ screen, ...issue })),
+  );
+  if (blocking.length) throw new Error('UI_ACCESSIBILITY_FAILURES: ' + JSON.stringify(blocking));
   console.log('UI review screenshots written to ' + out);
 } finally {
   await app.close();
