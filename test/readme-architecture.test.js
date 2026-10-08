@@ -22,6 +22,8 @@ function localMarkdownLinks(markdown) {
 test('employee documentation is aligned and links resolve', async (t) => {
   const [
     readme,
+    desktopReadme,
+    developerGuide,
     startHere,
     employeeGuide,
     architecture,
@@ -34,6 +36,8 @@ test('employee documentation is aligned and links resolve', async (t) => {
     documents,
   ] = await Promise.all([
     readFile(resolve(repoRoot, 'README.md'), 'utf-8'),
+    readFile(resolve(repoRoot, 'desktop/README.md'), 'utf-8'),
+    readFile(resolve(repoRoot, 'docs/developer-guide.md'), 'utf-8'),
     readFile(resolve(repoRoot, 'START-HERE.md'), 'utf-8'),
     readFile(resolve(repoRoot, 'docs/employee-guide.md'), 'utf-8'),
     readFile(resolve(repoRoot, 'docs/architecture.md'), 'utf-8'),
@@ -54,26 +58,30 @@ test('employee documentation is aligned and links resolve', async (t) => {
   const actionCount = countMatches(actions, /^  [a-z0-9_-]+:\s*$/gm);
   const provenanceCount = countMatches(provenance, /^  - id:/gm);
 
-  await t.test('README is GUI-first while keeping release and inventory boundaries', async () => {
+  await t.test('README leads with employee tasks and routes maintainers to the source inventory', async () => {
     const desktopPkg = JSON.parse(await readFile(resolve(repoRoot, 'desktop/package.json'), 'utf-8'));
 
     assert.ok(readme.includes('# STeP AI'));
     assert.ok(readme.includes('**STeP Desktop** คือหน้าจอทำงานหลัก'));
-    assert.ok(readme.includes('สำหรับผู้ใช้ทั่วไป: เริ่มจาก **STeP Desktop GUI**'));
-    assert.ok(readme.includes(`Harness source **v${pkg.version}**`));
-    assert.ok(readme.includes(`STeP Desktop **v${desktopPkg.version}**`));
-    assert.ok(readme.includes(`| ทีม | **${teamCount} ทีม** |`));
-    assert.ok(readme.includes(`| กลุ่ม routing | **${clusterCount} กลุ่ม** |`));
-    assert.ok(readme.includes(`| Skills | **${skillCount} Skills** |`));
-    assert.ok(readme.includes(`| Playbooks | **${playbookCount} Playbooks** |`));
-    assert.ok(readme.includes(`| Actions | **${actionCount} Actions** |`));
-    assert.ok(readme.includes('ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ'));
-    assert.ok(readme.includes('[Pilot Operations](docs/pilot-operations.md)'));
+    assert.ok(readme.includes('[คู่มือ STeP Desktop](desktop/README.md)'));
+    assert.ok(readme.includes('[คู่มือผู้ดูแลและนักพัฒนา](docs/developer-guide.md)'));
+    assert.ok(readme.includes(`**Harness v${pkg.version}**`));
+    assert.ok(readme.includes(`**STeP Desktop v${desktopPkg.version}**`));
+    assert.ok(developerGuide.includes(`Harness source **v${pkg.version}**`));
+    assert.ok(developerGuide.includes(`STeP Desktop **v${desktopPkg.version}**`));
+    assert.ok(desktopReadme.includes(`**STeP Desktop v${desktopPkg.version}**`));
+    assert.ok(developerGuide.includes(`| ทีม | **${teamCount} ทีม** |`));
+    assert.ok(developerGuide.includes(`| กลุ่ม routing | **${clusterCount} กลุ่ม** |`));
+    assert.ok(developerGuide.includes(`| Skills | **${skillCount} Skills** |`));
+    assert.ok(developerGuide.includes(`| Playbooks | **${playbookCount} Playbooks** |`));
+    assert.ok(developerGuide.includes(`| Actions | **${actionCount} Actions** |`));
+    assert.ok(developerGuide.includes('ตารางนี้นับจาก source ไม่ใช่รายการรับรองของ ZIP ที่พนักงานได้รับ'));
+    assert.ok(developerGuide.includes('[Pilot Operations](pilot-operations.md)'));
     assert.ok(readme.includes('Shared Drive หรือช่องทางภายใน'));
-    assert.ok(readme.includes('อย่าใช้ไฟล์จาก Public GitHub Release'));
-    assert.ok(readme.includes('Repository visibility'));
-    assert.ok(readme.includes('repository นี้มีสถานะ **Public**'));
-    assert.ok(readme.includes('ชุดติดตั้งที่แจกพนักงานมาจาก **release tag เท่านั้น** ไม่ใช่จาก `main`'));
+    assert.ok(desktopReadme.includes('ตัวติดตั้งที่ผู้ดูแลอนุมัติและแจกผ่านช่องทางภายใน'));
+    assert.ok(developerGuide.includes('Repository visibility'));
+    assert.ok(developerGuide.includes('repository นี้มีสถานะ **Public**'));
+    assert.ok(developerGuide.includes('ชุดติดตั้งที่แจกพนักงานมาจาก **release tag เท่านั้น** ไม่ใช่จาก `main`'));
   });
 
   await t.test('README covers the GUI onboarding and daily-use contract', () => {
@@ -145,9 +153,16 @@ test('employee documentation is aligned and links resolve', async (t) => {
     }
   });
 
-  await t.test('all README local links resolve', async () => {
-    for (const link of localMarkdownLinks(readme)) {
-      await access(resolve(repoRoot, link));
+  await t.test('employee and maintainer documentation local links resolve after relocation', async () => {
+    for (const [path, markdown] of [
+      ['README.md', readme],
+      ['desktop/README.md', desktopReadme],
+      ['docs/developer-guide.md', developerGuide],
+      ['docs/desktop-development.md', await readFile(resolve(repoRoot, 'docs/desktop-development.md'), 'utf-8')],
+    ]) {
+      for (const link of localMarkdownLinks(markdown)) {
+        await access(resolve(repoRoot, dirname(path), link));
+      }
     }
   });
 
@@ -166,14 +181,14 @@ test('employee documentation is aligned and links resolve', async (t) => {
 test('release status documents quote one inventory and the current version', async (t) => {
   const { loadRouterIndex } = await import('../src/cli/commands/ask.js');
   const read = (path) => readFile(resolve(repoRoot, path), 'utf-8').then(normalizeFixtureText);
-  const [pkgText, teams, skills, playbooks, actions, readme, changelog, operations, audit, architecture, axes, runbook, catalog] =
+  const [pkgText, teams, skills, playbooks, actions, developerGuide, changelog, operations, audit, architecture, axes, runbook, catalog] =
     await Promise.all([
       read('package.json'),
       read('manifest/teams.yaml'),
       read('manifest/skills.yaml'),
       read('manifest/playbooks.yaml'),
       read('manifest/actions.yaml'),
-      read('README.md'),
+      read('docs/developer-guide.md'),
       read('CHANGELOG.md'),
       read('docs/pilot-operations.md'),
       read('docs/pilot-readiness-audit.md'),
@@ -203,8 +218,7 @@ test('release status documents quote one inventory and the current version', asy
   });
 
   await t.test('prose counts match the router catalog', () => {
-    assert.ok(readme.includes(`Router มีเส้นทางเลือก Skill ${routerCount} รายการ`));
-    assert.ok(readme.includes(`Router มีเส้นทางเลือก Skill ${routerCount} รายการ`));
+    assert.ok(developerGuide.includes(`Router มีเส้นทางเลือก Skill ${routerCount} รายการ`));
     assert.ok(architecture.includes(`${skillCount} Skills ใน \`manifest/skills.yaml\` โดยเป็นปลายทางที่ Router เลือกได้ ${routerCount} รายการ`));
     assert.ok(axes.includes(`ทั้ง ${routerCount} รายการจาก ${skillCount} Skill`));
   });
