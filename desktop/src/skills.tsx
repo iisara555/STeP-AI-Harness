@@ -7,6 +7,8 @@ import { SectionArt } from './illustration';
 import { statusTag, tools, filters } from './skill-capabilities';
 export { statusTag, toolCount } from './skill-capabilities';
 
+// "common" means the Skill belongs to every team, so it reads as such instead of a team code.
+const ownerLabel = (owner: string) => (owner === 'common' ? t('ใช้ได้ทุกทีม') : `${t('ทีม')} ${owner.toUpperCase()}`);
 const fold = (value: string) => value.toLowerCase().replace(/[-_\s]+/g, ' ');
 
 export function SkillsHub({
@@ -91,7 +93,7 @@ export function SkillsHub({
                 {t(tool.id === 'documents' ? 'ฟอร์มร่างด้วย Skill' : statusTag.tool.label)}
               </span>
               <span className="tag">{t(tool.stage)}</span>
-              <span className="tag">{tool.owner.toUpperCase()}</span>
+              <span className="tag">{ownerLabel(tool.owner)}</span>
             </div>
             <button className="quiet" onClick={() => onOpenTool(tool.id)}>
               {t('เปิดเครื่องมือ')}
@@ -115,11 +117,7 @@ export function SkillsHub({
                 <span className={`tag ${tag.tone}`} title={t(tag.hint)}>
                   {t(tag.label)}
                 </span>
-                {s.owner && (
-                  <span className="tag">
-                    {t('ทีม')} {s.owner.toUpperCase()}
-                  </span>
-                )}
+                {s.owner && <span className="tag">{ownerLabel(s.owner)}</span>}
               </div>
               {s.status === 'routed' ? (
                 <button className="quiet" onClick={() => onUse(s.name)}>

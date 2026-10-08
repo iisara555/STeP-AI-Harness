@@ -612,7 +612,13 @@ export const en: Record<string, string> = {
   คืนคีย์ลัดเริ่มต้น: 'Restore default shortcuts',
   ส่วนตัว: 'Personal',
   พื้นที่งาน: 'Workspace',
+  'ปุ่มที่กดไม่ได้ชั่วคราวไม่เป็นก้อนสีเทาแล้ว อ่านง่ายทั้งธีมสว่างและมืด':
+    'Buttons that are temporarily unavailable no longer turn into grey blocks, in light and dark themes',
+  'ช่องเลือกโมเดลแสดงชื่อโมเดลสั้น ๆ ไม่โดนตัดคำ': 'The model picker shows a short model name instead of cutting it off',
+  'ศูนย์รวม Skill แสดง "ใช้ได้ทุกทีม" แทนรหัส COMMON และหน้าเชื่อมต่อ AI ไม่แสดงหัวข้อซ้ำ':
+    'Skill Hub shows "All teams" instead of the code COMMON, and the AI connection page no longer repeats its title',
   ทีม: 'Team',
+  ใช้ได้ทุกทีม: 'All teams',
   ความจำและรูปแบบคำตอบ: 'Memory and answer style',
   'บันทึกเฉพาะข้อมูลที่ไม่มีข้อมูลส่วนบุคคลหรือความลับ ความจำที่ยืนยันแล้วอาจถูกเลือกส่งให้ AI ในงานถัดไป คุณจะได้ตรวจบริบทก่อนส่ง':
     "Only save information without personal or confidential details. Confirmed memories may be sent to the AI in later tasks, and you'll review the context before sending",
