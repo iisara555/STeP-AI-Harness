@@ -3,6 +3,11 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'ขั้นตอนที่ AI กำลังทำแสดงในแชตพร้อมเครื่องหมายถูกเมื่อเสร็จ และอ่านรายการตัวเลือกในโหมดมืดได้ชัด':
+    "The AI's working steps show in the chat with a checkmark when done, and picker lists are readable in dark mode",
+  ลบการเชื่อมต่อที่ค้างรอลงชื่อเข้าใช้ได้แล้ว: 'A connection still waiting for sign-in can now be removed',
+  'หน้าเชื่อมต่อ AI อ่านง่ายขึ้น การ์ดบริการสูงเท่ากัน และบอกชัดว่าแบบไหนคิดเงินตามการใช้ API':
+    'The AI connection page is clearer: service cards are the same height and it says which options bill by API use',
   'มีหน้าโหลดดิ้งตอนเปิดแอป และแสดงหน้าหลักเมื่อทุกอย่างพร้อมแล้ว':
     'A loading screen while the app opens; the main window appears once everything is ready',
   'ถามเรื่อง STeP ครั้งแรกตอบได้เร็วขึ้น เพราะเตรียมเอกสารองค์กรไว้ตั้งแต่เปิดแอป':
