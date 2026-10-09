@@ -3,6 +3,12 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'มีหน้าโหลดดิ้งตอนเปิดแอป และแสดงหน้าหลักเมื่อทุกอย่างพร้อมแล้ว':
+    'A loading screen while the app opens; the main window appears once everything is ready',
+  'ถามเรื่อง STeP ครั้งแรกตอบได้เร็วขึ้น เพราะเตรียมเอกสารองค์กรไว้ตั้งแต่เปิดแอป':
+    'The first STeP question is answered faster because organization documents are prepared when the app opens',
+  'ค้นเอกสารองค์กรได้แม่นขึ้น เข้าใจคำที่พนักงานใช้ถามจริง เช่น ลาพักร้อน หรือ ส่งเบิกล่วงหน้า':
+    'Organization document search is more accurate and understands the words staff actually ask with, such as annual leave or advance claims',
   'ตอบคำถามเกี่ยวกับ STeP จากเอกสารองค์กรเสมอ แม้จะพิมพ์มาในรูปแบบงานแปลหรือสรุปข้อความ':
     'Questions about STeP are always answered from organization documents, even when worded as a translation or summary',
   'ChatGPT อ่านใบเสร็จและคัดผล OCR ตามรูปแบบข้อมูลที่กำหนด ผลอ่านไม่ได้น้อยลง':
