@@ -9,29 +9,29 @@ import { tm } from './i18n';
 import type { ProviderContext } from './providers';
 
 // Google's official Antigravity CLI, pinned with the sha512 its release manifest publishes
-// (storage.googleapis.com/antigravity-public/antigravity-cli/1.2.17/manifest.json).
-export const AGY_VERSION = '1.2.17';
-const AGY_BASE = 'https://storage.googleapis.com/antigravity-public/antigravity-cli/1.2.17-6683332533157888';
+// (storage.googleapis.com/antigravity-public/antigravity-cli/1.3.2/manifest.json).
+export const AGY_VERSION = '1.3.2';
+const AGY_BASE = 'https://storage.googleapis.com/antigravity-public/antigravity-cli/1.3.2-6492374831071232';
 const AGY_BUILDS: Record<string, { asset: string; sha512: string }> = {
   'win32-x64': {
     asset: 'windows-x64/cli_windows_x64.exe',
     sha512:
-      'fa3cbe2aa9f8ccc6dbf9333346cc5943020c6c71f112f9c221e573b49c39a073ad192bb8f59a0a526ff5471a72440bad87148158900edb689dc18db68d998a9a',
+      '7ede77453b10f68fd88d2c2976ab44ff467ab5de2d155d0da61b4da2b0f7400ab0430d977fb21b9464d084e2f61750515d8326e2436e2c6109ae44ffa3d8138b',
   },
   'win32-arm64': {
     asset: 'windows-arm/cli_windows_arm64.exe',
     sha512:
-      '712acd49a7efd65c5a0425cb8402344534aeb5f17ddb35913ac47511d9c09297916058d258bd46a5984777f13a6a21006f925fc750fc295bb7a0550a35fb992b',
+      '9595b3ffeb7aad210df57830cbdd23166a97e47ce53c66e1aa3e5235cc4116dd5f04ce3e757a59c52f3edb8ebb6afc3d3e319800240797fe9b3f9b1f0f5516a3',
   },
   'darwin-arm64': {
     asset: 'darwin-arm/cli_mac_arm64.tar.gz',
     sha512:
-      '9296703b3b79a7da9ff83ff3b138762639e850c71186b62beb5f5910a7b3799d95d85ec30320d55d4c98d92c5e65c7af75443cd51e32469dd1c2be5ee829ecfd',
+      'fd3474333e679b90369c4a041e2eea42cf74e0d931d2e9d16b54ea01278c5299605a6f704c20adcef0d48f14b790f42f3f557d6be03335fb79a445d1c568ba5b',
   },
   'darwin-x64': {
     asset: 'darwin-x64/cli_mac_x64.tar.gz',
     sha512:
-      'b17bd244385f51acb66d27764629cab293c1b37d9d69f59fd90421aaecb49ed224d5a4a5f2bdfd35958922e06ea2ce98909f10b03914f1dcb24e290f4e1ec629',
+      '6fada8a1732146f332e3407fce6390efbef3a8e31d5d35eabb55bdbe2ae9c507747e85679828ffdbcba68afe6bb0462fe7cfaa23bae38617e4200b6f84a4c655',
   },
 };
 export function agyComponentSpec(platform = process.platform, arch = process.arch) {

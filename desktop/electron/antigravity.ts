@@ -6,10 +6,12 @@ import { dirname, join, resolve } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { scrub, explainRuntimeFailure } from './diagnostics';
 import type { Connection, ModelOption } from '../src/types';
-import type { ProviderAdapter, ProviderContext, TokenCount } from './providers';
+import { providerSessionKey, type ProviderAdapter, type ProviderContext, type ProviderSession, type TokenCount } from './providers';
+import { combineUsage } from './usage';
+import { strictJsonSchema } from './json-schema';
 
 const LIMIT = 4_000_000;
-/** The `--effort` levels agy accepts (`agy --help`, 1.2.17). */
+/** The `--effort` levels agy accepts (`agy --help`, 1.2.17 and 1.3.2). */
 export const ANTIGRAVITY_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const AGENT = 'step-draft';
 const TEXT_TRANSPORT_RULES = `Native tools are unavailable in this STeP connection, including finish, file access, commands, MCP and native web search. Return the host's requested text format, including JSON when required. If the host supplied tools, request only those tools using fenced step-tool JSON in your text, never native function calls. Do not invent current facts or claim a search was performed. For fresh information without supplied evidence, ask for a source or explain that live search requires a supported connection.`;
@@ -125,6 +127,10 @@ export function runAntigravity(
     signal?: AbortSignal;
     timeoutMs?: number;
     holdInput?: boolean;
+    /** Keep stdin open after each message, for a stream-json conversation that runs one turn per message. */
+    keepInput?: boolean;
+    /** Receives handles to close stdin (ends a kept conversation) or stop the process tree with an error. */
+    control?: (handles: { end: () => void; stop: (error: Error) => void; send: (message: unknown) => void }) => void;
     line?: (line: string, send: (message: unknown) => void) => void;
   } = {},
 ): Promise<{ output: string; tail: string[] }> {
@@ -194,7 +200,8 @@ export function runAntigravity(
     };
     const send = (message: unknown) => {
       if (failed || settled || child.stdin.destroyed || child.stdin.writableEnded) throw new Error('RUNTIME_EXITED');
-      child.stdin.end(JSON.stringify(message) + '\n');
+      if (options.keepInput) child.stdin.write(JSON.stringify(message) + '\n');
+      else child.stdin.end(JSON.stringify(message) + '\n');
     };
     const line = (value: string) => {
       if (failed) return;
@@ -210,8 +217,9 @@ export function runAntigravity(
     child.stdout.on('data', chunk => {
       if (failed) return;
       const text = decoder.write(chunk);
-      output += text;
-      if (output.length > LIMIT) return fail(new Error('PROVIDER_OUTPUT_LIMIT'));
+      // A kept conversation reads its output line by line only; its whole lifetime is not held in memory.
+      if (!options.keepInput) output += text;
+      if (output.length > LIMIT || pending.length > LIMIT) return fail(new Error('PROVIDER_OUTPUT_LIMIT'));
       pending += text;
       let end: number;
       while ((end = pending.indexOf('\n')) >= 0) {
@@ -234,6 +242,13 @@ export function runAntigravity(
       finish(failed || (code !== 0 ? new Error(explainRuntimeFailure(tail) || 'RUNTIME_EXITED') : undefined));
     });
     if (!options.holdInput) child.stdin.end();
+    options.control?.({
+      end: () => {
+        if (!child.stdin.destroyed && !child.stdin.writableEnded) child.stdin.end();
+      },
+      stop: fail,
+      send,
+    });
     if (options.signal?.aborted) abort();
   });
 }
@@ -279,32 +294,148 @@ export function antigravityUsage(value: any): TokenCount | undefined {
   };
 }
 
+/** One agy process kept open across the tool turns of a run: stream-json runs one turn per message on one conversation. */
+type AgyConversation = {
+  home: Awaited<ReturnType<typeof antigravityHome>>;
+  identity: string;
+  /** The whole prompt the conversation already holds; a later turn sends only what follows it. */
+  sent: string;
+  /** Turns answered on this process. */
+  turns: number;
+  conversation: string;
+  /** The last usage the CLI reported, for when it reports conversation totals. */
+  usage?: TokenCount;
+  handles?: { end: () => void; stop: (error: Error) => void; send: (message: unknown) => void };
+  /** Receives the stream events of the turn in progress. */
+  handler?: (event: any, send: (message: unknown) => void) => void;
+  /** Told when the process ends while a turn waits. */
+  onExit?: (error: Error) => void;
+  exited: boolean;
+  /** Settles once the process has stopped and its isolated home is removed (or kept when shutdown was uncertain). */
+  done: Promise<void>;
+};
+
+const resettable = (error: unknown) =>
+  error instanceof Error && ['RUNTIME_EXITED', 'PROVIDER_STREAM_INVALID', 'PROVIDER_SESSION_INVALID'].includes(error.message);
+
+function parseEvent(line: string) {
+  let event: any;
+  try {
+    event = JSON.parse(line);
+  } catch {
+    throw new Error('PROVIDER_STREAM_INVALID');
+  }
+  if (!event || typeof event !== 'object' || Array.isArray(event)) throw new Error('PROVIDER_STREAM_INVALID');
+  return event;
+}
+
+/** The isolated settings and agent must be the ones agy loaded before any request text is written. */
+function checkInit(event: any, cwd: string, connection: Connection) {
+  const init = event.init;
+  if (!init || typeof init.cwd !== 'string' || !samePath(init.cwd, cwd) || init.agent !== AGENT || init.permission_mode !== 'strict')
+    throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
+  if (init.model !== undefined && init.model !== connection.model) throw new Error('MODEL_NOT_AVAILABLE');
+  // The CLI lists its built-in tools in init whatever the agent declares (live-tested 2026-10-05), so the
+  // listing is a catalog, not permission. Strict mode, confirmed above, proves the isolated settings that deny
+  // every native action were loaded; the workspace is an empty temporary folder; and the first tool step
+  // stops the process. The owner accepted relying on these instead of an empty catalog.
+  if (!Array.isArray(init.tools)) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
+  if (typeof event.conversation_id !== 'string' || !event.conversation_id || event.conversation_id.length > 128)
+    throw new Error('PROVIDER_STREAM_INVALID');
+  return event.conversation_id as string;
+}
+
+/**
+ * Follows one turn's step updates and result. Text is passed on as it arrives; the returned answer is the validated final
+ * response. `turns` is how many turns the process answered before this one: a later turn may report either its own
+ * number of turns or the conversation's.
+ */
+function turnReader(
+  conversation: () => string,
+  turns: number,
+  emit: (text: string) => void,
+  onUsage: (count: TokenCount, cumulative: boolean) => void,
+) {
+  let text = '';
+  let result: any;
+  return {
+    get result() {
+      return result;
+    },
+    read(event: any) {
+      if (event.event === 'step_update') {
+        const step = event.step_update;
+        if (!conversation() || result || !step || step.conversation_id !== conversation()) throw new Error('PROVIDER_STREAM_INVALID');
+        if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) throw new Error('TOOL_DENIED');
+        if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
+          if (typeof step.text_delta !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
+          text += step.text_delta;
+          emit(step.text_delta);
+        }
+        return undefined;
+      }
+      if (event.event !== 'result' || result) throw new Error('PROVIDER_STREAM_INVALID');
+      result = event.result;
+      if (!result || typeof result.status !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
+      const count = antigravityUsage(result.usage);
+      if (count) onUsage(count, turns > 0 && result.num_turns === turns + 1);
+      // Authentication failures may be emitted before init; never copy their raw message.
+      if (result.status !== 'SUCCESS') {
+        const reason = typeof result.error === 'string' ? scrub(result.error) : '';
+        throw new Error(
+          explainRuntimeFailure([reason]) ||
+            (['CANCELED', 'INTERRUPTED'].includes(result.status) ? 'CANCELLED' : 'PROVIDER_REQUEST_FAILED'),
+        );
+      }
+      if (
+        !conversation() ||
+        result.conversation_id !== conversation() ||
+        !(result.num_turns === 1 || (turns > 0 && result.num_turns === turns + 1)) ||
+        typeof result.response !== 'string'
+      )
+        throw new Error('PROVIDER_STREAM_INVALID');
+      if (result.response.length > LIMIT) throw new Error('PROVIDER_OUTPUT_LIMIT');
+      if (!result.response.trim()) throw new Error('EMPTY_RESULT');
+      if (!result.response.startsWith(text)) throw new Error('PROVIDER_STREAM_INVALID');
+      const remaining = result.response.slice(text.length);
+      if (remaining) emit(remaining);
+      return result.response as string;
+    },
+  };
+}
+
 export class AntigravityAdapter implements ProviderAdapter {
+  private conversations = new WeakMap<ProviderSession, AgyConversation>();
   constructor(private timeoutMs = 600_000) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     const deadline = Date.now() + this.timeoutMs;
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = AbortSignal.any([context.signal, timeout]);
     for (let attempt = 0; attempt < 2; attempt++) {
+      const attemptContext = {
+        ...context,
+        signal,
+        system: [context.system || '', TEXT_TRANSPORT_RULES, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
+      };
       // A failed stream can contain both partial prose and host tool requests.
       // Publish only a complete validated attempt, so recovery cannot duplicate them.
       const deltas: string[] = [];
       let answer: string;
       try {
-        answer = await this.runOnce(
-          prompt,
-          connection,
-          {
-            ...context,
-            signal,
-            system: [context.system || '', TEXT_TRANSPORT_RULES, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
-            emit: delta => deltas.push(delta),
-          },
-          deadline,
-        );
+        // The tool turns of a run continue on one process. A structured request and the recovery attempt run alone.
+        answer =
+          attempt === 0 && context.session && !context.jsonSchema
+            ? await this.conversationTurn(prompt, connection, { ...attemptContext, emit: delta => deltas.push(delta) }, deadline)
+            : await this.runOnce(
+                prompt,
+                connection,
+                { ...attemptContext, session: undefined, emit: delta => deltas.push(delta) },
+                deadline,
+                attempt === 0,
+              );
       } catch (error) {
         if (timeout.aborted && !context.signal.aborted && !(error as any)?.shutdownIncomplete) throw new Error('PROVIDER_TIMEOUT');
-        // runOnce waits for termination and deletes its isolated home first.
+        // A failed attempt has stopped its process and deleted its isolated home first.
         // Never replay quota/auth failures, unconfirmed policy or uncertain shutdown.
         if (
           attempt === 0 &&
@@ -322,109 +453,239 @@ export class AntigravityAdapter implements ProviderAdapter {
     }
     throw new Error('TOOL_DENIED');
   }
-  private async runOnce(prompt: string, connection: Connection, context: ProviderContext, deadline: number) {
+
+  private check(connection: Connection, context: ProviderContext) {
     if (context.signal.aborted) throw new Error('CANCELLED');
     if (connection.provider !== 'antigravity' || connection.mode !== 'subscription' || context.key) throw new Error('INVALID_CONNECTION');
     if (context.images?.length) throw new Error('VISION_UNAVAILABLE');
     if (context.webSearch) throw new Error('WEB_SEARCH_UNAVAILABLE');
     if (!/^gemini-[\w.-]{1,93}$/.test(connection.model)) throw new Error('MODEL_NOT_AVAILABLE');
     if (context.effort && !ANTIGRAVITY_EFFORTS.includes(context.effort)) throw new Error('MODEL_EFFORT_UNAVAILABLE');
+  }
+
+  private args(connection: Connection, context: ProviderContext, extra: string[] = []) {
+    return [
+      '--agent',
+      AGENT,
+      '--disable-slash-commands',
+      '--input-format',
+      'stream-json',
+      '--output-format',
+      'stream-json',
+      '--print-timeout',
+      '9m',
+      ...(connection.model ? ['--model', connection.model] : []),
+      ...(context.effort ? ['--effort', context.effort] : []),
+      ...extra,
+    ];
+  }
+
+  /** One process, one message, stdin closed after it; success needs a validated result and exit 0. */
+  private async runOnce(prompt: string, connection: Connection, context: ProviderContext, deadline: number, useSchema: boolean) {
+    this.check(connection, context);
     const home = await antigravityHome(context);
     let clean = true;
-    let initialized = false;
     let conversation = '';
-    let text = '';
-    let result: any;
     try {
       await checkAntigravity(connection.executable, home, context.signal);
-      const args = [
-        '--agent',
-        AGENT,
-        '--disable-slash-commands',
-        '--input-format',
-        'stream-json',
-        '--output-format',
-        'stream-json',
-        '--print-timeout',
-        '9m',
-      ];
-      if (connection.model) args.push('--model', connection.model);
-      if (context.effort) args.push('--effort', context.effort);
-      await runAntigravity(connection.executable, args, home, {
+      const extra: string[] = [];
+      // agy constrains the final result to this schema (`--json-schema`, 1.2.14+). The recovery attempt goes without it,
+      // in case the CLI answers a schema through a tool step, which STeP stops.
+      if (useSchema && context.jsonSchema) {
+        const file = join(dirname(home.cwd), 'output-schema.json');
+        await writeFile(file, JSON.stringify(strictJsonSchema(context.jsonSchema)), { mode: 0o600 });
+        extra.push('--json-schema', file);
+      }
+      const reader = turnReader(
+        () => conversation,
+        0,
+        context.emit,
+        count => context.onUsage?.(count),
+      );
+      let answer = '';
+      await runAntigravity(connection.executable, this.args(connection, context, extra), home, {
         signal: context.signal,
         timeoutMs: Math.max(1, deadline - Date.now()),
         holdInput: true,
         line: (line, send) => {
-          let event: any;
-          try {
-            event = JSON.parse(line);
-          } catch {
-            throw new Error('PROVIDER_STREAM_INVALID');
-          }
-          if (!event || typeof event !== 'object' || Array.isArray(event)) throw new Error('PROVIDER_STREAM_INVALID');
+          const event = parseEvent(line);
           if (event.event === 'init') {
-            const init = event.init;
-            if (
-              initialized ||
-              !init ||
-              typeof init.cwd !== 'string' ||
-              !samePath(init.cwd, home.cwd) ||
-              init.agent !== AGENT ||
-              init.permission_mode !== 'strict'
-            )
-              throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
-            if (init.model !== undefined && init.model !== connection.model) throw new Error('MODEL_NOT_AVAILABLE');
-            // The CLI lists its built-in tools in init whatever the agent declares (live-tested 2026-10-05), so the
-            // listing is a catalog, not permission. Strict mode, confirmed above, proves the isolated settings that deny
-            // every native action were loaded; the workspace is an empty temporary folder; and the first tool step
-            // below stops the process. The owner accepted relying on these instead of an empty catalog.
-            if (!Array.isArray(init.tools)) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
-            if (typeof event.conversation_id !== 'string' || !event.conversation_id || event.conversation_id.length > 128)
-              throw new Error('PROVIDER_STREAM_INVALID');
-            initialized = true;
-            conversation = event.conversation_id;
+            if (conversation) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
+            conversation = checkInit(event, home.cwd, connection);
             send({ event: 'user', message: { content: prompt } });
-          } else if (event.event === 'step_update') {
-            const step = event.step_update;
-            if (!initialized || result || !step || step.conversation_id !== conversation) throw new Error('PROVIDER_STREAM_INVALID');
-            if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) throw new Error('TOOL_DENIED');
-            if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
-              if (typeof step.text_delta !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
-              text += step.text_delta;
-              context.emit(step.text_delta);
-            }
-          } else if (event.event === 'result') {
-            if (result) throw new Error('PROVIDER_STREAM_INVALID');
-            result = event.result;
-            if (!result || typeof result.status !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
-            const count = antigravityUsage(result.usage);
-            if (count) context.onUsage?.(count);
-            // Authentication failures may be emitted before init; never copy their raw message.
-            if (result.status !== 'SUCCESS') {
-              const reason = typeof result.error === 'string' ? scrub(result.error) : '';
-              throw new Error(
-                explainRuntimeFailure([reason]) ||
-                  (['CANCELED', 'INTERRUPTED'].includes(result.status) ? 'CANCELLED' : 'PROVIDER_REQUEST_FAILED'),
-              );
-            }
-            if (!initialized || result.conversation_id !== conversation || result.num_turns !== 1 || typeof result.response !== 'string')
-              throw new Error('PROVIDER_STREAM_INVALID');
-            if (result.response.length > LIMIT) throw new Error('PROVIDER_OUTPUT_LIMIT');
-          } else throw new Error('PROVIDER_STREAM_INVALID');
+            return;
+          }
+          answer = reader.read(event) ?? answer;
         },
       });
-      if (!result || result.status !== 'SUCCESS') throw new Error('PROVIDER_REQUEST_FAILED');
-      if (!result.response.trim()) throw new Error('EMPTY_RESULT');
-      if (!result.response.startsWith(text)) throw new Error('PROVIDER_STREAM_INVALID');
-      const remaining = result.response.slice(text.length);
-      if (remaining) context.emit(remaining);
-      return result.response as string;
+      if (!reader.result || reader.result.status !== 'SUCCESS' || !answer) throw new Error('PROVIDER_REQUEST_FAILED');
+      return answer;
     } catch (error) {
       clean = !(error as any)?.shutdownIncomplete;
       throw error;
     } finally {
       if (clean) await home.close();
     }
+  }
+
+  /** A turn on the run's kept process: the first sends the whole prompt, later ones only the new tool results. */
+  private async conversationTurn(prompt: string, connection: Connection, context: ProviderContext, deadline: number) {
+    this.check(connection, context);
+    const session = context.session!;
+    const identity = providerSessionKey(connection, context);
+    const held = this.conversations.get(session);
+    const reuse = Boolean(held && !held.exited && held.identity === identity && held.sent && prompt.startsWith(held.sent));
+    if (held && !reuse) await session.closeAndWait();
+    if (reuse) {
+      try {
+        return await this.turn(held!, prompt, connection, context, deadline, Date.now());
+      } catch (error) {
+        // A process that ended or answered out of protocol between turns gets one fresh start with the whole prompt.
+        if (context.signal.aborted || !resettable(error)) throw error;
+        await session.closeAndWait();
+        return this.turn(
+          await this.open(session, identity, connection, context),
+          prompt,
+          connection,
+          context,
+          deadline,
+          Date.now(),
+          'session-invalid',
+        );
+      }
+    }
+    const started = Date.now();
+    return this.turn(await this.open(session, identity, connection, context), prompt, connection, context, deadline, started);
+  }
+
+  private async open(session: ProviderSession, identity: string, connection: Connection, context: ProviderContext) {
+    const home = await antigravityHome(context);
+    try {
+      await checkAntigravity(connection.executable, home, context.signal);
+    } catch (error) {
+      if (!(error as any)?.shutdownIncomplete) await home.close();
+      throw error;
+    }
+    const held: AgyConversation = { home, identity, sent: '', turns: 0, conversation: '', exited: false, done: Promise.resolve() };
+    const running = runAntigravity(connection.executable, this.args(connection, context), home, {
+      // The process lives for the whole run; each turn has its own deadline and cancellation below.
+      timeoutMs: 60 * 60_000,
+      holdInput: true,
+      keepInput: true,
+      control: handles => (held.handles = handles),
+      line: (line, send) => {
+        const event = parseEvent(line);
+        if (!held.handler) throw new Error('PROVIDER_STREAM_INVALID');
+        held.handler(event, send);
+      },
+    });
+    held.done = running
+      .then(
+        async () => {
+          held.exited = true;
+          held.onExit?.(new Error('RUNTIME_EXITED'));
+          await home.close();
+        },
+        async error => {
+          held.exited = true;
+          held.onExit?.(error instanceof Error ? error : new Error('RUNTIME_EXITED'));
+          if (!(error as any)?.shutdownIncomplete) await home.close();
+        },
+      )
+      // A home that cannot be removed is left behind; it must never leave a turn waiting forever.
+      .catch(() => {});
+    this.conversations.set(session, held);
+    session.onClose = async () => {
+      this.conversations.delete(session);
+      // Closing stdin ends the conversation; a process that does not exit soon is stopped.
+      held.handles?.end();
+      const stop = setTimeout(() => held.handles?.stop(new Error('CANCELLED')), 5000);
+      await held.done;
+      clearTimeout(stop);
+    };
+    return held;
+  }
+
+  private turn(
+    held: AgyConversation,
+    prompt: string,
+    connection: Connection,
+    context: ProviderContext,
+    deadline: number,
+    started: number,
+    resetReason?: string,
+  ) {
+    const fresh = !held.turns;
+    const input = fresh ? prompt : prompt.slice(held.sent.length);
+    context.onTransport?.({
+      mode: fresh ? 'full' : 'delta',
+      sentChars: input.length,
+      startupMs: fresh ? Date.now() - started : 0,
+      ...(resetReason ? { resetReason } : {}),
+    });
+    return new Promise<string>((resolve, reject) => {
+      let settled = false;
+      const finish = (error?: Error, answer?: string) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        context.signal.removeEventListener('abort', abort);
+        held.handler = undefined;
+        held.onExit = undefined;
+        if (error) {
+          // Wait until the process has stopped and its home is removed, as a one-shot run does.
+          held.handles?.stop(error);
+          held.done.then(() => reject(error));
+        } else resolve(answer!);
+      };
+      const timer = setTimeout(() => finish(new Error('PROVIDER_TIMEOUT')), Math.max(1, deadline - Date.now()));
+      const abort = () => finish(new Error('CANCELLED'));
+      context.signal.addEventListener('abort', abort, { once: true });
+      held.onExit = error =>
+        finish(error.message === 'RUNTIME_EXITED' || error.message === 'CANCELLED' ? new Error('RUNTIME_EXITED') : error);
+      const reader = turnReader(
+        () => held.conversation,
+        held.turns,
+        context.emit,
+        (count, cumulative) => {
+          // When agy reports conversation totals, this turn's part is the growth since the last report.
+          const turnCount = cumulative && held.usage ? combineUsage(count, held.usage, 'delta') : count;
+          held.usage = count;
+          context.onUsage?.(turnCount);
+        },
+      );
+      const ask = (send: (message: unknown) => void) => send({ event: 'user', message: { content: input } });
+      held.handler = (event, send) => {
+        if (event.event === 'init') {
+          const id = checkInit(event, held.home.cwd, connection);
+          // A later turn may announce the same conversation again; a different one is not this conversation.
+          if (held.conversation) {
+            if (id !== held.conversation) throw new Error('PROVIDER_SESSION_INVALID');
+            return;
+          }
+          held.conversation = id;
+          ask(send);
+          return;
+        }
+        const answer = reader.read(event);
+        if (answer !== undefined) {
+          held.turns++;
+          held.sent = prompt;
+          finish(undefined, answer);
+        }
+      };
+      if (context.signal.aborted) return abort();
+      if (held.exited) return finish(new Error('RUNTIME_EXITED'));
+      // A process that already started its conversation waits for the next message on stdin; a new one asks after init.
+      if (held.conversation) {
+        try {
+          if (!held.handles) throw new Error('RUNTIME_EXITED');
+          ask(held.handles.send);
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error('RUNTIME_EXITED'));
+        }
+      }
+    });
   }
 }
 
