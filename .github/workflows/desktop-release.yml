@@ -60,7 +60,9 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+      # Every PR already runs these on macOS (validate.yml desktop-macos-electron); only Windows runs them here.
       - name: Verify chat and tools with a synthetic provider
+        if: runner.os == 'Windows'
         run: npm run test:electron
       - name: Build installer
         env:
