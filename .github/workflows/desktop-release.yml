@@ -1,7 +1,7 @@
 name: Build STeP Desktop installers
 
-# Each installer is built on its own OS: Windows (NSIS .exe) and macOS (.dmg for Apple silicon and
-# for Intel). Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
+# Each installer is built on its own OS: Windows (NSIS .exe) and macOS (.dmg for Apple silicon).
+# Without the organisation's certificates the Mac apps are ad-hoc signed, which lets them
 # run after the user approves them once; with CSC_* and APPLE_* secrets they are signed and notarized.
 #
 # A `desktop-v<version>` tag, or a manual run with "publish" ticked (which creates that tag), also publishes: a release for that version, and the rolling `desktop-latest` release
@@ -43,15 +43,7 @@ jobs:
               desktop/release/*.blockmap
               desktop/release/latest-mac.yml
             feed: latest-mac.yml
-          - name: macos-x64
-            os: macos-latest
-            script: dist:mac:x64
-            artifact: |
-              desktop/release/*.dmg
-              desktop/release/*.zip
-              desktop/release/*.blockmap
-              desktop/release/latest-mac.yml
-            feed: latest-mac.yml
+          # Intel Mac builds stopped after 0.5.35; `npm run dist:mac:x64` still builds one by hand.
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -104,12 +96,6 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           DMG=$(ls release/*.dmg | head -1)
-          if [ "${{ matrix.name }}" = "macos-x64" ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
-            echo "::notice::Rosetta is not available on this runner; the x64 app was built and tested but not launched."
-            exit 0
-          fi
-          # Rosetta translates the Intel app on its first launch; give it time.
-          [ "${{ matrix.name }}" = "macos-x64" ] && export STEP_LAUNCH_TIMEOUT=420000
           MNT=$(mktemp -d)
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
           trap 'hdiutil detach "$MNT" -force || true' EXIT
@@ -163,11 +149,7 @@ jobs:
         run: |
           mkdir -p out
           cp built/step-desktop-windows-x64/* out/
-          for arch in arm64 x64; do
-            find "built/step-desktop-macos-$arch" -maxdepth 1 -type f ! -name latest-mac.yml -exec cp {} out/ \;
-          done
-          node desktop/scripts/merge-mac-update-info.mjs out/latest-mac.yml \
-            built/step-desktop-macos-arm64/latest-mac.yml built/step-desktop-macos-x64/latest-mac.yml
+          cp built/step-desktop-macos-arm64/* out/
           ls -l out
       - name: Publish the version and update the feed
         env:
