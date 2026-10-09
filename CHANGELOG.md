@@ -6,6 +6,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.36 — 2026-10-09
+
+### AI connection page and chat (PR #122)
+
+- The AI's working steps stay visible in the chat with a checkmark for each finished step (up to 30), and "ความคิดของ AI" stays open. Native dropdowns (model, mode, permission) use theme colours, so their text is readable in dark mode.
+- A connection whose browser sign-in is still waiting can be removed: removing it cancels the sign-in first instead of failing as busy.
+- Claude choices are clearer: with the Claude subscription pilot off, the admin form defaults Claude to API key, labels Console OAuth as API billing (not Pro/Max) and says how to turn on the pilot.
+- The service cards on the AI connection page are all the same height and keep their order when "ดูบริการอื่นอีก" opens; the "แนะนำ" label sits on the card's top edge.
+- The loading window stays up for at least 5 seconds.
+
 ## Desktop v0.5.35 — 2026-10-09
 
 ### Fix
