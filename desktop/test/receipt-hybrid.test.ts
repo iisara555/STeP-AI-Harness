@@ -4,14 +4,30 @@ import { parseVisionReading, compareField, receiptRuleChecks, thaiBahtWords } fr
 import { visionFormSuggestions, receiptDetailRegions, receiptFocusStyle, receiptCropRectangle } from '../src/receipt-hybrid';
 import { emptyReceiptForm, receiptFormReducer } from '../src/receipt-form';
 
-test('handwritten Vision readings replace confident OCR while printed readings retain the existing comparison', () => {
+test('Vision readings replace OCR values, printed or handwritten, unless Vision is unsure or malformed', () => {
   const reading = parseVisionReading(JSON.stringify({ fields: { total: { value: '808.00', is_handwritten: true, confidence: 0.95 } } }));
   const suggestions = visionFormSuggestions({ total: '880.00' }, {}, reading);
   assert.equal(suggestions.total, '808.00');
+  const printed = (fields: object) =>
+    visionFormSuggestions({ total: '880.00', taxId: '0105559999999' }, {}, parseVisionReading(JSON.stringify({ fields })));
+  assert.equal(printed({ total: { value: '808.00' } }).total, '808.00');
+  assert.equal(printed({ total: { value: '1,070' } }).total, '1070.00');
+  // Vision unsure: a confident OCR value stays; an OCR guess or an empty box still takes the Vision value.
+  assert.equal(printed({ total: { value: '808.00', needs_review: true } }).total, undefined);
+  assert.equal(printed({ total: { value: '808.00', confidence: 0.3 } }).total, undefined);
   assert.equal(
-    visionFormSuggestions({ total: '880.00' }, {}, parseVisionReading('{"fields":{"total":{"value":"808.00"}}}')).total,
-    undefined,
+    visionFormSuggestions(
+      { total: '880.00' },
+      { total: 'ocr' },
+      parseVisionReading('{"fields":{"total":{"value":"808.00","needs_review":true}}}'),
+    ).total,
+    '808.00',
   );
+  // Malformed amounts and tax IDs are never written into the form, even into an empty box.
+  assert.equal(printed({ total: { value: '1O7.00' } }).total, undefined);
+  assert.equal(visionFormSuggestions({}, {}, parseVisionReading('{"fields":{"total":{"value":"107.001"}}}')).total, undefined);
+  assert.equal(printed({ taxId: { value: '010555999999' } }).taxId, undefined);
+  assert.equal(printed({ taxId: { value: '0105559999998' } }).taxId, '0105559999998');
   let state = receiptFormReducer(emptyReceiptForm, {
     type: 'load',
     sourceId: 'synthetic',
