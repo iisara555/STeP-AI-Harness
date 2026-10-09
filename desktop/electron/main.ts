@@ -19,6 +19,7 @@ import {
 import { mkdir, writeFile, appendFile, rm, readFile } from 'node:fs/promises';
 import { ExportWorkspace } from './export-workspace';
 import { tmpdir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
@@ -2415,6 +2416,12 @@ async function main() {
       case 'removeConnection': {
         const c = store.get<Connection>('connection', inputText(input.id, 60));
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
+        // A sign-in still waiting on the browser is cancelled for the person, then removed once it has stopped.
+        const pending = connectControllers.get(c.id);
+        if (pending) {
+          pending.abort();
+          for (let waited = 0; connecting.has(c.id) && waited < 10_000; waited += 100) await delay(100);
+        }
         if (connecting.has(c.id)) throw new Error('CONNECTION_BUSY');
         providerUsage.forget(c.id);
         const sessions = store.list<Session>('session').filter(session => session.connectionId === c.id);
