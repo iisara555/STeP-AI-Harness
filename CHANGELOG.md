@@ -4,9 +4,9 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
-## Unreleased
+## Desktop v0.5.37 — 2026-10-09
 
-### Chat
+### Chat (PR #126)
 
 - While the AI works, the chat shows one status line that changes in place (for example "กำลังอ่าน Skill" then "กำลังเขียนคำตอบ") instead of a growing list of finished steps, so only the answer and the current step are on screen. "ความคิดของ AI" starts folded; open it to read the AI's reasoning.
 - Each answer shows how long it took (for example "ใช้เวลา 0:28"), counted from sending the request to the finished reply.
@@ -16,16 +16,16 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - A tool request the app cannot read (often a long file whose quotes or line breaks were not escaped) no longer ends the task as an empty reply. The AI is told why and gets two chances to send it again; after that the chat shows an error saying no file was saved.
 - New policy feature `answerCheck` (off by default): when on, an answer about STeP is checked once more by the AI against the same document excerpts, and any statement the documents do not support is listed under the answer for the employee to verify. A failed check never blocks the answer.
 
-### Organization policy
+### Organization policy (PR #126)
 
 - When `desktop-policy.json` cannot be used, the policy tab now lists the exact reason (for example invalid JSON, an unknown feature name, or a file that is not administrator-managed), and `diagnostics.jsonl` records it too. The Windows permission check on the file waits up to 15 seconds instead of 5, so a slow PowerShell start no longer counts as an untrusted file.
 
-### Development
+### Development (PR #126)
 
 - `AGENTS.md` (with `CLAUDE.md` pointing to it) is the starting page for any AI coding agent: the repository map, the checks to run, and the rules (answers about STeP from org documents, Thai first, releases, no direct pushes to main). `docs/progress.md` records the current state and what waits on the owner; the old `HANDOFF.md` moved to `docs/archive/`.
 - The concurrent user-config write test no longer fails on Windows: a lock file that Windows is still deleting (EPERM/EACCES) now counts as busy and is retried.
 
-### Receipt check: the image reading fills the form
+### Receipt check: the image reading fills the form (PR #127)
 
 - **Before:** when the AI read the receipt image, its values replaced the local OCR only for handwriting, empty boxes or OCR guesses. On a printed receipt a wrong OCR value stayed in the form even when the AI had read it correctly.
 - **After:** the AI image reading fills each field, printed or handwritten. OCR keeps a field only when the AI left it empty, marked it for review or reported confidence below 0.5 while OCR had a value. AI amounts must be a plain number with two decimals and a tax ID must be 13 digits, otherwise they are not written into the form. Fields where the two readings differ are still marked "OCR กับ AI อ่านต่างกัน", manual edits are never overwritten, and one confirmation is still required.

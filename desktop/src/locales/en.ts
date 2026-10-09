@@ -5,6 +5,11 @@ import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
   'ขั้นตอนที่ AI กำลังทำแสดงในแชตพร้อมเครื่องหมายถูกเมื่อเสร็จ และอ่านรายการตัวเลือกในโหมดมืดได้ชัด':
     "The AI's working steps show in the chat with a checkmark when done, and picker lists are readable in dark mode",
+  'แชตแสดงสถานะงานบรรทัดเดียว และบอกเวลาที่ใช้ตอบใต้คำตอบ': 'The chat shows one status line while working and how long each answer took',
+  'คำตอบเรื่อง STeP บอกเอกสารที่ใช้อ้างอิง': 'Answers about STeP list the documents they drew on',
+  'ไฟล์ HTML ที่ AI สร้าง เช่น สไลด์ กดดูตัวอย่างในแท็บเว็บได้ทันที':
+    'HTML files the AI writes, such as slides, open in the Web tab with Preview',
+  'ตรวจใบเสร็จ: ค่าที่ AI อ่านจากรูปเติมลงฟอร์มแทน OCR': 'Receipt check: values the AI reads from the image fill the form instead of OCR',
   ลบการเชื่อมต่อที่ค้างรอลงชื่อเข้าใช้ได้แล้ว: 'A connection still waiting for sign-in can now be removed',
   'หน้าเชื่อมต่อ AI อ่านง่ายขึ้น การ์ดบริการสูงเท่ากัน และบอกชัดว่าแบบไหนคิดเงินตามการใช้ API':
     'The AI connection page is clearer: service cards are the same height and it says which options bill by API use',
