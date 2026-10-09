@@ -65,6 +65,18 @@ Owner request: staff should not install or sign in to the CLI by hand. `electron
 - **Isolated home and the real sign-in (2026-10-06):** on a real Mac the Terminal sign-in succeeded but STeP's isolated `agy models` never saw it. Each isolated home now links `Library/Keychains` to the real one on macOS (unlinked first on cleanup) and copies `~/.gemini/antigravity-cli/antigravity-oauth-token`, agy's file storage when the keyring is unavailable (Linux without D-Bus logs `Using file-based token storage because no D-Bus session bus detected`). When `agy models` with the real profile succeeds twice while the isolated check fails, sign-in stops with `ANTIGRAVITY_SIGNIN_HIDDEN`.
 - **Not yet verified on a real machine:** the browser-first sign-in on Windows and macOS (the null-device stdin behaviour was checked on Linux only), and on macOS whether the isolated home used by `agy models` sees the keychain sign-in made with the real profile.
 
+## Efficiency (2026-10-09)
+
+- The `--version` check runs once per agy binary (path, size and change time) instead of once per message, so each message starts one process instead of two. A replaced or updated binary is checked again.
+- Usage now includes `thinking_tokens` as output (as Gemini's own `thoughtsTokenCount` is) and reports `cache_read_tokens` as cached input, so the usage page shows what the plan was charged and how much the prompt cache saved.
+- `xhigh` is accepted as an effort level, matching `agy --help` on 1.2.17.
+- **One process per run (2026-10-09):** `--input-format stream-json` runs one turn per stdin line on one conversation. The tool turns of a run (prompt, then prompt plus tool results) now continue on one agy process and send only the new tool results, as Codex and Gemini ACP do. A later turn may repeat `init` for the same conversation and may report `num_turns` and usage either per turn or as conversation totals; totals are turned into this turn's part. A process that exits or breaks protocol between turns gets one fresh start with the whole prompt; a tool step stops the process and falls back to the existing fresh text-only attempt. Closing the run closes stdin, waits for exit (stopping it after 5 seconds) and deletes the isolated home.
+- **Structured output:** a request with a JSON shape (the receipt OCR filter) runs alone with `--json-schema <file>` (strict form, written into the isolated home). If agy answers it through a tool step, the recovery attempt asks again without the schema.
+- **Pinned CLI 1.3.2** (was 1.2.17), sha512 values from `antigravity-cli/1.3.2/manifest.json`. Checked with the Linux 1.3.2 binary: same flags, same signed-out `agy models` and `agy -p` sign-in output, `last_check.timestamp` still gates the background updater.
+- **Text is still shown only after a turn validates.** Streaming it live would put text from a stopped (tool-step) attempt on screen.
+- **Not built:** images. The stream-json user message format for images is not documented and could not be probed without a signed-in account (agy asks for sign-in before it reads stdin).
+- All of the above use synthetic NDJSON runtimes in tests; the multi-turn and schema behaviour of the real CLI is assumed from its `--help` and changelog and still needs one signed-in run.
+
 ## Validation
 
 - **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.

@@ -107,7 +107,7 @@ import { section } from './prompt';
 import { ocrAttachmentReport, ocrAttachmentSource } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
-import { RECEIPT_VISION_SYSTEM } from '../src/receipt-vision';
+import { RECEIPT_VISION_SCHEMA, RECEIPT_VISION_SYSTEM } from '../src/receipt-vision';
 import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
@@ -2244,6 +2244,7 @@ async function main() {
             check();
             const response = await current.adapter.run(resolver.prompt, connection, {
               ...current.context,
+              jsonSchema: resolver.schema,
               signal: AbortSignal.any([signal, controller.signal]),
               emit: () => {},
             });
@@ -2306,6 +2307,7 @@ async function main() {
               const reply = await current.adapter.run(instruction + inspection.description, connection, {
                 ...current.context,
                 system: RECEIPT_VISION_SYSTEM,
+                jsonSchema: RECEIPT_VISION_SCHEMA,
                 images: inspection.images,
                 signal: combinedSignal,
                 emit: () => {},
