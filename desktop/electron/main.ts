@@ -118,6 +118,8 @@ let window: BrowserWindow, store: Store, service: WorkService;
 let rendererReady: () => void = () => undefined;
 /** Longest the loading window waits for the workspace before showing it anyway. */
 const SPLASH_LIMIT_MS = 20000;
+/** Shortest time the loading window stays up, so the logo animation is seen even when loading is quick. */
+const SPLASH_MIN_MS = 5000;
 const attachments = new Map<
   string,
   { view: Attachment; text: string; sessionId: string; images?: VisionInput[]; nativeBytes?: Buffer; sourceUsable?: boolean }
@@ -182,10 +184,12 @@ async function makeWindow(splash?: Splash, prepared: Promise<unknown> = Promise.
   if (!splash) window.once('ready-to-show', () => window.show());
   else {
     // The main window stays hidden behind the loading window until the workspace has drawn its first screen and
-    // the background preparation is done, or the limit passes, so it never opens half loaded.
+    // the background preparation is done, or the limit passes, so it never opens half loaded. The loading window
+    // also stays up for at least SPLASH_MIN_MS from when it opened.
     const drawn = new Promise<void>(done => (rendererReady = done));
     const limit = new Promise<void>(done => setTimeout(done, SPLASH_LIMIT_MS));
-    void Promise.race([Promise.all([drawn, prepared]), limit]).then(() => {
+    const least = new Promise<void>(done => setTimeout(done, Math.max(0, splash.openedAt + SPLASH_MIN_MS - Date.now())));
+    void Promise.all([Promise.race([Promise.all([drawn, prepared]), limit]), least]).then(() => {
       if (!window.isDestroyed()) window.show();
       splash.close();
     });
