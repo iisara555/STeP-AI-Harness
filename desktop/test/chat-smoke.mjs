@@ -49,13 +49,18 @@ createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line)
  setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},120);}
 });`,
 );
-let beacons = 0;
+const beacons = new Set();
 const server = createServer((req, res) =>
-  req.url.startsWith('/beacon')
-    ? (beacons++, res.end(''))
-    : res.end(
-        '<html><head><title>Synthetic Browser</title></head><body><h1>Browser fixture</h1><p>Public synthetic content.</p></body></html>',
-      ),
+  req.url === '/lib.mjs'
+    ? // A library from a CDN, imported as an ES module (as Three.js is) by a page opened from a local file.
+      (res.setHeader('content-type', 'text/javascript'),
+      res.setHeader('access-control-allow-origin', '*'),
+      res.end('export const scene = 3;'))
+    : req.url.startsWith('/beacon')
+      ? (beacons.add(req.url), res.end(''))
+      : res.end(
+          '<html><head><title>Synthetic Browser</title></head><body><h1>Browser fixture</h1><p>Public synthetic content.</p></body></html>',
+        ),
 );
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
@@ -311,20 +316,22 @@ try {
   assert.match(opened.text, /Browser fixture/);
   await page.getByRole('button', { name: 'ปิดเว็บนี้' }).click();
   await page.locator('.browser-tab').waitFor({ state: 'detached' });
-  // An HTML file (a slide deck) previews in the Web tab: its scripts run, but it cannot reach the network.
-  const beacon = 'http://127.0.0.1:' + server.address().port + '/beacon';
+  // An HTML file (a slide deck) previews in the Web tab as in a browser: stylesheets, images and module libraries
+  // from the web load and its scripts run; other local files do not.
+  const origin = 'http://127.0.0.1:' + server.address().port;
+  await writeFile(join(home, 'private.js'), 'window.leaked = true;');
   await writeFile(
     join(workspace, 'deck.html'),
-    `<html><head><title>Deck</title><link rel="stylesheet" href="${beacon}-css"></head><body><img src="${beacon}-img">` +
-      `<script>fetch('${beacon}-fetch').catch(()=>{});document.title='Deck ready';</script></body></html>`,
+    `<html><head><title>Deck</title><link rel="stylesheet" href="${origin}/beacon-css"></head><body><img src="${origin}/beacon-img">` +
+      `<script src="${new URL('file://' + join(home, 'private.js')).href}"></script>` +
+      `<script type="module">import { scene } from '${origin}/lib.mjs';document.title = 'Deck ready ' + scene + (window.leaked ? ' leaked' : '');</script></body></html>`,
   );
   await page.evaluate(() => window.step.call('previewHtml', { path: 'deck.html' }));
   await page.locator('.browser-tab.active').waitFor();
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('browserDock', { action: 'state' }))).tabs.map(tab => tab.title))
-    .toEqual(['Deck ready']);
-  await page.waitForTimeout(300);
-  assert.equal(beacons, 0, 'the preview made no network request');
+    .toEqual(['Deck ready 3']);
+  await expect.poll(() => [...beacons].sort()).toEqual(['/beacon-css', '/beacon-img']);
   await assert.rejects(
     page.evaluate(() => window.step.call('previewHtml', { path: 'new.txt' })),
     /INVALID_PATH/,

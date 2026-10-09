@@ -16,7 +16,7 @@ _Last updated: 2026-10-09_
 - **PR #126** — chat shows one status line that changes in place; "ใช้เวลา m:ss" under each answer; Gemini through
   Antigravity streams its answer; the policy tab shows why `desktop-policy.json` was rejected; Windows config-lock
   test flake fixed; this file, `AGENTS.md` and `CLAUDE.md`; source documents under STeP answers and an optional answer
-  check (policy `answerCheck`, off by default); HTML preview of files the AI writes; an unreadable tool request
+  check (policy `answerCheck`, off by default); HTML preview of files the AI writes (online, CDN libraries allowed, other local files blocked); an unreadable tool request
   is retried twice and then reported instead of ending as an empty reply.
 
 ## Waiting on the owner
