@@ -65,6 +65,13 @@ Owner request: staff should not install or sign in to the CLI by hand. `electron
 - **Isolated home and the real sign-in (2026-10-06):** on a real Mac the Terminal sign-in succeeded but STeP's isolated `agy models` never saw it. Each isolated home now links `Library/Keychains` to the real one on macOS (unlinked first on cleanup) and copies `~/.gemini/antigravity-cli/antigravity-oauth-token`, agy's file storage when the keyring is unavailable (Linux without D-Bus logs `Using file-based token storage because no D-Bus session bus detected`). When `agy models` with the real profile succeeds twice while the isolated check fails, sign-in stops with `ANTIGRAVITY_SIGNIN_HIDDEN`.
 - **Not yet verified on a real machine:** the browser-first sign-in on Windows and macOS (the null-device stdin behaviour was checked on Linux only), and on macOS whether the isolated home used by `agy models` sees the keychain sign-in made with the real profile.
 
+## Efficiency (2026-10-09)
+
+- The `--version` check runs once per agy binary (path, size and change time) instead of once per message, so each message starts one process instead of two. A replaced or updated binary is checked again.
+- Usage now includes `thinking_tokens` as output (as Gemini's own `thoughtsTokenCount` is) and reports `cache_read_tokens` as cached input, so the usage page shows what the plan was charged and how much the prompt cache saved.
+- `xhigh` is accepted as an effort level, matching `agy --help` on 1.2.17.
+- Not changed, waiting on a signed-in check: `--input-format stream-json` can keep one process open for several turns, which would let the tool turns of a run continue in one process the way Codex does; `--json-schema` would constrain the OCR filter reply but may answer through a `finish` tool step that STeP stops; and whether a stream-json user message accepts images. Each needs one run with a real Google account before it is turned on.
+
 ## Validation
 
 - **231 Desktop unit tests passed**, zero failures/skips. Eight adapter groups cover transport, policy preflight, invalid/error streams, usage, cancellation, unsupported inputs, catalog handling, readiness, shared-account disconnect and parallel isolation. A Linux CI failure exposed a shared ChatGPT browser-error race; cancellation now waits for acknowledgement and ignores late successful callbacks, with a delayed-ack regression test.

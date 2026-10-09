@@ -218,7 +218,8 @@ export function parseVisionReading(reply: string): {
         region: validReceiptRegion(raw?.region),
       };
   }
-  if (data.items !== undefined && (!Array.isArray(data.items) || data.items.length > 100)) throw new Error('RECEIPT_VISION_UNREADABLE');
+  // Structured-output modes send null for an optional part they leave out; it means the same as a missing one.
+  if (data.items != null && (!Array.isArray(data.items) || data.items.length > 100)) throw new Error('RECEIPT_VISION_UNREADABLE');
   const items: ReceiptItem[] = (data.items || []).map((item: any) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('RECEIPT_VISION_UNREADABLE');
     return {
@@ -250,7 +251,7 @@ export function parseVisionReading(reply: string): {
     ...Object.fromEntries(FEATURE_KEYS.filter(key => typeof data?.features?.[key] === 'boolean').map(key => [key, data.features[key]])),
     ...(typeof data.is_handwritten === 'boolean' ? { handwritten: data.is_handwritten } : {}),
   } as DocumentFeatures;
-  if (data.signatures !== undefined) {
+  if (data.signatures != null) {
     const status = signatures.receiver?.status;
     if (status === 'present' || status === 'absent') features.receiverSigned = status === 'present';
     else delete features.receiverSigned;

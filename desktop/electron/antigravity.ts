@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { chmod, copyFile, mkdir, mkdtemp, rm, symlink, unlink, writeFile } from 'node:fs/promises';
-import { existsSync, realpathSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
@@ -9,6 +9,8 @@ import type { Connection, ModelOption } from '../src/types';
 import type { ProviderAdapter, ProviderContext, TokenCount } from './providers';
 
 const LIMIT = 4_000_000;
+/** The `--effort` levels agy accepts (`agy --help`, 1.2.17). */
+export const ANTIGRAVITY_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const AGENT = 'step-draft';
 const TEXT_TRANSPORT_RULES = `Native tools are unavailable in this STeP connection, including finish, file access, commands, MCP and native web search. Return the host's requested text format, including JSON when required. If the host supplied tools, request only those tools using fenced step-tool JSON in your text, never native function calls. Do not invent current facts or claim a search was performed. For fresh information without supplied evidence, ask for a source or explain that live search requires a supported connection.`;
 const TOOL_RECOVERY_RULES = `The previous attempt was stopped because it requested a native tool. No native tool result is available. Answer the original request in its required text format or use the host's step-tool text protocol if supplied. Do not repeat the native tool call.`;
@@ -249,10 +251,32 @@ const samePath = (a: string, b: string) =>
 
 export function antigravityUsage(value: any): TokenCount | undefined {
   if (value === undefined) return undefined;
-  const { input_tokens: input, output_tokens: output, total_tokens: total } = value || {};
+  const {
+    input_tokens: input,
+    output_tokens: output,
+    total_tokens: total,
+    thinking_tokens: thinking,
+    cache_read_tokens: cached,
+  } = value || {};
   if (![input, output, total].every(n => Number.isSafeInteger(n) && n >= 0) || total < input + output)
     throw new Error('PROVIDER_STREAM_INVALID');
-  return { input, output, total };
+  const extra = (n: unknown) => {
+    if (n === undefined || n === null) return 0;
+    if (!Number.isSafeInteger(n) || (n as number) < 0) throw new Error('PROVIDER_STREAM_INVALID');
+    return n as number;
+  };
+  // agy 1.2.x reports thinking and prompt-cache reads apart from input and output. Thinking counts against the plan like
+  // output (as Gemini's own thoughtsTokenCount does), and cache reads are a part of the input, as for every other runtime.
+  const reasoning = extra(thinking),
+    reads = extra(cached);
+  const fullInput = reads > input ? input + reads : input,
+    fullOutput = output + reasoning;
+  return {
+    input: fullInput,
+    output: fullOutput,
+    total: Math.max(total, fullInput + fullOutput),
+    ...(reads ? { cachedInput: reads } : {}),
+  };
 }
 
 export class AntigravityAdapter implements ProviderAdapter {
@@ -304,7 +328,7 @@ export class AntigravityAdapter implements ProviderAdapter {
     if (context.images?.length) throw new Error('VISION_UNAVAILABLE');
     if (context.webSearch) throw new Error('WEB_SEARCH_UNAVAILABLE');
     if (!/^gemini-[\w.-]{1,93}$/.test(connection.model)) throw new Error('MODEL_NOT_AVAILABLE');
-    if (context.effort && !['low', 'medium', 'high', 'max'].includes(context.effort)) throw new Error('MODEL_EFFORT_UNAVAILABLE');
+    if (context.effort && !ANTIGRAVITY_EFFORTS.includes(context.effort)) throw new Error('MODEL_EFFORT_UNAVAILABLE');
     const home = await antigravityHome(context);
     let clean = true;
     let initialized = false;
@@ -404,7 +428,24 @@ export class AntigravityAdapter implements ProviderAdapter {
   }
 }
 
+// Executables that already answered as 1.2.14+, keyed by path with the file's size and change time, so replacing or
+// updating the binary checks it again. Without this every message started one extra agy process just for --version.
+const checked = new Map<string, string>();
+function fileStamp(executable: string) {
+  try {
+    const info = statSync(executable);
+    return `${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
+  } catch {
+    return '';
+  }
+}
+
 export async function checkAntigravity(executable: string, context: Pick<ProviderContext, 'cwd' | 'env'>, signal?: AbortSignal) {
+  const stamp = fileStamp(executable);
+  if (stamp && checked.get(executable) === stamp) {
+    if (signal?.aborted) throw new Error('CANCELLED');
+    return;
+  }
   const { output } = await runAntigravity(executable, ['--version'], context, { timeoutMs: 10_000, signal });
   const version = /^\s*(\d+)\.(\d+)\.(\d+)\s*$/.exec(output);
   if (
@@ -414,6 +455,7 @@ export async function checkAntigravity(executable: string, context: Pick<Provide
     (Number(version[1]) === 1 && Number(version[2]) === 2 && Number(version[3]) < 14)
   )
     throw new Error('ANTIGRAVITY_UPDATE_REQUIRED');
+  if (stamp) checked.set(executable, stamp);
 }
 
 export async function antigravityModels(connection: Connection, context: Pick<ProviderContext, 'cwd' | 'env'>): Promise<ModelOption[]> {
