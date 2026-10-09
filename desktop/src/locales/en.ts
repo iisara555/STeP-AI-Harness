@@ -389,7 +389,7 @@ export const en: Record<string, string> = {
   ยังไม่ได้รับสถานะจากแอป: 'No status from the app yet',
   แอปยังทำงานอยู่: 'The app is still working',
   'ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้': "This step hasn't reported back yet. Keep waiting, or press Stop",
-  ดูขั้นตอนที่ทำแล้ว: 'Show completed steps',
+  ขั้นตอนที่ทำแล้ว: 'Completed steps',
   ขั้นตอนของงาน: 'Task steps',
   '· ต้องทำโดยผู้มีอำนาจ': '· Requires an authorised person',
   'ความคิดของ AI': 'AI reasoning',

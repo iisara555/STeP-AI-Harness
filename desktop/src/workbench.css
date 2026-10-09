@@ -477,8 +477,19 @@
   font-size: 12px;
   margin: 10px 0;
 }
+.activity-history {
+  list-style: none;
+  padding: 0;
+}
 .activity-history li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   margin: 4px 0;
+}
+.activity-history li svg {
+  flex-shrink: 0;
+  margin-top: 3px;
 }
 .web-route {
   padding: 6px 10px;

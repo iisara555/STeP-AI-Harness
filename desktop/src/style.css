@@ -48,6 +48,16 @@ textarea {
   padding: 8px 10px;
   min-width: 0;
 }
+/* The native option list does not inherit a transparent select's background: on Windows dark mode it opened white
+   behind light text. Give the list the panel colours explicitly so every picker stays readable in both themes. */
+option,
+optgroup {
+  background-color: var(--paper);
+  color: var(--text);
+}
+option:disabled {
+  color: var(--disabled-text);
+}
 input:focus,
 textarea:focus,
 select:focus {
