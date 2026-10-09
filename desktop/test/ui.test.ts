@@ -119,7 +119,9 @@ test('Claude provider offers supported Console OAuth and clearly separates it fr
   const source = await (await import('node:fs/promises')).readFile(new URL('../src/ui.tsx', import.meta.url), 'utf8');
   assert.match(source, /value="oauth">\{t\('Claude Console OAuth/);
   const { providerDefaultMode } = await import('../src/ui');
-  assert.equal(providerDefaultMode('claude'), 'oauth');
+  // Console OAuth bills the API, so it is never the default for Claude.
+  assert.equal(providerDefaultMode('claude'), 'api');
+  assert.equal(providerDefaultMode('claude', true), 'subscription');
   assert.equal(providerDefaultMode('copilot'), 'oauth');
   assert.equal(providerDefaultMode('compatible'), 'api');
   assert.match(source, /โควตา API/);

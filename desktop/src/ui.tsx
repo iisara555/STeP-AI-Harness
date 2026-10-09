@@ -379,8 +379,13 @@ export function providerChoiceReady(c: ProviderChoice) {
   if (c.provider === 'compatible') return Boolean(c.baseUrl?.trim() && c.model?.trim() && (c.protocol !== 'anthropic' || c.key.trim()));
   return c.mode !== 'api' || Boolean(c.key.trim());
 }
-export function providerDefaultMode(provider: string): ProviderChoice['mode'] {
-  return ['claude', 'copilot'].includes(provider) ? 'oauth' : ['gemini', 'compatible'].includes(provider) ? 'api' : 'subscription';
+/**
+ * Claude starts on the person's own plan when the pilot allows it, otherwise on an API key whose cost note is shown.
+ * Console OAuth also bills the API, so it is never picked for them: a Pro/Max user landed there by mistake.
+ */
+export function providerDefaultMode(provider: string, claudeSubscription = false): ProviderChoice['mode'] {
+  if (provider === 'claude') return claudeSubscription ? 'subscription' : 'api';
+  return provider === 'copilot' ? 'oauth' : ['gemini', 'compatible'].includes(provider) ? 'api' : 'subscription';
 }
 /** What the 'connection' call stores for this choice. */
 export const connectionInput = (c: ProviderChoice) => ({
@@ -493,7 +498,11 @@ export function ProviderFields(props: {
   const main = all
     .filter(tile => MAIN_TILES.includes(tile.id))
     .sort((a, b) => Number(b.id === 'antigravity') - Number(a.id === 'antigravity'));
-  const tiles = props.compact && !more && (!selected || MAIN_TILES.includes(selected.id)) ? main : all;
+  // "More services" adds the rest after the main ones, so the tiles already seen keep their places.
+  const tiles =
+    props.compact && !more && (!selected || MAIN_TILES.includes(selected.id))
+      ? main
+      : [...main, ...all.filter(tile => !MAIN_TILES.includes(tile.id))];
   return (
     <>
       {!advanced ? (
@@ -699,7 +708,7 @@ function AdvancedProviderFields({
               onChange({
                 provider: e.target.value,
                 // Gemini sign-in now serves only organization licenses, so an API key is the usual choice.
-                mode: providerDefaultMode(e.target.value),
+                mode: providerDefaultMode(e.target.value, claudeSubscription),
                 baseUrl: 'https://api.openai.com/v1',
                 protocol: 'openai',
                 model: e.target.value === 'antigravity' ? ANTIGRAVITY_MODEL : '',
@@ -720,7 +729,7 @@ function AdvancedProviderFields({
           {t('วิธีเชื่อมต่อ')}
           <select value={mode} onChange={e => onChange({ ...value, mode: e.target.value })}>
             {provider === 'copilot' && <option value="oauth">{t('GitHub OAuth (บัญชี Copilot)')}</option>}
-            {provider === 'claude' && <option value="oauth">{t('Claude Console OAuth (ไม่ต้องใช้ API key)')}</option>}
+            {provider === 'claude' && <option value="oauth">{t('Claude Console OAuth (คิดเงินตามการใช้ API ไม่ใช่ Pro/Max)')}</option>}
             {subscription && (
               <option value="subscription">
                 {provider === 'antigravity'
@@ -737,6 +746,13 @@ function AdvancedProviderFields({
           </select>
         </label>
       </div>
+      {provider === 'claude' && !claudeSubscription && (
+        <p className="small muted">
+          {t(
+            'ต้องการใช้แพ็กเกจ Claude Pro/Max ในแอปนี้ ให้ผู้ดูแลเครื่องเปิดโหมดทดลองก่อน แล้วเลือก "แพ็กเกจของคุณผ่าน Claude Code" ในหน้าเลือกบริการ',
+          )}
+        </p>
+      )}
       {provider === 'compatible' && (
         <div className="form-grid">
           <label>

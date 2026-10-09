@@ -1355,7 +1355,9 @@ export const en: Record<string, string> = {
   ผู้ให้บริการ: 'Provider',
   วิธีเชื่อมต่อ: 'Connection method',
   'GitHub OAuth (บัญชี Copilot)': 'GitHub OAuth (Copilot account)',
-  'Claude Console OAuth (ไม่ต้องใช้ API key)': 'Claude Console OAuth (no API key needed)',
+  'Claude Console OAuth (คิดเงินตามการใช้ API ไม่ใช่ Pro/Max)': 'Claude Console OAuth (billed per API use, not Pro/Max)',
+  'ต้องการใช้แพ็กเกจ Claude Pro/Max ในแอปนี้ ให้ผู้ดูแลเครื่องเปิดโหมดทดลองก่อน แล้วเลือก "แพ็กเกจของคุณผ่าน Claude Code" ในหน้าเลือกบริการ':
+    'To use a Claude Pro/Max plan in this app, an administrator turns on the pilot first; then choose "Your plan through Claude Code" on the service list',
   'แพ็กเกจของคุณผ่าน Claude Code ในเครื่อง (ทดลอง)': 'Your plan through Claude Code on this computer (trial)',
   'บัญชีองค์กร Google (Gemini Code Assist Standard/Enterprise)': 'Google organisation account (Gemini Code Assist Standard/Enterprise)',
   'บัญชีส่วนตัว (ลงชื่อเข้าใช้)': 'Personal account (sign in)',

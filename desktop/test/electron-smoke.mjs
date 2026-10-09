@@ -37,7 +37,8 @@ try {
   assert.ok(withGoogle.connections.some(c => c.provider === 'gemini' && c.mode === 'subscription' && !c.ready));
   await page.getByText('เพิ่ม AI อีกบัญชี', { exact: true }).click();
   await providerField.selectOption('claude');
-  assert.equal(await methodField.inputValue(), 'oauth');
+  assert.equal(await methodField.inputValue(), process.env.STEP_CLAUDE_SUBSCRIPTION === '1' ? 'subscription' : 'api');
+  await methodField.selectOption('oauth');
   const availability = await page.evaluate(() => window.step.call('anthropicCli'));
   assert.equal(typeof availability.installed, 'boolean');
   await page.getByRole('button', { name: 'ตรวจอีกครั้ง', exact: true }).click();
