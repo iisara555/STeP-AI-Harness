@@ -1,7 +1,7 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { WebContents } from 'electron';
 
 /** HTML the AI wrote (a slide deck, a page) is previewed from a private copy, not from the workspace. */
@@ -11,6 +11,14 @@ export const isHtmlPath = (path: string) => /\.html?$/i.test(path.trim());
 
 const PAGE_PERMISSIONS = new Set(['fullscreen', 'pointerLock', 'clipboard-sanitized-write']);
 const web = (url: string) => /^https?:\/\//i.test(url);
+/** The local path a file: URL points at, compared without case (Windows), or '' for anything else. */
+const localPath = (url: string) => {
+  try {
+    return /^file:/i.test(url) ? resolve(fileURLToPath(url.split('#')[0].split('?')[0])).toLowerCase() : '';
+  } catch {
+    return '';
+  }
+};
 
 /**
  * Shows an HTML file in the Web tab as it works in a browser, like the previews of Codex, Claude or Cursor: scripts
@@ -28,16 +36,19 @@ export async function openHtmlPreview(
 ) {
   if (Buffer.byteLength(html) > PREVIEW_LIMIT) throw new Error('FILE_TOO_LARGE');
   const folder = await mkdtemp(join(tmpdir(), 'step-preview-'));
-  const file = join(folder, 'index.html');
-  await writeFile(file, html, 'utf8');
-  const own = pathToFileURL(file).href.toLowerCase();
+  const written = join(folder, 'index.html');
+  await writeFile(written, html, 'utf8');
+  // Windows temp folders can come as short 8.3 names (C:\Users\RUNNER~1) while Chromium requests the long name, so
+  // the copy is loaded and recognised by its real path, compared as a path rather than as URL text.
+  const file = await realpath(written).catch(() => written);
+  const own = new Set([resolve(written).toLowerCase(), resolve(file).toLowerCase()]);
+  const isOwn = (url: string) => own.has(localPath(url));
   const contents = create('step-preview-' + id);
   contents.once('destroyed', () => void rm(folder, { recursive: true, force: true }).catch(() => {}));
   const network = contents.session;
-  // Windows may change the drive letter's case, so compare without case. The hash part (#slide-3) is allowed.
   network.webRequest.onBeforeRequest((details, callback) => {
     const url = details.url.toLowerCase();
-    callback({ cancel: !(url.split('#')[0] === own || web(url) || url.startsWith('data:') || url.startsWith('blob:')) });
+    callback({ cancel: !(isOwn(details.url) || web(url) || url.startsWith('data:') || url.startsWith('blob:')) });
   });
   // Full screen (a deck's F key), pointer lock (3D scenes) and copying are what pages like these use; camera,
   // microphone, location, notifications and the rest stay refused.
@@ -47,7 +58,7 @@ export async function openHtmlPreview(
     if (web(url)) openLink(url);
     return { action: 'deny' };
   });
-  const allowed = (url: string) => web(url) || url.toLowerCase().split('#')[0] === own;
+  const allowed = (url: string) => web(url) || isOwn(url);
   contents.on('will-navigate', (event, url) => allowed(url) || event.preventDefault());
   contents.on('will-redirect', (event, url) => allowed(url) || event.preventDefault());
   await contents.loadFile(file);
