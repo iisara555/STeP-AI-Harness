@@ -9,8 +9,13 @@ const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_DESKTOP_SPLASH:
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
-  const splash = await app.firstWindow();
-  assert.match(splash.url(), /^data:text\/html/);
+  // Both windows open at startup in either order; the loading window is the one drawn from a data: URL.
+  let splash;
+  for (const started = Date.now(); !splash && Date.now() - started < 15000;) {
+    splash = app.windows().find(w => w.url().startsWith('data:text/html'));
+    if (!splash) await new Promise(done => setTimeout(done, 50));
+  }
+  assert.ok(splash, 'the loading window did not open');
   await splash.getByRole('img', { name: 'STeP Desktop' }).waitFor();
   assert.ok((await splash.getByRole('status').textContent())?.startsWith('กำลัง'));
   const visible = () =>
