@@ -71,5 +71,5 @@ try {
     await app.close();
   }
   await new Promise(resolve => server.close(resolve));
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

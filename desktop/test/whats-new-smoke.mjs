@@ -58,5 +58,5 @@ try {
   await app.close();
   console.log('whats-new smoke passed');
 } finally {
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

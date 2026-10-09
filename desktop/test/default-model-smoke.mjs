@@ -69,5 +69,5 @@ try {
   console.log('Default model smoke passed: set in Settings, used by new tasks, a task keeps its own model, invalid models refused.');
 } finally {
   await app.close();
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

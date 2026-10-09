@@ -69,5 +69,5 @@ try {
   console.log('App security smoke passed: sandbox, CSP, trusted IPC sender and private local profile.');
 } finally {
   if (app) await app.close();
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

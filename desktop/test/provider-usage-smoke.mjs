@@ -124,5 +124,5 @@ try {
   console.log('Synthetic provider Usage UI/IPC, read-only refresh, cache, account/local distinction and small-window layout passed');
 } finally {
   await app?.close().catch(() => {});
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

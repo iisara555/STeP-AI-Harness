@@ -48,7 +48,7 @@ try {
   console.log('Shared profile smoke passed: wizard prefilled from Setup-STeP-Skills, saved profile written back.');
 } finally {
   await app.close();
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 
 // Updated from an earlier version: set up, but no shared profile yet. Starting the app writes it once.
