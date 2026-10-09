@@ -2,7 +2,7 @@ import { CopilotClient } from '@github/copilot-sdk';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { ProviderAdapter, ProviderContext } from './providers';
-import { providerSessionKey, type ProviderSession } from './providers';
+import { providerSessionKey, recoverSessionTurn, retainedSdkError, type ProviderSession } from './providers';
 import type { Connection, ModelOption } from '../src/types';
 
 export class CopilotAdapter implements ProviderAdapter {
@@ -18,6 +18,12 @@ export class CopilotAdapter implements ProviderAdapter {
   >();
   constructor(private create = (options: ConstructorParameters<typeof CopilotClient>[0]) => new CopilotClient(options)) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    // A retained session whose CLI stopped between tool turns is tried once more from a fresh start.
+    const held = context.session ? this.conversations.get(context.session) : undefined;
+    const continuing = Boolean(held?.session && held.identity === providerSessionKey(connection, context) && prompt.startsWith(held.sent));
+    return recoverSessionTurn(context, attempt => this.turn(prompt, connection, attempt), continuing, retainedSdkError);
+  }
+  private async turn(prompt: string, connection: Connection, context: ProviderContext) {
     const started = Date.now();
     if (!context.key) throw new Error('COPILOT_LOGIN_REQUIRED');
     if (context.images?.length || context.webSearch) throw new Error('PROVIDER_CAPABILITY_UNSUPPORTED');

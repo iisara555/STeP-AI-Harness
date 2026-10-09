@@ -126,9 +126,20 @@ export function providerSessionKey(connection: Connection, context: ProviderCont
 }
 const resettableSessionError = (error: unknown) =>
   error instanceof Error && ['RUNTIME_EXITED', 'PROVIDER_SESSION_INVALID'].includes(error.message);
+/**
+ * SDK conversations (Claude, Copilot) report a process that died between tool turns as a generic request failure.
+ * Sign-in, quota, permission, model and size failures are not among these, so they never cost a second call.
+ */
+export const retainedSdkError = (error: unknown) =>
+  resettableSessionError(error) ||
+  (error instanceof Error && ['PROVIDER_REQUEST_FAILED', 'COPILOT_REQUEST_FAILED', 'PROVIDER_NETWORK'].includes(error.message));
 /** One fresh-session recovery, with cumulative usage across both physical attempts. */
-async function recoverSessionTurn(context: ProviderContext, turn: (context: ProviderContext) => Promise<string>) {
-  const continuing = Boolean(context.session?.rpc && !context.webSearch);
+export async function recoverSessionTurn(
+  context: ProviderContext,
+  turn: (context: ProviderContext) => Promise<string>,
+  continuing = Boolean(context.session?.rpc && !context.webSearch),
+  resettable: (error: unknown) => boolean = resettableSessionError,
+) {
   let observed: TokenCount = { input: 0, output: 0, total: 0 };
   const attempt = {
     ...context,
@@ -141,7 +152,7 @@ async function recoverSessionTurn(context: ProviderContext, turn: (context: Prov
     return await turn(attempt);
   } catch (error) {
     // Authentication and quota failures go to the host without a second provider call.
-    if (!continuing || context.signal.aborted || !resettableSessionError(error)) throw error;
+    if (!continuing || context.signal.aborted || !resettable(error)) throw error;
     await context.session?.closeAndWait();
     const failed = observed;
     observed = { input: 0, output: 0, total: 0 };
@@ -530,6 +541,12 @@ export class ClaudeAdapter implements ProviderAdapter {
   >();
   constructor(private loadSdk = () => import('@anthropic-ai/claude-agent-sdk')) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    // A retained conversation that dies between tool turns is tried once more from a fresh start, as Codex/Gemini are.
+    const held = context.session && !context.webSearch && !context.images?.length ? this.conversations.get(context.session) : undefined;
+    const continuing = Boolean(held && held.identity === providerSessionKey(connection, context) && prompt.startsWith(held.sent));
+    return recoverSessionTurn(context, attempt => this.turn(prompt, connection, attempt), continuing, retainedSdkError);
+  }
+  private async turn(prompt: string, connection: Connection, context: ProviderContext) {
     const started = Date.now();
     if (context.signal.aborted) throw new Error('CANCELLED');
     const authOptions = claudeSdkOptions(connection, context);

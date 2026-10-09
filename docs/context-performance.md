@@ -17,7 +17,11 @@ This scope keeps standing governance, the routing contract and any routed Skill
 and mandatory references. It omits registry discovery, organization retrieval,
 tool instructions and empty source/history sections.
 
-Other selected Skills, organization questions, workflows, approved plans, files,
+Organization documents are always searched first. A text request with a
+matching registered document, an STeP MIS request or organization words
+(STeP, ระเบียบ, สวัสดิการ, วันลา, ฝ่ายบุคคล, policy and similar) keeps full
+context, so a question worded as "summarize: what is the STeP leave rule?" is
+answered from STeP's sources. Other selected Skills, organization questions, workflows, approved plans, files,
 images, history, revisions and uncertain or mixed instructions use full context.
 The optimization therefore applies to some ordinary language tasks that route
 to a Skill as well as GENERAL. GENERAL alone does not imply text scope.
@@ -93,7 +97,7 @@ For example, an administrator can merge this into the existing Desktop policy:
 {
   "modelLimits": {
     "local-small-model": {
-      "contextWindow": 4096,
+      "contextWindow": 16384,
       "maxOutputTokens": 1024
     },
     "anthropic-compatible-model": {
@@ -122,9 +126,11 @@ The model names and prices above are examples, not vendor rates. Choose an
 approved compatible endpoint with the Anthropic protocol for `anthropic-ephemeral`.
 Choose an available model on the Gemini API-key connection for `gemini-explicit`.
 Compatible endpoints reject the Gemini-native option. `off` disables explicit caching;
-it does not disable automatic server caching. Context windows accept 512 through
-2,000,000 tokens; output limits accept 1 through 65,536 and must be below an
-explicit context window. Explicit windows allow budgets below the old 48k floor.
+it does not disable automatic server caching. Context windows accept 16,384 through
+2,000,000 tokens: standing governance alone is about 3k estimated tokens and a
+chat turn with tools about 9k, so a smaller window would refuse every message.
+Output limits accept 1 through 65,536 and must be below half of an explicit
+context window. A policy with an invalid entry is reported and not applied. Explicit windows allow budgets below the old 48k floor.
 The host reserves output and estimation headroom, with its existing 160k cap.
 Output limits affect compatible/Gemini API requests and host budgeting; native SDK/CLI
 output generation remains controlled by those runtimes. Existing heuristics

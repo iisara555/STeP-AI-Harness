@@ -3,6 +3,14 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'ตอบคำถามเกี่ยวกับ STeP จากเอกสารองค์กรเสมอ แม้จะพิมพ์มาในรูปแบบงานแปลหรือสรุปข้อความ':
+    'Questions about STeP are always answered from organization documents, even when worded as a translation or summary',
+  'ChatGPT อ่านใบเสร็จและคัดผล OCR ตามรูปแบบข้อมูลที่กำหนด ผลอ่านไม่ได้น้อยลง':
+    'ChatGPT reads receipts and filters OCR results in the required data shape, so fewer replies are unreadable',
+  'Antigravity ใช้โปรแกรมเดิมตลอดงานที่อ่านข้อมูลหลายรอบ และรองรับ agy 1.3.2':
+    'Antigravity keeps one process across repeated tool reads and supports agy 1.3.2',
+  'Claude และ Copilot เริ่มใหม่ให้เองเมื่อการคุยหลุดกลางงาน Gemini ที่ถูกจำกัดรายนาทีจะลองใหม่ให้อัตโนมัติ':
+    'Claude and Copilot restart on their own when a conversation drops mid-task; Gemini per-minute limits retry automatically',
   'งานแปล สรุปข้อความ และตรวจคำผิดส่งเฉพาะบริบทที่จำเป็น โดยคงกฎและ Skill ที่งานต้องใช้':
     'Translation, supplied-text summaries and spelling checks send only the needed context, retaining required rules and Skills',
   'ค้น Skill และเอกสารที่เกี่ยวข้องก่อน และอ่านรายละเอียดเพิ่มเติมเมื่อจำเป็น':
@@ -824,6 +832,10 @@ export const en: Record<string, string> = {
     "This model isn't available on your account or plan. Choose another model in the message box",
   'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า':
     'Your account quota is used up or temporarily limited. Try again later or choose a lighter model',
+  'การคุยกับ AI ในงานนี้ขาดตอน ระบบลองเริ่มใหม่ให้แล้วแต่ยังไม่สำเร็จ กดลองอีกครั้ง':
+    'The conversation with the AI dropped. The app restarted it without success — press Try again',
+  'AI พยายามใช้เครื่องมือในตัวที่ STeP ปิดไว้ กดลองอีกครั้ง หรือเลือกโมเดลอื่น':
+    'The AI tried to use a built-in tool that STeP turns off. Press Try again or choose another model',
   'บริการ AI ไม่ว่างชั่วคราว ระบบลองใหม่ให้แล้วแต่ยังไม่สำเร็จ รอสักครู่แล้วกดลองอีกครั้ง':
     'The AI service is busy right now. The app retried without success — wait a moment, then press Try again',
   'เชื่อมต่อบริการ AI ไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall แล้วลองอีกครั้ง':

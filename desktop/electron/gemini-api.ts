@@ -31,10 +31,20 @@ async function apiError(response: Response) {
   const data = await boundedJson(response).catch(() => ({}));
   // Inspect bounded provider diagnostics, but never expose their raw message.
   const reason = String(data.error?.message || '');
+  // Gemini answers 429 RESOURCE_EXHAUSTED both for a per-minute rate limit and for a used-up daily or billing quota.
+  // Only a daily/billing limit is final; a per-minute limit passes, so it is retried like any busy service.
+  const quotaIds = (Array.isArray(data.error?.details) ? data.error.details : [])
+    .flatMap((detail: any) => (Array.isArray(detail?.violations) ? detail.violations : []))
+    .map((violation: any) => String(violation?.quotaId || ''))
+    .join(' ');
+  // "limit: 0" means the key has no allowance for this model at all (for example a free tier without it).
+  const finalQuota = /PerDay|billing|credit|limit:\s*0\b/i.test(quotaIds + ' ' + reason);
   const code = [401, 403].includes(response.status)
     ? 'LOGIN_REQUIRED'
     : response.status === 429 || data.error?.status === 'RESOURCE_EXHAUSTED'
-      ? 'PROVIDER_QUOTA'
+      ? finalQuota
+        ? 'PROVIDER_QUOTA'
+        : 'PROVIDER_BUSY'
       : /(?:context|input|prompt).{0,30}(?:too long|token limit|exceed)/i.test(reason)
         ? 'PROMPT_TOO_LONG'
         : response.status >= 500
@@ -82,7 +92,7 @@ export class GeminiApiAdapter implements ProviderAdapter {
             : undefined;
         } catch (error) {
           if (context.signal.aborted) throw new Error('CANCELLED');
-          if (error instanceof Error && ['LOGIN_REQUIRED', 'PROVIDER_QUOTA'].includes(error.message)) throw error;
+          if (error instanceof Error && ['LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_BUSY'].includes(error.message)) throw error;
           return undefined;
         }
       })();
@@ -103,7 +113,11 @@ export class GeminiApiAdapter implements ProviderAdapter {
       });
     } catch (error) {
       // A different request can have cancelled the shared creation; it must not cancel this request.
-      if (context.signal.aborted || (error instanceof Error && ['LOGIN_REQUIRED', 'PROVIDER_QUOTA'].includes(error.message))) throw error;
+      if (
+        context.signal.aborted ||
+        (error instanceof Error && ['LOGIN_REQUIRED', 'PROVIDER_QUOTA', 'PROVIDER_BUSY'].includes(error.message))
+      )
+        throw error;
     } finally {
       if (cancel) context.signal.removeEventListener('abort', cancel);
     }

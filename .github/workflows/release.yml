@@ -41,8 +41,13 @@ jobs:
         run: npm test
       - name: Verify package tarball contents
         run: npm pack --dry-run
+      # GitHub Packages accepts only a package scope equal to the repository owner. The package is named
+      # @step-cmu/ai-harness, so publishing works only from a step-cmu repository; elsewhere the release stays green.
+      - name: Skip GitHub Packages outside the step-cmu owner
+        if: startsWith(github.ref, 'refs/tags/') && github.repository_owner != 'step-cmu'
+        run: echo "::notice::Package scope @step-cmu does not match owner ${{ github.repository_owner }}; GitHub Packages publish skipped."
       - name: Publish to GitHub Packages
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && github.repository_owner == 'step-cmu'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

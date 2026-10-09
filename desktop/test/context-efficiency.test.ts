@@ -81,7 +81,7 @@ test('self-contained language tasks reduce real harness input by over 60% while 
         call = f.captured[0];
       assert.equal(session.status, 'review', query);
       assert.ok(tokens(call.system + call.prompt) < baseline * 0.4, query);
-      assert.deepEqual(f.counts(), { catalogs: 0, documents: 0, hosts: 0 });
+      assert.deepEqual({ ...f.counts(), documents: 0 }, { catalogs: 0, documents: 0, hosts: 0 });
       assert.ok(call.prompt.includes(query));
       assert.ok(call.system.indexOf('<standing_governance>') >= 0);
       if (call.system.includes('<skill_instructions>'))
@@ -153,7 +153,7 @@ test('natural language transformations use text scope, while mixed actions and p
       const done = f.store.session(f.session.id);
       assert.equal(done.status, 'review', query);
       assert.equal(done.runs!.at(-1)!.steps[0].contextScope, 'text', query);
-      assert.deepEqual(f.counts(), { catalogs: 0, documents: 0, hosts: 0 });
+      assert.deepEqual({ ...f.counts(), documents: 0 }, { catalogs: 0, documents: 0, hosts: 0 });
     } finally {
       f.store.close();
     }
@@ -170,6 +170,32 @@ test('natural language transformations use text scope, while mixed actions and p
     'แปลเป็นภาษาอังกฤษตามระเบียบฝ่ายบุคคล',
   ])
     assert.equal(selfContainedText(query), false, query);
+});
+
+test('summaries or translations that touch STeP itself keep the organization documents and full context', async () => {
+  for (const query of [
+    // Worded as a text task, but the employee is asking about STeP: the documents must be read.
+    'สรุปข้อความ: ระเบียบลาพักร้อนของ STeP คืออะไร',
+    'สรุปข้อความ: ติดต่อฝ่ายบุคคลช่องทางไหน',
+    'แปลเป็นอังกฤษ: วันลาพักร้อนของพนักงาน STeP มีกี่วัน',
+    'Summarize this text: STeP welfare policy for staff',
+  ]) {
+    const f = fixture();
+    try {
+      assert.ok(selfContainedText(query), query);
+      await f.service.run(f.session.id, query, '', true, undefined, 'chat');
+      const done = f.store.session(f.session.id);
+      assert.equal(done.status, 'review', query);
+      assert.equal(done.runs!.at(-1)!.steps[0].contextScope, 'full', query);
+      assert.ok(f.counts().documents > 0 && f.counts().hosts > 0, query);
+      // The organization rule and the document registry reach the AI, so it answers from STeP's own sources.
+      assert.match(f.captured[0].system, /answer from <organization_knowledge> or a registered document/, query);
+      assert.match(f.captured[0].system, /STeP knowledge registry/, query);
+      if (query.includes('ฝ่ายบุคคล')) assert.match(f.captured[0].prompt, /\[hr-service-channels\]/);
+    } finally {
+      f.store.close();
+    }
+  }
 });
 
 test('Top-3 discovery deduplicates ranked evidence and preserves mandatory sources; uncertain discovery stays complete', () => {

@@ -116,14 +116,23 @@ test('compatible errors reach WorkService retry; quotas/auth/cancellation never 
 test('cache rates and small-model limits are explicit, validated and never double-count input', () => {
   const parsed = parsePolicy({
     prices: { fixture: { input: 1, output: 2, cachedInput: 0.1, cacheWriteInput: 1.25 } },
-    modelLimits: { fixture: { contextWindow: 4096, maxOutputTokens: 1024, promptCaching: 'anthropic-ephemeral' } },
+    modelLimits: { fixture: { contextWindow: 16384, maxOutputTokens: 1024, promptCaching: 'anthropic-ephemeral' } },
   });
   assert.deepEqual(parsed.problems, []);
-  assert.ok(contextBudget({ provider: 'compatible', ...parsed.policy.modelLimits!.fixture }) < 4096 - 1024);
+  const budget = contextBudget({ provider: 'compatible', ...parsed.policy.modelLimits!.fixture });
+  // Room for a full chat turn (about 9k estimated tokens) yet below the window minus the answer.
+  assert.ok(budget >= 9000 && budget < 16384 - 1024, String(budget));
+  // A window too small for the standing rules, or an answer that leaves no room for the prompt, is a policy problem.
+  const tooSmall = parsePolicy({ modelLimits: { fixture: { contextWindow: 4096, maxOutputTokens: 1024 } } });
+  assert.ok(tooSmall.problems.length);
+  assert.equal(tooSmall.policy.modelLimits?.fixture?.contextWindow, undefined);
+  const noRoom = parsePolicy({ modelLimits: { fixture: { contextWindow: 16384, maxOutputTokens: 16384 } } });
+  assert.ok(noRoom.problems.length);
+  assert.equal(noRoom.policy.modelLimits?.fixture, undefined);
   assert.ok(contextBudget({ provider: 'compatible', model: 'gpt-4o', maxOutputTokens: 65536 }) <= 128000 - 65536 - 6400);
   for (const input of [
     { prices: { fixture: { input: 1, output: 2, cachedInput: -1 } } },
-    { modelLimits: { fixture: { contextWindow: 4096, maxOutputTokens: 4096 } } },
+    { modelLimits: { fixture: { contextWindow: 16384, maxOutputTokens: 9000 } } },
     { modelLimits: { fixture: { contextWindow: NaN } } },
   ])
     assert.ok(parsePolicy(input).problems.length);
@@ -377,6 +386,102 @@ test('Copilot keeps the client/session for tool turns and forwards only current-
   await session.closeAndWait();
   assert.equal(stopped, 1);
   assert.equal(deleted, 1);
+});
+
+test('Claude and Copilot recover once with the full prompt when a retained conversation dies between tool turns', async () => {
+  // Claude: the SDK query of the first turn ends (process exited) before answering the second turn.
+  const prompts: string[][] = [];
+  const claude = new ClaudeAdapter(
+    async () =>
+      ({
+        query: (args: any) => {
+          const seen: string[] = [];
+          prompts.push(seen);
+          const source = args.prompt[Symbol.asyncIterator]();
+          let answered = false,
+            resultNext = false;
+          return {
+            next: async () => {
+              if (resultNext) {
+                resultNext = false;
+                return { done: false, value: { type: 'result', subtype: 'success', is_error: false, result: 'Done', usage: {} } };
+              }
+              const input = await source.next();
+              if (input.done) return { done: true };
+              seen.push(input.value.message.content);
+              // The first query dies on its second turn; a fresh query answers.
+              if (answered && prompts.length === 1) return { done: true };
+              answered = true;
+              resultNext = true;
+              return {
+                done: false,
+                value: { type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Done' } } },
+              };
+            },
+            close: () => {},
+          };
+        },
+      }) as any,
+  );
+  const claudeSession = new ProviderSession();
+  const transports: any[] = [];
+  const base = { cwd: tmpdir(), env: {}, key: 'synthetic', signal: new AbortController().signal, emit: () => {}, system: 'Rules' };
+  const claudeConnection = { id: 'c', provider: 'claude', mode: 'api', model: 'fixture' } as Connection;
+  await claude.run('Request', claudeConnection, { ...base, session: claudeSession });
+  assert.equal(
+    await claude.run('Request\nResults', claudeConnection, { ...base, session: claudeSession, onTransport: x => transports.push(x) }),
+    'Done',
+  );
+  assert.deepEqual(prompts, [['Request', '\nResults'], ['Request\nResults']]);
+  assert.equal(transports.at(-1).resetReason, 'session-invalid');
+  await claudeSession.closeAndWait();
+
+  // Copilot: the retained CLI stops, so the second send fails; a new client gets the whole prompt.
+  let clients = 0;
+  const sent: string[] = [];
+  const copilot = new CopilotAdapter(() => {
+    const client = ++clients;
+    return {
+      start: async () => {},
+      forceStop: async () => {},
+      deleteSession: async () => {},
+      createSession: async (options: any) => ({
+        sessionId: 's' + client,
+        sendAndWait: async ({ prompt }: any) => {
+          if (client === 1 && sent.length === 1) throw new Error('CLI server exited');
+          sent.push(prompt);
+          options.onEvent({ type: 'assistant.message_delta', data: { deltaContent: 'Done' } });
+          return { data: { content: 'Done' } };
+        },
+      }),
+    } as any;
+  });
+  const copilotSession = new ProviderSession();
+  const copilotConnection = { id: 'c', provider: 'copilot', mode: 'oauth', model: 'fixture' } as Connection;
+  await copilot.run('Request', copilotConnection, { ...base, session: copilotSession });
+  assert.equal(await copilot.run('Request\nResult', copilotConnection, { ...base, session: copilotSession }), 'Done');
+  assert.equal(clients, 2);
+  assert.deepEqual(sent, ['Request', 'Request\nResult']);
+  // A first turn that fails is never repeated: nothing was retained to recover.
+  const fresh = new CopilotAdapter(
+    () =>
+      ({
+        start: async () => {},
+        forceStop: async () => {},
+        deleteSession: async () => {},
+        createSession: async () => ({
+          sessionId: 'x',
+          sendAndWait: async () => {
+            clients++;
+            throw new Error('denied');
+          },
+        }),
+      }) as any,
+  );
+  clients = 0;
+  await assert.rejects(fresh.run('Request', copilotConnection, { ...base, session: new ProviderSession() }), /COPILOT_REQUEST_FAILED/);
+  assert.equal(clients, 1);
+  await copilotSession.closeAndWait();
 });
 
 test('retained conversation shutdown failures stop a reset and still release host resources', async () => {

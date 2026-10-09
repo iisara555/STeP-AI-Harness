@@ -131,19 +131,37 @@ test('unsupported caching and expired server resources fall back once without lo
 });
 
 test('Gemini cache auth/quota errors stop before generation; failed stream retains usage and native tools are denied', async () => {
-  for (const status of [401, 403, 429]) {
+  const daily = [
+    {
+      '@type': 'type.googleapis.com/google.rpc.QuotaFailure',
+      violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }],
+    },
+  ];
+  const minute = [
+    {
+      '@type': 'type.googleapis.com/google.rpc.QuotaFailure',
+      violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' }],
+    },
+  ];
+  for (const [status, details, expected] of [
+    [401, undefined, 'LOGIN_REQUIRED'],
+    [403, undefined, 'LOGIN_REQUIRED'],
+    [429, daily, 'PROVIDER_QUOTA'],
+    // A per-minute rate limit passes: the host retries it as a busy service instead of reporting a used-up quota.
+    [429, minute, 'PROVIDER_BUSY'],
+  ] as const) {
     let calls = 0;
     const adapter = new GeminiApiAdapter(
       (async () => {
         calls++;
         return Response.json(
-          { error: { message: 'private diagnostic', status: status === 429 ? 'RESOURCE_EXHAUSTED' : 'PERMISSION_DENIED' } },
+          { error: { message: 'private diagnostic', status: status === 429 ? 'RESOURCE_EXHAUSTED' : 'PERMISSION_DENIED', details } },
           { status },
         );
       }) as typeof fetch,
       new Map(),
     );
-    await assert.rejects(adapter.run('Request', connection, context()), new RegExp(status === 429 ? 'PROVIDER_QUOTA' : 'LOGIN_REQUIRED'));
+    await assert.rejects(adapter.run('Request', connection, context()), new RegExp(expected));
     assert.equal(calls, 1);
   }
   const counts: TokenCount[] = [];

@@ -47,6 +47,10 @@ test('readers see complete configuration while updates replace the file', async 
     while (!done) {
       const data = JSON.parse(await readFile(USER_CONFIG_PATH, 'utf8'));
       if (data.marker !== 'present') throw new Error('Configuration was lost');
+      // Windows cannot replace a file while another handle has it open, and a 100 KB read under the CI virus scanner
+      // takes milliseconds. A real reader (the app, the CLI, an editor) leaves gaps; one that never pauses would
+      // block every writer, which is not the case this test covers.
+      await new Promise(resolve => setTimeout(resolve, 25));
     }
     await writes;
   `);
