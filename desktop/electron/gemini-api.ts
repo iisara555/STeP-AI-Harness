@@ -164,7 +164,16 @@ export class GeminiApiAdapter implements ProviderAdapter {
           body: JSON.stringify({
             ...(name ? { cachedContent: name } : context.system ? { systemInstruction: { parts: [{ text: context.system }] } } : {}),
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            ...(connection.maxOutputTokens ? { generationConfig: { maxOutputTokens: connection.maxOutputTokens } } : {}),
+            ...(connection.maxOutputTokens || context.jsonSchema
+              ? {
+                  generationConfig: {
+                    ...(connection.maxOutputTokens ? { maxOutputTokens: connection.maxOutputTokens } : {}),
+                    // Gemini's native JSON mode: the reply is always one valid JSON value. The shape itself still comes
+                    // from the prompt and the host's parser, since Gemini accepts only part of JSON Schema.
+                    ...(context.jsonSchema ? { responseMimeType: 'application/json' } : {}),
+                  },
+                }
+              : {}),
           }),
         });
       } catch {

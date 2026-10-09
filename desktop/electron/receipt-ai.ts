@@ -198,7 +198,41 @@ export function buildReceiptAiResolver(mapping: ReceiptMapping, sanitize: (text:
     JSON.stringify(payload),
   ].join('\n');
 
-  return { prompt, tokens, fields: fields.map(item => item.field) };
+  const names: string[] = fields.map(item => item.field);
+  // The same contract as the prompt, for runtimes with native structured output: each field answers with one of the
+  // fixed choices or a token that OCR made for that field, so a reply cannot name another field's candidate.
+  const schema = {
+    type: 'object',
+    properties: {
+      decisions: {
+        type: 'object',
+        properties: Object.fromEntries(
+          names.map(field => [
+            field,
+            {
+              type: 'object',
+              properties: {
+                choice: {
+                  type: 'string',
+                  enum: [
+                    'KEEP',
+                    'AMBIGUOUS',
+                    'UNMAPPED',
+                    ...[...tokens].filter(([, entry]) => entry.fields.includes(field)).map(([token]) => token),
+                  ],
+                },
+                reason: { type: 'string' },
+              },
+              required: ['choice', 'reason'],
+            },
+          ]),
+        ),
+        required: names,
+      },
+    },
+    required: ['decisions'],
+  };
+  return { prompt, tokens, fields: names, schema };
 }
 
 export function resolveReceiptAiResponse(response: string, tokenMap: Map<string, TokenEntry>, fields: string[]): ReceiptAiDecision[] {

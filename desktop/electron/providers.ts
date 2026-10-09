@@ -16,6 +16,7 @@ import { explainRuntimeFailure } from './diagnostics';
 import { claudeEnv } from './claude-auth';
 import { anthropicEnv } from './anthropic-auth';
 import { AntigravityAdapter, antigravityModels } from './antigravity';
+import { strictJsonSchema } from './json-schema';
 
 // A failure keeps its code when the runtime said why; the scrubbed tail travels as `detail`.
 export function runtimeError(error: unknown, rpc: Rpc) {
@@ -51,6 +52,11 @@ export type ProviderContext = {
     cacheStatus?: 'created' | 'reused' | 'bypassed';
   }) => void;
   webSearch?: boolean;
+  /**
+   * The JSON shape the host will parse from the answer. ChatGPT (Codex) constrains the reply to it with outputSchema and
+   * the Gemini API returns JSON only; others rely on the prompt. The host validates the reply either way.
+   */
+  jsonSchema?: Record<string, unknown>;
   onWebActivity?: (stage: 'search' | 'read' | 'complete' | 'failed') => void;
   /** Keeps the runtime conversation open between the tool turns of one run (see ProviderSession). */
   session?: ProviderSession;
@@ -365,6 +371,7 @@ export class CodexAdapter implements ProviderAdapter {
                 ...(context.images || []).map(i => ({ type: 'image', url: `data:${i.mime};base64,${i.data}` })),
               ],
               ...(context.effort ? { effort: context.effort } : {}),
+              ...(context.jsonSchema ? { outputSchema: strictJsonSchema(context.jsonSchema) } : {}),
             })
             .catch(fail);
         });
