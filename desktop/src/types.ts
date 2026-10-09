@@ -389,6 +389,7 @@ export type RunEvent = {
   sessionId: string;
   type:
     | 'delta'
+    | 'discard'
     | 'reasoning'
     | 'status'
     | 'activity'
@@ -415,6 +416,8 @@ export type RunEvent = {
   approval?: ApprovalRequest;
   approvalId?: string;
   text?: string;
+  /** For discard: how many characters of the streamed answer to take back. */
+  count?: number;
   trace?: RunTrace;
   detail?: string[];
   connectionId?: string;

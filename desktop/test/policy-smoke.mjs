@@ -151,6 +151,8 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'นโยบายองค์กร' }).click();
   await page.getByRole('alert').filter({ hasText: 'อ่านนโยบายไม่สำเร็จ' }).waitFor();
+  // The reason is shown too, so an administrator knows what to fix.
+  await page.getByRole('alert').getByText('policy file is not valid JSON; using safe defaults').waitFor();
   await page.screenshot({ path: 'release/qa/policy-settings.png', fullPage: true });
   assert.deepEqual(errors, []);
   await writeFile(

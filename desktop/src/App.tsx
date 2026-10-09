@@ -378,6 +378,7 @@ export default function App() {
             setActivityAt(Date.now());
           }
           if (event.type === 'delta') setStream(s => (s + (event.text || '')).slice(-60000));
+          if (event.type === 'discard' && event.count) setStream(s => s.slice(0, Math.max(0, s.length - event.count!)));
           if (event.type === 'reasoning') setReasoning(s => (s + (event.text || '')).slice(-20000));
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
           if (event.type === 'step' && event.index !== undefined)

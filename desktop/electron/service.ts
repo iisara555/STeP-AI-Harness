@@ -1093,6 +1093,9 @@ export class WorkService {
                   }
                   this.emit({ sessionId: id, type: 'delta', text: delta });
                 },
+                discard: chars => {
+                  if (!search) this.emit({ sessionId: id, type: 'discard', count: chars });
+                },
               });
               if (search && (searchFailed || !completed || !answer.trim())) throw new Error('WEB_SEARCH_UNAVAILABLE');
               call.outcome = 'completed';

@@ -10,6 +10,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 - While the AI works, the chat shows one status line that changes in place (for example "กำลังอ่าน Skill" then "กำลังเขียนคำตอบ") instead of a growing list of finished steps, so only the answer and the current step are on screen. "ความคิดของ AI" starts folded; open it to read the AI's reasoning.
 - Each answer shows how long it took (for example "ใช้เวลา 0:28"), counted from sending the request to the finished reply.
+- Gemini through Antigravity shows its answer while it is being written instead of all at once at the end. If an attempt is stopped (it tried a tool STeP does not allow) and the app asks again, the stopped attempt's text is taken off the screen first.
+
+### Organization policy
+
+- When `desktop-policy.json` cannot be used, the policy tab now lists the exact reason (for example invalid JSON, an unknown feature name, or a file that is not administrator-managed), and `diagnostics.jsonl` records it too. The Windows permission check on the file waits up to 15 seconds instead of 5, so a slow PowerShell start no longer counts as an untrusted file.
 
 ## Desktop v0.5.36 — 2026-10-09
 

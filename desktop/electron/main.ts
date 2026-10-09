@@ -493,7 +493,9 @@ async function main() {
     text => scanText(text).redactedText,
     () => policyState.policy,
   );
-  if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  // Policy problems are fixed messages about the file's shape and permissions, never its secrets, so they are logged in full.
+  if (policyState.problems.length)
+    diagnose('policy-problems', { count: String(policyState.problems.length), problems: policyState.problems.join(' | ').slice(0, 1000) });
   // Mac updates without a Developer ID (electron/mac-update.ts): download the zip, check it, swap the bundle after quit.
   function macSelfInstall(): SelfInstall {
     const dir = join(data, 'updates');
@@ -538,7 +540,11 @@ async function main() {
     voiceTicketUntil = 0;
     approvals.close();
     questions.close();
-    diagnose('policy-reloaded', { source: policyState.policy.source, problems: String(policyState.problems.length) });
+    diagnose('policy-reloaded', {
+      source: policyState.policy.source,
+      problems: String(policyState.problems.length),
+      ...(policyState.problems.length ? { reasons: policyState.problems.join(' | ').slice(0, 1000) } : {}),
+    });
     emit({ sessionId: '', type: 'changed' });
   });
   const hooks = new HookEngine(
