@@ -4,7 +4,7 @@
 
 ## Version / inventory
 
-คู่มือนี้อ้างอิง Harness source **v0.7.6** และ STeP Desktop **v0.5.32**
+คู่มือนี้อ้างอิง Harness source **v0.7.7** และ STeP Desktop **v0.5.33**
 
 | รายการใน Harness source | จำนวน |
 | --- | --- |

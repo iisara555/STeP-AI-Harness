@@ -1,6 +1,6 @@
 # Governed Desktop tool loop (Phase 2)
 
-Chat and Draft share a host tool loop in `WorkService`. Existing provider adapters remain isolated and their native file/shell/MCP tools remain disabled. Models request host operations in explicit `step-tool` JSON fences. The default limit is eight model turns and at most eight requests per turn. Consecutive read operations execute in groups of three; commands, staged previews, questions and approvals execute sequentially. The final turn cannot start another operation.
+Chat and Draft share a host tool loop in `WorkService`. Existing provider adapters remain isolated and their native file/shell/MCP tools remain disabled. Models request host operations in explicit `step-tool` JSON fences. The default limit is 40 tool turns and at most eight requests per turn. Consecutive read operations execute in groups of three; commands, staged previews, questions and approvals execute sequentially. At the limit, the model gets a final turn without further operations. Self-contained text scope omits tool execution; see [context performance](context-performance.md).
 
 ## Permissions and outgoing data
 
@@ -29,7 +29,7 @@ Results and prior requests are tagged as untrusted data. The paging cache contai
 | `terminal`, `tasks` | Approved command execution and bounded background output; task ID or empty input reads tasks. |
 | `browser`, `web_fetch` | Public HTTP(S) URL; background text retrieval without cookies or browser credentials. Manual Browser remains separate. |
 | `web_search` | Public pattern-checked query, native search on the same provider, without source files/history/organization context. Requires a native search completion signal. |
-| `skill`, `reference` | Registered routed Skill ID or controlled document ID, with authority and path checks. |
+| `skill`, `reference` | Registered routed Skill ID or controlled document ID, with authority and path checks. Empty input and `args.action: catalog` discover metadata without loading bodies; reference catalogs filter restricted entries. `reference` accepts `args.action: outline` for headings or `args.section` for a selected section, through the same consent gate. |
 | `doc_outline`, `doc_section` | DOCX/PDF path and `args.index` for a section. Uses the existing disposable document/privacy worker. Outline derives from extracted headings and bounded text groups, not a preserved Word TOC or PDF page map. Partial/unreadable extraction is withheld. |
 | `sheet_create` | New XLSX path and args.spec.sheets[{name,columns:[{label,type}],rows:[[scalar]],formulas?:[{cell,formula}],source?}]. Creates binary Changes, refuses existing paths; maximum 10 sheets/30 columns/500 rows. Local arithmetic and a small function allowlist only; no formula evaluation. |
 | `slides_create` | New PPTX path and args.spec.{title,slides:[{title,bullets?,table?,chart?,notes?,source?}]}. Creates editable text/table/chart/notes in binary Changes; refuses existing paths; 20 slides maximum with bounded content. Visual review required. |
@@ -54,8 +54,8 @@ Trusted policy can set `"network": {"proxyUrl": "https://proxy.example.org:8443/
 
 ## Retry and usage
 
-`PROVIDER_BUSY`, `PROVIDER_NETWORK` and `RUNTIME_EXITED` get three retries at 2/4/8 seconds with 25% jitter and cancellation-aware waits. Structured `retry-after` seconds/date or `retryAfterMs` takes precedence, bounded at two minutes. Tests inject delays. Non-transient errors, quota failures and tool effects are not replayed. Usage before a failed provider attempt stays counted.
+`PROVIDER_BUSY`, `PROVIDER_NETWORK` and `RUNTIME_EXITED` get three retries at 2/4/8 seconds with 25% jitter and cancellation-aware waits. Compatible API transport errors map to the Desktop codes at the adapter boundary; structured quota codes stop retries. Structured `retry-after` seconds/date or `retryAfterMs` takes precedence, bounded at two minutes. Tests inject delays. Non-transient errors, quota failures and tool effects are not replayed. Usage before a failed provider attempt stays counted, including a dropped retained RPC session recovered once with a fresh conversation.
 
-`/usage` and the command palette open a local ledger for Chat/Draft and native web search, grouped by UTC day/provider/model. Prices are USD per million tokens, keyed by model or `provider:*`. Missing prices remain explicitly unpriced; policy changes do not rewrite past estimates. Daily token/monthly cost warnings appear at 80% of configured budgets and are advisory, not hard spending caps. Missing provider usage, image pricing, OCR resolution, hook prompts, subscriptions and work outside the app are not billing reconciliation.
+`/usage` and the command palette open a local ledger for Chat/Draft and native web search, grouped by UTC day/provider/model. Prices are USD per million tokens, keyed by model or `provider:*`, with optional cache-read/write rates. Cache subsets are already included in input totals. Missing cache rates use ordinary input prices with an explicit approximation label; missing model prices remain unpriced. Policy changes do not rewrite past estimates. Daily token/monthly cost warnings appear at 80% of configured budgets and are advisory, not hard spending caps. Missing provider usage, image pricing, OCR resolution, hook prompts, subscriptions and work outside the app are not billing reconciliation.
 
 Validation uses synthetic accounts/documents and actual local Electron/preload/IPC. It does not establish live provider entitlement, production acceptance, install/signing behavior, sandboxing or future phases.

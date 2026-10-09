@@ -22,6 +22,10 @@ export type Connection = {
   model: string;
   executable: string;
   customRuntime?: boolean;
+  /** Applied by managed modelLimits at run time; absent means use adapter/model defaults. */
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  promptCaching?: 'off' | 'anthropic-ephemeral' | 'gemini-explicit';
   /** Optional Google Cloud project for Workspace / organization Google OAuth accounts. */
   googleCloudProject?: string;
   /** A login may have written runtime-owned credentials, including OS keychain entries. */
@@ -97,6 +101,7 @@ export type UsageReport = {
   dailyTokens: number;
   monthlyUsd: number;
   unpricedTokens: number;
+  cachePriceMissingTokens?: number;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
   warnings: string[];
   accounts?: ProviderUsageReport[];
@@ -109,6 +114,9 @@ export type UsageReport = {
     total: number;
     usd: number;
     unpricedTokens: number;
+    cachedInput?: number;
+    cacheWriteInput?: number;
+    cachePriceMissingTokens?: number;
   }[];
 };
 export type WorkMode = 'chat' | 'draft' | 'image';
@@ -122,6 +130,31 @@ export type StepTrace = {
   attempts: number;
   ms: number;
   usage?: { input: number; output: number; total: number };
+  contextScope?: 'text' | 'full';
+  discovery?: { skills: 'top3' | 'full'; documents: 'top3' | 'full'; skillCount: number; documentCount: number };
+  toolMs?: number;
+  providerCalls?: ProviderCallTrace[];
+};
+/** Host text estimates and provider observations stay separate. No task text is persisted here. */
+export type ProviderCallTrace = {
+  kind: 'answer' | 'summary' | 'web-search';
+  outcome: 'running' | 'completed' | 'error';
+  code?: string;
+  ms: number;
+  ttftMs?: number;
+  payloadBytes: number;
+  inputEstimate: number;
+  estimateMethod: 'script-aware-estimate-v2';
+  components: Record<string, number>;
+  prefixHash: string;
+  transport?: {
+    mode: 'full' | 'delta';
+    sentChars: number;
+    startupMs?: number;
+    resetReason?: string;
+    cacheStatus?: 'created' | 'reused' | 'bypassed';
+  };
+  usage?: { input: number; output: number; total: number; cachedInput?: number; cacheWriteInput?: number };
 };
 export type RunTrace = {
   id: string;
@@ -132,6 +165,8 @@ export type RunTrace = {
   code?: string;
   ms: number;
   steps: StepTrace[];
+  /** Provider research before the first model step, when host-side search is enabled. */
+  providerCalls?: ProviderCallTrace[];
 };
 /** Finished Playbook steps of a run that stopped, so the same task can continue after them. */
 export type Checkpoint = { key: string; done: number; total: number; handoff: string; sources: string[]; skillTitle: string; at: string };

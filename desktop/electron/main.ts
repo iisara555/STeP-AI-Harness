@@ -127,9 +127,9 @@ const connectControllers = new Map<string, AbortController>();
 let installingAnt = false;
 const receiptOperations = new ReceiptOperations();
 const validProviders = new Set(['openai', 'claude', 'gemini', 'antigravity', 'compatible', 'copilot']);
-// Pilot diagnostics: error codes and provider names only, never request, draft, or document content.
+// Pilot diagnostics: codes, measurements and provider names; never request, draft, credentials or document content.
 let logFile = '';
-function diagnose(event: string, detail: Record<string, string> = {}) {
+function diagnose(event: string, detail: Record<string, string | number | undefined | Record<string, number>> = {}) {
   if (!logFile) return;
   void appendFile(logFile, JSON.stringify({ at: new Date().toISOString(), event, ...detail }) + '\n').catch(() => {});
 }
@@ -286,8 +286,10 @@ async function main() {
         ...options,
       }),
     contextPolicy: routerPolicy.classifyContextPolicy,
+    modelLimits: connection =>
+      policyState.policy.modelLimits?.[connection.model] || policyState.policy.modelLimits?.[connection.provider + ':*'] || {},
     privacy: scanText,
-    catalog: () => skillCatalog.loadSkillCatalog(root),
+    catalog: skillCatalog.createSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
     documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
@@ -436,8 +438,8 @@ async function main() {
     // Isolate runtime configuration from personal MCP servers, plugins, and files.
     const { cwd, env } = await isolatedRuntimeHome(join(data, 'runtimes', connection.id), connection, webSearch);
     // Development test runs only: point the bundled Gemini CLI at a local fake API. Installed copies ignore this.
-    if (!app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_TEST_GEMINI_BASE_URL)
-      env.GOOGLE_GEMINI_BASE_URL = process.env.STEP_TEST_GEMINI_BASE_URL;
+    const geminiBaseUrl = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? process.env.STEP_TEST_GEMINI_BASE_URL : undefined;
+    if (geminiBaseUrl) env.GOOGLE_GEMINI_BASE_URL = geminiBaseUrl;
     let authExecutable: string | undefined;
     if (connection.provider === 'claude' && connection.mode === 'subscription') {
       await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
@@ -447,7 +449,11 @@ async function main() {
       await mkdir(env.ANTHROPIC_CONFIG_DIR!, { recursive: true });
       authExecutable = await resolveAnthropicCli({ cwd, env }, findAnt);
     }
-    return { adapter: adapter(connection.provider), context: { cwd, env, key: await key(connection) }, authExecutable };
+    return {
+      adapter: adapter(connection.provider),
+      context: { cwd, env, key: await key(connection), ...(geminiBaseUrl ? { geminiBaseUrl } : {}) },
+      authExecutable,
+    };
   }
   const images = new Images(join(data, 'images'), key);
   // The organization's policy (admin-only file). Re-read when it changes; a bad file keeps safe defaults.
@@ -863,7 +869,39 @@ async function main() {
       // Run traces hold sizes, references and timing only; they go to diagnostics, not the window.
       if (event.type === 'trace' && event.trace) {
         const t = event.trace;
+        const session = store.get<Session>('session', event.sessionId);
+        const connection = session && store.get<Connection>('connection', session.connectionId);
         void fireHook({ event: 'stop', sessionId: event.sessionId, outcome: t.outcome, route: t.route });
+        const calls = [
+          ...(t.providerCalls || []).map(call => ({ call, step: -1, scope: 'full' })),
+          ...t.steps.flatMap((step, index) =>
+            (step.providerCalls || []).map(call => ({ call, step: index, scope: step.contextScope || 'full' })),
+          ),
+        ];
+        for (const { call, step, scope } of calls)
+          diagnose('provider-call', {
+            run: t.id,
+            step,
+            scope,
+            provider: connection?.provider || '',
+            model: session?.model ?? connection?.model ?? '',
+            kind: call.kind,
+            outcome: call.outcome,
+            code: call.code,
+            ms: call.ms,
+            ttftMs: call.ttftMs,
+            payloadBytes: call.payloadBytes,
+            inputEstimate: call.inputEstimate,
+            estimateMethod: call.estimateMethod,
+            components: call.components,
+            prefixHash: call.prefixHash,
+            transport: call.transport?.mode,
+            sentChars: call.transport?.sentChars,
+            startupMs: call.transport?.startupMs,
+            resetReason: call.transport?.resetReason,
+            cacheStatus: call.transport?.cacheStatus,
+            ...call.usage,
+          });
         diagnose('run-trace', {
           outcome: t.outcome,
           code: t.code || '',
@@ -873,7 +911,7 @@ async function main() {
           steps: t.steps
             .map(
               s =>
-                `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'}`,
+                `${s.attempts}x ${s.ms}ms sys=${s.systemChars} msg=${s.promptChars} refs=${s.references.length} tok=${s.usage?.total ?? '?'} scope=${s.contextScope || 'full'} tools=${s.toolMs || 0}ms`,
             )
             .join(' | ')
             .slice(0, 1200),

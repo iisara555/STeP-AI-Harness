@@ -2,6 +2,13 @@
 
 This is a development preview, not an accepted production release.
 
+## Context performance — Desktop 0.5.33 / Harness 0.7.7 (2026-10-09)
+
+- Local Harness suite: **954 tests, 952 passed, 0 failed, 2 platform skips**. Desktop suite: **562 tests, 560 passed, 0 failed, 2 platform skips**. Focused session/error checks after the final dropped-thread fix: **32 tests, 31 passed, 0 failed, 1 platform skip**. TypeScript/production build, Prettier, both validators, signed Node runtime pins, Pilot ZIP and package dry-run passed.
+- Real local Electron/preload/IPC smokes passed for Gemini API-key connection/quota/vision, retained CLI tool turns, managed native HTTP cache creation/reuse and usage traces; context/memory/compaction; governed tools/questions/plans/consent/Changes/recovery/cancellation; and the Usage dialog. All provider accounts, keys, source documents and responses are synthetic. Installer and macOS/Windows gates run in the existing release workflows.
+- The reproducible `npm --prefix desktop run eval:context` benchmark reports 3,489 estimated input tokens for translation (76.0% below the audited main baseline), 4,861 for spelling (60.2% lower), and 8,706 for the organization fixture (47.5% lower), retaining mandatory sources and full organization tool context. See [implementation, configuration and measurement limits](../docs/context-performance.md).
+- No runtime dependency, database, service, model router or production policy change. Gemini explicit cache storage charges are outside the token-cost estimate. Synthetic results do not establish live cache hits, provider entitlement, billed savings, model answer quality or the 1–2 second latency goal.
+
 ## Experimental Antigravity adapter (2026-10-01)
 
 - Branch `codex/antigravity-adapter`, stacked on `codex/chatgpt-gemini-oauth`. Added provider selection, native NDJSON, per-invocation configuration, model persistence/catalog filtering and shared-keyring-aware disconnect. See [implementation and evidence](../docs/antigravity-adapter.md).

@@ -241,6 +241,11 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
               {report.unpricedTokens.toLocaleString(locale())} {t('tokens ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย')}
             </p>
           )}
+          {!!report.cachePriceMissingTokens && (
+            <p className="muted small">
+              {report.cachePriceMissingTokens.toLocaleString(locale())} {t('cache tokens ยังไม่มีราคาแยก จึงประมาณด้วยราคา input ปกติ')}
+            </p>
+          )}
           {report.warnings.length > 0 && <p role="status">{t('การใช้งานถึงอย่างน้อย 80% ของงบที่ตั้งไว้ โปรดตรวจยอดก่อนทำงานต่อ')}</p>}
           {report.entries.some(e => !e.connectionId) && (
             <p className="muted small">{t('ยอดเก่าที่ไม่มีรหัสบัญชีรวมอยู่ในยอดแอป แต่ไม่จัดให้บัญชีใด')}</p>

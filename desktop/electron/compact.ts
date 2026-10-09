@@ -3,7 +3,7 @@ import { section } from './prompt';
 
 /** The budget when the model's context window is not known (a custom endpoint, a local Ollama model). */
 export const CONTEXT_TOKENS = 48_000;
-/** Never more than this, even on a 1M-token model: every tool turn resends the prompt, so cost and wait grow with it. */
+/** Cap host context even on a 1M-token model; retained sessions may still bill the full conversation. */
 export const MAX_CONTEXT_TOKENS = 160_000;
 
 /**
@@ -41,7 +41,19 @@ const PRESET_WINDOWS: Record<string, number> = {
  * How many prompt tokens to send before compacting: 60% of the model's window (the rest is for the answer, the system
  * prompt and estimation error), between CONTEXT_TOKENS and MAX_CONTEXT_TOKENS. Unknown models and custom runtimes keep CONTEXT_TOKENS.
  */
-export function contextBudget(connection: { provider?: string; model?: string; preset?: string; customRuntime?: boolean }) {
+export function contextBudget(connection: {
+  provider?: string;
+  model?: string;
+  preset?: string;
+  customRuntime?: boolean;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+}) {
+  if (Number.isSafeInteger(connection.contextWindow) && connection.contextWindow! >= 512 && connection.contextWindow! <= 2_000_000) {
+    const window = connection.contextWindow!;
+    const output = connection.maxOutputTokens || Math.min(8192, Math.floor(window * 0.4));
+    return Math.min(MAX_CONTEXT_TOKENS, Math.floor(window * 0.6), Math.max(1, window - output - Math.ceil(window * 0.05)));
+  }
   // A runtime the organization points at its own executable may run any model.
   if (connection.customRuntime) return CONTEXT_TOKENS;
   const model = String(connection.model || '');
@@ -50,7 +62,10 @@ export function contextBudget(connection: { provider?: string; model?: string; p
     (connection.preset ? PRESET_WINDOWS[connection.preset] : undefined) ??
     (connection.provider && connection.provider !== 'compatible' ? PROVIDER_WINDOWS[connection.provider] : undefined);
   if (!window) return CONTEXT_TOKENS;
-  return Math.min(MAX_CONTEXT_TOKENS, Math.max(CONTEXT_TOKENS, Math.floor(window * 0.6)));
+  const budget = Math.min(MAX_CONTEXT_TOKENS, Math.max(CONTEXT_TOKENS, Math.floor(window * 0.6)));
+  return connection.maxOutputTokens
+    ? Math.min(budget, Math.max(1, window - connection.maxOutputTokens - Math.ceil(window * 0.05)))
+    : budget;
 }
 type Part = { tag: string; text: string };
 export type CompactResult = { prompt: string; before: number; after: number; method: 'none' | 'micro' | 'summary' };

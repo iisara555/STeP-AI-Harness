@@ -13,6 +13,7 @@ export function scrub(line: string) {
 
 // Known provider failures, mapped to codes the interface explains in Thai.
 const KNOWN: [RegExp, string][] = [
+  [/(?:thread|session).{0,30}(?:not found|does not exist|invalid|expired|closed)/i, 'PROVIDER_SESSION_INVALID'],
   [/context.{0,25}(?:length|window|exceed)|prompt.{0,15}too long|maximum.{0,15}tokens/i, 'PROMPT_TOO_LONG'],
   // Since 18 June 2026 Google serves Gemini CLI only to API keys and Code Assist Standard/Enterprise licenses.
   [/no longer supported for Gemini Code Assist for individuals|IneligibleTier|migrate to the Antigravity/i, 'GEMINI_PERSONAL_DISCONTINUED'],
@@ -38,6 +39,10 @@ const KNOWN: [RegExp, string][] = [
     'LOGIN_REQUIRED',
   ],
   [/PERMISSION_DENIED|\b403\b|not (?:eligible|authorized)/i, 'PROVIDER_PERMISSION_DENIED'],
+  [
+    /\b(?:thread|session) (?:dropped|not found|does not exist|is invalid|has expired)\b|\b(?:invalid|expired|unknown) (?:thread|session)(?: id)?\b/i,
+    'PROVIDER_SESSION_INVALID',
+  ],
   [/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|getaddrinfo|network error|proxy/i, 'PROVIDER_NETWORK'],
 ];
 export function explainRuntimeFailure(lines: string[]) {

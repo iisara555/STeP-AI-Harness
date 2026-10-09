@@ -107,6 +107,12 @@ test('cancellation terminates the CLI descendant process', { timeout: 6000 }, as
       await new Promise(resolve => setTimeout(resolve, 30));
       try {
         process.kill(pid, 0);
+        // Linux containers may leave a killed descendant as an unreaped zombie under PID 1.
+        // It cannot execute; signal 0 alone does not distinguish it from a live descendant.
+        if (process.platform === 'linux') {
+          const status = await readFile(`/proc/${pid}/status`, 'utf8').catch(() => '');
+          if (/^State:\s+[ZX]\b/m.test(status)) alive = false;
+        }
       } catch {
         alive = false;
       }
@@ -392,6 +398,11 @@ test('busy services, exhausted quotas and the Gemini personal-account shutdown a
   assert.equal(explainRuntimeFailure(['{"type":"error","error":{"type":"overloaded_error"}}']), 'PROVIDER_BUSY');
   assert.equal(explainRuntimeFailure(['529 Overloaded']), 'PROVIDER_BUSY');
   assert.equal(explainRuntimeFailure(['rate_limit_error: 429 too many requests']), 'PROVIDER_BUSY');
+  assert.equal(explainRuntimeFailure(['turn failed: thread dropped']), 'PROVIDER_SESSION_INVALID');
+  assert.equal(explainRuntimeFailure(['session not found']), 'PROVIDER_SESSION_INVALID');
+  assert.equal(explainRuntimeFailure(['thread dropped', 'authentication required']), 'LOGIN_REQUIRED');
+  assert.equal(explainRuntimeFailure(['thread dropped', 'usage limit exceeded']), 'PROVIDER_QUOTA');
+  assert.equal(explainRuntimeFailure(['turn failed: unsupported request']), undefined);
   assert.equal(explainRuntimeFailure(['You have hit your usage limit']), 'PROVIDER_QUOTA');
   assert.equal(explainRuntimeFailure(['[API Error: 429 RESOURCE_EXHAUSTED] quota']), 'PROVIDER_QUOTA');
   assert.equal(

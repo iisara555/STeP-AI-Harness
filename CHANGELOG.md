@@ -6,6 +6,27 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.33 — 2026-10-09
+
+### Context and provider performance
+
+- Use a conservative text scope for new supplied-text translation, summary and spelling/grammar tasks after routing, authority and privacy checks. Keep routed Skills and mandatory rules; omit registry/tool discovery and empty envelopes. Compact document discovery to ID/title/summary and add governed reference outlines. Keep standing governance before registries and task-specific system content.
+- Cache local Skill metadata and organization sections with file/manifest invalidation. Add managed model window/output overrides, including small context windows, and opt-in Anthropic-compatible ephemeral caching. No new runtime dependency, database, service or model router.
+- Retain Claude and Copilot SDK conversations across tool turns alongside Codex/Gemini RPC reuse. Reset on changed context/account/runtime, stop retained conversations on cancellation, and preserve reported usage through dropped-session recovery. Native runtime tools remain disabled.
+- Normalize compatible API errors for Desktop retry and preserve cache-read/write usage, including failed streams. Price cache subsets without double-counting input; label ordinary-price estimates when cache rates are missing. Record prompt components, prefix hashes, TTFT, transport/reset and local tool time.
+- Add reproducible `desktop eval:context` fixtures and lifecycle/accounting regressions. Local estimated input falls from 14,529 to 3,489 tokens for translation (76.0%) and from 12,228 to 4,861 for spelling (60.2%). These measurements do not establish live latency, cache hits or billed savings. See [context performance](docs/context-performance.md).
+- Extend Fast Path to explicit Thai/English language requests with a colon, newline, inline supplied text or a missing-source question, retaining dedicated translation Skills. Mixed actions, context pointers and existing-task requests keep full context.
+- Use the existing router/retrieval rankings for up to three discovery candidates, retaining mandatory sources and the complete compact index when evidence is uncertain. Governed Skill/reference catalog actions can discover omitted entries; candidate discovery does not activate a Skill or approve an action.
+- Add opt-in Gemini API-key text caching through `cachedContents`, with five-minute TTL, account/model/prefix isolation, bounded host metadata and normal-generation fallback for unavailable/expired resources. Subscription/custom-runtime/search/image paths keep Gemini CLI. Include cached input and thinking output in usage; cache storage charges remain outside the token-cost estimate.
+- Release Desktop 0.5.33 and Harness 0.7.7. No new runtime dependency or policy-default change. Validation uses synthetic providers; live cache-hit/latency/billing evaluation remains separate.
+
+## v0.7.7
+
+- Preserve compatible API cache read/write usage, including failed streams, and recognize structured quota/context errors without exposing provider error bodies.
+- Add Gemini usage normalization: cached tokens are included in input totals and thinking tokens are included in output. Unknown cache observations remain absent.
+- Cache local Skill catalog metadata with file/manifest invalidation. Ship the context-performance implementation/configuration guide and retain governed routing and mandatory-source behavior.
+- Includes Desktop 0.5.33 source. Download Desktop installers from the [Desktop release](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.33). Provider measurements are local text estimates and synthetic transport checks, not live latency or billing guarantees.
+
 ## Desktop v0.5.32 — 2026-10-09
 
 ### Desktop: UI review round 2

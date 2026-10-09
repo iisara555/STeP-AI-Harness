@@ -126,6 +126,55 @@ test('draft progress consent covers only clean answers and receipts, never file 
   f.store.close();
 });
 
+test('reference outline discovers section names without transmitting the whole document and keeps source consent', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'known.md'), '# Policy\n\nPurpose\n## Medical allowance\nFull policy evidence here.');
+    const host = await f.tools.host(f.scope);
+    const request = { tool: 'reference', input: 'registered', args: { action: 'outline' } } as const;
+    const outline = (await host.execute(request, f.scope.signal)) as any;
+    assert.deepEqual(outline.sections, ['Policy', 'Medical allowance']);
+    assert.ok(!JSON.stringify(outline).includes('Full policy evidence'));
+    await host.outgoing(JSON.stringify(outline), f.scope.signal, request);
+    assert.ok(f.requests() > 0);
+    const section = (await host.execute(
+      { tool: 'reference', input: 'registered', args: { section: 'Medical allowance' } },
+      f.scope.signal,
+    )) as any;
+    assert.match(section.text, /Full policy evidence/);
+    await host.dispose?.();
+  } finally {
+    f.store.close();
+  }
+});
+
+test('catalog fallback exposes complete registered discovery metadata through governed tools without reading bodies', async () => {
+  const f = await fixture();
+  try {
+    const harness = (f.tools as any).harness;
+    harness.catalog = async () => [
+      { name: 'routed', title: 'Routed Skill', description: 'Short purpose', status: 'routed' },
+      { name: 'hidden', status: 'registered' },
+    ];
+    harness.documentCatalog = async () => [
+      { id: 'readable', title: 'Readable policy', path: 'policy.md' },
+      { id: 'revoked', title: 'Revoked', path: 'old.md', status: 'restricted' },
+    ];
+    const host = await f.tools.host(f.scope);
+    for (const tool of ['skill', 'reference'] as const) {
+      const request = { tool, input: '', args: { action: 'catalog' } };
+      const result = (await host.execute(request, f.scope.signal)) as any;
+      assert.equal(result.entries.length, 1);
+      assert.equal(result.entries[0].id, tool === 'skill' ? 'routed' : 'readable');
+      assert.ok(!JSON.stringify(result).includes('text'));
+      await host.outgoing(JSON.stringify(result), f.scope.signal, request);
+    }
+    assert.ok(f.requests() > 0, 'discovery transmission still requires consent');
+  } finally {
+    f.store.close();
+  }
+});
+
 test('browser control uses the task scope, serial execution, transmission consent and cancellation', async () => {
   const f = await fixture();
   const stop = new AbortController();

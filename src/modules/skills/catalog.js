@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { PACKAGE_ROOT } from '../role-resolver.js';
@@ -47,6 +47,29 @@ export async function loadSkillCatalog(root = PACKAGE_ROOT) {
   }
   const order = { routed: 0, registered: 1, unregistered: 2, 'missing-file': 3 };
   return catalog.sort((a, b) => order[a.status] - order[b.status] || a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+}
+
+/** Per-harness metadata cache. File/registry additions, removal and edits invalidate it without rereading every body. */
+export function createSkillCatalog(root = PACKAGE_ROOT) {
+  let revision = '', pending;
+  return async () => {
+    const names = (await readdir(join(root, 'skills'), { recursive: true }))
+      .filter(name => /(?:^|[\\/])SKILL\.md$/.test(name)).sort();
+    const paths = [...names.map(name => join('skills', name)), 'package.json', 'manifest/skills.yaml', 'manifest/router-index.yaml'];
+    const versions = await Promise.all(paths.map(async path => {
+      const info = await stat(join(root, path), { bigint: true }).catch(() => undefined);
+      return [path, info ? `${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}` : 'missing'];
+    }));
+    const next = JSON.stringify(versions);
+    if (!pending || next !== revision) {
+      revision = next;
+      const load = loadSkillCatalog(root);
+      pending = load;
+      void load.catch(() => { if (pending === load) pending = undefined; });
+    }
+    // Consumers must never mutate the catalog cached for another task.
+    return structuredClone(await pending);
+  };
 }
 
 async function skillFiles(root) {

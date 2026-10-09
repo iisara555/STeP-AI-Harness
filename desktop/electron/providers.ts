@@ -1,6 +1,13 @@
 import { compatibleRun } from '../../src/modules/providers/compatible.js';
+import { providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
+import { combineUsage } from './usage';
+import { InputQueue } from './input-queue';
+import { MAX_TOOL_TURNS } from './tool-loop';
+import { GeminiApiAdapter } from './gemini-api';
+import type { Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+export type { TokenCount } from '../../src/modules/providers/usage.js';
 import { CopilotAdapter, copilotModels } from './copilot';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -22,11 +29,12 @@ export function runtimeError(error: unknown, rpc: Rpc) {
 }
 import type { Connection, ModelOption, VisionInput } from '../src/types';
 
-export type TokenCount = { input: number; output: number; total: number };
 export type ProviderContext = {
   images?: VisionInput[];
   cwd: string;
   env: NodeJS.ProcessEnv;
+  /** Loopback API override supplied only by the non-packaged synthetic test host. */
+  geminiBaseUrl?: string;
   key?: string;
   effort?: string;
   /** Standing instructions for the runtime's system prompt; the prompt argument carries only the request sections. */
@@ -35,13 +43,20 @@ export type ProviderContext = {
   emit: (text: string) => void;
   onReasoning?: (text: string) => void;
   onUsage?: (usage: TokenCount) => void;
+  onTransport?: (info: {
+    mode: 'full' | 'delta';
+    sentChars: number;
+    startupMs?: number;
+    resetReason?: string;
+    cacheStatus?: 'created' | 'reused' | 'bypassed';
+  }) => void;
   webSearch?: boolean;
   onWebActivity?: (stage: 'search' | 'read' | 'complete' | 'failed') => void;
   /** Keeps the runtime conversation open between the tool turns of one run (see ProviderSession). */
   session?: ProviderSession;
 };
 /**
- * One runtime conversation kept open across the tool turns of a run. The tool loop sends the whole prompt every turn,
+ * One runtime conversation kept open across the tool turns of a step. The tool loop sends the whole prompt every turn,
  * each one the previous prompt plus new tool results; a runtime that holds a conversation (Codex app-server) then sends
  * only the new part on the same thread, instead of starting a process and a thread and resending everything per turn.
  */
@@ -51,9 +66,11 @@ export class ProviderSession {
   sent = '';
   system = '';
   model = '';
+  identity = '';
   usage: TokenCount = { input: 0, output: 0, total: 0 };
   /** Runs when the conversation closes, after its runtime stops (for example, removing a per-run instructions file). */
-  onClose?: () => void;
+  onClose?: () => void | Promise<void>;
+  private cleanup: Promise<void> = Promise.resolve();
   close() {
     const rpc = this.rpc,
       onClose = this.onClose;
@@ -61,12 +78,75 @@ export class ProviderSession {
     this.onClose = undefined;
     this.threadId = '';
     this.sent = '';
+    this.identity = '';
     this.usage = { input: 0, output: 0, total: 0 };
-    void rpc
-      ?.closeAndWait()
-      .catch(() => {})
-      .finally(() => onClose?.());
-    if (!rpc) onClose?.();
+    const shutdown = (async () => {
+      try {
+        await rpc?.closeAndWait();
+      } finally {
+        await onClose?.();
+      }
+    })();
+    this.cleanup = Promise.allSettled([this.cleanup, shutdown]).then(results => {
+      const failed = results.find(result => result.status === 'rejected');
+      if (failed?.status === 'rejected') throw failed.reason;
+    });
+    // Abort listeners call close() synchronously; closeAndWait() still observes shutdown failures.
+    void this.cleanup.catch(() => {});
+  }
+  async closeAndWait() {
+    this.close();
+    await this.cleanup;
+  }
+}
+/** Bound to one account, model, runtime, work directory and instructions; never persisted or logged. */
+export function providerSessionKey(connection: Connection, context: ProviderContext) {
+  return createHash('sha256')
+    .update(
+      JSON.stringify([
+        connection.provider,
+        connection.id,
+        connection.mode,
+        connection.model,
+        connection.executable,
+        connection.googleCloudProject,
+        context.cwd,
+        context.key,
+        context.effort,
+        context.system,
+      ]),
+    )
+    .digest('hex');
+}
+const resettableSessionError = (error: unknown) =>
+  error instanceof Error && ['RUNTIME_EXITED', 'PROVIDER_SESSION_INVALID'].includes(error.message);
+/** One fresh-session recovery, with cumulative usage across both physical attempts. */
+async function recoverSessionTurn(context: ProviderContext, turn: (context: ProviderContext) => Promise<string>) {
+  const continuing = Boolean(context.session?.rpc && !context.webSearch);
+  let observed: TokenCount = { input: 0, output: 0, total: 0 };
+  const attempt = {
+    ...context,
+    onUsage: (usage: TokenCount) => {
+      observed = combineUsage(observed, usage, 'max');
+      context.onUsage?.(observed);
+    },
+  };
+  try {
+    return await turn(attempt);
+  } catch (error) {
+    // Authentication and quota failures go to the host without a second provider call.
+    if (!continuing || context.signal.aborted || !resettableSessionError(error)) throw error;
+    await context.session?.closeAndWait();
+    const failed = observed;
+    observed = { input: 0, output: 0, total: 0 };
+    return turn({
+      ...context,
+      onUsage: usage => {
+        observed = combineUsage(observed, usage, 'max');
+        context.onUsage?.(combineUsage(failed, observed));
+      },
+      onTransport: info => context.onTransport?.({ ...info, resetReason: 'session-invalid' }),
+    });
   }
 }
 export interface ProviderAdapter {
@@ -120,32 +200,39 @@ export async function initialize(rpc: Rpc, provider: string) {
 
 export class CodexAdapter implements ProviderAdapter {
   async run(prompt: string, connection: Connection, context: ProviderContext) {
-    const continuing = Boolean(context.session?.rpc && !context.webSearch);
-    try {
-      return await this.turn(prompt, connection, context);
-    } catch (error) {
-      // A turn on the run's open thread that fails (the runtime dropped the thread or refused a second turn) is tried
-      // once more on a fresh thread with the whole prompt, as before threads were kept: never worse than not reusing.
-      if (!continuing || context.signal.aborted || (error instanceof Error && error.message === 'CANCELLED')) throw error;
-      context.session?.close();
-      return this.turn(prompt, connection, context);
-    }
+    return recoverSessionTurn(context, attempt => this.turn(prompt, connection, attempt));
   }
   private async turn(prompt: string, connection: Connection, context: ProviderContext) {
+    const started = Date.now();
     if (context.signal.aborted) throw new Error('CANCELLED');
     const session = context.webSearch ? undefined : context.session;
     const system = context.system || '';
+    const identity = providerSessionKey(connection, context);
     // Continue the run's open thread when this prompt only adds to what it already holds (tool results).
     const reuse = Boolean(
       session?.rpc &&
       session.threadId &&
       session.system === system &&
       session.model === (connection.model || '') &&
+      session.identity === identity &&
       session.sent &&
       prompt.startsWith(session.sent) &&
       !context.images?.length,
     );
-    if (session && !reuse) session.close();
+    const resetReason =
+      session?.sent && !reuse
+        ? session.system !== system
+          ? 'system-changed'
+          : session.model !== (connection.model || '')
+            ? 'model-changed'
+            : context.images?.length
+              ? 'images'
+              : session.identity !== identity
+                ? 'connection-changed'
+                : 'prefix-changed'
+        : undefined;
+    if (session && !reuse) await session.closeAndWait();
+    if (context.signal.aborted) throw new Error('CANCELLED');
     const rpc = reuse ? session!.rpc! : createRpc(connection, context);
     let text = '';
     const abort = () => (session ? session.close() : rpc.close());
@@ -170,13 +257,26 @@ export class CodexAdapter implements ProviderAdapter {
         });
         threadId = result.thread.id;
         if (session) {
-          Object.assign(session, { rpc, threadId, system, model: connection.model || '', usage: { input: 0, output: 0, total: 0 } });
+          Object.assign(session, {
+            rpc,
+            threadId,
+            system,
+            identity,
+            model: connection.model || '',
+            usage: { input: 0, output: 0, total: 0 },
+          });
           rpc.onClose(() => {
             if (session.rpc === rpc) session.close();
           });
         }
       }
       const input = reuse ? prompt.slice(session!.sent.length) : prompt;
+      context.onTransport?.({
+        mode: reuse ? 'delta' : 'full',
+        sentChars: input.length,
+        startupMs: reuse ? 0 : Date.now() - started,
+        resetReason,
+      });
       const base = session?.usage || { input: 0, output: 0, total: 0 };
       const answer = await (async () => {
         const result = { thread: { id: threadId } };
@@ -220,9 +320,14 @@ export class CodexAdapter implements ProviderAdapter {
             // The thread total covers every turn on the thread; report this turn's part of it.
             if (method === 'thread/tokenUsage/updated' && params.tokenUsage?.total) {
               const t = params.tokenUsage.total;
-              const now = { input: t.inputTokens || 0, output: t.outputTokens || 0, total: t.totalTokens || 0 };
+              const now = {
+                input: t.inputTokens || 0,
+                output: t.outputTokens || 0,
+                total: t.totalTokens || 0,
+                ...(Number.isSafeInteger(t.cachedInputTokens) && t.cachedInputTokens >= 0 ? { cachedInput: t.cachedInputTokens } : {}),
+              };
               if (session) session.usage = now;
-              context.onUsage?.({ input: now.input - base.input, output: now.output - base.output, total: now.total - base.total });
+              context.onUsage?.(combineUsage(now, base, 'delta'));
             }
             // Codex reports why a turn failed (usage limit, unsupported model, expired sign-in) here.
             if (method === 'error' && params?.error?.message)
@@ -269,21 +374,26 @@ export class CodexAdapter implements ProviderAdapter {
 }
 
 export class GeminiAdapter implements ProviderAdapter {
+  constructor(private api = new GeminiApiAdapter()) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
-    const continuing = Boolean(context.session?.rpc && !context.webSearch);
-    try {
-      return await this.turn(prompt, connection, context);
-    } catch (error) {
-      // As with Codex: a turn on the run's open conversation that fails is tried once more from a fresh start.
-      if (!continuing || context.signal.aborted || (error instanceof Error && error.message === 'CANCELLED')) throw error;
-      context.session?.close();
-      return this.turn(prompt, connection, context);
+    if (
+      connection.mode === 'api' &&
+      connection.promptCaching === 'gemini-explicit' &&
+      !connection.customRuntime &&
+      connection.model &&
+      !context.webSearch &&
+      !context.images?.length
+    ) {
+      return this.api.run(prompt, connection, context);
     }
+    return recoverSessionTurn(context, attempt => this.turn(prompt, connection, attempt));
   }
   private async turn(prompt: string, connection: Connection, context: ProviderContext) {
+    const started = Date.now();
     if (context.signal.aborted) throw new Error('CANCELLED');
     const session = context.webSearch ? undefined : context.session;
     const system = context.system || '';
+    const identity = providerSessionKey(connection, context);
     // Every tool turn of a run continues on one Gemini CLI process and ACP session, sending only the new tool results,
     // instead of starting the CLI again and resending the whole prompt each turn.
     const reuse = Boolean(
@@ -291,11 +401,25 @@ export class GeminiAdapter implements ProviderAdapter {
       session.threadId &&
       session.system === system &&
       session.model === (connection.model || '') &&
+      session.identity === identity &&
       session.sent &&
       prompt.startsWith(session.sent) &&
       !context.images?.length,
     );
-    if (session && !reuse) session.close();
+    const resetReason =
+      session?.sent && !reuse
+        ? session.system !== system
+          ? 'system-changed'
+          : session.model !== (connection.model || '')
+            ? 'model-changed'
+            : context.images?.length
+              ? 'images'
+              : session.identity !== identity
+                ? 'connection-changed'
+                : 'prefix-changed'
+        : undefined;
+    if (session && !reuse) await session.closeAndWait();
+    if (context.signal.aborted) throw new Error('CANCELLED');
     // Gemini CLI replaces its own coding-agent system prompt with the file named in GEMINI_SYSTEM_MD.
     // One file per conversation, so parallel tasks on the same connection never read each other's instructions.
     const systemFile = !reuse && system ? join(dirname(context.cwd), `system-${randomUUID()}.md`) : '';
@@ -309,6 +433,7 @@ export class GeminiAdapter implements ProviderAdapter {
     const searches = new Set<string>();
     const abort = () => (session ? session.close() : rpc.close());
     context.signal.addEventListener('abort', abort, { once: true });
+    if (context.signal.aborted) abort();
     try {
       let sessionId = reuse ? session!.threadId : '';
       if (!reuse) {
@@ -325,7 +450,7 @@ export class GeminiAdapter implements ProviderAdapter {
         sessionId = (await rpc.request('session/new', { cwd: context.cwd, mcpServers: [] })).sessionId;
         if (connection.model) await rpc.request('session/set_model', { sessionId, modelId: connection.model });
         if (session) {
-          Object.assign(session, { rpc, threadId: sessionId, system, model: connection.model || '', sent: '' });
+          Object.assign(session, { rpc, threadId: sessionId, system, identity, model: connection.model || '', sent: '' });
           session.onClose = removeSystemFile;
           rpc.onClose(() => {
             if (session.rpc === rpc) session.close();
@@ -359,6 +484,12 @@ export class GeminiAdapter implements ProviderAdapter {
           context.onReasoning?.(params.update.content.text);
       };
       const input = reuse ? prompt.slice(session!.sent.length) : prompt;
+      context.onTransport?.({
+        mode: reuse ? 'delta' : 'full',
+        sentChars: input.length,
+        startupMs: reuse ? 0 : Date.now() - started,
+        resetReason,
+      });
       await rpc.request(
         'session/prompt',
         {
@@ -386,105 +517,149 @@ export class GeminiAdapter implements ProviderAdapter {
 }
 
 export class ClaudeAdapter implements ProviderAdapter {
+  private conversations = new WeakMap<
+    ProviderSession,
+    { stream: Query; input: InputQueue<SDKUserMessage>; controller: AbortController; identity: string; sent: string; usage: TokenCount }
+  >();
   constructor(private loadSdk = () => import('@anthropic-ai/claude-agent-sdk')) {}
   async run(prompt: string, connection: Connection, context: ProviderContext) {
+    const started = Date.now();
     if (context.signal.aborted) throw new Error('CANCELLED');
     const authOptions = claudeSdkOptions(connection, context);
     const { query } = await this.loadSdk();
     if (context.signal.aborted) throw new Error('CANCELLED');
-    const controller = new AbortController(),
-      abort = () => controller.abort();
+    const session = !context.webSearch && !context.images?.length ? context.session : undefined;
+    const identity = providerSessionKey(connection, context);
+    let conversation = session ? this.conversations.get(session) : undefined;
+    const reuse = Boolean(conversation && conversation.identity === identity && prompt.startsWith(conversation.sent));
+    if (session && !reuse) {
+      await session.closeAndWait();
+      conversation = undefined;
+    }
+    if (context.signal.aborted) throw new Error('CANCELLED');
+    const controller = conversation?.controller || new AbortController(),
+      abort = () => {
+        controller.abort();
+        if (session) session.close();
+      };
     context.signal.addEventListener('abort', abort, { once: true });
     let text = '';
+    let stream: Query | undefined;
+    let keep = false;
     try {
-      const stream = query({
-        prompt: context.images?.length
-          ? (async function* () {
-              yield {
-                type: 'user' as const,
-                session_id: '',
-                parent_tool_use_id: null,
-                message: {
-                  role: 'user' as const,
-                  content: [
-                    { type: 'text' as const, text: prompt },
-                    ...(context.images || []).map(i => ({
-                      type: 'image' as const,
-                      source: { type: 'base64' as const, media_type: i.mime, data: i.data },
-                    })),
-                  ],
-                },
-              };
-            })()
-          : prompt,
-        options: {
-          cwd: context.cwd,
-          ...authOptions,
-          model: connection.model || undefined,
-          ...(context.system ? { systemPrompt: context.system } : {}),
-          ...(context.effort ? { effort: context.effort as any } : {}),
-          tools: context.webSearch ? ['WebSearch'] : [],
-          allowedTools: [],
-          mcpServers: {},
-          strictMcpConfig: true,
-          settingSources: [],
-          persistSession: false,
-          includePartialMessages: true,
-          abortController: controller,
-          maxTurns: context.webSearch ? 6 : 1,
-          ...(context.webSearch
-            ? {
-                hooks: {
-                  PreToolUse: [
-                    {
-                      hooks: [
-                        async (input: any) => {
-                          if (input.tool_name !== 'WebSearch')
-                            return {
-                              hookSpecificOutput: {
-                                hookEventName: 'PreToolUse' as const,
-                                permissionDecision: 'deny' as const,
-                                permissionDecisionReason: 'Only public web search is available.',
-                              },
-                            };
-                          context.onWebActivity?.('search');
-                          return {};
-                        },
+      const input = conversation?.input || (session ? new InputQueue<SDKUserMessage>() : undefined);
+      const delta = reuse ? prompt.slice(conversation!.sent.length) : prompt;
+      if (input) input.push({ type: 'user', session_id: '', parent_tool_use_id: null, message: { role: 'user', content: delta } });
+      stream =
+        conversation?.stream ||
+        query({
+          prompt:
+            input ||
+            (context.images?.length
+              ? (async function* () {
+                  yield {
+                    type: 'user' as const,
+                    session_id: '',
+                    parent_tool_use_id: null,
+                    message: {
+                      role: 'user' as const,
+                      content: [
+                        { type: 'text' as const, text: prompt },
+                        ...(context.images || []).map(i => ({
+                          type: 'image' as const,
+                          source: { type: 'base64' as const, media_type: i.mime, data: i.data },
+                        })),
                       ],
                     },
-                  ],
-                  PostToolUse: [
-                    {
-                      matcher: 'WebSearch',
-                      hooks: [
-                        async () => {
-                          context.onWebActivity?.('complete');
-                          return {};
-                        },
-                      ],
-                    },
-                  ],
-                  PostToolUseFailure: [
-                    {
-                      matcher: 'WebSearch',
-                      hooks: [
-                        async () => {
-                          context.onWebActivity?.('failed');
-                          return {};
-                        },
-                      ],
-                    },
-                  ],
-                },
-              }
-            : {}),
-          canUseTool: async (name, input) =>
-            context.webSearch && name === 'WebSearch'
-              ? { behavior: 'allow', updatedInput: input }
-              : { behavior: 'deny', message: 'Only host-managed drafting is available.' },
-        },
-      });
-      for await (const message of stream) {
+                  };
+                })()
+              : prompt),
+          options: {
+            cwd: context.cwd,
+            ...authOptions,
+            model: connection.model || undefined,
+            ...(context.system ? { systemPrompt: context.system } : {}),
+            ...(context.effort ? { effort: context.effort as any } : {}),
+            tools: context.webSearch ? ['WebSearch'] : [],
+            allowedTools: [],
+            mcpServers: {},
+            strictMcpConfig: true,
+            settingSources: [],
+            persistSession: false,
+            includePartialMessages: true,
+            abortController: controller,
+            maxTurns: context.webSearch ? 6 : session ? MAX_TOOL_TURNS + 1 : 1,
+            ...(context.webSearch
+              ? {
+                  hooks: {
+                    PreToolUse: [
+                      {
+                        hooks: [
+                          async (input: any) => {
+                            if (input.tool_name !== 'WebSearch')
+                              return {
+                                hookSpecificOutput: {
+                                  hookEventName: 'PreToolUse' as const,
+                                  permissionDecision: 'deny' as const,
+                                  permissionDecisionReason: 'Only public web search is available.',
+                                },
+                              };
+                            context.onWebActivity?.('search');
+                            return {};
+                          },
+                        ],
+                      },
+                    ],
+                    PostToolUse: [
+                      {
+                        matcher: 'WebSearch',
+                        hooks: [
+                          async () => {
+                            context.onWebActivity?.('complete');
+                            return {};
+                          },
+                        ],
+                      },
+                    ],
+                    PostToolUseFailure: [
+                      {
+                        matcher: 'WebSearch',
+                        hooks: [
+                          async () => {
+                            context.onWebActivity?.('failed');
+                            return {};
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                }
+              : {}),
+            canUseTool: async (name, input) =>
+              context.webSearch && name === 'WebSearch'
+                ? { behavior: 'allow', updatedInput: input }
+                : { behavior: 'deny', message: 'Only host-managed drafting is available.' },
+          },
+        });
+      if (session && !conversation) {
+        conversation = { stream, input: input!, controller, identity, sent: '', usage: { input: 0, output: 0, total: 0 } };
+        this.conversations.set(session, conversation);
+        session.onClose = () => {
+          input!.close();
+          controller.abort();
+          stream?.close();
+          this.conversations.delete(session);
+        };
+      }
+      context.onTransport?.({ mode: reuse ? 'delta' : 'full', sentChars: delta.length, startupMs: reuse ? 0 : Date.now() - started });
+      // Manual iteration preserves the SDK process after a result; for-await would close it on return.
+      while (true) {
+        const next = await stream.next();
+        if (next.done) {
+          if (session) throw new Error('PROVIDER_SESSION_INVALID');
+          break;
+        }
+        const message = next.value;
         if (message.type === 'stream_event' && message.event.type === 'content_block_delta' && message.event.delta.type === 'text_delta') {
           text += message.event.delta.text;
           context.emit(message.event.delta.text);
@@ -496,15 +671,35 @@ export class ClaudeAdapter implements ProviderAdapter {
         )
           context.onReasoning?.(message.event.delta.thinking);
         if (message.type === 'result' && message.usage) {
-          const u: any = message.usage,
-            input = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-          context.onUsage?.({ input, output: u.output_tokens || 0, total: input + (u.output_tokens || 0) });
+          const models = message.modelUsage && Object.values(message.modelUsage);
+          if (models?.length) {
+            const total = models.reduce(
+              (sum, usage) =>
+                combineUsage(
+                  sum,
+                  providerUsage('anthropic', {
+                    input_tokens: usage.inputTokens,
+                    output_tokens: usage.outputTokens,
+                    cache_read_input_tokens: usage.cacheReadInputTokens,
+                    cache_creation_input_tokens: usage.cacheCreationInputTokens,
+                  }),
+                ),
+              { input: 0, output: 0, total: 0 } as TokenCount,
+            );
+            context.onUsage?.(combineUsage(total, conversation?.usage || { input: 0, output: 0, total: 0 }, 'delta'));
+            if (conversation) conversation.usage = total;
+          } else context.onUsage?.(providerUsage('anthropic', message.usage));
         }
-        if (message.type === 'result' && message.is_error)
+        if (message.type === 'result' && (message.is_error || message.subtype !== 'success'))
           throw new Error(explainRuntimeFailure('errors' in message ? message.errors : []) || 'PROVIDER_REQUEST_FAILED');
         if (message.type === 'result' && message.subtype === 'success' && !text) {
           text = message.result;
           context.emit(text);
+        }
+        if (message.type === 'result' && session) {
+          conversation!.sent = prompt;
+          keep = true;
+          break;
         }
       }
       return text;
@@ -516,6 +711,10 @@ export class ClaudeAdapter implements ProviderAdapter {
       );
     } finally {
       context.signal.removeEventListener('abort', abort);
+      if (!keep) {
+        if (session) await session.closeAndWait();
+        else stream?.close?.();
+      }
     }
   }
 }
@@ -740,8 +939,34 @@ export async function compatibleModels(connection: Connection, key?: string, fet
 }
 
 export class CompatibleAdapter implements ProviderAdapter {
-  run(prompt: string, connection: Connection, context: ProviderContext) {
-    return compatibleRun(prompt, { baseUrl: connection.baseUrl || '', protocol: connection.protocol, model: connection.model }, context);
+  constructor(private fetcher: typeof fetch = fetch) {}
+  async run(prompt: string, connection: Connection, context: ProviderContext) {
+    if (connection.promptCaching === 'gemini-explicit') throw new Error('INVALID_INPUT');
+    try {
+      return await compatibleRun(
+        prompt,
+        {
+          baseUrl: connection.baseUrl || '',
+          protocol: connection.protocol,
+          model: connection.model,
+          maxOutputTokens: connection.maxOutputTokens,
+          promptCaching: connection.promptCaching,
+        },
+        context,
+        this.fetcher,
+      );
+    } catch (error) {
+      if (context.signal.aborted) throw new Error('CANCELLED');
+      const codes: Record<string, string> = {
+        PROVIDER_NETWORK_FAILED: 'PROVIDER_NETWORK',
+        PROVIDER_RATE_LIMIT: 'PROVIDER_BUSY',
+        PROVIDER_UNAVAILABLE: 'PROVIDER_BUSY',
+        PROVIDER_AUTH_FAILED: 'LOGIN_REQUIRED',
+      };
+      if (error instanceof Error && codes[error.message])
+        throw Object.assign(new Error(codes[error.message]), { retryAfterMs: (error as any).retryAfterMs });
+      throw error;
+    }
   }
 }
 export function adapter(provider: string): ProviderAdapter {

@@ -35,6 +35,7 @@ Default modes are `ask`, `acceptEdits`, `plan` and `auto` (Full auto), with `ask
   "hooks": [],
   "mcpServers": [],
   "prices": {},
+  "modelLimits": {},
   "budgets": {}
 }
 ```

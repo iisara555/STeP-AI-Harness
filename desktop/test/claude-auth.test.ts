@@ -318,7 +318,7 @@ test('Claude subscription streams text and usage with tools disabled through the
   });
   assert.equal(answer, 'สวัสดี');
   assert.deepEqual(deltas, ['สวัสดี']);
-  assert.deepEqual(usage, [{ input: 5, output: 4, total: 9 }]);
+  assert.deepEqual(usage, [{ input: 5, output: 4, total: 9, cachedInput: 2 }]);
   assert.equal(captured.options.pathToClaudeCodeExecutable, f.executable);
   assert.deepEqual(captured.options.tools, []);
   assert.deepEqual(captured.options.settingSources, []);

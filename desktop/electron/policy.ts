@@ -99,7 +99,12 @@ export type Policy = {
   hooks: HookDefinition[];
   mcpServers: McpServer[];
   /** US dollars per million tokens, keyed by model id or `provider:*`. */
-  prices: Record<string, { input: number; output: number }>;
+  prices: Record<string, { input: number; output: number; cachedInput?: number; cacheWriteInput?: number }>;
+  /** Model id or provider:*; only explicit administrator configuration changes adapter defaults. */
+  modelLimits?: Record<
+    string,
+    { contextWindow?: number; maxOutputTokens?: number; promptCaching?: 'off' | 'anthropic-ephemeral' | 'gemini-explicit' }
+  >;
   budgets: { dailyTokens?: number; monthlyCostUsd?: number };
   /** privateHosts: intranet hosts the assistant's browser may open although they resolve to private addresses. */
   network?: { proxyUrl?: string; privateHosts?: string[] };
@@ -501,10 +506,47 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
           Number.isFinite(price.output) &&
           price.input >= 0 &&
           price.output >= 0
-        )
-          policy.prices[model.slice(0, 120)] = { input: price.input, output: price.output };
-        else problems.push(`price for ${model} needs input and output per million tokens`);
+        ) {
+          const rates: Policy['prices'][string] = { input: price.input, output: price.output };
+          for (const field of ['cachedInput', 'cacheWriteInput'] as const) {
+            if (price[field] === undefined) continue;
+            if (typeof price[field] !== 'number' || !Number.isFinite(price[field]) || price[field] < 0)
+              problems.push(`price for ${model} has invalid ${field}`);
+            else rates[field] = price[field];
+          }
+          policy.prices[model.slice(0, 120)] = rates;
+        } else problems.push(`price for ${model} needs input and output per million tokens`);
       }
+  }
+  if (raw.modelLimits !== undefined) {
+    if (!isObject(raw.modelLimits)) problems.push('modelLimits must be an object');
+    else {
+      policy.modelLimits = {};
+      for (const [model, limits] of Object.entries(raw.modelLimits).slice(0, 200)) {
+        if (!isObject(limits)) {
+          problems.push(`modelLimits for ${model} must be an object`);
+          continue;
+        }
+        const valid: NonNullable<Policy['modelLimits']>[string] = {};
+        for (const [field, minimum, maximum] of [
+          ['contextWindow', 512, 2_000_000],
+          ['maxOutputTokens', 1, 65536],
+        ] as const) {
+          if (limits[field] === undefined) continue;
+          if (!Number.isSafeInteger(limits[field]) || limits[field] < minimum || limits[field] > maximum)
+            problems.push(`modelLimits for ${model} has invalid ${field}`);
+          else valid[field] = limits[field];
+        }
+        if (limits.promptCaching !== undefined) {
+          if (!['off', 'anthropic-ephemeral', 'gemini-explicit'].includes(limits.promptCaching))
+            problems.push(`modelLimits for ${model} has invalid promptCaching`);
+          else valid.promptCaching = limits.promptCaching;
+        }
+        if (valid.contextWindow && valid.maxOutputTokens && valid.maxOutputTokens >= valid.contextWindow)
+          problems.push(`modelLimits for ${model} needs output below contextWindow`);
+        policy.modelLimits[model.slice(0, 160)] = valid;
+      }
+    }
   }
   if (raw.budgets !== undefined) {
     if (!isObject(raw.budgets)) problems.push('budgets must be an object');

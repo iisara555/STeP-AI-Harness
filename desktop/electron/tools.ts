@@ -15,7 +15,7 @@ import { fetchPublic, publicUrl } from './web-fetch';
 import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
-import { documentSection } from './knowledge';
+import { documentSection, documentHeadings, OrganizationKnowledge } from './knowledge';
 import { mainLocale, tm } from './i18n';
 
 // What the employee reads on the status line while a tool runs, in plain words instead of the tool's name.
@@ -446,6 +446,16 @@ export class DesktopTools {
             await check();
             return scope.search(target);
           case 'skill': {
+            if (a.action === 'catalog')
+              return {
+                entries: ((await this.harness.catalog?.()) || [])
+                  .filter(entry => entry.status === 'routed')
+                  .map(entry => ({
+                    id: entry.name,
+                    name: entry.title || entry.name,
+                    summary: String(entry.description || '').slice(0, 140),
+                  })),
+              };
             const entry = ((await this.harness.catalog?.()) || []).find(e => e.name === target && e.status === 'routed');
             if (!entry) throw new Error('SKILL_NOT_ROUTED');
             const route = await this.harness.route(scope.query, {
@@ -464,6 +474,12 @@ export class DesktopTools {
             return { id: target, route: c, text: (await Promise.all(paths.map((p: string) => this.context(p)))).join('\n\n') };
           }
           case 'reference': {
+            if (a.action === 'catalog')
+              return {
+                entries: (
+                  await new OrganizationKnowledge(this.harness.root, this.harness.documentCatalog || (async () => [])).entries()
+                ).map(entry => ({ id: entry.id, name: entry.title })),
+              };
             let ref = (await this.harness.documentMetadata?.([target]))?.[0];
             // The AI sometimes names a document by its path or title instead of its ID; resolve those to the registered ID.
             if (!ref?.path || ref.status === 'unregistered') {
@@ -474,6 +490,7 @@ export class DesktopTools {
             }
             if (!ref?.path || ref.status === 'unregistered') throw new Error('REFERENCE_UNAVAILABLE');
             const text = await this.context(ref.path);
+            if (a.action === 'outline') return { id: ref.id, title: ref.title, sections: documentHeadings(text) };
             const part = typeof a.section === 'string' && a.section.trim() ? documentSection(text, a.section) : undefined;
             return part ? { ...ref, section: a.section, text: part } : { ...ref, text };
           }

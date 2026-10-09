@@ -1,4 +1,6 @@
 export const usageEn: Record<string, string> = {
+  'cache tokens ยังไม่มีราคาแยก จึงประมาณด้วยราคา input ปกติ':
+    'cache tokens have no separate rate; the estimate uses the regular input rate',
   'ยังไม่ได้อ่าน Usage จากผู้ให้บริการ': 'Provider usage has not been read yet',
   ยังไม่มีช่องอ่านโควตาหรือเครดิตสำหรับการเชื่อมต่อนี้: 'Quota and credit retrieval is not available for this connection yet',
   'เชื่อมต่อและทดสอบบัญชีนี้ก่อนอ่าน Usage': 'Connect and test this account before reading usage',
