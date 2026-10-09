@@ -377,7 +377,7 @@ export default function App() {
             const label = event.text || '';
             setProgress(label);
             setActivityAt(Date.now());
-            setActivities(list => (list.at(-1) === label ? list : [...list, label].slice(-5)));
+            setActivities(list => (list.at(-1) === label ? list : [...list, label].slice(-30)));
           }
           if (event.type === 'delta') setStream(s => (s + (event.text || '')).slice(-60000));
           if (event.type === 'reasoning') setReasoning(s => (s + (event.text || '')).slice(-20000));
@@ -1670,7 +1670,7 @@ export default function App() {
                       </ol>
                     )}
                     {reasoning && (
-                      <details className="thinking" open={!liveText}>
+                      <details className="thinking" open>
                         <summary>
                           <Brain size={14} />
                           {t('ความคิดของ AI')}
@@ -1679,6 +1679,17 @@ export default function App() {
                       </details>
                     )}
                     {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
+                    {/* Finished steps stay listed in order above the current one, never folded away. */}
+                    {activities.length > 1 && (
+                      <ol className="activity-history" aria-label={t('ขั้นตอนที่ทำแล้ว')}>
+                        {activities.slice(0, -1).map((label, index) => (
+                          <li key={index}>
+                            <Check size={13} />
+                            <span>{t(label)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
                     {/* One quiet line while working, as in Claude and Codex: what is happening and for how long. */}
                     <div className="activity" role="status" aria-live="polite">
                       <ThinkingScribble />
@@ -1690,16 +1701,6 @@ export default function App() {
                     </div>
                     {now - activityAt > 45000 && !liveText && (
                       <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
-                    )}
-                    {activities.length > 1 && (
-                      <details className="activity-history">
-                        <summary>{t('ดูขั้นตอนที่ทำแล้ว')}</summary>
-                        <ol>
-                          {activities.slice(0, -1).map((label, index) => (
-                            <li key={index}>{label}</li>
-                          ))}
-                        </ol>
-                      </details>
                     )}
                   </article>
                 )}

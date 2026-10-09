@@ -6,6 +6,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
+import { createServer as createTcpServer } from 'node:net';
 import { installPack, enablePack } from '../../src/modules/packs/index.js';
 
 const home = await mkdtemp(join(tmpdir(), 'step-phase5-ui-')),
@@ -36,12 +37,21 @@ const server = createServer(async (req, res) => {
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const baseUrl = `http://127.0.0.1:${server.address().port}/v1`;
+// An endpoint that accepts connections and never answers, so a connection test stays waiting.
+const silent = createTcpServer(() => {});
+await new Promise(r => silent.listen(0, '127.0.0.1', r));
+const silentUrl = `http://127.0.0.1:${silent.address().port}/v1`;
 // Strict consent: this smoke checks the source dialog.
 const policy = {
   pilot: false,
   checks: { authority: true, privacy: true },
   features: { compatibleProviders: true, voice: true, skillPacks: true, toolLoop: false },
-  providers: { compatible: [{ name: 'Fixture', baseUrl, protocol: 'openai' }] },
+  providers: {
+    compatible: [
+      { name: 'Fixture', baseUrl, protocol: 'openai' },
+      { name: 'Silent', baseUrl: silentUrl, protocol: 'openai' },
+    ],
+  },
   skillPacks: { approvedDigests: [pack.digest] },
   prices: { fixture: { input: 1, output: 2 } },
 };
@@ -79,6 +89,27 @@ try {
     const c = await window.step.call('connection', { provider: 'compatible', mode: 'api', baseUrl, protocol: 'openai', model: 'fixture' });
     await window.step.call('connect', { id: c.id });
   }, baseUrl);
+  // Removing a connection while its test is still waiting cancels the wait instead of refusing, and the
+  // finished wait does not bring the connection back.
+  const waitingId = await page.evaluate(
+    async url =>
+      (
+        await window.step.call('connection', {
+          provider: 'compatible',
+          mode: 'api',
+          baseUrl: url,
+          protocol: 'openai',
+          model: 'fixture',
+        })
+      ).id,
+    silentUrl,
+  );
+  const waiting = page.evaluate(id => window.step.call('connect', { id }).catch(e => e.message), waitingId);
+  await page.waitForTimeout(500);
+  await page.evaluate(id => window.step.call('removeConnection', { id }), waitingId);
+  await waiting;
+  assert.ok(!(await page.evaluate(() => window.step.call('snapshot'))).connections.some(c => c.id === waitingId));
+  silent.close();
   await page.reload();
   await expect(page.getByRole('button', { name: 'เริ่มงานใหม่', exact: true }).first()).toBeVisible();
   const composer = page.getByRole('textbox', { name: 'พิมพ์คำขอ' });

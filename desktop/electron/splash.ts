@@ -20,6 +20,8 @@ ${logo.css}
 
 export class Splash {
   private window?: BrowserWindow;
+  /** When the loading window opened, so it can stay up for a minimum time. */
+  readonly openedAt = Date.now();
   /** Opens the loading window; the theme and language come from the person's saved settings. */
   constructor() {
     const dark = nativeTheme.shouldUseDarkColors;
