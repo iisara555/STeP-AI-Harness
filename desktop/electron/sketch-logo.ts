@@ -1,6 +1,7 @@
-// The loading window's logo: the STeP symbol drawn as one loose, looping line in a naive hand-drawn style, as if the
-// pen never leaves the paper. It traces each bar a little more than once with small curls, loops down to the next bar,
-// then fades and draws again while the app loads. Pure SVG and CSS, generated here so the page needs no script.
+// The loading window's logo: the STeP symbol as one loose, looping line in a naive hand-drawn style, as if the pen
+// never leaves the paper. It traces each bar a little more than once with curls and loops down to the next bar. The
+// logo is whole from the start; the line "boils" (a few redrawn versions shown in turn), so it wiggles while the app
+// loads. Pure SVG and CSS, generated here so the page needs no script.
 
 type Point = [number, number];
 /** The symbol's three bars as top-left, top-right, bottom-right, bottom-left (src/assets/step-symbol-colour.svg). */
@@ -24,10 +25,9 @@ const BARS: Point[][] = [
     [0, 42.63],
   ],
 ];
-/** Seconds for one draw, hold and fade. */
-const CYCLE = 4.2;
-/** Share of the cycle spent drawing; the rest holds the finished logo, then fades it. */
-const DRAWING = 0.62;
+/** Redrawn versions of the line, and how long each stays on screen. */
+const FRAMES = 3;
+const FRAME_SECONDS = 0.14;
 
 /** A small seeded generator, so the drawing looks the same on every launch. */
 function random(seed: number) {
@@ -96,43 +96,30 @@ function smooth(points: Point[]) {
   }
   return d;
 }
-const length = (points: Point[]) => points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
-
-/** The animated drawing: yellow for the top bar, then one dark line (light in the dark theme) for the rest. */
-export function sketchLogo(dark: boolean) {
-  const rand = random(2569);
-  const ink = dark ? '#f4f1ea' : '#2b2627';
+/** One version of the whole line, from its own seed, so each version wobbles a little differently. */
+function line(seed: number) {
+  const rand = random(seed);
   const traces = BARS.map(bar => trace(bar, rand));
   // The pen keeps going between bars: from where one trace ends it loops down to the start of the next.
-  const segments: { points: Point[]; color: string }[] = [{ points: traces[0], color: dark ? '#ffc609' : '#f2b705' }];
+  const points = [...traces[0]];
   for (let i = 1; i < traces.length; i++) {
     const from = traces[i - 1][traces[i - 1].length - 1],
       to = traces[i][0];
-    const bridge: Point[] = [from, ...curl(lerp(from, to, 0.5), rand, 1.3), to];
-    segments.push({ points: [...bridge, ...traces[i].slice(1)], color: ink });
+    points.push(...curl(lerp(from, to, 0.5), rand, 1.3), ...traces[i]);
   }
-  const total = segments.reduce((sum, s) => sum + length(s.points), 0);
-  let start = 0;
-  const strokes = segments.map(s => {
-    const share = (length(s.points) / total) * DRAWING;
-    const stroke = { d: smooth(s.points), color: s.color, from: start, to: start + share };
-    start += share;
-    return stroke;
-  });
-  const percent = (n: number) => Math.round(n * 1000) / 10;
-  const css =
-    strokes
-      .map(
-        (s, i) =>
-          `@keyframes s${i}{0%,${percent(s.from)}%{stroke-dashoffset:1}${percent(s.to)}%,100%{stroke-dashoffset:0}}` +
-          `.s${i}{animation:s${i} ${CYCLE}s linear infinite,fade ${CYCLE}s ease-in infinite}`,
-      )
-      .join('') +
-    `@keyframes fade{0%,88%{opacity:1}98%,100%{opacity:0}}
-.sketch path{fill:none;stroke-width:.45;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 2;stroke-dashoffset:1}
-@media (prefers-reduced-motion:reduce){.sketch path{animation:none!important;stroke-dashoffset:0;opacity:1}}`;
-  const paths = strokes.map((s, i) => `<path class="s${i}" pathLength="1" d="${s.d}" stroke="${s.color}"/>`).join('');
-  // A little grain on the line, so it reads as a hand-drawn line rather than a vector stroke.
-  const svg = `<svg class="sketch" role="img" aria-label="STeP Desktop" viewBox="-5 -5 88.67 52.63"><defs><filter id="pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="0.45"/></filter></defs><g filter="url(#pencil)">${paths}</g></svg>`;
+  return smooth(points);
+}
+
+/** The whole logo in one colour (dark, or off-white in the dark theme), its line wiggling in place. */
+export function sketchLogo(dark: boolean) {
+  const ink = dark ? '#f4f1ea' : '#231f20';
+  const cycle = FRAMES * FRAME_SECONDS;
+  const frames = Array.from({ length: FRAMES }, (_, i) => line(2569 + i * 101));
+  // One path whose shape steps through the versions (CSS d animation), so exactly one version is always on screen.
+  const step = (i: number) => `${Math.round((i * 100) / FRAMES)}%{d:path("${frames[i]}")}`;
+  const css = `.sketch path{fill:none;stroke:${ink};stroke-width:.95;stroke-linecap:round;stroke-linejoin:round;animation:boil ${cycle}s steps(1) infinite}
+@keyframes boil{${frames.map((_, i) => step(i)).join('')}100%{d:path("${frames[0]}")}}
+@media (prefers-reduced-motion:reduce){.sketch path{animation:none}}`;
+  const svg = `<svg class="sketch" role="img" aria-label="STeP Desktop" viewBox="-5 -5 88.67 52.63"><path d="${frames[0]}"/></svg>`;
   return { css, svg };
 }
