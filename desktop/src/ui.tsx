@@ -519,9 +519,9 @@ export function ProviderFields(props: {
               >
                 <span className="provider-tile-head">
                   <strong>{tile.label}</strong>
-                  {tile.id === 'antigravity' && <span className="provider-recommended">{t('แนะนำ')}</span>}
                   <span className={'provider-kind ' + tile.kind}>{t(KIND_LABEL[tile.kind])}</span>
                 </span>
+                {tile.id === 'antigravity' && <span className="provider-recommended">{t('แนะนำ')}</span>}
                 <span className="provider-tile-text">{tile.description}</span>
               </button>
             ))}

@@ -1195,6 +1195,8 @@ nav button,
 .provider-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  /* Every card is as tall as the tallest one, so a long name or a wrapped label does not make a row stand out. */
+  grid-auto-rows: 1fr;
   gap: 8px;
 }
 /* First-run setup shows its four main services in one row, so the connect button stays above the fold. */
@@ -1227,17 +1229,35 @@ nav button,
 .provider-tile > span {
   width: 100%;
 }
+/* The name wraps on its own line space; the sign-in or API key label stays at the top right of every card. */
 .provider-tile-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 6px;
-  flex-wrap: wrap;
 }
-.provider-recommended {
+.provider-tile-head > strong {
+  min-width: 0;
+}
+.provider-tile-head > .provider-kind {
+  flex: none;
+}
+/* "Recommended" sits on the card's top edge, so it does not add a line and make that card taller. */
+.provider-tile {
+  position: relative;
+}
+.provider-tile > .provider-recommended {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  width: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-ink);
+  line-height: 16px;
 }
 .provider-tile-text {
   font-size: 12px;
