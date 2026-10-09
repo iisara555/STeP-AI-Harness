@@ -137,7 +137,7 @@ export type StepTrace = {
 };
 /** Host text estimates and provider observations stay separate. No task text is persisted here. */
 export type ProviderCallTrace = {
-  kind: 'answer' | 'summary' | 'web-search';
+  kind: 'answer' | 'summary' | 'web-search' | 'check';
   outcome: 'running' | 'completed' | 'error';
   code?: string;
   ms: number;
@@ -181,6 +181,10 @@ export type Message = {
   feedback?: 'good' | 'fix';
   /** How long the answer took, from sending the request to the finished reply. */
   ms?: number;
+  /** Titles of the STeP documents the answer drew on: strong matches given to the AI and documents it opened. */
+  docSources?: string[];
+  /** Policy answerCheck: statements about STeP that the document excerpts did not support (empty: all supported). */
+  check?: { unsupported: { claim: string; reason: string }[] };
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };

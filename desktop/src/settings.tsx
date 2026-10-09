@@ -36,6 +36,7 @@ const featureNames: Record<string, string> = localized({
   claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
   ocrTrial: 'เครื่องมือทดลอง OCR',
+  answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
 });
 
 export function SettingsPanel({

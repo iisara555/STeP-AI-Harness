@@ -37,6 +37,8 @@ import {
   ImagePlus,
   ChevronDown,
   Compass,
+  BookOpen,
+  AlertTriangle,
 } from 'lucide-react';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -1563,6 +1565,35 @@ export default function App() {
                         ))}
                       </div>
                     )}
+                    {!!message.docSources?.length && (
+                      <p className="doc-sources small muted">
+                        <BookOpen size={13} />
+                        <span>
+                          {t('อ้างอิงเอกสาร STeP')}: {message.docSources.join(' · ')}
+                        </span>
+                      </p>
+                    )}
+                    {message.check &&
+                      (message.check.unsupported.length ? (
+                        <div className="answer-check warn" role="note">
+                          <p>
+                            <AlertTriangle size={14} />
+                            {t('ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้')}
+                          </p>
+                          <ul>
+                            {message.check.unsupported.map((item, i) => (
+                              <li key={i}>
+                                “{item.claim}”{item.reason && <span className="muted"> · {item.reason}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="answer-check ok small muted">
+                          <ShieldCheck size={13} />
+                          {t('ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร')}
+                        </p>
+                      ))}
                     {!!message.webSources?.length && (
                       <div className="web-sources" aria-label={t('แหล่งข้อมูลจากการค้นเว็บ')}>
                         <span>{t('แหล่งข้อมูลจาก Web Search')}</span>

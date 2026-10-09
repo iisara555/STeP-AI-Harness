@@ -11,10 +11,17 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - While the AI works, the chat shows one status line that changes in place (for example "กำลังอ่าน Skill" then "กำลังเขียนคำตอบ") instead of a growing list of finished steps, so only the answer and the current step are on screen. "ความคิดของ AI" starts folded; open it to read the AI's reasoning.
 - Each answer shows how long it took (for example "ใช้เวลา 0:28"), counted from sending the request to the finished reply.
 - Gemini through Antigravity shows its answer while it is being written instead of all at once at the end. If an attempt is stopped (it tried a tool STeP does not allow) and the app asks again, the stopped attempt's text is taken off the screen first.
+- An answer about STeP lists the organization documents it drew on under the reply ("อ้างอิงเอกสาร STeP: …"), so employees can see it came from STeP's own sources.
+- New policy feature `answerCheck` (off by default): when on, an answer about STeP is checked once more by the AI against the same document excerpts, and any statement the documents do not support is listed under the answer for the employee to verify. A failed check never blocks the answer.
 
 ### Organization policy
 
 - When `desktop-policy.json` cannot be used, the policy tab now lists the exact reason (for example invalid JSON, an unknown feature name, or a file that is not administrator-managed), and `diagnostics.jsonl` records it too. The Windows permission check on the file waits up to 15 seconds instead of 5, so a slow PowerShell start no longer counts as an untrusted file.
+
+### Development
+
+- `AGENTS.md` (with `CLAUDE.md` pointing to it) is the starting page for any AI coding agent: the repository map, the checks to run, and the rules (answers about STeP from org documents, Thai first, releases, no direct pushes to main). `docs/progress.md` records the current state and what waits on the owner; the old `HANDOFF.md` moved to `docs/archive/`.
+- The concurrent user-config write test no longer fails on Windows: a lock file that Windows is still deleting (EPERM/EACCES) now counts as busy and is retried.
 
 ## Desktop v0.5.36 — 2026-10-09
 

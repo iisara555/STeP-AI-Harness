@@ -321,6 +321,7 @@ async function main() {
     documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
     visionEnabled: () => policyState.policy.features.vision,
+    answerCheck: () => policyState.policy.features.answerCheck,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
