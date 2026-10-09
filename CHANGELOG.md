@@ -6,7 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-### Fixes after Desktop 0.5.33 review
+## Desktop v0.5.34 — 2026-10-09
+
+### ChatGPT receipts and Antigravity (PR #117)
+
+- ChatGPT (Codex) receipt reading and the OCR filter send their JSON shape as the turn's output schema, so replies match what the host parses; the OCR filter limits each field to its own OCR candidates. Gemini API receipt requests ask for JSON output.
+- Antigravity continues a run's tool turns on one `agy` process and sends only new tool results, with one fresh restart if the process stops. Structured requests pass `--json-schema`. Pin `agy` 1.3.2, check its version once per binary, and count thinking and cache-read tokens.
+
+### Fixes after Desktop 0.5.33 review (PR #116)
 
 - A summary, translation or spelling request that touches STeP itself (a matching registered document, an STeP MIS request, or words such as STeP, ระเบียบ, สวัสดิการ, วันลา, ฝ่ายบุคคล) now keeps full context and the organization's documents. Only text with no organization sign uses the light text scope.
 - Recover a retained Claude or Copilot conversation once with the full prompt when its SDK process stops between tool turns, as Codex and Gemini already do. Add Thai messages for a dropped AI conversation and a denied native tool.
