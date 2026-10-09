@@ -8,6 +8,10 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Desktop v0.5.35 — 2026-10-09
 
+### Fix
+
+- The phone-number mask no longer hides digits inside a task id or other UUID (an id ending `-027766844efc` looked like a Bangkok number), so an exported conversation keeps its real id.
+
 ### Documentation: new README and organization knowledge in its own folder
 
 - Rewrite the README: answers about STeP come from organization documents, the AI services that connect, first-open warnings on Windows and Mac, the three ways to read a receipt, the tour, speaking styles, Learning Inbox, AI usage, What's New and language, and in-app updates on both systems.

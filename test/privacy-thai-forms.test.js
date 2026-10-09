@@ -85,3 +85,14 @@ test('downstream consumers never receive original text when a redacted copy is w
   assert.equal(privacySafeText(result), WITHHELD_TEXT);
   assert.ok(!privacySafeText(result).includes(result.original));
 });
+
+test('privacy gate leaves UUIDs and hex ids alone even when their digits look like a phone number', () => {
+  for (const id of ['e2927bb6-b132-4881-a21f-027766844efc', 'e2927bb6-b132-4881-a21f-a0812345678c', '0812345678ab1234']) {
+    clearPrivacyScanCache();
+    const result = evaluatePrivacyGate(`{"id":"${id}"}`);
+    assert.ok(!result.findings.some((f) => f.type === 'thai-phone'), `${id}: ${JSON.stringify(result.findings)}`);
+    assert.ok(result.redactedText.includes(id), `${id}: ${result.redactedText}`);
+  }
+  clearPrivacyScanCache();
+  assert.ok(evaluatePrivacyGate('{"phone":"0812345678"}').findings.some((f) => f.type === 'thai-phone'));
+});

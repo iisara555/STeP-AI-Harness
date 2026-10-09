@@ -75,8 +75,9 @@ const PATTERNS = [
     id: 'thai-phone',
     label: 'หมายเลขโทรศัพท์',
     class: 'restricted',
-    // Thai numbers are grouped 0XX-XXX-XXXX, 0X-XXXX-XXXX or with dots.
-    regex: /(?<!\d)(?:\+66[-\s.]?|0)\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}(?!\d)/g,
+    // Thai numbers are grouped 0XX-XXX-XXXX, 0X-XXXX-XXXX or with dots. Digits inside a UUID or hex identifier
+    // (a task id ending -027766844efc) are not a phone number.
+    regex: /(?<!\d|[\dA-Fa-f]-)(?:\+66[-\s.]?|(?<![A-Za-z])0)\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}(?![\dA-Za-z])/g,
     replacement: '[หมายเลขโทรศัพท์ถูกปิดบัง]',
   },
   {
