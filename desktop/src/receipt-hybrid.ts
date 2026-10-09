@@ -1,7 +1,20 @@
 import { RECEIPT_FIELDS, validReceiptRegion, type ReceiptField, type ReceiptRegion, type parseVisionReading } from './receipt-vision';
 import { formValues } from './receipt-workflow';
 
-/** Prefer image transcription for handwriting; the reducer still protects every manual edit. */
+const AMOUNT_FIELDS: ReceiptField[] = ['subtotal', 'vat', 'total'];
+
+/** A Vision value the form can take as is: amounts formatted to two decimals, a 13-digit tax ID. Anything else stays for review. */
+function wellFormed(key: ReceiptField, value: string) {
+  if (AMOUNT_FIELDS.includes(key)) return /^\d+\.\d{2}$/.test(value);
+  if (key === 'taxId') return /^\d{13}$/.test(value);
+  return true;
+}
+
+/**
+ * The image reading fills the form: it reads printed and handwritten receipts more reliably than local OCR.
+ * OCR keeps a field only when Vision left it empty, marked it for review or was unsure (confidence below 0.5)
+ * while OCR had a value, or when Vision's amount or tax ID is malformed. The reducer still protects every manual edit.
+ */
 export function visionFormSuggestions(
   current: Record<string, string>,
   guessed: Record<string, unknown>,
@@ -11,8 +24,12 @@ export function visionFormSuggestions(
   const values: Partial<Record<ReceiptField, string>> = {};
   for (const key of RECEIPT_FIELDS) {
     const field = reading.fields[key];
-    const handwritten = field?.isHandwritten ?? reading.features.handwritten;
-    if (normalized[key] && (!current[key]?.trim() || guessed[key] || handwritten === true)) values[key] = normalized[key];
+    const value = normalized[key];
+    if (!value || !wellFormed(key, value)) continue;
+    const ocrHolds = Boolean(current[key]?.trim()) && !guessed[key];
+    const unsure = field?.needsReview === true || (typeof field?.confidence === 'number' && field.confidence < 0.5);
+    if (ocrHolds && unsure) continue;
+    values[key] = value;
   }
   return values;
 }

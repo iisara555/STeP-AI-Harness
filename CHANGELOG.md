@@ -25,6 +25,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - `AGENTS.md` (with `CLAUDE.md` pointing to it) is the starting page for any AI coding agent: the repository map, the checks to run, and the rules (answers about STeP from org documents, Thai first, releases, no direct pushes to main). `docs/progress.md` records the current state and what waits on the owner; the old `HANDOFF.md` moved to `docs/archive/`.
 - The concurrent user-config write test no longer fails on Windows: a lock file that Windows is still deleting (EPERM/EACCES) now counts as busy and is retried.
 
+### Receipt check: the image reading fills the form
+
+- **Before:** when the AI read the receipt image, its values replaced the local OCR only for handwriting, empty boxes or OCR guesses. On a printed receipt a wrong OCR value stayed in the form even when the AI had read it correctly.
+- **After:** the AI image reading fills each field, printed or handwritten. OCR keeps a field only when the AI left it empty, marked it for review or reported confidence below 0.5 while OCR had a value. AI amounts must be a plain number with two decimals and a tax ID must be 13 digits, otherwise they are not written into the form. Fields where the two readings differ are still marked "OCR กับ AI อ่านต่างกัน", manual edits are never overwritten, and one confirmation is still required.
+- Tests: `receipt-hybrid.test.ts`.
+
 ## Desktop v0.5.36 — 2026-10-09
 
 ### AI connection page and chat (PR #122)
