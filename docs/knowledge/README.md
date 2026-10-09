@@ -29,3 +29,4 @@
 - ทุกเอกสารต้องลงทะเบียนใน [`manifest/documents.yaml`](../../manifest/documents.yaml) ระบุเจ้าของ แหล่งที่มา และวันที่ตรวจล่าสุด AI ค้นและอ้างอิงจากทะเบียนนั้น
 - เอกสารใหม่ให้วางในโฟลเดอร์นี้ แล้วเพิ่ม path ในทะเบียน ใน `package.json` (`files`) และใน `src/modules/role-resolver.js` ถ้าต้องติดตั้งไปกับชุด Skills จากนั้นรัน `npm run validate` และ `node scripts/build-claude-plugin.mjs`
 - เมื่อข้อมูลเปลี่ยน ให้แก้ที่นี่ที่เดียว ห้ามคัดลอกเนื้อหาไปไว้ใน Skill
+- ถ้าพนักงานมักถามด้วยคำที่เอกสารไม่ได้ใช้ (เช่น ถาม "ลาพักร้อน" แต่เอกสารเขียน "ลาพักผ่อน") ให้เพิ่ม `keywords: [คำ, คำ]` ในรายการของเอกสารนั้นใน `manifest/documents.yaml` การค้นของ STeP Desktop จะนับคำเหล่านี้เหมือนหัวข้อของเอกสาร จากนั้นเพิ่มคำถามตัวอย่างใน `desktop/eval/knowledge-questions.json` และรัน `npx tsx --test test/knowledge-accuracy.test.ts` ในโฟลเดอร์ `desktop` เพื่อตรวจว่าคะแนนไม่ลดลง

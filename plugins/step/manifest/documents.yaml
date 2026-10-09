@@ -141,6 +141,7 @@ documents:
 
   afp-operational-circulars:
     title: 'แนวปฏิบัติงาน AFP: Lead Time, หมวดค่าใช้จ่าย และ E-Signature'
+    keywords: [ส่งเอกสารเบิกล่วงหน้า, ส่งเบิก, เบิกจ่าย, ระยะเวลาดำเนินการ]
     path: docs/knowledge/afp-operational-circulars.md
     owner: afp
     documentType: team-circular
@@ -152,6 +153,7 @@ documents:
       E-Signature ใน STeP MIS และเงินชดเชยคอมพิวเตอร์พกพา
   cc-iso-document-register:
     title: ทะเบียนเอกสารระบบคุณภาพ ทีม CC (ISO Document Register)
+    keywords: [รหัสเอกสาร QP, แบบฟอร์ม FM, WI, Revision]
     path: docs/knowledge/cc-iso-document-register.md
     owner: qs
     documentType: team-circular
@@ -197,6 +199,7 @@ documents:
 
   step-public-profile:
     title: "ข้อมูลทั่วไปของ STeP จากแหล่งสาธารณะ (พันธกิจ บริการ ช่องทางทางการ)"
+    keywords: [พันธกิจ, วิสัยทัศน์, อุทยานวิทยาศาสตร์และเทคโนโลยี, บริการของอุทยาน]
     path: docs/knowledge/step-public-profile.md
     owner: cc
     type: organization-reference
@@ -279,6 +282,7 @@ documents:
 
   hr-personnel-welfare-2569:
     title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคล และสวัสดิการพนักงาน พ.ศ. 2569"
+    keywords: [ลาพักร้อน, วันลา, สวัสดิการ, เวลาทำงาน]
     owner: hd
     type: organization-announcement
     process: people.personnel-welfare
@@ -390,6 +394,7 @@ documents:
 
   qms-working-master-list:
     title: "Master Document List ฉบับทำงาน (รวบรวมจาก QP ที่ QS ส่งมาและหนังสือเวียนของ QS)"
+    keywords: [Master List, Rev ล่าสุด, เอกสารควบคุม]
     path: docs/knowledge/qms-working-master-list.md
     owner: qs
     type: working-index

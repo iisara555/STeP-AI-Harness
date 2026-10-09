@@ -1,5 +1,6 @@
 // Launches the packaged app (not the dev build) and checks it opens, runs without page errors, and ships the
 // organization documents, registry and Skills the assistant reads. Usage: node test/packaged-launch-smoke.mjs <executable>
+import { mainWindow } from './main-window.mjs';
 import { _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -16,7 +17,7 @@ delete env.ELECTRON_RUN_AS_NODE;
 const timeout = Number(process.env.STEP_LAUNCH_TIMEOUT) || 90000;
 const app = await electron.launch({ executablePath, env, timeout });
 try {
-  const page = await app.firstWindow({ timeout });
+  const page = await mainWindow(app, timeout);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout });

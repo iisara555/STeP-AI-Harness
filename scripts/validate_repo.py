@@ -439,7 +439,7 @@ MANIFEST_LINE_RE = re.compile(rf"^(?P<dash>- )?(?P<key>{MANIFEST_KEY}):(?: (?P<v
 INLINE_LIST_KEYS: dict[str, dict[str, str | None]] = {
     "actions.yaml": {"preferredTools": None},
     "authority.yaml": {key: None for key in ("triggers", "actions", "objects", "qualifiers")},
-    "documents.yaml": {"coOwners": None},
+    "documents.yaml": {"coOwners": None, "keywords": None},
     "organization.yaml": {key: None for key in ("officialChannels", "serviceLinesSourceRefs", "sharedOversight", "sourceRefs", "teams")},
     "playbooks.yaml": {key: None for key in ("consumers", "consumes", "parameters", "produces", "requiredSignals")},
     "processes.yaml": {"consumers": None},

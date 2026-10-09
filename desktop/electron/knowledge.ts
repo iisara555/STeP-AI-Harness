@@ -1,7 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 
-export type CatalogEntry = { id: string; title: string; path: string; owner?: string; status?: string };
+export type CatalogEntry = { id: string; title: string; path: string; owner?: string; status?: string; keywords?: string[] };
 export type KnowledgeSection = { id: string; title: string; path: string; heading: string; text: string; score: number };
 /** A registered document as the AI sees it in the knowledge registry: what it is about and which sections it has. */
 export type RegistryEntry = CatalogEntry & { summary: string; sections: string[] };
@@ -88,7 +88,9 @@ export class OrganizationKnowledge {
               path: entry.path,
               heading,
               text: part.trim(),
-              headGrams: trigrams(entry.title + ' ' + heading),
+              // Registered keywords are the words staff actually ask with ("ล่วงหน้ากี่วัน" for Lead Time), so they
+              // count like a heading in every section of their document.
+              headGrams: trigrams([entry.title, heading, ...(entry.keywords || [])].join(' ')),
               bodyGrams: trigrams(part.slice(0, 20000)),
             });
           }

@@ -319,6 +319,13 @@ export default function App() {
       return data as Snapshot;
     }
   }, [api]);
+  const announcedReady = useRef(false);
+  useEffect(() => {
+    // The app opens behind a loading window; tell it once the first real screen (or a startup error) is painted.
+    if (!api || announcedReady.current || !(snapshot || error)) return;
+    announcedReady.current = true;
+    requestAnimationFrame(() => void api.call('appReady').catch(() => undefined));
+  }, [api, snapshot, error]);
   useEffect(() => {
     const update = () => void refresh();
     window.addEventListener('step-workspace', update);

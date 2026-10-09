@@ -11,6 +11,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Rewrite the README: answers about STeP come from organization documents, the AI services that connect, first-open warnings on Windows and Mac, the three ways to read a receipt, the tour, speaking styles, Learning Inbox, AI usage, What's New and language, and in-app updates on both systems.
 - Move the 14 organization knowledge documents (HR, AFP, ISO, teams, executives, project codes, facilities) from `docs/` to `docs/knowledge/`, with an index. Add `docs/README.md`, a map that separates organization knowledge, user guides and harness development documents. Registry, Skills, plugin, package files and tests follow the new paths; installed Skills update removes the old copies.
 
+### Faster, more accurate organization knowledge and a loading screen
+
+- Registered documents can list `keywords` in `manifest/documents.yaml`: the words staff actually ask with when the document uses other terms (ลาพักร้อน for the annual leave rules, ส่งเบิกล่วงหน้า for AFP Lead Time). Search counts them like a section heading. On a benchmark of 55 staff questions (`desktop/eval/knowledge-questions.json`) the right document now comes first for 53, up from 46; `desktop/test/knowledge-accuracy.test.ts` fails if a change drops below that. BM25/IDF weighting was measured too and did not improve these documents, so the search keeps equal weights.
+- STeP Desktop opens with a loading window in the saved theme and language, reads the organization documents and the Skill catalog in the background, and shows the main window only once the workspace has drawn its first screen (at most 20 seconds). The first STeP question no longer waits for the document index.
+
 ## Desktop v0.5.34 — 2026-10-09
 
 ### ChatGPT receipts and Antigravity (PR #117)

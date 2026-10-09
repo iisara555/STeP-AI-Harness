@@ -36,6 +36,7 @@ import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
+import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
@@ -113,6 +114,10 @@ import { tm, useLanguage } from './i18n';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
 
 let window: BrowserWindow, store: Store, service: WorkService;
+/** Resolves when the workspace has drawn its first screen (the renderer's appReady call). */
+let rendererReady: () => void = () => undefined;
+/** Longest the loading window waits for the workspace before showing it anyway. */
+const SPLASH_LIMIT_MS = 20000;
 const attachments = new Map<
   string,
   { view: Attachment; text: string; sessionId: string; images?: VisionInput[]; nativeBytes?: Buffer; sourceUsable?: boolean }
@@ -139,7 +144,7 @@ const inputText = (value: unknown, limit = 30000) => {
 };
 
 const TITLEBAR_HEIGHT = 40;
-async function makeWindow() {
+async function makeWindow(splash?: Splash, prepared: Promise<unknown> = Promise.resolve()) {
   // Windows and Linux get no menu bar: the app's own menu lives in the title bar. Edit shortcuts (copy, paste, undo)
   // still work in text fields. macOS keeps its standard menu at the top of the screen.
   if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
@@ -174,7 +179,18 @@ async function makeWindow() {
     });
     if (result.response === 1) window.destroy();
   });
-  window.once('ready-to-show', () => window.show());
+  if (!splash) window.once('ready-to-show', () => window.show());
+  else {
+    // The main window stays hidden behind the loading window until the workspace has drawn its first screen and
+    // the background preparation is done, or the limit passes, so it never opens half loaded.
+    const drawn = new Promise<void>(done => (rendererReady = done));
+    const limit = new Promise<void>(done => setTimeout(done, SPLASH_LIMIT_MS));
+    void Promise.race([Promise.all([drawn, prepared]), limit]).then(() => {
+      if (!window.isDestroyed()) window.show();
+      splash.close();
+    });
+    window.webContents.once('render-process-gone', () => rendererReady());
+  }
   await window.loadFile(join(__dirname, 'renderer/index.html'));
 }
 
@@ -214,6 +230,12 @@ async function main() {
   store = new Store(join(data, 'workspace.sqlite'));
   const documentTemplates = new DocumentTemplates(store);
   useLanguage(() => store?.settings().language);
+  // Set the theme before the first paint so a dark-theme user never sees a light flash.
+  nativeTheme.themeSource = store.settings().theme;
+  // Development smoke tests drive the main window directly; STEP_DESKTOP_SPLASH=1 shows the loading window there too.
+  const splash =
+    !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_DESKTOP_SPLASH !== '1' ? undefined : new Splash();
+  splash?.step(tm('กำลังโหลดระบบของ STeP AI…'));
   const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
     import(pathToFileURL(join(root, 'src/modules/router/index.js')).href),
@@ -1583,6 +1605,9 @@ async function main() {
           return { status: 'blocked', blockers: [errorCode(error)], warnings: [], nextActions: ['REVIEW_REQUEST'] };
         }
       }
+      case 'appReady':
+        rendererReady();
+        return true;
       case 'snapshot':
         return snapshot();
       case 'automationList':
@@ -2901,9 +2926,9 @@ async function main() {
         throw new Error('UNKNOWN_OPERATION');
     }
   });
-  // Set the theme before the first paint so a dark-theme user never sees a light flash.
-  nativeTheme.themeSource = store.settings().theme;
-  await makeWindow();
+  splash?.step(tm('กำลังเตรียมความรู้ขององค์กรและ Skills…'));
+  const prepared = service.warmUp().then(() => splash?.step(tm('กำลังเปิดพื้นที่ทำงาน…')));
+  await makeWindow(splash, prepared);
   window.webContents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
     if (mainFrame) {
       approvals.close();
@@ -2948,6 +2973,7 @@ async function main() {
 }
 app.on('window-all-closed', () => app.quit());
 main().catch(error => {
+  for (const open of BrowserWindow.getAllWindows()) open.destroy();
   diagnose('startup-failed', { code: errorCode(error), message: String(error instanceof Error ? error.message : error).slice(0, 300) });
   dialog.showErrorBox('STeP Desktop', tm('เปิดแอปไม่สำเร็จ กรุณาตรวจชุดติดตั้ง'));
   app.quit();

@@ -1,4 +1,5 @@
 // A full NSIS payload install/legacy upgrade using a separate application identity.
+import { mainWindow } from './main-window.mjs';
 import { _electron as electron, expect } from '@playwright/test';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -52,7 +53,7 @@ try {
     env,
     timeout: 45000,
   });
-  const page = await app.firstWindow();
+  const page = await mainWindow(app);
   await expect(page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true }).click();
   await expect(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true })).toBeVisible();

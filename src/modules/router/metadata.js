@@ -263,6 +263,9 @@ export async function loadDocumentContextMetadata(ids = []) {
     if (index && !current.path) current.path = stripYamlScalar(index[1]);
     const status = line.match(/^    status:\s*(.+)/);
     if (status) current.status = stripYamlScalar(status[1]);
+    // Words staff ask with that the document itself may not use, matched by the desktop knowledge search.
+    const keywords = line.match(/^    keywords:\s*\[(.*)\]/);
+    if (keywords) current.keywords = keywords[1].split(',').map((word) => stripYamlScalar(word.trim())).filter(Boolean);
     const governance = line.match(/^    (authority|verification|sensitivity|owner):\s*(.+)/);
     if (governance) current[governance[1]] = stripYamlScalar(governance[2]);
   }

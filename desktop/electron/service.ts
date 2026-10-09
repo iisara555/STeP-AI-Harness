@@ -230,6 +230,18 @@ export class WorkService {
     this.knowledgeIndex ??= new OrganizationKnowledge(this.harness.root, this.harness.documentCatalog);
     return this.knowledgeIndex;
   }
+  /**
+   * Reads and indexes the organization documents and the Skill catalog before the first message, so the first STeP
+   * question is answered as fast as later ones. Failures are left for the first real task to report.
+   */
+  async warmUp() {
+    await Promise.all([
+      this.knowledge()
+        ?.registry()
+        .catch(() => undefined),
+      this.harness.catalog?.().catch(() => undefined),
+    ]);
+  }
   constructor(
     private store: Store,
     private harness: Harness,
