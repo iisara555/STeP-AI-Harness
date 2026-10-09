@@ -1,6 +1,6 @@
 // What kind of document a receipt is, and what the claim still needs. The document type comes from the vision model's
 // reading or, without it, from the printed heading; the checklist itself is fixed rules, each tied to where it comes
-// from, so no rule is made up by the AI. AFP rules come from its circulars (docs/afp-operational-circulars.md); items
+// from, so no rule is made up by the AI. AFP rules come from its circulars (docs/knowledge/afp-operational-circulars.md); items
 // whose source is not in the harness say so and send the person to AFP.
 
 import { parseThaiDate } from './thai-date';
@@ -209,7 +209,7 @@ export function complianceChecklist(input: {
     });
   }
 
-  // 3. AFP's own rules (docs/afp-operational-circulars.md).
+  // 3. AFP's own rules (docs/knowledge/afp-operational-circulars.md).
   if (f.thermalPaper || type === 'abbreviated_tax_invoice')
     items.push({
       id: 'thermal_copy',

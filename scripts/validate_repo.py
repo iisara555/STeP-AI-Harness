@@ -759,7 +759,7 @@ def validate_package_config(errors: list[str]) -> None:
         "src/modules/privacy/document.js", "src/modules/privacy/document-worker.js",
         "src/vendor/privacy/manifest.json", "src/vendor/privacy/pdf.mjs", "src/vendor/privacy/pdf.worker.mjs",
         "src/vendor/privacy/fxp.cjs", "src/vendor/privacy/fflate.mjs",
-        "docs/step-public-profile.md", "docs/project-code-scheme.md",
+        "docs/knowledge/step-public-profile.md", "docs/knowledge/project-code-scheme.md",
         "docs/pilot-runbook.md",
     }
     documents_text = (ROOT / "manifest/documents.yaml").read_text(encoding="utf-8")

@@ -76,6 +76,6 @@
 
 ## Source boundary
 
-- เก็บ PDF ต้นฉบับไว้นอก repository สาธารณะตาม `repository-data-boundary.md`; registry เก็บชื่อไฟล์ hash และสถานะเพื่อระบุต้นฉบับ
+- เก็บ PDF ต้นฉบับไว้นอก repository สาธารณะตาม `../repository-data-boundary.md`; registry เก็บชื่อไฟล์ hash และสถานะเพื่อระบุต้นฉบับ
 - ดัชนีนี้เก็บโครงสร้างสำหรับค้นหา ไม่คัดสเปกรายบรรทัด ภาพเครื่อง หรือข้อมูลติดต่อบุคคล
-- หากได้รับทะเบียนครุภัณฑ์หรือ service catalog ฉบับใหม่ ให้แก้ `../manifest/documents.yaml`, `../manifest/services.yaml` และดัชนีนี้พร้อมกัน โดยเก็บประวัติว่าแหล่งปี 2020 ถูกแทนที่เมื่อใด
+- หากได้รับทะเบียนครุภัณฑ์หรือ service catalog ฉบับใหม่ ให้แก้ `../../manifest/documents.yaml`, `../../manifest/services.yaml` และดัชนีนี้พร้อมกัน โดยเก็บประวัติว่าแหล่งปี 2020 ถูกแทนที่เมื่อใด

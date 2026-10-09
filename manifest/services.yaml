@@ -62,7 +62,7 @@ sources:
     sourceDate: "2020-06-19"
     receivedDate: "2026-09-20"
     documentRef: step-facility-equipment-inventory-2020
-    index: docs/facility-equipment-index.md
+    index: docs/knowledge/facility-equipment-index.md
     contentInRepo: false
     confirmedDate: "2026-09-20"
     confirmedBy: "เจ้าของบริการ; ผู้ใช้บันทึกคำยืนยันใน session 2026-09-20"

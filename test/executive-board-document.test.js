@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { loadDocumentCatalog } from '../src/modules/router/service.js';
 
-// docs/step-executive-board.md is what the assistant reads; manifest/organization.yaml is the maintained source.
+// docs/knowledge/step-executive-board.md is what the assistant reads; manifest/organization.yaml is the maintained source.
 test('the executive board document matches executiveOversight in organization.yaml and is readable by the assistant', async () => {
   // Windows checkouts may use CRLF.
   const org = (await readFile('manifest/organization.yaml', 'utf8')).replace(/\r\n/g, '\n');
@@ -12,7 +12,7 @@ test('the executive board document matches executiveOversight in organization.ya
     ([, name, position, teams]) => ({ name, position, teams: teams.split(',').map((t) => t.trim()).filter(Boolean) }),
   );
   assert.ok(executives.length >= 10);
-  const doc = (await readFile('docs/step-executive-board.md', 'utf8')).replace(/\r\n/g, '\n');
+  const doc = (await readFile('docs/knowledge/step-executive-board.md', 'utf8')).replace(/\r\n/g, '\n');
   const lastChecked = /lastChecked: "([^"]+)"/.exec(section)[1];
   assert.ok(doc.includes(`**ตรวจล่าสุด:** ${lastChecked}`), 'the document states the same check date');
   const byTeam = doc.slice(doc.indexOf('## ทีมไหนอยู่ภายใต้การกำกับของใคร')).split('\n').filter((line) => line.startsWith('| '));
@@ -34,5 +34,5 @@ test('the executive board document matches executiveOversight in organization.ya
   for (const name of listed) assert.ok(executives.some((e) => e.name === name), `${name} is in organization.yaml`);
 
   const entry = (await loadDocumentCatalog()).find((d) => d.id === 'step-executive-board');
-  assert.equal(entry?.path, 'docs/step-executive-board.md');
+  assert.equal(entry?.path, 'docs/knowledge/step-executive-board.md');
 });

@@ -61,7 +61,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(skillPaths.includes('skills/pm/industry-problem-discovery/SKILL.md'));
     assert.ok(skillPaths.includes('rules/human-approval.md'));
     assert.ok(skillPaths.includes('rules/output-management.md'));
-    assert.ok(skillPaths.includes('docs/step-context.md'));
+    assert.ok(skillPaths.includes('docs/knowledge/step-context.md'));
 
     // Verify staff-abbreviations is NOT included
     assert.ok(!skillPaths.includes('docs/staff-abbreviations.md'));
@@ -266,7 +266,7 @@ test('CLI & Core Modules Test Suite', async (t) => {
     assert.ok(qsFilePaths.includes('skills/common/quality-objective-kpi-review/SKILL.md'));
     assert.ok(qsFilePaths.includes('skills/common/management-review-prep/SKILL.md'));
     assert.ok(qsFilePaths.includes('rules/output-management.md'), 'All teams must receive output-management rule');
-    assert.ok(qsFilePaths.includes('docs/teams.md'), 'Must include teams.md');
+    assert.ok(qsFilePaths.includes('docs/knowledge/teams.md'), 'Must include teams.md');
     assert.ok(qsFilePaths.includes('docs/step-router.md'), 'Must include step-router.md');
 
     // Test Creative & Communication (CC) team

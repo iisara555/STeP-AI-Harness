@@ -6,6 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Documentation: new README and organization knowledge in its own folder
+
+- Rewrite the README: answers about STeP come from organization documents, the AI services that connect, first-open warnings on Windows and Mac, the three ways to read a receipt, the tour, speaking styles, Learning Inbox, AI usage, What's New and language, and in-app updates on both systems.
+- Move the 14 organization knowledge documents (HR, AFP, ISO, teams, executives, project codes, facilities) from `docs/` to `docs/knowledge/`, with an index. Add `docs/README.md`, a map that separates organization knowledge, user guides and harness development documents. Registry, Skills, plugin, package files and tests follow the new paths; installed Skills update removes the old copies.
+
 ## Desktop v0.5.34 — 2026-10-09
 
 ### ChatGPT receipts and Antigravity (PR #117)
@@ -685,7 +690,7 @@ Found while checking a slow, failed answer to "ผอ.วิน คือใค�
 - **Document type:** the AI classifies the receipt from the image as a full or abbreviated tax invoice, receipt, cash bill, payment voucher, invoice or quotation, or transfer slip. Without the AI, the printed heading decides. The person can change it.
 - **Claim category:** the person picks B, BV, emergency or other (or "not sure"). The checklist follows it.
 - **Checklist with its source on every item**, ordered missing → to check → to prepare → notes, with complete items folded into one line:
-  - **AFP circulars** (`docs/afp-operational-circulars.md`): the category B approval report within 3 working days after the receipt date, with the due date worked out (5 days for emergency; public holidays not counted, so check the calendar); the 10,000-baht caps; the clearing set (FM-AF-002, FM-AF-014, FM-AF-035/036, approval report); photocopying thermal paper; translating foreign-language documents; no inappropriate drinks; emergency pre-approval. A transfer slip, invoice or quotation is flagged as not a proof of payment for clearing.
+  - **AFP circulars** (`docs/knowledge/afp-operational-circulars.md`): the category B approval report within 3 working days after the receipt date, with the due date worked out (5 days for emergency; public holidays not counted, so check the calendar); the 10,000-baht caps; the clearing set (FM-AF-002, FM-AF-014, FM-AF-035/036, approval report); photocopying thermal paper; translating foreign-language documents; no inappropriate drinks; emergency pre-approval. A transfer slip, invoice or quotation is flagged as not a proof of payment for clearing.
   - **General payment-document elements**, marked "confirm with AFP": payee, date, what was paid for, amount in figures and words, payee signature.
   - **No source in the app yet**, marked "ask AFP": the buyer name and address to use, and whether a cash bill is accepted. These are never decided by the AI.
 - **The AI reports what it sees** (handwritten, thermal paper, foreign language, payee signature, buyer named, items listed, inappropriate drinks); the checklist itself is fixed rules in `desktop/src/receipt-compliance.ts`, with unit tests.
@@ -803,7 +808,7 @@ Found while checking a slow, failed answer to "ผอ.วิน คือใค�
   - its section headings.
   When the matched excerpts do not hold the answer, the AI opens the right document, or one section of it, with `reference(input=ID, args.section=heading)`. It no longer reports the information as missing. `reference` also accepts a document's path or title.
 - **Five more registered documents:** the administrator confirmed them as published for every employee (`sensitivity: public`):
-  - `step-teams-directory` (`docs/teams.md`)
+  - `step-teams-directory` (`docs/knowledge/teams.md`)
   - `step-public-profile`
   - `project-code-scheme` (the owner of the table is still unconfirmed)
   - `step-context`
@@ -841,7 +846,7 @@ Found while checking a slow, failed answer to "ผอ.วิน คือใค�
   - The app no longer asks "งานนี้ตรงกับข้อนี้ไหม" and never picks a Skill or Playbook by itself. Employees pick a Skill with `/` when they want one.
   - Authority checks (approving, signing on someone's behalf, issuing document numbers), Skill scope rules and the privacy gate still run on every message.
   - Administrators can turn automatic routing back on. The CLI is unchanged.
-- Register the executive board as an organization document (`step-executive-board`, `docs/step-executive-board.md`). It is built from the maintainer-confirmed `executiveOversight` in `manifest/organization.yaml` (checked 2026-09-20). "ผู้อำนวยการ STeP ชื่ออะไร", "ผอ.คือใคร", "รองผู้อำนวยการมีใครบ้าง" and "ทีม HD อยู่ภายใต้การกำกับของใคร" are now answered from it instead of a web search, which had returned a former director. A test keeps the document in step with `organization.yaml`.
+- Register the executive board as an organization document (`step-executive-board`, `docs/knowledge/step-executive-board.md`). It is built from the maintainer-confirmed `executiveOversight` in `manifest/organization.yaml` (checked 2026-09-20). "ผู้อำนวยการ STeP ชื่ออะไร", "ผอ.คือใคร", "รองผู้อำนวยการมีใครบ้าง" and "ทีม HD อยู่ภายใต้การกำกับของใคร" are now answered from it instead of a web search, which had returned a former director. A test keeps the document in step with `organization.yaml`.
 - Stop the clarifying question from looping. Answering "ไม่ตรง" to "งานนี้ตรงกับข้อนี้ไหมครับ?" asked the same question again. A declined menu is never offered again. In chat, once the employee has answered a clarifying question without picking an option, the assistant helps from the conversation. Approving, submitting or signing still asks.
 - Remove the routing notice under the text box while typing ("ต้องตอบคำถามแยกประเภทงานก่อน · ต้องตรวจ: …"). It looked like an error before anything was sent. The send itself still asks when it must. Only organizations that set prices see the cost estimate there.
 - Fix answers that showed a raw tool request (`{"tool": "reference", ...}`) instead of the answer. Some models, such as Gemini Flash-Lite, put the request in a ```json fence instead of ```step-tool. A reply that is only one valid tool request (json fence, unlabelled fence or bare JSON) now runs the tool through the same checks, so the AI reads the document and answers. A JSON example inside a longer answer is never treated as a request.
@@ -1081,13 +1086,13 @@ STeP Desktop และ Workspace ทำงานใกล้เคียงโ�
 - **กลไกบังคับ:** Skill ใหม่ต้องมีทั้ง eval และตัวอย่างก่อน merge ส่วน 43 Skill เดิมบันทึกเป็นรายการหนี้ `legacyWithoutEvals` ที่ลดได้อย่างเดียว
 - eval จับปัญหาได้สองจุดระหว่างเขียน: "ค่ารักษาพยาบาลเบิกได้ปีละเท่าไหร่" หลุดไปโหมด GENERAL และ "ร่างหนังสือแจ้งมติที่ประชุมถึงหน่วยงานภายนอก" ถูกถามกลับ แก้ทั้งสองแล้ว
 - มาตรฐานการเขียน Skill ระบุเกณฑ์ของแต่ละ lifecycle stage ชัดเจน และแก้ข้อความใน `manifest/skills.yaml` ที่ขัดกับมาตรฐาน
-- workspace ของทีมได้รับ `docs/facility-equipment-index.md` ที่ `expert-resource-matching` ใช้ และ `docs/skill-authoring-standard.md` ที่ `step-skill-authoring` อ้าง ก่อนหน้านี้ลิงก์ทั้งสองใช้ได้ใน repo แต่เปิดไม่ได้บนเครื่องพนักงาน และมี test ตรวจว่าเอกสารที่ Skill อ้างถูกแจกไปครบ
+- workspace ของทีมได้รับ `docs/knowledge/facility-equipment-index.md` ที่ `expert-resource-matching` ใช้ และ `docs/skill-authoring-standard.md` ที่ `step-skill-authoring` อ้าง ก่อนหน้านี้ลิงก์ทั้งสองใช้ได้ใน repo แต่เปิดไม่ได้บนเครื่องพนักงาน และมี test ตรวจว่าเอกสารที่ Skill อ้างถูกแจกไปครบ
 
 ### เอกสารที่ QS และ AFP ไม่ได้ส่งให้
 
-- **QS แจ้งว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List** จึงเพิ่มเอกสารฉบับทำงานสองไฟล์ที่รวบรวมจาก QP 8 ฉบับที่ QS ส่งมาและหนังสือเวียน ISO ของ CC: [Master List ฉบับทำงาน](docs/qms-working-master-list.md) บอก Rev และวันที่ของ QP ส่วน [แผนที่ ISO 9001:2015 → เอกสาร STeP](docs/qms-working-reference.md) ใช้แทน QM ทั้งสองไฟล์ระบุชัดว่าไม่ใช่เอกสารควบคุม ต้องตรวจ Rev ล่าสุดใน STeP MIS และขอบเขต QMS (ข้อ 4.3) ยังต้องถาม QS
+- **QS แจ้งว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List** จึงเพิ่มเอกสารฉบับทำงานสองไฟล์ที่รวบรวมจาก QP 8 ฉบับที่ QS ส่งมาและหนังสือเวียน ISO ของ CC: [Master List ฉบับทำงาน](docs/knowledge/qms-working-master-list.md) บอก Rev และวันที่ของ QP ส่วน [แผนที่ ISO 9001:2015 → เอกสาร STeP](docs/knowledge/qms-working-reference.md) ใช้แทน QM ทั้งสองไฟล์ระบุชัดว่าไม่ใช่เอกสารควบคุม ต้องตรวจ Rev ล่าสุดใน STeP MIS และขอบเขต QMS (ข้อ 4.3) ยังต้องถาม QS
 - ทะเบียนบันทึก QM และ Master List เป็น `not-provided` (QS ไม่ให้ 25 ก.ย. 2569) Skill ด้าน QMS อ้างฉบับทำงานแทน ส่วน QP ที่ Harness ยังไม่มีเนื้อความยังแสดงสถานะว่ามีช่องว่างของแหล่งอ้างอิงเหมือนเดิม
-- **AFP ไม่ได้ส่งนโยบายจัดซื้อจัดจ้างและแนวปฏิบัติเบิกจ่ายของ STeP** จึงเพิ่ม [ลำดับชั้นระเบียบงานการเงินและพัสดุ](docs/afp-regulation-hierarchy.md) ที่บอกว่าเรื่องไหนน่าจะอยู่ใต้ระเบียบระดับใด คือแนวปฏิบัติ AFP, ประกาศอุทยานฯ, ข้อบังคับ มช. และระเบียบระดับชาติ ไฟล์นี้มีแต่ชื่อฉบับ ไม่มีเนื้อความ AI จึงห้ามอ้างเลขข้อ วงเงิน หรืออัตราจากความจำ ข้อสรุปว่าเบิกได้ไหมหรือ TOR ถูกระเบียบไหมยังเป็นร่างที่รอแหล่งอ้างอิงเหมือนเดิม
+- **AFP ไม่ได้ส่งนโยบายจัดซื้อจัดจ้างและแนวปฏิบัติเบิกจ่ายของ STeP** จึงเพิ่ม [ลำดับชั้นระเบียบงานการเงินและพัสดุ](docs/knowledge/afp-regulation-hierarchy.md) ที่บอกว่าเรื่องไหนน่าจะอยู่ใต้ระเบียบระดับใด คือแนวปฏิบัติ AFP, ประกาศอุทยานฯ, ข้อบังคับ มช. และระเบียบระดับชาติ ไฟล์นี้มีแต่ชื่อฉบับ ไม่มีเนื้อความ AI จึงห้ามอ้างเลขข้อ วงเงิน หรืออัตราจากความจำ ข้อสรุปว่าเบิกได้ไหมหรือ TOR ถูกระเบียบไหมยังเป็นร่างที่รอแหล่งอ้างอิงเหมือนเดิม
 
 ### วิธีการจากชุมชน
 
@@ -1145,9 +1150,9 @@ STeP Desktop และ Workspace ทำงานใกล้เคียงโ�
 
 ### แหล่งอ้างอิงที่เพิ่ม
 
-- ดัชนีประกาศ HR ฉบับ 2569 พร้อมอัตราที่ประกาศ แนวปฏิบัติ HR ที่มีเฉพาะในหนังสือเวียน และ [ช่องทางยื่นเรื่อง HR](docs/hr-service-channels.md)
-- [ระยะเวลาและหมวดค่าใช้จ่าย AFP](docs/afp-operational-circulars.md)
-- [ทะเบียนเอกสาร ISO ของ CC](docs/cc-iso-document-register.md)
+- ดัชนีประกาศ HR ฉบับ 2569 พร้อมอัตราที่ประกาศ แนวปฏิบัติ HR ที่มีเฉพาะในหนังสือเวียน และ [ช่องทางยื่นเรื่อง HR](docs/knowledge/hr-service-channels.md)
+- [ระยะเวลาและหมวดค่าใช้จ่าย AFP](docs/knowledge/afp-operational-circulars.md)
+- [ทะเบียนเอกสาร ISO ของ CC](docs/knowledge/cc-iso-document-register.md)
 
 ### การติดตั้งและดูแลระบบ
 

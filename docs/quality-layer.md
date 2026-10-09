@@ -60,7 +60,7 @@ ISO REQUIREMENT
 กติกา Pilot:
 
 - ห้ามอ้างข้อกำหนดของ STeP ว่าเป็นข้อกำหนดของ ISO ถ้า source เป็นนโยบาย/QP/WI ขององค์กร
-- QS แจ้งเมื่อ 25 ก.ย. 2569 ว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List ทางการ Harness จึงใช้ [Master List ฉบับทำงาน](qms-working-master-list.md) และ [แผนที่ ISO → เอกสาร STeP](qms-working-reference.md) แทน สองไฟล์นี้**ไม่ใช่เอกสารควบคุม**
+- QS แจ้งเมื่อ 25 ก.ย. 2569 ว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List ทางการ Harness จึงใช้ [Master List ฉบับทำงาน](knowledge/qms-working-master-list.md) และ [แผนที่ ISO → เอกสาร STeP](knowledge/qms-working-reference.md) แทน สองไฟล์นี้**ไม่ใช่เอกสารควบคุม**
 - อ้าง Rev/วันที่ของ QP จาก Master List ฉบับทำงานได้ แต่ต้องบอกว่า "ตามฉบับที่ QS ส่งมา — ตรวจ Rev ล่าสุดใน STeP MIS ก่อนใช้อ้างอิงทางการ"
 - ถ้ามีเอกสารหลาย revision ที่ไม่อยู่ใน Master List ฉบับทำงาน ให้ตอบว่า `revision status unverified`
 - Quality Record ใช้เป็น evidence ของสิ่งที่เกิดขึ้นจริง แต่ไม่ยกระดับเป็น Organization Rule
@@ -73,8 +73,8 @@ ISO REQUIREMENT
 | --- | --- | --- |
 | ISO 9001:2015 | user-confirmed current standard | External normative reference |
 | STeP Quality Policy V2 — 8 Sep 2026 | user-confirmed current | Organization policy / WHY |
-| Quality Manual | **not-provided** (QS declined 25 ก.ย. 2569) | ใช้ [qms-working-reference.md](qms-working-reference.md) แทน; ห้ามเดา scope 4.3 |
-| Master Document List | **not-provided** (QS declined 25 ก.ย. 2569) | ใช้ [qms-working-master-list.md](qms-working-master-list.md) แทน; Rev ล่าสุดตรวจใน STeP MIS |
+| Quality Manual | **not-provided** (QS declined 25 ก.ย. 2569) | ใช้ [qms-working-reference.md](knowledge/qms-working-reference.md) แทน; ห้ามเดา scope 4.3 |
+| Master Document List | **not-provided** (QS declined 25 ก.ย. 2569) | ใช้ [qms-working-master-list.md](knowledge/qms-working-master-list.md) แทน; Rev ล่าสุดตรวจใน STeP MIS |
 | Master List ฉบับทำงาน | active-reference (derived) | Rev/วันที่ของ QP ที่ QS ส่งมา |
 | แผนที่ ISO → เอกสาร STeP | active-reference (derived) | clause → QP/นโยบาย ใช้แทน QM |
 | QP-DC-001 Rev.06 | provided; listed in working Master List (text not in Harness) | Document control framework |
@@ -89,10 +89,10 @@ ISO REQUIREMENT
 ## 5. Known gaps
 
 ### P0 — Quality Manual (QS ไม่ให้ — ใช้ฉบับทำงานแทน)
-ISO 9001:2015 ไม่บังคับให้มี Quality Manual Harness จึงใช้ [แผนที่ ISO → เอกสาร STeP](qms-working-reference.md) ที่รวบรวมจากนโยบายคุณภาพ V2 และ QP ที่ QS ส่งมา ข้อที่ยังไม่มีเอกสารรองรับ โดยเฉพาะ **ขอบเขต QMS (4.3)** และ exclusions ห้ามเดา ให้ AI ทำคำถามถาม QS ผ่าน `stakeholder-questionnaire`
+ISO 9001:2015 ไม่บังคับให้มี Quality Manual Harness จึงใช้ [แผนที่ ISO → เอกสาร STeP](knowledge/qms-working-reference.md) ที่รวบรวมจากนโยบายคุณภาพ V2 และ QP ที่ QS ส่งมา ข้อที่ยังไม่มีเอกสารรองรับ โดยเฉพาะ **ขอบเขต QMS (4.3)** และ exclusions ห้ามเดา ให้ AI ทำคำถามถาม QS ผ่าน `stakeholder-questionnaire`
 
 ### P0 — Master Document List (QS ไม่ให้ — ใช้ฉบับทำงานแทน)
-[Master List ฉบับทำงาน](qms-working-master-list.md) บอก Rev/วันที่ของ QP 8 ฉบับตามที่ QS ส่งมา แต่ไม่ใช่ทะเบียนควบคุม AI ห้ามรับรองว่าเอกสารใด Current/Superseded/Obsolete อย่างเป็นทางการ ให้ชี้ไปตรวจใน STeP MIS
+[Master List ฉบับทำงาน](knowledge/qms-working-master-list.md) บอก Rev/วันที่ของ QP 8 ฉบับตามที่ QS ส่งมา แต่ไม่ใช่ทะเบียนควบคุม AI ห้ามรับรองว่าเอกสารใด Current/Superseded/Obsolete อย่างเป็นทางการ ให้ชี้ไปตรวจใน STeP MIS
 
 สอง gap นี้ไม่ block Pilot: Harness ใช้ฉบับทำงานได้ทันที และแสดงข้อจำกัดข้างต้นทุกครั้งที่ claim ต้องพึ่งข้อมูลดังกล่าว
 
@@ -137,7 +137,7 @@ AI ห้ามตัดสินแทน:
 
 ### ต่อยอดฉบับทำงาน (ไม่ต้องรอ QS ส่งเอกสาร)
 - ถาม QS เฉพาะช่องว่าง เช่น ขอบเขต QMS 4.3 และ Rev ล่าสุดของ QP ผ่านแบบสอบถามจาก `stakeholder-questionnaire`
-- เมื่อได้คำตอบ ให้แก้ [qms-working-master-list.md](qms-working-master-list.md) / [qms-working-reference.md](qms-working-reference.md) พร้อมวันที่และผู้ตอบ
+- เมื่อได้คำตอบ ให้แก้ [qms-working-master-list.md](knowledge/qms-working-master-list.md) / [qms-working-reference.md](knowledge/qms-working-reference.md) พร้อมวันที่และผู้ตอบ
 - ถ้าภายหลัง QS ส่ง QM หรือ Master List ทางการ ให้ลงทะเบียนแทนฉบับทำงานและเปลี่ยนสถานะเป็น `active`
 
 ### Only after real usage shows need

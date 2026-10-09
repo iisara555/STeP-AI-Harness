@@ -38,7 +38,7 @@ standardVersion: 2
 
 ## Source
 
-- เป้าหมายยุทธศาสตร์ต้อง resolve จากแผนที่ประกาศจริง ไม่ใช้ความจำ ดู `../../manifest/documents.yaml` และ OIT O5 ใน `../../docs/step-public-profile.md`
+- เป้าหมายยุทธศาสตร์ต้อง resolve จากแผนที่ประกาศจริง ไม่ใช้ความจำ ดู `../../manifest/documents.yaml` และ OIT O5 ใน `../../docs/knowledge/step-public-profile.md`
 - ค่า Baseline และ Actual ต้องอ้างอิงระบบฐานข้อมูลหรือรายงานที่ตรวจสอบย้อนได้
 - แม่แบบในโฟลเดอร์นี้: `templates/okr-worksheet-template.md`
 

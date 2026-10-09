@@ -12,7 +12,7 @@
 ## ผังการกำกับดูแลระดับบริหาร
 
 ข้อมูลเครื่องอ่านอยู่ที่ [`manifest/organization.yaml`](../manifest/organization.yaml) → `executiveOversight`
-เอกสารที่ AI อ่านตอบคำถามเรื่องผู้บริหารคือ [คณะผู้บริหาร STeP](step-executive-board.md) (`step-executive-board` ใน `manifest/documents.yaml`) เมื่อผังเปลี่ยนให้แก้ทั้งสองที่ `test/executive-board-document.test.js` จะตรวจว่าตรงกัน
+เอกสารที่ AI อ่านตอบคำถามเรื่องผู้บริหารคือ [คณะผู้บริหาร STeP](knowledge/step-executive-board.md) (`step-executive-board` ใน `manifest/documents.yaml`) เมื่อผังเปลี่ยนให้แก้ทั้งสองที่ `test/executive-board-document.test.js` จะตรวจว่าตรงกัน
 ตรวจทานชื่อและตำแหน่งได้จากหน้า [คณะผู้บริหาร](https://www.step.cmu.ac.th/executive) (OIT O2) · ผังที่ใช้: ผู้ดูแลส่งเข้ามา 2026-09-20
 
 | ตำแหน่ง | ผู้บริหาร | ทีมที่กำกับ |

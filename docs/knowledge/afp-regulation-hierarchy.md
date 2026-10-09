@@ -2,7 +2,7 @@
 
 **สถานะ:** เอกสารอ้างอิงฉบับทำงาน รวบรวมเมื่อ 25 ก.ย. 2569 — **ไม่ใช่ระเบียบ และไม่มีเนื้อความของระเบียบใด ๆ**
 **เหตุที่มี:** AFP ไม่ได้ส่งนโยบายการจัดซื้อจัดจ้างหรือแนวปฏิบัติการเบิกจ่ายฉบับของ STeP ให้ Harness จึงใช้ระเบียบของหน่วยงานที่อยู่เหนือขึ้นไป (มช.) เป็นกรอบแทน
-**ทะเบียน:** `afp-regulation-hierarchy` ใน [manifest/documents.yaml](../manifest/documents.yaml)
+**ทะเบียน:** `afp-regulation-hierarchy` ใน [manifest/documents.yaml](../../manifest/documents.yaml)
 
 ## ใช้ทำอะไร
 
