@@ -31,10 +31,9 @@ docs/staff-abbreviations.md
 *.lnk
 desktop.ini
 
-# Generated agent instruction files (workspace-specific)
-AGENTS.md
+# Generated agent instruction files (workspace-specific). This repository's own AGENTS.md and CLAUDE.md are tracked:
+# they are the instructions for agents working on the repository itself.
 CHATGPT.md
-CLAUDE.md
 CODEX_INSTRUCTIONS.md
 GEMINI.md
 HERMES.md

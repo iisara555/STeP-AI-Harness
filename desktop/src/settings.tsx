@@ -36,6 +36,7 @@ const featureNames: Record<string, string> = localized({
   claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
   ocrTrial: 'เครื่องมือทดลอง OCR',
+  answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
 });
 
 export function SettingsPanel({
@@ -383,7 +384,19 @@ export function SettingsPanel({
                   'ถามยืนยันเฉพาะเมื่อจำเป็น: ยังบล็อกรหัสผ่านและข้อมูลอ่อนไหวที่ระบุตัวบุคคล ปิดบังเลขบัตรประชาชน และถามทุกครั้งก่อนเครื่องมือที่มีผลจริง',
                 )}
           </p>
-          {snapshot.policy.problems.length > 0 && <p role="alert">{t('อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล')}</p>}
+          {snapshot.policy.problems.length > 0 && (
+            <div role="alert">
+              <p>{t('อ่านนโยบายไม่สำเร็จครบถ้วน จึงใช้ค่าเริ่มต้น กรุณาแจ้งผู้ดูแล')}</p>
+              {/* The exact reasons, so an administrator can fix the file without guessing. */}
+              <ul className="small policy-problems">
+                {snapshot.policy.problems.map(problem => (
+                  <li key={problem}>
+                    <code>{problem}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="policy-features">
             {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
               <p key={name}>

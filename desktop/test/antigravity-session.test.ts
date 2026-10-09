@@ -52,12 +52,21 @@ createInterface({input:process.stdin}).on('line',line=>{
   const deltas: string[] = [],
     counts: TokenCount[] = [],
     transports: any[] = [];
+  // What is on screen: streamed text minus what an attempt took back.
+  const discarded: number[] = [];
+  const discard = (chars: number) => {
+    discarded.push(chars);
+    const kept = deltas.join('').slice(0, Math.max(0, deltas.join('').length - chars));
+    deltas.length = 0;
+    if (kept) deltas.push(kept);
+  };
   const session = new ProviderSession();
   const context = {
     cwd: root,
     env: { ...process.env },
     signal: new AbortController().signal,
     emit: (text: string) => deltas.push(text),
+    discard,
     onUsage: (count: TokenCount) => counts.push(count),
     onTransport: (info: any) => transports.push(info),
     system: 'Synthetic standing instructions',
@@ -69,6 +78,7 @@ createInterface({input:process.stdin}).on('line',line=>{
     context,
     session,
     deltas,
+    discarded,
     counts,
     transports,
     calls: async () =>

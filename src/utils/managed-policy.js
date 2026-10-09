@@ -42,7 +42,8 @@ Write-Output 'trusted'`;
           input: script,
           env: { ...process.env, STEP_POLICY_CHECK_PATH: path },
           windowsHide: true,
-          timeout: 5000,
+          // PowerShell can take several seconds to start on a busy or slow PC; a timeout reads as an untrusted file.
+          timeout: 15000,
           stdio: ["pipe", "pipe", "pipe"],
         },
       )

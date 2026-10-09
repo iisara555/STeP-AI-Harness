@@ -69,11 +69,20 @@ createInterface({input:process.stdin}).on('line',line=>{
   };
   const deltas: string[] = [];
   const counts: unknown[] = [];
+  // What is on screen: streamed text minus what an attempt took back.
+  const discarded: number[] = [];
+  const discard = (chars: number) => {
+    discarded.push(chars);
+    const kept = deltas.join('').slice(0, Math.max(0, deltas.join('').length - chars));
+    deltas.length = 0;
+    if (kept) deltas.push(kept);
+  };
   const context = {
     cwd: root,
     env: { ...process.env, GEMINI_API_KEY: 'synthetic-api-key' },
     signal: new AbortController().signal,
     emit: (text: string) => deltas.push(text),
+    discard,
     onUsage: (count: unknown) => counts.push(count),
     system: 'Synthetic standing instructions',
   };
@@ -82,6 +91,7 @@ createInterface({input:process.stdin}).on('line',line=>{
     connection,
     context,
     deltas,
+    discarded,
     counts,
     calls: async () =>
       (await readFile(log, 'utf8').catch(() => ''))
@@ -178,6 +188,8 @@ test('recovery preserves the governed host tool loop and its outgoing-data check
     assert.deepEqual(tools, [{ tool: 'reference', input: 'synthetic-reference' }]);
     assert.deepEqual(outgoing, ['Public synthetic reference']);
     assert.ok(!f.deltas.join('').includes('UNVERIFIED FRAGMENT'));
+    // Text is shown while agy answers, so the stopped attempt's text did reach the screen and was taken back.
+    assert.ok(f.discarded.length > 0, 'the stopped attempt streamed text and took it back');
     assert.equal((await f.calls()).filter(c => c.input).length, 3);
   } finally {
     await f.close();

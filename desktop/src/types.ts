@@ -137,7 +137,7 @@ export type StepTrace = {
 };
 /** Host text estimates and provider observations stay separate. No task text is persisted here. */
 export type ProviderCallTrace = {
-  kind: 'answer' | 'summary' | 'web-search';
+  kind: 'answer' | 'summary' | 'web-search' | 'check';
   outcome: 'running' | 'completed' | 'error';
   code?: string;
   ms: number;
@@ -179,6 +179,14 @@ export type Message = {
   files?: { name: string }[];
   /** The person's rating of an answer; stays on this computer with the conversation. */
   feedback?: 'good' | 'fix';
+  /** How long the answer took, from sending the request to the finished reply. */
+  ms?: number;
+  /** Titles of the STeP documents the answer drew on: strong matches given to the AI and documents it opened. */
+  docSources?: string[];
+  /** Policy answerCheck: statements about STeP that the document excerpts did not support (empty: all supported). */
+  check?: { unsupported: { claim: string; reason: string }[] };
+  /** Files the AI wrote in this answer: applied to the workspace, or staged for review in the changes tab (id). */
+  written?: { path: string; id: string; status: 'applied' | 'staged' }[];
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -387,6 +395,7 @@ export type RunEvent = {
   sessionId: string;
   type:
     | 'delta'
+    | 'discard'
     | 'reasoning'
     | 'status'
     | 'activity'
@@ -413,6 +422,8 @@ export type RunEvent = {
   approval?: ApprovalRequest;
   approvalId?: string;
   text?: string;
+  /** For discard: how many characters of the streamed answer to take back. */
+  count?: number;
   trace?: RunTrace;
   detail?: string[];
   connectionId?: string;

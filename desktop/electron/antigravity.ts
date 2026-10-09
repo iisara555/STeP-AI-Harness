@@ -417,23 +417,27 @@ export class AntigravityAdapter implements ProviderAdapter {
         signal,
         system: [context.system || '', TEXT_TRANSPORT_RULES, ...(attempt ? [TOOL_RECOVERY_RULES] : [])].join('\n\n'),
       };
-      // A failed stream can contain both partial prose and host tool requests.
-      // Publish only a complete validated attempt, so recovery cannot duplicate them.
-      const deltas: string[] = [];
+      // Text is shown as it arrives. An attempt that fails takes its text back first, so the recovery attempt
+      // (or the error) never leaves a stopped attempt's prose or tool requests on screen next to the new one.
+      let shown = 0;
+      const emit = (delta: string) => {
+        shown += delta.length;
+        context.emit(delta);
+      };
+      const discard = (chars: number) => {
+        shown -= chars;
+        context.discard?.(chars);
+      };
       let answer: string;
       try {
         // The tool turns of a run continue on one process. A structured request and the recovery attempt run alone.
         answer =
           attempt === 0 && context.session && !context.jsonSchema
-            ? await this.conversationTurn(prompt, connection, { ...attemptContext, emit: delta => deltas.push(delta) }, deadline)
-            : await this.runOnce(
-                prompt,
-                connection,
-                { ...attemptContext, session: undefined, emit: delta => deltas.push(delta) },
-                deadline,
-                attempt === 0,
-              );
+            ? await this.conversationTurn(prompt, connection, { ...attemptContext, emit, discard }, deadline)
+            : await this.runOnce(prompt, connection, { ...attemptContext, session: undefined, emit }, deadline, attempt === 0);
+        if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
       } catch (error) {
+        if (shown) discard(shown);
         if (timeout.aborted && !context.signal.aborted && !(error as any)?.shutdownIncomplete) throw new Error('PROVIDER_TIMEOUT');
         // A failed attempt has stopped its process and deleted its isolated home first.
         // Never replay quota/auth failures, unconfirmed policy or uncertain shutdown.
@@ -447,8 +451,6 @@ export class AntigravityAdapter implements ProviderAdapter {
           continue;
         throw error;
       }
-      if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
-      for (const delta of deltas) context.emit(delta);
       return answer;
     }
     throw new Error('TOOL_DENIED');
@@ -537,11 +539,27 @@ export class AntigravityAdapter implements ProviderAdapter {
     const reuse = Boolean(held && !held.exited && held.identity === identity && held.sent && prompt.startsWith(held.sent));
     if (held && !reuse) await session.closeAndWait();
     if (reuse) {
+      let shown = 0;
       try {
-        return await this.turn(held!, prompt, connection, context, deadline, Date.now());
+        return await this.turn(
+          held!,
+          prompt,
+          connection,
+          {
+            ...context,
+            emit: delta => {
+              shown += delta.length;
+              context.emit(delta);
+            },
+          },
+          deadline,
+          Date.now(),
+        );
       } catch (error) {
-        // A process that ended or answered out of protocol between turns gets one fresh start with the whole prompt.
+        // A process that ended or answered out of protocol between turns gets one fresh start with the whole prompt,
+        // after its partial text is taken back.
         if (context.signal.aborted || !resettable(error)) throw error;
+        if (shown) context.discard?.(shown);
         await session.closeAndWait();
         return this.turn(
           await this.open(session, identity, connection, context),

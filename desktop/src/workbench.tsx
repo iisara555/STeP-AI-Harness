@@ -448,6 +448,15 @@ export function WorkbenchPanel({ api, tab, session, workspace, request, onTab, o
                     >
                       {t('บันทึกที่ตรวจแล้ว')}
                     </button>
+                    {/\.html?$/i.test(change.path) && (
+                      <button
+                        className="quiet"
+                        disabled={busy}
+                        onClick={() => void action(() => api.call('previewHtml', { id: change.id }))}
+                      >
+                        {t('ดูตัวอย่าง')}
+                      </button>
+                    )}
                     <button
                       className="quiet"
                       onClick={() =>
