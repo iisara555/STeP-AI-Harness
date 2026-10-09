@@ -8,16 +8,14 @@ _Last updated: 2026-10-09_
 
 ## Latest release
 
-- **Desktop v0.5.36** (2026-10-09) — Windows x64 and macOS Apple silicon. Intel Macs stay on 0.5.35 (Mac Intel builds
-  dropped 2026-10-09). Harness **0.7.7**.
+- **Desktop v0.5.37** (2026-10-09) — Windows x64 and macOS Apple silicon: PR #126 (one-line chat status, answer time,
+  Antigravity streaming, policy problem reasons, STeP document sources, optional `answerCheck`, HTML preview, retry of
+  unreadable tool requests, `AGENTS.md`) and PR #127 (receipt fields filled from the AI image reading). Intel Macs stay
+  on 0.5.35. Harness **0.7.7**.
 
 ## In progress
 
-- **PR #126** — chat shows one status line that changes in place; "ใช้เวลา m:ss" under each answer; Gemini through
-  Antigravity streams its answer; the policy tab shows why `desktop-policy.json` was rejected; Windows config-lock
-  test flake fixed; this file, `AGENTS.md` and `CLAUDE.md`; source documents under STeP answers and an optional answer
-  check (policy `answerCheck`, off by default); HTML preview of files the AI writes (online, CDN libraries allowed, other local files blocked); an unreadable tool request
-  is retried twice and then reported instead of ending as an empty reply.
+- Nothing open from the agent threads.
 
 ## Waiting on the owner
 
@@ -25,6 +23,7 @@ _Last updated: 2026-10-09_
   in diagnostics), so `claudeSubscription` is not applied. After PR #126 the policy tab names the reason.
 - **Antigravity streaming** needs one check with a signed-in `agy`: whether `ttftMs` in `diagnostics.jsonl` is now
   lower than `ms`.
+- **HTML preview on a real machine**: WebGL (Three.js) and full screen inside the Web tab were not testable in CI.
 - **Branch protection on `main`** (GitHub Settings → Branches): require pull requests and the `validate` checks, so
   no agent can push straight to `main`.
 

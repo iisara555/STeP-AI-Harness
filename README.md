@@ -4,7 +4,7 @@
 
 สรุปประชุม ร่างหนังสือ เตรียม TOR จัดตาราง ตรวจใบเสร็จก่อนส่ง AFP และถามเรื่องระเบียบหรือสวัสดิการของ STeP โดยเริ่มจากข้อมูลหรือต้นเรื่องที่คุณมี แล้วแก้ร่างและส่งออกในพื้นที่ทำงานเดียว
 
-[ดาวน์โหลด Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.36) · [เริ่มใช้งาน](#เริ่มใช้งานใน-3-ขั้นตอน) · [ขอความช่วยเหลือ](SUPPORT.md)
+[ดาวน์โหลด Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.37) · [เริ่มใช้งาน](#เริ่มใช้งานใน-3-ขั้นตอน) · [ขอความช่วยเหลือ](SUPPORT.md)
 
 ![พื้นที่ทำงาน STeP Desktop พร้อมบทสนทนาและผลงาน](docs/images/gui/02-workspace.png)
 
@@ -185,6 +185,6 @@ AI ช่วยเตรียมงานให้ตรวจต่อ ส่�
 
 ประวัติการเปลี่ยนแปลงของแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-รุ่นใน source ปัจจุบัน: **STeP Desktop v0.5.36** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
+รุ่นใน source ปัจจุบัน: **STeP Desktop v0.5.37** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
 
 โค้ดเผยแพร่ภายใต้ [MIT License](LICENSE) ไฟล์บุคคลที่สามมีเงื่อนไขของตน เช่น [ภาพตราครุฑ](docs/third-party-notices/thai-garuda.md) Repository นี้เป็น public จึงไม่ใช่ที่เก็บเอกสารภายในหรือข้อมูลของผู้ใช้
