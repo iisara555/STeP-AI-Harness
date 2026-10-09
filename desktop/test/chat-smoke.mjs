@@ -49,10 +49,13 @@ createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line)
  setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:text}});send({method:'turn/completed',params:{turn:{status:'completed'}}});},120);}
 });`,
 );
-const server = createServer((_req, res) =>
-  res.end(
-    '<html><head><title>Synthetic Browser</title></head><body><h1>Browser fixture</h1><p>Public synthetic content.</p></body></html>',
-  ),
+let beacons = 0;
+const server = createServer((req, res) =>
+  req.url.startsWith('/beacon')
+    ? (beacons++, res.end(''))
+    : res.end(
+        '<html><head><title>Synthetic Browser</title></head><body><h1>Browser fixture</h1><p>Public synthetic content.</p></body></html>',
+      ),
 );
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
@@ -306,6 +309,26 @@ try {
     return window.step.call('toolBrowserRead', { id: dock.active });
   });
   assert.match(opened.text, /Browser fixture/);
+  await page.getByRole('button', { name: 'ปิดเว็บนี้' }).click();
+  await page.locator('.browser-tab').waitFor({ state: 'detached' });
+  // An HTML file (a slide deck) previews in the Web tab: its scripts run, but it cannot reach the network.
+  const beacon = 'http://127.0.0.1:' + server.address().port + '/beacon';
+  await writeFile(
+    join(workspace, 'deck.html'),
+    `<html><head><title>Deck</title><link rel="stylesheet" href="${beacon}-css"></head><body><img src="${beacon}-img">` +
+      `<script>fetch('${beacon}-fetch').catch(()=>{});document.title='Deck ready';</script></body></html>`,
+  );
+  await page.evaluate(() => window.step.call('previewHtml', { path: 'deck.html' }));
+  await page.locator('.browser-tab.active').waitFor();
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('browserDock', { action: 'state' }))).tabs.map(tab => tab.title))
+    .toEqual(['Deck ready']);
+  await page.waitForTimeout(300);
+  assert.equal(beacons, 0, 'the preview made no network request');
+  await assert.rejects(
+    page.evaluate(() => window.step.call('previewHtml', { path: 'new.txt' })),
+    /INVALID_PATH/,
+  );
   await page.getByRole('button', { name: 'ปิดเว็บนี้' }).click();
   await page.locator('.browser-tab').waitFor({ state: 'detached' });
   await page.getByRole('button', { name: 'ผลงาน', exact: true }).click();

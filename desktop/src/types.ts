@@ -185,6 +185,8 @@ export type Message = {
   docSources?: string[];
   /** Policy answerCheck: statements about STeP that the document excerpts did not support (empty: all supported). */
   check?: { unsupported: { claim: string; reason: string }[] };
+  /** Files the AI wrote in this answer: applied to the workspace, or staged for review in the changes tab (id). */
+  written?: { path: string; id: string; status: 'applied' | 'staged' }[];
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };

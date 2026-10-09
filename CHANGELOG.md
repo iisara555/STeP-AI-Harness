@@ -12,6 +12,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Each answer shows how long it took (for example "ใช้เวลา 0:28"), counted from sending the request to the finished reply.
 - Gemini through Antigravity shows its answer while it is being written instead of all at once at the end. If an attempt is stopped (it tried a tool STeP does not allow) and the app asks again, the stopped attempt's text is taken off the screen first.
 - An answer about STeP lists the organization documents it drew on under the reply ("อ้างอิงเอกสาร STeP: …"), so employees can see it came from STeP's own sources.
+- When the AI writes a file in chat (for example an HTML slide deck), the answer lists it as saved or waiting in "รายการแก้ไข". HTML files have a "ดูตัวอย่าง" button, there and on the review card, that opens the page in the Web tab offline: its scripts run (slide navigation) but it cannot load anything from the network or other local files.
+- A tool request the app cannot read (often a long file whose quotes or line breaks were not escaped) no longer ends the task as an empty reply. The AI is told why and gets two chances to send it again; after that the chat shows an error saying no file was saved.
 - New policy feature `answerCheck` (off by default): when on, an answer about STeP is checked once more by the AI against the same document excerpts, and any statement the documents do not support is listed under the answer for the employee to verify. A failed check never blocks the answer.
 
 ### Organization policy

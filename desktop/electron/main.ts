@@ -29,6 +29,7 @@ import { requireSecureStorage } from './secure-storage';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
+import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL, type SelfInstall } from './updater';
 import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
@@ -1532,6 +1533,33 @@ async function main() {
             throw new Error('BROWSER_LOAD_FAILED');
           }
           return { id, url, title: browser.getTitle() };
+        });
+      }
+      case 'previewHtml': {
+        // An HTML file in the workspace, or one the AI staged for review, shown offline in the Web tab.
+        const change = input.id ? workbench.change(inputText(input.id, 60)) : undefined;
+        const target = change ? change.path : inputText(input.path, 2000);
+        if (!isHtmlPath(target)) throw new Error('INVALID_PATH');
+        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, async () => {
+          if (browsers.size >= 4) throw new Error('TASK_LIMIT');
+          const html = change ? change.after : (await workbench.bytes(target, PREVIEW_LIMIT)).toString('utf8');
+          const id = randomUUID();
+          browsers.add(id);
+          try {
+            return await openHtmlPreview(
+              partition => {
+                const page = dock.create(id, 'manual', partition);
+                page.once('destroyed', () => browsers.delete(id));
+                return page;
+              },
+              id,
+              html,
+            );
+          } catch (error) {
+            browsers.delete(id);
+            dock.remove(id);
+            throw error;
+          }
         });
       }
       case 'toolBrowserRead': {

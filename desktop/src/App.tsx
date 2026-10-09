@@ -38,6 +38,7 @@ import {
   ChevronDown,
   Compass,
   BookOpen,
+  Eye,
   AlertTriangle,
 } from 'lucide-react';
 import { lazyScreen } from './lazy-screen';
@@ -1572,6 +1573,34 @@ export default function App() {
                           {t('อ้างอิงเอกสาร STeP')}: {message.docSources.join(' · ')}
                         </span>
                       </p>
+                    )}
+                    {!!message.written?.length && (
+                      <ul className="written-files small">
+                        {message.written.map(file => (
+                          <li key={file.path}>
+                            <FileText size={13} />
+                            <span className="written-path">{file.path}</span>
+                            <span className="muted">{file.status === 'applied' ? t('บันทึกแล้ว') : t('รอตรวจในรายการแก้ไข')}</span>
+                            {/\.html?$/i.test(file.path) && (
+                              <button
+                                className="quiet small"
+                                onClick={() =>
+                                  void action(() =>
+                                    api.call('previewHtml', file.status === 'applied' ? { path: file.path } : { id: file.id }),
+                                  )
+                                }
+                              >
+                                <Eye size={13} /> {t('ดูตัวอย่าง')}
+                              </button>
+                            )}
+                            {file.status === 'staged' && (
+                              <button className="quiet small" onClick={() => setToolTab('changes')}>
+                                {t('ไปตรวจ')}
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
                     )}
                     {message.check &&
                       (message.check.unsupported.length ? (

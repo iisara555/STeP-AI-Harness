@@ -692,3 +692,27 @@
     transform: rotate(-2deg) scale(0.98, 1.04);
   }
 }
+.written-files {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.written-files li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0;
+}
+.written-files svg {
+  flex-shrink: 0;
+}
+.written-path {
+  font-family: var(--mono, ui-monospace, monospace);
+  overflow-wrap: anywhere;
+}
+.written-files button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

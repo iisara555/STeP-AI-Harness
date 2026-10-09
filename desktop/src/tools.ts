@@ -84,6 +84,29 @@ export function loopRequests(text: string): LoopRequest[] {
   }
   return requests;
 }
+/**
+ * Why the step-tool blocks of a reply could not be read, one entry per block the loop would skip. A reply whose only
+ * request is broken (often a long file whose quotes or line breaks were not escaped in JSON) must not end the task as
+ * an answer: the person would see an empty reply, since tool blocks are hidden.
+ */
+export function brokenRequests(text: string): string[] {
+  const problems: string[] = [];
+  for (const match of text.matchAll(/```step-tool[ \t]*\n([\s\S]*?)(?:```|$)/g)) {
+    const body = match[1].trim();
+    if (loopRequests('```step-tool\n' + body + '\n```').length) continue;
+    try {
+      const r = JSON.parse(body);
+      problems.push(
+        !r || !LOOP_TOOLS.includes(r.tool)
+          ? `unknown tool ${JSON.stringify(String(r?.tool ?? '')).slice(0, 60)}`
+          : 'invalid fields or a value over its size limit (input 2000, content 200000 characters, args 30000)',
+      );
+    } catch (error) {
+      problems.push('invalid JSON: ' + String((error as Error).message).slice(0, 200));
+    }
+  }
+  return problems;
+}
 export function toolRequests(text: string): ToolRequest[] {
   const results: ToolRequest[] = [];
   for (const match of text.matchAll(/```step-tool\s*\n([\s\S]*?)```/g)) {

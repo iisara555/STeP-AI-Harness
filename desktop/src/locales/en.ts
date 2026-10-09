@@ -899,7 +899,13 @@ export const en: Record<string, string> = {
   'AI ทำงานไม่สำเร็จ ตรวจการเชื่อมต่อและโควตาแล้วลองใหม่': "The AI didn't complete. Check the connection and quota, then try again",
   'มีงานกำลังทำอยู่ รอให้เสร็จหรือหยุดงานก่อน': 'A task is already running. Wait for it to finish or stop it first',
   แหล่งอ้างอิงที่จำเป็นยังไม่พร้อม: "A required reference isn't ready yet",
+  ดูตัวอย่าง: 'Preview',
+  บันทึกแล้ว: 'Saved',
+  รอตรวจในรายการแก้ไข: 'Waiting for review in Changes',
+  ไปตรวจ: 'Review',
   'AI ยังไม่ได้ส่งร่างกลับมา กรุณาลองใหม่': "The AI hasn't returned a draft yet. Please try again",
+  'AI พยายามสร้างไฟล์หรือใช้เครื่องมือ แต่ส่งคำขอมาในรูปแบบที่อ่านไม่ได้ จึงยังไม่มีไฟล์ใดถูกบันทึก ลองส่งอีกครั้ง หรือเลือกโมเดลอื่น':
+    'The AI tried to create a file or use a tool, but sent the request in a form that could not be read, so no file was saved. Send it again, or choose another model',
   'เนื้อหายาวเกินขอบเขต กรุณาแบ่งงานเป็นส่วนเล็กลง': 'The content is too long. Please split the task into smaller parts',
   'ดำเนินการไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่': 'Something went wrong. Please check the details and try again',
   พร้อมเริ่ม: 'Ready to start',

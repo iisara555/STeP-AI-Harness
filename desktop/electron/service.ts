@@ -19,6 +19,7 @@ import { Store } from './store';
 import { ProviderSession, type ProviderAdapter, type ProviderContext, type TokenCount } from './providers';
 import { needsPublicWebSearch } from '../../src/modules/router/public-information.js';
 import { webSources } from '../src/web';
+import { brokenRequests } from '../src/tools';
 import { speakingStyleRules } from '../src/speaking-styles';
 import { ToolLoop, TOOL_RULES, BROWSER_RULES, type LoopHost } from './tool-loop';
 import type { ToolScope } from './tools';
@@ -648,6 +649,8 @@ export class WorkService {
       const catalog: RegistryEntry[] = knowledge ? await knowledge.registry().catch(() => []) : [];
       // Registered documents the AI opened itself with the reference tool during this run.
       const opened = new Set<string>();
+      // Files the AI wrote (applied) or proposed (staged for review) with the changes tool, listed under the answer.
+      const written = new Map<string, NonNullable<Message['written']>[number]>();
       // The organization's Skills, listed by name and description only; the model loads a Skill's full text with the
       // skill tool when the request needs it (like Claude Code and opencode), instead of every Skill being read.
       const skillRegistry = textOnly
@@ -1181,7 +1184,20 @@ export class WorkService {
             ...host,
             execute: (request, signal) => {
               if (request.tool === 'reference' && request.input) opened.add(request.input);
-              return host.execute(request, signal);
+              const done = host.execute(request, signal);
+              if (request.tool === 'changes' && request.content !== undefined)
+                void done.then(
+                  (change: any) => {
+                    if (change && typeof change.path === 'string' && typeof change.id === 'string')
+                      written.set(change.path, {
+                        path: change.path,
+                        id: change.id,
+                        status: change.status === 'applied' ? 'applied' : 'staged',
+                      });
+                  },
+                  () => {},
+                );
+              return done;
             },
             timing: (tool, ms) => {
               stepTrace.toolMs = (stepTrace.toolMs || 0) + ms;
@@ -1204,6 +1220,9 @@ export class WorkService {
         }
       }
       if (!result.trim()) throw new Error('EMPTY_RESULT');
+      // A chat reply that is only tool requests the loop could not read would show as an empty message.
+      if (chat && !result.replace(/```step-tool[\s\S]*?(?:```|$)/g, '').trim() && brokenRequests(result).length)
+        throw new Error('TOOL_REQUEST_UNREADABLE');
       const documentOutput = draftingTool ? parseDocumentOutput(handoff, draftingTool.id, { requireEnvelope: true }) : undefined;
       if (documentOutput) handoff = documentOutput.draft;
       // The STeP documents a chat answer drew on, shown under it: strong matches given to the AI and documents it opened.
@@ -1274,6 +1293,7 @@ export class WorkService {
         at: new Date().toISOString(),
         ms: Date.now() - started,
         ...(docSources.length ? { docSources } : {}),
+        ...(written.size ? { written: [...written.values()] } : {}),
         ...(check ? { check } : {}),
         ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
       });
