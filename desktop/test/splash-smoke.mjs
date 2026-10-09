@@ -16,7 +16,8 @@ try {
     if (!splash) await new Promise(done => setTimeout(done, 50));
   }
   assert.ok(splash, 'the loading window did not open');
-  const splashSeenAt = Date.now();
+  // The page's own start time stands in for when the window opened; a slow runner can find the window late.
+  const splashOpenedAt = await splash.evaluate(() => performance.timeOrigin);
   await splash.getByRole('img', { name: 'STeP Desktop' }).waitFor();
   assert.ok((await splash.getByRole('status').textContent())?.startsWith('กำลัง'));
   const visible = () =>
@@ -36,8 +37,9 @@ try {
     await new Promise(done => setTimeout(done, 200));
   }
   assert.equal(windows.length, 1, JSON.stringify(windows));
-  // The loading window stays up for at least 5 seconds from when it opened (it was found a little after that).
-  assert.ok(Date.now() - splashSeenAt >= 4500, `the loading window closed after ${Date.now() - splashSeenAt} ms`);
+  // The loading window stays up for at least 5 seconds from when it opened.
+  const shownFor = Math.round(Date.now() - splashOpenedAt);
+  assert.ok(shownFor >= 4800, `the loading window closed after ${shownFor} ms`);
   assert.ok(windows[0].visible && windows[0].url.includes('index.html'), JSON.stringify(windows));
   const page = app.windows().find(w => w.url().includes('index.html'));
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout: 5000 });
