@@ -162,5 +162,5 @@ try {
   console.log('README GUI screenshots created in', out);
 } finally {
   await app.close();
-  await rm(home, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
