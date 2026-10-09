@@ -4,7 +4,7 @@
 
 สำหรับพนักงาน STeP / RSP North ที่ต้องสรุปประชุม เตรียมเอกสาร จัดข้อมูล หรือดูความครบถ้วนของใบเสร็จก่อนส่ง AFP คุณเริ่มจากต้นเรื่องที่มี ตรวจร่างในแอป แล้วส่งออกไปใช้ต่อ
 
-[ดูตัวติดตั้ง Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.32) · [เริ่มใช้งาน](#เริ่มใช้งาน) · [ขอความช่วยเหลือ](../SUPPORT.md)
+[ดูตัวติดตั้ง Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.33) · [เริ่มใช้งาน](#เริ่มใช้งาน) · [ขอความช่วยเหลือ](../SUPPORT.md)
 
 ![พื้นที่ทำงานและแถบผลงานของ STeP Desktop](../docs/images/gui/02-workspace.png)
 
@@ -151,4 +151,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.5.32** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.5.33** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน

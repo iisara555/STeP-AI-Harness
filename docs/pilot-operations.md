@@ -4,7 +4,7 @@
 
 **Released distribution baseline:** v0.7.3 (GitHub Release 2026-09-21; รุ่นที่ผู้ทดสอบรอบแรกใช้อยู่) · v0.7.4 มี GitHub Release 2026-09-25 แต่ไม่แจก ผู้ทดสอบข้ามไปรุ่นล่าสุดที่ผ่าน Release Gate
 
-**Prepared Pilot candidate:** v0.7.6 (รวม v0.7.5) — รอ Release Gate; รอบแรกวันที่ 22 กันยายน 2569 ใช้ v0.7.3 ตาม [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek; สิ่งที่เปลี่ยนดู [CHANGELOG](../CHANGELOG.md)
+**Prepared Pilot candidate:** v0.7.7 (รวม v0.7.5–v0.7.6) — รอ Release Gate; รอบแรกวันที่ 22 กันยายน 2569 ใช้ v0.7.3 ตาม [คู่มือรอบ Pilot](pilot-runbook.md); ผู้ประสานงาน STeP AI Geek; สิ่งที่เปลี่ยนดู [CHANGELOG](../CHANGELOG.md)
 
 **Repository scope:** `main` may contain post-v0.7.3 changes; do not treat `main` as a released employee package until tagged/released.
 

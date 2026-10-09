@@ -3,6 +3,12 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'งานแปล สรุปข้อความ และตรวจคำผิดส่งเฉพาะบริบทที่จำเป็น โดยคงกฎและ Skill ที่งานต้องใช้':
+    'Translation, supplied-text summaries and spelling checks send only the needed context, retaining required rules and Skills',
+  'ค้น Skill และเอกสารที่เกี่ยวข้องก่อน และอ่านรายละเอียดเพิ่มเติมเมื่อจำเป็น':
+    'Find relevant Skills and documents first, and read more detail when needed',
+  'ลดการเริ่ม AI ใหม่ระหว่างอ่านข้อมูลหลายรอบ พร้อมแสดงประมาณการค่าใช้จ่ายเมื่อใช้ cache':
+    'Reuse the AI session during repeated tool reads and label estimated costs when caching is used',
   'แก้เอกสารผ่านแชตต่อจากร่างปัจจุบัน คง Skill แม่แบบ และข้อมูลที่แก้ไว้ก่อนหน้า':
     'Chat edits build on the current draft, retaining its Skill, template and earlier edits',
   'Ob-Oon และ Witty ตอบเป็นธรรมชาติ ไม่ใส่ชื่อหัวข้อของสไตล์ในคำตอบหรือเอกสาร':

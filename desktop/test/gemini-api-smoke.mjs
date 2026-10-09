@@ -11,6 +11,8 @@ import assert from 'node:assert/strict';
 let mode = 'quota';
 let ocrServer;
 const chatTurns = [];
+const cachedPrefixes = new Map();
+const cachedRequests = [];
 const receiptReply = {
   fields: {
     merchant: { value: 'ร้านตัวอย่าง จำกัด', evidence: 'ร้านตัวอย่าง จำกัด' },
@@ -55,12 +57,27 @@ const server = createServer((req, res) => {
       candidates: [{ content: { parts: [{ text }], role: 'model' }, finishReason: 'STOP', index: 0 }],
       usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 1, totalTokenCount: 6 },
     });
+    if (req.url.endsWith('/cachedContents')) {
+      const request = JSON.parse(body);
+      assert.equal(request.contents, undefined, 'cache creation contains no user/task text');
+      assert.equal(request.ttl, '300s');
+      const name = 'cachedContents/synthetic' + cachedPrefixes.size;
+      cachedPrefixes.set(name, request.systemInstruction);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ name }));
+    }
     if (req.url.includes('streamGenerateContent')) {
       prompts.push(body);
       // The receipt page's vision reading: answer with the JSON the receipt prompt asks for.
       let text = body.includes('You read Thai and English receipts') ? JSON.stringify(receiptReply) : 'OK';
       // A chat question: the first turn asks for the reference tool, the next answers from its result.
       const request = JSON.parse(body);
+      if (request.cachedContent) {
+        assert.ok(cachedPrefixes.has(request.cachedContent));
+        assert.equal(request.systemInstruction, undefined);
+        assert.equal(request.tools, undefined);
+        cachedRequests.push(request);
+      }
       const said = (request.contents || []).map(c => (c.parts || []).map(p => p.text || '').join('')).join('\n');
       if (said.includes('ผอ.วิน คือใคร')) {
         chatTurns.push({
@@ -77,7 +94,9 @@ const server = createServer((req, res) => {
       // The receipt reading answers slowly, so the test can switch pages while it is still running.
       const send = () => {
         res.writeHead(200, { 'content-type': 'text/event-stream' });
-        res.end('data: ' + JSON.stringify(reply(text)) + '\r\n\r\n');
+        const data = reply(text);
+        if (request.cachedContent) data.usageMetadata.cachedContentTokenCount = 3;
+        res.end('data: ' + JSON.stringify(data) + '\r\n\r\n');
       };
       const slow = body.includes('You read Thai and English receipts') || (slowTest && body.includes('Reply with exactly OK'));
       return void (slow ? setTimeout(send, 2500) : send());
@@ -316,9 +335,39 @@ try {
   const canceled = await page.evaluate(connectionId => window.step.call('ocrFolder', { connectionId }), connectionId);
   assert.equal(canceled.vision, true);
   assert.equal(canceled.textOnly, false);
+
+  // The managed opt-in goes through real routing, IPC and the native HTTP adapter.
+  const cacheModel = (await gemini()).find(c => c.id === connectionId).models.find(m => /^gemini-/.test(m.id)).id;
+  await writeFile(
+    join(home, 'desktop-policy.json'),
+    JSON.stringify({ modelLimits: { [cacheModel]: { promptCaching: 'gemini-explicit', maxOutputTokens: 1024 } } }),
+  );
+  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source).toBe('managed');
+  await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), { id: connectionId, model: cacheModel });
+  const cacheCalls = [];
+  for (const text of ['แปลเป็นอังกฤษ: วันนี้อากาศดี', 'แปลเป็นอังกฤษ: พรุ่งนี้อากาศดี']) {
+    const session = await page.evaluate(connectionId => window.step.call('create', { connectionId }), connectionId);
+    await page.evaluate(({ id, text }) => window.step.call('send', { id, text, mode: 'chat', autoImage: false }), { id: session.id, text });
+    await expect
+      .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === session.id)?.status, {
+        timeout: 30000,
+      })
+      .toBe('review');
+    const completed = (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(s => s.id === session.id);
+    const step = completed.runs.at(-1).steps[0];
+    assert.equal(step.contextScope, 'text');
+    cacheCalls.push(step.providerCalls[0]);
+  }
+  assert.equal(cachedPrefixes.size, 1, 'separate supplied-text tasks reuse the same governed prefix');
+  assert.equal(cachedRequests.length, 2);
+  assert.deepEqual(
+    cacheCalls.map(c => c.transport.cacheStatus),
+    ['created', 'reused'],
+  );
+  assert.ok(cacheCalls.every(c => c.usage.input === 5 && c.usage.cachedInput === 3 && c.usage.total === 6));
   assert.deepEqual(errors, []);
   console.log(
-    'Gemini API key smoke passed: Settings tests the key on connect; quota errors and success both finish; the receipt page reads an image with the vision model; chat tool turns share one Gemini conversation.',
+    'Gemini API key smoke passed: Settings, quota, vision, retained CLI tool turns and managed native HTTP prefix cache creation/reuse with trace usage.',
   );
 } finally {
   await app.close().catch(() => {});

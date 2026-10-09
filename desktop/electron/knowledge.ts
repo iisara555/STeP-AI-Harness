@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 
 export type CatalogEntry = { id: string; title: string; path: string; owner?: string; status?: string };
@@ -49,6 +49,7 @@ const MAX_SECTIONS = 4,
  */
 export class OrganizationKnowledge {
   private sections?: Promise<Section[]>;
+  private revision = '';
   constructor(
     private root: string,
     private catalog: () => Promise<CatalogEntry[]>,
@@ -56,29 +57,48 @@ export class OrganizationKnowledge {
   async entries() {
     return (await this.catalog().catch(() => [])).filter(entry => {
       const rel = relative(this.root, resolve(this.root, entry.path));
-      return entry.path && !rel.startsWith('..') && !isAbsolute(rel);
+      return (
+        entry.path &&
+        !rel.startsWith('..') &&
+        !isAbsolute(rel) &&
+        !['restricted', 'superseded', 'archived', 'withdrawn', 'not-provided'].includes(entry.status || '')
+      );
     });
   }
-  private load() {
-    this.sections ??= this.entries().then(async entries => {
-      const all: Section[] = [];
-      for (const entry of entries) {
-        const body = await readFile(resolve(this.root, entry.path), 'utf8').catch(() => '');
-        for (const part of body.split(/\n(?=#{1,3} )/)) {
-          const heading = /^#{1,3} (.+)/.exec(part)?.[1]?.trim() || entry.title;
-          all.push({
-            id: entry.id,
-            title: entry.title,
-            path: entry.path,
-            heading,
-            text: part.trim(),
-            headGrams: trigrams(entry.title + ' ' + heading),
-            bodyGrams: trigrams(part.slice(0, 20000)),
-          });
+  private async load() {
+    const entries = await this.entries();
+    const versions = await Promise.all(
+      entries.map(async entry => {
+        const info = await stat(resolve(this.root, entry.path), { bigint: true }).catch(() => undefined);
+        return [entry, info ? `${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}` : 'missing'];
+      }),
+    );
+    const revision = JSON.stringify(versions);
+    if (!this.sections || this.revision !== revision) {
+      this.revision = revision;
+      this.sections = (async () => {
+        const all: Section[] = [];
+        for (const entry of entries) {
+          const body = await readFile(resolve(this.root, entry.path), 'utf8').catch(() => '');
+          for (const part of body.split(/\n(?=#{1,3} )/)) {
+            const heading = /^#{1,3} (.+)/.exec(part)?.[1]?.trim() || entry.title;
+            all.push({
+              id: entry.id,
+              title: entry.title,
+              path: entry.path,
+              heading,
+              text: part.trim(),
+              headGrams: trigrams(entry.title + ' ' + heading),
+              bodyGrams: trigrams(part.slice(0, 20000)),
+            });
+          }
         }
-      }
-      return all;
-    });
+        return all;
+      })().catch(error => {
+        this.sections = undefined;
+        throw error;
+      });
+    }
     return this.sections;
   }
   /**
@@ -145,19 +165,15 @@ function documentSummary(intro: string) {
   return clip((line || '').replace(/\*\*|`|\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/^[-*] /, ''), 200);
 }
 
-/** The knowledge registry as prompt text: ID, title, owner, summary and sections of each document. */
+/** One bounded line per document. Section outlines are fetched on demand with reference(args.action=outline). */
 export function registryText(entries: RegistryEntry[]) {
   return entries
-    .map(e =>
-      [
-        `- ${e.id}: ${e.title}${e.owner ? ` (owner: ${e.owner})` : ''}`,
-        e.summary && `  about: ${e.summary}`,
-        e.sections.length && `  sections: ${e.sections.join(' | ')}`,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    )
+    .map(e => `- ${e.id} | ${clip(e.title.replace(/\s+/g, ' '), 110)} | ${clip(e.summary.replace(/\s+/g, ' '), 140)}`)
     .join('\n');
+}
+
+export function documentHeadings(text: string) {
+  return [...text.matchAll(/^#{1,3} (.+)$/gm)].map(match => clip(match[1].trim(), 160)).slice(0, 100);
 }
 
 /** One section of a document by its heading (exact, then partial match); undefined when none matches. */

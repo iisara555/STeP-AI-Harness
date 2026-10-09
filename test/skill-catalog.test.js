@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSkillCatalog } from '../src/modules/skills/catalog.js';
+import { loadSkillCatalog, createSkillCatalog } from '../src/modules/skills/catalog.js';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { queryStepRouter } from '../src/modules/router/service.js';
 
 test('skill catalog tags every SKILL.md by registry and router state', async () => {
@@ -22,4 +25,27 @@ test('an explicitly invoked skill skips scoring but never authority checks', asy
   assert.equal(blocked.routingContract.authority.status, 'BLOCK');
   const unknown = await queryStepRouter('ช่วยหน่อย', { team: 'cc', skill: 'no-such-skill' });
   assert.notEqual(unknown.routingContract.skill, 'no-such-skill');
+});
+
+test('cached catalog observes file additions, edits, removals and registry revocation without sharing mutable results', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'step-catalog-cache-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, 'skills', 'fixture'), { recursive: true });
+  await mkdir(join(root, 'manifest'));
+  await writeFile(join(root, 'manifest', 'skills.yaml'), 'skills:\n  fixture:\n    path: skills/fixture/SKILL.md\n    description: First revision\n');
+  await writeFile(join(root, 'skills', 'fixture', 'SKILL.md'), '---\nname: fixture\ndescription: First revision\n---\n# First title\n');
+  const catalog = createSkillCatalog(root);
+  const first = await catalog();
+  assert.equal(first.find(s => s.name === 'fixture').status, 'registered');
+  first.find(s => s.name === 'fixture').title = 'Mutation by caller';
+  assert.equal((await catalog()).find(s => s.name === 'fixture').title, 'First title');
+  await writeFile(join(root, 'skills', 'fixture', 'SKILL.md'), '---\nname: fixture\ndescription: Second revision\n---\n# Second title\n');
+  assert.equal((await catalog()).find(s => s.name === 'fixture').title, 'Second title');
+  await writeFile(join(root, 'manifest', 'skills.yaml'), 'skills:\n');
+  assert.equal((await catalog()).find(s => s.name === 'fixture').status, 'unregistered');
+  await mkdir(join(root, 'skills', 'new'));
+  await writeFile(join(root, 'skills', 'new', 'SKILL.md'), '---\nname: new-fixture\n---\n# New title\n');
+  assert.ok((await catalog()).some(s => s.name === 'new-fixture'));
+  await rm(join(root, 'skills', 'new'), { recursive: true });
+  assert.ok(!(await catalog()).some(s => s.name === 'new-fixture'));
 });

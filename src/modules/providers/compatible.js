@@ -1,3 +1,48 @@
+import { providerUsage } from "./usage.js";
+// Error bodies are untrusted and may contain private text. Inspect only a bounded structured code/type.
+async function failureCode(response) {
+  let code = "";
+  if (response.body) {
+    const reader = response.body.getReader();
+    try {
+      let body = "",
+        bytes = 0;
+      const decoder = new TextDecoder();
+      while (bytes <= 8192) {
+        const part = await reader.read();
+        if (part.done) break;
+        bytes += part.value.byteLength;
+        if (bytes > 8192) break;
+        body += decoder.decode(part.value, { stream: true });
+      }
+      if (bytes <= 8192) {
+        const error = JSON.parse(body)?.error;
+        code = [error?.code, error?.type]
+          .filter((v) => typeof v === "string")
+          .join(" ");
+      }
+    } catch {
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
+  }
+  if (response.status === 401 || response.status === 403)
+    return "PROVIDER_AUTH_FAILED";
+  if (
+    /\b(insufficient_quota|quota_exceeded|billing_hard_limit_reached|credit_balance_exhausted)\b/.test(
+      code,
+    )
+  )
+    return "PROVIDER_QUOTA";
+  if (/\b(context_length_exceeded|prompt_too_long)\b/.test(code))
+    return "PROMPT_TOO_LONG";
+  return response.status === 429
+    ? "PROVIDER_RATE_LIMIT"
+    : response.status >= 500
+      ? "PROVIDER_UNAVAILABLE"
+      : "PROVIDER_REQUEST_FAILED";
+}
 /** Bounded, text-only API transport shared by Desktop, the CLI and server runners. */
 export function providerEndpoint(baseUrl, protocol = "openai") {
   if (!["openai", "anthropic"].includes(protocol))
@@ -50,7 +95,15 @@ export async function compatibleRun(
     typeof prompt !== "string" ||
     prompt.length > 400_000 ||
     !profile.model ||
-    profile.model.length > 160
+    profile.model.length > 160 ||
+    (profile.maxOutputTokens !== undefined &&
+      (!Number.isSafeInteger(profile.maxOutputTokens) ||
+        profile.maxOutputTokens < 1 ||
+        profile.maxOutputTokens > 65536)) ||
+    (profile.promptCaching !== undefined &&
+      !["off", "anthropic-ephemeral"].includes(profile.promptCaching)) ||
+    (profile.promptCaching === "anthropic-ephemeral" &&
+      profile.protocol !== "anthropic")
   )
     throw new Error("INVALID_INPUT");
   const protocol = profile.protocol || "openai",
@@ -75,14 +128,23 @@ export async function compatibleRun(
     protocol === "anthropic"
       ? {
           model: profile.model,
-          max_tokens: 8192,
+          max_tokens: profile.maxOutputTokens || 8192,
           stream: true,
-          system: context.system || "",
+          system:
+            profile.promptCaching === "anthropic-ephemeral" && context.system
+              ? [
+                  {
+                    type: "text",
+                    text: context.system,
+                    cache_control: { type: "ephemeral" },
+                  },
+                ]
+              : context.system || "",
           messages: [{ role: "user", content: prompt }],
         }
       : {
           model: profile.model,
-          max_tokens: 8192,
+          max_tokens: profile.maxOutputTokens || 8192,
           stream: true,
           stream_options: { include_usage: true },
           messages: [
@@ -109,20 +171,16 @@ export async function compatibleRun(
     throw new Error("PROVIDER_NETWORK_FAILED");
   }
   if (!response.ok) {
-    await response.body?.cancel();
-    const code =
-      response.status === 401 || response.status === 403
-        ? "PROVIDER_AUTH_FAILED"
-        : response.status === 429
-          ? "PROVIDER_RATE_LIMIT"
-          : response.status >= 500
-            ? "PROVIDER_UNAVAILABLE"
-            : "PROVIDER_REQUEST_FAILED";
-    const wait = Number(response.headers.get("retry-after"));
+    const code = await failureCode(response);
+    const header = response.headers.get("retry-after");
+    const seconds = header === null ? NaN : Number(header);
+    const wait = Number.isFinite(seconds)
+      ? seconds * 1000
+      : Date.parse(header || "") - Date.now();
     throw Object.assign(
       new Error(code),
       Number.isFinite(wait) && wait > 0
-        ? { retryAfterMs: Math.min(wait * 1000, 60_000) }
+        ? { retryAfterMs: Math.min(wait, 120_000) }
         : {},
     );
   }
@@ -136,9 +194,9 @@ export async function compatibleRun(
   let text = "",
     buffer = "",
     bytes = 0,
-    ended = false,
-    input = 0,
-    output = 0;
+    ended = false;
+  let usage,
+    rawUsage = {};
   const reader = response.body.getReader(),
     decoder = new TextDecoder("utf-8", { fatal: true });
   const consume = (block) => {
@@ -161,10 +219,18 @@ export async function compatibleRun(
     if (event.error || event.type === "error")
       throw new Error("PROVIDER_REQUEST_FAILED");
     if (event.type === "message_stop") ended = true;
-    if (event.type === "message_start")
-      input = event.message?.usage?.input_tokens || 0;
-    if (event.type === "message_delta")
-      output = event.usage?.output_tokens ?? output;
+    const reported =
+      protocol === "anthropic"
+        ? event.type === "message_start"
+          ? event.message?.usage
+          : event.type === "message_delta"
+            ? event.usage
+            : undefined
+        : event.usage;
+    if (reported) {
+      rawUsage = { ...rawUsage, ...reported };
+      usage = providerUsage(protocol, rawUsage);
+    }
     const delta =
       protocol === "anthropic"
         ? event.type === "content_block_delta" &&
@@ -188,12 +254,6 @@ export async function compatibleRun(
     text += delta;
     if (text.length > 200_000) throw new Error("PROVIDER_OUTPUT_LIMIT");
     if (delta) context.emit?.(delta);
-    if (event.usage && protocol === "openai") {
-      input = event.usage.prompt_tokens || 0;
-      output = event.usage.completion_tokens || 0;
-    }
-    if (![input, output].every((n) => Number.isSafeInteger(n) && n >= 0))
-      throw new Error("PROVIDER_STREAM_INVALID");
   };
   const cancel = () => void reader.cancel().catch(() => {});
   signal.addEventListener("abort", cancel, { once: true });
@@ -219,7 +279,6 @@ export async function compatibleRun(
         context.signal?.aborted ? "CANCELLED" : "PROVIDER_TIMEOUT",
       );
     if (!ended || !text.trim()) throw new Error("PROVIDER_STREAM_INCOMPLETE");
-    context.onUsage?.({ input, output, total: input + output });
     return text;
   } catch (error) {
     if (signal.aborted)
@@ -232,5 +291,7 @@ export async function compatibleRun(
     signal.removeEventListener("abort", cancel);
     await reader.cancel().catch(() => {});
     reader.releaseLock();
+    // One observation per attempt, including a stream that fails after reporting usage.
+    if (usage) context.onUsage?.(usage);
   }
 }

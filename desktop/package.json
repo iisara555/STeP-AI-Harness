@@ -1,6 +1,6 @@
 {
   "name": "@step-cmu/desktop",
-  "version": "0.5.32",
+  "version": "0.5.33",
   "license": "MIT",
   "private": true,
   "description": "Local STeP employee workspace",
@@ -25,6 +25,7 @@
     "format:check": "prettier --check \"electron/**/*.{ts,cjs}\" \"src/**/*.{ts,tsx,css}\" \"test/**/*.{ts,mjs}\" \"eval/**/*.{ts,mjs,json}\" \"scripts/**/*.{mjs,cjs}\" build.mjs vite.config.ts",
     "eval:golden": "tsx eval/golden.ts",
     "eval:features": "tsx eval/feature-matrix.ts",
+    "eval:context": "tsx eval/context-efficiency.ts",
     "eval:office": "tsx eval/office-usability.ts",
     "eval:skill-benefit": "node eval/office-skill-benefit/eval.mjs"
   },

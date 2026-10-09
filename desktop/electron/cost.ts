@@ -12,6 +12,7 @@ type Entry = TokenCount & {
   usd: number;
   unpricedTokens: number;
   calls: number;
+  cachePriceMissingTokens?: number;
 };
 const dollars = (n: number) => Math.round(n * 1e12) / 1e12;
 export class CostLedger {
@@ -29,6 +30,16 @@ export class CostLedger {
     const day = this.now().toISOString().slice(0, 10),
       model = connection.model || 'provider-default';
     const price = this.policy().prices[model] || this.policy().prices[connection.provider + ':*'];
+    const cached = Math.min(input, clean(count.cachedInput ?? 0));
+    const written = Math.min(input - cached, clean(count.cacheWriteInput ?? 0));
+    const missing = price ? (price.cachedInput === undefined ? cached : 0) + (price.cacheWriteInput === undefined ? written : 0) : 0;
+    const usd = price
+      ? ((input - cached - written) * price.input +
+          cached * (price.cachedInput ?? price.input) +
+          written * (price.cacheWriteInput ?? price.input) +
+          output * price.output) /
+        1_000_000
+      : 0;
     const id = createHash('sha256')
       .update(JSON.stringify([day, connection.provider, model, connection.id || null, connection.mode || null]))
       .digest('hex');
@@ -43,7 +54,12 @@ export class CostLedger {
       output: output + (old?.output || 0),
       total: total + (old?.total || 0),
       calls: 1 + (old?.calls || 0),
-      usd: dollars((old?.usd || 0) + (price ? (input * price.input + output * price.output) / 1_000_000 : 0)),
+      ...(count.cachedInput !== undefined || old?.cachedInput !== undefined ? { cachedInput: cached + (old?.cachedInput || 0) } : {}),
+      ...(count.cacheWriteInput !== undefined || old?.cacheWriteInput !== undefined
+        ? { cacheWriteInput: written + (old?.cacheWriteInput || 0) }
+        : {}),
+      cachePriceMissingTokens: missing + (old?.cachePriceMissingTokens || 0),
+      usd: dollars((old?.usd || 0) + usd),
       unpricedTokens: (old?.unpricedTokens || 0) + (price ? 0 : total),
     });
   }
@@ -55,10 +71,11 @@ export class CostLedger {
     const dailyTokens = entries.filter(e => e.day === day).reduce((sum, e) => sum + e.total, 0);
     const monthlyUsd = dollars(entries.reduce((sum, e) => sum + e.usd, 0)),
       unpricedTokens = entries.reduce((sum, e) => sum + e.unpricedTokens, 0);
+    const cachePriceMissingTokens = entries.reduce((sum, e) => sum + (e.cachePriceMissingTokens || 0), 0);
     const warnings = [
       budgets.dailyTokens && dailyTokens >= budgets.dailyTokens * 0.8 && 'DAILY_TOKEN_BUDGET',
       budgets.monthlyCostUsd && monthlyUsd >= budgets.monthlyCostUsd * 0.8 && 'MONTHLY_COST_BUDGET',
     ].filter(Boolean) as string[];
-    return { day, month, entries, dailyTokens, monthlyUsd, unpricedTokens, budgets, warnings };
+    return { day, month, entries, dailyTokens, monthlyUsd, unpricedTokens, cachePriceMissingTokens, budgets, warnings };
   }
 }

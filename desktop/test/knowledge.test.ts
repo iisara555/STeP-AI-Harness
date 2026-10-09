@@ -196,7 +196,7 @@ test('who the director is comes from the executive board document, with names in
   store.close();
 });
 
-test('the knowledge registry lists every readable document with its summary and sections, scanned from the files', async () => {
+test('the one-line knowledge registry keeps documents discoverable and section reads remain available', async () => {
   const registry = await knowledge.registry();
   const catalog = await routing.loadDocumentCatalog();
   assert.equal(registry.length, catalog.length, 'one registry entry per readable registered document');
@@ -205,9 +205,10 @@ test('the knowledge registry lists every readable document with its summary and 
   assert.ok(board.sections.some(s => /^ผู้อำนวยการอุทยาน/.test(s)));
   assert.ok(board.sections.some(s => /รองผู้อำนวยการ/.test(s)));
   const text = registryText(registry);
-  assert.match(text, /- step-executive-board: .+\(owner: ga\)\n {2}about: .+\n {2}sections: ผู้อำนวยการ/);
+  assert.match(text, /- step-executive-board \| .+ \| .*ผู้อำนวยการคือใคร/);
+  assert.equal(text.split('\n').length, registry.length);
   assert.ok(!/hr-personnel-welfare-2566/.test(text), 'restricted documents never listed');
-  assert.ok(text.length < 12_000, 'the registry stays small');
+  assert.ok(text.length < 4_000, 'section headings are retrieved lazily instead of injected into every prompt');
   // reference(args.section) reads one section by its registry name.
   const body = await readFile(resolve(root, 'docs/step-executive-board.md'), 'utf8');
   assert.match(documentSection(body, 'ผู้อำนวยการอุทยานวิทยาศาสตร์และเทคโนโลยี (ผอ. STeP)')!, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
@@ -267,9 +268,10 @@ test('the AI sees a registry of Skills by name and description and loads only th
     [call, 'สรุปการประชุมตาม Skill'],
   );
   await work.run(session.id, 'สรุปบันทึกการประชุมนี้ให้หน่อย', '', true, undefined, 'chat');
-  // The registry names every routed Skill; no Skill's instructions are sent until the AI asks.
-  assert.match(captured.system, /- meeting-summary: /);
-  assert.match(captured.system, /- hr-policy-lookup: /);
+  // Confident discovery lists relevant Skills; no unselected Skill body is sent until the AI asks.
+  assert.match(captured.system, /- meeting-summary \| /);
+  assert.doesNotMatch(captured.system, /- hr-policy-lookup \| /);
+  assert.match(captured.system, /args.action=catalog/);
   assert.doesNotMatch(captured.system, /# STeP Meeting Summary/);
   assert.deepEqual(loaded, ['meeting-summary']);
   assert.equal(store.session(session.id).messages.at(-1)!.text, 'สรุปการประชุมตาม Skill');
