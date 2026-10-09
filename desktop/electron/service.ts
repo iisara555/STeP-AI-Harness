@@ -560,6 +560,7 @@ export class WorkService {
             question.question +
             (question.options?.length ? '\n' + question.options.map((o: any, i: number) => `${i + 1}. ${o.label}`).join('\n') : ''),
           at: new Date().toISOString(),
+          ms: Date.now() - started,
         });
         delete session.lastRun;
         finish(session, 'clarify');
@@ -1183,6 +1184,7 @@ export class WorkService {
         role: 'assistant',
         text: chat ? handoff : draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''),
         at: new Date().toISOString(),
+        ms: Date.now() - started,
         ...(retrieved || searched.length ? { webSources: webSources([retrieved, ...searched].filter(Boolean).join('\n\n')) } : {}),
       });
       finish(session, 'review');

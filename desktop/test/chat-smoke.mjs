@@ -213,6 +213,9 @@ try {
   assert.notEqual(colors.light, colors.dark, 'ink must follow the light/dark theme');
   // One quiet working line: what is happening and how long it has taken.
   await expect(page.locator('.activity-detail')).toHaveText(/^\d+:\d{2}$|0 วินาที/);
+  // Steps replace each other on that one line; finished steps are not listed above it.
+  await expect(page.locator('.activity')).toHaveCount(1);
+  await expect(page.locator('.activity-history')).toHaveCount(0);
   await page.screenshot({ path: 'release/qa/web-search-running.png', fullPage: true });
   await page.getByText('Synthetic holiday answer', { exact: false }).waitFor();
   // A heartbeat must keep the already streamed answer visible until completion.
@@ -224,6 +227,9 @@ try {
   const searched = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(searched.sessions[0].messages.at(-1).text, 'Synthetic holiday answer from retrieved evidence');
   assert.equal(searched.sessions[0].messages.at(-1).webSources[0].url, 'https://www.thaigov.go.th/example');
+  // Each answer records and shows how long it took.
+  assert.ok(Number.isInteger(searched.sessions[0].messages.at(-1).ms), 'the answer keeps its duration');
+  await expect(page.locator('.message.assistant .answer-time').last()).toHaveText(/^ใช้เวลา \d+:\d{2}$/);
   await page.locator('.composer textarea').fill('Second message');
   await page.locator('.send').click();
   await page.getByText('Second answer received', { exact: true }).waitFor();

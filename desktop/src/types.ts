@@ -179,6 +179,8 @@ export type Message = {
   files?: { name: string }[];
   /** The person's rating of an answer; stays on this computer with the conversation. */
   feedback?: 'good' | 'fix';
+  /** How long the answer took, from sending the request to the finished reply. */
+  ms?: number;
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
