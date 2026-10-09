@@ -342,7 +342,10 @@ try {
     join(home, 'desktop-policy.json'),
     JSON.stringify({ modelLimits: { [cacheModel]: { promptCaching: 'gemini-explicit', maxOutputTokens: 1024 } } }),
   );
-  await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source).toBe('managed');
+  // The host polls policy every five seconds; allow two polling cycles plus renderer scheduling.
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source, { timeout: 15000 })
+    .toBe('managed');
   await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), { id: connectionId, model: cacheModel });
   const cacheCalls = [];
   for (const text of ['แปลเป็นอังกฤษ: วันนี้อากาศดี', 'แปลเป็นอังกฤษ: พรุ่งนี้อากาศดี']) {
