@@ -9,6 +9,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ### Chat
 
 - While the AI works, the chat shows one status line that changes in place (for example "กำลังอ่าน Skill" then "กำลังเขียนคำตอบ") instead of a growing list of finished steps, so only the answer and the current step are on screen. "ความคิดของ AI" starts folded; open it to read the AI's reasoning.
+- Each answer shows how long it took (for example "ใช้เวลา 0:28"), counted from sending the request to the finished reply.
 
 ## Desktop v0.5.36 — 2026-10-09
 
