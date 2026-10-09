@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.35 — 2026-10-09
+
 ### Documentation: new README and organization knowledge in its own folder
 
 - Rewrite the README: answers about STeP come from organization documents, the AI services that connect, first-open warnings on Windows and Mac, the three ways to read a receipt, the tour, speaking styles, Learning Inbox, AI usage, What's New and language, and in-app updates on both systems.
