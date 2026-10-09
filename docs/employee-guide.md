@@ -105,7 +105,7 @@ First Run จะอ่านเฉพาะไฟล์เริ่มต้น�
 
 > ช่วยตรวจเอกสารนี้ว่ามีข้อมูลส่วนบุคคลหรือ credential ที่ไม่ควรส่งต่อหรือไม่ และเสนอจุดที่ควรปิดบัง
 
-ตัวอย่างเฉพาะฝ่ายและทีมอยู่ใน [docs/teams.md](teams.md), [docs/afp-demo-start.md](afp-demo-start.md) และ [docs/quality-pilot-smoke-test.md](quality-pilot-smoke-test.md)
+ตัวอย่างเฉพาะฝ่ายและทีมอยู่ใน [docs/knowledge/teams.md](knowledge/teams.md), [docs/afp-demo-start.md](afp-demo-start.md) และ [docs/quality-pilot-smoke-test.md](quality-pilot-smoke-test.md)
 
 ## งานหลายขั้น
 

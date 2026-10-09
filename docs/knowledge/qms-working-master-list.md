@@ -2,7 +2,7 @@
 
 **สถานะ:** เอกสารอ้างอิงฉบับทำงานของ STeP AI **ไม่ใช่เอกสารควบคุม** และไม่ใช่ Master Document List ทางการของ QS
 **เหตุผลที่มี:** QS แจ้งว่าไม่มีหรือไม่ให้ Master Document List ทางการ (บันทึกเมื่อ 25 กันยายน 2569) จึงรวบรวมจากเอกสารที่ QS ส่งเข้ามาและหนังสือเวียนของ QS ที่ Harness มีอยู่
-**ทะเบียน:** [`../manifest/documents.yaml`](../manifest/documents.yaml) → `qms-working-master-list`
+**ทะเบียน:** [`manifest/documents.yaml`](../../manifest/documents.yaml) → `qms-working-master-list`
 **ผู้ดูแล:** ผู้ดูแล STeP AI ร่วมกับ QS · ทบทวนทุกครั้งที่ได้รับหนังสือเวียนจาก `iso@step.cmu.ac.th`
 
 ## กติกาการใช้

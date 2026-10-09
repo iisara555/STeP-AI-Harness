@@ -311,6 +311,9 @@ export const en: Record<string, string> = {
   'หน้านี้เป็นการเปิด UI ในเบราว์เซอร์ จึงยังใช้บัญชีหรือไฟล์จริงไม่ได้':
     "You're viewing the interface in a browser, so real accounts and files aren't available here",
   'กำลังเปิดพื้นที่ทำงาน…': 'Opening your workspace…',
+  'กำลังเตรียมพื้นที่ทำงาน…': 'Preparing your workspace…',
+  'กำลังโหลดระบบของ STeP AI…': 'Loading STeP AI…',
+  'กำลังเตรียมความรู้ขององค์กรและ Skills…': 'Preparing organization knowledge and Skills…',
   ซ่อนแถบงาน: 'Hide task list',
   เริ่มงานใหม่: 'New task',
   ค้นหางานหรือเนื้อหา: 'Search tasks',

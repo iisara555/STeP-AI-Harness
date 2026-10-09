@@ -36,7 +36,7 @@ standardVersion: 2
 
 ## Source
 
-- สถานะเอกสารควบคุมต้อง resolve จาก `manifest/documents.yaml` และ [Master List ฉบับทำงาน](../../../docs/qms-working-master-list.md) (QS ไม่ให้ Master List ทางการ) — ฉบับทำงานไม่ใช่ทะเบียนควบคุม ให้บอกผู้ใช้ตรวจ Rev ล่าสุดใน STeP MIS ก่อนอ้างอิงทางการ
+- สถานะเอกสารควบคุมต้อง resolve จาก `manifest/documents.yaml` และ [Master List ฉบับทำงาน](../../../docs/knowledge/qms-working-master-list.md) (QS ไม่ให้ Master List ทางการ) — ฉบับทำงานไม่ใช่ทะเบียนควบคุม ให้บอกผู้ใช้ตรวจ Rev ล่าสุดใน STeP MIS ก่อนอ้างอิงทางการ
 - **ห้าม invent retention period หากไม่มี policy หรือ SOP ที่กำหนด**
 
 **แยกก่อน:**

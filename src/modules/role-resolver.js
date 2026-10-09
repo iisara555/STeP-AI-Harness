@@ -110,17 +110,17 @@ export async function resolveRoleFiles(roleId) {
 
   // 3. Resolve safe docs
   const safeDocs = [
-    'step-context.md',
+    'knowledge/step-context.md',
     'roles-and-ownership.md',
     'knowledge-policy.md',
     'privacy-preflight.md',
-    'teams.md',
+    'knowledge/teams.md',
     'step-router.md',
-    'hr-personnel-welfare-index.md',
-    'career-path-index.md',
-    'hr-service-channels.md',
-    'cc-iso-document-register.md',
-    'afp-operational-circulars.md',
+    'knowledge/hr-personnel-welfare-index.md',
+    'knowledge/career-path-index.md',
+    'knowledge/hr-service-channels.md',
+    'knowledge/cc-iso-document-register.md',
+    'knowledge/afp-operational-circulars.md',
     'third-party-methods.md',
     'document-coauthoring.md',
     'google-workspace-connector.md',
@@ -129,11 +129,11 @@ export async function resolveRoleFiles(roleId) {
     'thai-data-formatting.md',
     'thai-skill-connections.md',
     'third-party-notices/claude-thai-skills-MIT.txt',
-    'qms-working-master-list.md',
-    'qms-working-reference.md',
-    'afp-regulation-hierarchy.md',
+    'knowledge/qms-working-master-list.md',
+    'knowledge/qms-working-reference.md',
+    'knowledge/afp-regulation-hierarchy.md',
     'skill-authoring-standard.md',
-    'facility-equipment-index.md',
+    'knowledge/facility-equipment-index.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);
@@ -429,17 +429,17 @@ export async function resolveTeamFiles(teamCode) {
 
   // 3. Resolve safe docs
   const safeDocs = [
-    'step-context.md',
+    'knowledge/step-context.md',
     'roles-and-ownership.md',
     'knowledge-policy.md',
     'privacy-preflight.md',
-    'teams.md',
+    'knowledge/teams.md',
     'step-router.md',
-    'hr-personnel-welfare-index.md',
-    'career-path-index.md',
-    'hr-service-channels.md',
-    'cc-iso-document-register.md',
-    'afp-operational-circulars.md',
+    'knowledge/hr-personnel-welfare-index.md',
+    'knowledge/career-path-index.md',
+    'knowledge/hr-service-channels.md',
+    'knowledge/cc-iso-document-register.md',
+    'knowledge/afp-operational-circulars.md',
     'third-party-methods.md',
     'document-coauthoring.md',
     'google-workspace-connector.md',
@@ -448,11 +448,11 @@ export async function resolveTeamFiles(teamCode) {
     'thai-data-formatting.md',
     'thai-skill-connections.md',
     'third-party-notices/claude-thai-skills-MIT.txt',
-    'qms-working-master-list.md',
-    'qms-working-reference.md',
-    'afp-regulation-hierarchy.md',
+    'knowledge/qms-working-master-list.md',
+    'knowledge/qms-working-reference.md',
+    'knowledge/afp-regulation-hierarchy.md',
     'skill-authoring-standard.md',
-    'facility-equipment-index.md',
+    'knowledge/facility-equipment-index.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);

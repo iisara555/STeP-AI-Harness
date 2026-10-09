@@ -61,9 +61,9 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
       assert.ok(block.includes(`workingSubstitute: ${substitute}`));
     }
 
-    const workingList = await readFile('docs/qms-working-master-list.md', 'utf-8');
-    const workingRef = await readFile('docs/qms-working-reference.md', 'utf-8');
-    for (const [id, file] of [['qms-working-master-list', 'docs/qms-working-master-list.md'], ['qms-working-reference', 'docs/qms-working-reference.md']]) {
+    const workingList = await readFile('docs/knowledge/qms-working-master-list.md', 'utf-8');
+    const workingRef = await readFile('docs/knowledge/qms-working-reference.md', 'utf-8');
+    for (const [id, file] of [['qms-working-master-list', 'docs/knowledge/qms-working-master-list.md'], ['qms-working-reference', 'docs/knowledge/qms-working-reference.md']]) {
       const block = blockFor(id);
       assert.ok(block.includes(`path: ${file}`));
       assert.ok(block.includes('status: active-reference'));
@@ -81,14 +81,14 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
   });
 
   await t.test('AFP falls back to the higher-level regulation hierarchy without regulation text', async () => {
-    const hierarchy = await readFile('docs/afp-regulation-hierarchy.md', 'utf-8');
+    const hierarchy = await readFile('docs/knowledge/afp-regulation-hierarchy.md', 'utf-8');
     for (const id of ['procurement-policy', 'finance-disbursement-policy']) {
       const block = documents.slice(documents.indexOf(`  ${id}:`), documents.indexOf('\n\n', documents.indexOf(`  ${id}:`)));
       assert.ok(block.includes('status: not-provided'), `${id} must record that AFP did not provide it`);
       assert.ok(block.includes('workingSubstitute: afp-regulation-hierarchy'));
       assert.ok(!block.includes('path:'), `${id} has no text, so AFP Skills stay draft-with-source-gaps`);
     }
-    assert.ok(documents.includes('path: docs/afp-regulation-hierarchy.md'));
+    assert.ok(documents.includes('path: docs/knowledge/afp-regulation-hierarchy.md'));
     assert.ok(hierarchy.includes('ข้อบังคับมหาวิทยาลัยเชียงใหม่ ว่าด้วยการบริหารการเงิน'));
     assert.ok(hierarchy.includes('ห้ามอ้างเลขข้อ วงเงิน อัตรา หรือเงื่อนไขจากความจำ'));
     for (const skill of ['tor-review', 'tor-government-writing', 'receipt-audit', 'afp-operations-lookup']) {

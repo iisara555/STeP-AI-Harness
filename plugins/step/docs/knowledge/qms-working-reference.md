@@ -2,7 +2,7 @@
 
 **สถานะ:** เอกสารอ้างอิงฉบับทำงานของ STeP AI **ไม่ใช่ Quality Manual และไม่ใช่เอกสารควบคุม**
 **เหตุผลที่มี:** QS แจ้งว่าไม่มีหรือไม่ให้ Quality Manual (บันทึกเมื่อ 25 กันยายน 2569) เอกสารนี้จึงโยงข้อกำหนด ISO 9001:2015 กับนโยบาย กระบวนการ และ QP ที่ Harness มีอยู่ เพื่อให้ AI ช่วยเตรียมงานระบบคุณภาพได้โดยไม่ต้องเดา
-**ทะเบียน:** [`manifest/documents.yaml`](../manifest/documents.yaml) → `qms-working-reference`
+**ทะเบียน:** [`../../manifest/documents.yaml`](../../manifest/documents.yaml) → `qms-working-reference`
 
 ## ข้อเท็จจริงที่ควรรู้ก่อน
 
@@ -14,21 +14,21 @@
 
 | ข้อ ISO 9001:2015 | เรื่อง | แหล่งของ STeP ที่มีใน Harness | สถานะ |
 | --- | --- | --- | --- |
-| 4.1–4.2 | บริบทองค์กรและผู้มีส่วนได้เสีย | `docs/step-context.md`, `docs/step-public-profile.md` | มีข้อมูลบริบท ยังไม่ใช่การวิเคราะห์บริบทตาม ISO |
+| 4.1–4.2 | บริบทองค์กรและผู้มีส่วนได้เสีย | `step-context.md`, `step-public-profile.md` | มีข้อมูลบริบท ยังไม่ใช่การวิเคราะห์บริบทตาม ISO |
 | 4.3 | ขอบเขตของระบบบริหารคุณภาพ | — | **ไม่มีเอกสาร** ต้องถาม QS |
-| 4.4 | ระบบบริหารคุณภาพและกระบวนการ | `manifest/processes.yaml`, `docs/teams.md` | มีรายการกระบวนการ ยังไม่ใช่ process interaction ที่ QS รับรอง |
-| 5.1, 5.3 | ภาวะผู้นำ บทบาทและอำนาจหน้าที่ | `manifest/organization.yaml` (`executiveOversight`), `docs/roles-and-ownership.md`, `manifest/authority.yaml` | มี |
+| 4.4 | ระบบบริหารคุณภาพและกระบวนการ | `../../manifest/processes.yaml`, `teams.md` | มีรายการกระบวนการ ยังไม่ใช่ process interaction ที่ QS รับรอง |
+| 5.1, 5.3 | ภาวะผู้นำ บทบาทและอำนาจหน้าที่ | `../../manifest/organization.yaml` (`executiveOversight`), `../roles-and-ownership.md`, `../../manifest/authority.yaml` | มี |
 | 5.2 | นโยบายคุณภาพ | `step-quality-policy-v2` | มี (ผู้ใช้ยืนยันฉบับปัจจุบัน) |
 | 6.1 | การจัดการความเสี่ยงและโอกาส | QP-QS-001 (`qms-risk-management`) | มี |
 | 6.2 | วัตถุประสงค์คุณภาพ | `step-quality-policy-v2` | มี |
 | 6.3 | การวางแผนการเปลี่ยนแปลง | — | ไม่พบ QP เฉพาะ |
-| 7.1–7.3 | ทรัพยากร ความสามารถ ความตระหนัก | `docs/career-path-index.md`, `docs/hr-personnel-welfare-index.md`, กระบวนการ `people.learning-development` | มีข้อมูลด้านบุคลากร ยังไม่ใช่หลักฐานความสามารถรายบุคคล |
-| 7.1.5 | ทรัพยากรการเฝ้าระวังและการวัด | `docs/facility-equipment-index.md` | มีรายการเครื่องมือ ไม่มีข้อมูลการสอบเทียบ |
-| 7.4 | การสื่อสาร | `docs/hr-service-channels.md` และหนังสือเวียนของทีม | บางส่วน |
+| 7.1–7.3 | ทรัพยากร ความสามารถ ความตระหนัก | `career-path-index.md`, `hr-personnel-welfare-index.md`, กระบวนการ `people.learning-development` | มีข้อมูลด้านบุคลากร ยังไม่ใช่หลักฐานความสามารถรายบุคคล |
+| 7.1.5 | ทรัพยากรการเฝ้าระวังและการวัด | `facility-equipment-index.md` | มีรายการเครื่องมือ ไม่มีข้อมูลการสอบเทียบ |
+| 7.4 | การสื่อสาร | `hr-service-channels.md` และหนังสือเวียนของทีม | บางส่วน |
 | 7.5 | เอกสารและบันทึก | QP-DC-001, QP-DC-002, [Master List ฉบับทำงาน](qms-working-master-list.md) | มี |
 | 8.2 | ข้อกำหนดของบริการ | WI-CC-001/003/004/005, FM-CC-010/011 (ทีม CC) | มีเฉพาะทีม CC |
-| 8.4 | การควบคุมผู้ให้บริการภายนอก (จัดซื้อจัดจ้าง) | `docs/afp-operational-circulars.md` | มีระยะเวลาดำเนินการ ยังไม่มีระเบียบพัสดุฉบับที่ยืนยัน |
-| 8.5 | การให้บริการ | WI ของทีม CC, `docs/facility-equipment-index.md` | มีเฉพาะบางทีม |
+| 8.4 | การควบคุมผู้ให้บริการภายนอก (จัดซื้อจัดจ้าง) | `afp-operational-circulars.md` | มีระยะเวลาดำเนินการ ยังไม่มีระเบียบพัสดุฉบับที่ยืนยัน |
+| 8.5 | การให้บริการ | WI ของทีม CC, `facility-equipment-index.md` | มีเฉพาะบางทีม |
 | 8.7, 10.2 | ผลลัพธ์ที่ไม่เป็นไปตามข้อกำหนด และการแก้ไข | QP-QS-002 (`qms-nonconformity`), QP-QM-001 (`qms-corrective-preventive-action`) | มี |
 | 9.1.2 | ความพึงพอใจของลูกค้า | QP-QM-004 (`qms-complaint-management`) | มีส่วนข้อร้องเรียน |
 | 9.2 | การตรวจติดตามภายใน | QP-QM-002 (`qms-internal-audit`) | มี |

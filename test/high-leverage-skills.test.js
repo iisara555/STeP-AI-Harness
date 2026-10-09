@@ -53,9 +53,9 @@ test('STeP High-Leverage Skills — Routing & Anti-Collision Suite', async (t) =
     const skill = await readFile('skills/pm/expert-resource-matching/SKILL.md', 'utf-8');
     const services = await readFile('manifest/services.yaml', 'utf-8');
     const documents = await readFile('manifest/documents.yaml', 'utf-8');
-    const index = await readFile('docs/facility-equipment-index.md', 'utf-8');
+    const index = await readFile('docs/knowledge/facility-equipment-index.md', 'utf-8');
 
-    assert.ok(skill.includes('docs/facility-equipment-index.md'));
+    assert.ok(skill.includes('docs/knowledge/facility-equipment-index.md'));
     assert.ok(skill.includes('owner-confirmed-reference-2026-09-20'));
     assert.ok(services.includes('facility-equipment-inventory-2020'));
     assert.ok(documents.includes('step-facility-equipment-inventory-2020'));

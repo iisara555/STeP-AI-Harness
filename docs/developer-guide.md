@@ -78,6 +78,10 @@ npm run desktop:start
 
 ผลตรวจโครงสร้างและการทำงานพร้อมกัน: [Runtime refactor review](refactor-review.md)
 
+## ความรู้ขององค์กรกับเอกสารพัฒนา
+
+ความรู้ขององค์กรที่ AI ใช้ตอบคำถามเรื่อง STeP อยู่ใน [`docs/knowledge/`](knowledge/README.md) เท่านั้น ส่วนเอกสารอื่นใน `docs/` เป็นคู่มือผู้ใช้หรือเอกสารพัฒนา harness ดูรายการทั้งหมดใน [แผนที่เอกสาร](README.md) เอกสารความรู้ใหม่ต้องวางใน `docs/knowledge/` และลงทะเบียนใน `manifest/documents.yaml` ห้ามวางเอกสารพัฒนาหรือผลทดสอบไว้ในโฟลเดอร์นั้น
+
 ## ดูแล STeP Skills plugin
 
 ไฟล์ใน `plugins/step/` สร้างจาก `skills/`, `rules/`, `docs/` และ `manifest/` ด้วย `node scripts/build-claude-plugin.mjs` ห้ามแก้ใน `plugins/step/` โดยตรง หลังแก้ Skill ให้รันสคริปต์นี้ทุกครั้ง (`npm test` ตรวจว่า plugin ตรงกับต้นฉบับ) กติกาที่ขึ้นต้นทุกแชตแก้ที่ `plugin/session-brief.md` ส่วน `scripts/install-agent-skills.mjs` ลงชุดเดียวกันให้ Codex (กติกา) และ Antigravity (global หรือราย workspace)

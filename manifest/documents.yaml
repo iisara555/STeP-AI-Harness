@@ -28,7 +28,7 @@ documents:
   # AFP ไม่ได้ส่งนโยบายฉบับ STeP (25 ก.ย. 2569) — ใช้ลำดับชั้นระเบียบของหน่วยงานเหนือขึ้นไป (มช.) เป็นกรอบ
   afp-regulation-hierarchy:
     title: "ลำดับชั้นระเบียบงานการเงินและพัสดุ (ฉบับทำงาน — มีแต่ชื่อฉบับ ไม่มีเนื้อความ)"
-    path: docs/afp-regulation-hierarchy.md
+    path: docs/knowledge/afp-regulation-hierarchy.md
     owner: afp
     type: working-index
     process: procurement.request
@@ -141,7 +141,8 @@ documents:
 
   afp-operational-circulars:
     title: 'แนวปฏิบัติงาน AFP: Lead Time, หมวดค่าใช้จ่าย และ E-Signature'
-    path: docs/afp-operational-circulars.md
+    keywords: [ส่งเอกสารเบิกล่วงหน้า, ส่งเบิก, เบิกจ่าย, ระยะเวลาดำเนินการ]
+    path: docs/knowledge/afp-operational-circulars.md
     owner: afp
     documentType: team-circular
     effectiveDate: '2026-09-01'
@@ -152,7 +153,8 @@ documents:
       E-Signature ใน STeP MIS และเงินชดเชยคอมพิวเตอร์พกพา
   cc-iso-document-register:
     title: ทะเบียนเอกสารระบบคุณภาพ ทีม CC (ISO Document Register)
-    path: docs/cc-iso-document-register.md
+    keywords: [รหัสเอกสาร QP, แบบฟอร์ม FM, WI, Revision]
+    path: docs/knowledge/cc-iso-document-register.md
     owner: qs
     documentType: team-circular
     effectiveDate: '2026-09-01'
@@ -165,7 +167,7 @@ documents:
   # ผังผู้บริหาร: สร้างจาก manifest/organization.yaml → executiveOversight (test/executive-board-document.test.js ตรวจว่าตรงกัน)
   step-executive-board:
     title: "คณะผู้บริหาร STeP และผู้กำกับดูแลแต่ละทีม (ผู้อำนวยการ รองผู้อำนวยการ ผู้ช่วยผู้อำนวยการ ผู้จัดการ)"
-    path: docs/step-executive-board.md
+    path: docs/knowledge/step-executive-board.md
     owner: ga
     type: organization-reference
     sourceLevel: organization-reference
@@ -182,7 +184,7 @@ documents:
   # เอกสารความรู้องค์กรใน docs/ ที่ผู้ดูแลยืนยันว่าเป็นเอกสารเผยแพร่ พนักงานทุกคนอ่านได้ (2026-10-02)
   step-teams-directory:
     title: "รายชื่อ 22 ทีมของ STeP และ RSP North กลุ่มงาน 5 กลุ่ม และขอบเขตการทำงานร่วมกับ AI"
-    path: docs/teams.md
+    path: docs/knowledge/teams.md
     owner: ga
     type: organization-reference
     sourceLevel: organization-reference
@@ -197,7 +199,8 @@ documents:
 
   step-public-profile:
     title: "ข้อมูลทั่วไปของ STeP จากแหล่งสาธารณะ (พันธกิจ บริการ ช่องทางทางการ)"
-    path: docs/step-public-profile.md
+    keywords: [พันธกิจ, วิสัยทัศน์, อุทยานวิทยาศาสตร์และเทคโนโลยี, บริการของอุทยาน]
+    path: docs/knowledge/step-public-profile.md
     owner: cc
     type: organization-reference
     sourceLevel: organization-reference
@@ -213,7 +216,7 @@ documents:
 
   project-code-scheme:
     title: "โครงสร้างรหัสโครงการ (Project Code) ปีงบประมาณ 2569–2570"
-    path: docs/project-code-scheme.md
+    path: docs/knowledge/project-code-scheme.md
     owner: afp
     type: working-index
     sourceLevel: derived-working-reference
@@ -229,7 +232,7 @@ documents:
 
   step-context:
     title: "บริบทองค์กร STeP โดยสังเขป (หน่วยงาน งานหลัก ผู้รับสาร)"
-    path: docs/step-context.md
+    path: docs/knowledge/step-context.md
     owner: ga
     type: organization-reference
     sourceLevel: organization-reference
@@ -270,7 +273,7 @@ documents:
     verification: derived-from-hd-circulars
     status: active
     confirmedBy: "รวบรวมจากอีเมลแจ้งเวียนของ hr@step.cmu.ac.th ปี 2568-2569 ผู้ดูแล STeP AI อนุมัติให้บันทึก 2026-09-24"
-    index: docs/hr-service-channels.md
+    index: docs/knowledge/hr-service-channels.md
     contentInRepo: true
     sensitivity: internal-published
     sensitivityReason: "ชื่อระบบและขั้นตอนที่ทีม HD แจ้งเวียนถึงพนักงานทุกคน ไม่มี credential และไม่มีข้อมูลรายบุคคล"
@@ -279,6 +282,7 @@ documents:
 
   hr-personnel-welfare-2569:
     title: "ประกาศอุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่ ว่าด้วย หลักเกณฑ์เกี่ยวกับการบริหารงานบุคคล และสวัสดิการพนักงาน พ.ศ. 2569"
+    keywords: [ลาพักร้อน, วันลา, สวัสดิการ, เวลาทำงาน]
     owner: hd
     type: organization-announcement
     process: people.personnel-welfare
@@ -293,7 +297,7 @@ documents:
     verification: owner-confirmed-current
     status: active
     confirmedBy: "ได้รับไฟล์ประกาศฉบับลงนามจากผู้ดูแล STeP AI 2026-09-23"
-    index: docs/hr-personnel-welfare-index.md
+    index: docs/knowledge/hr-personnel-welfare-index.md
     contentInRepo: false
     sensitivity: internal-published
     sensitivityReason: "ประกาศตราครุฑที่ลงนามและประกาศใช้กับบุคลากรทั้งองค์กร HD อนุมัติให้เก็บสาระสำคัญพร้อมอัตราและจำนวนวันไว้ใน repository ได้"
@@ -334,7 +338,7 @@ documents:
     verification: owner-confirmed-current
     status: active
     confirmedBy: "ได้รับไฟล์ประกาศฉบับลงนามจากผู้ดูแล STeP AI 2026-09-23"
-    index: docs/career-path-index.md
+    index: docs/knowledge/career-path-index.md
     contentInRepo: false
     sensitivity: internal-published
     sensitivityReason: "ประกาศตราครุฑที่ลงนามและประกาศใช้กับบุคลากรทั้งองค์กร HD อนุมัติให้เก็บตารางขั้นพร้อมอัตราเงินเดือนและค่าตำแหน่งไว้ใน repository ได้"
@@ -390,7 +394,8 @@ documents:
 
   qms-working-master-list:
     title: "Master Document List ฉบับทำงาน (รวบรวมจาก QP ที่ QS ส่งมาและหนังสือเวียนของ QS)"
-    path: docs/qms-working-master-list.md
+    keywords: [Master List, Rev ล่าสุด, เอกสารควบคุม]
+    path: docs/knowledge/qms-working-master-list.md
     owner: qs
     type: working-index
     process: quality.document-control
@@ -401,7 +406,7 @@ documents:
 
   qms-working-reference:
     title: "แผนที่ ISO 9001:2015 กับเอกสารของ STeP (ใช้แทน Quality Manual)"
-    path: docs/qms-working-reference.md
+    path: docs/knowledge/qms-working-reference.md
     owner: qs
     type: working-index
     process: quality.audit-readiness
@@ -509,7 +514,7 @@ documents:
     sourceFile: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่.pdf"
     sourceSha256: "74288e1558f3a4d30c6e42af1189ef76d1f436f9be3ff4350f79c0f37e349e2d"
     pageCount: 42
-    index: docs/facility-equipment-index.md
+    index: docs/knowledge/facility-equipment-index.md
     contentInRepo: false
     sensitivity: internal-reference
     confirmedDate: "2026-09-20"

@@ -35,7 +35,7 @@ Skill นี้ยังไม่ได้กำหนดคำมั่นเ�
 
 - `../../manifest/services.yaml` เป็น Service Registry สำหรับจับคู่บริการและทีมก่อนส่งต่อ ต้องเคารพ `ownershipStatus` และสถานะการยืนยันของแต่ละรายการ
 - หน้าเว็บบริการทางการหรือ FAQ ที่เจ้าของบริการอนุมัติ พร้อมบันทึกแหล่งที่มาและวันที่ตรวจ
-- [บริบท STeP](../../docs/step-context.md) และ [กติกาการเขียน](../../rules/step-writing.md)
+- [บริบท STeP](../../docs/knowledge/step-context.md) และ [กติกาการเขียน](../../rules/step-writing.md)
 
 ## Workflow
 

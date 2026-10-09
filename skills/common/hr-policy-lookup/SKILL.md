@@ -43,9 +43,9 @@ standardVersion: 2
 
 | เรื่อง | Source | ทะเบียน |
 | --- | --- | --- |
-| การจ้าง เวลาทำงาน เงินเดือน สวัสดิการ การลา วินัย ลาออก พ้นสภาพ | `docs/hr-personnel-welfare-index.md` | `hr-personnel-welfare-2569` |
-| ขั้นความเชี่ยวชาญ ขั้นการบริหาร ค่าตำแหน่ง ผู้มีอำนาจแต่งตั้ง | `docs/career-path-index.md` | `step-career-path-2569` |
-| ต้องไปทำที่ระบบไหน ขั้นตอนยื่นเรื่อง วันหยุดเพิ่มเติมรายปี | `docs/hr-service-channels.md` | `hr-service-channels` |
+| การจ้าง เวลาทำงาน เงินเดือน สวัสดิการ การลา วินัย ลาออก พ้นสภาพ | `docs/knowledge/hr-personnel-welfare-index.md` | `hr-personnel-welfare-2569` |
+| ขั้นความเชี่ยวชาญ ขั้นการบริหาร ค่าตำแหน่ง ผู้มีอำนาจแต่งตั้ง | `docs/knowledge/career-path-index.md` | `step-career-path-2569` |
+| ต้องไปทำที่ระบบไหน ขั้นตอนยื่นเรื่อง วันหยุดเพิ่มเติมรายปี | `docs/knowledge/hr-service-channels.md` | `hr-service-channels` |
 
 - ประกาศฉบับ **2569 บังคับใช้ 1 ตุลาคม 2569** · ฉบับ 2566 `superseded` ใช้อ้างได้เฉพาะเหตุการณ์ก่อนวันนั้น
 - ดัชนีทั้งสองเก็บ**อัตราและจำนวนวันตามประกาศ** ตอบจากดัชนีได้โดยตรง

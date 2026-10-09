@@ -1,7 +1,7 @@
 version: 1
 # หมายเหตุสำคัญ: กลุ่มงานทั้ง 5 Clusters ด้านล่างเป็น "AI Routing Taxonomy"
 # ไม่ใช่การเปลี่ยนแปลงหรือทดแทนโครงสร้างสายบังคับบัญชาจริงของ STeP
-# projectCode = รหัสทีม 2 ตัวอักษรที่ใช้ประกอบรหัสโครงการ (ดู docs/project-code-scheme.md)
+# projectCode = รหัสทีม 2 ตัวอักษรที่ใช้ประกอบรหัสโครงการ (ดู docs/knowledge/project-code-scheme.md)
 # Per-team Skill eligibility ถูก resolve จาก manifest/router-index.yaml -> teams.primary/consumers
 # ส่วน skills: [common, pm, ...] ในไฟล์นี้เป็น legacy namespace/profile hint เพื่อ compatibility
 # และห้ามใช้เป็นเหตุผลในการโหลดทั้ง namespace เข้าสู่ team workspace

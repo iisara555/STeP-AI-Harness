@@ -439,7 +439,7 @@ MANIFEST_LINE_RE = re.compile(rf"^(?P<dash>- )?(?P<key>{MANIFEST_KEY}):(?: (?P<v
 INLINE_LIST_KEYS: dict[str, dict[str, str | None]] = {
     "actions.yaml": {"preferredTools": None},
     "authority.yaml": {key: None for key in ("triggers", "actions", "objects", "qualifiers")},
-    "documents.yaml": {"coOwners": None},
+    "documents.yaml": {"coOwners": None, "keywords": None},
     "organization.yaml": {key: None for key in ("officialChannels", "serviceLinesSourceRefs", "sharedOversight", "sourceRefs", "teams")},
     "playbooks.yaml": {key: None for key in ("consumers", "consumes", "parameters", "produces", "requiredSignals")},
     "processes.yaml": {"consumers": None},
@@ -759,7 +759,7 @@ def validate_package_config(errors: list[str]) -> None:
         "src/modules/privacy/document.js", "src/modules/privacy/document-worker.js",
         "src/vendor/privacy/manifest.json", "src/vendor/privacy/pdf.mjs", "src/vendor/privacy/pdf.worker.mjs",
         "src/vendor/privacy/fxp.cjs", "src/vendor/privacy/fflate.mjs",
-        "docs/step-public-profile.md", "docs/project-code-scheme.md",
+        "docs/knowledge/step-public-profile.md", "docs/knowledge/project-code-scheme.md",
         "docs/pilot-runbook.md",
     }
     documents_text = (ROOT / "manifest/documents.yaml").read_text(encoding="utf-8")

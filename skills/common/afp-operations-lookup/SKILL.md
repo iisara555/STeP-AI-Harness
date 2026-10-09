@@ -45,10 +45,10 @@ standardVersion: 2
 
 | เรื่อง | Source | ทะเบียน |
 | --- | --- | --- |
-| Lead Time การเงิน/พัสดุ, หมวด B/BV/B9.2, รถตู้, วิทยากร, ยืมเงิน, E-Signature, เงินชดเชยคอมฯ | `docs/afp-operational-circulars.md` | `afp-operational-circulars` |
-| ระเบียบระดับไหนกำกับเรื่องนี้ (STeP / มช. / ระดับชาติ) — มีแต่ชื่อฉบับ ไม่มีเนื้อความ | [`docs/afp-regulation-hierarchy.md`](../../../docs/afp-regulation-hierarchy.md) | `afp-regulation-hierarchy` |
-| อัตราค่ายานพาหนะต่อกิโลเมตร สิทธิสวัสดิการตามประกาศ | `docs/hr-personnel-welfare-index.md` | `hr-personnel-welfare-2569` |
-| ช่องทางยื่นเรื่องของพนักงาน | `docs/hr-service-channels.md` | `hr-service-channels` |
+| Lead Time การเงิน/พัสดุ, หมวด B/BV/B9.2, รถตู้, วิทยากร, ยืมเงิน, E-Signature, เงินชดเชยคอมฯ | `docs/knowledge/afp-operational-circulars.md` | `afp-operational-circulars` |
+| ระเบียบระดับไหนกำกับเรื่องนี้ (STeP / มช. / ระดับชาติ) — มีแต่ชื่อฉบับ ไม่มีเนื้อความ | [`docs/knowledge/afp-regulation-hierarchy.md`](../../../docs/knowledge/afp-regulation-hierarchy.md) | `afp-regulation-hierarchy` |
+| อัตราค่ายานพาหนะต่อกิโลเมตร สิทธิสวัสดิการตามประกาศ | `docs/knowledge/hr-personnel-welfare-index.md` | `hr-personnel-welfare-2569` |
+| ช่องทางยื่นเรื่องของพนักงาน | `docs/knowledge/hr-service-channels.md` | `hr-service-channels` |
 
 - `afp-operational-circulars` เป็น **แนวปฏิบัติระดับทีมจากอีเมลแจ้งเวียน ไม่ใช่ประกาศตราครุฑ**
   ใช้ตอบได้ แต่ต้องบอกที่มา และถ้าขัดกับ**ระเบียบกระทรวงการคลังหรือประกาศอุทยานฯ ให้ยึดระเบียบเป็นหลัก**

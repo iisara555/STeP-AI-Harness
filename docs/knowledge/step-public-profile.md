@@ -2,10 +2,10 @@
 
 **ตรวจแหล่งครั้งล่าสุด:** 2026-09-20
 **Provenance:** ทุกข้อในเอกสารนี้เป็น `SOURCE_FACT` จากเว็บไซต์ทางการสาธารณะ ไม่ใช่ `ORGANIZATION_RULE`
-**ข้อจำกัด:** ข้อมูลสาธารณะไม่ใช่สิทธิ์อนุมัติและไม่แทนการยืนยันจากเจ้าของกระบวนการ (`../manifest/services.yaml` → `publicDiscoveryIsNotAuthority: true`)
+**ข้อจำกัด:** ข้อมูลสาธารณะไม่ใช่สิทธิ์อนุมัติและไม่แทนการยืนยันจากเจ้าของกระบวนการ (`manifest/services.yaml` → `publicDiscoveryIsNotAuthority: true`)
 
-ค่าที่เครื่องอ่านได้อยู่ที่ [`../manifest/organization.yaml`](../manifest/organization.yaml) → `publicProfile`
-รายการแหล่งพร้อมสถานะ URL อยู่ที่ [`../manifest/services.yaml`](../manifest/services.yaml) → `sources`
+ค่าที่เครื่องอ่านได้อยู่ที่ [`manifest/organization.yaml`](../../manifest/organization.yaml) → `publicProfile`
+รายการแหล่งพร้อมสถานะ URL อยู่ที่ [`manifest/services.yaml`](../../manifest/services.yaml) → `sources`
 
 ## 1. หน่วยงาน
 
@@ -40,7 +40,7 @@ Research Utilization · Solution Provider · Incubator · Open Innovation · Inf
 
 ผู้รับบริการที่ระบุไว้: ผู้ประกอบการทุกขนาด นักวิชาการ นักวิจัย นักศึกษา ชุมชน และหน่วยงานภาครัฐ/เอกชน
 
-การจับคู่สายบริการเหล่านี้กับทีมเจ้าของงานอยู่ใน `../manifest/services.yaml` แล้ว เอกสารนี้ไม่ทำซ้ำ
+การจับคู่สายบริการเหล่านี้กับทีมเจ้าของงานอยู่ใน `manifest/services.yaml` แล้ว เอกสารนี้ไม่ทำซ้ำ
 
 ## 4. ข้อมูลติดต่อสาธารณะ
 
@@ -49,7 +49,7 @@ Research Utilization · Solution Provider · Incubator · Open Innovation · Inf
 - อีเมล: info@step.cmu.ac.th
 - ช่องทางทางการ: Facebook / Instagram / TikTok `cmustep`, LinkedIn `cmustep2012`, YouTube, Line
 
-แหล่ง: `step-contact` — ใช้เฉพาะช่องทางระดับองค์กร ไม่เก็บชื่อหรือช่องทางติดต่อรายบุคคลตาม [Knowledge Policy](knowledge-policy.md)
+แหล่ง: `step-contact` — ใช้เฉพาะช่องทางระดับองค์กร ไม่เก็บชื่อหรือช่องทางติดต่อรายบุคคลตาม [Knowledge Policy](../knowledge-policy.md)
 
 ## 5. ดัชนีเอกสารเปิดเผยสาธารณะ (OIT/ITA 2569)
 
@@ -64,11 +64,11 @@ Research Utilization · Solution Provider · Incubator · Open Innovation · Inf
 | บริการออนไลน์ | O10 ระบบบริการ e-Service |
 | จัดซื้อจัดจ้าง | O11 สรุปผลการจัดซื้อจัดจ้างรายเดือน 2569 · O12 รายงานสรุปผลการจัดซื้อจัดจ้าง 2568 |
 
-O1, O5, O8, O9, O11 และ O12 เป็นเป้าหมายลำดับแรกที่ควรยกระดับเป็น controlled source ใน `../manifest/documents.yaml` เมื่อเจ้าของเอกสารยืนยันฉบับที่ใช้จริง — ปัจจุบันยังไม่ได้ลงทะเบียนเป็น controlled document
+O1, O5, O8, O9, O11 และ O12 เป็นเป้าหมายลำดับแรกที่ควรยกระดับเป็น controlled source ใน `manifest/documents.yaml` เมื่อเจ้าของเอกสารยืนยันฉบับที่ใช้จริง — ปัจจุบันยังไม่ได้ลงทะเบียนเป็น controlled document
 
 ## 6. แหล่งภายใน
 
-repository นี้เป็น **public** ดังนั้น **ห้ามคัดเนื้อหาจากระบบภายในเข้ามาใน repo** (ดู [Repository Data Boundary](repository-data-boundary.md)) สิ่งที่ลงทะเบียนได้คือ pointer เท่านั้น
+repository นี้เป็น **public** ดังนั้น **ห้ามคัดเนื้อหาจากระบบภายในเข้ามาใน repo** (ดู [Repository Data Boundary](../repository-data-boundary.md)) สิ่งที่ลงทะเบียนได้คือ pointer เท่านั้น
 
 | ระบบ | สถานะ | ลงทะเบียนที่ |
 | --- | --- | --- |
@@ -90,6 +90,6 @@ repository นี้เป็น **public** ดังนั้น **ห้าม
 
 1. ใช้ตอบคำถามทั่วไปเรื่องหน่วยงาน ที่อยู่ ช่องทางติดต่อ และภาพรวมบริการ
 2. อ้าง `sourceRef` ทุกครั้งและระบุวันที่ตรวจแหล่ง
-3. **ห้าม**ใช้แทนระเบียบ ประกาศ มติ หรืออำนาจอนุมัติ — เรื่องเหล่านี้ใช้ `../manifest/documents.yaml` และ `../manifest/authority.yaml`
+3. **ห้าม**ใช้แทนระเบียบ ประกาศ มติ หรืออำนาจอนุมัติ — เรื่องเหล่านี้ใช้ `manifest/documents.yaml` และ `manifest/authority.yaml`
 4. ถ้าข้อมูลบนเว็บขัดกับเอกสารควบคุม ให้ยึดเอกสารควบคุมและแจ้งผู้ดูแล
-5. ทบทวนทุก 90 วันตาม [Knowledge Policy](knowledge-policy.md) หรือเมื่อพบลิงก์ตาย
+5. ทบทวนทุก 90 วันตาม [Knowledge Policy](../knowledge-policy.md) หรือเมื่อพบลิงก์ตาย

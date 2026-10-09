@@ -51,7 +51,7 @@ export function expenseDescriptionFromText(text: string) {
   return '';
 }
 
-// Names from the AFP circular table (docs/afp-operational-circulars.md §3), so a person who does not know the codes
+// Names from the AFP circular table (docs/knowledge/afp-operational-circulars.md §3), so a person who does not know the codes
 // can read the suggestion.
 const EXPENSE_CODE_NAMES: Record<string, string> = {
   B1: 'จัดประชุม อบรม สัมมนา หรือจัดงาน',
@@ -110,7 +110,7 @@ export function expenseCategorySuggestion(description: string, purpose = '', dat
     candidates: unique,
     evidence,
     provenance: 'AI_RECOMMENDATION',
-    sourceRef: 'docs/afp-operational-circulars.md#3',
+    sourceRef: 'docs/knowledge/afp-operational-circulars.md#3',
     sourceStatus: 'registered-circular-not-live-policy-verification',
     budget: null,
     nextSteps,

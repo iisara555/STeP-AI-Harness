@@ -38,7 +38,7 @@ standardVersion: 2
 ลำดับการค้น:
 
 1. `manifest/services.yaml` — จับคู่ service/capability และทีมเจ้าของก่อน
-2. [ดัชนีเครื่องมือ เครื่องจักร และพื้นที่](../../../docs/facility-equipment-index.md) — ใช้ค้นหา candidate ภายใน FOODFABR, RF Pilot Plant, INFRI, ABPlas และ CIMO; Central Lab ในเอกสารเดิมหมายถึง INFRI ส่วน FABLAB ไม่มีบริการแล้ว เมื่อต้องใช้สเปกให้เปิด PDF ต้นฉบับตามเลขหน้า และ route CIMO/INFRI/RF ไปทีม LES ส่วน Innovative Food Fabrication Pilot Plant ไปทีม FOODFABR
+2. [ดัชนีเครื่องมือ เครื่องจักร และพื้นที่](../../../docs/knowledge/facility-equipment-index.md) — ใช้ค้นหา candidate ภายใน FOODFABR, RF Pilot Plant, INFRI, ABPlas และ CIMO; Central Lab ในเอกสารเดิมหมายถึง INFRI ส่วน FABLAB ไม่มีบริการแล้ว เมื่อต้องใช้สเปกให้เปิด PDF ต้นฉบับตามเลขหน้า และ route CIMO/INFRI/RF ไปทีม LES ส่วน Innovative Food Fabrication Pilot Plant ไปทีม FOODFABR
 3. STeP และ NSP public service sources ที่ลงทะเบียนใน Service Registry
 4. NSTIS เมื่อจำเป็นต้องค้นหานักวิจัย เครื่องมือ Lab หรือโรงงานต้นแบบนอก registry ภายใน
 5. Human verification จากเจ้าของบริการก่อนติดต่อ จอง ใช้งบ หรือรับปาก

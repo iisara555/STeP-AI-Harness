@@ -42,7 +42,7 @@ test('documents kept as a summary index are readable; restricted and missing one
   assert.ok(!ids.includes('procurement-policy'), 'not provided to the harness');
   // The reference tool reads the same metadata: an index document resolves, a restricted one has no path.
   const [welfare, old] = await routing.loadDocumentContextMetadata(['hr-personnel-welfare-2569', 'hr-personnel-welfare-2566']);
-  assert.equal(welfare.path, 'docs/hr-personnel-welfare-index.md');
+  assert.equal(welfare.path, 'docs/knowledge/hr-personnel-welfare-index.md');
   assert.equal(old.path, '');
   assert.equal(old.status, 'restricted');
 });
@@ -210,7 +210,7 @@ test('the one-line knowledge registry keeps documents discoverable and section r
   assert.ok(!/hr-personnel-welfare-2566/.test(text), 'restricted documents never listed');
   assert.ok(text.length < 4_000, 'section headings are retrieved lazily instead of injected into every prompt');
   // reference(args.section) reads one section by its registry name.
-  const body = await readFile(resolve(root, 'docs/step-executive-board.md'), 'utf8');
+  const body = await readFile(resolve(root, 'docs/knowledge/step-executive-board.md'), 'utf8');
   assert.match(documentSection(body, 'ผู้อำนวยการอุทยานวิทยาศาสตร์และเทคโนโลยี (ผอ. STeP)')!, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);
   assert.match(documentSection(body, 'รองผู้อำนวยการ')!, /^## รองผู้อำนวยการ/);
   assert.equal(documentSection(body, 'ไม่มีหัวข้อนี้'), undefined);
