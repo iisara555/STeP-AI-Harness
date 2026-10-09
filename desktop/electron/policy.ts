@@ -1,6 +1,7 @@
 import { providerEndpoint } from '../../src/modules/providers/compatible.js';
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
+import { MIN_CONTEXT_WINDOW } from './compact';
 import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/managed-policy.js';
 
 /**
@@ -529,7 +530,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
         }
         const valid: NonNullable<Policy['modelLimits']>[string] = {};
         for (const [field, minimum, maximum] of [
-          ['contextWindow', 512, 2_000_000],
+          ['contextWindow', MIN_CONTEXT_WINDOW, 2_000_000],
           ['maxOutputTokens', 1, 65536],
         ] as const) {
           if (limits[field] === undefined) continue;
@@ -542,8 +543,9 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
             problems.push(`modelLimits for ${model} has invalid promptCaching`);
           else valid.promptCaching = limits.promptCaching;
         }
-        if (valid.contextWindow && valid.maxOutputTokens && valid.maxOutputTokens >= valid.contextWindow)
-          problems.push(`modelLimits for ${model} needs output below contextWindow`);
+        // An answer allowance above half the window leaves too little room for the rules and the request.
+        if (valid.contextWindow && valid.maxOutputTokens && valid.maxOutputTokens >= valid.contextWindow / 2)
+          problems.push(`modelLimits for ${model} needs maxOutputTokens below half of contextWindow`);
         policy.modelLimits[model.slice(0, 160)] = valid;
       }
     }

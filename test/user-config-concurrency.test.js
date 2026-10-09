@@ -47,6 +47,8 @@ test('readers see complete configuration while updates replace the file', async 
     while (!done) {
       const data = JSON.parse(await readFile(USER_CONFIG_PATH, 'utf8'));
       if (data.marker !== 'present') throw new Error('Configuration was lost');
+      // A real reader (the app, an editor, a scanner) pauses between reads; a zero-gap loop holds Windows sharing locks continuously.
+      await new Promise(resolve => setTimeout(resolve, 2));
     }
     await writes;
   `);

@@ -5,6 +5,8 @@ import { section } from './prompt';
 export const CONTEXT_TOKENS = 48_000;
 /** Cap host context even on a 1M-token model; retained sessions may still bill the full conversation. */
 export const MAX_CONTEXT_TOKENS = 160_000;
+/** Smallest window an administrator can set: governance alone is about 3k tokens and a chat turn with tools about 9k. */
+export const MIN_CONTEXT_WINDOW = 16_384;
 
 /**
  * Context window, in tokens, of the models this app connects to, from the providers' published limits. The first match
@@ -49,7 +51,11 @@ export function contextBudget(connection: {
   contextWindow?: number;
   maxOutputTokens?: number;
 }) {
-  if (Number.isSafeInteger(connection.contextWindow) && connection.contextWindow! >= 512 && connection.contextWindow! <= 2_000_000) {
+  if (
+    Number.isSafeInteger(connection.contextWindow) &&
+    connection.contextWindow! >= MIN_CONTEXT_WINDOW &&
+    connection.contextWindow! <= 2_000_000
+  ) {
     const window = connection.contextWindow!;
     const output = connection.maxOutputTokens || Math.min(8192, Math.floor(window * 0.4));
     return Math.min(MAX_CONTEXT_TOKENS, Math.floor(window * 0.6), Math.max(1, window - output - Math.ceil(window * 0.05)));

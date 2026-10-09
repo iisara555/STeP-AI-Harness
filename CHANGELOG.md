@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+### Fixes after Desktop 0.5.33 review
+
+- Recover a retained Claude or Copilot conversation once with the full prompt when its SDK process stops between tool turns, as Codex and Gemini already do. Add Thai messages for a dropped AI conversation and a denied native tool.
+- Gemini API key: a per-minute rate limit (429) now retries as a busy service; only a daily, billing or zero allowance reports a used-up quota.
+- `modelLimits.contextWindow` now accepts 16,384 through 2,000,000 tokens and `maxOutputTokens` must stay below half the window; the previous 4,096 example left a 2,457-token budget below the ~3,400 tokens every message needs.
+- Windows configuration writes retry atomic replacement for up to three seconds; the concurrency test reader pauses between reads like a real reader.
+- The GitHub Packages release step runs only for the `step-cmu` owner whose scope the package name uses, instead of failing with 403 on every tag.
+
 ## Desktop v0.5.33 — 2026-10-09
 
 ### Context and provider performance

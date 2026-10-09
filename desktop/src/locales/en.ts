@@ -824,6 +824,10 @@ export const en: Record<string, string> = {
     "This model isn't available on your account or plan. Choose another model in the message box",
   'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า':
     'Your account quota is used up or temporarily limited. Try again later or choose a lighter model',
+  'การคุยกับ AI ในงานนี้ขาดตอน ระบบลองเริ่มใหม่ให้แล้วแต่ยังไม่สำเร็จ กดลองอีกครั้ง':
+    'The conversation with the AI dropped. The app restarted it without success — press Try again',
+  'AI พยายามใช้เครื่องมือในตัวที่ STeP ปิดไว้ กดลองอีกครั้ง หรือเลือกโมเดลอื่น':
+    'The AI tried to use a built-in tool that STeP turns off. Press Try again or choose another model',
   'บริการ AI ไม่ว่างชั่วคราว ระบบลองใหม่ให้แล้วแต่ยังไม่สำเร็จ รอสักครู่แล้วกดลองอีกครั้ง':
     'The AI service is busy right now. The app retried without success — wait a moment, then press Try again',
   'เชื่อมต่อบริการ AI ไม่ได้ ตรวจอินเทอร์เน็ต proxy หรือ firewall แล้วลองอีกครั้ง':
