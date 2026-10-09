@@ -2088,12 +2088,17 @@ export default function App() {
                         disabled={running}
                         onChange={e => void action(() => chooseModel(e.target.value))}
                       >
-                        <option value="">{defaultModel ? t('ค่าเริ่มต้น ({0})', defaultModel.label) : t('ค่าเริ่มต้นของบริการ')}</option>
-                        {(connection.models || []).map(m => (
-                          <option key={m.id} value={m.id} title={m.description}>
-                            {m.label}
-                          </option>
-                        ))}
+                        {/* The pill is narrow, so the default shows just the model name; the full wording stays in the tooltip and list title. */}
+                        <option value="" title={t('ค่าเริ่มต้นของบริการ')}>
+                          {defaultModel ? defaultModel.label : t('ค่าเริ่มต้นของบริการ')}
+                        </option>
+                        {(connection.models || [])
+                          .filter(m => m.id !== defaultModel?.id || m.id === currentModel)
+                          .map(m => (
+                            <option key={m.id} value={m.id} title={m.description}>
+                              {m.label}
+                            </option>
+                          ))}
                         {currentModel && !connection.models?.some(m => m.id === currentModel) && (
                           <option value={currentModel}>{currentModel}</option>
                         )}

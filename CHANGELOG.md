@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.32 — 2026-10-09
+
+### Desktop: UI review round 2
+
+- Keep see-through buttons (icon buttons, the version line, the composer pickers) clear when disabled instead of filling them grey; the AI tab in Settings shows its title once; the OCR hint wraps at a readable width.
+- Show only the model name in the composer's default model picker so it no longer truncates; Skill Hub shows "ใช้ได้ทุกทีม" instead of the team code COMMON.
+- Release Desktop 0.5.32; Harness remains 0.7.6. No new runtime/model dependency or policy-default change.
+
 ## Desktop v0.5.31 — 2026-10-08
 
 ### Desktop: document revisions and natural speaking styles

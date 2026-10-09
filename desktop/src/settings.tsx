@@ -455,7 +455,8 @@ export function SettingsPanel({
       )}
       {page === 'ai' && (
         <section>
-          <h2>{t('การเชื่อมต่อ AI')}</h2>
+          {/* The page title above already says this; keep the heading for screen readers and in-page links. */}
+          <h2 className="sr-only">{t('การเชื่อมต่อ AI')}</h2>
           <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
         </section>
       )}
