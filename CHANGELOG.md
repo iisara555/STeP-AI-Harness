@@ -14,7 +14,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 ### Faster, more accurate organization knowledge and a loading screen
 
 - Registered documents can list `keywords` in `manifest/documents.yaml`: the words staff actually ask with when the document uses other terms (ลาพักร้อน for the annual leave rules, ส่งเบิกล่วงหน้า for AFP Lead Time). Search counts them like a section heading. On a benchmark of 55 staff questions (`desktop/eval/knowledge-questions.json`) the right document now comes first for 53, up from 46; `desktop/test/knowledge-accuracy.test.ts` fails if a change drops below that. BM25/IDF weighting was measured too and did not improve these documents, so the search keeps equal weights.
-- STeP Desktop opens with a minimal loading window (the STeP symbol sketched bar by bar in loose pencil strokes, then rubbed out and drawn again, in the saved theme), reads the organization documents and the Skill catalog in the background, and shows the main window only once the workspace has drawn its first screen (at most 20 seconds). The first STeP question no longer waits for the document index.
+- STeP Desktop opens with a minimal loading window (the STeP symbol drawn as one loose, looping naive line that never lifts the pen, then faded and drawn again, in the saved theme), reads the organization documents and the Skill catalog in the background, and shows the main window only once the workspace has drawn its first screen (at most 20 seconds). The first STeP question no longer waits for the document index.
 
 ## Desktop v0.5.34 — 2026-10-09
 
