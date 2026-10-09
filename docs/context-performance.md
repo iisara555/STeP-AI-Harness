@@ -17,7 +17,11 @@ This scope keeps standing governance, the routing contract and any routed Skill
 and mandatory references. It omits registry discovery, organization retrieval,
 tool instructions and empty source/history sections.
 
-Other selected Skills, organization questions, workflows, approved plans, files,
+Organization documents are always searched first. A text request with a
+matching registered document, an STeP MIS request or organization words
+(STeP, ระเบียบ, สวัสดิการ, วันลา, ฝ่ายบุคคล, policy and similar) keeps full
+context, so a question worded as "summarize: what is the STeP leave rule?" is
+answered from STeP's sources. Other selected Skills, organization questions, workflows, approved plans, files,
 images, history, revisions and uncertain or mixed instructions use full context.
 The optimization therefore applies to some ordinary language tasks that route
 to a Skill as well as GENERAL. GENERAL alone does not imply text scope.

@@ -8,6 +8,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ### Fixes after Desktop 0.5.33 review
 
+- A summary, translation or spelling request that touches STeP itself (a matching registered document, an STeP MIS request, or words such as STeP, ระเบียบ, สวัสดิการ, วันลา, ฝ่ายบุคคล) now keeps full context and the organization's documents. Only text with no organization sign uses the light text scope.
 - Recover a retained Claude or Copilot conversation once with the full prompt when its SDK process stops between tool turns, as Codex and Gemini already do. Add Thai messages for a dropped AI conversation and a denied native tool.
 - Gemini API key: a per-minute rate limit (429) now retries as a busy service; only a daily, billing or zero allowance reports a used-up quota.
 - `modelLimits.contextWindow` now accepts 16,384 through 2,000,000 tokens and `maxOutputTokens` must stay below half the window; the previous 4,096 example left a 2,457-token budget below the ~3,400 tokens every message needs.
