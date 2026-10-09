@@ -11,7 +11,7 @@ const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 try {
   const splash = await app.firstWindow();
   assert.match(splash.url(), /^data:text\/html/);
-  await splash.getByRole('heading', { name: 'STeP Desktop' }).waitFor();
+  await splash.getByRole('img', { name: 'STeP Desktop' }).waitFor();
   assert.ok((await splash.getByRole('status').textContent())?.startsWith('กำลัง'));
   const visible = () =>
     app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map(w => ({ url: w.webContents.getURL(), visible: w.isVisible() })));
