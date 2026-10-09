@@ -42,6 +42,8 @@ export type ProviderContext = {
   system?: string;
   signal: AbortSignal;
   emit: (text: string) => void;
+  /** Takes back the last `chars` characters passed to emit: a runtime calls it when a streamed attempt is discarded. */
+  discard?: (chars: number) => void;
   onReasoning?: (text: string) => void;
   onUsage?: (usage: TokenCount) => void;
   onTransport?: (info: {

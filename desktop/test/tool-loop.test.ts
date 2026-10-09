@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ToolLoop, type LoopHost } from '../electron/tool-loop';
-import { loopRequests } from '../src/tools';
+import { brokenRequests, loopRequests } from '../src/tools';
 const request = (tool: string, input = '', args?: unknown) => '```step-tool\n' + JSON.stringify({ tool, input, args }) + '\n```';
 const signal = () => new AbortController().signal;
 function host(extra: Partial<LoopHost> = {}): LoopHost {
@@ -320,4 +320,27 @@ test('the same requests turn after turn stop early with a progress report', asyn
   assert.equal(report, 'ติดอยู่ที่ขั้นเดิม');
   assert.equal(effects, 2);
   assert.equal(calls, 4);
+});
+test('a file request whose JSON broke is sent back to the AI with the reason instead of ending as an empty reply', async () => {
+  // A slide deck written into JSON without escaping its quotes and line breaks: nothing can be run from it.
+  const broken = '```step-tool\n{"tool":"changes","input":"deck.html","content":"<html lang="th">\n<body></body></html>"}\n```';
+  assert.equal(loopRequests(broken).length, 0);
+  assert.match(brokenRequests(broken)[0], /^invalid JSON/);
+  assert.deepEqual(brokenRequests('ตอบตามปกติ ไม่มีคำขอใช้เครื่องมือ'), []);
+  assert.match(brokenRequests('```step-tool\n{"tool":"delete","input":"a"}\n```')[0], /unknown tool/);
+  const written: string[] = [];
+  const loop = new ToolLoop(
+    host({ execute: async r => (written.push(r.input + ':' + r.content), { id: 'c1', path: r.input, status: 'applied' }) }),
+  );
+  const replies = [
+    broken,
+    '```step-tool\n' + JSON.stringify({ tool: 'changes', input: 'deck.html', content: '<html lang="th">\n<body></body></html>' }) + '\n```',
+    'สร้างไฟล์ deck.html แล้วครับ',
+  ];
+  const prompts: string[] = [];
+  const result = await loop.run('ทำสไลด์', async p => (prompts.push(p), replies[prompts.length - 1]), signal());
+  assert.match(prompts[1], /INVALID_TOOL_REQUEST/);
+  assert.match(prompts[1], /could not be read and nothing was run/);
+  assert.deepEqual(written, ['deck.html:<html lang="th">\n<body></body></html>']);
+  assert.equal(result, replies[2]);
 });

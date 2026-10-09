@@ -36,8 +36,10 @@ export async function saveUserConfig(updates) {
     try {
       lock = await open(lockPath, 'wx', 0o600);
     } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      if (Date.now() >= deadline) throw new Error('USER_CONFIG_BUSY');
+      // Windows reports EPERM/EACCES while another writer's lock is still being deleted (delete pending): also busy.
+      const busy = error.code === 'EEXIST' || (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code));
+      if (!busy) throw error;
+      if (Date.now() >= deadline) throw error.code === 'EEXIST' ? new Error('USER_CONFIG_BUSY') : error;
       await delay(25);
     }
   }

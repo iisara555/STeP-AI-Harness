@@ -37,6 +37,9 @@ import {
   ImagePlus,
   ChevronDown,
   Compass,
+  BookOpen,
+  Eye,
+  AlertTriangle,
 } from 'lucide-react';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -126,8 +129,7 @@ export default function App() {
     [progress, setProgress] = useState(''),
     [running, setRunning] = useState(false);
   const [heartbeatAt, setHeartbeatAt] = useState(0),
-    [activityAt, setActivityAt] = useState(0),
-    [activities, setActivities] = useState<string[]>([]);
+    [activityAt, setActivityAt] = useState(0);
   const [error, setError] = useState(''),
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null);
@@ -377,9 +379,9 @@ export default function App() {
             const label = event.text || '';
             setProgress(label);
             setActivityAt(Date.now());
-            setActivities(list => (list.at(-1) === label ? list : [...list, label].slice(-30)));
           }
           if (event.type === 'delta') setStream(s => (s + (event.text || '')).slice(-60000));
+          if (event.type === 'discard' && event.count) setStream(s => s.slice(0, Math.max(0, s.length - event.count!)));
           if (event.type === 'reasoning') setReasoning(s => (s + (event.text || '')).slice(-20000));
           if (event.type === 'plan') setPlan((event.plan || []).map(step => ({ ...step, state: 'pending' })));
           if (event.type === 'step' && event.index !== undefined)
@@ -722,7 +724,6 @@ export default function App() {
     setStartedAt(Date.now());
     setHeartbeatAt(Date.now());
     setActivityAt(Date.now());
-    setActivities([]);
     let result;
     try {
       result = await api!.call('send', {
@@ -1565,6 +1566,63 @@ export default function App() {
                         ))}
                       </div>
                     )}
+                    {!!message.docSources?.length && (
+                      <p className="doc-sources small muted">
+                        <BookOpen size={13} />
+                        <span>
+                          {t('อ้างอิงเอกสาร STeP')}: {message.docSources.join(' · ')}
+                        </span>
+                      </p>
+                    )}
+                    {!!message.written?.length && (
+                      <ul className="written-files small">
+                        {message.written.map(file => (
+                          <li key={file.path}>
+                            <FileText size={13} />
+                            <span className="written-path">{file.path}</span>
+                            <span className="muted">{file.status === 'applied' ? t('บันทึกแล้ว') : t('รอตรวจในรายการแก้ไข')}</span>
+                            {/\.html?$/i.test(file.path) && (
+                              <button
+                                className="quiet small"
+                                onClick={() =>
+                                  void action(() =>
+                                    api.call('previewHtml', file.status === 'applied' ? { path: file.path } : { id: file.id }),
+                                  )
+                                }
+                              >
+                                <Eye size={13} /> {t('ดูตัวอย่าง')}
+                              </button>
+                            )}
+                            {file.status === 'staged' && (
+                              <button className="quiet small" onClick={() => setToolTab('changes')}>
+                                {t('ไปตรวจ')}
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {message.check &&
+                      (message.check.unsupported.length ? (
+                        <div className="answer-check warn" role="note">
+                          <p>
+                            <AlertTriangle size={14} />
+                            {t('ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้')}
+                          </p>
+                          <ul>
+                            {message.check.unsupported.map((item, i) => (
+                              <li key={i}>
+                                “{item.claim}”{item.reason && <span className="muted"> · {item.reason}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="answer-check ok small muted">
+                          <ShieldCheck size={13} />
+                          {t('ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร')}
+                        </p>
+                      ))}
                     {!!message.webSources?.length && (
                       <div className="web-sources" aria-label={t('แหล่งข้อมูลจากการค้นเว็บ')}>
                         <span>{t('แหล่งข้อมูลจาก Web Search')}</span>
@@ -1634,6 +1692,11 @@ export default function App() {
                             {t('ตรวจ')} {request.tool}: {request.input.slice(0, 50)}
                           </button>
                         ))}
+                        {message.ms !== undefined && (
+                          <span className="answer-time" title={t('เวลาตั้งแต่ส่งคำถามจนได้คำตอบ')}>
+                            {t('ใช้เวลา {0}', formatElapsed(message.ms))}
+                          </span>
+                        )}
                       </div>
                     )}
                   </article>
@@ -1670,7 +1733,7 @@ export default function App() {
                       </ol>
                     )}
                     {reasoning && (
-                      <details className="thinking" open>
+                      <details className="thinking">
                         <summary>
                           <Brain size={14} />
                           {t('ความคิดของ AI')}
@@ -1679,18 +1742,7 @@ export default function App() {
                       </details>
                     )}
                     {liveText && !streamSaved && <RichText className="message-body streaming" text={liveText} onLink={openLink} />}
-                    {/* Finished steps stay listed in order above the current one, never folded away. */}
-                    {activities.length > 1 && (
-                      <ol className="activity-history" aria-label={t('ขั้นตอนที่ทำแล้ว')}>
-                        {activities.slice(0, -1).map((label, index) => (
-                          <li key={index}>
-                            <Check size={13} />
-                            <span>{t(label)}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                    {/* One quiet line while working, as in Claude and Codex: what is happening and for how long. */}
+                    {/* One quiet line while working, as in Claude and Codex: each step replaces the last, nothing stacks up. */}
                     <div className="activity" role="status" aria-live="polite">
                       <ThinkingScribble />
                       <span>{progress ? t(progress) : liveText ? t('กำลังเขียนคำตอบ') : t('กำลังคิด')}</span>

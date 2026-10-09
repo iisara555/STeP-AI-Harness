@@ -3450,6 +3450,13 @@ nav .count {
   flex: none;
   margin-top: 4px;
 }
+.policy-problems {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.policy-problems code {
+  overflow-wrap: anywhere;
+}
 .policy-features p {
   display: flex;
   justify-content: space-between;

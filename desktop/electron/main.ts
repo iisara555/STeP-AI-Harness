@@ -29,6 +29,7 @@ import { requireSecureStorage } from './secure-storage';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
+import { PREVIEW_LIMIT, isHtmlPath, openHtmlPreview } from './html-preview';
 import { autoUpdater } from 'electron-updater';
 import { Updater, RELEASES_URL, type SelfInstall } from './updater';
 import { appBundlePath, canReplace, downloadVerified, macUpdateAsset, startSwap } from './mac-update';
@@ -321,6 +322,7 @@ async function main() {
     documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
     visionEnabled: () => policyState.policy.features.vision,
+    answerCheck: () => policyState.policy.features.answerCheck,
     skillMetadata: async id => {
       const m = await routing.loadSkillContextMetadata(id);
       return { ...m, mandatoryReferences: await routing.loadDocumentContextMetadata(m?.mandatory || []) };
@@ -493,7 +495,9 @@ async function main() {
     text => scanText(text).redactedText,
     () => policyState.policy,
   );
-  if (policyState.problems.length) diagnose('policy-problems', { count: String(policyState.problems.length) });
+  // Policy problems are fixed messages about the file's shape and permissions, never its secrets, so they are logged in full.
+  if (policyState.problems.length)
+    diagnose('policy-problems', { count: String(policyState.problems.length), problems: policyState.problems.join(' | ').slice(0, 1000) });
   // Mac updates without a Developer ID (electron/mac-update.ts): download the zip, check it, swap the bundle after quit.
   function macSelfInstall(): SelfInstall {
     const dir = join(data, 'updates');
@@ -538,7 +542,11 @@ async function main() {
     voiceTicketUntil = 0;
     approvals.close();
     questions.close();
-    diagnose('policy-reloaded', { source: policyState.policy.source, problems: String(policyState.problems.length) });
+    diagnose('policy-reloaded', {
+      source: policyState.policy.source,
+      problems: String(policyState.problems.length),
+      ...(policyState.problems.length ? { reasons: policyState.problems.join(' | ').slice(0, 1000) } : {}),
+    });
     emit({ sessionId: '', type: 'changed' });
   });
   const hooks = new HookEngine(
@@ -1203,6 +1211,43 @@ async function main() {
     teams: Object.values(await routing.loadTeamsDictionary()),
   });
 
+  // A web page the employee (or a link in a preview) opens, in its own sandboxed Web tab.
+  const openBrowserTab = (input: { url: string }) => {
+    const url = browserUrl(inputText(input.url, 2000));
+    return gate.run({ tool: 'browser', readOnly: true }, { title: '', body: '', key: url }, async () => {
+      if (browsers.size >= 4) throw new Error('TASK_LIMIT');
+      const id = randomUUID();
+      const browser = dock.create(id, 'manual', 'step-browser-' + id);
+      browsers.add(id);
+      browser.once('destroyed', () => browsers.delete(id));
+      const network = browser.session;
+      network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
+      network.setPermissionCheckHandler(() => false);
+      network.on('will-download', e => e.preventDefault());
+      browser.setWindowOpenHandler(() => ({ action: 'deny' }));
+      browser.on('will-navigate', (e, target) => {
+        try {
+          browserUrl(target);
+        } catch {
+          e.preventDefault();
+        }
+      });
+      browser.on('will-redirect', (e, target) => {
+        try {
+          browserUrl(target);
+        } catch {
+          e.preventDefault();
+        }
+      });
+      try {
+        await browser.loadURL(url);
+      } catch {
+        dock.remove(id);
+        throw new Error('BROWSER_LOAD_FAILED');
+      }
+      return { id, url, title: browser.getTitle() };
+    });
+  };
   ipcMain.handle('step:call', async (event, method: string, raw: any = {}) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('UNTRUSTED_SENDER');
     const input = raw ?? {};
@@ -1491,40 +1536,34 @@ async function main() {
           () => workbench.start(command),
         );
       }
-      case 'toolBrowser': {
-        const url = browserUrl(inputText(input.url, 2000));
-        return gate.run({ tool: 'browser', readOnly: true }, { title: '', body: '', key: url }, async () => {
+      case 'toolBrowser':
+        return openBrowserTab(input);
+      case 'previewHtml': {
+        // An HTML file in the workspace, or one the AI staged for review, shown in the Web tab as it works in a browser.
+        const change = input.id ? workbench.change(inputText(input.id, 60)) : undefined;
+        const target = change ? change.path : inputText(input.path, 2000);
+        if (!isHtmlPath(target)) throw new Error('INVALID_PATH');
+        return gate.run({ tool: 'read', readOnly: true, path: target }, { title: '', body: '', key: target }, async () => {
           if (browsers.size >= 4) throw new Error('TASK_LIMIT');
+          const html = change ? change.after : (await workbench.bytes(target, PREVIEW_LIMIT)).toString('utf8');
           const id = randomUUID();
-          const browser = dock.create(id, 'manual', 'step-browser-' + id);
           browsers.add(id);
-          browser.once('destroyed', () => browsers.delete(id));
-          const network = browser.session;
-          network.setPermissionRequestHandler((_c, _p, callback) => callback(false));
-          network.setPermissionCheckHandler(() => false);
-          network.on('will-download', e => e.preventDefault());
-          browser.setWindowOpenHandler(() => ({ action: 'deny' }));
-          browser.on('will-navigate', (e, target) => {
-            try {
-              browserUrl(target);
-            } catch {
-              e.preventDefault();
-            }
-          });
-          browser.on('will-redirect', (e, target) => {
-            try {
-              browserUrl(target);
-            } catch {
-              e.preventDefault();
-            }
-          });
           try {
-            await browser.loadURL(url);
-          } catch {
+            return await openHtmlPreview(
+              partition => {
+                const page = dock.create(id, 'manual', partition);
+                page.once('destroyed', () => browsers.delete(id));
+                return page;
+              },
+              id,
+              html,
+              url => void openBrowserTab({ url }).catch(() => {}),
+            );
+          } catch (error) {
+            browsers.delete(id);
             dock.remove(id);
-            throw new Error('BROWSER_LOAD_FAILED');
+            throw error;
           }
-          return { id, url, title: browser.getTitle() };
         });
       }
       case 'toolBrowserRead': {

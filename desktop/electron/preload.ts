@@ -118,6 +118,7 @@ const allowed = new Set([
   'toolCancel',
   'toolBrowser',
   'toolBrowserRead',
+  'previewHtml',
   'browserDock',
   'windowControl',
 ]);
