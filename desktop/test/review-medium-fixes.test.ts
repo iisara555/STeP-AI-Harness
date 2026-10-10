@@ -8,6 +8,8 @@ import { Store } from '../electron/store';
 import { Workbench } from '../electron/workbench';
 import { defaultPolicy } from '../electron/policy';
 import { sensitivePath } from '../electron/permissions';
+// PowerShell (Windows) needs the call operator to run a quoted executable path.
+const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
 const privacy: any = await import('../../src/modules/privacy/index.js');
 
 async function fixture(scrub?: (text: string) => string) {
@@ -63,7 +65,7 @@ test('P1: a credential split across output chunks is masked completely and curso
       join(f.root, 'split.cjs'),
       "process.stdout.write('PRE password: Synthetic-'); setTimeout(()=>process.stdout.write('Tail-Value-987654\\nAFTER-MARKER\\n'),300)",
     );
-    const task = await f.workbench.start(`"${process.execPath}" split.cjs`, 's');
+    const task = await f.workbench.start(`${node} split.cjs`, 's');
     await new Promise(r => setTimeout(r, 150));
     const mid = (await f.workbench.inspectTask('s', task.id, { action: 'poll', offset: 0 })) as any;
     assert.ok(!mid.output.includes('Synthetic-'), 'an incomplete line is never exposed unscanned');
@@ -85,7 +87,7 @@ test('P1: output without a final newline is flushed at exit, and progress lines 
   const f = await fixture(scrub);
   try {
     await writeFile(join(f.root, 'cr.cjs'), "process.stdout.write('10%\\r'); setTimeout(()=>process.stdout.write('done-no-newline'),1500)");
-    const task = await f.workbench.start(`"${process.execPath}" cr.cjs`, 's');
+    const task = await f.workbench.start(`${node} cr.cjs`, 's');
     for (let i = 0; i < 40 && !/10%/.test(f.workbench.tasks().find(t => t.id === task.id)!.output); i++)
       await new Promise(r => setTimeout(r, 25));
     assert.match(f.workbench.tasks().find(t => t.id === task.id)!.output, /10%/);

@@ -10,6 +10,8 @@ import { Workbench } from '../electron/workbench';
 import { defaultPolicy } from '../electron/policy';
 import { sensitivePath } from '../electron/permissions';
 import { brokenRequests } from '../src/tools';
+// PowerShell (Windows) needs the call operator to run a quoted executable path.
+const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
 const privacy: any = await import('../../src/modules/privacy/index.js');
 
 const SECRET = 'TailValue987654';
@@ -26,7 +28,7 @@ async function fixture() {
     workbench,
     async run(name: string, body: string) {
       await writeFile(join(root, name), body);
-      const task = await workbench.start(`"${process.execPath}" ${name}`, 's');
+      const task = await workbench.start(`${node} ${name}`, 's');
       const seen: string[] = [];
       for (let i = 0; i < 200; i++) {
         await new Promise(r => setTimeout(r, 20));

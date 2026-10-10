@@ -18,6 +18,8 @@ import { ToolGate } from '../electron/tool-gate';
 import { DesktopTools, type ToolScope, documentSections } from '../electron/tools';
 import { sheetWorker } from '../electron/sheets';
 import type { Harness } from '../electron/service';
+// PowerShell (Windows) needs the call operator to run a quoted executable path.
+const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
 async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
@@ -845,7 +847,7 @@ test('task cancel denial and changed destination never terminate an owned job', 
   const host = await f.tools.host(f.scope);
   try {
     await writeFile(join(f.root, 'slow.cjs'), 'setTimeout(() => {}, 30000);');
-    const job = (await host.execute({ tool: 'terminal', input: `"${process.execPath}" slow.cjs` }, f.scope.signal)) as any;
+    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, f.scope.signal)) as any;
     f.deny();
     assert.equal(await host.execute({ tool: 'tasks', input: job.id, args: { action: 'cancel' } }, f.scope.signal), null);
     assert.equal(
@@ -876,7 +878,7 @@ test('task wait rechecks the workspace before returning process output', async (
   const host = await f.tools.host(f.scope);
   try {
     await writeFile(join(f.root, 'slow.cjs'), 'setTimeout(() => {}, 30000);');
-    const job = (await host.execute({ tool: 'terminal', input: `"${process.execPath}" slow.cjs` }, f.scope.signal)) as any;
+    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, f.scope.signal)) as any;
     const next = join(f.root, 'next');
     await mkdir(next);
     const pending = host.execute({ tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 30000 } }, f.scope.signal);
@@ -894,7 +896,7 @@ test('agent poll reports rolling-log loss with absolute sanitized-output cursors
   const f = await fixture();
   try {
     await writeFile(join(f.root, 'loud.cjs'), "process.stdout.write('A'.repeat(110000));");
-    const job = (await f.tools.execute({ tool: 'terminal', input: `\"${process.execPath}\" loud.cjs` }, f.scope)) as any;
+    const job = (await f.tools.execute({ tool: 'terminal', input: `${node} loud.cjs` }, f.scope)) as any;
     const done = (await f.tools.execute(
       { tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 2000, offset: 0, length: 100 } },
       f.scope,
@@ -908,7 +910,7 @@ test('agent poll reports rolling-log loss with absolute sanitized-output cursors
     const end = (await f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'poll', offset: 110000 } }, f.scope)) as any;
     assert.equal(end.output, '');
     assert.equal(end.endOffset, 110000);
-    const legacy = await f.workbench.start(`\"${process.execPath}\" -e \"process.exit(0)\"`);
+    const legacy = await f.workbench.start(`${node} -e \"process.exit(0)\"`);
     await assert.rejects(f.tools.execute({ tool: 'tasks', input: legacy.id, args: { action: 'status' } }, f.scope), /TASK_NOT_FOUND/);
   } finally {
     await f.workbench.close();
@@ -924,7 +926,7 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
   const host = await f.tools.host(f.scope);
   try {
     await writeFile(join(f.root, 'slow.cjs'), "process.stdout.write('started'); setTimeout(() => process.stdout.write('finished'), 800);");
-    const job = (await host.execute({ tool: 'terminal', input: `\"${process.execPath}\" slow.cjs` }, abort.signal)) as any;
+    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
     const request = { tool: 'tasks' as const, input: job.id, args: { action: 'wait', timeoutMs: 20 } };
     let activity = '';
     f.scope.activity = text => {
@@ -941,7 +943,7 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
     assert.equal(done.status, 'done');
     assert.equal(done.timedOut, false);
     assert.match(done.output, /startedfinished/);
-    const slow = (await host.execute({ tool: 'terminal', input: `\"${process.execPath}\" slow.cjs` }, abort.signal)) as any;
+    const slow = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
     await assert.rejects(
       f.tools.execute({ tool: 'tasks', input: slow.id, args: { action: 'cancel' } }, { ...f.scope, sessionId: 'other' }),
       /TASK_NOT_FOUND/,
@@ -954,7 +956,7 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
       abort.signal,
     )) as any;
     assert.equal(cancelled.status, 'cancelled');
-    const pendingJob = (await host.execute({ tool: 'terminal', input: `\"${process.execPath}\" slow.cjs` }, abort.signal)) as any;
+    const pendingJob = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
     const pending = host.execute({ tool: 'tasks', input: pendingJob.id, args: { action: 'wait', timeoutMs: 30000 } }, abort.signal);
     setTimeout(() => abort.abort(), 20);
     await assert.rejects(pending, /CANCELLED/);
@@ -966,7 +968,7 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
   }
   const plan = await fixture('plan');
   try {
-    const job = await plan.workbench.start(`\"${process.execPath}\" -e \"setTimeout(()=>{},1000)\"`, plan.scope.sessionId);
+    const job = await plan.workbench.start(`${node} -e \"setTimeout(()=>{},1000)\"`, plan.scope.sessionId);
     await assert.rejects(plan.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'cancel' } }, plan.scope), /PLAN_MODE/);
     assert.equal(
       ((await plan.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, plan.scope)) as any).status,
@@ -983,7 +985,7 @@ test('agent task inspection is session/workspace scoped and output bounded over 
   const f = await fixture();
   try {
     await writeFile(join(f.root, 'process.cjs'), "process.stdout.write('fixture-output');");
-    const job = (await f.tools.execute({ tool: 'terminal', input: `"${process.execPath}" process.cjs` }, f.scope)) as any;
+    const job = (await f.tools.execute({ tool: 'terminal', input: `${node} process.cjs` }, f.scope)) as any;
     for (let i = 0; i < 100 && f.workbench.tasks().find(t => t.id === job.id)?.status === 'running'; i++)
       await new Promise(resolve => setTimeout(resolve, 20));
     const status = (await f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, f.scope)) as any;
