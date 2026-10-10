@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-09_
+_Last updated: 2026-10-10_
 
 ## Latest release
 
@@ -15,7 +15,8 @@ _Last updated: 2026-10-09_
 
 ## In progress
 
-- Nothing open from the agent threads.
+- Branch `fix/plugin-home-tests-20261010`: portable `~/` link checks fixed; root tests pass 952 with 3 skips on Linux. Independent review passed; awaiting PR merge, no release change.
+- Separate knowledge-search and tool-result/policy fixes are in review worktrees, not yet merged.
 
 ## Waiting on the owner
 
@@ -23,9 +24,8 @@ _Last updated: 2026-10-09_
   in diagnostics), so `claudeSubscription` is not applied. After PR #126 the policy tab names the reason.
 - **Antigravity streaming** needs one check with a signed-in `agy`: whether `ttftMs` in `diagnostics.jsonl` is now
   lower than `ms`.
-- **HTML preview on a real machine**: WebGL (Three.js) and full screen inside the Web tab were not testable in CI.
-- **Branch protection on `main`** (GitHub Settings → Branches): require pull requests and the `validate` checks, so
-  no agent can push straight to `main`.
+- **HTML preview on employee Windows/macOS machines**: still awaiting native acceptance. On 2026-10-10 real Electron/Linux/Xvfb passed public-CDN Chart.js rendering, Three.js module loading, SwiftShader WebGL rendering, fullscreen, local-file blocking and device-permission denial. Run used `--no-sandbox`, so it does not certify the OS sandbox or native GPU.
+- **Branch protection on `main`** enabled and read back on 2026-10-10: PR required, strict `validate`, `desktop`, `windows-tests` and `desktop-macos-electron` checks; admin enforcement, no force-push/deletion.
 
 ## Known issues
 

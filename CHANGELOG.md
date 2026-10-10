@@ -4,6 +4,12 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+### Portable plugin installation test
+
+- Expand `~/` rule links before checking their files, and require them to remain in the installed configuration. This fixes a false test failure when the test temporary directory is inside the user's home; installer behavior and employee files are unchanged.
+
 ## Desktop v0.5.37 — 2026-10-09
 
 ### Chat (PR #126)
