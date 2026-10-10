@@ -8,15 +8,14 @@ _Last updated: 2026-10-10_
 
 ## Latest release
 
-- **Desktop v0.5.37** (2026-10-09) — Windows x64 and macOS Apple silicon: PR #126 (one-line chat status, answer time,
-  Antigravity streaming, policy problem reasons, STeP document sources, optional `answerCheck`, HTML preview, retry of
-  unreadable tool requests, `AGENTS.md`) and PR #127 (receipt fields filled from the AI image reading). Intel Macs stay
-  on 0.5.35. Harness **0.7.7**.
+- **Desktop v0.5.38** (2026-10-10) — Windows x64 and macOS Apple silicon: PR #132 (agent `tasks` lifecycle,
+  recursive `search_files`, exact staged `patch`, `tool_search`/`tool_describe`, three independent review rounds; four
+  LOW output-masking items listed in the CHANGELOG remain). Intel Macs stay on 0.5.35. Harness **0.7.7**.
 
 ## In progress
 
-- Discoverable tool registry source: agent `tool_search`/`tool_describe`, shared schemas/effects/conditional scope, consented managed-MCP discovery and real-app discovery/file/patch/task fixture implemented; text fallback retained, native tool transport and live/native-platform acceptance remain separate.
-- Execution parity source worktree: existing engine/UI/gates retained; agent lifecycle and workspace recursive search/exact staged patch added with synthetic tests. No release/commit yet; live accounts, native platforms and cancellation-resistant subprocess hardening remain open. Independent review provider refused the review run (not a security-review pass).
+- Desktop execution parity follow-ups: the four LOW output-masking items from review round 3 (CHANGELOG v0.5.38),
+  native provider tool transport, and acceptance on real Windows/macOS process trees and live models.
 
 ## Waiting on the owner
 

@@ -4,7 +4,9 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
-## Unreleased
+## Desktop v0.5.38 — 2026-10-10
+
+### AI tools: background tasks, workspace search, exact edits and tool discovery (PR #132)
 
 - Desktop review fixes (รอบ 2-3): output ของงานเบื้องหลังที่ยาวเกิน 8,000 ตัวอักษรไม่ปล่อยบรรทัดที่ยังไม่จบออกมาทั้งก้อนแล้ว และปิดบังโดยดูข้อความดิบที่ส่งไปแล้วของ stream เดียวกันร่วมด้วย credential ที่ key กับค่าอยู่คนละ chunk หรือคนละบรรทัดจึงยังถูกปิด; หน้าต่างอนุมัติหยุดงานแสดงคำสั่งที่ปิดบังแล้ว สถานะ และเวลาเริ่ม ไม่ใช่แค่รหัสงาน; poll ที่ไม่ระบุ offset แจ้ง `truncated:true` เมื่อ log เก่าถูกตัด; เพิ่ม `.vault-token`, `.htpasswd`, `.my.cnf`, `.s3cfg`, `.boto`, `.yarnrc.yml`, `pip.conf`, `pip.ini` และชื่อแบบ Windows (`.netrc.`, `.netrc::$DATA`) เป็น protected path; tool request ที่ฟิลด์ผิดบอกชื่อฟิลด์และค่าที่ต้องการให้ AI แก้
 
@@ -15,6 +17,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - Desktop source tranche 2: เพิ่ม `search_files` ค้นชื่อ/ข้อความใน workspace แบบ recursive พร้อมเลขบรรทัด ขอบเขตการสแกน และ cursor ที่ปฏิเสธผลเปลี่ยน; regex จำกัดเป็น fixed-width และ glob ไม่ใช้ backtracking เพิ่ม `patch` แก้ข้อความตรงตัวเพียงจุดเดียวโดย stage ใน Changes ก่อน ผ่านสิทธิ์/การยืนยัน/hash conflict/snapshot เดิม ไม่เขียนข้าม gate ไฟล์ลับ symlink/hardlink และ path rules ยังถูกปฏิเสธ พร้อมข้อความไทย/อังกฤษและ whole-app fixture ไม่มี commit/release หรือสิทธิ์ account ใหม่
 
 - Desktop source: AI ใช้ `tasks` เดิมเพื่อ list/status/poll/wait/cancel งานคำสั่งที่เป็นของ session และ workspace ปัจจุบันได้ รอไม่เกิน 30 วินาทีต่อครั้งและอ่าน log แบบจำกัดพร้อม cursor/คำเตือนเมื่อ log เก่าถูกตัด การหยุดงานยังผ่านสิทธิ์/การยืนยันของคนและถูกปิดใน plan mode ผลทุกครั้งยังผ่าน privacy/transmission gate เดิม ไม่มี Hermes embedding หรือสิทธิ์ account/secret เพิ่ม ดูขอบเขตและสิ่งที่ยังไม่ทำใน [Desktop tool loop](docs/desktop-tool-loop.md#execution-parity-tranche-1-source-only)
+
+### Known limits (LOW, not yet fixed)
+
+- Background task output masking, in rare timings: a value on the line after `password:` can stay unmasked when LF and CRLF line endings are mixed; in a single line over 8,000 characters with no spaces, the tail of a credential value longer than about 1,000 characters, or the first characters of a `ghp_`/`sk-` token, an email or a 13-digit ID, can stay visible; with privacy checks off, a withheld chunk can let the value on its next line through.
+- Not yet exercised on real Windows/macOS process trees or with real models; native provider tool transport is not part of this release.
 
 ## Desktop v0.5.37 — 2026-10-09
 

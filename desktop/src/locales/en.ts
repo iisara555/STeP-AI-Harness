@@ -3,6 +3,12 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'AI ตรวจและหยุดงานคำสั่งเบื้องหลังได้ การหยุดงานยังต้องให้คุณอนุมัติ':
+    'The AI can check and stop background commands; stopping one still needs your approval',
+  'AI ค้นไฟล์และข้อความทั้งโฟลเดอร์งาน และแก้ไฟล์ทีละจุดผ่านรายการแก้ไขให้คุณตรวจก่อน':
+    'The AI can search files and text across the work folder and make exact edits that wait in Changes for your review',
+  'ไฟล์รหัสผ่านของโปรแกรมทั่วไป เช่น .netrc และ .npmrc ถูกกันไม่ให้ AI อ่าน':
+    'Password files of common tools, such as .netrc and .npmrc, are kept away from the AI',
   กำลังตรวจงานเบื้องหลัง: 'Checking background tasks',
   'หยุดงานเบื้องหลังนี้?': 'Stop this background task?',
   '{0}\nสถานะ: {1} · เริ่ม: {2}': '{0}\nStatus: {1} · started: {2}',
