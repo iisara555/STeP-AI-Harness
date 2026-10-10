@@ -2,6 +2,7 @@
 import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  TASK_NOT_FOUND: 'ไม่พบงานเบื้องหลังนี้ในงานและพื้นที่งานปัจจุบัน',
   SECURE_STORAGE_UNAVAILABLE:
     'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth',
   INVALID_DOCUMENT_TOOL: 'ชนิดเครื่องมือร่างเอกสารไม่ถูกต้อง หรือ Skill ที่เลือกไม่ตรงกับเครื่องมือ',
@@ -136,6 +137,9 @@ export const errorText: Record<string, string> = localized({
   EXPORT_BUSY: 'เอกสารนี้กำลังส่งออก กรุณารอให้เสร็จก่อน',
   WORKSPACE_CHANGED: 'โฟลเดอร์ทำงานเปลี่ยนไป กรุณาตรวจคำขออีกครั้ง',
   FILE_LIMIT: 'ไฟล์นี้ใหญ่เกิน 200 KB หรือไม่ใช่ไฟล์ข้อความ',
+  PATCH_NO_MATCH: 'ไม่พบข้อความเดิมแบบตรงตัว กรุณาอ่านไฟล์ล่าสุดก่อนแก้ไข',
+  PATCH_AMBIGUOUS: 'พบข้อความเดิมมากกว่าหนึ่งจุด กรุณาระบุบริบทให้ตรงเพียงจุดเดียว',
+  SEARCH_CHANGED: 'ไฟล์หรือผลค้นหาเปลี่ยนระหว่างแบ่งหน้า กรุณาเริ่มค้นหาใหม่',
   FILE_BINARY: 'ไฟล์นี้เป็น binary ให้เปิดด้วยโปรแกรมที่รองรับ',
   FILE_CONFLICT: 'ไฟล์ถูกแก้หลังเตรียม diff กรุณาอ่านและตรวจใหม่',
   INVALID_URL: 'กรุณาใส่ URL แบบ http หรือ https',

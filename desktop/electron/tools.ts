@@ -3,7 +3,8 @@ import { resolve, relative, isAbsolute, extname, dirname, sep } from 'node:path'
 import { createHash } from 'node:crypto';
 import type { Connection, Workflow, WorkTask } from '../src/types';
 import { parsePlan } from './workflows';
-import type { LoopRequest } from '../src/tools';
+import { taskAction, type LoopRequest } from '../src/tools';
+import { discoverTools, validateToolRequest } from '../src/tool-registry';
 import type { Harness } from './service';
 import { Workbench } from './workbench';
 import { ToolGate } from './tool-gate';
@@ -20,13 +21,18 @@ import { mainLocale, tm } from './i18n';
 
 // What the employee reads on the status line while a tool runs, in plain words instead of the tool's name.
 const TOOL_ACTIVITY: Record<string, string> = {
+  tool_search: 'กำลังค้นรายการเครื่องมือ',
+  tool_describe: 'กำลังอ่านรายละเอียดเครื่องมือ',
   ask_user: 'รอคำตอบจากคุณ',
   plan: 'ส่งแผนให้คุณอนุมัติ',
   plan_update: 'บันทึกความคืบหน้าของแผน',
+  tasks: 'กำลังตรวจงานเบื้องหลัง',
   browser_control: 'กำลังทำงานบนเว็บ',
   web_search: 'กำลังค้นเว็บ',
   web_fetch: 'กำลังอ่านเว็บไซต์',
   files: 'กำลังอ่านไฟล์งาน',
+  search_files: 'กำลังค้นไฟล์ในพื้นที่งาน',
+  patch: 'กำลังเตรียมแก้ข้อความเฉพาะจุด',
   changes: 'กำลังเตรียมการแก้ไขไฟล์',
   sheet_create: 'กำลังจัดทำไฟล์ Excel',
   slides_create: 'กำลังจัดทำไฟล์ PowerPoint',
@@ -284,9 +290,12 @@ export class DesktopTools {
       enabled: () => this.policy().features.toolLoop,
       check,
       readOnly: r =>
+        !(['tool_search', 'tool_describe'].includes(r.tool) && r.args?.server !== undefined) &&
+        !(r.tool === 'tasks' && ['wait', 'cancel'].includes(String(r.args?.action))) &&
         ![
           'terminal',
           'changes',
+          'patch',
           'sheet_edit',
           'sheet_create',
           'slides_create',
@@ -355,11 +364,24 @@ export class DesktopTools {
     return applied ? { ...change, status: 'applied', snapshotId: applied.snapshotId } : { ...change, status: 'staged-for-human-review' };
   }
   async execute(r: LoopRequest, scope: ToolScope, check: () => Promise<void> = async () => {}) {
+    validateToolRequest(r);
     const a = r.args || {},
       target = r.input;
+    if (r.tool === 'tasks') taskAction(target, a);
+    const cancelTask = r.tool === 'tasks' && a.action === 'cancel';
+    // The approval names what is being stopped (sanitized command, status, start time), not only the task id.
+    const cancelled = cancelTask
+      ? ((await this.workbench.inspectTask(scope.sessionId, target, { action: 'status' })) as {
+          command?: string;
+          status?: string;
+          at?: string;
+        })
+      : undefined;
     if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
     const fileTool = [
       'files',
+      'search_files',
+      'patch',
       'changes',
       'doc_outline',
       'doc_section',
@@ -370,30 +392,101 @@ export class DesktopTools {
     ].includes(r.tool);
     const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
     if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-    if (this.mode() === 'plan' && ['changes', 'sheet_edit', 'sheet_create', 'slides_create'].includes(r.tool))
+    if (this.mode() === 'plan' && ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create'].includes(r.tool))
       throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
-      readOnly: !['terminal', 'sandbox', 'mcp_call', 'mcp_search'].includes(r.tool),
+      readOnly: !cancelTask && !['terminal', 'sandbox', 'mcp_call', 'mcp_search'].includes(r.tool),
       ...(fileTool ? { path: target || '.' } : {}),
       ...(command ? { command, execute: true } : {}),
     };
     return this.gate.run(
       request,
       {
-        title: tm('รันคำสั่งจาก AI?'),
-        body: target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
+        title: cancelTask ? tm('หยุดงานเบื้องหลังนี้?') : tm('รันคำสั่งจาก AI?'),
+        body: cancelled
+          ? tm(
+              '{0}\nสถานะ: {1} · เริ่ม: {2}',
+              String(cancelled.command || target).slice(0, 500),
+              String(cancelled.status || ''),
+              String(cancelled.at || ''),
+            )
+          : target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
         key: target,
         sessionId: scope.sessionId,
       },
       async () => {
         switch (r.tool) {
+          case 'tool_search':
+          case 'tool_describe':
+            if (a.server !== undefined) {
+              if (typeof a.server !== 'string' || !a.server || (r.tool === 'tool_search' && a.scope !== 'mcp'))
+                throw new Error('INVALID_INPUT');
+              if (!this.policy().features.mcp) throw new Error('MCP_DISABLED');
+              if (!this.policy().mcpServers.some(server => server.name === a.server)) throw new Error('MCP_SERVER_NOT_ALLOWED');
+              if (!this.external) throw new Error('TOOL_UNAVAILABLE');
+              // The only delegated operation is fixed, consented discovery. No recursive dispatch or caller-selected wrapper.
+              const remote = { tool: 'mcp_search', input: a.server, args: { query: target } } as LoopRequest;
+              const value = (await this.gate.run(
+                { tool: 'mcp_search', readOnly: false },
+                { title: tm('รันคำสั่งจาก AI?'), body: a.server, key: a.server, sessionId: scope.sessionId },
+                async () => {
+                  await check();
+                  return this.external!(remote, scope, check);
+                },
+                scope.signal,
+              )) as { tools?: { server: string; name: string; description: string; inputSchema: unknown }[]; total?: number } | null;
+              await check();
+              if (!value) return { cancelled: true, executionGranted: false };
+              const entries = (value.tools || []).filter(entry => r.tool !== 'tool_describe' || entry.name === target);
+              const incomplete = Number(value.total || 0) > (value.tools || []).length;
+              if (r.tool === 'tool_describe' && !entries.length && !incomplete) throw new Error('TOOL_UNAVAILABLE');
+              const limit = Number(a.limit ?? 12);
+              return {
+                tools: entries.slice(0, limit).map(entry => ({
+                  ...entry,
+                  server: a.server,
+                  invocation: { tool: 'mcp_call', input: a.server, args: { name: entry.name }, argumentsSchema: entry.inputSchema },
+                  effects: ['unknown-remote-effects', 'separate-consent-required'],
+                  trusted: false,
+                  executionGranted: false,
+                  availability: { status: 'conditional', reason: 'managed-server-separate-call-consent-required' },
+                })),
+                total: entries.length,
+                serverTotal: value.total,
+                hasMore: entries.length > limit,
+                boundedDiscovery: true,
+                discoveryIncomplete: incomplete,
+                next: incomplete ? 'Refine mcp_search query; absence in this bounded discovery is not proof of unavailability.' : undefined,
+                executionGranted: false,
+                transport: 'step-tool-text',
+              };
+            }
+            return discoverTools(r, this.policy(), this.mode(), Boolean(this.external));
           case 'mcp_search':
           case 'mcp_call':
           case 'sandbox':
           case 'browser_control':
             if (!this.external) throw new Error('TOOL_UNAVAILABLE');
             return this.external(r, scope, check);
+          case 'search_files':
+            return this.workbench.searchFiles(
+              target || '.',
+              a,
+              text => {
+                const review = this.harness.privacy(text);
+                if (review.action === 'block-external' || typeof review.redactedText !== 'string')
+                  throw new Error('PRIVACY_REVIEW_REQUIRED');
+                return review.redactedText;
+              },
+              check,
+            );
+          case 'patch': {
+            await check();
+            const change = await this.workbench.patch(target, a);
+            await check();
+            return this.settle({ id: change.id, path: change.path }, scope);
+          }
           case 'files':
             if (a.action === 'list' || !target) return this.workbench.files(target);
             {
@@ -427,9 +520,16 @@ export class DesktopTools {
             if ((a.action && a.action !== 'stage') || r.content === undefined) throw new Error('INVALID_INPUT');
             return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
           case 'terminal':
-            return this.workbench.start(target);
+            return this.workbench.start(target, scope.sessionId);
           case 'tasks':
-            return this.workbench.tasks().filter(t => !target || t.id === target);
+            if (a.action === 'wait') return this.workbench.waitTask(scope.sessionId, target, a, scope.signal, check);
+            if (cancelTask) {
+              await check();
+              await this.workbench.inspectTask(scope.sessionId, target, { action: 'status' });
+              await this.workbench.cancel(target);
+              return this.workbench.inspectTask(scope.sessionId, target, { action: 'status' });
+            }
+            return this.workbench.inspectTask(scope.sessionId, target, a);
           case 'browser':
           case 'web_fetch': {
             const url = publicUrl(target).href;

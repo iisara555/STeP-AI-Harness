@@ -1,11 +1,17 @@
+import { validateToolRequest } from './tool-registry';
+
 export type ToolTab = 'output' | 'browser' | 'terminal' | 'tasks' | 'files' | 'changes';
 export type ToolRequest = { tool: 'browser' | 'terminal' | 'files' | 'changes'; input: string; content?: string };
 export type BackgroundTask = {
   id: string;
+  /** Agent ownership; legacy/user-started jobs are not visible to the agent. */
+  sessionId?: string;
   command: string;
   cwd: string;
   status: 'running' | 'done' | 'failed' | 'cancelled' | 'interrupted';
   output: string;
+  /** Characters discarded from the sanitized rolling log (absolute polling cursor). */
+  outputOffset?: number;
   code?: number | null;
   at: string;
 };
@@ -21,6 +27,8 @@ export type FileChange = {
   snapshotId?: string;
 };
 export const LOOP_TOOLS = [
+  'tool_search',
+  'tool_describe',
   'mcp_search',
   'mcp_call',
   'sandbox',
@@ -28,6 +36,8 @@ export const LOOP_TOOLS = [
   'browser_control',
   'terminal',
   'files',
+  'search_files',
+  'patch',
   'changes',
   'tasks',
   'web_search',
@@ -47,6 +57,22 @@ export const LOOP_TOOLS = [
   'read_remaining',
 ] as const;
 export type LoopRequest = { tool: (typeof LOOP_TOOLS)[number]; input: string; content?: string; args?: Record<string, unknown> };
+export type TaskAction = 'list' | 'status' | 'poll' | 'wait' | 'cancel';
+export type TaskArgs = { action?: TaskAction; offset?: number; length?: number; timeoutMs?: number };
+/** Shared protocol/host validation. Numeric limits cannot be relaxed by bypassing the parser. */
+export function taskAction(input: string, args: Record<string, unknown> = {}): TaskAction {
+  const action = args.action === undefined ? (input ? 'poll' : 'list') : args.action;
+  if (typeof action !== 'string' || !['list', 'status', 'poll', 'wait', 'cancel'].includes(action) || (action !== 'list' && !input))
+    throw new Error('INVALID_INPUT');
+  for (const [key, min, max] of [
+    ['offset', 0, Number.MAX_SAFE_INTEGER],
+    ['length', 1, 40000],
+    ['timeoutMs', 0, 30000],
+  ] as const)
+    if (args[key] !== undefined && (!Number.isSafeInteger(args[key]) || Number(args[key]) < min || Number(args[key]) > max))
+      throw new Error('INVALID_INPUT');
+  return action as TaskAction;
+}
 /**
  * A reply that is nothing but one tool request in a ```json fence, an unlabelled fence or bare JSON. Smaller models
  * use these instead of step-tool; a JSON example inside a longer answer is never read as a request.
@@ -71,8 +97,10 @@ export function loopRequests(text: string): LoopRequest[] {
         (!r.args || typeof r.args !== 'object' || Array.isArray(r.args) || JSON.stringify(r.args).length > 30_000)
       )
         continue;
+      validateToolRequest(r);
+      if (r.tool === 'tasks') taskAction(r.input, r.args);
       requests.push({
-        tool: r.tool,
+        tool: r.tool as LoopRequest['tool'],
         input: r.input,
         ...(r.content !== undefined ? { content: r.content } : {}),
         ...(r.args ? { args: r.args } : {}),
@@ -96,10 +124,18 @@ export function brokenRequests(text: string): string[] {
     if (loopRequests('```step-tool\n' + body + '\n```').length) continue;
     try {
       const r = JSON.parse(body);
+      let field = '';
+      try {
+        if (r && LOOP_TOOLS.includes(r.tool)) validateToolRequest(r);
+      } catch (error) {
+        field = String((error as { field?: unknown }).field || '').slice(0, 120);
+      }
       problems.push(
         !r || !LOOP_TOOLS.includes(r.tool)
           ? `unknown tool ${JSON.stringify(String(r?.tool ?? '')).slice(0, 60)}`
-          : 'invalid fields or a value over its size limit (input 2000, content 200000 characters, args 30000)',
+          : field
+            ? `invalid field: ${field}`
+            : 'invalid fields or a value over its size limit (input 2000, content 200000 characters, args 30000)',
       );
     } catch (error) {
       problems.push('invalid JSON: ' + String((error as Error).message).slice(0, 200));

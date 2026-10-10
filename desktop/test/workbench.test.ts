@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from '../electron/store';
 import { Workbench, browserUrl } from '../electron/workbench';
-import { toolRequests } from '../src/tools';
+import { toolRequests, loopRequests } from '../src/tools';
 import { defaultPolicy } from '../electron/policy';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -195,6 +195,33 @@ test('background commands capture real output, drop ambient secrets, and cancel 
     await f.close();
   }
 });
+test('task lifecycle protocol rejects malformed actions and unbounded numeric arguments', async () => {
+  const request = (input: string, args: Record<string, unknown>) =>
+    '```step-tool\n' + JSON.stringify({ tool: 'tasks', input, args }) + '\n```';
+  for (const action of ['list', 'status', 'poll', 'wait', 'cancel'])
+    assert.equal(loopRequests(request(action === 'list' ? '' : 'job-id', { action })).length, 1);
+  const invalid = [
+    { action: ['poll'] },
+    { action: null },
+    { action: 'unknown' },
+    { action: 'wait', timeoutMs: 30001 },
+    { action: 'wait', timeoutMs: -1 },
+    { action: 'wait', timeoutMs: '1000' },
+    { action: 'poll', length: 40001 },
+    { action: 'poll', offset: -1 },
+  ];
+  const f = await fixture();
+  try {
+    for (const args of invalid) {
+      assert.deepEqual(loopRequests(request('job-id', args)), []);
+      await assert.rejects(f.tools.inspectTask('session', 'job-id', args), /INVALID_INPUT/);
+    }
+    assert.deepEqual(loopRequests(request('', { action: 'wait' })), []);
+  } finally {
+    await f.close();
+  }
+});
+
 test('browser rejects local file and script schemes; model tool proposals remain validated data', () => {
   assert.equal(browserUrl('https://example.com'), 'https://example.com/');
   for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://user:secret@example.com'])
