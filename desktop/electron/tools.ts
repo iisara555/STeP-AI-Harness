@@ -13,6 +13,7 @@ import { Questions } from './questions';
 import type { Policy, PermissionMode } from './policy';
 import type { LoopHost } from './tool-loop';
 import { fetchPublic, publicUrl } from './web-fetch';
+import { searchUrl } from './public-search';
 import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
@@ -147,7 +148,9 @@ export class DesktopTools {
         'ข้อมูลใหม่ {0} ตัวอักษร จะส่งให้ {1}\n{2}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n{3}',
         text.length.toLocaleString(mainLocale()),
         destination === 'web-query'
-          ? scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
+          ? this.harness.publicSearch
+            ? 'Bing'
+            : scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
           : destination === 'web-url'
             ? tm('เว็บปลายทางที่ระบุ')
             : scope.connection.provider,
@@ -542,6 +545,7 @@ export class DesktopTools {
           }
           case 'web_search':
             if (!target.trim() || this.harness.privacy(target).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+            if (this.harness.publicSearch) await this.siteConsent(searchUrl(target), scope);
             await this.outgoing(target, scope, 'web-query');
             await check();
             return scope.search(target);

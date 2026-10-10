@@ -151,7 +151,7 @@ try {
   await capture('03-skill-hub.png');
 
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await page.getByRole('heading', { name: 'ตรวจใบเสร็จก่อนส่ง AFP', level: 2 }).waitFor();
+  await page.getByRole('heading', { name: 'ตรวจใบเสร็จก่อนส่ง AFP', level: 1 }).waitFor();
   await capture('04-receipt-afp.png');
 
   await page.getByRole('button', { name: /ตั้งค่าพื้นที่ทำงาน/ }).click();

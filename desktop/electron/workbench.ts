@@ -6,6 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { StringDecoder } from 'node:string_decoder';
+import { StreamOutput } from './stream-output';
 import type { BackgroundTask, FileChange } from '../src/tools';
 import { taskAction } from '../src/tools';
 import type { WorkPlan, WorkTask } from '../src/types';
@@ -547,59 +548,24 @@ export class Workbench {
       timer = undefined;
       if (!this.disposed) this.store.put('background', id, task);
     };
-    // Output is masked in complete lines (LF or CR) and then only appended, so absolute poll cursors never move. An
-    // unfinished line stays in an internal raw buffer until it ends or the process exits; only an unfinished line
-    // over 8,000 characters is released early, at its last space so a token is not cut. Each chunk is masked together
-    // with the raw tail already committed on its stream (`context`, never shown), so a credential whose key and value
-    // fall on either side of a cut, or on consecutive lines, is still recognised. Only the masked continuation is
-    // appended; when masking now reaches back into text already shown, the corrected end is shown again instead.
-    const pending = { out: '', err: '' },
-      context = { out: '', err: '' };
-    const withheld = '[output withheld by the privacy check]\n';
-    const keep = (text: string) => {
-      if (text.length <= 1024) return text;
-      const tail = text.slice(-1024),
-        line = Math.max(tail.indexOf('\n'), tail.indexOf('\r'));
-      return line >= 0 && line < 1023 ? tail.slice(line + 1) : tail;
-    };
-    const commit = (stream: 'out' | 'err', chunk: string) => {
-      const raw = chunk.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
-      if (!raw) return;
-      const prior = context[stream],
-        shown = prior ? this.scrub(prior) : '',
-        safe = this.scrub(prior + raw);
-      let text: string;
-      if (typeof safe !== 'string' || typeof shown !== 'string') {
-        text = withheld;
-        context[stream] = '';
-      } else {
-        let same = 0;
-        while (same < shown.length && same < safe.length && shown[same] === safe[same]) same++;
-        text = safe.slice(same);
-        context[stream] = keep(prior + raw);
-      }
+    const commit = (text: string) => {
       const merged = task.output + text;
       task.outputOffset = (task.outputOffset || 0) + Math.max(0, merged.length - 100000);
       task.output = merged.slice(-100000);
       if (!timer) timer = setTimeout(flush, 150);
     };
-    const append = (stream: 'out' | 'err', text: string, end = false) => {
-      const buffer = pending[stream] + text;
-      let cut = end ? buffer.length : Math.max(buffer.lastIndexOf('\n'), buffer.lastIndexOf('\r')) + 1;
-      if (!end && buffer.length - cut > 8000) {
-        const space = Math.max(buffer.lastIndexOf(' '), buffer.lastIndexOf('\t'));
-        cut = space >= cut && buffer.length - space <= 4000 ? space + 1 : buffer.length;
-      }
-      pending[stream] = buffer.slice(cut);
-      commit(stream, buffer.slice(0, cut));
-    };
+    // Stream states are separate; only sanitized complete lines enter the log and its immutable poll cursors.
+    const out = new StreamOutput(this.scrub, commit),
+      err = new StreamOutput(this.scrub, commit);
     const stdout = new StringDecoder('utf8'),
       stderr = new StringDecoder('utf8');
-    child.stdout?.on('data', (data: Buffer) => append('out', stdout.write(data)));
-    child.stderr?.on('data', (data: Buffer) => append('err', stderr.write(data)));
+    child.stdout?.on('data', (data: Buffer) => out.write(stdout.write(data)));
+    child.stderr?.on('data', (data: Buffer) => err.write(stderr.write(data)));
     const finish = (code: number | null) => {
-      append('out', stdout.end(), true);
-      append('err', stderr.end(), true);
+      out.write(stdout.end());
+      err.write(stderr.end());
+      out.end();
+      err.end();
       task.status = this.stopped.has(id) ? 'cancelled' : code === 0 ? 'done' : 'failed';
       task.code = code;
       this.children.delete(id);

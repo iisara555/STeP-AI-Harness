@@ -102,7 +102,7 @@ Quality Layer ใช้ `manifest/documents.yaml` เดิมเป็น Contr
 หน้าที่หลัก:
 - แยก External Standard / Organization Policy / QM / QP / WI / Form / Record
 - เก็บ revision/effective date/source status เท่าที่มีหลักฐาน
-- mark `Quality Manual` และ `Master Document List` เป็น known gaps จนกว่า QS จะส่ง source ปัจจุบัน
+- ใช้ทะเบียนเอกสาร ISO ที่สร้างจาก STeP MIS (`mis-iso-document-register`) เป็นรายการเลขที่/REV/วันที่ และ mark เนื้อหา `Quality Manual` และ `Master Document List` ที่ยังไม่อยู่ใน Harness เป็น known gaps
 - ไม่รับรอง Current Revision ของ QP/WI จากชื่อไฟล์เพียงอย่างเดียว
 - link QMS Skills เดิมกับ source ที่เกี่ยวข้อง แทนการสร้าง Skill ซ้ำ
 

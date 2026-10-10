@@ -2323,8 +2323,8 @@ nav button:hover,
   line-height: 1.8;
 }
 .receipt-grid {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.1fr);
+  display: flex;
+  flex-direction: column;
   gap: 24px;
   margin-top: 18px;
   align-items: start;
@@ -2337,12 +2337,39 @@ nav button:hover,
   font-size: 13px;
 }
 .receipt-source {
-  /* The receipt stays in view beside the fields while the person scrolls through them. */
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - 190px);
-  overflow: auto;
-  padding-right: 4px;
+  width: 100%;
+}
+.receipt-form {
+  width: 100%;
+}
+.receipt-handoff-target {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.receipt-handoff-target label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.receipt-handoff-target select {
+  flex: 1;
+  min-width: 180px;
+}
+.receipt-heading h1 {
+  margin: 0;
+  font-size: 22px;
+}
+.receipt-heading p {
+  margin: 6px 0 16px;
+  font-size: 13px;
+}
+.receipt-error {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--danger);
 }
 .receipt-preview-frame {
   border: 1px solid var(--line);
@@ -2353,7 +2380,7 @@ nav button:hover,
 .receipt-preview {
   display: block;
   width: 100%;
-  max-height: 58vh;
+  max-height: 32vh;
   object-fit: contain;
   cursor: zoom-in;
 }

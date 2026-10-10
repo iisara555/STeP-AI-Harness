@@ -92,6 +92,7 @@ const CHAT_FILE_LIMIT = 10;
 // A short message sent with a file ("อันนี้", "ตามนี้") belongs to the request before it.
 const SHORT_WITH_FILE = 40;
 export type Harness = {
+  publicSearch?: (query: string, signal: AbortSignal) => Promise<string>;
   visionEnabled?: () => boolean;
   extraContext?: (id: string, query: string, connection: Connection, signal: AbortSignal) => Promise<{ text: string; loaded: string[] }>;
   compactHook?: (event: 'pre_compact' | 'post_compact', id: string, before: number, after: number) => Promise<void>;
@@ -1175,7 +1176,9 @@ export class WorkService {
             activity,
             workflow: options.workflow,
             search: async query => {
-              const found = await callProvider(section('current_message', query), await this.runtime(connection, true), true);
+              const found = this.harness.publicSearch
+                ? await this.harness.publicSearch(query, controller.signal)
+                : await callProvider(section('current_message', query), await this.runtime(connection, true), true);
               searched.push(found);
               return found;
             },

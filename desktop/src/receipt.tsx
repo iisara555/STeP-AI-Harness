@@ -46,6 +46,8 @@ import { localized, t } from './i18n';
 import { emptyReceiptForm, receiptFormReducer } from './receipt-form';
 import { visionFormSuggestions, receiptFocusStyle } from './receipt-hybrid';
 import type { ReceiptVisionResult } from '../electron/receipt-vision-recheck';
+import { explainError, connectionLabel } from './messages';
+import type { Connection } from './types';
 
 type MappingCandidate = {
   value: string;
@@ -210,6 +212,9 @@ export function ReceiptApp({
   connectionId,
   onBusy,
   trialTools = false,
+  connections = [],
+  chooseConnection,
+  openAiSettings,
 }: {
   call: (method: string, input?: unknown) => Promise<any>;
   onError: (error: unknown) => void;
@@ -221,6 +226,9 @@ export function ReceiptApp({
   onBusy?: (busy: boolean) => void;
   /** The OCR trial and measurement tools, for the team running the OCR pilot (policy features.ocrTrial). */
   trialTools?: boolean;
+  connections?: Connection[];
+  chooseConnection?: (id: string) => void;
+  openAiSettings?: () => void;
 }) {
   const [status, setStatus] = useState<OcrStatus | null>(null),
     [busy, setBusy] = useState(''),
@@ -235,6 +243,7 @@ export function ReceiptApp({
   const { value: expenseDescription, edited: descriptionEdited, origin: descriptionOrigin } = form.description;
   const sourceIdRef = useRef('');
   const actionPending = useRef(false);
+  const [actionError, setActionError] = useState('');
   const statusVersion = useRef(0);
   const setAllChecked = (checked: boolean) => updateForm({ type: 'check', checked });
   const [trialMode, setTrialMode] = useState(false);
@@ -274,11 +283,13 @@ export function ReceiptApp({
     if (foreground) {
       actionPending.current = true;
       setBusy(id);
+      setActionError('');
     }
     try {
       await fn();
     } catch (e) {
-      onError(e);
+      setActionError(explainError(e));
+      if (id !== 'handoff') onError(e);
     } finally {
       if (foreground) {
         actionPending.current = false;
@@ -722,7 +733,15 @@ export function ReceiptApp({
   const requiredChecked = allChecked && requiredFilled;
   return (
     <div className="receipt-app">
-      <h1 className="sr-only">{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h1>
+      <header className="receipt-heading">
+        <h1>{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h1>
+        <p className="muted">{t('เลือกใบเสร็จ → เทียบข้อมูลกับต้นฉบับ → ยืนยันและให้ AI ตรวจทาน')}</p>
+      </header>
+      {actionError && (
+        <p className="receipt-error" role="alert">
+          {actionError} {t('ข้อมูลที่ตรวจยังอยู่ในหน้านี้')}
+        </p>
+      )}
       <div className="receipt-service">
         <span className={`status-dot ${ready ? 'ok' : ''}`} aria-hidden="true" />
         <span>
@@ -849,7 +868,7 @@ export function ReceiptApp({
       {!doc ? (
         <div className="receipt-empty">
           <SectionArt scene="receipt" className="receipt-illustration" />
-          <h2>{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h2>
+          <h2>{t('เลือกใบเสร็จ')}</h2>
           <p className="muted">
             {t('เลือกรูปหรือ PDF ของใบเสร็จ ระบบจะอ่านข้อความและเสนอข้อมูลสำคัญ')}
             <br />
@@ -989,41 +1008,6 @@ export function ReceiptApp({
             </details>
           </section>
           <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
-            <section className="receipt-compliance receipt-outcome" aria-label={t('สรุปการใช้ใบเสร็จ')}>
-              <strong>{assessmentTitles[assessment.status]}</strong>
-              <dl>
-                <dt>{t('ประเภทเอกสาร')}</dt>
-                <dd>{docType ? t(DOCUMENT_TYPE_LABELS[docType]) : t('ยังไม่ทราบ')}</dd>
-                <dt>{t('หมวดที่แนะนำ')}</dt>
-                <dd>
-                  {categoryOverride === null
-                    ? expenseCodeLabel(categorySuggestion.code) || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
-                    : t(CATEGORY_LABELS[categoryOverride])}
-                </dd>
-                <dt>{t('งบที่ใช้')}</dt>
-                <dd>{t('ต้องอ้างอิงโครงการหรืองบที่ได้รับอนุมัติ ใบเสร็จอย่างเดียวระบุไม่ได้')}</dd>
-              </dl>
-              <strong>{t('ทำอะไรต่อ')}</strong>
-              <ul className="receipt-next-actions">
-                {categoryOverride === null && categorySuggestion.nextSteps.map(step => <li key={step}>{t(step)}</li>)}
-                {compliance
-                  .filter(
-                    item =>
-                      (item.status === 'missing' || item.status === 'warn' || item.status === 'todo' || item.id === 'cash_bill') &&
-                      !item.ifCategoryB,
-                  )
-                  .map(item => (
-                    <li key={item.id}>{itemText(item)}</li>
-                  ))}
-                {category === 'unsure' && <li>{t('เติมวัตถุประสงค์การใช้จ่ายเฉพาะเมื่อรายการยังแยกหมวดไม่ได้ หรือให้ AFP ระบุหมวด')}</li>}
-                <li>
-                  {allChecked
-                    ? t('เก็บใบเสร็จต้นฉบับและเตรียมเอกสารตามรายการด้านบนส่ง AFP')
-                    : t('ดูข้อมูลที่ระบบกรอก แก้เฉพาะจุดที่ผิด แล้วตรวจยืนยันทั้งหมดครั้งเดียวด้านล่าง')}
-                </li>
-              </ul>
-              <small className="muted">{t('หมวดเป็นข้อเสนอจากรายการและแนวปฏิบัติ AFP ที่มีในระบบ ไม่ใช่การอนุมัติงบหรือเบิกจ่าย')}</small>
-            </section>
             {pilot && (
               <details open className="receipt-compliance receipt-trial" aria-label={t('ผลทดลอง OCR')}>
                 <summary>{t('ผลทดลอง OCR · ก่อนแก้เทียบกับค่าที่คนตรวจ')}</summary>
@@ -1156,28 +1140,31 @@ export function ReceiptApp({
               )}
             </div>
             <section className="receipt-elements" aria-label={t('องค์ประกอบพื้นฐานใบเสร็จ')}>
-              <strong>
-                {completeness.status === 'incomplete'
-                  ? t('ใบเสร็จยังขาดองค์ประกอบ')
-                  : completeness.status === 'uncertain'
-                    ? t('องค์ประกอบใบเสร็จยังรอตรวจบางจุด')
-                    : rules.length
-                      ? t('มีองค์ประกอบแต่ข้อมูลยังขัดกัน')
-                      : allChecked
-                        ? t('ครบองค์ประกอบพื้นฐานที่ตรวจ')
-                        : t('พบองค์ประกอบพื้นฐานครบ · รอคุณยืนยัน')}
-              </strong>
-              <ul>
-                {completeness.components.map(component => (
-                  <li key={component.id}>
-                    <span>{t(component.label)}</span>
-                    <span className={'chip ' + (component.status === 'present' ? 'agree' : 'differ')}>
-                      {t(component.status === 'present' ? 'พบข้อมูล' : component.status === 'missing' ? 'ขาด' : 'รอตรวจ')}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <small className="muted">{t('องค์ประกอบเบื้องต้นตามหลักทั่วไป เงื่อนไขการรับเอกสารและหมวดเบิกให้ยืนยันกับ AFP')}</small>
+              <details>
+                <summary>{t('ดูองค์ประกอบพื้นฐานใบเสร็จ')}</summary>
+                <strong>
+                  {completeness.status === 'incomplete'
+                    ? t('ใบเสร็จยังขาดองค์ประกอบ')
+                    : completeness.status === 'uncertain'
+                      ? t('องค์ประกอบใบเสร็จยังรอตรวจบางจุด')
+                      : rules.length
+                        ? t('มีองค์ประกอบแต่ข้อมูลยังขัดกัน')
+                        : allChecked
+                          ? t('ครบองค์ประกอบพื้นฐานที่ตรวจ')
+                          : t('พบองค์ประกอบพื้นฐานครบ · รอคุณยืนยัน')}
+                </strong>
+                <ul>
+                  {completeness.components.map(component => (
+                    <li key={component.id}>
+                      <span>{t(component.label)}</span>
+                      <span className={'chip ' + (component.status === 'present' ? 'agree' : 'differ')}>
+                        {t(component.status === 'present' ? 'พบข้อมูล' : component.status === 'missing' ? 'ขาด' : 'รอตรวจ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <small className="muted">{t('องค์ประกอบเบื้องต้นตามหลักทั่วไป เงื่อนไขการรับเอกสารและหมวดเบิกให้ยืนยันกับ AFP')}</small>
+              </details>
             </section>
             <details className="receipt-compliance" aria-label={t('ประเภทเอกสารและสิ่งที่ต้องมี')}>
               <summary>{t('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด')}</summary>
@@ -1508,6 +1495,41 @@ export function ReceiptApp({
                 </small>
               </details>
             ) : null}
+            <section className="receipt-compliance receipt-outcome" aria-label={t('สรุปการใช้ใบเสร็จ')}>
+              <strong>{assessmentTitles[assessment.status]}</strong>
+              <dl>
+                <dt>{t('ประเภทเอกสาร')}</dt>
+                <dd>{docType ? t(DOCUMENT_TYPE_LABELS[docType]) : t('ยังไม่ทราบ')}</dd>
+                <dt>{t('หมวดที่แนะนำ')}</dt>
+                <dd>
+                  {categoryOverride === null
+                    ? expenseCodeLabel(categorySuggestion.code) || t('ยังระบุหมวดจากรายการนี้ไม่ได้')
+                    : t(CATEGORY_LABELS[categoryOverride])}
+                </dd>
+                <dt>{t('งบที่ใช้')}</dt>
+                <dd>{t('ต้องอ้างอิงโครงการหรืองบที่ได้รับอนุมัติ ใบเสร็จอย่างเดียวระบุไม่ได้')}</dd>
+              </dl>
+              <strong>{t('ทำอะไรต่อ')}</strong>
+              <ul className="receipt-next-actions">
+                {categoryOverride === null && categorySuggestion.nextSteps.map(step => <li key={step}>{t(step)}</li>)}
+                {compliance
+                  .filter(
+                    item =>
+                      (item.status === 'missing' || item.status === 'warn' || item.status === 'todo' || item.id === 'cash_bill') &&
+                      !item.ifCategoryB,
+                  )
+                  .map(item => (
+                    <li key={item.id}>{itemText(item)}</li>
+                  ))}
+                {category === 'unsure' && <li>{t('เติมวัตถุประสงค์การใช้จ่ายเฉพาะเมื่อรายการยังแยกหมวดไม่ได้ หรือให้ AFP ระบุหมวด')}</li>}
+                <li>
+                  {allChecked
+                    ? t('เก็บใบเสร็จต้นฉบับและเตรียมเอกสารตามรายการด้านบนส่ง AFP')
+                    : t('ดูข้อมูลที่ระบบกรอก แก้เฉพาะจุดที่ผิด แล้วตรวจยืนยันทั้งหมดครั้งเดียวด้านล่าง')}
+                </li>
+              </ul>
+              <small className="muted">{t('หมวดเป็นข้อเสนอจากรายการและแนวปฏิบัติ AFP ที่มีในระบบ ไม่ใช่การอนุมัติงบหรือเบิกจ่าย')}</small>
+            </section>
             <label className="receipt-note">
               {t('หมายเหตุการเบิก')}
               <textarea
@@ -1562,6 +1584,32 @@ export function ReceiptApp({
                 </p>
               </div>
             </div>
+            <div className="receipt-handoff-target">
+              <label>
+                {t('AI สำหรับตรวจทาน')}
+                <select
+                  aria-label={t('AI สำหรับตรวจทาน')}
+                  value={connectionId || ''}
+                  disabled={Boolean(busy)}
+                  onChange={event => chooseConnection?.(event.target.value)}
+                >
+                  <option value="">{t('เลือก AI ที่พร้อมใช้งาน')}</option>
+                  {connections
+                    .filter(connection => connection.ready)
+                    .map(connection => (
+                      <option key={connection.id} value={connection.id}>
+                        {connectionLabel(connection)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {openAiSettings && (
+                <button type="button" className="text-link" onClick={openAiSettings}>
+                  {t('ไปที่การเชื่อมต่อ AI')}
+                </button>
+              )}
+              <p className="small muted">{t('ส่งผลตรวจและข้อความ OCR ให้ AI ที่เลือก ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้')}</p>
+            </div>
             <div className="receipt-actions">
               <button
                 className="quiet"
@@ -1605,7 +1653,7 @@ export function ReceiptApp({
                 }
               >
                 <Send size={15} />
-                {t('ให้ AI ตรวจทานต่อ')}
+                {busy === 'handoff' ? t('กำลังส่งข้อมูลให้ AI…') : t('ให้ AI ตรวจทานต่อ')}
               </button>
             </div>
           </section>

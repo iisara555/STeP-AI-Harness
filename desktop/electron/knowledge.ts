@@ -80,6 +80,7 @@ export class OrganizationKnowledge {
         const all: Section[] = [];
         for (const entry of entries) {
           const body = await readFile(resolve(this.root, entry.path), 'utf8').catch(() => '');
+          const provenance = snapshotContext(body);
           for (const part of body.split(/\n(?=#{1,3} )/)) {
             const heading = /^#{1,3} (.+)/.exec(part)?.[1]?.trim() || entry.title;
             all.push({
@@ -87,7 +88,7 @@ export class OrganizationKnowledge {
               title: entry.title,
               path: entry.path,
               heading,
-              text: part.trim(),
+              text: provenance + part.trim(),
               // Registered keywords are the words staff actually ask with ("ล่วงหน้ากี่วัน" for Lead Time), so they
               // count like a heading in every section of their document.
               headGrams: trigrams([entry.title, heading, ...(entry.keywords || [])].join(' ')),
@@ -125,8 +126,21 @@ export class OrganizationKnowledge {
   async search(question: string): Promise<KnowledgeSection[]> {
     const query = [...trigrams(expandAbbreviations(question))];
     if (query.length < 2) return [];
+    const numbers = [...new Set(question.toUpperCase().match(/\b(?:QM|QP|WI|FM|SD)-[A-Z0-9]{2,8}-\d{1,6}\b/g) || [])];
+    const exact = (text: string, number: string) => new RegExp(`\\b${number}\\b`, 'i').test(text);
     const scored = (await this.load())
-      .map(section => ({ section, score: 0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams) }))
+      .filter(section => !numbers.length || numbers.some(number => exact(section.text, number)))
+      .map(section => ({
+        section,
+        // A table row for the requested identifier outranks generic mentions and historic explanations.
+        score: numbers.length
+          ? numbers.reduce(
+              (sum, number) =>
+                sum + (new RegExp(`^\\|\\s*${number}\\s*\\|`, 'im').test(section.text) ? 1 : exact(section.text, number) ? 0.8 : 0),
+              0,
+            ) / numbers.length
+          : 0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams),
+      }))
       .sort((a, b) => b.score - a.score);
     const best = scored[0]?.score || 0;
     if (best < MATCH_THRESHOLD) return [];
@@ -157,6 +171,13 @@ export function knowledgeText(sections: KnowledgeSection[]) {
 
 const REGISTRY_SECTIONS = 16;
 const clip = (text: string, max: number) => (text.length > max ? text.slice(0, max - 1).trimEnd() + '…' : text);
+/** MIS rows are snapshots; preserve their capture date even when only a matching team section is sent. */
+function snapshotContext(text: string) {
+  const date = /^\*\*ดึงข้อมูลเมื่อ:\*\*\s*(\d{4}-\d{2}-\d{2})/m.exec(text)?.[1];
+  return date && /STeP MIS/.test(text)
+    ? `ข้อมูลจาก STeP MIS ณ ${date} (ภาพข้อมูล ณ วันที่ดึง; ถ้า REV หรือวันที่ต่างจากฉบับจริง ให้ยึด MIS และเปิดฉบับปัจจุบันจาก MIS)\n\n`
+    : '';
+}
 /** The first plain sentence of a document: its purpose, without the title, metadata lines, tables or Markdown marks. */
 function documentSummary(intro: string) {
   const line = intro
@@ -184,5 +205,7 @@ export function documentSection(text: string, wanted: string) {
   const want = normalize(wanted);
   if (!want) return undefined;
   const heading = (part: string) => normalize(/^#{1,3} (.+)/.exec(part)?.[1] || '');
-  return parts.find(p => heading(p) === want) || parts.find(p => heading(p) && (heading(p).includes(want) || want.includes(heading(p))));
+  const found =
+    parts.find(p => heading(p) === want) || parts.find(p => heading(p) && (heading(p).includes(want) || want.includes(heading(p))));
+  return found ? snapshotContext(text) + found : undefined;
 }

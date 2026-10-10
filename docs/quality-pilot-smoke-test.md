@@ -2,7 +2,7 @@
 
 > เป้าหมาย: ทดสอบกับพนักงานทั่วไปโดยใช้ภาษาธรรมชาติ ไม่สอนชื่อ Skill, Router, Git หรือ Pull Request
 >
-> สถานะก่อนเริ่ม: Quality Manual และ Master Document List ยังเป็น known gaps จึงต้องมี test ที่ตรวจว่า AI รู้ว่าข้อมูลยังไม่ครบ
+> สถานะก่อนเริ่ม: รายการเอกสาร ISO (เลขที่ REV วันที่) มาจาก STeP MIS แล้ว แต่เนื้อหา Quality Manual และ Master List ยังไม่อยู่ใน Harness จึงต้องมี test ที่ตรวจว่า AI รู้ว่าข้อมูลยังไม่ครบ
 
 ## วิธี Pilot
 

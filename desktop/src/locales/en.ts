@@ -3,6 +3,32 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'AI สำหรับตรวจทาน': 'AI for review',
+  'เลือก AI ที่พร้อมใช้งาน': 'Choose a ready AI connection',
+  'ส่งผลตรวจและข้อความ OCR ให้ AI ที่เลือก ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้':
+    'Send the review and OCR text to the selected AI. The original image is not sent in this step.',
+  'เลือกใบเสร็จ → เทียบข้อมูลกับต้นฉบับ → ยืนยันและให้ AI ตรวจทาน':
+    'Choose a receipt → compare with the original → confirm and ask AI to review',
+  ข้อมูลที่ตรวจยังอยู่ในหน้านี้: 'Your reviewed information is still on this page',
+  ดูองค์ประกอบพื้นฐานใบเสร็จ: 'View basic receipt requirements',
+  'กำลังส่งข้อมูลให้ AI…': 'Sending information to AI…',
+  'ข้อมูลใบเสร็จมากเกินกว่าจะส่งให้ AI ในครั้งเดียว บันทึกผลตรวจไว้ แล้วเลือกเอกสารที่สั้นลงหรือแยกตรวจทีละใบ':
+    'This receipt has too much information to send at once. Save your review, then choose a shorter document or review receipts separately.',
+  'คำค้นยาวเกินไป กรุณาใช้คำค้นสาธารณะสั้น ๆ': 'The query is too long. Use a short public search query.',
+  'บริการค้นเว็บส่งผลที่อ่านไม่ได้ กรุณาลองใหม่หรือระบุเว็บไซต์ให้ AI อ่าน':
+    'The search service returned unreadable results. Try again or give the AI a website to read.',
+  'ยังไม่พบผลค้นเว็บ ลองเปลี่ยนคำค้นหรือระบุเว็บไซต์ให้ AI อ่าน':
+    'No web results were found. Change the query or give the AI a website to read.',
+  'ทุกการเชื่อมต่อ AI ค้นเว็บสาธารณะได้ รวม Antigravity โดยไม่ต้องเพิ่ม API key':
+    'Every AI connection can search the public web, including Antigravity, without another API key',
+  'หน้าใบเสร็จอยู่ในหน้าเดียว ตรวจข้อมูลแล้วส่งให้ AI ตรวจทานต่อได้ พร้อมข้อความเมื่อส่งไม่สำเร็จ':
+    'Review receipts on one page, then send to AI for another check with clear messages if sending fails',
+  'AI ตรวจและหยุดงานคำสั่งเบื้องหลังได้ การหยุดงานใช้สิทธิ์ตามโหมดที่คุณเลือก':
+    'The AI can check and stop background commands using the permissions of your selected mode',
+  'AI ค้นไฟล์และข้อความทั้งโฟลเดอร์งาน และแก้ไฟล์ทีละจุดผ่านรายการแก้ไขให้คุณตรวจก่อน':
+    'The AI can search files and text across the work folder and make exact edits that wait in Changes for your review',
+  'ไฟล์รหัสผ่านของโปรแกรมทั่วไป เช่น .netrc และ .npmrc ถูกกันไม่ให้ AI อ่าน':
+    'Password files of common tools, such as .netrc and .npmrc, are kept away from the AI',
   กำลังตรวจงานเบื้องหลัง: 'Checking background tasks',
   'หยุดงานเบื้องหลังนี้?': 'Stop this background task?',
   '{0}\nสถานะ: {1} · เริ่ม: {2}': '{0}\nStatus: {1} · started: {2}',

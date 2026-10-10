@@ -39,7 +39,7 @@ Run the checks for what you changed before saying a task is done, and say which 
 - **STeP answers come from STeP documents.** Anything about STeP must be answered from organization documents, never a
   generic answer. Keep this in any prompt-size or token-saving change. A new organization document goes in
   `docs/knowledge/` and must be registered in `manifest/documents.yaml`, or the app will never find it; the knowledge
-  benchmark must stay at or above 53/55.
+  benchmark must stay at or above its floor (59/61 since the MIS ISO register, `desktop/test/knowledge-accuracy.test.ts`).
 - **Thai first.** Staff-facing text is Thai; English UI strings go in `desktop/src/locales/en.ts`.
 - **One task per pull request.** Do not refactor or "tidy up" unrelated code in the same change.
 - **Versions.** Before bumping `desktop/package.json`, check the newest `main` and published releases; two agents have

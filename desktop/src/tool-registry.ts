@@ -181,7 +181,7 @@ const definitions: Record<string, [string, string[], Record<string, Schema>]> = 
     },
   ],
   web_search: [
-    'Search through the current provider; privacy and destination consent apply. Provider support is conditional.',
+    'Search public web results through Bing, independent of the AI connection. Use a short public query (up to 1000 characters); privacy and site consent apply. Read result pages with web_fetch to verify evidence.',
     ['network-query', 'consent'],
     {},
   ],

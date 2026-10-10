@@ -97,6 +97,7 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
     store,
     workbench,
     tools,
+    harness,
     scope,
     policy,
     events,
@@ -490,6 +491,33 @@ test('new file data requires separate consent, denied data and credentials never
     const count = f.requests();
     await assert.rejects(f.tools.outgoing('password: synthetic-test-credential', f.scope), /PRIVACY_REVIEW_REQUIRED/);
     assert.equal(f.requests(), count);
+  } finally {
+    f.store.close();
+  }
+});
+test('public search checks the query and site consent even when privacy checks are off', async () => {
+  const f = await fixture('auto');
+  f.policy.checks.privacy = false;
+  f.harness.publicSearch = async () => 'unused';
+  let searches = 0;
+  f.scope.search = async () => {
+    searches++;
+    return 'public evidence';
+  };
+  try {
+    await f.tools.execute({ tool: 'web_search', input: 'public synthetic query' }, f.scope);
+    assert.ok(f.bodies.some(body => body.includes('https://www.bing.com/search?q=')));
+    const approvals = f.requests();
+    await assert.rejects(
+      f.tools.execute({ tool: 'web_search', input: 'password: synthetic-test-credential' }, f.scope),
+      /PRIVACY_REVIEW_REQUIRED/,
+    );
+    assert.equal(searches, 1);
+    assert.equal(f.requests(), approvals);
+    f.scope.sessionId = 'another';
+    f.deny();
+    await assert.rejects(f.tools.execute({ tool: 'web_search', input: 'public query' }, f.scope), /WEB_SITE_DECLINED/);
+    assert.equal(searches, 1);
   } finally {
     f.store.close();
   }
@@ -895,7 +923,7 @@ test('task wait rechecks the workspace before returning process output', async (
 test('agent poll reports rolling-log loss with absolute sanitized-output cursors', async () => {
   const f = await fixture();
   try {
-    await writeFile(join(f.root, 'loud.cjs'), "process.stdout.write('A'.repeat(110000));");
+    await writeFile(join(f.root, 'loud.cjs'), "process.stdout.write(('A'.repeat(99)+'\\n').repeat(1100));");
     const job = (await f.tools.execute({ tool: 'terminal', input: `${node} loud.cjs` }, f.scope)) as any;
     const done = (await f.tools.execute(
       { tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 2000, offset: 0, length: 100 } },

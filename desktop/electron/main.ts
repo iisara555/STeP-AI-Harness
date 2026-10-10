@@ -38,6 +38,7 @@ import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
+import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
 import { inspectDocumentTemplate } from './document-template';
@@ -317,6 +318,7 @@ async function main() {
     modelLimits: connection =>
       policyState.policy.modelLimits?.[connection.model] || policyState.policy.modelLimits?.[connection.provider + ':*'] || {},
     privacy: scanText,
+    publicSearch: (query, signal) => searchPublicWeb(query, signal, policyState.policy.network?.proxyUrl),
     catalog: skillCatalog.createSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
     documentCatalog: routing.loadDocumentCatalog,
@@ -2598,6 +2600,7 @@ async function main() {
         if (attachmentRole === 'template' && !nativeTemplate) throw new Error('DOCUMENT_TEMPLATE_REQUIRED');
         const templateDescription = nativeTemplate ? await inspectDocumentTemplate(nativeTemplate, draftingTool!.id) : undefined;
         const attachmentText = templateDescription?.context || selected.map((a: any) => a.text).join('\n\n');
+        if (typeof input.sourceText === 'string' && input.sourceText.length > 100_000) throw new Error('INPUT_LIMIT');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
         if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');

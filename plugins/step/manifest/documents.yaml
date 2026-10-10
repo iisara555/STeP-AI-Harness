@@ -158,7 +158,7 @@ documents:
     owner: qs
     documentType: team-circular
     effectiveDate: '2026-09-01'
-    source: อีเมลแจ้งเวียนจาก iso@step.cmu.ac.th
+    source: อีเมลแจ้งเวียนจาก iso@step.cmu.ac.th และ STeP MIS (ตรวจ 10 ต.ค. 2569)
     summary: >-
       แบบฟอร์มและขั้นตอนระบบคุณภาพของทีม CC ที่บังคับใช้ปัจจุบัน
       รายการเอกสารที่ถูกยกเลิก และกฎว่าต้องดาวน์โหลดจาก STeP MIS เท่านั้น
@@ -368,32 +368,47 @@ documents:
     verification: user-confirmed-current
     status: active
 
-  # QS แจ้งว่าไม่มีหรือไม่ให้ Quality Manual และ Master Document List ทางการ (25 ก.ย. 2569)
-  # Harness ใช้เอกสารอ้างอิงฉบับทำงานด้านล่างแทน โดยไม่แอบอ้างว่าเป็นเอกสารควบคุม
+  # STeP MIS (ตรวจ 10 ต.ค. 2569) แสดง QM-QM-001 V.03 คู่มือคุณภาพ และ Master List รายทีม 25 ฉบับ
+  # เนื้อหาไม่อยู่ใน Harness จึงยัง not-provided: QM ใช้แผนที่ ISO แทน ส่วนรายการเอกสารใช้ทะเบียนจาก MIS
   qms-quality-manual:
-    title: "STeP Quality Manual (current revision)"
+    title: "STeP Quality Manual QM-QM-001 (current revision in STeP MIS)"
     owner: qs
     type: quality-manual
     process: quality.document-control
     sourceLevel: quality-manual
     authority: controlled-document
-    verification: qs-declined-2026-09-25
+    verification: listed-in-step-mis-2026-10-10
     status: not-provided
     workingSubstitute: qms-working-reference
 
   qms-master-document-list:
-    title: "STeP Master Document List (current)"
+    title: "STeP Master Document List (per-team Master Lists in STeP MIS)"
     owner: qs
     type: master-list
     process: quality.document-control
     sourceLevel: document-control-index
     authority: revision-source-of-truth
-    verification: qs-declined-2026-09-25
+    verification: listed-in-step-mis-2026-10-10
     status: not-provided
-    workingSubstitute: qms-working-master-list
+    workingSubstitute: mis-iso-document-register
+
+  # ทะเบียนเอกสาร ISO ทุกทีม สร้างจากข้อมูลที่ดึงจาก STeP MIS (scripts/generate-mis-iso-register.mjs) MIS เป็นแหล่งจริงของ REV
+  mis-iso-document-register:
+    title: "ทะเบียนเอกสารระบบคุณภาพ ISO ของ STeP ทุกทีม (จาก STeP MIS): เลขที่ REV วันที่บังคับใช้ สถานะ"
+    keywords: [แบบฟอร์ม, เลขเอกสาร, รุ่นล่าสุด, ฉบับล่าสุด, REV, วันที่บังคับใช้, Master List, คู่มือคุณภาพ, QM, QP, WI, FM, SD]
+    path: docs/knowledge/mis-iso-document-register.md
+    owner: qs
+    type: master-list
+    process: quality.document-control
+    sourceLevel: document-control-index
+    authority: step-mis-authoritative
+    verification: extracted-from-step-mis-2026-10-10
+    effectiveDate: '2026-10-10'
+    source: STeP MIS เมนู เอกสารระบบคุณภาพ (ISO)
+    status: active-reference
 
   qms-working-master-list:
-    title: "Master Document List ฉบับทำงาน (รวบรวมจาก QP ที่ QS ส่งมาและหนังสือเวียนของ QS)"
+    title: "Master Document List ฉบับทำงาน (ตัวชี้ไปทะเบียน STeP MIS และ QP ที่ Skill อ้างอิง)"
     keywords: [Master List, Rev ล่าสุด, เอกสารควบคุม]
     path: docs/knowledge/qms-working-master-list.md
     owner: qs
@@ -401,7 +416,7 @@ documents:
     process: quality.document-control
     sourceLevel: derived-working-reference
     authority: derived-from-provided-documents
-    verification: compiled-2026-09-25-confirm-revision-on-step-mis
+    verification: reconciled-with-step-mis-2026-10-10
     status: active-reference
 
   qms-working-reference:
