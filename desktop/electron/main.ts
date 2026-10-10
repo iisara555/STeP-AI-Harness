@@ -47,7 +47,7 @@ import { Coordinator } from './coordinator';
 import { Automations, connectionBinding } from './cron';
 import { Mcp } from './mcp';
 import { Sandbox } from './sandbox';
-import { adapter, listModels } from './providers';
+import { adapter, closeClaudeSpares, listModels } from './providers';
 import { compatibleEndpoint, presetBaseUrl } from './preset-endpoint';
 import { openRouterSignIn } from './openrouter-auth';
 import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets';
@@ -417,7 +417,10 @@ async function main() {
   const claudeSubscriptionOn = () =>
     process.env.STEP_CLAUDE_SUBSCRIPTION === '0'
       ? false
-      : process.env.STEP_CLAUDE_SUBSCRIPTION === '1' || policyState.policy.features.claudeSubscription;
+      : process.env.STEP_CLAUDE_SUBSCRIPTION === '1' ||
+        policyState.policy.features.claudeSubscription ||
+        // Development mode: the employee turned it on in Settings to test on their own plan (docs/claude-subscription.md).
+        (policyState.policy.features.developmentMode && store.settings().developmentMode === true);
   // The official ant CLI that STeP installs for Claude Console OAuth when the employee has none.
   const antHome = join(data, 'components', 'ant');
   const findAnt = () => findAnthropicCli([antComponentPath(antHome)]);
@@ -1251,7 +1254,11 @@ async function main() {
   const snapshot = async () => ({
     appVersion: app.getVersion(),
     usage: ledger.report(),
-    features: { claudeSubscription: claudeSubscriptionOn(), providerPresets: policyState.policy.features.providerPresets },
+    features: {
+      claudeSubscription: claudeSubscriptionOn(),
+      providerPresets: policyState.policy.features.providerPresets,
+      developmentMode: policyState.policy.features.developmentMode,
+    },
     policy: {
       source: policyState.policy.source,
       path: policyState.path,
@@ -1325,6 +1332,13 @@ async function main() {
         if (service.isActive(s.id)) throw new Error('RUN_ALREADY_ACTIVE');
         if (input.context !== learning.snapshot().context) throw new Error('WORKSPACE_CHANGED');
         return draftLessons(s, typeof input.focus === 'string' ? input.focus : '', 'ai');
+      }
+      case 'developmentMode': {
+        // Settings → AI: the employee's own switch for testing on their Claude Pro/Max plan; the policy can remove it.
+        if (!policyState.policy.features.developmentMode) throw new Error('FEATURE_DISABLED');
+        if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
+        store.put('settings', 'main', { ...store.settings(), developmentMode: input.enabled });
+        return store.settings();
       }
       case 'learningReviewSetting': {
         if (!policyState.policy.features.learningReview) throw new Error('FEATURE_DISABLED');
@@ -2484,6 +2498,7 @@ async function main() {
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
         if (connecting.has(c.id)) throw new Error('RUN_ALREADY_ACTIVE');
         providerUsage.forget(c.id);
+        closeClaudeSpares(c.id);
         for (const session of store.list<any>('session')) if (session.connectionId === c.id) service.cancel(session.id);
         if (c.provider === 'claude' && c.mode === 'subscription' && c.claudeAuthStarted) {
           const r = await runtime(c, true);
@@ -2518,6 +2533,7 @@ async function main() {
       case 'removeConnection': {
         const c = store.get<Connection>('connection', inputText(input.id, 60));
         if (!c) throw new Error('CONNECTION_NOT_FOUND');
+        closeClaudeSpares(c.id);
         // A sign-in still waiting on the browser is cancelled for the person, then removed once it has stopped.
         const pending = connectControllers.get(c.id);
         if (pending) {
@@ -3071,6 +3087,7 @@ async function main() {
     if (closing) return;
     event.preventDefault();
     closing = true;
+    closeClaudeSpares();
     agentBrowser.close();
     dock.close();
     void Promise.allSettled([

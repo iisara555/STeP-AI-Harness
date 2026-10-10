@@ -34,6 +34,7 @@ const featureNames: Record<string, string> = localized({
   receiptVision: 'ให้ AI อ่านภาพใบเสร็จ',
   autoUpdate: 'อัปเดตแอปอัตโนมัติ',
   claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
+  developmentMode: 'ให้พนักงานเปิดโหมดนักพัฒนา',
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
   ocrTrial: 'เครื่องมือทดลอง OCR',
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
@@ -470,6 +471,23 @@ export function SettingsPanel({
         <section>
           {/* The page title above already says this; keep the heading for screen readers and in-page links. */}
           <h2 className="sr-only">{t('การเชื่อมต่อ AI')}</h2>
+          {snapshot.features?.developmentMode && (
+            <div className="development-mode">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={snapshot.settings.developmentMode === true}
+                  onChange={e => void call('developmentMode', { enabled: e.target.checked }).then(refresh).catch(onError)}
+                />
+                {t('โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง')}
+              </label>
+              <p className="small muted">
+                {t(
+                  'สำหรับนักพัฒนาทดสอบแอปเท่านั้น Anthropic แจ้งว่าทดสอบได้ แต่การใช้งานจริงในองค์กรต้องเป็นไปตามเงื่อนไขที่ Anthropic ระบุในเอกสาร เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้',
+                )}
+              </p>
+            </div>
+          )}
           <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
         </section>
       )}

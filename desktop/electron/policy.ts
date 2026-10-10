@@ -37,6 +37,7 @@ export const FEATURES = [
   'learningReview',
   'ocrTrial',
   'answerCheck',
+  'developmentMode',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -169,6 +170,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // and each employee signs in to their own Claude account on Anthropic's page. Off until Anthropic confirms how its
   // Claude Code terms apply (docs/claude-subscription.md); pilot machines turn it on in the managed policy.
   claudeSubscription: false,
+  // Development mode: an employee may turn it on in Settings to test the app on their own Claude Pro/Max plan, which
+  // Anthropic told STeP is fine for developers testing; organization use must follow Anthropic's documented terms
+  // (docs/claude-subscription.md). An administrator can set it to false to remove the switch.
+  developmentMode: true,
   // A background review after every 10 user turns drafts lessons into the Learning Inbox (proposals only), as Hermes
   // Agent does. Each review is a model call on the employee's account, so it is off until an administrator allows it,
   // and each employee then turns it on in the Learning Inbox.

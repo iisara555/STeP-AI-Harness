@@ -249,6 +249,8 @@ export type Session = {
   runs?: RunTrace[];
 };
 export type Settings = {
+  /** Development mode (Settings → AI): Claude Pro/Max for developers testing; policy features.developmentMode allows it. */
+  developmentMode?: boolean;
   /** The employee turned on the background learning review (policy features.learningReview must allow it). */
   learningReview?: boolean;
   keybindings?: import('./commands').Keybindings;
@@ -322,7 +324,7 @@ export type Snapshot = {
   approvals?: ApprovalRule[];
   transmissionGrants?: TransmissionGrant[];
   consentMetrics?: ConsentSummary;
-  features?: { claudeSubscription?: boolean; providerPresets?: boolean };
+  features?: { claudeSubscription?: boolean; providerPresets?: boolean; developmentMode?: boolean };
   settings: Settings;
   connections: Connection[];
   sessions: Session[];
