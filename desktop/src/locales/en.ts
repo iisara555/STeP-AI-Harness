@@ -151,6 +151,10 @@ export const en: Record<string, string> = {
     'Sign in with Google. We install the connector and test it for you. Check your account’s entitlement and quota first.',
   'ตัวเลือก Antigravity': 'Antigravity options',
   'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องขอ API key': 'Antigravity and ChatGPT use account sign-in; no API key is needed.',
+  ให้พนักงานเปิดโหมดนักพัฒนา: 'Let employees turn on development mode',
+  'โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง': 'Development mode: test with your own Claude Pro/Max plan',
+  'สำหรับนักพัฒนาทดสอบแอปเท่านั้น Anthropic แจ้งว่าทดสอบได้ แต่การใช้งานจริงในองค์กรต้องเป็นไปตามเงื่อนไขที่ Anthropic ระบุในเอกสาร เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้':
+    "For developers testing the app only. Anthropic said testing is fine, but use inside the organization must follow Anthropic's documented terms. Once on, choose Claude with your plan in the list below.",
 
   อัปเดตยังไม่สำเร็จ: 'Update did not complete',
   'ตรวจอินเทอร์เน็ตแล้วลองใหม่ แอปเวอร์ชันเดิมและงานของคุณยังอยู่':

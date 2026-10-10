@@ -71,6 +71,7 @@ const allowed = new Set([
   'models',
   'model',
   'connectionModel',
+  'developmentMode',
   'authCode',
   'skills',
   'ocrInstall',

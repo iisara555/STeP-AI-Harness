@@ -536,6 +536,99 @@ export class GeminiAdapter implements ProviderAdapter {
   }
 }
 
+/**
+ * A parked Claude Code process (Agent SDK `prewarm()`), one per connection, so the next message does not wait for the
+ * official CLI to start, load and sign in. Only host-level options are fixed at prewarm: no tools, no MCP, no settings
+ * sources, a short base prompt. The task's own instructions, folder, model and effort arrive with `claim()`. Measured on
+ * a real Pro account (8 rounds): median time to first text 3.4 s cold, 2.2 s on a spare. A spare holds roughly
+ * 230-260 MB, so it is closed after ten idle minutes, on sign-out or removal, and when the app quits.
+ */
+type ClaudeSpare = { process: Promise<any>; key: string; controller: AbortController; timer: ReturnType<typeof setTimeout> };
+const claudeSpares = new Map<string, ClaudeSpare>();
+const SPARE_IDLE_MS = 10 * 60_000;
+const SPARE_SYSTEM = 'You are the STeP Desktop drafting assistant. Follow the instructions that follow.';
+class SpareRefused extends Error {}
+export const claudeSpareCount = (connectionId: string) => (claudeSpares.has(connectionId) ? 1 : 0);
+export function closeClaudeSpares(connectionId?: string) {
+  for (const [id, spare] of [...claudeSpares]) {
+    if (connectionId && id !== connectionId) continue;
+    claudeSpares.delete(id);
+    clearTimeout(spare.timer);
+    spare.controller.abort();
+    void spare.process.then(
+      p => p?.close?.(),
+      () => {},
+    );
+  }
+}
+/** What the spare was started with: the account, runtime and environment it read at start-up. */
+function claudeSpareKey(connection: Connection, options: ReturnType<typeof claudeSdkOptions>) {
+  const env = Object.entries(options.env || {})
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  return createHash('sha256')
+    .update(JSON.stringify([connection.id, connection.mode, options.pathToClaudeCodeExecutable || '', options.executable || '', env]))
+    .digest('hex');
+}
+async function takeClaudeSpare(connectionId: string, key: string) {
+  const spare = claudeSpares.get(connectionId);
+  if (!spare) return undefined;
+  claudeSpares.delete(connectionId);
+  clearTimeout(spare.timer);
+  if (spare.key !== key) {
+    // Made for another sign-in or runtime: never bind it to this one.
+    spare.controller.abort();
+    void spare.process.then(
+      p => p?.close?.(),
+      () => {},
+    );
+    return undefined;
+  }
+  try {
+    return { process: await spare.process, controller: spare.controller };
+  } catch {
+    return undefined;
+  }
+}
+function ensureClaudeSpare(sdk: any, connection: Connection, options: ReturnType<typeof claudeSdkOptions>, key: string) {
+  if (typeof sdk?.prewarm !== 'function' || claudeSpares.has(connection.id)) return;
+  const controller = new AbortController();
+  let process: Promise<any>;
+  try {
+    process = Promise.resolve(
+      sdk.prewarm({
+        options: {
+          ...options,
+          systemPrompt: SPARE_SYSTEM,
+          tools: [],
+          allowedTools: [],
+          mcpServers: {},
+          strictMcpConfig: true,
+          settingSources: [],
+          persistSession: false,
+          includePartialMessages: true,
+          abortController: controller,
+          maxTurns: MAX_TOOL_TURNS + 1,
+          canUseTool: async () => ({ behavior: 'deny', message: 'Only host-managed drafting is available.' }),
+        },
+      }),
+    );
+  } catch {
+    return;
+  }
+  const timer = setTimeout(() => {
+    if (claudeSpares.get(connection.id)?.process === process) closeClaudeSpares(connection.id);
+  }, SPARE_IDLE_MS);
+  (timer as any).unref?.();
+  const drop = () => {
+    if (claudeSpares.get(connection.id)?.process !== process) return;
+    claudeSpares.delete(connection.id);
+    clearTimeout(timer);
+  };
+  process.then(p => p?.exited?.then?.(drop, drop), drop);
+  claudeSpares.set(connection.id, { process, key, controller, timer });
+}
+
 export class ClaudeAdapter implements ProviderAdapter {
   private conversations = new WeakMap<
     ProviderSession,
@@ -548,11 +641,13 @@ export class ClaudeAdapter implements ProviderAdapter {
     const continuing = Boolean(held && held.identity === providerSessionKey(connection, context) && prompt.startsWith(held.sent));
     return recoverSessionTurn(context, attempt => this.turn(prompt, connection, attempt), continuing, retainedSdkError);
   }
-  private async turn(prompt: string, connection: Connection, context: ProviderContext) {
+  private async turn(prompt: string, connection: Connection, context: ProviderContext, useSpare = true): Promise<string> {
     const started = Date.now();
     if (context.signal.aborted) throw new Error('CANCELLED');
     const authOptions = claudeSdkOptions(connection, context);
-    const { query } = await this.loadSdk();
+    const sdk = await this.loadSdk();
+    const { query } = sdk;
+    const spareKey = claudeSpareKey(connection, authOptions);
     if (context.signal.aborted) throw new Error('CANCELLED');
     const session = !context.webSearch && !context.images?.length ? context.session : undefined;
     const identity = providerSessionKey(connection, context);
@@ -563,7 +658,12 @@ export class ClaudeAdapter implements ProviderAdapter {
       conversation = undefined;
     }
     if (context.signal.aborted) throw new Error('CANCELLED');
-    const controller = conversation?.controller || new AbortController(),
+    // A new conversation without search or images can start on the parked spare.
+    const spare =
+      useSpare && !reuse && !context.webSearch && !context.images?.length ? await takeClaudeSpare(connection.id, spareKey) : undefined;
+    let refused = false;
+    let retryCold = false;
+    const controller = conversation?.controller || spare?.controller || new AbortController(),
       abort = () => {
         controller.abort();
         if (session) session.close();
@@ -576,7 +676,21 @@ export class ClaudeAdapter implements ProviderAdapter {
       const input = conversation?.input || (session ? new InputQueue<SDKUserMessage>() : undefined);
       const delta = reuse ? prompt.slice(conversation!.sent.length) : prompt;
       if (input) input.push({ type: 'user', session_id: '', parent_tool_use_id: null, message: { role: 'user', content: delta } });
-      stream =
+      if (spare && !conversation) {
+        stream = spare.process.claim({
+          prompt: input || prompt,
+          options: {
+            cwd: context.cwd,
+            ...(connection.model ? { model: connection.model } : {}),
+            ...(context.system ? { appendSystemPrompt: context.system } : {}),
+            ...(context.effort ? { settings: { effortLevel: context.effort } } : {}),
+          },
+        });
+        spare.process.claimed?.catch?.((error: Error) => {
+          if (!String(error?.message).startsWith('option_not_applied')) refused = true;
+        });
+      }
+      stream = (stream ||
         conversation?.stream ||
         query({
           prompt:
@@ -666,7 +780,7 @@ export class ClaudeAdapter implements ProviderAdapter {
                 ? { behavior: 'allow', updatedInput: input }
                 : { behavior: 'deny', message: 'Only host-managed drafting is available.' },
           },
-        });
+        })) as Query;
       if (session && !conversation) {
         conversation = { stream, input: input!, controller, identity, sent: '', usage: { input: 0, output: 0, total: 0 } };
         this.conversations.set(session, conversation);
@@ -677,7 +791,12 @@ export class ClaudeAdapter implements ProviderAdapter {
           this.conversations.delete(session);
         };
       }
-      context.onTransport?.({ mode: reuse ? 'delta' : 'full', sentChars: delta.length, startupMs: reuse ? 0 : Date.now() - started });
+      context.onTransport?.({
+        mode: reuse ? 'delta' : 'full',
+        sentChars: delta.length,
+        startupMs: reuse ? 0 : Date.now() - started,
+        ...(spare && !reuse ? { resetReason: 'prewarmed' } : {}),
+      });
       // Manual iteration preserves the SDK process after a result; for-await would close it on return.
       while (true) {
         const next = await stream.next();
@@ -716,6 +835,14 @@ export class ClaudeAdapter implements ProviderAdapter {
             if (conversation) conversation.usage = total;
           } else context.onUsage?.(providerUsage('anthropic', message.usage));
         }
+        if (
+          message.type === 'result' &&
+          spare &&
+          !text &&
+          (message.is_error || message.subtype !== 'success') &&
+          (refused || /^not_claimed/.test(String((message as any).result || '')))
+        )
+          throw new SpareRefused();
         if (message.type === 'result' && (message.is_error || message.subtype !== 'success'))
           throw new Error(explainRuntimeFailure('errors' in message ? message.errors : []) || 'PROVIDER_REQUEST_FAILED');
         if (message.type === 'result' && message.subtype === 'success' && !text) {
@@ -731,17 +858,24 @@ export class ClaudeAdapter implements ProviderAdapter {
       return text;
     } catch (error) {
       if (context.signal.aborted) throw new Error('CANCELLED');
-      throw new Error(
-        explainRuntimeFailure([String(error)]) ||
-          (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED'),
-      );
+      // The spare could not take this conversation: start the same message cold, once.
+      if (error instanceof SpareRefused) retryCold = true;
+      else
+        throw new Error(
+          explainRuntimeFailure([String(error)]) ||
+            (error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED'),
+        );
     } finally {
       context.signal.removeEventListener('abort', abort);
       if (!keep) {
         if (session) await session.closeAndWait();
         else stream?.close?.();
       }
+      // Park a fresh spare for the next message (search and image runs use their own options; they do not need one).
+      if (!context.signal.aborted) ensureClaudeSpare(sdk as any, connection, authOptions, spareKey);
     }
+    if (retryCold) return this.turn(prompt, connection, context, false);
+    return text;
   }
 }
 
