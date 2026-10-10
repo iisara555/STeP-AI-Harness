@@ -264,7 +264,7 @@ ISO 9001:2015
       ↓
 STeP Quality Policy V2
       ↓
-Quality Manual              ← missing source
+Quality Manual              ← QM-QM-001 V.03 อยู่ใน STeP MIS (เนื้อหาไม่อยู่ใน Harness)
       ↓
 Quality Procedures
       ↓
@@ -272,14 +272,14 @@ WI / SD / FM
       ↓
 Quality Records / Evidence
 
-Master Document List        ← missing source
+Master Document List        ← รายการจาก STeP MIS: docs/knowledge/mis-iso-document-register.md
       └─ ใช้ยืนยัน Current / Superseded / Obsolete
 ~~~
 
 สถานะปัจจุบัน:
 - ISO 9001:2015 และ STeP Quality Policy V2 ลงทะเบียนแล้ว
 - QP ที่ได้รับถูก mark provided-unverified
-- Quality Manual และ Master Document List เป็น known gaps
+- รายการเอกสาร ISO ทุกทีม (เลขที่ REV วันที่ สถานะ) มาจาก STeP MIS ใน `mis-iso-document-register`; เนื้อหา Quality Manual และ Master List ยังไม่อยู่ใน Harness
 - Existing QMS Skills map กับ Source ที่เกี่ยวข้องแล้ว
 - มี Pilot Smoke Test 15 เคส
 

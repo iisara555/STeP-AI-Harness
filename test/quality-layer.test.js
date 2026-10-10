@@ -18,18 +18,23 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
     assert.ok(documents.includes('verification: user-confirmed-current'));
   });
 
-  await t.test('keeps Quality Manual and Master Document List as explicit not-provided sources', () => {
+  // Expectation changed on 2026-10-10: STeP MIS (the owner's authoritative source) lists QM-QM-001 V.03 and a Master
+  // List for every team, so they are no longer recorded as declined by QS. Their text is still not in the Harness, so
+  // both stay not-provided and readable only through the MIS register / clause map.
+  await t.test('keeps Quality Manual and Master Document List text as not-provided, listed in STeP MIS', () => {
     const qm = documents.slice(documents.indexOf('  qms-quality-manual:'), documents.indexOf('  qms-master-document-list:'));
-    assert.ok(qm.includes('verification: qs-declined-2026-09-25'));
+    assert.ok(qm.includes('verification: listed-in-step-mis-2026-10-10'));
+    assert.ok(qm.includes('QM-QM-001'));
     assert.ok(qm.includes('status: not-provided'));
 
-    const master = documents.slice(documents.indexOf('  qms-master-document-list:'), documents.indexOf('  qms-working-master-list:'));
+    const start = documents.indexOf('  qms-master-document-list:');
+    const master = documents.slice(start, documents.indexOf('\n\n', start));
     assert.ok(master.includes('authority: revision-source-of-truth'));
-    assert.ok(master.includes('verification: qs-declined-2026-09-25'));
+    assert.ok(master.includes('verification: listed-in-step-mis-2026-10-10'));
     assert.ok(master.includes('status: not-provided'));
   });
 
-  await t.test('QS-declined QM and Master List use derived working references', async () => {
+  await t.test('QM and Master List text not in the Harness use the clause map and the MIS register', async () => {
     const blockFor = (id) => {
       const lines = documents.split(/\r?\n/);
       const start = lines.findIndex((line) => line === `  ${id}:`);
@@ -54,10 +59,10 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
       assert.ok(block.includes('status: provided-text-not-in-harness'), `${id} text is not shipped, so readiness stays partial`);
     }
 
-    for (const [id, substitute] of [['qms-quality-manual', 'qms-working-reference'], ['qms-master-document-list', 'qms-working-master-list']]) {
+    for (const [id, substitute] of [['qms-quality-manual', 'qms-working-reference'], ['qms-master-document-list', 'mis-iso-document-register']]) {
       const block = blockFor(id);
-      assert.ok(block.includes('status: not-provided'), `${id} must record that QS declined`);
-      assert.ok(block.includes('verification: qs-declined-2026-09-25'));
+      assert.ok(block.includes('status: not-provided'), `${id} text is not in the Harness`);
+      assert.ok(block.includes('verification: listed-in-step-mis-2026-10-10'));
       assert.ok(block.includes(`workingSubstitute: ${substitute}`));
     }
 

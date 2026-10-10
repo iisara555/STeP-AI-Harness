@@ -4,6 +4,16 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+### ทะเบียนเอกสารระบบคุณภาพ ISO จาก STeP MIS
+
+- **ใหม่:** [ทะเบียนเอกสารระบบคุณภาพ ISO จาก STeP MIS](docs/knowledge/mis-iso-document-register.md) (`mis-iso-document-register`) รายการเลขที่ ประเภท REV วันที่บังคับใช้ ชื่อ และสถานะใช้อยู่/ยกเลิก ของเอกสาร 1,217 รายการทุกทีม (Master List 25 · QM 7 · QP 134 · WI 317 · FM 652 · SD 82; ใช้อยู่ 873 · ยกเลิก 344) ดึงจาก STeP MIS เมื่อ 10 ต.ค. 2569 STeP AI และ STeP Desktop ตอบคำถามแบบ "FM-AF-020 ใช้ rev อะไร", "QP-AF-001 มีผลวันไหน", "คู่มือคุณภาพรุ่นปัจจุบัน" จากทะเบียนนี้ได้ พร้อมบอกให้เปิดเอกสารจาก MIS ไฟล์ไม่มีลิงก์และไม่มีเนื้อหาเอกสาร
+- STeP MIS เป็นแหล่งที่ยึดถือของ REV และวันที่ (เจ้าของตัดสิน) การประกาศใช้ แก้ไข หรือยกเลิกเอกสารควบคุมยังเป็นอำนาจ QS
+- สร้างใหม่ได้ด้วย `node scripts/generate-mis-iso-register.mjs <ไฟล์ที่ดึงจาก MIS> --captured YYYY-MM-DD` (ไม่มี dependency ใหม่; `--check` ตรวจว่าไฟล์ตรงกับข้อมูล) ไฟล์ดิบจาก MIS ไม่เข้า repo ทีมใหญ่ (LES, FOOD FABR, Tech Up และอื่น ๆ) แบ่งตามประเภทและช่วงเลขเอกสาร ทุกหัวข้อไม่เกิน 3,800 ตัวอักษร เพื่อให้การค้นของ Desktop ส่งทั้งหัวข้อให้ AI
+- **แก้ข้อความที่ขัดกับ MIS:** Master List ฉบับทำงานกลายเป็นตัวชี้ไปทะเบียน MIS; คู่มือคุณภาพ QM-QM-001 V.03 และ Master List รายทีม 25 ฉบับมีอยู่ใน MIS (เนื้อหายังไม่อยู่ใน Harness) จึงไม่บันทึกว่า QS ไม่มีหรือไม่ให้อีก; ทะเบียน CC ปรับ FM-CC-005 เป็น V.03 และ FM-CC-010 เป็น V.01 (มีผล 1 ต.ค. 2569) และเพิ่ม FM-CC-004 ที่ยังใช้อยู่ตาม MIS; ปรับ `docs/quality-layer.md`, `docs/architecture.md`, `docs/harness-foundation.md`, แผนที่ ISO และ Skill `document-record-control`
+- ชุดคำถามทดสอบการค้นของ Desktop เพิ่มเป็น 61 ข้อ ผ่าน 59 (เดิม 53/55) เกณฑ์ขั้นต่ำขึ้นเป็น 59
+
 ## Desktop v0.5.37 — 2026-10-09
 
 ### Chat (PR #126)

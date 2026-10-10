@@ -31,12 +31,13 @@ standardVersion: 2
 - process ที่เกี่ยวข้อง
 
 ช่วยให้ตรวจได้ครบขึ้นถ้ามี:
-- Master List ฉบับทำงานหรือรายการเอกสารจาก STeP MIS
+- รายการเอกสารจาก STeP MIS (ดู[ทะเบียนเอกสาร ISO จาก STeP MIS](../../../docs/knowledge/mis-iso-document-register.md))
 - นโยบาย retention ขององค์กร
 
 ## Source
 
-- สถานะเอกสารควบคุมต้อง resolve จาก `manifest/documents.yaml` และ [Master List ฉบับทำงาน](../../../docs/knowledge/qms-working-master-list.md) (QS ไม่ให้ Master List ทางการ) — ฉบับทำงานไม่ใช่ทะเบียนควบคุม ให้บอกผู้ใช้ตรวจ Rev ล่าสุดใน STeP MIS ก่อนอ้างอิงทางการ
+- สถานะเอกสารควบคุมต้อง resolve จาก `manifest/documents.yaml` และ[ทะเบียนเอกสาร ISO จาก STeP MIS](../../../docs/knowledge/mis-iso-document-register.md) (STeP MIS เป็นแหล่งที่ยึดถือของเลขที่ REV และวันที่บังคับใช้; ไฟล์ใน Harness เป็นภาพ ณ วันที่ดึง) — บอกวันที่ดึงข้อมูลทุกครั้ง และให้ผู้ใช้เปิดหรือดาวน์โหลดเอกสารจาก STeP MIS การประกาศใช้หรือยกเลิกเอกสารเป็นอำนาจ QS
+- QP ระบบคุณภาพที่ Skill อ้างอิงและรายการที่เปลี่ยนเมื่อตรวจกับ MIS ดู [Master List ฉบับทำงาน](../../../docs/knowledge/qms-working-master-list.md)
 - **ห้าม invent retention period หากไม่มี policy หรือ SOP ที่กำหนด**
 
 **แยกก่อน:**
