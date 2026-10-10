@@ -92,7 +92,59 @@ try {
   let snapshot = await run(url, { action: 'open' });
   const tab = snapshot.tab;
   assert.ok(tab && snapshot.elements.length === 2);
+  // Capture needs a compositor: mount the fixture view as the Desktop dock does.
+  await app.evaluate((_e, id) => {
+    globalThis.testWindow.contentView.addChildView(globalThis.agentBrowser.tabs.get(id).view);
+    globalThis.testWindow.show();
+  }, tab);
   // Opening the same site again in the same task returns that tab (with any sign-in), without asking again.
+  const captured = await app.evaluate(async (_e, id) => globalThis.agentBrowser.capture(id, globalThis.context), tab);
+  assert.equal(captured.mime, 'image/png');
+  assert.ok(Buffer.from(captured.data, 'base64').length > 0);
+  assert.equal(
+    await app.evaluate(async (_e, id) => {
+      try {
+        await globalThis.agentBrowser.capture(id, {
+          ...globalThis.context,
+          approve: async () => {
+            await globalThis.agentBrowser.tabs
+              .get(id)
+              .contents.executeJavaScript("document.querySelector('p').textContent='Changed during image consent'");
+            return true;
+          },
+        });
+      } catch (e) {
+        return e.message;
+      }
+    }, tab),
+    'BROWSER_IMAGE_CHANGED',
+  );
+  assert.equal(
+    await app.evaluate(async (_e, id) => {
+      try {
+        await globalThis.agentBrowser.capture(id, { ...globalThis.context, sessionId: 'other' });
+      } catch (e) {
+        return e.message;
+      }
+    }, tab),
+    'BROWSER_CLOSED',
+  );
+  await app.evaluate(() => {
+    globalThis.accept = false;
+  });
+  assert.equal(
+    await app.evaluate(async (_e, id) => {
+      try {
+        await globalThis.agentBrowser.capture(id, globalThis.context);
+      } catch (e) {
+        return e.message;
+      }
+    }, tab),
+    'TOOL_DENIED',
+  );
+  await app.evaluate(() => {
+    globalThis.accept = true;
+  });
   const asked = await app.evaluate(() => globalThis.approvalCount);
   const again = await run(url + '/', { action: 'open' });
   assert.equal(again.tab, tab);
@@ -129,6 +181,16 @@ try {
   });
   const login = await run(url + '/login', { action: 'open' });
   assert.equal(login.requiresManualLogin, true);
+  assert.equal(
+    await app.evaluate(async (_e, id) => {
+      try {
+        await globalThis.agentBrowser.capture(id, globalThis.context);
+      } catch (e) {
+        return e.message;
+      }
+    }, login.tab),
+    'BROWSER_IMAGE_SENSITIVE',
+  );
   assert.deepEqual(login.elements, []);
   assert.equal(login.text, '');
   assert.equal((await run('file:///C:/Windows/win.ini', { action: 'open' })).error, 'INVALID_URL');

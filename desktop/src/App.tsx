@@ -219,6 +219,7 @@ export default function App() {
     coordinator?: boolean;
     documentTool?: DocumentToolId;
     attachmentRole?: DocumentAttachmentRole;
+    isolated?: boolean;
   } | null>(null);
   // The first send (or the first after the terms change) needs the usage terms ticked; a new ask starts unticked.
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -546,16 +547,31 @@ export default function App() {
       setHandoffAsk({ text: [text, sourceText].filter(Boolean).join('\n\n') });
       return;
     }
-    if (!connectionId) {
+    if (!snapshot?.connections.some(c => c.id === connectionId && c.ready)) {
       needAi();
-      return;
+      throw new Error('CONNECTION_NOT_READY');
     }
     await save();
     const s = await api!.call('create', { connectionId, project: t('ตรวจใบเสร็จ AFP') });
+    await start(
+      s.id,
+      text,
+      [],
+      undefined,
+      undefined,
+      allowIds,
+      sourceText,
+      'chat',
+      imageModel,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      true,
+    );
     setView('chat');
+    setWorkMode('chat');
     setSelected(s.id);
-    await refresh();
-    await start(s.id, text, [], undefined, undefined, allowIds, sourceText, 'draft');
   }
   async function createDocumentTask(tool: DocumentToolId) {
     if (!snapshot?.connections.some(c => c.id === connectionId && c.ready)) {
@@ -712,6 +728,7 @@ export default function App() {
     coordinator: boolean = coordinated && mode === 'draft' && !skill && !retry,
     documentTool?: DocumentToolId,
     attachmentRole?: DocumentAttachmentRole,
+    isolated: boolean = false,
   ) {
     const attempt = {},
       previousAttempt = runningIds.current.get(id);
@@ -740,7 +757,7 @@ export default function App() {
         coordinator,
         documentTool,
         attachmentRole,
-        ...(mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
+        ...(isolated ? { autoImage: false } : mode === 'chat' && workflowRef.current ? { workflow: workflowRef.current } : {}),
       });
     } catch (e) {
       setRunning(false);
@@ -771,6 +788,7 @@ export default function App() {
         coordinator,
         documentTool,
         attachmentRole,
+        isolated,
         ...result.consent,
       });
       return;
@@ -1385,9 +1403,12 @@ export default function App() {
                 onEvent={api.onEvent}
                 notify={notify}
                 onError={e => notify(explainError(e), 'error')}
-                handoff={(text, sourceText, allowIds) => action(() => receiptHandoff(text, sourceText, allowIds))}
+                handoff={receiptHandoff}
                 connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
                 trialTools={Boolean(snapshot.policy?.features.ocrTrial)}
+                connections={snapshot.connections}
+                chooseConnection={setConnectionId}
+                openAiSettings={openAiSettings}
               />
             </div>
           )}
@@ -1755,6 +1776,32 @@ export default function App() {
                       <p className="small muted">{t('ขั้นตอนนี้ยังไม่ส่งผลกลับมา คุณรอต่อหรือกดหยุดได้')}</p>
                     )}
                   </article>
+                )}
+                {!running && session?.runs?.some(run => run.steps.some(step => step.tools?.length)) && (
+                  <details className="tool-observability">
+                    <summary>{t('ประวัติเครื่องมือและรหัสตรวจสอบ')}</summary>
+                    <p className="small muted">
+                      {t('เก็บเฉพาะชื่อเครื่องมือ เวลา ผล และรหัสในเครื่อง ไม่บันทึกเนื้อหาที่ส่งให้เครื่องมือ')}
+                    </p>
+                    {session.runs.slice(-3).flatMap(run =>
+                      run.steps.flatMap(step =>
+                        (step.tools || []).map(tool => (
+                          <p key={tool.id}>
+                            <code>{tool.tool}</code> · {tool.ok ? t('สำเร็จ') : t('ไม่สำเร็จ')} · {tool.ms} ms{' '}
+                            {tool.code && (
+                              <span>
+                                {t(errorText[tool.code] || 'เครื่องมือทำงานไม่สำเร็จ')} ({tool.code})
+                              </span>
+                            )}
+                            <br />
+                            <span className="small muted">
+                              {t('รหัสตรวจสอบ')}: {run.id} / {tool.id}
+                            </span>
+                          </p>
+                        )),
+                      ),
+                    )}
+                  </details>
                 )}
                 {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
                   <div className="retry-row">
@@ -2702,6 +2749,7 @@ export default function App() {
                   ask.coordinator,
                   ask.documentTool,
                   ask.attachmentRole,
+                  ask.isolated,
                 ),
               );
             }}

@@ -1,0 +1,50 @@
+{
+  "_note": "Synthetic MIS ISO register extract for test/mis-iso-register.test.js. Team names follow the MIS display form; every document number and title is invented. Links and URLs are fixtures the generator must drop.",
+  "isoform": {
+    "url": "https://example.invalid/mis/isoform",
+    "head": ["ลำดับ", "เลขที่เอกสาร", "REV.", "วันที่บังคับใช้", "ชื่อเอกสาร", "ทีม", "ไฟล์"],
+    "n": 4,
+    "rows": [
+      { "cells": ["1", "FM-ZZ-002", "V.01", "2026-10-01", "แบบฟอร์มทดสอบ | มีเส้นตั้ง ดูที่ https://example.invalid/form", "ทีมทดสอบตัวอย่าง  (ZZ)", "ดาวน์โหลด"], "links": ["https://example.invalid/viewdoc?id=2"] },
+      { "cells": ["2", "FM-ZZ-001", "-", "2025-06-01", "(ยกเลิกการใช้งาน)แบบฟอร์มทดสอบเก่า", "ทีมทดสอบตัวอย่าง (ZZ)", "ดาวน์โหลด"], "links": ["https://script.google.com/macros/s/fixture/exec"] },
+      { "cells": ["3", "FM-ZZ-010", "V.00", "2026-09-01", "แบบฟอร์มลำดับที่สิบ", "ทีมทดสอบตัวอย่าง (ZZ)", "ดาวน์โหลด"], "links": [] },
+      { "cells": ["4", "FM-AA-001", "V.02", "2026-01-16", "แบบฟอร์มทีมเอ", "ทีมเอทดสอบ (AA)", "ลิงค์"], "links": ["www.example.invalid/a"] }
+    ]
+  },
+  "isoqp": {
+    "url": "https://example.invalid/mis/isoqp",
+    "head": ["ลำดับ", "เลขที่เอกสาร", "REV.", "วันที่บังคับใช้", "ชื่อเอกสาร", "ทีม", "ไฟล์"],
+    "n": 2,
+    "rows": [
+      { "cells": ["1", "QP-ZZ-001", "V.02", "2026-10-01", "ขั้นตอนทดสอบ", "ทีมทดสอบตัวอย่าง (ZZ)", "ดูข้อมูล"], "links": [] },
+      { "cells": ["2", "SD-ZZ-001", "V.00", "2026-04-01", "เอกสารสนับสนุนที่อยู่ผิดทะเบียน", "ทีมทดสอบตัวอย่าง (ZZ)", "ดูข้อมูล"], "links": [] }
+    ]
+  },
+  "isoqm": {
+    "url": "https://example.invalid/mis/isoqm",
+    "head": ["ลำดับ", "เลขที่เอกสาร", "REV.", "วันที่บังคับใช้", "ชื่อเอกสาร", "ทีม", "ไฟล์"],
+    "n": 1,
+    "rows": [{ "cells": ["1", "QM-ZZ-001", "V.03", "2025-07-16", "คู่มือคุณภาพทดสอบ", "ทีมทดสอบตัวอย่าง (ZZ)", "ดูข้อมูล"], "links": [] }]
+  },
+  "mslist": {
+    "url": "https://example.invalid/mis/mslist",
+    "head": ["ลำดับ", "เลขที่เอกสาร", "REV.", "วันที่บังคับใช้", "ชื่อเอกสาร", "ทีม", "ไฟล์"],
+    "n": 2,
+    "rows": [
+      { "cells": ["1", "-", "-", "2026-10-01", "Masterlist-ZZ", "ทีมทดสอบตัวอย่าง (ZZ)", "ดูข้อมูล"], "links": [] },
+      { "cells": ["2", "-", "-", "2026-04-01", "Masterlist-AA", "ทีมเอทดสอบ (AA)", "ดูข้อมูล"], "links": [] }
+    ]
+  },
+  "isowi": {
+    "url": "https://example.invalid/mis/isowi",
+    "head": ["ลำดับ", "เลขที่เอกสาร", "REV.", "วันที่บังคับใช้", "ชื่อเอกสาร", "ทีม", "ไฟล์"],
+    "n": 1,
+    "rows": [{ "cells": ["1", "WI-ZZ-001", "V.01", "2026-09-01", "วิธีปฏิบัติงานทดสอบ", "ทีมทดสอบตัวอย่าง (ZZ)", "ดูข้อมูล"], "links": [] }]
+  },
+  "isosd": {
+    "url": "https://example.invalid/mis/isosd",
+    "head": ["ลำดับ", "เลขที่เอกสาร", "REV.", "วันที่บังคับใช้", "ชื่อเอกสาร", "ทีม", "ไฟล์"],
+    "n": 0,
+    "rows": []
+  }
+}

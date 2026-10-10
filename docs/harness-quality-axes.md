@@ -86,7 +86,7 @@ validator ต้องมี Python 3.10 ขึ้นไป โดยค้น `
 
 ## สิ่งที่ต้องรอเจ้าของข้อมูล
 
-- QS: Master Document List, Quality Manual และยืนยัน revision ของ QP/WI
+- QS: เนื้อหา Quality Manual / Master List สำหรับ Harness และขอบเขต QMS (รายการเลขที่และ REV ใช้ทะเบียนจาก STeP MIS แล้ว)
 - AFP: นโยบาย/แบบฟอร์ม/checklist ปัจจุบันพร้อมผู้รับรอง
 - เจ้าของบริการ: service-to-team mapping ที่ยืนยันแล้ว
 - พนักงานจริง: installation/first-run/time-to-usable-output และความเข้าใจจุดยืนยัน

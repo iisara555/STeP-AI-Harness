@@ -32,7 +32,7 @@ await writeFile(
     // The coordinator dialog is part of the send-time privacy checks.
     checks: { authority: true, privacy: true },
     features: { coordinator: true, cron: true, mcp: true, sandbox: false, toolLoop: false },
-    mcpServers: [{ name: 'fixture', transport: 'stdio', command: process.execPath, args: [mcp] }],
+    mcpServers: [{ name: 'fixture', profile: 'google-workspace', transport: 'stdio', command: process.execPath, args: [mcp] }],
   }),
 );
 const db = new DatabaseSync(join(home, 'workspace.sqlite'));
@@ -128,7 +128,7 @@ try {
   assert.ok(history.history[0].sessionId);
   await jobs.getByText('เครื่องมือ MCP', { exact: true }).click();
   await jobs.getByLabel('MCP server', { exact: true }).selectOption('fixture');
-  await jobs.getByRole('button', { name: 'ค้นหาเครื่องมือ', exact: true }).click();
+  await jobs.getByRole('button', { name: 'ทดสอบ Google Workspace · fixture', exact: true }).click();
   await approve('ค้นหา MCP?');
   await approve('ค้นหาเครื่องมือจาก MCP?');
   await expect(jobs.locator('pre')).toContainText('echo');

@@ -6,15 +6,37 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Desktop review fixes (รอบ 2-3): output ของงานเบื้องหลังที่ยาวเกิน 8,000 ตัวอักษรไม่ปล่อยบรรทัดที่ยังไม่จบออกมาทั้งก้อนแล้ว และปิดบังโดยดูข้อความดิบที่ส่งไปแล้วของ stream เดียวกันร่วมด้วย credential ที่ key กับค่าอยู่คนละ chunk หรือคนละบรรทัดจึงยังถูกปิด; หน้าต่างอนุมัติหยุดงานแสดงคำสั่งที่ปิดบังแล้ว สถานะ และเวลาเริ่ม ไม่ใช่แค่รหัสงาน; poll ที่ไม่ระบุ offset แจ้ง `truncated:true` เมื่อ log เก่าถูกตัด; เพิ่ม `.vault-token`, `.htpasswd`, `.my.cnf`, `.s3cfg`, `.boto`, `.yarnrc.yml`, `pip.conf`, `pip.ini` และชื่อแบบ Windows (`.netrc.`, `.netrc::$DATA`) เป็น protected path; tool request ที่ฟิลด์ผิดบอกชื่อฟิลด์และค่าที่ต้องการให้ AI แก้
+## Desktop v0.5.38 — 2026-10-10
 
-- Desktop review fixes (MEDIUM): `search_files` ข้ามและนับไฟล์ที่ privacy check ไม่อนุญาต (`withheldFiles`) แทนที่จะล้มการค้นหาทั้งหมดเมื่อมีไฟล์ credential ไฟล์เดียว; output ของงานเบื้องหลังถูกปิดบังทีละบรรทัดที่จบแล้ว จึงไม่รั่วส่วนท้ายของ credential ที่ถูกแบ่งข้าม chunk และ cursor ไม่เลื่อน; `.netrc`, `_netrc`, `.npmrc`, `.pypirc`, `.git-credentials`, `.pgpass`, `*.kdbx` เป็น protected path ของเครื่องมือไฟล์ทุกตัว
+- Added `web_extract` with bounded article/headings/tables/links, controlled `vision_analyze`/`browser_vision` with explicit image consent and `EXTRACTED_UNVERIFIED` source provenance, and `image_generate` in the tool loop using the existing OpenAI/Gemini API service. Unsupported connections report their limitation; OAuth does not grant image API access.
+- Added organization-managed Google Workspace MCP profile and catalog-test UI using existing permission/destination consent. MCP stays off by default; organization endpoint/authentication must be configured by IT.
+- Added local per-tool diagnostic IDs, outcome/error code and timing, visible in folded chat history and existing diagnostics; tool input/output bodies are excluded. No external telemetry service or new runtime dependency.
+- New-tool evidence uses synthetic HTML/images/providers/MCP only. Live Google account access, provider vision acceptance and generated-image quality are not claimed.
 
-- Desktop source tranche 3: เพิ่ม `tool_search`/`tool_describe` ที่ AI เรียกได้จริงผ่าน step-tool พร้อม schema/effect/availability ตาม scope และ validation ที่ parser/dispatcher; discovery ของ MCP ต้องระบุ managed server และผ่าน consent/gate เดิม ไม่มี recursive execution wrapper ไม่ถือคำอธิบายเป็นสิทธิ์ cloud/account การค้นแบบย่อเป็นทางเลือกและเครื่องมือสำคัญยังเรียกตรงได้ พร้อม synthetic whole-app search → describe → read/patch/task และยืนยันการปฏิเสธ/อนุมัติเขียนจริง Native provider tool transport ยังไม่ได้ทำ ไม่มี commit/release
 
-- Desktop source tranche 2: เพิ่ม `search_files` ค้นชื่อ/ข้อความใน workspace แบบ recursive พร้อมเลขบรรทัด ขอบเขตการสแกน และ cursor ที่ปฏิเสธผลเปลี่ยน; regex จำกัดเป็น fixed-width และ glob ไม่ใช้ backtracking เพิ่ม `patch` แก้ข้อความตรงตัวเพียงจุดเดียวโดย stage ใน Changes ก่อน ผ่านสิทธิ์/การยืนยัน/hash conflict/snapshot เดิม ไม่เขียนข้าม gate ไฟล์ลับ symlink/hardlink และ path rules ยังถูกปฏิเสธ พร้อมข้อความไทย/อังกฤษและ whole-app fixture ไม่มี commit/release หรือสิทธิ์ account ใหม่
+### Combined release: PR #130, #131, #133 and review fixes
 
-- Desktop source: AI ใช้ `tasks` เดิมเพื่อ list/status/poll/wait/cancel งานคำสั่งที่เป็นของ session และ workspace ปัจจุบันได้ รอไม่เกิน 30 วินาทีต่อครั้งและอ่าน log แบบจำกัดพร้อม cursor/คำเตือนเมื่อ log เก่าถูกตัด การหยุดงานยังผ่านสิทธิ์/การยืนยันของคนและถูกปิดใน plan mode ผลทุกครั้งยังผ่าน privacy/transmission gate เดิม ไม่มี Hermes embedding หรือสิทธิ์ account/secret เพิ่ม ดูขอบเขตและสิ่งที่ยังไม่ทำใน [Desktop tool loop](docs/desktop-tool-loop.md#execution-parity-tranche-1-source-only)
+- รวม portable plugin test, ทะเบียนเอกสาร ISO จาก STeP MIS และการเตรียม Desktop release เป็นชุดเดียว ตัวทดสอบขยาย `~/` ก่อนตรวจไฟล์จริงใน installation และใช้ native filesystem path บน Windows แทน URL pathname และตรวจแถวทะเบียน/manifest ได้ทั้ง LF กับ CRLF ไม่มีการเปลี่ยน installer ของ plugin
+- ทะเบียน MIS มีเลขเอกสาร REV วันที่บังคับใช้ และสถานะ 1,217 รายการ โดยไม่มีไฟล์ต้นฉบับหรือลิงก์ดาวน์โหลดภายใน ค้นเลขเอกสารแบบตรงตัวก่อนคะแนนข้อความและไม่แทนเลขที่ไม่พบด้วยเอกสารใกล้เคียง Excerpt จากการค้นและการเปิด section พกวันที่ดึง snapshot พร้อมกติกายึดฉบับจริงใน MIS อำนาจประกาศใช้/ยกเลิกยังเป็นของ QS
+- ปิดช่อง credential ใน background output ที่ผสม LF/CRLF หรือแบ่งข้าม chunk/cursor: stdout และ stderr มี state แยกกัน เก็บ key ที่ยังไม่มีค่าจนอ่านค่าครบ ปิดบังบรรทัดก่อนลง log และระงับบรรทัดที่ยาวเกิน 8,000 ตัวอักษรพร้อมค่าที่อาจต่อในบรรทัดถัดไป แทนการปล่อยส่วนที่อ่านไม่ครบ Cursor ของ sanitized output ยังเป็น append-only เมื่อ scanner ระงับบรรทัดจะไม่ปล่อยค่าใน continuation โดยไม่มี key
+
+### AI tools: background tasks, workspace search, exact edits and tool discovery (PR #132)
+
+- AI ใช้ `tasks` เพื่อตรวจ/อ่าน/รอ/หยุดงานคำสั่งของ session และ workspace ปัจจุบันได้ รอครั้งละไม่เกิน 30 วินาที อ่าน log แบบจำกัดพร้อม cursor การหยุดงานยังใช้ permission/hook เดิม: ask และ accept-edits ต้องอนุมัติ auto ใช้สิทธิ์ของโหมด และ plan ปฏิเสธ
+- เพิ่ม recursive `search_files` พร้อม pagination และ exact staged `patch` ที่ปฏิเสธ match หาย/ซ้ำ รวมถึง overlap ไฟล์ binary/hardlink/symlink และ protected paths การเขียนยังผ่าน Changes และสิทธิ์เดิม ไม่มี Hermes embedding หรือสิทธิ์บัญชี/secret เพิ่ม
+- เพิ่ม `tool_search`/`tool_describe` พร้อม schema/effect/availability และ validation; managed MCP discovery ยังต้อง consent แยกจากการเรียกจริง คำอธิบายเครื่องมือไม่ใช่สิทธิ์รัน Native provider tool transport ยังไม่ได้ทำ
+
+### Public web search and one-page receipt review
+
+- ทุก connection รวม Antigravity ใช้ host `web_search` ผ่าน Bing RSS ได้ ไม่ต้องเพิ่ม API key ไม่มีการส่งไฟล์/ประวัติ/เอกสารองค์กรไปค้นเว็บ Query ยังผ่าน privacy scan และขอสิทธิ์เว็บไซต์ก่อนค้น รองรับ proxy, cancellation และ SSRF/timeout/size limits เดิม ไม่เปลี่ยน policy default; หากปิด toolLoop การค้น native ยังขึ้นกับ provider
+- หน้า OCR ใช้การเลื่อนในหน้าเดียว มีขั้นตอนชัดเจน พับองค์ประกอบ/ผล OCR/เครื่องมือขั้นสูงไว้ ตรวจแล้วส่งให้ AI เป็น chat โดยไม่พ่วง coordinator/workflow/การสร้างภาพจากงานก่อนหน้า ข้อมูลยาวลดหลักฐาน OCR ที่ซ้ำพร้อมแจ้งส่วนที่ละไว้ คง selected values และ provenance; export ในเครื่องยังครบ ถ้ายังเกินขนาดแสดงคำแนะนำเฉพาะและเก็บผลตรวจไว้ในหน้าเดิม
+- เพิ่ม regression ที่จำลอง 6 provider, transport/feed/privacy/cancellation และ OCR ข้อมูลยาว พร้อม Electron smoke ของปุ่มส่งต่อ/error/consent replay ใช้ข้อมูลสังเคราะห์เท่านั้น ไม่ใช่การวัดคุณภาพผลอ่านเอกสารจริงหรือผลโมเดลที่ล็อกอิน
+
+### Verification and limits
+
+- Credential/cursor/process-output regressions ใช้ข้อมูลสังเคราะห์และ mock outgoing check เท่านั้น ไม่ได้ส่งข้อมูลจริงไปโมเดล ชุดค้นทะเบียนตรวจ local retrieval และข้อความที่จะเข้า prompt ไม่ใช่การประเมินคุณภาพคำตอบด้วยโมเดลจริง
+- บรรทัด output ที่ยาวเกินขอบเขตและ continuation ที่อาจเป็น credential ถูกระงับโดยเจตนา จึงอาจไม่แสดง output บางส่วน การ masking ลดความเสี่ยง ไม่รับประกันจับ secret ทุกรูปแบบ
+- ยังต้องตรวจ process trees บนเครื่องพนักงาน Windows/macOS จริง โมเดลที่ล็อกอินจริง และ acceptance ของเอกสาร Office/OCR แยกจาก synthetic/native CI ไม่มีการเปลี่ยน policy default หรือ Harness version (0.7.7)
 
 ## Desktop v0.5.37 — 2026-10-09
 

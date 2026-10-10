@@ -21,7 +21,7 @@ export class Mcp {
     private consent: Consent,
   ) {}
   servers() {
-    return this.policy().mcpServers.map(s => ({ name: s.name, transport: s.transport }));
+    return this.policy().mcpServers.map(s => ({ name: s.name, transport: s.transport, ...(s.profile ? { profile: s.profile } : {}) }));
   }
   async close() {
     await Promise.allSettled([...this.clients].map(c => this.closers.get(c)?.() || c.close()));

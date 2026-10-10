@@ -120,7 +120,7 @@ async function proxyTunnel(proxyUrl: string, address: string, port: number, sign
   });
 }
 /** DNS is checked on every redirect and pinned on the actual connection, including proxy CONNECT. */
-export async function fetchPublic(input: string, signal: AbortSignal, proxyUrl?: string, resolve?: Resolve) {
+export async function fetchPublic(input: string, signal: AbortSignal, proxyUrl?: string, resolve?: Resolve, format?: 'rss' | 'html') {
   let current = publicUrl(input);
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
   for (let redirect = 0; redirect <= 4; redirect++) {
@@ -173,7 +173,9 @@ export async function fetchPublic(input: string, signal: AbortSignal, proxyUrl?:
               return;
             }
             if (
-              !/^(text\/(html|plain)|application\/json)\b/i.test(res.headers['content-type'] || '') ||
+              !(format === 'rss' ? /^(application\/(rss\+xml|xml)|text\/xml)\b/i : /^(text\/(html|plain)|application\/json)\b/i).test(
+                res.headers['content-type'] || '',
+              ) ||
               (res.headers['content-encoding'] && res.headers['content-encoding'] !== 'identity')
             ) {
               res.destroy();
@@ -199,6 +201,7 @@ export async function fetchPublic(input: string, signal: AbortSignal, proxyUrl?:
         current = publicUrl(new URL(response.location, current).href);
         continue;
       }
+      if (format === 'rss' || format === 'html') return { url: current.href, text: response.text || '' };
       const text = (response.text || '')
         .replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
         .replace(/<[^>]+>/g, ' ')

@@ -202,6 +202,7 @@ try {
   await expect(signature).toHaveValue('absent');
   await signature.focus();
   await page.getByText('ภาพขยายช่อง ลายเซ็นผู้รับเงิน · ตำแหน่งจาก AI โปรดเทียบต้นฉบับ').waitFor();
+  await page.getByText('ดูองค์ประกอบพื้นฐานใบเสร็จ', { exact: true }).click();
   await expect(page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' })).toContainText('ใบเสร็จยังขาดองค์ประกอบ');
   await page.getByLabel('ยอดรวมที่ชำระ').focus();
   await expect(page.locator('.receipt-preview-frame')).toHaveClass(/field-focused/);
@@ -215,8 +216,8 @@ try {
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
   // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
   assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
-  // Since the outcome-first receipt page, a flagged item shows in "ทำอะไรต่อ" and again in the full checklist.
-  await page.getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).first().waitFor();
+  // The actionable summary remains visible while duplicate checklist details are folded.
+  await page.getByLabel('สรุปการใช้ใบเสร็จ').getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).waitFor();
   // The B clearing set sits in the folded full checklist, so it is present but not on screen.
   await page.getByText('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน', { exact: false }).first().waitFor({ state: 'attached' });
   await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();

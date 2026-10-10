@@ -38,6 +38,7 @@ import { interactionStyleId, languageStyleId } from '../src/speaking-styles';
 import { Images } from './images';
 import { isImageRequest } from '../src/image-routing';
 import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
+import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
 import { inspectDocumentTemplate } from './document-template';
@@ -317,6 +318,7 @@ async function main() {
     modelLimits: connection =>
       policyState.policy.modelLimits?.[connection.model] || policyState.policy.modelLimits?.[connection.provider + ':*'] || {},
     privacy: scanText,
+    publicSearch: (query, signal) => searchPublicWeb(query, signal, policyState.policy.network?.proxyUrl),
     catalog: skillCatalog.createSkillCatalog(root),
     documentMetadata: routing.loadDocumentContextMetadata,
     documentCatalog: routing.loadDocumentCatalog,
@@ -664,7 +666,65 @@ async function main() {
     (body, signal) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal),
   );
   tools.closeBrowser = id => agentBrowser.closeOwner(id);
-  tools.external = (request, scope, check) => {
+  tools.external = async (request, scope, check) => {
+    if (request.tool === 'image_generate') {
+      if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+      if (scope.connection.mode !== 'api' || !['openai', 'gemini'].includes(scope.connection.provider) || !scope.generate)
+        throw new Error('IMAGE_API_REQUIRED');
+      if (harness.privacy(request.input).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+      const prompt = await tools.outgoing(request.input, scope);
+      await check();
+      const generated = await scope.generate(prompt, typeof request.args?.model === 'string' ? request.args.model : undefined);
+      await check();
+      return generated;
+    }
+    if (request.tool === 'vision_analyze' || request.tool === 'browser_vision') {
+      if (!policyState.policy.features.vision) throw new Error('VISION_DISABLED');
+      if (policyState.policy.checks.privacy) throw new Error('VISION_PRIVACY_REQUIRED');
+      if (!['openai', 'gemini', 'claude'].includes(scope.connection.provider) || !scope.analyze) throw new Error('VISION_UNAVAILABLE');
+      const prompt = typeof request.args?.prompt === 'string' ? request.args.prompt : 'Describe the image and identify uncertain details.';
+      if (harness.privacy(prompt).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+      let image: VisionInput;
+      if (request.tool === 'browser_vision')
+        image = await agentBrowser.capture(request.input, {
+          sessionId: scope.sessionId,
+          signal: scope.signal,
+          check,
+          review: () => {},
+          approve: (title, body) =>
+            approvals.request(
+              approvals.rule(store.settings().workspace || data, 'browser_vision', randomUUID()),
+              { title, body, privacyClass: 'internal', allowRemember: false, sessionId: scope.sessionId },
+              scope.signal,
+            ),
+        });
+      else {
+        const extension = extname(request.input).slice(1).toLowerCase();
+        if (!['png', 'jpg', 'jpeg', 'webp'].includes(extension)) throw new Error('ATTACH_UNSUPPORTED');
+        const bytes = await workbench.bytes(request.input, 8_000_000);
+        image = visionImage(extension, bytes);
+        if (
+          !(await approvals.request(
+            approvals.rule(store.settings().workspace || data, 'vision_analyze', randomUUID()),
+            {
+              title: tm('ส่งภาพให้ AI ตรวจ?'),
+              body: tm('ภาพ {0} จะส่งให้บัญชี AI ที่เลือก กรุณาตรวจข้อมูลในภาพก่อนยินยอม', request.input),
+              privacyClass: 'internal',
+              allowRemember: false,
+              sessionId: scope.sessionId,
+            },
+            scope.signal,
+          ))
+        )
+          throw new Error('TOOL_DENIED');
+        await check();
+        if (!bytes.equals(await workbench.bytes(request.input, 8_000_000))) throw new Error('FILE_CONFLICT');
+      }
+      await check();
+      const text = await scope.analyze(prompt, image);
+      await check();
+      return { text, source: { kind: request.tool, ref: request.input }, provenance: 'EXTRACTED_UNVERIFIED', humanConfirmed: false };
+    }
     if (request.tool === 'browser_control')
       return agentBrowser.run(request, {
         sessionId: scope.sessionId,
@@ -937,6 +997,9 @@ async function main() {
             cacheStatus: call.transport?.cacheStatus,
             ...call.usage,
           });
+        for (const step of t.steps)
+          for (const tool of step.tools || [])
+            diagnose('tool-call', { run: t.id, id: tool.id, tool: tool.tool, ok: tool.ok ? 1 : 0, code: tool.code, ms: tool.ms });
         diagnose('run-trace', {
           outcome: t.outcome,
           code: t.code || '',
@@ -2598,6 +2661,7 @@ async function main() {
         if (attachmentRole === 'template' && !nativeTemplate) throw new Error('DOCUMENT_TEMPLATE_REQUIRED');
         const templateDescription = nativeTemplate ? await inspectDocumentTemplate(nativeTemplate, draftingTool!.id) : undefined;
         const attachmentText = templateDescription?.context || selected.map((a: any) => a.text).join('\n\n');
+        if (typeof input.sourceText === 'string' && input.sourceText.length > 100_000) throw new Error('INPUT_LIMIT');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
         const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
         if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');

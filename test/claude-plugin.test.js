@@ -106,7 +106,7 @@ test('Codex rules: one managed STeP block in AGENTS.md, replaced on re-run, the 
 test('Antigravity global install: Skills in ~/.gemini/config/skills, brief in GEMINI.md once, the user’s own text and Skills kept', async () => {
   const { installAntigravityGlobal } = await import('../scripts/install-agent-skills.mjs');
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
-  const { tmpdir } = await import('node:os');
+  const { tmpdir, homedir } = await import('node:os');
   const gemini = mkdtempSync(join(tmpdir(), 'step-gemini-home-'));
   try {
     writeFileSync(join(gemini, 'GEMINI.md'), '# Mine\n\nตอบภาษาไทย\n');
@@ -122,7 +122,12 @@ test('Antigravity global install: Skills in ~/.gemini/config/skills, brief in GE
     assert.equal(rules.split('STeP AI Skills: begin').length - 1, 1);
     const linked = [...rules.matchAll(/([^\s(),`]+\/step\/rules\/[\w-]+\.md)/g)].map((m) => m[1]);
     assert.ok(linked.length > 0);
-    for (const path of linked) assert.ok(existsSync(path), `GEMINI.md links to ${path}`);
+    for (const path of linked) {
+      // The installer abbreviates real home paths to ~/; fs does not expand that notation.
+      const target = path.startsWith('~/') ? join(homedir(), path.slice(2)) : path;
+      assert.equal(dirname(resolve(target)), resolve(config, 'step', 'rules'), 'rule links stay in this installed configuration');
+      assert.ok(existsSync(target) && statSync(target).isFile(), `GEMINI.md links to ${path}`);
+    }
     assert.match(readFileSync(join(config, 'skills', 'receipt-audit', 'SKILL.md'), 'utf8'), /`\.\.\/\.\.\/step\/manifest\/documents\.yaml`/);
   } finally {
     rmSync(gemini, { recursive: true, force: true });

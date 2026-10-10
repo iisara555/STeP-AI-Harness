@@ -232,6 +232,59 @@ export class AgentBrowser {
     );
     return { tab: id, ...result };
   }
+  async capture(id: string, context: Context) {
+    await context.check();
+    const entry = this.get(id, context.sessionId);
+    if (entry.busy) throw new Error('BROWSER_BUSY');
+    this.dock?.select(id);
+    entry.busy = true;
+    try {
+      const before = await this.snapshot(id, entry, context.signal);
+      if (before.requiresManualLogin) throw new Error('BROWSER_IMAGE_SENSITIVE');
+      if (new URL(before.url).origin !== entry.origin) throw new Error('BROWSER_ORIGIN_CHANGED');
+      if (
+        !(await context.approve(
+          tm('ส่งภาพหน้าจอให้ AI?'),
+          tm('ส่งเฉพาะส่วนที่มองเห็นจากเว็บ {0} ให้บัญชี AI ที่เลือก ภาพอาจมีข้อมูลส่วนบุคคล กรุณาตรวจก่อนยินยอม', entry.origin),
+        ))
+      )
+        throw new Error('TOOL_DENIED');
+      await context.check();
+      const safe = await this.script(
+        entry,
+        `(() => { ${helpers}; return {url:location.href,sensitive:Array.from(document.querySelectorAll('input,textarea')).some(el => sensitive(el) && visible(el)) || Array.from(document.querySelectorAll('iframe')).some(visible),dirty:globalThis.__stepBrowser?.dirty}; })()`,
+        context.signal,
+      );
+      if (safe.sensitive || safe.dirty || safe.url !== before.url) throw new Error('BROWSER_IMAGE_CHANGED');
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let abort: (() => void) | undefined;
+      const image = await Promise.race([
+        entry.contents.capturePage(undefined, { stayHidden: true, stayAwake: true }),
+        new Promise<never>((_, reject) => {
+          abort = () => reject(new Error('CANCELLED'));
+          context.signal.addEventListener('abort', abort, { once: true });
+          timer = setTimeout(() => reject(new Error('BROWSER_TIMEOUT')), 10000);
+        }),
+      ]).finally(() => {
+        clearTimeout(timer);
+        if (abort) context.signal.removeEventListener('abort', abort);
+      });
+      await context.check();
+      const after = await this.script(entry, `({url:location.href,dirty:globalThis.__stepBrowser?.dirty})`, context.signal);
+      if (after.dirty || after.url !== before.url) throw new Error('BROWSER_IMAGE_CHANGED');
+      const size = image.getSize();
+      const scale = Math.min(1, 1600 / size.width, 1200 / size.height);
+      const bytes = (
+        scale < 1
+          ? image.resize({ width: Math.max(1, Math.floor(size.width * scale)), height: Math.max(1, Math.floor(size.height * scale)) })
+          : image
+      ).toPNG();
+      if (!bytes.length || bytes.length > 5_000_000) throw new Error('FILE_LIMIT');
+      return { mime: 'image/png' as const, data: bytes.toString('base64') };
+    } finally {
+      entry.busy = false;
+    }
+  }
   /**
    * A task that opens a site it already has open gets that tab back, already approved and with the employee's sign-in,
    * instead of a fresh page at the login screen. The AI does not keep tab IDs between messages, so "open" again is how it

@@ -68,11 +68,42 @@ test('organization proxy receives a pinned public CONNECT address, strips script
     const result = await fetchPublic('http://public.example', new AbortController().signal, url, resolver);
     assert.equal(result.text, 'public content');
     assert.deepEqual(connects, ['8.8.8.8:80']);
+    const html = await fetchPublic('http://public.example', new AbortController().signal, url, resolver, 'html');
+    assert.match(html.text, /<h1>public<\/h1>/);
+    assert.match(html.text, /<script>injected\(\)<\/script>/);
+    // The extraction layer, not transport, strips executable content from this inert HTML.
+    assert.deepEqual(connects, ['8.8.8.8:80', '8.8.8.8:80']);
     redirect = true;
     await assert.rejects(fetchPublic('http://public.example', new AbortController().signal, url, resolver), /WEB_ADDRESS_BLOCKED/);
-    assert.equal(connects.length, 2);
+    assert.equal(connects.length, 3);
   } finally {
     proxy.closeAllConnections();
     await new Promise<void>(resolve => proxy.close(() => resolve()));
+  }
+});
+test('RSS uses the same pinned public transport and is unsupported in ordinary web fetch', async () => {
+  const feed = '<rss><channel><item><title>synthetic</title></item></channel></rss>';
+  const proxy = createServer();
+  proxy.on('connect', (req, socket) => {
+    assert.equal(req.url, '8.8.8.8:80');
+    socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+    socket.once('data', () =>
+      socket.end(
+        `HTTP/1.1 200 OK\r\nContent-Type: application/rss+xml\r\nContent-Length: ${Buffer.byteLength(feed)}\r\nConnection: close\r\n\r\n${feed}`,
+      ),
+    );
+  });
+  proxy.listen(0, '127.0.0.1');
+  await once(proxy, 'listening');
+  const proxyUrl = `http://127.0.0.1:${(proxy.address() as any).port}`;
+  const resolver = async () => [{ address: '8.8.8.8', family: 4 }];
+  try {
+    assert.equal((await fetchPublic('http://public.example', new AbortController().signal, proxyUrl, resolver, 'rss')).text, feed);
+    await assert.rejects(fetchPublic('http://public.example', new AbortController().signal, proxyUrl, resolver), /WEB_CONTENT_UNSUPPORTED/);
+    const cancelled = AbortSignal.abort();
+    await assert.rejects(fetchPublic('http://public.example', cancelled, proxyUrl, resolver, 'rss'), /CANCELLED/);
+  } finally {
+    proxy.closeAllConnections();
+    await new Promise<void>(done => proxy.close(() => done()));
   }
 });

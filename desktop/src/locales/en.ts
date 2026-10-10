@@ -3,6 +3,71 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  สำเร็จ: 'Succeeded',
+  'AI ดึงหัวข้อและตารางจากเว็บ อ่านภาพเมื่อคุณยินยอม และสร้างภาพด้วยบัญชี API ที่รองรับได้':
+    'AI can extract web headings and tables, analyze images with your consent, and generate images using a supported API account',
+  'ทดสอบ Google Workspace ผ่าน MCP ขององค์กร และเปิดประวัติเครื่องมือดูรหัสตรวจสอบได้':
+    'Test Google Workspace through your organization MCP and inspect diagnostic IDs in tool history',
+  'สร้างภาพด้วยบัญชี API นี้?': 'Generate an image using this API account?',
+  '\nจะสร้างภาพหนึ่งภาพด้วยบัญชี API ที่เลือก อาจมีค่าใช้จ่ายตามบริการ':
+    '\nGenerate one image using the selected API account. Provider charges may apply.',
+  'หน้าเว็บนี้ยังแยกเนื้อหาไม่ได้ ลองอ่านด้วย web_fetch หรือระบุแหล่งอื่น':
+    'This page could not be extracted. Try web_fetch or another source.',
+  'นโยบายตรวจข้อมูลส่วนบุคคลไม่อนุญาตให้ส่งภาพผ่านเครื่องมือนี้ กรุณาใช้ข้อความที่ตรวจแล้ว':
+    'Privacy policy prevents image transmission through this tool. Use reviewed text instead.',
+  'หน้าเว็บนี้มีช่องข้อมูลสำคัญ จึงยังส่งภาพให้ AI ไม่ได้': 'This page contains sensitive input fields, so its image cannot be sent to AI.',
+  'หน้าเว็บเปลี่ยนระหว่างขอ consent กรุณาอ่านหน้าเว็บใหม่แล้วลองอีกครั้ง':
+    'The page changed during consent. Read it again before retrying.',
+  เครื่องมือทำงานไม่สำเร็จ: 'The tool could not complete.',
+  'ส่งภาพหน้าจอให้ AI?': 'Send a screenshot to AI?',
+  'ส่งเฉพาะส่วนที่มองเห็นจากเว็บ {0} ให้บัญชี AI ที่เลือก ภาพอาจมีข้อมูลส่วนบุคคล กรุณาตรวจก่อนยินยอม':
+    'Send the visible viewport of {0} to the selected AI account. The image may contain personal data; inspect it before consenting.',
+  'ส่งภาพให้ AI ตรวจ?': 'Send an image for AI analysis?',
+  'ภาพ {0} จะส่งให้บัญชี AI ที่เลือก กรุณาตรวจข้อมูลในภาพก่อนยินยอม':
+    'Image {0} will be sent to the selected AI account. Inspect its contents before consenting.',
+  'ใช้ MCP server ขององค์กร สิทธิ์ Google และการเข้าสู่ระบบจัดการโดย server เครื่องมือค้นหาและเรียกใช้จะขอ consent แยกกัน':
+    'Use the organization MCP server. Google sign-in and permissions are managed by that server. Discovery and execution request separate consent.',
+  'ยังไม่ได้ตั้งค่า Google Workspace ให้ผู้ดูแลเพิ่ม profile google-workspace ใน managed policy แล้วเปิด MCP':
+    'Google Workspace is not configured. Ask the administrator to add the google-workspace profile to managed policy and enable MCP.',
+  'ทดสอบ Google Workspace': 'Test Google Workspace',
+  'การทดสอบอ่านรายการเครื่องมือเท่านั้น ยังไม่ยืนยันสิทธิ์อ่านหรือเขียนเอกสารจริง':
+    'The test reads the tool catalog only; it does not establish access to real documents.',
+  ค้นเว็บและดึงเนื้อหาเว็บได้: 'Public web search and extraction available',
+  'อ่านภาพได้เมื่อ policy อนุญาตและคุณยินยอม': 'Image analysis requires policy permission and your consent',
+  การเชื่อมต่อนี้ยังไม่รองรับการอ่านภาพ: 'Image analysis is not supported by this connection',
+  'สร้างภาพได้ตามโมเดลและสิทธิ์ API': 'Image generation depends on API model access',
+  'สร้างภาพต้องใช้ OpenAI หรือ Gemini API': 'Image generation requires OpenAI or Gemini API',
+  ประวัติเครื่องมือและรหัสตรวจสอบ: 'Tool history and diagnostic IDs',
+  'เก็บเฉพาะชื่อเครื่องมือ เวลา ผล และรหัสในเครื่อง ไม่บันทึกเนื้อหาที่ส่งให้เครื่องมือ':
+    'Only tool names, timing, outcomes and IDs are stored locally; tool inputs are not logged.',
+  รหัสตรวจสอบ: 'Diagnostic ID',
+
+  'AI สำหรับตรวจทาน': 'AI for review',
+  'เลือก AI ที่พร้อมใช้งาน': 'Choose a ready AI connection',
+  'ส่งผลตรวจและข้อความ OCR ให้ AI ที่เลือก ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้':
+    'Send the review and OCR text to the selected AI. The original image is not sent in this step.',
+  'เลือกใบเสร็จ → เทียบข้อมูลกับต้นฉบับ → ยืนยันและให้ AI ตรวจทาน':
+    'Choose a receipt → compare with the original → confirm and ask AI to review',
+  ข้อมูลที่ตรวจยังอยู่ในหน้านี้: 'Your reviewed information is still on this page',
+  ดูองค์ประกอบพื้นฐานใบเสร็จ: 'View basic receipt requirements',
+  'กำลังส่งข้อมูลให้ AI…': 'Sending information to AI…',
+  'ข้อมูลใบเสร็จมากเกินกว่าจะส่งให้ AI ในครั้งเดียว บันทึกผลตรวจไว้ แล้วเลือกเอกสารที่สั้นลงหรือแยกตรวจทีละใบ':
+    'This receipt has too much information to send at once. Save your review, then choose a shorter document or review receipts separately.',
+  'คำค้นยาวเกินไป กรุณาใช้คำค้นสาธารณะสั้น ๆ': 'The query is too long. Use a short public search query.',
+  'บริการค้นเว็บส่งผลที่อ่านไม่ได้ กรุณาลองใหม่หรือระบุเว็บไซต์ให้ AI อ่าน':
+    'The search service returned unreadable results. Try again or give the AI a website to read.',
+  'ยังไม่พบผลค้นเว็บ ลองเปลี่ยนคำค้นหรือระบุเว็บไซต์ให้ AI อ่าน':
+    'No web results were found. Change the query or give the AI a website to read.',
+  'ทุกการเชื่อมต่อ AI ค้นเว็บสาธารณะได้ รวม Antigravity โดยไม่ต้องเพิ่ม API key':
+    'Every AI connection can search the public web, including Antigravity, without another API key',
+  'หน้าใบเสร็จอยู่ในหน้าเดียว ตรวจข้อมูลแล้วส่งให้ AI ตรวจทานต่อได้ พร้อมข้อความเมื่อส่งไม่สำเร็จ':
+    'Review receipts on one page, then send to AI for another check with clear messages if sending fails',
+  'AI ตรวจและหยุดงานคำสั่งเบื้องหลังได้ การหยุดงานใช้สิทธิ์ตามโหมดที่คุณเลือก':
+    'The AI can check and stop background commands using the permissions of your selected mode',
+  'AI ค้นไฟล์และข้อความทั้งโฟลเดอร์งาน และแก้ไฟล์ทีละจุดผ่านรายการแก้ไขให้คุณตรวจก่อน':
+    'The AI can search files and text across the work folder and make exact edits that wait in Changes for your review',
+  'ไฟล์รหัสผ่านของโปรแกรมทั่วไป เช่น .netrc และ .npmrc ถูกกันไม่ให้ AI อ่าน':
+    'Password files of common tools, such as .netrc and .npmrc, are kept away from the AI',
   กำลังตรวจงานเบื้องหลัง: 'Checking background tasks',
   'หยุดงานเบื้องหลังนี้?': 'Stop this background task?',
   '{0}\nสถานะ: {1} · เริ่ม: {2}': '{0}\nStatus: {1} · started: {2}',

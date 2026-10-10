@@ -18,16 +18,33 @@ test('receipt handoff serializes the reviewed JSON as persistent workspace sourc
   assert.match(source, /blank field may still have OCR candidates or unmapped lines/);
 });
 
+test('large OCR handoff fits host source limits without losing confirmed values or hiding omitted evidence', () => {
+  const source = receiptSourceText({
+    source_id: 'synthetic',
+    fields: { total: { value: '107.00', checked: true } },
+    ocr: { text: 'synthetic line\n'.repeat(20000), lines: Array.from({ length: 2000 }, () => ({ text: 'synthetic line', page: 1 })) },
+    afp_mapping: { fields: { total: { selected_value: '107.00', candidates: Array.from({ length: 1000 }, () => ({ value: '107.00' })) } } },
+  });
+  assert.ok(source.length <= 90_000);
+  const data = JSON.parse(source.slice(source.indexOf('{')));
+  assert.equal(data.fields.total.value, '107.00');
+  assert.equal(data.fields.total.provenance, 'SOURCE_FACT');
+  assert.equal(data.fields.total.verification, 'human-source-comparison');
+  assert.equal(data.ocr.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.ok(data.handoff_evidence_limit.omitted);
+  assert.match(source, /not proof that omitted evidence was absent/);
+});
+
 test('receipt UI passes structured source through workspace send and consent replay', async () => {
   const receipt = await readFile(new URL('../src/receipt.tsx', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
   const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
 
   assert.match(receipt, /receiptSourceText\(draft\(\)\)/);
-  assert.match(app, /start\(s\.id, text, \[\], undefined, undefined, allowIds, sourceText, 'draft'\)/);
+  assert.match(app, /start\(\s*s\.id,\s*text,\s*\[\],\s*undefined,\s*undefined,\s*allowIds,\s*sourceText,\s*'chat'/);
   assert.match(app, /allowIdentifiers: allowIds,\s*sourceText/);
   assert.match(app, /ask\.allowIds,\s*ask\.sourceText/);
-  assert.match(app, /handoff=\{\(text, sourceText, allowIds\).*receiptHandoff\(text, sourceText, allowIds\)/s);
+  assert.match(app, /handoff=\{receiptHandoff\}/);
   assert.match(main, /combinedSource/);
   assert.match(main, /\.run\(\s*id,\s*text,\s*combinedSource,\s*true/);
 });

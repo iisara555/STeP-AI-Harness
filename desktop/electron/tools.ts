@@ -13,6 +13,8 @@ import { Questions } from './questions';
 import type { Policy, PermissionMode } from './policy';
 import type { LoopHost } from './tool-loop';
 import { fetchPublic, publicUrl } from './web-fetch';
+import { extractWeb } from './web-extract';
+import { searchUrl } from './public-search';
 import { sheetWorker } from './sheets';
 import { sensitivePath, evaluatePermission, deniedPath } from './permissions';
 import { RunTransmission, type TransmissionSource } from './transmission';
@@ -48,6 +50,8 @@ export type ToolScope = {
   search: (query: string) => Promise<string>;
   activity: (text: string) => void;
   /** The native workflow of this run (electron/workflows.ts), if the employee picked one. */
+  analyze?: (prompt: string, image: import('../src/types').VisionInput) => Promise<string>;
+  generate?: (prompt: string, model?: string) => Promise<unknown>;
   workflow?: Workflow;
 };
 const blocked = (c: any) => c?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'UNAVAILABLE', 'CLARIFY'].includes(c?.mode);
@@ -147,7 +151,9 @@ export class DesktopTools {
         'ข้อมูลใหม่ {0} ตัวอักษร จะส่งให้ {1}\n{2}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n{3}',
         text.length.toLocaleString(mainLocale()),
         destination === 'web-query'
-          ? scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
+          ? this.harness.publicSearch
+            ? 'Bing'
+            : scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
           : destination === 'web-url'
             ? tm('เว็บปลายทางที่ระบุ')
             : scope.connection.provider,
@@ -279,7 +285,7 @@ export class DesktopTools {
           r.args?.action === 'list' || !r.input ? await this.workbench.path(r.input || '.') : dirname(await this.workbench.path(r.input));
         return { key: `files:${folder}`, label: tm('ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)', relative(workspace, folder) || '.') };
       }
-      if (['browser', 'web_fetch'].includes(r.tool)) {
+      if (['browser', 'web_fetch', 'web_extract'].includes(r.tool)) {
         const origin = publicUrl(r.input).origin;
         return { key: `web:${origin}`, label: tm('ผลการอ่านเว็บ {0}', origin) };
       }
@@ -307,6 +313,9 @@ export class DesktopTools {
           'mcp_search',
           'sandbox',
           'browser_control',
+          'browser_vision',
+          'vision_analyze',
+          'image_generate',
         ].includes(r.tool),
       activity: t =>
         scope.activity(
@@ -380,6 +389,7 @@ export class DesktopTools {
     if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
     const fileTool = [
       'files',
+      'vision_analyze',
       'search_files',
       'patch',
       'changes',
@@ -392,18 +402,22 @@ export class DesktopTools {
     ].includes(r.tool);
     const command = r.tool === 'terminal' || r.tool === 'sandbox' ? target : undefined;
     if (command && this.harness.privacy(command).action === 'block-external') throw new Error('PRIVACY_REVIEW_REQUIRED');
-    if (this.mode() === 'plan' && ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create'].includes(r.tool))
+    if (this.mode() === 'plan' && ['changes', 'patch', 'sheet_edit', 'sheet_create', 'slides_create', 'image_generate'].includes(r.tool))
       throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
-      readOnly: !cancelTask && !['terminal', 'sandbox', 'mcp_call', 'mcp_search'].includes(r.tool),
+      readOnly: !cancelTask && !['terminal', 'sandbox', 'mcp_call', 'mcp_search', 'image_generate'].includes(r.tool),
       ...(fileTool ? { path: target || '.' } : {}),
       ...(command ? { command, execute: true } : {}),
     };
     return this.gate.run(
       request,
       {
-        title: cancelTask ? tm('หยุดงานเบื้องหลังนี้?') : tm('รันคำสั่งจาก AI?'),
+        title: cancelTask
+          ? tm('หยุดงานเบื้องหลังนี้?')
+          : r.tool === 'image_generate'
+            ? tm('สร้างภาพด้วยบัญชี API นี้?')
+            : tm('รันคำสั่งจาก AI?'),
         body: cancelled
           ? tm(
               '{0}\nสถานะ: {1} · เริ่ม: {2}',
@@ -411,7 +425,9 @@ export class DesktopTools {
               String(cancelled.status || ''),
               String(cancelled.at || ''),
             )
-          : target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
+          : r.tool === 'image_generate'
+            ? target + tm('\nจะสร้างภาพหนึ่งภาพด้วยบัญชี API ที่เลือก อาจมีค่าใช้จ่ายตามบริการ')
+            : target + tm('\nคำสั่งอาจแก้ไฟล์หรือเชื่อมต่อเครือข่ายด้วยสิทธิ์ของคุณ'),
         key: target,
         sessionId: scope.sessionId,
       },
@@ -466,6 +482,9 @@ export class DesktopTools {
           case 'mcp_search':
           case 'mcp_call':
           case 'sandbox':
+          case 'vision_analyze':
+          case 'browser_vision':
+          case 'image_generate':
           case 'browser_control':
             if (!this.external) throw new Error('TOOL_UNAVAILABLE');
             return this.external(r, scope, check);
@@ -531,6 +550,7 @@ export class DesktopTools {
             }
             return this.workbench.inspectTask(scope.sessionId, target, a);
           case 'browser':
+          case 'web_extract':
           case 'web_fetch': {
             const url = publicUrl(target).href;
             // A URL can leak task data through its path/query even on an otherwise public host.
@@ -538,10 +558,19 @@ export class DesktopTools {
             await this.siteConsent(url, scope);
             await this.outgoing(url, scope, 'web-url');
             await check();
-            return fetchPublic(url, scope.signal, this.policy().network?.proxyUrl);
+            const fetched = await fetchPublic(
+              url,
+              scope.signal,
+              this.policy().network?.proxyUrl,
+              undefined,
+              r.tool === 'web_extract' ? 'html' : undefined,
+            );
+            await check();
+            return r.tool === 'web_extract' ? extractWeb(fetched.text, fetched.url) : fetched;
           }
           case 'web_search':
             if (!target.trim() || this.harness.privacy(target).action !== 'pass') throw new Error('PRIVACY_REVIEW_REQUIRED');
+            if (this.harness.publicSearch) await this.siteConsent(searchUrl(target), scope);
             await this.outgoing(target, scope, 'web-query');
             await check();
             return scope.search(target);

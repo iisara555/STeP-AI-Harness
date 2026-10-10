@@ -29,7 +29,7 @@ export function AutomationDialog({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [remove, setRemove] = useState('');
-  const [servers, setServers] = useState<{ name: string; transport: string }[]>([]),
+  const [servers, setServers] = useState<{ name: string; transport: string; profile?: 'google-workspace' }[]>([]),
     [server, setServer] = useState(''),
     [search, setSearch] = useState(''),
     [tool, setTool] = useState(''),
@@ -216,6 +216,32 @@ export function AutomationDialog({
           {t('เครื่องมือ MCP')} {features.mcp ? '' : t('(ยังไม่เปิดใช้)')}
         </summary>
         <p className="small muted">{t('ตรวจปลายทาง ข้อมูล และผลทุกครั้ง เครื่องมืออาจแก้ข้อมูลในบริการที่เชื่อมต่อ')}</p>
+        <section aria-label="Google Workspace MCP">
+          <h3>Google Workspace</h3>
+          <p>
+            {t('ใช้ MCP server ขององค์กร สิทธิ์ Google และการเข้าสู่ระบบจัดการโดย server เครื่องมือค้นหาและเรียกใช้จะขอ consent แยกกัน')}
+          </p>
+          {!servers.some(s => s.profile === 'google-workspace') && (
+            <p>{t('ยังไม่ได้ตั้งค่า Google Workspace ให้ผู้ดูแลเพิ่ม profile google-workspace ใน managed policy แล้วเปิด MCP')}</p>
+          )}
+          {servers
+            .filter(s => s.profile === 'google-workspace')
+            .map(s => (
+              <button
+                key={s.name}
+                disabled={busy || !features.mcp}
+                onClick={() =>
+                  void act(async () => {
+                    setServer(s.name);
+                    setResult(JSON.stringify(await api.call('mcpSearch', { server: s.name, query: '' }), null, 2));
+                  })
+                }
+              >
+                {t('ทดสอบ Google Workspace')} · {s.name}
+              </button>
+            ))}
+          <p className="small muted">{t('การทดสอบอ่านรายการเครื่องมือเท่านั้น ยังไม่ยืนยันสิทธิ์อ่านหรือเขียนเอกสารจริง')}</p>
+        </section>
         <label>
           Server
           <select aria-label="MCP server" value={server} onChange={e => setServer(e.target.value)}>

@@ -45,7 +45,10 @@
     { "q": "ลาคลอดได้กี่วัน", "doc": "hr-personnel-welfare-2569" },
     { "q": "ขอเบิกเงินต้องส่งก่อนกี่วัน", "doc": "afp-operational-circulars" },
     { "q": "E-Signature ใน MIS ใช้อย่างไร", "doc": "afp-operational-circulars" },
-    { "q": "ฟอร์มขอใช้บริการของทีม CC รหัสอะไร", "doc": ["cc-iso-document-register", "qms-working-master-list"] },
+    {
+      "q": "ฟอร์มขอใช้บริการของทีม CC รหัสอะไร",
+      "doc": ["cc-iso-document-register", "qms-working-master-list", "mis-iso-document-register"]
+    },
     { "q": "เอกสารคุณภาพฉบับล่าสุดดูที่ไหน", "doc": ["cc-iso-document-register", "qms-working-master-list"] },
     { "q": "วิสัยทัศน์ของ STeP", "doc": "step-public-profile" },
     { "q": "ทีม HD ทำหน้าที่อะไร", "doc": ["step-teams-directory", "hr-service-channels"] },
@@ -55,6 +58,12 @@
     { "q": "แนะนำร้านกาแฟในเชียงใหม่", "doc": "none" },
     { "q": "เขียนโค้ด Python อ่านไฟล์ CSV", "doc": "none" },
     { "q": "สภาพอากาศพรุ่งนี้", "doc": "none" },
-    { "q": "วันลาของพนักงานใหม่", "doc": "hr-personnel-welfare-2569" }
+    { "q": "วันลาของพนักงานใหม่", "doc": "hr-personnel-welfare-2569" },
+    { "q": "แบบฟอร์มคำขอให้จัดซื้อรุ่นล่าสุด", "doc": "mis-iso-document-register" },
+    { "q": "FM-AF-020 ใช้ rev อะไร", "doc": "mis-iso-document-register" },
+    { "q": "QP-AF-001 มีผลวันไหน", "doc": "mis-iso-document-register" },
+    { "q": "คู่มือคุณภาพรุ่นปัจจุบัน", "doc": "mis-iso-document-register" },
+    { "q": "แบบฟอร์มทีม CC ที่ใช้อยู่", "doc": ["mis-iso-document-register", "cc-iso-document-register"] },
+    { "q": "ช่วยออกแบบโปสเตอร์งานสัมมนา", "doc": "none" }
   ]
 }

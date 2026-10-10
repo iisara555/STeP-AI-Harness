@@ -156,6 +156,25 @@ export function AIConnections({
                       ? t('ลงชื่อแล้ว แต่ยังไม่พร้อมใช้งาน')
                       : t('ยังไม่พร้อมใช้งาน')}
               </p>
+              {c.ready && (
+                <p className="small muted">
+                  {t(
+                    snapshot.policy?.features.toolLoop === false ? 'ผู้ดูแลปิดวงจรเครื่องมืออัตโนมัติแล้ว' : 'ค้นเว็บและดึงเนื้อหาเว็บได้',
+                  )}
+                  {' · '}
+                  {t(
+                    ['openai', 'gemini', 'claude'].includes(c.provider)
+                      ? 'อ่านภาพได้เมื่อ policy อนุญาตและคุณยินยอม'
+                      : 'การเชื่อมต่อนี้ยังไม่รองรับการอ่านภาพ',
+                  )}
+                  {' · '}
+                  {t(
+                    c.mode === 'api' && ['openai', 'gemini'].includes(c.provider)
+                      ? 'สร้างภาพได้ตามโมเดลและสิทธิ์ API'
+                      : 'สร้างภาพต้องใช้ OpenAI หรือ Gemini API',
+                  )}
+                </p>
+              )}
               {busy === c.id && progress[c.id] ? (
                 <p className="connect-progress">
                   <LoaderCircle size={13} className="spin" />

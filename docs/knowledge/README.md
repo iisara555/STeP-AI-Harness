@@ -18,9 +18,10 @@
 | | [ระบบและช่องทางงานบุคคล](hr-service-channels.md) | ระบบที่ใช้และช่องทางติดต่อทีม HD |
 | การเงินและพัสดุ (AFP) | [แนวปฏิบัติงาน AFP](afp-operational-circulars.md) | Lead Time, หมวดค่าใช้จ่าย, E-Signature |
 | | [ลำดับชั้นระเบียบการเงินและพัสดุ](afp-regulation-hierarchy.md) | ระเบียบใดใช้ก่อนหลัง (ฉบับทำงาน ไม่ใช่ตัวระเบียบ) |
-| ระบบคุณภาพ (ISO 9001) | [ทะเบียนเอกสารระบบคุณภาพ ทีม CC](cc-iso-document-register.md) | รหัสเอกสาร QP / WI / FM ของทีม CC |
-| | [Master Document List ฉบับทำงาน](qms-working-master-list.md) | Rev และวันที่ของเอกสารควบคุม (ฉบับทำงาน) |
-| | [แผนที่ ISO 9001:2015 กับเอกสาร STeP](qms-working-reference.md) | ใช้แทน Quality Manual |
+| ระบบคุณภาพ (ISO 9001) | [ทะเบียนเอกสารระบบคุณภาพ ISO จาก STeP MIS](mis-iso-document-register.md) | เลขที่ REV วันที่บังคับใช้ และสถานะของ QM / QP / WI / FM / SD ทุกทีม (สร้างด้วย `scripts/generate-mis-iso-register.mjs`) |
+| | [ทะเบียนเอกสารระบบคุณภาพ ทีม CC](cc-iso-document-register.md) | รหัสเอกสาร QP / WI / FM ของทีม CC และแบบฟอร์มที่ยกเลิก |
+| | [Master Document List ฉบับทำงาน](qms-working-master-list.md) | ตัวชี้ไปทะเบียน MIS และ QP ที่ Skill อ้างอิง |
+| | [แผนที่ ISO 9001:2015 กับเอกสาร STeP](qms-working-reference.md) | ใช้แทนเนื้อหา Quality Manual (QM-QM-001 อยู่ใน MIS) |
 | พื้นที่และเครื่องมือ | [ดัชนีเครื่องมือ เครื่องจักร และพื้นที่](facility-equipment-index.md) | เครื่องมือและพื้นที่ STeP/NSP เชียงใหม่ |
 
 ## กติกาของโฟลเดอร์นี้
