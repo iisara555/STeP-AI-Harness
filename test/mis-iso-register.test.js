@@ -22,7 +22,7 @@ const URLISH = /https?:\/\/|www\.|viewdoc|script\.google|example\.invalid|mis\.s
 const { renderRegister } = await import('../scripts/generate-mis-iso-register.mjs');
 const fixture = () => JSON.parse(readFileSync(FIXTURE, 'utf8'));
 const sections = (md) => md.split(/\n(?=## )/).slice(1);
-const rowOf = (md, number) => md.split('\n').find((line) => line.startsWith(`| ${number} |`));
+const rowOf = (md, number) => md.split(/\r?\n/).find((line) => line.startsWith(`| ${number} |`));
 
 test('the test root uses a native filesystem path including Windows drive and escaped characters', () => {
   assert.equal(ROOT, fileURLToPath(new URL('..', import.meta.url)));
@@ -146,7 +146,7 @@ test('the committed register matches a regeneration from the private extract whe
 });
 
 test('the MIS register is registered and shipped everywhere a knowledge document must be', () => {
-  const documents = readFileSync(join(ROOT, 'manifest', 'documents.yaml'), 'utf8');
+  const documents = readFileSync(join(ROOT, 'manifest', 'documents.yaml'), 'utf8').replace(/\r\n/g, '\n');
   const block = documents.split(/\n(?=  [a-z0-9_-]+:\n)/).find((b) => b.startsWith('  mis-iso-document-register:'));
   assert.ok(block, 'registered in manifest/documents.yaml');
   assert.match(block, /^    path: docs\/knowledge\/mis-iso-document-register\.md$/m);

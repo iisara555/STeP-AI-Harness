@@ -10,7 +10,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ### Combined release: PR #130, #131, #133 and review fixes
 
-- รวม portable plugin test, ทะเบียนเอกสาร ISO จาก STeP MIS และการเตรียม Desktop release เป็นชุดเดียว ตัวทดสอบขยาย `~/` ก่อนตรวจไฟล์จริงใน installation และใช้ native filesystem path บน Windows แทน URL pathname ไม่มีการเปลี่ยน installer ของ plugin
+- รวม portable plugin test, ทะเบียนเอกสาร ISO จาก STeP MIS และการเตรียม Desktop release เป็นชุดเดียว ตัวทดสอบขยาย `~/` ก่อนตรวจไฟล์จริงใน installation และใช้ native filesystem path บน Windows แทน URL pathname และตรวจแถวทะเบียน/manifest ได้ทั้ง LF กับ CRLF ไม่มีการเปลี่ยน installer ของ plugin
 - ทะเบียน MIS มีเลขเอกสาร REV วันที่บังคับใช้ และสถานะ 1,217 รายการ โดยไม่มีไฟล์ต้นฉบับหรือลิงก์ดาวน์โหลดภายใน ค้นเลขเอกสารแบบตรงตัวก่อนคะแนนข้อความและไม่แทนเลขที่ไม่พบด้วยเอกสารใกล้เคียง Excerpt จากการค้นและการเปิด section พกวันที่ดึง snapshot พร้อมกติกายึดฉบับจริงใน MIS อำนาจประกาศใช้/ยกเลิกยังเป็นของ QS
 - ปิดช่อง credential ใน background output ที่ผสม LF/CRLF หรือแบ่งข้าม chunk/cursor: stdout และ stderr มี state แยกกัน เก็บ key ที่ยังไม่มีค่าจนอ่านค่าครบ ปิดบังบรรทัดก่อนลง log และระงับบรรทัดที่ยาวเกิน 8,000 ตัวอักษรพร้อมค่าที่อาจต่อในบรรทัดถัดไป แทนการปล่อยส่วนที่อ่านไม่ครบ Cursor ของ sanitized output ยังเป็น append-only เมื่อ scanner ระงับบรรทัดจะไม่ปล่อยค่าใน continuation โดยไม่มี key
 
