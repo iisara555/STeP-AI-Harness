@@ -36,6 +36,14 @@ _Last updated: 2026-10-10_
   document.
 - Small models with a 4,096-token window cannot fit the smallest prompt.
 
+## Document source and acceptance backlog
+
+These follow-ups remain open after the private MIS/native-template QA recorded in `document-drafting-review.md:62`:
+
+- **Source register and revision reconciliation:** record each form/document's owner, revision, effective date, provenance and private checksum; reconcile library/Master List differences with the document owner before declaring a current version. Keep internal source files and detailed evidence outside the public repository.
+- **Verified WI/QP → Skill mapping:** connect only owner-confirmed current agency instructions/procedures to drafting and review Skills, especially correspondence, procurement and finance. Do not infer regulatory clauses or accepted rates from an unverified revision.
+- **Five-tool accuracy acceptance:** TOR, memo, external letter, project proposal and minutes. Run synthetic cases first, covering factual content, missing fields, tables and signing sections; then have the owner privately review real documents and exported DOCX in Microsoft Word with the correct template/fonts. Existing host/export tests are not live-model or owner acceptance.
+
 ## Not started (ideas the owner approved in principle)
 
 - Antigravity image input; Learning Inbox shared across a team.
