@@ -1777,6 +1777,32 @@ export default function App() {
                     )}
                   </article>
                 )}
+                {!running && session?.runs?.some(run => run.steps.some(step => step.tools?.length)) && (
+                  <details className="tool-observability">
+                    <summary>{t('ประวัติเครื่องมือและรหัสตรวจสอบ')}</summary>
+                    <p className="small muted">
+                      {t('เก็บเฉพาะชื่อเครื่องมือ เวลา ผล และรหัสในเครื่อง ไม่บันทึกเนื้อหาที่ส่งให้เครื่องมือ')}
+                    </p>
+                    {session.runs.slice(-3).flatMap(run =>
+                      run.steps.flatMap(step =>
+                        (step.tools || []).map(tool => (
+                          <p key={tool.id}>
+                            <code>{tool.tool}</code> · {tool.ok ? t('สำเร็จ') : t('ไม่สำเร็จ')} · {tool.ms} ms{' '}
+                            {tool.code && (
+                              <span>
+                                {t(errorText[tool.code] || 'เครื่องมือทำงานไม่สำเร็จ')} ({tool.code})
+                              </span>
+                            )}
+                            <br />
+                            <span className="small muted">
+                              {t('รหัสตรวจสอบ')}: {run.id} / {tool.id}
+                            </span>
+                          </p>
+                        )),
+                      ),
+                    )}
+                  </details>
+                )}
                 {!running && (session?.status === 'error' || session?.status === 'interrupted') && lastRequest && (
                   <div className="retry-row">
                     {/* Continues the stopped task, after any Playbook steps it already finished. */}

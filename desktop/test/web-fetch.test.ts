@@ -68,9 +68,14 @@ test('organization proxy receives a pinned public CONNECT address, strips script
     const result = await fetchPublic('http://public.example', new AbortController().signal, url, resolver);
     assert.equal(result.text, 'public content');
     assert.deepEqual(connects, ['8.8.8.8:80']);
+    const html = await fetchPublic('http://public.example', new AbortController().signal, url, resolver, 'html');
+    assert.match(html.text, /<h1>public<\/h1>/);
+    assert.match(html.text, /<script>injected\(\)<\/script>/);
+    // The extraction layer, not transport, strips executable content from this inert HTML.
+    assert.deepEqual(connects, ['8.8.8.8:80', '8.8.8.8:80']);
     redirect = true;
     await assert.rejects(fetchPublic('http://public.example', new AbortController().signal, url, resolver), /WEB_ADDRESS_BLOCKED/);
-    assert.equal(connects.length, 2);
+    assert.equal(connects.length, 3);
   } finally {
     proxy.closeAllConnections();
     await new Promise<void>(resolve => proxy.close(() => resolve()));

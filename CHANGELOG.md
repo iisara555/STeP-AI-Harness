@@ -8,6 +8,12 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Desktop v0.5.38 — 2026-10-10
 
+- Added `web_extract` with bounded article/headings/tables/links, controlled `vision_analyze`/`browser_vision` with explicit image consent and `EXTRACTED_UNVERIFIED` source provenance, and `image_generate` in the tool loop using the existing OpenAI/Gemini API service. Unsupported connections report their limitation; OAuth does not grant image API access.
+- Added organization-managed Google Workspace MCP profile and catalog-test UI using existing permission/destination consent. MCP stays off by default; organization endpoint/authentication must be configured by IT.
+- Added local per-tool diagnostic IDs, outcome/error code and timing, visible in folded chat history and existing diagnostics; tool input/output bodies are excluded. No external telemetry service or new runtime dependency.
+- New-tool evidence uses synthetic HTML/images/providers/MCP only. Live Google account access, provider vision acceptance and generated-image quality are not claimed.
+
+
 ### Combined release: PR #130, #131, #133 and review fixes
 
 - รวม portable plugin test, ทะเบียนเอกสาร ISO จาก STeP MIS และการเตรียม Desktop release เป็นชุดเดียว ตัวทดสอบขยาย `~/` ก่อนตรวจไฟล์จริงใน installation และใช้ native filesystem path บน Windows แทน URL pathname และตรวจแถวทะเบียน/manifest ได้ทั้ง LF กับ CRLF ไม่มีการเปลี่ยน installer ของ plugin

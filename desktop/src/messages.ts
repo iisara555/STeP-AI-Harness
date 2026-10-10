@@ -2,6 +2,11 @@
 import { localized, t } from './i18n';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  WEB_EXTRACT_INVALID: 'หน้าเว็บนี้ยังแยกเนื้อหาไม่ได้ ลองอ่านด้วย web_fetch หรือระบุแหล่งอื่น',
+  VISION_PRIVACY_REQUIRED: 'นโยบายตรวจข้อมูลส่วนบุคคลไม่อนุญาตให้ส่งภาพผ่านเครื่องมือนี้ กรุณาใช้ข้อความที่ตรวจแล้ว',
+  BROWSER_IMAGE_SENSITIVE: 'หน้าเว็บนี้มีช่องข้อมูลสำคัญ จึงยังส่งภาพให้ AI ไม่ได้',
+  BROWSER_IMAGE_CHANGED: 'หน้าเว็บเปลี่ยนระหว่างขอ consent กรุณาอ่านหน้าเว็บใหม่แล้วลองอีกครั้ง',
+  TOOL_FAILED: 'เครื่องมือทำงานไม่สำเร็จ',
   TASK_NOT_FOUND: 'ไม่พบงานเบื้องหลังนี้ในงานและพื้นที่งานปัจจุบัน',
   SECURE_STORAGE_UNAVAILABLE:
     'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth',

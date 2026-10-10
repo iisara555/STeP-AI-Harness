@@ -84,9 +84,10 @@ export type HookDefinition =
       blockOnFailure: boolean;
       priority: number;
     };
-export type McpServer =
+export type McpServer = { profile?: 'google-workspace' } & (
   | { name: string; transport: 'stdio'; command: string; args: string[] }
-  | { name: string; transport: 'http'; url: string; headers: Record<string, string> };
+  | { name: string; transport: 'http'; url: string; headers: Record<string, string> }
+);
 export type Policy = {
   source: 'managed' | 'default';
   features: Record<Feature, boolean>;
@@ -485,17 +486,20 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       if (raw.mcpServers.length > 20) problems.push('mcpServers exceeds 20 definitions');
       for (const server of raw.mcpServers.slice(0, 20)) {
         const name = text(server?.name, 60);
+        const profile = server?.profile === 'google-workspace' ? { profile: 'google-workspace' as const } : {};
+        if (server?.profile !== undefined && server.profile !== 'google-workspace') problems.push('unsupported MCP server profile');
         if (!name || !/^[\w-]+$/.test(name)) problems.push('each MCP server needs a simple name');
         else if (policy.mcpServers.some(s => s.name === name)) problems.push('duplicate MCP server name');
         else if (server.transport === 'stdio' && text(server.command, 1000))
           policy.mcpServers.push({
             name,
+            ...profile,
             transport: 'stdio',
             command: text(server.command, 1000),
             args: Array.isArray(server.args) ? server.args.map((a: unknown) => String(a).slice(0, 1000)).slice(0, 50) : [],
           });
         else if (server.transport === 'http' && /^https?:\/\//i.test(text(server.url, 2000)))
-          policy.mcpServers.push({ name, transport: 'http', url: text(server.url, 2000), headers: headers(server.headers) });
+          policy.mcpServers.push({ name, ...profile, transport: 'http', url: text(server.url, 2000), headers: headers(server.headers) });
         else problems.push(`MCP server ${name} needs transport stdio (with command) or http (with url)`);
       }
     }

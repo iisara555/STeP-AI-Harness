@@ -124,6 +124,28 @@ test('registry and dispatcher parity includes loop-owned paging, without phantom
   assert.deepEqual(Object.keys(TOOL_REGISTRY).sort(), [...LOOP_TOOLS].sort());
 });
 
+test('new media tools retain plan restrictions and protected-path checks before external dispatch', async () => {
+  for (const mode of ['plan', 'ask'] as const) {
+    const f = await fixture(mode);
+    let calls = 0;
+    f.tools.external = async () => {
+      calls++;
+      return { synthetic: true };
+    };
+    try {
+      const host = await f.tools.host(f.scope);
+      if (mode === 'plan')
+        await assert.rejects(host.execute({ tool: 'image_generate', input: 'Synthetic image' }, f.scope.signal), /PLAN_MODE_BLOCKED/);
+      else await assert.rejects(host.execute({ tool: 'vision_analyze', input: '.ssh/identity.png' }, f.scope.signal), /SENSITIVE_PATH/);
+      assert.equal(calls, 0);
+      await host.dispose?.();
+    } finally {
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+
 test('synthetic ToolLoop discovery then underlying file/patch/task calls retain gates', async () => {
   const f = await fixture();
   const host = await f.tools.host(f.scope);
@@ -517,6 +539,11 @@ test('public search checks the query and site consent even when privacy checks a
     f.scope.sessionId = 'another';
     f.deny();
     await assert.rejects(f.tools.execute({ tool: 'web_search', input: 'public query' }, f.scope), /WEB_SITE_DECLINED/);
+    await assert.rejects(f.tools.execute({ tool: 'web_extract', input: 'https://example.org/article' }, f.scope), /WEB_SITE_DECLINED/);
+    await assert.rejects(
+      f.tools.execute({ tool: 'web_extract', input: 'https://example.org/?password=synthetic-test-credential' }, f.scope),
+      /PRIVACY_REVIEW_REQUIRED/,
+    );
     assert.equal(searches, 1);
   } finally {
     f.store.close();

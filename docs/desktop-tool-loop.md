@@ -125,3 +125,31 @@ Trusted policy can set `"network": {"proxyUrl": "https://proxy.example.org:8443/
 `/usage` and the command palette open a local ledger for Chat/Draft and native web search, grouped by UTC day/provider/model. Prices are USD per million tokens, keyed by model or `provider:*`, with optional cache-read/write rates. Cache subsets are already included in input totals. Missing cache rates use ordinary input prices with an explicit approximation label; missing model prices remain unpriced. Policy changes do not rewrite past estimates. Daily token/monthly cost warnings appear at 80% of configured budgets and are advisory, not hard spending caps. Missing provider usage, image pricing, OCR resolution, hook prompts, subscriptions and work outside the app are not billing reconciliation.
 
 Validation uses synthetic accounts/documents and actual local Electron/preload/IPC. It does not establish live provider entitlement, production acceptance, install/signing behavior, sandboxing or future phases.
+
+## Extraction, vision, generated images and local observability (Desktop 0.5.38)
+
+- `web_extract(input=public URL)` uses the same bounded, DNS-pinned HTTP reader, proxy, redirect checks, URL privacy
+  scan and per-site consent as `web_fetch`. It returns title, article/main text, headings, tables and public links,
+  fetched timestamp and `external-untrusted` provenance. No page JavaScript runs. It marks clipped evidence with
+  `truncated`; this is a bounded HTML extractor, not a complete document parser, authenticated browser or PDF reader.
+- `vision_analyze(input=workspace PNG/JPEG/WebP path,args.prompt=question)` reads at most 8 MB through protected-path,
+  no-symlink and file-change checks. `browser_vision(input=session-owned tab,args.prompt=question)` captures the visible
+  viewport (at most 1600×1200 and 5 MB), rejects sensitive input/login pages or visible iframes and detects DOM/navigation
+  changes around capture. Both require explicit image consent, enabled vision, privacy checks **off** and a supported
+  OpenAI/Claude/Gemini connection; strict privacy mode uses reviewed text instead. No policy default changes. The
+  analysis call is isolated from the tool session, counts provider usage and returns `EXTRACTED_UNVERIFIED` with a
+  source reference. It never constitutes human confirmation. Antigravity/Copilot/compatible transports remain text-only
+  for these tools. Pixel analysis accuracy and signed-in provider acceptance remain unmeasured.
+- `image_generate(input=prompt,args.model=optional accessible image model)` reuses the existing image-generation
+  service for one image on the selected OpenAI/Gemini **API** account. OAuth alone is insufficient. Plan mode refuses
+  generation; current permission mode and hooks apply, with prompt privacy checks and outgoing consent. The real
+  account model catalog is checked before generation. A returned `generated-local` artifact appears in the session
+  image gallery; it is not a workspace write or cloud publication. No API key is requested or logged by the AI.
+- Each tool result carries a `traceId`. Bounded local run traces keep tool name, success/error code and milliseconds,
+  alongside the run ID, without input/output text, URLs, paths or credentials. The chat's folded **ประวัติเครื่องมือและ
+  รหัสตรวจสอบ** shows the last three runs; diagnostics records `tool-call` with the same IDs. This adds no telemetry
+  endpoint, external observability dependency or automatic retry of uncertain remote writes.
+
+These tools use existing bundled libraries and Electron capture; no additional runtime/model download or installer
+architecture is introduced. Synthetic tests validate orchestration and gates, not real-model answer/image quality.
+Google Workspace setup uses the [organization-managed MCP profile](desktop-automation.md#google-workspace-through-an-organization-mcp-server).

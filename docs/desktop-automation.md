@@ -64,3 +64,39 @@ After a human finishes review, continue an existing autopilot PR with `step-ai a
 The local tests use disposable Git repositories, synthetic coder replies and synthetic GitHub reads. They do not publish fixture PRs, merge remote branches or consume live AI quota.
 
 Protocol/container references: [MCP SDK client](https://ts.sdk.modelcontextprotocol.io/client), [MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), [Docker container run](https://docs.docker.com/engine/containers/run/), [Docker none network](https://docs.docker.com/engine/network/drivers/none/).
+
+## Google Workspace through an organization MCP server
+
+Desktop 0.5.38 recognizes `profile: "google-workspace"` on an administrator-managed server. This is a label for the
+setup/test UI, not an OAuth grant, a trusted tool annotation or an automatic permission change. MCP remains off by
+default. The organization server handles Google OAuth, account binding and scopes; ChatGPT/Codex sign-in does not
+provide Google authorization. Desktop does not install a Google connector or ask for Google credentials in chat.
+
+1. The administrator adds the following fields to the existing managed policy (merge with the existing file;
+   do not replace other settings). See [policy locations on Windows/macOS](desktop-policy.md).
+2. Replace the example URL with the organization's approved Streamable HTTP MCP endpoint. Configure authentication
+   on that server and the existing managed HTTP transport, outside this public repository. The server must not
+   redirect to a browser OAuth/login page during MCP requests. Existing stdio servers can use the same profile;
+   stdio's isolated home and minimal environment still apply.
+3. Restart Desktop. Open **งานตามรอบ → เครื่องมือ MCP → Google Workspace → ทดสอบ Google Workspace**.
+   Approve discovery in the existing permission and destination dialogs. A returned catalog establishes connectivity
+   only; the exact tool names/schemas come from this server, not hard-coded Google API assumptions.
+4. In chat the AI discovers with `mcp_search`, then calls the discovered tool with `mcp_call`. Each execution asks
+   for separate consent. Verify the destination, account, arguments and result. A catalog test does not establish
+   document access or successful Google Sheets export; execution must return the actual resource/link.
+
+```json
+{
+  "features": { "mcp": true },
+  "mcpServers": [{
+    "name": "google-workspace",
+    "profile": "google-workspace",
+    "transport": "http",
+    "url": "https://workspace-mcp.example.org/mcp",
+    "headers": {}
+  }]
+}
+```
+
+The example is synthetic and needs an administrator-provided endpoint/authentication. No organization Google account
+was accessed in cloud testing. The synthetic MCP smoke verifies discovery and execution consent independently.

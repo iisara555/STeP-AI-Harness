@@ -122,6 +122,7 @@ export type UsageReport = {
 export type WorkMode = 'chat' | 'draft' | 'image';
 export type ImageArtifact = { id: string; name: string; model: string; provider: Provider; mime: string; at: string };
 /** One model step of a run: sizes, references and timing only, never request, source or draft text. */
+export type ToolTrace = { id: string; tool: string; ok: boolean; code?: string; ms: number };
 export type StepTrace = {
   label: string;
   systemChars: number;
@@ -133,11 +134,12 @@ export type StepTrace = {
   contextScope?: 'text' | 'full';
   discovery?: { skills: 'top3' | 'full'; documents: 'top3' | 'full'; skillCount: number; documentCount: number };
   toolMs?: number;
+  tools?: ToolTrace[];
   providerCalls?: ProviderCallTrace[];
 };
 /** Host text estimates and provider observations stay separate. No task text is persisted here. */
 export type ProviderCallTrace = {
-  kind: 'answer' | 'summary' | 'web-search' | 'check';
+  kind: 'answer' | 'summary' | 'web-search' | 'check' | 'vision';
   outcome: 'running' | 'completed' | 'error';
   code?: string;
   ms: number;

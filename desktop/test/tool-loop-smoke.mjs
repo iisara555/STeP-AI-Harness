@@ -112,6 +112,11 @@ try {
   const data = await page.evaluate(() => window.step.call('snapshot'));
   assert.equal(data.sessions[0].status, 'review');
   assert.equal(data.sessions[0].usage.total, 75);
+  const observed = data.sessions[0].runs.at(-1).steps.flatMap(s => s.tools || []);
+  assert.ok(observed.some(t => t.tool === 'files' && t.ok));
+  assert.doesNotMatch(JSON.stringify(observed), /Synthetic source note|result\.md|note\.txt/);
+  await page.getByText('ประวัติเครื่องมือและรหัสตรวจสอบ', { exact: true }).click();
+  await expect(page.getByText(observed[0].id, { exact: false })).toBeVisible();
   assert.equal(data.usage.dailyTokens, 75);
   const changes = await page.evaluate(() => window.step.call('toolChanges'));
   assert.equal(changes[0].path, 'result.md');
