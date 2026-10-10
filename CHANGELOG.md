@@ -4,6 +4,18 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+- Desktop review fixes (รอบ 2-3): output ของงานเบื้องหลังที่ยาวเกิน 8,000 ตัวอักษรไม่ปล่อยบรรทัดที่ยังไม่จบออกมาทั้งก้อนแล้ว และปิดบังโดยดูข้อความดิบที่ส่งไปแล้วของ stream เดียวกันร่วมด้วย credential ที่ key กับค่าอยู่คนละ chunk หรือคนละบรรทัดจึงยังถูกปิด; หน้าต่างอนุมัติหยุดงานแสดงคำสั่งที่ปิดบังแล้ว สถานะ และเวลาเริ่ม ไม่ใช่แค่รหัสงาน; poll ที่ไม่ระบุ offset แจ้ง `truncated:true` เมื่อ log เก่าถูกตัด; เพิ่ม `.vault-token`, `.htpasswd`, `.my.cnf`, `.s3cfg`, `.boto`, `.yarnrc.yml`, `pip.conf`, `pip.ini` และชื่อแบบ Windows (`.netrc.`, `.netrc::$DATA`) เป็น protected path; tool request ที่ฟิลด์ผิดบอกชื่อฟิลด์และค่าที่ต้องการให้ AI แก้
+
+- Desktop review fixes (MEDIUM): `search_files` ข้ามและนับไฟล์ที่ privacy check ไม่อนุญาต (`withheldFiles`) แทนที่จะล้มการค้นหาทั้งหมดเมื่อมีไฟล์ credential ไฟล์เดียว; output ของงานเบื้องหลังถูกปิดบังทีละบรรทัดที่จบแล้ว จึงไม่รั่วส่วนท้ายของ credential ที่ถูกแบ่งข้าม chunk และ cursor ไม่เลื่อน; `.netrc`, `_netrc`, `.npmrc`, `.pypirc`, `.git-credentials`, `.pgpass`, `*.kdbx` เป็น protected path ของเครื่องมือไฟล์ทุกตัว
+
+- Desktop source tranche 3: เพิ่ม `tool_search`/`tool_describe` ที่ AI เรียกได้จริงผ่าน step-tool พร้อม schema/effect/availability ตาม scope และ validation ที่ parser/dispatcher; discovery ของ MCP ต้องระบุ managed server และผ่าน consent/gate เดิม ไม่มี recursive execution wrapper ไม่ถือคำอธิบายเป็นสิทธิ์ cloud/account การค้นแบบย่อเป็นทางเลือกและเครื่องมือสำคัญยังเรียกตรงได้ พร้อม synthetic whole-app search → describe → read/patch/task และยืนยันการปฏิเสธ/อนุมัติเขียนจริง Native provider tool transport ยังไม่ได้ทำ ไม่มี commit/release
+
+- Desktop source tranche 2: เพิ่ม `search_files` ค้นชื่อ/ข้อความใน workspace แบบ recursive พร้อมเลขบรรทัด ขอบเขตการสแกน และ cursor ที่ปฏิเสธผลเปลี่ยน; regex จำกัดเป็น fixed-width และ glob ไม่ใช้ backtracking เพิ่ม `patch` แก้ข้อความตรงตัวเพียงจุดเดียวโดย stage ใน Changes ก่อน ผ่านสิทธิ์/การยืนยัน/hash conflict/snapshot เดิม ไม่เขียนข้าม gate ไฟล์ลับ symlink/hardlink และ path rules ยังถูกปฏิเสธ พร้อมข้อความไทย/อังกฤษและ whole-app fixture ไม่มี commit/release หรือสิทธิ์ account ใหม่
+
+- Desktop source: AI ใช้ `tasks` เดิมเพื่อ list/status/poll/wait/cancel งานคำสั่งที่เป็นของ session และ workspace ปัจจุบันได้ รอไม่เกิน 30 วินาทีต่อครั้งและอ่าน log แบบจำกัดพร้อม cursor/คำเตือนเมื่อ log เก่าถูกตัด การหยุดงานยังผ่านสิทธิ์/การยืนยันของคนและถูกปิดใน plan mode ผลทุกครั้งยังผ่าน privacy/transmission gate เดิม ไม่มี Hermes embedding หรือสิทธิ์ account/secret เพิ่ม ดูขอบเขตและสิ่งที่ยังไม่ทำใน [Desktop tool loop](docs/desktop-tool-loop.md#execution-parity-tranche-1-source-only)
+
 ## Desktop v0.5.37 — 2026-10-09
 
 ### Chat (PR #126)

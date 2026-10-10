@@ -72,6 +72,22 @@ export const SENSITIVE_PATH_PATTERNS = [
   '*/credentials*',
   '*/id_rsa*',
   '*/id_ed25519*',
+  // Credential stores of common tools: .netrc holds `password value` pairs that the text scanner cannot recognise.
+  '*/.netrc',
+  '*/_netrc',
+  '*/.npmrc',
+  '*/.pypirc',
+  '*/.git-credentials',
+  '*/.pgpass',
+  '*.kdbx',
+  '*/.vault-token',
+  '*/.htpasswd',
+  '*/.my.cnf',
+  '*/.s3cfg',
+  '*/.boto',
+  '*/.yarnrc.yml',
+  '*/pip.conf',
+  '*/pip.ini',
 ];
 
 const escape = (value: string) => value.replace(/[.+^${}()|[\]\\]/g, '\\$&');
@@ -88,9 +104,17 @@ const normalize = (path: string, root?: string) => {
   return resolve(base, expanded).split(sep).join('/');
 };
 
+// Windows opens `.netrc.`, `.netrc ` and `.netrc::$DATA` as `.netrc`: compare that name too.
+const windowsName = (full: string) =>
+  full
+    .replace(/::\$data$/i, '')
+    .split('/')
+    .map(part => (/^\.+$/.test(part) ? part : part.replace(/[. ]+$/, '')))
+    .join('/');
 export function sensitivePath(path: string, root?: string) {
-  const full = normalize(path, root);
-  return SENSITIVE_PATH_PATTERNS.find(pattern => matches(full, pattern));
+  const full = normalize(path, root),
+    alias = windowsName(full);
+  return SENSITIVE_PATH_PATTERNS.find(pattern => matches(full, pattern) || matches(alias, pattern));
 }
 
 export function deniedPath(path: string, rules: PathRule[], root?: string) {
@@ -115,7 +139,7 @@ export function evaluatePermission(
 ): PermissionDecision {
   if (request.path) {
     const full = normalize(request.path, options.root);
-    const sensitive = SENSITIVE_PATH_PATTERNS.find(pattern => matches(full, pattern));
+    const sensitive = sensitivePath(full);
     if (sensitive) return { allowed: false, requiresConfirmation: false, reason: `SENSITIVE_PATH:${sensitive}` };
     const rule = deniedPath(full, policy.permission.pathRules, options.root);
     if (rule) return { allowed: false, requiresConfirmation: false, reason: `PATH_RULE:${rule.pattern}` };

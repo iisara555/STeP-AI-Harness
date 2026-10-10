@@ -1,3 +1,5 @@
+import { constants } from 'node:fs';
+import { searchWorkspace } from './file-search';
 import { readdir, readFile, realpath, lstat, writeFile, open } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, dirname } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -5,6 +7,7 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { StringDecoder } from 'node:string_decoder';
 import type { BackgroundTask, FileChange } from '../src/tools';
+import { taskAction } from '../src/tools';
 import type { WorkPlan, WorkTask } from '../src/types';
 import { Store } from './store';
 import { sensitivePath, evaluatePermission } from './permissions';
@@ -79,6 +82,13 @@ export class Workbench {
       if (r.startsWith('..') || isAbsolute(r)) throw new Error('INVALID_PATH');
     };
     within(full);
+    // Refuse every symlink/junction component, not just the final leaf.
+    let ancestor = full === root ? root : dirname(full);
+    while (ancestor !== root) {
+      if ((await lstat(ancestor)).isSymbolicLink()) throw new Error('INVALID_PATH');
+      permitted(ancestor);
+      ancestor = dirname(ancestor);
+    }
     try {
       const info = await lstat(full);
       if (info.isSymbolicLink() || (info.isFile() && info.nlink > 1)) throw new Error('INVALID_PATH');
@@ -115,6 +125,53 @@ export class Workbench {
         .map(e => ({ name: e.name, path: relative(root, resolve(directory, e.name)), directory: e.isDirectory() })),
     };
   }
+  async searchFiles(
+    input: string,
+    args: Record<string, unknown> = {},
+    review: (text: string) => string = text => text,
+    check: () => Promise<void> = async () => {},
+  ) {
+    const root = await this.root();
+    return searchWorkspace(root, input, args, {
+      path: path => this.path(path),
+      bytes: (path, limit) => this.bytes(path, limit),
+      review,
+      check: async () => {
+        await check();
+        if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+      },
+    });
+  }
+  async patch(input: string, args: Record<string, unknown>) {
+    const old = args.old_string,
+      replacement = args.new_string,
+      expected = args.expectedHash;
+    if (
+      typeof old !== 'string' ||
+      !old ||
+      old.length > 200000 ||
+      typeof replacement !== 'string' ||
+      replacement.length > 200000 ||
+      old === replacement ||
+      (expected !== undefined && (typeof expected !== 'string' || !/^[a-f0-9]{64}$/.test(expected)))
+    )
+      throw new Error('INVALID_INPUT');
+    const root = await this.root(),
+      bytes = await this.bytes(input, 200000),
+      before = bytes.toString('utf8');
+    if (bytes.includes(0) || !Buffer.from(before).equals(bytes)) throw new Error('FILE_BINARY');
+    const hash = digest(bytes);
+    if (expected !== undefined && expected !== hash) throw new Error('FILE_CONFLICT');
+    const index = before.indexOf(old);
+    if (index < 0) throw new Error('PATCH_NO_MATCH');
+    if (before.indexOf(old, index + 1) >= 0) throw new Error('PATCH_AMBIGUOUS');
+    const after = before.slice(0, index) + replacement + before.slice(index + old.length),
+      output = Buffer.from(after);
+    if (output.includes(0) || output.toString('utf8') !== after) throw new Error('FILE_BINARY');
+    if (output.length > 200000) throw new Error('FILE_LIMIT');
+    if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+    return this.stageBytes(input, output, before, after, hash);
+  }
   async read(input: string) {
     const path = await this.path(input),
       info = await lstat(path);
@@ -125,9 +182,12 @@ export class Workbench {
   }
   async bytes(input: string, limit = 8_000_000) {
     const path = await this.path(input);
-    const handle = await open(path, 'r');
+    const before = await lstat(path);
+    if (before.isSymbolicLink()) throw new Error('INVALID_PATH');
+    const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
     try {
       const stat = await handle.stat();
+      if (stat.dev !== before.dev || stat.ino !== before.ino) throw new Error('FILE_CONFLICT');
       if (!stat.isFile() || stat.size > limit) throw new Error('FILE_LIMIT');
       if (stat.nlink > 1) throw new Error('INVALID_PATH');
       const buffer = Buffer.alloc(stat.size + 1);
@@ -138,6 +198,17 @@ export class Workbench {
         offset += bytesRead;
       }
       if (offset !== stat.size) throw new Error('FILE_CONFLICT');
+      await this.path(path);
+      const current = await lstat(path),
+        after = await handle.stat();
+      if (
+        current.dev !== stat.dev ||
+        current.ino !== stat.ino ||
+        after.size !== stat.size ||
+        after.mtimeMs !== stat.mtimeMs ||
+        after.ctimeMs !== stat.ctimeMs
+      )
+        throw new Error('FILE_CONFLICT');
       return buffer.subarray(0, offset);
     } finally {
       await handle.close();
@@ -290,7 +361,50 @@ export class Workbench {
     }
     await this.path(change.path, true);
     if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
-    await writeFile(path, change.binary ? Buffer.from(change.binary, 'base64') : change.after, { flag: hash === 'missing' ? 'wx' : 'w' });
+    if (hash === 'missing') {
+      await writeFile(path, change.binary ? Buffer.from(change.binary, 'base64') : change.after, { flag: 'wx' });
+    } else {
+      // Open without truncation/following links. Verify the same handle before any byte mutation.
+      const handle = await open(path, constants.O_RDWR | (constants.O_NOFOLLOW || 0));
+      try {
+        const stat = await handle.stat();
+        if (!stat.isFile() || stat.nlink > 1) throw new Error('INVALID_PATH');
+        if (stat.size > 8_000_000) throw new Error('FILE_LIMIT');
+        if (hash !== 'missing') {
+          const buffer = Buffer.alloc(stat.size + 1);
+          let offset = 0;
+          while (offset < buffer.length) {
+            const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+            if (!bytesRead) break;
+            offset += bytesRead;
+          }
+          if (offset !== stat.size || digest(buffer.subarray(0, offset)) !== hash) throw new Error('FILE_CONFLICT');
+        }
+        await this.path(change.path);
+        const current = await lstat(path),
+          latest = await handle.stat();
+        if (
+          current.dev !== stat.dev ||
+          current.ino !== stat.ino ||
+          latest.mtimeMs !== stat.mtimeMs ||
+          latest.ctimeMs !== stat.ctimeMs ||
+          latest.size !== stat.size
+        )
+          throw new Error('FILE_CONFLICT');
+        if (change.root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+        const output = change.binary ? Buffer.from(change.binary, 'base64') : Buffer.from(change.after);
+        // Explicit position avoids the read cursor and truncates only after preconditions hold.
+        let written = 0;
+        while (written < output.length) {
+          const result = await handle.write(output, written, output.length - written, written);
+          if (!result.bytesWritten) throw new Error('FILE_CONFLICT');
+          written += result.bytesWritten;
+        }
+        await handle.truncate(output.length);
+      } finally {
+        await handle.close();
+      }
+    }
     this.store.remove('change', id);
     return { path: change.path, snapshotId: change.snapshotId };
   }
@@ -392,13 +506,21 @@ export class Workbench {
       throw new Error('GIT_DIFF_UNAVAILABLE');
     }
   }
-  async start(command: string) {
+  async start(command: string, sessionId?: string) {
     if (typeof command !== 'string' || !command.trim() || command.length > 2000 || command.includes('\0'))
       throw new Error('INVALID_COMMAND');
     if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     const cwd = await this.root(),
       id = randomUUID();
-    const task: BackgroundTask = { id, command: this.scrub(command), cwd, status: 'running', output: '', at: new Date().toISOString() };
+    const task: BackgroundTask = {
+      id,
+      sessionId,
+      command: this.scrub(command),
+      cwd,
+      status: 'running',
+      output: '',
+      at: new Date().toISOString(),
+    };
     this.store.put('background', id, task);
     // Credentials are not passed to a shell. The user may still run commands with their own OS permissions.
     const env = Object.fromEntries(
@@ -425,16 +547,59 @@ export class Workbench {
       timer = undefined;
       if (!this.disposed) this.store.put('background', id, task);
     };
-    const append = (text: string) => {
-      task.output = this.scrub((task.output + text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')).slice(-100000));
+    // Output is masked in complete lines (LF or CR) and then only appended, so absolute poll cursors never move. An
+    // unfinished line stays in an internal raw buffer until it ends or the process exits; only an unfinished line
+    // over 8,000 characters is released early, at its last space so a token is not cut. Each chunk is masked together
+    // with the raw tail already committed on its stream (`context`, never shown), so a credential whose key and value
+    // fall on either side of a cut, or on consecutive lines, is still recognised. Only the masked continuation is
+    // appended; when masking now reaches back into text already shown, the corrected end is shown again instead.
+    const pending = { out: '', err: '' },
+      context = { out: '', err: '' };
+    const withheld = '[output withheld by the privacy check]\n';
+    const keep = (text: string) => {
+      if (text.length <= 1024) return text;
+      const tail = text.slice(-1024),
+        line = Math.max(tail.indexOf('\n'), tail.indexOf('\r'));
+      return line >= 0 && line < 1023 ? tail.slice(line + 1) : tail;
+    };
+    const commit = (stream: 'out' | 'err', chunk: string) => {
+      const raw = chunk.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+      if (!raw) return;
+      const prior = context[stream],
+        shown = prior ? this.scrub(prior) : '',
+        safe = this.scrub(prior + raw);
+      let text: string;
+      if (typeof safe !== 'string' || typeof shown !== 'string') {
+        text = withheld;
+        context[stream] = '';
+      } else {
+        let same = 0;
+        while (same < shown.length && same < safe.length && shown[same] === safe[same]) same++;
+        text = safe.slice(same);
+        context[stream] = keep(prior + raw);
+      }
+      const merged = task.output + text;
+      task.outputOffset = (task.outputOffset || 0) + Math.max(0, merged.length - 100000);
+      task.output = merged.slice(-100000);
       if (!timer) timer = setTimeout(flush, 150);
+    };
+    const append = (stream: 'out' | 'err', text: string, end = false) => {
+      const buffer = pending[stream] + text;
+      let cut = end ? buffer.length : Math.max(buffer.lastIndexOf('\n'), buffer.lastIndexOf('\r')) + 1;
+      if (!end && buffer.length - cut > 8000) {
+        const space = Math.max(buffer.lastIndexOf(' '), buffer.lastIndexOf('\t'));
+        cut = space >= cut && buffer.length - space <= 4000 ? space + 1 : buffer.length;
+      }
+      pending[stream] = buffer.slice(cut);
+      commit(stream, buffer.slice(0, cut));
     };
     const stdout = new StringDecoder('utf8'),
       stderr = new StringDecoder('utf8');
-    child.stdout?.on('data', (data: Buffer) => append(stdout.write(data)));
-    child.stderr?.on('data', (data: Buffer) => append(stderr.write(data)));
+    child.stdout?.on('data', (data: Buffer) => append('out', stdout.write(data)));
+    child.stderr?.on('data', (data: Buffer) => append('err', stderr.write(data)));
     const finish = (code: number | null) => {
-      append(stdout.end() + stderr.end());
+      append('out', stdout.end(), true);
+      append('err', stderr.end(), true);
       task.status = this.stopped.has(id) ? 'cancelled' : code === 0 ? 'done' : 'failed';
       task.code = code;
       this.children.delete(id);
@@ -450,6 +615,77 @@ export class Workbench {
       .list<BackgroundTask>('background')
       .sort((a, b) => b.at.localeCompare(a.at))
       .slice(0, 50);
+  }
+  /** Agent view uses the existing records/children, never OS process discovery. */
+  async inspectTask(sessionId: string, id: string, args: Record<string, unknown> = {}) {
+    const action = taskAction(id, args);
+    if (!['list', 'status', 'poll'].includes(action)) throw new Error('INVALID_INPUT');
+    const root = await this.root();
+    const metadata = ({ output, ...task }: BackgroundTask) => task;
+    const visible = (t: BackgroundTask) => t.sessionId === sessionId && t.cwd === root;
+    if (action === 'list')
+      return this.store
+        .list<BackgroundTask>('background')
+        .filter(visible)
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .slice(0, 50)
+        .map(metadata);
+    const task = this.store.get<BackgroundTask>('background', id);
+    if (!task || !visible(task)) throw new Error('TASK_NOT_FOUND');
+    if (action === 'status') return metadata(task);
+    const base = task.outputOffset || 0,
+      total = base + task.output.length;
+    const requested = args.offset ?? base,
+      length = args.length ?? 4000;
+    if (
+      !Number.isSafeInteger(requested) ||
+      Number(requested) < 0 ||
+      Number(requested) > total ||
+      !Number.isSafeInteger(length) ||
+      Number(length) < 1 ||
+      Number(length) > 40000
+    )
+      throw new Error('INVALID_INPUT');
+    const offset = Math.max(base, Number(requested)),
+      end = Math.min(total, offset + Number(length));
+    const output = this.scrub(task.output.slice(offset - base, end - base));
+    return {
+      ...metadata(task),
+      output: typeof output === 'string' ? output : '[output withheld by the privacy check]\n',
+      offset,
+      endOffset: end,
+      total,
+      // Without an offset the poll starts at the oldest retained character, so any loss means earlier output is gone.
+      truncated: Number(requested) < base || (args.offset === undefined && base > 0),
+      ...(end < total ? { nextOffset: end } : {}),
+    };
+  }
+  async waitTask(sessionId: string, id: string, args: Record<string, unknown>, signal: AbortSignal, check: () => Promise<void>) {
+    const timeout = args.timeoutMs ?? 1000;
+    if (!Number.isSafeInteger(timeout) || Number(timeout) < 0 || Number(timeout) > 30000) throw new Error('INVALID_INPUT');
+    // Recheck after inspection too: a workspace can switch between the scope check and canonical-root lookup.
+    const poll = async () => {
+      try {
+        const result = await this.inspectTask(sessionId, id, { ...args, action: 'poll' });
+        await check();
+        if (signal.aborted) throw new Error('CANCELLED');
+        return result;
+      } catch (error) {
+        await check();
+        throw error;
+      }
+    };
+    await check();
+    await poll();
+    const deadline = Date.now() + Number(timeout);
+    while (true) {
+      if (signal.aborted) throw new Error('CANCELLED');
+      await check();
+      const task = await poll();
+      if (!Array.isArray(task) && 'status' in task && (task.status !== 'running' || Date.now() >= deadline))
+        return { ...task, timedOut: task.status === 'running' };
+      await new Promise<void>(resolve => setTimeout(resolve, Math.min(25, Math.max(1, deadline - Date.now()))));
+    }
   }
   async cancel(id: string) {
     const child = this.children.get(id);

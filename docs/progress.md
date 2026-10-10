@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-09_
+_Last updated: 2026-10-10_
 
 ## Latest release
 
@@ -15,7 +15,8 @@ _Last updated: 2026-10-09_
 
 ## In progress
 
-- Nothing open from the agent threads.
+- Discoverable tool registry source: agent `tool_search`/`tool_describe`, shared schemas/effects/conditional scope, consented managed-MCP discovery and real-app discovery/file/patch/task fixture implemented; text fallback retained, native tool transport and live/native-platform acceptance remain separate.
+- Execution parity source worktree: existing engine/UI/gates retained; agent lifecycle and workspace recursive search/exact staged patch added with synthetic tests. No release/commit yet; live accounts, native platforms and cancellation-resistant subprocess hardening remain open. Independent review provider refused the review run (not a security-review pass).
 
 ## Waiting on the owner
 

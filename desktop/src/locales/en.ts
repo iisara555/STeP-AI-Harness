@@ -3,6 +3,10 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  กำลังตรวจงานเบื้องหลัง: 'Checking background tasks',
+  'หยุดงานเบื้องหลังนี้?': 'Stop this background task?',
+  '{0}\nสถานะ: {1} · เริ่ม: {2}': '{0}\nStatus: {1} · started: {2}',
+  ไม่พบงานเบื้องหลังนี้ในงานและพื้นที่งานปัจจุบัน: 'This background task is not available in the current task and workspace',
   'ขั้นตอนที่ AI กำลังทำแสดงในแชตพร้อมเครื่องหมายถูกเมื่อเสร็จ และอ่านรายการตัวเลือกในโหมดมืดได้ชัด':
     "The AI's working steps show in the chat with a checkmark when done, and picker lists are readable in dark mode",
   'แชตแสดงสถานะงานบรรทัดเดียว และบอกเวลาที่ใช้ตอบใต้คำตอบ': 'The chat shows one status line while working and how long each answer took',
@@ -1470,6 +1474,14 @@ export const en: Record<string, string> = {
   กำลังทำงานบนเว็บ: 'Working on the web page',
   กำลังอ่านเว็บไซต์: 'Reading the website',
   กำลังอ่านไฟล์งาน: 'Reading workspace files',
+  กำลังค้นรายการเครื่องมือ: 'Discovering available tools',
+  กำลังอ่านรายละเอียดเครื่องมือ: 'Reading tool details',
+  กำลังค้นไฟล์ในพื้นที่งาน: 'Searching workspace files',
+  กำลังเตรียมแก้ข้อความเฉพาะจุด: 'Preparing a targeted text patch',
+  'ไม่พบข้อความเดิมแบบตรงตัว กรุณาอ่านไฟล์ล่าสุดก่อนแก้ไข': 'Exact original text was not found. Read the latest file before editing',
+  'พบข้อความเดิมมากกว่าหนึ่งจุด กรุณาระบุบริบทให้ตรงเพียงจุดเดียว':
+    'Original text matches multiple locations. Include enough context for a unique match',
+  'ไฟล์หรือผลค้นหาเปลี่ยนระหว่างแบ่งหน้า กรุณาเริ่มค้นหาใหม่': 'Files or search results changed between pages. Restart the search',
   กำลังเตรียมการแก้ไขไฟล์: 'Preparing file changes',
   'เมนู STeP': 'STeP menu',
   ค้นหางานและคำสั่ง: 'Search tasks and commands',

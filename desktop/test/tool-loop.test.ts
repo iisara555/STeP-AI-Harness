@@ -1,9 +1,27 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ToolLoop, type LoopHost } from '../electron/tool-loop';
+import { ToolLoop, TOOL_RULES, type LoopHost } from '../electron/tool-loop';
+import { errorText } from '../src/messages';
 import { brokenRequests, loopRequests } from '../src/tools';
 const request = (tool: string, input = '', args?: unknown) => '```step-tool\n' + JSON.stringify({ tool, input, args }) + '\n```';
 const signal = () => new AbortController().signal;
+test('agent file rules explain bounded search and exact staged patches with localized errors', () => {
+  assert.match(TOOL_RULES, /search_files/);
+  assert.match(TOOL_RULES, /fixed-width/);
+  assert.match(TOOL_RULES, /nextCursor/);
+  assert.match(TOOL_RULES, /old_string/);
+  assert.match(TOOL_RULES, /expectedHash/);
+  assert.ok(errorText.PATCH_NO_MATCH);
+  assert.ok(errorText.PATCH_AMBIGUOUS);
+  assert.ok(errorText.SEARCH_CHANGED);
+});
+test('agent rules explain bounded lifecycle and missing-task errors have user-facing text', () => {
+  assert.match(TOOL_RULES, /args.action=list\|status\|poll\|wait\|cancel/);
+  assert.match(TOOL_RULES, /timeoutMs.*30000/);
+  assert.match(TOOL_RULES, /endOffset/);
+  assert.match(TOOL_RULES, /same session and workspace/);
+  assert.ok(errorText.TASK_NOT_FOUND);
+});
 function host(extra: Partial<LoopHost> = {}): LoopHost {
   return {
     enabled: () => true,

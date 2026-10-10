@@ -1,10 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, readFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
 import { Document, Packer, Paragraph } from 'docx';
+import { ToolLoop } from '../electron/tool-loop';
+import { TOOL_REGISTRY } from '../src/tool-registry';
+import { LOOP_TOOLS } from '../src/tools';
+import { loopRequests } from '../src/tools';
 import { Store } from '../electron/store';
 import { Workbench } from '../electron/workbench';
 import { defaultPolicy } from '../electron/policy';
@@ -14,6 +18,8 @@ import { ToolGate } from '../electron/tool-gate';
 import { DesktopTools, type ToolScope, documentSections } from '../electron/tools';
 import { sheetWorker } from '../electron/sheets';
 import type { Harness } from '../electron/service';
+// PowerShell (Windows) needs the call operator to run a quoted executable path.
+const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const documents: any = await import('../../src/modules/privacy/document.js');
 async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
@@ -33,10 +39,12 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
   const approvalOpened = new Promise<void>(resolve => {
     opened = resolve;
   });
-  const events: string[] = [];
+  const events: string[] = [],
+    bodies: string[] = [];
   const approvals = new Approvals(store, r => {
     if (r) {
       requests++;
+      bodies.push(r.body);
       lastApproval = r.id;
       opened();
       if (holdApproval) return;
@@ -92,6 +100,7 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
     scope,
     policy,
     events,
+    bodies,
     deny: () => {
       approve = false;
     },
@@ -107,6 +116,160 @@ async function fixture(mode: 'ask' | 'acceptEdits' | 'plan' | 'auto' = 'ask') {
     approvalOpened,
   };
 }
+test('registry and dispatcher parity includes loop-owned paging, without phantom tools', async () => {
+  const source = await readFile(resolve('electron/tools.ts'), 'utf8');
+  const cases = [...source.matchAll(/case '([a-z_]+)':/g)].map(match => match[1]);
+  assert.deepEqual([...new Set([...cases, 'read_remaining'])].sort(), [...LOOP_TOOLS].sort());
+  assert.deepEqual(Object.keys(TOOL_REGISTRY).sort(), [...LOOP_TOOLS].sort());
+});
+
+test('synthetic ToolLoop discovery then underlying file/patch/task calls retain gates', async () => {
+  const f = await fixture();
+  const host = await f.tools.host(f.scope);
+  await writeFile(join(f.root, 'note.txt'), 'synthetic exact text');
+  const proposals = [
+    { tool: 'tool_search', input: 'workspace' },
+    { tool: 'tool_describe', input: 'files' },
+    { tool: 'files', input: 'note.txt' },
+    { tool: 'tool_describe', input: 'patch' },
+    { tool: 'patch', input: 'note.txt', args: { old_string: 'exact', new_string: 'replacement' } },
+    { tool: 'tool_describe', input: 'tasks' },
+    { tool: 'tasks', input: '', args: { action: 'list' } },
+    { tool: 'tool_describe', input: 'terminal', args: { tool: 'terminal', arguments: { input: 'bad' } } },
+  ];
+  let turn = 0;
+  const prompts: string[] = [];
+  try {
+    const answer = await new ToolLoop(host, 20, 20000).run(
+      'Synthetic local-only fixture',
+      async prompt => {
+        prompts.push(prompt);
+        const proposal = proposals[turn++];
+        return proposal ? '```step-tool\n' + JSON.stringify(proposal) + '\n```' : 'fixture complete';
+      },
+      f.scope.signal,
+    );
+    assert.equal(answer, 'fixture complete');
+    const full = prompts.at(-1)!;
+    assert.match(full, /staged-for-human-review/);
+    assert.match(full, /synthetic exact text/);
+    assert.match(full, /INVALID_TOOL_REQUEST/);
+    assert.equal(await readFile(join(f.root, 'note.txt'), 'utf8'), 'synthetic exact text');
+    assert.ok(f.requests() >= 6, 'discovery does not remove transmission consent');
+    await assert.rejects(f.tools.execute({ tool: 'tool_search', input: '', args: { limit: '10' } } as any, f.scope), /INVALID_INPUT/);
+    await assert.rejects(f.tools.execute({ tool: 'files', input: '../outside.txt' }, f.scope), /INVALID_PATH/);
+  } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('explicit managed MCP discovery retains the existing effect gate and never dispatches a remote call', async () => {
+  const f = await fixture();
+  let contacted = 0;
+  f.policy.features.mcp = true;
+  f.policy.mcpServers = [{ name: 'synthetic', transport: 'stdio', command: 'unused', args: [] }];
+  f.tools.external = async (r, _scope, check) => {
+    await check();
+    contacted++;
+    assert.equal(r.tool, 'mcp_search');
+    assert.equal(r.input, 'synthetic');
+    return {
+      total: 1,
+      tools: [
+        {
+          server: 'synthetic',
+          name: 'remote_read',
+          description: 'untrusted',
+          inputSchema: { type: 'object', properties: { key: { type: 'string' } } },
+        },
+      ],
+    };
+  };
+  const host = await f.tools.host(f.scope);
+  try {
+    await host.execute({ tool: 'tool_search', input: '' }, f.scope.signal);
+    assert.equal(contacted, 0);
+    const described = (await host.execute(
+      { tool: 'tool_describe', input: 'remote_read', args: { server: 'synthetic' } },
+      f.scope.signal,
+    )) as any;
+    assert.equal(described.tools[0].name, 'remote_read');
+    assert.equal(described.tools[0].executionGranted, false);
+    assert.equal(described.tools[0].trusted, false);
+    assert.equal(contacted, 1);
+    assert.ok(f.requests() > 0, 'remote discovery still uses execution gate');
+    await assert.rejects(
+      host.execute({ tool: 'tool_describe', input: 'remote_read', args: { server: 'other' } }, f.scope.signal),
+      /MCP_SERVER_NOT_ALLOWED/,
+    );
+    const limited = (await host.execute(
+      { tool: 'tool_search', input: '', args: { scope: 'mcp', server: 'synthetic', limit: 1 } },
+      f.scope.signal,
+    )) as any;
+    assert.equal(limited.hasMore, false);
+    assert.equal(limited.boundedDiscovery, true);
+    assert.equal(contacted, 2);
+    f.deny();
+    const denied = (await host.execute(
+      { tool: 'tool_describe', input: 'remote_read', args: { server: 'synthetic' } },
+      f.scope.signal,
+    )) as any;
+    assert.equal(denied.cancelled, true);
+    assert.equal(contacted, 2, 'denied discovery must not contact server');
+    f.policy.features.mcp = false;
+    await assert.rejects(
+      f.tools.execute({ tool: 'tool_search', input: '', args: { scope: 'mcp', server: 'synthetic' } }, f.scope),
+      /MCP_DISABLED/,
+    );
+    assert.equal(contacted, 2);
+  } finally {
+    await host.dispose?.();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('agent search_files and patch dispatch retain privacy, write gates and plan restrictions', async () => {
+  for (const mode of ['ask', 'acceptEdits', 'plan'] as const) {
+    const f = await fixture(mode);
+    const host = await f.tools.host(f.scope);
+    try {
+      await mkdir(join(f.root, 'nested'));
+      await writeFile(join(f.root, 'nested', 'a.txt'), 'synthetic marker\nold exact text');
+      const [request] = loopRequests(JSON.stringify({ tool: 'search_files', input: '.', args: { pattern: 'marker', target: 'content' } }));
+      assert.ok(request, 'search must be agent reachable');
+      const result = (await host.execute(request, f.scope.signal)) as any;
+      assert.deepEqual(result.matches, [{ path: 'nested/a.txt', line: 1, text: 'synthetic marker' }]);
+      await host.outgoing(JSON.stringify(result), f.scope.signal, request);
+      assert.ok(f.requests() > 0, 'transmission consent still applies');
+      const [patch] = loopRequests(
+        JSON.stringify({ tool: 'patch', input: 'nested/a.txt', args: { old_string: 'old exact text', new_string: 'new exact text' } }),
+      );
+      assert.ok(patch, 'patch must be agent reachable');
+      assert.equal(host.readOnly(patch), false);
+      if (mode === 'plan') {
+        await assert.rejects(host.execute(patch, f.scope.signal), /PLAN_MODE_BLOCKED/);
+        continue;
+      }
+      const receipt = (await host.execute(patch, f.scope.signal)) as any;
+      assert.equal(receipt.status, mode === 'ask' ? 'staged-for-human-review' : 'applied');
+      assert.equal(
+        await readFile(join(f.root, 'nested', 'a.txt'), 'utf8'),
+        mode === 'ask' ? 'synthetic marker\nold exact text' : 'synthetic marker\nnew exact text',
+      );
+      if (mode === 'acceptEdits') assert.ok(f.events.includes('pre_tool_use'));
+      f.policy.permission.pathRules = [{ pattern: 'nested/**', allow: false }];
+      await assert.rejects(host.execute(patch, f.scope.signal), /PATH_RULE_DENIED/);
+      assert.deepEqual(((await host.execute(request, f.scope.signal)) as any).matches, []);
+    } finally {
+      await host.dispose?.();
+      await f.workbench.close();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
 test('draft progress consent covers only clean answers and receipts, never file contents or browser actions', async () => {
   const f = await fixture();
   f.allowRun();
@@ -485,6 +648,27 @@ test('text previews paginate; apply backs up bytes; restoration is staged and pr
     f.store.close();
   }
 });
+test('recursive search scans complete sources before matching or line previews', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'boundary.txt'), 'marker ' + 'x'.repeat(39997) + '\npassword: synthetic-test-credential');
+    // Review finding M1: a file the privacy review withholds is skipped and counted instead of aborting the whole
+    // search. Its marker line (before the credential) is still never returned, because the full file is reviewed first.
+    const withheld = (await f.tools.execute({ tool: 'search_files', input: '.', args: { pattern: 'marker' } }, f.scope)) as any;
+    assert.deepEqual(withheld.matches, []);
+    assert.equal(withheld.withheldFiles, 1);
+    assert.ok(!JSON.stringify(withheld).includes('synthetic-test-credential'));
+    await rm(join(f.root, 'boundary.txt'));
+    await writeFile(join(f.root, 'personal.txt'), 'Contact: sample@example.com\nmarker');
+    const result = (await f.tools.execute({ tool: 'search_files', input: '.', args: { pattern: 'Contact:' } }, f.scope)) as any;
+    assert.equal(result.matches[0].line, 1);
+    assert.ok(!JSON.stringify(result).includes('sample@example.com'));
+  } finally {
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
 test('model file reads scan the complete source before paging across credential boundaries', async () => {
   const f = await fixture();
   try {
@@ -656,4 +840,180 @@ test('accept edits never runs a command without asking', async () => {
   assert.equal(await f.tools.execute({ tool: 'terminal', input: 'echo should-not-run' }, f.scope), null, 'declined, not run');
   assert.equal(f.requests(), 1, 'the command asked first');
   f.store.close();
+});
+
+test('task cancel denial and changed destination never terminate an owned job', async () => {
+  const f = await fixture();
+  const host = await f.tools.host(f.scope);
+  try {
+    await writeFile(join(f.root, 'slow.cjs'), 'setTimeout(() => {}, 30000);');
+    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, f.scope.signal)) as any;
+    f.deny();
+    assert.equal(await host.execute({ tool: 'tasks', input: job.id, args: { action: 'cancel' } }, f.scope.signal), null);
+    assert.equal(
+      ((await host.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, f.scope.signal)) as any).status,
+      'running',
+    );
+    // The person sees which command is being stopped, not only the task id.
+    assert.match(f.bodies.at(-1)!, /slow\.cjs/);
+    assert.match(f.bodies.at(-1)!, /running/);
+    f.holdApproval();
+    const pending = host.execute({ tool: 'tasks', input: job.id, args: { action: 'cancel' } }, f.scope.signal);
+    const before = f.requests();
+    for (let i = 0; i < 100 && f.requests() === before; i++) await new Promise(resolve => setTimeout(resolve, 5));
+    f.scope.connection.id = 'changed';
+    f.approvals.respond(f.lastApproval(), 'once');
+    await assert.rejects(pending, /DESTINATION_CHANGED/);
+    assert.equal(f.workbench.tasks().find(t => t.id === job.id)?.status, 'running');
+  } finally {
+    await host.dispose?.();
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('task wait rechecks the workspace before returning process output', async () => {
+  const f = await fixture();
+  const host = await f.tools.host(f.scope);
+  try {
+    await writeFile(join(f.root, 'slow.cjs'), 'setTimeout(() => {}, 30000);');
+    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, f.scope.signal)) as any;
+    const next = join(f.root, 'next');
+    await mkdir(next);
+    const pending = host.execute({ tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 30000 } }, f.scope.signal);
+    setTimeout(() => f.store.put('settings', 'main', { workspace: next }), 30);
+    await assert.rejects(pending, /WORKSPACE_CHANGED/);
+  } finally {
+    await host.dispose?.();
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('agent poll reports rolling-log loss with absolute sanitized-output cursors', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'loud.cjs'), "process.stdout.write('A'.repeat(110000));");
+    const job = (await f.tools.execute({ tool: 'terminal', input: `${node} loud.cjs` }, f.scope)) as any;
+    const done = (await f.tools.execute(
+      { tool: 'tasks', input: job.id, args: { action: 'wait', timeoutMs: 2000, offset: 0, length: 100 } },
+      f.scope,
+    )) as any;
+    assert.equal(done.status, 'done');
+    assert.equal(done.output.length, 100);
+    assert.equal(done.truncated, true);
+    assert.equal(done.offset, 10000);
+    assert.equal(done.endOffset, 10100);
+    assert.equal(done.total, 110000);
+    const end = (await f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'poll', offset: 110000 } }, f.scope)) as any;
+    assert.equal(end.output, '');
+    assert.equal(end.endOffset, 110000);
+    const legacy = await f.workbench.start(`${node} -e \"process.exit(0)\"`);
+    await assert.rejects(f.tools.execute({ tool: 'tasks', input: legacy.id, args: { action: 'status' } }, f.scope), /TASK_NOT_FOUND/);
+  } finally {
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('agent wait is bounded, cancellable and uses the existing process cancellation gate', async () => {
+  const f = await fixture();
+  const abort = new AbortController();
+  f.scope.signal = abort.signal;
+  const host = await f.tools.host(f.scope);
+  try {
+    await writeFile(join(f.root, 'slow.cjs'), "process.stdout.write('started'); setTimeout(() => process.stdout.write('finished'), 800);");
+    const job = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
+    const request = { tool: 'tasks' as const, input: job.id, args: { action: 'wait', timeoutMs: 20 } };
+    let activity = '';
+    f.scope.activity = text => {
+      activity = text;
+    };
+    host.activity?.('tasks');
+    assert.equal(activity, 'กำลังตรวจงานเบื้องหลัง');
+    assert.equal(host.readOnly(request), false, 'bounded waits must not fan out in parallel');
+    const waiting = (await host.execute(request, abort.signal)) as any;
+    assert.equal(waiting.status, 'running');
+    assert.equal(waiting.timedOut, true);
+    await assert.rejects(host.execute({ ...request, args: { action: 'wait', timeoutMs: 30001 } }, abort.signal), /INVALID_INPUT/);
+    const done = (await host.execute({ ...request, args: { action: 'wait', timeoutMs: 2000 } }, abort.signal)) as any;
+    assert.equal(done.status, 'done');
+    assert.equal(done.timedOut, false);
+    assert.match(done.output, /startedfinished/);
+    const slow = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
+    await assert.rejects(
+      f.tools.execute({ tool: 'tasks', input: slow.id, args: { action: 'cancel' } }, { ...f.scope, sessionId: 'other' }),
+      /TASK_NOT_FOUND/,
+    );
+    const before = f.requests();
+    await host.execute({ tool: 'tasks', input: slow.id, args: { action: 'cancel' } }, abort.signal);
+    assert.equal(f.requests(), before + 1, 'cancel retains human approval in ask mode');
+    const cancelled = (await host.execute(
+      { tool: 'tasks', input: slow.id, args: { action: 'wait', timeoutMs: 2000 } },
+      abort.signal,
+    )) as any;
+    assert.equal(cancelled.status, 'cancelled');
+    const pendingJob = (await host.execute({ tool: 'terminal', input: `${node} slow.cjs` }, abort.signal)) as any;
+    const pending = host.execute({ tool: 'tasks', input: pendingJob.id, args: { action: 'wait', timeoutMs: 30000 } }, abort.signal);
+    setTimeout(() => abort.abort(), 20);
+    await assert.rejects(pending, /CANCELLED/);
+  } finally {
+    await host.dispose?.();
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+  const plan = await fixture('plan');
+  try {
+    const job = await plan.workbench.start(`${node} -e \"setTimeout(()=>{},1000)\"`, plan.scope.sessionId);
+    await assert.rejects(plan.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'cancel' } }, plan.scope), /PLAN_MODE/);
+    assert.equal(
+      ((await plan.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, plan.scope)) as any).status,
+      'running',
+    );
+  } finally {
+    await plan.workbench.close();
+    plan.store.close();
+    await rm(plan.root, { recursive: true, force: true });
+  }
+});
+
+test('agent task inspection is session/workspace scoped and output bounded over a real subprocess', async () => {
+  const f = await fixture();
+  try {
+    await writeFile(join(f.root, 'process.cjs'), "process.stdout.write('fixture-output');");
+    const job = (await f.tools.execute({ tool: 'terminal', input: `${node} process.cjs` }, f.scope)) as any;
+    for (let i = 0; i < 100 && f.workbench.tasks().find(t => t.id === job.id)?.status === 'running'; i++)
+      await new Promise(resolve => setTimeout(resolve, 20));
+    const status = (await f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, f.scope)) as any;
+    assert.equal(status.status, 'done');
+    assert.equal(status.output, undefined, 'status returns metadata, not log bodies');
+    const poll = (await f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'poll', offset: 0, length: 7 } }, f.scope)) as any;
+    assert.equal(poll.output, 'fixture');
+    assert.equal(poll.nextOffset, 7);
+    assert.equal(poll.total, 14);
+    const list = (await f.tools.execute({ tool: 'tasks', input: '', args: { action: 'list' } }, f.scope)) as any;
+    assert.equal(list.length, 1);
+    assert.equal(list[0].output, undefined);
+    await assert.rejects(
+      f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, { ...f.scope, sessionId: 'other' }),
+      /TASK_NOT_FOUND/,
+    );
+    assert.deepEqual(await f.tools.execute({ tool: 'tasks', input: '' }, { ...f.scope, sessionId: 'other' }), []);
+    await assert.rejects(
+      f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'poll', length: 40001 } }, f.scope),
+      /INVALID_INPUT/,
+    );
+    await assert.rejects(f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'unknown' } }, f.scope), /INVALID_INPUT/);
+    f.store.put('settings', 'main', { workspace: join(f.root, 'different') });
+    await mkdir(join(f.root, 'different'));
+    await assert.rejects(f.tools.execute({ tool: 'tasks', input: job.id, args: { action: 'status' } }, f.scope), /TASK_NOT_FOUND/);
+  } finally {
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
 });
