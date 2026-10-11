@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **HA05 knowledge relevance**: original staff-query corpus improves from 59/61 to 61/61 for local top-document retrieval/abstention. Topic coverage avoids shared-location matches; role-table evidence answers team duties instead of form lists. Paraphrase and independent synthetic cases added; exact document-number, restricted-source and cache behavior retained. 32 related regressions, root 968 passed/3 skipped, Desktop 674 passed/2 skipped, validators/format/build pass on Linux. Model-answer quality and unseen staff questions still require evaluation.
+
 - **HA03 effective capabilities**: shared Connect AI/Setup disclosures explain policy and transport blockers per account, with organization routing/MCP/draft/check status once per page. Unknown configuration stays unknown; text readiness does not establish image or MCP entitlement. Synthetic keyboard/policy-revocation, Setup and English Electron checks pass on Linux; root 968 passed/3 skipped, Desktop 670 passed/2 skipped, validators/format/build pass. Native employee/account acceptance remains open.
 
 - **HA01 Skill evidence**: Thai paired Office reports distinguish verified file outcomes, missing/failed/stale pairs and memo human review. Context fingerprints prevent mixing source/tool revisions on resume; ledger/call limits remain unchanged. Synthetic scorer and controlled real-host Office checks pass. No Desktop OAuth profile is available in this cloud (0 model prompts); signed-in Windows/macOS live results and existing eval debt remain open.
@@ -50,7 +52,6 @@ _Last updated: 2026-10-11_
 - `desktop/test/office-skill-benefit.test.mjs` fails in cloud containers (no Office runtime); not a code failure.
 - macOS Apple silicon `tool-loop-smoke` timed out once at release time and passed on re-run.
 - GitHub Packages workflow fails: package scope `@step-cmu` does not exist (403).
-- Knowledge search misses: "ทีม HD ทำหน้าที่อะไร" can match HD form lists rather than team duties; "แนะนำร้านกาแฟในเชียงใหม่" can match an HR document. Exact document-number retrieval has separate cross-team regression tests; the 59/61 benchmark is local search evidence, not model-answer accuracy.
 - Small models with a 4,096-token window cannot fit the smallest prompt.
 
 ## Document source and acceptance backlog

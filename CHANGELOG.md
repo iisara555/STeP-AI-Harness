@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- HA05: local organization search checks meaningful topic coverage and uses actual team-role table rows for duty questions, avoiding form-register and shared-location false matches. The unchanged 61-question corpus improves from 59/61 to 61/61 for retrieval/abstention; new paraphrase and independent synthetic regressions protect exact codes, restrictions and keyword lookup. This is local retrieval evidence, not live AI-answer accuracy. No document facts, privacy defaults, dependencies or context limits changed.
+
 - HA03: Connect AI and Setup show account-specific chat/web/vision/image eligibility, policy blockers and next steps, plus shared organization capabilities. Image and MCP access remain conditional on model/server permission; chat tests do not certify them. The snapshot exposes only the configured MCP server count. Synthetic policy, keyboard, narrow-window and English UI checks; no policy defaults, credentials or dependencies changed.
 
 - HA01: Office Skill evaluation now writes a Thai paired-results report and checks comparison fingerprints for the prompt, model/effort, Skill/reference contents and tool host. Failed/incomplete/duplicate/stale pairs remain unscored; memo heuristics require human review. Existing call budgets, OAuth handling and lifecycle defaults are unchanged. Tests use synthetic artifacts and controlled RPC; no live model benefit is claimed, and live OAuth evaluation remains pending on a signed-in Windows/macOS machine.
