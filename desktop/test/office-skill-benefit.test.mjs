@@ -359,3 +359,33 @@ test('a resumed pair from another source/tool context cannot be presented as cur
   }));
   assert.equal(safeSummary({ trials }).pairs[0].outcome, 'incomplete');
 });
+
+test('stopped live reports retain every planned task and the actual error status', () => {
+  const report = {
+    models: ['synthetic-model', 'untouched-model', 'private@example.invalid'],
+    trials: [
+      {
+        model: 'synthetic-model',
+        task: 'xlsx',
+        arm: 'without-skill',
+        status: 'error',
+        code: 'EVAL_QUOTA_BOUND',
+        modelCalls: 1,
+        verified: { artifactVerified: true },
+      },
+    ],
+  };
+  const summary = safeSummary(report);
+  assert.equal(summary.trials[0].status, 'error');
+  assert.equal(summary.pairs.length, 6);
+  assert.deepEqual(
+    summary.pairs.map(p => [p.model, p.task, p.outcome]),
+    ['synthetic-model', 'untouched-model'].flatMap(model => ['xlsx', 'pptx', 'memo'].map(task => [model, task, 'incomplete'])),
+  );
+  assert.equal(summary.pairs[0].withoutSkill.status, 'error');
+  assert.equal(summary.pairs[0].withoutSkill.code, 'EVAL_QUOTA_BOUND');
+  assert.equal(summary.pairs[2].withSkill, null);
+  assert.equal(summary.pairs[2].withoutSkill, null);
+  assert.match(summaryMarkdown(report), /บันทึกเสนอทางเลือก/);
+  assert.equal(JSON.stringify(summary).includes('private@example.invalid'), false);
+});

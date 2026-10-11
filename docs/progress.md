@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **Windows OAuth Skill eval / reporting coverage**: evaluated all six account-listed models on clean source `449424b` with the original OAuth runner (self-test → list → authenticated probe → live), synthetic inputs and one external ledger. 43 new admitted calls plus 2 prior astra calls; all models reached the token admission threshold before memo. Only three Excel pairs completed comparably: gpt-6-luna passed with Skill only; gpt-6-sol and gpt-5.6-sol passed both arms. PPTX pairs are incomplete; memo is unrun; recalculation/rendering/human semantics remain unverified. No quota/auth retry, reseeding, new budget folder or lifecycle promotion. Reporting-only follow-up retains all planned task rows and `error` statuses; regeneration uses recorded results, not new prompts. Root 968/8 skipped and Desktop 672/4 skipped, validators/format/build passed before live; after reporting fix root 968/8 skipped and Desktop 673/4 skipped, validate/format/build pass again. Private reports and budget remain outside Git.
+
 - **Windows evaluator shutdown**: the old/new Skill comparator now sets its exit status and lets HTTP handles/stdout drain. The existing loopback-model regression reproduced a libuv abort on Node 24 and 25 after writing a successful report; success and regression exit codes remain covered. This is separate from the OAuth WITH/WITHOUT runner.
 
 - **Windows validator regression**: the secret-scope subprocess test now uses the validator's Python 3.10+ discovery instead of a hardcoded `python` command. Reproduced failure with the Windows Store alias and working `py -3`; shared discovery is covered without skipping the scanner.

@@ -15,12 +15,12 @@ export function safeSummary(report) {
     cumulativeAdmittedCalls: Object.fromEntries(
       Object.entries(report.cumulativeAdmittedCalls || {}).map(([m, n]) => [safeModel(m), number(n)]),
     ),
-    pairs: pairedEvidence(report.trials || []),
+    pairs: pairedEvidence(report.trials || [], report.models || []),
     trials: (report.trials || []).map(t => ({
       model: safeModel(t.model),
       task: ['xlsx', 'pptx', 'memo'].includes(t.task) ? t.task : 'unknown',
       arm: ['with-skill', 'without-skill'].includes(t.arm) ? t.arm : 'unknown',
-      status: ['review', 'failed', 'cancelled', 'interrupted', 'idle'].includes(t.status) ? t.status : 'unknown',
+      status: ['review', 'error', 'failed', 'cancelled', 'interrupted', 'idle'].includes(t.status) ? t.status : 'unknown',
       code: safeCode(t.code),
       modelCalls: number(t.modelCalls),
       resumed: t.resumed === true,
@@ -45,8 +45,12 @@ export function safeSummary(report) {
 
 // Comparisons require the same prompt, sources, tool host, model/configuration and runner fingerprint.
 // A failed arm or an old ledger without that fingerprint remains visible but cannot establish a paired outcome.
-function pairedEvidence(trials) {
+function pairedEvidence(trials, models) {
   const groups = new Map();
+  for (const model of models) {
+    if (!/^[A-Za-z0-9_.-]{1,100}$/.test(model || '')) continue;
+    for (const task of ['xlsx', 'pptx', 'memo']) groups.set(JSON.stringify([model, task]), []);
+  }
   for (const trial of trials) {
     if (!/^[A-Za-z0-9_.-]{1,100}$/.test(trial.model || '') || !['xlsx', 'pptx', 'memo'].includes(trial.task)) continue;
     const key = JSON.stringify([trial.model, trial.task]);
@@ -56,7 +60,7 @@ function pairedEvidence(trials) {
   const armSummary = t =>
     t
       ? {
-          status: ['review', 'failed', 'cancelled', 'interrupted', 'idle'].includes(t.status) ? t.status : 'unknown',
+          status: ['review', 'error', 'failed', 'cancelled', 'interrupted', 'idle'].includes(t.status) ? t.status : 'unknown',
           code: /^[A-Z_]{1,100}$/.test(t.code || '') ? t.code : undefined,
           artifactVerified: typeof t.verified?.artifactVerified === 'boolean' ? t.verified.artifactVerified : null,
           modelCalls: Number.isSafeInteger(t.modelCalls) && t.modelCalls >= 0 ? t.modelCalls : null,
@@ -64,7 +68,8 @@ function pairedEvidence(trials) {
           resumed: t.resumed === true,
         }
       : null;
-  return [...groups.values()].map(rows => {
+  return [...groups.entries()].map(([key, rows]) => {
+    const [model, task] = JSON.parse(key);
     const withRows = rows.filter(t => t.arm === 'with-skill'),
       withoutRows = rows.filter(t => t.arm === 'without-skill');
     const a = withRows[0],
@@ -78,7 +83,7 @@ function pairedEvidence(trials) {
       b.contextCurrent !== false;
     const completed = contextMatches && a.status === 'review' && b.status === 'review' && !a.code && !b.code;
     let outcome = 'incomplete';
-    if (completed && rows[0].task === 'memo') outcome = 'requires-human-review';
+    if (completed && task === 'memo') outcome = 'requires-human-review';
     else if (completed && typeof a.verified?.artifactVerified === 'boolean' && typeof b.verified?.artifactVerified === 'boolean') {
       outcome = a.verified.artifactVerified
         ? b.verified.artifactVerified
@@ -88,7 +93,7 @@ function pairedEvidence(trials) {
           ? 'without-only'
           : 'neither';
     }
-    return { model: rows[0].model, task: rows[0].task, outcome, contextMatches, withSkill: armSummary(a), withoutSkill: armSummary(b) };
+    return { model, task, outcome, contextMatches, withSkill: armSummary(a), withoutSkill: armSummary(b) };
   });
 }
 
