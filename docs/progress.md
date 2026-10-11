@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **FE01 shared modal accessibility**: failing Electron Tab regression now passes; dialogs isolate background controls/shortcuts and restore focus after Escape or confirmation. Existing chat/privacy approval paths remain covered with synthetic providers; native screen-reader acceptance remains open.
+
 - **BE04 image intent**: reject Thai compounds that mean text overviews/formats and explicit no-image instructions before shared host/renderer auto-routing. Regression failed on main first. Explicit image mode and existing privacy/destination gates remain unchanged; follow-up brief retention is outside this fix.
 
 - **BE01 LINE intake recovery**: durable metadata before webhook acknowledgement; interrupted jobs are visible to the loopback operator and require reviewed input plus explicit provider approval. Queued/in-flight restart and failed-write regressions reproduced failures first and now pass with synthetic signatures/providers. Real organization credentials/channel rollout remain an IT acceptance step; policy defaults unchanged.
