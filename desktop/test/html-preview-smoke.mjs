@@ -143,8 +143,27 @@ try {
   // Native fullscreen restores the authored scale, then fitting resumes on return to the panel.
   const fullscreen = async enter =>
     app.evaluate(async ({ BrowserWindow }, enter) => {
-      const view = BrowserWindow.getAllWindows()[0].contentView.children.find(v => v.webContents?.getURL().includes('step-preview-'));
-      await view.webContents.executeJavaScript(enter ? 'document.documentElement.requestFullscreen()' : 'document.exitFullscreen()', true);
+      const window = BrowserWindow.getAllWindows()[0];
+      const view = window.contentView.children.find(v => v.webContents?.getURL().includes('step-preview-'));
+      const event = enter ? 'enter-full-screen' : 'leave-full-screen';
+      let completed;
+      let timer;
+      // The DOM promise precedes the native macOS animation. Exiting during that animation stalls Electron.
+      const nativeTransition = new Promise((resolve, reject) => {
+        completed = () => resolve();
+        window.once(event, completed);
+        timer = setTimeout(() => reject(new Error(`Native fullscreen transition timed out: ${event}`)), 10_000);
+      });
+      try {
+        await Promise.all([
+          nativeTransition,
+          view.webContents.executeJavaScript(enter ? 'document.documentElement.requestFullscreen()' : 'document.exitFullscreen()', true),
+        ]);
+        if (window.isFullScreen() !== enter) throw new Error('Native fullscreen state did not settle');
+      } finally {
+        clearTimeout(timer);
+        window.removeListener(event, completed);
+      }
     }, enter);
   checkpoint('enter native fullscreen');
   await fullscreen(true);

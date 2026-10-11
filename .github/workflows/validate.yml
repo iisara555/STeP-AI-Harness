@@ -133,6 +133,4 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Verify Electron chat, browser and tools on macOS
-        env:
-          DEBUG: pw:api
         run: npm run test:electron

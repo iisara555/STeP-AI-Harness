@@ -12,7 +12,7 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
-- **macOS HTML preview smoke diagnosis**: the #144 macOS log completes every prior smoke through receipt at 13:27 UTC, then the HTML preview smoke never finishes; #142 (without this smoke) passes macOS. Add phase reporting and a 90-second native-operation watchdog before changing the fullscreen behavior, with a 20-minute CI job bound. Windows baseline passes; macOS red reproduction and the fix are in progress. No eval/provider calls or budget changes.
+- **macOS HTML preview smoke**: #151 first reproduces a red native run: HTML fullscreen entry resolves, then exit is sent about 12 ms later and stalls until the 90-second watchdog fails the test. Wait for BrowserWindow's native enter/leave-full-screen events before proceeding; retain DOM/layout/fit/fullscreen assertions and bound each transition at 10 seconds. Keep phase reporting and the watchdog, plus a 20-minute CI job bound; temporary Playwright tracing is removed. Windows and final macOS verification are in progress. No eval/provider calls or budget changes.
 
 - **Right-panel HTML preview**: app-zoom geometry and fixed-slide cropping reproduced in failing Electron tests, then corrected. Local HTML has **พอดีพื้นที่ / ขนาดจริง** controls, with temporary scaling below Chromium’s zoom floor; responsive reports preserve vertical scrolling and source files/permissions stay unchanged. Synthetic resize/reload/fullscreen regressions pass on Linux/Xvfb; root 968 passed/3 skipped and Desktop 662 passed/2 skipped, both validators, formatting and build pass. Branch `fix/html-preview-responsive` builds on the audit/OCR stack; Windows/macOS employee acceptance remains open.
 
