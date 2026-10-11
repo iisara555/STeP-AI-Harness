@@ -691,9 +691,7 @@ export function ReceiptApp({
   return (
     <div className="receipt-app">
       <header className="receipt-heading">
-        <h1>
-          {t('ตรวจใบเสร็จก่อนส่ง AFP')} <span className="chip">{t('ทดลอง')}</span>
-        </h1>
+        <h1>{t('ตรวจใบเสร็จก่อนส่ง AFP')}</h1>
         <p className="muted">{t('ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ')}</p>
       </header>
       <div className="receipt-grid">

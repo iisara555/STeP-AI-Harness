@@ -4277,10 +4277,6 @@ nav button:disabled {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.receipt-heading h1 .chip {
-  vertical-align: middle;
-  font-size: 11px;
-}
 .receipt-source .receipt-empty {
   min-height: 240px;
   padding: 24px 12px;
