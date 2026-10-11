@@ -33,6 +33,8 @@ export type Connection = {
   /** The account signed in at the last connect, kept apart from the test result in `ready`. */
   signedIn?: boolean;
   ready: boolean;
+  /** Snapshot-only: current policy prevents use; the stored test result remains intact. */
+  policyBlocked?: boolean;
   note: string;
   models?: ModelOption[];
   modelsAt?: string;

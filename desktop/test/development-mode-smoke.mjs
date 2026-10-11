@@ -65,7 +65,18 @@ try {
   const connection = await call('connection', claudePlan);
   assert.equal(connection.provider, 'claude');
   assert.equal(connection.mode, 'subscription');
-  await call('removeConnection', { id: connection.id });
+  // A previously successful account remains stored when policy is revoked.
+  await app.evaluate(({ app }, id) => {
+    const { DatabaseSync } = process.mainModule.require('node:sqlite');
+    const db = new DatabaseSync(app.getPath('userData') + '/workspace.sqlite');
+    const c = JSON.parse(db.prepare("SELECT value FROM records WHERE kind='connection' AND id=?").get(id).value);
+    db.prepare("UPDATE records SET value=? WHERE kind='connection' AND id=?").run(
+      JSON.stringify({ ...c, ready: true, signedIn: true }),
+      id,
+    );
+    db.close();
+  }, connection.id);
+  assert.equal((await call('snapshot')).connections.find(c => c.id === connection.id).ready, true);
   await assert.rejects(call('developmentMode', { enabled: 'yes' }), /INVALID_INPUT/);
 
   // Off again.
@@ -73,9 +84,20 @@ try {
   await expect(toggle).not.toBeChecked();
   await expect.poll(async () => (await call('snapshot')).features.claudeSubscription).toBe(false);
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
+  const revoked = (await call('snapshot')).connections.find(c => c.id === connection.id);
+  assert.equal(revoked.ready, false, 'stored success must not mean ready when policy disables the provider');
+  assert.equal(revoked.policyBlocked, true);
+  await expect(page.locator('.ai-connection-status')).toContainText('ปิดการใช้งาน');
+  await expect(page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toHaveCount(0);
+  await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'ออกจากระบบ', exact: true })).toBeEnabled();
 
   // An administrator removes the switch: hidden, refused, and an earlier "on" no longer counts.
   await call('developmentMode', { enabled: true });
+  const resumed = (await call('snapshot')).connections.find(c => c.id === connection.id);
+  assert.equal(resumed.ready, true, 'policy projection must preserve the stored test result');
+  assert.equal(resumed.policyBlocked, false);
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: false } }));
   await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(false);
   await expect(toggle).toHaveCount(0);

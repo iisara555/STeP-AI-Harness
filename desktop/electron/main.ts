@@ -1284,7 +1284,20 @@ async function main() {
     consentMetrics: consentMetrics.summary(store.list('session').length),
     userFile: knownUserFile(),
     settings: store.settings(),
-    connections: store.connections(),
+    connections: store.connections().map(connection => {
+      let policyBlocked =
+        (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn()) ||
+        (connection.provider === 'copilot' && !policyState.policy.features.copilot);
+      if (connection.provider === 'compatible') {
+        try {
+          compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
+        } catch {
+          policyBlocked = true;
+        }
+      }
+      // Project current usability without erasing the historical test result in private storage.
+      return { ...connection, ready: connection.ready && !policyBlocked, policyBlocked };
+    }),
     sessions: store.list<any>('session').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     teams: Object.values(await routing.loadTeamsDictionary()),
   });

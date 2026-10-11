@@ -150,11 +150,13 @@ export function AIConnections({
                 {busy === c.id ? <LoaderCircle size={14} className="spin" /> : c.ready ? <Check size={14} /> : null}
                 {busy === c.id
                   ? t('กำลังเชื่อมต่อและทดสอบ…')
-                  : c.ready
-                    ? t('ทดสอบผ่าน · พร้อมใช้งาน')
-                    : c.signedIn
-                      ? t('ลงชื่อแล้ว แต่ยังไม่พร้อมใช้งาน')
-                      : t('ยังไม่พร้อมใช้งาน')}
+                  : c.policyBlocked
+                    ? t('การเชื่อมต่อนี้ถูกปิดการใช้งาน · ลงชื่อออกหรือลบบัญชีได้')
+                    : c.ready
+                      ? t('ทดสอบผ่าน · พร้อมใช้งาน')
+                      : c.signedIn
+                        ? t('ลงชื่อแล้ว แต่ยังไม่พร้อมใช้งาน')
+                        : t('ยังไม่พร้อมใช้งาน')}
               </p>
               {c.ready && (
                 <p className="small muted">
@@ -181,7 +183,9 @@ export function AIConnections({
                   {progress[c.id]}
                 </p>
               ) : (
-                <p className={c.ready ? 'connected' : 'muted'}>{t(c.note)}</p>
+                <p className={c.ready ? 'connected' : 'muted'}>
+                  {c.policyBlocked ? t('ผลทดสอบเดิมไม่ได้ยืนยันว่าใช้งานได้ตาม policy ปัจจุบัน') : t(c.note)}
+                </p>
               )}
               {c.provider === 'gemini' && c.googleCloudProject && (
                 <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>
@@ -190,7 +194,7 @@ export function AIConnections({
             <div className="connection-actions ai-primary-actions">
               <button
                 className={c.ready ? 'quiet' : undefined}
-                disabled={Boolean(busy)}
+                disabled={Boolean(busy) || c.policyBlocked}
                 onClick={() => void run(c.id, () => call('connect', { id: c.id }))}
               >
                 {busy === c.id ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
@@ -224,7 +228,7 @@ export function AIConnections({
                     {t('โมเดลเริ่มต้นสำหรับงานใหม่')}
                     <select
                       value={c.model}
-                      disabled={Boolean(busy)}
+                      disabled={Boolean(busy) || c.policyBlocked}
                       onChange={e => void run(c.id + ':model', () => call('connectionModel', { id: c.id, model: e.target.value }))}
                     >
                       {c.provider !== 'antigravity' && (

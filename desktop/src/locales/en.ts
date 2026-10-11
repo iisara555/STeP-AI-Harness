@@ -3,6 +3,9 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'การเชื่อมต่อนี้ถูกปิดการใช้งาน · ลงชื่อออกหรือลบบัญชีได้': 'Disabled by settings or policy · You can sign out or remove this account',
+  'ผลทดสอบเดิมไม่ได้ยืนยันว่าใช้งานได้ตาม policy ปัจจุบัน': 'A previous test does not confirm access under the current policy',
+
   สำเร็จ: 'Succeeded',
   'AI ดึงหัวข้อและตารางจากเว็บ อ่านภาพเมื่อคุณยินยอม และสร้างภาพด้วยบัญชี API ที่รองรับได้':
     'AI can extract web headings and tables, analyze images with your consent, and generate images using a supported API account',

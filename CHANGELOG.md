@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- FE02: connection readiness reflects current policy without overwriting the stored test result. Disabled connections show the blocker, cannot test/change models, and retain sign-out/remove actions; Setup and chat receive the effective status. Synthetic policy-revocation/re-enable Electron tests verify this behavior.
+
 - FE01: confirmation dialogs contain forward/backward Tab, make the background inert, prevent workspace shortcuts and restore focus on close. Real Electron keyboard and chat-consent regressions use isolated synthetic profiles.
 
 - BE04: Thai overview/formatting requests and explicit no-image instructions stay in chat instead of automatically entering image generation. Synthetic intent regressions preserve explicit image creation; original-brief follow-up support remains a separate issue.
