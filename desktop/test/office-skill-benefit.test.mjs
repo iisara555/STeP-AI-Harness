@@ -223,6 +223,17 @@ test('controlled RPC runs both arms through real Office tools and resumes withou
     );
     assert.equal(report.trials.filter(t => t.verified.artifactVerified === true).length, 4);
     assert.ok(report.trials.every(t => t.status === 'review'));
+    assert.ok(report.trials.every(t => t.turns.length === t.modelCalls));
+    for (const t of report.trials) {
+      for (const turn of t.turns) {
+        assert.equal(turn.status, 'completed');
+        assert.equal(turn.usage.total, 150);
+        assert.equal(turn.componentChars.toolRules > 0, true);
+        assert.equal(turn.componentChars.skill > 0, t.arm === 'with-skill');
+        assert.ok(turn.promptChars > 0 && turn.systemChars > 0);
+        assert.equal(turn.nativeProviderContext, 'not-observed');
+      }
+    }
     assert.equal(report.modelBenefitEstablished, false);
     const paired = JSON.parse(await readFile(join(output, folders[0], 'summary.json'), 'utf8'));
     assert.deepEqual(
@@ -235,6 +246,125 @@ test('controlled RPC runs both arms through real Office tools and resumes withou
     const ledger = JSON.parse(await readFile(join(output, 'budget.json'), 'utf8'));
     assert.equal(ledger.modelCalls['mock-office'], 12);
     assert.equal(Object.keys(ledger.trials).length, 6);
+    for (const task of ['xlsx', 'pptx', 'memo']) {
+      const rows = report.trials.filter(t => t.task === task);
+      const contexts = await Promise.all(rows.map(t => readFile(join(t.workspace, '.mock-context.json'), 'utf8').then(JSON.parse)));
+      assert.equal(contexts[0].sharedSystemHash, contexts[1].sharedSystemHash);
+      assert.deepEqual(
+        contexts.map(c => c.hasSkill),
+        rows.map(t => t.arm === 'with-skill'),
+      );
+      assert.ok(contexts.every(c => c.scopedTools && !c.unavailableTools));
+    }
+    // A changed prompt helper invalidates old comparison contexts without spending again.
+    const budgetBefore = await readFile(join(output, 'budget.json'));
+    await writeFile(join(kit, 'context.mjs'), (await readFile(join(kit, 'context.mjs'), 'utf8')) + '\n// synthetic context revision\n');
+    const third = run();
+    assert.equal(third.status, 0, third.stderr);
+    const latestFolder = JSON.parse(third.stdout.split('\n').find(line => line.includes('"runRoot"'))).runRoot;
+    const stale = JSON.parse(await readFile(join(latestFolder, 'summary.json'), 'utf8'));
+    assert.ok(stale.pairs.every(p => p.outcome === 'incomplete'));
+    assert.equal(stale.newModelCalls, 0);
+    assert.deepEqual(await readFile(join(output, 'budget.json')), budgetBefore);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('restricted harness instructions replace unavailable tool descriptions while the default host stays unchanged', async () => {
+  const { Store } = await import('../electron/store.ts');
+  const { WorkService } = await import('../electron/service.ts');
+  const { TOOL_RULES, BROWSER_RULES } = await import('../electron/tool-loop.ts');
+  const { evaluatePrivacyGate } = await import('../../src/modules/privacy/index.js');
+  const store = new Store(':memory:');
+  const scoped = 'SYNTHETIC_SCOPED_RULES: sheet_create sheet_read slides_create ask_user';
+  store.put('connection', 'synthetic-connection', {
+    id: 'synthetic-connection',
+    provider: 'openai',
+    mode: 'subscription',
+    model: 'mock',
+    executable: '',
+    ready: true,
+  });
+  const systems = [];
+  const harness = {
+    root: fileURLToPath(new URL('../..', import.meta.url)),
+    route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+    contextPolicy: () => ({ history: 'ignore', carryover: false }),
+    privacy: evaluatePrivacyGate,
+    skillMetadata: async () => null,
+    toolLoop: () => true,
+    toolInstructions: () => scoped,
+    tools: async () => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      outgoing: async text => text,
+      execute: async () => {
+        throw new Error('TEST_UNEXPECTED_TOOL');
+      },
+    }),
+  };
+  const runtime = async () => ({
+    context: {},
+    adapter: {
+      run: async (_prompt, _connection, context) => {
+        systems.push(context.system);
+        return 'คำตอบจากข้อมูลสังเคราะห์';
+      },
+    },
+  });
+  try {
+    for (const restricted of [true, false]) {
+      if (!restricted) delete harness.toolInstructions;
+      const session = store.create('synthetic-connection', 'cc');
+      await new WorkService(store, harness, runtime, () => {}).run(session.id, 'จัดข้อมูลสังเคราะห์', '', true, undefined, 'chat');
+      assert.equal(store.session(session.id).status, 'review');
+    }
+    assert.ok(systems[0].includes(scoped));
+    assert.equal(systems[0].includes(TOOL_RULES), false);
+    assert.equal(systems[0].includes(BROWSER_RULES), false);
+    assert.doesNotMatch(systems[0], /web_search|browser_control|tool_search/);
+    assert.ok(systems[1].includes(TOOL_RULES));
+    assert.ok(systems[1].includes(BROWSER_RULES));
+  } finally {
+    store.close();
+  }
+});
+
+test('failed controlled provider turns retain observed usage and bounded metadata without retry', { timeout: 60000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-office-failed-cost-'));
+  try {
+    const repo = fileURLToPath(new URL('../..', import.meta.url));
+    const kit = join(dir, 'kit'),
+      profile = join(dir, 'profile'),
+      output = join(dir, 'output');
+    await cp(new URL('../eval/office-skill-benefit/', import.meta.url), kit, { recursive: true });
+    await mkdir(profile);
+    await copyFile(new URL('./fixtures/office-eval-rpc.mjs', import.meta.url), join(kit, 'guarded-codex.mjs'));
+    await writeFile(join(kit, 'fixture-scenario.json'), JSON.stringify({ failAfterUsage: true }));
+    const result = spawnSync(
+      process.execPath,
+      [join(kit, 'eval.mjs'), '--repo', repo, '--profile', profile, '--output', output, '--live'],
+      {
+        encoding: 'utf8',
+        timeout: 45000,
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const folder = (await readdir(output)).find(name => name.startsWith('live-'));
+    const report = JSON.parse(await readFile(join(output, folder, 'report.json'), 'utf8'));
+    assert.equal(report.trials.length, 1);
+    const trial = report.trials[0];
+    assert.equal(trial.code, 'PROVIDER_QUOTA');
+    assert.equal(trial.modelCalls, 1);
+    assert.equal(trial.turns[0].status, 'error');
+    assert.equal(trial.turns[0].usage.total, 150);
+    assert.equal(trial.usage.total, 150);
+    const ledger = JSON.parse(await readFile(join(output, 'budget.json'), 'utf8'));
+    assert.equal(ledger.modelCalls['mock-office'], 1);
+    assert.equal(ledger.modelTokens['mock-office'], 150);
+    assert.equal(JSON.stringify(trial.turns).includes('ข้อมูลสังเคราะห์'), false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

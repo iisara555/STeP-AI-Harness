@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { Budget } from './budget.mjs';
 import { safeSummary, summaryMarkdown } from './summary.mjs';
+import { EVAL_TOOLS, EVAL_TOOL_RULES, skillBlock, observeUsage, recordedUsage } from './context.mjs';
 const root = process.env.STEP_EVAL_REPO,
   base = process.env.STEP_EVAL_OUTPUT,
   kit = process.env.STEP_EVAL_KIT;
@@ -22,6 +23,7 @@ const { defaultPolicy } = await import(repoModule('desktop/electron/policy.ts'))
 const { CodexAdapter, createRpc, initialize } = await import(repoModule('desktop/electron/providers.ts'));
 const { sheetWorker } = await import(repoModule('desktop/electron/sheets.ts'));
 const { evaluatePrivacyGate } = await import(repoModule('src/modules/privacy/index.js'));
+const { promptMetrics } = await import(repoModule('desktop/electron/prompt-metrics.ts'));
 const require2 = createRequire(join(root, 'desktop/package.json'));
 const ExcelJS = require2('exceljs'),
   JSZip = require2('jszip');
@@ -38,7 +40,9 @@ const hostFingerprint = fingerprint(
         'desktop/electron/sheet-worker.cjs',
       ].map(p => readFile(join(root, p), 'utf8')),
     )
-  ).join('\n') + (await readFile(new URL(import.meta.url), 'utf8')),
+  ).join('\n') +
+    (await readFile(new URL(import.meta.url), 'utf8')) +
+    (await readFile(new URL('./context.mjs', import.meta.url), 'utf8')),
 );
 const executable = join(kit, 'guarded-codex.mjs');
 const worker = join(root, 'desktop/electron/sheet-worker.cjs');
@@ -351,6 +355,7 @@ for (const model of models) {
       let tools;
       let usageWrites = Promise.resolve();
       const requests = [];
+      const turns = [];
       let statusCode = '',
         trialCalls = 0;
       const harness = {
@@ -362,6 +367,7 @@ for (const model of models) {
         documentPrivacy: async () => null,
         nextOutput: async () => null,
         toolLoop: () => true,
+        toolInstructions: () => EVAL_TOOL_RULES,
         permissionMode: () => 'acceptEdits',
         tools: async scope => {
           const host = await tools.host(scope);
@@ -369,7 +375,7 @@ for (const model of models) {
             ...host,
             readOnly: host.readOnly.bind(host),
             execute: async (r, s) => {
-              if (!['sheet_create', 'sheet_read', 'slides_create', 'ask_user'].includes(r.tool)) throw new Error('EVAL_TOOL_DISABLED');
+              if (!EVAL_TOOLS.includes(r.tool)) throw new Error('EVAL_TOOL_DISABLED');
               const record = { tool: r.tool, input: r.input, args: r.args };
               requests.push(record);
               try {
@@ -415,25 +421,45 @@ for (const model of models) {
             };
             await writeFile(join(runRoot, 'report.json'), JSON.stringify(report, null, 2));
             const stop = AbortSignal.any([context.signal, abortAll.signal, AbortSignal.timeout(12e4)]);
-            let lastUsageTotal = 0;
-            return selected.run(prompt, connection, {
-              ...context,
-              session: void 0,
-              signal: stop,
-              effort,
-              system:
-                (context.system || '') +
-                '\n\nThe evaluation exposes only sheet_create, sheet_read, slides_create and ask_user. All other host tools are unavailable in both arms. Use only synthetic task data. Keep the final response concise.' +
-                (instructions.length ? '\n\n<skill_instructions>\n' + instructions.join('\n\n') + '\n</skill_instructions>' : ''),
-              onUsage: u => {
-                const current = Math.max(lastUsageTotal, u.total || 0),
-                  delta = current - lastUsageTotal;
-                lastUsageTotal = current;
-                if (delta) usageWrites = usageWrites.then(() => budget.usage(modelId, delta));
-                tokens = budget.tokens(modelId) + delta;
-                context.onUsage?.(u);
+            const skill = skillBlock(instructions);
+            const system = (context.system || '') + skill;
+            const turn = {
+              ...promptMetrics(system, prompt, { toolRules: EVAL_TOOL_RULES, selectedInstructions: skill }),
+              systemChars: system.length,
+              promptChars: prompt.length,
+              componentChars: {
+                toolRules: (context.system || '').includes(EVAL_TOOL_RULES) ? EVAL_TOOL_RULES.length : 0,
+                skill: skill.length,
               },
-            });
+              nativeProviderContext: 'not-observed',
+              status: 'running',
+            };
+            turns.push(turn);
+            let lastUsageTotal = 0;
+            try {
+              const answer = await selected.run(prompt, connection, {
+                ...context,
+                session: void 0,
+                signal: stop,
+                effort,
+                system,
+                onUsage: u => {
+                  observeUsage(turn, u);
+                  const current = Math.max(lastUsageTotal, u.total || 0),
+                    delta = current - lastUsageTotal;
+                  lastUsageTotal = current;
+                  if (delta) usageWrites = usageWrites.then(() => budget.usage(modelId, delta));
+                  tokens = budget.tokens(modelId) + delta;
+                  context.onUsage?.(u);
+                },
+              });
+              turn.status = 'completed';
+              return answer;
+            } catch (error) {
+              turn.status = 'error';
+              turn.code = /^[A-Z_]+$/.test(error.message) ? error.message : 'PROVIDER_REQUEST_FAILED';
+              throw error;
+            }
           },
         },
       });
@@ -485,7 +511,9 @@ for (const model of models) {
         status: done.status,
         code: statusCode || void 0,
         modelCalls: trialCalls,
-        usage: done.usage,
+        usage: recordedUsage(turns) || done.usage,
+        usageCoverage: { observedTurns: turns.filter(turn => turn.usage).length, admittedTurns: turns.length },
+        turns,
         durationMs: Date.now() - started,
         verified,
         workspace,

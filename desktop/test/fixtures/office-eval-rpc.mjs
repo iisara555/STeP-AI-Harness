@@ -2,6 +2,11 @@
 import { createInterface } from 'node:readline';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+let failAfterUsage = false;
+try {
+  failAfterUsage = JSON.parse(readFileSync(new URL('./fixture-scenario.json', import.meta.url), 'utf8')).failAfterUsage === true;
+} catch {}
 const send = value => process.stdout.write(JSON.stringify(value) + '\n');
 const step = (tool, input, args) => '```step-tool\n' + JSON.stringify({ tool, input, args }) + '\n```';
 createInterface({ input: process.stdin }).on('line', line => {
@@ -11,7 +16,20 @@ createInterface({ input: process.stdin }).on('line', line => {
   if (message.method === 'account/read') result = { account: { type: 'chatgpt' } };
   if (message.method === 'account/rateLimits/read') result = { rateLimits: {} };
   if (message.method === 'model/list') result = { data: [{ model: 'mock-office', defaultReasoningEffort: 'low' }], nextCursor: null };
-  if (message.method === 'thread/start') result = { thread: { id: 'mock-thread' } };
+  if (message.method === 'thread/start') {
+    const system = message.params.developerInstructions || '';
+    const shared = system.split('\n\n<skill_instructions>')[0];
+    writeFileSync(
+      join(process.cwd(), '.mock-context.json'),
+      JSON.stringify({
+        sharedSystemHash: createHash('sha256').update(shared).digest('hex'),
+        hasSkill: system.includes('<skill_instructions>'),
+        scopedTools: ['sheet_create', 'sheet_read', 'slides_create', 'ask_user'].every(tool => shared.includes(tool)),
+        unavailableTools: /Browser interaction:|tool_search\(|web_search\(|terminal\(input/.test(shared),
+      }),
+    );
+    result = { thread: { id: 'mock-thread' } };
+  }
   send({ id: message.id, result });
   if (message.method !== 'turn/start') return;
   const path = join(process.cwd(), '.mock-turn-count.json');
@@ -71,5 +89,8 @@ createInterface({ input: process.stdin }).on('line', line => {
     method: 'thread/tokenUsage/updated',
     params: { tokenUsage: { total: { inputTokens: 100, outputTokens: 50, totalTokens: 150 } } },
   });
-  send({ method: 'turn/completed', params: { turn: { status: 'completed' } } });
+  send({
+    method: 'turn/completed',
+    params: { turn: failAfterUsage ? { status: 'failed', error: { message: 'synthetic quota exceeded' } } : { status: 'completed' } },
+  });
 });
