@@ -4221,3 +4221,13 @@ nav button:disabled {
 nav button:disabled {
   border-color: transparent;
 }
+
+.development-mode {
+  margin-bottom: 1rem;
+}
+.development-mode label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 600;
+}

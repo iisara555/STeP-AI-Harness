@@ -4,21 +4,17 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-10_
+_Last updated: 2026-10-11_
 
 ## Latest release
 
-- **Desktop v0.5.37** (2026-10-09) — Windows x64 and macOS Apple silicon: PR #126 (one-line chat status, answer time,
-  Antigravity streaming, policy problem reasons, STeP document sources, optional `answerCheck`, HTML preview, retry of
-  unreadable tool requests, `AGENTS.md`) and PR #127 (receipt fields filled from the AI image reading). Intel Macs stay
-  on 0.5.35. Harness **0.7.7**.
+- **Desktop v0.5.38** (2026-10-10) — published from combined PR #134 (`b5d6ed7`): Windows x64 and macOS Apple silicon installers and the in-app `desktop-latest` update feeds. Combines #130/#131/#133, MIS ISO register lookup, protected credential streaming, public search for every connection, one-page OCR handoff, web extraction, consented vision, image tool calls, organization Google MCP profile and local tool diagnostics. Harness **0.7.7**; Intel Macs stay on 0.5.35.
 
 ## In progress
 
-- **Desktop 0.5.38 prepared release**: combines PR #130/#131/#133 on main after #132, with review fixes for credential streaming/cursors, Windows URL paths, exact ISO document lookup and snapshot provenance, provider-independent public Bing web search and one-page OCR handoff/consent fixes. Source version is not publication evidence; the release workflow publishes only after the combined PR passes checks and is squash-merged. Harness remains **0.7.7**.
-- Validation of this combined change: root `npm test` 964 passed/3 skipped (967 cases); Desktop unit suite 647 passed/2 skipped (649 cases); `npm run validate`, `npm run desktop:test`, Python validator, formatting and build passed. Receipt handoff/consent and focused regressions use synthetic data. All 39 Electron smoke scripts passed locally on the expanded media/MCP/observability change with synthetic providers (the receipt disclosure checks open the relevant details). Windows CI exposed two CRLF-sensitive MIS assertions; their fixes also passed simulated CRLF reads. Windows/macOS native checks must pass on the final combined PR head before merge. A live Bing request in this cloud failed DNS resolution, so live search is not claimed here.
-- **Added scope in the combined PR**: structured web extraction, consented workspace/browser vision, image generation in the tool loop, Google Workspace managed MCP profile/test UI and local tool diagnostics. No new dependencies or policy defaults. Real provider image quality/Google authorization remain unverified; synthetic regressions and all 39 local Electron smoke scripts passed; Windows/macOS CI must pass on the expanded head.
-- Native provider tool transport, employee-machine process-tree acceptance and signed-in model acceptance remain open. Background masking deliberately withholds oversized lines and possible credential continuations.
+- **PR #135 / Desktop 0.5.39 prepared release**: based on released main 0.5.38. Review keeps `developmentMode` false by default (managed permission plus local opt-in), bounds/cancels warm claim waiting, falls back only before a prompt runs, reports a refused model without replay, and prevents late startup/finishing requests from resurrecting spares after logout/quit. Only successful text requests replenish the pool; policy revocation cancels Claude plan runs/sign-in. Both READMEs, operator docs, in-app notes and version/lockfile align with 0.5.39.
+- Regression evidence: seven new tests reproduced the original problems (six failures plus a startup-wait timeout), then passed after fixes. Additional cancellation, idle expiry, late-start cleanup and held-conversation reuse use a synthetic SDK. Local validation passed: root 964 passed/3 skipped (967 cases), Desktop 661 passed/2 skipped (663 cases), frozen install, formatting, build, both validators and all 40 Electron smoke scripts. Final Windows/macOS CI must pass before merge; release publication remains a separate workflow on the merged commit.
+- Real Claude account/quota behavior and employee-machine performance remain unverified after these review changes. Prior timing reported by the PR author has not been remeasured; the SDK documents roughly 230–260 MB per parked process. No new dependencies, credential handling or privacy/permission defaults added. Native provider tool transport, employee-machine process-tree acceptance and signed-in model acceptance remain open.
 
 ## Waiting on the owner
 

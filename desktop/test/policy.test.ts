@@ -44,6 +44,18 @@ test('auto mode needs both organization feature and allowed mode', () => {
   assert.equal(policyPath('darwin'), '/Library/Application Support/STeP/desktop-policy.json');
 });
 
+test('Claude developer access requires explicit managed policy and cannot relax the default pilot gate', () => {
+  assert.equal(defaultPolicy().features.claudeSubscription, false);
+  assert.equal(defaultPolicy().features.developmentMode, false);
+  const enabled = parsePolicy({ features: { developmentMode: true } });
+  assert.deepEqual(enabled.problems, []);
+  assert.equal(enabled.policy.features.developmentMode, true);
+  assert.equal(enabled.policy.features.claudeSubscription, false);
+  const invalid = parsePolicy({ features: { developmentMode: 'true' } });
+  assert.ok(invalid.problems.length);
+  assert.equal(invalid.policy.features.developmentMode, false);
+});
+
 test('invalid blocking definitions cannot silently enable risky features', () => {
   const cases = [
     null,

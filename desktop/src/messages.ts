@@ -154,6 +154,7 @@ export const errorText: Record<string, string> = localized({
   GIT_DIFF_UNAVAILABLE: 'อ่าน Git diff ไม่ได้ โฟลเดอร์นี้อาจไม่มี Git repository',
   TASK_LIMIT: 'มีงานหรือหน้าต่าง Browser ครบ 4 รายการแล้ว กรุณาหยุดหรือปิดบางรายการ',
   IMAGE_API_REQUIRED: 'การสร้างรูปต้องใช้ OpenAI หรือ Google ที่เชื่อมด้วย API key กรุณาเลือกบัญชีที่รองรับ',
+  MODEL_UNAVAILABLE: 'Claude Code ไม่รับโมเดลที่เลือก กรุณาตรวจรายชื่อโมเดลก่อนลองใหม่',
   IMAGE_MODEL_UNAVAILABLE: 'บัญชีนี้ยังไม่มีสิทธิ์ใช้โมเดลสร้างรูปที่เลือก กรุณาตรวจรายชื่อโมเดล',
   IMAGE_ACCESS_DENIED: 'ผู้ให้บริการไม่อนุญาต Image API กรุณาตรวจ API key และสิทธิ์บัญชี',
   IMAGE_RATE_LIMIT: 'โควตาสร้างรูปเต็ม กรุณาตรวจบัญชีหรือรอแล้วลองใหม่',

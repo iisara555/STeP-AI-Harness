@@ -6,6 +6,13 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.5.39',
+    items: () => [
+      t('Claude เตรียมพร้อมสำหรับข้อความถัดไป และหยุดรอเมื่อออกจากระบบหรือปิดแอป'),
+      t('โหมดนักพัฒนาใช้ Claude แบบแพ็กเกจได้เฉพาะเมื่อผู้ดูแลอนุญาตและคุณเปิดใช้เอง'),
+    ],
+  },
+  {
     version: '0.5.38',
     items: () => [
       t('ทุกการเชื่อมต่อ AI ค้นเว็บสาธารณะได้ รวม Antigravity โดยไม่ต้องเพิ่ม API key'),

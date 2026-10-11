@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.5.39 — 2026-10-11
+
+- Reviewed PR #135 against released 0.5.38. Added Claude Code prewarming with host tools/MCP disabled and isolated authentication. Only successful text requests prepare a spare; pending startup never blocks a request. Idle spares stop after ten minutes, logout/removal, developer-mode shutdown, policy reload or app quit.
+- Fixed synchronous claim refusal and settings rejection to fall back cold exactly once before the prompt runs. Claim waiting is bounded and cancellable. If the requested model is not applied after submission, report the failure without replaying the prompt or showing output from another model.
+- Kept Claude plan access closed by default: new `features.developmentMode` defaults to false, and access requires explicit managed policy plus the developer's local opt-in. Policy revocation/opt-out cancels active Claude plan runs and sign-in when plan access is no longer authorized; existing pilot authorization remains independent. Other privacy/permission defaults are unchanged; authentication remains with unmodified Claude Code.
+- Updated Thai/English UI, both READMEs, in-app notes and operator policy instructions. No external tool dependencies or installer runtimes added; the pinned SDK describes approximately 230–260 MB per parked process.
+- Validation uses synthetic SDK/provider data and Electron fixtures. The PR author's earlier live timing numbers were not remeasured on this release; real account access, quota behavior and employee-machine speed remain unverified. Local Thai OCR acceptance remains open.
+
 ## Desktop v0.5.38 — 2026-10-10
 
 - Added `web_extract` with bounded article/headings/tables/links, controlled `vision_analyze`/`browser_vision` with explicit image consent and `EXTRACTED_UNVERIFIED` source provenance, and `image_generate` in the tool loop using the existing OpenAI/Gemini API service. Unsupported connections report their limitation; OAuth does not grant image API access.
