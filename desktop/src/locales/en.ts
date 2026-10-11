@@ -3,6 +3,9 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  ยังเปิดพื้นที่ทำงานไม่ได้: 'Could not open the workspace',
+  'ลองเปิดอีกครั้ง ข้อมูลงานที่บันทึกไว้ยังอยู่ในเครื่อง': 'Try opening it again. Your saved work stays on this device.',
+  ลองเปิดอีกครั้ง: 'Try opening again',
   'การเชื่อมต่อนี้ถูกปิดการใช้งาน · ลงชื่อออกหรือลบบัญชีได้': 'Disabled by settings or policy · You can sign out or remove this account',
   'ผลทดสอบเดิมไม่ได้ยืนยันว่าใช้งานได้ตาม policy ปัจจุบัน': 'A previous test does not confirm access under the current policy',
 

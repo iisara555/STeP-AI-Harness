@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- FE03: workspace startup errors show a clear retry action instead of an endless spinner. Retry reloads local state and onboarding/history selection only; synthetic Electron failures verify recovery without any provider call or replay.
+
 - FE02: connection readiness reflects current policy without overwriting the stored test result. Disabled connections show the blocker, cannot test/change models, and retain sign-out/remove actions; Setup and chat receive the effective status. Synthetic policy-revocation/re-enable Electron tests verify this behavior.
 
 - FE01: confirmation dialogs contain forward/backward Tab, make the background inert, prevent workspace shortcuts and restore focus on close. Real Electron keyboard and chat-consent regressions use isolated synthetic profiles.

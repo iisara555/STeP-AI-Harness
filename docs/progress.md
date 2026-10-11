@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **FE03 startup recovery**: repeated transient snapshot errors now offer an accessible retry; success restores the saved task and onboarding state. Electron regression failed before the change and now passes with zero provider calls. No saved data migration or policy change.
+
 - **FE02 effective readiness**: a previously successful Claude plan connection no longer appears ready after access is disabled. Snapshot projects policy status without changing stored test success; re-enable restores it, and account cleanup remains accessible. Synthetic Electron regression reproduced the mismatch first. No entitlement or policy-default changes.
 
 - **FE01 shared modal accessibility**: failing Electron Tab regression now passes; dialogs isolate background controls/shortcuts and restore focus after Escape or confirmation. Existing chat/privacy approval paths remain covered with synthetic providers; native screen-reader acceptance remains open.

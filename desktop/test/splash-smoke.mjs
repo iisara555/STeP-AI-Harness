@@ -1,4 +1,4 @@
-import { _electron as electron } from '@playwright/test';
+import { _electron as electron, expect } from '@playwright/test';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,7 +43,38 @@ try {
   assert.ok(windows[0].visible && windows[0].url.includes('index.html'), JSON.stringify(windows));
   const page = app.windows().find(w => w.url().includes('index.html'));
   await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout: 5000 });
-  console.log('splash smoke passed');
+  // A transient snapshot failure can recover without losing local history or replaying a provider operation.
+  const retained = await page.evaluate(async () => {
+    const snapshot = await window.step.call('snapshot');
+    await window.step.call('settings', { ...snapshot.settings, onboarding: true, tourDone: true, whatsNewSeen: '999.0.0' });
+    const connection = await window.step.call('connection', { provider: 'openai', mode: 'subscription', model: '' });
+    return window.step.call('create', { connectionId: connection.id, project: 'Synthetic retained task' });
+  });
+  await app.evaluate(({ ipcMain }) => {
+    const handler = ipcMain._invokeHandlers.get('step:call');
+    let failures = 2;
+    globalThis.startupProviderCalls = 0;
+    ipcMain._invokeHandlers.set('step:call', (event, method, raw) => {
+      if (method === 'send' || method === 'connect') globalThis.startupProviderCalls++;
+      if (method === 'snapshot' && failures-- > 0) throw new Error('SYNTHETIC_TRANSIENT_STARTUP_FAILURE');
+      return handler(event, method, raw);
+    });
+  });
+  await page.reload();
+  const retry = page.getByRole('button', { name: 'ลองเปิดอีกครั้ง', exact: true });
+  await expect(retry).toBeVisible();
+  await expect(page.locator('.browser-message .spin')).toHaveCount(0);
+  await expect(page.getByRole('alert')).toContainText('ยังเปิดพื้นที่ทำงานไม่ได้');
+  await retry.click();
+  await expect(retry).toBeEnabled();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await retry.click();
+  await expect(page.locator('.composer textarea')).toBeVisible();
+  const recovered = await page.evaluate(() => window.step.call('snapshot'));
+  assert.ok(recovered.sessions.some(s => s.id === retained.id));
+  assert.equal(await app.evaluate(() => globalThis.startupProviderCalls), 0);
+  await expect(page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' })).toHaveCount(0);
+  console.log('splash smoke passed, including startup failure/retry/history recovery without provider replay');
 } finally {
   await app.close();
 }
