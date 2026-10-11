@@ -12,6 +12,7 @@ import {
 import { explainError, connectionLabel } from './messages';
 import type { Connection, Snapshot } from './types';
 import { locale, t } from './i18n';
+import { connectionCapabilities, organizationCapabilities, type Capability } from './connection-capabilities';
 
 /** Shared by first-run setup and Settings: choose/connect, then show actual test readiness. */
 export function AIConnections({
@@ -185,25 +186,6 @@ export function AIConnections({
                         ? t('ลงชื่อแล้ว แต่ยังไม่พร้อมใช้งาน')
                         : t('ยังไม่พร้อมใช้งาน')}
               </p>
-              {c.ready && (
-                <p className="small muted">
-                  {t(
-                    snapshot.policy?.features.toolLoop === false ? 'ผู้ดูแลปิดวงจรเครื่องมืออัตโนมัติแล้ว' : 'ค้นเว็บและดึงเนื้อหาเว็บได้',
-                  )}
-                  {' · '}
-                  {t(
-                    ['openai', 'gemini', 'claude'].includes(c.provider)
-                      ? 'อ่านภาพได้เมื่อ policy อนุญาตและคุณยินยอม'
-                      : 'การเชื่อมต่อนี้ยังไม่รองรับการอ่านภาพ',
-                  )}
-                  {' · '}
-                  {t(
-                    c.mode === 'api' && ['openai', 'gemini'].includes(c.provider)
-                      ? 'สร้างภาพได้ตามโมเดลและสิทธิ์ API'
-                      : 'สร้างภาพต้องใช้ OpenAI หรือ Gemini API',
-                  )}
-                </p>
-              )}
               {busy === c.id && progress[c.id] ? (
                 <p className="connect-progress">
                   <LoaderCircle size={13} className="spin" />
@@ -214,6 +196,10 @@ export function AIConnections({
                   {c.policyBlocked ? t('ผลทดสอบเดิมไม่ได้ยืนยันว่าใช้งานได้ตาม policy ปัจจุบัน') : t(c.note)}
                 </p>
               )}
+              <details className="ai-capabilities">
+                <summary>{t('บัญชีนี้ทำอะไรได้บ้าง')}</summary>
+                <CapabilityList items={connectionCapabilities(c, snapshot.policy)} />
+              </details>
               {c.provider === 'gemini' && c.googleCloudProject && (
                 <p className="small muted">Google Cloud Project: {c.googleCloudProject}</p>
               )}
@@ -336,6 +322,10 @@ export function AIConnections({
           </div>
         ))}
       </div>
+      <details className="ai-capabilities ai-organization-capabilities">
+        <summary>{t('ฟังก์ชันที่องค์กรเปิดให้ใช้')}</summary>
+        <CapabilityList items={organizationCapabilities(snapshot.policy)} />
+      </details>
       {removingConnection && (
         <ConfirmDialog
           title={t('ลบการเชื่อมต่อนี้?')}
@@ -368,5 +358,22 @@ export function AIConnections({
         </ConfirmDialog>
       )}
     </div>
+  );
+}
+
+function CapabilityList({ items }: { items: Capability[] }) {
+  const statuses = { available: 'ใช้ได้', conditional: 'ต้องตรวจเงื่อนไข', blocked: 'ยังใช้ไม่ได้', unknown: 'ยังไม่ทราบ' };
+  return (
+    <ul className="ai-capability-list">
+      {items.map(item => (
+        <li key={item.id} data-capability={item.id}>
+          <div>
+            <strong>{t(item.title)}</strong>
+            <span className={`ai-capability-state ${item.state}`}>{t(statuses[item.state])}</span>
+          </div>
+          <p className="small muted">{t(item.detail)}</p>
+        </li>
+      ))}
+    </ul>
   );
 }

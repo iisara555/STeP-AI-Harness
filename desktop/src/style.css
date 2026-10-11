@@ -4424,3 +4424,44 @@ nav button:disabled {
     font-size: 19px;
   }
 }
+
+.ai-capabilities {
+  margin-top: 8px;
+  min-width: 0;
+}
+.ai-capabilities summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+.ai-capability-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.ai-capability-list li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.ai-capability-list li > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+}
+.ai-capability-list strong {
+  font-size: 13px;
+}
+.ai-capability-list p {
+  overflow-wrap: anywhere;
+  margin: 4px 0 0;
+}
+.ai-capability-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ai-capability-state.available {
+  color: var(--accent-ink);
+}
+.ai-organization-capabilities {
+  padding: 12px 0;
+}

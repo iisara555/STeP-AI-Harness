@@ -94,6 +94,12 @@ These guards stay on whatever `checks` says. They stop a page or file with hidde
   - To allow an intranet system, list its host in `"network": {"privateHosts": ["intranet.step"]}` (at most 50 plain host names).
   - Pages the employee opens in the Web tab are not restricted.
 
+## ดูสิทธิ์จากหน้า Connect AI
+
+ใน Settings และ Setup เปิด **บัญชีนี้ทำอะไรได้บ้าง** เพื่อดูแชต ค้นเว็บ อ่านภาพ และสร้างภาพตามบัญชีและนโยบายปัจจุบัน หากยังใช้ไม่ได้ หน้าจอบอกเหตุและขั้นตอนต่อไป เช่น เชื่อมต่อบัญชี ติดต่อ IT หรือใช้ OCR ในเครื่อง การทดสอบบัญชีเป็นการทดสอบข้อความสั้น ไม่ได้ยืนยันสิทธิ์โมเดลภาพ โควตา หรือบริการภายนอก
+
+**ฟังก์ชันที่องค์กรเปิดให้ใช้** แสดงการเลือก Skill อัตโนมัติ MCP งานย่อย งานตามรอบ และการตรวจข้อมูล/อำนาจ เฉพาะสถานะที่นโยบายระบุ ถ้าไม่ทราบจะแสดงว่ายังไม่ทราบ จำนวน MCP server บอกเพียงว่าตั้งค่าไว้ ไม่ได้ยืนยันว่าติดต่อได้หรือมีสิทธิ์เอกสาร ต้องทดสอบ server และยืนยันสิทธิ์เมื่อใช้จริง เครื่องมือและการส่งข้อมูลยังผ่าน permission/consent เดิม
+
 ## Automatic routing (`features.autoRouting`)
 
 By default STeP Desktop does not run the local Router's Skill selection.

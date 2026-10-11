@@ -1276,6 +1276,7 @@ async function main() {
       defaultMode: policyState.policy.permission.defaultMode,
       mode: permissionMode(),
       hooks: policyState.policy.hooks.length,
+      mcpServers: policyState.policy.mcpServers.length,
       pilot: Boolean(policyState.policy.pilot),
       checks: policyState.policy.checks,
     },

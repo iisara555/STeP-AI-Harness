@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **HA03 effective capabilities**: shared Connect AI/Setup disclosures explain policy and transport blockers per account, with organization routing/MCP/draft/check status once per page. Unknown configuration stays unknown; text readiness does not establish image or MCP entitlement. Synthetic keyboard/policy-revocation, Setup and English Electron checks pass on Linux; root 968 passed/3 skipped, Desktop 670 passed/2 skipped, validators/format/build pass. Native employee/account acceptance remains open.
+
 - **HA01 Skill evidence**: Thai paired Office reports distinguish verified file outcomes, missing/failed/stale pairs and memo human review. Context fingerprints prevent mixing source/tool revisions on resume; ledger/call limits remain unchanged. Synthetic scorer and controlled real-host Office checks pass. No Desktop OAuth profile is available in this cloud (0 model prompts); signed-in Windows/macOS live results and existing eval debt remain open.
 
 - **Right-panel HTML preview**: app-zoom geometry and fixed-slide cropping reproduced in failing Electron tests, then corrected. Local HTML has **พอดีพื้นที่ / ขนาดจริง** controls, with temporary scaling below Chromium’s zoom floor; responsive reports preserve vertical scrolling and source files/permissions stay unchanged. Synthetic resize/reload/fullscreen regressions pass on Linux/Xvfb; root 968 passed/3 skipped and Desktop 662 passed/2 skipped, both validators, formatting and build pass. Branch `fix/html-preview-responsive` builds on the audit/OCR stack; Windows/macOS employee acceptance remains open.

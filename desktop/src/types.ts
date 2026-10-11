@@ -344,6 +344,8 @@ export type PolicySnapshot = {
   defaultMode: PermissionMode;
   mode: PermissionMode;
   hooks: number;
+  /** Configured managed servers only; no credentials or external-access guarantee. */
+  mcpServers?: number;
   pilot?: boolean;
   checks?: { authority: boolean; privacy: boolean };
 };
