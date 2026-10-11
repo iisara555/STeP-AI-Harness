@@ -154,6 +154,16 @@ try {
   await answer.getByRole('button', { name: 'จำสิ่งนี้', exact: true }).click();
   const rememberDialog = page.getByRole('alertdialog', { name: 'จำสิ่งนี้ไว้ใช้กับงานถัดไป' });
   assert.equal(await rememberDialog.locator('textarea').inputValue(), 'First answer received');
+  for (const key of ['Tab', 'Shift+Tab']) {
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press(key);
+      assert.ok(await rememberDialog.evaluate(el => el.contains(document.activeElement)));
+    }
+  }
+  await page.keyboard.press('Escape');
+  await expect(rememberDialog).toHaveCount(0);
+  await expect(answer.getByRole('button', { name: 'จำสิ่งนี้', exact: true })).toBeFocused();
+  await answer.getByRole('button', { name: 'จำสิ่งนี้', exact: true }).click();
   await rememberDialog.getByRole('button', { name: 'จำไว้', exact: true }).click();
   await rememberDialog.waitFor({ state: 'detached' });
   memory = await page.evaluate(() => window.step.call('memoryList'));

@@ -17,7 +17,7 @@ import {
   parsePriorCalls,
 } from '../eval/office-skill-benefit/config.mjs';
 import { Budget } from '../eval/office-skill-benefit/budget.mjs';
-import { safeSummary } from '../eval/office-skill-benefit/summary.mjs';
+import { safeSummary, summaryMarkdown } from '../eval/office-skill-benefit/summary.mjs';
 
 test('reads only subscription connection metadata without altering Desktop database', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'step-profile-test-'));
@@ -223,12 +223,148 @@ test('controlled RPC runs both arms through real Office tools and resumes withou
     );
     assert.equal(report.trials.filter(t => t.verified.artifactVerified === true).length, 4);
     assert.ok(report.trials.every(t => t.status === 'review'));
+    assert.ok(report.trials.every(t => t.turns.length === t.modelCalls));
+    for (const t of report.trials) {
+      for (const turn of t.turns) {
+        assert.equal(turn.status, 'completed');
+        assert.equal(turn.usage.total, 150);
+        assert.equal(turn.componentChars.toolRules > 0, true);
+        assert.equal(turn.componentChars.skill > 0, t.arm === 'with-skill');
+        assert.ok(turn.promptChars > 0 && turn.systemChars > 0);
+        assert.equal(turn.nativeProviderContext, 'not-observed');
+      }
+    }
     assert.equal(report.modelBenefitEstablished, false);
+    const paired = JSON.parse(await readFile(join(output, folders[0], 'summary.json'), 'utf8'));
+    assert.deepEqual(
+      paired.pairs.map(p => p.outcome),
+      ['both', 'both', 'requires-human-review'],
+    );
+    assert.match(await readFile(join(output, folders[0], 'summary.md'), 'utf8'), /ไฟล์ผ่านทั้งสองแบบ/);
     const second = run();
     assert.equal(second.status, 0, second.stderr);
     const ledger = JSON.parse(await readFile(join(output, 'budget.json'), 'utf8'));
     assert.equal(ledger.modelCalls['mock-office'], 12);
     assert.equal(Object.keys(ledger.trials).length, 6);
+    for (const task of ['xlsx', 'pptx', 'memo']) {
+      const rows = report.trials.filter(t => t.task === task);
+      const contexts = await Promise.all(rows.map(t => readFile(join(t.workspace, '.mock-context.json'), 'utf8').then(JSON.parse)));
+      assert.equal(contexts[0].sharedSystemHash, contexts[1].sharedSystemHash);
+      assert.deepEqual(
+        contexts.map(c => c.hasSkill),
+        rows.map(t => t.arm === 'with-skill'),
+      );
+      assert.ok(contexts.every(c => c.scopedTools && !c.unavailableTools));
+    }
+    // A changed prompt helper invalidates old comparison contexts without spending again.
+    const budgetBefore = await readFile(join(output, 'budget.json'));
+    await writeFile(join(kit, 'context.mjs'), (await readFile(join(kit, 'context.mjs'), 'utf8')) + '\n// synthetic context revision\n');
+    const third = run();
+    assert.equal(third.status, 0, third.stderr);
+    const latestFolder = JSON.parse(third.stdout.split('\n').find(line => line.includes('"runRoot"'))).runRoot;
+    const stale = JSON.parse(await readFile(join(latestFolder, 'summary.json'), 'utf8'));
+    assert.ok(stale.pairs.every(p => p.outcome === 'incomplete'));
+    assert.equal(stale.newModelCalls, 0);
+    assert.deepEqual(await readFile(join(output, 'budget.json')), budgetBefore);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('restricted harness instructions replace unavailable tool descriptions while the default host stays unchanged', async () => {
+  const { Store } = await import('../electron/store.ts');
+  const { WorkService } = await import('../electron/service.ts');
+  const { TOOL_RULES, BROWSER_RULES } = await import('../electron/tool-loop.ts');
+  const { evaluatePrivacyGate } = await import('../../src/modules/privacy/index.js');
+  const store = new Store(':memory:');
+  const scoped = 'SYNTHETIC_SCOPED_RULES: sheet_create sheet_read slides_create ask_user';
+  store.put('connection', 'synthetic-connection', {
+    id: 'synthetic-connection',
+    provider: 'openai',
+    mode: 'subscription',
+    model: 'mock',
+    executable: '',
+    ready: true,
+  });
+  const systems = [];
+  const harness = {
+    root: fileURLToPath(new URL('../..', import.meta.url)),
+    route: async () => ({ routingContract: { mode: 'GENERAL', authority: { status: 'ALLOW' }, mandatoryReferences: [] } }),
+    contextPolicy: () => ({ history: 'ignore', carryover: false }),
+    privacy: evaluatePrivacyGate,
+    skillMetadata: async () => null,
+    toolLoop: () => true,
+    toolInstructions: () => scoped,
+    tools: async () => ({
+      enabled: () => true,
+      check: async () => {},
+      readOnly: () => true,
+      outgoing: async text => text,
+      execute: async () => {
+        throw new Error('TEST_UNEXPECTED_TOOL');
+      },
+    }),
+  };
+  const runtime = async () => ({
+    context: {},
+    adapter: {
+      run: async (_prompt, _connection, context) => {
+        systems.push(context.system);
+        return 'คำตอบจากข้อมูลสังเคราะห์';
+      },
+    },
+  });
+  try {
+    for (const restricted of [true, false]) {
+      if (!restricted) delete harness.toolInstructions;
+      const session = store.create('synthetic-connection', 'cc');
+      await new WorkService(store, harness, runtime, () => {}).run(session.id, 'จัดข้อมูลสังเคราะห์', '', true, undefined, 'chat');
+      assert.equal(store.session(session.id).status, 'review');
+    }
+    assert.ok(systems[0].includes(scoped));
+    assert.equal(systems[0].includes(TOOL_RULES), false);
+    assert.equal(systems[0].includes(BROWSER_RULES), false);
+    assert.doesNotMatch(systems[0], /web_search|browser_control|tool_search/);
+    assert.ok(systems[1].includes(TOOL_RULES));
+    assert.ok(systems[1].includes(BROWSER_RULES));
+  } finally {
+    store.close();
+  }
+});
+
+test('failed controlled provider turns retain observed usage and bounded metadata without retry', { timeout: 60000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'step-office-failed-cost-'));
+  try {
+    const repo = fileURLToPath(new URL('../..', import.meta.url));
+    const kit = join(dir, 'kit'),
+      profile = join(dir, 'profile'),
+      output = join(dir, 'output');
+    await cp(new URL('../eval/office-skill-benefit/', import.meta.url), kit, { recursive: true });
+    await mkdir(profile);
+    await copyFile(new URL('./fixtures/office-eval-rpc.mjs', import.meta.url), join(kit, 'guarded-codex.mjs'));
+    await writeFile(join(kit, 'fixture-scenario.json'), JSON.stringify({ failAfterUsage: true }));
+    const result = spawnSync(
+      process.execPath,
+      [join(kit, 'eval.mjs'), '--repo', repo, '--profile', profile, '--output', output, '--live'],
+      {
+        encoding: 'utf8',
+        timeout: 45000,
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const folder = (await readdir(output)).find(name => name.startsWith('live-'));
+    const report = JSON.parse(await readFile(join(output, folder, 'report.json'), 'utf8'));
+    assert.equal(report.trials.length, 1);
+    const trial = report.trials[0];
+    assert.equal(trial.code, 'PROVIDER_QUOTA');
+    assert.equal(trial.modelCalls, 1);
+    assert.equal(trial.turns[0].status, 'error');
+    assert.equal(trial.turns[0].usage.total, 150);
+    assert.equal(trial.usage.total, 150);
+    const ledger = JSON.parse(await readFile(join(output, 'budget.json'), 'utf8'));
+    assert.equal(ledger.modelCalls['mock-office'], 1);
+    assert.equal(ledger.modelTokens['mock-office'], 150);
+    assert.equal(JSON.stringify(trial.turns).includes('ข้อมูลสังเคราะห์'), false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -258,4 +394,128 @@ test('host review consent still blocks credential-shaped data before model execu
   } finally {
     store.close();
   }
+});
+
+test('paired evidence compares only matching completed trials and never upgrades memo heuristics to quality proof', () => {
+  const trial = (task, arm, artifactVerified, extra = {}) => ({
+    model: 'synthetic-model',
+    task,
+    arm,
+    status: 'review',
+    modelCalls: 1,
+    durationMs: 100,
+    comparisonKey: 'a'.repeat(64),
+    verified: { artifactVerified },
+    ...extra,
+  });
+  const report = {
+    synthetic: true,
+    provider: 'openai',
+    auth: 'chatgpt-oauth',
+    trials: [
+      trial('xlsx', 'with-skill', true),
+      trial('xlsx', 'without-skill', false),
+      trial('pptx', 'with-skill', true, { status: 'failed', code: 'PROVIDER_QUOTA' }),
+      trial('pptx', 'without-skill', true),
+      trial('memo', 'with-skill', null, { verified: { checks: { pendingFacts: true, comparesChoices: true, readerEvidence: true } } }),
+      trial('memo', 'without-skill', null),
+    ],
+  };
+  const summary = safeSummary(report);
+  assert.deepEqual(
+    summary.pairs.map(p => [p.task, p.outcome]),
+    [
+      ['xlsx', 'with-only'],
+      ['pptx', 'incomplete'],
+      ['memo', 'requires-human-review'],
+    ],
+  );
+  assert.equal(summary.modelBenefitEstablished, false);
+  assert.equal(summary.pairs[0].withSkill.modelCalls, 1);
+  assert.equal(summary.pairs[1].withSkill.code, 'PROVIDER_QUOTA');
+  assert.equal(JSON.stringify(summary).includes('a'.repeat(64)), false);
+});
+
+test('paired evidence refuses missing, duplicate and mismatched evaluation contexts', () => {
+  const trial = (arm, key) => ({
+    model: 'synthetic-model',
+    task: 'xlsx',
+    arm,
+    status: 'review',
+    comparisonKey: key,
+    verified: { artifactVerified: true },
+  });
+  for (const trials of [
+    [trial('with-skill', 'a'.repeat(64))],
+    [trial('with-skill', 'a'.repeat(64)), trial('without-skill', 'b'.repeat(64))],
+    [trial('with-skill', undefined), trial('without-skill', undefined)],
+    [trial('with-skill', 'a'.repeat(64)), trial('with-skill', 'a'.repeat(64)), trial('without-skill', 'a'.repeat(64))],
+  ]) {
+    assert.equal(safeSummary({ trials }).pairs[0].outcome, 'incomplete');
+  }
+});
+
+test('Thai paired report exposes failures and uncertainty without answer or identity content', () => {
+  const report = {
+    trials: [
+      {
+        model: 'synthetic-model',
+        task: 'xlsx',
+        arm: 'with-skill',
+        status: 'failed',
+        code: 'LOGIN_REQUIRED',
+        output: 'private-output',
+        account: 'private-identity',
+        workspace: '/private/location',
+      },
+    ],
+  };
+  const text = summaryMarkdown(report);
+  assert.match(text, /เปรียบเทียบไม่ได้/);
+  assert.match(text, /ยังไม่พิสูจน์ว่า Skill ช่วยโดยทั่วไป/);
+  for (const hidden of ['private-output', 'private-identity', '/private/location']) assert.equal(text.includes(hidden), false);
+});
+
+test('a resumed pair from another source/tool context cannot be presented as current evidence', () => {
+  const trials = ['with-skill', 'without-skill'].map(arm => ({
+    model: 'synthetic-model',
+    task: 'xlsx',
+    arm,
+    status: 'review',
+    comparisonKey: 'a'.repeat(64),
+    contextCurrent: false,
+    resumed: true,
+    verified: { artifactVerified: true },
+  }));
+  assert.equal(safeSummary({ trials }).pairs[0].outcome, 'incomplete');
+});
+
+test('stopped live reports retain every planned task and the actual error status', () => {
+  const report = {
+    models: ['synthetic-model', 'untouched-model', 'private@example.invalid'],
+    trials: [
+      {
+        model: 'synthetic-model',
+        task: 'xlsx',
+        arm: 'without-skill',
+        status: 'error',
+        code: 'EVAL_QUOTA_BOUND',
+        modelCalls: 1,
+        verified: { artifactVerified: true },
+      },
+    ],
+  };
+  const summary = safeSummary(report);
+  assert.equal(summary.trials[0].status, 'error');
+  assert.equal(summary.pairs.length, 6);
+  assert.deepEqual(
+    summary.pairs.map(p => [p.model, p.task, p.outcome]),
+    ['synthetic-model', 'untouched-model'].flatMap(model => ['xlsx', 'pptx', 'memo'].map(task => [model, task, 'incomplete'])),
+  );
+  assert.equal(summary.pairs[0].withoutSkill.status, 'error');
+  assert.equal(summary.pairs[0].withoutSkill.code, 'EVAL_QUOTA_BOUND');
+  assert.equal(summary.pairs[2].withSkill, null);
+  assert.equal(summary.pairs[2].withoutSkill, null);
+  assert.match(summaryMarkdown(report), /บันทึกเสนอทางเลือก/);
+  assert.equal(JSON.stringify(summary).includes('private@example.invalid'), false);
 });

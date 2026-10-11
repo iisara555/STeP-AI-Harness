@@ -6,12 +6,10 @@ import { OrganizationKnowledge } from '../electron/knowledge';
 
 const routing: any = await import('../../src/modules/router/service.js');
 
-// Measured 53 of 55 on 2026-10-09 (keywords in manifest/documents.yaml). 59 of 61 on 2026-10-10 after the STeP MIS ISO
-// register: six questions added (five answered by the register, one more outside question), the same two misses as
-// before, and the MIS register accepted for "ฟอร์มขอใช้บริการของทีม CC รหัสอะไร" because its CC section lists the
-// current FM-CC-010. A change to the search, the documents or their keywords must not drop below this; raise it when a
-// change answers more.
-const FLOOR = 59;
+// Original 61-question corpus: 59/61 before HA05, 61/61 after its topic-coverage and evidence-backed team-role
+// retrieval fix (2026-10-11). This measures top-document retrieval and abstention, not live model-answer accuracy.
+// The additional paraphrase and independent synthetic cases are in knowledge-relevance.test.ts, outside this corpus.
+const FLOOR = 61;
 
 test('organization knowledge search finds the right document for staff questions', async () => {
   const knowledge = new OrganizationKnowledge(resolve('..'), routing.loadDocumentCatalog);

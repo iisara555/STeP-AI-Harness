@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runValidator } from '../scripts/validate-repo.js';
+import { runValidator, findPython } from '../scripts/validate-repo.js';
+
+test('Python discovery is reusable by validator subprocess tests with Windows aliases', () => {
+  const calls = [];
+  const runtime = findPython((command, args) => {
+    calls.push({ command, args });
+    return { status: command === 'py' ? 0 : 9009 };
+  });
+  assert.deepEqual(runtime, { command: 'py', prefix: ['-3'] });
+  assert.deepEqual(calls.map(c => c.command), ['python', 'python3', 'py']);
+  assert.ok(calls.every(c => c.args.includes('-c')));
+  assert.equal(findPython(() => ({ error: new Error('ENOENT') })), null);
+});
 
 test('validator finds python, python3, and the Windows py launcher', () => {
   for (const available of ['python', 'python3', 'py']) {

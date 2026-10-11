@@ -121,24 +121,39 @@ export class LineGateway {
     for (const f of readdirSync(join(config.storage, "jobs"))
       .filter((f) => /^[a-f0-9-]{36}\.json$/.test(f))
       .slice(-200)) {
+      let j;
       try {
-        const j = JSON.parse(
-          readFileSync(join(config.storage, "jobs", f), "utf8"),
-        );
-        if (
-          j.id + ".json" === f &&
-          [
-            "review",
-            "input-review",
-            "needs-input",
-            "delivery-unknown",
-            "delivering",
-          ].includes(j.status)
-        ) {
-          if (j.status === "delivering") j.status = "delivery-unknown";
-          this.jobs.set(j.id, j);
-        }
-      } catch {}
+        j = JSON.parse(readFileSync(join(config.storage, "jobs", f), "utf8"));
+      } catch {
+        continue;
+      }
+      if (j.id + ".json" !== f) continue;
+      if (/^[a-f0-9]{64}$/.test(j.eventHash))
+        this.events.set(j.eventHash, Date.parse(j.at));
+      if (["queued", "running", "interrupted"].includes(j.status)) {
+        j.status = "interrupted";
+        j.code = "LINE_RETRY_REQUIRED";
+        delete j.query;
+        delete j.source;
+        delete j.answer;
+        delete j.text;
+        this.removeAttachment(j);
+        // A failed recovery write must stop startup rather than hide an accepted job.
+        this.save(j);
+      }
+      if (
+        [
+          "review",
+          "input-review",
+          "needs-input",
+          "delivery-unknown",
+          "delivering",
+          "interrupted",
+        ].includes(j.status)
+      ) {
+        if (j.status === "delivering") j.status = "delivery-unknown";
+        this.jobs.set(j.id, j);
+      }
     }
     try {
       const saved = JSON.parse(
@@ -168,15 +183,15 @@ export class LineGateway {
     return p;
   }
   save(job) {
-    this.jobs.set(job.id, job);
     this.atomic(
       join(this.config.storage, "jobs", job.id + ".json"),
       JSON.stringify(job),
     );
+    this.jobs.set(job.id, job);
   }
   atomic(path, text) {
     const temp = path + "." + randomUUID() + ".tmp";
-    writeFileSync(temp, text, { mode: 0o600, flag: "wx" });
+    writeFileSync(temp, text, { mode: 0o600, flag: "wx", flush: true });
     renameSync(temp, path);
   }
   async accept(raw, signature) {
@@ -227,15 +242,9 @@ export class LineGateway {
       if (this.events.has(id)) continue;
       if (this.queue.length + this.running.size >= 32 || this.jobs.size >= 200)
         throw new Error("LINE_BUSY");
-      this.events.set(id, Date.now());
-      while (this.events.size > 5000)
-        this.events.delete(this.events.keys().next().value);
-      this.atomic(
-        join(this.config.storage, "events.json"),
-        JSON.stringify([...this.events]),
-      );
       const job = {
         id: randomUUID(),
+        eventHash: id,
         userHash: hash(this.config.channelId + "\0" + user.lineUserId),
         userBinding: hash(JSON.stringify(user)),
         employeeId: user.employeeId,
@@ -244,8 +253,17 @@ export class LineGateway {
         policyHash: hash(JSON.stringify(this.policy())),
         messageType: event.message.type,
       };
+      // The metadata receipt is the commit record, including its dedupe key.
+      // Do not persist inbound text before privacy review or acknowledge a failed write.
+      this.save(job);
+      this.events.set(id, Date.now());
       this.queue.push({ job, user, event });
-      this.jobs.set(job.id, job);
+      while (this.events.size > 5000)
+        this.events.delete(this.events.keys().next().value);
+      this.atomic(
+        join(this.config.storage, "events.json"),
+        JSON.stringify([...this.events]),
+      );
     }
     this.pump();
     return { accepted: true };
@@ -262,7 +280,7 @@ export class LineGateway {
       this.running.add(item.job.userHash);
       void this.process(item)
         .catch((error) => {
-          item.job.status = "blocked";
+          item.job.status = this.closed ? "interrupted" : "blocked";
           item.job.code = /^[A-Z_]{1,80}$/.test(error.message)
             ? error.message
             : "LINE_DRAFT_BLOCKED";
@@ -328,6 +346,8 @@ export class LineGateway {
     ]);
     try {
       this.assertPolicy();
+      job.status = "running";
+      this.save(job);
       if (event.message.type !== "text") {
         await this.content(job, event.message, signal);
         return;
@@ -371,6 +391,8 @@ export class LineGateway {
     if (job.policyHash !== hash(JSON.stringify(policy)))
       throw new Error("POLICY_CHANGED");
     if (!this.user(job)) throw new Error("LINE_ALLOWLIST_CHANGED");
+    job.status = "running";
+    this.save(job);
     const result = await (this.deps.run || runGovernedDraft)(
       {
         query: job.query,
@@ -421,6 +443,51 @@ export class LineGateway {
         at: job.at,
       }),
     );
+  }
+  async retry(id, confirmation) {
+    const job = this.jobs.get(id),
+      user = job && this.user(job);
+    if (
+      !job ||
+      !user ||
+      job.status !== "interrupted" ||
+      confirmation?.approveProvider !== true ||
+      typeof confirmation.query !== "string" ||
+      !confirmation.query.trim() ||
+      confirmation.query.length > 30_000
+    )
+      throw new Error("LINE_RETRY_APPROVAL_REQUIRED");
+    // A person supplies reviewed input again. No stored prompt or remote effect is replayed.
+    this.assertPolicy();
+    if (job.policyHash !== hash(JSON.stringify(this.policy())))
+      throw new Error("POLICY_CHANGED");
+    if (this.running.has(job.userHash) || this.running.size >= 3)
+      throw new Error("LINE_BUSY");
+    clean(confirmation.query);
+    job.query = confirmation.query;
+    delete job.code;
+    this.running.add(job.userHash);
+    const ctl = new AbortController();
+    this.controllers.add(ctl);
+    try {
+      await this.draft(
+        job,
+        user,
+        AbortSignal.any([ctl.signal, AbortSignal.timeout(600_000)]),
+      );
+      return { status: job.status };
+    } catch (error) {
+      job.status = "interrupted";
+      job.code = "LINE_RETRY_REQUIRED";
+      delete job.query;
+      delete job.text;
+      this.save(job);
+      throw error;
+    } finally {
+      this.controllers.delete(ctl);
+      this.running.delete(job.userHash);
+      this.pump();
+    }
   }
   async approveInput(id, confirmation) {
     const job = this.jobs.get(id),
@@ -618,7 +685,16 @@ export class LineGateway {
                     "input-review",
                     "needs-input",
                     "delivery-unknown",
+                    "interrupted",
                   ].includes(j.status),
+                );
+              else if (
+                req.method === "POST" &&
+                /^\/retry\/[a-f0-9-]{36}$/.test(req.url)
+              )
+                result = await this.retry(
+                  req.url.split("/").at(-1),
+                  JSON.parse(raw.toString()),
                 );
               else if (
                 req.method === "POST" &&
@@ -652,7 +728,9 @@ export class LineGateway {
               code === "LINE_SIGNATURE_INVALID" ||
                 code === "LINE_APPROVER_DENIED"
                 ? 403
-                : 400,
+                : code === "LINE_BUSY" || code === "LINE_REQUEST_INVALID"
+                  ? 503
+                  : 400,
               { "content-type": "application/json" },
             );
             res.end(JSON.stringify({ code }));

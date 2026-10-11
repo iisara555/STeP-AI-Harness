@@ -98,6 +98,8 @@ export type Harness = {
   compactHook?: (event: 'pre_compact' | 'post_compact', id: string, before: number, after: number) => Promise<void>;
   completed?: (session: Session) => Promise<void>;
   toolLoop?: () => boolean;
+  /** Trusted host instructions for a restricted tool surface; execution and consent gates still apply. */
+  toolInstructions?: () => string;
   /** Policy answerCheck: check chat answers about STeP against the document excerpts they used. */
   answerCheck?: () => boolean;
   tools?: (scope: ToolScope) => Promise<LoopHost>;
@@ -878,6 +880,7 @@ export class WorkService {
         status(step.description || tm('กำลังจัดทำร่าง'));
         // Standing rules and registries precede task-specific instructions and preferences.
         const toolsEnabled = Boolean(!textOnly && !options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
+        const scopedToolInstructions = toolsEnabled ? this.harness.toolInstructions?.() : undefined;
         const baseRules = textOnly ? TEXT_RULES : chat ? CHAT_RULES : DRAFTING_RULES;
         const documentDiscovery = selectDiscovery(
           catalog,
@@ -910,12 +913,12 @@ export class WorkService {
           governance.length && section('standing_governance', governance.join('\n\n')),
           this.harness.permissionMode?.() === 'plan' &&
             'Current permission mode is plan. Provide a plan and references for review; do not draft the final document, propose file mutations, or request command execution.',
-          toolsEnabled && TOOL_RULES,
-          toolsEnabled && BROWSER_RULES,
+          toolsEnabled && (scopedToolInstructions ?? TOOL_RULES),
+          toolsEnabled && scopedToolInstructions === undefined && BROWSER_RULES,
           !toolsEnabled &&
             !textOnly &&
             'Host tool execution is disabled for this turn. The Desktop draft export UI supports DOCX, PDF, Markdown, XLSX and PPTX where policy permits. For Excel provide the requested table in the draft and direct the user to XLSX export; do not claim a file was created or substitute CSV without their choice. Direct Google Sheets access requires an available authorized connector.',
-          toolsEnabled && WEB_RULE,
+          toolsEnabled && scopedToolInstructions === undefined && WEB_RULE,
           !textOnly && catalog.length && ORGANIZATION_RULE,
           internal && internalSystemRule(internal, toolsEnabled),
           documentIndex && KNOWLEDGE_RULE + '\n' + documentIndex,
@@ -1090,7 +1093,7 @@ export class WorkService {
                       registry: [documentIndex, skillIndex].filter(Boolean).join('\n'),
                       governance: governance.join('\n\n'),
                       selectedInstructions: selectedInstructions.join('\n\n'),
-                      toolRules: toolsEnabled ? TOOL_RULES + '\n\n' + BROWSER_RULES : '',
+                      toolRules: toolsEnabled ? (scopedToolInstructions ?? TOOL_RULES + '\n\n' + BROWSER_RULES) : '',
                     },
               ),
               kind: search ? 'web-search' : analysisImage ? 'vision' : 'answer',

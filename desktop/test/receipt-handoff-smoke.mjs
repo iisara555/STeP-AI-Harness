@@ -47,6 +47,11 @@ try {
           ];
           return {
             name: 'synthetic.png',
+            preview:
+              'data:image/svg+xml;base64,' +
+              Buffer.from(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="700"><rect width="500" height="700" fill="white"/><g fill="#231f20" font-family="sans-serif" font-size="24"><text x="32" y="60">SYNTHETIC RECEIPT</text><text x="32" y="120">RC-SYNTHETIC</text><text x="32" y="160">01/01/2569</text><text x="32" y="240">Water 107.00</text><text x="32" y="320">Total 107.00 THB</text><text x="32" y="640">Fixture only</text></g></svg>',
+              ).toString('base64'),
             result: {
               text: lines.join('\n'),
               summary: { needs_review: 0 },
@@ -71,7 +76,45 @@ try {
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await expect(page.getByRole('heading', { name: 'ตรวจใบเสร็จก่อนส่ง AFP' })).toBeVisible();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00');
+  await page.setViewportSize({ width: 1280, height: 820 });
+  const sourcePane = page.getByRole('region', { name: 'ใบเสร็จต้นฉบับ' });
+  const reviewPane = page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' });
+  await expect(reviewPane.getByRole('heading', { level: 2 })).toHaveText([
+    'ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก',
+    'ทำอะไรต่อ',
+    'ดูองค์ประกอบพื้นฐานใบเสร็จ',
+  ]);
+  const left = await sourcePane.boundingBox(),
+    right = await reviewPane.boundingBox();
+  assert.ok(left.x + left.width <= right.x, 'source must be left of the review');
+  await expect(page.getByRole('button', { name: 'AI กรอง OCR อีกชั้น' })).toHaveCount(0);
+  await expect(page.getByText('เครื่องมือทดลองและวัดผล OCR', { exact: true })).toHaveCount(0);
+  const components = page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' });
+  await expect(components).toContainText('รอตรวจ');
+  const check = page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/);
+  await expect(page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' })).toBeDisabled();
+  await check.check();
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('108.00');
+  await expect(check).not.toBeChecked();
+  await expect(page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' })).toBeDisabled();
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
+  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
+  await page.locator('.receipt-app').evaluate(el => {
+    el.scrollTop = 0;
+  });
+  await page.screenshot({ path: '/tmp/step-ocr-minimal-light.png', fullPage: true });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = 'dark';
+  });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: '/tmp/step-ocr-minimal-dark.png', fullPage: true });
+  await page.setViewportSize({ width: 800, height: 600 });
+  assert.ok(await page.locator('.receipt-app').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+  await page.screenshot({ path: '/tmp/step-ocr-minimal-small.png', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 820 });
+
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   const send = page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' });
   await send.click();

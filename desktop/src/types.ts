@@ -33,6 +33,8 @@ export type Connection = {
   /** The account signed in at the last connect, kept apart from the test result in `ready`. */
   signedIn?: boolean;
   ready: boolean;
+  /** Snapshot-only: current policy prevents use; the stored test result remains intact. */
+  policyBlocked?: boolean;
   note: string;
   models?: ModelOption[];
   modelsAt?: string;
@@ -342,6 +344,8 @@ export type PolicySnapshot = {
   defaultMode: PermissionMode;
   mode: PermissionMode;
   hooks: number;
+  /** Configured managed servers only; no credentials or external-access guarantee. */
+  mcpServers?: number;
   pilot?: boolean;
   checks?: { authority: boolean; privacy: boolean };
 };
@@ -383,7 +387,15 @@ export type Workflow = 'plan' | 'execute' | 'requirements' | 'diagnose';
 export type WorkTask = { title: string; status: 'todo' | 'doing' | 'done' | 'blocked'; note?: string };
 export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
 /** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
-export type BrowserDockTab = { id: string; title: string; url: string; kind: 'agent' | 'manual'; loading: boolean };
+export type BrowserDockTab = {
+  id: string;
+  title: string;
+  url: string;
+  kind: 'agent' | 'manual';
+  loading: boolean;
+  preview?: boolean;
+  fit?: boolean;
+};
 export type BrowserDockState = { tabs: BrowserDockTab[]; active: string; focus?: boolean };
 /** The in-app updater's state (electron/updater.ts). */
 export type UpdateState = {

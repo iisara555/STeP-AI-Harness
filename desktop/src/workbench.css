@@ -617,6 +617,22 @@
   position: relative;
   background: var(--paper);
 }
+.browser-preview-size {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+}
+.browser-preview-size button {
+  font-size: 12px;
+  padding: 3px 8px;
+}
+.browser-preview-size button[aria-pressed='true'] {
+  background: var(--selected);
+  color: var(--text);
+}
 .browser-host img {
   position: absolute;
   inset: 0;

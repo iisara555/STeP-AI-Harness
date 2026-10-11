@@ -6,6 +6,34 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.0 — 2026-10-11
+
+- Combined release of the reviewed audit, receipt, preview, knowledge and Office-eval work from PRs #136–#150. Desktop is 0.6.0; Harness remains 0.7.7. Publication requires all protected-branch CI checks and the Windows/macOS installer workflow to pass.
+- Office eval follow-ups preserve planned coverage and actual failure states, scope both arms to four executable tools and retain failed-turn usage. The existing Windows OAuth evidence establishes only three comparable Excel pairs; PPTX/memo benefit and actual token savings remain unproved. Original external budget and recordings are preserved; no additional live model calls or reset of prior calls.
+- macOS HTML preview smoke waits for native fullscreen transitions before requesting exit, retaining all preview assertions with bounded waits. The diagnostic run reproduced the hang before the fix. No application runtime or permission changes are involved.
+
+- HA05: local organization search checks meaningful topic coverage and uses actual team-role table rows for duty questions, avoiding form-register and shared-location false matches. The unchanged 61-question corpus improves from 59/61 to 61/61 for retrieval/abstention; new paraphrase and independent synthetic regressions protect exact codes, restrictions and keyword lookup. This is local retrieval evidence, not live AI-answer accuracy. No document facts, privacy defaults, dependencies or context limits changed.
+
+- HA03: Connect AI and Setup show account-specific chat/web/vision/image eligibility, policy blockers and next steps, plus shared organization capabilities. Image and MCP access remain conditional on model/server permission; chat tests do not certify them. The snapshot exposes only the configured MCP server count. Synthetic policy, keyboard, narrow-window and English UI checks; no policy defaults, credentials or dependencies changed.
+
+- HA01: Office Skill evaluation now writes a Thai paired-results report and checks comparison fingerprints for the prompt, model/effort, Skill/reference contents and tool host. Failed/incomplete/duplicate/stale pairs remain unscored; memo heuristics require human review. Existing call budgets, OAuth handling and lifecycle defaults are unchanged. Tests use synthetic artifacts and controlled RPC; the limited Windows OAuth evidence is described above and does not establish general Skill benefit.
+
+- HTML previews in the right panel now align with application zoom and fit oversized fixed-layout slides to the available width/height. Added Thai-first **พอดีพื้นที่ / ขนาดจริง** controls; responsive reports retain their media queries and vertical scrolling. Very small panels use a temporary layout scale below Chromium’s native zoom floor, restored in actual-size/fullscreen mode. Source files and preview permissions remain unchanged. Regression tests first reproduced both cropping causes, then verified synthetic narrow/short windows, resize, reload and fullscreen return on Linux/Electron; employee Windows/macOS acceptance remains open. No dependencies or version changes.
+
+- Simplified receipt review to one page: original on the left, corrections/next actions/five basic elements on the right, stacked on narrow windows. Ordinary editing is available on demand; advanced OCR pilot controls are removed from the employee page while private benchmark/export APIs remain. Handoff requires a tested connection and preserves corrections on failure. Synthetic Electron fixtures cover layout, human-confirmation revocation, delayed AI edits, consent, provenance and private scoring/export; real OCR accuracy, AFP acceptance and employee Windows/macOS checks remain open. No dependencies, policy defaults or version changes.
+
+- Added a one-click Dev mode button at the top of Connect AI in Settings and Setup. It uses the existing managed-policy/local opt-in gate, shows the current state and offers a return to normal mode; unavailable policy remains disabled with IT guidance. No policy defaults or account entitlements changed.
+
+- FE03: workspace startup errors show a clear retry action instead of an endless spinner. Retry reloads local state and onboarding/history selection only; synthetic Electron failures verify recovery without any provider call or replay.
+
+- FE02: connection readiness reflects current policy without overwriting the stored test result. Disabled connections show the blocker, cannot test/change models, and retain sign-out/remove actions; Setup and chat receive the effective status. Synthetic policy-revocation/re-enable Electron tests verify this behavior.
+
+- FE01: confirmation dialogs contain forward/backward Tab, make the background inert, prevent workspace shortcuts and restore focus on close. Real Electron keyboard and chat-consent regressions use isolated synthetic profiles.
+
+- BE04: Thai overview/formatting requests and explicit no-image instructions stay in chat instead of automatically entering image generation. Synthetic intent regressions preserve explicit image creation; original-brief follow-up support remains a separate issue.
+
+- BE01: LINE commits a private metadata receipt before acknowledging a webhook, recovers queued/running jobs for explicit operator retry and never automatically replays provider calls or delivery. Signed synthetic restart/storage/privacy/approval fixtures verify recovery; real channel deployment remains unverified. No policy defaults or dependencies changed.
+
 ## Desktop v0.5.39 — 2026-10-11
 
 - Reviewed PR #135 against released 0.5.38. Added Claude Code prewarming with host tools/MCP disabled and isolated authentication. Only successful text requests prepare a spare; pending startup never blocks a request. Idle spares stop after ten minutes, logout/removal, developer-mode shutdown, policy reload or app quit.

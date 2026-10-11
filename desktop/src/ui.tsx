@@ -34,6 +34,56 @@ export function ConfirmDialog({
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState('');
+  const backdrop = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  useEffect(() => {
+    const root = backdrop.current;
+    const dialog = root?.querySelector<HTMLElement>('[role="alertdialog"]');
+    if (!root || !dialog) return;
+    const focusable = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter(el => el.getClientRects().length && !el.closest('[inert]'));
+    const containFocus = () => {
+      if (!dialog.contains(document.activeElement)) (focusable()[0] || dialog).focus();
+    };
+    const outside: { element: HTMLElement; inert: boolean }[] = [];
+    for (let branch: HTMLElement | null = root; branch?.parentElement; branch = branch.parentElement) {
+      for (const sibling of Array.from(branch.parentElement.children)) {
+        if (sibling !== branch && sibling instanceof HTMLElement) {
+          outside.push({ element: sibling, inert: sibling.inert });
+          sibling.inert = true;
+        }
+      }
+    }
+    containFocus();
+    document.addEventListener('focusin', containFocus);
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      const first = elements[0] || dialog,
+        last = elements.at(-1) || dialog;
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    root.addEventListener('keydown', trap);
+    return () => {
+      document.removeEventListener('focusin', containFocus);
+      root.removeEventListener('keydown', trap);
+      for (const item of outside) item.element.inert = item.inert;
+      const target = previousFocus.current?.isConnected
+        ? previousFocus.current
+        : document.querySelector<HTMLElement>('.composer textarea, header.titlebar button');
+      target?.focus();
+    };
+  }, []);
   const confirm = async () => {
     if (pending || confirmDisabled) return;
     setPending(true);
@@ -49,12 +99,17 @@ export function ConfirmDialog({
   };
   return (
     <div
+      ref={backdrop}
       className="dialog-backdrop"
       onKeyDown={e => {
-        if (e.key === 'Escape') onCancel();
+        e.stopPropagation();
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onCancel();
+        }
       }}
     >
-      <section role="alertdialog" aria-modal="true" aria-label={title} className="confirm-dialog">
+      <section role="alertdialog" aria-modal="true" aria-label={title} className="confirm-dialog" tabIndex={-1}>
         <h2>{title}</h2>
         <div className="confirm-body">{children}</div>
         {error && (

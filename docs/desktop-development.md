@@ -2,7 +2,7 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> อ้างอิง source ที่เตรียมเผยแพร่: Harness **0.7.7** / Desktop **0.5.38**. รวมงานเบื้องหลัง การค้น/แก้ไฟล์ เครื่องมือ discovery และทะเบียน ISO จาก MIS พร้อม review fixes. Source/CI artifacts ไม่ยืนยันว่าตัวติดตั้งเผยแพร่แล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> อ้างอิง source ที่เตรียมเผยแพร่: Harness **0.7.7** / Desktop **0.6.0**. รวม audit fixes, หน้าใบเสร็จ, HTML preview, การค้นความรู้องค์กร และ Office Skill eval ที่รักษางบเดิม. Source/CI artifacts ไม่ยืนยันว่าตัวติดตั้งเผยแพร่แล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -15,6 +15,10 @@ Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`
 [Learning Inbox](desktop-learning.md) adds `/learn`, explicit review of local preference/procedure proposals, version history, disable and rollback. Only approved lessons enter later tasks; this phase does not include automatic review or measured quality improvement.
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
+
+## Local HTML previews
+
+The right-panel preview converts renderer CSS geometry to native DIP bounds using the application zoom factor. Local HTML defaults to **Fit to panel** (Thai: **พอดีพื้นที่**), with **Actual size** (**ขนาดจริง**) available per tab. Responsive HTML first lays out at the actual panel width; overflowing fixed slides fit width and, when vertical scrolling is locked, height. Below Chromium’s 25% native zoom floor, a temporary isolated-world CSS layout scale is restored on refit, actual-size mode and fullscreen. Source files, sandbox/permission boundaries and ordinary web tabs are unchanged. Long responsive reports retain vertical scrolling. The synthetic `html-preview-smoke.mjs` regression covers zoom, narrow/short windows, resize, reload and fullscreen return; it does not establish employee Windows/macOS acceptance.
 
 ## Office tools in Desktop 0.5.27
 
@@ -50,7 +54,7 @@ The [0.5.21 synthetic report](../experiments/local-thai-ocr/benchmark/QUALITY-RE
 
 Connect an OpenAI or Gemini API-key account, choose **สร้างรูป**, provide a complete brief and select an account-listed image model. Review the result in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth access. Reference images, image editing and inpainting are not supported by this Desktop path.
 
-Known limitations in this version: Chat auto-routing can interpret Thai text-overview requests beginning with `สร้างภาพรวม` as paid image requests, even with a no-image instruction. Use `สรุปภาพรวม` for text. Follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
+Chat auto-routing keeps Thai text-overview/formatting requests and explicit no-image instructions in chat. Select image mode explicitly for an ambiguous creation request. Known limitation: follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
 
 ## Run
 
@@ -142,30 +146,26 @@ Review/correct the populated form, then use the single existing source-compariso
 checkbox. Only selected, source-compared values become `SOURCE_FACT`; unchecked manual
 entries are `USER_INPUT`, while raw OCR/vision and alternatives remain
 `EXTRACTED_UNVERIFIED` even if they agree. There are no per-field confirmation requirements. Editing an expense
-description, purpose, type or category withdraws the confirmation too. Raw evidence,
-alternative readings, reread controls, the complete checklist and pilot tools are
-available in collapsed details. Saving and chat handoff are optional subsequent actions.
+description, purpose, type or category withdraws the confirmation too. The employee page
+shows the source on the left and three review sections on the right (stacked on narrow
+windows): corrections before claiming, next actions, and five basic receipt elements.
+Ordinary value editing and optional category/purpose correction are disclosures within
+those sections. Engine candidates, raw evidence and pilot controls are not exposed on
+the employee page; raw readings remain in the draft/handoff provenance. Saving and
+chat handoff are optional. Handoff requires mandatory fields, human confirmation and
+an effectively ready AI connection. Failed submission retains the form for retry.
 
-For a local pilot inside Desktop, open **ตรวจใบเสร็จ AFP**, install OCR there if needed,
-then select **ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)** before choosing a document.
-This per-read option requires local OCR and suppresses automatic AI image reading and
-candidate filtering. It preserves the initial OCR field suggestions, review flags and
-elapsed recognition time (including model initialization, excluding the file picker).
-Edit the fields against the source, including absent values, then check the existing
-source-comparison checkbox. The trial panel compares the frozen reading with those
-human-checked values. Independent AI image reading remains an explicit button under
-the existing policy and consent; its request time includes the consent dialog.
+For administrator pilots use the existing [benchmark tooling](../experiments/local-thai-ocr/benchmark/README.md)
+and record evidence in TEST-PLAN. The existing local-only reading, scoring module and
+private JSON export host APIs remain available to tooling and synthetic smoke tests;
+they are no longer employee-page controls. Initial OCR suggestions, review flags and
+elapsed recognition time are preserved independently from human corrections. Export
+requires source-compared human answers. Real input images and reports must be outside
+Git checkouts; path checks resolve symlinks and Git ancestors. A single document or a
+synthetic fixture does not close acceptance or establish model accuracy. RAM on
+employee hardware remains a separate pilot measurement.
 
-**บันทึกผลทดลอง (JSON)** exports the readings, human answers and per-field exact/review
-outcomes. Real input images and trial reports must be outside Git checkouts; the pilot
-checks Git ancestors and resolves symlinks for input and export. Reports stay on the
-local machine unless the person explicitly uses an AI/chat action. Comparison is NFC
-and trimmed text exact match, so date/money formatting differences can count as
-differences; this panel does not replace the benchmark's canonical scoring. RAM is
-explicitly unmeasured. A single document does not close the acceptance gate or prove
-model accuracy. Record employee-machine RAM separately for the broader pilot.
-
-With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, an image-capable connection reads the receipt image after a one-time consent. Gemini API/organization CLI uses its advertised ACP image capability; **Gemini via Antigravity, compatible endpoints and Copilot currently use text-only transports**. The page displays the selected reading mode, including after OCR startup, installation or folder selection. Full-page images fit within 1800 px; a single-page image also supplies three overlapping header, item-table and total crops taken from source pixels, fitting within 2048 px without upsampling. Images are numbered and crops refer to full-page coordinates so repeated rows are not separate evidence. Decoded images are limited to 24 million pixels, encoded images to 4 MB each and 12 MB combined. Receipt PDFs use the selected byte snapshot and reject more than three pages rather than silently truncating them. With an image-capable connection, AI-only reading is available without local OCR. With `checks.privacy` on, no image is sent.
+With policy features `vision` and `receiptVision` on (the default) and `checks.privacy` off, an image-capable connection reads the receipt image after a one-time consent. Gemini API/organization CLI uses its advertised ACP image capability; **Gemini via Antigravity, compatible endpoints and Copilot currently use text-only transports**. The page displays the selected reading mode, including after OCR startup and installation. Full-page images fit within 1800 px; a single-page image also supplies three overlapping header, item-table and total crops taken from source pixels, fitting within 2048 px without upsampling. Images are numbered and crops refer to full-page coordinates so repeated rows are not separate evidence. Decoded images are limited to 24 million pixels, encoded images to 4 MB each and 12 MB combined. Receipt PDFs use the selected byte snapshot and reject more than three pages rather than silently truncating them. With an image-capable connection, AI-only reading is available without local OCR. With `checks.privacy` on, no image is sent.
 
 Handwritten fields prefer Vision suggestions while OCR remains an independent comparison. The form reducer protects manual edits, including intentionally cleared values. The bounded JSON contract accepts only typed extraction fields, booleans, finite self-reported confidence in [0,1], at most 100 item rows and normalized in-page regions; malformed roots and oversized tables fail rather than silently truncate. Transport-level JSON-schema enforcement varies by provider runtime; local parsing remains mandatory. Focus moves the preview to a proposed region, including the matching PDF preview page, when available. Uncertain fields and contradictory rules remain visible; confidence is not calibrated accuracy. One final human confirmation covers the selected form, with any edit revoking it.
 
@@ -179,7 +179,7 @@ Vision signature metadata records only presence in a labeled receiver, issuer or
 
 For a text-only connection, local OCR is required. After opening a receipt, the connected AI automatically reconciles existing OCR candidates, including the source-backed expense description, after the existing text-transmission consent. Masking and typed candidate-token restrictions remain enforced. The AI may correct a selected OCR candidate but cannot overwrite manual edits, invent missing values or recover text that OCR never read from the image. Real handwriting/image accuracy remains subject to pilot acceptance; use an image-capable connection such as Gemini API to read the original directly.
 
-The page also shows the document type (from the AI or the printed heading) and a checklist for the chosen claim category. Each item names its source: AFP circulars, general payment-document elements to confirm with AFP, or "no source yet, ask AFP". The checklist prepares documents; it is not an approval.
+The editable document type comes from the AI or printed heading. Source-backed AFP requirements feed the corrections and next-action lists; five basic elements are displayed separately. Category suggestions and unknown rules require AFP confirmation. The page prepares documents; it is not an approval.
 
 ## Boundaries
 

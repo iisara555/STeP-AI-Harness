@@ -1,7 +1,7 @@
 // Gemini API key from Settings: pressing "connect" must test the key and finish ready or with a clear error, never
 // sit untested. Runs the bundled Gemini CLI against a local fake Gemini API; no Google account, key or quota is used.
 import { _electron as electron, expect } from '@playwright/test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
@@ -182,7 +182,8 @@ try {
     dialog.showMessageBox = async () => (globalThis.receiptConsents++, { response: 1 });
   }, receipt);
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await page.getByText('ยังไม่มี OCR ในเครื่อง ใช้ AI อ่านภาพได้เลย', { exact: false }).waitFor();
+  await expect(page.getByText('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ' })).toBeEnabled();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
   // Switching to another page while the receipt is read keeps the work: the sidebar shows it running, and the result
   // is there on return.
@@ -190,10 +191,11 @@ try {
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.getByLabel('กำลังตรวจใบเสร็จอยู่').waitFor();
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
+  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00', { timeout: 60000 });
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   await page.getByText('AI ฝากตรวจ: ตัวเลขยอดสุทธิจางเล็กน้อย').waitFor();
-  assert.ok((await page.getByText('AI อ่านจากภาพ · ตรวจกับต้นฉบับ').count()) >= 3, 'each AI-read field is marked');
+  assert.ok((await page.locator('.receipt-field.uncertain').count()) >= 3, 'AI-read fields remain highlighted for source comparison');
   const confirmAll = page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/);
   assert.equal(await confirmAll.isChecked(), false, 'nothing is confirmed for the person');
   await expect(page.getByLabel('ที่อยู่ผู้รับเงิน / ร้าน', { exact: true })).toHaveValue(receiptReply.merchantAddress);
@@ -209,18 +211,41 @@ try {
   assert.equal(await page.locator('.receipt-preview').evaluate(image => image.style.width), '250%');
   assert.equal(await page.locator('.receipt-preview').evaluate(image => image.style.transform), 'translate(-50%, -70%)');
   await page.getByText('ภาพขยายช่อง ยอดรวมที่ชำระ · ตำแหน่งจาก AI โปรดเทียบต้นฉบับ').waitFor();
-  await expect(page.locator('#rf-total').locator('..').locator('..')).toHaveClass(/uncertain/);
-  await page.getByText('ความมั่นใจที่ AI รายงาน: 70% · ไม่ใช่ความแม่นยำที่วัด').waitFor();
-  await page.getByText('ตารางรายการที่ AI อ่านได้ · ยังไม่ยืนยัน', { exact: true }).click();
+  await expect(page.locator('#rf-total').locator('..')).toHaveClass(/uncertain/);
+  // Technical self-reported confidence is retained as raw evidence, outside the minimal employee UI.
+  await expect(page.getByText('ความมั่นใจที่ AI รายงาน: 70% · ไม่ใช่ความแม่นยำที่วัด')).toHaveCount(0);
   await page.getByRole('cell', { name: 'สินค้าสังเคราะห์', exact: true }).waitFor();
   assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
   // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
   assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
-  // The actionable summary remains visible while duplicate checklist details are folded.
-  await page.getByLabel('สรุปการใช้ใบเสร็จ').getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).waitFor();
-  // The B clearing set sits in the folded full checklist, so it is present but not on screen.
-  await page.getByText('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน', { exact: false }).first().waitFor({ state: 'attached' });
-  await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();
+  // The correction appears directly in the minimal review.
+  await page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' }).getByText('ยังไม่เห็นลายมือชื่อผู้รับเงิน', { exact: false }).waitFor();
+  // Conditional AFP rules remain in the saved draft without crowding the employee page.
+  const reviewPath = join(home, 'synthetic-vision-review.json');
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
+  }, reviewPath);
+  const savedReview = async () => {
+    await page.getByRole('button', { name: 'บันทึกผลตรวจเก็บไว้' }).click();
+    return await expect
+      .poll(async () => {
+        try {
+          return JSON.parse(await readFile(reviewPath, 'utf8'));
+        } catch {
+          return null;
+        }
+      })
+      .not.toBeNull()
+      .then(async () => JSON.parse(await readFile(reviewPath, 'utf8')));
+  };
+  const initialReview = await savedReview();
+  assert.equal(initialReview.vision_check.fields.total.confidence, 0.7);
+  assert.equal(initialReview.vision_check.provenance, 'EXTRACTED_UNVERIFIED');
+  assert.ok(
+    initialReview.compliance.items.some(item => item.text.includes('ถ้าเบิกหมวด B: ชุดเคลียร์เงิน')),
+    'unknown category retains conditional AFP evidence',
+  );
+  await page.getByText('เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)', { exact: true }).click();
   await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('other');
   assert.equal(await page.getByText('ชุดเคลียร์เงิน', { exact: false }).count(), 0);
   // Enter in a field moves to the next one; one confirmation then covers every field.

@@ -1276,6 +1276,7 @@ async function main() {
       defaultMode: policyState.policy.permission.defaultMode,
       mode: permissionMode(),
       hooks: policyState.policy.hooks.length,
+      mcpServers: policyState.policy.mcpServers.length,
       pilot: Boolean(policyState.policy.pilot),
       checks: policyState.policy.checks,
     },
@@ -1284,7 +1285,20 @@ async function main() {
     consentMetrics: consentMetrics.summary(store.list('session').length),
     userFile: knownUserFile(),
     settings: store.settings(),
-    connections: store.connections(),
+    connections: store.connections().map(connection => {
+      let policyBlocked =
+        (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn()) ||
+        (connection.provider === 'copilot' && !policyState.policy.features.copilot);
+      if (connection.provider === 'compatible') {
+        try {
+          compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
+        } catch {
+          policyBlocked = true;
+        }
+      }
+      // Project current usability without erasing the historical test result in private storage.
+      return { ...connection, ready: connection.ready && !policyBlocked, policyBlocked };
+    }),
     sessions: store.list<any>('session').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     teams: Object.values(await routing.loadTeamsDictionary()),
   });
@@ -1644,7 +1658,7 @@ async function main() {
           try {
             return await openHtmlPreview(
               partition => {
-                const page = dock.create(id, 'manual', partition);
+                const page = dock.create(id, 'manual', partition, true);
                 page.once('destroyed', () => browsers.delete(id));
                 return page;
               },
@@ -1714,6 +1728,11 @@ async function main() {
         }
         if (action === 'capture') return dock.capture();
         const id = inputText(input.id, 60);
+        if (action === 'fit') {
+          if (typeof input.fit !== 'boolean') throw new Error('INVALID_INPUT');
+          dock.setFit(id, input.fit);
+          return dock.state();
+        }
         if (action === 'select') return (dock.select(id), dock.state());
         if (action === 'close') return (dock.remove(id), dock.state());
         if (['back', 'forward', 'reload'].includes(action)) return (dock.navigate(id, action as 'back'), true);

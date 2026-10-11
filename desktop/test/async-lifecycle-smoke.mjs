@@ -218,6 +218,7 @@ try {
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
   await pending('vision');
+  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   const corrections = {
     'ผู้ออกใบเสร็จ / ร้านค้า': 'ร้านที่คนตรวจแก้',
     เลขที่ใบเสร็จ: 'PERSON-002',

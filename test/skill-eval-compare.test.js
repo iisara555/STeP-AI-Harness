@@ -57,7 +57,7 @@ const run = (cwd, args, env) =>
     let out = "";
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (out += d));
-    child.on("close", (code) => done({ code, out }));
+    child.on("close", (code, signal) => done({ code, signal, out }));
   });
 
 test("a Skill change is compared old vs new on the same cases, and a worse case fails the gate", async (t) => {
@@ -115,6 +115,7 @@ test("a Skill change is compared old vs new on the same cases, and a worse case 
     env,
   );
   assert.equal(better.code, 0, better.out);
+  assert.equal(better.signal, null, "completed HTTP evaluation exits normally after recording its report");
   assert.match(better.out, /lesson-owner: old 0% → new 100% \(better\)/);
   assert.match(
     await readFile(join(copy, "report.md"), "utf8"),

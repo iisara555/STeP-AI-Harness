@@ -11,12 +11,13 @@ const executable = join(home, 'agy.mjs');
 const marker = join(home, 'unsafe');
 const calls = join(home, 'calls');
 const ocrPrompt = join(home, 'ocr-prompt.json');
+const ocrHold = join(home, 'hold-ocr-response');
 let ocrServer;
 await writeFile(
   executable,
   `
 import fs from 'node:fs';import {createInterface} from 'node:readline';
-const args=process.argv.slice(2),marker=${JSON.stringify(marker)},calls=${JSON.stringify(calls)},ocrPrompt=${JSON.stringify(ocrPrompt)};
+const args=process.argv.slice(2),marker=${JSON.stringify(marker)},calls=${JSON.stringify(calls)},ocrPrompt=${JSON.stringify(ocrPrompt)},ocrHold=${JSON.stringify(ocrHold)};
 if(args[0]==='--version'){console.log('1.2.14');process.exit(0);}
 if(args[0]==='models'){console.log('gemini-3.8-flash-medium\\tGemini fixture');process.exit(0);}
 const send=x=>console.log(JSON.stringify(x));
@@ -29,7 +30,8 @@ if(prompt.includes('strict OCR reconciliation')){
  const input=JSON.parse(prompt.split('Input:\\n').at(-1));fs.writeFileSync(ocrPrompt,JSON.stringify(input));
  response=JSON.stringify({decisions:Object.fromEntries(input.fields.map(f=>[f.field,{choice:(f.field==='merchant'?f.candidates.find(c=>c.engine==='easyocr'):f.candidates[0])?.token||'UNMAPPED',reason:'synthetic OCR evidence'}]))});
 }
-send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response,usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});
+const finish=()=>send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response,usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});
+if(prompt.includes('strict OCR reconciliation')&&fs.existsSync(ocrHold)){const wait=setInterval(()=>{if(!fs.existsSync(ocrHold)){clearInterval(wait);finish();}},20);}else finish();
 });
 `,
 );
@@ -193,6 +195,7 @@ try {
   assert.equal(started.textOnly, true);
   assert.equal(started.vision, false);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await expect(page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า')).toHaveValue('ร้านตัวอย่างถูกต้อง');
   await expect(page.getByLabel('เลขที่ใบเสร็จ', { exact: true })).toHaveValue('เล่ม 003 เลขที่ 042');
   await expect(page.getByLabel(/^วันที่/)).toHaveValue('04/11/2569');
@@ -211,11 +214,23 @@ try {
   );
   assert.match(denied, /VISION_UNAVAILABLE/);
   assert.deepEqual(await app.evaluate(() => globalThis.receiptDialogs), ['ให้ AI ช่วยกรองผล OCR']);
+  // The simplified page has no advanced reread controls. Exercise a delayed automatic mapping instead:
+  // human corrections entered while the native provider is working must survive its eventual suggestions.
+  await rm(ocrPrompt);
+  await writeFile(ocrHold, 'hold');
+  await page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true }).click();
+  await expect
+    .poll(async () =>
+      readFile(ocrPrompt, 'utf8').then(
+        () => true,
+        () => false,
+      ),
+    )
+    .toBe(true);
   await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').fill('ร้านที่คนแก้แล้ว');
   await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).fill('รายการที่คนแก้แล้ว');
-  await page.getByText('อ่านซ้ำหรือดูรายละเอียด AI', { exact: true }).click();
-  await page.getByRole('button', { name: 'AI กรอง OCR อีกชั้น' }).click();
-  await expect(page.getByRole('button', { name: 'AI กรอง OCR อีกชั้น' })).toBeEnabled();
+  await rm(ocrHold);
+  await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ', exact: true })).toBeEnabled();
   await expect(page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า')).toHaveValue('ร้านที่คนแก้แล้ว');
   await expect(page.getByLabel('รายการค่าใช้จ่าย', { exact: true })).toHaveValue('รายการที่คนแก้แล้ว');
   const disconnected = await page.evaluate(id => window.step.call('disconnect', { id }), connection.id);

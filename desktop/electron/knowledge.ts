@@ -5,7 +5,12 @@ export type CatalogEntry = { id: string; title: string; path: string; owner?: st
 export type KnowledgeSection = { id: string; title: string; path: string; heading: string; text: string; score: number };
 /** A registered document as the AI sees it in the knowledge registry: what it is about and which sections it has. */
 export type RegistryEntry = CatalogEntry & { summary: string; sections: string[] };
-type Section = Omit<KnowledgeSection, 'score'> & { headGrams: Set<string>; bodyGrams: Set<string> };
+type Section = Omit<KnowledgeSection, 'score'> & {
+  headGrams: Set<string>;
+  bodyGrams: Set<string>;
+  topicWords: Set<string>;
+  roleCodes: string[];
+};
 
 // Thai has no spaces between words, so documents and questions are compared as character trigrams.
 const normalize = (text: string) => text.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, '');
@@ -16,6 +21,75 @@ function trigrams(text: string) {
   return grams;
 }
 const share = (query: string[], grams: Set<string>) => query.filter(g => grams.has(g)).length / Math.max(query.length, 1);
+
+// Native Thai word segmentation is used only as a relevance guard: common question words and a shared place
+// name cannot by themselves establish the topic. Trigrams still rank Thai phrases and registered synonyms.
+const wordSegmenter = new Intl.Segmenter('th', { granularity: 'word' });
+const QUESTION_WORDS = new Set([
+  'อะไร',
+  'ไหม',
+  'อย่างไร',
+  'กี่',
+  'ไหน',
+  'ช่วย',
+  'ขอ',
+  'แนะนำ',
+  'ทำ',
+  'มี',
+  'ได้',
+  'ของ',
+  'ที่',
+  'เป็น',
+  'กับ',
+  'ใน',
+  'ต้อง',
+  'ยัง',
+  'แล้ว',
+  'บ้าง',
+  'นี้',
+  'หรือ',
+  'ให้',
+  'เท่าไร',
+  'เท่าไหร่',
+  'คือ',
+  'ใคร',
+  'หน่อย',
+]);
+function topicWords(text: string) {
+  return new Set(
+    [...wordSegmenter.segment(text.toLowerCase())]
+      .filter(word => word.isWordLike && word.segment.length > 1 && !QUESTION_WORDS.has(word.segment))
+      .map(word => word.segment),
+  );
+}
+/** Only codes in an actual role table count as duty evidence; form titles mentioning duties do not. */
+function roleCodes(text: string) {
+  let roleTable = false;
+  const codes: string[] = [];
+  for (const line of text.split('\n')) {
+    if (!line.trim().startsWith('|') || !line.trim().endsWith('|')) {
+      roleTable = false;
+      continue;
+    }
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map(cell => cell.replace(/\*\*|`/g, '').trim());
+    if (cells.some(cell => /หน้าที่|ขอบเขตบริการ|ความรับผิดชอบ/.test(cell))) {
+      // A data cell mentioning duties must not turn an ordinary form register into a role table.
+      if (/^(ทีม|หน่วยงาน|team|unit)$/i.test(cells[0])) {
+        roleTable = true;
+        continue;
+      }
+    }
+    const code = cells[0] || '';
+    if (roleTable && /^[a-z][a-z0-9]*(?:[ -][a-z0-9]+)*$/i.test(code)) codes.push(code);
+  }
+  return codes;
+}
+function requestedRole(question: string, codes: string[]) {
+  return codes.some(code => new RegExp(`(^|[^a-z0-9_-])${code.replace(/ /g, '\\s+')}($|[^a-z0-9_-])`, 'i').test(question));
+}
 
 // Thai title abbreviations as people type them ("ผอ.วิน คือใคร"), spelled out the way the documents write them.
 // Each needs its dot or a following space, so ordinary words that start the same way (ผอม, หนัง) are left alone.
@@ -93,6 +167,9 @@ export class OrganizationKnowledge {
               // count like a heading in every section of their document.
               headGrams: trigrams([entry.title, heading, ...(entry.keywords || [])].join(' ')),
               bodyGrams: trigrams(part.slice(0, 20000)),
+              topicWords: topicWords([entry.title, heading, ...(entry.keywords || []), part.slice(0, 20000)].join(' ')),
+              // A boosted answer must contain its evidence within the excerpt sent to the model.
+              roleCodes: roleCodes((provenance + part.trim()).slice(0, SECTION_CHARS)),
             });
           }
         }
@@ -124,7 +201,16 @@ export class OrganizationKnowledge {
   }
   /** The best-matching sections, strongest first; empty when the documents do not cover the question. */
   async search(question: string): Promise<KnowledgeSection[]> {
-    const query = [...trigrams(expandAbbreviations(question))];
+    const expanded = expandAbbreviations(question);
+    const query = [...trigrams(expanded)];
+    const words = [...topicWords(expanded)];
+    // A recommendation needs its requested subject, not just a matching place name later in the sentence.
+    const recommendation = /^(?:ช่วย|ขอ)?\s*แนะนำ\s*(.+?)(?=\s*(?:ใน|แถว|จังหวัด)|$)/.exec(question)?.[1];
+    const subject = recommendation ? [...topicWords(recommendation)] : [];
+    const roleQuestion = /หน้าที่|ดูแลงาน|รับผิดชอบ|ทำอะไร|ทำงานอะไร/.test(question);
+    const identifiers = roleQuestion
+      ? (question.toLowerCase().match(/[a-z][a-z0-9]*/g) || []).filter(id => !['team', 'unit'].includes(id))
+      : [];
     if (query.length < 2) return [];
     const numbers = [...new Set(question.toUpperCase().match(/\b(?:QM|QP|WI|FM|SD)-[A-Z0-9]{2,8}-\d{1,6}\b/g) || [])];
     const exact = (text: string, number: string) => new RegExp(`\\b${number}\\b`, 'i').test(text);
@@ -139,7 +225,13 @@ export class OrganizationKnowledge {
                 sum + (new RegExp(`^\\|\\s*${number}\\s*\\|`, 'im').test(section.text) ? 1 : exact(section.text, number) ? 0.8 : 0),
               0,
             ) / numbers.length
-          : 0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams),
+          : roleQuestion && requestedRole(question, section.roleCodes)
+            ? 0.85
+            : (words.length && share(words, section.topicWords) < 0.5) ||
+                (subject.length && !subject.every(word => section.topicWords.has(word))) ||
+                (identifiers.length && !identifiers.some(id => section.topicWords.has(id)))
+              ? 0
+              : 0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams),
       }))
       .sort((a, b) => b.score - a.score);
     const best = scored[0]?.score || 0;

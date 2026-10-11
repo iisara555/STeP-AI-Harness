@@ -322,6 +322,7 @@ export default function App() {
       return data as Snapshot;
     }
   }, [api]);
+  const [startupPending, setStartupPending] = useState(true);
   const announcedReady = useRef(false);
   useEffect(() => {
     // The app opens behind a loading window; tell it once the first real screen (or a startup error) is painted.
@@ -338,21 +339,28 @@ export default function App() {
     // An empty task shows the welcome from its greeting; only a conversation follows its latest message.
     if (session?.messages.length || stream || running) conversationEnd.current?.scrollIntoView({ block: 'end' });
   }, [session?.messages.length, stream, running]);
-  useEffect(() => {
-    void refresh()
-      .then(s => {
-        if (s) {
-          setWizard(!s.settings.onboarding);
-          // After an update, once: what changed since the version the person last saw.
-          const notes = s.settings.onboarding ? unseenNotes(s.settings.whatsNewSeen, s.appVersion || '') : [];
-          if (notes.length) setWhatsNew(notes);
-          setSelected(s.sessions[0]?.id || '');
-          setWorkMode(s.sessions[0]?.mode || (s.sessions[0]?.draft ? 'draft' : 'chat'));
-          setConnectionId(s.connections[0]?.id || '');
-        }
-      })
-      .catch(e => setError(explainError(e)));
+  const initializeWorkspace = useCallback(async () => {
+    setStartupPending(true);
+    setError('');
+    try {
+      const s = await refresh();
+      if (s) {
+        setWizard(!s.settings.onboarding);
+        const notes = s.settings.onboarding ? unseenNotes(s.settings.whatsNewSeen, s.appVersion || '') : [];
+        if (notes.length) setWhatsNew(notes);
+        setSelected(s.sessions[0]?.id || '');
+        setWorkMode(s.sessions[0]?.mode || (s.sessions[0]?.draft ? 'draft' : 'chat'));
+        setConnectionId(s.connections[0]?.id || '');
+      }
+    } catch (e) {
+      setError(explainError(e));
+    } finally {
+      setStartupPending(false);
+    }
   }, [refresh]);
+  useEffect(() => {
+    void initializeWorkspace();
+  }, [initializeWorkspace]);
   useEffect(() => {
     if (handoffAsk && claudeCode !== true)
       void api
@@ -1057,8 +1065,23 @@ export default function App() {
     return (
       <main className="browser-message">
         <img className="illustration empty-art" src={ideaArt} alt="" />
-        <LoaderCircle className="spin" />
-        <p>{error || t('กำลังเปิดพื้นที่ทำงาน…')}</p>
+        {error ? (
+          <>
+            <div role="alert">
+              <h1>{t('ยังเปิดพื้นที่ทำงานไม่ได้')}</h1>
+              <p>{error}</p>
+              <p>{t('ลองเปิดอีกครั้ง ข้อมูลงานที่บันทึกไว้ยังอยู่ในเครื่อง')}</p>
+            </div>
+            <button disabled={startupPending} onClick={() => void initializeWorkspace()}>
+              {t('ลองเปิดอีกครั้ง')}
+            </button>
+          </>
+        ) : (
+          <>
+            <LoaderCircle className="spin" aria-hidden="true" />
+            <p role="status">{t('กำลังเปิดพื้นที่ทำงาน…')}</p>
+          </>
+        )}
       </main>
     );
   const pageTitle = settings
@@ -1405,7 +1428,6 @@ export default function App() {
                 onError={e => notify(explainError(e), 'error')}
                 handoff={receiptHandoff}
                 connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
-                trialTools={Boolean(snapshot.policy?.features.ocrTrial)}
                 connections={snapshot.connections}
                 chooseConnection={setConnectionId}
                 openAiSettings={openAiSettings}

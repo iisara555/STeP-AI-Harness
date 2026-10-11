@@ -81,8 +81,12 @@ Generic drinks are not automatically B10; a receipt does not identify an approve
 budget. Suggestions remain recommendations under the registered AFP circular, never
 live policy verification. One source-comparison checkbox covers all populated fields
 and the selected item description. Edits to type/category/purpose also revoke it.
-Raw OCR/vision evidence, alternatives, full compliance checks and pilot controls are
-collapsed by default. Saving and chat handoff are optional after review.
+The page places the source beside three sections: corrections before claiming, next
+actions, and five basic receipt elements. Value editing and optional category/purpose
+correction are disclosures. Raw OCR/vision and alternatives remain in provenance;
+advanced pilot controls are absent from the employee page. Saving and chat handoff
+are optional after review; handoff requires a ready connection and retains the form
+on failure.
 
 OCR attachment text is transmitted with `EXTRACTED_UNVERIFIED` and an attachment
 reference. Transmission consent does not verify transcription. In the receipt mini

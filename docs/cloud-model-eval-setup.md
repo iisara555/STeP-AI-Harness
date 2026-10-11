@@ -83,3 +83,19 @@ Golden suite เดิมมี 3 synthetic scenarios; 3 รอบคือ 9 �
 
 
 Legacy golden/old-new API evaluators ข้างต้นไม่ใช่ตัวรัน OAuth และไม่ใช่ผล WITH/WITHOUT Skill ของ Office อย่าตั้ง API secrets เพียงเพื่อใช้คำสั่ง OAuth ในหน้านี้ ดู [แผนประเมิน](tool-usability-eval.md)
+
+## อ่านผลเปรียบเทียบให้ง่ายขึ้น
+
+เมื่อ `--live` รันเสร็จ เปิด `summary.md` ในโฟลเดอร์ผลนอก repo: ตารางแสดงว่าไฟล์ผ่านเฉพาะแบบมี Skill, เฉพาะแบบไม่มี Skill, ผ่านทั้งสองแบบ, ไม่ผ่านทั้งสองแบบ หรือเปรียบเทียบไม่ได้. Memo แสดง **รอคนตรวจ** เสมอ เพราะการพบคำ/ตัวเลขไม่ยืนยันความหมาย. `summary.json` เก็บสถานะ/รหัสผิดพลาด/จำนวน calls และเวลาเมื่อทราบ โดยไม่ใส่คำตอบหรือข้อมูลบัญชี.
+
+ทั้งคู่ต้องใช้ prompt, Skill/reference versions, model/effort และ tool host เดียวกันตาม fingerprint. ผลไม่ครบ, auth/quota failure, คู่ซ้ำ และ ledger เก่าหรือคนละบริบทไม่ถูกนับเป็นผลเปรียบเทียบ; ไม่ส่งคำขอเพิ่มเพื่อแทนผลเก่าอัตโนมัติ. Resume ยังใช้ budget เดิมและสามโจทย์เดิม. คู่สังเคราะห์จำนวนน้อยไม่เลื่อน lifecycle หรือเปลี่ยน `modelSideRun` เอง.
+
+Cloud รอบนี้ไม่มี Desktop data/profile (`DESKTOP_DATA_DIR_NOT_FOUND`, 0 model prompts). ต้องรันคำสั่ง OAuth บน Windows/macOS ที่มี connection พร้อมก่อนสรุปประโยชน์ของ Skill จริง. Tests ของ paired report และ controlled RPC เป็นการตรวจตัวรัน/รายงาน ไม่ใช่ผลโมเดลจริง.
+
+## ขนาดบริบทและ usage ที่ตรวจย้อนหลังได้
+
+ตัวรันส่งคำอธิบายเฉพาะ `sheet_create`, `sheet_read`, `slides_create` และ `ask_user` เหมือนกันทั้งสอง arm; WITH เพิ่ม Skill/references เดิมครบชุด. ไม่ส่งคำอธิบาย browser, shell, web หรือ discovery ที่ใช้ไม่ได้ใน eval. Desktop ปกติยังใช้ tool instructions เดิม และ execution/privacy/consent gates ไม่เปลี่ยน.
+
+`recording.json` ใหม่มี `turns`: ขนาด system/prompt, `componentChars` ของเครื่องมือและ Skill, `inputEstimate`/`components` ตาม `estimateMethod` และ usage จริงที่ provider ส่ง (รวม cache เมื่อมี). เก็บ observation ของ turn ที่ล้มเหลวด้วย; `usageCoverage` ระบุจำนวน turns ที่มี usage เทียบกับจำนวนที่รับคำขอ. Metadata นี้ไม่มีข้อความ prompt/คำตอบ. Estimates ของ host ไม่รวม base context ที่ Codex CLI เติมเอง (`nativeProviderContext: not-observed`) และไม่ใช่ยอด token ที่คิดจริง.
+
+Recordings เดิมที่ไม่มีข้อมูลราย turn หรือ usage ของรอบที่ล้มเหลวแยกต้นทุนย้อนหลังได้เพียงบางส่วน ห้ามเติมตัวเลขแทนข้อมูลที่ขาด. การวัดข้อความสั้นลงแบบ offline ยังไม่พิสูจน์อัตราประหยัด token หรือว่ารันครบสามคู่ได้ในงบเดิม. Fingerprint รวม prompt helper; source/context ที่เปลี่ยนไม่ทำให้ ledger เดิมเริ่มใหม่ และไม่รันคู่เดิมเพิ่มอัตโนมัติ. คง call/token bounds และ prior-calls เดิมจนมีขอบเขตงานใหม่ที่อนุมัติชัดเจน.

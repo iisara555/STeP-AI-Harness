@@ -103,7 +103,7 @@ test('base installers exclude the heavy OCR runtime and the Receipt page install
 
   const receipt = await readFile(new URL('../src/receipt.tsx', import.meta.url), 'utf8');
   assert.match(receipt, /call\('ocrInstall'/);
-  assert.match(receipt, /OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก/);
+  assert.match(receipt, /OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง/);
 
   const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(main, /resourcesPath, 'ocr-runtime'/);

@@ -47,6 +47,28 @@ try {
   await enter.click();
   await expect(wizard).toHaveCount(0);
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('option', { name: 'คีย์ลัดและ Vim', exact: true }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'คีย์ลัดและ Vim', exact: true });
+  await expect(confirm).toBeVisible();
+  for (const key of ['Tab', 'Shift+Tab']) {
+    for (let i = 0; i < 24; i++) {
+      await page.keyboard.press(key);
+      assert.ok(await confirm.evaluate(el => el.contains(document.activeElement)), `dialog focus escaped with ${key}`);
+    }
+  }
+  // Programmatic focus and global shortcuts cannot interact with the workspace behind a confirmation.
+  await page
+    .locator('header.titlebar button')
+    .first()
+    .evaluate(el => el.focus());
+  assert.ok(await confirm.evaluate(el => el.contains(document.activeElement)));
+  await page.keyboard.press('ControlOrMeta+,');
+  await expect(page.locator('.settings')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(confirm).toHaveCount(0);
+  assert.ok(await page.evaluate(() => document.activeElement !== document.body && !document.activeElement.closest('[inert]')));
+  assert.equal(await page.locator('[inert]').count(), 0);
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   // Choosing a service scrolls its card, with the connect button, into view.

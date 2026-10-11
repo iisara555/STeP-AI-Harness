@@ -3,6 +3,99 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'หน้าใบเสร็จเทียบต้นฉบับกับข้อมูลที่ต้องแก้ และยืนยันก่อนให้ AI ตรวจทาน':
+    'Compare the original receipt with corrections and confirm before AI review',
+  'หน้าเชื่อมต่อ AI บอกความสามารถที่ใช้ได้และข้อจำกัดของแต่ละบัญชี': 'AI connections show available capabilities and account limitations',
+  'ค้นเอกสารเรื่องหน้าที่ทีมได้ตรงขึ้น และหยุดเมื่อไม่มีเอกสารที่เกี่ยวข้อง':
+    'Team duty questions find more relevant documents and stop when no related evidence exists',
+  'ตัวอย่าง HTML ย่อให้พอดีพื้นที่ และเลือกดูขนาดจริงได้': 'HTML previews fit the panel or display at actual size',
+  'เปิดพื้นที่ทำงานอีกครั้งได้เมื่อโหลดไม่สำเร็จ โดยเก็บงานเดิมไว้': 'Retry a failed workspace load while keeping saved work',
+  'กล่องยืนยันใช้คีย์บอร์ดได้สะดวกขึ้น และเปิด Dev mode ได้เมื่อผู้ดูแลอนุญาต':
+    'Confirmation dialogs support keyboard navigation; Dev mode remains subject to administrator permission',
+  บัญชีนี้ทำอะไรได้บ้าง: 'What can this connection do?',
+  ฟังก์ชันที่องค์กรเปิดให้ใช้: 'Organization features',
+  ต้องตรวจเงื่อนไข: 'Check requirements',
+  ยังใช้ไม่ได้: 'Unavailable',
+  คุยและร่างเอกสาร: 'Chat and draft documents',
+  ค้นเว็บและอ่านหน้าเว็บ: 'Search and read web pages',
+  ผ่านการทดสอบข้อความสั้นแล้ว: 'A short text test passed',
+  'ติดต่อ IT เพื่อเปิดสิทธิ์การเชื่อมต่อนี้': 'Contact IT to enable this connection',
+  เชื่อมต่อและทดสอบบัญชีนี้ก่อน: 'Connect and test this account first',
+  'ยังไม่ทราบนโยบายเครื่องมือ ติดต่อ IT': 'Tool policy is unknown; contact IT',
+  'ค้นเว็บผ่านเครื่องมือของ STeP ได้หลังคุณอนุญาต': 'Search through STeP tools after your permission',
+  'ผู้ดูแลปิดเครื่องมือในแชต ติดต่อ IT': 'Chat tools are disabled by your administrator; contact IT',
+  'บัญชีนี้ใช้ข้อความ OCR แทนภาพได้ เลือกบัญชีที่รองรับภาพหากต้องการอ่านภาพ':
+    'Use OCR text with this connection, or choose an image-capable connection to read images',
+  'ผู้ดูแลปิดการอ่านภาพ ติดต่อ IT': 'Image reading is disabled by your administrator; contact IT',
+  'โหมดตรวจข้อมูลขององค์กรไม่ส่งภาพ ใช้ OCR ในเครื่องแทน': 'Organization privacy checks prevent sending images; use local OCR',
+  'ยังไม่ทราบนโยบายการส่งภาพ ติดต่อ IT': 'Image transmission policy is unknown; contact IT',
+  'เลือกโมเดลที่รองรับภาพ และยินยอมส่งภาพก่อนใช้ ผลทดสอบแชตยังไม่ยืนยันการอ่านภาพ':
+    'Choose an image-capable model and approve sending the image; a chat test does not verify image reading',
+  'ใช้ OpenAI หรือ Gemini API และโมเดลภาพที่บัญชีมีสิทธิ์ OAuth อย่างเดียวใช้ไม่ได้':
+    'Use OpenAI or Gemini API with an image model your account can access; OAuth alone is insufficient',
+  'ยังไม่ทราบโหมดการทำงาน ติดต่อ IT': 'Permission mode is unknown; contact IT',
+  ออกจากโหมดวางแผนก่อนสร้างภาพ: 'Leave Plan mode before generating images',
+  'เลือกโมเดลภาพที่บัญชีมีสิทธิ์ การสร้างภาพอาจมีค่าใช้จ่าย API': 'Choose an image model your account can access; API charges may apply',
+  'ให้ AI เลือก Skill อัตโนมัติ': 'Automatic Skill selection',
+  'เครื่องมือ MCP ขององค์กร': 'Organization MCP tools',
+  'แบ่งงานให้ AI หลายงานย่อย': 'Split work into AI subtasks',
+  ร่างงานตามรอบ: 'Scheduled drafts',
+  การตรวจข้อมูลเพิ่มเติมขององค์กร: 'Additional organization privacy checks',
+  การตรวจอำนาจเพิ่มเติมขององค์กร: 'Additional organization authority checks',
+  'ยังไม่ทราบนโยบายองค์กร ติดต่อ IT': 'Organization policy is unknown; contact IT',
+  'ยังไม่เลือกให้อัตโนมัติ เลือก Skill เองได้จากศูนย์รวม Skill': 'Automatic selection is off; choose a Skill from the Skill Center',
+  'ผู้ดูแลยังไม่เปิดฟังก์ชันนี้ ติดต่อ IT หากต้องใช้': 'Your administrator has not enabled this feature; contact IT if needed',
+  'ยังไม่ทราบการตั้งค่า MCP server ติดต่อ IT': 'MCP server configuration is unknown; contact IT',
+  'ให้ IT ตั้งค่า MCP server ขององค์กรก่อน': 'Ask IT to configure an organization MCP server first',
+  'ทดสอบ server ในงานตามรอบและเครื่องมือเพิ่มเติม สิทธิ์เอกสารต้องยืนยันตอนเรียกใช้':
+    'Test the server in Scheduled work and additional tools; document access must be verified when calling it',
+  'ใช้ในโหมดร่างและยืนยันแผนก่อน งานย่อยยังไม่ใช้เครื่องมือ': 'Use Draft mode and approve the plan first; subtasks do not use tools',
+  'ตั้งค่าและยืนยันบัญชีก่อน เป็นงานร่างและทำงานขณะเปิดแอป':
+    'Configure and approve the account first; draft jobs run while the app is open',
+  เปิดตามนโยบายองค์กรแล้ว: 'Enabled by organization policy',
+  'ขนาดตัวอย่าง HTML': 'HTML preview size',
+  พอดีพื้นที่: 'Fit to panel',
+  ขนาดจริง: 'Actual size',
+  'OCR ในเครื่องพร้อมใช้': 'Local OCR is ready',
+  'ตรวจ/แก้ข้อมูลที่อ่านได้': 'Review or correct the extracted values',
+  'เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)': 'Add a purpose or change the category (if needed)',
+  'ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ': 'Check the original, correct the reading, then confirm before sharing',
+  'ยังไม่มีภาพตัวอย่าง โปรดเปิดต้นฉบับในเครื่องเทียบก่อนยืนยัน':
+    'No image preview is available. Check the original on this device before confirming.',
+  'เลือกรูปหรือ PDF ของใบเสร็จ เพื่อเริ่มตรวจข้อมูล': 'Choose a receipt image or PDF to start reviewing',
+  'OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง อ่านไฟล์ในเครื่องโดยไม่ส่งไปบริการ OCR ภายนอก':
+    'OCR is an optional download. It reads files locally without sending them to an external OCR service.',
+  'AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว':
+    'AI can read the image with your consent. Chat handoff sends only reviewed text.',
+  'เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ': 'Choose a receipt on the left to see what needs checking',
+  'ค่าที่ระบบอ่านได้ยังต้องเทียบต้นฉบับ โดยเฉพาะช่องที่ไฮไลต์':
+    'Check all extracted values against the original, especially highlighted fields',
+  'รายการที่อ่านได้ · โปรดเทียบต้นฉบับ': 'Extracted items · Check against the original',
+  'รวมรายการ ที่อยู่ จำนวนเงินตัวอักษร และลายเซ็น การแก้ข้อมูลจะยกเลิกการยืนยัน':
+    'Includes items, address, amount in words and signatures. Editing withdraws confirmation.',
+  'เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่':
+    'Connect and test an AI before sending for review. Your work stays on this page.',
+  'ส่งเฉพาะผลตรวจและข้อความ ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้':
+    'Only review results and text are sent. The original image is not sent in this step.',
+  'ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP':
+    'This review helps prepare documents; it does not approve reimbursement. Keep the original and confirm requirements with AFP.',
+  ยังไม่มีผลตรวจองค์ประกอบ: 'No document-element check yet',
+  'ตรวจว่ามีลายเซ็น ไม่ได้ยืนยันตัวผู้ลงชื่อ องค์ประกอบครบยังไม่เท่ากับอนุมัติเบิก':
+    'Checks signature presence, not signer identity. Complete elements do not constitute reimbursement approval.',
+
+  'เลือก AI ที่มีบัญชี เชื่อมต่อ แล้วทดสอบใช้งาน': 'Choose your AI, connect, then test it',
+  'Claude Pro/Max สำหรับทดสอบ': 'Claude Pro/Max for testing',
+  'ต้องให้ IT อนุญาต': 'IT permission required',
+  'เปิด Dev mode': 'Switch to Dev mode',
+  กลับโหมดปกติ: 'Switch to normal mode',
+  'ผู้ดูแลยังไม่อนุญาต Dev mode ติดต่อ IT หากต้องใช้ทดสอบ':
+    'Dev mode is not allowed by your administrator. Contact IT to request testing access.',
+  ยังเปิดพื้นที่ทำงานไม่ได้: 'Could not open the workspace',
+  'ลองเปิดอีกครั้ง ข้อมูลงานที่บันทึกไว้ยังอยู่ในเครื่อง': 'Try opening it again. Your saved work stays on this device.',
+  ลองเปิดอีกครั้ง: 'Try opening again',
+  'การเชื่อมต่อนี้ถูกปิดการใช้งาน · ลงชื่อออกหรือลบบัญชีได้': 'Disabled by settings or policy · You can sign out or remove this account',
+  'ผลทดสอบเดิมไม่ได้ยืนยันว่าใช้งานได้ตาม policy ปัจจุบัน': 'A previous test does not confirm access under the current policy',
+
   สำเร็จ: 'Succeeded',
   'AI ดึงหัวข้อและตารางจากเว็บ อ่านภาพเมื่อคุณยินยอม และสร้างภาพด้วยบัญชี API ที่รองรับได้':
     'AI can extract web headings and tables, analyze images with your consent, and generate images using a supported API account',

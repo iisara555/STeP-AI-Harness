@@ -37,6 +37,7 @@ try {
   await app.evaluate(
     ({ ipcMain }, snapshot) => {
       globalThis.accountCalls = [];
+      globalThis.accountSnapshot = snapshot;
       globalThis.connectAttempts = 0;
       ipcMain.removeHandler('step:call');
       ipcMain.handle('step:call', async (_event, method, input) => {
@@ -93,6 +94,17 @@ try {
   await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'ลบ', exact: true })).toBeHidden();
+
+  const capabilities = page.locator('.ai-connect-step .ai-capabilities');
+  await capabilities.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(capabilities.locator('[data-capability="chat"]')).toContainText('ผ่านการทดสอบข้อความสั้นแล้ว');
+  await expect(capabilities.locator('[data-capability="web"] .ai-capability-state')).toHaveText('ใช้ได้');
+  await expect(capabilities.locator('[data-capability="image"]')).toContainText('OAuth อย่างเดียวใช้ไม่ได้');
+  const organization = page.locator('.ai-organization-capabilities');
+  await organization.locator('summary').click();
+  await expect(organization.locator('[data-capability="routing"]')).toContainText('เลือก Skill เองได้');
+  await expect(organization.locator('[data-capability="mcp"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
   await page.screenshot({ path: 'release/qa/connect-ai/ready.png' });
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeVisible();
@@ -113,6 +125,15 @@ try {
   assert.equal(choice.provider, 'openai');
   assert.equal(choice.mode, 'subscription');
   assert.equal(choice.apiKey, '');
+
+  // Changing the effective policy must refresh the capability display; no provider call is used.
+  await app.evaluate(() => {
+    globalThis.accountSnapshot.policy.features.toolLoop = false;
+  });
+  await page.getByRole('button', { name: 'ทดสอบอีกครั้ง', exact: true }).click();
+  await app.evaluate(() => globalThis.finishConnect());
+  await expect(capabilities.locator('[data-capability="web"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
+  await expect(capabilities.locator('[data-capability="web"]')).toContainText('ติดต่อ IT');
   await page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'การเชื่อมต่อ AI' })).toHaveCount(0);
   console.log(
