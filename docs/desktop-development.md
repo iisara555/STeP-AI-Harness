@@ -50,7 +50,7 @@ The [0.5.21 synthetic report](../experiments/local-thai-ocr/benchmark/QUALITY-RE
 
 Connect an OpenAI or Gemini API-key account, choose **สร้างรูป**, provide a complete brief and select an account-listed image model. Review the result in **ผลงาน** and choose **บันทึกรูป**. API quota is separate from subscription/OAuth access. Reference images, image editing and inpainting are not supported by this Desktop path.
 
-Known limitations in this version: Chat auto-routing can interpret Thai text-overview requests beginning with `สร้างภาพรวม` as paid image requests, even with a no-image instruction. Use `สรุปภาพรวม` for text. Follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
+Chat auto-routing keeps Thai text-overview/formatting requests and explicit no-image instructions in chat. Select image mode explicitly for an ambiguous creation request. Known limitation: follow-up image requests and answers to router clarification do not include the original brief in the generation prompt; repeat the complete brief. Synthetic renderer/host/provider fixtures verify selection, consent, display, export, cancellation and error handling; they do not prove live model access, output quality or provider billing.
 
 ## Run
 

@@ -14,6 +14,21 @@ test('image intent distinguishes explicit creation from ordinary discussion', ()
   for (const q of ['รูปนี้เป็นอะไร', 'ช่วยสรุปการประชุม', 'How do image models work?', 'อธิบายวิธีสร้างรูป', 'How do I generate an image?'])
     assert.equal(isImageRequest(q), false);
 });
+test('text overviews, formatting and explicit no-image instructions never auto-route to image generation', () => {
+  for (const q of [
+    'สร้างภาพรวมโครงการเป็นข้อความ ไม่ต้องสร้างรูป',
+    'ช่วยออกแบบรูปแบบรายงาน ไม่เอาภาพ',
+    'สร้างภาพรวมของแผนงาน',
+    'ทำรูปแบบตารางสำหรับ Excel',
+    'สร้างภาพลักษณ์องค์กรผ่านแผนการสื่อสาร',
+    'สร้างรูปแบบเอกสาร',
+    'สร้างภาพประกอบ แต่ไม่ต้องสร้างรูปจริง ขอแค่คำอธิบาย',
+    'Create an image brief only. Do not generate an image.',
+  ])
+    assert.equal(isImageRequest(q), false, q);
+  for (const q of ['ช่วยสร้างภาพโปสเตอร์งาน', 'สร้างรูปภาพรวมทีมในสวน', 'วาดภาพวิวภูเขา', 'create a poster of a tree'])
+    assert.equal(isImageRequest(q), true, q);
+});
 for (const provider of ['openai', 'gemini'] as const)
   test(`${provider} image request uses the account catalog, saves verified bytes, and keeps keys in the host`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'step-image-')),

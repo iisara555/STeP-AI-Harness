@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **BE04 image intent**: reject Thai compounds that mean text overviews/formats and explicit no-image instructions before shared host/renderer auto-routing. Regression failed on main first. Explicit image mode and existing privacy/destination gates remain unchanged; follow-up brief retention is outside this fix.
+
 - **BE01 LINE intake recovery**: durable metadata before webhook acknowledgement; interrupted jobs are visible to the loopback operator and require reviewed input plus explicit provider approval. Queued/in-flight restart and failed-write regressions reproduced failures first and now pass with synthetic signatures/providers. Real organization credentials/channel rollout remain an IT acceptance step; policy defaults unchanged.
 
 - **PR #135 / Desktop 0.5.39 prepared release**: based on released main 0.5.38. Review keeps `developmentMode` false by default (managed permission plus local opt-in), bounds/cancels warm claim waiting, falls back only before a prompt runs, reports a refused model without replay, and prevents late startup/finishing requests from resurrecting spares after logout/quit. Only successful text requests replenish the pool; policy revocation cancels Claude plan runs/sign-in. Both READMEs, operator docs, in-app notes and version/lockfile align with 0.5.39.

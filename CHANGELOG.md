@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- BE04: Thai overview/formatting requests and explicit no-image instructions stay in chat instead of automatically entering image generation. Synthetic intent regressions preserve explicit image creation; original-brief follow-up support remains a separate issue.
+
 - BE01: LINE commits a private metadata receipt before acknowledging a webhook, recovers queued/running jobs for explicit operator retry and never automatically replays provider calls or delivery. Signed synthetic restart/storage/privacy/approval fixtures verify recovery; real channel deployment remains unverified. No policy defaults or dependencies changed.
 
 ## Desktop v0.5.39 — 2026-10-11
