@@ -79,8 +79,8 @@ export function organizationCapabilities(policy?: PolicySnapshot): Capability[] 
     ['mcp', 'เครื่องมือ MCP ขององค์กร', 'mcp'],
     ['coordinator', 'แบ่งงานให้ AI หลายงานย่อย', 'coordinator'],
     ['cron', 'ร่างงานตามรอบ', 'cron'],
-    ['privacy', 'ตรวจข้อมูลส่วนบุคคลก่อนส่ง', 'privacy'],
-    ['authority', 'ตรวจขอบเขตอำนาจของ AI', 'authority'],
+    ['privacy', 'การตรวจข้อมูลเพิ่มเติมขององค์กร', 'privacy'],
+    ['authority', 'การตรวจอำนาจเพิ่มเติมขององค์กร', 'authority'],
   ];
   return definitions.map(([id, title, flag]) => {
     const enabled = ['privacy', 'authority'].includes(id) ? policy?.checks?.[flag as 'privacy' | 'authority'] : policy?.features[flag];
