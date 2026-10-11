@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { Budget } from './budget.mjs';
-import { safeSummary } from './summary.mjs';
+import { safeSummary, summaryMarkdown } from './summary.mjs';
 const root = process.env.STEP_EVAL_REPO,
   base = process.env.STEP_EVAL_OUTPUT,
   kit = process.env.STEP_EVAL_KIT;
@@ -24,6 +25,21 @@ const { evaluatePrivacyGate } = await import(repoModule('src/modules/privacy/ind
 const require2 = createRequire(join(root, 'desktop/package.json'));
 const ExcelJS = require2('exceljs'),
   JSZip = require2('jszip');
+const fingerprint = value => createHash('sha256').update(value).digest('hex');
+const hostFingerprint = fingerprint(
+  (
+    await Promise.all(
+      [
+        'desktop/electron/service.ts',
+        'desktop/electron/tools.ts',
+        'desktop/electron/tool-loop.ts',
+        'desktop/electron/providers.ts',
+        'desktop/electron/policy.ts',
+        'desktop/electron/sheet-worker.cjs',
+      ].map(p => readFile(join(root, p), 'utf8')),
+    )
+  ).join('\n') + (await readFile(new URL(import.meta.url), 'utf8')),
+);
 const executable = join(kit, 'guarded-codex.mjs');
 const worker = join(root, 'desktop/electron/sheet-worker.cjs');
 const tasks = await Promise.all(
@@ -285,6 +301,8 @@ for (const model of models) {
     : model.defaultReasoningEffort || 'medium';
   for (const [taskIndex, task] of tasks.entries()) {
     if (stopModel || globalStop || abortAll.signal.aborted) break;
+    const skillInstructions = await Promise.all([task.skillPath, ...task.references].map(f => readFile(join(root, f), 'utf8')));
+    const comparisonKey = fingerprint(JSON.stringify({ model: modelId, effort, prompt: task.prompt, hostFingerprint, skillInstructions }));
     const order = (models.indexOf(model) + taskIndex) % 2 ? ['without-skill', 'with-skill'] : ['with-skill', 'without-skill'];
     for (const arm of order) {
       if (stopModel || globalStop || abortAll.signal.aborted) break;
@@ -293,6 +311,7 @@ for (const model of models) {
         const previous = budget.data.trials[trialKey];
         report.trials.push({
           ...previous,
+          contextCurrent: previous.comparisonKey === comparisonKey,
           model: modelId,
           task: task.id,
           arm,
@@ -375,8 +394,7 @@ for (const model of models) {
         () => 'acceptEdits',
         worker,
       );
-      const instructions =
-        arm === 'with-skill' ? await Promise.all([task.skillPath, ...task.references].map(f => readFile(join(root, f), 'utf8'))) : [];
+      const instructions = arm === 'with-skill' ? skillInstructions : [];
       const selected = new CodexAdapter();
       const runtime = async () => ({
         context: { cwd: workspace, env: { ...process.env }, effort },
@@ -456,6 +474,7 @@ for (const model of models) {
         verified = { artifactVerified: false, reason: 'ARTIFACT_MISSING_OR_INVALID' };
       }
       const trial = {
+        comparisonKey,
         model: modelId,
         effort,
         round: taskIndex + 1,
@@ -476,6 +495,9 @@ for (const model of models) {
       };
       await writeFile(join(workspace, 'recording.json'), JSON.stringify(trial, null, 2));
       await budget.finish(trialKey, {
+        comparisonKey,
+        effort,
+        durationMs: trial.durationMs,
         model: modelId,
         round: trial.round,
         task: task.id,
@@ -535,6 +557,7 @@ report.liveEvaluationComplete = report.trials.length === models.length * 6;
 report.stoppedEarly = !report.liveEvaluationComplete;
 await writeFile(join(runRoot, 'report.json'), JSON.stringify(report, null, 2));
 await writeFile(join(runRoot, 'summary.json'), JSON.stringify(safeSummary(report), null, 2));
+await writeFile(join(runRoot, 'summary.md'), summaryMarkdown(report));
 console.log(
   JSON.stringify({
     report: join(runRoot, 'report.json'),

@@ -83,3 +83,11 @@ Golden suite เดิมมี 3 synthetic scenarios; 3 รอบคือ 9 �
 
 
 Legacy golden/old-new API evaluators ข้างต้นไม่ใช่ตัวรัน OAuth และไม่ใช่ผล WITH/WITHOUT Skill ของ Office อย่าตั้ง API secrets เพียงเพื่อใช้คำสั่ง OAuth ในหน้านี้ ดู [แผนประเมิน](tool-usability-eval.md)
+
+## อ่านผลเปรียบเทียบให้ง่ายขึ้น
+
+เมื่อ `--live` รันเสร็จ เปิด `summary.md` ในโฟลเดอร์ผลนอก repo: ตารางแสดงว่าไฟล์ผ่านเฉพาะแบบมี Skill, เฉพาะแบบไม่มี Skill, ผ่านทั้งสองแบบ, ไม่ผ่านทั้งสองแบบ หรือเปรียบเทียบไม่ได้. Memo แสดง **รอคนตรวจ** เสมอ เพราะการพบคำ/ตัวเลขไม่ยืนยันความหมาย. `summary.json` เก็บสถานะ/รหัสผิดพลาด/จำนวน calls และเวลาเมื่อทราบ โดยไม่ใส่คำตอบหรือข้อมูลบัญชี.
+
+ทั้งคู่ต้องใช้ prompt, Skill/reference versions, model/effort และ tool host เดียวกันตาม fingerprint. ผลไม่ครบ, auth/quota failure, คู่ซ้ำ และ ledger เก่าหรือคนละบริบทไม่ถูกนับเป็นผลเปรียบเทียบ; ไม่ส่งคำขอเพิ่มเพื่อแทนผลเก่าอัตโนมัติ. Resume ยังใช้ budget เดิมและสามโจทย์เดิม. คู่สังเคราะห์จำนวนน้อยไม่เลื่อน lifecycle หรือเปลี่ยน `modelSideRun` เอง.
+
+Cloud รอบนี้ไม่มี Desktop data/profile (`DESKTOP_DATA_DIR_NOT_FOUND`, 0 model prompts). ต้องรันคำสั่ง OAuth บน Windows/macOS ที่มี connection พร้อมก่อนสรุปประโยชน์ของ Skill จริง. Tests ของ paired report และ controlled RPC เป็นการตรวจตัวรัน/รายงาน ไม่ใช่ผลโมเดลจริง.

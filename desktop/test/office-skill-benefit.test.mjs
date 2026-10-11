@@ -17,7 +17,7 @@ import {
   parsePriorCalls,
 } from '../eval/office-skill-benefit/config.mjs';
 import { Budget } from '../eval/office-skill-benefit/budget.mjs';
-import { safeSummary } from '../eval/office-skill-benefit/summary.mjs';
+import { safeSummary, summaryMarkdown } from '../eval/office-skill-benefit/summary.mjs';
 
 test('reads only subscription connection metadata without altering Desktop database', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'step-profile-test-'));
@@ -224,6 +224,12 @@ test('controlled RPC runs both arms through real Office tools and resumes withou
     assert.equal(report.trials.filter(t => t.verified.artifactVerified === true).length, 4);
     assert.ok(report.trials.every(t => t.status === 'review'));
     assert.equal(report.modelBenefitEstablished, false);
+    const paired = JSON.parse(await readFile(join(output, folders[0], 'summary.json'), 'utf8'));
+    assert.deepEqual(
+      paired.pairs.map(p => p.outcome),
+      ['both', 'both', 'requires-human-review'],
+    );
+    assert.match(await readFile(join(output, folders[0], 'summary.md'), 'utf8'), /ไฟล์ผ่านทั้งสองแบบ/);
     const second = run();
     assert.equal(second.status, 0, second.stderr);
     const ledger = JSON.parse(await readFile(join(output, 'budget.json'), 'utf8'));
@@ -258,4 +264,98 @@ test('host review consent still blocks credential-shaped data before model execu
   } finally {
     store.close();
   }
+});
+
+test('paired evidence compares only matching completed trials and never upgrades memo heuristics to quality proof', () => {
+  const trial = (task, arm, artifactVerified, extra = {}) => ({
+    model: 'synthetic-model',
+    task,
+    arm,
+    status: 'review',
+    modelCalls: 1,
+    durationMs: 100,
+    comparisonKey: 'a'.repeat(64),
+    verified: { artifactVerified },
+    ...extra,
+  });
+  const report = {
+    synthetic: true,
+    provider: 'openai',
+    auth: 'chatgpt-oauth',
+    trials: [
+      trial('xlsx', 'with-skill', true),
+      trial('xlsx', 'without-skill', false),
+      trial('pptx', 'with-skill', true, { status: 'failed', code: 'PROVIDER_QUOTA' }),
+      trial('pptx', 'without-skill', true),
+      trial('memo', 'with-skill', null, { verified: { checks: { pendingFacts: true, comparesChoices: true, readerEvidence: true } } }),
+      trial('memo', 'without-skill', null),
+    ],
+  };
+  const summary = safeSummary(report);
+  assert.deepEqual(
+    summary.pairs.map(p => [p.task, p.outcome]),
+    [
+      ['xlsx', 'with-only'],
+      ['pptx', 'incomplete'],
+      ['memo', 'requires-human-review'],
+    ],
+  );
+  assert.equal(summary.modelBenefitEstablished, false);
+  assert.equal(summary.pairs[0].withSkill.modelCalls, 1);
+  assert.equal(summary.pairs[1].withSkill.code, 'PROVIDER_QUOTA');
+  assert.equal(JSON.stringify(summary).includes('a'.repeat(64)), false);
+});
+
+test('paired evidence refuses missing, duplicate and mismatched evaluation contexts', () => {
+  const trial = (arm, key) => ({
+    model: 'synthetic-model',
+    task: 'xlsx',
+    arm,
+    status: 'review',
+    comparisonKey: key,
+    verified: { artifactVerified: true },
+  });
+  for (const trials of [
+    [trial('with-skill', 'a'.repeat(64))],
+    [trial('with-skill', 'a'.repeat(64)), trial('without-skill', 'b'.repeat(64))],
+    [trial('with-skill', undefined), trial('without-skill', undefined)],
+    [trial('with-skill', 'a'.repeat(64)), trial('with-skill', 'a'.repeat(64)), trial('without-skill', 'a'.repeat(64))],
+  ]) {
+    assert.equal(safeSummary({ trials }).pairs[0].outcome, 'incomplete');
+  }
+});
+
+test('Thai paired report exposes failures and uncertainty without answer or identity content', () => {
+  const report = {
+    trials: [
+      {
+        model: 'synthetic-model',
+        task: 'xlsx',
+        arm: 'with-skill',
+        status: 'failed',
+        code: 'LOGIN_REQUIRED',
+        output: 'private-output',
+        account: 'private-identity',
+        workspace: '/private/location',
+      },
+    ],
+  };
+  const text = summaryMarkdown(report);
+  assert.match(text, /เปรียบเทียบไม่ได้/);
+  assert.match(text, /ยังไม่พิสูจน์ว่า Skill ช่วยโดยทั่วไป/);
+  for (const hidden of ['private-output', 'private-identity', '/private/location']) assert.equal(text.includes(hidden), false);
+});
+
+test('a resumed pair from another source/tool context cannot be presented as current evidence', () => {
+  const trials = ['with-skill', 'without-skill'].map(arm => ({
+    model: 'synthetic-model',
+    task: 'xlsx',
+    arm,
+    status: 'review',
+    comparisonKey: 'a'.repeat(64),
+    contextCurrent: false,
+    resumed: true,
+    verified: { artifactVerified: true },
+  }));
+  assert.equal(safeSummary({ trials }).pairs[0].outcome, 'incomplete');
 });

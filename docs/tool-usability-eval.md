@@ -41,3 +41,11 @@ Recordings: {suite:"office-tools-v1",synthetic:true,kind:"recorded-model-run",pr
 หลังเปิด network destinations แล้ว OAuth cloud ยังตอบ 401 และ refresh ไม่ผ่าน จึงยังไม่มีผลคุณภาพจากโมเดลจริง ไม่เติม API key แทนการล็อกอิน OAuth ผล live และ coauthoring/receipt cases ที่ยังไม่ได้รันคง `modelSideRun: not-yet-run`; Skill draft ไม่เลื่อนเองจาก unit checks `scripts/skill-eval-compare.mjs` เดิมเป็น old/new Skill พร้อม judge จึงไม่ใช้แทน WITH/WITHOUT Skill
 
 คำสั่ง Windows/macOS, ledger/resume, privacy และความต่างของตัวประเมิน: [Office OAuth evaluation setup](cloud-model-eval-setup.md)
+
+## อ่านผลเปรียบเทียบให้ง่ายขึ้น
+
+เมื่อ `--live` รันเสร็จ เปิด `summary.md` ในโฟลเดอร์ผลนอก repo: ตารางแสดงว่าไฟล์ผ่านเฉพาะแบบมี Skill, เฉพาะแบบไม่มี Skill, ผ่านทั้งสองแบบ, ไม่ผ่านทั้งสองแบบ หรือเปรียบเทียบไม่ได้. Memo แสดง **รอคนตรวจ** เสมอ เพราะการพบคำ/ตัวเลขไม่ยืนยันความหมาย. `summary.json` เก็บสถานะ/รหัสผิดพลาด/จำนวน calls และเวลาเมื่อทราบ โดยไม่ใส่คำตอบหรือข้อมูลบัญชี.
+
+ทั้งคู่ต้องใช้ prompt, Skill/reference versions, model/effort และ tool host เดียวกันตาม fingerprint. ผลไม่ครบ, auth/quota failure, คู่ซ้ำ และ ledger เก่าหรือคนละบริบทไม่ถูกนับเป็นผลเปรียบเทียบ; ไม่ส่งคำขอเพิ่มเพื่อแทนผลเก่าอัตโนมัติ. Resume ยังใช้ budget เดิมและสามโจทย์เดิม. คู่สังเคราะห์จำนวนน้อยไม่เลื่อน lifecycle หรือเปลี่ยน `modelSideRun` เอง.
+
+Cloud รอบนี้ไม่มี Desktop data/profile (`DESKTOP_DATA_DIR_NOT_FOUND`, 0 model prompts). ต้องรันคำสั่ง OAuth บน Windows/macOS ที่มี connection พร้อมก่อนสรุปประโยชน์ของ Skill จริง. Tests ของ paired report และ controlled RPC เป็นการตรวจตัวรัน/รายงาน ไม่ใช่ผลโมเดลจริง.
