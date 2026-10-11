@@ -1657,7 +1657,7 @@ async function main() {
           try {
             return await openHtmlPreview(
               partition => {
-                const page = dock.create(id, 'manual', partition);
+                const page = dock.create(id, 'manual', partition, true);
                 page.once('destroyed', () => browsers.delete(id));
                 return page;
               },
@@ -1727,6 +1727,11 @@ async function main() {
         }
         if (action === 'capture') return dock.capture();
         const id = inputText(input.id, 60);
+        if (action === 'fit') {
+          if (typeof input.fit !== 'boolean') throw new Error('INVALID_INPUT');
+          dock.setFit(id, input.fit);
+          return dock.state();
+        }
         if (action === 'select') return (dock.select(id), dock.state());
         if (action === 'close') return (dock.remove(id), dock.state());
         if (['back', 'forward', 'reload'].includes(action)) return (dock.navigate(id, action as 'back'), true);

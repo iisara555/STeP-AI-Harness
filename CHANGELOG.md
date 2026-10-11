@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- HTML previews in the right panel now align with application zoom and fit oversized fixed-layout slides to the available width/height. Added Thai-first **พอดีพื้นที่ / ขนาดจริง** controls; responsive reports retain their media queries and vertical scrolling. Very small panels use a temporary layout scale below Chromium’s native zoom floor, restored in actual-size/fullscreen mode. Source files and preview permissions remain unchanged. Regression tests first reproduced both cropping causes, then verified synthetic narrow/short windows, resize, reload and fullscreen return on Linux/Electron; employee Windows/macOS acceptance remains open. No dependencies or version changes.
+
 - Simplified receipt review to one page: original on the left, corrections/next actions/five basic elements on the right, stacked on narrow windows. Ordinary editing is available on demand; advanced OCR pilot controls are removed from the employee page while private benchmark/export APIs remain. Handoff requires a tested connection and preserves corrections on failure. Synthetic Electron fixtures cover layout, human-confirmation revocation, delayed AI edits, consent, provenance and private scoring/export; real OCR accuracy, AFP acceptance and employee Windows/macOS checks remain open. No dependencies, policy defaults or version changes.
 
 - Added a one-click Dev mode button at the top of Connect AI in Settings and Setup. It uses the existing managed-policy/local opt-in gate, shows the current state and offers a return to normal mode; unavailable policy remains disabled with IT guidance. No policy defaults or account entitlements changed.

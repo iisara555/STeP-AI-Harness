@@ -385,7 +385,15 @@ export type Workflow = 'plan' | 'execute' | 'requirements' | 'diagnose';
 export type WorkTask = { title: string; status: 'todo' | 'doing' | 'done' | 'blocked'; note?: string };
 export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
 /** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
-export type BrowserDockTab = { id: string; title: string; url: string; kind: 'agent' | 'manual'; loading: boolean };
+export type BrowserDockTab = {
+  id: string;
+  title: string;
+  url: string;
+  kind: 'agent' | 'manual';
+  loading: boolean;
+  preview?: boolean;
+  fit?: boolean;
+};
 export type BrowserDockState = { tabs: BrowserDockTab[]; active: string; focus?: boolean };
 /** The in-app updater's state (electron/updater.ts). */
 export type UpdateState = {

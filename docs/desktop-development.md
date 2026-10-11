@@ -16,6 +16,10 @@ Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
+## Local HTML previews
+
+The right-panel preview converts renderer CSS geometry to native DIP bounds using the application zoom factor. Local HTML defaults to **Fit to panel** (Thai: **พอดีพื้นที่**), with **Actual size** (**ขนาดจริง**) available per tab. Responsive HTML first lays out at the actual panel width; overflowing fixed slides fit width and, when vertical scrolling is locked, height. Below Chromium’s 25% native zoom floor, a temporary isolated-world CSS layout scale is restored on refit, actual-size mode and fullscreen. Source files, sandbox/permission boundaries and ordinary web tabs are unchanged. Long responsive reports retain vertical scrolling. The synthetic `html-preview-smoke.mjs` regression covers zoom, narrow/short windows, resize, reload and fullscreen return; it does not establish employee Windows/macOS acceptance.
+
 ## Office tools in Desktop 0.5.27
 
 The host tool loop can create actual XLSX workbooks (`sheet_create`) and editable PPTX decks (`slides_create`) from chat/draft, including a table from earlier conversation turns. Ask mode stages them in **Changes** for review/application; Accept Edits uses the existing write gate and reports `applied` only after writing. Existing files are not overwritten. Leading-zero identifiers remain text and missing facts remain pending confirmation. With tool execution disabled, use the draft's **XLSX** export; CSV is a separate format.

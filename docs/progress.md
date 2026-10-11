@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **Right-panel HTML preview**: app-zoom geometry and fixed-slide cropping reproduced in failing Electron tests, then corrected. Local HTML has **พอดีพื้นที่ / ขนาดจริง** controls, with temporary scaling below Chromium’s zoom floor; responsive reports preserve vertical scrolling and source files/permissions stay unchanged. Synthetic resize/reload/fullscreen regressions pass on Linux/Xvfb; root 968 passed/3 skipped and Desktop 662 passed/2 skipped, both validators, formatting and build pass. Branch `fix/html-preview-responsive` builds on the audit/OCR stack; Windows/macOS employee acceptance remains open.
+
 - **Minimal OCR review**: original on the left; corrections, next actions and five basic elements on the right. Employee UI has no advanced pilot controls. Ordinary edits remain available on demand; the backend/private benchmark APIs and provenance are retained. Synthetic layout, failure recovery, Gemini vision, consent, delayed edits and private scoring/export pass. Root 968 passed/3 skipped and Desktop 662 passed/2 skipped; both validators, formatting and build pass. Combined 41-script Electron and platform CI outcomes are tracked in [PR #142](https://github.com/iisara555/STeP-AI-Harness/pull/142); real OCR/AFP/native-machine acceptance remains open.
 
 - **Easy Dev mode**: discoverable stateful button in the shared Connect AI flow (Setup and Settings), with IT-policy explanation and one-click return. Existing provider-policy/forced-off restrictions remain intact; synthetic Electron checks cover the button and short-window Setup. No policy defaults changed.

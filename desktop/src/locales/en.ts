@@ -3,6 +3,9 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'ขนาดตัวอย่าง HTML': 'HTML preview size',
+  พอดีพื้นที่: 'Fit to panel',
+  ขนาดจริง: 'Actual size',
   'OCR ในเครื่องพร้อมใช้': 'Local OCR is ready',
   'ตรวจ/แก้ข้อมูลที่อ่านได้': 'Review or correct the extracted values',
   'เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)': 'Add a purpose or change the category (if needed)',

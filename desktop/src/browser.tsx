@@ -195,6 +195,24 @@ export function BrowserDockView({
           </>
         )}
       </div>
+      {active.preview && (
+        <div className="browser-preview-size" role="group" aria-label={t('ขนาดตัวอย่าง HTML')}>
+          {[true, false].map(fit => (
+            <button
+              key={String(fit)}
+              className="quiet"
+              aria-pressed={active.fit === fit}
+              onClick={() =>
+                run(async () => {
+                  await api.call('browserDock', { action: 'fit', id: active.id, fit });
+                })
+              }
+            >
+              {t(fit ? 'พอดีพื้นที่' : 'ขนาดจริง')}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="browser-host" ref={box}>
         {still && <img src={still} alt="" />}
       </div>
