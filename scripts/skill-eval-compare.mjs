@@ -232,4 +232,5 @@ if (flag("record")) {
   writeFileSync(file, JSON.stringify(spec, null, 2) + "\n");
   console.log(`Recorded in evals/skills/${name}.json (baseline.modelSideRun)`);
 }
-process.exit(worse.length ? 1 : 0);
+// Let provider HTTP handles close and stdout drain before terminating on Windows.
+process.exitCode = worse.length ? 1 : 0;

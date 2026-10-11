@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **Windows evaluator shutdown**: the old/new Skill comparator now sets its exit status and lets HTTP handles/stdout drain. The existing loopback-model regression reproduced a libuv abort on Node 24 and 25 after writing a successful report; success and regression exit codes remain covered. This is separate from the OAuth WITH/WITHOUT runner.
+
 - **Windows validator regression**: the secret-scope subprocess test now uses the validator's Python 3.10+ discovery instead of a hardcoded `python` command. Reproduced failure with the Windows Store alias and working `py -3`; shared discovery is covered without skipping the scanner.
 
 - **HA05 knowledge relevance**: original staff-query corpus improves from 59/61 to 61/61 for local top-document retrieval/abstention. Topic coverage avoids shared-location matches; role-table evidence answers team duties instead of form lists. Paraphrase and independent synthetic cases added; exact document-number, restricted-source and cache behavior retained. 32 related regressions, root 968 passed/3 skipped, Desktop 674 passed/2 skipped, validators/format/build pass on Linux. Model-answer quality and unseen staff questions still require evaluation.
