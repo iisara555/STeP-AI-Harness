@@ -22,6 +22,18 @@ await writeFile(join(workspace, 'deck.html'), deck);
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 let app;
+let phase = 'launch';
+const checkpoint = name => {
+  phase = name;
+  console.log(`HTML preview phase: ${name}`);
+};
+// Electron evaluate has no default deadline. Keep a stalled native operation red and report its phase.
+const deadline = setTimeout(() => {
+  console.error(`HTML preview timed out during ${phase}`);
+  process.exitCode = 1;
+  app?.process().kill();
+}, 90_000);
+deadline.unref();
 try {
   app = await electron.launch({ args: ['.'], env, timeout: 45_000 });
   const page = await app.firstWindow();
@@ -80,6 +92,7 @@ try {
     return !!r && r.left >= -2 && r.top >= -2 && r.right <= guest.width + 2 && r.bottom <= guest.height + 2;
   };
   const failures = [];
+  checkpoint('responsive preview and app zoom');
   await open('responsive.html');
   await page.evaluate(() => window.step.call('windowControl', { action: 'zoomIn' }));
   try {
@@ -94,6 +107,7 @@ try {
   await page.evaluate(() => window.step.call('windowControl', { action: 'zoomReset' }));
   await close();
   await open('deck.html');
+  checkpoint('fixed slide fit');
   try {
     await expect.poll(fits, { timeout: 10_000 }).toBe(true);
   } catch {
@@ -102,6 +116,7 @@ try {
   assert.deepEqual(failures, [], 'preview layout regressions');
 
   // Resizing a docked slide fits both dimensions, including a short window; original HTML is unchanged.
+  checkpoint('short and narrow window resize');
   for (const size of [
     { width: 1280, height: 800 },
     { width: 800, height: 600 },
@@ -117,6 +132,7 @@ try {
     await expect.poll(fits).toBe(true);
   }
   const actual = page.getByRole('button', { name: 'ขนาดจริง', exact: true });
+  checkpoint('actual size and fit');
   const fit = page.getByRole('button', { name: 'พอดีพื้นที่', exact: true });
   await actual.click();
   await expect(actual).toHaveAttribute('aria-pressed', 'true');
@@ -130,6 +146,7 @@ try {
       const view = BrowserWindow.getAllWindows()[0].contentView.children.find(v => v.webContents?.getURL().includes('step-preview-'));
       await view.webContents.executeJavaScript(enter ? 'document.documentElement.requestFullscreen()' : 'document.exitFullscreen()', true);
     }, enter);
+  checkpoint('enter native fullscreen');
   await fullscreen(true);
   await expect
     .poll(async () => {
@@ -137,12 +154,14 @@ try {
       return g?.fullscreen && g.previewZoom === 1 && g.rootZoom === '1';
     })
     .toBe(true);
+  checkpoint('leave native fullscreen');
   await fullscreen(false);
   await expect.poll(async () => !(await probe())?.fullscreen).toBe(true);
   if (!(await page.locator('.browser-host').isVisible())) await page.getByRole('button', { name: 'เปิดร่าง', exact: true }).click();
   await expect.poll(aligned).toBe(true);
   await expect.poll(fits).toBe(true);
   // Reload also recomputes the fit instead of retaining a scale from a previous document.
+  checkpoint('reload fit');
   const beforeReload = (await probe()).origin;
   await page.getByRole('button', { name: 'โหลดใหม่', exact: true }).click();
   await expect
@@ -165,6 +184,7 @@ try {
   await close();
 
   // A responsive document retains its media query and normal vertical scrolling, rather than becoming a tiny page.
+  checkpoint('responsive scrolling');
   await page.setViewportSize({ width: 800, height: 600 });
   await open('responsive.html');
   await expect.poll(async () => (await probe())?.columns?.trim().split(/\s+/).length).toBe(1);
@@ -191,6 +211,8 @@ try {
     'HTML preview smoke passed: zoom-aligned native bounds, fixed slides fit, short/narrow resize, actual-size/reload/fullscreen recovery and responsive document scrolling; synthetic files only.',
   );
 } finally {
+  checkpoint('close application');
   await app?.close();
+  clearTimeout(deadline);
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
