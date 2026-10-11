@@ -6,16 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-### STeP Desktop: Claude ข้อความถัดไปเริ่มเร็วขึ้น
+## Desktop v0.5.39 — 2026-10-11
 
-- หลังข้อความแรก แอปเปิด Claude Code ตัวจริงรอไว้หนึ่งตัวต่อการเชื่อมต่อ (`prewarm()` ของ Agent SDK) ข้อความถัดไปใช้ตัวนั้นแทนการเปิดใหม่ วัดกับบัญชีจริง 8 รอบ: เวลาถึงข้อความแรกมัธยฐาน 3.4 → 2.2 วินาที
-- ตัวที่รอไว้ไม่มีเครื่องมือ MCP หรือ settings คำสั่งของงานส่งไปตอนใช้ ถ้า Claude Code ไม่รับ แอปเปิดแบบปกติให้เอง ปิดเมื่อว่าง 10 นาที ออกจากระบบ ลบการเชื่อมต่อ หรือปิดแอป ใช้หน่วยความจำราว 250 MB
-- Antigravity (`agy`) ยังเปิดใหม่ทุกข้อความ เพราะ agy อ่านคำสั่งของงานจากไฟล์ agent ตอนเริ่ม process จึงเตรียมไว้ล่วงหน้าไม่ได้โดยไม่ย้ายคำสั่งองค์กรไปไว้ในข้อความผู้ใช้
-
-### STeP Desktop: โหมดนักพัฒนา
-
-- ตั้งค่า → การเชื่อมต่อ AI → **โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง** พนักงานเปิดเองได้ แล้วเชื่อมต่อ Claude แบบแพ็กเกจได้โดยไม่ต้องรอ policy `claudeSubscription` ตามที่ Anthropic แจ้งผู้ดูแลว่านักพัฒนาทดสอบได้ แต่การใช้ในองค์กรต้องเป็นไปตามเอกสารของ Anthropic ([docs/claude-subscription.md](docs/claude-subscription.md))
-- policy ใหม่ `features.developmentMode` (ค่าเริ่มต้น true) ผู้ดูแลตั้ง false เพื่อเอาสวิตช์ออก
+- Reviewed PR #135 against released 0.5.38. Added Claude Code prewarming with host tools/MCP disabled and isolated authentication. Only successful text requests prepare a spare; pending startup never blocks a request. Idle spares stop after ten minutes, logout/removal, developer-mode shutdown, policy reload or app quit.
+- Fixed synchronous claim refusal and settings rejection to fall back cold exactly once before the prompt runs. Claim waiting is bounded and cancellable. If the requested model is not applied after submission, report the failure without replaying the prompt or showing output from another model.
+- Kept Claude plan access closed by default: new `features.developmentMode` defaults to false, and access requires explicit managed policy plus the developer's local opt-in. Policy revocation/opt-out cancels active Claude plan runs and sign-in. Other privacy/permission defaults are unchanged; authentication remains with unmodified Claude Code.
+- Updated Thai/English UI, both READMEs, in-app notes and operator policy instructions. No external tool dependencies or installer runtimes added; the pinned SDK describes approximately 230–260 MB per parked process.
+- Validation uses synthetic SDK/provider data and Electron fixtures. The PR author's earlier live timing numbers were not remeasured on this release; real account access, quota behavior and employee-machine speed remain unverified. Local Thai OCR acceptance remains open.
 
 ## Desktop v0.5.38 — 2026-10-10
 

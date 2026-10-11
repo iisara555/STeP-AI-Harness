@@ -153,8 +153,15 @@ export const en: Record<string, string> = {
   'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องขอ API key': 'Antigravity and ChatGPT use account sign-in; no API key is needed.',
   ให้พนักงานเปิดโหมดนักพัฒนา: 'Let employees turn on development mode',
   'โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง': 'Development mode: test with your own Claude Pro/Max plan',
-  'สำหรับนักพัฒนาทดสอบแอปเท่านั้น Anthropic แจ้งว่าทดสอบได้ แต่การใช้งานจริงในองค์กรต้องเป็นไปตามเงื่อนไขที่ Anthropic ระบุในเอกสาร เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้':
-    "For developers testing the app only. Anthropic said testing is fine, but use inside the organization must follow Anthropic's documented terms. Once on, choose Claude with your plan in the list below.",
+  'สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบด้วยบัญชีของตัวเอง การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้':
+    "For developers authorized by the administrator to test using their own account. Use must follow Anthropic's terms. Once on, choose Claude with your plan in the list below.",
+
+  'Claude Code ไม่รับโมเดลที่เลือก กรุณาตรวจรายชื่อโมเดลก่อนลองใหม่':
+    'Claude Code did not accept the selected model. Check the model list before trying again.',
+  'Claude เตรียมพร้อมสำหรับข้อความถัดไป และหยุดรอเมื่อออกจากระบบหรือปิดแอป':
+    'Claude prepares for the next message and stops waiting when you sign out or close the app.',
+  'โหมดนักพัฒนาใช้ Claude แบบแพ็กเกจได้เฉพาะเมื่อผู้ดูแลอนุญาตและคุณเปิดใช้เอง':
+    'Claude plan developer mode requires administrator permission and your own opt-in.',
 
   อัปเดตยังไม่สำเร็จ: 'Update did not complete',
   'ตรวจอินเทอร์เน็ตแล้วลองใหม่ แอปเวอร์ชันเดิมและงานของคุณยังอยู่':

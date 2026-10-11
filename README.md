@@ -4,11 +4,13 @@
 
 สรุปประชุม ร่างหนังสือ เตรียม TOR จัดตาราง ตรวจใบเสร็จก่อนส่ง AFP และถามเรื่องระเบียบหรือสวัสดิการของ STeP โดยเริ่มจากข้อมูลหรือต้นเรื่องที่คุณมี แล้วแก้ร่างและส่งออกในพื้นที่ทำงานเดียว
 
-[ดาวน์โหลด Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.38) · [เริ่มใช้งาน](#เริ่มใช้งานใน-3-ขั้นตอน) · [ขอความช่วยเหลือ](SUPPORT.md)
+[ดาวน์โหลด Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.5.39) · [เริ่มใช้งาน](#เริ่มใช้งานใน-3-ขั้นตอน) · [ขอความช่วยเหลือ](SUPPORT.md)
 
 ![พื้นที่ทำงาน STeP Desktop พร้อมบทสนทนาและผลงาน](docs/images/gui/02-workspace.png)
 
 **STeP Desktop** คือหน้าจอทำงานหลักของ STeP AI สำหรับพนักงาน STeP / RSP North ใช้ภาษาไทยได้ ไม่ต้องจำชื่อ Skill หรือพิมพ์คำสั่งติดตั้งเอง ภาพในหน้านี้ใช้ข้อมูลตัวอย่าง หน้าจอจริงอาจต่างตามรุ่นและการตั้งค่าขององค์กร
+
+Desktop **0.5.39** เตรียม Claude Code ไว้สำหรับข้อความถัดไป พร้อม fallback เมื่อยังไม่ได้ส่งคำถาม และปิด process ที่รอเมื่อออกจากระบบ ปิดแอป หรือเปลี่ยนนโยบาย โหมดนักพัฒนาปิดเป็นค่าเริ่มต้น ต้องให้ผู้ดูแลอนุญาต `features.developmentMode` แล้วคุณเปิดใช้เอง จึงทดสอบแพ็กเกจ Claude ส่วนตัวได้ ดู [วิธีเปิดและข้อจำกัด](docs/claude-subscription.md#โหมดนักพัฒนา-development-mode) ผลตรวจรุ่นนี้ใช้ข้อมูลสังเคราะห์ ยังไม่ยืนยันความเร็วหรือการเข้าใช้บัญชีจริง
 
 Desktop **0.5.38** เพิ่ม `web_extract` ดึงหัวข้อ ตาราง และลิงก์จากเว็บ, `vision_analyze` / `browser_vision` อ่านภาพหลังคุณยินยอม และ `image_generate` ในแชต การอ่านภาพต้องใช้ connection และนโยบายที่รองรับ; การสร้างภาพใช้ OpenAI/Gemini API (OAuth อย่างเดียวใช้ไม่ได้) เปิดประวัติเครื่องมือดูรหัสตรวจสอบได้โดยไม่บันทึก input/output ของเครื่องมือใน trace ส่วน Google Workspace ใช้ MCP server ขององค์กรที่ผู้ดูแลตั้งค่าและขอ consent แยกตอนค้นหา/เรียกใช้: [วิธีตั้งค่า](docs/desktop-automation.md#google-workspace-through-an-organization-mcp-server) ผลทดสอบใช้ข้อมูลสังเคราะห์ ยังไม่ยืนยันคุณภาพกับโมเดลจริงหรือสิทธิ์บัญชี Google ขององค์กร
 
@@ -189,6 +191,6 @@ AI ช่วยเตรียมงานให้ตรวจต่อ ส่�
 
 ประวัติการเปลี่ยนแปลงของแต่ละรุ่นอยู่ใน [CHANGELOG](CHANGELOG.md)
 
-รุ่นใน source ปัจจุบัน: **STeP Desktop v0.5.38** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
+รุ่นใน source ปัจจุบัน: **STeP Desktop v0.5.39** / **Harness v0.7.7** ดูตัวติดตั้งที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การใช้งานในหน่วยงานให้ยึดรุ่นที่ผู้ดูแลอนุมัติ
 
 โค้ดเผยแพร่ภายใต้ [MIT License](LICENSE) ไฟล์บุคคลที่สามมีเงื่อนไขของตน เช่น [ภาพตราครุฑ](docs/third-party-notices/thai-garuda.md) Repository นี้เป็น public จึงไม่ใช่ที่เก็บเอกสารภายในหรือข้อมูลของผู้ใช้

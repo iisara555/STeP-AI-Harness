@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Development mode (Settings → AI): an employee turns it on to test on their own Claude Pro/Max plan. Without it, the
+// Development mode (Settings → AI): an administrator permits the switch, then a developer turns it on to test on their own Claude Pro/Max plan. Without it, the
 // Claude plan connection is refused as before; with it, the connection is accepted; a policy can remove the switch.
 const home = await mkdtemp(join(tmpdir(), 'step-development-mode-smoke-'));
 const workspace = join(home, 'work');
@@ -47,8 +47,15 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   const toggle = page.getByLabel('โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง');
+  await expect(toggle).toHaveCount(0);
+  await assert.rejects(call('developmentMode', { enabled: true }), /FEATURE_DISABLED/);
+
+  // The administrator explicitly allows developer testing; the employee opt-in is still off.
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: true } }));
+  await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(true);
   await expect(toggle).not.toBeChecked();
-  await expect(page.getByText(/Anthropic แจ้งว่าทดสอบได้ แต่การใช้งานจริงในองค์กร/)).toBeVisible();
+  await expect(page.getByText(/สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบ/)).toBeVisible();
+  assert.equal((await call('snapshot')).features.claudeSubscription, false);
 
   // On: the plan connection is accepted and the switch remembers.
   await toggle.click();
@@ -75,10 +82,17 @@ try {
   assert.equal((await call('snapshot')).features.claudeSubscription, false);
   await assert.rejects(call('developmentMode', { enabled: true }), /FEATURE_DISABLED/);
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
+
+  // The explicit developer opt-in cannot enable access when the environment forces the feature off.
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: true } }));
+  await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(true);
+  await app.evaluate(() => {
+    process.env.STEP_CLAUDE_SUBSCRIPTION = '0';
+  });
+  assert.equal((await call('snapshot')).features.claudeSubscription, false);
+  await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
   assert.deepEqual(errors, []);
-  console.log(
-    'Development mode smoke passed: off by default, Settings switch enables the Claude plan, off again refuses, policy can remove it.',
-  );
+  console.log('Development mode smoke passed: policy and employee opt-in both required, off/revocation refuses, forced-off override wins.');
 } finally {
   await app.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

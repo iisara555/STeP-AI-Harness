@@ -541,6 +541,14 @@ async function main() {
   app.on('before-quit', () => updates.stop());
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
+    closeClaudeSpares();
+    if (!claudeSubscriptionOn()) {
+      for (const c of store.list<Connection>('connection')) {
+        if (c.provider !== 'claude' || c.mode !== 'subscription') continue;
+        connectControllers.get(c.id)?.abort();
+        for (const session of store.list<Session>('session')) if (session.connectionId === c.id) service.cancel(session.id);
+      }
+    }
     receiptOperations.cancel();
     voice.cancel();
     voicePermissionUntil = 0;
@@ -1338,6 +1346,14 @@ async function main() {
         if (!policyState.policy.features.developmentMode) throw new Error('FEATURE_DISABLED');
         if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
         store.put('settings', 'main', { ...store.settings(), developmentMode: input.enabled });
+        if (!input.enabled) closeClaudeSpares();
+        if (!claudeSubscriptionOn()) {
+          for (const c of store.list<Connection>('connection')) {
+            if (c.provider !== 'claude' || c.mode !== 'subscription') continue;
+            connectControllers.get(c.id)?.abort();
+            for (const session of store.list<Session>('session')) if (session.connectionId === c.id) service.cancel(session.id);
+          }
+        }
         return store.settings();
       }
       case 'learningReviewSetting': {
