@@ -471,23 +471,6 @@ export function SettingsPanel({
         <section>
           {/* The page title above already says this; keep the heading for screen readers and in-page links. */}
           <h2 className="sr-only">{t('การเชื่อมต่อ AI')}</h2>
-          {snapshot.features?.developmentMode && (
-            <div className="development-mode">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={snapshot.settings.developmentMode === true}
-                  onChange={e => void call('developmentMode', { enabled: e.target.checked }).then(refresh).catch(onError)}
-                />
-                {t('โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง')}
-              </label>
-              <p className="small muted">
-                {t(
-                  'สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบด้วยบัญชีของตัวเอง การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้',
-                )}
-              </p>
-            </div>
-          )}
           <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
         </section>
       )}

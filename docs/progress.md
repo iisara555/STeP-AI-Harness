@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **Easy Dev mode**: discoverable stateful button in the shared Connect AI flow (Setup and Settings), with IT-policy explanation and one-click return. Existing provider-policy/forced-off restrictions remain intact; synthetic Electron checks cover the button and short-window Setup. No policy defaults changed.
+
 - **FE03 startup recovery**: repeated transient snapshot errors now offer an accessible retry; success restores the saved task and onboarding state. Electron regression failed before the change and now passes with zero provider calls. No saved data migration or policy change.
 
 - **FE02 effective readiness**: a previously successful Claude plan connection no longer appears ready after access is disabled. Snapshot projects policy status without changing stored test success; re-enable restores it, and account cleanup remains accessible. Synthetic Electron regression reproduced the mismatch first. No entitlement or policy-default changes.

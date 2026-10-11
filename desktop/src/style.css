@@ -1162,7 +1162,7 @@ nav button,
 .wizard .ai-connect-step > p {
   margin: 6px 0;
 }
-.wizard .ai-connect-step:first-of-type > p {
+.wizard .ai-connect-intro + .ai-connect-step > p {
   display: none;
 }
 .wizard .provider-detail {
@@ -4222,12 +4222,44 @@ nav button:disabled {
   border-color: transparent;
 }
 
-.development-mode {
-  margin-bottom: 1rem;
-}
-.development-mode label {
+.ai-connect-intro {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
-  font-weight: 600;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.ai-connect-intro > p {
+  margin: 0;
+}
+.development-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+.development-mode button {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .ai-connect-intro {
+    flex-wrap: wrap;
+  }
+}
+
+.wizard .ai-connect-intro {
+  margin-bottom: 0;
+}
+.wizard .ai-connect-intro > p {
+  display: none;
+}
+.wizard .development-mode {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wizard .development-mode button {
+  padding: 4px 10px;
+  font-size: 12px;
 }

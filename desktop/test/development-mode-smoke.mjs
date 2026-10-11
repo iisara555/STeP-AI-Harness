@@ -46,20 +46,24 @@ try {
 
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
-  const toggle = page.getByLabel('โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง');
-  await expect(toggle).toHaveCount(0);
+  const toggle = page.locator('.development-mode button');
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toBeDisabled();
   await assert.rejects(call('developmentMode', { enabled: true }), /FEATURE_DISABLED/);
 
   // The administrator explicitly allows developer testing; the employee opt-in is still off.
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: true } }));
   await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(true);
-  await expect(toggle).not.toBeChecked();
-  await expect(page.getByText(/สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบ/)).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(toggle).toHaveAttribute('title', /สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบ/);
   assert.equal((await call('snapshot')).features.claudeSubscription, false);
 
-  // On: the plan connection is accepted and the switch remembers.
+  // On: the discoverable one-click action uses the existing policy-gated host method.
+  await expect(toggle).toHaveText('เปิด Dev mode');
+  await expect(toggle).toBeEnabled();
   await toggle.click();
-  await expect(toggle).toBeChecked();
+  await expect(toggle).toHaveText('กลับโหมดปกติ');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(async () => (await call('snapshot')).features.claudeSubscription).toBe(true);
   assert.equal((await call('snapshot')).settings.developmentMode, true);
   const connection = await call('connection', claudePlan);
@@ -81,7 +85,7 @@ try {
 
   // Off again.
   await toggle.click();
-  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(async () => (await call('snapshot')).features.claudeSubscription).toBe(false);
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
   const revoked = (await call('snapshot')).connections.find(c => c.id === connection.id);
@@ -100,7 +104,8 @@ try {
   assert.equal(resumed.policyBlocked, false);
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: false } }));
   await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(false);
-  await expect(toggle).toHaveCount(0);
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toBeDisabled();
   assert.equal((await call('snapshot')).features.claudeSubscription, false);
   await assert.rejects(call('developmentMode', { enabled: true }), /FEATURE_DISABLED/);
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);

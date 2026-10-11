@@ -3,6 +3,13 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'เลือก AI ที่มีบัญชี เชื่อมต่อ แล้วทดสอบใช้งาน': 'Choose your AI, connect, then test it',
+  'Claude Pro/Max สำหรับทดสอบ': 'Claude Pro/Max for testing',
+  'ต้องให้ IT อนุญาต': 'IT permission required',
+  'เปิด Dev mode': 'Switch to Dev mode',
+  กลับโหมดปกติ: 'Switch to normal mode',
+  'ผู้ดูแลยังไม่อนุญาต Dev mode ติดต่อ IT หากต้องใช้ทดสอบ':
+    'Dev mode is not allowed by your administrator. Contact IT to request testing access.',
   ยังเปิดพื้นที่ทำงานไม่ได้: 'Could not open the workspace',
   'ลองเปิดอีกครั้ง ข้อมูลงานที่บันทึกไว้ยังอยู่ในเครื่อง': 'Try opening it again. Your saved work stays on this device.',
   ลองเปิดอีกครั้ง: 'Try opening again',

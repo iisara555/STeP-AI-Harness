@@ -65,7 +65,34 @@ export function AIConnections({
   };
   return (
     <div className="ai-connect-flow">
-      <p className="muted">{t('เลือกบริการที่คุณมีบัญชีอยู่แล้ว เชื่อมต่อครั้งเดียว แล้วเริ่มงานได้เมื่อทดสอบผ่าน')}</p>
+      <div className="ai-connect-intro">
+        <p className="muted">{t('เลือก AI ที่มีบัญชี เชื่อมต่อ แล้วทดสอบใช้งาน')}</p>
+        <div className="development-mode">
+          <button
+            type="button"
+            className="quiet"
+            aria-pressed={Boolean(snapshot.features?.developmentMode && snapshot.settings.developmentMode)}
+            title={
+              snapshot.features?.developmentMode
+                ? t(
+                    'สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบด้วยบัญชีของตัวเอง การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้',
+                  )
+                : t('ผู้ดูแลยังไม่อนุญาต Dev mode ติดต่อ IT หากต้องใช้ทดสอบ')
+            }
+            aria-describedby="dev-mode-help"
+            disabled={Boolean(busy) || !snapshot.features?.developmentMode}
+            onClick={() =>
+              void run('development-mode', () => call('developmentMode', { enabled: snapshot.settings.developmentMode !== true }))
+            }
+          >
+            {busy === 'development-mode' && <LoaderCircle size={14} className="spin" />}
+            {snapshot.features?.developmentMode && snapshot.settings.developmentMode ? t('กลับโหมดปกติ') : t('เปิด Dev mode')}
+          </button>
+          <small id="dev-mode-help" className="muted">
+            {snapshot.features?.developmentMode ? t('Claude Pro/Max สำหรับทดสอบ') : t('ต้องให้ IT อนุญาต')}
+          </small>
+        </div>
+      </div>
       <div className="ai-connect-step">
         <StepHeading>
           <span className="ai-step-number" aria-hidden="true">

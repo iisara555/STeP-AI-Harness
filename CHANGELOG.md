@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Added a one-click Dev mode button at the top of Connect AI in Settings and Setup. It uses the existing managed-policy/local opt-in gate, shows the current state and offers a return to normal mode; unavailable policy remains disabled with IT guidance. No policy defaults or account entitlements changed.
+
 - FE03: workspace startup errors show a clear retry action instead of an endless spinner. Retry reloads local state and onboarding/history selection only; synthetic Electron failures verify recovery without any provider call or replay.
 
 - FE02: connection readiness reflects current policy without overwriting the stored test result. Disabled connections show the blocker, cannot test/change models, and retain sign-out/remove actions; Setup and chat receive the effective status. Synthetic policy-revocation/re-enable Electron tests verify this behavior.
