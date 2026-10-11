@@ -595,6 +595,217 @@ async function lineFixture(deps = {}) {
     );
   return { root, gateway, deliveries };
 }
+test("LINE persists intake before acknowledgement and recovers interrupted work without replay", async () => {
+  const { root, gateway, deliveries } = await lineFixture();
+  gateway.pump = () => {};
+  let recovered;
+  let runs = 0;
+  try {
+    const raw = webhook(lineId(1), "Public recovery draft", "restart-intake");
+    await gateway.accept(raw, signature(raw));
+    const job = [...gateway.jobs.values()][0];
+    const persisted = JSON.parse(
+      await readFile(join(root, "jobs", job.id + ".json"), "utf8"),
+    );
+    assert.equal(persisted.status, "queued");
+    assert.doesNotMatch(
+      JSON.stringify(persisted),
+      /Public recovery draft|synthetic-channel-token|U111/,
+    );
+    await gateway.close();
+    // Simulate a crash after the job commit but before the separate dedupe index commit.
+    await rm(join(root, "events.json"));
+    recovered = new LineGateway(gateway.config, {
+      run: async () => {
+        runs++;
+        return {
+          status: "review",
+          text: "Public recovered draft",
+          route: "GENERAL",
+        };
+      },
+      route: harness.route,
+    });
+    assert.equal(recovered.jobs.get(job.id)?.status, "interrupted");
+    await recovered.accept(raw, signature(raw));
+    await recovered.idle();
+    assert.equal(recovered.jobs.size, 1);
+    assert.equal(runs, 0);
+    assert.equal(deliveries.length, 0);
+    await assert.rejects(
+      recovered.retry(job.id, { query: "Public recovery draft" }),
+      /RETRY_APPROVAL_REQUIRED/,
+    );
+    await assert.rejects(
+      recovered.retry(job.id, {
+        query: "Contact name: Synthetic Person",
+        approveProvider: true,
+      }),
+      /PRIVACY/,
+    );
+    assert.equal(runs, 0);
+    await recovered.retry(job.id, {
+      query: "Public recovery draft",
+      approveProvider: true,
+    });
+    assert.equal(runs, 1);
+    assert.equal(recovered.jobs.get(job.id).status, "review");
+    assert.equal(deliveries.length, 0);
+  } finally {
+    await recovered?.close();
+    await gateway.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("LINE recovers a provider-in-flight job as interrupted and enforces current policy on retry", async () => {
+  let release;
+  const held = new Promise((r) => {
+    release = r;
+  });
+  let started;
+  const ready = new Promise((r) => {
+    started = r;
+  });
+  const { root, gateway } = await lineFixture({
+    run: async () => {
+      started();
+      await held;
+      return { status: "review", text: "Public draft", route: "GENERAL" };
+    },
+  });
+  let recovered;
+  try {
+    const raw = webhook(lineId(1), "Public in-flight draft", "running-restart");
+    await gateway.accept(raw, signature(raw));
+    await ready;
+    const job = [...gateway.jobs.values()][0];
+    assert.equal(
+      JSON.parse(await readFile(join(root, "jobs", job.id + ".json"), "utf8"))
+        .status,
+      "running",
+    );
+    recovered = new LineGateway(gateway.config, {
+      run: async () => {
+        throw new Error("MUST_NOT_REPLAY");
+      },
+    });
+    assert.equal(recovered.jobs.get(job.id)?.status, "interrupted");
+    assert.equal(recovered.jobs.get(job.id)?.query, undefined);
+    recovered.config = {
+      ...recovered.config,
+      policy: {
+        ...policy,
+        features: { ...policy.features, lineGateway: false },
+      },
+    };
+    await assert.rejects(
+      recovered.retry(job.id, {
+        query: "Public in-flight draft",
+        approveProvider: true,
+      }),
+      /LINE_DISABLED/,
+    );
+  } finally {
+    release();
+    await gateway.idle();
+    await recovered?.close();
+    await gateway.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("LINE interrupted jobs and retry require loopback operator authentication", async () => {
+  const { root, gateway } = await lineFixture();
+  gateway.pump = () => {};
+  let recovered, server;
+  try {
+    const raw = webhook(lineId(1), "Public retry input", "operator-retry");
+    await gateway.accept(raw, signature(raw));
+    await gateway.close();
+    recovered = new LineGateway(gateway.config, {
+      run: async () => ({
+        status: "review",
+        text: "Public draft",
+        route: "GENERAL",
+      }),
+    });
+    server = recovered.server();
+    await new Promise((r) => server.listen(0, "127.0.0.1", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const job = [...recovered.jobs.values()][0];
+    assert.equal((await fetch(base + "/pending")).status, 403);
+    const headers = {
+      authorization: "Bearer " + approverToken,
+      "content-type": "application/json",
+    };
+    assert.equal(
+      (await (await fetch(base + "/pending", { headers })).json())[0].status,
+      "interrupted",
+    );
+    const body = JSON.stringify({
+      query: "Public retry input",
+      approveProvider: true,
+    });
+    assert.equal(
+      (await fetch(base + "/retry/" + job.id, { method: "POST", body })).status,
+      403,
+    );
+    const response = await fetch(base + "/retry/" + job.id, {
+      method: "POST",
+      headers,
+      body,
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: "review" });
+    assert.equal(job.status, "review");
+    assert.equal(
+      (
+        await fetch(base + "/retry/" + job.id, {
+          method: "POST",
+          headers,
+          body,
+        })
+      ).status,
+      400,
+    );
+  } finally {
+    if (server) {
+      server.closeAllConnections();
+      await new Promise((r) => server.close(r));
+    }
+    await recovered?.close();
+    await gateway.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("LINE cannot acknowledge a job whose durable write failed", async () => {
+  const { root, gateway } = await lineFixture();
+  try {
+    const atomic = gateway.atomic.bind(gateway);
+    gateway.atomic = (path, text) => {
+      if (path.includes("/jobs/")) throw new Error("SYNTHETIC_STORAGE_FAILURE");
+      atomic(path, text);
+    };
+    const raw = webhook(lineId(1), "Public storage draft", "storage-failure");
+    await assert.rejects(
+      gateway.accept(raw, signature(raw)),
+      /SYNTHETIC_STORAGE_FAILURE/,
+    );
+    assert.equal(gateway.events.size, 0);
+    assert.equal(gateway.jobs.size, 0);
+    gateway.atomic = atomic;
+    await gateway.accept(raw, signature(raw));
+    await gateway.idle();
+    assert.equal(gateway.jobs.size, 1);
+    assert.equal([...gateway.jobs.values()][0].status, "review");
+  } finally {
+    await gateway.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("LINE verifies exact signed bytes, isolates user sessions, rejects outsiders and deduplicates events across restart", async () => {
   const { root, gateway, deliveries } = await lineFixture();
   try {

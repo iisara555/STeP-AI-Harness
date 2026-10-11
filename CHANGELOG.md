@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- BE01: LINE commits a private metadata receipt before acknowledging a webhook, recovers queued/running jobs for explicit operator retry and never automatically replays provider calls or delivery. Signed synthetic restart/storage/privacy/approval fixtures verify recovery; real channel deployment remains unverified. No policy defaults or dependencies changed.
+
 ## Desktop v0.5.39 — 2026-10-11
 
 - Reviewed PR #135 against released 0.5.38. Added Claude Code prewarming with host tools/MCP disabled and isolated authentication. Only successful text requests prepare a spare; pending startup never blocks a request. Idle spares stop after ten minutes, logout/removal, developer-mode shutdown, policy reload or app quit.
