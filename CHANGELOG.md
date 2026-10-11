@@ -6,6 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.0 — 2026-10-11
+
+- Combined release of the reviewed audit, receipt, preview, knowledge and Office-eval work from PRs #136–#150. Desktop is 0.6.0; Harness remains 0.7.7. Publication requires all protected-branch CI checks and the Windows/macOS installer workflow to pass.
+- Office eval follow-ups preserve planned coverage and actual failure states, scope both arms to four executable tools and retain failed-turn usage. The existing Windows OAuth evidence establishes only three comparable Excel pairs; PPTX/memo benefit and actual token savings remain unproved. Original external budget and recordings are preserved; no additional live model calls or reset of prior calls.
+
 - HA05: local organization search checks meaningful topic coverage and uses actual team-role table rows for duty questions, avoiding form-register and shared-location false matches. The unchanged 61-question corpus improves from 59/61 to 61/61 for retrieval/abstention; new paraphrase and independent synthetic regressions protect exact codes, restrictions and keyword lookup. This is local retrieval evidence, not live AI-answer accuracy. No document facts, privacy defaults, dependencies or context limits changed.
 
 - HA03: Connect AI and Setup show account-specific chat/web/vision/image eligibility, policy blockers and next steps, plus shared organization capabilities. Image and MCP access remain conditional on model/server permission; chat tests do not certify them. The snapshot exposes only the configured MCP server count. Synthetic policy, keyboard, narrow-window and English UI checks; no policy defaults, credentials or dependencies changed.

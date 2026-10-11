@@ -3,6 +3,15 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'หน้าใบเสร็จเทียบต้นฉบับกับข้อมูลที่ต้องแก้ และยืนยันก่อนให้ AI ตรวจทาน':
+    'Compare the original receipt with corrections and confirm before AI review',
+  'หน้าเชื่อมต่อ AI บอกความสามารถที่ใช้ได้และข้อจำกัดของแต่ละบัญชี': 'AI connections show available capabilities and account limitations',
+  'ค้นเอกสารเรื่องหน้าที่ทีมได้ตรงขึ้น และหยุดเมื่อไม่มีเอกสารที่เกี่ยวข้อง':
+    'Team duty questions find more relevant documents and stop when no related evidence exists',
+  'ตัวอย่าง HTML ย่อให้พอดีพื้นที่ และเลือกดูขนาดจริงได้': 'HTML previews fit the panel or display at actual size',
+  'เปิดพื้นที่ทำงานอีกครั้งได้เมื่อโหลดไม่สำเร็จ โดยเก็บงานเดิมไว้': 'Retry a failed workspace load while keeping saved work',
+  'กล่องยืนยันใช้คีย์บอร์ดได้สะดวกขึ้น และเปิด Dev mode ได้เมื่อผู้ดูแลอนุญาต':
+    'Confirmation dialogs support keyboard navigation; Dev mode remains subject to administrator permission',
   บัญชีนี้ทำอะไรได้บ้าง: 'What can this connection do?',
   ฟังก์ชันที่องค์กรเปิดให้ใช้: 'Organization features',
   ต้องตรวจเงื่อนไข: 'Check requirements',
