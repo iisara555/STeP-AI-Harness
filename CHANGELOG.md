@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Simplified receipt review to one page: original on the left, corrections/next actions/five basic elements on the right, stacked on narrow windows. Ordinary editing is available on demand; advanced OCR pilot controls are removed from the employee page while private benchmark/export APIs remain. Handoff requires a tested connection and preserves corrections on failure. Synthetic Electron fixtures cover layout, human-confirmation revocation, delayed AI edits, consent, provenance and private scoring/export; real OCR accuracy, AFP acceptance and employee Windows/macOS checks remain open. No dependencies, policy defaults or version changes.
+
 - Added a one-click Dev mode button at the top of Connect AI in Settings and Setup. It uses the existing managed-policy/local opt-in gate, shows the current state and offers a return to normal mode; unavailable policy remains disabled with IT guidance. No policy defaults or account entitlements changed.
 
 - FE03: workspace startup errors show a clear retry action instead of an endless spinner. Retry reloads local state and onboarding/history selection only; synthetic Electron failures verify recovery without any provider call or replay.

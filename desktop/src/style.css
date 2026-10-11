@@ -2323,9 +2323,9 @@ nav button:hover,
   line-height: 1.8;
 }
 .receipt-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(320px, 1fr);
+  gap: 28px;
   margin-top: 18px;
   align-items: start;
 }
@@ -2338,6 +2338,9 @@ nav button:hover,
 }
 .receipt-source {
   width: 100%;
+  min-width: 0;
+  position: sticky;
+  top: 0;
 }
 .receipt-form {
   width: 100%;
@@ -2380,7 +2383,7 @@ nav button:hover,
 .receipt-preview {
   display: block;
   width: 100%;
-  max-height: 32vh;
+  max-height: calc(100vh - 240px);
   object-fit: contain;
   cursor: zoom-in;
 }
@@ -2763,7 +2766,7 @@ nav button:hover,
   text-align: right;
   font-size: 11px;
 }
-@media (max-width: 1150px) {
+@media (max-width: 980px) {
   .receipt-grid {
     grid-template-columns: 1fr;
   }
@@ -4262,4 +4265,166 @@ nav button:disabled {
 .wizard .development-mode button {
   padding: 4px 10px;
   font-size: 12px;
+}
+
+/* Minimal receipt review: source on the left, three task sections on the right. */
+.receipt-form {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.receipt-source header strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.receipt-heading h1 .chip {
+  vertical-align: middle;
+  font-size: 11px;
+}
+.receipt-source .receipt-empty {
+  min-height: 240px;
+  padding: 24px 12px;
+  background: var(--paper);
+  border-radius: 12px;
+}
+.receipt-source .receipt-empty p {
+  font-size: 14px;
+  max-width: 30ch;
+}
+.receipt-pick {
+  margin-top: 12px;
+}
+.receipt-source .receipt-service {
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  flex-wrap: wrap;
+}
+.receipt-source .receipt-service .icon {
+  margin-left: auto;
+}
+.receipt-review-section + .receipt-review-section {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.receipt-review-section h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  line-height: 1.6;
+  font-weight: 600;
+}
+.receipt-review-section p {
+  line-height: 1.75;
+}
+.receipt-form .receipt-value-row {
+  display: grid;
+  grid-template-columns: minmax(115px, 0.8fr) minmax(0, 1.3fr);
+  gap: 10px;
+  align-items: center;
+  padding: 5px 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+}
+.receipt-form .receipt-value-row > label {
+  margin: 0;
+}
+.receipt-value-row input,
+.receipt-value-row select {
+  min-width: 0;
+  width: 100%;
+  font-size: 13px;
+  padding: 7px 9px;
+}
+.receipt-value-row.uncertain input {
+  background: var(--accent-soft);
+}
+.receipt-corrections {
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 8px 0 14px;
+}
+.receipt-corrections li + li {
+  margin-top: 5px;
+}
+.receipt-review-section .receipt-actions {
+  position: static;
+  padding: 0;
+  background: none;
+  margin: 12px 0;
+}
+.receipt-review-section .receipt-actions button {
+  white-space: normal;
+}
+.receipt-review-section .receipt-handoff-target {
+  border: 0;
+  padding: 0;
+  margin-top: 14px;
+}
+.receipt-review-section .receipt-note {
+  margin: 10px 0;
+}
+.receipt-review-section .receipt-confirm {
+  margin: 16px 0;
+}
+.receipt-review-section.receipt-elements {
+  padding: 22px 0 0;
+  margin-top: 26px;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+.receipt-elements .chip {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.receipt-items-scroll {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.receipt-items {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.receipt-items caption {
+  text-align: left;
+  padding: 8px 0;
+  color: var(--muted);
+}
+.receipt-items td,
+.receipt-items th {
+  text-align: left;
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 980px) {
+  .receipt-app {
+    padding: 18px 16px 24px;
+  }
+  .receipt-grid {
+    gap: 22px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .receipt-preview {
+    max-height: 45vh;
+  }
+}
+@media (max-width: 480px) {
+  .receipt-form .receipt-value-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 7px 0;
+  }
+  .receipt-handoff-target select {
+    min-width: 0;
+    width: 100%;
+  }
+  .receipt-heading h1 {
+    font-size: 19px;
+  }
 }

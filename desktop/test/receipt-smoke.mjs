@@ -1,15 +1,26 @@
 // End-to-end check of the receipt mini app against a fake local OCR service on 127.0.0.1:8765.
 // No real OCR, provider, or receipt data is used. Usage: node test/receipt-smoke.mjs <receipt-image> [screenshot-dir]
-import { _electron as electron } from '@playwright/test';
+import { _electron as electron, expect } from '@playwright/test';
 import { createServer } from 'node:http';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { pathToFileURL } from 'node:url';
 
-const image = resolve(process.argv[2]),
-  out = process.argv[3] || (await mkdtemp(join(tmpdir(), 'step-receipt-qa-')));
+const out = process.argv[3] || (await mkdtemp(join(tmpdir(), 'step-receipt-qa-')));
 await mkdir(out, { recursive: true });
+const image = process.argv[2] ? resolve(process.argv[2]) : join(out, 'synthetic-receipt.png');
+if (!process.argv[2])
+  await writeFile(
+    image,
+    Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jhS0AAAAASUVORK5CYII=', 'base64'),
+  );
+// Compile the production scoring module for this Node fixture; no application or dependency changes.
+const trialModule = join(out, 'trial-scoring.mjs');
+await build({ entryPoints: ['src/receipt-trial.ts'], outfile: trialModule, bundle: true, platform: 'node', format: 'esm' });
+const { trialReading, trialReport } = await import(pathToFileURL(trialModule).href);
 const lines = [
   'ใบเสร็จรับเงิน',
   'ร้านตัวอย่าง จำกัด',
@@ -48,7 +59,7 @@ await new Promise((ok, fail) => {
 });
 
 const home = await mkdtemp(join(tmpdir(), 'step-receipt-'));
-// The OCR trial tools are hidden unless the policy turns them on; this run checks them too.
+// Private trial APIs remain tested separately from the simplified employee UI.
 await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { ocrTrial: true } }));
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
@@ -64,20 +75,23 @@ try {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
   }, image);
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await page.getByLabel('ยอดรวมที่ชำระ').waitFor();
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   assert.equal(await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).inputValue(), 'ค่าน้ำดื่ม');
-  const outcome = page.getByLabel('สรุปการใช้ใบเสร็จ');
-  await outcome.getByText('B10 · ค่าน้ำดื่ม', { exact: true }).waitFor();
+  const outcome = page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' });
+  await expect(outcome).toContainText('B10 · ค่าน้ำดื่ม');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).count(), 1);
-  await page.getByText('ยังต้องตรวจหรือแก้เพิ่ม').waitFor();
+  await page.getByRole('heading', { name: 'ต้องแก้หรือเติมข้อมูลก่อนใช้ประกอบการเบิก', exact: true }).waitFor();
   await page.screenshot({ path: join(out, 'receipt-review.png') });
   // One confirmation covers every field and the flagged line: the verdict flips to ready, never to "approved".
   assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), true);
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await page.getByText('ตรวจยืนยันข้อมูลแล้ว').waitFor();
-  assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), false);
+  await expect(page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/)).toBeChecked();
+  // No AI connection in this fixture: confirmation permits saving, not provider handoff.
+  assert.equal(await page.getByRole('button', { name: 'ให้ AI ตรวจทานต่อ' }).isDisabled(), true);
+  await expect(page.getByText('เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่')).toBeVisible();
   const saved = resolve(out, 'receipt-provenance.json');
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -116,13 +130,13 @@ try {
   assert.equal(editedDraft.fields.total.verification, null);
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await page.getByText('ตรวจยืนยันข้อมูลแล้ว').waitFor();
+  await expect(page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/)).toBeChecked();
   await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).fill('ค่าเครื่องดื่ม');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
-  await outcome.getByText('ยังระบุหมวดจากรายการนี้ไม่ได้').waitFor();
+  await expect(outcome).toContainText('ยังระบุหมวดจากรายการนี้ไม่ได้');
   await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).fill('ค่าน้ำดื่ม');
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();
+  await page.getByText('เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)', { exact: true }).click();
   await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('other');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
   await page.getByLabel('หมวดที่จะเบิก', { exact: true }).selectOption('auto');
@@ -131,54 +145,55 @@ try {
   await outcome.getByText('ยังใช้แทนหลักฐานรับเงินไม่ได้', { exact: true }).waitFor();
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
   await page.getByLabel('ประเภทเอกสาร', { exact: true }).selectOption('receipt');
-  await page.getByText('แก้ไขประเภท หมวด และดูเกณฑ์ตรวจทั้งหมด', { exact: true }).click();
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.getByLabel('หมายเหตุการเบิก', { exact: true }).fill('ใช้ในกิจกรรมสังเคราะห์');
   assert.equal(await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).isChecked(), false);
   await page.getByLabel('หมายเหตุการเบิก', { exact: true }).fill('');
   await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
   await page.screenshot({ path: join(out, 'receipt-ready.png') });
-  // The Desktop pilot freezes the local reading before edits and requires a fresh source comparison.
-  await page.getByText('เครื่องมือทดลองและวัดผล OCR', { exact: true }).click();
-  await page.getByLabel('ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)').check();
-  await page.getByRole('button', { name: 'ตรวจใบใหม่' }).click();
-  const trial = page.getByLabel('ผลทดลอง OCR');
-  await trial.waitFor();
-  assert.equal(await page.getByRole('button', { name: 'บันทึกผลทดลอง (JSON)' }).isDisabled(), true);
-  await page.getByLabel('ยอดรวมที่ชำระ').fill('108.00');
-  await page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/).check();
-  await trial.getByText(/OCR ตรง 6\/7 ช่อง/).waitFor();
+  // Pilot scoring/export stays available to development tools, without advanced controls on the employee page.
+  await expect(page.getByText('เครื่องมือทดลองและวัดผล OCR', { exact: true })).toHaveCount(0);
+  const local = await page.evaluate(async () => {
+    const reading = await window.step.call('ocrRead', { localOnly: true });
+    const extracted = window.ReceiptReview.extractReceipt(reading.result);
+    return {
+      fields: Object.fromEntries(Object.entries(extracted.fields).map(([key, field]) => [key, field.value])),
+      elapsedMs: reading.elapsedMs,
+    };
+  });
+  const frozen = trialReading(local.fields, ['date'], local.elapsedMs);
+  const pilot = trialReport(frozen, null, { ...local.fields, total: '108.00' }, true, 'receipt:synthetic-pilot');
+  assert.equal(pilot.summary.ocr.exact, 6);
   const trialPath = resolve(out, 'receipt-trial.json');
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, trialPath);
-  await page.getByRole('button', { name: 'บันทึกผลทดลอง (JSON)' }).click();
-  await page.getByText('บันทึกผลทดลองในเครื่องแล้ว', { exact: true }).waitFor();
-  const pilot = JSON.parse(await readFile(trialPath, 'utf8'));
-  assert.equal(pilot.ocr.fields.total.value, '107.00');
-  assert.equal(pilot.fields.total.human.value, '108.00');
-  assert.equal(pilot.fields.total.ocr.match, false);
-  assert.equal(pilot.summary.ocr.errors, 1);
-  assert.equal(pilot.vision, null);
-  assert.equal(pilot.acceptanceGate, 'OPEN');
-  assert.ok(pilot.ocr.elapsedMs > 0);
-  // Verify the actual IPC export guard rejects the checkout before writing the report.
+  await assert.rejects(
+    page.evaluate(draft => window.step.call('ocrTrialSave', { draft }), { ...pilot, checked: false }),
+    /INVALID_INPUT/,
+  );
+  await page.evaluate(draft => window.step.call('ocrTrialSave', { draft }), pilot);
+  const exported = JSON.parse(await readFile(trialPath, 'utf8'));
+  assert.equal(exported.ocr.fields.total.value, '107.00');
+  assert.equal(exported.fields.total.human.value, '108.00');
+  assert.equal(exported.fields.total.ocr.match, false);
+  assert.equal(exported.summary.ocr.errors, 1);
+  assert.equal(exported.vision, null);
+  assert.equal(exported.acceptanceGate, 'OPEN');
+  assert.ok(exported.ocr.elapsedMs > 0);
+  // The actual host export guard still refuses a report in the public checkout.
   await app.evaluate(({ dialog }, path) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, resolve('receipt-trial-forbidden.json'));
-  const denied = await page.evaluate(async draft => {
-    try {
-      await window.step.call('ocrTrialSave', { draft });
-      return '';
-    } catch (error) {
-      return String(error);
-    }
-  }, pilot);
-  assert.match(denied, /OCR_TRIAL_REPO_PATH/);
+  await assert.rejects(
+    page.evaluate(draft => window.step.call('ocrTrialSave', { draft }), pilot),
+    /OCR_TRIAL_REPO_PATH/,
+  );
+  await page.getByLabel('ยอดรวมที่ชำระ').fill('108.00');
+  await expect(page.getByLabel(/ตรวจทั้งหมดเทียบกับต้นฉบับแล้ว/)).not.toBeChecked();
   await page.getByLabel('ยอดรวมที่ชำระ').fill('107.00');
-  assert.equal(await page.getByRole('button', { name: 'บันทึกผลทดลอง (JSON)' }).isDisabled(), true);
-  await trial.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: join(out, 'receipt-trial.png') });
+  await page.getByRole('region', { name: 'องค์ประกอบพื้นฐานใบเสร็จ' }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(out, 'receipt-components.png') });
   console.log('Receipt mini app smoke passed with a fake local OCR service.');
 } finally {
   await app.close();

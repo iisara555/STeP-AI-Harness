@@ -8,9 +8,11 @@ _Last updated: 2026-10-11_
 
 ## Latest release
 
-- **Desktop v0.5.38** (2026-10-10) — published from combined PR #134 (`b5d6ed7`): Windows x64 and macOS Apple silicon installers and the in-app `desktop-latest` update feeds. Combines #130/#131/#133, MIS ISO register lookup, protected credential streaming, public search for every connection, one-page OCR handoff, web extraction, consented vision, image tool calls, organization Google MCP profile and local tool diagnostics. Harness **0.7.7**; Intel Macs stay on 0.5.35.
+- **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Minimal OCR review**: original on the left; corrections, next actions and five basic elements on the right. Employee UI has no advanced pilot controls. Ordinary edits remain available on demand; the backend/private benchmark APIs and provenance are retained. Synthetic layout, failure recovery, Gemini vision, consent, delayed edits and private scoring/export pass. Root 968 passed/3 skipped and Desktop 662 passed/2 skipped; both validators, formatting and build pass. The combined 41-script Electron run and PR CI are pending; real OCR/AFP/native-machine acceptance remains open.
 
 - **Easy Dev mode**: discoverable stateful button in the shared Connect AI flow (Setup and Settings), with IT-policy explanation and one-click return. Existing provider-policy/forced-off restrictions remain intact; synthetic Electron checks cover the button and short-window Setup. No policy defaults changed.
 
@@ -24,11 +26,10 @@ _Last updated: 2026-10-11_
 
 - **BE01 LINE intake recovery**: durable metadata before webhook acknowledgement; interrupted jobs are visible to the loopback operator and require reviewed input plus explicit provider approval. Queued/in-flight restart and failed-write regressions reproduced failures first and now pass with synthetic signatures/providers. Real organization credentials/channel rollout remain an IT acceptance step; policy defaults unchanged.
 
-- **PR #135 / Desktop 0.5.39 prepared release**: based on released main 0.5.38. Review keeps `developmentMode` false by default (managed permission plus local opt-in), bounds/cancels warm claim waiting, falls back only before a prompt runs, reports a refused model without replay, and prevents late startup/finishing requests from resurrecting spares after logout/quit. Only successful text requests replenish the pool; policy revocation cancels Claude plan runs/sign-in. Both READMEs, operator docs, in-app notes and version/lockfile align with 0.5.39.
-- Regression evidence: seven new tests reproduced the original problems (six failures plus a startup-wait timeout), then passed after fixes. Additional cancellation, idle expiry, late-start cleanup and held-conversation reuse use a synthetic SDK. Local validation passed: root 964 passed/3 skipped (967 cases), Desktop 661 passed/2 skipped (663 cases), frozen install, formatting, build, both validators and all 40 Electron smoke scripts. Final Windows/macOS CI must pass before merge; release publication remains a separate workflow on the merged commit.
-- Real Claude account/quota behavior and employee-machine performance remain unverified after these review changes. Prior timing reported by the PR author has not been remeasured; the SDK documents roughly 230–260 MB per parked process. No new dependencies, credential handling or privacy/permission defaults added. Native provider tool transport, employee-machine process-tree acceptance and signed-in model acceptance remain open.
 
 ## Waiting on the owner
+
+- **LINE Gateway deployment**: signed synthetic intake/restart/operator-retry checks are ready. This cloud has no LINE channel configuration or operator/allowlist bindings. IT must configure an authorized test server, TLS and private storage as documented in [Phase 5](desktop-phase5.md); live channel/employee approval and delivery remain external acceptance, not a completed production rollout.
 
 - **Google Workspace MCP**: IT must supply the approved server endpoint/authentication in managed policy. Catalog discovery and calls pass with a synthetic server; real Google scopes/document access remain unverified. Vision and generated-image quality also need signed-in provider acceptance.
 - **Claude Pro pilot** on the owner's machine: the policy file has a problem since 2026-10-09 13:31 (`policy-problems: 1`

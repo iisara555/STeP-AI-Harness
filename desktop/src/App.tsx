@@ -1428,7 +1428,6 @@ export default function App() {
                 onError={e => notify(explainError(e), 'error')}
                 handoff={receiptHandoff}
                 connectionId={connectionId === CLAUDE_CODE ? '' : connectionId}
-                trialTools={Boolean(snapshot.policy?.features.ocrTrial)}
                 connections={snapshot.connections}
                 chooseConnection={setConnectionId}
                 openAiSettings={openAiSettings}

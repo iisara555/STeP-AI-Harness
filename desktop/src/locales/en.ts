@@ -3,6 +3,33 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'OCR ในเครื่องพร้อมใช้': 'Local OCR is ready',
+  'ตรวจ/แก้ข้อมูลที่อ่านได้': 'Review or correct the extracted values',
+  'เพิ่มวัตถุประสงค์หรือแก้หมวด (ถ้าจำเป็น)': 'Add a purpose or change the category (if needed)',
+  'ดูต้นฉบับ แก้ข้อมูลที่อ่านผิด แล้วตรวจยืนยันก่อนส่งต่อ': 'Check the original, correct the reading, then confirm before sharing',
+  'ยังไม่มีภาพตัวอย่าง โปรดเปิดต้นฉบับในเครื่องเทียบก่อนยืนยัน':
+    'No image preview is available. Check the original on this device before confirming.',
+  'เลือกรูปหรือ PDF ของใบเสร็จ เพื่อเริ่มตรวจข้อมูล': 'Choose a receipt image or PDF to start reviewing',
+  'OCR เป็นส่วนเสริมที่ดาวน์โหลดเมื่อคุณติดตั้ง อ่านไฟล์ในเครื่องโดยไม่ส่งไปบริการ OCR ภายนอก':
+    'OCR is an optional download. It reads files locally without sending them to an external OCR service.',
+  'AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว':
+    'AI can read the image with your consent. Chat handoff sends only reviewed text.',
+  'เลือกใบเสร็จด้านซ้าย แล้วระบบจะแสดงจุดที่ต้องตรวจ': 'Choose a receipt on the left to see what needs checking',
+  'ค่าที่ระบบอ่านได้ยังต้องเทียบต้นฉบับ โดยเฉพาะช่องที่ไฮไลต์':
+    'Check all extracted values against the original, especially highlighted fields',
+  'รายการที่อ่านได้ · โปรดเทียบต้นฉบับ': 'Extracted items · Check against the original',
+  'รวมรายการ ที่อยู่ จำนวนเงินตัวอักษร และลายเซ็น การแก้ข้อมูลจะยกเลิกการยืนยัน':
+    'Includes items, address, amount in words and signatures. Editing withdraws confirmation.',
+  'เชื่อมต่อและทดสอบ AI ก่อนส่งตรวจทาน ข้อมูลในหน้านี้ยังอยู่':
+    'Connect and test an AI before sending for review. Your work stays on this page.',
+  'ส่งเฉพาะผลตรวจและข้อความ ภาพต้นฉบับไม่ถูกส่งในขั้นตอนนี้':
+    'Only review results and text are sent. The original image is not sent in this step.',
+  'ผลตรวจช่วยเตรียมเอกสาร ไม่ใช่การอนุมัติเบิกจ่าย เก็บต้นฉบับและยืนยันเงื่อนไขกับ AFP':
+    'This review helps prepare documents; it does not approve reimbursement. Keep the original and confirm requirements with AFP.',
+  ยังไม่มีผลตรวจองค์ประกอบ: 'No document-element check yet',
+  'ตรวจว่ามีลายเซ็น ไม่ได้ยืนยันตัวผู้ลงชื่อ องค์ประกอบครบยังไม่เท่ากับอนุมัติเบิก':
+    'Checks signature presence, not signer identity. Complete elements do not constitute reimbursement approval.',
+
   'เลือก AI ที่มีบัญชี เชื่อมต่อ แล้วทดสอบใช้งาน': 'Choose your AI, connect, then test it',
   'Claude Pro/Max สำหรับทดสอบ': 'Claude Pro/Max for testing',
   'ต้องให้ IT อนุญาต': 'IT permission required',
