@@ -11,7 +11,7 @@ import {
   link,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   compatibleRun,
@@ -785,7 +785,7 @@ test("LINE cannot acknowledge a job whose durable write failed", async () => {
   try {
     const atomic = gateway.atomic.bind(gateway);
     gateway.atomic = (path, text) => {
-      if (path.includes("/jobs/")) throw new Error("SYNTHETIC_STORAGE_FAILURE");
+      if (path.includes(`${sep}jobs${sep}`)) throw new Error("SYNTHETIC_STORAGE_FAILURE");
       atomic(path, text);
     };
     const raw = webhook(lineId(1), "Public storage draft", "storage-failure");
