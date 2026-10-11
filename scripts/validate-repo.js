@@ -4,15 +4,22 @@ import { resolve } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
-export function runValidator(run = spawnSync) {
-  // Probe first: a failed validation must never fall through to another runtime.
+export function findPython(run = spawnSync) {
   for (const [command, prefix] of [['python', []], ['python3', []], ['py', ['-3']]]) {
     const probe = run(command, [...prefix, '-c', 'import sys; sys.exit(sys.version_info < (3, 10))'], {
       stdio: 'ignore', windowsHide: true,
     });
     if (probe.error || probe.status !== 0) continue;
+    return { command, prefix };
+  }
+  return null;
+}
 
-    const result = run(command, [...prefix, 'scripts/validate_repo.py'], {
+export function runValidator(run = spawnSync) {
+  // Probe first: a failed validation must never fall through to another runtime.
+  const runtime = findPython(run);
+  if (runtime) {
+    const result = run(runtime.command, [...runtime.prefix, 'scripts/validate_repo.py'], {
       cwd: root, stdio: 'inherit', windowsHide: true,
       env: { ...process.env, PYTHONUTF8: '1' },
     });
