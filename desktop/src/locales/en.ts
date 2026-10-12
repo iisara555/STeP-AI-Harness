@@ -1020,6 +1020,7 @@ export const en: Record<string, string> = {
   'เปิดบริการ OCR ไม่สำเร็จ กรุณาลองติดตั้ง OCR ใหม่หรือตรวจ Diagnostics':
     "Couldn't start the OCR service. Try reinstalling OCR or check Diagnostics",
   'อ่านใบเสร็จไม่สำเร็จ ลองใช้ภาพที่ชัดขึ้นหรือไฟล์อื่น': "Couldn't read the receipt. Try a clearer image or another file",
+  'OCR กำลังอ่านใบเสร็จอีกใบอยู่ รอให้เสร็จก่อนแล้วกดลองอีกครั้ง': 'OCR is reading another receipt. Wait for it to finish, then try again',
   'ไฟล์ใหญ่เกิน 25 MB': 'The file is larger than 25 MB',
   'รองรับเฉพาะ PDF และไฟล์ภาพ': 'Only PDF and image files are supported',
   'โฟลเดอร์นี้ไม่ใช่ local-thai-ocr ของ STeP': "This folder isn't STeP's local-thai-ocr",

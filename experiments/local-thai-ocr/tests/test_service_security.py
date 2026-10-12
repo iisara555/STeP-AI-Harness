@@ -67,6 +67,15 @@ class ServiceSecurityTests(unittest.TestCase):
         finally:
             app._process_lock.release()
 
+    def test_busy_reply_reaches_a_client_that_already_sent_the_document(self):
+        # The Desktop app sends the whole receipt at once; it must still read "busy", not a dropped connection.
+        app._process_lock.acquire()
+        try:
+            self.assertEqual(self.request(timeout=2), 503)
+        finally:
+            app._process_lock.release()
+        self.mock_worker.assert_not_called()
+
     def test_logs_exclude_document_names_and_handle_unparsed_requests(self):
         with patch("builtins.print") as output:
             self.assertEqual(self.request(path="/api/ocr?filename=synthetic-private-name.png"), 200)

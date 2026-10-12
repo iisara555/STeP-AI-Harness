@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Receipt OCR: a second receipt sent while the local OCR is still reading one now says OCR is busy (Thai/English message) instead of "OCR not open" or "could not read". On Windows the service no longer drops the connection before its busy reply arrives.
+
 - Sidebar folds to an icon rail (as in Claude and Codex) instead of disappearing: new task, search, task list, the three tools, settings and profile stay one click away, each with a tooltip; the choice is remembered on the computer. Narrow windows start folded. Rail icons play a short animation on hover or keyboard focus ([lucide-animated](https://lucide-animated.com), MIT, via `motion`); no motion when the computer is set to reduce motion.
 - Profile picker no longer offers three near-copy drawings (30, 34, 35 repeated 12, 04, 08). Employees who already chose one keep it.
 
