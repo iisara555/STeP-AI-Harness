@@ -4483,6 +4483,8 @@ nav button:disabled {
   width: 40px;
   height: 40px;
   padding: 0;
+  /* Centred like the rest of the rail; the full sidebar's tool buttons are left-aligned with text. */
+  justify-content: center;
   flex-shrink: 0;
   background: transparent;
   color: var(--muted);

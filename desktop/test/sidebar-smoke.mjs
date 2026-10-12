@@ -198,6 +198,18 @@ try {
   await expect(sidebar.locator('.session')).toHaveCount(0);
   const railWidth = (await sidebar.boundingBox()).width;
   assert.ok(railWidth <= 64, `the folded sidebar is a narrow column of icons (${railWidth}px)`);
+  // Every icon sits in the middle of its button, in one straight column.
+  const offsets = await sidebar.locator('.rail-button').evaluateAll(buttons =>
+    buttons.map(b => {
+      const box = b.getBoundingClientRect(),
+        icon = b.querySelector('svg').getBoundingClientRect();
+      return Math.abs(box.x + box.width / 2 - (icon.x + icon.width / 2));
+    }),
+  );
+  assert.ok(
+    offsets.every(o => o < 1),
+    `rail icons are centred (${offsets.join(', ')})`,
+  );
   // Every icon is named, with a tooltip on hover, and still does its job.
   const skillIcon = sidebar.getByRole('button', { name: 'ศูนย์รวม Skill' });
   await expect(skillIcon).toHaveAttribute('data-tip', 'ศูนย์รวม Skill');
