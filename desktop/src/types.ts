@@ -328,7 +328,7 @@ export type Snapshot = {
   approvals?: ApprovalRule[];
   transmissionGrants?: TransmissionGrant[];
   consentMetrics?: ConsentSummary;
-  features?: { claudeSubscription?: boolean; providerPresets?: boolean; developmentMode?: boolean };
+  features?: { claudeSubscription?: boolean; providerPresets?: boolean; developmentMode?: boolean; developmentPasscode?: boolean };
   settings: Settings;
   connections: Connection[];
   sessions: Session[];

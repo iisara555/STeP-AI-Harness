@@ -38,7 +38,9 @@ export function AIConnections({
   const readiness = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(''),
     [progress, setProgress] = useState<Record<string, string>>({}),
-    [removingConnection, setRemovingConnection] = useState<Connection | null>(null);
+    [removingConnection, setRemovingConnection] = useState<Connection | null>(null),
+    // null: closed; a string: the passcode dialog for turning Dev mode on is open.
+    [devPasscode, setDevPasscode] = useState<string | null>(null);
   const connectNow =
     (choice.mode === 'subscription' && ['openai', 'claude', 'antigravity'].includes(choice.provider)) || choice.mode === 'api';
   useEffect(() => {
@@ -170,13 +172,38 @@ export function AIConnections({
           aria-describedby="dev-mode-help"
           disabled={Boolean(busy) || !snapshot.features?.developmentMode}
           onClick={() =>
-            void run('development-mode', () => call('developmentMode', { enabled: snapshot.settings.developmentMode !== true }))
+            snapshot.settings.developmentMode !== true && snapshot.features?.developmentPasscode
+              ? setDevPasscode('')
+              : void run('development-mode', () => call('developmentMode', { enabled: snapshot.settings.developmentMode !== true }))
           }
         >
           {busy === 'development-mode' && <LoaderCircle size={14} className="spin" />}
           {snapshot.features?.developmentMode && snapshot.settings.developmentMode ? t('กลับโหมดปกติ') : t('เปิด Dev mode')}
         </button>
       </div>
+      {devPasscode !== null && (
+        <ConfirmDialog
+          title={t('เปิด Dev mode')}
+          confirmLabel={t('เปิด Dev mode')}
+          confirmDisabled={!devPasscode.trim()}
+          onCancel={() => setDevPasscode(null)}
+          onConfirm={async () => {
+            try {
+              await call('developmentMode', { enabled: true, passcode: devPasscode });
+            } catch (e) {
+              throw new Error(explainError(e));
+            }
+            setDevPasscode(null);
+            await refresh();
+          }}
+        >
+          <p className="small">{t('ใส่รหัส Dev mode ที่ได้จาก IT')}</p>
+          <label>
+            {t('รหัส Dev mode')}
+            <input type="password" autoComplete="off" value={devPasscode} onChange={e => setDevPasscode(e.target.value)} />
+          </label>
+        </ConfirmDialog>
+      )}
       {removingConnection && (
         <ConfirmDialog
           title={t('ลบการเชื่อมต่อนี้?')}

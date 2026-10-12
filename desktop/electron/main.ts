@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Store } from './store';
 import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
@@ -1272,6 +1272,8 @@ async function main() {
       claudeSubscription: claudeSubscriptionOn(),
       providerPresets: policyState.policy.features.providerPresets,
       developmentMode: policyState.policy.features.developmentMode,
+      // Whether turning Dev mode on asks for the administrator's passcode; the digest itself never reaches the window.
+      developmentPasscode: Boolean(policyState.policy.developmentPasscodeSha256),
     },
     policy: {
       source: policyState.policy.source,
@@ -1365,6 +1367,18 @@ async function main() {
         // Settings → AI: the employee's own switch for testing on their Claude Pro/Max plan; the policy can remove it.
         if (!policyState.policy.features.developmentMode) throw new Error('FEATURE_DISABLED');
         if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
+        // Turning it on asks for the passcode the administrator set in the policy; turning it off never does.
+        const passcode = policyState.policy.developmentPasscodeSha256;
+        if (
+          input.enabled &&
+          passcode &&
+          !(
+            typeof input.passcode === 'string' &&
+            input.passcode.length <= 200 &&
+            timingSafeEqual(createHash('sha256').update(input.passcode.trim()).digest(), Buffer.from(passcode, 'hex'))
+          )
+        )
+          throw new Error('DEV_MODE_PASSCODE');
         store.put('settings', 'main', { ...store.settings(), developmentMode: input.enabled });
         if (!input.enabled) closeClaudeSpares();
         if (!claudeSubscriptionOn()) {

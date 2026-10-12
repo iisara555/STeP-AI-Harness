@@ -2386,4 +2386,7 @@ export const en: Record<string, string> = {
   'Antigravity รุ่นนี้ไม่ยืนยันว่าปิดเครื่องมือของตัวเองแล้ว จึงยังไม่ส่งข้อความใด ๆ ใช้ Gemini แบบ API key แทนได้':
     'This Antigravity version does not confirm its own tools are off, so nothing was sent. Gemini with an API key still works',
   พร้อมใช้งาน: 'Ready',
+  'รหัส Dev mode ไม่ถูกต้อง': 'Wrong Dev mode passcode',
+  'ใส่รหัส Dev mode ที่ได้จาก IT': 'Enter the Dev mode passcode from IT',
+  'รหัส Dev mode': 'Dev mode passcode',
 };
