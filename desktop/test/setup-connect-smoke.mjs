@@ -15,7 +15,7 @@ try {
   await page.getByRole('button', { name: 'เริ่มตั้งค่า', exact: true }).click();
   const wizard = page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' });
   await expect(wizard.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', exact: true })).toBeVisible();
-  await expect(wizard.getByRole('heading', { name: 'ตรวจว่าพร้อมใช้งาน', exact: true })).toBeVisible();
+  await expect(wizard.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toHaveCount(0);
   await expect(wizard.getByRole('radio', { name: /Gemini via Antigravity/ })).toHaveAttribute('aria-checked', 'true');
   const connect = wizard.getByRole('button', { name: 'เชื่อมต่อ Antigravity', exact: true });
   await expect(connect).toBeVisible();
@@ -65,7 +65,7 @@ try {
   await expect(wizard.getByRole('button', { name: 'ทำภายหลัง', exact: true })).toBeDisabled();
   await expect(wizard.getByRole('button', { name: 'ยกเลิก', exact: true })).toBeVisible();
   await app.evaluate(() => globalThis.finishSetupConnect());
-  await expect(wizard.getByText('ทดสอบผ่าน · พร้อมใช้งาน', { exact: true })).toBeVisible();
+  await expect(wizard.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
 
   const capabilities = wizard.locator('.ai-connect-step .ai-capabilities');
   await capabilities.locator('summary').click();

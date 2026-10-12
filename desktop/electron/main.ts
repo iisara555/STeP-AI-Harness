@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { join, resolve, basename, dirname, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Store } from './store';
 import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
@@ -52,7 +52,7 @@ import { compatibleEndpoint, presetBaseUrl } from './preset-endpoint';
 import { openRouterSignIn } from './openrouter-auth';
 import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets';
 import { errorCode } from './diagnostics';
-import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
+import { connectFailure, signInAndTest, signInExpired, signOutManagedProvider, SIGN_IN_EXPIRED } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
 import {
   agyComponentPath,
@@ -970,6 +970,12 @@ async function main() {
           mode: c?.mode || '',
           detail: (event.detail || []).join(' | ').slice(0, 1200),
         });
+        // An expired sign-in shows on the connection too, so the chat and Settings offer a new sign-in
+        // (or another ready account) instead of a stale "ready" that fails every task.
+        if (c?.ready && SIGN_IN_EXPIRED.includes(String(event.text)) && !connecting.has(c.id)) {
+          store.put('connection', c.id, signInExpired(c));
+          emit({ sessionId: '', type: 'changed' });
+        }
         return;
       }
       // Run traces hold sizes, references and timing only; they go to diagnostics, not the window.
@@ -1266,6 +1272,8 @@ async function main() {
       claudeSubscription: claudeSubscriptionOn(),
       providerPresets: policyState.policy.features.providerPresets,
       developmentMode: policyState.policy.features.developmentMode,
+      // Whether turning Dev mode on asks for the administrator's passcode; the digest itself never reaches the window.
+      developmentPasscode: Boolean(policyState.policy.developmentPasscodeSha256),
     },
     policy: {
       source: policyState.policy.source,
@@ -1359,6 +1367,18 @@ async function main() {
         // Settings → AI: the employee's own switch for testing on their Claude Pro/Max plan; the policy can remove it.
         if (!policyState.policy.features.developmentMode) throw new Error('FEATURE_DISABLED');
         if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
+        // Turning it on asks for the passcode the administrator set in the policy; turning it off never does.
+        const passcode = policyState.policy.developmentPasscodeSha256;
+        if (
+          input.enabled &&
+          passcode &&
+          !(
+            typeof input.passcode === 'string' &&
+            input.passcode.length <= 200 &&
+            timingSafeEqual(createHash('sha256').update(input.passcode.trim()).digest(), Buffer.from(passcode, 'hex'))
+          )
+        )
+          throw new Error('DEV_MODE_PASSCODE');
         store.put('settings', 'main', { ...store.settings(), developmentMode: input.enabled });
         if (!input.enabled) closeClaudeSpares();
         if (!claudeSubscriptionOn()) {
@@ -2095,7 +2115,7 @@ async function main() {
           connection.ready = false;
           connection.note =
             connection.provider === 'antigravity'
-              ? 'Use installed Antigravity; connection needs a new test.'
+              ? tm('ใช้ Antigravity ที่ STeP ติดตั้ง · ยังไม่ได้ทดสอบการเชื่อมต่อ')
               : tm('ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ');
           store.put('connection', connection.id, connection);
           return connection;
@@ -2131,6 +2151,7 @@ async function main() {
           authCodes.delete(connection.id);
           emit({ sessionId: '', type: 'auth-code-close', connectionId: connection.id });
         };
+        const before = { ready: connection.ready, note: connection.note, signedIn: connection.signedIn };
         delete connection.signedIn;
         try {
           if (connection.provider === 'gemini' && connection.mode === 'subscription' && !connection.googleCloudProject)
@@ -2211,6 +2232,7 @@ async function main() {
           emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: tm('กำลังโหลดรายชื่อโมเดล') });
           connection.ready = true;
           connection.note = tm('ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว');
+          delete connection.problem;
           try {
             await refreshModels(connection);
           } catch {
@@ -2225,8 +2247,12 @@ async function main() {
             code,
             detail: detail.join(' | ').slice(0, 1200),
           });
-          connection.ready = false;
-          connection.note = connectFailureNote(code);
+          const outcome = connectFailure(before, code);
+          connection.ready = outcome.ready;
+          connection.note = outcome.note;
+          if (outcome.signedIn) connection.signedIn = true;
+          if (outcome.problem) connection.problem = outcome.problem;
+          else delete connection.problem;
         } finally {
           clearTimeout(timer);
           dropCode();
@@ -2557,10 +2583,11 @@ async function main() {
         c.ready = false;
         c.note =
           c.provider === 'antigravity'
-            ? 'Disconnected from STeP. The native Google account remains signed in to Antigravity.'
+            ? tm('เลิกเชื่อมต่อกับ STeP แล้ว บัญชี Google ใน Antigravity ยังลงชื่ออยู่')
             : tm('ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่');
         delete c.models;
         delete c.modelsAt;
+        delete c.problem;
         store.put('connection', c.id, c);
         store.put('secret', c.id, null);
         return c;

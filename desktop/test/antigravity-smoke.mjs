@@ -235,7 +235,7 @@ try {
   await expect(page.getByLabel('รายการค่าใช้จ่าย', { exact: true })).toHaveValue('รายการที่คนแก้แล้ว');
   const disconnected = await page.evaluate(id => window.step.call('disconnect', { id }), connection.id);
   assert.equal(disconnected.ready, false);
-  assert.match(disconnected.note, /native Google account remains signed in/);
+  assert.match(disconnected.note, /บัญชี Google ใน Antigravity ยังลงชื่ออยู่/);
   assert.deepEqual(errors, []);
   console.log('Antigravity renderer/IPC/native-stream smoke passed; no live account or quota used.');
 } finally {

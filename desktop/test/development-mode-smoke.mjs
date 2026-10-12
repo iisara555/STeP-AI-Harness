@@ -91,11 +91,38 @@ try {
   const revoked = (await call('snapshot')).connections.find(c => c.id === connection.id);
   assert.equal(revoked.ready, false, 'stored success must not mean ready when policy disables the provider');
   assert.equal(revoked.policyBlocked, true);
-  await expect(page.locator('.ai-connection-status')).toContainText('ปิดการใช้งาน');
+  await expect(page.locator('.ai-connection-status')).toContainText('ปิดโดยองค์กร');
   await expect(page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toHaveCount(0);
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'ออกจากระบบ', exact: true })).toBeEnabled();
+
+  // With an administrator passcode in the policy, turning the switch on asks for it; turning it off never does.
+  await call('developmentMode', { enabled: false });
+  await writeFile(
+    join(home, 'desktop-policy.json'),
+    JSON.stringify({
+      features: { developmentMode: true },
+      developmentPasscodeSha256: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
+    }),
+  );
+  await expect.poll(async () => (await call('snapshot')).features.developmentPasscode, { timeout: 15000 }).toBe(true);
+  assert.equal(JSON.stringify(await call('snapshot')).includes('03ac6742'), false, 'the digest never reaches the window');
+  await assert.rejects(call('developmentMode', { enabled: true }), /DEV_MODE_PASSCODE/);
+  await expect(toggle).toHaveText('เปิด Dev mode');
+  await toggle.click();
+  const passcodeDialog = page.getByRole('alertdialog', { name: 'เปิด Dev mode' });
+  await passcodeDialog.getByLabel('รหัส Dev mode').fill('0000');
+  await passcodeDialog.getByRole('button', { name: 'เปิด Dev mode', exact: true }).click();
+  await expect(passcodeDialog.getByRole('alert')).toHaveText('รหัส Dev mode ไม่ถูกต้อง');
+  await passcodeDialog.getByLabel('รหัส Dev mode').fill('1234');
+  await passcodeDialog.getByRole('button', { name: 'เปิด Dev mode', exact: true }).click();
+  await expect(toggle).toHaveText('กลับโหมดปกติ');
+  await toggle.click();
+  await expect(toggle).toHaveText('เปิด Dev mode');
+  await expect(passcodeDialog).toHaveCount(0);
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: true } }));
+  await expect.poll(async () => (await call('snapshot')).features.developmentPasscode, { timeout: 15000 }).toBe(false);
 
   // An administrator removes the switch: hidden, refused, and an earlier "on" no longer counts.
   await call('developmentMode', { enabled: true });
@@ -119,7 +146,9 @@ try {
   assert.equal((await call('snapshot')).features.claudeSubscription, false);
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
   assert.deepEqual(errors, []);
-  console.log('Development mode smoke passed: policy and employee opt-in both required, off/revocation refuses, forced-off override wins.');
+  console.log(
+    'Development mode smoke passed: policy and employee opt-in both required, administrator passcode asked only when turning on, off/revocation refuses, forced-off override wins.',
+  );
 } finally {
   await app.close();
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

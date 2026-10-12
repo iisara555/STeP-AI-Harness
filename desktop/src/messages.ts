@@ -171,6 +171,7 @@ export const errorText: Record<string, string> = localized({
   PRIVACY_REVIEW_REQUIRED: 'พบข้อมูลที่ต้องตรวจเพิ่มเติม กรุณาปิดบังข้อมูลส่วนบุคคลหรือข้อมูลลับก่อนส่ง',
   LOGIN_REQUIRED: 'การลงชื่อเข้าใช้หมดอายุ กดเชื่อมต่อและทดสอบในหน้าตั้งค่าอีกครั้ง',
   LOGIN_FAILED: 'ลงชื่อเข้าใช้ไม่สำเร็จ กรุณาลองใหม่',
+  DEV_MODE_PASSCODE: 'รหัส Dev mode ไม่ถูกต้อง',
   AUTH_METHOD_UNAVAILABLE: 'ตัวเชื่อม AI รุ่นนี้ไม่รองรับวิธีลงชื่อเข้าใช้ที่เลือก กรุณาอัปเดตตัวเชื่อมแล้วลองใหม่',
   INVALID_LOGIN_RESPONSE: 'ตัวเชื่อม AI ส่งข้อมูลเริ่ม OAuth ไม่ครบ กรุณาอัปเดตตัวเชื่อมแล้วลองใหม่',
   GOOGLE_CLOUD_PROJECT_INVALID: 'Google Cloud Project ID ไม่ถูกต้อง ใช้ตัวพิมพ์เล็ก ตัวเลข และขีดกลาง 6–30 ตัวอักษร',

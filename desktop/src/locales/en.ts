@@ -2363,4 +2363,32 @@ export const en: Record<string, string> = {
   'OCR เป็นส่วนเสริม ไม่ติดมากับตัวติดตั้งหลัก OCR คือตัวอ่านตัวอักษรจากภาพที่ทำงานในเครื่องนี้ กด “{0}” เมื่อต้องการใช้ ระบบจะดาวน์โหลดและติดตั้งให้ครั้งเดียว ไฟล์ใบเสร็จไม่ถูกส่งไปบริการ OCR บนอินเทอร์เน็ต':
     "OCR is an add-on that isn't included in the main installer. OCR reads text from images on this computer. Press “{0}” when you need it: the app downloads and installs it once. Receipt files are never sent to an online OCR service",
   รายการข้อตกลง: 'Terms list',
+  'บัญชี AI ของคุณ': 'Your AI accounts',
+  'พร้อมใช้งาน {0} จาก {1} บัญชี': '{0} of {1} accounts ready',
+  'ตอนเชื่อมต่อ ระบบทดสอบข้อความสั้น ๆ 1 ครั้งด้วยโควตาของบัญชีนั้น': "Connecting sends one short test message using that account's quota",
+  'สำหรับนักพัฒนา · ต้องให้ IT อนุญาต': 'For developers · needs IT permission',
+  ลงชื่อใหม่: 'Sign in again',
+  'ผู้ดูแลปิดบริการนี้ ผลทดสอบเดิมใช้ไม่ได้จนกว่าจะเปิดอีกครั้ง · ลงชื่อออกหรือลบบัญชีได้':
+    'Your admin turned this service off. The earlier test does not count until it is back on · You can sign out or remove the account',
+  ปิดโดยองค์กร: 'Turned off by your organization',
+  'API key ใช้ไม่ได้': 'API key not accepted',
+  ต้องลงชื่อใหม่: 'Sign-in expired',
+  'ลงชื่อแล้ว แต่ทดสอบไม่ผ่าน': 'Signed in, test failed',
+  เชื่อมต่อไม่สำเร็จ: 'Connection failed',
+  ยังไม่ได้เชื่อมต่อ: 'Not connected yet',
+  'ทดสอบล่าสุดไม่ผ่านชั่วคราว ({0}) · ยังใช้งานได้ตามเดิม': 'The last test hit a temporary problem ({0}) · still ready to use',
+  'การลงชื่อเข้าใช้หมดอายุ กดลงชื่อใหม่': 'Your sign-in expired. Press Sign in again',
+  'บริการตอบช้าหรือเครือข่ายสะดุด · กำลังลองใหม่': 'The service was busy or the network dropped · trying again',
+  'กำลังตรวจบัญชี Google และทดสอบส่งข้อความสั้น ๆ': 'Checking the Google account and testing one short request',
+  'ใช้ Antigravity ที่ STeP ติดตั้ง · ยังไม่ได้ทดสอบการเชื่อมต่อ': 'Using the Antigravity installed by STeP · not tested yet',
+  'เลิกเชื่อมต่อกับ STeP แล้ว บัญชี Google ใน Antigravity ยังลงชื่ออยู่':
+    'Disconnected from STeP. The Google account stays signed in to Antigravity',
+  'Antigravity ไม่ยืนยันการตั้งค่าความปลอดภัยของ STeP จึงยังไม่ส่งข้อความใด ๆ กดเชื่อมต่อใหม่อีกครั้ง':
+    'Antigravity did not confirm the isolated STeP policy, so nothing was sent. Press connect again',
+  'Antigravity รุ่นนี้ไม่ยืนยันว่าปิดเครื่องมือของตัวเองแล้ว จึงยังไม่ส่งข้อความใด ๆ ใช้ Gemini แบบ API key แทนได้':
+    'This Antigravity version does not confirm its own tools are off, so nothing was sent. Gemini with an API key still works',
+  พร้อมใช้งาน: 'Ready',
+  'รหัส Dev mode ไม่ถูกต้อง': 'Wrong Dev mode passcode',
+  'ใส่รหัส Dev mode ที่ได้จาก IT': 'Enter the Dev mode passcode from IT',
+  'รหัส Dev mode': 'Dev mode passcode',
 };
