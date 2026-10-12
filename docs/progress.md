@@ -12,6 +12,8 @@ _Last updated: 2026-10-12_
 
 ## In progress
 
+- **Desktop 0.6.1 release (2026-10-12)**: owner asked for one combined release of #155 and #156. #154 (sidebar rail) is not included: its macOS Electron check was red at release time.
+
 - **Connect AI redesign (simpler, steadier)**: account cards first with one status and one fix button; expired sign-in found in a chat flips the account to "ต้องลงชื่อใหม่" (one-click sign in again); re-tests that only hit busy/network/cancel keep a working account ready; the test request retries once on busy/network; English connection notes translated. Optional policy `developmentPasscodeSha256`: Dev mode asks for an IT-set passcode when turning on (owner chose policy passcode over a hard-coded 1234). New unit tests (`connect-stability.test.ts`) and smoke steps (account-connect, gemini-api expired key) fail without the change. Desktop 680 passed/2 skipped plus the 2 known Office-runtime failures; format/build and 10 related Electron smokes pass on Linux/Xvfb. Waits on owner review; not tested with real expired accounts.
 
 - **Filler text beside tool requests (2026-10-12)**: Itsara saw Gemini (Antigravity) write "Work in progress. Keep this conversation going. 1…6" while it opened STeP documents; the phrase is not in STeP or agy 1.3.2, so the model wrote it. TOOL_RULES now asks for one short sentence in the employee's language, or nothing, beside a tool request. Not verified against a live Gemini account.

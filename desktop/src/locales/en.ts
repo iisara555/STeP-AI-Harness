@@ -3,6 +3,14 @@
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 export const en: Record<string, string> = {
+  'หน้าเชื่อมต่อ AI แสดงบัญชีเป็นการ์ด บอกสถานะเดียวและปุ่มที่ต้องกด':
+    'AI connections show each account as a card with one status and the button to press',
+  'ถ้าการลงชื่อหมดอายุระหว่างแชต บัญชีจะขึ้นว่า "ต้องลงชื่อใหม่" ให้กดลงชื่อได้ทันที':
+    'If a sign-in expires during a chat, the account shows "Sign in again" with a button to do it',
+  'เน็ตหรือบริการ AI สะดุดครั้งเดียวไม่ทำให้บัญชีที่ใช้ได้กลายเป็นไม่พร้อม':
+    'A single network or service hiccup no longer marks a working account as not ready',
+  'ผู้ดูแลตั้งรหัสสำหรับเปิด Dev mode ได้': 'Administrators can set a passcode for turning on Dev mode',
+  'ระหว่าง AI เปิดเอกสาร จะไม่มีข้อความภาษาอังกฤษซ้ำ ๆ ขึ้นบนจอ': 'No repeated English filler text appears while the AI opens documents',
   'หน้าใบเสร็จเทียบต้นฉบับกับข้อมูลที่ต้องแก้ และยืนยันก่อนให้ AI ตรวจทาน':
     'Compare the original receipt with corrections and confirm before AI review',
   'หน้าเชื่อมต่อ AI บอกความสามารถที่ใช้ได้และข้อจำกัดของแต่ละบัญชี': 'AI connections show available capabilities and account limitations',
