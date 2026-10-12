@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Chat: the AI is told to write at most one short sentence in the employee's language beside a tool request, or nothing. Gemini had filled each tool turn with English filler ("Work in progress. Keep this conversation going. 1") that stayed on screen until the answer finished.
+
 ## Desktop v0.6.0 — 2026-10-11
 
 - Combined release of the reviewed audit, receipt, preview, knowledge and Office-eval work from PRs #136–#150. Desktop is 0.6.0; Harness remains 0.7.7. Publication requires all protected-branch CI checks and the Windows/macOS installer workflow to pass.

@@ -12,6 +12,8 @@ _Last updated: 2026-10-11_
 
 ## In progress
 
+- **Filler text beside tool requests (2026-10-12)**: Itsara saw Gemini (Antigravity) write "Work in progress. Keep this conversation going. 1…6" while it opened STeP documents; the phrase is not in STeP or agy 1.3.2, so the model wrote it. TOOL_RULES now asks for one short sentence in the employee's language, or nothing, beside a tool request. Not verified against a live Gemini account.
+
 - **macOS HTML preview smoke**: #151 first reproduces a red native run: HTML fullscreen entry resolves, then exit is sent about 12 ms later and stalls until the 90-second watchdog fails the test. Wait for BrowserWindow's native enter/leave-full-screen events before proceeding; retain DOM/layout/fit/fullscreen assertions and bound each transition at 10 seconds. Keep phase reporting and the watchdog, plus a 20-minute CI job bound; temporary Playwright tracing is removed. Windows smoke passes; final native CI is tracked in #151. No eval/provider calls or budget changes.
 
 - **Desktop 0.6.0 release preparation (#152)**: owner authorized publication after all CI checks pass. Combine the ordered #136–#150 source commits and the separate macOS smoke fix #151, retaining original PR history. Version, lockfile, Thai/English in-app notes, both READMEs and developer source references are synchronized. Windows root 968/8 skipped, Desktop 675/4 skipped, frozen install, both validators, format and build pass; complete Electron suite, final integration CI and installer publication are tracked in #152. Harness stays 0.7.7; no live eval calls or budget reset.
