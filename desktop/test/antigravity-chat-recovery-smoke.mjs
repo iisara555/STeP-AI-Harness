@@ -81,7 +81,8 @@ try {
     await page.keyboard.press('Enter');
   };
   await send('How is the public synthetic podcast doing recently?');
-  await expect(page.locator('.message.assistant')).toContainText('ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ');
+  // The saved answer and the live reply can both be on screen for a moment while the run finishes.
+  await expect(page.locator('.message.assistant').last()).toContainText('ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ');
   assert.deepEqual((await readFile(calls, 'utf8')).trim().split('\n'), ['recover', 'answer']);
   await expect(page.locator('.message').filter({ hasText: 'UNVERIFIED FRAGMENT' })).toHaveCount(0);
   await writeFile(scenario, 'host');
