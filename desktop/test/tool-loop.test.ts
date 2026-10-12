@@ -22,6 +22,11 @@ test('agent rules explain bounded lifecycle and missing-task errors have user-fa
   assert.match(TOOL_RULES, /same session and workspace/);
   assert.ok(errorText.TASK_NOT_FOUND);
 });
+test('text beside a tool request stays a short note in the employee language, never filler', () => {
+  // Gemini once wrote "Work in progress. Keep this conversation going. N" beside each request, and chat shows every turn.
+  assert.match(TOOL_RULES, /shown to the employee while you work/);
+  assert.match(TOOL_RULES, /never filler, counters or placeholder text/);
+});
 function host(extra: Partial<LoopHost> = {}): LoopHost {
   return {
     enabled: () => true,
