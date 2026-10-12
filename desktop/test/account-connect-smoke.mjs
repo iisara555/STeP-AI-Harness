@@ -17,8 +17,8 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   await expect(page.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'ตรวจว่าพร้อมใช้งาน', exact: true })).toBeVisible();
-  await expect(page.getByText('เชื่อมต่อก่อน แล้วระบบจะทดสอบให้โดยอัตโนมัติ', { exact: true })).toBeVisible();
+  // A new user sees only the picker; the account list appears once there is an account.
+  await expect(page.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toHaveCount(0);
   await mkdir('release/qa/connect-ai', { recursive: true });
   await page.screenshot({ path: 'release/qa/connect-ai/new-user.png' });
   await expect(page.getByRole('radio', { name: /Gemini via Antigravity/ })).toHaveAttribute('aria-checked', 'true');
@@ -60,6 +60,16 @@ try {
           await new Promise(resolve => {
             globalThis.finishConnect = resolve;
           });
+          if (globalThis.expireNext) {
+            globalThis.expireNext = false;
+            Object.assign(snapshot.connections[0], {
+              ready: false,
+              signedIn: undefined,
+              problem: 'LOGIN_REQUIRED',
+              note: 'การลงชื่อเข้าใช้หมดอายุ กดลงชื่อใหม่',
+            });
+            return snapshot.connections[0];
+          }
           Object.assign(
             snapshot.connections[0],
             globalThis.connectAttempts === 1
@@ -73,6 +83,7 @@ try {
           );
           return snapshot.connections[0];
         }
+        if (method === 'disconnect') return snapshot.connections[0];
         throw new Error(`Unexpected synthetic IPC: ${method}`);
       });
     },
@@ -83,14 +94,16 @@ try {
   await expect(page.getByRole('tab', { name: 'ทั่วไป', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
   await app.evaluate(() => globalThis.finishConnect());
-  await expect(page.getByText('ลงชื่อแล้ว แต่ยังไม่พร้อมใช้งาน', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toBeVisible();
+  await expect(page.locator('.connection-state')).toHaveText('ลงชื่อแล้ว แต่ทดสอบไม่ผ่าน');
   await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toHaveCount(0);
   await page.screenshot({ path: 'release/qa/connect-ai/test-failed.png' });
   await page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
   await app.evaluate(() => globalThis.finishConnect());
   await expect(page.getByText('บัญชีทดสอบพร้อมใช้งาน', { exact: true })).toBeVisible();
-  await expect(page.getByText('ทดสอบผ่าน · พร้อมใช้งาน', { exact: true })).toBeVisible();
+  await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
+  await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'ready');
   await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'ลบ', exact: true })).toBeHidden();
@@ -134,10 +147,31 @@ try {
   await app.evaluate(() => globalThis.finishConnect());
   await expect(capabilities.locator('[data-capability="web"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
   await expect(capabilities.locator('[data-capability="web"]')).toContainText('ติดต่อ IT');
+  // An expired sign-in shows as one plain status with one button that signs in again from a clean state.
+  await app.evaluate(() => {
+    globalThis.expireNext = true;
+  });
+  await page.getByRole('button', { name: 'ทดสอบอีกครั้ง', exact: true }).click();
+  await app.evaluate(() => globalThis.finishConnect());
+  await expect(page.locator('.connection-state')).toHaveText('ต้องลงชื่อใหม่');
+  await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'attention');
+  await page.screenshot({ path: 'release/qa/connect-ai/sign-in-expired.png' });
+  const before = (await app.evaluate(() => globalThis.accountCalls)).length;
+  await page.getByRole('button', { name: 'ลงชื่อใหม่', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
+  await app.evaluate(() => globalThis.finishConnect());
+  await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
+  assert.deepEqual(
+    (await app.evaluate(() => globalThis.accountCalls))
+      .slice(before)
+      .map(c => c.method)
+      .filter(m => ['disconnect', 'connect'].includes(m)),
+    ['disconnect', 'connect'],
+  );
   await page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'การเชื่อมต่อ AI' })).toHaveCount(0);
   console.log(
-    'Employee account smoke passed: guided connection, busy state, signed-in/test-failed recovery without duplicate account, readiness, collapsed management, narrow dark layout; synthetic IPC only.',
+    'Employee account smoke passed: guided connection, busy state, signed-in/test-failed recovery without duplicate account, expired sign-in with one-click sign-in again, readiness, collapsed management, narrow dark layout; synthetic IPC only.',
   );
 } finally {
   await app.close();

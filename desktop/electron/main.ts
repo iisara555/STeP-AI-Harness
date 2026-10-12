@@ -52,7 +52,7 @@ import { compatibleEndpoint, presetBaseUrl } from './preset-endpoint';
 import { openRouterSignIn } from './openrouter-auth';
 import { PROVIDER_PRESETS, pickModel, presetFor } from '../src/provider-presets';
 import { errorCode } from './diagnostics';
-import { connectFailureNote, signInAndTest, signOutManagedProvider } from './connect';
+import { connectFailure, signInAndTest, signInExpired, signOutManagedProvider, SIGN_IN_EXPIRED } from './connect';
 import { checkRuntime, resolveRuntime } from './runtimes';
 import {
   agyComponentPath,
@@ -970,6 +970,12 @@ async function main() {
           mode: c?.mode || '',
           detail: (event.detail || []).join(' | ').slice(0, 1200),
         });
+        // An expired sign-in shows on the connection too, so the chat and Settings offer a new sign-in
+        // (or another ready account) instead of a stale "ready" that fails every task.
+        if (c?.ready && SIGN_IN_EXPIRED.includes(String(event.text)) && !connecting.has(c.id)) {
+          store.put('connection', c.id, signInExpired(c));
+          emit({ sessionId: '', type: 'changed' });
+        }
         return;
       }
       // Run traces hold sizes, references and timing only; they go to diagnostics, not the window.
@@ -2095,7 +2101,7 @@ async function main() {
           connection.ready = false;
           connection.note =
             connection.provider === 'antigravity'
-              ? 'Use installed Antigravity; connection needs a new test.'
+              ? tm('ใช้ Antigravity ที่ STeP ติดตั้ง · ยังไม่ได้ทดสอบการเชื่อมต่อ')
               : tm('ใช้ตัวเชื่อมที่มากับแอป · ยังไม่ได้ทดสอบการเชื่อมต่อ');
           store.put('connection', connection.id, connection);
           return connection;
@@ -2131,6 +2137,7 @@ async function main() {
           authCodes.delete(connection.id);
           emit({ sessionId: '', type: 'auth-code-close', connectionId: connection.id });
         };
+        const before = { ready: connection.ready, note: connection.note, signedIn: connection.signedIn };
         delete connection.signedIn;
         try {
           if (connection.provider === 'gemini' && connection.mode === 'subscription' && !connection.googleCloudProject)
@@ -2211,6 +2218,7 @@ async function main() {
           emit({ sessionId: '', type: 'connect-progress', connectionId: connection.id, text: tm('กำลังโหลดรายชื่อโมเดล') });
           connection.ready = true;
           connection.note = tm('ผ่านการเชื่อมต่อและรับคำตอบบนเครื่องนี้แล้ว');
+          delete connection.problem;
           try {
             await refreshModels(connection);
           } catch {
@@ -2225,8 +2233,12 @@ async function main() {
             code,
             detail: detail.join(' | ').slice(0, 1200),
           });
-          connection.ready = false;
-          connection.note = connectFailureNote(code);
+          const outcome = connectFailure(before, code);
+          connection.ready = outcome.ready;
+          connection.note = outcome.note;
+          if (outcome.signedIn) connection.signedIn = true;
+          if (outcome.problem) connection.problem = outcome.problem;
+          else delete connection.problem;
         } finally {
           clearTimeout(timer);
           dropCode();
@@ -2557,10 +2569,11 @@ async function main() {
         c.ready = false;
         c.note =
           c.provider === 'antigravity'
-            ? 'Disconnected from STeP. The native Google account remains signed in to Antigravity.'
+            ? tm('เลิกเชื่อมต่อกับ STeP แล้ว บัญชี Google ใน Antigravity ยังลงชื่ออยู่')
             : tm('ออกจากระบบแล้ว กดเชื่อมต่อและทดสอบเพื่อลงชื่อใหม่');
         delete c.models;
         delete c.modelsAt;
+        delete c.problem;
         store.put('connection', c.id, c);
         store.put('secret', c.id, null);
         return c;

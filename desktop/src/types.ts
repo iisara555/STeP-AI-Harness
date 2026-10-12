@@ -36,6 +36,8 @@ export type Connection = {
   /** Snapshot-only: current policy prevents use; the stored test result remains intact. */
   policyBlocked?: boolean;
   note: string;
+  /** Error code of the last failed connect, or LOGIN_REQUIRED after a chat found the sign-in expired; cleared by a passing test. */
+  problem?: string;
   models?: ModelOption[];
   modelsAt?: string;
 };

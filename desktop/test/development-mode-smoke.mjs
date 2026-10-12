@@ -91,7 +91,7 @@ try {
   const revoked = (await call('snapshot')).connections.find(c => c.id === connection.id);
   assert.equal(revoked.ready, false, 'stored success must not mean ready when policy disables the provider');
   assert.equal(revoked.policyBlocked, true);
-  await expect(page.locator('.ai-connection-status')).toContainText('ปิดการใช้งาน');
+  await expect(page.locator('.ai-connection-status')).toContainText('ปิดโดยองค์กร');
   await expect(page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toHaveCount(0);
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();

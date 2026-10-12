@@ -1149,9 +1149,6 @@ nav button,
   min-height: 0;
   padding: 8px;
 }
-.ai-provider-disclosure[data-first='true'] > summary {
-  display: none;
-}
 .wizard .ai-connect-flow > p {
   display: none;
 }
@@ -1162,7 +1159,7 @@ nav button,
 .wizard .ai-connect-step > p {
   margin: 6px 0;
 }
-.wizard .ai-connect-intro + .ai-connect-step > p {
+.wizard .ai-connect-lead + .ai-connect-step > p {
   display: none;
 }
 .wizard .provider-detail {
@@ -4225,46 +4222,135 @@ nav button:disabled {
   border-color: transparent;
 }
 
-.ai-connect-intro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+.ai-connect-lead {
+  margin: 0 0 0.25rem;
 }
-.ai-connect-intro > p {
-  margin: 0;
+.wizard .ai-connect-lead {
+  display: none;
 }
+/* Developer-only switch: at the bottom, small, still discoverable. */
 .development-mode {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 14px;
 }
 .development-mode button {
   white-space: nowrap;
+  font-size: 12px;
+  min-height: 0;
+  padding: 4px 10px;
 }
-@media (max-width: 480px) {
-  .ai-connect-intro {
-    flex-wrap: wrap;
-  }
+/* The account list sits on the page itself; each account is its own card. */
+.ai-connect-step.ai-readiness {
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
-
-.wizard .ai-connect-intro {
-  margin-bottom: 0;
+.connection-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
 }
-.wizard .ai-connect-intro > p {
+.connection-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  gap: 6px;
+}
+.ai-readiness .connection-card:last-child {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.connection-card.ready {
+  border-left-color: var(--diff-added);
+}
+.connection-card.attention,
+.connection-card.busy {
+  border-left-color: var(--accent);
+}
+.connection-card.error {
+  border-left-color: var(--danger);
+}
+.connection-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.connection-name {
+  font-size: 15px;
+}
+.connection-row .connection-state {
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--selected);
+  color: var(--muted);
+}
+.connection-state.ready {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.connection-state.attention,
+.connection-state.busy {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.connection-state.error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+.connection-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 18px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.connection-more > details {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin-top: 0;
+}
+.connection-more > details[open] {
+  flex-basis: 100%;
+}
+.connection-more .ai-account-management {
+  border-top: 0;
+  margin-top: 0;
+}
+.connection-more summary {
+  padding: 8px 0 0;
+  margin: 0;
+}
+.ai-provider-disclosure[data-first='true'] > summary {
   display: none;
 }
-.wizard .development-mode {
-  flex-direction: row;
+.ai-add-account summary {
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  padding: 0;
+  font-weight: 600;
 }
-.wizard .development-mode button {
-  padding: 4px 10px;
-  font-size: 12px;
+.ai-add-account {
+  border-style: dashed;
 }
 
 /* Minimal receipt review: source on the left, three task sections on the right. */
