@@ -128,7 +128,7 @@ try {
       update,
     );
   // The update card sits above the profile at the bottom of the task list, as in Claude and Codex.
-  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'ขยายแถบงาน' }).click();
   await sendUpdate({ status: 'downloading', current: '0.5.5', version: '0.5.6', percent: 40 });
   await page.locator('.update-card').getByText('กำลังดาวน์โหลดเวอร์ชัน 0.5.6').waitFor();
   await sendUpdate({ status: 'ready', current: '0.5.5', version: '0.5.6' });
@@ -136,11 +136,11 @@ try {
   await card.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
   assert.equal(await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).count(), 0, 'one place at a time');
   await page.locator('.sidebar').screenshot({ path: 'release/qa/ux-fixes/update-card.png' });
-  // With the task list hidden, the title bar offers it instead.
-  await titlebar.getByRole('button', { name: 'ซ่อนแถบงาน' }).click();
+  // With the task list folded to icons, the title bar offers it instead.
+  await titlebar.getByRole('button', { name: 'ย่อแถบงาน' }).click();
   await titlebar.getByRole('button', { name: 'รีสตาร์ทเพื่ออัปเดต' }).waitFor();
   await page.screenshot({ path: 'release/qa/ux-fixes/update-ready.png' });
-  await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  await titlebar.getByRole('button', { name: 'ขยายแถบงาน' }).click();
   // A Mac build that cannot install the update itself offers the download instead.
   await sendUpdate({ status: 'manual', current: '0.5.5', version: '0.5.6', url: 'https://example.invalid' });
   await card.getByRole('button', { name: 'ดาวน์โหลดเวอร์ชัน 0.5.6' }).waitFor();
@@ -148,12 +148,12 @@ try {
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
   await page.getByRole('tab', { name: 'ทั่วไป' }).click();
   const pictures = page.getByRole('radiogroup', { name: 'รูปโปรไฟล์' });
-  await expect(pictures.getByRole('radio')).toHaveCount(37);
+  await expect(pictures.getByRole('radio')).toHaveCount(34);
   await pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true }).click();
   await expect(pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true })).toHaveAttribute('aria-checked', 'true');
   await page.screenshot({ path: 'release/qa/ux-fixes/profile-pictures.png' });
   await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
-  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'แสดงแถบงาน' }).click();
+  if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'ขยายแถบงาน' }).click();
   await expect(page.locator('.profile .avatar-badge img')).toHaveAttribute('src', /avatar-05/);
   await page.locator('.profile').screenshot({ path: 'release/qa/ux-fixes/profile-sidebar.png' });
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-05');

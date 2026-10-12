@@ -4,13 +4,15 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-11_
+_Last updated: 2026-10-12_
 
 ## Latest release
 
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Sidebar icon rail + profile repeats** (branch `claude/sidebar-collapse-avatars-icons-jijjp7`): the title-bar toggle folds the sidebar to a 60 px icon rail with tooltips (remembered in localStorage) instead of hiding it; three near-duplicate avatars retired from the picker but still valid. Format, Desktop unit tests (only the known cloud-only office-skill-benefit failures), build, and sidebar/ux-audit/i18n/whats-new/tour/ui-review smokes pass on Linux/Xvfb. Animated icons: proposal only (Flaticon free needs attribution; lucide-animated is MIT) — waits on the owner.
 
 - **macOS HTML preview smoke**: #151 first reproduces a red native run: HTML fullscreen entry resolves, then exit is sent about 12 ms later and stalls until the 90-second watchdog fails the test. Wait for BrowserWindow's native enter/leave-full-screen events before proceeding; retain DOM/layout/fit/fullscreen assertions and bound each transition at 10 seconds. Keep phase reporting and the watchdog, plus a 20-minute CI job bound; temporary Playwright tracing is removed. Windows smoke passes; final native CI is tracked in #151. No eval/provider calls or budget changes.
 

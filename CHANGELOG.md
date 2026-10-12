@@ -6,6 +6,9 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Sidebar folds to an icon rail (as in Claude and Codex) instead of disappearing: new task, search, task list, the three tools, settings and profile stay one click away, each with a tooltip; the choice is remembered on the computer. Narrow windows start folded.
+- Profile picker no longer offers three near-copy drawings (30, 34, 35 repeated 12, 04, 08). Employees who already chose one keep it.
+
 ## Desktop v0.6.0 — 2026-10-11
 
 - Combined release of the reviewed audit, receipt, preview, knowledge and Office-eval work from PRs #136–#150. Desktop is 0.6.0; Harness remains 0.7.7. Publication requires all protected-branch CI checks and the Windows/macOS installer workflow to pass.
