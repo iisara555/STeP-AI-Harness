@@ -119,6 +119,11 @@ export type Policy = {
   skillPacks?: { approvedDigests: string[] };
   transmissionConsent?: { allowRunScope: boolean };
   /**
+   * SHA-256 (hex) of a passcode the administrator sets; when present, turning Dev mode on asks for it. Only the hash is
+   * stored, so the policy file and this public repository never hold the passcode itself.
+   */
+  developmentPasscodeSha256?: string;
+  /**
    * Standard consent (on by default, the behavior first trialled as "pilot mode"): fewer confirmation dialogs. Every
    * side-effect tool still asks each time. `false` restores the strict dialogs. With `checks.privacy` on, credentials
    * and sensitive data tied to a person are blocked and national ID numbers masked in both modes.
@@ -246,6 +251,11 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   if (raw.pilot !== undefined) {
     if (typeof raw.pilot !== 'boolean') problems.push('pilot must be true or false');
     else policy.pilot = raw.pilot;
+  }
+  if (raw.developmentPasscodeSha256 !== undefined) {
+    if (typeof raw.developmentPasscodeSha256 !== 'string' || !/^[a-fA-F0-9]{64}$/.test(raw.developmentPasscodeSha256))
+      problems.push('developmentPasscodeSha256 must be a 64-character SHA-256 hex digest');
+    else policy.developmentPasscodeSha256 = raw.developmentPasscodeSha256.toLowerCase();
   }
   if (raw.checks !== undefined) {
     if (

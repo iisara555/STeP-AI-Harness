@@ -4,13 +4,15 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-11_
+_Last updated: 2026-10-12_
 
 ## Latest release
 
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Connect AI redesign (simpler, steadier)**: account cards first with one status and one fix button; expired sign-in found in a chat flips the account to "ต้องลงชื่อใหม่" (one-click sign in again); re-tests that only hit busy/network/cancel keep a working account ready; the test request retries once on busy/network; English connection notes translated. Optional policy `developmentPasscodeSha256`: Dev mode asks for an IT-set passcode when turning on (owner chose policy passcode over a hard-coded 1234). New unit tests (`connect-stability.test.ts`) and smoke steps (account-connect, gemini-api expired key) fail without the change. Desktop 680 passed/2 skipped plus the 2 known Office-runtime failures; format/build and 10 related Electron smokes pass on Linux/Xvfb. Waits on owner review; not tested with real expired accounts.
 
 - **Filler text beside tool requests (2026-10-12)**: Itsara saw Gemini (Antigravity) write "Work in progress. Keep this conversation going. 1…6" while it opened STeP documents; the phrase is not in STeP or agy 1.3.2, so the model wrote it. TOOL_RULES now asks for one short sentence in the employee's language, or nothing, beside a tool request. Not verified against a live Gemini account.
 

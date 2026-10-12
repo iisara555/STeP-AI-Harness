@@ -49,6 +49,10 @@ const server = createServer((req, res) => {
   let body = '';
   req.on('data', d => (body += d));
   req.on('end', () => {
+    if (mode === 'expired') {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ error: { code: 401, message: 'API key expired', status: 'UNAUTHENTICATED' } }));
+    }
     if (mode === 'quota') {
       res.writeHead(429, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({ error: { code: 429, message: 'Quota exceeded, limit: 0', status: 'RESOURCE_EXHAUSTED' } }));
@@ -394,6 +398,17 @@ try {
     ['created', 'reused'],
   );
   assert.ok(cacheCalls.every(c => c.usage.input === 5 && c.usage.cachedInput === 3 && c.usage.total === 6));
+
+  // A chat that finds the key or sign-in no longer accepted flips the account out of "ready", so
+  // Settings and the composer offer the fix instead of a stale ready state that fails every task.
+  mode = 'expired';
+  const expiredSession = await page.evaluate(connectionId => window.step.call('create', { connectionId }), connectionId);
+  await page.evaluate(({ id }) => window.step.call('send', { id, text: 'แปลเป็นอังกฤษ: ขอบคุณ', mode: 'chat', autoImage: false }), {
+    id: expiredSession.id,
+  });
+  await expect.poll(async () => (await gemini()).find(c => c.id === connectionId)?.problem, { timeout: 30000 }).toBe('LOGIN_REQUIRED');
+  assert.equal((await gemini()).find(c => c.id === connectionId).ready, false);
+  mode = 'ok';
   assert.deepEqual(errors, []);
   console.log(
     'Gemini API key smoke passed: Settings, quota, vision, retained CLI tool turns and managed native HTTP prefix cache creation/reuse with trace usage.',
