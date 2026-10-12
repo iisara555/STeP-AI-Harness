@@ -110,7 +110,7 @@ export function TitleBar({
     {
       label: t('มุมมอง'),
       items: [
-        command('left', left ? t('ซ่อนแถบงาน') : t('แสดงแถบงาน')),
+        command('left', left ? t('ย่อแถบงาน') : t('ขยายแถบงาน')),
         command('right', right ? t('ซ่อนแผงขวา') : t('แสดงแผงขวา')),
         { id: 'zoom-in', label: t('ขยายตัวอักษร'), hint: shortcutText('Mod+='), run: windowAction('zoomIn') },
         { id: 'zoom-out', label: t('ย่อตัวอักษร'), hint: shortcutText('Mod+-'), run: windowAction('zoomOut') },
@@ -221,8 +221,8 @@ export function TitleBar({
         </div>
         <button
           className="icon titlebar-icon"
-          aria-label={left ? t('ซ่อนแถบงาน') : t('แสดงแถบงาน')}
-          title={left ? t('ซ่อนแถบงาน') : t('แสดงแถบงาน')}
+          aria-label={left ? t('ย่อแถบงาน') : t('ขยายแถบงาน')}
+          title={left ? t('ย่อแถบงาน') : t('ขยายแถบงาน')}
           aria-pressed={left}
           onClick={() => run('left')}
         >

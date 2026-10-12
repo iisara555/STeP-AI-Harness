@@ -181,6 +181,7 @@ export const errorText: Record<string, string> = localized({
   OCR_NOT_INSTALLED: 'ยังไม่ได้ติดตั้ง OCR ในเครื่องนี้ กด “ติดตั้ง OCR” ในหน้าตรวจใบเสร็จ',
   OCR_START_FAILED: 'เปิดบริการ OCR ไม่สำเร็จ กรุณาลองติดตั้ง OCR ใหม่หรือตรวจ Diagnostics',
   OCR_FAILED: 'อ่านใบเสร็จไม่สำเร็จ ลองใช้ภาพที่ชัดขึ้นหรือไฟล์อื่น',
+  OCR_BUSY: 'OCR กำลังอ่านใบเสร็จอีกใบอยู่ รอให้เสร็จก่อนแล้วกดลองอีกครั้ง',
   OCR_FILE_TOO_LARGE: 'ไฟล์ใหญ่เกิน 25 MB',
   OCR_UNSUPPORTED_FILE: 'รองรับเฉพาะ PDF และไฟล์ภาพ',
   OCR_FOLDER_INVALID: 'โฟลเดอร์นี้ไม่ใช่ local-thai-ocr ของ STeP',

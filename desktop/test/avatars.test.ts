@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync } from 'node:fs';
-import { AVATAR_IDS, isAvatarId } from '../src/avatar-ids';
+import { AVATAR_IDS, RETIRED_AVATAR_IDS, isAvatarId } from '../src/avatar-ids';
 
 test('every profile picture id has its bundled image, and only those ids are accepted', () => {
   const files = readdirSync(new URL('../src/assets/avatars/', import.meta.url)).filter(f => f.endsWith('.webp'));
@@ -11,4 +11,10 @@ test('every profile picture id has its bundled image, and only those ids are acc
   assert.equal(isAvatarId('avatar-36'), true);
   for (const bad of ['avatar-37', 'avatar-1', '../avatar-01', 'https://example.com/a.png', '', 7, null])
     assert.equal(isAvatarId(bad), false, String(bad));
+});
+
+test('near-copy drawings are retired from the picker but stay valid for employees who chose them', () => {
+  assert.deepEqual(RETIRED_AVATAR_IDS, ['avatar-30', 'avatar-34', 'avatar-35']);
+  for (const id of RETIRED_AVATAR_IDS) assert.equal(isAvatarId(id), true, id);
+  assert.equal(AVATAR_IDS.length - RETIRED_AVATAR_IDS.length, 33);
 });

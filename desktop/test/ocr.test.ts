@@ -77,6 +77,22 @@ test('receipts are posted as raw bytes to the local service and its result is re
   }
 });
 
+test('a receipt sent while the service reads another one says the service is busy', async () => {
+  const fake = await serve((req, res) => {
+    req.resume();
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: 'ocr_busy' }));
+  });
+  try {
+    const dir = await mkdtemp(join(tmpdir(), 'step-ocr-busy-')),
+      file = join(dir, 'receipt.jpg');
+    await writeFile(file, Buffer.from([1, 2, 3]));
+    await assert.rejects(new OcrService(() => '', fake.base).recognize(file, false), /OCR_BUSY/);
+  } finally {
+    await fake.close();
+  }
+});
+
 test('starting requires an installed OCR folder', async () => {
   await assert.rejects(new OcrService(() => join(tmpdir(), 'no-ocr-here'), 'http://127.0.0.1:9').start(), /OCR_NOT_INSTALLED/);
 });

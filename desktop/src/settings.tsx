@@ -4,7 +4,7 @@ import { AIConnections } from './ai-connections';
 import { shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
-import { AVATARS, Avatar } from './avatars';
+import { Avatar, pickableAvatars } from './avatars';
 import { initial } from './messages';
 import type { Snapshot } from './types';
 import { language, localized, t, teamName } from './i18n';
@@ -158,7 +158,7 @@ export function SettingsPanel({
             >
               <Avatar fallback={initial(userName) || 'ST'} />
             </button>
-            {AVATARS.map((a, i) => (
+            {pickableAvatars(avatar).map((a, i) => (
               <button
                 key={a.id}
                 type="button"
