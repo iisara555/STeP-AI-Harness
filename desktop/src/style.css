@@ -4553,3 +4553,8 @@ nav button:disabled {
     transition: none;
   }
 }
+.rail-icon {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}

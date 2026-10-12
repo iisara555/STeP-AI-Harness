@@ -1,6 +1,56 @@
-import type { ReactNode } from 'react';
-import { Blocks, FileText, LoaderCircle, MessageSquare, Plus, ReceiptText, Search, Settings2 } from 'lucide-react';
+import { useRef, type ForwardRefExoticComponent, type ReactNode, type RefAttributes } from 'react';
+import { MotionConfig } from 'motion/react';
+import { LoaderCircle } from 'lucide-react';
 import { t } from './i18n';
+import { BlocksIcon } from './animated-icons/blocks';
+import { FileTextIcon } from './animated-icons/file-text';
+import { MessageSquareIcon } from './animated-icons/message-square';
+import { PlusIcon } from './animated-icons/plus';
+import { ReceiptIcon } from './animated-icons/receipt';
+import { SearchIcon } from './animated-icons/search';
+import { SlidersHorizontalIcon } from './animated-icons/sliders-horizontal';
+
+type AnimatedIcon = ForwardRefExoticComponent<
+  { size?: number; className?: string } & RefAttributes<{ startAnimation: () => void; stopAnimation: () => void }>
+>;
+
+/** A rail icon that plays its small animation while the button is hovered or has keyboard focus. */
+function RailButton({
+  icon: Icon,
+  label,
+  size = 17,
+  className = '',
+  tour,
+  busy,
+  onClick,
+}: {
+  icon: AnimatedIcon;
+  label: string;
+  size?: number;
+  className?: string;
+  tour?: string;
+  busy?: ReactNode;
+  onClick: () => void;
+}) {
+  const icon = useRef<{ startAnimation: () => void; stopAnimation: () => void }>(null);
+  const start = () => icon.current?.startAnimation();
+  const stop = () => icon.current?.stopAnimation();
+  return (
+    <button
+      className={`rail-button ${className}`}
+      data-tour={tour}
+      aria-label={label}
+      data-tip={label}
+      onClick={onClick}
+      onMouseEnter={start}
+      onMouseLeave={stop}
+      onFocus={start}
+      onBlur={stop}
+    >
+      {busy || <Icon ref={icon} size={size} className="rail-icon" />}
+    </button>
+  );
+}
 
 const SIDEBAR_KEY = 'step.sidebar';
 
@@ -52,60 +102,49 @@ export function SidebarRail({
   onSettings: () => void;
 }) {
   const tools = [
-    ['documents', t('เครื่องมือร่างเอกสาร'), FileText],
-    ['skills', t('ศูนย์รวม Skill'), Blocks],
-    ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptText],
+    ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon],
+    ['skills', t('ศูนย์รวม Skill'), BlocksIcon],
+    ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon],
   ] as const;
   return (
-    <aside className="sidebar rail" aria-label={t('แถบงาน')}>
-      <div className="rail-brand">{brand}</div>
-      <button
-        className="rail-button rail-new"
-        data-tour="new-work"
-        aria-label={t('เริ่มงานใหม่')}
-        data-tip={t('เริ่มงานใหม่')}
-        onClick={onNew}
-      >
-        <Plus size={18} />
-      </button>
-      <button className="rail-button" aria-label={t('ค้นหางาน')} data-tip={t('ค้นหางาน')} onClick={onSearch}>
-        <Search size={17} />
-      </button>
-      <button className="rail-button" aria-label={t('งานทั้งหมด')} data-tip={t('งานทั้งหมด')} onClick={onTasks}>
-        <MessageSquare size={17} />
-      </button>
-      <span className="rail-divider" aria-hidden="true" />
-      <nav aria-label={t('เครื่องมือ')}>
-        {tools.map(([id, label, Icon]) => (
-          <button
-            key={id}
-            data-tour={id}
-            className={`rail-button ${view === id && !settings ? 'nav-active' : ''}`}
-            aria-label={label}
-            data-tip={label}
-            onClick={() => onView(id)}
-          >
-            {id === 'receipt' && receiptBusy && view !== 'receipt' ? (
-              <LoaderCircle size={17} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
-            ) : (
-              <Icon size={17} />
-            )}
-          </button>
-        ))}
-      </nav>
-      <span className="rail-spacer" />
-      <button
-        className={`rail-button ${settings ? 'nav-active' : ''}`}
-        data-tour="settings"
-        aria-label={t('ตั้งค่าพื้นที่ทำงาน')}
-        data-tip={t('ตั้งค่าพื้นที่ทำงาน')}
-        onClick={onSettings}
-      >
-        <Settings2 size={18} />
-      </button>
-      <div className="rail-profile" data-tour="version" data-tip={profileName}>
-        {avatar}
-      </div>
-    </aside>
+    // Animations follow the computer's "reduce motion" setting.
+    <MotionConfig reducedMotion="user">
+      <aside className="sidebar rail" aria-label={t('แถบงาน')}>
+        <div className="rail-brand">{brand}</div>
+        <RailButton icon={PlusIcon} size={18} className="rail-new" tour="new-work" label={t('เริ่มงานใหม่')} onClick={onNew} />
+        <RailButton icon={SearchIcon} label={t('ค้นหางาน')} onClick={onSearch} />
+        <RailButton icon={MessageSquareIcon} label={t('งานทั้งหมด')} onClick={onTasks} />
+        <span className="rail-divider" aria-hidden="true" />
+        <nav aria-label={t('เครื่องมือ')}>
+          {tools.map(([id, label, Icon]) => (
+            <RailButton
+              key={id}
+              icon={Icon}
+              tour={id}
+              className={view === id && !settings ? 'nav-active' : ''}
+              label={label}
+              busy={
+                id === 'receipt' &&
+                receiptBusy &&
+                view !== 'receipt' && <LoaderCircle size={17} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
+              }
+              onClick={() => onView(id)}
+            />
+          ))}
+        </nav>
+        <span className="rail-spacer" />
+        <RailButton
+          icon={SlidersHorizontalIcon}
+          size={18}
+          className={settings ? 'nav-active' : ''}
+          tour="settings"
+          label={t('ตั้งค่าพื้นที่ทำงาน')}
+          onClick={onSettings}
+        />
+        <div className="rail-profile" data-tour="version" data-tip={profileName}>
+          {avatar}
+        </div>
+      </aside>
+    </MotionConfig>
   );
 }
