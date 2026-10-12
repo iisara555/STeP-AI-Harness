@@ -56,6 +56,15 @@ test('Claude developer access requires explicit managed policy and cannot relax 
   assert.equal(invalid.policy.features.developmentMode, false);
 });
 
+test('the Dev mode passcode is stored as a SHA-256 digest only', () => {
+  const digest = '03AC674216F3E15C761EE1A5E255F067953623C8B388B4459E13F978D7C846F4';
+  const ok = parsePolicy({ developmentPasscodeSha256: digest, features: { developmentMode: true } });
+  assert.deepEqual(ok.problems, []);
+  assert.equal(ok.policy.developmentPasscodeSha256, digest.toLowerCase());
+  assert.equal(defaultPolicy().developmentPasscodeSha256, undefined);
+  for (const bad of ['1234', 1234, digest.slice(1)]) assert.ok(parsePolicy({ developmentPasscodeSha256: bad }).problems.length);
+});
+
 test('invalid blocking definitions cannot silently enable risky features', () => {
   const cases = [
     null,

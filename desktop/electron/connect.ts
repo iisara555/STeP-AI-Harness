@@ -13,9 +13,9 @@ export const connectNotes: Record<string, string> = {
   ANTIGRAVITY_CHECKSUM_FAILED: 'ไฟล์ Antigravity CLI ที่ดาวน์โหลดไม่ตรงกับ checksum ทางการ จึงยกเลิกการติดตั้ง',
   ANTIGRAVITY_INSTALL_FAILED: 'ติดตั้ง Antigravity CLI ไม่ได้ ลองกดเชื่อมต่อใหม่ หรือติดตั้งเองตามคู่มือ',
   ANTIGRAVITY_UNSUPPORTED: 'เครื่องรุ่นนี้ยังติดตั้ง Antigravity CLI อัตโนมัติไม่ได้ ติดตั้งเองตามคู่มือ',
-  ANTIGRAVITY_POLICY_UNCONFIRMED: 'Antigravity did not confirm the isolated STeP policy. No request was sent.',
+  ANTIGRAVITY_POLICY_UNCONFIRMED: 'Antigravity ไม่ยืนยันการตั้งค่าความปลอดภัยของ STeP จึงยังไม่ส่งข้อความใด ๆ กดเชื่อมต่อใหม่อีกครั้ง',
   ANTIGRAVITY_TOOLS_UNAVAILABLE:
-    'This Antigravity runtime declares native tools without confirming that they are disabled. No request was sent. Gemini API remains available.',
+    'Antigravity รุ่นนี้ไม่ยืนยันว่าปิดเครื่องมือของตัวเองแล้ว จึงยังไม่ส่งข้อความใด ๆ ใช้ Gemini แบบ API key แทนได้',
   CLAUDE_CODE_NOT_FOUND: 'ยังไม่พบ Claude Code เปิดวิธีติดตั้งแล้วกดตรวจอีกครั้ง',
   CLAUDE_CODE_UPDATE_REQUIRED: 'กรุณาอัปเดต Claude Code เป็นรุ่น 2.1.268 ขึ้นไป แล้วเชื่อมต่อใหม่',
   CLAUDE_PROFILE_MISMATCH: 'Claude Code ใช้โฟลเดอร์บัญชีไม่ตรงกับ STeP จึงหยุดการเชื่อมต่อ',
@@ -64,8 +64,54 @@ export const connectNotes: Record<string, string> = {
 export const connectFailureNote = (code: string) =>
   `${connectNotes[code] ? tm(connectNotes[code]) : tm('เชื่อมต่อไม่สำเร็จ ตรวจบัญชี โควตา และ runtime แล้วลองใหม่')} (${code})`;
 
+/** Failures that say nothing about the account itself: the service was busy, the network dropped, or the person cancelled. */
+export const TRANSIENT_CONNECT_FAILURES = ['CANCELLED', 'PROVIDER_BUSY', 'PROVIDER_NETWORK'];
+/** Failures a chat can hit after a connection passed its test, which only a new sign-in fixes. */
+export const SIGN_IN_EXPIRED = ['LOGIN_REQUIRED', 'COPILOT_LOGIN_REQUIRED'];
+
+/**
+ * What a failed connect leaves behind. A connection that already worked keeps working when the
+ * re-test only met a busy service, a network drop or a cancel, so pressing "test again" can never
+ * break an account that was fine.
+ */
+export function connectFailure(before: Pick<Connection, 'ready' | 'note' | 'signedIn'>, code: string) {
+  if (before.ready && TRANSIENT_CONNECT_FAILURES.includes(code))
+    return {
+      ready: true,
+      signedIn: before.signedIn,
+      note: code === 'CANCELLED' ? before.note : tm('ทดสอบล่าสุดไม่ผ่านชั่วคราว ({0}) · ยังใช้งานได้ตามเดิม', code),
+      problem: undefined,
+    };
+  return { ready: false, signedIn: undefined, note: connectFailureNote(code), problem: code };
+}
+
+/** A chat found the sign-in expired: the connection needs a new sign-in before the next task. */
+export function signInExpired(connection: Connection): Connection {
+  const next: Connection = { ...connection, ready: false, problem: 'LOGIN_REQUIRED', note: tm('การลงชื่อเข้าใช้หมดอายุ กดลงชื่อใหม่') };
+  delete next.signedIn;
+  return next;
+}
+
 const LOGIN_MS = 300_000,
-  TEST_MS = 120_000;
+  TEST_MS = 120_000,
+  TEST_RETRIES = 1;
+let TEST_RETRY_MS = 3_000;
+/** Tests only: shorten the pause before the second test request. */
+export const setTestRetryDelay = (ms: number) => (TEST_RETRY_MS = ms);
+const testFailure = (error: unknown) => {
+  const code = errorCode(error);
+  return code === 'UNEXPECTED' || code === 'RUNTIME_EXITED' ? explainRuntimeFailure((error as any)?.detail || []) || code : code;
+};
+const pause = (ms: number, signal: AbortSignal) =>
+  new Promise<void>(resolve => {
+    const timer = setTimeout(done, ms);
+    function done() {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', done);
+      resolve();
+    }
+    signal.addEventListener('abort', done, { once: true });
+  });
 const OPENAI_LOGIN_HOSTS = ['auth.openai.com', 'chatgpt.com', 'auth0.openai.com'];
 
 export type ConnectDeps = {
@@ -123,7 +169,7 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
     connection.provider === 'claude' && connection.mode === 'oauth'
       ? tm('ยืนยัน Claude Console OAuth แล้ว · กำลังทดสอบส่งข้อความสั้น ๆ')
       : connection.provider === 'antigravity'
-        ? 'Checking the native Google session and testing one short request'
+        ? tm('กำลังตรวจบัญชี Google และทดสอบส่งข้อความสั้น ๆ')
         : tm('ลงชื่อสำเร็จ · กำลังทดสอบส่งข้อความสั้น ๆ'),
   );
   if (signal.aborted) throw new Error('CANCELLED');
@@ -136,11 +182,22 @@ export async function signInAndTest(connection: Connection, deps: ConnectDeps, s
   const stop = () => test.abort();
   signal.addEventListener('abort', stop, { once: true });
   try {
-    await runtime.adapter.run('Reply with exactly OK. Do not use tools.', connection, {
-      ...runtime.context,
-      signal: test.signal,
-      emit: () => {},
-    });
+    // One more try after a short pause when the service was only busy or the network dropped,
+    // so a momentary hiccup does not send the person back to sign in again.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await runtime.adapter.run('Reply with exactly OK. Do not use tools.', connection, {
+          ...runtime.context,
+          signal: test.signal,
+          emit: () => {},
+        });
+        break;
+      } catch (error) {
+        if (attempt >= TEST_RETRIES || test.signal.aborted || !TRANSIENT_CONNECT_FAILURES.includes(testFailure(error))) throw error;
+        progress(tm('บริการตอบช้าหรือเครือข่ายสะดุด · กำลังลองใหม่'));
+        await pause(TEST_RETRY_MS, test.signal);
+      }
+    }
     if (connection.provider === 'antigravity') deps.signedIn?.();
   } catch (error) {
     const detail = (error as any)?.detail || [];
