@@ -12,6 +12,8 @@ _Last updated: 2026-10-12_
 
 ## In progress
 
+- **สื่อภายใน page (2026-10-12)**: owner asked to add the STeP Internal Studio v09 mini app to the Harness; plan in the project thread (3 PRs). PR 1 (this) adds the sidebar page with the ported prompt engine, copy-only. Next: PR 2 drafts content and generates images through the app's own AI connection and privacy gate; PR 3 moves the hand-drawn ink style and no-logo rules into the `step-image-prompt` Skill references. Owner defaults taken: no reference images in the public repo, fonts labelled a team choice, separate sidebar item. Waits on owner review.
+
 - **Desktop 0.6.1 release (2026-10-12)**: owner asked for one combined release of #155 and #156. #154 (sidebar rail) is not included: its macOS Electron check was red at release time.
 
 - **Connect AI redesign (simpler, steadier)**: account cards first with one status and one fix button; expired sign-in found in a chat flips the account to "ต้องลงชื่อใหม่" (one-click sign in again); re-tests that only hit busy/network/cancel keep a working account ready; the test request retries once on busy/network; English connection notes translated. Optional policy `developmentPasscodeSha256`: Dev mode asks for an IT-set passcode when turning on (owner chose policy passcode over a hard-coded 1234). New unit tests (`connect-stability.test.ts`) and smoke steps (account-connect, gemini-api expired key) fail without the change. Desktop 680 passed/2 skipped plus the 2 known Office-runtime failures; format/build and 10 related Electron smokes pass on Linux/Xvfb. Waits on owner review; not tested with real expired accounts.

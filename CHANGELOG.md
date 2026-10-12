@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- New **สื่อภายใน** (internal media) page in the sidebar Tools group: pick one of four jobs (ภาพประกอบ, ประกาศ, คู่มือใช้งาน, ความรู้ทั่วไป), enter the topic and copy, and get an English image-generation prompt for internal communication with the confirmed CI colours (#FFC709 / #231F20), a mandatory no-logo rule, exact Thai copy or a reserved text area, and five aspect ratios. Copying waits for missing fields and blocks placeholders or external-publication briefs. Ported from the owner's STeP Internal Studio v09 mini app (prompt text identical on 256 option combinations); the embedded style reference images and the mini app's own OpenAI server are not included, and the two Thai fonts are labelled a team choice, not a CI rule. "ให้ AI ช่วยร่างเนื้อหา" shows a request to copy into chat; drafting and image generation inside the page come in a follow-up. Copy goes through a new `copyText` IPC because the renderer has no clipboard permission. Draft stays in this computer's local storage. Synthetic unit and Electron checks; no provider calls, policy or privacy changes.
+
 ## Desktop v0.6.1 — 2026-10-12
 
 - Combined release of PR #155 (Connect AI redesign, Dev mode passcode from policy) and PR #156 (no filler text beside tool requests). Harness remains 0.7.7.

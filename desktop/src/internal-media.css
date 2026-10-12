@@ -1,0 +1,188 @@
+.internal-media {
+  overflow: auto;
+  padding: 22px 28px;
+}
+.media-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+/* Same treatment as the document type picker: plain cards, the selected one solid accent. */
+.media-types button:not(.active) {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+.media-types button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.media-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.media-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.media-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.media-card input,
+.media-card textarea,
+.media-card select {
+  width: 100%;
+}
+.media-card textarea {
+  resize: vertical;
+}
+.media-card details > label {
+  margin-top: 12px;
+}
+.media-ai-request > textarea,
+.media-ai-request > button {
+  margin-top: 8px;
+}
+.media-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.media-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.media-result {
+  align-self: start;
+}
+.media-result header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.media-result h2 {
+  margin: 0;
+}
+.media-result textarea[readonly] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--surface);
+}
+.media-audit-pending {
+  color: var(--accent-ink);
+}
+/* A schematic of where text and art go, drawn at the chosen ratio; never an AI result. */
+.media-layout {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.media-layout.ratio-4-5 {
+  aspect-ratio: 4 / 5;
+  max-width: 300px;
+}
+.media-layout.ratio-16-9 {
+  aspect-ratio: 16 / 9;
+}
+.media-layout.ratio-9-16 {
+  aspect-ratio: 9 / 16;
+  max-width: 220px;
+}
+.media-layout.ratio-3-1 {
+  aspect-ratio: 3 / 1;
+}
+.media-layout-empty {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--accent-ink);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+.space-left .media-layout-empty {
+  inset: 0 64% 0 0;
+}
+.space-right .media-layout-empty {
+  inset: 0 0 0 64%;
+}
+.space-top .media-layout-empty {
+  inset: 0 0 66% 0;
+}
+.space-bottom .media-layout-empty {
+  inset: 66% 0 0 0;
+}
+.space-center .media-layout-empty {
+  inset: 20% 24%;
+}
+.media-layout-art {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 30%;
+  aspect-ratio: 1;
+  max-height: 60%;
+  right: 8%;
+  top: 50%;
+  translate: 0 -50%;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 12px;
+}
+.space-right .media-layout-art {
+  right: auto;
+  left: 10%;
+}
+.space-top .media-layout-art {
+  top: 66%;
+}
+.space-bottom .media-layout-art {
+  top: 34%;
+}
+.space-center .media-layout-art {
+  right: 2%;
+  width: 18%;
+}
+.media-layout-copy {
+  position: absolute;
+  inset: 8% 44% 8% 6%;
+  overflow: hidden;
+  white-space: pre-line;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+@media (max-width: 900px) {
+  .media-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 680px) {
+  .internal-media {
+    padding: 16px;
+  }
+  .media-two {
+    grid-template-columns: 1fr;
+  }
+}

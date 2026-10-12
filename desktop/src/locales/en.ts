@@ -2,6 +2,7 @@
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
+import { internalMediaEn } from './internal-media-en';
 export const en: Record<string, string> = {
   'หน้าเชื่อมต่อ AI แสดงบัญชีเป็นการ์ด บอกสถานะเดียวและปุ่มที่ต้องกด':
     'AI connections show each account as a card with one status and the button to press',
@@ -315,6 +316,7 @@ export const en: Record<string, string> = {
     'The system key store is unavailable. Unlock it or ask your administrator to configure it before saving an API key or signing in with OAuth.',
   ...documentToolsEn,
   ...usageEn,
+  ...internalMediaEn,
   'ดำเนินการค่าพาหนะผ่านกระบวนการจัดซื้อจัดจ้าง และตรวจยอดรวมไม่เกิน 10,000 บาทต่อคนขับรถต่อกิจกรรม':
     'Use the procurement process for vehicle hire and check the aggregate limit of 10,000 baht per driver per activity',
   'ตรวจผลรวมทุกรายการในหมวดเดียวกัน ไม่เกิน 10,000 บาทต่อหมวด ไม่ใช่ตรวจเฉพาะใบนี้':

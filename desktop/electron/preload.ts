@@ -122,6 +122,7 @@ const allowed = new Set([
   'previewHtml',
   'browserDock',
   'windowControl',
+  'copyText',
 ]);
 contextBridge.exposeInMainWorld('step', {
   call: (method: string, input: unknown) => {
