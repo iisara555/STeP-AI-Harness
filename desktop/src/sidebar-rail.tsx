@@ -1,0 +1,152 @@
+import { useRef, type ForwardRefExoticComponent, type ReactNode, type RefAttributes } from 'react';
+import { MotionConfig } from 'motion/react';
+import { LoaderCircle } from 'lucide-react';
+import { t } from './i18n';
+import { BlocksIcon } from './animated-icons/blocks';
+import { FileTextIcon } from './animated-icons/file-text';
+import { MegaphoneIcon } from './animated-icons/megaphone';
+import { MessageSquareIcon } from './animated-icons/message-square';
+import { PlusIcon } from './animated-icons/plus';
+import { ReceiptIcon } from './animated-icons/receipt';
+import { SearchIcon } from './animated-icons/search';
+import { SlidersHorizontalIcon } from './animated-icons/sliders-horizontal';
+
+type AnimatedIcon = ForwardRefExoticComponent<
+  { size?: number; className?: string } & RefAttributes<{ startAnimation: () => void; stopAnimation: () => void }>
+>;
+
+/** A rail icon that plays its small animation while the button is hovered or has keyboard focus. */
+function RailButton({
+  icon: Icon,
+  label,
+  size = 17,
+  className = '',
+  tour,
+  busy,
+  onClick,
+}: {
+  icon: AnimatedIcon;
+  label: string;
+  size?: number;
+  className?: string;
+  tour?: string;
+  busy?: ReactNode;
+  onClick: () => void;
+}) {
+  const icon = useRef<{ startAnimation: () => void; stopAnimation: () => void }>(null);
+  const start = () => icon.current?.startAnimation();
+  const stop = () => icon.current?.stopAnimation();
+  return (
+    <button
+      className={`rail-button ${className}`}
+      data-tour={tour}
+      aria-label={label}
+      data-tip={label}
+      onClick={onClick}
+      onMouseEnter={start}
+      onMouseLeave={stop}
+      onFocus={start}
+      onBlur={stop}
+    >
+      {busy || <Icon ref={icon} size={size} className="rail-icon" />}
+    </button>
+  );
+}
+
+const SIDEBAR_KEY = 'step.sidebar';
+
+/** The employee's last choice, full task list (true) or icons only (false); null when they have not chosen yet. */
+export function readSidebarChoice(): boolean | null {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_KEY);
+    return saved === 'full' ? true : saved === 'rail' ? false : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSidebarChoice(full: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_KEY, full ? 'full' : 'rail');
+  } catch {
+    // Only a convenience: without storage the sidebar simply opens in its default state next time.
+  }
+}
+
+/**
+ * The task list folded down to a column of icons, as in Claude and Codex: the same actions as the full sidebar, each
+ * named in a tooltip and to screen readers. The task list itself opens the full sidebar again.
+ */
+export function SidebarRail({
+  brand,
+  avatar,
+  profileName,
+  view,
+  settings,
+  receiptBusy,
+  onNew,
+  onSearch,
+  onTasks,
+  onView,
+  onSettings,
+}: {
+  brand: ReactNode;
+  avatar: ReactNode;
+  profileName: string;
+  view: string;
+  settings: boolean;
+  receiptBusy: boolean;
+  onNew: () => void;
+  onSearch: () => void;
+  onTasks: () => void;
+  onView: (view: 'documents' | 'media' | 'skills' | 'receipt') => void;
+  onSettings: () => void;
+}) {
+  const tools = [
+    ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon],
+    ['media', t('สื่อภายใน'), MegaphoneIcon],
+    ['skills', t('ศูนย์รวม Skill'), BlocksIcon],
+    ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon],
+  ] as const;
+  return (
+    // Animations follow the computer's "reduce motion" setting.
+    <MotionConfig reducedMotion="user">
+      <aside className="sidebar rail" aria-label={t('แถบงาน')}>
+        <div className="rail-brand">{brand}</div>
+        <RailButton icon={PlusIcon} size={18} className="rail-new" tour="new-work" label={t('เริ่มงานใหม่')} onClick={onNew} />
+        <RailButton icon={SearchIcon} label={t('ค้นหางาน')} onClick={onSearch} />
+        <RailButton icon={MessageSquareIcon} label={t('งานทั้งหมด')} onClick={onTasks} />
+        <span className="rail-divider" aria-hidden="true" />
+        <nav aria-label={t('เครื่องมือ')}>
+          {tools.map(([id, label, Icon]) => (
+            <RailButton
+              key={id}
+              icon={Icon}
+              tour={id}
+              className={view === id && !settings ? 'nav-active' : ''}
+              label={label}
+              busy={
+                id === 'receipt' &&
+                receiptBusy &&
+                view !== 'receipt' && <LoaderCircle size={17} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
+              }
+              onClick={() => onView(id)}
+            />
+          ))}
+        </nav>
+        <span className="rail-spacer" />
+        <RailButton
+          icon={SlidersHorizontalIcon}
+          size={18}
+          className={settings ? 'nav-active' : ''}
+          tour="settings"
+          label={t('ตั้งค่าพื้นที่ทำงาน')}
+          onClick={onSettings}
+        />
+        <div className="rail-profile" data-tour="version" data-tip={profileName}>
+          {avatar}
+        </div>
+      </aside>
+    </MotionConfig>
+  );
+}

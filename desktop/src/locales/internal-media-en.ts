@@ -65,9 +65,12 @@ export const internalMediaEn: Record<string, string> = {
   'Prompt พร้อมใช้': 'Ready-to-use prompt',
   'คัดลอก Prompt': 'Copy prompt',
   'คัดลอกไม่ได้ เลือกข้อความแล้วคัดลอกเองได้': 'Could not copy. Select the text and copy it yourself',
-  พื้นที่วางข้อความ: 'Text area',
-  หัวเรื่องและเนื้อหา: 'Heading and content',
-  'ผังพื้นที่ตัวอย่าง ไม่ใช่ภาพที่ AI สร้าง': 'Layout sketch, not an AI-generated image',
   'Simple · Service · Sincere · เหลือง #FFC709 · ดำ #231F20 · ห้าม AI สร้างโลโก้ทุกชนิด ตรวจตัวสะกดและความถูกต้องก่อนใช้จริง':
     'Simple · Service · Sincere · yellow #FFC709 · black #231F20 · AI must never generate logos. Check spelling and accuracy before real use',
+  ตัวอย่างการจัดวาง: 'Layout preview',
+  'ผังภาพ เว้นพื้นที่ข้อความ{0}': 'Image layout with an empty text area: {0}',
+  'ผังภาพ ข้อความอยู่ในภาพ': 'Image layout with the text in the image',
+  เว้นว่างไว้ใส่ข้อความ: 'Left empty for text',
+  หัวเรื่อง: 'Headline',
+  'ผังคร่าว ๆ ไม่ใช่ภาพที่ AI สร้าง': 'A rough layout, not an AI-generated image',
 };

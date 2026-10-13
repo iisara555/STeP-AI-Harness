@@ -1,6 +1,6 @@
 // Every control in the sidebar, used the way an employee would: new task, search, the command palette, the task
-// filters, opening, pinning, renaming and deleting tasks, the Skill hub, the receipt check, settings and hiding the
-// sidebar. Answers come from a local fake AI service; nothing leaves this computer.
+// filters, opening, pinning, renaming and deleting tasks, the Skill hub, the receipt check, settings and folding the
+// sidebar to icons. Answers come from a local fake AI service; nothing leaves this computer.
 import { _electron as electron, expect } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, mkdir } from 'node:fs/promises';
@@ -191,15 +191,49 @@ try {
   await task('รายงานประชุมทีม ต.ค.').locator('.session-open').click();
   await expect(page.locator('.topbar-heading strong')).toHaveText('รายงานประชุมทีม ต.ค.');
 
-  // The profile shows the team; the sidebar can be hidden and shown again.
+  // The profile shows the team; the sidebar folds to icons, as in Claude and Codex, and opens again.
   await expect(sidebar.locator('.profile')).toContainText('ทีม CC');
-  await page.getByRole('button', { name: 'ซ่อนแถบงาน' }).click();
-  await expect(sidebar).toHaveCount(0);
-  await page.getByRole('button', { name: 'แสดงแถบงาน' }).click();
-  await expect(sidebar).toBeVisible();
+  await page.getByRole('button', { name: 'ย่อแถบงาน' }).click();
+  await expect(sidebar).toHaveClass(/rail/);
+  await expect(sidebar.locator('.session')).toHaveCount(0);
+  const railWidth = (await sidebar.boundingBox()).width;
+  assert.ok(railWidth <= 64, `the folded sidebar is a narrow column of icons (${railWidth}px)`);
+  // Every icon sits in the middle of its button, in one straight column.
+  const offsets = await sidebar.locator('.rail-button').evaluateAll(buttons =>
+    buttons.map(b => {
+      const box = b.getBoundingClientRect(),
+        icon = b.querySelector('svg').getBoundingClientRect();
+      return Math.abs(box.x + box.width / 2 - (icon.x + icon.width / 2));
+    }),
+  );
+  assert.ok(
+    offsets.every(o => o < 1),
+    `rail icons are centred (${offsets.join(', ')})`,
+  );
+  // Every icon is named, with a tooltip on hover, and still does its job.
+  const skillIcon = sidebar.getByRole('button', { name: 'ศูนย์รวม Skill' });
+  await expect(skillIcon).toHaveAttribute('data-tip', 'ศูนย์รวม Skill');
+  await skillIcon.click();
+  await expect(page.locator('.topbar-heading strong')).toHaveText('ศูนย์รวม Skill');
+  await expect(skillIcon).toHaveClass(/nav-active/);
+  await sidebar.getByRole('button', { name: 'ค้นหางาน' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  // The choice is remembered after the app reloads.
+  await page.reload();
+  await expect(page.locator('aside.sidebar')).toHaveClass(/rail/);
+  // The task list icon opens the full sidebar again.
+  await sidebar.getByRole('button', { name: 'งานทั้งหมด' }).click();
+  await expect(sidebar).not.toHaveClass(/rail/);
+  await expect(sidebar.locator('.session')).toHaveCount(1);
+  await page.getByRole('button', { name: 'ย่อแถบงาน' }).click();
+  await page.getByRole('button', { name: 'ขยายแถบงาน' }).click();
+  await expect(sidebar.locator('.profile')).toBeVisible();
 
   assert.deepEqual(errors, []);
-  console.log('Sidebar smoke passed: new task, search, palette, filters, open, pin, rename, delete, Skill hub, receipt, settings, hide.');
+  console.log(
+    'Sidebar smoke passed: new task, search, palette, filters, open, pin, rename, delete, Skill hub, receipt, settings, fold to icons.',
+  );
 } finally {
   await app.close();
   server.close();

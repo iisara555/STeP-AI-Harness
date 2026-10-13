@@ -52,9 +52,29 @@ class ServiceSecurityTests(unittest.TestCase):
     def test_busy_service_rejects_before_reading_or_queueing_another_document(self):
         app._process_lock.acquire()
         try:
-            self.assertEqual(self.request(timeout=0.5), 503)
+            # Announce a document but send only the headers: the service must answer without waiting for the body.
+            # (Unsent body bytes also keep Windows from resetting the socket when the service closes it unread.)
+            connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=0.5)
+            try:
+                connection.putrequest("POST", "/api/ocr?filename=synthetic.png")
+                connection.putheader("Content-Length", "15")
+                connection.endheaders()
+                response = connection.getresponse()
+                self.assertEqual(response.status, 503)
+                response.read()
+            finally:
+                connection.close()
         finally:
             app._process_lock.release()
+
+    def test_busy_reply_reaches_a_client_that_already_sent_the_document(self):
+        # The Desktop app sends the whole receipt at once; it must still read "busy", not a dropped connection.
+        app._process_lock.acquire()
+        try:
+            self.assertEqual(self.request(timeout=2), 503)
+        finally:
+            app._process_lock.release()
+        self.mock_worker.assert_not_called()
 
     def test_logs_exclude_document_names_and_handle_unparsed_requests(self):
         with patch("builtins.print") as output:

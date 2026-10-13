@@ -149,6 +149,8 @@ export class OcrService {
       throw new Error('OCR_UNAVAILABLE');
     }
     const body: any = await response.json().catch(() => null);
+    // The service reads one receipt at a time; a second one is turned away rather than queued.
+    if (response.status === 503 && body?.error === 'ocr_busy') throw new Error('OCR_BUSY');
     if (!response.ok || !body?.ok || !body.result) throw new Error('OCR_FAILED');
     return { bytes, extension, result: body.result };
   }

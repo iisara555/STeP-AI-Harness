@@ -66,6 +66,7 @@ import symbolWhite from './assets/step-symbol-mono-white.svg';
 import ideaArt from './assets/illustrations/idea.png';
 import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
+import { SidebarRail, readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
 import { UpdateCard, VersionLine, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
@@ -136,7 +137,12 @@ export default function App() {
     [files, setFiles] = useState<Attachment[]>([]),
     [inspecting, setInspecting] = useState<Attachment | null>(null);
   // Three columns need room: on narrower windows the draft panel, then the task list, start hidden.
-  const [left, setLeft] = useState(() => window.innerWidth >= 900),
+  // `left` is the full task list; when it is off the sidebar folds to an icon rail, as in Claude and Codex. The
+  // employee's own choice is remembered on this computer; with no choice yet, narrow windows start folded.
+  const [left, setLeft] = useState(() => {
+      const saved = readSidebarChoice();
+      return saved === null ? window.innerWidth >= 900 : saved;
+    }),
     [right, setRight] = useState(() => window.innerWidth >= 1100),
     [history, setHistory] = useState(false);
   useEffect(() => {
@@ -971,7 +977,11 @@ export default function App() {
     },
     wizard: () => setWizard(true),
     'whats-new': () => setWhatsNew(RELEASE_NOTES.filter(n => compareVersions(n.version, snapshot?.appVersion || '0') <= 0)),
-    left: () => setLeft(p => !p),
+    left: () =>
+      setLeft(p => {
+        saveSidebarChoice(!p);
+        return !p;
+      }),
     right: () => setRight(p => !p),
     skills: () => {
       setSettings(false);
@@ -1099,6 +1109,18 @@ export default function App() {
           : view === 'skills'
             ? t('ศูนย์รวม Skill')
             : session?.title || t('เริ่มต้นงานที่อยากทำ');
+  const brandSymbol = (
+    <span className="brand-symbol" role="img" aria-label="STeP">
+      <img className="on-light" src={symbolColour} alt="" />
+      <img className="on-dark" src={symbolWhite} alt="" />
+    </span>
+  );
+  const profileAvatar = (
+    <Avatar
+      id={snapshot.settings.avatar}
+      fallback={initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}
+    />
+  );
   return (
     <div className="shell">
       <TitleBar
@@ -1112,14 +1134,31 @@ export default function App() {
         theme={snapshot.settings.theme}
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
+        {!left && (
+          <SidebarRail
+            brand={brandSymbol}
+            avatar={profileAvatar}
+            profileName={[snapshot.settings.userName || snapshot.settings.assistant, snapshot.appVersion && `v${snapshot.appVersion}`]
+              .filter(Boolean)
+              .join(' · ')}
+            view={view}
+            settings={settings}
+            receiptBusy={receiptBusy}
+            onNew={() => void action(create)}
+            onSearch={() => setPalette(true)}
+            onTasks={() => commandRef.current.left?.()}
+            onView={next => {
+              setSettings(false);
+              navigate(next);
+            }}
+            onSettings={() => openSettings()}
+          />
+        )}
         {left && (
           <aside className="sidebar" aria-label={t('แถบงาน')}>
             <div className="brand">
               <div>
-                <span className="brand-symbol" role="img" aria-label="STeP">
-                  <img className="on-light" src={symbolColour} alt="" />
-                  <img className="on-dark" src={symbolWhite} alt="" />
-                </span>
+                {brandSymbol}
                 <span className="brand-tagline">MAKE INNOVATION SIMPLE</span>
               </div>
             </div>
@@ -1288,10 +1327,7 @@ export default function App() {
             </button>
             <UpdateCard api={api} update={update} />
             <div className="profile" data-tour="version">
-              <Avatar
-                id={snapshot.settings.avatar}
-                fallback={initial(snapshot.settings.userName || '') || snapshot.settings.team.toUpperCase() || 'ST'}
-              />
+              {profileAvatar}
               <div>
                 {snapshot.settings.userName || snapshot.settings.assistant}
                 <small>

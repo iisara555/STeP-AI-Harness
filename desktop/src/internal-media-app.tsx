@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Image, Lightbulb } from 'lucide-react';
+import { Copy, Lightbulb } from 'lucide-react';
 import {
   MEDIA_EXAMPLES,
   MEDIA_FONTS,
@@ -234,20 +234,73 @@ export function InternalMedia({
               {t('คัดลอก Prompt')}
             </button>
           </div>
-          <div className={`media-layout ratio-${state.ratio.replace(':', '-')} space-${blank ? state.position.toLowerCase() : 'none'}`}>
-            {blank && <div className="media-layout-empty">{t('พื้นที่วางข้อความ')}</div>}
-            <div className="media-layout-art">
-              <Image size={20} aria-hidden="true" />
-              {t('ภาพประกอบ')}
-            </div>
-            {!blank && <div className="media-layout-copy">{state.content || t('หัวเรื่องและเนื้อหา')}</div>}
-          </div>
-          <p className="small muted">{t('ผังพื้นที่ตัวอย่าง ไม่ใช่ภาพที่ AI สร้าง')}</p>
+          <MediaPreview state={state} />
           <p className="small muted">
             {t('Simple · Service · Sincere · เหลือง #FFC709 · ดำ #231F20 · ห้าม AI สร้างโลโก้ทุกชนิด ตรวจตัวสะกดและความถูกต้องก่อนใช้จริง')}
           </p>
         </section>
       </div>
     </div>
+  );
+}
+
+/** A layout sketch at the chosen ratio: where the copy or the empty text area goes, and where the art goes. */
+function MediaPreview({ state }: { state: MediaState }) {
+  const blank = state.textMode === 'SPACE';
+  const ratio = MEDIA_RATIOS.find(([value]) => value === state.ratio)?.[1] || state.ratio;
+  const lines = state.content
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  // Copy-in-image layouts follow the shape: text above the art on tall formats, beside it on wide ones.
+  const placement = blank ? state.position.toLowerCase() : ['4:5', '9:16'].includes(state.ratio) ? 'top' : 'left';
+  return (
+    <figure className="media-preview">
+      <figcaption>
+        <span>{t('ตัวอย่างการจัดวาง')}</span>
+        <span className="media-preview-chip">{t(ratio)}</span>
+      </figcaption>
+      <div
+        className={`media-canvas ratio-${state.ratio.replace(':', '-')} place-${placement}${blank ? ' is-blank' : ''}`}
+        role="img"
+        aria-label={blank ? t('ผังภาพ เว้นพื้นที่ข้อความ{0}', t(MEDIA_SPACE_LABELS[state.position])) : t('ผังภาพ ข้อความอยู่ในภาพ')}
+      >
+        <div className="media-canvas-text">
+          {blank ? (
+            <>
+              <span className="media-canvas-tag">{t('เว้นว่างไว้ใส่ข้อความ')}</span>
+              <i />
+              <i />
+              <i className="short" />
+            </>
+          ) : lines.length ? (
+            lines.map((line, i) => (
+              <span key={i} className={i === 0 ? 'heading' : ''} style={{ fontFamily: `'${state.font}', var(--font, sans-serif)` }}>
+                {line}
+              </span>
+            ))
+          ) : (
+            <>
+              <span className="heading placeholder">{t('หัวเรื่อง')}</span>
+              <i />
+              <i className="short" />
+            </>
+          )}
+        </div>
+        <div className="media-canvas-art" aria-hidden="true">
+          <svg viewBox="0 0 120 100" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="88" cy="24" r="10" className="accent" />
+            <path d="M14 82c10-2 22-3 36-2s36 3 56 0" />
+            <path d="M44 80V56c0-8 5-14 12-14s12 6 12 14v24" />
+            <path d="M56 42c-7 0-11-5-11-11s5-11 11-11 11 5 11 11-4 11-11 11Z" className="ink" />
+            <path d="M68 58l14-8M44 60l-10 6" />
+            <path d="M80 46h14v18H80z" />
+          </svg>
+          <span>{t('ภาพประกอบ')}</span>
+        </div>
+      </div>
+      <p className="small muted">{t('ผังคร่าว ๆ ไม่ใช่ภาพที่ AI สร้าง')}</p>
+    </figure>
   );
 }

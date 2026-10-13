@@ -6,6 +6,7 @@ import importlib.util
 import json
 import mimetypes
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -200,13 +201,30 @@ class Handler(BaseHTTPRequestHandler):
         # Do not accumulate documents and waiting threads while the single OCR worker is busy.
         if not _process_lock.acquire(blocking=False):
             self.close_connection = True
-            return self._send_json({"ok": False, "error": "ocr_busy"}, 503)
+            self._send_json({"ok": False, "error": "ocr_busy"}, 503)
+            return self._discard_unread_upload(length)
         try:
             payload, status = self._process_upload(length, suffix, original_name, threshold, handwriting, crosscheck, tesseract)
         finally:
             _process_lock.release()
         # Release after cleanup but before the response: a sequential next request must not see a completed job as busy.
         return self._send_json(payload, status)
+
+    def _discard_unread_upload(self, length: int) -> None:
+        # The answer is already sent and nothing is kept, but closing a socket with unread bytes makes Windows reset
+        # it, and the client then loses the 503 it was about to read. Finish sending, then drain and drop the upload.
+        try:
+            self.wfile.flush()
+            self.connection.shutdown(socket.SHUT_WR)
+            self.connection.settimeout(5)
+            remaining = length
+            while remaining > 0:
+                chunk = self.rfile.read(min(remaining, 64 * 1024))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except OSError:
+            pass
 
     def _process_upload(self, length, suffix, original_name, threshold, handwriting, crosscheck, tesseract):
         self.connection.settimeout(30)

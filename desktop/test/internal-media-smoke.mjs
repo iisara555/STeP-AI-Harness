@@ -36,7 +36,7 @@ try {
   await page.getByRole('combobox', { name: 'ข้อความในภาพ' }).selectOption('SPACE');
   await page.getByRole('combobox', { name: 'ตำแหน่งที่ต้องการเว้นว่าง' }).selectOption('RIGHT');
   assert.match(await prompt.inputValue(), /Keep the right third completely clean and empty/);
-  await page.locator('.media-layout-empty').waitFor();
+  await page.locator('.media-canvas.is-blank.place-right').waitFor();
 
   const content = page.getByRole('textbox', { name: 'เนื้อหา / ขั้นตอนที่จะใช้' });
   await content.fill('วันที่ [รอยืนยัน]');
@@ -47,6 +47,16 @@ try {
   await page.getByRole('button', { name: 'สื่อภายใน' }).click();
   assert.equal(await page.getByRole('textbox', { name: 'เนื้อหา / ขั้นตอนที่จะใช้' }).inputValue(), 'วันที่ [รอยืนยัน]');
   assert.equal(await page.getByRole('button', { name: 'ประกาศ' }).getAttribute('aria-pressed'), 'true');
+
+  // The folded sidebar (icon rail) also opens the page.
+  await page.getByRole('button', { name: 'ย่อแถบงาน' }).click();
+  await page
+    .locator('.sidebar.rail')
+    .getByRole('button', { name: /เครื่องมือร่างเอกสาร/ })
+    .click();
+  await page.locator('.sidebar.rail').getByRole('button', { name: 'สื่อภายใน' }).click();
+  await page.getByRole('button', { name: 'คัดลอก Prompt' }).waitFor();
+  await page.getByRole('button', { name: 'ขยายแถบงาน' }).click();
 
   // Leaving and coming back keeps the page as it was.
   await page.getByRole('button', { name: /เครื่องมือร่างเอกสาร/ }).click();
