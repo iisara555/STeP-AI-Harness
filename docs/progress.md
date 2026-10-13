@@ -4,15 +4,16 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-12_
+_Last updated: 2026-10-13_
 
 ## Latest release
 
+- **Desktop v0.6.2** (2026-10-13) — combined release of PR #158 (สื่อภายใน page, copy-only, with layout preview) and PR #154 (icon rail sidebar with animated icons, retired near-copy avatars, OCR busy reply). Windows x64 and macOS Apple silicon; Harness **0.7.7**.
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
 
-- **สื่อภายใน page (2026-10-12)**: owner asked to add the STeP Internal Studio v09 mini app to the Harness; plan in the project thread (3 PRs). PR 1 (#158) adds the sidebar page with the ported prompt engine, copy-only, a redesigned layout preview and the page in the folded icon rail from #154. Next: PR 2 drafts content and generates images through the app's own AI connection and privacy gate; PR 3 moves the hand-drawn ink style and no-logo rules into the `step-image-prompt` Skill references. Owner defaults taken: no reference images in the public repo, fonts labelled a team choice, separate sidebar item. Waits on owner review.
+- **สื่อภายใน page (2026-10-12)**: owner asked to add the STeP Internal Studio v09 mini app to the Harness; plan in the project thread (3 PRs). PR 1 (#158) adds the sidebar page with the ported prompt engine, copy-only, a redesigned layout preview and the page in the folded icon rail from #154. Next: PR 2 drafts content and generates images through the app's own AI connection and privacy gate; PR 3 moves the hand-drawn ink style and no-logo rules into the `step-image-prompt` Skill references. Owner defaults taken: no reference images in the public repo, fonts labelled a team choice, separate sidebar item. PR 1 shipped in 0.6.2 (2026-10-13, owner asked to merge and release); PR 2 and PR 3 not started.
 
 - **Desktop 0.6.1 release (2026-10-12)**: owner asked for one combined release of #155 and #156. #154 (sidebar rail) is not included: its macOS Electron check was red at release time.
 

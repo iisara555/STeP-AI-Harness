@@ -73,4 +73,10 @@ export const internalMediaEn: Record<string, string> = {
   เว้นว่างไว้ใส่ข้อความ: 'Left empty for text',
   หัวเรื่อง: 'Headline',
   'ผังคร่าว ๆ ไม่ใช่ภาพที่ AI สร้าง': 'A rough layout, not an AI-generated image',
+  'หน้าใหม่ "สื่อภายใน" กรอกเรื่องที่จะสื่อสาร แล้วคัดลอก Prompt ไปสร้างภาพตามสีองค์กร':
+    'New "Internal media" page: enter what to communicate and copy a prompt for images in organization colours',
+  'ดูตัวอย่างการจัดวางตามสัดส่วนภาพ และตำแหน่งที่เว้นไว้ใส่ข้อความ': 'Preview the layout at the chosen ratio and where text space is left',
+  'แถบด้านซ้ายย่อเหลือไอคอนได้ และไอคอนขยับเมื่อเอาเมาส์ชี้': 'The sidebar folds to icons that move when you point at them',
+  'ตัดรูปโปรไฟล์ที่หน้าตาซ้ำกันออก 3 รูป คนที่เลือกไว้แล้วใช้ต่อได้':
+    'Three look-alike profile pictures removed; anyone who chose one keeps it',
 };
