@@ -181,9 +181,6 @@
   width: 26%;
   opacity: 0.6;
 }
-.media-canvas.place-center .media-canvas-art span {
-  display: none;
-}
 .media-canvas-text {
   display: flex;
   flex-direction: column;
@@ -254,23 +251,13 @@
   color: #8a8384;
   font-size: 10px;
 }
-.media-canvas-art svg {
-  width: 100%;
-  max-width: 150px;
+.media-canvas-art img {
+  display: block;
+  width: auto;
+  max-width: 100%;
   height: auto;
-  max-height: 80%;
-  stroke: #231f20;
-  stroke-width: 2.2;
-}
-.media-canvas-art .ink {
-  fill: #231f20;
-}
-.media-canvas-art .accent {
-  fill: #ffc709;
-  stroke: none;
-}
-.media-canvas.ratio-3-1 .media-canvas-art span {
-  display: none;
+  max-height: 92%;
+  object-fit: contain;
 }
 @media (max-width: 900px) {
   .media-workspace {

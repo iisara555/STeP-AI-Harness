@@ -16,6 +16,7 @@ import {
   type MediaType,
 } from './internal-media';
 import { t } from './i18n';
+import coupleArt from './assets/illustrations/media-couple.webp';
 import './internal-media.css';
 
 // The draft stays on this computer only; storage can be unavailable, so every access is guarded.
@@ -289,15 +290,7 @@ function MediaPreview({ state }: { state: MediaState }) {
           )}
         </div>
         <div className="media-canvas-art" aria-hidden="true">
-          <svg viewBox="0 0 120 100" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="88" cy="24" r="10" className="accent" />
-            <path d="M14 82c10-2 22-3 36-2s36 3 56 0" />
-            <path d="M44 80V56c0-8 5-14 12-14s12 6 12 14v24" />
-            <path d="M56 42c-7 0-11-5-11-11s5-11 11-11 11 5 11 11-4 11-11 11Z" className="ink" />
-            <path d="M68 58l14-8M44 60l-10 6" />
-            <path d="M80 46h14v18H80z" />
-          </svg>
-          <span>{t('ภาพประกอบ')}</span>
+          <img src={coupleArt} alt="" draggable={false} />
         </div>
       </div>
       <p className="small muted">{t('ผังคร่าว ๆ ไม่ใช่ภาพที่ AI สร้าง')}</p>
