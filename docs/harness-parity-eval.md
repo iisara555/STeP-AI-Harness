@@ -40,7 +40,17 @@ Combined observed tokens: **214,152**. The ledger additionally retains 50,000 fo
 
 ## Next experiment before caching work
 
-Use a workspace outside repository ancestry, verify each connection with a bounded preflight, isolate ChatGPT's ambient context, and resolve Antigravity's startup failure first. Then freeze the models/runtime versions, use per-step admission for every native protocol, split the pack into budgeted trials, counterbalance arm order, and repeat the paired cases. Keep the source-backed file checks and error-injection acceptance criteria. Only after a complete comparable matrix should cache settings be evaluated.
+Freeze the updated evaluator context, models and runtime versions. Use a separately authorized experiment to split the pack into budgeted trials, counterbalance arm order, and repeat the paired cases. Keep the source-backed file checks and error-injection acceptance criteria. Only after a complete comparable matrix should cache settings be evaluated. The original ledger must not be restarted or refunded.
+
+## Zero-inference recovery follow-up, 2026-10-13
+
+The actual Antigravity 1.2.17 process reproduced a concrete startup error: `gemini-3.8-flash-medium` conflicts with `--effort low`. Keeping the selected model and changing only effort to `medium` reaches `init`. The evaluator now derives effort from the selected model suffix and classifies that configuration error. The native preflight also confirms the isolated `step_eval` MCP registration and the generic `call_mcp_tool` catalog entry, then stops without sending a user prompt. This establishes initialization/configuration compatibility, not actual model use of MCP or completed Gemini tasks. Both Gemini attempts in the original pilot used the conflicting tuple; their recorded results remain unchanged and are not provider-quality evidence. [Headless model/effort interface](https://antigravity.google/docs/cli/headless/), [MCP configuration](https://antigravity.google/docs/mcp).
+
+Codex dynamic-tool registration still passes without a model turn. Live trial working directories now use temporary folders outside repository ancestry, rejecting ambient ancestor instructions. Only named artifacts and the host-approved source excerpt return to the CC output folder. Existing account configuration and runtime base instructions are retained; their contribution to input tokens remains unmeasured.
+
+The evaluator no longer cancels completed baseline usage below its reservation at 75%. Native host-tool boundaries durably admit the next model step using observed cost, the largest observed input and completion headroom. Insufficient allowance or unconfirmed usage cancels before returning the tool result. Partial counters on failed/cancelled calls retain at least the complete reservation, never refund unseen work, and stop subsequent admission. These checks cannot impose a provider-side hard cap on internal steps or delayed usage. Synthetic regressions exercise the first ChatGPT counter (37,951 of 50,000), extension with competing reservations, missing usage, partial cancellation and ledger persistence.
+
+The original macOS Phase 4 label timeout did not reproduce on Windows and passed on the **same commit** when the failed CI job was rerun. Its cause is still unconfirmed; no timeout was increased and no check was skipped. The smoke now asserts its synthetic parent/policy before checking the conditional control and records a restricted fixture snapshot on failure; CI preserves those diagnostic artifacts for a recurrence. The updated revision still needs its own CI outcome.
 
 These scripts are experimental and do not enable native tools in the shipped Desktop or change managed policy, approval rules, account settings, or runtime versions.
 

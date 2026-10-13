@@ -83,10 +83,18 @@ const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home };
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: ['.'], env, timeout: 45000 });
 const errors = [];
+let stage = 'startup';
 try {
   const page = await app.firstWindow();
   page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.waitForFunction(() => typeof window.step?.call === 'function');
+  // Establish the synthetic fixture before looking for a conditional control.
+  // A failed profile/policy load should report its cause, not a label timeout.
+  const initial = await page.evaluate(() => window.step.call('snapshot'));
+  assert.equal(initial.policy.features.coordinator, true, 'fixture coordinator policy loaded');
+  assert.equal(initial.sessions.find(s => s.id === 'parent')?.mode, 'draft', 'fixture parent draft loaded');
+  stage = 'coordinator';
   const approve = async title => {
     const dialog = page.getByRole('alertdialog', { name: title });
     await dialog.waitFor();
@@ -108,6 +116,7 @@ try {
   assert.equal(coordinated.sessions.filter(s => s.parentId === 'parent').length, 3);
   assert.equal(coordinated.sessions.find(s => s.id === 'parent').proposals[0].text, 'Phase 4 synthetic draft');
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
+  stage = 'automation';
   await page.getByRole('menuitem', { name: 'งานตามรอบ', exact: true }).click();
   const jobs = page.getByRole('alertdialog', { name: 'งานตามรอบและเครื่องมือเพิ่มเติม' });
   await jobs.getByLabel('ชื่องานตามรอบ', { exact: true }).fill('Synthetic recurring draft');
@@ -127,6 +136,7 @@ try {
   const history = await page.evaluate(() => window.step.call('automationList'));
   assert.ok(history.history[0].sessionId);
   await jobs.getByText('เครื่องมือ MCP', { exact: true }).click();
+  stage = 'mcp';
   await jobs.getByLabel('MCP server', { exact: true }).selectOption('fixture');
   await jobs.getByRole('button', { name: 'ทดสอบ Google Workspace · fixture', exact: true }).click();
   await approve('ค้นหา MCP?');
@@ -163,6 +173,24 @@ try {
   console.log('Phase 4 real Electron IPC/UI/SQLite smoke passed with synthetic provider/MCP');
 } catch (e) {
   const page = await app.firstWindow();
+  const state = await page
+    .evaluate(async () => {
+      try {
+        const snapshot = await window.step.call('snapshot');
+        return {
+          policy: { source: snapshot.policy.source, features: snapshot.policy.features, problems: snapshot.policy.problems },
+          sessions: snapshot.sessions.map(s => ({ id: s.id, mode: s.mode, status: s.status })),
+          onboarding: snapshot.settings.onboarding,
+          language: snapshot.settings.language,
+          labels: [...document.querySelectorAll('[aria-label]')].map(e => e.getAttribute('aria-label')),
+        };
+      } catch {
+        return { snapshotUnavailable: true };
+      }
+    })
+    .catch(() => ({ rendererUnavailable: true }));
+  await writeFile('release/qa/phase4-failure.json', JSON.stringify({ stage, errors, state }, null, 2));
+  console.error(JSON.stringify({ smoke: 'phase4', stage, errors, state }));
   await page.screenshot({ path: 'release/qa/phase4-failed.png' });
   throw e;
 } finally {

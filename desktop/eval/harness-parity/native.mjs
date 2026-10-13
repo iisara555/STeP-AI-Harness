@@ -30,12 +30,22 @@ export function observeClaudeSdk(sdk, onModel, onBudgetUsage) {
               if (onBudgetUsage && message?.id && message.usage) {
                 const next = providerUsage('anthropic', message.usage);
                 const previous = messages.get(message.id) || { input: 0, output: 0, total: 0 };
-                messages.set(message.id, {
-                  input: Math.max(next.input, previous.input),
-                  output: Math.max(next.output, previous.output),
-                  total: Math.max(next.total, previous.total),
-                });
-                onBudgetUsage({ total: [...messages.values()].reduce((n, u) => n + u.total, 0), lastInput: next.input });
+                messages.set(
+                  message.id,
+                  Object.fromEntries(
+                    ['input', 'output', 'total', 'cachedInput', 'cacheWriteInput'].map(key => [
+                      key,
+                      Math.max(next[key] || 0, previous[key] || 0),
+                    ]),
+                  ),
+                );
+                const count = Object.fromEntries(
+                  ['input', 'output', 'total', 'cachedInput', 'cacheWriteInput'].map(key => [
+                    key,
+                    [...messages.values()].reduce((n, u) => n + u[key], 0),
+                  ]),
+                );
+                onBudgetUsage({ ...count, lastInput: next.input });
               }
               return event;
             };
@@ -59,7 +69,7 @@ export async function nativeClaude(prompt, connection, context, dispatch) {
         mcpShape,
         async args => {
           const result = await dispatch(args);
-          if (!context.allowNextNativeTurn?.()) context.stopProbe();
+          await context.beforeNativeStep?.();
           return { content: [{ type: 'text', text: JSON.stringify(result) }], isError: !result.ok };
         },
         { alwaysLoad: true },
@@ -111,6 +121,7 @@ export async function nativeCodex(prompt, connection, context, dispatch) {
       if (method !== 'item/tool/call' || params.tool !== 'step_host') throw new Error('EVAL_TOOL_DISABLED');
       const result = await dispatch(params.arguments);
       if (context.probeOnly) context.stopProbe();
+      else await context.beforeNativeStep?.();
       return { contentItems: [{ type: 'inputText', text: JSON.stringify(result) }], success: result.ok };
     };
     const result = await rpc.request('thread/start', {

@@ -2,6 +2,7 @@ import { createServer } from 'node:net';
 import { randomUUID } from 'node:crypto';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { antigravityHome, runAntigravity, antigravityUsage, ANTIGRAVITY_DENY } from '../../electron/antigravity.ts';
 
@@ -31,6 +32,7 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
         }
         const result = await dispatch(value);
         if (context.probeOnly) context.stopProbe();
+        else await context.beforeNativeStep?.();
         socket.end(JSON.stringify(result) + '\n');
       })().catch(() => socket.destroy());
     });
@@ -61,9 +63,14 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
       join(home.env.HOME, '.gemini/config/agents/step-draft/agent.md'),
       // MCP definitions come from the isolated global config, not a tools
       // alias or a string[] mcpServers frontmatter (the CLI expects objects).
-      '---\nname: step-draft\ndescription: STeP governed native-tool evaluation\ntools: [finish]\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nskills: []\nplugins: []\n---\n' +
+      '---\nname: step-draft\ndescription: STeP governed native-tool evaluation\ntools: [finish, mcp]\nexcludeDefaultComponents: true\nmainAgent: true\nsubagent: false\ncommandExecutionPolicy: off\nskills: []\nplugins: []\n---\n' +
         context.system,
     );
+    const configured = await runAntigravity(connection.executable, ['mcp', 'list'], home, {
+      signal: context.signal,
+      timeoutMs: 10000,
+    });
+    if (!/\bstep_eval\b/.test(configured.output)) throw new Error('EVAL_NATIVE_MCP_UNAVAILABLE');
     let initialized = false,
       result;
     let nativeCatalog = [];
@@ -103,26 +110,36 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
               return;
             }
             if (event.event === 'init') {
-              if (initialized || event.init?.agent !== 'step-draft' || event.init?.permission_mode !== 'strict')
+              const canonical = path => (process.platform === 'win32' ? realpathSync(path).toLowerCase() : realpathSync(path));
+              if (
+                initialized ||
+                event.init?.agent !== 'step-draft' ||
+                event.init?.permission_mode !== 'strict' ||
+                typeof event.init?.cwd !== 'string' ||
+                canonical(event.init.cwd) !== canonical(home.cwd)
+              )
                 throw new Error('EVAL_NATIVE_INIT_REJECTED');
               initialized = true;
-              nativeCatalog = (event.init.tools || []).filter(tool => typeof tool === 'string' && /step_host/.test(tool));
+              // agy 1.2.17 advertises a generic call_mcp_tool, not expanded
+              // server/tool names. Its isolated config contains only step_eval.
+              nativeCatalog = (event.init.tools || []).filter(tool => tool === 'call_mcp_tool' || tool === 'mcp__step_eval__step_host');
+              if (!nativeCatalog.length) throw new Error('EVAL_NATIVE_MCP_UNAVAILABLE');
               if (context.preflightOnly) throw new Error('EVAL_PREFLIGHT_COMPLETE');
               send({ event: 'user', message: { content: prompt } });
             }
             if (event.event === 'step_update') {
               const step = event.step_update;
               if (
-                step.step_type === 'tool' &&
+                (step.step_type === 'tool' || step.tool_info?.name) &&
                 step.tool_name !== 'finish' &&
-                !/step_host/.test(step.tool_name || JSON.stringify(step.tool_info?.name || ''))
+                !nativeCatalog.includes(step.tool_name || step.tool_info?.name)
               )
                 throw new Error('EVAL_NATIVE_TOOL_DENIED');
               if (step.state === 'DONE' && step.usage && !steps.has(step.step_index)) {
                 const usage = antigravityUsage(step.usage);
                 steps.set(step.step_index, usage);
                 for (const key of ['input', 'output', 'total', 'cachedInput']) observed[key] = (observed[key] || 0) + (usage[key] || 0);
-                context.onUsage?.(observed);
+                context.onBudgetUsage?.({ ...observed, lastInput: usage.input });
               }
             }
             if (event.event === 'result') {
@@ -135,9 +152,10 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
       );
     } catch (e) {
       if (context.preflightOnly && initialized && e.message === 'EVAL_PREFLIGHT_COMPLETE')
-        return { initialized, nativeCatalog, modelCalls: 0 };
+        return { initialized, nativeCatalog, mcpConfigured: true, nativeModelUseVerified: false, modelCalls: 0 };
       const diagnostic = [...(e.detail || []), ...diagnosticLines, JSON.stringify(result || {})].join('\n');
       context.onDiagnostic?.({
+        modelEffortConflict: /invalid model selection|conflicts with.*effort/i.test(diagnostic),
         configParse: /yaml|unmarshal|configuration.*(?:invalid|failed)/i.test(diagnostic),
         mcpStartup: /mcp/i.test(diagnostic),
         missingModule: /cannot find module|ERR_MODULE|module not found/i.test(diagnostic),
@@ -146,6 +164,7 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
         backend: /trajectory|transport|connect|backend|network/i.test(diagnostic),
         quota: /quota|rate.?limit|resource.?exhaust/i.test(diagnostic),
       });
+      if (/invalid model selection|conflicts with.*effort/i.test(diagnostic)) throw new Error('EVAL_MODEL_EFFORT_CONFLICT');
       throw e;
     }
     if (!initialized || result?.status !== 'SUCCESS' || typeof result.response !== 'string') throw new Error('EVAL_NATIVE_RESULT_FAILED');

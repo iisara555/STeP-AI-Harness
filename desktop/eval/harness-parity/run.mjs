@@ -7,11 +7,12 @@ import { CodexAdapter, ClaudeAdapter, ProviderSession, closeClaudeSpares } from 
 import { AntigravityAdapter } from '../../electron/antigravity.ts';
 import { ToolLoop } from '../../electron/tool-loop.ts';
 import { evaluatePrivacyGate } from '../../../src/modules/privacy/index.js';
-import { ParityBudget } from './budget.mjs';
+import { ParityBudget, InvocationBudget } from './budget.mjs';
 import { trialHost } from './host.mjs';
 import { nativeClaude, nativeCodex, observeClaudeSdk } from './native.mjs';
 import { nativeAntigravity } from './agy.mjs';
-import { PROMPT, RULES, SOURCE, SEED, TEXT_PROTOCOL, NATIVE_PROTOCOL, hash, verify, metrics } from './spec.mjs';
+import { isolatedWorkspace } from './workspace.mjs';
+import { PROMPT, RULES, SOURCE, SEED, TEXT_PROTOCOL, NATIVE_PROTOCOL, hash, verify, metrics, evaluationEffort } from './spec.mjs';
 import { runtimeEnv, desktopData, containsPath, resolvedDestination } from '../office-skill-benefit/config.mjs';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const require = createRequire(import.meta.url);
@@ -54,7 +55,7 @@ for (const path of [
   'desktop/electron/workbench.ts',
   'desktop/electron/policy.ts',
   'desktop/electron/sheet-worker.cjs',
-  ...['run', 'host', 'spec', 'budget', 'native', 'agy', 'stdio'].map(name => `desktop/eval/harness-parity/${name}.mjs`),
+  ...['run', 'host', 'spec', 'budget', 'native', 'agy', 'stdio', 'workspace'].map(name => `desktop/eval/harness-parity/${name}.mjs`),
 ])
   fingerprints[path] = hash(await readFile(join(root, path)));
 const skill = (
@@ -159,7 +160,7 @@ if (self) {
       provider: connection.provider,
       selectedModel: connection.model,
       executable: connection.executable,
-      effort: 'low',
+      effort: evaluationEffort(connection.provider, connection.model),
     })),
     fingerprints,
     tokenLimit: 300000,
@@ -178,49 +179,54 @@ if (self) {
   };
   if (protocol) {
     const { connection, profile } = selected.find(s => s.connection.provider === 'openai');
-    const result = await nativeCodex(
-      '',
-      connection,
-      { cwd: output, env: runtimeEnv(profile), signal: AbortSignal.timeout(30000), system: RULES, preflightOnly: true },
-      async () => {
-        throw new Error('NO_MODEL_TURN_ALLOWED');
-      },
-    );
-    await writeFile(
-      join(output, 'codex-protocol-preflight.json'),
-      JSON.stringify({ ...result, at: new Date().toISOString(), model: connection.model }, null, 2),
-    );
-    console.log(JSON.stringify(result));
-    const agy = selected.find(s => s.connection.provider === 'antigravity');
-    let agyResult;
-    let diagnostic;
+    const temporary = await isolatedWorkspace(root);
     try {
-      agyResult = await nativeAntigravity(
+      const result = await nativeCodex(
         '',
-        agy.connection,
-        {
-          cwd: output,
-          env: runtimeEnv(agy.profile),
-          signal: AbortSignal.timeout(30000),
-          system: RULES,
-          effort: 'low',
-          preflightOnly: true,
-          onDiagnostic: value => {
-            diagnostic = value;
-          },
-        },
+        connection,
+        { cwd: temporary.path, env: runtimeEnv(profile), signal: AbortSignal.timeout(30000), system: RULES, preflightOnly: true },
         async () => {
           throw new Error('NO_MODEL_TURN_ALLOWED');
         },
       );
-    } catch (e) {
-      agyResult = { code: /^[A-Z_]+$/.test(e.message) ? e.message : 'EVAL_PREFLIGHT_FAILED', diagnostic, modelCalls: 0 };
+      await writeFile(
+        join(output, 'codex-protocol-preflight.json'),
+        JSON.stringify({ ...result, at: new Date().toISOString(), model: connection.model }, null, 2),
+      );
+      console.log(JSON.stringify(result));
+      const agy = selected.find(s => s.connection.provider === 'antigravity');
+      let agyResult;
+      let diagnostic;
+      try {
+        agyResult = await nativeAntigravity(
+          '',
+          agy.connection,
+          {
+            cwd: temporary.path,
+            env: runtimeEnv(agy.profile),
+            signal: AbortSignal.timeout(30000),
+            system: RULES,
+            effort: evaluationEffort(agy.connection.provider, agy.connection.model),
+            preflightOnly: true,
+            onDiagnostic: value => {
+              diagnostic = value;
+            },
+          },
+          async () => {
+            throw new Error('NO_MODEL_TURN_ALLOWED');
+          },
+        );
+      } catch (e) {
+        agyResult = { code: /^[A-Z_]+$/.test(e.message) ? e.message : 'EVAL_PREFLIGHT_FAILED', diagnostic, modelCalls: 0 };
+      }
+      await writeFile(
+        join(output, 'antigravity-protocol-preflight.json'),
+        JSON.stringify({ ...agyResult, at: new Date().toISOString() }, null, 2),
+      );
+      console.log(JSON.stringify(agyResult));
+    } finally {
+      await temporary.close();
     }
-    await writeFile(
-      join(output, 'antigravity-protocol-preflight.json'),
-      JSON.stringify({ ...agyResult, at: new Date().toISOString() }, null, 2),
-    );
-    console.log(JSON.stringify(agyResult));
   } else if (!live) {
     console.log(JSON.stringify({ probe: 'ready', models: manifest.models, taskCount: 3, modelCalls: 0, contextKey }));
   } else {
@@ -268,8 +274,9 @@ if (self) {
           const key = `${connection.provider}-${arm}`;
           if (report.trials.some(t => t.key === key)) continue;
           if (stop) break;
-          const workspace = join(output, key);
-          await mkdir(workspace, { recursive: true });
+          const artifactDir = join(output, key);
+          const temporary = await isolatedWorkspace(root);
+          const workspace = temporary.path;
           await writeFile(join(workspace, 'recovery.md'), SEED);
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 300000);
@@ -289,7 +296,7 @@ if (self) {
             system: system + '\n' + (arm === 'baseline' ? TEXT_PROTOCOL : NATIVE_PROTOCOL),
             signal: controller.signal,
             emit: () => {},
-            effort: 'low',
+            effort: evaluationEffort(connection.provider, connection.model),
             onModel: model => observedModels.add(model),
             probeOnly,
             stopProbe: () => controller.abort(),
@@ -301,41 +308,30 @@ if (self) {
             );
             const turn = { status: 'running' };
             turns.push(turn);
-            let observed;
-            let budgetObservation;
+            const guard = new InvocationBudget(budget, reservation, controller, connection.provider);
             try {
               const text = await run(prompt, {
                 ...context,
                 ...(native ? {} : { session }),
-                onBudgetUsage: count => {
-                  budgetObservation = count;
-                  if (count.total >= reservation.reserved * 0.75) controller.abort();
-                },
-                allowNextNativeTurn: () =>
-                  budgetObservation && budgetObservation.total + budgetObservation.lastInput + 8192 < reservation.reserved,
-                onUsage: count => {
-                  if (!Number.isSafeInteger(count.total) || count.total < 0) return;
-                  observed = Object.fromEntries(
-                    ['input', 'output', 'total', 'cachedInput', 'cacheWriteInput']
-                      .filter(k => count[k] !== undefined)
-                      .map(k => [k, Math.max(observed?.[k] || 0, count[k])]),
-                  );
-                  // Leave headroom for one in-flight completion and hidden native
-                  // overhead; never admit another call after uncertainty.
-                  if (count.total + (connection.provider === 'antigravity' ? count.cachedInput || 0 : 0) >= reservation.reserved * 0.75)
+                onBudgetUsage: count => guard.observe(count, count.lastInput),
+                onUsage: count => guard.observe(count),
+                beforeNativeStep: async () => {
+                  try {
+                    await guard.admitNextStep();
+                  } catch (e) {
+                    code = e.message;
                     controller.abort();
+                    throw e;
+                  }
                 },
               });
               turn.status = 'completed';
               return text;
             } finally {
-              turn.usage = observed;
+              turn.usage = guard.usage;
               turn.status = turn.status === 'running' ? 'error' : turn.status;
-              const chargedUsage =
-                observed && connection.provider === 'antigravity'
-                  ? { ...observed, total: observed.total + (observed.cachedInput || 0) }
-                  : observed;
-              await budget.settle(reservation, chargedUsage, turn.status);
+              code ||= guard.code;
+              await budget.settle(reservation, guard.settledUsage(), turn.status, turn.status === 'completed');
             }
           };
           try {
@@ -358,7 +354,7 @@ if (self) {
               outputText = await invoke(PROMPT, (text, ctx) => run(text, connection, ctx, host.native), true);
             }
           } catch (e) {
-            code = /^[A-Z_]+$/.test(e.message) ? e.message : 'EVAL_RUN_FAILED';
+            code ||= /^[A-Z_]+$/.test(e.message) ? e.message : 'EVAL_RUN_FAILED';
           } finally {
             clearTimeout(timeout);
             await session.closeAndWait();
@@ -390,9 +386,21 @@ if (self) {
             metrics: metrics(host.records),
             output: outputText,
             requests: host.records,
-            workspace,
+            workspace: artifactDir,
+            runtimeWorkspace: workspace,
+            runtimeIsolation: 'outside repository ancestry; original OAuth profile retained',
           };
-          await writeFile(join(workspace, 'recording.json'), JSON.stringify(trial, null, 2));
+          try {
+            await temporary.publish(artifactDir);
+            const source = host.records.find(r => r.tool === 'reference' && r.ok && typeof r.result?.text === 'string');
+            if (source) {
+              await mkdir(join(artifactDir, 'docs/knowledge'), { recursive: true });
+              await writeFile(join(artifactDir, SOURCE), source.result.text, { flag: 'wx' });
+            }
+            await writeFile(join(artifactDir, 'recording.json'), JSON.stringify(trial, null, 2), { flag: 'wx' });
+          } finally {
+            await temporary.close();
+          }
           report.trials.push(trial);
           // Resolve the selected default once, then use that exact model for
           // its native arm. Never compare a moving default with a new model.

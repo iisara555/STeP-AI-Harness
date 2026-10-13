@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ParityBudget } from '../eval/harness-parity/budget.mjs';
@@ -12,6 +12,136 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import * as controls from '../eval/harness-parity/budget.mjs';
+import * as spec from '../eval/harness-parity/spec.mjs';
+import { nativeAntigravity } from '../eval/harness-parity/agy.mjs';
+import { isolatedWorkspace } from '../eval/harness-parity/workspace.mjs';
+
+test('runtime workspaces exclude repository ancestry and publish only named files without overwriting', async () => {
+  const repo = fileURLToPath(new URL('../../', import.meta.url));
+  await assert.rejects(isolatedWorkspace(repo, repo), /EVAL_WORKSPACE_NOT_ISOLATED/);
+  const base = await mkdtemp(join(tmpdir(), 'step-parity-scope-'));
+  let workspace;
+  try {
+    await writeFile(join(base, 'AGENTS.md'), 'Synthetic ambient instruction');
+    await assert.rejects(isolatedWorkspace(repo, base), /EVAL_AMBIENT_INSTRUCTIONS/);
+    await rm(join(base, 'AGENTS.md'));
+    workspace = await isolatedWorkspace(repo, base);
+    await writeFile(join(workspace.path, 'brief.md'), 'Synthetic verified draft');
+    await writeFile(join(workspace.path, 'private-runtime-state.json'), 'Synthetic runtime-only state');
+    const output = join(base, 'output');
+    await workspace.publish(output);
+    assert.equal(await readFile(join(output, 'brief.md'), 'utf8'), 'Synthetic verified draft');
+    await assert.rejects(access(join(output, 'private-runtime-state.json')));
+    await assert.rejects(workspace.publish(output), { code: 'EEXIST' });
+    await workspace.close();
+    await assert.rejects(access(workspace.path));
+    workspace = undefined;
+  } finally {
+    if (workspace) await workspace.close();
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test('a reported completed baseline turn below its reservation is not cancelled at 75 percent', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'step-parity-admission-'));
+  try {
+    const budget = await ParityBudget.open(folder);
+    const reservation = await budget.reserve('openai-baseline', 50000);
+    const controller = new AbortController();
+    const guard = new controls.InvocationBudget(budget, reservation, controller);
+    guard.observe({ input: 37565, output: 386, total: 37951 });
+    assert.equal(controller.signal.aborted, false);
+    await budget.settle(reservation, guard.usage, 'completed');
+    assert.equal(budget.data.used, 37951);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('native next-step admission extends only within the global allowance and rejects unknown usage', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'step-parity-step-admission-'));
+  try {
+    const budget = await ParityBudget.open(folder, 100000);
+    const reservation = await budget.reserve('native', 50000);
+    const controller = new AbortController();
+    const guard = new controls.InvocationBudget(budget, reservation, controller);
+    await assert.rejects(guard.admitNextStep(), /NATIVE_USAGE_UNCONFIRMED/);
+    guard.observe({ input: 32000, output: 8000, total: 40000 });
+    await guard.admitNextStep();
+    assert.equal(reservation.reserved, 80192);
+    const held = await budget.reserve('other', 10000);
+    guard.observe({ input: 67000, output: 12000, total: 79000 });
+    await assert.rejects(guard.admitNextStep(), /TOKEN_BUDGET_STOP/);
+    assert.equal(reservation.reserved, 80192);
+    assert.equal(held.reserved, 10000);
+    assert.equal(budget.data.used, 0);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('cancelling after a partial native usage report retains the reservation and blocks new model calls', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'step-parity-partial-'));
+  try {
+    const budget = await ParityBudget.open(folder, 100000);
+    const call = await budget.reserve('native', 50000);
+    await budget.settle(call, { total: 37951 }, 'error', false);
+    assert.equal(call.usage.total, 37951);
+    assert.equal(call.charged, 50000);
+    assert.equal(call.usageKnown, false);
+    await assert.rejects(budget.reserve('next', 1), /USAGE_UNKNOWN_STOP/);
+    assert.equal((await ParityBudget.open(folder, 100000)).data.used, 50000);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('Antigravity evaluation matches the selected model effort before the real process receives arguments', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'step-parity-agy-preflight-'));
+  const executable = join(folder, 'agy.mjs');
+  await writeFile(
+    executable,
+    `
+    import { readFileSync } from 'node:fs';
+    import { join } from 'node:path';
+    import readline from 'node:readline';
+    const args=process.argv.slice(2);
+    if(args[0]==='mcp') { console.log('step_eval'); process.exit(0); }
+    const model=args[args.indexOf('--model')+1], effort=args[args.indexOf('--effort')+1];
+    if (!model.endsWith('-'+effort)) {
+      console.log(JSON.stringify({event:'result',result:{status:'ERROR',error:'invalid model selection: model conflicts with --effort'}}));
+      process.exit(1);
+    }
+    const config=JSON.parse(readFileSync(join(process.env.HOME,'.gemini/config/mcp_config.json'),'utf8'));
+    if (!config.mcpServers.step_eval) process.exit(2);
+    console.log(JSON.stringify({event:'init',init:{agent:'step-draft',cwd:process.cwd(),permission_mode:'strict',tools:['mcp__step_eval__step_host']}}));
+    readline.createInterface({input:process.stdin}).on('line',()=>{ process.exit(3); });
+  `,
+  );
+  try {
+    const result = await nativeAntigravity(
+      '',
+      { executable, provider: 'antigravity', model: 'gemini-3.8-flash-medium' },
+      {
+        cwd: folder,
+        env: process.env,
+        system: 'Synthetic preflight',
+        preflightOnly: true,
+        effort: spec.evaluationEffort('antigravity', 'gemini-3.8-flash-medium'),
+        signal: AbortSignal.timeout(10000),
+      },
+      async () => {
+        throw new Error('NO_MODEL_TURN_ALLOWED');
+      },
+    );
+    assert.equal(result.initialized, true);
+    assert.equal(result.modelCalls, 0);
+    assert.deepEqual(result.nativeCatalog, ['mcp__step_eval__step_host']);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
 
 test('global budget persists reservations, includes missing usage, and never resets the cap', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'step-parity-budget-'));

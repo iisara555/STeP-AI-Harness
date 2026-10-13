@@ -60,6 +60,15 @@ export class ParityBudget {
   blocked() {
     return this.data.uncertain && this.data.acknowledgedThrough !== this.data.calls.length;
   }
+  async extend(call, amount) {
+    if (call.status !== 'running' || !this.data.calls.includes(call)) throw new Error('CALL_ALREADY_SETTLED');
+    if (this.blocked()) throw new Error('USAGE_UNKNOWN_STOP');
+    const other = this.data.calls.filter(c => c !== call && c.status === 'running').reduce((n, c) => n + c.reserved, 0);
+    if (!Number.isSafeInteger(amount) || amount < call.reserved || this.data.used + other + amount > this.data.limit)
+      throw new Error('TOKEN_BUDGET_STOP');
+    call.reserved = amount;
+    await this.save();
+  }
   async continueAccounted(reason) {
     if (typeof reason !== 'string' || !reason.trim()) throw new Error('ACCOUNTING_REASON_REQUIRED');
     // Deliberate continuation retains every unknown reservation at full cost.
@@ -68,17 +77,58 @@ export class ParityBudget {
     (this.data.accountingNotes ||= []).push({ at: new Date().toISOString(), reason, used: this.data.used });
     await this.save();
   }
-  async settle(call, usage, status) {
+  async settle(call, usage, status, complete = true) {
     if (call.status !== 'running') throw new Error('CALL_ALREADY_SETTLED');
     const known = Number.isSafeInteger(usage?.total) && usage.total > 0;
     call.status = status;
     call.usage = known ? usage : undefined;
-    call.charged = known ? usage.total : call.reserved;
-    call.usageKnown = known;
+    call.charged = known && complete ? usage.total : Math.max(call.reserved, known ? usage.total : 0);
+    call.usageKnown = known && complete;
+    if (!complete) call.usageCoverage = 'partial';
     this.data.used += call.charged;
-    this.data.uncertain ||= !known || call.charged > call.reserved;
-    if (known && call.charged <= call.reserved && this.data.acknowledgedThrough === this.data.calls.length - 1)
+    this.data.uncertain ||= !call.usageKnown || call.charged > call.reserved;
+    if (call.usageKnown && call.charged <= call.reserved && this.data.acknowledgedThrough === this.data.calls.length - 1)
       this.data.acknowledgedThrough = this.data.calls.length;
     await this.save();
+  }
+}
+
+// Admit the next native model step at the tool-result boundary. A completed
+// baseline notification below its reservation must not be cancelled at 75%.
+// Runtime usage cannot enforce unseen provider work; unknown usage stops here.
+export class InvocationBudget {
+  constructor(budget, reservation, controller, provider) {
+    Object.assign(this, { budget, reservation, controller, provider });
+  }
+  observe(count, lastInput) {
+    if (!Number.isSafeInteger(count?.total) || count.total < 0) throw new Error('EVAL_USAGE_INVALID');
+    const previous = this.usage?.input || 0;
+    for (const key of ['input', 'output', 'total', 'cachedInput', 'cacheWriteInput']) {
+      if (count[key] !== undefined && (!Number.isSafeInteger(count[key]) || count[key] < 0)) throw new Error('EVAL_USAGE_INVALID');
+    }
+    this.usage = Object.fromEntries(
+      ['input', 'output', 'total', 'cachedInput', 'cacheWriteInput']
+        .filter(key => count[key] !== undefined || this.usage?.[key] !== undefined)
+        .map(key => [key, Math.max(this.usage?.[key] || 0, count[key] || 0)]),
+    );
+    this.lastInput = Math.max(this.lastInput || 0, lastInput ?? Math.max(0, (count.input || 0) - previous));
+    if (this.chargedTotal() > this.reservation.reserved) {
+      this.code = 'TOKEN_BUDGET_STOP';
+      this.controller.abort();
+    }
+  }
+  chargedTotal() {
+    return (this.usage?.total || 0) + (this.provider === 'antigravity' ? this.usage?.cachedInput || 0 : 0);
+  }
+  async admitNextStep() {
+    if (this.code || this.controller.signal.aborted) throw new Error(this.code || 'CANCELLED');
+    if (!this.usage?.total || !this.lastInput) throw new Error('NATIVE_USAGE_UNCONFIRMED');
+    // Retain the largest observed input plus completion headroom. Extend
+    // durably before returning a tool result to the runtime.
+    const needed = this.chargedTotal() + this.lastInput + 8192;
+    if (needed > this.reservation.reserved) await this.budget.extend(this.reservation, needed);
+  }
+  settledUsage() {
+    return this.usage && { ...this.usage, total: this.chargedTotal() };
   }
 }

@@ -3,6 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export const hash = data => createHash('sha256').update(data).digest('hex');
+export function evaluationEffort(provider, model) {
+  // agy model IDs can already encode effort; a conflicting --effort is
+  // rejected before init. Keep the selected ID and match its suffix.
+  return provider === 'antigravity' ? /-(low|medium|high|xhigh|max)$/.exec(model)?.[1] || 'low' : 'low';
+}
 export const TOOLS = Object.freeze(['reference', 'files', 'changes', 'patch', 'sheet_create', 'sheet_read']);
 export const SOURCE = 'docs/knowledge/step-public-profile.md';
 export const SEED = '# ข้อมูลสังเคราะห์\nสถานะ: รอดำเนินการ\nหมายเหตุ: เก็บข้อความนี้ไว้\n';
