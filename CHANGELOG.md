@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Added an experimental cross-provider harness parity CLI with a fixed source/artifact/recovery workload, a durable 300,000-token ledger, native-tool prototypes sharing the scoped host executor, and zero-inference protocol checks. The first bounded pilot is documented with evaluator cancellations and unresolved Antigravity startup failures; it does not rank providers or change production tool/caching policy.
+
 ## Desktop v0.6.2 — 2026-10-13
 
 - Combined release of PR #158 (สื่อภายใน page, redesigned layout preview, page in the icon rail) and PR #154 (icon rail sidebar with animated icons, retired near-copy profile drawings, OCR busy reply). Harness remains 0.7.7.

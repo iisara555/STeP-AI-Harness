@@ -13,6 +13,8 @@ _Last updated: 2026-10-13_
 
 ## In progress
 
+- **Harness parity pilot (2026-10-13)**: experimental `desktop/eval/harness-parity/` measures the same three public/synthetic tasks through subscription adapters and scoped host tools. Claude baseline/native artifacts and source checks pass (native final response cancelled by evaluator); ChatGPT baseline hit the evaluator budget guard and Gemini failed before tool execution. Observed 214,152 tokens; conservative accounted total 289,152/300,000 without resetting the allowance. Codex zero-inference dynamic-tool registration passes; Antigravity native preflight still exits. Native per-step budget observation and fixture-only source restrictions are hardened after measurement; no additional inference, cache tuning, installed-app changes or policy changes. Findings and next controlled experiment: `docs/harness-parity-eval.md`.
+
 - **สื่อภายใน page (2026-10-12)**: owner asked to add the STeP Internal Studio v09 mini app to the Harness; plan in the project thread (3 PRs). PR 1 (#158) adds the sidebar page with the ported prompt engine, copy-only, a redesigned layout preview and the page in the folded icon rail from #154. Next: PR 2 drafts content and generates images through the app's own AI connection and privacy gate; PR 3 moves the hand-drawn ink style and no-logo rules into the `step-image-prompt` Skill references. Owner defaults taken: no reference images in the public repo, fonts labelled a team choice, separate sidebar item. PR 1 shipped in 0.6.2 (2026-10-13, owner asked to merge and release); PR 2 and PR 3 not started.
 
 - **Desktop 0.6.1 release (2026-10-12)**: owner asked for one combined release of #155 and #156. #154 (sidebar rail) is not included: its macOS Electron check was red at release time.
