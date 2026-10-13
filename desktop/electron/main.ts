@@ -1721,6 +1721,10 @@ async function main() {
       case 'updateDownload':
         await shell.openExternal(RELEASES_URL);
         return true;
+      case 'copyText':
+        // The renderer has no clipboard permission (see the permission handlers above); copying goes through here.
+        clipboard.writeText(inputText(input.text, 60000));
+        return true;
       case 'windowControl': {
         const action = inputText(input.action, 20);
         const contents = window.webContents;

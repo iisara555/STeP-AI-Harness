@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   Circle,
   ReceiptText,
+  Megaphone,
   Blocks,
   Copy,
   ImagePlus,
@@ -100,6 +101,7 @@ import { startersFor, starterTag, starterText } from './starters';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
+const InternalMedia = lazyScreen(async () => ({ default: (await import('./internal-media-app')).InternalMedia }));
 const SkillsHub = lazyScreen(async () => ({ default: (await import('./skills')).SkillsHub }));
 
 export default function App() {
@@ -177,15 +179,17 @@ export default function App() {
   }, [selected]);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
-  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents'>('chat');
+  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media'>('chat');
   const navigate = (next: typeof view) => {
     navigationVersion.current++;
     setView(next);
   };
   const [documentsOpened, setDocumentsOpened] = useState(false);
   const [consumedDocumentTask, setConsumedDocumentTask] = useState('');
+  const [mediaOpened, setMediaOpened] = useState(false);
   useEffect(() => {
     if (view === 'documents') setDocumentsOpened(true);
+    if (view === 'media') setMediaOpened(true);
   }, [view]);
   const [wizard, setWizard] = useState(false),
     [tour, setTour] = useState(false);
@@ -1098,11 +1102,13 @@ export default function App() {
     ? t('ตั้งค่าพื้นที่ทำงาน')
     : view === 'documents'
       ? t('เครื่องมือร่างเอกสาร')
-      : view === 'receipt'
-        ? t('ตรวจใบเสร็จก่อนส่ง AFP')
-        : view === 'skills'
-          ? t('ศูนย์รวม Skill')
-          : session?.title || t('เริ่มต้นงานที่อยากทำ');
+      : view === 'media'
+        ? t('สื่อภายใน')
+        : view === 'receipt'
+          ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+          : view === 'skills'
+            ? t('ศูนย์รวม Skill')
+            : session?.title || t('เริ่มต้นงานที่อยากทำ');
   const brandSymbol = (
     <span className="brand-symbol" role="img" aria-label="STeP">
       <img className="on-light" src={symbolColour} alt="" />
@@ -1268,6 +1274,17 @@ export default function App() {
               >
                 <FileText size={17} />
                 <span className="nav-label">{t('เครื่องมือร่างเอกสาร')}</span>
+              </button>
+              <button
+                data-tour="media"
+                className={view === 'media' && !settings ? 'nav-active' : ''}
+                onClick={() => {
+                  setSettings(false);
+                  navigate('media');
+                }}
+              >
+                <Megaphone size={17} />
+                <span className="nav-label">{t('สื่อภายใน')}</span>
               </button>
               <button
                 data-tour="skills"
@@ -1438,11 +1455,13 @@ export default function App() {
                   ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
                   : view === 'documents'
                     ? t('กรอกข้อมูลหรือต้นเรื่อง ให้ AI ร่างด้วย Skill แล้วแก้ไขและส่งออก')
-                    : view === 'receipt'
-                      ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
-                      : view === 'skills'
-                        ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
-                        : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                    : view === 'media'
+                      ? t('สร้าง Prompt ภาพสำหรับสื่อสารภายใน ตามสีองค์กรและห้ามสร้างโลโก้')
+                      : view === 'receipt'
+                        ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
+                        : view === 'skills'
+                          ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
+                          : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -1485,6 +1504,11 @@ export default function App() {
               />
             </div>
           )}
+          {mediaOpened && (
+            <div style={{ display: view === 'media' && !settings ? 'contents' : 'none' }}>
+              <InternalMedia notify={notify} copyText={text => api.call('copyText', { text })} />
+            </div>
+          )}
           {/* A connection being set up keeps going when Settings is closed: the panel stays mounted, hidden, until it
               finishes, so reopening shows its progress instead of offering to start it again. */}
           {(settings || settingsBusy) && (
@@ -1507,7 +1531,7 @@ export default function App() {
               />
             </div>
           )}
-          {settings ? null : view === 'receipt' || view === 'documents' ? null : view === 'skills' ? (
+          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'skills' ? (
             <SkillsHub
               skills={skills}
               team={myTeam}

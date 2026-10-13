@@ -4,6 +4,7 @@ import { LoaderCircle } from 'lucide-react';
 import { t } from './i18n';
 import { BlocksIcon } from './animated-icons/blocks';
 import { FileTextIcon } from './animated-icons/file-text';
+import { MegaphoneIcon } from './animated-icons/megaphone';
 import { MessageSquareIcon } from './animated-icons/message-square';
 import { PlusIcon } from './animated-icons/plus';
 import { ReceiptIcon } from './animated-icons/receipt';
@@ -98,11 +99,12 @@ export function SidebarRail({
   onNew: () => void;
   onSearch: () => void;
   onTasks: () => void;
-  onView: (view: 'documents' | 'skills' | 'receipt') => void;
+  onView: (view: 'documents' | 'media' | 'skills' | 'receipt') => void;
   onSettings: () => void;
 }) {
   const tools = [
     ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon],
+    ['media', t('สื่อภายใน'), MegaphoneIcon],
     ['skills', t('ศูนย์รวม Skill'), BlocksIcon],
     ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon],
   ] as const;
