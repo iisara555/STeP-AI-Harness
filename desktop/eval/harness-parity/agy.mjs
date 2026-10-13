@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { antigravityHome, runAntigravity, antigravityUsage, ANTIGRAVITY_DENY } from '../../electron/antigravity.ts';
 
 export async function nativeAntigravity(prompt, connection, context, dispatch) {
-  const home = await antigravityHome(context);
+  const home = await antigravityHome(context, context.authProfile);
   const endpoint = process.platform === 'win32' ? `\\\\.\\pipe\\step-parity-${randomUUID()}` : join(home.cwd, 'bridge.sock');
   const sockets = new Set();
   const server = createServer(socket => {

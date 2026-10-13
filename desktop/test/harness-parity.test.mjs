@@ -127,6 +127,7 @@ test('Antigravity evaluation matches the selected model effort before the real p
         cwd: folder,
         env: process.env,
         system: 'Synthetic preflight',
+        authProfile: { home: folder, platform: process.platform },
         preflightOnly: true,
         effort: spec.evaluationEffort('antigravity', 'gemini-3.8-flash-medium'),
         signal: AbortSignal.timeout(10000),
