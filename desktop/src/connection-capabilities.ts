@@ -83,6 +83,13 @@ export function organizationCapabilities(policy?: PolicySnapshot): Capability[] 
     ['authority', 'การตรวจอำนาจเพิ่มเติมขององค์กร', 'authority'],
   ];
   return definitions.map(([id, title, flag]) => {
+    if (id === 'routing') {
+      const tools = policy?.features.toolLoop;
+      const routing = policy?.features.autoRouting;
+      if (tools === true) return entry(id, title, 'available', 'tools', 'AI ค้นหาและเลือก Skill ที่ตรงกับงาน แล้วโหลดคำแนะนำเมื่อจำเป็น');
+      if (routing === true) return entry(id, title, 'available', 'policy', 'ระบบเลือก Skill ที่ตรงกับงานให้ก่อนเริ่มร่าง');
+      if (tools !== false || routing !== false) return entry(id, title, 'unknown', 'unknown', 'ยังไม่ทราบนโยบายองค์กร ติดต่อ IT');
+    }
     const enabled = ['privacy', 'authority'].includes(id) ? policy?.checks?.[flag as 'privacy' | 'authority'] : policy?.features[flag];
     if (enabled === undefined) return entry(id, title, 'unknown', 'unknown', 'ยังไม่ทราบนโยบายองค์กร ติดต่อ IT');
     if (!enabled)

@@ -139,10 +139,8 @@ export default function App() {
   // Three columns need room: on narrower windows the draft panel, then the task list, start hidden.
   // `left` is the full task list; when it is off the sidebar folds to an icon rail, as in Claude and Codex. The
   // employee's own choice is remembered on this computer; with no choice yet, narrow windows start folded.
-  const [left, setLeft] = useState(() => {
-      const saved = readSidebarChoice();
-      return saved === null ? window.innerWidth >= 900 : saved;
-    }),
+  const sidebarChoice = useRef<boolean | null>(readSidebarChoice());
+  const [left, setLeft] = useState(() => (sidebarChoice.current === null ? window.innerWidth >= 900 : sidebarChoice.current)),
     [right, setRight] = useState(() => window.innerWidth >= 1100),
     [history, setHistory] = useState(false);
   useEffect(() => {
@@ -150,7 +148,7 @@ export default function App() {
     const onResize = () => {
       const now = window.innerWidth;
       if (now < 1100 && width >= 1100) setRight(false);
-      if (now < 900 && width >= 900) setLeft(false);
+      if (sidebarChoice.current === null && now < 900 !== width < 900) setLeft(now >= 900);
       width = now;
     };
     window.addEventListener('resize', onResize);
@@ -979,8 +977,10 @@ export default function App() {
     'whats-new': () => setWhatsNew(RELEASE_NOTES.filter(n => compareVersions(n.version, snapshot?.appVersion || '0') <= 0)),
     left: () =>
       setLeft(p => {
-        saveSidebarChoice(!p);
-        return !p;
+        const next = !p;
+        sidebarChoice.current = next;
+        saveSidebarChoice(next);
+        return next;
       }),
     right: () => setRight(p => !p),
     skills: () => {
@@ -1152,6 +1152,7 @@ export default function App() {
               navigate(next);
             }}
             onSettings={() => openSettings()}
+            onProfile={() => openSettings()}
           />
         )}
         {left && (

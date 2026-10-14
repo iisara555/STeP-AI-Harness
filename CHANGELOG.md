@@ -6,6 +6,9 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Fixed chat creation, sending and deletion when a saved workspace is missing and Skill Packs are disabled; managed organization hooks remain active and missing folders are not recreated. Settings now reflect AI Skill selection through the tool loop even when deterministic pre-routing is off.
+- Fixed Claude sign-in browser opening for the official `/cai/oauth/authorize` endpoint, retaining exact HTTPS host/path validation and main-process handling of authorization details.
+- Improved internal-media validation across fields, citation handling, example replacement confirmation and English prompt instructions. Sidebar resizing follows window width until an explicit choice is saved, and the folded profile control supports keyboard activation.
 ## Desktop v0.6.2 — 2026-10-13
 
 - Combined release of PR #158 (สื่อภายใน page, redesigned layout preview, page in the icon rail) and PR #154 (icon rail sidebar with animated icons, retired near-copy profile drawings, OCR busy reply). Harness remains 0.7.7.

@@ -89,6 +89,7 @@ export function SidebarRail({
   onTasks,
   onView,
   onSettings,
+  onProfile,
 }: {
   brand: ReactNode;
   avatar: ReactNode;
@@ -101,6 +102,7 @@ export function SidebarRail({
   onTasks: () => void;
   onView: (view: 'documents' | 'media' | 'skills' | 'receipt') => void;
   onSettings: () => void;
+  onProfile: () => void;
 }) {
   const tools = [
     ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon],
@@ -143,9 +145,15 @@ export function SidebarRail({
           label={t('ตั้งค่าพื้นที่ทำงาน')}
           onClick={onSettings}
         />
-        <div className="rail-profile" data-tour="version" data-tip={profileName}>
+        <button
+          className="rail-profile"
+          data-tour="version"
+          data-tip={profileName}
+          aria-label={`${t('รูปโปรไฟล์')} · ${profileName}`}
+          onClick={onProfile}
+        >
           {avatar}
-        </div>
+        </button>
       </aside>
     </MotionConfig>
   );

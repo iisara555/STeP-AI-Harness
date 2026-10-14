@@ -22,10 +22,22 @@ try {
   await page.getByText('กรอก เรื่องที่ต้องการสื่อสาร').waitFor();
 
   await page.getByRole('button', { name: 'ประกาศ' }).click();
-  await page.getByRole('button', { name: 'ใส่ตัวอย่าง' }).click();
+  const brief = page.getByRole('textbox', { name: 'ข้อมูลที่มี' });
+  const example = page.getByRole('button', { name: 'ใส่ตัวอย่าง' });
+  await brief.fill('ข้อมูลร่างของผู้ใช้');
+  let confirmMessage = '';
+  page.once('dialog', async dialog => {
+    confirmMessage = dialog.message();
+    await dialog.dismiss();
+  });
+  await example.click();
+  assert.match(confirmMessage, /ใช้ตัวอย่างแทนข้อมูลปัจจุบัน/);
+  assert.equal(await brief.inputValue(), 'ข้อมูลร่างของผู้ใช้', 'dismissing keeps every draft field');
+  page.once('dialog', dialog => dialog.accept());
+  await example.click();
   await page.getByText('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง').waitFor();
   const prompt = page.getByRole('textbox', { name: 'Prompt พร้อมใช้' });
-  assert.match(await prompt.inputValue(), /Create one ประกาศ visual for INTERNAL communication only/);
+  assert.match(await prompt.inputValue(), /Create one announcement for INTERNAL communication only/);
   assert.match(await prompt.inputValue(), /MANDATORY LOGO RESTRICTION/);
 
   await app.evaluate(({ clipboard }) => clipboard.writeText(''));
@@ -47,6 +59,23 @@ try {
   await page.getByRole('button', { name: 'สื่อภายใน' }).click();
   assert.equal(await page.getByRole('textbox', { name: 'เนื้อหา / ขั้นตอนที่จะใช้' }).inputValue(), 'วันที่ [รอยืนยัน]');
   assert.equal(await page.getByRole('button', { name: 'ประกาศ' }).getAttribute('aria-pressed'), 'true');
+
+  // Real numbered citations must not be treated as unfinished placeholders.
+  await content.fill('เนื้อหาที่ตรวจแล้ว [1]');
+  await page.getByText('รายละเอียดเพิ่มเติม', { exact: true }).click();
+  const source = page.getByRole('textbox', { name: 'แหล่งข้อมูล', exact: true });
+  await source.fill('รายงานประจำปี [1] · [คู่มือการใช้พื้นที่](https://example.org)');
+  await page.getByText('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง').waitFor();
+  assert.equal(await copy.isDisabled(), false, 'numbered citations allow copying');
+  for (const intent of ['สำหรับเผยแพร่สู่สาธารณะ', 'publish this publicly', 'ลงเพจ Facebook สาธารณะ']) {
+    await brief.fill(intent);
+    await page.getByText('รุ่นนี้ใช้สื่อสารภายในเท่านั้น กรุณาปรับโจทย์').waitFor();
+    assert.equal(await copy.isDisabled(), true, `${intent} blocks the copy button`);
+  }
+  await brief.fill('สำหรับสื่อสารภายในทีม');
+  await content.fill('ใช้ภายในเท่านั้น ห้ามเผยแพร่ภายนอก');
+  await page.getByText('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง').waitFor();
+  assert.equal(await copy.isDisabled(), false, 'an internal-only disclaimer permits copying');
 
   // The folded sidebar (icon rail) also opens the page.
   await page.getByRole('button', { name: 'ย่อแถบงาน' }).click();

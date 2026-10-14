@@ -354,6 +354,8 @@ export function packAsset(workspace, id, assetId, kind, policy) {
   };
 }
 export function enabledPackHooks(workspace, policy) {
+  // Disabled packs cannot supply hooks; do not touch a stale or unavailable workspace just to confirm that.
+  if (policy?.features?.skillPacks !== true) return [];
   return listPacks(workspace, policy)
     .filter((p) => p.enabled && p.hooksEnabled)
     .flatMap((p) => read(workspace, p.id).manifest.hooks || []);

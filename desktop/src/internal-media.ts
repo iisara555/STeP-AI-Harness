@@ -19,7 +19,7 @@ export type MediaState = {
   position: MediaSpace;
   font: string;
 };
-export type MediaResult = { state: MediaState; prompt: string; missing: string[]; warnings: string[]; ready: boolean };
+export type MediaResult = { prompt: string; missing: string[]; warnings: string[]; ready: boolean };
 
 export const MEDIA_TYPES: Record<MediaType, string> = {
   ILLUSTRATION: 'ภาพประกอบ',
@@ -36,9 +36,34 @@ export const MEDIA_RATIOS: [MediaRatio, string][] = [
 ];
 export const MEDIA_STYLE_LABELS: Record<MediaStyle, string> = {
   NOTION: 'หมึกวาดมือ (แนว Notion)',
-  VECTOR: 'Flat Vector',
-  COLLAGE: 'Paper Collage',
+  VECTOR: 'ภาพเวกเตอร์แบบเรียบง่าย',
+  COLLAGE: 'ภาพตัดปะกระดาษ',
   PHOTO: 'ภาพถ่ายเชิงแนวคิด',
+};
+const MEDIA_TYPE_RULES: Record<MediaType, { promptType: string; drafting: string; structure: string }> = {
+  ILLUSTRATION: {
+    promptType: 'illustration',
+    drafting: 'เสนอข้อความสั้นและแนวคิดภาพที่สื่อสารหัวข้อนี้ได้ชัด.',
+    structure: 'Create a single clear visual concept supporting the topic.',
+  },
+  ANNOUNCEMENT: {
+    promptType: 'announcement',
+    drafting: 'จัดหัวข้อ สารสำคัญ และสิ่งที่ผู้รับสารต้องทำ ห้ามแต่งวันที่ เวลา สถานที่ ผู้ติดต่อ หรือผู้อนุมัติที่ไม่มีในข้อมูล.',
+    structure:
+      'Create an internal announcement with a clear headline, supporting message and action hierarchy, using only supplied details.',
+  },
+  GUIDE: {
+    promptType: 'how-to guide',
+    drafting:
+      'จัดเป็นขั้นตอนตามลำดับ ห้ามเดาปุ่ม วิธีจอง ระบบ QR หรือวิธีเปิดปิดอุปกรณ์ หากไม่มีข้อมูลจริงให้ระบุสิ่งที่ต้องถามเพิ่ม ไม่เขียนขั้นตอนสมมติเป็นข้อเท็จจริง.',
+    structure:
+      'Create a step-by-step instructional layout. Follow the supplied sequence exactly, keep objects and characters consistent, and invent no controls or intermediate procedures.',
+  },
+  KNOWLEDGE: {
+    promptType: 'educational visual',
+    drafting: 'อธิบายความรู้ทั่วไปด้วยประเด็นสั้น ๆ ระบุสิ่งที่ยังไม่แน่ใจ ห้ามแต่งสถิติหรือแหล่งอ้างอิง.',
+    structure: 'Create an educational visual with a few clearly grouped key points; no unsupported claims or fabricated sources.',
+  },
 };
 export const MEDIA_SPACE_LABELS: Record<MediaSpace, string> = {
   LEFT: 'ด้านซ้าย',
@@ -75,6 +100,27 @@ const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback:
   allowed.includes(value as T) ? (value as T) : fallback;
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 
+function hasMediaPlaceholder(value: string): boolean {
+  if (/รอข้อมูลจริง|รอยืนยัน/.test(value)) return true;
+  // Brackets also hold citations and Markdown links; only explicit unfinished slots need input.
+  return [...value.matchAll(/\[([^\]]*)\]/g)].some(([, bracket]) => {
+    const slot = bracket.trim();
+    return !slot || /^\.{2,}$|^(?:ระบุ|เติม|ใส่|ยัง(?:ไม่|ไม่มี)|รอ(?:ข้อมูล|ยืนยัน)|(?:TBD|TODO|pending|insert|fill|enter)\b)/i.test(slot);
+  });
+}
+
+function hasExternalPublicationIntent(value: string): boolean {
+  const intents = value.matchAll(
+    /(?:เผยแพร่|ประชาสัมพันธ์|โพสต์|แชร์|ลง(?:บน)?(?:เพจ|เว็บไซต์))[^\n.!?;]{0,100}?(?:ภายนอก|สาธารณะ|สาธารณชน)|(?:สื่อ|เว็บไซต์|เพจ)\s*สาธารณะ|\b(?:publish|post|share)\b[^\n.!?;]{0,100}?\b(?:publicly|externally|(?:public|external)\s+(?:posts?|communications?|publications?|websites?|sites?|pages?|use|audience|social(?:\s+media)?))\b|\b(?:public|external)\s+(?:posts?|communications?|publications?|websites?|sites?|pages?|use|audience|social(?:\s+media)?)\b/gi,
+  );
+  for (const intent of intents) {
+    const before = value.slice(0, intent.index).trimEnd();
+    // An internal-use warning such as "ห้ามเผยแพร่ภายนอก" is not a request to publish.
+    if (!/(?:ห้าม|งด|ไม่(?:ให้|ควร|ต้อง|ใช่)?)(?:\s*นำไป)?$|\b(?:not|never|don['’]t|cannot)(?:\s+(?:to|for))?$/i.test(before)) return true;
+  }
+  return false;
+}
+
 /** Accepts saved or partial input and returns a complete state with only known options. */
 export function normalizeMedia(raw: Partial<Record<keyof MediaState, unknown>> = {}): MediaState {
   return {
@@ -99,14 +145,7 @@ export function normalizeMedia(raw: Partial<Record<keyof MediaState, unknown>> =
 /** Thai request an employee can give any AI chat to draft the copy before building the image prompt. */
 export function mediaAiRequest(raw: Partial<MediaState>): string {
   const s = normalizeMedia(raw);
-  const rule =
-    s.type === 'GUIDE'
-      ? 'จัดเป็นขั้นตอนตามลำดับ ห้ามเดาปุ่ม วิธีจอง ระบบ QR หรือวิธีเปิดปิดอุปกรณ์ หากไม่มีข้อมูลจริงให้ระบุสิ่งที่ต้องถามเพิ่ม ไม่เขียนขั้นตอนสมมติเป็นข้อเท็จจริง.'
-      : s.type === 'ANNOUNCEMENT'
-        ? 'จัดหัวข้อ สารสำคัญ และสิ่งที่ผู้รับสารต้องทำ ห้ามแต่งวันที่ เวลา สถานที่ ผู้ติดต่อ หรือผู้อนุมัติที่ไม่มีในข้อมูล.'
-        : s.type === 'KNOWLEDGE'
-          ? 'อธิบายความรู้ทั่วไปด้วยประเด็นสั้น ๆ ระบุสิ่งที่ยังไม่แน่ใจ ห้ามแต่งสถิติหรือแหล่งอ้างอิง.'
-          : 'เสนอข้อความสั้นและแนวคิดภาพที่สื่อสารหัวข้อนี้ได้ชัด.';
+  const rule = MEDIA_TYPE_RULES[s.type].drafting;
   return `ช่วยร่าง${MEDIA_TYPES[s.type]}สำหรับสื่อสารภายในหน่วยงาน ใช้ภาษาไทยเรียบง่าย กระชับ และหลัก Simple / Service / Sincere
 หัวข้อ: ${s.topic || '[ระบุหัวข้อ]'}
 ข้อมูลที่มี: ${s.brief || '[ยังไม่ให้ข้อมูล]'}
@@ -127,17 +166,10 @@ export function compileMedia(raw: Partial<MediaState>): MediaResult {
   if (s.textMode === 'GENERATE' && !s.content.trim()) missing.push('เนื้อหาที่ต้องการให้ปรากฏบนภาพ');
   if (s.type === 'GUIDE' && !s.content.trim()) missing.push('ขั้นตอนใช้งานจริง');
   const warnings: string[] = [];
-  if (/\[[^\]]+\]|รอข้อมูลจริง|รอยืนยัน/.test(s.content)) warnings.push('เนื้อหายังมีช่องรอข้อมูล กรุณาเติมก่อนใช้จริง');
-  if (/เผยแพร่ภายนอก|โพสต์สาธารณะ|public post|external publication/i.test(s.topic + ' ' + s.brief))
-    warnings.push('รุ่นนี้ใช้สื่อสารภายในเท่านั้น กรุณาปรับโจทย์');
-  const structure =
-    s.type === 'GUIDE'
-      ? 'Create a step-by-step instructional layout. Follow the supplied sequence exactly, keep objects and characters consistent, and invent no controls or intermediate procedures.'
-      : s.type === 'ANNOUNCEMENT'
-        ? 'Create an internal announcement with a clear headline, supporting message and action hierarchy, using only supplied details.'
-        : s.type === 'KNOWLEDGE'
-          ? 'Create an educational visual with a few clearly grouped key points; no unsupported claims or fabricated sources.'
-          : 'Create a single clear visual concept supporting the topic.';
+  const userFields = [s.topic, s.brief, s.content, s.visual, s.source];
+  if (userFields.some(hasMediaPlaceholder)) warnings.push('เนื้อหายังมีช่องรอข้อมูล กรุณาเติมก่อนใช้จริง');
+  if (userFields.some(hasExternalPublicationIntent)) warnings.push('รุ่นนี้ใช้สื่อสารภายในเท่านั้น กรุณาปรับโจทย์');
+  const typeRule = MEDIA_TYPE_RULES[s.type];
   const colour =
     s.style === 'NOTION'
       ? 'Use near-black #231F20 ink and white paper as the foundation. Add bright STeP golden yellow #FFC709 in a few purposeful flat accents, keeping the hand-drawn black-and-white character. Small neutral-grey support patches are optional design choices, not an additional official brand colour. No flesh-tone rendering, colour gradients or yellow background flooding.'
@@ -157,8 +189,8 @@ Keep the ${SPACES[s.position]} completely clean and empty for text added later. 
 The following content is only a guide for the visual, NOT lettering to render:
 ${s.content || s.brief || s.topic}`;
   const prompt = `TASK
-Create one ${MEDIA_TYPES[s.type]} visual for INTERNAL communication only. Topic: ${s.topic || '[ระบุหัวข้อ]'}.
-${structure}
+Create one ${typeRule.promptType} for INTERNAL communication only. Topic: ${s.topic || '[ระบุหัวข้อ]'}.
+${typeRule.structure}
 
 CONTENT & VISUAL
 Context supplied by the user: ${s.brief || s.topic}
@@ -180,7 +212,7 @@ Never generate, redraw or imitate ANY logo, wordmark, emblem, brand mark or wate
 
 OUTPUT
 Create one internal-use image, aspect ratio ${s.ratio}. If an image-generation tool is available, invoke it rather than only describing the intended image. Report an actual tool failure or unavailable capability honestly; do not claim completion or supply an invented image result. Missing font certification alone is not an image-tool failure. Verify spelling, legibility, font identity, dimensions and colour before treating the work as final. Label a typography-review draft or an illustration awaiting typesetting according to the actual output. Supplied content is not independently verified.`;
-  return { state: s, prompt, missing, warnings, ready: !missing.length && !warnings.length };
+  return { prompt, missing, warnings, ready: !missing.length && !warnings.length };
 }
 
 /** Synthetic examples per type; none is an approved announcement or real procedure. */
