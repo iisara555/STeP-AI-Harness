@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'employeeLoginState',
+  'employeeLoginStart',
+  'employeeLoginCancel',
+  'employeeLoginAdopt',
+  'employeeLogout',
   'vaultState',
   'vaultSave',
   'vaultRemove',

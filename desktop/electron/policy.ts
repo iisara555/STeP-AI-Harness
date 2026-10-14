@@ -141,6 +141,8 @@ export type Policy = {
   checks: { authority: boolean; privacy: boolean };
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
   credentialStorage?: { sharedDevice: boolean };
+  /** Identity-only employee sign-in; Workspace API consent stays separate. */
+  appLogin: { required: boolean; clientId: string; sessionHours: number };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -229,6 +231,11 @@ export function defaultPolicy(): Policy {
     budgets: {},
     pilot: true,
     checks: { authority: false, privacy: false },
+    appLogin: {
+      required: true,
+      clientId: '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com',
+      sessionHours: 12,
+    },
     // Installed-app client IDs are public configuration. No client secret is bundled.
     googleWorkspace: {
       clientId: '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com',
@@ -272,6 +279,19 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy: closedPolicy(), problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.appLogin !== undefined) {
+    const value = raw.appLogin;
+    if (
+      !isObject(value) ||
+      Object.keys(value).some(key => !['required', 'clientId', 'sessionHours'].includes(key)) ||
+      (value.required !== undefined && typeof value.required !== 'boolean') ||
+      (value.clientId !== undefined &&
+        (typeof value.clientId !== 'string' || !/^[a-zA-Z0-9_-]{5,200}\.apps\.googleusercontent\.com$/.test(value.clientId))) ||
+      (value.sessionHours !== undefined && (!Number.isInteger(value.sessionHours) || value.sessionHours < 1 || value.sessionHours > 24))
+    )
+      problems.push('appLogin requires a boolean required flag, a Desktop clientId and sessionHours from 1 to 24');
+    else policy.appLogin = { ...policy.appLogin, ...value };
+  }
   if (raw.credentialStorage !== undefined) {
     if (
       !isObject(raw.credentialStorage) ||

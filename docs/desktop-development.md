@@ -2,9 +2,12 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> Prepared source: Harness **0.7.7** / Desktop **0.6.5**, making Vault, configured employee Workspace and a local Claude developer demo opt-in available on every installation. Explicit managed policy can still deny them. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> Prepared source: Harness **0.7.7** / Desktop **0.6.6**, requiring verified employee Google sign-in before opening the workspace while retaining Vault, separately authorized Workspace services and the personal Claude developer demo opt-in. Explicit managed policy can still deny these capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
+
+[Employee Google entry](employee-login.md) gates workspace initialization in 0.6.6. Identity consent
+is separate from Workspace API grants and AI accounts; packaged apps cannot bypass entry with development smoke variables.
 
 The Phase 2 [governed tool loop](desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
 
