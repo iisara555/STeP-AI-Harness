@@ -5,6 +5,59 @@ import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 export const en: Record<string, string> = {
+  'ตรวจนโยบายองค์กรไม่ได้ กรุณาติดต่อผู้ดูแลระบบก่อนเข้าใช้งาน':
+    'The organization policy could not be verified. Contact your administrator before signing in',
+  'โปรไฟล์นี้ตั้งค่าเป็นเครื่องใช้ร่วมกัน กรุณาใช้โปรไฟล์ของระบบปฏิบัติการส่วนตัว หรือติดต่อผู้ดูแลระบบ':
+    'This profile is marked as shared. Use a private operating system profile or contact your administrator',
+  'ลงชื่อด้วยบัญชีเดิมเพื่อกลับไปบันทึกร่าง หรือเลือกปิดโดยไม่บันทึก':
+    'Sign in with the original account to save your draft, or close without saving',
+  กลับไปลงชื่อ: 'Return to sign-in',
+  ปิดแอป: 'Close app',
+  ใช้ธีมสว่าง: 'Use light theme',
+  ใช้ธีมมืด: 'Use dark theme',
+  'พื้นที่ทำงาน STeP Desktop': 'STeP Desktop workspace',
+  เริ่มต้นงานของคุณ: 'Begin your work',
+  ในพื้นที่เดียวกัน: 'In one workspace',
+  'คุย ร่างเอกสาร และทำงานกับผู้ช่วย AI ในพื้นที่ทำงานของ STeP':
+    'Chat, draft documents and work with your AI assistant in the STeP workspace',
+  'คุณเป็นผู้ตรวจและตัดสินใจ ก่อนนำผลงานไปใช้จริง': 'You review and decide before putting work into use',
+  บัญชีพนักงาน: 'Employee account',
+  เข้าสู่พื้นที่ทำงาน: 'Sign in to your workspace',
+  ใช้ข้อมูลเดิมของคุณ: 'Keep your existing work',
+  'กำลังเปิดพื้นที่ทำงานของคุณ…': 'Opening your workspace…',
+  'เครื่องนี้มีแชต เอกสาร หรือการเชื่อมต่อเดิม โปรดยืนยันว่าเป็นข้อมูลของคุณก่อนผูกกับบัญชีนี้':
+    'This device has existing chats, documents or connections. Confirm that they are yours before binding them to this account',
+  'ลงชื่อด้วยบัญชีงาน เพื่อเข้าใช้งาน STeP Desktop': 'Use your work account to sign in to STeP Desktop',
+  'ข้อมูลเครื่องนี้ผูกกับ {0}': 'This device belongs to {0}',
+  รอการลงชื่อในเบราว์เซอร์: 'Waiting for browser sign-in',
+  'ลงชื่อให้เสร็จ แล้วกลับมาที่หน้าต่างนี้': 'Complete sign-in, then return to this window',
+  ยกเลิกการลงชื่อ: 'Cancel sign-in',
+  ยืนยันว่าเป็นข้อมูลของฉัน: 'Confirm this is my work',
+  เลือกบัญชีใหม่: 'Choose another account',
+  'ลงชื่อเข้าใช้ด้วย Google': 'Sign in with Google',
+  'ใช้เฉพาะชื่อและอีเมลเพื่อยืนยันตัวตน การเชื่อมบริการ Google จะขออนุญาตแยกภายหลัง':
+    'Only your name and email are used to verify your identity. Google services request separate consent later',
+  พื้นที่ทำงานสำหรับบัญชีองค์กร: 'A workspace for organization accounts',
+  'บัญชีนี้ไม่ตรงกับเจ้าของข้อมูลบนเครื่อง กรุณาลงชื่อด้วยบัญชีเดิม หรือใช้โปรไฟล์ของระบบปฏิบัติการแยกกัน':
+    'This account does not own the data on this device. Use the original account or a separate operating system profile',
+  'อ่านข้อมูลการลงชื่อบนเครื่องไม่ได้ กรุณาติดต่อผู้ดูแลระบบ ข้อมูลและเอกสารเดิมยังไม่ได้ถูกลบ':
+    'The saved sign-in could not be read. Contact your administrator. Existing data and documents have not been deleted',
+  'บันทึกการลงชื่ออย่างปลอดภัยไม่ได้ กรุณาตรวจสิทธิ์ของโปรไฟล์เครื่องหรือติดต่อผู้ดูแลระบบ':
+    'Sign-in could not be stored securely. Check your profile permissions or contact your administrator',
+  'กรุณาใช้บัญชี Google Workspace ของ step.cmu.ac.th': 'Use a step.cmu.ac.th Google Workspace account',
+  'ยืนยันบัญชี Google ไม่สำเร็จ กรุณาลองลงชื่อใหม่': 'Google identity verification failed. Try signing in again',
+  'ผู้ดูแลองค์กรจำกัดการเชื่อมแอปนี้ กรุณาติดต่อผู้ดูแล Google Workspace':
+    'Your organization has restricted this app. Contact your Google Workspace administrator',
+  'ยังไม่ได้อนุญาตให้ยืนยันตัวตน คุณสามารถลองลงชื่อใหม่ได้': 'Identity verification was not authorized. You can try signing in again',
+  'รอการลงชื่อเกินเวลา กรุณาลองอีกครั้ง': 'Sign-in timed out. Try again',
+  'เชื่อมต่อ Google ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง':
+    'Could not connect to Google. Check your internet connection and try again',
+  ยกเลิกการลงชื่อแล้ว: 'Sign-in cancelled',
+  'นโยบายองค์กรเปลี่ยนระหว่างลงชื่อ กรุณาลองใหม่': 'Organization policy changed during sign-in. Try again',
+  ออกจากบัญชีพนักงาน: 'Sign out of employee account',
+  'ออกจากบัญชีพนักงาน?': 'Sign out of your employee account?',
+  'งานที่กำลังทำจะหยุด ข้อมูลและการเชื่อมต่อเดิมจะเก็บไว้ให้บัญชีเดิมกลับมาใช้งาน':
+    'Running work will stop. Data and connections will be kept for the original account',
   'เปิดหน้า Vault และการเชื่อม Google Workspace ให้ทุกเครื่องที่ติดตั้งรุ่นนี้ โดยผู้ดูแลยังปิดได้':
     'Vault and Google Workspace connections are available on every installation of this release; administrators can still disable them',
   'เลือก Docs/Sheets/Slides, Calendar และ Tasks แล้วลงชื่อด้วยบัญชี step.cmu.ac.th ได้':

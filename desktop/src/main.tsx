@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { EmployeeLoginScreen } from './employee-login';
 import '@fontsource/ibm-plex-sans-thai/thai-400.css';
 import '@fontsource/ibm-plex-sans-thai/thai-500.css';
 import '@fontsource/ibm-plex-sans-thai/thai-600.css';
@@ -11,7 +12,5 @@ import '@fontsource/ibm-plex-sans-thai/latin-600.css';
 import '@fontsource/ibm-plex-sans-thai/latin-700.css';
 import './style.css';
 createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <React.StrictMode>{location.hash === '#employee-login' ? <EmployeeLoginScreen /> : <App />}</React.StrictMode>,
 );

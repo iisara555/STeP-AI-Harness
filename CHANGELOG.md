@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Add required employee Google entry with identity-only online PKCE, signed hosted-domain verification, OS-encrypted bounded sessions and owner-bound workspace access. Keep Workspace API consent and AI accounts separate; add a Harness-aligned Thai/English login screen with light/dark themes and safe logout/expiry recovery.
+
 ## Desktop v0.6.5 (2026-10-14)
 
 - Make Vault and Google Workspace available on every installation, with the owner-supplied public Desktop OAuth client and strict `step.cmu.ac.th` hosted-domain validation. Docs/Sheets/Slides, Calendar and Tasks are selectable; no client secret is distributed.

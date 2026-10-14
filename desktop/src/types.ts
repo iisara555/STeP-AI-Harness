@@ -323,6 +323,7 @@ export type MemoryProposal = Pick<MemoryEntry, 'id' | 'name' | 'text' | 'type' |
   at: string;
 };
 export type Snapshot = {
+  employeeLogin?: import('./employee-login-types').EmployeeLoginState;
   usage?: UsageReport;
   policy?: PolicySnapshot;
   approvals?: ApprovalRule[];

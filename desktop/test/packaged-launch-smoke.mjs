@@ -48,13 +48,18 @@ try {
   });
   assert.equal(shipped.packaged, true);
   for (const [file, present] of Object.entries(shipped.files)) assert.ok(present, `packaged harness is missing ${file}`);
-  // The renderer talks to the main process: skipping setup saves settings and shows the workspace.
-  await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
-  await page.locator('.composer textarea').waitFor({ timeout: 30000 });
-  const snapshot = await page.evaluate(() => window.step.call('snapshot'));
-  assert.ok(Array.isArray(snapshot.sessions));
+  // Production starts behind identity verification; no test environment flag bypasses the packaged gate.
+  await page.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true }).waitFor({ timeout: 30000 });
+  const identity = await page.evaluate(() => window.step.call('employeeLoginState'));
+  assert.equal(identity.required, true);
+  await assert.rejects(
+    page.evaluate(() => window.step.call('snapshot')),
+    /AUTH_REQUIRED/,
+  );
   assert.deepEqual(errors, []);
-  console.log(`Packaged app ${shipped.version} launched: setup, workspace and IPC work; organization documents and Skills are bundled.`);
+  console.log(
+    `Packaged app ${shipped.version} launched: mandatory Google login and workspace IPC denial work; organization documents and Skills are bundled.`,
+  );
 } finally {
   await app.close().catch(() => {});
   await rm(home, { recursive: true, force: true }).catch(() => {});

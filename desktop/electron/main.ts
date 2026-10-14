@@ -28,6 +28,8 @@ import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
 import { Vault } from './vault';
 import { GoogleWorkspace } from './google-workspace';
+import { EmployeeLogin, authorizeEmployee, employeeLoginConfig } from './employee-login';
+import { openEmployeeLogin } from './employee-login-window';
 import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
 import type { GoogleRequest } from './google-operations';
 import { googleOperationCatalog } from './google-operations';
@@ -218,6 +220,42 @@ async function main() {
   const data = app.getPath('userData');
   const { prepareDraft } = await import(pathToFileURL(join(root, 'src/modules/runner/index.js')).href);
   await prepareLocalData(data);
+  const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
+  const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
+  const employee = new EmployeeLogin(
+    data,
+    () => {
+      const configuration = readPolicy();
+      const policy = configuration.policy;
+      return employeeLoginConfig(
+        policy.appLogin,
+        app.isPackaged,
+        process.env,
+        Boolean(policy.credentialStorage?.sharedDevice),
+        configuration.problems.length > 0,
+      );
+    },
+    {
+      wrap: value => {
+        requireSecureStorage(safeStorage);
+        return safeStorage.encryptString(value);
+      },
+      unwrap: value => {
+        requireSecureStorage(safeStorage);
+        return safeStorage.decryptString(value);
+      },
+    },
+    authorizeEmployee(url => shell.openExternal(url)),
+  );
+  let loginWindow: BrowserWindow | undefined;
+  if (employee.state().required && employee.state().phase !== 'authenticated') {
+    loginWindow = await openEmployeeLogin(employee);
+    if (!loginWindow) {
+      app.quit();
+      return;
+    }
+  }
+  let employeeLocked = false;
   logFile = join(data, 'logs', 'diagnostics.jsonl');
   let voicePermissionUntil = 0,
     voiceTicketUntil = 0;
@@ -258,6 +296,8 @@ async function main() {
     vaultProfile,
   );
   const executionAllowed = () => {
+    employee.assert();
+    if (employeeLocked) throw new Error('AUTH_REQUIRED');
     if (vault.protected()) throw new Error('VAULT_HOST_EXECUTION_BLOCKED');
   };
   let hostHooks = 0;
@@ -284,7 +324,9 @@ async function main() {
   nativeTheme.themeSource = store.settings().theme;
   // Development smoke tests drive the main window directly; STEP_DESKTOP_SPLASH=1 shows the loading window there too.
   const splash =
-    !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_DESKTOP_SPLASH !== '1' ? undefined : new Splash();
+    loginWindow || (!app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME && process.env.STEP_DESKTOP_SPLASH !== '1')
+      ? undefined
+      : new Splash();
   splash?.step(tm('กำลังโหลดระบบของ STeP AI…'));
   const [routing, routerPolicy, privacy, documents, outputs, skillCatalog] = await Promise.all([
     import(pathToFileURL(join(root, 'src/modules/router/service.js')).href),
@@ -422,6 +464,12 @@ async function main() {
     return task;
   }
   const emit = (event: any) => {
+    if (employeeLocked) return;
+    try {
+      employee.assert();
+    } catch {
+      return;
+    }
     if (window && !window.isDestroyed()) window.webContents.send('step:event', event);
   };
   const exportWorkspace = new ExportWorkspace(
@@ -584,8 +632,6 @@ async function main() {
   }
   const images = new Images(join(data, 'images'), key);
   // The organization's policy (admin-only file). Re-read when it changes; a bad file keeps safe defaults.
-  const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
-  const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
   let policyState = readPolicy();
   async function migrateApiKeys() {
     if (!policyState.policy.features.vault || !vault.protected()) return;
@@ -795,6 +841,9 @@ async function main() {
         ? policyState.policy.googleWorkspace
         : undefined,
     url => shell.openExternal(url),
+    undefined,
+    undefined,
+    () => employee.subject(),
   );
   const googleContext = (signal = new AbortController().signal, after = async () => {}, sessionId?: string) => {
     const identity = phase4Identity(),
@@ -1288,6 +1337,8 @@ async function main() {
     () => policyState.policy,
     harness.privacy,
     async (job, signal, created) => {
+      employee.assert();
+      if (employeeLocked) throw new Error('AUTH_REQUIRED');
       const identity = phase4Identity(),
         policy = policyState.policy;
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
@@ -1298,6 +1349,8 @@ async function main() {
       created(session.id);
       const cancel = () => service.cancel(session.id);
       const check = () => {
+        employee.assert();
+        if (employeeLocked) throw new Error('AUTH_REQUIRED');
         if (signal.aborted) throw new Error('CANCELLED');
         const connection = store.get<Connection>('connection', job.connectionId);
         if (!connection?.ready || connection.model !== job.model || connectionBinding(connection) !== job.connectionBinding)
@@ -1345,6 +1398,13 @@ async function main() {
           body: run.status === 'review' ? tm('งานตามรอบมีร่างรอตรวจแล้ว') : tm('งานตามรอบต้องการให้ตรวจสถานะ'),
         });
         notification.on('click', () => {
+          if (employeeLocked) return;
+          try {
+            employee.assert();
+          } catch {
+            void lockEmployeeWorkspace();
+            return;
+          }
           window.show();
           window.focus();
         });
@@ -1483,6 +1543,7 @@ async function main() {
     return file;
   };
   const snapshot = async () => ({
+    employeeLogin: employee.state(),
     appVersion: app.getVersion(),
     usage: ledger.report(),
     features: {
@@ -1565,8 +1626,82 @@ async function main() {
       return { id, url, title: browser.getTitle() };
     });
   };
-  ipcMain.handle('step:call', async (event, method: string, raw: any = {}) => {
+  const lockEmployeeWorkspace = async () => {
+    if (employeeLocked || !employee.state().required) return;
+    employeeLocked = true;
+    window.hide();
+    ipcMain.removeHandler('step:call');
+    google.invalidate();
+    vault.invalidate();
+    approvals.close();
+    questions.close();
+    receiptOperations.cancel();
+    voice.cancel();
+    for (const controller of connectControllers.values()) controller.abort();
+    service.cancelAll();
+    coordinator.cancelAll();
+    automations.stop();
+    closeClaudeSpares();
+    agentBrowser.close();
+    dock.close();
+    try {
+      // Await cancellation acknowledgement before a new sign-in can resume the workspace.
+      await Promise.allSettled([
+        service.closeAndWait(),
+        coordinator.closeAndWait(),
+        automations.closeAndWait(),
+        mcp.close(),
+        sandbox.close(),
+        ...workbench
+          .tasks()
+          .filter(task => task.status === 'running')
+          .map(task => workbench.cancel(task.id)),
+      ]);
+      if (store.list<Session>('session').some(session => service.isActive(session.id))) throw new Error('AUTH_CANCELLATION_PENDING');
+      const login = await openEmployeeLogin(employee, async login => {
+        const dirty = await window.webContents.executeJavaScript(
+          "(() => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; })()",
+        );
+        if (!dirty) return true;
+        const answer = await dialog.showMessageBox(login, {
+          type: 'warning',
+          message: tm('มีร่างที่ยังไม่บันทึก'),
+          detail: tm('ลงชื่อด้วยบัญชีเดิมเพื่อกลับไปบันทึกร่าง หรือเลือกปิดโดยไม่บันทึก'),
+          buttons: [tm('กลับไปลงชื่อ'), tm('ปิดโดยไม่บันทึก')],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        if (answer.response !== 1) return false;
+        window.destroy();
+        return true;
+      });
+      if (!login || window.isDestroyed()) {
+        app.quit();
+        return;
+      }
+      employee.assert();
+      ipcMain.handle('step:call', handleCall);
+      employeeLocked = false;
+      automations.start();
+      window.show();
+      window.focus();
+      login.destroy();
+      window.webContents.send('step:event', { sessionId: '', type: 'changed' });
+    } catch {
+      // A failed lock or authentication recovery must never reveal the workspace.
+      app.quit();
+    }
+  };
+  const handleCall = async (event: Electron.IpcMainInvokeEvent, method: string, raw: any = {}) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('UNTRUSTED_SENDER');
+    if (method === 'employeeLoginState') return employee.state();
+    if (employeeLocked) throw new Error('AUTH_REQUIRED');
+    try {
+      employee.assert();
+    } catch {
+      void lockEmployeeWorkspace();
+      throw new Error('AUTH_REQUIRED');
+    }
     const input = raw ?? {};
     if (['workspace', 'settings', 'permissionMode'].includes(method)) {
       vault.invalidate();
@@ -1574,6 +1709,21 @@ async function main() {
     }
     if (['vaultSave', 'googleConnect'].includes(method)) ensureCredentialStorage();
     switch (method) {
+      case 'employeeLogout': {
+        if (!employee.state().required) throw new Error('FEATURE_DISABLED');
+        const answer = await dialog.showMessageBox(window, {
+          type: 'question',
+          message: tm('ออกจากบัญชีพนักงาน?'),
+          detail: tm('งานที่กำลังทำจะหยุด ข้อมูลและการเชื่อมต่อเดิมจะเก็บไว้ให้บัญชีเดิมกลับมาใช้งาน'),
+          buttons: [tm('ยกเลิก'), tm('ออกจากระบบ')],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        if (answer.response !== 1) return false;
+        employee.logout();
+        setTimeout(() => void lockEmployeeWorkspace(), 0);
+        return true;
+      }
       case 'vaultState':
         return {
           ...vault.state(),
@@ -3416,10 +3566,32 @@ async function main() {
       default:
         throw new Error('UNKNOWN_OPERATION');
     }
-  });
+  };
+  ipcMain.handle('step:call', handleCall);
   splash?.step(tm('กำลังเตรียมความรู้ขององค์กรและ Skills…'));
   const prepared = service.warmUp().then(() => splash?.step(tm('กำลังเปิดพื้นที่ทำงาน…')));
   await makeWindow(splash, prepared);
+  window.on('show', () => {
+    if (employeeLocked) {
+      window.hide();
+      return;
+    }
+    try {
+      employee.assert();
+    } catch {
+      window.hide();
+      void lockEmployeeWorkspace();
+    }
+  });
+  loginWindow?.destroy();
+  const employeeTimer = setInterval(() => {
+    try {
+      employee.assert();
+    } catch {
+      void lockEmployeeWorkspace();
+    }
+  }, 1000);
+  employeeTimer.unref();
   window.webContents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
     if (mainFrame) {
       vault.invalidate();
@@ -3435,11 +3607,19 @@ async function main() {
     questions.close();
   });
   app.on('second-instance', () => {
+    if (employeeLocked) return;
+    try {
+      employee.assert();
+    } catch {
+      void lockEmployeeWorkspace();
+      return;
+    }
     window.show();
     window.focus();
   });
   let closing = false;
   app.on('before-quit', event => {
+    clearInterval(employeeTimer);
     google.cancel();
     vault.invalidate();
     approvals.close();

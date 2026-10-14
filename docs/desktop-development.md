@@ -6,6 +6,9 @@ For employee setup and everyday use, read the [Desktop guide](../desktop/README.
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
+[Employee Google entry](employee-login.md) gates workspace initialization in source after 0.6.5. Identity consent
+is separate from Workspace API grants and AI accounts; packaged apps cannot bypass entry with development smoke variables.
+
 The Phase 2 [governed tool loop](desktop-tool-loop.md) connects Chat/Draft to bounded host tools, document/spreadsheet previews, one-time result consent, questions/plans, backups and `/usage`. It remains a development preview; synthetic validation does not prove live provider access.
 
 The same `/usage` dialog also shows [per-account provider quotas, credits and API usage](desktop-provider-usage.md), with explicit refresh, reported units/reset times and separate local estimates. Supported account readers use managed credentials without sending a model prompt; unsupported connections retain local accounting and provider links when available. Claude/Copilot interfaces are experimental, and real-account access remains separately unverified.

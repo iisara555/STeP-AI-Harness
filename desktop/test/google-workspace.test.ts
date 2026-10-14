@@ -89,6 +89,43 @@ test('connect grants stay private; fixed Google requests are account-bound and e
     f.clean();
   }
 });
+
+test('Workspace consent and stored grants belong to the signed-in employee subject', async () => {
+  const f = fixture();
+  try {
+    const bound = new GoogleWorkspace(
+      f.store,
+      f.vault,
+      () => config,
+      async () => {},
+      fetch,
+      async (_config, scopes) => ({
+        who: { sub: '1234', email: 'fixture@example.test', hd: 'example.test' },
+        scopes,
+        tokens: { access: 'synthetic-access', refresh: 'synthetic-refresh', expires: Date.now() + 3600000 },
+      }),
+      () => '9876',
+    );
+    await assert.rejects(bound.connect(['documents'], context), /GOOGLE_ACCOUNT_MISMATCH/);
+    assert.equal(f.vault.protected(), false);
+    await f.google.connect(['documents'], context);
+    assert.equal(bound.state().accounts.length, 0);
+    await assert.rejects(
+      bound.execute(
+        f.google.state().accounts[0].id,
+        {
+          operation: 'docs.get',
+          params: { documentId: 'fixture-doc' },
+        },
+        context,
+      ),
+      /GOOGLE_ACCOUNT_MISMATCH/,
+    );
+    assert.equal(f.calls.length, 0);
+  } finally {
+    f.clean();
+  }
+});
 test('pause or disconnect during approval cannot send a request, and handles are context-bound', async () => {
   const f = fixture();
   try {

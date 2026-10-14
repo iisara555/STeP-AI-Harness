@@ -1,5 +1,31 @@
 @import './theme.css';
 @import './workbench.css';
+.employee-account-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  margin-bottom: 25px;
+}
+.employee-account-card > svg {
+  color: var(--accent-ink);
+  flex-shrink: 0;
+}
+.employee-account-card > div {
+  flex: 1;
+  min-width: 0;
+}
+.employee-account-card p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.employee-account-card > button {
+  flex-shrink: 0;
+}
 * {
   box-sizing: border-box;
 }
