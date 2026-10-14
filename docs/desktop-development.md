@@ -2,7 +2,7 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> อ้างอิง source ที่เตรียมเผยแพร่: Harness **0.7.7** / Desktop **0.6.2**. รวมหน้า "สื่อภายใน" และแถบด้านซ้ายแบบย่อเหลือไอคอน. Source/CI artifacts ไม่ยืนยันว่าตัวติดตั้งเผยแพร่แล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> อ้างอิง source ที่เตรียมเผยแพร่: Harness **0.7.7** / Desktop **0.6.3**. รวมงานแก้ UI/OAuth และ missing-workspace chat กับชุดทดสอบ Harness parity สำหรับผู้พัฒนา; native tools ยังเป็นชุดทดลองแยกจากแอป. Source/CI artifacts ไม่ยืนยันว่าตัวติดตั้งเผยแพร่แล้ว: ตรวจ [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) และ [ช่องทางอัปเดต](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 

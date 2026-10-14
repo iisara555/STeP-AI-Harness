@@ -4,6 +4,16 @@ import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 export const en: Record<string, string> = {
+  'สร้าง ส่งข้อความ และลบงานได้เมื่อโฟลเดอร์งานเดิมหายไป':
+    'Create tasks, send messages and delete tasks when the saved workspace folder is missing',
+  'แก้การเปิดเบราว์เซอร์เพื่อลงชื่อเข้าใช้ Claude': 'Fixed opening the browser for Claude sign-in',
+  'หน้าตั้งค่าแสดงการเลือก Skill อัตโนมัติให้ตรงกับการทำงานของ AI': 'Settings reflect automatic Skill selection by the AI',
+  'แถบด้านซ้ายปรับตามขนาดหน้าต่าง และเปิดโปรไฟล์ด้วยคีย์บอร์ดได้':
+    'The sidebar follows window size and the profile supports keyboard activation',
+  'หน้าสื่อภายในตรวจข้อมูลก่อนคัดลอก และยืนยันก่อนแทนที่ข้อมูลด้วยตัวอย่าง':
+    'Internal media checks draft fields before copying and confirms before replacing them with an example',
+  เพิ่มชุดทดสอบคุณภาพงานเอกสารและการกู้คืนเมื่อเครื่องมือผิดพลาดสำหรับผู้พัฒนา:
+    'Added developer tests for document quality and recovery from tool errors',
   'หน้าเชื่อมต่อ AI แสดงบัญชีเป็นการ์ด บอกสถานะเดียวและปุ่มที่ต้องกด':
     'AI connections show each account as a card with one status and the button to press',
   'ถ้าการลงชื่อหมดอายุระหว่างแชต บัญชีจะขึ้นว่า "ต้องลงชื่อใหม่" ให้กดลงชื่อได้ทันที':

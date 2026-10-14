@@ -6,6 +6,13 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.3 — 2026-10-14
+
+- Combined release of PR #160 (UI/OAuth and missing-workspace chat fixes) and PR #159 (harness parity evaluator and CI follow-up). Harness stays 0.7.7. Native tools remain an experiment outside the shipped app.
+
+- Hardened the harness parity evaluator after the pilot: matching Antigravity model/effort selection, zero-prompt MCP initialization checks, model workspaces outside repository ancestry, durable native next-step admission and conservative partial-usage accounting. Added synthetic macOS Phase 4 failure diagnostics without skipping checks or changing timeouts; no additional inference or production policy/caching changes.
+- Added an experimental cross-provider harness parity CLI with a fixed source/artifact/recovery workload, a durable 300,000-token ledger, native-tool prototypes sharing the scoped host executor, and zero-inference protocol checks. The first bounded pilot is documented with evaluator cancellations and unresolved Antigravity startup failures; it does not rank providers or change production tool/caching policy.
+
 - Fixed chat creation, sending and deletion when a saved workspace is missing and Skill Packs are disabled; managed organization hooks remain active and missing folders are not recreated. Settings now reflect AI Skill selection through the tool loop even when deterministic pre-routing is off.
 - Fixed Claude sign-in browser opening for the official `/cai/oauth/authorize` endpoint, retaining exact HTTPS host/path validation and main-process handling of authorization details.
 - Improved internal-media validation across fields, citation handling, example replacement confirmation and English prompt instructions. Sidebar resizing follows window width until an explicit choice is saved, and the folded profile control supports keyboard activation.

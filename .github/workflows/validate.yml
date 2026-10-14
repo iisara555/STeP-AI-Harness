@@ -134,3 +134,12 @@ jobs:
       - run: npm run build
       - name: Verify Electron chat, browser and tools on macOS
         run: npm run test:electron
+      - name: Preserve synthetic Phase 4 failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-phase4-failure
+          path: |
+            desktop/release/qa/phase4-failure.json
+            desktop/release/qa/phase4-failed.png
+          if-no-files-found: ignore
