@@ -1,8 +1,8 @@
 # Employee Google sign-in
 
-This source change requires employee identity before opening STeP Desktop. It follows the published 0.6.5
-release and is not yet included in those installers. Entry consent, Workspace service consent and AI accounts
-are independent.
+Desktop 0.6.6 requires employee identity before opening the workspace. Entry consent, Workspace service
+consent and AI accounts are independent. Verify the published installer and update feed before distributing
+this version; updating source alone does not update an installed or running application.
 
 ## Entry and consent
 
