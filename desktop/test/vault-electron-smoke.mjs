@@ -65,6 +65,18 @@ const server = createServer({ key: pair.privateKey.export({ type: 'pkcs8', forma
 });
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
+let phase = 'fixture setup';
+const checkpoint = name => {
+  phase = name;
+  console.log(`Vault Electron phase: ${name}`);
+};
+// Native evaluate/close calls have no default deadline; a stall must report its phase and fail.
+const deadline = setTimeout(() => {
+  console.error(`Vault Electron timed out during ${phase}`);
+  process.exitCode = 1;
+  app?.process().kill('SIGKILL');
+}, 90_000);
+deadline.unref();
 try {
   await new Promise(done => server.listen(0, '127.0.0.1', done));
   const origin = 'https://127.0.0.1:' + server.address().port;
@@ -84,6 +96,7 @@ try {
     entry,
     `const {app,BrowserWindow,safeStorage}=require('electron');globalThis.fixtureErrors=[];app.on('web-contents-created',(event,w)=>w.on('did-fail-load',(event,code)=>globalThis.fixtureErrors.push(code)));globalThis.fixtureErrors=[];app.on('web-contents-created',(event,w)=>w.on('did-fail-load',(event,code)=>globalThis.fixtureErrors.push(code)));const {Vault}=require(${JSON.stringify(bundle)});globalThis.AgentBrowser=require(${JSON.stringify(browserBundle)}).AgentBrowser;app.setPath('userData',${JSON.stringify(join(home, 'profile'))});app.on('certificate-error',(event,contents,url,error,certificate,callback)=>{globalThis.fixtureErrors.push([error,certificate.fingerprint]);globalThis.fixtureErrors.push([error,certificate.fingerprint]);if(new URL(url).origin===${JSON.stringify(origin)}&&require('crypto').createHash('sha256').update(new (require('crypto').X509Certificate)(certificate.data).raw).digest('hex').toUpperCase()===${JSON.stringify(fingerprint.replaceAll(':', ''))}){event.preventDefault();callback(true);}else callback(false);});app.whenReady().then(()=>{globalThis.vault=new Vault(${JSON.stringify(join(home, 'vault.sqlite'))},{wrap:s=>{if(!safeStorage.isEncryptionAvailable())throw Error('OS_STORAGE_UNAVAILABLE');return safeStorage.encryptString(s)},unwrap:b=>safeStorage.decryptString(b)});const w=new BrowserWindow({show:false});w.loadURL('about:blank');});app.on('will-quit',()=>globalThis.vault.close());`,
   );
+  checkpoint('launch storage fixture');
   app = await electron.launch({ args: [entry], env, timeout: 45000 });
   await app.firstWindow();
   const saved = await app.evaluate(
@@ -98,9 +111,11 @@ try {
     origin,
   );
   assert.equal(Object.hasOwn(saved, 'password'), false);
+  checkpoint('close first process');
   await app.close();
   app = undefined;
   // Same profile, separate Electron process: this exercises actual safeStorage, not mock encryption.
+  checkpoint('restart storage fixture');
   app = await electron.launch({ args: [entry], env, timeout: 45000 });
   await app.firstWindow();
   await app.evaluate(() => {
@@ -125,6 +140,7 @@ try {
         throw error;
       });
   const page = await open(origin + '/login');
+  checkpoint('exact-origin fill');
   const result = await app.evaluate(async (_electron, id) => {
     const expected = await globalThis.agent.prepareVault(id, 'owner', globalThis.context.signal);
     const [credential] = globalThis.vault.catalog('owner', expected.origin);
@@ -149,6 +165,7 @@ try {
   assert.equal(hidden, 'BROWSER_VAULT_SENSITIVE');
   await app.evaluate(() => globalThis.agent.closeOwner('owner'));
   const changed = await open(origin + '/changed');
+  checkpoint('changed-form partial fill');
   const partial = await app.evaluate(async (_electron, id) => {
     const expected = await globalThis.agent.prepareVault(id, 'owner', globalThis.context.signal);
     const [credential] = globalThis.vault.catalog('owner', expected.origin);
@@ -164,6 +181,7 @@ try {
   assert.deepEqual(partial.filledFields, ['username']);
   await app.evaluate(() => globalThis.agent.closeOwner('owner'));
   const single = await open(origin + '/two');
+  checkpoint('identifier-only fill');
   const one = await app.evaluate(async (_electron, id) => {
     const expected = await globalThis.agent.prepareVault(id, 'owner', globalThis.context.signal);
     const [credential] = globalThis.vault.catalog('owner', expected.origin);
@@ -176,14 +194,20 @@ try {
     );
   }, single.tab);
   assert.deepEqual(one.filledFields, ['username']);
+  checkpoint('close owned browser views');
+  await app.evaluate(() => globalThis.agent.closeOwner('owner'));
   await mkdir('release/qa/vault', { recursive: true });
   console.log(
     'Vault Electron smoke passed: actual OS encryption across restart, HTTPS exact-origin fill, identifier-only login, changed form partial outcome and model-read suppression.',
   );
 } finally {
+  checkpoint('close application');
   if (app) await app.close();
+  checkpoint('close HTTPS fixture');
   server.closeAllConnections();
   await new Promise(done => server.close(done));
+  checkpoint('remove private fixture');
   assert.ok(home.startsWith(tmpdir()));
   await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  clearTimeout(deadline);
 }
