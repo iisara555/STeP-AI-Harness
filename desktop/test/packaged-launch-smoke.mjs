@@ -1,7 +1,7 @@
 // Launches the packaged app (not the dev build) and checks it opens, runs without page errors, and ships the
 // organization documents, registry and Skills the assistant reads. Usage: node test/packaged-launch-smoke.mjs <executable>
 import { mainWindow } from './main-window.mjs';
-import { _electron as electron, expect } from '@playwright/test';
+import { _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,8 +20,7 @@ try {
   const page = await mainWindow(app, timeout);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true }).waitFor({ timeout });
-  await expect(page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' })).toHaveCount(0);
+  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout });
   const shipped = await app.evaluate(async ({ app }) => {
     const { existsSync } = process.mainModule.require('node:fs');
     const { join } = process.mainModule.require('node:path');
@@ -49,18 +48,13 @@ try {
   });
   assert.equal(shipped.packaged, true);
   for (const [file, present] of Object.entries(shipped.files)) assert.ok(present, `packaged harness is missing ${file}`);
-  // Production starts behind identity verification; no test environment flag bypasses the packaged gate.
-  await page.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true }).waitFor({ timeout: 30000 });
-  const identity = await page.evaluate(() => window.step.call('employeeLoginState'));
-  assert.equal(identity.required, true);
-  await assert.rejects(
-    page.evaluate(() => window.step.call('snapshot')),
-    /AUTH_REQUIRED/,
-  );
+  // The renderer talks to the main process: skipping setup saves settings and shows the workspace.
+  await page.getByRole('button', { name: 'ข้าม ตั้งค่าทีหลัง' }).click();
+  await page.locator('.composer textarea').waitFor({ timeout: 30000 });
+  const snapshot = await page.evaluate(() => window.step.call('snapshot'));
+  assert.ok(Array.isArray(snapshot.sessions));
   assert.deepEqual(errors, []);
-  console.log(
-    `Packaged app ${shipped.version} launched: mandatory Google login and workspace IPC denial work; organization documents and Skills are bundled.`,
-  );
+  console.log(`Packaged app ${shipped.version} launched: setup, workspace and IPC work; organization documents and Skills are bundled.`);
 } finally {
   await app.close().catch(() => {});
   await rm(home, { recursive: true, force: true }).catch(() => {});

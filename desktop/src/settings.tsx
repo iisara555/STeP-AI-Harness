@@ -112,7 +112,7 @@ export function SettingsPanel({
     setBusy(id);
     try {
       await fn();
-      if (id !== 'employee-logout') await refresh();
+      await refresh();
     } catch (e) {
       onError(e);
     } finally {
@@ -159,18 +159,6 @@ export function SettingsPanel({
       {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'general' && (
         <section className="avatar-section">
-          {snapshot.employeeLogin?.phase === 'authenticated' && (
-            <div className="employee-account-card">
-              <ShieldCheck size={21} />
-              <div>
-                <strong>{t('บัญชีพนักงาน')}</strong>
-                <p>{snapshot.employeeLogin.email}</p>
-              </div>
-              <button className="ghost" disabled={Boolean(busy)} onClick={() => void run('employee-logout', () => call('employeeLogout'))}>
-                {t('ออกจากบัญชีพนักงาน')}
-              </button>
-            </div>
-          )}
           <h2>{t('รูปโปรไฟล์')}</h2>
           <p className="muted small">{t('เลือกภาพวาดที่ชอบ ภาพเป็นลายเส้นประกอบ ไม่ใช่รูปถ่ายของใคร และเก็บไว้ในเครื่องนี้เท่านั้น')}</p>
           <div className="avatar-picker" role="radiogroup" aria-label={t('รูปโปรไฟล์')}>
