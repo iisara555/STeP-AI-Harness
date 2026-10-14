@@ -67,6 +67,8 @@ Protocol/container references: [MCP SDK client](https://ts.sdk.modelcontextproto
 
 ## Google Workspace through an organization MCP server
 
+For the proposed employee account connection UI, Google service capability matrix and administrator/OAuth acceptance gates, see the [Google Workspace design handoff](desktop-google-workspace-design.md). That proposal is not an implemented extension of the MCP setup below.
+
 Desktop 0.5.38 recognizes `profile: "google-workspace"` on an administrator-managed server. This is a label for the
 setup/test UI, not an OAuth grant, a trusted tool annotation or an automatic permission change. MCP remains off by
 default. The organization server handles Google OAuth, account binding and scopes; ChatGPT/Codex sign-in does not

@@ -12,10 +12,12 @@
 
 - [ ] **P0:** เพิ่ม regression ที่มี watchdog และ profile คงที่เพื่อแยก shutdown/persistence; พิสูจน์ packaged Windows/Mac และ upgrade ก่อนกล่าวว่าเก็บข้ามการเปิดแอปได้
 - [ ] **P1:** ทำ Vault Module และ Settings โดยเริ่มจาก encrypted username+password, metadata-only Interface, secure IPC และ migration ที่รักษาข้อมูลเดิม
-- [ ] **P2:** ทำ browser list/fill/request_save, username-first login, exact-origin checks, approval binding, execution gate และ redaction พร้อม adversarial tests
+- [ ] **P2:** Implement browser list/fill/request_save, username-first login, exact-origin checks, approval binding, execution isolation and redaction with adversarial tests.
 - [ ] **P3:** เชื่อม external password managers หลัง MVP ผ่าน โดยผู้ใช้เลือกเปิดแหล่งข้อมูลเอง
 
 เริ่มจาก P0 และเปิด implementation PR แยกตาม milestone เพื่อให้ review ได้เป็นเรื่องเดียว ใช้ fixture สังเคราะห์และบัญชีทดสอบที่ได้รับอนุญาตเท่านั้น ผล security tests 7 ข้อที่กล่าวท้ายเอกสารเป็นผลตรวจฐานเดิม ไม่ใช่ผลทดสอบ Vault ใหม่ ชุด benchmark เดิมไม่มีงบอนุมัติเพิ่มจากงานนี้
+
+Employee Google Workspace account connection and Google service access are specified in the [Google Workspace design handoff](desktop-google-workspace-design.md). It covers the existing organization MCP route, a future native OAuth route, service capabilities, administrator controls and G0-G3 acceptance. Google service grants remain separate from AI-provider sign-in and browser password fill.
 
 ## 1. สิ่งที่อ้างอิงจาก Hermes และสิ่งที่เลือกให้ STeP
 
@@ -220,13 +222,13 @@ Electron ระบุว่า Windows ใช้การป้องกัน�
 
 ### การรันโค้ดและปลายทางอื่น
 
-- Browser Vault รุ่นแรกใช้ execution gate ระดับแอป ปิดการรัน terminal หรือโค้ดอิสระด้วยสิทธิ์ host ของ agent จากทุก session ขณะเปิดความสามารถนี้ ไม่จำกัดเฉพาะ session ที่ขอรหัส ห้ามเปิดใช้หรือสร้าง grant ขณะที่ยังมีงานลักษณะนี้ทำงานอยู่ ผู้ใช้ต้องตัดสินใจจบงานเดิมเอง
+- Browser Vault requires an app-wide host-execution gate across all agent sessions. Do not enable it or create a grant while incompatible host code is running. The gate remains active while stored credentials, wrapped keys or authenticated browser state are accessible to agent host processes; suspend/disable does not make those artifacts safe. Resume terminal, arbitrary code, hooks or local executables only after isolation proves that files, decryption facilities, browser processes and credential destinations are inaccessible. If that cannot be established, keep host execution denied and explain the conflict before activation.
 - Provider runtimes ที่โครงการอนุมัติและปิด native tools ยังใช้ได้ตามเดิม ส่วน hooks, local MCP executables และ plugins ที่รันโค้ดต้องได้รับการประเมินใน gate นี้ด้วย ห้ามถือว่าป้ายชื่อ tool แปลว่าแยกจากเครื่องผู้ใช้แล้ว
 - ไฟล์ Vault, wrapped keys และ runtime credentials อยู่ใน protected paths ของ read/search/patch/export และ attachments
 - การซ่อนเครื่องมืออย่างเดียวไม่ใช่ OS sandbox หากในอนาคตจะเปิด terminal พร้อม Vault ต้องมี isolation ที่พิสูจน์การกันไฟล์ โปรเซส และปลายทาง network ได้ก่อน
 - API key ใช้ได้เฉพาะ connection/adapter ที่ผูกไว้ ไม่ให้นำ browser password ไปเป็น API key หรือ credential ของ MCP โดยการเปลี่ยน args
 - Vault ไม่ให้สิทธิ์ใหม่แก่ MCP server, plugin, cron หรือ webhook; browser fill ที่ไม่มีหน้าจอให้มนุษย์ยืนยันถูกปฏิเสธในรุ่นแรก การใช้ AI connection ของ automation เดิมยังอยู่ใต้ authorization ของ job และ connection เดิม
-- ไม่ย้าย OAuth credentials ออกจาก official CLI profiles มาเก็บซ้ำ ใน UI แสดง “จัดการผ่านบัญชี AI” และเชื่อมไปยัง sign-in/sign-out เดิม
+- Existing AI-provider OAuth credentials stay in their official runtime profiles. A future native Google Workspace connector owns separately consented OAuth grants under its dedicated lifecycle contract; no token import from Gemini/Antigravity or other CLI profiles. See [Google Workspace token ownership](desktop-google-workspace-design.md#4-oauth-ownership-employee-identity-and-token-lifecycle).
 
 ## 7. Race condition และการกู้คืน
 
@@ -256,7 +258,9 @@ API keys ปัจจุบันอยู่ใน encrypted records ชนิ�
 3. บันทึก `credentialRef` หลัง record ใหม่ตรวจผ่านเท่านั้น Migration ต้องทำซ้ำได้โดยไม่สร้างรายการซ้ำ
 4. ระหว่างเปลี่ยนรองรับ crash และ rollback ด้วย state ที่ชัดเจน ไม่อ้าง atomic transaction ข้ามสองฐานข้อมูลโดยไม่มี protocol รองรับ
 5. Source encrypted record เดิมคงไว้ตามช่วงเปลี่ยนรุ่นที่กำหนด การเก็บกวาดต้องมีแผนกู้คืนและคำยืนยันที่เกี่ยวข้อง ไม่ทำใน PR แรก
-6. OAuth/subscription ใช้ reference ไปยัง runtime เดิม ไม่มีการอ่านหรือ import token จาก auth files มาเป็น Vault item ทั่วไป
+6. Existing AI-provider OAuth/subscription connections reference their runtime; no token import from auth files. New employee Google Workspace grants are a separate connector-owned credential kind, not legacy API-key migration or general browser Vault items.
+7. After a successful migration, the new store is authoritative. Updates and deletes invalidate legacy fallback with durable revision/tombstone state before reporting success; readers must not silently restore an old key or a deleted connection. Supported rollback versions must understand that state, otherwise require explicit reauthentication rather than an unsafe downgrade. Keeping the original encrypted record for recovery is not permission to use stale credentials.
+8. Acceptance must cover migration followed by key replacement or deletion, then crash/restart and supported rollback; no stale key use or credential resurrection. Whole-store backup replay remains the separate cryptographic limitation described above.
 
 Settings แบบใหม่ยังไม่ใช่ configuration ที่ 0.6.3 รองรับ Feature flag ควรปิดค่าเริ่มต้น และการอนุญาตขององค์กรกับความยินยอมจำบัญชีของผู้ใช้ต้องครบทั้งคู่ก่อนเปิด browser fill
 
