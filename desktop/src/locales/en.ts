@@ -12,7 +12,7 @@ export const en: Record<string, string> = {
     'Leave prose fields blank for an AI draft using the Skill and template; missing facts stay pending',
   'ปรับร่างเดิมเฉพาะส่วนที่ขอ โดยใช้ร่างล่าสุดและข้อความที่คุณแก้ไว้':
     'Revise only the requested parts using the latest draft and your edits',
-  เพิ่มคลังรหัสผ่านที่เข้ารหัสในเครื่อง เมื่อผู้ดูแลเปิดให้ใช้:
+  'เพิ่มคลังรหัสผ่านที่เข้ารหัสในเครื่อง เมื่อผู้ดูแลเปิดให้ใช้':
     'Added a locally encrypted credential Vault when enabled by your administrator',
   'เตรียมเชื่อมบัญชี Google Workspace และบริการที่ผู้ดูแลอนุญาต โดยต้องตั้งค่า OAuth client ก่อน':
     'Prepared employee Google Workspace services approved by your administrator; configure an OAuth client before connecting',
