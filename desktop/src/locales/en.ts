@@ -5,6 +5,7 @@ import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 export const en: Record<string, string> = {
+  แก้หน้าสื่อภายในให้แก้ไขต่อได้หลังใส่ตัวอย่าง: 'Keep internal media editable after inserting an example',
   'เปิดพื้นที่ทำงานได้ทันที โดยไม่ต้องลงชื่อ Google ก่อนเข้าแอป': 'Open your workspace directly without Google sign-in at app entry',
   'ตรวจนโยบายองค์กรไม่ได้ กรุณาติดต่อผู้ดูแลระบบก่อนเข้าใช้งาน':
     'The organization policy could not be verified. Contact your administrator before signing in',

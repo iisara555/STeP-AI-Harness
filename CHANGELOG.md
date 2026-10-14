@@ -8,6 +8,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Desktop v0.6.8 (2026-10-14)
 
+- Replace the internal-media sample overwrite JavaScript confirm popup with the existing in-app confirmation dialog. Preserve drafts on cancel and restore editable keyboard focus on cancel/accept; native regression covers subsequent typing, dropdown changes, copy validation and draft persistence.
+
 - Remove employee Google sign-in at app entry, its encrypted session/owner gate, expiry lock and employee logout controls. Fresh and upgraded profiles open setup or the workspace directly, including profiles with retired appLogin policy or unreadable employee-session files. Existing work and retired session files are preserved. Optional Google Workspace connections, provider sign-in, managed policy and Vault restrictions remain independent.
 
 ## Desktop v0.6.7 (2026-10-14)

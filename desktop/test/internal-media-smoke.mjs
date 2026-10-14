@@ -1,6 +1,6 @@
 // The internal media page opens from the sidebar, gates copying on missing input, keeps the draft across a reload and
 // switches language. Synthetic data only; no provider is called.
-import { _electron as electron } from '@playwright/test';
+import { _electron as electron, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -25,16 +25,28 @@ try {
   const brief = page.getByRole('textbox', { name: 'ข้อมูลที่มี' });
   const example = page.getByRole('button', { name: 'ใส่ตัวอย่าง' });
   await brief.fill('ข้อมูลร่างของผู้ใช้');
-  let confirmMessage = '';
-  page.once('dialog', async dialog => {
-    confirmMessage = dialog.message();
+  let nativeDialogs = 0;
+  page.on('dialog', async dialog => {
+    nativeDialogs++;
     await dialog.dismiss();
   });
   await example.click();
-  assert.match(confirmMessage, /ใช้ตัวอย่างแทนข้อมูลปัจจุบัน/);
+  assert.equal(nativeDialogs, 0, 'sample replacement must not open a blocking native JavaScript dialog');
+  const confirm = page.getByRole('alertdialog', { name: 'ใช้ตัวอย่างแทนข้อมูลปัจจุบันหรือไม่?' });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   assert.equal(await brief.inputValue(), 'ข้อมูลร่างของผู้ใช้', 'dismissing keeps every draft field');
-  page.once('dialog', dialog => dialog.accept());
+  await brief.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('Edited after cancellation');
+  assert.equal(await brief.inputValue(), 'Edited after cancellation', 'keyboard editing works after cancellation');
   await example.click();
+  await confirm.getByRole('button', { name: 'ใส่ตัวอย่าง', exact: true }).click();
+  await expect(confirm).toHaveCount(0);
+  await brief.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('Edited after sample');
+  assert.equal(await brief.inputValue(), 'Edited after sample', 'keyboard editing works after accepting an example');
   await page.getByText('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง').waitFor();
   const prompt = page.getByRole('textbox', { name: 'Prompt พร้อมใช้' });
   assert.match(await prompt.inputValue(), /Create one announcement for INTERNAL communication only/);

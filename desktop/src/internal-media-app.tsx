@@ -16,6 +16,7 @@ import {
   type MediaType,
 } from './internal-media';
 import { t } from './i18n';
+import { ConfirmDialog } from './ui';
 import coupleArt from './assets/illustrations/media-couple.webp';
 import './internal-media.css';
 
@@ -37,6 +38,7 @@ export function InternalMedia({
   copyText: (text: string) => Promise<unknown>;
 }) {
   const [state, setState] = useState<MediaState>(loadDraft);
+  const [exampleType, setExampleType] = useState<MediaType | null>(null);
   const result = useMemo(() => compileMedia(state), [state]);
   const aiRequest = useMemo(() => mediaAiRequest(state), [state]);
   useEffect(() => {
@@ -56,11 +58,15 @@ export function InternalMedia({
       notify(t('คัดลอกไม่ได้ เลือกข้อความแล้วคัดลอกเองได้'), 'error');
     }
   }
+  function fillExample(type: MediaType) {
+    set({ ...MEDIA_EXAMPLES[type], source: t('ตัวอย่างสมมติสำหรับทดลอง') });
+    setExampleType(null);
+    notify(t('ใส่ตัวอย่างแล้ว แก้ให้ตรงกับงานจริง'));
+  }
   function applyExample() {
     const replacesDraft = [state.topic, state.brief, state.content, state.visual, state.source].some(value => value.trim());
-    if (replacesDraft && !window.confirm(t('ใช้ตัวอย่างแทนข้อมูลปัจจุบันหรือไม่?'))) return;
-    set({ ...MEDIA_EXAMPLES[state.type], source: t('ตัวอย่างสมมติสำหรับทดลอง') });
-    notify(t('ใส่ตัวอย่างแล้ว แก้ให้ตรงกับงานจริง'));
+    if (replacesDraft) setExampleType(state.type);
+    else fillExample(state.type);
   }
   const audit = result.ready
     ? t('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง')
@@ -70,6 +76,17 @@ export function InternalMedia({
       ].join(' · ');
   return (
     <div className="internal-media">
+      {exampleType && (
+        <ConfirmDialog
+          title={t('ใช้ตัวอย่างแทนข้อมูลปัจจุบันหรือไม่?')}
+          confirmLabel={t('ใส่ตัวอย่าง')}
+          focusCancel
+          onCancel={() => setExampleType(null)}
+          onConfirm={() => fillExample(exampleType)}
+        >
+          <p>{t('ตัวอย่างสมมติสำหรับทดลอง')}</p>
+        </ConfirmDialog>
+      )}
       <h1 className="sr-only">{t('สื่อภายใน')}</h1>
       <p className="muted">{t('เลือกงาน → ใส่เรื่องที่ต้องการสื่อสาร → ได้ Prompt สำหรับเครื่องมือสร้างภาพ')}</p>
       <div className="media-types" role="group" aria-label={t('ประเภทสื่อ')}>
