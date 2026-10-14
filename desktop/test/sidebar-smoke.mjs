@@ -66,6 +66,16 @@ try {
   });
   await page.reload();
   const sidebar = page.locator('aside.sidebar');
+  // Until the employee chooses, the sidebar follows the viewport in both directions without saving a preference.
+  assert.equal(await page.evaluate(() => localStorage.getItem('step.sidebar')), null);
+  await expect(sidebar).not.toHaveClass(/rail/);
+  await page.setViewportSize({ width: 800, height: 860 });
+  await expect(sidebar).toHaveClass(/rail/);
+  await page.reload();
+  await expect(sidebar).toHaveClass(/rail/);
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await expect(sidebar).not.toHaveClass(/rail/);
+  assert.equal(await page.evaluate(() => localStorage.getItem('step.sidebar')), null);
   const composer = page.locator('.composer textarea');
   const sessions = async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions;
   const task = title => sidebar.locator('.session').filter({ hasText: title });
@@ -222,10 +232,25 @@ try {
   // The choice is remembered after the app reloads.
   await page.reload();
   await expect(page.locator('aside.sidebar')).toHaveClass(/rail/);
+  const profileButton = sidebar.getByRole('button', { name: /รูปโปรไฟล์/ });
+  await profileButton.focus();
+  await expect(profileButton).toBeFocused();
+  await profileButton.click();
+  await expect(page.getByRole('tab', { name: 'ทั่วไป' })).toHaveAttribute('aria-selected', 'true');
+  await skillIcon.click();
+  // An explicit folded choice also stays folded when the window grows again.
+  await page.setViewportSize({ width: 800, height: 900 });
+  await expect(sidebar).toHaveClass(/rail/);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(sidebar).toHaveClass(/rail/);
   // The task list icon opens the full sidebar again.
   await sidebar.getByRole('button', { name: 'งานทั้งหมด' }).click();
   await expect(sidebar).not.toHaveClass(/rail/);
   await expect(sidebar.locator('.session')).toHaveCount(1);
+  // An explicit full-sidebar choice survives crossing the automatic narrow-window breakpoint.
+  await page.setViewportSize({ width: 800, height: 900 });
+  await expect(sidebar).not.toHaveClass(/rail/);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'ย่อแถบงาน' }).click();
   await page.getByRole('button', { name: 'ขยายแถบงาน' }).click();
   await expect(sidebar.locator('.profile')).toBeVisible();

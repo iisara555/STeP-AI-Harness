@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -423,6 +423,13 @@ test("CLI stream-json emits metadata, privacy-reviewed draft and completion; def
 });
 const skill =
   "---\nname: public-draft\ndescription: Prepare public draft text.\n---\nUse supplied facts. Missing facts stay unconfirmed.\n";
+test("disabled pack hooks never access a missing workspace; enabled packs retain validation", () => {
+  const missing = join(tmpdir(), "step-missing-pack-workspace-" + randomUUID());
+  assert.deepEqual(enabledPackHooks(missing, {}), []);
+  assert.deepEqual(enabledPackHooks(missing, { features: { skillPacks: false } }), []);
+  assert.throws(() => enabledPackHooks(missing, { features: { skillPacks: true } }), { code: "ENOENT" });
+});
+
 test("packs import Anthropic layout inertly, require approved digest and explicit hooks, export into a fresh directory, detect tampering", async () => {
   const root = await fixture(),
     work = join(root, "work"),

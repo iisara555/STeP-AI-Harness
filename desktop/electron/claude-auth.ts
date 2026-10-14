@@ -141,7 +141,7 @@ export function claudeLoginUrl(output: string) {
         !url.username &&
         !url.password &&
         !url.hash &&
-        url.pathname === '/oauth/authorize' &&
+        ['/oauth/authorize', '/cai/oauth/authorize'].includes(url.pathname) &&
         url.searchParams.get('response_type') === 'code' &&
         ['client_id', 'state', 'code_challenge', 'redirect_uri'].every(key => !!url.searchParams.get(key))
       )

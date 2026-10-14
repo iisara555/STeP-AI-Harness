@@ -57,7 +57,8 @@ export function InternalMedia({
     }
   }
   function applyExample() {
-    if ((state.topic || state.content) && !window.confirm(t('ใช้ตัวอย่างแทนหัวข้อและเนื้อหาปัจจุบันหรือไม่?'))) return;
+    const replacesDraft = [state.topic, state.brief, state.content, state.visual, state.source].some(value => value.trim());
+    if (replacesDraft && !window.confirm(t('ใช้ตัวอย่างแทนข้อมูลปัจจุบันหรือไม่?'))) return;
     set({ ...MEDIA_EXAMPLES[state.type], source: t('ตัวอย่างสมมติสำหรับทดลอง') });
     notify(t('ใส่ตัวอย่างแล้ว แก้ให้ตรงกับงานจริง'));
   }

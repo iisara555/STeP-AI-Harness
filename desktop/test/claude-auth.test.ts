@@ -18,6 +18,7 @@ import type { Connection } from '../src/types';
 
 const oauthTestUrl =
   'https://claude.com/oauth/authorize?response_type=code&client_id=synthetic&state=synthetic&code_challenge=synthetic&redirect_uri=http%3A%2F%2Flocalhost%2Fcallback';
+const caiOauthTestUrl = oauthTestUrl.replace('/oauth/authorize?', '/cai/oauth/authorize?code=true&');
 
 async function fixture(mode = 'code', version = '2.1.268') {
   const cwd = await mkdtemp(join(tmpdir(), 'step-claude-test-'));
@@ -48,6 +49,7 @@ async function fixture(mode = 'code', version = '2.1.268') {
       " else if(mode === 'browser') { fs.writeFileSync(saved, 'synthetic'); process.exit(0); }",
       ' else {',
       `  if(mode === 'url') console.log(${JSON.stringify(oauthTestUrl)});`,
+      `  if(mode === 'url-cai') console.log(${JSON.stringify(caiOauthTestUrl)});`,
       "  process.stdout.write('Paste code here if prompted: ');",
       "  require('node:readline').createInterface({input:process.stdin}).once('line',code=>{",
       "   if(code !== 'example#state') process.exit(2);",
@@ -82,6 +84,7 @@ test('discovery checks version; missing and old runtimes are actionable', async 
 
 test('Claude browser links require a complete URL on an exact official HTTPS authorization endpoint', () => {
   assert.equal(claudeLoginUrl(oauthTestUrl + '\n'), oauthTestUrl);
+  assert.equal(claudeLoginUrl(caiOauthTestUrl + '\n'), caiOauthTestUrl);
   assert.equal(claudeLoginUrl(oauthTestUrl.replace('claude.com', 'claude.ai') + '\n'), oauthTestUrl.replace('claude.com', 'claude.ai'));
   assert.equal(claudeLoginUrl(oauthTestUrl), undefined);
   for (const invalid of [
@@ -90,6 +93,8 @@ test('Claude browser links require a complete URL on an exact official HTTPS aut
     oauthTestUrl.replace('claude.com', 'evil.invalid@claude.com'),
     oauthTestUrl.replace('claude.com', 'claude.com:8443'),
     oauthTestUrl.replace('/oauth/authorize', '/other'),
+    caiOauthTestUrl.replace('/cai/oauth/authorize', '/cai/oauth/authorize/extra'),
+    caiOauthTestUrl.replace('/cai/oauth/authorize', '/prefix/cai/oauth/authorize'),
     oauthTestUrl.replace('state=synthetic', 'state='),
     oauthTestUrl.replace('response_type=code', 'response_type=token'),
     oauthTestUrl + '#unexpected',
@@ -120,6 +125,32 @@ test('piped CLI login opens its official link once and keeps auth details out of
   assert.deepEqual(opened, [oauthTestUrl]);
   assert.equal(await claudeStatus(f.executable, f.context), true);
   assert.doesNotMatch(progress.join('\n'), /https:|state=|example#state/);
+});
+
+test('piped Claude Code cai authorization opens its browser link and closes the code dialog', async () => {
+  const f = await fixture('url-cai');
+  const opened: string[] = [];
+  let dropped = 0;
+  await claudeLogin(
+    f.executable,
+    f.context,
+    {
+      progress: () => {},
+      openExternal: async url => {
+        opened.push(url);
+      },
+      askForCode: async () => {
+        await new Promise(r => setTimeout(r, 20));
+        return 'example#state';
+      },
+      dropCode: () => {
+        dropped++;
+      },
+    },
+    new AbortController().signal,
+  );
+  assert.deepEqual(opened, [caiOauthTestUrl], 'the official CLI link must open a browser rather than leaving only a code dialog');
+  assert.equal(dropped, 1);
 });
 
 test('browser launch failure cancels the native login and closes the code dialog with a typed error', async () => {

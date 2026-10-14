@@ -4604,9 +4604,18 @@ nav button:disabled {
   min-height: 12px;
 }
 .rail-profile {
+  width: 40px;
+  justify-content: center;
   margin-top: 10px;
-  padding-top: 12px;
+  padding: 12px 3px 0;
   border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.rail-profile:hover,
+.rail-profile:focus-visible {
+  background: var(--hover);
+  filter: none;
 }
 .sidebar.rail [data-tip] {
   position: relative;

@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-14_
 
 ## Latest release
 
@@ -13,6 +13,7 @@ _Last updated: 2026-10-13_
 
 ## In progress
 
+- **Desktop UI/OAuth audit fixes (2026-10-14)**: owner explicitly requested inclusion in the next release alongside the harness evaluator. Preserved and prepared the earlier local fixes on `codex/desktop-ui-audit-fixes`: missing-workspace chat create/send/delete recovery with managed hooks retained; accurate tool-loop Skill routing disclosure; exact Claude `/cai/oauth/authorize` browser recognition; internal-media placeholder/publication/citation/example handling; responsive and keyboard-accessible sidebar. Synthetic regressions and relevant Electron smokes are rechecked before merge. Release 0.6.3 is coordinated in PR #159; no live provider prompts or policy changes.
 - **สื่อภายใน page (2026-10-12)**: owner asked to add the STeP Internal Studio v09 mini app to the Harness; plan in the project thread (3 PRs). PR 1 (#158) adds the sidebar page with the ported prompt engine, copy-only, a redesigned layout preview and the page in the folded icon rail from #154. Next: PR 2 drafts content and generates images through the app's own AI connection and privacy gate; PR 3 moves the hand-drawn ink style and no-logo rules into the `step-image-prompt` Skill references. Owner defaults taken: no reference images in the public repo, fonts labelled a team choice, separate sidebar item. PR 1 shipped in 0.6.2 (2026-10-13, owner asked to merge and release); PR 2 and PR 3 not started.
 
 - **Desktop 0.6.1 release (2026-10-12)**: owner asked for one combined release of #155 and #156. #154 (sidebar rail) is not included: its macOS Electron check was red at release time.

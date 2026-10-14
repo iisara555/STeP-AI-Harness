@@ -56,6 +56,7 @@ try {
   await page.getByRole('button', { name: 'Workspace settings' }).click();
   await page.getByRole('tab', { name: /^AI connections/ }).click();
   await page.locator('.ai-organization-capabilities summary').click();
+  await expect(page.locator('[data-capability="routing"] .ai-capability-state')).toHaveText('Available');
   const policyCapabilities = await page.locator('.ai-organization-capabilities').innerText();
   assert.doesNotMatch(policyCapabilities, /[฀-๿]/, policyCapabilities);
   await page.getByRole('tab', { name: 'Appearance & language' }).click();

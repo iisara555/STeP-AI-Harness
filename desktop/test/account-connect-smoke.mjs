@@ -116,7 +116,8 @@ try {
   await expect(capabilities.locator('[data-capability="image"]')).toContainText('OAuth อย่างเดียวใช้ไม่ได้');
   const organization = page.locator('.ai-organization-capabilities');
   await organization.locator('summary').click();
-  await expect(organization.locator('[data-capability="routing"]')).toContainText('เลือก Skill เองได้');
+  await expect(organization.locator('[data-capability="routing"] .ai-capability-state')).toHaveText('ใช้ได้');
+  await expect(organization.locator('[data-capability="routing"]')).toContainText('AI ค้นหาและเลือก Skill');
   await expect(organization.locator('[data-capability="mcp"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
   await page.screenshot({ path: 'release/qa/connect-ai/ready.png' });
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
