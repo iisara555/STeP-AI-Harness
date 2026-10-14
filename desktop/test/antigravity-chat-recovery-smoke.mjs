@@ -77,7 +77,9 @@ try {
   await page.reload();
   await page.locator('.statusbar .status-dot.ok').waitFor();
   const send = async text => {
+    // A rendered final answer can precede run cleanup; wait until the composer accepts the next turn.
     await page.locator('.composer textarea').fill(text);
+    await expect(page.getByRole('button', { name: /ส่งคำขอ/ })).toBeEnabled();
     await page.keyboard.press('Enter');
   };
   await send('How is the public synthetic podcast doing recently?');
