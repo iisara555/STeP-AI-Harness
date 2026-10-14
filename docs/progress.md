@@ -25,6 +25,8 @@ _Last updated: 2026-10-14_
 
 ## In progress
 
+- **Internal-media sample editing (2026-10-14)**: sample replacement used a blocking native JavaScript confirm. Replace it with the shared in-app dialog, preserving cancel and confirmed replacement. Native regression first catches the native popup, then verifies keyboard edits after both decisions, subsequent options/copy validation and retained draft. Intended for 0.6.8 alongside removal of app login; validation and protected CI pending.
+
 - **Remove app entry login / Desktop 0.6.8 (2026-10-14)**: the owner explicitly requested removing employee login and publishing a new release. Restore direct fresh/existing workspace entry and remove employee identity UI, IPC, session locks and policy. Retired policy and session files must not block startup or erase work. Optional Workspace OAuth and Vault controls remain independent. Native fresh/upgraded regression first fails at the old login page; complete validation and protected CI before merge/publication. Internal-media sample editing regression is being handled separately for the same release.
 
 
