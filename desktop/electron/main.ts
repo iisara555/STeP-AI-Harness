@@ -1629,6 +1629,7 @@ async function main() {
   const lockEmployeeWorkspace = async () => {
     if (employeeLocked || !employee.state().required) return;
     employeeLocked = true;
+    if (process.platform === 'darwin' || process.platform === 'win32') window.setOpacity(0);
     window.hide();
     ipcMain.removeHandler('step:call');
     google.invalidate();
@@ -1685,6 +1686,7 @@ async function main() {
       ipcMain.handle('step:call', handleCall);
       employeeLocked = false;
       automations.start();
+      if (process.platform === 'darwin' || process.platform === 'win32') window.setOpacity(1);
       window.show();
       window.focus();
       login.destroy();
@@ -3573,6 +3575,18 @@ async function main() {
   splash?.step(tm('กำลังเตรียมความรู้ขององค์กรและ Skills…'));
   const prepared = service.warmUp().then(() => splash?.step(tm('กำลังเปิดพื้นที่ทำงาน…')));
   await makeWindow(splash, prepared);
+  // Native show events can arrive after visibility changes on macOS. Guard application-owned calls first.
+  const showWorkspace = window.show.bind(window);
+  window.show = () => {
+    if (employeeLocked) return;
+    try {
+      employee.assert();
+    } catch {
+      void lockEmployeeWorkspace();
+      return;
+    }
+    showWorkspace();
+  };
   window.on('show', () => {
     if (employeeLocked) {
       window.hide();

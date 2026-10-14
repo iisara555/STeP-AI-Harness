@@ -230,6 +230,16 @@ try {
   await expect.poll(() => application.evaluate(() => employeeFixture.closeChecks)).toBe(1);
   await expect(login.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true })).toBeVisible();
   await assert.rejects(call(appPage, 'snapshot'), /UNTRUSTED_SENDER|AUTH_REQUIRED/);
+  if (process.platform === 'darwin' || process.platform === 'win32')
+    assert.equal(
+      await application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find(window => window.webContents.getURL().endsWith('index.html'))
+          .getOpacity(),
+      ),
+      0,
+      'native activation must not paint locked workspace contents',
+    );
   assert.equal(
     await application.evaluate(({ app, BrowserWindow }) => {
       const workspace = BrowserWindow.getAllWindows().find(window => window.webContents.getURL().endsWith('index.html'));
@@ -251,6 +261,16 @@ try {
   await login.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true }).click();
   await expect.poll(async () => (await application.windows()).filter(page => page.url().includes('#employee-login')).length).toBe(0);
   assert.ok((await call(appPage, 'snapshot')).sessions.some(session => session.id === 'fixture-existing'));
+  if (process.platform === 'darwin' || process.platform === 'win32')
+    assert.equal(
+      await application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find(window => window.webContents.getURL().endsWith('index.html'))
+          .getOpacity(),
+      ),
+      1,
+      'the verified owner can see the resumed workspace',
+    );
   await appPage.evaluate(() => window.removeEventListener('step:check-unsaved', window.employeeFixtureDirty));
   console.log('Employee login fixture: owner resumed; checking normal shutdown.');
   await closeOwnedApplication();
