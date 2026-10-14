@@ -35,6 +35,8 @@ export const en: Record<string, string> = {
   ยืนยันว่าเป็นข้อมูลของฉัน: 'Confirm this is my work',
   เลือกบัญชีใหม่: 'Choose another account',
   'ลงชื่อเข้าใช้ด้วย Google': 'Sign in with Google',
+  'แก้ปัญหา Windows ตรวจนโยบายไม่ผ่านจนเปิดหน้าลงชื่อไม่ได้':
+    'Fix Windows policy checking that prevented access to Google sign-in',
   'ใช้เฉพาะชื่อและอีเมลเพื่อยืนยันตัวตน การเชื่อมบริการ Google จะขออนุญาตแยกภายหลัง':
     'Only your name and email are used to verify your identity. Google services request separate consent later',
   พื้นที่ทำงานสำหรับบัญชีองค์กร: 'A workspace for organization accounts',

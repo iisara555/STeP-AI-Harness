@@ -6,6 +6,10 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.7',
+    items: () => [t('แก้ปัญหา Windows ตรวจนโยบายไม่ผ่านจนเปิดหน้าลงชื่อไม่ได้')],
+  },
+  {
     version: '0.6.6',
     items: () => [
       t('ลงชื่อด้วยบัญชี Google ของ step.cmu.ac.th ก่อนเปิดพื้นที่ทำงาน'),

@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.7 (2026-10-14)
+
 - Fix Windows managed-policy verification rejecting valid administrator-protected files before employee sign-in. Execute the complete PowerShell ACL check and avoid inherited PowerShell 7 module paths; keep the existing owner/write checks and required Google identity. Existing installed apps require an updated installer; no policy or credential migration is performed.
 
 ## Desktop v0.6.6 (2026-10-14)
