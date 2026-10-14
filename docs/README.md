@@ -53,6 +53,7 @@
 
 **STeP Desktop**
 
+- [Vault design handoff — username/password และ API key](desktop-vault-design.md) — แบบเสนอและแผน P0–P3 สำหรับพัฒนาต่อ ยังไม่มีฟีเจอร์ในแอป
 - [Governed tool loop](desktop-tool-loop.md), [Native workflows](desktop-workflows.md), [Context, memory and sessions](desktop-context-memory.md)
 - [Coordinator, scheduled drafts, MCP and autopilot](desktop-automation.md), [Agent Browser](desktop-browser-agent.md), [Interface language](desktop-i18n.md)
 - [Providers, command surfaces and LINE gateway](desktop-phase5.md), [Scoped consent](desktop-phase6.md), [Security review 2026-10-06](desktop-security-review.md)
