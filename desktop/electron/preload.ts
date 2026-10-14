@@ -1,5 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron';
 const allowed = new Set([
+  'vaultState',
+  'vaultSave',
+  'vaultRemove',
+  'vaultSuspend',
+  'vaultResumeBrowser',
+  'googleState',
+  'googleConnect',
+  'googleCancel',
+  'googlePause',
+  'googleDisconnect',
+  'googleExecute',
+  'googleOpen',
   'updateState',
   'updateCheck',
   'updateInstall',

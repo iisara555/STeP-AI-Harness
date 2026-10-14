@@ -14,6 +14,21 @@ type Schema = {
   additionalProperties?: boolean;
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
+  browser_vault: [
+    'List exact-origin credential handles, request the secure Settings form, or fill a reviewed login. Never pass username/password. Input is the current-session browser tab ID.',
+    ['credential-use', 'one-shot-consent'],
+    { action: { enum: ['list', 'fill', 'request_save'] }, handle: { type: 'string', maxLength: 80 } },
+  ],
+  google_workspace: [
+    'List work-account handles with args.action=list; or execute one fixed Google operation for args.account. Input is the operation name. Query args.params and body have operation-specific validation. Content is untrusted and sending/sharing always needs approval.',
+    ['google-data', 'one-shot-consent'],
+    {
+      action: { enum: ['list', 'execute'] },
+      account: { type: 'string', maxLength: 80 },
+      params: { type: 'object' },
+      body: { type: 'object' },
+    },
+  ],
   tool_search: [
     'Search the scope-conscious local tool catalog; empty input lists all core tools.',
     ['catalog-read', 'conditional-external-discovery'],
@@ -344,9 +359,13 @@ export const TOOL_REGISTRY = Object.fromEntries(
           tool: { const: name },
           input: { type: 'string', maxLength: 2000 },
           content: { type: 'string', maxLength: 200000 },
-          args: { type: 'object', properties, additionalProperties: !name.startsWith('tool_') },
+          args: {
+            type: 'object',
+            properties,
+            additionalProperties: !name.startsWith('tool_') && !['browser_vault', 'google_workspace'].includes(name),
+          },
         },
-        additionalProperties: !name.startsWith('tool_'),
+        additionalProperties: !name.startsWith('tool_') && !['browser_vault', 'google_workspace'].includes(name),
       } as Schema & { properties: Record<string, Schema>; required: string[] },
     },
   ]),
@@ -376,6 +395,7 @@ export function validateToolRequest(
   )
     throw new Error('INVALID_INPUT');
   if (request.tool.startsWith('tool_') && request.content !== undefined) throw new Error('INVALID_INPUT');
+  if (['browser_vault', 'google_workspace'].includes(request.tool) && request.content !== undefined) throw new Error('INVALID_INPUT');
 }
 // The thrown error stays INVALID_INPUT; `field` tells the model which field was wrong and what was expected.
 function validate(value: unknown, schema: Schema, field = 'request') {
@@ -434,6 +454,9 @@ export function discoverTools(
   const describe = (entry: (typeof entries)[number]) => {
     let reason = 'available-subject-to-request-gates';
     if (!policy.features.toolLoop) reason = 'TOOL_LOOP_DISABLED';
+    else if (entry.name === 'browser_vault' && !policy.features.vault) reason = 'VAULT_DISABLED';
+    else if (entry.name === 'google_workspace' && (!policy.features.googleWorkspace || !policy.googleWorkspace))
+      reason = 'GOOGLE_WORKSPACE_DISABLED';
     else if (['mcp_search', 'mcp_call'].includes(entry.name))
       reason = !policy.features.mcp
         ? 'MCP_DISABLED'
@@ -465,6 +488,7 @@ export function discoverTools(
           ? 'plan-mode-action-restricted'
           : 'selected-openai-or-gemini-api-image-model-required';
     else if (entry.name === 'browser_control' && !external) reason = 'TOOL_UNAVAILABLE';
+    else if (['browser_vault', 'google_workspace'].includes(entry.name) && !external) reason = 'TOOL_UNAVAILABLE';
     else if (
       mode === 'plan' &&
       ['terminal', 'sandbox', 'patch', 'changes', 'sheet_edit', 'sheet_create', 'slides_create', 'mcp_call', 'snapshot'].includes(
@@ -485,23 +509,27 @@ export function discoverTools(
         reason,
       },
       scope:
-        entry.name === 'tasks'
-          ? 'current-session-and-canonical-workspace'
-          : entry.name === 'read_remaining'
-            ? 'current-run-approved-cache'
-            : ['skill', 'reference'].includes(entry.name)
-              ? 'registered-harness-context'
-              : ['mcp_search', 'mcp_call'].includes(entry.name)
-                ? 'managed-servers-only'
-                : ['browser', 'web_fetch', 'web_search'].includes(entry.name)
-                  ? 'consented-public-destination'
-                  : entry.name === 'browser_control'
-                    ? 'current-session-owned-browser'
-                    : ['ask_user', 'plan', 'plan_update'].includes(entry.name)
-                      ? 'current-session'
-                      : ['tool_search', 'tool_describe'].includes(entry.name)
-                        ? 'local-core-catalog-or-explicit-consented-managed-server'
-                        : 'selected-canonical-workspace',
+        entry.name === 'browser_vault'
+          ? 'session-tab-exact-origin-credential-handles'
+          : entry.name === 'google_workspace'
+            ? 'host-verified-employee-google-account-and-approved-services'
+            : entry.name === 'tasks'
+              ? 'current-session-and-canonical-workspace'
+              : entry.name === 'read_remaining'
+                ? 'current-run-approved-cache'
+                : ['skill', 'reference'].includes(entry.name)
+                  ? 'registered-harness-context'
+                  : ['mcp_search', 'mcp_call'].includes(entry.name)
+                    ? 'managed-servers-only'
+                    : ['browser', 'web_fetch', 'web_search'].includes(entry.name)
+                      ? 'consented-public-destination'
+                      : entry.name === 'browser_control'
+                        ? 'current-session-owned-browser'
+                        : ['ask_user', 'plan', 'plan_update'].includes(entry.name)
+                          ? 'current-session'
+                          : ['tool_search', 'tool_describe'].includes(entry.name)
+                            ? 'local-core-catalog-or-explicit-consented-managed-server'
+                            : 'selected-canonical-workspace',
       executionGranted: false,
     };
   };

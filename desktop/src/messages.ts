@@ -1,7 +1,9 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
 import { localized, t } from './i18n';
+import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  ...credentialErrorsTh,
   WEB_EXTRACT_INVALID: 'หน้าเว็บนี้ยังแยกเนื้อหาไม่ได้ ลองอ่านด้วย web_fetch หรือระบุแหล่งอื่น',
   VISION_PRIVACY_REQUIRED: 'นโยบายตรวจข้อมูลส่วนบุคคลไม่อนุญาตให้ส่งภาพผ่านเครื่องมือนี้ กรุณาใช้ข้อความที่ตรวจแล้ว',
   BROWSER_IMAGE_SENSITIVE: 'หน้าเว็บนี้มีช่องข้อมูลสำคัญ จึงยังส่งภาพให้ AI ไม่ได้',

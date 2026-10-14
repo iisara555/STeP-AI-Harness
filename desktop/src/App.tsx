@@ -124,7 +124,8 @@ export default function App() {
   const snapshotVersion = useRef(0),
     navigationVersion = useRef(0);
   const [settings, setSettings] = useState(false),
-    [settingsPage, setSettingsPage] = useState<'general' | 'ai'>('general'),
+    [settingsPage, setSettingsPage] = useState<'general' | 'ai' | 'credentials'>('general'),
+    [vaultOrigin, setVaultOrigin] = useState(''),
     [query, setQuery] = useState(''),
     [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
@@ -379,6 +380,11 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'vault-open') {
+          setVaultOrigin(event.text || '');
+          setSettingsPage('credentials');
+          setSettings(true);
+        }
         if (event.type === 'approval' && event.approval)
           setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
         if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
@@ -545,7 +551,7 @@ export default function App() {
     setSettings(false);
   }
   selectSessionRef.current = selectSession;
-  const openSettings = (page: 'general' | 'ai' = 'general') => {
+  const openSettings = (page: 'general' | 'ai' | 'credentials' = 'general') => {
     navigationVersion.current++;
     setSettingsPage(page);
     setSettings(true);
@@ -667,6 +673,11 @@ export default function App() {
     return s;
   }
   async function send() {
+    if (query.trim() === '/vault' || query.trim() === '/google') {
+      setQuery('');
+      openSettings('credentials');
+      return;
+    }
     if (/^\/(learn|learning)(?:\s|$)/.test(query.trim())) {
       setLearningText(query.trim().replace(/^\/(learn|learning)\s*/, ''));
       setLearningOpen(true);
@@ -961,6 +972,7 @@ export default function App() {
     new: () => void action(create),
     usage: () => setUsageOpen(true),
     memory: () => setMemoryOpen(true),
+    vault: () => openSettings('credentials'),
     learning: () => {
       setLearningText('');
       setLearningOpen(true);
@@ -1518,6 +1530,7 @@ export default function App() {
                 onBusy={setSettingsBusy}
                 key={settingsPage}
                 initialPage={settingsPage}
+                vaultOrigin={vaultOrigin}
                 snapshot={snapshot}
                 call={api.call}
                 refresh={refresh}

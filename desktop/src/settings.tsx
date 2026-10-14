@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Building2, Check, FolderOpen, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { AIConnections } from './ai-connections';
+import { CredentialSettings } from './credential-settings';
 import { shortcut } from './messages';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { SectionArt } from './illustration';
@@ -12,6 +13,8 @@ import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleI
 
 /** Plain names for the policy switches; the technical key stays beside each for administrators. */
 const featureNames: Record<string, string> = localized({
+  vault: 'เก็บและใช้ข้อมูลบัญชีผ่าน Vault',
+  googleWorkspace: 'เชื่อมบัญชี Google Workspace ของพนักงาน',
   toolLoop: 'ให้ AI ใช้เครื่องมือหลายขั้นตอน',
   autoMode: 'โหมดอัตโนมัติเต็มรูปแบบ',
   shellByAi: 'ให้ AI รันคำสั่งในเครื่อง',
@@ -42,6 +45,7 @@ const featureNames: Record<string, string> = localized({
 
 export function SettingsPanel({
   initialPage,
+  vaultOrigin,
   snapshot,
   call,
   refresh,
@@ -51,7 +55,8 @@ export function SettingsPanel({
   openTour,
   onBusy,
 }: {
-  initialPage: 'general' | 'ai';
+  initialPage: 'general' | 'ai' | 'credentials';
+  vaultOrigin?: string;
   /** Whether an operation (connecting an account, testing a key) is running, so the app keeps the panel while it does. */
   onBusy?: (busy: boolean) => void;
   openWizard: () => void;
@@ -74,10 +79,18 @@ export function SettingsPanel({
   const [outputStyle, setOutputStyle] = useState(snapshot.settings.outputStyle || '');
   const [outputStyles, setOutputStyles] = useState<string[] | null>(null);
   const [busy, setBusy] = useState('');
+  const credentialBusy = useCallback((active: boolean) => setBusy(active ? 'credentials' : ''), []);
   // New users land on AI connections when none exist; otherwise on general settings.
-  const [page, setPage] = useState<'general' | 'ai' | 'appearance' | 'privacy' | 'policy'>(
-    initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length) ? 'ai' : 'general',
+  const [page, setPage] = useState<'general' | 'ai' | 'credentials' | 'appearance' | 'privacy' | 'policy'>(
+    initialPage === 'credentials'
+      ? 'credentials'
+      : initialPage === 'ai' || (snapshot.settings.onboarding && !snapshot.connections.length)
+        ? 'ai'
+        : 'general',
   );
+  useEffect(() => {
+    if (initialPage === 'credentials') setPage('credentials');
+  }, [initialPage, vaultOrigin]);
   useEffect(() => {
     if (page !== 'general') return;
     let active = true;
@@ -109,6 +122,7 @@ export function SettingsPanel({
   const pages = [
     ['general', t('ทั่วไป'), Settings2],
     ['ai', t('การเชื่อมต่อ AI'), Sparkles],
+    ['credentials', t('รหัสผ่านและการเชื่อมต่อ'), ShieldCheck],
     ['appearance', t('รูปลักษณ์และภาษา'), Sun],
     ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
     ['policy', t('นโยบายองค์กร'), Building2],
@@ -142,6 +156,7 @@ export function SettingsPanel({
           </button>
         ))}
       </div>
+      {page === 'credentials' && <CredentialSettings call={call} onError={onError} onBusy={credentialBusy} requestedOrigin={vaultOrigin} />}
       {page === 'general' && (
         <section className="avatar-section">
           <h2>{t('รูปโปรไฟล์')}</h2>

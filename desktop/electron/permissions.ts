@@ -22,6 +22,7 @@ export type PermissionDecision = { allowed: boolean; requiresConfirmation: boole
 // Credential and key material, denied in every mode and by any policy. OpenHarness keeps the same
 // list outside user control so prompt injection cannot reach it.
 export const SENSITIVE_PATH_PATTERNS = [
+  '**/vault/**',
   '*/.step/memory',
   '*/.step/memory/*',
   '*/desktop-policy.json',
