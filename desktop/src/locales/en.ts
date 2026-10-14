@@ -8,6 +8,14 @@ export const en: Record<string, string> = {
   'เก็บและใช้ข้อมูลบัญชีผ่าน Vault': 'Store and use account credentials through Vault',
   'เชื่อมบัญชี Google Workspace ของพนักงาน': 'Connect employee Google Workspace accounts',
   ...credentialErrorsEn,
+  'เว้นช่องเนื้อหาได้ AI ช่วยขึ้นร่างตาม Skill และแม่แบบ ส่วนข้อเท็จจริงที่ขาดยังคงรอยืนยัน':
+    'Leave prose fields blank for an AI draft using the Skill and template; missing facts stay pending',
+  'ปรับร่างเดิมเฉพาะส่วนที่ขอ โดยใช้ร่างล่าสุดและข้อความที่คุณแก้ไว้':
+    'Revise only the requested parts using the latest draft and your edits',
+  เพิ่มคลังรหัสผ่านที่เข้ารหัสในเครื่อง เมื่อผู้ดูแลเปิดให้ใช้:
+    'Added a locally encrypted credential Vault when enabled by your administrator',
+  'เตรียมเชื่อมบัญชี Google Workspace และบริการที่ผู้ดูแลอนุญาต โดยต้องตั้งค่า OAuth client ก่อน':
+    'Prepared employee Google Workspace services approved by your administrator; configure an OAuth client before connecting',
   รหัสผ่านและการเชื่อมต่อ: 'Passwords and connections',
   'สร้าง ส่งข้อความ และลบงานได้เมื่อโฟลเดอร์งานเดิมหายไป':
     'Create tasks, send messages and delete tasks when the saved workspace folder is missing',

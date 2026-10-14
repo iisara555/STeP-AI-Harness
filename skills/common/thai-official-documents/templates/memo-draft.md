@@ -1,5 +1,7 @@
 # Working template — บันทึกข้อความ
 
+Apply the [draft assistance guidance](../references/drafting-checks.md#draft-assistance-and-revision) to blank prose fields. Draft the rationale and requested consideration from the supplied purpose; keep unknown facts pending. The paragraph placeholders below describe content roles rather than text to copy verbatim.
+
 แม่แบบเพื่อร่างเท่านั้น ไม่ใช่แบบหน่วยงานฉบับปัจจุบันที่รับรองแล้ว ใช้แบบหน่วยงานที่ได้รับก่อนแม่แบบนี้ ใช้ชื่อช่องส่วนงาน/ส่วนราชการตามแบบ ข้อมูลที่ขาดคง `[รอยืนยัน: ชื่อช่อง]` ไม่ออกเลขหนังสือหรือเลือกผู้ลงนามแทนเจ้าของเรื่อง
 
 ## ตัวเอกสาร

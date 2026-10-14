@@ -6,8 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.4 — 2026-10-14
+
+- Combined release of PR #162 (Vault/Workspace design), #163 (implementation) and #164 (document drafting assistance), retaining their source commits. Harness remains 0.7.7. No organization policy activation, live model benchmark or budget reset.
 - Added administrator-gated local credential Vault with encrypted username/password pairs, connection-bound API-key migration, metadata-only Settings/IPC and one-shot exact-origin browser fill. Stored credentials keep app-owned host execution denied even when Vault is paused or disabled.
 - Added a separately authorized employee Google Workspace connector with PKCE/OIDC, OS-protected tokens, selected service scopes, fixed Google operations, original-service launch and explicit write/result-transfer approval. Disabled by default; live organization OAuth and packaged acceptance remain pending.
+- Document tools now draft proposed narrative, objectives, activities and functional requirements from sparse inputs using the selected Skill/template. Unknown facts and source-dependent procurement conditions remain pending. A separate revision action uses the latest draft, preserves user edits and stages only the requested changes for review in the existing task.
+
+- Native Vault smokes close owned browser views before shutdown, wait for the initial UI before legacy-key setup and report bounded lifecycle failures. Source validation uses synthetic fixtures; live Google service and document-model/owner acceptance remain separate.
 
 ## Desktop v0.6.3 — 2026-10-14
 

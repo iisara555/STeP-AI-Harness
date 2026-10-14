@@ -1,5 +1,7 @@
 # Working template — หนังสือราชการ
 
+Apply the [draft assistance guidance](../references/drafting-checks.md#draft-assistance-and-revision) to blank prose fields. Draft coordination or request wording from the supplied purpose; keep unknown factual details pending. The paragraph placeholders below describe content roles rather than text to copy verbatim.
+
 แม่แบบเพื่อร่างเท่านั้น ไม่ใช่แบบหน่วยงานฉบับปัจจุบันที่รับรองแล้ว หนังสือเชิญ ตอบกลับ และประสานงานเป็นวัตถุประสงค์ของหนังสือ ให้เลือกโครงหนังสือภายนอกหรือแบบหน่วยงานตามผู้รับจริง ข้อมูลที่ขาดคง `[รอยืนยัน: ชื่อช่อง]`
 
 ## ร่างเพื่อพิจารณา
