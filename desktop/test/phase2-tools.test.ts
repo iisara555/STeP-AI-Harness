@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, readFile, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, mkdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
@@ -605,6 +605,74 @@ test('only routed Skills and registered references load; every tool passes hooks
     f.store.close();
   }
 });
+test('Skill resources load progressively and cannot escape the routed Skill or bypass authority', async () => {
+  const f = await fixture();
+  const base = join(f.root, 'skills', 'known');
+  try {
+    await mkdir(join(base, 'references'), { recursive: true });
+    await mkdir(join(base, 'examples'));
+    await mkdir(join(f.root, 'elsewhere'));
+    await writeFile(join(base, 'SKILL.md'), 'Core Skill only');
+    await writeFile(join(base, 'references', 'search.md'), 'Bounded search procedure');
+    await writeFile(join(base, 'examples', 'good.md'), 'Worked example');
+    await writeFile(join(f.root, 'elsewhere', 'outside.md'), 'Not part of this Skill');
+    await symlink(join(f.root, 'elsewhere'), join(base, 'references', 'linked'), 'junction');
+    f.harness.catalog = async () => [{ name: 'known', path: 'skills/known/SKILL.md', status: 'routed' }];
+    f.harness.skillMetadata = async () => ({ path: 'skills/known/SKILL.md', mandatoryReferences: [] });
+    const call = (resource: string) => f.tools.execute({ tool: 'skill', input: 'known', args: { resource } }, f.scope);
+    const core: any = await f.tools.execute({ tool: 'skill', input: 'known' }, f.scope);
+    assert.equal(core.text, 'Core Skill only');
+    const ref: any = await call('references/search.md');
+    assert.equal(ref.resource, 'references/search.md');
+    assert.equal(ref.text, 'Bounded search procedure');
+    assert.equal(((await call('examples/good.md')) as any).text, 'Worked example');
+    for (const resource of ['../elsewhere/outside.md', 'references/../../elsewhere/outside.md', '/etc/passwd', 'scripts/run.mjs'])
+      await assert.rejects(call(resource), /INVALID_SKILL_RESOURCE/);
+    await assert.rejects(call('references/linked/outside.md'), /INVALID_SKILL_RESOURCE/);
+    await assert.rejects(
+      f.tools.execute({ tool: 'skill', input: 'known', args: { action: 'catalog', resource: 'references/search.md' } }, f.scope),
+      /INVALID_INPUT/,
+    );
+    f.policy.permission.pathRules.push({ pattern: 'skills/known/references/search.md', allow: false });
+    await assert.rejects(call('references/search.md'), /PATH_RULE_DENIED/);
+    f.policy.permission.pathRules = [];
+    f.harness.route = async () => ({ routingContract: { mode: 'BLOCK', skill: 'known', authority: { status: 'DENY' } } });
+    await assert.rejects(call('references/search.md'), /AUTHORITY_REVIEW_REQUIRED/);
+  } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('native Google Workspace Skill and its references can be loaded through the real catalog/router', async () => {
+  const f = await fixture();
+  const catalog: any = await import('../../src/modules/skills/catalog.js');
+  const router: any = await import('../../src/cli/commands/ask.js');
+  const resolver: any = await import('../../src/modules/role-resolver.js');
+  try {
+    f.harness.root = resolver.PACKAGE_ROOT;
+    f.harness.catalog = () => catalog.loadSkillCatalog();
+    f.harness.route = (query, options) => router.queryStepRouter(query, options);
+    f.harness.skillMetadata = async id => ({
+      path: (await catalog.loadSkillCatalog()).find((entry: any) => entry.name === id)?.path,
+      mandatoryReferences: [],
+    });
+    f.scope.query = 'ช่วยอ่าน Gmail';
+    const core: any = await f.tools.execute({ tool: 'skill', input: 'google-workspace' }, f.scope);
+    assert.match(core.text, /# STeP Google Workspace/);
+    assert.equal(core.route.skill, 'google-workspace');
+    const ref: any = await f.tools.execute(
+      { tool: 'skill', input: 'google-workspace', args: { resource: 'references/daily-brief.md' } },
+      f.scope,
+    );
+    assert.match(ref.text, /timezone/);
+    assert.match(ref.text, /Coverage/);
+  } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
 test('the plan workflow asks the employee to approve the plan, keeps it on the task, and execute ticks it off', async () => {
   const f = await fixture();
   try {

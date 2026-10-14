@@ -1020,6 +1020,25 @@ skills:
       mandatory: [qms-management-review, step-quality-policy-v2, human-approval-rule]
       optional: [qms-working-reference]
 
+  google-workspace:
+    owner: ga
+    version: 1.0.0
+    domain: [operations, documents]
+    process: [governance.document-review]
+    path: skills/common/google-workspace/SKILL.md
+    description: ค้น Gmail และ Drive ทำงาน Google Docs/Sheets/Slides สรุป Google Calendar และจัดการ Google Tasks ผ่านบัญชีที่เชื่อมในแอป พร้อมตรวจสิทธิ์และยืนยันก่อนเปลี่ยนข้อมูล
+    governance:
+      owner: ga
+      reviewer: [qs, developer]
+      approvedBy: [ga-head]
+      reviewedAt: "2026-10-14"
+      reviewCycle: { months: 6 }
+      lifecycle:
+        stage: draft
+    references:
+      mandatory: [human-approval-rule, data-classification-rule]
+      optional: []
+
   spreadsheet-work:
     owner: ga
     version: 1.0.0

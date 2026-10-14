@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Add a native Google Workspace Skill with account/scope preflight, bounded Gmail search and daily briefs, exact-action write review, read-back limits and unknown-outcome recovery. Load individual Skill references/examples through the governed `skill` tool. Include offline fixtures for all 26 native operations and Hermes MIT provenance; live Google and model-side acceptance remain open.
+
 ## Desktop v0.6.8 (2026-10-14)
 
 - Replace the internal-media sample overwrite JavaScript confirm popup with the existing in-app confirmation dialog. Preserve drafts on cancel and restore editable keyboard focus on cancel/accept; native regression covers subsequent typing, dropdown changes, copy validation and draft persistence.

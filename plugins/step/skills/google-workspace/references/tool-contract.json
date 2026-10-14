@@ -1,0 +1,320 @@
+{
+  "version": 1,
+  "source": "synthetic-native-google-contract-2026-10-14",
+  "operations": [
+    {
+      "service": "drive-read",
+      "effect": "read",
+      "request": {
+        "operation": "drive.list",
+        "params": {
+          "query": "trashed = false and name contains 'ประชุม'",
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "read",
+      "request": {
+        "operation": "docs.get",
+        "params": {
+          "documentId": "demo_doc"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "write",
+      "request": {
+        "operation": "docs.create",
+        "body": {
+          "title": "ร่างประชุมสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "write",
+      "request": {
+        "operation": "docs.appendText",
+        "params": {
+          "documentId": "demo_doc"
+        },
+        "body": {
+          "text": "ข้อความสังเคราะห์",
+          "requiredRevisionId": "demo_revision"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "read",
+      "request": {
+        "operation": "sheets.get",
+        "params": {
+          "spreadsheetId": "demo_sheet"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "read",
+      "request": {
+        "operation": "sheets.values.get",
+        "params": {
+          "spreadsheetId": "demo_sheet",
+          "range": "'ข้อมูล'!A1:B2"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "write",
+      "request": {
+        "operation": "sheets.create",
+        "body": {
+          "title": "ตารางสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "write",
+      "request": {
+        "operation": "sheets.values.update",
+        "params": {
+          "spreadsheetId": "demo_sheet",
+          "range": "'ข้อมูล'!A1:B2"
+        },
+        "body": {
+          "values": [
+            [
+              "รหัส",
+              "ยอด"
+            ],
+            [
+              "00123",
+              100
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "read",
+      "request": {
+        "operation": "slides.get",
+        "params": {
+          "presentationId": "demo_slides"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "write",
+      "request": {
+        "operation": "slides.create",
+        "body": {
+          "title": "สไลด์สังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "documents",
+      "effect": "write",
+      "request": {
+        "operation": "slides.appendTextSlide",
+        "params": {
+          "presentationId": "demo_slides"
+        },
+        "body": {
+          "text": "ข้อความสังเคราะห์",
+          "requiredRevisionId": "demo_revision"
+        }
+      }
+    },
+    {
+      "service": "gmail-read",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.list",
+        "params": {
+          "query": "in:inbox is:unread newer_than:7d",
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "gmail-read",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.get",
+        "params": {
+          "messageId": "demo_message"
+        }
+      }
+    },
+    {
+      "service": "gmail-draft",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.draft",
+        "body": {
+          "to": [
+            "recipient@example.test"
+          ],
+          "subject": "หัวข้อสังเคราะห์",
+          "text": "ข้อความสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "gmail-send",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.send",
+        "body": {
+          "to": [
+            "recipient@example.test"
+          ],
+          "subject": "หัวข้อสังเคราะห์",
+          "text": "ข้อความสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "calendar",
+      "effect": "read",
+      "request": {
+        "operation": "calendar.list",
+        "params": {
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "calendar",
+      "effect": "read",
+      "request": {
+        "operation": "calendar.events",
+        "params": {
+          "calendarId": "primary",
+          "timeMin": "2026-10-14T00:00:00+07:00",
+          "timeMax": "2026-10-15T00:00:00+07:00",
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "calendar",
+      "effect": "write",
+      "request": {
+        "operation": "calendar.createEvent",
+        "params": {
+          "calendarId": "primary"
+        },
+        "body": {
+          "summary": "ประชุมสังเคราะห์",
+          "text": "วาระสังเคราะห์",
+          "start": "2026-10-14T09:00:00+07:00",
+          "end": "2026-10-14T10:00:00+07:00",
+          "attendees": [
+            "attendee@example.test"
+          ]
+        }
+      }
+    },
+    {
+      "service": "tasks",
+      "effect": "read",
+      "request": {
+        "operation": "tasks.lists",
+        "params": {
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "tasks",
+      "effect": "read",
+      "request": {
+        "operation": "tasks.list",
+        "params": {
+          "tasklistId": "demo_list",
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "tasks",
+      "effect": "write",
+      "request": {
+        "operation": "tasks.create",
+        "params": {
+          "tasklistId": "demo_list"
+        },
+        "body": {
+          "title": "งานสังเคราะห์",
+          "text": "รายละเอียดสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "tasks",
+      "effect": "write",
+      "request": {
+        "operation": "tasks.complete",
+        "params": {
+          "tasklistId": "demo_list",
+          "taskId": "demo_task"
+        }
+      }
+    },
+    {
+      "service": "chat",
+      "effect": "read",
+      "request": {
+        "operation": "chat.spaces",
+        "params": {
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "chat",
+      "effect": "read",
+      "request": {
+        "operation": "chat.messages",
+        "params": {
+          "spaceId": "demo_space",
+          "pageToken": "synthetic-page"
+        }
+      }
+    },
+    {
+      "service": "chat",
+      "effect": "write",
+      "request": {
+        "operation": "chat.send",
+        "params": {
+          "spaceId": "demo_space"
+        },
+        "body": {
+          "text": "ข้อความสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "meet",
+      "effect": "read",
+      "request": {
+        "operation": "meet.get",
+        "params": {
+          "spaceId": "demo_space"
+        }
+      }
+    }
+  ]
+}

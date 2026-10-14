@@ -62,6 +62,15 @@ export const QUALIFIED_INTENT_RULES = [
       ['ไทย', 'อังกฤษ', 'thai', 'english'],
     ],
   },
+  // Native Google work needs both a named service and an operation. A passing
+  // mention of Google, or an attached local Office file, keeps its own routing.
+  {
+    intent: 'google-workspace',
+    allAny: [
+      ['google workspace', 'gmail', 'google docs', 'google sheets', 'google slides', 'google calendar', 'google tasks', 'google chat', 'google meet', 'ไฟล์ drive'],
+      ['ค้น', 'อ่าน', 'สรุป', 'สร้าง', 'แก้', 'อัปเดต', 'ส่ง', 'ร่าง', 'เชื่อม', 'search', 'read', 'create', 'update', 'send', 'draft', 'summarize', 'connect'],
+    ],
+  },
   { intent: 'market-test', any: ['ขายได้ไหม', 'จะขายได้ไหม', 'ทดสอบตลาด', 'ทดลองตลาด', 'market test', 'test market'] },
   {
     intent: 'triage',
