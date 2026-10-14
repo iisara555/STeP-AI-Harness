@@ -5,6 +5,14 @@ import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 export const en: Record<string, string> = {
+  'เปิดหน้า Vault และการเชื่อม Google Workspace ให้ทุกเครื่องที่ติดตั้งรุ่นนี้ โดยผู้ดูแลยังปิดได้':
+    'Vault and Google Workspace connections are available on every installation of this release; administrators can still disable them',
+  'เลือก Docs/Sheets/Slides, Calendar และ Tasks แล้วลงชื่อด้วยบัญชี step.cmu.ac.th ได้':
+    'Select Docs/Sheets/Slides, Calendar and Tasks, then sign in with a step.cmu.ac.th account',
+  'เปิด Dev mode เพื่อ demo ด้วย Claude Pro/Max ของคุณ แล้วกดกลับโหมดปกติเพื่อปิดเอง':
+    'Turn on Dev mode to demo with your own Claude Pro/Max account, then switch back to normal mode to turn it off',
+  'API key เดิมย้ายเข้า Vault หลังคุณเลือกเก็บบัญชีเว็บไซต์หรือเชื่อม Google แล้ว':
+    'Existing API keys move into Vault after you choose to remember a website account or connect Google',
   'เก็บและใช้ข้อมูลบัญชีผ่าน Vault': 'Store and use account credentials through Vault',
   'เชื่อมบัญชี Google Workspace ของพนักงาน': 'Connect employee Google Workspace accounts',
   ...credentialErrorsEn,
@@ -282,8 +290,8 @@ export const en: Record<string, string> = {
   'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องขอ API key': 'Antigravity and ChatGPT use account sign-in; no API key is needed.',
   ให้พนักงานเปิดโหมดนักพัฒนา: 'Let employees turn on development mode',
   'โหมดนักพัฒนา: ทดลองใช้ Claude Pro/Max ของตัวเอง': 'Development mode: test with your own Claude Pro/Max plan',
-  'สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบด้วยบัญชีของตัวเอง การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้':
-    "For developers authorized by the administrator to test using their own account. Use must follow Anthropic's terms. Once on, choose Claude with your plan in the list below.",
+  'สำหรับทดสอบและ demo ด้วยบัญชี Claude Pro/Max ของคุณ การใช้งานต้องเป็นไปตามเงื่อนไขของ Anthropic เปิดแล้วเลือก Claude แบบแพ็กเกจในรายการด้านล่างได้ กดกลับโหมดปกติเพื่อปิด':
+    "For testing and demos with your own Claude Pro/Max account. Use must follow Anthropic's terms. Once on, choose Claude with your plan below. Switch back to normal mode to turn it off.",
 
   'Claude Code ไม่รับโมเดลที่เลือก กรุณาตรวจรายชื่อโมเดลก่อนลองใหม่':
     'Claude Code did not accept the selected model. Check the model list before trying again.',

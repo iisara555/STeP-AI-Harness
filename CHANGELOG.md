@@ -6,6 +6,14 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.5 (2026-10-14)
+
+- Make Vault and Google Workspace available on every installation, with the owner-supplied public Desktop OAuth client and strict `step.cmu.ac.th` hosted-domain validation. Docs/Sheets/Slides, Calendar and Tasks are selectable; no client secret is distributed.
+- Offer the developer switch without per-machine policy installation. Developers explicitly opt in to their own Claude Pro/Max account for a demo and can switch back to normal mode themselves. Subscription access remains off outside that opt-in unless managed policy permits it.
+- Preserve explicit administrator denials and fail closed on invalid/untrusted policy. Administrators may replace or clear the bundled Google configuration.
+- Delay legacy API-key migration and first Vault protection until explicit website/Google credential enrollment. Existing API-only profiles retain OS-encrypted storage and executable-tool behavior; enrollment preserves the existing persistent execution restrictions.
+- Verify clean-install availability, opt-in/off, administrator denial/passcodes, configuration replacement and migration using synthetic fixtures. Live Google consent/API access and Claude account readiness require the account owner; publishing is checked separately.
+
 ## Desktop v0.6.4 — 2026-10-14
 
 - Combined release of PR #162 (Vault/Workspace design), #163 (implementation) and #164 (document drafting assistance), retaining their source commits. Harness remains 0.7.7. No organization policy activation, live model benchmark or budget reset.

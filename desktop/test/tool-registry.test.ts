@@ -40,6 +40,8 @@ test('malformed discovery fields and recursive wrappers are inert in parser and 
 
 test('managed availability never exposes secrets or infers installed cloud connectors', () => {
   const policy = defaultPolicy();
+  policy.features.googleWorkspace = false;
+  delete policy.googleWorkspace;
   policy.mcpServers = [
     { name: 'synthetic', transport: 'http', url: 'https://fixture.invalid/secret-path', headers: { Authorization: 'SYNTHETIC_SECRET' } },
   ];
@@ -59,6 +61,12 @@ test('managed availability never exposes secrets or infers installed cloud conne
     discoverTools({ tool: 'tool_describe', input: 'google_workspace' }, policy, 'ask', true).tools[0].availability.reason,
     'GOOGLE_WORKSPACE_DISABLED',
     'a feature switch alone does not establish OAuth configuration',
+  );
+  policy.googleWorkspace = defaultPolicy().googleWorkspace;
+  assert.equal(
+    discoverTools({ tool: 'tool_describe', input: 'google_workspace' }, policy, 'ask', true).tools[0].availability.reason,
+    'available-subject-to-request-gates',
+    'the configured release exposes the adapter without claiming a connected account',
   );
 });
 

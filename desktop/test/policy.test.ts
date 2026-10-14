@@ -44,9 +44,10 @@ test('auto mode needs both organization feature and allowed mode', () => {
   assert.equal(policyPath('darwin'), '/Library/Application Support/STeP/desktop-policy.json');
 });
 
-test('Claude developer access requires explicit managed policy and cannot relax the default pilot gate', () => {
+test('the release offers Claude developer opt-in while organization policy can disable it', () => {
   assert.equal(defaultPolicy().features.claudeSubscription, false);
-  assert.equal(defaultPolicy().features.developmentMode, false);
+  assert.equal(defaultPolicy().features.developmentMode, true);
+  assert.equal(parsePolicy({ features: { developmentMode: false } }).policy.features.developmentMode, false);
   const enabled = parsePolicy({ features: { developmentMode: true } });
   assert.deepEqual(enabled.problems, []);
   assert.equal(enabled.policy.features.developmentMode, true);
@@ -54,6 +55,26 @@ test('Claude developer access requires explicit managed policy and cannot relax 
   const invalid = parsePolicy({ features: { developmentMode: 'true' } });
   assert.ok(invalid.problems.length);
   assert.equal(invalid.policy.features.developmentMode, false);
+});
+
+test('release Workspace configuration is public, isolated per load and replaceable by managed policy', () => {
+  const first = defaultPolicy();
+  assert.equal(first.features.vault, true);
+  assert.equal(first.features.googleWorkspace, true);
+  assert.deepEqual(first.googleWorkspace?.domains, ['step.cmu.ac.th']);
+  assert.deepEqual(first.googleWorkspace?.services, ['documents', 'calendar', 'tasks']);
+  assert.match(first.googleWorkspace!.clientId, /^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
+  assert.deepEqual(Object.keys(first.googleWorkspace!).sort(), ['clientId', 'domains', 'services']);
+  first.googleWorkspace!.domains.push('changed.test');
+  first.googleWorkspace!.services.pop();
+  assert.deepEqual(defaultPolicy().googleWorkspace?.domains, ['step.cmu.ac.th']);
+  assert.equal(defaultPolicy().googleWorkspace?.services.length, 3);
+  const replacement = { clientId: 'replacement-client.apps.googleusercontent.com', domains: ['example.test'], services: ['tasks'] };
+  assert.deepEqual(parsePolicy({ googleWorkspace: replacement }).policy.googleWorkspace, replacement);
+  assert.equal(parsePolicy({ googleWorkspace: null }).policy.googleWorkspace, undefined);
+  const disabled = parsePolicy({ features: { vault: false, googleWorkspace: false, developmentMode: false } });
+  assert.deepEqual(disabled.problems, []);
+  for (const flag of ['vault', 'googleWorkspace', 'developmentMode'] as const) assert.equal(disabled.policy.features[flag], false);
 });
 
 test('the Dev mode passcode is stored as a SHA-256 digest only', () => {
@@ -80,6 +101,8 @@ test('invalid blocking definitions cannot silently enable risky features', () =>
     assert.ok(parsed.problems.length);
     assert.equal(parsed.policy.source, 'default');
     assert.equal(parsed.policy.features.shellByAi, false);
+    for (const flag of ['vault', 'googleWorkspace', 'developmentMode'] as const) assert.equal(parsed.policy.features[flag], false);
+    assert.equal(parsed.policy.googleWorkspace, undefined);
   }
   const parsed = parsePolicy({ hooks: [{ event: 'pre_tool_use', type: 'prompt', prompt: 'Check metadata', block_on_failure: true }] });
   assert.equal(parsed.policy.hooks[0].type, 'prompt');

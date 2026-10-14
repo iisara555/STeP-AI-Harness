@@ -38,10 +38,18 @@ try {
   checkpoint('close legacy process');
   await app.close();
   app = undefined;
-  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { vault: true, googleWorkspace: true } }));
+  await writeFile(
+    join(home, 'desktop-policy.json'),
+    JSON.stringify({ features: { vault: true, googleWorkspace: true }, googleWorkspace: null }),
+  );
   checkpoint('restart with Vault enabled');
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
   const page = await app.firstWindow();
+  await page.waitForFunction(() => Boolean(window.step));
+  const dormant = await page.evaluate(() => window.step.call('vaultState'));
+  assert.equal(dormant.enabled, true);
+  assert.equal(dormant.protected, false, 'exposing Vault does not enroll an API-only profile');
+  assert.equal(dormant.entries.length, 0);
   await page.setViewportSize({ width: 1280, height: 900 });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -67,7 +75,7 @@ try {
   checkpoint('inspect metadata and migration');
   const state = await page.evaluate(() => window.step.call('vaultState'));
   assert.equal(state.entries.filter(v => v.kind === 'website').length, 1);
-  assert.equal(state.entries.filter(v => v.kind === 'api-key').length, 1, 'legacy API key migrated during startup');
+  assert.equal(state.entries.filter(v => v.kind === 'api-key').length, 1, 'legacy API key migrates after explicit credential enrollment');
   assert.equal(state.protected, true);
   assert.doesNotMatch(JSON.stringify(state), /synthetic-employee|synthetic-password/);
   await page.getByRole('button', { name: 'แก้ไข', exact: true }).click();

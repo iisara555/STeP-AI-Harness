@@ -9,7 +9,8 @@ import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/man
  * Organization policy for STeP Desktop. It lives where only an administrator can write:
  *   Windows: %ProgramData%\STeP\desktop-policy.json
  *   macOS:   /Library/Application Support/STeP/desktop-policy.json
- * Without the file every risky capability stays off. Employees can read the policy in Settings
+ * Without the file the release defaults apply, including optional credential enrollment and developer opt-in.
+ * Invalid or untrusted policy disables credential/demo capabilities. Employees can read the policy in Settings
  * but cannot change it; the app re-reads the file when it changes.
  */
 export const FEATURES = [
@@ -180,8 +181,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // and each employee signs in to their own Claude account on Anthropic's page. Off until Anthropic confirms how its
   // Claude Code terms apply (docs/claude-subscription.md); pilot machines turn it on in the managed policy.
   claudeSubscription: false,
-  // The administrator must explicitly permit the developer switch. A local opt-in must not relax the existing pilot gate.
-  developmentMode: false,
+  // The demo release offers the developer switch on every machine. Each developer must still opt in locally.
+  developmentMode: true,
   // A background review after every 10 user turns drafts lessons into the Learning Inbox (proposals only), as Hermes
   // Agent does. Each review is a model call on the employee's account, so it is off until an administrator allows it,
   // and each employee then turns it on in the Learning Inbox.
@@ -193,8 +194,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // against those document excerpts and shows any it cannot find there. Each check is one more model call, so it is off
   // until an administrator turns it on.
   answerCheck: false,
-  vault: false,
-  googleWorkspace: false,
+  vault: true,
+  googleWorkspace: true,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',
@@ -228,7 +229,23 @@ export function defaultPolicy(): Policy {
     budgets: {},
     pilot: true,
     checks: { authority: false, privacy: false },
+    // Installed-app client IDs are public configuration. No client secret is bundled.
+    googleWorkspace: {
+      clientId: '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com',
+      domains: ['step.cmu.ac.th'],
+      services: ['documents', 'calendar', 'tasks'],
+    },
   };
+}
+
+/** Invalid or untrusted policy must not fall back to newly enabled credential/demo capabilities. */
+function closedPolicy(): Policy {
+  const policy = defaultPolicy();
+  policy.features.vault = false;
+  policy.features.googleWorkspace = false;
+  policy.features.developmentMode = false;
+  delete policy.googleWorkspace;
+  return policy;
 }
 
 export const policyPath = managedPolicyPath;
@@ -253,7 +270,7 @@ const headers = (value: unknown) =>
 export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] } {
   const policy = defaultPolicy();
   const problems: string[] = [];
-  if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
+  if (!isObject(raw)) return { policy: closedPolicy(), problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
   if (raw.credentialStorage !== undefined) {
     if (
@@ -264,7 +281,8 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       problems.push('credentialStorage.sharedDevice must be boolean');
     else policy.credentialStorage = { sharedDevice: raw.credentialStorage.sharedDevice };
   }
-  if (raw.googleWorkspace !== undefined) {
+  if (raw.googleWorkspace === null) delete policy.googleWorkspace;
+  else if (raw.googleWorkspace !== undefined) {
     const g = raw.googleWorkspace;
     if (
       !isObject(g) ||
@@ -624,7 +642,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     }
   }
   // Reject the entire document: ignoring a malformed blocking rule could grant unintended access.
-  return { policy: problems.length ? defaultPolicy() : policy, problems };
+  return { policy: problems.length ? closedPolicy() : policy, problems };
 }
 
 /** Check the file and its directory; a writable directory can replace an otherwise protected file. */
@@ -635,11 +653,11 @@ export function loadPolicy(path = policyPath(), trusted = trustedPolicyPath): { 
   if (!existsSync(path)) return { policy: defaultPolicy(), problems: [], path };
   try {
     if (!trusted(path))
-      return { policy: defaultPolicy(), problems: ['policy file or directory is not administrator-managed; using safe defaults'], path };
+      return { policy: closedPolicy(), problems: ['policy file or directory is not administrator-managed; using safe defaults'], path };
     if (lstatSync(path).size > 256_000) throw new Error('POLICY_LIMIT');
     const raw = JSON.parse(readFileSync(path, 'utf8'));
     return { ...parsePolicy(raw), path };
   } catch {
-    return { policy: defaultPolicy(), problems: ['policy file is not valid JSON; using safe defaults'], path };
+    return { policy: closedPolicy(), problems: ['policy file is not valid JSON; using safe defaults'], path };
   }
 }
