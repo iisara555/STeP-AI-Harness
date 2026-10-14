@@ -4,6 +4,8 @@ import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 export const en: Record<string, string> = {
+  เพิ่มชุดทดสอบคุณภาพงานเอกสารและการกู้คืนเมื่อเครื่องมือผิดพลาดสำหรับผู้พัฒนา:
+    'Added developer tests for document quality and recovery from tool errors',
   'หน้าเชื่อมต่อ AI แสดงบัญชีเป็นการ์ด บอกสถานะเดียวและปุ่มที่ต้องกด':
     'AI connections show each account as a card with one status and the button to press',
   'ถ้าการลงชื่อหมดอายุระหว่างแชต บัญชีจะขึ้นว่า "ต้องลงชื่อใหม่" ให้กดลงชื่อได้ทันที':

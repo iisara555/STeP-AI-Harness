@@ -6,6 +6,10 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.3 — 2026-10-14
+
+- Release of the harness parity evaluator and CI follow-up in PR #159. Harness stays 0.7.7. Native tools remain an experiment outside the shipped app.
+
 - Hardened the harness parity evaluator after the pilot: matching Antigravity model/effort selection, zero-prompt MCP initialization checks, model workspaces outside repository ancestry, durable native next-step admission and conservative partial-usage accounting. Added synthetic macOS Phase 4 failure diagnostics without skipping checks or changing timeouts; no additional inference or production policy/caching changes.
 - Added an experimental cross-provider harness parity CLI with a fixed source/artifact/recovery workload, a durable 300,000-token ledger, native-tool prototypes sharing the scoped host executor, and zero-inference protocol checks. The first bounded pilot is documented with evaluator cancellations and unresolved Antigravity startup failures; it does not rank providers or change production tool/caching policy.
 

@@ -6,6 +6,10 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.3',
+    items: () => [t('เพิ่มชุดทดสอบคุณภาพงานเอกสารและการกู้คืนเมื่อเครื่องมือผิดพลาดสำหรับผู้พัฒนา')],
+  },
+  {
     version: '0.6.2',
     items: () => [
       t('หน้าใหม่ "สื่อภายใน" กรอกเรื่องที่จะสื่อสาร แล้วคัดลอก Prompt ไปสร้างภาพตามสีองค์กร'),
