@@ -34,6 +34,8 @@ export const LOOP_TOOLS = [
   'sandbox',
   'browser',
   'browser_control',
+  'browser_vault',
+  'google_workspace',
   'terminal',
   'files',
   'search_files',

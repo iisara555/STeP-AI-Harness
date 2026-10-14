@@ -53,6 +53,8 @@
 
 **STeP Desktop**
 
+- [Vault and Google Workspace implementation](vault-workspace-implementation.md) - employee flow, managed configuration, operation limits, local verification and remaining live/packaged gates
+
 - [Vault design handoff — username/password และ API key](desktop-vault-design.md) — แบบเสนอและแผน P0–P3 สำหรับพัฒนาต่อ ยังไม่มีฟีเจอร์ในแอป
 - [Employee Google Workspace connection and service access](desktop-google-workspace-design.md) - account connection, Google service capabilities, OAuth/admin controls and G0-G3 acceptance; design only
 - [Governed tool loop](desktop-tool-loop.md), [Native workflows](desktop-workflows.md), [Context, memory and sessions](desktop-context-memory.md)

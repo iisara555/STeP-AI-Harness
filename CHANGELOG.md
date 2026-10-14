@@ -6,6 +6,9 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Added administrator-gated local credential Vault with encrypted username/password pairs, connection-bound API-key migration, metadata-only Settings/IPC and one-shot exact-origin browser fill. Stored credentials keep app-owned host execution denied even when Vault is paused or disabled.
+- Added a separately authorized employee Google Workspace connector with PKCE/OIDC, OS-protected tokens, selected service scopes, fixed Google operations, original-service launch and explicit write/result-transfer approval. Disabled by default; live organization OAuth and packaged acceptance remain pending.
+
 ## Desktop v0.6.3 — 2026-10-14
 
 - Combined release of PR #160 (UI/OAuth and missing-workspace chat fixes) and PR #159 (harness parity evaluator and CI follow-up). Harness stays 0.7.7. Native tools remain an experiment outside the shipped app.

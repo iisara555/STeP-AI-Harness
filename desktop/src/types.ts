@@ -432,7 +432,8 @@ export type RunEvent = {
     | 'question-close'
     | 'trace'
     | 'browser'
-    | 'update';
+    | 'update'
+    | 'vault-open';
   browser?: BrowserDockState;
   update?: UpdateState;
   question?: ToolQuestion;

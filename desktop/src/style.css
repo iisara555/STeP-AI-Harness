@@ -4655,3 +4655,111 @@ nav button:disabled {
   place-items: center;
   pointer-events: none;
 }
+/* Credential Settings reuses the workspace's restrained panels and accessible native controls. */
+.credential-settings {
+  max-width: 960px;
+}
+.credential-section {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+.credential-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.credential-heading,
+.credential-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.credential-actions,
+.google-launches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.credential-note {
+  padding: 14px 18px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.credential-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.credential-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.credential-form input:not([type='checkbox']) {
+  width: 100%;
+}
+.credential-form .credential-check {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}
+.credential-form p,
+.credential-form .credential-actions {
+  grid-column: 1 / -1;
+}
+.credential-row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.credential-row p {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.credential-search {
+  width: 100%;
+  margin-top: 18px;
+}
+.credential-account {
+  padding: 18px;
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.google-services {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 18px;
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.credential-check {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.credential-files {
+  max-height: 260px;
+  overflow: auto;
+  padding: 14px;
+}
+@media (max-width: 700px) {
+  .credential-form,
+  .google-services {
+    grid-template-columns: 1fr;
+  }
+  .credential-heading,
+  .credential-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -13,6 +13,7 @@ export class ToolGate {
     private root: () => Promise<string>,
     private approvals: Approvals,
     private hook: (payload: HookPayload) => Promise<HookOutcome>,
+    private executionAllowed: () => void = () => {},
   ) {}
   async run<T>(
     request: ToolRequest,
@@ -25,6 +26,7 @@ export class ToolGate {
     const policy = this.policy();
     const mode = this.mode();
     const check = () => {
+      if (request.execute) this.executionAllowed();
       const decision = evaluatePermission(request, this.mode(), this.policy(), { root: workspace });
       if (!decision.allowed)
         throw new Error(

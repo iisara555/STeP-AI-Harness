@@ -26,6 +26,12 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Store } from './store';
 import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
+import { Vault } from './vault';
+import { GoogleWorkspace } from './google-workspace';
+import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
+import type { GoogleRequest } from './google-operations';
+import { googleOperationCatalog } from './google-operations';
+import { credentialTitles } from '../src/credential-copy';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
 import { BrowserDock } from './browser-dock';
@@ -235,8 +241,45 @@ async function main() {
         details.mediaType === 'audio'),
   );
   store = new Store(join(data, 'workspace.sqlite'));
+  const vaultProfile = store.get<string>('vault-profile', 'main') || randomUUID();
+  store.put('vault-profile', 'main', vaultProfile);
+  const vault = new Vault(
+    join(data, 'vault', 'vault.sqlite'),
+    {
+      wrap: value => {
+        requireSecureStorage(safeStorage);
+        return safeStorage.encryptString(value);
+      },
+      unwrap: value => {
+        requireSecureStorage(safeStorage);
+        return safeStorage.decryptString(value);
+      },
+    },
+    vaultProfile,
+  );
+  const executionAllowed = () => {
+    if (vault.protected()) throw new Error('VAULT_HOST_EXECUTION_BLOCKED');
+  };
+  let hostHooks = 0;
+  let localMcpActive = () => false;
+  const ensureCredentialStorage = () => {
+    if (policyState.policy.credentialStorage?.sharedDevice) throw new Error('VAULT_SHARED_DEVICE');
+    if (vault.protected()) return;
+    if (
+      hostHooks ||
+      localMcpActive() ||
+      connecting.size ||
+      store.list<Session>('session').some(s => ['running', 'queued'].includes(s.status)) ||
+      store.list<any>('background').some(t => t.status === 'running') ||
+      policyState.policy.hooks.some(h => h.type === 'command') ||
+      policyState.policy.mcpServers.some(s => s.transport === 'stdio') ||
+      enabledPackHooks(store.settings().workspace || data, policyState.policy).some(h => h.type === 'command')
+    )
+      throw new Error('VAULT_EXECUTION_CONFLICT');
+  };
   const documentTemplates = new DocumentTemplates(store);
   useLanguage(() => store?.settings().language);
+  const credentialTitle = (title: string) => credentialTitles[title]?.[store.settings().language === 'en' ? 1 : 0] || title;
   // Set the theme before the first paint so a dark-theme user never sees a light flash.
   nativeTheme.themeSource = store.settings().theme;
   // Development smoke tests drive the main window directly; STEP_DESKTOP_SPLASH=1 shows the loading window there too.
@@ -399,10 +442,58 @@ async function main() {
     },
   );
   async function key(connection: Connection) {
+    const ref = store.get<string>('credential-ref', connection.id);
+    const destination = JSON.stringify([connection.id, connection.provider, connection.baseUrl || '']);
+    if (ref) return vault.use(ref, 'api-key', destination, async value => value);
     const encrypted = store.get<string>('secret', connection.id);
     if (!encrypted) return undefined;
     requireSecureStorage(safeStorage);
-    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
+    const value = safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
+    if (policyState.policy.features.vault) {
+      ensureCredentialStorage();
+      const pending = vault.list().find(v => v.kind === 'api-key' && v.destination === destination);
+      if (pending && !(await vault.use(pending.id, 'api-key', destination, async saved => saved === value)))
+        throw new Error('VAULT_INTEGRITY_ERROR');
+      const record = pending || vault.save({ label: 'AI connection', kind: 'api-key', destination, value });
+      store.transaction(() => {
+        store.put('vault-legacy', connection.id, encrypted);
+        store.put('credential-ref', connection.id, record.id);
+        store.put('secret', connection.id, null);
+      });
+    }
+    return value;
+  }
+  function saveKey(connection: Connection, value: string) {
+    const ref = store.get<string>('credential-ref', connection.id);
+    if (!policyState.policy.features.vault && !ref) {
+      requireSecureStorage(safeStorage);
+      store.put('secret', connection.id, safeStorage.encryptString(value).toString('base64'));
+      return;
+    }
+    ensureCredentialStorage();
+    const old = ref ? vault.list().find(v => v.id === ref) : undefined;
+    const record = vault.save({
+      ...(old ? { id: old.id, revision: old.revision } : {}),
+      label: 'AI connection',
+      kind: 'api-key',
+      destination: JSON.stringify([connection.id, connection.provider, connection.baseUrl || '']),
+      value,
+    });
+    store.transaction(() => {
+      store.put('credential-ref', connection.id, record.id);
+      store.put('secret', connection.id, null);
+      store.remove('vault-legacy', connection.id);
+    });
+  }
+  function removeKey(id: string) {
+    const ref = store.get<string>('credential-ref', id),
+      old = ref && vault.list().find(v => v.id === ref);
+    store.transaction(() => {
+      store.remove('secret', id);
+      store.remove('vault-legacy', id);
+      store.remove('credential-ref', id);
+    });
+    if (old) vault.remove(old.id, old.revision);
   }
   // Each connection keeps its runtime's sign-in and state in its own folder under app data.
   async function removeRuntimeHome(id: string) {
@@ -464,6 +555,7 @@ async function main() {
     }
   }
   async function runtime(connection: Connection, signOut = false, webSearch = false) {
+    if (connection.customRuntime) executionAllowed();
     if (connection.provider === 'claude' && connection.mode === 'subscription' && !claudeSubscriptionOn() && !signOut)
       throw new Error('FEATURE_DISABLED');
     if (connection.provider === 'compatible') compatibleEndpoint(connection, policyState.policy, testPresetBaseUrl());
@@ -494,6 +586,12 @@ async function main() {
   const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
   const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
   let policyState = readPolicy();
+  if (policyState.policy.features.vault) {
+    for (const c of store.connections()) {
+      if (!store.get('secret', c.id) || store.get('credential-ref', c.id)) continue;
+      await key(c).catch(error => diagnose('vault-migration-failed', { code: errorCode(error) }));
+    }
+  }
   const voice = new Voice(join(data, 'components', 'voice'), () => policyState.policy);
   const workbench = new Workbench(
     store,
@@ -541,6 +639,8 @@ async function main() {
   app.on('before-quit', () => updates.stop());
   watchFile(policyState.path, { interval: 5000 }, () => {
     policyState = readPolicy();
+    vault.invalidate();
+    google.invalidate();
     closeClaudeSpares();
     if (!claudeSubscriptionOn()) {
       for (const c of store.list<Connection>('connection')) {
@@ -590,7 +690,17 @@ async function main() {
   };
   // Hook results go to diagnostics; payloads carry masked text and metadata only.
   const fireHook = async (payload: HookPayload) => {
-    const outcome = await hooks.run(payload);
+    const commandHooks = [...policyState.policy.hooks, ...enabledPackHooks(store.settings().workspace || data, policyState.policy)].some(
+      h => h.type === 'command',
+    );
+    if (commandHooks) executionAllowed();
+    if (commandHooks) hostHooks++;
+    let outcome;
+    try {
+      outcome = await hooks.run(payload);
+    } finally {
+      if (commandHooks) hostHooks--;
+    }
     if (outcome.results.length)
       diagnose('hook', {
         event: payload.event,
@@ -618,6 +728,7 @@ async function main() {
       }),
     approvals,
     fireHook,
+    executionAllowed,
   );
   // Web pages, the assistant's and the employee's own, show in the Web tab of the main window (no pop-up windows).
   const dock = new BrowserDock(
@@ -670,14 +781,117 @@ async function main() {
       signal,
     );
   const mcp = new Mcp(() => policyState.policy, phase4Identity, join(data, 'mcp'), harness.privacy, phase4Consent);
+  mcp.executionAllowed = executionAllowed;
+  localMcpActive = () => mcp.localActive > 0;
+  workbench.executionAllowed = executionAllowed;
+  const google = new GoogleWorkspace(
+    store,
+    vault,
+    () =>
+      policyState.policy.features.googleWorkspace && !policyState.policy.credentialStorage?.sharedDevice
+        ? policyState.policy.googleWorkspace
+        : undefined,
+    url => shell.openExternal(url),
+  );
+  const googleContext = (signal = new AbortController().signal, after = async () => {}, sessionId?: string) => {
+    const identity = phase4Identity(),
+      policy = policyState.policy;
+    return {
+      signal,
+      check: async () => {
+        await after();
+        if (identity !== phase4Identity() || policy !== policyState.policy) throw new Error('POLICY_CHANGED');
+        if (signal.aborted) throw new Error('CANCELLED');
+      },
+      approve: (title: string, body: string) =>
+        approvals.request(
+          approvals.rule(store.settings().workspace || data, 'google_workspace', body),
+          { title: credentialTitle(title), body, privacyClass: 'restricted', allowRemember: false, sessionId },
+          signal,
+        ),
+    };
+  };
   const sandbox = new Sandbox(
     workbench,
     () => policyState.policy,
     harness.privacy,
     (body, signal) => phase4Consent(tm('รันคำสั่งใน Docker sandbox?'), body, signal),
   );
-  tools.closeBrowser = id => agentBrowser.closeOwner(id);
+  tools.closeBrowser = id => {
+    agentBrowser.closeOwner(id);
+    vault.endOwner(id);
+  };
   tools.external = async (request, scope, check) => {
+    if (request.tool === 'google_workspace') {
+      if (!policyState.policy.features.googleWorkspace) throw new Error('FEATURE_DISABLED');
+      const binding = JSON.stringify([scope.sessionId, phase4Identity()]);
+      if (request.args?.action === 'list') return { accounts: google.catalog(binding), operations: googleOperationCatalog };
+      if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+      const id = google.resolve(inputText(request.args?.account, 80), binding);
+      const result = await google.execute(
+        id,
+        { operation: request.input as GoogleRequest['operation'], params: request.args?.params as any, body: request.args?.body as any },
+        googleContext(scope.signal, check, scope.sessionId),
+      );
+      const report = privacy.evaluatePrivacyGate(JSON.stringify(result));
+      if (report.action === 'block-external' || !report.redactedText) throw new Error('PRIVACY_REVIEW_REQUIRED');
+      if (
+        !(await approvals.request(
+          approvals.rule(
+            store.settings().workspace || data,
+            'google-result',
+            createHash('sha256').update(report.redactedText).digest('hex'),
+          ),
+          {
+            title: credentialTitle('Send this Google result to the selected AI?'),
+            body: `${scope.connection.provider}\n${request.input}\n${report.redactedText.slice(0, 8000)}`,
+            privacyClass: report.classification,
+            allowRemember: false,
+            sessionId: scope.sessionId,
+          },
+          scope.signal,
+        ))
+      )
+        throw new Error('CANCELLED');
+      await check();
+      return JSON.parse(report.redactedText);
+    }
+    if (request.tool === 'browser_vault') {
+      if (policyState.policy.credentialStorage?.sharedDevice) throw new Error('VAULT_SHARED_DEVICE');
+      if (!policyState.policy.features.vault) throw new Error('FEATURE_DISABLED');
+      const target = agentBrowser.vaultTarget(request.input, scope.sessionId);
+      const binding = JSON.stringify([scope.sessionId, request.input, phase4Identity()]);
+      if (request.args?.action === 'list') return { entries: vault.catalog(binding, target.origin) };
+      if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+      if (request.args?.action === 'request_save') {
+        emit({ sessionId: scope.sessionId, type: 'vault-open', text: target.origin });
+        return { status: 'secure-settings-opened', origin: target.origin };
+      }
+      if (request.args?.action !== 'fill') throw new Error('INVALID_INPUT');
+      const expected = await agentBrowser.prepareVault(request.input, scope.sessionId, scope.signal);
+      return vault.fill(
+        inputText(request.args.handle, 80),
+        binding,
+        expected.origin,
+        label =>
+          approvals.request(
+            approvals.rule(store.settings().workspace || data, 'browser_vault', randomUUID()),
+            {
+              title: credentialTitle('Fill account once?'),
+              body: label + '\n' + expected.origin + '\n' + expected.fields.join(', '),
+              privacyClass: 'restricted',
+              allowRemember: false,
+              sessionId: scope.sessionId,
+            },
+            scope.signal,
+          ),
+        async payload => {
+          await check();
+          if (vault.state().suspended) throw new Error('VAULT_SUSPENDED');
+          return agentBrowser.fillVault(request.input, scope.sessionId, expected, payload, scope.signal);
+        },
+      );
+    }
     if (request.tool === 'image_generate') {
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
       if (scope.connection.mode !== 'api' || !['openai', 'gemini'].includes(scope.connection.provider) || !scope.generate)
@@ -1223,7 +1437,7 @@ async function main() {
         signal,
         ...(test ? { authUrl: test.replace(/\/v1$/, '') + '/auth', keysUrl: test + '/auth/keys', port: 0 } : {}),
       });
-      store.put('secret', connection.id, safeStorage.encryptString(apiKey).toString('base64'));
+      saveKey(connection, apiKey);
       connection.signedIn = true;
     }
     if (!apiKey && preset.key === 'required') throw new Error('API_KEY_REQUIRED');
@@ -1351,7 +1565,80 @@ async function main() {
   ipcMain.handle('step:call', async (event, method: string, raw: any = {}) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('UNTRUSTED_SENDER');
     const input = raw ?? {};
+    if (['workspace', 'settings', 'permissionMode'].includes(method)) {
+      vault.invalidate();
+      google.invalidate();
+    }
+    if (['vaultSave', 'googleConnect'].includes(method)) ensureCredentialStorage();
     switch (method) {
+      case 'vaultState':
+        return {
+          ...vault.state(),
+          entries: vault.list().filter(v => v.kind === 'website' || v.kind === 'api-key'),
+          enabled: policyState.policy.features.vault && !policyState.policy.credentialStorage?.sharedDevice,
+          browsers: agentBrowser.sensitiveTabs(),
+        };
+      case 'vaultSave': {
+        if (!policyState.policy.features.vault || input.kind !== 'website' || input.remember !== true) throw new Error('FEATURE_DISABLED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+        if (
+          Object.keys(input).some(k => !['id', 'revision', 'kind', 'label', 'destination', 'username', 'password', 'remember'].includes(k))
+        )
+          throw new Error('INVALID_INPUT');
+        return vault.save(input);
+      }
+      case 'vaultRemove': {
+        const entry = vault.list().find(v => v.id === input.id);
+        if (!entry || entry.kind !== 'website') throw new Error('VAULT_ACCESS_DENIED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+        if (!(await phase4Consent(credentialTitle('Delete this account from this device?'), entry.label))) throw new Error('CANCELLED');
+        vault.remove(entry.id, input.revision);
+        return true;
+      }
+      case 'vaultSuspend':
+        if (typeof input.enabled !== 'boolean') throw new Error('INVALID_INPUT');
+        vault.suspend(input.enabled);
+        if (input.enabled) service.cancelAll();
+        google.invalidate();
+        return true;
+      case 'vaultResumeBrowser': {
+        const tab = inputText(input.tab, 80),
+          owner = inputText(input.sessionId, 80);
+        agentBrowser.vaultTarget(tab, owner);
+        if (
+          !(await phase4Consent(
+            credentialTitle('Resume reading this website?'),
+            credentialTitle('Check the page for credentials and private information before allowing AI to read it.'),
+          ))
+        )
+          throw new Error('CANCELLED');
+        agentBrowser.resumeVault(tab, owner);
+        vault.endAttempt(JSON.stringify([owner, tab, phase4Identity()]));
+        return true;
+      }
+      case 'googleState':
+        return { ...google.state(), enabled: policyState.policy.features.googleWorkspace, pages: GOOGLE_PAGES };
+      case 'googleConnect':
+        if (!policyState.policy.features.googleWorkspace || permissionMode() === 'plan') throw new Error('FEATURE_DISABLED');
+        return google.connect(
+          input.services as GoogleService[],
+          googleContext(new AbortController().signal, async () => ensureCredentialStorage()),
+        );
+      case 'googleCancel':
+        google.cancel();
+        return true;
+      case 'googlePause':
+        return google.pause(inputText(input.id, 80), input.paused);
+      case 'googleDisconnect':
+        return google.disconnect(inputText(input.id, 80), input.revoke === true, googleContext());
+      case 'googleExecute':
+        if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+        return google.execute(inputText(input.id, 80), input.request, googleContext());
+      case 'googleOpen': {
+        if (!Object.hasOwn(GOOGLE_PAGES, input.service)) throw new Error('INVALID_INPUT');
+        await shell.openExternal(GOOGLE_PAGES[input.service as keyof typeof GOOGLE_PAGES]);
+        return true;
+      }
       case 'learningList':
         return { ...learning.snapshot(), feedback: memories.proposals(), review: reviewState(), metrics: measureLessons() };
       case 'learningDraft': {
@@ -2093,9 +2380,9 @@ async function main() {
         };
         if (input.apiKey) {
           requireSecureStorage(safeStorage);
-          store.put('secret', id, safeStorage.encryptString(inputText(input.apiKey, 1000)).toString('base64'));
+          saveKey(connection, inputText(input.apiKey, 1000));
         }
-        if (input.mode === 'subscription' || input.mode === 'oauth') store.put('secret', id, null);
+        if (input.mode === 'subscription' || input.mode === 'oauth') removeKey(id);
         providerUsage.forget(id);
         store.put('connection', id, connection);
         return connection;
@@ -2180,7 +2467,7 @@ async function main() {
               await shell.openExternal(url);
             });
             if (controller.signal.aborted || currentPolicy !== policyState.policy) throw new Error('CANCELLED');
-            store.put('secret', connection.id, safeStorage.encryptString(token).toString('base64'));
+            saveKey(connection, token);
             connection.signedIn = true;
           }
           const preset = connection.provider === 'compatible' ? presetFor(connection.preset) : undefined;
@@ -2593,7 +2880,7 @@ async function main() {
         delete c.modelsAt;
         delete c.problem;
         store.put('connection', c.id, c);
-        store.put('secret', c.id, null);
+        removeKey(c.id);
         return c;
       }
       case 'removeConnection': {
@@ -2628,7 +2915,7 @@ async function main() {
         }
         await removeRuntimeHome(c.id);
         store.remove('connection', c.id);
-        store.remove('secret', c.id);
+        removeKey(c.id);
         // Work stays; it asks for another AI the next time it is used.
         for (const session of sessions) {
           session.connectionId = '';
@@ -3127,11 +3414,15 @@ async function main() {
   await makeWindow(splash, prepared);
   window.webContents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
     if (mainFrame) {
+      vault.invalidate();
+      google.invalidate();
       approvals.close();
       questions.close();
     }
   });
   window.webContents.on('render-process-gone', () => {
+    vault.invalidate();
+    google.invalidate();
     approvals.close();
     questions.close();
   });
@@ -3141,6 +3432,8 @@ async function main() {
   });
   let closing = false;
   app.on('before-quit', event => {
+    google.cancel();
+    vault.invalidate();
     approvals.close();
     questions.close();
     voice.cancel();
@@ -3166,7 +3459,11 @@ async function main() {
       sandbox.close(),
     ]).finally(() => app.quit());
   });
-  app.on('will-quit', () => store.close());
+  app.on('will-quit', () => {
+    google.cancel();
+    vault.close();
+    store.close();
+  });
 }
 app.on('window-all-closed', () => app.quit());
 main().catch(error => {

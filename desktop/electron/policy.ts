@@ -2,6 +2,7 @@ import { providerEndpoint } from '../../src/modules/providers/compatible.js';
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import { MIN_CONTEXT_WINDOW } from './compact';
+import { GOOGLE_SERVICES, type GoogleService } from '../src/google-services';
 import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/managed-policy.js';
 
 /**
@@ -38,6 +39,8 @@ export const FEATURES = [
   'ocrTrial',
   'answerCheck',
   'developmentMode',
+  'vault',
+  'googleWorkspace',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 /** ask: ask before every edit or command. acceptEdits: reviewed file writes go ahead, commands ask. auto: full auto. */
@@ -135,6 +138,8 @@ export type Policy = {
    * results; off, nothing is masked, blocked or asked about on privacy grounds.
    */
   checks: { authority: boolean; privacy: boolean };
+  googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
+  credentialStorage?: { sharedDevice: boolean };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -188,6 +193,8 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // against those document excerpts and shows any it cannot find there. Each check is one more model call, so it is off
   // until an administrator turns it on.
   answerCheck: false,
+  vault: false,
+  googleWorkspace: false,
 };
 export const DEFAULT_DENIED_COMMANDS = [
   'rm -rf /*',
@@ -248,6 +255,39 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   const problems: string[] = [];
   if (!isObject(raw)) return { policy, problems: ['policy is not a JSON object'] };
   policy.source = 'managed';
+  if (raw.credentialStorage !== undefined) {
+    if (
+      !isObject(raw.credentialStorage) ||
+      Object.keys(raw.credentialStorage).some(k => k !== 'sharedDevice') ||
+      typeof raw.credentialStorage.sharedDevice !== 'boolean'
+    )
+      problems.push('credentialStorage.sharedDevice must be boolean');
+    else policy.credentialStorage = { sharedDevice: raw.credentialStorage.sharedDevice };
+  }
+  if (raw.googleWorkspace !== undefined) {
+    const g = raw.googleWorkspace;
+    if (
+      !isObject(g) ||
+      Object.keys(g).some(k => !['clientId', 'domains', 'services'].includes(k)) ||
+      typeof g.clientId !== 'string' ||
+      !/^[A-Za-z0-9_-]{5,200}\.apps\.googleusercontent\.com$/.test(g.clientId) ||
+      !Array.isArray(g.domains) ||
+      !g.domains.length ||
+      g.domains.length > 20 ||
+      g.domains.some((d: unknown) => typeof d !== 'string' || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) ||
+      !Array.isArray(g.services) ||
+      !g.services.length ||
+      g.services.length > 10 ||
+      g.services.some((s: unknown) => typeof s !== 'string' || !Object.hasOwn(GOOGLE_SERVICES, s))
+    )
+      problems.push('googleWorkspace requires a Desktop OAuth clientId, verified domains and allowed service names');
+    else
+      policy.googleWorkspace = {
+        clientId: g.clientId,
+        domains: [...new Set<string>(g.domains)],
+        services: [...new Set<GoogleService>(g.services)],
+      };
+  }
   if (raw.pilot !== undefined) {
     if (typeof raw.pilot !== 'boolean') problems.push('pilot must be true or false');
     else policy.pilot = raw.pilot;
