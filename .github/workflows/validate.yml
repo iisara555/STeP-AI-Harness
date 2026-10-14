@@ -131,6 +131,8 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
+      - name: Verify macOS unit and evaluator boundaries
+        run: npm test
       - run: npm run build
       - name: Verify Electron chat, browser and tools on macOS
         run: npm run test:electron
