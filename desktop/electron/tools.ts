@@ -296,6 +296,7 @@ export class DesktopTools {
       enabled: () => this.policy().features.toolLoop,
       check,
       readOnly: r =>
+        !((r.tool === 'browser_vault' && r.args?.action !== 'list') || (r.tool === 'google_workspace' && r.args?.action !== 'list')) &&
         !(['tool_search', 'tool_describe'].includes(r.tool) && r.args?.server !== undefined) &&
         !(r.tool === 'tasks' && ['wait', 'cancel'].includes(String(r.args?.action))) &&
         ![
@@ -406,7 +407,9 @@ export class DesktopTools {
       throw new Error('PLAN_MODE_BLOCKED');
     const request = {
       tool: r.tool,
-      readOnly: !cancelTask && !['terminal', 'sandbox', 'mcp_call', 'mcp_search', 'image_generate'].includes(r.tool),
+      readOnly:
+        !cancelTask &&
+        !['terminal', 'sandbox', 'mcp_call', 'mcp_search', 'image_generate', 'browser_vault', 'google_workspace'].includes(r.tool),
       ...(fileTool ? { path: target || '.' } : {}),
       ...(command ? { command, execute: true } : {}),
     };
@@ -486,6 +489,8 @@ export class DesktopTools {
           case 'browser_vision':
           case 'image_generate':
           case 'browser_control':
+          case 'browser_vault':
+          case 'google_workspace':
             if (!this.external) throw new Error('TOOL_UNAVAILABLE');
             return this.external(r, scope, check);
           case 'search_files':

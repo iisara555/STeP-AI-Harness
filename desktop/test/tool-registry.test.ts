@@ -53,9 +53,12 @@ test('managed availability never exposes secrets or infers installed cloud conne
   assert.equal(core.managedMcp, undefined);
   assert.equal(core.tools.find(t => t.name === 'patch')?.availability.reason, 'plan-mode-action-restricted');
   assert.equal(core.tools.find(t => t.name === 'tasks')?.scope, 'current-session-and-canonical-workspace');
+  assert.equal(core.tools.find(t => t.name === 'google_workspace')?.availability.reason, 'GOOGLE_WORKSPACE_DISABLED');
+  policy.features.googleWorkspace = true;
   assert.equal(
-    core.tools.some(t => t.name === 'google_workspace'),
-    false,
+    discoverTools({ tool: 'tool_describe', input: 'google_workspace' }, policy, 'ask', true).tools[0].availability.reason,
+    'GOOGLE_WORKSPACE_DISABLED',
+    'a feature switch alone does not establish OAuth configuration',
   );
 });
 

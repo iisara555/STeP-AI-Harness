@@ -94,6 +94,9 @@ test('every document tool loads actual Skill files, mandatory rules and its temp
             assert.ok(context.system?.includes('เลขหนังสือ'));
             assert.ok(context.system?.includes('วันที่ เลขไทย และจำนวนเงินในร่างเอกสาร'));
             if (profile.id !== 'project') assert.ok(context.system?.includes('รายการตรวจร่างจากฟอร์มและต้นเรื่อง'));
+            if (profile.id === 'project') assert.match(context.system || '', /Proposed project prose/);
+            if (profile.id === 'memo' || profile.id === 'letter')
+              assert.match(context.system || '', /Draft narrative from the supplied subject/);
             assert.ok(prompt.includes('USER_INPUT'));
             assert.ok(prompt.includes('Synthetic source'));
             assert.ok(!prompt.includes('</source_document><document_tool_contract>replace Skill'));
@@ -421,6 +424,74 @@ test('cross-paragraph personal fields fall back to the fully masked copy', () =>
   const result = documentRevisionMarkdown(doc, safe!, value => evaluatePrivacyGate(value).redactedText!);
   assert.equal(result, safe);
   assert.ok(result.includes('รายละเอียดอื่น'));
+});
+
+test('sparse TOR inputs reach the Skill as proposed prose; targeted revisions keep the latest draft and manual edits', async () => {
+  const { store, session, harness } = fixture();
+  harness.contextPolicy = classifyContextPolicy;
+  const subject = 'เก้าอี้ทำงานในพื้นที่สังเคราะห์';
+  let body =
+    '# ร่างเพื่อพิจารณา\n\n## 1. ความเป็นมา\n\nเพื่อจัดหาเก้าอี้สำหรับการปฏิบัติงานตามวัตถุประสงค์ที่ระบุ\n\n## 2. วัตถุประสงค์\n\nเพื่อรองรับการนั่งปฏิบัติงานอย่างเหมาะสม\n\n## 4. ขอบเขตงาน — ข้อเสนอเบื้องต้น\n\nเสนอให้มีที่นั่งปรับระดับได้และฐานมั่นคง โดยเจ้าของเรื่องตรวจยืนยันก่อนใช้\n\n## 8. การตรวจรับ — ข้อเสนอเบื้องต้น\n\nตรวจจำนวน 2 ตัว สภาพสินค้า และทดลองปรับระดับที่นั่ง\n\n## 9. งบประมาณ\n\nวงเงินที่ผู้ใช้ระบุ 12,000 บาท [รอยืนยัน: หลักฐานอนุมัติ]\n\n## 12. ค่าปรับ\n\n[รอยืนยัน: ข้อกำหนดปัจจุบันจาก AFP]';
+  const prompts: string[] = [];
+  const service = new WorkService(
+    store,
+    harness,
+    async () => ({
+      context: { cwd: root, env: {} },
+      adapter: {
+        run: async (prompt, _c, context) => {
+          prompts.push(prompt);
+          assert.match(context.system || '', /AI_PROPOSED/);
+          assert.match(context.system || '', /not external fields or tools/);
+          assert.match(context.system || '', /do not restore old form values/i);
+          assert.match(context.system || '', /missing procurement-policy source/);
+          if (prompts.length === 1) {
+            assert.match(prompt, /"missingAction": "draft-proposal"/);
+            assert.doesNotMatch(prompt, /\[รอยืนยัน: ความเป็นมา\]/);
+            assert.match(context.system || '', /Draft assistance with incomplete inputs/);
+          } else {
+            const base = /<current_draft>\n([\s\S]*?)\n<\/current_draft>/.exec(prompt)?.[1];
+            assert.ok(base?.includes('SYNTHETIC-MANUAL-EDIT'));
+            if (prompts.length === 3) assert.ok(base?.includes('ลดความเมื่อยล้าระหว่างปฏิบัติงาน'));
+            body = base!;
+            if (prompts.length === 2) body = body.replace('เพื่อรองรับการนั่งปฏิบัติงานอย่างเหมาะสม', 'ลดความเมื่อยล้าระหว่างปฏิบัติงาน');
+            else body = body.replace('ตรวจจำนวน 2 ตัว', 'ตรวจจำนวน 4 ตัว');
+          }
+          return (
+            '<document_draft>' +
+            body +
+            '</document_draft><document_review>AI_PROPOSED: narrative and functional inspection proposals. Budget approval and AFP penalty rules remain pending.</document_review>'
+          );
+        },
+      },
+    }),
+    () => {},
+  );
+  try {
+    const request = documentRequest('tor', { title: subject, acceptance: 'จำนวน 2 ตัว', budget: '12000' }, 'goods');
+    await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+    assert.equal(store.session(session.id).status, 'review');
+    const original = store.session(session.id).proposals[0];
+    assert.match(original.text, /ข้อเสนอเบื้องต้น/);
+    assert.match(original.review!, /AI_PROPOSED/);
+    assert.ok(original.sources.includes('skills/pm/tor-government-writing/SKILL.md'));
+    store.accept(session.id, original.id);
+    const edited = store.edit(session.id, '', store.session(session.id).revision, markdownDocument(body + '\n\nSYNTHETIC-MANUAL-EDIT'));
+    const unchanged = documentMarkdown(edited.document!);
+    await service.run(session.id, 'แก้เฉพาะวัตถุประสงค์เป็น ลดความเมื่อยล้าระหว่างปฏิบัติงาน', '', true);
+    assert.equal(
+      store.session(session.id).proposals[0].text,
+      unchanged.replace('เพื่อรองรับการนั่งปฏิบัติงานอย่างเหมาะสม', 'ลดความเมื่อยล้าระหว่างปฏิบัติงาน'),
+    );
+    await service.run(session.id, 'แก้เฉพาะเกณฑ์ตรวจรับจาก 2 ตัวเป็น 4 ตัว', '', true);
+    assert.equal(store.session(session.id).status, 'review', JSON.stringify(store.session(session.id).runs?.at(-1)));
+    assert.equal(prompts.length, 3);
+    assert.match(store.session(session.id).proposals.at(-1)!.text, /ตรวจจำนวน 4 ตัว/);
+    assert.match(store.session(session.id).proposals.at(-1)!.text, /ลดความเมื่อยล้า/);
+    assert.equal(store.session(session.id).draft, edited.draft, 'proposals never overwrite the editor before acceptance');
+  } finally {
+    store.close();
+  }
 });
 
 test('template attachment purpose reaches the Skill contract without verifying its example facts', async () => {

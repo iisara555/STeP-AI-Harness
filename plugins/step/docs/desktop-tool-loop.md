@@ -1,0 +1,155 @@
+# Governed Desktop tool loop (Phase 2)
+
+## Execution parity tranche 1 (source only)
+
+This adds lifecycle actions to the existing `tasks` tool, not a second process API or Hermes embedding. `terminal` still starts an approved background command in the selected workspace; its returned `id` is the task ID, not the tool-result paging handle. The existing Terminal/Tasks UI remains available.
+
+```step-tool
+{"tool":"tasks","input":"<terminal task id>","args":{"action":"wait","timeoutMs":1000,"offset":0,"length":4000}}
+```
+
+Protocol: `{tool:"tasks", input:string, args?:TaskArgs}`; `TaskArgs` has optional `action: "list"|"status"|"poll"|"wait"|"cancel"`, `offset:number`, `length:number`, `timeoutMs:number`. Both protocol parsing and host dispatch validate actions and integer bounds. Defaults: empty input lists; a task ID polls. Explicit non-list actions require a task ID.
+
+- **list:** at most 50 newest records owned by the current session and canonical workspace, with command/cwd/status/code/time metadata but no output bodies. User-started/legacy unowned jobs and other sessions/workspaces are invisible to the agent; the manual Tasks view is unchanged.
+- **status:** one owned record, metadata only. Unknown/inaccessible IDs return `TASK_NOT_FOUND`, without exposing another task.
+- **poll:** a bounded slice of the sanitized merged stdout/stderr log; default 4,000, maximum 40,000 UTF-16 characters per call. `offset` is an absolute sanitized-output cursor, not a byte position; omitted offsets begin at the retained log's start. Returns `offset`, `endOffset`, `total`, `truncated`, and `nextOffset` when more retained output is available. Poll again at `endOffset` for new output. A stale cursor is advanced to the retained start and sets `truncated:true`; a future/negative/fractional cursor is rejected. Only the last 100,000 characters are retained. Output is sanitized in complete lines with CR/LF normalized, independently per stream, before append-only storage. A credential key without its value is held until the next nonempty line. Unfinished lines are held until completion or process exit; lines over 8,000 UTF-16 characters are withheld in full, along with a possible value on the next nonempty line. Scanner-withheld lines also withhold a possible continuation. No raw tail is exposed to a poll cursor, and stdout/stderr keep separate bounded states. This can intentionally hide some oversized or ambiguous public output instead of exposing an unscanned credential fragment. A poll without `offset` reports `truncated:true` whenever earlier output has been lost. Masking can change text length, so these are not raw-process byte counters.
+- **wait:** same bounded output plus `timedOut`; waits 1,000 ms by default, accepts integers 0–30,000 ms. Returns on terminal status or deadline; a timeout does not stop the subprocess. Waits are serialized in the loop and repeatedly check cancellation, workspace, policy/mode and destination binding. Cancellation of the run retains existing run-owned job cleanup. This is bounded polling, not an event subscription or a durable notification.
+- **cancel:** requests termination through the existing process-tree cancellation primitive, permission gate and hooks. Ask/accept-edits mode requires approval, and the dialog shows the job's sanitized command, status and start time rather than only its ID; auto mode stops it without asking; plan mode refuses. After approval ownership and run binding are rechecked. It returns current metadata, which may still say `running` while exit is pending; follow with status/wait, never infer success from sending a signal. Finished-job cancellation is idempotent. POSIX uses the existing process-group SIGTERM and Windows uses taskkill; SIGTERM-resistant jobs are not force-killed by this tranche.
+
+All lifecycle results continue through existing output privacy/transmission approval before reaching the model; lifecycle access does not authorize data transmission. Launch remains limited to four children, filters secret-like ambient environment names, and uses the employee's OS permissions. It is **not** an OS sandbox or a guarantee against arbitrary command exfiltration. No arbitrary JavaScript evaluation, account/secret access, stdin/PTY, process resume, OS-wide process enumeration, new IPC, or new permission defaults are introduced. On app restart stored running jobs become `interrupted` without replay; their session/workspace ownership remains.
+
+**File-tool inventory:** `files` remains the bounded listing/read tool and `changes` remains the full-text staging tool. Tranche 2 adds workspace recursive `search_files` and exact targeted `patch` through the same host, gates and Changes UI (see below).
+
+**Evidence:** `test/workbench.test.ts` covers typed protocol rejection and existing workspace/symlink/hardlink/file-edit boundaries. `test/phase2-tools.test.ts` exercises real Node subprocesses in temporary workspaces: owned list/status/poll, rolling-log loss, bounded wait, approved cancel, denial, plan mode, changed destination/workspace and run abort. `test/execution-parity-smoke.mjs` runs the real Electron app and provider protocol with a synthetic local runtime: 12 turns and 14 separate execution/transmission approvals, completed/cancelled processes, actual source-file read and an inert staged edit. It is registered in `test:electron`. These Linux fixtures do not establish live model quality, Windows/macOS process-tree behavior or employee-machine acceptance.
+
+Chat and Draft share a host tool loop in `WorkService`. Existing provider adapters remain isolated and their native file/shell/MCP tools remain disabled. Models request host operations in explicit `step-tool` JSON fences. The default limit is 40 tool turns and at most eight requests per turn. Consecutive read operations execute in groups of three; commands, staged previews, questions and approvals execute sequentially. At the limit, the model gets a final turn without further operations. Self-contained text scope omits tool execution; see [context performance](context-performance.md).
+
+## Execution parity tranche 2: workspace search and exact patch
+
+```step-tool
+{"tool":"search_files","input":".","args":{"pattern":"TODO","target":"content","glob":"**/*.ts","maxResults":20}}
+```
+
+`input` selects an existing workspace directory (empty means `.`). `target: content` is the default; `pattern` is a non-empty literal substring (maximum 256 characters). `target: files` instead treats `pattern` as a workspace-relative filename glob and returns paths without reading binary contents. Optional `glob` restricts either search; `*` and `?` match within one segment and standalone `**` spans segments. Invalid/traversal/absolute/backslash glob forms are refused. Matching uses bounded dynamic programming rather than backtracking regex. `regex:true` is only for content and accepts a deliberately small **fixed-width** JavaScript subset: literals, dot, anchors, character classes and `\d`/`\w`/`\s`; no repetition, groups, alternation, lookarounds or backreferences. Unsupported regex is `INVALID_INPUT`, not silently converted to literal search.
+
+The traversal checks every directory/file and all path ancestors using Workbench's canonical workspace, sensitive paths and managed path rules. It skips symlinks/junctions, hardlinks, denied entries, node_modules and release. Limits: 5,000 encountered entries, depth 32, `maxFiles` 1–1,000, `maxBytes` 1–4,000,000 total content bytes, and content files at most 200,000 bytes. Binary/invalid UTF-8/oversized content files are skipped and counted, never decoded for the agent. Output has `matches[{path,line,text}]` (1-based original line; preview up to 4,000 characters), `scannedFiles`, `scannedBytes`, `skippedFiles`, `truncated`, and `total` **within the bounded scan**, not the whole tree. Paths are sorted ordinally. `maxResults` is 1–500, default 100, per page; each page also caps serialized match data at 600,000 characters to stay below the tool-loop output ceiling. At most 5,000 matches are retained. A capped scan sets `truncated:true`; do not report an exhaustive negative from it.
+
+Pass `nextCursor` unchanged as `args.cursor` with identical arguments to fetch the next result page. Each call rescans under current permissions and binds the cursor to workspace/arguments/scanned content/results; changes return `SEARCH_CHANGED` and require restarting. This is not a durable filesystem snapshot. Full bounded source privacy review precedes matching, so a credential split across lines/chunks cannot escape through the preview. Redaction that changes line counts causes that file to be omitted to avoid false line numbers. A file the privacy review withholds (an unmaskable credential) is skipped and counted in `withheldFiles` instead of failing the whole search; its contents never reach the agent. Credential stores such as `.netrc`, `_netrc`, `.npmrc`, `.pypirc`, `.git-credentials`, `.pgpass` and `*.kdbx` are protected paths for every file tool. Existing result transmission consent still applies; recursive search does not inherit single-folder read grants.
+
+```step-tool
+{"tool":"patch","input":"notes.txt","args":{"old_string":"Exact old text including context","new_string":"Exact replacement"}}
+```
+
+`patch` requires an existing valid UTF-8 text file at most 200,000 bytes; empty/no-op old text, binary, oversized output, zero matches (`PATCH_NO_MATCH`) and multiple **including overlapping** matches (`PATCH_AMBIGUOUS`) are refused. There is no fuzzy/all-match/create mode. Optional `expectedHash` is a lowercase SHA256 of the original raw bytes for a caller's prior-read precondition. Staging re-reads and compares the original hash (`FILE_CONFLICT`) even when no caller hash was supplied, and application checks it again on a non-truncating, no-follow opened handle before overwriting the existing file. Ancestor links and handle/path inode mismatches are also refused. These checks are not an OS lock against arbitrary concurrent writers after the final check. Changes stores exact replacement bytes plus the normal readable before/after preview. Ask mode returns only a staged receipt; the file does not change until human apply. Accept Edits/Auto use the existing write gate/hooks and create the normal byte snapshot. Plan mode refuses patch. No direct filesystem mutation, new IPC, OS-wide search, account access, install or generic shell fallback is added.
+
+Evidence: `test/file-operations.test.ts` has real temporary files, permission/link/UTF-8/budget/cursor/conflict/snapshot tests and a deterministic lifecycle workspace-race regression. `test/phase2-tools.test.ts` covers parsed agent dispatch, read privacy/transmission, write mode gates and plan refusal. `test/file-operations-smoke.mjs` runs the real Electron app with a synthetic local provider and actual files: recursive paginated read, protected-path and unsafe-regex refusal, exact staging, denied human apply, approved apply and snapshot. Native Windows/macOS junction/process behavior and live model/account acceptance remain unverified. Cancellation-resistant subprocesses still need a separate lifecycle hardening tranche; sending SIGTERM is not proof of exit. An attempted independent review was blocked by the review provider, so no independent-security-review pass is claimed.
+
+## Execution parity tranche 3: discoverable governed registry (source only)
+
+The existing `step-tool` text protocol now accepts `tool_search` and `tool_describe`; it is **not native provider tool transport**. The default prompt offers concise optional discovery while retaining the direct essential-tool instructions and legacy single-JSON/fenced requests for smaller models. No mandatory discovery round is added.
+
+```step-tool
+{"tool":"tool_search","input":"workspace","args":{"scope":"core","limit":12}}
+```
+
+```step-tool
+{"tool":"tool_describe","input":"patch"}
+```
+
+`src/tool-registry.ts` is the canonical host-request envelope/field-schema, effect and description catalog for all current core protocol tools, including `tasks`, `search_files`, `patch` and the loop-owned `read_remaining`. Search matches all whitespace-separated words against names/descriptions; empty input lists the catalog. `scope` is `core`, `mcp` or `all` (default), `limit` is an integer 1–40 (default 40). Search returns concise entries without schemas, exact matched `total` and `hasMore`; describe accepts one exact core name and returns its schema. Use a narrower query or higher limit; core search has no cursor. Result paging remains the existing consented `read_remaining`. Field types/bounds are validated both by the parser and host dispatcher, and tool-specific semantic/path/action checks remain in their underlying handlers. Legacy unknown non-discovery arguments are tolerated; discovery rejects unknown fields, content, nested calls and execution-wrapper arguments.
+
+Availability is **conditional**, not a grant: it reports current tool-loop/MCP/sandbox switches, managed configuration, connector attachment and plan-mode restrictions. A descriptor does not certify a path, an installed Docker runtime, a provider's web-search support or an authenticated account. Scope identifies workspace, owned session job/browser, registered harness context, consented public destination or run-owned approved cache. There is no implicit Google/cloud connector, server URL/header exposure, software install or new account permission.
+
+Default/all MCP metadata lists only enabled managed server names/transports; it does not connect. To actually discover remote schemas, use `tool_search(input=query,args={scope:"mcp",server:"managed-name"})` or `tool_describe(input=exact-remote-name,args.server="managed-name")`. The only delegated operation is fixed `mcp_search`, through its existing side-effect gate, hooks, policy/run checks and destination consent; there is no recursive general dispatcher. Server schemas/descriptions are untrusted, remote effects unknown, and invocation metadata points to `mcp_call` which still requires separate permission/consent. Discovery can be denied without contacting a server. Remote discovery retains the existing bounded MCP search (up to 100 server tools scanned, at most 12 returned); `boundedDiscovery`, `serverTotal`, `hasMore` and conservative `discoveryIncomplete` distinguish it from a complete matching catalog. Refine the query; a missing tool in incomplete discovery is not proof of unavailable access.
+
+All discovery results still pass the ordinary result transmission/privacy gate, and descriptions always say `executionGranted:false`. They cannot execute the described tool, relax path rules or staging/application/snapshot gates, inspect other-session tasks, or grant business authority.
+
+Evidence: `test/tool-registry.test.ts` covers schemas/registry-protocol parity, malformed fields/wrapper rejection, conditional availability and metadata-only secret-safe MCP listing. `test/phase2-tools.test.ts` checks registry vs actual dispatcher cases (including loop-owned paging), synthetic tool-loop search → describe → file read/patch/task dispatch, denied/disabled/unknown-server managed discovery and unchanged transmission/staging/path gates. `test/tool-discovery-smoke.mjs` runs the real app with a synthetic local provider: 14 turns, actual file read/recursive search/exact staging, actual terminal completion through tasks, protected-path refusal, denied then approved human apply and verified snapshot. No live accounts, native-platform acceptance, live small-model quality or independent security-review pass is claimed.
+
+## Permissions and outgoing data
+
+Model-generated search queries and fetch URLs require their own one-time destination consent before network access. Only pattern-checked public requests qualify; confirming a provider result does not authorize a new web/search destination. Policy/workspace checks repeat after this consent.
+
+Model text-file reads scan the complete bounded source before paging. Known credentials block the entire source; paging offsets refer to masked text so detection cannot be bypassed at a chunk boundary. Manual previews remain local and use the existing attachment consent when sent into Chat.
+
+The initial request and later human requests retain routing and authority checks. `skill` accepts only a catalog entry with `status: routed`, reroutes the original task with that Skill, and rejects blocked, unavailable or ambiguous authority. `reference` resolves a controlled document ID and returns its status/authority/verification. Context reads enforce canonical boundaries, credential exclusions and managed path rules.
+
+`features.toolLoop: false` keeps proposals inert for manual review. Plan mode allows research/questions/plans but rejects model staging and command execution. Local tools retain Phase 1 path, command, mode, pre/post hook and policy-change checks. Shell execution requires confirmation unless policy enables both auto mode and `shellByAi`; it uses the employee's OS permissions and is not an OS sandbox. Models cannot apply Changes.
+
+Every new result is scanned and checks transmission consent. Eligible clean reads can share an explicitly selected scope for one loop; the default remains approval once. Scopes expire after at most 10 minutes, 24 results or 200,000 characters, bind to source/provider/account/model/workspace/team/policy/mode, and never persist. Masked sources and document/spreadsheet/MCP/shell/write results require separate review. See [Phase 6](desktop-phase6.md) for source scopes and the revoke-and-stop control. Consent remains independent of execution permissions. Credentials and withheld redactions cannot transmit. Declining returns a code without content. Workspace/mode/policy changes invalidate the loop. Cancellation closes pending approvals/questions and stops commands started by that run. Completed runs can leave approved background tasks in Tasks.
+
+Results and prior requests are tagged as untrusted data. The paging cache contains approved/masked text only and is discarded after each run. Results expose a 4,000-character preview, result ID, total size and `nextOffset`; `read_remaining` gets another approved cached page through the hook gate. Cache size is capped at four million characters, one result at one million. Context checks remain in force; compaction belongs to Phase 3.
+
+## Protocol
+
+```step-tool
+{"tool":"files","input":"notes.md","args":{"offset":0}}
+```
+
+| Tool | Arguments and behavior |
+| --- | --- |
+| `files` | Relative path; `args.action: list` lists a directory. Reads return 40,000-character pages with explicit offsets, bounded at 8 MB. Manual Files previews use 200,000-character pages and prevent editing a partial page. |
+| `search_files` | Recursive bounded workspace name/content search, validated glob/fixed-width regex and content-bound cursor; see tranche 2. |
+| `patch` | Exact unique find/replace staged through Changes, optional expectedHash; see tranche 2. |
+| `changes` | Path and `content` stage text; `args.action: list` or `diff` reads authorized current-workspace changes. No model apply operation. |
+| `terminal`, `tasks` | Approved command start plus session/workspace-owned list/status/poll/wait/cancel; see execution tranche below. |
+| `browser`, `web_fetch` | Public HTTP(S) URL; background text retrieval without cookies or browser credentials. Manual Browser remains separate. |
+| `web_search` | Public pattern-checked query sent to Bing RSS through host HTTP, independent of the AI provider (including Antigravity); no extra API key or native model search call. Per-site consent applies in every mode; privacy checks also apply when enabled. DNS pinning, private-address blocking, proxy, cancellation and size/time bounds match web_fetch. Results are untrusted snippets with actual links; web_fetch verifies the linked page. With toolLoop disabled the older provider-native search path remains conditional. |
+| `skill`, `reference` | Registered routed Skill ID or controlled document ID, with authority and path checks. Empty input and `args.action: catalog` discover metadata without loading bodies; reference catalogs filter restricted entries. `reference` accepts `args.action: outline` for headings or `args.section` for a selected section, through the same consent gate. |
+| `doc_outline`, `doc_section` | DOCX/PDF path and `args.index` for a section. Uses the existing disposable document/privacy worker. Outline derives from extracted headings and bounded text groups, not a preserved Word TOC or PDF page map. Partial/unreadable extraction is withheld. |
+| `sheet_create` | New XLSX path and args.spec.sheets[{name,columns:[{label,type}],rows:[[scalar]],formulas?:[{cell,formula}],source?}]. Creates binary Changes, refuses existing paths; maximum 10 sheets/30 columns/500 rows. Local arithmetic and a small function allowlist only; no formula evaluation. |
+| `slides_create` | New PPTX path and args.spec.{title,slides:[{title,bullets?,table?,chart?,notes?,source?}]}. Creates editable text/table/chart/notes in binary Changes; refuses existing paths; 20 slides maximum with bounded content. Visual review required. |
+| `sheet_read` | XLSX path, optional `args.sheet` and `args.range`, default `A1:J20`, maximum 500 cells; reports worksheet dimensions. |
+| `sheet_edit` | XLSX path, optional sheet name, `args.edits: [{cell:"A1",value:"new value"}]`, maximum 200 scalar edits. Stages a readable cell preview and workbook, without direct writes or object-valued formula edits. Formula cells and protected sheets are refused. |
+| `ask_user` | Question in `input`, up to six labels in `args.options`; Chat accepts an option or free text. Cancellation stops the run. |
+| `plan` | Plan text in `input`; one-time approval before continuing to draft. Does not authorize business actions. |
+| `snapshot` | Path and `args.action: create` or `list`; `restore` plus snapshot ID in `args.id` stages restoration. |
+| `read_remaining` | Result ID and `args.offset`; cannot read another run's cache. |
+
+Office operations run in a disposable worker with 256 MB heap and a 20-second deadline. Source/result files are capped at 8 MB and expanded XLSX packages at 32 MB. `sheet_edit` patches the selected worksheet XML and workbook recalculation settings; untouched ZIP parts retain their decompressed bytes. Formula cells, array-formula ranges, protected worksheets, merged non-anchor cells, macro/signed packages are refused. This preserves package parts, not a guarantee that every Excel feature renders correctly. `sheet_read` returns formulas and cached results separately with cacheStatus=not-verified. No formula engine runs; input edits/new formulas require recalculation in a spreadsheet application. Only `.xlsx` is supported.
+
+Applying an existing file saves its exact bytes in local SQLite first. The source must still match the preview hash; changed files/workspace paths are refused. Restoration stages another Changes preview through the same apply gate. Backups are limited to 30 entries/40 million base64 characters; employees can inspect/remove a selected backup in Changes. Staged bytes/backups stay local and are never sent as binary tool results. They are not Git worktrees or OS snapshots. New files have no earlier file to restore.
+
+## Public retrieval and organization proxy
+
+Address exclusions use a conservative subset of the [IANA IPv4 registry](https://www.iana.org/assignments/iana-ipv4-special-registry) and [IANA IPv6 registry](https://www.iana.org/assignments/iana-ipv6-special-registry). Some special-purpose globally reachable ranges are intentionally excluded.
+
+Host URLs allow HTTP(S), ports 80/443 and no credentials. Local/reserved IPv4, non-public/mapped/transition IPv6 and non-public hostname suffixes are rejected. Every DNS answer must be public; the actual connection pins a verified IP. Four redirects maximum, with repeated URL/DNS checks. Responses permit uncompressed HTML/plain text/JSON at 2 MB, with a 30-second deadline. Script/style content is removed; nothing is executed. This is text retrieval, not authenticated or JavaScript browsing.
+
+Trusted policy can set `"network": {"proxyUrl": "https://proxy.example.org:8443/"}`. The proxy URL has no credentials/path/query/fragment. CONNECT targets the verified public IP; HTTPS verifies the destination certificate. Administrators choose the trusted proxy, including internal endpoints. Proxy authentication is unsupported. Tests cover a real local HTTP CONNECT proxy and private redirects; live corporate configuration and HTTPS proxy E2E remain unverified. This setting governs host fetches, not provider runtime traffic.
+
+## Retry and usage
+
+`PROVIDER_BUSY`, `PROVIDER_NETWORK` and `RUNTIME_EXITED` get three retries at 2/4/8 seconds with 25% jitter and cancellation-aware waits. Compatible API transport errors map to the Desktop codes at the adapter boundary; structured quota codes stop retries. Structured `retry-after` seconds/date or `retryAfterMs` takes precedence, bounded at two minutes. Tests inject delays. Non-transient errors, quota failures and tool effects are not replayed. Usage before a failed provider attempt stays counted, including a dropped retained RPC session recovered once with a fresh conversation.
+
+`/usage` and the command palette open a local ledger for Chat/Draft and native web search, grouped by UTC day/provider/model. Prices are USD per million tokens, keyed by model or `provider:*`, with optional cache-read/write rates. Cache subsets are already included in input totals. Missing cache rates use ordinary input prices with an explicit approximation label; missing model prices remain unpriced. Policy changes do not rewrite past estimates. Daily token/monthly cost warnings appear at 80% of configured budgets and are advisory, not hard spending caps. Missing provider usage, image pricing, OCR resolution, hook prompts, subscriptions and work outside the app are not billing reconciliation.
+
+Validation uses synthetic accounts/documents and actual local Electron/preload/IPC. It does not establish live provider entitlement, production acceptance, install/signing behavior, sandboxing or future phases.
+
+## Extraction, vision, generated images and local observability (Desktop 0.5.38)
+
+- `web_extract(input=public URL)` uses the same bounded, DNS-pinned HTTP reader, proxy, redirect checks, URL privacy
+  scan and per-site consent as `web_fetch`. It returns title, article/main text, headings, tables and public links,
+  fetched timestamp and `external-untrusted` provenance. No page JavaScript runs. It marks clipped evidence with
+  `truncated`; this is a bounded HTML extractor, not a complete document parser, authenticated browser or PDF reader.
+- `vision_analyze(input=workspace PNG/JPEG/WebP path,args.prompt=question)` reads at most 8 MB through protected-path,
+  no-symlink and file-change checks. `browser_vision(input=session-owned tab,args.prompt=question)` captures the visible
+  viewport (at most 1600×1200 and 5 MB), rejects sensitive input/login pages or visible iframes and detects DOM/navigation
+  changes around capture. Both require explicit image consent, enabled vision, privacy checks **off** and a supported
+  OpenAI/Claude/Gemini connection; strict privacy mode uses reviewed text instead. No policy default changes. The
+  analysis call is isolated from the tool session, counts provider usage and returns `EXTRACTED_UNVERIFIED` with a
+  source reference. It never constitutes human confirmation. Antigravity/Copilot/compatible transports remain text-only
+  for these tools. Pixel analysis accuracy and signed-in provider acceptance remain unmeasured.
+- `image_generate(input=prompt,args.model=optional accessible image model)` reuses the existing image-generation
+  service for one image on the selected OpenAI/Gemini **API** account. OAuth alone is insufficient. Plan mode refuses
+  generation; current permission mode and hooks apply, with prompt privacy checks and outgoing consent. The real
+  account model catalog is checked before generation. A returned `generated-local` artifact appears in the session
+  image gallery; it is not a workspace write or cloud publication. No API key is requested or logged by the AI.
+- Each tool result carries a `traceId`. Bounded local run traces keep tool name, success/error code and milliseconds,
+  alongside the run ID, without input/output text, URLs, paths or credentials. The chat's folded **ประวัติเครื่องมือและ
+  รหัสตรวจสอบ** shows the last three runs; diagnostics records `tool-call` with the same IDs. This adds no telemetry
+  endpoint, external observability dependency or automatic retry of uncertain remote writes.
+
+These tools use existing bundled libraries and Electron capture; no additional runtime/model download or installer
+architecture is introduced. Synthetic tests validate orchestration and gates, not real-model answer/image quality.
+Google Workspace setup uses the [organization-managed MCP profile](desktop-automation.md#google-workspace-through-an-organization-mcp-server).

@@ -34,6 +34,12 @@ standardVersion: 2
 
 สิ่งที่ยังไม่รู้ให้ใช้ `รอยืนยัน` พร้อมระบุเจ้าของคำตอบ
 
+### Draft assistance with incomplete inputs
+
+Draft useful prose from the supplied procurement subject and intended use even when the background, objectives or scope fields are blank. Write a proposed rationale, objectives, neutral functional requirements, deliverables and inspection methods for owner review. Do not invent a history of defects or events. Label proposed requirement sections as provisional in the draft and record their assumptions and `AI_PROPOSED` provenance in the separate review. A working-template placeholder is a field guide, not the default output for every missing paragraph.
+
+Keep unknown factual values and authority-dependent conditions pending: amounts, quantities, dimensions, thresholds, agreed dates, approved budgets, legal conditions, qualifications, penalties and warranty periods require supplied evidence. Missing policy sources do not prevent drafting the narrative and functional proposals. Preserve every unrelated section and user edit when revising; an explicit user correction updates the corresponding draft field without implying approval.
+
 ## Source
 
 **Source Gate** — ก่อนใช้กฎ แบบฟอร์ม อัตรา วัน ระยะรับประกัน เกณฑ์ผู้ยื่นข้อเสนอ หรือข้อความบังคับ ให้ resolve จาก `../../manifest/documents.yaml` และ source ปัจจุบัน
@@ -60,7 +66,7 @@ standardVersion: 2
 
    [แม่แบบกลาง ๑๖ หัวข้อ](../thai-official-documents/templates/tor-16-sections-template.md) ใช้เป็น working template ได้ แต่ current official structure ต้องยืนยันกับ AFP ไม่คัดอัตรา คุณสมบัติ SLA หรือข้อกฎหมายที่ยังไม่ resolve จาก source
 
-4. **Make requirements testable** — ทุก deliverable สำคัญเชื่อม `Need → Requirement → Evidence/Test → Acceptance condition` **ห้ามสร้างจำนวน ขนาด spec รอบแก้ไข SLA benchmark หรือ threshold เอง**
+4. **Make requirements testable** — ทุก deliverable สำคัญเชื่อม `Need → Requirement → Evidence/Test → Acceptance condition` **ห้ามสร้างจำนวน ขนาด spec รอบแก้ไข SLA benchmark หรือ threshold เอง**. Proposed functional requirements and inspection methods may be drafted for owner review; they are not established specifications or procurement rules.
 5. **Neutrality & competition review** — ชี้ requirement ที่อาจล็อก brand/model/vendor หรือจำกัดการแข่งขันโดยไม่มี evidence ใน source แล้วส่งให้ owner หรือ AFP ยืนยัน
 6. **Traceability** — ทำตาราง Objective / Requirement-Activity / Deliverable / Acceptance / Source
 7. **Source gaps** — แยกท้ายร่างเป็น Current rules resolved, Pending AFP confirmation, Missing source และ Planning assumptions
@@ -96,5 +102,5 @@ AI ไม่อนุมัติ: งบประมาณ วิธีจั�
 
 - ลด PII ในเอกสารแนบตาม Privacy Gate และไม่เก็บ raw personal หรือ vendor data ที่ไม่จำเป็นใน Run State
 - ไม่แต่งกฎพัสดุ อัตรา หรือคุณสมบัติผู้เสนอจากความจำ
-- ไม่สร้าง spec หรือ threshold ทางเทคนิคเองโดยไม่มี source
+- Do not assert unsourced specifications or technical thresholds as established requirements. Clearly provisional functional proposals may be drafted for owner confirmation.
 - ไม่ระบุสถานะการอนุมัติที่ยังไม่เกิดขึ้นจริง

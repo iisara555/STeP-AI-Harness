@@ -1,4 +1,14 @@
 export const documentToolsEn: Record<string, string> = {
+  'เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน':
+    'Leave prose fields blank for an AI first draft from your context. Facts and evidence-dependent conditions stay pending.',
+  'เว้นได้ AI ช่วยเสนอร่างให้พิจารณา': 'Optional: AI can propose wording for your review',
+  ปรับร่างเดิม: 'Revise existing draft',
+  'ร่างที่กำลังแก้: {0}': 'Draft being revised: {0}',
+  ระบุเฉพาะส่วนที่ต้องการปรับ: 'Describe only the changes you want',
+  'ใช้ร่างล่าสุดและข้อความที่คุณแก้ไว้ คงส่วนอื่นไว้ให้ตรวจเทียบก่อนใช้':
+    'Use the latest draft and your edits. Keep other sections for comparison before accepting.',
+  'แก้ร่างเดิมเฉพาะตามคำขอนี้: {0}': 'Revise the existing draft only as requested: {0}',
+
   'ส่งออก DOCX: บรรทัดสั้นที่ขึ้นบรรทัดใหม่ไม่ยืดช่องว่างจนคำแยกไปคนละฝั่ง':
     'DOCX export: short lines ending with a manual line break keep their spaces instead of spreading words across the page.',
   'ปรับระยะบรรทัดและย่อหน้าของแบบร่าง เก็บแท็บและบรรทัดใหม่ที่คุณกรอกไว้':

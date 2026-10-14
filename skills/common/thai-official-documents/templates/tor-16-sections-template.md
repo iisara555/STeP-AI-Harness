@@ -10,6 +10,8 @@ A4 ขอบซ้าย ๓ ซม. ขวา ๒ ซม. บน ๒.๕ ซม
 
 ## โครงร่าง — คงหัวข้อที่ข้อมูลยังขาด
 
+The placeholders below identify fields in the working outline. Draft the rationale, objectives, proposed scope, deliverables and functional inspection methods from the current task context instead of copying whole placeholder paragraphs. Mark proposed requirement sections for owner review and record assumptions separately. Keep only unknown factual values or source-dependent conditions pending. On a targeted revision, preserve the existing draft outside the requested sections.
+
 ```text
 ร่างเพื่อพิจารณา — ขอบเขตของงาน (TOR)
 [รอยืนยัน: ชื่อโครงการและประเภทงานซื้อหรือจ้างจากต้นทาง]

@@ -31,7 +31,7 @@ standardVersion: 2
 ## Inputs
 
 ขั้นต่ำ:
-- สำหรับร่างข้อเสนอ: ข้อมูลต้นเรื่องหรือแบบฟอร์มที่ผู้ใช้กรอกอย่างน้อยหนึ่งส่วน ช่องอื่นใช้ `[รอยืนยัน]` ไม่เติมตัวเลขเอง
+- For a proposal, use the supplied subject/purpose or at least one meaningful form field. Draft proposed prose for missing narrative fields; unknown factual values retain `[รอยืนยัน]`.
 - สำหรับแผนปฏิบัติการ:
 - ขอบเขตงานหรือข้อเสนอโครงการ
 - ระยะเวลาดำเนินการรวม
@@ -58,7 +58,7 @@ standardVersion: 2
 
 1. ทำตารางข้อเท็จจริงและแหล่งข้อมูลจากฟอร์ม/ต้นเรื่อง เก็บตัวเลขและขอบเขตตามต้นทาง ฟอร์มเป็น `USER_INPUT` ไม่ใช่ `POLICY` หรือหลักฐานอนุมัติ ข้อมูล OCR/AI ที่ยังไม่ตรวจคง `EXTRACTED_UNVERIFIED`
 2. ตรวจแบบหน่วยงาน เงื่อนไขแหล่งทุน และกฎที่อ้างจาก Controlled Source ตาม Source Gate ถ้ายังขาดให้บอกแหล่งที่ขาด ไม่อ้างจากความจำว่าเป็นกฎปัจจุบัน
-3. ร่างตามแม่แบบข้อเสนอ: หลักการและเหตุผล วัตถุประสงค์ กลุ่มเป้าหมาย กิจกรรม ระยะเวลา งบประมาณ ตัวชี้วัด ผลที่คาด และจุดอนุมัติ ช่องที่ขาดใช้ `[รอยืนยัน: ชื่อช่อง]`
+3. Draft the proposal structure: rationale, objectives, target group, activities, timing, budget, indicators, expected outcomes and approval points. Proposed project prose may fill blank rationale, objectives, activities, qualitative indicators/evaluation methods and expected outcomes from the supplied purpose; mark its assumptions as `AI_PROPOSED` in the separate review. Keep quantities, target thresholds, dates, locations, prices, budgets and approval facts pending when absent. Template placeholders are field guides. For revisions, preserve unrequested sections and user edits, applying explicit corrections to the latest draft.
 4. เชื่อมวัตถุประสงค์ → กิจกรรม → ผลผลิต → ตัวชี้วัด/หลักฐาน ห้ามแต่งจำนวนคน เป้าตัวชี้วัด กำหนดเวลา ราคาต่อหน่วย หรือวงเงิน ข้อเสนอเพิ่มเติมติดป้าย `RECOMMENDATION` แยกจากเนื้อหาที่ตกลงแล้ว
 5. ตรวจยอดงบเฉพาะเมื่อมีจำนวน/ราคาในต้นทางครบ ระบุสูตรและ `DERIVED` เมื่อคำนวณเอง เปิดเผย conflict และข้อมูลที่ต้องขอจากเจ้าของเรื่อง/AFP
 6. ส่งร่างเพื่อพิจารณาพร้อมรายการที่ต้องยืนยันและผู้มีอำนาจ ไม่ถือว่าอนุมัติโครงการหรือเบิกงบได้แล้ว

@@ -124,7 +124,8 @@ export default function App() {
   const snapshotVersion = useRef(0),
     navigationVersion = useRef(0);
   const [settings, setSettings] = useState(false),
-    [settingsPage, setSettingsPage] = useState<'general' | 'ai'>('general'),
+    [settingsPage, setSettingsPage] = useState<'general' | 'ai' | 'credentials'>('general'),
+    [vaultOrigin, setVaultOrigin] = useState(''),
     [query, setQuery] = useState(''),
     [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'artifacts'>('all');
@@ -379,6 +380,11 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'vault-open') {
+          setVaultOrigin(event.text || '');
+          setSettingsPage('credentials');
+          setSettings(true);
+        }
         if (event.type === 'approval' && event.approval)
           setToolApprovals(list => [...list.filter(a => a.id !== event.approval!.id), event.approval!]);
         if (event.type === 'approval-close') setToolApprovals(list => list.filter(a => a.id !== event.approvalId));
@@ -545,7 +551,7 @@ export default function App() {
     setSettings(false);
   }
   selectSessionRef.current = selectSession;
-  const openSettings = (page: 'general' | 'ai' = 'general') => {
+  const openSettings = (page: 'general' | 'ai' | 'credentials' = 'general') => {
     navigationVersion.current++;
     setSettingsPage(page);
     setSettings(true);
@@ -637,6 +643,22 @@ export default function App() {
       form.source ? form.sourceRole : 'source',
     );
   }
+  async function reviseDocument(id: string, changes: string) {
+    if (!snapshot?.sessions.find(s => s.id === id)?.documentTool) throw new Error('INVALID_DOCUMENT_TOOL');
+    await save();
+    await api!.call('sessionConnection', { id, connectionId });
+    setWorkMode('draft');
+    setView('chat');
+    setSettings(false);
+    setSelected(id);
+    setQuery('');
+    setFiles([]);
+    setPendingSource('');
+    setRight(true);
+    setToolTab('output');
+    await refresh();
+    await start(id, t('แก้ร่างเดิมเฉพาะตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
+  }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
     const version = ++navigationVersion.current;
@@ -667,6 +689,11 @@ export default function App() {
     return s;
   }
   async function send() {
+    if (query.trim() === '/vault' || query.trim() === '/google') {
+      setQuery('');
+      openSettings('credentials');
+      return;
+    }
     if (/^\/(learn|learning)(?:\s|$)/.test(query.trim())) {
       setLearningText(query.trim().replace(/^\/(learn|learning)\s*/, ''));
       setLearningOpen(true);
@@ -961,6 +988,7 @@ export default function App() {
     new: () => void action(create),
     usage: () => setUsageOpen(true),
     memory: () => setMemoryOpen(true),
+    vault: () => openSettings('credentials'),
     learning: () => {
       setLearningText('');
       setLearningOpen(true);
@@ -1498,6 +1526,12 @@ export default function App() {
                 chooseConnection={setConnectionId}
                 attach={attachDocument}
                 draft={draftDocument}
+                existingDraft={
+                  session?.documentTool && (session.draft.trim() || session.proposals.length)
+                    ? { id: session.id, tool: session.documentTool, title: session.title }
+                    : undefined
+                }
+                revise={reviseDocument}
                 consumedTask={consumedDocumentTask}
                 busy={running}
                 onError={e => notify(explainError(e), 'error')}
@@ -1518,6 +1552,7 @@ export default function App() {
                 onBusy={setSettingsBusy}
                 key={settingsPage}
                 initialPage={settingsPage}
+                vaultOrigin={vaultOrigin}
                 snapshot={snapshot}
                 call={api.call}
                 refresh={refresh}

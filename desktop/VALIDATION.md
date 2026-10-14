@@ -2,6 +2,12 @@
 
 This is a development preview, not an accepted production release.
 
+## Vault and Google Workspace local implementation - 2026-10-14
+
+- Desktop unit suite: **729 total, 725 passed, 4 platform skips, 0 failures** on the local Windows development host. Repository validator, likely-secret scan, package whitelist and TypeScript/production build passed. The existing renderer chunk-size warning remains.
+- Real Windows Electron smoke passed with OS-backed encryption across two processes, exact-certificate synthetic HTTPS login, identifier-first fill, changed-form partial outcomes and withheld model reads. Real Settings/preload/IPC/SQLite smoke passed explicit remember consent, metadata-only editing, legacy API-key migration, missing Google configuration, pause and terminal denial. Screenshots use synthetic data under ignored `release/qa/vault/`.
+- Google OAuth/Google service transport tests use synthetic callback/JWK/API fixtures, with no real employee account, live service request or model spend. The owner confirmed OAuth client/domain are not available; this is not proof of live Google access. Both capabilities default off; tenant setup, macOS native/packaged Windows/macOS upgrade, API entitlement and rollout require their own evidence. See [implementation scope](../docs/vault-workspace-implementation.md).
+
 ## Context performance — Desktop 0.5.33 / Harness 0.7.7 (2026-10-09)
 
 - Local Harness suite: **954 tests, 952 passed, 0 failed, 2 platform skips**. Desktop suite: **562 tests, 560 passed, 0 failed, 2 platform skips**. Focused session/error checks after the final dropped-thread fix: **32 tests, 31 passed, 0 failed, 1 platform skip**. TypeScript/production build, Prettier, both validators, signed Node runtime pins, Pilot ZIP and package dry-run passed.

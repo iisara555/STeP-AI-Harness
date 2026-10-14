@@ -19,6 +19,8 @@ export function DocumentTools({
   chooseConnection,
   attach,
   draft,
+  existingDraft,
+  revise,
   consumedTask,
   busy,
   onError,
@@ -29,14 +31,17 @@ export function DocumentTools({
   chooseConnection: (id: string) => void;
   attach: (id: DocumentToolId) => Promise<DocumentAttachment | null>;
   draft: (id: DocumentToolId, form: DocumentForm) => Promise<void>;
+  existingDraft?: { id: string; tool: DocumentToolId; title: string };
+  revise: (id: string, request: string) => Promise<void>;
   consumedTask: string;
   busy: boolean;
   onError: (error: unknown) => void;
   openAiSettings: () => void;
 }) {
-  const [selected, setSelected] = useState<DocumentToolId>('tor');
+  const [selected, setSelected] = useState<DocumentToolId>(() => existingDraft?.tool || 'tor');
   const [forms, setForms] = useState<Partial<Record<DocumentToolId, DocumentForm>>>({});
   const [working, setWorking] = useState(false);
+  const [revisionRequest, setRevisionRequest] = useState('');
   const profile = documentTool(selected)!;
   const form = forms[selected] || { values: {}, variant: profile.variants[0].id };
   const ready = connections.filter(c => c.ready);
@@ -44,6 +49,7 @@ export function DocumentTools({
   const disabled = busy || working;
   const hasInput = Object.values(form.values).some(v => v.trim()) || Boolean(form.source?.file.usable);
   const update = (patch: Partial<DocumentForm>) => setForms(old => ({ ...old, [selected]: { ...form, ...patch } }));
+  useEffect(() => setRevisionRequest(''), [existingDraft?.id, selected]);
   // Consent is handled by the normal send dialog. Only a started send consumes the attachment.
   useEffect(() => {
     if (!consumedTask) return;
@@ -94,13 +100,45 @@ export function DocumentTools({
       >
         <header>
           <h2>{t(profile.title)}</h2>
-          <p className="small muted">{t('ข้อมูลที่ขาดจะคงช่อง [รอยืนยัน] ให้ตรวจและเติมในร่างก่อนนำไปใช้')}</p>
+          <p className="small muted">
+            {t('เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน')}
+          </p>
           <p className="small muted">
             {t(
               'TOR ใช้แม่แบบ 16 หัวข้อเดิม เอกสารอีก 4 ประเภทเลือก DOCX จาก MIS เป็นแม่แบบเพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป',
             )}
           </p>
         </header>
+        {existingDraft?.tool === selected && (
+          <section className="document-revision">
+            <h3>{t('ปรับร่างเดิม')}</h3>
+            <p className="small muted">{t('ร่างที่กำลังแก้: {0}', existingDraft.title)}</p>
+            <label>
+              {t('ระบุเฉพาะส่วนที่ต้องการปรับ')}
+              <textarea
+                aria-label={t('ระบุเฉพาะส่วนที่ต้องการปรับ')}
+                value={revisionRequest}
+                maxLength={6000}
+                disabled={disabled}
+                onChange={e => setRevisionRequest(e.target.value)}
+              />
+            </label>
+            <p className="small muted">{t('ใช้ร่างล่าสุดและข้อความที่คุณแก้ไว้ คงส่วนอื่นไว้ให้ตรวจเทียบก่อนใช้')}</p>
+            <button
+              type="button"
+              className="quiet"
+              disabled={disabled || !connected || !revisionRequest.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await revise(existingDraft.id, revisionRequest.trim());
+                  setRevisionRequest('');
+                })
+              }
+            >
+              {t('ปรับร่างเดิม')}
+            </button>
+          </section>
+        )}
         <div className="document-form-options">
           <label>
             {t('ชนิด / เรื่อง')}
@@ -255,6 +293,7 @@ export function DocumentTools({
                   onChange={e => update({ values: { ...form.values, [f.key]: e.target.value } })}
                 />
               )}
+              {f.missingAction === 'draft-proposal' && <small className="muted">{t('เว้นได้ AI ช่วยเสนอร่างให้พิจารณา')}</small>}
               {f.hint && <small className="muted">{t(f.hint)}</small>}
             </label>
           ))}

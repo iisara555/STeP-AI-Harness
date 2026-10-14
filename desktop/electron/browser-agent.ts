@@ -32,6 +32,8 @@ type Entry = {
   origin: string;
   opened: string;
   busy: boolean;
+  vaultSensitive?: boolean;
+  generation?: number;
 };
 type Context = {
   sessionId: string;
@@ -183,6 +185,7 @@ export class AgentBrowser {
     );
   }
   private async snapshot(id: string, entry: Entry, signal: AbortSignal) {
+    if (entry.vaultSensitive) throw new Error('BROWSER_VAULT_SENSITIVE');
     const snapshot = randomUUID();
     await this.settle(entry, signal);
     const marker = await this.markListeners(entry, signal);
@@ -365,6 +368,9 @@ export class AgentBrowser {
         else if (!contents.isDestroyed()) contents.close();
       };
       const entry: Entry = { contents, view, dispose, owner: context.sessionId, origin: new URL(url).origin, opened: url, busy: true };
+      contents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
+        if (mainFrame) entry.generation = (entry.generation || 0) + 1;
+      });
       this.tabs.set(id, entry);
       this.origins.set(contentsId, entry.origin);
       contents.once('destroyed', () => {
@@ -432,6 +438,7 @@ export class AgentBrowser {
       }
     }
     const entry = this.get(request.input, context.sessionId);
+    if (entry.vaultSensitive && action !== 'close') throw new Error('BROWSER_VAULT_SENSITIVE');
     context.activity?.(
       `${action === 'read' ? tm('กำลังอ่านผลจากเว็บ') : action === 'close' ? tm('กำลังปิดเว็บ') : action === 'fill' ? tm('ตรวจเป้าหมายก่อนขอกรอกข้อมูล') : tm('ตรวจเป้าหมายก่อนขอคลิก')} ${new URL(entry.origin).host}`,
     );
@@ -501,5 +508,124 @@ export class AgentBrowser {
   }
   close() {
     for (const entry of [...this.tabs.values()]) entry.dispose();
+  }
+  vaultTarget(id: string, owner: string) {
+    const entry = this.get(id, owner);
+    const url = new URL(entry.contents.getURL());
+    if (url.protocol !== 'https:' || url.origin !== entry.origin || entry.busy || url.hostname === 'accounts.google.com')
+      throw new Error('VAULT_ORIGIN_CHANGED');
+    return { origin: url.origin, url: url.href, generation: entry.generation || 0 };
+  }
+  async prepareVault(id: string, owner: string, signal: AbortSignal) {
+    const entry = this.get(id, owner),
+      target = this.vaultTarget(id, owner);
+    const form = await this.script(
+      entry,
+      `(() => {
+      const visible = el => el.isConnected && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
+      const passwords = [...document.querySelectorAll('input[type=password]')].filter(visible);
+      const identifiers = [...document.querySelectorAll('input')].filter(el => visible(el) && (el.type === 'email' || el.autocomplete === 'username' || /^(username|email|login|identifier)$/i.test(el.name || el.id)));
+      if (passwords.length > 1 || identifiers.length > 1 || !passwords.length && !identifiers.length) return null;
+      const username = identifiers[0], password = passwords[0], form = password?.form || username?.form;
+      if (!form || username && username.form !== form || password && password.form !== form || form.method.toLowerCase() !== 'post' || new URL(form.action || location.href,location.href).origin !== location.origin || [username,password].some(el => el && (el.disabled || el.readOnly))) return null;
+      const fingerprint = JSON.stringify([location.href, form.outerHTML]);
+      globalThis.__stepVault = { username, password, form, fingerprint, origin: location.origin };
+      return { fingerprint, fields: [username ? 'username' : '', password ? 'password' : ''].filter(Boolean) };
+    })()`,
+      signal,
+    );
+    if (!form) throw new Error('VAULT_FORM_UNSUPPORTED');
+    return { ...target, ...form } as { origin: string; url: string; generation: number; fingerprint: string; fields: string[] };
+  }
+  async fillVault(
+    id: string,
+    owner: string,
+    expected: { origin: string; url: string; generation: number; fingerprint: string },
+    payload: { username: string; password: string },
+    signal: AbortSignal,
+  ) {
+    const entry = this.get(id, owner),
+      target = this.vaultTarget(id, owner);
+    if (target.origin !== expected.origin || target.url !== expected.url || target.generation !== expected.generation)
+      throw new Error('VAULT_ORIGIN_CHANGED');
+    entry.busy = true;
+    entry.vaultSensitive = true;
+    const tool = entry.contents.debugger;
+    // Credential values are CDP structured arguments, never code strings or public evaluation tool input.
+    let attached = false,
+      contextId: number | undefined;
+    const contexts = (_event: unknown, method: string, params: any) => {
+      if (method === 'Runtime.executionContextCreated' && params.context?.name === 'step-vault') contextId = params.context.id;
+    };
+    const stop = () => entry.dispose();
+    signal.addEventListener('abort', stop, { once: true });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      if (signal.aborted) throw new Error('CANCELLED');
+      if (tool.isAttached()) throw new Error('VAULT_TRANSPORT_BUSY');
+      tool.attach('1.3');
+      attached = true;
+      tool.on('message', contexts);
+      await tool.sendCommand('Runtime.enable');
+      const { frameTree } = await tool.sendCommand('Page.getFrameTree');
+      const world = await tool.sendCommand('Page.createIsolatedWorld', { frameId: frameTree.frame.id, worldName: 'step-vault' });
+      contextId = world.executionContextId;
+      if ((entry.generation || 0) !== expected.generation) throw new Error('VAULT_ORIGIN_CHANGED');
+      const work = tool.sendCommand('Runtime.callFunctionOn', {
+        executionContextId: contextId,
+        returnByValue: true,
+        functionDeclaration: `function(username,password,expected) {
+          const visible = el => el && el.isConnected && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && !el.disabled && !el.readOnly;
+          const passwords=[...document.querySelectorAll('input[type=password]')].filter(visible);
+          const identifiers=[...document.querySelectorAll('input')].filter(el=>visible(el)&&(el.type==='email'||el.autocomplete==='username'||/^(username|email|login|identifier)$/i.test(el.name||el.id)));
+          const user=identifiers[0], pass=passwords[0], form=pass?.form||user?.form;
+          const valid=()=>location.origin===expected.origin && location.href===expected.url && form?.isConnected && form.method.toLowerCase()==='post' && new URL(form.action||location.href,location.href).origin===expected.origin && JSON.stringify([location.href,form.outerHTML])===expected.fingerprint;
+          if(passwords.length>1||identifiers.length>1||!form||user&&user.form!==form||pass&&pass.form!==form||!valid()) return {status:'changed',filledFields:[]};
+          const filled=[];
+          const fill=(el,value,name)=>{if(!visible(el)||!valid())return false;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));filled.push(name);return true;};
+          if(user&&!fill(user,username,'username'))return {status:'changed',filledFields:filled};
+          if(pass&&!fill(pass,password,'password'))return {status:'partial',filledFields:filled};
+          return {status:'filled',filledFields:filled,origin:expected.origin};
+        }`,
+        arguments: [{ value: payload.username }, { value: payload.password }, { value: expected }],
+      });
+      const reply: any = await Promise.race([
+        work,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            stop();
+            reject(new Error('VAULT_OUTCOME_UNKNOWN'));
+          }, 10000);
+        }),
+      ]);
+      if (reply.exceptionDetails || !reply.result?.value) throw new Error('VAULT_OUTCOME_UNKNOWN');
+      const value = reply.result.value;
+      if (
+        !['filled', 'partial', 'changed'].includes(value.status) ||
+        !Array.isArray(value.filledFields) ||
+        value.filledFields.some((f: string) => !['username', 'password'].includes(f))
+      )
+        throw new Error('VAULT_OUTCOME_UNKNOWN');
+      return { status: value.status, filledFields: value.filledFields, origin: expected.origin };
+    } catch (error) {
+      throw new Error(
+        ['CANCELLED', 'VAULT_TRANSPORT_BUSY'].includes((error as Error).message) ? (error as Error).message : 'VAULT_OUTCOME_UNKNOWN',
+      );
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', stop);
+      tool.removeListener('message', contexts);
+      if (attached && tool.isAttached()) tool.detach();
+      entry.busy = false;
+    }
+  }
+  resumeVault(id: string, owner: string) {
+    const entry = this.get(id, owner);
+    entry.vaultSensitive = false;
+  }
+  sensitiveTabs() {
+    return [...this.tabs]
+      .filter(([, entry]) => entry.vaultSensitive)
+      .map(([id, entry]) => ({ id, sessionId: entry.owner, origin: entry.origin }));
   }
 }

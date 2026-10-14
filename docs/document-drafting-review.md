@@ -1,5 +1,17 @@
 # ตรวจงานร่างเอกสารและส่งออก — 8 ตุลาคม 2569
 
+## Draft assistance and targeted revision — 2026-10-14
+
+Sparse input forms distinguish missing prose from unknown facts. Background, objectives, proposed activities, deliverables and functional inspection methods may be drafted from the supplied purpose using the selected Skill and working template. TOR, correspondence and project Skills/templates explicitly support proposed prose, with provisional functional proposals in TOR while keeping amounts, quantities, dimensions, technical thresholds, agreed dates, approval, qualifications, penalties and other source-dependent conditions pending. Meeting history and resolutions still require supplied notes. Template/example values remain structure-only input.
+
+The host marks draftable fields with `missingAction: draft-proposal`, keeps supplied values as `USER_INPUT`, and requires `AI_PROPOSED` assumptions in the separate review. Proposed requirement sections retain a short provisional label in the editable/exported document. `document_draft` and `document_review` are response delimiters parsed by the host, so the model must not search for external tools or claim that missing document-control tools prevent drafting.
+
+The document page offers a separate targeted revision action for the selected task. It saves current editor changes, uses the latest valid proposal or edited document, keeps the original Skill/template and stages a full revised proposal for comparison before acceptance. The contract preserves all unrequested sections and user edits; explicit user corrections supersede earlier form values without implying verification or approval. New-document submission continues to create a separate task.
+
+Validation on Windows passes root 969/977 (8 existing platform/dependency skips), Desktop 709/713 (4 existing skips), 18 focused document tests, both validators, plugin freshness, formatting and TypeScript/production build. Synthetic sparse TOR inputs cover repeated field corrections and manual editor changes. Native renderer/preload/IPC with a local fake provider covers the revision action in the same task and DOCX/PDF exports for all five document profiles, with no renderer errors. The smoke waits for the sidebar before connection setup/reload to avoid racing startup. The initial sandbox blocked loopback/temp-file operations; unsandboxed synthetic validation passes. One unrelated Windows OCR socket-abort in the first full root run passes on the same code's rerun, without disabling its check.
+
+Host tests prove the supplied context, staging and export behavior; they do not establish that every live model will follow the drafting/revision instructions or that a procurement draft is approved. No original staff document, Google credential or live-model request is included. Word layout/agency-template acceptance and a live-provider quality evaluation remain separate gates.
+
 ตรวจเส้นทางของทั้งห้าเครื่องมือ ตั้งแต่ฟอร์ม → Skill และ working template → คำตอบ AI → ข้อเสนอ → ร่างที่แก้ไขได้ → DOCX/PDF ใช้แบบบันทึกที่เจ้าของงานส่งมาเทียบโครง ฟอนต์ และส่วนลงนามในเครื่องเท่านั้น ไม่เก็บต้นฉบับ ชื่อบุคคล รายชื่อผู้ร่วมงาน หรือข้อมูลโครงการจริงใน repository
 
 ## ปัญหาที่แก้

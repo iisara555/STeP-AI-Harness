@@ -1,5 +1,7 @@
 # Working template — ข้อเสนอโครงการ
 
+Draft the proposed prose described in the [proposal workflow](../SKILL.md#ร่างข้อเสนอโครงการ) for blank narrative fields. Label proposed activities and evaluation methods for owner review, with assumptions in the separate review. Keep unknown factual/authority-dependent values pending; the placeholders below are field guides.
+
 ใช้เพื่อร่างพิจารณา ไม่ใช่แบบแหล่งทุนหรือหน่วยงานที่ยืนยันฉบับปัจจุบันแล้ว ตรวจแบบเจ้าของเรื่องและเงื่อนไขแหล่งทุนก่อนเสนอ ข้อมูลที่ไม่มีคง `[รอยืนยัน: ชื่อช่อง]` ไม่มีตัวเลขตัวอย่างให้คัดเป็นข้อเท็จจริง
 
 ## ร่างเพื่อพิจารณา — [รอยืนยัน: ชื่อโครงการ]

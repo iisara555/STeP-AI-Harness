@@ -27,6 +27,7 @@ export function browserUrl(input: string) {
   return url.href;
 }
 export class Workbench {
+  executionAllowed: () => void = () => {};
   private children = new Map<string, ChildProcess>();
   private stopped = new Set<string>();
   private cancelling = new Set<string>();
@@ -428,7 +429,9 @@ export class Workbench {
     this.store.remove('change', id);
   }
   async diff() {
+    this.executionAllowed();
     const root = await this.root();
+    this.executionAllowed();
     try {
       const status = await execute('git', ['-C', root, '-c', 'core.fsmonitor=false', 'status', '--short', '-z'], {
         windowsHide: true,
@@ -508,11 +511,13 @@ export class Workbench {
     }
   }
   async start(command: string, sessionId?: string) {
+    this.executionAllowed();
     if (typeof command !== 'string' || !command.trim() || command.length > 2000 || command.includes('\0'))
       throw new Error('INVALID_COMMAND');
     if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     const cwd = await this.root(),
       id = randomUUID();
+    this.executionAllowed();
     const task: BackgroundTask = {
       id,
       sessionId,

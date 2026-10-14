@@ -11,6 +11,8 @@ export type McpTool = { server: string; name: string; description: string; input
 type Consent = (title: string, text: string, signal?: AbortSignal) => Promise<boolean>;
 /** SDK capabilities are deliberately empty: servers cannot request sampling, roots or elicitation. */
 export class Mcp {
+  localActive = 0;
+  executionAllowed: () => void = () => {};
   private clients = new Set<Client>();
   private closers = new Map<Client, () => Promise<void>>();
   constructor(
@@ -44,6 +46,7 @@ export class Mcp {
     await mkdir(this.home, { recursive: true, mode: 0o700 });
     let transport: StdioClientTransport | StreamableHTTPClientTransport;
     if (server.transport === 'stdio') {
+      this.executionAllowed();
       const env = Object.fromEntries(
         ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'PATHEXT'].filter(k => process.env[k]).map(k => [k, process.env[k]!]),
       );
@@ -114,6 +117,7 @@ export class Mcp {
       }, 250);
     signal?.addEventListener('abort', stop, { once: true });
     try {
+      if (server.transport === 'stdio') this.localActive++;
       await client.connect(transport, { timeout: 15_000 });
       check();
       const result = await action(client, check);
@@ -129,6 +133,7 @@ export class Mcp {
       clearInterval(watcher);
       signal?.removeEventListener('abort', stop);
       await close();
+      if (server.transport === 'stdio') this.localActive--;
       this.closers.delete(client);
       this.clients.delete(client);
     }
