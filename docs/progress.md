@@ -10,6 +10,8 @@ _Last updated: 2026-10-14_
 
 - **Desktop v0.6.6** (2026-10-14) — published from PR #167 (f5ee5fa), with required signed Google employee entry, separate Workspace consent and Windows x64/macOS arm64 installers. Publication run 38577397888 attempt 2 passed, including full Windows Electron tests and packaged Mac login/signature checks. Public Windows installer/Mac ZIP SHA-512 matches immutable feeds; both rolling feeds are 0.6.6 and the tag points to f5ee5fa. Post-merge CI 38577367679 passed. Harness remains 0.7.7. Real Google consent and employee-device acceptance remain open.
 
+**Release validation follow-up (2026-10-14)**: the first 0.6.6 publication attempt hit an Antigravity keyboard-send smoke race after a prior answer was rendered. The exact same source passed the complete Windows test suite on attempt 2; no checks were disabled. The fixture now waits for the composer to accept the next turn before pressing Enter and retains all recovery/denial assertions. Targeted native validation, formatting, documentation checks and generated plugin freshness pass. This follow-up changes tests/docs only; the published application source remains f5ee5fa.
+
 - **Desktop v0.6.5** (2026-10-14) — published from PR #166 (`b57f08a`), with Windows x64/macOS arm64 installers. Publication run `38542865217` passed; public Windows installer/macOS ZIP SHA-512 matched immutable feeds, and both rolling feeds reached 0.6.5. Harness remains 0.7.7.
 
 - **Desktop v0.6.4** (2026-10-14) — published from PR #165 (`057d678`) with Windows x64/macOS arm64 installers and both rolling update feeds at 0.6.4. Publication run `38529987728` passed; public installer/ZIP SHA-512 matched the immutable feeds. Harness remains 0.7.7.
@@ -21,7 +23,6 @@ _Last updated: 2026-10-14_
 
 ## In progress
 
-- **Release validation follow-up (2026-10-14)**: the first 0.6.6 publication attempt hit an Antigravity keyboard-send smoke race after a prior answer was rendered. The exact same source passed the complete Windows test suite on attempt 2; no checks were disabled. The fixture now waits for the composer to accept the next turn before pressing Enter and retains all recovery/denial assertions. Targeted native validation, formatting, documentation checks and generated plugin freshness pass. This follow-up changes tests/docs only; the published application source remains f5ee5fa.
 
 
 - **Employee entry acceptance (shipped in 0.6.6)**: identity-only entry, signed hd=step.cmu.ac.th, encrypted 12-hour private-profile sessions, separate owner-bound Workspace consent, safe logout/expiry and Windows/macOS native/packaged validation are complete. Actual sign-in using the supplied Google client, employee-device acceptance and live service access still need the account owner. See [employee entry](employee-login.md).
