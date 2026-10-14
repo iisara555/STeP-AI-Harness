@@ -34,13 +34,17 @@ foreach ($p in @($env:STEP_POLICY_CHECK_PATH, [System.IO.Path]::GetDirectoryName
   }
 }
 Write-Output 'trusted'`;
+    const env = { ...process.env, STEP_POLICY_CHECK_PATH: path };
+    // Windows PowerShell must load its own built-in modules, not inherited PowerShell 7 modules.
+    for (const name of Object.keys(env))
+      if (name.toLowerCase() === "psmodulepath") delete env[name];
     return (
       execFileSync(
         "powershell.exe",
-        ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "-"],
+        // Stdin command mode requires interactive blank-line terminators for compound statements.
+        ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script],
         {
-          input: script,
-          env: { ...process.env, STEP_POLICY_CHECK_PATH: path },
+          env,
           windowsHide: true,
           // PowerShell can take several seconds to start on a busy or slow PC; a timeout reads as an untrusted file.
           timeout: 15000,
