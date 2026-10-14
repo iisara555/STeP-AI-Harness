@@ -172,7 +172,7 @@ test('replacement and delete invalidate handles, keep the execution guard, and r
     f.clean();
   }
 });
-test('models cannot pass a secret via browser_vault and feature/config defaults fail closed', () => {
+test('models cannot pass a secret via browser_vault and malformed credential policy fails closed', () => {
   for (const args of [
     { action: 'fill', password: 'x' },
     { action: 'list', username: 'x' },
@@ -182,8 +182,9 @@ test('models cannot pass a secret via browser_vault and feature/config defaults 
     () => validateToolRequest({ tool: 'browser_vault', input: 'tab', content: 'secret', args: { action: 'fill' } }),
     /INVALID_INPUT/,
   );
-  assert.equal(defaultPolicy().features.vault, false);
-  assert.equal(defaultPolicy().features.googleWorkspace, false);
+  assert.equal(defaultPolicy().features.vault, true);
+  assert.equal(defaultPolicy().features.googleWorkspace, true);
+  assert.equal(parsePolicy({ googleWorkspace: { clientId: 'invalid' } }).policy.features.vault, false);
   assert.ok(parsePolicy({ googleWorkspace: { clientId: 'invalid', domains: ['example.test'], services: ['documents'] } }).problems.length);
 });
 test('the host-execution guard is checked again after a pending approval', async () => {

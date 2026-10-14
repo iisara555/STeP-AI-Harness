@@ -6,6 +6,15 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.5',
+    items: () => [
+      t('เปิดหน้า Vault และการเชื่อม Google Workspace ให้ทุกเครื่องที่ติดตั้งรุ่นนี้ โดยผู้ดูแลยังปิดได้'),
+      t('เลือก Docs/Sheets/Slides, Calendar และ Tasks แล้วลงชื่อด้วยบัญชี step.cmu.ac.th ได้'),
+      t('เปิด Dev mode เพื่อ demo ด้วย Claude Pro/Max ของคุณ แล้วกดกลับโหมดปกติเพื่อปิดเอง'),
+      t('API key เดิมย้ายเข้า Vault หลังคุณเลือกเก็บบัญชีเว็บไซต์หรือเชื่อม Google แล้ว'),
+    ],
+  },
+  {
     version: '0.6.4',
     items: () => [
       t('เว้นช่องเนื้อหาได้ AI ช่วยขึ้นร่างตาม Skill และแม่แบบ ส่วนข้อเท็จจริงที่ขาดยังคงรอยืนยัน'),

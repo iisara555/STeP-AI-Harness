@@ -5,8 +5,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Development mode (Settings → AI): an administrator permits the switch, then a developer turns it on to test on their own Claude Pro/Max plan. Without it, the
-// Claude plan connection is refused as before; with it, the connection is accepted; a policy can remove the switch.
+// The release offers developer opt-in and configured Workspace on a clean machine. A managed policy can still
+// disable the switch; the developer must opt in to their own Claude Pro/Max plan and can turn it off again.
 const home = await mkdtemp(join(tmpdir(), 'step-development-mode-smoke-'));
 const workspace = join(home, 'work');
 await mkdir(workspace);
@@ -42,12 +42,28 @@ try {
 
   // Off (the default): the Claude plan connection is refused, as before.
   assert.equal((await call('snapshot')).features.claudeSubscription, false);
+  const defaults = await call('snapshot');
+  assert.equal(defaults.features.developmentMode, true);
+  assert.equal(defaults.policy.features.vault, true);
+  assert.equal(defaults.policy.features.googleWorkspace, true);
+  assert.equal((await call('googleState')).configured, true);
+  assert.deepEqual((await call('googleState')).services, ['documents', 'calendar', 'tasks']);
+  const apiOnly = await call('connection', { provider: 'openai', mode: 'api', apiKey: 'synthetic-demo-api-key', model: 'synthetic-model' });
+  assert.equal((await call('vaultState')).protected, false, 'API-only use does not silently enroll Vault');
+  await call('removeConnection', { id: apiOnly.id });
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
 
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   const toggle = page.locator('.development-mode button');
   await expect(toggle).toBeVisible();
+  await expect(toggle).toBeEnabled();
+  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'เพิ่มบัญชีเว็บไซต์', exact: true })).toBeEnabled();
+  await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: false } }));
+  await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(false);
   await expect(toggle).toBeDisabled();
   await assert.rejects(call('developmentMode', { enabled: true }), /FEATURE_DISABLED/);
 
@@ -55,7 +71,7 @@ try {
   await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { developmentMode: true } }));
   await expect.poll(async () => (await call('snapshot')).policy.features.developmentMode, { timeout: 15000 }).toBe(true);
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await expect(toggle).toHaveAttribute('title', /สำหรับนักพัฒนาที่ผู้ดูแลอนุญาตให้ทดสอบ/);
+  await expect(toggle).toHaveAttribute('title', /สำหรับทดสอบและ demo/);
   assert.equal((await call('snapshot')).features.claudeSubscription, false);
 
   // On: the discoverable one-click action uses the existing policy-gated host method.
@@ -147,7 +163,7 @@ try {
   await assert.rejects(call('connection', claudePlan), /INVALID_CONNECTION/);
   assert.deepEqual(errors, []);
   console.log(
-    'Development mode smoke passed: policy and employee opt-in both required, administrator passcode asked only when turning on, off/revocation refuses, forced-off override wins.',
+    'Development mode smoke passed: clean-install Vault/Workspace availability, dormant API-only protection, local developer opt-in/off, administrator denial/passcode, and forced-off override.',
   );
 } finally {
   await app.close();

@@ -449,7 +449,8 @@ async function main() {
     if (!encrypted) return undefined;
     requireSecureStorage(safeStorage);
     const value = safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
-    if (policyState.policy.features.vault) {
+    // Exposing Vault in a release must not enroll API-only profiles before the employee remembers a credential.
+    if (policyState.policy.features.vault && vault.protected()) {
       ensureCredentialStorage();
       const pending = vault.list().find(v => v.kind === 'api-key' && v.destination === destination);
       if (pending && !(await vault.use(pending.id, 'api-key', destination, async saved => saved === value)))
@@ -465,7 +466,7 @@ async function main() {
   }
   function saveKey(connection: Connection, value: string) {
     const ref = store.get<string>('credential-ref', connection.id);
-    if (!policyState.policy.features.vault && !ref) {
+    if ((!policyState.policy.features.vault || !vault.protected()) && !ref) {
       requireSecureStorage(safeStorage);
       store.put('secret', connection.id, safeStorage.encryptString(value).toString('base64'));
       return;
@@ -586,12 +587,14 @@ async function main() {
   const testPolicy = !app.isPackaged && process.env.STEP_DESKTOP_TEST_HOME ? join(data, 'desktop-policy.json') : undefined;
   const readPolicy = () => (testPolicy ? loadPolicy(testPolicy, () => true) : loadPolicy());
   let policyState = readPolicy();
-  if (policyState.policy.features.vault) {
+  async function migrateApiKeys() {
+    if (!policyState.policy.features.vault || !vault.protected()) return;
     for (const c of store.connections()) {
       if (!store.get('secret', c.id) || store.get('credential-ref', c.id)) continue;
       await key(c).catch(error => diagnose('vault-migration-failed', { code: errorCode(error) }));
     }
   }
+  await migrateApiKeys();
   const voice = new Voice(join(data, 'components', 'voice'), () => policyState.policy);
   const workbench = new Workbench(
     store,
@@ -1585,7 +1588,9 @@ async function main() {
           Object.keys(input).some(k => !['id', 'revision', 'kind', 'label', 'destination', 'username', 'password', 'remember'].includes(k))
         )
           throw new Error('INVALID_INPUT');
-        return vault.save(input);
+        const saved = vault.save(input);
+        await migrateApiKeys();
+        return saved;
       }
       case 'vaultRemove': {
         const entry = vault.list().find(v => v.id === input.id);
@@ -1618,12 +1623,15 @@ async function main() {
       }
       case 'googleState':
         return { ...google.state(), enabled: policyState.policy.features.googleWorkspace, pages: GOOGLE_PAGES };
-      case 'googleConnect':
+      case 'googleConnect': {
         if (!policyState.policy.features.googleWorkspace || permissionMode() === 'plan') throw new Error('FEATURE_DISABLED');
-        return google.connect(
+        const connected = await google.connect(
           input.services as GoogleService[],
           googleContext(new AbortController().signal, async () => ensureCredentialStorage()),
         );
+        await migrateApiKeys();
+        return connected;
+      }
       case 'googleCancel':
         google.cancel();
         return true;
