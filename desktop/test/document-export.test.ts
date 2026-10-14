@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import JSZip from 'jszip';
 import { DOMParser } from '@xmldom/xmldom';
-import { exportDocument, pdfHtml } from '../electron/export';
+import { exportDocument, pdfHtml, tableLayout } from '../electron/export';
 import { resolveDocumentLayout } from '../src/document-layout';
 import { markdownDocument, documentText, type DraftNode } from '../src/draft';
 
@@ -24,6 +24,34 @@ test('memo narrative, unit label and all signature lines use their own layout wi
 });
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+test('Thai document styles and emphasis retain language, complex-script size and italics without changing text', async () => {
+  const input = 'ภาษาไทยผสม English 00123 **ข้อความตัวหนา** และ *ข้อความตัวเอียง*';
+  const doc = await word(input, { documentTool: 'project' });
+  const styles = new DOMParser().parseFromString(await doc.zip.file('word/styles.xml')!.async('string'), 'application/xml');
+  const defaults = styles.getElementsByTagNameNS(W, 'rPrDefault')[0];
+  assert.equal(attr(defaults, 'lang', 'val'), 'th-TH');
+  assert.equal(attr(defaults, 'szCs', 'val'), '32');
+  const italic = Array.from(doc.paragraphs[0].getElementsByTagNameNS(W, 'r')).find(run => doc.text(run) === 'ข้อความตัวเอียง')!;
+  assert.ok(italic.getElementsByTagNameNS(W, 'i').length);
+  assert.ok(italic.getElementsByTagNameNS(W, 'iCs').length);
+  const footer = new DOMParser().parseFromString(await doc.zip.file('word/footer1.xml')!.async('string'), 'application/xml');
+  assert.equal(attr(footer.documentElement, 'szCs', 'val'), '28');
+  assert.equal(doc.paragraphs.map(doc.text).join(''), documentText(markdownDocument(input)));
+  assert.doesNotMatch(doc.xml, /[\u200B\u00AD]/);
+});
+
+test('natural Thai header word boundaries avoid unnecessary small fonts in document tables', async () => {
+  const rows = [
+    ['รายละเอียดกิจกรรมและขั้นตอนการดำเนินงาน', 'ผู้รับผิดชอบและระยะเวลาดำเนินการ'],
+    ['เตรียมข้อมูลสังเคราะห์สำหรับทดสอบ', 'ทีมสังเคราะห์'],
+  ];
+  assert.equal(tableLayout(rows).points, 16);
+  const doc = await word(`| ${rows[0].join(' | ')} |\n|---|---|\n| ${rows[1].join(' | ')} |`, { documentTool: 'project' });
+  const header = doc.paragraph(rows[0][0]);
+  assert.equal(attr(header, 'sz', 'val'), '32');
+  assert.equal(doc.text(header), rows[0][0]);
+});
 
 test('PDF memo separates reference and date into columns while preserving rich labels and uncertain dates', () => {
   const doc = markdownDocument(

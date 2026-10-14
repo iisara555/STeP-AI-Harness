@@ -320,7 +320,7 @@ export default function App() {
       TableCell,
     ],
     content: toDoc(''),
-    editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false' } },
+    editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false', lang: 'th' } },
     onUpdate: () => setDirty(true),
   });
   const refresh = useCallback(async () => {

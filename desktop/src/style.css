@@ -893,6 +893,10 @@ nav button,
   line-height: 1.9;
   font-size: 14px;
   caret-color: var(--accent-ink);
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-break: auto;
+  hyphens: none;
 }
 .draft-editor p {
   margin: 0 0 8px;
