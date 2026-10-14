@@ -15,7 +15,7 @@ export const internalMediaEn: Record<string, string> = {
   ข้อมูลที่มี: 'Information you have',
   'บอกสารสำคัญ ขั้นตอน หรือรายละเอียดที่ต้องมี': 'Key message, steps or details that must be included',
   ใส่ตัวอย่าง: 'Fill in an example',
-  'ใช้ตัวอย่างแทนหัวข้อและเนื้อหาปัจจุบันหรือไม่?': 'Replace the current topic and content with the example?',
+  'ใช้ตัวอย่างแทนข้อมูลปัจจุบันหรือไม่?': 'Replace the current information with the example?',
   ตัวอย่างสมมติสำหรับทดลอง: 'Synthetic example for trying the page',
   'ใส่ตัวอย่างแล้ว แก้ให้ตรงกับงานจริง': 'Example added. Edit it to match the real job',
   'ให้ AI ช่วยร่างเนื้อหา': 'Ask AI to draft the content',
@@ -33,6 +33,8 @@ export const internalMediaEn: Record<string, string> = {
   'แบนเนอร์ · 3:1': 'Banner · 3:1',
   แนวภาพ: 'Visual style',
   'หมึกวาดมือ (แนว Notion)': 'Hand-drawn ink (Notion-like)',
+  ภาพเวกเตอร์แบบเรียบง่าย: 'Flat vector',
+  ภาพตัดปะกระดาษ: 'Paper collage',
   ภาพถ่ายเชิงแนวคิด: 'Conceptual photography',
   'เส้นหนาบางมีจังหวะวาดมือ ผมและเสื้อผ้าถมดำ หน้าตาเรียบ ท่าทางเล่าเรื่อง บนพื้นขาว เติมเหลืององค์กรเฉพาะจุด ถ้ามีภาพอ้างอิงที่ได้รับอนุญาต แนบในเครื่องมือสร้างภาพได้ การคัดลอก Prompt ไม่ได้แนบรูปให้':
     'Hand-drawn lines of varying weight, solid black hair and clothing, simple faces, story-telling poses on white, with organization yellow in a few spots. If you have permitted reference images, attach them in the image tool; copying the prompt attaches no images',

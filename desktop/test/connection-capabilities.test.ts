@@ -42,7 +42,7 @@ test('vision and image routes expose their policy blockers and model-dependent s
 });
 test('organization capabilities distinguish disabled, missing server and enabled-but-unverified access', () => {
   const get = (p: PolicySnapshot, id: string) => organizationCapabilities(p).find(x => x.id === id)!;
-  assert.equal(get(policy, 'routing').state, 'blocked');
+  assert.equal(get(policy, 'routing').state, 'available');
   assert.equal(get({ ...policy, features: { ...policy.features, mcp: true } }, 'mcp').reason, 'server-missing');
   assert.equal(
     get({ ...policy, features: { ...policy.features, mcp: true }, mcpServers: 1 } as PolicySnapshot, 'mcp').state,
@@ -51,4 +51,14 @@ test('organization capabilities distinguish disabled, missing server and enabled
   assert.equal(get(policy, 'privacy').state, 'blocked');
   assert.equal(get({ ...policy, checks: { authority: true, privacy: true } }, 'privacy').state, 'available');
   assert.equal(get({ ...policy, features: { ...policy.features, cron: true } }, 'cron').state, 'conditional');
+});
+
+test('Skill selection includes model tool discovery even when pre-routing is off', () => {
+  const routing = (features: Record<string, boolean>) => organizationCapabilities({ ...policy, features }).find(x => x.id === 'routing')!;
+  assert.equal(routing({ autoRouting: false, toolLoop: true }).state, 'available');
+  assert.match(routing({ autoRouting: false, toolLoop: true }).detail, /AI.*เลือก Skill/);
+  assert.equal(routing({ autoRouting: true, toolLoop: false }).state, 'available');
+  assert.equal(routing({ autoRouting: false, toolLoop: false }).state, 'blocked');
+  assert.equal(routing({ autoRouting: false }).state, 'unknown');
+  assert.equal(organizationCapabilities().find(x => x.id === 'routing')!.state, 'unknown');
 });

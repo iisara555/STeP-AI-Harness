@@ -56,6 +56,10 @@ export const en: Record<string, string> = {
   ออกจากโหมดวางแผนก่อนสร้างภาพ: 'Leave Plan mode before generating images',
   'เลือกโมเดลภาพที่บัญชีมีสิทธิ์ การสร้างภาพอาจมีค่าใช้จ่าย API': 'Choose an image model your account can access; API charges may apply',
   'ให้ AI เลือก Skill อัตโนมัติ': 'Automatic Skill selection',
+  ใช้ได้: 'Available',
+  'AI ค้นหาและเลือก Skill ที่ตรงกับงาน แล้วโหลดคำแนะนำเมื่อจำเป็น':
+    'AI finds and selects a relevant Skill, then loads its instructions when needed',
+  'ระบบเลือก Skill ที่ตรงกับงานให้ก่อนเริ่มร่าง': 'The app selects a relevant Skill before drafting',
   'เครื่องมือ MCP ขององค์กร': 'Organization MCP tools',
   'แบ่งงานให้ AI หลายงานย่อย': 'Split work into AI subtasks',
   ร่างงานตามรอบ: 'Scheduled drafts',
