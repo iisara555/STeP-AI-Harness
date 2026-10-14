@@ -494,7 +494,15 @@ export default function App() {
       }
     };
     window.addEventListener('beforeunload', guard);
-    return () => window.removeEventListener('beforeunload', guard);
+    // Query dirty state without triggering Chromium's native beforeunload dialog.
+    const checkDirty = (event: Event) => {
+      if (dirtyRef.current) event.preventDefault();
+    };
+    window.addEventListener('step:check-unsaved', checkDirty);
+    return () => {
+      window.removeEventListener('beforeunload', guard);
+      window.removeEventListener('step:check-unsaved', checkDirty);
+    };
   }, []);
   useEffect(() => {
     if (editor && !dirtyRef.current) editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });

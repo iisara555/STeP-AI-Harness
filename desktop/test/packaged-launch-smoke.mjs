@@ -1,7 +1,7 @@
 // Launches the packaged app (not the dev build) and checks it opens, runs without page errors, and ships the
 // organization documents, registry and Skills the assistant reads. Usage: node test/packaged-launch-smoke.mjs <executable>
 import { mainWindow } from './main-window.mjs';
-import { _electron as electron } from '@playwright/test';
+import { _electron as electron, expect } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,7 +20,8 @@ try {
   const page = await mainWindow(app, timeout);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' }).waitFor({ timeout });
+  await page.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true }).waitFor({ timeout });
+  await expect(page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' })).toHaveCount(0);
   const shipped = await app.evaluate(async ({ app }) => {
     const { existsSync } = process.mainModule.require('node:fs');
     const { join } = process.mainModule.require('node:path');

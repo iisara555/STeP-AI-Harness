@@ -25,7 +25,7 @@ db.prepare('INSERT INTO records VALUES(?,?,?)').run(
     theme: 'light',
     onboarding: true,
     tourDone: true,
-    whatsNewSeen: '0.6.5',
+    whatsNewSeen: JSON.parse(await readFile('package.json', 'utf8')).version,
     dataAcknowledged: true,
     termsAccepted: true,
     termsVersion: terms,
@@ -191,7 +191,7 @@ try {
   await expect(login.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true })).toBeEnabled();
   await appPage.evaluate(() => {
     window.employeeFixtureDirty = event => event.preventDefault();
-    window.addEventListener('beforeunload', window.employeeFixtureDirty);
+    window.addEventListener('step:check-unsaved', window.employeeFixtureDirty);
   });
   await application.evaluate(({ dialog }) => {
     employeeFixture.closeChecks = 0;
@@ -225,7 +225,7 @@ try {
   await login.getByRole('button', { name: 'ลงชื่อเข้าใช้ด้วย Google', exact: true }).click();
   await expect.poll(async () => (await application.windows()).filter(page => page.url().includes('#employee-login')).length).toBe(0);
   assert.ok((await call(appPage, 'snapshot')).sessions.some(session => session.id === 'fixture-existing'));
-  await appPage.evaluate(() => window.removeEventListener('beforeunload', window.employeeFixtureDirty));
+  await appPage.evaluate(() => window.removeEventListener('step:check-unsaved', window.employeeFixtureDirty));
   await application.close();
   application = await electron.launch({ args: ['dist/main.cjs'], env, timeout: 60000 });
   const resumed = await application.firstWindow();

@@ -1660,7 +1660,7 @@ async function main() {
       if (store.list<Session>('session').some(session => service.isActive(session.id))) throw new Error('AUTH_CANCELLATION_PENDING');
       const login = await openEmployeeLogin(employee, async login => {
         const dirty = await window.webContents.executeJavaScript(
-          "(() => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; })()",
+          "(() => { const event = new Event('step:check-unsaved', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; })()",
         );
         if (!dirty) return true;
         const answer = await dialog.showMessageBox(login, {

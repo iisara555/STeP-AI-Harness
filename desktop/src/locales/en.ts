@@ -2489,4 +2489,12 @@ export const en: Record<string, string> = {
   'รหัส Dev mode ไม่ถูกต้อง': 'Wrong Dev mode passcode',
   'ใส่รหัส Dev mode ที่ได้จาก IT': 'Enter the Dev mode passcode from IT',
   'รหัส Dev mode': 'Dev mode passcode',
+  'ลงชื่อด้วยบัญชี Google ของ step.cmu.ac.th ก่อนเปิดพื้นที่ทำงาน':
+    'Sign in with your step.cmu.ac.th Google account before opening the workspace',
+  'การเข้าแอปขอเฉพาะข้อมูลโปรไฟล์ สิทธิ์บริการ Google ขอแยกเมื่อคุณเลือกเชื่อมต่อ':
+    'App sign-in only requests your profile. Google service permissions are requested separately when you choose to connect',
+  'จำการลงชื่อในเครื่องส่วนตัวได้ 12 ชั่วโมง และล็อกพื้นที่ทำงานเมื่อออกจากบัญชีหรือหมดเวลา':
+    'Remember sign-in on your private device for 12 hours and lock the workspace on sign-out or session expiry',
+  'กลับมาลงชื่อด้วยบัญชีเดิมเพื่อทำงานต่อ โดยเก็บร่างที่ยังไม่บันทึกไว้':
+    'Sign in again with the same account to continue, keeping your unsaved draft',
 };
