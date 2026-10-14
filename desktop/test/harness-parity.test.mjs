@@ -14,8 +14,19 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import * as controls from '../eval/harness-parity/budget.mjs';
 import * as spec from '../eval/harness-parity/spec.mjs';
-import { nativeAntigravity } from '../eval/harness-parity/agy.mjs';
+import { nativeAntigravity, unixSocketBase } from '../eval/harness-parity/agy.mjs';
 import { isolatedWorkspace } from '../eval/harness-parity/workspace.mjs';
+
+test('native Antigravity sockets fit Darwin limits even with long or multibyte temporary paths', () => {
+  const macTemp = '/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T';
+  const nested = macTemp + '/step-parity-agy-preflight-vBjUWU/antigravity-hjJ9lV/workspace';
+  assert.ok(Buffer.byteLength(nested + '/bridge.sock') >= 104, 'reproduces the failed release address');
+  for (const base of [macTemp, nested, '/tmp/' + 'ก'.repeat(40)]) {
+    assert.ok(Buffer.byteLength(unixSocketBase(base) + '/sp-XXXXXX/s') < 104);
+  }
+  assert.equal(unixSocketBase(macTemp), macTemp);
+  assert.equal(unixSocketBase(nested), '/tmp');
+});
 
 test('runtime workspaces exclude repository ancestry and publish only named files without overwriting', async () => {
   const repo = fileURLToPath(new URL('../../', import.meta.url));

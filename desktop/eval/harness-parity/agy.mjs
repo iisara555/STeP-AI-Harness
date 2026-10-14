@@ -1,14 +1,22 @@
 import { createServer } from 'node:net';
 import { randomUUID } from 'node:crypto';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { writeFile, mkdir, mkdtemp, unlink, rmdir } from 'node:fs/promises';
+import { join, dirname, posix } from 'node:path';
+import { tmpdir } from 'node:os';
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { antigravityHome, runAntigravity, antigravityUsage, ANTIGRAVITY_DENY } from '../../electron/antigravity.ts';
 
+export function unixSocketBase(base) {
+  // Darwin's sockaddr_un allows 104 bytes including NUL. Avoid nesting under
+  // the trial/OAuth home; unusually long or non-ASCII TMPDIR values use /tmp.
+  return Buffer.byteLength(posix.join(base, 'sp-XXXXXX', 's')) <= 100 ? base : '/tmp';
+}
+
 export async function nativeAntigravity(prompt, connection, context, dispatch) {
   const home = await antigravityHome(context, context.authProfile);
-  const endpoint = process.platform === 'win32' ? `\\\\.\\pipe\\step-parity-${randomUUID()}` : join(home.cwd, 'bridge.sock');
+  let socketDir;
+  let endpoint;
   const sockets = new Set();
   const server = createServer(socket => {
     sockets.add(socket);
@@ -38,6 +46,8 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
     });
   });
   try {
+    socketDir = process.platform === 'win32' ? undefined : await mkdtemp(join(unixSocketBase(tmpdir()), 'sp-'));
+    endpoint = socketDir ? join(socketDir, 's') : `\\\\.\\pipe\\step-parity-${randomUUID()}`;
     await new Promise((resolve, reject) => {
       server.once('error', reject);
       server.listen(endpoint, resolve);
@@ -171,7 +181,16 @@ export async function nativeAntigravity(prompt, connection, context, dispatch) {
     return result.response;
   } finally {
     for (const socket of sockets) socket.destroy();
-    await new Promise(resolve => server.close(resolve));
-    await home.close();
+    if (server.listening) await new Promise(resolve => server.close(resolve));
+    try {
+      await home.close();
+    } finally {
+      if (socketDir) {
+        await unlink(endpoint).catch(e => {
+          if (e.code !== 'ENOENT') throw e;
+        });
+        await rmdir(socketDir);
+      }
+    }
   }
 }
