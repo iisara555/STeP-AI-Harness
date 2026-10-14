@@ -1659,6 +1659,8 @@ async function main() {
       ]);
       if (store.list<Session>('session').some(session => service.isActive(session.id))) throw new Error('AUTH_CANCELLATION_PENDING');
       const login = await openEmployeeLogin(employee, async login => {
+        // App shutdown may already have closed the hidden workspace before this login window.
+        if (window.isDestroyed()) return true;
         const dirty = await window.webContents.executeJavaScript(
           "(() => { const event = new Event('step:check-unsaved', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; })()",
         );

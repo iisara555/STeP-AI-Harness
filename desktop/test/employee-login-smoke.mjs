@@ -1,5 +1,6 @@
 import { _electron as electron, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -62,6 +63,31 @@ let application;
 const screenshots = resolve('../tmp/login-preview');
 await mkdir(screenshots, { recursive: true });
 const call = (page, method, input) => page.evaluate(({ method, input }) => window.step.call(method, input), { method, input });
+
+async function closeOwnedApplication() {
+  const owned = application;
+  if (!owned) return;
+  application = undefined;
+  let deadline;
+  try {
+    await Promise.race([
+      owned.close(),
+      new Promise((_, reject) => {
+        deadline = setTimeout(() => {
+          // Kill only this fixture's launched process after reporting a bounded shutdown failure.
+          try {
+            if (process.platform === 'win32')
+              execFileSync('taskkill', ['/PID', String(owned.process().pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+            else owned.process().kill('SIGKILL');
+          } catch {}
+          reject(new Error('Employee login fixture shutdown exceeded 30 seconds'));
+        }, 30000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(deadline);
+  }
+}
 
 async function fixtures(application) {
   await application.evaluate(({ shell }) => {
@@ -226,7 +252,8 @@ try {
   await expect.poll(async () => (await application.windows()).filter(page => page.url().includes('#employee-login')).length).toBe(0);
   assert.ok((await call(appPage, 'snapshot')).sessions.some(session => session.id === 'fixture-existing'));
   await appPage.evaluate(() => window.removeEventListener('step:check-unsaved', window.employeeFixtureDirty));
-  await application.close();
+  console.log('Employee login fixture: owner resumed; checking normal shutdown.');
+  await closeOwnedApplication();
   application = await electron.launch({ args: ['dist/main.cjs'], env, timeout: 60000 });
   const resumed = await application.firstWindow();
   await expect(resumed.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true })).toBeVisible({ timeout: 30000 });
@@ -239,11 +266,18 @@ try {
     .poll(async () => (await application.windows()).filter(page => page.url().includes('#employee-login')).length, { timeout: 15000 })
     .toBe(1);
   await assert.rejects(call(resumed, 'snapshot'), /UNTRUSTED_SENDER|AUTH_REQUIRED/);
+  // Native app quit can destroy the workspace before asking the locked login window to close.
+  await application.evaluate(({ BrowserWindow }) => {
+    const workspace = BrowserWindow.getAllWindows().find(window => window.webContents.getURL().endsWith('index.html'));
+    workspace.destroy();
+  });
+  console.log('Employee login fixture: workspace closed before login; checking locked shutdown.');
+  await closeOwnedApplication();
   console.log(
     'Employee login: identity-only PKCE, signed domain denial, legacy adoption, IPC gate, OS encryption, owner-bound logout/resume and expiry lock passed.',
   );
 } finally {
-  await application?.close().catch(() => {});
+  await closeOwnedApplication().catch(() => {});
   assert.ok(home.startsWith(join(tmpdir(), 'step-employee-login-smoke-')));
   await rm(home, { recursive: true, force: true });
 }
