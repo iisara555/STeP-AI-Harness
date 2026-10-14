@@ -1,9 +1,5 @@
 # STeP Desktop managed policy
 
-[Employee Google entry](employee-login.md) adds `appLogin.required`, `appLogin.clientId` and `appLogin.sessionHours`.
-Required identity-only entry defaults on, independently of `features.googleWorkspace`. Only a trusted managed policy can
-disable it; invalid policy retains required entry. This source change follows the published 0.6.5 release.
-
 Phase 1 of the OpenHarness adaptation adds organization-managed permissions and hooks. The Router authority gate, Privacy Gate and built-in credential-path exclusions remain independent of permission mode and remembered approvals.
 
 ## Policy location and trust

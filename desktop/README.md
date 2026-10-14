@@ -4,15 +4,13 @@
 
 สำหรับพนักงาน STeP / RSP North ที่ต้องสรุปประชุม เตรียมเอกสาร จัดข้อมูล หรือดูความครบถ้วนของใบเสร็จก่อนส่ง AFP คุณเริ่มจากต้นเรื่องที่มี ตรวจร่างในแอป แล้วส่งออกไปใช้ต่อ
 
-[ดูตัวติดตั้ง Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.7) · [เริ่มใช้งาน](#เริ่มใช้งาน) · [ขอความช่วยเหลือ](../SUPPORT.md)
+[ดูตัวติดตั้ง Windows / Mac](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-v0.6.8) · [เริ่มใช้งาน](#เริ่มใช้งาน) · [ขอความช่วยเหลือ](../SUPPORT.md)
 
 ![พื้นที่ทำงานและแถบผลงานของ STeP Desktop](../docs/images/gui/02-workspace.png)
 
 ภาพใช้ข้อมูลตัวอย่าง หน้าจอและตัวเลือกอาจต่างตามรุ่นและการตั้งค่าขององค์กร
 
-Desktop **0.6.7** แก้ Windows ที่ตรวจนโยบายองค์กรไม่ผ่านจนลงชื่อเข้าแอปไม่ได้ โดยคงการตรวจสิทธิ์ policy และบัญชี Google เดิม
-
-Desktop **0.6.6** requires signed employee Google identity before opening the workspace. Entry requests only openid/email/profile and checks the signed hosted domain; Workspace API consent is requested separately. This release also makes Vault and the configured employee Google Workspace connection available on every installation. Select Docs/Sheets/Slides, Calendar and Tasks, then authorize a `step.cmu.ac.th` account. Dev mode is available for a developer to opt in to a personal Claude Pro/Max demo and switch back to normal mode afterwards. Managed policy can disable these capabilities. API-only profiles enter Vault protection only after explicit website/Google credential enrollment; see [configuration and acceptance](../docs/vault-workspace-implementation.md).
+Desktop **0.6.8** เปิดพื้นที่ทำงานได้ทันทีโดยไม่ต้องลงชื่อ Google ก่อนเข้าแอป เก็บแชต เอกสาร และการเชื่อมต่อเดิมไว้ การเชื่อม Google Workspace เป็นตัวเลือกแยกเมื่อผู้ใช้ต้องการใช้งาน และยังตรวจนโยบายองค์กรกับสิทธิ์ของ Vault ตามเดิม
 
 Desktop **0.6.2** มีหน้า "สื่อภายใน" สร้าง Prompt ภาพสำหรับสื่อสารภายในตามสีองค์กร พร้อมตัวอย่างการจัดวาง และแถบด้านซ้ายย่อเหลือไอคอนที่ขยับเมื่อชี้ได้
 
@@ -156,4 +154,4 @@ AI ได้รับโครงและชื่อช่องที่ร�
 
 อ่าน [ภาพรวม STeP AI](../README.md) หรือ [รายละเอียดสำหรับผู้ดูแลและนักพัฒนา](../docs/desktop-development.md) เมื่อต้องตั้งค่าระบบ ทดสอบ หรือสร้างตัวติดตั้ง
 
-รุ่นใน source: **STeP Desktop v0.6.7** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน
+รุ่นใน source: **STeP Desktop v0.6.8** ดูไฟล์ที่เผยแพร่จาก [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) การมี release ไม่ได้แทนการอนุมัติใช้งานในหน่วยงาน

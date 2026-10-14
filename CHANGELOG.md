@@ -6,6 +6,10 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.8 (2026-10-14)
+
+- Remove employee Google sign-in at app entry, its encrypted session/owner gate, expiry lock and employee logout controls. Fresh and upgraded profiles open setup or the workspace directly, including profiles with retired appLogin policy or unreadable employee-session files. Existing work and retired session files are preserved. Optional Google Workspace connections, provider sign-in, managed policy and Vault restrictions remain independent.
+
 ## Desktop v0.6.7 (2026-10-14)
 
 - Fix Windows managed-policy verification rejecting valid administrator-protected files before employee sign-in. Execute the complete PowerShell ACL check and avoid inherited PowerShell 7 module paths; keep the existing owner/write checks and required Google identity. Existing installed apps require an updated installer; no policy or credential migration is performed.

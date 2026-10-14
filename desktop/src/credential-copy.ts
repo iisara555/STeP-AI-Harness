@@ -17,10 +17,6 @@ export const credentialTitles: Record<string, readonly [string, string]> = {
   ],
 };
 const errors: Record<string, readonly [string, string]> = {
-  GOOGLE_ACCOUNT_MISMATCH: [
-    'กรุณาเชื่อมบริการ Workspace ด้วยบัญชีเดียวกับที่ลงชื่อเข้าใช้ STeP Desktop',
-    'Connect Workspace services with the same account used to sign in to STeP Desktop.',
-  ],
   VAULT_LOGIN_ATTEMPT_CHANGED: [
     'หน้าล็อกอินสองขั้นต้องใช้บัญชีเดิม หากข้อมูลเปลี่ยนหรือหมดเวลา ให้เริ่มล็อกอินใหม่',
     'A two-step login must use the same account. Restart login if the credential changes or the attempt expires.',
