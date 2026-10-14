@@ -1,5 +1,19 @@
 # ตรวจงานร่างเอกสารและส่งออก — 8 ตุลาคม 2569
 
+## TOR จากความต้องการและแหล่งปัจจุบัน — 2026-10-14
+
+ฟอร์ม TOR เพิ่มบริบทไม่บังคับ: การใช้งาน/ผลสำเร็จ ข้อจำกัด/งานที่ไม่รวม และรูปแบบเอกสารที่ต้องการ ค่าที่กรอกยังเป็น `USER_INPUT` ใน source ไม่เป็น host instruction หรือหลักฐานอนุมัติ ช่องว่างสามช่องนี้เป็น `missingAction: omit` จึงไม่ทำให้ TOR มีช่องรอยืนยันเรื่องรูปแบบโดยไม่จำเป็น ช่องข้อเท็จจริงที่ต้องมีหลักฐานยังใช้เกณฑ์เดิม
+
+ทั้งงานซื้อและจ้างโหลด `tor-drafting-guide`, `procurement-source-map` และตัวอย่าง `task-adaptations` เข้า context จริงก่อนร่าง แยกการเลือกผู้เสนอจากการตรวจรับผลส่งมอบ เชื่อมความต้องการกับข้อกำหนด/ผลส่งมอบ/วิธีตรวจ/เงื่อนไขผ่าน คงข้อยกเว้นและข้อความที่ผู้ใช้แก้เอง ตัวอย่าง AI Computer มีคำเตือนขอบเขตและไม่ได้โหลดเป็นค่าเริ่มต้นของทุกงาน
+
+แผนที่แหล่งอ้าง [ว 159 จากหน้าและ PDF ของกระทรวงพาณิชย์](https://www.moc.go.th/th/content/category/detail/id/8/cid/36/iid/5887) ซึ่งเปิดอ่านและตรวจภาพหน้าที่ 2 เมื่อ 14 ตุลาคม 2569 เพื่อเทียบสาระกับ working outline ไม่รับรองฉบับล่าสุดหรือการใช้บังคับกับงานใด หน้าแบบฟอร์มคณะวิจิตรศิลป์ มช. เปิดได้แต่ไฟล์แบบเปิดไม่ได้ ส่วน QP-AF-001 ใน OIT 2024 เป็นจุดเริ่มตรวจฉบับควบคุมกับ AFP ไม่ใช่หลักฐานยืนยันรุ่นปัจจุบัน ไม่มีการเปลี่ยนสถานะ registry หรือคัดอัตรา/วงเงินมาเป็นกฎใหม่
+
+แม่แบบ 16 หัวข้อเพิ่มแนวทางเขียนรายการส่งมอบและตารางตรวจรับ 4 คอลัมน์ ให้แบบหน่วยงานที่ตรวจแล้วมาก่อนโครงกลาง ไม่เพิ่มการรองรับ native DOCX สำหรับ TOR ในชุดนี้ การตรวจความครบและ source/coverage อยู่ในผลตรวจแยก การตรวจไฟล์จริงและอำนาจมนุษย์ยังเป็นคนละสถานะกับการร่างข้อความ
+
+เพิ่ม eval ของ `tor-government-writing` ครบ routing 4 มิติและถอนจากรายการหนี้ legacy โดยคงสถานะ lifecycle เดิม ชุดเคสครอบคลุมงานซื้อที่มีข้อยกเว้น งานจ้างตามแบบหน่วยงาน แก้จำนวนที่อ้างหลายหัวข้อ และลิงก์ระเบียบที่เปิดไม่ได้ `outputAssertions` ยังต้องทดสอบโมเดลจริงและให้เจ้าของเอกสารตรวจ ไม่อ้างว่าการทดสอบด้วย provider จำลองวัดคุณภาพการร่างของโมเดลได้
+
+หลักฐาน local: form/service 20 ข้อและ routing/Skill 172 ข้อผ่าน; root 978 ผ่าน/4 ข้าม, Desktop 733 ผ่าน/2 ข้าม พร้อม frozen install, formatting, build, validator และ plugin freshness ผ่าน Desktop suite ใช้ TMPDIR ใหม่ใน `/var/tmp` เพื่อไม่ชน ancestry guard ของ `/tmp/.git` โดยไม่เปลี่ยน guard Native Electron `document-tools-smoke` ตรวจช่องใหม่ การคงค่าหลังสลับหน้า บริบทที่ส่งจริง และ DOCX/PDF; `i18n-smoke` ผ่าน ชุดตัวอย่าง TOR ปรับให้ตรงหัวข้อกลางและมีตารางตรวจรับจริง แปลงงานซื้อ/งานบริการด้วยตัวส่งออกจริงและตรวจภาพ PDF ครบ 4 หน้า ตารางคง 16 pt ไม่ล้นขอบ หลักฐานอยู่ภายนอก repo และใช้ IBM Plex Sans Thai จาก dependency เดิมเป็นฟอนต์ QA ที่ระบุชัดใน HTML เท่านั้น ไม่แก้ชื่อหรือแทนไฟล์ฟอนต์ของ DOCX ไม่รับรองหน้า Word/Sarabun บนเครื่องพนักงาน ไม่มีการเรียกโมเดลจริง อนุมัติแบบ หรือออก release ในชุดนี้
+
 ## Draft assistance and targeted revision — 2026-10-14
 
 Sparse input forms distinguish missing prose from unknown facts. Background, objectives, proposed activities, deliverables and functional inspection methods may be drafted from the supplied purpose using the selected Skill and working template. TOR, correspondence and project Skills/templates explicitly support proposed prose, with provisional functional proposals in TOR while keeping amounts, quantities, dimensions, technical thresholds, agreed dates, approval, qualifications, penalties and other source-dependent conditions pending. Meeting history and resolutions still require supplied notes. Template/example values remain structure-only input.

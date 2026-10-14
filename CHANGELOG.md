@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Improve TOR drafting from the current task's intended use, exclusions and presentation preferences. Load goods/service adaptation examples, requirement-to-acceptance guidance and a dated official-source discovery map; preserve agency outlines and distinguish the 16-section working fallback from a verified form. Keep example hardware/contract terms out of new tasks and source/coverage checks outside exported documents.
+
 ## Desktop v0.6.8 (2026-10-14)
 
 - Replace the internal-media sample overwrite JavaScript confirm popup with the existing in-app confirmation dialog. Preserve drafts on cancel and restore editable keyboard focus on cancel/accept; native regression covers subsequent typing, dropdown changes, copy validation and draft persistence.

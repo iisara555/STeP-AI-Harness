@@ -94,7 +94,7 @@ Use the relevant working template when a current agency template is unavailable:
 
 ### 6. กรณี TOR ของ STeP
 
-ใช้ [tor-review](../../pm/tor-review/SKILL.md) และ [tor-government-writing](../../pm/tor-government-writing/SKILL.md) ร่วมกัน โดยดึงโครงสร้าง ๑๖ ข้อและกฎการจัดหน้าจาก [แม่แบบ TOR ๑๖ หัวข้อมาตรฐาน](templates/tor-16-sections-template.md)
+ใช้ [tor-review](../../pm/tor-review/SKILL.md) และ [tor-government-writing](../../pm/tor-government-writing/SKILL.md) ร่วมกัน ให้แบบหน่วยงานที่ตรวจรุ่นและความเกี่ยวข้องได้มาก่อน หากไม่มีใช้ [แม่แบบ TOR ๑๖ หัวข้อฉบับทำงาน](templates/tor-16-sections-template.md) ไม่อ้างว่าทุก TOR ต้องมี 16 หัวข้อ ดู [วิธีร่างตามงานจริงและตารางตรวจรับ](../../pm/tor-government-writing/references/tor-drafting-guide.md) เพื่อจัดเนื้อหาตามความต้องการ ไม่คัดสเปกหรือเงื่อนไขจากตัวอย่างงานอื่น
 
 TOR โครงการสื่อประชาสัมพันธ์มีหน้าปก หัวข้อ ๑–๑๖ ตารางตรวจรับ และภาคผนวกได้ โดยไม่ต้องมีตราครุฑหรือช่อง `ที่/วันที่/เรื่อง/เรียน` บนทุกหน้า แต่ควรแนบกับหนังสือหรือบันทึกข้อความที่มีรูปแบบถูกต้องเมื่อเสนอในระบบราชการ
 
