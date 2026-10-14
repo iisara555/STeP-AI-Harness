@@ -1,5 +1,7 @@
 # Google Workspace connector (optional, separate)
 
+The [employee Google Workspace design handoff](desktop-google-workspace-design.md) describes proposed Desktop account connection and broader service access. This optional connector retains only the operations documented below; the proposal does not add Gmail, Calendar, Slides or OAuth login to this module.
+
 โมดูล `src/modules/connectors/google-workspace.js` ใช้ gws CLI ที่องค์กรติดตั้งและ sign in เองแล้ว ไม่ติดตั้ง ไม่เรียก auth login ไม่เปิด service account key และไม่เพิ่มเข้า Desktop tool loop โดยอัตโนมัติ
 
 รองรับ drive.list, docs.get, sheets.get, sheets.values.get สำหรับอ่าน และ docs.create/sheets.create สำหรับสร้างร่างว่าง พร้อม docs.appendText (append ข้อความโดยต้องมี requiredRevisionId จากผลอ่านล่าสุด) และ sheets.values.update (RAW scalar values สูงสุด 500 cells ใน range ที่ host ตรวจแล้ว) ไม่รองรับ sharing, mail, delete หรือ publish

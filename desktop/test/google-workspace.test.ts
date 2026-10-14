@@ -187,6 +187,7 @@ test('PKCE uses one-use state-bound loopback callback and never returns tokens t
     async url => {
       auth = new URL(url);
       assert.equal(auth.searchParams.get('code_challenge_method'), 'S256');
+      assert.equal(auth.searchParams.get('hd'), 'example.test');
       const callback = new URL(auth.searchParams.get('redirect_uri')!);
       assert.equal(callback.hostname, '127.0.0.1');
       callback.searchParams.set('state', 'incorrect');

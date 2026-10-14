@@ -32,7 +32,7 @@ Replacing/deleting the key clears archived fallback and the old `secret` record.
 
 ## Administrator configuration
 
-Merge these non-secret fields into the existing protected Desktop policy only after the organization reviews the account/data flow. Replace the synthetic client/domain with an organization-owned **Desktop app** OAuth client and verified Workspace domains. Do not replace other policy fields or distribute a confidential web-client secret.
+Merge these non-secret fields into the existing protected Desktop policy only after the organization reviews the account/data flow. Replace the synthetic client with an organization-owned **Desktop app** OAuth client and confirm the allowed Workspace domains for the intended cohort. Do not replace other policy fields or distribute a confidential web-client secret.
 
 ```json
 {
@@ -40,13 +40,15 @@ Merge these non-secret fields into the existing protected Desktop policy only af
   "credentialStorage": { "sharedDevice": false },
   "googleWorkspace": {
     "clientId": "synthetic-client.apps.googleusercontent.com",
-    "domains": ["example.org"],
+    "domains": ["step.cmu.ac.th"],
     "services": ["documents", "calendar", "tasks"]
   }
 }
 ```
 
-Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner confirmed that no real client ID/domain is available yet; the UI correctly remains unconfigured until these inputs are supplied. This task made no tenant/production policy changes.
+Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner confirmed that no Google Cloud project/Desktop client ID is available yet; the UI correctly remains unconfigured until these inputs are supplied. This task made no tenant/production policy changes.
+
+On 2026-10-14, a user-authorized identity-only Google OAuth Playground check verified a signed, unexpired ID token with `hd=step.cmu.ac.th`, matching issuer, audience and the requested account. No refresh token was requested or received. This confirms that account's hosted domain, not a configured Desktop grant or live Workspace service acceptance. No account identifiers or tokens are recorded here. The authorization URL now supplies the configured domain as a UI hint (or `hd=*` for multiple domains); the signed claim allowlist remains the access check.
 
 The native connector uses PKCE S256, state/nonce, a bounded one-use random loopback callback, signed OIDC validation against Google's JWKs, and issuer/audience/expiry/verified-email/domain checks. Refresh tokens are separate purpose-bound Vault records; refresh is serialized per account and preserves an omitted replacement token. No provider/CLI auth profile is imported. OAuth/MCP identities remain separate. Network calls use fixed endpoints, time/output limits and redirect denial; token values and private error bodies never reach returned receipts. Unknown write outcomes are not retried automatically.
 
@@ -55,6 +57,8 @@ Pause denies new operations without revoking the grant. Local disconnect removes
 Official references: [installed-app OAuth](https://developers.google.com/identity/protocols/oauth2/native-app), [OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect), [Drive scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), [Workspace user-data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy), [Electron safeStorage](https://www.electronjs.org/docs/latest/api/safe-storage). Recheck current Google policies before activation.
 
 ## Verification and remaining acceptance
+
+- 2026-10-14 follow-up: the configured hosted-domain authorization hint is covered by all 11 Google connector regressions; root tests pass 969/977 with 8 existing platform/dependency skips, alongside both repository validators and formatting. Regenerated linked plugin documentation resolves the stale-plugin CI check. The latest remote checks must still run against the follow-up commit.
 
 - `desktop/test/vault.test.ts` and `google-workspace.test.ts` use synthetic fixtures for encryption/integrity, origin/session/grant races, username-first account binding, exact immutable operation approval, PKCE callback/state, OIDC signatures/claims, token-refresh concurrency, disconnect and withheld diagnostics.
 - `vault-electron-smoke.mjs` uses real Electron/OS `safeStorage`, two separate processes with the same profile, and an exact-certificate local HTTPS fixture for one-page/identifier-first fill, changed-form partial outcomes and model-read suppression. This does not prove packaged-app upgrade behavior.

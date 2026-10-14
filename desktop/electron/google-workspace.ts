@@ -181,6 +181,7 @@ export async function googleAuthorize(
       code_challenge_method: 'S256',
       access_type: 'offline',
       prompt: 'select_account consent',
+      hd: config.domains.length === 1 ? config.domains[0] : '*',
     }).toString();
     if (signal.aborted) reject('CANCELLED');
     await open(auth.toString());
