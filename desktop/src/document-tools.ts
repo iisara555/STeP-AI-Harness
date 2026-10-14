@@ -3,7 +3,7 @@ import { parseThaiDate, formatThaiDate } from './thai-date';
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes';
 export type DocumentAttachmentRole = 'source' | 'template';
-export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean };
+export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean; missingAction?: 'draft-proposal' };
 export type DocumentTool = {
   id: DocumentToolId;
   title: string;
@@ -16,6 +16,10 @@ export type DocumentTool = {
   fields: DocumentField[];
 };
 const field = (key: string, label: string, multiline = false, hint?: string): DocumentField => ({ key, label, multiline, hint });
+const draftable = (key: string, label: string, multiline = false, hint?: string): DocumentField => ({
+  ...field(key, label, multiline, hint),
+  missingAction: 'draft-proposal',
+});
 const common = [field('title', 'ชื่อเอกสาร / ชื่อโครงการ'), field('unit', 'หน่วยงานเจ้าของเรื่อง'), field('owner', 'ผู้รับผิดชอบ')];
 const dateGuide = 'docs/thai-data-formatting.md';
 const draftingChecks = 'skills/common/thai-official-documents/references/drafting-checks.md';
@@ -41,12 +45,12 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     ],
     fields: [
       ...common,
-      field('background', 'ความเป็นมา', true),
-      field('objectives', 'วัตถุประสงค์', true),
-      field('scope', 'ขอบเขตงาน', true),
-      field('deliverables', 'ผลส่งมอบ', true),
+      draftable('background', 'ความเป็นมา', true),
+      draftable('objectives', 'วัตถุประสงค์', true),
+      draftable('scope', 'ขอบเขตงาน', true),
+      draftable('deliverables', 'ผลส่งมอบ', true),
       field('qualifications', 'คุณสมบัติผู้เสนอราคา', true, 'แนบแหล่งเกณฑ์คุณสมบัติที่ต้องใช้ ถ้ามี'),
-      field('acceptance', 'เกณฑ์ตรวจรับ', true),
+      draftable('acceptance', 'เกณฑ์ตรวจรับ', true),
       field('timeline', 'ระยะเวลา / กำหนดส่งมอบ'),
       field('budget', 'งบประมาณที่มีหลักฐาน'),
       field('sources', 'แบบฟอร์ม / ระเบียบ / แหล่งอ้างอิงที่ต้องใช้', true),
@@ -71,10 +75,10 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       ...official,
       field('reviewer', 'ผู้เสนอความเห็นและตำแหน่ง (ถ้ามี)', true, 'เว้นไว้ถ้าแบบหน่วยงานไม่มีช่องนี้ ไม่ถือว่าให้ความเห็นแล้ว'),
       field('decisionSigner', 'ผู้พิจารณาและตำแหน่ง (ถ้ามี)', true, 'ระบุผู้ที่เจ้าของเรื่องเลือก ช่องคำสั่งและลายมือชื่อเว้นไว้'),
-      field('background', 'เรื่องเดิม / ความเป็นมา', true),
+      draftable('background', 'เรื่องเดิม / ความเป็นมา', true),
       field('facts', 'ข้อเท็จจริง / ผลดำเนินการ', true),
-      field('considerations', 'ข้อพิจารณา / เหตุผลและแหล่งเกณฑ์', true),
-      field('request', 'ข้อเสนอ / สิ่งที่ต้องการให้พิจารณา', true),
+      draftable('considerations', 'ข้อพิจารณา / เหตุผลและแหล่งเกณฑ์', true),
+      draftable('request', 'ข้อเสนอ / สิ่งที่ต้องการให้พิจารณา', true),
       field('budget', 'งบประมาณที่มีหลักฐาน'),
       field('sources', 'แบบฟอร์ม / ข้อกฎหมายพร้อมแหล่งอ้างอิง', true),
     ],
@@ -97,8 +101,8 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
       field('unit', 'หน่วยงาน / ที่อยู่ผู้ส่ง'),
       field('subject', 'เรื่อง'),
       ...official,
-      field('background', 'เหตุที่มีหนังสือ / ต้นเรื่อง', true),
-      field('content', 'สาระ / สิ่งที่ขอประสาน', true),
+      draftable('background', 'เหตุที่มีหนังสือ / ต้นเรื่อง', true),
+      draftable('content', 'สาระ / สิ่งที่ขอประสาน', true),
       field('schedule', 'วัน เวลา สถานที่ (ถ้ามี)'),
       field('contact', 'ผู้ประสานงาน / ช่องทางติดต่อ'),
       field('sources', 'แบบหน่วยงาน / แหล่งอ้างอิง', true),
@@ -115,14 +119,14 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     variants: [{ id: 'proposal', label: 'ข้อเสนอโครงการเพื่อพิจารณา' }],
     fields: [
       ...common,
-      field('rationale', 'หลักการและเหตุผล', true),
-      field('objectives', 'วัตถุประสงค์', true),
+      draftable('rationale', 'หลักการและเหตุผล', true),
+      draftable('objectives', 'วัตถุประสงค์', true),
       field('target', 'กลุ่มเป้าหมาย / จำนวนที่มีหลักฐาน'),
-      field('activities', 'กิจกรรม / วิธีดำเนินงาน', true),
+      draftable('activities', 'กิจกรรม / วิธีดำเนินงาน', true),
       field('timeline', 'ระยะเวลา / สถานที่'),
       field('budget', 'งบประมาณ / แหล่งงบที่มีหลักฐาน', true),
-      field('indicators', 'ตัวชี้วัด / วิธีประเมินผล', true),
-      field('outcomes', 'ผลที่คาดว่าจะได้รับ', true),
+      draftable('indicators', 'ตัวชี้วัด / วิธีประเมินผล', true),
+      draftable('outcomes', 'ผลที่คาดว่าจะได้รับ', true),
       field('sources', 'แบบหน่วยงาน / เงื่อนไขแหล่งทุนพร้อมแหล่งอ้างอิง', true),
     ],
   },
@@ -176,7 +180,11 @@ export function documentRequest(
         {
           label: f.label,
           value,
-          ...(value ? { provenance: 'USER_INPUT' } : { placeholder: `[รอยืนยัน: ${f.label}]` }),
+          ...(value
+            ? { provenance: 'USER_INPUT' }
+            : f.missingAction === 'draft-proposal'
+              ? { missingAction: 'draft-proposal' }
+              : { missingAction: 'confirm', placeholder: `[รอยืนยัน: ${f.label}]` }),
           ...(isDate ? (date ? { formatted: formatThaiDate(date, 'official') } : { review: 'DATE_NEEDS_REVIEW' }) : {}),
         },
       ];
@@ -187,7 +195,7 @@ export function documentRequest(
   const task =
     profile.id === 'memo' ? profile.title + kind.label : profile.variants.length > 1 ? `${profile.title} (${kind.label})` : profile.title;
   return {
-    text: `${task} จากข้อมูลในฟอร์มและไฟล์ที่แนบ ใช้ Skill ที่เลือกเป็นหลักและแม่แบบที่โหลดในบริบท จัดทำตัวเอกสารที่แก้ไขและส่งออกได้ใน document_draft เว้นข้อมูลที่ขาดเป็น [รอยืนยัน: ชื่อช่อง] แยกผลตรวจ รายการข้อมูลและแหล่งอ้างอิงที่ต้องยืนยันไว้ใน document_review ซึ่งแสดงในแอปและไม่เป็นส่วนหนึ่งของเอกสาร${attachmentRole === 'template' ? ' ไฟล์ที่แนบเป็นแบบฟอร์ม/ตัวอย่าง ใช้เฉพาะโครงสร้างและชื่อช่อง ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ หรือข้อมูลที่กรอกเป็นตัวอย่างในไฟล์นั้นเป็นข้อเท็จจริงของงานใหม่ เติมข้อมูลของงานนี้จากฟอร์มหรือหลักฐานต้นเรื่องที่เจ้าของยืนยันแยกเท่านั้น' : ' ไฟล์ที่แนบเป็นต้นเรื่องของงานนี้ คง provenance และตรวจความขัดแย้งกับฟอร์มตาม Skill'}`,
+    text: `${task} จากข้อมูลในฟอร์มและไฟล์ที่แนบ ใช้ Skill ที่เลือกเป็นหลักและแม่แบบที่โหลดในบริบท จัดทำตัวเอกสารที่แก้ไขและส่งออกได้ใน document_draft ช่วยขึ้นร่างเนื้อหาที่เสนอได้จากบริบทตาม Skill และแม่แบบ แม้ผู้ใช้ยังไม่ได้กรอกช่องนั้น ระบุข้อความที่เสนอเป็นร่างเพื่อพิจารณาและแยกสมมติฐานในผลตรวจ คง [รอยืนยัน: ชื่อช่อง] เฉพาะข้อเท็จจริงหรือเงื่อนไขที่ต้องมีหลักฐาน แยกผลตรวจ รายการข้อมูลและแหล่งอ้างอิงที่ต้องยืนยันไว้ใน document_review ซึ่งแสดงในแอปและไม่เป็นส่วนหนึ่งของเอกสาร${attachmentRole === 'template' ? ' ไฟล์ที่แนบเป็นแบบฟอร์ม/ตัวอย่าง ใช้เฉพาะโครงสร้างและชื่อช่อง ไม่ใช้ชื่อบุคคล เลขหนังสือ วันที่ รหัสโครงการ งบ หรือข้อมูลที่กรอกเป็นตัวอย่างในไฟล์นั้นเป็นข้อเท็จจริงของงานใหม่ เติมข้อมูลของงานนี้จากฟอร์มหรือหลักฐานต้นเรื่องที่เจ้าของยืนยันแยกเท่านั้น' : ' ไฟล์ที่แนบเป็นต้นเรื่องของงานนี้ คง provenance และตรวจความขัดแย้งกับฟอร์มตาม Skill'}`,
     sourceText,
   };
 }

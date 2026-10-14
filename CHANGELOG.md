@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Document tools now draft proposed narrative, objectives, activities and functional requirements from sparse inputs using the selected Skill/template. Unknown facts and source-dependent procurement conditions remain pending. A separate revision action uses the latest draft, preserves user edits and stages only the requested changes for review in the existing task.
+
 ## Desktop v0.6.3 — 2026-10-14
 
 - Combined release of PR #160 (UI/OAuth and missing-workspace chat fixes) and PR #159 (harness parity evaluator and CI follow-up). Harness stays 0.7.7. Native tools remain an experiment outside the shipped app.

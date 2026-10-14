@@ -62,6 +62,23 @@ test('invalid profiles, subtypes, fields and oversized form input fail before se
   assert.throws(() => documentRequest('memo', { subject: 'ก'.repeat(6001) }), /INPUT_LIMIT/);
 });
 
+test('missing prose receives a drafting task while missing facts retain confirmation markers', () => {
+  const tor = JSON.parse(documentRequest('tor', { title: 'Synthetic chair purchase', budget: '12000' }, 'goods').sourceText);
+  for (const key of ['background', 'objectives', 'scope', 'deliverables', 'acceptance']) {
+    assert.equal(tor.fields[key].missingAction, 'draft-proposal');
+    assert.equal(tor.fields[key].placeholder, undefined);
+    assert.equal(tor.fields[key].value, null);
+    assert.equal(tor.fields[key].provenance, undefined, 'a drafting request is not a sourced fact');
+  }
+  assert.equal(tor.fields.budget.value, '12000');
+  assert.equal(tor.fields.budget.provenance, 'USER_INPUT');
+  assert.equal(tor.fields.qualifications.missingAction, 'confirm');
+  const memo = JSON.parse(documentRequest('memo', { subject: 'Synthetic purchase request' }).sourceText);
+  for (const key of ['number', 'date', 'signer', 'facts', 'budget']) assert.match(memo.fields[key].placeholder, /รอยืนยัน/);
+  const minutes = JSON.parse(documentRequest('minutes', { title: 'Synthetic meeting' }).sourceText);
+  for (const key of ['notes', 'decisions', 'owners', 'attendees']) assert.equal(minutes.fields[key].missingAction, 'confirm');
+});
+
 test('an attached example form supplies structure only; its sample values are not facts of the new task', () => {
   const template = documentRequest('memo', { subject: 'งานสังเคราะห์ใหม่' }, 'approval', 'template');
   assert.equal(JSON.parse(template.sourceText).attachmentRole, 'template');

@@ -89,6 +89,7 @@ try {
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator('aside.sidebar')).toBeVisible();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('dialog', dialog => {
@@ -239,8 +240,21 @@ try {
       await editor.press('Enter');
       await editor.pressSequentially('SYNTHETIC-MANUAL-EDIT');
       for (const message of ['ชื่อโครงการ: SYNTHETIC-RENAMED', 'วัตถุประสงค์: SYNTHETIC-OBJECTIVE']) {
-        await page.locator('.composer textarea').fill(message);
-        await page.locator('.composer textarea').press('Enter');
+        const sessionCount = (await snapshot()).sessions.length;
+        if (message.includes('SYNTHETIC-RENAMED')) {
+          await open();
+          await expect(page.locator('.document-tool-picker button[aria-pressed="true"]')).toContainText('ร่างโครงการ');
+          await expect(
+            form.getByText('เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน'),
+          ).toBeVisible();
+          await form.getByLabel('ระบุเฉพาะส่วนที่ต้องการปรับ', { exact: true }).fill(message);
+          await mkdir('release/qa/document-drafting', { recursive: true });
+          await page.screenshot({ path: 'release/qa/document-drafting/revise-existing.png' });
+          await form.getByRole('button', { name: 'ปรับร่างเดิม', exact: true }).click();
+        } else {
+          await page.locator('.composer textarea').fill(message);
+          await page.locator('.composer textarea').press('Enter');
+        }
         const consent = page.getByRole('button', { name: 'มีสิทธิ์ส่งข้อมูลนี้', exact: true });
         const contextConsent = page.getByRole('alertdialog', { name: 'ใช้บริบทที่บันทึกไว้กับงานนี้?', exact: true });
         // Changing preferences writes local context; approve its actual dialog instead of disabling the gate.
@@ -264,6 +278,7 @@ try {
           .poll(async () => (await snapshot()).sessions.find(s => s.id === last.id)?.proposals.length, { timeout: 30000 })
           .toBe(1);
         const revision = (await snapshot()).sessions.find(s => s.id === last.id);
+        assert.equal((await snapshot()).sessions.length, sessionCount, 'the revision form must reuse the selected document task');
         assert.equal(revision.documentTool, 'project');
         assert.equal(revision.skill, skill);
         assert.ok(revision.proposals[0].text.includes('SYNTHETIC-MANUAL-EDIT'));
@@ -271,6 +286,7 @@ try {
         assert.ok(requests.at(-1).prompt.includes('Synthetic form fact'));
         assert.ok(requests.at(-1).prompt.includes('SYNTHETIC-MANUAL-EDIT'));
         assert.ok(!requests.at(-1).system.includes('Respond using the "Ob-Oon"'));
+        assert.ok(requests.at(-1).system.includes('Do not regenerate the document'));
         await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
         await expect(editor).toContainText('SYNTHETIC-RENAMED');
       }

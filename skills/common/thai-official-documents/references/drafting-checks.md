@@ -17,7 +17,13 @@
 
 ลำดับเรื่องเดิม/ข้อเท็จจริง/ข้อพิจารณา/ข้อเสนอเป็นลำดับสาระ ไม่ได้บังคับให้บันทึกทุกฉบับพิมพ์หัวข้อเลข ๑–๔ สำหรับบันทึกสั้นให้ร่างเป็นย่อหน้าต่อเนื่องตามแบบหน่วยงาน ใช้หัวข้อเมื่อแบบหรือความซับซ้อนของเรื่องต้องการ ไม่อ้าง “ตามที่ได้รับอนุมัติ” ถ้าต้นทางไม่มีหลักฐานการอนุมัติเดิม ส่วนงาน/ส่วนราชการใช้ชื่อช่องตามแบบที่ได้รับ ช่องผู้เสนอความเห็นและผู้พิจารณาเพิ่มเฉพาะเมื่อแบบหรือเจ้าของเรื่องระบุ เว้นพื้นที่คำสั่งและลายมือชื่อไว้
 
-แสดงตารางผลตรวจและรายการยืนยันในส่วนผลตรวจแยกจากตัวเอกสาร ไม่ส่งออกเป็นหน้าของหนังสือหรือสร้างเป็นสิ่งที่ส่งมาด้วยโดยอัตโนมัติ ช่องข้อมูลขาดในหนังสือยังต้องคง `[รอยืนยัน: ชื่อช่อง]` ไว้
+Display checks and unresolved items separately from the document; they are not exported letter pages or implied attachments. Keep `[รอยืนยัน: ชื่อช่อง]` for unknown factual values.
+
+## Draft assistance and revision
+
+Draft narrative from the supplied subject and intended purpose even when prose fields are blank. Offer proposed rationale, considerations, coordination wording and a closing request for owner review. Identify proposed wording and assumptions as `AI_PROPOSED` in the separate review. Template placeholders guide the field meaning; draft the supported prose and leave only unknown factual details pending. Actual history, results, recipients, document numbers, amounts, dates, policy conditions and signatures still require current-task evidence. Meeting events and resolutions come only from supplied notes.
+
+For a targeted revision, use the latest draft and change only the requested parts. Preserve unrelated text, tables and user edits; explicit corrections replace the corresponding earlier form value without implying approval.
 
 เลขหนังสือ งบ ผู้ลงนาม และข้อกฎหมายที่ยังไม่มีให้ใช้ `[รอยืนยัน: ชื่อช่อง]` พร้อมรายการข้อมูลที่เจ้าของต้องเติม ข้อความร่างและไฟล์ส่งออกต้องแยกสถานะการตรวจ: ร่างข้อความ → ตรวจความหมาย/แหล่ง → ตรวจจัดหน้าจริง → ผู้มีอำนาจพิจารณา
 

@@ -637,6 +637,22 @@ export default function App() {
       form.source ? form.sourceRole : 'source',
     );
   }
+  async function reviseDocument(id: string, changes: string) {
+    if (!snapshot?.sessions.find(s => s.id === id)?.documentTool) throw new Error('INVALID_DOCUMENT_TOOL');
+    await save();
+    await api!.call('sessionConnection', { id, connectionId });
+    setWorkMode('draft');
+    setView('chat');
+    setSettings(false);
+    setSelected(id);
+    setQuery('');
+    setFiles([]);
+    setPendingSource('');
+    setRight(true);
+    setToolTab('output');
+    await refresh();
+    await start(id, t('แก้ร่างเดิมเฉพาะตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
+  }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
     const version = ++navigationVersion.current;
@@ -1498,6 +1514,12 @@ export default function App() {
                 chooseConnection={setConnectionId}
                 attach={attachDocument}
                 draft={draftDocument}
+                existingDraft={
+                  session?.documentTool && (session.draft.trim() || session.proposals.length)
+                    ? { id: session.id, tool: session.documentTool, title: session.title }
+                    : undefined
+                }
+                revise={reviseDocument}
                 consumedTask={consumedDocumentTask}
                 busy={running}
                 onError={e => notify(explainError(e), 'error')}

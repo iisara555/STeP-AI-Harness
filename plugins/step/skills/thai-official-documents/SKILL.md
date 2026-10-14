@@ -52,9 +52,9 @@ standardVersion: 2
 
 ### 2. ตรวจโครงสร้างตามชนิดเอกสาร
 
-ใช้ [รายการตรวจร่างตามประเภท](references/drafting-checks.md) สำหรับบันทึกขออนุมัติ ขอความเห็นชอบ รายงานผล และหนังสือเชิญ/ตอบกลับ/ประสานงาน พร้อม [คู่มือวันที่และตัวเลข](../../docs/thai-data-formatting.md) เมื่อจัดข้อมูลเข้าฟอร์ม ตรวจเฉพาะสิ่งที่มีต้นทาง ช่องที่ขาดคงรอยืนยัน
+Use the [drafting checks](references/drafting-checks.md) for approval/endorsement/report memos and invitation/reply/coordination letters, including their guidance for incomplete inputs and targeted revision. Use the [date and number guide](../../docs/thai-data-formatting.md) when formatting form data. Verify facts against supplied sources; keep unknown factual values pending while drafting proposed prose from the supplied purpose.
 
-เมื่อต้องยกร่างจากฟอร์มหรือต้นเรื่อง ให้ใช้ working template ตามประเภท: [บันทึกข้อความ](templates/memo-draft.md), [หนังสือราชการ](templates/letter-draft.md), [รายงานการประชุม](templates/minutes-draft.md) เป็นโครงเมื่อยังไม่มีแบบหน่วยงานที่ตรวจฉบับปัจจุบันได้ แม่แบบเหล่านี้ไม่ใช่แบบทางการที่รับรองแล้ว ห้ามแต่งเลขหนังสือ งบ หรือข้อกฎหมาย ช่องขาดคง `[รอยืนยัน: ชื่อช่อง]` สำหรับรายงานประชุมใช้ `meeting-summary` ตรวจ Decision/Proposal/Action จากต้นทางก่อนจัดรูปแบบ ร่างข้อความยังไม่ถือว่าผ่านการตรวจ DOCX/PDF จริง
+Use the relevant working template when a current agency template is unavailable: [memo](templates/memo-draft.md), [letter](templates/letter-draft.md), or [minutes](templates/minutes-draft.md). These are drafting structures, not approved agency forms. Document numbers, budgets, legal conditions and other unknown facts retain `[รอยืนยัน: ชื่อช่อง]`; draftable narrative follows the drafting checks. For minutes, use `meeting-summary` to distinguish source-backed decisions, proposals and actions before formatting. Text drafting does not establish DOCX/PDF layout verification.
 
 - **หนังสือราชการมาตรฐาน** มีส่วนราชการ เลขที่ วันที่ เรื่อง เรียน ข้อความ คำลงท้าย ลายมือชื่อ ตำแหน่ง และสิ่งที่ส่งมาด้วยตามกรณี
 - **TOR** มีชื่อโครงการ หน่วยงาน ประเภทงาน ความเป็นมา วัตถุประสงค์ ขอบเขต ผลส่งมอบ กำหนดส่งมอบ เกณฑ์ตรวจรับ งบประมาณ การจ่ายเงิน ค่าปรับ การรับประกัน และผู้รับผิดชอบ
