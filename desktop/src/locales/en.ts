@@ -2500,4 +2500,8 @@ export const en: Record<string, string> = {
     'Remember sign-in on your private device for 12 hours and lock the workspace on sign-out or session expiry',
   'กลับมาลงชื่อด้วยบัญชีเดิมเพื่อทำงานต่อ โดยเก็บร่างที่ยังไม่บันทึกไว้':
     'Sign in again with the same account to continue, keeping your unsaved draft',
+  'ร่าง TOR ตามการใช้งาน ข้อจำกัด และรูปแบบที่คุณต้องการ พร้อมเชื่อมผลส่งมอบกับเกณฑ์ตรวจรับ':
+    'Draft TORs around your intended use, constraints and presentation preferences, linking deliverables to acceptance checks',
+  'ปรับการตัดบรรทัดไทยและหัวตาราง พร้อมตัวหนาและตัวเอียงใน DOCX': 'Improve Thai wrapping, table headers and DOCX bold/italic formatting',
+  'เพิ่ม Skill ช่วยใช้ Google Workspace ผ่านบัญชีที่เชื่อมในแอป': 'Add a Skill for Google Workspace using accounts connected in the app',
 };

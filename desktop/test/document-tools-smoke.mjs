@@ -145,10 +145,17 @@ try {
       .getByRole('button', { name: new RegExp(`^${title}`) })
       .click();
     await form.getByLabel(field, { exact: true }).fill('Synthetic form fact');
+    if (id === 'tor') {
+      await form.getByLabel('การใช้งานและผลสำเร็จที่ต้องการ', { exact: true }).fill('SYNTHETIC-USE: จัดทำคู่มือจากเนื้อหาของทีม');
+      await form.getByLabel('ข้อจำกัด / งานที่ไม่รวม', { exact: true }).fill('SYNTHETIC-EXCLUSION: ไม่รวมถ่ายภาพและวิดีโอ');
+      await form.getByLabel('รูปแบบเอกสารที่ต้องการ', { exact: true }).fill('SYNTHETIC-STYLE: หัวข้อสั้นและตารางตรวจรับ');
+    }
     // The form survives switching to another tool page.
     await page.locator('aside.sidebar').getByRole('button', { name: 'ศูนย์รวม Skill' }).click();
     await open();
     await expect(form.getByLabel(field, { exact: true })).toHaveValue('Synthetic form fact');
+    if (id === 'tor')
+      await expect(form.getByLabel('ข้อจำกัด / งานที่ไม่รวม', { exact: true })).toHaveValue('SYNTHETIC-EXCLUSION: ไม่รวมถ่ายภาพและวิดีโอ');
     if (id === 'tor') await page.screenshot({ path: '/tmp/step-document-tools.png', fullPage: true });
     if (id === 'letter') {
       await form.getByLabel(field, { exact: true }).fill('');
@@ -194,6 +201,15 @@ try {
     assert.ok(call.system.includes(`Primary Skill: ${skill}`));
     assert.ok(call.system.includes('## Workflow'));
     assert.ok(call.system.includes('working template'));
+    if (id === 'tor') {
+      assert.ok(call.system.includes('TOR drafting method: task-led requirements'));
+      assert.ok(call.system.includes('Procurement source map: discovery is not approval'));
+      assert.ok(call.system.includes('TOR adaptation examples: goods and services'));
+      for (const marker of ['SYNTHETIC-USE', 'SYNTHETIC-EXCLUSION', 'SYNTHETIC-STYLE']) {
+        assert.ok(call.prompt.includes(marker));
+        assert.ok(!call.system.includes(marker), 'form preferences remain untrusted task data');
+      }
+    }
     if (id === 'letter') assert.ok(call.prompt.includes('SYNTHETIC ATTACHED SOURCE'));
     else {
       assert.ok(call.prompt.includes('USER_INPUT'));
@@ -317,6 +333,9 @@ try {
   }
   assert.equal(requests.length, profiles.length + 2, 'one generation per profile and two project revisions');
   const editor = page.locator('.tiptap[contenteditable="true"]');
+  await expect(editor).toHaveAttribute('lang', 'th');
+  assert.equal(await editor.evaluate(el => getComputedStyle(el).wordBreak), 'normal');
+  assert.equal(await editor.evaluate(el => getComputedStyle(el).overflowWrap), 'break-word');
   await expect(editor).toContainText('[รอยืนยัน: เวลา]');
   await editor.fill('ร่างเพื่อพิจารณา\nแก้ไขสังเคราะห์โดยเจ้าของเรื่อง\n[รอยืนยัน: งบประมาณ]');
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();

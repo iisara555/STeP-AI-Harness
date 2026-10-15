@@ -100,6 +100,33 @@ test('native memo uses current editor content and keeps the agency font, tabs, m
   assert.equal(zip.file('docProps/core.xml'), null);
 });
 
+test('new Thai template text keeps emphasis when the source explicitly disables complex-script bold and italics', async () => {
+  const source = await JSZip.loadAsync(await syntheticTemplate('memo'));
+  const xml = await source.file('word/document.xml')!.async('string');
+  source.file('word/document.xml', xml.replaceAll('</w:rPr>', '<w:bCs w:val="0"/><w:iCs w:val="0"/><w:lang w:val="en-US"/></w:rPr>'));
+  const output = await JSZip.loadAsync(
+    await renderDocumentTemplate(
+      await source.generateAsync({ type: 'uint8array' }),
+      'memo',
+      markdownDocument('# บันทึกข้อความ\n\nเรียน ผู้รับสังเคราะห์\n\nด้วย **ข้อความตัวหนา** และ *ข้อความตัวเอียง*'),
+    ),
+  );
+  const dom = new DOMParser().parseFromString(await output.file('word/document.xml')!.async('string'), 'application/xml');
+  const runs = Array.from(dom.getElementsByTagNameNS(W, 'r'));
+  for (const [value, tag] of [
+    ['ข้อความตัวหนา', 'bCs'],
+    ['ข้อความตัวเอียง', 'iCs'],
+  ]) {
+    const run = runs.find(run => run.textContent === value)!;
+    const properties = run.getElementsByTagNameNS(W, tag);
+    assert.equal(properties.length, 1);
+    assert.notEqual(properties[0].getAttributeNS(W, 'val'), '0');
+    assert.equal(run.getElementsByTagNameNS(W, 'lang')[0].getAttributeNS(W, 'val'), 'th-TH');
+    assert.equal(run.getElementsByTagNameNS(W, 'rFonts')[0].getAttributeNS(W, 'cs'), 'TH SarabunIT๙');
+  }
+  assert.equal(await output.file('word/footer1.xml')!.async('string'), await source.file('word/footer1.xml')!.async('string'));
+});
+
 test('native fields keep manual line breaks and tabs and Word does not expand their short lines', async () => {
   const bytes = await syntheticTemplate('memo');
   const draft: DraftNode = {

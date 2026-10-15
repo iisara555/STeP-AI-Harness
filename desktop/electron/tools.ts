@@ -1,4 +1,5 @@
-import { readFile, realpath, lstat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { realpath, lstat, open } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, extname, dirname, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { Connection, Workflow, WorkTask } from '../src/types';
@@ -104,25 +105,57 @@ export class DesktopTools {
     private notify: () => void = () => {},
     private identity: (sessionId: string) => string = () => '',
   ) {}
-  private async context(path: string) {
+  private async context(path: string, allowedDirectory?: string) {
     const root = await realpath(this.harness.root),
-      full = resolve(root, path),
-      actual = await realpath(full);
-    const r = relative(root, actual);
+      full = resolve(root, path);
     // Only the part inside the harness is checked against the sensitive-path patterns: the app is installed under a
     // folder named "STeP Desktop" on Windows, which those patterns protect where it holds the app's own data.
     const inside = (path: string) => '/harness/' + relative(root, path).split(sep).join('/');
-    if (
-      isAbsolute(r) ||
-      r.startsWith('..') ||
-      sensitivePath(inside(full), '/') ||
-      sensitivePath(inside(actual), '/') ||
-      (await lstat(full)).isSymbolicLink()
-    )
-      throw new Error('INVALID_CONTEXT_PATH');
-    if (deniedPath(actual, this.policy().permission.pathRules, root)) throw new Error('PATH_RULE_DENIED');
-    if ((await lstat(actual)).size > 1_000_000) throw new Error('CONTEXT_LIMIT');
-    return readFile(actual, 'utf8');
+    const checkedPath = async () => {
+      const actual = await realpath(full);
+      for (const boundary of [root, allowedDirectory || root]) {
+        const r = relative(boundary, actual);
+        if (isAbsolute(r) || r.startsWith('..')) throw new Error('INVALID_CONTEXT_PATH');
+      }
+      if (sensitivePath(inside(full), '/') || sensitivePath(inside(actual), '/') || (await lstat(full)).isSymbolicLink())
+        throw new Error('INVALID_CONTEXT_PATH');
+      for (const target of [full, actual])
+        if (deniedPath(target, this.policy().permission.pathRules, root)) throw new Error('PATH_RULE_DENIED');
+      return actual;
+    };
+    const actual = await checkedPath(),
+      before = await lstat(actual);
+    if (!before.isFile() || before.nlink !== 1) throw new Error('INVALID_CONTEXT_PATH');
+    if (before.size > 1_000_000) throw new Error('CONTEXT_LIMIT');
+    const handle = await open(actual, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+    try {
+      const stat = await handle.stat();
+      if (!stat.isFile() || stat.nlink !== 1 || stat.dev !== before.dev || stat.ino !== before.ino) throw new Error('INVALID_CONTEXT_PATH');
+      if (stat.size > 1_000_000) throw new Error('CONTEXT_LIMIT');
+      const bytes = Buffer.alloc(stat.size + 1);
+      let offset = 0;
+      while (offset < bytes.length) {
+        const { bytesRead } = await handle.read(bytes, offset, bytes.length - offset, null);
+        if (!bytesRead) break;
+        offset += bytesRead;
+      }
+      if ((await checkedPath()) !== actual) throw new Error('INVALID_CONTEXT_PATH');
+      const current = await lstat(actual),
+        after = await handle.stat();
+      if (
+        offset !== stat.size ||
+        current.dev !== stat.dev ||
+        current.ino !== stat.ino ||
+        current.nlink !== 1 ||
+        after.size !== stat.size ||
+        after.mtimeMs !== stat.mtimeMs ||
+        after.ctimeMs !== stat.ctimeMs
+      )
+        throw new Error('CONTEXT_UNAVAILABLE');
+      return bytes.subarray(0, offset).toString('utf8');
+    } finally {
+      await handle.close();
+    }
   }
   async outgoing(
     text: string,
@@ -580,6 +613,7 @@ export class DesktopTools {
             await check();
             return scope.search(target);
           case 'skill': {
+            if (a.action === 'catalog' && a.resource !== undefined) throw new Error('INVALID_INPUT');
             if (a.action === 'catalog')
               return {
                 entries: ((await this.harness.catalog?.()) || [])
@@ -601,6 +635,17 @@ export class DesktopTools {
             if (blocked(c) || c?.skill !== target) throw new Error('AUTHORITY_REVIEW_REQUIRED');
             const meta = await this.harness.skillMetadata(target);
             if (!meta?.path || meta.path !== entry.path) throw new Error('CONTEXT_UNAVAILABLE');
+            if (a.resource !== undefined) {
+              // References remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
+              if (typeof a.resource !== 'string' || !/^(references|examples)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
+                throw new Error('INVALID_SKILL_RESOURCE');
+              const base = await realpath(resolve(this.harness.root, dirname(meta.path)));
+              const path = resolve(base, a.resource);
+              const actual = await realpath(path);
+              const within = relative(base, actual);
+              if (isAbsolute(within) || within.startsWith('..')) throw new Error('INVALID_SKILL_RESOURCE');
+              return { id: target, resource: a.resource, route: c, text: await this.context(path, base) };
+            }
             const paths = [
               meta.path,
               ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path)).filter(Boolean),

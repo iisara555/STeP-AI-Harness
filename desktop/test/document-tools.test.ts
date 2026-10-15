@@ -2,6 +2,27 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DOCUMENT_TOOLS, documentTool, documentRequest } from '../src/document-tools';
 
+test('TOR captures intended outcomes, exclusions and presentation preferences as task data', () => {
+  const values = {
+    title: 'จัดซื้ออุปกรณ์สังเคราะห์',
+    intendedUse: 'SYNTHETIC-USE: ใช้จัดประชุมออนไลน์',
+    constraints: 'ไม่รวมระบบเครือข่าย ใช้จอเดิม รหัส 0007',
+    preferences: 'ใช้เลขไทย หัวข้อย่อยสั้นและตารางตรวจรับ',
+  };
+  const request = documentRequest('tor', values, 'goods');
+  const fields = JSON.parse(request.sourceText).fields;
+  for (const [key, value] of Object.entries(values)) {
+    assert.equal(fields[key].value, value);
+    assert.equal(fields[key].provenance, 'USER_INPUT');
+    assert.ok(!request.text.includes(value));
+  }
+  for (const key of ['intendedUse', 'constraints', 'preferences']) {
+    const blank = JSON.parse(documentRequest('tor', {}).sourceText).fields[key];
+    assert.equal(blank.missingAction, 'omit');
+    assert.equal(blank.placeholder, undefined);
+  }
+});
+
 test('five document tools select related Skills and every requested form field', () => {
   assert.deepEqual(
     DOCUMENT_TOOLS.map(p => p.id),

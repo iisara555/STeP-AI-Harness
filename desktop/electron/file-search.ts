@@ -2,6 +2,11 @@ import { opendir } from 'node:fs/promises';
 import { resolve, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 export type SearchMatch = { path: string; line?: number; text?: string };
+export function encodeSearchFingerprint(digest: string) {
+  // This is host metadata, not source data. Hex can contain a 13-digit run that the outgoing privacy scan masks.
+  // Use the same 256 bits with letters only; do not exempt arbitrary tool output from privacy review.
+  return digest.replace(/[0-9a-f]/g, digit => String.fromCharCode(97 + Number.parseInt(digit, 16)));
+}
 export function searchOptions(args: Record<string, unknown>) {
   const target = args.target ?? 'content';
   const pattern = args.pattern;
@@ -50,7 +55,8 @@ export function searchOptions(args: Record<string, unknown>) {
     }
   }
   const cursor = args.cursor;
-  if (cursor !== undefined && (typeof cursor !== 'string' || !/^[a-f0-9]{64}:[0-9]{1,5}$/.test(cursor))) throw new Error('INVALID_INPUT');
+  if (cursor !== undefined && (typeof cursor !== 'string' || !/^(?:[a-p]{64}|[a-f0-9]{64}):[0-9]{1,5}$/.test(cursor)))
+    throw new Error('INVALID_INPUT');
   return { target, pattern, glob, regex, cursor, ...limits } as {
     target: unknown;
     pattern: string;
@@ -203,9 +209,11 @@ export async function searchWorkspace(
     }
   }
   hash.update(JSON.stringify({ matches, truncated, scannedFiles, scannedBytes, skippedFiles, withheldFiles }));
-  const fingerprint = hash.digest('hex'),
+  const legacyFingerprint = hash.digest('hex'),
+    fingerprint = encodeSearchFingerprint(legacyFingerprint),
     offset = options.cursor ? Number(options.cursor.split(':')[1]) : 0;
-  if (options.cursor && (options.cursor.split(':')[0] !== fingerprint || offset > matches.length)) throw new Error('SEARCH_CHANGED');
+  if (options.cursor && (![fingerprint, legacyFingerprint].includes(options.cursor.split(':')[0]) || offset > matches.length))
+    throw new Error('SEARCH_CHANGED');
   await access.check();
   let end = offset,
     pageCharacters = 0;

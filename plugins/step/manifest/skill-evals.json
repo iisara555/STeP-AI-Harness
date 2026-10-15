@@ -81,7 +81,8 @@
     "vercel-deploy",
     "voice-of-customer",
     "thai-english-translation",
-    "spreadsheet-work"
+    "spreadsheet-work",
+    "google-workspace"
   ],
   "note": "Many skills in needsDirectModelSideCoverage already have routing/authority regression tests. This list means they are not directly represented in pilot-30-v1 model-side benchmark.",
   "evalFiles": "evals/skills/<skill>.json",
@@ -117,7 +118,6 @@
     "step-image-prompt",
     "step-skill-authoring",
     "team-weekly-review",
-    "tor-government-writing",
     "vercel-deploy",
     "voice-of-customer"
   ],

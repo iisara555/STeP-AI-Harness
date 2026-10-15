@@ -28,6 +28,7 @@ import { type DraftNode, documentMarkdown, documentText, plainDocument, validate
 import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
 import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
 import { renderDocumentTemplate } from './document-template';
+import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE } from '../src/thai-typography';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
@@ -57,8 +58,7 @@ const numericColumns = (rows: string[][]) =>
   });
 
 const TEXT_WIDTH = 11906 - 3 * CM - 2 * CM; // A4 width less the official margins, in twips
-// Thai vowel and tone marks take no width of their own.
-const visible = (text = '') => text.replace(/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g, '').length;
+const visible = (text = '') => textUnits(text);
 
 /**
  * Font size and column widths (twips) of a table, for Word and PDF alike. Each column first gets room for its longest
@@ -72,9 +72,8 @@ export function tableLayout(rows: string[][]) {
   const sized = (points: number) => {
     const span = (chars: number) => (chars + 1) * points * 20 * 0.55 + 220;
     const minimum = Array.from({ length: count }, (_, column) => {
-      const header = (rows[0]?.[column] || '').split(/\s+/).map(visible);
       const figures = numeric[column] ? rows.slice(1).map(row => visible(row[column])) : [];
-      return span(Math.max(2, ...header, ...figures));
+      return span(Math.max(2, longestWordUnits(rows[0]?.[column] || ''), ...figures));
     });
     const desired = minimum.map((least, column) => Math.max(least, span(Math.min(Math.max(...rows.map(row => visible(row[column]))), 40))));
     return { points, minimum, desired };
@@ -176,8 +175,8 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
       'Noto Sans Thai Bold',
       'NotoSansThai-Bold',
     ]),
-    `body{font-family:"${layout.font}","STeP Fallback",sans-serif;font-size:16pt;line-height:1.35;overflow-wrap:anywhere;margin:0}`,
-    'p{white-space:pre-wrap;margin:0 0 6pt}h1{font-size:20pt}h2{font-size:18pt}h3{font-size:16pt}',
+    `body{font-family:"${layout.font}","STeP Fallback",sans-serif;font-size:16pt;line-height:1.35;${THAI_DOCUMENT_CSS}margin:0}`,
+    'p{white-space:pre-wrap;margin:0 0 6pt;widows:2;orphans:2}h1{font-size:20pt}h2{font-size:18pt}h3{font-size:16pt}',
     'h1,h2,h3{margin:12pt 0 6pt;break-after:avoid}ul,ol{margin:0 0 6pt;padding-left:1.5em}',
     'table{border-collapse:collapse;width:100%;table-layout:fixed;margin:6pt 0 10pt}tr{break-inside:avoid}thead{display:table-header-group}',
     'th,td{border:0.75pt solid #444;padding:2pt 5pt;vertical-align:top;text-align:left}th{background:#eee;font-weight:bold}',
@@ -241,6 +240,8 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
       sizeComplexScript: size,
       boldComplexScript: bold || child.marks?.some(m => m.type === 'bold'),
       italics: child.marks?.some(m => m.type === 'italic'),
+      italicsComplexScript: child.marks?.some(m => m.type === 'italic'),
+      language: THAI_DOCUMENT_LANGUAGE,
     };
     const text = child.text || '';
     const textRuns = (value: string): ParagraphChild[] =>
@@ -379,7 +380,15 @@ function docxBlocks(
 
 function docx(document: DraftNode, layout: DocumentLayout) {
   const heading = (size: number) => ({
-    run: { font: layout.font, size, bold: true, color: '000000' },
+    run: {
+      font: layout.font,
+      size,
+      sizeComplexScript: size,
+      bold: true,
+      boldComplexScript: true,
+      language: THAI_DOCUMENT_LANGUAGE,
+      color: '000000',
+    },
     paragraph: { spacing: { before: 120, after: 60 }, keepNext: true, keepLines: true },
   });
   const roles = documentLayoutRoles(document, layout.id);
@@ -390,7 +399,15 @@ function docx(document: DraftNode, layout: DocumentLayout) {
       children: [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ font: layout.font, size: 28, children: ['หน้า ', PageNumber.CURRENT] })],
+          children: [
+            new TextRun({
+              font: layout.font,
+              size: 28,
+              sizeComplexScript: 28,
+              language: THAI_DOCUMENT_LANGUAGE,
+              children: ['หน้า ', PageNumber.CURRENT],
+            }),
+          ],
         }),
       ],
     });
@@ -420,7 +437,7 @@ function docx(document: DraftNode, layout: DocumentLayout) {
     styles: {
       default: {
         document: {
-          run: { font: layout.font, size: 32 },
+          run: { font: layout.font, size: 32, sizeComplexScript: 32, language: THAI_DOCUMENT_LANGUAGE },
           paragraph: { spacing: { before: 0, after: 0, line: 240, lineRule: LineRuleType.AUTO } },
         },
         heading1: heading(layout.id ? 32 : 40),

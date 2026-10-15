@@ -2,7 +2,7 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> Prepared source: Harness **0.7.7** / Desktop **0.6.8**, opening the workspace directly without employee Google sign-in while retaining Vault, optional Workspace services and the personal Claude developer demo opt-in. Explicit managed policy can still deny these capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> Prepared source: Harness **0.7.7** / Desktop **0.6.9**, opening the workspace directly without employee Google sign-in while retaining Vault, optional Workspace services and the personal Claude developer demo opt-in. Explicit managed policy can still deny these capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
@@ -29,7 +29,7 @@ The host tool loop can create actual XLSX workbooks (`sheet_create`) and editabl
 
 `sheet_read` separates formulas from cached values; `sheet_edit` patches input cells while preserving unrelated ZIP parts and refuses formula/protected cells, macros and signed packages. Recalculate in Excel/LibreOffice and visually review every PPTX page. Creation does not support faithful editing of an existing PPTX. See [Office workflows](office-workflows.md) for bounds, synthetic evidence and the draft `spreadsheet-work` Skill.
 
-The optional Google Workspace module is not automatically registered in the Desktop loop or authenticated. Direct Google Sheets access requires an available authorized connector; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. These additions are included in the 0.5.27 source; installer publication is verified separately in Desktop releases.
+The optional CLI Google Workspace connector remains separate. Current Desktop has a native `google_workspace` tool using in-app OAuth/Vault; the [Google Workspace Skill](../skills/common/google-workspace/SKILL.md) supplies service preflight, bounded reads and exact-action write verification. Google Sheets access requires an authorized account and allowed scopes; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. The local Office additions were included in the 0.5.27 source; installer publication is verified separately in Desktop releases.
 
 ## Document exports — Desktop 0.5.29
 

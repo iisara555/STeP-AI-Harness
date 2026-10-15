@@ -31,6 +31,7 @@ standardVersion: 2
 - approved budget facts เมื่อมี
 - current template, policy, checklist หรือ source
 - owner, reviewer และ approver ที่ยืนยันแล้ว
+- intended use / ผลสำเร็จที่ต้องการ ข้อจำกัด งานที่ไม่รวม และรูปแบบที่ผู้ใช้ต้องการ เมื่อมี
 
 สิ่งที่ยังไม่รู้ให้ใช้ `รอยืนยัน` พร้อมระบุเจ้าของคำตอบ
 
@@ -50,9 +51,13 @@ Keep unknown factual values and authority-dependent conditions pending: amounts,
 
 รายละเอียดที่เปลี่ยนได้ เช่น ค่าปรับ เกณฑ์ราคา หนังสือเวียน คุณสมบัติผู้เสนอ และ technical threshold **ต้องอยู่ใน source ไม่ใช่ในความจำของ Skill**
 
+อ่าน [แผนที่แหล่งจัดซื้อจัดจ้าง](references/procurement-source-map.md) เพื่อเทียบสาระและตรวจต้นทาง แยก “อ่านเอกสารแล้ว” จาก “ยืนยันฉบับปัจจุบันและใช้กับงานนี้ได้” ลิงก์หรือชื่อระเบียบเพียงอย่างเดียวไม่ผ่าน Source Gate
+
 ## Workflow
 
-1. **Classify the procurement need** — ระบุประเภทงานตามข้อมูลและ source ที่ได้รับ โดยไม่เดาวิธีจัดซื้อหรือข้อกฎหมายที่ยังไม่ยืนยัน
+ก่อนร่างหรือแก้ อ่าน [วิธีร่างตามงานจริง](references/tor-drafting-guide.md) และ [ตัวอย่างซื้อพัสดุ/จ้างบริการ](examples/task-adaptations.md) ตัวอย่าง AI Computer เป็นงานเฉพาะ ไม่ใช่แม่แบบเนื้อหาของทุก TOR ห้ามยกความเป็นมา สเปก จำนวน คุณสมบัติ SLA หรือเงื่อนไขของตัวอย่างมาเป็นค่าเริ่มต้น
+
+1. **Classify the procurement need** — สรุปผู้ใช้ การใช้งาน ผลสำเร็จ และขอบเขตที่ไม่รวม แยกงานซื้อ งานจ้าง งานผสม/งานเฉพาะตามข้อมูล โดยไม่เดาวิธีจัดซื้อหรือข้อกฎหมายที่ยังไม่ยืนยัน
 2. **Build fact table**
 
    | Topic | Value | Source | Status |
@@ -62,24 +67,28 @@ Keep unknown factual values and authority-dependent conditions pending: amounts,
    | Budget | … | … | … |
    | Date | … | … | … |
 
-3. **Draft structure** — ใช้ current template ที่ resolve ได้ ถ้าไม่มีให้ใช้โครงกลาง: ความเป็นมา, วัตถุประสงค์, Scope/specification, Deliverables, Timeline/delivery, Acceptance criteria, Budget facts/payment basis ที่ source รองรับ, Dependencies/owner-provided inputs, Required qualifications เฉพาะที่มี source, Attachments/references
+3. **Draft structure** — ใช้ current template ที่ resolve ได้ก่อน เทียบสาระกับหัวข้อในแบบและรักษารูปแบบที่ผู้ใช้ต้องการ ถ้าไม่มีให้ใช้โครงกลาง: ความเป็นมา, วัตถุประสงค์, Scope/specification, Deliverables, Timeline/delivery, Acceptance criteria, Budget facts/payment basis ที่ source รองรับ, Dependencies/owner-provided inputs, Required qualifications เฉพาะที่มี source, Attachments/references
 
-   [แม่แบบกลาง ๑๖ หัวข้อ](../thai-official-documents/templates/tor-16-sections-template.md) ใช้เป็น working template ได้ แต่ current official structure ต้องยืนยันกับ AFP ไม่คัดอัตรา คุณสมบัติ SLA หรือข้อกฎหมายที่ยังไม่ resolve จาก source
+   [แม่แบบกลาง ๑๖ หัวข้อ](../thai-official-documents/templates/tor-16-sections-template.md) ใช้เป็น working template ได้ ไม่อ้างว่า 16 หัวข้อเป็นข้อบังคับสากล current official structure ต้องยืนยันกับ AFP ไม่คัดอัตรา คุณสมบัติ SLA หรือข้อกฎหมายที่ยังไม่ resolve จาก source
 
 4. **Make requirements testable** — ทุก deliverable สำคัญเชื่อม `Need → Requirement → Evidence/Test → Acceptance condition` **ห้ามสร้างจำนวน ขนาด spec รอบแก้ไข SLA benchmark หรือ threshold เอง**. Proposed functional requirements and inspection methods may be drafted for owner review; they are not established specifications or procurement rules.
 5. **Neutrality & competition review** — ชี้ requirement ที่อาจล็อก brand/model/vendor หรือจำกัดการแข่งขันโดยไม่มี evidence ใน source แล้วส่งให้ owner หรือ AFP ยืนยัน
-6. **Traceability** — ทำตาราง Objective / Requirement-Activity / Deliverable / Acceptance / Source
-7. **Source gaps** — แยกท้ายร่างเป็น Current rules resolved, Pending AFP confirmation, Missing source และ Planning assumptions
+6. **Traceability** — ตรวจความต้องการทุกข้อและรอยต่อจาก Objective / Requirement-Activity / Deliverable / Acceptance / Source แยกเกณฑ์คัดเลือกผู้เสนอออกจากเกณฑ์ตรวจรับ งานแต่ละรายการมีวิธีตรวจ/หลักฐาน/เงื่อนไขผ่านที่ตรวจซ้ำได้ ค่าที่ขาดเว้นเฉพาะจุด
+7. **Source gaps & review** — แยก Current rules resolved, Pending AFP confirmation, Missing source, Planning assumptions และ coverage ไว้ในผลตรวจนอก TOR ตรวจจำนวน หน่วย วันส่งมอบ งวดงาน/เงิน และข้อยกเว้นข้ามหัวข้อ คงเนื้อหาอื่นเมื่อแก้เฉพาะเรื่อง ไม่เพิ่มภาคผนวกผลตรวจเอง
 
 ## Output
 
 ส่งอย่างน้อย:
+
+ตัวอย่างวิธีเขียนและเหตุผล (ข้อมูลสังเคราะห์): [ซื้ออุปกรณ์ / จ้างทำคู่มือ / แก้จำนวน](examples/task-adaptations.md) ใช้เรียนวิธีปรับตามงาน ไม่คัดข้อเท็จจริงของตัวอย่าง
 
 1. TOR draft พร้อมสถานะ `ร่างเพื่อพิจารณา`
 2. Fact / source table
 3. Traceability matrix
 4. Missing information และ source gaps
 5. Questions for AFP หรือ project owner
+
+รายการ 2–5 แสดงแยกจากตัว TOR ใน `document_review` เมื่อ host รองรับ พร้อมเทียบความต้องการกับตำแหน่งในร่างเป็น `ครอบคลุม / เสนอเพิ่ม / รอยืนยัน / ขัดกัน` ไม่แทรกคำอธิบาย Skill หรือ source checklist ลงเอกสารส่งออก ร่างที่ดีอ่านต่อเนื่อง มีหัวข้อจริงและตารางตรวจรับที่พอดีหน้า ไม่ใช่ทั้งฉบับใน code fence หรือช่องรอยืนยันทุกย่อหน้า
 
 **ห้ามเขียนว่า `พร้อมประกาศ`, `ถูกต้องตามกฎหมาย` หรือ `AFP อนุมัติแล้ว` หากไม่มีหลักฐานจริง**
 

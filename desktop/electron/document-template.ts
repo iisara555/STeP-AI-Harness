@@ -305,9 +305,34 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
           ? properties(textRun, 'rPr')
           : properties(children(source).find(n => n.localName === 'pPr') || source, 'rPr');
       if (props) run.appendChild(props);
+      const runProperties = () => {
+        let p = children(run).find(n => n.localName === 'rPr');
+        if (!p) {
+          p = create('rPr');
+          run.insertBefore(p, run.firstChild);
+        }
+        return p;
+      };
+      const setProperty = (tag: string) => {
+        const p = runProperties();
+        for (const old of children(p).filter(n => n.localName === tag)) p.removeChild(old);
+        const style = create(tag);
+        p.appendChild(style);
+      };
       for (const mark of node.marks || []) {
-        const style = create(mark.type === 'bold' ? 'b' : 'i');
-        run.firstChild ? run.firstChild.appendChild(style) : run.appendChild(create('rPr')).appendChild(style);
+        const tag = mark.type === 'bold' ? 'b' : 'i';
+        setProperty(tag);
+        setProperty(tag + 'Cs');
+      }
+      // Correct only inserted Thai runs. Existing template content, fonts, margins and paragraph styles are retained.
+      if (/[\u0E00-\u0E7F]/.test(node.text || '')) {
+        const p = runProperties();
+        let language = children(p).find(n => n.localName === 'lang');
+        if (!language) {
+          language = create('lang');
+          p.appendChild(language);
+        }
+        language.setAttributeNS(W, 'w:val', 'th-TH');
       }
       if (node.type === 'hardBreak') run.appendChild(create('br'));
       else {

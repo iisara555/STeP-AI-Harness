@@ -4,9 +4,11 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-14_
+_Last updated: 2026-10-15_
 
 ## Latest release
+
+- **Desktop v0.6.8** (2026-10-14) — published with direct workspace entry and the in-app internal-media example confirmation. Optional Google Workspace/Vault permissions remain independent. Next release preparation is recorded below.
 
 - **Desktop v0.6.7** (2026-10-14) — published after #168/#169 from `26ab982`, fixing Windows managed-policy ACL invocation. PR and main CI passed; installer run 38588536288 passed on attempt 2 after retrying only publication following GitHub API HTTP 500. Eight assets and both rolling feeds verified at 0.6.7. Real employee OAuth subsequently failed at token exchange; the owner requested removal of mandatory app login.
 
@@ -25,9 +27,12 @@ _Last updated: 2026-10-14_
 
 ## In progress
 
-- **Internal-media sample editing (2026-10-14)**: sample replacement used a blocking native JavaScript confirm. Replace it with the shared in-app dialog, preserving cancel and confirmed replacement. Native regression first catches the native popup, then verifies keyboard edits after both decisions, subsequent options/copy validation and retained draft. Intended for 0.6.8 alongside removal of app login; validation and protected CI pending.
+- **Desktop 0.6.9 audit and release (2026-10-15)**: owner authorized auditing, fixing and releasing #172–#174 together. Preserve source commits and both TOR/Thai-layout references. Two failing regressions reproduce a Skill-reference directory substitution and privacy corruption of numeric runs in search cursors. Pin scope, use bounded stable descriptor reads and encode search hashes with letters while preserving legacy cursor support and privacy checks. Consolidate duplicate TOR text and remove an unused style branch; no behavioral test is disabled/deleted. Root 990 passed/4 skipped and 47 focused file/tool tests pass. Full Desktop/native validation, protected CI and installer/feed verification are pending. Harness remains 0.7.7; live Google/model and Word/agency acceptance remain separate.
 
-- **Remove app entry login / Desktop 0.6.8 (2026-10-14)**: the owner explicitly requested removing employee login and publishing a new release. Restore direct fresh/existing workspace entry and remove employee identity UI, IPC, session locks and policy. Retired policy and session files must not block startup or erase work. Optional Workspace OAuth and Vault controls remain independent. Native fresh/upgraded regression first fails at the old login page; complete validation and protected CI before merge/publication. Internal-media sample editing regression is being handled separately for the same release.
+
+
+
+
 
 
 - **Employee entry acceptance (shipped in 0.6.6)**: identity-only entry, signed hd=step.cmu.ac.th, encrypted 12-hour private-profile sessions, separate owner-bound Workspace consent, safe logout/expiry and Windows/macOS native/packaged validation are complete. Actual sign-in using the supplied Google client, employee-device acceptance and live service access still need the account owner. See [employee entry](employee-login.md).

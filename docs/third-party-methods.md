@@ -62,6 +62,16 @@
 MIT License กำหนดให้แนบประกาศลิขสิทธิ์เมื่อคัดลอกส่วนสำคัญของซอฟต์แวร์ ไฟล์ใน repository นี้ไม่ได้คัดลอกข้อความต้นฉบับ แต่บันทึกที่มาไว้ที่นี่และท้ายไฟล์ที่ดัดแปลง เพื่อให้ตรวจย้อนได้
 Apache License 2.0 ให้ใช้และดัดแปลงได้โดยระบุที่มาและบอกว่ามีการเปลี่ยนแปลง ตารางด้านบนทำหน้าที่นั้น
 
+## Google Workspace — 14 ตุลาคม 2569
+
+[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent/tree/79651b71bd56efd76d06f3de1df64dde09b58ff3/skills/productivity/google-workspace), MIT © 2025 Nous Research: ศึกษา SKILL.md, setup.py, google_api.py, gws_bridge.py, Gmail search และ daily brief (workflow credited to Ben Barclay). เขียน Skill/references/checker/fixtures ใหม่ให้ใช้ native Google tool และ OAuth/Vault ของ STeP ไม่คัดลอก backend หรือเพิ่ม Hermes/gws/MCP. ดู [provenance](../skills/common/google-workspace/references/provenance.md) และ [MIT notice](../skills/common/google-workspace/references/hermes-MIT.txt). การตรวจ offline ไม่ใช่หลักฐาน live API หรือคุณภาพโมเดล
+
+## Thai document typography — 14 ตุลาคม 2569
+
+[thaigqsoft/thai-doc-skills](https://github.com/thaigqsoft/thai-doc-skills/tree/6aa488fa2ae1a00b7a9c38dd54feab4889b3fb5a), MIT © 2026 Netthip: ศึกษา `thai-docx/SKILL.md`, `thai_docx.py`, `thai_pdf.py`, `font_embed.py` และภาพเปรียบเทียบการตัดบรรทัด เขียนแนวทางและ implementation ใหม่ด้วย ICU/Intl.Segmenter และ DOCX/PDF backend เดิม ตั้งภาษาและ complex-script sizes/emphasis ครบ ใช้ขอบเขตคำไทยประมาณความกว้างหัวตาราง และคงข้อความทุกตัวอักษร ดู [layout checks](../skills/common/thai-official-documents/references/thai-layout.md) และ [MIT notice](../skills/common/thai-official-documents/references/thai-doc-skills-MIT.txt)
+
+ไม่รับการบังคับใช้ Python แทน JavaScript, แทรก ZWSP อัตโนมัติ, เปลี่ยนทุกเอกสารเป็นชิดซ้าย, ติดตั้ง/ฝังฟอนต์เอง หรือถือ Sarabun New/PSK เป็นไฟล์เดียวกัน ไม่คัดลอกฟอนต์หรือ asset ต้นทางซึ่งมี license แยก ไม่เปลี่ยนขอบกระดาษหรือ spacing ของแบบหน่วยงาน การทดสอบสังเคราะห์ใช้ฟอนต์ UI ที่แอปมีอยู่ ไม่ยืนยันหน้าของ Word หรือแบบราชการจริง
+
 ## Office / tool usability — 6 ตุลาคม 2569
 
 - [SerpApi agent-usability-test](https://github.com/serpapi/skills/blob/master/skills/agent-usability-test/SKILL.md), MIT: WITH/WITHOUT tools, isolated sessions, counterbalanced order และ interface failure modes; protocol/scorer/fixtures เขียนใหม่ใน STeP ไม่คัดลอก Skill

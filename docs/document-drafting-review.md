@@ -1,5 +1,35 @@
 # ตรวจงานร่างเอกสารและส่งออก — 8 ตุลาคม 2569
 
+## Combined audit / Desktop 0.6.9 — 2026-10-15
+
+Audit #172–#174 together before release. A deterministic regression replaces a reference directory after the initial Skill check and reproduces an out-of-Skill read. The reader now pins the authorized Skill boundary, checks both lexical/resolved policy paths, rejects linked/non-file inputs and uses a bounded descriptor read with file-identity and path/policy rechecks. The test fails before and passes after. This does not grant new source authority or Google access.
+
+Retain the Thai layout guide and all TOR-specific guides when merging the profile references. Consolidate the duplicated computer example into a forwarding page while retaining its canonical original, and remove the unused value branch of the inserted-run emphasis setter. No behavioral test is removed or disabled.
+
+The original #173 macOS failure is an absent second search-page payload in file-operations smoke; its exact cursor was not retained. A seeded hash deterministically reproduces one cause of this failure class: a 13-digit substring in a hex cursor is masked as a personal identifier, so pagination fails. New cursors encode the same 256-bit fingerprint with letters only; valid legacy hashes remain accepted. Privacy rules and source-content masking are unchanged. Both audit regressions fail before and pass after; 47 focused file/tool tests pass. Add payload diagnostics and require the full native suite on the combined head rather than assuming a rerun proves the original cause.
+
+## Thai typography — 2026-10-14
+
+Three synthetic regressions first failed: long Thai headers unnecessarily reduced a two-column table from 16 to 12 pt, generated DOCX lacked explicit Thai language/default complex-script size, and template `bCs/iCs=0` overrode newly selected Thai emphasis. Word exports now set `th-TH` and complete complex-script size/emphasis (including footer sizes); inserted Thai template runs replace conflicting emphasis flags while retaining the template font, paragraph style and other package parts. Existing template content is not reformatted.
+
+ICU `Intl.Segmenter('th')` estimates header words and grapheme widths rather than treating an entire unspaced Thai header as one word. The synthetic two-column case remains 16 pt. This remains a width estimate, not a Word layout engine. Editor/PDF use native Thai wrapping, preserve explicit hard breaks, and allow long URLs to wrap without changing their characters. PDF paragraphs request two-line widow/orphan control. No ZWSP, soft hyphen, forced line break or spelling normalization is inserted; Markdown/source text remains unchanged.
+
+All five drafting profiles load shared [Thai layout checks](../skills/common/thai-official-documents/references/thai-layout.md), adapted from pinned thai-doc-skills sources with MIT attribution. They distinguish semantic paragraphs from visual line wraps and require actual page review without overriding an agency template. No Python backend, font bundle or automatic font installation/embedding is added. Validation passes 41 focused tests, full root (970 passed/4 skipped) and Desktop (734 passed/2 skipped) suites, formatting/build/validators and the document-tools/template UI smokes. The new offline smoke checks six DOCX/PDF exports, visible text bounds, Thai mark placement, intact identifiers/URLs and 16 pt sample tables; all six printed PDF pages were rasterized and inspected. The environment isolation failure in the default temp directory is resolved by selecting a clean test temp root, without disabling the guard. Native browser/PDF QA uses the existing bundled IBM Plex Sans Thai font for reproducible synthetic geometry; it does not establish Word/Sarabun rendering or agency approval.
+
+## TOR จากความต้องการและแหล่งปัจจุบัน — 2026-10-14
+
+ฟอร์ม TOR เพิ่มบริบทไม่บังคับ: การใช้งาน/ผลสำเร็จ ข้อจำกัด/งานที่ไม่รวม และรูปแบบเอกสารที่ต้องการ ค่าที่กรอกยังเป็น `USER_INPUT` ใน source ไม่เป็น host instruction หรือหลักฐานอนุมัติ ช่องว่างสามช่องนี้เป็น `missingAction: omit` จึงไม่ทำให้ TOR มีช่องรอยืนยันเรื่องรูปแบบโดยไม่จำเป็น ช่องข้อเท็จจริงที่ต้องมีหลักฐานยังใช้เกณฑ์เดิม
+
+ทั้งงานซื้อและจ้างโหลด `tor-drafting-guide`, `procurement-source-map` และตัวอย่าง `task-adaptations` เข้า context จริงก่อนร่าง แยกการเลือกผู้เสนอจากการตรวจรับผลส่งมอบ เชื่อมความต้องการกับข้อกำหนด/ผลส่งมอบ/วิธีตรวจ/เงื่อนไขผ่าน คงข้อยกเว้นและข้อความที่ผู้ใช้แก้เอง ตัวอย่าง AI Computer มีคำเตือนขอบเขตและไม่ได้โหลดเป็นค่าเริ่มต้นของทุกงาน
+
+แผนที่แหล่งอ้าง [ว 159 จากหน้าและ PDF ของกระทรวงพาณิชย์](https://www.moc.go.th/th/content/category/detail/id/8/cid/36/iid/5887) ซึ่งเปิดอ่านและตรวจภาพหน้าที่ 2 เมื่อ 14 ตุลาคม 2569 เพื่อเทียบสาระกับ working outline ไม่รับรองฉบับล่าสุดหรือการใช้บังคับกับงานใด หน้าแบบฟอร์มคณะวิจิตรศิลป์ มช. เปิดได้แต่ไฟล์แบบเปิดไม่ได้ ส่วน QP-AF-001 ใน OIT 2024 เป็นจุดเริ่มตรวจฉบับควบคุมกับ AFP ไม่ใช่หลักฐานยืนยันรุ่นปัจจุบัน ไม่มีการเปลี่ยนสถานะ registry หรือคัดอัตรา/วงเงินมาเป็นกฎใหม่
+
+แม่แบบ 16 หัวข้อเพิ่มแนวทางเขียนรายการส่งมอบและตารางตรวจรับ 4 คอลัมน์ ให้แบบหน่วยงานที่ตรวจแล้วมาก่อนโครงกลาง ไม่เพิ่มการรองรับ native DOCX สำหรับ TOR ในชุดนี้ การตรวจความครบและ source/coverage อยู่ในผลตรวจแยก การตรวจไฟล์จริงและอำนาจมนุษย์ยังเป็นคนละสถานะกับการร่างข้อความ
+
+เพิ่ม eval ของ `tor-government-writing` ครบ routing 4 มิติและถอนจากรายการหนี้ legacy โดยคงสถานะ lifecycle เดิม ชุดเคสครอบคลุมงานซื้อที่มีข้อยกเว้น งานจ้างตามแบบหน่วยงาน แก้จำนวนที่อ้างหลายหัวข้อ และลิงก์ระเบียบที่เปิดไม่ได้ `outputAssertions` ยังต้องทดสอบโมเดลจริงและให้เจ้าของเอกสารตรวจ ไม่อ้างว่าการทดสอบด้วย provider จำลองวัดคุณภาพการร่างของโมเดลได้
+
+หลักฐาน local: form/service 20 ข้อและ routing/Skill 172 ข้อผ่าน; root 978 ผ่าน/4 ข้าม, Desktop 733 ผ่าน/2 ข้าม พร้อม frozen install, formatting, build, validator และ plugin freshness ผ่าน Desktop suite ใช้ TMPDIR ใหม่ใน `/var/tmp` เพื่อไม่ชน ancestry guard ของ `/tmp/.git` โดยไม่เปลี่ยน guard Native Electron `document-tools-smoke` ตรวจช่องใหม่ การคงค่าหลังสลับหน้า บริบทที่ส่งจริง และ DOCX/PDF; `i18n-smoke` ผ่าน ชุดตัวอย่าง TOR ปรับให้ตรงหัวข้อกลางและมีตารางตรวจรับจริง แปลงงานซื้อ/งานบริการด้วยตัวส่งออกจริงและตรวจภาพ PDF ครบ 4 หน้า ตารางคง 16 pt ไม่ล้นขอบ หลักฐานอยู่ภายนอก repo และใช้ IBM Plex Sans Thai จาก dependency เดิมเป็นฟอนต์ QA ที่ระบุชัดใน HTML เท่านั้น ไม่แก้ชื่อหรือแทนไฟล์ฟอนต์ของ DOCX ไม่รับรองหน้า Word/Sarabun บนเครื่องพนักงาน ไม่มีการเรียกโมเดลจริง อนุมัติแบบ หรือออก release ในชุดนี้
+
 ## Draft assistance and targeted revision — 2026-10-14
 
 Sparse input forms distinguish missing prose from unknown facts. Background, objectives, proposed activities, deliverables and functional inspection methods may be drafted from the supplied purpose using the selected Skill and working template. TOR, correspondence and project Skills/templates explicitly support proposed prose, with provisional functional proposals in TOR while keeping amounts, quantities, dimensions, technical thresholds, agreed dates, approval, qualifications, penalties and other source-dependent conditions pending. Meeting history and resolutions still require supplied notes. Template/example values remain structure-only input.
