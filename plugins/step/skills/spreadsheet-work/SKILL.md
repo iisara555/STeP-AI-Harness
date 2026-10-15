@@ -46,7 +46,7 @@ AI ช่วยจัดตาราง ตรวจสูตรและแก�
 
 ## Handoff
 
-`project-plan` สำหรับโครงแผน, AFP/`receipt-audit` สำหรับแหล่งกฎการเงิน, `data-privacy-compliance` สำหรับข้อมูลส่วนบุคคล; Google Workspace connector เป็น Action แยก พร้อมส่งต่อเมื่อระบุ sheet/range และ source ของค่าที่ต้องใช้แล้ว
+`project-plan` สำหรับโครงแผน, AFP/`receipt-audit` สำหรับแหล่งกฎการเงิน, `data-privacy-compliance` สำหรับข้อมูลส่วนบุคคล; Google Sheets ในบัญชีออนไลน์ส่งต่อ `google-workspace` เมื่อระบุ spreadsheet/sheet/range และ source ของค่าแล้ว โดยตรวจบัญชี/สิทธิ์ในแอปและยืนยันก่อนเขียน
 
 ## Guardrails
 

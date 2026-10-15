@@ -62,6 +62,10 @@
 MIT License กำหนดให้แนบประกาศลิขสิทธิ์เมื่อคัดลอกส่วนสำคัญของซอฟต์แวร์ ไฟล์ใน repository นี้ไม่ได้คัดลอกข้อความต้นฉบับ แต่บันทึกที่มาไว้ที่นี่และท้ายไฟล์ที่ดัดแปลง เพื่อให้ตรวจย้อนได้
 Apache License 2.0 ให้ใช้และดัดแปลงได้โดยระบุที่มาและบอกว่ามีการเปลี่ยนแปลง ตารางด้านบนทำหน้าที่นั้น
 
+## Google Workspace — 14 ตุลาคม 2569
+
+[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent/tree/79651b71bd56efd76d06f3de1df64dde09b58ff3/skills/productivity/google-workspace), MIT © 2025 Nous Research: ศึกษา SKILL.md, setup.py, google_api.py, gws_bridge.py, Gmail search และ daily brief (workflow credited to Ben Barclay). เขียน Skill/references/checker/fixtures ใหม่ให้ใช้ native Google tool และ OAuth/Vault ของ STeP ไม่คัดลอก backend หรือเพิ่ม Hermes/gws/MCP. ดู [provenance](../skills/common/google-workspace/references/provenance.md) และ [MIT notice](../skills/common/google-workspace/references/hermes-MIT.txt). การตรวจ offline ไม่ใช่หลักฐาน live API หรือคุณภาพโมเดล
+
 ## Office / tool usability — 6 ตุลาคม 2569
 
 - [SerpApi agent-usability-test](https://github.com/serpapi/skills/blob/master/skills/agent-usability-test/SKILL.md), MIT: WITH/WITHOUT tools, isolated sessions, counterbalanced order และ interface failure modes; protocol/scorer/fixtures เขียนใหม่ใน STeP ไม่คัดลอก Skill

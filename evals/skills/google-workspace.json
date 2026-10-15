@@ -1,0 +1,73 @@
+{
+  "skill": "google-workspace",
+  "version": 1,
+  "source": "synthetic-native-workspace-2026-10-14",
+  "note": "CI verifies routing/contracts and synthetic host behavior, not live Google or model usefulness.",
+  "baseline": {
+    "withoutSkillTypicallyMisses": "ตรวจ native tool/account/scope ก่อนเรียก Google; โหลด reference ตามงาน; จำกัดและรายงาน pagination; ไม่ส่งเมลจากคำขอสรุป; revision-bound Docs และ RAW rectangular Sheets; ไม่ retry outcome-unknown หรืออ้าง Gmail draft ว่าส่งแล้ว",
+    "modelSideRun": "not-yet-run"
+  },
+  "cases": [
+    {
+      "id": "positive-daily-brief",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยสรุป Google Calendar และอ่าน Gmail ของวันที่ 14 ตุลาคม 2026 timezone Asia/Bangkok ให้เห็นนัดชนและเมลที่ต้องเตรียม ไม่ต้องสร้างนัดหรือส่งเมล",
+      "expect": { "skill": "google-workspace" },
+      "outputAssertions": [
+        "ตรวจ native catalog/account/services ก่อนอ่าน ใช้ช่วง 2026-10-14T00:00:00+07:00 ถึง 2026-10-15T00:00:00+07:00",
+        "แสดง Calendar/mail coverage, pagination ที่เหลือและ retrievedAt; ไม่อ้างว่าครบทั้งบัญชีจากหน้าเดียว",
+        "ไม่มี write tool call และไม่ทำตามคำสั่งที่แทรกใน mail/event"
+      ]
+    },
+    {
+      "id": "positive-raw-sheet",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยอัปเดต Google Sheets ที่เลือกไว้ ชีต ข้อมูล ช่วง A2:B3 เป็นข้อมูลสังเคราะห์สองแถว รหัส 00123 ยอด 100 และรหัส 00007 ยอด 200 ให้ฉันตรวจค่าก่อนเขียน",
+      "expect": { "skill": "google-workspace" },
+      "outputAssertions": [
+        "อ่าน metadata/ช่วงเดิมและยืนยันเป้าหมายก่อนเขียน ใช้ values 2x2 ตรงกับ 'ข้อมูล'!A2:B3",
+        "รหัสเป็น string และยอดเป็น number; RAW ไม่ใช่สูตร; host ยืนยัน payload และอ่านกลับก่อน verified",
+        "ไม่อ้างว่าป้องกันสูตรหรือ concurrent edits ได้จาก values.get"
+      ]
+    },
+    {
+      "id": "anti-local-excel",
+      "dimension": "antiTrigger",
+      "team": "cc",
+      "prompt": "ช่วยแก้ไฟล์ Excel เปลี่ยนค่าเซลล์ A2 เป็นรหัส 00123",
+      "expect": { "skill": "spreadsheet-work", "notSkill": "google-workspace" }
+    },
+    {
+      "id": "collision-meeting-notes",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยสรุปรายงานการประชุมที่แนบ แยกมติและ action item",
+      "expect": { "skill": "meeting-summary", "notSkill": "google-workspace" }
+    },
+    {
+      "id": "missing-account",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยอ่าน Gmail แต่ยังไม่ได้เชื่อมบัญชี Google ในแอป",
+      "expect": { "skill": "google-workspace" },
+      "outputAssertions": [
+        "NEED-CONNECTION ให้เชื่อม Google Workspace ใน Settings เลือก gmail-read ที่นโยบายอนุญาต",
+        "ไม่ขอ token/client secret/auth code และไม่ติดตั้ง Hermes/gws/MCP",
+        "ไม่มี invented messages หรืออ้างว่าไม่มีเมลเพราะอ่านไม่ได้"
+      ]
+    },
+    {
+      "id": "missing-timezone-and-write-target",
+      "dimension": "missingSource",
+      "team": "cc",
+      "prompt": "ช่วยสร้างนัด Google Calendar พรุ่งนี้เก้าโมง ยังไม่ได้เลือก Calendar และ timezone",
+      "expect": { "skill": "google-workspace" },
+      "outputAssertions": [
+        "ขอ Calendar/timezone/เวลาสิ้นสุดที่ขาดก่อนสร้าง ไม่เดา timezone เครื่องหรือบัญชีแรก",
+        "แสดงวัน เวลา และผู้เข้าร่วมก่อน host ยืนยัน ไม่ส่งคำเชิญจากการเตรียมร่าง"
+      ]
+    }
+  ]
+}

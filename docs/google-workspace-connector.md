@@ -1,6 +1,6 @@
 # Google Workspace connector (optional, separate)
 
-The [employee Google Workspace design handoff](desktop-google-workspace-design.md) describes proposed Desktop account connection and broader service access. This optional connector retains only the operations documented below; the proposal does not add Gmail, Calendar, Slides or OAuth login to this module.
+Current Desktop connects directly with its native `google_workspace` tool and in-app OAuth/Vault. The [Google Workspace Skill](../skills/common/google-workspace/SKILL.md) and its references describe that path; no CLI or external MCP server is required. `skill` input `google-workspace` with `args.resource` reads one reference progressively. The [design handoff](desktop-google-workspace-design.md) retains the original design context. The optional CLI connector documented below is a separate module with the narrower operations listed here.
 
 โมดูล `src/modules/connectors/google-workspace.js` ใช้ gws CLI ที่องค์กรติดตั้งและ sign in เองแล้ว ไม่ติดตั้ง ไม่เรียก auth login ไม่เปิด service account key และไม่เพิ่มเข้า Desktop tool loop โดยอัตโนมัติ
 

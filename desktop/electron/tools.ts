@@ -580,6 +580,7 @@ export class DesktopTools {
             await check();
             return scope.search(target);
           case 'skill': {
+            if (a.action === 'catalog' && a.resource !== undefined) throw new Error('INVALID_INPUT');
             if (a.action === 'catalog')
               return {
                 entries: ((await this.harness.catalog?.()) || [])
@@ -601,6 +602,17 @@ export class DesktopTools {
             if (blocked(c) || c?.skill !== target) throw new Error('AUTHORITY_REVIEW_REQUIRED');
             const meta = await this.harness.skillMetadata(target);
             if (!meta?.path || meta.path !== entry.path) throw new Error('CONTEXT_UNAVAILABLE');
+            if (a.resource !== undefined) {
+              // References remain scoped to the routed Skill, never arbitrary harness files or executable scripts.
+              if (typeof a.resource !== 'string' || !/^(references|examples)\/[A-Za-z0-9][A-Za-z0-9_/-]*\.md$/.test(a.resource))
+                throw new Error('INVALID_SKILL_RESOURCE');
+              const base = await realpath(resolve(this.harness.root, dirname(meta.path)));
+              const path = resolve(base, a.resource);
+              const actual = await realpath(path);
+              const within = relative(base, actual);
+              if (isAbsolute(within) || within.startsWith('..')) throw new Error('INVALID_SKILL_RESOURCE');
+              return { id: target, resource: a.resource, route: c, text: await this.context(path) };
+            }
             const paths = [
               meta.path,
               ...(meta.mandatoryReferences || []).map((ref: any) => (typeof ref === 'string' ? ref : ref.path)).filter(Boolean),

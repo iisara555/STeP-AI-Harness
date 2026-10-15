@@ -1344,6 +1344,26 @@ skills:
           authority: qms-conformity-decision
           description: การตัดสินใจ รับรองผล หรืออนุมัติการเปลี่ยนแปลง QMS ใน Management Review
 
+  - name: google-workspace
+    cluster: governance-operations
+    domain: operations
+    processId: governance.document-review
+    teams:
+      primary: [ga]
+      consumers: [cc, afp, imo, sit, mi, piti, qs]
+    description: ทำงาน Gmail, Drive, Google Docs/Sheets/Slides, Google Calendar และ Google Tasks ในแอป โดยไม่จัดการไฟล์ Office ในเครื่องหรืออนุมัติแทนผู้มีอำนาจ
+    intent: [search, read, create, google-workspace]
+    triggers: [Google Workspace, ค้น Gmail, อ่าน Gmail, ส่ง Gmail, ร่าง Gmail, ค้นอีเมล Gmail, ค้นไฟล์ Drive, อ่าน Google Docs, สร้าง Google Docs, แก้ Google Docs, อ่าน Google Sheets, สร้าง Google Sheets, อัปเดต Google Sheets, อ่าน Google Slides, สร้าง Google Slides, สรุป Google Calendar, อ่าน Google Calendar, สร้างนัด Google Calendar, Google Tasks, Google Chat, Google Meet, google workspace, gmail search, google sheets, google calendar]
+    paths: ["**/google-workspace/**"]
+    fileTypes: []
+    requires: []
+    scope:
+      allow:
+        - ค้น อ่าน และสรุปข้อมูล Google ที่บัญชีและนโยบายอนุญาต
+        - เตรียมและดำเนินการเปลี่ยนข้อมูลเฉพาะที่ผู้ใช้ตรวจและ host ยืนยัน
+      escalate: {}
+      human_only: {}
+
   - name: spreadsheet-work
     cluster: governance-operations
     domain: operations

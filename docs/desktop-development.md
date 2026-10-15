@@ -29,7 +29,7 @@ The host tool loop can create actual XLSX workbooks (`sheet_create`) and editabl
 
 `sheet_read` separates formulas from cached values; `sheet_edit` patches input cells while preserving unrelated ZIP parts and refuses formula/protected cells, macros and signed packages. Recalculate in Excel/LibreOffice and visually review every PPTX page. Creation does not support faithful editing of an existing PPTX. See [Office workflows](office-workflows.md) for bounds, synthetic evidence and the draft `spreadsheet-work` Skill.
 
-The optional Google Workspace module is not automatically registered in the Desktop loop or authenticated. Direct Google Sheets access requires an available authorized connector; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. These additions are included in the 0.5.27 source; installer publication is verified separately in Desktop releases.
+The optional CLI Google Workspace connector remains separate. Current Desktop has a native `google_workspace` tool using in-app OAuth/Vault; the [Google Workspace Skill](../skills/common/google-workspace/SKILL.md) supplies service preflight, bounded reads and exact-action write verification. Google Sheets access requires an authorized account and allowed scopes; otherwise import the XLSX. Controlled artifact tests do not establish live model benefit, Google API access or staff-machine PowerPoint compatibility. The local Office additions were included in the 0.5.27 source; installer publication is verified separately in Desktop releases.
 
 ## Document exports — Desktop 0.5.29
 
