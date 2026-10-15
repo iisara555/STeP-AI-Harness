@@ -343,7 +343,12 @@ export default function App() {
     ],
     content: toDoc(''),
     editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false', lang: 'th' } },
-    onUpdate: () => setDirty(true),
+    onUpdate: () => {
+      // A saved snapshot can finish rendering after an immediate editor command.
+      // Protect that new edit before React commits the dirty state.
+      dirtyRef.current = true;
+      setDirty(true);
+    },
   });
   const refresh = useCallback(async () => {
     if (api) {
