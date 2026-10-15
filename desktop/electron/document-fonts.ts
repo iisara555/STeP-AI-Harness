@@ -32,7 +32,10 @@ export async function embedDocumentFonts(bytes: Uint8Array): Promise<{ bytes: Bu
     serializer = new XMLSerializer();
   const parse = (xml: string) => parser.parseFromString(xml, 'application/xml');
   const manifestBytes = await readFile(join(directory(), 'manifest.json'));
-  if (createHash('sha256').update(manifestBytes).digest('hex') !== '8bafe458cc795cbb0f8f7b973ef1a6baceb19458dd015010d73d56a0dfedc9d1')
+  if (
+    createHash('sha256').update(manifestBytes.toString('utf8').replace(/\r\n/g, '\n')).digest('hex') !==
+    '8bafe458cc795cbb0f8f7b973ef1a6baceb19458dd015010d73d56a0dfedc9d1'
+  )
     throw new Error('DOCUMENT_FONT_UNAVAILABLE');
   const manifest: Family[] = JSON.parse(manifestBytes.toString('utf8'));
   const used = new Set<string>();
