@@ -23,6 +23,7 @@ export function DocumentToolbar({
             ? 'h' + e.getAttributes('heading').level
             : 'paragraph',
       list: e.isActive('listItem'),
+      nested: e.state.selection.$from.depth > 1 || e.state.selection.$to.depth > 1,
       ordered: e.isActive('orderedList'),
       start: e.getAttributes('orderedList').start || 1,
       image: e.isActive('image'),
@@ -37,7 +38,7 @@ export function DocumentToolbar({
           {t('รูปแบบข้อความ')}
           <select
             aria-label={t('รูปแบบข้อความ')}
-            disabled={disabled}
+            disabled={disabled || state.nested}
             value={state.kind}
             onChange={event => {
               const value = event.target.value;
@@ -57,17 +58,21 @@ export function DocumentToolbar({
             </option>
           </select>
         </label>
-        <button className="quiet" disabled={locked || disabled} onClick={() => editor.chain().focus().toggleWrap('blockquote').run()}>
+        <button
+          className="quiet"
+          disabled={locked || disabled || (state.nested && !editor.isActive('blockquote'))}
+          onClick={() => editor.chain().focus().toggleWrap('blockquote').run()}
+        >
           {t('ข้อความอ้างอิง')}
         </button>
         <button
           className="quiet"
-          disabled={locked || disabled}
+          disabled={locked || disabled || state.nested}
           onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}
         >
           {t('ขึ้นหน้าใหม่')}
         </button>
-        <button className="quiet" disabled={locked || disabled} onClick={onImage}>
+        <button className="quiet" disabled={locked || disabled || state.nested} onClick={onImage}>
           {t('แทรกรูปภาพ')}
         </button>
         <button className="quiet" disabled={!state.list || disabled} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>

@@ -1,5 +1,20 @@
 import { Node, mergeAttributes } from '@tiptap/react';
 import { t } from './i18n';
+import StarterKit from '@tiptap/starter-kit';
+import { TableCell, TableHeader } from '@tiptap/extension-table';
+
+// Match host validation: cells contain paragraphs; list items contain paragraphs and nested lists.
+export const DocumentTableCell = TableCell.extend({ content: 'paragraph+' });
+export const DocumentTableHeader = TableHeader.extend({ content: 'paragraph+' });
+export const DocumentStarterKit = StarterKit.extend({
+  addExtensions() {
+    return (this.parent?.() || []).map(extension =>
+      extension.name === 'listItem' && extension.type === 'node'
+        ? extension.extend({ content: 'paragraph (paragraph | bulletList | orderedList)*' })
+        : extension,
+    );
+  },
+});
 
 export const DocumentTitle = Node.create({
   name: 'title',

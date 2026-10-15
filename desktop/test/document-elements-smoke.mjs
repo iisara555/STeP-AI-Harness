@@ -43,6 +43,20 @@ put('session', 'document', {
     content: [
       { type: 'title', content: [{ type: 'text', text: 'ชื่อเรื่องสังเคราะห์' }] },
       { type: 'paragraph', content: [{ type: 'text', text: 'เนื้อหาสำหรับตรวจองค์ประกอบ' }] },
+      {
+        type: 'table',
+        content: [
+          {
+            type: 'tableRow',
+            content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Synthetic table cell' }] }] }],
+          },
+        ],
+      },
+      {
+        type: 'orderedList',
+        attrs: { start: 3 },
+        content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Synthetic list item' }] }] }],
+      },
     ],
   },
   revision: 0,
@@ -76,6 +90,14 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await expect(page.locator('.tiptap')).toContainText('เนื้อหาสำหรับตรวจองค์ประกอบ');
+  phase = 'bounded containers';
+  for (const selector of ['.tiptap td p', '.tiptap li p']) {
+    await page.locator(selector).click();
+    await expect(page.getByLabel('รูปแบบข้อความ', { exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'แทรกรูปภาพ', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'ขึ้นหน้าใหม่', exact: true })).toBeDisabled();
+  }
+  await page.locator('.tiptap p').filter({ hasText: 'เนื้อหาสำหรับตรวจองค์ประกอบ' }).click();
   phase = 'presentation controls';
   await page.getByLabel('การจัดหน้า', { exact: true }).selectOption('book');
   await page.getByLabel('สารบัญจากหัวข้อระดับ 1–3', { exact: true }).check();
