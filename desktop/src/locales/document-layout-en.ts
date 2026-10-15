@@ -1,4 +1,10 @@
 export const documentLayoutEn: Record<string, string> = {
+  'เลือกการจัดหน้าเอกสารราชการ รายงาน หรือหนังสือ พร้อมตัวเลือกช่วยตัดคำไทยใน DOCX':
+    'Choose official, report or book layouts, with optional Thai word-break assistance in DOCX',
+  'ส่งออก DOCX พร้อมฟอนต์สารบรรณที่ฝังในไฟล์ครบสี่รูปแบบ': 'Export DOCX with all four Sarabun font faces embedded',
+  'เพิ่มชื่อเรื่อง หัวข้อสามระดับ รายการซ้อน รูปภาพ และคำบรรยายในร่าง':
+    'Add titles, three heading levels, nested lists, images and captions to drafts',
+  'เพิ่มสารบัญ หัวท้ายกระดาษ และเลขหน้าที่อัปเดตใน Word ได้': 'Add a table of contents, headers, footers and live page numbers in Word',
   'ฝังฟอนต์ได้บางส่วน ฟอนต์ที่ต้องตรวจบนเครื่องปลายทาง: {0}': 'Some fonts are embedded. Check these fonts on the destination computer: {0}',
   'สารบัญจากหัวข้อระดับ 1–3': 'Table of contents from Heading 1–3',
   ข้อความหัวกระดาษ: 'Header text',
