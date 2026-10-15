@@ -230,14 +230,17 @@ try {
     else await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveCount(0);
     const exported = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), last.id);
     assert.equal(exported.layout.documentTool, id);
-    assert.equal(exported.layout.font, id === 'memo' ? 'TH Sarabun New' : 'TH Sarabun PSK');
+    assert.equal(exported.layout.font, id === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK');
     assert.equal(exported.layout.fontStatus, 'missing');
     assert.equal(exported.layout.garudaHeightCm, id === 'memo' ? 1.5 : id === 'letter' ? 3 : undefined);
     const JSZip = createRequire(import.meta.url)('jszip');
     const zip = await JSZip.loadAsync(await readFile(exported.path), { checkCRC32: true });
     await writeFile(join(previewFolder, `app-${id}.docx`), await readFile(exported.path));
-    const document = await zip.file('word/document.xml').async('string');
-    assert.ok(document.includes(`w:cs="${id === 'memo' ? 'TH Sarabun New' : 'TH Sarabun PSK'}"`));
+    const document = await zip
+      .file('word/document.xml')
+      .async('string')
+      .then(xml => xml.replaceAll('\u200b', ''));
+    assert.ok(document.includes(`w:cs="${id === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK'}"`));
     assert.ok(!document.includes('Skill Verification') && !document.includes('Unresolved Fields'));
     assert.ok(!document.includes('document_draft') && !document.includes('&lt;br'));
     const accepted = (await snapshot()).sessions.find(s => s.id === last.id);
@@ -346,7 +349,12 @@ try {
   const bytes = await readFile(output.path);
   assert.equal(bytes.subarray(0, 2).toString(), 'PK');
   const JSZip = createRequire(import.meta.url)('jszip');
-  const xml = await (await JSZip.loadAsync(bytes)).file('word/document.xml').async('string');
+  const xml = await (
+    await JSZip.loadAsync(bytes)
+  )
+    .file('word/document.xml')
+    .async('string')
+    .then(xml => xml.replaceAll('\u200b', ''));
   assert.ok(xml.includes('แก้ไขสังเคราะห์โดยเจ้าของเรื่อง'));
   assert.ok(xml.includes('[รอยืนยัน: งบประมาณ]'));
   assert.ok(output.path.startsWith(workspace));
@@ -396,6 +404,9 @@ try {
   await page.getByLabel('ฟอนต์ DOCX', { exact: true }).selectOption('TH Sarabun New');
   await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
   await expect(page.locator('.document-export-info')).toContainText('TH Sarabun New');
+  await expect(page.locator('.document-export-info')).toContainText('ฝังฟอนต์ครบแล้ว');
+  await page.getByLabel('ฝังฟอนต์เพื่อเปิดและแก้ไขบนเครื่องอื่น').uncheck();
+  await page.getByRole('button', { name: 'ส่งออก', exact: true }).click();
   await expect(page.locator('.document-export-info')).toContainText('ตรวจไม่พบฟอนต์นี้');
   const invalidFont = await page.evaluate(
     async id =>
@@ -459,12 +470,12 @@ try {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (...args) {
       const context = original.apply(this, args);
-      if (args[0] === '2d' && context) context.measureText = () => ({ width: context.font.includes('TH Sarabun PSK') ? 99 : 100 });
+      if (args[0] === '2d' && context) context.measureText = () => ({ width: context.font.includes('TH SarabunPSK') ? 99 : 100 });
       return context;
     };
   });
   await page.getByRole('button', { name: 'Export', exact: true }).click();
-  await expect(page.locator('.document-export-info')).toContainText('This file uses TH Sarabun PSK');
+  await expect(page.locator('.document-export-info')).toContainText('This file uses TH SarabunPSK');
   await expect(page.locator('.document-export-info')).toContainText('Uses a working layout');
   await expect(page.locator('.document-export-info')).not.toContainText('not detected');
   assert.doesNotMatch(await page.locator('.document-export-info').innerText(), /[ก-๙]/);

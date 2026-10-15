@@ -146,7 +146,9 @@ test('exports keep tables as tables and use the Thai official page', async () =>
   assert.match(html, /TH Sarabun New/);
   assert.match(html, /font-size:16pt/);
   for (const format of ['docx', 'xlsx', 'pptx'])
-    await exportDocument(join(home, 'd.' + format), format, text, async () => Buffer.alloc(0), doc);
+    await exportDocument(join(home, 'd.' + format), format, text, async () => Buffer.alloc(0), doc, {
+      presentation: { preset: 'saraban' },
+    });
   const JSZip = createRequire(import.meta.url)('jszip');
   const word = await (await JSZip.loadAsync(await readFile(join(home, 'd.docx')))).file('word/document.xml').async('string');
   assert.match(word, /<w:tbl>/);

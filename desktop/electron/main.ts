@@ -3222,7 +3222,7 @@ async function main() {
         return true;
       }
       case 'edit':
-        return store.edit(inputText(input.id, 60), inputText(input.text, 150000), input.revision, input.document);
+        return store.edit(inputText(input.id, 60), inputText(input.text, 150000), input.revision, input.document, input.presentation);
       case 'accept':
         return store.accept(input.id, input.proposalId);
       case 'reject': {
@@ -3235,7 +3235,7 @@ async function main() {
         const s = store.session(input.id),
           version = s.versions.find(v => v.revision === input.revision);
         if (!version) throw new Error('VERSION_NOT_FOUND');
-        return store.edit(s.id, version.text, s.revision, version.document);
+        return store.edit(s.id, version.text, s.revision, version.document, version.presentation || {});
       }
       case 'attach': {
         const sessionId = inputText(input.id, 60);
@@ -3365,7 +3365,7 @@ async function main() {
           if (!workspace) return { canceled: true };
           if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
           const result = await harness.nextOutput({ workspaceDir: workspace, team: s.team, title: s.title, extension: format });
-          await exportDocument(
+          const exported = await exportDocument(
             result.path,
             format,
             s.draft,
@@ -3387,7 +3387,9 @@ async function main() {
               }
             },
             s.document,
-            layout ? { documentTool: layout.id, font: layout.font, garuda: input.garuda, template } : undefined,
+            layout
+              ? { documentTool: layout.id, font: layout.font, garuda: input.garuda, template, presentation: s.presentation }
+              : undefined,
           );
           exportPaths.add(result.path);
           if (!layout) return result;
@@ -3401,6 +3403,7 @@ async function main() {
               documentTool: layout.id,
               font,
               fontStatus,
+              ...(exported ? exported : {}),
               ...(template ? { templateName: s.documentTemplate!.name } : { garudaHeightCm: layout.garudaHeightCm }),
             },
           };

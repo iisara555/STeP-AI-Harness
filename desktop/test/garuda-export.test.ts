@@ -20,7 +20,8 @@ const parse = (xml: string) => new DOMParser().parseFromString(xml, 'application
 const texts = (dom: Document) =>
   Array.from(dom.getElementsByTagNameNS(W, 't'))
     .map(n => n.textContent)
-    .join('');
+    .join('')
+    .replaceAll('\u200b', '');
 const attr = (dom: Document, element: string, name: string) => dom.getElementsByTagNameNS(W, element)[0]?.getAttributeNS(W, name);
 async function word(documentTool?: string, garuda?: string, font?: string, document = draft) {
   const path = join(await mkdtemp(join(tmpdir(), 'step-garuda-')), 'draft.docx');
@@ -83,7 +84,7 @@ test('memo header keeps the source title editable and gives Thai and Latin the s
     assert.equal(texts(header), 'บันทึกข้อความ (ร่าง)');
     assert.equal(attr(header, 'sz', 'val'), '60');
     assert.equal(attr(header, 'szCs', 'val'), '60');
-    assert.equal(attr(header, 'rFonts', 'cs'), font);
+    assert.equal(attr(header, 'rFonts', 'cs'), resolveDocumentLayout('memo', font).font);
     assert.ok(header.getElementsByTagNameNS(W, 'bCs').length);
   }
   const plain = markdownDocument('ส่วนราชการ [รอยืนยัน: หน่วยงาน]\n\nเนื้อหาสังเคราะห์');
@@ -110,7 +111,7 @@ test('PDF export passes a local graphic, actual selected font and unchanged fact
       'pdf',
       documentText(draft),
       async html => {
-        assert.match(html, new RegExp(`font-family:"${id && id !== 'memo' ? 'TH Sarabun PSK' : 'TH Sarabun New'}"`));
+        assert.match(html, new RegExp(`font-family:"${id && id !== 'memo' ? 'TH SarabunPSK' : 'TH Sarabun New'}"`));
         assert.match(html, /00123/);
         assert.match(html, /\[รอยืนยัน: งบประมาณ\]/);
         assert.doesNotMatch(html, /<script|src="https?:|position:fixed/);

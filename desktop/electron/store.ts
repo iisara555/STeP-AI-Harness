@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { Session, Connection, Settings } from '../src/types';
 import { documentText, markdownDocument, validateDocument } from '../src/draft';
 import { parseDocumentOutput } from '../src/document-output';
+import { resolvePresentation } from '../src/document-presentation';
 
 export class Store {
   private db: DatabaseSync;
@@ -169,15 +170,29 @@ export class Store {
     session.updatedAt = new Date().toISOString();
     this.put('session', session.id, session);
   }
-  edit(id: string, text: string, baseRevision: number, document?: unknown) {
+  edit(id: string, text: string, baseRevision: number, document?: unknown, presentation?: unknown) {
     const session = this.session(id);
     if (session.revision !== baseRevision) throw new Error('DRAFT_CONFLICT');
     const normalized = document === undefined ? undefined : validateDocument(document);
+    const appearance = presentation === undefined ? session.presentation : resolvePresentation(presentation, Boolean(session.documentTool));
+    if (session.documentTemplate && appearance?.preset && appearance.preset !== (session.presentation?.preset || 'saraban'))
+      throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
     if (normalized) text = documentText(normalized);
-    if (text !== session.draft || JSON.stringify(normalized) !== JSON.stringify(session.document)) {
-      session.versions.push({ revision: session.revision, text: session.draft, document: session.document, at: new Date().toISOString() });
+    if (
+      text !== session.draft ||
+      JSON.stringify(normalized) !== JSON.stringify(session.document) ||
+      JSON.stringify(appearance) !== JSON.stringify(session.presentation)
+    ) {
+      session.versions.push({
+        revision: session.revision,
+        text: session.draft,
+        document: session.document,
+        presentation: session.presentation,
+        at: new Date().toISOString(),
+      });
       session.draft = text;
       session.document = normalized;
+      session.presentation = appearance;
       session.revision++;
       this.save(session);
     }

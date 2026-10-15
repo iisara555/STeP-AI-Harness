@@ -16,7 +16,7 @@ test('memo narrative, unit label and all signature lines use their own layout wi
   );
   assert.match(doc.xml, /w:cs="TH Sarabun New"/);
   assert.equal(attr(doc.paragraph('ส่วนงาน'), 'ind', 'firstLine'), undefined);
-  assert.equal(attr(doc.paragraph('ข้าพเจ้า'), 'jc', 'val'), 'both');
+  assert.equal(attr(doc.paragraph('ข้าพเจ้า'), 'jc', 'val'), 'left');
   for (const label of ['(ผู้เสนอสมมติ)', 'ผู้ดูแลโครงการ', '(ผู้ตรวจสมมติ)', 'หัวหน้าทีม', '(ผู้พิจารณาสมมติ)', 'ผู้อำนวยการ']) {
     assert.equal(attr(doc.paragraph(label), 'jc', 'val'), 'center', label);
     assert.ok(!attr(doc.paragraph(label), 'ind', 'firstLine'), label);
@@ -66,7 +66,11 @@ test('PDF memo separates reference and date into columns while preserving rich l
 async function word(markdown: string | DraftNode, options?: { documentTool?: string; font?: string }) {
   const path = join(await mkdtemp(join(tmpdir(), 'step-document-layout-')), 'draft.docx');
   const document = typeof markdown === 'string' ? markdownDocument(markdown) : markdown;
-  await exportDocument(path, 'docx', documentText(document), async () => Buffer.alloc(0), document, options);
+  // Literal-text fixtures exercise the opt-out; document-typography.test.ts exercises default segmentation/embedding.
+  await exportDocument(path, 'docx', documentText(document), async () => Buffer.alloc(0), document, {
+    ...options,
+    presentation: { thaiBreaks: false, embedFonts: false },
+  });
   const zip = await JSZip.loadAsync(await readFile(path), { checkCRC32: true });
   const xml = await zip.file('word/document.xml')!.async('string');
   const dom = new DOMParser().parseFromString(xml, 'application/xml');
@@ -101,7 +105,7 @@ test('Word uses explicit single line spacing and separates narrative paragraphs 
   const defaults = styles.getElementsByTagNameNS(W, 'pPrDefault')[0];
   assert.equal(attr(defaults, 'spacing', 'line'), '240');
   assert.equal(attr(defaults, 'spacing', 'lineRule'), 'auto');
-  for (const start of ['ด้วยข้อมูล', 'จึงเรียน']) assert.equal(attr(doc.paragraph(start), 'spacing', 'after'), '120');
+  for (const start of ['ด้วยข้อมูล', 'จึงเรียน']) assert.equal(attr(doc.paragraph(start), 'spacing', 'after'), '0');
   for (const start of ['เรื่อง', 'เรียน', '(ผู้เสนอ', 'ผู้ดูแล']) assert.equal(attr(doc.paragraph(start), 'spacing', 'after'), '0');
 });
 
@@ -143,7 +147,7 @@ test('five document profiles export native editable content with their selected 
       '# ร่างสังเคราะห์\n\n## ๑. หัวข้อ\n\nรหัส **00123**\n\n[รอยืนยัน: งบประมาณ]\n\n| รายการ | สถานะ |\n|---|---|\n| ทดสอบ | รอยืนยัน |',
       { documentTool },
     );
-    assert.ok(doc.xml.includes(`w:cs="${documentTool === 'memo' ? 'TH Sarabun New' : 'TH Sarabun PSK'}"`));
+    assert.ok(doc.xml.includes(`w:cs="${documentTool === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK'}"`));
     assert.equal(attr(doc.paragraph('ร่างสังเคราะห์'), 'jc', 'val'), documentTool === 'memo' ? 'left' : 'center', documentTool);
     assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), '32');
     assert.match(doc.xml, /<w:pgNumType[^>]*w:fmt="thaiNumbers"/);
@@ -175,7 +179,7 @@ test('memo fields, letter sender/date and signatures receive distinct layouts wi
     '# ร่างหนังสือ\n\nส่วนราชการ หน่วยงานสังเคราะห์\n\nที่ 0007/๖๙ วันที่ [รอยืนยัน: วันที่]\n\nหน่วยงานและที่อยู่ [รอยืนยัน: ผู้ส่ง]\n\nวันที่ [รอยืนยัน: วันที่]\n\nเรื่อง สังเคราะห์\n\nเรียน [รอยืนยัน: ผู้รับ]\n\nสาระจากต้นเรื่องสังเคราะห์\n\n(ลงชื่อ) [รอยืนยัน: ผู้ลงนาม]\n\nตำแหน่ง [รอยืนยัน: ตำแหน่ง]';
   const memo = await word(markdown, { documentTool: 'memo' });
   assert.ok(Array.from(memo.paragraph('ที่ 0007/๖๙').getElementsByTagNameNS(W, 'tab')).some(tab => tab.parentNode?.nodeName === 'w:r'));
-  assert.equal(attr(memo.paragraph('สาระจากต้นเรื่อง'), 'ind', 'firstLine'), '1418');
+  assert.equal(attr(memo.paragraph('สาระจากต้นเรื่อง'), 'ind', 'firstLine'), '709');
   assert.equal(attr(memo.paragraph('(ลงชื่อ)'), 'jc', 'val'), 'center');
   assert.equal(attr(memo.paragraph('(ลงชื่อ)'), 'ind', 'left'), '4535');
   const letter = await word(markdown, { documentTool: 'letter' });
@@ -189,7 +193,7 @@ test('memo fields, letter sender/date and signatures receive distinct layouts wi
 test('TOR front matter and minutes title fields are centered while source labels remain editable', async () => {
   const tor = await word('# ร่าง TOR\n\nหน่วยงานสังเคราะห์\n\n## ๑. วัตถุประสงค์\n\nสาระจากต้นทาง', { documentTool: 'tor' });
   assert.equal(attr(tor.paragraph('หน่วยงานสังเคราะห์'), 'jc', 'val'), 'center');
-  assert.equal(attr(tor.paragraph('สาระจากต้นทาง'), 'jc', 'val'), 'both');
+  assert.equal(attr(tor.paragraph('สาระจากต้นทาง'), 'jc', 'val'), 'left');
   const minutes = await word(
     '# รายงานการประชุม\n\nชื่อการประชุม สังเคราะห์\n\nครั้งที่ [รอยืนยัน: ครั้งที่]\n\nวัน เวลา สถานที่ [รอยืนยัน: วัน เวลา สถานที่]\n\nผู้มาประชุม [รอยืนยัน: รายชื่อ]\n\n## ระเบียบวาระที่ ๑\n\nมติ [รอยืนยัน: มติ]',
     { documentTool: 'minutes' },

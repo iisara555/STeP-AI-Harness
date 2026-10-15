@@ -114,3 +114,9 @@ Host เก็บ bytes ที่เลือกเป็น snapshot ส่ว�
 เพิ่ม regression ใน `document-export.test.ts` และ `document-template.test.ts` ซึ่งรวมใน `desktop:test` เดิม ตรวจไฟล์สังเคราะห์ครบห้า profile และต้นฉบับ MIS ส่วนตัวสี่แบบกับข้อมูลร่างสังเคราะห์ แปลงเป็น PDF ด้วย LibreOffice และตรวจทุกหน้าของตัวอย่างที่แก้: แบบร่างทั่วไปอย่างละหนึ่งหน้า; native บันทึก/หนังสือ/โครงการอย่างละหนึ่งหน้า และรายงานประชุมสองหน้า ตรวจพบฟอนต์ TH Sarabun New/PSK ใน cloud แต่ยังไม่มี TH SarabunIT๙ จึงไม่รับรองหน้าของ native บันทึก/หนังสือที่ใช้ fallback หรือ Word บนเครื่องพนักงาน หลักฐานและต้นฉบับอยู่ภายนอก repo รวมชุดแก้นี้ใน Desktop 0.5.30 โดย Harness คง 0.7.6 และไม่เปลี่ยน policy default
 
 ผลตรวจชุดนี้: root tests 949 ข้อ ผ่าน 947 ข้าม 2; Desktop tests 513 ข้อ ผ่าน 511 ข้าม 2; tests เฉพาะร่าง/ส่งออก/แม่แบบผ่าน 34 ข้อ พร้อม validate, formatting และ TypeScript/build ใน cloud ใช้ test-user directory ส่วนตัวผ่าน preload โดยไม่เปลี่ยน HOME และตัวช่วย reap โปรเซสลูกที่จบแล้วเพื่อชดเชย PID 1 ของ container ไม่ปิด test หรือเปลี่ยน runtime ของแอปเพื่อให้ผ่าน
+
+## Complete Thai DOCX foundation — 2026-10-15
+
+The owner selected TypeScript/ICU, DOCX-only U+200B by default with opt-out, and preservation of agency templates. Canonicalize TH SarabunPSK while accepting the old spaced alias. Add bounded saraban/report/book presets, revisioned presentation metadata, detached paragraph-wide segmentation and actual four-face font embedding with per-file and manifest checksums. Markdown soft wraps form one paragraph; explicit breaks and existing stored drafts retain their structure. New template runs complete missing script properties. No application version or release is changed.
+
+Targeted semantic, export, package and persistence regressions accompany the change. Native Word rendering and full integration validation are recorded after completion, separately from XML tests and macOS employee acceptance.

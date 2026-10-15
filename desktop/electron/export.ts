@@ -28,7 +28,9 @@ import { type DraftNode, documentMarkdown, documentText, plainDocument, validate
 import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
 import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
 import { renderDocumentTemplate } from './document-template';
-import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE } from '../src/thai-typography';
+import { longestWordUnits, textUnits, THAI_DOCUMENT_CSS, THAI_DOCUMENT_LANGUAGE, withThaiBreaks } from '../src/thai-typography';
+import { DOCUMENT_PRESETS, resolvePresentation, type DocumentPresentation } from '../src/document-presentation';
+import { embedDocumentFonts } from './document-fonts';
 
 export const exportFormats = ['md', 'docx', 'pdf', 'xlsx', 'pptx'] as const;
 
@@ -65,7 +67,7 @@ const visible = (text = '') => textUnits(text);
  * header word and its figures, which must not wrap; the rest of the line goes to columns with longer text. A table
  * whose header words do not fit at 16 pt drops to 14 or 12 pt, as Thai official documents do with wide tables.
  */
-export function tableLayout(rows: string[][]) {
+export function tableLayout(rows: string[][], textWidth = TEXT_WIDTH, bodyPoints = 16) {
   const count = Math.max(1, ...rows.map(row => row.length));
   const numeric = numericColumns(rows);
   const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
@@ -78,14 +80,15 @@ export function tableLayout(rows: string[][]) {
     const desired = minimum.map((least, column) => Math.max(least, span(Math.min(Math.max(...rows.map(row => visible(row[column]))), 40))));
     return { points, minimum, desired };
   };
-  const { points, minimum, desired } = [16, 14].map(sized).find(size => sum(size.minimum) <= TEXT_WIDTH) || sized(12);
+  const { points, minimum, desired } =
+    [bodyPoints, Math.max(12, bodyPoints - 2)].map(sized).find(size => sum(size.minimum) <= textWidth) || sized(12);
   let widths: number[];
-  if (sum(desired) <= TEXT_WIDTH) widths = desired.map(width => (width * TEXT_WIDTH) / sum(desired));
-  else if (sum(minimum) <= TEXT_WIDTH) {
-    const spare = TEXT_WIDTH - sum(minimum),
+  if (sum(desired) <= textWidth) widths = desired.map(width => (width * textWidth) / sum(desired));
+  else if (sum(minimum) <= textWidth) {
+    const spare = textWidth - sum(minimum),
       wanted = sum(desired) - sum(minimum);
     widths = minimum.map((least, column) => least + (spare * (desired[column] - least)) / wanted);
-  } else widths = minimum.map(width => (width * TEXT_WIDTH) / sum(minimum));
+  } else widths = minimum.map(width => (width * textWidth) / sum(minimum));
   return { points, columns: widths.map(Math.floor) };
 }
 
@@ -222,7 +225,8 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
   return `<!doctype html><html lang="th"><meta charset="utf-8"><style>${style}</style><body>${letterhead}${content}</body></html>`;
 }
 
-function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false): ParagraphChild[] {
+function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT, dateTab = false, thaiBreaks = false): ParagraphChild[] {
+  if (thaiBreaks) node = withThaiBreaks(node);
   // Locate the label across rich-text runs, rather than matching a word inside its placeholder/value.
   const date = dateTab ? /[ \t]+(วันที่[ \t])/.exec(documentText(node).split(/\r\n?|\n/)[0]) : null;
   const spaceStart = date?.index ?? -1;
@@ -268,22 +272,28 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
   });
 }
 
-function docxTable(table: DraftNode, font: string) {
+type WordLayout = DocumentLayout & { presentation: DocumentPresentation };
+const wordPreset = (layout: WordLayout) => DOCUMENT_PRESETS[layout.presentation.preset];
+const wordWidth = (layout: WordLayout) => 11906 - Math.round((wordPreset(layout).margins.left + wordPreset(layout).margins.right) * CM);
+
+function docxTable(table: DraftNode, layout: WordLayout) {
+  const font = layout.font,
+    textWidth = wordWidth(layout);
   const rows = table.content || [];
   const text = tableRows(table);
   const width = Math.max(1, ...rows.map(row => (row.content || []).length));
   const numeric = numericColumns(text);
-  const { points, columns } = tableLayout(text);
+  const { points, columns } = tableLayout(text, textWidth, wordPreset(layout).points);
   const size = points * 2;
   return new Table({
-    width: { size: TEXT_WIDTH, type: WidthType.DXA },
+    width: { size: textWidth, type: WidthType.DXA },
     columnWidths: columns,
     layout: TableLayoutType.FIXED,
     rows: rows.map(
       (row, index) =>
         new TableRow({
           tableHeader: index === 0,
-          cantSplit: true,
+          cantSplit: index === 0,
           children: Array.from({ length: width }, (_, column) => {
             const cell = row.content?.[column];
             const header = cell?.type === 'tableHeader';
@@ -296,7 +306,7 @@ function docxTable(table: DraftNode, font: string) {
                   new Paragraph({
                     alignment: numeric[column] ? AlignmentType.RIGHT : undefined,
                     widowControl: true,
-                    children: runs(p, size, header, font),
+                    children: runs(p, size, header, font, false, layout.presentation.thaiBreaks),
                   }),
               ),
             });
@@ -308,13 +318,17 @@ function docxTable(table: DraftNode, font: string) {
 
 function docxBlocks(
   node: DraftNode,
-  layout: DocumentLayout,
+  layout: WordLayout,
   role: LayoutRole = 'body',
   prefix = '',
   depth = 0,
   firstPageSpace = false,
 ): (Paragraph | Table)[] {
-  if (node.type === 'table') return [docxTable(node, layout.font), new Paragraph({ children: [] })];
+  if (node.type === 'table')
+    return [
+      docxTable(node, layout),
+      new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [] }),
+    ];
   if (node.type === 'paragraph' || node.type === 'heading') {
     const level = node.attrs?.level || 1;
     const size = layout.id
@@ -322,23 +336,23 @@ function docxBlocks(
         ? layout.id === 'memo'
           ? 60
           : 36
-        : 32
+        : wordPreset(layout).points * 2
       : node.type === 'heading'
-        ? [40, 36, 32][level - 1]
-        : 32;
-    const band = Math.floor(TEXT_WIDTH / 2);
+        ? (wordPreset(layout).points + [4, 2, 0][level - 1]) * 2
+        : wordPreset(layout).points * 2;
+    const band = Math.floor(wordWidth(layout) / 2);
     const centered = ['title', 'front', 'signature', 'date'].includes(role);
-    const body = layout.id && role === 'body' && node.type === 'paragraph' && !depth;
+    const body = role === 'body' && node.type === 'paragraph' && !depth;
     return [
       new Paragraph({
         heading: node.type === 'heading' ? [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][level - 1] : undefined,
-        alignment: centered ? AlignmentType.CENTER : body ? AlignmentType.JUSTIFIED : undefined,
+        alignment: centered ? AlignmentType.CENTER : AlignmentType.LEFT,
         indent: depth
           ? { left: 360 * depth, hanging: prefix ? 360 : 0 }
           : ['signature', 'sender'].includes(role)
             ? { left: band }
             : body
-              ? { firstLine: Math.round(2.5 * CM) }
+              ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
               : undefined,
         tabStops: role === 'memo-reference' ? [{ type: TabStopType.LEFT, position: band }] : undefined,
         keepNext:
@@ -348,13 +362,20 @@ function docxBlocks(
         keepLines: node.type === 'heading' || role === 'signature',
         widowControl: true,
         ...(node.type === 'paragraph'
-          ? { spacing: { before: firstPageSpace ? Math.round(0.5 * CM) : 0, after: body && documentText(node).trim() ? 120 : 0 } }
+          ? {
+              spacing: {
+                before: firstPageSpace ? Math.round(0.5 * CM) : 0,
+                after: role === 'body' && documentText(node).trim() ? wordPreset(layout).after * 20 : 0,
+              },
+            }
           : firstPageSpace
             ? { spacing: { before: Math.round(0.5 * CM) } }
             : {}),
         children: [
-          ...(prefix ? [new TextRun({ text: prefix, font: layout.font, size })] : []),
-          ...runs(node, size, node.type === 'heading', layout.font, role === 'memo-reference'),
+          ...(prefix
+            ? [new TextRun({ text: prefix, font: layout.font, size, sizeComplexScript: size, language: THAI_DOCUMENT_LANGUAGE })]
+            : []),
+          ...runs(node, size, node.type === 'heading', layout.font, role === 'memo-reference', layout.presentation.thaiBreaks),
         ],
       }),
     ];
@@ -378,7 +399,8 @@ function docxBlocks(
   return (node.content || []).flatMap(child => docxBlocks(child, layout, 'body', '', depth));
 }
 
-function docx(document: DraftNode, layout: DocumentLayout) {
+function docx(document: DraftNode, layout: WordLayout) {
+  const preset = wordPreset(layout);
   const heading = (size: number) => ({
     run: {
       font: layout.font,
@@ -426,7 +448,9 @@ function docx(document: DraftNode, layout: DocumentLayout) {
                 transformation: { width: (layout.garudaHeightCm * 96) / 2.54, height: (layout.garudaHeightCm * 96) / 2.54 },
                 altText: { name: 'Garuda', title: 'ตราครุฑ', description: `สูง ${layout.garudaHeightCm} ซม.` },
               }),
-              ...(title ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font)] : []),
+              ...(title
+                ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font, false, layout.presentation.thaiBreaks)]
+                : []),
             ],
           }),
         ],
@@ -437,12 +461,12 @@ function docx(document: DraftNode, layout: DocumentLayout) {
     styles: {
       default: {
         document: {
-          run: { font: layout.font, size: 32, sizeComplexScript: 32, language: THAI_DOCUMENT_LANGUAGE },
-          paragraph: { spacing: { before: 0, after: 0, line: 240, lineRule: LineRuleType.AUTO } },
+          run: { font: layout.font, size: preset.points * 2, sizeComplexScript: preset.points * 2, language: THAI_DOCUMENT_LANGUAGE },
+          paragraph: { spacing: { before: 0, after: 0, line: Math.round(preset.line * 240), lineRule: LineRuleType.AUTO } },
         },
-        heading1: heading(layout.id ? 32 : 40),
-        heading2: heading(layout.id ? 32 : 36),
-        heading3: heading(32),
+        heading1: heading((preset.points + 4) * 2),
+        heading2: heading((preset.points + 2) * 2),
+        heading3: heading(preset.points * 2),
       },
     },
     sections: [
@@ -452,10 +476,10 @@ function docx(document: DraftNode, layout: DocumentLayout) {
           page: {
             size: { width: 11906, height: 16838 },
             margin: {
-              top: Math.round(2.5 * CM),
-              bottom: 2 * CM,
-              left: 3 * CM,
-              right: 2 * CM,
+              top: Math.round(preset.margins.top * CM),
+              bottom: Math.round(preset.margins.bottom * CM),
+              left: Math.round(preset.margins.left * CM),
+              right: Math.round(preset.margins.right * CM),
               ...(header ? { header: Math.round(1.5 * CM) } : {}),
             },
             ...(layout.id ? { pageNumbers: { formatType: NumberFormat.THAI_NUMBERS } } : {}),
@@ -655,17 +679,26 @@ export async function exportDocument(
   text: string,
   pdf: (html: string) => Promise<Uint8Array>,
   document?: DraftNode,
-  options: { documentTool?: unknown; font?: unknown; garuda?: unknown; template?: Uint8Array } = {},
+  options: { documentTool?: unknown; font?: unknown; garuda?: unknown; template?: Uint8Array; presentation?: unknown } = {},
 ) {
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
-  if (format === 'docx' && options.template)
-    return writeFile(path, await renderDocumentTemplate(options.template, options.documentTool, content));
-  if (format === 'docx')
-    return writeFile(path, await Packer.toBuffer(docx(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda))));
+  if (format === 'docx') {
+    const presentation = resolvePresentation(options.presentation, Boolean(options.documentTool));
+    const bytes = options.template
+      ? await renderDocumentTemplate(options.template, options.documentTool, content, presentation.thaiBreaks)
+      : await Packer.toBuffer(
+          docx(content, { ...resolveDocumentLayout(options.documentTool, options.font, options.garuda), presentation }),
+        );
+    const result = presentation.embedFonts
+      ? await embedDocumentFonts(bytes)
+      : { bytes, embedding: { status: 'disabled' as const, families: [] as string[] } };
+    await writeFile(path, result.bytes);
+    return { fontEmbedding: result.embedding };
+  }
   if (format === 'pdf')
     return writeFile(path, await pdf(pdfHtml(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda))));
   if (format === 'xlsx') return xlsx(path, content);

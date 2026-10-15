@@ -4,7 +4,7 @@ import { resolveDocumentLayout, probeDocumentFont } from '../src/document-layout
 
 test('working document layouts distinguish explicit fonts and reject arbitrary profiles', () => {
   assert.equal(resolveDocumentLayout('memo').font, 'TH Sarabun New');
-  assert.equal(resolveDocumentLayout('tor').font, 'TH Sarabun PSK');
+  assert.equal(resolveDocumentLayout('tor').font, 'TH SarabunPSK');
   assert.equal(resolveDocumentLayout(undefined).font, 'TH Sarabun New');
   assert.equal(resolveDocumentLayout('memo', 'TH Sarabun New').font, 'TH Sarabun New');
   assert.throws(() => resolveDocumentLayout('../../private'), /INVALID_DOCUMENT_TOOL/);

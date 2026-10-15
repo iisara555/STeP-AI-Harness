@@ -1,0 +1,19 @@
+.document-presentation {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem;
+  margin: 0.8rem 0;
+  font-size: 0.875rem;
+}
+.document-presentation label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.document-presentation select {
+  flex: 1;
+  min-width: 8rem;
+}
