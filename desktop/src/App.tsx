@@ -4,6 +4,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { DocumentPresentationControls } from './document-presentation-controls';
 import { resolvePresentation } from './document-presentation';
+import { DocumentTitle, DocumentCaption, DocumentQuote, DocumentPageBreak, DocumentImageNode } from './document-elements';
+import { DocumentToolbar } from './document-toolbar';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { plainDocument as toDoc, documentText } from './draft';
 import {
@@ -324,6 +326,11 @@ export default function App() {
       TableRow,
       TableHeader,
       TableCell,
+      DocumentTitle,
+      DocumentCaption,
+      DocumentQuote,
+      DocumentPageBreak,
+      DocumentImageNode.configure({ load: assetId => api!.call('documentAsset', { id: sessionRef.current?.id, assetId }) }),
     ],
     content: toDoc(''),
     editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false', lang: 'th' } },
@@ -2631,6 +2638,29 @@ export default function App() {
                         </p>
                         <RichText text={session.documentReview.text} />
                       </details>
+                    )}
+                    {editor && (
+                      <DocumentToolbar
+                        editor={editor}
+                        locked={Boolean(session.documentTemplate)}
+                        disabled={exporting}
+                        onImage={() =>
+                          void action(async () => {
+                            const owner = selected;
+                            await save();
+                            const result = await api.call('documentImageAdd', { id: owner });
+                            if (!result.canceled && currentId.current === owner)
+                              editor
+                                .chain()
+                                .focus()
+                                .insertContent([
+                                  { type: 'image', attrs: result.attrs },
+                                  { type: 'caption', content: [] },
+                                ])
+                                .run();
+                          })
+                        }
+                      />
                     )}
                     <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
                       <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>

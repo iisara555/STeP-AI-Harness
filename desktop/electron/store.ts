@@ -1,9 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import type { Session, Connection, Settings } from '../src/types';
-import { documentText, markdownDocument, validateDocument } from '../src/draft';
+import { documentText, markdownDocument, validateDocument, documentImageIds } from '../src/draft';
 import { parseDocumentOutput } from '../src/document-output';
 import { resolvePresentation } from '../src/document-presentation';
+import type { DocumentAssetRecord } from './document-assets';
 
 export class Store {
   private db: DatabaseSync;
@@ -91,8 +92,31 @@ export class Store {
     delete s.approvedPlan;
     delete s.workPlan;
     delete s.documentTemplate;
-    this.save(s);
-    return s;
+    return this.transaction(() => {
+      const replacements = new Map<string, string>();
+      for (const asset of this.list<DocumentAssetRecord>('document-asset')) {
+        if (asset.sessionId !== id) continue;
+        const key = randomUUID();
+        replacements.set(asset.key, key);
+        this.put('document-asset', key, { ...asset, key, sessionId: s.id });
+      }
+      // Remap structured nodes and opaque Markdown tokens in all retained versions and proposals.
+      const remap = (value: unknown): unknown => {
+        if (typeof value === 'string')
+          return (
+            replacements.get(value) ??
+            value.replace(/step-asset:([0-9a-f-]{36})/gi, (token, key) =>
+              replacements.has(key) ? 'step-asset:' + replacements.get(key) : token,
+            )
+          );
+        if (Array.isArray(value)) return value.map(remap);
+        if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, remap(item)]));
+        return value;
+      };
+      const forked = remap(s) as Session;
+      this.save(forked);
+      return forked;
+    });
   }
   resume(id: string) {
     const s = this.session(id);
@@ -174,6 +198,10 @@ export class Store {
     const session = this.session(id);
     if (session.revision !== baseRevision) throw new Error('DRAFT_CONFLICT');
     const normalized = document === undefined ? undefined : validateDocument(document);
+    if (normalized)
+      for (const key of documentImageIds(normalized)) {
+        if (this.get<{ sessionId: string }>('document-asset', key)?.sessionId !== id) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
+      }
     const appearance = presentation === undefined ? session.presentation : resolvePresentation(presentation, Boolean(session.documentTool));
     if (session.documentTemplate && appearance?.preset && appearance.preset !== (session.presentation?.preset || 'saraban'))
       throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');

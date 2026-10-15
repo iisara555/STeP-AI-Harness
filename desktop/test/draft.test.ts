@@ -72,7 +72,7 @@ test('model Markdown becomes a bounded, formatted draft', () => {
   assert.equal(table.type, 'table');
   assert.equal(table.content![0].content![0].type, 'tableHeader');
   assert.equal(documentText(table), 'หัวข้อ\tรายละเอียด\nงบ\t50,000');
-  assert.deepEqual(h, { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'บรีฟงาน' }] });
+  assert.deepEqual(h, { type: 'title', content: [{ type: 'text', text: 'บรีฟงาน' }] });
   assert.deepEqual(
     p.content!.map(n => n.marks?.[0]?.type || 'plain'),
     ['plain', 'bold', 'plain', 'italic'],

@@ -120,3 +120,9 @@ Host เก็บ bytes ที่เลือกเป็น snapshot ส่ว�
 The owner selected TypeScript/ICU, DOCX-only U+200B by default with opt-out, and preservation of agency templates. Canonicalize TH SarabunPSK while accepting the old spaced alias. Add bounded saraban/report/book presets, revisioned presentation metadata, detached paragraph-wide segmentation and actual four-face font embedding with per-file and manifest checksums. Markdown soft wraps form one paragraph; explicit breaks and existing stored drafts retain their structure. New template runs complete missing script properties. No application version or release is changed.
 
 Targeted semantic, export, package and persistence regressions accompany the change. Native Word rendering and full integration validation are recorded after completion, separately from XML tests and macOS employee acceptance.
+
+### Rich elements and owned images
+
+The document toolbar distinguishes Title from Heading 1–3 and exposes quote, caption, page break, list nesting/start and image width/alternative text. New Markdown titles become Title; existing saved drafts are not migrated. DOCX lists use native numbering rather than printed prefixes. A form-feed encodes explicit page breaks in local Markdown; ordinary horizontal rules keep their previous behavior.
+
+Images enter through a policy-checked native picker, are bounded before native decode, normalized to PNG without source metadata, checksummed and stored in the private workspace database. The editor holds only an asset ID owned by its task. All revisions retain assets, and forks copy/remap their own assets before the original task can be deleted. No remote image URLs are fetched. DOCX/PDF include images; Markdown/XLSX/PPTX report unsupported image elements before writing. Native agency templates reject new structures they cannot preserve. Automated fixtures use synthetic text and pixels; no real staff document is committed.

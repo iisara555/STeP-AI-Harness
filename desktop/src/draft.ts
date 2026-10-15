@@ -3,7 +3,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 export type DraftNode = {
   type: string;
   text?: string;
-  attrs?: { level?: number; start?: number };
+  attrs?: { level?: number; start?: number; assetId?: string; widthCm?: number; alt?: string };
   marks?: { type: string }[];
   content?: DraftNode[];
 };
@@ -14,7 +14,9 @@ export const plainDocument = (text: string): DraftNode => ({
 
 // Inline Markdown to text runs: bold and italic survive; code, links, and escapes become plain text.
 function inline(text: string): DraftNode[] {
+  const addMark = (marks: { type: string }[], type: string) => (marks.some(mark => mark.type === type) ? marks : [...marks, { type }]);
   const flatten = (node: any, marks: { type: string }[] = []): DraftNode[] => {
+    if (node.type === 'image') return [{ type: 'text', text: text.slice(node.position.start.offset, node.position.end.offset) }];
     if (node.type === 'break') return [{ type: 'hardBreak' }];
     if (node.type === 'html' && /^<br\s*\/?>$/i.test(node.value)) return [{ type: 'hardBreak' }];
     if (typeof node.value === 'string') {
@@ -27,7 +29,7 @@ function inline(text: string): DraftNode[] {
         let start = 0;
         for (const match of raw.matchAll(pattern)) {
           if (match.index! > start) parts.push({ type: 'text', text: raw.slice(start, match.index), ...(marks.length ? { marks } : {}) });
-          parts.push({ type: 'text', text: match[2], marks: [...marks, { type: 'bold' }] });
+          parts.push({ type: 'text', text: match[2], marks: addMark(marks, 'bold') });
           start = match.index! + match[0].length;
         }
         if (start) {
@@ -38,7 +40,7 @@ function inline(text: string): DraftNode[] {
       return [{ type: 'text', text: node.value, ...(marks.length ? { marks } : {}) }];
     }
     const mark = node.type === 'strong' ? 'bold' : node.type === 'emphasis' ? 'italic' : undefined;
-    return (node.children || []).flatMap((child: any) => flatten(child, mark ? [...marks, { type: mark }] : marks));
+    return (node.children || []).flatMap((child: any) => flatten(child, mark ? addMark(marks, mark) : marks));
   };
   return flatten(fromMarkdown(text));
 }
@@ -126,10 +128,29 @@ export function markdownDocument(markdown: string): DraftNode {
       doc.content!.push(tableNode(rows));
       continue;
     }
-    if (!raw.trim() || /^\s*([-*_])(\s*\1){2,}\s*$/.test(raw) || TABLE_RULE.test(raw)) continue;
+    if (raw === '\f') {
+      doc.content!.push({ type: 'pageBreak' });
+      continue;
+    }
+    if (!raw.trim() || TABLE_RULE.test(raw) || /^\s*([-*_])(\s*\1){2,}\s*$/.test(raw)) continue;
+    const asset = /^!\[((?:\\.|[^\]])*)\]\(step-asset:([a-f0-9-]{36})\)$/.exec(raw.trim());
+    if (asset) {
+      doc.content!.push({ type: 'image', attrs: { assetId: asset[2], widthCm: 12, alt: asset[1].replace(/\\([\\\[\]])/g, '$1') } });
+      continue;
+    }
+    if (/^\s*>\s?/.test(raw)) {
+      const quote = [raw.replace(/^\s*>\s?/, '')];
+      while (at + 1 < lines.length && /^\s*>\s?/.test(lines[at + 1])) quote.push(lines[++at].replace(/^\s*>\s?/, ''));
+      doc.content!.push({ type: 'blockquote', content: [{ type: 'paragraph', content: inline(quote.join(' ')) }] });
+      continue;
+    }
     const heading = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(raw);
     if (heading) {
-      doc.content!.push({ type: 'heading', attrs: { level: Math.min(heading[1].length, 3) }, content: inline(heading[2]) });
+      doc.content!.push(
+        heading[1].length === 1 && !doc.content!.length
+          ? { type: 'title', content: inline(heading[2]) }
+          : { type: 'heading', attrs: { level: Math.min(heading[1].length, 3) }, content: inline(heading[2]) },
+      );
       continue;
     }
     // A pipe row without a rule stays readable as one line; quotes lose their marker.
@@ -176,7 +197,12 @@ export function validateDocument(value: unknown): DraftNode {
   const visit = (node: any, depth: number): DraftNode => {
     if (++count > 30000 || depth > 16 || !node || typeof node !== 'object') throw new Error('INVALID_DOCUMENT');
     const children: Record<string, string[]> = {
-      doc: ['paragraph', 'heading', 'bulletList', 'orderedList', 'table'],
+      doc: ['paragraph', 'heading', 'title', 'caption', 'blockquote', 'pageBreak', 'image', 'bulletList', 'orderedList', 'table'],
+      title: ['text', 'hardBreak'],
+      caption: ['text', 'hardBreak'],
+      blockquote: ['paragraph'],
+      image: [],
+      pageBreak: [],
       table: ['tableRow'],
       tableRow: ['tableHeader', 'tableCell'],
       tableHeader: ['paragraph'],
@@ -195,7 +221,7 @@ export function validateDocument(value: unknown): DraftNode {
       if (typeof node.text !== 'string' || node.text.length > 150000) throw new Error('INVALID_DOCUMENT');
       result.text = node.text;
       if (node.marks !== undefined) {
-        if (!Array.isArray(node.marks) || node.marks.some((m: any) => !m || !['bold', 'italic'].includes(m.type)))
+        if (!Array.isArray(node.marks) || node.marks.length > 2 || node.marks.some((m: any) => !m || !['bold', 'italic'].includes(m.type)))
           throw new Error('INVALID_DOCUMENT');
         result.marks = node.marks.map((m: any) => ({ type: m.type }));
       }
@@ -208,6 +234,22 @@ export function validateDocument(value: unknown): DraftNode {
       const start = node.attrs?.start ?? 1;
       if (!Number.isInteger(start) || start < 1 || start > 10000) throw new Error('INVALID_DOCUMENT');
       result.attrs = { start };
+    }
+    if (node.type === 'image') {
+      const { assetId, widthCm = 12, alt = '' } = node.attrs || {};
+      if (
+        typeof assetId !== 'string' ||
+        !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(assetId) ||
+        typeof widthCm !== 'number' ||
+        !Number.isFinite(widthCm) ||
+        widthCm < 1 ||
+        widthCm > 17 ||
+        typeof alt !== 'string' ||
+        alt.length > 500 ||
+        Object.keys(node.attrs || {}).some(k => !['assetId', 'widthCm', 'alt'].includes(k))
+      )
+        throw new Error('INVALID_DOCUMENT');
+      result.attrs = { assetId, widthCm, alt };
     }
     if (node.content !== undefined) {
       if (!Array.isArray(node.content) || node.content.some((c: any) => !children[node.type].includes(c?.type)))
@@ -226,9 +268,11 @@ export function validateDocument(value: unknown): DraftNode {
 export function documentText(node: DraftNode): string {
   if (node.type === 'text') return node.text || '';
   if (node.type === 'hardBreak') return '\n';
+  if (node.type === 'image') return node.attrs?.alt || '[รูปภาพ]';
+  if (node.type === 'pageBreak') return '';
   // A table as tab-separated rows, which spreadsheets and the plain-text exports read as columns.
   if (node.type === 'tableRow') return (node.content || []).map(cell => documentText(cell).replace(/[\t\n]+/g, ' ')).join('\t');
-  return (node.content || []).map(documentText).join(['paragraph', 'heading'].includes(node.type) ? '' : '\n');
+  return (node.content || []).map(documentText).join(['paragraph', 'heading', 'title', 'caption'].includes(node.type) ? '' : '\n');
 }
 
 export function documentMarkdown(node: DraftNode, indent = ''): string {
@@ -238,6 +282,11 @@ export function documentMarkdown(node: DraftNode, indent = ''): string {
     return text;
   }
   if (node.type === 'hardBreak') return '  \n';
+  if (node.type === 'image') return `![${(node.attrs?.alt || '').replace(/([\\\[\]])/g, '\\$1')}](step-asset:${node.attrs?.assetId})`;
+  if (node.type === 'pageBreak') return '\f';
+  if (node.type === 'blockquote') return (node.content || []).map(n => '> ' + documentMarkdown(n, indent)).join('\n>\n');
+  if (node.type === 'title') return '# ' + (node.content || []).map(n => documentMarkdown(n)).join('');
+  if (node.type === 'caption') return (node.content || []).map(n => documentMarkdown(n)).join('');
   if (node.type === 'table') {
     const rows = (node.content || []).map(row =>
       (row.content || []).map(cell =>
@@ -264,4 +313,13 @@ export function documentMarkdown(node: DraftNode, indent = ''): string {
     .map(child => documentMarkdown(child, indent))
     .join(['paragraph', 'heading'].includes(node.type) ? '' : '\n\n');
   return node.type === 'heading' ? '#'.repeat(node.attrs?.level || 1) + ' ' + text : text;
+}
+
+export function documentImageIds(node: DraftNode): string[] {
+  return [
+    ...new Set([
+      ...(node.type === 'image' && node.attrs?.assetId ? [node.attrs.assetId] : []),
+      ...(node.content || []).flatMap(documentImageIds),
+    ]),
+  ];
 }
