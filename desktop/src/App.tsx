@@ -2,6 +2,8 @@ import { ThinkingScribble } from './thinking-scribble';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { DocumentPresentationControls } from './document-presentation-controls';
+import { resolvePresentation } from './document-presentation';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { plainDocument as toDoc, documentText } from './draft';
 import {
@@ -161,6 +163,9 @@ export default function App() {
   const [format, setFormat] = useState('docx'),
     [exportPath, setExportPath] = useState('');
   const [exportFont, setExportFont] = useState('auto');
+  const [presentation, setPresentation] = useState(() => resolvePresentation());
+  const presentationRef = useRef(presentation);
+  presentationRef.current = presentation;
   const [exportGaruda, setExportGaruda] = useState('auto');
   const [exporting, setExporting] = useState(false);
   const exportPending = useRef(false);
@@ -168,6 +173,7 @@ export default function App() {
     documentTool?: string;
     font: string;
     fontStatus: string;
+    fontEmbedding?: { status: string; families: string[] };
     garudaHeightCm?: number;
     templateName?: string;
   } | null>(null);
@@ -505,7 +511,10 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    if (editor && !dirtyRef.current) editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
+    if (editor && !dirtyRef.current) {
+      editor.commands.setContent(session?.document || toDoc(session?.draft || ''), { emitUpdate: false });
+      setPresentation(resolvePresentation(session?.presentation, Boolean(session?.documentTool)));
+    }
   }, [editor, selected, session?.revision]);
   const action = async (fn: () => Promise<unknown>) => {
     try {
@@ -523,10 +532,11 @@ export default function App() {
         if (current && editor && dirtyRef.current) {
           const document = editor.getJSON(),
             text = documentText(document as any);
-          const serialized = JSON.stringify(document);
-          const saved = await api!.call('edit', { id: current.id, text, document, revision: current.revision });
+          const appearance = presentationRef.current;
+          const serialized = JSON.stringify({ document, appearance });
+          const saved = await api!.call('edit', { id: current.id, text, document, presentation: appearance, revision: current.revision });
           sessionRef.current = saved;
-          const changedAgain = JSON.stringify(editor.getJSON()) !== serialized;
+          const changedAgain = JSON.stringify({ document: editor.getJSON(), appearance: presentationRef.current }) !== serialized;
           setDirty(changedAgain);
           dirtyRef.current = changedAgain;
           await refresh();
@@ -2711,6 +2721,19 @@ export default function App() {
                         {t('ส่งออก')}
                       </button>
                     </footer>
+                    {format === 'docx' && (
+                      <DocumentPresentationControls
+                        value={presentation}
+                        locked={Boolean(session?.documentTemplate)}
+                        disabled={exporting}
+                        onChange={value => {
+                          setPresentation(value);
+                          presentationRef.current = value;
+                          setDirty(true);
+                          dirtyRef.current = true;
+                        }}
+                      />
+                    )}
                     {['docx', 'pdf'].includes(format) && (
                       <label className="document-export-font">
                         {t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
@@ -2765,7 +2788,11 @@ export default function App() {
                         ) : (
                           <p>{t('ไม่ใส่ตราครุฑ')}</p>
                         )}
-                        {exportInfo.fontStatus === 'missing' && (
+                        {exportInfo.fontEmbedding?.status === 'embedded' && <p>{t('ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้')}</p>}
+                        {exportInfo.fontEmbedding?.status === 'unavailable' && (
+                          <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
+                        )}
+                        {exportInfo.fontEmbedding?.status !== 'embedded' && exportInfo.fontStatus === 'missing' && (
                           <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
                         )}
                         {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}

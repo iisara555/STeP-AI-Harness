@@ -1,3 +1,5 @@
+import { fromMarkdown } from 'mdast-util-from-markdown';
+
 export type DraftNode = {
   type: string;
   text?: string;
@@ -12,33 +14,33 @@ export const plainDocument = (text: string): DraftNode => ({
 
 // Inline Markdown to text runs: bold and italic survive; code, links, and escapes become plain text.
 function inline(text: string): DraftNode[] {
-  const nodes: DraftNode[] = [],
-    pattern = /(\*\*|__)(.+?)\1|(\*|_)(?!\s)(.+?)(?<!\s)\3|`([^`]+)`|\[([^\]]+)\]\([^)]*\)|\\([\\`*_[\]<>#])/g;
-  let last = 0,
-    match: RegExpExecArray | null;
-  const push = (value: string, mark?: string, breaks = true) => {
-    // The model sometimes uses a Markdown-compatible HTML break. Map that one token to the bounded schema;
-    // never parse arbitrary HTML or attributes. Fenced code bypasses inline parsing.
-    (breaks ? value.split(/<br\s*\/?>/i) : [value]).forEach((part, index) => {
-      if (index) nodes.push({ type: 'hardBreak' });
-      if (part) nodes.push(mark ? { type: 'text', text: part, marks: [{ type: mark }] } : { type: 'text', text: part });
-    });
+  const flatten = (node: any, marks: { type: string }[] = []): DraftNode[] => {
+    if (node.type === 'break') return [{ type: 'hardBreak' }];
+    if (node.type === 'html' && /^<br\s*\/?>$/i.test(node.value)) return [{ type: 'hardBreak' }];
+    if (typeof node.value === 'string') {
+      // Preserve legacy emphasis next to identifiers (CommonMark treats **name_**suffix as literal).
+      // Escaped source characters remain literal; stripping markers before privacy review must not split an email.
+      const raw = text.slice(node.position?.start.offset ?? 0, node.position?.end.offset ?? text.length);
+      if (node.type === 'text' && raw === node.value && !raw.includes('\\')) {
+        const pattern = /(\*\*|__)(.+?)\1/g;
+        const parts: DraftNode[] = [];
+        let start = 0;
+        for (const match of raw.matchAll(pattern)) {
+          if (match.index! > start) parts.push({ type: 'text', text: raw.slice(start, match.index), ...(marks.length ? { marks } : {}) });
+          parts.push({ type: 'text', text: match[2], marks: [...marks, { type: 'bold' }] });
+          start = match.index! + match[0].length;
+        }
+        if (start) {
+          if (start < raw.length) parts.push({ type: 'text', text: raw.slice(start), ...(marks.length ? { marks } : {}) });
+          return parts;
+        }
+      }
+      return [{ type: 'text', text: node.value, ...(marks.length ? { marks } : {}) }];
+    }
+    const mark = node.type === 'strong' ? 'bold' : node.type === 'emphasis' ? 'italic' : undefined;
+    return (node.children || []).flatMap((child: any) => flatten(child, mark ? [...marks, { type: mark }] : marks));
   };
-  while ((match = pattern.exec(text))) {
-    push(text.slice(last, match.index));
-    if (match[2] !== undefined) push(match[2], 'bold');
-    else if (match[4] !== undefined) push(match[4], 'italic');
-    else push(match[5] ?? match[6] ?? match[7], undefined, match[5] === undefined);
-    last = pattern.lastIndex;
-  }
-  push(text.slice(last));
-  // Adjacent plain runs merge so the editor sees one text node.
-  return nodes.reduce<DraftNode[]>((all, node) => {
-    const prev = all.at(-1);
-    if (prev?.type === 'text' && node.type === 'text' && !prev.marks && !node.marks) prev.text += node.text || '';
-    else all.push({ ...node });
-    return all;
-  }, []);
+  return flatten(fromMarkdown(text));
 }
 
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
@@ -139,7 +141,31 @@ export function markdownDocument(markdown: string): DraftNode {
           .map(cell => cell.trim())
           .join(' · ')
       : raw.replace(/^\s*>\s?/, '');
-    doc.content!.push({ type: 'paragraph', content: inline(text) });
+    const fieldLine =
+      /^(?:ส่วนงาน|ส่วนราชการ|ที่\s|วันที่\s|เรื่อง\s|เรียน\s|อ้างถึง|สิ่งที่ส่งมาด้วย|หน่วยงาน\s|ผู้รับผิดชอบ|ชื่อการประชุม|ครั้งที่|วัน เวลา|เริ่มประชุม|เลิกประชุม|ขอแสดงความนับถือ|ตำแหน่ง|\(|\[รอยืนยัน:)/;
+    const prose = [text];
+    while (
+      at + 1 < lines.length &&
+      !fieldLine.test(raw) &&
+      !fieldLine.test(lines[at + 1]) &&
+      lines[at + 1].trim() &&
+      !/^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|[>|]|```|~~~)/.test(lines[at + 1]) &&
+      !/^(?: {2,}|\\)$/.test(prose.at(-1)!.slice(-2))
+    ) {
+      if (/ {2}$|\\$/.test(prose.at(-1)!)) break;
+      prose.push(lines[++at]);
+    }
+    // Markdown soft newlines are spaces. Explicit Markdown hard breaks remain break nodes.
+    const joined = prose.join(' ');
+    const content = inline(joined.replace(/ {2}$|\\$/, ''));
+    if (/ {2}$|\\$/.test(prose.at(-1)!) && at + 1 < lines.length && lines[at + 1].trim()) {
+      while (at + 1 < lines.length && lines[at + 1].trim() && !/^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|[>|])/.test(lines[at + 1])) {
+        const next = lines[++at];
+        content.push({ type: 'hardBreak' }, ...inline(next.replace(/ {2}$|\\$/, '')));
+        if (!/ {2}$|\\$/.test(next)) break;
+      }
+    }
+    doc.content!.push({ type: 'paragraph', content });
   }
   return doc;
 }

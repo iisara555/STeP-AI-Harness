@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Improve Thai DOCX export with optional paragraph-wide ICU word-break opportunities, canonical Sarabun family names, genuine four-face font embedding, three page presets and revisioned presentation controls. Preserve source text and agency layouts; distinguish Markdown soft wraps from explicit breaks.
+
 ## Desktop v0.6.9 (2026-10-15)
 
 - Add a native Google Workspace Skill with account/scope preflight, bounded Gmail search and daily briefs, exact-action write review, read-back limits and unknown-outcome recovery. Load individual Skill references/examples through the governed `skill` tool. Include offline fixtures for all 26 native operations and Hermes MIT provenance; live Google and model-side acceptance remain open.

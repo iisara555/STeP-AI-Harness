@@ -3,6 +3,7 @@ import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import { documentText, validateDocument, type DraftNode } from '../src/draft';
 import { documentTool, type DocumentToolId } from '../src/document-tools';
 import { documentLayoutRoles } from '../src/document-layout';
+import { withThaiBreaks } from '../src/thai-typography';
 import { posix } from 'node:path';
 
 // Agency files remain local. Only a sample-free outline goes to the selected AI.
@@ -232,10 +233,65 @@ export async function inspectDocumentTemplate(bytes: Uint8Array, id: unknown) {
 }
 
 /** Reflow editable content using the selected template's native styles, frames, tables and sections. */
-export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, input: DraftNode) {
+export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, input: DraftNode, thaiBreaks = false) {
   const rich = validateDocument(input);
   const { zip, doc, body } = await open(bytes);
   const info = describe(body, doc, id);
+  const stylesFile = zip.file('word/styles.xml');
+  const styles = stylesFile ? parse(await stylesFile.async('string')) : undefined;
+  const themeFile = zip.file('word/theme/theme1.xml');
+  const theme = themeFile ? parse(await themeFile.async('string')) : undefined;
+  const themeFamily = (reference: string, script: string) => {
+    if (!reference) return undefined;
+    const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+    const group = theme?.getElementsByTagNameNS(A, reference.startsWith('major') ? 'majorFont' : 'minorFont')[0];
+    if (!group) return undefined;
+    return (
+      (script === 'cs'
+        ? Array.from(group.getElementsByTagNameNS(A, 'font'))
+            .find(n => n.getAttribute('script') === 'Thai')
+            ?.getAttribute('typeface')
+        : undefined) ||
+      group.getElementsByTagNameNS(A, script === 'cs' ? 'cs' : script === 'eastAsia' ? 'ea' : 'latin')[0]?.getAttribute('typeface') ||
+      group.getElementsByTagNameNS(A, 'latin')[0]?.getAttribute('typeface') ||
+      undefined
+    );
+  };
+  const inheritedRunProperties = (source: Element) => {
+    const layers: Element[] = [];
+    const run = children(source).find(n => n.localName === 'r' && text(n));
+    if (run) layers.push(...children(run).filter(n => n.localName === 'rPr'));
+    const paragraphProps = children(source).find(n => n.localName === 'pPr');
+    if (paragraphProps) layers.push(...children(paragraphProps).filter(n => n.localName === 'rPr'));
+    const visited = new Set<string>();
+    const chain = (initial?: string | null) => {
+      let key = initial;
+      while (key && !visited.has(key)) {
+        visited.add(key);
+        const style = styles && elements(styles, 'style').find(n => n.getAttributeNS(W, 'styleId') === key);
+        if (!style) break;
+        layers.push(...children(style).filter(n => n.localName === 'rPr'));
+        key = children(style)
+          .find(n => n.localName === 'basedOn')
+          ?.getAttributeNS(W, 'val');
+      }
+    };
+    chain(
+      layers[0] &&
+        children(layers[0])
+          .find(n => n.localName === 'rStyle')
+          ?.getAttributeNS(W, 'val'),
+    );
+    chain(
+      paragraphProps &&
+        children(paragraphProps)
+          .find(n => n.localName === 'pStyle')
+          ?.getAttributeNS(W, 'val'),
+    );
+    if (styles)
+      for (const defaults of elements(styles, 'rPrDefault')) layers.push(...children(defaults).filter(n => n.localName === 'rPr'));
+    return layers;
+  };
   const original = children(body),
     paragraphs = original.filter(n => n.localName === 'p');
   const firstText = paragraphs.find(n => text(n));
@@ -297,6 +353,7 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
     return p;
   };
   const inline = (p: Element, nodes: DraftNode[], source: Element, fieldValue = false) => {
+    if (thaiBreaks) nodes = withThaiBreaks({ type: 'paragraph', content: nodes }).content!;
     for (const node of nodes) {
       const run = create('r'),
         textRun = children(source).find(n => n.localName === 'r' && text(n));
@@ -333,6 +390,51 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
           p.appendChild(language);
         }
         language.setAttributeNS(W, 'w:val', 'th-TH');
+        let fonts = children(p).find(n => n.localName === 'rFonts');
+        if (!fonts) {
+          fonts = create('rFonts');
+          p.appendChild(fonts);
+        }
+        const inherited = inheritedRunProperties(source);
+        const effective = (tag: string, attribute: string) =>
+          inherited
+            .map(layer => {
+              const value = children(layer).find(n => n.localName === tag);
+              return (
+                value?.getAttributeNS(W, attribute) ||
+                (tag === 'rFonts'
+                  ? themeFamily(value?.getAttributeNS(W, attribute === 'cs' ? 'cstheme' : `${attribute}Theme`) || '', attribute)
+                  : undefined)
+              );
+            })
+            .find(Boolean);
+        const family =
+          fonts.getAttributeNS(W, 'cs') ||
+          fonts.getAttributeNS(W, 'ascii') ||
+          effective('rFonts', 'cs') ||
+          effective('rFonts', 'ascii') ||
+          info.font;
+        for (const key of ['ascii', 'hAnsi', 'cs', 'eastAsia'])
+          if (!fonts.getAttributeNS(W, key))
+            fonts.setAttributeNS(
+              W,
+              `w:${key}`,
+              (effective('rFonts', key) || family) === 'TH Sarabun PSK' ? 'TH SarabunPSK' : effective('rFonts', key) || family,
+            );
+        if (!children(p).some(n => n.localName === 'szCs')) {
+          const size = create('szCs');
+          size.setAttributeNS(
+            W,
+            'w:val',
+            children(p)
+              .find(n => n.localName === 'sz')
+              ?.getAttributeNS(W, 'val') ||
+              effective('szCs', 'val') ||
+              effective('sz', 'val') ||
+              '32',
+          );
+          p.appendChild(size);
+        }
       }
       if (node.type === 'hardBreak') run.appendChild(create('br'));
       else {

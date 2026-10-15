@@ -196,7 +196,13 @@ export type Message = {
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
-export type DraftVersion = { revision: number; text: string; document?: DraftNode; at: string };
+export type DraftVersion = {
+  revision: number;
+  text: string;
+  document?: DraftNode;
+  presentation?: import('./document-presentation').DocumentPresentation;
+  at: string;
+};
 export type Proposal = { id: string; text: string; review?: string; baseRevision: number; sources: string[]; at: string };
 export type DocumentTemplateInfo = { key: string; sha256: string; name: string; font: string };
 export type Session = {
@@ -220,6 +226,7 @@ export type Session = {
   messages: Message[];
   draft: string;
   document?: DraftNode;
+  presentation?: import('./document-presentation').DocumentPresentation;
   revision: number;
   versions: DraftVersion[];
   proposals: Proposal[];

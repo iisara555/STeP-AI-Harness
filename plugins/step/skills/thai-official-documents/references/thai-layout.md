@@ -23,3 +23,9 @@
 บอกสถานะให้ตรง: ร่างข้อความ / ส่งออกแล้ว / ตรวจโครงสร้างแล้ว / ตรวจหน้าจริงแล้ว พร้อมสิ่งที่ยังไม่ได้ตรวจ การตรวจภาพหรือไฟล์สังเคราะห์ไม่ใช่การรับรองแบบราชการหรือคุณภาพร่างจากโมเดลจริง
 
 ศึกษาจาก [thaigqsoft/thai-doc-skills](https://github.com/thaigqsoft/thai-doc-skills/tree/6aa488fa2ae1a00b7a9c38dd54feab4889b3fb5a) (MIT © 2026 Netthip): นำหลัก complex-script formatting และการตรวจการตัดคำมาเขียนใหม่ให้เหมาะกับ STeP ไม่ใช้ Python backend ไม่แทรก ZWSP อัตโนมัติ ไม่ติดตั้ง/ฝังฟอนต์จากต้นทาง ดู [MIT notice](thai-doc-skills-MIT.txt)
+
+## Desktop DOCX export controls
+
+Keep source/draft text free of layout-only characters. Desktop may insert optional U+200B word-break opportunities into a detached DOCX export copy using ICU boundaries; this does not authorize inserting them into prompts or saved drafts. Markdown soft wraps belong to one semantic paragraph. Preserve explicit hard breaks and existing saved paragraph boundaries.
+
+DOCX supports saraban/report/book presets, canonical TH SarabunPSK naming and genuine four-face font embedding. Native agency templates retain their layout. Verify the selected family and every rendered page in Word; XML checks alone are not layout acceptance.

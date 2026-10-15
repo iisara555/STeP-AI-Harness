@@ -5,6 +5,19 @@ import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 export const en: Record<string, string> = {
+  'รูปแบบ DOCX': 'DOCX formatting',
+  'ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้': 'Fonts embedded for viewing and editing in Word',
+  'แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน':
+    'The template uses a font outside the app bundle. Check it on the destination computer',
+  'การตั้งค่ารูปแบบเอกสารไม่ถูกต้อง กรุณาเลือกใหม่': 'Invalid document presentation. Select the options again',
+  'ไฟล์ฟอนต์ของแอปไม่ครบหรือไม่ตรงรุ่น กรุณาติดตั้งแอปใหม่ก่อนส่งออก':
+    'Bundled fonts are missing or damaged. Reinstall the app before exporting',
+  การจัดหน้า: 'Page preset',
+  'ราชการ (สารบรรณ)': 'Official correspondence',
+  รายงานทั่วไป: 'General report',
+  'บทความ / หนังสือ': 'Article / book',
+  'ช่วยตัดคำไทยใน Word': 'Improve Thai word wrapping in Word',
+  ฝังฟอนต์เพื่อเปิดและแก้ไขบนเครื่องอื่น: 'Embed fonts for viewing and editing on other computers',
   แก้หน้าสื่อภายในให้แก้ไขต่อได้หลังใส่ตัวอย่าง: 'Keep internal media editable after inserting an example',
   'เปิดพื้นที่ทำงานได้ทันที โดยไม่ต้องลงชื่อ Google ก่อนเข้าแอป': 'Open your workspace directly without Google sign-in at app entry',
   'ตรวจนโยบายองค์กรไม่ได้ กรุณาติดต่อผู้ดูแลระบบก่อนเข้าใช้งาน':

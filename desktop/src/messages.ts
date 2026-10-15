@@ -26,6 +26,8 @@ export const errorText: Record<string, string> = localized({
   DOCUMENT_TEMPLATE_NOT_FOUND: 'ไม่พบต้นฉบับแม่แบบที่ตรวจไว้ กรุณาแนบแม่แบบใหม่ ข้อมูลในร่างยังอยู่',
   DOCUMENT_TEMPLATE_DOCX_ONLY: 'ร่างที่ใช้แม่แบบต้นฉบับส่งออก DOCX ก่อน แล้วเปิดใน Word เพื่อตรวจหน้าและบันทึก PDF',
   DOCUMENT_TEMPLATE_LAYOUT_LOCKED: 'แม่แบบต้นฉบับใช้ฟอนต์และตราที่อยู่ใน DOCX กรุณาเลือกตามแม่แบบ',
+  INVALID_DOCUMENT_PRESENTATION: 'การตั้งค่ารูปแบบเอกสารไม่ถูกต้อง กรุณาเลือกใหม่',
+  DOCUMENT_FONT_UNAVAILABLE: 'ไฟล์ฟอนต์ของแอปไม่ครบหรือไม่ตรงรุ่น กรุณาติดตั้งแอปใหม่ก่อนส่งออก',
   INVALID_EXPORT_FONT: 'ฟอนต์ส่งออกไม่รองรับ กรุณาเลือกจากรายการ',
   INVALID_EXPORT_GARUDA: 'ตัวเลือกตราครุฑไม่ถูกต้อง กรุณาเลือกจากรายการ',
   LEARNING_INVALID: 'กรุณากรอกชื่อ บทเรียน ที่มา และคำที่ใช้เลือกวิธีทำงานให้ครบ',

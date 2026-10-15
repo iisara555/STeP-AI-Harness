@@ -150,7 +150,10 @@ try {
     const output = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), session.id);
     assert.equal(output.layout.templateName, `synthetic-${id}.docx`);
     const zip = await JSZip.loadAsync(await readFile(output.path)),
-      xml = await zip.file('word/document.xml').async('string');
+      xml = await zip
+        .file('word/document.xml')
+        .async('string')
+        .then(xml => xml.replaceAll('\u200b', ''));
     assert.ok(
       xml.includes('เนื้อหาสังเคราะห์สำหรับงานใหม่') && !xml.includes('TEMPLATE EXAMPLE MUST NOT LEAK') && !xml.includes('TEMPLATE-0007'),
     );
@@ -179,7 +182,12 @@ try {
     }, session.id);
     await page.reload();
     const updated = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), edited.id);
-    const latest = await (await JSZip.loadAsync(await readFile(updated.path))).file('word/document.xml').async('string');
+    const latest = await (
+      await JSZip.loadAsync(await readFile(updated.path))
+    )
+      .file('word/document.xml')
+      .async('string')
+      .then(xml => xml.replaceAll('\u200b', ''));
     assert.ok(latest.includes('ข้อความที่เจ้าของแก้ไขแล้ว'));
   }
   assert.equal(calls.length, 4);

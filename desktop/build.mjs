@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { build as buildRenderer } from 'vite';
-import { copyFile } from 'node:fs/promises';
+import { copyFile, cp } from 'node:fs/promises';
 await buildRenderer();
 await build({
   entryPoints: ['electron/main.ts'],
@@ -13,6 +13,7 @@ await build({
 });
 await copyFile('electron/sheet-worker.cjs', 'dist/sheet-worker.cjs');
 await copyFile('electron/office-package.cjs', 'dist/office-package.cjs');
+await cp('assets/document-fonts', 'dist/document-fonts', { recursive: true });
 await build({
   entryPoints: ['electron/preload.ts'],
   outfile: 'dist/preload.cjs',

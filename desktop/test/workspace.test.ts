@@ -280,7 +280,7 @@ test('exports preserve Thai text and spreadsheets never turn text into formulas'
   const require = createRequire(import.meta.url);
   const JSZip = require('jszip');
   const docx = await JSZip.loadAsync(await readFile(join(dir, 'draft.docx')));
-  assert.match(await docx.file('word/document.xml').async('string'), /ข้อความภาษาไทย/);
+  assert.match((await docx.file('word/document.xml').async('string')).replaceAll('\u200b', ''), /ข้อความภาษาไทย/);
   const pptx = await JSZip.loadAsync(await readFile(join(dir, 'draft.pptx')));
   assert.match(await pptx.file('ppt/slides/slide1.xml').async('string'), /หัวข้อโครงการ/);
 });

@@ -27,6 +27,8 @@ _Last updated: 2026-10-15_
 
 ## In progress
 
+- **Complete Thai DOCX (2026-10-15, owner implementation request)**: PR 1 adds source-preserving Thai break opportunities, canonical font names, three page presets, four-face font embedding and revisioned presentation controls. PR 2 will add bounded rich document elements and persistent images; PR 3 will add TOC/header/footer fields and final native Word verification. No release/version bump. PR 1: Desktop 746 passed/4 skipped, Harness 990 passed/8 skipped (serial rerun after an existing temp-directory walk race), validator, build/format and document-tools/template/Thai-layout Electron smokes pass. Three presets were exported through Windows Word and all pages inspected; the final-table blank-page issue was reproduced and corrected (each fixture now 2 pages). Native macOS Word and employee-form acceptance remain separate.
+
 - **Desktop 0.6.9 audit and release (2026-10-15)**: owner authorized auditing, fixing and releasing #172–#174 together. Preserve source commits and both TOR/Thai-layout references. Two failing regressions reproduce a Skill-reference directory substitution and privacy corruption of numeric runs in search cursors. Pin scope, use bounded stable descriptor reads and encode search hashes with letters while preserving legacy cursor support and privacy checks. Consolidate duplicate TOR text and remove an unused style branch; no behavioral test is disabled/deleted. Root 990 passed/4 skipped and 47 focused file/tool tests pass. Full Desktop/native validation, protected CI and installer/feed verification are pending. Harness remains 0.7.7; live Google/model and Word/agency acceptance remain separate.
 
 

@@ -2,17 +2,18 @@ import { documentTool, type DocumentToolId } from './document-tools';
 import { documentText, type DraftNode } from './draft';
 
 // These are working layouts, not a certification of a current agency form.
-export const DOCUMENT_FONTS = ['TH Sarabun PSK', 'TH Sarabun New'] as const;
+export const DOCUMENT_FONTS = ['TH SarabunPSK', 'TH Sarabun New'] as const;
 export type DocumentFont = (typeof DOCUMENT_FONTS)[number];
 export type DocumentLayout = { id?: DocumentToolId; font: DocumentFont; garudaHeightCm?: 1.5 | 3 };
 export function resolveDocumentLayout(id?: unknown, font?: unknown, garuda?: unknown): DocumentLayout {
+  if (font === 'TH Sarabun PSK') font = 'TH SarabunPSK';
   const profile = id === undefined ? undefined : documentTool(id);
   if (id !== undefined && !profile) throw new Error('INVALID_DOCUMENT_TOOL');
   if (font !== undefined && !DOCUMENT_FONTS.includes(font as DocumentFont)) throw new Error('INVALID_EXPORT_FONT');
   if (garuda !== undefined && garuda !== 'auto' && garuda !== 'none') throw new Error('INVALID_EXPORT_GARUDA');
   return {
     id: profile?.id,
-    font: (font as DocumentFont | undefined) || (profile && profile.id !== 'memo' ? 'TH Sarabun PSK' : 'TH Sarabun New'),
+    font: (font as DocumentFont | undefined) || (profile && profile.id !== 'memo' ? 'TH SarabunPSK' : 'TH Sarabun New'),
     ...(garuda !== 'none' && ['memo', 'letter'].includes(profile?.id || '') ? { garudaHeightCm: profile?.id === 'memo' ? 1.5 : 3 } : {}),
   };
 }

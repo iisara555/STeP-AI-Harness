@@ -210,3 +210,7 @@ Anthropic ไม่มีตัวติดตั้ง `ant` สำหรับ
 ## Managed organization policy
 
 Desktop permissions and hooks are documented in [desktop-policy.md](desktop-policy.md). The OpenHarness adaptation roadmap and remaining phases are tracked in [openharness-parity.md](openharness-parity.md).
+
+## DOCX presentation controls
+
+DOCX export defaults to saraban for document tools and report for general drafts, with book available explicitly. Presentation controls are revisioned with the draft. Thai word-break opportunities are inserted into a detached export copy only and can be disabled. The bundled genuine Sarabun families retain their own licenses, are checksum-verified and embedded with all four faces; no system font installation is performed. Agency-template layout controls remain locked.
