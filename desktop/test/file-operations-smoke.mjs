@@ -112,6 +112,7 @@ try {
     .split('\n')
     .map(line => JSON.parse(line));
   assert.equal(records.length, 8);
+  for (const turn of [1, 2, 3, 7]) assert.ok(records[turn].prior, `Turn ${turn} expected a tool payload: ${JSON.stringify(records[turn])}`);
   assert.deepEqual(records[1].prior.matches, [{ path: 'nested/note.txt', line: 1, text: 'marker one' }]);
   assert.deepEqual(records[2].prior.matches, [{ path: 'nested/note.txt', line: 2, text: 'marker two' }]);
   assert.equal(records[3].prior.status, 'staged-for-human-review');

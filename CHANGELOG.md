@@ -6,11 +6,15 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.9 (2026-10-15)
+
 - Add a native Google Workspace Skill with account/scope preflight, bounded Gmail search and daily briefs, exact-action write review, read-back limits and unknown-outcome recovery. Load individual Skill references/examples through the governed `skill` tool. Include offline fixtures for all 26 native operations and Hermes MIT provenance; live Google and model-side acceptance remain open.
 
 - Improve Thai document layout with explicit Thai Word language/complex-script styling, natural Thai-word table width estimates and Thai-aware editor/PDF wrapping. Preserve source text without inserting invisible break characters, keep native template fonts/layout, and add shared drafting/layout guidance adapted from thai-doc-skills with MIT attribution. Synthetic DOCX/XML and browser/PDF checks do not replace final Word/agency-form acceptance.
 
 - Improve TOR drafting from the current task's intended use, exclusions and presentation preferences. Load goods/service adaptation examples, requirement-to-acceptance guidance and a dated official-source discovery map; preserve agency outlines and distinguish the 16-section working fallback from a verified form. Keep example hardware/contract terms out of new tasks and source/coverage checks outside exported documents.
+
+- Audit combined changes: pin Skill-reference reads to the authorized directory, recheck policy and file identity through a bounded descriptor read, and reject substituted/linked files. Encode search fingerprints without numeric runs that privacy masking could corrupt, while preserving valid legacy cursors and personal-data checks. Remove the duplicate computer TOR example body and an unused style-setter branch. Preserve all behavioral tests and improve file-search smoke diagnostics for the prior macOS failure.
 
 ## Desktop v0.6.8 (2026-10-14)
 

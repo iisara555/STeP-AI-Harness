@@ -313,11 +313,10 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
         }
         return p;
       };
-      const setProperty = (tag: string, value?: string) => {
+      const setProperty = (tag: string) => {
         const p = runProperties();
         for (const old of children(p).filter(n => n.localName === tag)) p.removeChild(old);
         const style = create(tag);
-        if (value) style.setAttributeNS(W, 'w:val', value);
         p.appendChild(style);
       };
       for (const mark of node.marks || []) {

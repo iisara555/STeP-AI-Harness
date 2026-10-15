@@ -6,6 +6,19 @@ import { join } from 'node:path';
 import { Store } from '../electron/store';
 import { Workbench } from '../electron/workbench';
 import { defaultPolicy } from '../electron/policy';
+import { encodeSearchFingerprint, searchOptions } from '../electron/file-search';
+import { evaluatePrivacyGate } from '../../src/modules/privacy/index.js';
+
+test('opaque search cursors survive privacy masking even when the hash contains thirteen consecutive digits', () => {
+  const digest = 'ab1234567890123cd' + 'f'.repeat(47);
+  assert.equal(digest.length, 64);
+  const cursor = `${encodeSearchFingerprint(digest)}:1`;
+  const payload = JSON.stringify({ matches: [{ path: 'note.txt', line: 1, text: 'marker' }], nextCursor: cursor });
+  const safe = evaluatePrivacyGate(payload).redactedText;
+  assert.equal(safe, payload, 'host-generated pagination metadata must reach the model intact');
+  assert.equal(searchOptions({ pattern: 'marker', cursor }).cursor, cursor);
+  assert.notEqual(evaluatePrivacyGate('เลขประจำตัว 1234567890123').redactedText, 'เลขประจำตัว 1234567890123');
+});
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'step-file-operations-'));
   const store = new Store(':memory:');
@@ -193,6 +206,7 @@ test('bounded search filters protected files, validates patterns and paginates d
     const first = await f.workbench.searchFiles('.', args);
     assert.deepEqual(first.matches, [{ path: 'a.txt', line: 1, text: 'needle' }]);
     assert.ok(first.nextCursor);
+    assert.equal(evaluatePrivacyGate(JSON.stringify(first)).redactedText, JSON.stringify(first));
     const next = await f.workbench.searchFiles('.', {
       maxResults: 1,
       glob: '**/*.txt',

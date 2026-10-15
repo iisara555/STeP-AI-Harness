@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, readFile, mkdir, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, mkdir, rm, symlink, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
@@ -638,6 +638,34 @@ test('Skill resources load progressively and cannot escape the routed Skill or b
     f.policy.permission.pathRules = [];
     f.harness.route = async () => ({ routingContract: { mode: 'BLOCK', skill: 'known', authority: { status: 'DENY' } } });
     await assert.rejects(call('references/search.md'), /AUTHORITY_REVIEW_REQUIRED/);
+  } finally {
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('a reference directory replaced after Skill scope validation cannot expose another Skill', async () => {
+  const f = await fixture();
+  const base = join(f.root, 'skills', 'known'),
+    refs = join(base, 'references');
+  try {
+    await mkdir(refs, { recursive: true });
+    await mkdir(join(f.root, 'other-skill'));
+    await writeFile(join(base, 'SKILL.md'), 'Core');
+    await writeFile(join(refs, 'search.md'), 'Authorized reference');
+    await writeFile(join(f.root, 'other-skill', 'search.md'), 'SYNTHETIC_UNAUTHORIZED_REFERENCE');
+    f.harness.catalog = async () => [{ name: 'known', path: 'skills/known/SKILL.md', status: 'routed' }];
+    f.harness.skillMetadata = async () => ({ path: 'skills/known/SKILL.md', mandatoryReferences: [] });
+    const originalContext = (f.tools as any).context.bind(f.tools);
+    (f.tools as any).context = async (...args: unknown[]) => {
+      await rename(refs, join(base, 'retained-references'));
+      await symlink(join(f.root, 'other-skill'), refs, 'junction');
+      return originalContext(...args);
+    };
+    await assert.rejects(
+      f.tools.execute({ tool: 'skill', input: 'known', args: { resource: 'references/search.md' } }, f.scope),
+      /INVALID_CONTEXT_PATH|INVALID_SKILL_RESOURCE/,
+    );
   } finally {
     f.store.close();
     await rm(f.root, { recursive: true, force: true });

@@ -1,5 +1,13 @@
 # ตรวจงานร่างเอกสารและส่งออก — 8 ตุลาคม 2569
 
+## Combined audit / Desktop 0.6.9 — 2026-10-15
+
+Audit #172–#174 together before release. A deterministic regression replaces a reference directory after the initial Skill check and reproduces an out-of-Skill read. The reader now pins the authorized Skill boundary, checks both lexical/resolved policy paths, rejects linked/non-file inputs and uses a bounded descriptor read with file-identity and path/policy rechecks. The test fails before and passes after. This does not grant new source authority or Google access.
+
+Retain the Thai layout guide and all TOR-specific guides when merging the profile references. Consolidate the duplicated computer example into a forwarding page while retaining its canonical original, and remove the unused value branch of the inserted-run emphasis setter. No behavioral test is removed or disabled.
+
+The original #173 macOS failure is an absent second search-page payload in file-operations smoke; its exact cursor was not retained. A seeded hash deterministically reproduces one cause of this failure class: a 13-digit substring in a hex cursor is masked as a personal identifier, so pagination fails. New cursors encode the same 256-bit fingerprint with letters only; valid legacy hashes remain accepted. Privacy rules and source-content masking are unchanged. Both audit regressions fail before and pass after; 47 focused file/tool tests pass. Add payload diagnostics and require the full native suite on the combined head rather than assuming a rerun proves the original cause.
+
 ## Thai typography — 2026-10-14
 
 Three synthetic regressions first failed: long Thai headers unnecessarily reduced a two-column table from 16 to 12 pt, generated DOCX lacked explicit Thai language/default complex-script size, and template `bCs/iCs=0` overrode newly selected Thai emphasis. Word exports now set `th-TH` and complete complex-script size/emphasis (including footer sizes); inserted Thai template runs replace conflicting emphasis flags while retaining the template font, paragraph style and other package parts. Existing template content is not reformatted.
