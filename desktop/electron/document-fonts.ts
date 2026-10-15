@@ -11,7 +11,7 @@ const PR = 'http://schemas.openxmlformats.org/package/2006/relationships';
 const CT = 'http://schemas.openxmlformats.org/package/2006/content-types';
 type Face = { file: string; sha256: string };
 type Family = { family: string; files: Record<'regular' | 'bold' | 'italic' | 'boldItalic', Face> };
-export type FontEmbedding = { status: 'embedded' | 'disabled' | 'unavailable'; families: string[] };
+export type FontEmbedding = { status: 'embedded' | 'partial' | 'disabled' | 'unavailable'; families: string[]; missingFamilies?: string[] };
 
 function directory() {
   const candidates = [
@@ -50,6 +50,7 @@ export async function embedDocumentFonts(bytes: Uint8Array): Promise<{ bytes: Bu
     }
   }
   const selected = manifest.filter(f => used.has(f.family));
+  const missingFamilies = [...used].filter(name => !selected.some(f => f.family === name));
   if (!selected.length) return { bytes: Buffer.from(bytes), embedding: { status: 'unavailable', families: [] } };
   const table = parse((await zip.file('word/fontTable.xml')?.async('string')) || `<w:fonts xmlns:w="${W}" xmlns:r="${R}"/>`);
   table.documentElement.setAttribute('xmlns:r', R);
@@ -123,6 +124,10 @@ export async function embedDocumentFonts(bytes: Uint8Array): Promise<{ bytes: Bu
     zip.file(path, serializer.serializeToString(doc));
   return {
     bytes: await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }),
-    embedding: { status: 'embedded', families: selected.map(f => f.family) },
+    embedding: {
+      status: missingFamilies.length ? 'partial' : 'embedded',
+      families: selected.map(f => f.family),
+      ...(missingFamilies.length ? { missingFamilies } : {}),
+    },
   };
 }

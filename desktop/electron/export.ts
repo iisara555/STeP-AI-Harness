@@ -6,9 +6,9 @@ import {
   Header,
   ImageRun,
   PageNumber,
+  TableOfContents,
   NumberFormat,
   LevelFormat,
-  PageBreak,
   Packer,
   Paragraph,
   AlignmentType,
@@ -79,7 +79,13 @@ export function tableLayout(rows: string[][], textWidth = TEXT_WIDTH, bodyPoints
     const span = (chars: number) => (chars + 1) * points * 20 * 0.55 + 220;
     const minimum = Array.from({ length: count }, (_, column) => {
       const figures = numeric[column] ? rows.slice(1).map(row => visible(row[column])) : [];
-      return span(Math.max(2, longestWordUnits(rows[0]?.[column] || ''), ...figures));
+      // Reserve a whole date/reference token before allocating spare width to narrative columns.
+      const codes = rows
+        .slice(1)
+        .flatMap(row => [...(row[column] || '').matchAll(/[A-Za-z0-9๐-๙][A-Za-z0-9๐-๙._:/%+-]*/g)])
+        .filter(match => /[0-9๐-๙]/.test(match[0]))
+        .map(match => Math.min(32, visible(match[0])));
+      return span(Math.max(2, longestWordUnits(rows[0]?.[column] || ''), ...figures, ...codes));
     });
     const desired = minimum.map((least, column) => Math.max(least, span(Math.min(Math.max(...rows.map(row => visible(row[column]))), 40))));
     return { points, minimum, desired };
@@ -350,14 +356,18 @@ function docxBlocks(
   numbering?: { reference: string; level: number },
   depth = 0,
   firstPageSpace = false,
+  breakBefore = false,
 ): (Paragraph | Table)[] {
-  if (node.type === 'pageBreak') return [new Paragraph({ children: [new PageBreak()] })];
+  if (node.type === 'pageBreak') return [new Paragraph({ pageBreakBefore: true, spacing: { line: 20, lineRule: LineRuleType.EXACT } })];
   if (node.type === 'image') {
     const image = layout.images.get(node.attrs!.assetId!);
     if (!image) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
-    const width = Math.min(((node.attrs?.widthCm || 12) * 96) / 2.54, wordWidth(layout) / 15);
+    const preset = wordPreset(layout);
+    const maxHeight = (16838 - Math.round((preset.margins.top + preset.margins.bottom) * CM)) / 15 - 72;
+    const width = Math.min(((node.attrs?.widthCm || 12) * 96) / 2.54, wordWidth(layout) / 15, (maxHeight * image.width) / image.height);
     return [
       new Paragraph({
+        pageBreakBefore: breakBefore,
         alignment: AlignmentType.CENTER,
         keepNext: true,
         children: [
@@ -371,9 +381,21 @@ function docxBlocks(
       }),
     ];
   }
-  if (node.type === 'blockquote') return (node.content || []).flatMap(child => docxBlocks(child, layout, 'quote', undefined, depth));
+  if (node.type === 'blockquote')
+    return (node.content || []).flatMap((child, index) =>
+      docxBlocks(child, layout, 'quote', undefined, depth, false, breakBefore && index === 0),
+    );
   if (node.type === 'table')
     return [
+      ...(breakBefore
+        ? [
+            new Paragraph({
+              pageBreakBefore: true,
+              keepNext: true,
+              spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT },
+            }),
+          ]
+        : []),
       docxTable(node, layout),
       new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [] }),
     ];
@@ -396,6 +418,7 @@ function docxBlocks(
     const body = role === 'body' && node.type === 'paragraph' && !depth;
     return [
       new Paragraph({
+        pageBreakBefore: breakBefore,
         ...(title
           ? { heading: HeadingLevel.TITLE }
           : node.type === 'heading'
@@ -440,7 +463,7 @@ function docxBlocks(
     ];
   }
   if (node.type === 'bulletList' || node.type === 'orderedList')
-    return (node.content || []).flatMap(item =>
+    return (node.content || []).flatMap((item, itemIndex) =>
       (item.content || []).flatMap((child, index) =>
         docxBlocks(
           child,
@@ -448,6 +471,8 @@ function docxBlocks(
           'body',
           index === 0 && child.type === 'paragraph' ? { reference: layout.lists.get(node)!, level: Math.min(depth, 8) } : undefined,
           depth + 1,
+          false,
+          breakBefore && itemIndex === 0 && index === 0,
         ),
       ),
     );
@@ -494,24 +519,42 @@ function docx(document: DraftNode, layout: WordLayout) {
   const blocks = document.content || [];
   const title =
     layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
-  const footer = () =>
-    new Footer({
+  const appearance = layout.presentation;
+  const pageAt = (position: 'header' | 'footer') => appearance.pageNumber !== 'none' && appearance.pageNumberPosition.startsWith(position);
+  const textLine = (text: string) =>
+    new Paragraph({
+      spacing: { before: 0, after: 0 },
+      children: runs({ type: 'paragraph', content: [{ type: 'text', text }] }, 28, false, layout.font, false, appearance.thaiBreaks),
+    });
+  const numberLine = () =>
+    new Paragraph({
+      alignment: appearance.pageNumberPosition === 'footer-center' ? AlignmentType.CENTER : AlignmentType.RIGHT,
+      spacing: { before: 0, after: 0 },
       children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({
-              font: layout.font,
-              size: 28,
-              sizeComplexScript: 28,
-              language: THAI_DOCUMENT_LANGUAGE,
-              children: ['หน้า ', PageNumber.CURRENT],
-            }),
-          ],
+        new TextRun({
+          font: layout.font,
+          size: 28,
+          sizeComplexScript: 28,
+          language: THAI_DOCUMENT_LANGUAGE,
+          bold: false,
+          boldComplexScript: false,
+          italics: false,
+          italicsComplexScript: false,
+          children: appearance.pageNumber === 'thai' ? ['หน้า ', PageNumber.CURRENT] : [PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES],
         }),
       ],
     });
-  const header = layout.garudaHeightCm
+  const headerLines = () => [
+    ...(appearance.headerText ? [textLine(appearance.headerText)] : []),
+    ...(pageAt('header') ? [numberLine()] : []),
+  ];
+  const footer = () =>
+    new Footer({
+      children: [...(appearance.footerText ? [textLine(appearance.footerText)] : []), ...(pageAt('footer') ? [numberLine()] : [])],
+    });
+  const hasHeader = Boolean(appearance.headerText || pageAt('header'));
+  const hasFooter = Boolean(appearance.footerText || pageAt('footer'));
+  const firstHeader = layout.garudaHeightCm
     ? new Header({
         children: [
           new Paragraph({
@@ -524,20 +567,74 @@ function docx(document: DraftNode, layout: WordLayout) {
                 type: 'png',
                 data: GARUDA_PNG,
                 transformation: { width: (layout.garudaHeightCm * 96) / 2.54, height: (layout.garudaHeightCm * 96) / 2.54 },
-                altText: { name: 'Garuda', title: 'ตราครุฑ', description: `สูง ${layout.garudaHeightCm} ซม.` },
+                altText: { name: 'Garuda', title: 'ตราครุฑ', description: 'Garuda' },
               }),
               ...(title
-                ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font, false, layout.presentation.thaiBreaks)]
+                ? [new TextRun({ children: [new Tab()] }), ...runs(title, 60, true, layout.font, false, appearance.thaiBreaks)]
                 : []),
             ],
           }),
+          ...headerLines(),
         ],
       })
     : undefined;
+  const tocBlocks = appearance.toc
+    ? [
+        new Paragraph({
+          style: 'TOCHeading',
+          children: runs({ type: 'paragraph', content: [{ type: 'text', text: 'สารบัญ' }] }, (preset.points + 4) * 2, true, layout.font),
+        }),
+        new TableOfContents('Table of contents', { headingStyleRange: '1-3', hyperlink: true }),
+      ]
+    : [];
+  const body: (Paragraph | Table | TableOfContents)[] = [];
+  let breakBefore = false;
+  for (const [index, node] of blocks.entries()) {
+    if (node === title) continue;
+    if (node.type === 'pageBreak') {
+      if (breakBefore) body.push(...docxBlocks(node, layout));
+      breakBefore = true;
+      continue;
+    }
+    body.push(...docxBlocks(node, layout, roles[index], undefined, 0, Boolean(firstHeader && index === (title ? 1 : 0)), breakBefore));
+    breakBefore = false;
+  }
+  if (breakBefore) body.push(...docxBlocks({ type: 'pageBreak' }, layout));
+  const tocIndex = !title && blocks[0]?.type === 'title' ? 1 : 0;
+  body.splice(tocIndex, 0, ...tocBlocks);
   return new Document({
     compatibility: { doNotExpandShiftReturn: true },
+    features: { updateFields: true },
     numbering: { config: numberingConfig },
     styles: {
+      paragraphStyles: [
+        {
+          id: 'Caption',
+          name: 'Caption',
+          basedOn: 'Normal',
+          run: {
+            font: layout.font,
+            size: (preset.points - 2) * 2,
+            sizeComplexScript: (preset.points - 2) * 2,
+            language: THAI_DOCUMENT_LANGUAGE,
+          },
+          paragraph: { outlineLevel: 9 },
+        },
+        {
+          id: 'TOCHeading',
+          name: 'TOC Heading',
+          basedOn: 'Normal',
+          run: heading((preset.points + 4) * 2).run,
+          paragraph: { outlineLevel: 9, keepNext: true },
+        },
+        ...[1, 2, 3].map(level => ({
+          id: 'TOC' + level,
+          name: 'toc ' + level,
+          basedOn: 'Normal',
+          run: { font: layout.font, size: preset.points * 2, sizeComplexScript: preset.points * 2, language: THAI_DOCUMENT_LANGUAGE },
+          paragraph: { outlineLevel: 9, indent: { left: (level - 1) * 360 }, spacing: { before: 0, after: 0 } },
+        })),
+      ],
       default: {
         document: {
           run: { font: layout.font, size: preset.points * 2, sizeComplexScript: preset.points * 2, language: THAI_DOCUMENT_LANGUAGE },
@@ -552,7 +649,7 @@ function docx(document: DraftNode, layout: WordLayout) {
     sections: [
       {
         properties: {
-          ...(header ? { titlePage: true } : {}),
+          ...(firstHeader ? { titlePage: true } : {}),
           page: {
             size: { width: 11906, height: 16838 },
             margin: {
@@ -560,23 +657,21 @@ function docx(document: DraftNode, layout: WordLayout) {
               bottom: Math.round(preset.margins.bottom * CM),
               left: Math.round(preset.margins.left * CM),
               right: Math.round(preset.margins.right * CM),
-              ...(header ? { header: Math.round(1.5 * CM) } : {}),
+              ...(firstHeader || hasHeader ? { header: Math.round((firstHeader ? 1.5 : 1) * CM) } : {}),
             },
-            ...(layout.id ? { pageNumbers: { formatType: NumberFormat.THAI_NUMBERS } } : {}),
+            pageNumbers: { formatType: appearance.pageNumber === 'thai' ? NumberFormat.THAI_NUMBERS : NumberFormat.DECIMAL },
           },
         },
-        ...(header ? { headers: { first: header } } : {}),
-        ...(layout.id
+        ...(firstHeader || hasHeader
           ? {
-              footers: {
-                default: footer(),
-                ...(header ? { first: footer() } : {}),
+              headers: {
+                ...(hasHeader ? { default: new Header({ children: headerLines() }) } : {}),
+                ...(firstHeader ? { first: firstHeader } : {}),
               },
             }
           : {}),
-        children: blocks.flatMap((node, index) =>
-          node === title ? [] : docxBlocks(node, layout, roles[index], undefined, 0, Boolean(header && index === (title ? 1 : 0))),
-        ),
+        ...(hasFooter ? { footers: { default: footer(), ...(firstHeader ? { first: footer() } : {}) } } : {}),
+        children: body,
       },
     ],
   });
@@ -773,11 +868,30 @@ export async function exportDocument(
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
   if (rich && documentImageIds(rich).length && !['docx', 'pdf'].includes(format)) throw new Error('UNSUPPORTED_EXPORT_ELEMENT');
+  if (format !== 'docx' && options.presentation) {
+    const p = resolvePresentation(options.presentation, Boolean(options.documentTool));
+    if (
+      p.toc ||
+      p.headerText ||
+      p.footerText ||
+      (p.pageNumber !== 'none' && (p.pageNumber !== (options.documentTool ? 'thai' : 'none') || p.pageNumberPosition !== 'footer-center'))
+    )
+      throw new Error('DOCX_PRESENTATION_ONLY');
+  }
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
   if (format === 'docx') {
     const presentation = resolvePresentation(options.presentation, Boolean(options.documentTool));
+    if (
+      options.template &&
+      (presentation.toc ||
+        presentation.headerText ||
+        presentation.footerText ||
+        presentation.pageNumber !== (options.documentTool ? 'thai' : 'none') ||
+        presentation.pageNumberPosition !== 'footer-center')
+    )
+      throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
     const bytes = options.template
       ? await renderDocumentTemplate(options.template, options.documentTool, content, presentation.thaiBreaks)
       : await Packer.toBuffer(
@@ -792,7 +906,10 @@ export async function exportDocument(
       ? await embedDocumentFonts(bytes)
       : { bytes, embedding: { status: 'disabled' as const, families: [] as string[] } };
     await writeFile(path, result.bytes);
-    return { fontEmbedding: result.embedding };
+    return {
+      fontEmbedding: result.embedding,
+      fieldsNeedUpdate: !options.template && (presentation.toc || presentation.pageNumber !== 'none'),
+    };
   }
   if (format === 'pdf')
     return writeFile(

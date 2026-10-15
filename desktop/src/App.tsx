@@ -175,7 +175,8 @@ export default function App() {
     documentTool?: string;
     font: string;
     fontStatus: string;
-    fontEmbedding?: { status: string; families: string[] };
+    fontEmbedding?: { status: string; families: string[]; missingFamilies?: string[] };
+    fieldsNeedUpdate?: boolean;
     garudaHeightCm?: number;
     templateName?: string;
   } | null>(null);
@@ -2819,6 +2820,17 @@ export default function App() {
                           <p>{t('ไม่ใส่ตราครุฑ')}</p>
                         )}
                         {exportInfo.fontEmbedding?.status === 'embedded' && <p>{t('ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้')}</p>}
+                        {exportInfo.fontEmbedding?.status === 'partial' && (
+                          <p>
+                            {t(
+                              'ฝังฟอนต์ได้บางส่วน ฟอนต์ที่ต้องตรวจบนเครื่องปลายทาง: {0}',
+                              exportInfo.fontEmbedding.missingFamilies?.join(', ') || '',
+                            )}
+                          </p>
+                        )}
+                        {exportInfo.fieldsNeedUpdate && (
+                          <p>{t('หากสารบัญหรือเลขหน้ายังไม่ปรับ ให้เปิดใน Word แล้วเลือก Update Field (อัปเดตเขตข้อมูล)')}</p>
+                        )}
                         {exportInfo.fontEmbedding?.status === 'unavailable' && (
                           <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
                         )}

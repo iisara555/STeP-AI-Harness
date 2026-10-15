@@ -202,9 +202,17 @@ export class Store {
       for (const key of documentImageIds(normalized)) {
         if (this.get<{ sessionId: string }>('document-asset', key)?.sessionId !== id) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
       }
-    const appearance = presentation === undefined ? session.presentation : resolvePresentation(presentation, Boolean(session.documentTool));
-    if (session.documentTemplate && appearance?.preset && appearance.preset !== (session.presentation?.preset || 'saraban'))
-      throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
+    const appearanceInput = presentation === undefined ? session.presentation : presentation;
+    const appearance = appearanceInput === undefined ? undefined : resolvePresentation(appearanceInput, Boolean(session.documentTool));
+    if (session.documentTemplate && appearance) {
+      const original = resolvePresentation(session.presentation, true);
+      if (
+        (['preset', 'toc', 'headerText', 'footerText', 'pageNumber', 'pageNumberPosition'] as const).some(
+          key => appearance[key] !== original[key],
+        )
+      )
+        throw new Error('DOCUMENT_TEMPLATE_LAYOUT_LOCKED');
+    }
     if (normalized) text = documentText(normalized);
     if (
       text !== session.draft ||

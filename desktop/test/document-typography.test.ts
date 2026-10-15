@@ -21,6 +21,10 @@ test('Markdown soft wrapping differs from paragraphs and explicit hard breaks; e
   assert.ok(doc.content![1].content?.some(n => n.type === 'hardBreak'));
   const combined = doc.content![1].content!.find(n => n.text === 'และเอียง')!;
   assert.deepEqual(combined.marks?.map(m => m.type).sort(), ['bold', 'italic']);
+  const escaped = markdownDocument('literal ' + String.fromCharCode(92).repeat(2) + '\nsoft wrap');
+  assert.equal(documentText(escaped), 'literal \\ soft wrap');
+  assert.ok(!escaped.content![0].content!.some(n => n.type === 'hardBreak'));
+  assert.equal(documentText(markdownDocument('literal \\*stars\\* and ***bold italic***')), 'literal *stars* and bold italic');
 });
 
 test('Thai boundaries cross emphasis safely without changing source or protected tokens', () => {

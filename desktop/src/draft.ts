@@ -49,6 +49,8 @@ const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
 /** A GFM delimiter row under a header: pipes, hyphens, colons and spaces only, e.g. |---|:-:|. */
 const isTableRule = (line: string) => /^[\s|:-]+$/.test(line) && line.includes('|') && line.includes('-');
+const hardBreak = (line: string) => / {2}$/.test(line) || (line.match(/\\+$/)?.[0].length || 0) % 2 === 1;
+const withoutBreak = (line: string) => (hardBreak(line) ? line.replace(/ {2}$|\\$/, '') : line);
 export const MAX_TABLE_ROWS = 500;
 export const MAX_TABLE_COLUMNS = 30;
 
@@ -171,19 +173,19 @@ export function markdownDocument(markdown: string): DraftNode {
       !fieldLine.test(lines[at + 1]) &&
       lines[at + 1].trim() &&
       !/^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|[>|]|```|~~~)/.test(lines[at + 1]) &&
-      !/^(?: {2,}|\\)$/.test(prose.at(-1)!.slice(-2))
+      !/^!\[.*\]\(step-asset:/.test(lines[at + 1]) &&
+      !hardBreak(prose.at(-1)!)
     ) {
-      if (/ {2}$|\\$/.test(prose.at(-1)!)) break;
       prose.push(lines[++at]);
     }
     // Markdown soft newlines are spaces. Explicit Markdown hard breaks remain break nodes.
     const joined = prose.join(' ');
-    const content = inline(joined.replace(/ {2}$|\\$/, ''));
-    if (/ {2}$|\\$/.test(prose.at(-1)!) && at + 1 < lines.length && lines[at + 1].trim()) {
+    const content = inline(withoutBreak(joined));
+    if (hardBreak(prose.at(-1)!) && at + 1 < lines.length && lines[at + 1].trim()) {
       while (at + 1 < lines.length && lines[at + 1].trim() && !/^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|[>|])/.test(lines[at + 1])) {
         const next = lines[++at];
-        content.push({ type: 'hardBreak' }, ...inline(next.replace(/ {2}$|\\$/, '')));
-        if (!/ {2}$|\\$/.test(next)) break;
+        content.push({ type: 'hardBreak' }, ...inline(withoutBreak(next)));
+        if (!hardBreak(next)) break;
       }
     }
     doc.content!.push({ type: 'paragraph', content });
@@ -191,7 +193,7 @@ export function markdownDocument(markdown: string): DraftNode {
   return doc;
 }
 
-// Accept a bounded schema, never renderer HTML, links, images, or arbitrary attributes.
+// Accept a bounded schema with owned image IDs, never renderer HTML, URLs or arbitrary attributes.
 export function validateDocument(value: unknown): DraftNode {
   let count = 0;
   const visit = (node: any, depth: number): DraftNode => {

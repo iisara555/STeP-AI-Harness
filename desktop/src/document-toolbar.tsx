@@ -81,6 +81,7 @@ export function DocumentToolbar({
             {t('เลขเริ่มต้น')}
             <input
               type="number"
+              disabled={disabled}
               min="1"
               max="10000"
               value={state.start}
@@ -98,6 +99,7 @@ export function DocumentToolbar({
             {t('ความกว้างรูป (ซม.)')}
             <input
               aria-label={t('ความกว้างรูป (ซม.)')}
+              disabled={disabled || locked}
               type="number"
               min="1"
               max="17"
@@ -113,6 +115,7 @@ export function DocumentToolbar({
             {t('คำอธิบายรูป')}
             <input
               maxLength={500}
+              disabled={disabled || locked}
               value={state.alt}
               onChange={event => editor.commands.updateAttributes('image', { alt: event.target.value })}
             />

@@ -35,6 +35,47 @@ export function DocumentPresentationControls({
         {t('ช่วยตัดคำไทยใน Word')}
       </label>
       <label>
+        <input type="checkbox" disabled={locked} checked={value.toc} onChange={event => update({ toc: event.target.checked })} />
+        {t('สารบัญจากหัวข้อระดับ 1–3')}
+      </label>
+      <label>
+        {t('ข้อความหัวกระดาษ')}
+        <input maxLength={500} disabled={locked} value={value.headerText} onChange={event => update({ headerText: event.target.value })} />
+      </label>
+      <label>
+        {t('ข้อความท้ายกระดาษ')}
+        <input maxLength={500} disabled={locked} value={value.footerText} onChange={event => update({ footerText: event.target.value })} />
+      </label>
+      <label>
+        {t('รูปแบบเลขหน้า')}
+        <select
+          aria-label={t('รูปแบบเลขหน้า')}
+          disabled={locked}
+          value={value.pageNumber}
+          onChange={event => update({ pageNumber: event.target.value as DocumentPresentation['pageNumber'] })}
+        >
+          <option value="none">{t('ไม่ใส่เลขหน้า')}</option>
+          <option value="thai">{t('หน้า ๑')}</option>
+          <option value="arabic-total">1 / 10</option>
+        </select>
+      </label>
+      <label>
+        {t('ตำแหน่งเลขหน้า')}
+        <select
+          aria-label={t('ตำแหน่งเลขหน้า')}
+          disabled={locked || value.pageNumber === 'none'}
+          value={value.pageNumberPosition}
+          onChange={event => update({ pageNumberPosition: event.target.value as DocumentPresentation['pageNumberPosition'] })}
+        >
+          <option value="footer-center">{t('ท้ายกระดาษ ตรงกลาง')}</option>
+          <option value="footer-right">{t('ท้ายกระดาษ ด้านขวา')}</option>
+          <option value="header-right">{t('หัวกระดาษ ด้านขวา')}</option>
+        </select>
+      </label>
+      {(value.toc || value.pageNumber !== 'none') && (
+        <p className="muted">{t('หากสารบัญหรือเลขหน้ายังไม่ปรับ ให้เปิดใน Word แล้วเลือก Update Field (อัปเดตเขตข้อมูล)')}</p>
+      )}
+      <label>
         <input type="checkbox" checked={value.embedFonts} onChange={event => update({ embedFonts: event.target.checked })} />
         {t('ฝังฟอนต์เพื่อเปิดและแก้ไขบนเครื่องอื่น')}
       </label>
