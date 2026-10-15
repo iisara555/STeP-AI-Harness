@@ -3418,9 +3418,9 @@ async function main() {
             },
             s.document,
             {
-              ...(layout
-                ? { documentTool: layout.id, font: layout.font, garuda: input.garuda, template, presentation: s.presentation }
-                : {}),
+              ...(layout ? { font: layout.font, garuda: input.garuda, template } : {}),
+              documentTool: s.documentTool,
+              presentation: s.presentation,
               images: s.document ? documentAssets.resolve(s.id, s.document) : undefined,
             },
           );

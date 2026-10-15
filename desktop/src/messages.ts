@@ -3,6 +3,7 @@ import { localized, t } from './i18n';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  DOCX_PRESENTATION_ONLY: 'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น',
   ...credentialErrorsTh,
   WEB_EXTRACT_INVALID: 'หน้าเว็บนี้ยังแยกเนื้อหาไม่ได้ ลองอ่านด้วย web_fetch หรือระบุแหล่งอื่น',
   VISION_PRIVACY_REQUIRED: 'นโยบายตรวจข้อมูลส่วนบุคคลไม่อนุญาตให้ส่งภาพผ่านเครื่องมือนี้ กรุณาใช้ข้อความที่ตรวจแล้ว',

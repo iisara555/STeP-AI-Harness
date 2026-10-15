@@ -17,6 +17,10 @@
   flex: 1;
   min-width: 8rem;
 }
+.document-presentation input:not([type='checkbox']) {
+  flex: 1;
+  min-width: 10rem;
+}
 
 .draft-editor [data-document-title] {
   font-size: 1.6em;

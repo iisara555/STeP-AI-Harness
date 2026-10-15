@@ -1,12 +1,20 @@
 import { ThinkingScribble } from './thinking-scribble';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import { DocumentPresentationControls } from './document-presentation-controls';
 import { resolvePresentation } from './document-presentation';
-import { DocumentTitle, DocumentCaption, DocumentQuote, DocumentPageBreak, DocumentImageNode } from './document-elements';
+import {
+  DocumentTitle,
+  DocumentCaption,
+  DocumentQuote,
+  DocumentPageBreak,
+  DocumentImageNode,
+  DocumentStarterKit,
+  DocumentTableCell,
+  DocumentTableHeader,
+} from './document-elements';
 import { DocumentToolbar } from './document-toolbar';
-import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
+import { Table, TableRow } from '@tiptap/extension-table';
 import { plainDocument as toDoc, documentText } from './draft';
 import {
   ArrowUp,
@@ -175,7 +183,8 @@ export default function App() {
     documentTool?: string;
     font: string;
     fontStatus: string;
-    fontEmbedding?: { status: string; families: string[] };
+    fontEmbedding?: { status: string; families: string[]; missingFamilies?: string[] };
+    fieldsNeedUpdate?: boolean;
     garudaHeightCm?: number;
     templateName?: string;
   } | null>(null);
@@ -312,7 +321,7 @@ export default function App() {
   }, [view, settings]);
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
+      DocumentStarterKit.configure({
         heading: { levels: [1, 2, 3] },
         link: false,
         underline: false,
@@ -324,8 +333,8 @@ export default function App() {
       }),
       Table.configure({ resizable: false }),
       TableRow,
-      TableHeader,
-      TableCell,
+      DocumentTableHeader,
+      DocumentTableCell,
       DocumentTitle,
       DocumentCaption,
       DocumentQuote,
@@ -2819,6 +2828,17 @@ export default function App() {
                           <p>{t('ไม่ใส่ตราครุฑ')}</p>
                         )}
                         {exportInfo.fontEmbedding?.status === 'embedded' && <p>{t('ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้')}</p>}
+                        {exportInfo.fontEmbedding?.status === 'partial' && (
+                          <p>
+                            {t(
+                              'ฝังฟอนต์ได้บางส่วน ฟอนต์ที่ต้องตรวจบนเครื่องปลายทาง: {0}',
+                              exportInfo.fontEmbedding.missingFamilies?.join(', ') || '',
+                            )}
+                          </p>
+                        )}
+                        {exportInfo.fieldsNeedUpdate && (
+                          <p>{t('หากสารบัญหรือเลขหน้ายังไม่ปรับ ให้เปิดใน Word แล้วเลือก Update Field (อัปเดตเขตข้อมูล)')}</p>
+                        )}
                         {exportInfo.fontEmbedding?.status === 'unavailable' && (
                           <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
                         )}

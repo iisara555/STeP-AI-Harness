@@ -358,6 +358,13 @@ try {
   assert.ok(xml.includes('แก้ไขสังเคราะห์โดยเจ้าของเรื่อง'));
   assert.ok(xml.includes('[รอยืนยัน: งบประมาณ]'));
   assert.ok(output.path.startsWith(workspace));
+  // Saving default DOCX presentation must not block existing plain-text/spreadsheet/slide exports.
+  for (const format of ['md', 'xlsx', 'pptx']) {
+    const converted = await page.evaluate(({ id, format }) => window.step.call('export', { id, format }), { id: last.id, format });
+    const convertedBytes = await readFile(converted.path);
+    if (format === 'md') assert.ok(convertedBytes.toString('utf8').includes('แก้ไขสังเคราะห์โดยเจ้าของเรื่อง'));
+    else assert.equal(convertedBytes.subarray(0, 2).toString(), 'PK');
+  }
   // Export owns folder selection/creation, including cancellation, without a trip to Settings.
   const savedDraft = (await snapshot()).sessions.find(s => s.id === last.id).draft;
   // Simulate a fresh profile without weakening the public settings input validator.

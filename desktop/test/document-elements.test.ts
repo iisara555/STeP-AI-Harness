@@ -4,6 +4,7 @@ import { mkdtemp, readFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import JSZip from 'jszip';
+import { DOMParser } from '@xmldom/xmldom';
 import { Store } from '../electron/store';
 import { DocumentAssets, documentImageDimensions } from '../electron/document-assets';
 import { documentText, markdownDocument, documentMarkdown, validateDocument, type DraftNode } from '../src/draft';
@@ -46,12 +47,24 @@ test('Word uses Title separately from headings and actual native list numbering 
   assert.match(xml, /<w:pStyle w:val="Heading2"/);
   assert.match(xml, /<w:numPr>/);
   assert.match(xml, /<w:ilvl w:val="2"/);
-  assert.match(xml, /<w:br w:type="page"/);
+  assert.match(xml, /<w:pageBreakBefore/);
+  const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+  const paragraphs = Array.from(parsed.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'p'));
+  const nextPage = paragraphs.find(p => p.textContent!.replaceAll('\u200b', '').includes('เนื้อหาหน้าใหม่'))!;
+  assert.ok(nextPage.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'pageBreakBefore').length);
   assert.match(xml, /<w:ind w:left="720" w:right="720"/);
   const numbering = await zip.file('word/numbering.xml')!.async('string');
   assert.match(numbering, /<w:start w:val="3"/);
   assert.match(numbering, /<w:start w:val="7"/);
   assert.ok(!xml.includes('3. ขั้นตอนแรก'));
+  for (const format of ['xlsx', 'pptx']) {
+    const unsupported = path + '.' + format;
+    await assert.rejects(
+      exportDocument(unsupported, format, '', async () => Buffer.alloc(0), document),
+      /UNSUPPORTED_EXPORT_ELEMENT/,
+    );
+    await assert.rejects(access(unsupported));
+  }
 });
 
 test('owned image bytes survive restart and version restore; cross-task and corrupt references fail before writing', async () => {

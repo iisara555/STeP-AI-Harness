@@ -1,4 +1,25 @@
 export const documentLayoutEn: Record<string, string> = {
+  'เลือกการจัดหน้าเอกสารราชการ รายงาน หรือหนังสือ พร้อมตัวเลือกช่วยตัดคำไทยใน DOCX':
+    'Choose official, report or book layouts, with optional Thai word-break assistance in DOCX',
+  'ส่งออก DOCX พร้อมฟอนต์สารบรรณที่ฝังในไฟล์ครบสี่รูปแบบ': 'Export DOCX with all four Sarabun font faces embedded',
+  'เพิ่มชื่อเรื่อง หัวข้อสามระดับ รายการซ้อน รูปภาพ และคำบรรยายในร่าง':
+    'Add titles, three heading levels, nested lists, images and captions to drafts',
+  'เพิ่มสารบัญ หัวท้ายกระดาษ และเลขหน้าที่อัปเดตใน Word ได้': 'Add a table of contents, headers, footers and live page numbers in Word',
+  'ฝังฟอนต์ได้บางส่วน ฟอนต์ที่ต้องตรวจบนเครื่องปลายทาง: {0}': 'Some fonts are embedded. Check these fonts on the destination computer: {0}',
+  'สารบัญจากหัวข้อระดับ 1–3': 'Table of contents from Heading 1–3',
+  ข้อความหัวกระดาษ: 'Header text',
+  ข้อความท้ายกระดาษ: 'Footer text',
+  รูปแบบเลขหน้า: 'Page number format',
+  ไม่ใส่เลขหน้า: 'No page numbers',
+  'หน้า ๑': 'Thai page numbers',
+  ตำแหน่งเลขหน้า: 'Page number position',
+  'ท้ายกระดาษ ตรงกลาง': 'Footer, center',
+  'ท้ายกระดาษ ด้านขวา': 'Footer, right',
+  'หัวกระดาษ ด้านขวา': 'Header, right',
+  'หากสารบัญหรือเลขหน้ายังไม่ปรับ ให้เปิดใน Word แล้วเลือก Update Field (อัปเดตเขตข้อมูล)':
+    'If the table of contents or page numbers are not refreshed, open in Word and choose Update Field',
+  'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น':
+    'The selected table of contents and header/footer options require DOCX. Export DOCX or turn these options off for other formats',
   คำบรรยายภาพ: 'Figure caption',
   ขึ้นหน้าใหม่: 'Page break',
   รูปภาพในเอกสาร: 'Document image',

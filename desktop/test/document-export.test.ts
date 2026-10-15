@@ -51,6 +51,11 @@ test('natural Thai header word boundaries avoid unnecessary small fonts in docum
   const header = doc.paragraph(rows[0][0]);
   assert.equal(attr(header, 'sz', 'val'), '32');
   assert.equal(doc.text(header), rows[0][0]);
+  const dates = tableLayout([
+    ['รายละเอียดงาน', 'ผู้ดำเนินการ', 'วันที่ดำเนินการ', 'จำนวน', 'หน่วย', 'หมายเหตุ'],
+    ['กิจกรรมสังเคราะห์ 10', 'ทีมตัวอย่าง', '01/01/2500', '00100.00', 'รายการ', 'ข้อความสำหรับตรวจการจัดคอลัมน์'],
+  ]);
+  assert.ok(dates.columns[2] >= (10 + 1) * dates.points * 20 * 0.55 + 219);
 });
 
 test('PDF memo separates reference and date into columns while preserving rich labels and uncertain dates', () => {

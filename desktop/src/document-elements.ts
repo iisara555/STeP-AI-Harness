@@ -1,5 +1,20 @@
 import { Node, mergeAttributes } from '@tiptap/react';
 import { t } from './i18n';
+import StarterKit from '@tiptap/starter-kit';
+import { TableCell, TableHeader } from '@tiptap/extension-table';
+
+// Match host validation: cells contain paragraphs; list items contain paragraphs and nested lists.
+export const DocumentTableCell = TableCell.extend({ content: 'paragraph+' });
+export const DocumentTableHeader = TableHeader.extend({ content: 'paragraph+' });
+export const DocumentStarterKit = StarterKit.extend({
+  addExtensions() {
+    return (this.parent?.() || []).map(extension =>
+      extension.name === 'listItem' && extension.type === 'node'
+        ? extension.extend({ content: 'paragraph (paragraph | bulletList | orderedList)*' })
+        : extension,
+    );
+  },
+});
 
 export const DocumentTitle = Node.create({
   name: 'title',
@@ -55,12 +70,21 @@ export const DocumentImageNode = Node.create<{ load: (assetId: string) => Promis
   parseHTML: () => [],
   renderHTML: ({ node }) => ['figure', { 'data-document-image': node.attrs.assetId }, ['span', {}, node.attrs.alt || t('รูปภาพในเอกสาร')]],
   addNodeView() {
-    return ({ node }) => {
+    return ({ node, editor, getPos }) => {
       const dom = document.createElement('figure'),
         img = document.createElement('img'),
         status = document.createElement('span');
       dom.className = 'document-image';
       dom.append(img, status);
+      // Selecting an image reveals controls above the editor. Keep that reflow from retargeting the mouse gesture.
+      dom.addEventListener('mousedown', event => {
+        if (event.button !== 0) return;
+        const position = getPos();
+        if (typeof position !== 'number') return;
+        event.preventDefault();
+        editor.commands.setNodeSelection(position);
+        editor.view.focus();
+      });
       let alive = true;
       const display = (current: typeof node) => {
         img.alt = current.attrs.alt;
@@ -83,6 +107,7 @@ export const DocumentImageNode = Node.create<{ load: (assetId: string) => Promis
         });
       return {
         dom,
+        stopEvent: event => event.type === 'mousedown' || event.type === 'mouseup',
         update: updated => {
           if (updated.type !== node.type || updated.attrs.assetId !== node.attrs.assetId) return false;
           display(updated);
