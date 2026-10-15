@@ -27,7 +27,7 @@ export function documentLayoutRoles(document: DraftNode, id?: DocumentToolId): L
   return blocks.map((node, index) => {
     if (!id) return 'body';
     const text = documentText(node).trim();
-    if (index === 0 && node.type === 'heading') return 'title';
+    if (index === 0 && ['heading', 'title'].includes(node.type)) return 'title';
     if (node.type !== 'paragraph') return 'body';
     if (['tor', 'project'].includes(id) && section > 0 && index < section) return 'front';
     if (id === 'minutes' && index < (section >= 0 ? section : 12) && /^(?:ชื่อการประชุม|ครั้งที่|วัน เวลา สถานที่)/.test(text))

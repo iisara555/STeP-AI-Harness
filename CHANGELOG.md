@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Add editable document titles, three heading levels, quotes, captions, explicit page breaks and native nested Word lists. Import bounded local PNG/JPEG images into task-owned storage, retain them through revision restore and task forks, and reject missing/cross-task assets or unsupported exports explicitly.
+
 - Improve Thai DOCX export with optional paragraph-wide ICU word-break opportunities, canonical Sarabun family names, genuine four-face font embedding, three page presets and revisioned presentation controls. Preserve source text and agency layouts; distinguish Markdown soft wraps from explicit breaks.
 
 ## Desktop v0.6.9 (2026-10-15)

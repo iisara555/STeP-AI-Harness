@@ -7,6 +7,8 @@ import {
   ImageRun,
   PageNumber,
   NumberFormat,
+  LevelFormat,
+  PageBreak,
   Packer,
   Paragraph,
   AlignmentType,
@@ -21,10 +23,12 @@ import {
   TabStopType,
   WidthType,
   type ParagraphChild,
+  type INumberingOptions,
 } from 'docx';
 import ExcelJS from 'exceljs';
 import PptxGenJS from 'pptxgenjs';
-import { type DraftNode, documentMarkdown, documentText, plainDocument, validateDocument } from '../src/draft';
+import { type DraftNode, documentMarkdown, documentText, plainDocument, validateDocument, documentImageIds } from '../src/draft';
+import type { DocumentImage } from './document-assets';
 import { documentLayoutRoles, resolveDocumentLayout, type DocumentLayout, type LayoutRole } from '../src/document-layout';
 import { GARUDA_DATA_URI, GARUDA_PNG } from './garuda-image';
 import { renderDocumentTemplate } from './document-template';
@@ -92,14 +96,30 @@ export function tableLayout(rows: string[][], textWidth = TEXT_WIDTH, bodyPoints
   return { points, columns: widths.map(Math.floor) };
 }
 
-function richHtml(node: DraftNode): string {
+function richHtml(node: DraftNode, images: ReadonlyMap<string, DocumentImage> = new Map()): string {
+  if (node.type === 'pageBreak') return '<div style="break-before:page"></div>';
+  if (node.type === 'image') {
+    const image = images.get(node.attrs!.assetId!);
+    if (!image) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
+    return (
+      '<figure><img alt="' +
+      escapeHtml(node.attrs?.alt || '') +
+      '" src="data:image/png;base64,' +
+      image.bytes.toString('base64') +
+      '" style="width:' +
+      (node.attrs?.widthCm || 12) +
+      'cm;max-width:100%;height:auto"></figure>'
+    );
+  }
+  if (node.type === 'caption') return '<p class="caption">' + (node.content || []).map(child => richHtml(child, images)).join('') + '</p>';
+
   if (node.type === 'text') {
     let text = escapeHtml(node.text || '');
     for (const mark of node.marks || []) text = mark.type === 'bold' ? `<strong>${text}</strong>` : `<em>${text}</em>`;
     return text;
   }
   if (node.type === 'hardBreak') return '<br>';
-  const text = (node.content || []).map(richHtml).join('');
+  const text = (node.content || []).map(child => richHtml(child, images)).join('');
   if (node.type === 'table') {
     const text = tableRows(node);
     const numeric = numericColumns(text);
@@ -110,7 +130,7 @@ function richHtml(node: DraftNode): string {
         `<tr>${(row.content || [])
           .map((cell, column) => {
             const tag = cell.type === 'tableHeader' ? 'th' : 'td';
-            return `<${tag}${numeric[column] ? ' class="num"' : ''}>${(cell.content || []).map(richHtml).join('')}</${tag}>`;
+            return `<${tag}${numeric[column] ? ' class="num"' : ''}>${(cell.content || []).map(child => richHtml(child, images)).join('')}</${tag}>`;
           })
           .join('')}</tr>`,
     );
@@ -120,6 +140,8 @@ function richHtml(node: DraftNode): string {
   const tag = (
     {
       paragraph: 'p',
+      title: 'h1',
+      blockquote: 'blockquote',
       bulletList: 'ul',
       orderedList: 'ol',
       listItem: 'li',
@@ -150,10 +172,10 @@ function memoReferenceHtml(node: DraftNode) {
     }
     offset += text.length;
   }
-  return `<p class="memo-reference-row"><span class="memo-number">${number.map(richHtml).join('')}</span><span class="memo-date">${value.map(richHtml).join('')}</span></p>`;
+  return `<p class="memo-reference-row"><span class="memo-number">${number.map(node => richHtml(node)).join('')}</span><span class="memo-date">${value.map(node => richHtml(node)).join('')}</span></p>`;
 }
 
-export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
+export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout(), images: ReadonlyMap<string, DocumentImage> = new Map()) {
   // TH Sarabun New when installed (the family brings its real bold); otherwise a common Thai font scaled down to the
   // same visual size, since TH Sarabun is drawn much smaller than other fonts at the same point size.
   const face = (weight: number, names: string[]) =>
@@ -179,7 +201,7 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
       'NotoSansThai-Bold',
     ]),
     `body{font-family:"${layout.font}","STeP Fallback",sans-serif;font-size:16pt;line-height:1.35;${THAI_DOCUMENT_CSS}margin:0}`,
-    'p{white-space:pre-wrap;margin:0 0 6pt;widows:2;orphans:2}h1{font-size:20pt}h2{font-size:18pt}h3{font-size:16pt}',
+    'figure{margin:8pt 0;text-align:center;break-after:avoid}.caption{text-align:center;font-size:14pt;break-before:avoid}blockquote{margin:8pt 1.25cm}p{white-space:pre-wrap;margin:0 0 6pt;widows:2;orphans:2}h1{font-size:20pt}h2{font-size:18pt}h3{font-size:16pt}',
     'h1,h2,h3{margin:12pt 0 6pt;break-after:avoid}ul,ol{margin:0 0 6pt;padding-left:1.5em}',
     'table{border-collapse:collapse;width:100%;table-layout:fixed;margin:6pt 0 10pt}tr{break-inside:avoid}thead{display:table-header-group}',
     'th,td{border:0.75pt solid #444;padding:2pt 5pt;vertical-align:top;text-align:left}th{background:#eee;font-weight:bold}',
@@ -202,7 +224,8 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
       : []),
   ].join('');
   const blocks = document.content || [];
-  const title = layout.id === 'memo' && layout.garudaHeightCm && blocks[0]?.type === 'heading' ? blocks[0] : undefined;
+  const title =
+    layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
   const roles = documentLayoutRoles(document, layout.id);
   const content = layout.id
     ? blocks
@@ -215,10 +238,10 @@ export function pdfHtml(document: DraftNode, layout = resolveDocumentLayout()) {
             : role === 'body' && node.type === 'paragraph'
               ? 'text-indent:2.5cm;text-align:justify;'
               : '';
-          return `<div class="block ${role}" style="${css}${indent}">${role === 'memo-reference' ? memoReferenceHtml(node) : richHtml(node)}</div>`;
+          return `<div class="block ${role}" style="${css}${indent}">${role === 'memo-reference' ? memoReferenceHtml(node) : richHtml(node, images)}</div>`;
         })
         .join('')
-    : richHtml(document);
+    : richHtml(document, images);
   const letterhead = layout.garudaHeightCm
     ? `<div class="letterhead ${layout.id}"><img alt="ตราครุฑ" src="${GARUDA_DATA_URI}" style="height:${layout.garudaHeightCm}cm;width:${layout.garudaHeightCm}cm">${title ? richHtml(title) : ''}</div>`
     : '';
@@ -272,7 +295,11 @@ function runs(node: DraftNode, size: number, bold = false, font = OFFICIAL_FONT,
   });
 }
 
-type WordLayout = DocumentLayout & { presentation: DocumentPresentation };
+type WordLayout = DocumentLayout & {
+  presentation: DocumentPresentation;
+  images: ReadonlyMap<string, DocumentImage>;
+  lists: Map<DraftNode, string>;
+};
 const wordPreset = (layout: WordLayout) => DOCUMENT_PRESETS[layout.presentation.preset];
 const wordWidth = (layout: WordLayout) => 11906 - Math.round((wordPreset(layout).margins.left + wordPreset(layout).margins.right) * CM);
 
@@ -319,87 +346,137 @@ function docxTable(table: DraftNode, layout: WordLayout) {
 function docxBlocks(
   node: DraftNode,
   layout: WordLayout,
-  role: LayoutRole = 'body',
-  prefix = '',
+  role: LayoutRole | 'quote' = 'body',
+  numbering?: { reference: string; level: number },
   depth = 0,
   firstPageSpace = false,
 ): (Paragraph | Table)[] {
+  if (node.type === 'pageBreak') return [new Paragraph({ children: [new PageBreak()] })];
+  if (node.type === 'image') {
+    const image = layout.images.get(node.attrs!.assetId!);
+    if (!image) throw new Error('DOCUMENT_IMAGE_NOT_FOUND');
+    const width = Math.min(((node.attrs?.widthCm || 12) * 96) / 2.54, wordWidth(layout) / 15);
+    return [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        keepNext: true,
+        children: [
+          new ImageRun({
+            type: 'png',
+            data: image.bytes,
+            transformation: { width, height: (width * image.height) / image.width },
+            altText: { name: 'Document image', title: node.attrs?.alt || '', description: node.attrs?.alt || '' },
+          }),
+        ],
+      }),
+    ];
+  }
+  if (node.type === 'blockquote') return (node.content || []).flatMap(child => docxBlocks(child, layout, 'quote', undefined, depth));
   if (node.type === 'table')
     return [
       docxTable(node, layout),
       new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [] }),
     ];
-  if (node.type === 'paragraph' || node.type === 'heading') {
+  if (['paragraph', 'heading', 'title', 'caption'].includes(node.type)) {
+    const title = node.type === 'title' || role === 'title';
+    const caption = node.type === 'caption';
     const level = node.attrs?.level || 1;
-    const size = layout.id
-      ? role === 'title'
-        ? layout.id === 'memo'
-          ? 60
-          : 36
-        : wordPreset(layout).points * 2
-      : node.type === 'heading'
-        ? (wordPreset(layout).points + [4, 2, 0][level - 1]) * 2
-        : wordPreset(layout).points * 2;
+    const points = wordPreset(layout).points;
+    const size = title
+      ? layout.id === 'memo'
+        ? 60
+        : 44
+      : caption
+        ? (points - 2) * 2
+        : node.type === 'heading'
+          ? (points + [4, 2, 0][level - 1]) * 2
+          : points * 2;
     const band = Math.floor(wordWidth(layout) / 2);
-    const centered = ['title', 'front', 'signature', 'date'].includes(role);
+    const centered = title || caption || ['front', 'signature', 'date'].includes(role);
     const body = role === 'body' && node.type === 'paragraph' && !depth;
     return [
       new Paragraph({
-        heading: node.type === 'heading' ? [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][level - 1] : undefined,
+        ...(title
+          ? { heading: HeadingLevel.TITLE }
+          : node.type === 'heading'
+            ? { heading: [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][level - 1] }
+            : caption
+              ? { style: 'Caption' }
+              : {}),
+        numbering,
         alignment: centered ? AlignmentType.CENTER : AlignmentType.LEFT,
-        indent: depth
-          ? { left: 360 * depth, hanging: prefix ? 360 : 0 }
-          : ['signature', 'sender'].includes(role)
-            ? { left: band }
-            : body
-              ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
-              : undefined,
+        indent: numbering
+          ? undefined
+          : role === 'quote'
+            ? { left: 720, right: 720 }
+            : depth
+              ? { left: 360 * depth }
+              : ['signature', 'sender'].includes(role)
+                ? { left: band }
+                : body
+                  ? { firstLine: Math.round(wordPreset(layout).indent * CM) }
+                  : undefined,
         tabStops: role === 'memo-reference' ? [{ type: TabStopType.LEFT, position: band }] : undefined,
         keepNext:
+          title ||
           node.type === 'heading' ||
           ['front', 'sender', 'date', 'memo-reference'].includes(role) ||
           (role === 'signature' && /^(?:\(|ขอแสดงความนับถือ)/.test(documentText(node))),
-        keepLines: node.type === 'heading' || role === 'signature',
+        keepLines: title || caption || node.type === 'heading' || role === 'signature',
         widowControl: true,
-        ...(node.type === 'paragraph'
-          ? {
-              spacing: {
-                before: firstPageSpace ? Math.round(0.5 * CM) : 0,
-                after: role === 'body' && documentText(node).trim() ? wordPreset(layout).after * 20 : 0,
-              },
-            }
-          : firstPageSpace
-            ? { spacing: { before: Math.round(0.5 * CM) } }
-            : {}),
-        children: [
-          ...(prefix
-            ? [new TextRun({ text: prefix, font: layout.font, size, sizeComplexScript: size, language: THAI_DOCUMENT_LANGUAGE })]
-            : []),
-          ...runs(node, size, node.type === 'heading', layout.font, role === 'memo-reference', layout.presentation.thaiBreaks),
-        ],
+        spacing: {
+          before: firstPageSpace ? Math.round(0.5 * CM) : title || node.type === 'heading' ? 120 : 0,
+          after: node.type === 'paragraph' ? (role === 'body' && documentText(node).trim() ? wordPreset(layout).after * 20 : 0) : 60,
+        },
+        children: runs(
+          node,
+          size,
+          title || node.type === 'heading',
+          layout.font,
+          role === 'memo-reference',
+          layout.presentation.thaiBreaks,
+        ),
       }),
     ];
   }
   if (node.type === 'bulletList' || node.type === 'orderedList')
-    return (node.content || []).flatMap((item, index) =>
-      (item.content || []).flatMap((child, childIndex) =>
+    return (node.content || []).flatMap(item =>
+      (item.content || []).flatMap((child, index) =>
         docxBlocks(
           child,
           layout,
           'body',
-          childIndex === 0 && child.type === 'paragraph'
-            ? node.type === 'bulletList'
-              ? '• '
-              : `${(node.attrs?.start || 1) + index}. `
-            : '',
+          index === 0 && child.type === 'paragraph' ? { reference: layout.lists.get(node)!, level: Math.min(depth, 8) } : undefined,
           depth + 1,
         ),
       ),
     );
-  return (node.content || []).flatMap(child => docxBlocks(child, layout, 'body', '', depth));
+  return (node.content || []).flatMap(child => docxBlocks(child, layout, 'body', undefined, depth));
 }
 
 function docx(document: DraftNode, layout: WordLayout) {
+  const numberingConfig: INumberingOptions['config'][number][] = [];
+  const collectLists = (node: DraftNode) => {
+    if (['bulletList', 'orderedList'].includes(node.type)) {
+      const reference = 'step-list-' + layout.lists.size;
+      layout.lists.set(node, reference);
+      numberingConfig.push({
+        reference,
+        levels: Array.from({ length: 9 }, (_, level) => ({
+          level,
+          format: node.type === 'bulletList' ? LevelFormat.BULLET : LevelFormat.DECIMAL,
+          text: node.type === 'bulletList' ? ['•', '◦', '▪'][level % 3] : '%' + (level + 1) + '.',
+          start: node.attrs?.start || 1,
+          style: {
+            run: { font: layout.font, size: wordPreset(layout).points * 2, sizeComplexScript: wordPreset(layout).points * 2 },
+            paragraph: { indent: { left: 360 * (level + 1), hanging: 180 } },
+          },
+        })),
+      });
+    }
+    (node.content || []).forEach(collectLists);
+  };
+  collectLists(document);
   const preset = wordPreset(layout);
   const heading = (size: number) => ({
     run: {
@@ -415,7 +492,8 @@ function docx(document: DraftNode, layout: WordLayout) {
   });
   const roles = documentLayoutRoles(document, layout.id);
   const blocks = document.content || [];
-  const title = layout.id === 'memo' && layout.garudaHeightCm && blocks[0]?.type === 'heading' ? blocks[0] : undefined;
+  const title =
+    layout.id === 'memo' && layout.garudaHeightCm && ['heading', 'title'].includes(blocks[0]?.type || '') ? blocks[0] : undefined;
   const footer = () =>
     new Footer({
       children: [
@@ -458,6 +536,7 @@ function docx(document: DraftNode, layout: WordLayout) {
     : undefined;
   return new Document({
     compatibility: { doNotExpandShiftReturn: true },
+    numbering: { config: numberingConfig },
     styles: {
       default: {
         document: {
@@ -467,6 +546,7 @@ function docx(document: DraftNode, layout: WordLayout) {
         heading1: heading((preset.points + 4) * 2),
         heading2: heading((preset.points + 2) * 2),
         heading3: heading(preset.points * 2),
+        title: { ...heading(44), paragraph: { ...heading(44).paragraph, outlineLevel: 9 } },
       },
     },
     sections: [
@@ -495,7 +575,7 @@ function docx(document: DraftNode, layout: WordLayout) {
             }
           : {}),
         children: blocks.flatMap((node, index) =>
-          node === title ? [] : docxBlocks(node, layout, roles[index], '', 0, Boolean(header && index === (title ? 1 : 0))),
+          node === title ? [] : docxBlocks(node, layout, roles[index], undefined, 0, Boolean(header && index === (title ? 1 : 0))),
         ),
       },
     ],
@@ -511,7 +591,7 @@ function outline(document: DraftNode) {
     if (node.type === 'table') {
       order.push({ table: tables.length });
       tables.push(node);
-    } else if (node.type === 'paragraph' || node.type === 'heading') {
+    } else if (['paragraph', 'heading', 'title', 'caption'].includes(node.type)) {
       order.push({ line: lines.length });
       lines.push({ text: prefix + documentText(node), kind: node.type === 'heading' ? 'heading' : prefix ? 'item' : 'paragraph', depth });
     } else if (node.type === 'bulletList' || node.type === 'orderedList')
@@ -673,16 +753,26 @@ async function pptx(path: string, document: DraftNode) {
   await deck.writeFile({ fileName: path });
 }
 
+export type ExportDocumentOptions = {
+  documentTool?: unknown;
+  font?: unknown;
+  garuda?: unknown;
+  template?: Uint8Array;
+  presentation?: unknown;
+  images?: ReadonlyMap<string, DocumentImage>;
+};
+
 export async function exportDocument(
   path: string,
   format: string,
   text: string,
   pdf: (html: string) => Promise<Uint8Array>,
   document?: DraftNode,
-  options: { documentTool?: unknown; font?: unknown; garuda?: unknown; template?: Uint8Array; presentation?: unknown } = {},
+  options: ExportDocumentOptions = {},
 ) {
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
+  if (rich && documentImageIds(rich).length && !['docx', 'pdf'].includes(format)) throw new Error('UNSUPPORTED_EXPORT_ELEMENT');
   if (format === 'md') return writeFile(path, rich ? documentMarkdown(rich) : text, 'utf8');
   // A draft without structure is plain text: one paragraph per line, nothing read as Markdown.
   const content = rich || plainDocument(text);
@@ -691,7 +781,12 @@ export async function exportDocument(
     const bytes = options.template
       ? await renderDocumentTemplate(options.template, options.documentTool, content, presentation.thaiBreaks)
       : await Packer.toBuffer(
-          docx(content, { ...resolveDocumentLayout(options.documentTool, options.font, options.garuda), presentation }),
+          docx(content, {
+            ...resolveDocumentLayout(options.documentTool, options.font, options.garuda),
+            presentation,
+            images: options.images || new Map(),
+            lists: new Map(),
+          }),
         );
     const result = presentation.embedFonts
       ? await embedDocumentFonts(bytes)
@@ -700,7 +795,10 @@ export async function exportDocument(
     return { fontEmbedding: result.embedding };
   }
   if (format === 'pdf')
-    return writeFile(path, await pdf(pdfHtml(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda))));
+    return writeFile(
+      path,
+      await pdf(pdfHtml(content, resolveDocumentLayout(options.documentTool, options.font, options.garuda), options.images)),
+    );
   if (format === 'xlsx') return xlsx(path, content);
   return pptx(path, content);
 }

@@ -235,6 +235,11 @@ export async function inspectDocumentTemplate(bytes: Uint8Array, id: unknown) {
 /** Reflow editable content using the selected template's native styles, frames, tables and sections. */
 export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, input: DraftNode, thaiBreaks = false) {
   const rich = validateDocument(input);
+  const rejectElements = (node: DraftNode) => {
+    if (['image', 'caption', 'blockquote', 'pageBreak'].includes(node.type)) fail('DOCUMENT_TEMPLATE_UNSUPPORTED_ELEMENT');
+    (node.content || []).forEach(rejectElements);
+  };
+  rejectElements(rich);
   const { zip, doc, body } = await open(bytes);
   const info = describe(body, doc, id);
   const stylesFile = zip.file('word/styles.xml');
@@ -603,7 +608,7 @@ export async function renderDocumentTemplate(bytes: Uint8Array, id: unknown, inp
       continue;
     }
     const key =
-      node.type === 'heading' && index === 0
+      ['heading', 'title'].includes(node.type) && index === 0
         ? 'title'
         : value === 'ขอแสดงความนับถือ'
           ? 'closing'

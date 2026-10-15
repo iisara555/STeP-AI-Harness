@@ -149,7 +149,7 @@ test('five document profiles export native editable content with their selected 
     );
     assert.ok(doc.xml.includes(`w:cs="${documentTool === 'memo' ? 'TH Sarabun New' : 'TH SarabunPSK'}"`));
     assert.equal(attr(doc.paragraph('ร่างสังเคราะห์'), 'jc', 'val'), documentTool === 'memo' ? 'left' : 'center', documentTool);
-    assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), '32');
+    assert.equal(attr(doc.paragraph('๑. หัวข้อ'), 'sz', 'val'), '36');
     assert.match(doc.xml, /<w:pgNumType[^>]*w:fmt="thaiNumbers"/);
     assert.match(doc.xml, /<w:footerReference/);
     const footer = await doc.zip.file('word/footer1.xml')!.async('string');

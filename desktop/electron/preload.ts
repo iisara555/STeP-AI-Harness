@@ -114,6 +114,8 @@ const allowed = new Set([
   'reject',
   'restore',
   'attach',
+  'documentImageAdd',
+  'documentAsset',
   'export',
   'reveal',
   'imageModels',

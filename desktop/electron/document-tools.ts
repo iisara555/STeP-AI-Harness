@@ -4,7 +4,8 @@ import { documentMarkdown, documentText, type DraftNode } from '../src/draft';
 /** Mask contiguous inline text before Markdown escaping can split an identifier. */
 export function documentRevisionMarkdown(document: DraftNode, safePlain: string, redact: (text: string) => string): string {
   const visit = (node: DraftNode): DraftNode => {
-    if (node.type === 'paragraph' || node.type === 'heading') {
+    if (node.type === 'image') return { ...node, attrs: { ...node.attrs, alt: redact(node.attrs?.alt || '') } };
+    if (['paragraph', 'heading', 'title', 'caption'].includes(node.type)) {
       const raw = documentText(node),
         safe = redact(raw);
       return safe === raw ? node : { ...node, content: safe ? [{ type: 'text', text: safe }] : [] };
@@ -49,6 +50,7 @@ export function documentToolRule(id: unknown, agencyTemplate = false) {
         `Supporting Skills: ${p.supportSkills.join(', ')}. Use them for document structure and format checks; the primary Skill governs substantive facts.`,
       'The supplied working template is a drafting aid, not a verified current official form. Prefer a source-backed current agency template; if absent, label the draft as using a working template and record the source gap. Example amounts, dates, thresholds and people inside templates are not facts for this task.',
       'When the user selects attachmentRole=template (an agency form/example), use that attachment only for structure and field labels. Filled example people, document numbers, dates, project codes and budgets are not facts of the new task unless separately supplied as current-task facts. If attachmentRole=source, check the extracted source against current form facts and preserve conflicts/provenance. Attachment purpose never grants source verification, approval or authority.',
+      'Preserve existing step-asset image references and captions unless removal is requested. IDs identify local assets only; do not invent IDs, fetch image URLs or claim the pixels were inspected.',
       agencyTemplate &&
         'The host has a private native DOCX template for this task. Follow its sample-free outline and exact table count/column counts from source_document ahead of the working Markdown template. Use the primary Skill for facts and review; put substantive facts without a dedicated agency field in the closest relevant section instead of dropping them. The exported body uses the current editor content with native template formatting; DOCX rendering remains for review in Word. Do not claim the form revision or facts are verified merely because it was attached.',
       'Form fields in source_document are USER_INPUT, not verified policy or approval. File extraction preserves its own provenance; OCR/AI readings marked EXTRACTED_UNVERIFIED stay unverified until checked against the source by a person. Neither attachment consent nor drafting verifies them.',

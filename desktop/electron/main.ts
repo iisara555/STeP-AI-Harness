@@ -49,6 +49,8 @@ import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
+import { DocumentAssets, documentImageDimensions, readDocumentImage } from './document-assets';
+import { sensitivePath, deniedPath } from './permissions';
 import { Coordinator } from './coordinator';
 import { Automations, connectionBinding } from './cron';
 import { Mcp } from './mcp';
@@ -278,6 +280,7 @@ async function main() {
       throw new Error('VAULT_EXECUTION_CONFLICT');
   };
   const documentTemplates = new DocumentTemplates(store);
+  const documentAssets = new DocumentAssets(store);
   useLanguage(() => store?.settings().language);
   const credentialTitle = (title: string) => credentialTitles[title]?.[store.settings().language === 'en' ? 1 : 0] || title;
   // Set the theme before the first paint so a dark-theme user never sees a light flash.
@@ -3218,8 +3221,35 @@ async function main() {
         if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
         store.remove('session', id);
         documentTemplates.remove(id);
+        documentAssets.remove(id);
         for (const [aid, a] of attachments) if (a.sessionId === id) attachments.delete(aid);
         return true;
+      }
+      case 'documentImageAdd': {
+        const sessionId = inputText(input.id, 60),
+          task = store.session(sessionId);
+        if (task.documentTemplate) throw new Error('DOCUMENT_TEMPLATE_UNSUPPORTED_ELEMENT');
+        if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
+        const selection = await dialog.showOpenDialog(window, {
+          properties: ['openFile'],
+          filters: [{ name: 'PNG / JPEG', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+        if (selection.canceled || !selection.filePaths[0]) return { canceled: true };
+        const allow = (path: string) => {
+          if (sensitivePath(path) || deniedPath(path, policyState.policy.permission.pathRules, store.settings().workspace))
+            throw new Error('PATH_BLOCKED');
+        };
+        const bytes = await readDocumentImage(selection.filePaths[0], allow);
+        documentImageDimensions(bytes);
+        const image = nativeImage.createFromBuffer(bytes);
+        if (image.isEmpty()) throw new Error('DOCUMENT_IMAGE_INVALID');
+        const size = image.getSize();
+        if (actions.evaluateActionGate(draftExportAction).status !== 'allowed') throw new Error('ACTION_BLOCKED');
+        return { attrs: documentAssets.save(sessionId, { bytes: image.toPNG(), mime: 'image/png', ...size }) };
+      }
+      case 'documentAsset': {
+        const image = documentAssets.load(inputText(input.id, 60), inputText(input.assetId, 60));
+        return { dataUrl: `data:${image.mime};base64,${image.bytes.toString('base64')}` };
       }
       case 'edit':
         return store.edit(inputText(input.id, 60), inputText(input.text, 150000), input.revision, input.document, input.presentation);
@@ -3387,9 +3417,12 @@ async function main() {
               }
             },
             s.document,
-            layout
-              ? { documentTool: layout.id, font: layout.font, garuda: input.garuda, template, presentation: s.presentation }
-              : undefined,
+            {
+              ...(layout
+                ? { documentTool: layout.id, font: layout.font, garuda: input.garuda, template, presentation: s.presentation }
+                : {}),
+              images: s.document ? documentAssets.resolve(s.id, s.document) : undefined,
+            },
           );
           exportPaths.add(result.path);
           if (!layout) return result;

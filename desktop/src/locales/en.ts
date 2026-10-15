@@ -4,7 +4,9 @@ import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
+import { documentLayoutEn } from './document-layout-en';
 export const en: Record<string, string> = {
+  ...documentLayoutEn,
   'รูปแบบ DOCX': 'DOCX formatting',
   'ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้': 'Fonts embedded for viewing and editing in Word',
   'แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน':
