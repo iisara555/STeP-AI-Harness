@@ -8,6 +8,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 - Add a native Google Workspace Skill with account/scope preflight, bounded Gmail search and daily briefs, exact-action write review, read-back limits and unknown-outcome recovery. Load individual Skill references/examples through the governed `skill` tool. Include offline fixtures for all 26 native operations and Hermes MIT provenance; live Google and model-side acceptance remain open.
 
+- Improve Thai document layout with explicit Thai Word language/complex-script styling, natural Thai-word table width estimates and Thai-aware editor/PDF wrapping. Preserve source text without inserting invisible break characters, keep native template fonts/layout, and add shared drafting/layout guidance adapted from thai-doc-skills with MIT attribution. Synthetic DOCX/XML and browser/PDF checks do not replace final Word/agency-form acceptance.
+
 ## Desktop v0.6.8 (2026-10-14)
 
 - Replace the internal-media sample overwrite JavaScript confirm popup with the existing in-app confirmation dialog. Preserve drafts on cancel and restore editable keyboard focus on cancel/accept; native regression covers subsequent typing, dropdown changes, copy validation and draft persistence.

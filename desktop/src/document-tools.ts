@@ -23,6 +23,7 @@ const draftable = (key: string, label: string, multiline = false, hint?: string)
 const common = [field('title', 'ชื่อเอกสาร / ชื่อโครงการ'), field('unit', 'หน่วยงานเจ้าของเรื่อง'), field('owner', 'ผู้รับผิดชอบ')];
 const dateGuide = 'docs/thai-data-formatting.md';
 const draftingChecks = 'skills/common/thai-official-documents/references/drafting-checks.md';
+const thaiLayout = 'skills/common/thai-official-documents/references/thai-layout.md';
 const official = [
   field('number', 'เลขหนังสือ', false, 'เว้นไว้หากยังไม่ได้ออกเลข'),
   field('date', 'วันที่', false, 'ระบุปีเต็ม เช่น 2 ตุลาคม 2569'),
@@ -38,7 +39,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'tor-government-writing',
     supportSkills: ['thai-official-documents'],
     template: 'skills/common/thai-official-documents/templates/tor-16-sections-template.md',
-    references: [dateGuide, draftingChecks],
+    references: [dateGuide, draftingChecks, thaiLayout],
     variants: [
       { id: 'service', label: 'จ้างงาน / บริการ' },
       { id: 'goods', label: 'ซื้อพัสดุ / ครุภัณฑ์' },
@@ -63,7 +64,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'thai-official-documents',
     supportSkills: [],
     template: 'skills/common/thai-official-documents/templates/memo-draft.md',
-    references: [dateGuide, draftingChecks],
+    references: [dateGuide, draftingChecks, thaiLayout],
     variants: [
       { id: 'approval', label: 'ขออนุมัติ' },
       { id: 'concurrence', label: 'ขอความเห็นชอบ' },
@@ -90,7 +91,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'thai-official-documents',
     supportSkills: [],
     template: 'skills/common/thai-official-documents/templates/letter-draft.md',
-    references: [dateGuide, draftingChecks],
+    references: [dateGuide, draftingChecks, thaiLayout],
     variants: [
       { id: 'external', label: 'หนังสือภายนอก' },
       { id: 'invitation', label: 'หนังสือเชิญ' },
@@ -115,7 +116,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'project-plan',
     supportSkills: [],
     template: 'skills/pm/project-plan/templates/project-proposal-template.md',
-    references: [dateGuide],
+    references: [dateGuide, thaiLayout],
     variants: [{ id: 'proposal', label: 'ข้อเสนอโครงการเพื่อพิจารณา' }],
     fields: [
       ...common,
@@ -137,7 +138,7 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'meeting-summary',
     supportSkills: ['thai-official-documents'],
     template: 'skills/common/thai-official-documents/templates/minutes-draft.md',
-    references: [dateGuide, draftingChecks],
+    references: [dateGuide, draftingChecks, thaiLayout],
     variants: [{ id: 'minutes', label: 'รายงานการประชุม' }],
     fields: [
       field('title', 'ชื่อการประชุม'),

@@ -317,6 +317,9 @@ try {
   }
   assert.equal(requests.length, profiles.length + 2, 'one generation per profile and two project revisions');
   const editor = page.locator('.tiptap[contenteditable="true"]');
+  await expect(editor).toHaveAttribute('lang', 'th');
+  assert.equal(await editor.evaluate(el => getComputedStyle(el).wordBreak), 'normal');
+  assert.equal(await editor.evaluate(el => getComputedStyle(el).overflowWrap), 'break-word');
   await expect(editor).toContainText('[รอยืนยัน: เวลา]');
   await editor.fill('ร่างเพื่อพิจารณา\nแก้ไขสังเคราะห์โดยเจ้าของเรื่อง\n[รอยืนยัน: งบประมาณ]');
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();

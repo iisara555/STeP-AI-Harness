@@ -48,6 +48,8 @@ test('Skill review output is retained separately through drafting, acceptance an
         adapter: {
           run: async (_prompt, _connection, context) => {
             assert.ok(context.system?.includes('<document_draft>'));
+            assert.ok(context.system?.includes('# ตรวจการตัดบรรทัดและจัดหน้าเอกสารไทย'));
+            assert.ok(context.system?.includes('ไม่เปลี่ยนข้อความต้นทางเงียบ ๆ'));
             return '<document_draft>\n# เอกสารสังเคราะห์\n\nรหัส 00123 [รอยืนยัน: งบ]\n</document_draft>\n<document_review>\n## ตรวจข้อมูลก่อนเสนอ\n\nยังไม่ได้ตรวจหน้าส่งออก\n</document_review>';
           },
         },
