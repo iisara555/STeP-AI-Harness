@@ -33,6 +33,44 @@ function fixture() {
   return { store, session, harness };
 }
 
+test('both TOR variants load task adaptation, acceptance and source guidance without importing the computer example', async () => {
+  for (const variant of ['goods', 'service']) {
+    const { store, session, harness } = fixture();
+    let calls = 0;
+    const service = new WorkService(
+      store,
+      harness,
+      async () => ({
+        context: { cwd: root, env: {} },
+        adapter: {
+          run: async (prompt, _connection, context) => {
+            calls++;
+            assert.ok(context.system?.includes('TOR drafting method: task-led requirements'));
+            assert.ok(context.system?.includes('Procurement source map: discovery is not approval'));
+            assert.ok(context.system?.includes('TOR adaptation examples: goods and services'));
+            assert.ok(context.system?.includes('Do not transfer example-specific'));
+            assert.ok(!context.system?.includes('ภายใต้โครงการสนับสนุนและยกระดับระบบนิเวศนวัตกรรมปัญญาประดิษฐ์ภาคเหนือ'));
+            assert.ok(prompt.includes('SYNTHETIC-USE-001'));
+            return envelope('# ร่างเพื่อพิจารณา\n\nงานสังเคราะห์ [รอยืนยัน: งบประมาณ]');
+          },
+        },
+      }),
+      () => {},
+    );
+    try {
+      const request = documentRequest('tor', { title: 'SYNTHETIC-USE-001' }, variant);
+      await service.run(session.id, request.text, request.sourceText, true, undefined, 'draft', undefined, [], { documentTool: 'tor' });
+      const done = store.session(session.id);
+      assert.equal(done.status, 'review', JSON.stringify(done.runs?.at(-1)));
+      assert.equal(calls, 1);
+      for (const suffix of ['tor-drafting-guide.md', 'procurement-source-map.md', 'task-adaptations.md'])
+        assert.ok(done.proposals[0].sources.some(path => path.endsWith(suffix)));
+    } finally {
+      store.close();
+    }
+  }
+});
+
 test('Skill review output is retained separately through drafting, acceptance and revision for every tool', async () => {
   for (const { tool, variant } of DOCUMENT_TOOLS.flatMap(tool => tool.variants.map(variant => ({ tool, variant })))) {
     const { store, session, harness } = fixture();

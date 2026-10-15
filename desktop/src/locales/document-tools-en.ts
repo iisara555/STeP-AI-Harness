@@ -151,6 +151,15 @@ export const documentToolsEn: Record<string, string> = {
   'อ้างถึง / สิ่งที่ส่งมาด้วย': 'References / enclosures',
   'จ้างงาน / บริการ': 'Work / service procurement',
   'ซื้อพัสดุ / ครุภัณฑ์': 'Goods / equipment procurement',
+  การใช้งานและผลสำเร็จที่ต้องการ: 'Intended use and desired outcomes',
+  'เว้นได้ ระบุว่าใครใช้ ใช้ทำอะไร และต้องส่งมอบอะไรจึงใช้งานได้':
+    'Optional: describe who will use it, for what purpose and what makes the delivery usable.',
+  'ข้อจำกัด / งานที่ไม่รวม': 'Constraints / exclusions',
+  'เว้นได้ ระบุสิ่งที่ต้องใช้ร่วมกัน สิ่งที่หน่วยงานเตรียมให้ และงานที่ไม่ต้องการ':
+    'Optional: describe compatibility needs, agency-provided inputs and excluded work.',
+  รูปแบบเอกสารที่ต้องการ: 'Document presentation preferences',
+  'เว้นได้ ระบุแบบหน่วยงาน ลำดับหัวข้อ ความละเอียด หรือรูปแบบตารางที่ต้องการ':
+    'Optional: specify the agency form, heading order, detail level or table format.',
   ความเป็นมา: 'Background',
   วัตถุประสงค์: 'Objectives',
   ขอบเขตงาน: 'Scope',

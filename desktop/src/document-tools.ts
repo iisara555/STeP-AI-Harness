@@ -3,7 +3,7 @@ import { parseThaiDate, formatThaiDate } from './thai-date';
 /** Fixed document profiles: the host selects actual Skills and working templates from this allowlist. */
 export type DocumentToolId = 'tor' | 'memo' | 'letter' | 'project' | 'minutes';
 export type DocumentAttachmentRole = 'source' | 'template';
-export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean; missingAction?: 'draft-proposal' };
+export type DocumentField = { key: string; label: string; hint?: string; multiline?: boolean; missingAction?: 'draft-proposal' | 'omit' };
 export type DocumentTool = {
   id: DocumentToolId;
   title: string;
@@ -39,13 +39,42 @@ export const DOCUMENT_TOOLS: DocumentTool[] = [
     skill: 'tor-government-writing',
     supportSkills: ['thai-official-documents'],
     template: 'skills/common/thai-official-documents/templates/tor-16-sections-template.md',
-    references: [dateGuide, draftingChecks, thaiLayout],
+    references: [
+      dateGuide,
+      draftingChecks,
+      thaiLayout,
+      'skills/pm/tor-government-writing/references/tor-drafting-guide.md',
+      'skills/pm/tor-government-writing/references/procurement-source-map.md',
+      'skills/pm/tor-government-writing/examples/task-adaptations.md',
+    ],
     variants: [
       { id: 'service', label: 'จ้างงาน / บริการ' },
       { id: 'goods', label: 'ซื้อพัสดุ / ครุภัณฑ์' },
     ],
     fields: [
       ...common,
+      {
+        ...field('intendedUse', 'การใช้งานและผลสำเร็จที่ต้องการ', true, 'เว้นได้ ระบุว่าใครใช้ ใช้ทำอะไร และต้องส่งมอบอะไรจึงใช้งานได้'),
+        missingAction: 'omit',
+      },
+      {
+        ...field(
+          'constraints',
+          'ข้อจำกัด / งานที่ไม่รวม',
+          true,
+          'เว้นได้ ระบุสิ่งที่ต้องใช้ร่วมกัน สิ่งที่หน่วยงานเตรียมให้ และงานที่ไม่ต้องการ',
+        ),
+        missingAction: 'omit',
+      },
+      {
+        ...field(
+          'preferences',
+          'รูปแบบเอกสารที่ต้องการ',
+          true,
+          'เว้นได้ ระบุแบบหน่วยงาน ลำดับหัวข้อ ความละเอียด หรือรูปแบบตารางที่ต้องการ',
+        ),
+        missingAction: 'omit',
+      },
       draftable('background', 'ความเป็นมา', true),
       draftable('objectives', 'วัตถุประสงค์', true),
       draftable('scope', 'ขอบเขตงาน', true),
@@ -183,8 +212,8 @@ export function documentRequest(
           value,
           ...(value
             ? { provenance: 'USER_INPUT' }
-            : f.missingAction === 'draft-proposal'
-              ? { missingAction: 'draft-proposal' }
+            : f.missingAction
+              ? { missingAction: f.missingAction }
               : { missingAction: 'confirm', placeholder: `[รอยืนยัน: ${f.label}]` }),
           ...(isDate ? (date ? { formatted: formatThaiDate(date, 'official') } : { review: 'DATE_NEEDS_REVIEW' }) : {}),
         },
