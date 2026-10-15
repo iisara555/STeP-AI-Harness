@@ -52,6 +52,7 @@ export function escapeHtml(text: string) {
 /** A cell's or block's text on one line, for spreadsheets and slides. */
 const flat = (node: DraftNode) => documentText(node).replace(/\s*\n\s*/g, ' ');
 const tableRows = (table: DraftNode) => (table.content || []).map(row => (row.content || []).map(flat));
+const hasPageBreak = (node: DraftNode): boolean => node.type === 'pageBreak' || Boolean(node.content?.some(hasPageBreak));
 const AMOUNT = /^[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?$/;
 /** Columns whose body cells are all amounts (at least one), right-aligned as figures are in Thai official tables. */
 const numericColumns = (rows: string[][]) =>
@@ -868,6 +869,7 @@ export async function exportDocument(
   const rich = document ? validateDocument(document) : undefined;
   if (!exportFormats.includes(format as any)) throw new Error('INVALID_FORMAT');
   if (rich && documentImageIds(rich).length && !['docx', 'pdf'].includes(format)) throw new Error('UNSUPPORTED_EXPORT_ELEMENT');
+  if (rich && hasPageBreak(rich) && ['xlsx', 'pptx'].includes(format)) throw new Error('UNSUPPORTED_EXPORT_ELEMENT');
   if (format !== 'docx' && options.presentation) {
     const p = resolvePresentation(options.presentation, Boolean(options.documentTool));
     if (

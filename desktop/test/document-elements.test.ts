@@ -57,6 +57,14 @@ test('Word uses Title separately from headings and actual native list numbering 
   assert.match(numbering, /<w:start w:val="3"/);
   assert.match(numbering, /<w:start w:val="7"/);
   assert.ok(!xml.includes('3. ขั้นตอนแรก'));
+  for (const format of ['xlsx', 'pptx']) {
+    const unsupported = path + '.' + format;
+    await assert.rejects(
+      exportDocument(unsupported, format, '', async () => Buffer.alloc(0), document),
+      /UNSUPPORTED_EXPORT_ELEMENT/,
+    );
+    await assert.rejects(access(unsupported));
+  }
 });
 
 test('owned image bytes survive restart and version restore; cross-task and corrupt references fail before writing', async () => {
