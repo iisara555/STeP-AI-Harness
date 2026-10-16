@@ -86,7 +86,17 @@ import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
-import { installPack, listPacks, enablePack, exportPack, packAsset, enabledPackHooks } from '../../src/modules/packs/index.js';
+import {
+  installPack,
+  listPacks,
+  enablePack,
+  exportPack,
+  packAsset,
+  enabledPackHooks,
+  promotionPayload,
+  recordPromotion,
+} from '../../src/modules/packs/index.js';
+import { submitSkill } from './skill-submit';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
@@ -2297,6 +2307,38 @@ async function main() {
           input.kind,
           policyState.policy,
         );
+      case 'packPromote': {
+        // "เสนอให้องค์กรใช้": only to the intake set in policy, only a pack whose files pass the privacy check (every read of
+        // a pack re-runs it) and the Standard v2 review, and only after the employee agrees to what is sent and to credit.
+        const identity = phase4Identity(),
+          url = policyState.policy.skillPacks?.submitUrl,
+          settings = store.settings(),
+          workspace = settings.workspace || data,
+          id = inputText(input.id, 64);
+        if (!url) throw new Error('SKILL_SUBMIT_UNAVAILABLE');
+        const credit = { name: settings.userName || '', team: settings.team || '' };
+        const submission = promotionPayload(workspace, id, { credit });
+        if (harness.privacy(JSON.stringify(submission.files)).action !== 'pass') throw new Error('SKILL_SUBMIT_PRIVACY');
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'question',
+          buttons: [tm('ยกเลิก'), tm('ส่งให้ผู้ดูแลพิจารณา')],
+          defaultId: 0,
+          cancelId: 0,
+          message: tm('เสนอ Skill นี้ให้องค์กรใช้'),
+          detail: tm(
+            '{0}\nระบบจะส่งไฟล์ Skill {1} ไฟล์ ผลตรวจ จำนวนครั้งที่ใช้ และชื่อผู้เสนอ ({2}{3}) ไปยังช่องทางรับ Skill ของผู้ดูแลที่ {4}\nผู้ดูแลจะตรวจก่อนเผยแพร่ และเมื่อเผยแพร่ ชื่อของคุณจะแสดงเป็นผู้ร่วมสร้าง',
+            id,
+            submission.files.length,
+            submission.contributor.name,
+            submission.contributor.team ? ' · ' + submission.contributor.team : '',
+            new URL(url).host,
+          ),
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
+        const { reference } = await submitSkill(url, { ...submission, appVersion: app.getVersion() }, (u, init) => net.fetch(u, init));
+        return recordPromotion(workspace, id, { digest: submission.pack.digest, reference, credit });
+      }
       case 'packExport': {
         const selected = await dialog.showSaveDialog(window!, {
           title: tm('ส่งออก Skill ไปยังโฟลเดอร์ใหม่'),

@@ -140,6 +140,20 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
           <button disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
             {t('ส่งออก .claude/skills')}
           </button>
+          {/* Sends the pack to the administrators' intake sheet; publishing for everyone still needs their approval. */}
+          {!p.invalid && p.promotable && (
+            <button disabled={busy || p.promotion?.current} onClick={() => void act('packPromote', { id: p.id })}>
+              {t('เสนอให้องค์กรใช้')}
+            </button>
+          )}
+          {p.promotion && (
+            <p className="small muted" role="note">
+              {p.promotion.current
+                ? t('เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา', new Date(p.promotion.submittedAt).toLocaleDateString())
+                : t('ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้', new Date(p.promotion.submittedAt).toLocaleDateString())}
+              {p.promotion.reference ? ' · ' + t('เลขที่ {0}', p.promotion.reference) : ''}
+            </p>
+          )}
           {[
             ...p.skills.map((a: any) => ({ ...a, kind: 'skill' })),
             ...(p.agentsEnabled ? p.agents.map((a: any) => ({ ...a, kind: 'agent' })) : []),

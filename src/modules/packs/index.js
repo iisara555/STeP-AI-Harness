@@ -234,6 +234,7 @@ function read(workspace, id) {
     state,
     credit,
     usage: usageOf(folder),
+    promotion: promotionOf(folder),
     review: reviewPack(manifest, files),
   };
 }
@@ -296,6 +297,80 @@ function recordUse(folder) {
     // A count that cannot be written never blocks using the Skill.
     if (existsSync(temp)) rmSync(temp, { force: true });
   }
+}
+// "เสนอให้องค์กรใช้": the staff member sends a pack that passed the review to the administrators' intake sheet. What
+// is sent is built here so the app and its tests agree: the pack's own text files, the review findings, the local use
+// count and the uploader's credit. The caller runs the privacy check and asks consent before sending anything.
+function promotionOf(folder) {
+  try {
+    regular(join(folder, "promotion.json"));
+    const p = JSON.parse(readFileSync(join(folder, "promotion.json"), "utf8"));
+    if (
+      !/^[a-f0-9]{64}$/.test(p.digest) ||
+      typeof p.submittedAt !== "string" ||
+      Number.isNaN(Date.parse(p.submittedAt))
+    )
+      return undefined;
+    return {
+      digest: p.digest,
+      submittedAt: p.submittedAt,
+      ...(typeof p.reference === "string" ? { reference: field(p.reference) } : {}),
+    };
+  } catch {
+    return undefined;
+  }
+}
+export function promotionPayload(workspace, id, { credit } = {}) {
+  const p = read(workspace, id);
+  // Packs imported before credit existed are credited to the person sending them now.
+  if (!p.credit) p.credit = creditOf(credit);
+  if (p.review.status === "fail") throw new Error("PACK_REVIEW_FAILED");
+  if ((p.manifest.hooks || []).length || (p.manifest.agents || []).length)
+    throw new Error("PACK_PROMOTION_TEXT_ONLY");
+  if (!p.credit) throw new Error("PACK_CREDIT_REQUIRED");
+  return {
+    schema: 1,
+    pack: {
+      id,
+      version: String(p.manifest.version || ""),
+      digest: p.digest,
+      skills: p.manifest.skills.map((s) => s.id),
+    },
+    review: {
+      status: p.review.status,
+      findings: p.review.findings.map(({ level, code, file, line, message }) => ({
+        level,
+        code,
+        file,
+        line,
+        message,
+      })),
+    },
+    usage: p.usage,
+    contributor: { name: p.credit.name, team: p.credit.team, uploadedAt: p.credit.uploadedAt },
+    files: [...p.files]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([path, bytes]) => ({ path, text: bytes.toString("utf8") })),
+  };
+}
+// After the intake accepted it: remember what was sent and record the uploader's consent to be credited by name.
+export function recordPromotion(workspace, id, { digest, reference, credit } = {}) {
+  const p = read(workspace, id);
+  if (digest !== p.digest) throw new Error("PACK_CHANGED");
+  const promotion = {
+    digest,
+    submittedAt: new Date().toISOString(),
+    ...(typeof reference === "string" && reference ? { reference: field(reference) } : {}),
+  };
+  const write = (name, value) => {
+    const temp = join(p.folder, name + "-" + randomUUID() + ".tmp");
+    writeFileSync(temp, JSON.stringify(value), { flag: "wx", mode: 0o600 });
+    renameSync(temp, join(p.folder, name + ".json"));
+  };
+  write("promotion", promotion);
+  const uploader = p.credit || creditOf(credit);
+  if (uploader) write("credit", { ...uploader, orgConsent: true });
+  return promotion;
 }
 export function installPack(workspace, source, { name, credit } = {}) {
   const files = tree(resolve(source));
@@ -372,6 +447,12 @@ export function listPacks(workspace, policy = {}) {
           adminApproved: adminApproved(p, policy),
           review: p.review,
           usage: p.usage,
+          promotable:
+            typeof policy?.skillPacks?.submitUrl === "string" &&
+            p.review.status !== "fail" &&
+            !(p.manifest.hooks || []).length &&
+            !(p.manifest.agents || []).length,
+          ...(p.promotion ? { promotion: { ...p.promotion, current: p.promotion.digest === p.digest } } : {}),
           ...(p.credit ? { credit: p.credit } : {}),
           skills: p.manifest.skills,
           agents: p.manifest.agents || [],
