@@ -1218,8 +1218,8 @@ export const en: Record<string, string> = {
   ไม่สำเร็จ: 'Failed',
   หยุดแล้ว: 'Stopped',
   งานหยุดเมื่อปิดแอป: 'Stopped when the app closed',
-  'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills ผู้ดูแลต้องรับรอง digest ก่อนเปิดใช้ เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง':
-    'Import a pack.json or a SKILL.md folder (including .claude/skills). Your admin must approve the digest before use; pack content is used as reference for drafts',
+  'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills Skill ที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติใช้เองบนเครื่องนี้ได้ทันที ส่วน Hooks, Agent และการแชร์ให้ทีมต้องให้ผู้ดูแลรับรอง digest ก่อน เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง':
+    'Import pack.json or a SKILL.md folder, including .claude/skills. Text-only Skills that pass the automated checks can be used on this computer right away; hooks, agents and sharing with a team need your admin to approve the digest first. Content is reference material for drafting.',
   'ชื่อชุดที่นำเข้าจาก SKILL.md': 'Name of the pack imported from SKILL.md',
   เลือกโฟลเดอร์และนำเข้า: 'Choose folder and import',
   'เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน': 'Enable admin-approved Hooks on confirm',
@@ -2561,4 +2561,18 @@ export const en: Record<string, string> = {
   ความปลอดภัย: 'Safety',
   มาตรฐาน: 'Standard',
   'นำเข้าโดย {0}': 'Imported by {0}',
+  // Staff Skills: personal use and usage counts
+  'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน': 'Let staff use their own Skills once they pass the checks',
+  'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้':
+    'This Skill has not passed the checks; fix the listed items and import it again before using it',
+  'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้': 'Your admin has turned off staff-made Skills on this computer',
+  'ใช้แล้ว {0} ครั้ง': 'Used {0} times',
+  'ล่าสุด {0}': 'last {0}',
+  เลิกใช้เอง: 'Stop using',
+  ใช้เองบนเครื่องนี้: 'Use on this computer',
+  'ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือให้ผู้ดูแลรับรอง digest ของชุดนี้':
+    "Not usable yet: fix the review findings, or ask your admin to approve this pack's digest",
+  'ใช้ Skill นี้เองบนเครื่องนี้': 'Use this Skill on this computer',
+  '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล':
+    '{0}\nPassed the automated standard and safety checks. It works on this computer only, as reference text for drafting, with no hooks or agents, and is not approved by an admin.',
 };

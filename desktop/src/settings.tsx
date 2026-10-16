@@ -30,6 +30,7 @@ const featureNames: Record<string, string> = localized({
   providerPresets: 'บริการ AI อื่นที่รู้จัก (OpenRouter, Groq ฯลฯ)',
   headless: 'สั่งงานแบบไม่เปิดหน้าต่าง',
   skillPacks: 'ติดตั้ง Skill Packs',
+  staffSkills: 'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน',
   cron: 'งานตามรอบ',
   coordinator: 'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว',
   memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',

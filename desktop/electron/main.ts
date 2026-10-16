@@ -2255,19 +2255,29 @@ async function main() {
       case 'packEnable': {
         const identity = phase4Identity(),
           workspace = store.settings().workspace || data,
-          id = inputText(input.id, 64);
+          id = inputText(input.id, 64),
+          personal = input.personal === true && input.disable !== true;
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
           buttons: [tm('ยกเลิก'), tm('ยืนยัน')],
           defaultId: 0,
           cancelId: 0,
-          message: input.disable ? tm('ปิด Skill Pack นี้') : tm('เปิด Skill Pack ที่ผู้ดูแลรับรอง'),
-          detail: tm(
-            '{0}\nHooks: {1}\nAgent templates: {2}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้',
-            id,
-            input.hooks === true ? tm('เปิด command/HTTP hooks ที่รับรอง') : tm('ปิด'),
-            input.agents === true ? tm('เปิด') : tm('ปิด'),
-          ),
+          message: input.disable
+            ? tm('ปิด Skill Pack นี้')
+            : personal
+              ? tm('ใช้ Skill นี้เองบนเครื่องนี้')
+              : tm('เปิด Skill Pack ที่ผู้ดูแลรับรอง'),
+          detail: personal
+            ? tm(
+                '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล',
+                id,
+              )
+            : tm(
+                '{0}\nHooks: {1}\nAgent templates: {2}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้',
+                id,
+                input.hooks === true ? tm('เปิด command/HTTP hooks ที่รับรอง') : tm('ปิด'),
+                input.agents === true ? tm('เปิด') : tm('ปิด'),
+              ),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
@@ -2276,6 +2286,7 @@ async function main() {
           hooks: input.hooks === true,
           agents: input.agents === true,
           disable: input.disable === true,
+          personal,
         });
       }
       case 'packAsset':

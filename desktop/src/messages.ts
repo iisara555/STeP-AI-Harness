@@ -61,6 +61,8 @@ export const errorText: Record<string, string> = localized({
   COMPONENT_BUSY: 'ส่วนเสริมกำลังทำงาน กรุณารอให้เสร็จก่อน',
   PACK_APPROVAL_REQUIRED: 'ผู้ดูแลต้องรับรอง digest ของชุดนี้ก่อนเปิดใช้',
   PACK_DISABLED: 'ชุดนี้ปิดใช้หรือไฟล์เปลี่ยนจากที่ผู้ดูแลรับรอง',
+  PACK_REVIEW_FAILED: 'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้',
+  PACK_PERSONAL_DISABLED: 'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้',
   PACK_MANIFEST_INVALID: 'รูปแบบ Skill Pack ไม่ถูกต้อง',
   PACK_AUTHORITY_REJECTED: 'ชุดนี้มีข้อความกำหนดสิทธิ์เครื่องมือที่ไม่รองรับ',
   PACK_NAME_REQUIRED: 'กรุณากำหนดชื่อชุดด้วยอักษรอังกฤษตัวเล็กและขีดกลาง',

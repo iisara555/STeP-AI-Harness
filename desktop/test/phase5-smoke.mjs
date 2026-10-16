@@ -16,6 +16,19 @@ await mkdir(workspace);
 await mkdir(source);
 await writeFile(join(source, 'SKILL.md'), '---\nname: public-draft\ndescription: Public writing draft.\n---\nUse supplied facts only.\n');
 const pack = installPack(workspace, source, { name: 'public-writing' });
+// A staff-made Standard v2 Skill used personally after the automated review, and one not yet enabled.
+const staffSource = join(home, 'staff-source');
+await mkdir(staffSource);
+await writeFile(
+  join(staffSource, 'SKILL.md'),
+  '---\nname: room-request\ndescription: ใช้เมื่อพนักงานต้องร่างคำขอจองห้องประชุมให้ครบรายละเอียด\nstandardVersion: 2\n---\n' +
+    ['Purpose', 'เมื่อควรใช้', 'Inputs', 'Source', 'Workflow', 'Output', 'Handoff', 'Guardrails']
+      .map(h => `## ${h}\nข้อความสังเคราะห์\n`)
+      .join('\n') +
+    '\n## Authority\nAI ร่างได้ ผู้ใช้ต้องยืนยันก่อนส่ง\n',
+);
+const staffPack = installPack(workspace, staffSource, { name: 'staff-room', credit: { name: 'พนักงานสังเคราะห์', team: 'ga' } });
+installPack(workspace, staffSource, { name: 'staff-room-copy' });
 let calls = 0;
 const server = createServer(async (req, res) => {
   let body = '';
@@ -56,6 +69,7 @@ const policy = {
   prices: { fixture: { input: 1, output: 2 } },
 };
 enablePack(workspace, pack.id, policy, { approve: true });
+enablePack(workspace, staffPack.id, policy, { approve: true, personal: true });
 await writeFile(join(home, 'desktop-policy.json'), JSON.stringify(policy));
 const db = new DatabaseSync(join(home, 'workspace.sqlite'));
 db.exec('CREATE TABLE records(kind TEXT NOT NULL,id TEXT NOT NULL,value TEXT NOT NULL,PRIMARY KEY(kind,id))');
@@ -147,8 +161,16 @@ try {
   const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
   await expect(packs).toContainText('public-writing');
   // The fixture is a legacy Skill, so the automated Standard v2 report lists what it lacks.
-  await expect(packs.getByRole('status')).toContainText('ไม่ผ่านการตรวจ');
+  await expect(packs.locator('section').filter({ hasText: 'public-writing' }).getByRole('status')).toContainText('ไม่ผ่านการตรวจ');
   await expect(packs).toContainText('standardVersion: 2');
+  // Staff Skills: a passing one runs on this computer without an admin digest, credited to its uploader.
+  const staff = packs.locator('section').filter({ hasText: 'staff-room ·' });
+  await expect(staff).toContainText('ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย');
+  await expect(staff).toContainText('นำเข้าโดย พนักงานสังเคราะห์');
+  await expect(staff.getByRole('button', { name: 'เลิกใช้เอง', exact: true })).toBeVisible();
+  await expect(staff.getByRole('button', { name: 'ใช้ skill: room-request', exact: true })).toBeEnabled();
+  const copy = packs.locator('section').filter({ hasText: 'staff-room-copy' });
+  await expect(copy.getByRole('button', { name: 'ใช้เองบนเครื่องนี้', exact: true })).toBeVisible();
   await packs.getByRole('button', { name: 'ใช้ skill: public-draft', exact: true }).click();
   await expect(packs).not.toBeVisible();
   await composer.press('Enter');
