@@ -10,6 +10,9 @@ import { ensureGitignored } from '../../src/modules/user-memory.js';
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 const TYPES = ['user', 'feedback', 'project', 'reference'];
 const SCOPES = ['private', 'project', 'team'];
+// A memory holds up to 4,000 characters of text; Thai takes 3 bytes per character in UTF-8, so the file limit is in
+// bytes with room for the name and metadata. Saving and listing use the same limit, so a saved memory always lists.
+const MEMORY_FILE_BYTES = 16_384;
 async function canonicalPathRules(rules: PathRule[]) {
   const aliases = await Promise.all(
     rules
@@ -131,6 +134,9 @@ export function extractPreferences(session: Session) {
 
 export class Memories {
   private queue: Promise<void> = Promise.resolve();
+  private confirming = new Set<string>();
+  /** Bumped on every save or deletion, so a prompt built before an approval can tell its memories changed. */
+  version = 0;
   constructor(
     private store: Store,
     private data: string,
@@ -199,13 +205,13 @@ export class Memories {
           try {
             const path = join(directory, file),
               info = await lstat(path);
-            if (!info.isFile() || info.isSymbolicLink() || info.nlink > 1 || info.size > 12_000) continue;
+            if (!info.isFile() || info.isSymbolicLink() || info.nlink > 1 || info.size > MEMORY_FILE_BYTES) continue;
             const handle = await open(path, 'r');
             let source: string;
             try {
-              const bytes = Buffer.alloc(12_001),
+              const bytes = Buffer.alloc(MEMORY_FILE_BYTES + 1),
                 result = await handle.read(bytes, 0, bytes.length, 0);
-              if (result.bytesRead > 12_000 || result.bytesRead !== info.size) continue;
+              if (result.bytesRead > MEMORY_FILE_BYTES || result.bytesRead !== info.size) continue;
               source = new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, result.bytesRead));
             } finally {
               await handle.close();
@@ -254,31 +260,45 @@ export class Memories {
       const info = await lstat(path);
       if (!info.isFile() || info.isSymbolicLink()) throw new Error('INVALID_PATH');
     }
+    const source = memoryMarkdown(m);
+    if (Buffer.byteLength(source, 'utf8') > MEMORY_FILE_BYTES) throw new Error('MEMORY_INVALID');
     const temp = join(directory, `.${randomUUID()}.tmp`);
-    await writeFile(temp, memoryMarkdown(m), { flag: 'wx', mode: 0o600 });
+    await writeFile(temp, source, { flag: 'wx', mode: 0o600 });
     try {
       await rename(temp, path);
     } finally {
       await unlink(temp).catch(() => {});
     }
+    this.version++;
     return m;
   }
   async remove(id: string) {
+    const context = this.context(),
+      policy = this.policy();
     const entry = (await this.list()).find(m => m.id === id);
     if (!entry) throw new Error('MEMORY_NOT_FOUND');
     const path = join(await this.directory(entry.scope), entry.id + '.md');
     if ((await lstat(path)).isSymbolicLink()) throw new Error('INVALID_PATH');
+    // A workspace switched while this ran must not delete a same-named memory in the new workspace.
+    if (context !== this.context() || policy !== this.policy()) throw new Error('WORKSPACE_CHANGED');
     await unlink(path);
+    this.version++;
   }
   proposals() {
     return this.store.list<MemoryProposal>('memory-proposal').filter(m => m.context === this.context());
   }
   async confirm(id: string, changes: any) {
     const proposal = this.proposals().find(p => p.id === id);
-    if (!proposal) throw new Error('MEMORY_NOT_FOUND');
-    const saved = await this.save({ ...proposal, ...changes, id: undefined });
-    this.store.remove('memory-proposal', id);
-    return saved;
+    // A second confirmation of the same proposal while the first is still saving must not save it twice.
+    if (!proposal || this.confirming.has(id)) throw new Error('MEMORY_NOT_FOUND');
+    this.confirming.add(id);
+    try {
+      const saved = await this.save({ ...proposal, ...changes, id: undefined });
+      this.store.remove('memory-proposal', id);
+      return saved;
+    } finally {
+      this.confirming.delete(id);
+    }
   }
   dismiss(id: string) {
     if (!this.proposals().some(p => p.id === id)) throw new Error('MEMORY_NOT_FOUND');

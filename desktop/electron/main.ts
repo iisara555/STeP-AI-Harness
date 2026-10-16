@@ -1114,7 +1114,8 @@ async function main() {
     const identity = JSON.stringify([settings.workspace, settings.team, settings.outputStyle]);
     const preferences = await workspaceContext.load(),
       selected = await memories.relevant(query);
-    const learningVersion = learning.snapshot().generation;
+    const learningVersion = learning.snapshot().generation,
+      memoryVersion = memories.version;
     const lessons = learning.relevant(query);
     const text = [
       preferences.length ? section('workspace_preferences', JSON.stringify(preferences)) : '',
@@ -1170,7 +1171,8 @@ async function main() {
       identity !== JSON.stringify([current.workspace, current.team, current.outputStyle]) ||
       policy !== policyState.policy ||
       mode !== permissionMode() ||
-      learningVersion !== learning.snapshot().generation
+      learningVersion !== learning.snapshot().generation ||
+      memoryVersion !== memories.version
     )
       throw new Error('WORKSPACE_CHANGED');
     try {
