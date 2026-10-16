@@ -191,7 +191,69 @@ test("compatible profiles deny unapproved, credential-bearing and remote plainte
   );
   await assert.rejects(
     compatibleRun("Text", profile, { images: [{}] }, fetcher),
+    /INVALID_INPUT/,
+  );
+  await assert.rejects(
+    compatibleRun("Text", profile, { webSearch: true }, fetcher),
     /CAPABILITY_UNSUPPORTED/,
+  );
+});
+test("compatible transport sends pictures as content parts and names a model that cannot read them", async () => {
+  const profile = {
+    baseUrl: "https://api.example.invalid/v1",
+    model: "vision-model",
+  };
+  const images = [{ mime: "image/jpeg", data: "AAAA" }];
+  const bodies = [];
+  const answer = () =>
+    new Response(
+      sse({ choices: [{ delta: { content: "อ่านแล้ว" } }] }) +
+        sse({ choices: [{ delta: {}, finish_reason: "stop" }] }),
+      { headers: { "content-type": "text/event-stream" } },
+    );
+  const fetcher = async (_url, init) => {
+    bodies.push(JSON.parse(init.body));
+    return answer();
+  };
+  await compatibleRun("Read the page", profile, { images }, fetcher).catch(
+    () => {},
+  );
+  assert.deepEqual(bodies[0].messages.at(-1).content, [
+    { type: "text", text: "Read the page" },
+    { type: "image_url", image_url: { url: "data:image/jpeg;base64,AAAA" } },
+  ]);
+  await compatibleRun(
+    "Read the page",
+    { ...profile, protocol: "anthropic" },
+    { images, key: "k" },
+    fetcher,
+  ).catch(() => {});
+  assert.deepEqual(bodies[1].messages[0].content[1], {
+    type: "image",
+    source: { type: "base64", media_type: "image/jpeg", data: "AAAA" },
+  });
+  await compatibleRun("Text only", profile, {}, fetcher).catch(() => {});
+  assert.equal(bodies[2].messages.at(-1).content, "Text only");
+  const refused = async () =>
+    new Response(JSON.stringify({ error: { message: "no images" } }), {
+      status: 400,
+    });
+  await assert.rejects(
+    compatibleRun("Read", profile, { images }, refused),
+    /VISION_UNAVAILABLE/,
+  );
+  await assert.rejects(
+    compatibleRun("Read", profile, {}, refused),
+    /PROVIDER_REQUEST_FAILED/,
+  );
+  await assert.rejects(
+    compatibleRun(
+      "Read",
+      profile,
+      { images: [{ mime: "image/gif", data: "AAAA" }] },
+      fetcher,
+    ),
+    /INVALID_INPUT/,
   );
 });
 test("shared preflight and draft runner block authority, source privacy, hooks, policy drift and tool actions", async () => {

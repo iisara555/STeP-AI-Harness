@@ -249,6 +249,27 @@ export class Store {
     this.save(edited);
     return edited;
   }
+  /**
+   * "เปิดใน Output" on an answer. In a document task the answer becomes a proposal to compare and accept, without the
+   * conversation around it; elsewhere it opens as structured Markdown. Neither overwrites a document's draft directly.
+   */
+  stageMessage(id: string, index: number) {
+    const session = this.session(id),
+      message = Number.isInteger(index) ? session.messages[index] : undefined;
+    if (!message || message.role !== 'assistant' || message.draftSummary) throw new Error('MESSAGE_NOT_FOUND');
+    if (!session.documentTool) return this.edit(id, message.text, session.revision, markdownDocument(message.text));
+    const output = parseDocumentOutput(message.text, session.documentTool);
+    session.proposals.push({
+      id: randomUUID(),
+      text: output.draft,
+      ...(output.review ? { review: output.review } : {}),
+      baseRevision: session.revision,
+      sources: session.sources || [],
+      at: new Date().toISOString(),
+    });
+    this.save(session);
+    return session;
+  }
   remove(kind: string, id: string) {
     this.db.prepare('DELETE FROM records WHERE kind=? AND id=?').run(kind, id);
     if (kind === 'session') this.db.prepare('DELETE FROM session_search WHERE id=?').run(id);

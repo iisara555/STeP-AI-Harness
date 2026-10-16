@@ -88,3 +88,11 @@ test('every tour step has English text', async () => {
     'add these to src/locales/en.ts',
   );
 });
+
+test('every Skill Pack review message has an English entry with the same placeholders', async () => {
+  const { REVIEW_MESSAGES } = await import('../../src/modules/packs/index.js');
+  for (const thai of Object.values(REVIEW_MESSAGES)) {
+    assert.ok(en[thai] !== undefined, `add to src/locales/en.ts: ${thai}`);
+    assert.equal((en[thai].match(/\{\d+\}/g) || []).join(), (thai.match(/\{\d+\}/g) || []).join(), thai);
+  }
+});

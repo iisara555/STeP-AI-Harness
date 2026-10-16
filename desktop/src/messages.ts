@@ -61,6 +61,16 @@ export const errorText: Record<string, string> = localized({
   COMPONENT_BUSY: 'ส่วนเสริมกำลังทำงาน กรุณารอให้เสร็จก่อน',
   PACK_APPROVAL_REQUIRED: 'ผู้ดูแลต้องรับรอง digest ของชุดนี้ก่อนเปิดใช้',
   PACK_DISABLED: 'ชุดนี้ปิดใช้หรือไฟล์เปลี่ยนจากที่ผู้ดูแลรับรอง',
+  PACK_REVIEW_FAILED: 'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้',
+  PACK_PERSONAL_DISABLED: 'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้',
+  PACK_PROMOTION_TEXT_ONLY: 'เสนอให้องค์กรได้เฉพาะ Skill แบบข้อความที่ไม่มี Hooks หรือ Agent',
+  PACK_CREDIT_REQUIRED: 'ยังไม่มีชื่อผู้เสนอ กรุณาใส่ชื่อในการตั้งค่าโปรไฟล์ก่อนเสนอ',
+  PACK_CHANGED: 'ไฟล์ Skill เปลี่ยนระหว่างส่ง กรุณาเปิดรายการใหม่แล้วลองอีกครั้ง',
+  SKILL_SUBMIT_UNAVAILABLE: 'ผู้ดูแลยังไม่ได้ตั้งช่องทางรับ Skill ที่เสนอให้องค์กร',
+  SKILL_SUBMIT_TOO_LARGE: 'Skill นี้ใหญ่เกินกว่าจะส่งทางช่องทางนี้ กรุณาติดต่อผู้ดูแล',
+  SKILL_SUBMIT_FAILED: 'ส่งไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง',
+  SKILL_SUBMIT_REJECTED: 'ช่องทางรับ Skill ไม่รับคำขอนี้ กรุณาติดต่อผู้ดูแล',
+  SKILL_SUBMIT_PRIVACY: 'พบข้อมูลส่วนบุคคลหรือรหัสลับในไฟล์ Skill จึงยังส่งไม่ได้ กรุณาแก้ไฟล์แล้วนำเข้าใหม่',
   PACK_MANIFEST_INVALID: 'รูปแบบ Skill Pack ไม่ถูกต้อง',
   PACK_AUTHORITY_REJECTED: 'ชุดนี้มีข้อความกำหนดสิทธิ์เครื่องมือที่ไม่รองรับ',
   PACK_NAME_REQUIRED: 'กรุณากำหนดชื่อชุดด้วยอักษรอังกฤษตัวเล็กและขีดกลาง',
@@ -140,7 +150,9 @@ export const errorText: Record<string, string> = localized({
   ATTACH_NO_TEXT: 'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน',
   ATTACH_PAGES_WITHOUT_TEXT:
     'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก',
-  ATTACH_SCANNED_TOO_LONG: 'PDF สแกนยาวเกิน 20 หน้า แบ่งไฟล์แล้วแนบทีละส่วน',
+  ATTACH_SCANNED_TOO_LONG: 'PDF สแกนยาวเกิน 30 หน้า แบ่งไฟล์แล้วแนบทีละส่วน',
+  ATTACH_SCANNED_NEEDS_VISION:
+    'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น Gemini ผ่าน Antigravity) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่',
   ATTACH_TIMEOUT: 'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง',
   ATTACH_READ_FAILED: 'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้',
   ATTACH_PARTIAL:

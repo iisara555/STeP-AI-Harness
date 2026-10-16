@@ -137,6 +137,8 @@ export const en: Record<string, string> = {
   'ผู้ดูแลปิดเครื่องมือในแชต ติดต่อ IT': 'Chat tools are disabled by your administrator; contact IT',
   'บัญชีนี้ใช้ข้อความ OCR แทนภาพได้ เลือกบัญชีที่รองรับภาพหากต้องการอ่านภาพ':
     'Use OCR text with this connection, or choose an image-capable connection to read images',
+  'Gemini ผ่าน Antigravity ยังรับภาพไม่ได้ ภาพและ PDF สแกนจะใช้ข้อความ OCR ในเครื่องแทน ถ้าต้องให้ AI ดูภาพเอง เชื่อมต่อ Gemini ด้วย API key, ChatGPT หรือ Claude':
+    'Gemini through Antigravity cannot take images yet. Images and scanned PDFs use on-device OCR text instead. To let the AI see images, connect Gemini with an API key, ChatGPT or Claude',
   'ผู้ดูแลปิดการอ่านภาพ ติดต่อ IT': 'Image reading is disabled by your administrator; contact IT',
   'โหมดตรวจข้อมูลขององค์กรไม่ส่งภาพ ใช้ OCR ในเครื่องแทน': 'Organization privacy checks prevent sending images; use local OCR',
   'ยังไม่ทราบนโยบายการส่งภาพ ติดต่อ IT': 'Image transmission policy is unknown; contact IT',
@@ -687,6 +689,10 @@ export const en: Record<string, string> = {
   'แหล่งข้อมูลจาก Web Search': 'Sources from Web Search',
   คัดลอก: 'Copy',
   'เปิดใน Output': 'Open in Output',
+  'ส่งเป็นข้อเสนอแล้ว เทียบกับร่างแล้วกด “ใช้ร่างนี้”': 'Added as a proposal. Compare it with the draft, then select “Use this draft”',
+  แก้เอกสารนี้: 'Edit this document',
+  'พิมพ์สิ่งที่อยากแก้ในเอกสารนี้ เช่น ระยะเวลาดำเนินการ 90 วัน หรือถามเกี่ยวกับร่างได้':
+    'Type what to change in this document, e.g. a 90-day duration, or ask about the draft',
   ตรวจ: 'Review',
   'การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้': 'AI usage has reached at least 80% of the budget you set',
   ดูการใช้งาน: 'View usage',
@@ -1045,7 +1051,9 @@ export const en: Record<string, string> = {
   'ผู้ดูแลยังไม่อนุญาตการส่งภาพต้นฉบับให้ AI': "Your admin doesn't allow sending source images to the AI",
   'การเชื่อมต่อ AI นี้ยังไม่รับภาพ (รวมถึง PDF สแกน) เลือกโมเดลที่อ่านภาพได้ หรือใช้ไฟล์ต้นฉบับที่มีข้อความ':
     "This AI connection doesn't take images (scanned PDFs included). Pick a model that reads images, or use the original file with text",
-  'PDF สแกนยาวเกิน 20 หน้า แบ่งไฟล์แล้วแนบทีละส่วน': 'The scanned PDF is over 20 pages. Split it and attach one part at a time',
+  'PDF สแกนยาวเกิน 30 หน้า แบ่งไฟล์แล้วแนบทีละส่วน': 'The scanned PDF is over 30 pages. Split it and attach one part at a time',
+  'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น Gemini ผ่าน Antigravity) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่':
+    'This PDF is a scan, but the selected AI account (such as Gemini through Antigravity) cannot take images and on-device OCR is not running. Start on-device OCR, or switch to ChatGPT, Claude or Gemini with an API key, then attach it again',
   'ส่งภาพให้ AI อ่านโดยตรง ตรวจว่ามีสิทธิ์ส่งข้อมูลในภาพก่อนส่ง':
     'The image goes to the AI as it is. Check you may share what it shows before sending',
   'PDF สแกน · ส่งเป็นภาพ {0} หน้าให้ AI อ่าน': 'Scanned PDF · {0} pages go to the AI as images',
@@ -1210,8 +1218,8 @@ export const en: Record<string, string> = {
   ไม่สำเร็จ: 'Failed',
   หยุดแล้ว: 'Stopped',
   งานหยุดเมื่อปิดแอป: 'Stopped when the app closed',
-  'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills ผู้ดูแลต้องรับรอง digest ก่อนเปิดใช้ เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง':
-    'Import a pack.json or a SKILL.md folder (including .claude/skills). Your admin must approve the digest before use; pack content is used as reference for drafts',
+  'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills Skill ที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติใช้เองบนเครื่องนี้ได้ทันที ส่วน Hooks, Agent และการแชร์ให้ทีมต้องให้ผู้ดูแลรับรอง digest ก่อน เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง':
+    'Import pack.json or a SKILL.md folder, including .claude/skills. Text-only Skills that pass the automated checks can be used on this computer right away; hooks, agents and sharing with a team need your admin to approve the digest first. Content is reference material for drafting.',
   'ชื่อชุดที่นำเข้าจาก SKILL.md': 'Name of the pack imported from SKILL.md',
   เลือกโฟลเดอร์และนำเข้า: 'Choose folder and import',
   'เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน': 'Enable admin-approved Hooks on confirm',
@@ -2519,4 +2527,69 @@ export const en: Record<string, string> = {
     'Draft TORs around your intended use, constraints and presentation preferences, linking deliverables to acceptance checks',
   'ปรับการตัดบรรทัดไทยและหัวตาราง พร้อมตัวหนาและตัวเอียงใน DOCX': 'Improve Thai wrapping, table headers and DOCX bold/italic formatting',
   'เพิ่ม Skill ช่วยใช้ Google Workspace ผ่านบัญชีที่เชื่อมในแอป': 'Add a Skill for Google Workspace using accounts connected in the app',
+  // Skill Pack review (src/modules/packs/review.js)
+  'ไม่มีส่วนหัว (frontmatter) ที่มี name และ description': 'No front matter with name and description',
+  'ยังไม่ระบุ standardVersion: 2 ในส่วนหัว Skill ใหม่ต้องใช้มาตรฐาน v2':
+    'standardVersion: 2 is missing from the front matter; new Skills must follow Standard v2',
+  'ขาดหัวข้อบังคับตามมาตรฐาน v2: {0}': 'Missing Standard v2 sections: {0}',
+  'description สั้นเกินไป ควรบอกว่าใช้ Skill นี้เมื่อไรให้ชัด (อย่างน้อย 20 ตัวอักษร)':
+    'The description is too short; say clearly when to use this Skill (at least 20 characters)',
+  'ส่วนหัวมีช่องที่มาตรฐานไม่รองรับ: {0}': 'The front matter has fields the standard does not support: {0}',
+  'หัวข้อ Source ว่าง ถ้าไม่ต้องใช้แหล่งข้อมูลภายนอกให้เขียนบอกไว้ตรง ๆ':
+    'The Source section is empty; if no outside source is needed, say so',
+  'หัวข้อ Authority ต้องแยกว่าอะไร AI ช่วยได้ อะไรต้องยืนยัน และอะไรเป็นอำนาจของคน':
+    "The Authority section must separate what AI may do, what needs confirming and what is a person's authority",
+  'SKILL.md ยาว {0} บรรทัด ควรย้ายรายละเอียดไปไว้ในโฟลเดอร์ references หรือ templates':
+    'SKILL.md has {0} lines; move details into references or templates',
+  'มีไฟล์ที่ไม่ใช่ข้อความ ({0}) Skill ของพนักงานต้องเป็นข้อความเท่านั้น': 'Contains non-text files ({0}); staff Skills must be text only',
+  'มี Hooks หรือ Agent templates ซึ่งพนักงานนำเข้าเองไม่ได้ ต้องให้ผู้ดูแลรับรอง':
+    'Contains Hooks or Agent templates, which staff cannot import themselves; an admin must approve them',
+  'มีข้อความที่สั่งให้ AI ลืมหรือข้ามคำสั่งเดิม (prompt injection): “{0}”':
+    'Text tells the AI to forget or skip its instructions (prompt injection): “{0}”',
+  'มีข้อความที่ขัดกฎต้องให้คนอนุมัติก่อน: “{0}”': 'Text conflicts with the rule that a person must approve: “{0}”',
+  'มีข้อความให้ทำต่อโดยไม่ต้องให้ผู้ใช้ยืนยัน ผู้ดูแลควรตรวจว่าไม่ใช่งานที่มีผลจริง: “{0}”':
+    "Text continues without the user's confirmation; an admin should check it has no real-world effect: “{0}”",
+  'มีข้อความที่อาจส่งข้อมูลออกไปภายนอก: “{0}”': 'Text may send data outside: “{0}”',
+  'มีข้อความที่ขอรหัสผ่านหรือข้อมูลลับจากผู้ใช้: “{0}”': 'Text asks the user for a password or secret: “{0}”',
+  'มีอักขระที่มองไม่เห็นซ่อนอยู่ ซึ่งอาจใช้ซ่อนคำสั่ง': 'Contains invisible characters that could hide instructions',
+  'มีคำสั่งซ่อนอยู่ในคอมเมนต์ HTML ที่คนอ่านไม่เห็น': 'Contains instructions hidden in an HTML comment that people do not see',
+  'มีลิงก์ภายนอก ({0}) ผู้ดูแลควรตรวจว่าปลายทางน่าเชื่อถือ':
+    'Contains outside links ({0}); an admin should check the destinations are trustworthy',
+  'ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย': 'Passed the Skill Standard v2 and safety checks',
+  'ผ่านการตรวจ มีข้อแนะนำ {0} ข้อ': 'Passed, with {0} suggestions',
+  'ไม่ผ่านการตรวจ {0} ข้อ': 'Failed {0} checks',
+  ความปลอดภัย: 'Safety',
+  มาตรฐาน: 'Standard',
+  'นำเข้าโดย {0}': 'Imported by {0}',
+  // Staff Skills: personal use and usage counts
+  'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน': 'Let staff use their own Skills once they pass the checks',
+  'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้':
+    'This Skill has not passed the checks; fix the listed items and import it again before using it',
+  'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้': 'Your admin has turned off staff-made Skills on this computer',
+  เสนอให้องค์กรใช้: 'Propose for the organization',
+  'เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา': 'Proposed to the organization on {0}, waiting for the admins',
+  'ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้': 'Files changed since you proposed it on {0}; you can propose the new version',
+  'เลขที่ {0}': 'Reference {0}',
+  ส่งให้ผู้ดูแลพิจารณา: 'Send to the admins',
+  'เสนอ Skill นี้ให้องค์กรใช้': 'Propose this Skill for the organization',
+  '{0}\nระบบจะส่งไฟล์ Skill {1} ไฟล์ ผลตรวจ จำนวนครั้งที่ใช้ และชื่อผู้เสนอ ({2}{3}) ไปยังช่องทางรับ Skill ของผู้ดูแลที่ {4}\nผู้ดูแลจะตรวจก่อนเผยแพร่ และเมื่อเผยแพร่ ชื่อของคุณจะแสดงเป็นผู้ร่วมสร้าง':
+    "{0}\nThis sends the {1} Skill files, the check results, the use count and your name ({2}{3}) to the admins' Skill intake at {4}.\nThe admins review it before publishing, and once published your name is shown as a contributor.",
+  'เสนอให้องค์กรได้เฉพาะ Skill แบบข้อความที่ไม่มี Hooks หรือ Agent': 'Only text Skills without hooks or agents can be proposed',
+  'ยังไม่มีชื่อผู้เสนอ กรุณาใส่ชื่อในการตั้งค่าโปรไฟล์ก่อนเสนอ': 'Add your name in the profile settings before proposing a Skill',
+  'ไฟล์ Skill เปลี่ยนระหว่างส่ง กรุณาเปิดรายการใหม่แล้วลองอีกครั้ง': 'The Skill files changed while sending. Reopen the list and try again',
+  'ผู้ดูแลยังไม่ได้ตั้งช่องทางรับ Skill ที่เสนอให้องค์กร': 'Your admins have not set up the Skill intake yet',
+  'Skill นี้ใหญ่เกินกว่าจะส่งทางช่องทางนี้ กรุณาติดต่อผู้ดูแล': 'This Skill is too large for the intake. Contact your admins',
+  'ส่งไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง': 'Sending failed. Check the internet connection and try again',
+  'ช่องทางรับ Skill ไม่รับคำขอนี้ กรุณาติดต่อผู้ดูแล': 'The Skill intake refused this submission. Contact your admins',
+  'พบข้อมูลส่วนบุคคลหรือรหัสลับในไฟล์ Skill จึงยังส่งไม่ได้ กรุณาแก้ไฟล์แล้วนำเข้าใหม่':
+    'The Skill files contain personal data or a secret, so they cannot be sent. Fix the files and import again',
+  'ใช้แล้ว {0} ครั้ง': 'Used {0} times',
+  'ล่าสุด {0}': 'last {0}',
+  เลิกใช้เอง: 'Stop using',
+  ใช้เองบนเครื่องนี้: 'Use on this computer',
+  'ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือให้ผู้ดูแลรับรอง digest ของชุดนี้':
+    "Not usable yet: fix the review findings, or ask your admin to approve this pack's digest",
+  'ใช้ Skill นี้เองบนเครื่องนี้': 'Use this Skill on this computer',
+  '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล':
+    '{0}\nPassed the automated standard and safety checks. It works on this computer only, as reference text for drafting, with no hooks or agents, and is not approved by an admin.',
 };

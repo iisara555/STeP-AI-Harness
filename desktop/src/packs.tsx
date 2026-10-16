@@ -2,7 +2,39 @@ import { useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
 import type { DesktopAPI } from './types';
+import type { PackReview as PackReviewResult } from '../../src/modules/packs/index.js';
 import { t } from './i18n';
+const REVIEW_STATUS = {
+  pass: 'ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย',
+  warn: 'ผ่านการตรวจ มีข้อแนะนำ {0} ข้อ',
+  fail: 'ไม่ผ่านการตรวจ {0} ข้อ',
+};
+/** The automated Standard v2 and safety report. Advice for the uploader and admin; it approves nothing. */
+function PackReview({ review }: { review: PackReviewResult }) {
+  const fails = review.findings.filter(f => f.level === 'fail').length;
+  const label =
+    review.status === 'pass'
+      ? t(REVIEW_STATUS.pass)
+      : review.status === 'warn'
+        ? t(REVIEW_STATUS.warn, review.findings.length)
+        : t(REVIEW_STATUS.fail, fails);
+  return (
+    <details className={`pack-review ${review.status}`} open={review.status === 'fail'}>
+      <summary role="status">
+        {review.status === 'pass' ? '✓ ' : review.status === 'warn' ? '! ' : '✕ '}
+        {label}
+      </summary>
+      <ul>
+        {review.findings.map((f, i) => (
+          <li key={i} className={f.level === 'fail' ? 'error' : 'muted'}>
+            {f.area === 'safety' ? t('ความปลอดภัย') : t('มาตรฐาน')}
+            {f.file ? ` · ${f.file}${f.line ? ':' + f.line : ''}` : ''} — {t(f.template, ...f.args)}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClose: () => void; onSelect: (text: string) => void }) {
   const [packs, setPacks] = useState<any[]>([]),
     [name, setName] = useState(''),
@@ -41,7 +73,7 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
     <ConfirmDialog info title="Skill Packs" confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p>
         {t(
-          'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills ผู้ดูแลต้องรับรอง digest ก่อนเปิดใช้ เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง',
+          'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills Skill ที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติใช้เองบนเครื่องนี้ได้ทันที ส่วน Hooks, Agent และการแชร์ให้ทีมต้องให้ผู้ดูแลรับรอง digest ก่อน เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง',
         )}
       </p>
       <label>
@@ -64,18 +96,64 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
       {packs.map(p => (
         <section key={p.id}>
           <strong>
-            {p.id} · {p.enabled ? t('เปิดใช้') : t('ปิดใช้')}
+            {p.id} · {p.enabled ? (p.personal ? t('ใช้เองบนเครื่องนี้') : t('เปิดใช้')) : t('ปิดใช้')}
             {p.invalid ? t(' · ตรวจไฟล์ไม่ผ่าน') : ''}
           </strong>
           <p className="small muted">
             {p.digest} · Hooks {p.hooks}
           </p>
-          <button disabled={busy || p.invalid} onClick={() => void act('packEnable', { id: p.id, disable: p.enabled, hooks, agents })}>
-            {p.enabled ? t('ปิดใช้') : t('ยืนยันเปิดใช้')}
-          </button>
+          {p.credit && (
+            <p className="small">
+              {t('นำเข้าโดย {0}', p.credit.name)}
+              {p.credit.team ? ' · ' + p.credit.team : ''} · {new Date(p.credit.uploadedAt).toLocaleDateString()}
+            </p>
+          )}
+          {p.review && <PackReview review={p.review} />}
+          {p.usage?.count > 0 && (
+            <p className="small muted">
+              {t('ใช้แล้ว {0} ครั้ง', p.usage.count)}
+              {p.usage.lastUsedAt ? ' · ' + t('ล่าสุด {0}', new Date(p.usage.lastUsedAt).toLocaleDateString()) : ''}
+            </p>
+          )}
+          {p.enabled ? (
+            <button disabled={busy} onClick={() => void act('packEnable', { id: p.id, disable: true })}>
+              {p.personal ? t('เลิกใช้เอง') : t('ปิดใช้')}
+            </button>
+          ) : (
+            <>
+              {/* Staff use a Skill that passed the automated checks on their own computer; no hooks or agents. */}
+              {!p.invalid && p.personalAllowed && (
+                <button disabled={busy} onClick={() => void act('packEnable', { id: p.id, personal: true })}>
+                  {t('ใช้เองบนเครื่องนี้')}
+                </button>
+              )}
+              {p.adminApproved && (
+                <button disabled={busy || p.invalid} onClick={() => void act('packEnable', { id: p.id, hooks, agents })}>
+                  {t('ยืนยันเปิดใช้')}
+                </button>
+              )}
+              {!p.invalid && !p.personalAllowed && !p.adminApproved && (
+                <p className="small muted">{t('ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือให้ผู้ดูแลรับรอง digest ของชุดนี้')}</p>
+              )}
+            </>
+          )}
           <button disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
             {t('ส่งออก .claude/skills')}
           </button>
+          {/* Sends the pack to the administrators' intake sheet; publishing for everyone still needs their approval. */}
+          {!p.invalid && p.promotable && (
+            <button disabled={busy || p.promotion?.current} onClick={() => void act('packPromote', { id: p.id })}>
+              {t('เสนอให้องค์กรใช้')}
+            </button>
+          )}
+          {p.promotion && (
+            <p className="small muted" role="note">
+              {p.promotion.current
+                ? t('เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา', new Date(p.promotion.submittedAt).toLocaleDateString())
+                : t('ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้', new Date(p.promotion.submittedAt).toLocaleDateString())}
+              {p.promotion.reference ? ' · ' + t('เลขที่ {0}', p.promotion.reference) : ''}
+            </p>
+          )}
           {[
             ...p.skills.map((a: any) => ({ ...a, kind: 'skill' })),
             ...(p.agentsEnabled ? p.agents.map((a: any) => ({ ...a, kind: 'agent' })) : []),

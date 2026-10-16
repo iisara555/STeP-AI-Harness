@@ -20,6 +20,7 @@ export function attachmentReason(report: any, limit = 100_000): string | undefin
     if (TOO_LARGE.has(reason)) return 'ATTACH_TOO_LARGE';
     if (reason === 'no-extractable-text') return 'ATTACH_NO_TEXT';
     if (reason === 'processing-time-limit') return 'ATTACH_TIMEOUT';
+    if (reason === 'scanned-needs-vision') return 'ATTACH_SCANNED_NEEDS_VISION';
     return 'ATTACH_READ_FAILED';
   }
   // The scan withholds text it could not read completely, so the AI never summarizes half a document.

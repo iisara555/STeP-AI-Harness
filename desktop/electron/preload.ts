@@ -110,6 +110,7 @@ const allowed = new Set([
   'rename',
   'remove',
   'edit',
+  'stageMessage',
   'accept',
   'reject',
   'restore',

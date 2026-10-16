@@ -1,6 +1,7 @@
 import { copilotDeviceLogin } from './copilot-auth';
 import { unscanned, credentialsOnly } from './checks';
 import { TERMS_VERSION } from '../src/terms-version';
+import { takesImages } from '../src/vision-transport';
 import {
   app,
   BrowserWindow,
@@ -85,7 +86,17 @@ import { assertPrivateTrialPath } from './receipt-trial-path';
 import { installOcr, ocrComponentCurrent } from './components';
 import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
-import { installPack, listPacks, enablePack, exportPack, packAsset, enabledPackHooks } from '../../src/modules/packs/index.js';
+import {
+  installPack,
+  listPacks,
+  enablePack,
+  exportPack,
+  packAsset,
+  enabledPackHooks,
+  promotionPayload,
+  recordPromotion,
+} from '../../src/modules/packs/index.js';
+import { submitSkill } from './skill-submit';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
@@ -2244,24 +2255,39 @@ async function main() {
           properties: ['openDirectory'],
         });
         if (selected.canceled || !selected.filePaths[0]) return null;
-        return installPack(store.settings().workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64) });
+        // Credit the uploader from this computer's profile; it is kept beside the pack, never inside its files.
+        const settings = store.settings();
+        return installPack(settings.workspace || data, selected.filePaths[0], {
+          name: inputText(input.name || '', 64),
+          credit: { name: settings.userName || '', team: settings.team || '' },
+        });
       }
       case 'packEnable': {
         const identity = phase4Identity(),
           workspace = store.settings().workspace || data,
-          id = inputText(input.id, 64);
+          id = inputText(input.id, 64),
+          personal = input.personal === true && input.disable !== true;
         const consent = await dialog.showMessageBox(window!, {
           type: 'question',
           buttons: [tm('ยกเลิก'), tm('ยืนยัน')],
           defaultId: 0,
           cancelId: 0,
-          message: input.disable ? tm('ปิด Skill Pack นี้') : tm('เปิด Skill Pack ที่ผู้ดูแลรับรอง'),
-          detail: tm(
-            '{0}\nHooks: {1}\nAgent templates: {2}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้',
-            id,
-            input.hooks === true ? tm('เปิด command/HTTP hooks ที่รับรอง') : tm('ปิด'),
-            input.agents === true ? tm('เปิด') : tm('ปิด'),
-          ),
+          message: input.disable
+            ? tm('ปิด Skill Pack นี้')
+            : personal
+              ? tm('ใช้ Skill นี้เองบนเครื่องนี้')
+              : tm('เปิด Skill Pack ที่ผู้ดูแลรับรอง'),
+          detail: personal
+            ? tm(
+                '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล',
+                id,
+              )
+            : tm(
+                '{0}\nHooks: {1}\nAgent templates: {2}\nPack ไม่สามารถให้สิทธิ์หรือแก้ขั้นตอนองค์กรได้',
+                id,
+                input.hooks === true ? tm('เปิด command/HTTP hooks ที่รับรอง') : tm('ปิด'),
+                input.agents === true ? tm('เปิด') : tm('ปิด'),
+              ),
         });
         if (consent.response !== 1) throw new Error('CANCELLED');
         if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
@@ -2270,6 +2296,7 @@ async function main() {
           hooks: input.hooks === true,
           agents: input.agents === true,
           disable: input.disable === true,
+          personal,
         });
       }
       case 'packAsset':
@@ -2280,6 +2307,38 @@ async function main() {
           input.kind,
           policyState.policy,
         );
+      case 'packPromote': {
+        // "เสนอให้องค์กรใช้": only to the intake set in policy, only a pack whose files pass the privacy check (every read of
+        // a pack re-runs it) and the Standard v2 review, and only after the employee agrees to what is sent and to credit.
+        const identity = phase4Identity(),
+          url = policyState.policy.skillPacks?.submitUrl,
+          settings = store.settings(),
+          workspace = settings.workspace || data,
+          id = inputText(input.id, 64);
+        if (!url) throw new Error('SKILL_SUBMIT_UNAVAILABLE');
+        const credit = { name: settings.userName || '', team: settings.team || '' };
+        const submission = promotionPayload(workspace, id, { credit });
+        if (harness.privacy(JSON.stringify(submission.files)).action !== 'pass') throw new Error('SKILL_SUBMIT_PRIVACY');
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'question',
+          buttons: [tm('ยกเลิก'), tm('ส่งให้ผู้ดูแลพิจารณา')],
+          defaultId: 0,
+          cancelId: 0,
+          message: tm('เสนอ Skill นี้ให้องค์กรใช้'),
+          detail: tm(
+            '{0}\nระบบจะส่งไฟล์ Skill {1} ไฟล์ ผลตรวจ จำนวนครั้งที่ใช้ และชื่อผู้เสนอ ({2}{3}) ไปยังช่องทางรับ Skill ของผู้ดูแลที่ {4}\nผู้ดูแลจะตรวจก่อนเผยแพร่ และเมื่อเผยแพร่ ชื่อของคุณจะแสดงเป็นผู้ร่วมสร้าง',
+            id,
+            submission.files.length,
+            submission.contributor.name,
+            submission.contributor.team ? ' · ' + submission.contributor.team : '',
+            new URL(url).host,
+          ),
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
+        const { reference } = await submitSkill(url, { ...submission, appVersion: app.getVersion() }, (u, init) => net.fetch(u, init));
+        return recordPromotion(workspace, id, { digest: submission.pack.digest, reference, credit });
+      }
       case 'packExport': {
         const selected = await dialog.showSaveDialog(window!, {
           title: tm('ส่งออก Skill ไปยังโฟลเดอร์ใหม่'),
@@ -3034,6 +3093,8 @@ async function main() {
         const vision = selected.some(a => Boolean(a.images?.length));
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         if (vision && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
+        // A picture attached under an image-capable account cannot go out after a switch to one that drops it.
+        if (vision && !takesImages(sendingConnection.provider)) throw new Error('VISION_UNAVAILABLE');
         if (coordinated && vision) throw new Error('VISION_UNAVAILABLE');
         if (!['source', 'template'].includes(attachmentRole) || (attachmentRole === 'template' && (!draftingTool || selected.length !== 1)))
           throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
@@ -3251,6 +3312,8 @@ async function main() {
         const image = documentAssets.load(inputText(input.id, 60), inputText(input.assetId, 60));
         return { dataUrl: `data:${image.mime};base64,${image.bytes.toString('base64')}` };
       }
+      case 'stageMessage':
+        return store.stageMessage(inputText(input.id, 60), Number(input.index));
       case 'edit':
         return store.edit(inputText(input.id, 60), inputText(input.text, 150000), input.revision, input.document, input.presentation);
       case 'accept':
@@ -3269,8 +3332,11 @@ async function main() {
       }
       case 'attach': {
         const sessionId = inputText(input.id, 60);
-        store.session(sessionId);
+        const attachingSession = store.session(sessionId);
         const vision = input.vision === true;
+        // Pictures go only to a connection that can carry them. Gemini through Antigravity (and Copilot) get the local
+        // OCR text of an image or scanned PDF instead (src/vision-transport.ts).
+        const imagesAccepted = takesImages(store.get<Connection>('connection', attachingSession.connectionId)?.provider);
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         const result = await dialog.showOpenDialog(window, {
           properties: ['openFile'],
@@ -3301,7 +3367,8 @@ async function main() {
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
           images: VisionInput[] | undefined;
         // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
-        const directImage = vision && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+        const directImage =
+          vision && imagesAccepted && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
         if (directImage) {
           const bytes = await readFile(path);
           if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
@@ -3313,6 +3380,7 @@ async function main() {
         const scannedPdf =
           !vision &&
           extension === 'pdf' &&
+          imagesAccepted &&
           !policyState.policy.checks.privacy &&
           policyState.policy.features.vision &&
           ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '');
@@ -3325,20 +3393,33 @@ async function main() {
           !scannedPdf &&
           OCR_EXTENSIONS.includes(extension) &&
           (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
+        let ocrRan = false;
         if (scanNeeded && report.action !== 'block-external') {
           const health = await ocr.health();
-          if (!health.running && (vision || extension !== 'pdf')) throw new Error('OCR_UNAVAILABLE');
+          if (!health.running && (vision || extension !== 'pdf'))
+            throw new Error(imagesAccepted ? 'OCR_UNAVAILABLE' : 'VISION_UNAVAILABLE');
           if (health.running) {
             const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
             report = ocrAttachmentReport(read.result, harness.privacy);
+            ocrRan = true;
             // Text redaction cannot mask pixels. Flagged OCR forbids sending the original image.
-            if (vision && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
-            if (vision && !attachmentReason(report)) {
+            if (vision && imagesAccepted && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
+            if (vision && imagesAccepted && !attachmentReason(report)) {
               if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
               images = [visionImage(extension, read.bytes)];
             }
           }
         }
+        // A scan that could go neither as pictures nor as OCR text says what to change instead of "no text".
+        if (
+          extension === 'pdf' &&
+          !imagesAccepted &&
+          !ocrRan &&
+          !policyState.policy.checks.privacy &&
+          policyState.policy.features.vision &&
+          ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '')
+        )
+          report = { ...report, extractionStatus: 'unavailable', reviewReasons: ['scanned-needs-vision'] };
         // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
         // A sample-free native outline can be used even when original source text must be withheld.
         // This does not approve sending the original text/images; source mode keeps its original gate.

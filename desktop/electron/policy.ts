@@ -29,6 +29,7 @@ export const FEATURES = [
   'providerPresets',
   'headless',
   'skillPacks',
+  'staffSkills',
   'cron',
   'coordinator',
   'memoryTeam',
@@ -120,7 +121,11 @@ export type Policy = {
   sandbox?: { image: string };
   providers?: { compatible: { name: string; baseUrl: string; protocol: 'openai' | 'anthropic' }[]; copilot?: { clientId: string } };
   voice?: { components: Record<string, { runtime: { url: string; sha256: string }; model: { url: string; sha256: string } }> };
-  skillPacks?: { approvedDigests: string[] };
+  /**
+   * approvedDigests: packs an administrator approved for everyone. submitUrl: the Apps Script web app (deployed from
+   * scripts/skill-intake) that receives "เสนอให้องค์กรใช้"; kept in policy, never in code, and absent means no button.
+   */
+  skillPacks?: { approvedDigests: string[]; submitUrl?: string };
   transmissionConsent?: { allowRunScope: boolean };
   /**
    * SHA-256 (hex) of a passcode the administrator sets; when present, turning Dev mode on asks for it. Only the hash is
@@ -165,6 +170,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   providerPresets: true,
   headless: false,
   skillPacks: false,
+  // Staff may import their own text-only Skills and use them on their own computer once the automated Standard v2 and
+  // safety review finds nothing that fails (owner's decision, 2026-10-16). No hooks or agents; sharing beyond that
+  // computer still needs an administrator. IT can set it to false.
+  staffSkills: true,
   cron: false,
   coordinator: false,
   memoryTeam: false,
@@ -250,6 +259,8 @@ function closedPolicy(): Policy {
 
 export const policyPath = managedPolicyPath;
 
+// A Google Apps Script web app deployment, on a personal or a Google Workspace domain account.
+export const SKILL_SUBMIT_URL = /^https:\/\/script\.google\.com\/(?:a\/macros\/[a-z0-9.-]{1,100}|macros)\/s\/[A-Za-z0-9_-]{20,200}\/exec$/;
 const isObject = (value: unknown): value is Record<string, any> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, limit: number) => (typeof value === 'string' && value.trim() && value.length <= limit ? value.trim() : '');
 const seconds = (value: unknown, fallback: number, max: number) =>
@@ -336,13 +347,20 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   if (raw.skillPacks !== undefined) {
     if (
       !isObject(raw.skillPacks) ||
-      Object.keys(raw.skillPacks).some(k => k !== 'approvedDigests') ||
-      !Array.isArray(raw.skillPacks.approvedDigests) ||
-      raw.skillPacks.approvedDigests.length > 100 ||
-      raw.skillPacks.approvedDigests.some((d: unknown) => typeof d !== 'string' || !/^[a-f0-9]{64}$/.test(d))
+      Object.keys(raw.skillPacks).some(k => !['approvedDigests', 'submitUrl'].includes(k)) ||
+      (raw.skillPacks.approvedDigests === undefined && raw.skillPacks.submitUrl === undefined) ||
+      (raw.skillPacks.approvedDigests !== undefined &&
+        (!Array.isArray(raw.skillPacks.approvedDigests) ||
+          raw.skillPacks.approvedDigests.length > 100 ||
+          raw.skillPacks.approvedDigests.some((d: unknown) => typeof d !== 'string' || !/^[a-f0-9]{64}$/.test(d)))) ||
+      (raw.skillPacks.submitUrl !== undefined && !SKILL_SUBMIT_URL.test(String(raw.skillPacks.submitUrl)))
     )
       problems.push('invalid Skill Pack approvals');
-    else policy.skillPacks = { approvedDigests: [...new Set<string>(raw.skillPacks.approvedDigests)] };
+    else
+      policy.skillPacks = {
+        approvedDigests: [...new Set<string>(raw.skillPacks.approvedDigests || [])],
+        ...(raw.skillPacks.submitUrl ? { submitUrl: raw.skillPacks.submitUrl } : {}),
+      };
   }
   if (raw.providers !== undefined) {
     if (!isObject(raw.providers) || Object.keys(raw.providers).some(k => !['compatible', 'copilot'].includes(k)))
