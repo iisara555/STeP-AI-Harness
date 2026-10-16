@@ -454,15 +454,17 @@ export default function App() {
             void refresh();
             return;
           }
-          setRunning(false);
-          setStream('');
-          setReasoning('');
-          setPlan([]);
-          setStartedAt(0);
-          // The authority notice stays visible after the run; main sends it in the chosen language.
-          setProgress(p =>
-            p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' || p === t('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ') ? p : '',
-          );
+          if (event.sessionId === currentId.current) {
+            setRunning(false);
+            setStream('');
+            setReasoning('');
+            setPlan([]);
+            setStartedAt(0);
+            // The authority notice stays visible after the run; main sends it in the chosen language.
+            setProgress(p =>
+              p === 'ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ' || p === t('ขั้นตอนดำเนินการจริงต้องทำโดยผู้มีอำนาจ') ? p : '',
+            );
+          }
           const attempt = runningIds.current.get(event.sessionId);
           const finished = attempt ? event.sessionId : '';
           void refresh().then(data => {
@@ -581,6 +583,7 @@ export default function App() {
     setSelected(id);
     const chosen = snapshot?.sessions.find(s => s.id === id);
     setWorkMode(chosen?.mode || (chosen?.draft ? 'draft' : 'chat'));
+    setRunning(['running', 'queued'].includes(chosen?.status || ''));
     setPendingSource('');
     setFiles([]);
     setStream('');
@@ -704,6 +707,7 @@ export default function App() {
     await save();
     if (version !== navigationVersion.current) return;
     setSelected('');
+    setRunning(false);
     setWorkMode('chat');
     setPendingSource('');
     setView('chat');

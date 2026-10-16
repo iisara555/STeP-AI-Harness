@@ -122,6 +122,7 @@ export class GoogleWorkspace {
         this.transport,
       );
       await context.check();
+      if (controller.signal.aborted || context.signal.aborted) reject('CANCELLED');
       if (epoch !== this.epoch || JSON.stringify(config) !== JSON.stringify(this.config())) reject('GOOGLE_ACCOUNT_CHANGED');
       const subject = this.employeeSubject();
       if (subject && result.who.sub !== subject) reject('GOOGLE_ACCOUNT_MISMATCH');

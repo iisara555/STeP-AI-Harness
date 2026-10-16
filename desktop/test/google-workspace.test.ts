@@ -341,6 +341,67 @@ test('native authorization cancellation closes its listener without a token exch
   );
   assert.equal(calls, 0);
 });
+for (const phase of ['authorization', 'commit-check'] as const)
+  test(`connection cancellation during ${phase} cannot persist credentials or an account`, async () => {
+    const f = fixture();
+    let ready!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => {
+      ready = resolve;
+    });
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let checks = 0;
+    const google = new GoogleWorkspace(
+      f.store,
+      f.vault,
+      () => config,
+      async () => {},
+      async () => {
+        throw new Error('TRANSPORT_NOT_EXPECTED');
+      },
+      async (_config, scopes) => {
+        if (phase === 'authorization') {
+          ready();
+          await gate;
+        }
+        return {
+          who: { sub: '1234', email: 'synthetic@example.test', hd: 'example.test' },
+          scopes,
+          tokens: { refresh: 'synthetic-refresh', access: 'synthetic-access', expires: Date.now() + 3600000 },
+        };
+      },
+    );
+    try {
+      const pending = google
+        .connect(['documents'], {
+          ...context,
+          check: async () => {
+            if (++checks === 2 && phase === 'commit-check') {
+              ready();
+              await gate;
+            }
+          },
+        })
+        .then(
+          () => null,
+          error => error,
+        );
+      await waiting;
+      google.cancel();
+      release();
+      const error = await pending;
+      assert.equal(error?.message, 'CANCELLED');
+      assert.equal(f.vault.list().length, 0);
+      assert.equal(google.state().accounts.length, 0);
+      await google.connect(['documents'], context);
+      assert.equal(google.state().accounts.length, 1, 'a fresh connection still succeeds after cancellation');
+    } finally {
+      release();
+      f.clean();
+    }
+  });
+
 test('workspace services require a complete configured audience and storage cannot connect while paused', async () => {
   const f = fixture();
   try {

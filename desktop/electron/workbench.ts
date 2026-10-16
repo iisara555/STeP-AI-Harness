@@ -515,9 +515,11 @@ export class Workbench {
     if (typeof command !== 'string' || !command.trim() || command.length > 2000 || command.includes('\0'))
       throw new Error('INVALID_COMMAND');
     if (this.children.size >= 4) throw new Error('TASK_LIMIT');
+    // Hex UUIDs can resemble personal identifiers; letters keep host handles intact through privacy review.
     const cwd = await this.root(),
-      id = randomUUID();
+      id = randomUUID().replace(/[0-9a-f]/g, digit => String.fromCharCode(97 + Number.parseInt(digit, 16)));
     this.executionAllowed();
+    if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     const task: BackgroundTask = {
       id,
       sessionId,

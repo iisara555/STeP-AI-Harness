@@ -18,6 +18,7 @@ import { Store } from '../electron/store';
 import { CostLedger } from '../electron/cost';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
 import { contextBudget } from '../electron/compact';
+import { Rpc } from '../electron/rpc';
 import type { Connection } from '../src/types';
 const privacy: any = await import('../../src/modules/privacy/index.js');
 const event = (data: unknown) => `data: ${JSON.stringify(data)}\n\n`;
@@ -148,6 +149,72 @@ test('cache rates and small-model limits are explicit, validated and never doubl
   assert.equal(ledger.report().entries[0].cachedInput, 80);
   store.close();
 });
+
+for (const provider of ['openai', 'gemini'] as const)
+  test(`${provider} cancellation owns the fresh RPC during initialization`, { timeout: 5000 }, async t => {
+    const home = await mkdtemp(join(tmpdir(), 'step-cancel-initialize-'));
+    const executable = join(home, 'runtime.cjs');
+    await writeFile(executable, 'setTimeout(() => {}, 10000);');
+    const session = new ProviderSession();
+    const controller = new AbortController();
+    let ready!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => {
+      ready = resolve;
+    });
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const methods: string[] = [];
+    let closes = 0;
+    const close = Rpc.prototype.close;
+    t.mock.method(Rpc.prototype, 'close', function (this: Rpc, reason?: string) {
+      closes++;
+      return close.call(this, reason);
+    });
+    t.mock.method(Rpc.prototype, 'request', async (method: string) => {
+      methods.push(method);
+      if (method === 'initialize') {
+        ready();
+        await gate;
+      }
+      if (method === 'thread/start') return { thread: { id: 'synthetic-thread' } };
+      if (method === 'session/new') return { sessionId: 'synthetic-session' };
+      return {};
+    });
+    const adapter = provider === 'openai' ? new CodexAdapter() : new GeminiAdapter();
+    const connection = { id: 'synthetic', provider, mode: 'subscription', executable, ready: true } as Connection;
+    const pending = adapter
+      .run('Synthetic request', connection, {
+        cwd: home,
+        env: {},
+        signal: controller.signal,
+        emit: () => {},
+        session,
+      })
+      .then(
+        () => null,
+        error => error,
+      );
+    try {
+      await waiting;
+      controller.abort();
+      const closesAtCancel = closes;
+      release();
+      const error = await pending;
+      assert.ok(closesAtCancel > 0, 'cancel must close the RPC before initialization completes');
+      assert.equal(error?.message, 'CANCELLED');
+      assert.equal(
+        methods.some(method => method === 'turn/start' || method === 'session/prompt'),
+        false,
+      );
+      assert.equal(session.rpc, undefined);
+    } finally {
+      release();
+      await pending;
+      await session.closeAndWait();
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 
 for (const provider of ['openai', 'gemini'] as const)
   test(`${provider} keeps one process/thread for deltas, resets changed context and does not retry quotas`, { timeout: 12000 }, async t => {
