@@ -4767,3 +4767,21 @@ nav button:disabled {
     flex-direction: column;
   }
 }
+.pack-review {
+  margin: 6px 0;
+  font-size: 13px;
+}
+.pack-review summary {
+  cursor: pointer;
+}
+.pack-review.pass summary {
+  color: var(--diff-added);
+}
+.pack-review.fail summary,
+.pack-review li.error {
+  color: var(--danger);
+}
+.pack-review ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}

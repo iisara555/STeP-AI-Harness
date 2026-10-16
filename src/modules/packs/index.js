@@ -11,6 +11,7 @@ import {
 import { resolve, join, relative, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { evaluatePrivacyGate } from "../privacy/index.js";
+import { reviewPack, REVIEW_MESSAGES } from "./review.js";
 
 const ID = /^[a-z][a-z0-9-]{0,63}$/;
 const EVENTS = [
@@ -214,12 +215,32 @@ function read(workspace, id) {
     );
   if (manifest.name !== id) throw new Error("PACK_ID_INVALID");
   const hash = digest(files);
-  let state = {};
+  let state = {},
+    credit;
   try {
     regular(join(folder, "enabled.json"));
     state = JSON.parse(readFileSync(join(folder, "enabled.json"), "utf8"));
   } catch {}
-  return { folder, assets, files, manifest, digest: hash, state };
+  try {
+    regular(join(folder, "credit.json"));
+    credit = creditOf(JSON.parse(readFileSync(join(folder, "credit.json"), "utf8")));
+  } catch {}
+  return { folder, assets, files, manifest, digest: hash, state, credit };
+}
+// Who uploaded the pack, for credit. Kept beside the pack, never inside its files, so it is not part of the digest
+// or of anything a model reads; showing it beyond this computer needs the uploader's consent (orgConsent).
+const field = (v) =>
+  typeof v === "string"
+    ? v.replace(/[\u0000-\u001f\u007f<>]/g, "").trim().slice(0, 80)
+    : "";
+function creditOf(value) {
+  if (!plain(value)) return undefined;
+  const name = field(value.name);
+  if (!name) return undefined;
+  const at = typeof value.uploadedAt === "string" && !Number.isNaN(Date.parse(value.uploadedAt))
+    ? new Date(value.uploadedAt).toISOString()
+    : new Date().toISOString();
+  return { name, team: field(value.team), uploadedAt: at, orgConsent: value.orgConsent === true };
 }
 function allowed(pack, policy) {
   return (
@@ -230,7 +251,7 @@ function allowed(pack, policy) {
     pack.state.enabled === true
   );
 }
-export function installPack(workspace, source, { name } = {}) {
+export function installPack(workspace, source, { name, credit } = {}) {
   const files = tree(resolve(source));
   let manifest;
   if (files.has("pack.json"))
@@ -269,11 +290,19 @@ export function installPack(workspace, source, { name } = {}) {
       JSON.stringify({ enabled: false, digest: digest(files) }),
       { flag: "wx", mode: 0o600 },
     );
+    const uploader = creditOf(credit);
+    if (uploader)
+      writeFileSync(join(stage, "credit.json"), JSON.stringify(uploader), {
+        flag: "wx",
+        mode: 0o600,
+      });
     renameSync(stage, dest);
     return {
       id: manifest.name,
       digest: digest(files),
       enabled: false,
+      review: reviewPack(manifest, files),
+      ...(uploader ? { credit: uploader } : {}),
       skills: manifest.skills,
       agents: manifest.agents || [],
       hooks: (manifest.hooks || []).length,
@@ -292,6 +321,8 @@ export function listPacks(workspace, policy = {}) {
           id,
           digest: p.digest,
           enabled: allowed(p, policy),
+          review: reviewPack(p.manifest, p.files),
+          ...(p.credit ? { credit: p.credit } : {}),
           skills: p.manifest.skills,
           agents: p.manifest.agents || [],
           hooks: (p.manifest.hooks || []).length,
@@ -360,6 +391,7 @@ export function enabledPackHooks(workspace, policy) {
     .filter((p) => p.enabled && p.hooksEnabled)
     .flatMap((p) => read(workspace, p.id).manifest.hooks || []);
 }
+export { reviewPack, REVIEW_MESSAGES };
 export function exportPack(
   workspace,
   id,

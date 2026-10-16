@@ -2,7 +2,39 @@ import { useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
 import type { DesktopAPI } from './types';
+import type { PackReview as PackReviewResult } from '../../src/modules/packs/index.js';
 import { t } from './i18n';
+const REVIEW_STATUS = {
+  pass: 'ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย',
+  warn: 'ผ่านการตรวจ มีข้อแนะนำ {0} ข้อ',
+  fail: 'ไม่ผ่านการตรวจ {0} ข้อ',
+};
+/** The automated Standard v2 and safety report. Advice for the uploader and admin; it approves nothing. */
+function PackReview({ review }: { review: PackReviewResult }) {
+  const fails = review.findings.filter(f => f.level === 'fail').length;
+  const label =
+    review.status === 'pass'
+      ? t(REVIEW_STATUS.pass)
+      : review.status === 'warn'
+        ? t(REVIEW_STATUS.warn, review.findings.length)
+        : t(REVIEW_STATUS.fail, fails);
+  return (
+    <details className={`pack-review ${review.status}`} open={review.status === 'fail'}>
+      <summary role="status">
+        {review.status === 'pass' ? '✓ ' : review.status === 'warn' ? '! ' : '✕ '}
+        {label}
+      </summary>
+      <ul>
+        {review.findings.map((f, i) => (
+          <li key={i} className={f.level === 'fail' ? 'error' : 'muted'}>
+            {f.area === 'safety' ? t('ความปลอดภัย') : t('มาตรฐาน')}
+            {f.file ? ` · ${f.file}${f.line ? ':' + f.line : ''}` : ''} — {t(f.template, ...f.args)}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClose: () => void; onSelect: (text: string) => void }) {
   const [packs, setPacks] = useState<any[]>([]),
     [name, setName] = useState(''),
@@ -70,6 +102,13 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
           <p className="small muted">
             {p.digest} · Hooks {p.hooks}
           </p>
+          {p.credit && (
+            <p className="small">
+              {t('นำเข้าโดย {0}', p.credit.name)}
+              {p.credit.team ? ' · ' + p.credit.team : ''} · {new Date(p.credit.uploadedAt).toLocaleDateString()}
+            </p>
+          )}
+          {p.review && <PackReview review={p.review} />}
           <button disabled={busy || p.invalid} onClick={() => void act('packEnable', { id: p.id, disable: p.enabled, hooks, agents })}>
             {p.enabled ? t('ปิดใช้') : t('ยืนยันเปิดใช้')}
           </button>
