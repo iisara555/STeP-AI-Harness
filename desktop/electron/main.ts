@@ -2245,7 +2245,12 @@ async function main() {
           properties: ['openDirectory'],
         });
         if (selected.canceled || !selected.filePaths[0]) return null;
-        return installPack(store.settings().workspace || data, selected.filePaths[0], { name: inputText(input.name || '', 64) });
+        // Credit the uploader from this computer's profile; it is kept beside the pack, never inside its files.
+        const settings = store.settings();
+        return installPack(settings.workspace || data, selected.filePaths[0], {
+          name: inputText(input.name || '', 64),
+          credit: { name: settings.userName || '', team: settings.team || '' },
+        });
       }
       case 'packEnable': {
         const identity = phase4Identity(),

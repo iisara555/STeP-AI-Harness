@@ -1,4 +1,9 @@
-export function installPack(workspace:string,source:string,options?:{name?:string}):any;
+export type PackCredit={name:string;team:string;uploadedAt:string;orgConsent:boolean};
+export type PackFinding={level:'fail'|'warn';area:'standard'|'safety';code:string;file?:string;line?:number;message:string;template:string;args:string[]};
+export const REVIEW_MESSAGES:Record<string,string>;
+export type PackReview={status:'pass'|'warn'|'fail';findings:PackFinding[];skills:number;checkedAt:string};
+export function reviewPack(manifest:any,files:Map<string,Buffer>):PackReview;
+export function installPack(workspace:string,source:string,options?:{name?:string;credit?:{name?:string;team?:string;uploadedAt?:string;orgConsent?:boolean}}):any;
 export function listPacks(workspace:string,policy?:any):any[];
 export function enablePack(workspace:string,id:string,policy:any,options?:any):any;
 export function packAsset(workspace:string,id:string,assetId:string,kind:string,policy:any):{text:string;label:string;digest:string};

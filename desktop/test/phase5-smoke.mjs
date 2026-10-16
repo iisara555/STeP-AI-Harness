@@ -146,6 +146,9 @@ try {
   await palette.getByRole('option', { name: 'Skill Packs', exact: true }).click();
   const packs = page.getByRole('alertdialog', { name: 'Skill Packs' });
   await expect(packs).toContainText('public-writing');
+  // The fixture is a legacy Skill, so the automated Standard v2 report lists what it lacks.
+  await expect(packs.getByRole('status')).toContainText('ไม่ผ่านการตรวจ');
+  await expect(packs).toContainText('standardVersion: 2');
   await packs.getByRole('button', { name: 'ใช้ skill: public-draft', exact: true }).click();
   await expect(packs).not.toBeVisible();
   await composer.press('Enter');

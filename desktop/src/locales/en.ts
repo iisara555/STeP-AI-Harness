@@ -2527,4 +2527,38 @@ export const en: Record<string, string> = {
     'Draft TORs around your intended use, constraints and presentation preferences, linking deliverables to acceptance checks',
   'ปรับการตัดบรรทัดไทยและหัวตาราง พร้อมตัวหนาและตัวเอียงใน DOCX': 'Improve Thai wrapping, table headers and DOCX bold/italic formatting',
   'เพิ่ม Skill ช่วยใช้ Google Workspace ผ่านบัญชีที่เชื่อมในแอป': 'Add a Skill for Google Workspace using accounts connected in the app',
+  // Skill Pack review (src/modules/packs/review.js)
+  'ไม่มีส่วนหัว (frontmatter) ที่มี name และ description': 'No front matter with name and description',
+  'ยังไม่ระบุ standardVersion: 2 ในส่วนหัว Skill ใหม่ต้องใช้มาตรฐาน v2':
+    'standardVersion: 2 is missing from the front matter; new Skills must follow Standard v2',
+  'ขาดหัวข้อบังคับตามมาตรฐาน v2: {0}': 'Missing Standard v2 sections: {0}',
+  'description สั้นเกินไป ควรบอกว่าใช้ Skill นี้เมื่อไรให้ชัด (อย่างน้อย 20 ตัวอักษร)':
+    'The description is too short; say clearly when to use this Skill (at least 20 characters)',
+  'ส่วนหัวมีช่องที่มาตรฐานไม่รองรับ: {0}': 'The front matter has fields the standard does not support: {0}',
+  'หัวข้อ Source ว่าง ถ้าไม่ต้องใช้แหล่งข้อมูลภายนอกให้เขียนบอกไว้ตรง ๆ':
+    'The Source section is empty; if no outside source is needed, say so',
+  'หัวข้อ Authority ต้องแยกว่าอะไร AI ช่วยได้ อะไรต้องยืนยัน และอะไรเป็นอำนาจของคน':
+    "The Authority section must separate what AI may do, what needs confirming and what is a person's authority",
+  'SKILL.md ยาว {0} บรรทัด ควรย้ายรายละเอียดไปไว้ในโฟลเดอร์ references หรือ templates':
+    'SKILL.md has {0} lines; move details into references or templates',
+  'มีไฟล์ที่ไม่ใช่ข้อความ ({0}) Skill ของพนักงานต้องเป็นข้อความเท่านั้น': 'Contains non-text files ({0}); staff Skills must be text only',
+  'มี Hooks หรือ Agent templates ซึ่งพนักงานนำเข้าเองไม่ได้ ต้องให้ผู้ดูแลรับรอง':
+    'Contains Hooks or Agent templates, which staff cannot import themselves; an admin must approve them',
+  'มีข้อความที่สั่งให้ AI ลืมหรือข้ามคำสั่งเดิม (prompt injection): “{0}”':
+    'Text tells the AI to forget or skip its instructions (prompt injection): “{0}”',
+  'มีข้อความที่ขัดกฎต้องให้คนอนุมัติก่อน: “{0}”': 'Text conflicts with the rule that a person must approve: “{0}”',
+  'มีข้อความให้ทำต่อโดยไม่ต้องให้ผู้ใช้ยืนยัน ผู้ดูแลควรตรวจว่าไม่ใช่งานที่มีผลจริง: “{0}”':
+    "Text continues without the user's confirmation; an admin should check it has no real-world effect: “{0}”",
+  'มีข้อความที่อาจส่งข้อมูลออกไปภายนอก: “{0}”': 'Text may send data outside: “{0}”',
+  'มีข้อความที่ขอรหัสผ่านหรือข้อมูลลับจากผู้ใช้: “{0}”': 'Text asks the user for a password or secret: “{0}”',
+  'มีอักขระที่มองไม่เห็นซ่อนอยู่ ซึ่งอาจใช้ซ่อนคำสั่ง': 'Contains invisible characters that could hide instructions',
+  'มีคำสั่งซ่อนอยู่ในคอมเมนต์ HTML ที่คนอ่านไม่เห็น': 'Contains instructions hidden in an HTML comment that people do not see',
+  'มีลิงก์ภายนอก ({0}) ผู้ดูแลควรตรวจว่าปลายทางน่าเชื่อถือ':
+    'Contains outside links ({0}); an admin should check the destinations are trustworthy',
+  'ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย': 'Passed the Skill Standard v2 and safety checks',
+  'ผ่านการตรวจ มีข้อแนะนำ {0} ข้อ': 'Passed, with {0} suggestions',
+  'ไม่ผ่านการตรวจ {0} ข้อ': 'Failed {0} checks',
+  ความปลอดภัย: 'Safety',
+  มาตรฐาน: 'Standard',
+  'นำเข้าโดย {0}': 'Imported by {0}',
 };
