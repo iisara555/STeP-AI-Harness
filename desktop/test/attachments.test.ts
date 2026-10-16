@@ -60,3 +60,10 @@ test('reasons follow the scan report', () => {
   assert.equal(attachmentReason({ extractionStatus: 'text-extracted', redactedText: 'x'.repeat(100_001) }), 'ATTACH_TOO_LARGE');
   assert.equal(attachmentReason({ extractionStatus: 'text-extracted', action: 'human-confirm', redactedText: 'ok' }), undefined);
 });
+
+test('a scan that can go neither as pictures nor as OCR text names what to change', () => {
+  assert.equal(
+    attachmentReason({ extractionStatus: 'unavailable', reviewReasons: ['scanned-needs-vision'] }),
+    'ATTACH_SCANNED_NEEDS_VISION',
+  );
+});

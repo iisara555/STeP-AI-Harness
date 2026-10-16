@@ -1,6 +1,7 @@
 import { copilotDeviceLogin } from './copilot-auth';
 import { unscanned, credentialsOnly } from './checks';
 import { TERMS_VERSION } from '../src/terms-version';
+import { takesImages } from '../src/vision-transport';
 import {
   app,
   BrowserWindow,
@@ -3034,6 +3035,8 @@ async function main() {
         const vision = selected.some(a => Boolean(a.images?.length));
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         if (vision && workMode === 'image') throw new Error('VISION_UNAVAILABLE');
+        // A picture attached under an image-capable account cannot go out after a switch to one that drops it.
+        if (vision && !takesImages(sendingConnection.provider)) throw new Error('VISION_UNAVAILABLE');
         if (coordinated && vision) throw new Error('VISION_UNAVAILABLE');
         if (!['source', 'template'].includes(attachmentRole) || (attachmentRole === 'template' && (!draftingTool || selected.length !== 1)))
           throw new Error('INVALID_DOCUMENT_SOURCE_ROLE');
@@ -3269,8 +3272,11 @@ async function main() {
       }
       case 'attach': {
         const sessionId = inputText(input.id, 60);
-        store.session(sessionId);
+        const attachingSession = store.session(sessionId);
         const vision = input.vision === true;
+        // Pictures go only to a connection that can carry them. Gemini through Antigravity (and Copilot) get the local
+        // OCR text of an image or scanned PDF instead (src/vision-transport.ts).
+        const imagesAccepted = takesImages(store.get<Connection>('connection', attachingSession.connectionId)?.provider);
         if (vision && !policyState.policy.features.vision) throw new Error('VISION_DISABLED');
         const result = await dialog.showOpenDialog(window, {
           properties: ['openFile'],
@@ -3301,7 +3307,8 @@ async function main() {
         let report: any = await harness.documentPrivacy(path, { includeRedacted: true }),
           images: VisionInput[] | undefined;
         // With privacy checks off, an image for a vision model is sent as it is, like other AI apps: no local OCR pass.
-        const directImage = vision && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+        const directImage =
+          vision && imagesAccepted && !policyState.policy.checks.privacy && ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
         if (directImage) {
           const bytes = await readFile(path);
           if (bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
@@ -3313,6 +3320,7 @@ async function main() {
         const scannedPdf =
           !vision &&
           extension === 'pdf' &&
+          imagesAccepted &&
           !policyState.policy.checks.privacy &&
           policyState.policy.features.vision &&
           ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '');
@@ -3325,20 +3333,33 @@ async function main() {
           !scannedPdf &&
           OCR_EXTENSIONS.includes(extension) &&
           (vision || extension !== 'pdf' || ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || ''));
+        let ocrRan = false;
         if (scanNeeded && report.action !== 'block-external') {
           const health = await ocr.health();
-          if (!health.running && (vision || extension !== 'pdf')) throw new Error('OCR_UNAVAILABLE');
+          if (!health.running && (vision || extension !== 'pdf'))
+            throw new Error(imagesAccepted ? 'OCR_UNAVAILABLE' : 'VISION_UNAVAILABLE');
           if (health.running) {
             const read = await ocr.recognize(path, health.crosscheck, health.tesseract, health.handwriting);
             report = ocrAttachmentReport(read.result, harness.privacy);
+            ocrRan = true;
             // Text redaction cannot mask pixels. Flagged OCR forbids sending the original image.
-            if (vision && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
-            if (vision && !attachmentReason(report)) {
+            if (vision && imagesAccepted && (report.action !== 'pass' || report.containsPersonalData)) report.action = 'block-external';
+            if (vision && imagesAccepted && !attachmentReason(report)) {
               if (read.bytes.length > 4_000_000) throw new Error('ATTACH_TOO_LARGE');
               images = [visionImage(extension, read.bytes)];
             }
           }
         }
+        // A scan that could go neither as pictures nor as OCR text says what to change instead of "no text".
+        if (
+          extension === 'pdf' &&
+          !imagesAccepted &&
+          !ocrRan &&
+          !policyState.policy.checks.privacy &&
+          policyState.policy.features.vision &&
+          ['ATTACH_NO_TEXT', 'ATTACH_PAGES_WITHOUT_TEXT'].includes(attachmentReason(report) || '')
+        )
+          report = { ...report, extractionStatus: 'unavailable', reviewReasons: ['scanned-needs-vision'] };
         // The reason travels with the chip; the window refuses to send while any chip cannot be sent.
         // A sample-free native outline can be used even when original source text must be withheld.
         // This does not approve sending the original text/images; source mode keeps its original gate.
