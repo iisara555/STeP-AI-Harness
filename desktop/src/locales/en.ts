@@ -2545,6 +2545,9 @@ export const en: Record<string, string> = {
   'ยังไม่ระบุ standardVersion: 2 ในส่วนหัว Skill ใหม่ต้องใช้มาตรฐาน v2':
     'standardVersion: 2 is missing from the front matter; new Skills must follow Standard v2',
   'ขาดหัวข้อบังคับตามมาตรฐาน v2: {0}': 'Missing Standard v2 sections: {0}',
+  'ขาดหัวข้อบังคับตามมาตรฐาน v3: {0}': 'Missing Standard v3 sections: {0}',
+  'หัวข้อ Maintenance ต้องมีบรรทัด “อัปเดตล่าสุด: ปปปป-ดด-วว” เป็นปี ค.ศ.':
+    'The Maintenance section needs a line “Last updated: YYYY-MM-DD” (Gregorian year)',
   'description สั้นเกินไป ควรบอกว่าใช้ Skill นี้เมื่อไรให้ชัด (อย่างน้อย 20 ตัวอักษร)':
     'The description is too short; say clearly when to use this Skill (at least 20 characters)',
   'ส่วนหัวมีช่องที่มาตรฐานไม่รองรับ: {0}': 'The front matter has fields the standard does not support: {0}',

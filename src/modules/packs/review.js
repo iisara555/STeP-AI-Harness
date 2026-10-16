@@ -12,6 +12,10 @@ export const STANDARD_HEADINGS = [
   "Handoff",
   "Guardrails",
 ];
+// Standard v3 adds what a person needs to rerun and check the work: the environment it runs in, known problems and
+// their fixes, how to verify the result, and when it was last updated (rules/learning-and-verification.md).
+export const STANDARD_V3_HEADINGS = ["Environment", "Pitfalls", "Verification", "Maintenance"];
+export const UPDATED_LINE = /(?:อัปเดตล่าสุด|Last updated)\s*:\s*(\d{4}-\d{2}-\d{2})/i;
 const FRONTMATTER_KEYS = ["name", "description", "standardVersion"];
 // Staff Skills are text only: instructions, references and templates, never code that runs.
 const TEXT_FILE = /\.(?:md|txt|json|csv|tsv|ya?ml)$/i;
@@ -59,6 +63,8 @@ export const REVIEW_MESSAGES = {
   "standard.frontmatter": "ไม่มีส่วนหัว (frontmatter) ที่มี name และ description",
   "standard.version": "ยังไม่ระบุ standardVersion: 2 ในส่วนหัว Skill ใหม่ต้องใช้มาตรฐาน v2",
   "standard.headings": "ขาดหัวข้อบังคับตามมาตรฐาน v2: {0}",
+  "standard.headings3": "ขาดหัวข้อบังคับตามมาตรฐาน v3: {0}",
+  "standard.updated": "หัวข้อ Maintenance ต้องมีบรรทัด “อัปเดตล่าสุด: ปปปป-ดด-วว” เป็นปี ค.ศ.",
   "standard.description": "description สั้นเกินไป ควรบอกว่าใช้ Skill นี้เมื่อไรให้ชัด (อย่างน้อย 20 ตัวอักษร)",
   "standard.keys": "ส่วนหัวมีช่องที่มาตรฐานไม่รองรับ: {0}",
   "standard.source": "หัวข้อ Source ว่าง ถ้าไม่ต้องใช้แหล่งข้อมูลภายนอกให้เขียนบอกไว้ตรง ๆ",
@@ -111,10 +117,18 @@ function checkStandard(path, text, add) {
   const extra = Object.keys(values).filter((key) => !FRONTMATTER_KEYS.includes(key));
   if (extra.length) add("warn", "standard", "standard.keys", path, 1, extra.join(", "));
   if (values.description.length < 20) add("warn", "standard", "standard.description", path, 1);
-  if (Number(values.standardVersion) !== 2) add("fail", "standard", "standard.version", path, 1);
+  const version = Number(values.standardVersion);
+  if (version !== 2 && version !== 3) add("fail", "standard", "standard.version", path, 1);
   const found = sections(body);
   const missing = STANDARD_HEADINGS.filter((heading) => !found.has(heading));
   if (missing.length) add("fail", "standard", "standard.headings", path, undefined, missing.join(", "));
+  if (version === 3) {
+    const missingV3 = STANDARD_V3_HEADINGS.filter((heading) => !found.has(heading));
+    if (missingV3.length) add("fail", "standard", "standard.headings3", path, undefined, missingV3.join(", "));
+    const updated = UPDATED_LINE.exec(found.get("Maintenance") || "")?.[1];
+    if (found.has("Maintenance") && !(updated && Number.isFinite(Date.parse(updated))))
+      add("fail", "standard", "standard.updated", path);
+  }
   if (found.has("Source") && !found.get("Source").trim()) add("fail", "standard", "standard.source", path);
   const authority = found.get("Authority") || "";
   if (found.has("Authority") && !/ยืนยัน|อนุมัติ|confirm|approv|มนุษย์|ผู้มีอำนาจ|human/i.test(authority))
