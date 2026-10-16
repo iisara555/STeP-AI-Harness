@@ -443,6 +443,7 @@ export const en: Record<string, string> = {
   'ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้': 'These statements are not in the STeP documents; check them before use',
   'ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร': 'Checked against the STeP documents: nothing contradicts them',
   'ตรวจคำตอบเรื่อง STeP กับเอกสาร': 'Check STeP answers against the documents',
+  ปรับระดับการคิดตามขนาดงาน: 'Reasoning level by task size',
   'กำลังตรวจคำตอบกับเอกสาร STeP': 'Checking the answer against the STeP documents',
   เวลาตั้งแต่ส่งคำถามจนได้คำตอบ: 'Time from sending the request to the finished answer',
   'เครื่องมือทดลองและวัดผล OCR': 'OCR trial and measurement tools',
@@ -747,6 +748,9 @@ export const en: Record<string, string> = {
   เลือกโมเดล: 'Choose model',
   'โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'The model for this task — change it any time',
   'ค่าเริ่มต้น ({0})': 'Default ({0})',
+  อัตโนมัติตามขนาดงาน: 'Auto by task size',
+  'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล':
+    'Auto: a short chat question uses Low; a large task (several steps, plan mode, a long request or many files) uses High; other tasks use the model default',
   ค่าเริ่มต้น: 'Default',
   ค่าเริ่มต้นของบริการ: 'Service default',
   เลือกระดับการคิด: 'Choose reasoning level',

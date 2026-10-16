@@ -171,6 +171,8 @@ export type RunTrace = {
   code?: string;
   ms: number;
   steps: StepTrace[];
+  /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
+  effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
   /** Provider research before the first model step, when host-side search is enabled. */
   providerCalls?: ProviderCallTrace[];
 };

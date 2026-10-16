@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Pick the reasoning level by task size when the employee leaves it on the default: a short chat question uses Low, a large task (several Playbook steps, plan mode, a long request, a long attachment or three or more files) uses High, and other work, including every document draft, keeps the model's default. Only levels the model offers are sent, the employee's own choice always wins, the level picker shows "อัตโนมัติตามขนาดงาน", and the run trace records the size and level. IT can turn it off with `features.autoEffort: false`.
+
 - Add Skill Standard v3: on top of the nine v2 sections, a Skill has `Environment` (paths, systems, commands), `Pitfalls` (known problems and fixes), `Verification` (the evidence needed before calling work done) and `Maintenance` with an `อัปเดตล่าสุด: YYYY-MM-DD` line. The repository validator, the Skill authoring test and the staff Skill Pack review check the new sections and date; v2 Skills still pass. `step-skill-authoring` now follows v3 and teaches it.
 
 - Let the AI look up earlier work with a new read-only tool, `session_search`: it finds this team's earlier tasks on this computer by words, project and date (newest first, up to 10) and reads a bounded excerpt of one (request, last turns, start of the draft), so the employee does not have to explain past work again. Results go through the usual privacy check and consent, and the current task and other teams' tasks are never shown.
