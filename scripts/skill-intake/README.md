@@ -47,9 +47,43 @@
 และรหัสลับตอนนำเข้าและก่อนส่งอีกครั้ง แล้วพนักงานต้องกดยืนยันในหน้าต่างที่บอกว่าจะส่งอะไรไปที่ไหน ข้อมูลที่ส่ง:
 ไฟล์ Skill, ผลตรวจ, จำนวนครั้งที่ใช้บนเครื่องนั้น, ชื่อและทีมของผู้เสนอ และรุ่นแอป
 
-## ขั้นต่อไปหลังรับเรื่อง
+## ขั้นต่อไปหลังรับเรื่อง (ผู้ดูแล)
 
-การเผยแพร่ยังต้องผ่านผู้ดูแล: นำร่องกับทีมโดยใส่ digest ใน `skillPacks.approvedDigests` ของเครื่องทีมนั้น
-หรือเสนอเข้า repository เป็น Skill ขององค์กรพร้อมชื่อผู้ร่วมสร้าง (ขั้นนี้ทำใน PR ถัดไป)
+ผู้ดูแลพิจารณาในชีต (คอลัมน์สถานะ ผู้ตรวจ หมายเหตุ) แล้วใช้ [`admin.mjs`](admin.mjs) ในเครื่องที่ clone repository นี้ไว้
+เริ่มจากเปิดลิงก์ในคอลัมน์ "โฟลเดอร์ไฟล์" กด **ดาวน์โหลด** ทั้งโฟลเดอร์ แล้วแตกไฟล์ zip
 
-ทดสอบสคริปต์นี้แบบไม่ต่อ Google: `node --test test/skill-intake.test.js`
+1. **ตรวจซ้ำ** ว่าไฟล์ที่ดาวน์โหลดตรงกับที่พนักงานส่ง และยังผ่านการตรวจ:
+
+   ```sh
+   node scripts/skill-intake/admin.mjs check <โฟลเดอร์ที่แตกไฟล์> --digest <ค่าในคอลัมน์ Digest>
+   ```
+
+   สคริปต์คืนชื่อไฟล์จาก Drive (`a__b.md` กลับเป็น `a/b.md`) ตรวจข้อมูลส่วนบุคคลและรหัสลับ ชนิดไฟล์ และ `pack.json`
+   แบบเดียวกับตอนนำเข้าในแอป ตรวจมาตรฐาน v2 และความปลอดภัยซ้ำ แล้วเทียบ digest กับชีต digest ไม่ตรง = ไฟล์ใน Drive
+   ถูกแก้หลังส่ง ห้ามใช้ชุดนั้น
+
+2. **นำร่องกับทีม**:
+
+   ```sh
+   node scripts/skill-intake/admin.mjs pilot <โฟลเดอร์> --digest <Digest> --out <โฟลเดอร์สำหรับแจกทีม> [--policy <desktop-policy.json เดิม>]
+   ```
+
+   สคริปต์พิมพ์นโยบายที่ต้องใส่ในเครื่องของทีม (`features.skillPacks: true` และ digest ใน `skillPacks.approvedDigests`
+   ถ้าให้ `--policy` จะรวมกับค่าเดิมให้) และโฟลเดอร์ที่ทุกเครื่องในทีมต้องนำเข้าในหน้า Skill Packs สคริปต์ไม่เขียนไฟล์นโยบายเอง
+   เลิกนำร่องได้โดยลบ digest ออกจากนโยบาย
+
+3. **เสนอเข้า repository เป็น Skill ขององค์กร** (บน branch ใหม่):
+
+   ```sh
+   node scripts/skill-intake/admin.mjs add <โฟลเดอร์> --digest <Digest> --owner <รหัสทีมใน manifest/teams.yaml> \
+     [--contributor "<ชื่อผู้เสนอ>" --team "<ทีม>" --date YYYY-MM-DD] [--namespace common] [--dry-run]
+   ```
+
+   สคริปต์คัดลอก Skill ไปที่ `skills/<namespace>/<ชื่อ>/` และเพิ่มรายการใน `manifest/skills.yaml` ที่ stage `draft`
+   พร้อม `contributors: ["ชื่อ / ทีม / วันที่"]` แล้วรัน `validate_repo.py` และบอกสิ่งที่ Skill ใหม่ทุกตัวยังต้องมีก่อนเปิด PR
+   (รายการใน router-index, evals, จำนวน Skills ในเอกสาร, rebuild plugin) สคริปต์ไม่ commit หรือ push เอง
+
+   repository นี้เป็นสาธารณะ ใส่ `--contributor` เฉพาะเมื่อผู้เสนอยินยอมให้แสดงชื่อนอกองค์กร ถ้าไม่แน่ใจให้ใส่แค่ `--team`
+   หรือไม่ใส่เลย
+
+ทดสอบแบบไม่ต่อ Google: `node --test test/skill-intake.test.js test/skill-intake-admin.test.js`

@@ -449,7 +449,7 @@ INLINE_LIST_KEYS: dict[str, dict[str, str | None]] = {
         "intent": "skills[]",
     },
     "services.yaml": {key: None for key in ("aliases", "discoverySources", "highlightInstruments", "processes", "sourceRefs", "supportTeams")},
-    "skills.yaml": {key: None for key in ("approvedBy", "domain", "mandatory", "optional", "reviewer", "service")},
+    "skills.yaml": {key: None for key in ("approvedBy", "contributors", "domain", "mandatory", "optional", "reviewer", "service")},
     "teams.yaml": {"paths": None, "skills": None, "starterPrompts": None},
 }
 # Every child of these keys is read as an inline list (playbook signals).
