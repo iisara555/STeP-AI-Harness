@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, readFile, mkdir, rm, symlink, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import crypto from 'node:crypto';
+import { syncBuiltinESMExports } from 'node:module';
 import ExcelJS from 'exceljs';
 import { Document, Packer, Paragraph } from 'docx';
 import { ToolLoop } from '../electron/tool-loop';
@@ -1177,6 +1179,43 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
     await plan.workbench.close();
     plan.store.close();
     await rm(plan.root, { recursive: true, force: true });
+  }
+});
+
+test('generated task handles survive privacy review even with identifier-shaped UUID digits', async t => {
+  const f = await fixture();
+  let host: Awaited<ReturnType<typeof f.tools.host>> | undefined;
+  const legacyId = '0424c50e-b5a3-489d-8cd1-234567890123';
+  t.mock.method(crypto, 'randomUUID', () => legacyId);
+  syncBuiltinESMExports();
+  try {
+    const job = await f.workbench.start(`${node} -e "setTimeout(()=>{},30000)"`, f.scope.sessionId);
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+    host = await f.tools.host(f.scope);
+    const transmitted = JSON.parse(await host.outgoing(JSON.stringify(job), f.scope.signal, { tool: 'terminal', input: job.command }));
+    assert.equal(transmitted.id, job.id, 'the approved task handle must still address the actual subprocess');
+    const status = (await host.execute({ tool: 'tasks', input: transmitted.id, args: { action: 'status' } }, f.scope.signal)) as any;
+    assert.equal(status.id, job.id);
+    await host.execute({ tool: 'tasks', input: transmitted.id, args: { action: 'cancel' } }, f.scope.signal);
+    const stopped = (await host.execute(
+      { tool: 'tasks', input: transmitted.id, args: { action: 'wait', timeoutMs: 2000 } },
+      f.scope.signal,
+    )) as any;
+    assert.equal(stopped.status, 'cancelled');
+    f.store.put('background', legacyId, { ...job, id: legacyId, status: 'interrupted' });
+    const legacy = await f.workbench.inspectTask(f.scope.sessionId, legacyId, { action: 'status' });
+    assert.ok(!Array.isArray(legacy));
+    assert.equal(legacy.id, legacyId);
+    const personalData = 'เลขประจำตัว 1234567890123';
+    assert.notEqual(await f.tools.outgoing(personalData, f.scope), personalData, 'personal-data masking remains enabled');
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+    await host?.dispose?.();
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
   }
 });
 
