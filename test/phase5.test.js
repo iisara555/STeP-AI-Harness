@@ -488,14 +488,8 @@ const skill =
 test("disabled pack hooks never access a missing workspace; enabled packs retain validation", () => {
   const missing = join(tmpdir(), "step-missing-pack-workspace-" + randomUUID());
   assert.deepEqual(enabledPackHooks(missing, {}), []);
-  assert.deepEqual(
-    enabledPackHooks(missing, { features: { skillPacks: false } }),
-    [],
-  );
-  assert.throws(
-    () => enabledPackHooks(missing, { features: { skillPacks: true } }),
-    { code: "ENOENT" },
-  );
+  assert.deepEqual(enabledPackHooks(missing, { features: { skillPacks: false } }), []);
+  assert.throws(() => enabledPackHooks(missing, { features: { skillPacks: true } }), { code: "ENOENT" });
 });
 
 test("packs import Anthropic layout inertly, require approved digest and explicit hooks, export into a fresh directory, detect tampering", async () => {
@@ -860,8 +854,7 @@ test("LINE cannot acknowledge a job whose durable write failed", async () => {
   try {
     const atomic = gateway.atomic.bind(gateway);
     gateway.atomic = (path, text) => {
-      if (path.includes(`${sep}jobs${sep}`))
-        throw new Error("SYNTHETIC_STORAGE_FAILURE");
+      if (path.includes(`${sep}jobs${sep}`)) throw new Error("SYNTHETIC_STORAGE_FAILURE");
       atomic(path, text);
     };
     const raw = webhook(lineId(1), "Public storage draft", "storage-failure");
