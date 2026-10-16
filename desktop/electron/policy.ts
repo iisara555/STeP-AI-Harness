@@ -29,6 +29,7 @@ export const FEATURES = [
   'providerPresets',
   'headless',
   'skillPacks',
+  'staffSkills',
   'cron',
   'coordinator',
   'memoryTeam',
@@ -165,6 +166,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   providerPresets: true,
   headless: false,
   skillPacks: false,
+  // Staff may import their own text-only Skills and use them on their own computer once the automated Standard v2 and
+  // safety review finds nothing that fails (owner's decision, 2026-10-16). No hooks or agents; sharing beyond that
+  // computer still needs an administrator. IT can set it to false.
+  staffSkills: true,
   cron: false,
   coordinator: false,
   memoryTeam: false,

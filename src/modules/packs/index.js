@@ -225,7 +225,17 @@ function read(workspace, id) {
     regular(join(folder, "credit.json"));
     credit = creditOf(JSON.parse(readFileSync(join(folder, "credit.json"), "utf8")));
   } catch {}
-  return { folder, assets, files, manifest, digest: hash, state, credit };
+  return {
+    folder,
+    assets,
+    files,
+    manifest,
+    digest: hash,
+    state,
+    credit,
+    usage: usageOf(folder),
+    review: reviewPack(manifest, files),
+  };
 }
 // Who uploaded the pack, for credit. Kept beside the pack, never inside its files, so it is not part of the digest
 // or of anything a model reads; showing it beyond this computer needs the uploader's consent (orgConsent).
@@ -242,14 +252,50 @@ function creditOf(value) {
     : new Date().toISOString();
   return { name, team: field(value.team), uploadedAt: at, orgConsent: value.orgConsent === true };
 }
-function allowed(pack, policy) {
+// A staff member may use a text-only pack on their own computer once the automated review finds nothing that fails
+// (owner's decision, 2026-10-16). It never runs hooks or agent templates; sharing with a team or the organization still
+// goes through an administrator's approved digest. The review is re-run on every read, so an edited file closes it.
+function personalUse(pack, policy) {
+  return (
+    policy?.features?.staffSkills !== false &&
+    pack.review.status !== "fail" &&
+    !(pack.manifest.hooks || []).length &&
+    !(pack.manifest.agents || []).length
+  );
+}
+function adminApproved(pack, policy) {
   return (
     policy?.features?.skillPacks === true &&
     Array.isArray(policy.skillPacks?.approvedDigests) &&
-    policy.skillPacks.approvedDigests.includes(pack.digest) &&
-    pack.state.digest === pack.digest &&
-    pack.state.enabled === true
+    policy.skillPacks.approvedDigests.includes(pack.digest)
   );
+}
+function allowed(pack, policy) {
+  if (pack.state.digest !== pack.digest || pack.state.enabled !== true) return false;
+  return pack.state.personal === true ? personalUse(pack, policy) : adminApproved(pack, policy);
+}
+// Local usage counts so staff and admins can see which Skills are used before promoting them. Never leaves the computer.
+function usageOf(folder) {
+  try {
+    regular(join(folder, "usage.json"));
+    const u = JSON.parse(readFileSync(join(folder, "usage.json"), "utf8"));
+    const count = Number.isSafeInteger(u.count) && u.count > 0 ? u.count : 0;
+    const last = typeof u.lastUsedAt === "string" && !Number.isNaN(Date.parse(u.lastUsedAt)) ? u.lastUsedAt : undefined;
+    return { count, ...(last ? { lastUsedAt: last } : {}) };
+  } catch {
+    return { count: 0 };
+  }
+}
+function recordUse(folder) {
+  const next = { count: usageOf(folder).count + 1, lastUsedAt: new Date().toISOString() };
+  const temp = join(folder, "usage-" + randomUUID() + ".tmp");
+  try {
+    writeFileSync(temp, JSON.stringify(next), { flag: "wx", mode: 0o600 });
+    renameSync(temp, join(folder, "usage.json"));
+  } catch {
+    // A count that cannot be written never blocks using the Skill.
+    if (existsSync(temp)) rmSync(temp, { force: true });
+  }
 }
 export function installPack(workspace, source, { name, credit } = {}) {
   const files = tree(resolve(source));
@@ -321,7 +367,11 @@ export function listPacks(workspace, policy = {}) {
           id,
           digest: p.digest,
           enabled: allowed(p, policy),
-          review: reviewPack(p.manifest, p.files),
+          personal: allowed(p, policy) && p.state.personal === true,
+          personalAllowed: personalUse(p, policy),
+          adminApproved: adminApproved(p, policy),
+          review: p.review,
+          usage: p.usage,
           ...(p.credit ? { credit: p.credit } : {}),
           skills: p.manifest.skills,
           agents: p.manifest.agents || [],
@@ -345,21 +395,26 @@ export function enablePack(
   workspace,
   id,
   policy,
-  { approve = false, hooks = false, agents = false, disable = false } = {},
+  {
+    approve = false,
+    hooks = false,
+    agents = false,
+    disable = false,
+    personal = false,
+  } = {},
 ) {
   const p = read(workspace, id);
-  if (
-    !disable &&
-    (!approve ||
-      policy?.features?.skillPacks !== true ||
-      !policy.skillPacks?.approvedDigests?.includes(p.digest))
-  )
-    throw new Error("PACK_APPROVAL_REQUIRED");
+  if (!disable && !approve) throw new Error("PACK_APPROVAL_REQUIRED");
+  if (!disable && personal) {
+    if (policy?.features?.staffSkills === false) throw new Error("PACK_PERSONAL_DISABLED");
+    if (!personalUse(p, policy)) throw new Error("PACK_REVIEW_FAILED");
+  } else if (!disable && !adminApproved(p, policy)) throw new Error("PACK_APPROVAL_REQUIRED");
   const state = {
     digest: p.digest,
     enabled: !disable,
-    hooks: hooks === true && !disable,
-    agents: agents === true && !disable,
+    ...(personal && !disable ? { personal: true } : {}),
+    hooks: hooks === true && !disable && !personal,
+    agents: agents === true && !disable && !personal,
   };
   const temp = join(p.folder, "enabled-" + randomUUID() + ".tmp");
   writeFileSync(temp, JSON.stringify(state), { flag: "wx", mode: 0o600 });
@@ -378,6 +433,7 @@ export function packAsset(workspace, id, assetId, kind, policy) {
     kind === "skill" ? p.manifest.skills : p.manifest.agents || []
   ).find((a) => a.id === assetId);
   if (!asset) throw new Error("PACK_ASSET_INVALID");
+  recordUse(p.folder);
   return {
     text: p.files.get(asset.path).toString("utf8"),
     label: id + "/" + assetId,
