@@ -193,6 +193,8 @@ export type Message = {
   check?: { unsupported: { claim: string; reason: string }[] };
   /** Files the AI wrote in this answer: applied to the workspace, or staged for review in the changes tab (id). */
   written?: { path: string; id: string; status: 'applied' | 'staged' }[];
+  /** The note a drafting run leaves in chat; the document itself is the proposal, so this is never opened as one. */
+  draftSummary?: boolean;
 };
 /** A file sent in a chat: its checked, masked text stays with the conversation. */
 export type ConversationFile = { name: string; text: string; at: string };
@@ -241,6 +243,8 @@ export type Session = {
   followUps?: string[];
   /** Index of the first message in the current task boundary inside this Workspace session. */
   contextStart?: number;
+  /** A document's own request, set aside while chat turns answer beside it; the next document edit resumes it. */
+  documentTask?: { originalQuery: string; answers: string[]; followUps: string[]; skill?: string; contextStart?: number };
   model?: string;
   effort?: string;
   pinned?: boolean;

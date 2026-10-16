@@ -3254,6 +3254,8 @@ async function main() {
         const image = documentAssets.load(inputText(input.id, 60), inputText(input.assetId, 60));
         return { dataUrl: `data:${image.mime};base64,${image.bytes.toString('base64')}` };
       }
+      case 'stageMessage':
+        return store.stageMessage(inputText(input.id, 60), Number(input.index));
       case 'edit':
         return store.edit(inputText(input.id, 60), inputText(input.text, 150000), input.revision, input.document, input.presentation);
       case 'accept':
