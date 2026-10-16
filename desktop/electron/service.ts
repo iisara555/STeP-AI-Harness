@@ -30,7 +30,7 @@ import { mainLocale, tm } from './i18n';
 import { internalSystemFor, internalSystemRule } from './internal-systems';
 import { workflowRule } from './workflows';
 import { documentTool, type DocumentToolId } from '../src/document-tools';
-import { documentToolRule, isDocumentFieldReply, documentRevisionMarkdown } from './document-tools';
+import { documentToolRule, isDocumentQuestion, documentRevisionMarkdown } from './document-tools';
 import { combineUsage } from './usage';
 import { promptMetrics } from './prompt-metrics';
 import { selfContainedText } from './text-intent';
@@ -397,6 +397,17 @@ export class WorkService {
     const masked = (value: string) => this.harness.privacy(value, { allowedIdentifiers: allowed }).redactedText;
     const text = outgoing(input, reviewed);
     let session = this.store.session(id);
+    // A document from the drafting page stays the task of its session: a typed draft-mode message edits it, whatever
+    // its wording, until a new document is started. A question about it is answered in chat and leaves it unchanged.
+    const besideDocument = !selectedDocument && !skill && Boolean(documentTool(session.documentTool));
+    if (besideDocument && mode === 'draft' && session.documentTask) {
+      // A chat turn set this document's own request aside; editing it again resumes that request and its Skill.
+      Object.assign(session, session.documentTask);
+      delete session.documentTask;
+    }
+    const documentTask = besideDocument && mode === 'draft' && Boolean(session.draft.trim() || session.proposals.length);
+    const documentQuestion = documentTask && !attachmentText && isDocumentQuestion(session.documentTool, text);
+    if (documentQuestion) mode = 'chat';
     // Chat is one continuous conversation. Drafts keep task boundaries so an unrelated task starts clean.
     const chat = mode === 'chat';
     const workspaceDir = this.harness.memoryDir?.() || this.store.settings().workspace;
@@ -420,17 +431,9 @@ export class WorkService {
           : plainDraft;
     const pending = session.proposals.at(-1),
       working = pending && pending.baseRevision === baseRevision ? masked(pending.text) : draft;
-    // A labeled field value is an edit within a selected document, even without an edit verb.
-    // Explicit new tools/Skills, new source files and chat turns keep their normal task boundaries.
-    if (
-      !chat &&
-      session.mode === 'draft' &&
-      !selectedDocument &&
-      !skill &&
-      !incomingSource &&
-      working.trim() &&
-      isDocumentFieldReply(session.documentTool, text)
-    ) {
+    // Any draft-mode message in a document task (a field value, "ใส่งบ 5 แสน", "ตรงหัวข้อ 5 ช่วยแก้…") edits that
+    // document, with or without an edit verb. Explicit new tools/Skills and chat turns keep their task boundaries.
+    if (!chat && documentTask && !clarification && working.trim()) {
       policy = { ...policy, history: 'relevant-only', carryover: true, revision: true, inferred: false };
     }
     let carriesPrevious = hadTask && policy.carryover;
@@ -523,13 +526,26 @@ export class WorkService {
         // A source-reference question may keep the reviewed source/history, but it
         // is still routed from the latest request. Only an edit/resume request, or a
         // message that only points at a file, keeps the prior route.
+        // A chat turn beside a document answers on its own route but keeps the document, its template and checks.
+        const keepDocument = chat && besideDocument;
+        if (keepDocument && !session.documentTask)
+          session.documentTask = {
+            originalQuery: session.originalQuery,
+            answers: session.answers,
+            followUps: session.followUps || [],
+            skill: session.skill,
+            contextStart: session.contextStart,
+          };
+        if (!keepDocument) delete session.documentTask;
         session.originalQuery = text;
         session.answers = [];
         session.followUps = [];
         session.skill = skill || undefined;
-        session.documentTool = selectedDocument?.id;
-        session.documentTemplate = selectedDocument ? options.documentTemplate : undefined;
-        delete session.documentReview;
+        if (!keepDocument) {
+          session.documentTool = selectedDocument?.id;
+          session.documentTemplate = selectedDocument ? options.documentTemplate : undefined;
+          delete session.documentReview;
+        }
         session.contextStart = session.messages.length;
         delete session.checkpoint;
         delete session.approvedPlan;
@@ -543,7 +559,7 @@ export class WorkService {
     }
     const latest = retrying && options.retry ? session.lastRun?.latest || text : text;
     session.lastRun = { revising, carries: carriesPrevious, continuing, latest };
-    session.mode = mode;
+    session.mode = documentQuestion ? 'draft' : mode;
     session.title = session.title === 'งานใหม่' ? taskTitle(text) : session.title;
     session.status = 'running';
     this.store.save(session);
@@ -1321,6 +1337,7 @@ export class WorkService {
         role: 'assistant',
         text: chat ? handoff : draftSummary(handoff, working, skillTitle, revising ? (session.followUps || []).at(-1) || '' : ''),
         at: new Date().toISOString(),
+        ...(chat ? {} : { draftSummary: true }),
         ms: Date.now() - started,
         ...(docSources.length ? { docSources } : {}),
         ...(written.size ? { written: [...written.values()] } : {}),

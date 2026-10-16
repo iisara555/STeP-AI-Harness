@@ -169,7 +169,7 @@ test('every document tool loads actual Skill files, mandatory rules and its temp
   }
 });
 
-test('revisions and retries retain the selected Skill/template; a new task drops them', async () => {
+test('revisions, retries and chat turns beside the document retain the selected Skill/template', async () => {
   const { store, session, harness } = fixture();
   harness.contextPolicy = text =>
     text === 'ปรับภาษาให้ชัดขึ้น' ? { history: 'relevant-only', carryover: true, revision: true } : { history: 'ignore', carryover: false };
@@ -207,9 +207,10 @@ test('revisions and retries retain the selected Skill/template; a new task drops
   assert.equal(store.session(session.id).documentTool, 'project');
   assert.deepEqual(store.session(session.id).documentTemplate, template);
   assert.ok(seen.slice(0, 3).every(s => s.includes('Working template — ข้อเสนอโครงการ')));
+  // A chat answer beside the document runs without its contract; the document stays for the next edit.
   await service.run(session.id, 'ช่วยอธิบายคำว่า innovation', '', true, undefined, 'chat');
-  assert.equal(store.session(session.id).documentTool, undefined);
-  assert.equal(store.session(session.id).documentTemplate, undefined);
+  assert.equal(store.session(session.id).documentTool, 'project');
+  assert.deepEqual(store.session(session.id).documentTemplate, template);
   assert.ok(!seen.at(-1)?.includes('<document_tool_contract>'));
   store.close();
 });
@@ -277,7 +278,8 @@ test('field replies revise the current document with its original Skill, templat
     assert.ok(systems.every(s => !s.includes('SYNTHETIC_CHAT_NAME') && !s.includes('Conversation style for chat text')));
     assert.ok(systems.every(s => s.includes('current_draft') && s.includes('unrequested')));
     await service.run(session.id, 'อธิบายคำว่า innovation', '', true, undefined, 'chat');
-    assert.equal(store.session(session.id).documentTool, undefined, 'unrelated tasks still start clean');
+    assert.ok(!systems.at(-1)!.includes('<document_tool_contract>'), 'a chat answer beside the document is not a document run');
+    assert.equal(store.session(session.id).documentTool, 'project', 'the document stays for later edits');
   } finally {
     store.close();
   }

@@ -5,13 +5,17 @@ const OUTPUT_TAG = /<\/?document_(?:draft|review)\b[^>]*>/gi;
 const REVIEW_HEADING =
   /^(?:ตรวจข้อมูล(?:และแหล่งที่ขาด)?(?:ก่อนเสนอ)?|ผลตรวจ(?:ร่าง|เอกสาร|รูปแบบ)?|ตารางผลตรวจ|ตารางการตรวจสอบความสอดคล้องตามมาตรฐานงานสารบรรณ|รายการข้อมูลที่ต้องยืนยัน(?:เพิ่มเติม)?(?:ก่อนเสนองาน)?|ข้อมูลที่ต้องยืนยัน|ประเด็นค้าง\s*\/\s*ตรวจข้อมูล|Skill Verification|Unresolved Fields|Next Steps)(?:\s|\(|$)/i;
 
+// A chat opener ("ได้ครับ ผมแก้ไขให้แล้วดังนี้") or closer ("หากต้องการปรับเพิ่มบอกได้เลยครับ") around a document.
+const OPENER = /^(?:ได้ครับ|ได้ค่ะ|ได้เลย|นี่คือ|ต่อไปนี้|จัดทำร่าง|แน่นอน|ผม(?:ได้)?(?:แก้|ปรับ)|ดิฉัน(?:ได้)?(?:แก้|ปรับ))/;
+const CLOSER =
+  /^(?:(?:หาก|ถ้า)(?:ต้องการ|มี|อยาก)[^\n]*(?:บอก|แจ้ง|ปรับ|แก้|ช่วย)|หวังว่า|ยินดี(?:ช่วย|ปรับ|แก้)|มีอะไรให้ช่วย|ต้องการให้(?:ผม|ดิฉัน))/;
+
 function separateLegacy(text: string): DocumentOutput {
   const lines = text.split('\n');
-  const start = lines.findIndex(line => /^\s*#{1,3}\s+(?:ร่าง|บันทึกข้อความ|รายงานการประชุม|ขอบเขตของงาน|ข้อเสนอโครงการ)/.test(line));
+  let start = lines.findIndex(line => /^\s*#{1,3}\s+(?:ร่าง|บันทึกข้อความ|รายงานการประชุม|ขอบเขตของงาน|ข้อเสนอโครงการ)/.test(line));
+  if (start <= 0) start = lines.findIndex(line => /^\s*#{1,3}\s+\S/.test(line));
   // A later document-like heading is not permission to discard real opening paragraphs or tables.
-  const preface =
-    start > 0 &&
-    lines.slice(0, start).every(line => !line.trim() || /^(?:ได้ครับ|ได้ค่ะ|นี่คือ|ต่อไปนี้|จัดทำร่าง|แน่นอน)/.test(line.trim()));
+  const preface = start > 0 && lines.slice(0, start).every(line => !line.trim() || OPENER.test(line.trim()));
   const from = preface ? start : 0;
   const check = lines.findIndex(
     (line, index) =>
@@ -23,12 +27,16 @@ function separateLegacy(text: string): DocumentOutput {
           .trim(),
       ),
   );
+  // A closing offer after the document belongs to the review too.
+  let end = check < 0 ? lines.length : check;
+  let tail = end;
+  while (tail > from && (!lines[tail - 1].trim() || CLOSER.test(lines[tail - 1].trim()))) tail--;
+  if (lines.slice(tail, end).some(line => CLOSER.test(line.trim()))) end = tail;
   return {
-    draft: lines
-      .slice(from, check < 0 ? undefined : check)
+    draft: lines.slice(from, end).join('\n').trim(),
+    review: [...lines.slice(0, from), ...lines.slice(end, check < 0 ? undefined : check), ...(check < 0 ? [] : lines.slice(check))]
       .join('\n')
       .trim(),
-    review: [...lines.slice(0, from), ...(check < 0 ? [] : lines.slice(check))].join('\n').trim(),
   };
 }
 

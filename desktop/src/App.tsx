@@ -1828,22 +1828,27 @@ export default function App() {
                         >
                           <Copy size={15} />
                         </button>
-                        <button
-                          className="icon"
-                          aria-label={t('เปิดใน Output')}
-                          title={t('เปิดใน Output')}
-                          onClick={() =>
-                            void action(async () => {
-                              await save();
-                              await api.call('edit', { id: session.id, text: message.text, revision: session.revision });
-                              await refresh();
-                              setToolTab('output');
-                              setRight(true);
-                            })
-                          }
-                        >
-                          <FileText size={15} />
-                        </button>
+                        {/* A drafting run's note is not a document; the draft itself is already in Output. */}
+                        {!message.draftSummary && (
+                          <button
+                            className="icon"
+                            aria-label={t('เปิดใน Output')}
+                            title={t('เปิดใน Output')}
+                            onClick={() =>
+                              void action(async () => {
+                                await save();
+                                // In a document task the answer becomes a proposal to compare, never a direct overwrite.
+                                await api.call('stageMessage', { id: session.id, index });
+                                await refresh();
+                                setToolTab('output');
+                                setRight(true);
+                                if (session.documentTool) notify(t('ส่งเป็นข้อเสนอแล้ว เทียบกับร่างแล้วกด “ใช้ร่างนี้”'), 'info');
+                              })
+                            }
+                          >
+                            <FileText size={15} />
+                          </button>
+                        )}
                         <FeedbackButtons
                           sessionId={session.id}
                           index={index}
@@ -2167,7 +2172,13 @@ export default function App() {
                   <textarea
                     ref={composerRef}
                     aria-label={t('พิมพ์คำขอ')}
-                    placeholder={forced ? t('บอกงานสำหรับ {0}…', forced.title) : t('พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill')}
+                    placeholder={
+                      forced
+                        ? t('บอกงานสำหรับ {0}…', forced.title)
+                        : session?.documentTool && workMode === 'draft'
+                          ? t('พิมพ์สิ่งที่อยากแก้ในเอกสารนี้ เช่น ระยะเวลาดำเนินการ 90 วัน หรือถามเกี่ยวกับร่างได้')
+                          : t('พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill')
+                    }
                     value={query}
                     onChange={e => {
                       setQuery(e.target.value);
@@ -2285,7 +2296,9 @@ export default function App() {
                       </optgroup>
                       {/* Chat writes documents too (open in Output, or file changes), like other AI apps; the separate
                         drafting mode stays only for tasks that already use it and for multi-worker drafting. */}
-                      {(workMode === 'draft' || snapshot.policy?.features.coordinator) && <option value="draft">{t('สร้างเอกสาร')}</option>}
+                      {(workMode === 'draft' || session?.documentTool || snapshot.policy?.features.coordinator) && (
+                        <option value="draft">{session?.documentTool ? t('แก้เอกสารนี้') : t('สร้างเอกสาร')}</option>
+                      )}
                       <option value="image">{t('สร้างรูป')}</option>
                     </select>
                     {snapshot.policy && (

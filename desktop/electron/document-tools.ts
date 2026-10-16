@@ -17,23 +17,17 @@ export function documentRevisionMarkdown(document: DraftNode, safePlain: string,
   return documentText(safe) === safePlain ? documentMarkdown(safe) : safePlain;
 }
 
-/** Recognize a field reply only within an already selected document task. */
-export function isDocumentFieldReply(id: unknown, text: string): boolean {
-  const profile = documentTool(id);
-  if (!profile) return false;
+// A question ends with a Thai question word or "?", or opens with one. "…ได้ไหม" and edit words make it a polite request.
+const QUESTION =
+  /(?:[?？]|ไหม|มั้ย|หรือเปล่า|รึเปล่า|หรือไม่|อะไร|ยังไง|อย่างไร|เท่าไร|เท่าไหร่|ทำไม|ใคร|เมื่อไร|เมื่อไหร่|ที่ไหน|ตรงไหน|แบบไหน|มาจากไหน|หรอ|เหรอ)(?:\s*(?:ครับ|ค่ะ|คะ|คับ|จ้ะ|จ้า|นะ|ฮะ))*\s*[?？]?\s*$|^\s*(?:ทำไม|อะไร|ใคร|อธิบาย|why\b|what\b|how\b)/i;
+const REQUEST =
+  /ช่วย|ขอ|อยากให้|รบกวน|ใส่|เพิ่ม|แก้|ปรับ|เปลี่ยน|ตัด|ลบ|เติม|ย้าย|ทำให้|เขียน|ให้เป็น|ได้\s*(?:ไหม|มั้ย|หรือเปล่า|รึเปล่า|หรือไม่)/;
+
+/** A question about the selected document, answered in chat without touching the draft. */
+export function isDocumentQuestion(id: unknown, text: string): boolean {
   const value = text.trim();
-  return profile.fields.some(field =>
-    field.label.split('/').some(part => {
-      const label = part
-        .replace(/\s*\([^)]*\)/g, '')
-        .replace(/ที่มีหลักฐาน|ที่ตกลงแล้ว/g, '')
-        .trim();
-      if (!label || !value.startsWith(label)) return false;
-      const rest = value.slice(label.length);
-      // Thai project/document titles are often entered without a separator.
-      return Boolean(rest.trim()) && (field.key === 'title' || /^[\s:：]/.test(rest));
-    }),
-  );
+  if (!documentTool(id) || !value) return false;
+  return QUESTION.test(value) && !REQUEST.test(value);
 }
 
 /** Trusted task constraints supplement, rather than replace, the loaded Skill procedures. */

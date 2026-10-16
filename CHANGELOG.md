@@ -6,6 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Keep a drafted document (TOR, memo, letter, project, minutes) as the task of its chat: anything typed in the chat box in document mode now edits that document with its own Skill, template and output contract, with or without an edit verb (before, "ใส่งบประมาณ 500,000 บาท" or "ตรงหัวข้อ 5 ช่วยแก้…" started a new task, dropped the document tool and stored the AI's chat reply as the draft). A question about the draft is answered in chat and leaves the draft unchanged; chat turns beside the document keep it for later edits. "เปิดใน Output" on an answer now stages a proposal without the conversation around it, keeps headings and tables, and is hidden on drafting-run notes.
 - Send images and scanned-PDF pages to OpenAI- and Anthropic-compatible services (OpenRouter, Qwen, MiniMax, Ollama and others) as standard image parts; a model that refuses them reports "cannot take images" instead of a generic failure. Gemini through Antigravity stays text-only (agy 1.3.2 `stream-json` input accepts only text blocks), so images and scanned PDFs attached under it use on-device OCR text, or the chip says what to change. Scanned PDFs may now have up to 30 pages (pages past 20 are drawn at 1280 px).
 
 ## Desktop v0.6.10 (2026-10-15)

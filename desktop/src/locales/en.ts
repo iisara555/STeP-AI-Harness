@@ -689,6 +689,10 @@ export const en: Record<string, string> = {
   'แหล่งข้อมูลจาก Web Search': 'Sources from Web Search',
   คัดลอก: 'Copy',
   'เปิดใน Output': 'Open in Output',
+  'ส่งเป็นข้อเสนอแล้ว เทียบกับร่างแล้วกด “ใช้ร่างนี้”': 'Added as a proposal. Compare it with the draft, then select “Use this draft”',
+  แก้เอกสารนี้: 'Edit this document',
+  'พิมพ์สิ่งที่อยากแก้ในเอกสารนี้ เช่น ระยะเวลาดำเนินการ 90 วัน หรือถามเกี่ยวกับร่างได้':
+    'Type what to change in this document, e.g. a 90-day duration, or ask about the draft',
   ตรวจ: 'Review',
   'การใช้งาน AI ถึงอย่างน้อย 80% ของงบที่ตั้งไว้': 'AI usage has reached at least 80% of the budget you set',
   ดูการใช้งาน: 'View usage',
