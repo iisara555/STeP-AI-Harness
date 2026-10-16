@@ -122,6 +122,7 @@ import { CostLedger } from './cost';
 import { ProviderUsage, usageDashboard } from './provider-usage';
 import { Memories, safeMemory } from './memory';
 import { Learning } from './learning';
+import { MAINTENANCE_EVERY_MS, findMaintenance, mergeBoard, moveItem } from './maintenance';
 import { DRAFT_SYSTEM, draftInput, parseDrafts } from './learning-draft';
 import { learningMetrics } from '../src/learning-metrics';
 import { proposalMarkdown, type SkillInfo } from './skill-proposal';
@@ -131,7 +132,7 @@ import { ocrAttachmentReport, ocrAttachmentSource } from './ocr-attachment';
 import { pdfPageImages } from './pdf-pages';
 import { isWorkflow } from './workflows';
 import { RECEIPT_VISION_SCHEMA, RECEIPT_VISION_SYSTEM } from '../src/receipt-vision';
-import type { Attachment, Connection, Provider, Session, Settings, VisionInput } from '../src/types';
+import type { Attachment, Connection, MaintenanceBoard, MaintenanceStatus, Provider, Session, Settings, VisionInput } from '../src/types';
 import { tm, useLanguage } from './i18n';
 import { readSharedProfile, sharedProfilePath, writeSharedProfile } from './shared-profile';
 
@@ -998,6 +999,38 @@ async function main() {
   harness.recordUsage = (connection, count) => ledger.record(connection, count);
   const memories = new Memories(store, data, () => policyState.policy, harness.privacy);
   const learning = new Learning(store, data, text => privacy.evaluatePrivacyGate(text));
+  // Step 6 of the agent-learning plan: a local daily check of what was learned, kept as a board per work folder and team.
+  const maintenanceFindings = async () =>
+    findMaintenance({
+      memories: await memories.list(),
+      lessons: learning.snapshot().lessons,
+      metrics: measureLessons().lessons,
+      packs: (() => {
+        try {
+          return listPacks(store.settings().workspace || data, policyState.policy);
+        } catch {
+          return [];
+        }
+      })(),
+    });
+  const maintenanceBoard = () => store.get<MaintenanceBoard>('maintenance', learning.context());
+  const runMaintenance = async () => {
+    const context = learning.context(),
+      findings = await maintenanceFindings();
+    if (context !== learning.context()) throw new Error('WORKSPACE_CHANGED');
+    const board = mergeBoard(store.get<MaintenanceBoard>('maintenance', context), findings);
+    store.put('maintenance', context, board);
+    return board;
+  };
+  const dueMaintenance = () => {
+    const checked = Date.parse(maintenanceBoard()?.checkedAt || '');
+    return !Number.isFinite(checked) || Date.now() - checked >= MAINTENANCE_EVERY_MS;
+  };
+  const maintenanceTimer = setInterval(() => {
+    if (policyState.policy.features.maintenance && dueMaintenance())
+      void runMaintenance().catch(error => diagnose('maintenance-failed', { code: errorCode(error) }));
+  }, 3600_000);
+  maintenanceTimer.unref?.();
   const workspaceContext = new WorkspaceContext(workbench, data, () => store.settings(), harness.privacy);
   harness.compactHook = async (event, id, before, after) => {
     const result = await fireHook({ event, sessionId: id, beforeTokens: before, afterTokens: after });
@@ -1815,6 +1848,24 @@ async function main() {
       case 'memoryDismiss':
         memories.dismiss(inputText(input.id, 60));
         return true;
+      case 'maintenanceList':
+        if (!policyState.policy.features.maintenance) return { enabled: false };
+        return { enabled: true, board: dueMaintenance() ? await runMaintenance() : maintenanceBoard() };
+      case 'maintenanceRun':
+        if (!policyState.policy.features.maintenance) throw new Error('FEATURE_DISABLED');
+        return { enabled: true, board: await runMaintenance() };
+      case 'maintenanceMove': {
+        if (!policyState.policy.features.maintenance) throw new Error('FEATURE_DISABLED');
+        const context = learning.context(),
+          board = maintenanceBoard();
+        if (!board) throw new Error('MAINTENANCE_NOT_FOUND');
+        const status = inputText(input.status, 20) as MaintenanceStatus;
+        // Done is checked again now: an item whose problem is still there goes back to "to do".
+        const moved = moveItem(board, inputText(input.id, 40), status, status === 'done' ? await maintenanceFindings() : []);
+        if (context !== learning.context()) throw new Error('WORKSPACE_CHANGED');
+        store.put('maintenance', context, moved.board);
+        return { enabled: true, board: moved.board, verified: moved.verified };
+      }
       case 'contextStyles':
         return workspaceContext.styles();
       case 'contextStyle': {

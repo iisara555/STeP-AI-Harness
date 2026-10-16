@@ -64,6 +64,9 @@
   และข้อ 1 อยู่ในคำสั่งของ AI ที่ร่างบทเรียน (`DRAFT_SYSTEM` ใน `desktop/electron/learning-draft.ts`)
   ส่วนข้อ 4 แอปเลือกระดับการคิดให้เอง (`desktop/electron/effort.ts`) เมื่อพนักงานไม่ได้เลือก
   และ IT ปิดได้ด้วย policy `features.autoEffort: false`
+  ส่วนข้อ 6 แอปตรวจความจำ บทเรียน และ Skill Pack บนเครื่องวันละครั้ง (`desktop/electron/maintenance.ts`)
+  แล้วแสดงเป็นบอร์ด ต้องทำ / กำลังแก้ / เสร็จแล้ว ในหน้าความจำ ไม่เรียก AI และไม่แก้หรือลบอะไรเอง
+  งานที่ย้ายเป็น "เสร็จแล้ว" จะถูกตรวจซ้ำทันที ถ้ายังพบปัญหาจะกลับไป "ต้องทำ" (ปิดได้ด้วย `features.maintenance: false`)
 - Coding agent ที่พัฒนา repository นี้: อ้างจาก `AGENTS.md`
 
 ดูเพิ่ม: `secret-safety.md`, `data-classification.md`

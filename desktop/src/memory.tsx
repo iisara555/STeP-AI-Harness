@@ -3,6 +3,7 @@ import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
 import type { DesktopAPI, MemoryEntry, MemoryProposal, Settings } from './types';
 import { localized, t } from './i18n';
+import { MaintenancePanel } from './maintenance';
 
 type Edit = Pick<MemoryEntry, 'name' | 'text' | 'type' | 'scope' | 'importance' | 'ttl_days'> & { id?: string; proposal?: boolean };
 const fresh = (): Edit => ({ name: '', text: '', type: 'user', scope: 'private', importance: 0.7, ttl_days: 0 });
@@ -23,7 +24,8 @@ export function MemoryDialog({
   const [data, setData] = useState<{ entries: MemoryEntry[]; proposals: MemoryProposal[]; teamEnabled: boolean }>(),
     [edit, setEdit] = useState<Edit>(),
     [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [version, setVersion] = useState(0);
   const load = async () => {
     setData(await api.call('memoryList'));
   };
@@ -38,6 +40,7 @@ export function MemoryDialog({
       await run();
       await load();
       await refresh();
+      setVersion(v => v + 1);
     } catch (e) {
       setError(explainError(e));
     } finally {
@@ -57,6 +60,7 @@ export function MemoryDialog({
         )}
       </p>
       {error && <p role="alert">{error}</p>}
+      <MaintenancePanel api={api} version={version} />
       {!edit && (
         <button className="quiet" disabled={busy} onClick={() => setEdit(fresh())}>
           {t('เพิ่มความจำ')}

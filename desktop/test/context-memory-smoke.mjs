@@ -139,6 +139,27 @@ try {
   await expect(memory.getByLabel('ข้อความความจำ', { exact: true })).toHaveCount(0);
   await expect(memory.getByLabel('รูปแบบคำตอบ', { exact: true })).toHaveCount(0);
   await expect(memory.getByRole('button', { name: 'แก้ไข', exact: true })).toBeEnabled();
+  // Maintenance board (step 6 of the agent-learning plan): a near-duplicate memory shows up as a to-do, and "done" is
+  // only kept once the check no longer finds it.
+  await memory.getByRole('button', { name: 'งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง', exact: true }).click();
+  await memory.getByRole('button', { name: 'เพิ่มความจำ', exact: true }).click();
+  await memory.getByLabel('ชื่อความจำ', { exact: true }).fill('Source preference copy');
+  await memory.getByLabel('ข้อความความจำ', { exact: true }).fill('Prefer concise responses and identify missing evidence!');
+  await memory.getByRole('button', { name: 'ยืนยันบันทึกความจำ', exact: true }).click();
+  await memory.getByRole('button', { name: 'ตรวจตอนนี้', exact: true }).click();
+  const duplicate = memory.locator('.maintenance-item', { hasText: 'Source preference copy' });
+  await expect(duplicate).toContainText('ความจำสองรายการเนื้อหาเกือบเหมือนกัน');
+  await duplicate.getByRole('button', { name: 'แก้แล้ว ตรวจอีกครั้ง', exact: true }).click();
+  await expect(memory.getByRole('status')).toContainText('ยังพบปัญหาเดิม');
+  await expect(duplicate).toContainText('เคยย้ายเป็นเสร็จแล้ว แต่ยังพบปัญหาเดิม');
+  await page.screenshot({ path: 'release/qa/maintenance-board.png' });
+  await memory
+    .locator('.memory-item', { hasText: 'Source preference copy' })
+    .getByRole('button', { name: 'ลบความจำ', exact: true })
+    .click();
+  await duplicate.getByRole('button', { name: 'แก้แล้ว ตรวจอีกครั้ง', exact: true }).click();
+  await expect(duplicate).toContainText('ยืนยันแล้วว่าแก้ครบ');
+  await expect(memory.getByRole('button', { name: 'แก้ไข', exact: true })).toHaveCount(1);
   await page.screenshot({ path: 'release/qa/phase3-memory.png' });
   await memory.getByRole('button', { name: 'ปิด', exact: true }).click();
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
@@ -319,6 +340,7 @@ try {
         synthetic: true,
         compaction: true,
         memoryCrud: true,
+        maintenanceBoard: true,
         piiRejected: true,
         fts: true,
         fork: true,

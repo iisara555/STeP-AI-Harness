@@ -749,6 +749,42 @@ export const en: Record<string, string> = {
   'โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'The model for this task — change it any time',
   'ค่าเริ่มต้น ({0})': 'Default ({0})',
   อัตโนมัติตามขนาดงาน: 'Auto by task size',
+  'ความจำหมดอายุแล้ว: ลบ หรือแก้ข้อความแล้วตั้งอายุใหม่': 'Memory expired: delete it, or edit it and set a new lifetime',
+  'ความจำไม่ได้ทบทวนเกิน 180 วัน: ตรวจว่ายังจริงอยู่ไหม แล้วแก้หรือลบ':
+    'Memory not reviewed for over 180 days: check it is still true, then edit or delete it',
+  'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลข PR/ticket หรือ log): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร':
+    'Memory holds short-lived data (task progress, PR/ticket numbers or logs): delete it, or rewrite it as a lasting fact',
+  'ความจำสองรายการเนื้อหาเกือบเหมือนกัน: รวมเป็นรายการเดียว แล้วลบอีกรายการ':
+    'Two memories say almost the same thing: merge them into one and delete the other',
+  'บทเรียนนี้ยังต้องแก้เรื่องเดิมซ้ำ: เขียนบทเรียนให้ชัดขึ้นในกล่องบทเรียน':
+    'The same thing still had to be corrected after this lesson: make the lesson clearer in the Learning Inbox',
+  'คำตอบที่ใช้บทเรียนนี้ถูกกด "ต้องแก้" บ่อยกว่า "ดี": ทบทวนหรือปิดบทเรียน':
+    'Answers using this lesson were marked "Needs fixing" more often than "Good": review or turn off the lesson',
+  'บทเรียนนี้ไม่ถูกใช้เกิน 90 วัน: ปิดถ้าไม่จำเป็นแล้ว':
+    'This lesson has not been used for over 90 days: turn it off if it is no longer needed',
+  'บทเรียนเก็บข้อมูลชั่วคราว: แก้ให้เหลือแต่วิธีทำงานที่ใช้ซ้ำได้':
+    'Lesson holds short-lived data: edit it down to the reusable way of working',
+  'บทเรียนสองข้อเนื้อหาเกือบเหมือนกัน: รวมเป็นข้อเดียว แล้วปิดอีกข้อ':
+    'Two lessons say almost the same thing: merge them into one and turn off the other',
+  'Skill Pack ที่ติดตั้งอ่านไม่ได้: นำเข้าใหม่หรือลบออก': 'An installed Skill Pack cannot be read: import it again or remove it',
+  'Skill Pack ที่เปิดใช้มีผลตรวจที่ต้องแก้: เปิดผลตรวจใน Skill Pack แล้วแก้ไฟล์ Skill':
+    'An enabled Skill Pack has review findings to fix: open its review in Skill Packs and fix the Skill files',
+  ต้องทำ: 'To do',
+  กำลังแก้: 'In progress',
+  'ตรวจอีกครั้งแล้วยังพบปัญหาเดิม จึงย้ายกลับไป "ต้องทำ"': 'Checked again and the problem is still there, so it moved back to "To do"',
+  'งานดูแลความจำ บทเรียน และ Skill ({0})': 'Memory, lesson and Skill upkeep ({0})',
+  'งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง': 'Memory, lesson and Skill upkeep: nothing to do',
+  'แอปตรวจบนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลไปที่ใด และไม่แก้หรือลบอะไรเอง แก้ที่ความจำ บทเรียน หรือ Skill Pack แล้วย้ายเป็น "เสร็จแล้ว" แอปจะตรวจซ้ำทันที':
+    'The app checks on this computer once a day, sends nothing anywhere and never edits or deletes anything itself. Fix the memory, lesson or Skill Pack, then move the item to "Done" and the app checks it again at once.',
+  'ตรวจล่าสุด {0}': 'Last checked {0}',
+  ตรวจตอนนี้: 'Check now',
+  'เคยย้ายเป็นเสร็จแล้ว แต่ยังพบปัญหาเดิม': 'Moved to done earlier, but the problem is still there',
+  ตรวจแล้วไม่พบปัญหานี้แล้ว: 'A check no longer finds this problem',
+  ยืนยันแล้วว่าแก้ครบ: 'Confirmed fixed',
+  เริ่มทำ: 'Start',
+  'แก้แล้ว ตรวจอีกครั้ง': 'Fixed, check again',
+  ไม่ต้องทำ: 'Skip',
+  'ตรวจความจำ บทเรียน และ Skill ทุกวัน': 'Daily check of memories, lessons and Skills',
   'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล':
     'Auto: a short chat question uses Low; a large task (several steps, plan mode, a long request or many files) uses High; other tasks use the model default',
   ค่าเริ่มต้น: 'Default',

@@ -42,6 +42,8 @@ Each answer has **Good**, **Needs fixing** and **Remember this** buttons:
 
 Relevance selects at most five confirmed, unexpired memories using lexical overlap, importance and durable user preferences. Selection uses local computation. Autodream is a bounded local background queue after completed tasks: it proposes only conservative response preferences from user messages. It never learns assistant claims, server addresses, credentials, names or financial facts, and makes no additional provider call. This deliberately adapts [OpenHarness personalization extraction](https://github.com/HKUDS/OpenHarness/blob/main/src/openharness/personalization/extractor.py) to STeP evidence and privacy discipline.
 
+Upkeep board: once a day, and when the Memory dialog opens after a day, a local check (`desktop/electron/maintenance.ts`, no model call) lists memories that expired, were not reviewed for 180 days, hold short-lived text or nearly duplicate another, plus lessons and enabled Skill Packs that need review. The Memory dialog shows them as ต้องทำ / กำลังแก้ / เสร็จแล้ว, kept per work folder and team. The board never edits or deletes; the employee fixes the item, then "แก้แล้ว ตรวจอีกครั้ง" re-runs the check and only keeps it done if the problem is gone. Policy `features.maintenance: false` turns it off.
+
 Managed policy example:
 
 ```json

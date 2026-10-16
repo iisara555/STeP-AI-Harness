@@ -41,6 +41,7 @@ export const FEATURES = [
   'ocrTrial',
   'answerCheck',
   'autoEffort',
+  'maintenance',
   'developmentMode',
   'vault',
   'googleWorkspace',
@@ -209,6 +210,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // Playbook, plan mode, a long request or many files) a deeper one, within the levels the model offers (electron/effort.ts).
   // The employee's choice always wins. IT can set it to false to always use the model default.
   autoEffort: true,
+  // A daily local check of memories, lessons and Skill Packs (expired, duplicated, short-lived, corrected again, failing
+  // review) shown as a to-do / doing / done board in the Memory dialog. No model call; it never changes anything itself.
+  maintenance: true,
   vault: true,
   googleWorkspace: true,
 };

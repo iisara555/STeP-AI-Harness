@@ -478,3 +478,37 @@ declare global {
     step?: DesktopAPI;
   }
 }
+/** Maintenance board (electron/maintenance.ts): local checks of memories, lessons and Skill Packs, no model call. */
+export type MaintenanceKind =
+  | 'memory-expired'
+  | 'memory-stale'
+  | 'memory-ephemeral'
+  | 'memory-duplicate'
+  | 'lesson-repeated'
+  | 'lesson-fix'
+  | 'lesson-unused'
+  | 'lesson-ephemeral'
+  | 'lesson-duplicate'
+  | 'pack-invalid'
+  | 'pack-review';
+export type MaintenanceFinding = {
+  id: string;
+  kind: MaintenanceKind;
+  area: 'memory' | 'lesson' | 'skill';
+  /** What the item is about (`memory:scope:id`, `lesson:id`, `pack:id`); two for a duplicate pair. */
+  targets: string[];
+  name: string;
+  count?: number;
+};
+export type MaintenanceStatus = 'todo' | 'doing' | 'done' | 'dismissed';
+export type MaintenanceItem = MaintenanceFinding & {
+  status: MaintenanceStatus;
+  foundAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  /** check: a later check no longer found it; person: moved to done and the check agreed. */
+  resolvedBy?: 'check' | 'person';
+  /** Marked done earlier, but the check still finds the problem. */
+  reopened?: boolean;
+};
+export type MaintenanceBoard = { checkedAt: string; items: MaintenanceItem[] };
