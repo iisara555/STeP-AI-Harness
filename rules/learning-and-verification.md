@@ -68,5 +68,7 @@
   แล้วแสดงเป็นบอร์ด ต้องทำ / กำลังแก้ / เสร็จแล้ว ในหน้าความจำ ไม่เรียก AI และไม่แก้หรือลบอะไรเอง
   งานที่ย้ายเป็น "เสร็จแล้ว" จะถูกตรวจซ้ำทันที ถ้ายังพบปัญหาจะกลับไป "ต้องทำ" (ปิดได้ด้วย `features.maintenance: false`)
 - Coding agent ที่พัฒนา repository นี้: อ้างจาก `AGENTS.md`
+- พื้นที่งานของพนักงานที่ติดตั้งด้วย `step-ai init` / `update`: ไฟล์คำสั่งของทุกโปรแกรม AI (AGENTS.md, CLAUDE.md, GEMINI.md ฯลฯ)
+  อ้างกฎนี้ (`src/modules/router/router-prompt.js`)
 
 ดูเพิ่ม: `rules/secret-safety.md`, `rules/data-classification.md`

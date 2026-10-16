@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Employee workspaces installed by `step-ai init` / `update` now tell every AI app (AGENTS.md, CLAUDE.md, GEMINI.md and the others) to keep only lasting facts in memory and to cite real evidence before saying work is done, per `rules/learning-and-verification.md`, which the installer already copies. Found by the agent-learning deploy test: the rule reached the workspace but no instruction file pointed to it.
+
 - Add a daily upkeep check of what the assistant has learned, with a board in the Memory dialog (ต้องทำ / กำลังแก้ / เสร็จแล้ว). It runs on this computer with no model call and finds memories that expired, went unreviewed for 180 days, hold short-lived text or nearly duplicate another; lessons that still had to be corrected, were rated "Needs fixing" more than "Good", went unused for 90 days, hold short-lived text or duplicate another; and enabled Skill Packs that cannot be read or did not pass review. The board never edits or deletes anything; the employee fixes the item where it lives, and moving it to done checks again at once, sending it back if the problem is still there. IT can turn it off with `features.maintenance: false`.
 
 - Pick the reasoning level by task size when the employee leaves it on the default: a short chat question uses Low, a large task (several Playbook steps, plan mode, a long request, a long attachment or three or more files) uses High, and other work, including every document draft, keeps the model's default. Only levels the model offers are sent, the employee's own choice always wins, the level picker shows "อัตโนมัติตามขนาดงาน", and the run trace records the size and level. IT can turn it off with `features.autoEffort: false`.
