@@ -31,6 +31,8 @@ Run the checks for what you changed before saying a task is done, and say which 
 - UI or Electron main-process changes: also the relevant `node test/<name>-smoke.mjs` (Linux needs `xvfb-run -a`);
   CI runs the full `npm run test:electron` on macOS.
 - Harness (`src/`, `skills/`, `manifest/`): `npm test` and `python3 scripts/validate_repo.py` at the root.
+- Never say done without evidence from this task, and keep memory to stable facts (no PR numbers, run logs or
+  secrets); procedures belong in Skills. Full rule: [`rules/learning-and-verification.md`](rules/learning-and-verification.md).
 - A test that fails without your change too is not yours to skip: name it in the PR. Never disable or delete a test
   to get green. `desktop/test/office-skill-benefit.test.mjs` cannot run in cloud containers (no Office runtime).
 

@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Add the standing rule `rules/learning-and-verification.md` (owner's request): what may and may not be kept as memory, preferences from corrections, and no "done" without evidence. In Desktop, every run with tools now tells the AI to verify with a real tool result and cite it before saying work is done, or say what is unverified; the AI that drafts Learning Inbox lessons is told to drop short-lived facts (task progress, PR or run numbers, logs). `AGENTS.md` points coding agents to the same rule.
+
 ## Desktop v0.6.11 (2026-10-16)
 
 - Build the organization's Skill intake (the "Feedback & Skill Promoting" sheet's Apps Script, owner's request) into the app as the default `skillPacks.submitUrl`, so "เสนอให้องค์กรใช้" works on every computer without a policy file. A policy `submitUrl` still replaces it, and `features.staffSkills: false` removes the button.
