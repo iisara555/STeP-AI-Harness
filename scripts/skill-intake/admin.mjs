@@ -333,7 +333,7 @@ export function addToRepo(
     );
     for (const [relative, bytes] of skill.files) {
       const out = join(target, relative);
-      written.push(join("skills", namespace, skill.id, relative));
+      written.push(`skills/${namespace}/${skill.id}/${relative}`);
       if (!dryRun) {
         mkdirSync(dirname(out), { recursive: true });
         writeFileSync(out, bytes, { flag: "wx" });
