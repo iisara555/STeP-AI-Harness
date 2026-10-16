@@ -9,3 +9,5 @@ export function enablePack(workspace:string,id:string,policy:any,options?:any):a
 export function packAsset(workspace:string,id:string,assetId:string,kind:string,policy:any):{text:string;label:string;digest:string};
 export function enabledPackHooks(workspace:string,policy:any):any[];
 export function exportPack(workspace:string,id:string,destination:string,options?:any):any;
+export function promotionPayload(workspace:string,id:string,options?:{credit?:{name?:string;team?:string}}):{schema:1;pack:{id:string;version:string;digest:string;skills:string[]};review:{status:string;findings:any[]};usage:{count:number;lastUsedAt?:string};contributor:{name:string;team:string;uploadedAt:string};files:{path:string;text:string}[]};
+export function recordPromotion(workspace:string,id:string,options:{digest:string;reference?:string;credit?:{name?:string;team?:string}}):{digest:string;submittedAt:string;reference?:string};

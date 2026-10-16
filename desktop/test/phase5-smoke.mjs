@@ -65,7 +65,10 @@ const policy = {
       { name: 'Silent', baseUrl: silentUrl, protocol: 'openai' },
     ],
   },
-  skillPacks: { approvedDigests: [pack.digest] },
+  skillPacks: {
+    approvedDigests: [pack.digest],
+    submitUrl: 'https://script.google.com/macros/s/AKfycbSyntheticDeploymentId0123456789/exec',
+  },
   prices: { fixture: { input: 1, output: 2 } },
 };
 enablePack(workspace, pack.id, policy, { approve: true });
@@ -168,6 +171,8 @@ try {
   await expect(staff).toContainText('ผ่านการตรวจมาตรฐาน Skill v2 และความปลอดภัย');
   await expect(staff).toContainText('นำเข้าโดย พนักงานสังเคราะห์');
   await expect(staff.getByRole('button', { name: 'เลิกใช้เอง', exact: true })).toBeVisible();
+  // With an intake in policy, a Skill that passed the checks can be proposed for the organization.
+  await expect(staff.getByRole('button', { name: 'เสนอให้องค์กรใช้', exact: true })).toBeEnabled();
   await expect(staff.getByRole('button', { name: 'ใช้ skill: room-request', exact: true })).toBeEnabled();
   const copy = packs.locator('section').filter({ hasText: 'staff-room-copy' });
   await expect(copy.getByRole('button', { name: 'ใช้เองบนเครื่องนี้', exact: true })).toBeVisible();

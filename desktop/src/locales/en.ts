@@ -2566,6 +2566,23 @@ export const en: Record<string, string> = {
   'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้':
     'This Skill has not passed the checks; fix the listed items and import it again before using it',
   'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้': 'Your admin has turned off staff-made Skills on this computer',
+  เสนอให้องค์กรใช้: 'Propose for the organization',
+  'เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา': 'Proposed to the organization on {0}, waiting for the admins',
+  'ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้': 'Files changed since you proposed it on {0}; you can propose the new version',
+  'เลขที่ {0}': 'Reference {0}',
+  ส่งให้ผู้ดูแลพิจารณา: 'Send to the admins',
+  'เสนอ Skill นี้ให้องค์กรใช้': 'Propose this Skill for the organization',
+  '{0}\nระบบจะส่งไฟล์ Skill {1} ไฟล์ ผลตรวจ จำนวนครั้งที่ใช้ และชื่อผู้เสนอ ({2}{3}) ไปยังช่องทางรับ Skill ของผู้ดูแลที่ {4}\nผู้ดูแลจะตรวจก่อนเผยแพร่ และเมื่อเผยแพร่ ชื่อของคุณจะแสดงเป็นผู้ร่วมสร้าง':
+    "{0}\nThis sends the {1} Skill files, the check results, the use count and your name ({2}{3}) to the admins' Skill intake at {4}.\nThe admins review it before publishing, and once published your name is shown as a contributor.",
+  'เสนอให้องค์กรได้เฉพาะ Skill แบบข้อความที่ไม่มี Hooks หรือ Agent': 'Only text Skills without hooks or agents can be proposed',
+  'ยังไม่มีชื่อผู้เสนอ กรุณาใส่ชื่อในการตั้งค่าโปรไฟล์ก่อนเสนอ': 'Add your name in the profile settings before proposing a Skill',
+  'ไฟล์ Skill เปลี่ยนระหว่างส่ง กรุณาเปิดรายการใหม่แล้วลองอีกครั้ง': 'The Skill files changed while sending. Reopen the list and try again',
+  'ผู้ดูแลยังไม่ได้ตั้งช่องทางรับ Skill ที่เสนอให้องค์กร': 'Your admins have not set up the Skill intake yet',
+  'Skill นี้ใหญ่เกินกว่าจะส่งทางช่องทางนี้ กรุณาติดต่อผู้ดูแล': 'This Skill is too large for the intake. Contact your admins',
+  'ส่งไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง': 'Sending failed. Check the internet connection and try again',
+  'ช่องทางรับ Skill ไม่รับคำขอนี้ กรุณาติดต่อผู้ดูแล': 'The Skill intake refused this submission. Contact your admins',
+  'พบข้อมูลส่วนบุคคลหรือรหัสลับในไฟล์ Skill จึงยังส่งไม่ได้ กรุณาแก้ไฟล์แล้วนำเข้าใหม่':
+    'The Skill files contain personal data or a secret, so they cannot be sent. Fix the files and import again',
   'ใช้แล้ว {0} ครั้ง': 'Used {0} times',
   'ล่าสุด {0}': 'last {0}',
   เลิกใช้เอง: 'Stop using',
