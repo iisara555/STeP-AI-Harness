@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-16_
 
 ## Latest release
 
@@ -30,6 +30,8 @@ _Last updated: 2026-10-15_
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Verified stability guards (2026-10-16, follow-up to #179)**: credential-only filtering now runs before the privacy-off tool-result return without adding result-consent dialogs; Google connect rechecks cancellation before storing credentials/accounts; fresh Codex/Gemini RPCs are closed on cancel and Gemini rechecks before/after its prompt; Workbench rechecks its four-child cap after workspace resolution; foreground progress follows the selected task and survives another task's completion. The parity fixture now uses the same policy-dependent scanner as Desktop. UI markup, styles, copy, navigation controls and permission/consent choices are unchanged. Six deterministic synthetic regressions failed before the guards and pass afterward; Desktop format and unit checks pass (763 passed/2 existing platform skips). Local Electron validation hit an existing-dependency Vite resolution failure before app launch, also with the pre-change renderer; native clean-install/build/Electron CI is tracked by the follow-up PR. No live accounts, provider calls, private data, version bump or release publication.
 
 - **Document editor save race (PR #179)**: an immediate image-picker reply could insert an image before React committed the saved revision, then the saved-snapshot effect replaced the newer draft. Reproduced in two macOS CI attempts and Linux Electron, with an image-insertion transaction followed by the stale replacement. Editor changes now mark the unsaved guard synchronously. The original image/import/edit/reload/export smoke passes six consecutive Linux runs; async-lifecycle and view-switch smokes, Desktop 757 passed/2 skipped, 33 documentation/version checks, validator, formatting and build pass. Native validation is tracked by this PR's CI. No version or installer changes; published 0.6.10 remains source `2a791b6`.
 

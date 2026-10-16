@@ -102,6 +102,41 @@ test('approved apply refuses a leaf replaced after the last path validation', as
     await f.close();
   }
 });
+test('concurrent starts recheck capacity after resolving the workspace', { timeout: 8000 }, async () => {
+  const f = await fixture();
+  const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
+  const command = `${node} -e "setTimeout(()=>{},10000)"`;
+  const root = f.workbench.root.bind(f.workbench);
+  let release!: () => void, ready!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const waiting = new Promise<void>(resolve => {
+    ready = resolve;
+  });
+  let pending = 0;
+  try {
+    await Promise.all(Array.from({ length: 3 }, () => f.workbench.start(command, 'synthetic')));
+    f.workbench.root = async () => {
+      const path = await root();
+      if (++pending === 2) ready();
+      await gate;
+      return path;
+    };
+    const starts = [f.workbench.start(command, 'synthetic'), f.workbench.start(command, 'synthetic')];
+    await waiting;
+    release();
+    const results = await Promise.allSettled(starts);
+    assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+    const rejected = results.find(result => result.status === 'rejected');
+    assert.equal(rejected?.status === 'rejected' && rejected.reason.message, 'TASK_LIMIT');
+    assert.equal(f.workbench.tasks().length, 4, 'denied starts do not create background tasks');
+  } finally {
+    release();
+    await f.close();
+  }
+});
+
 test('task wait reports a workspace race between scope check and record inspection deterministically', async () => {
   const f = await fixture();
   const alternate = await mkdtemp(join(tmpdir(), 'step-wait-alternate-'));

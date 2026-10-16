@@ -330,10 +330,19 @@ try {
   await expect
     .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions.find(session => session.id === ids.a)?.status)
     .toBe('running');
+  await app.evaluate(({ BrowserWindow }, id) => {
+    const view = BrowserWindow.getAllWindows()[0].webContents;
+    view.send('step:event', { sessionId: id, type: 'delta', text: 'Synthetic foreground stream' });
+    view.send('step:event', { sessionId: id, type: 'reasoning', text: 'Synthetic foreground reasoning' });
+  }, ids.a);
+  await expect(page.getByTitle('หยุดงาน', { exact: true })).toBeVisible();
+  await expect(page.locator('.conversation')).toContainText('Synthetic foreground stream');
   await app.evaluate(
     ({ BrowserWindow }, id) => BrowserWindow.getAllWindows()[0].webContents.send('step:event', { sessionId: id, type: 'changed' }),
     ids.b,
   );
+  await expect(page.getByTitle('หยุดงาน', { exact: true })).toBeVisible();
+  await expect(page.locator('.conversation')).toContainText('Synthetic foreground stream');
   await page
     .locator('.sessions')
     .getByRole('button', { name: /^Synthetic task B/ })
@@ -351,6 +360,7 @@ try {
     { home, id: ids.a },
   );
   await expect(page.locator('.toast').filter({ hasText: 'Synthetic task A' })).toBeVisible();
+  await expect(page.getByTitle('หยุดงาน', { exact: true })).toHaveCount(0);
   assert.deepEqual(errors, []);
   console.log(
     'Async lifecycle smoke passed: latest navigation/snapshot, serialized draft/profile saves, preserved manual receipt edits, exclusive receipt dialogs, policy recheck and background completion.',

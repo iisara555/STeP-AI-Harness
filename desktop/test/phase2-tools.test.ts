@@ -17,6 +17,7 @@ import { Questions } from '../electron/questions';
 import { ToolGate } from '../electron/tool-gate';
 import { DesktopTools, type ToolScope, documentSections } from '../electron/tools';
 import { sheetWorker } from '../electron/sheets';
+import { credentialsOnly } from '../electron/checks';
 import type { Harness } from '../electron/service';
 // PowerShell (Windows) needs the call operator to run a quoted executable path.
 const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
@@ -500,6 +501,53 @@ test('consent ends with the loop and never overrides policy or destination chang
     f.store.close();
   }
 });
+test('privacy-off tool results mask credentials before the next provider turn without new consent', async () => {
+  for (const tool of ['browser_control', 'mcp_search', 'mcp_call'] as const) {
+    const f = await fixture();
+    f.policy.checks.privacy = false;
+    f.policy.features.mcp = true;
+    f.harness.privacy = text => credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
+    const credential = ['sk', 'abcdefghij'.repeat(3)].join('-');
+    let actionApprovals = -1;
+    f.tools.external = async () => {
+      actionApprovals = f.requests();
+      return { text: `Synthetic result api_key: ${credential}` };
+    };
+    const request =
+      tool === 'browser_control'
+        ? { tool, input: 'synthetic-tab', args: { action: 'read' } }
+        : tool === 'mcp_call'
+          ? { tool, input: 'synthetic', args: { name: 'read', arguments: {} } }
+          : { tool, input: 'synthetic' };
+    const host = await f.tools.host(f.scope);
+    let turns = 0;
+    try {
+      await new ToolLoop(host).run(
+        'Read synthetic information',
+        async prompt => {
+          if (++turns === 1) return '```step-tool\n' + JSON.stringify(request) + '\n```';
+          assert.equal(prompt.includes(credential), false, `${tool} must not expose the synthetic credential`);
+          assert.match(prompt, /\[credential-redacted\]/);
+          return 'Done';
+        },
+        f.scope.signal,
+      );
+      assert.equal(turns, 2);
+      assert.ok(actionApprovals >= 0);
+      assert.equal(f.requests(), actionApprovals, 'privacy-off must not introduce an extra result-consent dialog');
+      const plain = 'Synthetic contact person@example.test';
+      assert.equal(await f.tools.outgoing(plain, f.scope), plain, 'optional personal-data filtering stays off');
+      f.harness.privacy = () => ({ action: 'block-external', redactedText: null });
+      await assert.rejects(f.tools.outgoing('Synthetic unmaskable result', f.scope), /PRIVACY_REVIEW_REQUIRED/);
+      assert.equal(f.requests(), actionApprovals);
+    } finally {
+      await host.dispose?.();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+
 test('new file data requires separate consent, denied data and credentials never transmit', async () => {
   const f = await fixture();
   try {

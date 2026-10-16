@@ -518,6 +518,7 @@ export class Workbench {
     const cwd = await this.root(),
       id = randomUUID();
     this.executionAllowed();
+    if (this.children.size >= 4) throw new Error('TASK_LIMIT');
     const task: BackgroundTask = {
       id,
       sessionId,
