@@ -109,7 +109,7 @@ import {
   antComponentSpec,
 } from './anthropic-auth';
 import { existsSync, watchFile, unwatchFile } from 'node:fs';
-import { loadPolicy, type PermissionMode } from './policy';
+import { loadPolicy, skillSubmitUrl, type PermissionMode } from './policy';
 import { ConsentMetrics } from './consent-metrics';
 import { sendConsent, type SendSignals } from './consent-plan';
 import { Approvals } from './approvals';
@@ -2248,7 +2248,10 @@ async function main() {
       case 'voiceStatus':
         return voice.status();
       case 'packList':
-        return listPacks(store.settings().workspace || data, policyState.policy);
+        return listPacks(store.settings().workspace || data, {
+          ...policyState.policy,
+          skillPacks: { approvedDigests: [], ...policyState.policy.skillPacks, submitUrl: skillSubmitUrl(policyState.policy) },
+        });
       case 'packInstall': {
         const selected = await dialog.showOpenDialog(window!, {
           title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
@@ -2308,10 +2311,10 @@ async function main() {
           policyState.policy,
         );
       case 'packPromote': {
-        // "เสนอให้องค์กรใช้": only to the intake set in policy, only a pack whose files pass the privacy check (every read of
-        // a pack re-runs it) and the Standard v2 review, and only after the employee agrees to what is sent and to credit.
+        // "เสนอให้องค์กรใช้": only to the organization's intake (or the one set in policy), only a pack whose files pass the
+        // privacy check (every read of a pack re-runs it) and the Standard v2 review, and only after the employee agrees to what is sent and to credit.
         const identity = phase4Identity(),
-          url = policyState.policy.skillPacks?.submitUrl,
+          url = skillSubmitUrl(policyState.policy),
           settings = store.settings(),
           workspace = settings.workspace || data,
           id = inputText(input.id, 64);

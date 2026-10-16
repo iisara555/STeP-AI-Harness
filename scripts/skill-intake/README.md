@@ -28,16 +28,17 @@
    - ดำเนินการในฐานะ: **ฉัน** (เจ้าของ Sheet)
    - ผู้มีสิทธิ์เข้าถึง: **ทุกคน** (แอปส่งโดยไม่ต้องลงชื่อ Google)
 5. อนุญาตสิทธิ์ที่ Google ขอ (Sheet และ Drive ของเจ้าของ) แล้วคัดลอก URL ที่ลงท้ายด้วย `/exec`
-6. ใส่ URL ในไฟล์นโยบายของเครื่องพนักงาน (`%ProgramData%\STeP\desktop-policy.json` บน Windows,
-   `/Library/Application Support/STeP/desktop-policy.json` บน Mac):
+6. ตั้งแต่ STeP Desktop 0.6.11 URL ของ Sheet องค์กรฝังอยู่ในแอปแล้ว (`DEFAULT_SKILL_SUBMIT_URL` ใน
+   `desktop/electron/policy.ts`) ทุกเครื่องเห็นปุ่มโดยไม่ต้องตั้งนโยบาย ถ้าทำการทำให้ใช้งานได้ใหม่จน URL เปลี่ยน
+   ต้องแก้ค่านั้นแล้วออกรุ่นใหม่ หรือใส่ URL ใหม่ในไฟล์นโยบายของเครื่อง (`%ProgramData%\STeP\desktop-policy.json`
+   บน Windows, `/Library/Application Support/STeP/desktop-policy.json` บน Mac) ซึ่งใช้แทนค่าในแอป:
 
    ```json
    { "skillPacks": { "submitUrl": "https://script.google.com/macros/s/<รหัสการทำให้ใช้งานได้>/exec" } }
    ```
 
-   ถ้ามี `skillPacks.approvedDigests` อยู่แล้ว ให้ใส่ `submitUrl` ไว้ในวัตถุเดียวกัน แอปรับเฉพาะ URL ของ
-   `script.google.com` ที่ลงท้าย `/exec` ไม่มีค่านี้ = ไม่แสดงปุ่ม
-7. เปิดแอปใหม่ ในหน้า Skill Packs ปุ่ม "เสนอให้องค์กรใช้" จะขึ้นใต้ Skill ที่ผ่านการตรวจ
+   แอปรับเฉพาะ URL ของ `script.google.com` ที่ลงท้าย `/exec` ปิดปุ่มได้ด้วย `"features": { "staffSkills": false }`
+7. ในหน้า Skill Packs ปุ่ม "เสนอให้องค์กรใช้" จะขึ้นใต้ Skill ที่ผ่านการตรวจ
 
 แก้ `Code.gs` ภายหลัง: วางโค้ดใหม่ แล้ว **จัดการการทำให้ใช้งานได้ > แก้ไข > เวอร์ชันใหม่** เพื่อให้ URL เดิมใช้โค้ดใหม่
 
