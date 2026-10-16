@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, readFile, mkdir, rm, symlink, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import crypto from 'node:crypto';
+import { syncBuiltinESMExports } from 'node:module';
 import ExcelJS from 'exceljs';
 import { Document, Packer, Paragraph } from 'docx';
 import { ToolLoop } from '../electron/tool-loop';
@@ -17,6 +19,7 @@ import { Questions } from '../electron/questions';
 import { ToolGate } from '../electron/tool-gate';
 import { DesktopTools, type ToolScope, documentSections } from '../electron/tools';
 import { sheetWorker } from '../electron/sheets';
+import { credentialsOnly } from '../electron/checks';
 import type { Harness } from '../electron/service';
 // PowerShell (Windows) needs the call operator to run a quoted executable path.
 const node = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}"`;
@@ -500,6 +503,53 @@ test('consent ends with the loop and never overrides policy or destination chang
     f.store.close();
   }
 });
+test('privacy-off tool results mask credentials before the next provider turn without new consent', async () => {
+  for (const tool of ['browser_control', 'mcp_search', 'mcp_call'] as const) {
+    const f = await fixture();
+    f.policy.checks.privacy = false;
+    f.policy.features.mcp = true;
+    f.harness.privacy = text => credentialsOnly(text, privacy.scanPrivacyText, privacy.CREDENTIAL_PATTERN);
+    const credential = ['sk', 'abcdefghij'.repeat(3)].join('-');
+    let actionApprovals = -1;
+    f.tools.external = async () => {
+      actionApprovals = f.requests();
+      return { text: `Synthetic result api_key: ${credential}` };
+    };
+    const request =
+      tool === 'browser_control'
+        ? { tool, input: 'synthetic-tab', args: { action: 'read' } }
+        : tool === 'mcp_call'
+          ? { tool, input: 'synthetic', args: { name: 'read', arguments: {} } }
+          : { tool, input: 'synthetic' };
+    const host = await f.tools.host(f.scope);
+    let turns = 0;
+    try {
+      await new ToolLoop(host).run(
+        'Read synthetic information',
+        async prompt => {
+          if (++turns === 1) return '```step-tool\n' + JSON.stringify(request) + '\n```';
+          assert.equal(prompt.includes(credential), false, `${tool} must not expose the synthetic credential`);
+          assert.match(prompt, /\[credential-redacted\]/);
+          return 'Done';
+        },
+        f.scope.signal,
+      );
+      assert.equal(turns, 2);
+      assert.ok(actionApprovals >= 0);
+      assert.equal(f.requests(), actionApprovals, 'privacy-off must not introduce an extra result-consent dialog');
+      const plain = 'Synthetic contact person@example.test';
+      assert.equal(await f.tools.outgoing(plain, f.scope), plain, 'optional personal-data filtering stays off');
+      f.harness.privacy = () => ({ action: 'block-external', redactedText: null });
+      await assert.rejects(f.tools.outgoing('Synthetic unmaskable result', f.scope), /PRIVACY_REVIEW_REQUIRED/);
+      assert.equal(f.requests(), actionApprovals);
+    } finally {
+      await host.dispose?.();
+      f.store.close();
+      await rm(f.root, { recursive: true, force: true });
+    }
+  }
+});
+
 test('new file data requires separate consent, denied data and credentials never transmit', async () => {
   const f = await fixture();
   try {
@@ -1129,6 +1179,43 @@ test('agent wait is bounded, cancellable and uses the existing process cancellat
     await plan.workbench.close();
     plan.store.close();
     await rm(plan.root, { recursive: true, force: true });
+  }
+});
+
+test('generated task handles survive privacy review even with identifier-shaped UUID digits', async t => {
+  const f = await fixture();
+  let host: Awaited<ReturnType<typeof f.tools.host>> | undefined;
+  const legacyId = '0424c50e-b5a3-489d-8cd1-234567890123';
+  t.mock.method(crypto, 'randomUUID', () => legacyId);
+  syncBuiltinESMExports();
+  try {
+    const job = await f.workbench.start(`${node} -e "setTimeout(()=>{},30000)"`, f.scope.sessionId);
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+    host = await f.tools.host(f.scope);
+    const transmitted = JSON.parse(await host.outgoing(JSON.stringify(job), f.scope.signal, { tool: 'terminal', input: job.command }));
+    assert.equal(transmitted.id, job.id, 'the approved task handle must still address the actual subprocess');
+    const status = (await host.execute({ tool: 'tasks', input: transmitted.id, args: { action: 'status' } }, f.scope.signal)) as any;
+    assert.equal(status.id, job.id);
+    await host.execute({ tool: 'tasks', input: transmitted.id, args: { action: 'cancel' } }, f.scope.signal);
+    const stopped = (await host.execute(
+      { tool: 'tasks', input: transmitted.id, args: { action: 'wait', timeoutMs: 2000 } },
+      f.scope.signal,
+    )) as any;
+    assert.equal(stopped.status, 'cancelled');
+    f.store.put('background', legacyId, { ...job, id: legacyId, status: 'interrupted' });
+    const legacy = await f.workbench.inspectTask(f.scope.sessionId, legacyId, { action: 'status' });
+    assert.ok(!Array.isArray(legacy));
+    assert.equal(legacy.id, legacyId);
+    const personalData = 'เลขประจำตัว 1234567890123';
+    assert.notEqual(await f.tools.outgoing(personalData, f.scope), personalData, 'personal-data masking remains enabled');
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+    await host?.dispose?.();
+    await f.workbench.close();
+    f.store.close();
+    await rm(f.root, { recursive: true, force: true });
   }
 });
 

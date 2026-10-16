@@ -254,7 +254,10 @@ export class CodexAdapter implements ProviderAdapter {
     if (context.signal.aborted) throw new Error('CANCELLED');
     const rpc = reuse ? session!.rpc! : createRpc(connection, context);
     let text = '';
-    const abort = () => (session ? session.close() : rpc.close());
+    const abort = () => {
+      rpc.close();
+      session?.close();
+    };
     context.signal.addEventListener('abort', abort, { once: true });
     let keep = false;
     try {
@@ -451,7 +454,10 @@ export class GeminiAdapter implements ProviderAdapter {
     let text = '';
     let keep = false;
     const searches = new Set<string>();
-    const abort = () => (session ? session.close() : rpc.close());
+    const abort = () => {
+      rpc.close();
+      session?.close();
+    };
     context.signal.addEventListener('abort', abort, { once: true });
     if (context.signal.aborted) abort();
     try {
@@ -510,6 +516,7 @@ export class GeminiAdapter implements ProviderAdapter {
         startupMs: reuse ? 0 : Date.now() - started,
         resetReason,
       });
+      if (context.signal.aborted) throw new Error('CANCELLED');
       await rpc.request(
         'session/prompt',
         {
@@ -518,6 +525,7 @@ export class GeminiAdapter implements ProviderAdapter {
         },
         600_000,
       );
+      if (context.signal.aborted) throw new Error('CANCELLED');
       if (session) {
         session.sent = prompt;
         keep = true;

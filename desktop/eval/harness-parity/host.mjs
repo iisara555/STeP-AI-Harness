@@ -8,7 +8,8 @@ import { ToolGate } from '../../electron/tool-gate.ts';
 import { Approvals } from '../../electron/approvals.ts';
 import { Questions } from '../../electron/questions.ts';
 import { defaultPolicy } from '../../electron/policy.ts';
-import { evaluatePrivacyGate } from '../../../src/modules/privacy/index.js';
+import { credentialsOnly } from '../../electron/checks.ts';
+import { evaluatePrivacyGate, scanPrivacyText, CREDENTIAL_PATTERN } from '../../../src/modules/privacy/index.js';
 import { TOOLS, CONCURRENT, hash, nativeRequest } from './spec.mjs';
 
 export async function trialHost(root, workspace, connection, signal) {
@@ -35,7 +36,7 @@ export async function trialHost(root, workspace, connection, signal) {
   );
   const harness = {
     root,
-    privacy: evaluatePrivacyGate,
+    privacy: text => (policy.checks.privacy ? evaluatePrivacyGate(text) : credentialsOnly(text, scanPrivacyText, CREDENTIAL_PATTERN)),
     documentMetadata: async ids =>
       ids.map(id =>
         id === 'step-public-profile' && documents[id]?.sensitivity === 'public' ? { id, ...documents[id] } : { id, status: 'unregistered' },
