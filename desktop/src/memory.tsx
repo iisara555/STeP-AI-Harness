@@ -7,6 +7,8 @@ import { localized, t } from './i18n';
 type Edit = Pick<MemoryEntry, 'name' | 'text' | 'type' | 'scope' | 'importance' | 'ttl_days'> & { id?: string; proposal?: boolean };
 const fresh = (): Edit => ({ name: '', text: '', type: 'user', scope: 'private', importance: 0.7, ttl_days: 0 });
 const scopes: Record<string, string> = localized({ private: 'ส่วนตัว', project: 'พื้นที่งาน', team: 'ทีม' });
+const origins: Record<string, string> = localized({ manual: 'พิมพ์เอง', chat: 'จากแชต', feedback: 'จากคำแก้ "ต้องแก้"' });
+const day = (iso: string) => new Date(iso).toLocaleDateString();
 export function MemoryDialog({
   api,
   settings,
@@ -47,6 +49,11 @@ export function MemoryDialog({
       <p className="small muted">
         {t(
           'บันทึกเฉพาะข้อมูลที่ไม่มีข้อมูลส่วนบุคคลหรือความลับ ความจำที่ยืนยันแล้วอาจถูกเลือกส่งให้ AI ในงานถัดไป คุณจะได้ตรวจบริบทก่อนส่ง',
+        )}
+      </p>
+      <p className="small muted">
+        {t(
+          'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลข PR/ticket หรือ log ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill',
         )}
       </p>
       {error && <p role="alert">{error}</p>}
@@ -167,6 +174,11 @@ export function MemoryDialog({
             {m.expired ? t(' · หมดอายุแล้ว') : ''}
           </span>
           <p>{m.text}</p>
+          <p className="muted small">
+            {t('ที่มา:')} {m.origin ? origins[m.origin] : t('ไม่ได้บันทึกไว้')} · {t('บันทึกเมื่อ')} {day(m.created_at)}
+            {m.updated_at !== m.created_at ? ` · ${t('แก้ไขล่าสุด')} ${day(m.updated_at)}` : ''}
+            {m.origin_evidence ? ` · ${t('หลักฐาน:')} “${m.origin_evidence}”` : ''}
+          </p>
           <button className="quiet" disabled={busy} onClick={() => setEdit(m)}>
             {t('แก้ไข')}
           </button>

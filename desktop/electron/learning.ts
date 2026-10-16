@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { Store } from './store';
-import { safeMemory } from './memory';
+import { safeMemory, stableMemory } from './memory';
 import { overlap } from '../src/learning-curator';
 import type {
   LessonContent,
@@ -72,6 +72,8 @@ export class Learning {
   propose(context: unknown, raw: any, source: LearningCandidate['source'] = 'manual', sessionId?: string, countRepeat = true) {
     const state = this.check(context),
       content = this.content(raw?.content);
+    // New lessons keep stable facts only; lessons already confirmed still apply and restore as before.
+    stableMemory([content.name, content.trigger, content.text].join('\n'));
     const evidence = safeMemory(checkedText(raw?.evidence, 2000), this.privacy);
     if (state.candidates.filter(c => c.status === 'pending').length >= 20) throw new Error('LEARNING_LIMIT');
     const lesson = raw.lessonId ? state.lessons.find(l => l.id === raw.lessonId) : undefined;
@@ -145,7 +147,8 @@ export class Learning {
       candidate = state.candidates.find(c => c.id === id && c.status === 'pending');
     if (!candidate) throw new Error('LEARNING_NOT_FOUND');
     if (approve) {
-      this.content(candidate.content);
+      const checked = this.content(candidate.content);
+      stableMemory([checked.name, checked.trigger, checked.text].join('\n'));
       safeMemory(candidate.evidence, this.privacy);
       let lesson = state.lessons.find(l => l.id === candidate.lessonId);
       if ((lesson ? current(lesson).revision : 0) !== candidate.baseRevision) throw new Error('LEARNING_CONFLICT');

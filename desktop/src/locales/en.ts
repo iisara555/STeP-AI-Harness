@@ -977,6 +977,15 @@ export const en: Record<string, string> = {
   ตรวจและยืนยัน: 'Review and confirm',
   ไม่บันทึก: "Don't save",
   ความจำที่บันทึกแล้ว: 'Saved memories',
+  พิมพ์เอง: 'Typed by you',
+  จากแชต: 'From a chat',
+  'จากคำแก้ "ต้องแก้"': 'From a "Needs fixing" note',
+  ไม่ได้บันทึกไว้: 'Not recorded',
+  บันทึกเมื่อ: 'Saved',
+  แก้ไขล่าสุด: 'Last edited',
+  'หลักฐาน:': 'Evidence:',
+  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลข PR/ticket หรือ log ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
+    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, PR/ticket numbers and logs. Working steps belong in a "procedure" lesson or a Skill',
   ' · หมดอายุแล้ว': ' · Expired',
   แก้ไข: 'Edit',
   ลบความจำ: 'Delete memory',
@@ -1044,6 +1053,8 @@ export const en: Record<string, string> = {
   'ไฟล์เปลี่ยนระหว่างอ่าน กรุณาแนบไฟล์อีกครั้ง': 'The file changed while being read. Please attach it again',
   'ข้อมูลนี้มีข้อมูลส่วนบุคคล ความลับ หรือเนื้อหาที่ต้องตรวจเพิ่มเติม จึงบันทึกเป็นความจำไม่ได้':
     "This contains personal, confidential or sensitive content that needs review, so it can't be saved as memory",
+  'ข้อความนี้เป็นข้อมูลชั่วคราว เช่น ความคืบหน้างาน เลข PR/ticket/run หรือ log จึงไม่บันทึกเป็นความจำหรือบทเรียน ให้บันทึกเฉพาะข้อเท็จจริงที่ไม่ค่อยเปลี่ยน':
+    "This looks short-lived (task progress, a PR/ticket/run number or a log), so it isn't saved as a memory or lesson. Save only facts that rarely change",
   'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ':
     'Invalid memory format. Check the name, text, importance and lifetime',
   ไม่พบความจำในขอบเขตที่เลือก: 'No memories found in the selected scope',

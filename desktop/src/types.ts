@@ -325,6 +325,12 @@ export type MemoryEntry = {
   created_at: string;
   updated_at: string;
   source: 'user-confirmed';
+  /** How it was proposed: typed by the employee, picked up from a chat, or a "needs fixing" note. Absent on older files. */
+  origin?: 'manual' | 'chat' | 'feedback';
+  /** The task it came from, for a confirmed proposal. */
+  origin_session?: string;
+  /** The employee's own words it rests on, privacy-checked, at most 300 characters. */
+  origin_evidence?: string;
   expired?: boolean;
 };
 export type MemoryProposal = Pick<MemoryEntry, 'id' | 'name' | 'text' | 'type' | 'scope' | 'importance' | 'ttl_days'> & {
