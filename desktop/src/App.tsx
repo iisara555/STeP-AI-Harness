@@ -1,7 +1,7 @@
 import { ThinkingScribble } from './thinking-scribble';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { DocumentPresentationControls } from './document-presentation-controls';
+import { DocumentPresentationControls, readExportSettingsOpen, saveExportSettingsOpen } from './document-presentation-controls';
 import { resolvePresentation } from './document-presentation';
 import {
   DocumentTitle,
@@ -53,6 +53,7 @@ import {
   BookOpen,
   Eye,
   AlertTriangle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -179,6 +180,7 @@ export default function App() {
   const [exportGaruda, setExportGaruda] = useState('auto');
   const [exporting, setExporting] = useState(false);
   const exportPending = useRef(false);
+  const [exportSettings, setExportSettings] = useState(readExportSettingsOpen);
   const [exportInfo, setExportInfo] = useState<{
     documentTool?: string;
     font: string;
@@ -2579,7 +2581,7 @@ export default function App() {
                 ) : (
                   <>
                     <div className="draft-title">
-                      <span>{t(session.title)}</span>
+                      <span title={t(session.title)}>{t(session.title)}</span>
                       <small>
                         {t('เวอร์ชัน')} {session.revision}
                         {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
@@ -2612,10 +2614,35 @@ export default function App() {
                       </div>
                     )}
                     {session.proposals.map(p => (
-                      <section className="proposal" key={p.id}>
-                        <div>
+                      <section className={'proposal' + (session.draft.trim() ? '' : ' primary')} key={p.id}>
+                        <div className="proposal-head">
                           <Sparkles size={16} />
                           <strong>{t('ข้อเสนอจาก AI')}</strong>
+                          <div className="proposal-actions">
+                            <button
+                              disabled={dirty || p.baseRevision !== session.revision}
+                              onClick={() =>
+                                void action(async () => {
+                                  await api.call('accept', { id: selected, proposalId: p.id });
+                                  await refresh();
+                                })
+                              }
+                            >
+                              <Check size={15} />
+                              {t('ใช้ร่างนี้')}
+                            </button>
+                            <button
+                              className="quiet"
+                              onClick={() =>
+                                void action(async () => {
+                                  await api.call('reject', { id: selected, proposalId: p.id });
+                                  await refresh();
+                                })
+                              }
+                            >
+                              {t('ไม่ใช้')}
+                            </button>
+                          </div>
                         </div>
                         <p className="small muted">
                           {p.baseRevision === session.revision
@@ -2632,31 +2659,6 @@ export default function App() {
                             <RichText text={p.review} />
                           </details>
                         )}
-                        <div className="proposal-actions">
-                          <button
-                            disabled={dirty || p.baseRevision !== session.revision}
-                            onClick={() =>
-                              void action(async () => {
-                                await api.call('accept', { id: selected, proposalId: p.id });
-                                await refresh();
-                              })
-                            }
-                          >
-                            <Check size={15} />
-                            {t('ใช้ร่างนี้')}
-                          </button>
-                          <button
-                            className="quiet"
-                            onClick={() =>
-                              void action(async () => {
-                                await api.call('reject', { id: selected, proposalId: p.id });
-                                await refresh();
-                              })
-                            }
-                          >
-                            {t('ไม่ใช้')}
-                          </button>
-                        </div>
                       </section>
                     ))}
                     {session.documentReview && (
@@ -2670,50 +2672,52 @@ export default function App() {
                         <RichText text={session.documentReview.text} />
                       </details>
                     )}
-                    {editor && (
-                      <DocumentToolbar
-                        editor={editor}
-                        locked={Boolean(session.documentTemplate)}
-                        disabled={exporting}
-                        onImage={() =>
-                          void action(async () => {
-                            const owner = selected;
-                            await save();
-                            const result = await api.call('documentImageAdd', { id: owner });
-                            if (!result.canceled && currentId.current === owner)
-                              editor
-                                .chain()
-                                .focus()
-                                .insertContent([
-                                  { type: 'image', attrs: result.attrs },
-                                  { type: 'caption', content: [] },
-                                ])
-                                .run();
-                          })
-                        }
-                      />
-                    )}
-                    <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
-                      <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
-                        {t('ข้อความ')}
-                      </button>
-                      <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
-                        {t('หัวข้อ')}
-                      </button>
-                      <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
-                        {t('ตัวหนา')}
-                      </button>
-                      <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
-                        {t('ตัวเอียง')}
-                      </button>
-                      <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
-                        {t('รายการ')}
-                      </button>
-                      <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
-                        {t('ลำดับ')}
-                      </button>
+                    <div className="draft-tools">
+                      {editor && (
+                        <DocumentToolbar
+                          editor={editor}
+                          locked={Boolean(session.documentTemplate)}
+                          disabled={exporting}
+                          onImage={() =>
+                            void action(async () => {
+                              const owner = selected;
+                              await save();
+                              const result = await api.call('documentImageAdd', { id: owner });
+                              if (!result.canceled && currentId.current === owner)
+                                editor
+                                  .chain()
+                                  .focus()
+                                  .insertContent([
+                                    { type: 'image', attrs: result.attrs },
+                                    { type: 'caption', content: [] },
+                                  ])
+                                  .run();
+                            })
+                          }
+                        />
+                      )}
+                      <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
+                        <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
+                          {t('ข้อความ')}
+                        </button>
+                        <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
+                          {t('หัวข้อ')}
+                        </button>
+                        <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
+                          {t('ตัวหนา')}
+                        </button>
+                        <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
+                          {t('ตัวเอียง')}
+                        </button>
+                        <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
+                          {t('รายการ')}
+                        </button>
+                        <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
+                          {t('ลำดับ')}
+                        </button>
+                      </div>
                     </div>
-                    <div className="editor-scroll">
+                    <div className={'editor-scroll' + (!session.draft.trim() && session.proposals.length ? ' waiting' : '')}>
                       <EditorContent editor={editor} />
                     </div>
                     <details className="sources">
@@ -2725,6 +2729,67 @@ export default function App() {
                         <p key={path}>{path}</p>
                       ))}
                     </details>
+                    {exportSettings && ['docx', 'pdf'].includes(format) && (
+                      <div className="export-settings" id="export-settings">
+                        {format === 'docx' && (
+                          <DocumentPresentationControls
+                            value={presentation}
+                            locked={Boolean(session?.documentTemplate)}
+                            disabled={exporting}
+                            onChange={value => {
+                              setPresentation(value);
+                              presentationRef.current = value;
+                              setDirty(true);
+                              dirtyRef.current = true;
+                            }}
+                          />
+                        )}
+                        {['docx', 'pdf'].includes(format) && (
+                          <label className="document-export-font">
+                            {t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
+                            <select
+                              aria-label={t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
+                              value={exportFont}
+                              onChange={e => {
+                                setExportFont(e.target.value);
+                                setExportInfo(null);
+                              }}
+                            >
+                              <option value="auto">
+                                {session.documentTemplate
+                                  ? t('ตามแม่แบบ DOCX ({0})', session.documentTemplate.font)
+                                  : t('ตามแม่แบบร่าง ({0})', resolveDocumentLayout(session.documentTool).font)}
+                              </option>
+                              {DOCUMENT_FONTS.map(font => (
+                                <option key={font} value={font} disabled={Boolean(session.documentTemplate)}>
+                                  {font}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        {!session.documentTemplate &&
+                          ['docx', 'pdf'].includes(format) &&
+                          ['memo', 'letter'].includes(session.documentTool || '') && (
+                            <label className="document-export-font">
+                              {t('ตราครุฑ')}
+                              <select
+                                aria-label={t('ตราครุฑ')}
+                                value={exportGaruda}
+                                onChange={e => {
+                                  setExportGaruda(e.target.value);
+                                  setExportInfo(null);
+                                }}
+                              >
+                                <option value="auto">
+                                  {t('ตามประเภทเอกสาร (สูง {0} ซม.)', resolveDocumentLayout(session.documentTool).garudaHeightCm)}
+                                </option>
+                                <option value="none">{t('ไม่ใส่ตราครุฑ')}</option>
+                              </select>
+                            </label>
+                          )}
+                      </div>
+                    )}
                     <footer className="artifact-footer">
                       <button className="quiet" disabled={!dirty} onClick={() => void action(save)}>
                         <Save size={16} />
@@ -2744,6 +2809,21 @@ export default function App() {
                           </option>
                         ))}
                       </select>
+                      {['docx', 'pdf'].includes(format) && (
+                        <button
+                          className="icon"
+                          aria-label={t('ตั้งค่าส่งออก')}
+                          title={t('ตั้งค่าส่งออก')}
+                          aria-expanded={exportSettings}
+                          aria-controls="export-settings"
+                          onClick={() => {
+                            setExportSettings(!exportSettings);
+                            saveExportSettingsOpen(!exportSettings);
+                          }}
+                        >
+                          <SlidersHorizontal size={16} />
+                        </button>
+                      )}
                       <button
                         disabled={exporting || (!session.draft && !dirty)}
                         onClick={() =>
@@ -2782,107 +2862,54 @@ export default function App() {
                         {t('ส่งออก')}
                       </button>
                     </footer>
-                    {format === 'docx' && (
-                      <DocumentPresentationControls
-                        value={presentation}
-                        locked={Boolean(session?.documentTemplate)}
-                        disabled={exporting}
-                        onChange={value => {
-                          setPresentation(value);
-                          presentationRef.current = value;
-                          setDirty(true);
-                          dirtyRef.current = true;
-                        }}
-                      />
-                    )}
-                    {['docx', 'pdf'].includes(format) && (
-                      <label className="document-export-font">
-                        {t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
-                        <select
-                          aria-label={t(format === 'docx' ? 'ฟอนต์ DOCX' : 'ฟอนต์ PDF')}
-                          value={exportFont}
-                          onChange={e => {
-                            setExportFont(e.target.value);
-                            setExportInfo(null);
-                          }}
-                        >
-                          <option value="auto">
-                            {session.documentTemplate
-                              ? t('ตามแม่แบบ DOCX ({0})', session.documentTemplate.font)
-                              : t('ตามแม่แบบร่าง ({0})', resolveDocumentLayout(session.documentTool).font)}
-                          </option>
-                          {DOCUMENT_FONTS.map(font => (
-                            <option key={font} value={font} disabled={Boolean(session.documentTemplate)}>
-                              {font}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    {!session.documentTemplate &&
-                      ['docx', 'pdf'].includes(format) &&
-                      ['memo', 'letter'].includes(session.documentTool || '') && (
-                        <label className="document-export-font">
-                          {t('ตราครุฑ')}
-                          <select
-                            aria-label={t('ตราครุฑ')}
-                            value={exportGaruda}
-                            onChange={e => {
-                              setExportGaruda(e.target.value);
-                              setExportInfo(null);
-                            }}
-                          >
-                            <option value="auto">
-                              {t('ตามประเภทเอกสาร (สูง {0} ซม.)', resolveDocumentLayout(session.documentTool).garudaHeightCm)}
-                            </option>
-                            <option value="none">{t('ไม่ใส่ตราครุฑ')}</option>
-                          </select>
-                        </label>
-                      )}
-                    {exportInfo && (
-                      <div className="document-export-info" role="status">
-                        <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
-                        {exportInfo.templateName ? (
-                          <p>{t('รักษารูปแบบและตราจากแม่แบบ {0}', exportInfo.templateName)}</p>
-                        ) : exportInfo.garudaHeightCm ? (
-                          <p>{t('ตราครุฑสูง {0} ซม. (เฉพาะหน้าแรก)', exportInfo.garudaHeightCm)}</p>
-                        ) : (
-                          <p>{t('ไม่ใส่ตราครุฑ')}</p>
-                        )}
-                        {exportInfo.fontEmbedding?.status === 'embedded' && <p>{t('ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้')}</p>}
-                        {exportInfo.fontEmbedding?.status === 'partial' && (
-                          <p>
-                            {t(
-                              'ฝังฟอนต์ได้บางส่วน ฟอนต์ที่ต้องตรวจบนเครื่องปลายทาง: {0}',
-                              exportInfo.fontEmbedding.missingFamilies?.join(', ') || '',
+                    {(exportInfo || exportPath) && (
+                      <div className="export-status">
+                        {exportInfo && (
+                          <div className="document-export-info" role="status">
+                            <p>{t('ไฟล์ใช้ฟอนต์ {0}', exportInfo.font)}</p>
+                            {exportInfo.templateName ? (
+                              <p>{t('รักษารูปแบบและตราจากแม่แบบ {0}', exportInfo.templateName)}</p>
+                            ) : exportInfo.garudaHeightCm ? (
+                              <p>{t('ตราครุฑสูง {0} ซม. (เฉพาะหน้าแรก)', exportInfo.garudaHeightCm)}</p>
+                            ) : (
+                              <p>{t('ไม่ใส่ตราครุฑ')}</p>
                             )}
-                          </p>
-                        )}
-                        {exportInfo.fieldsNeedUpdate && (
-                          <p>{t('หากสารบัญหรือเลขหน้ายังไม่ปรับ ให้เปิดใน Word แล้วเลือก Update Field (อัปเดตเขตข้อมูล)')}</p>
-                        )}
-                        {exportInfo.fontEmbedding?.status === 'unavailable' && (
-                          <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
-                        )}
-                        {exportInfo.fontEmbedding?.status !== 'embedded' && exportInfo.fontStatus === 'missing' && (
-                          <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
-                        )}
-                        {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}
-                        {exportInfo.documentTool && (
-                          <p>
-                            {t(
-                              exportInfo.templateName
-                                ? 'ใช้รูปแบบต้นฉบับ DOCX ตรวจทุกหน้าใน Word ก่อนเสนอ'
-                                : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
+                            {exportInfo.fontEmbedding?.status === 'embedded' && <p>{t('ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้')}</p>}
+                            {exportInfo.fontEmbedding?.status === 'partial' && (
+                              <p>
+                                {t(
+                                  'ฝังฟอนต์ได้บางส่วน ฟอนต์ที่ต้องตรวจบนเครื่องปลายทาง: {0}',
+                                  exportInfo.fontEmbedding.missingFamilies?.join(', ') || '',
+                                )}
+                              </p>
                             )}
-                          </p>
+                            {exportInfo.fieldsNeedUpdate && (
+                              <p>{t('หากสารบัญหรือเลขหน้ายังไม่ปรับ ให้เปิดใน Word แล้วเลือก Update Field (อัปเดตเขตข้อมูล)')}</p>
+                            )}
+                            {exportInfo.fontEmbedding?.status === 'unavailable' && (
+                              <p>{t('แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน')}</p>
+                            )}
+                            {exportInfo.fontEmbedding?.status !== 'embedded' && exportInfo.fontStatus === 'missing' && (
+                              <p>{t('ตรวจไม่พบฟอนต์นี้บนเครื่อง ติดตั้งฟอนต์ให้ตรงแบบก่อนตรวจหน้าใน Word')}</p>
+                            )}
+                            {exportInfo.fontStatus === 'unknown' && <p>{t('ตรวจฟอนต์บนเครื่องไม่ได้ โปรดตรวจฟอนต์และหน้าใน Word')}</p>}
+                            {exportInfo.documentTool && (
+                              <p>
+                                {t(
+                                  exportInfo.templateName
+                                    ? 'ใช้รูปแบบต้นฉบับ DOCX ตรวจทุกหน้าใน Word ก่อนเสนอ'
+                                    : 'จัดหน้าตามแม่แบบร่าง ต้องเทียบแบบหน่วยงานก่อนเสนอ',
+                                )}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {exportPath && (
+                          <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
+                            {t('เปิดโฟลเดอร์ไฟล์ล่าสุด')}
+                          </button>
                         )}
                       </div>
-                    )}
-                    {exportPath && (
-                      <button className="text-link" onClick={() => void api.call('reveal', { path: exportPath })}>
-                        {t('เปิดโฟลเดอร์ไฟล์ล่าสุด')}
-                      </button>
                     )}
                   </>
                 )}

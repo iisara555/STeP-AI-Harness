@@ -806,6 +806,7 @@ export const en: Record<string, string> = {
   'แหล่งอ้างอิงที่ใช้ (': 'Sources used (',
   บันทึก: 'Save',
   รูปแบบส่งออก: 'Export format',
+  ตั้งค่าส่งออก: 'Export settings',
   'บันทึก {0} แล้ว': 'Saved {0}',
   เปิดโฟลเดอร์: 'Open folder',
   ส่งออก: 'Export',

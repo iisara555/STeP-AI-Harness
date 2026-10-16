@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Give the draft most of the ผลงาน panel: the editor grows to fill the panel instead of shrinking to a sliver, DOCX/PDF export settings fold behind a button next to ส่งออก (the choice is remembered), the AI proposal's buttons sit in its header, and the formatting toolbars share one compact row.
+
 ## Desktop v0.6.11 (2026-10-16)
 
 - Build the organization's Skill intake (the "Feedback & Skill Promoting" sheet's Apps Script, owner's request) into the app as the default `skillPacks.submitUrl`, so "เสนอให้องค์กรใช้" works on every computer without a policy file. A policy `submitUrl` still replaces it, and `features.staffSkills: false` removes the button.
