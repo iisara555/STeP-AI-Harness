@@ -2592,4 +2592,14 @@ export const en: Record<string, string> = {
   'ใช้ Skill นี้เองบนเครื่องนี้': 'Use this Skill on this computer',
   '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล':
     '{0}\nPassed the automated standard and safety checks. It works on this computer only, as reference text for drafting, with no hooks or agents, and is not approved by an admin.',
+  'พิมพ์ในแชตตอนร่างเอกสารเพื่อแก้ร่างเดิมได้ทันที ไม่ต้องเริ่มงานใหม่':
+    'Type in the chat while drafting to edit the same document instead of starting a new task',
+  'ส่งภาพและ PDF สแกนให้ AI ที่เชื่อมผ่าน OpenRouter, Qwen, MiniMax หรือ Ollama อ่านได้':
+    'Send images and scanned PDFs to AI connected through OpenRouter, Qwen, MiniMax or Ollama',
+  'ตรวจ Skill ที่นำเข้ากับมาตรฐาน v2 และความปลอดภัยอัตโนมัติ พร้อมรายงานภาษาไทย':
+    'Imported Skills are checked against Standard v2 and for safety automatically, with a Thai report',
+  'ใช้ Skill ที่คุณนำเข้าเองบนเครื่องนี้ได้ทันทีเมื่อผ่านการตรวจ':
+    'Use a Skill you imported on this computer as soon as it passes the checks',
+  'ปุ่ม "เสนอให้องค์กรใช้" ส่ง Skill ของคุณให้ผู้ดูแลพิจารณา':
+    'The "Propose for the organization" button sends your Skill to the administrators for review',
 };

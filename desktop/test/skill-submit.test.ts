@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePolicy } from '../electron/policy';
+import { DEFAULT_SKILL_SUBMIT_URL, SKILL_SUBMIT_URL, parsePolicy, skillSubmitUrl } from '../electron/policy';
 import { submitSkill, type SkillSubmission } from '../electron/skill-submit';
 
 const url = 'https://script.google.com/macros/s/AKfycbSyntheticDeploymentId0123456789/exec';
@@ -62,4 +62,12 @@ test('a submission is posted as text and counts as accepted only with a referenc
   await assert.rejects(submitSkill('https://example.com/exec', submission, answer({ ok: true, id: 'x' })), /SKILL_SUBMIT_UNAVAILABLE/);
   const big = { ...submission, files: [{ path: 'SKILL.md', text: 'x'.repeat(2_600_000) }] };
   await assert.rejects(submitSkill(url, big, answer({ ok: true, id: 'x' })), /SKILL_SUBMIT_TOO_LARGE/);
+});
+
+test('the organization intake is built in, a policy address replaces it, and turning staff Skills off removes it', () => {
+  assert.match(DEFAULT_SKILL_SUBMIT_URL, SKILL_SUBMIT_URL);
+  assert.equal(skillSubmitUrl(parsePolicy({}).policy), DEFAULT_SKILL_SUBMIT_URL);
+  assert.equal(skillSubmitUrl(parsePolicy({ skillPacks: { approvedDigests: [] } }).policy), DEFAULT_SKILL_SUBMIT_URL);
+  assert.equal(skillSubmitUrl(parsePolicy({ skillPacks: { submitUrl: url } }).policy), url);
+  assert.equal(skillSubmitUrl(parsePolicy({ features: { staffSkills: false } }).policy), undefined);
 });

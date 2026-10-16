@@ -123,7 +123,8 @@ export type Policy = {
   voice?: { components: Record<string, { runtime: { url: string; sha256: string }; model: { url: string; sha256: string } }> };
   /**
    * approvedDigests: packs an administrator approved for everyone. submitUrl: the Apps Script web app (deployed from
-   * scripts/skill-intake) that receives "เสนอให้องค์กรใช้"; kept in policy, never in code, and absent means no button.
+   * scripts/skill-intake) that receives "เสนอให้องค์กรใช้"; absent means the organization's own intake
+   * (DEFAULT_SKILL_SUBMIT_URL, owner's 2026-10-16 decision so no computer needs a policy for it).
    */
   skillPacks?: { approvedDigests: string[]; submitUrl?: string };
   transmissionConsent?: { allowRunScope: boolean };
@@ -261,6 +262,15 @@ export const policyPath = managedPolicyPath;
 
 // A Google Apps Script web app deployment, on a personal or a Google Workspace domain account.
 export const SKILL_SUBMIT_URL = /^https:\/\/script\.google\.com\/(?:a\/macros\/[a-z0-9.-]{1,100}|macros)\/s\/[A-Za-z0-9_-]{20,200}\/exec$/;
+// The organization's intake sheet "Feedback & Skill Promoting" (scripts/skill-intake). Built in so the button works
+// without a policy on each computer; a policy submitUrl replaces it and features.staffSkills: false turns it off.
+export const DEFAULT_SKILL_SUBMIT_URL =
+  'https://script.google.com/macros/s/AKfycbxNhKaK8GMqvHKkVW5qV6h_H0ZtGZP9Ch76SzKlal1Z-nKhq3mHE4Lh7SBVoHrgW1yCdg/exec';
+/** Where "เสนอให้องค์กรใช้" sends a Skill under this policy, or undefined when IT turned staff Skills off. */
+export function skillSubmitUrl(policy: Policy): string | undefined {
+  if (policy.features.staffSkills === false) return undefined;
+  return policy.skillPacks?.submitUrl || DEFAULT_SKILL_SUBMIT_URL;
+}
 const isObject = (value: unknown): value is Record<string, any> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, limit: number) => (typeof value === 'string' && value.trim() && value.length <= limit ? value.trim() : '');
 const seconds = (value: unknown, fallback: number, max: number) =>
