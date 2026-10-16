@@ -1783,6 +1783,7 @@ export const en: Record<string, string> = {
   กำลังค้นรายการเครื่องมือ: 'Discovering available tools',
   กำลังอ่านรายละเอียดเครื่องมือ: 'Reading tool details',
   กำลังค้นไฟล์ในพื้นที่งาน: 'Searching workspace files',
+  กำลังค้นงานเก่าบนเครื่องนี้: 'Searching earlier tasks on this computer',
   กำลังเตรียมแก้ข้อความเฉพาะจุด: 'Preparing a targeted text patch',
   'ไม่พบข้อความเดิมแบบตรงตัว กรุณาอ่านไฟล์ล่าสุดก่อนแก้ไข': 'Exact original text was not found. Read the latest file before editing',
   'พบข้อความเดิมมากกว่าหนึ่งจุด กรุณาระบุบริบทให้ตรงเพียงจุดเดียว':
@@ -2064,6 +2065,7 @@ export const en: Record<string, string> = {
     '{0} new characters will be sent to {1}\n{2}\nReview the masked preview before consenting:\n{3}',
   'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)':
     'Your answers to the assistant and draft progress in this task (no file contents or real submissions)',
+  'งานเก่าของทีมเดียวกันบนเครื่องนี้ (ชื่องาน ข้อความ และร่าง)': "This team's earlier tasks on this computer (titles, messages and drafts)",
   'ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)': 'Text files in folder {0} (subfolders excluded)',
   'ผลการอ่านเว็บ {0}': 'Web read results from {0}',
   'กำลังใช้เครื่องมือ ': 'Using tool ',

@@ -50,6 +50,7 @@ export const LOOP_TOOLS = [
   'image_generate',
   'skill',
   'reference',
+  'session_search',
   'doc_outline',
   'doc_section',
   'sheet_read',

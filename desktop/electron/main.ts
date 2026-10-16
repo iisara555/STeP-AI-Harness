@@ -788,6 +788,7 @@ async function main() {
         c?.signedIn,
       ]);
     },
+    store,
   );
   harness.tools = scope => tools.host(scope);
   const phase4Identity = () => JSON.stringify([store.settings().workspace, store.settings().team, permissionMode()]);

@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Let the AI look up earlier work with a new read-only tool, `session_search`: it finds this team's earlier tasks on this computer by words, project and date (newest first, up to 10) and reads a bounded excerpt of one (request, last turns, start of the draft), so the employee does not have to explain past work again. Results go through the usual privacy check and consent, and the current task and other teams' tasks are never shown.
+
 - Record where each memory came from (typed by the employee, a chat preference or a "Needs fixing" note, with the task and the employee's own words for a confirmed proposal) and show it with the saved and edited dates in the Memory dialog; older memory files still load. Refuse short-lived text as a new memory, feedback proposal or lesson: PR/ticket/run numbers, log lines, stack traces and task progress, per `rules/learning-and-verification.md`. The Memory dialog says what is worth saving.
 
 - Add the standing rule `rules/learning-and-verification.md` (owner's request): what may and may not be kept as memory, preferences from corrections, and no "done" without evidence. In Desktop, every run with tools now tells the AI to verify with a real tool result and cite it before saying work is done, or say what is unverified; the AI that drafts Learning Inbox lessons is told to drop short-lived facts (task progress, PR or run numbers, logs). `AGENTS.md` points coding agents to the same rule.
