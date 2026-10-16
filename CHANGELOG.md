@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Send images and scanned-PDF pages to OpenAI- and Anthropic-compatible services (OpenRouter, Qwen, MiniMax, Ollama and others) as standard image parts; a model that refuses them reports "cannot take images" instead of a generic failure. Gemini through Antigravity stays text-only (agy 1.3.2 `stream-json` input accepts only text blocks), so images and scanned PDFs attached under it use on-device OCR text, or the chip says what to change. Scanned PDFs may now have up to 30 pages (pages past 20 are drawn at 1280 px).
+
 ## Desktop v0.6.10 (2026-10-15)
 
 - Add Word TOC, header/footer text and configurable Thai or current/total page fields, with revisioned settings and native-template layout locks. Keep Title out of the TOC, request field updates on opening, report unavailable embedded families, and reject unsupported presentation exports explicitly. Verify synthetic documents in Windows Word; correct page-break pagination, date/reference column widths and image selection during toolbar reflow.

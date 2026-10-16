@@ -7,8 +7,11 @@ import type { VisionInput } from '../src/types';
 // A scanned PDF has no text layer, so its pages go to a vision model as pictures, as in other AI apps.
 // pdf.js (the copy the document check already uses) draws each page in a hidden, sandboxed window that can
 // load nothing but pdf.js itself; the PDF bytes are handed over in memory.
-export const SCANNED_PDF_PAGES = 20;
+// A whole TOR (about 20 pages plus cover and annexes) fits in one attachment. Past 20 pages each page is drawn smaller,
+// so the request stays inside the byte budget and within Claude's 2000 px limit for requests with many images.
+export const SCANNED_PDF_PAGES = 30;
 const LONGEST_SIDE = 1600;
+const LONGEST_SIDE_MANY = 1280;
 const TOTAL_BYTES = 15_000_000;
 const TIME_LIMIT = 90_000;
 
@@ -44,10 +47,11 @@ export async function pdfPageImages(
         standardFontDataUrl: './standard_fonts/' }).promise;
       if (doc.numPages > ${maxPages}) return { tooLong: true };
       const pages = [];
+      const longest = doc.numPages > 20 ? ${LONGEST_SIDE_MANY} : ${LONGEST_SIDE};
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i);
         const base = page.getViewport({ scale: 1 });
-        const viewport = page.getViewport({ scale: Math.min(2, ${LONGEST_SIDE} / Math.max(base.width, base.height)) });
+        const viewport = page.getViewport({ scale: Math.min(2, longest / Math.max(base.width, base.height)) });
         const canvas = document.createElement('canvas');
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);

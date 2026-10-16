@@ -43,7 +43,31 @@ async function failureCode(response) {
       ? "PROVIDER_UNAVAILABLE"
       : "PROVIDER_REQUEST_FAILED";
 }
-/** Bounded, text-only API transport shared by Desktop, the CLI and server runners. */
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+function imageParts(images, protocol) {
+  if (images === undefined) return [];
+  if (!Array.isArray(images) || images.length > 40)
+    throw new Error("INVALID_INPUT");
+  return images.map((image) => {
+    if (
+      !IMAGE_TYPES.includes(image?.mime) ||
+      typeof image.data !== "string" ||
+      !image.data ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(image.data)
+    )
+      throw new Error("INVALID_INPUT");
+    return protocol === "anthropic"
+      ? {
+          type: "image",
+          source: { type: "base64", media_type: image.mime, data: image.data },
+        }
+      : {
+          type: "image_url",
+          image_url: { url: `data:${image.mime};base64,${image.data}` },
+        };
+  });
+}
+/** Bounded API transport shared by Desktop, the CLI and server runners. */
 export function providerEndpoint(baseUrl, protocol = "openai") {
   if (!["openai", "anthropic"].includes(protocol))
     throw new Error("PROVIDER_PROTOCOL_INVALID");
@@ -108,8 +132,11 @@ export async function compatibleRun(
     throw new Error("INVALID_INPUT");
   const protocol = profile.protocol || "openai",
     endpoint = providerEndpoint(profile.baseUrl, protocol);
-  if (context.images?.length || context.webSearch)
-    throw new Error("PROVIDER_CAPABILITY_UNSUPPORTED");
+  if (context.webSearch) throw new Error("PROVIDER_CAPABILITY_UNSUPPORTED");
+  // Pictures (an image or the pages of a scanned PDF) go as standard content parts, the way the OpenAI and Anthropic
+  // APIs and the services that copy them (OpenRouter, Qwen, MiniMax, Ollama, ...) take them. Whether the chosen model
+  // reads them is the service's answer: a refusal comes back as VISION_UNAVAILABLE, never as a silent text-only reply.
+  const images = imageParts(context.images, protocol);
   const signal = AbortSignal.any([
     AbortSignal.timeout(600_000),
     ...(context.signal ? [context.signal] : []),
@@ -140,7 +167,14 @@ export async function compatibleRun(
                   },
                 ]
               : context.system || "",
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            {
+              role: "user",
+              content: images.length
+                ? [{ type: "text", text: prompt }, ...images]
+                : prompt,
+            },
+          ],
         }
       : {
           model: profile.model,
@@ -151,7 +185,12 @@ export async function compatibleRun(
             ...(context.system
               ? [{ role: "system", content: context.system }]
               : []),
-            { role: "user", content: prompt },
+            {
+              role: "user",
+              content: images.length
+                ? [{ type: "text", text: prompt }, ...images]
+                : prompt,
+            },
           ],
         };
   let response;
@@ -171,7 +210,13 @@ export async function compatibleRun(
     throw new Error("PROVIDER_NETWORK_FAILED");
   }
   if (!response.ok) {
-    const code = await failureCode(response);
+    let code = await failureCode(response);
+    if (
+      images.length &&
+      code === "PROVIDER_REQUEST_FAILED" &&
+      [400, 404, 415, 422].includes(response.status)
+    )
+      code = "VISION_UNAVAILABLE";
     const header = response.headers.get("retry-after");
     const seconds = header === null ? NaN : Number(header);
     const wait = Number.isFinite(seconds)

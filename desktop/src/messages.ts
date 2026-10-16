@@ -140,7 +140,9 @@ export const errorText: Record<string, string> = localized({
   ATTACH_NO_TEXT: 'ไฟล์นี้ไม่มีตัวอักษรให้อ่าน มักเป็น PDF สแกนหรือรูปภาพ ใช้ไฟล์ต้นฉบับ (Word หรือ PDF ที่พิมพ์) แทน',
   ATTACH_PAGES_WITHOUT_TEXT:
     'บางหน้าใน PDF เป็นภาพสแกนที่อ่านตัวอักษรไม่ได้ ระบบจึงยังไม่ส่ง เพื่อไม่ให้ AI สรุปจากเนื้อหาที่ขาดไป ใช้ไฟล์ต้นฉบับหรือตัดหน้าที่เป็นภาพออก',
-  ATTACH_SCANNED_TOO_LONG: 'PDF สแกนยาวเกิน 20 หน้า แบ่งไฟล์แล้วแนบทีละส่วน',
+  ATTACH_SCANNED_TOO_LONG: 'PDF สแกนยาวเกิน 30 หน้า แบ่งไฟล์แล้วแนบทีละส่วน',
+  ATTACH_SCANNED_NEEDS_VISION:
+    'PDF นี้เป็นภาพสแกน แต่บัญชี AI ที่เลือกอยู่ (เช่น Gemini ผ่าน Antigravity) ยังรับภาพไม่ได้ และ OCR ในเครื่องยังไม่เปิด เปิด OCR ในเครื่อง หรือเปลี่ยนเป็น ChatGPT, Claude หรือ Gemini ด้วย API key แล้วแนบใหม่',
   ATTACH_TIMEOUT: 'อ่านไฟล์นานเกินกำหนด ลองแบ่งไฟล์ให้เล็กลง',
   ATTACH_READ_FAILED: 'เปิดหรืออ่านไฟล์นี้ไม่ได้ ไฟล์อาจเสียหรือตั้งรหัสผ่านไว้',
   ATTACH_PARTIAL:

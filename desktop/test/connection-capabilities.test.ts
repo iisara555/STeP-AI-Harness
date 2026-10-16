@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { connectionCapabilities, organizationCapabilities } from '../src/connection-capabilities';
 import type { Connection, PolicySnapshot } from '../src/types';
+import { takesImages } from '../src/vision-transport';
 const connection = {
   id: 'synthetic',
   provider: 'antigravity',
@@ -23,6 +24,14 @@ test('Antigravity can search via host but does not inherit image or image-genera
   assert.equal(state(connection, policy, 'web').state, 'available');
   assert.equal(state(connection, policy, 'vision').state, 'blocked');
   assert.equal(state(connection, policy, 'image').state, 'blocked');
+});
+test('images go where the transport carries them; Antigravity and Copilot point to OCR text instead', () => {
+  assert.match(state(connection, policy, 'vision').detail, /Antigravity.*OCR/);
+  const compatible = { ...connection, provider: 'compatible', mode: 'api' } as Connection;
+  assert.equal(state(compatible, policy, 'vision').state, 'conditional');
+  assert.equal(state({ ...connection, provider: 'copilot' } as Connection, policy, 'vision').reason, 'transport');
+  for (const provider of ['openai', 'claude', 'gemini', 'compatible']) assert.equal(takesImages(provider), true, provider);
+  for (const provider of ['antigravity', 'copilot', undefined]) assert.equal(takesImages(provider), false, String(provider));
 });
 test('policy revocation and missing policy never project stale or guessed readiness', () => {
   assert.equal(state({ ...connection, policyBlocked: true, ready: false }, policy, 'web').state, 'blocked');

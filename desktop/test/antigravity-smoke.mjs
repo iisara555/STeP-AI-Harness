@@ -6,6 +6,27 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 
+// A PDF whose pages have no text layer, like a scanned document.
+function blankPdf(count) {
+  const objects = ['', '<< /Type /Catalog /Pages 2 0 R >>'];
+  objects[2] = `<< /Type /Pages /Kids [${Array.from({ length: count }, (_, i) => `${3 + i * 2} 0 R`).join(' ')}] /Count ${count} >>`;
+  for (let i = 0; i < count; i++) {
+    objects[3 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${4 + i * 2} 0 R >>`;
+    objects[4 + i * 2] = '<< /Length 0 >>\nstream\n\nendstream';
+  }
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  for (let n = 1; n < objects.length; n++) {
+    offsets[n] = out.length;
+    out += `${n} 0 obj\n${objects[n]}\nendobj\n`;
+  }
+  const xref = out.length;
+  out += `xref\n0 ${objects.length}\n0000000000 65535 f \n${offsets
+    .slice(1)
+    .map(o => `${String(o).padStart(10, '0')} 00000 n \n`)
+    .join('')}trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
 const home = await mkdtemp(join(tmpdir(), 'step-antigravity-smoke-'));
 const executable = join(home, 'agy.mjs');
 const marker = join(home, 'unsafe');
@@ -98,6 +119,18 @@ try {
   // Antigravity is text-only. A newly started OCR retains that capability and automatically requests token mapping.
   await rm(marker);
   assert.equal((await page.evaluate(id => window.step.call('connect', { id }), connection.id)).ready, true);
+  // agy's stream-json input takes text only, so a scanned PDF is never turned into page pictures for it. With no local
+  // OCR running the chip says what to change instead of a bare "no text".
+  const scan = join(home, 'scanned-tor.pdf');
+  await writeFile(scan, blankPdf(2));
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+  }, scan);
+  const task = await page.evaluate(connectionId => window.step.call('create', { connectionId }), connection.id);
+  const scanned = await page.evaluate(id => window.step.call('attach', { id }), task.id);
+  assert.equal(scanned.usable, false, JSON.stringify(scanned));
+  assert.equal(scanned.reason, 'ATTACH_SCANNED_NEEDS_VISION');
+  assert.equal(scanned.vision, undefined);
   const folder = join(home, 'ocr'),
     python = process.platform === 'win32' ? join(folder, '.venv', 'Scripts', 'python.exe') : join(folder, '.venv', 'bin', 'python');
   await mkdir(dirname(python), { recursive: true });
