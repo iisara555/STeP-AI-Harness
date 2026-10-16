@@ -1,9 +1,12 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, open, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { pathExists } from '../utils/file-ops.js';
 import { safeWorkspacePath } from '../utils/workspace-path.js';
 
 export const USER_MEMORY_FILENAME = 'USER.md';
+const TONE_MAX = 300;
 
 export const PERSONALITY_PRESETS = {
   coworker: {
@@ -76,6 +79,8 @@ export function generateUserMemoryTemplate(options = {}) {
   const firstRunCompleted = options.firstRunCompleted === true;
   const projects = options.activeProjects || [];
   const skills = options.frequentSkills || [];
+  const preferences = Object.entries(options.preferences || {});
+  const notes = options.notes || [];
 
   let text = `# STeP User Memory (Private — Workspace Local)\n\n`;
   text += `> **ความเป็นส่วนตัว (Privacy Notice):**  \n`;
@@ -97,9 +102,14 @@ export function generateUserMemoryTemplate(options = {}) {
   text += `- **First Run Completed**: ${firstRunCompleted ? 'true' : 'false'}\n\n`;
 
   text += `## 3. สไตล์และแนวทางการทำงาน (Working Preferences)\n`;
-  text += `- **การจัดรูปแบบผลลัพธ์ (Output Format)**: ชอบแบบสรุปหัวข้อย่อยและตาราง Markdown\n`;
-  text += `- **การตรวจทาน (Review Habits)**: ตรวจสอบความถูกต้องของร่างเอกสารก่อนส่งจริงเสมอ\n`;
-  text += `- **ข้อจำกัดเฉพาะตัว (Custom Constraints)**: ปฏิบัติตามมาตรฐาน CMU / MHESI\n\n`;
+  if (preferences.length > 0) {
+    for (const [label, value] of preferences) text += `- **${label}**: ${value}\n`;
+  } else {
+    text += `- **การจัดรูปแบบผลลัพธ์ (Output Format)**: ชอบแบบสรุปหัวข้อย่อยและตาราง Markdown\n`;
+    text += `- **การตรวจทาน (Review Habits)**: ตรวจสอบความถูกต้องของร่างเอกสารก่อนส่งจริงเสมอ\n`;
+    text += `- **ข้อจำกัดเฉพาะตัว (Custom Constraints)**: ปฏิบัติตามมาตรฐาน CMU / MHESI\n`;
+  }
+  text += `\n`;
 
   text += `## 4. โครงการและบริบทที่ทำอยู่ (Active Projects & Contexts)\n`;
   if (projects.length > 0) {
@@ -127,6 +137,7 @@ export function generateUserMemoryTemplate(options = {}) {
 
   text += `## 7. บันทึกเพิ่มเติมและการเรียนรู้ (Working Notes & Clarifications)\n`;
   text += `- AI จะอัปเดตส่วนนี้อย่างต่อเนื่องเมื่อคุณให้ข้อมูลหรือระบุสไตล์ใหม่ในแชท\n`;
+  for (const note of notes) text += `- ${note}\n`;
 
   return text;
 }
@@ -244,6 +255,54 @@ export function needsFirstRunCompanion(memory = {}) {
 }
 
 /**
+ * Read, change and replace USER.md as one transaction, also across processes (CLI and Desktop share the file).
+ * Mirrors saveUserConfig: an exclusive lock file, a private temporary file and an atomic rename.
+ * Never removes another writer's lock, even after a timeout or crash.
+ * @param {string} filePath
+ * @param {(existing: string|null) => string|null|Promise<string|null>} change returns the new text, or null to leave the file
+ */
+async function transformUserMemory(filePath, change) {
+  const lockPath = filePath + '.lock';
+  const deadline = Date.now() + 5000;
+  let lock;
+  while (!lock) {
+    try {
+      lock = await open(lockPath, 'wx', 0o600);
+    } catch (error) {
+      const busy = error.code === 'EEXIST' || (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(error.code));
+      if (!busy) throw error;
+      if (Date.now() >= deadline) throw error.code === 'EEXIST' ? new Error('USER_MEMORY_BUSY') : error;
+      await delay(25);
+    }
+  }
+  const temporary = `${filePath}.${randomUUID()}.tmp`;
+  try {
+    const existing = (await pathExists(filePath)) ? await readFile(filePath, 'utf-8') : null;
+    const next = await change(existing);
+    if (next === null || next === undefined) return { existing, written: false };
+    await writeFile(temporary, next, { flag: 'wx', mode: 0o600 });
+    const replacementDeadline = Date.now() + 3000;
+    for (;;) {
+      try {
+        await rename(temporary, filePath);
+        break;
+      } catch (error) {
+        if (!['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || Date.now() >= replacementDeadline) throw error;
+        await delay(25);
+      }
+    }
+    return { existing, written: true };
+  } finally {
+    try {
+      await rm(temporary, { force: true });
+    } finally {
+      await lock.close();
+      await rm(lockPath, { force: true });
+    }
+  }
+}
+
+/**
  * Load User Memory from workspace if present
  */
 export async function loadUserMemory(workspaceDir = process.cwd()) {
@@ -272,12 +331,19 @@ export async function updateUserMemoryProfile(workspaceDir = process.cwd(), upda
   const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
   if (!(await pathExists(filePath))) return { updated: false, filePath };
 
-  let content = await readFile(filePath, 'utf-8');
+  const { written } = await transformUserMemory(filePath, (existing) => existing === null ? null : applyProfileUpdates(existing, updates));
+  if (!written) return { updated: false, filePath };
+  await ensureGitignored(workspaceDir);
+  return { updated: true, filePath };
+}
+
+function applyProfileUpdates(content, updates) {
   const team = updates.team ? String(updates.team).toUpperCase() : '';
   const cluster = updates.cluster ? String(updates.cluster) : '';
 
   const setProfileField = (text, pattern, canonicalLabel, value) => {
-    if (pattern.test(text)) return text.replace(pattern, `$1${value}`);
+    // A function replacement keeps `$&` / `$$` in the value literal.
+    if (pattern.test(text)) return text.replace(pattern, (_, label) => `${label}${value}`);
     const line = `- **${canonicalLabel}**: ${value}`;
     if (/^## 1\..*$/m.test(text)) {
       return text.replace(/^## 1\..*$/m, (heading) => `${heading}\n${line}`);
@@ -287,13 +353,13 @@ export async function updateUserMemoryProfile(workspaceDir = process.cwd(), upda
 
   content = setProfileField(
     content,
-    /(- \*\*(?:ทีมหลัก(?: \(Primary Team\))?|Primary Team)\*\*:\s*).*$/m,
+    /(- \*\*(?:ทีมหลัก(?: \(Primary Team\))?|Primary Team)\*\*:[ \t]*).*$/m,
     'ทีมหลัก (Primary Team)',
     team,
   );
   content = setProfileField(
     content,
-    /(- \*\*(?:กลุ่มงานสำหรับ Routing(?: \(Routing Cluster\))?|Routing Cluster)\*\*:\s*).*$/m,
+    /(- \*\*(?:กลุ่มงานสำหรับ Routing(?: \(Routing Cluster\))?|Routing Cluster)\*\*:[ \t]*).*$/m,
     'กลุ่มงานสำหรับ Routing (Routing Cluster)',
     cluster,
   );
@@ -311,13 +377,10 @@ export async function updateUserMemoryProfile(workspaceDir = process.cwd(), upda
 
     content = content.replace(
       /## 5\. งานเริ่มต้นที่แนะนำ \(Suggested First Tasks\)[\s\S]*?## 6\. ทักษะที่ใช้งานบ่อย \(Frequently Used Skills\)/,
-      replacement
+      () => replacement
     );
   }
-
-  await writeFile(filePath, content, 'utf-8');
-  await ensureGitignored(workspaceDir);
-  return { updated: true, filePath };
+  return content;
 }
 
 /**
@@ -330,36 +393,40 @@ export function applyPersonalization(markdown = '', options = {}) {
   const personality = PERSONALITY_PRESETS[options.personality] ? options.personality : 'coworker';
   const preset = getPersonalityPreset(personality);
   const tone = (personality === 'custom' ? options.assistantTone : '') || preset.tone || options.assistantTone || '';
-  const clean = (value) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
+  const clean = (value, max = 200) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
   const name = clean(options.name), assistantName = clean(options.assistantName) || 'STeP Mate', team = clean(options.team);
+  // The custom style field accepts 300 characters in Settings and ASSISTANT.md; USER.md keeps the same length.
+  const style = clean(tone, TONE_MAX);
 
   const current = parseUserMemory(markdown);
   if (!markdown || !/ผู้ช่วยส่วนตัว|Personal Assistant/i.test(markdown)) {
     return generateUserMemoryTemplate({
       name: name || current.profile.name, team: team || current.profile.team, cluster: current.profile.cluster, role: current.profile.role,
-      assistantName, personality, assistantTone: clean(tone), tone: clean(tone), firstRunCompleted: true,
+      assistantName, personality, assistantTone: style, tone: style, firstRunCompleted: true,
       activeProjects: current.activeProjects, frequentSkills: current.frequentSkills,
+      // Older USER.md files keep the employee's own working preferences and notes when upgraded.
+      preferences: current.preferences, notes: current.notes,
     });
   }
-  const set = (text, label, value) => text.replace(new RegExp(`(- \\*\\*${label}[^*]*\\*\\*:)[^\\n]*`), `$1 ${value}`);
+  // A function replacement keeps `$&` / `$$` in names and styles literal.
+  const set = (text, label, value) => text.replace(new RegExp(`(- \\*\\*${label}[^*]*\\*\\*:)[^\\n]*`), (_, prefix) => `${prefix} ${value}`);
   let text = markdown;
   text = set(text, 'ชื่อ / ชื่อเรียก', name || current.profile.name);
   if (options.team !== undefined) text = set(text, 'ทีมหลัก', team.toUpperCase());
-  text = set(text, 'รูปแบบการสื่อสารที่ชอบ', clean(tone));
+  text = set(text, 'รูปแบบการสื่อสารที่ชอบ', style);
   text = set(text, 'ชื่อผู้ช่วย', assistantName);
   text = set(text, 'บุคลิกผู้ช่วย', `${personality} (${preset.label})`);
-  text = set(text, 'รูปแบบการคุย', clean(tone));
+  text = set(text, 'รูปแบบการคุย', style);
   text = /- \*\*First Run Completed\*\*:/.test(text)
     ? set(text, 'First Run Completed', 'true')
-    : text.replace(/(- \*\*รูปแบบการคุย[^\n]*)/, '$1\n- **First Run Completed**: true');
+    : text.replace(/(- \*\*รูปแบบการคุย[^\n]*)/, (line) => `${line}\n- **First Run Completed**: true`);
   return text;
 }
 
 /** Write the personalization to USER.md, creating the file when it does not exist yet. */
 export async function savePersonalization(workspaceDir = process.cwd(), options = {}) {
   const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
-  const existing = (await pathExists(filePath)) ? await readFile(filePath, 'utf-8') : '';
-  await writeFile(filePath, applyPersonalization(existing, options), 'utf-8');
+  const { existing } = await transformUserMemory(filePath, (current) => applyPersonalization(current || '', options));
   await ensureGitignored(workspaceDir);
   return { filePath, created: !existing };
 }
@@ -367,7 +434,7 @@ export async function savePersonalization(workspaceDir = process.cwd(), options 
 /** Save raw markdown text to USER.md */
 export async function saveUserMemory(workspaceDir = process.cwd(), content = '') {
   const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
-  await writeFile(filePath, content, 'utf-8');
+  await transformUserMemory(filePath, () => content);
   await ensureGitignored(workspaceDir);
   return filePath;
 }
@@ -375,17 +442,10 @@ export async function saveUserMemory(workspaceDir = process.cwd(), content = '')
 /** Initialize USER.md in workspace if it doesn't already exist */
 export async function initUserMemory(workspaceDir = process.cwd(), options = {}) {
   const filePath = await safeWorkspacePath(workspaceDir, USER_MEMORY_FILENAME);
-  const exists = await pathExists(filePath);
-
-  if (exists) {
-    await ensureGitignored(workspaceDir);
-    return { created: false, filePath };
-  }
-
-  const content = generateUserMemoryTemplate(options);
-  await writeFile(filePath, content, 'utf-8');
+  // Created only when still missing inside the lock, so a parallel save is never replaced by the template.
+  const { written } = await transformUserMemory(filePath, (existing) => existing === null ? generateUserMemoryTemplate(options) : null);
   await ensureGitignored(workspaceDir);
-  return { created: true, filePath };
+  return { created: written, filePath };
 }
 
 /**
@@ -404,12 +464,11 @@ export async function ensureGitignored(workspaceDir = process.cwd(), { strict = 
     const exists = await pathExists(gitignorePath);
     const content = exists ? await readFile(gitignorePath, 'utf-8') : '';
     const lines = content.split(/\r?\n/).map((l) => l.trim());
-    const missing = [];
-
-    if (!lines.includes('USER.md') && !lines.includes('/USER.md')) missing.push('USER.md');
-    if (!lines.includes('MEMORY.md') && !lines.includes('/MEMORY.md')) missing.push('MEMORY.md');
-    if (!lines.includes('ASSISTANT.md') && !lines.includes('/ASSISTANT.md')) missing.push('ASSISTANT.md');
-    if (!lines.includes('.step/memory/') && !lines.includes('/.step/memory/')) missing.push('.step/memory/');
+    // Git applies the last matching rule, so a later `!` negation (for example `!USER.md` or `!*.md`) re-includes
+    // the file. A rule only counts when no negation follows it; otherwise it is appended again at the end.
+    const lastNegation = lines.findLastIndex((l) => l.startsWith('!'));
+    const ignored = (rule) => Math.max(lines.lastIndexOf(rule), lines.lastIndexOf('/' + rule)) > lastNegation;
+    const missing = ['USER.md', 'MEMORY.md', 'ASSISTANT.md', '.step/memory/'].filter((rule) => !ignored(rule));
 
     if (missing.length === 0) return false;
 

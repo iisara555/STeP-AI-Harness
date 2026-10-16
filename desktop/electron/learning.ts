@@ -18,7 +18,9 @@ const current = (lesson: LearnedLesson) => lesson.revisions[lesson.revisions.len
 // Usage is kept apart from the lessons so recording it never bumps their generation (which aborts a running task).
 const MAX_USES = 2000,
   MAX_REPEATS = 500,
-  REPEAT_OVERLAP = 0.5;
+  REPEAT_OVERLAP = 0.5,
+  MAX_BYTES = 8_000_000,
+  DISABLE_SLACK_BYTES = 64_000;
 const checkedText = (value: unknown, max: number) => {
   if (typeof value !== 'string' || !value.trim() || value.length > max) throw new Error('LEARNING_INVALID');
   return value.trim();
@@ -44,11 +46,13 @@ export class Learning {
     if (context !== this.context()) throw new Error('WORKSPACE_CHANGED');
     return this.snapshot();
   }
-  private commit(state: LearningSnapshot) {
+  private commit(state: LearningSnapshot, disabling = false) {
     if (state.context !== this.context()) throw new Error('WORKSPACE_CHANGED');
     const { context, ...saved } = state;
     saved.generation++;
-    if (Buffer.byteLength(JSON.stringify(saved), 'utf8') > 8_000_000) throw new Error('LEARNING_LIMIT');
+    // Turning a lesson off adds a few bytes and must work even at the size cap (at most 100 active lessons).
+    if (Buffer.byteLength(JSON.stringify(saved), 'utf8') > MAX_BYTES + (disabling ? DISABLE_SLACK_BYTES : 0))
+      throw new Error('LEARNING_LIMIT');
     this.store.put('learning', context, saved);
   }
   private content(raw: any): LessonContent {
@@ -178,7 +182,7 @@ export class Learning {
       restoredFrom: target as number,
       at: new Date().toISOString(),
     });
-    this.commit(state);
+    this.commit(state, target === 0);
   }
   usage(): LearningUsage {
     return this.store.get<LearningUsage>('learning-usage', this.context()) || { uses: [], repeats: [] };
