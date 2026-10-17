@@ -8,6 +8,8 @@ _Last updated: 2026-10-17_
 
 ## Latest release
 
+- **Desktop v0.6.13** (2026-10-17) — prepared from `main` after #195–#201: composer AI pill and icon draft toolbar (#199), scheduled tasks page on by default and sidebar tools as icons (#201), Vault website sign-in (#200), Google sign-in failure reasons, built-in OAuth client and plain-language Workspace routing (#195–#198). Windows x64 and macOS arm64.
+
 - **Desktop v0.6.10** (2026-10-15) — published from `2a791b6` after #176–#178, completing Thai DOCX text/fonts/presets, rich elements and owned images, TOC/header/footer/page fields. Exact-head PR CI and post-merge main CI `38696841804` passed. Installer run `38698022343` passed for Windows x64/macOS arm64, including full Windows Electron checks and packaged Mac signature/launch checks. All eight immutable/rolling asset digests match; public Windows installer and Mac ZIP SHA-512 match both 0.6.10 feeds. The release tag resolves to `2a791b6`; the actual Mac ZIP contains all eight pinned font faces and their licenses. Harness remains 0.7.7. Native macOS Word and employee-form acceptance remain open.
 
 - **Desktop v0.6.9** (2026-10-15) — published from `f167111`; optional Workspace Skill, Thai layout/TOR work and bounded reference/search fixes.

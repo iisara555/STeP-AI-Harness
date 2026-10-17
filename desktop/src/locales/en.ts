@@ -9,6 +9,19 @@ import { documentLayoutEn } from './document-layout-en';
 export const en: Record<string, string> = {
   'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
+  'ช่องแชทเลือก AI โมเดล และระดับการคิดได้จากปุ่มเดียว ไม่ล้นเป็นสองบรรทัด':
+    'Pick the AI, model and reasoning level from one button in the composer, so it stays on one row',
+  'แถบเครื่องมือผลงานเป็นไอคอนพร้อมคำอธิบาย ไม่ต้องเลื่อนหาเครื่องมือ':
+    'The draft toolbar uses icons with tooltips, so you no longer scroll to find a tool',
+  'หน้างานตั้งเวลาใหม่ ให้ผู้ช่วยทำงานซ้ำตามวันและเวลาที่ตั้ง ผลเป็นร่างรอตรวจ':
+    'New scheduled tasks page: the assistant repeats a task on the days and time you set, and each result is a draft for review',
+  'เครื่องมือในแถบด้านซ้ายย่อเป็นไอคอน รายการงานจึงมีพื้นที่มากขึ้น': 'Sidebar tools fold to icons, so the task list has more room',
+  'ให้ AI กรอกบัญชีเว็บที่บันทึกใน Vault เพื่อเข้าระบบ เช่น STeP MIS หลังคุณยืนยัน':
+    'Let AI sign in to websites such as STeP MIS with an account saved in Vault, after you confirm',
+  'ถามเรื่องนัด งาน หรืออีเมลด้วยภาษาปกติได้ เมื่อเชื่อม Google Workspace แล้ว':
+    'Ask about meetings, tasks or email in plain words once Google Workspace is connected',
+  'รูปโปรไฟล์ในโหมดมืดแสดงถูกต้อง และสิทธิ์อ่านอย่างเดียวเปลี่ยนชื่อให้ชัดขึ้น':
+    'Profile pictures look right in dark mode, and the read-only permission has a clearer name',
   'ปรับแชต การตั้งค่า และกล่องยืนยันให้อ่านง่ายขึ้น ทั้งหน้าต่างเล็กและโหมดมืด':
     'Clearer chat, settings and confirmations, including small windows and dark mode',
   'ให้พื้นที่ร่างในแผงผลงานมากขึ้น และพับการตั้งค่าส่งออกได้':
