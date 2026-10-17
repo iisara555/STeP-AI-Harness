@@ -1,5 +1,37 @@
 import { useEditorState, type Editor } from '@tiptap/react';
+import type { ReactNode } from 'react';
+import { Bold, ImagePlus, IndentDecrease, IndentIncrease, Italic, List, ListOrdered, SeparatorHorizontal, TextQuote } from 'lucide-react';
 import { t } from './i18n';
+
+// Icon buttons keep the whole toolbar on one or two rows of a narrow panel; the Thai name is the button's
+// accessible name and tooltip.
+function Tool({
+  label,
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={'quiet draft-tool' + (active ? ' active' : '')}
+      aria-label={label}
+      aria-pressed={active === undefined ? undefined : active}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function DocumentToolbar({
   editor,
@@ -23,6 +55,9 @@ export function DocumentToolbar({
             ? 'h' + e.getAttributes('heading').level
             : 'paragraph',
       list: e.isActive('listItem'),
+      bold: e.isActive('bold'),
+      italic: e.isActive('italic'),
+      bullet: e.isActive('bulletList'),
       nested: e.state.selection.$from.depth > 1 || e.state.selection.$to.depth > 1,
       ordered: e.isActive('orderedList'),
       start: e.getAttributes('orderedList').start || 1,
@@ -34,10 +69,10 @@ export function DocumentToolbar({
   return (
     <div className="document-structure-controls">
       <div role="toolbar" aria-label={t('โครงสร้างเอกสาร')} className="format-toolbar">
-        <label>
-          {t('รูปแบบข้อความ')}
+        <label className="draft-tool-kind">
           <select
             aria-label={t('รูปแบบข้อความ')}
+            title={t('รูปแบบข้อความ')}
             disabled={disabled || state.nested}
             value={state.kind}
             onChange={event => {
@@ -58,29 +93,65 @@ export function DocumentToolbar({
             </option>
           </select>
         </label>
-        <button
-          className="quiet"
-          disabled={locked || disabled || (state.nested && !editor.isActive('blockquote'))}
-          onClick={() => editor.chain().focus().toggleWrap('blockquote').run()}
-        >
-          {t('ข้อความอ้างอิง')}
-        </button>
-        <button
-          className="quiet"
-          disabled={locked || disabled || state.nested}
-          onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}
-        >
-          {t('ขึ้นหน้าใหม่')}
-        </button>
-        <button className="quiet" disabled={locked || disabled || state.nested} onClick={onImage}>
-          {t('แทรกรูปภาพ')}
-        </button>
-        <button className="quiet" disabled={!state.list || disabled} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
-          {t('เพิ่มระดับรายการ')}
-        </button>
-        <button className="quiet" disabled={!state.list || disabled} onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
-          {t('ลดระดับรายการ')}
-        </button>
+        <span className="draft-tool-group">
+          <Tool label={t('ตัวหนา')} active={state.bold} disabled={disabled} onClick={() => editor.chain().focus().toggleBold().run()}>
+            <Bold size={15} />
+          </Tool>
+          <Tool label={t('ตัวเอียง')} active={state.italic} disabled={disabled} onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <Italic size={15} />
+          </Tool>
+        </span>
+        <span className="draft-tool-group">
+          <Tool
+            label={t('รายการ')}
+            active={state.bullet}
+            disabled={disabled}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <List size={15} />
+          </Tool>
+          <Tool
+            label={t('ลำดับ')}
+            active={state.ordered}
+            disabled={disabled}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            <ListOrdered size={15} />
+          </Tool>
+          <Tool
+            label={t('เพิ่มระดับรายการ')}
+            disabled={!state.list || disabled}
+            onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+          >
+            <IndentIncrease size={15} />
+          </Tool>
+          <Tool
+            label={t('ลดระดับรายการ')}
+            disabled={!state.list || disabled}
+            onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+          >
+            <IndentDecrease size={15} />
+          </Tool>
+        </span>
+        <span className="draft-tool-group">
+          <Tool
+            label={t('ข้อความอ้างอิง')}
+            disabled={locked || disabled || (state.nested && !editor.isActive('blockquote'))}
+            onClick={() => editor.chain().focus().toggleWrap('blockquote').run()}
+          >
+            <TextQuote size={15} />
+          </Tool>
+          <Tool
+            label={t('ขึ้นหน้าใหม่')}
+            disabled={locked || disabled || state.nested}
+            onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}
+          >
+            <SeparatorHorizontal size={15} />
+          </Tool>
+          <Tool label={t('แทรกรูปภาพ')} disabled={locked || disabled || state.nested} onClick={onImage}>
+            <ImagePlus size={15} />
+          </Tool>
+        </span>
         {state.ordered && (
           <label>
             {t('เลขเริ่มต้น')}

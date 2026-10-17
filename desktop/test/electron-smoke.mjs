@@ -51,6 +51,7 @@ try {
   await page.getByRole('heading', { name: 'ให้ AI ร่างงานหนัก', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
+  await page.getByRole('button', { name: 'เลือก AI โมเดล และระดับการคิด' }).click();
   await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');
   await page.locator('.composer textarea').fill('ทดสอบส่งต่อ');
   await page.keyboard.press('Enter');
@@ -101,7 +102,7 @@ try {
   const restored = await page.evaluate(() => window.step.call('snapshot'));
   assert.match(restored.sessions[0].draft, /ตรวจการแก้ไข/);
   await page.locator('.draft-editor').click();
-  await page.getByRole('button', { name: 'หัวข้อ', exact: true }).click();
+  await page.getByRole('combobox', { name: 'รูปแบบข้อความ', exact: true }).selectOption('h2');
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
   await page.waitForTimeout(200);
   const formatted = await page.evaluate(() => window.step.call('snapshot'));

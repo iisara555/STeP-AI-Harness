@@ -91,19 +91,23 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   // Native End differs on macOS, and a click may leave the caret in a neighbouring block after reflow.
   // Set the fixture's insertion point explicitly, then wait for the toolbar to observe the selection.
+  // On macOS the editor's own focus handling can restore the previous caret just after focus(), so set it again
+  // until the toolbar reports the intended block.
   const caretAtEnd = async (block, kind) => {
-    await block.evaluate(element => {
-      element.closest('[contenteditable="true"]').focus();
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      range.collapse(false);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-    });
     const format = page.getByLabel('รูปแบบข้อความ', { exact: true });
-    await expect(format).toBeEnabled();
-    await expect(format).toHaveValue(kind);
+    await expect(async () => {
+      await block.evaluate(element => {
+        element.closest('[contenteditable="true"]').focus();
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+      await expect(format).toBeEnabled({ timeout: 1000 });
+      await expect(format).toHaveValue(kind, { timeout: 1000 });
+    }).toPass({ timeout: 15000 });
   };
   // Export settings start folded under the sliders button next to ส่งออก; the choice is remembered.
   const showExportSettings = async () => {
