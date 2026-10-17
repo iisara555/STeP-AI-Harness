@@ -960,6 +960,43 @@ export default function App() {
   const modelInfo = (id: string) => connection?.models?.find(m => m.id === id) || (!id ? defaultModel : undefined);
   const activeModel = modelInfo(currentModel),
     currentEffort = session ? session.effort || '' : pendingEffort;
+  const modelName = activeModel?.label || currentModel,
+    effortName = currentEffort ? effortLabel[currentEffort] || currentEffort : '';
+  const aiLabel = connection
+    ? [modelName || connectionName(connection), effortName].filter(Boolean).join(' · ')
+    : !session && connectionId === CLAUDE_CODE
+      ? t('Claude · Pro/Max (เปิดใน Claude Code)')
+      : t('เลือก AI');
+  const aiSummary = connection
+    ? [
+        connectionName(connection),
+        modelName || t('ค่าเริ่มต้นของบริการ'),
+        effortName ||
+          (activeModel?.efforts?.length ? (snapshot?.policy?.features.autoEffort ? t('อัตโนมัติตามขนาดงาน') : t('ค่าเริ่มต้น')) : ''),
+        connection.ready ? '' : t('ยังไม่พร้อม'),
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : aiLabel;
+  const [aiPicker, setAiPicker] = useState(false);
+  const aiPickerRef = useRef<HTMLDivElement>(null);
+  // The AI picker closes on a click outside it or Escape, like a menu.
+  useEffect(() => {
+    if (!aiPicker) return;
+    const close = (event: PointerEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent ? event.key === 'Escape' : !aiPickerRef.current?.contains(event.target as Node))
+        setAiPicker(false);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [aiPicker]);
+  useEffect(() => {
+    if (running) setAiPicker(false);
+  }, [running]);
   // Load the provider's model list once for ready connections that have never fetched it.
   useEffect(() => {
     if (!api || !connection?.ready || connection.modelsAt || modelsRequested.current.has(connection.id)) return;
@@ -2410,80 +2447,107 @@ export default function App() {
                       </select>
                     )}
                     <span className="spacer" />
-                    <select
-                      className="pill-select"
-                      aria-label={t('เลือกการเชื่อมต่อ AI')}
-                      value={session ? session.connectionId : connectionId}
-                      disabled={running}
-                      onChange={e => void action(() => chooseConnection(e.target.value))}
-                    >
-                      <option value="">{t('เลือก AI')}</option>
-                      {snapshot.connections.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {connectionName(c)}
-                          {c.ready ? '' : t(' · ยังไม่พร้อม')}
-                        </option>
-                      ))}
-                      {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
-                    </select>
-                    {connection && (
-                      <select
-                        aria-label={t('เลือกโมเดล')}
+                    {/* One pill for the AI account, model and reasoning level: the full choice opens above it, so the row
+                        stays on one line and the account is not repeated in the status bar. */}
+                    <div className="ai-picker" ref={aiPickerRef}>
+                      <button
+                        type="button"
+                        className="pill-select ai-picker-button"
                         data-tour="model"
-                        className="pill-select model-select"
-                        title={
-                          connection.models?.find(m => m.id === currentModel)?.description || t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
-                        }
-                        value={currentModel}
+                        aria-label={t('เลือก AI โมเดล และระดับการคิด')}
+                        aria-expanded={aiPicker}
+                        title={aiSummary}
                         disabled={running}
-                        onChange={e => void action(() => chooseModel(e.target.value))}
+                        onClick={() => setAiPicker(open => !open)}
                       >
-                        {/* The pill is narrow, so the default shows just the model name; the full wording stays in the tooltip and list title. */}
-                        <option value="" title={t('ค่าเริ่มต้นของบริการ')}>
-                          {defaultModel ? defaultModel.label : t('ค่าเริ่มต้นของบริการ')}
-                        </option>
-                        {(connection.models || [])
-                          .filter(m => m.id !== defaultModel?.id || m.id === currentModel)
-                          .map(m => (
-                            <option key={m.id} value={m.id} title={m.description}>
-                              {m.label}
-                            </option>
-                          ))}
-                        {currentModel && !connection.models?.some(m => m.id === currentModel) && (
-                          <option value={currentModel}>{currentModel}</option>
-                        )}
-                      </select>
-                    )}
-                    {activeModel?.efforts?.length ? (
-                      <select
-                        aria-label={t('เลือกระดับการคิด')}
-                        className="pill-select model-select"
-                        title={
-                          activeModel.efforts.find(e => e.id === currentEffort)?.description ||
-                          (!currentEffort && snapshot.policy?.features.autoEffort
-                            ? t(
-                                'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล',
-                              )
-                            : t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น'))
-                        }
-                        value={currentEffort}
-                        disabled={running}
-                        onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
-                      >
-                        <option value="">
-                          {snapshot.policy?.features.autoEffort
-                            ? t('อัตโนมัติตามขนาดงาน')
-                            : activeModel.defaultEffort
-                              ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
-                              : t('ค่าเริ่มต้น')}
-                        </option>
-                        {activeModel.efforts.map(e => (
-                          <option key={e.id} value={e.id} title={e.description}>
-                            {effortLabel[e.id] || e.id}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
+                        <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
+                        <span className="ai-picker-label">{aiLabel}</span>
+                        <ChevronDown size={14} aria-hidden="true" />
+                      </button>
+                      {aiPicker && (
+                        <div className="ai-picker-menu" role="group" aria-label={t('AI ของงานนี้')}>
+                          <label>
+                            {t('บัญชี AI')}
+                            <select
+                              aria-label={t('เลือกการเชื่อมต่อ AI')}
+                              value={session ? session.connectionId : connectionId}
+                              disabled={running}
+                              onChange={e => void action(() => chooseConnection(e.target.value))}
+                            >
+                              <option value="">{t('เลือก AI')}</option>
+                              {snapshot.connections.map(c => (
+                                <option key={c.id} value={c.id}>
+                                  {connectionName(c)}
+                                  {c.ready ? '' : t(' · ยังไม่พร้อม')}
+                                </option>
+                              ))}
+                              {!session && <option value={CLAUDE_CODE}>{t('Claude · Pro/Max (เปิดใน Claude Code)')}</option>}
+                            </select>
+                          </label>
+                          {connection && (
+                            <label>
+                              {t('โมเดล')}
+                              <select
+                                aria-label={t('เลือกโมเดล')}
+                                title={
+                                  connection.models?.find(m => m.id === currentModel)?.description ||
+                                  t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
+                                }
+                                value={currentModel}
+                                disabled={running}
+                                onChange={e => void action(() => chooseModel(e.target.value))}
+                              >
+                                <option value="" title={t('ค่าเริ่มต้นของบริการ')}>
+                                  {defaultModel ? defaultModel.label : t('ค่าเริ่มต้นของบริการ')}
+                                </option>
+                                {(connection.models || [])
+                                  .filter(m => m.id !== defaultModel?.id || m.id === currentModel)
+                                  .map(m => (
+                                    <option key={m.id} value={m.id} title={m.description}>
+                                      {m.label}
+                                    </option>
+                                  ))}
+                                {currentModel && !connection.models?.some(m => m.id === currentModel) && (
+                                  <option value={currentModel}>{currentModel}</option>
+                                )}
+                              </select>
+                            </label>
+                          )}
+                          {activeModel?.efforts?.length ? (
+                            <label>
+                              {t('ระดับการคิด')}
+                              <select
+                                aria-label={t('เลือกระดับการคิด')}
+                                title={
+                                  activeModel.efforts.find(e => e.id === currentEffort)?.description ||
+                                  (!currentEffort && snapshot.policy?.features.autoEffort
+                                    ? t(
+                                        'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล',
+                                      )
+                                    : t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น'))
+                                }
+                                value={currentEffort}
+                                disabled={running}
+                                onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
+                              >
+                                <option value="">
+                                  {snapshot.policy?.features.autoEffort
+                                    ? t('อัตโนมัติตามขนาดงาน')
+                                    : activeModel.defaultEffort
+                                      ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
+                                      : t('ค่าเริ่มต้น')}
+                                </option>
+                                {activeModel.efforts.map(e => (
+                                  <option key={e.id} value={e.id} title={e.description}>
+                                    {effortLabel[e.id] || e.id}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
                     {running ? (
                       <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
                         <Square size={17} />
@@ -2507,10 +2571,13 @@ export default function App() {
           <footer className="statusbar" aria-label={t('สถานะ')}>
             <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
             <span>
+              {/* The account and model are on the composer's AI pill; the status bar only says whether it can work. */}
               {connection
-                ? `${providerName(connection)} · ${
-                    !connection.ready ? t('ยังไม่พร้อม') : runFailed ? t('งานล่าสุดไม่สำเร็จ') : t('พร้อมทำงาน')
-                  }`
+                ? !connection.ready
+                  ? t('ยังไม่พร้อม')
+                  : runFailed
+                    ? t('งานล่าสุดไม่สำเร็จ')
+                    : t('พร้อมทำงาน')
                 : t('ยังไม่เชื่อมต่อ AI')}
             </span>
             {elapsed && (
@@ -2788,26 +2855,6 @@ export default function App() {
                           }
                         />
                       )}
-                      <div className="format-toolbar" role="toolbar" aria-label={t('จัดรูปแบบร่าง')}>
-                        <button className="quiet" onClick={() => editor?.chain().focus().setParagraph().run()}>
-                          {t('ข้อความ')}
-                        </button>
-                        <button className="quiet" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>
-                          {t('หัวข้อ')}
-                        </button>
-                        <button className="quiet" onClick={() => editor?.chain().focus().toggleBold().run()}>
-                          {t('ตัวหนา')}
-                        </button>
-                        <button className="quiet" onClick={() => editor?.chain().focus().toggleItalic().run()}>
-                          {t('ตัวเอียง')}
-                        </button>
-                        <button className="quiet" onClick={() => editor?.chain().focus().toggleBulletList().run()}>
-                          {t('รายการ')}
-                        </button>
-                        <button className="quiet" onClick={() => editor?.chain().focus().toggleOrderedList().run()}>
-                          {t('ลำดับ')}
-                        </button>
-                      </div>
                     </div>
                     <div className={'editor-scroll' + (!session.draft.trim() && session.proposals.length ? ' waiting' : '')}>
                       <EditorContent editor={editor} />
