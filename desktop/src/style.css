@@ -770,6 +770,34 @@ nav button,
   color: var(--text);
   max-width: 170px;
 }
+/* The permission pill shows a shield and a short word; the real list lies over it, see-through, so a click opens it. */
+.composer-tools .permission-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.composer-tools .permission-pill:hover,
+.composer-tools .permission-pill:focus-within {
+  background: var(--hover);
+  color: var(--text);
+}
+.composer-tools .permission-pill:has(select:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.permission-pill select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.permission-pill:has(select:disabled) {
+  opacity: 0.45;
+}
 /* The AI pill holds account, model and reasoning level; its menu opens upward from the composer. */
 .ai-picker {
   position: relative;

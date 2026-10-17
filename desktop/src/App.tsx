@@ -126,6 +126,14 @@ const DocumentTools = lazyScreen(async () => ({ default: (await import('./docume
 const InternalMedia = lazyScreen(async () => ({ default: (await import('./internal-media-app')).InternalMedia }));
 const SkillsHub = lazyScreen(async () => ({ default: (await import('./skills')).SkillsHub }));
 
+// Short words for the composer's permission pill; the list itself keeps the full descriptions.
+const PERMISSION_SHORT: Record<string, string> = {
+  ask: 'ถามก่อน',
+  acceptEdits: 'แก้ไฟล์ได้',
+  auto: 'อัตโนมัติ',
+  plan: 'อ่านอย่างเดียว',
+};
+
 export default function App() {
   const api = window.step;
   const [update] = useUpdate(api);
@@ -2416,35 +2424,41 @@ export default function App() {
                       )}
                       <option value="image">{t('สร้างรูป')}</option>
                     </select>
+                    {/* Permission as a small shield pill with a short word; the native list underneath keeps the full
+                        wording, so opening it still explains each level. */}
                     {snapshot.policy && (
-                      <select
-                        className="pill-select"
-                        aria-label={t('สิทธิ์เครื่องมือ')}
-                        title={t('สิทธิ์เครื่องมือ')}
-                        value={snapshot.policy.mode}
-                        disabled={running || submitting}
-                        onChange={e =>
-                          void action(async () => {
-                            await api.call('permissionMode', { mode: e.target.value });
-                            await refresh();
-                          })
-                        }
-                      >
-                        <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
-                          {t('ถามก่อนแก้ไข')}
-                        </option>
-                        <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
-                          {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
-                          {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                        </option>
-                        <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
-                          {t('อัตโนมัติเต็มรูปแบบ')}
-                          {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
-                        </option>
-                        <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
-                          {t('วางแผน · อ่านอย่างเดียว')}
-                        </option>
-                      </select>
+                      <label className="pill-select permission-pill" title={t('สิทธิ์เครื่องมือ')}>
+                        <ShieldCheck size={14} aria-hidden="true" />
+                        <span>{t(PERMISSION_SHORT[snapshot.policy.mode] || 'ถามก่อน')}</span>
+                        <ChevronDown size={13} aria-hidden="true" />
+                        <select
+                          aria-label={t('สิทธิ์เครื่องมือ')}
+                          title={t('สิทธิ์เครื่องมือ')}
+                          value={snapshot.policy.mode}
+                          disabled={running || submitting}
+                          onChange={e =>
+                            void action(async () => {
+                              await api.call('permissionMode', { mode: e.target.value });
+                              await refresh();
+                            })
+                          }
+                        >
+                          <option value="ask" disabled={!snapshot.policy.modes.includes('ask')}>
+                            {t('ถามก่อนแก้ไข')}
+                          </option>
+                          <option value="acceptEdits" disabled={!snapshot.policy.modes.includes('acceptEdits')}>
+                            {t('แก้ไฟล์ได้เลย · ถามก่อนรันคำสั่ง')}
+                            {!snapshot.policy.modes.includes('acceptEdits') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                          </option>
+                          <option value="auto" disabled={!snapshot.policy.modes.includes('auto')}>
+                            {t('อัตโนมัติเต็มรูปแบบ')}
+                            {!snapshot.policy.modes.includes('auto') ? t(' · ปิดโดยผู้ดูแล') : ''}
+                          </option>
+                          <option value="plan" disabled={!snapshot.policy.modes.includes('plan')}>
+                            {t('อ่านอย่างเดียว · ห้ามแก้ไขไฟล์')}
+                          </option>
+                        </select>
+                      </label>
                     )}
                     <span className="spacer" />
                     {/* One pill for the AI account, model and reasoning level: the full choice opens above it, so the row

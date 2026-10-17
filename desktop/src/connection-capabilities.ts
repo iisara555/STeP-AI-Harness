@@ -71,7 +71,7 @@ export function connectionCapabilities(c: Connection, policy?: PolicySnapshot): 
       : !policy
         ? entry('image', definitions[3][1], 'unknown', 'unknown', 'ยังไม่ทราบโหมดการทำงาน ติดต่อ IT')
         : policy.mode === 'plan'
-          ? entry('image', definitions[3][1], 'blocked', 'plan', 'ออกจากโหมดวางแผนก่อนสร้างภาพ')
+          ? entry('image', definitions[3][1], 'blocked', 'plan', 'ออกจากโหมดอ่านอย่างเดียวก่อนสร้างภาพ')
           : entry('image', definitions[3][1], 'conditional', 'model', 'เลือกโมเดลภาพที่บัญชีมีสิทธิ์ การสร้างภาพอาจมีค่าใช้จ่าย API');
   return [chat, web, vision, image];
 }
