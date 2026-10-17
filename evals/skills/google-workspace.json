@@ -1,7 +1,7 @@
 {
   "skill": "google-workspace",
-  "version": 1,
-  "source": "synthetic-native-workspace-2026-10-14",
+  "version": 2,
+  "source": "synthetic-native-workspace-plain-language-2026-10-17",
   "note": "CI verifies routing/contracts and synthetic host behavior, not live Google or model usefulness.",
   "baseline": {
     "withoutSkillTypicallyMisses": "ตรวจ native tool/account/scope ก่อนเรียก Google; โหลด reference ตามงาน; จำกัดและรายงาน pagination; ไม่ส่งเมลจากคำขอสรุป; revision-bound Docs และ RAW rectangular Sheets; ไม่ retry outcome-unknown หรืออ้าง Gmail draft ว่าส่งแล้ว",
@@ -122,6 +122,395 @@
         "ขอ Calendar/timezone/เวลาสิ้นสุดที่ขาดก่อนสร้าง ไม่เดา timezone เครื่องหรือบัญชีแรก",
         "แสดงวัน เวลา และผู้เข้าร่วมก่อน host ยืนยัน ไม่ส่งคำเชิญจากการเตรียมร่าง"
       ]
+    },
+    {
+      "id": "plain-calendar-today",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "วันนี้มีนัดอะไร",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-calendar-tomorrow",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "พรุ่งนี้มีประชุมไหม",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-calendar-check",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยดูปฏิทินให้หน่อย",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-calendar-agenda",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยดูตารางนัดวันนี้ให้หน่อย",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-calendar-personal",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ฉันมีประชุมกี่โมง",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-tasks-pending",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "มีงานอะไรค้างบ้าง",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีก่อนใช้ tasks.lists/tasks.list; ถ้ามีหลายบัญชีหรือรายการให้เลือก ไม่เดาบัญชีแรก",
+        "ตอบเฉพาะงานที่อ่านได้จริงและบอกขอบเขต ไม่อ้างว่าเป็นงานค้างทั้งหมดขององค์กร"
+      ]
+    },
+    {
+      "id": "plain-tasks-list",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยดูรายการงานที่ต้องทำ",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีก่อนใช้ tasks.lists/tasks.list; ถ้ามีหลายบัญชีหรือรายการให้เลือก ไม่เดาบัญชีแรก",
+        "ตอบเฉพาะงานที่อ่านได้จริงและบอกขอบเขต ไม่อ้างว่าเป็นงานค้างทั้งหมดขององค์กร"
+      ]
+    },
+    {
+      "id": "plain-tasks-create",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "เพิ่มงานว่าต้องส่งรายงานวันศุกร์",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และรายการงานเป้าหมายก่อนใช้ tasks.create; ขอข้อมูลที่ขาดและให้ผู้ใช้ยืนยันก่อนเขียน",
+        "คำว่าเพิ่มงานไม่ได้อนุญาตส่งอีเมลหรือสร้างนัด"
+      ]
+    },
+    {
+      "id": "plain-mail-find",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยหาอีเมลเรื่องใบเสนอราคา",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจบัญชีและ gmail-read จริงก่อนใช้ gmail.list/gmail.get; ถ้าผู้ดูแลยังไม่เปิด Gmail ให้แจ้งข้อจำกัด",
+        "ไม่สร้าง draft หรือส่งเมลจากคำขออ่านหรือค้น และไม่อ้างว่าไม่มีเมลเมื่อยังไม่มีสิทธิ์อ่าน"
+      ]
+    },
+    {
+      "id": "plain-mail-new",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "มีเมลใหม่ไหม",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจบัญชีและ gmail-read จริงก่อนใช้ gmail.list/gmail.get; ถ้าผู้ดูแลยังไม่เปิด Gmail ให้แจ้งข้อจำกัด",
+        "ไม่สร้าง draft หรือส่งเมลจากคำขออ่านหรือค้น และไม่อ้างว่าไม่มีเมลเมื่อยังไม่มีสิทธิ์อ่าน"
+      ]
+    },
+    {
+      "id": "plain-mail-unread",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "ช่วยอ่านเมลที่ยังไม่ได้อ่านให้หน่อย",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจบัญชีและ gmail-read จริงก่อนใช้ gmail.list/gmail.get; ถ้าผู้ดูแลยังไม่เปิด Gmail ให้แจ้งข้อจำกัด",
+        "ไม่สร้าง draft หรือส่งเมลจากคำขออ่านหรือค้น และไม่อ้างว่าไม่มีเมลเมื่อยังไม่มีสิทธิ์อ่าน"
+      ]
+    },
+    {
+      "id": "plain-english-calendar",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "What's on my calendar today?",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-english-meetings",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "Any meetings tomorrow?",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีที่เชื่อมก่อน ใช้ calendar.list/calendar.events เฉพาะอ่าน ไม่สร้างนัดจากคำถามดูตาราง",
+        "แปลงวันตามวันที่ปัจจุบันและ timezone ที่ยืนยันแล้ว ถ้ายังไม่ทราบช่วงเวลาหรือ timezone ให้ถามสั้น ๆ ไม่ขอให้ผู้ใช้พิมพ์ชื่อ Skill"
+      ]
+    },
+    {
+      "id": "plain-english-tasks",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "Show my to-do list",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีก่อนใช้ tasks.lists/tasks.list; ถ้ามีหลายบัญชีหรือรายการให้เลือก ไม่เดาบัญชีแรก",
+        "ตอบเฉพาะงานที่อ่านได้จริงและบอกขอบเขต ไม่อ้างว่าเป็นงานค้างทั้งหมดขององค์กร"
+      ]
+    },
+    {
+      "id": "plain-english-mail",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "Check my inbox",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจบัญชีและ gmail-read จริงก่อนใช้ gmail.list/gmail.get; ถ้าผู้ดูแลยังไม่เปิด Gmail ให้แจ้งข้อจำกัด",
+        "ไม่สร้าง draft หรือส่งเมลจากคำขออ่านหรือค้น และไม่อ้างว่าไม่มีเมลเมื่อยังไม่มีสิทธิ์อ่าน"
+      ]
+    },
+    {
+      "id": "plain-collision-draft-email",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยร่างอีเมลเชิญประชุมพรุ่งนี้",
+      "expect": {
+        "notSkill": "google-workspace",
+        "mode": "GENERAL"
+      }
+    },
+    {
+      "id": "plain-collision-draft-document",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยสร้างเอกสารให้หน่อย",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-attached-minutes",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยสรุปประชุมวันนี้จากบันทึกที่แนบ",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-attached-tasks",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "มีงานอะไรค้างบ้างจากรายงานที่แนบ",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-attached-calendar",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยดูตารางนัดในไฟล์ Excel ที่แนบ",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-inline-email",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยสรุปอีเมลนี้: เรียนทีมงาน พรุ่งนี้มีประชุมไหม กรุณาเตรียมรายงาน",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-translate-question",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "แปลเป็นอังกฤษ: วันนี้มีนัดอะไร",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-hr-policy",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "วันหยุดราชการปีนี้มีสิทธิลาอย่างไร",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-organization-duties",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "หน้าที่ของทีม GA มีงานอะไรบ้าง",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-local-slides",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ทำสไลด์สรุปประชุมจากไฟล์ PPTX ในเครื่อง",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-google-mention",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยร่างหนังสือราชการเชิญวิทยากรจาก Google",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-meeting-plan",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยวางแผนการประชุมพรุ่งนี้",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-tasks-today",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "วันนี้ต้องทำอะไรบ้าง",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีก่อนใช้ tasks.lists/tasks.list; ถ้ามีหลายบัญชีหรือรายการให้เลือก ไม่เดาบัญชีแรก",
+        "ตอบเฉพาะงานที่อ่านได้จริงและบอกขอบเขต ไม่อ้างว่าเป็นงานค้างทั้งหมดขององค์กร"
+      ]
+    },
+    {
+      "id": "plain-tasks-first",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "งานค้างมีอะไรบ้าง",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และบัญชีก่อนใช้ tasks.lists/tasks.list; ถ้ามีหลายบัญชีหรือรายการให้เลือก ไม่เดาบัญชีแรก",
+        "ตอบเฉพาะงานที่อ่านได้จริงและบอกขอบเขต ไม่อ้างว่าเป็นงานค้างทั้งหมดขององค์กร"
+      ]
+    },
+    {
+      "id": "plain-tasks-add-space",
+      "dimension": "positive",
+      "team": "cc",
+      "prompt": "เพิ่มงาน ส่งรายงานวันศุกร์",
+      "expect": {
+        "skill": "google-workspace"
+      },
+      "outputAssertions": [
+        "ตรวจ catalog และรายการงานเป้าหมายก่อนใช้ tasks.create; ขอข้อมูลที่ขาดและให้ผู้ใช้ยืนยันก่อนเขียน",
+        "คำว่าเพิ่มงานไม่ได้อนุญาตส่งอีเมลหรือสร้างนัด"
+      ]
+    },
+    {
+      "id": "plain-collision-team-duties",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "งานที่ต้องทำของทีม GA มีอะไรบ้าง",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-policy-calendar",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "ช่วยดูปฏิทินวันหยุดราชการขององค์กร",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-sop-tasks",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "วันนี้ต้องทำอะไรบ้างตามคู่มือที่แนบ",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-english-source",
+      "dimension": "collision",
+      "team": "cc",
+      "prompt": "Show my to-do list from the attached report",
+      "expect": {
+        "notSkill": "google-workspace"
+      }
+    },
+    {
+      "id": "plain-collision-github-tasks",
+      "dimension": "collision",
+      "team": "developer",
+      "prompt": "ช่วยสร้างรายการงานบน GitHub แยกคนรับผิดชอบและป้ายกำกับให้หน่อย",
+      "expect": {
+        "skill": "github-workflow",
+        "notSkill": "google-workspace"
+      }
     }
   ]
 }

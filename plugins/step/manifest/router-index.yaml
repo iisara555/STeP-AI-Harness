@@ -1351,9 +1351,9 @@ skills:
     teams:
       primary: [ga]
       consumers: [cc, afp, imo, sit, mi, piti, qs]
-    description: ทำงาน Gmail, Drive, Google Docs/Sheets/Slides, Google Calendar และ Google Tasks ในแอป โดยไม่จัดการไฟล์ Office ในเครื่องหรืออนุมัติแทนผู้มีอำนาจ
-    intent: [search, read, create, google-workspace]
-    triggers: [Google Workspace, ค้น Gmail, อ่าน Gmail, ส่ง Gmail, ร่าง Gmail, ค้นอีเมล Gmail, ค้นไฟล์ Drive, หาไฟล์ Drive, Google Drive, ดูนัด Google Calendar, นัดใน Google Calendar, อ่าน Google Docs, สร้าง Google Docs, แก้ Google Docs, อ่าน Google Sheets, สร้าง Google Sheets, อัปเดต Google Sheets, อ่าน Google Slides, สร้าง Google Slides, สรุป Google Calendar, อ่าน Google Calendar, สร้างนัด Google Calendar, Google Tasks, Google Chat, Google Meet, google workspace, gmail search, google sheets, google calendar]
+    description: ดูนัดและปฏิทิน เช่น วันนี้มีนัดอะไร พรุ่งนี้มีประชุมไหม ดูงานค้างหรือเพิ่มงานที่ต้องทำ ค้นหรืออ่านอีเมล ผ่าน Google Workspace ที่เชื่อมในแอป รวมถึง Drive และ Docs/Sheets/Slides; ไม่ใช้กับไฟล์ในเครื่องหรือคำถามระเบียบองค์กร
+    intent: [google-workspace]
+    triggers: [วันนี้มีนัด, มีประชุม, ปฏิทิน, ตารางนัด, งานค้าง, งานที่ต้องทำ, อีเมล, Google Workspace, วันนี้ต้องทำอะไร, พรุ่งนี้ต้องทำอะไร, มีงานอะไร, งานอะไรค้าง, รายการงาน, เพิ่มงาน, เมล, กล่องจดหมาย, calendar, meetings, appointments, my tasks, to-do list, inbox, emails, ค้น Gmail, อ่าน Gmail, ส่ง Gmail, ร่าง Gmail, ค้นอีเมล Gmail, ค้นไฟล์ Drive, หาไฟล์ Drive, Google Drive, ดูนัด Google Calendar, นัดใน Google Calendar, อ่าน Google Docs, สร้าง Google Docs, แก้ Google Docs, อ่าน Google Sheets, สร้าง Google Sheets, อัปเดต Google Sheets, อ่าน Google Slides, สร้าง Google Slides, สรุป Google Calendar, อ่าน Google Calendar, สร้างนัด Google Calendar, Google Tasks, Google Chat, Google Meet, google workspace, gmail search, google sheets, google calendar]
     paths: ["**/google-workspace/**"]
     fileTypes: []
     requires: []
