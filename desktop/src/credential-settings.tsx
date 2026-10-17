@@ -1,5 +1,27 @@
 import { useEffect, useState } from 'react';
-import { LockKeyhole, Globe, ExternalLink, Plus, Pause, Play, Trash2, Pencil } from 'lucide-react';
+import {
+  LockKeyhole,
+  Globe,
+  ExternalLink,
+  Plus,
+  Pause,
+  Play,
+  Trash2,
+  Pencil,
+  Mail,
+  CalendarDays,
+  FolderOpen,
+  FileText,
+  ListChecks,
+  MessageSquare,
+  Video,
+  PenLine,
+  Send,
+  ShieldCheck,
+  Check,
+  RefreshCw,
+  type LucideIcon,
+} from 'lucide-react';
 import { language } from './i18n';
 import { GOOGLE_PAGES, type GoogleService } from './google-services';
 import type { VaultMetadata } from '../electron/vault';
@@ -34,9 +56,35 @@ const words = {
   ],
   keys: ['API keys จัดการผ่านหน้าการเชื่อมต่อ AI', 'Manage API keys in AI connections'],
   googleIntro: [
-    'เชื่อมบัญชีงานของคุณและเลือกบริการที่จะใช้ การเชื่อม AI ด้วย Google เป็นสิทธิ์คนละชุด',
-    'Connect your work account and select services. Google AI sign-in grants separate access.',
+    'ให้ AI ช่วยค้นเมล ดูนัด และหาไฟล์ในบัญชี Google ของงานคุณ',
+    'Let the AI search your mail, check your calendar and find files in your work Google account.',
   ],
+  googleSeparate: ['แยกจากการลงชื่อ Gemini ในหน้าการเชื่อมต่อ AI', 'Separate from the Gemini sign-in under AI connections.'],
+  step1: ['เลือกบริการ', 'Choose services'],
+  step2: ['ลงชื่อด้วยบัญชีงานในเบราว์เซอร์', 'Sign in with your work account in the browser'],
+  step3: ['ถามในแชตได้เลย', 'Ask in chat'],
+  promise: [
+    'AI ขออนุญาตคุณทุกครั้งก่อนอ่านหรือเปลี่ยนข้อมูล และไม่เห็นรหัสผ่านหรือ token ของคุณ',
+    'The AI asks you every time before it reads or changes anything, and never sees your password or token.',
+  ],
+  readOnly: ['อ่านอย่างเดียว', 'Read only'],
+  canChange: ['แก้ไขได้ · ถามก่อนทุกครั้ง', 'Can change · asks first'],
+  adminMore: [
+    'Gmail และการค้นไฟล์ Drive ทั้งหมดยังปิดอยู่ ต้องให้ผู้ดูแลระบบเปิดก่อน',
+    'Gmail and searching all Drive files are off until an administrator turns them on.',
+  ],
+  waiting: [
+    'กำลังรอให้คุณลงชื่อในเบราว์เซอร์ เสร็จแล้วกลับมาที่แอปนี้',
+    'Waiting for you to sign in in the browser. Come back to this app when you are done.',
+  ],
+  yourAccounts: ['บัญชีที่เชื่อมแล้ว', 'Connected accounts'],
+  addAccount: ['เชื่อมบัญชีอื่น', 'Connect another account'],
+  moreActions: ['ตัวเลือกเพิ่มเติม', 'More options'],
+  revokeHint: [
+    'เลิกเชื่อมในเครื่อง ลบการเชื่อมต่อจากเครื่องนี้ ส่วนเพิกถอนสิทธิ์ที่ Google ยกเลิกสิทธิ์ของแอปในบัญชี Google ด้วย',
+    'Disconnect locally removes it from this device. Revoke also removes the app from your Google account.',
+  ],
+  reauthHint: ['สิทธิ์หมดอายุหรือมีการเปลี่ยนแปลง กดลงชื่อเข้าใช้ใหม่', 'Access expired or changed. Sign in again.'],
   notConfigured: [
     'รอผู้ดูแลตั้งค่า Google OAuth client ID และโดเมนที่อนุญาต จึงจะเชื่อมบัญชีงานได้',
     'An administrator must configure the Google OAuth client ID and allowed domains before work-account connection.',
@@ -48,13 +96,14 @@ const words = {
   paused: ['พักอยู่', 'Paused'],
   revoke: ['เพิกถอนสิทธิ์ที่ Google', 'Revoke Google access'],
   disconnect: ['เลิกเชื่อมในเครื่อง', 'Disconnect locally'],
-  noAccounts: ['ยังไม่มีบัญชี Google Workspace', 'No Google Workspace accounts connected'],
-  open: ['เปิดบริการต้นฉบับ', 'Open original service'],
+  open: ['เปิดบริการของ Google ในเบราว์เซอร์', 'Open Google services in the browser'],
   verifyBrowser: [
     'ตรวจบัญชีที่มุมขวาของ Google อีกครั้ง บัญชีใน browser อาจต่างจากบัญชีที่เชื่อมในแอป',
     'Verify the account in Google. Your browser account can differ from the account connected here.',
   ],
   selectServices: ['เลือกบริการที่ต้องใช้', 'Select the services you need'],
+  hideFiles: ['ซ่อนรายการไฟล์', 'Hide files'],
+  noFiles: ['ยังไม่มีไฟล์ที่แอปนี้เปิดได้', 'No files this app can open yet'],
   files: ['เลือกไฟล์ที่บัญชีนี้เข้าถึงได้', 'Select files this account can access'],
   fileScope: [
     'รายการนี้จำกัดตามสิทธิ์จริง drive.file ไม่เปิดไฟล์ทั้งหมดจากการวางลิงก์',
@@ -63,16 +112,80 @@ const words = {
   resumeBrowser: ['ตรวจแล้ว ให้ AI อ่านเว็บไซต์ต่อ', 'Reviewed: resume AI website reading'],
 } as const;
 const w = (key: keyof typeof words) => words[key][language() === 'en' ? 1 : 0];
-const serviceNames: Record<GoogleService, string> = {
-  documents: 'Drive / Docs / Sheets / Slides',
-  'drive-read': 'Drive (read existing files)',
-  'gmail-read': 'Gmail (read)',
-  'gmail-draft': 'Gmail (drafts)',
-  'gmail-send': 'Gmail (send)',
+type ServiceInfo = { icon: LucideIcon; name: [string, string]; detail: [string, string]; changes?: boolean };
+const SERVICES: Record<GoogleService, ServiceInfo> = {
+  documents: {
+    icon: FileText,
+    name: ['Docs / Sheets / Slides', 'Docs / Sheets / Slides'],
+    detail: ['สร้างและแก้เอกสารที่แอปนี้เปิดหรือสร้างเอง', 'Create and edit documents this app opens or creates'],
+    changes: true,
+  },
+  'drive-read': {
+    icon: FolderOpen,
+    name: ['ค้นไฟล์ใน Drive', 'Search Drive'],
+    detail: ['หาและอ่านไฟล์ทุกไฟล์ที่บัญชีคุณเปิดได้', 'Find and read any file your account can open'],
+  },
+  'gmail-read': {
+    icon: Mail,
+    name: ['อ่าน Gmail', 'Read Gmail'],
+    detail: ['ค้นและสรุปอีเมลในกล่องจดหมาย', 'Search and summarise your mail'],
+  },
+  'gmail-draft': {
+    icon: PenLine,
+    name: ['ร่างอีเมล', 'Draft emails'],
+    detail: ['เตรียมฉบับร่างไว้ใน Gmail ให้คุณตรวจก่อนส่ง', 'Save drafts in Gmail for you to review'],
+    changes: true,
+  },
+  'gmail-send': {
+    icon: Send,
+    name: ['ส่งอีเมล', 'Send emails'],
+    detail: ['ส่งอีเมลหลังคุณตรวจผู้รับและข้อความแล้ว', 'Send mail after you review recipients and text'],
+    changes: true,
+  },
+  'calendar-read': {
+    icon: CalendarDays,
+    name: ['ดูปฏิทิน', 'View Calendar'],
+    detail: ['ดูนัดและหาช่วงที่ว่าง', 'See your events and free time'],
+  },
+  calendar: {
+    icon: CalendarDays,
+    name: ['ปฏิทิน (ดูและสร้างนัด)', 'Calendar (view and create)'],
+    detail: ['ดูนัด และสร้างนัดหรือส่งคำเชิญหลังคุณตรวจแล้ว', 'See events and create invitations after you review them'],
+    changes: true,
+  },
+  tasks: {
+    icon: ListChecks,
+    name: ['Google Tasks', 'Google Tasks'],
+    detail: ['ดู เพิ่ม และติ๊กงานที่ต้องทำ', 'View, add and complete to-dos'],
+    changes: true,
+  },
+  chat: {
+    icon: MessageSquare,
+    name: ['Google Chat', 'Google Chat'],
+    detail: ['อ่านและส่งข้อความในห้องที่คุณอยู่', 'Read and send messages in your spaces'],
+    changes: true,
+  },
+  meet: {
+    icon: Video,
+    name: ['Google Meet', 'Google Meet'],
+    detail: ['ดูข้อมูลห้องประชุม', 'View meeting space details'],
+  },
+};
+const lang = () => (language() === 'en' ? 1 : 0);
+const serviceName = (s: string) => SERVICES[s as GoogleService]?.name[lang()] || s;
+const LAUNCH_NAMES: Record<string, string> = {
+  gmail: 'Gmail',
+  drive: 'Drive',
+  docs: 'Docs',
+  sheets: 'Sheets',
+  slides: 'Slides',
   calendar: 'Calendar',
   tasks: 'Tasks',
   chat: 'Chat',
   meet: 'Meet',
+  contacts: 'Contacts',
+  forms: 'Forms',
+  scripts: 'Apps Script',
 };
 type Props = {
   call: (method: string, input?: any) => Promise<any>;
@@ -296,117 +409,214 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
           </button>
         ))}
       </section>
-      <section className="credential-section">
-        <h2>
-          <Globe size={19} />
-          Google Workspace
-        </h2>
-        <p className="muted">{w('googleIntro')}</p>
+      <section className="credential-section google-workspace">
+        <div className="google-hero">
+          <span className="google-hero-icon" aria-hidden="true">
+            <Globe size={22} />
+          </span>
+          <div>
+            <h2>Google Workspace</h2>
+            <p>{w('googleIntro')}</p>
+            <p className="muted small">{w('googleSeparate')}</p>
+          </div>
+        </div>
         {!google?.enabled ? (
-          <p role="status">{w('googleDisabled')}</p>
+          <p className="credential-note" role="status">
+            {w('googleDisabled')}
+          </p>
         ) : !google.configured ? (
-          <p role="status">{w('notConfigured')}</p>
+          <p className="credential-note" role="status">
+            {w('notConfigured')}
+          </p>
         ) : (
           <>
+            {!google.accounts.length && (
+              <ol className="google-steps">
+                <li>{w('step1')}</li>
+                <li>{w('step2')}</li>
+                <li>{w('step3')}</li>
+              </ol>
+            )}
+            {Boolean(google.accounts.length) && <h3 className="google-subhead">{w('yourAccounts')}</h3>}
+            {google.accounts.map(account => {
+              const state = account.reauth ? 'attention' : account.paused ? 'paused' : 'ready';
+              return (
+                <article className={`google-account ${state}`} key={account.id}>
+                  <div className="google-account-head">
+                    <span className="google-avatar" aria-hidden="true">
+                      {(account.label.trim()[0] || 'G').toUpperCase()}
+                    </span>
+                    <div className="google-account-name">
+                      <strong>{account.label}</strong>
+                      <span className="muted small">{account.domain}</span>
+                    </div>
+                    <span className={`connection-state ${state === 'paused' ? '' : state}`}>
+                      <span className="connection-dot" aria-hidden="true" />
+                      {account.reauth ? w('reconnect') : account.paused ? w('paused') : w('connected')}
+                    </span>
+                  </div>
+                  {account.reauth && <p className="muted small">{w('reauthHint')}</p>}
+                  <ul className="google-chips" aria-label={w('selectServices')}>
+                    {account.services.map(s => {
+                      const Icon = SERVICES[s as GoogleService]?.icon || Globe;
+                      return (
+                        <li key={s}>
+                          <Icon size={13} aria-hidden="true" />
+                          {serviceName(s)}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="credential-actions">
+                    {account.reauth && (
+                      <button
+                        disabled={Boolean(busy)}
+                        onClick={() =>
+                          void run('google-connect', () =>
+                            call('googleConnect', {
+                              services: account.services.filter(s => google.services.includes(s as GoogleService)),
+                            }),
+                          )
+                        }
+                      >
+                        <RefreshCw size={14} />
+                        {w('reconnect')}
+                      </button>
+                    )}
+                    {account.services.some(s => s === 'documents' || s === 'drive-read') && (
+                      <button
+                        className="quiet"
+                        disabled={Boolean(busy) || account.paused || account.reauth}
+                        onClick={() =>
+                          void run('files', async () => {
+                            const result = await call('googleExecute', { id: account.id, request: { operation: 'drive.list' } });
+                            setFiles(result.data?.files || []);
+                          })
+                        }
+                      >
+                        <FolderOpen size={14} />
+                        {w('files')}
+                      </button>
+                    )}
+                    <button
+                      className="quiet"
+                      disabled={Boolean(busy)}
+                      onClick={() => void run('google-pause', () => call('googlePause', { id: account.id, paused: !account.paused }))}
+                    >
+                      {account.paused ? <Play size={14} /> : <Pause size={14} />}
+                      {account.paused ? w('resume') : w('pause')}
+                    </button>
+                  </div>
+                  <details className="google-more">
+                    <summary>{w('moreActions')}</summary>
+                    <p className="muted small">{w('revokeHint')}</p>
+                    <div className="credential-actions">
+                      <button
+                        className="quiet"
+                        disabled={Boolean(busy)}
+                        onClick={() => void run('disconnect', () => call('googleDisconnect', { id: account.id, revoke: false }))}
+                      >
+                        {w('disconnect')}
+                      </button>
+                      <button
+                        className="quiet danger-text"
+                        disabled={Boolean(busy)}
+                        onClick={() => void run('revoke', () => call('googleDisconnect', { id: account.id, revoke: true }))}
+                      >
+                        <Trash2 size={14} />
+                        {w('revoke')}
+                      </button>
+                    </div>
+                  </details>
+                </article>
+              );
+            })}
+            {files && (
+              <div className="credential-files">
+                <div className="credential-heading">
+                  <p className="muted small">{w('fileScope')}</p>
+                  <button className="quiet" onClick={() => setFiles(undefined)}>
+                    {w('hideFiles')}
+                  </button>
+                </div>
+                {!files.length && <p className="muted">{w('noFiles')}</p>}
+                {files.map(file => (
+                  <p key={file.id}>
+                    <FileText size={14} aria-hidden="true" /> <strong>{file.name}</strong>
+                  </p>
+                ))}
+              </div>
+            )}
             <fieldset className="google-services">
-              <legend>{w('selectServices')}</legend>
-              {google.services.map(s => (
-                <label className="credential-check" key={s}>
-                  <input
-                    type="checkbox"
-                    checked={services.includes(s)}
-                    disabled={Boolean(busy)}
-                    onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
-                  />
-                  {serviceNames[s]}
-                </label>
-              ))}
+              <legend>{google.accounts.length ? w('addAccount') : w('selectServices')}</legend>
+              {google.services.map(s => {
+                const info = SERVICES[s];
+                const Icon = info.icon;
+                const on = services.includes(s);
+                return (
+                  <label className={`google-service${on ? ' selected' : ''}`} key={s}>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={Boolean(busy)}
+                      onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
+                    />
+                    <span className="google-service-icon" aria-hidden="true">
+                      <Icon size={18} />
+                    </span>
+                    <span className="google-service-text">
+                      <strong>{info.name[lang()]}</strong>
+                      <span className="muted small">{info.detail[lang()]}</span>
+                      <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>
+                        {info.changes ? w('canChange') : w('readOnly')}
+                      </span>
+                    </span>
+                    <span className="google-service-tick" aria-hidden="true">
+                      {on && <Check size={14} />}
+                    </span>
+                  </label>
+                );
+              })}
             </fieldset>
-            <button
-              disabled={Boolean(busy) || !services.length}
-              onClick={() =>
-                void run('google-connect', () => call('googleConnect', { services: services.filter(s => google.services.includes(s)) }))
-              }
-            >
-              {w('connect')}
-            </button>
+            {!google.services.includes('gmail-read') && <p className="muted small google-admin">{w('adminMore')}</p>}
+            <div className="google-connect-row">
+              <button
+                disabled={Boolean(busy) || !services.length}
+                onClick={() =>
+                  void run('google-connect', () => call('googleConnect', { services: services.filter(s => google.services.includes(s)) }))
+                }
+              >
+                {w('connect')}
+              </button>
+              {busy === 'google-connect' && (
+                <>
+                  <span className="muted small" role="status">
+                    {w('waiting')}
+                  </span>
+                  <button className="quiet" onClick={() => void call('googleCancel').catch(onError)}>
+                    {w('cancel')}
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="google-promise">
+              <ShieldCheck size={16} aria-hidden="true" />
+              {w('promise')}
+            </p>
           </>
         )}
-        {busy === 'google-connect' && (
-          <button className="quiet" onClick={() => void call('googleCancel').catch(onError)}>
-            {w('cancel')}
-          </button>
-        )}
-        {!google?.accounts.length && <p className="muted">{w('noAccounts')}</p>}
-        {google?.accounts.map(account => (
-          <article className="credential-account" key={account.id}>
-            <div className="credential-heading">
-              <div>
-                <strong>{account.label}</strong>
-                <p className="muted small">
-                  {account.domain} · {account.reauth ? w('reconnect') : account.paused ? w('paused') : w('connected')}
-                </p>
-              </div>
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                onClick={() => void run('google-pause', () => call('googlePause', { id: account.id, paused: !account.paused }))}
-              >
-                {account.paused ? w('resume') : w('pause')}
+        <details className="google-open">
+          <summary>{w('open')}</summary>
+          <p className="muted small">{w('verifyBrowser')}</p>
+          <div className="google-launches">
+            {Object.keys(GOOGLE_PAGES).map(service => (
+              <button key={service} className="quiet" onClick={() => void call('googleOpen', { service }).catch(onError)}>
+                <ExternalLink size={13} />
+                {LAUNCH_NAMES[service] || service}
               </button>
-            </div>
-            <p className="muted small">{account.services.map(s => serviceNames[s as GoogleService] || s).join(' · ')}</p>
-            <div className="credential-actions">
-              {account.services.some(s => s === 'documents' || s === 'drive-read') && (
-                <button
-                  disabled={Boolean(busy) || account.paused || account.reauth}
-                  onClick={() =>
-                    void run('files', async () => {
-                      const result = await call('googleExecute', { id: account.id, request: { operation: 'drive.list' } });
-                      setFiles(result.data?.files || []);
-                    })
-                  }
-                >
-                  {w('files')}
-                </button>
-              )}
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                onClick={() => void run('disconnect', () => call('googleDisconnect', { id: account.id, revoke: false }))}
-              >
-                {w('disconnect')}
-              </button>
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                onClick={() => void run('revoke', () => call('googleDisconnect', { id: account.id, revoke: true }))}
-              >
-                {w('revoke')}
-              </button>
-            </div>
-          </article>
-        ))}
-        {files && (
-          <div className="credential-files">
-            <p className="muted small">{w('fileScope')}</p>
-            {files.map(file => (
-              <p key={file.id}>
-                <strong>{file.name}</strong> <span className="muted small">{file.id}</span>
-              </p>
             ))}
           </div>
-        )}
-        <h3>{w('open')}</h3>
-        <p className="muted small">{w('verifyBrowser')}</p>
-        <div className="google-launches">
-          {Object.keys(GOOGLE_PAGES).map(service => (
-            <button key={service} className="quiet" onClick={() => void call('googleOpen', { service }).catch(onError)}>
-              <ExternalLink size={13} />
-              {service}
-            </button>
-          ))}
-        </div>
+        </details>
       </section>
     </div>
   );

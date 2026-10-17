@@ -1353,7 +1353,7 @@ skills:
       consumers: [cc, afp, imo, sit, mi, piti, qs]
     description: ทำงาน Gmail, Drive, Google Docs/Sheets/Slides, Google Calendar และ Google Tasks ในแอป โดยไม่จัดการไฟล์ Office ในเครื่องหรืออนุมัติแทนผู้มีอำนาจ
     intent: [search, read, create, google-workspace]
-    triggers: [Google Workspace, ค้น Gmail, อ่าน Gmail, ส่ง Gmail, ร่าง Gmail, ค้นอีเมล Gmail, ค้นไฟล์ Drive, อ่าน Google Docs, สร้าง Google Docs, แก้ Google Docs, อ่าน Google Sheets, สร้าง Google Sheets, อัปเดต Google Sheets, อ่าน Google Slides, สร้าง Google Slides, สรุป Google Calendar, อ่าน Google Calendar, สร้างนัด Google Calendar, Google Tasks, Google Chat, Google Meet, google workspace, gmail search, google sheets, google calendar]
+    triggers: [Google Workspace, ค้น Gmail, อ่าน Gmail, ส่ง Gmail, ร่าง Gmail, ค้นอีเมล Gmail, ค้นไฟล์ Drive, หาไฟล์ Drive, Google Drive, ดูนัด Google Calendar, นัดใน Google Calendar, อ่าน Google Docs, สร้าง Google Docs, แก้ Google Docs, อ่าน Google Sheets, สร้าง Google Sheets, อัปเดต Google Sheets, อ่าน Google Slides, สร้าง Google Slides, สรุป Google Calendar, อ่าน Google Calendar, สร้างนัด Google Calendar, Google Tasks, Google Chat, Google Meet, google workspace, gmail search, google sheets, google calendar]
     paths: ["**/google-workspace/**"]
     fileTypes: []
     requires: []

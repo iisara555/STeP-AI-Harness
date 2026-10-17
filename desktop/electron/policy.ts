@@ -252,7 +252,7 @@ export function defaultPolicy(): Policy {
     googleWorkspace: {
       clientId: '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com',
       domains: ['step.cmu.ac.th'],
-      services: ['documents', 'calendar', 'tasks'],
+      services: ['documents', 'calendar-read', 'tasks'],
     },
   };
 }

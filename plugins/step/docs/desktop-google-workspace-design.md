@@ -1,6 +1,6 @@
 # Employee Google Workspace connection and service access
 
-Status: design handoff for PR #162; not implemented or enabled by this document.
+Status: design handoff for PR #162. The native Desktop route (section 4) has since been implemented in `desktop/electron/google-workspace.ts`, `google-oauth.ts` and `google-operations.ts` and is on by default; see the [Google Workspace Skill](../skills/google-workspace/SKILL.md) and [policy](desktop-policy.md). The table in section 1 describes the state when this handoff was written.
 
 Reference baseline: Desktop 0.6.3, commit `81fe787727487ab654701a19e55039750db76345`. Sources checked on 2026-10-14.
 

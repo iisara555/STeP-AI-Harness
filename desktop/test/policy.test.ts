@@ -62,7 +62,7 @@ test('release Workspace configuration is public, isolated per load and replaceab
   assert.equal(first.features.vault, true);
   assert.equal(first.features.googleWorkspace, true);
   assert.deepEqual(first.googleWorkspace?.domains, ['step.cmu.ac.th']);
-  assert.deepEqual(first.googleWorkspace?.services, ['documents', 'calendar', 'tasks']);
+  assert.deepEqual(first.googleWorkspace?.services, ['documents', 'calendar-read', 'tasks']);
   assert.match(first.googleWorkspace!.clientId, /^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
   assert.deepEqual(Object.keys(first.googleWorkspace!).sort(), ['clientId', 'domains', 'services']);
   first.googleWorkspace!.domains.push('changed.test');

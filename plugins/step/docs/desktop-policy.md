@@ -197,6 +197,34 @@ Run `npm test`, `npm run format:check`, `npm run build` and `npm run test:electr
 
 The release enables `vault`, `googleWorkspace` and `developmentMode` without a per-machine policy file. `claudeSubscription` remains false: a developer turns Dev mode on to use a personal Claude Pro/Max account for evaluation/demo, then selects **Switch back to normal mode** to turn it off. The owner chose manual shutdown; there is no scheduled expiry. This does not establish Anthropic approval for organizational distribution of subscription sign-in.
 
-The bundled configuration contains only the public installed-app client ID, `step.cmu.ac.th` and `documents`, `calendar`, `tasks`. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
+The bundled configuration contains only the public installed-app client ID, `step.cmu.ac.th` and `documents`, `calendar-read`, `tasks`. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
+
+### Turning on Gmail and Drive search for a cohort
+
+Gmail and searching every Drive file stay off in the release. When the administrator has completed the Google-side steps
+below, add a `googleWorkspace` object to the managed policy of the approved cohort only. It replaces the whole bundled
+configuration, so it repeats the public client ID and domain. It contains no secret: installed-app client IDs are public
+and the app has no client secret.
+
+```json
+{
+  "googleWorkspace": {
+    "clientId": "991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com",
+    "domains": ["step.cmu.ac.th"],
+    "services": ["documents", "drive-read", "gmail-read", "calendar-read", "tasks"]
+  }
+}
+```
+
+- `gmail-read` (`gmail.readonly`) and `drive-read` (`drive.readonly`) are read-only. Add `gmail-draft`, `gmail-send` or
+  `calendar` only for a cohort approved to create drafts, send mail or create events; each write still asks the employee
+  every time.
+- Before enabling: in the organization's Google Cloud project, confirm this Desktop OAuth client, enable the Gmail,
+  Drive and Calendar APIs, and set the OAuth audience. `gmail.readonly` and `drive.readonly` are restricted scopes:
+  an External audience needs Google verification. In Admin Console, **Security -> Access and data control -> API
+  controls**, allow this client for the cohort.
+- Employees who connected before the change reconnect in **Settings -> Google Workspace** and tick the new services;
+  existing grants are not widened silently.
+- This uses the built-in `google_workspace` tool. It needs no MCP server (`features.mcp` stays off) and no CLI.
 
 An API-only profile remains in its existing OS-encrypted key store until the employee explicitly remembers a website account or connects Workspace. That first enrollment activates Vault protection and migration; the existing cross-session executable-tool restrictions persist even after pause, feature disable or deletion. Startup/first key use retries migration for an already protected profile; authoritative references never fall back to legacy secrets.

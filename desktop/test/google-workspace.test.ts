@@ -13,7 +13,7 @@ const clientId = 'synthetic-client.apps.googleusercontent.com';
 const config = { clientId, domains: ['example.test'], services: ['documents', 'gmail-send', 'calendar', 'tasks', 'chat', 'meet'] as any };
 const context = { signal: new AbortController().signal, check: async () => {}, approve: async () => true };
 const json = (data: unknown) => new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } });
-function fixture() {
+function fixture(settings = config) {
   const dir = mkdtempSync(join(tmpdir(), 'step-google-test-')),
     store = new Store(join(dir, 'workspace.sqlite'));
   const vault = new Vault(join(dir, 'vault.sqlite'), { wrap: s => Buffer.from(s), unwrap: b => b.toString() });
@@ -32,7 +32,7 @@ function fixture() {
   const google = new GoogleWorkspace(
     store,
     vault,
-    () => config,
+    () => settings,
     async () => {},
     transport,
     authorize,
@@ -445,6 +445,41 @@ test('Gmail MIME is decoded locally and binary/HTML attachment payloads are with
     const result = await g.execute(g.state().accounts[0].id, { operation: 'gmail.get', params: { messageId: 'mail' } }, context);
     assert.match(result.data.text, /1234567890123/);
     assert.doesNotMatch(JSON.stringify(result), /should-not-leave-host|encoded-html|attachmentId/);
+  } finally {
+    f.clean();
+  }
+});
+test('read-only Calendar reads events but cannot create them', async () => {
+  const f = fixture({ ...config, services: ['calendar-read'] as any });
+  try {
+    await f.google.connect(['calendar-read'], context);
+    const state = f.google.state();
+    assert.deepEqual(state.accounts[0].services, ['calendar-read']);
+    const id = state.accounts[0].id;
+    await f.google.execute(id, { operation: 'calendar.list', params: {} }, context);
+    await f.google.execute(
+      id,
+      {
+        operation: 'calendar.events',
+        params: { calendarId: 'primary', timeMin: '2026-10-17T00:00:00+07:00', timeMax: '2026-10-18T00:00:00+07:00' },
+      },
+      context,
+    );
+    assert.equal(f.calls.length, 2);
+    assert.ok(f.calls.every(call => (call.init?.method || 'GET') === 'GET'));
+    await assert.rejects(
+      f.google.execute(
+        id,
+        {
+          operation: 'calendar.createEvent',
+          params: { calendarId: 'primary' },
+          body: { summary: 'synthetic', start: '2026-10-17T09:00:00+07:00', end: '2026-10-17T10:00:00+07:00' },
+        },
+        context,
+      ),
+      /GOOGLE_SCOPE_MISSING/,
+    );
+    assert.equal(f.calls.length, 2);
   } finally {
     f.clean();
   }

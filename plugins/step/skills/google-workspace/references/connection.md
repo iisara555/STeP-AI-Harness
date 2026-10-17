@@ -18,12 +18,13 @@
 | ค้น/อ่าน Gmail | `gmail-read` |
 | สร้าง Gmail draft ในบัญชี | `gmail-draft` |
 | ส่ง Gmail จริง | `gmail-send` |
-| อ่าน/สร้างนัด Calendar | `calendar` |
+| อ่านนัด Calendar อย่างเดียว | `calendar-read` |
+| อ่านและสร้างนัด Calendar | `calendar` |
 | Google Tasks | `tasks` |
 | อ่าน/ส่ง Google Chat | `chat` |
 | อ่าน Meet space | `meet` |
 
-ขอเฉพาะบริการที่ต้องใช้ สิทธิ์ที่นโยบายอนุญาตไม่แปลว่า Google grant สำเร็จ ทุก operation ตรวจ scope จริงอีกครั้ง ค่าเริ่มต้นแอปเปิด `documents`, `calendar`, `tasks`; งาน Gmail ต้องให้ผู้ดูแลอนุญาตก่อน ไม่แก้ policy จากแชตเพื่อเพิ่มสิทธิ์เอง
+ขอเฉพาะบริการที่ต้องใช้ สิทธิ์ที่นโยบายอนุญาตไม่แปลว่า Google grant สำเร็จ ทุก operation ตรวจ scope จริงอีกครั้ง ค่าเริ่มต้นแอปเปิด `documents`, `calendar-read`, `tasks`; การสร้างนัด (`calendar`), Gmail และการค้น Drive ทุกไฟล์ (`drive-read`) ต้องให้ผู้ดูแลอนุญาตก่อน ไม่แก้ policy จากแชตเพื่อเพิ่มสิทธิ์เอง
 
 ## Error → ขั้นตอนถัดไป
 
