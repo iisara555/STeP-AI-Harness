@@ -1,6 +1,6 @@
 # Coordinator, scheduled drafts, MCP, sandbox and autopilot
 
-Phase 4 adds local orchestration to the Phase 0–3 governed Desktop host. It does not establish a production release. Features remain disabled until an administrator enables them in the managed policy file described in [Desktop policy](desktop-policy.md).
+Phase 4 adds local orchestration to the Phase 0–3 governed Desktop host. It does not establish a production release. Scheduled tasks (`cron`) are on by default; the other features remain disabled until an administrator enables them in the managed policy file described in [Desktop policy](desktop-policy.md).
 
 ## Coordinator
 
