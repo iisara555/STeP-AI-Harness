@@ -5497,13 +5497,10 @@ input[type='radio'] {
 body:has(.dialog-backdrop) .toasts {
   z-index: 49;
 }
-/* Dark theme: avatars are black ink on white paper; draw them as light ink on a dark tile, like the illustrations. */
-:root[data-theme='dark'] .avatar-badge.has-picture {
-  background: var(--selected);
-}
+/* Dark theme: avatars stay black ink on paper like a photo. Inverting them turned filled hair and clothes white,
+   so faces read as photo negatives; the paper is only dimmed so it does not glare. */
 :root[data-theme='dark'] .avatar-badge.has-picture img {
-  filter: invert(1) brightness(0.92);
-  mix-blend-mode: screen;
+  filter: brightness(0.88);
 }
 /* Dark theme: danger fills are a clear red with white text, not a pastel that reads as disabled. */
 :root[data-theme='dark'] button.danger,
@@ -5521,12 +5518,8 @@ body:has(.dialog-backdrop) .toasts {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme='system'] .avatar-badge.has-picture {
-    background: var(--selected);
-  }
   :root[data-theme='system'] .avatar-badge.has-picture img {
-    filter: invert(1) brightness(0.92);
-    mix-blend-mode: screen;
+    filter: brightness(0.88);
   }
   :root[data-theme='system'] button.danger,
   :root[data-theme='system'] .stop {
