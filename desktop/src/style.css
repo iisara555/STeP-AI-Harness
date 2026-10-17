@@ -4755,20 +4755,274 @@ nav button:disabled {
   width: 100%;
   margin-top: 18px;
 }
-.credential-account {
-  padding: 18px;
-  margin: 14px 0;
-  border: 1px solid var(--border);
+/* Google Workspace: one hero, numbered first-time steps, service cards, account cards like Connect AI. */
+.google-hero {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.google-hero h2 {
+  margin: 0 0 4px;
+}
+.google-hero p {
+  margin: 0 0 2px;
+}
+.google-hero-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.google-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 18px 0 4px;
+  padding: 0;
+  list-style: none;
+  counter-reset: google-step;
+  font-size: 13px;
+  color: var(--muted);
+}
+.google-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  counter-increment: google-step;
+}
+.google-steps li::before {
+  content: counter(google-step);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.google-subhead {
+  margin: 20px 0 8px;
+  font-size: 14px;
 }
 .google-services {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 16px 0 8px;
+  border: 0;
+}
+.google-services legend {
+  margin-bottom: 10px;
+  padding: 0;
+  font-weight: 600;
+}
+.google-service {
+  position: relative;
+  display: flex;
   gap: 12px;
-  padding: 18px;
-  margin: 16px 0;
-  border: 1px solid var(--border);
+  align-items: flex-start;
+  padding: 14px 40px 14px 14px;
+  border: 1px solid var(--line);
   border-radius: 12px;
+  background: var(--paper);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.google-service:hover {
+  border-color: var(--line-strong);
+}
+.google-service.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.google-service input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.google-service:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.google-service-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--selected);
+  color: var(--text);
+}
+.google-service.selected .google-service-icon {
+  background: var(--paper);
+}
+.google-service-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.google-service-text .muted {
+  line-height: 1.5;
+}
+.google-kind {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.google-kind.read {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.google-kind.changes {
+  color: var(--accent-ink);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.google-service-tick {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--on-accent);
+}
+.google-service.selected .google-service-tick {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.google-admin {
+  margin: 4px 0 0;
+}
+.google-connect-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 16px;
+}
+.google-promise {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.google-promise svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--diff-added);
+}
+.google-account {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.google-account.ready {
+  border-left-color: var(--diff-added);
+}
+.google-account.attention {
+  border-left-color: var(--accent);
+}
+.google-account-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.google-account-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.google-account .connection-state {
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--selected);
+  color: var(--muted);
+}
+.google-account .connection-state.ready {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 12%, transparent);
+}
+.google-account .connection-state.attention {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.google-account p {
+  margin: 0;
+}
+.google-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.google-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.google-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 12px;
+}
+.google-more,
+.google-open {
+  margin-top: 4px;
+}
+.google-more summary,
+.google-open summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.google-open {
+  margin-top: 22px;
+}
+.google-launches {
+  margin-top: 8px;
 }
 .credential-check {
   display: flex;
@@ -4784,6 +5038,9 @@ nav button:disabled {
   .credential-form,
   .google-services {
     grid-template-columns: 1fr;
+  }
+  .google-account-head {
+    flex-wrap: wrap;
   }
   .credential-heading,
   .credential-row {

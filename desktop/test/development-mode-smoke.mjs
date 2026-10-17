@@ -47,7 +47,7 @@ try {
   assert.equal(defaults.policy.features.vault, true);
   assert.equal(defaults.policy.features.googleWorkspace, true);
   assert.equal((await call('googleState')).configured, true);
-  assert.deepEqual((await call('googleState')).services, ['documents', 'calendar', 'tasks']);
+  assert.deepEqual((await call('googleState')).services, ['documents', 'calendar-read', 'tasks']);
   const apiOnly = await call('connection', { provider: 'openai', mode: 'api', apiKey: 'synthetic-demo-api-key', model: 'synthetic-model' });
   assert.equal((await call('vaultState')).protected, false, 'API-only use does not silently enroll Vault');
   await call('removeConnection', { id: apiOnly.id });
