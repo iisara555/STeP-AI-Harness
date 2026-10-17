@@ -3,6 +3,7 @@ import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import { MIN_CONTEXT_WINDOW } from './compact';
 import { GOOGLE_SERVICES, type GoogleService } from '../src/google-services';
+import { DEFAULT_GOOGLE_CLIENT_ID } from './google-client';
 import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/managed-policy.js';
 
 /**
@@ -248,9 +249,9 @@ export function defaultPolicy(): Policy {
     budgets: {},
     pilot: true,
     checks: { authority: false, privacy: false },
-    // Installed-app client IDs are public configuration. No client secret is bundled.
+    // Managed policy contains public configuration only; build-time native client credentials stay in main.
     googleWorkspace: {
-      clientId: '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com',
+      clientId: DEFAULT_GOOGLE_CLIENT_ID,
       domains: ['step.cmu.ac.th'],
       services: ['documents', 'calendar-read', 'tasks'],
     },
