@@ -6,6 +6,10 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Dark theme: profile pictures are no longer drawn as photo negatives. Inverting the black-ink drawings turned hair and clothes white; they now keep their paper, slightly dimmed, in both themes.
+
+- Tidy the chat composer and the draft panel's toolbar (owner's request). The composer's AI account, model and reasoning level are now one pill (status dot and model name) that opens a small menu with the three choices, and tool permission is a small shield pill with a short word (ถามก่อน, แก้ไฟล์ได้, อัตโนมัติ, อ่านอย่างเดียว) whose list keeps the full wording, so the controls stay on one row at 1024 px and 1440 px. The read-only permission is now called "อ่านอย่างเดียว · ห้ามแก้ไขไฟล์" instead of "วางแผน · อ่านอย่างเดียว", so it no longer reads like the "วางแผนก่อนลงมือ" work mode (it still blocks file changes, commands and Google writes in every task); the status bar below no longer repeats the account name and only says whether the AI can work. The ผลงาน toolbar is one set of icon buttons in groups (text style, bold/italic, lists and list level, quote/page break/image) with Thai tooltips; the "ข้อความ" and "หัวข้อ" buttons that repeated the text-style list are gone, and in a narrow panel the tools wrap to a second row instead of scrolling sideways.
+
 - Narrow the plain-language Google Workspace routing added just before: questions about the organization's meetings or a procedure ("อุทยานฯ มีประชุมอะไรบ้าง", "มีงานที่ต้องทำก่อนส่งเบิก AFP อะไรบ้าง"), mail content pasted into the message, long messages, and words that merely start with "เมล" (เมล็ด, เมลเบิร์น) no longer open the employee's calendar, tasks or inbox, so STeP questions keep answering from organization documents.
 
 - Recognize plain Google Workspace questions such as “วันนี้มีนัดอะไร”, “มีงานอะไรค้างบ้าง” and “ช่วยหาอีเมลเรื่องใบเสนอราคา”. Improve both automatic routing and the Skill candidates shown to the AI; keep local attachments, email drafting, translations and organization procedures in their existing routes. Add employee examples while preserving account, service, consent and global routing controls.
