@@ -104,6 +104,12 @@ try {
   });
   await page.reload();
   const snapshot = () => page.evaluate(() => window.step.call('snapshot'));
+  // Export settings start folded under the sliders button next to ส่งออก; the choice is remembered.
+  const showExportSettings = async () => {
+    const toggle = page.getByRole('button', { name: 'ตั้งค่าส่งออก', exact: true });
+    if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  };
   // General source intake must retain its own limits and privacy reason, even above the native-template ceiling.
   const largeSource = join(home, 'oversize-source.docx');
   const sourceFile = await open(largeSource, 'w');
@@ -146,6 +152,8 @@ try {
     assert.ok(calls.at(-1).system.includes('private native DOCX template'));
     assert.ok(calls.at(-1).prompt.includes('Filled examples have been withheld'));
     assert.ok(!calls.at(-1).prompt.includes('TEMPLATE EXAMPLE MUST NOT LEAK') && !calls.at(-1).prompt.includes('TEMPLATE-0007'));
+    await showExportSettings();
+    await expect(page.getByLabel('ฟอนต์ DOCX', { exact: true })).toBeVisible();
     await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveCount(0);
     const output = await page.evaluate(id => window.step.call('export', { id, format: 'docx' }), session.id);
     assert.equal(output.layout.templateName, `synthetic-${id}.docx`);

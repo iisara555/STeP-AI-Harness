@@ -125,6 +125,12 @@ try {
   });
   const open = () => page.locator('aside.sidebar').getByRole('button', { name: 'เครื่องมือร่างเอกสาร', exact: true }).click();
   const snapshot = () => page.evaluate(() => window.step.call('snapshot'));
+  // Export settings start folded under the sliders button next to ส่งออก; the choice is remembered.
+  const showExportSettings = async () => {
+    const toggle = page.getByRole('button', { name: 'ตั้งค่าส่งออก', exact: true });
+    if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  };
   await open();
   const form = page.locator('.document-form');
   await expect(page.locator('.document-tool-picker button')).toHaveCount(5);
@@ -225,6 +231,8 @@ try {
       await page.locator('aside.sidebar .session-open').filter({ hasText: last.title }).first().click();
     }
     await page.getByRole('button', { name: 'ใช้ร่างนี้', exact: true }).click();
+    if (id === profiles[0][0]) await expect(page.locator('.export-settings')).toHaveCount(0);
+    await showExportSettings();
     await expect(page.getByLabel('ฟอนต์ DOCX', { exact: true })).toHaveValue('auto');
     if (id === 'memo' || id === 'letter') await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveValue('auto');
     else await expect(page.getByLabel('ตราครุฑ', { exact: true })).toHaveCount(0);
