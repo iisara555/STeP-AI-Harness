@@ -676,7 +676,7 @@ export const en: Record<string, string> = {
   ทำสำเนาเป็นงานใหม่: 'Duplicate as new task',
   บันทึกบทสนทนาแล้ว: 'Conversation saved',
   'ส่งออก Markdown': 'Export Markdown',
-  'ส่งออก JSON': 'Export JSON',
+  บันทึกบทสนทนาเป็นไฟล์: 'Save conversation to a file',
   ความจำ: 'Memory',
   'ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน': 'Have the assistant run a task on a schedule, such as every weekday morning',
   งานตามรอบ: 'Scheduled tasks',
@@ -1657,7 +1657,7 @@ export const en: Record<string, string> = {
   'ยังเป็นรุ่นทดลอง ตรวจผลกับใบเสร็จจริงอีกครั้งก่อนส่ง':
     'Still a trial feature: check the result against the real receipt before submitting.',
   'Skill คือสูตรงานสำเร็จรูป': 'A Skill is a ready-made work recipe',
-  'Skill รวมขั้นตอนและแบบฟอร์มของงานที่ทำบ่อยไว้ให้ AI ทำตาม ดูทั้งหมดได้ที่นี่ หรือพิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น /receipt-audit':
+  'Skill รวมขั้นตอนและแบบฟอร์มของงานที่ทำบ่อยไว้ให้ AI ทำตาม ดูทั้งหมดได้ที่นี่ หรือพิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น ตรวจใบเสร็จ AFP':
     'A Skill bundles the steps and forms of frequent work for the AI to follow. Browse them all here, or type / in the message box to pick one such as /receipt-audit.',
   'เลือก AI และระดับการคิด': 'Choose the AI and reasoning level',
   'ปกติใช้ค่าเริ่มต้นได้เลย เปลี่ยนโมเดลหรือระดับการคิดได้ทุกเมื่อ ระดับสูงคิดละเอียดขึ้นแต่ช้าและใช้โควตามากขึ้น':

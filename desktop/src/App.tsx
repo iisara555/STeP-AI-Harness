@@ -1537,7 +1537,7 @@ export default function App() {
                       }
                     >
                       <Download size={15} />
-                      {t('ส่งออก JSON')}
+                      {t('บันทึกบทสนทนาเป็นไฟล์')}
                     </button>
                     <hr />
                     <button
