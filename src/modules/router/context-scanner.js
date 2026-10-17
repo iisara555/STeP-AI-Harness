@@ -8,13 +8,21 @@ import { extname, basename, dirname } from 'node:path';
 import { scoreSkillCandidate } from './scorer.js';
 import { neutralizeDraftingPhrases } from './authority-preflight.js';
 import { translationTargetInScope } from './translation-scope.js';
+import { referencesOrganization } from './entrepreneur-intent.js';
 
 export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
 
 // Employees name the work, not the product. Implicit account requests are narrow:
 // reading supplied/local material and drafting content keep their own Skills.
-const SUPPLIED_WORKSPACE_SOURCE = /ที่แนบ|แนบมา|ในเครื่อง|(?:จาก|ตาม)(?:ไฟล์|รายงาน|บันทึก|ข้อความ|ระเบียบ|นโยบาย|คู่มือ|sop)|(?:อีเมล|เมล|ข้อความ)(?:นี้|ด้านล่าง)\s*[:：\n]|(?:งานที่ต้องทำ|รายการงาน).{0,8}ของ(?:ทีม|ฝ่าย|หน่วยงาน)|(?:ปฏิทิน|ตาราง)วันหยุดราชการ|(?:บน|ใน)\s*(?:github|gitlab|trello|asana|notion|outlook)\b|\.(?:xlsx|docx|pptx|eml|msg)\b|\b(?:attached|pasted|local file|from (?:the )?(?:report|notes|text))\b/i;
-const PLAIN_WORKSPACE_REQUESTS = [
+const SUPPLIED_WORKSPACE_SOURCE = /ที่แนบ|แนบมา|ในเครื่อง|(?:จาก|ตาม)(?:ไฟล์|รายงาน|บันทึก|ข้อความ|ระเบียบ|นโยบาย|คู่มือ|sop)|(?:อีเมล|เมล|ข้อความ)(?:นี้|ด้านล่าง)\s*[:：\n]|(?:ข้อความ|เนื้อหา)(?:คือ|ว่า|ดังนี้)|ดังนี้\s*[:：]|ต่อไปนี้|[:：]\s*\n|(?:งานที่ต้องทำ|รายการงาน).{0,8}ของ(?:ทีม|ฝ่าย|หน่วยงาน)|(?:ปฏิทิน|ตาราง)วันหยุดราชการ|(?:บน|ใน)\s*(?:github|gitlab|trello|asana|notion|outlook)\b|\.(?:xlsx|docx|pptx|eml|msg)\b|\b(?:attached|pasted|local file|from (?:the )?(?:report|notes|text))\b/i;
+// A plain account question is short. Longer messages carry their own material.
+const PLAIN_WORKSPACE_MAX_LENGTH = 200;
+// "What must be done before/for X" asks about a procedure, not the employee's own task list or calendar.
+const PROCEDURE_QUESTION = /ขั้นตอน|ในการ|สำหรับการ|ก่อน(?:ส่ง|เบิก|ยื่น|จัด|เริ่ม|ปิด)|หลัง(?:จัด|อบรม|ปิด)|จัด(?:อบรม|งาน|สัมมนา|กิจกรรม|ประชุม)|(?:แต่ละ|ต่อ|ประจำ)(?:ปี|เดือน|ไตรมาส)|\b(?:procedure|process|checklist)\b/i;
+// "เมล" is also the start of เมล็ด (seed) and เมลเบิร์น (Melbourne).
+const MAIL = '(?:อีเมล|เมล)(?!็|เบิร์น|เบิร์ล)';
+// Calendar and task questions: an organization's meetings or a procedure belong to organization documents.
+const PLAIN_SCHEDULE_REQUESTS = [
   /(?:วันนี้|พรุ่งนี้|มะรืน|สัปดาห์นี้|สัปดาห์หน้า|อาทิตย์นี้|อาทิตย์หน้า).{0,12}มี(?:นัด|ประชุม)(?:อะไร|ไหม|มั้ย|บ้าง|หรือเปล่า|กี่|ตอนไหน|เมื่อไหร่)/,
   /มี(?:นัด|ประชุม)(?:อะไร|ไหน|กี่โมง|เมื่อไหร่|บ้าง|ไหม|มั้ย)/,
   /(?:ดู|เช็ก|เช็ค|ตรวจ|สรุป).{0,12}(?:ปฏิทิน|ตารางนัด|นัดหมาย|นัดวันนี้|นัดพรุ่งนี้|นัดประชุม)/,
@@ -24,12 +32,22 @@ const PLAIN_WORKSPACE_REQUESTS = [
   /(?:วันนี้|พรุ่งนี้).{0,8}(?:มีงานอะไร|ต้องทำอะไร)/,
   /เพิ่มงาน(?:\s|ว่า|ใหม่|ให้|เตือน)/,
   /(?:เพิ่ม|บันทึก|สร้าง).{0,8}(?:งานว่า|งานใหม่|รายการงาน|รายการสิ่งที่ต้องทำ|สิ่งที่ต้องทำ)/,
-  /(?:ดู|อ่าน|เช็ก|เช็ค|ค้น|หา|สรุป).{0,12}(?:อีเมล|เมล|กล่องจดหมาย|จดหมายเข้า)/,
-  /(?:อีเมล|เมล).{0,8}(?:ใหม่|ยังไม่ได้อ่าน|เข้ามา)/,
-  /\b(?:what(?:'s| is)|show|check|read|summari[sz]e).{0,25}\b(?:my calendar|my appointments|my meetings|my tasks|my to-do list|my inbox)\b/i,
+  /\b(?:what(?:'s| is)|show|check|read|summari[sz]e).{0,25}\b(?:my calendar|my appointments|my meetings|my tasks|my to-do list)\b/i,
   /\b(?:what|any).{0,18}\b(?:meetings|appointments).{0,25}\b(?:today|tomorrow|this week|next week)\b/i,
+];
+const PLAIN_MAIL_REQUESTS = [
+  new RegExp(`(?:ดู|อ่าน|เช็ก|เช็ค|ค้น|หา|สรุป).{0,12}(?:${MAIL}|กล่องจดหมาย|จดหมายเข้า)`),
+  new RegExp(`${MAIL}.{0,8}(?:ใหม่|ยังไม่ได้อ่าน|เข้ามา)`),
+  /\b(?:what(?:'s| is)|show|check|read|summari[sz]e).{0,25}\bmy inbox\b/i,
   /\b(?:find|search|read|check|summari[sz]e).{0,20}\b(?:emails|unread mail|inbox)\b/i,
 ];
+
+function isPlainWorkspaceRequest(text) {
+  if (text.length > PLAIN_WORKSPACE_MAX_LENGTH || SUPPLIED_WORKSPACE_SOURCE.test(text)) return false;
+  if (PLAIN_MAIL_REQUESTS.some(pattern => pattern.test(text))) return true;
+  if (PROCEDURE_QUESTION.test(text) || referencesOrganization(text)) return false;
+  return PLAIN_SCHEDULE_REQUESTS.some(pattern => pattern.test(text));
+}
 
 export const QUALIFIED_INTENT_RULES = [
   { intent: 'privacy-review', any: ['เลขบัตรประชาชน', 'เลขบัตร', 'ข้อมูลส่วนบุคคล', 'pii', 'pdpa', 'credential', 'password', 'ข้อมูลสุขภาพ'] },
@@ -180,7 +198,7 @@ export function inferIntentFromText(promptText = '') {
     if (matchesQualifiedIntent(lower, rule)) return rule.intent;
   }
 
-  if (!SUPPLIED_WORKSPACE_SOURCE.test(lower) && PLAIN_WORKSPACE_REQUESTS.some(pattern => pattern.test(lower))) {
+  if (isPlainWorkspaceRequest(lower)) {
     return 'google-workspace';
   }
 
