@@ -17,6 +17,27 @@ export const credentialTitles: Record<string, readonly [string, string]> = {
   ],
 };
 const errors: Record<string, readonly [string, string]> = {
+  GOOGLE_CLIENT_CONFIGURATION: [
+    'การตั้งค่า OAuth ของ Google ไม่ตรงกับแอป กรุณาให้ผู้ดูแลตรวจ OAuth client และสิทธิ์บริการ แล้วเชื่อมใหม่',
+    'Google OAuth configuration does not match this app. Ask your administrator to check the OAuth client and service scopes, then reconnect.',
+  ],
+  GOOGLE_CLIENT_SECRET_REQUIRED: [
+    'Google ปฏิเสธการแลกรหัสเพราะต้องใช้ client secret กรุณาให้ผู้ดูแลตรวจการตั้งค่า Desktop OAuth client',
+    'Google rejected the code exchange because a client secret is required. Ask your administrator to check the Desktop OAuth client configuration.',
+  ],
+  GOOGLE_AUTH_CODE_REJECTED: [
+    'รหัสเชื่อมบัญชีหมดอายุหรือใช้ไปแล้ว กดเชื่อมบัญชีงานและลงชื่อใหม่อีกครั้ง',
+    'The authorization code expired or was already used. Connect your work account and sign in again.',
+  ],
+  GOOGLE_AUTH_TIMEOUT: ['หมดเวลารอลงชื่อเข้าใช้ กดเชื่อมบัญชีงานเพื่อลองใหม่', 'Sign-in timed out. Connect your work account to retry.'],
+  GOOGLE_CALLBACK_INVALID: [
+    'ผลลงชื่อเข้าใช้จาก Google ไม่ครบ กดเชื่อมบัญชีงานเพื่อลองใหม่',
+    'The Google sign-in response was incomplete. Connect your work account to retry.',
+  ],
+  GOOGLE_RESPONSE_INVALID: [
+    'Google ส่งข้อมูลยืนยันบัญชีไม่ครบ กดเชื่อมใหม่ หากยังไม่สำเร็จให้ผู้ดูแลตรวจการตั้งค่า OAuth',
+    'Google returned an incomplete account response. Reconnect; if it fails again, ask your administrator to check OAuth configuration.',
+  ],
   VAULT_LOGIN_ATTEMPT_CHANGED: [
     'หน้าล็อกอินสองขั้นต้องใช้บัญชีเดิม หากข้อมูลเปลี่ยนหรือหมดเวลา ให้เริ่มล็อกอินใหม่',
     'A two-step login must use the same account. Restart login if the credential changes or the attempt expires.',

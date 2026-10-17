@@ -153,10 +153,10 @@ export class GoogleWorkspace {
       this.store.put('google-account', id, account);
       this.epoch++;
       this.handles.clear();
-      return this.state();
     } finally {
       this.connecting = undefined;
     }
+    return this.state();
   }
   pause(id: string, paused: boolean) {
     if (typeof paused !== 'boolean') reject('INVALID_INPUT');

@@ -24,6 +24,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { language } from './i18n';
+import { explainError } from './messages';
 import { GOOGLE_PAGES, type GoogleService } from './google-services';
 import type { VaultMetadata } from '../electron/vault';
 const words = {
@@ -223,6 +224,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
   }>();
   const [services, setServices] = useState<GoogleService[]>(['documents']);
   const [busy, setBusy] = useState('');
+  const [connectionError, setConnectionError] = useState<unknown>();
   const [files, setFiles] = useState<{ id: string; name: string; mimeType: string }[]>();
   const [query, setQuery] = useState('');
   const reload = async () => {
@@ -253,10 +255,12 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
   }, [busy, onBusy]);
   const run = async (id: string, action: () => Promise<unknown>) => {
     setBusy(id);
+    if (id === 'google-connect') setConnectionError(undefined);
     try {
       await action();
       await reload();
     } catch (error) {
+      if (id === 'google-connect') setConnectionError(error);
       onError(error);
     } finally {
       setBusy('');
@@ -596,6 +600,11 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
               })}
             </fieldset>
             {!google.services.includes('gmail-read') && <p className="muted small google-admin">{w('adminMore')}</p>}
+            {connectionError !== undefined && (
+              <p className="credential-note" role="alert">
+                {explainError(connectionError)}
+              </p>
+            )}
             <div className="google-connect-row">
               <button
                 disabled={Boolean(busy) || !services.length}
