@@ -132,13 +132,14 @@ const TONES: Record<string, string> = {
   professional: 'polite, structured and clear for organizational work',
   concise: 'short and to the point, focused on next actions',
 };
-function personal(settings: { userName?: string; assistant?: string; personality?: string; assistantTone?: string }) {
-  const clean = (value?: string) =>
+export function personal(settings: { userName?: string; assistant?: string; personality?: string; assistantTone?: string }) {
+  const clean = (value?: string, max = 120) =>
     String(value || '')
       .replace(/[\r\n"]+/g, ' ')
       .trim()
-      .slice(0, 120);
-  const style = settings.personality === 'custom' ? clean(settings.assistantTone) : TONES[settings.personality || 'coworker'];
+      .slice(0, max);
+  // The custom style field accepts 300 characters in Settings; the prompt keeps all of it.
+  const style = settings.personality === 'custom' ? clean(settings.assistantTone, 300) : TONES[settings.personality || 'coworker'];
   const lines = [
     settings.assistant && `Your name is "${clean(settings.assistant)}".`,
     settings.userName && `Address the user as "${clean(settings.userName)}".`,
