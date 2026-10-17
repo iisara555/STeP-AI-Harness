@@ -2,7 +2,7 @@
 
 For employee setup and everyday use, read the [Desktop guide](../desktop/README.md). This page retains implementation, evaluation, packaging and policy details. Unless a section says repository root, run Desktop commands from `desktop/`.
 
-> Prepared source: Harness **0.7.7** / Desktop **0.6.12**, with the UI audit fixes, memory upkeep and history lookup, read-only Calendar defaults and macOS CI smoke fixes. Explicit managed policy can still deny capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
+> Prepared source: Harness **0.7.7** / Desktop **0.6.13**, with the one-button AI picker, icon draft toolbar, scheduled tasks page, Vault website sign-in and plain-language Google Workspace questions. Explicit managed policy can still deny capabilities. Native tools remain experimental outside the shipped app. Source/CI artifacts do not establish installer publication; verify [Desktop releases](https://github.com/iisara555/STeP-AI-Harness/releases?q=desktop-v) and the [update feed](https://github.com/iisara555/STeP-AI-Harness/releases/tag/desktop-latest).
 
 Local Electron workspace with Thai chat, Tiptap text editing, SQLite history, conflict-safe proposals, source review, and versioned exports. The shared routing service retains the CLI contract. Graphify is developer tooling only.
 
