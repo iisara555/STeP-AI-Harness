@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Building2, Check, FolderOpen, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
+import { Building2, Check, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
 import { shortcut } from './messages';
@@ -11,7 +11,7 @@ import type { Snapshot } from './types';
 import { language, localized, t, teamName } from './i18n';
 import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleId } from './speaking-styles';
 
-/** Plain names for the policy switches; the technical key stays beside each for administrators. */
+/** Plain names for the policy switches; the technical keys are listed under the administrators' fold. */
 const featureNames: Record<string, string> = localized({
   vault: 'เก็บและใช้ข้อมูลบัญชีผ่าน Vault',
   googleWorkspace: 'เชื่อมบัญชี Google Workspace ของพนักงาน',
@@ -45,6 +45,40 @@ const featureNames: Record<string, string> = localized({
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
   maintenance: 'ตรวจความจำ บทเรียน และ Skill ทุกวัน',
 });
+
+/** The policy switches in a few plain groups, so staff can scan them; switches not listed fall into the last group. */
+const POLICY_GROUPS: [string, string[]][] = [
+  [
+    'การทำงานของ AI',
+    [
+      'toolLoop',
+      'autoMode',
+      'autopilot',
+      'coordinator',
+      'autoRouting',
+      'autoEffort',
+      'answerCheck',
+      'vision',
+      'receiptVision',
+      'voice',
+      'cron',
+    ],
+  ],
+  ['ข้อมูลและความเป็นส่วนตัว', ['vault', 'memoryTeam', 'learningReview', 'maintenance']],
+  [
+    'ส่วนเสริมและการเชื่อมต่อ',
+    ['googleWorkspace', 'mcp', 'lineGateway', 'copilot', 'compatibleProviders', 'providerPresets', 'skillPacks', 'staffSkills', 'ocrTrial'],
+  ],
+  ['การอัปเดตและนักพัฒนา', ['autoUpdate', 'developmentMode', 'claudeSubscription', 'shellByAi', 'autoMerge', 'sandbox', 'headless']],
+];
+function policyGroups(features: Record<string, boolean>) {
+  const names = Object.keys(features),
+    listed = new Set(POLICY_GROUPS.flatMap(([, keys]) => keys));
+  return POLICY_GROUPS.map(([title, keys], i) => ({
+    title,
+    names: [...keys.filter(key => names.includes(key)), ...(i === POLICY_GROUPS.length - 1 ? names.filter(key => !listed.has(key)) : [])],
+  })).filter(group => group.names.length);
+}
 
 export function SettingsPanel({
   initialPage,
@@ -125,7 +159,7 @@ export function SettingsPanel({
   const pages = [
     ['general', t('ทั่วไป'), Settings2],
     ['ai', t('การเชื่อมต่อ AI'), Sparkles],
-    ['credentials', t('รหัสผ่านและการเชื่อมต่อ'), ShieldCheck],
+    ['credentials', t('รหัสผ่านและการเชื่อมต่อ'), KeyRound],
     ['appearance', t('รูปลักษณ์และภาษา'), Sun],
     ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
     ['policy', t('นโยบายองค์กร'), Building2],
@@ -226,18 +260,21 @@ export function SettingsPanel({
             </button>
           </div>
           <p className="small muted">
-            {t(
-              'ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ส่วน USER.md (ชื่อ ผู้ช่วย และวิธีพูดคุย) เก็บในโฟลเดอร์นี้เพื่อใช้ร่วมกับ STeP AI บน CLI',
-            )}
+            {t('ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ชื่อเรียก ผู้ช่วย และวิธีพูดคุยที่ตั้งไว้ก็เก็บในโฟลเดอร์นี้ด้วย')}
           </p>
-          <div className="folder-row">
-            <span>{snapshot.userFile || t('USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า')}</span>
-            {snapshot.userFile && (
-              <button className="quiet" onClick={() => void run('user', () => call('reveal', { path: snapshot.userFile }))}>
-                {t('เปิดตำแหน่งไฟล์')}
-              </button>
-            )}
-          </div>
+          {/* The settings file and its path matter only to people who also use STeP AI from the command line. */}
+          <details className="settings-admin">
+            <summary>{t('ขั้นสูง')}</summary>
+            <p className="small muted">{t('การตั้งค่าเก็บเป็นไฟล์ USER.md เพื่อใช้ร่วมกับ STeP AI บน CLI')}</p>
+            <div className="folder-row">
+              <span>{snapshot.userFile || t('USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า')}</span>
+              {snapshot.userFile && (
+                <button className="quiet" onClick={() => void run('user', () => call('reveal', { path: snapshot.userFile }))}>
+                  {t('เปิดตำแหน่งไฟล์')}
+                </button>
+              )}
+            </div>
+          </details>
           <div className="choice-row" style={{ marginTop: 14 }}>
             <button className="quiet" onClick={openWizard}>
               {t('เปิดตัวช่วยตั้งค่าเริ่มต้น')}
@@ -263,7 +300,12 @@ export function SettingsPanel({
                 ['professional', t('มืออาชีพ'), t('สุภาพ มีโครงสร้าง ชัดเจน')],
                 ['concise', t('กระชับ'), t('ตอบสั้น ตรงประเด็น')],
                 ['custom', t('กำหนดเอง'), t('เขียนสไตล์ที่ต้องการ')],
-                ...Object.values(INTERACTION_STYLES).map(style => [style.id, style.displayName, t(style.summary)]),
+                ...Object.values(INTERACTION_STYLES).map(style => [
+                  style.id,
+                  // A Thai name first, the persona name in brackets; English shows the persona name alone.
+                  style.thaiName && language() !== 'en' ? `${style.thaiName} (${style.displayName})` : style.displayName,
+                  t(style.summary),
+                ]),
               ] as [string, string, string][]
             ).map(([id, label, summary]) => {
               const documented = id in INTERACTION_STYLES;
@@ -391,11 +433,7 @@ export function SettingsPanel({
       {page === 'policy' && snapshot.policy && (
         <section>
           <h2>{t('นโยบายที่ผู้ดูแลกำหนด')}</h2>
-          <p>
-            {snapshot.policy.source === 'managed' ? t('ใช้นโยบายองค์กร') : t('ใช้ค่าเริ่มต้นที่ปิดความสามารถเสี่ยงไว้')} · Hooks:{' '}
-            {snapshot.policy.hooks}
-          </p>
-          <p className="small muted">{snapshot.policy.path}</p>
+          <p>{snapshot.policy.source === 'managed' ? t('ใช้นโยบายองค์กร') : t('ใช้ค่าเริ่มต้นที่ปิดความสามารถเสี่ยงไว้')}</p>
           <p className="pilot-note">
             {snapshot.policy.pilot === false
               ? t('โหมดเข้มงวด: ผู้ดูแลตั้งให้ถามยืนยันก่อนส่งไฟล์แนบ ส่งครั้งแรก และส่งผลเครื่องมือแต่ละแหล่ง')
@@ -416,17 +454,44 @@ export function SettingsPanel({
               </ul>
             </div>
           )}
-          <div className="policy-features">
-            {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
-              <p key={name}>
-                <span>
-                  {featureNames[name] || name} <code className="small muted">{name}</code>
-                </span>
-                <span>{enabled ? t('เปิดในนโยบาย') : t('ปิดโดยผู้ดูแล')}</span>
-              </p>
-            ))}
-          </div>
+          {policyGroups(snapshot.policy.features).map(group => (
+            <div className="policy-group" key={group.title}>
+              <h3>{t(group.title)}</h3>
+              <ul className="policy-features">
+                {group.names.map(name => {
+                  const enabled = snapshot.policy!.features[name];
+                  return (
+                    <li key={name}>
+                      <span>{featureNames[name] || name}</span>
+                      <span className={enabled ? 'policy-badge on' : 'policy-badge off'}>
+                        {enabled ? <Check size={13} aria-hidden="true" /> : <Minus size={13} aria-hidden="true" />}
+                        {enabled ? t('เปิดในนโยบาย') : t('ปิดโดยผู้ดูแล')}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
           <p className="small muted">{t('สถานะนี้แสดงสิทธิ์ตามนโยบาย ความสามารถที่อยู่ระหว่างพัฒนาจะพร้อมใช้เมื่อส่งมอบแล้ว')}</p>
+          {/* Keys, the file path and hook counts are for whoever edits the policy file, not for staff. */}
+          <details className="settings-admin">
+            <summary>{t('สำหรับผู้ดูแล')}</summary>
+            <p className="small">
+              {t('ไฟล์นโยบาย')}: <code>{snapshot.policy.path}</code>
+            </p>
+            <p className="small">
+              {t('ที่มา')}: <code>{snapshot.policy.source}</code> · Hooks: {snapshot.policy.hooks}
+            </p>
+            <ul className="policy-keys small">
+              {Object.entries(snapshot.policy.features).map(([name, enabled]) => (
+                <li key={name}>
+                  <code>{name}</code>
+                  <span>{enabled ? 'true' : 'false'}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
           {snapshot.consentMetrics && (
             <>
               <h3>{t('สถิติการถามยืนยันในเครื่องนี้')}</h3>
@@ -492,16 +557,10 @@ export function SettingsPanel({
           <AIConnections snapshot={snapshot} call={call} refresh={refresh} onError={onError} onBusy={setBusy} />
         </section>
       )}
-      <div className="settings-save">
-        {page === 'ai' || page === 'privacy' ? (
-          <button
-            className={page === 'ai' && snapshot.connections.some(c => c.ready) ? undefined : 'quiet'}
-            disabled={Boolean(busy)}
-            onClick={close}
-          >
-            {page === 'ai' && snapshot.connections.some(c => c.ready) ? t('เริ่มใช้งาน') : t('กลับไปที่งาน')}
-          </button>
-        ) : (
+      {/* One footer on every tab: save where this panel has fields to save, otherwise just go back. Only the save
+          stays pinned to the bottom, so it never covers a tab's own buttons (such as connecting an AI account). */}
+      <div className={page === 'general' || page === 'appearance' ? 'settings-save sticky' : 'settings-save'}>
+        {page === 'general' || page === 'appearance' ? (
           <button
             disabled={Boolean(busy)}
             onClick={() =>
@@ -524,6 +583,14 @@ export function SettingsPanel({
           >
             <Check size={17} />
             {t('บันทึกและไปที่งาน')}
+          </button>
+        ) : (
+          <button
+            className={page === 'ai' && snapshot.connections.some(c => c.ready) ? undefined : 'quiet'}
+            disabled={Boolean(busy)}
+            onClick={close}
+          >
+            {t('กลับไปที่งาน')}
           </button>
         )}
       </div>

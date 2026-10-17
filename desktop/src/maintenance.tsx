@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { explainError } from './messages';
+import { explainError, shownDate } from './messages';
 import type { DesktopAPI, MaintenanceBoard, MaintenanceItem, MaintenanceKind, MaintenanceStatus } from './types';
 import { localized, t } from './i18n';
 
@@ -24,7 +24,7 @@ const columns: { status: MaintenanceStatus; label: string }[] = [
   { status: 'doing', label: 'กำลังแก้' },
   { status: 'done', label: 'เสร็จแล้ว' },
 ];
-const day = (iso: string) => new Date(iso).toLocaleDateString();
+const day = (iso: string) => shownDate(iso);
 
 export function MaintenancePanel({ api, version }: { api: DesktopAPI; version: number }) {
   const [state, setState] = useState<{ enabled: boolean; board?: MaintenanceBoard }>(),

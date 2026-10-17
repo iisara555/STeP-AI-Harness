@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
 import { ConfirmDialog } from './ui';
 import type { DesktopAPI, ProviderUsageReport, UsageReport } from './types';
-import { explainError } from './messages';
+import { connectionBrand, connectionName, explainError, shownDate, shownMonth } from './messages';
 import { locale, t } from './i18n';
 import './usage.css';
 import { formatUsd, usageSourceName } from './usage-display';
 
 function statusText(account: ProviderUsageReport) {
-  if (account.status === 'idle') return t('ยังไม่ได้อ่าน Usage จากผู้ให้บริการ');
+  if (account.status === 'idle') return t('ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ');
   if (account.status === 'unsupported') return t('ยังไม่มีช่องอ่านโควตาหรือเครดิตสำหรับการเชื่อมต่อนี้');
-  if (account.status === 'disconnected') return t('เชื่อมต่อและทดสอบบัญชีนี้ก่อนอ่าน Usage');
+  if (account.status === 'disconnected') return t('เชื่อมต่อและทดสอบบัญชีนี้ก่อนอ่านการใช้งาน');
   if (account.status === 'unavailable') return t('ผู้ให้บริการยังไม่รายงานโควตาหรือเครดิตสำหรับบัญชีนี้');
   if (account.status === 'error') {
-    if (account.reason === 'FEATURE_DISABLED') return t('Policy ปิดการเชื่อมต่อนี้');
+    if (account.reason === 'FEATURE_DISABLED') return t('ผู้ดูแลปิดการเชื่อมต่อนี้ในนโยบาย');
     if (account.reason === 'USAGE_AUTH_REQUIRED') return t('ตรวจการลงชื่อเข้าใช้หรือสิทธิ์ API key ที่หน้าการเชื่อมต่อ AI');
-    if (account.reason === 'USAGE_TIMEOUT') return t('อ่าน Usage ไม่ทันเวลา ลองรีเฟรชอีกครั้ง');
-    return t('อ่าน Usage ไม่สำเร็จ ลองรีเฟรชหรือตรวจที่ผู้ให้บริการ');
+    if (account.reason === 'USAGE_TIMEOUT') return t('อ่านการใช้งานไม่ทันเวลา ลองรีเฟรชอีกครั้ง');
+    return t('อ่านการใช้งานไม่สำเร็จ ลองรีเฟรชหรือตรวจที่ผู้ให้บริการ');
   }
   return t('ข้อมูลจากผู้ให้บริการ');
 }
@@ -44,6 +44,11 @@ function limitName(row: ProviderUsageReport['limits'][number]) {
   };
   return [period, row.scope || names[row.name]].filter(Boolean).join(' · ') || t('โควตา');
 }
+/** Local clock time at which the ledger's day (counted in UTC) begins, such as 07:00 น. in Thailand. */
+const dayStart = (day: string) => {
+  const start = new Date(day + 'T00:00:00Z');
+  return Number.isFinite(start.getTime()) ? shownDate(start, true).split(' ').slice(1).join(' ') : '';
+};
 const displayNumber = (n: number) => n.toLocaleString(locale(), { maximumFractionDigits: 4 });
 
 function UsageAccount({
@@ -63,20 +68,20 @@ function UsageAccount({
     tokens = entries.reduce((n, e) => n + e.total, 0),
     usd = entries.reduce((n, e) => n + e.usd, 0);
   return (
-    <section className="usage-account" data-usage-account={account.connectionId} aria-label={account.label}>
+    <section className="usage-account" data-usage-account={account.connectionId} aria-label={connectionName(account)}>
       <h4>
-        {account.label}{' '}
-        <span className="muted small">
-          {account.mode === 'api' ? 'API' : account.mode === 'oauth' ? 'Console OAuth' : t('สมาชิก')}
-          {account.plan ? ` · ${account.plan}` : ''}
-        </span>
+        {connectionName(account)}
+        {account.plan ? <span className="muted small"> · {account.plan}</span> : null}
       </h4>
       <p className="small" role={account.status === 'error' ? 'status' : undefined}>
         {statusText(account)}
       </p>
-      {account.source && <p className="muted small">{t('แหล่งข้อมูล: {0}', usageSourceName(account.source))}</p>}
-      {account.checkedAt && <p className="muted small">{t('อัปเดต: {0}', new Date(account.checkedAt).toLocaleString(locale()))}</p>}
-      {account.experimental && <p className="muted small">{t('ช่องอ่าน Usage นี้ยังเป็น experimental และอาจเปลี่ยนได้')}</p>}
+      {/* The source is only worth a line when it is not the account's own name (ChatGPT for the ChatGPT sign-in). */}
+      {account.source && usageSourceName(account.source) !== connectionBrand(account) && (
+        <p className="muted small">{t('แหล่งข้อมูล: {0}', usageSourceName(account.source))}</p>
+      )}
+      {account.checkedAt && <p className="muted small">{t('อัปเดต: {0}', shownDate(account.checkedAt, true))}</p>}
+      {account.experimental && <p className="muted small">{t('ช่องอ่านการใช้งานนี้ยังอยู่ระหว่างทดลอง และอาจเปลี่ยนได้')}</p>}
       {account.reason === 'CREDIT_UNAVAILABLE' && <p className="small">{t('อ่านยอดใช้ของ API key ได้ แต่ยังอ่านเครดิตบัญชีไม่ได้')}</p>}
       {account.limits.map((row, i) => (
         <div className="usage-meter" key={i}>
@@ -93,11 +98,11 @@ function UsageAccount({
           {row.usedPercent !== undefined && <progress max={100} value={row.usedPercent} aria-label={limitName(row)} />}
           {row.used !== undefined && (
             <p className="muted small">
-              {t('ใช้แล้ว {0} requests', displayNumber(row.used))}
+              {t('ใช้แล้ว {0} ครั้ง', displayNumber(row.used))}
               {row.total !== undefined ? ` / ${displayNumber(row.total)}` : ''}
             </p>
           )}
-          {row.resetsAt && <p className="muted small">{t('รีเซ็ต: {0}', new Date(row.resetsAt).toLocaleString(locale()))}</p>}
+          {row.resetsAt && <p className="muted small">{t('รีเซ็ต: {0}', shownDate(row.resetsAt, true))}</p>}
         </div>
       ))}
       {account.credits.map((credit, i) => (
@@ -143,9 +148,9 @@ function UsageAccount({
           <strong>{t('ยอด API ที่ผู้ให้บริการรายงาน (USD)')}</strong>
           {account.spend.map((spend, i) => {
             const periods = {
-              day: t('วันนี้ (UTC)'),
-              week: t('สัปดาห์นี้ (จันทร์–อาทิตย์ UTC)'),
-              month: t('เดือนนี้ (UTC)'),
+              day: t('วันนี้ (ตามรอบวันของผู้ให้บริการ)'),
+              week: t('สัปดาห์นี้ (จันทร์–อาทิตย์ ตามรอบของผู้ให้บริการ)'),
+              month: t('เดือนนี้ (ตามรอบของผู้ให้บริการ)'),
               all: t('สะสม'),
             };
             return (
@@ -156,11 +161,11 @@ function UsageAccount({
           })}
         </div>
       )}
-      <p className="muted small">{t('ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}', displayNumber(tokens), formatUsd(usd))}</p>
+      <p className="muted small">{t('ในแอปเดือนนี้: {0} โทเคน · ประมาณ ${1}', displayNumber(tokens), formatUsd(usd))}</p>
       <div className="usage-account-actions">
         {account.canRefresh && (
           <button className="quiet" disabled={Boolean(busy)} onClick={onRefresh}>
-            {busy === account.connectionId ? t('กำลังอ่าน Usage…') : t('รีเฟรช Usage')}
+            {busy === account.connectionId ? t('กำลังอ่านการใช้งาน…') : t('รีเฟรชการใช้งาน')}
           </button>
         )}
         {account.hasDashboard && (
@@ -204,7 +209,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
         <>
           <h3>{t('โควตาและเครดิตรายบัญชี')}</h3>
           <p className="muted small">
-            {t('ข้อมูลเป็น snapshot ณ เวลาที่ระบุ รีเฟรชได้ไม่เกินหนึ่งครั้งต่อนาทีต่อบัญชี ข้อมูลที่ไม่รายงานยังถือว่าไม่ทราบ')}
+            {t('ข้อมูล ณ เวลาที่ระบุ รีเฟรชได้ไม่เกินหนึ่งครั้งต่อนาทีต่อบัญชี ข้อมูลที่ผู้ให้บริการไม่รายงานยังถือว่าไม่ทราบ')}
           </p>
           {(report.accounts || []).length ? (
             report.accounts!.map(account => (
@@ -222,28 +227,32 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
           )}
           <h3>{t('การใช้ใน STeP Desktop')}</h3>
           <p>
-            {t('วันนี้ (UTC)')} {report.day}: {report.dailyTokens.toLocaleString(locale())} tokens
+            {t(
+              'วันนี้ {0} (รอบวันเริ่ม {1}): {2} โทเคน',
+              shownDate(report.day),
+              dayStart(report.day),
+              report.dailyTokens.toLocaleString(locale()),
+            )}
             {report.budgets.dailyTokens ? ` / ${report.budgets.dailyTokens.toLocaleString(locale())}` : ''}
           </p>
           <p>
-            {t('เดือน')} {report.month}
-            {t(': ค่าใช้จ่ายประมาณ $')}
-            {formatUsd(report.monthlyUsd)}
+            {t('เดือน {0}: ค่าใช้จ่ายประมาณ ${1}', shownMonth(report.month), formatUsd(report.monthlyUsd))}
             {report.budgets.monthlyCostUsd ? ` / $${report.budgets.monthlyCostUsd}` : ''}
           </p>
           <p className="muted small">
             {t(
-              'คำนวณจาก tokens ของ Chat, Draft และ Web Search ที่ provider รายงาน และราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป',
+              'คำนวณจากโทเคนของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป',
             )}
           </p>
           {report.unpricedTokens > 0 && (
             <p>
-              {report.unpricedTokens.toLocaleString(locale())} {t('tokens ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย')}
+              {report.unpricedTokens.toLocaleString(locale())} {t('โทเคนยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย')}
             </p>
           )}
           {!!report.cachePriceMissingTokens && (
             <p className="muted small">
-              {report.cachePriceMissingTokens.toLocaleString(locale())} {t('cache tokens ยังไม่มีราคาแยก จึงประมาณด้วยราคา input ปกติ')}
+              {report.cachePriceMissingTokens.toLocaleString(locale())}{' '}
+              {t('โทเคนที่ใช้ซ้ำจากแคชยังไม่มีราคาแยก จึงประมาณด้วยราคาข้อความขาเข้าปกติ')}
             </p>
           )}
           {report.warnings.length > 0 && <p role="status">{t('การใช้งานถึงอย่างน้อย 80% ของงบที่ตั้งไว้ โปรดตรวจยอดก่อนทำงานต่อ')}</p>}
@@ -264,19 +273,23 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
                   </tr>
                 </thead>
                 <tbody>
-                  {report.entries.map((e, i) => (
-                    <tr key={i}>
-                      <td>{e.day}</td>
-                      <td>
-                        {report.accounts?.find(a => a.connectionId === e.connectionId)?.label || e.provider} / {e.model}
-                      </td>
-                      <td>{e.total.toLocaleString(locale())}</td>
-                      <td>
-                        {formatUsd(e.usd)}
-                        {e.unpricedTokens > 0 ? t(' + รอราคา') : ''}
-                      </td>
-                    </tr>
-                  ))}
+                  {report.entries.map((e, i) => {
+                    const account = report.accounts?.find(a => a.connectionId === e.connectionId);
+                    return (
+                      <tr key={i}>
+                        <td>{shownDate(e.day)}</td>
+                        <td>
+                          {account ? connectionName(account) : connectionName({ provider: e.provider })} ·{' '}
+                          {e.model === 'provider-default' ? t('โมเดลเริ่มต้น') : e.model}
+                        </td>
+                        <td>{e.total.toLocaleString(locale())}</td>
+                        <td>
+                          {formatUsd(e.usd)}
+                          {e.unpricedTokens > 0 ? t(' + รอราคา') : ''}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

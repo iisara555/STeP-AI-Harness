@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ConfirmDialog } from './ui';
-import { explainError } from './messages';
+import { explainError, shownDate } from './messages';
 import type { DesktopAPI, MemoryEntry, MemoryProposal, Settings } from './types';
 import { localized, t } from './i18n';
 import { MaintenancePanel } from './maintenance';
@@ -9,7 +9,7 @@ type Edit = Pick<MemoryEntry, 'name' | 'text' | 'type' | 'scope' | 'importance' 
 const fresh = (): Edit => ({ name: '', text: '', type: 'user', scope: 'private', importance: 0.7, ttl_days: 0 });
 const scopes: Record<string, string> = localized({ private: 'ส่วนตัว', project: 'พื้นที่งาน', team: 'ทีม' });
 const origins: Record<string, string> = localized({ manual: 'พิมพ์เอง', chat: 'จากแชต', feedback: 'จากคำแก้ "ต้องแก้"' });
-const day = (iso: string) => new Date(iso).toLocaleDateString();
+const day = (iso: string) => shownDate(iso);
 export function MemoryDialog({
   api,
   settings,

@@ -82,7 +82,7 @@ import { Avatar } from './avatars';
 import { SidebarRail, readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
 import { UpdateCard, VersionLine, useUpdate } from './update';
 import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
-import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionLabel, shortcut, statusText } from './messages';
+import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
 import type { ApprovalRequest } from './types';
@@ -1021,7 +1021,7 @@ export default function App() {
       await refresh();
     });
   }
-  const providerName = (c?: Connection) => (c ? connectionLabel(c) : '');
+  const providerName = (c?: Connection) => (c ? connectionName(c) : '');
   const setTheme = (theme: string) =>
     action(async () => {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
@@ -2353,7 +2353,7 @@ export default function App() {
                       <option value="">{t('เลือก AI')}</option>
                       {snapshot.connections.map(c => (
                         <option key={c.id} value={c.id}>
-                          {connectionLabel(c)} · {c.mode === 'api' ? 'API' : t('บัญชีส่วนตัว')}
+                          {connectionName(c)}
                           {c.ready ? '' : t(' · ยังไม่พร้อม')}
                         </option>
                       ))}

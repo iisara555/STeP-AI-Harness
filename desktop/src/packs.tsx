@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from './ui';
-import { explainError } from './messages';
+import { explainError, shownDate } from './messages';
 import type { DesktopAPI } from './types';
 import type { PackReview as PackReviewResult } from '../../src/modules/packs/index.js';
 import { t } from './i18n';
@@ -118,14 +118,14 @@ export function PacksDialog({
           {p.credit && (
             <p className="small">
               {t('นำเข้าโดย {0}', p.credit.name)}
-              {p.credit.team ? ' · ' + p.credit.team : ''} · {new Date(p.credit.uploadedAt).toLocaleDateString()}
+              {p.credit.team ? ' · ' + p.credit.team : ''} · {shownDate(p.credit.uploadedAt)}
             </p>
           )}
           {p.review && <PackReview review={p.review} />}
           {p.usage?.count > 0 && (
             <p className="small muted">
               {t('ใช้แล้ว {0} ครั้ง', p.usage.count)}
-              {p.usage.lastUsedAt ? ' · ' + t('ล่าสุด {0}', new Date(p.usage.lastUsedAt).toLocaleDateString()) : ''}
+              {p.usage.lastUsedAt ? ' · ' + t('ล่าสุด {0}', shownDate(p.usage.lastUsedAt)) : ''}
             </p>
           )}
           {p.enabled ? (
@@ -162,8 +162,8 @@ export function PacksDialog({
           {p.promotion && (
             <p className="small muted" role="note">
               {p.promotion.current
-                ? t('เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา', new Date(p.promotion.submittedAt).toLocaleDateString())
-                : t('ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้', new Date(p.promotion.submittedAt).toLocaleDateString())}
+                ? t('เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา', shownDate(p.promotion.submittedAt))
+                : t('ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้', shownDate(p.promotion.submittedAt))}
               {p.promotion.reference ? ' · ' + t('เลขที่ {0}', p.promotion.reference) : ''}
             </p>
           )}

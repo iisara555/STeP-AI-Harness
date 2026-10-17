@@ -1,5 +1,6 @@
 // Words the whole interface shares: error codes and statuses in plain Thai, and provider names.
-import { localized, t } from './i18n';
+import { language, localized, t } from './i18n';
+import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
@@ -213,7 +214,7 @@ export const errorText: Record<string, string> = localized({
   RECEIPT_VISION_UNREADABLE: 'AI ตอบกลับในรูปแบบที่อ่านไม่ได้ ลองให้ AI อ่านภาพอีกครั้ง หรือใช้ผลจาก OCR',
   RECEIPT_VISION_FORMAT: 'แปลงภาพใบเสร็จเพื่อส่งให้ AI ไม่ได้ ลองบันทึกเป็น JPG หรือ PNG แล้วเลือกใหม่',
   SKILL_NOT_ROUTED: 'Skill นี้ยังไม่เชื่อม Routing จึงเรียกจากแชทไม่ได้',
-  RUNTIME_INVALID: 'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ ใช้ตัวเชื่อมที่มากับแอปแทนได้',
+  RUNTIME_INVALID: 'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ กด “กลับไปใช้ตัวเชื่อมที่มากับแอป” แทนได้',
   RUNTIME_UNAVAILABLE: 'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่',
   MODEL_NOT_AVAILABLE: 'โมเดลนี้ใช้กับบัญชีหรือแพ็กเกจของคุณไม่ได้ เลือกโมเดลอื่นในกล่องพิมพ์',
   PROVIDER_QUOTA: 'โควตาของบัญชีเต็มหรือถูกจำกัดชั่วคราว ลองใหม่ภายหลังหรือเลือกโมเดลที่เบากว่า',
@@ -290,6 +291,33 @@ export const statusText: Record<string, string> = localized({
   cancelled: 'หยุดแล้ว',
   interrupted: 'งานหยุดเมื่อปิดแอป',
 });
+
+/** A staff-facing date, and optionally its time, in the one app-wide format (17/10/2569 14:05 น.), local time. */
+export const shownDate = (value: string | number | Date, time = false) => formatLocalDate(value, { time, english: language() === 'en' });
+/** A YYYY-MM month key in the same style (ต.ค. 2569). */
+export const shownMonth = (value: string) => formatLocalMonth(value, { english: language() === 'en' });
+
+type NamedConnection = { provider?: string; label?: string; mode?: string; signedIn?: boolean };
+/** What staff call the service on an account: "ChatGPT" for the ChatGPT sign-in, the provider or preset otherwise. */
+export const connectionBrand = (c: NamedConnection) =>
+  c.provider === 'openai' && c.mode === 'subscription' ? 'ChatGPT' : connectionLabel(c);
+/** The kind of account beside that name: บัญชีส่วนตัว, API key, or the OAuth it signs in with. */
+export const connectionKind = (c: NamedConnection) =>
+  c.mode === 'api'
+    ? c.signedIn
+      ? t('ลงชื่อเข้าใช้')
+      : 'API key'
+    : c.mode === 'oauth'
+      ? c.provider === 'copilot'
+        ? 'GitHub OAuth'
+        : 'Claude Console OAuth'
+      : t('บัญชีส่วนตัว');
+/**
+ * The one name an AI account goes by everywhere it is shown (Settings card, usage page, status bar, pickers,
+ * consent text): brand plus kind, such as "ChatGPT บัญชีส่วนตัว" or "OpenRouter API key".
+ */
+export const connectionName = (c: NamedConnection) =>
+  c.provider === 'copilot' ? connectionBrand(c) : `${connectionBrand(c)} ${connectionKind(c)}`;
 
 /** A connection's name: a preset or custom endpoint shows its own label (OpenRouter, Groq, ...). */
 export const connectionLabel = (c: { provider?: string; label?: string }) =>

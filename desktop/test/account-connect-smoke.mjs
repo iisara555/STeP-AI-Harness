@@ -96,7 +96,8 @@ try {
   await app.evaluate(() => globalThis.finishConnect());
   await expect(page.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toBeVisible();
   await expect(page.locator('.connection-state')).toHaveText('ลงชื่อแล้ว แต่ทดสอบไม่ผ่าน');
-  await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toHaveCount(0);
+  // One footer label on every Settings tab; it becomes the primary button only once an account is ready.
+  await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).toHaveClass(/quiet/);
   await page.screenshot({ path: 'release/qa/connect-ai/test-failed.png' });
   await page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กำลังเชื่อมต่อและทดสอบ…', exact: true })).toBeDisabled();
@@ -104,9 +105,9 @@ try {
   await expect(page.getByText('บัญชีทดสอบพร้อมใช้งาน', { exact: true })).toBeVisible();
   await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
   await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'ready');
-  await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).not.toHaveClass(/quiet/);
   await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeHidden();
-  await expect(page.getByRole('button', { name: 'ลบ', exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeHidden();
 
   const capabilities = page.locator('.ai-connect-step .ai-capabilities');
   await capabilities.locator('summary').focus();
@@ -122,7 +123,7 @@ try {
   await page.screenshot({ path: 'release/qa/connect-ai/ready.png' });
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'ลบ', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeVisible();
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
@@ -169,7 +170,7 @@ try {
       .filter(m => ['disconnect', 'connect'].includes(m)),
     ['disconnect', 'connect'],
   );
-  await page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'การเชื่อมต่อ AI' })).toHaveCount(0);
   console.log(
     'Employee account smoke passed: guided connection, busy state, signed-in/test-failed recovery without duplicate account, expired sign-in with one-click sign-in again, readiness, collapsed management, narrow dark layout; synthetic IPC only.',
