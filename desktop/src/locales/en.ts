@@ -7,6 +7,18 @@ import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 export const en: Record<string, string> = {
   ...documentLayoutEn,
+  'ปรับแชต การตั้งค่า และกล่องยืนยันให้อ่านง่ายขึ้น ทั้งหน้าต่างเล็กและโหมดมืด':
+    'Clearer chat, settings and confirmations, including small windows and dark mode',
+  'ให้พื้นที่ร่างในแผงผลงานมากขึ้น และพับการตั้งค่าส่งออกได้':
+    'More room for the draft in the output panel, with collapsible export settings',
+  'ให้ AI ค้นงานเก่าในทีมมาใช้ต่อ และแสดงที่มาของความจำ': 'Let AI find earlier work from your team, and show where memories came from',
+  'เพิ่มบอร์ดตรวจความจำและ Skill บนเครื่อง โดยไม่แก้หรือลบข้อมูลเอง':
+    'A local board checks memories and Skills without editing or deleting them automatically',
+  'เลือกระดับการคิดตามขนาดงานอัตโนมัติ เมื่อคุณไม่ได้กำหนดเอง': 'Choose reasoning effort for the task size when you leave it on automatic',
+  'ปรับหน้าเชื่อม Google Workspace และให้ Calendar อ่านอย่างเดียวเป็นค่าเริ่มต้น ผู้ที่เคยเชื่อมให้เชื่อมใหม่หนึ่งครั้ง':
+    'Clearer Google Workspace setup with read-only Calendar access by default. Reconnect Calendar once if you already connected it',
+  'แก้การบันทึกความจำและโปรไฟล์ เพื่อเก็บข้อความภาษาไทยและการแก้ไขพร้อมกันได้ครบ':
+    'Fix memory and profile saves to preserve Thai text and concurrent edits',
   'รูปแบบ DOCX': 'DOCX formatting',
   'ฝังฟอนต์ครบแล้ว เปิดและแก้ไขต่อใน Word ได้': 'Fonts embedded for viewing and editing in Word',
   'แม่แบบใช้ฟอนต์ที่ไม่มีในชุดแอป ตรวจฟอนต์บนเครื่องปลายทางก่อนใช้งาน':
