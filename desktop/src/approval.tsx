@@ -12,6 +12,10 @@ const privacyLabels: Record<string, string> = localized({
 // Employees see what the step does; unknown tool ids still show as-is so nothing is hidden.
 const toolLabels: Record<string, string> = localized({
   external_ai: 'ส่งคำขอให้ AI',
+  'tool-data': 'ส่งผลการใช้เครื่องมือให้ AI',
+  'web-query': 'ค้นเว็บ',
+  'web-url': 'เปิดเว็บปลายทาง',
+  web_fetch: 'อ่านเว็บไซต์',
   browser_control: 'ผู้ช่วยทำงานบนเว็บ',
   browser: 'เปิดเว็บ',
   browser_read: 'อ่านหน้าเว็บ',
@@ -28,10 +32,21 @@ const toolLabels: Record<string, string> = localized({
   ask_user: 'คำถามถึงคุณ',
   plan: 'แผนงาน',
 });
+const STEP = /^(?:[-*+•]\s*(?:\[[ xX]\]\s*)?|\d{1,2}[.)]\s+)(.+)$/;
+/** A plan's steps as a list: marked lines (1. / - / *) are steps; a plan of one plain line is one step. */
+export function planSteps(body: string) {
+  const lines = body
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean);
+  const marked = lines.filter(l => STEP.test(l));
+  if (marked.length) return { steps: marked.map(l => STEP.exec(l)![1].trim()), notes: lines.filter(l => !STEP.test(l)) };
+  return { steps: lines.slice(0, 1), notes: lines.slice(1) };
+}
 export function ApprovalDialog({
   request,
   children,
-  confirmLabel = t('อนุญาตครั้งนี้'),
+  confirmLabel,
   onConfirm,
   onRun,
   onCancel,
@@ -47,28 +62,77 @@ export function ApprovalDialog({
 }) {
   const [remember, setRemember] = useState(false);
   const [run, setRun] = useState(Boolean(request.runDefault && request.runScope));
+  const isPlan = request.tool === 'plan';
+  const plan = isPlan && request.body ? planSteps(t(request.body)) : null;
+  const label = confirmLabel || (isPlan ? t('อนุมัติแผน') : t('อนุญาตครั้งนี้'));
   return (
     <ConfirmDialog
       title={t(request.title)}
-      confirmLabel={run ? t('อนุญาตในขอบเขตนี้จนจบรอบ') : remember ? t('อนุญาตใน workspace นี้') : confirmLabel}
+      confirmLabel={run ? t('อนุญาตในขอบเขตนี้จนจบรอบ') : remember ? t('อนุญาตใน workspace นี้') : label}
       onConfirm={() => (run && onRun ? onRun() : onConfirm(remember))}
       onCancel={onCancel}
       focusCancel
       confirmDisabled={confirmDisabled}
     >
-      <p className="small muted">
-        {t('เครื่องมือ:')} {toolLabels[request.tool] || request.tool} {t('· ระดับข้อมูลจากการตรวจรูปแบบ:')}{' '}
-        {privacyLabels[request.privacyClass] || request.privacyClass}
-      </p>
-      {request.body && <p className="approval-detail">{t(request.body)}</p>}
+      {!isPlan && (
+        <p className="small muted">
+          {t('เครื่องมือ:')} {toolLabels[request.tool] || request.tool} {t('· ระดับข้อมูลจากการตรวจรูปแบบ:')}{' '}
+          {privacyLabels[request.privacyClass] || request.privacyClass}
+        </p>
+      )}
+      {plan ? (
+        <div className="approval-plan">
+          <strong className="small">{t('ขั้นตอนของแผน')}</strong>
+          <ol>
+            {plan.steps.map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ol>
+          {plan.notes.map((note, i) => (
+            <p key={i} className="small muted approval-detail">
+              {note}
+            </p>
+          ))}
+        </div>
+      ) : (
+        request.body && <p className="approval-detail">{t(request.body)}</p>
+      )}
+      {request.facts?.length ? (
+        <dl className="approval-facts">
+          {request.facts.map(f => (
+            <div key={f.label}>
+              <dt>{f.label}</dt>
+              <dd>{f.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {request.preview && (
+        <div className="approval-preview">
+          <span className="small muted">{t('ตัวอย่างข้อความที่จะส่ง (ปิดบังข้อมูลแล้ว)')}</span>
+          <blockquote className="approval-detail">{request.preview}</blockquote>
+        </div>
+      )}
+      {request.technical && request.technical !== request.preview && (
+        <details className="approval-technical">
+          <summary>{t('รายละเอียดสำหรับผู้ดูแล')}</summary>
+          <pre tabIndex={0}>{request.technical}</pre>
+        </details>
+      )}
       {children}
       {request.runScope && onRun && (
         <label className="approval-remember">
           <input type="checkbox" checked={run} onChange={e => setRun(e.target.checked)} />
           <span>
             {t('อนุญาตส่งข้อมูลในขอบเขตนี้โดยไม่ถามซ้ำ')}
-            <br />
-            <span className="approval-detail">{request.runScope}</span>
+            <ul className="approval-scope">
+              {request.runScope
+                .split('\n')
+                .filter(Boolean)
+                .map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+            </ul>
           </span>
         </label>
       )}

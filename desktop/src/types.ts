@@ -400,6 +400,12 @@ export type ApprovalRequest = {
   /** Pilot mode pre-selects the run scope, so one answer covers the rest of the run. */
   runDefault?: boolean;
   sessionId?: string;
+  /** Short facts for staff (length, masking), shown as a list instead of raw data. */
+  facts?: { label: string; value: string }[];
+  /** The masked text to check before agreeing, in readable form. */
+  preview?: string;
+  /** The exact masked payload, folded away for administrators. */
+  technical?: string;
 };
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Building2, Check, FolderOpen, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
+import { Building2, Check, FolderOpen, KeyRound, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
 import { shortcut } from './messages';
@@ -125,7 +125,7 @@ export function SettingsPanel({
   const pages = [
     ['general', t('ทั่วไป'), Settings2],
     ['ai', t('การเชื่อมต่อ AI'), Sparkles],
-    ['credentials', t('รหัสผ่านและการเชื่อมต่อ'), ShieldCheck],
+    ['credentials', t('รหัสผ่านและการเชื่อมต่อ'), KeyRound],
     ['appearance', t('รูปลักษณ์และภาษา'), Sun],
     ['privacy', t('ความเป็นส่วนตัว'), ShieldCheck],
     ['policy', t('นโยบายองค์กร'), Building2],

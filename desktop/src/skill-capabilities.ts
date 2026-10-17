@@ -25,7 +25,7 @@ export const tools = [
   },
   {
     id: 'receipt',
-    title: 'ตรวจใบเสร็จก่อนส่ง AFP',
+    title: 'ตรวจใบเสร็จ AFP',
     description: 'อ่านใบเสร็จ เติมข้อมูลให้ตรวจครั้งเดียว แล้วเตรียมตรวจตามกฎ AFP',
     owner: 'afp',
     stage: 'ทดลอง',

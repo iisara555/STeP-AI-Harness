@@ -74,7 +74,7 @@ try {
   );
   await page.reload();
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await expect(page.getByRole('heading', { name: 'ตรวจใบเสร็จก่อนส่ง AFP' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'ตรวจใบเสร็จ AFP' })).toBeVisible();
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await expect(page.getByLabel('ยอดรวมที่ชำระ')).toHaveValue('107.00');
