@@ -5,6 +5,7 @@ export const credentialTitles: Record<string, readonly [string, string]> = {
   'Revoke Google authorization?': ['เพิกถอนสิทธิ์ที่ Google?', 'Revoke Google authorization?'],
   'Disconnect locally?': ['เลิกเชื่อมบัญชีนี้ในเครื่อง?', 'Disconnect locally?'],
   'Fill account once?': ['กรอกบัญชีนี้ครั้งเดียว?', 'Fill account once?'],
+  'Fill account and sign in?': ['กรอกบัญชีนี้แล้วกดเข้าสู่ระบบให้?', 'Fill account and sign in?'],
   'Delete this account from this device?': ['ลบบัญชีนี้จากเครื่อง?', 'Delete this account from this device?'],
   'Resume reading this website?': ['กลับมาอ่านเว็บไซต์นี้ต่อ?', 'Resume reading this website?'],
   'Check the page for credentials and private information before allowing AI to read it.': [

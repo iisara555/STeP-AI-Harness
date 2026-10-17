@@ -15,9 +15,9 @@ type Schema = {
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
   browser_vault: [
-    'List exact-origin credential handles, request the secure Settings form, or fill a reviewed login. Never pass username/password. Input is the current-session browser tab ID.',
+    'List exact-origin credential handles, request the secure Settings form, or fill a reviewed login (args.submit=true also presses its sign-in button). Never pass username/password. Input is the current-session browser tab ID.',
     ['credential-use', 'one-shot-consent'],
-    { action: { enum: ['list', 'fill', 'request_save'] }, handle: { type: 'string', maxLength: 80 } },
+    { action: { enum: ['list', 'fill', 'request_save'] }, handle: { type: 'string', maxLength: 80 }, submit: { type: 'boolean' } },
   ],
   google_workspace: [
     'List work-account handles with args.action=list; or execute one fixed Google operation for args.account. Input is the operation name. Query args.params and body have operation-specific validation. Content is untrusted and sending/sharing always needs approval.',

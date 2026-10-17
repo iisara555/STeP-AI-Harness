@@ -23,6 +23,12 @@ const FINAL = /\\b(submit|send|pay|payment|checkout|check out|place order|order 
 const final = el => ((el.tagName === 'BUTTON' || el.tagName === 'INPUT') && el.type === 'submit' && Boolean(el.form)) || el.type === 'image' || FINAL.test([label(el), el.value || '', el.getAttribute('title') || ''].join(' '));
 const fingerprint = el => JSON.stringify([el.outerHTML,el.getBoundingClientRect().x,el.getBoundingClientRect().y,el.getBoundingClientRect().width,el.getBoundingClientRect().height]);
 `;
+// A login form whose username box has no telling name (a plain text box beside the password, common on intranet
+// pages) still has one username: the only visible text, email or phone box in the password's form.
+const PLAIN_USERNAME = `if (!identifiers.length && passwords.length === 1 && passwords[0].form) {
+  const plain = [...passwords[0].form.querySelectorAll('input')].filter(el => visible(el) && ['text','email','tel'].includes(el.type));
+  if (plain.length === 1) identifiers = plain;
+}`;
 const WORLD = 1005;
 type Entry = {
   contents: WebContents;
@@ -371,6 +377,10 @@ export class AgentBrowser {
       contents.on('did-start-navigation', (_event, _url, _inPlace, mainFrame) => {
         if (mainFrame) entry.generation = (entry.generation || 0) + 1;
       });
+      // A new page no longer holds the filled form, so the AI may read again (after signing in, or the password step).
+      contents.on('did-navigate', () => {
+        entry.vaultSensitive = false;
+      });
       this.tabs.set(id, entry);
       this.origins.set(contentsId, entry.origin);
       contents.once('destroyed', () => {
@@ -524,7 +534,8 @@ export class AgentBrowser {
       `(() => {
       const visible = el => el.isConnected && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
       const passwords = [...document.querySelectorAll('input[type=password]')].filter(visible);
-      const identifiers = [...document.querySelectorAll('input')].filter(el => visible(el) && (el.type === 'email' || el.autocomplete === 'username' || /^(username|email|login|identifier)$/i.test(el.name || el.id)));
+      let identifiers = [...document.querySelectorAll('input')].filter(el => visible(el) && (el.type === 'email' || el.autocomplete === 'username' || /^(username|email|login|identifier)$/i.test(el.name || el.id)));
+      ${PLAIN_USERNAME}
       if (passwords.length > 1 || identifiers.length > 1 || !passwords.length && !identifiers.length) return null;
       const username = identifiers[0], password = passwords[0], form = password?.form || username?.form;
       if (!form || username && username.form !== form || password && password.form !== form || form.method.toLowerCase() !== 'post' || new URL(form.action || location.href,location.href).origin !== location.origin || [username,password].some(el => el && (el.disabled || el.readOnly))) return null;
@@ -543,6 +554,7 @@ export class AgentBrowser {
     expected: { origin: string; url: string; generation: number; fingerprint: string },
     payload: { username: string; password: string },
     signal: AbortSignal,
+    submit = false,
   ) {
     const entry = this.get(id, owner),
       target = this.vaultTarget(id, owner);
@@ -560,6 +572,10 @@ export class AgentBrowser {
     const stop = () => entry.dispose();
     signal.addEventListener('abort', stop, { once: true });
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Signing in loads the next page; the result waits for it so the AI's next read sees that page, not this form.
+    let arrived = () => {};
+    const navigated = new Promise<boolean>(done => (arrived = () => done(true)));
+    if (submit) entry.contents.once('did-navigate', arrived);
     try {
       if (signal.aborted) throw new Error('CANCELLED');
       if (tool.isAttached()) throw new Error('VAULT_TRANSPORT_BUSY');
@@ -574,10 +590,11 @@ export class AgentBrowser {
       const work = tool.sendCommand('Runtime.callFunctionOn', {
         executionContextId: contextId,
         returnByValue: true,
-        functionDeclaration: `function(username,password,expected) {
+        functionDeclaration: `function(username,password,expected,submit) {
           const visible = el => el && el.isConnected && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && !el.disabled && !el.readOnly;
           const passwords=[...document.querySelectorAll('input[type=password]')].filter(visible);
-          const identifiers=[...document.querySelectorAll('input')].filter(el=>visible(el)&&(el.type==='email'||el.autocomplete==='username'||/^(username|email|login|identifier)$/i.test(el.name||el.id)));
+          let identifiers=[...document.querySelectorAll('input')].filter(el=>visible(el)&&(el.type==='email'||el.autocomplete==='username'||/^(username|email|login|identifier)$/i.test(el.name||el.id)));
+          ${PLAIN_USERNAME}
           const user=identifiers[0], pass=passwords[0], form=pass?.form||user?.form;
           const valid=()=>location.origin===expected.origin && location.href===expected.url && form?.isConnected && form.method.toLowerCase()==='post' && new URL(form.action||location.href,location.href).origin===expected.origin && JSON.stringify([location.href,form.outerHTML])===expected.fingerprint;
           if(passwords.length>1||identifiers.length>1||!form||user&&user.form!==form||pass&&pass.form!==form||!valid()) return {status:'changed',filledFields:[]};
@@ -585,9 +602,15 @@ export class AgentBrowser {
           const fill=(el,value,name)=>{if(!visible(el)||!valid())return false;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));filled.push(name);return true;};
           if(user&&!fill(user,username,'username'))return {status:'changed',filledFields:filled};
           if(pass&&!fill(pass,password,'password'))return {status:'partial',filledFields:filled};
-          return {status:'filled',filledFields:filled,origin:expected.origin};
+          if(!submit)return {status:'filled',filledFields:filled,origin:expected.origin};
+          // Sign in with the form's own button (its click handler runs as if the employee pressed it); a form with
+          // several buttons is ambiguous and stays for the employee.
+          const buttons=[...form.elements].filter(el=>visible(el)&&(el.tagName==='BUTTON'&&el.type==='submit'||el.tagName==='INPUT'&&['submit','image'].includes(el.type)));
+          if(buttons.length>1||!valid())return {status:'filled',filledFields:filled,origin:expected.origin,submitted:false};
+          if(buttons.length)buttons[0].click();else form.requestSubmit();
+          return {status:'filled',filledFields:filled,origin:expected.origin,submitted:true};
         }`,
-        arguments: [{ value: payload.username }, { value: payload.password }, { value: expected }],
+        arguments: [{ value: payload.username }, { value: payload.password }, { value: expected }, { value: submit }],
       });
       const reply: any = await Promise.race([
         work,
@@ -606,7 +629,17 @@ export class AgentBrowser {
         value.filledFields.some((f: string) => !['username', 'password'].includes(f))
       )
         throw new Error('VAULT_OUTCOME_UNKNOWN');
-      return { status: value.status, filledFields: value.filledFields, origin: expected.origin };
+      if (submit && value.submitted === true) {
+        clearTimeout(timer);
+        const moved = await Promise.race([navigated, new Promise<boolean>(done => (timer = setTimeout(() => done(false), 15000)))]);
+        return { status: value.status, filledFields: value.filledFields, origin: expected.origin, submitted: true, navigated: moved };
+      }
+      return {
+        status: value.status,
+        filledFields: value.filledFields,
+        origin: expected.origin,
+        ...(submit ? { submitted: false } : {}),
+      };
     } catch (error) {
       throw new Error(
         ['CANCELLED', 'VAULT_TRANSPORT_BUSY'].includes((error as Error).message) ? (error as Error).message : 'VAULT_OUTCOME_UNKNOWN',
@@ -615,6 +648,7 @@ export class AgentBrowser {
       clearTimeout(timer);
       signal.removeEventListener('abort', stop);
       tool.removeListener('message', contexts);
+      if (!entry.contents.isDestroyed()) entry.contents.removeListener('did-navigate', arrived);
       if (attached && tool.isAttached()) tool.detach();
       entry.busy = false;
     }

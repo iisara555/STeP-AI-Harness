@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Sign in to websites with a saved Vault account. The AI was never told about `browser_vault`, and the browser and STeP MIS rules told it to always ask the employee to sign in by hand, so a saved account was never used. When a page needs a login the AI now lists saved accounts for that exact site and asks to fill one; one approval ("กรอกบัญชีนี้แล้วกดเข้าสู่ระบบให้?") fills the username and password and presses the form's own sign-in button. The AI still never sees the password, and reading resumes by itself once the next page loads (the filled form is gone). Login forms whose username box has no telling name (a single plain text box beside the password) are now recognized, and a pasted login page address or a bare host is saved as its HTTPS origin.
+
 - Narrow the plain-language Google Workspace routing added just before: questions about the organization's meetings or a procedure ("อุทยานฯ มีประชุมอะไรบ้าง", "มีงานที่ต้องทำก่อนส่งเบิก AFP อะไรบ้าง"), mail content pasted into the message, long messages, and words that merely start with "เมล" (เมล็ด, เมลเบิร์น) no longer open the employee's calendar, tasks or inbox, so STeP questions keep answering from organization documents.
 
 - Recognize plain Google Workspace questions such as “วันนี้มีนัดอะไร”, “มีงานอะไรค้างบ้าง” and “ช่วยหาอีเมลเรื่องใบเสนอราคา”. Improve both automatic routing and the Skill candidates shown to the AI; keep local attachments, email drafting, translations and organization procedures in their existing routes. Add employee examples while preserving account, service, consent and global routing controls.

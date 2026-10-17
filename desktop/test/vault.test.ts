@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { Vault, vaultOrigin } from '../electron/vault';
+import { Vault, vaultOrigin, websiteOrigin } from '../electron/vault';
 import { validateToolRequest } from '../src/tool-registry';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
 import { ToolGate } from '../electron/tool-gate';
@@ -115,6 +115,42 @@ test('origin, session, cancellation and suspend races deny the sink', async () =
   } finally {
     f.clean();
   }
+});
+test('a pasted login page address or bare host is saved as its exact HTTPS origin', () => {
+  for (const typed of [
+    'https://mis.step.cmu.ac.th/mis/login.php',
+    ' mis.step.cmu.ac.th ',
+    'mis.step.cmu.ac.th/mis/login.php?next=1#top',
+    'https://mis.step.cmu.ac.th',
+  ])
+    assert.equal(websiteOrigin(typed), 'https://mis.step.cmu.ac.th', typed);
+  for (const typed of [
+    'http://mis.step.cmu.ac.th/mis/login.php',
+    'https://user:pw@mis.step.cmu.ac.th/',
+    'ftp://example.test',
+    '',
+    'https://',
+  ])
+    assert.throws(() => websiteOrigin(typed), /VAULT_ORIGIN_INVALID/, typed);
+  const f = fixture();
+  try {
+    const saved = f.vault.save({
+      label: 'MIS',
+      kind: 'website',
+      destination: 'https://mis.step.cmu.ac.th/mis/login.php',
+      username: 'synthetic-user',
+      password: 'synthetic-password',
+    });
+    assert.equal(saved.destination, 'https://mis.step.cmu.ac.th');
+    assert.equal(f.vault.catalog('task', 'https://mis.step.cmu.ac.th').length, 1);
+  } finally {
+    f.clean();
+  }
+});
+test('browser_vault accepts submit as a boolean and nothing else', () => {
+  validateToolRequest({ tool: 'browser_vault', input: 'tab', args: { action: 'fill', handle: 'h', submit: true } });
+  assert.throws(() => validateToolRequest({ tool: 'browser_vault', input: 'tab', args: { action: 'fill', handle: 'h', submit: 'yes' } }));
+  assert.throws(() => validateToolRequest({ tool: 'browser_vault', input: 'tab', args: { action: 'fill', password: 'x' } }));
 });
 test('tampered binding is authenticated and key-store failure does not overwrite ciphertext', () => {
   const f = fixture();

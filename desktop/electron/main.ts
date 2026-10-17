@@ -891,6 +891,8 @@ async function main() {
       }
       if (request.args?.action !== 'fill') throw new Error('INVALID_INPUT');
       const expected = await agentBrowser.prepareVault(request.input, scope.sessionId, scope.signal);
+      // Signing in is part of what the employee approves here: after filling, the login page stays hidden from the AI.
+      const submit = request.args?.submit === true;
       return vault.fill(
         inputText(request.args.handle, 80),
         binding,
@@ -899,7 +901,7 @@ async function main() {
           approvals.request(
             approvals.rule(store.settings().workspace || data, 'browser_vault', randomUUID()),
             {
-              title: credentialTitle('Fill account once?'),
+              title: credentialTitle(submit ? 'Fill account and sign in?' : 'Fill account once?'),
               body: label + '\n' + expected.origin + '\n' + expected.fields.join(', '),
               privacyClass: 'restricted',
               allowRemember: false,
@@ -910,7 +912,7 @@ async function main() {
         async payload => {
           await check();
           if (vault.state().suspended) throw new Error('VAULT_SUSPENDED');
-          return agentBrowser.fillVault(request.input, scope.sessionId, expected, payload, scope.signal);
+          return agentBrowser.fillVault(request.input, scope.sessionId, expected, payload, scope.signal, submit);
         },
       );
     }

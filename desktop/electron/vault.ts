@@ -17,6 +17,17 @@ export const vaultOrigin = (value: string) => {
     throw new Error('VAULT_ORIGIN_INVALID');
   }
 };
+/** The site an employee types when saving an account: a pasted login page address or a bare host keeps only its origin. */
+export const websiteOrigin = (value: string) => {
+  const text = typeof value === 'string' ? value.trim() : '';
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(text) ? text : 'https://' + text);
+    if (url.username || url.password) throw new Error();
+    return vaultOrigin(url.origin);
+  } catch {
+    throw new Error('VAULT_ORIGIN_INVALID');
+  }
+};
 const string = (value: unknown, max: number) => {
   if (typeof value !== 'string' || !value.trim() || value.length > max || /[\x00-\x1f]/.test(value)) throw new Error('INVALID_INPUT');
   return value;
@@ -116,7 +127,7 @@ export class Vault {
     const previous = input.id ? this.record(string(input.id, 80)) : undefined;
     if (previous && (this.locks.has(previous.id) || previous.revision !== input.revision)) throw new Error('VAULT_REVISION_CHANGED');
     if (previous && previous.kind !== input.kind) throw new Error('VAULT_ACCESS_DENIED');
-    const destination = input.kind === 'website' ? vaultOrigin(input.destination) : string(input.destination, 2000);
+    const destination = input.kind === 'website' ? websiteOrigin(input.destination) : string(input.destination, 2000);
     const meta: VaultMetadata = {
       id: previous?.id || randomUUID(),
       label: string(input.label, 100),
