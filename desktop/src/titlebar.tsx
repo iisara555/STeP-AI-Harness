@@ -111,7 +111,8 @@ export function TitleBar({
         command('skills', t('ศูนย์รวม Skill')),
         command('memory', t('ดูและแก้ไขความจำ')),
         command('usage', t('ดูการใช้งาน AI')),
-        command('automations', t('งานตามรอบและเครื่องมือเพิ่มเติม')),
+        command('schedules', t('งานตั้งเวลา')),
+        command('automations', t('เครื่องมือเพิ่มเติม (MCP และ Docker)')),
       ],
     },
     {

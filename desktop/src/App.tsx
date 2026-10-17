@@ -49,11 +49,13 @@ import {
   Copy,
   ImagePlus,
   ChevronDown,
+  ChevronUp,
   Compass,
   BookOpen,
   Eye,
   AlertTriangle,
   SlidersHorizontal,
+  CalendarClock,
 } from 'lucide-react';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -124,6 +126,7 @@ import { startersFor, starterTag, starterText } from './starters';
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
 const InternalMedia = lazyScreen(async () => ({ default: (await import('./internal-media-app')).InternalMedia }));
+const ScheduledTasks = lazyScreen(async () => ({ default: (await import('./schedules-app')).ScheduledTasks }));
 const SkillsHub = lazyScreen(async () => ({ default: (await import('./skills')).SkillsHub }));
 
 // Short words for the composer's permission pill; the list itself keeps the full descriptions.
@@ -134,10 +137,29 @@ const PERMISSION_SHORT: Record<string, string> = {
   plan: 'อ่านอย่างเดียว',
 };
 
+const TOOLS_KEY = 'step.sidebarTools';
+
 export default function App() {
   const api = window.step;
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
+  // Tools start as one row of icons so the task list keeps the height; the choice is remembered.
+  const [toolsOpen, setToolsOpen] = useState(() => {
+    try {
+      return localStorage.getItem(TOOLS_KEY) === 'open';
+    } catch {
+      return false;
+    }
+  });
+  const toggleTools = () =>
+    setToolsOpen(open => {
+      try {
+        localStorage.setItem(TOOLS_KEY, open ? 'icons' : 'open');
+      } catch {
+        // The layout still switches for this session.
+      }
+      return !open;
+    });
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
     [memoryOpen, setMemoryOpen] = useState(false);
@@ -219,7 +241,7 @@ export default function App() {
   }, [selected]);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
-  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media'>('chat');
+  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const navigate = (next: typeof view) => {
     navigationVersion.current++;
     setView(next);
@@ -1150,6 +1172,10 @@ export default function App() {
       setSettings(false);
       navigate('skills');
     },
+    schedules: () => {
+      setSettings(false);
+      navigate('schedules');
+    },
     receipt: () => {
       setSettings(false);
       navigate('receipt');
@@ -1271,7 +1297,9 @@ export default function App() {
           ? t('ตรวจใบเสร็จ AFP')
           : view === 'skills'
             ? t('ศูนย์รวม Skill')
-            : session?.title || t('เริ่มต้นงานที่อยากทำ');
+            : view === 'schedules'
+              ? t('งานตั้งเวลา')
+              : session?.title || t('เริ่มต้นงานที่อยากทำ');
   const brandSymbol = (
     <span className="brand-symbol" role="img" aria-label="STeP">
       <img className="on-light" src={symbolColour} alt="" />
@@ -1432,11 +1460,23 @@ export default function App() {
                 </p>
               )}
             </div>
-            <div className="session-group tools-group">{t('เครื่องมือ')}</div>
-            <nav>
+            <div className="session-group tools-group">
+              <span>{t('เครื่องมือ')}</span>
+              <button
+                className="quiet tools-toggle"
+                aria-expanded={toolsOpen}
+                aria-label={toolsOpen ? t('ย่อเครื่องมือเป็นไอคอน') : t('แสดงชื่อเครื่องมือ')}
+                title={toolsOpen ? t('ย่อเครื่องมือเป็นไอคอน') : t('แสดงชื่อเครื่องมือ')}
+                onClick={toggleTools}
+              >
+                {toolsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+            <nav className={toolsOpen ? 'tools-nav' : 'tools-nav icons'}>
               <button
                 data-tour="documents"
                 className={view === 'documents' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('เครื่องมือร่างเอกสาร')}
                 onClick={() => {
                   setSettings(false);
                   navigate('documents');
@@ -1448,6 +1488,7 @@ export default function App() {
               <button
                 data-tour="media"
                 className={view === 'media' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('สื่อภายใน')}
                 onClick={() => {
                   setSettings(false);
                   navigate('media');
@@ -1459,6 +1500,7 @@ export default function App() {
               <button
                 data-tour="skills"
                 className={view === 'skills' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('ศูนย์รวม Skill')}
                 onClick={() => {
                   setSettings(false);
                   navigate('skills');
@@ -1469,8 +1511,21 @@ export default function App() {
                 <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
               </button>
               <button
+                data-tour="schedules"
+                className={view === 'schedules' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('งานตั้งเวลา')}
+                onClick={() => {
+                  setSettings(false);
+                  navigate('schedules');
+                }}
+              >
+                <CalendarClock size={17} />
+                <span className="nav-label">{t('งานตั้งเวลา')}</span>
+              </button>
+              <button
                 data-tour="receipt"
                 className={view === 'receipt' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('ตรวจใบเสร็จ AFP')}
                 onClick={() => {
                   setSettings(false);
                   navigate('receipt');
@@ -1611,11 +1666,12 @@ export default function App() {
                       title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
                       onClick={() => {
                         setChatMenu(false);
-                        setAutomationOpen(true);
+                        setSettings(false);
+                        navigate('schedules');
                       }}
                     >
-                      <Timer size={15} />
-                      {t('งานตามรอบ')}
+                      <CalendarClock size={15} />
+                      {t('งานตั้งเวลา')}
                     </button>
                   </div>
                 </>
@@ -1631,7 +1687,9 @@ export default function App() {
                         ? t('ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง')
                         : view === 'skills'
                           ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
-                          : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                          : view === 'schedules'
+                            ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
+                            : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -1708,7 +1766,20 @@ export default function App() {
               />
             </div>
           )}
-          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'skills' ? (
+          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'schedules' ? (
+            <ScheduledTasks
+              api={api}
+              connections={snapshot.connections}
+              defaultConnection={connectionId}
+              onOpen={id =>
+                void action(async () => {
+                  await refresh();
+                  navigate('chat');
+                  await selectSession(id);
+                })
+              }
+            />
+          ) : view === 'skills' ? (
             <SkillsHub
               skills={staffSkills}
               team={myTeam}
@@ -3080,15 +3151,12 @@ export default function App() {
         {automationOpen && (
           <AutomationDialog
             api={api}
-            connections={snapshot.connections}
             features={snapshot.policy?.features || {}}
             onClose={() => setAutomationOpen(false)}
-            onOpen={id => {
+            onSchedules={() => {
               setAutomationOpen(false);
-              void action(async () => {
-                await refresh();
-                await selectSession(id);
-              });
+              setSettings(false);
+              navigate('schedules');
             }}
           />
         )}

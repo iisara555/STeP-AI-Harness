@@ -2,6 +2,7 @@
 // maintained by hand: add an entry whenever new Thai text is wrapped in t() or tm().
 import { documentToolsEn } from './document-tools-en';
 import { usageEn } from './usage-en';
+import { schedulesEn } from './schedules-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
@@ -169,7 +170,7 @@ export const en: Record<string, string> = {
   'ระบบเลือก Skill ที่ตรงกับงานให้ก่อนเริ่มร่าง': 'The app selects a relevant Skill before drafting',
   'เครื่องมือ MCP ขององค์กร': 'Organization MCP tools',
   'แบ่งงานให้ AI หลายงานย่อย': 'Split work into AI subtasks',
-  ร่างงานตามรอบ: 'Scheduled drafts',
+  ร่างงานตั้งเวลา: 'Scheduled drafts',
   การตรวจข้อมูลเพิ่มเติมขององค์กร: 'Additional organization privacy checks',
   การตรวจอำนาจเพิ่มเติมขององค์กร: 'Additional organization authority checks',
   'ยังไม่ทราบนโยบายองค์กร ติดต่อ IT': 'Organization policy is unknown; contact IT',
@@ -177,7 +178,7 @@ export const en: Record<string, string> = {
   'ผู้ดูแลยังไม่เปิดฟังก์ชันนี้ ติดต่อ IT หากต้องใช้': 'Your administrator has not enabled this feature; contact IT if needed',
   'ยังไม่ทราบการตั้งค่า MCP server ติดต่อ IT': 'MCP server configuration is unknown; contact IT',
   'ให้ IT ตั้งค่า MCP server ขององค์กรก่อน': 'Ask IT to configure an organization MCP server first',
-  'ทดสอบ server ในงานตามรอบและเครื่องมือเพิ่มเติม สิทธิ์เอกสารต้องยืนยันตอนเรียกใช้':
+  'ทดสอบ server ในงานตั้งเวลาและเครื่องมือเพิ่มเติม สิทธิ์เอกสารต้องยืนยันตอนเรียกใช้':
     'Test the server in Scheduled work and additional tools; document access must be verified when calling it',
   'ใช้ในโหมดร่างและยืนยันแผนก่อน งานย่อยยังไม่ใช้เครื่องมือ': 'Use Draft mode and approve the plan first; subtasks do not use tools',
   'ตั้งค่าและยืนยันบัญชีก่อน เป็นงานร่างและทำงานขณะเปิดแอป':
@@ -448,6 +449,7 @@ export const en: Record<string, string> = {
     'The system key store is unavailable. Unlock it or ask your administrator to configure it before saving an API key or signing in with OAuth.',
   ...documentToolsEn,
   ...usageEn,
+  ...schedulesEn,
   ...internalMediaEn,
   'ดำเนินการค่าพาหนะผ่านกระบวนการจัดซื้อจัดจ้าง และตรวจยอดรวมไม่เกิน 10,000 บาทต่อคนขับรถต่อกิจกรรม':
     'Use the procurement process for vehicle hire and check the aggregate limit of 10,000 baht per driver per activity',
@@ -692,7 +694,7 @@ export const en: Record<string, string> = {
   บันทึกบทสนทนาเป็นไฟล์: 'Save conversation to a file',
   ความจำ: 'Memory',
   'ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน': 'Have the assistant run a task on a schedule, such as every weekday morning',
-  งานตามรอบ: 'Scheduled tasks',
+  งานตั้งเวลา: 'Scheduled tasks',
   แบ่งงานย่อย: 'Split into subtasks',
   'บริบทที่ใช้ (': 'Context used (',
   'สวัสดีครับ คุณ{0}': 'Hello, {0}',
@@ -749,6 +751,8 @@ export const en: Record<string, string> = {
   ถามก่อน: 'Ask first',
   แก้ไฟล์ได้: 'Edit files',
   อ่านอย่างเดียว: 'Read only',
+  ย่อเครื่องมือเป็นไอคอน: 'Show tools as icons',
+  แสดงชื่อเครื่องมือ: 'Show tool names',
   ' · ปิดโดยผู้ดูแล': ' · Disabled by admin',
   'ข้อมูลต้นทางแนบแล้ว ×': 'Source data attached ×',
   'กำลังตรวจโมเดลของบัญชี…': "Checking this account's models…",
@@ -955,19 +959,19 @@ export const en: Record<string, string> = {
   ทุกชั่วโมง: 'Every hour',
   'ทุกวัน เวลา 09:00 น. (ประเทศไทย)': 'Daily at 09:00 (Thailand)',
   'วันทำงาน เวลา 09:00 น. (ประเทศไทย)': 'Weekdays at 09:00 (Thailand)',
-  งานตามรอบและเครื่องมือเพิ่มเติม: 'Scheduled tasks and more tools',
-  'งานตามรอบทำเมื่อเปิดแอปและใช้บัญชีที่คุณเลือก ผลเป็นร่างให้คุณตรวจ ก่อนส่งออกหรือนำไปใช้':
+  งานตั้งเวลาและเครื่องมือเพิ่มเติม: 'Scheduled tasks and more tools',
+  'งานตั้งเวลาทำเมื่อเปิดแอปและใช้บัญชีที่คุณเลือก ผลเป็นร่างให้คุณตรวจ ก่อนส่งออกหรือนำไปใช้':
     'Scheduled tasks run while the app is open, using the account you choose. Results come back as drafts for you to review before exporting or using them',
-  ผู้ดูแลยังไม่เปิดใช้งานตามรอบ: "Your admin hasn't enabled scheduled tasks yet",
-  ชื่องานตามรอบ: 'Scheduled task name',
+  ผู้ดูแลยังไม่เปิดใช้งานตั้งเวลา: "Your admin hasn't enabled scheduled tasks yet",
+  ชื่องานตั้งเวลา: 'Scheduled task name',
   คำขอตามรอบ: 'Scheduled request',
   รอบการทำงาน: 'Schedule',
   ตารางที่บันทึกไว้: 'Saved schedule',
   'บัญชี AI': 'AI account',
-  บัญชีงานตามรอบ: 'Scheduled task account',
+  บัญชีงานตั้งเวลา: 'Scheduled task account',
   เลือกบัญชี: 'Choose account',
   เปิดรอบอัตโนมัติ: 'Run automatically',
-  บันทึกงานตามรอบ: 'Save scheduled task',
+  บันทึกงานตั้งเวลา: 'Save scheduled task',
   ยกเลิกการแก้ไข: 'Cancel edit',
   พักรอบอัตโนมัติ: 'Pause automatic runs',
   '· รอบถัดไป': '· Next run',
@@ -1090,12 +1094,12 @@ export const en: Record<string, string> = {
   'แผนงานย่อยมีลำดับงานวนกลับ จึงเริ่มทำไม่ได้': "The subtask plan contains a loop, so it can't start",
   'มีงานย่อยที่ทำไม่สำเร็จ กรุณาตรวจบทสนทนางานย่อย': 'Some subtasks failed. Check the subtask conversations',
   'มีงานย่อยที่ต้องการข้อมูลเพิ่ม กรุณาตรวจบทสนทนางานย่อย': 'Some subtasks need more information. Check the subtask conversations',
-  ผู้ดูแลยังไม่เปิดงานตามรอบ: "Your admin hasn't enabled scheduled tasks",
+  ผู้ดูแลยังไม่เปิดงานตั้งเวลา: "Your admin hasn't enabled scheduled tasks",
   'ตารางงานไม่ถูกต้องหรือไม่มีรอบในปีถัดไป กรุณาเลือกรอบใหม่':
     'The schedule is invalid or has no run within the next year. Please choose another',
-  'บัญชี ทีม หรือพื้นที่งานเปลี่ยนแล้ว กรุณาบันทึกงานตามรอบใหม่ก่อนเริ่ม':
+  'บัญชี ทีม หรือพื้นที่งานเปลี่ยนแล้ว กรุณาบันทึกงานตั้งเวลาใหม่ก่อนเริ่ม':
     'The account, team or workspace has changed. Save the scheduled task again before running',
-  ไม่พบงานตามรอบนี้แล้ว: 'This scheduled task no longer exists',
+  ไม่พบงานตั้งเวลานี้แล้ว: 'This scheduled task no longer exists',
   'จำนวนงานหรือคิวเต็มแล้ว กรุณาหยุดหรือลบงานที่ไม่ใช้': "Too many tasks or the queue is full. Stop or delete tasks you don't use",
   'ผู้ดูแลยังไม่เปิด MCP': "Your admin hasn't enabled MCP",
   'เชื่อมต่อ MCP ไม่สำเร็จ กรุณาตรวจ server กับผู้ดูแล': "Couldn't connect to MCP. Check the server with your admin",
@@ -2027,18 +2031,18 @@ export const en: Record<string, string> = {
   'ตรวจแผนงานย่อยก่อนเริ่ม?': 'Review the subtask plan before starting?',
   'งาน {0}\n{1}\nแต่ละงานใช้บัญชี AI เดิม ผลรวมเป็นร่างรอตรวจ':
     'Task {0}\n{1}\nEach subtask uses the same AI account; the combined result is a draft for review',
-  งานตามรอบมีร่างรอตรวจแล้ว: 'A scheduled task has a draft to review',
-  งานตามรอบต้องการให้ตรวจสถานะ: 'A scheduled task needs your attention',
+  งานตั้งเวลามีร่างรอตรวจแล้ว: 'A scheduled task has a draft to review',
+  งานตั้งเวลาต้องการให้ตรวจสถานะ: 'A scheduled task needs your attention',
   บันทึกบทสนทนา: 'Save conversation',
   'เขียนไฟล์ที่ตรวจแล้ว?': 'Write the reviewed file?',
   '\nตรวจ Before / After ใน Changes ก่อนบันทึก': '\nCheck Before / After in Changes before saving',
   'รันคำสั่งนี้บนเครื่อง?': 'Run this command on this computer?',
   '\nคำสั่งทำงานด้วยสิทธิ์ของคุณ และอาจแก้ไฟล์หรือเชื่อมต่อเครือข่าย':
     '\nThe command runs with your permissions and may change files or use the network',
-  'อนุมัติงานตามรอบ?': 'Approve this scheduled task?',
-  '{0}\nตาราง UTC: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ':
-    '{0}\nSchedule (UTC): {1}\nUses account {2} and the current workspace, only while the app is open. Results are drafts for review',
-  'เริ่มงานตามรอบ?': 'Start the scheduled task?',
+  'อนุมัติงานตั้งเวลา?': 'Approve this scheduled task?',
+  '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ผลเป็นร่างรอตรวจ':
+    '{0}\nWhen: {1}\nUses account {2} and the current workspace while the app is open. If the app is closed at that time, it runs when the app opens within 12 hours. Results are drafts for review',
+  'เริ่มงานตั้งเวลา?': 'Start the scheduled task?',
   'ค้นหา MCP?': 'Search MCP?',
   'เรียก MCP?': 'Call MCP?',
   'รันใน Docker?': 'Run in Docker?',
@@ -2682,7 +2686,7 @@ export const en: Record<string, string> = {
   'ปุ่ม "เสนอให้องค์กรใช้" ส่ง Skill ของคุณให้ผู้ดูแลพิจารณา':
     'The "Propose for the organization" button sends your Skill to the administrators for review',
   // UI audit 2026-10-17: group C (dialogs)
-  ยังไม่มีงานตามรอบที่ทำแล้ว: 'No scheduled task has run yet',
+  ยังไม่มีงานตั้งเวลาที่ทำแล้ว: 'No scheduled task has run yet',
   'ผู้ดูแลยังไม่เปิดเครื่องมือ MCP บนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
     'Your administrator has not turned on MCP tools on this computer. Contact them if you need it',
   'ใช้บริการที่องค์กรตั้งไว้ การเข้าสู่ระบบและสิทธิ์ Google จัดการโดยองค์กร การค้นหาและการเรียกใช้เครื่องมือจะถามคุณก่อนทุกครั้ง':

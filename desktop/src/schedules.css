@@ -1,0 +1,160 @@
+/* งานตั้งเวลา: one column of cards, as wide as the Skill hub. */
+.schedules {
+  flex: 1;
+  overflow: auto;
+  padding: 24px max(24px, calc((100% - 860px) / 2)) 30px;
+}
+.schedules h2 {
+  font-size: 15px;
+  margin: 22px 0 10px;
+}
+.schedules-intro {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.schedules-intro p {
+  margin: 0;
+  max-width: 68ch;
+}
+.schedules-intro > button {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.schedules-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+.schedules-error {
+  color: var(--danger);
+  font-size: 13px;
+}
+.schedule-list,
+.schedule-templates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.schedule-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.schedule-card.paused {
+  opacity: 0.7;
+}
+.schedule-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent-ink);
+}
+.schedule-card.paused .schedule-icon {
+  color: var(--muted);
+}
+.schedule-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.schedule-main .text-link {
+  padding: 0 0 0 8px;
+  font-size: inherit;
+}
+.schedule-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.schedule-actions .quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 5px 9px;
+}
+.schedule-templates {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.schedule-template {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+}
+.schedule-template:hover:not(:disabled) {
+  background: var(--hover);
+}
+.schedule-editor {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--focus);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.schedule-editor h2 {
+  margin: 0;
+}
+.schedule-when {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.schedule-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.day-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.day-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.day-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.day-chip:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.schedule-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.schedule-editor-actions button[type='submit'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

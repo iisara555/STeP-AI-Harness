@@ -1346,7 +1346,7 @@ async function main() {
       const identity = phase4Identity(),
         policy = policyState.policy;
       if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
-      const session = store.create(job.connectionId, job.team, 'Scheduled drafts');
+      const session = store.create(job.connectionId, job.team, tm('งานตั้งเวลา'));
       session.model = job.model;
       session.title = job.name;
       store.save(session);
@@ -1397,7 +1397,7 @@ async function main() {
       if (Notification.isSupported()) {
         const notification = new Notification({
           title: 'STeP Desktop',
-          body: run.status === 'review' ? tm('งานตามรอบมีร่างรอตรวจแล้ว') : tm('งานตามรอบต้องการให้ตรวจสถานะ'),
+          body: run.status === 'review' ? tm('งานตั้งเวลามีร่างรอตรวจแล้ว') : tm('งานตั้งเวลาต้องการให้ตรวจสถานะ'),
         });
         notification.on('click', () => {
           window.show();
@@ -2190,12 +2190,13 @@ async function main() {
         if (
           input.enabled &&
           !(await phase4Consent(
-            tm('อนุมัติงานตามรอบ?'),
+            tm('อนุมัติงานตั้งเวลา?'),
             tm(
-              '{0}\nตาราง UTC: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน เฉพาะเมื่อแอปเปิด ผลเป็นร่างรอตรวจ',
+              '{0}\nเวลา: {1}\nใช้บัญชี {2} และพื้นที่งานปัจจุบัน ทำเมื่อแอปเปิดอยู่ ถ้าแอปปิดตอนถึงเวลา จะทำเมื่อเปิดแอปภายใน 12 ชั่วโมง ผลเป็นร่างรอตรวจ',
               query,
-              input.schedule,
-              input.connectionId,
+              // The page sends the time in words; the stored UTC schedule is the fallback.
+              inputText(input.label || input.schedule, 160),
+              store.connections().find(c => c.id === input.connectionId)?.label || input.connectionId,
             ),
           ))
         )
@@ -2216,7 +2217,7 @@ async function main() {
         const id = inputText(input.id, 60),
           job = automations.list().find(j => j.id === id);
         if (!job) throw new Error('AUTOMATION_NOT_FOUND');
-        if (!(await phase4Consent(tm('เริ่มงานตามรอบ?'), job.query))) throw new Error('CANCELLED');
+        if (!(await phase4Consent(tm('เริ่มงานตั้งเวลา?'), job.query))) throw new Error('CANCELLED');
         if (JSON.stringify(job) !== JSON.stringify(automations.list().find(j => j.id === id)))
           throw new Error('AUTOMATION_CONTEXT_CHANGED');
         return automations.enqueue(id);
