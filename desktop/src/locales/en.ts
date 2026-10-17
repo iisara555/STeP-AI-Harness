@@ -2669,7 +2669,6 @@ export const en: Record<string, string> = {
   'ใช้บริการที่องค์กรตั้งไว้ การเข้าสู่ระบบและสิทธิ์ Google จัดการโดยองค์กร การค้นหาและการเรียกใช้เครื่องมือจะถามคุณก่อนทุกครั้ง':
     'Uses the service your organization set up. Your organization manages Google sign-in and permissions. Searching for and running a tool asks you first every time',
   'ยังไม่ได้ตั้งค่า Google Workspace ติดต่อผู้ดูแลระบบ': 'Google Workspace is not set up yet. Contact your administrator',
-  สำหรับผู้ดูแล: 'For administrators',
   'เพิ่ม MCP server ที่มี profile google-workspace ใน managed policy แล้วเปิด features.mcp':
     'Add an MCP server with profile google-workspace to the managed policy, then turn on features.mcp',
   บริการ: 'Service',
