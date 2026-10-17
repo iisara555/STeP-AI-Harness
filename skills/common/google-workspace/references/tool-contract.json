@@ -185,7 +185,7 @@
       }
     },
     {
-      "service": "calendar",
+      "service": "calendar-read",
       "effect": "read",
       "request": {
         "operation": "calendar.list",
@@ -195,7 +195,7 @@
       }
     },
     {
-      "service": "calendar",
+      "service": "calendar-read",
       "effect": "read",
       "request": {
         "operation": "calendar.events",

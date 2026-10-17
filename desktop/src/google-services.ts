@@ -4,6 +4,8 @@ export const GOOGLE_SERVICES = {
   'gmail-read': ['gmail.readonly'],
   'gmail-draft': ['gmail.compose'],
   'gmail-send': ['gmail.send'],
+  // Read-only Calendar is the release default; `calendar` adds event creation for cohorts an administrator approves.
+  'calendar-read': ['calendar.calendarlist.readonly', 'calendar.events.readonly'],
   calendar: ['calendar.calendarlist.readonly', 'calendar.events'],
   tasks: ['tasks'],
   chat: ['chat.spaces.readonly', 'chat.messages.readonly', 'chat.messages.create'],

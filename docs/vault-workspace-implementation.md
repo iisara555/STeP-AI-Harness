@@ -45,12 +45,12 @@ Merge these non-secret fields into the existing protected Desktop policy only af
   "googleWorkspace": {
     "clientId": "synthetic-client.apps.googleusercontent.com",
     "domains": ["step.cmu.ac.th"],
-    "services": ["documents", "calendar", "tasks"]
+    "services": ["documents", "calendar-read", "tasks"]
   }
 }
 ```
 
-Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner supplied a verified Desktop app client on 2026-10-14 and requested release-wide activation. Desktop 0.6.5 bundles only its public client ID, with `step.cmu.ac.th` and documents/calendar/tasks selectable. No client secret is needed in policy or bundled. Managed policy can replace or clear the configuration and deny these capabilities. Project API enablement, audience/test-user setup and tenant access remain separate from client-type validation.
+Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar-read`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner supplied a verified Desktop app client on 2026-10-14 and requested release-wide activation. Desktop 0.6.5 bundles only its public client ID, with `step.cmu.ac.th` and documents/calendar/tasks selectable. No client secret is needed in policy or bundled. Managed policy can replace or clear the configuration and deny these capabilities. Project API enablement, audience/test-user setup and tenant access remain separate from client-type validation.
 
 On 2026-10-14, a user-authorized identity-only Google OAuth Playground check verified a signed, unexpired ID token with `hd=step.cmu.ac.th`, matching issuer, audience and the requested account. No refresh token was requested or received. This confirms that account's hosted domain, not a configured Desktop grant or live Workspace service acceptance. No account identifiers or tokens are recorded here. The authorization URL now supplies the configured domain as a UI hint (or `hd=*` for multiple domains); the signed claim allowlist remains the access check.
 
