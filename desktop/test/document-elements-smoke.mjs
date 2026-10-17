@@ -89,6 +89,22 @@ try {
   await page.setViewportSize({ width: 1500, height: 1000 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
+  // Native End differs on macOS, and a click may leave the caret in a neighbouring block after reflow.
+  // Set the fixture's insertion point explicitly, then wait for the toolbar to observe the selection.
+  const caretAtEnd = async (block, kind) => {
+    await block.evaluate(element => {
+      element.closest('[contenteditable="true"]').focus();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+    const format = page.getByLabel('รูปแบบข้อความ', { exact: true });
+    await expect(format).toBeEnabled();
+    await expect(format).toHaveValue(kind);
+  };
   // Export settings start folded under the sliders button next to ส่งออก; the choice is remembered.
   const showExportSettings = async () => {
     const toggle = page.getByRole('button', { name: 'ตั้งค่าส่งออก', exact: true });
@@ -117,8 +133,7 @@ try {
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, picture);
-  await page.locator('.tiptap p').filter({ hasText: 'เนื้อหาสำหรับตรวจองค์ประกอบ' }).click();
-  await page.keyboard.press('End');
+  await caretAtEnd(page.locator('.tiptap p').filter({ hasText: 'เนื้อหาสำหรับตรวจองค์ประกอบ' }), 'paragraph');
   await page.getByRole('button', { name: 'แทรกรูปภาพ', exact: true }).click();
   await expect(page.locator('.document-image img')).toHaveAttribute('src', /^data:image\/png;base64,/);
   await page.locator('[data-document-caption]').click();
@@ -149,10 +164,10 @@ try {
   await page.locator('.tiptap p').filter({ hasText: 'เนื้อหาสำหรับตรวจองค์ประกอบ' }).click();
   await page.getByRole('button', { name: 'ข้อความอ้างอิง', exact: true }).click();
   await expect(page.locator('.tiptap blockquote')).toContainText('เนื้อหาสำหรับตรวจองค์ประกอบ');
-  await page.locator('[data-document-caption]').click();
-  await page.keyboard.press('End');
+  await caretAtEnd(page.locator('[data-document-caption]'), 'caption');
   await page.getByRole('button', { name: 'ขึ้นหน้าใหม่', exact: true }).click();
   await expect(page.locator('[data-document-page-break]')).toHaveCount(1);
+  await expect(page.locator('[data-document-caption] + [data-document-page-break]')).toHaveCount(1);
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
   await expect(page.getByRole('button', { name: 'บันทึก', exact: true })).toBeDisabled();
   phase = 'native export';
