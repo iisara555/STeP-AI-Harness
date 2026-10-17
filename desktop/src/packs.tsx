@@ -35,7 +35,19 @@ function PackReview({ review }: { review: PackReviewResult }) {
     </details>
   );
 }
-export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClose: () => void; onSelect: (text: string) => void }) {
+export function PacksDialog({
+  api,
+  features,
+  onClose,
+  onSelect,
+}: {
+  api: DesktopAPI;
+  features?: Record<string, boolean>;
+  onClose: () => void;
+  onSelect: (text: string) => void;
+}) {
+  // Same rule as packImportAllowed in the main process: an import must be usable personally or after approval.
+  const importAllowed = features?.skillPacks === true || features?.staffSkills !== false;
   const [packs, setPacks] = useState<any[]>([]),
     [name, setName] = useState(''),
     [error, setError] = useState(''),
@@ -80,9 +92,10 @@ export function PacksDialog({ api, onClose, onSelect }: { api: DesktopAPI; onClo
         {t('ชื่อชุดที่นำเข้าจาก SKILL.md')}
         <input value={name} onChange={e => setName(e.target.value)} placeholder="public-writing" />
       </label>
-      <button disabled={busy} onClick={() => void act('packInstall', { name })}>
+      <button disabled={busy || !importAllowed} onClick={() => void act('packInstall', { name })}>
         {t('เลือกโฟลเดอร์และนำเข้า')}
       </button>
+      {!importAllowed && <p className="small muted">{t('ผู้ดูแลปิดการนำเข้า Skill Pack บนเครื่องนี้')}</p>}
       <label>
         <input type="checkbox" checked={hooks} onChange={e => setHooks(e.target.checked)} />
         {t('เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน')}

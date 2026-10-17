@@ -62,6 +62,7 @@ export const errorText: Record<string, string> = localized({
   PACK_APPROVAL_REQUIRED: 'ผู้ดูแลต้องรับรอง digest ของชุดนี้ก่อนเปิดใช้',
   PACK_DISABLED: 'ชุดนี้ปิดใช้หรือไฟล์เปลี่ยนจากที่ผู้ดูแลรับรอง',
   PACK_REVIEW_FAILED: 'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้',
+  PACK_IMPORT_DISABLED: 'ผู้ดูแลปิดการนำเข้า Skill Pack บนเครื่องนี้',
   PACK_PERSONAL_DISABLED: 'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้',
   PACK_PROMOTION_TEXT_ONLY: 'เสนอให้องค์กรได้เฉพาะ Skill แบบข้อความที่ไม่มี Hooks หรือ Agent',
   PACK_CREDIT_REQUIRED: 'ยังไม่มีชื่อผู้เสนอ กรุณาใส่ชื่อในการตั้งค่าโปรไฟล์ก่อนเสนอ',

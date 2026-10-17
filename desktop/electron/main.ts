@@ -88,6 +88,7 @@ import { validateKeybindings } from '../src/commands';
 import { Voice } from './voice';
 import {
   installPack,
+  packImportAllowed,
   listPacks,
   enablePack,
   exportPack,
@@ -2308,6 +2309,7 @@ async function main() {
           skillPacks: { approvedDigests: [], ...policyState.policy.skillPacks, submitUrl: skillSubmitUrl(policyState.policy) },
         });
       case 'packInstall': {
+        if (!packImportAllowed(policyState.policy)) throw new Error('PACK_IMPORT_DISABLED');
         const selected = await dialog.showOpenDialog(window!, {
           title: tm('นำเข้า Skill Pack จากโฟลเดอร์'),
           properties: ['openDirectory'],
@@ -2956,6 +2958,7 @@ async function main() {
       case 'ocrTrialSave':
       case 'ocrSave': {
         const trial = method === 'ocrTrialSave';
+        if (trial && !policyState.policy.features.ocrTrial) throw new Error('FEATURE_DISABLED');
         const text = JSON.stringify(input.draft ?? null, null, 2);
         if (!input.draft || typeof input.draft !== 'object' || text.length > 2_000_000) throw new Error('INVALID_INPUT');
         if (trial && (input.draft.schema !== 'step-receipt-trial/v1' || input.draft.checked !== true)) throw new Error('INVALID_INPUT');

@@ -3141,6 +3141,7 @@ export default function App() {
         {packsOpen && (
           <PacksDialog
             api={api}
+            features={snapshot.policy?.features}
             onClose={() => setPacksOpen(false)}
             onSelect={text => {
               setPendingSource(text);

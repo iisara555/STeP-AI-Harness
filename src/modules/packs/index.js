@@ -372,6 +372,14 @@ export function recordPromotion(workspace, id, { digest, reference, credit } = {
   if (uploader) write("credit", { ...uploader, orgConsent: true });
   return promotion;
 }
+// Importing is only useful when an import can be used: personally (staffSkills, default on) or after admin approval (skillPacks).
+export function packImportAllowed(policy) {
+  return (
+    policy?.features?.skillPacks === true ||
+    policy?.features?.staffSkills !== false
+  );
+}
+
 export function installPack(workspace, source, { name, credit } = {}) {
   const files = tree(resolve(source));
   let manifest;

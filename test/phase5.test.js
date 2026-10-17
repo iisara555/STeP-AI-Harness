@@ -28,6 +28,7 @@ import {
   packAsset,
   exportPack,
   enabledPackHooks,
+  packImportAllowed,
 } from "../src/modules/packs/index.js";
 import { LineGateway, verifySignature } from "../gateway/line/service.js";
 
@@ -490,6 +491,14 @@ test("disabled pack hooks never access a missing workspace; enabled packs retain
   assert.deepEqual(enabledPackHooks(missing, {}), []);
   assert.deepEqual(enabledPackHooks(missing, { features: { skillPacks: false } }), []);
   assert.throws(() => enabledPackHooks(missing, { features: { skillPacks: true } }), { code: "ENOENT" });
+});
+
+test("pack import is refused only when neither personal use nor admin approval is allowed", () => {
+  assert.equal(packImportAllowed({}), true);
+  assert.equal(packImportAllowed({ features: { skillPacks: false } }), true);
+  assert.equal(packImportAllowed({ features: { staffSkills: false, skillPacks: true } }), true);
+  assert.equal(packImportAllowed({ features: { staffSkills: false, skillPacks: false } }), false);
+  assert.equal(packImportAllowed({ features: { staffSkills: false } }), false);
 });
 
 test("packs import Anthropic layout inertly, require approved digest and explicit hooks, export into a fresh directory, detect tampering", async () => {
