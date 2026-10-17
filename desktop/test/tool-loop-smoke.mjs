@@ -101,12 +101,17 @@ try {
   const question = page.locator('.composer-area .tool-question');
   await question.getByText('Choose output style').waitFor();
   await question.getByRole('button', { name: /Brief/ }).click();
-  await consent().waitFor();
-  await consent().getByRole('checkbox').check();
-  await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
+  // The employee's own answer and plan approval are not asked about again (UI audit H2); the plan shows its steps.
   const plan = page.getByRole('alertdialog', { name: 'อนุมัติแผนก่อนจัดทำร่าง?' });
   await plan.waitFor();
-  await plan.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+  await expect(consent()).toHaveCount(0);
+  await expect(plan.locator('.approval-plan li')).toContainText(['Read the note and stage a reviewed summary.']);
+  await plan.getByRole('button', { name: 'อนุมัติแผน', exact: true }).click();
+  // The staged draft receipt still asks, with its own run scope.
+  await consent().waitFor();
+  await expect(consent()).not.toContainText('"approved"');
+  await consent().getByRole('checkbox').check();
+  await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
   await page.getByText('Completed with reviewed tools', { exact: true }).waitFor();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].status).toBe('review');
   const data = await page.evaluate(() => window.step.call('snapshot'));

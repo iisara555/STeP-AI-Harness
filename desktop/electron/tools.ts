@@ -58,6 +58,56 @@ export type ToolScope = {
   generate?: (prompt: string, model?: string) => Promise<unknown>;
   workflow?: Workflow;
 };
+/** The AI service as the employee knows it (the connection's own name and model), not internal ids. */
+const PROVIDER_NAMES: Record<string, string> = {
+  openai: 'OpenAI',
+  claude: 'Claude',
+  gemini: 'Gemini',
+  antigravity: 'Gemini / Antigravity',
+  copilot: 'GitHub Copilot',
+  compatible: 'AI',
+};
+export const destinationName = (c: Pick<Connection, 'provider' | 'model'> & { label?: string }) => {
+  const name = (c.provider === 'compatible' && c.label) || PROVIDER_NAMES[c.provider] || c.provider;
+  return c.model ? `${name} · ${c.model}` : name;
+};
+/**
+ * The employee's own reply inside this app: an ask_user answer they typed or clicked, or the yes/no of a plan they just
+ * approved (fixed fields only). Nothing here comes from a file, a web page or another tool.
+ */
+export const ownAnswer = (r: LoopRequest | undefined, text: string) => {
+  if (r?.tool !== 'ask_user' && r?.tool !== 'plan') return false;
+  try {
+    const value = JSON.parse(text);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const keys = Object.keys(value);
+    if (r.tool === 'ask_user') return keys.length === 1 && typeof value.answer === 'string';
+    return (
+      typeof value.approved === 'boolean' &&
+      keys.every(k => ['approved', 'scope', 'status', 'tasks', 'next'].includes(k)) &&
+      keys.every(k => ['boolean', 'number', 'string'].includes(typeof value[k]))
+    );
+  } catch {
+    return false;
+  }
+};
+/** What a tool result reads like to staff: the file's text or the answer, instead of the JSON envelope. */
+const readable = (text: string) => {
+  try {
+    const value = JSON.parse(text);
+    if (value && typeof value === 'object') {
+      if (typeof value.text === 'string') return value.text;
+      if (typeof value.content === 'string') return value.content;
+      if (typeof value.answer === 'string') return value.answer;
+      if (typeof value.path === 'string' && value.status === 'staged-for-human-review')
+        return tm('ไฟล์ {0} รอคุณตรวจในรายการแก้ไข', value.path);
+      if (typeof value.path === 'string' && value.status === 'applied') return tm('บันทึกไฟล์ {0} แล้ว', value.path);
+    }
+  } catch {
+    /* Plain text stays as it is. */
+  }
+  return text;
+};
 const blocked = (c: any) => c?.authority?.status !== 'ALLOW' || ['BLOCK', 'ESCALATE', 'UNAVAILABLE', 'CLARIFY'].includes(c?.mode);
 export function documentSections(text: string) {
   // Worker extraction preserves line breaks. Without headings, use bounded paragraph groups.
@@ -168,11 +218,18 @@ export class DesktopTools {
     destination?: 'web-query' | 'web-url',
     transmission?: RunTransmission,
     source?: TransmissionSource,
+    what?: string,
+    own = false,
   ) {
     const review = this.harness.privacy(text);
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     // Credential filtering is always on; optional privacy consent still follows policy.
     if (!this.policy().checks.privacy) return review.redactedText;
+    const clean =
+      review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text;
+    // The employee's own answer, typed or clicked in this app a moment ago, is not asked about again. Anything the
+    // privacy scan flags still asks, as does every file, web and tool result.
+    if (own && clean && !destination) return review.redactedText;
     const rule = this.approvals.rule(
       await this.workbench.root().catch(() => ''),
       destination || 'tool-data',
@@ -186,25 +243,34 @@ export class DesktopTools {
             ? tm('เข้าถึงเว็บปลายทางนี้?')
             : tm('ส่งผลเครื่องมือให้ AI?'),
       body: tm(
-        'ข้อมูลใหม่ {0} ตัวอักษร จะส่งให้ {1}\n{2}\nตรวจตัวอย่างที่ปิดบังแล้วก่อนยินยอม:\n{3}',
-        text.length.toLocaleString(mainLocale()),
+        '{0} จะส่งให้ {1}',
+        what || (destination === 'web-query' ? tm('คำค้น') : destination === 'web-url' ? tm('ที่อยู่เว็บ') : tm('ผลจากเครื่องมือ')),
         destination === 'web-query'
           ? this.harness.publicSearch
             ? 'Bing'
-            : scope.connection.provider + tm(' และบริการค้นเว็บของบัญชีนี้')
+            : destinationName(scope.connection) + tm(' และบริการค้นเว็บของบัญชีนี้')
           : destination === 'web-url'
             ? tm('เว็บปลายทางที่ระบุ')
-            : scope.connection.provider,
-        (review.findings || []).map((f: any) => f.label).join(', '),
-        review.redactedText.slice(0, 1500),
+            : destinationName(scope.connection),
       ),
+      facts: [
+        { label: tm('ความยาว'), value: tm('{0} ตัวอักษร', text.length.toLocaleString(mainLocale())) },
+        {
+          label: tm('การปิดบังข้อมูล'),
+          value: review.findings?.length
+            ? tm('ปิดบังแล้ว: {0}', (review.findings || []).map((f: any) => f.label).join(', '))
+            : review.redactedText !== text
+              ? tm('ปิดบังบางส่วนแล้ว')
+              : tm('ไม่พบข้อมูลส่วนบุคคลที่ต้องปิดบัง'),
+        },
+      ],
+      preview: readable(review.redactedText).slice(0, 1500),
+      technical: review.redactedText.slice(0, 1500),
       privacyClass: review.classification === 'public' ? 'internal' : review.classification,
       allowRemember: false,
       sessionId: scope.sessionId,
     };
     if (transmission && !destination) {
-      const clean =
-        review.action === 'pass' && review.classification === 'public' && !review.findings?.length && review.redactedText === text;
       await transmission.authorize(text.length, clean ? source : undefined, runScope =>
         this.approvals.choose(rule, { ...detail, runScope, runDefault: Boolean(runScope && this.policy().pilot) }, scope.signal),
       );
@@ -289,7 +355,7 @@ export class DesktopTools {
     };
     const transmission = new RunTransmission(
       scope.sessionId,
-      `${scope.connection.provider} (${scope.connection.id.slice(0, 8)}) / ${scope.connection.model || 'default'}${scope.connection.baseUrl ? ' / ' + scope.connection.baseUrl : ''}`,
+      `${destinationName(scope.connection)}${scope.connection.baseUrl ? ' · ' + scope.connection.baseUrl : ''}`,
       check,
       this.notify,
     );
@@ -321,7 +387,12 @@ export class DesktopTools {
         if (this.sourceClean.get(r) === false) return;
         const folder =
           r.args?.action === 'list' || !r.input ? await this.workbench.path(r.input || '.') : dirname(await this.workbench.path(r.input));
-        return { key: `files:${folder}`, label: tm('ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)', relative(workspace, folder) || '.') };
+        return {
+          key: `files:${folder}`,
+          label: relative(workspace, folder)
+            ? tm('ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)', relative(workspace, folder))
+            : tm('ไฟล์ข้อความในโฟลเดอร์งานหลัก (ไม่รวมโฟลเดอร์ย่อย)'),
+        };
       }
       if (['browser', 'web_fetch', 'web_extract'].includes(r.tool)) {
         const origin = publicUrl(r.input).origin;
@@ -330,6 +401,20 @@ export class DesktopTools {
       if (['skill', 'reference'].includes(r.tool)) return { key: `${r.tool}:${r.input}`, label: `${r.tool}: ${r.input}` };
       if (r.tool === 'session_search')
         return { key: 'session-history', label: tm('งานเก่าของทีมเดียวกันบนเครื่องนี้ (ชื่องาน ข้อความ และร่าง)') };
+    };
+    // What is being sent, in the employee's words, for the consent summary.
+    const describe = (r?: LoopRequest) => {
+      if (!r) return undefined;
+      const name = String(r.input || '').slice(0, 200);
+      if (r.tool === 'ask_user') return tm('คำตอบของคุณ');
+      if (r.tool === 'plan') return tm('ผลการอนุมัติแผนของคุณ');
+      if (['files', 'doc_outline', 'doc_section', 'sheet_read'].includes(r.tool))
+        return r.args?.action === 'list' || !name ? tm('รายชื่อไฟล์ในโฟลเดอร์งาน') : tm('เนื้อหาไฟล์ {0}', name);
+      if (r.tool === 'changes' || r.tool === 'patch') return tm('สถานะการเตรียมร่าง {0}', name);
+      if (['browser', 'browser_control', 'web_fetch', 'web_extract', 'web_search'].includes(r.tool)) return tm('ผลการอ่านเว็บ');
+      if (r.tool === 'session_search') return tm('ผลค้นงานเก่าบนเครื่องนี้');
+      if (r.tool === 'skill' || r.tool === 'reference') return tm('เอกสาร {0}', name);
+      return undefined;
     };
     return {
       cancel: scope.cancel,
@@ -370,7 +455,15 @@ export class DesktopTools {
         ),
       outgoing: async (text, _signal, r) => {
         await check();
-        const approved = await this.outgoing(text, transmissionScope, undefined, transmission, await sourceFor(r));
+        const approved = await this.outgoing(
+          text,
+          transmissionScope,
+          undefined,
+          transmission,
+          await sourceFor(r),
+          describe(r),
+          ownAnswer(r, text),
+        );
         await check();
         return approved;
       },

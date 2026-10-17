@@ -43,7 +43,7 @@ import {
   Timer,
   ShieldCheck,
   Circle,
-  ReceiptText,
+  Receipt,
   Megaphone,
   Blocks,
   Copy,
@@ -166,12 +166,17 @@ export default function App() {
   const [left, setLeft] = useState(() => (sidebarChoice.current === null ? window.innerWidth >= 900 : sidebarChoice.current)),
     [right, setRight] = useState(() => window.innerWidth >= 1100),
     [history, setHistory] = useState(false);
+  // Below about 1200px, chat, task list and draft panel do not fit together: while the panel is open the task list
+  // folds to the icon rail on its own (the employee's choice stays as it was), unless they open it again by hand.
+  const [roomy, setRoomy] = useState(() => window.innerWidth >= 1200),
+    [leftPeek, setLeftPeek] = useState(false);
   useEffect(() => {
     let width = window.innerWidth;
     const onResize = () => {
       const now = window.innerWidth;
       if (now < 1100 && width >= 1100) setRight(false);
       if (sidebarChoice.current === null && now < 900 !== width < 900) setLeft(now >= 900);
+      setRoomy(now >= 1200);
       width = now;
     };
     window.addEventListener('resize', onResize);
@@ -320,6 +325,14 @@ export default function App() {
   useEffect(() => setChatMenu(false), [selected, view]);
   const saveInFlight = useRef<Promise<void> | null>(null);
   const showPanel = right && !settings && view === 'chat';
+  const fullSidebar = left && (roomy || !showPanel || leftPeek);
+  const questionPending = questions.some(q => q.sessionId === selected);
+  const runFailed = !running && session?.status === 'error';
+  // The code of the last failure in this task, to explain it next to "try again".
+  const failureCode = runFailed ? [...(session?.messages || [])].reverse().find(m => m.role === 'status')?.text || '' : '';
+  useEffect(() => {
+    if (showPanel) setLeftPeek(false);
+  }, [showPanel]);
   const [panelOpened, setPanelOpened] = useState(false);
   useEffect(() => {
     if (showPanel) setPanelOpened(true);
@@ -353,7 +366,16 @@ export default function App() {
       DocumentImageNode.configure({ load: assetId => api!.call('documentAsset', { id: sessionRef.current?.id, assetId }) }),
     ],
     content: toDoc(''),
-    editorProps: { attributes: { 'aria-label': t('ร่างที่แก้ไขได้'), class: 'draft-editor', spellcheck: 'false', lang: 'th' } },
+    editorProps: {
+      attributes: {
+        role: 'textbox',
+        'aria-multiline': 'true',
+        'aria-label': t('ร่างที่แก้ไขได้'),
+        class: 'draft-editor',
+        spellcheck: 'false',
+        lang: 'th',
+      },
+    },
     onUpdate: () => {
       // A saved snapshot can finish rendering after an immediate editor command.
       // Protect that new edit before React commits the dirty state.
@@ -1034,6 +1056,13 @@ export default function App() {
     });
   }
   const providerName = (c?: Connection) => (c ? connectionName(c) : '');
+  // A run that waits on the employee's answer or permission says so, instead of "working".
+  const taskStatus = (s: { id: string; status: string }) =>
+    questions.some(q => q.sessionId === s.id)
+      ? t('รอคุณตอบ')
+      : toolApprovals.some(a => a.sessionId === s.id)
+        ? t('รอคุณอนุญาต')
+        : statusText[s.status] || s.status;
   const setTheme = (theme: string) =>
     action(async () => {
       await api!.call('settings', { assistant: snapshot!.settings.assistant, team: snapshot!.settings.team, theme });
@@ -1060,13 +1089,17 @@ export default function App() {
     },
     wizard: () => setWizard(true),
     'whats-new': () => setWhatsNew(RELEASE_NOTES.filter(n => compareVersions(n.version, snapshot?.appVersion || '0') <= 0)),
-    left: () =>
+    left: () => {
+      // Folded only because the draft panel needs the room: open the list this time without changing the saved choice.
+      if (left && !fullSidebar) return setLeftPeek(true);
+      setLeftPeek(false);
       setLeft(p => {
         const next = !p;
         sidebarChoice.current = next;
         saveSidebarChoice(next);
         return next;
-      }),
+      });
+    },
     right: () => setRight(p => !p),
     skills: () => {
       setSettings(false);
@@ -1190,7 +1223,7 @@ export default function App() {
       : view === 'media'
         ? t('สื่อภายใน')
         : view === 'receipt'
-          ? t('ตรวจใบเสร็จก่อนส่ง AFP')
+          ? t('ตรวจใบเสร็จ AFP')
           : view === 'skills'
             ? t('ศูนย์รวม Skill')
             : session?.title || t('เริ่มต้นงานที่อยากทำ');
@@ -1207,19 +1240,19 @@ export default function App() {
     />
   );
   return (
-    <div className="shell">
+    <div className={showPanel ? 'shell panel-open' : 'shell'}>
       <TitleBar
         api={api}
         title={pageTitle}
         run={id => commandRef.current[id]?.()}
         hint={id => shortcutText(snapshot.settings.keybindings?.[id] ?? COMMANDS.find(c => c[0] === id)?.[2] ?? '')}
-        left={left}
+        left={fullSidebar}
         right={right}
         showRight={!settings && view === 'chat'}
         theme={snapshot.settings.theme}
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
-        {!left && (
+        {!fullSidebar && (
           <SidebarRail
             brand={brandSymbol}
             avatar={profileAvatar}
@@ -1240,7 +1273,7 @@ export default function App() {
             onProfile={() => openSettings()}
           />
         )}
-        {left && (
+        {fullSidebar && (
           <aside className="sidebar" aria-label={t('แถบงาน')}>
             <div className="brand">
               <div>
@@ -1308,10 +1341,10 @@ export default function App() {
                       />
                     ) : (
                       <div key={s.id} className={`session ${selected === s.id ? 'selected' : ''}`}>
-                        <button className="session-open" onClick={() => void action(() => selectSession(s.id))}>
+                        <button className="session-open" title={t(s.title)} onClick={() => void action(() => selectSession(s.id))}>
                           <span>{t(s.title)}</span>
                           <small>
-                            {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {statusText[s.status] || s.status}
+                            {s.project || s.team.toUpperCase() || t('ทุกทีม')} · {taskStatus(s)}
                           </small>
                         </button>
                         <span className="session-actions">
@@ -1345,7 +1378,13 @@ export default function App() {
                 </section>
               ))}
               {!filtered.length && (
-                <p className="muted small">{search ? t('ไม่พบงานที่ตรงกับคำค้น') : t('เมื่อเริ่มงาน บทสนทนาจะอยู่ที่นี่')}</p>
+                <p className="muted small">
+                  {search
+                    ? t('ไม่พบงานที่ตรงกับคำค้น')
+                    : filter === 'artifacts'
+                      ? t('ยังไม่มีร่างที่บันทึก งานที่มีร่างจาก AI หรือร่างที่คุณบันทึกจะอยู่ที่นี่')
+                      : t('เมื่อเริ่มงาน บทสนทนาจะอยู่ที่นี่')}
+                </p>
               )}
             </div>
             <div className="session-group tools-group">{t('เครื่องมือ')}</div>
@@ -1392,7 +1431,7 @@ export default function App() {
                   navigate('receipt');
                 }}
               >
-                <ReceiptText size={17} />
+                <Receipt size={17} />
                 <span className="nav-label">{t('ตรวจใบเสร็จ AFP')}</span>
                 {receiptBusy && view !== 'receipt' ? (
                   <LoaderCircle size={14} className="spin" aria-label={t('กำลังตรวจใบเสร็จอยู่')} />
@@ -1408,7 +1447,7 @@ export default function App() {
                 openSettings();
               }}
             >
-              <Settings2 size={18} />
+              <SlidersHorizontal size={18} />
               <span>{t('ตั้งค่าพื้นที่ทำงาน')}</span>
             </button>
             <UpdateCard api={api} update={update} />
@@ -1685,6 +1724,13 @@ export default function App() {
                           <br />
                           <em>{t('ส่วนคุณตัดสินเรื่องสำคัญ')}</em>
                         </h1>
+                        {/* In the greeting, where a first-time user looks, not below the starters behind the composer. */}
+                        {!snapshot.settings.tourDone && (
+                          <button className="welcome-tour quiet" onClick={commands.tour}>
+                            <Compass size={15} />
+                            {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
+                          </button>
+                        )}
                       </div>
                       <SectionArt scene="chat" className="welcome-illustration" />
                     </div>
@@ -1725,12 +1771,6 @@ export default function App() {
                         {t('รู้จักทีมและ Skill ของ STeP')}
                       </li>
                     </ul>
-                    {!snapshot.settings.tourDone && (
-                      <button className="welcome-tour quiet" onClick={commands.tour}>
-                        <Compass size={15} />
-                        {t('ใช้ครั้งแรก? ดูทัวร์แนะนำการใช้งาน')}
-                      </button>
-                    )}
                   </div>
                 )}
                 {session?.messages.map((message, index) => (
@@ -2015,6 +2055,14 @@ export default function App() {
                     >
                       {t('แก้คำขอ')}
                     </button>
+                    {/^(PROVIDER_|CONNECTION_|COPILOT_|AUTH_|OAUTH_)/.test(failureCode) && (
+                      <button className="quiet" onClick={openAiSettings}>
+                        {t('ตรวจการเชื่อมต่อ AI')}
+                      </button>
+                    )}
+                    {/^[A-Z_]+$/.test(failureCode) && (
+                      <span className="small muted retry-code">{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</span>
+                    )}
                     {(connection?.models?.length || 0) > 1 && (
                       <span className="small muted">{t('หรือเลือกโมเดลอื่นในกล่องพิมพ์ก่อนลองใหม่')}</span>
                     )}
@@ -2192,8 +2240,15 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                  {/* While the assistant waits for an answer, the question card is the one place to type. */}
+                  {questionPending && (
+                    <p className="composer-question-note small muted" role="status">
+                      {t('ตอบคำถามของผู้ช่วยด้านบนก่อน แล้วพิมพ์คำขอต่อได้')}
+                    </p>
+                  )}
                   <textarea
                     ref={composerRef}
+                    hidden={questionPending}
                     aria-label={t('พิมพ์คำขอ')}
                     placeholder={
                       forced
@@ -2450,10 +2505,12 @@ export default function App() {
             </>
           )}
           <footer className="statusbar" aria-label={t('สถานะ')}>
-            <span className={`status-dot ${connection?.ready ? 'ok' : ''}`} aria-hidden="true" />
+            <span className={`status-dot ${connection?.ready ? (runFailed ? 'failed' : 'ok') : ''}`} aria-hidden="true" />
             <span>
               {connection
-                ? `${providerName(connection)} · ${connection.ready ? t('พร้อมทำงาน') : t('ยังไม่พร้อม')}`
+                ? `${providerName(connection)} · ${
+                    !connection.ready ? t('ยังไม่พร้อม') : runFailed ? t('งานล่าสุดไม่สำเร็จ') : t('พร้อมทำงาน')
+                  }`
                 : t('ยังไม่เชื่อมต่อ AI')}
             </span>
             {elapsed && (
@@ -2518,27 +2575,33 @@ export default function App() {
               style={showPanel ? undefined : { display: 'none' }}
             >
               <nav className="workbench-tabs" aria-label={t('เครื่องมือข้างร่าง')}>
-                {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
-                  .filter(tab => advancedTools || tab !== 'terminal')
-                  .map(tab => (
-                    <button
-                      key={tab}
-                      className={toolTab === tab ? 'active' : ''}
-                      aria-current={toolTab === tab ? 'page' : undefined}
-                      onClick={() => setToolTab(tab)}
-                    >
-                      {
+                {/* The tabs scroll sideways in one row when the panel is narrow; the settings icon keeps its place. */}
+                <div className="workbench-tab-list">
+                  {(['output', 'browser', 'terminal', 'tasks', 'files', 'changes'] as ToolTab[])
+                    .filter(tab => advancedTools || tab !== 'terminal')
+                    .map(tab => (
+                      <button
+                        key={tab}
+                        className={toolTab === tab ? 'active' : ''}
+                        aria-current={toolTab === tab ? 'page' : undefined}
+                        onClick={e => {
+                          setToolTab(tab);
+                          e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                        }}
+                      >
                         {
-                          output: t('ผลงาน'),
-                          browser: t('เว็บ'),
-                          terminal: t('คำสั่งขั้นสูง'),
-                          tasks: t('งานเบื้องหลัง'),
-                          files: t('ไฟล์งาน'),
-                          changes: t('รายการแก้ไข'),
-                        }[tab]
-                      }
-                    </button>
-                  ))}
+                          {
+                            output: t('ผลงาน'),
+                            browser: t('เว็บ'),
+                            terminal: t('คำสั่งขั้นสูง'),
+                            tasks: t('งานเบื้องหลัง'),
+                            files: t('ไฟล์งาน'),
+                            changes: t('รายการแก้ไข'),
+                          }[tab]
+                        }
+                      </button>
+                    ))}
+                </div>
                 <button
                   className="workbench-advanced"
                   aria-expanded={advancedTools}
@@ -2601,8 +2664,19 @@ export default function App() {
                     <div className="draft-title">
                       <span title={t(session.title)}>{t(session.title)}</span>
                       <small>
-                        {t('เวอร์ชัน')} {session.revision}
-                        {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
+                        {/* An empty draft has no version yet: say what goes here instead of "version 0, saved". */}
+                        {!session.revision && !session.draft.trim() ? (
+                          dirty ? (
+                            t('มีการแก้ไขที่ยังไม่บันทึก')
+                          ) : (
+                            t('ยังไม่มีร่าง · AI จะใส่ร่างที่นี่ หรือพิมพ์เองได้')
+                          )
+                        ) : (
+                          <>
+                            {t('เวอร์ชัน')} {session.revision}
+                            {dirty ? t(' · มีการแก้ไขที่ยังไม่บันทึก') : t(' · บันทึกแล้ว')}
+                          </>
+                        )}
                       </small>
                     </div>
                     {history && (

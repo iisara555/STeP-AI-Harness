@@ -193,7 +193,7 @@ try {
   const count = Number(await sidebar.locator('nav .count').innerText());
   assert.ok(count > 0, 'the Skill hub shows how many Skills and tools there are');
   await sidebar.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await expect(page.locator('.topbar-heading strong')).toHaveText('ตรวจใบเสร็จก่อนส่ง AFP');
+  await expect(page.locator('.topbar-heading strong')).toHaveText('ตรวจใบเสร็จ AFP');
   await sidebar.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน' }).click();
   await expect(page.locator('.topbar-heading strong')).toHaveText('ตั้งค่าพื้นที่ทำงาน');
   await expect(page.getByRole('tab', { name: 'ทั่วไป' })).toHaveAttribute('aria-selected', 'true');
