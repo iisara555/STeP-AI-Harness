@@ -7,3 +7,6 @@ set to reduce motion.
 
 `megaphone.tsx` (สื่อภายใน) is not from lucide-animated, which has no megaphone: it is the Lucide megaphone drawing
 with a short wiggle, written in the same shape as the copied icons.
+
+`calendar-clock.tsx` (งานตั้งเวลา) is not from lucide-animated either: the Lucide calendar-clock drawing whose clock hand
+sweeps once, in the same shape.

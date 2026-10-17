@@ -31,7 +31,7 @@ const featureNames: Record<string, string> = localized({
   headless: 'สั่งงานแบบไม่เปิดหน้าต่าง',
   skillPacks: 'เปิด Skill Pack ที่ผู้ดูแลรับรอง พร้อม Hooks และ Agent',
   staffSkills: 'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน',
-  cron: 'งานตามรอบ',
+  cron: 'งานตั้งเวลา',
   coordinator: 'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว',
   memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',
   autoRouting: 'ให้ระบบเลือก Skill และถามเพิ่มให้เอง',

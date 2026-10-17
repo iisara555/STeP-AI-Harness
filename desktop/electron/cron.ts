@@ -64,6 +64,7 @@ export function nextCron(schedule: string, now: number) {
   }
   throw new Error('CRON_INVALID');
 }
+export const CATCH_UP_MS = 12 * 3600_000;
 export class Automations {
   private queue: string[] = [];
   private draining = false;
@@ -79,14 +80,20 @@ export class Automations {
     private notify: (run: AutomationRun) => void,
     private now: () => number = Date.now,
   ) {
+    const interrupted = new Set<string>();
     for (const run of store.list<AutomationRun>('automation-run'))
       if (['queued', 'running'].includes(run.status)) {
         run.status = 'interrupted';
+        interrupted.add(run.automationId);
         store.put('automation-run', run.id, run);
       }
+    // A time missed while the app was closed runs once at the first check after start, if it fell within the last
+    // 12 hours, like scheduled tasks in other apps. A run cut off by closing the app is never replayed, and older or
+    // paused times move on to the next one.
     for (const job of store.list<Automation>('automation')) {
       delete job.running;
-      if (job.nextAt <= now()) job.nextAt = nextCron(job.schedule, now());
+      if (job.nextAt <= now() && (!job.enabled || interrupted.has(job.id) || now() - job.nextAt > CATCH_UP_MS))
+        job.nextAt = nextCron(job.schedule, now());
       store.put('automation', job.id, job);
     }
   }

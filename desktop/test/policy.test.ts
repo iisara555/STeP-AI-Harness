@@ -27,8 +27,9 @@ test('managed policy is optional, administrator-only and fail closed', async () 
 
 test('auto mode needs both organization feature and allowed mode', () => {
   const defaultValue = defaultPolicy();
-  for (const feature of ['shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator', 'cron'] as const)
+  for (const feature of ['shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator'] as const)
     assert.equal(defaultValue.features[feature], false);
+  assert.equal(defaultValue.features.cron, true);
   // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.
   assert.equal(defaultValue.features.vision, true);
   assert.equal(defaultValue.features.autoMode, true);

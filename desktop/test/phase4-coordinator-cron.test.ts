@@ -313,6 +313,38 @@ test('restart interrupts stale runs, advances overdue schedules and never replay
   queue.stop();
   store.close();
 });
+test('a time missed while the app was closed runs once at start if it was within 12 hours', () => {
+  const { store, policy } = fixture(),
+    now = Date.now();
+  const job = (id: string, nextAt: number, enabled = true) =>
+    store.put('automation', id, { id, name: id, query: 'Draft', schedule: '0 2 * * *', enabled, nextAt });
+  job('recent', now - 3600_000);
+  job('old', now - 13 * 3600_000);
+  job('paused', now - 3600_000, false);
+  job('future', now + 3600_000);
+  const queued: string[] = [];
+  const queue = new Automations(
+    store,
+    () => policy,
+    evaluatePrivacyGate,
+    async () => '',
+    () => {},
+    () => now,
+  );
+  (queue as any).enqueue = (id: string) => queued.push(id);
+  const at = (id: string) => queue.list().find(j => j.id === id)!.nextAt;
+  assert.equal(at('recent'), now - 3600_000);
+  assert.ok(at('old') > now);
+  assert.ok(at('paused') > now);
+  assert.equal(at('future'), now + 3600_000);
+  queue.tick();
+  assert.deepEqual(queued, ['recent']);
+  assert.ok(at('recent') > now);
+  queue.tick();
+  assert.deepEqual(queued, ['recent']);
+  queue.stop();
+  store.close();
+});
 test('WorkService claims the global three-run capacity and cancellation frees it', async () => {
   const { store } = fixture();
   let calls = 0;

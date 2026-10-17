@@ -178,7 +178,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // safety review finds nothing that fails (owner's decision, 2026-10-16). No hooks or agents; sharing beyond that
   // computer still needs an administrator. IT can set it to false.
   staffSkills: true,
-  cron: false,
+  // งานตั้งเวลา: employees schedule their own tasks while the app is open. Each job asks for consent when saved, passes
+  // the privacy check and ends as a draft for review (owner's decision, 2026-10-17). IT can set it to false.
+  cron: true,
   coordinator: false,
   memoryTeam: false,
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.

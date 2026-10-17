@@ -81,7 +81,7 @@ export function organizationCapabilities(policy?: PolicySnapshot): Capability[] 
     ['routing', 'ให้ AI เลือก Skill อัตโนมัติ', 'autoRouting'],
     ['mcp', 'เครื่องมือ MCP ขององค์กร', 'mcp'],
     ['coordinator', 'แบ่งงานให้ AI หลายงานย่อย', 'coordinator'],
-    ['cron', 'ร่างงานตามรอบ', 'cron'],
+    ['cron', 'ร่างงานตั้งเวลา', 'cron'],
     ['privacy', 'การตรวจข้อมูลเพิ่มเติมขององค์กร', 'privacy'],
     ['authority', 'การตรวจอำนาจเพิ่มเติมขององค์กร', 'authority'],
   ];
@@ -108,7 +108,13 @@ export function organizationCapabilities(policy?: PolicySnapshot): Capability[] 
     if (id === 'mcp') {
       if (policy?.mcpServers === undefined) return entry(id, title, 'unknown', 'unknown', 'ยังไม่ทราบการตั้งค่า MCP server ติดต่อ IT');
       if (!policy.mcpServers) return entry(id, title, 'blocked', 'server-missing', 'ให้ IT ตั้งค่า MCP server ขององค์กรก่อน');
-      return entry(id, title, 'conditional', 'consent', 'ทดสอบ server ในงานตามรอบและเครื่องมือเพิ่มเติม สิทธิ์เอกสารต้องยืนยันตอนเรียกใช้');
+      return entry(
+        id,
+        title,
+        'conditional',
+        'consent',
+        'ทดสอบ server ในเครื่องมือเพิ่มเติม (MCP และ Docker) สิทธิ์เอกสารต้องยืนยันตอนเรียกใช้',
+      );
     }
     if (id === 'coordinator')
       return entry(id, title, 'conditional', 'draft-only', 'ใช้ในโหมดร่างและยืนยันแผนก่อน งานย่อยยังไม่ใช้เครื่องมือ');

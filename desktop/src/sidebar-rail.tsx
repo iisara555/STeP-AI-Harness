@@ -3,6 +3,7 @@ import { MotionConfig } from 'motion/react';
 import { LoaderCircle } from 'lucide-react';
 import { t } from './i18n';
 import { BlocksIcon } from './animated-icons/blocks';
+import { CalendarClockIcon } from './animated-icons/calendar-clock';
 import { FileTextIcon } from './animated-icons/file-text';
 import { MegaphoneIcon } from './animated-icons/megaphone';
 import { MessageSquareIcon } from './animated-icons/message-square';
@@ -100,7 +101,7 @@ export function SidebarRail({
   onNew: () => void;
   onSearch: () => void;
   onTasks: () => void;
-  onView: (view: 'documents' | 'media' | 'skills' | 'receipt') => void;
+  onView: (view: 'documents' | 'media' | 'skills' | 'schedules' | 'receipt') => void;
   onSettings: () => void;
   onProfile: () => void;
 }) {
@@ -108,6 +109,7 @@ export function SidebarRail({
     ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon],
     ['media', t('สื่อภายใน'), MegaphoneIcon],
     ['skills', t('ศูนย์รวม Skill'), BlocksIcon],
+    ['schedules', t('งานตั้งเวลา'), CalendarClockIcon],
     ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon],
   ] as const;
   return (
