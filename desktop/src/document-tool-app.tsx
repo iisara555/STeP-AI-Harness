@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from 'lucide-react';
 import type { Attachment, Connection } from './types';
 import { DOCUMENT_TOOLS, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
-import { connectionLabel, errorText } from './messages';
+import { connectionName, errorText } from './messages';
 import { t } from './i18n';
+import { skillDisplayName } from './skill-display';
+import { ThaiText } from './thai-text';
 import './document-tools.css';
 
 export type DocumentAttachment = { sessionId: string; file: Attachment };
@@ -48,6 +50,19 @@ export function DocumentTools({
   const connected = ready.some(c => c.id === connectionId);
   const disabled = busy || working;
   const hasInput = Object.values(form.values).some(v => v.trim()) || Boolean(form.source?.file.usable);
+  const sourceBlocked = Boolean(
+    form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
+  );
+  // The same checks that disable the draft button, worded for staff so a grey button never goes unexplained.
+  const blockedReason = disabled
+    ? ''
+    : !connected
+      ? t('เลือก AI ที่เชื่อมต่อแล้วด้านบนก่อน')
+      : sourceBlocked
+        ? t('ไฟล์แนบส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อน')
+        : !hasInput
+          ? t('กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง')
+          : '';
   const update = (patch: Partial<DocumentForm>) => setForms(old => ({ ...old, [selected]: { ...form, ...patch } }));
   useEffect(() => setRevisionRequest(''), [existingDraft?.id, selected]);
   // Consent is handled by the normal send dialog. Only a started send consumes the attachment.
@@ -87,7 +102,9 @@ export function DocumentTools({
           >
             <FileText size={18} />
             <strong>{t(p.title)}</strong>
-            <small>{t(p.description)}</small>
+            <small>
+              <ThaiText text={t(p.description)} />
+            </small>
           </button>
         ))}
       </div>
@@ -104,9 +121,9 @@ export function DocumentTools({
             {t('เว้นช่องเนื้อหาได้ AI จะช่วยขึ้นร่างจากต้นเรื่อง ส่วนข้อเท็จจริงและเงื่อนไขที่ต้องมีหลักฐานจะคงรอยืนยัน')}
           </p>
           <p className="small muted">
-            {t(
-              'TOR ใช้แม่แบบ 16 หัวข้อเดิม เอกสารอีก 4 ประเภทเลือก DOCX จาก MIS เป็นแม่แบบเพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป',
-            )}
+            {selected === 'tor'
+              ? t('TOR ใช้แม่แบบ 16 หัวข้อเดิม')
+              : t('แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป')}
           </p>
         </header>
         {existingDraft?.tool === selected && (
@@ -168,7 +185,7 @@ export function DocumentTools({
               </option>
               {ready.map(c => (
                 <option key={c.id} value={c.id}>
-                  {connectionLabel(c)}
+                  {connectionName(c)}
                 </option>
               ))}
             </select>
@@ -185,11 +202,11 @@ export function DocumentTools({
         <details className="document-skill-info">
           <summary>{t('ขั้นตอนที่ใช้ร่างและตรวจข้อมูล')}</summary>
           <p>
-            {t('Skill หลัก:')} <code>{profile.skill}</code>
+            {t('Skill หลัก:')} <strong title={profile.skill}>{skillDisplayName(profile.skill)}</strong>
             {profile.supportSkills.length > 0 && (
               <>
                 {' '}
-                · {t('ร่วมกับ')} <code>{profile.supportSkills.join(', ')}</code>
+                · {t('ร่วมกับ')} {profile.supportSkills.map(skillDisplayName).join(', ')}
               </>
             )}
           </p>
@@ -298,23 +315,25 @@ export function DocumentTools({
             </label>
           ))}
         </div>
-        <footer>
+        {/* Sticky: the only primary action stays in reach on a form that is several screens tall. */}
+        <footer className="document-form-actions">
           <p className="small muted">{t('AI ช่วยร่าง การตรวจข้อมูลจริง การอนุมัติ และการลงนามเป็นของเจ้าของเรื่องและผู้มีอำนาจ')}</p>
-          <button
-            className="primary"
-            type="submit"
-            disabled={
-              disabled ||
-              !connected ||
-              !hasInput ||
-              Boolean(
-                form.source && (!form.source.file.usable || (form.sourceRole !== 'template' && form.source.file.sourceUsable === false)),
-              )
-            }
-          >
-            {working ? <LoaderCircle size={17} className="spin" /> : <Sparkles size={17} />}
-            {t('ให้ AI ร่างเอกสาร')}
-          </button>
+          <div className="document-form-submit">
+            {blockedReason && (
+              <p id="document-draft-reason" className="small document-draft-reason" role="status">
+                {blockedReason}
+              </p>
+            )}
+            <button
+              className="primary"
+              type="submit"
+              aria-describedby={blockedReason ? 'document-draft-reason' : undefined}
+              disabled={disabled || !connected || !hasInput || sourceBlocked}
+            >
+              {working ? <LoaderCircle size={17} className="spin" /> : <Sparkles size={17} />}
+              {t('ให้ AI ร่างเอกสาร')}
+            </button>
+          </div>
         </footer>
       </form>
     </div>

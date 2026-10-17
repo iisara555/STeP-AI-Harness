@@ -11,6 +11,8 @@ export type SpeakingStyle = {
   id: string;
   /** Name shown in Settings, from the document's `display_name`. */
   displayName: string;
+  /** Thai name shown before the persona name in Settings, such as คมคาย (Witty) (translated through t()). */
+  thaiName?: string;
   /** Thai summary shown under the name (translated through t()). */
   summary: string;
   /** The document's `default_intensity` (0–1), kept for a later intensity control. */
@@ -24,6 +26,7 @@ export const INTERACTION_STYLES: Record<Exclude<InteractionStyleId, 'standard'>,
   witty: {
     id: 'witty',
     displayName: 'Witty',
+    thaiName: 'คมคาย',
     summary: 'จับภาพรวม ตรงประเด็น เชื่อมกับผลลัพธ์ แล้วจบด้วยสิ่งที่ต้องทำต่อ',
     defaultIntensity: 0.65,
     version: '0.4',
@@ -46,7 +49,8 @@ Do not impersonate the referenced person and never fabricate quotations.`,
   'ob-oon': {
     id: 'ob-oon',
     displayName: 'Ob-Oon',
-    summary: 'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและ Impact',
+    thaiName: 'ชวนคิด',
+    summary: 'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและผลลัพธ์ที่มีความหมาย',
     defaultIntensity: 0.7,
     version: '0.4',
     fragment: `Respond using the "Ob-Oon" interaction style.

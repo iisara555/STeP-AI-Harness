@@ -235,10 +235,6 @@ export const en: Record<string, string> = {
   'ส่งภาพให้ AI ตรวจ?': 'Send an image for AI analysis?',
   'ภาพ {0} จะส่งให้บัญชี AI ที่เลือก กรุณาตรวจข้อมูลในภาพก่อนยินยอม':
     'Image {0} will be sent to the selected AI account. Inspect its contents before consenting.',
-  'ใช้ MCP server ขององค์กร สิทธิ์ Google และการเข้าสู่ระบบจัดการโดย server เครื่องมือค้นหาและเรียกใช้จะขอ consent แยกกัน':
-    'Use the organization MCP server. Google sign-in and permissions are managed by that server. Discovery and execution request separate consent.',
-  'ยังไม่ได้ตั้งค่า Google Workspace ให้ผู้ดูแลเพิ่ม profile google-workspace ใน managed policy แล้วเปิด MCP':
-    'Google Workspace is not configured. Ask the administrator to add the google-workspace profile to managed policy and enable MCP.',
   'ทดสอบ Google Workspace': 'Test Google Workspace',
   'การทดสอบอ่านรายการเครื่องมือเท่านั้น ยังไม่ยืนยันสิทธิ์อ่านหรือเขียนเอกสารจริง':
     'The test reads the tool catalog only; it does not establish access to real documents.',
@@ -416,8 +412,23 @@ export const en: Record<string, string> = {
   'เนื้อหาสไลด์เกินรูปแบบที่รองรับ กรุณาแบ่งเป็นหลายสไลด์': 'The slide content exceeds the supported layout. Split it across more slides.',
   'มีไฟล์ชื่อนี้อยู่แล้ว กรุณาเลือกชื่อใหม่': 'A file with this name already exists. Choose a new name.',
   'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR': 'Choose a new file in a private folder to save the OCR trial results.',
-  'AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ':
-    'The selected AI helps map OCR text into the form. This connection does not read receipt images.',
+  'ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น':
+    'The AI is not reading the receipt image right now (your organisation or the selected AI does not allow it). It only maps OCR text into the form.',
+  'รอตรวจบริการ OCR สักครู่': 'Checking the OCR service, one moment',
+  'กด "เปิดบริการ OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้': 'Press "Start OCR service" below first, then choose a receipt',
+  'กด "ติดตั้ง OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้': 'Press "Install OCR" below first, then choose a receipt',
+  'เลือก AI ที่เชื่อมต่อแล้วด้านบนก่อน': 'Choose a connected AI above first',
+  'ไฟล์แนบส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อน': 'The attachment cannot be sent to the AI. Remove it or attach another file first',
+  'กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง':
+    'Fill in at least one field or attach a source document, then let the AI draft',
+  'TOR ใช้แม่แบบ 16 หัวข้อเดิม': 'TOR uses the standard 16-section template',
+  'แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป':
+    'You can attach a Word file from MIS as the template to keep its original layout. Without one, a general draft layout is used',
+  อีกขั้นเดียวก่อนเริ่มงาน: 'One step left before you start',
+  'Gemini ผ่าน Antigravity': 'Gemini via Antigravity',
+  'Gemini ผ่าน Antigravity (ทดลอง)': 'Gemini via Antigravity (beta)',
+  'โมเดล Gemini': 'Gemini model',
+  '{0} โทเคน': '{0} tokens',
   'ถ้า OCR อ่านตัวอักษรผิด AI แบบข้อความแก้จากภาพไม่ได้ ใช้ AI ที่รองรับภาพเพื่ออ่านต้นฉบับ':
     'Text-only AI cannot correct misread characters from the image. Use an image-capable AI to read the original.',
   'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth':
@@ -657,8 +668,7 @@ export const en: Record<string, string> = {
   'ตรวจใบเสร็จก่อนส่ง AFP': 'Check receipts before sending to AFP',
   เริ่มต้นงานที่อยากทำ: 'What would you like to work on?',
   'บัญชี AI และข้อมูลอยู่ในเครื่องนี้': 'Your AI account and data stay on this computer',
-  'ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต':
-    'Beta · Reads receipts with on-device OCR, and has the AI read the image to compare when your organisation allows it',
+  'ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง': 'Beta · Reads receipts with on-device OCR, then you check before sending',
   'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing': 'Skills in this workspace, with their Manifest and Routing status',
   'จากคำขอ สู่ผลงานที่ใช้ต่อได้': 'From request to ready-to-use work',
   ซ่อนร่าง: 'Hide draft',
@@ -666,7 +676,7 @@ export const en: Record<string, string> = {
   ทำสำเนาเป็นงานใหม่: 'Duplicate as new task',
   บันทึกบทสนทนาแล้ว: 'Conversation saved',
   'ส่งออก Markdown': 'Export Markdown',
-  'ส่งออก JSON': 'Export JSON',
+  บันทึกบทสนทนาเป็นไฟล์: 'Save conversation to a file',
   ความจำ: 'Memory',
   'ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน': 'Have the assistant run a task on a schedule, such as every weekday morning',
   งานตามรอบ: 'Scheduled tasks',
@@ -752,8 +762,8 @@ export const en: Record<string, string> = {
   'ความจำหมดอายุแล้ว: ลบ หรือแก้ข้อความแล้วตั้งอายุใหม่': 'Memory expired: delete it, or edit it and set a new lifetime',
   'ความจำไม่ได้ทบทวนเกิน 180 วัน: ตรวจว่ายังจริงอยู่ไหม แล้วแก้หรือลบ':
     'Memory not reviewed for over 180 days: check it is still true, then edit or delete it',
-  'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลข PR/ticket หรือ log): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร':
-    'Memory holds short-lived data (task progress, PR/ticket numbers or logs): delete it, or rewrite it as a lasting fact',
+  'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลขงาน หรือบันทึกระบบ): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร':
+    'Memory holds short-lived data (task progress, job numbers or system logs): delete it, or rewrite it as a lasting fact',
   'ความจำสองรายการเนื้อหาเกือบเหมือนกัน: รวมเป็นรายการเดียว แล้วลบอีกรายการ':
     'Two memories say almost the same thing: merge them into one and delete the other',
   'บทเรียนนี้ยังต้องแก้เรื่องเดิมซ้ำ: เขียนบทเรียนให้ชัดขึ้นในกล่องบทเรียน':
@@ -956,22 +966,17 @@ export const en: Record<string, string> = {
   '(ยังไม่เปิดใช้)': '(not enabled)',
   'ตรวจปลายทาง ข้อมูล และผลทุกครั้ง เครื่องมืออาจแก้ข้อมูลในบริการที่เชื่อมต่อ':
     'Check the destination, data and results each time — tools may change data in connected services',
-  'เลือก server ที่ผู้ดูแลกำหนด': 'Choose a server set by your admin',
   'ค้นหาเครื่องมือ MCP': 'Search MCP tools',
   ค้นหาเครื่องมือ: 'Search tools',
   'ชื่อเครื่องมือ MCP': 'MCP tool name',
   ชื่อเครื่องมือ: 'Tool name',
   'ข้อมูลเครื่องมือ MCP': 'MCP tool input',
   ตรวจและเรียกเครื่องมือ: 'Check and call tool',
-  'รันใน container ที่ผู้ดูแลกำหนด ปิดเครือข่าย และอ่านเฉพาะสำเนาไฟล์ที่คุณแนบ':
-    'Runs in an admin-defined container with no network, reading only copies of the files you attach',
   'คำสั่ง sandbox': 'Sandbox command',
   'ไฟล์ sandbox': 'Sandbox files',
-  'path ไฟล์ในพื้นที่งาน คั่นด้วย comma': 'File paths in the workspace, separated by commas',
-  'ตรวจและรันใน sandbox': 'Check and run in sandbox',
   'ดูการใช้งาน AI': 'View AI usage',
   ดูและแก้ไขความจำ: 'View and edit memory',
-  'คีย์ลัดและ Vim': 'Shortcuts and Vim',
+  คีย์ลัดแป้นพิมพ์: 'Keyboard shortcuts',
   ดูทัวร์แนะนำอีกครั้ง: 'Replay the tour',
   เปิดตัวช่วยตั้งค่าเริ่มต้น: 'Open setup wizard',
   สลับแถบงาน: 'Toggle task list',
@@ -979,9 +984,6 @@ export const en: Record<string, string> = {
   ธีมตามระบบ: 'System theme',
   ธีมสว่าง: 'Light theme',
   ธีมมืด: 'Dark theme',
-  'Mod คือ Ctrl บน Windows/Linux และ Command บน macOS ใช้รูปแบบ Mod+Alt+Shift+k เว้นว่างเพื่อปิดคีย์ลัด':
-    'Mod means Ctrl on Windows/Linux and Command on macOS. Use the form Mod+Alt+Shift+k; leave blank to turn a shortcut off',
-  'คีย์ลัด ': 'Shortcut ',
   'เปิด Vim ในช่องพิมพ์คำขอ': 'Enable Vim in the message box',
   'เริ่มใน Insert กด Escape เพื่อเข้า Normal ใช้ i/a, h/j/k/l, w/b, 0/$ และ x การพิมพ์ภาษาไทยผ่าน IME ยังคงทำงานตามปกติ':
     'Starts in Insert mode; press Escape for Normal. Supports i/a, h/j/k/l, w/b, 0/$ and x. Thai input through an IME works as usual',
@@ -1025,8 +1027,8 @@ export const en: Record<string, string> = {
   บันทึกเมื่อ: 'Saved',
   แก้ไขล่าสุด: 'Last edited',
   'หลักฐาน:': 'Evidence:',
-  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลข PR/ticket หรือ log ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
-    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, PR/ticket numbers and logs. Working steps belong in a "procedure" lesson or a Skill',
+  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลขงาน หรือบันทึกระบบ ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
+    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, job numbers and system logs. Working steps belong in a "procedure" lesson or a Skill',
   ' · หมดอายุแล้ว': ' · Expired',
   แก้ไข: 'Edit',
   ลบความจำ: 'Delete memory',
@@ -1094,8 +1096,8 @@ export const en: Record<string, string> = {
   'ไฟล์เปลี่ยนระหว่างอ่าน กรุณาแนบไฟล์อีกครั้ง': 'The file changed while being read. Please attach it again',
   'ข้อมูลนี้มีข้อมูลส่วนบุคคล ความลับ หรือเนื้อหาที่ต้องตรวจเพิ่มเติม จึงบันทึกเป็นความจำไม่ได้':
     "This contains personal, confidential or sensitive content that needs review, so it can't be saved as memory",
-  'ข้อความนี้เป็นข้อมูลชั่วคราว เช่น ความคืบหน้างาน เลข PR/ticket/run หรือ log จึงไม่บันทึกเป็นความจำหรือบทเรียน ให้บันทึกเฉพาะข้อเท็จจริงที่ไม่ค่อยเปลี่ยน':
-    "This looks short-lived (task progress, a PR/ticket/run number or a log), so it isn't saved as a memory or lesson. Save only facts that rarely change",
+  'ข้อความนี้เป็นข้อมูลชั่วคราว เช่น ความคืบหน้างาน เลขงาน หรือบันทึกระบบ จึงไม่บันทึกเป็นความจำหรือบทเรียน ให้บันทึกเฉพาะข้อเท็จจริงที่ไม่ค่อยเปลี่ยน':
+    "This looks short-lived (task progress, a job number or a system log), so it isn't saved as a memory or lesson. Save only facts that rarely change",
   'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ':
     'Invalid memory format. Check the name, text, importance and lifetime',
   ไม่พบความจำในขอบเขตที่เลือก: 'No memories found in the selected scope',
@@ -1201,7 +1203,7 @@ export const en: Record<string, string> = {
   'รองรับเฉพาะ PDF และไฟล์ภาพ': 'Only PDF and image files are supported',
   'โฟลเดอร์นี้ไม่ใช่ local-thai-ocr ของ STeP': "This folder isn't STeP's local-thai-ocr",
   'Skill นี้ยังไม่เชื่อม Routing จึงเรียกจากแชทไม่ได้': "This Skill isn't connected to Routing yet, so it can't be called from chat",
-  'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ ใช้ตัวเชื่อมที่มากับแอปแทนได้':
+  'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ กด “กลับไปใช้ตัวเชื่อมที่มากับแอป” แทนได้':
     "The selected file isn't this provider's Codex or Gemini CLI. You can use the connector bundled with the app instead",
   'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่': 'The AI connector is missing from the installation. Please reinstall the app',
   'โมเดลนี้ใช้กับบัญชีหรือแพ็กเกจของคุณไม่ได้ เลือกโมเดลอื่นในกล่องพิมพ์':
@@ -1270,18 +1272,12 @@ export const en: Record<string, string> = {
   ไม่สำเร็จ: 'Failed',
   หยุดแล้ว: 'Stopped',
   งานหยุดเมื่อปิดแอป: 'Stopped when the app closed',
-  'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills Skill ที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติใช้เองบนเครื่องนี้ได้ทันที ส่วน Hooks, Agent และการแชร์ให้ทีมต้องให้ผู้ดูแลรับรอง digest ก่อน เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง':
-    'Import pack.json or a SKILL.md folder, including .claude/skills. Text-only Skills that pass the automated checks can be used on this computer right away; hooks, agents and sharing with a team need your admin to approve the digest first. Content is reference material for drafting.',
-  'ชื่อชุดที่นำเข้าจาก SKILL.md': 'Name of the pack imported from SKILL.md',
   เลือกโฟลเดอร์และนำเข้า: 'Choose folder and import',
-  'เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน': 'Enable admin-approved Hooks on confirm',
-  'เปิด Agent templates เมื่อยืนยัน': 'Enable Agent templates on confirm',
   'ยังไม่มี Skill Pack': 'No Skill Packs yet',
   เปิดใช้: 'Enable',
   ปิดใช้: 'Disable',
   ' · ตรวจไฟล์ไม่ผ่าน': ' · File check failed',
   ยืนยันเปิดใช้: 'Confirm enable',
-  'ส่งออก .claude/skills': 'Export .claude/skills',
   ใช้: 'Use',
   ตรวจความพร้อมก่อนส่ง: 'Readiness check before sending',
   ต้องตอบคำถามแยกประเภทงานก่อน: 'Answer the task-type question first',
@@ -1409,7 +1405,7 @@ export const en: Record<string, string> = {
     'Changes only how the assistant talks in chat. Facts, sources, permissions and document standards stay the same, and it never role-plays a real person',
   'จับภาพรวม ตรงประเด็น เชื่อมกับผลลัพธ์ แล้วจบด้วยสิ่งที่ต้องทำต่อ':
     'Big picture first, straight to the point, tied to outcomes, ending with the next action',
-  'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและ Impact':
+  'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและผลลัพธ์ที่มีความหมาย':
     'Asks questions, opens new perspectives, connects the dots and leads to opportunity and impact',
   สำเนียงภาษา: 'Dialect',
   ใช้ร่วมกับสไตล์ด้านบนได้: 'Can be combined with the style above',
@@ -1439,8 +1435,17 @@ export const en: Record<string, string> = {
   โฟลเดอร์เก็บผลงาน: 'Output folder',
   ยังไม่เลือกโฟลเดอร์: 'No folder selected',
   เลือกโฟลเดอร์: 'Choose folder',
-  'ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ส่วน USER.md (ชื่อ ผู้ช่วย และวิธีพูดคุย) เก็บในโฟลเดอร์นี้เพื่อใช้ร่วมกับ STeP AI บน CLI':
-    'Exported files are saved in this folder, named by team and date. USER.md (your name, assistant and conversation style) lives here too, so STeP AI on the CLI can use it',
+  'ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ชื่อเรียก ผู้ช่วย และวิธีพูดคุยที่ตั้งไว้ก็เก็บในโฟลเดอร์นี้ด้วย':
+    'Exported files are named by team and date in this folder. Your name, assistant and speaking style are kept here too',
+  ขั้นสูง: 'Advanced',
+  'การตั้งค่าเก็บเป็นไฟล์ USER.md เพื่อใช้ร่วมกับ STeP AI บน CLI': 'Settings are kept in USER.md so STeP AI on the CLI can share them',
+  สำหรับผู้ดูแล: 'For administrators',
+  ไฟล์นโยบาย: 'Policy file',
+  ที่มา: 'Source',
+  'การทำงานของ AI': 'How the AI works',
+  ข้อมูลและความเป็นส่วนตัว: 'Data and privacy',
+  ส่วนเสริมและการเชื่อมต่อ: 'Add-ons and connections',
+  การอัปเดตและนักพัฒนา: 'Updates and developers',
   'USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า': 'USER.md is created when you save settings',
   เปิดตำแหน่งไฟล์: 'Show file location',
   'เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์':
@@ -1500,7 +1505,12 @@ export const en: Record<string, string> = {
   'เลิกใช้ runtime ที่เลือกเอง': 'Stop using the custom runtime',
   ใช้ตัวเชื่อมที่มากับแอป: 'Use the connector bundled with the app',
   'สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง': 'For admins: use your own Codex or Gemini CLI',
-  'เลือก runtime': 'Choose runtime',
+  เลือกโปรแกรมเชื่อมต่อเอง: 'Choose a connector yourself',
+  'ตอนนี้ใช้ Antigravity ที่เลือกเอง ไม่ใช่ตัวที่ STeP ติดตั้งให้': 'Using an Antigravity you chose, not the one STeP installed',
+  'ตอนนี้ใช้โปรแกรมเชื่อมต่อที่เลือกเอง ถ้าเชื่อมต่อมีปัญหา ให้กลับไปใช้ตัวที่ติดตั้งมากับแอป':
+    'Using a connector you chose. If connecting fails, switch back to the one bundled with the app',
+  กลับไปใช้ตัวเชื่อมที่มากับแอป: 'Use the connector bundled with the app',
+  ลบบัญชีนี้: 'Remove this account',
   ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง: "Remove this connection's sign-in data from this computer",
   ออกจากระบบ: 'Sign out',
   ลบ: 'Delete',
@@ -1647,7 +1657,7 @@ export const en: Record<string, string> = {
   'ยังเป็นรุ่นทดลอง ตรวจผลกับใบเสร็จจริงอีกครั้งก่อนส่ง':
     'Still a trial feature: check the result against the real receipt before submitting.',
   'Skill คือสูตรงานสำเร็จรูป': 'A Skill is a ready-made work recipe',
-  'Skill รวมขั้นตอนและแบบฟอร์มของงานที่ทำบ่อยไว้ให้ AI ทำตาม ดูทั้งหมดได้ที่นี่ หรือพิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น /receipt-audit':
+  'Skill รวมขั้นตอนและแบบฟอร์มของงานที่ทำบ่อยไว้ให้ AI ทำตาม ดูทั้งหมดได้ที่นี่ หรือพิมพ์ / ในกล่องพิมพ์เพื่อเลือก Skill เช่น ตรวจใบเสร็จ AFP':
     'A Skill bundles the steps and forms of frequent work for the AI to follow. Browse them all here, or type / in the message box to pick one such as /receipt-audit.',
   'เลือก AI และระดับการคิด': 'Choose the AI and reasoning level',
   'ปกติใช้ค่าเริ่มต้นได้เลย เปลี่ยนโมเดลหรือระดับการคิดได้ทุกเมื่อ ระดับสูงคิดละเอียดขึ้นแต่ช้าและใช้โควตามากขึ้น':
@@ -1747,12 +1757,6 @@ export const en: Record<string, string> = {
     'Since 18 June 2026 Google no longer serves Gemini CLI to personal Google accounts or Google AI Pro/Ultra. This method works only for organisation accounts with Gemini Code Assist Standard/Enterprise linked to this project. Personal accounts should choose “API key” and use a Gemini API key instead',
   เก็บเข้ารหัสในเครื่องนี้: 'Stored encrypted on this computer',
   'การใช้งาน AI': 'AI usage',
-  'วันนี้ (UTC)': 'Today (UTC)',
-  เดือน: 'Month',
-  ': ค่าใช้จ่ายประมาณ $': ': estimated cost $',
-  'คำนวณจาก tokens ของ Chat, Draft และ Web Search ที่ provider รายงาน และราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป':
-    "Based on Chat, Draft and Web Search tokens reported by the provider and the prices your admin set. It's an estimate that excludes images, subscriptions and usage outside the app",
-  'tokens ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย': "tokens have no price set yet, so they aren't included in the cost",
   'การใช้งานถึงอย่างน้อย 80% ของงบที่ตั้งไว้ โปรดตรวจยอดก่อนทำงานต่อ':
     'Usage has reached at least 80% of the budget. Please check before continuing',
   ' + รอราคา': ' + price pending',
@@ -2524,14 +2528,14 @@ export const en: Record<string, string> = {
   'บริการ AI ที่ผู้ดูแลกำหนดเอง': 'AI services set up by an administrator',
   'บริการ AI อื่นที่รู้จัก (OpenRouter, Groq ฯลฯ)': 'Other well-known AI services (OpenRouter, Groq, …)',
   สั่งงานแบบไม่เปิดหน้าต่าง: 'Run tasks without a window',
-  'ติดตั้ง Skill Packs': 'Install Skill Packs',
+  'เปิด Skill Pack ที่ผู้ดูแลรับรอง พร้อม Hooks และ Agent': 'Admin-approved Skill Packs with hooks and agents',
   'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว': 'Let the AI split work across several helpers',
   ความจำที่ใช้ร่วมกันในทีม: 'Team-shared memory',
   'ให้ระบบเลือก Skill และถามเพิ่มให้เอง': 'Pick Skills and ask follow-up questions automatically',
   อัปเดตแอปอัตโนมัติ: 'Automatic app updates',
   'ใช้แพ็กเกจ Claude Pro/Max': 'Use a Claude Pro/Max plan',
   ทบทวนหาบทเรียนอัตโนมัติ: 'Automatic lesson review',
-  'เครื่องมือทดลอง OCR': 'OCR trial tools',
+  'บันทึกผลทดลอง OCR สำหรับทีมนำร่อง': 'Save OCR trial results for the pilot team',
   แถบงาน: 'Task sidebar',
   เครื่องมือข้างร่าง: 'Draft side tools',
   แถบหัวหน้าต่าง: 'Window title bar',
@@ -2623,6 +2627,7 @@ export const en: Record<string, string> = {
   'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้':
     'This Skill has not passed the checks; fix the listed items and import it again before using it',
   'ผู้ดูแลปิดการใช้ Skill ที่พนักงานทำเองบนเครื่องนี้': 'Your admin has turned off staff-made Skills on this computer',
+  'ผู้ดูแลปิดการนำเข้า Skill Pack บนเครื่องนี้': 'Your admin has turned off importing Skill Packs on this computer',
   เสนอให้องค์กรใช้: 'Propose for the organization',
   'เสนอให้องค์กรแล้วเมื่อ {0} รอผู้ดูแลพิจารณา': 'Proposed to the organization on {0}, waiting for the admins',
   'ไฟล์เปลี่ยนหลังเสนอเมื่อ {0} เสนอรุ่นใหม่ได้': 'Files changed since you proposed it on {0}; you can propose the new version',
@@ -2644,8 +2649,6 @@ export const en: Record<string, string> = {
   'ล่าสุด {0}': 'last {0}',
   เลิกใช้เอง: 'Stop using',
   ใช้เองบนเครื่องนี้: 'Use on this computer',
-  'ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือให้ผู้ดูแลรับรอง digest ของชุดนี้':
-    "Not usable yet: fix the review findings, or ask your admin to approve this pack's digest",
   'ใช้ Skill นี้เองบนเครื่องนี้': 'Use this Skill on this computer',
   '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล':
     '{0}\nPassed the automated standard and safety checks. It works on this computer only, as reference text for drafting, with no hooks or agents, and is not approved by an admin.',
@@ -2659,4 +2662,87 @@ export const en: Record<string, string> = {
     'Use a Skill you imported on this computer as soon as it passes the checks',
   'ปุ่ม "เสนอให้องค์กรใช้" ส่ง Skill ของคุณให้ผู้ดูแลพิจารณา':
     'The "Propose for the organization" button sends your Skill to the administrators for review',
+  // UI audit 2026-10-17: group C (dialogs)
+  ยังไม่มีงานตามรอบที่ทำแล้ว: 'No scheduled task has run yet',
+  'ผู้ดูแลยังไม่เปิดเครื่องมือ MCP บนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
+    'Your administrator has not turned on MCP tools on this computer. Contact them if you need it',
+  'ใช้บริการที่องค์กรตั้งไว้ การเข้าสู่ระบบและสิทธิ์ Google จัดการโดยองค์กร การค้นหาและการเรียกใช้เครื่องมือจะถามคุณก่อนทุกครั้ง':
+    'Uses the service your organization set up. Your organization manages Google sign-in and permissions. Searching for and running a tool asks you first every time',
+  'ยังไม่ได้ตั้งค่า Google Workspace ติดต่อผู้ดูแลระบบ': 'Google Workspace is not set up yet. Contact your administrator',
+  'เพิ่ม MCP server ที่มี profile google-workspace ใน managed policy แล้วเปิด features.mcp':
+    'Add an MCP server with profile google-workspace to the managed policy, then turn on features.mcp',
+  บริการ: 'Service',
+  เลือกบริการที่ผู้ดูแลกำหนด: 'Choose a service your administrator set up',
+  'เช่น ปฏิทิน หรือ เอกสาร': 'For example, calendar or documents',
+  คัดลอกชื่อจากผลค้นหา: 'Copy the name from the search results',
+  ข้อมูลที่ส่งให้เครื่องมือ: 'Data sent to the tool',
+  'เขียนในรูปแบบ JSON ตามที่ผลค้นหาบอก เช่น {"query": "รายงานประจำเดือน"} ถ้าเครื่องมือไม่ต้องใช้ข้อมูล ปล่อยเป็น {}':
+    'Write it as JSON, as the search results describe, for example {"query": "monthly report"}. If the tool needs no data, leave {}',
+  'พื้นที่ทดลองคำสั่ง (Docker)': 'Command sandbox (Docker)',
+  'ผู้ดูแลยังไม่เปิดพื้นที่ทดลองคำสั่งบนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
+    'Your administrator has not turned on the command sandbox on this computer. Contact them if you need it',
+  'คำสั่งทำงานในพื้นที่แยกที่ผู้ดูแลกำหนด ไม่ต่ออินเทอร์เน็ต และอ่านได้เฉพาะสำเนาไฟล์ที่คุณระบุ':
+    'Commands run in a separate space your administrator set up, with no internet, and can read only copies of the files you list',
+  'ไฟล์ที่ใช้ (ไม่บังคับ)': 'Files to use (optional)',
+  'เช่น รายงาน/ข้อมูล.csv': 'For example, reports/data.csv',
+  'ตำแหน่งไฟล์ในพื้นที่งาน ถ้ามีหลายไฟล์ คั่นด้วยเครื่องหมายจุลภาค (,)':
+    'File locations in the workspace. Separate several files with commas (,)',
+  ตรวจและทำงานในพื้นที่ทดลอง: 'Check and run in the sandbox',
+  'พิมพ์คีย์ลัดในช่องทางขวาของแต่ละคำสั่ง เช่น {0} เว้นว่างเพื่อปิดคีย์ลัดของคำสั่งนั้น':
+    'Type a shortcut in the box to the right of each command, for example {0}. Leave it blank to turn that shortcut off',
+  คีย์ลัดของแต่ละคำสั่ง: 'Shortcut for each command',
+  'คีย์ลัด {0}': 'Shortcut for {0}',
+  ไม่มีคีย์ลัด: 'No shortcut',
+  'นำเข้าชุด Skill (คู่มือที่บอก AI ว่าทำงานเรื่องหนึ่งอย่างไร) จากโฟลเดอร์บนเครื่อง ชุดที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติ ใช้เองบนเครื่องนี้ได้ทันที ส่วนชุดที่มีคำสั่งอัตโนมัติ ผู้ช่วยสำเร็จรูป หรือจะแชร์ให้ทั้งทีม ต้องให้ผู้ดูแลรับรองก่อน เนื้อหาในชุดเป็นข้อมูลประกอบการร่างเท่านั้น':
+    'Import a Skill set (a guide that tells the AI how to do one kind of work) from a folder on this computer. A text-only set that passes the automatic checks works for you on this computer right away. A set with automatic commands or ready-made assistants, or one to share with your team, needs administrator approval first. Its content is only reference material for drafts',
+  'ตั้งชื่อชุด (ใช้เมื่อนำเข้าโฟลเดอร์ Skill เดี่ยว)': 'Set name (used when importing a single Skill folder)',
+  'เมื่อกด "ยืนยันเปิดใช้" ชุดที่ผู้ดูแลรับรองแล้ว': 'When you press "Confirm and turn on" for an approved set',
+  เปิดคำสั่งอัตโนมัติที่ผู้ดูแลรับรองไว้ด้วย: 'Also turn on its approved automatic commands',
+  เปิดผู้ช่วยสำเร็จรูปที่มากับชุดด้วย: 'Also turn on the ready-made assistants in the set',
+  'รับไฟล์ pack.json โฟลเดอร์ที่มี SKILL.md และ .claude/skills คำสั่งอัตโนมัติคือ Hooks ผู้ช่วยสำเร็จรูปคือ Agent templates ทั้งสองเปิดได้เฉพาะชุดที่มี digest อยู่ในรายการรับรองของ managed policy':
+    'Accepts pack.json, a folder with SKILL.md, and .claude/skills. Automatic commands are Hooks; ready-made assistants are Agent templates. Both turn on only for a set whose digest is in the managed policy approval list',
+  'ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือขอให้ผู้ดูแลรับรองชุดนี้':
+    'Not usable yet: fix what the check found, or ask an administrator to approve this set',
+  'ส่งออกเป็นโฟลเดอร์ Skill': 'Export as a Skill folder',
+  'รุ่นก่อนหน้า ({0} รุ่น)': 'Earlier versions ({0})',
+
+  // UI audit 2026-10-17: A (chat, sidebar and draft panel)
+  รอคุณตอบ: 'Waiting for your answer',
+  รอคุณอนุญาต: 'Waiting for your permission',
+  'ยังไม่มีร่างที่บันทึก งานที่มีร่างจาก AI หรือร่างที่คุณบันทึกจะอยู่ที่นี่':
+    'No saved drafts yet. Tasks with a draft from the AI or one you saved appear here',
+  'ตรวจการเชื่อมต่อ AI': 'Check the AI connection',
+  'รหัสสำหรับแจ้งผู้ดูแล: {0}': 'Code for your administrator: {0}',
+  'ตอบคำถามของผู้ช่วยด้านบนก่อน แล้วพิมพ์คำขอต่อได้': 'Answer the assistant’s question above first, then type your next request',
+  งานล่าสุดไม่สำเร็จ: 'Last task failed',
+  มีการแก้ไขที่ยังไม่บันทึก: 'Unsaved changes',
+  'ยังไม่มีร่าง · AI จะใส่ร่างที่นี่ หรือพิมพ์เองได้': 'No draft yet · the AI puts its draft here, or type your own',
+  อนุมัติแผน: 'Approve plan',
+  ขั้นตอนของแผน: 'Plan steps',
+  'ตัวอย่างข้อความที่จะส่ง (ปิดบังข้อมูลแล้ว)': 'Preview of the text to send (personal data masked)',
+  รายละเอียดสำหรับผู้ดูแล: 'Details for administrators',
+  'ส่งผลการใช้เครื่องมือให้ AI': 'Send tool results to the AI',
+  เปิดเว็บปลายทาง: 'Open the destination website',
+  อ่านเว็บไซต์: 'Read website',
+  '{0} จะส่งให้ {1}': '{0} will be sent to {1}',
+  คำค้น: 'The search query',
+  ที่อยู่เว็บ: 'The web address',
+  ผลจากเครื่องมือ: 'The tool result',
+  ความยาว: 'Length',
+  '{0} ตัวอักษร': '{0} characters',
+  การปิดบังข้อมูล: 'Masking',
+  'ปิดบังแล้ว: {0}': 'Masked: {0}',
+  ปิดบังบางส่วนแล้ว: 'Partly masked',
+  ไม่พบข้อมูลส่วนบุคคลที่ต้องปิดบัง: 'No personal data found to mask',
+  'ไฟล์ข้อความในโฟลเดอร์งานหลัก (ไม่รวมโฟลเดอร์ย่อย)': 'Text files in the main work folder (not subfolders)',
+  คำตอบของคุณ: 'Your answer',
+  ผลการอนุมัติแผนของคุณ: 'Your plan approval',
+  รายชื่อไฟล์ในโฟลเดอร์งาน: 'The list of files in the work folder',
+  'เนื้อหาไฟล์ {0}': 'The content of {0}',
+  'สถานะการเตรียมร่าง {0}': 'Draft status of {0}',
+  ผลการอ่านเว็บ: 'The web page content',
+  ผลค้นงานเก่าบนเครื่องนี้: 'Results from earlier tasks on this computer',
+  'เอกสาร {0}': 'Document {0}',
+  'ไฟล์ {0} รอคุณตรวจในรายการแก้ไข': '{0} is waiting for your review in Changes',
+  'บันทึกไฟล์ {0} แล้ว': '{0} saved',
 };

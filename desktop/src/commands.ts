@@ -10,7 +10,7 @@ export const COMMANDS = [
   ['learning', 'กล่องบทเรียน', ''],
   ['automations', 'งานตามรอบและเครื่องมือเพิ่มเติม', 'Mod+Shift+b'],
   ['settings', 'ตั้งค่าพื้นที่ทำงาน', 'Mod+,'],
-  ['keyboard', 'คีย์ลัดและ Vim', ''],
+  ['keyboard', 'คีย์ลัดแป้นพิมพ์', ''],
   ['packs', 'Skill Packs', ''],
   ['tour', 'ดูทัวร์แนะนำอีกครั้ง', ''],
   ['whats-new', 'มีอะไรใหม่ในรุ่นนี้', ''],
@@ -18,24 +18,55 @@ export const COMMANDS = [
   ['left', 'สลับแถบงาน', ''],
   ['right', 'สลับร่าง', ''],
   ['skills', 'ศูนย์รวม Skill', ''],
-  ['receipt', 'ตรวจใบเสร็จก่อนส่ง AFP', ''],
+  ['receipt', 'ตรวจใบเสร็จ AFP', ''],
   ['documents', 'เครื่องมือร่างเอกสาร', ''],
   ['theme-system', 'ธีมตามระบบ', ''],
   ['theme-light', 'ธีมสว่าง', ''],
   ['theme-dark', 'ธีมมืด', ''],
 ] as const;
 export type CommandId = (typeof COMMANDS)[number][0];
+const STORED_COMBO = /^(?:Mod\+)(?:Alt\+)?(?:Shift\+)?(?:[a-z0-9]|,|\.)$/;
+/** The keyboard dialog shows a valid stored combination in platform keys, and anything half-typed as typed. */
+export const editableShortcut = (combo: string) => (STORED_COMBO.test(combo) ? shortcutText(combo) : combo);
+
+const macKeys = () => typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
+/**
+ * A stored combination ("Mod+Shift+u") as people read it on this platform: Ctrl+Shift+U on Windows and Linux,
+ * ⌘⇧U on a Mac. Display only; settings keep the stored form.
+ */
+export function shortcutText(combo: string, mac = macKeys()) {
+  return combo
+    ? combo
+        .replace('Mod+', mac ? '⌘' : 'Ctrl+')
+        .replace('Alt+', mac ? '⌥' : 'Alt+')
+        .replace('Shift+', mac ? '⇧' : 'Shift+')
+        .replace(/([a-z])$/, c => c.toUpperCase())
+    : '';
+}
+/**
+ * Reads what someone typed in the keyboard dialog back to the stored form. Accepts the shown form (Ctrl+K, ⌘⇧U),
+ * the stored form (Mod+k) and common spellings (Cmd, Command, Control, Option). Anything else is returned unchanged
+ * so saving reports it as invalid.
+ */
+export function parseShortcut(text: string) {
+  const value = text.trim();
+  if (!value) return '';
+  const rest = value
+    .replace(/\b(?:mod|ctrl|control|cmd|command)\b|⌘|⌃/gi, '\u0001')
+    .replace(/\b(?:alt|option|opt)\b|⌥/gi, '\u0002')
+    .replace(/\bshift\b|⇧/gi, '\u0003')
+    .replace(/\s+/g, '');
+  const match = rest.match(/^((?:[\u0001\u0002\u0003]\+?)+)([^+])$/);
+  if (!match || !match[1].includes('\u0001')) return value;
+  return 'Mod+' + (match[1].includes('\u0002') ? 'Alt+' : '') + (match[1].includes('\u0003') ? 'Shift+' : '') + match[2].toLowerCase();
+}
 export type Keybindings = Partial<Record<CommandId, string>>;
 export function validateKeybindings(value: unknown): Keybindings {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_KEYBINDINGS');
   const result: Keybindings = {},
     used = new Set<string>();
   for (const [id, combo] of Object.entries(value)) {
-    if (
-      !COMMANDS.some(c => c[0] === id) ||
-      typeof combo !== 'string' ||
-      (combo && !/^(?:Mod\+)(?:Alt\+)?(?:Shift\+)?(?:[a-z0-9]|,|\.)$/.test(combo))
-    )
+    if (!COMMANDS.some(c => c[0] === id) || typeof combo !== 'string' || (combo && !STORED_COMBO.test(combo)))
       throw new Error('INVALID_KEYBINDINGS');
     result[id as CommandId] = combo;
   }
@@ -61,11 +92,12 @@ export function commandPalette(
   dynamic: PaletteItem[],
 ): PaletteItem[] {
   return [
-    ...COMMANDS.filter(([id]) => actions[id]).map(([id, label, fallback]) => ({
+    // "Open commands" would only reopen the palette the person is already in.
+    ...COMMANDS.filter(([id]) => id !== 'palette' && actions[id]).map(([id, label, fallback]) => ({
       id,
       label: t(label),
       group: t('คำสั่ง'),
-      hint: bindings[id] ?? fallback,
+      hint: shortcutText(bindings[id] ?? fallback),
       run: actions[id]!,
     })),
     ...dynamic,

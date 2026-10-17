@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Check,
   RefreshCw,
+  Search,
   type LucideIcon,
 } from 'lucide-react';
 import { language } from './i18n';
@@ -38,6 +39,9 @@ const words = {
   ],
   add: ['เพิ่มบัญชีเว็บไซต์', 'Add website account'],
   label: ['ชื่อเรียกบัญชี', 'Account label'],
+  search: ['ค้นหาบัญชีเว็บไซต์ที่บันทึกไว้', 'Search saved website accounts'],
+  editHeading: ['แก้ไขบัญชีเว็บไซต์', 'Edit website account'],
+  emptyHint: ['กด “เพิ่มบัญชีเว็บไซต์” เพื่อเก็บบัญชีแรก', 'Press “Add website account” to save the first one'],
   origin: ['เว็บไซต์ที่ใช้ได้', 'Allowed website'],
   username: ['Username / อีเมล', 'Username / email'],
   password: ['Password', 'Password'],
@@ -98,7 +102,7 @@ const words = {
   disconnect: ['เลิกเชื่อมในเครื่อง', 'Disconnect locally'],
   open: ['เปิดบริการของ Google ในเบราว์เซอร์', 'Open Google services in the browser'],
   verifyBrowser: [
-    'ตรวจบัญชีที่มุมขวาของ Google อีกครั้ง บัญชีใน browser อาจต่างจากบัญชีที่เชื่อมในแอป',
+    'ตรวจบัญชีที่มุมขวาของ Google อีกครั้ง บัญชีในเบราว์เซอร์อาจต่างจากบัญชีที่เชื่อมในแอป',
     'Verify the account in Google. Your browser account can differ from the account connected here.',
   ],
   selectServices: ['เลือกบริการที่ต้องใช้', 'Select the services you need'],
@@ -116,7 +120,7 @@ type ServiceInfo = { icon: LucideIcon; name: [string, string]; detail: [string, 
 const SERVICES: Record<GoogleService, ServiceInfo> = {
   documents: {
     icon: FileText,
-    name: ['Docs / Sheets / Slides', 'Docs / Sheets / Slides'],
+    name: ['เอกสาร ชีต และสไลด์', 'Docs, Sheets and Slides'],
     detail: ['สร้างและแก้เอกสารที่แอปนี้เปิดหรือสร้างเอง', 'Create and edit documents this app opens or creates'],
     changes: true,
   },
@@ -295,6 +299,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
           <form
             className="credential-form"
             autoComplete="off"
+            aria-labelledby="credential-form-heading"
             onSubmit={event => {
               event.preventDefault();
               const input = { ...form, kind: 'website' };
@@ -302,6 +307,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
               void run('save', () => call('vaultSave', input));
             }}
           >
+            <h3 id="credential-form-heading">{form.id ? w('editHeading') : w('add')}</h3>
             <label>
               {w('label')}
               <input required maxLength={100} value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} />
@@ -353,14 +359,25 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             </div>
           </form>
         )}
-        <input
-          className="credential-search"
-          aria-label={w('label')}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={w('label')}
-        />
-        {!websites.length && <p className="muted">{w('empty')}</p>}
+        {/* Search only once there is something to search, and say it is a search, so it is never taken for the add form. */}
+        {Boolean(vault?.entries.some(v => v.kind === 'website')) && (
+          <label className="credential-search">
+            <Search size={15} aria-hidden="true" />
+            <input
+              type="search"
+              aria-label={w('search')}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={w('search')}
+            />
+          </label>
+        )}
+        {!websites.length && (
+          <p className="muted">
+            {w('empty')}
+            {!query && vault?.enabled && !form ? <span className="small"> · {w('emptyHint')}</span> : null}
+          </p>
+        )}
         {websites.map(entry => (
           <article className="credential-row" key={entry.id}>
             <div>

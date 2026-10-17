@@ -232,7 +232,7 @@ try {
     { home },
   );
   await page.getByRole('button', { name: 'ตัวเลือกงานนี้' }).click();
-  await page.getByRole('menuitem', { name: 'ส่งออก JSON', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'บันทึกบทสนทนาเป็นไฟล์', exact: true }).click();
   await expect
     .poll(async () =>
       readFile(join(home, 'conversation.json'), 'utf8')

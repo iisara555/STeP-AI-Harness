@@ -71,7 +71,8 @@ export function InternalMedia({
   const audit = result.ready
     ? t('พร้อมคัดลอก · ตรวจเนื้อหาก่อนใช้จริง')
     : [
-        ...result.missing.map(m => t('กรอก {0}', t(m === 'หัวข้อ' ? 'เรื่องที่ต้องการสื่อสาร' : m))),
+        // Name the field on screen: the topic box, or the one content box that both content checks refer to.
+        ...new Set(result.missing.map(m => t('กรอก {0}', m === 'หัวข้อ' ? t('เรื่องที่ต้องการสื่อสาร') : t('เนื้อหา / ขั้นตอนที่จะใช้')))),
         ...result.warnings.map(w => t(w)),
       ].join(' · ');
   return (
@@ -243,16 +244,17 @@ export function InternalMedia({
             <h2>{t('Prompt ของคุณ')}</h2>
             <span className="small muted">{t('ใช้ภายในเท่านั้น')}</span>
           </header>
-          <p role="status" aria-live="polite" className={result.ready ? 'small' : 'small media-audit-pending'}>
-            {audit}
-          </p>
-          <textarea readOnly rows={16} aria-label={t('Prompt พร้อมใช้')} value={result.prompt} />
-          <div className="media-actions">
+          {/* Sticky: what is still missing and the copy button stay in view while the lower fields are filled. */}
+          <div className="media-copy-bar">
+            <p role="status" aria-live="polite" className={result.ready ? 'small' : 'small media-audit-pending'}>
+              {audit}
+            </p>
             <button type="button" className="primary" disabled={!result.ready} onClick={() => void copy(result.prompt)}>
               <Copy size={16} />
               {t('คัดลอก Prompt')}
             </button>
           </div>
+          <textarea readOnly rows={16} aria-label={t('Prompt พร้อมใช้')} value={result.prompt} />
           <MediaPreview state={state} />
           <p className="small muted">
             {t('Simple · Service · Sincere · เหลือง #FFC709 · ดำ #231F20 · ห้าม AI สร้างโลโก้ทุกชนิด ตรวจตัวสะกดและความถูกต้องก่อนใช้จริง')}

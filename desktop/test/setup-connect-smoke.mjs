@@ -16,7 +16,7 @@ try {
   const wizard = page.getByRole('dialog', { name: 'ตั้งค่าเริ่มต้น STeP Desktop' });
   await expect(wizard.getByRole('heading', { name: 'เลือก AI และเชื่อมต่อ', exact: true })).toBeVisible();
   await expect(wizard.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toHaveCount(0);
-  await expect(wizard.getByRole('radio', { name: /Gemini via Antigravity/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(wizard.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toHaveAttribute('aria-checked', 'true');
   const connect = wizard.getByRole('button', { name: 'เชื่อมต่อ Antigravity', exact: true });
   await expect(connect).toBeVisible();
   await mkdir('release/qa/connect-ai', { recursive: true });

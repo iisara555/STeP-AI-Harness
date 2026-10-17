@@ -300,11 +300,19 @@ test('draft progress consent covers only clean answers and receipts, never file 
   const f = await fixture();
   f.allowRun();
   const host = await f.tools.host(f.scope);
+  // The employee's own answer and plan approval, given in the app a moment ago, are not asked about again (UI audit H2).
   await host.outgoing('{"answer":"Brief"}', f.scope.signal, { tool: 'ask_user', input: 'Style?' });
-  const count = f.requests();
   await host.outgoing('{"approved":true}', f.scope.signal, { tool: 'plan', input: 'Draft' });
+  assert.equal(f.requests(), 0);
+  // Anything else in an answer envelope, or an answer the privacy scan flags, still asks.
+  await host.outgoing('{"answer":"Brief","extra":"x"}', f.scope.signal, { tool: 'ask_user', input: 'Style?' });
+  assert.equal(f.requests(), 1);
+  await host.outgoing('{"answer":"Contact sample@example.com"}', f.scope.signal, { tool: 'ask_user', input: 'Style?' });
+  assert.equal(f.requests(), 2);
+  const count = f.requests();
   await host.outgoing('{"status":"staged-for-human-review"}', f.scope.signal, { tool: 'changes', input: 'draft.md', content: 'Draft' });
-  assert.equal(f.requests(), count);
+  await host.outgoing('{"status":"staged-for-human-review"}', f.scope.signal, { tool: 'changes', input: 'other.md', content: 'Draft' });
+  assert.equal(f.requests(), count, 'the draft-progress scope chosen above covers clean draft receipts');
   await host.outgoing('File content', f.scope.signal, { tool: 'changes', input: 'draft.md', args: { action: 'diff' } });
   assert.equal(f.requests(), count + 1);
   await host.outgoing('Web content', f.scope.signal, { tool: 'browser_control', input: 'tab', args: { action: 'read' } });

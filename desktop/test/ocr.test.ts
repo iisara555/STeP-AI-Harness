@@ -218,3 +218,12 @@ test('an old OCR child exit cannot clear the child owned by a restart', async t 
   assert.equal(children[0].kills, 1);
   assert.equal(children[1].kills, 1);
 });
+
+test('policy switches guard what they name: ocrTrial for trial saves, skillPacks or staffSkills for pack import', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const main = await readFile(new URL('../electron/main.ts', import.meta.url), 'utf8');
+  assert.match(main, /if \(trial && !policyState\.policy\.features\.ocrTrial\) throw new Error\('FEATURE_DISABLED'\)/);
+  assert.match(main, /case 'packInstall': \{\s+if \(!packImportAllowed\(policyState\.policy\)\) throw new Error\('PACK_IMPORT_DISABLED'\)/);
+  const packs = await readFile(new URL('../src/packs.tsx', import.meta.url), 'utf8');
+  assert.match(packs, /disabled=\{busy \|\| !importAllowed\}/);
+});

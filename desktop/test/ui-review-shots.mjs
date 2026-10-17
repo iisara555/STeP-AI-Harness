@@ -105,7 +105,7 @@ try {
   const screens = [
     ['07-skills-hub', 'ศูนย์รวม Skill', '.skills-hub'],
     ['08-documents', 'เครื่องมือร่างเอกสาร', '.document-tools'],
-    ['09-receipt', 'ตรวจใบเสร็จก่อนส่ง AFP', '.receipt-app'],
+    ['09-receipt', 'ตรวจใบเสร็จ AFP', '.receipt-app'],
   ];
   for (const [name, label, selector] of screens) {
     await palette(label);
@@ -118,7 +118,7 @@ try {
     ['11-memory', 'ดูและแก้ไขความจำ'],
     ['12-learning', 'กล่องบทเรียน'],
     ['13-automations', 'งานตามรอบและเครื่องมือเพิ่มเติม'],
-    ['14-keyboard', 'คีย์ลัดและ Vim'],
+    ['14-keyboard', 'คีย์ลัดแป้นพิมพ์'],
     ['15-packs', 'Skill Packs'],
     ['16-whats-new', 'มีอะไรใหม่ในรุ่นนี้'],
   ]) {

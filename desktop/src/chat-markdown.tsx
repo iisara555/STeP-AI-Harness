@@ -77,7 +77,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
           {copied ? t('คัดลอกแล้ว') : t('คัดลอกโค้ด')}
         </button>
       </header>
-      <pre>{html ? <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} /> : <code>{code}</code>}</pre>
+      <pre tabIndex={0}>{html ? <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} /> : <code>{code}</code>}</pre>
     </figure>
   );
 }

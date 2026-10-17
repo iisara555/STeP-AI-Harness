@@ -47,7 +47,9 @@ try {
   await expect(page.getByRole('button', { name: 'เริ่มงานใหม่' }).first()).toBeVisible();
   await page.waitForTimeout(500);
   await expect(page.getByRole('dialog', { name: 'มีอะไรใหม่' })).toHaveCount(0);
-  // The version sits under the person's name.
+  // At 1100px with the draft panel open the task list folds to the icon rail; opening it shows the version under the name.
+  await expect(page.locator('.profile')).toHaveCount(0);
+  await page.getByRole('button', { name: 'งานทั้งหมด' }).first().click();
   await expect(page.locator('.profile .version-line')).toContainText(`v${version}`);
   await page.keyboard.press('ControlOrMeta+k');
   await page

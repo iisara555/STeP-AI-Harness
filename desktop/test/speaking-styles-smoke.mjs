@@ -41,7 +41,7 @@ try {
   };
   let picker = await open();
   const names = (await picker.getByRole('radio').allInnerTexts()).map(text => text.split('\n')[0].trim());
-  assert.deepEqual(names, ['เพื่อนร่วมงาน', 'มืออาชีพ', 'กระชับ', 'กำหนดเอง', 'Witty', 'Ob-Oon']);
+  assert.deepEqual(names, ['เพื่อนร่วมงาน', 'มืออาชีพ', 'กระชับ', 'กำหนดเอง', 'คมคาย (Witty)', 'ชวนคิด (Ob-Oon)']);
   await expect(picker.getByRole('radio', { name: /เพื่อนร่วมงาน/ })).toHaveAttribute('aria-checked', 'true');
   if (shots) await page.screenshot({ path: join(shots, 'speaking-styles.png'), fullPage: true });
 

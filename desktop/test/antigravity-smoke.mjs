@@ -67,7 +67,7 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   // Employees find Antigravity among the services, not only in the administrators' form.
-  await page.getByRole('radio', { name: /Gemini via Antigravity/ }).click();
+  await page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ }).click();
   await page.getByText('ตัวเลือก Antigravity', { exact: true }).click();
   assert.equal(await page.getByLabel('โมเดล', { exact: true }).inputValue(), 'gemini-3.8-flash-medium');
   assert.equal(await page.getByLabel(/API key/).count(), 0);
@@ -77,7 +77,7 @@ try {
   assert.equal(await page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ }).inputValue(), 'subscription');
   assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
   assert.equal(await page.getByLabel(/Google Cloud Project ID/).count(), 0);
-  assert.equal(await page.getByLabel('Gemini model').inputValue(), 'gemini-3.8-flash-medium');
+  assert.equal(await page.getByLabel('โมเดล Gemini').inputValue(), 'gemini-3.8-flash-medium');
   await expect(page.getByText(/ปิดเครื่องมือของ Antigravity ทั้งหมด/)).toBeVisible();
   // Save this test connection directly so the real one-click UI cannot install/sign in to a provider.
   await page.evaluate(() =>
@@ -222,7 +222,9 @@ try {
   warming = true;
   await page.reload();
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
-  await page.getByText('AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ').waitFor();
+  await page
+    .getByText('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น')
+    .waitFor();
   await page.getByText('OCR ในเครื่องพร้อมใช้', { exact: false }).waitFor();
   const started = await page.evaluate(connectionId => window.step.call('ocrStart', { connectionId }), connection.id);
   assert.equal(started.textOnly, true);

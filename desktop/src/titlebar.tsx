@@ -1,21 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ChevronDown, PanelLeft, PanelRight, RefreshCw, Search } from 'lucide-react';
 import type { DesktopAPI, UpdateState } from './types';
-import type { CommandId } from './commands';
+import { shortcutText, type CommandId } from './commands';
 import { t } from './i18n';
 import { useUpdate } from './update';
 
 const mac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
-const mod = mac ? '⌘' : 'Ctrl+';
-/** A key combination as people read it on this platform: ⌘K on a Mac, Ctrl+K elsewhere. */
-export const shortcutText = (combo: string) =>
-  combo
-    ? combo
-        .replace('Mod+', mod)
-        .replace('Alt+', mac ? '⌥' : 'Alt+')
-        .replace('Shift+', mac ? '⇧' : 'Shift+')
-        .replace(/([a-z])$/, c => c.toUpperCase())
-    : '';
+// One formatter for every place a shortcut is shown (title bar, menus, palette, keyboard dialog).
+export { shortcutText } from './commands';
 
 type Item = { id: string; label: string; hint?: string; run: () => void; danger?: boolean };
 type Group = { label: string; items: Item[] };
@@ -101,11 +93,7 @@ export function TitleBar({
   const groups: Group[] = [
     {
       label: t('งาน'),
-      items: [
-        command('new', t('เริ่มงานใหม่')),
-        command('palette', t('ค้นหางานและคำสั่ง')),
-        command('receipt', t('ตรวจใบเสร็จก่อนส่ง AFP')),
-      ],
+      items: [command('new', t('เริ่มงานใหม่')), command('palette', t('ค้นหางานและคำสั่ง')), command('receipt', t('ตรวจใบเสร็จ AFP'))],
     },
     {
       label: t('มุมมอง'),
@@ -130,7 +118,7 @@ export function TitleBar({
       label: t('ช่วยเหลือ'),
       items: [
         command('settings', t('ตั้งค่าพื้นที่ทำงาน')),
-        command('keyboard', t('คีย์ลัดและ Vim')),
+        command('keyboard', t('คีย์ลัดแป้นพิมพ์')),
         command('tour', t('ดูทัวร์แนะนำอีกครั้ง')),
         {
           id: 'update',

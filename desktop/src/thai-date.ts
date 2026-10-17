@@ -54,3 +54,28 @@ export function formatThaiDate(date: Date, style: 'short' | 'official' = 'short'
     ? `${day} ${MONTHS[month][1]} ${year}`
     : `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
 }
+
+/**
+ * The one staff-facing format for a moment or a day, in the person's own time zone: 17/10/2569 (Buddhist era,
+ * day/month) and, with a time, 17/10/2569 14:05 น. English uses the same order with the common era. A bare
+ * YYYY-MM-DD day key is read as that calendar day, not as UTC midnight. Returns '' for an unreadable value.
+ */
+export function formatLocalDate(value: string | number | Date, options: { time?: boolean; english?: boolean } = {}): string {
+  const dayKey = typeof value === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  const date = dayKey ? new Date(Number(dayKey[1]), Number(dayKey[2]) - 1, Number(dayKey[3])) : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const two = (n: number) => String(n).padStart(2, '0');
+  const day = `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear() + (options.english ? 0 : 543)}`;
+  if (!options.time || dayKey) return day;
+  const clock = `${two(date.getHours())}:${two(date.getMinutes())}`;
+  return options.english ? `${day} ${clock}` : `${day} ${clock} น.`;
+}
+
+/** A YYYY-MM month key as staff read it: ต.ค. 2569 (or Oct 2026). Unknown text is returned unchanged. */
+export function formatLocalMonth(value: string, options: { english?: boolean } = {}): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  const month = match ? Number(match[2]) - 1 : -1;
+  if (!match || month < 0 || month > 11) return value;
+  const name = options.english ? MONTHS[month][2][0].toUpperCase() + MONTHS[month][2].slice(1) : MONTHS[month][0];
+  return `${name} ${Number(match[1]) + (options.english ? 0 : 543)}`;
+}

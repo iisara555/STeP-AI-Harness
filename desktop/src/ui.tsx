@@ -195,11 +195,12 @@ export function CommandPalette({ items, onClose }: { items: PaletteItem[]; onClo
               if (e.key === 'Escape') onClose();
             }}
             role="combobox"
-            aria-expanded="true"
+            aria-expanded={matches.length > 0}
             aria-controls="palette-list"
           />
         </label>
-        <div className="palette-list" id="palette-list" role="listbox" ref={list}>
+        {/* A listbox must hold options; with no match the list is a plain region and the message is announced. */}
+        <div className="palette-list" id="palette-list" role={matches.length ? 'listbox' : undefined} ref={list}>
           {matches.map((item, index) => {
             const heading = item.group !== group ? (group = item.group) : '';
             return (
@@ -218,7 +219,11 @@ export function CommandPalette({ items, onClose }: { items: PaletteItem[]; onClo
               </div>
             );
           })}
-          {!matches.length && <p className="muted small palette-empty">{t('ไม่พบงานหรือคำสั่งที่ตรงกัน')}</p>}
+          {!matches.length && (
+            <p className="muted small palette-empty" role="status">
+              {t('ไม่พบงานหรือคำสั่งที่ตรงกัน')}
+            </p>
+          )}
         </div>
       </section>
     </div>
@@ -517,7 +522,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     key('gemini', 'Gemini', t('คีย์จาก Google AI Studio มีแบบใช้ฟรี')),
     {
       id: 'antigravity',
-      label: 'Gemini via Antigravity',
+      label: t('Gemini ผ่าน Antigravity'),
       description: t('แนะนำสำหรับผู้มีสิทธินักศึกษา ใช้บัญชี Google และตรวจสิทธิ์ของบัญชีก่อนเริ่ม (ทดลอง)'),
       kind: 'account',
       choice: { ...initialChoice, provider: 'antigravity', mode: 'subscription', model: ANTIGRAVITY_MODEL },
@@ -774,7 +779,7 @@ function AdvancedProviderFields({
           >
             <option value="openai">OpenAI (ChatGPT)</option>
             <option value="gemini">Gemini (Google)</option>
-            <option value="antigravity">Gemini via Antigravity (experimental)</option>
+            <option value="antigravity">{t('Gemini ผ่าน Antigravity (ทดลอง)')}</option>
             <option value="claude">Claude (Anthropic)</option>
             <option value="compatible">Compatible endpoint / Ollama</option>
             <option value="copilot">GitHub Copilot</option>
@@ -837,7 +842,7 @@ function AdvancedProviderFields({
       {provider === 'antigravity' && (
         <div>
           <label>
-            Gemini model
+            {t('โมเดล Gemini')}
             <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
           </label>
           <p className="small muted">

@@ -65,3 +65,15 @@ export function withThaiBreaks(node: DraftNode): DraftNode {
     }),
   };
 }
+
+/**
+ * UI copy: Thai writes a space between phrases, and the line-break dictionary also splits compounds the eye reads as
+ * one word ("งบ|ประมาณ", "ผู้รับ|ผิด|ชอบ", "รุ่น|นี้"). Short space-separated phrases are kept whole; a longer run
+ * keeps the dictionary's breaks so it can still wrap inside a narrow card.
+ */
+export function thaiPhrases(text: string, maxUnits = 16): { text: string; keep: boolean }[] {
+  return text
+    .split(/(\s+)/)
+    .filter(Boolean)
+    .map(part => ({ text: part, keep: !/^\s+$/.test(part) && /[ก-๎]/.test(part) && textUnits(part) <= maxUnits }));
+}
