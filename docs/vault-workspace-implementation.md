@@ -50,7 +50,14 @@ Merge these non-secret fields into the existing protected Desktop policy only af
 }
 ```
 
-Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar-read`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner supplied a verified Desktop app client on 2026-10-14 and requested release-wide activation. Desktop 0.6.5 bundles only its public client ID, with `step.cmu.ac.th` and documents/calendar/tasks selectable. No client secret is needed in policy or bundled. Managed policy can replace or clear the configuration and deny these capabilities. Project API enablement, audience/test-user setup and tenant access remain separate from client-type validation.
+Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar-read`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner supplied a verified Desktop app client on 2026-10-14 and requested release-wide activation. Desktop 0.6.5 bundles only its public client ID, with `step.cmu.ac.th` and documents/calendar/tasks selectable. Managed policy can replace or clear the configuration and deny these capabilities. Project API enablement, audience/test-user setup and tenant access remain separate from client-type validation.
+
+The employee confirmed `GOOGLE_CLIENT_SECRET_REQUIRED` on 2026-10-17: a Desktop client can require its issued secret
+alongside PKCE. Use the native **Import OAuth client file** action in Google Workspace settings to select the Desktop
+app JSON downloaded from Google Cloud, then reconnect. The selected client ID must match policy; Web client JSON is
+refused. The bounded file is read only in the main process, and only its secret is saved as a purpose-bound encrypted
+`google-client` Vault credential. It is used for both code exchange and refresh; browser URLs, renderer state, policy,
+account metadata and tools never receive it. No secret is bundled or committed. See [administrator steps](desktop-policy.md#desktop-oauth-client-credentials).
 
 On 2026-10-14, a user-authorized identity-only Google OAuth Playground check verified a signed, unexpired ID token with `hd=step.cmu.ac.th`, matching issuer, audience and the requested account. No refresh token was requested or received. This confirms that account's hosted domain, not a configured Desktop grant or live Workspace service acceptance. No account identifiers or tokens are recorded here. The authorization URL now supplies the configured domain as a UI hint (or `hd=*` for multiple domains); the signed claim allowlist remains the access check.
 

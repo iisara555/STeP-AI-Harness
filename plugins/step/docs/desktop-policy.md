@@ -199,12 +199,28 @@ The release enables `vault`, `googleWorkspace` and `developmentMode` without a p
 
 The bundled configuration contains only the public installed-app client ID, `step.cmu.ac.th` and `documents`, `calendar-read`, `tasks`. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
 
+### Desktop OAuth client credentials
+
+Google can require the issued `client_secret` for a Desktop app even when PKCE is used. The employee-device failure
+confirmed on 2026-10-17 was `GOOGLE_CLIENT_SECRET_REQUIRED`; repeating browser consent cannot supply the missing value.
+Download the organization's **Desktop app** OAuth client JSON from Google Cloud, then in **Settings -> Passwords and
+connections -> Google Workspace -> Organization Google connection setup**, choose **Import OAuth client file** and
+select it locally. Connect the work account again afterward. The JSON must match the client ID already permitted by
+policy; a Web application JSON or a different client is rejected.
+
+Only the main process reads the selected file (at most 64 KiB). It stores only the client secret in an encrypted,
+purpose-bound `google-client` Vault record; policy, renderer state and model-facing catalogs receive no secret or file
+path. Code exchange and refresh send the secret only in the POST body to Google's fixed token endpoint. PKCE,
+state/nonce, domain/signature checks and consent remain required. Client import uses the existing Vault enrollment,
+shared-device, suspension and executable-tool guards. Importing a new file for the same client replaces its stored
+value; Google revocation and employee-account disconnect keep their separate behavior.
+
 ### Turning on Gmail and Drive search for a cohort
 
 Gmail and searching every Drive file stay off in the release. When the administrator has completed the Google-side steps
 below, add a `googleWorkspace` object to the managed policy of the approved cohort only. It replaces the whole bundled
-configuration, so it repeats the public client ID and domain. It contains no secret: installed-app client IDs are public
-and the app has no client secret.
+configuration, so it repeats the public client ID and domain. Policy contains no secret: installed-app client IDs are
+public; a required client secret is imported separately into the device's Vault as described above.
 
 ```json
 {

@@ -7,6 +7,7 @@ const allowed = new Set([
   'vaultResumeBrowser',
   'googleState',
   'googleConnect',
+  'googleImportClient',
   'googleCancel',
   'googlePause',
   'googleDisconnect',

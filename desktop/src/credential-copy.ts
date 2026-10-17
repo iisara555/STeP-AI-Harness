@@ -17,6 +17,14 @@ export const credentialTitles: Record<string, readonly [string, string]> = {
   ],
 };
 const errors: Record<string, readonly [string, string]> = {
+  GOOGLE_CLIENT_FILE_INVALID: [
+    'อ่านไฟล์ OAuth client ไม่สำเร็จ เลือกไฟล์ JSON แบบ Desktop app ที่ดาวน์โหลดจาก Google Cloud',
+    'Cannot read this OAuth client file. Choose a Desktop app JSON file downloaded from Google Cloud.',
+  ],
+  GOOGLE_CLIENT_MISMATCH: [
+    'ไฟล์นี้เป็น OAuth client คนละตัวกับที่องค์กรตั้งไว้ กรุณาเลือกไฟล์ที่ตรงกับ Client ID ของแอป',
+    'This file belongs to a different OAuth client. Choose the file matching the app’s configured client ID.',
+  ],
   GOOGLE_CONNECTION_FAILED: [
     'เชื่อมบัญชี Google ไม่สำเร็จ กดเชื่อมบัญชีงานเพื่อลองใหม่',
     'Google account connection failed. Connect your work account to retry.',
@@ -26,8 +34,8 @@ const errors: Record<string, readonly [string, string]> = {
     'Google OAuth configuration does not match this app. Ask your administrator to check the OAuth client and service scopes, then reconnect.',
   ],
   GOOGLE_CLIENT_SECRET_REQUIRED: [
-    'Google ปฏิเสธการแลกรหัสเพราะต้องใช้ client secret กรุณาให้ผู้ดูแลตรวจการตั้งค่า Desktop OAuth client',
-    'Google rejected the code exchange because a client secret is required. Ask your administrator to check the Desktop OAuth client configuration.',
+    'Google ต้องใช้ client secret เลือก “นำเข้าไฟล์ OAuth client” แล้วเลือกไฟล์ JSON แบบ Desktop app จากผู้ดูแล จากนั้นเชื่อมบัญชีใหม่',
+    'Google requires a client secret. Choose “Import OAuth client file”, select the administrator’s Desktop app JSON, then reconnect.',
   ],
   GOOGLE_AUTH_CODE_REJECTED: [
     'รหัสเชื่อมบัญชีหมดอายุหรือใช้ไปแล้ว กดเชื่อมบัญชีงานและลงชื่อใหม่อีกครั้ง',

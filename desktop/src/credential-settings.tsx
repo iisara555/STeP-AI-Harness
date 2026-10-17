@@ -96,6 +96,16 @@ const words = {
   ],
   googleDisabled: ['ผู้ดูแลยังไม่ได้เปิดการเชื่อม Google Workspace', 'Google Workspace connections are not enabled by the administrator.'],
   connect: ['เชื่อมบัญชีงาน', 'Connect work account'],
+  clientSetup: ['ตั้งค่าการเชื่อม Google ขององค์กร', 'Organization Google connection setup'],
+  importClient: ['นำเข้าไฟล์ OAuth client', 'Import OAuth client file'],
+  clientHelp: [
+    'เลือกไฟล์ JSON แบบ Desktop app ที่ดาวน์โหลดจาก Google Cloud ขององค์กร แอปจะเก็บ client secret ใน Vault บนเครื่องนี้ และใช้กับ Client ID ที่องค์กรตั้งไว้เท่านั้น',
+    'Choose the organization’s Desktop app JSON downloaded from Google Cloud. The app stores its client secret in this device’s Vault and uses only the configured client ID.',
+  ],
+  clientReady: [
+    'ตั้งค่า OAuth client บนเครื่องนี้แล้ว กดเชื่อมบัญชีงานเพื่อลองอีกครั้ง',
+    'OAuth client configured on this device. Connect your work account to retry.',
+  ],
   reconnect: ['ลงชื่อเข้าใช้ใหม่', 'Sign in again'],
   connected: ['เชื่อมแล้ว', 'Connected'],
   paused: ['พักอยู่', 'Paused'],
@@ -211,6 +221,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     configured: boolean;
     connecting: boolean;
     connectionError?: string;
+    clientSecretConfigured?: boolean;
     services: GoogleService[];
     accounts: { id: string; label: string; domain: string; services: string[]; paused: boolean; reauth: boolean }[];
   }>();
@@ -258,12 +269,13 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
   }, [busy, onBusy]);
   const run = async (id: string, action: () => Promise<unknown>) => {
     setBusy(id);
-    if (id === 'google-connect') setConnectionError(undefined);
+    const connectionAction = id === 'google-connect' || id === 'google-client-import';
+    if (connectionAction) setConnectionError(undefined);
     try {
       await action();
       await reload();
     } catch (error) {
-      if (id === 'google-connect') setConnectionError(error);
+      if (connectionAction) setConnectionError(error);
       onError(error);
     } finally {
       setBusy('');
@@ -606,6 +618,22 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             {connectionError !== undefined && (
               <p className="credential-note" role="alert">
                 {explainError(connectionError)}
+              </p>
+            )}
+            <details className="google-more" open={String(connectionError).includes('GOOGLE_CLIENT_SECRET_REQUIRED') || undefined}>
+              <summary>{w('clientSetup')}</summary>
+              <p className="muted small">{w('clientHelp')}</p>
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                onClick={() => void run('google-client-import', () => call('googleImportClient'))}
+              >
+                <FolderOpen size={14} /> {w('importClient')}
+              </button>
+            </details>
+            {google.clientSecretConfigured && (
+              <p className="credential-note" role="status">
+                {w('clientReady')}
               </p>
             )}
             <div className="google-connect-row">
