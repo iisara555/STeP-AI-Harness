@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { createHash, randomBytes, randomUUID, createPublicKey, verify } from 'node:crypto';
-export type GoogleOAuthConfig = { clientId: string; domains: string[] };
+export type GoogleOAuthConfig = { clientId: string; domains: string[]; clientSecret?: string };
 export type GoogleIdentity = { sub: string; email: string; hd: string; name?: string };
 function reject(code: string): never {
   throw new Error(code);
@@ -215,6 +215,7 @@ export async function googleAuthorization(
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           client_id: config.clientId,
+          ...(config.clientSecret ? { client_secret: config.clientSecret } : {}),
           code: received,
           code_verifier: verifier,
           grant_type: 'authorization_code',

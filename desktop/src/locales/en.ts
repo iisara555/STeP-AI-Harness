@@ -6,6 +6,7 @@ import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 export const en: Record<string, string> = {
+  'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
   'ปรับแชต การตั้งค่า และกล่องยืนยันให้อ่านง่ายขึ้น ทั้งหน้าต่างเล็กและโหมดมืด':
     'Clearer chat, settings and confirmations, including small windows and dark mode',

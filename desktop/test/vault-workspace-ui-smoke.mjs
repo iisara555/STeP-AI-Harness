@@ -82,6 +82,42 @@ try {
   assert.equal(await form.getByLabel('Username / อีเมล', { exact: true }).inputValue(), '');
   assert.equal(await form.getByLabel('Password', { exact: true }).inputValue(), '');
   await form.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  checkpoint('import Desktop OAuth client through native dialog');
+  const clientId = 'synthetic-client.apps.googleusercontent.com';
+  const clientPath = join(home, 'client.json');
+  await writeFile(clientPath, JSON.stringify({ installed: { client_id: clientId, client_secret: 'synthetic-client-secret' } }));
+  await writeFile(
+    join(home, 'desktop-policy.json'),
+    JSON.stringify({
+      features: { vault: true, googleWorkspace: true },
+      googleWorkspace: { clientId, domains: ['example.test'], services: ['documents'] },
+    }),
+  );
+  await expect.poll(() => page.evaluate(() => window.step.call('googleState').then(s => s.configured)), { timeout: 15000 }).toBe(true);
+  await app.evaluate(({ dialog }) => {
+    dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
+  });
+  assert.equal(await page.evaluate(() => window.step.call('googleImportClient')), false);
+  assert.equal(await page.evaluate(() => window.step.call('googleState').then(s => s.clientSecretConfigured)), false);
+  await app.evaluate(({ dialog }, clientPath) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [clientPath] });
+  }, clientPath);
+  const imported = await page.evaluate(() => window.step.call('googleImportClient'));
+  assert.equal(imported.clientSecretConfigured, true);
+  assert.doesNotMatch(JSON.stringify(imported), /synthetic-client-secret|client\.json/);
+  const metadata = await page.evaluate(() => window.step.call('vaultState'));
+  assert.equal(metadata.entries.length, 2, 'the client credential is not exposed in the website/API credential list');
+  assert.doesNotMatch(JSON.stringify(metadata), /synthetic-client-secret/);
+  await writeFile(clientPath, JSON.stringify({ web: { client_id: clientId, client_secret: 'synthetic-client-secret' } }));
+  const invalid = await page.evaluate(() =>
+    window.step.call('googleImportClient').then(
+      () => '',
+      e => String(e),
+    ),
+  );
+  assert.match(invalid, /GOOGLE_CLIENT_FILE_INVALID/);
+  assert.doesNotMatch(invalid, /synthetic-client-secret|client\.json/);
+  assert.equal(await page.evaluate(() => window.step.call('googleState').then(s => s.clientSecretConfigured)), true);
   checkpoint('pause and deny host execution');
   await page.getByRole('button', { name: 'พักการใช้งาน', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กลับมาใช้งาน', exact: true })).toBeVisible();
@@ -105,7 +141,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    'Credential Settings smoke passed: real renderer/preload/IPC, explicit remember consent, metadata-only state/edit, missing Google config, pause and host-execution denial.',
+    'Credential Settings smoke passed: real renderer/preload/IPC, explicit remember consent, metadata-only state/edit, native Desktop client import, rejected web client, missing Google config, pause and host-execution denial.',
   );
 } finally {
   checkpoint('close application');
