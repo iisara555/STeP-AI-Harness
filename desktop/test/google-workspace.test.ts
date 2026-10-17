@@ -54,7 +54,8 @@ function fixture(settings = config) {
 test('connect grants stay private; fixed Google requests are account-bound and exact-action approved', async () => {
   const f = fixture();
   try {
-    await f.google.connect(['documents'], context);
+    const connected = await f.google.connect(['documents'], context);
+    assert.equal(connected.connecting, false, 'a completed connection must not remain in the browser-waiting state');
     const state = f.google.state();
     assert.equal(state.accounts.length, 1);
     assert.equal(JSON.stringify(state).includes('synthetic-refresh'), false);
@@ -234,7 +235,9 @@ test('PKCE uses one-use state-bound loopback callback and never returns tokens t
       callback.searchParams.set('state', auth.searchParams.get('state')!);
       const ok = await fetch(callback);
       assert.equal(ok.status, 200);
-      assert.doesNotMatch(await ok.text(), /synthetic-access|synthetic-refresh/);
+      const page = await ok.text();
+      assert.match(page, /ยังไม่เสร็จ|still needs to verify/);
+      assert.doesNotMatch(page, /synthetic-code|synthetic-access|synthetic-refresh/);
       assert.equal((await fetch(callback)).status, 400);
     },
     context.signal,
@@ -282,6 +285,148 @@ test('Google responses are bounded and upstream token-bearing error messages are
   await assert.rejects(
     googleJson('https://example.test', {}, async () => new Response('private token', { status: 403 })),
     /^Error: GOOGLE_ACCESS_DENIED$/,
+  );
+});
+test('token failures identify configuration and expired grants without disclosing upstream diagnostics', async () => {
+  for (const [error, description, grant, expected] of [
+    ['invalid_client', 'private diagnostic', 'authorization_code', 'GOOGLE_CLIENT_CONFIGURATION'],
+    ['invalid_request', 'client_secret is missing. private diagnostic', 'authorization_code', 'GOOGLE_CLIENT_SECRET_REQUIRED'],
+    ['invalid_scope', 'private diagnostic', 'authorization_code', 'GOOGLE_CLIENT_CONFIGURATION'],
+    ['invalid_grant', 'private diagnostic', 'authorization_code', 'GOOGLE_AUTH_CODE_REJECTED'],
+    ['invalid_grant', 'private diagnostic', 'refresh_token', 'GOOGLE_REAUTH_REQUIRED'],
+    ['unknown_error', 'private diagnostic', 'authorization_code', 'GOOGLE_REQUEST_FAILED'],
+  ]) {
+    await assert.rejects(
+      googleJson(
+        'https://oauth2.googleapis.com/token',
+        { method: 'POST', body: new URLSearchParams({ grant_type: grant }) },
+        async () => new Response(JSON.stringify({ error, error_description: description }), { status: 400 }),
+      ),
+      new RegExp(`^Error: ${expected}$`),
+    );
+  }
+});
+test('real loopback OAuth failure leaves no account, and retry verifies, stores and uses the Google account', async () => {
+  const f = fixture({ ...config, services: ['documents', 'calendar-read', 'tasks'] });
+  const scopes = googleScopes(['documents', 'calendar-read', 'tasks']);
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  let nonce = '',
+    failing = true,
+    opened = 0;
+  const transport: typeof fetch = async (url, init) => {
+    if (String(url) === 'https://oauth2.googleapis.com/token') {
+      if (failing)
+        return new Response(JSON.stringify({ error: 'invalid_client', error_description: 'private diagnostic' }), { status: 401 });
+      const data =
+        Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'fixture' })).toString('base64url') +
+        '.' +
+        Buffer.from(
+          JSON.stringify({
+            iss: 'https://accounts.google.com',
+            aud: clientId,
+            nonce,
+            sub: '1234',
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            email: 'fixture@example.test',
+            email_verified: true,
+            hd: 'example.test',
+          }),
+        ).toString('base64url');
+      return json({
+        id_token: data + '.' + sign('RSA-SHA256', Buffer.from(data), privateKey).toString('base64url'),
+        access_token: 'synthetic-access',
+        refresh_token: 'synthetic-refresh',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: scopes.join(' '),
+      });
+    }
+    if (String(url) === 'https://www.googleapis.com/oauth2/v3/certs')
+      return json({ keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'fixture', alg: 'RS256' }] });
+    assert.match(String(url), /^https:\/\/www.googleapis.com\/calendar\/v3\//);
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer synthetic-access');
+    return json({ items: [] });
+  };
+  const google = new GoogleWorkspace(
+    f.store,
+    f.vault,
+    () => ({ ...config, services: ['documents', 'calendar-read', 'tasks'] }),
+    async url => {
+      opened++;
+      const auth = new URL(url);
+      nonce = auth.searchParams.get('nonce')!;
+      const callback = new URL(auth.searchParams.get('redirect_uri')!);
+      callback.searchParams.set('state', auth.searchParams.get('state')!);
+      callback.searchParams.set('code', 'synthetic-code');
+      const response = await fetch(callback);
+      assert.equal(response.status, 200);
+      assert.doesNotMatch(await response.text(), /synthetic-code|synthetic-access|synthetic-refresh|private diagnostic/);
+    },
+    transport,
+  );
+  try {
+    await assert.rejects(google.connect(['documents', 'calendar-read', 'tasks'], context), /^Error: GOOGLE_CLIENT_CONFIGURATION$/);
+    assert.equal(google.state().connectionError, 'GOOGLE_CLIENT_CONFIGURATION');
+    assert.equal(google.state().connecting, false);
+    assert.equal(google.state().accounts.length, 0);
+    assert.equal(f.vault.list().length, 0);
+    failing = false;
+    const connected = await google.connect(['documents', 'calendar-read', 'tasks'], context);
+    assert.equal(connected.connecting, false);
+    assert.equal(connected.connectionError, undefined);
+    assert.equal(connected.accounts.length, 1);
+    assert.deepEqual(connected.accounts[0].services, ['documents', 'calendar-read', 'tasks']);
+    assert.doesNotMatch(JSON.stringify(connected), /synthetic-access|synthetic-refresh|fixture@example.test/);
+    assert.equal(f.vault.list().length, 1);
+    const result = await google.execute(connected.accounts[0].id, { operation: 'calendar.list' }, context);
+    assert.deepEqual(result.data.items, []);
+    assert.equal(opened, 2);
+  } finally {
+    f.clean();
+  }
+});
+test('connection status retains only a fixed error code until retry, and clears it on context changes', async () => {
+  const f = fixture();
+  const google = new GoogleWorkspace(
+    f.store,
+    f.vault,
+    () => config,
+    async () => {},
+    fetch,
+    async () => {
+      throw new Error('private diagnostic with synthetic-secret and fixture@example.test');
+    },
+  );
+  try {
+    await assert.rejects(google.connect(['documents'], context));
+    assert.equal(google.state().connecting, false);
+    assert.equal(google.state().connectionError, 'GOOGLE_CONNECTION_FAILED');
+    assert.doesNotMatch(JSON.stringify(google.state()), /synthetic-secret|fixture@example.test|private diagnostic/);
+    google.invalidate();
+    assert.equal(google.state().connectionError, undefined);
+  } finally {
+    f.clean();
+  }
+});
+test('denied Google callbacks show failure and never exchange a code', async () => {
+  await assert.rejects(
+    googleAuthorize(
+      config,
+      googleScopes(['documents']),
+      async url => {
+        const auth = new URL(url);
+        const callback = new URL(auth.searchParams.get('redirect_uri')!);
+        callback.searchParams.set('state', auth.searchParams.get('state')!);
+        callback.searchParams.set('error', 'access_denied');
+        const response = await fetch(callback);
+        assert.match(await response.text(), /เชื่อมบัญชี Google ไม่สำเร็จ/);
+      },
+      context.signal,
+      async () => {
+        assert.fail('denied consent must not call the token endpoint');
+      },
+    ),
+    /^Error: GOOGLE_CONSENT_DENIED$/,
   );
 });
 test('refresh is serialized, preserves an omitted refresh token, and sends only to the fixed token endpoint', async () => {

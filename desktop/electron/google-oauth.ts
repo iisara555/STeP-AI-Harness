@@ -5,25 +5,7 @@ export type GoogleIdentity = { sub: string; email: string; hd: string; name?: st
 function reject(code: string): never {
   throw new Error(code);
 }
-/** Bounded JSON transport with redirect denial; upstream diagnostics and credential-bearing bodies stay private. */
-export async function googleJson(url: string, init: RequestInit = {}, transport = fetch) {
-  let response: Response;
-  try {
-    response = await transport(url, {
-      ...init,
-      redirect: 'error',
-      signal: AbortSignal.any([init.signal || new AbortController().signal, AbortSignal.timeout(20000)]),
-    });
-  } catch {
-    reject(init.signal?.aborted ? 'CANCELLED' : 'GOOGLE_REQUEST_FAILED');
-  }
-  if (!response.ok) {
-    if (response.status === 401) reject('GOOGLE_REAUTH_REQUIRED');
-    if (response.status === 403) reject('GOOGLE_ACCESS_DENIED');
-    if (response.status === 429) reject('GOOGLE_QUOTA_LIMIT');
-    reject('GOOGLE_REQUEST_FAILED');
-  }
-  if (response.status === 204) return {};
+async function readGoogleResponse(response: Response) {
   const reader = response.body?.getReader();
   if (!reader) reject('GOOGLE_RESPONSE_INVALID');
   const chunks: Uint8Array[] = [];
@@ -37,7 +19,7 @@ export async function googleJson(url: string, init: RequestInit = {}, transport 
       chunks.push(part.value);
     }
     const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    if (!data || typeof data !== 'object' || Array.isArray(data) || data.error) reject('GOOGLE_RESPONSE_INVALID');
+    if (!data || typeof data !== 'object' || Array.isArray(data)) reject('GOOGLE_RESPONSE_INVALID');
     return data;
   } catch (error) {
     reject(
@@ -48,6 +30,47 @@ export async function googleJson(url: string, init: RequestInit = {}, transport 
   } finally {
     await reader.cancel().catch(() => {});
   }
+}
+/** Bounded JSON transport with redirect denial; upstream diagnostics and credential-bearing bodies stay private. */
+export async function googleJson(url: string, init: RequestInit = {}, transport = fetch) {
+  let response: Response;
+  try {
+    response = await transport(url, {
+      ...init,
+      redirect: 'error',
+      signal: AbortSignal.any([init.signal || new AbortController().signal, AbortSignal.timeout(20000)]),
+    });
+  } catch {
+    reject(init.signal?.aborted ? 'CANCELLED' : 'GOOGLE_REQUEST_FAILED');
+  }
+  if (!response.ok) {
+    // Recognize only Google's fixed OAuth error codes, never expose descriptions, URLs or token-bearing bodies.
+    if (url === 'https://oauth2.googleapis.com/token' && [400, 401].includes(response.status)) {
+      const error = await readGoogleResponse(response).catch(() => ({}));
+      if (error.error === 'invalid_client' || error.error === 'unauthorized_client' || error.error === 'invalid_scope')
+        reject('GOOGLE_CLIENT_CONFIGURATION');
+      if (
+        error.error === 'invalid_request' &&
+        typeof error.error_description === 'string' &&
+        /client_secret.*(?:missing|required)/i.test(error.error_description)
+      )
+        reject('GOOGLE_CLIENT_SECRET_REQUIRED');
+      if (error.error === 'invalid_grant')
+        reject(
+          new URLSearchParams(String(init.body)).get('grant_type') === 'refresh_token'
+            ? 'GOOGLE_REAUTH_REQUIRED'
+            : 'GOOGLE_AUTH_CODE_REJECTED',
+        );
+    }
+    if (response.status === 401) reject('GOOGLE_REAUTH_REQUIRED');
+    if (response.status === 403) reject('GOOGLE_ACCESS_DENIED');
+    if (response.status === 429) reject('GOOGLE_QUOTA_LIMIT');
+    reject('GOOGLE_REQUEST_FAILED');
+  }
+  if (response.status === 204) return {};
+  const data = await readGoogleResponse(response);
+  if (data.error) reject('GOOGLE_RESPONSE_INVALID');
+  return data;
 }
 export async function googleIdentity(token: string, clientId: string, nonce: string, transport = fetch): Promise<GoogleIdentity> {
   try {
@@ -131,21 +154,25 @@ export async function googleAuthorization(
       return;
     }
     consumed = true;
+    const callbackError = parsed.searchParams.has('error')
+      ? parsed.searchParams.get('error') === 'admin_policy_enforced'
+        ? 'GOOGLE_ADMIN_BLOCKED'
+        : 'GOOGLE_CONSENT_DENIED'
+      : parsed.searchParams.getAll('code').length !== 1 ||
+          !parsed.searchParams.get('code') ||
+          parsed.searchParams.get('code')!.length > 4096
+        ? 'GOOGLE_CALLBACK_INVALID'
+        : undefined;
     res.writeHead(200, {
-      'content-type': 'text/plain; charset=utf-8',
+      'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',
       'content-security-policy': "default-src 'none'",
       'referrer-policy': 'no-referrer',
     });
-    res.end('Return to STeP Desktop.');
-    if (parsed.searchParams.has('error'))
-      fail(new Error(parsed.searchParams.get('error') === 'admin_policy_enforced' ? 'GOOGLE_ADMIN_BLOCKED' : 'GOOGLE_CONSENT_DENIED'));
-    else if (
-      parsed.searchParams.getAll('code').length !== 1 ||
-      !parsed.searchParams.get('code') ||
-      parsed.searchParams.get('code')!.length > 4096
-    )
-      fail(new Error('GOOGLE_CALLBACK_INVALID'));
+    res.end(
+      `<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>STeP Desktop · Google</title><body><main><h1>${callbackError ? 'เชื่อมบัญชี Google ไม่สำเร็จ' : 'Google ส่งผลกลับแล้ว'}</h1><p>${callbackError ? 'กลับไปที่ STeP Desktop เพื่อดูสาเหตุและลองเชื่อมใหม่' : 'การเชื่อมยังไม่เสร็จ แอปกำลังตรวจบัญชีและบันทึกการเชื่อมต่อ กลับไปที่ STeP Desktop เพื่อดูผล บัญชีจะปรากฏในหน้ารหัสผ่านและการเชื่อมต่อเมื่อสำเร็จ'}</p><p lang="en">${callbackError ? 'Google authorization was not completed. Return to STeP Desktop to review the error and retry.' : 'STeP Desktop still needs to verify and save your account. Return to Passwords and connections in the app to check the result.'}</p><p>ปิดแท็บนี้ได้ / You can close this tab.</p></main></body></html>`,
+    );
+    if (callbackError) fail(new Error(callbackError));
     else done(parsed.searchParams.get('code')!);
   });
   let port = 0;

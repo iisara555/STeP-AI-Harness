@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Google Workspace connection failures remain visible next to the connect button, including after closing/reopening Settings, and distinguish OAuth client configuration, missing client-secret requirements, expired/reused codes and expired grants. Only a fixed failure code is retained in main-process memory until retry/context change. The browser callback explains that the app must still verify and save the account, shows denied consent as failure, and completed connections return an idle state. Synthetic callback/identity/storage/Calendar and Settings retry checks cover recovery; real Google account acceptance remains outstanding.
+
 ## Desktop v0.6.12 (2026-10-17)
 
 - Stabilize the macOS Electron smoke fixtures: explicitly position and verify document insertion carets, and open the task list before updater-profile checks on narrow screens. Preserve all document boundary/export and update-recovery assertions.
