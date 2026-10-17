@@ -3518,6 +3518,49 @@ nav .count {
 }
 .tools-group {
   margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tools-toggle {
+  padding: 3px 5px;
+  color: var(--muted);
+}
+/* Tools folded: one row of icon buttons with tooltips, so the task list above keeps the height. */
+.tools-nav.icons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tools-nav.icons button {
+  position: relative;
+  flex: 1 1 0;
+  justify-content: center;
+  padding: 8px 0;
+  min-width: 32px;
+}
+.tools-nav.icons .nav-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.tools-nav.icons .count,
+.tools-nav.icons .beta {
+  display: none;
+}
+.tools-nav.icons .spin {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+}
+/* Names shown: shorter rows than the task list. */
+.tools-nav:not(.icons) button {
+  padding: 6px 10px;
 }
 .sidebar nav + .settings-button {
   margin-top: 3px;

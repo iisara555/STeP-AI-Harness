@@ -49,6 +49,7 @@ import {
   Copy,
   ImagePlus,
   ChevronDown,
+  ChevronUp,
   Compass,
   BookOpen,
   Eye,
@@ -136,10 +137,29 @@ const PERMISSION_SHORT: Record<string, string> = {
   plan: 'อ่านอย่างเดียว',
 };
 
+const TOOLS_KEY = 'step.sidebarTools';
+
 export default function App() {
   const api = window.step;
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
+  // Tools start as one row of icons so the task list keeps the height; the choice is remembered.
+  const [toolsOpen, setToolsOpen] = useState(() => {
+    try {
+      return localStorage.getItem(TOOLS_KEY) === 'open';
+    } catch {
+      return false;
+    }
+  });
+  const toggleTools = () =>
+    setToolsOpen(open => {
+      try {
+        localStorage.setItem(TOOLS_KEY, open ? 'icons' : 'open');
+      } catch {
+        // The layout still switches for this session.
+      }
+      return !open;
+    });
   const [questions, setQuestions] = useState<ToolQuestion[]>([]),
     [usageOpen, setUsageOpen] = useState(false),
     [memoryOpen, setMemoryOpen] = useState(false);
@@ -1440,11 +1460,23 @@ export default function App() {
                 </p>
               )}
             </div>
-            <div className="session-group tools-group">{t('เครื่องมือ')}</div>
-            <nav>
+            <div className="session-group tools-group">
+              <span>{t('เครื่องมือ')}</span>
+              <button
+                className="quiet tools-toggle"
+                aria-expanded={toolsOpen}
+                aria-label={toolsOpen ? t('ย่อเครื่องมือเป็นไอคอน') : t('แสดงชื่อเครื่องมือ')}
+                title={toolsOpen ? t('ย่อเครื่องมือเป็นไอคอน') : t('แสดงชื่อเครื่องมือ')}
+                onClick={toggleTools}
+              >
+                {toolsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+            <nav className={toolsOpen ? 'tools-nav' : 'tools-nav icons'}>
               <button
                 data-tour="documents"
                 className={view === 'documents' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('เครื่องมือร่างเอกสาร')}
                 onClick={() => {
                   setSettings(false);
                   navigate('documents');
@@ -1456,6 +1488,7 @@ export default function App() {
               <button
                 data-tour="media"
                 className={view === 'media' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('สื่อภายใน')}
                 onClick={() => {
                   setSettings(false);
                   navigate('media');
@@ -1467,6 +1500,7 @@ export default function App() {
               <button
                 data-tour="skills"
                 className={view === 'skills' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('ศูนย์รวม Skill')}
                 onClick={() => {
                   setSettings(false);
                   navigate('skills');
@@ -1479,6 +1513,7 @@ export default function App() {
               <button
                 data-tour="schedules"
                 className={view === 'schedules' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('งานตั้งเวลา')}
                 onClick={() => {
                   setSettings(false);
                   navigate('schedules');
@@ -1490,6 +1525,7 @@ export default function App() {
               <button
                 data-tour="receipt"
                 className={view === 'receipt' && !settings ? 'nav-active' : ''}
+                title={toolsOpen ? undefined : t('ตรวจใบเสร็จ AFP')}
                 onClick={() => {
                   setSettings(false);
                   navigate('receipt');

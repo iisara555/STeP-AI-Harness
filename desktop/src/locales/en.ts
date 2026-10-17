@@ -751,6 +751,8 @@ export const en: Record<string, string> = {
   ถามก่อน: 'Ask first',
   แก้ไฟล์ได้: 'Edit files',
   อ่านอย่างเดียว: 'Read only',
+  ย่อเครื่องมือเป็นไอคอน: 'Show tools as icons',
+  แสดงชื่อเครื่องมือ: 'Show tool names',
   ' · ปิดโดยผู้ดูแล': ' · Disabled by admin',
   'ข้อมูลต้นทางแนบแล้ว ×': 'Source data attached ×',
   'กำลังตรวจโมเดลของบัญชี…': "Checking this account's models…",
