@@ -11,6 +11,26 @@ import { translationTargetInScope } from './translation-scope.js';
 
 export const BRAND_REVIEW_SIGNALS = ['brand', 'tone of voice', 'น้ำเสียงแบรนด์', 'โลโก้', 'logo', 'identity', 'บุคลิกแบรนด์', 'ตราสัญลักษณ์', 'คู่มือแบรนด์', 'ci guideline'];
 
+// Employees name the work, not the product. Implicit account requests are narrow:
+// reading supplied/local material and drafting content keep their own Skills.
+const SUPPLIED_WORKSPACE_SOURCE = /ที่แนบ|แนบมา|ในเครื่อง|(?:จาก|ตาม)(?:ไฟล์|รายงาน|บันทึก|ข้อความ|ระเบียบ|นโยบาย|คู่มือ|sop)|(?:อีเมล|เมล|ข้อความ)(?:นี้|ด้านล่าง)\s*[:：\n]|(?:งานที่ต้องทำ|รายการงาน).{0,8}ของ(?:ทีม|ฝ่าย|หน่วยงาน)|(?:ปฏิทิน|ตาราง)วันหยุดราชการ|(?:บน|ใน)\s*(?:github|gitlab|trello|asana|notion|outlook)\b|\.(?:xlsx|docx|pptx|eml|msg)\b|\b(?:attached|pasted|local file|from (?:the )?(?:report|notes|text))\b/i;
+const PLAIN_WORKSPACE_REQUESTS = [
+  /(?:วันนี้|พรุ่งนี้|มะรืน|สัปดาห์นี้|สัปดาห์หน้า|อาทิตย์นี้|อาทิตย์หน้า).{0,12}มี(?:นัด|ประชุม)(?:อะไร|ไหม|มั้ย|บ้าง|หรือเปล่า|กี่|ตอนไหน|เมื่อไหร่)/,
+  /มี(?:นัด|ประชุม)(?:อะไร|ไหน|กี่โมง|เมื่อไหร่|บ้าง|ไหม|มั้ย)/,
+  /(?:ดู|เช็ก|เช็ค|ตรวจ|สรุป).{0,12}(?:ปฏิทิน|ตารางนัด|นัดหมาย|นัดวันนี้|นัดพรุ่งนี้|นัดประชุม)/,
+  /(?:ดู|เช็ก|เช็ค|สรุป).{0,12}ตาราง(?:งาน|ประชุม).{0,12}(?:วันนี้|พรุ่งนี้|สัปดาห์นี้|สัปดาห์หน้า)/,
+  /(?:มี|ดู|เช็ก|เช็ค|สรุป|รายการ|ลิสต์).{0,12}(?:งานอะไรค้าง|งานค้าง|งานที่ค้าง|งานที่ต้องทำ|งานที่ยังไม่เสร็จ|รายการงาน|สิ่งที่ต้องทำ)/,
+  /(?:งานค้าง|งานที่ต้องทำ|รายการงาน).{0,12}(?:มีอะไร|อะไรบ้าง|มีไหม|เหลืออะไร)/,
+  /(?:วันนี้|พรุ่งนี้).{0,8}(?:มีงานอะไร|ต้องทำอะไร)/,
+  /เพิ่มงาน(?:\s|ว่า|ใหม่|ให้|เตือน)/,
+  /(?:เพิ่ม|บันทึก|สร้าง).{0,8}(?:งานว่า|งานใหม่|รายการงาน|รายการสิ่งที่ต้องทำ|สิ่งที่ต้องทำ)/,
+  /(?:ดู|อ่าน|เช็ก|เช็ค|ค้น|หา|สรุป).{0,12}(?:อีเมล|เมล|กล่องจดหมาย|จดหมายเข้า)/,
+  /(?:อีเมล|เมล).{0,8}(?:ใหม่|ยังไม่ได้อ่าน|เข้ามา)/,
+  /\b(?:what(?:'s| is)|show|check|read|summari[sz]e).{0,25}\b(?:my calendar|my appointments|my meetings|my tasks|my to-do list|my inbox)\b/i,
+  /\b(?:what|any).{0,18}\b(?:meetings|appointments).{0,25}\b(?:today|tomorrow|this week|next week)\b/i,
+  /\b(?:find|search|read|check|summari[sz]e).{0,20}\b(?:emails|unread mail|inbox)\b/i,
+];
+
 export const QUALIFIED_INTENT_RULES = [
   { intent: 'privacy-review', any: ['เลขบัตรประชาชน', 'เลขบัตร', 'ข้อมูลส่วนบุคคล', 'pii', 'pdpa', 'credential', 'password', 'ข้อมูลสุขภาพ'] },
   { intent: 'spreadsheet-edit', allAny: [['excel', 'xlsx', 'workbook'], ['แก้ไฟล์', 'แก้เซลล์', 'เปลี่ยนค่าเซลล์', 'อ่านไฟล์', 'read workbook', 'edit workbook']] },
@@ -158,6 +178,10 @@ export function inferIntentFromText(promptText = '') {
   for (const rule of QUALIFIED_INTENT_RULES) {
     if (rule.intent === 'translation' && !translationTargetInScope(lower)) continue;
     if (matchesQualifiedIntent(lower, rule)) return rule.intent;
+  }
+
+  if (!SUPPLIED_WORKSPACE_SOURCE.test(lower) && PLAIN_WORKSPACE_REQUESTS.some(pattern => pattern.test(lower))) {
+    return 'google-workspace';
   }
 
   // Brand review is a qualified review intent: require both a brand-domain

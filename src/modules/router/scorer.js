@@ -304,6 +304,8 @@ export function deriveRoutingConfidence(bestMatch, runnerUp = null) {
 export function rankSkillCandidates(skills, context, options = {}) {
   const scored = skills
     .filter(s => !s.intent?.includes('translation') || translationTargetInScope(context.text))
+    // Broad account words also occur in writing and local sources. Offer native Google only for qualified requests.
+    .filter(s => !s.intent?.includes('google-workspace') || context.intent === 'google-workspace')
     .map((s) => scoreSkillCandidate(s, context, options));
   const lowerText = (context.text || '').toLowerCase();
   const actionFirstIntents = new Set([

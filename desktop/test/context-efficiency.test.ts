@@ -138,6 +138,24 @@ test('organization, selected-Skill, workflow, file and history requests keep ful
   }
 });
 
+test('plain Google questions reach the actual provider Skill index with automatic routing off', async () => {
+  for (const query of ['วันนี้มีนัดอะไร', 'มีงานอะไรค้างบ้าง', 'ช่วยหาอีเมลเรื่องใบเสนอราคา']) {
+    const f = fixture({ route: (text, opts) => routing.queryStepRouter(text, { ...opts, autoRoute: false }) });
+    try {
+      await f.service.run(f.session.id, query, '', true, undefined, 'chat');
+      const session = f.store.session(f.session.id);
+      assert.equal(session.status, 'review', query);
+      assert.equal(session.runs!.at(-1)!.steps[0].discovery!.skills, 'top3', query);
+      assert.match(f.captured[0].system, /- google-workspace \|/);
+      assert.match(f.captured[0].system, /วันนี้มีนัดอะไร/);
+      assert.match(f.captured[0].system, /load it first with the skill tool/);
+      assert.doesNotMatch(f.captured[0].system, /<skill_instructions>[\s\S]*# STeP Google Workspace/);
+    } finally {
+      f.store.close();
+    }
+  }
+});
+
 test('natural language transformations use text scope, while mixed actions and pointers retain full context', async () => {
   for (const query of [
     'ช่วยแปลเป็นภาษาอังกฤษ วันนี้อากาศดี',

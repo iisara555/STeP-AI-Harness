@@ -743,7 +743,7 @@ test('native Google Workspace Skill and its references can be loaded through the
       path: (await catalog.loadSkillCatalog()).find((entry: any) => entry.name === id)?.path,
       mandatoryReferences: [],
     });
-    f.scope.query = 'ช่วยอ่าน Gmail';
+    f.scope.query = 'วันนี้มีนัดอะไร';
     const core: any = await f.tools.execute({ tool: 'skill', input: 'google-workspace' }, f.scope);
     assert.match(core.text, /# STeP Google Workspace/);
     assert.equal(core.route.skill, 'google-workspace');
