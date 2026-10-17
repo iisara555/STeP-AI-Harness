@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Narrow the plain-language Google Workspace routing added just before: questions about the organization's meetings or a procedure ("อุทยานฯ มีประชุมอะไรบ้าง", "มีงานที่ต้องทำก่อนส่งเบิก AFP อะไรบ้าง"), mail content pasted into the message, long messages, and words that merely start with "เมล" (เมล็ด, เมลเบิร์น) no longer open the employee's calendar, tasks or inbox, so STeP questions keep answering from organization documents.
+
 - Recognize plain Google Workspace questions such as “วันนี้มีนัดอะไร”, “มีงานอะไรค้างบ้าง” and “ช่วยหาอีเมลเรื่องใบเสนอราคา”. Improve both automatic routing and the Skill candidates shown to the AI; keep local attachments, email drafting, translations and organization procedures in their existing routes. Add employee examples while preserving account, service, consent and global routing controls.
 
 - Support Google Desktop OAuth clients that require a client secret alongside PKCE. Administrators configure the matching Desktop app JSON once for installer builds; employees click Connect work account and consent through Google without importing files. Published builds require that configuration. Native client credentials stay in the main bundle and are extractable from an installer; employee tokens remain encrypted in the Vault. A native file-import fallback supports development and other managed clients. Web clients and mismatched IDs are refused; no secret reaches policy, browser URLs or renderer state.

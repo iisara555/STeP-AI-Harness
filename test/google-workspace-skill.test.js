@@ -27,6 +27,26 @@ test('plain account questions route across teams and remain discoverable with au
   assert.ok(entry.triggers.includes('อีเมล'));
 });
 
+test('organization meetings, procedures, pasted mail and look-alike words do not route to the account Skill', async () => {
+  for (const prompt of [
+    'อุทยานฯ มีประชุมอะไรบ้างในแต่ละปี',
+    'STeP มีประชุมคณะกรรมการบ้างไหม',
+    'มีงานที่ต้องทำก่อนส่งเบิก AFP อะไรบ้าง',
+    'จัดอบรมผู้ประกอบการ มีงานที่ต้องทำอะไรบ้าง',
+    'ช่วยหาเมล็ดกาแฟที่ดีที่สุด',
+    'ช่วยดูเมลเบิร์นมีอะไรเที่ยว',
+    'สรุปอีเมลที่ลูกค้าส่งมา ให้หน่อย ข้อความคือ สวัสดีครับ ขอใบเสนอราคาภายในวันศุกร์',
+  ]) {
+    const routed = await queryStepRouter(prompt, { team: 'ga', cluster: '' });
+    assert.notEqual(routed.routingContract?.skill, 'google-workspace', prompt);
+    assert.ok(!routed.candidateSkills?.some(c => c.skill?.name === 'google-workspace'), prompt);
+  }
+  for (const prompt of ['มีเมลใหม่ไหม', 'เพิ่มงาน ส่งรายงานวันศุกร์', 'หาอีเมลจาก STeP เรื่องประชุม']) {
+    const routed = await queryStepRouter(prompt, { team: 'ga', cluster: '' });
+    assert.equal(routed.routingContract?.skill, 'google-workspace', prompt);
+  }
+});
+
 test('native Workspace reference/checker covers the shipped operation catalog', async () => {
   assert.deepEqual(await checkContract(resolve('.')), {
     status: 'checked-offline', operations: 26, liveGoogleVerified: false,
