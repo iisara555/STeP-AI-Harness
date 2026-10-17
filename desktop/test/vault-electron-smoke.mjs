@@ -53,6 +53,21 @@ const fingerprint = createHash('sha256').update(certDer).digest('hex').toUpperCa
 let app;
 const server = createServer({ key: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }), cert }, (req, res) => {
   res.setHeader('content-type', 'text/html');
+  // An intranet-style login: the username box has no telling name, the button carries the page's own click handler.
+  if (req.url === '/intranet' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => (body += chunk));
+    req.on('end', () => {
+      const form = new URLSearchParams(body);
+      const ok = form.get('txtUser') === 'synthetic-user' && form.get('txtPass') === 'synthetic-password' && form.get('clicked') === '1';
+      res.end(ok ? '<h1>Home</h1><p>signed in</p>' : '<p>wrong</p>');
+    });
+    return;
+  }
+  if (req.url === '/intranet')
+    return res.end(
+      '<form method="post" action="/intranet"><input type="text" name="txtUser" placeholder="STeP Account"><input type="password" name="txtPass"><input type="hidden" name="clicked" value="0"><button type="submit" onclick="this.form.clicked.value=1">Sign in</button></form><a href="/forgot">Forgot password</a>',
+    );
   if (req.url === '/two') res.end('<form method="post"><input name="username" autocomplete="username"><button>Next</button></form>');
   else if (req.url === '/changed')
     res.end(
@@ -194,11 +209,38 @@ try {
     );
   }, single.tab);
   assert.deepEqual(one.filledFields, ['username']);
+  await app.evaluate(() => globalThis.agent.closeOwner('owner'));
+  const intranet = await open(origin + '/intranet');
+  assert.equal(intranet.requiresManualLogin, true);
+  checkpoint('plain username fill and sign in');
+  const signedIn = await app.evaluate(async (_electron, id) => {
+    const expected = await globalThis.agent.prepareVault(id, 'owner', globalThis.context.signal);
+    const [credential] = globalThis.vault.catalog('owner', expected.origin);
+    const result = await globalThis.vault.fill(
+      credential.handle,
+      'owner',
+      expected.origin,
+      async () => true,
+      payload => globalThis.agent.fillVault(id, 'owner', expected, payload, globalThis.context.signal, true),
+    );
+    return { fields: expected.fields, result };
+  }, intranet.tab);
+  assert.deepEqual(signedIn.fields, ['username', 'password']);
+  assert.deepEqual(signedIn.result.filledFields, ['username', 'password']);
+  assert.equal(signedIn.result.submitted, true);
+  assert.equal(signedIn.result.navigated, true);
+  // The next page no longer holds the form, so the AI reads it without a manual resume, and never the password.
+  const landing = await app.evaluate(
+    async (_electron, id) => globalThis.agent.run({ tool: 'browser_control', input: id, args: { action: 'read' } }, globalThis.context),
+    intranet.tab,
+  );
+  assert.match(landing.text, /signed in/);
+  assert.equal(JSON.stringify(landing).includes('synthetic-password'), false);
   checkpoint('close owned browser views');
   await app.evaluate(() => globalThis.agent.closeOwner('owner'));
   await mkdir('release/qa/vault', { recursive: true });
   console.log(
-    'Vault Electron smoke passed: actual OS encryption across restart, HTTPS exact-origin fill, identifier-only login, changed form partial outcome and model-read suppression.',
+    'Vault Electron smoke passed: actual OS encryption across restart, HTTPS exact-origin fill, identifier-only login, plain-username sign in with reading resumed on the next page, changed form partial outcome and model-read suppression.',
   );
 } finally {
   checkpoint('close application');

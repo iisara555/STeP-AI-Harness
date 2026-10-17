@@ -148,7 +148,12 @@ test('a request about STeP MIS is sent to the STeP Browser with the registered a
   const mis = (await internalSystemFor(root, 'STeP MIS'))!;
   const on = internalSystemRule(mis, true);
   assert.match(on, /browser_control\(input="https:\/\/mis\.step\.cmu\.ac\.th\/", args\.action=open\)/);
-  assert.match(on, /never ask for, type or store credentials/);
+  assert.match(on, /saved account through browser_vault/);
+  // Saved accounts are used before the employee is asked to sign in by hand.
+  const { BROWSER_RULES } = await import('../electron/tool-loop');
+  assert.match(BROWSER_RULES, /requiresManualLogin is true, first call browser_vault\(input=tab,args\.action=list\)/);
+  assert.match(BROWSER_RULES, /args=\{action:fill,handle,submit:true\}/);
+  assert.match(on, /Never ask for, type or store credentials yourself/);
   assert.match(on, /Do not submit, approve, sign or e-sign/);
   assert.match(internalSystemRule(mis, false), /open https:\/\/mis\.step\.cmu\.ac\.th\/ themselves/);
 
