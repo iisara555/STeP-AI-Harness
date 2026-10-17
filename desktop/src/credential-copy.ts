@@ -17,6 +17,10 @@ export const credentialTitles: Record<string, readonly [string, string]> = {
   ],
 };
 const errors: Record<string, readonly [string, string]> = {
+  GOOGLE_CONNECTION_FAILED: [
+    'เชื่อมบัญชี Google ไม่สำเร็จ กดเชื่อมบัญชีงานเพื่อลองใหม่',
+    'Google account connection failed. Connect your work account to retry.',
+  ],
   GOOGLE_CLIENT_CONFIGURATION: [
     'การตั้งค่า OAuth ของ Google ไม่ตรงกับแอป กรุณาให้ผู้ดูแลตรวจ OAuth client และสิทธิ์บริการ แล้วเชื่อมใหม่',
     'Google OAuth configuration does not match this app. Ask your administrator to check the OAuth client and service scopes, then reconnect.',

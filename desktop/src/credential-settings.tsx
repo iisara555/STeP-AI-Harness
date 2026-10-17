@@ -210,6 +210,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     enabled: boolean;
     configured: boolean;
     connecting: boolean;
+    connectionError?: string;
     services: GoogleService[];
     accounts: { id: string; label: string; domain: string; services: string[]; paused: boolean; reauth: boolean }[];
   }>();
@@ -231,6 +232,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     const [v, g] = await Promise.all([call('vaultState'), call('googleState')]);
     setVault(v);
     setGoogle(g);
+    setConnectionError(g.connectionError);
   };
   useEffect(() => {
     let alive = true;
@@ -239,6 +241,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
         if (alive) {
           setVault(v);
           setGoogle(g);
+          setConnectionError(g.connectionError);
         }
       })
       .catch(onError);

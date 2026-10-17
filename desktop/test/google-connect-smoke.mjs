@@ -38,6 +38,7 @@ try {
       if (method === 'googleState') return globalThis.googleFixture;
       if (method === 'googleConnect') {
         globalThis.googleFixture.connecting = true;
+        globalThis.googleFixture.connectionError = undefined;
         try {
           await new Promise((resolve, reject) => {
             globalThis.googleResolve = resolve;
@@ -46,6 +47,9 @@ try {
           globalThis.googleFixture.accounts = [
             { id: 'fixture', label: 'fi••••@example.test', domain: 'example.test', services: input.services, paused: false, reauth: false },
           ];
+        } catch (error) {
+          if (error.message !== 'CANCELLED') globalThis.googleFixture.connectionError = error.message;
+          throw error;
         } finally {
           globalThis.googleFixture.connecting = false;
         }
@@ -74,6 +78,12 @@ try {
   const notification = page.locator('.toast');
   if (await notification.count()) await notification.getByRole('button').first().click();
   await expect(settings.getByRole('alert')).toBeVisible();
+  // The account error must survive unmounting Settings after the notification has gone.
+  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await expect(settings).toHaveCount(0);
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await expect(settings.getByRole('alert')).toContainText('การตั้งค่า OAuth ของ Google ไม่ตรงกับแอป');
   await connect.click();
   await expect(settings.getByRole('alert')).toHaveCount(0);
   await expect(connect).toBeDisabled();
@@ -90,7 +100,7 @@ try {
   await expect(connect).toBeEnabled();
   assert.deepEqual(errors, []);
   console.log(
-    'Google connection smoke passed: pending, persistent configuration error, cancellation and successful retry. Synthetic Google IPC only.',
+    'Google connection smoke passed: pending, error after notification dismissal and Settings reopen, cancellation and successful retry. Synthetic Google IPC only.',
   );
 } finally {
   if (app) await app.close();

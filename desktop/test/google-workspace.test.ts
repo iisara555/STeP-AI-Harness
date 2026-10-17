@@ -366,12 +366,14 @@ test('real loopback OAuth failure leaves no account, and retry verifies, stores 
   );
   try {
     await assert.rejects(google.connect(['documents', 'calendar-read', 'tasks'], context), /^Error: GOOGLE_CLIENT_CONFIGURATION$/);
+    assert.equal(google.state().connectionError, 'GOOGLE_CLIENT_CONFIGURATION');
     assert.equal(google.state().connecting, false);
     assert.equal(google.state().accounts.length, 0);
     assert.equal(f.vault.list().length, 0);
     failing = false;
     const connected = await google.connect(['documents', 'calendar-read', 'tasks'], context);
     assert.equal(connected.connecting, false);
+    assert.equal(connected.connectionError, undefined);
     assert.equal(connected.accounts.length, 1);
     assert.deepEqual(connected.accounts[0].services, ['documents', 'calendar-read', 'tasks']);
     assert.doesNotMatch(JSON.stringify(connected), /synthetic-access|synthetic-refresh|fixture@example.test/);
@@ -379,6 +381,29 @@ test('real loopback OAuth failure leaves no account, and retry verifies, stores 
     const result = await google.execute(connected.accounts[0].id, { operation: 'calendar.list' }, context);
     assert.deepEqual(result.data.items, []);
     assert.equal(opened, 2);
+  } finally {
+    f.clean();
+  }
+});
+test('connection status retains only a fixed error code until retry, and clears it on context changes', async () => {
+  const f = fixture();
+  const google = new GoogleWorkspace(
+    f.store,
+    f.vault,
+    () => config,
+    async () => {},
+    fetch,
+    async () => {
+      throw new Error('private diagnostic with synthetic-secret and fixture@example.test');
+    },
+  );
+  try {
+    await assert.rejects(google.connect(['documents'], context));
+    assert.equal(google.state().connecting, false);
+    assert.equal(google.state().connectionError, 'GOOGLE_CONNECTION_FAILED');
+    assert.doesNotMatch(JSON.stringify(google.state()), /synthetic-secret|fixture@example.test|private diagnostic/);
+    google.invalidate();
+    assert.equal(google.state().connectionError, undefined);
   } finally {
     f.clean();
   }

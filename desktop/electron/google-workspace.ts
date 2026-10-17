@@ -4,6 +4,7 @@ export { googleJson, googleIdentity } from './google-oauth';
 import type { Store } from './store';
 import { Vault } from './vault';
 import { GOOGLE_SERVICES, googleScopes, type GoogleService } from '../src/google-services';
+import { credentialErrorsTh } from '../src/credential-copy';
 import { googleInvocation, type GoogleRequest } from './google-operations';
 
 export type GoogleConfig = { clientId: string; domains: string[]; services: GoogleService[] };
@@ -37,6 +38,7 @@ export const googleAuthorize = (
 export class GoogleWorkspace {
   private epoch = 0;
   private connecting?: AbortController;
+  private connectionError?: string;
   private refreshes = new Map<string, Promise<Tokens>>();
   private handles = new Map<string, { account: string; context: string; epoch: number; expires: number }>();
   constructor(
@@ -64,6 +66,7 @@ export class GoogleWorkspace {
       configured: Boolean(this.config()?.clientId),
       services: this.config()?.services || [],
       connecting: Boolean(this.connecting),
+      connectionError: this.connectionError,
       accounts: this.accounts().map(({ id, label, domain, scopes, paused, reauth }) => ({
         id,
         label,
@@ -81,6 +84,7 @@ export class GoogleWorkspace {
   invalidate() {
     this.epoch++;
     this.handles.clear();
+    this.connectionError = undefined;
     this.connecting?.abort();
   }
   cancel() {
@@ -101,6 +105,7 @@ export class GoogleWorkspace {
     const epoch = this.epoch;
     const controller = new AbortController();
     this.connecting = controller;
+    this.connectionError = undefined;
     try {
       if (
         !(await context.approve(
@@ -153,6 +158,13 @@ export class GoogleWorkspace {
       this.store.put('google-account', id, account);
       this.epoch++;
       this.handles.clear();
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      if (!controller.signal.aborted && !context.signal.aborted && code !== 'CANCELLED') {
+        // Only fixed, translated codes survive a Settings remount. Never retain upstream diagnostics or credentials.
+        this.connectionError = Object.hasOwn(credentialErrorsTh, code) ? code : 'GOOGLE_CONNECTION_FAILED';
+      }
+      throw error;
     } finally {
       this.connecting = undefined;
     }
