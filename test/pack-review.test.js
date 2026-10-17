@@ -82,6 +82,36 @@ test("missing v2 version and headings fail with a Thai report", () => {
   assert.match(headings.message, /Handoff/);
 });
 
+test("a Standard v3 Skill needs Environment, Pitfalls, Verification and a dated Maintenance section", () => {
+  const v3 = good.replace("standardVersion: 2\n", "standardVersion: 3\n") +
+    `
+## Environment
+ไม่มีระบบหรือ path เฉพาะ ใช้แชตใน STeP Desktop
+
+## Pitfalls
+| ปัญหา | วิธีแก้ |
+|---|---|
+| ผู้ใช้ไม่บอกจำนวนคน | ถามก่อนร่าง |
+
+## Verification
+อ่านร่างกลับให้ผู้ใช้ตรวจวันที่ เวลา และห้องก่อนบอกว่าเสร็จ
+
+## Maintenance
+อัปเดตล่าสุด: 2026-10-16
+`;
+  const passed = reviewPack(manifest(), files({ "SKILL.md": v3 }));
+  assert.equal(passed.status, "pass", JSON.stringify(passed.findings));
+
+  const missing = reviewPack(manifest(), files({ "SKILL.md": v3.replace(/## Pitfalls[\s\S]*?## Verification/, "## Verification") }));
+  assert.equal(missing.status, "fail");
+  assert.match(missing.findings.find((f) => f.code === "standard.headings3").message, /มาตรฐาน v3: Pitfalls/);
+
+  const undated = reviewPack(manifest(), files({ "SKILL.md": v3.replace("อัปเดตล่าสุด: 2026-10-16", "อัปเดตล่าสุด: เมื่อวาน") }));
+  assert.ok(codes(undated).includes("standard.updated"));
+  const english = reviewPack(manifest(), files({ "SKILL.md": v3.replace("อัปเดตล่าสุด: 2026-10-16", "Last updated: 2026-10-16") }));
+  assert.equal(english.status, "pass", JSON.stringify(english.findings));
+});
+
 test("prompt injection, authority breaches, exfiltration and secrets are caught in Thai and English", () => {
   const cases = {
     "safety.injection": [

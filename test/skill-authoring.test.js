@@ -123,8 +123,10 @@ test('STeP Skill Authoring Standard', async (t) => {
     }
 
     const authoring = await readFile('skills/common/step-skill-authoring/SKILL.md', 'utf-8');
-    assert.ok(authoring.includes('standardVersion: 2'));
+    assert.ok(authoring.includes('standardVersion: 3'));
     assert.ok(authoring.includes('Purpose → เมื่อควรใช้ → Inputs → Source → Workflow → Output → Authority → Handoff → Guardrails'));
+    assert.ok(authoring.includes('Environment → Pitfalls → Verification → Maintenance'));
+    assert.match(authoring, /## Maintenance\s+อัปเดตล่าสุด: \d{4}-\d{2}-\d{2}/);
 
     const ncr = await readFile('skills/common/ncr-capa/SKILL.md', 'utf-8');
     const iso = await readFile('skills/common/iso9001-audit-readiness/SKILL.md', 'utf-8');
@@ -132,7 +134,7 @@ test('STeP Skill Authoring Standard', async (t) => {
     assert.ok(iso.includes('## Authority'));
   });
 
-  await t.test('every Skill except the documented exemption follows Standard v2', async () => {
+  await t.test('every Skill except the documented exemption follows Standard v2 or v3', async () => {
     // docs/skill-authoring-standard.md records step-router as the only exemption:
     // it specifies the routing algorithm itself, not a task Skill.
     const exempt = new Set(['skills/common/step-router/SKILL.md'.replace(/\//g, sep)]);
@@ -159,12 +161,17 @@ test('STeP Skill Authoring Standard', async (t) => {
       if (exempt.has(file)) continue;
       const text = await readFile(file, 'utf-8');
       const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      if (!frontmatter || !/standardVersion:\s*2/.test(frontmatter[1])) {
-        offenders.push(`${file}: missing standardVersion: 2`);
+      const version = frontmatter && /standardVersion:\s*([23])\s*$/m.exec(frontmatter[1])?.[1];
+      if (!version) {
+        offenders.push(`${file}: missing standardVersion: 2 or 3`);
         continue;
       }
       const headings = [...text.matchAll(/^##\s+(.+?)\s*$/gm)].map((match) => match[1].trim());
-      const missing = required.filter((heading) => !headings.includes(heading));
+      // Standard v3 adds Environment, Pitfalls, Verification and a dated Maintenance section.
+      const needed = version === '3' ? [...required, 'Environment', 'Pitfalls', 'Verification', 'Maintenance'] : required;
+      const missing = needed.filter((heading) => !headings.includes(heading));
+      if (version === '3' && !/^## Maintenance\s*$[\s\S]*?(?:อัปเดตล่าสุด|Last updated)\s*:\s*\d{4}-\d{2}-\d{2}/m.test(text))
+        missing.push('Maintenance date');
       if (missing.length) offenders.push(`${file}: missing ${missing.join(', ')}`);
     }
 

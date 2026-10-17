@@ -171,6 +171,8 @@ export type RunTrace = {
   code?: string;
   ms: number;
   steps: StepTrace[];
+  /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
+  effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
   /** Provider research before the first model step, when host-side search is enabled. */
   providerCalls?: ProviderCallTrace[];
 };
@@ -325,6 +327,12 @@ export type MemoryEntry = {
   created_at: string;
   updated_at: string;
   source: 'user-confirmed';
+  /** How it was proposed: typed by the employee, picked up from a chat, or a "needs fixing" note. Absent on older files. */
+  origin?: 'manual' | 'chat' | 'feedback';
+  /** The task it came from, for a confirmed proposal. */
+  origin_session?: string;
+  /** The employee's own words it rests on, privacy-checked, at most 300 characters. */
+  origin_evidence?: string;
   expired?: boolean;
 };
 export type MemoryProposal = Pick<MemoryEntry, 'id' | 'name' | 'text' | 'type' | 'scope' | 'importance' | 'ttl_days'> & {
@@ -470,3 +478,37 @@ declare global {
     step?: DesktopAPI;
   }
 }
+/** Maintenance board (electron/maintenance.ts): local checks of memories, lessons and Skill Packs, no model call. */
+export type MaintenanceKind =
+  | 'memory-expired'
+  | 'memory-stale'
+  | 'memory-ephemeral'
+  | 'memory-duplicate'
+  | 'lesson-repeated'
+  | 'lesson-fix'
+  | 'lesson-unused'
+  | 'lesson-ephemeral'
+  | 'lesson-duplicate'
+  | 'pack-invalid'
+  | 'pack-review';
+export type MaintenanceFinding = {
+  id: string;
+  kind: MaintenanceKind;
+  area: 'memory' | 'lesson' | 'skill';
+  /** What the item is about (`memory:scope:id`, `lesson:id`, `pack:id`); two for a duplicate pair. */
+  targets: string[];
+  name: string;
+  count?: number;
+};
+export type MaintenanceStatus = 'todo' | 'doing' | 'done' | 'dismissed';
+export type MaintenanceItem = MaintenanceFinding & {
+  status: MaintenanceStatus;
+  foundAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  /** check: a later check no longer found it; person: moved to done and the check agreed. */
+  resolvedBy?: 'check' | 'person';
+  /** Marked done earlier, but the check still finds the problem. */
+  reopened?: boolean;
+};
+export type MaintenanceBoard = { checkedAt: string; items: MaintenanceItem[] };

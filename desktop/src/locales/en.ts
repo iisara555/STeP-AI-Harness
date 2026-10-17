@@ -443,6 +443,7 @@ export const en: Record<string, string> = {
   'ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้': 'These statements are not in the STeP documents; check them before use',
   'ตรวจกับเอกสาร STeP แล้ว ไม่พบข้อความที่ขัดกับเอกสาร': 'Checked against the STeP documents: nothing contradicts them',
   'ตรวจคำตอบเรื่อง STeP กับเอกสาร': 'Check STeP answers against the documents',
+  ปรับระดับการคิดตามขนาดงาน: 'Reasoning level by task size',
   'กำลังตรวจคำตอบกับเอกสาร STeP': 'Checking the answer against the STeP documents',
   เวลาตั้งแต่ส่งคำถามจนได้คำตอบ: 'Time from sending the request to the finished answer',
   'เครื่องมือทดลองและวัดผล OCR': 'OCR trial and measurement tools',
@@ -747,6 +748,45 @@ export const en: Record<string, string> = {
   เลือกโมเดล: 'Choose model',
   'โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'The model for this task — change it any time',
   'ค่าเริ่มต้น ({0})': 'Default ({0})',
+  อัตโนมัติตามขนาดงาน: 'Auto by task size',
+  'ความจำหมดอายุแล้ว: ลบ หรือแก้ข้อความแล้วตั้งอายุใหม่': 'Memory expired: delete it, or edit it and set a new lifetime',
+  'ความจำไม่ได้ทบทวนเกิน 180 วัน: ตรวจว่ายังจริงอยู่ไหม แล้วแก้หรือลบ':
+    'Memory not reviewed for over 180 days: check it is still true, then edit or delete it',
+  'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลข PR/ticket หรือ log): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร':
+    'Memory holds short-lived data (task progress, PR/ticket numbers or logs): delete it, or rewrite it as a lasting fact',
+  'ความจำสองรายการเนื้อหาเกือบเหมือนกัน: รวมเป็นรายการเดียว แล้วลบอีกรายการ':
+    'Two memories say almost the same thing: merge them into one and delete the other',
+  'บทเรียนนี้ยังต้องแก้เรื่องเดิมซ้ำ: เขียนบทเรียนให้ชัดขึ้นในกล่องบทเรียน':
+    'The same thing still had to be corrected after this lesson: make the lesson clearer in the Learning Inbox',
+  'คำตอบที่ใช้บทเรียนนี้ถูกกด "ต้องแก้" บ่อยกว่า "ดี": ทบทวนหรือปิดบทเรียน':
+    'Answers using this lesson were marked "Needs fixing" more often than "Good": review or turn off the lesson',
+  'บทเรียนนี้ไม่ถูกใช้เกิน 90 วัน: ปิดถ้าไม่จำเป็นแล้ว':
+    'This lesson has not been used for over 90 days: turn it off if it is no longer needed',
+  'บทเรียนเก็บข้อมูลชั่วคราว: แก้ให้เหลือแต่วิธีทำงานที่ใช้ซ้ำได้':
+    'Lesson holds short-lived data: edit it down to the reusable way of working',
+  'บทเรียนสองข้อเนื้อหาเกือบเหมือนกัน: รวมเป็นข้อเดียว แล้วปิดอีกข้อ':
+    'Two lessons say almost the same thing: merge them into one and turn off the other',
+  'Skill Pack ที่ติดตั้งอ่านไม่ได้: นำเข้าใหม่หรือลบออก': 'An installed Skill Pack cannot be read: import it again or remove it',
+  'Skill Pack ที่เปิดใช้มีผลตรวจที่ต้องแก้: เปิดผลตรวจใน Skill Pack แล้วแก้ไฟล์ Skill':
+    'An enabled Skill Pack has review findings to fix: open its review in Skill Packs and fix the Skill files',
+  ต้องทำ: 'To do',
+  กำลังแก้: 'In progress',
+  'ตรวจอีกครั้งแล้วยังพบปัญหาเดิม จึงย้ายกลับไป "ต้องทำ"': 'Checked again and the problem is still there, so it moved back to "To do"',
+  'งานดูแลความจำ บทเรียน และ Skill ({0})': 'Memory, lesson and Skill upkeep ({0})',
+  'งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง': 'Memory, lesson and Skill upkeep: nothing to do',
+  'แอปตรวจบนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลไปที่ใด และไม่แก้หรือลบอะไรเอง แก้ที่ความจำ บทเรียน หรือ Skill Pack แล้วย้ายเป็น "เสร็จแล้ว" แอปจะตรวจซ้ำทันที':
+    'The app checks on this computer once a day, sends nothing anywhere and never edits or deletes anything itself. Fix the memory, lesson or Skill Pack, then move the item to "Done" and the app checks it again at once.',
+  'ตรวจล่าสุด {0}': 'Last checked {0}',
+  ตรวจตอนนี้: 'Check now',
+  'เคยย้ายเป็นเสร็จแล้ว แต่ยังพบปัญหาเดิม': 'Moved to done earlier, but the problem is still there',
+  ตรวจแล้วไม่พบปัญหานี้แล้ว: 'A check no longer finds this problem',
+  ยืนยันแล้วว่าแก้ครบ: 'Confirmed fixed',
+  เริ่มทำ: 'Start',
+  'แก้แล้ว ตรวจอีกครั้ง': 'Fixed, check again',
+  ไม่ต้องทำ: 'Skip',
+  'ตรวจความจำ บทเรียน และ Skill ทุกวัน': 'Daily check of memories, lessons and Skills',
+  'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล':
+    'Auto: a short chat question uses Low; a large task (several steps, plan mode, a long request or many files) uses High; other tasks use the model default',
   ค่าเริ่มต้น: 'Default',
   ค่าเริ่มต้นของบริการ: 'Service default',
   เลือกระดับการคิด: 'Choose reasoning level',
@@ -977,6 +1017,15 @@ export const en: Record<string, string> = {
   ตรวจและยืนยัน: 'Review and confirm',
   ไม่บันทึก: "Don't save",
   ความจำที่บันทึกแล้ว: 'Saved memories',
+  พิมพ์เอง: 'Typed by you',
+  จากแชต: 'From a chat',
+  'จากคำแก้ "ต้องแก้"': 'From a "Needs fixing" note',
+  ไม่ได้บันทึกไว้: 'Not recorded',
+  บันทึกเมื่อ: 'Saved',
+  แก้ไขล่าสุด: 'Last edited',
+  'หลักฐาน:': 'Evidence:',
+  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลข PR/ticket หรือ log ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
+    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, PR/ticket numbers and logs. Working steps belong in a "procedure" lesson or a Skill',
   ' · หมดอายุแล้ว': ' · Expired',
   แก้ไข: 'Edit',
   ลบความจำ: 'Delete memory',
@@ -1044,6 +1093,8 @@ export const en: Record<string, string> = {
   'ไฟล์เปลี่ยนระหว่างอ่าน กรุณาแนบไฟล์อีกครั้ง': 'The file changed while being read. Please attach it again',
   'ข้อมูลนี้มีข้อมูลส่วนบุคคล ความลับ หรือเนื้อหาที่ต้องตรวจเพิ่มเติม จึงบันทึกเป็นความจำไม่ได้':
     "This contains personal, confidential or sensitive content that needs review, so it can't be saved as memory",
+  'ข้อความนี้เป็นข้อมูลชั่วคราว เช่น ความคืบหน้างาน เลข PR/ticket/run หรือ log จึงไม่บันทึกเป็นความจำหรือบทเรียน ให้บันทึกเฉพาะข้อเท็จจริงที่ไม่ค่อยเปลี่ยน':
+    "This looks short-lived (task progress, a PR/ticket/run number or a log), so it isn't saved as a memory or lesson. Save only facts that rarely change",
   'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ':
     'Invalid memory format. Check the name, text, importance and lifetime',
   ไม่พบความจำในขอบเขตที่เลือก: 'No memories found in the selected scope',
@@ -1772,6 +1823,7 @@ export const en: Record<string, string> = {
   กำลังค้นรายการเครื่องมือ: 'Discovering available tools',
   กำลังอ่านรายละเอียดเครื่องมือ: 'Reading tool details',
   กำลังค้นไฟล์ในพื้นที่งาน: 'Searching workspace files',
+  กำลังค้นงานเก่าบนเครื่องนี้: 'Searching earlier tasks on this computer',
   กำลังเตรียมแก้ข้อความเฉพาะจุด: 'Preparing a targeted text patch',
   'ไม่พบข้อความเดิมแบบตรงตัว กรุณาอ่านไฟล์ล่าสุดก่อนแก้ไข': 'Exact original text was not found. Read the latest file before editing',
   'พบข้อความเดิมมากกว่าหนึ่งจุด กรุณาระบุบริบทให้ตรงเพียงจุดเดียว':
@@ -2053,6 +2105,7 @@ export const en: Record<string, string> = {
     '{0} new characters will be sent to {1}\n{2}\nReview the masked preview before consenting:\n{3}',
   'คำตอบที่คุณส่งให้ผู้ช่วยและสถานะการเตรียมร่างในงานนี้ (ไม่รวมเนื้อหาไฟล์หรือการส่งงานจริง)':
     'Your answers to the assistant and draft progress in this task (no file contents or real submissions)',
+  'งานเก่าของทีมเดียวกันบนเครื่องนี้ (ชื่องาน ข้อความ และร่าง)': "This team's earlier tasks on this computer (titles, messages and drafts)",
   'ไฟล์ข้อความในโฟลเดอร์ {0} (ไม่รวมโฟลเดอร์ย่อย)': 'Text files in folder {0} (subfolders excluded)',
   'ผลการอ่านเว็บ {0}': 'Web read results from {0}',
   'กำลังใช้เครื่องมือ ': 'Using tool ',
@@ -2532,6 +2585,9 @@ export const en: Record<string, string> = {
   'ยังไม่ระบุ standardVersion: 2 ในส่วนหัว Skill ใหม่ต้องใช้มาตรฐาน v2':
     'standardVersion: 2 is missing from the front matter; new Skills must follow Standard v2',
   'ขาดหัวข้อบังคับตามมาตรฐาน v2: {0}': 'Missing Standard v2 sections: {0}',
+  'ขาดหัวข้อบังคับตามมาตรฐาน v3: {0}': 'Missing Standard v3 sections: {0}',
+  'หัวข้อ Maintenance ต้องมีบรรทัด “อัปเดตล่าสุด: ปปปป-ดด-วว” เป็นปี ค.ศ.':
+    'The Maintenance section needs a line “Last updated: YYYY-MM-DD” (Gregorian year)',
   'description สั้นเกินไป ควรบอกว่าใช้ Skill นี้เมื่อไรให้ชัด (อย่างน้อย 20 ตัวอักษร)':
     'The description is too short; say clearly when to use this Skill (at least 20 characters)',
   'ส่วนหัวมีช่องที่มาตรฐานไม่รองรับ: {0}': 'The front matter has fields the standard does not support: {0}',

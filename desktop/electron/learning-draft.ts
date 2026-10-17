@@ -23,6 +23,7 @@ Rules:
 - Never record an approach that failed or was not confirmed to work as a reliable method.
 - Never conclude a tool or service "does not work" from a one-off problem (a missing install, a network error, a quota).
 - Never include names, phone numbers, ID numbers, emails, account numbers, passwords, keys or other personal or secret data.
+- Never keep short-lived facts: progress of the current task, PR, ticket or run numbers, run logs, or data that changes all the time. Keep stable facts: communication preferences, fixed paths and settings, project conventions and deployment steps, tool quirks, and corrections the employee made.
 - Prefer one precise lesson over several overlapping ones. Return [] rather than guess.`;
 
 /** The conversation as the reviewer sees it: recent turns, bounded, and the current draft. */

@@ -58,6 +58,25 @@ Skill ใหม่ตั้งแต่ Standard v2 ต้องใส่ `stand
 - `Handoff` ต้องระบุปลายทางหรือเกณฑ์ว่าเมื่อไรงานพร้อมส่งต่อ
 - ขนาดไฟล์ไม่ใช่ quality gate โดยตัวมันเอง แต่ core contract ควรสั้นและ predictable; methodology/template ที่ยาวให้ย้ายไป references/scripts/templates ตาม Progressive Disclosure
 
+## Skill Standard v3 — เพิ่มสิ่งที่ต้องใช้ตอนทำซ้ำและตรวจผล
+
+v3 ต่อยอดจาก v2 (เพิ่ม 2026-10-16 ตามกฎ `../rules/learning-and-verification.md`): Memory เก็บบริบทและความชอบ ส่วน Skill เก็บขั้นตอนที่ทำซ้ำได้และตรวจผลได้
+
+ใช้ `standardVersion: 3` และมีหัวข้อ `##` ครบ 9 หัวข้อของ v2 บวก 4 หัวข้อ:
+
+1. `Environment` — path ระบบ เครื่องมือ หรือคำสั่งที่ต้องใช้ ถ้าไม่มีให้เขียนว่าไม่มี
+2. `Pitfalls` — ปัญหาที่มักเกิดและวิธีแก้ที่ตรวจแล้ว
+3. `Verification` — หลักฐานที่ต้องมีก่อนบอกว่างานเสร็จ เช่น ผลคำสั่ง ผลทดสอบ หรือการอ่านผลกลับมาตรวจ
+4. `Maintenance` — ต้องมีบรรทัด `อัปเดตล่าสุด: YYYY-MM-DD` (ปี ค.ศ.; ใช้ `Last updated:` ได้) และบอกว่าเมื่อไรต้องแก้ Skill
+
+หลักการ:
+
+- Skill ใหม่ควรใช้ v3; Skill v2 เดิมยังผ่าน validator และไม่ต้อง migrate พร้อมกัน ให้ยกเป็น v3 เมื่อแก้เชิงสาระ
+- `scripts/validate_repo.py`, `test/skill-authoring.test.js` และตัวตรวจ Skill Pack ของพนักงาน (`src/modules/packs/review.js`) ตรวจหัวข้อและวันที่ของ v3 แบบเดียวกัน
+- frontmatter ยังรับเฉพาะ `name`, `description`, `standardVersion` วันที่จึงอยู่ในหัวข้อ Maintenance ไม่ใช่ frontmatter
+- เมื่อขั้นตอนหรือคำสั่งเปลี่ยน ให้แก้ Skill และเปลี่ยนวันที่ทันที อย่าปล่อยคำสั่งที่ใช้ไม่ได้ค้างไว้
+- ตัวอย่างจริง: `../skills/step-skill-authoring/SKILL.md`
+
 ### ข้อยกเว้นที่บันทึกไว้
 
 - `skills/common/step-router` **ไม่ต้องใช้โครง v2** เพราะไม่ใช่ Skill ปลายทางที่ Router เลือก แต่เป็นสเปกอัลกอริทึมการจัดเส้นทางของตัว Router เอง การยัดหัวข้อ Inputs/Output/Handoff แบบ Skill ทั่วไปจะบิดความหมายของเอกสาร
