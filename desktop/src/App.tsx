@@ -54,6 +54,7 @@ import {
   Eye,
   AlertTriangle,
   SlidersHorizontal,
+  CalendarClock,
 } from 'lucide-react';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
@@ -124,6 +125,7 @@ import { startersFor, starterTag, starterText } from './starters';
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
 const InternalMedia = lazyScreen(async () => ({ default: (await import('./internal-media-app')).InternalMedia }));
+const ScheduledTasks = lazyScreen(async () => ({ default: (await import('./schedules-app')).ScheduledTasks }));
 const SkillsHub = lazyScreen(async () => ({ default: (await import('./skills')).SkillsHub }));
 
 // Short words for the composer's permission pill; the list itself keeps the full descriptions.
@@ -219,7 +221,7 @@ export default function App() {
   }, [selected]);
   const [authCode, setAuthCode] = useState<{ id: string; code: string } | null>(null);
   const [plan, setPlan] = useState<(PlanStep & { state: string })[]>([]);
-  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media'>('chat');
+  const [view, setView] = useState<'chat' | 'receipt' | 'skills' | 'documents' | 'media' | 'schedules'>('chat');
   const navigate = (next: typeof view) => {
     navigationVersion.current++;
     setView(next);
@@ -1150,6 +1152,10 @@ export default function App() {
       setSettings(false);
       navigate('skills');
     },
+    schedules: () => {
+      setSettings(false);
+      navigate('schedules');
+    },
     receipt: () => {
       setSettings(false);
       navigate('receipt');
@@ -1271,7 +1277,9 @@ export default function App() {
           ? t('ตรวจใบเสร็จ AFP')
           : view === 'skills'
             ? t('ศูนย์รวม Skill')
-            : session?.title || t('เริ่มต้นงานที่อยากทำ');
+            : view === 'schedules'
+              ? t('งานตั้งเวลา')
+              : session?.title || t('เริ่มต้นงานที่อยากทำ');
   const brandSymbol = (
     <span className="brand-symbol" role="img" aria-label="STeP">
       <img className="on-light" src={symbolColour} alt="" />
@@ -1469,6 +1477,17 @@ export default function App() {
                 <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
               </button>
               <button
+                data-tour="schedules"
+                className={view === 'schedules' && !settings ? 'nav-active' : ''}
+                onClick={() => {
+                  setSettings(false);
+                  navigate('schedules');
+                }}
+              >
+                <CalendarClock size={17} />
+                <span className="nav-label">{t('งานตั้งเวลา')}</span>
+              </button>
+              <button
                 data-tour="receipt"
                 className={view === 'receipt' && !settings ? 'nav-active' : ''}
                 onClick={() => {
@@ -1611,11 +1630,12 @@ export default function App() {
                       title={t('ตั้งให้ผู้ช่วยทำงานซ้ำตามเวลา เช่น ทุกเช้าวันทำงาน')}
                       onClick={() => {
                         setChatMenu(false);
-                        setAutomationOpen(true);
+                        setSettings(false);
+                        navigate('schedules');
                       }}
                     >
-                      <Timer size={15} />
-                      {t('งานตามรอบ')}
+                      <CalendarClock size={15} />
+                      {t('งานตั้งเวลา')}
                     </button>
                   </div>
                 </>
@@ -1631,7 +1651,9 @@ export default function App() {
                         ? t('ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง')
                         : view === 'skills'
                           ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
-                          : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
+                          : view === 'schedules'
+                            ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
+                            : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
               </small>
             </div>
             {!settings && view === 'chat' && (
@@ -1708,7 +1730,20 @@ export default function App() {
               />
             </div>
           )}
-          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'skills' ? (
+          {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'schedules' ? (
+            <ScheduledTasks
+              api={api}
+              connections={snapshot.connections}
+              defaultConnection={connectionId}
+              onOpen={id =>
+                void action(async () => {
+                  await refresh();
+                  navigate('chat');
+                  await selectSession(id);
+                })
+              }
+            />
+          ) : view === 'skills' ? (
             <SkillsHub
               skills={staffSkills}
               team={myTeam}
@@ -3080,15 +3115,12 @@ export default function App() {
         {automationOpen && (
           <AutomationDialog
             api={api}
-            connections={snapshot.connections}
             features={snapshot.policy?.features || {}}
             onClose={() => setAutomationOpen(false)}
-            onOpen={id => {
+            onSchedules={() => {
               setAutomationOpen(false);
-              void action(async () => {
-                await refresh();
-                await selectSession(id);
-              });
+              setSettings(false);
+              navigate('schedules');
             }}
           />
         )}
