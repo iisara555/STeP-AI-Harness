@@ -235,10 +235,6 @@ export const en: Record<string, string> = {
   'ส่งภาพให้ AI ตรวจ?': 'Send an image for AI analysis?',
   'ภาพ {0} จะส่งให้บัญชี AI ที่เลือก กรุณาตรวจข้อมูลในภาพก่อนยินยอม':
     'Image {0} will be sent to the selected AI account. Inspect its contents before consenting.',
-  'ใช้ MCP server ขององค์กร สิทธิ์ Google และการเข้าสู่ระบบจัดการโดย server เครื่องมือค้นหาและเรียกใช้จะขอ consent แยกกัน':
-    'Use the organization MCP server. Google sign-in and permissions are managed by that server. Discovery and execution request separate consent.',
-  'ยังไม่ได้ตั้งค่า Google Workspace ให้ผู้ดูแลเพิ่ม profile google-workspace ใน managed policy แล้วเปิด MCP':
-    'Google Workspace is not configured. Ask the administrator to add the google-workspace profile to managed policy and enable MCP.',
   'ทดสอบ Google Workspace': 'Test Google Workspace',
   'การทดสอบอ่านรายการเครื่องมือเท่านั้น ยังไม่ยืนยันสิทธิ์อ่านหรือเขียนเอกสารจริง':
     'The test reads the tool catalog only; it does not establish access to real documents.',
@@ -752,8 +748,8 @@ export const en: Record<string, string> = {
   'ความจำหมดอายุแล้ว: ลบ หรือแก้ข้อความแล้วตั้งอายุใหม่': 'Memory expired: delete it, or edit it and set a new lifetime',
   'ความจำไม่ได้ทบทวนเกิน 180 วัน: ตรวจว่ายังจริงอยู่ไหม แล้วแก้หรือลบ':
     'Memory not reviewed for over 180 days: check it is still true, then edit or delete it',
-  'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลข PR/ticket หรือ log): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร':
-    'Memory holds short-lived data (task progress, PR/ticket numbers or logs): delete it, or rewrite it as a lasting fact',
+  'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลขงาน หรือบันทึกระบบ): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร':
+    'Memory holds short-lived data (task progress, job numbers or system logs): delete it, or rewrite it as a lasting fact',
   'ความจำสองรายการเนื้อหาเกือบเหมือนกัน: รวมเป็นรายการเดียว แล้วลบอีกรายการ':
     'Two memories say almost the same thing: merge them into one and delete the other',
   'บทเรียนนี้ยังต้องแก้เรื่องเดิมซ้ำ: เขียนบทเรียนให้ชัดขึ้นในกล่องบทเรียน':
@@ -956,22 +952,17 @@ export const en: Record<string, string> = {
   '(ยังไม่เปิดใช้)': '(not enabled)',
   'ตรวจปลายทาง ข้อมูล และผลทุกครั้ง เครื่องมืออาจแก้ข้อมูลในบริการที่เชื่อมต่อ':
     'Check the destination, data and results each time — tools may change data in connected services',
-  'เลือก server ที่ผู้ดูแลกำหนด': 'Choose a server set by your admin',
   'ค้นหาเครื่องมือ MCP': 'Search MCP tools',
   ค้นหาเครื่องมือ: 'Search tools',
   'ชื่อเครื่องมือ MCP': 'MCP tool name',
   ชื่อเครื่องมือ: 'Tool name',
   'ข้อมูลเครื่องมือ MCP': 'MCP tool input',
   ตรวจและเรียกเครื่องมือ: 'Check and call tool',
-  'รันใน container ที่ผู้ดูแลกำหนด ปิดเครือข่าย และอ่านเฉพาะสำเนาไฟล์ที่คุณแนบ':
-    'Runs in an admin-defined container with no network, reading only copies of the files you attach',
   'คำสั่ง sandbox': 'Sandbox command',
   'ไฟล์ sandbox': 'Sandbox files',
-  'path ไฟล์ในพื้นที่งาน คั่นด้วย comma': 'File paths in the workspace, separated by commas',
-  'ตรวจและรันใน sandbox': 'Check and run in sandbox',
   'ดูการใช้งาน AI': 'View AI usage',
   ดูและแก้ไขความจำ: 'View and edit memory',
-  'คีย์ลัดและ Vim': 'Shortcuts and Vim',
+  คีย์ลัดแป้นพิมพ์: 'Keyboard shortcuts',
   ดูทัวร์แนะนำอีกครั้ง: 'Replay the tour',
   เปิดตัวช่วยตั้งค่าเริ่มต้น: 'Open setup wizard',
   สลับแถบงาน: 'Toggle task list',
@@ -979,9 +970,6 @@ export const en: Record<string, string> = {
   ธีมตามระบบ: 'System theme',
   ธีมสว่าง: 'Light theme',
   ธีมมืด: 'Dark theme',
-  'Mod คือ Ctrl บน Windows/Linux และ Command บน macOS ใช้รูปแบบ Mod+Alt+Shift+k เว้นว่างเพื่อปิดคีย์ลัด':
-    'Mod means Ctrl on Windows/Linux and Command on macOS. Use the form Mod+Alt+Shift+k; leave blank to turn a shortcut off',
-  'คีย์ลัด ': 'Shortcut ',
   'เปิด Vim ในช่องพิมพ์คำขอ': 'Enable Vim in the message box',
   'เริ่มใน Insert กด Escape เพื่อเข้า Normal ใช้ i/a, h/j/k/l, w/b, 0/$ และ x การพิมพ์ภาษาไทยผ่าน IME ยังคงทำงานตามปกติ':
     'Starts in Insert mode; press Escape for Normal. Supports i/a, h/j/k/l, w/b, 0/$ and x. Thai input through an IME works as usual',
@@ -1025,8 +1013,8 @@ export const en: Record<string, string> = {
   บันทึกเมื่อ: 'Saved',
   แก้ไขล่าสุด: 'Last edited',
   'หลักฐาน:': 'Evidence:',
-  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลข PR/ticket หรือ log ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
-    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, PR/ticket numbers and logs. Working steps belong in a "procedure" lesson or a Skill',
+  'ควรบันทึกข้อเท็จจริงที่ไม่ค่อยเปลี่ยน เช่น รูปแบบคำตอบที่ชอบ ข้อตกลงของงาน หรือสิ่งที่เคยแก้ให้ ไม่ต้องบันทึกความคืบหน้างาน เลขงาน หรือบันทึกระบบ ขั้นตอนการทำงานควรเป็นบทเรียนแบบ "วิธีทำงาน" หรือ Skill':
+    'Save facts that rarely change, such as the answer style you like, work conventions or things you corrected before. Skip task progress, job numbers and system logs. Working steps belong in a "procedure" lesson or a Skill',
   ' · หมดอายุแล้ว': ' · Expired',
   แก้ไข: 'Edit',
   ลบความจำ: 'Delete memory',
@@ -1094,8 +1082,8 @@ export const en: Record<string, string> = {
   'ไฟล์เปลี่ยนระหว่างอ่าน กรุณาแนบไฟล์อีกครั้ง': 'The file changed while being read. Please attach it again',
   'ข้อมูลนี้มีข้อมูลส่วนบุคคล ความลับ หรือเนื้อหาที่ต้องตรวจเพิ่มเติม จึงบันทึกเป็นความจำไม่ได้':
     "This contains personal, confidential or sensitive content that needs review, so it can't be saved as memory",
-  'ข้อความนี้เป็นข้อมูลชั่วคราว เช่น ความคืบหน้างาน เลข PR/ticket/run หรือ log จึงไม่บันทึกเป็นความจำหรือบทเรียน ให้บันทึกเฉพาะข้อเท็จจริงที่ไม่ค่อยเปลี่ยน':
-    "This looks short-lived (task progress, a PR/ticket/run number or a log), so it isn't saved as a memory or lesson. Save only facts that rarely change",
+  'ข้อความนี้เป็นข้อมูลชั่วคราว เช่น ความคืบหน้างาน เลขงาน หรือบันทึกระบบ จึงไม่บันทึกเป็นความจำหรือบทเรียน ให้บันทึกเฉพาะข้อเท็จจริงที่ไม่ค่อยเปลี่ยน':
+    "This looks short-lived (task progress, a job number or a system log), so it isn't saved as a memory or lesson. Save only facts that rarely change",
   'รูปแบบความจำไม่ถูกต้อง กรุณาตรวจชื่อ ข้อความ ความสำคัญ และอายุความจำ':
     'Invalid memory format. Check the name, text, importance and lifetime',
   ไม่พบความจำในขอบเขตที่เลือก: 'No memories found in the selected scope',
@@ -1270,18 +1258,12 @@ export const en: Record<string, string> = {
   ไม่สำเร็จ: 'Failed',
   หยุดแล้ว: 'Stopped',
   งานหยุดเมื่อปิดแอป: 'Stopped when the app closed',
-  'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills Skill ที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติใช้เองบนเครื่องนี้ได้ทันที ส่วน Hooks, Agent และการแชร์ให้ทีมต้องให้ผู้ดูแลรับรอง digest ก่อน เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง':
-    'Import pack.json or a SKILL.md folder, including .claude/skills. Text-only Skills that pass the automated checks can be used on this computer right away; hooks, agents and sharing with a team need your admin to approve the digest first. Content is reference material for drafting.',
-  'ชื่อชุดที่นำเข้าจาก SKILL.md': 'Name of the pack imported from SKILL.md',
   เลือกโฟลเดอร์และนำเข้า: 'Choose folder and import',
-  'เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน': 'Enable admin-approved Hooks on confirm',
-  'เปิด Agent templates เมื่อยืนยัน': 'Enable Agent templates on confirm',
   'ยังไม่มี Skill Pack': 'No Skill Packs yet',
   เปิดใช้: 'Enable',
   ปิดใช้: 'Disable',
   ' · ตรวจไฟล์ไม่ผ่าน': ' · File check failed',
   ยืนยันเปิดใช้: 'Confirm enable',
-  'ส่งออก .claude/skills': 'Export .claude/skills',
   ใช้: 'Use',
   ตรวจความพร้อมก่อนส่ง: 'Readiness check before sending',
   ต้องตอบคำถามแยกประเภทงานก่อน: 'Answer the task-type question first',
@@ -2645,8 +2627,6 @@ export const en: Record<string, string> = {
   'ล่าสุด {0}': 'last {0}',
   เลิกใช้เอง: 'Stop using',
   ใช้เองบนเครื่องนี้: 'Use on this computer',
-  'ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือให้ผู้ดูแลรับรอง digest ของชุดนี้':
-    "Not usable yet: fix the review findings, or ask your admin to approve this pack's digest",
   'ใช้ Skill นี้เองบนเครื่องนี้': 'Use this Skill on this computer',
   '{0}\nผ่านการตรวจมาตรฐานและความปลอดภัยอัตโนมัติแล้ว ใช้ได้เฉพาะบนเครื่องนี้ เป็นข้อความประกอบการร่างเท่านั้น ไม่มี Hooks หรือ Agent และไม่ได้รับรองโดยผู้ดูแล':
     '{0}\nPassed the automated standard and safety checks. It works on this computer only, as reference text for drafting, with no hooks or agents, and is not approved by an admin.',
@@ -2660,4 +2640,48 @@ export const en: Record<string, string> = {
     'Use a Skill you imported on this computer as soon as it passes the checks',
   'ปุ่ม "เสนอให้องค์กรใช้" ส่ง Skill ของคุณให้ผู้ดูแลพิจารณา':
     'The "Propose for the organization" button sends your Skill to the administrators for review',
+  // UI audit 2026-10-17: group C (dialogs)
+  ยังไม่มีงานตามรอบที่ทำแล้ว: 'No scheduled task has run yet',
+  'ผู้ดูแลยังไม่เปิดเครื่องมือ MCP บนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
+    'Your administrator has not turned on MCP tools on this computer. Contact them if you need it',
+  'ใช้บริการที่องค์กรตั้งไว้ การเข้าสู่ระบบและสิทธิ์ Google จัดการโดยองค์กร การค้นหาและการเรียกใช้เครื่องมือจะถามคุณก่อนทุกครั้ง':
+    'Uses the service your organization set up. Your organization manages Google sign-in and permissions. Searching for and running a tool asks you first every time',
+  'ยังไม่ได้ตั้งค่า Google Workspace ติดต่อผู้ดูแลระบบ': 'Google Workspace is not set up yet. Contact your administrator',
+  สำหรับผู้ดูแล: 'For administrators',
+  'เพิ่ม MCP server ที่มี profile google-workspace ใน managed policy แล้วเปิด features.mcp':
+    'Add an MCP server with profile google-workspace to the managed policy, then turn on features.mcp',
+  บริการ: 'Service',
+  เลือกบริการที่ผู้ดูแลกำหนด: 'Choose a service your administrator set up',
+  'เช่น ปฏิทิน หรือ เอกสาร': 'For example, calendar or documents',
+  คัดลอกชื่อจากผลค้นหา: 'Copy the name from the search results',
+  ข้อมูลที่ส่งให้เครื่องมือ: 'Data sent to the tool',
+  'เขียนในรูปแบบ JSON ตามที่ผลค้นหาบอก เช่น {"query": "รายงานประจำเดือน"} ถ้าเครื่องมือไม่ต้องใช้ข้อมูล ปล่อยเป็น {}':
+    'Write it as JSON, as the search results describe, for example {"query": "monthly report"}. If the tool needs no data, leave {}',
+  'พื้นที่ทดลองคำสั่ง (Docker)': 'Command sandbox (Docker)',
+  'ผู้ดูแลยังไม่เปิดพื้นที่ทดลองคำสั่งบนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ':
+    'Your administrator has not turned on the command sandbox on this computer. Contact them if you need it',
+  'คำสั่งทำงานในพื้นที่แยกที่ผู้ดูแลกำหนด ไม่ต่ออินเทอร์เน็ต และอ่านได้เฉพาะสำเนาไฟล์ที่คุณระบุ':
+    'Commands run in a separate space your administrator set up, with no internet, and can read only copies of the files you list',
+  'ไฟล์ที่ใช้ (ไม่บังคับ)': 'Files to use (optional)',
+  'เช่น รายงาน/ข้อมูล.csv': 'For example, reports/data.csv',
+  'ตำแหน่งไฟล์ในพื้นที่งาน ถ้ามีหลายไฟล์ คั่นด้วยเครื่องหมายจุลภาค (,)':
+    'File locations in the workspace. Separate several files with commas (,)',
+  ตรวจและทำงานในพื้นที่ทดลอง: 'Check and run in the sandbox',
+  'พิมพ์คีย์ลัดในช่องทางขวาของแต่ละคำสั่ง เช่น {0} เว้นว่างเพื่อปิดคีย์ลัดของคำสั่งนั้น':
+    'Type a shortcut in the box to the right of each command, for example {0}. Leave it blank to turn that shortcut off',
+  คีย์ลัดของแต่ละคำสั่ง: 'Shortcut for each command',
+  'คีย์ลัด {0}': 'Shortcut for {0}',
+  ไม่มีคีย์ลัด: 'No shortcut',
+  'นำเข้าชุด Skill (คู่มือที่บอก AI ว่าทำงานเรื่องหนึ่งอย่างไร) จากโฟลเดอร์บนเครื่อง ชุดที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติ ใช้เองบนเครื่องนี้ได้ทันที ส่วนชุดที่มีคำสั่งอัตโนมัติ ผู้ช่วยสำเร็จรูป หรือจะแชร์ให้ทั้งทีม ต้องให้ผู้ดูแลรับรองก่อน เนื้อหาในชุดเป็นข้อมูลประกอบการร่างเท่านั้น':
+    'Import a Skill set (a guide that tells the AI how to do one kind of work) from a folder on this computer. A text-only set that passes the automatic checks works for you on this computer right away. A set with automatic commands or ready-made assistants, or one to share with your team, needs administrator approval first. Its content is only reference material for drafts',
+  'ตั้งชื่อชุด (ใช้เมื่อนำเข้าโฟลเดอร์ Skill เดี่ยว)': 'Set name (used when importing a single Skill folder)',
+  'เมื่อกด "ยืนยันเปิดใช้" ชุดที่ผู้ดูแลรับรองแล้ว': 'When you press "Confirm and turn on" for an approved set',
+  เปิดคำสั่งอัตโนมัติที่ผู้ดูแลรับรองไว้ด้วย: 'Also turn on its approved automatic commands',
+  เปิดผู้ช่วยสำเร็จรูปที่มากับชุดด้วย: 'Also turn on the ready-made assistants in the set',
+  'รับไฟล์ pack.json โฟลเดอร์ที่มี SKILL.md และ .claude/skills คำสั่งอัตโนมัติคือ Hooks ผู้ช่วยสำเร็จรูปคือ Agent templates ทั้งสองเปิดได้เฉพาะชุดที่มี digest อยู่ในรายการรับรองของ managed policy':
+    'Accepts pack.json, a folder with SKILL.md, and .claude/skills. Automatic commands are Hooks; ready-made assistants are Agent templates. Both turn on only for a set whose digest is in the managed policy approval list',
+  'ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือขอให้ผู้ดูแลรับรองชุดนี้':
+    'Not usable yet: fix what the check found, or ask an administrator to approve this set',
+  'ส่งออกเป็นโฟลเดอร์ Skill': 'Export as a Skill folder',
+  'รุ่นก่อนหน้า ({0} รุ่น)': 'Earlier versions ({0})',
 };

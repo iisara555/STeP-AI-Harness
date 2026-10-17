@@ -5148,3 +5148,191 @@ nav button:disabled {
   margin: 4px 0 0;
   padding-left: 18px;
 }
+/* UI audit 2026-10-17: group C (dialogs) */
+/* Keyboard shortcuts: one command per row, name left, key right. */
+.keybinding-table {
+  display: grid;
+  margin: 4px 0 12px;
+  border-top: 1px solid var(--line);
+}
+.keybinding-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 170px);
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.keybinding-row label {
+  font-size: 13px;
+  line-break: strict;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.keybinding-row input {
+  width: 100%;
+  padding: 6px 10px;
+}
+.keybinding-vim,
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.keybinding-vim input,
+.check-row input {
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+/* Stacked forms in dialogs: label above field, actions on their own row. */
+.dialog-form,
+.pack-form {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 4px;
+}
+.dialog-form h3 {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+.dialog-form > section > p,
+.dialog-form > p,
+.pack-form > p {
+  margin: 0;
+}
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.field > input,
+.field > select,
+.field > textarea {
+  width: 100%;
+}
+.field > small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.code-field {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* Folded sections in dialogs: a full-row target of at least 32px with a chevron, so they read as controls. */
+.dialog-fold > summary,
+.admin-fold > summary,
+.whats-new-older > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 6px 4px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+.dialog-fold > summary::-webkit-details-marker,
+.admin-fold > summary::-webkit-details-marker,
+.whats-new-older > summary::-webkit-details-marker {
+  display: none;
+}
+.dialog-fold > summary::before,
+.admin-fold > summary::before,
+.whats-new-older > summary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin: 0 4px 0 2px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.dialog-fold[open] > summary::before,
+.admin-fold[open] > summary::before,
+.whats-new-older[open] > summary::before {
+  transform: rotate(45deg);
+}
+.dialog-fold > summary:hover,
+.admin-fold > summary:hover,
+.whats-new-older > summary:hover {
+  background: var(--hover);
+}
+.dialog-fold {
+  margin: 2px 0;
+}
+.dialog-fold[open] {
+  padding-bottom: 8px;
+}
+.admin-fold > summary {
+  font-size: 12px;
+  color: var(--muted);
+}
+.admin-fold > p {
+  margin: 4px 0 0;
+}
+/* Skill Packs */
+.pack-options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.pack-options legend {
+  padding: 0;
+  margin-bottom: 2px;
+}
+.pack-empty {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.pack-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.pack-item > :not(button) {
+  flex-basis: 100%;
+}
+.pack-item > p {
+  margin: 0;
+}
+/* Memory: the maintenance board toggle is a disclosure with a chevron. */
+.maintenance-toggle {
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+}
+.maintenance-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.maintenance-toggle[aria-expanded='true'] .maintenance-chevron {
+  transform: rotate(90deg);
+}
+/* What's new: older versions folded under one row. */
+.whats-new-older {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.whats-new-older > summary {
+  font-size: 14px;
+  font-weight: 600;
+}

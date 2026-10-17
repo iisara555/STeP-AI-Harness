@@ -85,36 +85,54 @@ export function PacksDialog({
     <ConfirmDialog info title="Skill Packs" confirmLabel={t('ปิด')} onConfirm={onClose} onCancel={onClose}>
       <p>
         {t(
-          'นำเข้า pack.json หรือโฟลเดอร์ SKILL.md รวมถึง .claude/skills Skill ที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติใช้เองบนเครื่องนี้ได้ทันที ส่วน Hooks, Agent และการแชร์ให้ทีมต้องให้ผู้ดูแลรับรอง digest ก่อน เนื้อหาเป็นข้อมูลประกอบสำหรับร่าง',
+          'นำเข้าชุด Skill (คู่มือที่บอก AI ว่าทำงานเรื่องหนึ่งอย่างไร) จากโฟลเดอร์บนเครื่อง ชุดที่เป็นข้อความล้วนและผ่านการตรวจอัตโนมัติ ใช้เองบนเครื่องนี้ได้ทันที ส่วนชุดที่มีคำสั่งอัตโนมัติ ผู้ช่วยสำเร็จรูป หรือจะแชร์ให้ทั้งทีม ต้องให้ผู้ดูแลรับรองก่อน เนื้อหาในชุดเป็นข้อมูลประกอบการร่างเท่านั้น',
         )}
       </p>
-      <label>
-        {t('ชื่อชุดที่นำเข้าจาก SKILL.md')}
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="public-writing" />
-      </label>
-      <button disabled={busy || !importAllowed} onClick={() => void act('packInstall', { name })}>
-        {t('เลือกโฟลเดอร์และนำเข้า')}
-      </button>
-      {!importAllowed && <p className="small muted">{t('ผู้ดูแลปิดการนำเข้า Skill Pack บนเครื่องนี้')}</p>}
-      <label>
-        <input type="checkbox" checked={hooks} onChange={e => setHooks(e.target.checked)} />
-        {t('เปิด Hooks ที่ผู้ดูแลรับรองเมื่อยืนยัน')}
-      </label>
-      <label>
-        <input type="checkbox" checked={agents} onChange={e => setAgents(e.target.checked)} />
-        {t('เปิด Agent templates เมื่อยืนยัน')}
-      </label>
+      <div className="pack-form">
+        <label className="field">
+          <span>{t('ตั้งชื่อชุด (ใช้เมื่อนำเข้าโฟลเดอร์ Skill เดี่ยว)')}</span>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="public-writing" />
+        </label>
+        <div className="dialog-actions">
+          <button disabled={busy || !importAllowed} onClick={() => void act('packInstall', { name })}>
+            {t('เลือกโฟลเดอร์และนำเข้า')}
+          </button>
+        </div>
+        {!importAllowed && <p className="small muted">{t('ผู้ดูแลปิดการนำเข้า Skill Pack บนเครื่องนี้')}</p>}
+        <fieldset className="pack-options">
+          <legend className="small muted">{t('เมื่อกด "ยืนยันเปิดใช้" ชุดที่ผู้ดูแลรับรองแล้ว')}</legend>
+          <label className="check-row">
+            <input type="checkbox" checked={hooks} onChange={e => setHooks(e.target.checked)} />
+            <span>{t('เปิดคำสั่งอัตโนมัติที่ผู้ดูแลรับรองไว้ด้วย')}</span>
+          </label>
+          <label className="check-row">
+            <input type="checkbox" checked={agents} onChange={e => setAgents(e.target.checked)} />
+            <span>{t('เปิดผู้ช่วยสำเร็จรูปที่มากับชุดด้วย')}</span>
+          </label>
+        </fieldset>
+        <details className="admin-fold">
+          <summary>{t('สำหรับผู้ดูแล')}</summary>
+          <p className="small muted">
+            {t(
+              'รับไฟล์ pack.json โฟลเดอร์ที่มี SKILL.md และ .claude/skills คำสั่งอัตโนมัติคือ Hooks ผู้ช่วยสำเร็จรูปคือ Agent templates ทั้งสองเปิดได้เฉพาะชุดที่มี digest อยู่ในรายการรับรองของ managed policy',
+            )}
+          </p>
+        </details>
+      </div>
       {error && <p role="alert">{error}</p>}
-      {!packs.length && <p>{t('ยังไม่มี Skill Pack')}</p>}
+      {!packs.length && <p className="muted pack-empty">{t('ยังไม่มี Skill Pack')}</p>}
       {packs.map(p => (
-        <section key={p.id}>
+        <section key={p.id} className="pack-item">
           <strong>
             {p.id} · {p.enabled ? (p.personal ? t('ใช้เองบนเครื่องนี้') : t('เปิดใช้')) : t('ปิดใช้')}
             {p.invalid ? t(' · ตรวจไฟล์ไม่ผ่าน') : ''}
           </strong>
-          <p className="small muted">
-            {p.digest} · Hooks {p.hooks}
-          </p>
+          <details className="admin-fold">
+            <summary>{t('สำหรับผู้ดูแล')}</summary>
+            <p className="small muted">
+              digest {p.digest} · Hooks {p.hooks}
+            </p>
+          </details>
           {p.credit && (
             <p className="small">
               {t('นำเข้าโดย {0}', p.credit.name)}
@@ -146,12 +164,12 @@ export function PacksDialog({
                 </button>
               )}
               {!p.invalid && !p.personalAllowed && !p.adminApproved && (
-                <p className="small muted">{t('ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือให้ผู้ดูแลรับรอง digest ของชุดนี้')}</p>
+                <p className="small muted">{t('ยังใช้ไม่ได้: แก้ตามผลตรวจ หรือขอให้ผู้ดูแลรับรองชุดนี้')}</p>
               )}
             </>
           )}
           <button disabled={busy || p.invalid} onClick={() => void act('packExport', { id: p.id })}>
-            {t('ส่งออก .claude/skills')}
+            {t('ส่งออกเป็นโฟลเดอร์ Skill')}
           </button>
           {/* Sends the pack to the administrators' intake sheet; publishing for everyone still needs their approval. */}
           {!p.invalid && p.promotable && (

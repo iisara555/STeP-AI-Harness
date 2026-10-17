@@ -146,9 +146,9 @@ try {
   await page.keyboard.press('ControlOrMeta+k');
   const palette = page.getByRole('dialog', { name: 'คำสั่ง' });
   await expect(palette).toBeVisible();
-  await palette.getByRole('option', { name: /คีย์ลัดและ Vim/ }).click();
-  const keyboard = page.getByRole('alertdialog', { name: 'คีย์ลัดและ Vim' });
-  await keyboard.getByRole('textbox', { name: 'คีย์ลัด palette', exact: true }).fill('Mod+j');
+  await palette.getByRole('option', { name: /คีย์ลัดแป้นพิมพ์/ }).click();
+  const keyboard = page.getByRole('alertdialog', { name: 'คีย์ลัดแป้นพิมพ์' });
+  await keyboard.getByRole('textbox', { name: 'คีย์ลัด เปิดคำสั่ง', exact: true }).fill('Mod+j');
   await keyboard.getByRole('checkbox', { name: 'เปิด Vim ในช่องพิมพ์คำขอ' }).check();
   await keyboard.getByRole('button', { name: 'บันทึก', exact: true }).click();
   await expect(keyboard).not.toBeVisible();

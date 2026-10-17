@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { explainError } from './messages';
 import type { DesktopAPI, MaintenanceBoard, MaintenanceItem, MaintenanceKind, MaintenanceStatus } from './types';
 import { localized, t } from './i18n';
@@ -8,7 +9,7 @@ import { localized, t } from './i18n';
 const problems: Record<MaintenanceKind, string> = localized({
   'memory-expired': 'ความจำหมดอายุแล้ว: ลบ หรือแก้ข้อความแล้วตั้งอายุใหม่',
   'memory-stale': 'ความจำไม่ได้ทบทวนเกิน 180 วัน: ตรวจว่ายังจริงอยู่ไหม แล้วแก้หรือลบ',
-  'memory-ephemeral': 'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลข PR/ticket หรือ log): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร',
+  'memory-ephemeral': 'ความจำเก็บข้อมูลชั่วคราว (ความคืบหน้างาน เลขงาน หรือบันทึกระบบ): ลบ หรือเขียนใหม่เป็นข้อเท็จจริงถาวร',
   'memory-duplicate': 'ความจำสองรายการเนื้อหาเกือบเหมือนกัน: รวมเป็นรายการเดียว แล้วลบอีกรายการ',
   'lesson-repeated': 'บทเรียนนี้ยังต้องแก้เรื่องเดิมซ้ำ: เขียนบทเรียนให้ชัดขึ้นในกล่องบทเรียน',
   'lesson-fix': 'คำตอบที่ใช้บทเรียนนี้ถูกกด "ต้องแก้" บ่อยกว่า "ดี": ทบทวนหรือปิดบทเรียน',
@@ -55,8 +56,10 @@ export function MaintenancePanel({ api, version }: { api: DesktopAPI; version: n
   const move = (item: MaintenanceItem, status: MaintenanceStatus) => void act(() => api.call('maintenanceMove', { id: item.id, status }));
   return (
     <section className="maintenance">
-      <button className="quiet" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {waiting ? t('งานดูแลความจำ บทเรียน และ Skill ({0})', waiting) : t('งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง')}
+      {/* A disclosure, so it reads as one: chevron first, text left-aligned, like the other folds in the app. */}
+      <button className="quiet maintenance-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ChevronRight size={16} aria-hidden="true" className="maintenance-chevron" />
+        <span>{waiting ? t('งานดูแลความจำ บทเรียน และ Skill ({0})', waiting) : t('งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง')}</span>
       </button>
       {open && (
         <>

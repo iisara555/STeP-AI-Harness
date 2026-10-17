@@ -195,11 +195,12 @@ export function CommandPalette({ items, onClose }: { items: PaletteItem[]; onClo
               if (e.key === 'Escape') onClose();
             }}
             role="combobox"
-            aria-expanded="true"
+            aria-expanded={matches.length > 0}
             aria-controls="palette-list"
           />
         </label>
-        <div className="palette-list" id="palette-list" role="listbox" ref={list}>
+        {/* A listbox must hold options; with no match the list is a plain region and the message is announced. */}
+        <div className="palette-list" id="palette-list" role={matches.length ? 'listbox' : undefined} ref={list}>
           {matches.map((item, index) => {
             const heading = item.group !== group ? (group = item.group) : '';
             return (
@@ -218,7 +219,11 @@ export function CommandPalette({ items, onClose }: { items: PaletteItem[]; onClo
               </div>
             );
           })}
-          {!matches.length && <p className="muted small palette-empty">{t('ไม่พบงานหรือคำสั่งที่ตรงกัน')}</p>}
+          {!matches.length && (
+            <p className="muted small palette-empty" role="status">
+              {t('ไม่พบงานหรือคำสั่งที่ตรงกัน')}
+            </p>
+          )}
         </div>
       </section>
     </div>

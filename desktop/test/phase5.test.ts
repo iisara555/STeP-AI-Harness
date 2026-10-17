@@ -8,7 +8,7 @@ import { copilotDeviceLogin } from '../electron/copilot-auth';
 import { CopilotAdapter } from '../electron/copilot';
 import { defaultPolicy, parsePolicy } from '../electron/policy';
 import { Voice, downloadVerified, validateWav } from '../electron/voice';
-import { commandForKey, validateKeybindings, vimEdit, commandPalette } from '../src/commands';
+import { commandForKey, validateKeybindings, vimEdit, commandPalette, parseShortcut, shortcutText } from '../src/commands';
 
 test('Phase 5 risky capabilities stay off and invalid destinations, approvals and artifacts reject the complete policy', () => {
   const p = defaultPolicy();
@@ -154,7 +154,12 @@ test('command registry validates collisions and platform modifiers; Vim edits on
   assert.equal(commandForKey({ ...event, isComposing: true }), undefined);
   assert.equal(commandForKey({ ...event, ctrlKey: false, metaKey: true }, {}, true), 'palette');
   assert.equal(commandForKey({ ...event, key: 'q' }, { palette: 'Mod+q' }), 'palette');
-  assert.equal(commandPalette({ new: () => {} }, { new: 'Mod+q' }, [])[0].hint, 'Mod+q');
+  // Shown in platform keys with a capital letter; settings keep the stored Mod+q.
+  assert.equal(commandPalette({ new: () => {} }, { new: 'Mod+q' }, [])[0].hint, 'Ctrl+Q');
+  assert.equal(commandPalette({ palette: () => {}, new: () => {} }, {}, []).length, 1, 'the palette does not list itself');
+  assert.equal(shortcutText('Mod+Shift+u', true), '⌘⇧U');
+  for (const typed of ['Ctrl+Shift+U', '⌘⇧U', 'cmd+shift+u', 'Mod+Shift+u']) assert.equal(parseShortcut(typed), 'Mod+Shift+u');
+  assert.equal(parseShortcut('Ctrl+'), 'Ctrl+', 'half-typed text stays as typed');
   assert.equal(vimEdit('Escape', 'abc', 1, false)?.normal, true);
   assert.equal(vimEdit('i', 'abc', 1, true)?.normal, false);
   assert.equal(vimEdit('x', 'a😀b', 1, true)?.text, 'ab');

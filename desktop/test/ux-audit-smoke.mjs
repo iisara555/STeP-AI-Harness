@@ -48,8 +48,8 @@ try {
   await expect(wizard).toHaveCount(0);
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
   await page.keyboard.press('ControlOrMeta+k');
-  await page.getByRole('option', { name: 'คีย์ลัดและ Vim', exact: true }).click();
-  const confirm = page.getByRole('alertdialog', { name: 'คีย์ลัดและ Vim', exact: true });
+  await page.getByRole('option', { name: 'คีย์ลัดแป้นพิมพ์', exact: true }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'คีย์ลัดแป้นพิมพ์', exact: true });
   await expect(confirm).toBeVisible();
   for (const key of ['Tab', 'Shift+Tab']) {
     for (let i = 0; i < 24; i++) {
