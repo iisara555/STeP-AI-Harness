@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:
 import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-export type VaultKind = 'website' | 'api-key' | 'google-oauth';
+export type VaultKind = 'website' | 'api-key' | 'google-oauth' | 'google-client';
 export type VaultMetadata = { id: string; label: string; kind: VaultKind; destination: string; revision: number; at: string };
 type Record = VaultMetadata & { nonce: string; tag: string; ciphertext: string };
 export type KeyProtection = { wrap: (value: string) => Buffer; unwrap: (value: Buffer) => string };
@@ -112,7 +112,7 @@ export class Vault {
     password?: string;
     value?: string;
   }): VaultMetadata {
-    if (!['website', 'api-key', 'google-oauth'].includes(input.kind)) throw new Error('INVALID_INPUT');
+    if (!['website', 'api-key', 'google-oauth', 'google-client'].includes(input.kind)) throw new Error('INVALID_INPUT');
     const previous = input.id ? this.record(string(input.id, 80)) : undefined;
     if (previous && (this.locks.has(previous.id) || previous.revision !== input.revision)) throw new Error('VAULT_REVISION_CHANGED');
     if (previous && previous.kind !== input.kind) throw new Error('VAULT_ACCESS_DENIED');

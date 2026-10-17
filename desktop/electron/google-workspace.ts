@@ -5,6 +5,8 @@ import type { Store } from './store';
 import { Vault } from './vault';
 import { GOOGLE_SERVICES, googleScopes, type GoogleService } from '../src/google-services';
 import { credentialErrorsTh } from '../src/credential-copy';
+import { parseGoogleDesktopClient } from './google-client';
+import { bundledGoogleClientSecret } from './google-bundled-client';
 import { googleInvocation, type GoogleRequest } from './google-operations';
 
 export type GoogleConfig = { clientId: string; domains: string[]; services: GoogleService[] };
@@ -26,7 +28,7 @@ function reject(code: string): never {
   throw new Error(code);
 }
 export const googleAuthorize = (
-  config: GoogleConfig,
+  config: GoogleConfig & { clientSecret?: string },
   scopes: string[],
   open: (url: string) => Promise<void>,
   signal: AbortSignal,
@@ -49,6 +51,7 @@ export class GoogleWorkspace {
     private transport = fetch,
     private authorize = googleAuthorize,
     private employeeSubject: () => string | undefined = () => undefined,
+    private bundledClientSecret = bundledGoogleClientSecret,
   ) {}
   private accounts() {
     const subject = this.employeeSubject();
@@ -61,12 +64,46 @@ export class GoogleWorkspace {
     if (subject && a.subject !== subject) reject('GOOGLE_ACCOUNT_MISMATCH');
     return a;
   }
+  private async withClientSecret<T>(clientId: string, action: (secret?: string) => Promise<T>): Promise<T> {
+    const bundled = this.bundledClientSecret(clientId);
+    if (bundled) return action(bundled);
+    const record = this.store.get<{ credentialId: string }>('google-client', clientId);
+    return record ? this.vault.use(record.credentialId, 'google-client', clientId, action) : action();
+  }
+  importClient(text: string) {
+    if (this.connecting) reject('GOOGLE_CONNECTION_BUSY');
+    if (this.vault.state().suspended) reject('VAULT_SUSPENDED');
+    const config = this.config();
+    if (!config?.clientId) reject('GOOGLE_NOT_CONFIGURED');
+    const secret = parseGoogleDesktopClient(text, config.clientId);
+    const previous = this.store.get<{ credentialId: string }>('google-client', config.clientId);
+    const old = previous && this.vault.list().find(v => v.id === previous.credentialId);
+    if (previous && (!old || old.kind !== 'google-client' || old.destination !== config.clientId)) reject('VAULT_INTEGRITY_ERROR');
+    const entry = this.vault.save({
+      ...(old ? { id: old.id, revision: old.revision } : {}),
+      label: 'Google Desktop OAuth client',
+      kind: 'google-client',
+      destination: config.clientId,
+      value: secret,
+    });
+    this.store.put('google-client', config.clientId, { credentialId: entry.id });
+    this.invalidate();
+    return this.state();
+  }
   state() {
+    const clientId = this.config()?.clientId;
+    const clientPreconfigured = Boolean(clientId && this.bundledClientSecret(clientId));
+    const client = clientId && this.store.get<{ credentialId: string }>('google-client', clientId);
     return {
       configured: Boolean(this.config()?.clientId),
       services: this.config()?.services || [],
       connecting: Boolean(this.connecting),
       connectionError: this.connectionError,
+      clientPreconfigured,
+      clientSecretConfigured: Boolean(
+        clientPreconfigured ||
+        (client && this.vault.list().some(v => v.id === client.credentialId && v.kind === 'google-client' && v.destination === clientId)),
+      ),
       accounts: this.accounts().map(({ id, label, domain, scopes, paused, reauth }) => ({
         id,
         label,
@@ -119,12 +156,14 @@ export class GoogleWorkspace {
       )
         reject('CANCELLED');
       await context.check();
-      const result = await this.authorize(
-        config,
-        googleScopes(services),
-        this.open,
-        AbortSignal.any([controller.signal, context.signal]),
-        this.transport,
+      const result = await this.withClientSecret(config.clientId, secret =>
+        this.authorize(
+          { ...config, ...(secret ? { clientSecret: secret } : {}) },
+          googleScopes(services),
+          this.open,
+          AbortSignal.any([controller.signal, context.signal]),
+          this.transport,
+        ),
       );
       await context.check();
       if (controller.signal.aborted || context.signal.aborted) reject('CANCELLED');
@@ -202,15 +241,22 @@ export class GoogleWorkspace {
     if (pending) return pending;
     const revision = a.revision;
     const work = (async () => {
-      const refreshed = await googleJson(
-        'https://oauth2.googleapis.com/token',
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ client_id: a.clientId, refresh_token: value.refresh, grant_type: 'refresh_token' }),
-          signal,
-        },
-        this.transport,
+      const refreshed = await this.withClientSecret(a.clientId, secret =>
+        googleJson(
+          'https://oauth2.googleapis.com/token',
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: a.clientId,
+              refresh_token: value.refresh,
+              grant_type: 'refresh_token',
+              ...(secret ? { client_secret: secret } : {}),
+            }),
+            signal,
+          },
+          this.transport,
+        ),
       );
       if (
         typeof refreshed.access_token !== 'string' ||

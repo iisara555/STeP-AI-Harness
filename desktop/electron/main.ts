@@ -29,6 +29,7 @@ import { prepareLocalData } from './local-data';
 import { requireSecureStorage } from './secure-storage';
 import { Vault } from './vault';
 import { GoogleWorkspace } from './google-workspace';
+import { readGoogleClientFile } from './google-client';
 import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
 import type { GoogleRequest } from './google-operations';
 import { googleOperationCatalog } from './google-operations';
@@ -1624,7 +1625,7 @@ async function main() {
       vault.invalidate();
       google.invalidate();
     }
-    if (['vaultSave', 'googleConnect'].includes(method)) ensureCredentialStorage();
+    if (['vaultSave', 'googleConnect', 'googleImportClient'].includes(method)) ensureCredentialStorage();
     switch (method) {
       case 'vaultState':
         return {
@@ -1675,6 +1676,24 @@ async function main() {
       }
       case 'googleState':
         return { ...google.state(), enabled: policyState.policy.features.googleWorkspace, pages: GOOGLE_PAGES };
+      case 'googleImportClient': {
+        if (!policyState.policy.features.googleWorkspace || permissionMode() === 'plan') throw new Error('FEATURE_DISABLED');
+        if (google.state().connecting) throw new Error('GOOGLE_CONNECTION_BUSY');
+        const policy = policyState.policy;
+        const picked = await dialog.showOpenDialog(window, {
+          title: tm('เลือกไฟล์ OAuth client แบบ Desktop app'),
+          properties: ['openFile'],
+          filters: [{ name: 'Google OAuth client JSON', extensions: ['json'] }],
+        });
+        if (picked.canceled || picked.filePaths.length !== 1) return false;
+        const text = await readGoogleClientFile(picked.filePaths[0]);
+        if (policy !== policyState.policy) throw new Error('POLICY_CHANGED');
+        if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
+        ensureCredentialStorage();
+        const result = google.importClient(text);
+        await migrateApiKeys();
+        return result;
+      }
       case 'googleConnect': {
         if (!policyState.policy.features.googleWorkspace || permissionMode() === 'plan') throw new Error('FEATURE_DISABLED');
         const connected = await google.connect(
