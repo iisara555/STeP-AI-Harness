@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Support Google Desktop OAuth clients that require a client secret alongside PKCE. Import the matching Desktop app JSON through the native file picker in Google Workspace settings; its secret is stored in the local Vault and used for code exchange and refresh. Web clients and mismatched IDs are refused; no secret is embedded in policy, browser URLs or renderer state.
+- Support Google Desktop OAuth clients that require a client secret alongside PKCE. Administrators configure the matching Desktop app JSON once for installer builds; employees click Connect work account and consent through Google without importing files. Published builds require that configuration. Native client credentials stay in the main bundle and are extractable from an installer; employee tokens remain encrypted in the Vault. A native file-import fallback supports development and other managed clients. Web clients and mismatched IDs are refused; no secret reaches policy, browser URLs or renderer state.
 
 - Google Workspace connection failures remain visible next to the connect button, including after closing/reopening Settings, and distinguish OAuth client configuration, missing client-secret requirements, expired/reused codes and expired grants. Only a fixed failure code is retained in main-process memory until retry/context change. The browser callback explains that the app must still verify and save the account, shows denied consent as failure, and completed connections return an idle state. Synthetic callback/identity/storage/Calendar and Settings retry checks cover recovery; real Google account acceptance remains outstanding.
 

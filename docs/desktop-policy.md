@@ -197,30 +197,53 @@ Run `npm test`, `npm run format:check`, `npm run build` and `npm run test:electr
 
 The release enables `vault`, `googleWorkspace` and `developmentMode` without a per-machine policy file. `claudeSubscription` remains false: a developer turns Dev mode on to use a personal Claude Pro/Max account for evaluation/demo, then selects **Switch back to normal mode** to turn it off. The owner chose manual shutdown; there is no scheduled expiry. This does not establish Anthropic approval for organizational distribution of subscription sign-in.
 
-The bundled configuration contains only the public installed-app client ID, `step.cmu.ac.th` and `documents`, `calendar-read`, `tasks`. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
+The default policy contains only the public installed-app client ID, `step.cmu.ac.th` and `documents`, `calendar-read`, `tasks`. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
 
 ### Desktop OAuth client credentials
 
 Google can require the issued `client_secret` for a Desktop app even when PKCE is used. The employee-device failure
 confirmed on 2026-10-17 was `GOOGLE_CLIENT_SECRET_REQUIRED`; repeating browser consent cannot supply the missing value.
-Download the organization's **Desktop app** OAuth client JSON from Google Cloud, then in **Settings -> Passwords and
-connections -> Google Workspace -> Organization Google connection setup**, choose **Import OAuth client file** and
-select it locally. Connect the work account again afterward. The JSON must match the client ID already permitted by
-policy; a Web application JSON or a different client is rejected.
+The employee flow is **Connect work account -> choose the work Google account -> Allow -> return to STeP**.
+Employees do not need a Google Cloud project, JSON file or client secret.
 
-Only the main process reads the selected file (at most 64 KiB). It stores only the client secret in an encrypted,
-purpose-bound `google-client` Vault record; policy, renderer state and model-facing catalogs receive no secret or file
-path. Code exchange and refresh send the secret only in the POST body to Google's fixed token endpoint. PKCE,
-state/nonce, domain/signature checks and consent remain required. Client import uses the existing Vault enrollment,
-shared-device, suspension and executable-tool guards. Importing a new file for the same client replaces its stored
-value; Google revocation and employee-account disconnect keep their separate behavior.
+An administrator configures the organization's **Desktop app** JSON once for the distribution:
+
+1. In repository **Settings -> Secrets and variables -> Actions**, create `GOOGLE_DESKTOP_CLIENT_JSON` with the
+   complete downloaded JSON as its value. Keep the real file outside the checkout; never commit it or send it in chat.
+2. Build installers with the existing `Build STeP Desktop installers` workflow. `publish: false` makes a test installer;
+   publishing still requires the owner's release instruction. Published builds fail if the JSON is missing. Any supplied
+   input must be a Desktop app client matching the release's default ID; Web clients and mismatches fail without
+   printing their contents.
+3. Distribute the installer normally. Main-process code uses the preconfigured native client automatically for code
+   exchange and refresh. Settings hides the administrator file-import section for the matching configured client.
+
+For a local developer build, set `STEP_GOOGLE_DESKTOP_CLIENT_JSON` to the file contents before `npm run build`;
+`STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT=true` enables the same missing-input check. An absent value is allowed for
+unpublished development builds. The build injects only the validated client ID and client secret into the **main**
+bundle, never the renderer or preload; it does not package the original JSON or its other fields. A different managed
+client ID never receives the distribution's client secret. A new distribution's value takes precedence over an older
+manual import, allowing client credential rotation through installer updates.
+
+**Native apps cannot keep an installed-app client secret confidential**: a recipient can extract it from the installer.
+This is shared application identity, not an employee credential or authorization grant. Only Desktop app clients are
+accepted for this path; confidential Web application credentials require a server implementation. Employee consent,
+PKCE, state/nonce, signed identity/domain checks and encrypted per-employee Vault tokens remain required. The
+preconfigured client alone does not enroll a Vault or grant access to any account.
+
+The native **Organization Google connection setup -> Import OAuth client file** remains a fallback for development
+or an administrator-managed client without a matching distribution credential. Main reads a selected file of at most
+64 KiB and stores only the secret in a purpose-bound encrypted `google-client` Vault record. Policy, renderer state,
+model-facing catalogs and browser URLs receive no secret or file path. Token grants use Google's fixed endpoint.
+Import retains Vault enrollment, shared-device, suspension and executable-tool guards. Web JSON and mismatches are
+rejected; importing for the same client replaces its stored value. Account disconnect and Google revocation remain
+separate operations.
 
 ### Turning on Gmail and Drive search for a cohort
 
 Gmail and searching every Drive file stay off in the release. When the administrator has completed the Google-side steps
 below, add a `googleWorkspace` object to the managed policy of the approved cohort only. It replaces the whole bundled
 configuration, so it repeats the public client ID and domain. Policy contains no secret: installed-app client IDs are
-public; a required client secret is imported separately into the device's Vault as described above.
+public; a required native client credential comes from the installer build or local Vault fallback described above.
 
 ```json
 {

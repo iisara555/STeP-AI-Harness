@@ -6,6 +6,7 @@ import { Vault } from './vault';
 import { GOOGLE_SERVICES, googleScopes, type GoogleService } from '../src/google-services';
 import { credentialErrorsTh } from '../src/credential-copy';
 import { parseGoogleDesktopClient } from './google-client';
+import { bundledGoogleClientSecret } from './google-bundled-client';
 import { googleInvocation, type GoogleRequest } from './google-operations';
 
 export type GoogleConfig = { clientId: string; domains: string[]; services: GoogleService[] };
@@ -50,6 +51,7 @@ export class GoogleWorkspace {
     private transport = fetch,
     private authorize = googleAuthorize,
     private employeeSubject: () => string | undefined = () => undefined,
+    private bundledClientSecret = bundledGoogleClientSecret,
   ) {}
   private accounts() {
     const subject = this.employeeSubject();
@@ -63,6 +65,8 @@ export class GoogleWorkspace {
     return a;
   }
   private async withClientSecret<T>(clientId: string, action: (secret?: string) => Promise<T>): Promise<T> {
+    const bundled = this.bundledClientSecret(clientId);
+    if (bundled) return action(bundled);
     const record = this.store.get<{ credentialId: string }>('google-client', clientId);
     return record ? this.vault.use(record.credentialId, 'google-client', clientId, action) : action();
   }
@@ -88,14 +92,17 @@ export class GoogleWorkspace {
   }
   state() {
     const clientId = this.config()?.clientId;
+    const clientPreconfigured = Boolean(clientId && this.bundledClientSecret(clientId));
     const client = clientId && this.store.get<{ credentialId: string }>('google-client', clientId);
     return {
       configured: Boolean(this.config()?.clientId),
       services: this.config()?.services || [],
       connecting: Boolean(this.connecting),
       connectionError: this.connectionError,
+      clientPreconfigured,
       clientSecretConfigured: Boolean(
-        client && this.vault.list().some(v => v.id === client.credentialId && v.kind === 'google-client' && v.destination === clientId),
+        clientPreconfigured ||
+        (client && this.vault.list().some(v => v.id === client.credentialId && v.kind === 'google-client' && v.destination === clientId)),
       ),
       accounts: this.accounts().map(({ id, label, domain, scopes, paused, reauth }) => ({
         id,

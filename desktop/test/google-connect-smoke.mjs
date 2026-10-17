@@ -110,9 +110,24 @@ try {
   await expect(settings.getByRole('alert')).toHaveCount(0);
   await expect(settings.getByText('กำลังรอให้คุณลงชื่อในเบราว์เซอร์ เสร็จแล้วกลับมาที่แอปนี้', { exact: true })).toHaveCount(0);
   await expect(connect).toBeEnabled();
+  // Organization-provisioned installers need only the regular OAuth action; staff never import a client file.
+  await app.evaluate(() => {
+    globalThis.googleFixture.clientPreconfigured = true;
+    globalThis.googleFixture.clientSecretConfigured = true;
+    globalThis.googleFixture.accounts = [];
+  });
+  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await expect(settings.getByText('ตั้งค่าการเชื่อม Google ขององค์กร', { exact: true })).toHaveCount(0);
+  await expect(settings.getByRole('button', { name: 'นำเข้าไฟล์ OAuth client', exact: true })).toHaveCount(0);
+  await connect.click();
+  await expect.poll(() => app.evaluate(() => globalThis.googleFixture.connecting)).toBe(true);
+  await app.evaluate(() => globalThis.googleResolve());
+  await expect(settings.getByText('fi••••@example.test', { exact: true })).toBeVisible();
   assert.deepEqual(errors, []);
   console.log(
-    'Google connection smoke passed: pending, error after notification dismissal and Settings reopen, Desktop client import, cancellation and successful retry. Synthetic Google IPC only.',
+    'Google connection smoke passed: pending, persistent errors, Desktop client import, cancellation, retry and preconfigured organization OAuth without employee JSON import. Synthetic Google IPC only.',
   );
 } finally {
   if (app) await app.close();

@@ -32,7 +32,7 @@ Replacing/deleting the key clears archived fallback and the old `secret` record.
 
 ## Desktop 0.6.5 release activation
 
-The owner requested availability on every released installation. Vault and Workspace are enabled by release defaults; existing managed denials still apply. Only the public installed-app client ID is distributed. Employees must authorize their own Workspace account and select services. A developer can use the one-click Dev mode switch for a personal Claude Pro/Max demo, then switch back manually. This is not confirmation of live account/service acceptance or organizational Anthropic approval.
+The owner requested availability on every released installation. Vault and Workspace are enabled by release defaults; existing managed denials still apply. Organization installers can preconfigure the matching Desktop app client at build time, so employees only complete browser consent. Native client credentials are extractable from an installer; employee tokens remain private in the Vault. Employees must authorize their own Workspace account and select services. A developer can use the one-click Dev mode switch for a personal Claude Pro/Max demo, then switch back manually. This is not confirmation of live account/service acceptance or organizational Anthropic approval.
 
 ## Administrator configuration
 
@@ -53,11 +53,17 @@ Merge these non-secret fields into the existing protected Desktop policy only af
 Supported service names are `documents`, `drive-read`, `gmail-read`, `gmail-draft`, `gmail-send`, `calendar-read`, `calendar`, `tasks`, `chat`, and `meet`. Enable only implemented services approved for that cohort. Required APIs, OAuth audience, organization app access, Google verification/assessment requirements, quotas/edition entitlement, retention and approved AI destinations remain administrator responsibilities. The owner supplied a verified Desktop app client on 2026-10-14 and requested release-wide activation. Desktop 0.6.5 bundles only its public client ID, with `step.cmu.ac.th` and documents/calendar/tasks selectable. Managed policy can replace or clear the configuration and deny these capabilities. Project API enablement, audience/test-user setup and tenant access remain separate from client-type validation.
 
 The employee confirmed `GOOGLE_CLIENT_SECRET_REQUIRED` on 2026-10-17: a Desktop client can require its issued secret
-alongside PKCE. Use the native **Import OAuth client file** action in Google Workspace settings to select the Desktop
-app JSON downloaded from Google Cloud, then reconnect. The selected client ID must match policy; Web client JSON is
-refused. The bounded file is read only in the main process, and only its secret is saved as a purpose-bound encrypted
-`google-client` Vault credential. It is used for both code exchange and refresh; browser URLs, renderer state, policy,
-account metadata and tools never receive it. No secret is bundled or committed. See [administrator steps](desktop-policy.md#desktop-oauth-client-credentials).
+alongside PKCE. An administrator supplies the matching Desktop app JSON once as the repository Actions secret
+`GOOGLE_DESKTOP_CLIENT_JSON`. The installer build validates the exact release client ID, refuses Web clients and
+injects only native app identity into main. Employees use **Connect work account** and browser consent without file
+import. Published builds require that input; unpublished development builds may omit it. Native client credentials
+are extractable from an installer, so they do not provide confidentiality or authorize an employee account.
+
+For another managed client or development build, native file import remains a fallback: only main reads a bounded
+Desktop app JSON matching policy, then stores the client secret in a purpose-bound encrypted Vault record. Both
+code exchange and refresh use the matching bundled client first, otherwise the Vault record, only at Google's fixed
+token endpoint. Browser URLs, renderer/account metadata and tools never receive it. Real credentials are never
+committed. See [administrator steps](desktop-policy.md#desktop-oauth-client-credentials).
 
 On 2026-10-14, a user-authorized identity-only Google OAuth Playground check verified a signed, unexpired ID token with `hd=step.cmu.ac.th`, matching issuer, audience and the requested account. No refresh token was requested or received. This confirms that account's hosted domain, not a configured Desktop grant or live Workspace service acceptance. No account identifiers or tokens are recorded here. The authorization URL now supplies the configured domain as a UI hint (or `hd=*` for multiple domains); the signed claim allowlist remains the access check.
 

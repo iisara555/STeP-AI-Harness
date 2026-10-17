@@ -1,5 +1,7 @@
 import { open } from 'node:fs/promises';
 
+export const DEFAULT_GOOGLE_CLIENT_ID = '991643024129-1gd4866dn064tm72kjtavsu6qpgpa1hp.apps.googleusercontent.com';
+
 const LIMIT = 65536;
 function invalid(): never {
   throw new Error('GOOGLE_CLIENT_FILE_INVALID');
@@ -47,4 +49,13 @@ export function parseGoogleDesktopClient(text: string, expectedClientId: string)
     invalid();
   if (client.client_id !== expectedClientId) throw new Error('GOOGLE_CLIENT_MISMATCH');
   return client.client_secret as string;
+}
+
+/** Release input comes from the organization's CI secret, never from an employee or managed policy. */
+export function googleClientBuildConfig(json: string | undefined, required = false) {
+  if (!json) {
+    if (required) throw new Error('GOOGLE_DESKTOP_CLIENT_JSON_REQUIRED');
+    return null;
+  }
+  return { clientId: DEFAULT_GOOGLE_CLIENT_ID, clientSecret: parseGoogleDesktopClient(json, DEFAULT_GOOGLE_CLIENT_ID) };
 }

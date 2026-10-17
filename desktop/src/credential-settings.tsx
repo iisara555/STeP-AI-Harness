@@ -222,6 +222,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     connecting: boolean;
     connectionError?: string;
     clientSecretConfigured?: boolean;
+    clientPreconfigured?: boolean;
     services: GoogleService[];
     accounts: { id: string; label: string; domain: string; services: string[]; paused: boolean; reauth: boolean }[];
   }>();
@@ -620,18 +621,20 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                 {explainError(connectionError)}
               </p>
             )}
-            <details className="google-more" open={String(connectionError).includes('GOOGLE_CLIENT_SECRET_REQUIRED') || undefined}>
-              <summary>{w('clientSetup')}</summary>
-              <p className="muted small">{w('clientHelp')}</p>
-              <button
-                className="quiet"
-                disabled={Boolean(busy)}
-                onClick={() => void run('google-client-import', () => call('googleImportClient'))}
-              >
-                <FolderOpen size={14} /> {w('importClient')}
-              </button>
-            </details>
-            {google.clientSecretConfigured && (
+            {!google.clientPreconfigured && (
+              <details className="google-more" open={String(connectionError).includes('GOOGLE_CLIENT_SECRET_REQUIRED') || undefined}>
+                <summary>{w('clientSetup')}</summary>
+                <p className="muted small">{w('clientHelp')}</p>
+                <button
+                  className="quiet"
+                  disabled={Boolean(busy)}
+                  onClick={() => void run('google-client-import', () => call('googleImportClient'))}
+                >
+                  <FolderOpen size={14} /> {w('importClient')}
+                </button>
+              </details>
+            )}
+            {google.clientSecretConfigured && !google.clientPreconfigured && (
               <p className="credential-note" role="status">
                 {w('clientReady')}
               </p>

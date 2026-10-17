@@ -66,6 +66,10 @@ jobs:
         run: npm run test:electron
       - name: Build installer
         env:
+          # Organization-wide Desktop app credentials: configured once by IT, built into main only.
+          STEP_GOOGLE_DESKTOP_CLIENT_JSON: ${{ secrets.GOOGLE_DESKTOP_CLIENT_JSON }}
+          # A published build must support the default work-account sign-in without employee JSON import.
+          STEP_REQUIRE_GOOGLE_DESKTOP_CLIENT: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.publish) && 'true' || 'false' }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}

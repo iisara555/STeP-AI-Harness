@@ -345,6 +345,54 @@ test('imported client credentials stay encrypted and are reused for authorizatio
     f.clean();
   }
 });
+test('organization-provisioned OAuth connects and refreshes without employee client-file import', async () => {
+  const f = fixture();
+  const bundled = 'synthetic-distribution-client-secret';
+  const google = new GoogleWorkspace(
+    f.store,
+    f.vault,
+    () => config,
+    async () => {},
+    async (url, init) => {
+      if (String(url) === 'https://oauth2.googleapis.com/token') {
+        const body = new URLSearchParams(String(init?.body));
+        assert.equal(body.get('client_id'), clientId);
+        assert.equal(body.get('client_secret'), bundled);
+        assert.equal(body.get('grant_type'), 'refresh_token');
+        return json({ access_token: 'synthetic-renewed', token_type: 'Bearer', expires_in: 3600 });
+      }
+      assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer synthetic-renewed');
+      return json({ items: [] });
+    },
+    async (settings, scopes) => {
+      assert.equal(settings.clientSecret, bundled);
+      return {
+        who: { sub: '1234', email: 'fixture@example.test', hd: 'example.test' },
+        scopes,
+        tokens: { access: 'expired', refresh: 'synthetic-refresh', expires: 0 },
+      };
+    },
+    undefined,
+    id => (id === clientId ? bundled : undefined),
+  );
+  try {
+    assert.equal(google.state().clientPreconfigured, true);
+    assert.equal(google.state().clientSecretConfigured, true);
+    assert.equal(f.vault.protected(), false, 'bundled native app identity must not enroll employee credentials at startup');
+    await google.connect(['calendar'], context);
+    assert.equal(google.state().accounts.length, 1);
+    assert.equal(f.store.list('google-client').length, 0);
+    assert.equal(f.vault.list().length, 1, 'only the employee OAuth token is stored');
+    // A new distribution rotates the shared native client value without an old local import overriding it.
+    google.importClient(clientFile('synthetic-obsolete-client-secret'));
+    await google.execute(google.state().accounts[0].id, { operation: 'calendar.list' }, context);
+    assert.doesNotMatch(JSON.stringify(google.state()) + JSON.stringify(google.catalog('session')), /synthetic-distribution-client-secret/);
+    f.vault.suspend(true);
+    await assert.rejects(google.connect(['calendar'], context), /VAULT_SUSPENDED/);
+  } finally {
+    f.clean();
+  }
+});
 test('OIDC signature, nonce, audience and Workspace membership are checked against signed claims', async () => {
   const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const transport: typeof fetch = async () => json({ keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'fixture', alg: 'RS256' }] });
