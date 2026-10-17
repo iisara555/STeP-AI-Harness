@@ -412,8 +412,23 @@ export const en: Record<string, string> = {
   'เนื้อหาสไลด์เกินรูปแบบที่รองรับ กรุณาแบ่งเป็นหลายสไลด์': 'The slide content exceeds the supported layout. Split it across more slides.',
   'มีไฟล์ชื่อนี้อยู่แล้ว กรุณาเลือกชื่อใหม่': 'A file with this name already exists. Choose a new name.',
   'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR': 'Choose a new file in a private folder to save the OCR trial results.',
-  'AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ':
-    'The selected AI helps map OCR text into the form. This connection does not read receipt images.',
+  'ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น':
+    'The AI is not reading the receipt image right now (your organisation or the selected AI does not allow it). It only maps OCR text into the form.',
+  'รอตรวจบริการ OCR สักครู่': 'Checking the OCR service, one moment',
+  'กด "เปิดบริการ OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้': 'Press "Start OCR service" below first, then choose a receipt',
+  'กด "ติดตั้ง OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้': 'Press "Install OCR" below first, then choose a receipt',
+  'เลือก AI ที่เชื่อมต่อแล้วด้านบนก่อน': 'Choose a connected AI above first',
+  'ไฟล์แนบส่งให้ AI ไม่ได้ ให้นำออกหรือแนบไฟล์อื่นก่อน': 'The attachment cannot be sent to the AI. Remove it or attach another file first',
+  'กรอกอย่างน้อยหนึ่งช่อง หรือแนบต้นเรื่อง แล้วจึงให้ AI ร่าง':
+    'Fill in at least one field or attach a source document, then let the AI draft',
+  'TOR ใช้แม่แบบ 16 หัวข้อเดิม': 'TOR uses the standard 16-section template',
+  'แนบไฟล์ Word จาก MIS เป็นแม่แบบได้ เพื่อรักษารูปแบบต้นฉบับ หากไม่แนบจะใช้แบบร่างทั่วไป':
+    'You can attach a Word file from MIS as the template to keep its original layout. Without one, a general draft layout is used',
+  อีกขั้นเดียวก่อนเริ่มงาน: 'One step left before you start',
+  'Gemini ผ่าน Antigravity': 'Gemini via Antigravity',
+  'Gemini ผ่าน Antigravity (ทดลอง)': 'Gemini via Antigravity (beta)',
+  'โมเดล Gemini': 'Gemini model',
+  '{0} โทเคน': '{0} tokens',
   'ถ้า OCR อ่านตัวอักษรผิด AI แบบข้อความแก้จากภาพไม่ได้ ใช้ AI ที่รองรับภาพเพื่ออ่านต้นฉบับ':
     'Text-only AI cannot correct misread characters from the image. Use an image-capable AI to read the original.',
   'ระบบเก็บกุญแจของเครื่องยังไม่พร้อม กรุณาปลดล็อกหรือให้ผู้ดูแลตั้งค่า ก่อนบันทึก API key หรือลงชื่อด้วย OAuth':
@@ -653,8 +668,7 @@ export const en: Record<string, string> = {
   'ตรวจใบเสร็จก่อนส่ง AFP': 'Check receipts before sending to AFP',
   เริ่มต้นงานที่อยากทำ: 'What would you like to work on?',
   'บัญชี AI และข้อมูลอยู่ในเครื่องนี้': 'Your AI account and data stay on this computer',
-  'ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต':
-    'Beta · Reads receipts with on-device OCR, and has the AI read the image to compare when your organisation allows it',
+  'ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง': 'Beta · Reads receipts with on-device OCR, then you check before sending',
   'Skill ในพื้นที่ทำงานนี้ พร้อมสถานะ Manifest และ Routing': 'Skills in this workspace, with their Manifest and Routing status',
   'จากคำขอ สู่ผลงานที่ใช้ต่อได้': 'From request to ready-to-use work',
   ซ่อนร่าง: 'Hide draft',

@@ -118,3 +118,9 @@
   min-height: 90px;
   resize: vertical;
 }
+
+/* UI audit 2026-10-17: group D */
+/* No bottom padding: the sticky action bar (style.css) then sits flush on the bottom edge of the scrolling area. */
+.document-tools {
+  padding-bottom: 0;
+}

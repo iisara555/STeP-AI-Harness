@@ -138,8 +138,8 @@ try {
   const gemini = async () => (await page.evaluate(() => window.step.call('snapshot'))).connections.filter(c => c.provider === 'gemini');
   const connect = async () => {
     const add = page.getByText('เพิ่ม AI อีกบัญชี', { exact: true });
-    if ((await add.count()) && !(await page.getByRole('radio', { name: /^Gemini(?! via)/ }).isVisible())) await add.click();
-    await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
+    if ((await add.count()) && !(await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).isVisible())) await add.click();
+    await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
     await page.getByLabel('Gemini API key').fill('synthetic-gemini-key-for-smoke');
     await page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true }).click();
   };

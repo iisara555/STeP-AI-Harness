@@ -5336,3 +5336,134 @@ nav button:disabled {
   font-size: 14px;
   font-weight: 600;
 }
+
+
+/* UI audit 2026-10-17: group D (documents, receipt, media, Skills, setup, tour, dark theme, typography) */
+/* Thai phrases kept whole (src/thai-text.tsx): the dictionary would otherwise split "งบ|ประมาณ" or "รุ่น|นี้". */
+.thai-keep {
+  white-space: nowrap;
+}
+/* Document tool: the draft action stays pinned to the bottom of the long form, with the reason it is not ready yet. */
+.document-form footer.document-form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 24px -16px 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -8px 16px -12px var(--shadow-card);
+}
+.document-form-actions > p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.document-form-submit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+.document-draft-reason,
+.receipt-pick-reason {
+  margin: 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.receipt-pick-reason {
+  margin-top: 6px;
+}
+/* Native checkboxes and radios use the STeP yellow instead of the system blue, in both themes. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--accent);
+}
+/* Setup wizard: the terms acknowledgement sits in the fixed footer next to the buttons. */
+.wizard-actions .terms-accept {
+  padding-top: 0;
+  border-top: 0;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Connect step: the "more services" and "advanced" links sit together, without an empty band between them. */
+.wizard .provider-picker + p {
+  margin-top: 0;
+}
+/* The step heading takes focus for screen readers when a step opens; it is not a control, so no ring. */
+.wizard-body h1:focus {
+  outline: none;
+}
+/* Minimum readable size for the sidebar tagline and the team line under the name. */
+.brand-tagline {
+  font-size: 11px !important;
+  letter-spacing: 0.1em;
+}
+.profile small {
+  font-size: 11px;
+}
+/* Tour: one dot per step, with a gap where part 2 starts. */
+.tour-dots {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tour-dots i {
+  width: 6px;
+  height: 6px;
+}
+.tour-dots i.active {
+  width: 14px;
+}
+.tour-dots i.chapter-start {
+  margin-left: 6px;
+}
+/* A toast raised while a dialog is open sits under the dialog's scrim instead of glaring above it. */
+body:has(.dialog-backdrop) .toasts {
+  z-index: 49;
+}
+/* Dark theme: avatars are black ink on white paper; draw them as light ink on a dark tile, like the illustrations. */
+:root[data-theme='dark'] .avatar-badge.has-picture {
+  background: var(--selected);
+}
+:root[data-theme='dark'] .avatar-badge.has-picture img {
+  filter: invert(1) brightness(0.92);
+  mix-blend-mode: screen;
+}
+/* Dark theme: danger fills are a clear red with white text, not a pastel that reads as disabled. */
+:root[data-theme='dark'] button.danger,
+:root[data-theme='dark'] .stop {
+  background: #c9372c;
+  color: #fff;
+}
+/* Dark theme: tool chips are outlined instead of a light fill; the ready status keeps a visible edge. */
+:root[data-theme='dark'] .tag.tool {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+}
+:root[data-theme='dark'] .tag.routed {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .avatar-badge.has-picture {
+    background: var(--selected);
+  }
+  :root[data-theme='system'] .avatar-badge.has-picture img {
+    filter: invert(1) brightness(0.92);
+    mix-blend-mode: screen;
+  }
+  :root[data-theme='system'] button.danger,
+  :root[data-theme='system'] .stop {
+    background: #c9372c;
+    color: #fff;
+  }
+  :root[data-theme='system'] .tag.tool {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text);
+  }
+  :root[data-theme='system'] .tag.routed {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}

@@ -60,6 +60,15 @@ import type { DocumentAttachment, DocumentForm } from './document-tool-app';
 import { documentRequest, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
 import { DOCUMENT_FONTS, resolveDocumentLayout } from './document-layout';
 import { toolCount } from './skill-capabilities';
+import { skillsForStaff } from './skill-display';
+// Export formats by the app staff know them by; the value stays the file extension.
+const EXPORT_FORMAT_LABELS: Record<string, string> = {
+  docx: 'Word (.docx)',
+  pdf: 'PDF (.pdf)',
+  md: 'Markdown (.md)',
+  xlsx: 'Excel (.xlsx)',
+  pptx: 'PowerPoint (.pptx)',
+};
 import { SetupWizard } from './setup';
 import { Tour } from './tour';
 import {
@@ -968,7 +977,10 @@ export default function App() {
     await api!.call('model', { id: session.id, model, effort: next });
     await refresh();
   }
-  const routedSkills = (skills || []).filter(s => s.status === 'routed');
+  // Staff see Thai Skill names, and developer Skills only in Dev mode (skill-display.ts).
+  const developerMode = Boolean(snapshot?.features?.developmentMode && snapshot?.settings.developmentMode);
+  const staffSkills = skills && skillsForStaff(skills, developerMode);
+  const routedSkills = (staffSkills || []).filter(s => s.status === 'routed');
   // "/" lists the person's team first and also matches Thai descriptions and trigger words.
   const slash = /^\/(\S*)$/.exec(query);
   const myTeam = snapshot?.settings.team || '';
@@ -1370,7 +1382,7 @@ export default function App() {
               >
                 <Blocks size={17} />
                 <span className="nav-label">{t('ศูนย์รวม Skill')}</span>
-                <span className="count">{skills ? skills.length + toolCount : ''}</span>
+                <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
               </button>
               <button
                 data-tour="receipt"
@@ -1532,7 +1544,7 @@ export default function App() {
                     : view === 'media'
                       ? t('สร้าง Prompt ภาพสำหรับสื่อสารภายใน ตามสีองค์กรและห้ามสร้างโลโก้')
                       : view === 'receipt'
-                        ? t('ทดลอง · อ่านด้วย OCR ในเครื่อง และให้ AI อ่านภาพเทียบเมื่อองค์กรอนุญาต')
+                        ? t('ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง')
                         : view === 'skills'
                           ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
                           : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
@@ -1614,7 +1626,7 @@ export default function App() {
           )}
           {settings ? null : view === 'receipt' || view === 'documents' || view === 'media' ? null : view === 'skills' ? (
             <SkillsHub
-              skills={skills}
+              skills={staffSkills}
               team={myTeam}
               onUse={useSkill}
               onOpenTool={id => navigate(id === 'documents' ? 'documents' : 'receipt')}
@@ -2461,7 +2473,7 @@ export default function App() {
                   session.usage.runs,
                 )}
               >
-                {formatTokens(session.usage.total)} token
+                {t('{0} โทเคน', formatTokens(session.usage.total))}
               </span>
             )}
             <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
@@ -2810,8 +2822,8 @@ export default function App() {
                         }}
                       >
                         {['docx', 'pdf', 'md', 'xlsx', 'pptx'].map(f => (
-                          <option key={f} disabled={f === 'pdf' && Boolean(session.documentTemplate)}>
-                            {f}
+                          <option key={f} value={f} disabled={f === 'pdf' && Boolean(session.documentTemplate)}>
+                            {EXPORT_FORMAT_LABELS[f]}
                           </option>
                         ))}
                       </select>

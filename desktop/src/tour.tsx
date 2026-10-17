@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
+import { ThaiText } from './thai-text';
 
 // A spotlight tour over the real interface, in two parts: the basics every staff member needs to start a task, then the
 // task-specific tools. Targets are marked with data-tour. A step without a target is a card in the middle; an optional
@@ -130,9 +131,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
   const step = steps[index],
     last = index === steps.length - 1,
     // The end of the basics is a stop: people can start working there or carry on into the tools.
-    checkpoint = !last && steps[index + 1].chapter !== step.chapter,
-    inChapter = steps.filter(s => s.chapter === step.chapter),
-    position = inChapter.indexOf(step);
+    checkpoint = !last && steps[index + 1].chapter !== step.chapter;
   useLayoutEffect(() => {
     const measure = () => {
       const el = step.target ? document.querySelector(`[data-tour="${step.target}"]`) : null;
@@ -166,6 +165,13 @@ export function Tour({ onClose }: { onClose: () => void }) {
         window.innerWidth - width - 12,
       )
     : window.innerWidth / 2 - width / 2;
+  // The ring stays inside the window, so a target at the very edge (the status bar, the sidebar foot) is not cut off.
+  const spot = rect && {
+    left: Math.max(2, rect.left - pad),
+    top: Math.max(2, rect.top - pad),
+    right: Math.min(window.innerWidth - 2, rect.right + pad),
+    bottom: Math.min(window.innerHeight - 2, rect.bottom + pad),
+  };
   const top = rect ? Math.min(Math.max(12, rect.top), window.innerHeight - height - 12) : Math.max(12, window.innerHeight / 2 - height / 2);
   return (
     <div
@@ -174,10 +180,10 @@ export function Tour({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label={t('ทัวร์แนะนำ {0} จาก {1}: {2}', index + 1, steps.length, t(step.title))}
     >
-      {rect ? (
+      {spot ? (
         <div
           className="tour-spot"
-          style={{ left: rect.left - pad, top: rect.top - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }}
+          style={{ left: spot.left, top: spot.top, width: spot.right - spot.left, height: spot.bottom - spot.top }}
         />
       ) : (
         <div className="tour-dim" />
@@ -190,9 +196,17 @@ export function Tour({ onClose }: { onClose: () => void }) {
             </span>
           ))}
         </div>
-        <h2>{t(step.title)}</h2>
-        <p>{t(step.body)}</p>
-        {step.tip && <p className="tour-tip">{t(step.tip)}</p>}
+        <h2>
+          <ThaiText text={t(step.title)} />
+        </h2>
+        <p>
+          <ThaiText text={t(step.body)} />
+        </p>
+        {step.tip && (
+          <p className="tour-tip">
+            <ThaiText text={t(step.tip)} />
+          </p>
+        )}
         {checkpoint && (
           <p className="tour-tip tour-checkpoint">
             {t('พื้นฐานครบแล้ว เริ่มงานแรกได้เลย หรือดูเครื่องมือช่วยงานต่ออีก {0} ขั้น', steps.length - index - 1)}
@@ -200,8 +214,17 @@ export function Tour({ onClose }: { onClose: () => void }) {
         )}
         <div className="tour-progress">
           <span className="tour-dots" aria-hidden="true">
-            {inChapter.map((s, i) => (
-              <i key={s.title} className={i === position ? 'active' : i < position ? 'done' : ''} />
+            {/* One dot per step across both parts, matching the "x / n" counter; a gap marks where part 2 starts. */}
+            {steps.map((s, i) => (
+              <i
+                key={s.title}
+                className={[
+                  i === index ? 'active' : i < index ? 'done' : '',
+                  i > 0 && s.chapter !== steps[i - 1].chapter ? 'chapter-start' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              />
             ))}
           </span>
           <small className="muted">

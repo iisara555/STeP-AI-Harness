@@ -522,7 +522,7 @@ function providerTiles(claudeSubscription: boolean, presets: boolean): Tile[] {
     key('gemini', 'Gemini', t('คีย์จาก Google AI Studio มีแบบใช้ฟรี')),
     {
       id: 'antigravity',
-      label: 'Gemini via Antigravity',
+      label: t('Gemini ผ่าน Antigravity'),
       description: t('แนะนำสำหรับผู้มีสิทธินักศึกษา ใช้บัญชี Google และตรวจสิทธิ์ของบัญชีก่อนเริ่ม (ทดลอง)'),
       kind: 'account',
       choice: { ...initialChoice, provider: 'antigravity', mode: 'subscription', model: ANTIGRAVITY_MODEL },
@@ -779,7 +779,7 @@ function AdvancedProviderFields({
           >
             <option value="openai">OpenAI (ChatGPT)</option>
             <option value="gemini">Gemini (Google)</option>
-            <option value="antigravity">Gemini via Antigravity (experimental)</option>
+            <option value="antigravity">{t('Gemini ผ่าน Antigravity (ทดลอง)')}</option>
             <option value="claude">Claude (Anthropic)</option>
             <option value="compatible">Compatible endpoint / Ollama</option>
             <option value="copilot">GitHub Copilot</option>
@@ -842,7 +842,7 @@ function AdvancedProviderFields({
       {provider === 'antigravity' && (
         <div>
           <label>
-            Gemini model
+            {t('โมเดล Gemini')}
             <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
           </label>
           <p className="small muted">

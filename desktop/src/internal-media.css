@@ -272,3 +272,55 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* UI audit 2026-10-17: group D */
+/* The result column runs the full height of the form, so its copy bar can stay pinned while lower fields are filled. */
+.media-result {
+  align-self: stretch;
+}
+.media-copy-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 6px 12px -10px var(--shadow-card);
+}
+.media-copy-bar > p {
+  flex: 1 1 220px;
+  margin: 0;
+}
+/* Dark theme: the sketch follows the theme (dark page, light lines and drawing) instead of a glaring white box. */
+:root[data-theme='dark'] .media-canvas {
+  background: var(--paper);
+  color: var(--text);
+}
+:root[data-theme='dark'] .media-canvas-text i {
+  background: var(--line-strong);
+}
+:root[data-theme='dark'] .media-canvas-art img {
+  filter: invert(1);
+  mix-blend-mode: screen;
+  opacity: 0.88;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .media-canvas {
+    background: var(--paper);
+    color: var(--text);
+  }
+  :root[data-theme='system'] .media-canvas-text i {
+    background: var(--line-strong);
+  }
+  :root[data-theme='system'] .media-canvas-art img {
+    filter: invert(1);
+    mix-blend-mode: screen;
+    opacity: 0.88;
+  }
+}

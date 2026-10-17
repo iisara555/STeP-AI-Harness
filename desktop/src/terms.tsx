@@ -8,10 +8,13 @@ export function Terms({
   privacyChecks,
   accepted,
   onChange,
+  showAccept = true,
 }: {
   privacyChecks: boolean;
   accepted: boolean;
   onChange: (accepted: boolean) => void;
+  /** False when the caller puts the acknowledgement in its own always-visible footer (setup wizard). */
+  showAccept?: boolean;
 }) {
   return (
     <div className="terms" aria-label={t('ข้อตกลงการใช้งาน')}>
@@ -36,10 +39,16 @@ export function Terms({
         <li>{t('ตรวจข้อเท็จจริง ตัวเลข ชื่อ และการอ้างอิงในคำตอบทุกครั้งก่อนนำไปใช้ คุณเป็นผู้รับผิดชอบงานที่ส่งออกไป')}</li>
         <li>{t('ประวัติการสนทนาเก็บในเครื่องนี้ ส่วนข้อมูลที่ส่งให้ผู้ให้บริการ AI อยู่ภายใต้เงื่อนไขของบัญชีที่เชื่อมไว้')}</li>
       </ul>
-      <label className="terms-accept">
-        <input type="checkbox" checked={accepted} onChange={e => onChange(e.target.checked)} />
-        <span>{t('ฉันอ่านและรับทราบข้อตกลงการใช้งาน')}</span>
-      </label>
+      {showAccept && <TermsAccept accepted={accepted} onChange={onChange} />}
     </div>
+  );
+}
+
+export function TermsAccept({ accepted, onChange }: { accepted: boolean; onChange: (accepted: boolean) => void }) {
+  return (
+    <label className="terms-accept">
+      <input type="checkbox" checked={accepted} onChange={e => onChange(e.target.checked)} />
+      <span>{t('ฉันอ่านและรับทราบข้อตกลงการใช้งาน')}</span>
+    </label>
   );
 }

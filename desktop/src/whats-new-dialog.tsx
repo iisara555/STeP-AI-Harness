@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { t } from './i18n';
 import type { ReleaseNote } from './whats-new';
+import { ThaiText } from './thai-text';
 
 function Note({ note }: { note: ReleaseNote }) {
   return (
@@ -8,7 +9,9 @@ function Note({ note }: { note: ReleaseNote }) {
       <h3>{t('STeP Desktop รุ่น {0}', note.version)}</h3>
       <ul>
         {note.items().map(item => (
-          <li key={item}>{item}</li>
+          <li key={item}>
+            <ThaiText text={item} />
+          </li>
         ))}
       </ul>
     </div>

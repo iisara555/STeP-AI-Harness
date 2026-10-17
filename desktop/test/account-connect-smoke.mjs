@@ -21,8 +21,8 @@ try {
   await expect(page.getByRole('heading', { name: 'บัญชี AI ของคุณ', exact: true })).toHaveCount(0);
   await mkdir('release/qa/connect-ai', { recursive: true });
   await page.screenshot({ path: 'release/qa/connect-ai/new-user.png' });
-  await expect(page.getByRole('radio', { name: /Gemini via Antigravity/ })).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('radio', { name: /Gemini via Antigravity/ })).toContainText('แนะนำ');
+  await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ })).toContainText('แนะนำ');
   await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /แพ็กเกจของคุณผ่าน Claude Code/ })).toHaveCount(0);

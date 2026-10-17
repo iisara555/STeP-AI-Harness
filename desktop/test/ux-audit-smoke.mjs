@@ -34,16 +34,23 @@ try {
     assert.ok(await wizard.evaluate(el => el.contains(document.activeElement)));
   }
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
-  await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('บันทึกการตั้งค่าแล้ว');
+  // No AI yet: the heading says what is left instead of claiming setup is finished.
+  await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('อีกขั้นเดียวก่อนเริ่มงาน');
   await expect(wizard).toContainText('เชื่อมต่อ AI · ทำภายหลัง');
-  await page.getByRole('button', { name: 'เชื่อมต่อ AI', exact: true }).click();
+  // The usage terms must be ticked before either action; both buttons show the disabled style until then, and the
+  // checkbox sits in the fixed footer so it is visible even in a short window.
+  const enter = page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true });
+  const connect = page.getByRole('button', { name: 'เชื่อมต่อ AI', exact: true });
+  await expect(enter).toBeDisabled();
+  await expect(connect).toBeDisabled();
+  await expect(wizard.getByLabel('ข้อตกลงการใช้งาน', { exact: true })).toContainText('ระบบไม่ได้ตรวจหรือปิดบังข้อมูลให้');
+  const accept = wizard.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' });
+  await assertVisibleButton(accept);
+  await accept.check();
+  await connect.click();
   await expect(wizard.getByRole('heading', { level: 1 })).toHaveText('เชื่อมต่อ AI');
   await page.getByRole('button', { name: 'ทำภายหลัง', exact: true }).click();
-  // The usage terms must be ticked before the workspace opens; ticking records the accepted version.
-  const enter = page.getByRole('button', { name: 'เข้าชมพื้นที่ทำงาน', exact: true });
-  await expect(enter).toBeDisabled();
-  await expect(wizard.getByLabel('ข้อตกลงการใช้งาน', { exact: true })).toContainText('ระบบไม่ได้ตรวจหรือปิดบังข้อมูลให้');
-  await wizard.getByRole('checkbox', { name: 'ฉันอ่านและรับทราบข้อตกลงการใช้งาน' }).check();
+  // Ticking records the accepted version when the workspace opens.
   await enter.click();
   await expect(wizard).toHaveCount(0);
   assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.termsVersion, '2026-10-02');
@@ -72,13 +79,13 @@ try {
   await page.keyboard.press('ControlOrMeta+,');
   await page.getByRole('tab', { name: 'การเชื่อมต่อ AI' }).click();
   // Choosing a service scrolls its card, with the connect button, into view.
-  await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
+  await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await assertVisibleButton(page.getByRole('button', { name: 'เชื่อมต่อ ChatGPT', exact: true }));
   await expect(page.getByRole('status')).toContainText('ใช้แพ็กเกจบัญชีที่คุณลงชื่อ');
   // Gemini API key sits on the main page: the connect button waits for a key, cost shows as API budget,
   // and going back to ChatGPT drops the key.
-  await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
+  await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
   const geminiConnect = page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true });
   await expect(geminiConnect).toBeDisabled();
   await expect(page.locator('.connection-cost')).toContainText('ใช้งบ API');
@@ -86,7 +93,7 @@ try {
   await expect(geminiConnect).toBeEnabled();
   await assertVisibleButton(geminiConnect);
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
-  await page.getByRole('radio', { name: /^Gemini(?! via)/ }).click();
+  await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
   await expect(page.getByLabel('Gemini API key')).toHaveValue('');
   await page.getByRole('radio', { name: /^ChatGPT/ }).click();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
