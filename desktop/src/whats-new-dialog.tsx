@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { t } from './i18n';
 import type { ReleaseNote } from './whats-new';
+import { ThaiText } from './thai-text';
 
 /** "What's new" after an update: the notes of each version since the one the person last saw. */
 export function WhatsNewDialog({ notes, onClose }: { notes: ReleaseNote[]; onClose: () => void }) {
@@ -21,7 +22,9 @@ export function WhatsNewDialog({ notes, onClose }: { notes: ReleaseNote[]; onClo
               <h3>{t('STeP Desktop รุ่น {0}', note.version)}</h3>
               <ul>
                 {note.items().map(item => (
-                  <li key={item}>{item}</li>
+                  <li key={item}>
+                    <ThaiText text={item} />
+                  </li>
                 ))}
               </ul>
             </div>

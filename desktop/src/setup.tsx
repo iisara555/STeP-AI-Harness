@@ -5,7 +5,7 @@ import { AIConnections } from './ai-connections';
 import launchArt from './assets/illustrations/launch.png';
 import teamworkArt from './assets/illustrations/teamwork.png';
 import { t, teamName } from './i18n';
-import { Terms } from './terms';
+import { Terms, TermsAccept } from './terms';
 
 type Call = (method: string, input?: unknown) => Promise<any>;
 type Personality = NonNullable<Settings['personality']>;
@@ -275,12 +275,17 @@ export function SetupWizard({
         {step === 5 && (
           <section className="wizard-body center">
             <img className="illustration wizard-art" src={teamworkArt} alt="" />
-            <h1>{ready ? (userName ? t('พร้อมแล้ว คุณ{0}', userName) : t('พร้อมเริ่มงานแล้ว')) : t('บันทึกการตั้งค่าแล้ว')}</h1>
+            <h1>{ready ? (userName ? t('พร้อมแล้ว คุณ{0}', userName) : t('พร้อมเริ่มงานแล้ว')) : t('อีกขั้นเดียวก่อนเริ่มงาน')}</h1>
             <p className="muted">
               {ready ? t('{0} พร้อมช่วยงานแรกของคุณ', assistant) : t('ยังไม่ได้เชื่อมต่อ AI เชื่อมบัญชีก่อนเริ่มคุยกับผู้ช่วย')}
             </p>
             <p className="small muted">{t('เริ่มจากงานตัวอย่าง หรือปรับผู้ช่วยและส่วนเสริมภายหลังในการตั้งค่า')}</p>
-            <Terms privacyChecks={Boolean(snapshot.policy?.checks?.privacy)} accepted={termsAccepted} onChange={setTermsAccepted} />
+            <Terms
+              privacyChecks={Boolean(snapshot.policy?.checks?.privacy)}
+              accepted={termsAccepted}
+              onChange={setTermsAccepted}
+              showAccept={false}
+            />
           </section>
         )}
 
@@ -297,7 +302,8 @@ export function SetupWizard({
               {t('ข้าม ตั้งค่าทีหลัง')}
             </button>
           )}
-          {step === 5 && !termsAccepted && <span className="small muted">{t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม')}</span>}
+          {/* The acknowledgement lives in the fixed footer, so a short window never hides it under the scrolling terms. */}
+          {step === 5 && <TermsAccept accepted={termsAccepted} onChange={setTermsAccepted} />}
           <span className="spacer" />
           {step < 5 ? (
             <button
@@ -319,8 +325,8 @@ export function SetupWizard({
                 {ready ? t('เริ่มใช้งานเลย') : t('เข้าชมพื้นที่ทำงาน')}
               </button>
               <button
-                disabled={Boolean(busy) || (ready && !termsAccepted)}
-                title={ready && !termsAccepted ? t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม') : undefined}
+                disabled={Boolean(busy) || !termsAccepted}
+                title={termsAccepted ? undefined : t('ติ๊กรับทราบข้อตกลงการใช้งานก่อนเริ่ม')}
                 onClick={() => (ready ? finish(true) : setStep(3))}
               >
                 {ready ? t('ดูทัวร์แนะนำ') : t('เชื่อมต่อ AI')}

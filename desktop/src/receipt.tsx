@@ -665,6 +665,16 @@ export function ReceiptApp({
   }
   const ready = status?.running;
   const usableConnectionId = connections.find(c => c.id === connectionId && c.ready)?.id;
+  const canPick = Boolean(ready || (status?.vision && usableConnectionId));
+  // Why "เลือกใบเสร็จ" is grey, said right under it instead of only further down the page.
+  const pickReason =
+    canPick || busy
+      ? ''
+      : !status
+        ? t('รอตรวจบริการ OCR สักครู่')
+        : status.installed
+          ? t('กด "เปิดบริการ OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้')
+          : t('กด "ติดตั้ง OCR" ด้านล่างก่อน จึงเลือกใบเสร็จได้');
   const corrections = [
     ...new Set([
       ...compliance.filter(item => ['missing', 'warn'].includes(item.status) && !item.ifCategoryB).map(itemText),
@@ -768,12 +778,18 @@ export function ReceiptApp({
           )}
           <button
             className="receipt-pick"
-            disabled={!(ready || (status?.vision && usableConnectionId)) || Boolean(busy)}
+            disabled={!canPick || Boolean(busy)}
+            aria-describedby={pickReason ? 'receipt-pick-reason' : undefined}
             onClick={() => void run('read', read)}
           >
             {busy === 'read' ? <LoaderCircle size={16} className="spin" /> : <FileSearch size={16} />}
             {busy === 'read' ? t('กำลังอ่านใบเสร็จ… ครั้งแรกอาจใช้ 1–2 นาที') : t('เลือกใบเสร็จ')}
           </button>
+          {pickReason && (
+            <p id="receipt-pick-reason" className="small receipt-pick-reason">
+              {pickReason}
+            </p>
+          )}
           <p className="small muted">{t('รองรับ PDF, PNG, JPG, WebP, BMP, TIFF ขนาดไม่เกิน 25 MB')}</p>
           <div className="receipt-service">
             <span className={`status-dot ${ready ? 'ok' : ''}`} aria-hidden="true" />
@@ -828,7 +844,9 @@ export function ReceiptApp({
           )}
           {status?.vision && <p className="small muted">{t('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')}</p>}
           {status?.textOnly && (
-            <p className="small muted">{t('AI ที่เลือกช่วยจัดข้อความ OCR เข้าฟอร์ม แต่เส้นทางนี้ยังไม่อ่านภาพใบเสร็จ')}</p>
+            <p className="small muted">
+              {t('ตอนนี้ AI ไม่ได้อ่านภาพใบเสร็จ (นโยบายองค์กรหรือ AI ที่เลือกยังไม่รองรับ) AI ช่วยจัดข้อความจาก OCR เข้าฟอร์มเท่านั้น')}
+            </p>
           )}
         </section>
         <section className="receipt-form" aria-label={t('ข้อมูลที่ต้องตรวจ')}>
