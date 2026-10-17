@@ -3607,6 +3607,30 @@ nav .count {
   margin-top: 12px;
   padding-top: 12px;
 }
+/* Maintenance board in the Memory dialog: three columns, stacked when narrow. */
+.maintenance {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.maintenance-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.maintenance-column h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+.maintenance-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.maintenance-item p {
+  margin: 4px 0;
+}
 .attachment-image {
   display: block;
   max-width: 100%;

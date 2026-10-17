@@ -2393,16 +2393,22 @@ export default function App() {
                         className="pill-select model-select"
                         title={
                           activeModel.efforts.find(e => e.id === currentEffort)?.description ||
-                          t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น')
+                          (!currentEffort && snapshot.policy?.features.autoEffort
+                            ? t(
+                                'อัตโนมัติ: คำถามสั้นในแชตใช้ Low งานใหญ่ (หลายขั้นตอน โหมดวางแผน คำขอยาว หรือหลายไฟล์) ใช้ High งานทั่วไปใช้ค่าเริ่มต้นของโมเดล',
+                              )
+                            : t('ระดับการคิด (reasoning) ยิ่งสูงยิ่งละเอียดแต่ช้าและใช้โควตามากขึ้น'))
                         }
                         value={currentEffort}
                         disabled={running}
                         onChange={e => void action(() => chooseModel(currentModel, e.target.value))}
                       >
                         <option value="">
-                          {activeModel.defaultEffort
-                            ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
-                            : t('ค่าเริ่มต้น')}
+                          {snapshot.policy?.features.autoEffort
+                            ? t('อัตโนมัติตามขนาดงาน')
+                            : activeModel.defaultEffort
+                              ? t('ค่าเริ่มต้น ({0})', effortLabel[activeModel.defaultEffort] || activeModel.defaultEffort)
+                              : t('ค่าเริ่มต้น')}
                         </option>
                         {activeModel.efforts.map(e => (
                           <option key={e.id} value={e.id} title={e.description}>

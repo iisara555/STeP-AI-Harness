@@ -42,6 +42,8 @@ const featureNames: Record<string, string> = localized({
   learningReview: 'ทบทวนหาบทเรียนอัตโนมัติ',
   ocrTrial: 'เครื่องมือทดลอง OCR',
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
+  autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
+  maintenance: 'ตรวจความจำ บทเรียน และ Skill ทุกวัน',
 });
 
 export function SettingsPanel({

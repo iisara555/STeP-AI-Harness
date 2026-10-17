@@ -48,6 +48,32 @@ export function safeMemory(text: string, privacy: (text: string) => any) {
     throw new Error('MEMORY_PRIVACY_BLOCKED');
   return text;
 }
+/**
+ * rules/learning-and-verification.md: memory keeps stable facts. Task progress, PR/ticket/run numbers, run logs and
+ * stack traces are short-lived and refused, so they never come back as context in a later task.
+ */
+const EPHEMERAL: RegExp[] = [
+  /(?:^|[\s(])#\d{2,}\b|\b(?:PR|pull request|issue|ticket)\s*#?\d+|\/(?:pull|issues|runs|jobs)\/\d+/i,
+  /\b(?:run|job|build)\s*(?:id\s*)?#?\d{5,}\b/i,
+  /^\s*(?:\[?\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}|\d{2}:\d{2}:\d{2})|^\s*(?:Traceback \(most recent call last\)|at \S+ \(.+:\d+:\d+\))|^\s*(?:ERROR|WARN(?:ING)?|FATAL)\b[:\]]/m,
+  /\b(?:WIP|work in progress|currently working on|today I)\b|(?:ทำถึงขั้น|ทำไปแล้ว\s*\d|ค้างอยู่ที่|เมื่อกี้|ตอนนี้กำลัง)/i,
+];
+export function stableMemory(text: string) {
+  if (EPHEMERAL.some(pattern => pattern.test(text))) throw new Error('MEMORY_EPHEMERAL');
+  return text;
+}
+const ORIGINS = ['manual', 'chat', 'feedback'];
+/** Where a memory came from: how it was proposed and, for proposals, the task and the employee's own words. */
+function origin(raw: any): Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'> {
+  if (!ORIGINS.includes(raw?.origin)) return {};
+  return {
+    origin: raw.origin,
+    ...(typeof raw.origin_session === 'string' && /^[\w-]{1,60}$/.test(raw.origin_session) ? { origin_session: raw.origin_session } : {}),
+    ...(typeof raw.origin_evidence === 'string' && raw.origin_evidence.trim()
+      ? { origin_evidence: raw.origin_evidence.replace(/\s+/g, ' ').trim().slice(0, 300) }
+      : {}),
+  };
+}
 function normalize(raw: any): MemoryEntry {
   if (
     !raw ||
@@ -111,7 +137,7 @@ export function parseMemory(text: string): MemoryEntry {
     raw.source !== 'user-confirmed'
   )
     throw new Error('MEMORY_INVALID');
-  return { ...checked, id: raw.id, created_at: raw.created_at, updated_at: raw.updated_at };
+  return { ...checked, ...origin(raw), id: raw.id, created_at: raw.created_at, updated_at: raw.updated_at };
 }
 /** Conservative, evidence-bound extraction. Assistant claims, paths, names and budgets are never learned. */
 export function extractPreferences(session: Session) {
@@ -218,7 +244,7 @@ export class Memories {
             }
             const m = parseMemory(source);
             if (m.scope !== scope || file !== m.id + '.md') continue;
-            safeMemory(m.name + '\n' + m.text, this.privacy);
+            safeMemory([m.name, m.text, m.origin_evidence].filter(Boolean).join('\n'), this.privacy);
             entries.push({ ...m, expired: Boolean(m.ttl_days && Date.parse(m.updated_at) + m.ttl_days * 86400_000 <= Date.now()) });
           } catch {
             /* Malformed, sensitive or redirected entries never enter prompts. */
@@ -230,17 +256,22 @@ export class Memories {
     }
     return entries.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   }
-  async save(raw: any) {
+  /** `from` is set by the host for a confirmed proposal; what the renderer sends never sets a memory's origin. */
+  async save(raw: any, from?: Pick<MemoryEntry, 'origin' | 'origin_session' | 'origin_evidence'>) {
     const context = this.context(),
       policy = this.policy();
     const m = normalize(raw);
     safeMemory(m.name + '\n' + m.text, this.privacy);
+    stableMemory(m.name + '\n' + m.text);
     const existing = raw.id ? (await this.list()).find(e => e.id === raw.id && e.scope === m.scope) : undefined;
     if (raw.id && !existing) throw new Error('MEMORY_NOT_FOUND');
     if (existing) {
       m.id = existing.id;
       m.created_at = existing.created_at;
     }
+    // An edit keeps the record of where the memory came from; a new one is the proposal's or typed by the employee.
+    Object.assign(m, existing ? origin(existing) : from ? origin(from) : { origin: 'manual' });
+    if (m.origin_evidence) safeMemory(m.origin_evidence, this.privacy);
     const directory = await this.directory(m.scope, true);
     if (m.scope === 'project') {
       const workspace = this.store.settings().workspace,
@@ -293,7 +324,14 @@ export class Memories {
     if (!proposal || this.confirming.has(id)) throw new Error('MEMORY_NOT_FOUND');
     this.confirming.add(id);
     try {
-      const saved = await this.save({ ...proposal, ...changes, id: undefined });
+      const saved = await this.save(
+        { ...proposal, ...changes, id: undefined },
+        {
+          origin: proposal.type === 'feedback' ? 'feedback' : 'chat',
+          origin_session: proposal.sessionId,
+          origin_evidence: proposal.evidence,
+        },
+      );
       this.store.remove('memory-proposal', id);
       return saved;
     } finally {
@@ -309,7 +347,7 @@ export class Memories {
    * A note that fails the privacy check is refused, not kept for review.
    */
   proposeFeedback(sessionId: string, note: string) {
-    const text = safeMemory(note.trim(), this.privacy);
+    const text = stableMemory(safeMemory(note.trim(), this.privacy));
     if (!text || text.length > 1000) throw new Error('MEMORY_INVALID');
     const pending = this.proposals();
     const existing = pending.find(p => p.text === text);
@@ -342,6 +380,7 @@ export class Memories {
           try {
             safeMemory(candidate.evidence, this.privacy);
             safeMemory(candidate.text, this.privacy);
+            stableMemory(candidate.text);
             if (existing.some(m => m.text === candidate.text) || this.proposals().some(m => m.text === candidate.text)) continue;
             if (this.proposals().length >= 20) break;
             const id = randomUUID();

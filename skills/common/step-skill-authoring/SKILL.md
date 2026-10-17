@@ -1,7 +1,7 @@
 ---
 name: step-skill-authoring
 description: ใช้เมื่อผู้ใช้ต้องการสร้าง ปรับ หรือยกระดับ Skill ของ STeP AI Harness ให้เข้ากับบริบทองค์กร; ตรวจก่อนว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry/Source หรือ Action และไม่ใช้เพื่ออนุมัติ Skill เข้าสู่ Pilot โดยไม่มีการทดสอบและหลักฐาน
-standardVersion: 2
+standardVersion: 3
 ---
 
 # STeP Skill Authoring
@@ -18,7 +18,7 @@ Skill นี้เป็นมาตรฐานกลางสำหรับ�
 
 - ต้องสร้าง Skill ใหม่หรือปรับ Skill เดิมอย่างมีนัยสำคัญ
 - ต้องตัดสินว่าโจทย์ควรเป็น Skill, Playbook, Rule, Registry หรือ Action
-- ต้องยกระดับ legacy Skill ให้เป็น Standard v2
+- ต้องยกระดับ legacy Skill ให้เป็น Standard v2 หรือ v3
 
 **Anti-trigger:**
 - ต้องการนำ Skill เข้าสู่ Pilot จริง → Playbook `skill-to-pilot`
@@ -90,16 +90,25 @@ Skill ใหม่หรือ Skill ที่ปรับอย่างมี�
 
 รายละเอียดมาตรฐาน: [skill-contract.md](references/skill-contract.md)
 
-### 4. Trigger Metadata & Standard v2
+### 4. Trigger Metadata & Standard v3
 
 Skill ใหม่ต้องใช้ frontmatter:
 - `name`
 - `description`
-- `standardVersion: 2`
+- `standardVersion: 3` (v2 ยังผ่าน validator แต่ Skill ใหม่ควรเป็น v3)
 
-และต้องมี section ระดับ `##` ครบ 9 หัวข้อ:
+และต้องมี section ระดับ `##` ครบ 9 หัวข้อของ v2:
 
 `Purpose → เมื่อควรใช้ → Inputs → Source → Workflow → Output → Authority → Handoff → Guardrails`
+
+บวกอีก 4 หัวข้อของ v3:
+
+`Environment → Pitfalls → Verification → Maintenance`
+
+- `Environment` — path, ระบบ, เครื่องมือหรือคำสั่งที่ต้องใช้ ถ้าไม่มีให้เขียนว่าไม่มี
+- `Pitfalls` — ปัญหาที่มักเกิดและวิธีแก้ที่ตรวจแล้ว
+- `Verification` — หลักฐานที่ต้องมีก่อนบอกว่างานเสร็จ (ผลคำสั่ง ผลทดสอบ หรือการอ่านผลกลับมาตรวจ) ตาม `rules/learning-and-verification.md`
+- `Maintenance` — บรรทัด `อัปเดตล่าสุด: YYYY-MM-DD` และเมื่อไรต้องแก้ Skill นี้
 
 Legacy Skill ที่ยังไม่มี `standardVersion` ให้ migrate แบบ incremental เมื่อมีการแก้เชิงสาระหรือเป็นกลุ่มความเสี่ยงสูง ไม่ต้องแก้ทั้ง repository พร้อมกัน
 
@@ -170,7 +179,7 @@ AI ช่วยได้: จัดประเภทความต้องก
 - งานที่ควรเป็น SOP ขององค์กร → `sop-authoring`
 - การจัดเส้นทางและ collision → `step-router` และ `manifest/router-index.yaml`
 
-พร้อมส่งต่อเมื่อ: Skill Contract ครบ 12 ข้อ, มีไฟล์ eval ครบ 4 มิติและตัวอย่างคำตอบ และระบุการเปลี่ยนแปลงใน registry ที่ต้องทำ
+พร้อมส่งต่อเมื่อ: Skill Contract ครบ 12 ข้อ, มีไฟล์ eval ครบ 4 มิติและตัวอย่างคำตอบ, ผ่านหัวข้อ Verification ด้านล่าง และระบุการเปลี่ยนแปลงใน registry ที่ต้องทำ
 
 ## Guardrails
 
@@ -180,3 +189,41 @@ AI ช่วยได้: จัดประเภทความต้องก
 - ไม่เปลี่ยน `approved` lifecycle เองเพียงเพราะไฟล์สร้างเสร็จ
 - ไม่ Merge เมื่อ dependency/test ที่เกี่ยวข้องล้มเหลว
 - งานที่มี external side effect ต้องใช้ Action/Tool gate ของ Harness
+
+## Environment
+
+- ไฟล์ Skill: `skills/<namespace>/<name>/SKILL.md` พร้อม `references/` และ `examples/` ในโฟลเดอร์เดียวกัน
+- Registry: `manifest/skills.yaml`, `manifest/router-index.yaml`, `manifest/skill-evals.json`
+- Eval: `evals/skills/<skill>.json`
+- มาตรฐาน: `docs/skill-authoring-standard.md`
+- คำสั่งที่ root ของ repository: `python3 scripts/validate_repo.py`, `npm test`, `node scripts/build-claude-plugin.mjs`
+- Skill Pack ของพนักงานใน STeP Desktop ตรวจด้วย `src/modules/packs/review.js` ซึ่งใช้หัวข้อชุดเดียวกัน
+
+## Pitfalls
+
+| ปัญหา | วิธีแก้ |
+|---|---|
+| `validate_repo.py` แจ้ง `unsupported frontmatter keys` | frontmatter รับเฉพาะ `name`, `description`, `standardVersion` ย้ายข้อมูลอื่นไปไว้ใน body หรือ `manifest/skills.yaml` |
+| test แจ้งว่า Skill ใหม่ไม่มี eval หรือ `examples/` | เพิ่ม `evals/skills/<skill>.json` ครบ 4 มิติและโฟลเดอร์ `examples/`; ห้ามเพิ่มชื่อใน `legacyWithoutEvals` |
+| `build-claude-plugin.mjs --check` แจ้งว่า plugin ไม่เป็นรุ่นล่าสุด | รัน `node scripts/build-claude-plugin.mjs` แล้ว commit โฟลเดอร์ `plugins/step` ที่สร้างใหม่ |
+| Router เลือก Skill ผิดตัวหรือชนกับ Skill เดิม | เพิ่ม anti-trigger ใน description และเคส `collision` ใน eval แล้วปรับ `manifest/router-index.yaml` |
+| description เล่าขั้นตอนแทนเงื่อนไข | เขียนใหม่ให้บอกเมื่อไรควรใช้และไม่ควรใช้ AI จะได้เปิด Skill แทนการทำตามบทสรุป |
+| ลิงก์ไปไฟล์ใน `references/` ที่ไม่มีอยู่จริง | `validate_repo.py` ตรวจให้ สร้างไฟล์หรือแก้ลิงก์ก่อน commit |
+
+## Verification
+
+ห้ามบอกว่า Skill พร้อมจนกว่าจะมีหลักฐานจากงานนี้:
+
+1. `python3 scripts/validate_repo.py` ขึ้น `Validation passed`
+2. `npm test` ที่ root ผ่าน รวม test ของ Skill authoring และ eval routing
+3. `node scripts/build-claude-plugin.mjs --check` ขึ้น `plugins/step is up to date`
+4. เคส eval ครบ positive, antiTrigger, collision และ missingSource
+
+แนบคำสั่งและผลลัพธ์ไว้ใน pull request หรือรายงาน ถ้ารันไม่ได้ให้บอกตรง ๆ ว่ายังไม่ได้ตรวจอะไร
+
+## Maintenance
+
+อัปเดตล่าสุด: 2026-10-16
+
+- เจ้าของ: `ai-admin` ตาม `manifest/skills.yaml`
+- แก้ Skill นี้ทันทีเมื่อมาตรฐาน validator หรือคำสั่งใน Environment เปลี่ยน แล้วเปลี่ยนวันที่ข้างบน

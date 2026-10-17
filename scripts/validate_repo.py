@@ -94,6 +94,22 @@ def validate_skills(errors: list[str]) -> int:
                 "Handoff",
                 "Guardrails",
             ]
+            if standard_version >= 3:
+                # Standard v3: environment, known problems, verification and last-updated date.
+                required_headings += ["Environment", "Pitfalls", "Verification", "Maintenance"]
+                maintenance = re.search(
+                    r"^##\s+Maintenance\s*$(.*?)(?=^##\s|\Z)", text, flags=re.MULTILINE | re.DOTALL
+                )
+                updated = re.search(
+                    r"(?:อัปเดตล่าสุด|Last updated)\s*:\s*(\d{4}-\d{2}-\d{2})",
+                    maintenance.group(1) if maintenance else "",
+                    flags=re.IGNORECASE,
+                )
+                if maintenance and not updated:
+                    errors.append(
+                        f"{path.relative_to(ROOT)}: standardVersion 3 Maintenance needs "
+                        "'อัปเดตล่าสุด: YYYY-MM-DD'"
+                    )
             missing = [heading for heading in required_headings if heading not in headings]
             if missing:
                 errors.append(

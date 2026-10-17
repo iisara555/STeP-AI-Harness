@@ -33,6 +33,7 @@ import { documentTool, type DocumentToolId } from '../src/document-tools';
 import { documentToolRule, isDocumentQuestion, documentRevisionMarkdown } from './document-tools';
 import { combineUsage } from './usage';
 import { promptMetrics } from './prompt-metrics';
+import { autoEffort, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
 import { parseDocumentOutput } from '../src/document-output';
@@ -105,6 +106,8 @@ export type Harness = {
   tools?: (scope: ToolScope) => Promise<LoopHost>;
   recordUsage?: (connection: Connection, count: TokenCount) => void;
   modelLimits?: (connection: Connection) => Pick<Connection, 'contextWindow' | 'maxOutputTokens' | 'promptCaching'>;
+  /** Policy autoEffort: pick the reasoning level by task size when the employee has not chosen one (electron/effort.ts). */
+  autoEffort?: () => boolean;
   documentMetadata?: (ids: string[]) => Promise<any[]>;
   /** Registered organization documents the assistant may read (manifest/documents.yaml). */
   documentCatalog?: () => Promise<CatalogEntry[]>;
@@ -170,6 +173,9 @@ export const CHAT_RULES = [
 ].join(' ');
 
 // Questions about STeP itself are answered from its own registered documents first, never from guesses or the web.
+// rules/learning-and-verification.md: no "done" without evidence from this task (owner's rule, 2026-10-16).
+export const VERIFICATION_RULE =
+  'Before saying work is done, created, sent or fixed, verify it in this task with a real tool result (test, lint or build output, a file or page read back, command output) and cite that evidence. A performed action is not proof of its outcome. If you could not verify, say what is unverified and how the employee can check it.';
 const WEB_RULE =
   'For public facts that change over time (dates, holidays, announcements, news, prices, laws), call web_search with a short public query instead of answering from memory, then cite the sources with Markdown links. Never put private or STeP-internal details in a search query.';
 const SKILL_RULE =
@@ -802,6 +808,19 @@ export class WorkService {
         revising || (options.draftOnly && options.mergeOnly)
           ? [planned.filter((s: any) => !(s.kind === 'action' || s.action || s.actionId)).at(-1) || planned[0]]
           : planned;
+      // The employee's level wins; otherwise the level follows the size of this task, within what the model offers.
+      const size = taskSize({
+        chat,
+        text: latest,
+        sourceChars: (incomingSource || session.sourceText || '').length,
+        files: fileNames.length + (options.images?.length || 0),
+        steps: steps.length,
+        plan: this.harness.permissionMode?.() === 'plan',
+        revising,
+      });
+      const chosenEffort = session.effort || undefined;
+      const effort = chosenEffort || (this.harness.autoEffort?.() ? autoEffort(modelOption(selectedConnection)?.efforts, size) : undefined);
+      trace.effort = { size, auto: !chosenEffort, ...(effort ? { level: effort } : {}) };
       const runtime = await this.runtime(connection, false);
       const extra = options.draftOnly ? undefined : await this.harness.extraContext?.(id, latest, connection, controller.signal);
       if (extra || known.length) {
@@ -935,6 +954,7 @@ export class WorkService {
           !toolsEnabled &&
             !textOnly &&
             'Host tool execution is disabled for this turn. The Desktop draft export UI supports DOCX, PDF, Markdown, XLSX and PPTX where policy permits. For Excel provide the requested table in the draft and direct the user to XLSX export; do not claim a file was created or substitute CSV without their choice. Direct Google Sheets access requires an available authorized connector.',
+          toolsEnabled && VERIFICATION_RULE,
           toolsEnabled && scopedToolInstructions === undefined && WEB_RULE,
           !textOnly && catalog.length && ORGANIZATION_RULE,
           internal && internalSystemRule(internal, toolsEnabled),
@@ -1139,7 +1159,7 @@ export class WorkService {
                       if (stage === 'failed') searchFailed = true;
                     }
                   : undefined,
-                effort: session.effort || undefined,
+                effort,
                 onReasoning: text => {
                   if (!analysisImage) this.emit({ sessionId: id, type: 'reasoning', text });
                 },

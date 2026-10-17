@@ -66,6 +66,19 @@ All discovery results still pass the ordinary result transmission/privacy gate, 
 
 Evidence: `test/tool-registry.test.ts` covers schemas/registry-protocol parity, malformed fields/wrapper rejection, conditional availability and metadata-only secret-safe MCP listing. `test/phase2-tools.test.ts` checks registry vs actual dispatcher cases (including loop-owned paging), synthetic tool-loop search → describe → file read/patch/task dispatch, denied/disabled/unknown-server managed discovery and unchanged transmission/staging/path gates. `test/tool-discovery-smoke.mjs` runs the real app with a synthetic local provider: 14 turns, actual file read/recursive search/exact staging, actual terminal completion through tasks, protected-path refusal, denied then approved human apply and verified snapshot. No live accounts, native-platform acceptance, live small-model quality or independent security-review pass is claimed.
 
+## Earlier tasks: `session_search` (agent-learning step 3)
+
+The AI can find this team's earlier tasks on this computer instead of asking the employee to explain again (`desktop/electron/session-history.ts`).
+
+```json
+{"tool":"session_search","input":"TOR เว็บไซต์","args":{"project":"เว็บไซต์ใหม่","from":"2026-10-01","to":"2026-10-15","limit":5}}
+{"tool":"session_search","input":"<task id>","args":{"action":"read"}}
+```
+
+- Search uses the same SQLite FTS5 index as the sidebar search (title, project, draft, messages and attached-file text). An empty input lists by date only. `from`/`to` are local calendar days (`YYYY-MM-DD`) compared with the task's last update; `project` matches part of the project name; `limit` is 1–10 (default 5). Results are newest first with a short snippet.
+- `read` returns the original request, at most the last 12 user/assistant turns (8,000 characters in all, 1,500 per turn) and the first 2,000 characters of the draft.
+- Only tasks of the run's own team are visible, and the current task is excluded. Like every tool result, the output passes the privacy check and transmission consent (source "งานเก่าของทีมเดียวกันบนเครื่องนี้") before the AI sees it, and the AI must treat it as untrusted data. It is read-only and allowed in plan mode.
+
 ## Permissions and outgoing data
 
 Model-generated search queries and fetch URLs require their own one-time destination consent before network access. Only pattern-checked public requests qualify; confirming a provider result does not authorize a new web/search destination. Policy/workspace checks repeat after this consent.
