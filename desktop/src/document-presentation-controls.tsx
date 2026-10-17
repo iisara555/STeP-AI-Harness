@@ -2,6 +2,25 @@ import { resolvePresentation, type DocumentPresentation } from './document-prese
 import { t } from './i18n';
 import './document-presentation.css';
 
+const EXPORT_SETTINGS_KEY = 'step.exportSettings';
+
+/** Export settings start folded so the draft keeps the panel; the employee's last choice is remembered on this computer. */
+export function readExportSettingsOpen(): boolean {
+  try {
+    return localStorage.getItem(EXPORT_SETTINGS_KEY) === 'open';
+  } catch {
+    return false;
+  }
+}
+
+export function saveExportSettingsOpen(open: boolean) {
+  try {
+    localStorage.setItem(EXPORT_SETTINGS_KEY, open ? 'open' : 'closed');
+  } catch {
+    // Storage can be unavailable; the panel still works for this run.
+  }
+}
+
 export function DocumentPresentationControls({
   value,
   locked,

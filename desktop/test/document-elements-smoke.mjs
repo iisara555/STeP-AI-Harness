@@ -89,6 +89,12 @@ try {
   await page.setViewportSize({ width: 1500, height: 1000 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
+  // Export settings start folded under the sliders button next to ส่งออก; the choice is remembered.
+  const showExportSettings = async () => {
+    const toggle = page.getByRole('button', { name: 'ตั้งค่าส่งออก', exact: true });
+    if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  };
   await expect(page.locator('.tiptap')).toContainText('เนื้อหาสำหรับตรวจองค์ประกอบ');
   phase = 'bounded containers';
   for (const selector of ['.tiptap td p', '.tiptap li p']) {
@@ -99,6 +105,8 @@ try {
   }
   await page.locator('.tiptap p').filter({ hasText: 'เนื้อหาสำหรับตรวจองค์ประกอบ' }).click();
   phase = 'presentation controls';
+  await expect(page.getByLabel('การจัดหน้า', { exact: true })).toHaveCount(0);
+  await showExportSettings();
   await page.getByLabel('การจัดหน้า', { exact: true }).selectOption('book');
   await page.getByLabel('สารบัญจากหัวข้อระดับ 1–3', { exact: true }).check();
   await page.getByLabel('ข้อความหัวกระดาษ', { exact: true }).fill('Synthetic header');
