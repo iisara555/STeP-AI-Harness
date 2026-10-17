@@ -4,7 +4,7 @@ import type { LessonContent, LearningMetrics, LearningReviewState, LearningSnaps
 import { curatorReport, type CuratorFinding } from './learning-curator';
 import { MIN_RATED } from './learning-metrics';
 import { ConfirmDialog } from './ui';
-import { explainError } from './messages';
+import { explainError, shownDate } from './messages';
 import { t } from './i18n';
 
 type Data = LearningSnapshot & { feedback: MemoryProposal[]; review?: LearningReviewState; metrics?: LearningMetrics };
@@ -45,7 +45,7 @@ function LessonResults({ metrics }: { metrics: LearningMetrics }) {
         {metrics.since
           ? t(
               'นับตั้งแต่ {0} บนเครื่องนี้ คะแนนมาจากปุ่มดี/ต้องแก้ใต้คำตอบ ตัวเลขเป็นสัญญาณให้คุณตัดสิน ไม่ใช่หลักฐานว่า AI เก่งขึ้น',
-              new Date(metrics.since).toLocaleDateString(),
+              shownDate(metrics.since),
             )
           : t('ยังไม่มีงานที่บันทึกผล เริ่มนับเมื่อใช้งานครั้งถัดไป')}
       </p>
@@ -89,7 +89,7 @@ function LessonResults({ metrics }: { metrics: LearningMetrics }) {
                   {l.good} / {l.fix}
                 </td>
                 <td>{l.repeats}</td>
-                <td>{l.lastUsed ? new Date(l.lastUsed).toLocaleDateString() : t('ยังไม่ถูกใช้')}</td>
+                <td>{l.lastUsed ? shownDate(l.lastUsed) : t('ยังไม่ถูกใช้')}</td>
               </tr>
             ))}
           </tbody>
@@ -441,7 +441,7 @@ export function LearningDialog({
                 .map(r => (
                   <div className="memory-item" key={r.revision}>
                     <p>
-                      {t('รุ่น {0}', r.revision)} · {new Date(r.at).toLocaleString()}
+                      {t('รุ่น {0}', r.revision)} · {shownDate(r.at, true)}
                     </p>
                     {r.content && <strong>{r.content.name}</strong>}
                     <pre>{r.content?.text || t('หยุดใช้แล้ว')}</pre>

@@ -29,7 +29,7 @@ import { localized, t } from './i18n';
 import { emptyReceiptForm, receiptFormReducer } from './receipt-form';
 import { visionFormSuggestions, receiptFocusStyle } from './receipt-hybrid';
 import type { ReceiptVisionResult } from '../electron/receipt-vision-recheck';
-import { explainError, connectionLabel } from './messages';
+import { explainError, connectionName } from './messages';
 import type { Connection } from './types';
 
 type MappingCandidate = {
@@ -1094,7 +1094,7 @@ export function ReceiptApp({
                     .filter(c => c.ready)
                     .map(c => (
                       <option key={c.id} value={c.id}>
-                        {connectionLabel(c)}
+                        {connectionName(c)}
                       </option>
                     ))}
                 </select>

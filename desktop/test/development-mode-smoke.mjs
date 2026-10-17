@@ -109,7 +109,8 @@ try {
   assert.equal(revoked.policyBlocked, true);
   await expect(page.locator('.ai-connection-status')).toContainText('ปิดโดยองค์กร');
   await expect(page.getByRole('button', { name: 'ทดสอบใช้งาน', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'เริ่มใช้งาน', exact: true })).toHaveCount(0);
+  // One footer label on every Settings tab; it becomes the primary button only once an account is ready.
+  await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).toHaveClass(/quiet/);
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'ออกจากระบบ', exact: true })).toBeEnabled();
 

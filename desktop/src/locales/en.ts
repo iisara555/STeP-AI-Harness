@@ -1203,7 +1203,7 @@ export const en: Record<string, string> = {
   'รองรับเฉพาะ PDF และไฟล์ภาพ': 'Only PDF and image files are supported',
   'โฟลเดอร์นี้ไม่ใช่ local-thai-ocr ของ STeP': "This folder isn't STeP's local-thai-ocr",
   'Skill นี้ยังไม่เชื่อม Routing จึงเรียกจากแชทไม่ได้': "This Skill isn't connected to Routing yet, so it can't be called from chat",
-  'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ ใช้ตัวเชื่อมที่มากับแอปแทนได้':
+  'ไฟล์ที่เลือกไม่ใช่ Codex หรือ Gemini CLI ของผู้ให้บริการนี้ กด “กลับไปใช้ตัวเชื่อมที่มากับแอป” แทนได้':
     "The selected file isn't this provider's Codex or Gemini CLI. You can use the connector bundled with the app instead",
   'ไม่พบตัวเชื่อม AI ในชุดติดตั้ง กรุณาติดตั้งแอปใหม่': 'The AI connector is missing from the installation. Please reinstall the app',
   'โมเดลนี้ใช้กับบัญชีหรือแพ็กเกจของคุณไม่ได้ เลือกโมเดลอื่นในกล่องพิมพ์':
@@ -1405,7 +1405,7 @@ export const en: Record<string, string> = {
     'Changes only how the assistant talks in chat. Facts, sources, permissions and document standards stay the same, and it never role-plays a real person',
   'จับภาพรวม ตรงประเด็น เชื่อมกับผลลัพธ์ แล้วจบด้วยสิ่งที่ต้องทำต่อ':
     'Big picture first, straight to the point, tied to outcomes, ending with the next action',
-  'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและ Impact':
+  'ชวนคิด เปิดมุมมองใหม่ เชื่อมจุด แล้วพาไปหาโอกาสและผลลัพธ์ที่มีความหมาย':
     'Asks questions, opens new perspectives, connects the dots and leads to opportunity and impact',
   สำเนียงภาษา: 'Dialect',
   ใช้ร่วมกับสไตล์ด้านบนได้: 'Can be combined with the style above',
@@ -1435,8 +1435,17 @@ export const en: Record<string, string> = {
   โฟลเดอร์เก็บผลงาน: 'Output folder',
   ยังไม่เลือกโฟลเดอร์: 'No folder selected',
   เลือกโฟลเดอร์: 'Choose folder',
-  'ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ส่วน USER.md (ชื่อ ผู้ช่วย และวิธีพูดคุย) เก็บในโฟลเดอร์นี้เพื่อใช้ร่วมกับ STeP AI บน CLI':
-    'Exported files are saved in this folder, named by team and date. USER.md (your name, assistant and conversation style) lives here too, so STeP AI on the CLI can use it',
+  'ไฟล์ที่ส่งออกจะตั้งชื่อตามทีมและวันที่ในโฟลเดอร์นี้ ชื่อเรียก ผู้ช่วย และวิธีพูดคุยที่ตั้งไว้ก็เก็บในโฟลเดอร์นี้ด้วย':
+    'Exported files are named by team and date in this folder. Your name, assistant and speaking style are kept here too',
+  ขั้นสูง: 'Advanced',
+  'การตั้งค่าเก็บเป็นไฟล์ USER.md เพื่อใช้ร่วมกับ STeP AI บน CLI': 'Settings are kept in USER.md so STeP AI on the CLI can share them',
+  สำหรับผู้ดูแล: 'For administrators',
+  ไฟล์นโยบาย: 'Policy file',
+  ที่มา: 'Source',
+  'การทำงานของ AI': 'How the AI works',
+  ข้อมูลและความเป็นส่วนตัว: 'Data and privacy',
+  ส่วนเสริมและการเชื่อมต่อ: 'Add-ons and connections',
+  การอัปเดตและนักพัฒนา: 'Updates and developers',
   'USER.md จะถูกสร้างเมื่อบันทึกการตั้งค่า': 'USER.md is created when you save settings',
   เปิดตำแหน่งไฟล์: 'Show file location',
   'เปลี่ยนภาษาของเมนูและปุ่มทั้งหมด ผู้ช่วยยังตอบตามภาษาที่คุณพิมพ์':
@@ -1496,7 +1505,12 @@ export const en: Record<string, string> = {
   'เลิกใช้ runtime ที่เลือกเอง': 'Stop using the custom runtime',
   ใช้ตัวเชื่อมที่มากับแอป: 'Use the connector bundled with the app',
   'สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง': 'For admins: use your own Codex or Gemini CLI',
-  'เลือก runtime': 'Choose runtime',
+  เลือกโปรแกรมเชื่อมต่อเอง: 'Choose a connector yourself',
+  'ตอนนี้ใช้ Antigravity ที่เลือกเอง ไม่ใช่ตัวที่ STeP ติดตั้งให้': 'Using an Antigravity you chose, not the one STeP installed',
+  'ตอนนี้ใช้โปรแกรมเชื่อมต่อที่เลือกเอง ถ้าเชื่อมต่อมีปัญหา ให้กลับไปใช้ตัวที่ติดตั้งมากับแอป':
+    'Using a connector you chose. If connecting fails, switch back to the one bundled with the app',
+  กลับไปใช้ตัวเชื่อมที่มากับแอป: 'Use the connector bundled with the app',
+  ลบบัญชีนี้: 'Remove this account',
   ลบข้อมูลลงชื่อของการเชื่อมต่อนี้ออกจากเครื่อง: "Remove this connection's sign-in data from this computer",
   ออกจากระบบ: 'Sign out',
   ลบ: 'Delete',
@@ -1743,12 +1757,6 @@ export const en: Record<string, string> = {
     'Since 18 June 2026 Google no longer serves Gemini CLI to personal Google accounts or Google AI Pro/Ultra. This method works only for organisation accounts with Gemini Code Assist Standard/Enterprise linked to this project. Personal accounts should choose “API key” and use a Gemini API key instead',
   เก็บเข้ารหัสในเครื่องนี้: 'Stored encrypted on this computer',
   'การใช้งาน AI': 'AI usage',
-  'วันนี้ (UTC)': 'Today (UTC)',
-  เดือน: 'Month',
-  ': ค่าใช้จ่ายประมาณ $': ': estimated cost $',
-  'คำนวณจาก tokens ของ Chat, Draft และ Web Search ที่ provider รายงาน และราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป':
-    "Based on Chat, Draft and Web Search tokens reported by the provider and the prices your admin set. It's an estimate that excludes images, subscriptions and usage outside the app",
-  'tokens ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย': "tokens have no price set yet, so they aren't included in the cost",
   'การใช้งานถึงอย่างน้อย 80% ของงบที่ตั้งไว้ โปรดตรวจยอดก่อนทำงานต่อ':
     'Usage has reached at least 80% of the budget. Please check before continuing',
   ' + รอราคา': ' + price pending',

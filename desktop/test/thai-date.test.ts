@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseThaiDate, formatThaiDate } from '../src/thai-date';
+import { parseThaiDate, formatThaiDate, formatLocalDate, formatLocalMonth } from '../src/thai-date';
 import { parseReceiptDate } from '../src/receipt-compliance';
 import { formValues } from '../src/receipt-workflow';
 import { documentRequest } from '../src/document-tools';
@@ -57,4 +57,17 @@ test('an ambiguous form date is passed for review without an invented year', () 
   assert.equal(source.fields.date.formatted, undefined);
   assert.equal(source.fields.date.review, 'DATE_NEEDS_REVIEW');
   assert.equal(source.fields.number.value, null);
+});
+
+test('staff-facing dates use one day/month/year format in local time', () => {
+  const moment = new Date(2026, 9, 17, 14, 5);
+  assert.equal(formatLocalDate(moment), '17/10/2569');
+  assert.equal(formatLocalDate(moment.toISOString(), { time: true }), '17/10/2569 14:05 น.');
+  assert.equal(formatLocalDate(moment, { time: true, english: true }), '17/10/2026 14:05');
+  assert.equal(formatLocalDate('2026-10-02'), '02/10/2569', 'a day key stays that calendar day in every time zone');
+  assert.equal(formatLocalDate('2026-10-02', { time: true }), '02/10/2569');
+  assert.equal(formatLocalDate('not a date'), '');
+  assert.equal(formatLocalMonth('2026-10'), 'ต.ค. 2569');
+  assert.equal(formatLocalMonth('2026-10', { english: true }), 'Oct 2026');
+  assert.equal(formatLocalMonth('later'), 'later');
 });

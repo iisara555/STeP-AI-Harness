@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileText, LoaderCircle, Paperclip, Sparkles, X } from 'lucide-react';
 import type { Attachment, Connection } from './types';
 import { DOCUMENT_TOOLS, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
-import { connectionLabel, errorText } from './messages';
+import { connectionName, errorText } from './messages';
 import { t } from './i18n';
 import { skillDisplayName } from './skill-display';
 import { ThaiText } from './thai-text';
@@ -185,7 +185,7 @@ export function DocumentTools({
               </option>
               {ready.map(c => (
                 <option key={c.id} value={c.id}>
-                  {connectionLabel(c)}
+                  {connectionName(c)}
                 </option>
               ))}
             </select>

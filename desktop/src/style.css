@@ -5466,4 +5466,195 @@ body:has(.dialog-backdrop) .toasts {
   :root[data-theme='system'] .tag.routed {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   }
+
+
+/* UI audit 2026-10-17: group B (Settings and AI usage) */
+/* One tab row that scrolls sideways instead of wrapping, and stays in view while a tab scrolls. */
+.settings-tabs {
+  position: sticky;
+  top: -35px;
+  z-index: 4;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  background: var(--surface);
+  padding-top: 6px;
+}
+.settings-tabs button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* The save action is always reachable, however long the tab. */
+.settings-save.sticky {
+  position: sticky;
+  bottom: -50px;
+  z-index: 4;
+  padding: 12px 0 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 1150px) {
+  .settings-tabs {
+    top: -26px;
+  }
+  .settings-save.sticky {
+    bottom: -26px;
+  }
+}
+/* Short windows: a compact header so content starts near the top. */
+@media (max-height: 760px) {
+  .settings-content {
+    padding-top: 18px;
+  }
+  .settings-tabs {
+    top: -18px;
+    margin-top: 8px;
+  }
+  .settings-hero .settings-art,
+  .settings-hero .settings-illustration,
+  .settings-hero p {
+    display: none;
+  }
+  .settings-content h1 {
+    font-size: 20px;
+    margin: 0;
+  }
+}
+/* Policy: grouped switches with on/off badges that differ in colour and icon. */
+.policy-group h3 {
+  font-size: 14px;
+  margin: 22px 0 6px;
+}
+.policy-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.policy-features li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.policy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.policy-badge.on {
+  color: var(--diff-added);
+  background: color-mix(in srgb, var(--diff-added) 13%, transparent);
+}
+.policy-badge.off {
+  color: var(--muted);
+  background: var(--selected);
+}
+/* A folded section for administrators (policy keys, file paths); staff never need to open it. */
+.settings-admin {
+  margin-top: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.settings-admin summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+.settings-admin[open] summary {
+  margin-bottom: 8px;
+}
+.settings-admin code {
+  overflow-wrap: anywhere;
+}
+.policy-keys {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 2px 16px;
+}
+.policy-keys li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+}
+/* AI account management: normal-size buttons, and removing the account apart from signing out. */
+.connection-actions button,
+.ai-account-management .connection-actions button {
+  font-size: 13px;
+}
+.connection-runtime {
+  margin-top: 12px;
+}
+.connection-row .connection-runtime p {
+  display: block;
+  margin: 0 0 6px;
+}
+.connection-account-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.connection-account-actions .connection-remove {
+  margin-left: auto;
+}
+.connection-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.connection-remove:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+/* Website accounts: the add form has its own heading; the search says it is a search. */
+.credential-form h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 15px;
+}
+.settings-content label.credential-search {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 8px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+}
+.credential-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  padding: 8px 0;
+}
+.credential-search:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* --border is not a theme token; give these boxes a visible edge in both themes. */
+.settings-content .pilot-note,
+.credential-form {
+  border: 1px solid var(--line-strong);
+}
+.settings-content .pilot-note {
+  background: var(--paper);
+}
+/* The sticky footer draws its own top rule; avoid a second rule right above it. */
+.settings-content > section:has(+ .settings-save.sticky) {
+  border-bottom: 0;
 }

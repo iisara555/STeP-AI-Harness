@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, LoaderCircle, Plug, Plus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Check, LoaderCircle, Plug, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import {
   ConfirmDialog,
   ProviderFields,
@@ -9,9 +9,9 @@ import {
   connectLabel,
   type ProviderChoice,
 } from './ui';
-import { explainError, connectionLabel } from './messages';
+import { explainError, connectionBrand, connectionKind, connectionLabel, shownDate } from './messages';
 import type { Connection, Snapshot } from './types';
-import { locale, t } from './i18n';
+import { t } from './i18n';
 import { connectionCapabilities, organizationCapabilities, type Capability } from './connection-capabilities';
 import { connectionState } from './connection-state';
 
@@ -239,9 +239,6 @@ export function AIConnections({
   );
 }
 
-/** What the account is called on its card: staff know "ChatGPT", not the company behind it. */
-const cardName = (c: Connection) => (c.provider === 'openai' && c.mode === 'subscription' ? 'ChatGPT' : connectionLabel(c));
-
 function ConnectionCard({
   connection: c,
   snapshot,
@@ -290,18 +287,8 @@ function ConnectionCard({
     <li className={`connection-row connection-card ${tone}`} data-state={tone}>
       <div className="connection-head">
         <strong className="connection-name">
-          {cardName(c)}{' '}
-          <small>
-            {c.mode === 'api'
-              ? c.signedIn
-                ? t('ลงชื่อเข้าใช้')
-                : 'API key'
-              : c.mode === 'oauth'
-                ? c.provider === 'copilot'
-                  ? 'GitHub OAuth'
-                  : 'Claude Console OAuth'
-                : t('บัญชีส่วนตัว')}
-          </small>
+          {/* The same name as everywhere else (connectionName), split so the kind reads as a subtitle. */}
+          {connectionBrand(c)} <small>{connectionKind(c)}</small>
         </strong>
         <span className={`ai-connection-status connection-state ${tone}`} role="status">
           {working ? (
@@ -379,7 +366,7 @@ function ConnectionCard({
             )}
             {c.modelsAt && (
               <p className="small muted">
-                {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {new Date(c.modelsAt).toLocaleString(locale())}
+                {t('โมเดล')} {c.models?.length || 0} {t('รายการ · อัปเดต')} {shownDate(c.modelsAt, true)}
               </p>
             )}
           </div>
@@ -395,26 +382,36 @@ function ConnectionCard({
               </button>
             )}
             {/* Only the CLI-based connections have a runtime to choose; API endpoints and Copilot do not. */}
-            {!['claude', 'compatible', 'copilot'].includes(c.provider) &&
-              (c.customRuntime ? (
-                <button
-                  className="quiet"
-                  disabled={Boolean(busy)}
-                  title={t('เลิกใช้ runtime ที่เลือกเอง')}
-                  onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
-                >
-                  {c.provider === 'antigravity' ? t('ใช้ Antigravity ที่ STeP ติดตั้ง') : t('ใช้ตัวเชื่อมที่มากับแอป')}
-                </button>
-              ) : (
-                <button
-                  className="quiet"
-                  disabled={Boolean(busy)}
-                  title={t('สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง')}
-                  onClick={() => void run(c.id, () => call('runtime', { id: c.id }))}
-                >
-                  {t('เลือก runtime')}
-                </button>
-              ))}
+            {!['claude', 'compatible', 'copilot'].includes(c.provider) && !c.customRuntime && (
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                title={t('สำหรับผู้ดูแลระบบ: ใช้ Codex หรือ Gemini CLI ที่ติดตั้งเอง')}
+                onClick={() => void run(c.id, () => call('runtime', { id: c.id }))}
+              >
+                {t('เลือกโปรแกรมเชื่อมต่อเอง')}
+              </button>
+            )}
+          </div>
+          {!['claude', 'compatible', 'copilot'].includes(c.provider) && c.customRuntime && (
+            <div className="connection-runtime">
+              <p className="small muted">
+                {c.provider === 'antigravity'
+                  ? t('ตอนนี้ใช้ Antigravity ที่เลือกเอง ไม่ใช่ตัวที่ STeP ติดตั้งให้')
+                  : t('ตอนนี้ใช้โปรแกรมเชื่อมต่อที่เลือกเอง ถ้าเชื่อมต่อมีปัญหา ให้กลับไปใช้ตัวที่ติดตั้งมากับแอป')}
+              </p>
+              <button
+                className="quiet"
+                disabled={Boolean(busy)}
+                title={t('เลิกใช้ runtime ที่เลือกเอง')}
+                onClick={() => void run(c.id, () => call('runtime', { id: c.id, reset: true }))}
+              >
+                {c.provider === 'antigravity' ? t('ใช้ Antigravity ที่ STeP ติดตั้ง') : t('กลับไปใช้ตัวเชื่อมที่มากับแอป')}
+              </button>
+            </div>
+          )}
+          {/* Signing out keeps the account; removing it is destructive, so it sits apart in the danger style. */}
+          <div className="connection-actions connection-account-actions">
             {/* Signing out of an API-key connection would only delete the key; removing it says that plainly. */}
             {(c.mode === 'subscription' || c.mode === 'oauth' || c.signedIn || (c.ready && c.mode !== 'api')) && (
               <button
@@ -430,8 +427,9 @@ function ConnectionCard({
                 {c.provider === 'antigravity' ? t('เลิกเชื่อมต่อ') : t('ออกจากระบบ')}
               </button>
             )}
-            <button className="quiet danger-text" disabled={Boolean(busy)} onClick={onRemove}>
-              {t('ลบ')}
+            <button className="quiet danger-text connection-remove" disabled={Boolean(busy)} onClick={onRemove}>
+              <Trash2 size={14} aria-hidden="true" />
+              {t('ลบบัญชีนี้')}
             </button>
           </div>
         </details>
