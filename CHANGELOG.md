@@ -6,6 +6,10 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.12 (2026-10-17)
+
+- Stabilize the macOS Electron smoke fixtures: explicitly position and verify document insertion carets, and open the task list before updater-profile checks on narrow screens. Preserve all document boundary/export and update-recovery assertions.
+
 - Fix the findings of the 2026-10-17 UI audit of every screen (owner's request, all except the Claude Pro/Max row M6):
   - **Chat:** the strict-privacy consent dialog says in Thai what is sent and to which service, with the raw data folded under "รายละเอียดสำหรับผู้ดูแล". It no longer asks again when the only thing sent is the employee's own answer or plan approval and the privacy scan finds it clean. The failed-run row no longer covers the tool history. A question from the AI hides the composer and the task list says "รอคุณตอบ". The plan card lists its steps and its button reads "อนุมัติแผน". After a failure the status bar shows "งานล่าสุดไม่สำเร็จ" with a support code. The "มีผลงาน" filter has its own empty message. The panel tabs stay on one row, and the first-run tour button is visible. Below 1200 px the task list folds to icons while the draft panel is open.
   - **Settings:** the policy page groups switches in Thai with on/off badges and keeps raw keys and the file path under "สำหรับผู้ดูแล". One name is used for each AI account everywhere, for example "ChatGPT บัญชีส่วนตัว". The usage page is Thai with local times. Dates use one Thai format (17/10/2569). The delete-account button is set apart from sign-out, the add-website-account form has a heading, footer labels are consistent, and the developer text on the General tab is folded. On small windows the header is compact and the tab row stays put.
