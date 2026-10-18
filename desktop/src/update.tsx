@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownToLine, LoaderCircle, RefreshCw } from 'lucide-react';
+import { ArrowDownToLine, LoaderCircle, RefreshCw } from './icons';
 import type { DesktopAPI, UpdateState } from './types';
 import { t } from './i18n';
 

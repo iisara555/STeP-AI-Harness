@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Power, Trash2 } from 'lucide-react';
+import { CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Power, Trash2 } from './icons';
 import type { Automation, AutomationRun } from '../electron/cron';
 import type { Connection, DesktopAPI } from './types';
 import { connectionName, explainError } from './messages';

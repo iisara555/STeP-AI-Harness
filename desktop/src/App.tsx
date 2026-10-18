@@ -56,7 +56,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   CalendarClock,
-} from 'lucide-react';
+} from './icons';
 import { lazyScreen } from './lazy-screen';
 import type { DocumentAttachment, DocumentForm } from './document-tool-app';
 import { documentRequest, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';

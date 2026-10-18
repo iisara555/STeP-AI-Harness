@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Folder, FileText, RefreshCw, Play, Square, Globe, ArrowLeft, Download, X } from 'lucide-react';
+import { Folder, FileText, RefreshCw, Play, Square, Globe, ArrowLeft, Download, X } from './icons';
 import type { DesktopAPI, Session } from './types';
 import type { ToolTab, BackgroundTask, FileChange, ToolRequest } from './tools';
 import { explainError } from './messages';

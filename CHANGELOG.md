@@ -4,6 +4,11 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+- Add 20 distinct office profile pictures in the existing Notion-style black ink on white paper. The picker now offers 53 portraits; saved pictures and retired choices still load.
+- Interactive icons throughout the app play a short motion on hover or keyboard focus, keeping the existing Lucide drawings and button sizes. Disabled controls stay still, and changes to the computer's Reduce Motion setting take effect while the app is open, including the folded sidebar.
+
 ## Desktop v0.6.15 (2026-10-18)
 
 - Morning brief settings keep the switch, time and consent together in one panel. Google Calendar has one service card with explicit read-only or view/create access, limited to the organization's allowed services; existing accounts no longer show duplicate Calendar badges.

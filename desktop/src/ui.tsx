@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CircleAlert, CircleCheck, LoaderCircle, Search, X } from 'lucide-react';
+import { CircleAlert, CircleCheck, LoaderCircle, Search, X } from './icons';
 import type { Session } from './types';
 import { explainError } from './messages';
 import { t } from './i18n';

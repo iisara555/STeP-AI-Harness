@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircleQuestion, ArrowUp } from 'lucide-react';
+import { MessageCircleQuestion, ArrowUp } from './icons';
 import type { ToolQuestion } from './types';
 import { explainError } from './messages';
 import { t } from './i18n';

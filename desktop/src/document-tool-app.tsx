@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileText, LoaderCircle, Paperclip, Sparkles, X } from 'lucide-react';
+import { FileText, LoaderCircle, Paperclip, Sparkles, X } from './icons';
 import type { Attachment, Connection } from './types';
 import { DOCUMENT_TOOLS, documentTool, type DocumentToolId, type DocumentAttachmentRole } from './document-tools';
 import { connectionName, errorText } from './messages';

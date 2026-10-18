@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, LoaderCircle, Plug, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Check, LoaderCircle, Plug, Plus, RefreshCw, Trash2 } from './icons';
 import {
   ConfirmDialog,
   ProviderFields,

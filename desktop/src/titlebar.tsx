@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, ChevronDown, PanelLeft, PanelRight, RefreshCw, Search } from 'lucide-react';
+import { ArrowDownToLine, ChevronDown, PanelLeft, PanelRight, RefreshCw, Search } from './icons';
 import type { DesktopAPI, UpdateState } from './types';
 import { shortcutText, type CommandId } from './commands';
 import { t } from './i18n';
