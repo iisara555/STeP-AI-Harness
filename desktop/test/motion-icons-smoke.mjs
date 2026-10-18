@@ -22,9 +22,11 @@ const settled = async icon => expect.poll(() => moving(icon)).toBe(false);
 // Observe before the interaction: Playwright may return from hover after a short animation finishes.
 const observe = async (icon, action, shouldMove = true) => {
   await icon.evaluate(el => {
-    el.motionTrace = { frames: [], stopped: false };
+    el.motionTrace = { frames: [], elapsed: 0, stopped: false };
     const trace = el.motionTrace;
+    const started = performance.now();
     const sample = () => {
+      trace.elapsed = performance.now() - started;
       const style = getComputedStyle(el);
       trace.frames.push(
         !['none', '0deg'].includes(style.rotate) ||
@@ -39,7 +41,8 @@ const observe = async (icon, action, shouldMove = true) => {
     await action();
     if (shouldMove) await expect.poll(() => icon.evaluate(el => el.motionTrace.frames.some(Boolean))).toBe(true);
     else {
-      await expect.poll(() => icon.evaluate(el => el.motionTrace.frames.length)).toBeGreaterThan(25);
+      await expect.poll(() => icon.evaluate(el => el.motionTrace.elapsed)).toBeGreaterThan(500);
+      assert.ok(await icon.evaluate(el => el.motionTrace.frames.length > 1), 'sample multiple rendered frames');
       assert.ok(await icon.evaluate(el => el.motionTrace.frames.every(frame => !frame)), 'interaction keeps the icon still');
     }
   } finally {
@@ -85,6 +88,7 @@ try {
   await plus.evaluate(el => {
     el.style.removeProperty('transform');
   });
+  await page.mouse.move(1300, 900);
   await newWork.evaluate(el => {
     el.blur();
     el.disabled = true;
