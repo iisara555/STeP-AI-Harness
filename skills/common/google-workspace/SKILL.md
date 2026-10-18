@@ -1,6 +1,6 @@
 ---
 name: google-workspace
-description: ใช้กับคำถามง่าย ๆ เช่น วันนี้มีนัดอะไร พรุ่งนี้มีประชุมไหม มีงานอะไรค้างบ้าง หาอีเมลเรื่องใบเสนอราคา หรือทำงาน Gmail, Drive, Google Docs/Sheets/Slides, Calendar และ Tasks ผ่านบัญชีที่เชื่อมใน STeP Desktop; ไม่ใช้กับไฟล์ในเครื่องหรือคำถามระเบียบองค์กร
+description: ใช้กับคำถามง่าย ๆ เช่น วันนี้มีนัดอะไร พรุ่งนี้มีประชุมไหม มีงานอะไรค้างบ้าง หาอีเมลเรื่องใบเสนอราคา หรือทำงาน Gmail, Drive, Docs/Sheets/Slides, Forms, Apps Script, Calendar และ Tasks ผ่านบัญชีที่เชื่อมใน STeP Desktop; ไม่ใช้กับไฟล์ในเครื่องหรือคำถามระเบียบองค์กร
 standardVersion: 3
 ---
 
@@ -13,6 +13,8 @@ standardVersion: 3
 ## เมื่อควรใช้
 
 - ค้นอีเมล Gmail หรือไฟล์ Drive อ่าน/สร้าง/เพิ่มข้อความใน Google Docs, Sheets, Slides
+- จัดป้ายกำกับและร่าง Gmail, จัดโฟลเดอร์/สิทธิ์แชร์ Drive, แก้รูปแบบ Docs/Sheets/Slides, สร้าง/แก้ Google Forms และอ่านคำตอบ
+- อ่านหรือแก้โครงการ Google Apps Script จัดเวอร์ชัน/Deployment หรือเรียก API Executable ที่ตั้งค่า Google Cloud ไว้แล้ว
 - สรุปนัด Google Calendar และอีเมลที่ต้องเตรียม หรือสร้างนัดที่ผู้ใช้ตรวจแล้ว
 - อ่าน/สร้าง/ทำรายการ Google Tasks ให้เสร็จ; อ่านหรือส่ง Google Chat เมื่อเปิดสิทธิ์ไว้
 - ผู้ใช้ไม่ต้องพิมพ์ Google หรือชื่อ Skill เช่น “วันนี้มีนัดอะไร” “พรุ่งนี้มีประชุมไหม” “มีงานอะไรค้างบ้าง” “ช่วยหาอีเมลเรื่องใบเสนอราคา” เป็นคำขออ่านข้อมูลบัญชีที่เชื่อมได้
@@ -49,7 +51,7 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 4. แยกอ่าน/ร่าง/ส่งจริง เลือก operation จาก catalog และใช้เฉพาะ params/body ที่ระบุ อ่านข้อมูลเท่าที่จำเป็น จำกัด pagination และบอกขอบเขตที่ยังอ่านไม่ครบ คำขอสรุปไม่อนุญาตให้ส่งเมลหรือสร้างนัด
 5. ก่อนเปลี่ยนข้อมูล แสดงบัญชี เป้าหมาย เนื้อหาหรือช่วงเซลล์ เวลา/ผู้รับ และผลกระทบให้ตรวจ เครื่องมือขอการยืนยันเฉพาะ payload อีกครั้ง แม้สร้าง Gmail draft หรืออยู่ Accept Edits/Auto; การอนุมัติแผนไม่แทนการยืนยัน action
 6. เรียก `google_workspace` input ชื่อ operation args `{"action":"execute","account":"<handle>","params":{},"body":{}}` ตาม catalog; ส่ง params/body เฉพาะที่งานนั้นใช้ การอ่านและส่งผลเข้า AI ยังผ่าน consent/privacy ของ host
-7. ตรวจผลตาม reference; เมื่อ write outcome ไม่ชัดเจน ห้าม retry หรือสลับบัญชีเพื่อทำซ้ำ ตรวจสถานะที่ Google ก่อน รายงาน completed เฉพาะเมื่อเครื่องมือยืนยันพร้อม reference/ID; แยก completed ออกจาก verified-after-read
+7. ตรวจผลตาม reference; เมื่อ write outcome ไม่ชัดเจน ห้าม retry หรือสลับบัญชีเพื่อทำซ้ำ ตรวจสถานะที่ Google ก่อน รายงาน completed เฉพาะเมื่อเครื่องมือยืนยันพร้อม reference/ID หรือ target สำหรับคำสั่งตอบรับว่าง; แยก completed ออกจาก verified-after-read
 
 ### ตัวอย่างงานอ่านอย่างเดียว
 
@@ -61,7 +63,7 @@ Anti-trigger: Excel/PPTX ในเครื่อง → `spreadsheet-work` / `p
 | ดูนัดวันนี้ | `calendar.list` แล้ว `calendar.events` | `{"calendarId":"primary","timeMin":"2026-10-17T00:00:00+07:00","timeMax":"2026-10-18T00:00:00+07:00"}` | `calendar-read` หรือ `calendar` |
 | หาไฟล์ Drive ชื่อมี "TOR" | `drive.list` | `{"query":"name contains 'TOR' and trashed = false"}` | `drive-read` (ทุกไฟล์) หรือ `documents` (เฉพาะไฟล์ที่แอปเปิด/สร้าง) |
 
-ผลแต่ละหน้าได้สูงสุด 20 รายการ ถ้ามี `nextPageToken` ให้บอกว่ายังอ่านไม่ครบ และอ่านหน้าถัดไปเฉพาะเมื่องานต้องใช้ ไวยากรณ์ค้น Gmail อยู่ใน [Gmail search](references/gmail-search-syntax.md)
+รายการส่วนใหญ่ได้หน้าละ 20 รายการตาม catalog ถ้ามี `nextPageToken` ให้บอกว่ายังอ่านไม่ครบ และอ่านหน้าถัดไปเฉพาะเมื่องานต้องใช้ ไวยากรณ์ค้น Gmail อยู่ใน [Gmail search](references/gmail-search-syntax.md)
 
 ## Output
 
@@ -91,19 +93,22 @@ AI ค้น อ่าน สรุป และเตรียมเนื้�
 
 - เครื่องมือในแอป: `google_workspace` (ตรวจด้วย `tool_describe`) ของ STeP Desktop ไม่ต้องติดตั้ง CLI, Python หรือ MCP server และไม่ใช้ gogcli/gws
 - บัญชีและบริการ: Settings → Google Workspace ในแอป token อยู่ใน Vault ของเครื่อง AI ได้แค่ handle
-- นโยบาย: key `googleWorkspace` และ `features.googleWorkspace` ใน `desktop-policy.json` (Windows `%ProgramData%\STeP\desktop-policy.json`, macOS `/Library/Application Support/STeP/desktop-policy.json`) ค่าเริ่มต้นเปิด `documents`, `calendar-read`, `tasks`; Gmail, การค้น Drive ทุกไฟล์ และการสร้างนัดต้องให้ผู้ดูแลเปิด ดู [การเชื่อมและแก้ปัญหา](references/connection.md)
+- นโยบาย: key `googleWorkspace` และ `features.googleWorkspace` ใน `desktop-policy.json` (Windows `%ProgramData%\STeP\desktop-policy.json`, macOS `/Library/Application Support/STeP/desktop-policy.json`) ค่าเริ่มต้นเสนอ Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script เพิ่มจาก `documents`, `calendar-read`, `tasks`; ผู้ดูแลจำกัดได้และบัญชีต้องเลือกยินยอมเอง การสร้างนัดยังต้องเปิด `calendar` ดู [การเชื่อมและแก้ปัญหา](references/connection.md)
 - รายการ operation และ params ที่รองรับ: [tool contract](references/tool-contract.md)
 
 ## Pitfalls
 
 | ปัญหา | วิธีแก้ |
 | --- | --- |
-| `GOOGLE_SCOPE_MISSING` ตอนอ่าน Gmail หรือค้น Drive | ค่าเริ่มต้นไม่มี `gmail-read` / `drive-read` บอกผู้ใช้ว่าต้องให้ผู้ดูแลเปิดใน policy แล้วกดเชื่อมใหม่ที่ Settings ไม่ลองบริการอื่นแทน |
+| `GOOGLE_SCOPE_MISSING` | ตรวจบริการที่บัญชีเลือกและนโยบาย หากนโยบายอนุญาตให้กด “ปรับบริการที่อนุญาต” ที่บัญชีเดิมแล้วเชื่อมใหม่ หากนโยบายปิดให้ผู้ดูแลพิจารณา ไม่สลับบริการหรือบัญชีเพื่อหลบข้อจำกัด |
 | เคยเชื่อม Calendar แล้วแต่อ่านนัดไม่ได้หลังอัปเดตแอป | ค่าเริ่มต้นเปลี่ยนเป็น `calendar-read` ให้ผู้ใช้กดเชื่อมใหม่ 1 ครั้งและเลือก Calendar (read) |
 | `drive.list` หาไฟล์ที่มีอยู่จริงไม่เจอ | บัญชีมีแค่ `documents` (`drive.file`) ซึ่งเห็นเฉพาะไฟล์ที่แอปสร้างหรือเปิด บอกข้อจำกัดนี้ ไม่สรุปว่าไม่มีไฟล์ |
 | นัดหายหรือเวลาเพี้ยน | ส่ง `timeMin`/`timeMax` แบบ RFC3339 ที่มี offset เช่น `+07:00` ถ้าผู้ใช้ไม่บอก timezone และมีผลกับคำตอบให้ถาม |
 | ผลค้นได้ 20 รายการพอดี | มีหน้าถัดไปได้ ตรวจ `nextPageToken` แล้วบอกว่ายังไม่ครบ |
 | `gmail.get` คืน `contentUnavailable` | เมลเป็น HTML หรือไฟล์แนบอย่างเดียว ให้ผู้ใช้เปิด Gmail เอง ไม่เดาเนื้อหา |
+| ไฟล์แนบหรือ Drive เป็นไฟล์ไบนารี | เครื่องมือโอน/อ่านไฟล์ใน catalog รองรับข้อความ UTF-8 เท่านั้น ให้เปิด PDF/DOCX/รูปภาพใน Google โดยตรง ไม่คืน base64 ให้ AI |
+| `GOOGLE_SOURCE_CHANGED` ตอนแก้ Apps Script | อ่าน `getContent` ใหม่แล้วใช้ contentHash ล่าสุด ส่งเฉพาะไฟล์ที่แก้ ไม่ตัด hash check ทิ้ง |
+| Apps Script รันไม่ได้ | ต้องเป็น API Executable deployment ใน Cloud project เดียวกับ OAuth client และ grant ครบ Project OAuth Scopes; ดู tool contract ไม่สั่งรันโค้ดผ่าน shell แทน |
 | ผู้ใช้กดปฏิเสธหน้าต่างยืนยัน (`CANCELLED`) | หยุดงานนั้น ไม่เรียกซ้ำเพื่อขอใหม่ทันที ถามผู้ใช้ว่าจะปรับขอบเขตไหม |
 | `GOOGLE_OUTCOME_UNKNOWN` หลังส่งเมลหรือสร้างนัด | ห้ามส่งซ้ำ ให้ผู้ใช้ตรวจใน Gmail/Calendar ก่อน ตาม [การแก้และตรวจผล](references/write-verification.md) |
 
@@ -112,14 +117,14 @@ AI ค้น อ่าน สรุป และเตรียมเนื้�
 ก่อนบอกว่างานเสร็จต้องมีหลักฐานจากผลเครื่องมือในงานนี้:
 
 1. งานอ่าน: บอกบัญชีแบบปกปิด operation ที่เรียก ช่วงวันหรือคำค้น จำนวนที่อ่าน และหน้าที่ยังเหลือ ทุกข้อมูลในคำตอบต้องมาจากผลจริง พร้อม ID หรือลิงก์ที่ผลคืนมา
-2. งานเขียน: ต้องมี `status: completed` และ ID/ลิงก์จากผลเครื่องมือ ถ้าอ่านกลับได้ (เช่น `calendar.events` ช่วงเวลานั้น หรือ `docs.get`) ให้อ่านกลับแล้วแยกรายงาน completed กับ verified-after-read
+2. งานเขียน: ต้องมี `status: completed` และ ID/ลิงก์หรือ target ที่ host ยืนยันสำหรับคำสั่งตอบรับว่าง เช่น ลบสิทธิ์แชร์ ถ้าอ่านกลับได้ให้อ่านกลับแล้วแยกรายงาน completed กับ verified-after-read ไม่อ้างว่าผู้รับได้รับ/เปิดอีเมลจากผลส่งสำเร็จ
 3. ถ้าเรียกไม่ได้ ให้บอกรหัส error และขั้นถัดไปตามตารางใน [การเชื่อมและแก้ปัญหา](references/connection.md) ไม่อ้างว่าทำแล้ว
 
 ผู้ดูแล repository ตรวจ Skill นี้ด้วย `python3 scripts/validate_repo.py`, `npm test` ที่ root และ `cd desktop && npx tsx --test test/google-workspace-skill.test.ts` (ตรวจว่าตัวอย่างใน tool contract ตรงกับ operation จริง)
 
 ## Maintenance
 
-อัปเดตล่าสุด: 2026-10-17
+อัปเดตล่าสุด: 2026-10-18
 
 - เจ้าของ: ตาม `manifest/skills.yaml`
 - แก้ Skill นี้เมื่อ `desktop/electron/google-operations.ts` เพิ่มหรือเปลี่ยน operation, เมื่อ `desktop/src/google-services.ts` เปลี่ยนชื่อบริการหรือ scope, หรือเมื่อค่าเริ่มต้น `googleWorkspace` ใน `desktop/electron/policy.ts` เปลี่ยน แล้วแก้วันที่ข้างบน

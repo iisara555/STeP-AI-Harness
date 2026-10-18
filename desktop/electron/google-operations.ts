@@ -1,17 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { googleId as id, googleText as text, googleExact as exact } from './google-validation';
+import { EXTENDED_GOOGLE_OPERATIONS, extendedGoogleCatalog, type ExtendedGoogleOperation } from './google-extended-operations';
+import type { GoogleService } from '../src/google-services';
+import { googleMailMessage } from './google-mail';
 const scope = (name: string) => 'https://www.googleapis.com/auth/' + name;
-const id = (value: unknown) => {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(value)) throw new Error('INVALID_GOOGLE_INPUT');
-  return encodeURIComponent(value);
-};
-const text = (value: unknown, max = 20000) => {
-  if (typeof value !== 'string' || !value.trim() || value.length > max || value.includes('\0')) throw new Error('INVALID_GOOGLE_INPUT');
-  return value;
-};
-const exact = (value: any, keys: string[]) => {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !keys.includes(key)))
-    throw new Error('INVALID_GOOGLE_INPUT');
-};
 export const GOOGLE_OPERATIONS = [
   'drive.list',
   'docs.get',
@@ -39,10 +31,11 @@ export const GOOGLE_OPERATIONS = [
   'chat.messages',
   'chat.send',
   'meet.get',
+  ...(Object.keys(EXTENDED_GOOGLE_OPERATIONS) as ExtendedGoogleOperation[]),
 ] as const;
 export type GoogleOperation = (typeof GOOGLE_OPERATIONS)[number];
 /** Discovery gives models the actual bounded contract instead of asking them to invent API arguments. */
-export const googleOperationCatalog = [
+const legacyGoogleCatalog: [string, string[], string[]][] = [
   ['drive.list', ['query?', 'pageToken?'], []],
   ['docs.get', ['documentId'], []],
   ['docs.create', [], ['title']],
@@ -60,8 +53,8 @@ export const googleOperationCatalog = [
   ['slides.appendTextSlide', ['presentationId'], ['text', 'requiredRevisionId']],
   ['gmail.list', ['query?', 'pageToken?'], []],
   ['gmail.get', ['messageId'], []],
-  ['gmail.draft', [], ['to (email array)', 'subject', 'text']],
-  ['gmail.send', [], ['to (email array)', 'subject', 'text']],
+  ['gmail.draft', [], ['to (email array)', 'subject', 'text', 'cc?', 'bcc?', 'threadId?', 'inReplyTo?']],
+  ['gmail.send', [], ['to (email array)', 'subject', 'text', 'cc?', 'bcc?', 'threadId?', 'inReplyTo?']],
   ['calendar.list', ['pageToken?'], []],
   ['calendar.events', ['calendarId', 'timeMin (RFC3339)', 'timeMax (RFC3339)', 'pageToken?'], []],
   [
@@ -77,18 +70,54 @@ export const googleOperationCatalog = [
   ['chat.messages', ['spaceId', 'pageToken?'], []],
   ['chat.send', ['spaceId'], ['text']],
   ['meet.get', ['spaceId'], []],
-].map(([operation, params, body]) => ({ operation, params, body }));
+];
+export const googleOperationCatalog = legacyGoogleCatalog
+  .map(([operation, params, body]) => ({ operation, params, body }))
+  .concat(extendedGoogleCatalog);
 export type GoogleRequest = { operation: GoogleOperation; params?: Record<string, any>; body?: Record<string, any> };
+export function googleOperationServices(operation: string, write: boolean): GoogleService[] {
+  const [service] = operation.split('.');
+  if (service === 'gmail') {
+    if (operation === 'gmail.send') return ['gmail-send'];
+    if (operation === 'gmail.draft' || operation === 'gmail.drafts.delete' || operation === 'gmail.drafts.update') return ['gmail-draft'];
+    if (operation.startsWith('gmail.drafts.')) return ['gmail-read', 'gmail-draft'];
+    if (write) return ['gmail-manage'];
+    return ['gmail-read'];
+  }
+  if (service === 'drive') return write ? ['drive'] : ['documents', 'drive-read', 'drive'];
+  if (service === 'docs' || service === 'sheets' || service === 'slides')
+    return write ? ['documents', service, 'drive'] : ['documents', service, 'drive-read', 'drive'];
+  if (service === 'calendar') return write ? ['calendar'] : ['calendar-read', 'calendar'];
+  if (['tasks', 'chat', 'meet', 'forms', 'appscript'].includes(service)) return [service as GoogleService];
+  throw new Error('GOOGLE_OPERATION_UNSUPPORTED');
+}
 export function googleInvocation(request: GoogleRequest) {
   exact(request, ['operation', 'params', 'body']);
   if (!GOOGLE_OPERATIONS.includes(request.operation)) throw new Error('GOOGLE_OPERATION_UNSUPPORTED');
   const p = request.params || {},
     b = request.body || {};
+  if (Object.hasOwn(EXTENDED_GOOGLE_OPERATIONS, request.operation)) {
+    const definition = EXTENDED_GOOGLE_OPERATIONS[request.operation as ExtendedGoogleOperation];
+    const call = definition.invoke(p, b);
+    const method = call.method || 'GET';
+    return {
+      ...call,
+      method,
+      operation: request.operation,
+      scopes: definition.scopes.map(scope),
+      services: googleOperationServices(request.operation, method !== 'GET'),
+      write: method !== 'GET',
+      digest: createHash('sha256')
+        .update(JSON.stringify([request.operation, call.url, method, call.body, call.payload, call.preflight]))
+        .digest('hex'),
+      preview: JSON.stringify(request),
+    };
+  }
   let url = '',
     method = 'GET',
     body: object | undefined;
   let scopes: string[] = [];
-  const docRead = ['drive.file', 'drive.readonly'];
+  const docRead = ['drive.file', 'drive.readonly', 'drive'];
   const page = () => {
     if (p.pageToken !== undefined) return text(p.pageToken, 2000);
     return '';
@@ -111,7 +140,7 @@ export function googleInvocation(request: GoogleRequest) {
       exact(p, ['documentId']);
       exact(b, []);
       url = 'https://docs.googleapis.com/v1/documents/' + id(p.documentId);
-      scopes = docRead;
+      scopes = [...docRead, 'documents', 'documents.readonly'];
       break;
     case 'docs.create':
       exact(p, []);
@@ -119,7 +148,7 @@ export function googleInvocation(request: GoogleRequest) {
       url = 'https://docs.googleapis.com/v1/documents';
       method = 'POST';
       body = { title: text(b.title, 200) };
-      scopes = ['drive.file'];
+      scopes = ['drive.file', 'documents', 'drive'];
       break;
     case 'docs.appendText':
       exact(p, ['documentId']);
@@ -130,19 +159,19 @@ export function googleInvocation(request: GoogleRequest) {
         writeControl: { requiredRevisionId: text(b.requiredRevisionId, 2000) },
         requests: [{ insertText: { endOfSegmentLocation: {}, text: text(b.text) } }],
       };
-      scopes = ['drive.file'];
+      scopes = ['drive.file', 'documents', 'drive'];
       break;
     case 'sheets.get':
       exact(p, ['spreadsheetId']);
       exact(b, []);
       url = 'https://sheets.googleapis.com/v4/spreadsheets/' + id(p.spreadsheetId) + '?includeGridData=false';
-      scopes = docRead;
+      scopes = [...docRead, 'spreadsheets', 'spreadsheets.readonly'];
       break;
     case 'sheets.values.get':
       exact(p, ['spreadsheetId', 'range']);
       exact(b, []);
       url = 'https://sheets.googleapis.com/v4/spreadsheets/' + id(p.spreadsheetId) + '/values/' + encodeURIComponent(text(p.range, 200));
-      scopes = docRead;
+      scopes = [...docRead, 'spreadsheets', 'spreadsheets.readonly'];
       break;
     case 'sheets.create':
       exact(p, []);
@@ -150,7 +179,7 @@ export function googleInvocation(request: GoogleRequest) {
       url = 'https://sheets.googleapis.com/v4/spreadsheets';
       method = 'POST';
       body = { properties: { title: text(b.title, 200) } };
-      scopes = ['drive.file'];
+      scopes = ['drive.file', 'spreadsheets', 'drive'];
       break;
     case 'sheets.values.update': {
       exact(p, ['spreadsheetId', 'range']);
@@ -191,14 +220,14 @@ export function googleInvocation(request: GoogleRequest) {
         '?valueInputOption=RAW';
       method = 'PUT';
       body = { values: b.values };
-      scopes = ['drive.file'];
+      scopes = ['drive.file', 'spreadsheets', 'drive'];
       break;
     }
     case 'slides.get':
       exact(p, ['presentationId']);
       exact(b, []);
       url = 'https://slides.googleapis.com/v1/presentations/' + id(p.presentationId);
-      scopes = docRead;
+      scopes = [...docRead, 'presentations', 'presentations.readonly'];
       break;
     case 'slides.create':
       exact(p, []);
@@ -206,7 +235,7 @@ export function googleInvocation(request: GoogleRequest) {
       url = 'https://slides.googleapis.com/v1/presentations';
       method = 'POST';
       body = { title: text(b.title, 200) };
-      scopes = ['drive.file'];
+      scopes = ['drive.file', 'presentations', 'drive'];
       break;
     case 'slides.appendTextSlide': {
       exact(p, ['presentationId']);
@@ -215,7 +244,7 @@ export function googleInvocation(request: GoogleRequest) {
         box = 'step_' + randomUUID().replaceAll('-', '');
       url = 'https://slides.googleapis.com/v1/presentations/' + id(p.presentationId) + ':batchUpdate';
       method = 'POST';
-      scopes = ['drive.file'];
+      scopes = ['drive.file', 'presentations', 'drive'];
       body = {
         writeControl: { requiredRevisionId: text(b.requiredRevisionId, 2000) },
         requests: [
@@ -242,43 +271,23 @@ export function googleInvocation(request: GoogleRequest) {
       url =
         'https://gmail.googleapis.com/gmail/v1/users/me/messages?' +
         new URLSearchParams({ maxResults: '20', q: p.query ? text(p.query, 500) : '', pageToken: page() });
-      scopes = ['gmail.readonly'];
+      scopes = ['gmail.readonly', 'gmail.modify'];
       break;
     case 'gmail.get':
       exact(p, ['messageId']);
       exact(b, []);
       url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/' + id(p.messageId) + '?format=full';
-      scopes = ['gmail.readonly'];
+      scopes = ['gmail.readonly', 'gmail.modify'];
       break;
     case 'gmail.draft':
     case 'gmail.send': {
       exact(p, []);
-      exact(b, ['to', 'subject', 'text']);
-      if (
-        !Array.isArray(b.to) ||
-        !b.to.length ||
-        b.to.length > 10 ||
-        b.to.some(
-          (v: any) =>
-            typeof v !== 'string' || !/^[A-Za-z0-9.!#$%&'*+\/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(v) || v.length > 254,
-        )
-      )
-        throw new Error('INVALID_GOOGLE_INPUT');
-      const subject = text(b.subject, 200);
-      if (/[\r\n]/.test(subject)) throw new Error('INVALID_GOOGLE_INPUT');
-      const raw = Buffer.from(
-        'To: ' +
-          b.to.join(', ') +
-          '\r\nSubject: =?UTF-8?B?' +
-          Buffer.from(subject).toString('base64') +
-          '?=\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n' +
-          Buffer.from(text(b.text)).toString('base64'),
-      ).toString('base64url');
+      const message = googleMailMessage(b);
       method = 'POST';
       const draft = request.operation === 'gmail.draft';
       url = 'https://gmail.googleapis.com/gmail/v1/users/me/' + (draft ? 'drafts' : 'messages/send');
-      body = draft ? { message: { raw } } : { raw };
-      scopes = draft ? ['gmail.compose'] : ['gmail.send', 'gmail.compose'];
+      body = draft ? { message } : message;
+      scopes = draft ? ['gmail.compose', 'gmail.modify'] : ['gmail.send', 'gmail.compose', 'gmail.modify'];
       break;
     }
     case 'calendar.list':
@@ -405,6 +414,13 @@ export function googleInvocation(request: GoogleRequest) {
     method,
     body,
     scopes: scopes.map(scope),
+    services: googleOperationServices(request.operation, method !== 'GET'),
+    acknowledge: false,
+    payload: undefined as string | undefined,
+    contentType: undefined as string | undefined,
+    response: 'json' as 'json' | 'text',
+    timeoutMs: undefined as number | undefined,
+    preflight: undefined as { url: string; contentHash: string; deleteFiles: string[] } | undefined,
     write: method !== 'GET',
     digest,
     preview: JSON.stringify(request),

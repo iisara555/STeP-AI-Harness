@@ -3,11 +3,13 @@ import { googleJson, googleIdentity, googleAuthorization } from './google-oauth'
 export { googleJson, googleIdentity } from './google-oauth';
 import type { Store } from './store';
 import { Vault } from './vault';
-import { GOOGLE_SERVICES, googleScopes, type GoogleService } from '../src/google-services';
+import { GOOGLE_SERVICES, LEGACY_GOOGLE_SERVICES, googleScopes, hasGoogleScope, type GoogleService } from '../src/google-services';
 import { credentialErrorsTh } from '../src/credential-copy';
 import { parseGoogleDesktopClient } from './google-client';
 import { bundledGoogleClientSecret } from './google-bundled-client';
 import { googleInvocation, type GoogleRequest } from './google-operations';
+import { googleMailContent } from './google-mail';
+import { googleScriptContentHash } from './google-validation';
 
 export type GoogleConfig = { clientId: string; domains: string[]; services: GoogleService[] };
 type Account = {
@@ -16,6 +18,7 @@ type Account = {
   label: string;
   domain: string;
   scopes: string[];
+  services?: GoogleService[];
   credentialId: string;
   clientId: string;
   paused: boolean;
@@ -64,6 +67,23 @@ export class GoogleWorkspace {
     if (subject && a.subject !== subject) reject('GOOGLE_ACCOUNT_MISMATCH');
     return a;
   }
+  private services(a: Account) {
+    // Old accounts retain only their original service surface; a broad OAuth scope never opts into a new action.
+    const selected =
+      a.services ||
+      LEGACY_GOOGLE_SERVICES.filter(s =>
+        googleScopes([s])
+          .slice(2)
+          .every(scope => a.scopes.includes(scope)),
+      );
+    return selected.filter(
+      s =>
+        Object.hasOwn(GOOGLE_SERVICES, s) &&
+        googleScopes([s])
+          .slice(2)
+          .some(scope => hasGoogleScope(a.scopes, scope)),
+    );
+  }
   private async withClientSecret<T>(clientId: string, action: (secret?: string) => Promise<T>): Promise<T> {
     const bundled = this.bundledClientSecret(clientId);
     if (bundled) return action(bundled);
@@ -104,17 +124,13 @@ export class GoogleWorkspace {
         clientPreconfigured ||
         (client && this.vault.list().some(v => v.id === client.credentialId && v.kind === 'google-client' && v.destination === clientId)),
       ),
-      accounts: this.accounts().map(({ id, label, domain, scopes, paused, reauth }) => ({
-        id,
-        label,
-        domain,
-        services: Object.keys(GOOGLE_SERVICES).filter(s =>
-          googleScopes([s as GoogleService])
-            .slice(2)
-            .every(scope => scopes.includes(scope)),
-        ),
-        paused,
-        reauth: Boolean(reauth),
+      accounts: this.accounts().map(a => ({
+        id: a.id,
+        label: a.label,
+        domain: a.domain,
+        services: this.services(a),
+        paused: a.paused,
+        reauth: Boolean(a.reauth),
       })),
     };
   }
@@ -135,15 +151,16 @@ export class GoogleWorkspace {
   cancel() {
     this.connecting?.abort();
   }
-  async connect(services: GoogleService[], context: Context) {
+  async connect(services: GoogleService[], context: Context, accountId?: string) {
     if (this.vault.state().suspended) reject('VAULT_SUSPENDED');
     const config = this.config();
     if (!config?.clientId || !config.domains.length) reject('GOOGLE_NOT_CONFIGURED');
     if (this.connecting) reject('GOOGLE_CONNECTION_BUSY');
+    const target = accountId === undefined ? undefined : this.account(accountId);
     if (
       !Array.isArray(services) ||
       !services.length ||
-      services.length > 10 ||
+      services.length > Object.keys(GOOGLE_SERVICES).length ||
       services.some(s => !config.services.includes(s) || !Object.hasOwn(GOOGLE_SERVICES, s))
     )
       reject('GOOGLE_SERVICE_DISABLED');
@@ -157,6 +174,7 @@ export class GoogleWorkspace {
           'Connect Google Workspace?',
           'Services: ' +
             services.join(', ') +
+            (target ? '\nAccount: ' + target.label : '') +
             '\nOrganization: ' +
             config.domains.join(', ') +
             '\nWorkspace content requires separate review before sending to AI.',
@@ -178,6 +196,7 @@ export class GoogleWorkspace {
       if (epoch !== this.epoch || JSON.stringify(config) !== JSON.stringify(this.config())) reject('GOOGLE_ACCOUNT_CHANGED');
       const subject = this.employeeSubject();
       if (subject && result.who.sub !== subject) reject('GOOGLE_ACCOUNT_MISMATCH');
+      if (target && result.who.sub !== target.subject) reject('GOOGLE_ACCOUNT_MISMATCH');
       const existing = this.accounts().find(a => a.subject === result.who.sub && a.clientId === config.clientId);
       if (this.accounts().length >= 10 && !existing) reject('GOOGLE_ACCOUNT_LIMIT');
       const id = existing?.id || randomUUID();
@@ -197,6 +216,7 @@ export class GoogleWorkspace {
         label,
         domain: result.who.hd,
         scopes: result.scopes,
+        services: [...new Set(services)],
         credentialId: credential.id,
         clientId: config.clientId,
         paused: false,
@@ -302,8 +322,9 @@ export class GoogleWorkspace {
     this.refreshes.set(a.id, work);
     return work;
   }
-  async execute(accountId: string, request: GoogleRequest, context: Context) {
-    const invocation = googleInvocation(structuredClone(request));
+  async execute(accountId: string, input: GoogleRequest, context: Context) {
+    const request = structuredClone(input);
+    const invocation = googleInvocation(request);
     const a = this.account(accountId),
       config = this.config(),
       epoch = this.epoch;
@@ -313,8 +334,11 @@ export class GoogleWorkspace {
         reject('GOOGLE_ACCOUNT_CHANGED');
       if (!config || a.clientId !== config.clientId || !config.domains.includes(a.domain) || a.paused || a.reauth)
         reject('GOOGLE_ACCESS_DENIED');
-      const allowed = googleScopes(config.services);
-      if (!invocation.scopes.some(s => a.scopes.includes(s) && allowed.includes(s))) reject('GOOGLE_SCOPE_MISSING');
+      const selected = this.services(a);
+      if (selected.includes('drive')) selected.push('drive-read');
+      if (selected.includes('calendar')) selected.push('calendar-read');
+      if (!invocation.services.some(s => selected.includes(s) && config.services.includes(s))) reject('GOOGLE_SCOPE_MISSING');
+      if (!invocation.scopes.some(s => hasGoogleScope(a.scopes, s))) reject('GOOGLE_SCOPE_MISSING');
       if (context.signal.aborted) reject('CANCELLED');
     };
     await check();
@@ -329,17 +353,39 @@ export class GoogleWorkspace {
     await check();
     const tokens = await this.tokens(a, context.signal);
     await check();
+    if (invocation.preflight) {
+      const current = await googleJson(
+        invocation.preflight.url,
+        { headers: { authorization: `Bearer ${tokens.access}` }, signal: context.signal },
+        this.transport,
+      );
+      await check();
+      if (googleScriptContentHash(current) !== invocation.preflight.contentHash) reject('GOOGLE_SOURCE_CHANGED');
+      const changed = new Map((invocation.body as any).files.map((file: any) => [file.name, file]));
+      const files = current.files
+        .filter((file: any) => !changed.has(file.name) && !invocation.preflight!.deleteFiles.includes(file.name))
+        .map(({ name, type, source = '' }: any) => ({ name, type, source }));
+      files.push(...changed.values());
+      if (files.length > 500 || !files.some((file: any) => file.name === 'appsscript' && file.type === 'JSON'))
+        reject('INVALID_GOOGLE_INPUT');
+      invocation.body = { files };
+    }
     let result: any;
     try {
       result = await googleJson(
         invocation.url,
         {
           method: invocation.method,
-          headers: { authorization: `Bearer ${tokens.access}`, 'content-type': 'application/json' },
-          ...(invocation.body ? { body: JSON.stringify(invocation.body) } : {}),
+          headers: { authorization: `Bearer ${tokens.access}`, 'content-type': invocation.contentType || 'application/json' },
+          ...(invocation.payload !== undefined
+            ? { body: invocation.payload }
+            : invocation.body
+              ? { body: JSON.stringify(invocation.body) }
+              : {}),
           signal: context.signal,
         },
         this.transport,
+        { response: invocation.response, timeoutMs: invocation.timeoutMs },
       );
     } catch (error) {
       if (invocation.write && !['GOOGLE_ACCESS_DENIED', 'GOOGLE_REAUTH_REQUIRED', 'GOOGLE_QUOTA_LIMIT'].includes((error as Error).message))
@@ -352,39 +398,54 @@ export class GoogleWorkspace {
       if (invocation.write) reject('GOOGLE_OUTCOME_UNKNOWN');
       throw new Error('GOOGLE_ACCOUNT_CHANGED');
     }
-    if (request.operation === 'gmail.get') {
-      const parts: string[] = [];
-      let visited = 0;
-      const extract = (part: any, depth = 0) => {
-        if (!part || depth > 10 || ++visited > 50) return;
-        if (part.mimeType === 'text/plain' && typeof part.body?.data === 'string')
-          parts.push(Buffer.from(part.body.data, 'base64url').toString('utf8'));
-        if (Array.isArray(part.parts)) for (const child of part.parts) extract(child, depth + 1);
-      };
-      extract(result.payload);
-      result = {
-        id: result.id,
-        threadId: result.threadId,
-        text: parts.join('\n').slice(0, 80000),
-        headers: Array.isArray(result.payload?.headers)
-          ? result.payload.headers
-              .filter((h: any) => ['from', 'to', 'subject', 'date'].includes(String(h.name).toLowerCase()))
-              .map((h: any) => ({ name: String(h.name), value: String(h.value).slice(0, 2000) }))
-          : [],
-        ...(parts.length ? {} : { contentUnavailable: 'No plain-text body available; open Gmail to inspect HTML/attachments.' }),
-      };
-      // Encoded MIME/attachment payloads must never bypass the outgoing local privacy scan.
+    if (request.operation === 'gmail.get') result = googleMailContent(result);
+    if (request.operation === 'gmail.threads.get')
+      result = { id: result.id, messages: Array.isArray(result.messages) ? result.messages.slice(0, 50).map(googleMailContent) : [] };
+    if (request.operation === 'gmail.drafts.get') result = { id: result.id, message: googleMailContent(result.message || {}) };
+    if (request.operation === 'gmail.attachments.getText') {
+      try {
+        if (typeof result.data !== 'string' || !/^[A-Za-z0-9_-]*={0,2}$/.test(result.data)) reject('GOOGLE_RESPONSE_INVALID');
+        const text = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(result.data, 'base64url'));
+        if (text.includes('\0')) reject('GOOGLE_TEXT_ONLY');
+        result = { text, size: result.size };
+      } catch {
+        reject('GOOGLE_TEXT_ONLY');
+      }
     }
+    if (request.operation === 'appscript.run' && (result.done !== true || !result.response)) reject('GOOGLE_OUTCOME_UNKNOWN');
+    if (request.operation === 'appscript.versions.create' && (!Number.isSafeInteger(result.versionNumber) || result.versionNumber < 1))
+      reject('GOOGLE_OUTCOME_UNKNOWN');
+    if (request.operation === 'appscript.projects.getContent') result = { ...result, contentHash: googleScriptContentHash(result) };
     let resourceUrl: string | undefined;
-    const resourceId = result.documentId || result.spreadsheetId || result.presentationId;
+    const resourceId = result.documentId || result.spreadsheetId || result.presentationId || result.formId || result.scriptId;
     if (invocation.write) {
-      const reference = resourceId || result.id || result.name;
-      if (typeof reference !== 'string' || !reference || reference.length > 300) reject('GOOGLE_OUTCOME_UNKNOWN');
+      const reference =
+        resourceId ||
+        result.id ||
+        result.name ||
+        result.deploymentId ||
+        (request.operation === 'appscript.versions.create' ? `${request.params!.scriptId}:${result.versionNumber}` : undefined);
+      if (!invocation.acknowledge && (typeof reference !== 'string' || !reference || reference.length > 300))
+        reject('GOOGLE_OUTCOME_UNKNOWN');
     }
     if (typeof resourceId === 'string' && /^[A-Za-z0-9_-]{1,200}$/.test(resourceId)) {
       if (result.documentId) resourceUrl = `https://docs.google.com/document/d/${resourceId}/edit`;
       else if (result.spreadsheetId) resourceUrl = `https://docs.google.com/spreadsheets/d/${resourceId}/edit`;
-      else resourceUrl = `https://docs.google.com/presentation/d/${resourceId}/edit`;
+      else if (result.presentationId) resourceUrl = `https://docs.google.com/presentation/d/${resourceId}/edit`;
+      else if (result.formId) resourceUrl = `https://docs.google.com/forms/d/${resourceId}/edit`;
+      else resourceUrl = `https://script.google.com/home/projects/${resourceId}/edit`;
+    }
+    if (!resourceUrl) {
+      const family = request.operation.split('.')[0];
+      const reference =
+        request.params?.[family === 'drive' ? 'fileId' : family === 'appscript' ? 'scriptId' : family === 'forms' ? 'formId' : ''] ||
+        result.form?.formId ||
+        (family === 'drive' ? result.id : undefined);
+      if (typeof reference === 'string' && /^[A-Za-z0-9_-]{1,200}$/.test(reference)) {
+        if (family === 'drive') resourceUrl = `https://drive.google.com/file/d/${reference}/view`;
+        if (family === 'forms') resourceUrl = `https://docs.google.com/forms/d/${reference}/edit`;
+        if (family === 'appscript') resourceUrl = `https://script.google.com/home/projects/${reference}/edit`;
+      }
     }
     const clean = JSON.stringify(result)
       .split(tokens.access)
@@ -397,6 +458,8 @@ export class GoogleWorkspace {
       retrievedAt: new Date().toISOString(),
       provenance: 'EXTRACTED_UNVERIFIED',
       trust: 'untrusted-data',
+      ...(invocation.write ? { requestDigest: invocation.digest } : {}),
+      ...(invocation.acknowledge ? { target: structuredClone(request.params || {}) } : {}),
       ...(resourceUrl ? { resourceUrl } : {}),
       data: JSON.parse(clean),
     };

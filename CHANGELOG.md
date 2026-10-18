@@ -4,6 +4,11 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+- Expand native Google Workspace from 26 to 76 operations across Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script. Add mail threads/draft editing/replies/labels, Drive folders/sharing/text transfer, revision-bound document and form editing, Sheet formatting/formulas/charts, and Script source/version/deployment/execution workflows. Reuse the app's OAuth and Vault; no extra CLI is needed.
+- Offer the seven service families in Settings, with one Drive and Calendar card and account-bound permission upgrades. Store explicit service choices so Gmail drafting or mailbox management cannot silently authorize sending. Existing accounts retain their original choices until reauthorized. Google Cloud API enablement and actual account consent remain separate; file transfers are UTF-8 text only. See [supported functions and prerequisites](docs/google-workspace-functions.md).
+
 ## Desktop v0.6.15 (2026-10-18)
 
 - Morning brief settings keep the switch, time and consent together in one panel. Google Calendar has one service card with explicit read-only or view/create access, limited to the organization's allowed services; existing accounts no longer show duplicate Calendar badges.

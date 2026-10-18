@@ -49,8 +49,15 @@ test('organization meetings, procedures, pasted mail and look-alike words do not
 
 test('native Workspace reference/checker covers the shipped operation catalog', async () => {
   assert.deepEqual(await checkContract(resolve('.')), {
-    status: 'checked-offline', operations: 26, liveGoogleVerified: false,
+    status: 'checked-offline', operations: 76, liveGoogleVerified: false,
   });
+});
+
+test('Forms and Apps Script account operations route to the native Workspace Skill', async () => {
+  for (const prompt of ['สร้างแบบสอบถามใน Google Forms', 'อ่านคำตอบ Google Forms', 'แก้โค้ดโปรเจ็กต์ Apps Script', 'รันฟังก์ชันใน Apps Script', 'จัดรูปแบบตารางใน Google Sheets']) {
+    const routed = await queryStepRouter(prompt, { team: 'cc', cluster: '' });
+    assert.equal(routed.routingContract?.skill, 'google-workspace', prompt);
+  }
 });
 
 test('offline contract checker rejects a reference that promises an unsupported operation', async () => {
@@ -58,7 +65,7 @@ test('offline contract checker rejects a reference that promises an unsupported 
   try {
     const folder = 'skills/common/google-workspace/references';
     await Promise.all([mkdir(join(root, folder), { recursive: true }), mkdir(join(root, 'desktop/electron'), { recursive: true })]);
-    const files = ['desktop/electron/google-operations.ts', `${folder}/tool-contract.md`, `${folder}/tool-contract.json`];
+    const files = ['desktop/electron/google-operations.ts', 'desktop/electron/google-extended-operations.ts', `${folder}/tool-contract.md`, `${folder}/tool-contract.json`];
     for (const file of files) await writeFile(join(root, file), await readFile(file));
     const path = join(root, folder, 'tool-contract.md');
     await writeFile(path, (await readFile(path, 'utf8')) + '\n| `drive.share` | fileId | email | unsupported |\n');

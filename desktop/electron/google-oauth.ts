@@ -5,7 +5,7 @@ export type GoogleIdentity = { sub: string; email: string; hd: string; name?: st
 function reject(code: string): never {
   throw new Error(code);
 }
-async function readGoogleResponse(response: Response) {
+async function readGoogleResponse(response: Response, format: 'json' | 'text' = 'json') {
   const reader = response.body?.getReader();
   if (!reader) reject('GOOGLE_RESPONSE_INVALID');
   const chunks: Uint8Array[] = [];
@@ -18,27 +18,40 @@ async function readGoogleResponse(response: Response) {
       if (size > 1000000) reject('GOOGLE_OUTPUT_LIMIT');
       chunks.push(part.value);
     }
-    const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const bytes = Buffer.concat(chunks);
+    if (format === 'text') {
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      if (text.includes('\0')) reject('GOOGLE_TEXT_ONLY');
+      return { text, mimeType: response.headers.get('content-type')?.split(';')[0] || 'text/plain' };
+    }
+    const data = JSON.parse(bytes.toString('utf8'));
     if (!data || typeof data !== 'object' || Array.isArray(data)) reject('GOOGLE_RESPONSE_INVALID');
     return data;
   } catch (error) {
     reject(
-      ['GOOGLE_OUTPUT_LIMIT', 'GOOGLE_RESPONSE_INVALID'].includes((error as Error).message)
+      ['GOOGLE_OUTPUT_LIMIT', 'GOOGLE_RESPONSE_INVALID', 'GOOGLE_TEXT_ONLY'].includes((error as Error).message)
         ? (error as Error).message
-        : 'GOOGLE_RESPONSE_INVALID',
+        : format === 'text'
+          ? 'GOOGLE_TEXT_ONLY'
+          : 'GOOGLE_RESPONSE_INVALID',
     );
   } finally {
     await reader.cancel().catch(() => {});
   }
 }
 /** Bounded JSON transport with redirect denial; upstream diagnostics and credential-bearing bodies stay private. */
-export async function googleJson(url: string, init: RequestInit = {}, transport = fetch) {
+export async function googleJson(
+  url: string,
+  init: RequestInit = {},
+  transport = fetch,
+  options: { response?: 'json' | 'text'; timeoutMs?: number } = {},
+) {
   let response: Response;
   try {
     response = await transport(url, {
       ...init,
       redirect: 'error',
-      signal: AbortSignal.any([init.signal || new AbortController().signal, AbortSignal.timeout(20000)]),
+      signal: AbortSignal.any([init.signal || new AbortController().signal, AbortSignal.timeout(options.timeoutMs || 20000)]),
     });
   } catch {
     reject(init.signal?.aborted ? 'CANCELLED' : 'GOOGLE_REQUEST_FAILED');
@@ -68,7 +81,7 @@ export async function googleJson(url: string, init: RequestInit = {}, transport 
     reject('GOOGLE_REQUEST_FAILED');
   }
   if (response.status === 204) return {};
-  const data = await readGoogleResponse(response);
+  const data = await readGoogleResponse(response, options.response);
   if (data.error) reject('GOOGLE_RESPONSE_INVALID');
   return data;
 }
@@ -239,7 +252,10 @@ export async function googleAuthorization(
     if (!config.domains.includes(who.hd)) reject('GOOGLE_ORGANIZATION_DENIED');
     return {
       who,
-      scopes: tokens.scope.split(' ').filter((s: string) => scopes.includes(s)),
+      scopes: tokens.scope
+        .split(' ')
+        .map((s: string) => (s === 'https://www.googleapis.com/auth/userinfo.email' ? 'email' : s))
+        .filter((s: string) => scopes.includes(s)),
       tokens: {
         refresh: typeof tokens.refresh_token === 'string' ? tokens.refresh_token : '',
         access: tokens.access_token,

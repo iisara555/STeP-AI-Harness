@@ -1,58 +1,98 @@
-# Native Google tool contract
+# Native Google Workspace tool contract
 
-อ่าน operation catalog จาก `google_workspace` args `{"action":"list"}` ทุกงาน catalog ของเครื่องที่ติดตั้งเป็นหลัก ตารางนี้อธิบาย source รุ่นที่ทดสอบ ไม่เพิ่ม scope หรือรองรับ operation เอง
+This is the STeP Desktop contract, inspired by the seven Workspace service families in [gogcli](https://github.com/openclaw/gogcli). It uses the app's own OAuth/Vault and Google REST APIs; no gog binary or shell bridge is required. The source catalog and synthetic examples are checked offline. A valid example is not evidence of live Google access.
 
-## รูปคำขอ
+## Calling the tool
 
-```json
-{"tool":"google_workspace","input":"","args":{"action":"list"}}
-```
+First use tool_describe for google_workspace, then call it with empty input and args {"action":"list"}. Choose the account handle belonging to this task. To execute, set input to one operation below and args to {"account":"<handle>","params":{...},"body":{...}}. Omit empty params/body. Always inspect the current catalog rather than inventing an operation. Every read and write requires the host's approval, and sharing a result with AI has a separate privacy review.
 
-จากนั้นเลือก `accounts[].handle` ที่ผู้ใช้ต้องการ บัญชีที่ pause/reauth ไม่อยู่ในผล; handle หมดอายุภายในห้านาทีและใช้เฉพาะ session เดิม
+| Operation | Service | Effect | Params | Body |
+| --- | --- | --- | --- | --- |
+| `drive.list` | drive-read | read | `query?`, `pageToken?` |  |
+| `docs.get` | documents | read | `documentId` |  |
+| `docs.create` | documents | write |  | `title` |
+| `docs.appendText` | documents | write | `documentId` | `text`, `requiredRevisionId` |
+| `sheets.get` | documents | read | `spreadsheetId` |  |
+| `sheets.values.get` | documents | read | `spreadsheetId`, `range` |  |
+| `sheets.create` | documents | write |  | `title` |
+| `sheets.values.update` | documents | write | `spreadsheetId`, `range (explicit A1:B2 rectangle)` | `values (RAW, at most 500 scalar cells matching the rectangle)` |
+| `slides.get` | documents | read | `presentationId` |  |
+| `slides.create` | documents | write |  | `title` |
+| `slides.appendTextSlide` | documents | write | `presentationId` | `text`, `requiredRevisionId` |
+| `gmail.list` | gmail-read | read | `query?`, `pageToken?` |  |
+| `gmail.get` | gmail-read | read | `messageId` |  |
+| `gmail.draft` | gmail-draft | write |  | `to (email array)`, `subject`, `text`, `cc?`, `bcc?`, `threadId?`, `inReplyTo?` |
+| `gmail.send` | gmail-send | write |  | `to (email array)`, `subject`, `text`, `cc?`, `bcc?`, `threadId?`, `inReplyTo?` |
+| `calendar.list` | calendar-read | read | `pageToken?` |  |
+| `calendar.events` | calendar-read | read | `calendarId`, `timeMin (RFC3339)`, `timeMax (RFC3339)`, `pageToken?` |  |
+| `calendar.createEvent` | calendar | write | `calendarId` | `summary`, `text?`, `start (RFC3339 with offset)`, `end (RFC3339 with offset)`, `attendees? (email array)` |
+| `tasks.lists` | tasks | read | `pageToken?` |  |
+| `tasks.list` | tasks | read | `tasklistId`, `pageToken?` |  |
+| `tasks.create` | tasks | write | `tasklistId` | `title`, `text?` |
+| `tasks.complete` | tasks | write | `tasklistId`, `taskId` |  |
+| `chat.spaces` | chat | read | `pageToken?` |  |
+| `chat.messages` | chat | read | `spaceId`, `pageToken?` |  |
+| `chat.send` | chat | write | `spaceId` | `text` |
+| `meet.get` | meet | read | `spaceId` |  |
+| `drive.get` | drive-read | read | `fileId` |  |
+| `drive.createFolder` | drive | write |  | `name`, `parentId?` |
+| `drive.copy` | drive | write | `fileId` | `name`, `parentId?` |
+| `drive.update` | drive | write | `fileId`, `addParent?`, `removeParent?` | `name?`, `description?`, `trashed?` |
+| `drive.exportText` | drive-read | read | `fileId`, `mimeType` |  |
+| `drive.getText` | drive-read | read | `fileId` |  |
+| `drive.uploadText` | drive | write |  | `name`, `mimeType`, `text`, `parentId?` |
+| `drive.permissions.list` | drive-read | read | `fileId`, `pageToken?` |  |
+| `drive.permissions.create` | drive | write | `fileId` | `type`, `role`, `emailAddress?`, `domain?` |
+| `drive.permissions.delete` | drive | write | `fileId`, `permissionId` |  |
+| `docs.batchUpdate` | docs | write | `documentId` | `requests (Google API request objects; max 50; allowed: insertText, deleteContentRange, replaceAllText, updateTextStyle, updateParagraphStyle, createParagraphBullets, deleteParagraphBullets, insertTable, insertTableRow, insertTableColumn, deleteTableRow, deleteTableColumn, updateTableCellStyle, updateDocumentStyle, insertInlineImage, insertPageBreak, createHeader, createFooter, createNamedRange, deleteNamedRange)`, `requiredRevisionId` |
+| `slides.batchUpdate` | slides | write | `presentationId` | `requests (Google API request objects; max 50; allowed: createSlide, deleteObject, duplicateObject, updateSlidesPosition, createShape, insertText, deleteText, replaceAllText, updateTextStyle, updateParagraphStyle, createParagraphBullets, deleteParagraphBullets, updatePageProperties, updatePageElementTransform, updateShapeProperties, createImage, replaceImage, createTable, insertTableRows, insertTableColumns, deleteTableRow, deleteTableColumn, updateTableCellProperties, updateTableBorderProperties, updateTableColumnProperties, updateTableRowProperties, mergeTableCells, unmergeTableCells, createSheetsChart, refreshSheetsChart, updateLineProperties)`, `requiredRevisionId` |
+| `slides.pages.get` | slides | read | `presentationId`, `pageId` |  |
+| `sheets.batchUpdate` | sheets | write | `spreadsheetId` | `requests (Google API request objects; max 50; allowed: addSheet, deleteSheet, updateSheetProperties, updateCells, repeatCell, appendCells, insertDimension, deleteDimension, updateDimensionProperties, autoResizeDimensions, copyPaste, cutPaste, mergeCells, unmergeCells, setBasicFilter, clearBasicFilter, sortRange, addConditionalFormatRule, updateConditionalFormatRule, deleteConditionalFormatRule, setDataValidation, addChart, updateChartSpec, deleteEmbeddedObject, addNamedRange, updateNamedRange, deleteNamedRange, updateSpreadsheetProperties, findReplace)` |
+| `sheets.values.batchGet` | sheets | read | `spreadsheetId`, `ranges`, `valueRenderOption?` |  |
+| `sheets.values.batchUpdate` | sheets | write | `spreadsheetId` | `data`, `valueInputOption?` |
+| `sheets.values.append` | sheets | write | `spreadsheetId`, `range` | `values`, `valueInputOption?` |
+| `sheets.values.clear` | sheets | write | `spreadsheetId`, `range` |  |
+| `gmail.threads.list` | gmail-read | read | `query?`, `pageToken?` |  |
+| `gmail.threads.get` | gmail-read | read | `threadId` |  |
+| `gmail.labels.list` | gmail-read | read |  |  |
+| `gmail.labels.create` | gmail-manage | write |  | `name` |
+| `gmail.modify` | gmail-manage | write | `messageId` | `addLabelIds?`, `removeLabelIds?` |
+| `gmail.trash` | gmail-manage | write | `messageId` |  |
+| `gmail.untrash` | gmail-manage | write | `messageId` |  |
+| `gmail.drafts.list` | gmail-draft | read | `pageToken?` |  |
+| `gmail.drafts.get` | gmail-draft | read | `draftId` |  |
+| `gmail.drafts.update` | gmail-draft | write | `draftId` | `to`, `subject`, `text`, `cc?`, `bcc?`, `threadId?`, `inReplyTo?` |
+| `gmail.drafts.delete` | gmail-draft | write | `draftId` |  |
+| `gmail.attachments.getText` | gmail-read | read | `messageId`, `attachmentId` |  |
+| `forms.create` | forms | write |  | `title`, `documentTitle?` |
+| `forms.get` | forms | read | `formId` |  |
+| `forms.batchUpdate` | forms | write | `formId` | `requests (Google API request objects; max 50; allowed: updateFormInfo, updateSettings, createItem, moveItem, deleteItem, updateItem)`, `requiredRevisionId` |
+| `forms.responses.list` | forms | read | `formId`, `pageToken?`, `filter?` |  |
+| `forms.responses.get` | forms | read | `formId`, `responseId` |  |
+| `forms.setPublishSettings` | forms | write | `formId` | `isPublished`, `isAcceptingResponses` |
+| `appscript.projects.create` | appscript | write |  | `title`, `parentId?` |
+| `appscript.projects.get` | appscript | read | `scriptId` |  |
+| `appscript.projects.getContent` | appscript | read | `scriptId`, `versionNumber?` |  |
+| `appscript.projects.updateContent` | appscript | write | `scriptId` | `files (changed or new files only; other files preserved; max 50)`, `deleteFiles? (explicit names to remove; cannot remove appsscript manifest)`, `expectedContentHash (contentHash from appscript.projects.getContent)` |
+| `appscript.versions.list` | appscript | read | `scriptId`, `pageToken?` |  |
+| `appscript.versions.get` | appscript | read | `scriptId`, `versionNumber` |  |
+| `appscript.versions.create` | appscript | write | `scriptId` | `description?` |
+| `appscript.deployments.list` | appscript | read | `scriptId`, `pageToken?` |  |
+| `appscript.deployments.get` | appscript | read | `scriptId`, `deploymentId` |  |
+| `appscript.deployments.create` | appscript | write | `scriptId` | `versionNumber`, `manifestFileName`, `description?` |
+| `appscript.deployments.update` | appscript | write | `scriptId`, `deploymentId` | `versionNumber`, `manifestFileName`, `description?` |
+| `appscript.deployments.delete` | appscript | write | `scriptId`, `deploymentId` |  |
+| `appscript.processes.list` | appscript | read | `pageToken?`, `scriptId?` |  |
+| `appscript.run` | appscript | write | `deploymentId` | `function`, `parameters?` |
 
-```json
-{"tool":"google_workspace","input":"sheets.values.get","args":{"action":"execute","account":"<handle-from-list>","params":{"spreadsheetId":"<selected-id>","range":"'ข้อมูล'!A1:B3"}}}
-```
+## Boundaries and verification
 
-เครื่องมือคืน `status`, `operation`, `retrievedAt`, `trust`, `provenance`, `data` และอาจมี `resourceUrl` ไฟล์ Google บางชนิด ผล API อยู่ใน `data` ไม่ใช่ JSON รูปแบบ wrapper ของ Hermes
+- Services are explicit employee choices as well as OAuth grants. Gmail drafting does not authorize sending; mailbox management does not authorize sending either. Existing accounts retain their original service choices until reconnected.
+- Docs, Slides and Forms batch writes require the revision from a fresh read. Requests are limited to 50 approved Google request types. Sheets values default to RAW; formula entry requires explicit USER_ENTERED. Batch value writes use explicit matching rectangles, at most 500 cells in total.
+- Apps Script content writes accept changed/new files, optional explicit deleteFiles, and contentHash from getContent. The host rereads and checks that hash, preserves all unmodified files, and sends a complete project to Google. The appsscript manifest cannot be removed. Redacted credentials cannot be written back into a changed file. Google offers no atomic content precondition, so concurrent remote edits remain possible.
+- Apps Script run uses the API Executable deployment ID, devMode=false. The script and OAuth client must share a standard Cloud project, and the grant must cover the script's own Project OAuth Scopes. The app does not request arbitrary runtime scopes. A timeout or partial failure is an unknown write outcome; inspect the source before repeating.
+- Drive uploads/downloads/exports and Gmail attachment reads here are UTF-8 text only, bounded to 1 MB responses (uploads 50,000 characters). Do not claim binary/PDF/DOCX download or full gogcli command parity. Open binary files in Google. No raw attachment/MIME base64 is exposed to the model.
+- Enable Drive, Gmail, Docs, Sheets, Slides, Forms and Apps Script APIs in the configured Google Cloud project, and permit the requested scopes in Workspace administration. Expanding policy does not grant existing accounts new permissions; use Change allowed services and reauthorize the same account.
+- Report only confirmed IDs/resource links and status. Creation without a reference, interrupted writes and unknown outcomes are not success and must not be retried automatically.
 
-## Operations
-
-`?` = optional; ID ต้องมาจากผลจริง/ลิงก์ที่ผู้ใช้ให้ ไม่มี arbitrary URL, service account, shell, custom HTTP หรือ arbitrary API method
-
-| Operation | params | body | ผลกระทบ |
-| --- | --- | --- | --- |
-| `drive.list` | query?, pageToken? | — | อ่านทีละ 20 ไฟล์; query เป็น Drive syntax ไม่ใช่ Gmail syntax |
-| `docs.get` | documentId | — | อ่านเอกสารและ revisionId; ไม่รับรองครบทุก tab |
-| `docs.create` | — | title | สร้างเอกสารว่าง ไม่ seed body ในคำขอนี้ |
-| `docs.appendText` | documentId | text, requiredRevisionId | เพิ่มข้อความท้ายเอกสารจาก revision ล่าสุด; ไม่มี tab selector |
-| `sheets.get` | spreadsheetId | — | อ่าน metadata ชีต; ไม่รวม grid data |
-| `sheets.values.get` | spreadsheetId, range | — | อ่านค่าที่แสดงใน A1 range; ไม่ใช่ผลตรวจสูตร/ชนิดเซลล์ครบถ้วน |
-| `sheets.create` | — | title | สร้าง spreadsheet ว่าง |
-| `sheets.values.update` | spreadsheetId, range | values | เขียน RAW rectangular range ตรงขนาด; ≤100 แถว และ ≤500 cells |
-| `slides.get` | presentationId | — | อ่าน slide และ revisionId |
-| `slides.create` | — | title | สร้าง presentation ว่าง |
-| `slides.appendTextSlide` | presentationId | text, requiredRevisionId | เพิ่ม slide ข้อความใน presentation ที่อ่าน revision ล่าสุด |
-| `gmail.list` | query?, pageToken? | — | อ่านรายการ message IDs ทีละ 20 ไม่ใช่ full body หรือทุก thread |
-| `gmail.get` | messageId | — | อ่าน header และ plain-text body; HTML-only/attachments อาจอ่านไม่ได้ |
-| `gmail.draft` | — | to (email array), subject, text | สร้าง draft ใน Gmail; ไม่ใช่การส่ง |
-| `gmail.send` | — | to (email array), subject, text | ส่งข้อความใหม่จริง ไม่มี reply/threadId/CC/BCC/attachments |
-| `calendar.list` | pageToken? | — | อ่านรายการ Calendar ที่เข้าถึงได้ ทีละ 20 |
-| `calendar.events` | calendarId, timeMin, timeMax, pageToken? | — | อ่านนัดในช่วง RFC3339 ที่ระบุ timezone ทีละ 20 |
-| `calendar.createEvent` | calendarId | summary, text?, start, end, attendees? (email array) | สร้างนัดและ `sendUpdates=all`; ผู้เข้าร่วมได้รับคำเชิญ |
-| `tasks.lists` | pageToken? | — | อ่าน task list ทีละ 20 |
-| `tasks.list` | tasklistId, pageToken? | — | อ่าน task ทีละ 20 ตาม API default ไม่รับรองรวม completed/hidden |
-| `tasks.create` | tasklistId | title, text? | สร้าง task ไม่มี due date argument |
-| `tasks.complete` | tasklistId, taskId | — | เปลี่ยน task เป็น completed |
-| `chat.spaces` | pageToken? | — | อ่าน spaces ทีละ 20 |
-| `chat.messages` | spaceId, pageToken? | — | อ่าน messages ทีละ 20 |
-| `chat.send` | spaceId | text | ส่งข้อความจริง ≤4,000 ตัวอักษร |
-| `meet.get` | spaceId | — | อ่าน Meet space ไม่ได้สร้างประชุม/อ่าน transcript |
-
-## ขอบเขตการอ่าน
-
-ถ้าผล list มี `nextPageToken` และจำเป็นต่อโจทย์ ให้เรียกต่อด้วย query/ช่วงเดิม จำกัดเริ่มต้น 3 pages ต่อรายการ และอ่าน Gmail เต็มไม่เกิน 10 messages ที่เกี่ยวกับงานก่อน สรุป coverage และขอขยายเมื่อจำเป็น ไม่ใช้ `resultSizeEstimate` เป็นจำนวนที่อ่านจริง
-
-Drive query ตัวอย่าง: `trashed = false and mimeType = 'application/vnd.google-apps.document' and name contains 'ประชุม'` หากค้นได้ไฟล์ชื่อซ้ำ ต้องยืนยัน ID ก่อนแก้ การไม่มีผลภายใต้ `drive.file` ไม่ยืนยันว่าไม่มีไฟล์ใน Drive ทั้งหมด
-
-สคริปต์ [check-contract.mjs](../scripts/check-contract.mjs) และ [fixtures](tool-contract.json) ใช้ตรวจ offline ใน source checkout เท่านั้น ไม่ใช่คำสั่งให้ AI รันหรือช่องทางเรียก Google เพิ่มเติม
+Sources: [Google Workspace API references](https://developers.google.com/workspace), [Forms API](https://developers.google.com/workspace/forms/api/reference/rest), [Apps Script run](https://developers.google.com/apps-script/api/reference/rest/v1/scripts/run).

@@ -1763,6 +1763,7 @@ async function main() {
         const connected = await google.connect(
           input.services as GoogleService[],
           googleContext(new AbortController().signal, async () => ensureCredentialStorage()),
+          input.id === undefined ? undefined : inputText(input.id, 80),
         );
         await migrateApiKeys();
         return connected;

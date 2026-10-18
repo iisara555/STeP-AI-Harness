@@ -734,7 +734,8 @@ test('Gmail MIME is decoded locally and binary/HTML attachment payloads are with
     await g.connect(['gmail-read'], context);
     const result = await g.execute(g.state().accounts[0].id, { operation: 'gmail.get', params: { messageId: 'mail' } }, context);
     assert.match(result.data.text, /1234567890123/);
-    assert.doesNotMatch(JSON.stringify(result), /should-not-leave-host|encoded-html|attachmentId/);
+    assert.doesNotMatch(JSON.stringify(result), /should-not-leave-host|encoded-html/);
+    assert.deepEqual(result.data.attachments, [{ attachmentId: 'private', filename: '', mimeType: 'application/pdf' }]);
   } finally {
     f.clean();
   }

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { GOOGLE_OPERATIONS, googleInvocation, googleOperationCatalog, type GoogleRequest } from '../electron/google-operations';
-import { googleScopes, type GoogleService } from '../src/google-services';
+import { googleScopes, hasGoogleScope, type GoogleService } from '../src/google-services';
 
 const contract = JSON.parse(
   await readFile(new URL('../../skills/common/google-workspace/references/tool-contract.json', import.meta.url), 'utf8'),
@@ -15,9 +15,10 @@ test('every Skill request example validates against native Google operations and
     const invocation = googleInvocation(request);
     assert.equal(invocation.write, item.effect === 'write', request.operation);
     assert.ok(
-      invocation.scopes.some(scope => googleScopes([item.service as GoogleService]).includes(scope)),
+      invocation.scopes.some(scope => hasGoogleScope(googleScopes([item.service as GoogleService]), scope)),
       request.operation,
     );
+    assert.ok(invocation.services.includes(item.service), request.operation + ' service intent');
     const entry = googleOperationCatalog.find(entry => entry.operation === request.operation)!;
     assert.ok(Array.isArray(entry.params));
     assert.ok(Array.isArray(entry.body));

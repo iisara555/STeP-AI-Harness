@@ -63,13 +63,28 @@ test('release Workspace configuration is public, isolated per load and replaceab
   assert.equal(first.features.vault, true);
   assert.equal(first.features.googleWorkspace, true);
   assert.deepEqual(first.googleWorkspace?.domains, ['step.cmu.ac.th']);
-  assert.deepEqual(first.googleWorkspace?.services, ['documents', 'calendar-read', 'tasks']);
+  assert.deepEqual(first.googleWorkspace?.services, [
+    'documents',
+    'docs',
+    'sheets',
+    'slides',
+    'drive-read',
+    'drive',
+    'gmail-read',
+    'gmail-draft',
+    'gmail-send',
+    'gmail-manage',
+    'forms',
+    'appscript',
+    'calendar-read',
+    'tasks',
+  ]);
   assert.match(first.googleWorkspace!.clientId, /^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/);
   assert.deepEqual(Object.keys(first.googleWorkspace!).sort(), ['clientId', 'domains', 'services']);
   first.googleWorkspace!.domains.push('changed.test');
   first.googleWorkspace!.services.pop();
   assert.deepEqual(defaultPolicy().googleWorkspace?.domains, ['step.cmu.ac.th']);
-  assert.equal(defaultPolicy().googleWorkspace?.services.length, 3);
+  assert.equal(defaultPolicy().googleWorkspace?.services.length, 14);
   const replacement = { clientId: 'replacement-client.apps.googleusercontent.com', domains: ['example.test'], services: ['tasks'] };
   assert.deepEqual(parsePolicy({ googleWorkspace: replacement }).policy.googleWorkspace, replacement);
   assert.equal(parsePolicy({ googleWorkspace: null }).policy.googleWorkspace, undefined);
