@@ -6,6 +6,10 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.15',
+    items: () => [t('กดเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง')],
+  },
+  {
     version: '0.6.14',
     items: () => [
       t('ปุ่ม "เพิ่ม Skill ของฉัน" ในหน้า Skills พร้อมเครดิตชื่อผู้เพิ่ม'),
