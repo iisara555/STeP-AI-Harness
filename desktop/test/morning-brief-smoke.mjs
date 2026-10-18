@@ -53,6 +53,8 @@ try {
       gaps: [],
     };
     globalThis.briefCalls = [];
+    globalThis.googleConnectCalls = [];
+    globalThis.googleAllowedServices = ['documents', 'calendar-read', 'calendar', 'tasks'];
     globalThis.briefFixture = {
       feature: true,
       available: true,
@@ -74,6 +76,7 @@ try {
       }
       if (method === 'morningBriefSettings') {
         if (input.remember === false) globalThis.briefFixture.remembered = false;
+        if (typeof input.enabled === 'boolean') globalThis.briefFixture.enabled = input.enabled;
         if (input.time) globalThis.briefFixture.time = input.time;
         return globalThis.briefFixture;
       }
@@ -86,18 +89,22 @@ try {
           connecting: false,
           clientPreconfigured: true,
           clientSecretConfigured: true,
-          services: ['calendar-read', 'tasks'],
+          services: globalThis.googleAllowedServices,
           accounts: [
             {
               id: 'fixture',
               label: 'fi••••@example.test',
               domain: 'example.test',
-              services: ['calendar-read', 'tasks'],
+              services: ['calendar-read', 'calendar', 'tasks'],
               paused: false,
               reauth: false,
             },
           ],
         };
+      if (method === 'googleConnect') {
+        globalThis.googleConnectCalls.push(input.services);
+        return true;
+      }
       return original(event, method, input);
     });
   });
@@ -129,12 +136,94 @@ try {
   await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
   await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
   const settings = page.locator('.morning-brief-settings');
+  assert.equal(
+    await settings
+      .getByRole('checkbox', { name: 'แสดงสรุปเช้านี้', exact: true })
+      .evaluate(el => getComputedStyle(el.closest('label')).flexDirection),
+    'row',
+    'the morning brief switch and its label stay together horizontally',
+  );
   await expect(settings).toContainText('อนุญาตให้อ่านนัดและงานวันนี้ทุกวันแล้ว (fi••••@example.test)');
   await settings.getByRole('button', { name: 'ยกเลิกการอนุญาตทุกวัน', exact: true }).click();
   await expect(settings.getByRole('button', { name: 'ยกเลิกการอนุญาตทุกวัน', exact: true })).toHaveCount(0);
+  const enabled = settings.getByRole('checkbox', { name: 'แสดงสรุปเช้านี้', exact: true });
+  const time = settings.getByLabel('แสดงตั้งแต่เวลา', { exact: true });
+  await enabled.click();
+  await expect(enabled).not.toBeChecked();
+  await expect(time).toBeDisabled();
+  await enabled.click();
+  await expect(enabled).toBeChecked();
+  await expect(time).toBeEnabled();
+  await time.fill('08:45');
+  await settings.getByRole('heading', { name: 'สรุปเช้านี้', exact: true }).click();
+  await expect.poll(() => app.evaluate(() => globalThis.briefFixture.time)).toBe('08:45');
+  const calendar = page.locator('.google-calendar');
+  const connect = page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true });
+  await expect(calendar).toHaveCount(1);
+  await expect(page.locator('.google-services .google-service')).toHaveCount(3);
+  await expect(page.locator('.google-chips li'), 'legacy calendar read/write grants share one account badge').toHaveCount(2);
+  await calendar.getByText('ปฏิทิน', { exact: true }).click();
+  await expect(calendar.getByRole('radio', { name: 'ดูอย่างเดียว', exact: true })).toBeChecked();
+  await connect.click();
+  await expect.poll(() => app.evaluate(() => globalThis.googleConnectCalls.at(-1))).toEqual(['documents', 'calendar-read']);
+  await calendar.getByRole('radio', { name: 'ดูและสร้างนัด', exact: true }).check();
+  await connect.click();
+  await expect.poll(() => app.evaluate(() => globalThis.googleConnectCalls.at(-1))).toEqual(['documents', 'calendar']);
+  if (process.env.STEP_SMOKE_SHOTS) {
+    await settings.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(process.env.STEP_SMOKE_SHOTS, 'morning-settings-light-1280.png') });
+  }
+  await page.setViewportSize({ width: 700, height: 1000 });
+  const bounds = await settings.locator('.morning-brief-controls').evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth }));
+  assert.ok(bounds.scroll <= bounds.width, 'morning brief controls fit a narrow window');
+  if (process.env.STEP_SMOKE_SHOTS) {
+    await settings.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(process.env.STEP_SMOKE_SHOTS, 'morning-settings-light-700.png') });
+  }
+  // A read-only organization policy never offers or sends event-write access.
+  await app.evaluate(() => {
+    globalThis.googleAllowedServices = ['calendar-read', 'tasks'];
+  });
+  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await expect(connect).toBeDisabled();
+  await calendar.getByText('ปฏิทิน', { exact: true }).click();
+  await expect(calendar.getByRole('radio', { name: 'ดูและสร้างนัด', exact: true })).toHaveCount(0);
+  await connect.click();
+  await expect.poll(() => app.evaluate(() => globalThis.googleConnectCalls.at(-1))).toEqual(['calendar-read']);
+  await app.evaluate(() => {
+    globalThis.googleAllowedServices = ['documents', 'calendar-read', 'calendar', 'tasks'];
+  });
+  await page.evaluate(async () => {
+    const { settings } = await window.step.call('snapshot');
+    await window.step.call('settings', { ...settings, theme: 'dark' });
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await calendar.getByText('ปฏิทิน', { exact: true }).click();
+  await expect(calendar.getByRole('radio', { name: 'ดูอย่างเดียว', exact: true })).toBeChecked();
+  if (process.env.STEP_SMOKE_SHOTS) {
+    await settings.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(process.env.STEP_SMOKE_SHOTS, 'morning-settings-dark-1280.png') });
+  }
+  await page.evaluate(async () => {
+    const { settings } = await window.step.call('snapshot');
+    await window.step.call('settings', { ...settings, language: 'en' });
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Passwords and connections', exact: true }).click();
+  await calendar.getByText('Calendar', { exact: true }).click();
+  await expect(calendar.getByRole('radio', { name: 'View only', exact: true })).toBeChecked();
+  await calendar.getByRole('radio', { name: 'View and create events', exact: true }).check();
+  await page.getByRole('button', { name: 'Connect work account', exact: true }).click();
+  await expect.poll(() => app.evaluate(() => globalThis.googleConnectCalls.at(-1))).toEqual(['documents', 'calendar']);
   assert.deepEqual(errors, []);
   console.log(
-    'Morning brief smoke passed: card, one consent with every-day option, summary, ask AI into the composer, dismiss and revoke. Synthetic IPC only.',
+    'Morning brief smoke passed: summary consent, switch/time persistence, one Calendar card, exact read/write scopes, read-only policy, narrow/dark and English settings. Synthetic IPC only.',
   );
 } finally {
   if (app) await app.close();

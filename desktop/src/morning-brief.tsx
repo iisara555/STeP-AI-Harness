@@ -240,20 +240,22 @@ export function MorningBriefSettings({ call, onError }: { call: Call; onError: (
       </h3>
       <p className="muted small">{t('การ์ดบนหน้าแชตที่สรุปนัดและงานของวันนี้ คิดในเครื่องนี้ ไม่ส่งให้ AI')}</p>
       {!state.available && <p className="muted small">{t('เชื่อมบัญชีที่เปิด Calendar ไว้ก่อน จึงจะใช้สรุปเช้านี้ได้')}</p>}
-      <label className="morning-brief-row">
-        <input type="checkbox" checked={state.enabled} onChange={e => save({ enabled: e.target.checked })} />
-        {t('แสดงสรุปเช้านี้')}
-      </label>
-      <label className="morning-brief-row">
-        {t('แสดงตั้งแต่เวลา')}
-        <input
-          type="time"
-          value={time}
-          disabled={!state.enabled}
-          onChange={e => setTime(e.target.value)}
-          onBlur={() => time && time !== state.time && save({ time })}
-        />
-      </label>
+      <div className="morning-brief-controls">
+        <label className="morning-brief-toggle">
+          <input type="checkbox" checked={state.enabled} onChange={e => save({ enabled: e.target.checked })} />
+          <span>{t('แสดงสรุปเช้านี้')}</span>
+        </label>
+        <label className="morning-brief-time-setting">
+          <span>{t('แสดงตั้งแต่เวลา')}</span>
+          <input
+            type="time"
+            value={time}
+            disabled={!state.enabled}
+            onChange={e => setTime(e.target.value)}
+            onBlur={() => time && time !== state.time && save({ time })}
+          />
+        </label>
+      </div>
       {state.remembered ? (
         <p className="morning-brief-row">
           <ShieldCheck size={14} aria-hidden="true" />

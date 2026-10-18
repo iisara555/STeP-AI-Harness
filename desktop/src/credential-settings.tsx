@@ -74,6 +74,10 @@ const words = {
     'The AI asks you every time before it reads or changes anything, and never sees your password or token.',
   ],
   readOnly: ['อ่านอย่างเดียว', 'Read only'],
+  calendar: ['ปฏิทิน', 'Calendar'],
+  calendarAccess: ['สิทธิ์ปฏิทิน', 'Calendar access'],
+  calendarRead: ['ดูอย่างเดียว', 'View only'],
+  calendarWrite: ['ดูและสร้างนัด', 'View and create events'],
   canChange: ['แก้ไขได้ · ถามก่อนทุกครั้ง', 'Can change · asks first'],
   adminMore: [
     'Gmail และการค้นไฟล์ Drive ทั้งหมดยังปิดอยู่ ต้องให้ผู้ดูแลระบบเปิดก่อน',
@@ -189,6 +193,59 @@ const SERVICES: Record<GoogleService, ServiceInfo> = {
 };
 const lang = () => (language() === 'en' ? 1 : 0);
 const serviceName = (s: string) => SERVICES[s as GoogleService]?.name[lang()] || s;
+
+function CalendarService({
+  allowed,
+  selected,
+  busy,
+  onChange,
+}: {
+  allowed: GoogleService[];
+  selected: GoogleService[];
+  busy: boolean;
+  onChange: (services: GoogleService[]) => void;
+}) {
+  const options = (['calendar-read', 'calendar'] as const).filter(s => allowed.includes(s));
+  const access = options.find(s => s === 'calendar' && selected.includes(s)) || options.find(s => selected.includes(s));
+  const info = SERVICES[access || options[0]];
+  const choose = (next?: GoogleService) =>
+    onChange([...selected.filter(s => s !== 'calendar-read' && s !== 'calendar'), ...(next ? [next] : [])]);
+  return (
+    <div className={'google-service google-calendar' + (access ? ' selected' : '')}>
+      <label className="google-calendar-toggle">
+        <input
+          type="checkbox"
+          aria-label={w('calendar')}
+          checked={Boolean(access)}
+          disabled={busy}
+          onChange={e => choose(e.target.checked ? options[0] : undefined)}
+        />
+        <span className="google-service-icon" aria-hidden="true">
+          <CalendarDays size={18} />
+        </span>
+        <span className="google-service-text">
+          <strong>{w('calendar')}</strong>
+          <span className="muted small">{info.detail[lang()]}</span>
+          <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{info.changes ? w('canChange') : w('readOnly')}</span>
+        </span>
+        <span className="google-service-tick" aria-hidden="true">
+          {access && <Check size={14} />}
+        </span>
+      </label>
+      {access && options.length > 1 && (
+        <fieldset className="google-calendar-access">
+          <legend>{w('calendarAccess')}</legend>
+          {options.map(s => (
+            <label key={s}>
+              <input type="radio" name="google-calendar-access" checked={access === s} disabled={busy} onChange={() => choose(s)} />
+              <span>{s === 'calendar-read' ? w('calendarRead') : w('calendarWrite')}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+    </div>
+  );
+}
 const LAUNCH_NAMES: Record<string, string> = {
   gmail: 'Gmail',
   drive: 'Drive',
@@ -495,15 +552,17 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                   </div>
                   {account.reauth && <p className="muted small">{w('reauthHint')}</p>}
                   <ul className="google-chips" aria-label={w('selectServices')}>
-                    {account.services.map(s => {
-                      const Icon = SERVICES[s as GoogleService]?.icon || Globe;
-                      return (
-                        <li key={s}>
-                          <Icon size={13} aria-hidden="true" />
-                          {serviceName(s)}
-                        </li>
-                      );
-                    })}
+                    {account.services
+                      .filter(s => s !== 'calendar-read' || !account.services.includes('calendar'))
+                      .map(s => {
+                        const Icon = SERVICES[s as GoogleService]?.icon || Globe;
+                        return (
+                          <li key={s}>
+                            <Icon size={13} aria-hidden="true" />
+                            {serviceName(s)}
+                          </li>
+                        );
+                      })}
                   </ul>
                   <div className="credential-actions">
                     {account.reauth && (
@@ -588,34 +647,49 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             )}
             <fieldset className="google-services">
               <legend>{google.accounts.length ? w('addAccount') : w('selectServices')}</legend>
-              {google.services.map(s => {
-                const info = SERVICES[s];
-                const Icon = info.icon;
-                const on = services.includes(s);
-                return (
-                  <label className={`google-service${on ? ' selected' : ''}`} key={s}>
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      disabled={Boolean(busy)}
-                      onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
-                    />
-                    <span className="google-service-icon" aria-hidden="true">
-                      <Icon size={18} />
-                    </span>
-                    <span className="google-service-text">
-                      <strong>{info.name[lang()]}</strong>
-                      <span className="muted small">{info.detail[lang()]}</span>
-                      <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>
-                        {info.changes ? w('canChange') : w('readOnly')}
+              {google.services
+                .filter(
+                  (s, index, all) =>
+                    (s !== 'calendar-read' && s !== 'calendar') || index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
+                )
+                .map(s => {
+                  if (s === 'calendar-read' || s === 'calendar')
+                    return (
+                      <CalendarService
+                        key="calendar"
+                        allowed={google.services}
+                        selected={services}
+                        busy={Boolean(busy)}
+                        onChange={setServices}
+                      />
+                    );
+                  const info = SERVICES[s];
+                  const Icon = info.icon;
+                  const on = services.includes(s);
+                  return (
+                    <label className={`google-service${on ? ' selected' : ''}`} key={s}>
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={Boolean(busy)}
+                        onChange={e => setServices(old => (e.target.checked ? [...old, s] : old.filter(v => v !== s)))}
+                      />
+                      <span className="google-service-icon" aria-hidden="true">
+                        <Icon size={18} />
                       </span>
-                    </span>
-                    <span className="google-service-tick" aria-hidden="true">
-                      {on && <Check size={14} />}
-                    </span>
-                  </label>
-                );
-              })}
+                      <span className="google-service-text">
+                        <strong>{info.name[lang()]}</strong>
+                        <span className="muted small">{info.detail[lang()]}</span>
+                        <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>
+                          {info.changes ? w('canChange') : w('readOnly')}
+                        </span>
+                      </span>
+                      <span className="google-service-tick" aria-hidden="true">
+                        {on && <Check size={14} />}
+                      </span>
+                    </label>
+                  );
+                })}
             </fieldset>
             {!google.services.includes('gmail-read') && <p className="muted small google-admin">{w('adminMore')}</p>}
             {connectionError !== undefined && (
@@ -643,7 +717,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             )}
             <div className="google-connect-row">
               <button
-                disabled={Boolean(busy) || !services.length}
+                disabled={Boolean(busy) || !services.some(s => google.services.includes(s))}
                 onClick={() =>
                   void run('google-connect', () => call('googleConnect', { services: services.filter(s => google.services.includes(s)) }))
                 }
