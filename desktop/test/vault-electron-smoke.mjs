@@ -68,6 +68,22 @@ const server = createServer({ key: pair.privateKey.export({ type: 'pkcs8', forma
     return res.end(
       '<form method="post" action="/intranet"><input type="text" name="txtUser" placeholder="STeP Account"><input type="password" name="txtPass"><input type="hidden" name="clicked" value="0"><button type="submit" onclick="this.form.clicked.value=1">Sign in</button></form><a href="/forgot">Forgot password</a>',
     );
+  // A page like STeP MBS: typing marks the form (its HTML changes after filling) and a show-password eye is a second
+  // submit-type button, so only the button named for signing in may be pressed.
+  if (req.url === '/mbs' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => (body += chunk));
+    req.on('end', () => {
+      const form = new URLSearchParams(body);
+      const ok = form.get('user') === 'synthetic-user' && form.get('pass') === 'synthetic-password' && form.get('via') === 'signin';
+      res.end(ok ? '<h1>MBS</h1><p>welfare home</p>' : '<p>wrong</p>');
+    });
+    return;
+  }
+  if (req.url === '/mbs')
+    return res.end(
+      '<meta charset="utf-8"><form method="post" action="/mbs" oninput="this.classList.add(\'touched\')"><input type="text" name="user"><input type="password" name="pass"><button aria-label="แสดงรหัสผ่าน" onclick="event.preventDefault()">👁</button><input type="hidden" name="via" value=""><button type="submit" onclick="this.form.via.value=\'signin\'">เข้าสู่ระบบ</button></form>',
+    );
   if (req.url === '/two') res.end('<form method="post"><input name="username" autocomplete="username"><button>Next</button></form>');
   else if (req.url === '/changed')
     res.end(
@@ -236,11 +252,32 @@ try {
   );
   assert.match(landing.text, /signed in/);
   assert.equal(JSON.stringify(landing).includes('synthetic-password'), false);
+  await app.evaluate(() => globalThis.agent.closeOwner('owner'));
+  const mbs = await open(origin + '/mbs');
+  checkpoint('sign in after the form changes and beside a show-password button');
+  const welfare = await app.evaluate(async (_electron, id) => {
+    const expected = await globalThis.agent.prepareVault(id, 'owner', globalThis.context.signal);
+    const [credential] = globalThis.vault.catalog('owner', expected.origin);
+    return globalThis.vault.fill(
+      credential.handle,
+      'owner',
+      expected.origin,
+      async () => true,
+      payload => globalThis.agent.fillVault(id, 'owner', expected, payload, globalThis.context.signal, true),
+    );
+  }, mbs.tab);
+  assert.equal(welfare.submitted, true);
+  assert.equal(welfare.navigated, true);
+  const landingMbs = await app.evaluate(
+    async (_electron, id) => globalThis.agent.run({ tool: 'browser_control', input: id, args: { action: 'read' } }, globalThis.context),
+    mbs.tab,
+  );
+  assert.match(landingMbs.text, /welfare home/);
   checkpoint('close owned browser views');
   await app.evaluate(() => globalThis.agent.closeOwner('owner'));
   await mkdir('release/qa/vault', { recursive: true });
   console.log(
-    'Vault Electron smoke passed: actual OS encryption across restart, HTTPS exact-origin fill, identifier-only login, plain-username sign in with reading resumed on the next page, changed form partial outcome and model-read suppression.',
+    'Vault Electron smoke passed: actual OS encryption across restart, HTTPS exact-origin fill, identifier-only login, plain-username sign in with reading resumed on the next page, sign in after the form changes beside a show-password button, changed form partial outcome and model-read suppression.',
   );
 } finally {
   checkpoint('close application');

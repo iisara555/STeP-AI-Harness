@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Vault website sign-in now presses the sign-in button on pages like STeP MBS (`mis.step.cmu.ac.th/hdesystemnew`): the form may change after typing (validation marks) and a show-password eye counts as a second button, so the app now waits a moment, checks it is still the same page and form, and presses the one button named for signing in (เข้าสู่ระบบ / Login). A script login without a page load also counts as signed in. The employee still approves every fill and the AI never sees the password (owner approved this relaxation on 2026-10-18). The AI also no longer names internal fields such as `requiresManualLogin` to staff.
+
 ## Desktop v0.6.14 (2026-10-18)
 
 - Skills hub: a **เพิ่ม Skill ของฉัน** button beside the search opens the existing Skill Packs import, so staff no longer need the command palette to add their own Skill. Imported Skills appear under "Skill ของฉัน" with their state and the uploader's credit ("เพิ่มโดย ชื่อ · ทีม · วันที่", kept beside the pack, never in its files); one that is on can be used straight from its card. Organization Skills show the same credit from `contributors` in `manifest/skills.yaml`, which the intake script writes only after the uploader agreed to be credited. Policy `features.staffSkills: false` hides the button and the list.
