@@ -1830,6 +1830,8 @@ export default function App() {
               api={api}
               connections={snapshot.connections}
               defaultConnection={connectionId}
+              workspace={snapshot.settings.workspace}
+              onConnections={openAiSettings}
               onOpen={id =>
                 void action(async () => {
                   await refresh();

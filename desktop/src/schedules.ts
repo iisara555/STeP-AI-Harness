@@ -1,5 +1,7 @@
 // Scheduled tasks are stored as five-field cron in UTC (electron/cron.ts). Employees pick a local time and days;
 // these helpers turn that choice into UTC cron and read it back for display and editing.
+import { nextCron } from '../electron/cron-schedule';
+import type { AutomationRun } from '../electron/cron';
 
 export type Repeat = 'daily' | 'weekdays' | 'days' | 'hourly';
 export type ScheduleChoice = { repeat: Repeat; time: string; days: number[] };
@@ -38,6 +40,44 @@ export function toCron(choice: ScheduleChoice, now = new Date()): string {
   if (choice.repeat === 'days' && !days.length) throw new Error('NO_DAYS');
   const dow = days.length ? sorted(days.map(d => (((d + shift) % 7) + 7) % 7)).join(',') : '*';
   return `${utc % 60} ${Math.floor(utc / 60)} * * ${dow}`;
+}
+
+export function previewSchedule(choice: ScheduleChoice, now = Date.now()) {
+  const schedule = toCron(choice, new Date(now));
+  return { schedule, nextAt: nextCron(schedule, now) };
+}
+
+/** Only fixed, staff-facing messages; provider errors and unknown codes are never rendered verbatim. */
+export function scheduledRunAdvice(
+  run?: Pick<AutomationRun, 'status' | 'code'>,
+): { message: string; action?: 'edit' | 'connections' } | null {
+  if (run?.status === 'interrupted') return { message: 'รอบล่าสุดหยุดเมื่อแอปปิด ตรวจร่างเดิมก่อนกด "ทำตอนนี้" เพื่อลองใหม่' };
+  if (run?.status !== 'error') return null;
+  switch (run.code) {
+    case 'LOGIN_REQUIRED':
+    case 'COPILOT_LOGIN_REQUIRED':
+    case 'CONNECTION_NOT_READY':
+    case 'CONNECTION_NOT_FOUND':
+      return { message: 'บัญชี AI ของงานยังไม่พร้อม เชื่อมต่อและทดสอบบัญชีอีกครั้ง แล้วกด "ทำตอนนี้"', action: 'connections' };
+    case 'AUTOMATION_CONTEXT_CHANGED':
+      return { message: 'บัญชี AI โมเดล ทีม หรือพื้นที่งานเปลี่ยนแล้ว ตรวจและบันทึกการตั้งค่าใหม่ก่อนลองอีกครั้ง', action: 'edit' };
+    case 'POLICY_CHANGED':
+      return { message: 'นโยบายการใช้งานเปลี่ยนแล้ว ตรวจการตั้งค่าและคำสั่งก่อนบันทึกใหม่', action: 'edit' };
+    case 'PRIVACY_REVIEW_REQUIRED':
+    case 'AUTHORITY_REVIEW_REQUIRED':
+      return { message: 'คำสั่งของงานต้องผ่านการตรวจทาน ตรวจและแก้คำสั่งก่อนบันทึกใหม่', action: 'edit' };
+    case 'CRON_DISABLED':
+      return { message: 'รอบล่าสุดหยุดเพราะผู้ดูแลปิดงานตั้งเวลาไว้ ติดต่อผู้ดูแลหากยังเปิดใช้ไม่ได้' };
+    case 'PROVIDER_TIMEOUT':
+    case 'RUN_TIMEOUT':
+    case 'RUNTIME_EXITED':
+      return { message: 'การเชื่อมต่อ AI หยุดหรือตอบไม่ทัน ตรวจอินเทอร์เน็ตแล้วกด "ทำตอนนี้" เพื่อลองใหม่' };
+    default:
+      return {
+        message: 'รอบล่าสุดทำงานไม่สำเร็จ ตรวจผลของรอบนั้นและการเชื่อมต่อ AI ก่อนกด "ทำตอนนี้" เพื่อลองใหม่',
+        action: 'connections',
+      };
+  }
 }
 
 const parseDays = (field: string) => {

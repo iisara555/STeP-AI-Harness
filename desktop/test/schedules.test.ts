@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { describeSchedule, fromCron, SCHEDULE_TEMPLATES, toCron } from '../src/schedules';
+import { describeSchedule, fromCron, previewSchedule, scheduledRunAdvice, SCHEDULE_TEMPLATES, toCron } from '../src/schedules';
 import { nextCron } from '../electron/cron';
+import { setLanguage, t } from '../src/i18n';
 
 const withZone = (zone: string, run: () => void) => {
   const before = process.env.TZ;
@@ -54,3 +55,41 @@ test('round trips hold west of UTC too, and every template is a valid schedule',
       days: [0, 6],
     });
   }));
+
+test('the editor preview agrees with the scheduler at a minute boundary and when local days cross UTC', () =>
+  withZone('Asia/Bangkok', () => {
+    const choice = { repeat: 'days' as const, time: '06:00', days: [1, 5] };
+    const at = Date.parse('2026-10-18T23:00:00Z');
+    const preview = previewSchedule(choice, at);
+    assert.equal(preview.schedule, '0 23 * * 0,4');
+    assert.equal(preview.nextAt, Date.parse('2026-10-22T23:00:00Z'));
+    assert.equal(preview.nextAt, nextCron(preview.schedule, at));
+    const hourly = previewSchedule({ repeat: 'hourly', time: '00:15', days: [] }, Date.parse('2026-10-18T03:14:59Z'));
+    assert.equal(hourly.nextAt, Date.parse('2026-10-18T03:15:00Z'));
+    assert.throws(() => previewSchedule({ repeat: 'days', time: '08:30', days: [] }), /NO_DAYS/);
+  }));
+
+test('run failures offer the relevant recovery without exposing unknown error text', () => {
+  assert.equal(scheduledRunAdvice({ status: 'error', code: 'LOGIN_REQUIRED' })?.action, 'connections');
+  assert.equal(scheduledRunAdvice({ status: 'error', code: 'AUTOMATION_CONTEXT_CHANGED' })?.action, 'edit');
+  assert.equal(scheduledRunAdvice({ status: 'error', code: 'AUTHORITY_REVIEW_REQUIRED' })?.action, 'edit');
+  assert.equal(scheduledRunAdvice({ status: 'error', code: 'CRON_DISABLED' })?.action, undefined);
+  assert.match(scheduledRunAdvice({ status: 'interrupted' })!.message, /ตรวจร่างเดิม/);
+  assert.equal(scheduledRunAdvice({ status: 'review' }), null);
+  assert.equal(scheduledRunAdvice(), null);
+  assert.doesNotMatch(scheduledRunAdvice({ status: 'error', code: 'UNRECOGNIZED_VENDOR_ERROR' })!.message, /UNRECOGNIZED/);
+  try {
+    setLanguage('en');
+    for (const code of [
+      'LOGIN_REQUIRED',
+      'AUTOMATION_CONTEXT_CHANGED',
+      'PRIVACY_REVIEW_REQUIRED',
+      'CRON_DISABLED',
+      'PROVIDER_TIMEOUT',
+      'UNKNOWN',
+    ])
+      assert.doesNotMatch(t(scheduledRunAdvice({ status: 'error', code })!.message), /[ก-๙]/, code);
+  } finally {
+    setLanguage('th');
+  }
+});
