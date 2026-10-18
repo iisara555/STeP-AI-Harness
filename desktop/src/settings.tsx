@@ -15,6 +15,7 @@ import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleI
 const featureNames: Record<string, string> = localized({
   vault: 'เก็บและใช้ข้อมูลบัญชีผ่าน Vault',
   googleWorkspace: 'เชื่อมบัญชี Google Workspace ของพนักงาน',
+  morningBrief: 'การ์ดสรุปเช้านี้ (นัดและงานวันนี้)',
   toolLoop: 'ให้ AI ใช้เครื่องมือหลายขั้นตอน',
   autoMode: 'โหมดอัตโนมัติเต็มรูปแบบ',
   shellByAi: 'ให้ AI รันคำสั่งในเครื่อง',
@@ -72,6 +73,7 @@ const POLICY_GROUPS: [string, string[]][] = [
     'ส่วนเสริมและการเชื่อมต่อ',
     [
       'googleWorkspace',
+      'morningBrief',
       'mcp',
       'lineGateway',
       'copilot',

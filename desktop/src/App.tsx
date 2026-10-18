@@ -122,6 +122,7 @@ import { WhatsNewDialog } from './whats-new-dialog';
 import type { ToolQuestion } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
+import { MorningBriefCard } from './morning-brief';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
@@ -1920,6 +1921,7 @@ export default function App() {
                       </div>
                       <SectionArt scene="chat" className="welcome-illustration" />
                     </div>
+                    <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
                     <p className="suggestions-label">
                       {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
                     </p>
