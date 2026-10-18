@@ -37,8 +37,67 @@ documents:
     verification: titles-identified-2026-09-25-text-not-in-harness
     status: active-reference
 
+  # QP ของ AFP ถอดข้อความจาก PDF ใน STeP MIS (18 ต.ค. 2569) เจ้าของอนุมัติให้เก็บใน repo สาธารณะได้
+  afp-procurement-procedure:
+    title: "QP-AF-001 การดำเนินการจัดซื้อจัดจ้าง"
+    keywords: [ขอซื้อขอจ้าง, ใบขอซื้อ, ตรวจรับพัสดุ, คณะกรรมการตรวจรับ, วิธีเฉพาะเจาะจง]
+    path: docs/knowledge/qp-af-001.md
+    owner: afp
+    type: quality-procedure
+    process: procurement.request
+    version: "02"
+    effectiveDate: "2026-10-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
+
+  afp-annual-inventory-procedure:
+    title: "QP-AF-002 การตรวจสอบพัสดุประจำปีและจำหน่ายพัสดุ"
+    keywords: [ตรวจนับพัสดุ, ตรวจสอบพัสดุประจำปี, จำหน่ายพัสดุ, ครุภัณฑ์ชำรุด]
+    path: docs/knowledge/qp-af-002.md
+    owner: afp
+    type: quality-procedure
+    process: procurement.request
+    version: "00"
+    effectiveDate: "2023-07-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
+
+  afp-advance-procedure:
+    title: "QP-AF-003 กระบวนการยืมเงิน เคลียร์เงินยืม และการสำรองเงินจ่ายล่วงหน้าโครงการ"
+    keywords: [เคลียร์เงินยืม, คืนเงินยืม, สำรองจ่าย]
+    path: docs/knowledge/qp-af-003.md
+    owner: afp
+    type: quality-procedure
+    process: procurement.request
+    version: "02"
+    effectiveDate: "2025-06-01"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
+
+  afp-payment-procedure:
+    title: "QP-AF-004 กระบวนการจ่ายเงิน"
+    keywords: [จ่ายเงิน, ขั้นตอนการจ่ายเงิน, ใบสำคัญจ่าย, จ่ายเช็ค, โอนเงิน]
+    path: docs/knowledge/qp-af-004.md
+    owner: afp
+    type: quality-procedure
+    process: procurement.request
+    version: "03"
+    effectiveDate: "2026-05-16"
+    sourceLevel: organization-procedure
+    authority: controlled-document
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
+
   qs-doc-control-procedure:
     title: "QP-DC-001 การควบคุมเอกสารและข้อมูล"
+    keywords: [ควบคุมเอกสาร, ขอแก้ไขเอกสาร, DAR, ยกเลิกเอกสาร, แจกจ่ายเอกสาร, เอกสารภายนอก]
+    path: docs/knowledge/qp-dc-001.md
     owner: qs
     type: quality-procedure
     process: quality.document-control
@@ -46,8 +105,8 @@ documents:
     effectiveDate: "2026-04-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   data-classification-rule:
     title: "ระเบียบการจำแนกชั้นความลับและการคุ้มครองข้อมูลส่วนบุคคล (PDPA)"
@@ -368,34 +427,40 @@ documents:
     verification: user-confirmed-current
     status: active
 
-  # STeP MIS (ตรวจ 10 ต.ค. 2569) แสดง QM-QM-001 V.03 คู่มือคุณภาพ และ Master List รายทีม 25 ฉบับ
-  # เนื้อหาไม่อยู่ใน Harness จึงยัง not-provided: QM ใช้แผนที่ ISO แทน ส่วนรายการเอกสารใช้ทะเบียนจาก MIS
+  # ข้อความ QM-QM-001 และ Master List 5 ทีมถอดจาก PDF ใน STeP MIS (18 ต.ค. 2569) เจ้าของอนุมัติให้เก็บใน repo สาธารณะได้
+  # ทะเบียน MIS ยังเป็นแหล่งจริงของ REV ล่าสุด แผนที่ ISO ยังใช้คู่กันได้
   qms-quality-manual:
-    title: "STeP Quality Manual QM-QM-001 (current revision in STeP MIS)"
+    title: "QM-QM-001 คู่มือคุณภาพ (Quality Manual) ของ STeP"
+    keywords: [คู่มือคุณภาพ, Quality Manual, ขอบเขตระบบคุณภาพ, บริบทองค์กร, ผู้มีส่วนได้ส่วนเสีย]
+    path: docs/knowledge/qm-qm-001.md
     owner: qs
     type: quality-manual
     process: quality.document-control
+    version: "03"
+    effectiveDate: "2025-07-16"
     sourceLevel: quality-manual
     authority: controlled-document
-    verification: listed-in-step-mis-2026-10-10
-    status: not-provided
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
     workingSubstitute: qms-working-reference
 
   qms-master-document-list:
-    title: "STeP Master Document List (per-team Master Lists in STeP MIS)"
+    title: "Master List เอกสารควบคุมของ STeP (AFP, QM, DC, QS, CC)"
+    keywords: [Master List, บัญชีรายการเอกสารควบคุม, FM-DC-003]
+    path: docs/knowledge/mis-master-lists.md
     owner: qs
     type: master-list
     process: quality.document-control
     sourceLevel: document-control-index
     authority: revision-source-of-truth
-    verification: listed-in-step-mis-2026-10-10
-    status: not-provided
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
     workingSubstitute: mis-iso-document-register
 
   # ทะเบียนเอกสาร ISO ทุกทีม สร้างจากข้อมูลที่ดึงจาก STeP MIS (scripts/generate-mis-iso-register.mjs) MIS เป็นแหล่งจริงของ REV
   mis-iso-document-register:
     title: "ทะเบียนเอกสารระบบคุณภาพ ISO ของ STeP ทุกทีม (จาก STeP MIS): เลขที่ REV วันที่บังคับใช้ สถานะ"
-    keywords: [แบบฟอร์ม, เลขเอกสาร, รุ่นล่าสุด, ฉบับล่าสุด, REV, วันที่บังคับใช้, Master List, คู่มือคุณภาพ, QM, QP, WI, FM, SD]
+    keywords: [แบบฟอร์ม, เลขเอกสาร, รุ่นล่าสุด, ฉบับล่าสุด, รุ่นปัจจุบัน, ฉบับปัจจุบัน, REV, วันที่บังคับใช้, Master List, คู่มือคุณภาพ, QM, QP, WI, FM, SD]
     path: docs/knowledge/mis-iso-document-register.md
     owner: qs
     type: master-list
@@ -432,6 +497,8 @@ documents:
 
   qms-quality-record-control:
     title: "QP-DC-002 การควบคุมบันทึกคุณภาพ"
+    keywords: [บันทึกคุณภาพ, ระยะเวลาจัดเก็บ, ทำลายบันทึก]
+    path: docs/knowledge/qp-dc-002.md
     owner: qs
     type: quality-procedure
     process: quality.document-control
@@ -439,11 +506,13 @@ documents:
     effectiveDate: "2023-09-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   qms-risk-management:
     title: "QP-QS-001 การวิเคราะห์และการจัดการความเสี่ยง"
+    keywords: [ความเสี่ยง, โอกาส, ประเมินความเสี่ยง, ทะเบียนความเสี่ยง]
+    path: docs/knowledge/qp-qs-001.md
     owner: qs
     type: quality-procedure
     process: quality.management-review
@@ -451,11 +520,13 @@ documents:
     effectiveDate: "2023-04-16"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   qms-nonconformity:
     title: "QP-QS-002 การปฏิบัติงานที่เกิดข้อผิดพลาด"
+    keywords: [งานผิดพลาด, ข้อผิดพลาด, สิ่งที่ไม่เป็นไปตามข้อกำหนด, NC]
+    path: docs/knowledge/qp-qs-002.md
     owner: qs
     type: quality-procedure
     process: quality.corrective-action
@@ -463,11 +534,13 @@ documents:
     effectiveDate: "2025-07-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   qms-corrective-preventive-action:
     title: "QP-QM-001 การปฏิบัติการแก้ไข และป้องกัน"
+    keywords: [CAR, PAR, แก้ไขและป้องกัน, หาสาเหตุ]
+    path: docs/knowledge/qp-qm-001.md
     owner: qs
     type: quality-procedure
     process: quality.corrective-action
@@ -475,11 +548,13 @@ documents:
     effectiveDate: "2023-12-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   qms-internal-audit:
     title: "QP-QM-002 การตรวจติดตามคุณภาพภายใน"
+    keywords: [ตรวจติดตามภายใน, Internal Audit, ผู้ตรวจติดตาม, แผนตรวจติดตาม]
+    path: docs/knowledge/qp-qm-002.md
     owner: qs
     type: quality-procedure
     process: quality.audit-readiness
@@ -487,11 +562,13 @@ documents:
     effectiveDate: "2023-09-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   qms-management-review:
     title: "QP-QM-003 การประชุมทบทวนฝ่ายบริหาร"
+    keywords: [ทบทวนฝ่ายบริหาร, Management Review, วาระทบทวน]
+    path: docs/knowledge/qp-qm-003.md
     owner: qs
     type: quality-procedure
     process: quality.management-review
@@ -499,11 +576,13 @@ documents:
     effectiveDate: "2023-12-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   qms-complaint-management:
     title: "QP-QM-004 การจัดการข้อร้องเรียนของผู้ใช้บริการ"
+    keywords: [ข้อร้องเรียน, ร้องเรียน]
+    path: docs/knowledge/qp-qm-004.md
     owner: qs
     type: quality-procedure
     process: quality.corrective-action
@@ -511,8 +590,8 @@ documents:
     effectiveDate: "2023-09-01"
     sourceLevel: organization-procedure
     authority: controlled-document
-    verification: listed-in-working-master-list
-    status: provided-text-not-in-harness
+    verification: text-from-step-mis-pdf-2026-10-18
+    status: active
 
   step-facility-equipment-inventory-2020:
     title: "ข้อมูลเครื่องมือ เครื่องจักร ภายในพื้นที่อาคารอำนวยการอุทยานวิทยาศาสตร์ภาคเหนือ (จ.เชียงใหม่)"

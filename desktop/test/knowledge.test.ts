@@ -213,7 +213,8 @@ test('the one-line knowledge registry keeps documents discoverable and section r
   assert.match(text, /- step-executive-board \| .+ \| .*ผู้อำนวยการคือใคร/);
   assert.equal(text.split('\n').length, registry.length);
   assert.ok(!/hr-personnel-welfare-2566/.test(text), 'restricted documents never listed');
-  assert.ok(text.length < 4_000, 'section headings are retrieved lazily instead of injected into every prompt');
+  // 5,500 since 2026-10-18: one bounded line for each of the 14 QM/QP/Master List texts converted from STeP MIS.
+  assert.ok(text.length < 5_500, 'section headings are retrieved lazily instead of injected into every prompt');
   // reference(args.section) reads one section by its registry name.
   const body = await readFile(resolve(root, 'docs/knowledge/step-executive-board.md'), 'utf8');
   assert.match(documentSection(body, 'ผู้อำนวยการอุทยานวิทยาศาสตร์และเทคโนโลยี (ผอ. STeP)')!, /รศ\.ดร\.ปิติวัฒน์ วัฒนชัย/);

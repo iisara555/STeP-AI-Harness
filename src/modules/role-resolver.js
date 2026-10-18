@@ -135,6 +135,20 @@ export async function resolveRoleFiles(roleId) {
     'knowledge/afp-regulation-hierarchy.md',
     'skill-authoring-standard.md',
     'knowledge/facility-equipment-index.md',
+    'knowledge/qm-qm-001.md',
+    'knowledge/mis-master-lists.md',
+    'knowledge/qp-af-001.md',
+    'knowledge/qp-af-002.md',
+    'knowledge/qp-af-003.md',
+    'knowledge/qp-af-004.md',
+    'knowledge/qp-dc-001.md',
+    'knowledge/qp-dc-002.md',
+    'knowledge/qp-qm-001.md',
+    'knowledge/qp-qm-002.md',
+    'knowledge/qp-qm-003.md',
+    'knowledge/qp-qm-004.md',
+    'knowledge/qp-qs-001.md',
+    'knowledge/qp-qs-002.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);
@@ -455,6 +469,20 @@ export async function resolveTeamFiles(teamCode) {
     'knowledge/afp-regulation-hierarchy.md',
     'skill-authoring-standard.md',
     'knowledge/facility-equipment-index.md',
+    'knowledge/qm-qm-001.md',
+    'knowledge/mis-master-lists.md',
+    'knowledge/qp-af-001.md',
+    'knowledge/qp-af-002.md',
+    'knowledge/qp-af-003.md',
+    'knowledge/qp-af-004.md',
+    'knowledge/qp-dc-001.md',
+    'knowledge/qp-dc-002.md',
+    'knowledge/qp-qm-001.md',
+    'knowledge/qp-qm-002.md',
+    'knowledge/qp-qm-003.md',
+    'knowledge/qp-qm-004.md',
+    'knowledge/qp-qs-001.md',
+    'knowledge/qp-qs-002.md',
   ];
   for (const doc of safeDocs) {
     const docPath = join(PACKAGE_ROOT, 'docs', doc);
