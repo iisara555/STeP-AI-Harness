@@ -35,6 +35,7 @@ export const FEATURES = [
   'coordinator',
   'memoryTeam',
   'autoRouting',
+  'morningBrief',
   'receiptVision',
   'autoUpdate',
   'claudeSubscription',
@@ -150,6 +151,8 @@ export type Policy = {
   checks: { authority: boolean; privacy: boolean };
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
   credentialStorage?: { sharedDevice: boolean };
+  /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
+  morningBrief?: { rememberConsent: boolean };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -186,6 +189,9 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
   // Off, every request goes to the AI as general help.
   autoRouting: false,
+  // สรุปเช้านี้ (owner's decision, 2026-10-17): a card on the chat home that reads today's Calendar and Google Tasks
+  // after the employee agrees and works out the summary on this computer, with no model call. IT can set it to false.
+  morningBrief: true,
   // The receipt check also lets a vision model read the receipt image and compares it with the local OCR, field by
   // field. Needs vision; with checks.privacy on the receipt image is never sent (strict, OCR-candidates-only mode).
   receiptVision: true,
@@ -313,6 +319,15 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     )
       problems.push('credentialStorage.sharedDevice must be boolean');
     else policy.credentialStorage = { sharedDevice: raw.credentialStorage.sharedDevice };
+  }
+  if (raw.morningBrief !== undefined) {
+    if (
+      !isObject(raw.morningBrief) ||
+      Object.keys(raw.morningBrief).some(k => k !== 'rememberConsent') ||
+      typeof raw.morningBrief.rememberConsent !== 'boolean'
+    )
+      problems.push('morningBrief.rememberConsent must be boolean');
+    else policy.morningBrief = { rememberConsent: raw.morningBrief.rememberConsent };
   }
   if (raw.googleWorkspace === null) delete policy.googleWorkspace;
   else if (raw.googleWorkspace !== undefined) {

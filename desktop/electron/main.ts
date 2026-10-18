@@ -33,6 +33,7 @@ import { readGoogleClientFile } from './google-client';
 import { GOOGLE_PAGES, type GoogleService } from '../src/google-services';
 import type { GoogleRequest } from './google-operations';
 import { googleOperationCatalog } from './google-operations';
+import { BRIEF_OPERATIONS, briefDay, readMorningBrief, type MorningBrief } from './morning-brief';
 import { credentialTitles } from '../src/credential-copy';
 import { Workbench, browserUrl } from './workbench';
 import { AgentBrowser } from './browser-agent';
@@ -833,6 +834,67 @@ async function main() {
         ),
     };
   };
+  // สรุปเช้านี้: one card a day on the chat home. Reading Google always takes the employee's OK, or a remembered OK that
+  // covers only these three reads of one account connection under the policy in force when it was given.
+  type BriefSettings = {
+    enabled?: boolean;
+    time?: string;
+    dismissed?: string;
+    notified?: string;
+    consent?: { account: string; key: string; policy: string };
+  };
+  let briefToday: { date: string; account: string; brief: MorningBrief } | undefined;
+  const briefSettings = () => store.get<BriefSettings>('morning-brief', 'main') || {};
+  const saveBriefSettings = (change: BriefSettings) => store.put('morning-brief', 'main', { ...briefSettings(), ...change });
+  const briefPolicy = () => createHash('sha256').update(JSON.stringify(policyState.policy)).digest('hex');
+  const briefAccount = () =>
+    policyState.policy.features.morningBrief && policyState.policy.features.googleWorkspace
+      ? google.state().accounts.find(a => !a.paused && !a.reauth && a.services.some(s => s === 'calendar-read' || s === 'calendar'))
+      : undefined;
+  const briefRemembered = (accountId: string) => {
+    const consent = briefSettings().consent;
+    if (policyState.policy.morningBrief?.rememberConsent === false || !consent || consent.account !== accountId) return false;
+    try {
+      return consent.key === google.consentKey(accountId) && consent.policy === briefPolicy();
+    } catch {
+      return false;
+    }
+  };
+  const briefState = () => {
+    const settings = briefSettings(),
+      account = briefAccount(),
+      { date } = briefDay(Date.now());
+    const time = settings.time || '09:00';
+    const now = new Date(Date.now() + 7 * 3600_000).toISOString().slice(11, 16);
+    const enabled = settings.enabled !== false;
+    const brief = briefToday && account && briefToday.date === date && briefToday.account === account.id ? briefToday.brief : undefined;
+    return {
+      feature: policyState.policy.features.morningBrief,
+      available: Boolean(account),
+      enabled,
+      time,
+      account: account?.label,
+      tasks: Boolean(account?.services.includes('tasks')),
+      rememberAllowed: policyState.policy.morningBrief?.rememberConsent !== false,
+      remembered: Boolean(account && briefRemembered(account.id)),
+      due: Boolean(account && enabled && now >= time && settings.dismissed !== date),
+      brief,
+    };
+  };
+  const briefTimer = setInterval(() => {
+    const state = briefState(),
+      { date } = briefDay(Date.now());
+    if (!state.due || state.brief || briefSettings().notified === date || !Notification.isSupported()) return;
+    saveBriefSettings({ notified: date });
+    // No meeting or task names in the notification: it can show on a locked or shared screen.
+    const notification = new Notification({ title: 'STeP Desktop', body: tm('พร้อมสรุปวันนี้แล้ว') });
+    notification.on('click', () => {
+      window.show();
+      window.focus();
+    });
+    notification.show();
+  }, 60_000);
+  briefTimer.unref?.();
   const sandbox = new Sandbox(
     workbench,
     () => policyState.policy,
@@ -1715,6 +1777,66 @@ async function main() {
       case 'googleExecute':
         if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         return google.execute(inputText(input.id, 80), input.request, googleContext());
+      case 'morningBriefState':
+        return briefState();
+      case 'morningBriefRun': {
+        const account = briefAccount();
+        if (!policyState.policy.features.morningBrief) throw new Error('FEATURE_DISABLED');
+        if (!account) throw new Error('GOOGLE_ACCOUNT_NOT_FOUND');
+        const remember = input.remember === true && policyState.policy.morningBrief?.rememberConsent !== false;
+        const key = google.consentKey(account.id),
+          policy = briefPolicy();
+        if (!briefRemembered(account.id)) {
+          const body = [
+            tm('อ่านนัดวันนี้จาก Calendar และงานจาก Google Tasks ของบัญชี {0}', account.label),
+            tm('อ่านอย่างเดียว ไม่แก้ไขข้อมูล สรุปในเครื่องนี้โดยไม่ส่งให้ AI'),
+            remember ? tm('และอนุญาตแบบนี้ทุกวัน จนกว่าคุณจะยกเลิกในหน้า Google Workspace') : '',
+            BRIEF_OPERATIONS.join(', '),
+          ]
+            .filter(Boolean)
+            .join('\n');
+          const approved = await approvals.request(approvals.rule(store.settings().workspace || data, 'morning_brief', body), {
+            title: tm('อ่านปฏิทินและงานวันนี้?'),
+            body,
+            privacyClass: 'restricted',
+            allowRemember: false,
+          });
+          if (!approved) throw new Error('CANCELLED');
+        }
+        if (remember) saveBriefSettings({ consent: { account: account.id, key, policy } });
+        // The consent above covers exactly the fixed reads readMorningBrief makes, so each one is approved here.
+        const context = googleContext();
+        const brief = await readMorningBrief(request => {
+          if (!BRIEF_OPERATIONS.includes(request.operation as (typeof BRIEF_OPERATIONS)[number])) throw new Error('INVALID_INPUT');
+          return google.execute(account.id, request, { ...context, approve: async () => true });
+        });
+        briefToday = { date: brief.date, account: account.id, brief };
+        return briefState();
+      }
+      case 'morningBriefSettings': {
+        const change: BriefSettings = {};
+        if (typeof input.enabled === 'boolean') change.enabled = input.enabled;
+        if (input.time !== undefined) {
+          if (typeof input.time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new Error('INVALID_INPUT');
+          change.time = input.time;
+        }
+        if (input.remember === false) change.consent = undefined;
+        saveBriefSettings(change);
+        if (change.enabled === false) briefToday = undefined;
+        return briefState();
+      }
+      case 'morningBriefOpen': {
+        // Only a Meet link from today's brief, never an address the page supplies.
+        const url = inputText(input.url, 200);
+        if (!/^https:\/\/meet\.google\.com\/[a-z0-9-]+$/.test(url) || !briefToday?.brief.events.some(e => e.meet === url))
+          throw new Error('INVALID_INPUT');
+        await shell.openExternal(url);
+        return true;
+      }
+      case 'morningBriefDismiss':
+        saveBriefSettings({ dismissed: briefDay(Date.now()).date });
+        briefToday = undefined;
+        return briefState();
       case 'googleOpen': {
         if (!Object.hasOwn(GOOGLE_PAGES, input.service)) throw new Error('INVALID_INPUT');
         await shell.openExternal(GOOGLE_PAGES[input.service as keyof typeof GOOGLE_PAGES]);
