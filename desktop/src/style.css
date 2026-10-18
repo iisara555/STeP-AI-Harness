@@ -5068,6 +5068,9 @@ nav button:disabled {
 .google-service:hover {
   border-color: var(--line-strong);
 }
+.google-services > label.google-service {
+  margin: 0;
+}
 .google-service.selected {
   border-color: var(--accent);
   background: var(--accent-soft);
@@ -5133,6 +5136,46 @@ nav button:disabled {
 .google-service.selected .google-service-tick {
   border-color: var(--accent);
   background: var(--accent);
+}
+.google-calendar {
+  flex-direction: column;
+  gap: 10px;
+}
+.google-calendar label.google-calendar-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  cursor: pointer;
+}
+.google-calendar-access {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 0 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.google-calendar-access legend {
+  margin: 0;
+  font-weight: 500;
+}
+.google-calendar-access label {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  cursor: pointer;
+}
+.google-calendar-access input {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  margin: 0;
+  flex: none;
 }
 .google-admin {
   margin: 4px 0 0;
@@ -6129,9 +6172,41 @@ summary {
 .morning-brief-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 4px 0;
 }
 .morning-brief-settings {
-  margin-top: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.morning-brief-settings .google-subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+.morning-brief-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.morning-brief-settings label.morning-brief-toggle,
+.morning-brief-settings label.morning-brief-time-setting {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.morning-brief-time-setting input {
+  width: 110px;
 }

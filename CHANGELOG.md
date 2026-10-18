@@ -4,11 +4,10 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
-## Unreleased
-
-- Scheduled tasks show the next run, local time zone, AI account/model and workspace before saving; explain failed or interrupted runs with recovery links; and keep paused tasks paused when editing, with an explicit enable switch.
-
 ## Desktop v0.6.15 (2026-10-18)
+
+- Morning brief settings keep the switch, time and consent together in one panel. Google Calendar has one service card with explicit read-only or view/create access, limited to the organization's allowed services; existing accounts no longer show duplicate Calendar badges.
+- Scheduled tasks show the next run, local time zone, AI account/model and workspace before saving; explain failed or interrupted runs with recovery links; and keep paused tasks paused when editing, with an explicit enable switch.
 
 - Vault website sign-in now presses the sign-in button on pages like STeP MBS (`mis.step.cmu.ac.th/hdesystemnew`): the form may change after typing (validation marks) and a show-password eye counts as a second button, so the app now waits a moment, checks it is still the same page and form, and presses the one button named for signing in (เข้าสู่ระบบ / Login). A script login without a page load also counts as signed in. The employee still approves every fill and the AI never sees the password (owner approved this relaxation on 2026-10-18). The AI also no longer names internal fields such as `requiresManualLogin` to staff.
 
