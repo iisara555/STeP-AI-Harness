@@ -18,23 +18,10 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
     assert.ok(documents.includes('verification: user-confirmed-current'));
   });
 
-  // Expectation changed on 2026-10-10: STeP MIS (the owner's authoritative source) lists QM-QM-001 V.03 and a Master
-  // List for every team, so they are no longer recorded as declined by QS. Their text is still not in the Harness, so
-  // both stay not-provided and readable only through the MIS register / clause map.
-  await t.test('keeps Quality Manual and Master Document List text as not-provided, listed in STeP MIS', () => {
-    const qm = documents.slice(documents.indexOf('  qms-quality-manual:'), documents.indexOf('  qms-master-document-list:'));
-    assert.ok(qm.includes('verification: listed-in-step-mis-2026-10-10'));
-    assert.ok(qm.includes('QM-QM-001'));
-    assert.ok(qm.includes('status: not-provided'));
-
-    const start = documents.indexOf('  qms-master-document-list:');
-    const master = documents.slice(start, documents.indexOf('\n\n', start));
-    assert.ok(master.includes('authority: revision-source-of-truth'));
-    assert.ok(master.includes('verification: listed-in-step-mis-2026-10-10'));
-    assert.ok(master.includes('status: not-provided'));
-  });
-
-  await t.test('QM and Master List text not in the Harness use the clause map and the MIS register', async () => {
+  // Expectation changed on 2026-10-18: the owner approved shipping the STeP MIS texts in this public repository, so the
+  // Quality Manual, the team Master Lists and the QS/QM/DC procedures are readable here. STeP MIS stays the source of
+  // truth for the current REV, which every converted file says in its header.
+  await t.test('ships Quality Manual, Master Lists and QP text converted from STeP MIS', async () => {
     const blockFor = (id) => {
       const lines = documents.split(/\r?\n/);
       const start = lines.findIndex((line) => line === `  ${id}:`);
@@ -44,27 +31,32 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
       return lines.slice(start, end).join('\n');
     };
 
-    for (const id of [
-      'qs-doc-control-procedure',
-      'qms-quality-record-control',
-      'qms-risk-management',
-      'qms-nonconformity',
-      'qms-corrective-preventive-action',
-      'qms-internal-audit',
-      'qms-management-review',
-      'qms-complaint-management',
+    for (const [id, file, code] of [
+      ['qs-doc-control-procedure', 'qp-dc-001.md', 'QP-DC-001'],
+      ['qms-quality-record-control', 'qp-dc-002.md', 'QP-DC-002'],
+      ['qms-risk-management', 'qp-qs-001.md', 'QP-QS-001'],
+      ['qms-nonconformity', 'qp-qs-002.md', 'QP-QS-002'],
+      ['qms-corrective-preventive-action', 'qp-qm-001.md', 'QP-QM-001'],
+      ['qms-internal-audit', 'qp-qm-002.md', 'QP-QM-002'],
+      ['qms-management-review', 'qp-qm-003.md', 'QP-QM-003'],
+      ['qms-complaint-management', 'qp-qm-004.md', 'QP-QM-004'],
+      ['qms-quality-manual', 'qm-qm-001.md', 'QM-QM-001'],
+      ['qms-master-document-list', 'mis-master-lists.md', 'Master List'],
+      ['afp-procurement-procedure', 'qp-af-001.md', 'QP-AF-001'],
+      ['afp-annual-inventory-procedure', 'qp-af-002.md', 'QP-AF-002'],
+      ['afp-advance-procedure', 'qp-af-003.md', 'QP-AF-003'],
+      ['afp-payment-procedure', 'qp-af-004.md', 'QP-AF-004'],
     ]) {
       const block = blockFor(id);
-      assert.ok(block.includes('verification: listed-in-working-master-list'), `${id} must be traced to the working list`);
-      assert.ok(block.includes('status: provided-text-not-in-harness'), `${id} text is not shipped, so readiness stays partial`);
+      assert.ok(block.includes(`path: docs/knowledge/${file}`), `${id} must point at its text`);
+      assert.ok(block.includes('verification: text-from-step-mis-pdf-2026-10-18'), `${id} must record where its text came from`);
+      assert.ok(block.includes('status: active'), `${id} text is shipped`);
+      const text = await readFile(`docs/knowledge/${file}`, 'utf-8');
+      assert.ok(text.split('\n')[0].includes(code), `${file} must open with its code`);
+      assert.ok(text.includes('STeP MIS'), `${file} must name STeP MIS as the controlled copy`);
+      assert.doesNotMatch(text, /[\uF700-\uF8FF]/, `${file} must not keep PDF presentation-form characters`);
     }
-
-    for (const [id, substitute] of [['qms-quality-manual', 'qms-working-reference'], ['qms-master-document-list', 'mis-iso-document-register']]) {
-      const block = blockFor(id);
-      assert.ok(block.includes('status: not-provided'), `${id} text is not in the Harness`);
-      assert.ok(block.includes('verification: listed-in-step-mis-2026-10-10'));
-      assert.ok(block.includes(`workingSubstitute: ${substitute}`));
-    }
+    assert.ok(blockFor('qms-master-document-list').includes('authority: revision-source-of-truth'));
 
     const workingList = await readFile('docs/knowledge/qms-working-master-list.md', 'utf-8');
     const workingRef = await readFile('docs/knowledge/qms-working-reference.md', 'utf-8');
@@ -82,7 +74,7 @@ test('STeP Quality Layer v0.1 foundation', async (t) => {
     assert.ok(workingRef.includes('4.3'), 'QMS scope gap must stay explicit');
     assert.ok(workingRef.includes('stakeholder-questionnaire'));
     assert.ok(!skills.includes('qms-quality-manual') && !skills.includes('qms-master-document-list'),
-      'Skills must point at the working references, not the declined documents');
+      'Skills keep pointing at the working references; the shipped QM and Master List are found by search');
   });
 
   await t.test('AFP falls back to the higher-level regulation hierarchy without regulation text', async () => {

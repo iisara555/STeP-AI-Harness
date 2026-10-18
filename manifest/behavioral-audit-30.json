@@ -65,7 +65,7 @@
         "skill": "sop-authoring",
         "team": "qs",
         "scope": "ALLOW",
-        "readiness": "partial",
+        "readiness": "ready",
         "sourceIncludes": [
           "qs-doc-control-procedure"
         ],
@@ -100,7 +100,7 @@
         "skill": "document-record-control",
         "team": "qs",
         "scope": "ALLOW",
-        "readiness": "partial",
+        "readiness": "ready",
         "sourceIncludes": [
           "qs-doc-control-procedure",
           "qms-quality-record-control"
@@ -118,7 +118,7 @@
         "skill": "ncr-capa",
         "team": "qs",
         "scope": "ALLOW",
-        "readiness": "partial",
+        "readiness": "ready",
         "sourceIncludes": [
           "qms-nonconformity",
           "qms-corrective-preventive-action"

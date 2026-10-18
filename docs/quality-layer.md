@@ -90,6 +90,8 @@ ISO REQUIREMENT
 ## 5. Known gaps
 
 ### P0 — Quality Manual (มีใน MIS แต่เนื้อหาไม่อยู่ใน Harness)
+> ปิดแล้ว 18 ต.ค. 2569: ข้อความ QM-QM-001 REV 03, Master List 5 ทีม และ QP ของ DC/QS/QM/AF ถอดจาก PDF ใน MIS อยู่ใน `docs/knowledge/` แล้ว ข้อความด้านล่างเป็นบันทึกเดิม
+
 MIS แสดง QM-QM-001 V.03 คู่มือคุณภาพ (มีผล 16 ก.ค. 2568) แต่เนื้อหาไม่อยู่ใน Harness จึงใช้ [แผนที่ ISO → เอกสาร STeP](knowledge/qms-working-reference.md) ที่รวบรวมจากนโยบายคุณภาพ V2 และ QP ที่ QS ส่งมา ข้อที่ยังไม่มีเอกสารรองรับ โดยเฉพาะ **ขอบเขต QMS (4.3)** และ exclusions ห้ามเดา ให้ AI ทำคำถามถาม QS ผ่าน `stakeholder-questionnaire`
 
 ### P0 — Master Document List (รายการจาก MIS ลงทะเบียนแล้ว)

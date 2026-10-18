@@ -1,7 +1,16 @@
 import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 
-export type CatalogEntry = { id: string; title: string; path: string; owner?: string; status?: string; keywords?: string[] };
+export type CatalogEntry = {
+  id: string;
+  title: string;
+  path: string;
+  owner?: string;
+  status?: string;
+  authority?: string;
+  verification?: string;
+  keywords?: string[];
+};
 export type KnowledgeSection = { id: string; title: string; path: string; heading: string; text: string; score: number };
 /** A registered document as the AI sees it in the knowledge registry: what it is about and which sections it has. */
 export type RegistryEntry = CatalogEntry & { summary: string; sections: string[] };
@@ -9,7 +18,9 @@ type Section = Omit<KnowledgeSection, 'score'> & {
   headGrams: Set<string>;
   bodyGrams: Set<string>;
   topicWords: Set<string>;
+  headWords: Set<string>;
   roleCodes: string[];
+  procedureCopy: boolean;
 };
 
 // Thai has no spaces between words, so documents and questions are compared as character trigrams.
@@ -112,6 +123,8 @@ export function expandAbbreviations(text: string) {
 export const MATCH_THRESHOLD = 0.3;
 /** A match this strong answers from the documents alone; weaker matches still allow a public web search afterwards. */
 export const STRONG_MATCH = 0.5;
+const HISTORY_HEADING = /^(?:\d+\.\s*)?ประวัติการ(?:แก้ไข|เปลี่ยนแปลง)/;
+const REVISION_QUESTION = /รุ่นล่าสุด|รุ่นปัจจุบัน|ฉบับล่าสุด|ฉบับปัจจุบัน|ใช้ฉบับไหน|\brev\b|มีผลวันไหน|วันที่บังคับใช้/i;
 const MAX_SECTIONS = 4,
   MAX_CHARS = 9000,
   SECTION_CHARS = 4000;
@@ -168,8 +181,10 @@ export class OrganizationKnowledge {
               headGrams: trigrams([entry.title, heading, ...(entry.keywords || [])].join(' ')),
               bodyGrams: trigrams(part.slice(0, 20000)),
               topicWords: topicWords([entry.title, heading, ...(entry.keywords || []), part.slice(0, 20000)].join(' ')),
+              headWords: topicWords([entry.title, heading, ...(entry.keywords || [])].join(' ')),
               // A boosted answer must contain its evidence within the excerpt sent to the model.
               roleCodes: roleCodes((provenance + part.trim()).slice(0, SECTION_CHARS)),
+              procedureCopy: entry.authority === 'controlled-document' && /^text-from-step-mis-pdf/.test(entry.verification || ''),
             });
           }
         }
@@ -208,9 +223,14 @@ export class OrganizationKnowledge {
     const recommendation = /^(?:ช่วย|ขอ)?\s*แนะนำ\s*(.+?)(?=\s*(?:ใน|แถว|จังหวัด)|$)/.exec(question)?.[1];
     const subject = recommendation ? [...topicWords(recommendation)] : [];
     const roleQuestion = /หน้าที่|ดูแลงาน|รับผิดชอบ|ทำอะไร|ทำงานอะไร/.test(question);
+    // A question about a named team ("ทีม CC") needs a section that mentions that team.
     const identifiers = roleQuestion
       ? (question.toLowerCase().match(/[a-z][a-z0-9]*/g) || []).filter(id => !['team', 'unit'].includes(id))
-      : [];
+      : [...question.toLowerCase().matchAll(/ทีม\s*([a-z][a-z0-9]*)/g)].map(match => match[1]);
+    // Revision-history tables mention most topics of their document, so they only lead when the question is about changes.
+    const historyQuestion = /แก้ไข|เปลี่ยน|ประวัติ|rev|ฉบับ|รุ่น/i.test(question);
+    // Procedure texts converted from STeP MIS are copies; which revision is in force comes from the registers.
+    const revisionQuestion = REVISION_QUESTION.test(question);
     if (query.length < 2) return [];
     const numbers = [...new Set(question.toUpperCase().match(/\b(?:QM|QP|WI|FM|SD)-[A-Z0-9]{2,8}-\d{1,6}\b/g) || [])];
     const exact = (text: string, number: string) => new RegExp(`\\b${number}\\b`, 'i').test(text);
@@ -228,10 +248,14 @@ export class OrganizationKnowledge {
           : roleQuestion && requestedRole(question, section.roleCodes)
             ? 0.85
             : (words.length && share(words, section.topicWords) < 0.5) ||
+                // Long procedure copies mention much in passing; their title, heading or keywords must carry the topic.
+                (section.procedureCopy && words.length && !words.some(word => section.headWords.has(word))) ||
                 (subject.length && !subject.every(word => section.topicWords.has(word))) ||
                 (identifiers.length && !identifiers.some(id => section.topicWords.has(id)))
               ? 0
-              : 0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams),
+              : (0.6 * share(query, section.headGrams) + 0.4 * share(query, section.bodyGrams)) *
+                (!historyQuestion && HISTORY_HEADING.test(section.heading) ? 0.8 : 1) *
+                (revisionQuestion && section.procedureCopy ? 0.7 : 1),
       }))
       .sort((a, b) => b.score - a.score);
     const best = scored[0]?.score || 0;
