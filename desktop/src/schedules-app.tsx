@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, LoaderCircle, Pause, Pencil, Play, Plus, Power, Trash2 } from 'lucide-react';
 import type { Automation, AutomationRun } from '../electron/cron';
 import type { Connection, DesktopAPI } from './types';
@@ -11,6 +11,8 @@ import {
   SCHEDULE_TEMPLATES,
   describeSchedule,
   fromCron,
+  previewSchedule,
+  scheduledRunAdvice,
   toCron,
   type Repeat,
   type ScheduleChoice,
@@ -18,13 +20,14 @@ import {
 } from './schedules';
 import './schedules.css';
 
-type Draft = { id: string; name: string; query: string; connectionId: string; choice: ScheduleChoice };
+type Draft = { id: string; name: string; query: string; connectionId: string; choice: ScheduleChoice; enabled: boolean };
 const blank = (connectionId = ''): Draft => ({
   id: '',
   name: '',
   query: '',
   connectionId,
   choice: { repeat: 'weekdays', time: '08:30', days: [1] },
+  enabled: true,
 });
 const STATUS: Record<AutomationRun['status'], string> = {
   queued: 'รอคิว',
@@ -47,14 +50,18 @@ export function ScheduledTasks({
   api,
   connections,
   defaultConnection,
+  workspace,
+  onConnections,
   onOpen,
 }: {
   api: DesktopAPI;
   connections: Connection[];
   defaultConnection: string;
+  workspace: string;
+  onConnections: () => void;
   onOpen: (sessionId: string) => void;
 }) {
-  const ready = connections.filter(c => c.ready);
+  const ready = connections.filter(c => c.ready && !c.policyBlocked);
   const fallback = ready.some(c => c.id === defaultConnection) ? defaultConnection : ready[0]?.id || '';
   const [data, setData] = useState<{ jobs: Automation[]; history: AutomationRun[]; enabled: boolean }>(),
     [draft, setDraft] = useState<Draft | null>(null),
@@ -109,6 +116,17 @@ export function ScheduledTasks({
     document.querySelector('.schedules')?.scrollTo({ top: 0 });
     setDraft({ ...blank(fallback), name: t(template.name), query: t(template.query), choice: { ...template.choice } });
   };
+  const edit = (job: Automation) => {
+    setDraft({
+      id: job.id,
+      name: job.name,
+      query: job.query,
+      connectionId: job.connectionId,
+      choice: fromCron(job.schedule) || blank().choice,
+      enabled: job.enabled,
+    });
+    document.querySelector('.schedules')?.scrollTo({ top: 0 });
+  };
   const lastRun = (id: string) => data?.history.find(r => r.automationId === id);
   const enabled = data?.enabled;
 
@@ -136,6 +154,8 @@ export function ScheduledTasks({
           key={draft.id + draft.name + draft.choice.time}
           draft={draft}
           connections={ready}
+          workspace={workspace}
+          onConnections={onConnections}
           busy={busy === 'save'}
           onCancel={() => setDraft(null)}
           onSave={async (job, on) => {
@@ -149,7 +169,14 @@ export function ScheduledTasks({
         </p>
       )}
       {data && !enabled && <p className="schedules-empty">{t('ผู้ดูแลยังไม่เปิดงานตั้งเวลาบนเครื่องนี้ ถ้าต้องใช้ ติดต่อผู้ดูแลระบบ')}</p>}
-      {enabled && !ready.length && <p className="schedules-empty">{t('เชื่อมต่อบัญชี AI ก่อน แล้วจึงสร้างงานตั้งเวลาได้')}</p>}
+      {enabled && !ready.length && (
+        <p className="schedules-empty">
+          {t('เชื่อมต่อบัญชี AI ก่อน แล้วจึงสร้างงานตั้งเวลาได้')}{' '}
+          <button className="text-link" onClick={onConnections}>
+            {t('ไปที่การเชื่อมต่อ AI')}
+          </button>
+        </p>
+      )}
       {enabled && (
         <>
           <h2>{t('งานของฉัน')}</h2>
@@ -157,7 +184,8 @@ export function ScheduledTasks({
           <ul className="schedule-list">
             {data.jobs.map(job => {
               const run = lastRun(job.id),
-                connection = connections.find(c => c.id === job.connectionId);
+                connection = connections.find(c => c.id === job.connectionId),
+                advice = scheduledRunAdvice(run);
               return (
                 <li key={job.id} className={'schedule-card' + (job.enabled ? '' : ' paused')}>
                   <CalendarClock size={20} className="schedule-icon" aria-hidden="true" />
@@ -171,7 +199,7 @@ export function ScheduledTasks({
                       {connection ? ` · ${connectionName(connection)}` : ''}
                     </span>
                     {run && (
-                      <span className="small muted">
+                      <span className={'small schedule-run-status ' + run.status}>
                         {t(
                           'ล่าสุด {0} · {1}',
                           new Date(run.at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }),
@@ -183,6 +211,20 @@ export function ScheduledTasks({
                           </button>
                         )}
                       </span>
+                    )}
+                    {advice && (
+                      <div className="schedule-problem">
+                        <p>{t(advice.message)}</p>
+                        {advice.action && (
+                          <button
+                            className="text-link"
+                            disabled={!!busy || !!job.running}
+                            onClick={() => (advice.action === 'edit' ? edit(job) : onConnections())}
+                          >
+                            {advice.action === 'edit' ? t('ตรวจและบันทึกใหม่') : t('ไปที่การเชื่อมต่อ AI')}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="schedule-actions">
@@ -220,15 +262,7 @@ export function ScheduledTasks({
                       aria-label={t('แก้ไขงาน {0}', job.name)}
                       title={t('แก้ไขงาน')}
                       disabled={!!busy || !!job.running}
-                      onClick={() =>
-                        setDraft({
-                          id: job.id,
-                          name: job.name,
-                          query: job.query,
-                          connectionId: job.connectionId,
-                          choice: fromCron(job.schedule) || blank().choice,
-                        })
-                      }
+                      onClick={() => edit(job)}
                     >
                       <Pencil size={16} />
                     </button>
@@ -281,20 +315,40 @@ export function ScheduledTasks({
 function ScheduleEditor({
   draft,
   connections,
+  workspace,
+  onConnections,
   busy,
   onCancel,
   onSave,
 }: {
   draft: Draft;
   connections: Connection[];
+  workspace: string;
+  onConnections: () => void;
   busy: boolean;
   onCancel: () => void;
   onSave: (job: Draft, enabled: boolean) => Promise<void>;
 }) {
   const [job, setJob] = useState(draft);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const choice = job.choice;
   const setChoice = (next: Partial<ScheduleChoice>) => setJob({ ...job, choice: { ...choice, ...next } });
-  const valid = job.name.trim() && job.query.trim() && job.connectionId && (choice.repeat !== 'days' || choice.days.length);
+  const preview = useMemo(() => {
+    try {
+      return previewSchedule(choice, now);
+    } catch {
+      return null;
+    }
+  }, [choice, now]);
+  const connection = connections.find(c => c.id === job.connectionId);
+  const valid = job.name.trim() && job.query.trim() && connection && preview;
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const offset = -new Date(now).getTimezoneOffset();
+  const zoneOffset = `UTC${offset < 0 ? '-' : '+'}${String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0')}:${String(Math.abs(offset) % 60).padStart(2, '0')}`;
   // Shown in the page, not as a dialog: saving opens the app's consent prompt, which must not sit under another modal.
   return (
     <form
@@ -302,7 +356,7 @@ function ScheduleEditor({
       aria-label={job.id ? t('แก้ไขงานตั้งเวลา') : t('งานตั้งเวลาใหม่')}
       onSubmit={e => {
         e.preventDefault();
-        if (valid && !busy) void onSave(job, true);
+        if (valid && !busy) void onSave(job, job.enabled);
       }}
       onKeyDown={e => {
         if (e.key === 'Escape') onCancel();
@@ -383,6 +437,11 @@ function ScheduleEditor({
         {t('บัญชี AI')}
         <select aria-label={t('บัญชี AI ของงาน')} value={job.connectionId} onChange={e => setJob({ ...job, connectionId: e.target.value })}>
           <option value="">{t('เลือกบัญชี')}</option>
+          {job.connectionId && !connection && (
+            <option value={job.connectionId} disabled>
+              {t('บัญชีเดิมยังไม่พร้อม กรุณาเลือกใหม่')}
+            </option>
+          )}
           {connections.map(c => (
             <option key={c.id} value={c.id}>
               {connectionName(c)}
@@ -390,14 +449,58 @@ function ScheduleEditor({
           ))}
         </select>
       </label>
-      <p className="small muted">{t('กดบันทึกแล้ว แอปจะถามยืนยันอีกครั้ง ผลแต่ละรอบเป็นร่างรอตรวจ ไม่ส่งหรือเผยแพร่เอง')}</p>
+      {!connection && (
+        <p className="small schedules-error">
+          {t('เลือกบัญชี AI ที่พร้อมใช้งานก่อนบันทึก')}{' '}
+          <button type="button" className="text-link" onClick={onConnections}>
+            {t('ไปที่การเชื่อมต่อ AI')}
+          </button>
+        </p>
+      )}
+      <section className="schedule-preview" aria-label={t('สรุปก่อนบันทึก')}>
+        <h3>{t('สรุปก่อนบันทึก')}</h3>
+        <dl aria-live="polite">
+          <div>
+            <dt>{t('กำหนดเวลา')}</dt>
+            <dd>{preview ? scheduleText(preview.schedule) : t('เลือกวันและเวลาที่ต้องการให้ครบ')}</dd>
+          </div>
+          <div>
+            <dt>{t('เขตเวลา')}</dt>
+            <dd>
+              {zone === 'Asia/Bangkok' ? t('เวลาไทย') : zone} · {zoneOffset}
+            </dd>
+          </div>
+          <div>
+            <dt>{job.enabled ? t('รอบถัดไป') : t('รอบถัดไปหากเปิดใช้')}</dt>
+            <dd>{preview ? new Date(preview.nextAt).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('บัญชี AI')}</dt>
+            <dd>{connection ? connectionName(connection) : t('ยังไม่ได้เลือก')}</dd>
+          </div>
+          <div>
+            <dt>{t('โมเดล AI')}</dt>
+            <dd>{connection ? connection.model || t('โมเดลเริ่มต้นของบัญชี') : t('ยังไม่ได้เลือก')}</dd>
+          </div>
+          <div>
+            <dt>{t('พื้นที่งาน')}</dt>
+            <dd>{workspace || t('พื้นที่งานเริ่มต้นของแอป')}</dd>
+          </div>
+        </dl>
+      </section>
+      <label className="schedule-enable">
+        <input type="checkbox" checked={job.enabled} onChange={e => setJob({ ...job, enabled: e.target.checked })} />
+        {t('เปิดใช้งานตามเวลาที่ตั้ง')}
+      </label>
+      {!job.enabled && <p className="small muted">{t('บันทึกโดยพักงานไว้ งานจะไม่ทำตามเวลาจนกว่าคุณจะเปิดใช้')}</p>}
+      <p className="small muted">{t('เมื่อเปิดใช้งาน แอปจะถามยืนยันอีกครั้ง ผลแต่ละรอบเป็นร่างรอตรวจ ไม่ส่งหรือเผยแพร่เอง')}</p>
       <div className="schedule-editor-actions">
         <button type="button" className="quiet" onClick={onCancel}>
           {t('ยกเลิก')}
         </button>
         <button type="submit" disabled={!valid || busy}>
           {busy && <LoaderCircle size={15} className="spin" />}
-          {t('บันทึกและเปิดใช้')}
+          {job.id ? t('บันทึกการแก้ไข') : job.enabled ? t('บันทึกและเปิดใช้') : t('บันทึกและพักไว้')}
         </button>
       </div>
     </form>

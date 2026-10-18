@@ -1,4 +1,38 @@
 export const schedulesEn: Record<string, string> = {
+  สรุปก่อนบันทึก: 'Review before saving',
+  กำหนดเวลา: 'Schedule',
+  เขตเวลา: 'Time zone',
+  เวลาไทย: 'Thailand time',
+  รอบถัดไป: 'Next run',
+  รอบถัดไปหากเปิดใช้: 'Next run if enabled',
+  'โมเดล AI': 'AI model',
+  โมเดลเริ่มต้นของบัญชี: 'Account default model',
+  พื้นที่งานเริ่มต้นของแอป: 'App default workspace',
+  เลือกวันและเวลาที่ต้องการให้ครบ: 'Choose the days and time',
+  ยังไม่ได้เลือก: 'Not selected',
+  'บัญชีเดิมยังไม่พร้อม กรุณาเลือกใหม่': 'The previous account is unavailable; choose another',
+  'เลือกบัญชี AI ที่พร้อมใช้งานก่อนบันทึก': 'Choose an available AI account before saving',
+  เปิดใช้งานตามเวลาที่ตั้ง: 'Run at the scheduled times',
+  'บันทึกโดยพักงานไว้ งานจะไม่ทำตามเวลาจนกว่าคุณจะเปิดใช้': 'Save paused. This task will not run on its schedule until you turn it on',
+  บันทึกการแก้ไข: 'Save changes',
+  บันทึกและพักไว้: 'Save paused',
+  ตรวจและบันทึกใหม่: 'Review and save again',
+  'รอบล่าสุดหยุดเมื่อแอปปิด ตรวจร่างเดิมก่อนกด "ทำตอนนี้" เพื่อลองใหม่':
+    'The last run stopped when the app closed. Check its draft before pressing "Run now" to try again',
+  'บัญชี AI ของงานยังไม่พร้อม เชื่อมต่อและทดสอบบัญชีอีกครั้ง แล้วกด "ทำตอนนี้"':
+    'The task’s AI account is unavailable. Connect and test it again, then press "Run now"',
+  'บัญชี AI โมเดล ทีม หรือพื้นที่งานเปลี่ยนแล้ว ตรวจและบันทึกการตั้งค่าใหม่ก่อนลองอีกครั้ง':
+    'The AI account, model, team or workspace changed. Review and save the settings again before retrying',
+  'คำสั่งของงานต้องผ่านการตรวจทาน ตรวจและแก้คำสั่งก่อนบันทึกใหม่':
+    'The task instructions need review. Check and edit them before saving again',
+  'นโยบายการใช้งานเปลี่ยนแล้ว ตรวจการตั้งค่าและคำสั่งก่อนบันทึกใหม่':
+    'The usage policy changed. Review the settings and instructions before saving again',
+  'รอบล่าสุดหยุดเพราะผู้ดูแลปิดงานตั้งเวลาไว้ ติดต่อผู้ดูแลหากยังเปิดใช้ไม่ได้':
+    'The last run stopped because scheduled tasks were disabled. Contact your administrator if you still cannot enable them',
+  'การเชื่อมต่อ AI หยุดหรือตอบไม่ทัน ตรวจอินเทอร์เน็ตแล้วกด "ทำตอนนี้" เพื่อลองใหม่':
+    'The AI connection stopped or timed out. Check your internet connection, then press "Run now" to try again',
+  'รอบล่าสุดทำงานไม่สำเร็จ ตรวจผลของรอบนั้นและการเชื่อมต่อ AI ก่อนกด "ทำตอนนี้" เพื่อลองใหม่':
+    'The last run failed. Check its result and the AI connection before pressing "Run now" to try again',
   งานตั้งเวลา: 'Scheduled tasks',
   'ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ': 'Let the assistant repeat tasks on a schedule; each result is a draft for you to check',
   'ให้ผู้ช่วยทำงานซ้ำตามเวลาที่คุณตั้ง เช่น ร่างสรุปงานทุกเย็นวันศุกร์ ผลแต่ละรอบเป็นร่างในรายการงาน พร้อมแจ้งเตือนให้คุณตรวจก่อนใช้':
@@ -38,8 +72,8 @@ export const schedulesEn: Record<string, string> = {
   เวลา: 'Time',
   วันที่ทำ: 'Days',
   'บัญชี AI ของงาน': 'AI account for the task',
-  'กดบันทึกแล้ว แอปจะถามยืนยันอีกครั้ง ผลแต่ละรอบเป็นร่างรอตรวจ ไม่ส่งหรือเผยแพร่เอง':
-    'After you save, the app asks you to confirm. Each run is a draft for review; nothing is sent or published on its own',
+  'เมื่อเปิดใช้งาน แอปจะถามยืนยันอีกครั้ง ผลแต่ละรอบเป็นร่างรอตรวจ ไม่ส่งหรือเผยแพร่เอง':
+    'When you turn it on, the app asks you to confirm. Each run is a draft for review; nothing is sent or published on its own',
   บันทึกและเปิดใช้: 'Save and turn on',
   'เครื่องมือเพิ่มเติม (MCP และ Docker)': 'More tools (MCP and Docker)',
   งานที่ให้ผู้ช่วยทำซ้ำตามเวลาอยู่ที่หน้างานตั้งเวลา: 'Tasks the assistant repeats on a schedule are on the Scheduled tasks page',

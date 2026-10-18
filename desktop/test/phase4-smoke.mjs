@@ -7,9 +7,11 @@ import { join } from 'node:path';
 
 const home = await mkdtemp(join(tmpdir(), 'step-phase4-smoke-')),
   workspace = join(home, 'work'),
+  movedWorkspace = join(home, 'other-work'),
   executable = join(home, 'codex.mjs'),
   mcp = join(home, 'mcp.mjs');
 await mkdir(workspace);
+await mkdir(movedWorkspace);
 await mkdir('release/qa', { recursive: true });
 await writeFile(
   executable,
@@ -123,15 +125,77 @@ try {
   await jobs.getByLabel('ชื่องานตั้งเวลา', { exact: true }).fill('Synthetic recurring draft');
   await jobs.getByLabel('สิ่งที่ให้ผู้ช่วยทำ', { exact: true }).fill('Prepare a concise public draft.');
   await jobs.getByLabel('บัญชี AI ของงาน', { exact: true }).selectOption('fake');
+  const preview = jobs.getByRole('region', { name: 'สรุปก่อนบันทึก' });
+  await expect(preview).toContainText(workspace);
+  await expect(preview).toContainText('โมเดลเริ่มต้นของบัญชี');
+  await expect(preview).toContainText(/UTC[+-]\d{2}:\d{2}/);
+  await jobs.getByLabel('ทำซ้ำ', { exact: true }).selectOption('days');
+  await jobs.locator('.schedule-days').getByText('ศ.', { exact: true }).click();
+  await jobs.locator('.schedule-days').getByText('จ.', { exact: true }).click();
+  await expect(jobs.getByRole('checkbox', { name: 'ศ.', exact: true })).toBeChecked();
+  await jobs.getByLabel('เวลา', { exact: true }).fill('16:00');
+  await expect(preview).toContainText('ทุก ศ. เวลา 16:00 น.');
   await jobs.getByRole('button', { name: 'บันทึกและเปิดใช้', exact: true }).click();
   await approve('อนุมัติงานตั้งเวลา?');
   await jobs.getByRole('button', { name: 'แก้ไขงาน Synthetic recurring draft', exact: true }).click();
   await jobs.getByLabel('ชื่องานตั้งเวลา', { exact: true }).fill('Updated recurring draft');
-  await jobs.getByRole('button', { name: 'บันทึกและเปิดใช้', exact: true }).click();
+  await jobs.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
   await approve('อนุมัติงานตั้งเวลา?');
   await expect(jobs.locator('.schedule-card')).toContainText('Updated recurring draft');
   await jobs.getByRole('button', { name: 'พักงาน Updated recurring draft', exact: true }).click();
   await expect(jobs.locator('.schedule-card')).toContainText('พักไว้');
+  await jobs.getByRole('button', { name: 'แก้ไขงาน Updated recurring draft', exact: true }).click();
+  await expect(jobs.getByRole('checkbox', { name: 'เปิดใช้งานตามเวลาที่ตั้ง' })).not.toBeChecked();
+  await expect(preview).toContainText('รอบถัดไปหากเปิดใช้');
+  await page.evaluate(async () => {
+    const { settings } = await window.step.call('snapshot');
+    await window.step.call('settings', { ...settings, language: 'en' });
+  });
+  await page.reload();
+  await page.locator('[data-tour="schedules"]').click();
+  await jobs.getByRole('button', { name: 'Edit Updated recurring draft', exact: true }).click();
+  await expect(jobs.getByRole('region', { name: 'Review before saving' })).toContainText('Account default model');
+  await expect(jobs.getByRole('checkbox', { name: 'Run at the scheduled times' })).not.toBeChecked();
+  await page.evaluate(async () => {
+    const { settings } = await window.step.call('snapshot');
+    await window.step.call('settings', { ...settings, language: 'th' });
+  });
+  await page.reload();
+  await page.locator('[data-tour="schedules"]').click();
+  await jobs.getByRole('button', { name: 'แก้ไขงาน Updated recurring draft', exact: true }).click();
+  await expect(preview).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1350 });
+  await page.screenshot({ path: 'release/qa/phase4-schedule-editor.png' });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await jobs.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click({ timeout: 5000 });
+  await expect(jobs.getByRole('form', { name: 'แก้ไขงานตั้งเวลา' })).toHaveCount(0);
+  assert.equal((await page.evaluate(() => window.step.call('automationList'))).jobs[0].enabled, false, 'editing preserves pause');
+  // A changed workspace must still stop execution; the page offers review, never an automatic rebind/retry.
+  await app.evaluate(({ dialog }, workspace) => {
+    const original = dialog.showOpenDialog;
+    dialog.showOpenDialog = async () => {
+      dialog.showOpenDialog = original;
+      return { canceled: false, filePaths: [workspace] };
+    };
+  }, movedWorkspace);
+  await page.evaluate(() => window.step.call('workspace'));
+  await jobs.getByRole('button', { name: 'ทำตอนนี้', exact: true }).click();
+  await approve('เริ่มงานตั้งเวลา?');
+  await expect
+    .poll(async () => (await page.evaluate(() => window.step.call('automationList'))).history[0]?.code)
+    .toBe('AUTOMATION_CONTEXT_CHANGED');
+  await expect(jobs.locator('.schedule-problem')).toContainText('พื้นที่งานเปลี่ยนแล้ว');
+  await page.setViewportSize({ width: 650, height: 1000 });
+  assert.equal(await jobs.evaluate(el => el.scrollWidth <= el.clientWidth), true, 'narrow schedule cards do not overflow');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: 'release/qa/phase4-schedule-recovery.png' });
+  await jobs.getByRole('button', { name: 'ตรวจและบันทึกใหม่', exact: true }).click();
+  await expect(preview).toContainText(movedWorkspace);
+  await jobs.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
+  await expect(jobs.getByRole('form', { name: 'แก้ไขงานตั้งเวลา' })).toHaveCount(0);
+  const rebound = (await page.evaluate(() => window.step.call('automationList'))).jobs[0];
+  assert.equal(rebound.workspace, movedWorkspace);
+  assert.equal(rebound.enabled, false, 'reviewing a changed context preserves pause');
   await jobs.getByRole('button', { name: 'ทำตอนนี้', exact: true }).click();
   await approve('เริ่มงานตั้งเวลา?');
   await expect
@@ -140,6 +204,7 @@ try {
   const history = await page.evaluate(() => window.step.call('automationList'));
   assert.ok(history.history[0].sessionId);
   await expect(jobs.locator('.schedule-card')).toContainText('ร่างรอตรวจ');
+  await expect(jobs.locator('.schedule-problem')).toHaveCount(0);
   await page.screenshot({ path: 'release/qa/phase4-schedules.png' });
   await jobs.getByRole('button', { name: 'ลบงาน Updated recurring draft', exact: true }).click();
   await page
