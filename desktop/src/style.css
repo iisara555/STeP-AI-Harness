@@ -2961,6 +2961,17 @@ nav .count {
 .skill-chip .icon {
   padding: 2px;
 }
+.skill-suggestion {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+}
+.skill-suggestion .quiet {
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
 .slash-menu {
   position: absolute;
   left: 10px;
@@ -3904,6 +3915,21 @@ nav .count {
 }
 .feedback-scope input {
   width: auto;
+}
+.feedback-scope + .feedback-field {
+  margin-top: 12px;
+}
+.feedback-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.feedback-check input {
+  width: auto;
+}
+.feedback-report {
+  margin-top: 8px;
 }
 
 /* Usage terms on the last setup step and in the first-send dialog. */
@@ -5987,4 +6013,125 @@ summary {
 .message-body pre:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+.skills-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.skills-search-row .skills-search {
+  flex: 1;
+  min-width: 0;
+}
+.skills-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 13px;
+  padding: 0 14px;
+  border-radius: 8px;
+}
+.skills-own h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.skills-own .skills-grid + h2 {
+  margin-top: 22px;
+}
+.skill-card > .skill-credit {
+  margin-top: 0;
+  color: var(--muted);
+}
+
+/* สรุปเช้านี้: a card on the chat home, above the starters. */
+.morning-brief {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.morning-brief header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.morning-brief h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 1rem;
+}
+.morning-brief h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.morning-brief p {
+  margin: 0;
+}
+.morning-brief ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.morning-brief li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.morning-brief li.conflict .morning-brief-time {
+  color: var(--danger);
+}
+.morning-brief-time {
+  min-width: 92px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.morning-brief-what {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.morning-brief-what small {
+  color: var(--muted);
+}
+.morning-brief .badge {
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.morning-brief .badge.warn {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+.morning-brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.morning-brief-remember,
+.morning-brief-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.morning-brief-settings {
+  margin-top: 12px;
 }

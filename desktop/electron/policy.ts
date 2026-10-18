@@ -31,10 +31,13 @@ export const FEATURES = [
   'headless',
   'skillPacks',
   'staffSkills',
+  'feedback',
   'cron',
   'coordinator',
   'memoryTeam',
   'autoRouting',
+  'skillSuggestions',
+  'morningBrief',
   'receiptVision',
   'autoUpdate',
   'claudeSubscription',
@@ -150,6 +153,8 @@ export type Policy = {
   checks: { authority: boolean; privacy: boolean };
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
   credentialStorage?: { sharedDevice: boolean };
+  /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
+  morningBrief?: { rememberConsent: boolean };
 };
 
 // Off until an administrator turns them on: anything that runs code, merges, or sends data somewhere new.
@@ -178,6 +183,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // safety review finds nothing that fails (owner's decision, 2026-10-16). No hooks or agents; sharing beyond that
   // computer still needs an administrator. IT can set it to false.
   staffSkills: true,
+  // "แจ้งปัญหา / เสนอแนะ": employees send a problem, an idea or a wrong answer to the administrators' intake sheet (the
+  // same Apps Script as Skill proposals). Each send passes the privacy check and a confirmation of exactly what goes
+  // (owner's decision, 2026-10-18). IT can set it to false.
+  feedback: true,
   // งานตั้งเวลา: employees schedule their own tasks while the app is open. Each job asks for consent when saved, passes
   // the privacy check and ends as a draft for review (owner's decision, 2026-10-17). IT can set it to false.
   cron: true,
@@ -186,6 +195,13 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
   // Off, every request goes to the AI as general help.
   autoRouting: false,
+  // While autoRouting is off, a Skill that clearly fits what the employee is typing is offered as one button above the
+  // composer ("ลองใช้ Skill: …"); nothing changes unless they press it (owner's decision, 2026-10-18). Local matching
+  // only, no model call. IT can set it to false.
+  skillSuggestions: true,
+  // สรุปเช้านี้ (owner's decision, 2026-10-17): a card on the chat home that reads today's Calendar and Google Tasks
+  // after the employee agrees and works out the summary on this computer, with no model call. IT can set it to false.
+  morningBrief: true,
   // The receipt check also lets a vision model read the receipt image and compares it with the local OCR, field by
   // field. Needs vision; with checks.privacy on the receipt image is never sent (strict, OCR-candidates-only mode).
   receiptVision: true,
@@ -206,9 +222,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // for the team running the OCR pilot, not for every employee, so they stay hidden until an administrator turns them on.
   ocrTrial: false,
   // After a chat answer that drew on STeP documents, a second model call checks the answer's statements about STeP
-  // against those document excerpts and shows any it cannot find there. Each check is one more model call, so it is off
-  // until an administrator turns it on.
-  answerCheck: false,
+  // against those document excerpts and shows any it cannot find there. On by default so staff see when an answer goes
+  // beyond the documents (owner's decision, 2026-10-18); it runs only for answers grounded in STeP documents, so general
+  // questions are not slowed. Each check is one more model call; IT can set it to false.
+  answerCheck: true,
   // When the employee has not picked a reasoning level, a short chat question gets a light level and a large task (a
   // Playbook, plan mode, a long request or many files) a deeper one, within the levels the model offers (electron/effort.ts).
   // The employee's choice always wins. IT can set it to false to always use the model default.
@@ -278,6 +295,11 @@ export const SKILL_SUBMIT_URL = /^https:\/\/script\.google\.com\/(?:a\/macros\/[
 // without a policy on each computer; a policy submitUrl replaces it and features.staffSkills: false turns it off.
 export const DEFAULT_SKILL_SUBMIT_URL =
   'https://script.google.com/macros/s/AKfycbxNhKaK8GMqvHKkVW5qV6h_H0ZtGZP9Ch76SzKlal1Z-nKhq3mHE4Lh7SBVoHrgW1yCdg/exec';
+/** Where "แจ้งปัญหา / เสนอแนะ" sends under this policy, or undefined when IT turned it off. Same intake as Skills. */
+export function feedbackSubmitUrl(policy: Policy): string | undefined {
+  if (policy.features.feedback === false) return undefined;
+  return policy.skillPacks?.submitUrl || DEFAULT_SKILL_SUBMIT_URL;
+}
 /** Where "เสนอให้องค์กรใช้" sends a Skill under this policy, or undefined when IT turned staff Skills off. */
 export function skillSubmitUrl(policy: Policy): string | undefined {
   if (policy.features.staffSkills === false) return undefined;
@@ -313,6 +335,15 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     )
       problems.push('credentialStorage.sharedDevice must be boolean');
     else policy.credentialStorage = { sharedDevice: raw.credentialStorage.sharedDevice };
+  }
+  if (raw.morningBrief !== undefined) {
+    if (
+      !isObject(raw.morningBrief) ||
+      Object.keys(raw.morningBrief).some(k => k !== 'rememberConsent') ||
+      typeof raw.morningBrief.rememberConsent !== 'boolean'
+    )
+      problems.push('morningBrief.rememberConsent must be boolean');
+    else policy.morningBrief = { rememberConsent: raw.morningBrief.rememberConsent };
   }
   if (raw.googleWorkspace === null) delete policy.googleWorkspace;
   else if (raw.googleWorkspace !== undefined) {

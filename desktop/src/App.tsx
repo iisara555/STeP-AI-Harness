@@ -92,7 +92,7 @@ import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
 import { SidebarRail, readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
 import { UpdateCard, VersionLine, useUpdate } from './update';
-import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
+import type { Attachment, Connection, PlanStep, Session, OwnPack, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
@@ -108,7 +108,7 @@ import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { LearningDialog } from './learning';
-import { FeedbackButtons, FeedbackDialog, type FeedbackAsk } from './feedback';
+import { FeedbackButtons, FeedbackDialog, ReportDialog, type FeedbackAsk, type ReportAsk } from './feedback';
 import { AutomationDialog } from './automations';
 import { commandPalette, commandForKey, vimEdit, COMMANDS } from './commands';
 import { TitleBar, shortcutText } from './titlebar';
@@ -122,6 +122,7 @@ import { WhatsNewDialog } from './whats-new-dialog';
 import type { ToolQuestion } from './types';
 import { locale, setLanguage, t, teamName } from './i18n';
 import { startersFor, starterTag, starterText } from './starters';
+import { MorningBriefCard } from './morning-brief';
 
 const ReceiptApp = lazyScreen(async () => ({ default: (await import('./receipt')).ReceiptApp }));
 const DocumentTools = lazyScreen(async () => ({ default: (await import('./document-tool-app')).DocumentTools }));
@@ -166,6 +167,7 @@ export default function App() {
   const [learningOpen, setLearningOpen] = useState(false),
     [learningText, setLearningText] = useState('');
   const [packsOpen, setPacksOpen] = useState(false),
+    [ownPacks, setOwnPacks] = useState<OwnPack[] | null>(null),
     [keyboardOpen, setKeyboardOpen] = useState(false),
     [vimNormal, setVimNormal] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false),
@@ -258,6 +260,9 @@ export default function App() {
   const [whatsNew, setWhatsNew] = useState<ReleaseNote[] | null>(null);
   const [skills, setSkills] = useState<SkillEntry[] | null>(null),
     [forcedSkill, setForcedSkill] = useState(''),
+    // "ลองใช้ Skill": the Skill the Router finds clearly fits what is being typed, and the ones the person waved away.
+    [suggestedSkill, setSuggestedSkill] = useState(''),
+    [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
     [slashIndex, setSlashIndex] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [toasts, setToasts] = useState<Toast[]>([]),
@@ -271,6 +276,7 @@ export default function App() {
     [startedAt, setStartedAt] = useState(0),
     [now, setNow] = useState(Date.now());
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
+  const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
   const [consentAsk, setConsentAsk] = useState<{
     sessionId: string;
@@ -573,6 +579,19 @@ export default function App() {
       .then(setSkills)
       .catch(() => setSkills([]));
   }, [api]);
+  // The Skills hub lists what this computer imported; reread after the Skill Packs window closes.
+  const ownSkillsAllowed = snapshot?.policy?.features.staffSkills !== false;
+  useEffect(() => {
+    if (!api || view !== 'skills' || packsOpen || !ownSkillsAllowed) return;
+    let live = true;
+    void api
+      .call('packList')
+      .then(list => live && setOwnPacks(list))
+      .catch(() => live && setOwnPacks([]));
+    return () => {
+      live = false;
+    };
+  }, [api, view, packsOpen, ownSkillsAllowed]);
   // Set during render so every child of this pass reads the chosen language.
   setLanguage(snapshot?.settings.language);
   useEffect(() => {
@@ -1097,6 +1116,35 @@ export default function App() {
     setTimeout(() => composerRef.current?.focus(), 0);
   };
   const forced = routedSkills.find(s => s.name === forcedSkill);
+  const canSuggest =
+    snapshot?.policy?.features.skillSuggestions !== false &&
+    !snapshot?.policy?.features.autoRouting &&
+    view === 'chat' &&
+    !settings &&
+    !running &&
+    !forcedSkill &&
+    !session?.skill &&
+    !session?.documentTool &&
+    !query.startsWith('/');
+  useEffect(() => {
+    setSuggestedSkill('');
+    if (!api || !canSuggest || query.trim().length < 8) return;
+    let alive = true;
+    // Only once typing pauses, so the Router is not asked on every key.
+    const timer = setTimeout(() => {
+      void api
+        .call('skillSuggest', { text: query })
+        .then((found: { skill: string } | null) => {
+          if (alive && found && !dismissedSkills.includes(found.skill)) setSuggestedSkill(found.skill);
+        })
+        .catch(() => {});
+    }, 500);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [api, query, canSuggest, dismissedSkills]);
+  const suggested = canSuggest ? routedSkills.find(s => s.name === suggestedSkill) : undefined;
   // Tasks that were opened but never used (older versions created them eagerly) stay out of the list.
   const filtered =
     snapshot?.sessions.filter(
@@ -1149,6 +1197,15 @@ export default function App() {
     automations: () => setAutomationOpen(true),
     settings: () => openSettings(),
     keyboard: () => setKeyboardOpen(true),
+    // Absent when IT turned "แจ้งปัญหา / เสนอแนะ" off, so the palette and menu do not offer it.
+    feedback:
+      snapshot?.policy?.features.feedback === false
+        ? undefined
+        : () => {
+            // The task's latest error code (never its text) helps the administrators see what went wrong.
+            const code = [...(session?.messages || [])].reverse().find(m => m.role === 'status')?.text;
+            setReportAsk({ errorCode: code && /^[A-Z][A-Z0-9_]{1,63}$/.test(code) && code !== 'CANCELLED' ? code : undefined });
+          },
     tour: () => {
       setSettings(false);
       navigate('chat');
@@ -1214,9 +1271,10 @@ export default function App() {
         return;
       }
       const id = commandForKey(e, keybindingsRef.current, macKeys);
-      if (id && id in commandRef.current) {
+      const run = id && id in commandRef.current ? commandRef.current[id as keyof typeof commands] : undefined;
+      if (run) {
         e.preventDefault();
-        commandRef.current[id as keyof typeof commands]();
+        run();
       }
     };
     window.addEventListener('keydown', listener);
@@ -1323,6 +1381,7 @@ export default function App() {
         right={right}
         showRight={!settings && view === 'chat'}
         theme={snapshot.settings.theme}
+        feedback={snapshot.policy?.features.feedback !== false}
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
         {!fullSidebar && (
@@ -1785,6 +1844,18 @@ export default function App() {
               team={myTeam}
               onUse={useSkill}
               onOpenTool={id => navigate(id === 'documents' ? 'documents' : 'receipt')}
+              ownPacks={ownPacks}
+              onAddOwn={ownSkillsAllowed ? () => setPacksOpen(true) : undefined}
+              onUsePack={(id, assetId) =>
+                void action(async () => {
+                  const asset = await api.call('packAsset', { id, assetId, kind: 'skill' });
+                  setPendingSource(
+                    `<imported_asset label="${asset.label}" trust="untrusted">\n${asset.text.replace(/</g, '&lt;')}\n</imported_asset>`,
+                  );
+                  navigate('chat');
+                  notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
+                })
+              }
             />
           ) : (
             <>
@@ -1850,6 +1921,7 @@ export default function App() {
                       </div>
                       <SectionArt scene="chat" className="welcome-illustration" />
                     </div>
+                    <MorningBriefCard call={api.call} onError={e => notify(explainError(e), 'error')} onAsk={setQuery} />
                     <p className="suggestions-label">
                       {myTeamName ? t('ลองงานแรกของทีม {0}', myTeamName) : t('ลองงานแรกที่คนส่วนใหญ่ใช้บ่อย')}
                     </p>
@@ -2321,6 +2393,33 @@ export default function App() {
                           {t('ไปที่การเชื่อมต่อ AI')}
                         </button>
                       )}
+                    </div>
+                  )}
+                  {suggested && (
+                    <div className="skill-chip skill-suggestion" role="status">
+                      <Blocks size={13} />
+                      <span>{t('งานนี้มี Skill ที่ช่วยได้:')}</span>
+                      <button
+                        className="quiet"
+                        title={suggested.description}
+                        onClick={() => {
+                          setForcedSkill(suggested.name);
+                          setSuggestedSkill('');
+                          composerRef.current?.focus();
+                        }}
+                      >
+                        {t('ลองใช้ Skill: {0}', suggested.title)}
+                      </button>
+                      <button
+                        className="icon"
+                        aria-label={t('ไม่ใช้ Skill ที่แนะนำ')}
+                        onClick={() => {
+                          setDismissedSkills(list => [...list, suggested.name]);
+                          setSuggestedSkill('');
+                        }}
+                      >
+                        <X size={13} />
+                      </button>
                     </div>
                   )}
                   {forced && (
@@ -3185,6 +3284,24 @@ export default function App() {
             call={api.call}
             hasWorkspace={Boolean(snapshot?.settings.workspace)}
             onClose={() => setFeedbackAsk(null)}
+            onDone={text => notify(text, 'success')}
+            onReport={
+              snapshot?.policy?.features.feedback === false
+                ? undefined
+                : text => {
+                    setReportAsk({ sessionId: feedbackAsk.sessionId, index: feedbackAsk.index, text });
+                    setFeedbackAsk(null);
+                  }
+            }
+          />
+        )}
+        {reportAsk && api && (
+          <ReportDialog
+            ask={reportAsk}
+            call={api.call}
+            userName={snapshot?.settings.userName || ''}
+            team={snapshot?.settings.team || ''}
+            onClose={() => setReportAsk(null)}
             onDone={text => notify(text, 'success')}
           />
         )}

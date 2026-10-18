@@ -43,6 +43,7 @@ export async function loadSkillCatalog(root = PACKAGE_ROOT) {
       cluster: route?.cluster || '',
       teams: route?.teams?.primary || [],
       triggers: (route?.triggers || []).slice(0, 8),
+      ...(entry?.contributors?.length ? { contributors: entry.contributors } : {}),
     });
   }
   const order = { routed: 0, registered: 1, unregistered: 2, 'missing-file': 3 };
@@ -100,6 +101,18 @@ async function loadRegistry(root) {
     if (field) current[field[1]] = stripYamlScalar(field[2]);
     const stage = /^ {8}stage:\s*(.+)$/.exec(line);
     if (stage) current.stage = stripYamlScalar(stage[1]);
+    const credits = /^ {4}contributors:\s*\[(.*)\]\s*$/.exec(line);
+    if (credits) current.contributors = [...credits[1].matchAll(/"([^"]*)"/g)].map((m) => contributor(m[1])).filter(Boolean);
   }
   return registry;
+}
+
+// Staff who contributed a Skill, written by scripts/skill-intake/admin.mjs as "name / team / YYYY-MM-DD" (team and
+// date optional) only after the uploader agreed to be credited by name.
+function contributor(text) {
+  const parts = text.split(' / ').map((part) => part.trim()).filter(Boolean);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(parts.at(-1) || '') && parts.length > 1 ? parts.pop() : '';
+  const [name, ...team] = parts;
+  if (!name) return undefined;
+  return { name, ...(team.length ? { team: team.join(' / ') } : {}), ...(date ? { date } : {}) };
 }

@@ -6,9 +6,23 @@ import { schedulesEn } from './schedules-en';
 import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
+import { feedbackEn } from './feedback-en';
+import { skillSuggestEn } from './skill-suggest-en';
+import { morningBriefEn } from './morning-brief-en';
 export const en: Record<string, string> = {
   'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
+  ...feedbackEn,
+  ...skillSuggestEn,
+  ...morningBriefEn,
+  'ปุ่ม "เพิ่ม Skill ของฉัน" ในหน้า Skills พร้อมเครดิตชื่อผู้เพิ่ม': '"Add my Skill" on the Skills page, with credit to whoever added it',
+  'ตรวจคำตอบเรื่อง STeP กับเอกสารองค์กรให้อัตโนมัติ': 'Answers about STeP are checked against the organization documents automatically',
+  'เมนูแจ้งปัญหา / เสนอแนะ ส่งเรื่องถึงผู้ดูแลได้ในไม่กี่คลิก': 'Report a problem or suggest an idea to the admins in a few clicks',
+  'ปุ่มลองใช้ Skill เหนือช่องแชท เมื่อมี Skill ที่ตรงกับสิ่งที่พิมพ์':
+    'A "Try this Skill" button above the composer when a Skill fits what you type',
+  'การ์ดสรุปเช้านี้ แสดงนัดและงานวันนี้จาก Google Calendar และ Tasks':
+    "A morning summary card with today's meetings and tasks from Google Calendar and Tasks",
+  'ตอบจากคู่มือคุณภาพ QP และ Master List ของ STeP ได้แล้ว': 'Answers from the STeP Quality Manual, procedures (QP) and Master Lists',
   'ช่องแชทเลือก AI โมเดล และระดับการคิดได้จากปุ่มเดียว ไม่ล้นเป็นสองบรรทัด':
     'Pick the AI, model and reasoning level from one button in the composer, so it stays on one row',
   'แถบเครื่องมือผลงานเป็นไอคอนพร้อมคำอธิบาย ไม่ต้องเลื่อนหาเครื่องมือ':
@@ -2658,6 +2672,18 @@ export const en: Record<string, string> = {
   ความปลอดภัย: 'Safety',
   มาตรฐาน: 'Standard',
   'นำเข้าโดย {0}': 'Imported by {0}',
+  // Skills hub: the staff member's own Skills and uploader credit
+  'เพิ่ม Skill ของฉัน': 'Add my Skill',
+  'นำเข้า Skill จากโฟลเดอร์บนเครื่อง ระบบตรวจมาตรฐานและความปลอดภัยให้ก่อนใช้':
+    'Import a Skill from a folder on this computer; it is checked for standards and safety before use',
+  'Skill ของฉัน': 'My Skills',
+  'Skill ขององค์กร': 'Organization Skills',
+  'Skill ที่พนักงานเพิ่ม': 'Added by staff',
+  'เพิ่มโดย {0}': 'Added by {0}',
+  ยังไม่เปิดใช้: 'Not on yet',
+  ตรวจไฟล์ไม่ผ่าน: 'File check failed',
+  'เลือก Skill ในชุด': 'Choose a Skill in the pack',
+  ดูผลตรวจและเปิดใช้: 'See the check and turn it on',
   // Staff Skills: personal use and usage counts
   'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน': 'Let staff use their own Skills once they pass the checks',
   'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้':

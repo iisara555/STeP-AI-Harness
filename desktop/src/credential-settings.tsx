@@ -27,6 +27,7 @@ import { language } from './i18n';
 import { explainError } from './messages';
 import { GOOGLE_PAGES, type GoogleService } from './google-services';
 import type { VaultMetadata } from '../electron/vault';
+import { MorningBriefSettings } from './morning-brief';
 const words = {
   title: ['รหัสผ่านและการเชื่อมต่อ', 'Passwords and connections'],
   intro: [
@@ -568,6 +569,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                 </article>
               );
             })}
+            {Boolean(google.accounts.length) && <MorningBriefSettings call={call} onError={onError} />}
             {files && (
               <div className="credential-files">
                 <div className="credential-heading">

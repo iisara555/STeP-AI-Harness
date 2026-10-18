@@ -118,6 +118,14 @@ export class GoogleWorkspace {
       })),
     };
   }
+  /**
+   * Identifies one connection of one account: it changes when the account is paused, resumed, re-signed-in, removed
+   * and connected again, or moved to another OAuth client, so a consent remembered against it lapses then.
+   */
+  consentKey(id: string) {
+    const a = this.account(id);
+    return [a.id, a.revision, a.clientId, a.subject].join(':');
+  }
   invalidate() {
     this.epoch++;
     this.handles.clear();

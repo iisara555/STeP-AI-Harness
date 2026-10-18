@@ -74,12 +74,15 @@ export function FeedbackDialog({
   hasWorkspace,
   onClose,
   onDone,
+  onReport,
 }: {
   ask: FeedbackAsk;
   call: Call;
   hasWorkspace: boolean;
   onClose: () => void;
   onDone: (text: string) => void;
+  /** Opens "แจ้งปัญหา / เสนอแนะ" for this answer instead; absent when IT turned it off. */
+  onReport?: (text: string) => void;
 }) {
   const [text, setText] = useState(ask.text),
     [scope, setScope] = useState<'private' | 'project'>('private');
@@ -135,10 +138,104 @@ export function FeedbackDialog({
           </div>
         </>
       )}
+      {fix && onReport && (
+        <button type="button" className="quiet feedback-report" onClick={() => onReport(text)}>
+          {t('คำตอบผิดหรือแอปมีปัญหา? แจ้งผู้ดูแลแอปแทน')}
+        </button>
+      )}
       <p className="small muted">
         {fix
           ? t('ความเห็นพร้อมข้อความจะกลายเป็นข้อเสนอความจำ ต้องยืนยันก่อนใช้ ข้อความที่มีข้อมูลส่วนบุคคลจะไม่ถูกจำ')
           : t('เก็บในเครื่องนี้เท่านั้น ข้อความที่มีข้อมูลส่วนบุคคลหรือความลับจะไม่ถูกจำ')}
+      </p>
+    </ConfirmDialog>
+  );
+}
+
+/** Where "แจ้งปัญหา / เสนอแนะ" was opened: from an answer (the answer can be attached) or from the menu. */
+export type ReportAsk = { sessionId?: string; index?: number; text?: string; errorCode?: string };
+
+/**
+ * "แจ้งปัญหา / เสนอแนะ": sends a problem, an idea or a wrong answer to the app's administrators. The app checks the
+ * text for personal data and shows exactly what goes in a confirmation before anything is sent.
+ */
+export function ReportDialog({
+  ask,
+  call,
+  userName,
+  team,
+  onClose,
+  onDone,
+}: {
+  ask: ReportAsk;
+  call: Call;
+  userName: string;
+  team: string;
+  onClose: () => void;
+  onDone: (text: string) => void;
+}) {
+  const fromAnswer = ask.index !== undefined && Boolean(ask.sessionId);
+  const [category, setCategory] = useState<'problem' | 'idea' | 'answer'>(fromAnswer ? 'answer' : 'problem'),
+    [text, setText] = useState(ask.text || ''),
+    [includeName, setIncludeName] = useState(Boolean(userName)),
+    [attachAnswer, setAttachAnswer] = useState(false);
+  const categories: [typeof category, string][] = [
+    ['problem', t('ปัญหาการใช้งาน')],
+    ['idea', t('ข้อเสนอแนะ')],
+    ['answer', t('คำตอบไม่ถูกต้อง')],
+  ];
+  return (
+    <ConfirmDialog
+      title={t('แจ้งปัญหา / เสนอแนะ')}
+      confirmLabel={t('ส่งถึงผู้ดูแล')}
+      confirmDisabled={!text.trim()}
+      onCancel={onClose}
+      onConfirm={async () => {
+        try {
+          const result = await call('feedbackSend', {
+            category,
+            text,
+            includeName,
+            attachAnswer: fromAnswer && attachAnswer,
+            sessionId: ask.sessionId,
+            index: ask.index,
+            errorCode: ask.errorCode,
+          });
+          onDone(t('ส่งถึงผู้ดูแลแล้ว เลขที่ {0} ขอบคุณที่ช่วยให้แอปดีขึ้นครับ', result.reference));
+          onClose();
+        } catch (e) {
+          // The employee closed the confirmation: keep the form as typed, with no error and the button enabled again.
+          if (e instanceof Error && /CANCELLED/.test(e.message)) throw new Error('');
+          throw new Error(explainError(e));
+        }
+      }}
+    >
+      <div className="feedback-scope" role="radiogroup" aria-label={t('เรื่องที่จะแจ้ง')}>
+        {categories.map(([id, label]) => (
+          <label key={id}>
+            <input type="radio" checked={category === id} onChange={() => setCategory(id)} />
+            {label}
+          </label>
+        ))}
+      </div>
+      <label className="feedback-field">
+        {t('เล่าสั้น ๆ ว่าเกิดอะไรขึ้น หรืออยากให้ปรับอะไร')}
+        <textarea value={text} rows={5} maxLength={2000} onChange={e => setText(e.target.value)} />
+      </label>
+      {fromAnswer && (
+        <label className="feedback-check">
+          <input type="checkbox" checked={attachAnswer} onChange={e => setAttachAnswer(e.target.checked)} />
+          {t('แนบคำตอบของ AI ข้อนี้ไปด้วย')}
+        </label>
+      )}
+      {userName && (
+        <label className="feedback-check">
+          <input type="checkbox" checked={includeName} onChange={e => setIncludeName(e.target.checked)} />
+          {t('ใส่ชื่อของฉัน ({0}) เพื่อให้ผู้ดูแลติดต่อกลับได้', userName + (team ? ' · ' + team : ''))}
+        </label>
+      )}
+      <p className="small muted">
+        {t('ส่งเฉพาะข้อความนี้ รุ่นแอป และระบบปฏิบัติการ ไม่ส่งบทสนทนา ไฟล์ หรือร่างอื่น ข้อความที่มีข้อมูลส่วนบุคคลจะส่งไม่ได้')}
       </p>
     </ConfirmDialog>
   );

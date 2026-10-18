@@ -26,6 +26,7 @@ export function TitleBar({
   right,
   showRight,
   theme,
+  feedback,
 }: {
   api: DesktopAPI;
   title: string;
@@ -35,6 +36,8 @@ export function TitleBar({
   right: boolean;
   showRight: boolean;
   theme: string;
+  /** "แจ้งปัญหา / เสนอแนะ" is on in policy. */
+  feedback: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const bar = useRef<HTMLElement>(null);
@@ -121,6 +124,7 @@ export function TitleBar({
         command('settings', t('ตั้งค่าพื้นที่ทำงาน')),
         command('keyboard', t('คีย์ลัดแป้นพิมพ์')),
         command('tour', t('ดูทัวร์แนะนำอีกครั้ง')),
+        ...(feedback ? [command('feedback', t('แจ้งปัญหา / เสนอแนะ'))] : []),
         {
           id: 'update',
           label: update?.current ? t('ตรวจหาอัปเดต · เวอร์ชัน {0}', update.current) : t('ตรวจหาอัปเดต'),
