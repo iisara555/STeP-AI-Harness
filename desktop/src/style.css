@@ -2961,6 +2961,17 @@ nav .count {
 .skill-chip .icon {
   padding: 2px;
 }
+.skill-suggestion {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+}
+.skill-suggestion .quiet {
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
 .slash-menu {
   position: absolute;
   left: 10px;

@@ -36,6 +36,7 @@ export const FEATURES = [
   'coordinator',
   'memoryTeam',
   'autoRouting',
+  'skillSuggestions',
   'receiptVision',
   'autoUpdate',
   'claudeSubscription',
@@ -191,6 +192,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
   // Off, every request goes to the AI as general help.
   autoRouting: false,
+  // While autoRouting is off, a Skill that clearly fits what the employee is typing is offered as one button above the
+  // composer ("ลองใช้ Skill: …"); nothing changes unless they press it (owner's decision, 2026-10-18). Local matching
+  // only, no model call. IT can set it to false.
+  skillSuggestions: true,
   // The receipt check also lets a vision model read the receipt image and compares it with the local OCR, field by
   // field. Needs vision; with checks.privacy on the receipt image is never sent (strict, OCR-candidates-only mode).
   receiptVision: true,

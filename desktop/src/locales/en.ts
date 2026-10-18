@@ -7,10 +7,12 @@ import { internalMediaEn } from './internal-media-en';
 import { credentialErrorsEn } from '../credential-copy';
 import { documentLayoutEn } from './document-layout-en';
 import { feedbackEn } from './feedback-en';
+import { skillSuggestEn } from './skill-suggest-en';
 export const en: Record<string, string> = {
   'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
   ...feedbackEn,
+  ...skillSuggestEn,
   'ช่องแชทเลือก AI โมเดล และระดับการคิดได้จากปุ่มเดียว ไม่ล้นเป็นสองบรรทัด':
     'Pick the AI, model and reasoning level from one button in the composer, so it stays on one row',
   'แถบเครื่องมือผลงานเป็นไอคอนพร้อมคำอธิบาย ไม่ต้องเลื่อนหาเครื่องมือ':
