@@ -112,3 +112,50 @@ test("the Skill intake stops after its daily limit", () => {
   props.set("count-20261016", "200");
   assert.deepEqual(post(submission()), { ok: false, error: "LIMIT" });
 });
+
+const feedback = (extra = {}) => ({
+  schema: 1,
+  kind: "feedback",
+  category: "answer",
+  text: "+คำตอบเรื่องวันลาไม่ตรงกับประกาศ",
+  answer: "=ลาพักร้อนได้ 30 วัน",
+  contributor: { name: "พนักงานสังเคราะห์", team: "ทีมทดสอบ" },
+  errorCode: "PROVIDER_NETWORK",
+  os: "win32 x64",
+  appVersion: "0.6.14",
+  ...extra,
+});
+
+test("a problem report or suggestion becomes one row in its own tab, with no Drive files", () => {
+  const { post, sheets, files } = intake();
+  assert.deepEqual(post(feedback()), { ok: true, id: "20261016-abcdef12" });
+  const sheet = sheets.get("ความเห็นจากพนักงาน");
+  assert.equal(sheet.rows[0][2], "ประเภท");
+  const row = sheet.rows[1];
+  assert.equal(row[2], "คำตอบไม่ถูกต้อง");
+  assert.equal(row[3], "'+คำตอบเรื่องวันลาไม่ตรงกับประกาศ", "employee text never becomes a formula");
+  assert.equal(row[4], "'=ลาพักร้อนได้ 30 วัน");
+  assert.equal(row[7], "PROVIDER_NETWORK");
+  assert.equal(row[10], "ใหม่");
+  assert.equal(files.length, 0);
+  assert.equal(sheets.has("Skill ที่เสนอ"), false);
+  // Anonymous and without an answer is fine.
+  assert.equal(post(feedback({ category: "idea", answer: undefined, errorCode: undefined, contributor: { name: "", team: "" } })).ok, true);
+  assert.equal(sheet.rows[2][2], "ข้อเสนอแนะ");
+});
+
+test("malformed feedback is refused and counts toward the shared daily limit", () => {
+  const { post, sheets, props } = intake();
+  for (const bad of [
+    feedback({ category: "other" }),
+    feedback({ text: " " }),
+    feedback({ text: "x".repeat(2001) }),
+    feedback({ errorCode: "<script>" }),
+    feedback({ contributor: undefined }),
+    feedback({ schema: 2 }),
+  ])
+    assert.deepEqual(post(bad), { ok: false, error: "INVALID" });
+  assert.equal(sheets.size, 0);
+  props.set("count-20261016", "200");
+  assert.deepEqual(post(feedback()), { ok: false, error: "LIMIT" });
+});

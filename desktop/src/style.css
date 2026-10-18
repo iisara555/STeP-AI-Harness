@@ -3905,6 +3905,21 @@ nav .count {
 .feedback-scope input {
   width: auto;
 }
+.feedback-scope + .feedback-field {
+  margin-top: 12px;
+}
+.feedback-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.feedback-check input {
+  width: auto;
+}
+.feedback-report {
+  margin-top: 8px;
+}
 
 /* Usage terms on the last setup step and in the first-send dialog. */
 .terms {

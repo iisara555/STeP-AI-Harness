@@ -98,7 +98,7 @@ import {
   promotionPayload,
   recordPromotion,
 } from '../../src/modules/packs/index.js';
-import { submitSkill } from './skill-submit';
+import { FEEDBACK_CATEGORIES, submitFeedback, submitSkill } from './skill-submit';
 import { buildReceiptAiResolver, resolveReceiptAiResponse } from './receipt-ai';
 import { findClaudeCode, handoffText, openClaudeCode } from './handoff';
 import { resolveClaudeRuntime, claudeLogout } from './claude-auth';
@@ -111,7 +111,7 @@ import {
   antComponentSpec,
 } from './anthropic-auth';
 import { existsSync, watchFile, unwatchFile } from 'node:fs';
-import { loadPolicy, skillSubmitUrl, type PermissionMode } from './policy';
+import { feedbackSubmitUrl, loadPolicy, skillSubmitUrl, type PermissionMode } from './policy';
 import { ConsentMetrics } from './consent-metrics';
 import { sendConsent, type SendSignals } from './consent-plan';
 import { Approvals } from './approvals';
@@ -2420,6 +2420,60 @@ async function main() {
         if (identity !== phase4Identity()) throw new Error('POLICY_CHANGED');
         const { reference } = await submitSkill(url, { ...submission, appVersion: app.getVersion() }, (u, init) => net.fetch(u, init));
         return recordPromotion(workspace, id, { digest: submission.pack.digest, reference, credit });
+      }
+      case 'feedbackSend': {
+        // "แจ้งปัญหา / เสนอแนะ": only to the organization's intake (or the one set in policy). The employee's text, and
+        // the AI answer only when they chose to attach it, must pass the personal-data scan; a native dialog then shows what
+        // goes before anything leaves the computer. No chat history, files or drafts are sent.
+        const url = feedbackSubmitUrl(policyState.policy);
+        if (!url) throw new Error('FEEDBACK_SUBMIT_UNAVAILABLE');
+        const category = FEEDBACK_CATEGORIES.find(c => c === input.category);
+        const text = inputText(input.text, 2000).trim();
+        if (!category || !text) throw new Error('FEEDBACK_INVALID');
+        let answer: string | undefined;
+        if (input.attachAnswer === true) {
+          const s = store.session(inputText(input.sessionId, 128));
+          const index = Number(input.index);
+          const message = Number.isInteger(index) ? s.messages[index] : undefined;
+          if (message?.role !== 'assistant') throw new Error('FEEDBACK_INVALID');
+          answer = message.text.slice(0, 8000);
+        }
+        // The full personal-data scan, even where policy checks.privacy is off: this text leaves the app for a shared sheet.
+        if (privacy.evaluatePrivacyGate([text, answer || ''].join('\n')).action !== 'pass') throw new Error('FEEDBACK_PRIVACY');
+        const settings = store.settings();
+        const contributor =
+          input.includeName === true ? { name: settings.userName || '', team: settings.team || '' } : { name: '', team: '' };
+        const errorCode =
+          typeof input.errorCode === 'string' && /^[A-Z][A-Z0-9_]{1,63}$/.test(input.errorCode) ? input.errorCode : undefined;
+        const consent = await dialog.showMessageBox(window!, {
+          type: 'question',
+          buttons: [tm('ยกเลิก'), tm('ส่งถึงผู้ดูแล')],
+          defaultId: 0,
+          cancelId: 0,
+          message: tm('ส่งเรื่องนี้ถึงผู้ดูแลแอป'),
+          detail: tm(
+            'ระบบจะส่งข้อความของคุณ{0}{1} รุ่นแอป และระบบปฏิบัติการ ไปยังช่องทางรับความเห็นของผู้ดูแลที่ {2}\nไม่มีการส่งบทสนทนา ไฟล์ หรือร่างเอกสารอื่น',
+            answer ? tm(' คำตอบของ AI ที่แนบ') : '',
+            contributor.name ? tm(' ชื่อผู้ส่ง ({0})', contributor.name + (contributor.team ? ' · ' + contributor.team : '')) : '',
+            new URL(url).host,
+          ),
+        });
+        if (consent.response !== 1) throw new Error('CANCELLED');
+        return submitFeedback(
+          url,
+          {
+            schema: 1,
+            kind: 'feedback',
+            category,
+            text,
+            ...(answer ? { answer } : {}),
+            contributor,
+            ...(errorCode ? { errorCode } : {}),
+            os: process.platform + ' ' + process.arch,
+            appVersion: app.getVersion(),
+          },
+          (u, init) => net.fetch(u, init),
+        );
       }
       case 'packExport': {
         const selected = await dialog.showSaveDialog(window!, {
