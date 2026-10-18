@@ -15,6 +15,14 @@ export const en: Record<string, string> = {
   ...feedbackEn,
   ...skillSuggestEn,
   ...morningBriefEn,
+  'ปุ่ม "เพิ่ม Skill ของฉัน" ในหน้า Skills พร้อมเครดิตชื่อผู้เพิ่ม': '"Add my Skill" on the Skills page, with credit to whoever added it',
+  'ตรวจคำตอบเรื่อง STeP กับเอกสารองค์กรให้อัตโนมัติ': 'Answers about STeP are checked against the organization documents automatically',
+  'เมนูแจ้งปัญหา / เสนอแนะ ส่งเรื่องถึงผู้ดูแลได้ในไม่กี่คลิก': 'Report a problem or suggest an idea to the admins in a few clicks',
+  'ปุ่มลองใช้ Skill เหนือช่องแชท เมื่อมี Skill ที่ตรงกับสิ่งที่พิมพ์':
+    'A "Try this Skill" button above the composer when a Skill fits what you type',
+  'การ์ดสรุปเช้านี้ แสดงนัดและงานวันนี้จาก Google Calendar และ Tasks':
+    "A morning summary card with today's meetings and tasks from Google Calendar and Tasks",
+  'ตอบจากคู่มือคุณภาพ QP และ Master List ของ STeP ได้แล้ว': 'Answers from the STeP Quality Manual, procedures (QP) and Master Lists',
   'ช่องแชทเลือก AI โมเดล และระดับการคิดได้จากปุ่มเดียว ไม่ล้นเป็นสองบรรทัด':
     'Pick the AI, model and reasoning level from one button in the composer, so it stays on one row',
   'แถบเครื่องมือผลงานเป็นไอคอนพร้อมคำอธิบาย ไม่ต้องเลื่อนหาเครื่องมือ':

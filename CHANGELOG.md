@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+## Desktop v0.6.14 (2026-10-18)
+
 - Skills hub: a **เพิ่ม Skill ของฉัน** button beside the search opens the existing Skill Packs import, so staff no longer need the command palette to add their own Skill. Imported Skills appear under "Skill ของฉัน" with their state and the uploader's credit ("เพิ่มโดย ชื่อ · ทีม · วันที่", kept beside the pack, never in its files); one that is on can be used straight from its card. Organization Skills show the same credit from `contributors` in `manifest/skills.yaml`, which the intake script writes only after the uploader agreed to be credited. Policy `features.staffSkills: false` hides the button and the list.
 
 - Answers about STeP are now checked against the STeP documents they used by default (policy `features.answerCheck` is now true; owner's decision after the staff-experience review). Statements the documents do not support are listed under the answer. Only answers grounded in STeP documents get the extra model call, so general questions are not slower; IT can set the switch to false.
