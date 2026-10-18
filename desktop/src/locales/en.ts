@@ -2658,6 +2658,18 @@ export const en: Record<string, string> = {
   ความปลอดภัย: 'Safety',
   มาตรฐาน: 'Standard',
   'นำเข้าโดย {0}': 'Imported by {0}',
+  // Skills hub: the staff member's own Skills and uploader credit
+  'เพิ่ม Skill ของฉัน': 'Add my Skill',
+  'นำเข้า Skill จากโฟลเดอร์บนเครื่อง ระบบตรวจมาตรฐานและความปลอดภัยให้ก่อนใช้':
+    'Import a Skill from a folder on this computer; it is checked for standards and safety before use',
+  'Skill ของฉัน': 'My Skills',
+  'Skill ขององค์กร': 'Organization Skills',
+  'Skill ที่พนักงานเพิ่ม': 'Added by staff',
+  'เพิ่มโดย {0}': 'Added by {0}',
+  ยังไม่เปิดใช้: 'Not on yet',
+  ตรวจไฟล์ไม่ผ่าน: 'File check failed',
+  'เลือก Skill ในชุด': 'Choose a Skill in the pack',
+  ดูผลตรวจและเปิดใช้: 'See the check and turn it on',
   // Staff Skills: personal use and usage counts
   'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน': 'Let staff use their own Skills once they pass the checks',
   'Skill นี้ยังไม่ผ่านการตรวจ แก้ตามรายการแล้วนำเข้าใหม่ก่อนใช้':

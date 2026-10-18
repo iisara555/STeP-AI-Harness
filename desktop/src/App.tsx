@@ -92,7 +92,7 @@ import { SectionArt } from './illustration';
 import { Avatar } from './avatars';
 import { SidebarRail, readSidebarChoice, saveSidebarChoice } from './sidebar-rail';
 import { UpdateCard, VersionLine, useUpdate } from './update';
-import type { Attachment, Connection, PlanStep, Session, SkillEntry, Snapshot } from './types';
+import type { Attachment, Connection, PlanStep, Session, OwnPack, SkillEntry, Snapshot } from './types';
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
@@ -166,6 +166,7 @@ export default function App() {
   const [learningOpen, setLearningOpen] = useState(false),
     [learningText, setLearningText] = useState('');
   const [packsOpen, setPacksOpen] = useState(false),
+    [ownPacks, setOwnPacks] = useState<OwnPack[] | null>(null),
     [keyboardOpen, setKeyboardOpen] = useState(false),
     [vimNormal, setVimNormal] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false),
@@ -573,6 +574,19 @@ export default function App() {
       .then(setSkills)
       .catch(() => setSkills([]));
   }, [api]);
+  // The Skills hub lists what this computer imported; reread after the Skill Packs window closes.
+  const ownSkillsAllowed = snapshot?.policy?.features.staffSkills !== false;
+  useEffect(() => {
+    if (!api || view !== 'skills' || packsOpen || !ownSkillsAllowed) return;
+    let live = true;
+    void api
+      .call('packList')
+      .then(list => live && setOwnPacks(list))
+      .catch(() => live && setOwnPacks([]));
+    return () => {
+      live = false;
+    };
+  }, [api, view, packsOpen, ownSkillsAllowed]);
   // Set during render so every child of this pass reads the chosen language.
   setLanguage(snapshot?.settings.language);
   useEffect(() => {
@@ -1785,6 +1799,18 @@ export default function App() {
               team={myTeam}
               onUse={useSkill}
               onOpenTool={id => navigate(id === 'documents' ? 'documents' : 'receipt')}
+              ownPacks={ownPacks}
+              onAddOwn={ownSkillsAllowed ? () => setPacksOpen(true) : undefined}
+              onUsePack={(id, assetId) =>
+                void action(async () => {
+                  const asset = await api.call('packAsset', { id, assetId, kind: 'skill' });
+                  setPendingSource(
+                    `<imported_asset label="${asset.label}" trust="untrusted">\n${asset.text.replace(/</g, '&lt;')}\n</imported_asset>`,
+                  );
+                  navigate('chat');
+                  notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
+                })
+              }
             />
           ) : (
             <>
