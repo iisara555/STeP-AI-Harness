@@ -575,7 +575,11 @@ export class AgentBrowser {
     // Signing in loads the next page; the result waits for it so the AI's next read sees that page, not this form.
     let arrived = () => {};
     const navigated = new Promise<boolean>(done => (arrived = () => done(true)));
-    if (submit) entry.contents.once('did-navigate', arrived);
+    // A login that swaps the page with a script (no full load) moves within the page instead.
+    if (submit) {
+      entry.contents.once('did-navigate', arrived);
+      entry.contents.once('did-navigate-in-page', arrived);
+    }
     try {
       if (signal.aborted) throw new Error('CANCELLED');
       if (tool.isAttached()) throw new Error('VAULT_TRANSPORT_BUSY');
@@ -598,19 +602,34 @@ export class AgentBrowser {
           const user=identifiers[0], pass=passwords[0], form=pass?.form||user?.form;
           const valid=()=>location.origin===expected.origin && location.href===expected.url && form?.isConnected && form.method.toLowerCase()==='post' && new URL(form.action||location.href,location.href).origin===expected.origin && JSON.stringify([location.href,form.outerHTML])===expected.fingerprint;
           if(passwords.length>1||identifiers.length>1||!form||user&&user.form!==form||pass&&pass.form!==form||!valid()) return {status:'changed',filledFields:[]};
+          // The form was checked whole above; typing may then change its HTML (validation marks), so each field
+          // only rechecks that the page and form are the same ones.
+          const same=()=>location.origin===expected.origin&&location.href===expected.url&&form.isConnected&&new URL(form.action||location.href,location.href).origin===expected.origin;
           const filled=[];
-          const fill=(el,value,name)=>{if(!visible(el)||!valid())return false;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));filled.push(name);return true;};
+          const fill=(el,value,name)=>{if(!visible(el)||!same())return false;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));filled.push(name);return true;};
           if(user&&!fill(user,username,'username'))return {status:'changed',filledFields:filled};
           if(pass&&!fill(pass,password,'password'))return {status:'partial',filledFields:filled};
           if(!submit)return {status:'filled',filledFields:filled,origin:expected.origin};
-          // Sign in with the form's own button (its click handler runs as if the employee pressed it); a form with
-          // several buttons is ambiguous and stays for the employee.
-          const buttons=[...form.elements].filter(el=>visible(el)&&(el.tagName==='BUTTON'&&el.type==='submit'||el.tagName==='INPUT'&&['submit','image'].includes(el.type)));
-          if(buttons.length>1||!valid())return {status:'filled',filledFields:filled,origin:expected.origin,submitted:false};
-          if(buttons.length)buttons[0].click();else form.requestSubmit();
-          return {status:'filled',filledFields:filled,origin:expected.origin,submitted:true};
+          // Wait briefly: pages enable their sign-in button a moment after typing.
+          return new Promise(done=>setTimeout(done,400)).then(()=>{
+            const words=el=>[el.innerText||'',el.value||'',el.getAttribute('aria-label')||'',el.getAttribute('title')||''].join(' ');
+            const named=el=>/\\b(log ?in|sign ?in)\\b|เข้าสู่ระบบ|ลงชื่อเข้าใช้|เข้าระบบ|ล็อกอิน|ล็อคอิน/i.test(words(el));
+            const submits=[...form.elements].filter(el=>visible(el)&&(el.tagName==='BUTTON'&&el.type==='submit'||el.tagName==='INPUT'&&['submit','image'].includes(el.type)));
+            // Sign in with the page's own button (its click handler runs as if the employee pressed it): the one
+            // submit button, else the one button named for signing in (a show-password eye is also a button, and
+            // some intranet pages sign in from a plain button next to the form). Anything ambiguous stays for the employee.
+            let target=submits.length===1?submits[0]:null;
+            if(!target){
+              const signIn=[...new Set([...form.querySelectorAll('button,input[type=button],input[type=submit],a[role=button]'),...document.querySelectorAll('button,input[type=button],input[type=submit]')])].filter(el=>visible(el)&&named(el));
+              if(signIn.length===1)target=signIn[0];
+            }
+            if(!same()||!target&&submits.length)return {status:'filled',filledFields:filled,origin:expected.origin,submitted:false};
+            if(target)target.click();else form.requestSubmit();
+            return {status:'filled',filledFields:filled,origin:expected.origin,submitted:true};
+          });
         }`,
         arguments: [{ value: payload.username }, { value: payload.password }, { value: expected }, { value: submit }],
+        awaitPromise: true,
       });
       const reply: any = await Promise.race([
         work,
@@ -631,7 +650,16 @@ export class AgentBrowser {
         throw new Error('VAULT_OUTCOME_UNKNOWN');
       if (submit && value.submitted === true) {
         clearTimeout(timer);
-        const moved = await Promise.race([navigated, new Promise<boolean>(done => (timer = setTimeout(() => done(false), 15000)))]);
+        let moved = await Promise.race([navigated, new Promise<boolean>(done => (timer = setTimeout(() => done(false), 15000)))]);
+        // A script login can replace the form without any navigation; the password box being gone means it went through.
+        if (!moved && !entry.contents.isDestroyed())
+          moved = await entry.contents
+            .executeJavaScriptInIsolatedWorld(WORLD, [
+              {
+                code: `![...document.querySelectorAll('input[type=password]')].some(el => el.isConnected && el.getBoundingClientRect().width > 0)`,
+              },
+            ])
+            .then(Boolean, () => false);
         return { status: value.status, filledFields: value.filledFields, origin: expected.origin, submitted: true, navigated: moved };
       }
       return {
@@ -648,7 +676,10 @@ export class AgentBrowser {
       clearTimeout(timer);
       signal.removeEventListener('abort', stop);
       tool.removeListener('message', contexts);
-      if (!entry.contents.isDestroyed()) entry.contents.removeListener('did-navigate', arrived);
+      if (!entry.contents.isDestroyed()) {
+        entry.contents.removeListener('did-navigate', arrived);
+        entry.contents.removeListener('did-navigate-in-page', arrived);
+      }
       if (attached && tool.isAttached()) tool.detach();
       entry.busy = false;
     }

@@ -15,6 +15,8 @@ export const en: Record<string, string> = {
   ...feedbackEn,
   ...skillSuggestEn,
   ...morningBriefEn,
+  'กดเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง':
+    'After filling a saved Vault account, the app presses sign in itself on sites like STeP MBS',
   'ปุ่ม "เพิ่ม Skill ของฉัน" ในหน้า Skills พร้อมเครดิตชื่อผู้เพิ่ม': '"Add my Skill" on the Skills page, with credit to whoever added it',
   'ตรวจคำตอบเรื่อง STeP กับเอกสารองค์กรให้อัตโนมัติ': 'Answers about STeP are checked against the organization documents automatically',
   'เมนูแจ้งปัญหา / เสนอแนะ ส่งเรื่องถึงผู้ดูแลได้ในไม่กี่คลิก': 'Report a problem or suggest an idea to the admins in a few clicks',

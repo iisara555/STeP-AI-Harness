@@ -8,6 +8,8 @@ _Last updated: 2026-10-18_
 
 ## Latest release
 
+- **Desktop v0.6.15** (2026-10-18) — owner asked to ship #210 right away: Vault website sign-in presses the sign-in button on STeP MBS-style pages. After publishing: the owner retries STeP MBS on a real machine, and the landing page links move to 0.6.15.
+
 - **Desktop v0.6.14** (2026-10-18) — combined release the owner asked for, from `main` after #203–#208: เพิ่ม Skill ของฉัน + uploader credit (#203), answer check on by default (#204), แจ้งปัญหา / เสนอแนะ + เสนอให้องค์กรใช้ fix (#205), ลองใช้ Skill chip (#206), สรุปเช้านี้ card (#207), STeP MIS QM/QP/Master List texts in knowledge search (#208). After publishing: the owner redeploys the Apps Script for the feedback tab, and the landing page links move to 0.6.14.
 
 - **Desktop v0.6.13** (2026-10-17) — prepared from `main` after #195–#201: composer AI pill and icon draft toolbar (#199), scheduled tasks page on by default and sidebar tools as icons (#201), Vault website sign-in (#200), Google sign-in failure reasons, built-in OAuth client and plain-language Workspace routing (#195–#198). Windows x64 and macOS arm64.
@@ -34,6 +36,8 @@ _Last updated: 2026-10-18_
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **Vault sign-in presses the button on STeP MBS (2026-10-18, owner chose "ผ่อนตามนี้")**: on 0.6.14 the app filled the saved account but left the sign-in to the employee, because typing changed the form's HTML and a show-password button made the submit button ambiguous. `fillVault` now checks the whole form once, rechecks only page/form/action per field, waits 400 ms, and presses the single submit button or the single button named for signing in; a vanished password box counts as signed in. New case in `test/vault-electron-smoke.mjs` fails on the old code. Ships in 0.6.15; waits on the owner retrying STeP MBS on a real machine.
 
 - **เพิ่ม Skill ของฉัน on the Skills hub (2026-10-18, owner: "เอาครับ และให้ credit ผู้อัพโหลด")**: the hub has an add button that opens the Skill Packs import, a "Skill ของฉัน" section listing packs imported on this computer with state, uploader credit and a direct use button, and credit on organization Skills from manifest `contributors` (parsed by `src/modules/skills/catalog.js`). `features.staffSkills: false` hides button and list. Checked: root tests and validate_repo, Desktop format/unit (Office-runtime tests cannot run in cloud)/build, new `test/skills-hub.test.ts` and Linux `test/own-skills-smoke.mjs` (import, credit, use, hidden by policy). Waits on the owner: merge; rides the release after 0.6.13.
 
