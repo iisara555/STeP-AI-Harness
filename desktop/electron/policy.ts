@@ -206,9 +206,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // for the team running the OCR pilot, not for every employee, so they stay hidden until an administrator turns them on.
   ocrTrial: false,
   // After a chat answer that drew on STeP documents, a second model call checks the answer's statements about STeP
-  // against those document excerpts and shows any it cannot find there. Each check is one more model call, so it is off
-  // until an administrator turns it on.
-  answerCheck: false,
+  // against those document excerpts and shows any it cannot find there. On by default so staff see when an answer goes
+  // beyond the documents (owner's decision, 2026-10-18); it runs only for answers grounded in STeP documents, so general
+  // questions are not slowed. Each check is one more model call; IT can set it to false.
+  answerCheck: true,
   // When the employee has not picked a reasoning level, a short chat question gets a light level and a large task (a
   // Playbook, plan mode, a long request or many files) a deeper one, within the levels the model offers (electron/effort.ts).
   // The employee's choice always wins. IT can set it to false to always use the model default.
