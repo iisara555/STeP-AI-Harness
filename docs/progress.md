@@ -4,7 +4,7 @@ Shared state for every agent and person working on this repository (see [AGENTS.
 pull request that changes the state. Newest first inside each section; keep it short and move finished items to the
 CHANGELOG instead of growing this file.
 
-_Last updated: 2026-10-17_
+_Last updated: 2026-10-18_
 
 ## Latest release
 
@@ -32,6 +32,8 @@ _Last updated: 2026-10-17_
 - **Desktop v0.5.39** (2026-10-11) — published from PR #135 (`7f33d12`): managed/local Dev mode gates for Claude plan access, bounded cold fallback and idle prewarming cleanup. Windows x64 and macOS Apple silicon installers are published; Harness **0.7.7**. Intel Macs stay on 0.5.35. The audit fixes below are pull requests and are not in this release.
 
 ## In progress
+
+- **ลองใช้ Skill (2026-10-18, staff-experience review item B, owner approved)**: a high-confidence local Router match for the text being typed is offered as one button above the composer (`skillSuggest` IPC, policy `features.skillSuggestions`); `autoRouting` stays off. Smoke `test/skill-suggest-smoke.mjs`.
 
 - **Vault sign-in for websites (2026-10-17, owner report: saved the STeP MIS account but the AI still did not sign in)**: the AI was never told `browser_vault` exists, and the browser and STeP MIS rules told it to ask the employee to sign in by hand, so saved accounts were unused on every provider (not specific to Gemini via Antigravity). The rules now list and fill the saved account first; `fill` with `submit: true` presses the form's single sign-in button under the one approval, and reading resumes when the next page loads. Username boxes without a telling name are recognized (single plain text box in the password's form), and pasted login page addresses save as the origin. Checked: Desktop format, unit (814 passed; the 2 Office-runtime tests cannot run in cloud), build, Linux browser-agent and browser-loop smokes; `vault-electron-smoke` passes on Linux only with a mock key store (no OS key store in cloud) and its new sign-in phase fails on the old code. Not verified: the real MIS page (unreachable from cloud) and a real Antigravity run. Waits on the owner: merge, then try MIS on a real machine; rides the next combined release.
 - **งานตั้งเวลา page (2026-10-17, owner asked for scheduled tasks like ChatGPT/Claude routines)**: a sidebar page (`desktop/src/schedules-app.tsx`, `schedules.ts`) replaces the scheduled-jobs part of the old automations dialog, with local-time schedules, three ready-made tasks, run now/pause/edit/delete, and a 12-hour catch-up for runs missed while the app was closed (`desktop/electron/cron.ts`). MCP and Docker keep their own dialog. Policy `features.cron` now defaults to true (owner's decision 2026-10-17); IT can set it to false. Next: a morning-brief template that reads today's calendar and Google Tasks.

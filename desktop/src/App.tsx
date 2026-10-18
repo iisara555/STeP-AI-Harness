@@ -258,6 +258,9 @@ export default function App() {
   const [whatsNew, setWhatsNew] = useState<ReleaseNote[] | null>(null);
   const [skills, setSkills] = useState<SkillEntry[] | null>(null),
     [forcedSkill, setForcedSkill] = useState(''),
+    // "ลองใช้ Skill": the Skill the Router finds clearly fits what is being typed, and the ones the person waved away.
+    [suggestedSkill, setSuggestedSkill] = useState(''),
+    [dismissedSkills, setDismissedSkills] = useState<string[]>([]),
     [slashIndex, setSlashIndex] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [toasts, setToasts] = useState<Toast[]>([]),
@@ -1097,6 +1100,35 @@ export default function App() {
     setTimeout(() => composerRef.current?.focus(), 0);
   };
   const forced = routedSkills.find(s => s.name === forcedSkill);
+  const canSuggest =
+    snapshot?.policy?.features.skillSuggestions !== false &&
+    !snapshot?.policy?.features.autoRouting &&
+    view === 'chat' &&
+    !settings &&
+    !running &&
+    !forcedSkill &&
+    !session?.skill &&
+    !session?.documentTool &&
+    !query.startsWith('/');
+  useEffect(() => {
+    setSuggestedSkill('');
+    if (!api || !canSuggest || query.trim().length < 8) return;
+    let alive = true;
+    // Only once typing pauses, so the Router is not asked on every key.
+    const timer = setTimeout(() => {
+      void api
+        .call('skillSuggest', { text: query })
+        .then((found: { skill: string } | null) => {
+          if (alive && found && !dismissedSkills.includes(found.skill)) setSuggestedSkill(found.skill);
+        })
+        .catch(() => {});
+    }, 500);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [api, query, canSuggest, dismissedSkills]);
+  const suggested = canSuggest ? routedSkills.find(s => s.name === suggestedSkill) : undefined;
   // Tasks that were opened but never used (older versions created them eagerly) stay out of the list.
   const filtered =
     snapshot?.sessions.filter(
@@ -2321,6 +2353,33 @@ export default function App() {
                           {t('ไปที่การเชื่อมต่อ AI')}
                         </button>
                       )}
+                    </div>
+                  )}
+                  {suggested && (
+                    <div className="skill-chip skill-suggestion" role="status">
+                      <Blocks size={13} />
+                      <span>{t('งานนี้มี Skill ที่ช่วยได้:')}</span>
+                      <button
+                        className="quiet"
+                        title={suggested.description}
+                        onClick={() => {
+                          setForcedSkill(suggested.name);
+                          setSuggestedSkill('');
+                          composerRef.current?.focus();
+                        }}
+                      >
+                        {t('ลองใช้ Skill: {0}', suggested.title)}
+                      </button>
+                      <button
+                        className="icon"
+                        aria-label={t('ไม่ใช้ Skill ที่แนะนำ')}
+                        onClick={() => {
+                          setDismissedSkills(list => [...list, suggested.name]);
+                          setSuggestedSkill('');
+                        }}
+                      >
+                        <X size={13} />
+                      </button>
                     </div>
                   )}
                   {forced && (

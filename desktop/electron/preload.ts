@@ -62,6 +62,7 @@ const allowed = new Set([
   'sessionFork',
   'sessionExport',
   'snapshot',
+  'skillSuggest',
   'appReady',
   'usage',
   'providerUsage',

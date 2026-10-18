@@ -2176,6 +2176,20 @@ async function main() {
         return true;
       case 'snapshot':
         return snapshot();
+      case 'skillSuggest': {
+        // The Skill that clearly fits the text being typed, for the "ลองใช้ Skill" button. Local Router scoring only; with
+        // autoRouting on the Router already picks Skills itself, so nothing is suggested.
+        const features = policyState.policy.features;
+        const text = inputText(input.text, 4000).trim();
+        if (!features.skillSuggestions || features.autoRouting || text.length < 8) return null;
+        const routed = await routing.queryStepRouter(text, {
+          autoRoute: false,
+          authorityChecks: false,
+          team: store.settings().team,
+          workspaceDir: store.settings().workspace || data,
+        });
+        return routed.routingConfidence?.tier === 'HIGH' && routed.bestMatch?.skill ? { skill: routed.bestMatch.skill } : null;
+      }
       case 'automationList':
         return { jobs: automations.list(), history: automations.history(), enabled: policyState.policy.features.cron };
       case 'automationSave': {
