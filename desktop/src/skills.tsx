@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Blocks, ReceiptText, Search } from 'lucide-react';
-import type { SkillEntry } from './types';
+import { ArrowRight, Blocks, Plus, ReceiptText, Search } from 'lucide-react';
+import type { OwnPack, SkillEntry } from './types';
 import { t } from './i18n';
+import { shownDate } from './messages';
 import { SectionArt } from './illustration';
 
 import { statusTag, tools, filters } from './skill-capabilities';
@@ -10,17 +11,30 @@ export { statusTag, toolCount } from './skill-capabilities';
 // "common" means the Skill belongs to every team, so it reads as such instead of a team code.
 const ownerLabel = (owner: string) => (owner === 'common' ? t('ใช้ได้ทุกทีม') : `${t('ทีม')} ${owner.toUpperCase()}`);
 const fold = (value: string) => value.toLowerCase().replace(/[-_\s]+/g, ' ');
+// "เพิ่มโดย ชื่อ · ทีม · วันที่": who brought a Skill in, kept outside its files.
+const creditLine = (people: { name: string; team?: string; date?: string }[]) =>
+  t('เพิ่มโดย {0}', people.map(p => [p.name, p.team, p.date && shownDate(p.date)].filter(Boolean).join(' · ')).join(', '));
+const packState = (p: OwnPack) =>
+  p.invalid ? 'ตรวจไฟล์ไม่ผ่าน' : p.enabled ? (p.personal ? 'ใช้เองบนเครื่องนี้' : 'เปิดใช้แล้ว') : 'ยังไม่เปิดใช้';
 
 export function SkillsHub({
   skills,
   team = '',
   onUse,
   onOpenTool,
+  ownPacks = null,
+  onAddOwn,
+  onUsePack,
 }: {
   skills: SkillEntry[] | null;
   team?: string;
   onUse: (name: string) => void;
   onOpenTool: (id: string) => void;
+  /** Skill Packs imported on this computer; shown only while staff may add their own (onAddOwn given). */
+  ownPacks?: OwnPack[] | null;
+  /** Opens the Skill Packs import; left out when the administrator turned staff Skills off. */
+  onAddOwn?: () => void;
+  onUsePack?: (pack: string, skill: string) => void;
 }) {
   // Staff see their own team's Skills first; the rest follow in name order.
   const mine = (s: SkillEntry) => Boolean(team) && (s.owner === team || s.teams.includes(team));
@@ -43,6 +57,10 @@ export function SkillsHub({
       )
       .sort((a, b) => Number(!mine(a)) - Number(!mine(b)));
   }, [skills, query, filter, team]);
+  const visibleOwn =
+    onAddOwn && filter === 'all'
+      ? (ownPacks || []).filter(p => !query.trim() || fold([p.id, ...p.skills.map(s => s.id)].join(' ')).includes(fold(query.trim())))
+      : [];
   const visibleTools = tools.filter(
     t => (filter === 'all' || filter === 'tool') && (!query.trim() || fold(t.title + ' ' + t.description).includes(fold(query.trim()))),
   );
@@ -52,10 +70,22 @@ export function SkillsHub({
       <h1 className="sr-only">{t('ศูนย์รวม Skill')}</h1>
       <div className="skills-head">
         <div className="skills-controls">
-          <label className="skills-search">
-            <Search size={16} />
-            <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
-          </label>
+          <div className="skills-search-row">
+            <label className="skills-search">
+              <Search size={16} />
+              <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
+            </label>
+            {onAddOwn && (
+              <button
+                className="skills-add"
+                onClick={onAddOwn}
+                title={t('นำเข้า Skill จากโฟลเดอร์บนเครื่อง ระบบตรวจมาตรฐานและความปลอดภัยให้ก่อนใช้')}
+              >
+                <Plus size={15} />
+                {t('เพิ่ม Skill ของฉัน')}
+              </button>
+            )}
+          </div>
           <div className="skills-filters" role="tablist" aria-label={t('กรองตามสถานะ')}>
             {filters.map(([id, label]) => (
               <button
@@ -76,6 +106,39 @@ export function SkillsHub({
         </div>
         <SectionArt scene="skills" className="skills-illustration" />
       </div>
+      {visibleOwn.length > 0 && (
+        <section className="skills-own" aria-label={t('Skill ของฉัน')}>
+          <h2>{t('Skill ของฉัน')}</h2>
+          <div className="skills-grid">
+            {visibleOwn.map(p => (
+              <article key={p.id} className="skill-card">
+                <header>
+                  <Blocks size={16} />
+                  <strong>{p.skills.length === 1 ? p.skills[0].id : p.id}</strong>
+                </header>
+                {p.skills.length > 1 && <p>{p.skills.map(s => s.id).join(', ')}</p>}
+                <div className="skill-tags">
+                  <span className={`tag ${p.enabled ? 'routed' : p.invalid ? 'unregistered' : 'registered'}`}>{t(packState(p))}</span>
+                  <span className="tag">{t('Skill ที่พนักงานเพิ่ม')}</span>
+                </div>
+                {p.credit && <small className="skill-credit">{creditLine([{ ...p.credit, date: p.credit.uploadedAt }])}</small>}
+                {p.enabled && p.skills.length === 1 && onUsePack ? (
+                  <button className="quiet" onClick={() => onUsePack(p.id, p.skills[0].id)}>
+                    {t('ใช้ Skill นี้')}
+                    <ArrowRight size={14} />
+                  </button>
+                ) : (
+                  <button className="quiet" onClick={onAddOwn}>
+                    {t(p.enabled ? 'เลือก Skill ในชุด' : 'ดูผลตรวจและเปิดใช้')}
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+          <h2>{t('Skill ขององค์กร')}</h2>
+        </section>
+      )}
       {!skills && <p className="muted">{t('กำลังโหลดรายชื่อ Skill…')}</p>}
       <div className="skills-grid">
         {visibleTools.map(tool => (
@@ -119,6 +182,7 @@ export function SkillsHub({
                 </span>
                 {s.owner && <span className="tag">{ownerLabel(s.owner)}</span>}
               </div>
+              {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
               {s.status === 'routed' ? (
                 <button className="quiet" onClick={() => onUse(s.name)}>
                   {t('ใช้ Skill นี้')}

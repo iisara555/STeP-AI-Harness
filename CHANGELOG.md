@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Skills hub: a **เพิ่ม Skill ของฉัน** button beside the search opens the existing Skill Packs import, so staff no longer need the command palette to add their own Skill. Imported Skills appear under "Skill ของฉัน" with their state and the uploader's credit ("เพิ่มโดย ชื่อ · ทีม · วันที่", kept beside the pack, never in its files); one that is on can be used straight from its card. Organization Skills show the same credit from `contributors` in `manifest/skills.yaml`, which the intake script writes only after the uploader agreed to be credited. Policy `features.staffSkills: false` hides the button and the list.
+
 ## Desktop v0.6.13 (2026-10-17)
 
 - Sign in to websites with a saved Vault account. The AI was never told about `browser_vault`, and the browser and STeP MIS rules told it to always ask the employee to sign in by hand, so a saved account was never used. When a page needs a login the AI now lists saved accounts for that exact site and asks to fill one; one approval ("กรอกบัญชีนี้แล้วกดเข้าสู่ระบบให้?") fills the username and password and presses the form's own sign-in button. The AI still never sees the password, and reading resumes by itself once the next page loads (the filled form is gone). Login forms whose username box has no telling name (a single plain text box beside the password) are now recognized, and a pasted login page address or a bare host is saved as its HTTPS origin.

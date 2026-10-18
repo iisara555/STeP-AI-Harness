@@ -56,6 +56,17 @@ export type SkillEntry = {
   cluster: string;
   teams: string[];
   triggers: string[];
+  /** Staff credited for an organization Skill (manifest contributors, written only with their consent). */
+  contributors?: { name: string; team?: string; date?: string }[];
+};
+/** A Skill Pack imported on this computer, as packList returns it; credit stays beside the pack, never in its files. */
+export type OwnPack = {
+  id: string;
+  enabled: boolean;
+  personal?: boolean;
+  invalid?: boolean;
+  skills: { id: string }[];
+  credit?: { name: string; team?: string; uploadedAt: string };
 };
 export type Usage = { input: number; output: number; total: number; runs: number };
 /** Only provider-reported account meters. Unknown values stay absent, never zero. */

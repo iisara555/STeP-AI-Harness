@@ -5988,3 +5988,33 @@ summary {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.skills-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.skills-search-row .skills-search {
+  flex: 1;
+  min-width: 0;
+}
+.skills-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 13px;
+  padding: 0 14px;
+  border-radius: 8px;
+}
+.skills-own h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.skills-own .skills-grid + h2 {
+  margin-top: 22px;
+}
+.skill-card > .skill-credit {
+  margin-top: 0;
+  color: var(--muted);
+}
