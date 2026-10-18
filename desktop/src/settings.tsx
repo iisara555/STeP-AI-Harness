@@ -31,6 +31,7 @@ const featureNames: Record<string, string> = localized({
   headless: 'สั่งงานแบบไม่เปิดหน้าต่าง',
   skillPacks: 'เปิด Skill Pack ที่ผู้ดูแลรับรอง พร้อม Hooks และ Agent',
   staffSkills: 'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน',
+  feedback: 'ให้พนักงานแจ้งปัญหาและข้อเสนอแนะถึงผู้ดูแล',
   cron: 'งานตั้งเวลา',
   coordinator: 'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว',
   memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',
@@ -67,7 +68,18 @@ const POLICY_GROUPS: [string, string[]][] = [
   ['ข้อมูลและความเป็นส่วนตัว', ['vault', 'memoryTeam', 'learningReview', 'maintenance']],
   [
     'ส่วนเสริมและการเชื่อมต่อ',
-    ['googleWorkspace', 'mcp', 'lineGateway', 'copilot', 'compatibleProviders', 'providerPresets', 'skillPacks', 'staffSkills', 'ocrTrial'],
+    [
+      'googleWorkspace',
+      'mcp',
+      'lineGateway',
+      'copilot',
+      'compatibleProviders',
+      'providerPresets',
+      'skillPacks',
+      'staffSkills',
+      'feedback',
+      'ocrTrial',
+    ],
   ],
   ['การอัปเดตและนักพัฒนา', ['autoUpdate', 'developmentMode', 'claudeSubscription', 'shellByAi', 'autoMerge', 'sandbox', 'headless']],
 ];

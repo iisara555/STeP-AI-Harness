@@ -22,6 +22,8 @@ const allowed = new Set([
   'packEnable',
   'packAsset',
   'packExport',
+  'packPromote',
+  'feedbackSend',
   'voiceStatus',
   'voiceInstall',
   'voicePermission',

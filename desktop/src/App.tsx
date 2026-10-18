@@ -108,7 +108,7 @@ import { QuestionCard } from './tool-question';
 import { UsageDialog } from './usage';
 import { MemoryDialog } from './memory';
 import { LearningDialog } from './learning';
-import { FeedbackButtons, FeedbackDialog, type FeedbackAsk } from './feedback';
+import { FeedbackButtons, FeedbackDialog, ReportDialog, type FeedbackAsk, type ReportAsk } from './feedback';
 import { AutomationDialog } from './automations';
 import { commandPalette, commandForKey, vimEdit, COMMANDS } from './commands';
 import { TitleBar, shortcutText } from './titlebar';
@@ -271,6 +271,7 @@ export default function App() {
     [startedAt, setStartedAt] = useState(0),
     [now, setNow] = useState(Date.now());
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAsk | null>(null);
+  const [reportAsk, setReportAsk] = useState<ReportAsk | null>(null);
   const [chatMenu, setChatMenu] = useState(false);
   const [consentAsk, setConsentAsk] = useState<{
     sessionId: string;
@@ -1149,6 +1150,15 @@ export default function App() {
     automations: () => setAutomationOpen(true),
     settings: () => openSettings(),
     keyboard: () => setKeyboardOpen(true),
+    // Absent when IT turned "แจ้งปัญหา / เสนอแนะ" off, so the palette and menu do not offer it.
+    feedback:
+      snapshot?.policy?.features.feedback === false
+        ? undefined
+        : () => {
+            // The task's latest error code (never its text) helps the administrators see what went wrong.
+            const code = [...(session?.messages || [])].reverse().find(m => m.role === 'status')?.text;
+            setReportAsk({ errorCode: code && /^[A-Z][A-Z0-9_]{1,63}$/.test(code) && code !== 'CANCELLED' ? code : undefined });
+          },
     tour: () => {
       setSettings(false);
       navigate('chat');
@@ -1214,9 +1224,10 @@ export default function App() {
         return;
       }
       const id = commandForKey(e, keybindingsRef.current, macKeys);
-      if (id && id in commandRef.current) {
+      const run = id && id in commandRef.current ? commandRef.current[id as keyof typeof commands] : undefined;
+      if (run) {
         e.preventDefault();
-        commandRef.current[id as keyof typeof commands]();
+        run();
       }
     };
     window.addEventListener('keydown', listener);
@@ -1323,6 +1334,7 @@ export default function App() {
         right={right}
         showRight={!settings && view === 'chat'}
         theme={snapshot.settings.theme}
+        feedback={snapshot.policy?.features.feedback !== false}
       />
       <div className="app" style={{ '--artifact-width': `${width}px` } as React.CSSProperties}>
         {!fullSidebar && (
@@ -3185,6 +3197,24 @@ export default function App() {
             call={api.call}
             hasWorkspace={Boolean(snapshot?.settings.workspace)}
             onClose={() => setFeedbackAsk(null)}
+            onDone={text => notify(text, 'success')}
+            onReport={
+              snapshot?.policy?.features.feedback === false
+                ? undefined
+                : text => {
+                    setReportAsk({ sessionId: feedbackAsk.sessionId, index: feedbackAsk.index, text });
+                    setFeedbackAsk(null);
+                  }
+            }
+          />
+        )}
+        {reportAsk && api && (
+          <ReportDialog
+            ask={reportAsk}
+            call={api.call}
+            userName={snapshot?.settings.userName || ''}
+            team={snapshot?.settings.team || ''}
+            onClose={() => setReportAsk(null)}
             onDone={text => notify(text, 'success')}
           />
         )}

@@ -20,9 +20,46 @@ export async function submitSkill(
   fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
   timeoutMs = 30_000,
 ): Promise<{ reference: string }> {
-  if (!SKILL_SUBMIT_URL.test(url)) throw new Error('SKILL_SUBMIT_UNAVAILABLE');
-  const body = JSON.stringify(submission);
-  if (body.length > 2_500_000) throw new Error('SKILL_SUBMIT_TOO_LARGE');
+  return postIntake(url, submission, 2_500_000, 'SKILL_SUBMIT', fetcher, timeoutMs);
+}
+
+export const FEEDBACK_CATEGORIES = ['problem', 'idea', 'answer'] as const;
+export type FeedbackSubmission = {
+  schema: 1;
+  kind: 'feedback';
+  category: (typeof FEEDBACK_CATEGORIES)[number];
+  text: string;
+  /** The AI answer the employee chose to attach, after the privacy check. */
+  answer?: string;
+  /** Empty when the employee chose not to send their name. */
+  contributor: { name: string; team: string };
+  /** The last error code shown in the task, such as PROVIDER_NETWORK. Never message text. */
+  errorCode?: string;
+  os: string;
+  appVersion: string;
+};
+
+/** Sends one "แจ้งปัญหา / เสนอแนะ" to the same intake as Skills. Errors are FEEDBACK_SUBMIT_*. */
+export async function submitFeedback(
+  url: string,
+  submission: FeedbackSubmission,
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  timeoutMs = 30_000,
+): Promise<{ reference: string }> {
+  return postIntake(url, submission, 20_000, 'FEEDBACK_SUBMIT', fetcher, timeoutMs);
+}
+
+async function postIntake(
+  url: string,
+  value: unknown,
+  limit: number,
+  code: 'SKILL_SUBMIT' | 'FEEDBACK_SUBMIT',
+  fetcher: (url: string, init: RequestInit) => Promise<Response>,
+  timeoutMs: number,
+): Promise<{ reference: string }> {
+  if (!SKILL_SUBMIT_URL.test(url)) throw new Error(code + '_UNAVAILABLE');
+  const body = JSON.stringify(value);
+  if (body.length > limit) throw new Error(code + '_TOO_LARGE');
   let response: Response;
   try {
     response = await fetcher(url, {
@@ -33,10 +70,10 @@ export async function submitSkill(
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
-    throw new Error('SKILL_SUBMIT_FAILED');
+    throw new Error(code + '_FAILED');
   }
   const answer = await response.json().catch(() => null);
   if (!response.ok || !answer || answer.ok !== true || typeof answer.id !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(answer.id))
-    throw new Error(answer && answer.ok === false ? 'SKILL_SUBMIT_REJECTED' : 'SKILL_SUBMIT_FAILED');
+    throw new Error(answer && answer.ok === false ? code + '_REJECTED' : code + '_FAILED');
   return { reference: answer.id };
 }

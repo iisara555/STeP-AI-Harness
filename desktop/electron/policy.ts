@@ -31,6 +31,7 @@ export const FEATURES = [
   'headless',
   'skillPacks',
   'staffSkills',
+  'feedback',
   'cron',
   'coordinator',
   'memoryTeam',
@@ -178,6 +179,10 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   // safety review finds nothing that fails (owner's decision, 2026-10-16). No hooks or agents; sharing beyond that
   // computer still needs an administrator. IT can set it to false.
   staffSkills: true,
+  // "แจ้งปัญหา / เสนอแนะ": employees send a problem, an idea or a wrong answer to the administrators' intake sheet (the
+  // same Apps Script as Skill proposals). Each send passes the privacy check and a confirmation of exactly what goes
+  // (owner's decision, 2026-10-18). IT can set it to false.
+  feedback: true,
   // งานตั้งเวลา: employees schedule their own tasks while the app is open. Each job asks for consent when saved, passes
   // the privacy check and ends as a draft for review (owner's decision, 2026-10-17). IT can set it to false.
   cron: true,
@@ -278,6 +283,11 @@ export const SKILL_SUBMIT_URL = /^https:\/\/script\.google\.com\/(?:a\/macros\/[
 // without a policy on each computer; a policy submitUrl replaces it and features.staffSkills: false turns it off.
 export const DEFAULT_SKILL_SUBMIT_URL =
   'https://script.google.com/macros/s/AKfycbxNhKaK8GMqvHKkVW5qV6h_H0ZtGZP9Ch76SzKlal1Z-nKhq3mHE4Lh7SBVoHrgW1yCdg/exec';
+/** Where "แจ้งปัญหา / เสนอแนะ" sends under this policy, or undefined when IT turned it off. Same intake as Skills. */
+export function feedbackSubmitUrl(policy: Policy): string | undefined {
+  if (policy.features.feedback === false) return undefined;
+  return policy.skillPacks?.submitUrl || DEFAULT_SKILL_SUBMIT_URL;
+}
 /** Where "เสนอให้องค์กรใช้" sends a Skill under this policy, or undefined when IT turned staff Skills off. */
 export function skillSubmitUrl(policy: Policy): string | undefined {
   if (policy.features.staffSkills === false) return undefined;
