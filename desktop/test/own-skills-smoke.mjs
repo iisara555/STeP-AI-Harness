@@ -47,6 +47,8 @@ try {
   if (shots) {
     for (const theme of ['light', 'dark']) {
       await page.evaluate(theme => (document.documentElement.dataset.theme = theme), theme);
+      // Buttons fade their background; wait so the shot shows the settled theme, not a half-switched one.
+      await page.waitForTimeout(400);
       await page.screenshot({ path: join(shots, `skills-hub-own-${theme}-1440.png`) });
     }
     await page.setViewportSize({ width: 1024, height: 720 });
