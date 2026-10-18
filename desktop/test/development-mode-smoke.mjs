@@ -46,8 +46,25 @@ try {
   assert.equal(defaults.features.developmentMode, true);
   assert.equal(defaults.policy.features.vault, true);
   assert.equal(defaults.policy.features.googleWorkspace, true);
-  assert.equal((await call('googleState')).configured, true);
-  assert.deepEqual((await call('googleState')).services, ['documents', 'calendar-read', 'tasks']);
+  const workspaceDefaults = await call('googleState');
+  assert.equal(workspaceDefaults.configured, true);
+  assert.deepEqual(workspaceDefaults.services, [
+    'documents',
+    'docs',
+    'sheets',
+    'slides',
+    'drive-read',
+    'drive',
+    'gmail-read',
+    'gmail-draft',
+    'gmail-send',
+    'gmail-manage',
+    'forms',
+    'appscript',
+    'calendar-read',
+    'tasks',
+  ]);
+  assert.deepEqual(workspaceDefaults.accounts, [], 'available services do not grant access without employee consent');
   const apiOnly = await call('connection', { provider: 'openai', mode: 'api', apiKey: 'synthetic-demo-api-key', model: 'synthetic-model' });
   assert.equal((await call('vaultState')).protected, false, 'API-only use does not silently enroll Vault');
   await call('removeConnection', { id: apiOnly.id });
