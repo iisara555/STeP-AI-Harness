@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Lightbulb } from 'lucide-react';
+import { Copy, Lightbulb } from './icons';
 import {
   MEDIA_EXAMPLES,
   MEDIA_FONTS,

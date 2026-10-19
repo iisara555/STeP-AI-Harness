@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Blocks, Plus, ReceiptText, Search } from 'lucide-react';
+import { ArrowRight, Blocks, Plus, ReceiptText, Search } from './icons';
 import type { OwnPack, SkillEntry } from './types';
 import { t } from './i18n';
 import { shownDate } from './messages';

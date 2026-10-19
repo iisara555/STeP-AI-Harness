@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { Download, FileSearch, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, FileSearch, LoaderCircle, Play, RefreshCw, Save, ScanText, Send, ZoomIn, ZoomOut } from './icons';
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,

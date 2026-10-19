@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Square } from 'lucide-react';
+import { Mic, Square } from './icons';
 import type { DesktopAPI } from './types';
 import { explainError } from './messages';
 import { t } from './i18n';

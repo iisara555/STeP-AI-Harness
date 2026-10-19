@@ -155,15 +155,21 @@ try {
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
   await page.getByRole('tab', { name: 'ทั่วไป' }).click();
   const pictures = page.getByRole('radiogroup', { name: 'รูปโปรไฟล์' });
-  await expect(pictures.getByRole('radio')).toHaveCount(34);
-  await pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true }).click();
-  await expect(pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect(pictures.getByRole('radio')).toHaveCount(54);
+  await expect(pictures.getByRole('radio', { name: 'ภาพที่ 5', exact: true }).locator('img')).toHaveAttribute('src', /avatar-05/);
+  const newPortrait = pictures.getByRole('radio').filter({ has: page.locator('img[src*="avatar-56"]') });
+  await newPortrait.click();
+  await expect(newPortrait).toHaveAttribute('aria-checked', 'true');
+  assert.ok(
+    await pictures.locator('img').evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0)),
+    'every bundled portrait loads',
+  );
   await page.screenshot({ path: 'release/qa/ux-fixes/profile-pictures.png' });
   await page.getByRole('button', { name: 'บันทึกและไปที่งาน' }).click();
   if (!(await page.locator('.profile').count())) await titlebar.getByRole('button', { name: 'ขยายแถบงาน' }).click();
-  await expect(page.locator('.profile .avatar-badge img')).toHaveAttribute('src', /avatar-05/);
+  await expect(page.locator('.profile .avatar-badge img')).toHaveAttribute('src', /avatar-56/);
   await page.locator('.profile').screenshot({ path: 'release/qa/ux-fixes/profile-sidebar.png' });
-  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-05');
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-56');
   const rejected = await page.evaluate(async () => {
     const { settings } = await window.step.call('snapshot');
     return window.step.call('settings', { ...settings, avatar: '../../secret.png' }).then(
@@ -172,7 +178,9 @@ try {
     );
   });
   assert.match(rejected, /INVALID_SETTINGS/);
-  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-05');
+  assert.equal((await page.evaluate(() => window.step.call('snapshot'))).settings.avatar, 'avatar-56');
+  await page.reload();
+  await expect(page.locator('.profile .avatar-badge img')).toHaveAttribute('src', /avatar-56/);
   assert.deepEqual(errors, []);
   console.log(
     'UX audit fixes passed: short onboarding, accurate readiness, keyboard containment, visible small-window actions, billing labels, browser task entry, the app-drawn title bar, in-app updates and profile pictures.',

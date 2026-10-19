@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, RotateCw, X, Bot, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, X, Bot, Send } from './icons';
 import type { BrowserDockState, DesktopAPI } from './types';
 import { t } from './i18n';
 import { SectionArt } from './illustration';

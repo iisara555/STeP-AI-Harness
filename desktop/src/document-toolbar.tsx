@@ -1,6 +1,6 @@
 import { useEditorState, type Editor } from '@tiptap/react';
 import type { ReactNode } from 'react';
-import { Bold, ImagePlus, IndentDecrease, IndentIncrease, Italic, List, ListOrdered, SeparatorHorizontal, TextQuote } from 'lucide-react';
+import { Bold, ImagePlus, IndentDecrease, IndentIncrease, Italic, List, ListOrdered, SeparatorHorizontal, TextQuote } from './icons';
 import { t } from './i18n';
 
 // Icon buttons keep the whole toolbar on one or two rows of a narrow panel; the Thai name is the button's

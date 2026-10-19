@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CalendarDays, ListChecks, Lightbulb, Sun, X, Video, ExternalLink, MessageSquare, ShieldCheck } from 'lucide-react';
+import { CalendarDays, ListChecks, Lightbulb, Sun, X, Video, ExternalLink, MessageSquare, ShieldCheck } from './icons';
 import { t } from './i18n';
 import type { MorningBrief } from '../electron/morning-brief';
 
