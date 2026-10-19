@@ -10,6 +10,14 @@ import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 export const en: Record<string, string> = {
+  'เพิ่มรูปโปรไฟล์คนทำงาน 20 แบบ และไอคอนขยับเมื่อชี้หรือใช้คีย์บอร์ด พร้อมรองรับการลดการเคลื่อนไหว':
+    '20 more office profile pictures and icons that move on hover or keyboard focus, respecting Reduce Motion',
+  'เพิ่มงาน Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script ผ่านบัญชี Google ที่เชื่อมไว้':
+    'More Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script actions through your connected Google account',
+  'เลือกบริการ Google และเพิ่มสิทธิ์ให้บัญชีเดิมได้ โดยยังต้องยืนยันก่อนอ่านหรือเปลี่ยนข้อมูล':
+    'Choose Google services and upgrade the same account, with confirmation before reads or changes',
+  'แก้ Apps Script แล้วไม่แนบโค้ดของไฟล์อื่นกลับไปให้ AI อัตโนมัติ':
+    'Editing Apps Script no longer returns source from other files to AI as a side effect',
   'เลือกไฟล์ OAuth client แบบ Desktop app': 'Choose a Desktop app OAuth client file',
   ...documentLayoutEn,
   ...feedbackEn,

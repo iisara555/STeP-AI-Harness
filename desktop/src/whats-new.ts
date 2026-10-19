@@ -6,6 +6,15 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.16',
+    items: () => [
+      t('เพิ่มรูปโปรไฟล์คนทำงาน 20 แบบ และไอคอนขยับเมื่อชี้หรือใช้คีย์บอร์ด พร้อมรองรับการลดการเคลื่อนไหว'),
+      t('เพิ่มงาน Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script ผ่านบัญชี Google ที่เชื่อมไว้'),
+      t('เลือกบริการ Google และเพิ่มสิทธิ์ให้บัญชีเดิมได้ โดยยังต้องยืนยันก่อนอ่านหรือเปลี่ยนข้อมูล'),
+      t('แก้ Apps Script แล้วไม่แนบโค้ดของไฟล์อื่นกลับไปให้ AI อัตโนมัติ'),
+    ],
+  },
+  {
     version: '0.6.15',
     items: () => [
       t('กดเข้าสู่ระบบเว็บอย่าง STeP MBS ให้เองหลังกรอกบัญชีจาก Vault ไม่ต้องสลับไปกดเอง'),
