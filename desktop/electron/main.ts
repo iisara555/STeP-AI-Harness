@@ -1167,7 +1167,7 @@ async function main() {
   };
   const reviewState = () => ({
     allowed: policyState.policy.features.learningReview,
-    enabled: Boolean(policyState.policy.features.learningReview && store.settings().learningReview),
+    enabled: Boolean(policyState.policy.features.learningReview && store.settings().learningReview !== false),
     today: reviewBudget().count,
     dailyLimit: REVIEW_DAILY,
   });

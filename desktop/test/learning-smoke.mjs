@@ -11,7 +11,7 @@ const workspace = join(home, 'work'),
   audit = join(home, 'calls.jsonl');
 await mkdir(workspace);
 const marker = 'Mark absent fields as unknown.';
-await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false, learningReview: true } }));
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false } }));
 // The AI's drafts for /learn: a procedure, and one carrying personal data that must never reach the inbox.
 const drafts = [
   {
@@ -84,6 +84,7 @@ async function runTask() {
 }
 try {
   await launch();
+  assert.deepEqual((await state()).review, { allowed: true, enabled: true, today: 0, dailyLimit: 10 });
   await page.locator('.composer textarea').fill('/learn ' + marker);
   await page.locator('.composer textarea').press('Enter');
   const dialog = page.getByRole('alertdialog', { name: 'กล่องบทเรียน' });
@@ -165,11 +166,11 @@ try {
   assert.match(aiDrafts[0].evidence, /AI draft from the task/);
   assert.equal(JSON.stringify(await state()).includes('fake.person'), false, 'personal data never reaches the inbox');
   await assert.rejects(call('learningDraft', { context: 'stale', sessionId: finished.id }), /WORKSPACE_CHANGED/);
-  // The background review: allowed by policy but off until the employee turns it on; then a task reaching 10 user
+  // The background review is on by default without a saved preference; a task reaching 10 user
   // turns gets one review, which drafts lessons as pending candidates marked as the review's, within a daily budget.
-  assert.deepEqual((await state()).review, { allowed: true, enabled: false, today: 0, dailyLimit: 10 });
+  assert.deepEqual((await state()).review, { allowed: true, enabled: true, today: 0, dailyLimit: 10 });
+  await expect(inbox.getByRole('checkbox', { name: /ทบทวนงานอัตโนมัติ:/ })).toBeChecked();
   await call('learningDecide', { context, id: aiDrafts[0].id, approve: false });
-  await call('learningReviewSetting', { enabled: true });
   const long = await call('create', { connectionId: 'fake' });
   const status = async () => (await call('snapshot')).sessions.find(s => s.id === long.id)?.status;
   for (let turn = 1; turn <= 10; turn++) {
@@ -179,7 +180,22 @@ try {
   }
   await expect.poll(async () => (await state()).candidates.filter(c => c.source === 'review' && c.status === 'pending').length).toBe(1);
   assert.equal((await state()).review.today, 1);
-  await call('learningReviewSetting', { enabled: false });
+  await inbox.getByRole('checkbox', { name: /ทบทวนงานอัตโนมัติ:/ }).click();
+  await expect.poll(async () => (await state()).review.enabled).toBe(false);
+  await expect(inbox.getByRole('checkbox', { name: /ทบทวนงานอัตโนมัติ:/ })).not.toBeChecked();
+  for (let turn = 11; turn <= 20; turn++) {
+    await call('send', { id: long.id, text: 'Receipt step ' + turn, mode: 'chat', autoImage: false });
+    await expect.poll(status, { timeout: 15000 }).toBe('review');
+  }
+  assert.equal((await state()).review.today, 1, 'opting out prevents the next automatic review');
+  await app.close();
+  await launch();
+  assert.equal((await state()).review.enabled, false, 'an existing opt-out survives restart and the release default');
+  await call('learningReviewSetting', { enabled: true });
+  await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ features: { toolLoop: false, learningReview: false } }));
+  await expect.poll(async () => (await state()).review.allowed, { timeout: 15000 }).toBe(false);
+  assert.equal((await state()).review.enabled, false, 'organization denial overrides the employee setting');
+  await assert.rejects(call('learningReviewSetting', { enabled: true }), /FEATURE_DISABLED/);
   await call('permissionMode', { mode: 'plan' });
   await assert.rejects(call('learningDraft', { context, sessionId: finished.id }), /PLAN_READ_ONLY/);
   await assert.rejects(
@@ -201,7 +217,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Learning smoke passed: /learn UI, AI drafts as pending candidates, the opt-in background review every 10 turns, Skill change proposal files, pending exclusion, explicit approval, real provider-adapter context, disable, rollback, restart, plan mode and durable-data privacy. Synthetic model only.',
+    'Learning smoke passed: /learn UI, default automatic review every 10 turns, pending-only AI drafts, opt-out/restart and IT denial, Skill proposals, pending exclusion, explicit approval, provider context, disable, rollback, plan mode and durable-data privacy. Synthetic model only.',
   );
 } finally {
   await app?.close();

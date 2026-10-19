@@ -4,6 +4,10 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+- เปิดการทบทวนบทเรียนอัตโนมัติเป็นค่าเริ่มต้นสำหรับผู้ใช้ที่ยังไม่เคยตั้งค่า: ทุกสิบข้อความในงานเดียว สูงสุดสิบครั้งต่อวัน ใช้โทเคนจากบัญชี AI ของงาน ข้อเสนอยังรอยืนยันก่อนนำไปใช้ ผู้ใช้ปิดเองได้และค่าปิดเดิมยังคงอยู่ IT ปิดได้ด้วย `features.learningReview: false` และนโยบายที่ไม่ถูกต้องจะไม่เปิดการทบทวน
+
 ## Desktop v0.6.16 (2026-10-19)
 
 - Known malformed-response limits: an Apps Script update receipt does not validate upstream `scriptId` as a string; malformed returned file content can produce `GOOGLE_RESPONSE_INVALID` after a successful write rather than `GOOGLE_OUTCOME_UNKNOWN`. No automatic retry is performed; inspect Google before repeating the update.

@@ -15,7 +15,7 @@ The same `/usage` dialog also shows [per-account provider quotas, credits and AP
 
 Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
 
-[Learning Inbox](desktop-learning.md) adds `/learn`, explicit review of local preference/procedure proposals, version history, disable and rollback. Only approved lessons enter later tasks; this phase does not include automatic review or measured quality improvement.
+[Learning Inbox](desktop-learning.md) adds `/learn`, pending preference/procedure proposals, version history, disable and rollback. Background review defaults on in the next release; explicit employee opt-out and organization denial still win. Only confirmed lessons enter later tasks. Usage/correction metrics and paired Skill evaluation support review; measured live quality improvement remains unverified.
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
