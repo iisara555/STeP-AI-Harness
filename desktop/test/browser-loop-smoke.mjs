@@ -28,8 +28,9 @@ const send=o=>console.log(JSON.stringify({jsonrpc:'2.0',...o}));
 let thread='';
 readline.createInterface({input:process.stdin}).on('line',line=>{
  const m=JSON.parse(line);send({id:m.id,result:m.method==='thread/start'?{thread:{id:'fixture'}}:{}});
- if(m.method==='thread/start'){thread='';appendFileSync(${JSON.stringify(join(home, 'threads.log'))},'thread\\n');}
+ if(m.method==='thread/start'){thread='';appendFileSync(${JSON.stringify(join(home, 'threads.log'))},m.params.developerInstructions?.startsWith('You select ONE')?'selection\\n':'answer\\n');}
  if(m.method!=='turn/start')return;
+ if(m.params.outputSchema?.properties?.skillId){send({method:'item/agentMessage/delta',params:{delta:JSON.stringify({skillId:null,reason:'Browser operation'})}});send({method:'turn/completed',params:{turn:{status:'completed'}}});return;}
  thread+=m.params.input.map(i=>i.text||'').join('');
  const prompt=thread;
  const results=[...prompt.matchAll(/<tool_results>\\s*([\\s\\S]*?)\\s*<\\/tool_results>/g)].map(m=>JSON.parse(m[1])[0]);
@@ -167,7 +168,9 @@ try {
   await expect(page.locator('.browser-tab')).toHaveCount(0);
   assert.equal(titles.filter(t => t === 'ส่งผลเครื่องมือให้ AI?').length, 0);
   // Five model turns in one run share one runtime process and thread: later turns send only the new tool results.
-  assert.equal((await readFile(join(home, 'threads.log'), 'utf8')).trim().split('\n').length, 1, 'one thread for the whole run');
+  const threads = (await readFile(join(home, 'threads.log'), 'utf8')).trim().split('\n');
+  assert.equal(threads.filter(kind => kind === 'answer').length, 1, 'one answer thread for all browser tool turns');
+  assert.equal(threads.filter(kind => kind === 'selection').length, 1, 'selection has its own tool-free thread');
   assert.equal(await page.getByRole('alertdialog').count(), 0);
   console.log(
     'Browser chat loop passed: open -> fill -> read -> click -> read -> verified, 3 action approvals and no data approvals with privacy checks off; local fixtures only.',
