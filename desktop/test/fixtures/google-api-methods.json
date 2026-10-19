@@ -1,0 +1,955 @@
+{
+  "retrievedAt": "2026-10-18",
+  "source": "Official Google API Discovery documents; public endpoint/method/scope metadata, not live account verification.",
+  "discovery": {
+    "drive": "https://www.googleapis.com/$discovery/rest?version=v3",
+    "docs": "https://docs.googleapis.com/$discovery/rest?version=v1",
+    "sheets": "https://sheets.googleapis.com/$discovery/rest?version=v4",
+    "slides": "https://slides.googleapis.com/$discovery/rest?version=v1",
+    "gmail": "https://gmail.googleapis.com/$discovery/rest?version=v1",
+    "calendar": "https://www.googleapis.com/$discovery/rest?version=v3",
+    "tasks": "https://tasks.googleapis.com/$discovery/rest?version=v1",
+    "chat": "https://chat.googleapis.com/$discovery/rest?version=v1",
+    "meet": "https://meet.googleapis.com/$discovery/rest?version=v2",
+    "forms": "https://forms.googleapis.com/$discovery/rest?version=v1",
+    "script": "https://script.googleapis.com/$discovery/rest?version=v1"
+  },
+  "operations": {
+    "drive.list": {
+      "googleMethod": "drive.files.list",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/drive/v3/files",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/drive.metadata",
+        "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "https://www.googleapis.com/auth/drive.photos.readonly",
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "docs.get": {
+      "googleMethod": "docs.documents.get",
+      "method": "GET",
+      "endpoint": "https://docs.googleapis.com/v1/documents/{documentId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/documents.readonly",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "docs.create": {
+      "googleMethod": "docs.documents.create",
+      "method": "POST",
+      "endpoint": "https://docs.googleapis.com/v1/documents",
+      "scopes": [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+    },
+    "docs.appendText": {
+      "googleMethod": "docs.documents.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://docs.googleapis.com/v1/documents/{documentId}:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+    },
+    "sheets.get": {
+      "googleMethod": "sheets.spreadsheets.get",
+      "method": "GET",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/spreadsheets.readonly"
+      ]
+    },
+    "sheets.values.get": {
+      "googleMethod": "sheets.spreadsheets.values.get",
+      "method": "GET",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/spreadsheets.readonly"
+      ]
+    },
+    "sheets.create": {
+      "googleMethod": "sheets.spreadsheets.create",
+      "method": "POST",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "sheets.values.update": {
+      "googleMethod": "sheets.spreadsheets.values.update",
+      "method": "PUT",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "slides.get": {
+      "googleMethod": "slides.presentations.get",
+      "method": "GET",
+      "endpoint": "https://slides.googleapis.com/v1/presentations/{+presentationId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/presentations",
+        "https://www.googleapis.com/auth/presentations.readonly"
+      ]
+    },
+    "slides.create": {
+      "googleMethod": "slides.presentations.create",
+      "method": "POST",
+      "endpoint": "https://slides.googleapis.com/v1/presentations",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/presentations"
+      ]
+    },
+    "slides.appendTextSlide": {
+      "googleMethod": "slides.presentations.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://slides.googleapis.com/v1/presentations/{presentationId}:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/presentations",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/spreadsheets.readonly"
+      ]
+    },
+    "gmail.list": {
+      "googleMethod": "gmail.users.messages.list",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.metadata",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.get": {
+      "googleMethod": "gmail.users.messages.get",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{id}",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.action",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.metadata",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+        "https://www.googleapis.com/auth/gmail.metadata",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.draft": {
+      "googleMethod": "gmail.users.drafts.create",
+      "method": "POST",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/drafts",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ]
+    },
+    "gmail.send": {
+      "googleMethod": "gmail.users.messages.send",
+      "method": "POST",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/send",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.send"
+      ]
+    },
+    "calendar.list": {
+      "googleMethod": "calendar.calendarList.list",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+      "scopes": [
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/calendar.calendarlist",
+        "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+        "https://www.googleapis.com/auth/calendar.readonly"
+      ]
+    },
+    "calendar.events": {
+      "googleMethod": "calendar.events.list",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events",
+      "scopes": [
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/calendar.app.created",
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/calendar.events.freebusy",
+        "https://www.googleapis.com/auth/calendar.events.owned",
+        "https://www.googleapis.com/auth/calendar.events.owned.readonly",
+        "https://www.googleapis.com/auth/calendar.events.public.readonly",
+        "https://www.googleapis.com/auth/calendar.events.readonly",
+        "https://www.googleapis.com/auth/calendar.readonly"
+      ]
+    },
+    "calendar.createEvent": {
+      "googleMethod": "calendar.events.insert",
+      "method": "POST",
+      "endpoint": "https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events",
+      "scopes": [
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/calendar.app.created",
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/calendar.events.owned"
+      ]
+    },
+    "tasks.lists": {
+      "googleMethod": "tasks.tasklists.list",
+      "method": "GET",
+      "endpoint": "https://tasks.googleapis.com/tasks/v1/users/@me/lists",
+      "scopes": ["https://www.googleapis.com/auth/tasks", "https://www.googleapis.com/auth/tasks.readonly"]
+    },
+    "tasks.list": {
+      "googleMethod": "tasks.tasks.list",
+      "method": "GET",
+      "endpoint": "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks",
+      "scopes": ["https://www.googleapis.com/auth/tasks", "https://www.googleapis.com/auth/tasks.readonly"]
+    },
+    "tasks.create": {
+      "googleMethod": "tasks.tasks.insert",
+      "method": "POST",
+      "endpoint": "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks",
+      "scopes": ["https://www.googleapis.com/auth/tasks"]
+    },
+    "tasks.complete": {
+      "googleMethod": "tasks.tasks.patch",
+      "method": "PATCH",
+      "endpoint": "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks/{task}",
+      "scopes": ["https://www.googleapis.com/auth/tasks"]
+    },
+    "chat.spaces": {
+      "googleMethod": "chat.spaces.list",
+      "method": "GET",
+      "endpoint": "https://chat.googleapis.com/v1/spaces",
+      "scopes": [
+        "https://www.googleapis.com/auth/chat.bot",
+        "https://www.googleapis.com/auth/chat.spaces",
+        "https://www.googleapis.com/auth/chat.spaces.readonly"
+      ]
+    },
+    "chat.messages": {
+      "googleMethod": "chat.spaces.messages.list",
+      "method": "GET",
+      "endpoint": "https://chat.googleapis.com/v1/{+parent}/messages",
+      "scopes": [
+        "https://www.googleapis.com/auth/chat.app.messages.readonly",
+        "https://www.googleapis.com/auth/chat.import",
+        "https://www.googleapis.com/auth/chat.messages",
+        "https://www.googleapis.com/auth/chat.messages.readonly"
+      ]
+    },
+    "chat.send": {
+      "googleMethod": "chat.spaces.messages.create",
+      "method": "POST",
+      "endpoint": "https://chat.googleapis.com/v1/{+parent}/messages",
+      "scopes": [
+        "https://www.googleapis.com/auth/chat.bot",
+        "https://www.googleapis.com/auth/chat.import",
+        "https://www.googleapis.com/auth/chat.messages",
+        "https://www.googleapis.com/auth/chat.messages.create"
+      ]
+    },
+    "meet.get": {
+      "googleMethod": "meet.spaces.get",
+      "method": "GET",
+      "endpoint": "https://meet.googleapis.com/v2/{+name}",
+      "scopes": [
+        "https://www.googleapis.com/auth/meetings.space.created",
+        "https://www.googleapis.com/auth/meetings.space.readonly",
+        "https://www.googleapis.com/auth/meetings.space.settings"
+      ]
+    },
+    "drive.get": {
+      "googleMethod": "drive.files.get",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/drive.metadata",
+        "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "https://www.googleapis.com/auth/drive.photos.readonly",
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "drive.createFolder": {
+      "googleMethod": "drive.files.create",
+      "method": "POST",
+      "endpoint": "https://www.googleapis.com/drive/v3/files",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+    },
+    "drive.copy": {
+      "googleMethod": "drive.files.copy",
+      "method": "POST",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}/copy",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.photos.readonly"
+      ]
+    },
+    "drive.update": {
+      "googleMethod": "drive.files.update",
+      "method": "PATCH",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.metadata",
+        "https://www.googleapis.com/auth/drive.scripts"
+      ]
+    },
+    "drive.exportText": {
+      "googleMethod": "drive.files.export",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}/export",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "drive.getText": {
+      "googleMethod": "drive.files.get",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/drive.metadata",
+        "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "https://www.googleapis.com/auth/drive.photos.readonly",
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "drive.uploadText": {
+      "googleMethod": "drive.files.create",
+      "method": "POST",
+      "endpoint": "https://www.googleapis.com/upload/drive/v3/files",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.appdata",
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+    },
+    "drive.permissions.list": {
+      "googleMethod": "drive.permissions.list",
+      "method": "GET",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}/permissions",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/drive.metadata",
+        "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "https://www.googleapis.com/auth/drive.photos.readonly",
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "drive.permissions.create": {
+      "googleMethod": "drive.permissions.create",
+      "method": "POST",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}/permissions",
+      "scopes": ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
+    },
+    "drive.permissions.delete": {
+      "googleMethod": "drive.permissions.delete",
+      "method": "DELETE",
+      "endpoint": "https://www.googleapis.com/drive/v3/files/{fileId}/permissions/{permissionId}",
+      "scopes": ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
+    },
+    "docs.batchUpdate": {
+      "googleMethod": "docs.documents.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://docs.googleapis.com/v1/documents/{documentId}:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+    },
+    "slides.batchUpdate": {
+      "googleMethod": "slides.presentations.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://slides.googleapis.com/v1/presentations/{presentationId}:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/presentations",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/spreadsheets.readonly"
+      ]
+    },
+    "slides.pages.get": {
+      "googleMethod": "slides.presentations.pages.get",
+      "method": "GET",
+      "endpoint": "https://slides.googleapis.com/v1/presentations/{presentationId}/pages/{pageObjectId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/presentations",
+        "https://www.googleapis.com/auth/presentations.readonly"
+      ]
+    },
+    "sheets.batchUpdate": {
+      "googleMethod": "sheets.spreadsheets.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "sheets.values.batchGet": {
+      "googleMethod": "sheets.spreadsheets.values.batchGet",
+      "method": "GET",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values:batchGet",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/spreadsheets.readonly"
+      ]
+    },
+    "sheets.values.batchUpdate": {
+      "googleMethod": "sheets.spreadsheets.values.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "sheets.values.append": {
+      "googleMethod": "sheets.spreadsheets.values.append",
+      "method": "POST",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:append",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "sheets.values.clear": {
+      "googleMethod": "sheets.spreadsheets.values.clear",
+      "method": "POST",
+      "endpoint": "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:clear",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "gmail.threads.list": {
+      "googleMethod": "gmail.users.threads.list",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/threads",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.metadata",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.threads.get": {
+      "googleMethod": "gmail.users.threads.get",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/threads/{id}",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.action",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.metadata",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+        "https://www.googleapis.com/auth/gmail.metadata",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.labels.list": {
+      "googleMethod": "gmail.users.labels.list",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/labels",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.labels",
+        "https://www.googleapis.com/auth/gmail.metadata",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.labels.create": {
+      "googleMethod": "gmail.users.labels.create",
+      "method": "POST",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/labels",
+      "scopes": ["https://mail.google.com/", "https://www.googleapis.com/auth/gmail.labels", "https://www.googleapis.com/auth/gmail.modify"]
+    },
+    "gmail.modify": {
+      "googleMethod": "gmail.users.messages.modify",
+      "method": "POST",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{id}/modify",
+      "scopes": ["https://mail.google.com/", "https://www.googleapis.com/auth/gmail.modify"]
+    },
+    "gmail.trash": {
+      "googleMethod": "gmail.users.messages.trash",
+      "method": "POST",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{id}/trash",
+      "scopes": ["https://mail.google.com/", "https://www.googleapis.com/auth/gmail.modify"]
+    },
+    "gmail.untrash": {
+      "googleMethod": "gmail.users.messages.untrash",
+      "method": "POST",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{id}/untrash",
+      "scopes": ["https://mail.google.com/", "https://www.googleapis.com/auth/gmail.modify"]
+    },
+    "gmail.drafts.list": {
+      "googleMethod": "gmail.users.drafts.list",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/drafts",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.drafts.get": {
+      "googleMethod": "gmail.users.drafts.get",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/drafts/{id}",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "gmail.drafts.update": {
+      "googleMethod": "gmail.users.drafts.update",
+      "method": "PUT",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/drafts/{id}",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ]
+    },
+    "gmail.drafts.delete": {
+      "googleMethod": "gmail.users.drafts.delete",
+      "method": "DELETE",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/drafts/{id}",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ]
+    },
+    "gmail.attachments.getText": {
+      "googleMethod": "gmail.users.messages.attachments.get",
+      "method": "GET",
+      "endpoint": "https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{messageId}/attachments/{id}",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.action",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.readonly"
+      ]
+    },
+    "forms.create": {
+      "googleMethod": "forms.forms.create",
+      "method": "POST",
+      "endpoint": "https://forms.googleapis.com/v1/forms",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/forms.body"
+      ]
+    },
+    "forms.get": {
+      "googleMethod": "forms.forms.get",
+      "method": "GET",
+      "endpoint": "https://forms.googleapis.com/v1/forms/{formId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/forms.body",
+        "https://www.googleapis.com/auth/forms.body.readonly"
+      ]
+    },
+    "forms.batchUpdate": {
+      "googleMethod": "forms.forms.batchUpdate",
+      "method": "POST",
+      "endpoint": "https://forms.googleapis.com/v1/forms/{formId}:batchUpdate",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/forms.body"
+      ]
+    },
+    "forms.responses.list": {
+      "googleMethod": "forms.forms.responses.list",
+      "method": "GET",
+      "endpoint": "https://forms.googleapis.com/v1/forms/{formId}/responses",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/forms.responses.readonly"
+      ]
+    },
+    "forms.responses.get": {
+      "googleMethod": "forms.forms.responses.get",
+      "method": "GET",
+      "endpoint": "https://forms.googleapis.com/v1/forms/{formId}/responses/{responseId}",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/forms.responses.readonly"
+      ]
+    },
+    "forms.setPublishSettings": {
+      "googleMethod": "forms.forms.setPublishSettings",
+      "method": "POST",
+      "endpoint": "https://forms.googleapis.com/v1/forms/{formId}:setPublishSettings",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/forms.body"
+      ]
+    },
+    "appscript.projects.create": {
+      "googleMethod": "script.projects.create",
+      "method": "POST",
+      "endpoint": "https://script.googleapis.com/v1/projects",
+      "scopes": ["https://www.googleapis.com/auth/script.projects"]
+    },
+    "appscript.projects.get": {
+      "googleMethod": "script.projects.get",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}",
+      "scopes": ["https://www.googleapis.com/auth/script.projects", "https://www.googleapis.com/auth/script.projects.readonly"]
+    },
+    "appscript.projects.getContent": {
+      "googleMethod": "script.projects.getContent",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/content",
+      "scopes": ["https://www.googleapis.com/auth/script.projects", "https://www.googleapis.com/auth/script.projects.readonly"]
+    },
+    "appscript.projects.updateContent": {
+      "googleMethod": "script.projects.updateContent",
+      "method": "PUT",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/content",
+      "scopes": ["https://www.googleapis.com/auth/script.projects"]
+    },
+    "appscript.versions.list": {
+      "googleMethod": "script.projects.versions.list",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/versions",
+      "scopes": ["https://www.googleapis.com/auth/script.projects", "https://www.googleapis.com/auth/script.projects.readonly"]
+    },
+    "appscript.versions.get": {
+      "googleMethod": "script.projects.versions.get",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/versions/{versionNumber}",
+      "scopes": ["https://www.googleapis.com/auth/script.projects", "https://www.googleapis.com/auth/script.projects.readonly"]
+    },
+    "appscript.versions.create": {
+      "googleMethod": "script.projects.versions.create",
+      "method": "POST",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/versions",
+      "scopes": ["https://www.googleapis.com/auth/script.projects"]
+    },
+    "appscript.deployments.list": {
+      "googleMethod": "script.projects.deployments.list",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/deployments",
+      "scopes": ["https://www.googleapis.com/auth/script.deployments", "https://www.googleapis.com/auth/script.deployments.readonly"]
+    },
+    "appscript.deployments.get": {
+      "googleMethod": "script.projects.deployments.get",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/deployments/{deploymentId}",
+      "scopes": ["https://www.googleapis.com/auth/script.deployments", "https://www.googleapis.com/auth/script.deployments.readonly"]
+    },
+    "appscript.deployments.create": {
+      "googleMethod": "script.projects.deployments.create",
+      "method": "POST",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/deployments",
+      "scopes": ["https://www.googleapis.com/auth/script.deployments"]
+    },
+    "appscript.deployments.update": {
+      "googleMethod": "script.projects.deployments.update",
+      "method": "PUT",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/deployments/{deploymentId}",
+      "scopes": ["https://www.googleapis.com/auth/script.deployments"]
+    },
+    "appscript.deployments.delete": {
+      "googleMethod": "script.projects.deployments.delete",
+      "method": "DELETE",
+      "endpoint": "https://script.googleapis.com/v1/projects/{scriptId}/deployments/{deploymentId}",
+      "scopes": ["https://www.googleapis.com/auth/script.deployments"]
+    },
+    "appscript.processes.list": {
+      "googleMethod": "script.processes.list",
+      "method": "GET",
+      "endpoint": "https://script.googleapis.com/v1/processes",
+      "scopes": ["https://www.googleapis.com/auth/script.processes"]
+    },
+    "appscript.run": {
+      "googleMethod": "script.scripts.run",
+      "method": "POST",
+      "endpoint": "https://script.googleapis.com/v1/scripts/{scriptId}:run",
+      "scopes": [
+        "https://mail.google.com/",
+        "https://www.google.com/calendar/feeds",
+        "https://www.google.com/m8/feeds",
+        "https://www.googleapis.com/auth/admin.directory.group",
+        "https://www.googleapis.com/auth/admin.directory.user",
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/forms",
+        "https://www.googleapis.com/auth/forms.currentonly",
+        "https://www.googleapis.com/auth/groups",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ]
+    }
+  },
+  "requestTypes": {
+    "docs": [
+      "deleteSuggestion",
+      "addDocumentTab",
+      "insertSectionBreak",
+      "createHeader",
+      "updateTableColumnProperties",
+      "updateDocumentTabProperties",
+      "insertComment",
+      "createDropdownDefinition",
+      "mergeTableCells",
+      "insertPageBreak",
+      "updateCommentPost",
+      "updateDropdownDefinitionProperties",
+      "deleteContentRange",
+      "deleteTab",
+      "updateTextStyle",
+      "deleteDropdownDefinition",
+      "updateNamedStyle",
+      "pinTableHeaderRows",
+      "deleteParagraphBullets",
+      "deleteHeader",
+      "insertInlineImage",
+      "insertRichLink",
+      "insertText",
+      "unmergeTableCells",
+      "updateTableRowStyle",
+      "addCommentReply",
+      "deleteCommentReply",
+      "replaceImage",
+      "updateTableCellStyle",
+      "createNamedRange",
+      "deleteTableRow",
+      "deleteComment",
+      "deleteTableColumn",
+      "deleteNamedRange",
+      "rejectSuggestion",
+      "updateDocumentStyle",
+      "insertPerson",
+      "insertTableRow",
+      "insertDropdown",
+      "replaceNamedRangeContent",
+      "insertDate",
+      "createFootnote",
+      "acceptSuggestion",
+      "replaceAllText",
+      "createParagraphBullets",
+      "createFooter",
+      "insertTable",
+      "updateSectionStyle",
+      "deletePositionedObject",
+      "updateParagraphStyle",
+      "deleteFooter",
+      "updateDropdownProperties",
+      "insertTableColumn"
+    ],
+    "slides": [
+      "deleteComment",
+      "deleteParagraphBullets",
+      "createSheetsChart",
+      "ungroupObjects",
+      "updatePageElementsZOrder",
+      "updateTableCellProperties",
+      "updatePageElementAltText",
+      "updateSlideProperties",
+      "updateImageProperties",
+      "duplicateObject",
+      "updatePageElementTransform",
+      "mergeTableCells",
+      "updateTableRowProperties",
+      "updateCommentPost",
+      "updateVideoProperties",
+      "updateParagraphStyle",
+      "replaceAllShapesWithImage",
+      "createTable",
+      "insertTableColumns",
+      "createSlide",
+      "updateShapeProperties",
+      "rerouteLine",
+      "createLine",
+      "insertText",
+      "insertComment",
+      "addCommentReply",
+      "deleteObject",
+      "deleteTableColumn",
+      "deleteTableRow",
+      "insertTableRows",
+      "unmergeTableCells",
+      "deleteCommentReply",
+      "updateTableBorderProperties",
+      "createImage",
+      "createVideo",
+      "updateSlidesPosition",
+      "createParagraphBullets",
+      "updateLineCategory",
+      "updateLineProperties",
+      "createShape",
+      "replaceAllText",
+      "replaceImage",
+      "updateTableColumnProperties",
+      "refreshSheetsChart",
+      "deleteText",
+      "updateTextStyle",
+      "groupObjects",
+      "replaceAllShapesWithSheetsChart",
+      "updatePageProperties"
+    ],
+    "sheets": [
+      "addNamedRange",
+      "updateChartSpec",
+      "addCommentReply",
+      "deleteFilterView",
+      "deleteEmbeddedObject",
+      "refreshDataSource",
+      "trimWhitespace",
+      "textToColumns",
+      "appendCells",
+      "updateBorders",
+      "updateCells",
+      "duplicateFilterView",
+      "duplicateSheet",
+      "findReplace",
+      "cancelDataSourceRefresh",
+      "addProtectedRange",
+      "deleteDeveloperMetadata",
+      "repeatCell",
+      "addFilterView",
+      "updateProtectedRange",
+      "updateSheetProperties",
+      "addChart",
+      "insertComment",
+      "sortRange",
+      "insertDimension",
+      "addSheet",
+      "updateDeveloperMetadata",
+      "updateConditionalFormatRule",
+      "appendDimension",
+      "deleteTable",
+      "createDeveloperMetadata",
+      "updateCommentPost",
+      "addDataSource",
+      "updateEmbeddedObjectPosition",
+      "addSlicer",
+      "deleteDimensionGroup",
+      "addConditionalFormatRule",
+      "moveDimension",
+      "randomizeRange",
+      "updateNamedRange",
+      "addDimensionGroup",
+      "setBasicFilter",
+      "updateSpreadsheetProperties",
+      "deleteSheet",
+      "updateTable",
+      "deleteDuplicates",
+      "cutPaste",
+      "copyPaste",
+      "updateDimensionProperties",
+      "updateDataSource",
+      "updateBanding",
+      "updateFilterView",
+      "addTable",
+      "pasteData",
+      "deleteComment",
+      "updateDimensionGroup",
+      "deleteDataSource",
+      "setDataValidation",
+      "mergeCells",
+      "autoResizeDimensions",
+      "updateSlicerSpec",
+      "deleteCommentReply",
+      "autoFill",
+      "deleteProtectedRange",
+      "deleteDimension",
+      "addBanding",
+      "deleteRange",
+      "insertRange",
+      "unmergeCells",
+      "clearBasicFilter",
+      "deleteConditionalFormatRule",
+      "deleteBanding",
+      "deleteNamedRange",
+      "updateEmbeddedObjectBorder"
+    ],
+    "forms": ["deleteItem", "updateSettings", "updateItem", "moveItem", "createItem", "updateFormInfo"]
+  }
+}

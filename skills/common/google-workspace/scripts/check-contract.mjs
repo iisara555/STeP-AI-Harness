@@ -14,7 +14,10 @@ export async function checkContract(root) {
   ]);
   const block = /export const GOOGLE_OPERATIONS = \[([\s\S]*?)\] as const;/.exec(source);
   assert.ok(block, 'Native operation catalog not found');
-  const operations = [...block[1].matchAll(/'([a-zA-Z.]+)'/g)].map(match => match[1]).sort();
+  const extended = source.includes('Object.keys(EXTENDED_GOOGLE_OPERATIONS)')
+    ? await readFile(resolve(root, 'desktop/electron/google-extended-operations.ts'), 'utf8') : '';
+  const operations = [...block[1].matchAll(/'([a-zA-Z.]+)'/g), ...extended.matchAll(/^  '([a-zA-Z.]+)': define\(/gm)].map(match => match[1]).sort();
+  assert.equal(new Set(operations).size, operations.length, 'Native operations must be unique');
   const documented = [...reference.matchAll(/^\| `([a-zA-Z.]+)` \|/gm)].map(match => match[1]).sort();
   const sampled = fixtures.operations.map(item => item.request.operation).sort();
   assert.deepEqual(documented, operations, 'Reference operations differ from the native catalog');

@@ -112,6 +112,18 @@ const errors: Record<string, readonly [string, string]> = {
     'บัญชียังไม่ได้อนุญาตสิทธิ์ที่บริการนี้ต้องใช้ กรุณาเชื่อมใหม่โดยเลือกบริการที่จำเป็น',
     'The required service scope is not granted. Reconnect with the services you need.',
   ],
+  GOOGLE_TEXT_ONLY: [
+    'รายการนี้อ่านได้เฉพาะไฟล์ข้อความ UTF-8 กรุณาเปิดไฟล์ไบนารีหรือไฟล์แนบใน Google โดยตรง',
+    'This operation reads UTF-8 text only. Open binary files or attachments directly in Google.',
+  ],
+  GOOGLE_REDACTED_SOURCE: [
+    'ไฟล์โค้ดนี้มีข้อมูลที่ถูกปิดบัง กรุณาแก้ไฟล์นั้นใน Apps Script โดยตรง ส่วนไฟล์ที่ไม่ได้แก้จะถูกเก็บไว้ตามเดิม',
+    'This code contains withheld credentials. Edit that file directly in Apps Script; unmodified files are preserved.',
+  ],
+  GOOGLE_SOURCE_CHANGED: [
+    'โค้ด Apps Script เปลี่ยนหลังอ่าน กรุณาอ่านโค้ดล่าสุดแล้วตรวจรายการไฟล์ใหม่ก่อนบันทึก',
+    'Apps Script content changed after reading. Read the latest code and review all files before saving.',
+  ],
   GOOGLE_ACCOUNT_CHANGED: [
     'บัญชีหรือการตั้งค่าเปลี่ยนระหว่างทำงาน กรุณาเลือกบัญชีและยืนยันใหม่',
     'The account or configuration changed. Select the account and confirm again.',

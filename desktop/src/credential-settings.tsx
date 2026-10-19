@@ -122,6 +122,13 @@ const words = {
     'Verify the account in Google. Your browser account can differ from the account connected here.',
   ],
   selectServices: ['เลือกบริการที่ต้องใช้', 'Select the services you need'],
+  drive: ['Google Drive', 'Google Drive'],
+  driveAccess: ['สิทธิ์ไฟล์', 'File access'],
+  driveRead: ['ค้นและอ่าน', 'Search and read'],
+  driveWrite: ['อ่าน สร้าง และจัดการไฟล์', 'Read, create and manage files'],
+  editServices: ['ปรับบริการที่อนุญาต', 'Change allowed services'],
+  updatingServices: ['กำลังปรับสิทธิ์ของ', 'Changing services for'],
+  newAccount: ['เชื่อมบัญชีอื่น', 'Connect another account'],
   hideFiles: ['ซ่อนรายการไฟล์', 'Hide files'],
   noFiles: ['ยังไม่มีไฟล์ที่แอปนี้เปิดได้', 'No files this app can open yet'],
   files: ['เลือกไฟล์ที่บัญชีนี้เข้าถึงได้', 'Select files this account can access'],
@@ -190,41 +197,99 @@ const SERVICES: Record<GoogleService, ServiceInfo> = {
     name: ['Google Meet', 'Google Meet'],
     detail: ['ดูข้อมูลห้องประชุม', 'View meeting space details'],
   },
+  'gmail-manage': {
+    icon: Mail,
+    name: ['จัดป้ายกำกับและย้ายอีเมล', 'Manage Gmail labels and messages'],
+    detail: ['ติดป้ายกำกับ ทำเครื่องหมายอ่าน และย้ายเข้า/ออกถังขยะ', 'Apply labels, mark read, and move mail to or from Trash'],
+    changes: true,
+  },
+  drive: {
+    icon: FolderOpen,
+    name: ['จัดการไฟล์ Drive', 'Manage Drive files'],
+    detail: ['สร้างโฟลเดอร์ คัดลอก ย้ายไฟล์ และจัดสิทธิ์แชร์', 'Create folders, copy and move files, and manage sharing'],
+    changes: true,
+  },
+  docs: {
+    icon: FileText,
+    name: ['Google Docs', 'Google Docs'],
+    detail: ['อ่าน สร้าง แก้ข้อความ จัดรูปแบบ และสร้างตาราง', 'Read, create, edit, format and add tables'],
+    changes: true,
+  },
+  sheets: {
+    icon: ListChecks,
+    name: ['Google Sheets', 'Google Sheets'],
+    detail: ['อ่าน เขียนสูตร เพิ่มแถว จัดรูปแบบ และสร้างกราฟ', 'Read, write formulas, append rows, format and create charts'],
+    changes: true,
+  },
+  slides: {
+    icon: Video,
+    name: ['Google Slides', 'Google Slides'],
+    detail: ['อ่าน สร้าง และจัดหน้า ข้อความ รูปภาพ หรือตาราง', 'Read, create and edit slides, text, images and tables'],
+    changes: true,
+  },
+  forms: {
+    icon: ListChecks,
+    name: ['Google Forms', 'Google Forms'],
+    detail: ['สร้าง แก้คำถาม เปิดรับคำตอบ และอ่านผลตอบกลับ', 'Create forms, edit questions, publish and read responses'],
+    changes: true,
+  },
+  appscript: {
+    icon: PenLine,
+    name: ['Google Apps Script', 'Google Apps Script'],
+    detail: [
+      'แก้โค้ด จัดเวอร์ชันและ Deployment หรือเรียกฟังก์ชันที่ตั้งค่าไว้',
+      'Edit code, manage versions/deployments and run configured functions',
+    ],
+    changes: true,
+  },
 };
 const lang = () => (language() === 'en' ? 1 : 0);
 const serviceName = (s: string) => SERVICES[s as GoogleService]?.name[lang()] || s;
 
-function CalendarService({
+const visibleGoogleServices = (allowed: GoogleService[]) =>
+  allowed.filter(s => s !== 'documents' || !(['docs', 'sheets', 'slides'] as GoogleService[]).every(v => allowed.includes(v)));
+const selectedGoogleServices = (selected: GoogleService[], allowed: GoogleService[]) => {
+  const visible = visibleGoogleServices(allowed);
+  return [
+    ...new Set(
+      selected.flatMap(s => (s === 'documents' && !visible.includes(s) ? (['docs', 'sheets', 'slides'] as GoogleService[]) : [s])),
+    ),
+  ].filter(s => visible.includes(s));
+};
+function WorkspaceAccessService({
+  family,
   allowed,
   selected,
   busy,
   onChange,
 }: {
+  family: 'calendar' | 'drive';
   allowed: GoogleService[];
   selected: GoogleService[];
   busy: boolean;
   onChange: (services: GoogleService[]) => void;
 }) {
-  const options = (['calendar-read', 'calendar'] as const).filter(s => allowed.includes(s));
-  const access = options.find(s => s === 'calendar' && selected.includes(s)) || options.find(s => selected.includes(s));
+  const kinds: GoogleService[] = family === 'calendar' ? ['calendar-read', 'calendar'] : ['drive-read', 'drive'];
+  const options = kinds.filter(s => allowed.includes(s));
+  const access = options.find(s => s === family && selected.includes(s)) || options.find(s => selected.includes(s));
   const info = SERVICES[access || options[0]];
-  const choose = (next?: GoogleService) =>
-    onChange([...selected.filter(s => s !== 'calendar-read' && s !== 'calendar'), ...(next ? [next] : [])]);
+  const Icon = info.icon;
+  const choose = (next?: GoogleService) => onChange([...selected.filter(s => !kinds.includes(s)), ...(next ? [next] : [])]);
   return (
-    <div className={'google-service google-calendar' + (access ? ' selected' : '')}>
-      <label className="google-calendar-toggle">
+    <div className={'google-service google-access google-' + family + (access ? ' selected' : '')}>
+      <label className="google-access-toggle">
         <input
           type="checkbox"
-          aria-label={w('calendar')}
+          aria-label={w(family)}
           checked={Boolean(access)}
           disabled={busy}
           onChange={e => choose(e.target.checked ? options[0] : undefined)}
         />
         <span className="google-service-icon" aria-hidden="true">
-          <CalendarDays size={18} />
+          <Icon size={18} />
         </span>
         <span className="google-service-text">
-          <strong>{w('calendar')}</strong>
+          <strong>{w(family)}</strong>
           <span className="muted small">{info.detail[lang()]}</span>
           <span className={`google-kind ${info.changes ? 'changes' : 'read'}`}>{info.changes ? w('canChange') : w('readOnly')}</span>
         </span>
@@ -233,12 +298,20 @@ function CalendarService({
         </span>
       </label>
       {access && options.length > 1 && (
-        <fieldset className="google-calendar-access">
-          <legend>{w('calendarAccess')}</legend>
+        <fieldset className="google-access-options">
+          <legend>{w(family === 'calendar' ? 'calendarAccess' : 'driveAccess')}</legend>
           {options.map(s => (
             <label key={s}>
-              <input type="radio" name="google-calendar-access" checked={access === s} disabled={busy} onChange={() => choose(s)} />
-              <span>{s === 'calendar-read' ? w('calendarRead') : w('calendarWrite')}</span>
+              <input type="radio" name={'google-' + family + '-access'} checked={access === s} disabled={busy} onChange={() => choose(s)} />
+              <span>
+                {family === 'calendar'
+                  ? s === 'calendar-read'
+                    ? w('calendarRead')
+                    : w('calendarWrite')
+                  : s === 'drive-read'
+                    ? w('driveRead')
+                    : w('driveWrite')}
+              </span>
             </label>
           ))}
         </fieldset>
@@ -294,6 +367,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     remember: boolean;
   }>();
   const [services, setServices] = useState<GoogleService[]>(['documents']);
+  const [editingGoogle, setEditingGoogle] = useState<string>();
   const [busy, setBusy] = useState('');
   const [connectionError, setConnectionError] = useState<unknown>();
   const [files, setFiles] = useState<{ id: string; name: string; mimeType: string }[]>();
@@ -311,6 +385,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
         if (alive) {
           setVault(v);
           setGoogle(g);
+          setServices(old => selectedGoogleServices(old, g.services));
           setConnectionError(g.connectionError);
         }
       })
@@ -554,6 +629,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                   <ul className="google-chips" aria-label={w('selectServices')}>
                     {account.services
                       .filter(s => s !== 'calendar-read' || !account.services.includes('calendar'))
+                      .filter(s => s !== 'drive-read' || !account.services.includes('drive'))
                       .map(s => {
                         const Icon = SERVICES[s as GoogleService]?.icon || Globe;
                         return (
@@ -565,12 +641,25 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                       })}
                   </ul>
                   <div className="credential-actions">
+                    <button
+                      className="quiet"
+                      disabled={Boolean(busy)}
+                      onClick={() => {
+                        setEditingGoogle(account.id);
+                        setServices(selectedGoogleServices(account.services as GoogleService[], google.services));
+                        document.querySelector('.google-services')?.scrollIntoView({ block: 'center', behavior: 'instant' });
+                      }}
+                    >
+                      <ShieldCheck size={14} />
+                      {w('editServices')}
+                    </button>
                     {account.reauth && (
                       <button
                         disabled={Boolean(busy)}
                         onClick={() =>
                           void run('google-connect', () =>
                             call('googleConnect', {
+                              id: account.id,
                               services: account.services.filter(s => google.services.includes(s as GoogleService)),
                             }),
                           )
@@ -580,7 +669,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                         {w('reconnect')}
                       </button>
                     )}
-                    {account.services.some(s => s === 'documents' || s === 'drive-read') && (
+                    {account.services.some(s => s === 'documents' || s === 'drive-read' || s === 'drive') && (
                       <button
                         className="quiet"
                         disabled={Boolean(busy) || account.paused || account.reauth}
@@ -646,17 +735,19 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
               </div>
             )}
             <fieldset className="google-services">
-              <legend>{google.accounts.length ? w('addAccount') : w('selectServices')}</legend>
-              {google.services
-                .filter(
-                  (s, index, all) =>
-                    (s !== 'calendar-read' && s !== 'calendar') || index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
+              <legend>{editingGoogle ? w('editServices') : google.accounts.length ? w('addAccount') : w('selectServices')}</legend>
+              {visibleGoogleServices(google.services)
+                .filter((s, index, all) =>
+                  s !== 'calendar-read' && s !== 'calendar'
+                    ? (s !== 'drive-read' && s !== 'drive') || index === all.findIndex(v => v === 'drive-read' || v === 'drive')
+                    : index === all.findIndex(v => v === 'calendar-read' || v === 'calendar'),
                 )
                 .map(s => {
-                  if (s === 'calendar-read' || s === 'calendar')
+                  if (s === 'calendar-read' || s === 'calendar' || s === 'drive-read' || s === 'drive')
                     return (
-                      <CalendarService
-                        key="calendar"
+                      <WorkspaceAccessService
+                        key={s.startsWith('drive') ? 'drive' : 'calendar'}
+                        family={s.startsWith('drive') ? 'drive' : 'calendar'}
                         allowed={google.services}
                         selected={services}
                         busy={Boolean(busy)}
@@ -716,10 +807,26 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
               </p>
             )}
             <div className="google-connect-row">
+              {editingGoogle && (
+                <>
+                  <p className="muted small">
+                    {w('updatingServices')} {google.accounts.find(a => a.id === editingGoogle)?.label}
+                  </p>
+                  <button className="quiet" disabled={Boolean(busy)} onClick={() => setEditingGoogle(undefined)}>
+                    {w('newAccount')}
+                  </button>
+                </>
+              )}
               <button
                 disabled={Boolean(busy) || !services.some(s => google.services.includes(s))}
                 onClick={() =>
-                  void run('google-connect', () => call('googleConnect', { services: services.filter(s => google.services.includes(s)) }))
+                  void run('google-connect', async () => {
+                    await call('googleConnect', {
+                      services: services.filter(s => google.services.includes(s)),
+                      ...(editingGoogle ? { id: editingGoogle } : {}),
+                    });
+                    setEditingGoogle(undefined);
+                  })
                 }
               >
                 {w('connect')}

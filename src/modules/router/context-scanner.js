@@ -105,8 +105,8 @@ export const QUALIFIED_INTENT_RULES = [
   {
     intent: 'google-workspace',
     allAny: [
-      ['google workspace', 'gmail', 'google docs', 'google sheets', 'google slides', 'google calendar', 'google tasks', 'google chat', 'google meet', 'google drive', 'ไฟล์ drive'],
-      ['ค้น', 'หา', 'ดู', 'อ่าน', 'สรุป', 'สร้าง', 'แก้', 'อัปเดต', 'ส่ง', 'ร่าง', 'เชื่อม', 'search', 'read', 'create', 'update', 'send', 'draft', 'summarize', 'connect'],
+      ['google workspace', 'gmail', 'google docs', 'google sheets', 'google slides', 'google calendar', 'google tasks', 'google chat', 'google meet', 'google drive', 'ไฟล์ drive', 'google forms', 'apps script', 'appscript', 'script.google.com'],
+      ['ค้น', 'หา', 'ดู', 'อ่าน', 'สรุป', 'สร้าง', 'แก้', 'อัปเดต', 'ส่ง', 'ร่าง', 'เชื่อม', 'เผยแพร่', 'รัน', 'จัดรูปแบบ', 'search', 'read', 'create', 'update', 'send', 'draft', 'summarize', 'connect', 'publish', 'deploy', 'run'],
     ],
   },
   { intent: 'market-test', any: ['ขายได้ไหม', 'จะขายได้ไหม', 'ทดสอบตลาด', 'ทดลองตลาด', 'market test', 'test market'] },

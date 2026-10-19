@@ -2,7 +2,7 @@ import { providerEndpoint } from '../../src/modules/providers/compatible.js';
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import { MIN_CONTEXT_WINDOW } from './compact';
-import { GOOGLE_SERVICES, type GoogleService } from '../src/google-services';
+import { DEFAULT_GOOGLE_SERVICES, GOOGLE_SERVICES, type GoogleService } from '../src/google-services';
 import { DEFAULT_GOOGLE_CLIENT_ID } from './google-client';
 import { managedPolicyPath, trustedManagedPolicyPath } from '../../src/utils/managed-policy.js';
 
@@ -272,7 +272,7 @@ export function defaultPolicy(): Policy {
     googleWorkspace: {
       clientId: DEFAULT_GOOGLE_CLIENT_ID,
       domains: ['step.cmu.ac.th'],
-      services: ['documents', 'calendar-read', 'tasks'],
+      services: [...DEFAULT_GOOGLE_SERVICES],
     },
   };
 }
@@ -359,7 +359,7 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
       g.domains.some((d: unknown) => typeof d !== 'string' || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) ||
       !Array.isArray(g.services) ||
       !g.services.length ||
-      g.services.length > 10 ||
+      g.services.length > Object.keys(GOOGLE_SERVICES).length ||
       g.services.some((s: unknown) => typeof s !== 'string' || !Object.hasOwn(GOOGLE_SERVICES, s))
     )
       problems.push('googleWorkspace requires a Desktop OAuth clientId, verified domains and allowed service names');

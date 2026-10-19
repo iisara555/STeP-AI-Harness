@@ -240,10 +240,12 @@ Import retains Vault enrollment, shared-device, suspension and executable-tool g
 rejected; importing for the same client replaces its stored value. Account disconnect and Google revocation remain
 separate operations.
 
-### Turning on Gmail and Drive search for a cohort
+### Workspace services and restricted cohorts
 
-Gmail and searching every Drive file stay off in the release. When the administrator has completed the Google-side steps
-below, add a `googleWorkspace` object to the managed policy of the approved cohort only. It replaces the whole bundled
+The bundled policy offers Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script alongside the original app-managed
+documents, read-only Calendar and Tasks. This offers choices; it does not widen existing account grants. Employees opt
+in through Google consent, and the host separately checks the selected service intent, including draft versus send.
+Administrators can restrict the offering to an approved cohort with a `googleWorkspace` object. It replaces the whole bundled
 configuration, so it repeats the public client ID and domain. Policy contains no secret: installed-app client IDs are
 public; a required native client credential comes from the installer build or local Vault fallback described above.
 
@@ -257,15 +259,21 @@ public; a required native client credential comes from the installer build or lo
 }
 ```
 
-- `gmail-read` (`gmail.readonly`) and `drive-read` (`drive.readonly`) are read-only. Add `gmail-draft`, `gmail-send` or
-  `calendar` only for a cohort approved to create drafts, send mail or create events; each write still asks the employee
-  every time.
-- Before enabling: in the organization's Google Cloud project, confirm this Desktop OAuth client, enable the Gmail,
-  Drive and Calendar APIs, and set the OAuth audience. `gmail.readonly` and `drive.readonly` are restricted scopes:
+- This example restricts Gmail and Drive to read-only. Remove services to prohibit them. `gmail-draft`, `gmail-send`
+  and `gmail-manage` are separate employee intents even though Google's compose/modify scopes can also send.
+  `drive` manages files/sharing, `docs`/`sheets`/`slides` grant their native app surfaces, `forms` edits forms/reads
+  responses, and `appscript` manages projects/deployments. Each write still asks every time, including Full auto.
+- Before connecting: in the organization's Google Cloud project, confirm this Desktop OAuth client, enable the APIs
+  needed (Gmail, Drive, Docs, Sheets, Slides, Forms, Apps Script, Calendar and Tasks), and set the OAuth audience.
+  `gmail.readonly` and `drive.readonly` are restricted scopes:
   an External audience needs Google verification. In Admin Console, **Security -> Access and data control -> API
   controls**, allow this client for the cohort.
-- Employees who connected before the change reconnect in **Settings -> Google Workspace** and tick the new services;
-  existing grants are not widened silently.
+- Employees choose **Change allowed services** on their existing account and tick the new services; the OAuth result
+  must match that account's Google subject. Existing grants are not widened silently. Read-only Calendar remains the
+  default; event creation still requires an administrator to offer `calendar`.
 - This uses the built-in `google_workspace` tool. It needs no MCP server (`features.mcp` stays off) and no CLI.
+
+See [Workspace functions](google-workspace-functions.md) for the supported operations, transfer limits and Apps Script
+API Executable requirements. No production Google Cloud API or Workspace Admin setting is changed by a source update.
 
 An API-only profile remains in its existing OS-encrypted key store until the employee explicitly remembers a website account or connects Workspace. That first enrollment activates Vault protection and migration; the existing cross-session executable-tool restrictions persist even after pause, feature disable or deletion. Startup/first key use retries migration for an already protected profile; authoritative references never fall back to legacy secrets.

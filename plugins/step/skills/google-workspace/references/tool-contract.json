@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "source": "synthetic-native-google-contract-2026-10-14",
+  "source": "synthetic-native-google-contract-2026-10-18",
   "operations": [
     {
       "service": "drive-read",
@@ -313,6 +313,681 @@
         "operation": "meet.get",
         "params": {
           "spaceId": "demo_space"
+        }
+      }
+    },
+    {
+      "service": "drive-read",
+      "effect": "read",
+      "request": {
+        "operation": "drive.get",
+        "params": {
+          "fileId": "demo_file"
+        }
+      }
+    },
+    {
+      "service": "drive",
+      "effect": "write",
+      "request": {
+        "operation": "drive.createFolder",
+        "body": {
+          "name": "โฟลเดอร์สังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "drive",
+      "effect": "write",
+      "request": {
+        "operation": "drive.copy",
+        "params": {
+          "fileId": "demo_file"
+        },
+        "body": {
+          "name": "สำเนาสังเคราะห์",
+          "parentId": "demo_folder"
+        }
+      }
+    },
+    {
+      "service": "drive",
+      "effect": "write",
+      "request": {
+        "operation": "drive.update",
+        "params": {
+          "fileId": "demo_file",
+          "addParent": "demo_folder",
+          "removeParent": "old_folder"
+        },
+        "body": {
+          "name": "ชื่อใหม่",
+          "trashed": false
+        }
+      }
+    },
+    {
+      "service": "drive-read",
+      "effect": "read",
+      "request": {
+        "operation": "drive.exportText",
+        "params": {
+          "fileId": "demo_file",
+          "mimeType": "text/plain"
+        }
+      }
+    },
+    {
+      "service": "drive-read",
+      "effect": "read",
+      "request": {
+        "operation": "drive.getText",
+        "params": {
+          "fileId": "demo_file"
+        }
+      }
+    },
+    {
+      "service": "drive",
+      "effect": "write",
+      "request": {
+        "operation": "drive.uploadText",
+        "body": {
+          "name": "sample.csv",
+          "mimeType": "text/csv",
+          "text": "รหัส,ยอด\n00123,100",
+          "parentId": "demo_folder"
+        }
+      }
+    },
+    {
+      "service": "drive-read",
+      "effect": "read",
+      "request": {
+        "operation": "drive.permissions.list",
+        "params": {
+          "fileId": "demo_file",
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "drive",
+      "effect": "write",
+      "request": {
+        "operation": "drive.permissions.create",
+        "params": {
+          "fileId": "demo_file"
+        },
+        "body": {
+          "type": "user",
+          "role": "reader",
+          "emailAddress": "synthetic@example.test"
+        }
+      }
+    },
+    {
+      "service": "drive",
+      "effect": "write",
+      "request": {
+        "operation": "drive.permissions.delete",
+        "params": {
+          "fileId": "demo_file",
+          "permissionId": "demo_permission"
+        }
+      }
+    },
+    {
+      "service": "docs",
+      "effect": "write",
+      "request": {
+        "operation": "docs.batchUpdate",
+        "params": {
+          "documentId": "demo_doc"
+        },
+        "body": {
+          "requiredRevisionId": "demo_revision",
+          "requests": [
+            {
+              "replaceAllText": {
+                "containsText": {
+                  "text": "{{title}}",
+                  "matchCase": true
+                },
+                "replaceText": "หัวข้อสังเคราะห์"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "service": "slides",
+      "effect": "write",
+      "request": {
+        "operation": "slides.batchUpdate",
+        "params": {
+          "presentationId": "demo_slides"
+        },
+        "body": {
+          "requiredRevisionId": "demo_revision",
+          "requests": [
+            {
+              "replaceAllText": {
+                "containsText": {
+                  "text": "{{title}}",
+                  "matchCase": true
+                },
+                "replaceText": "หัวข้อสังเคราะห์"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "service": "slides",
+      "effect": "read",
+      "request": {
+        "operation": "slides.pages.get",
+        "params": {
+          "presentationId": "demo_slides",
+          "pageId": "demo_page"
+        }
+      }
+    },
+    {
+      "service": "sheets",
+      "effect": "write",
+      "request": {
+        "operation": "sheets.batchUpdate",
+        "params": {
+          "spreadsheetId": "demo_sheet"
+        },
+        "body": {
+          "requests": [
+            {
+              "addSheet": {
+                "properties": {
+                  "title": "ข้อมูลสังเคราะห์"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "service": "sheets",
+      "effect": "read",
+      "request": {
+        "operation": "sheets.values.batchGet",
+        "params": {
+          "spreadsheetId": "demo_sheet",
+          "ranges": [
+            "'ข้อมูล'!A1:B2"
+          ],
+          "valueRenderOption": "FORMULA"
+        }
+      }
+    },
+    {
+      "service": "sheets",
+      "effect": "write",
+      "request": {
+        "operation": "sheets.values.batchUpdate",
+        "params": {
+          "spreadsheetId": "demo_sheet"
+        },
+        "body": {
+          "data": [
+            {
+              "range": "'ข้อมูล'!A1:B2",
+              "values": [
+                [
+                  "รหัส",
+                  "ยอด"
+                ],
+                [
+                  "00123",
+                  100
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "service": "sheets",
+      "effect": "write",
+      "request": {
+        "operation": "sheets.values.append",
+        "params": {
+          "spreadsheetId": "demo_sheet",
+          "range": "'ข้อมูล'!A:B"
+        },
+        "body": {
+          "values": [
+            [
+              "00124",
+              200
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "service": "sheets",
+      "effect": "write",
+      "request": {
+        "operation": "sheets.values.clear",
+        "params": {
+          "spreadsheetId": "demo_sheet",
+          "range": "'ข้อมูล'!A1:B2"
+        }
+      }
+    },
+    {
+      "service": "gmail-read",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.threads.list",
+        "params": {
+          "query": "is:unread newer_than:7d",
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "gmail-read",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.threads.get",
+        "params": {
+          "threadId": "demo_thread"
+        }
+      }
+    },
+    {
+      "service": "gmail-read",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.labels.list"
+      }
+    },
+    {
+      "service": "gmail-manage",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.labels.create",
+        "body": {
+          "name": "รอตรวจ"
+        }
+      }
+    },
+    {
+      "service": "gmail-manage",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.modify",
+        "params": {
+          "messageId": "demo_message"
+        },
+        "body": {
+          "addLabelIds": [
+            "STARRED"
+          ],
+          "removeLabelIds": [
+            "UNREAD"
+          ]
+        }
+      }
+    },
+    {
+      "service": "gmail-manage",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.trash",
+        "params": {
+          "messageId": "demo_message"
+        }
+      }
+    },
+    {
+      "service": "gmail-manage",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.untrash",
+        "params": {
+          "messageId": "demo_message"
+        }
+      }
+    },
+    {
+      "service": "gmail-draft",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.drafts.list",
+        "params": {
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "gmail-draft",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.drafts.get",
+        "params": {
+          "draftId": "demo_draft"
+        }
+      }
+    },
+    {
+      "service": "gmail-draft",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.drafts.update",
+        "params": {
+          "draftId": "demo_draft"
+        },
+        "body": {
+          "to": [
+            "synthetic@example.test"
+          ],
+          "subject": "ร่างสังเคราะห์",
+          "text": "ข้อความที่ตรวจแล้ว",
+          "cc": [
+            "copy@example.test"
+          ]
+        }
+      }
+    },
+    {
+      "service": "gmail-draft",
+      "effect": "write",
+      "request": {
+        "operation": "gmail.drafts.delete",
+        "params": {
+          "draftId": "demo_draft"
+        }
+      }
+    },
+    {
+      "service": "gmail-read",
+      "effect": "read",
+      "request": {
+        "operation": "gmail.attachments.getText",
+        "params": {
+          "messageId": "demo_message",
+          "attachmentId": "synthetic_attachment"
+        }
+      }
+    },
+    {
+      "service": "forms",
+      "effect": "write",
+      "request": {
+        "operation": "forms.create",
+        "body": {
+          "title": "แบบสอบถามสังเคราะห์",
+          "documentTitle": "แบบสอบถามสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "forms",
+      "effect": "read",
+      "request": {
+        "operation": "forms.get",
+        "params": {
+          "formId": "demo_form"
+        }
+      }
+    },
+    {
+      "service": "forms",
+      "effect": "write",
+      "request": {
+        "operation": "forms.batchUpdate",
+        "params": {
+          "formId": "demo_form"
+        },
+        "body": {
+          "requiredRevisionId": "demo_revision",
+          "requests": [
+            {
+              "createItem": {
+                "item": {
+                  "title": "ข้อเสนอแนะ",
+                  "questionItem": {
+                    "question": {
+                      "required": false,
+                      "textQuestion": {
+                        "paragraph": true
+                      }
+                    }
+                  }
+                },
+                "location": {
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "service": "forms",
+      "effect": "read",
+      "request": {
+        "operation": "forms.responses.list",
+        "params": {
+          "formId": "demo_form",
+          "filter": "timestamp >= 2026-10-18T00:00:00Z",
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "forms",
+      "effect": "read",
+      "request": {
+        "operation": "forms.responses.get",
+        "params": {
+          "formId": "demo_form",
+          "responseId": "demo_response"
+        }
+      }
+    },
+    {
+      "service": "forms",
+      "effect": "write",
+      "request": {
+        "operation": "forms.setPublishSettings",
+        "params": {
+          "formId": "demo_form"
+        },
+        "body": {
+          "isPublished": false,
+          "isAcceptingResponses": false
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.projects.create",
+        "body": {
+          "title": "โครงการสังเคราะห์"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.projects.get",
+        "params": {
+          "scriptId": "demo_script"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.projects.getContent",
+        "params": {
+          "scriptId": "demo_script"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.projects.updateContent",
+        "params": {
+          "scriptId": "demo_script"
+        },
+        "body": {
+          "files": [
+            {
+              "name": "Code",
+              "type": "SERVER_JS",
+              "source": "function sample() { return 1; }"
+            }
+          ],
+          "expectedContentHash": "314c1724ac62aaa31a2b1351f504155977d11ede35e81fe26bc78eaebe670b0c"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.versions.list",
+        "params": {
+          "scriptId": "demo_script",
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.versions.get",
+        "params": {
+          "scriptId": "demo_script",
+          "versionNumber": 1
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.versions.create",
+        "params": {
+          "scriptId": "demo_script"
+        },
+        "body": {
+          "description": "เวอร์ชันที่ตรวจแล้ว"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.deployments.list",
+        "params": {
+          "scriptId": "demo_script",
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.deployments.get",
+        "params": {
+          "scriptId": "demo_script",
+          "deploymentId": "demo_deployment"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.deployments.create",
+        "params": {
+          "scriptId": "demo_script"
+        },
+        "body": {
+          "versionNumber": 1,
+          "manifestFileName": "appsscript",
+          "description": "Deployment ที่ตรวจแล้ว"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.deployments.update",
+        "params": {
+          "scriptId": "demo_script",
+          "deploymentId": "demo_deployment"
+        },
+        "body": {
+          "versionNumber": 1,
+          "manifestFileName": "appsscript"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.deployments.delete",
+        "params": {
+          "scriptId": "demo_script",
+          "deploymentId": "demo_deployment"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "read",
+      "request": {
+        "operation": "appscript.processes.list",
+        "params": {
+          "scriptId": "demo_script",
+          "pageToken": "synthetic_page"
+        }
+      }
+    },
+    {
+      "service": "appscript",
+      "effect": "write",
+      "request": {
+        "operation": "appscript.run",
+        "params": {
+          "deploymentId": "demo_api_executable"
+        },
+        "body": {
+          "function": "sample",
+          "parameters": [
+            "ข้อมูลสังเคราะห์"
+          ]
         }
       }
     }

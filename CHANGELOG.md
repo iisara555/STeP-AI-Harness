@@ -6,6 +6,11 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Known malformed-response limits: an Apps Script update receipt does not validate upstream `scriptId` as a string; malformed returned file content can produce `GOOGLE_RESPONSE_INVALID` after a successful write rather than `GOOGLE_OUTCOME_UNKNOWN`. No automatic retry is performed; inspect Google before repeating the update.
+- Apps Script source updates return an allowlisted acknowledgement instead of echoing unchanged project source into the AI result; source reads remain separate. Regression coverage uses the full Google Content response, including private source beyond the output preview.
+- Known limits: generic Sheets batch/clear can target whole sheets and formulas outside the values-API 500-cell/USER_ENTERED rules; UTF-8/NUL checks do not reject every binary MIME (an ASCII PDF may pass); Forms with Drive can allow response reads through the Drive scope even if the dedicated response scope was declined.
+- Expand native Google Workspace from 26 to 76 operations across Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script. Add mail threads/draft editing/replies/labels, Drive folders/sharing/text transfer, revision-bound document and form editing, Sheet formatting/formulas/charts, and Script source/version/deployment/execution workflows. Reuse the app's OAuth and Vault; no extra CLI is needed.
+- Offer the seven service families in Settings, with one Drive and Calendar card and account-bound permission upgrades. Store explicit service choices so Gmail drafting or mailbox management cannot silently authorize sending. Existing accounts retain their original choices until reauthorized. Google Cloud API enablement and actual account consent remain separate; file transfers are UTF-8 text only. See [supported functions and prerequisites](docs/google-workspace-functions.md).
 - Add 20 distinct office profile pictures in the existing Notion-style black ink on white paper. The picker now offers 53 portraits; saved pictures and retired choices still load.
 - Interactive icons throughout the app play a short motion on hover or keyboard focus, keeping the existing Lucide drawings and button sizes. Disabled controls stay still, and changes to the computer's Reduce Motion setting take effect while the app is open, including the folded sidebar.
 

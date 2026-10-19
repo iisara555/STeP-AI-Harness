@@ -5137,11 +5137,11 @@ nav button:disabled {
   border-color: var(--accent);
   background: var(--accent);
 }
-.google-calendar {
+.google-access {
   flex-direction: column;
   gap: 10px;
 }
-.google-calendar label.google-calendar-toggle {
+.google-access label.google-access-toggle {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -5149,7 +5149,7 @@ nav button:disabled {
   margin: 0;
   cursor: pointer;
 }
-.google-calendar-access {
+.google-access-options {
   display: grid;
   gap: 7px;
   width: 100%;
@@ -5159,18 +5159,18 @@ nav button:disabled {
   border-top: 1px solid var(--line);
   font-size: 12px;
 }
-.google-calendar-access legend {
+.google-access-options legend {
   margin: 0;
   font-weight: 500;
 }
-.google-calendar-access label {
+.google-access-options label {
   flex-direction: row;
   align-items: center;
   gap: 7px;
   margin: 0;
   cursor: pointer;
 }
-.google-calendar-access input {
+.google-access-options input {
   position: static;
   opacity: 1;
   pointer-events: auto;

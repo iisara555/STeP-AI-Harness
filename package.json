@@ -76,6 +76,7 @@
     "manifest/provenance.yaml",
     "docs/harness-foundation.md",
     "docs/desktop-policy.md",
+    "docs/google-workspace-functions.md",
     "docs/desktop-security-review.md",
     "docs/desktop-workflows.md",
     "docs/desktop-tool-loop.md",

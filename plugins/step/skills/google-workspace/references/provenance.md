@@ -22,4 +22,8 @@ OAuth, browser callback, token refresh, scope/domain checks และ Vault ใ�
 
 สคริปต์ `check-contract.mjs` เป็น offline developer check ตรวจ operation/reference/fixtures ตรงกับ source และ Desktop tests เรียก `googleInvocation` กับ fixtures ทุกตัว ไม่ติดต่อ Google ไม่เปิด token และไม่พิสูจน์ live OAuth หรือคุณภาพโมเดล
 
-ขอบเขตที่ native catalog ไม่มีจะบอกตรง ๆ: upload/download/share/delete/Contacts/reply/thread/attachments/labels/Sheets append/tab-specific Docs ไม่มีการอ้างว่ารองรับเทียบเท่า Hermes ทั้งหมด การตรวจจริงกับบัญชีและ owner review ยังต้องทำภายหลัง
+วันที่ 2026-10-18 ขยาย native catalog จาก 26 เป็น 76 operations ตาม 7 กลุ่มบริการที่ผู้ใช้ยก [openclaw/gogcli](https://github.com/openclaw/gogcli) เป็นตัวอย่าง: Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script ใช้แนวคิด service-specific consent, typed operations และ structured results โดยไม่ได้คัดลอก Go implementation หรือเพิ่ม gog binary/shell bridge
+
+ตรวจ endpoint/method/scope และชนิด batch request กับ Google API Discovery documents ทางการ แล้วเก็บ snapshot สาธารณะเฉพาะ metadata ใน `desktop/test/fixtures/google-api-methods.json` สำหรับการตรวจ offline การเพิ่ม scope ใน policy ไม่เพิ่ม grant ให้บัญชีเก่า และ host ตรวจเจตนาอ่าน/ร่าง/ส่งแยกจาก scope ที่กว้างกว่าของ Google
+
+ขอบเขตที่ native catalog ไม่มีจะบอกตรง ๆ: โอนไฟล์ไบนารี/PDF/DOCX, Contacts, ส่ง draft ID เดิมโดยไม่ตรวจเนื้อหาใหม่ และ selector ของคำสั่ง append สำหรับ Docs หลาย tab ไม่มีการอ้างว่าเทียบเท่า Hermes หรือ gogcli ทุกคำสั่ง การตรวจจริงกับบัญชีและการตั้งค่า Google Cloud ขององค์กรยังต้องทำแยกต่างหาก
