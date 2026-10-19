@@ -197,7 +197,7 @@ Run `npm test`, `npm run format:check`, `npm run build` and `npm run test:electr
 
 The release enables `vault`, `googleWorkspace` and `developmentMode` without a per-machine policy file. `claudeSubscription` remains false: a developer turns Dev mode on to use a personal Claude Pro/Max account for evaluation/demo, then selects **Switch back to normal mode** to turn it off. The owner chose manual shutdown; there is no scheduled expiry. This does not establish Anthropic approval for organizational distribution of subscription sign-in.
 
-The default policy contains only the public installed-app client ID, `step.cmu.ac.th` and `documents`, `calendar-read`, `tasks`. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
+The default policy contains the public installed-app client ID, `step.cmu.ac.th` and all 17 supported service permissions (11 product families). Availability is not account authorization. `calendar-read` requests only read-only Calendar scopes; `calendar` additionally allows reviewed event creation. Google API enablement, OAuth audience/test users and administrator access still require project/tenant configuration. A managed `googleWorkspace` object replaces the entire configuration; `googleWorkspace: null` explicitly clears it. Explicit `features.vault`, `features.googleWorkspace` or `features.developmentMode` false values deny the respective capability. Malformed or untrusted managed policy disables all three capabilities instead of falling back to release-enabled credential/demo features.
 
 ### Desktop OAuth client credentials
 
@@ -240,8 +240,20 @@ separate operations.
 
 ### Workspace services and restricted cohorts
 
+An existing managed `googleWorkspace.services` list replaces release defaults; it is never widened by an app upgrade.
+This explained the reported missing 0.6.16 services: that installer contained the new methods and UI, while the device
+policy still allowed only `documents`, `calendar-read`, `tasks`, `calendar`. Settings now names the restricted
+permissions and explains how to upgrade the existing account. Administrators who approve every supported service
+can keep their existing client/domain and set `services` to:
+
+```json
+["documents", "docs", "sheets", "slides", "drive-read", "drive", "gmail-read", "gmail-draft", "gmail-send", "gmail-manage", "forms", "appscript", "calendar-read", "tasks", "calendar", "chat", "meet"]
+```
+
+This does not enable Cloud APIs or grant employee OAuth permissions. Keep intentionally restricted policies explicit.
+
 The bundled policy offers Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script alongside the original app-managed
-documents, read-only Calendar and Tasks. This offers choices; it does not widen existing account grants. Employees opt
+documents, Calendar read/event creation, Tasks, Chat and Meet. This offers choices; it does not widen existing account grants. Employees opt
 in through Google consent, and the host separately checks the selected service intent, including draft versus send.
 Administrators can restrict the offering to an approved cohort with a `googleWorkspace` object. It replaces the whole bundled
 configuration, so it repeats the public client ID and domain. Policy contains no secret: installed-app client IDs are
@@ -262,13 +274,13 @@ public; a required native client credential comes from the installer build or lo
   `drive` manages files/sharing, `docs`/`sheets`/`slides` grant their native app surfaces, `forms` edits forms/reads
   responses, and `appscript` manages projects/deployments. Each write still asks every time, including Full auto.
 - Before connecting: in the organization's Google Cloud project, confirm this Desktop OAuth client, enable the APIs
-  needed (Gmail, Drive, Docs, Sheets, Slides, Forms, Apps Script, Calendar and Tasks), and set the OAuth audience.
+  needed (Gmail, Drive, Docs, Sheets, Slides, Forms, Apps Script, Calendar, Tasks, Chat and Meet), and set the OAuth audience.
   `gmail.readonly` and `drive.readonly` are restricted scopes:
   an External audience needs Google verification. In Admin Console, **Security -> Access and data control -> API
   controls**, allow this client for the cohort.
 - Employees choose **Change allowed services** on their existing account and tick the new services; the OAuth result
-  must match that account's Google subject. Existing grants are not widened silently. Read-only Calendar remains the
-  default; event creation still requires an administrator to offer `calendar`.
+  must match that account's Google subject. Existing grants are not widened silently. Calendar event creation, Chat and Meet are now offered by default,
+  but require their own account selections, scopes and per-action consent.
 - This uses the built-in `google_workspace` tool. It needs no MCP server (`features.mcp` stays off) and no CLI.
 
 See [Workspace functions](google-workspace-functions.md) for the supported operations, transfer limits and Apps Script

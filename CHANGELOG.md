@@ -6,6 +6,8 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
+- Offer all 17 native Google Workspace permissions (11 supported service families) by default, including Calendar event creation, Chat and Meet. Explain which permissions an existing managed policy restricts and how to reauthorize an existing account. Upgrades preserve administrator restrictions and employee grants; Cloud API enablement remains separate.
+
 - พิมพ์งานด้วยภาษาปกติแล้วเลือก Skill ก่อนตอบแบบผสม: ชื่อทักษะที่ระบุชัดและ Router มั่นใจสูงโหลดได้ทันที กรณีอื่นให้ AI ที่เชื่อมต่ออยู่เลือกจากชื่อและคำอธิบาย แล้วตรวจสิทธิและโหลดเนื้อหา Skill จริง งานแปล ตรวจคำผิด และย่อข้อความสั้นยังใช้ทางลัดเดิม
 - แยกงานเขียนโพสต์ใหม่ออกจากงานตรวจน้ำเสียงแบรนด์ บันทึกเวลาและการใช้โทเคนของขั้นเลือก Skill และปิดกลับไปใช้การค้นหา Skill เดิมได้ผ่าน policy `features.hybridSkillSelection`
 

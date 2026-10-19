@@ -4,7 +4,7 @@ export const GOOGLE_SERVICES = {
   'gmail-read': ['gmail.readonly'],
   'gmail-draft': ['gmail.compose'],
   'gmail-send': ['gmail.send'],
-  // Read-only Calendar is the release default; `calendar` adds event creation for cohorts an administrator approves.
+  // Calendar read and event creation remain separate choices in each account's consent.
   'calendar-read': ['calendar.calendarlist.readonly', 'calendar.events.readonly'],
   calendar: ['calendar.calendarlist.readonly', 'calendar.events'],
   tasks: ['tasks'],
@@ -47,6 +47,9 @@ export const DEFAULT_GOOGLE_SERVICES: GoogleService[] = [
   'appscript',
   'calendar-read',
   'tasks',
+  'calendar',
+  'chat',
+  'meet',
 ];
 
 const broaderScopes: Record<string, string[]> = {
