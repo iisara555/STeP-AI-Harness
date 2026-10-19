@@ -3,9 +3,9 @@ import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:
 import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { totp } from './vault-otp';
-import { paymentFields, addressFields } from '../src/vault-fields';
+import { addressFields } from '../src/vault-fields';
 
-export type VaultKind = 'website' | 'payment' | 'address' | 'api-key' | 'google-oauth' | 'google-client';
+export type VaultKind = 'website' | 'address' | 'api-key' | 'google-oauth' | 'google-client';
 export type VaultPayload = { username: string; password: string; otpSecret?: string; fields?: Record<string, string> };
 export type VaultMetadata = { id: string; label: string; kind: VaultKind; destination: string; revision: number; at: string };
 type StoredRecord = VaultMetadata & { nonce: string; tag: string; ciphertext: string };
@@ -131,14 +131,11 @@ export class Vault {
     otpSecret?: string;
     fields?: Record<string, string>;
   }): VaultMetadata {
-    if (!['website', 'payment', 'address', 'api-key', 'google-oauth', 'google-client'].includes(input.kind))
-      throw new Error('INVALID_INPUT');
+    if (!['website', 'address', 'api-key', 'google-oauth', 'google-client'].includes(input.kind)) throw new Error('INVALID_INPUT');
     const previous = input.id ? this.record(string(input.id, 80)) : undefined;
     if (previous && (this.locks.has(previous.id) || previous.revision !== input.revision)) throw new Error('VAULT_REVISION_CHANGED');
     if (previous && previous.kind !== input.kind) throw new Error('VAULT_ACCESS_DENIED');
-    const destination = ['website', 'payment', 'address'].includes(input.kind)
-      ? websiteOrigin(input.destination)
-      : string(input.destination, 2000);
+    const destination = ['website', 'address'].includes(input.kind) ? websiteOrigin(input.destination) : string(input.destination, 2000);
     const meta: VaultMetadata = {
       id: previous?.id || randomUUID(),
       label: string(input.label, 100),
@@ -149,10 +146,9 @@ export class Vault {
     };
     if (input.otpSecret) totp(input.otpSecret);
     const fields = input.fields && Object.fromEntries(Object.entries(input.fields).filter(([, value]) => value !== ''));
-    if (input.kind === 'payment' || input.kind === 'address') {
-      const allowed = input.kind === 'payment' ? paymentFields : addressFields;
-      const required =
-        input.kind === 'payment' ? ['card_number', 'exp_month', 'exp_year', 'cvc'] : ['address_line1', 'city', 'postal_code', 'country'];
+    if (input.kind === 'address') {
+      const allowed = addressFields;
+      const required = ['address_line1', 'city', 'postal_code', 'country'];
       if (!fields || Object.keys(fields).some(k => !allowed.includes(k)) || required.some(k => !fields[k]))
         throw new Error('INVALID_INPUT');
       for (const value of Object.values(fields)) string(value, 1000);
@@ -168,7 +164,7 @@ export class Vault {
                 : string(input.password, 4000),
             otpSecret: input.otpSecret === undefined ? (previous ? this.decode(previous).otpSecret : undefined) : input.otpSecret,
           }
-        : input.kind === 'payment' || input.kind === 'address'
+        : input.kind === 'address'
           ? { username: '', password: '', fields }
           : { value: string(input.value, 20000) };
     if (this.list().length >= 200 && !previous) throw new Error('VAULT_LIMIT');
@@ -243,7 +239,7 @@ export class Vault {
     if (this.suspended) throw new Error('VAULT_SUSPENDED');
     const destination = vaultOrigin(origin);
     return this.list()
-      .filter(entry => ['website', 'payment', 'address'].includes(entry.kind) && entry.destination === destination)
+      .filter(entry => ['website', 'address'].includes(entry.kind) && entry.destination === destination)
       .map(entry => {
         const payload = this.decode(this.record(entry.id));
         return {
@@ -260,8 +256,7 @@ export class Vault {
   browserHandle(id: string, context: string, origin: string) {
     if (this.suspended) throw new Error('VAULT_SUSPENDED');
     const entry = this.record(id);
-    if (!['website', 'payment', 'address'].includes(entry.kind) || entry.destination !== vaultOrigin(origin))
-      throw new Error('VAULT_ACCESS_DENIED');
+    if (!['website', 'address'].includes(entry.kind) || entry.destination !== vaultOrigin(origin)) throw new Error('VAULT_ACCESS_DENIED');
     const now = Date.now();
     for (const [handle, entry] of this.handles) if (entry.expires < now) this.handles.delete(handle);
     if (this.handles.size >= 500) throw new Error('VAULT_LIMIT');

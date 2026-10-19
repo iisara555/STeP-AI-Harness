@@ -15,8 +15,8 @@ type Schema = {
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
   browser_vault: [
-    'Saved logins and addresses fill automatically on their exact site; card fills ask first. list returns handles and usernames, never passwords. save_login opens a masked trusted Save & sign in prompt; enter_code uses a saved TOTP or masked code prompt. unlock opens a manager prompt. Never pass a secret in arguments or chat. Input is the current-session browser tab ID. submit=true signs in after login fill.',
-    ['credential-use', 'exact-origin', 'payment-consent'],
+    'Saved logins and addresses fill automatically on their exact site. Payment cards are not supported. list returns handles and usernames, never passwords. save_login opens a masked trusted Save & sign in prompt; enter_code uses a saved TOTP or masked code prompt. unlock opens a manager prompt. Never pass a secret in arguments or chat. Input is the current-session browser tab ID. submit=true signs in after login fill.',
+    ['credential-use', 'exact-origin'],
     {
       action: { enum: ['list', 'fill', 'request_save', 'save_login', 'enter_code', 'unlock'] },
       handle: { type: 'string', maxLength: 80 },

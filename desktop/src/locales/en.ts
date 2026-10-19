@@ -14,12 +14,10 @@ export const en: Record<string, string> = {
     'Coding tools remain available with their normal permissions. Host commands can access data owned by this OS user.',
   'Authenticator setup key หรือ otpauth:// (ไม่บังคับ)': 'Authenticator setup key or otpauth:// (optional)',
   'ลบ Authenticator key ที่บันทึกไว้': 'Remove saved authenticator key',
-  เพิ่มบัตรชำระเงิน: 'Add payment card',
   เพิ่มที่อยู่: 'Add address',
   ชื่อเรียกบัญชี: 'Account label',
   เว็บไซต์ที่ใช้ได้: 'Allowed website',
   จำข้อมูลนี้บนเครื่องส่วนตัวของฉัน: 'Remember on my personal device',
-  บัตรชำระเงิน: 'Payment card',
   ที่อยู่: 'Address',
   ลบจากเครื่อง: 'Delete locally',
   ตัวจัดการรหัสผ่าน: 'Password managers',
@@ -28,12 +26,7 @@ export const en: Record<string, string> = {
   'ติดตั้งและลงชื่อใน CLI ของบริการก่อน': 'Install and sign in to its CLI first',
   ล็อก: 'Lock',
   ปลดล็อก: 'Unlock',
-  เลขบัตร: 'Card number',
-  ชื่อบนบัตร: 'Cardholder name',
-  เดือนหมดอายุ: 'Expiry month',
-  ปีหมดอายุ: 'Expiry year',
   'CVC / CVV': 'CVC / CVV',
-  รหัสไปรษณีย์เรียกเก็บเงิน: 'Billing postal code',
   ที่อยู่บรรทัดแรก: 'Address line1',
   ที่อยู่บรรทัดที่สอง: 'Address line2',
   'เมือง / อำเภอ': 'City',
@@ -49,7 +42,6 @@ export const en: Record<string, string> = {
   จำบัญชีนี้บนเครื่องส่วนตัวของฉัน: 'Remember this login on my personal device',
   'บัญชีที่จำไว้ใน Vault ใช้ลงชื่อให้อัตโนมัติ หากยังไม่มีบัญชี ผู้ช่วยเปิดหน้าต่างบันทึกและเข้าสู่ระบบให้ รหัสผ่านและ OTP ไม่เข้าแชต':
     'Saved Vault accounts sign in automatically. For a new account, the assistant opens Save & sign in. Passwords and codes never enter chat.',
-  'กรอกข้อมูลบัตรครั้งนี้?': 'Fill this payment card once?',
   'เพิ่มรูปโปรไฟล์คนทำงาน 20 แบบ และไอคอนขยับเมื่อชี้หรือใช้คีย์บอร์ด พร้อมรองรับการลดการเคลื่อนไหว':
     '20 more office profile pictures and icons that move on hover or keyboard focus, respecting Reduce Motion',
   'เพิ่มงาน Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script ผ่านบัญชี Google ที่เชื่อมไว้':

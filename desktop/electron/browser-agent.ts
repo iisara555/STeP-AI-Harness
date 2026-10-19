@@ -43,7 +43,7 @@ type Entry = {
   opened: string;
   busy: boolean;
   vaultSensitive?: boolean;
-  protectedKind?: 'payment' | 'address' | 'code';
+  protectedKind?: 'address' | 'code';
   generation?: number;
 };
 type Context = {
@@ -486,7 +486,7 @@ export class AgentBrowser {
       );
       if (info.error) throw new Error(info.error);
       context.review(info.url + '\n' + info.label);
-      const final = action === 'click' && (info.final === true || entry.protectedKind === 'payment' || entry.protectedKind === 'address');
+      const final = action === 'click' && (info.final === true || entry.protectedKind === 'address');
       if (final) context.activity?.(tm('รออนุญาตขั้นสุดท้าย: {0}', info.label));
       if (
         (final || !context.routine?.()) &&
@@ -701,7 +701,8 @@ export class AgentBrowser {
     entry.vaultSensitive = false;
     entry.protectedKind = undefined;
   }
-  async prepareProtected(id: string, owner: string, kind: 'payment' | 'address' | 'code', signal: AbortSignal) {
+  async prepareProtected(id: string, owner: string, kind: 'address' | 'code', signal: AbortSignal) {
+    if (!['address', 'code'].includes(kind)) throw new Error('VAULT_FORM_UNSUPPORTED');
     const target = this.vaultTarget(id, owner),
       entry = this.get(id, owner);
     const result = await this.script(
@@ -715,18 +716,17 @@ export class AgentBrowser {
       generation: number;
       fingerprint: string;
       fields: string[];
-      kind: 'payment' | 'address' | 'code';
+      kind: 'address' | 'code';
     };
   }
   async fillProtected(
     id: string,
     owner: string,
-    expected: { origin: string; url: string; generation: number; fingerprint: string; kind: 'payment' | 'address' | 'code' },
+    expected: { origin: string; url: string; generation: number; fingerprint: string; kind: 'address' | 'code' },
     values: Record<string, string>,
     signal: AbortSignal,
   ) {
-    if (expected.kind === 'payment' && values.exp_month && values.exp_year)
-      values = { ...values, exp_date: values.exp_month.padStart(2, '0') + '/' + values.exp_year.slice(-2) };
+    if (!['address', 'code'].includes(expected.kind)) throw new Error('VAULT_FORM_UNSUPPORTED');
     const target = this.vaultTarget(id, owner),
       entry = this.get(id, owner);
     if (target.url !== expected.url || target.generation !== expected.generation) throw new Error('VAULT_ORIGIN_CHANGED');

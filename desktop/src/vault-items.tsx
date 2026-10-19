@@ -1,16 +1,10 @@
 import { useState } from 'react';
 import { t } from './i18n';
 import type { VaultMetadata } from '../electron/vault';
-import { paymentFields, addressFields } from './vault-fields';
+import { addressFields } from './vault-fields';
 
 // Field names match the browser host contract; only encrypted trusted IPC accepts their values.
 const labels: Record<string, string> = {
-  card_number: 'เลขบัตร',
-  cardholder_name: 'ชื่อบนบัตร',
-  exp_month: 'เดือนหมดอายุ',
-  exp_year: 'ปีหมดอายุ',
-  cvc: 'CVC / CVV',
-  billing_postal_code: 'รหัสไปรษณีย์เรียกเก็บเงิน',
   address_line1: 'ที่อยู่บรรทัดแรก',
   address_line2: 'ที่อยู่บรรทัดที่สอง',
   city: 'เมือง / อำเภอ',
@@ -33,7 +27,7 @@ export function VaultItems({
   call: (method: string, input?: any) => Promise<any>;
 }) {
   const [form, setForm] = useState<{
-    kind: 'payment' | 'address';
+    kind: 'address';
     label: string;
     destination: string;
     fields: Record<string, string>;
@@ -42,11 +36,9 @@ export function VaultItems({
   return (
     <div className="vault-items">
       <div className="credential-actions">
-        {(['payment', 'address'] as const).map(kind => (
-          <button key={kind} disabled={disabled} onClick={() => setForm({ kind, label: '', destination: '', fields: {}, remember: false })}>
-            {kind === 'payment' ? t('เพิ่มบัตรชำระเงิน') : t('เพิ่มที่อยู่')}
-          </button>
-        ))}
+        <button disabled={disabled} onClick={() => setForm({ kind: 'address', label: '', destination: '', fields: {}, remember: false })}>
+          {t('เพิ่มที่อยู่')}
+        </button>
       </div>
       {form && (
         <form
@@ -67,18 +59,14 @@ export function VaultItems({
             {t('เว็บไซต์ที่ใช้ได้')}
             <input required type="url" value={form.destination} onChange={event => setForm({ ...form, destination: event.target.value })} />
           </label>
-          {(form.kind === 'payment' ? paymentFields : addressFields).map(name => (
+          {addressFields.map(name => (
             <label key={name}>
               {t(labels[name])}
               <input
-                type={['card_number', 'cvc'].includes(name) ? 'password' : 'text'}
+                type="text"
                 autoComplete="off"
                 maxLength={1000}
-                required={
-                  form.kind === 'payment'
-                    ? ['card_number', 'exp_month', 'exp_year', 'cvc'].includes(name)
-                    : ['address_line1', 'city', 'postal_code', 'country'].includes(name)
-                }
+                required={['address_line1', 'city', 'postal_code', 'country'].includes(name)}
                 value={form.fields[name] || ''}
                 onChange={event => setForm({ ...form, fields: { ...form.fields, [name]: event.target.value } })}
               />
@@ -97,13 +85,13 @@ export function VaultItems({
         </form>
       )}
       {entries
-        .filter(entry => ['payment', 'address'].includes(entry.kind))
+        .filter(entry => entry.kind === 'address')
         .map(entry => (
           <article className="credential-row" key={entry.id}>
             <div>
               <strong>{entry.label}</strong>
               <p className="muted small">
-                {entry.destination} · {entry.kind === 'payment' ? t('บัตรชำระเงิน') : t('ที่อยู่')}
+                {entry.destination} · {t('ที่อยู่')}
               </p>
             </div>
             <button

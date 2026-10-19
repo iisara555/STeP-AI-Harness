@@ -22,10 +22,6 @@ const currentCode = () => {
 };
 const server = createServer({ key, cert }, (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  if (req.url === '/payment')
-    return res.end(
-      '<form method="post"><input autocomplete="cc-number"><input autocomplete="cc-exp"><input autocomplete="cc-csc"><button>Pay</button></form>',
-    );
   if (req.url === '/address')
     return res.end(
       '<form method="post"><input autocomplete="address-line1"><input autocomplete="address-level2"><input autocomplete="postal-code"><input autocomplete="country"><button>Continue</button></form>',
@@ -71,7 +67,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  const values=results.filter(r=>r.ok).map(r=>{try{return JSON.parse(r.text)}catch{return {}}});const last=values.at(-1);
  const tab=values.find(v=>v.tab)?.tab;const accounts=values.filter(v=>Array.isArray(v.entries)).at(-1)?.entries||[];
  let request;
- const scenario=thread.includes('Run synthetic payment fill')?'payment':thread.includes('Run synthetic address fill')?'address':'website';
+ const scenario=thread.includes('Run synthetic address fill')?'address':'website';
  if(scenario!=='website'){
    if(!results.length)request={tool:'browser_control',input:${JSON.stringify(origin)}+'/'+scenario,args:{action:'open'}};
    else if(last?.filledFields){}
@@ -215,15 +211,19 @@ try {
     assert.equal(state.blockHostExecution, false);
     await page.getByRole('button', { name: 'ปิดเว็บนี้', exact: true }).last().click();
   }
+  await assert.rejects(
+    page.evaluate(
+      origin => window.step.call('vaultSave', { kind: 'payment', destination: origin, label: 'Unsupported', remember: true }),
+      origin,
+    ),
+    /FEATURE_DISABLED/,
+  );
   assert.equal(logins, 3);
   assert.equal(codes, 3);
-  for (const kind of ['payment', 'address']) {
+  for (const kind of ['address']) {
     phase = kind + ' from chat';
     console.log('Vault Hermes phase: ' + phase);
-    const fields =
-      kind === 'payment'
-        ? { card_number: '4111111111111111', exp_month: '03', exp_year: '2030', cvc: '123' }
-        : { address_line1: 'Synthetic private street', city: 'Test city', postal_code: '00000', country: 'TH' };
+    const fields = { address_line1: 'Synthetic private street', city: 'Test city', postal_code: '00000', country: 'TH' };
     await page.evaluate(
       ({ kind, fields, origin }) =>
         window.step.call('vaultSave', { kind, fields, destination: origin, label: 'Synthetic ' + kind, remember: true }),
@@ -236,13 +236,8 @@ try {
     const open = page.getByRole('alertdialog');
     await expect(open).toBeVisible({ timeout: 20000 });
     await open.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-    if (kind === 'payment') {
-      const consent = page.getByRole('alertdialog', { name: 'กรอกข้อมูลบัตรครั้งนี้?', exact: true });
-      await expect(consent).toBeVisible({ timeout: 20000 });
-      await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
-    }
     await expect(page.getByText('Vault ' + kind + ' fill verified', { exact: true })).toBeVisible({ timeout: 20000 });
-    assert.equal((await page.evaluate(() => window.vaultAudit)).length, kind === 'payment' ? 2 : 1);
+    assert.equal((await page.evaluate(() => window.vaultAudit)).length, 1);
     const actual = await app.evaluate(
       async ({ webContents }, url) =>
         webContents
@@ -251,7 +246,7 @@ try {
           .executeJavaScript('[...document.querySelectorAll("input")].map(el=>el.value)'),
       origin + '/' + kind,
     );
-    assert.ok(actual.includes(kind === 'payment' ? '4111111111111111' : 'Synthetic private street'));
+    assert.ok(actual.includes('Synthetic private street'));
     await page.getByRole('button', { name: 'ปิดเว็บนี้', exact: true }).last().click();
   }
   assert.deepEqual(errors, []);

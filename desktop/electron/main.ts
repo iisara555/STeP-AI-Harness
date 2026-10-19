@@ -1033,27 +1033,9 @@ async function main() {
         async entry => {
           expected =
             otp || entry.kind !== 'website'
-              ? await agentBrowser.prepareProtected(
-                  request.input,
-                  scope.sessionId,
-                  otp ? 'code' : (entry.kind as 'address' | 'payment'),
-                  scope.signal,
-                )
+              ? await agentBrowser.prepareProtected(request.input, scope.sessionId, otp ? 'code' : 'address', scope.signal)
               : await agentBrowser.prepareVault(request.input, scope.sessionId, scope.signal);
-          if (entry.kind !== 'payment') return true;
-          // A background task cannot confirm a card fill; never consume an unavailable human approval.
-          if (!store.list<Session>('session').some(session => session.id === scope.sessionId)) throw new Error('VAULT_PROMPT_UNAVAILABLE');
-          return approvals.request(
-            approvals.rule(store.settings().workspace || data, 'browser_vault', randomUUID()),
-            {
-              title: tm('กรอกข้อมูลบัตรครั้งนี้?'),
-              body: entry.label + '\n' + target.origin,
-              privacyClass: 'restricted',
-              allowRemember: false,
-              sessionId: scope.sessionId,
-            },
-            scope.signal,
-          );
+          return true;
         },
         async (payload, entry) => {
           await check();
@@ -1793,14 +1775,14 @@ async function main() {
       case 'vaultState':
         return {
           ...vault.state(),
-          entries: vault.list().filter(v => ['website', 'payment', 'address', 'api-key'].includes(v.kind)),
+          entries: vault.list().filter(v => ['website', 'address', 'api-key'].includes(v.kind)),
           sources: vaultManagers.state(),
           blockHostExecution: Boolean(policyState.policy.credentialStorage?.blockHostExecution),
           enabled: policyState.policy.features.vault && !policyState.policy.credentialStorage?.sharedDevice,
           browsers: agentBrowser.sensitiveTabs(),
         };
       case 'vaultSave': {
-        if (!policyState.policy.features.vault || !['website', 'payment', 'address'].includes(input.kind) || input.remember !== true)
+        if (!policyState.policy.features.vault || !['website', 'address'].includes(input.kind) || input.remember !== true)
           throw new Error('FEATURE_DISABLED');
         if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         if (
@@ -1815,7 +1797,7 @@ async function main() {
       }
       case 'vaultRemove': {
         const entry = vault.list().find(v => v.id === input.id);
-        if (!entry || !['website', 'payment', 'address'].includes(entry.kind)) throw new Error('VAULT_ACCESS_DENIED');
+        if (!entry || !['website', 'address'].includes(entry.kind)) throw new Error('VAULT_ACCESS_DENIED');
         if (permissionMode() === 'plan') throw new Error('PLAN_MODE_BLOCKED');
         if (!(await phase4Consent(credentialTitle('Delete this account from this device?'), entry.label))) throw new Error('CANCELLED');
         vault.remove(entry.id, input.revision);

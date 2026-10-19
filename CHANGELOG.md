@@ -6,7 +6,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 
 ## Unreleased
 
-- Enable Hermes-style Vault browser workflows: saved-login/address autofill, trusted Save & sign in and masked verification prompts, host TOTP, detected 1Password/Bitwarden sources and one-time card-fill consent. Coding tools keep their usual permissions after Vault enrollment; administrators can retain the previous global execution gate with `credentialStorage.blockHostExecution: true`. Existing OS-wrapped encrypted records remain compatible. See [behavior, trust model and acceptance limits](docs/desktop-vault-hermes.md).
+- Enable Hermes-style Vault browser workflows: saved-login/address autofill, trusted Save & sign in and masked verification prompts, host TOTP, detected 1Password/Bitwarden sources and exact-origin address filling; card storage/import/fill are removed at the owner's request. Coding tools keep their usual permissions after Vault enrollment; administrators can retain the previous global execution gate with `credentialStorage.blockHostExecution: true`. Existing OS-wrapped encrypted records remain compatible. See [behavior, trust model and acceptance limits](docs/desktop-vault-hermes.md).
 
 ## Desktop v0.6.16 (2026-10-19)
 

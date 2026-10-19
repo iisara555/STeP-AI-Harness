@@ -250,7 +250,7 @@ try {
     mbs.tab,
   );
   assert.match(landingMbs.text, /welfare home/);
-  checkpoint('protected payment, address and split-code forms');
+  checkpoint('unsupported payment, protected address and split-code forms');
   const signup = await open(origin + '/new-password');
   const signupError = await app.evaluate(async (_electron, id) => {
     try {
@@ -265,12 +265,17 @@ try {
     async (_electron, id) => globalThis.agent.run({ tool: 'browser_control', input: id, args: { action: 'close' } }, globalThis.context),
     signup.tab,
   );
+  const card = await open(origin + '/payment');
+  const refused = await app.evaluate(async (_electron, id) => {
+    try {
+      await globalThis.agent.prepareProtected(id, 'owner', 'payment', globalThis.context.signal);
+      return false;
+    } catch (error) {
+      return error.message;
+    }
+  }, card.tab);
+  assert.equal(refused, 'VAULT_FORM_UNSUPPORTED');
   for (const [path, kind, values] of [
-    [
-      '/payment',
-      'payment',
-      { card_number: '4111111111111111', cardholder_name: 'Synthetic Person', exp_month: '03', exp_year: '2030', cvc: '123' },
-    ],
     ['/address', 'address', { address_line1: 'Synthetic street', city: 'Test city', postal_code: '00000', country: 'Thailand' }],
     ['/split-code', 'code', { code: '123456' }],
   ]) {
@@ -291,7 +296,6 @@ try {
     assert.equal(filled.read.protectedForm, true);
     assert.equal(filled.read.text, '');
     assert.ok(filled.read.elements.every(element => !element.editable));
-    if (kind === 'payment') assert.ok(filled.dom.includes('03/30'));
     if (kind === 'address') assert.ok(filled.dom.includes('TH'));
     if (kind === 'code') assert.deepEqual(filled.dom, ['1', '2', '3', '4', '5', '6']);
     assert.doesNotMatch(JSON.stringify(filled.read), /4111111111111111|Synthetic street|123456/);

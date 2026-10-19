@@ -65,6 +65,8 @@ try {
     page.getByText('รอผู้ดูแลตั้งค่า Google OAuth client ID และโดเมนที่อนุญาต จึงจะเชื่อมบัญชีงานได้', { exact: true }),
   ).toBeVisible();
   assert.equal(await page.getByRole('button', { name: 'เชื่อมบัญชีงาน', exact: true }).count(), 0);
+  await expect(page.getByRole('button', { name: 'เพิ่มบัตรชำระเงิน', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'เพิ่มที่อยู่', exact: true })).toBeVisible();
   checkpoint('remember website account');
   await page.getByRole('button', { name: 'เพิ่มบัญชีเว็บไซต์', exact: true }).click();
   const form = page.locator('.credential-form');

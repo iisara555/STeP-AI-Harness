@@ -22,9 +22,9 @@ An OTP step uses a saved authenticator key when present. Otherwise **Verificatio
 | Save and sign in | Trusted dialog, explicit personal-device remember consent |
 | Manual OTP | Trusted masked dialog, separate from `ask_user` and conversation persistence |
 | TOTP | Generated on the host, bound to the selected login's exact origin before resolving the seed |
-| Payment cards | Store in encrypted Vault; every fill requires a fresh human approval |
+| Payment cards | Removed at the owner's request: no storage, import or browser fill |
 | Addresses | Store in encrypted Vault; automatic exact-origin fill |
-| Final browser actions | Existing browser permission and final-action approvals still apply, including Verify/checkout buttons; card fill is not permission to pay |
+| Final browser actions | Existing browser permission and final-action approvals still apply, including Verify/checkout buttons |
 | 1Password / Bitwarden | Auto-detect installed `op` / `bw` CLI; each source can be disabled, locked or unlocked in Settings |
 | Coding tools | Available with their normal permissions even after Vault enrollment |
 | Managed strict host gate | IT can set `credentialStorage.blockHostExecution: true` to retain the previous global execution restriction |
@@ -41,13 +41,13 @@ Only exact HTTPS origins saved on a login item are used. Bitwarden **Never** URI
 
 ## Storage and trust boundaries
 
-Existing AES-256-GCM SQLite records and OS-wrapped random keys remain compatible. Username/password are still encrypted together at rest; card/address payloads and optional TOTP seeds use the same authenticated records. The change does not downgrade storage to a key file beside ciphertext. There is no master-password/biometric or secure-erasure claim.
+Existing AES-256-GCM SQLite records and OS-wrapped random keys remain compatible. Username/password are still encrypted together at rest; address payloads and optional TOTP seeds use the same authenticated records. The change does not downgrade storage to a key file beside ciphertext. There is no master-password/biometric or secure-erasure claim.
 
 The broker supplies session-bound handles reusable through a login's password/OTP steps, with a 30-minute idle lifetime; local writes, revisions, pause and identity changes invalidate them. Inner storage fills still use one-use 90-second grants. Listing accounts no longer allocates unused inner grants.
 
-Browser fills use a private structured CDP call in an isolated top-level world. Website login keeps exact origin, URL, navigation generation and form/action checks. Payment/address/OTP targets are fingerprinted and checked again at execution and during each field write; supported selectors include autocomplete, labels and bounded name heuristics. Combined card expiry, matching select-option value/text and adjacent one-character OTP boxes are supported. Ambiguous targets stop instead of guessing. Cross-origin frames and arbitrary JavaScript are not exposed.
+Browser fills use a private structured CDP call in an isolated top-level world. Website login keeps exact origin, URL, navigation generation and form/action checks. Address/OTP targets are fingerprinted and checked again at execution and during each field write; supported selectors include autocomplete, labels and bounded name heuristics. Matching select-option value/text and adjacent one-character OTP boxes are supported. Ambiguous targets stop instead of guessing. Cross-origin frames and arbitrary JavaScript are not exposed.
 
-During a protected card/address/OTP form, model reads return only actionable button metadata, with no page text or editable field values; screenshots remain refused. This lets the assistant reach Verify/Continue/checkout through the existing final-action approval. Navigation resumes normal reading. A filled login form stays withheld; full navigation or a verified SPA login transition releases it. A person can also resume explicitly in Settings.
+During a protected address/OTP form, model reads return only actionable button metadata, with no page text or editable field values; screenshots remain refused. This lets the assistant reach Verify/Continue/checkout through the existing final-action approval. Navigation resumes normal reading. A filled login form stays withheld; full navigation or a verified SPA login transition releases it. A person can also resume explicitly in Settings.
 
 Known secret values and common URL/base64 encodings are registered before filling and redacted from later outgoing text. Numeric status fields and host-generated opaque IDs stay usable in JSON; page text is scrubbed. This does not establish protection against every encoding, screenshots after navigation, hostile same-origin scripts or arbitrary code with the same OS-user rights. The site receives the values as it would when a human types them.
 
@@ -55,9 +55,9 @@ The default now follows Hermes's host trust model: sensitive-path protections an
 
 ## Scope of parity and verification
 
-Functional parity here covers Vault login/save, manager discovery/unlock, manual OTP/TOTP, address/card filling and coexistence with coding tools. It does not mean byte-identical storage, every website/browser backend, CLI UX parity, or unattended browser jobs. STeP's scheduled jobs still use its existing draft-only contract and expose no browser tools; saved-login resolution itself has no UI dependency, while missing-login/manual-code/card steps require an interactive surface.
+Functional parity here covers Vault login/save, manager discovery/unlock, manual OTP/TOTP, address filling and coexistence with coding tools. It does not mean byte-identical storage, every website/browser backend, CLI UX parity, or unattended browser jobs. STeP's scheduled jobs still use its existing draft-only contract and expose no browser tools; saved-login resolution itself has no UI dependency, while missing-login/manual-code steps require an interactive surface.
 
-Verification uses synthetic credentials and a deterministic local provider. `vault-parity.test.ts` covers RFC vectors, origin/revision/lock races, manager subprocess channels and stable handles. `vault-hermes-smoke.mjs` exercises the real app's chat, dedicated prompts, encrypted storage, login, manual OTP, automatic TOTP, protected Verify controls and a custom coding runtime after enrollment. `vault-electron-smoke.mjs` exercises actual OS wrapping across restart and native HTTPS forms, including cards/addresses/selects/split OTP and final-action refusal. `vault-workspace-ui-smoke.mjs` preserves the managed strict-gate path.
+Verification uses synthetic credentials and a deterministic local provider. `vault-parity.test.ts` covers RFC vectors, origin/revision/lock races, manager subprocess channels and stable handles. `vault-hermes-smoke.mjs` exercises the real app's chat, dedicated prompts, encrypted storage, login, manual OTP, automatic TOTP, protected Verify controls and a custom coding runtime after enrollment. `vault-electron-smoke.mjs` exercises actual OS wrapping across restart and native HTTPS forms, including rejected card operations, addresses/selects/split OTP and final-action refusal. `vault-workspace-ui-smoke.mjs` preserves the managed strict-gate path.
 
 Live 1Password/Bitwarden accounts, real employee sites/SSO, packaged Windows/macOS upgrades and the complete macOS CI remain separate acceptance evidence. Do not call these live integrations verified from fake CLI tests.
 

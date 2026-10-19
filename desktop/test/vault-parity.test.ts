@@ -143,15 +143,13 @@ test('saved login handle continues into OTP, wrong-origin OTP is denied before r
     f.close();
   }
 });
-test('payment/address payloads remain encrypted and declining card consent never reaches browser', async () => {
+test('payment storage is refused and address payloads remain encrypted', async () => {
   const f = fixture();
   try {
-    f.vault.save({
-      kind: 'payment',
-      label: 'Card',
-      destination: 'https://example.test',
-      fields: { card_number: '4111111111111111', exp_month: '12', exp_year: '2030', cvc: '123' },
-    });
+    assert.throws(
+      () => f.vault.save({ kind: 'payment' as any, label: 'Unsupported', destination: 'https://example.test' }),
+      /INVALID_INPUT/,
+    );
     f.vault.save({
       kind: 'address',
       label: 'Address',
@@ -159,18 +157,9 @@ test('payment/address payloads remain encrypted and declining card consent never
       fields: { address_line1: 'Synthetic street marker', city: 'Test', postal_code: '00000', country: 'TH', address_line2: '' },
     });
     const { entries } = await f.broker.list('session', 'https://example.test');
-    await assert.rejects(
-      f.broker.use(
-        entries.find(entry => entry.kind === 'payment')!.handle,
-        'session',
-        'https://example.test',
-        false,
-        async () => false,
-        async () => {
-          throw new Error('must not fill');
-        },
-      ),
-      /CANCELLED/,
+    assert.equal(
+      entries.some(entry => entry.kind === 'payment'),
+      false,
     );
     await f.broker.use(
       entries.find(entry => entry.kind === 'address')!.handle,

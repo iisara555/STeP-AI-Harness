@@ -96,11 +96,7 @@ export class VaultBroker {
     const run = async (payload: VaultPayload & { code?: string }) => {
       valid();
       if (otp && payload.otpSecret) payload.code = totp(payload.otpSecret);
-      this.redaction.register(
-        payload.password,
-        payload.code,
-        ...(grant!.entry.kind === 'payment' ? Object.values(payload.fields || {}) : []),
-      );
+      this.redaction.register(payload.password, payload.code);
       grant!.expires = Date.now() + 1800000;
       return sink(payload, grant!.entry);
     };

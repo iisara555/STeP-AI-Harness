@@ -32,8 +32,8 @@ import { VaultItems } from './vault-items';
 const words = {
   title: ['รหัสผ่านและการเชื่อมต่อ', 'Passwords and connections'],
   intro: [
-    'บัญชีและที่อยู่ที่จำไว้กรอกอัตโนมัติเฉพาะเว็บไซต์ที่กำหนด บัตรชำระเงินถามก่อนทุกครั้ง รหัสผ่านไม่เข้าแชต',
-    'Saved logins and addresses fill automatically on their exact sites. Card fills ask first. Passwords never enter chat.',
+    'บัญชีและที่อยู่ที่จำไว้กรอกอัตโนมัติเฉพาะเว็บไซต์ที่กำหนด รหัสผ่านไม่เข้าแชต',
+    'Saved logins and addresses fill automatically on their exact sites. Passwords never enter chat.',
   ],
   disabled: ['ผู้ดูแลยังไม่ได้เปิดใช้ Vault สำหรับเครื่องนี้', 'The administrator has not enabled Vault on this device.'],
   conflict: [
