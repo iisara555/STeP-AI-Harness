@@ -19,6 +19,8 @@ Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](desktop-phase5.md). Live account/channel/hardware acceptance remains separate.
 
+Vault browser sign-in now follows the [Hermes-style workflow](desktop-vault-hermes.md): automatic saved-login/address fill, trusted save/OTP prompts, host TOTP, external manager adapters and card-fill consent. Enabled release defaults preserve managed denial. Coding tools retain their ordinary permissions unless IT explicitly enables `credentialStorage.blockHostExecution`; this is the same-OS-user host trust boundary, not a code sandbox. Existing stored credentials remain encrypted with the OS-wrapped key.
+
 ## Local HTML previews
 
 The right-panel preview converts renderer CSS geometry to native DIP bounds using the application zoom factor. Local HTML defaults to **Fit to panel** (Thai: **พอดีพื้นที่**), with **Actual size** (**ขนาดจริง**) available per tab. Responsive HTML first lays out at the actual panel width; overflowing fixed slides fit width and, when vertical scrolling is locked, height. Below Chromium’s 25% native zoom floor, a temporary isolated-world CSS layout scale is restored on refit, actual-size mode and fullscreen. Source files, sandbox/permission boundaries and ordinary web tabs are unchanged. Long responsive reports retain vertical scrolling. The synthetic `html-preview-smoke.mjs` regression covers zoom, narrow/short windows, resize, reload and fullscreen return; it does not establish employee Windows/macOS acceptance.

@@ -4,6 +4,10 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+- Enable Hermes-style Vault browser workflows: saved-login/address autofill, trusted Save & sign in and masked verification prompts, host TOTP, detected 1Password/Bitwarden sources and one-time card-fill consent. Coding tools keep their usual permissions after Vault enrollment; administrators can retain the previous global execution gate with `credentialStorage.blockHostExecution: true`. Existing OS-wrapped encrypted records remain compatible. See [behavior, trust model and acceptance limits](docs/desktop-vault-hermes.md).
+
 ## Desktop v0.6.16 (2026-10-19)
 
 - Known malformed-response limits: an Apps Script update receipt does not validate upstream `scriptId` as a string; malformed returned file content can produce `GOOGLE_RESPONSE_INVALID` after a successful write rather than `GOOGLE_OUTCOME_UNKNOWN`. No automatic retry is performed; inspect Google before repeating the update.

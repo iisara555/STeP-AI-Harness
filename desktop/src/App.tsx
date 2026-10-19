@@ -96,6 +96,7 @@ import type { Attachment, Connection, PlanStep, Session, OwnPack, SkillEntry, Sn
 import { CLAUDE_CODE, effortLabel, errorText, explainError, initial, connectionName, shortcut, statusText } from './messages';
 import { SettingsPanel } from './settings';
 import { ApprovalDialog } from './approval';
+import { VaultPromptDialog, type VaultPrompt } from './vault-prompt';
 import type { ApprovalRequest } from './types';
 import { WorkbenchPanel } from './workbench';
 import { toolRequests, visibleStream, type ToolTab, type ToolRequest } from './tools';
@@ -144,6 +145,7 @@ export default function App() {
   const api = window.step;
   const [update] = useUpdate(api);
   const [toolApprovals, setToolApprovals] = useState<ApprovalRequest[]>([]);
+  const [vaultPrompts, setVaultPrompts] = useState<VaultPrompt[]>([]);
   // Tools start as one row of icons so the task list keeps the height; the choice is remembered.
   const [toolsOpen, setToolsOpen] = useState(() => {
     try {
@@ -476,6 +478,10 @@ export default function App() {
   useEffect(
     () =>
       api?.onEvent(event => {
+        if (event.type === 'vault-prompt' && event.vaultPrompt)
+          setVaultPrompts(items => [...items.filter(item => item.id !== event.vaultPrompt!.id), event.vaultPrompt!]);
+        if (event.type === 'vault-prompt-close' && event.vaultPrompt)
+          setVaultPrompts(items => items.filter(item => item.id !== event.vaultPrompt!.id));
         if (event.type === 'vault-open') {
           setVaultOrigin(event.text || '');
           setSettingsPage('credentials');
@@ -3259,6 +3265,13 @@ export default function App() {
               setSettings(false);
               navigate('schedules');
             }}
+          />
+        )}
+        {vaultPrompts[0] && (
+          <VaultPromptDialog
+            key={vaultPrompts[0].id}
+            prompt={vaultPrompts[0]}
+            respond={(id, value) => api.call('vaultPromptRespond', { id, value })}
           />
         )}
         {toolApprovals[0] && (

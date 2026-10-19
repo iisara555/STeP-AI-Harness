@@ -40,7 +40,11 @@ try {
   app = undefined;
   await writeFile(
     join(home, 'desktop-policy.json'),
-    JSON.stringify({ features: { vault: true, googleWorkspace: true }, googleWorkspace: null }),
+    JSON.stringify({
+      features: { vault: true, googleWorkspace: true },
+      googleWorkspace: null,
+      credentialStorage: { blockHostExecution: true },
+    }),
   );
   checkpoint('restart with Vault enabled');
   app = await electron.launch({ args: ['.'], env, timeout: 45000 });
@@ -91,6 +95,7 @@ try {
     JSON.stringify({
       features: { vault: true, googleWorkspace: true },
       googleWorkspace: { clientId, domains: ['example.test'], services: ['documents'] },
+      credentialStorage: { blockHostExecution: true },
     }),
   );
   await expect.poll(() => page.evaluate(() => window.step.call('googleState').then(s => s.configured)), { timeout: 15000 }).toBe(true);
@@ -119,12 +124,15 @@ try {
   assert.doesNotMatch(invalid, /synthetic-client-secret|client\.json/);
   assert.equal(await page.evaluate(() => window.step.call('googleState').then(s => s.clientSecretConfigured)), true);
   checkpoint('pause and deny host execution');
+  assert.equal(await page.evaluate(() => window.step.call('vaultState').then(state => state.blockHostExecution)), true);
   await page.getByRole('button', { name: 'พักการใช้งาน', exact: true }).click();
   await expect(page.getByRole('button', { name: 'กลับมาใช้งาน', exact: true })).toBeVisible();
+  checkpoint('capture paused Settings');
   await mkdir('release/qa/vault', { recursive: true });
-  await page.screenshot({ path: 'release/qa/vault/settings-1280.png' });
+  await page.screenshot({ path: 'release/qa/vault/settings-1280.png', timeout: 15000 });
   await page.setViewportSize({ width: 800, height: 700 });
-  await page.screenshot({ path: 'release/qa/vault/settings-800.png' });
+  await page.screenshot({ path: 'release/qa/vault/settings-800.png', timeout: 15000 });
+  checkpoint('strict policy terminal refusal');
   const rejected = await page.evaluate(() =>
     window.step.call('toolRun', { command: 'echo should-not-run' }).then(
       () => false,

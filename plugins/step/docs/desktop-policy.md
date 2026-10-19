@@ -82,6 +82,8 @@ With `privacy` off, responsibility moves to the employee through the **usage ter
 
 ## Web and credential guards (always on)
 
+Vault's [Hermes-style browser workflow](desktop-vault-hermes.md) is enabled by `features.vault: true` (release default). Saved logins and addresses fill automatically on their exact saved HTTPS origins; payment-card fills ask every time, and final browser actions keep their existing approvals. Trusted masked save/unlock/code dialogs never create chat replies. Model metadata includes login identifiers. `credentialStorage.sharedDevice: true` disables remembered credential enrollment/use. Optional `credentialStorage.blockHostExecution: true` preserves the previous global terminal/custom runtime/command hook/local MCP/sandbox denial once a Vault key exists. Omitted/false allows those tools under normal permissions, including after enrollment. Invalid/untrusted policy disables Vault and restores the strict host gate. Password-manager CLI detection is on by default; employee opt-out and local lock win.
+
 These guards stay on whatever `checks` says. They stop a page or file with hidden instructions (prompt injection) from sending task data out without anyone seeing it:
 
 - **Reading a website (`web_fetch`):** the AI reads a site only after the employee allows that site once in the task. This applies in every mode, Full auto included. The full URL is shown, so data hidden in the address is visible. `web_search` does not ask.

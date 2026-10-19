@@ -124,7 +124,7 @@ export type Harness = {
     deictic?: boolean;
   };
   catalog?: () => Promise<any[]>;
-  privacy: (text: string, options?: { allowedIdentifiers?: string[] }) => any;
+  privacy: (text: string, options?: { allowedIdentifiers?: string[]; credentialMetadata?: boolean }) => any;
   skillMetadata: (id: string) => Promise<any>;
   documentPrivacy: (path: string, options: any) => Promise<any>;
   nextOutput: (options: any) => Promise<any>;

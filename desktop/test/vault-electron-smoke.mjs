@@ -5,54 +5,31 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:https';
-import { generateKeyPairSync, sign, createHash } from 'node:crypto';
+import { httpsFixture } from './https-fixture.mjs';
 import assert from 'node:assert/strict';
 const home = await mkdtemp(join(tmpdir(), 'step-vault-electron-'));
-// A generated one-use certificate, trusted only by this isolated test app and origin.
-const der = (tag, value) => {
-  const b = Buffer.isBuffer(value) ? value : Buffer.from(value);
-  const length =
-    b.length < 128
-      ? Buffer.from([b.length])
-      : (() => {
-          const bytes = [];
-          let n = b.length;
-          while (n) {
-            bytes.unshift(n & 255);
-            n >>= 8;
-          }
-          return Buffer.from([128 + bytes.length, ...bytes]);
-        })();
-  return Buffer.concat([Buffer.from([tag]), length, b]);
-};
-const seq = (...items) => der(0x30, Buffer.concat(items));
-const algorithm = Buffer.from('300d06092a864886f70d01010b0500', 'hex');
-const pair = generateKeyPairSync('rsa', { modulusLength: 2048 });
-const name = seq(der(0x31, seq(Buffer.from('0603550403', 'hex'), der(0x0c, 'synthetic.local'))));
-const validity = seq(der(0x17, '240101000000Z'), der(0x17, '300101000000Z'));
-const extensions = der(0xa3, seq(seq(Buffer.from('0603551d11', 'hex'), der(0x04, seq(der(0x87, Buffer.from([127, 0, 0, 1])))))));
-const tbs = seq(
-  der(0xa0, der(0x02, Buffer.from([2]))),
-  der(0x02, Buffer.from([1])),
-  algorithm,
-  name,
-  validity,
-  name,
-  pair.publicKey.export({ type: 'spki', format: 'der' }),
-  extensions,
-);
-const certDer = seq(tbs, algorithm, der(0x03, Buffer.concat([Buffer.from([0]), sign('RSA-SHA256', tbs, pair.privateKey)])));
-const cert =
-  '-----BEGIN CERTIFICATE-----\n' +
-  certDer
-    .toString('base64')
-    .match(/.{1,64}/g)
-    .join('\n') +
-  '\n-----END CERTIFICATE-----\n';
-const fingerprint = createHash('sha256').update(certDer).digest('hex').toUpperCase().match(/../g).join(':');
+const { key, cert, fingerprint } = httpsFixture();
 let app;
-const server = createServer({ key: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }), cert }, (req, res) => {
+const server = createServer({ key, cert }, (req, res) => {
   res.setHeader('content-type', 'text/html');
+  if (req.url === '/new-password')
+    return res.end(
+      '<form method="post"><input autocomplete="username"><input type="password" autocomplete="new-password"><button>Create account</button></form>',
+    );
+  if (req.url === '/payment')
+    return res.end(
+      '<form method="post"><input autocomplete="cc-number" name="number"><input autocomplete="cc-name"><input autocomplete="cc-exp" placeholder="MM/YY"><input autocomplete="cc-csc"><button type="button" onclick="document.body.innerHTML=\'<h1>Paid synthetic</h1>\'">Pay</button></form>',
+    );
+  if (req.url === '/address')
+    return res.end(
+      '<form method="post"><label>Street<input name="street"></label><input autocomplete="address-level2"><input autocomplete="postal-code"><select autocomplete="country"><option value="US">United States</option><option value="TH">Thailand</option></select><button type="button">Continue</button></form>',
+    );
+  if (req.url === '/split-code')
+    return res.end(
+      '<form method="post">' +
+        Array.from({ length: 6 }, (_, i) => '<input name="otp' + i + '" maxlength="1" autocomplete="one-time-code">').join('') +
+        '<button>Verify</button></form>',
+    );
   // An intranet-style login: the username box has no telling name, the button carries the page's own click handler.
   if (req.url === '/intranet' && req.method === 'POST') {
     let body = '';
@@ -273,6 +250,91 @@ try {
     mbs.tab,
   );
   assert.match(landingMbs.text, /welfare home/);
+  checkpoint('protected payment, address and split-code forms');
+  const signup = await open(origin + '/new-password');
+  const signupError = await app.evaluate(async (_electron, id) => {
+    try {
+      await globalThis.agent.prepareVault(id, 'owner', globalThis.context.signal);
+      return 'unexpected';
+    } catch (error) {
+      return error.message;
+    }
+  }, signup.tab);
+  assert.equal(signupError, 'VAULT_FORM_UNSUPPORTED');
+  await app.evaluate(
+    async (_electron, id) => globalThis.agent.run({ tool: 'browser_control', input: id, args: { action: 'close' } }, globalThis.context),
+    signup.tab,
+  );
+  for (const [path, kind, values] of [
+    [
+      '/payment',
+      'payment',
+      { card_number: '4111111111111111', cardholder_name: 'Synthetic Person', exp_month: '03', exp_year: '2030', cvc: '123' },
+    ],
+    ['/address', 'address', { address_line1: 'Synthetic street', city: 'Test city', postal_code: '00000', country: 'Thailand' }],
+    ['/split-code', 'code', { code: '123456' }],
+  ]) {
+    const opened = await open(origin + path);
+    const filled = await app.evaluate(
+      async (_electron, { id, kind, values }) => {
+        const expected = await globalThis.agent.prepareProtected(id, 'owner', kind, globalThis.context.signal);
+        const result = await globalThis.agent.fillProtected(id, 'owner', expected, values, globalThis.context.signal);
+        const dom = await globalThis.agent.tabs
+          .get(id)
+          .contents.executeJavaScript('[...document.querySelectorAll("input,select")].map(el=>el.value)');
+        const read = await globalThis.agent.run({ tool: 'browser_control', input: id, args: { action: 'read' } }, globalThis.context);
+        return { result, dom, read };
+      },
+      { id: opened.tab, kind, values },
+    );
+    assert.equal(filled.result.status, 'filled');
+    assert.equal(filled.read.protectedForm, true);
+    assert.equal(filled.read.text, '');
+    assert.ok(filled.read.elements.every(element => !element.editable));
+    if (kind === 'payment') assert.ok(filled.dom.includes('03/30'));
+    if (kind === 'address') assert.ok(filled.dom.includes('TH'));
+    if (kind === 'code') assert.deepEqual(filled.dom, ['1', '2', '3', '4', '5', '6']);
+    assert.doesNotMatch(JSON.stringify(filled.read), /4111111111111111|Synthetic street|123456/);
+    const image = await app.evaluate(async (_electron, id) => {
+      try {
+        await globalThis.agent.capture(id, globalThis.context);
+        return 'unexpected';
+      } catch (error) {
+        return error.message;
+      }
+    }, opened.tab);
+    assert.equal(image, 'BROWSER_IMAGE_SENSITIVE');
+    if (kind !== 'code') {
+      const denied = await app.evaluate(
+        async (_electron, { id, snapshot, ref }) => {
+          let approvals = 0;
+          try {
+            await globalThis.agent.run(
+              { tool: 'browser_control', input: id, args: { action: 'click', snapshot, ref } },
+              {
+                ...globalThis.context,
+                routine: () => true,
+                approve: async () => {
+                  approvals++;
+                  return false;
+                },
+              },
+            );
+            return { approvals };
+          } catch (error) {
+            return { approvals, error: error.message };
+          }
+        },
+        { id: opened.tab, snapshot: filled.read.snapshot, ref: filled.read.elements[0].ref },
+      );
+      assert.equal(denied.approvals, 1);
+      assert.equal(denied.error, 'BROWSER_ACTION_DECLINED');
+    }
+    await app.evaluate(
+      async (_electron, id) => globalThis.agent.run({ tool: 'browser_control', input: id, args: { action: 'close' } }, globalThis.context),
+      opened.tab,
+    );
+  }
   checkpoint('close owned browser views');
   await app.evaluate(() => globalThis.agent.closeOwner('owner'));
   await mkdir('release/qa/vault', { recursive: true });

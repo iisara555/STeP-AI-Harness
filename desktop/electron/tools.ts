@@ -220,8 +220,9 @@ export class DesktopTools {
     source?: TransmissionSource,
     what?: string,
     own = false,
+    credentialMetadata = false,
   ) {
-    const review = this.harness.privacy(text);
+    const review = this.harness.privacy(text, { credentialMetadata });
     if (review.action === 'block-external' || typeof review.redactedText !== 'string') throw new Error('PRIVACY_REVIEW_REQUIRED');
     // Credential filtering is always on; optional privacy consent still follows policy.
     if (!this.policy().checks.privacy) return review.redactedText;
@@ -463,6 +464,7 @@ export class DesktopTools {
           await sourceFor(r),
           describe(r),
           ownAnswer(r, text),
+          r?.tool === 'browser_control' || r?.tool === 'browser_vault',
         );
         await check();
         return approved;
@@ -541,8 +543,9 @@ export class DesktopTools {
     const request = {
       tool: r.tool,
       readOnly:
-        !cancelTask &&
-        !['terminal', 'sandbox', 'mcp_call', 'mcp_search', 'image_generate', 'browser_vault', 'google_workspace'].includes(r.tool),
+        (r.tool === 'browser_vault' && a.action === 'list') ||
+        (!cancelTask &&
+          !['terminal', 'sandbox', 'mcp_call', 'mcp_search', 'image_generate', 'browser_vault', 'google_workspace'].includes(r.tool)),
       ...(fileTool ? { path: target || '.' } : {}),
       ...(command ? { command, execute: true } : {}),
     };

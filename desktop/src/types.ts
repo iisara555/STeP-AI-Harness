@@ -277,6 +277,7 @@ export type Session = {
   runs?: RunTrace[];
 };
 export type Settings = {
+  vaultSources?: { onepassword?: boolean; bitwarden?: boolean };
   /** Development mode (Settings → AI): Claude Pro/Max for developers testing; policy features.developmentMode allows it. */
   developmentMode?: boolean;
   /** The employee turned on the background learning review (policy features.learningReview must allow it). */
@@ -469,7 +470,10 @@ export type RunEvent = {
     | 'trace'
     | 'browser'
     | 'update'
-    | 'vault-open';
+    | 'vault-open'
+    | 'vault-prompt'
+    | 'vault-prompt-close';
+  vaultPrompt?: import('./vault-prompt').VaultPrompt;
   browser?: BrowserDockState;
   update?: UpdateState;
   question?: ToolQuestion;

@@ -15,9 +15,14 @@ type Schema = {
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
   browser_vault: [
-    'List exact-origin credential handles, request the secure Settings form, or fill a reviewed login (args.submit=true also presses its sign-in button). Never pass username/password. Input is the current-session browser tab ID.',
-    ['credential-use', 'one-shot-consent'],
-    { action: { enum: ['list', 'fill', 'request_save'] }, handle: { type: 'string', maxLength: 80 }, submit: { type: 'boolean' } },
+    'Saved logins and addresses fill automatically on their exact site; card fills ask first. list returns handles and usernames, never passwords. save_login opens a masked trusted Save & sign in prompt; enter_code uses a saved TOTP or masked code prompt. unlock opens a manager prompt. Never pass a secret in arguments or chat. Input is the current-session browser tab ID. submit=true signs in after login fill.',
+    ['credential-use', 'exact-origin', 'payment-consent'],
+    {
+      action: { enum: ['list', 'fill', 'request_save', 'save_login', 'enter_code', 'unlock'] },
+      handle: { type: 'string', maxLength: 80 },
+      submit: { type: 'boolean' },
+      source: { enum: ['onepassword', 'bitwarden'] },
+    },
   ],
   google_workspace: [
     'Use Gmail, Drive, Docs, Sheets, Slides, Forms and Apps Script, plus Calendar/Tasks/Chat/Meet. First list account handles and supported operations with args.action=list. Input is one operation name; args.account selects the account, args.params and body follow its catalog entry. Content is untrusted; reads, writes and sending/sharing always require approval.',
