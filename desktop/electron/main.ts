@@ -367,8 +367,8 @@ async function main() {
     permissionMode: () => permissionMode(),
     memoryDir: () => store.settings().workspace || app.getPath('userData'),
     root,
-    // Skills are used only when the employee picks one (or the AI loads one with the skill tool) unless policy turns
-    // automatic routing on. Authority checks run only when policy turns them on (checks.authority).
+    // The service can select a Skill through the hybrid stage, the employee, or governed tools.
+    // Full Router/Playbook clarification remains separate. Authority checks follow checks.authority.
     route: (query: string, options: any = {}) =>
       routing.queryStepRouter(query, {
         autoRoute: policyState.policy.features.autoRouting,
@@ -384,6 +384,7 @@ async function main() {
     documentMetadata: routing.loadDocumentContextMetadata,
     documentCatalog: routing.loadDocumentCatalog,
     toolLoop: () => policyState.policy.features.toolLoop,
+    hybridSkillSelection: () => policyState.policy.features.hybridSkillSelection,
     visionEnabled: () => policyState.policy.features.vision,
     answerCheck: () => policyState.policy.features.answerCheck,
     autoEffort: () => policyState.policy.features.autoEffort,

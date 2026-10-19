@@ -13,6 +13,8 @@ await writeFile(
   join(home, 'desktop-policy.json'),
   // Strict consent: this smoke checks the per-result dialogs.
   JSON.stringify({
+    // Count the existing tool-turn recovery/consent protocol; selection has its own native smoke.
+    features: { hybridSkillSelection: false },
     pilot: false,
     checks: { authority: true, privacy: true },
     prices: { 'openai:*': { input: 1, output: 2 } },

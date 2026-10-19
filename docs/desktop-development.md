@@ -61,6 +61,8 @@ Chat auto-routing keeps Thai text-overview/formatting requests and explicit no-i
 
 ## Run
 
+Hybrid Skill selection lives in `electron/skill-selection.ts` and is integrated in `WorkService` before answer assembly. Run `node --import tsx --test test/skill-selection.test.ts test/context-efficiency.test.ts` from `desktop/` for selection, actual instruction loading, text scope, continuation, validation and authority regressions. Synthetic provider tests establish host behavior; live selection scores and final-answer quality are separate evidence.
+
 Use Node 24 LTS and Python 3.10+ for repository validation. From the repository root:
 
 ```sh

@@ -36,6 +36,7 @@ import { promptMetrics } from './prompt-metrics';
 import { autoEffort, modelOption, taskSize } from './effort';
 import { selfContainedText } from './text-intent';
 import { selectDiscovery } from './discovery';
+import { highConfidenceSkill, prepareSkillSelection } from './skill-selection';
 import { parseDocumentOutput } from '../src/document-output';
 import {
   OrganizationKnowledge,
@@ -99,6 +100,8 @@ export type Harness = {
   compactHook?: (event: 'pre_compact' | 'post_compact', id: string, before: number, after: number) => Promise<void>;
   completed?: (session: Session) => Promise<void>;
   toolLoop?: () => boolean;
+  /** Choose a registered procedure before ordinary chat; explicit Skills and fixed workflows keep their own route. */
+  hybridSkillSelection?: () => boolean;
   /** Trusted host instructions for a restricted tool surface; execution and consent gates still apply. */
   toolInstructions?: () => string;
   /** Policy answerCheck: check chat answers about STeP against the document excerpts they used. */
@@ -600,7 +603,7 @@ export class WorkService {
     };
     try {
       status(tm('กำลังเลือกแนวทางทำงาน'));
-      const routed = await this.harness.route(session.originalQuery, {
+      let routed = await this.harness.route(session.originalQuery, {
         team: session.team,
         workspaceDir,
         clarificationAnswer: session.answers.join('\n'),
@@ -609,7 +612,7 @@ export class WorkService {
         conversational: chat,
       });
       checkAbort();
-      const contract = routed.routingContract;
+      let contract = routed.routingContract;
       trace.mode = String(contract.mode || '');
       trace.route = routeKey(contract);
       if (contract.mode === 'CLARIFY') {
@@ -679,13 +682,100 @@ export class WorkService {
       const written = new Map<string, NonNullable<Message['written']>[number]>();
       // The organization's Skills, listed by name and description only; the model loads a Skill's full text with the
       // skill tool when the request needs it (like Claude Code and opencode), instead of every Skill being read.
-      const skillRegistry = textOnly
+      let skillRegistry = textOnly
         ? []
         : ((await this.harness.catalog?.().catch(() => [])) || []).filter((e: any) => e.status === 'routed');
       if (internal) activity(tm('งานนี้ใช้ {0} · จะเปิดในแท็บเว็บ', internal.name));
       // With tools, the AI decides when to search the web (web_search), as in Claude Code and opencode. The host searches
       // ahead only for a run without tools.
       const modelTools = Boolean(!options.draftOnly && this.harness.tools && this.harness.toolLoop?.());
+      if (
+        this.harness.hybridSkillSelection?.() &&
+        chat &&
+        modelTools &&
+        !textOnly &&
+        !internal &&
+        contract.mode === 'GENERAL' &&
+        !session.skill &&
+        !session.documentTool &&
+        !options.workflow &&
+        !clarification &&
+        !session.approvedPlan &&
+        !session.workPlan &&
+        this.harness.permissionMode?.() !== 'plan' &&
+        skillRegistry.length
+      ) {
+        const previous = continuing || revising || retrying ? session.runs?.at(-1)?.skillSelection?.skill : undefined;
+        let chosen: string | null | undefined =
+          previous && skillRegistry.some((entry: any) => entry.name === previous)
+            ? previous
+            : highConfidenceSkill(routed, skillRegistry, session.originalQuery);
+        if (chosen) trace.skillSelection = { method: chosen === previous ? 'previous' : 'router', skill: chosen };
+        else {
+          const selection = prepareSkillSelection(
+            skillRegistry,
+            session.originalQuery,
+            incomingSource || (continuing || revising || retrying ? masked(session.files?.at(-1)?.text || '') : ''),
+          );
+          const selectionRuntime = await this.runtime(connection, false);
+          const calledAt = Date.now();
+          const call: ProviderCallTrace = {
+            ...promptMetrics(selection.system, selection.prompt),
+            kind: 'selection',
+            outcome: 'running',
+            ms: 0,
+          };
+          (trace.providerCalls ||= []).push(call);
+          let counted: TokenCount = { input: 0, output: 0, total: 0 };
+          try {
+            const reply = await selectionRuntime.adapter.run(selection.prompt, connection, {
+              ...selectionRuntime.context,
+              signal: controller.signal,
+              system: selection.system,
+              jsonSchema: selection.schema,
+              emit: () => {},
+              onUsage: count => {
+                counted = combineUsage(counted, count, 'max');
+              },
+              onTransport: info => {
+                call.transport = info;
+              },
+            });
+            checkAbort();
+            chosen = selection.parse(reply);
+            call.outcome = chosen === undefined ? 'error' : 'completed';
+            if (chosen === undefined) call.code = 'INVALID_SKILL_SELECTION';
+            trace.skillSelection = { method: chosen === undefined ? 'fallback' : 'model', ...(chosen ? { skill: chosen } : {}) };
+            // A deliberate general-help decision keeps procedure suggestions out of this answer's prompt.
+            if (chosen === null) skillRegistry = [];
+          } catch (error) {
+            call.outcome = 'error';
+            call.code = codeOf(error);
+            throw error;
+          } finally {
+            call.ms = Date.now() - calledAt;
+            if (counted.total) call.usage = counted;
+            searchUsage = combineUsage(searchUsage, counted);
+            this.harness.recordUsage?.(connection, counted);
+          }
+        }
+        if (chosen) {
+          const checked = await this.harness.route(session.originalQuery, {
+            team: session.team,
+            workspaceDir,
+            skill: chosen,
+            conversational: chat,
+          });
+          checkAbort();
+          if (blockedRoute(checked.routingContract) || checked.routingContract?.skill !== chosen)
+            throw new Error('AUTHORITY_REVIEW_REQUIRED');
+          if (checked.routingContract.readiness?.status === 'unavailable') throw new Error('CONTEXT_UNAVAILABLE');
+          routed = checked;
+          contract = checked.routingContract;
+          trace.mode = String(contract.mode || '');
+          trace.route = routeKey(contract);
+        }
+      }
       const searchPublic =
         !modelTools &&
         !options.draftOnly &&

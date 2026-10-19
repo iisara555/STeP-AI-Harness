@@ -104,13 +104,11 @@ These guards stay on whatever `checks` says. They stop a page or file with hidde
 
 ## Automatic routing (`features.autoRouting`)
 
-By default STeP Desktop does not run the local Router's Skill selection.
-- Every message goes straight to the AI as general help, with the organization documents that match it.
-- The app never asks "งานนี้ตรงกับข้อนี้ไหม".
-- It never picks a Skill or Playbook for the employee.
-- The AI sees a **Skill registry**: one line per routed Skill, giving its name and description. It does not see the Skill text.
-- When a request is work a Skill covers, the AI loads that one Skill's full text with the `skill` tool, the same progressive loading Claude Code and opencode use. The status line shows "กำลังอ่าน Skill …".
-- The employee can also pick a Skill with `/` in the composer.
+`features.hybridSkillSelection` is on by default. For ordinary chat with governed tools enabled, a HIGH Router candidate explicitly named in the request preloads its registered Skill. A HIGH ranking alone does not establish semantic certainty. Otherwise the same connected AI makes one structured selection from the complete compact routed catalog before answering. The host validates the returned name, reruns the route and loads its Skill and mandatory references. The selector receives the current privacy-checked request and at most 12,000 characters of its source, marked when truncated; it receives no execution tools or earlier conversation. Its usage and timing are recorded as a `selection` provider call.
+
+Self-contained language edits keep text scope and make no selection call. Explicit `/` Skills, fixed document tools, native workflows, plan mode and internal-browser tasks keep their existing routes. A continuing task can reuse its previous selection after the route is checked again. An invalid selection falls back to governed discovery; account, quota, network and cancellation failures stop normally without a hidden classifier retry. A valid `null` selection keeps Skill suggestions out of that answer's prompt.
+
+Administrators can set `{ "features": { "hybridSkillSelection": false } }` to restore model-driven discovery: the AI sees Skill names/descriptions and opens full text through the `skill` tool. `/` remains available in both modes. Neither setting changes publication, credential, transmission or tool permissions.
 
 The Router still runs on every message:
 - With `checks.authority` on, authority checks (`manifest/authority.yaml`) and the best-matching Skill's own scope rules still BLOCK or ESCALATE. Examples are approving, signing on someone's behalf, or issuing a document number.
