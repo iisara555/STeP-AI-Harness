@@ -31,6 +31,7 @@ let thread='';
 readline.createInterface({input:process.stdin}).on('line',line=>{
  const m=JSON.parse(line);let result={};if(m.method==='thread/start'){result={thread:{id:'fixture'}};thread='';}send({id:m.id,result});
  if(m.method!=='turn/start')return;
+ if(m.params.outputSchema?.properties?.skillId){send({method:'item/agentMessage/delta',params:{delta:JSON.stringify({skillId:null,reason:'File operation fixture'})}});send({method:'turn/completed',params:{turn:{status:'completed'}}});return;}
  thread+=m.params.input?.map(i=>i.text||'').join('')||'';
  const blocks=[...thread.matchAll(/<tool_results>\\s*([\\s\\S]*?)\\s*<\\/tool_results>/g)];
  const last=blocks.length?JSON.parse(blocks.at(-1)[1]):[];
