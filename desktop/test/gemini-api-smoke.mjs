@@ -84,11 +84,8 @@ const server = createServer((req, res) => {
         cachedRequests.push(request);
       }
       const said = (request.contents || []).map(c => (c.parts || []).map(p => p.text || '').join('')).join('\n');
-      let selection;
-      try {
-        selection = JSON.parse(said);
-      } catch {}
-      const selecting = selection && Object.hasOwn(selection, 'sourceTruncated');
+      // Gemini CLI adds its own user-turn framing around the host's JSON input.
+      const selecting = /"sourceTruncated"\s*:\s*(?:true|false)/.test(said);
       if (selecting) {
         selectionTurns.push(request);
         text = JSON.stringify({ skillId: null, reason: 'Gemini conversation fixture' });
