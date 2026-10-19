@@ -154,7 +154,7 @@ export type StepTrace = {
 };
 /** Host text estimates and provider observations stay separate. No task text is persisted here. */
 export type ProviderCallTrace = {
-  kind: 'answer' | 'summary' | 'web-search' | 'check' | 'vision';
+  kind: 'answer' | 'summary' | 'web-search' | 'check' | 'vision' | 'selection';
   outcome: 'running' | 'completed' | 'error';
   code?: string;
   ms: number;
@@ -182,6 +182,7 @@ export type RunTrace = {
   code?: string;
   ms: number;
   steps: StepTrace[];
+  skillSelection?: { method: 'router' | 'model' | 'previous' | 'fallback'; skill?: string };
   /** Reasoning level sent for this run: the employee's choice, or picked by task size (auto). No level means the model default. */
   effort?: { size: 'small' | 'medium' | 'large'; auto: boolean; level?: string };
   /** Provider research before the first model step, when host-side search is enabled. */

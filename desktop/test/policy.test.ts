@@ -30,6 +30,8 @@ test('auto mode needs both organization feature and allowed mode', () => {
   for (const feature of ['shellByAi', 'mcp', 'autoMerge', 'autopilot', 'lineGateway', 'coordinator'] as const)
     assert.equal(defaultValue.features[feature], false);
   assert.equal(defaultValue.features.cron, true);
+  assert.equal(defaultValue.features.hybridSkillSelection, true);
+  assert.equal(parsePolicy({ features: { hybridSkillSelection: false } }).policy.features.hybridSkillSelection, false);
   // Images reach vision models and Full auto is offered by default, as in other AI apps; commands still need shellByAi.
   assert.equal(defaultValue.features.vision, true);
   assert.equal(defaultValue.features.autoMode, true);

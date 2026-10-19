@@ -2596,6 +2596,7 @@ export const en: Record<string, string> = {
   'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว': 'Let the AI split work across several helpers',
   ความจำที่ใช้ร่วมกันในทีม: 'Team-shared memory',
   'ให้ระบบเลือก Skill และถามเพิ่มให้เอง': 'Pick Skills and ask follow-up questions automatically',
+  'เลือก Skill ที่เหมาะกับงานก่อนตอบ': 'Choose a suitable Skill before answering',
   อัปเดตแอปอัตโนมัติ: 'Automatic app updates',
   'ใช้แพ็กเกจ Claude Pro/Max': 'Use a Claude Pro/Max plan',
   ทบทวนหาบทเรียนอัตโนมัติ: 'Automatic lesson review',

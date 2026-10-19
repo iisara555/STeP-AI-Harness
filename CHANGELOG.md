@@ -4,6 +4,11 @@
 
 workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ของไฟล์นี้เป็น release notes ของ GitHub Release และจะไม่ออก release ถ้ายังไม่มีหัวข้อของรุ่นที่ระบุใน `package.json`
 
+## Unreleased
+
+- พิมพ์งานด้วยภาษาปกติแล้วเลือก Skill ก่อนตอบแบบผสม: ชื่อทักษะที่ระบุชัดและ Router มั่นใจสูงโหลดได้ทันที กรณีอื่นให้ AI ที่เชื่อมต่ออยู่เลือกจากชื่อและคำอธิบาย แล้วตรวจสิทธิและโหลดเนื้อหา Skill จริง งานแปล ตรวจคำผิด และย่อข้อความสั้นยังใช้ทางลัดเดิม
+- แยกงานเขียนโพสต์ใหม่ออกจากงานตรวจน้ำเสียงแบรนด์ บันทึกเวลาและการใช้โทเคนของขั้นเลือก Skill และปิดกลับไปใช้การค้นหา Skill เดิมได้ผ่าน policy `features.hybridSkillSelection`
+
 ## Desktop v0.6.16 (2026-10-19)
 
 - Known malformed-response limits: an Apps Script update receipt does not validate upstream `scriptId` as a string; malformed returned file content can produce `GOOGLE_RESPONSE_INVALID` after a successful write rather than `GOOGLE_OUTCOME_UNKNOWN`. No automatic retry is performed; inspect Google before repeating the update.

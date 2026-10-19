@@ -36,6 +36,7 @@ export const FEATURES = [
   'coordinator',
   'memoryTeam',
   'autoRouting',
+  'hybridSkillSelection',
   'skillSuggestions',
   'morningBrief',
   'receiptVision',
@@ -193,8 +194,11 @@ const DEFAULT_FEATURES: Record<Feature, boolean> = {
   coordinator: false,
   memoryTeam: false,
   // The local Router picks Skills and Playbooks and asks clarifying questions only when an administrator turns it on.
-  // Off, every request goes to the AI as general help.
+  // Off, the hybrid selection stage or the AI's governed Skill tool can choose the procedure.
   autoRouting: false,
+  // Preload confidently matched named procedures, otherwise ask the same AI to choose from metadata before answering.
+  // Text-only edits and explicitly selected workflows keep their existing path. IT can disable the extra selection call.
+  hybridSkillSelection: true,
   // While autoRouting is off, a Skill that clearly fits what the employee is typing is offered as one button above the
   // composer ("ลองใช้ Skill: …"); nothing changes unless they press it (owner's decision, 2026-10-18). Local matching
   // only, no model call. IT can set it to false.

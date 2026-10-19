@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 let mode = 'quota';
 let ocrServer;
 const chatTurns = [];
+const selectionTurns = [];
 const cachedPrefixes = new Map();
 const cachedRequests = [];
 const receiptReply = {
@@ -83,7 +84,12 @@ const server = createServer((req, res) => {
         cachedRequests.push(request);
       }
       const said = (request.contents || []).map(c => (c.parts || []).map(p => p.text || '').join('')).join('\n');
-      if (said.includes('ผอ.วิน คือใคร')) {
+      // Gemini CLI adds its own user-turn framing around the host's JSON input.
+      const selecting = /"sourceTruncated"\s*:\s*(?:true|false)/.test(said);
+      if (selecting) {
+        selectionTurns.push(request);
+        text = JSON.stringify({ skillId: null, reason: 'Gemini conversation fixture' });
+      } else if (said.includes('ผอ.วิน คือใคร')) {
         chatTurns.push({
           contents: request.contents.length,
           last: request.contents
@@ -303,6 +309,7 @@ try {
   }
   await page.getByText('รศ.ดร.ปิติวัฒน์ วัฒนชัย (จากเอกสาร step-executive-board)').waitFor({ timeout: 90000 });
   assert.equal(chatTurns.length, 2, JSON.stringify(chatTurns.map(t => t.contents)));
+  assert.equal(selectionTurns.length, 1, 'selection is a separate tool-free request');
   assert.equal(chatTurns[0].contents, 1);
   assert.ok(chatTurns[1].contents >= 3, 'the second turn continues the same conversation');
   assert.ok(chatTurns[1].last.includes('<tool_results>') && !chatTurns[1].last.includes('<routing_contract>'), 'only the new part is sent');
