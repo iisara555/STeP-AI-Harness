@@ -744,6 +744,20 @@ nav button,
   padding: 2px 8px 8px;
   gap: 4px;
 }
+.composer-side-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 8px 4px;
+}
+.side-question-history {
+  max-height: 32vh;
+  overflow: auto;
+}
+.side-question-history summary {
+  overflow-wrap: anywhere;
+}
 .composer-tools > button {
   flex-shrink: 0;
 }

@@ -150,6 +150,9 @@ test('targeted patches preserve every node outside the selected section and reje
   );
   const base = markdownDocument(original),
     target = documentTarget(base, 'แก้เฉพาะข้อ 1', 4)!;
+  assert.equal(documentTarget(base, 'แก้ร่างเดิมตามคำขอนี้: ชื่อโครงการ: ชื่อใหม่', 4), undefined);
+  const thai = markdownDocument('# โครงการ\n\n## ๒. วัตถุประสงค์\n\nเดิม\n\n## ๓. กิจกรรม\n\nคงเดิม');
+  assert.equal(documentTarget(thai, 'แก้เฉพาะข้อที่ ๒', 4)!.expectedHash, documentTarget(thai, 'แก้เฉพาะข้อ 2', 4)!.expectedHash);
   const paragraph = documentTarget(base, 'แก้ย่อหน้าที่ 1 ของหัวข้อ 2', 4)!;
   assert.match(paragraph.markdown, /ข้อความเดิมสอง/);
   assert.doesNotMatch(paragraph.markdown, /ข้อความเดิมหนึ่ง/);

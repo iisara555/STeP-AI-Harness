@@ -149,6 +149,13 @@ try {
   await expect.poll(async () => (await current()).sideQuestions.filter(q => q.status === 'completed').length).toBe(2);
   assert.equal((await current()).status, 'running');
   await waitDone();
+  await page.setViewportSize({ width: 960, height: 720 });
+  const inputBox = await page.locator('.composer textarea').boundingBox();
+  const asideBox = await page.locator('.composer').getByRole('button', { name: 'ถามแทรก', exact: true }).boundingBox();
+  assert.ok(inputBox && inputBox.y >= 0 && inputBox.y + inputBox.height <= 720);
+  assert.ok(asideBox && asideBox.x >= 0 && asideBox.x + asideBox.width <= 960 && asideBox.y + asideBox.height <= 720);
+  await mkdir('release/qa/long-task-workflows', { recursive: true });
+  await page.screenshot({ path: 'release/qa/long-task-workflows/questions-and-draft.png' });
   await page.getByRole('button', { name: 'ทำตามแผนแบบต่อเนื่อง', exact: true }).click();
   await expect.poll(async () => (await current()).longTask?.status, { timeout: 30000 }).toBe('completed');
   assert.equal((await current()).longTask.rounds, 2);

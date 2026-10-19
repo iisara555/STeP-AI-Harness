@@ -784,7 +784,7 @@ export default function App() {
     setRight(true);
     setToolTab('output');
     await refresh();
-    await start(id, t('แก้ร่างเดิมเฉพาะตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
+    await start(id, t('แก้ร่างเดิมตามคำขอนี้: {0}', changes), [], undefined, undefined, undefined, '', 'draft');
   }
   async function create() {
     // A new task is only a blank page until the first request or attachment, so no empty tasks pile up.
@@ -2524,40 +2524,44 @@ export default function App() {
                       ))}
                     </div>
                   )}
-                  {session?.sideQuestions?.map(q => (
-                    <details className="work-plan" key={q.id} open={q.status !== 'completed' || q === session.sideQuestions?.at(-1)}>
-                      <summary>
-                        {t('ถามแทรก')} · {q.question}
-                      </summary>
-                      <small className="muted">{t('อ้างอิงภาพสถานะเอกสารรุ่น {0}', q.revision)}</small>
-                      {q.status === 'running' ? (
-                        <p role="status">{t('กำลังตอบคำถามแทรก')}</p>
-                      ) : q.code ? (
-                        <p role="alert">{explainError(new Error(q.code))}</p>
-                      ) : (
-                        <>
-                          <ChatMarkdown text={q.answer || ''} />
-                          {!!q.docSources?.length && (
-                            <p className="small muted">
-                              {t('อ้างอิงเอกสาร STeP')}: {q.docSources.join(' · ')}
-                            </p>
+                  {!!session?.sideQuestions?.length && (
+                    <div className="side-question-history" aria-label={t('ถามแทรก')}>
+                      {session.sideQuestions.map(q => (
+                        <details className="work-plan" key={q.id} open={q.status !== 'completed' || q === session.sideQuestions?.at(-1)}>
+                          <summary>
+                            {t('ถามแทรก')} · {q.question}
+                          </summary>
+                          <small className="muted">{t('อ้างอิงภาพสถานะเอกสารรุ่น {0}', q.revision)}</small>
+                          {q.status === 'running' ? (
+                            <p role="status">{t('กำลังตอบคำถามแทรก')}</p>
+                          ) : q.code ? (
+                            <p role="alert">{explainError(new Error(q.code))}</p>
+                          ) : (
+                            <>
+                              <ChatMarkdown text={q.answer || ''} />
+                              {!!q.docSources?.length && (
+                                <p className="small muted">
+                                  {t('อ้างอิงเอกสาร STeP')}: {q.docSources.join(' · ')}
+                                </p>
+                              )}
+                              {!!q.check?.unsupported.length && (
+                                <div className="answer-check warn" role="note">
+                                  <p>{t('ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้')}</p>
+                                  <ul>
+                                    {q.check.unsupported.map((item, i) => (
+                                      <li key={i}>
+                                        “{item.claim}”{item.reason && <span className="muted"> · {item.reason}</span>}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </>
                           )}
-                          {!!q.check?.unsupported.length && (
-                            <div className="answer-check warn" role="note">
-                              <p>{t('ข้อความเหล่านี้ไม่พบในเอกสาร STeP โปรดตรวจก่อนใช้')}</p>
-                              <ul>
-                                {q.check.unsupported.map((item, i) => (
-                                  <li key={i}>
-                                    “{item.claim}”{item.reason && <span className="muted"> · {item.reason}</span>}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </details>
-                  ))}
+                        </details>
+                      ))}
+                    </div>
+                  )}
                   {/* While the assistant waits for an answer, the question card is the one place to type. */}
                   {questionPending && (
                     <p className="composer-question-note small muted" role="status">
@@ -2611,6 +2615,45 @@ export default function App() {
                     }}
                   />
                   {snapshot.settings.vimMode && <span className="small muted">Vim: {vimNormal ? 'Normal' : 'Insert'}</span>}
+                  {session && (
+                    <div className="composer-side-actions">
+                      {session?.documentTool && (
+                        <button
+                          className="quiet"
+                          disabled={Boolean(files.length || pendingSource || submitting)}
+                          onClick={() =>
+                            void action(async () => {
+                              const text = query;
+                              await save();
+                              const fresh = await createTask();
+                              if (fresh) {
+                                await selectSession(fresh.id);
+                                setWorkflow('');
+                                workflowRef.current = '';
+                                setForcedSkill('');
+                                setQuery(text);
+                              }
+                            })
+                          }
+                        >
+                          {t('เริ่มงานใหม่')}
+                        </button>
+                      )}
+                      {session && (
+                        <button
+                          className="quiet"
+                          disabled={
+                            !query.trim() ||
+                            Boolean(files.length || pendingSource) ||
+                            session.sideQuestions?.some(q => q.status === 'running')
+                          }
+                          onClick={() => void action(() => askAside())}
+                        >
+                          {t('ถามแทรก')}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <Readiness api={api} query={query} connectionId={session?.connectionId || connectionId} model={currentModel} />
                   {/* Laid out like Claude Desktop: add and modes on the left, AI and send on the right. */}
                   <div className="composer-tools">
@@ -2835,41 +2878,6 @@ export default function App() {
                         </div>
                       )}
                     </div>
-                    {session?.documentTool && (
-                      <button
-                        className="quiet"
-                        disabled={Boolean(files.length || pendingSource || submitting)}
-                        onClick={() =>
-                          void action(async () => {
-                            const text = query;
-                            await save();
-                            const fresh = await createTask();
-                            if (fresh) {
-                              await selectSession(fresh.id);
-                              setWorkflow('');
-                              workflowRef.current = '';
-                              setForcedSkill('');
-                              setQuery(text);
-                            }
-                          })
-                        }
-                      >
-                        {t('เริ่มงานใหม่')}
-                      </button>
-                    )}
-                    {session && (
-                      <button
-                        className="quiet"
-                        disabled={
-                          !query.trim() ||
-                          Boolean(files.length || pendingSource) ||
-                          session.sideQuestions?.some(q => q.status === 'running')
-                        }
-                        onClick={() => void action(() => askAside())}
-                      >
-                        {t('ถามแทรก')}
-                      </button>
-                    )}
                     {running ? (
                       <button className="send stop" title={t('หยุดงาน')} onClick={() => void api.call('cancel', { id: selected })}>
                         <Square size={17} />

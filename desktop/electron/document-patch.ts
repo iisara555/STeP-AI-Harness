@@ -9,15 +9,17 @@ const hash = (value: unknown) =>
     .digest('hex')
     .replace(/[0-9a-f]/g, c => String.fromCharCode(97 + parseInt(c, 16)));
 const heading = (node: DraftNode) => ['heading', 'title'].includes(node.type);
+const digits = (text: string) => text.replace(/[๐-๙]/g, c => String(c.charCodeAt(0) - '๐'.charCodeAt(0)));
 
 /** Locate only an explicit section/paragraph request. The model never chooses paths in the document tree. */
 export function documentTarget(document: DraftNode, request: string, revision: number): DocumentTarget | undefined {
+  request = digits(request);
   const nodes = document.content || [];
-  const section = /(?:ข้อ|หัวข้อ|section)\s*(\d+(?:\.\d+)*)/i.exec(request);
+  const section = /(?:ข้อ|หัวข้อ|section)\s*(?:ที่\s*)?(\d+(?:\.\d+)*)/i.exec(request);
   const paragraph = /(?:ย่อหน้า(?:ที่)?|paragraph)\s*(\d+)/i.exec(request);
   const candidates = nodes.flatMap((node, index) => {
     if (!heading(node)) return [];
-    const title = documentText(node).trim();
+    const title = digits(documentText(node).trim());
     const number = /^(?:(?:ข้อ|หัวข้อ|section)\s*)?(\d+(?:\.\d+)*)(?:[.\s)]|$)/i.exec(title)?.[1];
     const name = title
       .replace(/^(?:(?:ข้อ|หัวข้อ|section)\s*)?\d+(?:\.\d+)*[.\s)]*/i, '')
