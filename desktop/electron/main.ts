@@ -50,6 +50,7 @@ import { WorkService, MAX_PARALLEL_RUNS, type Harness } from './service';
 import { searchPublicWeb } from './public-search';
 import { Splash } from './splash';
 import { documentTool } from '../src/document-tools';
+import { isDocumentQuestion } from './document-tools';
 import { inspectDocumentTemplate } from './document-template';
 import { DocumentTemplates, readTemplateSnapshot } from './document-template-store';
 import { DocumentAssets, documentImageDimensions, readDocumentImage } from './document-assets';
@@ -3322,17 +3323,38 @@ async function main() {
         store.save(session);
         return session;
       }
+      case 'sideQuestion':
       case 'send': {
         const id = inputText(input.id, 60),
           text = inputText(input.text);
         const sending = store.session(id);
-        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        const aside =
+          method === 'sideQuestion' ||
+          (!input.skill &&
+            !input.documentTool &&
+            !input.attachments?.length &&
+            input.mode === 'draft' &&
+            isDocumentQuestion(sending.documentTool, text));
+        if (
+          aside &&
+          (input.skill ||
+            input.documentTool ||
+            input.attachments?.length ||
+            input.sourceText ||
+            input.workflow ||
+            input.coordinator ||
+            input.autoContinue)
+        )
+          throw new Error('INVALID_INPUT');
+        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+          throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         const sendingConnection = store.get<Connection>('connection', sending.connectionId);
         if (!sendingConnection?.ready) throw new Error('CONNECTION_NOT_READY');
         const mode = input.mode === 'image' || input.mode === 'chat' || input.mode === 'draft' ? input.mode : 'draft';
         // A native workflow (plan, execute, requirements, diagnose) runs as chat, never as an image request.
         const workflow = isWorkflow(input.workflow) ? input.workflow : undefined;
+        if (input.autoContinue && workflow !== 'execute') throw new Error('INVALID_INPUT');
         const workMode =
           !workflow && mode === 'chat' && input.autoImage !== false && isImageRequest(text) ? 'image' : workflow ? 'chat' : mode;
         const draftingTool = input.documentTool === undefined ? undefined : documentTool(input.documentTool);
@@ -3379,7 +3401,8 @@ async function main() {
         const attachmentText = templateDescription?.context || selected.map((a: any) => a.text).join('\n\n');
         if (typeof input.sourceText === 'string' && input.sourceText.length > 100_000) throw new Error('INPUT_LIMIT');
         const sourceText = typeof input.sourceText === 'string' ? inputText(input.sourceText, 100_000) : '';
-        const combinedSource = [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
+        const questionSnapshot = aside ? service.questionSnapshot(id) : undefined;
+        const combinedSource = questionSnapshot?.source || [sourceText, attachmentText].filter(Boolean).join('\n\n---\n\n');
         if (combinedSource.length > 100_000) throw new Error('INPUT_LIMIT');
         // Only juristic-person numbers (13 digits starting with 0) that the person checked may stay unmasked.
         const allowIds = (Array.isArray(input.allowIdentifiers) ? input.allowIdentifiers : [])
@@ -3406,7 +3429,7 @@ async function main() {
                 keywordOnly: review.keywordOnly,
                 first,
                 attachment: selected.length > 0,
-                source: Boolean(sourceText),
+                source: Boolean(sourceText) || aside,
                 vision,
                 coordinated,
               },
@@ -3423,7 +3446,11 @@ async function main() {
         }
         if (ask) {
           // The in-app dialog answers with a one-time token bound to this exact request, so a later edit needs a new answer.
-          const sourceDigest = sourceText ? createHash('sha256').update(sourceText).digest('hex') : '';
+          const sourceDigest = (aside ? combinedSource : sourceText)
+            ? createHash('sha256')
+                .update(aside ? combinedSource : sourceText)
+                .digest('hex')
+            : '';
           const fingerprint = createHash('sha256')
             .update(
               [
@@ -3435,6 +3462,8 @@ async function main() {
                 workMode,
                 input.imageModel || '',
                 String(coordinated),
+                String(aside),
+                String(input.autoContinue === true),
                 sourceDigest,
                 ...selected.map((a: any) => a.view.id),
               ].join('\0'),
@@ -3454,7 +3483,7 @@ async function main() {
                 labels: review.labels,
                 attachment: selected.length > 0,
                 vision,
-                source: Boolean(sourceText),
+                source: Boolean(sourceText) || aside,
               },
             };
           }
@@ -3467,7 +3496,8 @@ async function main() {
           }
           acceptTerms();
         }
-        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+          throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         // Organization hooks see the masked request only, never attachments or credentials.
         const submitted = await fireHook({
@@ -3482,9 +3512,17 @@ async function main() {
           throw new Error('HOOK_BLOCKED');
         }
         // Awaited hooks can admit another run. Check again before changing task state or snapshots.
-        if (service.isActive(id) || coordinator.has(id)) throw new Error('RUN_ALREADY_ACTIVE');
+        if ((aside && service.isQuestionActive(id)) || (!aside && (service.isActive(id) || coordinator.has(id))))
+          throw new Error('RUN_ALREADY_ACTIVE');
         if (service.activeCount() >= MAX_PARALLEL_RUNS) throw new Error('RUN_LIMIT');
         const queued = store.session(id);
+        if (aside) {
+          void service.sideQuestion(id, text, true, questionSnapshot!).catch(error => {
+            diagnose('side-question-failed', { code: errorCode(error) });
+            emit({ sessionId: id, type: 'changed' });
+          });
+          return { started: true, aside: true, mode: 'chat', masked: review.labels, warning };
+        }
         const templateInfo =
           nativeTemplate && templateDescription
             ? documentTemplates.save(id, nativeTemplate, draftingTool!.id, selected[0].view.name, templateDescription.font)
@@ -3509,6 +3547,7 @@ async function main() {
                 ],
                 {
                   retry: input.retry === true,
+                  autoContinue: input.autoContinue === true,
                   images: selected.flatMap(a => a.images || []),
                   ...(workflow ? { workflow } : {}),
                   ...(draftingTool ? { documentTool: draftingTool.id } : {}),

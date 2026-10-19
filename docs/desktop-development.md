@@ -15,6 +15,8 @@ The same `/usage` dialog also shows [per-account provider quotas, credits and AP
 
 Phase 3 adds [context and memory controls](desktop-context-memory.md): `/memory`, workspace instructions/persona/styles, bounded compaction, session fork/search/export/resume, local OCR attachments and administrator-gated image input.
 
+[Long tasks and document workflows](desktop-long-tasks.md) add detached snapshot questions, host-enforced section patches, persistent compaction summaries, bounded continuation of approved plans and a coding workflow with local TypeScript diagnostics. This is unreleased source; live model quality and employee-device acceptance remain separate.
+
 [Learning Inbox](desktop-learning.md) adds `/learn`, explicit review of local preference/procedure proposals, version history, disable and rollback. Only approved lessons enter later tasks; this phase does not include automatic review or measured quality improvement.
 
 Phase 5 adds [compatible/Copilot profiles, headless drafts, pre-send readiness, command/keybinding controls, on-demand local voice, governed Skill Packs and the LINE draft gateway](desktop-phase5.md). Live account/channel/hardware acceptance remains separate.

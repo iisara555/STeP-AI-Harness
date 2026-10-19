@@ -54,7 +54,15 @@ function setup(reply: (prompt: string, system: string) => string) {
 test('chat-box edits without an edit verb keep revising the same document for every tool', async () => {
   for (const tool of DOCUMENT_TOOLS) {
     let turn = 0;
-    const { store, session, service, systems } = setup(() => envelope(`# เอกสารสังเคราะห์\n\nฉบับที่ ${turn++}`));
+    const { store, session, service, systems } = setup((_prompt, system) => {
+      const target = /<document_patch_target>\n([\s\S]*?)\n<\/document_patch_target>/.exec(system);
+      if (target) {
+        const patch = JSON.parse(target[1]);
+        patch.markdown = '## 5. ระยะเวลาดำเนินการ\n\nระยะเวลา 90 วัน';
+        return `<document_patch>${JSON.stringify(patch)}</document_patch><document_review>ตรวจจำลอง</document_review>`;
+      }
+      return envelope(`# เอกสารสังเคราะห์\n\n## 5. ระยะเวลาดำเนินการ\n\nฉบับที่ ${turn++}`);
+    });
     const template = { key: 'synthetic', sha256: 'synthetic', name: 'synthetic.docx', font: 'TH Sarabun PSK' };
     try {
       const request = documentRequest(tool.id, { [tool.fields[0].key]: 'Synthetic input' }, tool.variants[0].id);
@@ -64,6 +72,11 @@ test('chat-box edits without an edit verb keep revising the same document for ev
       });
       store.accept(session.id, store.session(session.id).proposals.at(-1)!.id);
       for (const edit of EDITS) {
+        if (edit.includes('หัวข้อ 5'))
+          assert.ok(
+            JSON.stringify(store.session(session.id).document).includes('5.'),
+            JSON.stringify({ tool: tool.id, document: store.session(session.id).document }),
+          );
         await service.run(session.id, edit, '', true, undefined, 'draft');
         const current = store.session(session.id);
         assert.equal(current.status, 'review', `${tool.id}: ${edit}: ${current.messages.at(-1)?.text}`);
@@ -115,7 +128,8 @@ test('a question about the draft is answered in chat and leaves the document as 
     let after = store.session(session.id);
     assert.equal(after.status, 'review');
     assert.ok(!systems.at(-1)!.includes('<document_tool_contract>'));
-    assert.equal(after.messages.at(-1)?.text, 'หัวข้อ 3 คือขอบเขตงานที่ผู้รับจ้างต้องทำ');
+    assert.equal(after.sideQuestions?.at(-1)?.answer, 'หัวข้อ 3 คือขอบเขตงานที่ผู้รับจ้างต้องทำ');
+    assert.deepEqual(after.messages, before.messages, 'side questions keep the main transcript unchanged');
     assert.equal(after.draft, before.draft);
     assert.equal(after.proposals.length, before.proposals.length);
     assert.equal(after.documentTool, 'tor');

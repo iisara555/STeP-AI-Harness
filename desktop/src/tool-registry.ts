@@ -14,6 +14,11 @@ type Schema = {
   additionalProperties?: boolean;
 };
 const definitions: Record<string, [string, string[], Record<string, Schema>]> = {
+  code_diagnostics: [
+    'Check TypeScript/JavaScript syntax and semantic types in a bounded local snapshot with relative imports. Does not run project code, plugins or scripts. Not a full project build: incomplete=true requires project checks.',
+    ['workspace-read'],
+    {},
+  ],
   browser_vault: [
     'List exact-origin credential handles, request the secure Settings form, or fill a reviewed login (args.submit=true also presses its sign-in button). Never pass username/password. Input is the current-session browser tab ID.',
     ['credential-use', 'one-shot-consent'],

@@ -1,6 +1,6 @@
 import { constants } from 'node:fs';
 import { realpath, lstat, open } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, extname, dirname, sep } from 'node:path';
+import { resolve, relative, isAbsolute, extname, dirname, sep, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { Connection, Workflow, WorkTask } from '../src/types';
 import { parsePlan } from './workflows';
@@ -522,6 +522,7 @@ export class DesktopTools {
       : undefined;
     if (r.tool === 'browser_control' && this.mode() === 'plan' && a.action !== 'read') throw new Error('PLAN_MODE_BLOCKED');
     const fileTool = [
+      'code_diagnostics',
       'files',
       'vision_analyze',
       'search_files',
@@ -676,6 +677,8 @@ export class DesktopTools {
             if (a.action === 'list') return this.workbench.changes();
             if ((a.action && a.action !== 'stage') || r.content === undefined) throw new Error('INVALID_INPUT');
             return this.workbench.stage(target, r.content).then(c => this.settle({ id: c.id, path: c.path }, scope));
+          case 'code_diagnostics':
+            return this.workbench.diagnostics(target, scope.signal, join(dirname(this.sheetPath), 'code-worker.cjs'));
           case 'terminal':
             return this.workbench.start(target, scope.sessionId);
           case 'tasks':

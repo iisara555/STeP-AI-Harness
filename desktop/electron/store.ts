@@ -15,10 +15,18 @@ export class Store {
     );
     // Interrupted jobs are never replayed automatically.
     for (const session of this.list<Session>('session')) {
+      const longInterrupted = session.longTask?.status === 'running';
+      if (longInterrupted) session.longTask!.status = 'interrupted';
+      const sideInterrupted = session.sideQuestions?.some(question => question.status === 'running');
+      for (const question of session.sideQuestions || [])
+        if (question.status === 'running') {
+          question.status = 'error';
+          question.code = 'RUN_INTERRUPTED';
+        }
       if (session.status === 'running' || session.status === 'queued') {
         session.status = 'interrupted';
         this.put('session', session.id, session);
-      }
+      } else if (sideInterrupted || longInterrupted) this.put('session', session.id, session);
     }
     // Rebuild at startup to backfill older databases and recover an interrupted index update.
     this.db.exec('DELETE FROM session_search');
@@ -83,6 +91,9 @@ export class Store {
     s.title = source.title + ' (fork)';
     s.status = 'idle';
     delete s.checkpoint;
+    delete s.contextCheckpoint;
+    delete s.longTask;
+    delete s.sideQuestions;
     delete s.lastRun;
     delete s.consentedAt;
     delete s.allowedIdentifiers;
@@ -133,6 +144,7 @@ export class Store {
         connectionId: _connection,
         lastRun: _run,
         checkpoint: _checkpoint,
+        contextCheckpoint: _contextCheckpoint,
         documentTemplate: _template,
         ...data
       } = s;
@@ -240,7 +252,7 @@ export class Store {
     if (!proposal) throw new Error('PROPOSAL_NOT_FOUND');
     // Proposals are Markdown from the model; keep their headings, lists, and emphasis in the editable draft.
     const output = session.documentTool ? parseDocumentOutput(proposal.text, session.documentTool) : { draft: proposal.text, review: '' };
-    const edited = this.edit(id, output.draft, proposal.baseRevision, markdownDocument(output.draft));
+    const edited = this.edit(id, output.draft, proposal.baseRevision, proposal.document || markdownDocument(output.draft));
     const review = [proposal.review, output.review].filter(Boolean).join('\n\n');
     if (review) edited.documentReview = { text: review, revision: edited.revision };
     else delete edited.documentReview;

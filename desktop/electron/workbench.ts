@@ -7,6 +7,7 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { StringDecoder } from 'node:string_decoder';
 import { StreamOutput } from './stream-output';
+import { codeDiagnostics } from './code-diagnostics';
 import type { BackgroundTask, FileChange } from '../src/tools';
 import { taskAction } from '../src/tools';
 import type { WorkPlan, WorkTask } from '../src/types';
@@ -181,6 +182,72 @@ export class Workbench {
     const buffer = await readFile(path);
     if (buffer.includes(0)) throw new Error('FILE_BINARY');
     return { path: relative(await this.root(), path), text: buffer.toString('utf8') };
+  }
+  async diagnostics(input: string, signal: AbortSignal, workerPath: string) {
+    if (!/\.(?:[cm]?[jt]sx?)$/i.test(input)) throw new Error('CODE_LANGUAGE_UNSUPPORTED');
+    const root = await this.root(),
+      files: { path: string; text: string; hash: string }[] = [],
+      pending = [input];
+    const seen = new Set<string>();
+    let missing = 0,
+      size = 0;
+    while (pending.length && files.length < 20 && size < 1_000_000) {
+      if (signal.aborted) throw new Error('CANCELLED');
+      const next = pending.shift()!;
+      let file: string, bytes: Buffer;
+      try {
+        file = await this.path(next);
+        bytes = await this.bytes(next, 200000);
+      } catch (error) {
+        if (!files.length) throw error;
+        missing++;
+        continue;
+      }
+      const name = relative(root, file).split('\\').join('/');
+      if (seen.has(name)) continue;
+      seen.add(name);
+      if (bytes.includes(0) || !Buffer.from(bytes.toString('utf8')).equals(bytes) || size + bytes.length > 1_000_000) {
+        if (!files.length) throw new Error('FILE_BINARY');
+        missing++;
+        continue;
+      }
+      const text = bytes.toString('utf8');
+      size += bytes.length;
+      files.push({ path: name, text, hash: digest(bytes) });
+      const imports = [...text.matchAll(/(?:from\s*|import\s*\(?|require\s*\()\s*['"](\.[^'"\n]+)['"]/g)].slice(0, 30);
+      for (const match of imports) {
+        const stem = resolve(dirname(file), match[1]);
+        let found = false;
+        for (const candidate of [
+          stem,
+          stem.replace(/\.js$/, '.ts'),
+          ...['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.js'].map(ext => stem + ext),
+        ]) {
+          try {
+            const allowed = await this.path(candidate),
+              stat = await lstat(allowed);
+            if (stat.isFile() && /\.[cm]?[jt]sx?$/i.test(candidate)) {
+              pending.push(relative(root, allowed));
+              found = true;
+              break;
+            }
+          } catch {
+            /* Missing and protected imports are not read. */
+          }
+        }
+        if (!found) missing++;
+      }
+    }
+    const result = await codeDiagnostics(files, files[0].path, signal, workerPath);
+    if (root !== (await this.root())) throw new Error('WORKSPACE_CHANGED');
+    for (const file of files) if (digest(await this.bytes(file.path, 200000)) !== file.hash) throw new Error('FILE_CONFLICT');
+    return {
+      ...result,
+      path: files[0].path,
+      files: files.length,
+      incomplete: result.incomplete || Boolean(missing || pending.length),
+      note: 'Local language-service snapshot only. Project configuration, external dependencies and project tests require their own checks.',
+    };
   }
   async bytes(input: string, limit = 8_000_000) {
     const path = await this.path(input);

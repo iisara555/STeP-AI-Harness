@@ -4,8 +4,15 @@ import type { WorkPlan, WorkTask, Workflow } from '../src/types';
 // one in the composer and its rules join the system prompt for that run. The working methods follow widely used agent
 // practices (brainstorm, clarify, plan with checkpoints, execute step by step, requirements interview, structured
 // diagnosis), written here for office work at STeP rather than copied from any skill pack.
-export const WORKFLOWS: readonly Workflow[] = ['plan', 'execute', 'requirements', 'diagnose'];
+export const WORKFLOWS: readonly Workflow[] = ['plan', 'execute', 'requirements', 'diagnose', 'coding'];
 export const isWorkflow = (value: unknown): value is Workflow => WORKFLOWS.includes(value as Workflow);
+
+const CODING_RULE = `Native workflow: CODE AND VERIFY.
+Inspect the workspace instructions, relevant source and existing package/test configuration. State the intended change and use a short plan for multiple steps.
+Read before editing. Use exact patch with a unique old_string or Changes; preserve unrelated files and user edits. A staged proposal is not applied code: wait for application before claiming tests cover it. Never bypass a refused patch through terminal.
+After applied TypeScript/JavaScript edits, use code_diagnostics for bounded local syntax and semantic checks. incomplete=true, missing dependencies or zero diagnostics do not establish a successful full-project build. Use terminal and tasks to run the project's existing relevant tests/typecheck/build, inspect exit codes, correct failures, and inspect changes/diff before reporting success. Do not invent a test command if project instructions provide one.
+Use background tasks for long commands; wait/poll the owned task, and honor cancellation. Keep verified results, blockers and next steps in the approved work plan. At the tool limit report progress accurately so work can resume.
+Follow execution permission and transmission gates. Never claim staged files, generated tests or model reasoning prove the implementation works. Publishing, merge and deployment remain separate authorized actions.`;
 
 const PLAN_RULE = `Native workflow: PLAN BEFORE DOING. Do not do the work itself in this run; produce an approved plan.
 1. Understand: restate the goal in one or two sentences. If the path is not obvious, compare 2-3 approaches with their trade-offs and recommend one.
@@ -42,9 +49,11 @@ export function workflowRule(workflow: Workflow, plan?: WorkPlan) {
     ? PLAN_RULE
     : workflow === 'execute'
       ? executeRule(plan)
-      : workflow === 'requirements'
-        ? REQUIREMENTS_RULE
-        : DIAGNOSE_RULE;
+      : workflow === 'coding'
+        ? CODING_RULE
+        : workflow === 'requirements'
+          ? REQUIREMENTS_RULE
+          : DIAGNOSE_RULE;
 }
 
 /** The plan the plan tool submitted, as a goal and tasks; tasks are checklist, numbered or bulleted lines. */

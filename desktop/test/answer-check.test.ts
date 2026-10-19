@@ -53,6 +53,19 @@ function fixture(extra: Partial<Harness>, checkReply = '{"unsupported":[]}') {
 
 const QUERY = 'ติดต่อฝ่ายบุคคลช่องทางไหน';
 
+test('detached answers retain organization sources and answer-check warnings', async () => {
+  const f = fixture({ answerCheck: () => true }, '{"unsupported":[{"claim":"โทรศัพท์ภายใน","reason":"ไม่มีหลักฐาน"}]}');
+  try {
+    await f.service.sideQuestion(f.session.id, QUERY, true);
+    const answer = f.store.session(f.session.id).sideQuestions!.at(-1)!;
+    assert.equal(answer.status, 'completed');
+    assert.ok(answer.docSources?.length);
+    assert.equal(answer.check?.unsupported[0].claim, 'โทรศัพท์ภายใน');
+  } finally {
+    f.store.close();
+  }
+});
+
 test('a chat answer about STeP lists the documents it drew on; no check runs unless the policy turns it on', async () => {
   const f = fixture({});
   try {

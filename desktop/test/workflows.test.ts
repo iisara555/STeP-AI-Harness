@@ -29,12 +29,13 @@ test('a submitted plan becomes a goal and tasks; checklist, numbered and bullete
 });
 
 test('each workflow gives the assistant its own way of working; execute follows the approved plan', () => {
-  assert.deepEqual([...WORKFLOWS], ['plan', 'execute', 'requirements', 'diagnose']);
+  assert.deepEqual([...WORKFLOWS], ['plan', 'execute', 'requirements', 'diagnose', 'coding']);
   assert.ok(isWorkflow('plan') && !isWorkflow('approve') && !isWorkflow(undefined));
   assert.match(workflowRule('plan'), /ask_user[\s\S]*plan tool[\s\S]*- \[ \]/);
   assert.match(workflowRule('plan'), /Do not do the work itself/);
   assert.match(workflowRule('requirements'), /ความต้องการ[\s\S]*testable/);
   assert.match(workflowRule('diagnose'), /hypotheses[\s\S]*root cause only with evidence/);
+  assert.match(workflowRule('coding'), /staged proposal is not applied code[\s\S]*code_diagnostics[\s\S]*terminal and tasks/);
   assert.match(workflowRule('execute'), /no approved plan/);
   const rule = workflowRule('execute', {
     goal: 'จัดสัมมนา',

@@ -10,6 +10,31 @@ import { feedbackEn } from './feedback-en';
 import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 export const en: Record<string, string> = {
+  ถามแทรก: 'Ask aside',
+  'ถามแทรกใช้ภาพสถานะงานเดิม กรุณานำไฟล์หรือข้อมูลแนบออกก่อน':
+    'Side questions use the task snapshot. Remove attached files or source text first.',
+  'คำถามแทรกใช้สำหรับอ่านภาพสถานะและตอบเท่านั้น งานหลักยังอยู่เหมือนเดิม':
+    'Side questions can only read a snapshot and answer. The main task is unchanged.',
+  เลือกแผนที่ยืนยันแล้วก่อนเริ่มทำงานต่อเนื่อง: 'Select an approved plan before continuing automatically',
+  'ถึงขอบเขตงานต่อเนื่องแล้ว ตรวจผลงานและเลือกทำต่อได้โดยไม่เริ่มงานที่เสร็จแล้วซ้ำ':
+    'The continuation budget was reached. Review the results before continuing from unfinished work.',
+  'ยังระบุส่วนที่จะแก้ไม่ได้ชัดเจน โปรดใช้ชื่อหัวข้อหรือหมายเลขย่อหน้า':
+    'The edit target is ambiguous. Use the section title or paragraph number.',
+  'AI ส่งการแก้เฉพาะส่วนไม่ตรงกับเป้าหมาย ร่างเดิมยังอยู่ กรุณาลองอีกครั้ง':
+    'The AI returned an invalid targeted edit. Your draft is unchanged; try again.',
+  'การตรวจโค้ดนี้รองรับ TypeScript และ JavaScript': 'Code diagnostics support TypeScript and JavaScript',
+  'ตรวจโค้ดไม่สำเร็จ ให้ใช้คำสั่งตรวจของโครงการแทน': 'Code diagnostics failed. Use the project checks instead.',
+  'การตรวจโค้ดใช้เวลาเกินขอบเขต ให้ใช้คำสั่งตรวจของโครงการแทน': 'Code diagnostics timed out. Use the project checks instead.',
+  งานถูกขัดจังหวะ: 'Interrupted',
+  เขียนและตรวจโค้ด: 'Code and verify',
+  ทำตามแผนแบบต่อเนื่อง: 'Continue through the plan',
+  'สูงสุด 3 รอบ / 10 นาที หยุดรับงานเพิ่มเมื่อใช้ถึง 50,000 โทเคนที่รายงาน':
+    'Up to 3 rounds / 10 minutes; stop new calls at 50,000 reported tokens',
+  'งานต่อเนื่องรอบ {0}/{1}': 'Continuation round {0}/{1}',
+  ถึงขอบเขตที่กำหนด: 'Budget reached',
+  พักเพื่อทบทวน: 'Paused for review',
+  'อ้างอิงภาพสถานะเอกสารรุ่น {0}': 'Based on the snapshot at document revision {0}',
+  กำลังตอบคำถามแทรก: 'Answering the side question',
   'เพิ่มรูปโปรไฟล์คนทำงาน 20 แบบ และไอคอนขยับเมื่อชี้หรือใช้คีย์บอร์ด พร้อมรองรับการลดการเคลื่อนไหว':
     '20 more office profile pictures and icons that move on hover or keyboard focus, respecting Reduce Motion',
   'เพิ่มงาน Gmail, Drive, Docs, Sheets, Slides, Forms และ Apps Script ผ่านบัญชี Google ที่เชื่อมไว้':

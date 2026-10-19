@@ -20,6 +20,17 @@ await build({
   external: ['electron', '@anthropic-ai/claude-agent-sdk', '@github/copilot-sdk'],
 });
 await copyFile('electron/sheet-worker.cjs', 'dist/sheet-worker.cjs');
+await build({
+  entryPoints: ['electron/code-worker.cjs'],
+  outfile: 'dist/code-worker.cjs',
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node22',
+});
+await cp('node_modules/typescript/lib', 'dist/typescript-lib', { recursive: true, filter: path => !/\.(?:js|map|json)$/.test(path) });
+await copyFile('node_modules/typescript/LICENSE.txt', 'dist/typescript-lib/LICENSE.txt');
+await copyFile('node_modules/typescript/ThirdPartyNoticeText.txt', 'dist/typescript-lib/ThirdPartyNoticeText.txt');
 await copyFile('electron/office-package.cjs', 'dist/office-package.cjs');
 await cp('assets/document-fonts', 'dist/document-fonts', { recursive: true });
 await build({

@@ -14,6 +14,8 @@ export const plainDocument = (text: string): DraftNode => ({
 
 // Inline Markdown to text runs: bold and italic survive; code, links, and escapes become plain text.
 function inline(text: string): DraftNode[] {
+  // This parser reads inline content (including heading labels), never a new ordered-list block.
+  text = text.replace(/^(\d{1,4})([.)])(?=\s)/, (_match, number, punctuation) => number + '\\' + punctuation);
   const addMark = (marks: { type: string }[], type: string) => (marks.some(mark => mark.type === type) ? marks : [...marks, { type }]);
   const flatten = (node: any, marks: { type: string }[] = []): DraftNode[] => {
     if (node.type === 'image') return [{ type: 'text', text: text.slice(node.position.start.offset, node.position.end.offset) }];

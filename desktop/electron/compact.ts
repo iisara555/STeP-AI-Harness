@@ -1,5 +1,7 @@
 import { estimateTextTokens } from '../../src/modules/context-budget/index.js';
 import { section } from './prompt';
+import { createHash } from 'node:crypto';
+import type { SummaryCheckpoint } from '../src/types';
 
 /** The budget when the model's context window is not known (a custom endpoint, a local Ollama model). */
 export const CONTEXT_TOKENS = 48_000;
@@ -76,6 +78,8 @@ export function contextBudget(connection: {
 type Part = { tag: string; text: string };
 export type CompactResult = { prompt: string; before: number; after: number; method: 'none' | 'micro' | 'summary' };
 export type CompactOptions = {
+  checkpoint?: SummaryCheckpoint;
+  retain?: (checkpoint: SummaryCheckpoint) => void;
   system: string;
   state: string;
   budget?: number;
@@ -126,6 +130,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
   const build = () => render(items) + '\n\n' + outside + '\n\n' + section('task_state', options.state);
   let value = build();
   let method: CompactResult['method'] = 'micro';
+  let checkpoint: SummaryCheckpoint | undefined;
   if (options.reactive || tokens(options.system + value) > budget) {
     const conversation = items.find(p => p.tag === 'conversation');
     let messages: any[] = [];
@@ -136,10 +141,30 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
     }
     if (Array.isArray(messages) && messages.length > 2 && conversation) {
       const old = messages.slice(0, -2);
+      const signature = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+      const cached = options.checkpoint;
+      const valid =
+        cached &&
+        Number.isSafeInteger(cached.covered) &&
+        cached.covered >= 0 &&
+        cached.covered <= old.length &&
+        typeof cached.text === 'string' &&
+        cached.text.length <= 40000 &&
+        signature(old.slice(0, cached.covered)) === cached.prefixHash
+          ? cached
+          : undefined;
+      const retained = valid ? options.privacy(valid.text) : '';
       // Several bounded calls avoid asking an already over-full provider to summarize its oversized prompt.
       const chunks: string[] = [];
       let batch = '';
-      for (const m of old) {
+      const priorParts =
+        valid && valid.covered < old.length
+          ? Array.from({ length: Math.ceil(retained.length / 6000) }, (_, i) => ({
+              role: 'summary',
+              text: retained.slice(i * 6000, (i + 1) * 6000),
+            }))
+          : [];
+      for (const m of [...priorParts, ...old.slice(valid?.covered || 0)]) {
         const line = JSON.stringify({ role: m.role, text: preview(String(m.text || ''), 6000) });
         if (tokens(batch + line) > 6000 && batch) {
           chunks.push(batch);
@@ -149,6 +174,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       }
       if (batch) chunks.push(batch);
       const summaries: string[] = [];
+      if (valid?.covered === old.length) summaries.push(retained);
       if (chunks.length > 12)
         summaries.push('[Some older turns omitted from this bounded summary. The complete transcript remains local.]');
       for (const chunk of chunks.slice(-12)) {
@@ -157,6 +183,7 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
       }
       conversation.text = JSON.stringify(messages.slice(-2));
       items.push({ tag: 'context_summary', text: summaries.join('\n\n') });
+      checkpoint = { covered: old.length, prefixHash: signature(old), text: summaries.join('\n\n') };
       method = 'summary';
       value = build();
     }
@@ -172,5 +199,6 @@ export async function compact(prompt: string, options: CompactOptions): Promise<
   if (after > budget || (options.reactive && after >= before)) throw new Error('CONTEXT_LIMIT');
   if (options.signal.aborted) throw new Error('CANCELLED');
   await options.hook?.('post_compact', before, after);
+  if (checkpoint) options.retain?.(checkpoint);
   return { prompt: value, before, after, method };
 }

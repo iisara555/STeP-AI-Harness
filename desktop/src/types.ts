@@ -219,9 +219,30 @@ export type DraftVersion = {
   presentation?: import('./document-presentation').DocumentPresentation;
   at: string;
 };
-export type Proposal = { id: string; text: string; review?: string; baseRevision: number; sources: string[]; at: string };
+export type Proposal = {
+  id: string;
+  text: string;
+  review?: string;
+  document?: DraftNode;
+  baseRevision: number;
+  sources: string[];
+  at: string;
+};
 export type DocumentTemplateInfo = { key: string; sha256: string; name: string; font: string };
+export type SummaryCheckpoint = { covered: number; prefixHash: string; text: string };
 export type Session = {
+  /** Read-only answers from a frozen task snapshot; never become document edits or main-task history. */
+  sideQuestions?: {
+    id: string;
+    question: string;
+    answer?: string;
+    docSources?: string[];
+    check?: Message['check'];
+    code?: string;
+    revision: number;
+    at: string;
+    status: 'running' | 'completed' | 'error';
+  }[];
   /** The selected form's Skill/template contract, retained for revisions and retry. */
   documentTool?: DocumentToolId;
   /** Reference to a private, host-owned DOCX snapshot; bytes never go to the renderer or AI. */
@@ -231,6 +252,16 @@ export type Session = {
   parentId?: string;
   loadedContext?: string[];
   compaction?: { before: number; after: number; method: string; at: string };
+  contextCheckpoint?: SummaryCheckpoint;
+  longTask?: {
+    status: 'running' | 'completed' | 'blocked' | 'budget' | 'paused' | 'interrupted';
+    rounds: number;
+    maxRounds: number;
+    maxTokens: number;
+    maxMs: number;
+    startedAt: string;
+    reason?: string;
+  };
   approvedPlan?: string;
   /** The plan approved in the native 'plan' workflow, ticked off by the 'execute' workflow. */
   workPlan?: WorkPlan;
@@ -422,7 +453,7 @@ export type ApprovalRequest = {
 export type ToolQuestion = { id: string; sessionId: string; question: string; options: string[] };
 export type PlanStep = { label: string; action?: boolean };
 /** Native workflows of the harness (electron/workflows.ts), picked in the composer. */
-export type Workflow = 'plan' | 'execute' | 'requirements' | 'diagnose';
+export type Workflow = 'plan' | 'execute' | 'requirements' | 'diagnose' | 'coding';
 export type WorkTask = { title: string; status: 'todo' | 'doing' | 'done' | 'blocked'; note?: string };
 export type WorkPlan = { goal: string; tasks: WorkTask[]; approvedAt?: string };
 /** Pages open in the Web tab (electron/browser-dock.ts): the assistant's and the employee's own. */
