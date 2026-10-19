@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight } from './icons';
 import { explainError, shownDate } from './messages';
 import type { DesktopAPI, MaintenanceBoard, MaintenanceItem, MaintenanceKind, MaintenanceStatus } from './types';
 import { localized, t } from './i18n';

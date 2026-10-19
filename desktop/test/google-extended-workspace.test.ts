@@ -298,6 +298,56 @@ test('Apps Script edits preserve unmodified files and reject changes since the r
   }
 });
 
+test('Apps Script update returns only acknowledgement metadata, never unchanged project source', async () => {
+  const f = fixture(['appscript']);
+  try {
+    await f.google.connect(['appscript'], context);
+    const id = f.google.state().accounts[0].id;
+    const privateSource = '// private padding\n'.repeat(600) + 'const privateMarker = "UNCHANGED_PRIVATE_FIXTURE";';
+    const files = [
+      { name: 'appsscript', type: 'JSON', source: '{}' },
+      { name: 'Code', type: 'SERVER_JS', source: 'function sample() {}' },
+      { name: 'PrivateConfig', type: 'SERVER_JS', source: privateSource },
+      { name: 'Retired', type: 'SERVER_JS', source: 'function retired() {}' },
+    ];
+    let written: any;
+    f.respond(async (_url, init) => {
+      if (init.method === 'PUT') {
+        written = JSON.parse(String(init.body));
+        assert.equal(written.files.find((file: any) => file.name === 'PrivateConfig').source, privateSource);
+        assert.equal(
+          written.files.some((file: any) => file.name === 'Retired'),
+          false,
+        );
+        // The real updateContent endpoint echoes all project files, including unchanged source.
+        return json({ scriptId: 'demo_script', files: written.files, unexpectedSource: privateSource });
+      }
+      return json({ scriptId: 'demo_script', files });
+    });
+    const changedFile = { name: 'Code', type: 'SERVER_JS', source: 'function sample() { return 2; }' };
+    const result = await f.google.execute(
+      id,
+      {
+        operation: 'appscript.projects.updateContent',
+        params: { scriptId: 'demo_script' },
+        body: { files: [changedFile], deleteFiles: ['Retired'], expectedContentHash: googleScriptContentHash({ files }) },
+      },
+      context,
+    );
+    assert.doesNotMatch(JSON.stringify(result), /UNCHANGED_PRIVATE_FIXTURE|unexpectedSource|function sample/);
+    assert.deepEqual(result.data, {
+      scriptId: 'demo_script',
+      changedFiles: [{ name: 'Code', type: 'SERVER_JS' }],
+      deletedFiles: ['Retired'],
+      contentHash: googleScriptContentHash(written),
+    });
+    assert.match(result.resourceUrl!, /script.google.com/);
+    assert.ok(result.requestDigest);
+  } finally {
+    f.clean();
+  }
+});
+
 test('empty acknowledgements confirm only supported updates, and script timeouts are never retried', async () => {
   const f = fixture();
   try {

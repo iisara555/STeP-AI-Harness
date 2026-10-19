@@ -29,8 +29,10 @@ card when all three are available; existing app-managed `documents` grants remai
 Existing accounts do not gain services automatically. **Change allowed services** reauthorizes a specific existing
 Google subject, preventing a different signed-in browser account from being substituted. The account stores selected
 service intents separately from actual OAuth scopes. In particular, choosing Gmail drafts or mailbox management
-cannot enable sending just because Google's compose/modify scope is broad. Partial Forms consent can permit form
-body work while response reads stay blocked.
+cannot enable sending just because Google's compose/modify scope is broad. With Forms alone, partial consent can
+permit form body work while response reads stay blocked. Selecting Forms together with Drive can permit response
+reads through Google's accepted Drive scope even if `forms.responses.readonly` was declined; do not describe that
+combination as body-only access.
 
 The administrator can narrow `googleWorkspace.services`; both that policy and the employee's account intent apply
 on every call, followed by actual scope checks. Every read/write asks for the account and exact request. Sending a
@@ -55,16 +57,25 @@ six minutes; cancellation/timeout does not prove the remote function stopped or 
 - Named Google operations only: no caller-selected URL, HTTP method, token, raw MIME or shell command.
 - JSON/text responses are bounded to 1 MB, pages normally to 20 items. Use the returned page token and state the
   inspected scope. Binary files, PDF/DOCX exports and binary attachments must be opened in Google; transfer commands
-  here support UTF-8 text only. Upload text is at most 50,000 characters. Encoded MIME/attachment bodies are decoded
+  here validate UTF-8 decoding and reject NUL bytes, not every binary MIME type: an ASCII-only PDF can pass those
+  text checks. Do not treat this as binary conversion or rely on MIME-based rejection. Upload text is at most
+  50,000 characters. Encoded MIME/attachment bodies are decoded
   before privacy review; raw base64 is never returned to the model.
 - Batch writes accept at most 50 allowlisted Google request types and 100 KB of structured input. Docs, Slides and
   Forms require fresh revision IDs. Sheets value writes use matching rectangles and at most 500 cells in total.
-  Sheets has no atomic revision guard; do not promise protection against concurrent editors.
+  The 500-cell and explicit `valueInputOption` rules apply to values APIs, not generic `sheets.batchUpdate` or clear
+  operations; generic batch requests can target an entire sheet and set formulas via `userEnteredValue`. Review
+  their full ranges and effects. Sheets has no atomic revision guard; do not promise protection against concurrent editors.
 - Apps Script file updates require `contentHash` from `getContent`. The host rereads and compares the hash after
   approval, merges changed/new files, preserves all other files and removes only explicit `deleteFiles`. It retains
   the manifest, refuses writing credential-redaction placeholders, and never sends unchanged private source to AI
-  as a side effect of editing another file. Google has no atomic content precondition, so a concurrent edit can still
+  as a side effect of editing another file. The write receipt includes only script ID, changed file names/types,
+  explicitly deleted names and a content hash; reading source requires a separate read. Google has no atomic content precondition, so a concurrent edit can still
   occur between the check and the write.
+- Malformed Apps Script update responses remain a robustness limit: a non-string upstream `scriptId` is not schema
+  validated in the receipt, and a malformed file source can make post-write hash parsing return
+  `GOOGLE_RESPONSE_INVALID` after the write instead of `GOOGLE_OUTCOME_UNKNOWN`. No automatic retry is performed;
+  inspect the script in Google before repeating an update after an error.
 - Creation requires a returned resource reference. Supported empty acknowledgements (such as removing a sharing
   grant) report the exact target and request digest. A script run is completed only with `done: true` and a response.
   Interrupted/ambiguous writes return `GOOGLE_OUTCOME_UNKNOWN`; never retry automatically. Confirm with a read or in

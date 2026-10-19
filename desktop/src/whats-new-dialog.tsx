@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from './icons';
 import { t } from './i18n';
 import type { ReleaseNote } from './whats-new';
 import { ThaiText } from './thai-text';

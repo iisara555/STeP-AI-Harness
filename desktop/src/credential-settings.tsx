@@ -22,7 +22,7 @@ import {
   RefreshCw,
   Search,
   type LucideIcon,
-} from 'lucide-react';
+} from './icons';
 import { language } from './i18n';
 import { explainError } from './messages';
 import { GOOGLE_PAGES, type GoogleService } from './google-services';

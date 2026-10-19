@@ -416,6 +416,16 @@ export class GoogleWorkspace {
     if (request.operation === 'appscript.versions.create' && (!Number.isSafeInteger(result.versionNumber) || result.versionNumber < 1))
       reject('GOOGLE_OUTCOME_UNKNOWN');
     if (request.operation === 'appscript.projects.getContent') result = { ...result, contentHash: googleScriptContentHash(result) };
+    if (request.operation === 'appscript.projects.updateContent') {
+      // Google echoes Content for the whole project. Return an allowlisted receipt,
+      // never source from unchanged files (or even the changed file) as a write side effect.
+      result = {
+        scriptId: result.scriptId || request.params!.scriptId,
+        changedFiles: request.body!.files.map(({ name, type }: any) => ({ name, type })),
+        deletedFiles: [...(request.body!.deleteFiles || [])],
+        contentHash: googleScriptContentHash(Array.isArray(result.files) ? result : invocation.body),
+      };
+    }
     let resourceUrl: string | undefined;
     const resourceId = result.documentId || result.spreadsheetId || result.presentationId || result.formId || result.scriptId;
     if (invocation.write) {

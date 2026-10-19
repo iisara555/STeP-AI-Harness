@@ -1,4 +1,4 @@
-import { Check, Circle, LoaderCircle, OctagonAlert, Play, ListChecks } from 'lucide-react';
+import { Check, Circle, LoaderCircle, OctagonAlert, Play, ListChecks } from './icons';
 import type { WorkPlan, Workflow } from './types';
 import { t } from './i18n';
 

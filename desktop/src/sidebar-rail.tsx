@@ -1,6 +1,19 @@
 import { useRef, type ForwardRefExoticComponent, type ReactNode, type RefAttributes } from 'react';
 import { MotionConfig } from 'motion/react';
-import { LoaderCircle } from 'lucide-react';
+import { useReducedMotion } from './reduced-motion';
+import {
+  Blocks,
+  CalendarClock,
+  FileText,
+  LoaderCircle,
+  Megaphone,
+  MessageSquare,
+  Plus,
+  Receipt,
+  Search,
+  SlidersHorizontal,
+  type LucideIcon,
+} from 'lucide-react';
 import { t } from './i18n';
 import { BlocksIcon } from './animated-icons/blocks';
 import { CalendarClockIcon } from './animated-icons/calendar-clock';
@@ -19,6 +32,7 @@ type AnimatedIcon = ForwardRefExoticComponent<
 /** A rail icon that plays its small animation while the button is hovered or has keyboard focus. */
 function RailButton({
   icon: Icon,
+  stillIcon: StillIcon,
   label,
   size = 17,
   className = '',
@@ -27,6 +41,7 @@ function RailButton({
   onClick,
 }: {
   icon: AnimatedIcon;
+  stillIcon: LucideIcon;
   label: string;
   size?: number;
   className?: string;
@@ -34,8 +49,9 @@ function RailButton({
   busy?: ReactNode;
   onClick: () => void;
 }) {
+  const reduced = useReducedMotion();
   const icon = useRef<{ startAnimation: () => void; stopAnimation: () => void }>(null);
-  const start = () => icon.current?.startAnimation();
+  const start = () => !reduced && icon.current?.startAnimation();
   const stop = () => icon.current?.stopAnimation();
   return (
     <button
@@ -49,7 +65,7 @@ function RailButton({
       onFocus={start}
       onBlur={stop}
     >
-      {busy || <Icon ref={icon} size={size} className="rail-icon" />}
+      {busy || (reduced ? <StillIcon size={size} className="rail-icon" /> : <Icon ref={icon} size={size} className="rail-icon" />)}
     </button>
   );
 }
@@ -106,26 +122,35 @@ export function SidebarRail({
   onProfile: () => void;
 }) {
   const tools = [
-    ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon],
-    ['media', t('สื่อภายใน'), MegaphoneIcon],
-    ['skills', t('ศูนย์รวม Skill'), BlocksIcon],
-    ['schedules', t('งานตั้งเวลา'), CalendarClockIcon],
-    ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon],
+    ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon, FileText],
+    ['media', t('สื่อภายใน'), MegaphoneIcon, Megaphone],
+    ['skills', t('ศูนย์รวม Skill'), BlocksIcon, Blocks],
+    ['schedules', t('งานตั้งเวลา'), CalendarClockIcon, CalendarClock],
+    ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon, Receipt],
   ] as const;
   return (
     // Animations follow the computer's "reduce motion" setting.
     <MotionConfig reducedMotion="user">
       <aside className="sidebar rail" aria-label={t('แถบงาน')}>
         <div className="rail-brand">{brand}</div>
-        <RailButton icon={PlusIcon} size={18} className="rail-new" tour="new-work" label={t('เริ่มงานใหม่')} onClick={onNew} />
-        <RailButton icon={SearchIcon} label={t('ค้นหางาน')} onClick={onSearch} />
-        <RailButton icon={MessageSquareIcon} label={t('งานทั้งหมด')} onClick={onTasks} />
+        <RailButton
+          icon={PlusIcon}
+          stillIcon={Plus}
+          size={18}
+          className="rail-new"
+          tour="new-work"
+          label={t('เริ่มงานใหม่')}
+          onClick={onNew}
+        />
+        <RailButton icon={SearchIcon} stillIcon={Search} label={t('ค้นหางาน')} onClick={onSearch} />
+        <RailButton icon={MessageSquareIcon} stillIcon={MessageSquare} label={t('งานทั้งหมด')} onClick={onTasks} />
         <span className="rail-divider" aria-hidden="true" />
         <nav aria-label={t('เครื่องมือ')}>
-          {tools.map(([id, label, Icon]) => (
+          {tools.map(([id, label, Icon, StillIcon]) => (
             <RailButton
               key={id}
               icon={Icon}
+              stillIcon={StillIcon}
               tour={id}
               className={view === id && !settings ? 'nav-active' : ''}
               label={label}
@@ -141,6 +166,7 @@ export function SidebarRail({
         <span className="rail-spacer" />
         <RailButton
           icon={SlidersHorizontalIcon}
+          stillIcon={SlidersHorizontal}
           size={18}
           className={settings ? 'nav-active' : ''}
           tour="settings"

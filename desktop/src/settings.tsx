@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Building2, Check, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from 'lucide-react';
+import { Building2, Check, FolderOpen, KeyRound, Minus, Monitor, Moon, Settings2, ShieldCheck, Sparkles, Sun } from './icons';
 import { AIConnections } from './ai-connections';
 import { CredentialSettings } from './credential-settings';
 import { shortcut } from './messages';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparkles } from './icons';
 import type { Settings, Snapshot } from './types';
 import { AIConnections } from './ai-connections';
 import launchArt from './assets/illustrations/launch.png';

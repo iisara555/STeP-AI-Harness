@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bookmark, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Bookmark, ThumbsDown, ThumbsUp } from './icons';
 import type { Message } from './types';
 import { ConfirmDialog } from './ui';
 import { explainError } from './messages';
