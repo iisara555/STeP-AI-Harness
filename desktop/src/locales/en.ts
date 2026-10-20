@@ -11,7 +11,7 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
-  'กลับมาใช้ข้อมูลบัญชี': 'Resume credential access',
+  กลับมาใช้ข้อมูลบัญชี: 'Resume credential access',
   'ส่งข้อมูลจาก Google ให้ AI': 'Send Google data to AI',
   รหัสผ่านหลักของตัวจัดการรหัสผ่าน: 'Password manager master password',
   รหัสผ่านของเว็บไซต์นี้: 'Password for this website',
