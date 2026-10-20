@@ -25,6 +25,8 @@ const server = createServer((req, res) => {
   // The cafe's menu arrives from the network after the page has loaded, as on a real single-page app.
   if (req.url === '/cafe/menu.json') return void setTimeout(() => res.end(JSON.stringify(['Espresso:10', 'Americano:7'])), 700);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  if (req.url === '/otp') return res.end('<input name="otp" autocomplete="one-time-code" value="123456"><button>Verify</button>');
+  if (req.url === '/verified') return res.end('<h1>Verified after OTP</h1>');
   res.end(
     req.url === '/login'
       ? '<input type="password" aria-label="Password"><p>Private login screen</p>'
@@ -192,6 +194,29 @@ try {
     'BROWSER_IMAGE_SENSITIVE',
   );
   assert.deepEqual(login.elements, []);
+  // Reproduce navigation completing while a protected read waits for the network/DOM to settle.
+  const otp = await run(url + '/otp', { action: 'open' });
+  await app.evaluate((_e, id) => {
+    const entry = globalThis.agentBrowser.tabs.get(id);
+    entry.vaultSensitive = true;
+    entry.protectedKind = 'code';
+  }, otp.tab);
+  const protectedOtp = await run(otp.tab, { action: 'read' });
+  assert.equal(protectedOtp.protectedForm, true);
+  assert.equal(protectedOtp.text, '');
+  assert.doesNotMatch(JSON.stringify(protectedOtp), /123456/);
+  await app.evaluate((_e, destination) => {
+    const browser = globalThis.agentBrowser,
+      settle = browser.settle;
+    browser.settle = async function (entry, signal) {
+      this.settle = settle;
+      await entry.contents.loadURL(destination);
+      await settle.call(this, entry, signal);
+    };
+  }, url + '/verified');
+  const verifiedOtp = await run(otp.tab, { action: 'read' });
+  assert.equal(verifiedOtp.protectedForm, undefined);
+  assert.match(verifiedOtp.text, /Verified after OTP/);
   assert.equal(login.text, '');
   assert.equal((await run('file:///C:/Windows/win.ini', { action: 'open' })).error, 'INVALID_URL');
   // A card a page made clickable with its own script (a pointer cursor, no button or link) is a target too, once.

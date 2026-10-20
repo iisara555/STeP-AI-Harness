@@ -76,7 +76,7 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  }
  else if(!results.length)request={tool:'browser_control',input:${JSON.stringify(origin + '/login')},args:{action:'open'}};
  else if(last?.text?.includes('Vault login verified')){}
- else if(last?.protectedForm)request={tool:'browser_control',input:tab,args:{action:'click',snapshot:last.snapshot,ref:last.elements.find(element=>element.label==='Verify').ref}};
+ else if(last?.protectedForm&&last.elements.some(element=>element.label==='Verify'))request={tool:'browser_control',input:tab,args:{action:'click',snapshot:last.snapshot,ref:last.elements.find(element=>element.label==='Verify').ref}};
  else if(last?.requiresManualLogin&&last?.text?.includes('Verification'))request={tool:'browser_vault',input:tab,args:{action:'enter_code'}};
  else if(last?.requiresManualLogin)request={tool:'browser_vault',input:tab,args:{action:'list'}};
  else if(last&&Array.isArray(last.entries))request={tool:'browser_vault',input:tab,args:accounts.length?{action:'fill',handle:accounts[0].handle,submit:true}:{action:'save_login'}};

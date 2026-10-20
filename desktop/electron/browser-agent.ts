@@ -197,10 +197,13 @@ export class AgentBrowser {
   }
   private async snapshot(id: string, entry: Entry, signal: AbortSignal) {
     if (entry.vaultSensitive && !entry.protectedKind) throw new Error('BROWSER_VAULT_SENSITIVE');
-    const protectedRead = Boolean(entry.vaultSensitive && entry.protectedKind);
     const snapshot = randomUUID();
     await this.settle(entry, signal);
     const marker = await this.markListeners(entry, signal);
+    // A submitted OTP/address form may navigate while settling. Read the protection state of the current page,
+    // after those waits, so the next page can be read without carrying the old form's mask forward.
+    if (entry.vaultSensitive && !entry.protectedKind) throw new Error('BROWSER_VAULT_SENSITIVE');
+    const protectedRead = Boolean(entry.vaultSensitive && entry.protectedKind);
     const result = await this.script(
       entry,
       `(() => { ${helpers}
