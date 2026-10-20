@@ -153,7 +153,7 @@ export type Policy = {
    */
   checks: { authority: boolean; privacy: boolean };
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
-  credentialStorage?: { sharedDevice: boolean };
+  credentialStorage?: { sharedDevice?: boolean; blockHostExecution?: boolean };
   /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
   morningBrief?: { rememberConsent: boolean };
 };
@@ -285,6 +285,7 @@ export function defaultPolicy(): Policy {
 function closedPolicy(): Policy {
   const policy = defaultPolicy();
   policy.features.vault = false;
+  policy.credentialStorage = { blockHostExecution: true };
   policy.features.googleWorkspace = false;
   policy.features.developmentMode = false;
   policy.features.learningReview = false;
@@ -335,11 +336,12 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
   if (raw.credentialStorage !== undefined) {
     if (
       !isObject(raw.credentialStorage) ||
-      Object.keys(raw.credentialStorage).some(k => k !== 'sharedDevice') ||
-      typeof raw.credentialStorage.sharedDevice !== 'boolean'
+      Object.keys(raw.credentialStorage).some(k => !['sharedDevice', 'blockHostExecution'].includes(k)) ||
+      !Object.keys(raw.credentialStorage).length ||
+      Object.values(raw.credentialStorage).some(value => typeof value !== 'boolean')
     )
-      problems.push('credentialStorage.sharedDevice must be boolean');
-    else policy.credentialStorage = { sharedDevice: raw.credentialStorage.sharedDevice };
+      problems.push('credentialStorage fields must be boolean');
+    else policy.credentialStorage = { ...raw.credentialStorage };
   }
   if (raw.morningBrief !== undefined) {
     if (

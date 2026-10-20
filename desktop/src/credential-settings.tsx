@@ -23,16 +23,17 @@ import {
   Search,
   type LucideIcon,
 } from './icons';
-import { language } from './i18n';
+import { language, t } from './i18n';
 import { explainError } from './messages';
 import { GOOGLE_PAGES, type GoogleService } from './google-services';
 import type { VaultMetadata } from '../electron/vault';
 import { MorningBriefSettings } from './morning-brief';
+import { VaultItems } from './vault-items';
 const words = {
   title: ['รหัสผ่านและการเชื่อมต่อ', 'Passwords and connections'],
   intro: [
-    'เก็บข้อมูลบัญชีบนเครื่องนี้ เลือกปลายทางและตรวจทุกครั้งก่อนใช้งาน',
-    'Store account credentials on this device. Review the destination before use.',
+    'บัญชีและที่อยู่ที่จำไว้กรอกอัตโนมัติเฉพาะเว็บไซต์ที่กำหนด รหัสผ่านไม่เข้าแชต',
+    'Saved logins and addresses fill automatically on their exact sites. Passwords never enter chat.',
   ],
   disabled: ['ผู้ดูแลยังไม่ได้เปิดใช้ Vault สำหรับเครื่องนี้', 'The administrator has not enabled Vault on this device.'],
   conflict: [
@@ -344,6 +345,8 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     enabled: boolean;
     suspended: boolean;
     protected: boolean;
+    blockHostExecution?: boolean;
+    sources?: { source: 'onepassword' | 'bitwarden'; enabled: boolean; installed: boolean; unlocked: boolean }[];
     entries: VaultMetadata[];
     browsers: { id: string; sessionId: string; origin: string }[];
   }>();
@@ -365,6 +368,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     username: string;
     password: string;
     remember: boolean;
+    otpSecret?: string;
   }>();
   const [services, setServices] = useState<GoogleService[]>(['documents']);
   const [editingGoogle, setEditingGoogle] = useState<string>();
@@ -437,7 +441,12 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
           </button>
         </div>
         {!vault?.enabled && <p role="status">{w('disabled')}</p>}
-        {vault?.protected && <p className="credential-note">{w('conflict')}</p>}
+        {vault?.protected && vault.blockHostExecution && <p className="credential-note">{w('conflict')}</p>}
+        {vault?.protected && !vault.blockHostExecution && (
+          <p className="credential-note">
+            {t('เครื่องมือเขียนโค้ดใช้สิทธิ์ตามปกติ คำสั่งในเครื่องอาจเข้าถึงข้อมูลของผู้ใช้ระบบปฏิบัติการนี้ได้')}
+          </p>
+        )}
         {vault?.protected && (
           <button
             className="quiet"
@@ -498,6 +507,26 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
               />
             </label>
             {form.id && <p className="muted small">{w('usernameEdit')}</p>}
+            <label>
+              {t('Authenticator setup key หรือ otpauth:// (ไม่บังคับ)')}
+              <input
+                type="password"
+                autoComplete="off"
+                maxLength={4000}
+                value={form.otpSecret || ''}
+                onChange={event => setForm({ ...form, otpSecret: event.target.value || undefined })}
+              />
+            </label>
+            {form.id && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.otpSecret === ''}
+                  onChange={event => setForm({ ...form, otpSecret: event.target.checked ? '' : undefined })}
+                />
+                {t('ลบ Authenticator key ที่บันทึกไว้')}
+              </label>
+            )}
             <label className="credential-check">
               <input type="checkbox" checked={form.remember} onChange={e => setForm({ ...form, remember: e.target.checked })} />
               {w('remember')}
@@ -567,6 +596,13 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
             </div>
           </article>
         ))}
+        <VaultItems
+          entries={vault?.entries || []}
+          sources={vault?.sources || []}
+          disabled={!vault?.enabled || Boolean(busy)}
+          run={run}
+          call={call}
+        />
         {vault?.entries.some(v => v.kind === 'api-key') && <p className="muted small">{w('keys')}</p>}
         {vault?.browsers.map(tab => (
           <button

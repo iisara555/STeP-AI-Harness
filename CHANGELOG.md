@@ -13,6 +13,7 @@ workflow `Publish Pilot Release` ใช้ส่วน `## v<รุ่น>` ข�
 - พิมพ์งานด้วยภาษาปกติแล้วเลือก Skill ก่อนตอบแบบผสม: ชื่อทักษะที่ระบุชัดและ Router มั่นใจสูงโหลดได้ทันที กรณีอื่นให้ AI ที่เชื่อมต่ออยู่เลือกจากชื่อและคำอธิบาย แล้วตรวจสิทธิและโหลดเนื้อหา Skill จริง งานแปล ตรวจคำผิด และย่อข้อความสั้นยังใช้ทางลัดเดิม
 - แยกงานเขียนโพสต์ใหม่ออกจากงานตรวจน้ำเสียงแบรนด์ บันทึกเวลาและการใช้โทเคนของขั้นเลือก Skill และปิดกลับไปใช้การค้นหา Skill เดิมได้ผ่าน policy `features.hybridSkillSelection`
 - เปิดการทบทวนบทเรียนอัตโนมัติเป็นค่าเริ่มต้นสำหรับผู้ใช้ที่ยังไม่เคยตั้งค่า: ทุกสิบข้อความในงานเดียว สูงสุดสิบครั้งต่อวัน ใช้โทเคนจากบัญชี AI ของงาน ข้อเสนอยังรอยืนยันก่อนนำไปใช้ ผู้ใช้ปิดเองได้และค่าปิดเดิมยังคงอยู่ IT ปิดได้ด้วย `features.learningReview: false` และนโยบายที่ไม่ถูกต้องจะไม่เปิดการทบทวน
+- Enable Hermes-style Vault browser workflows: saved-login/address autofill, trusted Save & sign in and masked verification prompts, host TOTP, detected 1Password/Bitwarden sources and exact-origin address filling; card storage/import/fill are removed at the owner's request. Coding tools keep their usual permissions after Vault enrollment; administrators can retain the previous global execution gate with `credentialStorage.blockHostExecution: true`. Existing OS-wrapped encrypted records remain compatible. See [behavior, trust model and acceptance limits](docs/desktop-vault-hermes.md).
 
 ## Desktop v0.6.16 (2026-10-19)
 
