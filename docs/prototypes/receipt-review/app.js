@@ -16,6 +16,64 @@ const state = {
   grouped: false,
   zoomed: false,
 };
+// Owner-supplied reference: docs/knowledge/receipt-buyer-identity.md.
+const BUYER_REFERENCE = {
+  name: "อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่",
+  taxId: "0994000423179",
+  address: "เลขที่ 155 หมู่ 2 ตำบลแม่เหียะ อำเภอเมือง จังหวัดเชียงใหม่ 50100",
+};
+const digits = (text) =>
+  text.replace(/[๐-๙]/g, (d) => String("๐๑๒๓๔๕๖๗๘๙".indexOf(d)));
+const compact = (text) => digits(text).replace(/\s+/g, "");
+const addressKey = (text) =>
+  compact(text)
+    .replace(/^เลขที่/, "")
+    .replace(/หมู่ที่/g, "หมู่")
+    .replace(/ต\./g, "ตำบล")
+    .replace(/อ\./g, "อำเภอ")
+    .replace(/จ\./g, "จังหวัด");
+function buyerFacts() {
+  if (
+    state.sourceKind !== 0 ||
+    state.scenario === "missing" ||
+    state.scenario === "buyer-seller-only"
+  )
+    return { name: "", taxId: "", address: "" };
+  const facts = { ...BUYER_REFERENCE };
+  if (state.scenario === "buyer-match") {
+    facts.taxId = "0-9940-00423-17-9";
+    facts.address = "155 หมู่ 2 ต.แม่เหียะ อ.เมือง จ.เชียงใหม่ 50100";
+  }
+  if (state.scenario === "buyer-mismatch") {
+    facts.taxId = "0994000423178";
+    facts.address = BUYER_REFERENCE.address.replace("155", "157");
+  }
+  if (state.scenario === "buyer-unclear") facts.taxId = "09940004231?9";
+  return facts;
+}
+function buyerComparison() {
+  const facts = buyerFacts();
+  return ["name", "taxId", "address"].map((key) => {
+    const normalize =
+      key === "taxId"
+        ? (s) => compact(s).replace(/-/g, "")
+        : key === "address"
+          ? addressKey
+          : compact;
+    const observed = facts[key];
+    const status =
+      state.sourceKind !== 0 || state.scenario === "unsupported"
+        ? "by-type"
+        : !observed
+          ? "not-detected"
+          : observed.includes("?")
+            ? "illegible"
+            : normalize(observed) === normalize(BUYER_REFERENCE[key])
+              ? "match"
+              : "mismatch";
+    return { key, expected: BUYER_REFERENCE[key], observed, status };
+  });
+}
 const node = (tag, text, className) => {
   const el = document.createElement(tag);
   if (text !== undefined) el.textContent = text;
@@ -32,6 +90,43 @@ function region(id, label) {
   el.id = "region-" + id;
   el.dataset.label = label;
   return el;
+}
+function signatureReading() {
+  const s = state.scenario;
+  const absent =
+    [
+      "signature-absent",
+      "signature-buyer-only",
+      "signature-text-only",
+    ].includes(s) ||
+    (s === "missing" && state.sourceKind === 2);
+  return {
+    receiver:
+      s === "signature-unclear" || s === "unsupported"
+        ? "uncertain"
+        : absent
+          ? "absent"
+          : "present",
+    buyer: s === "signature-buyer-only" ? "present" : "uncertain",
+  };
+}
+// A deliberately abstract, synthetic signing mark. This is a fixture, not a detector or a person's signature.
+function signingMark() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 140 45");
+  svg.setAttribute("class", "signing-mark");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "รอยลายเซ็นจำลอง ไม่ใช่ลายเซ็นบุคคลจริง");
+  const path = document.createElementNS(svg.namespaceURI, "path");
+  path.setAttribute(
+    "d",
+    "M8 31 C35 3 43 6 27 28 S48 39 59 17 S57 34 79 27 S100 22 114 25 M38 36 L130 32",
+  );
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "1.8");
+  svg.append(path);
+  return svg;
 }
 function model() {
   const s = state.scenario;
@@ -70,6 +165,76 @@ function model() {
       focus: "header",
       reviewAll: true,
     };
+  if (["buyer-mismatch", "buyer-seller-only", "buyer-unclear"].includes(s)) {
+    const unclear = s === "buyer-unclear";
+    return {
+      status: unclear ? "warning" : "danger",
+      title: unclear ? "ยังยืนยันไม่ได้" : "ยังไม่ครบ",
+      description: "เทียบข้อมูลผู้ซื้อกับข้อมูล STeP ที่ผู้ดูแลระบุ",
+      issues: [
+        [
+          unclear
+            ? "เลขภาษีผู้ซื้ออ่านไม่ครบ ไม่เติมจากค่าอ้างอิง"
+            : s === "buyer-seller-only"
+              ? "เลขตรงเฉพาะผู้ขาย แต่ข้อมูลผู้ซื้อยังว่าง"
+              : "เลขภาษีผู้ซื้อและเลขที่อยู่ไม่ตรงกับค่าอ้างอิง",
+          "buyer",
+        ],
+      ],
+      actions: [
+        [
+          unclear
+            ? "ตรวจเลขภาษีจากต้นฉบับหรือถ่ายใหม่ให้ชัด"
+            : "ให้ร้านตรวจชื่อ ที่อยู่ และเลขภาษีในช่องผู้ซื้อ",
+          "คุณและร้าน · ใช้ข้อมูลอ้างอิง STeP ที่ให้มา",
+        ],
+        [
+          "ตรวจเอกสารแก้ไขและเกณฑ์เบิกจ่ายก่อนส่งต่อ",
+          "คุณ · ไม่แก้หรือเติมข้อมูลต้นฉบับแทนร้าน",
+        ],
+      ],
+      button: "ดูข้อมูลผู้ซื้อในภาพ",
+      focus: "buyer",
+      ...(unclear
+        ? { uncertain: "buyer" }
+        : s === "buyer-seller-only"
+          ? { missing: "buyer" }
+          : { conflict: "buyer" }),
+    };
+  }
+  if (s.startsWith("signature-") && s !== "signature-present") {
+    const uncertain = s === "signature-unclear";
+    const reason = uncertain
+      ? "ช่องผู้รับเงินไม่ชัด ยังยืนยันการมีลายเซ็นไม่ได้"
+      : s === "signature-buyer-only"
+        ? "พบลายเซ็นผู้ซื้อ แต่ช่องผู้รับเงินยังว่าง"
+        : s === "signature-text-only"
+          ? "ชื่อพิมพ์และตราประทับไม่ใช่ลายเซ็นผู้รับเงิน"
+          : "ช่องลายเซ็นผู้รับเงินในตัวอย่างว่าง";
+    return {
+      status: uncertain ? "warning" : "danger",
+      title: uncertain ? "ยังยืนยันไม่ได้" : "ยังไม่ครบ",
+      description: "เกณฑ์สาธิตกรณีนี้กำหนดให้มีลายเซ็นผู้รับเงิน",
+      issues: [[reason, "signature"]],
+      actions: [
+        [
+          uncertain
+            ? "ถ่ายช่องลายเซ็นผู้รับเงินให้ชัด แล้วตรวจใหม่"
+            : "ขอผู้รับเงินจริงลงนามตามเกณฑ์ที่ใช้กับเอกสารนี้",
+          uncertain
+            ? "คุณ · ภาพไม่ชัดไม่เท่ากับไม่มีลายเซ็น"
+            : "ผู้รับเงิน · ไม่ให้ผู้อื่นลงชื่อแทน",
+        ],
+        [
+          "ตรวจองค์ประกอบอื่นและเกณฑ์เบิกจ่ายก่อนส่งต่อ",
+          "คุณและ AFP · การพบลายเซ็นไม่ทำให้เอกสารผ่านทุกข้อ",
+        ],
+      ],
+      button: "ดูช่องลายเซ็นในภาพ",
+      focus: "signature",
+      ...(uncertain ? { uncertain: "signature" } : { missing: "signature" }),
+    };
+  }
   if (s === "missing") {
     const byKind = [
       {
@@ -229,7 +394,14 @@ function renderPaper() {
   );
   issuer.append(node("p", "99 ถนนตัวอย่าง อำเภอสมมติ จังหวัดตัวอย่าง"));
   if (kind < 2)
-    issuer.append(node("p", "เลขภาษี: 0000000000000 (ข้อมูลสังเคราะห์)"));
+    issuer.append(
+      node(
+        "p",
+        state.scenario === "buyer-seller-only"
+          ? "เลขภาษีผู้ขาย: 0994000423179 (ตัวอย่างสลับบทบาท)"
+          : "เลขภาษี: 0000000000000 (ข้อมูลสังเคราะห์)",
+      ),
+    );
   field(
     "วันที่",
     state.scenario === "missing" && kind === 1
@@ -239,25 +411,19 @@ function renderPaper() {
   );
   const buyer = region("buyer", "ผู้ซื้อ");
   if (kind === 0) {
-    const missingBuyer = state.scenario === "missing";
+    const facts = buyerFacts();
     buyer.append(
-      node(
-        "p",
-        "ผู้ซื้อ: " +
-          (missingBuyer ? "— ไม่ได้ระบุ —" : "หน่วยงานตัวอย่าง (สังเคราะห์)"),
-      ),
-    );
-    buyer.append(
-      node(
-        "p",
-        "ที่อยู่: " +
-          (missingBuyer ? "— ไม่ได้ระบุ —" : "88 ถนนสมมติ จังหวัดตัวอย่าง"),
-      ),
+      node("p", "ผู้ซื้อ: " + (facts.name || "— ไม่ได้ระบุ —")),
+      node("p", "ที่อยู่: " + (facts.address || "— ไม่ได้ระบุ —")),
+      node("p", "เลขภาษีผู้ซื้อ: " + (facts.taxId || "— ไม่ได้ระบุ —")),
     );
   } else
     buyer.append(
       node("p", "สำหรับตัวอย่างประเภทนี้ ไม่ใช้ข้อผู้ซื้อของเต็มรูปมาเหมารวม"),
     );
+  if (state.scenario === "signature-buyer-only") {
+    buyer.append(node("p", "ลงชื่อผู้ซื้อ:"), signingMark());
+  }
   const items = region("items", "รายการสินค้า / แถวตาราง");
   const table = node("table");
   const caption = node("caption", "รายการจำลอง");
@@ -299,16 +465,26 @@ function renderPaper() {
   );
   totals.append(total);
   field("รับชำระแล้ว", amount, totals);
-  const signature = region("signature", "หลักฐานผู้รับเงิน");
+  const signature = region("signature", "ลายเซ็นผู้รับเงิน");
   signature.append(
-    node(
-      "p",
-      state.scenario === "missing" && kind === 2
-        ? "ผู้รับเงิน: — ไม่ได้ระบุ —"
-        : "ผู้รับเงิน: ผู้รับตัวอย่าง",
-      "signature",
-    ),
+    node("p", "ลงชื่อผู้รับเงิน: __________________", "signature"),
   );
+  const reading = signatureReading();
+  if (reading.receiver === "present") signature.append(signingMark());
+  else if (state.scenario === "signature-unclear")
+    signature.append(
+      node(
+        "p",
+        "บริเวณนี้มีแสงสะท้อน / รายละเอียดไม่ชัด",
+        "signature-obscured",
+      ),
+    );
+  else if (state.scenario === "signature-text-only") {
+    signature.append(
+      node("p", "ผู้รับตัวอย่าง (ชื่อพิมพ์)", "signature"),
+      node("p", "ตราร้านตัวอย่าง", "example-stamp"),
+    );
+  }
   paper.append(
     header,
     issuer,
@@ -357,6 +533,32 @@ function render() {
   $("status-symbol").textContent =
     m.status === "success" ? "✓" : m.status === "danger" ? "!" : "?";
   $("status-description").textContent = m.description;
+  const signing = signatureReading();
+  const signingLabels = {
+    present: "พบลายเซ็นผู้รับเงิน",
+    absent: "ไม่พบลายเซ็นผู้รับเงิน",
+    uncertain: "ลายเซ็นผู้รับเงิน: ยังยืนยันไม่ได้",
+  };
+  $("signature-result").textContent =
+    signingLabels[signing.receiver] + " · ดูในภาพ";
+  $("signature-note").textContent =
+    signing.buyer === "present"
+      ? "พบลายเซ็นผู้ซื้อแยกต่างหาก ใช้แทนช่องผู้รับเงินไม่ได้"
+      : "ตรวจการมีลายเซ็น ไม่ยืนยันตัวผู้ลงชื่อหรือความแท้";
+  const comparisons = buyerComparison();
+  const buyerStatus = comparisons.some((f) => f.status === "by-type")
+    ? "ตรวจตามประเภทเอกสาร"
+    : comparisons.some((f) => f.status === "mismatch")
+      ? "มีข้อมูลไม่ตรงกับ STeP"
+      : comparisons.some((f) => f.status === "not-detected")
+        ? "ยังไม่พบข้อมูลครบ"
+        : comparisons.some((f) => f.status === "illegible")
+          ? "ยังอ่านไม่ชัด"
+          : "ตรงกับข้อมูลอ้างอิง STeP";
+  $("buyer-result").textContent =
+    "ข้อมูลผู้ซื้อ: " + buyerStatus + " · ดูในภาพ";
+  $("buyer-note").textContent =
+    "เทียบชื่อ ที่อยู่ และเลขภาษี 0-9940-00423-17-9 แยกจากผู้ขาย";
   $("issues").replaceChildren();
   for (const [label, target] of m.issues) {
     const li = node("li");
@@ -380,25 +582,64 @@ function render() {
     ["buyer", "ข้อมูลผู้ซื้อ"],
     ["items", "รายการสินค้าและจำนวน"],
     ["totals", "ยอดเงินและหลักฐานชำระ"],
-    ["signature", "หลักฐานผู้รับเงินตามกรณี"],
+    ["signature", "ลายเซ็นผู้รับเงิน"],
   ];
   for (const [id, label] of fields) {
     const row = node("div", undefined, "evidence-row");
-    const status = m.reviewAll
-      ? "รอตรวจใหม่"
-      : m.missing === id
-        ? "ขาดในตัวอย่าง"
-        : m.uncertain === id
-          ? "ต้องตรวจจากภาพ"
-          : id === "buyer" && state.kind !== 0
-            ? "ตรวจตามประเภท"
-            : "พบในตัวอย่าง";
+    const status =
+      id === "signature"
+        ? signingLabels[signing.receiver]
+        : m.reviewAll
+          ? "รอตรวจใหม่"
+          : m.missing === id
+            ? "ขาดในตัวอย่าง"
+            : m.conflict === id
+              ? "ข้อมูลไม่ตรง"
+              : m.uncertain === id
+                ? "ต้องตรวจจากภาพ"
+                : id === "buyer" && state.kind !== 0
+                  ? "ตรวจตามประเภท"
+                  : "พบในตัวอย่าง";
     row.append(
       node("span", label),
       node(
         "span",
         status,
-        "evidence-state" + (m.missing === id ? " missing" : ""),
+        "evidence-state" +
+          (m.missing === id || m.conflict === id ? " missing" : ""),
+      ),
+    );
+    $("evidence").append(row);
+  }
+  if (signing.buyer === "present") {
+    const row = node("div", undefined, "evidence-row");
+    row.append(
+      node("span", "ลายเซ็นผู้ซื้อ"),
+      node("span", "พบในช่องผู้ซื้อ", "evidence-state"),
+    );
+    $("evidence").append(row);
+  }
+  for (const f of comparisons) {
+    const row = node("div", undefined, "buyer-comparison");
+    const labels = {
+      name: "ชื่อผู้ซื้อ",
+      address: "ที่อยู่ผู้ซื้อ",
+      taxId: "เลขภาษีผู้ซื้อ",
+    };
+    const statuses = {
+      match: "ตรง",
+      mismatch: "ไม่ตรง",
+      "not-detected": "ไม่พบข้อมูล",
+      illegible: "อ่านไม่ชัด",
+      "by-type": "ตรวจตามประเภท",
+    };
+    row.append(
+      node("p", labels[f.key] + " · " + statuses[f.status]),
+      node("p", "ค่าอ้างอิง: " + f.expected, "small"),
+      node(
+        "p",
+        "ค่าที่พบ: " + (f.observed || "ยังไม่พบในช่องผู้ซื้อ"),
+        "small",
       ),
     );
     $("evidence").append(row);
@@ -460,6 +701,11 @@ $("scenario").addEventListener("change", (e) => {
   state.changed = false;
   state.document = 0;
   if (state.scenario === "multiple") state.kind = 1;
+  if (
+    state.scenario.startsWith("signature-") ||
+    state.scenario.startsWith("buyer-")
+  )
+    state.kind = 0;
   state.sourceKind = state.kind;
   $("kind-editor").hidden = true;
   $("change-kind").setAttribute("aria-expanded", "false");
@@ -498,6 +744,7 @@ $("primary").addEventListener("click", () => {
   else showDialog(m.dialog);
 });
 $("close-dialog").addEventListener("click", () => $("action-dialog").close());
+$("signature-result").addEventListener("click", () => focusRegion("signature"));
 $("copy").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText($("dialog-text").textContent);
@@ -513,3 +760,7 @@ if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
   $("theme").textContent = "โหมดสว่าง";
 }
 render();
+
+$("buyer-result").addEventListener("click", () =>
+  focusRegion(state.sourceKind === 0 ? "buyer" : "header"),
+);

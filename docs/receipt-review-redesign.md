@@ -3,7 +3,7 @@
 วันที่ค้นคว้า: 20 ตุลาคม 2569 (Asia/Bangkok) · ฐาน Desktop 0.6.18 / main `5af0943`
 
 สถานะ: **แบบระบบและต้นแบบกดลองได้ ยังไม่เปลี่ยนแอปหรือเปลี่ยน OCR ที่ใช้งานจริง**
-เปิด [ต้นแบบหน้าจอ](prototypes/receipt-review/index.html) ในเบราว์เซอร์ได้โดยตรง ใช้ข้อมูลสังเคราะห์ทั้งหมด ไม่รับไฟล์จริง ไม่เรียก OCR/API และไม่ส่งข้อมูลออก
+เปิด [ต้นแบบหน้าจอ](prototypes/receipt-review/index.html) ในเบราว์เซอร์ได้โดยตรง ใช้เอกสาร/ผลตรวจสังเคราะห์ และข้อมูลอ้างอิงผู้ซื้อที่ผู้ดูแลให้มา ไม่รับไฟล์จริง ไม่เรียก OCR/API และไม่ส่งข้อมูลออก
 
 ## ผลลัพธ์ที่ผู้ใช้ต้องเห็น
 
@@ -75,6 +75,40 @@
 1. พบข้อบังคับที่ใช้กับกรณีนี้และพิสูจน์ว่าขาด/ข้อมูลผิด → **ยังไม่ครบ** พร้อมรายการแก้; แสดงข้อที่ยังยืนยันไม่ได้ควบคู่
 2. ไม่มีข้อขาดที่ยืนยันแล้ว แต่มีภาพไม่ชัด ค่าขัดกัน ไม่รู้ประเภท ไม่รู้บริบท หรือขาดเกณฑ์ปัจจุบัน → **ยังยืนยันไม่ได้** พร้อมวิธีปิดแต่ละประเด็น
 3. ทุกข้อที่ใช้กับกรณีมีหลักฐานครบ ค่าสำคัญเทียบต้นฉบับแล้ว และ source ยังใช้ได้ → **ครบตามเกณฑ์ที่ตรวจ** พร้อมชื่อ/รุ่นเกณฑ์และขอบเขต
+
+## ตรวจลายเซ็นจากภาพ
+
+ข้อกำหนดเพิ่มเติมของผู้ใช้: แสดง **พบลายเซ็น / ไม่พบลายเซ็น / ยังยืนยันไม่ได้** ในข้อ 2 ของหน้าหลัก กดชี้ตำแหน่งต้นฉบับได้ คงสามคำตอบเดิม
+
+Desktop เดิมมี [signature reading contract](../desktop/src/receipt-vision.ts) แยกผู้รับเงิน/ผู้ออก/ผู้ซื้ออยู่แล้ว V2 ต้องรักษาการแยกบทบาทและหลักฐานบนภาพนี้
+
+| ผล              | หลักฐาน                                                              | ทำต่อ                                                     |
+| --------------- | -------------------------------------------------------------------- | --------------------------------------------------------- |
+| พบ              | เห็นรอยลงนามในช่อง/บริเวณที่ผูกกับบทบาทนั้น                          | ตรวจองค์ประกอบอื่น ไม่ทำให้ทั้งใบผ่านอัตโนมัติ            |
+| ไม่พบ           | เห็นช่องที่เกี่ยวข้องครบและชัด แต่ไม่มีรอยลงนาม                      | หาก source กำหนดให้มี ขอผู้รับเงินจริงลงนาม ห้ามลงชื่อแทน |
+| ยังยืนยันไม่ได้ | ภาพเบลอ ตัดขอบ แสงสะท้อน ตราทับ ระบุบทบาทไม่ได้ หรือ engine ไม่พร้อม | ขอภาพชัด/ครบ หรือให้คนตรวจ ไม่สรุปว่าขาด                  |
+
+หลัง layout/grouping ต้องมี visual signature-presence detector หรือ document vision ตรวจ full page และ crop ที่ยังมี label/context โดย OCR ใช้ช่วยหาช่องลงชื่อได้ แต่ชื่อพิมพ์/ชื่อเขียน ตราประทับ โลโก้ เส้นประ เครื่องหมายติ๊ก หรือลายมือรายการสินค้าใช้ยืนยันการเซ็นไม่ได้ ต้อง benchmark detector แยกจาก text OCR
+
+ผูกผล `present | absent | uncertain` กับ `documentId/role/evidenceRefs/observation/reviewState` โดย role เป็น `receiver | issuer | buyer | unknown` และพิกัดกลับต้นฉบับ ลายเซ็นผู้ซื้อใช้แทนผู้รับเงินไม่ได้ รอยที่ไม่มีบริบทเพียงพอคง unknown ไม่โยงจากใบอื่น และไม่ถอดรูปลายเซ็นเป็นชื่อผู้ลงนาม
+
+แยก `signatureRequirement: required | not_required | unknown` ตามกฎที่มี source: required+absent → ขาด, required+uncertain → รอตรวจ, present → ผ่านเฉพาะข้อการมีลายเซ็น; ถ้าเกณฑ์ยังไม่ยืนยันให้รอ source ไม่บังคับทุกประเภทต้องมีลายเซ็นหมึก เอกสารอิเล็กทรอนิกส์ต้องใช้ข้อกำหนดที่เกี่ยวข้อง การตรวจ certificate/digital signature เป็นงานแยก ไม่ยืนยันจากภาพ
+
+การตรวจนี้ไม่ระบุตัวบุคคล ไม่จับคู่ชีวมิติ ไม่รับรองลายเซ็นแท้/ปลอมหรืออำนาจผู้ลงนาม ตัวอย่างในต้นแบบเป็นรอยเส้นสาธิต ไม่ใช่ลายเซ็นจริง และยังไม่มี detector ทำงานกับภาพจริง
+
+## ข้อมูลผู้ซื้อ STeP ที่ให้ใช้เทียบ
+
+ผู้ใช้ระบุข้อมูลเพิ่มเติมวันที่ 20 ตุลาคม 2569 บันทึกเป็น [ข้อมูลอ้างอิงผู้ซื้อ](knowledge/receipt-buyer-identity.md) และลงทะเบียน `receipt-buyer-identity` แล้ว ข้อมูลนี้ช่วยปิดช่องว่าง expected buyer identity; สถานะของ `finance-disbursement-policy` และเกณฑ์ชุดเบิกจ่ายอื่นยังแยกตาม source เดิม
+
+- ชื่อ: **อุทยานวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเชียงใหม่**
+- เลขประจำตัวผู้เสียภาษี: **0-9940-00423-17-9** — canonical string **0994000423179**
+- ที่อยู่: **เลขที่ 155 หมู่ 2 ตำบลแม่เหียะ อำเภอเมือง จังหวัดเชียงใหม่ 50100**
+
+ตรวจจาก region ผู้ซื้อ/ผู้รับบริการ แยกจากผู้ขาย แม้ผู้ขายมีเลขตรงกันก็ไม่ใช้แทนช่องผู้ซื้อ เทียบชื่อ เลขภาษี และองค์ประกอบที่อยู่แยกช่อง: เลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์ รักษาเลขศูนย์นำหน้า Normalize ขีด/ช่องว่าง/เลขไทย และคำย่อที่ชัดเจน (ต./อ./จ.) ได้ แต่ไม่ใช้ fuzzy match ยอมรับเลขผิดหนึ่งหลัก และไม่เติมค่าอ้างอิงลงในผลอ่านที่เอกสารไม่มี
+
+ผลรายช่องเป็น **ตรง / ไม่ตรง / ไม่พบข้อมูล / อ่านไม่ชัด** พร้อมชี้ภาพ แยก “ค่าที่ควรเป็น” กับ “ค่าที่พบ” เมื่อมีความต่างให้ร้านตรวจแก้ หาก OCR ขัดกันให้ตรวจต้นฉบับก่อนตัดสินว่าผิด การตรงกับ reference หรือผ่าน checksum ไม่เท่ากับยืนยันทะเบียนภายนอก/สิทธิเบิก
+
+ใช้กฎตามประเภท: ใบกำกับภาษีอย่างย่อที่ไม่มีผู้ซื้อไม่ถูกตัดสินผิดด้วยกฎเต็มรูปโดยอัตโนมัติ ชื่อย่อ/ภาษาอังกฤษ สาขา/สำนักงานใหญ่ และข้อยกเว้นที่ผู้ใช้ยังไม่ได้ระบุให้รอยืนยัน ไม่เดาค่าเพิ่ม การเปลี่ยน buyer reference version ทำให้ checks ที่อิงค่าดังกล่าวต้องประเมินใหม่
 
 ## OCR ที่ค้นพบและข้อเสนอเลือกใช้
 
@@ -178,6 +212,14 @@ ReceiptReviewV2
   fields[] { documentId, role, key, raw, normalized, candidates[], evidenceRefs[],
              readingState: present | not_detected | illegible | conflict | unanchored,
              reviewState: extracted_unverified | user_input | source_checked }
+  signatures[] { documentId, role: receiver | issuer | buyer | unknown,
+                 presence: present | absent | uncertain, evidenceRefs[], observation,
+                 reviewState: extracted_unverified | source_checked }
+  signatureRequirements[] { role, requirement: required | not_required | unknown,
+                            ruleId, sourceRef }
+  buyerComparison { referenceId, referenceVersion, referenceSource,
+                    fields[] { key, expected, observed, evidenceRefs[],
+                               status: match | mismatch | not_detected | illegible } }
   checks[] { ruleId, applicability, status: pass | fail | unknown | not_applicable,
              evidenceRefs[], sourceRef, reason }
   summary { kind, completeness: complete | incomplete | needs_review,
@@ -212,6 +254,8 @@ ReceiptReviewV2
 
 ## แผนพัฒนาต่อและการย้ายระบบ
 
+เพิ่ม benchmark/adversarial gate สำหรับลายเซ็นพบ/ไม่พบ/ไม่ชัด แยกบทบาท receiver/issuer/buyer; ต้องไม่มีการนับชื่อ ตรา หรือลายเซ็นผู้ซื้อเป็นผู้รับเงินใน gate พร้อมรายงาน precision/recall/coverage ของ presence และ region accuracy ชุดผู้ซื้อครอบคลุมเลขผิดหนึ่งหลัก ขีดคั่น/เลขไทย/ศูนย์นำหน้า ที่อยู่ผิด/ขาด คำย่อชัดเจน ผู้ขายที่มีเลขตรงแต่ผู้ซื้อว่าง และ OCR ไม่ชัด ห้าม reference เติมค่าที่ไม่มีในเอกสารให้ผ่าน
+
 1. เพิ่ม `ReceiptReviewV2` และ pure summary/rule engine หลัง adapter พร้อม regression: full invoice ขาดผู้ซื้อไม่ downgrade, อย่างย่อไม่โดนกฎเต็มรูป, missing source ไม่ครบ, unreadable ไม่เท่ากับไม่มี, VAT rate/เงินทอนไม่เป็น total, ไม่ปะปน issuer/buyer/ใบ/แถว, async ไม่ทับ manual edit
 2. เพิ่ม preprocessing/coordinates + layout adapter; ทดลองแต่ละ engine หลัง capability/consent gate เดิม จัดเก็บ benchmark นอก public repository และไม่ bundle weights/key ใน installer
 3. เปลี่ยน `receipt.tsx` เป็นสามคำตอบและ source focus ตามต้นแบบ; ใช้ English locale, light/dark/narrow/keyboard, native Electron handoff ที่อ่านได้ ไม่มี JSON ใน alert
@@ -221,6 +265,6 @@ ReceiptReviewV2
 
 ## วิธีตรวจต้นแบบ
 
-เปิด `docs/prototypes/receipt-review/index.html` ใน Chromium/Chrome/Edge ทดสอบ scenario: ขาดข้อมูล, อ่านไม่ชัด, รอเกณฑ์, ครบตามเกณฑ์จำลอง, ยอดขัดกัน, หลายใบ และเอกสารนอกประเภท สลับครบสี่ประเภท กดประเด็นชี้ภาพ สลับกลุ่มใบ และใช้ Tab/Enter/Escape ตรวจแบบแคบ/มืด ทุกค่าเป็น fixture; “เกณฑ์จำลอง” ไม่ใช่ source ปัจจุบันของ AFP
+เปิด `docs/prototypes/receipt-review/index.html` ใน Chromium/Chrome/Edge ทดสอบ 7 scenarios เดิม เพิ่มกรณีลายเซ็นพบ/ไม่พบ/ไม่ชัด/มีเฉพาะผู้ซื้อ/มีชื่อกับตรา และข้อมูลผู้ซื้อตรง/ไม่ตรง/อ่านไม่ชัด/มีเฉพาะช่องผู้ขาย สลับสี่ประเภท กดประเด็น/ผลลายเซ็นเพื่อชี้ภาพ สลับกลุ่มใบ และใช้ Tab/Enter/Escape ตรวจแบบแคบ/มืด เอกสารและผลอ่านเป็น fixture ข้อมูลอ้างอิงผู้ซื้อใช้ค่าที่ผู้ดูแลให้มา “เกณฑ์จำลอง” ไม่ใช่ source ปัจจุบันของ AFP
 
 ผลตรวจจริงของต้นแบบและข้อจำกัดบันทึกใน `docs/progress.md` ใน PR เดียวกัน

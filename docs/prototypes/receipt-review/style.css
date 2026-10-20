@@ -393,6 +393,25 @@ select {
   margin-top: 10px;
   font-size: 10px;
 }
+.signing-mark {
+  display: block;
+  width: 130px;
+  height: 42px;
+  margin-left: auto;
+}
+.signature-obscured {
+  background: #eee5d6;
+  color: #706350;
+  text-align: right;
+  padding: 8px;
+}
+.example-stamp {
+  border: 1px solid #706350;
+  color: #706350;
+  width: fit-content;
+  margin-left: auto;
+  padding: 2px 8px;
+}
 .paper .unclear-number {
   letter-spacing: 3px;
   background: #eee5d6;
@@ -537,6 +556,15 @@ select {
   color: var(--muted);
   font-size: 14px;
   margin: 8px 0 8px 35px;
+}
+.signature-summary,
+.buyer-summary {
+  margin: 10px 0 0 35px;
+}
+.signature-summary .text-button,
+.buyer-summary .text-button {
+  font-size: 13px;
+  text-align: left;
 }
 .issues {
   padding: 0;
@@ -766,6 +794,8 @@ dialog pre {
   .kind-meta,
   .status-line,
   .status-description,
+  .signature-summary,
+  .buyer-summary,
   .issues,
   .evidence,
   .actions,
@@ -826,4 +856,10 @@ dialog pre {
   .review-layout {
     grid-template-areas: "result" "source";
   }
+}
+
+.buyer-comparison {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
 }

@@ -15,8 +15,8 @@
   <body>
     <a class="skip" href="#result">ข้ามไปผลตรวจ</a>
     <div class="demo-bar">
-      <span class="demo-dot"></span>ต้นแบบกดลองได้ · ข้อมูลและเกณฑ์จำลองทั้งหมด
-      · ไม่ได้อ่านไฟล์จริงหรือส่งข้อมูลออก
+      <span class="demo-dot"></span>ต้นแบบกดลองได้ · เอกสารและผลตรวจจำลอง ·
+      ข้อมูลอ้างอิงผู้ซื้อจากผู้ดูแล · ไม่ได้อ่านไฟล์จริงหรือส่งข้อมูลออก
     </div>
     <main class="workspace">
       <header class="page-header">
@@ -39,6 +39,17 @@
           <option value="conflict">ยอดเงินขัดกัน</option>
           <option value="multiple">หลายใบในภาพเดียว</option>
           <option value="unsupported">เอกสารนอก 4 ประเภท</option>
+          <option value="signature-present">พบลายเซ็นผู้รับเงิน</option>
+          <option value="signature-absent">ช่องลายเซ็นว่าง</option>
+          <option value="signature-unclear">ลายเซ็นไม่ชัด</option>
+          <option value="signature-buyer-only">มีเฉพาะลายเซ็นผู้ซื้อ</option>
+          <option value="signature-text-only">
+            มีชื่อและตรา แต่ไม่มีลายเซ็น
+          </option>
+          <option value="buyer-match">ข้อมูลผู้ซื้อตรงกับ STeP</option>
+          <option value="buyer-mismatch">ที่อยู่และเลขภาษีผู้ซื้อไม่ตรง</option>
+          <option value="buyer-unclear">เลขภาษีผู้ซื้ออ่านไม่ชัด</option>
+          <option value="buyer-seller-only">เลขภาษีตรงเฉพาะในช่องผู้ขาย</option>
         </select>
         <p>เลือกเพื่อดูหน้าจอแต่ละสถานการณ์</p>
       </div>
@@ -90,7 +101,23 @@
               ><strong id="status-title"></strong>
             </div>
             <p class="status-description" id="status-description"></p>
+            <div class="signature-summary">
+              <button
+                id="signature-result"
+                class="text-button"
+                type="button"
+              ></button>
+              <p class="small" id="signature-note"></p>
+            </div>
             <ul id="issues" class="issues"></ul>
+            <div class="buyer-summary">
+              <button
+                id="buyer-result"
+                class="text-button"
+                type="button"
+              ></button>
+              <p class="small" id="buyer-note"></p>
+            </div>
             <details class="evidence">
               <summary>ดูองค์ประกอบและที่มาของผลตรวจ</summary>
               <div id="evidence"></div>
