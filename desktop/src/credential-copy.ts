@@ -71,7 +71,10 @@ const errors: Record<string, readonly [string, string]> = {
     'ระบบกุญแจของเครื่องไม่พร้อม ข้อมูลที่เข้ารหัสยังถูกเก็บไว้',
     'The OS key store is unavailable. Encrypted data is preserved.',
   ],
-  VAULT_SUSPENDED: ['พักการใช้ Vault อยู่ กลับมาเปิดใช้ใน Settings ก่อน', 'Vault is paused. Resume it in Settings.'],
+  VAULT_SUSPENDED: [
+    'พักการใช้ข้อมูลบัญชีอยู่ ไปที่ ตั้งค่าพื้นที่ทำงาน → รหัสผ่านและการเชื่อมต่อ แล้วกด กลับมาใช้งาน ไม่ต้องกรอกรหัสผ่าน Google ใหม่',
+    'Credential access is paused. Open Workspace settings → Passwords and connections and select Resume. You do not need to enter your Google password again.',
+  ],
   VAULT_ACCESS_DENIED: [
     'สิทธิ์ใช้ข้อมูลบัญชีหมดอายุหรือไม่ตรงกับงานนี้ กรุณาเลือกบัญชีใหม่',
     'The credential grant expired or does not match this task. Select the account again.',

@@ -775,3 +775,38 @@ test('read-only Calendar reads events but cannot create them', async () => {
     f.clean();
   }
 });
+
+test('a paused Vault is reported in Settings and blocks discovery and reads before prompting or contacting Google', async () => {
+  const f = fixture();
+  try {
+    await f.google.connect(['documents'], context);
+    const id = f.google.state().accounts[0].id;
+    f.vault.suspend(true);
+    assert.equal(f.google.state().vaultSuspended, true);
+    assert.throws(() => f.google.catalog('session'), /VAULT_SUSPENDED/);
+    let approved = 0;
+    await assert.rejects(
+      f.google.execute(
+        id,
+        { operation: 'docs.get', params: { documentId: 'synthetic-doc' } },
+        {
+          ...context,
+          approve: async () => {
+            approved++;
+            return true;
+          },
+        },
+      ),
+      /VAULT_SUSPENDED/,
+    );
+    assert.equal(approved, 0);
+    assert.equal(f.calls.length, 0);
+    f.vault.suspend(false);
+    assert.equal(f.google.state().vaultSuspended, false);
+    assert.equal(f.google.catalog('session').length, 1);
+    await f.google.execute(id, { operation: 'docs.get', params: { documentId: 'synthetic-doc' } }, context);
+    assert.equal(f.calls.length, 1, 'resuming reuses the connected account without another sign-in');
+  } finally {
+    f.clean();
+  }
+});

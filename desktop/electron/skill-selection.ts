@@ -5,6 +5,9 @@ export function highConfidenceSkill(routed: any, entries: Entry[], query: string
   if (routed.routingConfidence?.tier !== 'HIGH') return undefined;
   const name = routed.candidateSkills?.[0]?.skill?.name;
   if (!entries.some(entry => entry.name === name && entry.status === 'routed')) return undefined;
+  // The router excludes this candidate unless it detects a Workspace operation (including narrow personal
+  // calendar/mail/task questions). Reuse that decision; WorkService still checks authority and readiness.
+  if (name === 'google-workspace' && routed.routingConfidence.reason === 'direct-trigger-and-intent-with-clear-margin') return name;
   // HIGH is a ranking tier, not calibrated semantic certainty. Only an explicit procedure name skips model selection.
   const canonical = (value: string) =>
     value

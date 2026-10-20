@@ -358,6 +358,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
     enabled: boolean;
     configured: boolean;
     connecting: boolean;
+    vaultSuspended?: boolean;
     connectionError?: string;
     clientSecretConfigured?: boolean;
     clientPreconfigured?: boolean;
@@ -647,9 +648,18 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                 <li>{w('step3')}</li>
               </ol>
             )}
+            {google.vaultSuspended && (
+              <div className="credential-note" role="status">
+                <p>{t('พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ กดกลับมาใช้งานเพื่อใช้บัญชีที่เชื่อมไว้')}</p>
+                <button disabled={Boolean(busy)} onClick={() => void run('pause', () => call('vaultSuspend', { enabled: false }))}>
+                  <Play size={15} />
+                  {w('resume')}
+                </button>
+              </div>
+            )}
             {Boolean(google.accounts.length) && <h3 className="google-subhead">{w('yourAccounts')}</h3>}
             {google.accounts.map(account => {
-              const state = account.reauth ? 'attention' : account.paused ? 'paused' : 'ready';
+              const state = account.reauth ? 'attention' : account.paused || google.vaultSuspended ? 'paused' : 'ready';
               return (
                 <article className={`google-account ${state}`} key={account.id}>
                   <div className="google-account-head">
@@ -662,7 +672,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                     </div>
                     <span className={`connection-state ${state === 'paused' ? '' : state}`}>
                       <span className="connection-dot" aria-hidden="true" />
-                      {account.reauth ? w('reconnect') : account.paused ? w('paused') : w('connected')}
+                      {account.reauth ? w('reconnect') : account.paused || google.vaultSuspended ? w('paused') : w('connected')}
                     </span>
                   </div>
                   {account.reauth && <p className="muted small">{w('reauthHint')}</p>}
@@ -712,7 +722,7 @@ export function CredentialSettings({ call, onError, onBusy, requestedOrigin = ''
                     {account.services.some(s => s === 'documents' || s === 'drive-read' || s === 'drive') && (
                       <button
                         className="quiet"
-                        disabled={Boolean(busy) || account.paused || account.reauth}
+                        disabled={Boolean(busy) || google.vaultSuspended || account.paused || account.reauth}
                         onClick={() =>
                           void run('files', async () => {
                             const result = await call('googleExecute', { id: account.id, request: { operation: 'drive.list' } });

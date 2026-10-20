@@ -11,6 +11,36 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'ส่งข้อมูลจาก Google ให้ AI': 'Send Google data to AI',
+  รหัสผ่านหลักของตัวจัดการรหัสผ่าน: 'Password manager master password',
+  รหัสผ่านของเว็บไซต์นี้: 'Password for this website',
+  'กรอกรหัสผ่านหลักของตัวจัดการรหัสผ่านที่ระบุด้านบน เพื่อปลดล็อกบัญชีที่บันทึกไว้ หากไม่เคยใช้ตัวจัดการนี้ ให้กดยกเลิก':
+    'Enter the master password for the password manager named above to unlock saved accounts. Cancel if you do not use this manager.',
+  'กรอกชื่อผู้ใช้และรหัสผ่านที่คุณใช้เข้าสู่เว็บไซต์ด้านบน ตรวจชื่อเว็บไซต์ก่อนบันทึก':
+    'Enter the username and password you use for the website above. Check the website before saving.',
+  'กรอกรหัสยืนยันครั้งเดียวที่เว็บไซต์ด้านบนร้องขอ เช่น รหัสจากแอปยืนยันตัวตน อีเมล หรือ SMS ของบัญชีที่กำลังเข้าสู่ระบบ':
+    'Enter the one-time code requested by the website above, such as a code from your authenticator app, email or SMS for the account you are signing into.',
+  'Google Workspace ใช้การลงชื่อเข้าใช้ผ่าน Google ไม่ต้องกรอกรหัสผ่าน Google ในกล่องนี้':
+    'Google Workspace signs in through Google. Do not enter your Google password in this dialog.',
+  'พักการใช้ข้อมูลบัญชีอยู่ จึงยังใช้ Google Workspace ไม่ได้ กดกลับมาใช้งานเพื่อใช้บัญชีที่เชื่อมไว้':
+    'Credential access is paused, so Google Workspace is unavailable. Select Resume to use your connected account.',
+  'รายการในปฏิทิน {0} รายการ': 'Calendar entries: {0}',
+  ไม่ระบุชื่อ: 'Untitled',
+  'สถานที่ทำงาน (ไม่ใช่นัดประชุม)': 'Working location (not a meeting)',
+  'เริ่ม: {0}': 'Starts: {0}',
+  'สิ้นสุด: {0}': 'Ends: {0}',
+  'สถานที่: {0}': 'Location: {0}',
+  'รายละเอียด: {0}': 'Details: {0}',
+  'ข้อมูลและรายละเอียดประกอบจาก Google จะส่งให้ AI ที่ระบุเมื่อคุณอนุญาต ตรวจตัวอย่างก่อนส่งได้ด้านล่าง':
+    'Google data and accompanying details will be sent to the named AI if you allow it. Review the preview below.',
+  'AI ปลายทาง': 'Recipient AI',
+  'บัญชี Google': 'Google account',
+  งานที่ขอ: 'Requested task',
+  อ่านรายการในปฏิทิน: 'Read calendar entries',
+  'ตัวอย่างอาจแสดงข้อมูลบางส่วน รายละเอียดประกอบอยู่ในรายละเอียดสำหรับผู้ดูแล':
+    'The preview may be partial. Accompanying data is available in administrator details.',
+  บัญชีงาน: 'Work account',
+
   ...uiReviewEn,
   ถามแทรก: 'Ask aside',
   'ถามแทรกใช้ภาพสถานะงานเดิม กรุณานำไฟล์หรือข้อมูลแนบออกก่อน':

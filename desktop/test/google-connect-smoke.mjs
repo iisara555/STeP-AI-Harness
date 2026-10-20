@@ -34,7 +34,18 @@ try {
     };
     ipcMain.removeHandler('step:call');
     ipcMain.handle('step:call', async (event, method, input) => {
-      if (method === 'vaultState') return { enabled: true, protected: false, suspended: false, entries: [], browsers: [] };
+      if (method === 'vaultState')
+        return { enabled: true, protected: false, suspended: Boolean(globalThis.googleFixture.vaultSuspended), entries: [], browsers: [] };
+      if (method === 'vaultSuspend') {
+        globalThis.googleFixture.vaultSuspended = input.enabled;
+        return true;
+      }
+      if (method === 'vaultPromptRespond') {
+        globalThis.vaultReply = input;
+        const prompt = globalThis.promptFixture;
+        event.sender.send('step:event', { type: 'vault-prompt-close', sessionId: '', vaultPrompt: prompt });
+        return true;
+      }
       if (method === 'googleState') return globalThis.googleFixture;
       if (method === 'googleImportClient') {
         globalThis.googleFixture.clientSecretConfigured = true;
@@ -110,6 +121,49 @@ try {
   await expect(settings.getByRole('alert')).toHaveCount(0);
   await expect(settings.getByText('กำลังรอให้คุณลงชื่อในเบราว์เซอร์ เสร็จแล้วกลับมาที่แอปนี้', { exact: true })).toHaveCount(0);
   await expect(connect).toBeEnabled();
+  // A connected account cannot look ready while credential access is paused.
+  await app.evaluate(() => {
+    globalThis.googleFixture.vaultSuspended = true;
+  });
+  await page.getByRole('button', { name: 'กลับไปที่งาน', exact: true }).click();
+  await page.getByRole('button', { name: 'ตั้งค่าพื้นที่ทำงาน', exact: true }).click();
+  await page.getByRole('tab', { name: 'รหัสผ่านและการเชื่อมต่อ', exact: true }).click();
+  await expect(settings.locator('.google-account .connection-state')).toHaveText('พักอยู่');
+  await expect(settings.getByRole('status')).toContainText('พักการใช้ข้อมูลบัญชีอยู่');
+  await settings.getByRole('button', { name: 'กลับมาใช้งาน', exact: true }).first().click();
+  await expect(settings.locator('.google-account .connection-state')).toHaveText('เชื่อมแล้ว');
+  assert.equal(await app.evaluate(() => globalThis.googleFixture.vaultSuspended), false);
+  // Trusted Vault UI explains the exact input and can be cancelled without providing a secret.
+  for (const kind of ['unlock', 'login', 'code']) {
+    await app.evaluate(({ BrowserWindow }, kind) => {
+      globalThis.promptFixture = {
+        id: 'synthetic-prompt',
+        sessionId: '',
+        kind,
+        origin: 'https://accounts.example.test',
+        provider: kind === 'unlock' ? 'bitwarden' : undefined,
+      };
+      BrowserWindow.getAllWindows()[0].webContents.send('step:event', {
+        type: 'vault-prompt',
+        sessionId: '',
+        vaultPrompt: globalThis.promptFixture,
+      });
+    }, kind);
+    const dialog = page.getByRole('dialog');
+    if (kind === 'unlock') {
+      await expect(dialog.getByText('Bitwarden', { exact: true })).toBeVisible();
+      await expect(dialog.getByLabel('รหัสผ่านหลักของตัวจัดการรหัสผ่าน', { exact: true })).toBeVisible();
+      await expect(dialog).toContainText('ไม่ต้องกรอกรหัสผ่าน Google ในกล่องนี้');
+    } else if (kind === 'login') {
+      await expect(dialog.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true })).toBeVisible();
+      await expect(dialog).toContainText('https://accounts.example.test');
+    } else {
+      await expect(dialog).toContainText('แอปยืนยันตัวตน อีเมล หรือ SMS');
+    }
+    await dialog.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    assert.equal(await app.evaluate(() => globalThis.vaultReply.value), undefined);
+  }
   // Organization-provisioned installers need only the regular OAuth action; staff never import a client file.
   await app.evaluate(() => {
     globalThis.googleFixture.clientPreconfigured = true;
