@@ -1003,6 +1003,7 @@ export function ReceiptApp({
                         'receipt-value-row receipt-field' +
                         ((guessed[k] ||
                           matchOf(k) === 'differ' ||
+                          fields[k]?.mappingMethod === 'thai-label-mark-loss' ||
                           vision?.fields[k as ReceiptField]?.needsReview ||
                           rules.some(r => r.field === k)) &&
                         values[k]

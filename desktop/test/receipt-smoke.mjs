@@ -30,7 +30,7 @@ const lines = [
   'วันที่ 23/09/2569',
   'เลขประจำตัวผู้เสียภาษี 0105559999999',
   'ยอดก่อนภาษี 100.00',
-  'ภาษีมูลค่าเพิ่ม 7.00',
+  'ภาษีมูลค่าเพิม 7.00', // Real OCR can lose the Thai tone mark; recovery must stay visibly uncertain.
   'ยอดสุทธิ 107.00',
   'รายการ ค่าน้ำดื่ม',
 ];
@@ -124,6 +124,8 @@ try {
   await page.getByText('ตรวจ/แก้ข้อมูลที่อ่านได้', { exact: true }).click();
   await page.getByLabel('ยอดรวมที่ชำระ').waitFor();
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
+  assert.equal(await page.getByLabel('ภาษีมูลค่าเพิ่ม').inputValue(), '7.00');
+  await expect(page.locator('.receipt-value-row.uncertain').filter({ has: page.locator('#rf-vat') })).toHaveCount(1);
   assert.equal(await page.getByLabel('ผู้ออกใบเสร็จ / ร้านค้า').inputValue(), 'ร้านตัวอย่าง จำกัด');
   assert.equal(await page.getByLabel('รายการค่าใช้จ่าย', { exact: true }).inputValue(), 'ค่าน้ำดื่ม');
   const outcome = page.getByRole('region', { name: 'ข้อมูลที่ต้องตรวจ' });
