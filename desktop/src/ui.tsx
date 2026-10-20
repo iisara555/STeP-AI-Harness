@@ -894,7 +894,7 @@ function AdvancedProviderFields({
       ) : (
         mode === 'api' && (
           <label>
-            API key
+            {t('รหัสเชื่อมต่อ (API key)')}
             <input
               type="password"
               autoComplete="off"
