@@ -1,5 +1,6 @@
 import { providerUsage, type TokenCount } from '../../src/modules/providers/usage.js';
-import { providerSessionKey, type ProviderAdapter, type ProviderContext } from './providers';
+import type { ProviderAdapter, ProviderContext } from './providers';
+import { providerSessionKey } from './provider-session-key';
 import type { Connection } from '../src/types';
 
 type CacheEntry = { expires: number; pending: Promise<string | undefined> };
@@ -56,7 +57,7 @@ async function apiError(response: Response) {
   return Object.assign(new Error(code), Number.isFinite(wait) && wait > 0 ? { retryAfterMs: Math.min(wait, 120_000) } : {});
 }
 
-/** Opt-in Gemini API-key text transport. CLI search/images/subscription/custom runtimes keep their existing path. */
+/** API-key text transport and host-scoped receipt images; search/subscription/custom runtimes retain the CLI. */
 export class GeminiApiAdapter implements ProviderAdapter {
   constructor(
     private request = fetch,
@@ -125,7 +126,20 @@ export class GeminiApiAdapter implements ProviderAdapter {
   }
   async run(prompt: string, connection: Connection, context: ProviderContext) {
     if (connection.provider !== 'gemini' || connection.mode !== 'api' || !context.key) throw new Error('API_KEY_REQUIRED');
-    if (context.images?.length || context.webSearch) throw new Error('PROVIDER_CAPABILITY_UNSUPPORTED');
+    if (context.webSearch || (context.images?.length && !context.receiptOcr)) throw new Error('PROVIDER_CAPABILITY_UNSUPPORTED');
+    if (context.receiptOcr && (!context.images?.length || !context.jsonSchema)) throw new Error('INVALID_INPUT');
+    let imageBytes = 0;
+    if ((context.images?.length || 0) > 6) throw new Error('ATTACH_TOO_LARGE');
+    for (const image of context.images || []) {
+      if (typeof image?.data !== 'string' || !['image/jpeg', 'image/png', 'image/webp'].includes(image.mime))
+        throw new Error('RECEIPT_VISION_FORMAT');
+      if (image.data.length > 5_333_336) throw new Error('ATTACH_TOO_LARGE');
+      if (!image.data.length || image.data.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(image.data))
+        throw new Error('RECEIPT_VISION_FORMAT');
+      const bytes = (image.data.length * 3) / 4 - (image.data.endsWith('==') ? 2 : image.data.endsWith('=') ? 1 : 0);
+      imageBytes += bytes;
+      if (bytes > 4_000_000 || imageBytes > 12_000_000) throw new Error('ATTACH_TOO_LARGE');
+    }
     const model = connection.model.replace(/^models\//, '');
     if (!/^gemini-[a-zA-Z0-9._-]{1,120}$/.test(model) || prompt.length > 400_000) throw new Error('INVALID_INPUT');
     if (context.signal.aborted) throw new Error('CANCELLED');
@@ -144,7 +158,9 @@ export class GeminiApiAdapter implements ProviderAdapter {
     }
     const base = (context.geminiBaseUrl || 'https://generativelanguage.googleapis.com').replace(/\/$/, '') + '/v1beta';
     const signal = AbortSignal.any([context.signal, AbortSignal.timeout(600_000)]);
-    const cached = await this.prefix(connection, context, base, model);
+    const cached = context.receiptOcr
+      ? { name: undefined, status: 'bypassed' as const }
+      : await this.prefix(connection, context, base, model);
     let name = cached.name;
     let response: Response;
     for (let attempt = 0; ; attempt++) {
@@ -163,14 +179,24 @@ export class GeminiApiAdapter implements ProviderAdapter {
           signal,
           body: JSON.stringify({
             ...(name ? { cachedContent: name } : context.system ? { systemInstruction: { parts: [{ text: context.system }] } } : {}),
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  { text: prompt },
+                  ...(context.images || []).map(image => ({ inlineData: { mimeType: image.mime, data: image.data } })),
+                ],
+              },
+            ],
             ...(connection.maxOutputTokens || context.jsonSchema
               ? {
                   generationConfig: {
                     ...(connection.maxOutputTokens ? { maxOutputTokens: connection.maxOutputTokens } : {}),
-                    // Gemini's native JSON mode: the reply is always one valid JSON value. The shape itself still comes
-                    // from the prompt and the host's parser, since Gemini accepts only part of JSON Schema.
+                    ...(context.receiptOcr ? { maxOutputTokens: Math.min(connection.maxOutputTokens || 16_384, 16_384) } : {}),
+                    // Receipt extraction supplies the native schema; all responses still pass the host's parser.
+                    // Other text flows retain JSON mode with their existing prompt-defined shape.
                     ...(context.jsonSchema ? { responseMimeType: 'application/json' } : {}),
+                    ...(context.receiptOcr ? { responseJsonSchema: context.jsonSchema } : {}),
                   },
                 }
               : {}),

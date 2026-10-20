@@ -1,3 +1,5 @@
+import { parseReceiptCloudConfig, type ReceiptCloudConfig } from './receipt-cloud-config';
+declare const __STEP_RECEIPT_CLOUD__: ReceiptCloudConfig | undefined;
 import { providerEndpoint } from '../../src/modules/providers/compatible.js';
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
@@ -152,6 +154,9 @@ export type Policy = {
    * results; off, nothing is masked, blocked or asked about on privacy grounds.
    */
   checks: { authority: boolean; privacy: boolean };
+  /** Local receipt OCR has no external API or hosting fees. External receipt AI requires explicit administrator opt-in. */
+  receiptLocalOnly?: boolean;
+  receiptCloud?: ReceiptCloudConfig;
   googleWorkspace?: { clientId: string; domains: string[]; services: GoogleService[] };
   credentialStorage?: { sharedDevice?: boolean; blockHostExecution?: boolean };
   /** สรุปเช้านี้: whether an employee may let it read today's Calendar and Tasks every day without asking again. */
@@ -272,7 +277,9 @@ export function defaultPolicy(): Policy {
     budgets: {},
     pilot: true,
     checks: { authority: false, privacy: false },
+    receiptLocalOnly: true,
     // Managed policy contains public configuration only; build-time native client credentials stay in main.
+    ...(typeof __STEP_RECEIPT_CLOUD__ !== 'undefined' && __STEP_RECEIPT_CLOUD__ ? { receiptCloud: __STEP_RECEIPT_CLOUD__ } : {}),
     googleWorkspace: {
       clientId: DEFAULT_GOOGLE_CLIENT_ID,
       domains: ['step.cmu.ac.th'],
@@ -284,6 +291,8 @@ export function defaultPolicy(): Policy {
 /** Invalid or untrusted policy must not fall back to newly enabled credential/demo capabilities. */
 function closedPolicy(): Policy {
   const policy = defaultPolicy();
+  // Invalid or untrusted routing must never redirect receipt images to a default recipient.
+  policy.features.receiptVision = false;
   policy.features.vault = false;
   policy.credentialStorage = { blockHostExecution: true };
   policy.features.googleWorkspace = false;
@@ -351,6 +360,18 @@ export function parsePolicy(raw: unknown): { policy: Policy; problems: string[] 
     )
       problems.push('morningBrief.rememberConsent must be boolean');
     else policy.morningBrief = { rememberConsent: raw.morningBrief.rememberConsent };
+  }
+  if (raw.receiptLocalOnly !== undefined) {
+    if (typeof raw.receiptLocalOnly !== 'boolean') problems.push('receiptLocalOnly must be boolean');
+    else policy.receiptLocalOnly = raw.receiptLocalOnly;
+  }
+  if (raw.receiptCloud === null) delete policy.receiptCloud;
+  else if (raw.receiptCloud !== undefined) {
+    const cloud = parseReceiptCloudConfig(raw.receiptCloud);
+    if (cloud) policy.receiptCloud = cloud;
+    else {
+      problems.push('receiptCloud requires an HTTPS service origin and a Gemini model, with no credentials');
+    }
   }
   if (raw.googleWorkspace === null) delete policy.googleWorkspace;
   else if (raw.googleWorkspace !== undefined) {

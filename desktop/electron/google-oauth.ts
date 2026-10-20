@@ -85,7 +85,12 @@ export async function googleJson(
   if (data.error) reject('GOOGLE_RESPONSE_INVALID');
   return data;
 }
-export async function googleIdentity(token: string, clientId: string, nonce: string, transport = fetch): Promise<GoogleIdentity> {
+export async function googleIdentity(
+  token: string,
+  clientId: string,
+  nonce: string | undefined,
+  transport = fetch,
+): Promise<GoogleIdentity> {
   try {
     const parts = token.split('.');
     if (parts.length !== 3 || token.length > 20000) throw new Error();
@@ -110,7 +115,7 @@ export async function googleIdentity(token: string, clientId: string, nonce: str
       (claims.azp && claims.azp !== clientId) ||
       !Number.isFinite(claims.exp) ||
       claims.exp <= Date.now() / 1000 ||
-      claims.nonce !== nonce ||
+      (nonce !== undefined && claims.nonce !== nonce) ||
       typeof claims.sub !== 'string' ||
       !/^\d{1,100}$/.test(claims.sub) ||
       claims.email_verified !== true ||
@@ -259,6 +264,7 @@ export async function googleAuthorization(
       tokens: {
         refresh: typeof tokens.refresh_token === 'string' ? tokens.refresh_token : '',
         access: tokens.access_token,
+        ...(typeof tokens.id_token === 'string' ? { identity: tokens.id_token } : {}),
         expires: Date.now() + tokens.expires_in * 1000,
       },
     };

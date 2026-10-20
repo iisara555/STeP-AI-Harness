@@ -65,5 +65,10 @@
     { "q": "คู่มือคุณภาพรุ่นปัจจุบัน", "doc": "mis-iso-document-register" },
     { "q": "แบบฟอร์มทีม CC ที่ใช้อยู่", "doc": ["mis-iso-document-register", "cc-iso-document-register"] },
     { "q": "ช่วยออกแบบโปสเตอร์งานสัมมนา", "doc": "none" }
+  ],
+  "receiptBuyerIdentityQuestions": [
+    { "q": "ชื่อผู้ซื้อและที่อยู่ STeP ที่ต้องใช้ตรวจใบเสร็จคืออะไร", "doc": "receipt-buyer-identity" },
+    { "q": "เลขประจำตัวผู้เสียภาษีของ STeP สำหรับตรวจใบเสร็จคืออะไร", "doc": "receipt-buyer-identity" },
+    { "q": "เลขภาษีผู้ซื้อ 0994000423179 ต้องใช้ที่อยู่ใด", "doc": "receipt-buyer-identity" }
   ]
 }

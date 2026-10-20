@@ -111,6 +111,7 @@ export async function resolveRoleFiles(roleId) {
   // 3. Resolve safe docs
   const safeDocs = [
     'knowledge/step-context.md',
+    'knowledge/receipt-buyer-identity.md',
     'roles-and-ownership.md',
     'knowledge-policy.md',
     'privacy-preflight.md',
@@ -445,6 +446,7 @@ export async function resolveTeamFiles(teamCode) {
   // 3. Resolve safe docs
   const safeDocs = [
     'knowledge/step-context.md',
+    'knowledge/receipt-buyer-identity.md',
     'roles-and-ownership.md',
     'knowledge-policy.md',
     'privacy-preflight.md',

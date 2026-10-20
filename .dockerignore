@@ -1,0 +1,20 @@
+# Upload only the transitive OCR service sources, never desktop data, keys or build artifacts.
+**
+!.dockerignore
+!gateway/
+!gateway/receipt/
+!gateway/receipt/Dockerfile
+!gateway/receipt/*.ts
+!desktop/
+!desktop/electron/
+!desktop/electron/gemini-api.ts
+!desktop/electron/provider-session-key.ts
+!desktop/electron/google-oauth.ts
+!desktop/src/
+!desktop/src/receipt-vision.ts
+!desktop/src/receipt-compliance.ts
+!desktop/src/thai-date.ts
+!src/
+!src/modules/
+!src/modules/providers/
+!src/modules/providers/usage.js

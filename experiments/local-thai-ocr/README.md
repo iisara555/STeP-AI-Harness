@@ -17,18 +17,20 @@
 - Optional EasyOCR Thai/English recognition cross-checks PaddleOCR's detected lines, including lines with high PaddleOCR confidence. Different readings are flagged for human review; neither reading replaces the other automatically.
 - ถ้าเครื่องมี **Tesseract 5 + `tha` + `eng` traineddata** ระบบจะใช้เป็น independent verifier สำหรับตัวพิมพ์และตัวเลขโดยอัตโนมัติ ไม่ใช้ Tesseract เป็นผู้ตัดสินลายมือ
 - ระบบจัดประเภทบรรทัดเป็น `printed-likely`, `handwriting-likely`, `printed-conflict` หรือ `uncertain` จากการเห็นพ้อง/ขัดกันของ PaddleOCR, Tesseract และ Thai-TrOCR
-- STeP Desktop มี AI candidate filter: หลัง OCR บน connection แบบ text-only จะเลือก candidate หลัง consent; สั่งตรวจซ้ำด้วยปุ่มได้ ส่งเฉพาะข้อความที่ผ่าน privacy masking และ candidate token **ไม่ส่งภาพใบเสร็จ** และไม่ยอมรับค่าที่ AI สร้างใหม่
+- STeP Desktop มี AI candidate filter เป็นทางเลือกเมื่อผู้ดูแลปิด `receiptLocalOnly`: ใช้หลัง consent ส่งเฉพาะข้อความที่ผ่าน privacy masking และ candidate token **ไม่ส่งภาพใบเสร็จ** และไม่ยอมรับค่าที่ AI สร้างใหม่ ค่าเริ่มต้นไม่เรียก AI ต่อจาก OCR
 - มี Web UI ในเครื่องที่ `http://127.0.0.1:8765`
 - ไฟล์ชั่วคราวถูกลบหลังประมวลผล
 
-## OCR/mapping ใน source Desktop 0.5.23
+## OCR/mapping ใน source ปัจจุบัน (2026-10-20)
 
 - แยก subtotal / VAT amount / paid total ตาม label และความสัมพันธ์ทางคณิตศาสตร์ ไม่ตีความ VAT rate เป็นจำนวนเงิน; ค่าที่คำนวณเติมยังต้องตรวจเทียบต้นฉบับ
 - รองรับเลขที่/No., label ไทยที่เว้นวรรค วันที่เดือนอังกฤษ และตัวเลขที่เว้นวรรคข้าง separator; ตัดบรรทัดเงินสด/ที่อยู่ออกจากชื่อร้าน ไม่แทนตัวอักษรในยอดเงินเป็นเลขเอง
-- ถ้า text boxes บ่งชี้ภาพตะแคง จะอ่านเพิ่มสอง quarter turns แล้วเลือก reading score ที่ดีกว่า; ไม่ใช่การรับรอง auto-deskew ทุกมุม
-- detection side default 1280 px (`STEP_OCR_DET_SIDE`) และ PDF scan 200 DPI. ภาพโทรศัพท์ใช้ EXIF orientation และภาพซีดใช้ bounded contrast normalization; native-text PDF ข้าม PaddleOCR startup
+- PDF สแกนใช้ 300 DPI ภายใต้เพดานด้านยาว 4800 px และใช้ overlapping tiles เช่นเดียวกับรูปภาพ เพื่อรักษารายละเอียดตัวเล็ก/วรรณยุกต์; native-text PDF ยังข้าม PaddleOCR startup
+- ภาพตะแคงหรือคำอ่านว่าง/อ่อนจะลอง 180°/90°/270° เพิ่ม ส่วนหน้าเอียงเล็กน้อยลอง deskew เมื่อมีแนวบรรทัดยาวอย่างน้อยสามบรรทัดเห็นตรงกัน เลือกผลใหม่เมื่อ reading score ดีขึ้นชัดเจน; ไม่รับรองภาพทุกมุมหรือหน้าที่ผิดแต่ confidence สูง
+- ภาพซีดอ่านต้นฉบับก่อน แล้วเทียบ bounded autocontrast โดยไม่ตัดช่วงสีหรือแปลงขาวดำแรง ภาพที่ปรับแล้วต้องผ่านเกณฑ์เลือกคำอ่านเดียวกัน โมเดลเสริมตรวจเฉพาะหน้าที่เลือกเพื่อไม่ใช้โควตาบรรทัดหมดกับรอบทดลอง
+- detection side default 1280 px (`STEP_OCR_DET_SIDE`) และ EXIF orientation ยังใช้ตามเดิม ฉลาก VAT ที่ OCR ทำสระ/วรรณยุกต์หายบางตำแหน่งกู้ได้เฉพาะตัวเลขในบรรทัด/แถวเดียวกัน เก็บฉลากดิบและบังคับตรวจทาน ไม่แก้ชื่อร้าน ตัวเลข หรืออัตราภาษีด้วยการเดา
 
-Tests ของการเปลี่ยนนี้เป็น synthetic/mocked regressions. รายงาน [50/63 → 59/63 ของรอบ 0.5.21](benchmark/QUALITY-RESULTS-2026-10-06.md) เป็นหลักฐานก่อนการเปลี่ยน 0.5.23 ไม่ใช่ accuracy ปัจจุบันหรือผลกับเอกสารจริง. ต้องวัดภาพจริง เวลา และ RAM บนเครื่องพนักงานใหม่ก่อนปิด gate.
+ดู [ผลรันโมเดลจริงบนภาพสังเคราะห์และการศึกษา upstream/REA รอบ 2026-10-20](benchmark/QUALITY-RESULTS-2026-10-20.md) แยกจาก unit ที่ใช้ mock. รายงาน [50/63 → 59/63 ของรอบ 0.5.21](benchmark/QUALITY-RESULTS-2026-10-06.md) เป็นหลักฐานเก่า ไม่ใช่ accuracy ปัจจุบันหรือผลกับเอกสารจริง. ต้องวัดภาพจริง เวลา และ RAM บนเครื่องพนักงานใหม่ก่อนปิด gate.
 
 ## Receipt review workflow
 
@@ -46,11 +48,14 @@ OCR service/engine ยัง **ไม่** ถูกลงทะเบียน�
 
 **STeP Desktop mini app:** แอป Desktop มีเครื่องมือ “ตรวจใบเสร็จ AFP” (ป้าย *ทดลอง*) ที่เรียก service นี้ที่ `127.0.0.1:8765` โดยตรง ใช้ `web/receipt-review.js` ชุดเดียวกัน และใช้ runtime ใน App Data ที่ติดตั้งผ่าน Desktop หรือ `.venv` ของ standalone ที่พร้อมใช้อยู่แล้ว เครื่องมือนี้ยังไม่ผ่าน Router; ปุ่ม “ให้ AI ตรวจทานต่อ” ส่งค่าที่คนเลือกและตรวจแล้ว พร้อม JSON ที่ยังมี OCR ดิบ/candidate เข้า chat ปกติ โดยเลือก `receipt-audit` ได้ หรือให้ Router เลือกเมื่อเปิด `autoRouting`) ค่าที่ตรวจเทียบต้นฉบับแล้วเป็น `SOURCE_FACT`; OCR/vision ดิบและ candidate อื่นยังเป็น `EXTRACTED_UNVERIFIED`; ค่าที่กรอกเองแต่ยังไม่ตรวจเป็น `USER_INPUT` การยืนยันส่งไม่ใช่การยืนยันค่า และการยืนยันค่าไม่ใช่การอนุมัติเบิก Acceptance gate ด้านล่างยังใช้กับการผูก OCR เข้ากับ Router
 
-Receipt vision has a separate boundary from the masked candidate filter: it sends
+Desktop defaults to `receiptLocalOnly: true`: OCR, correction, confirmation and
+save run locally without API/hosting fees. Existing API/cloud configuration does
+not enable an external fallback. The following optional integrations require the
+administrator to turn local-only mode off explicitly. Receipt vision sends
 images to the connected provider only with its existing consent/policy conditions
 (`features.vision`, `features.receiptVision`, and privacy checks off). With privacy
 checks enabled, receipt vision is disabled. Chat handoff follows the current chat
-privacy/consent policy. This work does not change either default or consent scope.
+privacy/consent policy when that optional integration is enabled.
 
 ## Privacy boundary
 
@@ -63,9 +68,9 @@ privacy/consent policy. This work does not change either default or consent scop
 3. ครั้งแรกที่เปิด Thai-TrOCR หากยังไม่มี model weights ใน Hugging Face cache
 4. The first EasyOCR cross-check may download its Thai recognition model if it is not cached. Model download does not upload receipt bytes.
 5. Tesseract ไม่ได้ bundle มากับ installer หลัก; ถ้าต้องการชั้นนี้ให้ติดตั้ง Tesseract 5 และภาษา `tha` + `eng` ตามเอกสาร upstream แล้ว Desktop จะตรวจพบเอง
-6. ใน Desktop, candidate filter อาจติดต่อ provider หลัง OCR สำหรับ connection แบบ text-only เมื่อมี consent หรือเมื่อกดตรวจซ้ำ โดยส่ง token + evidence ที่ผ่าน privacy gate; receipt vision ส่งภาพแยกภายใต้ consent/policy ไม่ได้อยู่ใน local-only OCR path
+6. เมื่อผู้ดูแลปิด `receiptLocalOnly` เท่านั้น candidate filter/receipt vision จึงอาจติดต่อ provider ภายใต้ consent/policy เดิม ค่าเริ่มต้นไม่เรียกบริการเหล่านี้และไม่เปิด API fallback
 
-ต้องการทดสอบแบบ local-only ใน Desktop ให้เลือก **ทดลอง OCR ในเครื่อง (สำหรับใบที่เลือกครั้งถัดไป)** ก่อนเปิดเอกสาร โหมดนี้หยุดการเรียก AI อัตโนมัติ เก็บเอกสารจริงและผล JSON นอก Git checkout. การอ่านภาพหรือส่งแชตภายหลังเป็นการส่งข้อมูลแยกที่ผู้ใช้เลือกเอง
+Desktop ใช้ OCR ในเครื่องเป็นค่าเริ่มต้น ไม่ต้องลงชื่อเข้า Google หรือเลือกบัญชี AI สำหรับขั้นตอนนี้ เก็บเอกสารจริงและผล JSON นอก Git checkout. การส่งเข้าแชตภายหลังเป็นอีกการกระทำหนึ่งตาม policy ของแชต
 
 **Model download ไม่ใช่ document upload** แต่เครื่องที่ต้อง air-gap ควรเตรียม dependency/model cache ล่วงหน้าก่อนนำไปใช้.
 

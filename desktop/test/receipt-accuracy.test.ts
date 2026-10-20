@@ -9,6 +9,45 @@ async function mapper() {
   return context.window.ReceiptReview;
 }
 
+test('Thai VAT labels with lost marks keep original evidence and require review', async () => {
+  const review = await mapper();
+  for (const label of ['ภาษีมูลค่าเพิม', 'ภาษมูลค่าเพิ่ม']) {
+    const result = review.extractReceipt({
+      pages: [
+        {
+          page: 1,
+          lines: [
+            { text: label, confidence: 0.98, box: [10, 100, 160, 125] },
+            { text: '7.00', confidence: 0.99, box: [200, 100, 260, 125] },
+            { text: 'ยอดสุทธิ 107.00', box: [10, 140, 260, 165] },
+          ],
+        },
+      ],
+    });
+    assert.equal(result.fields.vat.value, '7.00');
+    assert.equal(result.fields.vat.mappingMethod, 'thai-label-mark-loss');
+    assert.ok(result.fields.vat.sourceTexts.includes(label));
+    assert.equal(result.records.find((line: any) => line.text === label).needsReview, true);
+    assert.equal(result.records[0].text, label);
+  }
+});
+
+test('Thai VAT mark recovery never invents a rate, borrows another row or overrides exact evidence', async () => {
+  const review = await mapper();
+  for (const text of ['ภาษีมูลค่าเพิม 7%', 'ไม่รวมภาษีมูลค่าเพิม 7.00', 'เลขผู้เสียภาษี 0000000000000']) {
+    const result = review.extractReceipt({ pages: [{ page: 1, lines: [{ text }] }] });
+    assert.equal(result.fields.vat.value, '', text);
+  }
+  const lines = [
+    { text: 'ภาษีมูลค่าเพิม', box: [10, 100, 160, 125] },
+    { text: '107.00', box: [200, 160, 260, 185] },
+  ];
+  assert.equal(review.extractReceipt({ pages: [{ page: 1, lines }] }).fields.vat.value, '');
+  const exact = review.extractReceipt({ pages: [{ page: 1, lines: [...lines, { text: 'VAT 7.00', box: [10, 220, 260, 245] }] }] });
+  assert.equal(exact.fields.vat.value, '7.00');
+  assert.equal(exact.fields.vat.mappingMethod, 'same-line');
+});
+
 test('adjacent totals rows use their own amount, independent of OCR record order', async () => {
   const review = await mapper();
   const lines = [

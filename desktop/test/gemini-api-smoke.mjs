@@ -120,6 +120,7 @@ server.listen(0, '127.0.0.1');
 await once(server, 'listening');
 
 const home = await mkdtemp(join(tmpdir(), 'step-gemini-api-'));
+await writeFile(join(home, 'desktop-policy.json'), JSON.stringify({ receiptLocalOnly: false }));
 const env = {
   ...process.env,
   STEP_DESKTOP_TEST_HOME: home,
@@ -175,8 +176,16 @@ try {
     'the connection test reached the Gemini API',
   );
 
-  // With no local OCR, the receipt page reads a receipt with the connected vision model alone: one consent, the image
-  // sent as image data, and every field it fills left unconfirmed for a person to check.
+  const receiptProfile = (await gemini()).find(connection => connection.ready);
+  const receiptModel = receiptProfile.models.find(model => /^gemini-/.test(model.id));
+  assert.ok(receiptModel, 'the account exposes a concrete image model');
+  await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), {
+    id: receiptProfile.id,
+    model: receiptModel.id,
+  });
+
+  // Receipt extraction uses native Gemini REST, independently of chat and without a local OCR install.
+  // Cancellation sends no image; remembered consent is bound to the account, key, model and policy.
   await page.keyboard.press('Escape');
   const receipt = join(home, 'receipt.png');
   const png = await app.evaluate(({ nativeImage }) =>
@@ -194,7 +203,28 @@ try {
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   await expect(page.getByText('AI อ่านภาพได้เมื่อคุณยินยอม ส่งต่อในแชตจะส่งเฉพาะข้อความที่ตรวจแล้ว')).toBeVisible();
   await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ' })).toBeEnabled();
+  const beforeReceipt = prompts.length;
   await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  const consent = page.getByRole('alertdialog', { name: 'ส่งใบเสร็จให้ Google AI (Gemini API)' });
+  await consent.waitFor();
+  assert.equal(prompts.length, beforeReceipt, 'images wait for consent');
+  await expect(consent).toContainText('generativelanguage.googleapis.com');
+  await consent.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ' })).toBeEnabled();
+  assert.equal(prompts.length, beforeReceipt, 'cancelled consent sends nothing');
+  await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  await consent.waitFor();
+  const ocrProfile = (await gemini()).find(connection => connection.ready);
+  const anotherModel = ocrProfile.models.find(model => model.id !== ocrProfile.model && /^gemini-/.test(model.id));
+  assert.ok(anotherModel, 'fixture has another valid model');
+  await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), { id: ocrProfile.id, model: anotherModel.id });
+  await consent.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'เลือกใบเสร็จ' })).toBeEnabled();
+  assert.equal(prompts.length, beforeReceipt, 'a changed model invalidates the pending consent');
+  await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), ocrProfile);
+  await page.getByRole('button', { name: 'เลือกใบเสร็จ' }).click();
+  await consent.getByRole('checkbox').check();
+  await consent.getByRole('button', { name: 'อนุญาตใน workspace นี้', exact: true }).click();
   // Switching to another page while the receipt is read keeps the work: the sidebar shows it running, and the result
   // is there on return.
   await page.getByText('receipt.png', { exact: true }).waitFor();
@@ -225,7 +255,7 @@ try {
   // Technical self-reported confidence is retained as raw evidence, outside the minimal employee UI.
   await expect(page.getByText('ความมั่นใจที่ AI รายงาน: 70% · ไม่ใช่ความแม่นยำที่วัด')).toHaveCount(0);
   await page.getByRole('cell', { name: 'สินค้าสังเคราะห์', exact: true }).waitFor();
-  assert.equal(await app.evaluate(() => globalThis.receiptConsents), 1);
+  assert.equal(await app.evaluate(() => globalThis.receiptConsents), 0, 'Gemini receipt consent stays in the app');
   // The AI's document type and what it saw drive the checklist; the AFP clearing set shows while the category is open.
   assert.equal(await page.getByLabel('ประเภทเอกสาร', { exact: true }).inputValue(), 'cash_bill');
   // The correction appears directly in the minimal review.
@@ -275,8 +305,13 @@ try {
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();
   assert.equal(await confirmAll.isChecked(), true);
   assert.equal(await page.getByLabel('ยอดรวมที่ชำระ').inputValue(), '107.00');
+  const ocrUsage = (await savedReview()).vision_check.ocr_usage;
+  assert.equal(ocrUsage.requests, 1);
+  assert.deepEqual(ocrUsage.tokens, { input: 5, output: 1, total: 6 });
   const visionRequest = prompts.find(p => p.includes('You read Thai and English receipts'));
   assert.ok(visionRequest && /"inlineData"|"inline_data"/.test(visionRequest), 'the receipt went to the model as an image');
+  assert.ok(JSON.parse(visionRequest).generationConfig.responseJsonSchema, 'native REST constrains receipt output');
+  assert.equal(cachedPrefixes.size, 0, 'receipt images never create an explicit server cache');
   const imageParts = JSON.parse(visionRequest)
     .contents.flatMap(c => c.parts)
     .filter(part => part.inlineData || part.inline_data);
@@ -377,12 +412,14 @@ try {
   const cacheModel = (await gemini()).find(c => c.id === connectionId).models.find(m => /^gemini-/.test(m.id)).id;
   await writeFile(
     join(home, 'desktop-policy.json'),
-    JSON.stringify({ modelLimits: { [cacheModel]: { promptCaching: 'gemini-explicit', maxOutputTokens: 1024 } } }),
+    JSON.stringify({ receiptLocalOnly: true, modelLimits: { [cacheModel]: { promptCaching: 'gemini-explicit', maxOutputTokens: 1024 } } }),
   );
-  // The host polls policy every five seconds; allow two polling cycles plus renderer scheduling.
+  // Wait for this policy version, returning receipts to local mode while enabling ordinary chat caching.
   await expect
-    .poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).policy.source, { timeout: 15000 })
-    .toBe('managed');
+    .poll(async () => (await page.evaluate(() => window.step.call('ocrStatus'))).localOnly, {
+      timeout: 15000,
+    })
+    .toBe(true);
   await page.evaluate(({ id, model }) => window.step.call('connectionModel', { id, model }), { id: connectionId, model: cacheModel });
   const cacheCalls = [];
   for (const text of ['แปลเป็นอังกฤษ: วันนี้อากาศดี', 'แปลเป็นอังกฤษ: พรุ่งนี้อากาศดี']) {
@@ -418,7 +455,7 @@ try {
   mode = 'ok';
   assert.deepEqual(errors, []);
   console.log(
-    'Gemini API key smoke passed: Settings, quota, vision, retained CLI tool turns and managed native HTTP prefix cache creation/reuse with trace usage.',
+    'Gemini API key smoke passed: Settings, quota, native receipt images, cancelled/stale consent, retained CLI tool turns and managed native HTTP prefix cache creation/reuse with trace usage.',
   );
 } finally {
   await app.close().catch(() => {});

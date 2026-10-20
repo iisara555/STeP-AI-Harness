@@ -2,6 +2,23 @@ version: 1
 description: Official STeP Controlled Document Registry — Policies, SOPs, Rules, and Templates
 
 documents:
+  receipt-buyer-identity:
+    title: "ข้อมูลผู้ซื้อ STeP สำหรับตรวจใบเสร็จ: ชื่อ ที่อยู่ และเลขประจำตัวผู้เสียภาษี"
+    keywords: [ชื่อผู้ซื้อ, ที่อยู่ผู้ซื้อ, เลขประจำตัวผู้เสียภาษี, เลขภาษี, ตรวจใบเสร็จ, "0994000423179"]
+    path: docs/knowledge/receipt-buyer-identity.md
+    owner: afp
+    type: organization-reference
+    sourceLevel: organization-reference
+    authority: owner-confirmed-reference
+    verification: user-provided-2026-10-20
+    status: active-reference
+    confirmedDate: "2026-10-20"
+    confirmedBy: "ผู้ดูแลโครงการระบุชื่อ ที่อยู่ และเลขผู้เสียภาษีสำหรับตรวจใบเสร็จในบทสนทนา"
+    contentInRepo: true
+    sensitivity: public
+    sensitivityReason: "ข้อมูลชื่อ ที่อยู่ และเลขผู้เสียภาษีของหน่วยงาน ไม่มีข้อมูลบุคคลหรือใบเสร็จพนักงาน"
+    note: "ใช้เป็นค่าอ้างอิงผู้ซื้อตามที่ผู้ใช้ให้มา ไม่ใช่นโยบายเบิกจ่ายหรือผลตรวจทะเบียนภายนอก; สาขาและเงื่อนไขเฉพาะยังไม่ได้ระบุ"
+
   procurement-policy:
     title: "นโยบายและหลักเกณฑ์การจัดซื้อจัดจ้างและการบริหารพัสดุ STeP"
     owner: afp

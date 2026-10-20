@@ -11,7 +11,7 @@ from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 
 from .safety import external_path
-from .score import FIELDS, score_fields
+from .score import FIELDS, score_fields, score_text
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKOUT = ROOT.parents[1]
@@ -94,6 +94,9 @@ def run(args):
                 raise ValueError('Non-synthetic input requires --private')
             if not isinstance(truth.get('fields'), dict) or set(truth['fields']) != set(FIELDS):
                 raise ValueError('Ground truth must contain exactly the seven receipt fields')
+            if 'expected_lines' in truth and (not isinstance(truth['expected_lines'], list) or
+                    any(not isinstance(line, str) for line in truth['expected_lines'])):
+                raise ValueError('Full-text reference must be a list of strings')
             stem = truth_path.name.removesuffix('.truth.json')
             image = next((folder / (stem + ext) for ext in ('.png', '.jpg', '.jpeg', '.pdf') if (folder / (stem + ext)).is_file()), None)
             if not image:
@@ -144,6 +147,8 @@ def run(args):
             row.update(status='completed', scenario=truth.get('scenario', 'pilot'),
                        simulated_handwriting=bool(truth.get('simulated_handwriting')),
                        score=score_fields(truth.get('raw_fields', truth['fields']), reading['fields'], reading['review']))
+            if args.mode in {'ocr', 'combined'} and any(line.strip() for line in truth.get('expected_lines', [])):
+                row['text_score'] = score_text('\n'.join(truth['expected_lines']), ocr.get('text', ''))
             (output / (ident + '.reading.json')).write_text(json.dumps(dict(ocr=ocr, visionReply=vision_reply), ensure_ascii=False, indent=2), encoding='utf-8')
         except Exception as error:
             # Error messages can contain private paths or engine text. Never serialize them into the summary.
@@ -156,6 +161,9 @@ def run(args):
         rows.append(row)
         print(ident + ': ' + row['status'], flush=True)
     completed = [r for r in rows if r['status'] == 'completed']
+    text_scores = [r['text_score'] for r in completed if 'text_score' in r]
+    reference_characters = sum(r['reference_characters'] for r in text_scores)
+    text_edits = sum(r['edits'] for r in text_scores)
     totals = {k: sum(r['score']['review'][k] for r in completed) for k in ('tp', 'fp', 'fn', 'tn')}
     totals['precision'] = totals['tp'] / (totals['tp'] + totals['fp']) if totals['tp'] + totals['fp'] else None
     totals['recall'] = totals['tp'] / (totals['tp'] + totals['fn']) if totals['tp'] + totals['fn'] else None
@@ -172,6 +180,9 @@ def run(args):
                    model_initialization='new worker per OCR request; cached downloads are not warm-process inference',
                    requested_options=dict(threshold=args.threshold, crosscheck=args.crosscheck, tesseract=args.tesseract, handwriting=args.handwriting),
                    attempted=len(rows), completed=sum(r['status'] == 'completed' for r in rows), live_requests=live_count, documents=rows)
+    summary['text_score'] = dict(samples=len(text_scores), edits=text_edits,
+        reference_characters=reference_characters, cer=text_edits / reference_characters if reference_characters else None,
+        normalization='Unicode code points, NFC, whitespace removed; Thai marks and reading order retained')
     (output / 'report.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return 0 if summary['completed'] == summary['attempted'] else 1
 

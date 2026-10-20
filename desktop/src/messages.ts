@@ -4,6 +4,7 @@ import { formatLocalDate, formatLocalMonth } from './thai-date';
 import { credentialErrorsTh } from './credential-copy';
 export const CLAUDE_CODE = 'claude-code';
 export const errorText: Record<string, string> = localized({
+  OCR_LOCAL_ONLY: 'โหมด OCR ในเครื่องไม่เรียกบริการ AI ภายนอก',
   DOCX_PRESENTATION_ONLY: 'สารบัญและหัวท้ายกระดาษที่ตั้งไว้ใช้กับ DOCX กรุณาส่งออก DOCX หรือปิดตัวเลือกเหล่านี้ก่อนส่งออกรูปแบบอื่น',
   ...credentialErrorsTh,
   WEB_EXTRACT_INVALID: 'อ่านเนื้อหาหน้าเว็บนี้ไม่ได้ ลองส่งลิงก์อื่นหรือแนบไฟล์ต้นฉบับ',
@@ -215,6 +216,9 @@ export const errorText: Record<string, string> = localized({
   AUTH_METHOD_UNAVAILABLE: 'ตัวเชื่อม AI รุ่นนี้ไม่รองรับวิธีลงชื่อเข้าใช้ที่เลือก กรุณาอัปเดตตัวเชื่อมแล้วลองใหม่',
   INVALID_LOGIN_RESPONSE: 'ตัวเชื่อม AI ส่งข้อมูลเริ่ม OAuth ไม่ครบ กรุณาอัปเดตตัวเชื่อมแล้วลองใหม่',
   GOOGLE_CLOUD_PROJECT_INVALID: 'Google Cloud Project ID ไม่ถูกต้อง ใช้ตัวพิมพ์เล็ก ตัวเลข และขีดกลาง 6–30 ตัวอักษร',
+  OCR_DAILY_LIMIT: 'ถึงโควตา OCR ของวันนี้แล้ว ตรวจใบเสร็จด้วยคนหรือรอรอบวันใหม่',
+  OCR_REQUEST_REPLAYED: 'คำขอนี้ถูกส่งแล้ว ตรวจผลก่อนลองอ่านใบเสร็จใหม่',
+  OCR_SERVICE_UNAVAILABLE: 'บริการ OCR ของ STeP ยังไม่พร้อม ลองอีกครั้งภายหลัง ข้อมูลที่ตรวจยังอยู่',
   OCR_UNAVAILABLE: 'บริการ OCR ในเครื่องยังไม่เปิด กด “เปิดบริการ OCR” ก่อน',
   OCR_TRIAL_REPO_PATH: 'ข้อมูลทดลอง OCR ต้องอยู่นอก Git repo กรุณาเลือกโฟลเดอร์ส่วนตัวบนเครื่อง',
   OCR_TRIAL_UNSAFE_PATH: 'กรุณาเลือกไฟล์ใหม่ในโฟลเดอร์ส่วนตัวเพื่อเก็บผลทดลอง OCR',
