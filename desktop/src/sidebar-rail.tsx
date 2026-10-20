@@ -124,7 +124,7 @@ export function SidebarRail({
   const tools = [
     ['documents', t('เครื่องมือร่างเอกสาร'), FileTextIcon, FileText],
     ['media', t('สื่อภายใน'), MegaphoneIcon, Megaphone],
-    ['skills', t('ศูนย์รวม Skill'), BlocksIcon, Blocks],
+    ['skills', t('ตัวช่วยงาน'), BlocksIcon, Blocks],
     ['schedules', t('งานตั้งเวลา'), CalendarClockIcon, CalendarClock],
     ['receipt', t('ตรวจใบเสร็จ AFP'), ReceiptIcon, Receipt],
   ] as const;

@@ -71,9 +71,9 @@ try {
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
   await page.locator('.skill-card').first().waitFor();
   await page.screenshot({ path: join(out, 'skills-hub.png') });
-  await page.getByRole('button', { name: 'ใช้ Skill นี้' }).first().click();
+  await page.getByRole('button', { name: 'ใช้ตัวช่วยนี้' }).first().click();
   await page.locator('.skill-chip').waitFor();
-  await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
+  await page.getByRole('button', { name: 'เลิกใช้ตัวช่วยนี้' }).click();
   await page.getByRole('textbox', { name: 'พิมพ์คำขอ' }).fill('/rec');
   await page.locator('.slash-menu').waitFor();
   if (!(await page.locator('.slash-menu button').first().textContent()).includes('/receipt-audit'))
@@ -82,7 +82,7 @@ try {
   await page.keyboard.press('Enter');
   await page.locator('.skill-chip').waitFor();
   await page.screenshot({ path: join(out, 'skill-chip.png') });
-  await page.getByRole('button', { name: 'เลิกใช้ Skill นี้' }).click();
+  await page.getByRole('button', { name: 'เลิกใช้ตัวช่วยนี้' }).click();
   await page.keyboard.press('ControlOrMeta+K');
   await page.getByRole('dialog', { name: 'คำสั่ง' }).waitFor();
   await page.keyboard.type('ธีม');

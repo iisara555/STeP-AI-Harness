@@ -157,7 +157,7 @@ try {
       await form.getByLabel('รูปแบบเอกสารที่ต้องการ', { exact: true }).fill('SYNTHETIC-STYLE: หัวข้อสั้นและตารางตรวจรับ');
     }
     // The form survives switching to another tool page.
-    await page.locator('aside.sidebar').getByRole('button', { name: 'ศูนย์รวม Skill' }).click();
+    await page.locator('aside.sidebar').getByRole('button', { name: 'ตัวช่วยงาน' }).click();
     await open();
     await expect(form.getByLabel(field, { exact: true })).toHaveValue('Synthetic form fact');
     if (id === 'tor')

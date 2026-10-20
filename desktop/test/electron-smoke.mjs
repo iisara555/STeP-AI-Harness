@@ -27,10 +27,10 @@ try {
   // Google serves Gemini sign-in only to organization Code Assist licenses, so an API key is the default.
   await providerField.selectOption('gemini');
   assert.equal(await methodField.inputValue(), 'api');
-  await page.getByLabel('API key', { exact: true }).waitFor();
+  await page.getByLabel('รหัสเชื่อมต่อ (API key)', { exact: true }).waitFor();
   assert.ok((await methodField.locator('option').allTextContents()).some(t => /Gemini Code Assist Standard\/Enterprise/.test(t)));
   await methodField.selectOption('subscription');
-  assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
+  assert.equal(await page.getByLabel('รหัสเชื่อมต่อ (API key)', { exact: true }).count(), 0);
   await page.getByLabel(/Google Cloud Project ID/).fill('step-smoke-test');
   await page.getByRole('button', { name: 'เพิ่มการเชื่อมต่อ', exact: true }).click();
   const withGoogle = await page.evaluate(() => window.step.call('snapshot'));
@@ -51,7 +51,7 @@ try {
   await page.getByRole('heading', { name: 'ให้ AI ร่างงานหนัก', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
-  await page.getByRole('button', { name: 'เลือก AI โมเดล และระดับการคิด' }).click();
+  await page.getByRole('button', { name: 'เลือกบริการ รุ่น AI และระดับการคิด' }).click();
   await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');
   await page.locator('.composer textarea').fill('ทดสอบส่งต่อ');
   await page.keyboard.press('Enter');

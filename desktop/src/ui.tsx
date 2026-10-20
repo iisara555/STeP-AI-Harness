@@ -554,7 +554,7 @@ const tileFor = (tiles: Tile[], c: ProviderChoice) =>
   );
 // Antigravity is on the first page so staff with only a Google account can connect without a key.
 const MAIN_TILES = ['chatgpt', 'claude-sub', 'gemini-api', 'antigravity'];
-const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'API key', local: 'ในเครื่องนี้' };
+const KIND_LABEL: Record<Tile['kind'], string> = { account: 'ลงชื่อเข้าใช้', key: 'รหัสเชื่อมต่อ (API key)', local: 'ในเครื่องนี้' };
 
 export function ProviderFields(props: {
   value: ProviderChoice;
@@ -702,7 +702,7 @@ function ProviderDetail({
       )}
       {needsKey && (
         <label>
-          {preset?.signIn ? t('API key (ไม่บังคับ)') : `${tile.label} API key`}
+          {preset?.signIn ? t('รหัสเชื่อมต่อ (API key, ไม่บังคับ)') : t('{0} รหัสเชื่อมต่อ (API key)', tile.label)}
           <input
             type="password"
             autoComplete="off"
@@ -715,19 +715,19 @@ function ProviderDetail({
       {preset && (
         <label>
           <span>
-            {t('โมเดล')} <span className="muted small">{t('(ไม่บังคับ)')}</span>
+            {t('รุ่น AI')} <span className="muted small">{t('(ไม่บังคับ)')}</span>
           </span>
           <input
             value={value.model || ''}
             onChange={e => onChange({ ...value, model: e.target.value.trim() })}
-            placeholder={preset.defaultModel || t('ใช้โมเดลแรกที่บริการมี')}
+            placeholder={preset.defaultModel || t('ใช้รุ่น AI แรกที่บริการมี')}
             autoComplete="off"
           />
         </label>
       )}
       {help && (
         <button type="button" className="text-link" onClick={() => void call('openHelp', { topic: help })}>
-          {preset?.key === 'none' ? t('ดาวน์โหลด {0}', preset.label) : t('ขอ API key จาก {0}', preset?.label || tileName(value))}
+          {preset?.key === 'none' ? t('ดาวน์โหลด {0}', preset.label) : t('ขอรหัสเชื่อมต่อจาก {0}', preset?.label || tileName(value))}
         </button>
       )}
       {value.provider === 'gemini' && value.mode === 'api' && (
@@ -748,7 +748,7 @@ function ProviderDetail({
         <details className="provider-options">
           <summary>{t('ตัวเลือก Antigravity')}</summary>
           <label>
-            {t('โมเดล')}
+            {t('รุ่น AI')}
             <input value={value.model || ''} onChange={e => onChange({ ...value, model: e.target.value.trim() })} autoComplete="off" />
           </label>
           <button type="button" className="text-link" onClick={() => void call('openHelp', { topic: 'antigravity' })}>

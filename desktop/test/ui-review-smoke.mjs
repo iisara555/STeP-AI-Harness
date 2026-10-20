@@ -61,7 +61,7 @@ try {
   await page.locator('.session-open').first().focus();
   await expect(page.locator('.session.selected .session-actions')).toBeVisible();
   for (const [view, title, selector] of [
-    ['skills', 'ศูนย์รวม Skill', '.skills-hub'],
+    ['skills', 'ตัวช่วยงาน', '.skills-hub'],
     ['documents', 'เครื่องมือร่างเอกสาร', '.document-tools'],
     ['receipt', 'ตรวจใบเสร็จ AFP', '.receipt-app'],
   ]) {

@@ -113,7 +113,7 @@ try {
   await consent().waitFor();
   await expect(consent()).not.toContainText('"approved"');
   await consent().getByRole('checkbox').check();
-  await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
+  await consent().getByRole('button', { name: 'อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ', exact: true }).click();
   await page.getByText('Completed with reviewed tools', { exact: true }).waitFor();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].status).toBe('review');
   const data = await page.evaluate(() => window.step.call('snapshot'));

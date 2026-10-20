@@ -88,7 +88,7 @@ try {
   const scopeChoice = consent.getByRole('checkbox', { name: /อนุญาตส่งข้อมูลในขอบเขตนี้/ });
   await expect(scopeChoice).not.toBeChecked();
   await scopeChoice.check();
-  await consent.getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
+  await consent.getByRole('button', { name: 'อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ', exact: true }).click();
   await expect(page.locator('.transmission-scope')).toContainText('fixture');
   await expect(consent).toContainText('draft.txt');
   // Draft progress now offers its own opt-in run scope (UX audit F04); it must start unchecked.
@@ -107,7 +107,7 @@ try {
   await composer.press('Enter');
   await expect(consent).toBeVisible();
   await scopeChoice.check();
-  await consent.getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
+  await consent.getByRole('button', { name: 'อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ', exact: true }).click();
   await page.getByRole('button', { name: 'ถอนสิทธิ์และหยุดงาน', exact: true }).click();
   await expect
     .poll(

@@ -67,22 +67,18 @@ export function SkillsHub({
 
   return (
     <div className="skills-hub">
-      <h1 className="sr-only">{t('ศูนย์รวม Skill')}</h1>
+      <h1 className="sr-only">{t('ตัวช่วยงาน')}</h1>
       <div className="skills-head">
         <div className="skills-controls">
           <div className="skills-search-row">
             <label className="skills-search">
               <Search size={16} />
-              <input placeholder={t('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
+              <input placeholder={t('ค้นหาตัวช่วยงาน ทีม หรือคำที่ใช้เรียก')} value={query} onChange={e => setQuery(e.target.value)} />
             </label>
             {onAddOwn && (
-              <button
-                className="skills-add"
-                onClick={onAddOwn}
-                title={t('นำเข้า Skill จากโฟลเดอร์บนเครื่อง ระบบตรวจมาตรฐานและความปลอดภัยให้ก่อนใช้')}
-              >
+              <button className="skills-add" onClick={onAddOwn} title={t('เลือกโฟลเดอร์ตัวช่วยงาน ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้')}>
                 <Plus size={15} />
-                {t('เพิ่ม Skill ของฉัน')}
+                {t('เพิ่มตัวช่วยงานของฉัน')}
               </button>
             )}
           </div>
@@ -99,16 +95,13 @@ export function SkillsHub({
               </button>
             ))}
           </div>
-          <p className="small muted">
-            {t('เรียก Skill ที่พร้อมใช้ได้ตรง ๆ โดยพิมพ์')} <code>{t('/ชื่อ-skill')}</code>{' '}
-            {t('ในกล่องพิมพ์ ระบบยังตรวจสิทธิ์และขอบเขตของงานทุกครั้ง')}
-          </p>
+          <p className="small muted">{t('ตัวช่วยงาน (Skill) รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้')}</p>
         </div>
         <SectionArt scene="skills" className="skills-illustration" />
       </div>
       {visibleOwn.length > 0 && (
-        <section className="skills-own" aria-label={t('Skill ของฉัน')}>
-          <h2>{t('Skill ของฉัน')}</h2>
+        <section className="skills-own" aria-label={t('ตัวช่วยงานของฉัน')}>
+          <h2>{t('ตัวช่วยงานของฉัน')}</h2>
           <div className="skills-grid">
             {visibleOwn.map(p => (
               <article key={p.id} className="skill-card">
@@ -119,12 +112,12 @@ export function SkillsHub({
                 {p.skills.length > 1 && <p>{p.skills.map(s => s.id).join(', ')}</p>}
                 <div className="skill-tags">
                   <span className={`tag ${p.enabled ? 'routed' : p.invalid ? 'unregistered' : 'registered'}`}>{t(packState(p))}</span>
-                  <span className="tag">{t('Skill ที่พนักงานเพิ่ม')}</span>
+                  <span className="tag">{t('ตัวช่วยงานที่พนักงานเพิ่ม')}</span>
                 </div>
                 {p.credit && <small className="skill-credit">{creditLine([{ ...p.credit, date: p.credit.uploadedAt }])}</small>}
                 {p.enabled && p.skills.length === 1 && onUsePack ? (
                   <button className="quiet" onClick={() => onUsePack(p.id, p.skills[0].id)}>
-                    {t('ใช้ Skill นี้')}
+                    {t('ใช้ตัวช่วยนี้')}
                     <ArrowRight size={14} />
                   </button>
                 ) : (
@@ -185,7 +178,7 @@ export function SkillsHub({
               {!!s.contributors?.length && <small className="skill-credit">{creditLine(s.contributors)}</small>}
               {s.status === 'routed' ? (
                 <button className="quiet" onClick={() => onUse(s.name)}>
-                  {t('ใช้ Skill นี้')}
+                  {t('ใช้ตัวช่วยนี้')}
                   <ArrowRight size={14} />
                 </button>
               ) : (

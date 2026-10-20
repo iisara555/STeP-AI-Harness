@@ -111,7 +111,7 @@ export function TitleBar({
     {
       label: t('เครื่องมือ'),
       items: [
-        command('skills', t('ศูนย์รวม Skill')),
+        command('skills', t('ตัวช่วยงาน')),
         command('memory', t('ดูและแก้ไขความจำ')),
         command('usage', t('ดูการใช้งาน AI')),
         command('schedules', t('งานตั้งเวลา')),

@@ -104,8 +104,12 @@ try {
   await writeFile(scenario, 'block');
   await send('Synthetic persistent tool failure');
   const status = page.locator('.message.status').last();
-  await expect(status).toContainText('AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต', { timeout: 30000 });
+  await expect(status).toContainText('การเชื่อมต่อนี้ใช้เครื่องมือที่ AI ขอไม่ได้', { timeout: 30000 });
   await expect(status).not.toContainText('TOOL_DENIED');
+  const support = page.locator('.retry-code');
+  await expect(support.getByText('รหัสสำหรับแจ้งผู้ดูแล: TOOL_DENIED', { exact: true })).not.toBeVisible();
+  await support.getByText('ข้อมูลสำหรับแจ้งปัญหา', { exact: true }).click();
+  await expect(support).toContainText('TOOL_DENIED');
   assert.equal(
     (await readFile(calls, 'utf8'))
       .trim()

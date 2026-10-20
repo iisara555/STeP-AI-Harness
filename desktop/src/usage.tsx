@@ -267,7 +267,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
                 <thead>
                   <tr>
                     <th>{t('วันที่')}</th>
-                    <th>{t('โมเดล')}</th>
+                    <th>{t('รุ่น AI')}</th>
                     <th>{t('โทเคน')}</th>
                     <th>{t('ค่าใช้จ่าย (USD)')}</th>
                   </tr>

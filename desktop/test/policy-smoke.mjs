@@ -82,7 +82,7 @@ try {
   assert.equal((await page.evaluate(() => window.policyApply)).result, null);
   await apply(change.id);
   await approval.getByRole('checkbox').check();
-  await approval.getByRole('button', { name: 'อนุญาตใน workspace นี้', exact: true }).click();
+  await approval.getByRole('button', { name: 'จำการอนุญาตในโฟลเดอร์นี้', exact: true }).click();
   await page.waitForFunction(() => window.policyApply.done);
   assert.equal(await readFile(join(workspace, 'notes.md'), 'utf8'), 'Reviewed synthetic content');
   const next = await page.evaluate(() => window.step.call('toolStage', { path: 'notes.md', content: 'Second reviewed content' }));

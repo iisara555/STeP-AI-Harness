@@ -402,7 +402,7 @@ export function LearningDialog({
                     value={skillFor[l.id] || ''}
                     onChange={e => setSkillFor({ ...skillFor, [l.id]: e.target.value })}
                   >
-                    <option value="">{t('เลือก Skill')}</option>
+                    <option value="">{t('เลือกตัวช่วยงาน')}</option>
                     {skills.map(skill => (
                       <option key={skill.name} value={skill.name}>
                         {skill.title || skill.name}

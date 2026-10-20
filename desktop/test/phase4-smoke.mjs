@@ -217,7 +217,7 @@ try {
   await page.getByPlaceholder('พิมพ์เพื่อค้นหางานหรือคำสั่ง…').fill('MCP');
   await page.keyboard.press('Enter');
   const tools = page.getByRole('alertdialog', { name: 'เครื่องมือเพิ่มเติม (MCP และ Docker)' });
-  await tools.getByText('เครื่องมือ MCP', { exact: true }).click();
+  await tools.getByText('บริการเสริม', { exact: true }).click();
   await tools.getByLabel('MCP server', { exact: true }).selectOption('fixture');
   await tools.getByRole('button', { name: 'ทดสอบ Google Workspace · fixture', exact: true }).click();
   await approve('ค้นหา MCP?');

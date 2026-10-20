@@ -69,13 +69,13 @@ try {
   // Employees find Antigravity among the services, not only in the administrators' form.
   await page.getByRole('radio', { name: /Gemini ผ่าน Antigravity/ }).click();
   await page.getByText('ตัวเลือก Antigravity', { exact: true }).click();
-  assert.equal(await page.getByLabel('โมเดล', { exact: true }).inputValue(), 'gemini-3.8-flash-medium');
+  assert.equal(await page.getByLabel('รุ่น AI', { exact: true }).inputValue(), 'gemini-3.8-flash-medium');
   assert.equal(await page.getByLabel(/API key/).count(), 0);
   await expect(page.getByRole('button', { name: 'วิธีติดตั้งและลงชื่อเข้าใช้ Antigravity' })).toBeVisible();
   await page.getByRole('button', { name: 'ตั้งค่าขั้นสูงสำหรับผู้ดูแล' }).click();
   await page.getByRole('combobox', { name: /ผู้ให้บริการ/ }).selectOption('antigravity');
   assert.equal(await page.getByRole('combobox', { name: /วิธีเชื่อมต่อ/ }).inputValue(), 'subscription');
-  assert.equal(await page.getByLabel('API key', { exact: true }).count(), 0);
+  assert.equal(await page.getByLabel('รหัสเชื่อมต่อ (API key)', { exact: true }).count(), 0);
   assert.equal(await page.getByLabel(/Google Cloud Project ID/).count(), 0);
   assert.equal(await page.getByLabel('โมเดล Gemini').inputValue(), 'gemini-3.8-flash-medium');
   await expect(page.getByText(/ปิดเครื่องมือของ Antigravity ทั้งหมด/)).toBeVisible();

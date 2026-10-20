@@ -80,7 +80,8 @@ test('self-contained language tasks reduce real harness input by over 60% while 
       const session = f.store.session(f.session.id),
         call = f.captured[0];
       assert.equal(session.status, 'review', query);
-      assert.ok(tokens(call.system + call.prompt) < baseline * 0.4, query);
+      const sent = tokens(call.system + call.prompt);
+      assert.ok(sent < baseline * 0.4, `${query}: ${sent} tokens; limit ${baseline * 0.4}`);
       assert.deepEqual({ ...f.counts(), documents: 0 }, { catalogs: 0, documents: 0, hosts: 0 });
       assert.ok(call.prompt.includes(query));
       assert.ok(call.system.indexOf('<standing_governance>') >= 0);

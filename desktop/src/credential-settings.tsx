@@ -35,7 +35,7 @@ const words = {
     'บัญชีและที่อยู่ที่จำไว้กรอกอัตโนมัติเฉพาะเว็บไซต์ที่กำหนด รหัสผ่านไม่เข้าแชต',
     'Saved logins and addresses fill automatically on their exact sites. Passwords never enter chat.',
   ],
-  disabled: ['ผู้ดูแลยังไม่ได้เปิดใช้ Vault สำหรับเครื่องนี้', 'The administrator has not enabled Vault on this device.'],
+  disabled: ['เครื่องนี้ยังไม่เปิดใช้การบันทึกข้อมูลบัญชี', 'The administrator has not enabled Vault on this device.'],
   conflict: [
     'เมื่อมีข้อมูลใน Vault แอปจะปิดการรันคำสั่ง โค้ด และเครื่องมือในเครื่องที่อาจเข้าถึงรหัสผ่าน การพัก Vault ไม่เปิดสิทธิ์เหล่านี้กลับ',
     'Stored Vault credentials block host commands, custom runtimes and local executable tools. Pausing Vault keeps that protection.',
@@ -61,7 +61,7 @@ const words = {
     'พิมพ์ username ใหม่เพื่อแก้ไข ค่าที่บันทึกแล้วไม่ถูกอ่านกลับเข้าหน้าจอ',
     'Enter the username to edit. Saved values are not read back into this screen.',
   ],
-  keys: ['API keys จัดการผ่านหน้าการเชื่อมต่อ AI', 'Manage API keys in AI connections'],
+  keys: ['จัดการรหัสเชื่อมต่อ (API key) ที่หน้า “การเชื่อมต่อ AI”', 'Manage API keys in AI connections'],
   googleIntro: [
     'ให้ AI ช่วยค้นเมล ดูนัด และหาไฟล์ในบัญชี Google ของงานคุณ',
     'Let the AI search your mail, check your calendar and find files in your work Google account.',

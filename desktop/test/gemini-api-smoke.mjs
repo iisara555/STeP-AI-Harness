@@ -146,7 +146,7 @@ try {
     const add = page.getByText('เพิ่ม AI อีกบัญชี', { exact: true });
     if ((await add.count()) && !(await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).isVisible())) await add.click();
     await page.getByRole('radio', { name: /^Gemini(?! ผ่าน)/ }).click();
-    await page.getByLabel('Gemini API key').fill('synthetic-gemini-key-for-smoke');
+    await page.getByLabel('Gemini รหัสเชื่อมต่อ (API key)').fill('synthetic-gemini-key-for-smoke');
     await page.getByRole('button', { name: 'เชื่อมต่อ Gemini', exact: true }).click();
   };
   await page.keyboard.press('ControlOrMeta+,');

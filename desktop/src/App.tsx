@@ -1344,13 +1344,13 @@ export default function App() {
         ...routedSkills.map(s => ({
           id: 'skill-' + s.name,
           group: 'Skill',
-          label: t('ใช้ Skill: ') + s.title,
+          label: t('ใช้ตัวช่วยงาน: ') + s.title,
           hint: '/' + s.name,
           run: () => useSkill(s.name),
         })),
         ...(connection?.models || []).map(m => ({
           id: 'model-' + m.id,
-          group: t('โมเดล'),
+          group: t('รุ่น AI'),
           label: t('ใช้ ') + m.label,
           hint: m.id === currentModel ? t('ใช้อยู่') : providerName(connection),
           run: () => action(() => chooseModel(m.id)),
@@ -1413,7 +1413,7 @@ export default function App() {
         : view === 'receipt'
           ? t('ตรวจใบเสร็จ AFP')
           : view === 'skills'
-            ? t('ศูนย์รวม Skill')
+            ? t('ตัวช่วยงาน')
             : view === 'schedules'
               ? t('งานตั้งเวลา')
               : session?.title || t('เริ่มต้นงานที่อยากทำ');
@@ -1618,14 +1618,14 @@ export default function App() {
               <button
                 data-tour="skills"
                 className={view === 'skills' && !settings ? 'nav-active' : ''}
-                title={toolsOpen ? undefined : t('ศูนย์รวม Skill')}
+                title={toolsOpen ? undefined : t('ตัวช่วยงาน')}
                 onClick={() => {
                   setSettings(false);
                   navigate('skills');
                 }}
               >
                 <Blocks size={17} />
-                <span className="nav-label">{t('ศูนย์รวม Skill')}</span>
+                <span className="nav-label">{t('ตัวช่วยงาน')}</span>
                 <span className="count">{staffSkills ? staffSkills.length + toolCount : ''}</span>
               </button>
               <button
@@ -1798,13 +1798,13 @@ export default function App() {
                 {settings
                   ? t('บัญชี AI และข้อมูลอยู่ในเครื่องนี้')
                   : view === 'documents'
-                    ? t('กรอกข้อมูลหรือต้นเรื่อง ให้ AI ร่างด้วย Skill แล้วแก้ไขและส่งออก')
+                    ? t('ใส่ข้อมูลหรือแนบต้นเรื่อง ให้ AI ช่วยร่าง แล้วตรวจแก้ก่อนส่งออก')
                     : view === 'media'
                       ? t('สร้าง Prompt ภาพสำหรับสื่อสารภายใน ตามสีองค์กรและห้ามสร้างโลโก้')
                       : view === 'receipt'
                         ? t('ทดลอง · อ่านใบเสร็จด้วย OCR ในเครื่อง แล้วให้คุณตรวจก่อนส่ง')
                         : view === 'skills'
-                          ? t('ค้นหา Skill และเครื่องมือ พร้อมดูว่ารายการใดเรียกใช้ได้')
+                          ? t('ค้นหาตัวช่วยงานและดูว่ารายการใดพร้อมใช้')
                           : view === 'schedules'
                             ? t('ให้ผู้ช่วยทำงานซ้ำตามเวลา ผลเป็นร่างให้คุณตรวจ')
                             : session?.project || t('จากคำขอ สู่ผลงานที่ใช้ต่อได้')}
@@ -1914,7 +1914,7 @@ export default function App() {
                     `<imported_asset label="${asset.label}" trust="untrusted">\n${asset.text.replace(/</g, '&lt;')}\n</imported_asset>`,
                   );
                   navigate('chat');
-                  notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
+                  notify(t('เพิ่มข้อมูลจากชุดตัวช่วยงานแล้ว ตรวจบริการปลายทางก่อนส่ง'));
                 })
               }
             />
@@ -1951,7 +1951,7 @@ export default function App() {
                     {session.compaction && (
                       <span className="muted small">
                         {t(
-                          'ย่อบริบทแล้ว {0} → {1} tokens (ประมาณการ)',
+                          'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} หน่วยข้อความ (ประมาณการ)',
                           session.compaction.before.toLocaleString(locale()),
                           session.compaction.after.toLocaleString(locale()),
                         )}
@@ -2017,7 +2017,7 @@ export default function App() {
                       </li>
                       <li>
                         <Blocks size={14} />
-                        {t('รู้จักทีมและ Skill ของ STeP')}
+                        {t('รู้จักทีมและตัวช่วยงานของ STeP')}
                       </li>
                     </ul>
                   </div>
@@ -2310,10 +2310,13 @@ export default function App() {
                       </button>
                     )}
                     {/^[A-Z_]+$/.test(failureCode) && (
-                      <span className="small muted retry-code">{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</span>
+                      <details className="small muted retry-code">
+                        <summary>{t('ข้อมูลสำหรับแจ้งปัญหา')}</summary>
+                        <p>{t('รหัสสำหรับแจ้งผู้ดูแล: {0}', failureCode)}</p>
+                      </details>
                     )}
                     {(connection?.models?.length || 0) > 1 && (
-                      <span className="small muted">{t('หรือเลือกโมเดลอื่นในกล่องพิมพ์ก่อนลองใหม่')}</span>
+                      <span className="small muted">{t('หรือเลือกรุ่น AI อื่นที่ช่องพิมพ์แล้วลองใหม่')}</span>
                     )}
                   </div>
                 )}
@@ -2429,7 +2432,7 @@ export default function App() {
                             onChange={e => setImageModel(e.target.value)}
                             disabled={running}
                           >
-                            <option value="">{availableImages[0] || t('กำลังตรวจโมเดลของบัญชี…')}</option>
+                            <option value="">{availableImages[0] || t('กำลังดูรุ่น AI ที่บัญชีนี้ใช้ได้…')}</option>
                             {availableImages.map(id => (
                               <option key={id} value={id}>
                                 {id}
@@ -2477,7 +2480,7 @@ export default function App() {
                   {suggested && (
                     <div className="skill-chip skill-suggestion" role="status">
                       <Blocks size={13} />
-                      <span>{t('งานนี้มี Skill ที่ช่วยได้:')}</span>
+                      <span>{t('ตัวช่วยที่เหมาะกับงานนี้:')}</span>
                       <button
                         className="quiet"
                         title={suggested.description}
@@ -2487,11 +2490,11 @@ export default function App() {
                           composerRef.current?.focus();
                         }}
                       >
-                        {t('ลองใช้ Skill: {0}', suggested.title)}
+                        {t('ลองใช้ตัวช่วย: {0}', suggested.title)}
                       </button>
                       <button
                         className="icon"
-                        aria-label={t('ไม่ใช้ Skill ที่แนะนำ')}
+                        aria-label={t('ไม่ใช้ตัวช่วยที่แนะนำ')}
                         onClick={() => {
                           setDismissedSkills(list => [...list, suggested.name]);
                           setSuggestedSkill('');
@@ -2504,15 +2507,15 @@ export default function App() {
                   {forced && (
                     <div className="skill-chip">
                       <Blocks size={13} />
-                      {t('ใช้ Skill:')} <strong>{forced.title}</strong>
+                      {t('ใช้ตัวช่วยงาน:')} <strong>{forced.title}</strong>
                       <code>/{forced.name}</code>
-                      <button className="icon" aria-label={t('เลิกใช้ Skill นี้')} onClick={() => setForcedSkill('')}>
+                      <button className="icon" aria-label={t('เลิกใช้ตัวช่วยนี้')} onClick={() => setForcedSkill('')}>
                         <X size={13} />
                       </button>
                     </div>
                   )}
                   {slashMatches.length > 0 && (
-                    <div className="slash-menu" role="listbox" aria-label={t('เลือก Skill')}>
+                    <div className="slash-menu" role="listbox" aria-label={t('เลือกตัวช่วยงาน')}>
                       {slashMatches.map((s, i) => (
                         <button
                           key={s.name}
@@ -2595,7 +2598,7 @@ export default function App() {
                         ? t('บอกงานสำหรับ {0}…', forced.title)
                         : session?.documentTool && workMode === 'draft'
                           ? t('พิมพ์สิ่งที่อยากแก้ในเอกสารนี้ เช่น ระยะเวลาดำเนินการ 90 วัน หรือถามเกี่ยวกับร่างได้')
-                          : t('พิมพ์สิ่งที่อยากให้ช่วย… หรือพิมพ์ / เพื่อเลือก Skill')
+                          : t('พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือกตัวช่วยงาน')
                     }
                     value={query}
                     onChange={e => {
@@ -2802,7 +2805,7 @@ export default function App() {
                         type="button"
                         className="pill-select ai-picker-button"
                         data-tour="model"
-                        aria-label={t('เลือก AI โมเดล และระดับการคิด')}
+                        aria-label={t('เลือกบริการ รุ่น AI และระดับการคิด')}
                         aria-expanded={aiPicker}
                         title={aiSummary}
                         disabled={running}
@@ -2834,12 +2837,12 @@ export default function App() {
                           </label>
                           {connection && (
                             <label>
-                              {t('โมเดล')}
+                              {t('รุ่น AI')}
                               <select
-                                aria-label={t('เลือกโมเดล')}
+                                aria-label={t('เลือกรุ่น AI')}
                                 title={
                                   connection.models?.find(m => m.id === currentModel)?.description ||
-                                  t('โมเดลที่ใช้กับงานนี้ เปลี่ยนได้ทุกเมื่อ')
+                                  t('รุ่น AI สำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ')
                                 }
                                 value={currentModel}
                                 disabled={running}
@@ -2939,13 +2942,13 @@ export default function App() {
               <span
                 className="status-item"
                 title={t(
-                  'ส่งเข้า {0} · ตอบกลับ {1} token จาก {2} รอบ',
+                  'ข้อความที่ส่ง {0} หน่วย · คำตอบ {1} หน่วย จาก {2} ครั้ง',
                   session.usage.input.toLocaleString(locale()),
                   session.usage.output.toLocaleString(locale()),
                   session.usage.runs,
                 )}
               >
-                {t('{0} โทเคน', formatTokens(session.usage.total))}
+                {t('{0} หน่วยข้อความ', formatTokens(session.usage.total))}
               </span>
             )}
             <button className="status-item status-button" data-tour="palette" onClick={() => setPalette(true)}>
@@ -3650,7 +3653,7 @@ export default function App() {
             onClose={() => setPacksOpen(false)}
             onSelect={text => {
               setPendingSource(text);
-              notify(t('เพิ่มข้อมูลจาก Skill Pack แล้ว ตรวจปลายทางก่อนส่ง'));
+              notify(t('เพิ่มข้อมูลจากชุดตัวช่วยงานแล้ว ตรวจบริการปลายทางก่อนส่ง'));
             }}
           />
         )}

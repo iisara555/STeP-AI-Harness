@@ -11,6 +11,108 @@ import { skillSuggestEn } from './skill-suggest-en';
 import { morningBriefEn } from './morning-brief-en';
 import { uiReviewEn } from './ui-review-en';
 export const en: Record<string, string> = {
+  'ให้ผู้ช่วยเปิดเว็บไซต์นี้?': 'Let the assistant open this website?',
+  'ให้ผู้ช่วยกรอกข้อมูลนี้?': 'Let the assistant fill in this data?',
+  'ให้ผู้ช่วยคลิกจุดนี้?': 'Let the assistant click this target?',
+  'ให้ผู้ช่วยกดขั้นสุดท้ายนี้?': 'Let the assistant press this final step?',
+
+  'เลือกบริการ รุ่น AI และระดับการคิด': 'Choose an AI service, model and reasoning level',
+  'เลือกโฟลเดอร์ตัวช่วยงาน ระบบตรวจรูปแบบและจุดเสี่ยงก่อนเปิดใช้':
+    'Choose a helper folder; its format and potential risks are checked before use',
+  'Antigravity และ ChatGPT ลงชื่อด้วยบัญชีได้ ไม่ต้องกรอกรหัสเชื่อมต่อ':
+    'Sign in to Antigravity or ChatGPT with an account; no API key is needed',
+
+  'ค้นหาตัวช่วยงาน ทีม หรือคำที่ใช้เรียก': 'Search work helpers, teams or keywords',
+  เพิ่มตัวช่วยงานของฉัน: 'Add my work helper',
+  ตัวช่วยงานของฉัน: 'My work helpers',
+  ตัวช่วยงานที่พนักงานเพิ่ม: 'Staff-added helper',
+  ใช้ตัวช่วยนี้: 'Use this helper',
+  'เลือกโฟลเดอร์ตัวช่วยงาน ระบบจะตรวจไฟล์ก่อนเปิดใช้': 'Choose a helper folder; files are checked before use',
+  เครื่องนี้ยังไม่เปิดใช้การบันทึกข้อมูลบัญชี: 'Credential storage is not enabled on this device',
+  'จัดการรหัสเชื่อมต่อ (API key) ที่หน้า “การเชื่อมต่อ AI”': 'Manage API keys in AI connections',
+  'รหัสเชื่อมต่อ (API key)': 'API key',
+  'รหัสเชื่อมต่อ (API key, ไม่บังคับ)': 'API key (optional)',
+  'Gemini รหัสเชื่อมต่อ (API key)': 'Gemini API key',
+  'ใช้รุ่น AI แรกที่บริการมี': 'Use the first available AI model',
+  'ขอรหัสเชื่อมต่อจาก {0}': 'Get an API key from {0}',
+  '{0} รหัสเชื่อมต่อ (API key)': '{0} API key',
+  'ตัวช่วยงาน (Skill) รวมวิธีทำงานแต่ละแบบ เลือกรายการที่พร้อมใช้ หรือพิมพ์งานตามปกติได้':
+    'Work helpers (Skills) provide procedures for different tasks. Choose an available helper or describe your task as usual.',
+
+  'อ่านเนื้อหาหน้าเว็บนี้ไม่ได้ ลองส่งลิงก์อื่นหรือแนบไฟล์ต้นฉบับ':
+    'This page could not be read. Try another link or attach the source file.',
+  'หน้าเว็บเปลี่ยนระหว่างรออนุญาต เปิดอ่านหน้าเว็บอีกครั้งก่อนส่งข้อมูล':
+    'The page changed while permission was pending. Read it again before sending data.',
+  'ยังบันทึกข้อมูลบัญชีไม่ได้ ตรวจว่าปลดล็อกเครื่องแล้วลองใหม่ หากยังไม่ได้ให้แจ้งผู้ดูแล':
+    'Account details could not be saved. Check that the computer is unlocked and retry; contact support if it continues.',
+  'ได้รับคำตอบจาก AI ไม่ครบ ลองอีกครั้ง': 'The AI response was incomplete. Try again.',
+  'อ่านคำตอบจาก AI ไม่สำเร็จ ลองอีกครั้ง': 'The AI response could not be read. Try again.',
+  'ยังเชื่อมต่อ AI ผ่านเครือข่ายองค์กรไม่ได้ ให้ผู้ดูแลตรวจการเชื่อมต่อ':
+    'The organization network connection to AI is unavailable. Ask support to check it.',
+  'องค์กรยังไม่อนุญาตบริการ AI นี้ เลือกบริการที่เปิดใช้หรือแจ้งผู้ดูแล':
+    'This AI service is not allowed by your organization. Choose an available service or contact support.',
+  'ชุดตัวช่วยงานนี้ยังไม่ได้รับรอง ให้ผู้ดูแลตรวจและเปิดใช้ก่อน': 'This helper pack needs administrator review and approval before use.',
+  'ทำงานครบขอบเขตคำขอนี้แล้ว ตรวจ “รายการแก้ไข” และ “งานเบื้องหลัง” แล้วพิมพ์ “ต่อ” เพื่อทำงานต่อ':
+    'This request reached its work limit. Review Changes and Background tasks, then type Continue.',
+  องค์กรปิดการทำงานด้วยเครื่องมืออัตโนมัติไว้: 'Automatic tool use is disabled by your organization.',
+  'การเชื่อมต่อนี้ใช้เครื่องมือที่ AI ขอไม่ได้ เลือกรุ่น AI อื่น หรือแนบข้อมูลให้ช่วยสรุป':
+    'This connection cannot use the requested tool. Choose another AI model or attach source material to summarize.',
+  'ตัวช่วยงานนี้ยังเปิดใช้ในแชตไม่ได้ เลือกตัวช่วยอื่น': 'This work helper is not available in chat. Choose another helper.',
+  'บัญชีนี้ใช้รุ่น AI ที่เลือกไม่ได้ เลือกรุ่นอื่นที่ช่องพิมพ์':
+    'Your account cannot use this AI model. Choose another model in the composer.',
+  'บัญชีนี้ถึงขีดจำกัดการใช้ AI หรือถูกจำกัดชั่วคราว ลองใหม่ภายหลัง หรือเลือกรุ่นอื่น':
+    'Your account reached an AI usage limit or is temporarily restricted. Try later or choose another model.',
+  'การสนทนากับ AI ขาดช่วง และเชื่อมต่อใหม่ยังไม่สำเร็จ กด “ลองอีกครั้ง”':
+    'The AI conversation was interrupted and reconnecting did not succeed. Select Try again.',
+  'การเชื่อมต่อ AI หยุดกลางคัน ลองเชื่อมต่ออีกครั้ง': 'The AI connection stopped unexpectedly. Try connecting again.',
+  'ยังดูรุ่น AI ที่บัญชีนี้ใช้ได้ไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองใหม่':
+    'Available AI models could not be loaded. Check the connection and retry.',
+  ข้อมูลสำหรับแจ้งปัญหา: 'Support details',
+
+  เลือกตัวช่วยงาน: 'Choose a work helper',
+  ตัวช่วยงาน: 'Work helpers',
+  'ใช้ตัวช่วยงาน: ': 'Work helper: ',
+  'ใช้ตัวช่วยงาน:': 'Work helper:',
+  เลิกใช้ตัวช่วยนี้: 'Stop using this helper',
+  'ตัวช่วยที่เหมาะกับงานนี้:': 'A helper for this task:',
+  'ลองใช้ตัวช่วย: {0}': 'Try helper: {0}',
+  ไม่ใช้ตัวช่วยที่แนะนำ: 'Dismiss this helper',
+  'พิมพ์งานที่อยากให้ช่วย หรือพิมพ์ / เพื่อเลือกตัวช่วยงาน': 'Describe your task, or type / to choose a helper',
+  'รู้จักทีมและตัวช่วยงานของ STeP': 'STeP teams and work helpers',
+  ค้นหาตัวช่วยงานและดูว่ารายการใดพร้อมใช้: 'Find work helpers and see which are available',
+  'ใส่ข้อมูลหรือแนบต้นเรื่อง ให้ AI ช่วยร่าง แล้วตรวจแก้ก่อนส่งออก': 'Add details or a source, let AI draft, then review before exporting',
+  'เพิ่มข้อมูลจากชุดตัวช่วยงานแล้ว ตรวจบริการปลายทางก่อนส่ง': 'Helper-pack data added. Check the recipient before sending',
+  'รุ่น AI': 'AI model',
+  'เลือกรุ่น AI': 'Choose an AI model',
+  'กำลังดูรุ่น AI ที่บัญชีนี้ใช้ได้…': 'Checking available AI models\u2026',
+  'รุ่น AI สำหรับงานนี้ เปลี่ยนได้ทุกเมื่อ': 'AI model for this task; you can change it anytime',
+  'เลือกบริการและรุ่น AI': 'Choose an AI service and model',
+  'หรือเลือกรุ่น AI อื่นที่ช่องพิมพ์แล้วลองใหม่': 'Or choose another AI model in the composer and retry',
+  'รุ่น AI และการจัดการบัญชี': 'AI models and account management',
+  'รุ่น AI สำหรับงานใหม่': 'AI model for new tasks',
+  'ดูรุ่น AI ที่ใช้ได้': 'Check available AI models',
+  เลิกใช้โปรแกรมเชื่อมต่อที่เลือกเอง: 'Stop using the custom connection program',
+  'Antigravity และ ChatGPT ใช้บัญชีที่มีอยู่ลงชื่อเข้าใช้ได้': 'Sign in to Antigravity or ChatGPT with your existing account',
+  จำการอนุญาตในโฟลเดอร์นี้: 'Remember permission for this folder',
+  จำการอนุญาตเฉพาะเครื่องมือและปลายทางนี้ในโฟลเดอร์นี้: 'Remember permission for this tool and destination in this folder',
+  อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ: 'Allow this scope until this request ends',
+  ไม่ถามซ้ำสำหรับข้อมูลกลุ่มนี้จนจบคำขอ: 'Do not ask again for this data scope until the request ends',
+  '· ผลตรวจข้อมูลเบื้องต้น:': '\u00b7 Preliminary data check:',
+  บริการเสริม: 'Connected service',
+  ค้นบริการเสริม: 'Find a connected service',
+  พื้นที่ทดสอบแยก: 'Isolated test area',
+  กำลังเตรียมงาน: 'Preparing your task',
+  'ข้อความที่ส่ง {0} หน่วย · คำตอบ {1} หน่วย จาก {2} ครั้ง': 'Input {0} text units \u00b7 Output {1} text units from {2} calls',
+  '{0} หน่วยข้อความ': '{0} text units',
+  'ย่อข้อมูลประกอบแล้ว จาก {0} เหลือ {1} หน่วยข้อความ (ประมาณการ)': 'Supporting context reduced from {0} to {1} text units (estimated)',
+  บันทึกและใช้ข้อมูลบัญชี: 'Save and use account credentials',
+  เลือกตัวช่วยงานและถามข้อมูลที่ขาดให้อัตโนมัติ: 'Choose a work helper and ask for missing details automatically',
+  เลือกตัวช่วยที่เหมาะกับงานก่อนตอบ: 'Choose a suitable helper before answering',
+  แนะนำตัวช่วยงานเหนือช่องพิมพ์: 'Suggest work helpers above the composer',
+  ใช้ตัวช่วยงานที่ทำเองได้เมื่อตรวจผ่าน: 'Use your own work helpers after they pass review',
+  'ตรวจข้อมูลที่จำ บทเรียน และตัวช่วยงานทุกวัน': 'Check saved memories, lessons and work helpers daily',
+  'สวัสดีครับ{0} {1} พร้อมช่วยงานครับ ต้องการให้ช่วยเรื่องใด': 'Hello{0}, {1} is ready. What would you like help with?',
+
   กลับมาใช้ข้อมูลบัญชี: 'Resume credential access',
   'ส่งข้อมูลจาก Google ให้ AI': 'Send Google data to AI',
   รหัสผ่านหลักของตัวจัดการรหัสผ่าน: 'Password manager master password',
