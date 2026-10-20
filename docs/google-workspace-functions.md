@@ -22,6 +22,11 @@ runtime source of supported operations; never invent IDs or turn account content
 
 ## Connection and intent
 
+The release offers all 11 supported families (17 permission choices), including Calendar event creation, Chat and Meet.
+An existing device policy can replace that list. Settings names the permissions that policy restricts instead of
+implying they are absent from the installer. An app update cannot widen a managed allowlist or an existing account
+grant; an administrator updates policy, then the employee uses **Change allowed services** on the existing account.
+
 Settings → Passwords and connections → Google Workspace offers the service choices allowed by policy. Drive and
 Calendar each have one card with an access selector. Separate Docs/Sheets/Slides choices replace the legacy combined
 card when all three are available; existing app-managed `documents` grants remain valid.

@@ -33,15 +33,20 @@ try {
     'slides',
     'forms',
     'appscript',
+    'calendar',
+    'chat',
+    'meet',
   ])
     assert.ok(native.services.includes(service), service);
   await app.evaluate(({ ipcMain }, state) => {
     const original = ipcMain._invokeHandlers.get('step:call');
     globalThis.googleServiceCalls = [];
+    globalThis.googleAllowedServices = [...state.services];
     let accounts = [];
     ipcMain.removeHandler('step:call');
     ipcMain.handle('step:call', async (event, method, input) => {
-      if (method === 'googleState') return { ...state, clientPreconfigured: true, clientSecretConfigured: true, accounts };
+      if (method === 'googleState')
+        return { ...state, services: globalThis.googleAllowedServices, clientPreconfigured: true, clientSecretConfigured: true, accounts };
       if (method === 'googleConnect') {
         globalThis.googleServiceCalls.push(structuredClone(input));
         accounts = [
@@ -115,9 +120,22 @@ try {
   await setCard(services.getByRole('checkbox', { name: /^Google Apps Script/ }), false);
   await expect(services.getByRole('checkbox', { name: /^Google Apps Script/ })).not.toBeChecked();
   await page.screenshot({ path: 'release/qa/google-services/narrow-dark-english.png' });
+  await expect(page.locator('.google-admin')).toHaveCount(0);
+  await app.evaluate(() => {
+    globalThis.googleAllowedServices = ['documents', 'calendar-read', 'tasks', 'calendar'];
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Passwords and connections', exact: true }).click();
+  const restricted = page.locator('.google-admin');
+  await expect(restricted).toContainText('restricted by this device');
+  for (const name of ['Google Forms', 'Google Apps Script', 'Google Chat', 'Google Meet']) await expect(restricted).toContainText(name);
+  await expect(services.getByRole('checkbox', { name: /^Google Forms/ })).toHaveCount(0);
+  await expect(page.getByText(/Updating the app does not add account permissions/)).toBeVisible();
+  await page.screenshot({ path: 'release/qa/google-services/restricted-policy.png' });
   assert.deepEqual(errors, []);
   console.log(
-    'Google services smoke passed: native defaults for seven families, explicit Gmail send, one Drive/Calendar card, account-bound service upgrades, English and narrow/dark settings. Synthetic OAuth only.',
+    'Google services smoke passed: native defaults for all eleven supported families, restricted-policy diagnostics, explicit Gmail send, one Drive/Calendar card, account-bound service upgrades, English and narrow/dark settings. Synthetic OAuth only.',
   );
 } finally {
   clearTimeout(deadline);
