@@ -147,7 +147,8 @@ try {
   let s = await current();
   assert.deepEqual(s.proposals[0].document.content.slice(-2), before.document.content.slice(-2));
   await page.evaluate(({ id, proposalId }) => window.step.call('accept', { id, proposalId }), { id, proposalId: s.proposals[0].id });
-  await send('ปรับภาษาให้ชัดขึ้น LONG_RUNNING_FIXTURE');
+  await page.locator('.composer textarea').fill('ปรับภาษาให้ชัดขึ้น LONG_RUNNING_FIXTURE');
+  await page.locator('.composer textarea').press('Enter');
   await expect.poll(async () => (await current()).status).toBe('running');
   await expect(page.getByRole('button', { name: 'หยุดงาน', exact: true })).toBeVisible();
   await page.locator('.composer textarea').fill('อธิบายเป้าหมายให้ฟังหน่อย');
