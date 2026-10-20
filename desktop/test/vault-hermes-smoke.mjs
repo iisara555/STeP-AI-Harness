@@ -146,8 +146,26 @@ try {
   await page.reload();
   await page.evaluate(() => {
     window.vaultAudit = [];
+    window.vaultPromptEvents = [];
     window.step.onEvent(event => {
       if (event.type === 'approval') window.vaultAudit.push(event.approval.title);
+      if (event.type.startsWith('vault-prompt'))
+        window.vaultPromptEvents.push({ type: event.type, id: event.vaultPrompt?.id, kind: event.vaultPrompt?.kind });
+    });
+  });
+  await app.evaluate(({ ipcMain }) => {
+    const original = ipcMain._invokeHandlers.get('step:call');
+    globalThis.vaultPromptResponses = [];
+    ipcMain.removeHandler('step:call');
+    ipcMain.handle('step:call', async (event, method, input) => {
+      if (method === 'vaultPromptRespond')
+        globalThis.vaultPromptResponses.push({
+          id: input.id,
+          hasUsername: Boolean(input.value?.username),
+          hasPassword: Boolean(input.value?.password),
+          hasCode: Boolean(input.value?.code),
+        });
+      return original(event, method, input);
     });
   });
   const errors = [];
@@ -258,6 +276,12 @@ try {
 } catch (error) {
   if (app) {
     const page = await app.firstWindow();
+    console.log(
+      'Prompt lifecycle diagnostics',
+      await page.evaluate(() => window.vaultPromptEvents),
+      await app.evaluate(() => globalThis.vaultPromptResponses),
+      { logins, codes },
+    );
     const snapshot = await page.evaluate(() => window.step.call('snapshot'));
     console.log(JSON.stringify(snapshot.sessions.map(s => ({ status: s.status, messages: s.messages, trace: s.trace }))).slice(-7000));
   }
