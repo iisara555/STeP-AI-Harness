@@ -6,6 +6,13 @@ export type ReleaseNote = { version: string; items: () => string[] };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '0.6.18',
+    items: () => [
+      t('ปรับการรับคำตอบ Gemini ผ่าน Antigravity ก่อนเรียก Google Workspace ให้ใช้ผลสุดท้ายที่ตรวจแล้วเมื่อข้อความชั่วคราวถูกปรับ'),
+      t('เพิ่มรายละเอียดขั้นตอนเมื่อ Antigravity ส่งข้อมูลผิดรูปแบบ โดยไม่บันทึกคำถามหรือข้อมูล Google'),
+    ],
+  },
+  {
     version: '0.6.17',
     items: () => [
       t('เลือกสิทธิ์เต็มทุกบริการ Google Workspace ได้เอง ไม่ต้องตั้งค่าจาก IT รายเครื่อง บัญชีเดิมต้องยืนยันสิทธิ์เพิ่มกับ Google'),
