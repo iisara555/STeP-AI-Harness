@@ -168,8 +168,13 @@ export function runAntigravity(
       clearTimeout(timer);
       clearTimeout(shutdown);
       options.signal?.removeEventListener('abort', abort);
-      if (error) reject(Object.assign(error, { detail: [...tail, ...((error as any).detail || [])].slice(-8) }));
-      else resolveRun({ output, tail });
+      if (error) {
+        const detail: unknown = (error as any).detail;
+        const stages = Array.isArray(detail)
+          ? detail.filter(line => typeof line === 'string' && /^Antigravity protocol: [a-z-]+$/.test(line))
+          : [];
+        reject(Object.assign(error, { detail: [...tail, ...stages].slice(-8) }));
+      } else resolveRun({ output, tail });
     };
     const fail = (error: Error) => {
       if (failed || settled) return;

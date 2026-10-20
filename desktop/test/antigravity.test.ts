@@ -4,7 +4,14 @@ import { lstat, mkdir, mkdtemp, readFile, writeFile, readdir, rm, stat } from 'n
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { AntigravityAdapter, ANTIGRAVITY_DENY, antigravityHome, antigravityModels, antigravityUsage } from '../electron/antigravity';
+import {
+  AntigravityAdapter,
+  ANTIGRAVITY_DENY,
+  antigravityHome,
+  antigravityModels,
+  antigravityUsage,
+  runAntigravity,
+} from '../electron/antigravity';
 import { adapter, listModels } from '../electron/providers';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import { checkRuntime } from '../electron/runtimes';
@@ -342,6 +349,29 @@ test('Antigravity protocol failures retain a fixed diagnostic stage without requ
     } finally {
       await f.close();
     }
+  }
+});
+
+test('Antigravity transport preserves only fixed protocol stages from thrown callback details', async () => {
+  for (const detail of [{ private: 'synthetic-private-detail' }, ['synthetic-private-detail', 'Antigravity protocol: json']]) {
+    await assert.rejects(
+      runAntigravity(
+        process.execPath,
+        ['-e', "console.log('synthetic')"],
+        { cwd: tmpdir(), env: { ...process.env } },
+        {
+          line: () => {
+            throw Object.assign(new Error('PROVIDER_STREAM_INVALID'), { detail });
+          },
+        },
+      ),
+      error => {
+        assert.equal((error as Error).message, 'PROVIDER_STREAM_INVALID');
+        assert.deepEqual((error as any).detail, Array.isArray(detail) ? ['Antigravity protocol: json'] : []);
+        assert.doesNotMatch(JSON.stringify(error), /synthetic-private-detail/);
+        return true;
+      },
+    );
   }
 });
 
