@@ -768,9 +768,12 @@ nav button,
 .work-plan-hint {
   margin: 8px 0 0;
 }
+.work-plan-actions .work-plan-run {
+  margin: 0;
+}
 .credential-form.vault-prompt-form {
   grid-template-columns: minmax(0, 1fr);
-  padding: 0;
+  padding: 4px;
   border: 0;
 }
 .credential-form .credential-check,
