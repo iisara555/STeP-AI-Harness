@@ -11,23 +11,21 @@ import assert from 'node:assert/strict';
 const home = await mkdtemp(join(tmpdir(), 'step-workspace-reliability-'));
 const seed = new DatabaseSync(join(home, 'workspace.sqlite'));
 seed.exec('CREATE TABLE records (kind TEXT NOT NULL,id TEXT NOT NULL,value TEXT NOT NULL,PRIMARY KEY(kind,id))');
-seed
-  .prepare('INSERT INTO records VALUES (?,?,?)')
-  .run(
-    'settings',
-    'main',
-    JSON.stringify({
-      team: '',
-      assistant: 'STeP Mate',
-      workspace: home,
-      theme: 'light',
-      onboarding: true,
-      tourDone: true,
-      whatsNewSeen: '999.0.0',
-      termsVersion: '2026-10-02',
-      consentedAt: new Date().toISOString(),
-    }),
-  );
+seed.prepare('INSERT INTO records VALUES (?,?,?)').run(
+  'settings',
+  'main',
+  JSON.stringify({
+    team: '',
+    assistant: 'STeP Mate',
+    workspace: home,
+    theme: 'light',
+    onboarding: true,
+    tourDone: true,
+    whatsNewSeen: '999.0.0',
+    termsVersion: '2026-10-02',
+    consentedAt: new Date().toISOString(),
+  }),
+);
 seed.close();
 const env = { ...process.env, STEP_DESKTOP_TEST_HOME: home, STEP_DISABLE_UPDATES: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
