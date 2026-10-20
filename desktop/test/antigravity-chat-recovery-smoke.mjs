@@ -34,6 +34,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  }
  const ticks=String.fromCharCode(96).repeat(3);
  const response=mode==='host'?(prompt.includes('<tool_results>')?'Public synthetic host evidence received':ticks+'step-tool\\n'+JSON.stringify({tool:'files',input:'note.txt'})+'\\n'+ticks):'ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ';
+ if(mode==='host')send({event:'step_update',step_update:{conversation_id:'fixture',step_type:'agent_response',text_delta:'PROVISIONAL HOST REQUEST'}});
  send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response,usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});
 });
 `,
@@ -99,6 +100,7 @@ try {
       .filter(x => x === 'host').length,
     2,
   );
+  await expect(page.locator('.message').filter({ hasText: 'PROVISIONAL HOST REQUEST' })).toHaveCount(0);
   await writeFile(scenario, 'block');
   await send('Synthetic persistent tool failure');
   const status = page.locator('.message.status').last();

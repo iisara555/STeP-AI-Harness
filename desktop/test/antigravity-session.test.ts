@@ -4,6 +4,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AntigravityAdapter } from '../electron/antigravity';
+import { ToolLoop } from '../electron/tool-loop';
 import { ProviderSession, type TokenCount } from '../electron/providers';
 import { strictJsonSchema } from '../electron/json-schema';
 import type { Connection } from '../src/types';
@@ -34,8 +35,19 @@ createInterface({input:process.stdin}).on('line',line=>{
   if(kind==='schema-tool' && schema) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'finish'}});
   if(kind==='tool' && turns===2) return send({event:'step_update',step_update:{conversation_id:'conv',step_type:'tool',tool_name:'read_file'}});
   if(kind==='reinit') send({event:'init',conversation_id:'conv',init:{cwd:process.cwd(),agent:'step-draft',permission_mode:'strict',tools:['finish']}});
-  const answer='answer '+turns;
-  send({event:'step_update',step_update:{conversation_id:'conv',step_type:'agent_response',text_delta:answer}});
+  let answer='answer '+turns, provisional=answer;
+  if(kind==='workspace-rewrite'){
+    const requests=[
+      {tool:'google_workspace',input:'accounts',args:{action:'list'}},
+      {tool:'google_workspace',input:'calendar.list',args:{action:'execute',account:'synthetic-account'}},
+      {tool:'google_workspace',input:'calendar.events',args:{action:'execute',account:'synthetic-account',params:{calendarId:'synthetic-calendar',timeMin:'2026-10-19T00:00:00+07:00',timeMax:'2026-10-26T00:00:00+07:00'}}},
+    ];
+    const ticks=String.fromCharCode(96).repeat(3);
+    answer=turns<=requests.length?ticks+'step-tool\\n'+JSON.stringify(requests[turns-1])+'\\n'+ticks:'วันอังคาร 10:00 ประชุมทีมสังเคราะห์';
+    // A provisional native answer must never cause this unvalidated write request to execute.
+    provisional=turns===3?ticks+'step-tool\\n'+JSON.stringify({tool:'google_workspace',input:'calendar.createEvent',args:{action:'execute',account:'synthetic-account'}})+'\\n'+ticks:'กำลังตรวจตารางนัดหมาย';
+  }
+  send({event:'step_update',step_update:{conversation_id:'conv',step_type:'agent_response',text_delta:provisional}});
   send({event:'result',result:{status:'SUCCESS',conversation_id:'conv',num_turns:turns,response:answer,usage:{input_tokens:100*turns,output_tokens:10*turns,total_tokens:110*turns}}});
 }).on('close',()=>{fs.appendFileSync(log,JSON.stringify({closed:process.pid})+'\\n');process.exit(0);});
 `,
@@ -124,6 +136,55 @@ test('the tool turns of a run continue on one agy process and send only the new 
     assert.ok(calls.some(c => c.closed));
     assert.deepEqual((await readdir(f.root)).sort(), ['agy.mjs', 'calls.jsonl']);
   } finally {
+    await f.close();
+  }
+});
+
+test('Antigravity Calendar lookup executes only canonical host requests and preserves outgoing checks', async () => {
+  const f = await fixture('workspace-rewrite');
+  const requests: any[] = [],
+    outgoing: string[] = [];
+  const loop = new ToolLoop({
+    enabled: () => true,
+    check: async () => {},
+    readOnly: request => request.args?.action === 'list' || ['calendar.list', 'calendar.events'].includes(request.input),
+    execute: async request => {
+      assert.equal(request.tool, 'google_workspace');
+      requests.push(request);
+      if (request.args?.action === 'list') return { accounts: [{ handle: 'synthetic-account' }] };
+      assert.equal(request.args?.account, 'synthetic-account');
+      if (request.input === 'calendar.list') return { items: [{ id: 'synthetic-calendar' }] };
+      assert.equal(request.input, 'calendar.events', 'provisional write requests must never execute');
+      assert.deepEqual(request.args?.params, {
+        calendarId: 'synthetic-calendar',
+        timeMin: '2026-10-19T00:00:00+07:00',
+        timeMax: '2026-10-26T00:00:00+07:00',
+      });
+      return { items: [{ summary: 'ประชุมทีมสังเคราะห์', start: { dateTime: '2026-10-20T10:00:00+07:00' } }] };
+    },
+    outgoing: async text => {
+      outgoing.push(text);
+      return text;
+    },
+  });
+  try {
+    const provider = new AntigravityAdapter();
+    assert.equal(
+      await loop.run('อาทิตย์นี้มีประชุมอะไรบ้าง', prompt => provider.run(prompt, f.connection, f.context), f.context.signal),
+      'วันอังคาร 10:00 ประชุมทีมสังเคราะห์',
+    );
+    assert.deepEqual(
+      requests.map(request => request.input),
+      ['accounts', 'calendar.list', 'calendar.events'],
+    );
+    assert.equal(outgoing.length, 3);
+    assert.match(outgoing[2], /ประชุมทีมสังเคราะห์/);
+    assert.doesNotMatch(f.deltas.join(''), /calendar.createEvent|กำลังตรวจตารางนัดหมาย/);
+    assert.equal((await f.calls()).filter(call => call.start).length, 1);
+    assert.equal(f.discarded.length, 4);
+    await f.session.closeAndWait();
+  } finally {
+    await f.session.closeAndWait();
     await f.close();
   }
 });
