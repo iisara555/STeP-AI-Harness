@@ -356,7 +356,7 @@ export class AgentBrowser {
       if (
         !context.routine?.() &&
         !(await context.approve(
-          tm('เปิดเว็บให้ Agent ทำงาน?'),
+          tm('ให้ผู้ช่วยเปิดเว็บไซต์นี้?'),
           url + tm('\nเปิดในแท็บเว็บของ STeP แยกจากบัญชีส่วนตัว เว็บไซต์อาจได้รับข้อมูลการเชื่อมต่อ'),
         ))
       )
@@ -494,7 +494,7 @@ export class AgentBrowser {
       if (
         (final || !context.routine?.()) &&
         !(await context.approve(
-          final ? tm('ให้ Agent กดขั้นสุดท้ายนี้?') : action === 'fill' ? tm('ให้ Agent กรอกข้อมูลนี้?') : tm('ให้ Agent คลิกเป้าหมายนี้?'),
+          final ? tm('ให้ผู้ช่วยกดขั้นสุดท้ายนี้?') : action === 'fill' ? tm('ให้ผู้ช่วยกรอกข้อมูลนี้?') : tm('ให้ผู้ช่วยคลิกจุดนี้?'),
           info.url +
             '\n' +
             info.label +

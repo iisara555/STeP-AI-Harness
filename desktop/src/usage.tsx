@@ -161,7 +161,7 @@ function UsageAccount({
           })}
         </div>
       )}
-      <p className="muted small">{t('ในแอปเดือนนี้: {0} โทเคน · ประมาณ ${1}', displayNumber(tokens), formatUsd(usd))}</p>
+      <p className="muted small">{t('ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}', displayNumber(tokens), formatUsd(usd))}</p>
       <div className="usage-account-actions">
         {account.canRefresh && (
           <button className="quiet" disabled={Boolean(busy)} onClick={onRefresh}>
@@ -228,7 +228,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
           <h3>{t('การใช้ใน STeP Desktop')}</h3>
           <p>
             {t(
-              'วันนี้ {0} (รอบวันเริ่ม {1}): {2} โทเคน',
+              'วันนี้ {0} (รอบวันเริ่ม {1}): {2} tokens',
               shownDate(report.day),
               dayStart(report.day),
               report.dailyTokens.toLocaleString(locale()),
@@ -241,18 +241,18 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
           </p>
           <p className="muted small">
             {t(
-              'คำนวณจากโทเคนของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป',
+              'คำนวณจาก token ของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป',
             )}
           </p>
           {report.unpricedTokens > 0 && (
             <p>
-              {report.unpricedTokens.toLocaleString(locale())} {t('โทเคนยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย')}
+              {report.unpricedTokens.toLocaleString(locale())} {t('token ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย')}
             </p>
           )}
           {!!report.cachePriceMissingTokens && (
             <p className="muted small">
               {report.cachePriceMissingTokens.toLocaleString(locale())}{' '}
-              {t('โทเคนที่ใช้ซ้ำจากแคชยังไม่มีราคาแยก จึงประมาณด้วยราคาข้อความขาเข้าปกติ')}
+              {t('token ที่ใช้ซ้ำจาก cache ยังไม่มีราคาแยก จึงประมาณด้วยราคาข้อความขาเข้าปกติ')}
             </p>
           )}
           {report.warnings.length > 0 && <p role="status">{t('การใช้งานถึงอย่างน้อย 80% ของงบที่ตั้งไว้ โปรดตรวจยอดก่อนทำงานต่อ')}</p>}
@@ -268,7 +268,7 @@ export function UsageDialog({ api, onClose }: { api: DesktopAPI; onClose: () => 
                   <tr>
                     <th>{t('วันที่')}</th>
                     <th>{t('โมเดล')}</th>
-                    <th>{t('โทเคน')}</th>
+                    <th>{t('token')}</th>
                     <th>{t('ค่าใช้จ่าย (USD)')}</th>
                   </tr>
                 </thead>

@@ -55,7 +55,7 @@ export function VaultPromptDialog({
       <div className="credential-form vault-prompt-form">
         {prompt.kind === 'login' && (
           <label>
-            {t('Username / อีเมล')}
+            {t('ชื่อผู้ใช้หรืออีเมล')}
             <input
               autoComplete="off"
               autoFocus

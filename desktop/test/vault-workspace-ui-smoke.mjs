@@ -72,8 +72,8 @@ try {
   const form = page.locator('.credential-form');
   await form.getByLabel('ชื่อเรียกบัญชี', { exact: true }).fill('Synthetic work account');
   await form.getByLabel('เว็บไซต์ที่ใช้ได้', { exact: true }).fill('https://accounts.example.test');
-  await form.getByLabel('Username / อีเมล', { exact: true }).fill('synthetic-employee');
-  await form.getByLabel('Password', { exact: true }).fill('synthetic-password');
+  await form.getByLabel('ชื่อผู้ใช้หรืออีเมล', { exact: true }).fill('synthetic-employee');
+  await form.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).fill('synthetic-password');
   await expect(form.getByRole('button', { name: 'บันทึก', exact: true })).toBeDisabled();
   await form.getByLabel('จำบัญชีนี้บนเครื่องส่วนตัวของฉัน').check();
   await form.getByRole('button', { name: 'บันทึก', exact: true }).click();
@@ -85,8 +85,8 @@ try {
   assert.equal(state.protected, true);
   assert.doesNotMatch(JSON.stringify(state), /synthetic-employee|synthetic-password/);
   await page.getByRole('button', { name: 'แก้ไข', exact: true }).click();
-  assert.equal(await form.getByLabel('Username / อีเมล', { exact: true }).inputValue(), '');
-  assert.equal(await form.getByLabel('Password', { exact: true }).inputValue(), '');
+  assert.equal(await form.getByLabel('ชื่อผู้ใช้หรืออีเมล', { exact: true }).inputValue(), '');
+  assert.equal(await form.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).inputValue(), '');
   await form.getByRole('button', { name: 'ยกเลิก', exact: true }).click();
   checkpoint('import Desktop OAuth client through native dialog');
   const clientId = 'synthetic-client.apps.googleusercontent.com';

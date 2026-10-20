@@ -71,7 +71,7 @@ export function ApprovalDialog({
   return (
     <ConfirmDialog
       title={t(request.title)}
-      confirmLabel={run ? t('อนุญาตในขอบเขตนี้จนจบรอบ') : remember ? t('อนุญาตใน workspace นี้') : label}
+      confirmLabel={run ? t('อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ') : remember ? t('จำการอนุญาตในโฟลเดอร์นี้') : label}
       onConfirm={() => (run && onRun ? onRun() : onConfirm(remember))}
       onCancel={onCancel}
       focusCancel
@@ -79,7 +79,7 @@ export function ApprovalDialog({
     >
       {!isPlan && (
         <p className="small muted">
-          {t('เครื่องมือ:')} {toolLabels[request.tool] || request.tool} {t('· ระดับข้อมูลจากการตรวจรูปแบบ:')}{' '}
+          {t('เครื่องมือ:')} {toolLabels[request.tool] || request.tool} {t('· ผลตรวจข้อมูลเบื้องต้น:')}{' '}
           {privacyLabels[request.privacyClass] || request.privacyClass}
         </p>
       )}
@@ -127,7 +127,7 @@ export function ApprovalDialog({
         <label className="approval-remember">
           <input type="checkbox" checked={run} onChange={e => setRun(e.target.checked)} />
           <span>
-            {t('อนุญาตส่งข้อมูลในขอบเขตนี้โดยไม่ถามซ้ำ')}
+            {t('ไม่ถามซ้ำสำหรับข้อมูลกลุ่มนี้จนจบคำขอ')}
             <ul className="approval-scope">
               {request.runScope
                 .split('\n')
@@ -142,7 +142,7 @@ export function ApprovalDialog({
       {request.allowRemember && (
         <label className="approval-remember">
           <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
-          {t('อนุญาตทุกครั้งสำหรับเครื่องมือและเป้าหมายนี้ใน workspace นี้')}
+          {t('จำการอนุญาตเฉพาะเครื่องมือและปลายทางนี้ในโฟลเดอร์นี้')}
         </label>
       )}
     </ConfirmDialog>

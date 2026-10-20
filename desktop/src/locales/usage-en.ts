@@ -1,5 +1,5 @@
 export const usageEn: Record<string, string> = {
-  'โทเคนที่ใช้ซ้ำจากแคชยังไม่มีราคาแยก จึงประมาณด้วยราคาข้อความขาเข้าปกติ':
+  'token ที่ใช้ซ้ำจาก cache ยังไม่มีราคาแยก จึงประมาณด้วยราคาข้อความขาเข้าปกติ':
     'cached tokens have no separate rate; the estimate uses the regular input rate',
   ยังไม่ได้อ่านการใช้งานจากผู้ให้บริการ: 'Provider usage has not been read yet',
   ยังไม่มีช่องอ่านโควตาหรือเครดิตสำหรับการเชื่อมต่อนี้: 'Quota and credit retrieval is not available for this connection yet',
@@ -44,7 +44,7 @@ export const usageEn: Record<string, string> = {
   สะสม: 'All time',
   'BYOK ภายนอก': 'External BYOK',
   'API key นี้': 'This API key',
-  'ในแอปเดือนนี้: {0} โทเคน · ประมาณ ${1}': 'In this app this month: {0} tokens · estimated ${1}',
+  'ในแอปเดือนนี้: {0} tokens · ประมาณ ${1}': 'In this app this month: {0} tokens · estimated ${1}',
   รีเฟรชการใช้งาน: 'Refresh usage',
   ดูที่ผู้ให้บริการ: 'View at provider',
   โควตาและเครดิตรายบัญชี: 'Account quotas and credits',
@@ -54,10 +54,10 @@ export const usageEn: Record<string, string> = {
   'การใช้ใน STeP Desktop': 'Usage in STeP Desktop',
   'ยอดเก่าที่ไม่มีรหัสบัญชีรวมอยู่ในยอดแอป แต่ไม่จัดให้บัญชีใด':
     'Historical usage without an account ID is included in app totals but is not attributed to any account',
-  'วันนี้ {0} (รอบวันเริ่ม {1}): {2} โทเคน': 'Today {0} (day starts {1}): {2} tokens',
+  'วันนี้ {0} (รอบวันเริ่ม {1}): {2} tokens': 'Today {0} (day starts {1}): {2} tokens',
   'เดือน {0}: ค่าใช้จ่ายประมาณ ${1}': 'Month {0}: estimated cost ${1}',
-  'คำนวณจากโทเคนของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป':
+  'คำนวณจาก token ของแชต ร่างเอกสาร และการค้นเว็บที่ผู้ให้บริการรายงาน กับราคาที่ผู้ดูแลตั้งไว้ เป็นยอดประมาณการ ไม่รวมรูปภาพ ค่าบัญชีสมาชิก หรือการใช้งานนอกแอป':
     "Based on chat, drafting and web search tokens reported by the provider and the prices your admin set. It's an estimate that excludes images, subscriptions and usage outside the app",
-  'โทเคนยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย': "tokens have no price set yet, so they aren't included in the cost",
+  'token ยังไม่มีราคาที่ตั้งไว้ จึงยังไม่รวมในค่าใช้จ่าย': "tokens have no price set yet, so they aren't included in the cost",
   โมเดลเริ่มต้น: 'default model',
 };

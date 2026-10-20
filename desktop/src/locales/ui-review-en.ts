@@ -9,7 +9,7 @@ export const uiReviewEn: Record<string, string> = {
     'Ask side questions while work continues, keeping your draft and Stop control, with bounded plan continuation and targeted document edits.',
   'ฟอร์ม Vault กด Enter ได้และเก็บข้อมูลไว้เมื่อบันทึกไม่สำเร็จ กล่องยืนยันแสดงข้อความอ่านง่ายแทน JSON ดิบ':
     'Vault forms support Enter and retain input after failed saves. Confirmation dialogs show readable content with technical JSON in details.',
-  'ทบทวนบทเรียนอัตโนมัติเป็นค่าเริ่มต้น ใช้โทเคนของบัญชี AI และปิดได้ในกล่องบทเรียน ข้อเสนอยังรอยืนยันก่อนใช้':
+  'ทบทวนบทเรียนอัตโนมัติเป็นค่าเริ่มต้น ใช้ token ของบัญชี AI และปิดได้ในกล่องบทเรียน ข้อเสนอยังรอยืนยันก่อนใช้':
     'Automatic lesson review is on by default, uses your AI account tokens and can be disabled in the Learning Inbox. Suggestions require your confirmation.',
   'เลือก Skill ก่อนตอบแบบผสม และเพิ่มเครื่องมือเขียนและตรวจโค้ดพร้อมผลตรวจ JavaScript และ TypeScript':
     'Hybrid Skill selection before answers, plus coding workflows with JavaScript and TypeScript diagnostics.',

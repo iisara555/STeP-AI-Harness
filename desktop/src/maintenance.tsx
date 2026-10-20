@@ -59,13 +59,13 @@ export function MaintenancePanel({ api, version }: { api: DesktopAPI; version: n
       {/* A disclosure, so it reads as one: chevron first, text left-aligned, like the other folds in the app. */}
       <button className="quiet maintenance-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
         <ChevronRight size={16} aria-hidden="true" className="maintenance-chevron" />
-        <span>{waiting ? t('งานดูแลความจำ บทเรียน และ Skill ({0})', waiting) : t('งานดูแลความจำ บทเรียน และ Skill: ไม่มีงานค้าง')}</span>
+        <span>{waiting ? t('งานดูแลข้อมูลที่จำและ Skill ({0})', waiting) : t('งานดูแลข้อมูลที่จำและ Skill: ไม่มีงานค้าง')}</span>
       </button>
       {open && (
         <>
           <p className="small muted">
             {t(
-              'แอปตรวจบนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลไปที่ใด และไม่แก้หรือลบอะไรเอง แก้ที่ความจำ บทเรียน หรือ Skill Pack แล้วย้ายเป็น "เสร็จแล้ว" แอปจะตรวจซ้ำทันที',
+              'แอปตรวจข้อมูลที่จำ บทเรียน และ Skill Pack บนเครื่องนี้วันละครั้ง ไม่ส่งข้อมูลออกและไม่แก้หรือลบเอง เมื่อคุณแก้แล้ว ย้ายงานเป็น "เสร็จแล้ว" เพื่อให้แอปตรวจซ้ำ',
             )}
             {state.board ? ` ${t('ตรวจล่าสุด {0}', day(state.board.checkedAt))}` : ''}
           </p>

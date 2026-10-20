@@ -13,7 +13,7 @@ import { INTERACTION_STYLES, LANGUAGE_STYLES, interactionStyleId, languageStyleI
 
 /** Plain names for the policy switches; the technical keys are listed under the administrators' fold. */
 const featureNames: Record<string, string> = localized({
-  vault: 'เก็บและใช้ข้อมูลบัญชีผ่าน Vault',
+  vault: 'บันทึกและใช้ข้อมูลบัญชี',
   googleWorkspace: 'เชื่อมบัญชี Google Workspace ของพนักงาน',
   morningBrief: 'การ์ดสรุปเช้านี้ (นัดและงานวันนี้)',
   toolLoop: 'ให้ AI ใช้เครื่องมือหลายขั้นตอน',
@@ -31,14 +31,14 @@ const featureNames: Record<string, string> = localized({
   providerPresets: 'บริการ AI อื่นที่รู้จัก (OpenRouter, Groq ฯลฯ)',
   headless: 'สั่งงานแบบไม่เปิดหน้าต่าง',
   skillPacks: 'เปิด Skill Pack ที่ผู้ดูแลรับรอง พร้อม Hooks และ Agent',
-  staffSkills: 'ให้พนักงานใช้ Skill ที่ทำเองเมื่อตรวจผ่าน',
+  staffSkills: 'ใช้ Skill ที่ทำเองได้เมื่อตรวจผ่าน',
   feedback: 'ให้พนักงานแจ้งปัญหาและข้อเสนอแนะถึงผู้ดูแล',
   cron: 'งานตั้งเวลา',
   coordinator: 'ให้ AI แบ่งงานย่อยให้ผู้ช่วยหลายตัว',
   memoryTeam: 'ความจำที่ใช้ร่วมกันในทีม',
-  autoRouting: 'ให้ระบบเลือก Skill และถามเพิ่มให้เอง',
+  autoRouting: 'เลือก Skill และถามข้อมูลที่ขาดให้อัตโนมัติ',
   hybridSkillSelection: 'เลือก Skill ที่เหมาะกับงานก่อนตอบ',
-  skillSuggestions: 'แนะนำ Skill ที่ตรงกับงานเหนือช่องพิมพ์',
+  skillSuggestions: 'แนะนำ Skill เหนือช่องพิมพ์',
   receiptVision: 'ให้ AI อ่านภาพใบเสร็จ',
   autoUpdate: 'อัปเดตแอปอัตโนมัติ',
   claudeSubscription: 'ใช้แพ็กเกจ Claude Pro/Max',
@@ -47,7 +47,7 @@ const featureNames: Record<string, string> = localized({
   ocrTrial: 'บันทึกผลทดลอง OCR สำหรับทีมนำร่อง',
   answerCheck: 'ตรวจคำตอบเรื่อง STeP กับเอกสาร',
   autoEffort: 'ปรับระดับการคิดตามขนาดงาน',
-  maintenance: 'ตรวจความจำ บทเรียน และ Skill ทุกวัน',
+  maintenance: 'ตรวจข้อมูลที่จำ บทเรียน และ Skill ทุกวัน',
 });
 
 /** The policy switches in a few plain groups, so staff can scan them; switches not listed fall into the last group. */

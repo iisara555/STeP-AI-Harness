@@ -147,7 +147,7 @@ try {
   await capture('02-workspace.png');
 
   await page.getByRole('button', { name: /ศูนย์รวม Skill/ }).click();
-  await page.getByPlaceholder('ค้นหา Skill, ทีม หรือคำที่ใช้เรียก').waitFor();
+  await page.getByPlaceholder('ค้นหา Skill ทีม หรือคำที่ใช้เรียก').waitFor();
   await capture('03-skill-hub.png');
 
   await page.getByRole('button', { name: /ตรวจใบเสร็จ AFP/ }).click();

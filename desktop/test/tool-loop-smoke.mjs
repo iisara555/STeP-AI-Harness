@@ -113,7 +113,7 @@ try {
   await consent().waitFor();
   await expect(consent()).not.toContainText('"approved"');
   await consent().getByRole('checkbox').check();
-  await consent().getByRole('button', { name: 'อนุญาตในขอบเขตนี้จนจบรอบ', exact: true }).click();
+  await consent().getByRole('button', { name: 'อนุญาตเฉพาะขอบเขตนี้จนจบคำขอ', exact: true }).click();
   await page.getByText('Completed with reviewed tools', { exact: true }).waitFor();
   await expect.poll(async () => (await page.evaluate(() => window.step.call('snapshot'))).sessions[0].status).toBe('review');
   const data = await page.evaluate(() => window.step.call('snapshot'));
@@ -132,7 +132,7 @@ try {
   await page.keyboard.press('Enter');
   const usage = page.getByRole('alertdialog', { name: 'การใช้งาน AI' });
   await usage.waitFor();
-  await expect(usage).toContainText('75 โทเคน');
+  await expect(usage).toContainText('75 token');
   await page.screenshot({ path: 'release/qa/tool-loop-usage.png' });
   await usage.getByRole('button', { name: 'ปิด', exact: true }).click();
   // Declined note content is withheld; a provider may continue with a question without that note.

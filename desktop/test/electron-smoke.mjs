@@ -51,7 +51,7 @@ try {
   await page.getByRole('heading', { name: 'ให้ AI ร่างงานหนัก', exact: false }).waitFor();
   await page.screenshot({ path: 'release/qa/workspace-light.png', fullPage: true });
   // Claude Pro/Max hands the request to Claude Code; stop at the confirmation so no terminal opens.
-  await page.getByRole('button', { name: 'เลือก AI โมเดล และระดับการคิด' }).click();
+  await page.getByRole('button', { name: 'เลือกบริการ โมเดลและระดับการคิด' }).click();
   await page.getByRole('combobox', { name: 'เลือกการเชื่อมต่อ AI' }).selectOption('claude-code');
   await page.locator('.composer textarea').fill('ทดสอบส่งต่อ');
   await page.keyboard.press('Enter');

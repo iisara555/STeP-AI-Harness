@@ -203,7 +203,7 @@ try {
     if (!round) {
       const prompt = page.getByRole('alertdialog', { name: 'บันทึกบัญชีและเข้าสู่ระบบ', exact: true });
       await expect(prompt).toBeVisible({ timeout: 20000 });
-      await prompt.getByLabel('Username / อีเมล', { exact: true }).fill('synthetic-employee');
+      await prompt.getByLabel('ชื่อผู้ใช้หรืออีเมล', { exact: true }).fill('synthetic-employee');
       await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).fill('synthetic-password-marker');
       assert.equal(await prompt.getByLabel('รหัสผ่านของเว็บไซต์นี้', { exact: true }).getAttribute('type'), 'password');
       await prompt.getByRole('checkbox').check();
@@ -215,7 +215,7 @@ try {
       await code.getByLabel('รหัสยืนยัน', { exact: true }).fill('123456');
       await code.getByLabel('รหัสยืนยัน', { exact: true }).press('Enter');
     }
-    const verify = page.getByRole('alertdialog', { name: 'ให้ Agent กดขั้นสุดท้ายนี้?', exact: true });
+    const verify = page.getByRole('alertdialog', { name: 'ให้ผู้ช่วยกดขั้นสุดท้ายนี้?', exact: true });
     await expect(verify).toBeVisible({ timeout: 30000 });
     await verify.getByRole('button', { name: 'อนุญาตครั้งนี้', exact: true }).click();
     await expect(page.getByText('Vault login verified', { exact: true }).first()).toBeVisible({ timeout: 20000 });

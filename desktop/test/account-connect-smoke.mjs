@@ -106,7 +106,7 @@ try {
   await expect(page.locator('.connection-state')).toHaveText('พร้อมใช้งาน');
   await expect(page.locator('.connection-card')).toHaveAttribute('data-state', 'ready');
   await expect(page.getByRole('button', { name: 'กลับไปที่งาน', exact: true })).not.toHaveClass(/quiet/);
-  await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeHidden();
+  await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeHidden();
 
   const capabilities = page.locator('.ai-connect-step .ai-capabilities');
@@ -122,7 +122,7 @@ try {
   await expect(organization.locator('[data-capability="mcp"] .ai-capability-state')).toHaveText('ยังใช้ไม่ได้');
   await page.screenshot({ path: 'release/qa/connect-ai/ready.png' });
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
-  await expect(page.getByRole('combobox', { name: 'โมเดลเริ่มต้นสำหรับงานใหม่' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'โมเดลสำหรับงานใหม่' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'ลบบัญชีนี้', exact: true })).toBeVisible();
   await page.getByText('โมเดลและการจัดการบัญชี', { exact: true }).click();
   await page.evaluate(() => {
