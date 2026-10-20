@@ -4,7 +4,7 @@
 
 ## Version / inventory
 
-This guide references Harness source **v0.7.7** and STeP Desktop **v0.6.17**.
+This guide references Harness source **v0.7.7** and STeP Desktop **v0.6.18**.
 
 | รายการใน Harness source | จำนวน |
 | --- | --- |

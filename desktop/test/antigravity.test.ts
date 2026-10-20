@@ -4,7 +4,14 @@ import { lstat, mkdir, mkdtemp, readFile, writeFile, readdir, rm, stat } from 'n
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { AntigravityAdapter, ANTIGRAVITY_DENY, antigravityHome, antigravityModels, antigravityUsage } from '../electron/antigravity';
+import {
+  AntigravityAdapter,
+  ANTIGRAVITY_DENY,
+  antigravityHome,
+  antigravityModels,
+  antigravityUsage,
+  runAntigravity,
+} from '../electron/antigravity';
 import { adapter, listModels } from '../electron/providers';
 import { signInAndTest, signOutManagedProvider } from '../electron/connect';
 import { checkRuntime } from '../electron/runtimes';
@@ -53,7 +60,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  if(kind==='null') return send(null);
  if(kind==='missing') return;
  if(kind!=='final-only'){const b=Buffer.from(JSON.stringify(step('สวัสดี'))+'\\n');process.stdout.write(b.subarray(0,180));process.stdout.write(b.subarray(180));send(step('ครับ','DONE'));}
- const result={event:'result',result:{status:kind==='waiting'?'WAITING':'SUCCESS',conversation_id:'session',num_turns:kind==='turns'?2:1,response:kind==='diverged'?'different':'สวัสดีครับ',usage:{input_tokens:11,output_tokens:5,total_tokens:16}}};
+ const result={event:'result',result:{status:kind==='waiting'?'WAITING':'SUCCESS',conversation_id:kind==='wrong-session'?'other-session':'session',num_turns:kind==='turns'?2:1,response:kind==='diverged'?'different':'สวัสดีครับ',usage:{input_tokens:11,output_tokens:5,total_tokens:16}}};
  send(result); if(kind==='duplicate')send(result); if(kind==='exit')process.exitCode=7;
 });
 `,
@@ -279,7 +286,7 @@ test('Antigravity accepts final-only output and fails closed on invalid, incompl
     ['missing', 'PROVIDER_REQUEST_FAILED'],
     ['duplicate', 'PROVIDER_STREAM_INVALID'],
     ['turns', 'PROVIDER_STREAM_INVALID'],
-    ['diverged', 'PROVIDER_STREAM_INVALID'],
+    ['wrong-session', 'PROVIDER_STREAM_INVALID'],
     ['waiting', 'PROVIDER_REQUEST_FAILED'],
     ['exit', 'RUNTIME_EXITED'],
     ['tool', 'TOOL_DENIED'],
@@ -292,6 +299,79 @@ test('Antigravity accepts final-only output and fails closed on invalid, incompl
     } finally {
       await f.close();
     }
+  }
+});
+
+test('Antigravity replaces provisional text with the validated final response', async () => {
+  const f = await fixture('diverged');
+  try {
+    assert.equal(await new AntigravityAdapter().run('Synthetic', f.connection, f.context), 'different');
+    assert.equal(f.deltas.join(''), 'different');
+    assert.deepEqual(f.discarded, ['สวัสดีครับ'.length]);
+    assert.equal((await f.calls()).filter(call => call.input).length, 1);
+  } finally {
+    await f.close();
+  }
+});
+
+test('Antigravity consumers without retraction see only a successful final answer', async () => {
+  for (const kind of ['diverged', 'exit']) {
+    const f = await fixture(kind);
+    try {
+      const run = new AntigravityAdapter().run('Synthetic', f.connection, { ...f.context, discard: undefined });
+      if (kind === 'exit') {
+        await assert.rejects(run, { message: 'RUNTIME_EXITED' });
+        assert.deepEqual(f.deltas, []);
+      } else {
+        assert.equal(await run, 'different');
+        assert.deepEqual(f.deltas, ['different']);
+      }
+    } finally {
+      await f.close();
+    }
+  }
+});
+
+test('Antigravity protocol failures retain a fixed diagnostic stage without request data', async () => {
+  for (const [kind, stage] of [
+    ['malformed', 'json'],
+    ['wrong-session', 'result-metadata'],
+  ]) {
+    const f = await fixture(kind);
+    try {
+      await assert.rejects(new AntigravityAdapter().run('Synthetic private calendar request', f.connection, f.context), error => {
+        assert.equal((error as Error).message, 'PROVIDER_STREAM_INVALID');
+        assert.deepEqual((error as any).detail, ['Antigravity protocol: ' + stage]);
+        assert.doesNotMatch(JSON.stringify(error), /Synthetic private calendar request|GEMINI_API_KEY|synthetic-api-key/);
+        return true;
+      });
+      assert.deepEqual(f.deltas, []);
+    } finally {
+      await f.close();
+    }
+  }
+});
+
+test('Antigravity transport preserves only fixed protocol stages from thrown callback details', async () => {
+  for (const detail of [{ private: 'synthetic-private-detail' }, ['synthetic-private-detail', 'Antigravity protocol: json']]) {
+    await assert.rejects(
+      runAntigravity(
+        process.execPath,
+        ['-e', "console.log('synthetic')"],
+        { cwd: tmpdir(), env: { ...process.env } },
+        {
+          line: () => {
+            throw Object.assign(new Error('PROVIDER_STREAM_INVALID'), { detail });
+          },
+        },
+      ),
+      error => {
+        assert.equal((error as Error).message, 'PROVIDER_STREAM_INVALID');
+        assert.deepEqual((error as any).detail, Array.isArray(detail) ? ['Antigravity protocol: json'] : []);
+        assert.doesNotMatch(JSON.stringify(error), /synthetic-private-detail/);
+        return true;
+      },
+    );
   }
 });
 

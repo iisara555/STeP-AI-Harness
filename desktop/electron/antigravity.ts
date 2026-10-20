@@ -11,6 +11,9 @@ import { combineUsage } from './usage';
 import { strictJsonSchema } from './json-schema';
 
 const LIMIT = 4_000_000;
+// Fixed protocol stages help diagnose a failure without retaining prompts, tool arguments or Google results.
+const invalidStream = (stage: string) =>
+  Object.assign(new Error('PROVIDER_STREAM_INVALID'), { detail: [`Antigravity protocol: ${stage}`] });
 /** The `--effort` levels agy accepts (`agy --help`, 1.2.17 and 1.3.2). */
 export const ANTIGRAVITY_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const AGENT = 'step-draft';
@@ -165,8 +168,13 @@ export function runAntigravity(
       clearTimeout(timer);
       clearTimeout(shutdown);
       options.signal?.removeEventListener('abort', abort);
-      if (error) reject(Object.assign(error, { detail: tail }));
-      else resolveRun({ output, tail });
+      if (error) {
+        const detail: unknown = (error as any).detail;
+        const stages = Array.isArray(detail)
+          ? detail.filter(line => typeof line === 'string' && /^Antigravity protocol: [a-z-]+$/.test(line))
+          : [];
+        reject(Object.assign(error, { detail: [...tail, ...stages].slice(-8) }));
+      } else resolveRun({ output, tail });
     };
     const fail = (error: Error) => {
       if (failed || settled) return;
@@ -208,7 +216,7 @@ export function runAntigravity(
       try {
         options.line?.(value, send);
       } catch (error) {
-        fail(error instanceof Error ? error : new Error('PROVIDER_STREAM_INVALID'));
+        fail(error instanceof Error ? error : invalidStream('callback'));
       }
     };
     const abort = () => fail(new Error('CANCELLED'));
@@ -273,11 +281,10 @@ export function antigravityUsage(value: any): TokenCount | undefined {
     thinking_tokens: thinking,
     cache_read_tokens: cached,
   } = value || {};
-  if (![input, output, total].every(n => Number.isSafeInteger(n) && n >= 0) || total < input + output)
-    throw new Error('PROVIDER_STREAM_INVALID');
+  if (![input, output, total].every(n => Number.isSafeInteger(n) && n >= 0) || total < input + output) throw invalidStream('usage');
   const extra = (n: unknown) => {
     if (n === undefined || n === null) return 0;
-    if (!Number.isSafeInteger(n) || (n as number) < 0) throw new Error('PROVIDER_STREAM_INVALID');
+    if (!Number.isSafeInteger(n) || (n as number) < 0) throw invalidStream('usage-extra');
     return n as number;
   };
   // agy 1.2.x reports thinking and prompt-cache reads apart from input and output. Thinking counts against the plan like
@@ -323,9 +330,9 @@ function parseEvent(line: string) {
   try {
     event = JSON.parse(line);
   } catch {
-    throw new Error('PROVIDER_STREAM_INVALID');
+    throw invalidStream('json');
   }
-  if (!event || typeof event !== 'object' || Array.isArray(event)) throw new Error('PROVIDER_STREAM_INVALID');
+  if (!event || typeof event !== 'object' || Array.isArray(event)) throw invalidStream('event-shape');
   return event;
 }
 
@@ -341,7 +348,7 @@ function checkInit(event: any, cwd: string, connection: Connection) {
   // stops the process. The owner accepted relying on these instead of an empty catalog.
   if (!Array.isArray(init.tools)) throw new Error('ANTIGRAVITY_POLICY_UNCONFIRMED');
   if (typeof event.conversation_id !== 'string' || !event.conversation_id || event.conversation_id.length > 128)
-    throw new Error('PROVIDER_STREAM_INVALID');
+    throw invalidStream('init-conversation');
   return event.conversation_id as string;
 }
 
@@ -355,6 +362,7 @@ function turnReader(
   turns: number,
   emit: (text: string) => void,
   onUsage: (count: TokenCount, cumulative: boolean) => void,
+  discard?: (chars: number) => void,
 ) {
   let text = '';
   let result: any;
@@ -365,18 +373,20 @@ function turnReader(
     read(event: any) {
       if (event.event === 'step_update') {
         const step = event.step_update;
-        if (!conversation() || result || !step || step.conversation_id !== conversation()) throw new Error('PROVIDER_STREAM_INVALID');
+        if (!conversation() || result || !step || step.conversation_id !== conversation()) throw invalidStream('step-conversation');
         if (step.step_type === 'tool' || step.tool_name !== undefined || step.tool_call !== undefined) throw new Error('TOOL_DENIED');
         if (step.step_type === 'agent_response' && step.text_delta !== undefined) {
-          if (typeof step.text_delta !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
+          if (typeof step.text_delta !== 'string') throw invalidStream('step-text');
           text += step.text_delta;
-          emit(step.text_delta);
+          if (text.length > LIMIT) throw new Error('PROVIDER_OUTPUT_LIMIT');
+          // A consumer that cannot retract provisional text receives only the validated final response.
+          if (discard) emit(step.text_delta);
         }
         return undefined;
       }
-      if (event.event !== 'result' || result) throw new Error('PROVIDER_STREAM_INVALID');
+      if (event.event !== 'result' || result) throw invalidStream('event-order');
       result = event.result;
-      if (!result || typeof result.status !== 'string') throw new Error('PROVIDER_STREAM_INVALID');
+      if (!result || typeof result.status !== 'string') throw invalidStream('result-shape');
       const count = antigravityUsage(result.usage);
       if (count) onUsage(count, turns > 0 && result.num_turns === turns + 1);
       // Authentication failures may be emitted before init; never copy their raw message.
@@ -393,11 +403,14 @@ function turnReader(
         !(result.num_turns === 1 || (turns > 0 && result.num_turns === turns + 1)) ||
         typeof result.response !== 'string'
       )
-        throw new Error('PROVIDER_STREAM_INVALID');
+        throw invalidStream('result-metadata');
       if (result.response.length > LIMIT) throw new Error('PROVIDER_OUTPUT_LIMIT');
       if (!result.response.trim()) throw new Error('EMPTY_RESULT');
-      if (!result.response.startsWith(text)) throw new Error('PROVIDER_STREAM_INVALID');
-      const remaining = result.response.slice(text.length);
+      // The terminal response is the current turn's canonical answer. Reconcile a revised response before the
+      // host parses any step-tool request; provisional text is never an executable tool result.
+      const revised = !result.response.startsWith(text);
+      if (discard && revised && text) discard(text.length);
+      const remaining = discard && !revised ? result.response.slice(text.length) : result.response;
       if (remaining) emit(remaining);
       return result.response as string;
     },
@@ -433,7 +446,12 @@ export class AntigravityAdapter implements ProviderAdapter {
         // The tool turns of a run continue on one process. A structured request and the recovery attempt run alone.
         answer =
           attempt === 0 && context.session && !context.jsonSchema
-            ? await this.conversationTurn(prompt, connection, { ...attemptContext, emit, discard }, deadline)
+            ? await this.conversationTurn(
+                prompt,
+                connection,
+                { ...attemptContext, emit, discard: context.discard ? discard : undefined },
+                deadline,
+              )
             : await this.runOnce(prompt, connection, { ...attemptContext, session: undefined, emit }, deadline, attempt === 0);
         if (signal.aborted) throw new Error(context.signal.aborted ? 'CANCELLED' : 'PROVIDER_TIMEOUT');
       } catch (error) {
@@ -501,8 +519,9 @@ export class AntigravityAdapter implements ProviderAdapter {
       const reader = turnReader(
         () => conversation,
         0,
-        context.emit,
+        context.discard ? context.emit : () => {},
         count => context.onUsage?.(count),
+        context.discard,
       );
       let answer = '';
       await runAntigravity(connection.executable, this.args(connection, context, extra), home, {
@@ -521,6 +540,7 @@ export class AntigravityAdapter implements ProviderAdapter {
         },
       });
       if (!reader.result || reader.result.status !== 'SUCCESS' || !answer) throw new Error('PROVIDER_REQUEST_FAILED');
+      if (!context.discard) context.emit(answer);
       return answer;
     } catch (error) {
       clean = !(error as any)?.shutdownIncomplete;
@@ -593,7 +613,7 @@ export class AntigravityAdapter implements ProviderAdapter {
       control: handles => (held.handles = handles),
       line: (line, send) => {
         const event = parseEvent(line);
-        if (!held.handler) throw new Error('PROVIDER_STREAM_INVALID');
+        if (!held.handler) throw invalidStream('idle-event');
         held.handler(event, send);
       },
     });
@@ -671,6 +691,7 @@ export class AntigravityAdapter implements ProviderAdapter {
           held.usage = count;
           context.onUsage?.(turnCount);
         },
+        context.discard,
       );
       const ask = (send: (message: unknown) => void) => send({ event: 'user', message: { content: input } });
       held.handler = (event, send) => {

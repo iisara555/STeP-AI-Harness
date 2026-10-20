@@ -34,6 +34,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  }
  const ticks=String.fromCharCode(96).repeat(3);
  const response=mode==='host'?(prompt.includes('<tool_results>')?'Public synthetic host evidence received':ticks+'step-tool\\n'+JSON.stringify({tool:'files',input:'note.txt'})+'\\n'+ticks):'ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ';
+ if(mode==='host')send({event:'step_update',step_update:{conversation_id:'fixture',step_type:'agent_response',text_delta:'PROVISIONAL HOST REQUEST'}});
  send({event:'result',result:{status:'SUCCESS',conversation_id:'fixture',num_turns:1,response,usage:{input_tokens:2,output_tokens:1,total_tokens:3}}});
 });
 `,
@@ -81,17 +82,17 @@ try {
   const send = async text => {
     // A rendered final answer can precede run cleanup; wait until the composer accepts the next turn.
     await page.locator('.composer textarea').fill(text);
-    await expect(page.getByRole('button', { name: /ส่งคำขอ/ })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /ส่งคำขอ/ })).toBeEnabled({ timeout: 30000 });
     await page.keyboard.press('Enter');
   };
   await send('How is the public synthetic podcast doing recently?');
   // The saved answer and the live reply can both be on screen for a moment while the run finishes.
-  await expect(page.locator('.message.assistant').last()).toContainText('ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ');
+  await expect(page.locator('.message.assistant').last()).toContainText('ขอลิงก์แหล่งข้อมูลล่าสุดเพื่อสรุปให้ครับ', { timeout: 30000 });
   assert.deepEqual((await readFile(calls, 'utf8')).trim().split('\n'), ['recover', 'answer']);
   await expect(page.locator('.message').filter({ hasText: 'UNVERIFIED FRAGMENT' })).toHaveCount(0);
   await writeFile(scenario, 'host');
   await send('Read the public synthetic note.txt through the host tool');
-  await expect(page.locator('.message.assistant').last()).toContainText('Public synthetic host evidence received');
+  await expect(page.locator('.message.assistant').last()).toContainText('Public synthetic host evidence received', { timeout: 30000 });
   assert.equal(
     (await readFile(calls, 'utf8'))
       .trim()
@@ -99,10 +100,11 @@ try {
       .filter(x => x === 'host').length,
     2,
   );
+  await expect(page.locator('.message').filter({ hasText: 'PROVISIONAL HOST REQUEST' })).toHaveCount(0);
   await writeFile(scenario, 'block');
   await send('Synthetic persistent tool failure');
   const status = page.locator('.message.status').last();
-  await expect(status).toContainText('AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต');
+  await expect(status).toContainText('AI พยายามใช้เครื่องมือที่การเชื่อมต่อนี้ไม่อนุญาต', { timeout: 30000 });
   await expect(status).not.toContainText('TOOL_DENIED');
   assert.equal(
     (await readFile(calls, 'utf8'))

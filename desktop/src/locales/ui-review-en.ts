@@ -1,4 +1,8 @@
 export const uiReviewEn: Record<string, string> = {
+  'ปรับการรับคำตอบ Gemini ผ่าน Antigravity ก่อนเรียก Google Workspace ให้ใช้ผลสุดท้ายที่ตรวจแล้วเมื่อข้อความชั่วคราวถูกปรับ':
+    'Gemini through Antigravity uses the validated final reply for Google Workspace requests when provisional text changes.',
+  'เพิ่มรายละเอียดขั้นตอนเมื่อ Antigravity ส่งข้อมูลผิดรูปแบบ โดยไม่บันทึกคำถามหรือข้อมูล Google':
+    'Antigravity protocol errors include diagnostic stages without recording prompts or Google data.',
   'เลือกสิทธิ์เต็มทุกบริการ Google Workspace ได้เอง ไม่ต้องตั้งค่าจาก IT รายเครื่อง บัญชีเดิมต้องยืนยันสิทธิ์เพิ่มกับ Google':
     'Select full access to every supported Google Workspace service without per-device IT setup. Existing accounts must authorize additional access in Google.',
   'ถามแทรกได้ระหว่างทำงานโดยไม่เปลี่ยนร่างหรือซ่อนปุ่มหยุด พร้อมงานตามแผนแบบต่อเนื่องและการแก้เอกสารเฉพาะส่วน':
