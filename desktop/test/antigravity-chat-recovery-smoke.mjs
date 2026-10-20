@@ -123,7 +123,7 @@ try {
     await window.step.call('settings', { assistant: s.assistant, team: s.team, theme: s.theme, language: 'en' });
   });
   await page.reload();
-  await expect(page.locator('.message.status').last()).toContainText('The AI attempted a tool this connection does not allow');
+  await expect(page.locator('.message.status').last()).toContainText('This connection cannot use the requested tool');
   console.log(
     'Antigravity chat recovery smoke passed: bounded recovery, withheld partial text, real host file tool and localized failure; no live provider calls.',
   );
